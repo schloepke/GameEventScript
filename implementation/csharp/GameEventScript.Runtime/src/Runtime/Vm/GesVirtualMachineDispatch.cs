@@ -3,7 +3,6 @@
 
 using System;
 using GameEventScript.Api;
-using GameEventScript.Runtime;
 using GameEventScript.Runtime.Values;
 using static GameEventScript.Api.GesBytecodeOpCode;
 using static GameEventScript.Api.GesBytecodeTypeKind;
@@ -74,10 +73,10 @@ internal partial class GesVirtualMachine
                         CallAddress(instruction.TargetAddress, instruction.DestinationRegister, instruction.HasInstructionFlag(GesInstructionFlag.NormalizeResultAsPredicate));
                         break;
                     case CreateSeries:
-                        this.GesVmCreateSeries(instruction.DestinationRegister, (GesBytecodeSeriesKind)instruction.TypeOperand);
+                        ExecuteCreateSeries(instruction.DestinationRegister, (GesBytecodeSeriesKind)instruction.TypeOperand);
                         break;
                     case CallExternal:
-                        this.GesVmCallExternal(instruction.DestinationRegister, instruction.BindId, instruction.ListIndex, context, instruction.HasInstructionFlag(GesInstructionFlag.NormalizeResultAsPredicate));
+                        ExecuteCallExternal(instruction.DestinationRegister, instruction.BindId, instruction.ListIndex, context, instruction.HasInstructionFlag(GesInstructionFlag.NormalizeResultAsPredicate));
                         break;
 
                     case GesBytecodeOpCode.ReturnVoid:
@@ -91,34 +90,34 @@ internal partial class GesVirtualMachine
                     case EmitAfter:
                     case PublishInstant:
                     case PublishAfter:
-                        SetBoolean(instruction.DestinationRegister, this.Send(instruction, context));
+                        SetBoolean(instruction.DestinationRegister, Send(instruction, context));
                         break;
                     case EmitMessage:
-                        this.GesVmPublishMessage(instruction.MessageDestination, Program.UInt16IndexLists.Resolve(instruction.ListIndex), false, context);
+                        EmitOrPublishMessage(instruction.MessageDestination, Program.UInt16IndexLists.Resolve(instruction.ListIndex), false, context);
                         break;
                     case EmitMessageWithTags:
-                        this.GesVmPublishMessageWithTags(instruction.MessageDestination, Program.UInt16IndexLists.Resolve(instruction.ListIndex),
+                        EmitOrPublishMessageWithTags(instruction.MessageDestination, Program.UInt16IndexLists.Resolve(instruction.ListIndex),
                             Program.UInt16IndexLists.Resolve(instruction.SecondaryListIndex), false, context);
                         break;
                     case EmitMessageValue:
-                        this.GesVmPublishMessageValue(in Register(instruction.XRegister), false, context);
+                        EmitOrPublishMessageValue(in Register(instruction.XRegister), false, context);
                         break;
                     case EmitMessageValueWithTags:
-                        this.GesVmPublishMessageValueWithTags(in Register(instruction.XRegister), Program.UInt16IndexLists.Resolve(instruction.ListIndex), false, context);
+                        EmitOrPublishMessageValueWithTags(in Register(instruction.XRegister), Program.UInt16IndexLists.Resolve(instruction.ListIndex), false, context);
                         break;
 
                     case PublishMessage:
-                        this.GesVmPublishMessage(instruction.MessageDestination, Program.UInt16IndexLists.Resolve(instruction.ListIndex), true, context);
+                        EmitOrPublishMessage(instruction.MessageDestination, Program.UInt16IndexLists.Resolve(instruction.ListIndex), true, context);
                         break;
                     case PublishMessageWithTags:
-                        this.GesVmPublishMessageWithTags(instruction.MessageDestination, Program.UInt16IndexLists.Resolve(instruction.ListIndex),
+                        EmitOrPublishMessageWithTags(instruction.MessageDestination, Program.UInt16IndexLists.Resolve(instruction.ListIndex),
                             Program.UInt16IndexLists.Resolve(instruction.SecondaryListIndex), true, context);
                         break;
                     case PublishMessageValue:
-                        this.GesVmPublishMessageValue(in Register(instruction.XRegister), true, context);
+                        EmitOrPublishMessageValue(in Register(instruction.XRegister), true, context);
                         break;
                     case PublishMessageValueWithTags:
-                        this.GesVmPublishMessageValueWithTags(in Register(instruction.XRegister), Program.UInt16IndexLists.Resolve(instruction.ListIndex), true, context);
+                        EmitOrPublishMessageValueWithTags(in Register(instruction.XRegister), Program.UInt16IndexLists.Resolve(instruction.ListIndex), true, context);
                         break;
 
                     case ConstructData:
@@ -149,52 +148,52 @@ internal partial class GesVirtualMachine
                         break;
                     }
                     case Cast:
-                        this.GesVmCast(instruction.DestinationRegister, Register(instruction.XRegister), instruction.TypeKind, context);
+                        ExecuteCast(instruction.DestinationRegister, Register(instruction.XRegister), instruction.TypeKind, context);
                         break;
                     case CastCustom:
-                        this.GesVmCastCustom(instruction.DestinationRegister, Register(instruction.XRegister), instruction.SecondaryStringIndex);
+                        ExecuteCastCustom(instruction.DestinationRegister, Register(instruction.XRegister), instruction.SecondaryStringIndex);
                         break;
                     case CastUnit:
-                        this.GesVmCastUnit(instruction.DestinationRegister, Register(instruction.XRegister), instruction.Unit);
+                        ExecuteCastUnit(instruction.DestinationRegister, Register(instruction.XRegister), instruction.Unit);
                         break;
                     case CastNumeric:
-                        this.GesVmCastNumeric(instruction.DestinationRegister, Register(instruction.XRegister));
+                        ExecuteCastNumeric(instruction.DestinationRegister, Register(instruction.XRegister));
                         break;
 
                     case CheckType:
-                        this.GesVmCheckType(instruction.DestinationRegister, Register(instruction.XRegister), instruction.TypeKind);
+                        ExecuteCheckType(instruction.DestinationRegister, Register(instruction.XRegister), instruction.TypeKind);
                         break;
                     case CheckCustomType:
-                        this.GesVmCheckCustomType(instruction.DestinationRegister, Register(instruction.XRegister), instruction.SecondaryStringIndex);
+                        ExecuteCheckCustomType(instruction.DestinationRegister, Register(instruction.XRegister), instruction.SecondaryStringIndex);
                         break;
                     case CheckUnit:
-                        this.GesVmCheckUnit(instruction.DestinationRegister, Register(instruction.XRegister), instruction.Unit);
+                        ExecuteCheckUnit(instruction.DestinationRegister, Register(instruction.XRegister), instruction.Unit);
                         break;
                     case CheckNumeric:
-                        this.GesVmCheckNumeric(instruction.DestinationRegister, Register(instruction.XRegister));
+                        ExecuteCheckNumeric(instruction.DestinationRegister, Register(instruction.XRegister));
                         break;
                     case CheckInteger:
-                        this.GesVmCheckInteger(instruction.DestinationRegister, Register(instruction.XRegister));
+                        ExecuteCheckInteger(instruction.DestinationRegister, Register(instruction.XRegister));
                         break;
                     case CheckFractional:
-                        this.GesVmCheckFractional(instruction.DestinationRegister, Register(instruction.XRegister));
+                        ExecuteCheckFractional(instruction.DestinationRegister, Register(instruction.XRegister));
                         break;
 
                     case Move:
-                        if ((instruction.UnitAndFlags & 0x40) != 0) MoveNumeric(instruction.DestinationRegister, instruction.XRegister);
+                        if ((instruction.UnitAndFlags & 0x40) != 0) ExecuteMoveNumeric(instruction.DestinationRegister, instruction.XRegister);
                         else SetValue(instruction.DestinationRegister, in Register(instruction.XRegister));
                         break;
                     case MemberAccess:
-                        this.GesVmMemberAccess(instruction.DestinationRegister, FetchStringByPointer(instruction.StringIndex), Register(instruction.YRegister));
+                        ExecuteMemberAccess(instruction.DestinationRegister, FetchStringByPointer(instruction.StringIndex), Register(instruction.YRegister));
                         break;
                     case IndexAccess:
-                        this.GesVmIndexAccess(instruction.DestinationRegister, instruction.Index, Register(instruction.YRegister));
+                        ExecuteIndexAccess(instruction.DestinationRegister, instruction.Index, Register(instruction.YRegister));
                         break;
                     case PropertyAccess:
-                        this.GesVmPropertyAccess(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister));
+                        ExecutePropertyAccess(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister));
                         break;
                     case BindHandler:
-                        this.BindHandler(instruction.DestinationRegister, Register(instruction.XRegister), Program.UInt16IndexLists.Resolve(instruction.ListIndex));
+                        ExecuteBindHandler(instruction.DestinationRegister, Register(instruction.XRegister), Program.UInt16IndexLists.Resolve(instruction.ListIndex));
                         break;
 
                     case LoadNothing:
@@ -222,10 +221,10 @@ internal partial class GesVirtualMachine
                         SetTagPointer(instruction.DestinationRegister, instruction.StringIndex);
                         break;
                     case LoadHandler:
-                        this.CreateMessageSignature(instruction.DestinationRegister, Program.UInt16IndexLists.Resolve(instruction.ListIndex));
+                        ExecuteLoadHandler(instruction.DestinationRegister, Program.UInt16IndexLists.Resolve(instruction.ListIndex));
                         break;
                     case LoadMessage:
-                        this.CreateMessage(instruction.DestinationRegister, Program.UInt16IndexLists.Resolve(instruction.SecondaryListIndex), Program.UInt16IndexLists.Resolve(instruction.ListIndex));
+                        ExecuteLoadMessage(instruction.DestinationRegister, Program.UInt16IndexLists.Resolve(instruction.SecondaryListIndex), Program.UInt16IndexLists.Resolve(instruction.ListIndex));
                         break;
 
                     case GesBytecodeOpCode.StageRegister:
@@ -257,35 +256,35 @@ internal partial class GesVirtualMachine
                         break;
 
                     case CreateDice:
-                        this.GesVmCreateDice(instruction.DestinationRegister, instruction.Count, instruction.ImmediateY, context);
+                        ExecuteCreateDice(instruction.DestinationRegister, instruction.Count, instruction.ImmediateY, context);
                         break;
                     case CreateVector:
-                        this.GesVmCreateVector(instruction.DestinationRegister, instruction.ImmediateX);
+                        ExecuteCreateVector(instruction.DestinationRegister, instruction.ImmediateX);
                         ClearStage();
                         break;
                     case CreatePoint:
-                        this.GesVmCreatePoint(instruction.DestinationRegister, instruction.ImmediateX);
+                        ExecuteCreatePoint(instruction.DestinationRegister, instruction.ImmediateX);
                         ClearStage();
                         break;
                     case CreateList:
-                        this.GesVmCreateList(instruction.DestinationRegister);
+                        ExecuteCreateList(instruction.DestinationRegister);
                         ClearStage();
                         break;
                     case CreateMap:
-                        this.GesVmCreateMap(instruction.DestinationRegister, instruction.SecondaryListIndex);
+                        ExecuteCreateMap(instruction.DestinationRegister, instruction.SecondaryListIndex);
                         ClearStage();
                         break;
                     case CreateRange:
-                        this.GesVmCreateRange(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister));
+                        ExecuteCreateRange(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister));
                         break;
                     case CreateRangeWithStep:
-                        this.GesVmCreateRange(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister), Register(instruction.AU));
+                        ExecuteCreateRangeWithStep(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister), Register(instruction.AU));
                         break;
                     case CreateRangeIterator:
-                        this.GesVmCreateRangeIterator(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister), context);
+                        ExecuteCreateRangeIterator(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister), context);
                         break;
                     case CreateRangeIteratorWithStep:
-                        this.GesVmCreateRangeIterator(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister), Register(instruction.AU), context);
+                        ExecuteCreateRangeIteratorWithStep(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister), Register(instruction.AU), context);
                         break;
                     case CreateRangeIteratorShort:
                         if (!context.RuntimeBudget.CheckRangeLengthWithinLimit(GesRangeMath.GetLength(instruction.ImmediateX, instruction.ImmediateY, instruction.AS), "For loop range would enumerate more range items than allowed."))
@@ -300,10 +299,10 @@ internal partial class GesVirtualMachine
                         CallRecordConstructor(instruction.BindId, instruction.DestinationRegister);
                         break;
                     case CreateRecordValue:
-                        this.GesVmCreateRecordValue(instruction.DestinationRegister, Register(instruction.XRegister), instruction.SecondaryStringIndex);
+                        ExecuteCreateRecordValue(instruction.DestinationRegister, Register(instruction.XRegister), instruction.SecondaryStringIndex);
                         break;
                     case CreateExternalType:
-                        this.GesVmCreateExternalType(instruction.DestinationRegister, instruction.BindId, instruction.ListIndex);
+                        ExecuteCreateExternalType(instruction.DestinationRegister, instruction.BindId, instruction.ListIndex);
                         ClearStage();
                         break;
 
@@ -331,102 +330,102 @@ internal partial class GesVirtualMachine
                     #region Group 2 - boolean algebra, comparison, math and random
 
                     case Or:
-                        this.GesVmOr(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister));
+                        ExecuteOr(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister));
                         break;
                     case And:
-                        this.GesVmAnd(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister));
+                        ExecuteAnd(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister));
                         break;
                     case Xor:
-                        this.GesVmXor(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister));
+                        ExecuteXor(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister));
                         break;
                     case Implies:
-                        this.GesVmImplies(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister));
+                        ExecuteImplies(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister));
                         break;
                     case Not:
-                        this.GesVmNot(instruction.DestinationRegister, Register(instruction.XRegister));
+                        ExecuteNot(instruction.DestinationRegister, Register(instruction.XRegister));
                         break;
                     case Equal:
-                        this.GesVmEqual(instruction.DestinationRegister, in Register(instruction.XRegister), in Register(instruction.YRegister));
+                        ExecuteEqual(instruction.DestinationRegister, in Register(instruction.XRegister), in Register(instruction.YRegister));
                         break;
                     case NotEqual:
-                        this.GesVmNotEqual(instruction.DestinationRegister, in Register(instruction.XRegister), in Register(instruction.YRegister));
+                        ExecuteNotEqual(instruction.DestinationRegister, in Register(instruction.XRegister), in Register(instruction.YRegister));
                         break;
                     case Less:
-                        this.GesVmLess(instruction.DestinationRegister, in Register(instruction.XRegister), in Register(instruction.YRegister));
+                        ExecuteLess(instruction.DestinationRegister, in Register(instruction.XRegister), in Register(instruction.YRegister));
                         break;
                     case Greater:
-                        this.GesVmGreater(instruction.DestinationRegister, in Register(instruction.XRegister), in Register(instruction.YRegister));
+                        ExecuteGreater(instruction.DestinationRegister, in Register(instruction.XRegister), in Register(instruction.YRegister));
                         break;
                     case LessOrEqual:
-                        this.GesVmLessOrEqual(instruction.DestinationRegister, in Register(instruction.XRegister), in Register(instruction.YRegister));
+                        ExecuteLessOrEqual(instruction.DestinationRegister, in Register(instruction.XRegister), in Register(instruction.YRegister));
                         break;
                     case GreaterOrEqual:
-                        this.GesVmGreaterOrEqual(instruction.DestinationRegister, in Register(instruction.XRegister), in Register(instruction.YRegister));
+                        ExecuteGreaterOrEqual(instruction.DestinationRegister, in Register(instruction.XRegister), in Register(instruction.YRegister));
                         break;
                     case Add:
                         if ((instruction.UnitAndFlags & 0x40) != 0)
-                            AddNumeric(instruction.DestinationRegister, instruction.XRegister, instruction.YRegister);
-                        else this.AddRegisters(instruction.DestinationRegister, instruction.XRegister, instruction.YRegister);
+                            ExecuteAddNumeric(instruction.DestinationRegister, instruction.XRegister, instruction.YRegister);
+                        else ExecuteAdd(instruction.DestinationRegister, instruction.XRegister, instruction.YRegister);
                         break;
                     case Subtract:
-                        if ((instruction.UnitAndFlags & 0x40) != 0) SubtractNumeric(instruction.DestinationRegister, instruction.XRegister, instruction.YRegister);
-                        else this.GesVmSubtract(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister));
+                        if ((instruction.UnitAndFlags & 0x40) != 0) ExecuteSubtractNumeric(instruction.DestinationRegister, instruction.XRegister, instruction.YRegister);
+                        else ExecuteSubtract(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister));
                         break;
                     case Multiply:
-                        if ((instruction.UnitAndFlags & 0x40) != 0) MultiplyNumeric(instruction.DestinationRegister, instruction.XRegister, instruction.YRegister);
-                        else this.MultiplyRegisters(instruction.DestinationRegister, instruction.XRegister, instruction.YRegister);
+                        if ((instruction.UnitAndFlags & 0x40) != 0) ExecuteMultiplyNumeric(instruction.DestinationRegister, instruction.XRegister, instruction.YRegister);
+                        else ExecuteMultiply(instruction.DestinationRegister, instruction.XRegister, instruction.YRegister);
                         break;
                     case Divide:
-                        if ((instruction.UnitAndFlags & 0x40) != 0) DivideNumeric(instruction.DestinationRegister, instruction.XRegister, instruction.YRegister);
-                        else this.GesVmDivide(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister));
+                        if ((instruction.UnitAndFlags & 0x40) != 0) ExecuteDivideNumeric(instruction.DestinationRegister, instruction.XRegister, instruction.YRegister);
+                        else ExecuteDivide(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister));
                         break;
                     case Power:
-                        if ((instruction.UnitAndFlags & 0x40) != 0) PowerNumeric(instruction.DestinationRegister, instruction.XRegister, instruction.YRegister);
-                        else this.GesVmPower(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister));
+                        if ((instruction.UnitAndFlags & 0x40) != 0) ExecutePowerNumeric(instruction.DestinationRegister, instruction.XRegister, instruction.YRegister);
+                        else ExecutePower(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister));
                         break;
                     case IntegerDivide:
-                        if ((instruction.UnitAndFlags & 0x40) != 0) FloorDivideNumeric(instruction.DestinationRegister, instruction.XRegister, instruction.YRegister);
-                        else this.GesVmFloorDivide(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister));
+                        if ((instruction.UnitAndFlags & 0x40) != 0) ExecuteIntegerDivideNumeric(instruction.DestinationRegister, instruction.XRegister, instruction.YRegister);
+                        else ExecuteIntegerDivide(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister));
                         break;
                     case Modulo:
-                        if ((instruction.UnitAndFlags & 0x40) != 0) ModuloNumeric(instruction.DestinationRegister, instruction.XRegister, instruction.YRegister);
-                        else this.ModuloRegisters(instruction.DestinationRegister, instruction.XRegister, instruction.YRegister);
+                        if ((instruction.UnitAndFlags & 0x40) != 0) ExecuteModuloNumeric(instruction.DestinationRegister, instruction.XRegister, instruction.YRegister);
+                        else ExecuteModulo(instruction.DestinationRegister, instruction.XRegister, instruction.YRegister);
                         break;
                     case Remainder:
-                        if ((instruction.UnitAndFlags & 0x40) != 0) RemainderNumeric(instruction.DestinationRegister, instruction.XRegister, instruction.YRegister);
-                        else this.GesVmRemainder(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister));
+                        if ((instruction.UnitAndFlags & 0x40) != 0) ExecuteRemainderNumeric(instruction.DestinationRegister, instruction.XRegister, instruction.YRegister);
+                        else ExecuteRemainder(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister));
                         break;
                     case Min:
-                        if ((instruction.UnitAndFlags & 0x40) != 0) MinNumeric(instruction.DestinationRegister, instruction.XRegister, instruction.YRegister);
-                        else this.GesVmMin(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister));
+                        if ((instruction.UnitAndFlags & 0x40) != 0) ExecuteMinNumeric(instruction.DestinationRegister, instruction.XRegister, instruction.YRegister);
+                        else ExecuteMin(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister));
                         break;
                     case Max:
-                        if ((instruction.UnitAndFlags & 0x40) != 0) MaxNumeric(instruction.DestinationRegister, instruction.XRegister, instruction.YRegister);
-                        else this.GesVmMax(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister));
+                        if ((instruction.UnitAndFlags & 0x40) != 0) ExecuteMaxNumeric(instruction.DestinationRegister, instruction.XRegister, instruction.YRegister);
+                        else ExecuteMax(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister));
                         break;
                     case Negate:
-                        if ((instruction.UnitAndFlags & 0x40) != 0) NegateNumeric(instruction.DestinationRegister, instruction.XRegister);
-                        else this.GesVmNegate(instruction.DestinationRegister, Register(instruction.XRegister));
+                        if ((instruction.UnitAndFlags & 0x40) != 0) ExecuteNegateNumeric(instruction.DestinationRegister, instruction.XRegister);
+                        else ExecuteNegate(instruction.DestinationRegister, Register(instruction.XRegister));
                         break;
                     case Abs:
-                        if ((instruction.UnitAndFlags & 0x40) != 0) AbsNumeric(instruction.DestinationRegister, instruction.XRegister);
-                        else this.GesVmAbs(instruction.DestinationRegister, Register(instruction.XRegister));
+                        if ((instruction.UnitAndFlags & 0x40) != 0) ExecuteAbsNumeric(instruction.DestinationRegister, instruction.XRegister);
+                        else ExecuteAbs(instruction.DestinationRegister, Register(instruction.XRegister));
                         break;
                     case LogN:
-                        this.GesVmNaturalLog(instruction.DestinationRegister, Register(instruction.XRegister));
+                        ExecuteLogN(instruction.DestinationRegister, Register(instruction.XRegister));
                         break;
                     case Chance:
-                        this.GesVmChance(instruction.DestinationRegister, Register(instruction.XRegister));
+                        ExecuteChance(instruction.DestinationRegister, Register(instruction.XRegister));
                         break;
                     case Clamp:
-                        if ((instruction.UnitAndFlags & 0x40) != 0) ClampNumeric(instruction.DestinationRegister, instruction.XRegister, instruction.YRegister, instruction.AU);
-                        else this.GesVmClamp(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister), Register(instruction.AU));
+                        if ((instruction.UnitAndFlags & 0x40) != 0) ExecuteClampNumeric(instruction.DestinationRegister, instruction.XRegister, instruction.YRegister, instruction.AU);
+                        else ExecuteClamp(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister), Register(instruction.AU));
                         break;
                     case RandomTake:
-                        this.GesVmRandom(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister), RandomGenerator);
+                        ExecuteRandomTake(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister), RandomGenerator);
                         break;
                     case RandomTakeFloat:
-                        this.GesVmRandomFloat(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister), RandomGenerator);
+                        ExecuteRandomTakeFloat(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister), RandomGenerator);
                         break;
                     case RandomPush:
                         var seed = Register(instruction.XRegister);
@@ -443,131 +442,131 @@ internal partial class GesVirtualMachine
                             RaiseError(GesDiagnosticCodes.RuntimeRandomStackUnderflow, "Random scope pop crossed the active handler boundary.");
                         break;
                     case Term:
-                        this.GesVmTerm(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister));
+                        ExecuteTerm(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister));
                         break;
                     case Exp:
-                        this.GesVmExp(instruction.DestinationRegister, Register(instruction.XRegister));
+                        ExecuteExp(instruction.DestinationRegister, Register(instruction.XRegister));
                         break;
                     case Floor:
-                        this.GesVmFloor(instruction.DestinationRegister, Register(instruction.XRegister));
+                        ExecuteFloor(instruction.DestinationRegister, Register(instruction.XRegister));
                         break;
                     case Ceil:
-                        this.GesVmCeil(instruction.DestinationRegister, Register(instruction.XRegister));
+                        ExecuteCeil(instruction.DestinationRegister, Register(instruction.XRegister));
                         break;
                     case Truncate:
-                        this.GesVmTruncate(instruction.DestinationRegister, Register(instruction.XRegister));
+                        ExecuteTruncate(instruction.DestinationRegister, Register(instruction.XRegister));
                         break;
                     case RoundHalfEven:
-                        this.GesVmRoundHalfEven(instruction.DestinationRegister, Register(instruction.XRegister));
+                        ExecuteRoundHalfEven(instruction.DestinationRegister, Register(instruction.XRegister));
                         break;
                     case RoundHalfUp:
-                        this.GesVmRoundHalfUp(instruction.DestinationRegister, Register(instruction.XRegister));
+                        ExecuteRoundHalfUp(instruction.DestinationRegister, Register(instruction.XRegister));
                         break;
                     case RoundHalfDown:
-                        this.GesVmRoundHalfDown(instruction.DestinationRegister, Register(instruction.XRegister));
+                        ExecuteRoundHalfDown(instruction.DestinationRegister, Register(instruction.XRegister));
                         break;
                     case DegreeToRadians:
-                        this.GesVmDegreeToRadians(instruction.DestinationRegister, Register(instruction.XRegister));
+                        ExecuteDegreeToRadians(instruction.DestinationRegister, Register(instruction.XRegister));
                         break;
                     case DegreeFromRadians:
-                        this.GesVmDegreeFromRadians(instruction.DestinationRegister, Register(instruction.XRegister));
+                        ExecuteDegreeFromRadians(instruction.DestinationRegister, Register(instruction.XRegister));
                         break;
                     case WrapDegree:
-                        this.GesVmWrapDegree(instruction.DestinationRegister, Register(instruction.XRegister));
+                        ExecuteWrapDegree(instruction.DestinationRegister, Register(instruction.XRegister));
                         break;
                     case Sin:
-                        this.GesVmSin(instruction.DestinationRegister, Register(instruction.XRegister));
+                        ExecuteSin(instruction.DestinationRegister, Register(instruction.XRegister));
                         break;
                     case Cos:
-                        this.GesVmCos(instruction.DestinationRegister, Register(instruction.XRegister));
+                        ExecuteCos(instruction.DestinationRegister, Register(instruction.XRegister));
                         break;
                     case Tan:
-                        this.GesVmTan(instruction.DestinationRegister, Register(instruction.XRegister));
+                        ExecuteTan(instruction.DestinationRegister, Register(instruction.XRegister));
                         break;
                     case Asin:
-                        this.GesVmAsin(instruction.DestinationRegister, Register(instruction.XRegister));
+                        ExecuteAsin(instruction.DestinationRegister, Register(instruction.XRegister));
                         break;
                     case Acos:
-                        this.GesVmAcos(instruction.DestinationRegister, Register(instruction.XRegister));
+                        ExecuteAcos(instruction.DestinationRegister, Register(instruction.XRegister));
                         break;
                     case Atan:
-                        this.GesVmAtan(instruction.DestinationRegister, Register(instruction.XRegister));
+                        ExecuteAtan(instruction.DestinationRegister, Register(instruction.XRegister));
                         break;
                     case Atan2:
-                        this.GesVmAtan2(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister));
+                        ExecuteAtan2(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister));
                         break;
                     case Hypot2D:
-                        this.GesVmHypot2D(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister));
+                        ExecuteHypot2D(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister));
                         break;
                     case Hypot3D:
-                        this.GesVmHypot3D(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister), Register(instruction.AU));
+                        ExecuteHypot3D(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister), Register(instruction.AU));
                         break;
                     case Distance:
-                        this.GesVmDistance(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister));
+                        ExecuteDistance(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister));
                         break;
                     case Distance2D:
-                        this.GesVmDistance2D(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister), Register(instruction.AU), Register(instruction.BU));
+                        ExecuteDistance2D(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister), Register(instruction.AU), Register(instruction.BU));
                         break;
                     case Distance3D:
-                        this.GesVmDistance3D(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister), Register(instruction.AU), Register(instruction.BU),
+                        ExecuteDistance3D(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister), Register(instruction.AU), Register(instruction.BU),
                             Register(instruction.CU), Register(instruction.DU));
                         break;
                     case DistanceSquared:
-                        this.GesVmDistanceSquared(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister));
+                        ExecuteDistanceSquared(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister));
                         break;
                     case DistanceSquared2D:
-                        this.GesVmDistanceSquared2D(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister), Register(instruction.AU), Register(instruction.BU));
+                        ExecuteDistanceSquared2D(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister), Register(instruction.AU), Register(instruction.BU));
                         break;
                     case DistanceSquared3D:
-                        this.GesVmDistanceSquared3D(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister), Register(instruction.AU), Register(instruction.BU),
+                        ExecuteDistanceSquared3D(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister), Register(instruction.AU), Register(instruction.BU),
                             Register(instruction.CU), Register(instruction.DU));
                         break;
                     case LengthSquared:
-                        this.GesVmLengthSquared(instruction.DestinationRegister, Register(instruction.XRegister));
+                        ExecuteLengthSquared(instruction.DestinationRegister, Register(instruction.XRegister));
                         break;
                     case LengthSquared2D:
-                        this.GesVmLengthSquared2D(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister));
+                        ExecuteLengthSquared2D(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister));
                         break;
                     case LengthSquared3D:
-                        this.GesVmLengthSquared3D(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister), Register(instruction.AU));
+                        ExecuteLengthSquared3D(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister), Register(instruction.AU));
                         break;
                     case Normalize:
-                        this.GesVmNormalize(instruction.DestinationRegister, Register(instruction.XRegister));
+                        ExecuteNormalize(instruction.DestinationRegister, Register(instruction.XRegister));
                         break;
                     case Normalize2D:
-                        this.GesVmNormalize2D(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister));
+                        ExecuteNormalize2D(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister));
                         break;
                     case Normalize3D:
-                        this.GesVmNormalize3D(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister), Register(instruction.AU));
+                        ExecuteNormalize3D(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister), Register(instruction.AU));
                         break;
                     case Dot:
-                        this.GesVmDot(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister));
+                        ExecuteDot(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister));
                         break;
                     case Dot2D:
-                        this.GesVmDot2D(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister), Register(instruction.AU), Register(instruction.BU));
+                        ExecuteDot2D(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister), Register(instruction.AU), Register(instruction.BU));
                         break;
                     case Dot3D:
-                        this.GesVmDot3D(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister), Register(instruction.AU), Register(instruction.BU),
+                        ExecuteDot3D(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister), Register(instruction.AU), Register(instruction.BU),
                             Register(instruction.CU), Register(instruction.DU));
                         break;
                     case Cross:
-                        this.GesVmCross(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister));
+                        ExecuteCross(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister));
                         break;
                     case Cross2D:
-                        this.GesVmCross2D(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister), Register(instruction.AU), Register(instruction.BU));
+                        ExecuteCross2D(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister), Register(instruction.AU), Register(instruction.BU));
                         break;
                     case Cross3D:
-                        this.GesVmCross3D(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister), Register(instruction.AU), Register(instruction.BU),
+                        ExecuteCross3D(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister), Register(instruction.AU), Register(instruction.BU),
                             Register(instruction.CU), Register(instruction.DU));
                         break;
                     case AngleBetween:
-                        this.GesVmAngleBetween(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister));
+                        ExecuteAngleBetween(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister));
                         break;
                     case AngleBetween2D:
-                        this.GesVmAngleBetween2D(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister), Register(instruction.AU), Register(instruction.BU));
+                        ExecuteAngleBetween2D(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister), Register(instruction.AU), Register(instruction.BU));
                         break;
                     case AngleBetween3D:
-                        this.GesVmAngleBetween3D(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister), Register(instruction.AU), Register(instruction.BU),
+                        ExecuteAngleBetween3D(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister), Register(instruction.AU), Register(instruction.BU),
                             Register(instruction.CU), Register(instruction.DU));
                         break;
 
@@ -576,102 +575,102 @@ internal partial class GesVirtualMachine
                     #region Group 3 - text, collection, iterators
 
                     case TakeFirst:
-                        this.GesVmTakeFirst(instruction.DestinationRegister, Register(instruction.XRegister), instruction.ImmediateY);
+                        ExecuteTakeFirst(instruction.DestinationRegister, Register(instruction.XRegister), instruction.ImmediateY);
                         break;
                     case DropFirst:
-                        this.GesVmDropFirst(instruction.DestinationRegister, Register(instruction.XRegister), instruction.ImmediateY);
+                        ExecuteDropFirst(instruction.DestinationRegister, Register(instruction.XRegister), instruction.ImmediateY);
                         break;
                     case TakeLast:
-                        this.GesVmTakeLast(instruction.DestinationRegister, Register(instruction.XRegister), instruction.ImmediateY);
+                        ExecuteTakeLast(instruction.DestinationRegister, Register(instruction.XRegister), instruction.ImmediateY);
                         break;
                     case DropLast:
-                        this.GesVmDropLast(instruction.DestinationRegister, Register(instruction.XRegister), instruction.ImmediateY);
+                        ExecuteDropLast(instruction.DestinationRegister, Register(instruction.XRegister), instruction.ImmediateY);
                         break;
                     case TakeHighest:
-                        this.GesVmTakeHighest(instruction.DestinationRegister, Register(instruction.XRegister), instruction.ImmediateY);
+                        ExecuteTakeHighest(instruction.DestinationRegister, Register(instruction.XRegister), instruction.ImmediateY);
                         break;
                     case TakeLowest:
-                        this.GesVmTakeLowest(instruction.DestinationRegister, Register(instruction.XRegister), instruction.ImmediateY);
+                        ExecuteTakeLowest(instruction.DestinationRegister, Register(instruction.XRegister), instruction.ImmediateY);
                         break;
                     case DropHighest:
-                        this.GesVmDropHighest(instruction.DestinationRegister, Register(instruction.XRegister), instruction.ImmediateY);
+                        ExecuteDropHighest(instruction.DestinationRegister, Register(instruction.XRegister), instruction.ImmediateY);
                         break;
                     case DropLowest:
-                        this.GesVmDropLowest(instruction.DestinationRegister, Register(instruction.XRegister), instruction.ImmediateY);
+                        ExecuteDropLowest(instruction.DestinationRegister, Register(instruction.XRegister), instruction.ImmediateY);
                         break;
                     case OneRandom:
-                        this.GesVmOneRandom(instruction.DestinationRegister, Register(instruction.XRegister), RandomGenerator);
+                        ExecuteOneRandom(instruction.DestinationRegister, Register(instruction.XRegister), RandomGenerator);
                         break;
                     case TakeRandom:
-                        this.GesVmTakeRandom(instruction.DestinationRegister, Register(instruction.XRegister), instruction.ImmediateY, RandomGenerator);
+                        ExecuteTakeRandom(instruction.DestinationRegister, Register(instruction.XRegister), instruction.ImmediateY, RandomGenerator);
                         break;
                     case OneWeighted:
-                        this.GesVmOneWeighted(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister), RandomGenerator);
+                        ExecuteOneWeighted(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister), RandomGenerator);
                         break;
                     case TakeWeighted:
-                        this.GesVmTakeWeighted(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.AU), instruction.ImmediateY, RandomGenerator);
+                        ExecuteTakeWeighted(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.AU), instruction.ImmediateY, RandomGenerator);
                         break;
                     case Count:
-                        this.GesVmCount(instruction.DestinationRegister, Register(instruction.XRegister));
+                        ExecuteCount(instruction.DestinationRegister, Register(instruction.XRegister));
                         break;
                     case StartsWith:
-                        this.GesVmStartsWith(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister));
+                        ExecuteStartsWith(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister));
                         break;
                     case EndsWith:
-                        this.GesVmEndsWith(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister));
+                        ExecuteEndsWith(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister));
                         break;
                     case Contains:
-                        this.GesVmContains(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister));
+                        ExecuteContains(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister));
                         break;
                     case ContainsAny:
-                        this.GesVmContainsAnyAll(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister), requireAll: false);
+                        ExecuteContainsAny(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister));
                         break;
                     case ContainsAll:
-                        this.GesVmContainsAnyAll(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister), requireAll: true);
+                        ExecuteContainsAll(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister));
                         break;
                     case ContainsValue:
-                        this.GesVmContainsValue(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister));
+                        ExecuteContainsValue(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister));
                         break;
                     case Union:
-                        this.GesVmUnion(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister));
+                        ExecuteUnion(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister));
                         break;
                     case Intersect:
-                        this.GesVmIntersect(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister));
+                        ExecuteIntersect(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister));
                         break;
                     case Zip:
-                        this.GesVmZip(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister));
+                        ExecuteZip(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister));
                         break;
                     case KeysOfMap:
-                        this.GesVmKeys(instruction.DestinationRegister, Register(instruction.XRegister));
+                        ExecuteKeysOfMap(instruction.DestinationRegister, Register(instruction.XRegister));
                         break;
                     case ValuesOfMap:
-                        this.GesVmValues(instruction.DestinationRegister, Register(instruction.XRegister));
+                        ExecuteValuesOfMap(instruction.DestinationRegister, Register(instruction.XRegister));
                         break;
                     case EntriesOfMap:
-                        this.GesVmEntries(instruction.DestinationRegister, Register(instruction.XRegister));
+                        ExecuteEntriesOfMap(instruction.DestinationRegister, Register(instruction.XRegister));
                         break;
                     case GesBytecodeOpCode.First:
-                        this.GesVmFirst(instruction.DestinationRegister, Register(instruction.XRegister));
+                        ExecuteFirst(instruction.DestinationRegister, Register(instruction.XRegister));
                         break;
                     case GesBytecodeOpCode.Last:
-                        this.GesVmLast(instruction.DestinationRegister, Register(instruction.XRegister));
+                        ExecuteLast(instruction.DestinationRegister, Register(instruction.XRegister));
                         break;
                     case GesBytecodeOpCode.Single:
-                        this.GesVmSingle(instruction.DestinationRegister, Register(instruction.XRegister));
+                        ExecuteSingle(instruction.DestinationRegister, Register(instruction.XRegister));
                         break;
                     case Cartesian:
-                        this.GesVmCartesian(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister), context.RuntimeBudget);
+                        ExecuteCartesian(instruction.DestinationRegister, Register(instruction.XRegister), Register(instruction.YRegister), context.RuntimeBudget);
                         break;
                     case IteratorCreate:
-                        this.GesVmIteratorCreate(instruction, context.RuntimeBudget);
+                        ExecuteIteratorCreate(instruction, context.RuntimeBudget);
                         break;
                     case IteratorCreateOrJump:
-                        this.GesVmIteratorCreate(instruction, context.RuntimeBudget);
+                        ExecuteIteratorCreate(instruction, context.RuntimeBudget);
                         if (IsRegisterNothing(instruction.DestinationRegister)) JumpAddress(instruction.TargetAddress);
                         break;
                     case IteratorNext:
                     {
-                        if (instruction.UnitAndFlags != 0 ? this.GesVmIteratorNextComponents(instruction) : this.GesVmIteratorNext(instruction.DestinationRegister, Register(instruction.XRegister), instruction.TargetAddress))
+                        if (instruction.UnitAndFlags != 0 ? ExecuteIteratorNextComponents(instruction) : ExecuteIteratorNext(instruction.DestinationRegister, Register(instruction.XRegister), instruction.TargetAddress))
                         {
                             context.RuntimeBudget.ConsumeLoopIterationIfAvailable("For loop iteration exceeds the configured limit.");
                         }
@@ -679,82 +678,82 @@ internal partial class GesVirtualMachine
                         break;
                     }
                     case IteratorClose:
-                        this.GesVmIteratorClose(instruction.XRegister);
+                        ExecuteIteratorClose(instruction.XRegister);
                         break;
                     case HasAny:
-                        this.GesVmHasAnyAll(instruction.DestinationRegister, Register(instruction.XRegister), false);
+                        ExecuteHasAny(instruction.DestinationRegister, Register(instruction.XRegister));
                         break;
                     case HasAll:
-                        this.GesVmHasAnyAll(instruction.DestinationRegister, Register(instruction.XRegister), true);
+                        ExecuteHasAll(instruction.DestinationRegister, Register(instruction.XRegister));
                         break;
                     case Distinct:
-                        this.GesVmDistinct(instruction.DestinationRegister, Register(instruction.XRegister));
+                        ExecuteDistinct(instruction.DestinationRegister, Register(instruction.XRegister));
                         break;
                     case SortAscending:
-                        this.GesVmSortAscending(instruction.DestinationRegister, Register(instruction.XRegister));
+                        ExecuteSortAscending(instruction.DestinationRegister, Register(instruction.XRegister));
                         break;
                     case SortDescending:
-                        this.GesVmSortDescending(instruction.DestinationRegister, Register(instruction.XRegister));
+                        ExecuteSortDescending(instruction.DestinationRegister, Register(instruction.XRegister));
                         break;
                     case Reverse:
-                        this.GesVmReverse(instruction.DestinationRegister, Register(instruction.XRegister));
+                        ExecuteReverse(instruction.DestinationRegister, Register(instruction.XRegister));
                         break;
                     case Shuffle:
-                        this.GesVmShuffle(instruction.DestinationRegister, Register(instruction.XRegister), RandomGenerator);
+                        ExecuteShuffle(instruction.DestinationRegister, Register(instruction.XRegister), RandomGenerator);
                         break;
                     case ListBuilderCreate:
-                        this.GesVmCreateListBuilder(instruction.DestinationRegister);
+                        ExecuteListBuilderCreate(instruction.DestinationRegister);
                         break;
                     case ListBuilderAdd:
-                        this.GesVmListBuilderAdd(Register(instruction.XRegister), in Register(instruction.YRegister), context.RuntimeBudget);
+                        ExecuteListBuilderAdd(Register(instruction.XRegister), in Register(instruction.YRegister), context.RuntimeBudget);
                         break;
                     case ListBuilderFinish:
-                        this.GesVmListBuilderFinish(instruction.DestinationRegister, in Register(instruction.XRegister));
+                        ExecuteListBuilderFinish(instruction.DestinationRegister, in Register(instruction.XRegister));
                         break;
                     case MapBuilderCreate:
-                        this.GesVmCreateMapBuilder(instruction.DestinationRegister);
+                        ExecuteMapBuilderCreate(instruction.DestinationRegister);
                         break;
                     case MapBuilderAdd:
-                        this.GesVmMapBuilderAdd(Register(instruction.XRegister), in Register(instruction.YRegister), in Register(instruction.AU), context.RuntimeBudget);
+                        ExecuteMapBuilderAdd(Register(instruction.XRegister), in Register(instruction.YRegister), in Register(instruction.AU), context.RuntimeBudget);
                         break;
                     case MapBuilderFinish:
-                        this.GesVmMapBuilderFinish(instruction.DestinationRegister, in Register(instruction.XRegister));
+                        ExecuteMapBuilderFinish(instruction.DestinationRegister, in Register(instruction.XRegister));
                         break;
                     case DistinctBuilderCreate:
-                        this.GesVmCreateDistinctBuilder(instruction.DestinationRegister);
+                        ExecuteDistinctBuilderCreate(instruction.DestinationRegister);
                         break;
                     case DistinctBuilderAdd:
-                        this.GesVmDistinctBuilderAdd(Register(instruction.XRegister), in Register(instruction.YRegister), in Register(instruction.AU), context.RuntimeBudget);
+                        ExecuteDistinctBuilderAdd(Register(instruction.XRegister), in Register(instruction.YRegister), in Register(instruction.AU), context.RuntimeBudget);
                         break;
                     case DistinctBuilderFinish:
-                        this.GesVmDistinctBuilderFinish(instruction.DestinationRegister, in Register(instruction.XRegister));
+                        ExecuteDistinctBuilderFinish(instruction.DestinationRegister, in Register(instruction.XRegister));
                         break;
                     case GroupBuilderCreate:
-                        this.GesVmCreateGroupBuilder(instruction.DestinationRegister);
+                        ExecuteGroupBuilderCreate(instruction.DestinationRegister);
                         break;
                     case GroupBuilderAdd:
-                        this.GesVmGroupBuilderAdd(Register(instruction.XRegister), in Register(instruction.YRegister), in Register(instruction.AU), context.RuntimeBudget);
+                        ExecuteGroupBuilderAdd(Register(instruction.XRegister), in Register(instruction.YRegister), in Register(instruction.AU), context.RuntimeBudget);
                         break;
                     case GroupBuilderFinish:
-                        this.GesVmGroupBuilderFinish(instruction.DestinationRegister, in Register(instruction.XRegister));
+                        ExecuteGroupBuilderFinish(instruction.DestinationRegister, in Register(instruction.XRegister));
                         break;
                     case OrderBuilderCreate:
-                        this.GesVmCreateOrderBuilder(instruction.DestinationRegister);
+                        ExecuteOrderBuilderCreate(instruction.DestinationRegister);
                         break;
                     case OrderBuilderAdd:
-                        this.GesVmOrderBuilderAdd(Register(instruction.XRegister), in Register(instruction.YRegister), in Register(instruction.AU), context.RuntimeBudget);
+                        ExecuteOrderBuilderAdd(Register(instruction.XRegister), in Register(instruction.YRegister), in Register(instruction.AU), context.RuntimeBudget);
                         break;
                     case OrderBuilderFinishAscending:
-                        this.GesVmOrderBuilderFinishAscending(instruction.DestinationRegister, in Register(instruction.XRegister));
+                        ExecuteOrderBuilderFinishAscending(instruction.DestinationRegister, in Register(instruction.XRegister));
                         break;
                     case OrderBuilderFinishDescending:
-                        this.GesVmOrderBuilderFinishDescending(instruction.DestinationRegister, in Register(instruction.XRegister));
+                        ExecuteOrderBuilderFinishDescending(instruction.DestinationRegister, in Register(instruction.XRegister));
                         break;
                     case HasPattern:
-                        this.GesVmHasPattern(instruction.DestinationRegister, Register(instruction.XRegister), (GesBytecodePatternKind)instruction.AU, instruction.ImmediateY, Register(instruction.BU));
+                        ExecuteHasPattern(instruction.DestinationRegister, Register(instruction.XRegister), (GesBytecodePatternKind)instruction.AU, instruction.ImmediateY, Register(instruction.BU));
                         break;
                     case TakePattern:
-                        this.GesVmTakePattern(instruction.DestinationRegister, Register(instruction.XRegister), (GesBytecodePatternKind)instruction.AU, instruction.ImmediateY, Register(instruction.BU));
+                        ExecuteTakePattern(instruction.DestinationRegister, Register(instruction.XRegister), (GesBytecodePatternKind)instruction.AU, instruction.ImmediateY, Register(instruction.BU));
                         break;
 
                     #endregion

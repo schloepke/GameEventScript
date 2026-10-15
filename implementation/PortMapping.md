@@ -329,12 +329,13 @@ contains exactly the measured reference sources plus the recalibrated corpus.
 
 ### Phase 4 – VM handlers
 
-- [ ] C#: convert `GesVmRegister*` classes into `private Execute<OpCode>` members
+- [x] C#: convert `GesVmRegister*` classes into `private Execute<OpCode>` members
       of `partial class GesVirtualMachine`, one file per opcode under
-      `Runtime/Vm/Opcodes/{Core,Math,Collections}`; stateless helpers under
-      `Support`. Commit per opcode group.
-- [ ] Align handler names with opcode cases (`IntegerDivide`, `LogN`,
-      `KeysOfMap`, separate `HasAny`/`HasAll`, `ContainsAny`/`ContainsAll`, …).
+      `Runtime/Vm/Opcodes/{Core,Math,Collections}`; helpers shared by several
+      handlers under `Support`. Done as one mechanical commit (A/B 0.9966).
+- [x] Align handler names with opcode cases (`IntegerDivide`, `LogN`,
+      `KeysOfMap`, separate `HasAny`/`HasAll`, `ContainsAny`/`ContainsAll`, …);
+      fast and general variants use the Swift suffixes `Numeric`/`General`.
 - [ ] Align VM setter and staging names per the internal mapping table.
 - [ ] Swift: fix handler names that do not match their opcode
       (`compoundIterator` in `IteratorCreate`), remove empty namespace files,

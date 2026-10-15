@@ -190,7 +190,7 @@ internal static class GesDataConstruction
             "handler" => Handler,
             _ => Nothing
         };
-        return GesVmRegisterTypeCastCheck.GesVmCast(first, kind, state, 0, context);
+        return GesVirtualMachine.CastValue(first, kind, state, 0, context);
     }
 
     private static void AddTags(GesValue value, List<string> tags)

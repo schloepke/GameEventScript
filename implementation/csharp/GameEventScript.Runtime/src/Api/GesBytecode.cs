@@ -4,7 +4,6 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 
@@ -390,39 +389,30 @@ public struct GesBytecodeInstruction
 
     internal GesInstructionFlag InstructionFlags => DecodeInstructionFlags(UnitAndFlags);
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal bool HasInstructionFlag(GesInstructionFlag flag)
         => HasInstructionFlag(UnitAndFlags, flag);
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal void AddInstructionFlag(GesInstructionFlag flag)
         => UnitAndFlags = WithInstructionFlag(UnitAndFlags, flag);
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static byte EncodeUnitAndFlags(GesQuantityUnit? unit, GesInstructionFlag flags = GesInstructionFlag.None)
         => EncodeUnitAndFlags(unit.ToStoredUnit(), flags);
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static byte EncodeUnitAndFlags(GesQuantityUnit unit, GesInstructionFlag flags = GesInstructionFlag.None)
         => (byte)(((byte)unit.ToStoredUnit() & UnitMask) | ((byte)flags & InstructionFlagMask));
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static GesQuantityUnit DecodeUnit(byte unitAndFlags)
         => ((GesQuantityUnit)(unitAndFlags & UnitMask)).ToStoredUnit();
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static GesInstructionFlag DecodeInstructionFlags(byte unitAndFlags)
         => (GesInstructionFlag)(unitAndFlags & InstructionFlagMask);
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static bool HasInstructionFlag(byte unitAndFlags, GesInstructionFlag flag)
         => (unitAndFlags & (byte)flag) != 0;
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static byte WithInstructionFlag(byte unitAndFlags, GesInstructionFlag flag)
         => (byte)(unitAndFlags | ((byte)flag & InstructionFlagMask));
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static byte WithoutInstructionFlags(byte unitAndFlags)
         => (byte)(unitAndFlags & UnitMask);
 }

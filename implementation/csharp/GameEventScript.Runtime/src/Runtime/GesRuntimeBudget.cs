@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using System;
-using System.Runtime.CompilerServices;
 using GameEventScript.Api;
 
 namespace GameEventScript.Runtime;
@@ -28,7 +27,6 @@ internal sealed class GesRuntimeBudget(GesContext context, GesRuntimeLimits limi
         _exhausted = false;
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public int ReserveExecutionSlice(int requestedSteps, string detail)
     {
         if (_exhausted || requestedSteps <= 0) return 0;
@@ -46,7 +44,6 @@ internal sealed class GesRuntimeBudget(GesContext context, GesRuntimeLimits limi
         return reserved;
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void CompleteExecutionSlice(int executedSteps, int reservedSteps, bool stillProcessing, string detail)
     {
         if (Limits.MaxExecutionSteps <= 0 || _exhausted) return;

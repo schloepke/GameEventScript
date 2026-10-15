@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using System.Diagnostics.CodeAnalysis;
-using System.Runtime.CompilerServices;
 using GameEventScript.Api;
 using GameEventScript.Runtime.Values;
 using static GameEventScript.Api.GesBytecodeTypeKind;
@@ -13,7 +12,6 @@ namespace GameEventScript.Runtime.Vm;
 [SuppressMessage("ReSharper", "CompareOfFloatsByEqualityOperator")]
 internal partial class GesVirtualMachine
 {
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void ExecuteModulo(ushort destinationRegister, ushort x, ushort y)
     {
         ref readonly var a = ref Register(x);

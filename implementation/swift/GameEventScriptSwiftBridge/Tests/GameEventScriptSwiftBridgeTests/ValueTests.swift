@@ -43,9 +43,9 @@ final class ValueTests: XCTestCase {
         var values: [String: [Int?]] = ["z": [1, nil], "a": [2]]
         let encoded = try values.toGesValue()
         values["z"] = [8]
-        XCTAssertEqual(encoded.mapEntries?.map(\.key), ["a", "z"])
+        XCTAssertEqual(encoded.asMap.map { map in (0..<map.length).map { map.key(at: $0) } }, ["a", "z"])
         XCTAssertEqual(try [String: [Int?]].fromGesValue(encoded), ["z": [1, nil], "a": [2]])
-        let optionalMap = try [String: Int?].fromGesValue(.map([.init(key: "x", value: .nothing)]))
+        let optionalMap = try [String: Int?].fromGesValue(.map(keys: ["x"], values: [.nothing]))
         XCTAssertEqual(optionalMap.count, 1)
         XCTAssertNotNil(optionalMap.index(forKey: "x"))
         XCTAssertNil(try Int?.fromGesValue(.nothing))
@@ -53,9 +53,9 @@ final class ValueTests: XCTestCase {
     }
 
     func testDictionaryDecodeRejectsCanonicalEquivalenceCollisions() throws {
-        let value = GesValue.map([.init(key: "é", value: .integer(1)), .init(key: "e\u{301}", value: .integer(2))])
+        let value = GesValue.map(keys: ["é", "e\u{301}"], values: [.integer(1), .integer(2)])
         XCTAssertEqual(value.length, 2)
         XCTAssertThrowsError(try [String: Int].fromGesValue(value)) { guard case GesBridgeConversionError.dictionaryKeyCollision = $0 else { return XCTFail("\($0)") } }
-        XCTAssertThrowsError(try [String: Int].fromGesValue(.record(typeName: "Thing", entries: [])))
+        XCTAssertThrowsError(try [String: Int].fromGesValue(.record(typeName: "Thing", keys: [], values: [])))
     }
 }

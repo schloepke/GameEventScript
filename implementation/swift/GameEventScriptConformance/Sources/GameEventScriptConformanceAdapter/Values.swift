@@ -84,9 +84,14 @@ enum Values {
         case ":Range.binary64": return try .floatRange(from: number(node.text("from")), to: number(node.text("to")), step: number(node.text("step")))
         case ":Message": return try .message(message(node.required("message")))
         default:
-            var entries = try node.values("entries").map { try GesMapEntry(key: $0.text("key"), value: decode($0.required("value"))) }
-            let result = type == ":Map" ? GesValue.map(entries) : GesValue.record(typeName: String(type.dropFirst()), entries: entries)
-            if mutateSource && !entries.isEmpty { entries[0] = GesMapEntry(key: "mutated", value: .nothing) }
+            let nodes = try node.values("entries")
+            var keys = try nodes.map { try $0.text("key") }
+            var values = try nodes.map { try decode($0.required("value")) }
+            let result = type == ":Map" ? GesValue.map(keys: keys, values: values) : GesValue.record(typeName: String(type.dropFirst()), keys: keys, values: values)
+            if mutateSource && !keys.isEmpty {
+                keys[0] = "mutated"
+                values[0] = .nothing
+            }
             return result
         }
     }
@@ -125,7 +130,10 @@ extension Values {
             let r = value.floatRangeValue!
             return ["type": ":Range.binary64", "from": numberText(r.from), "to": numberText(r.to), "step": numberText(r.step)]
         default:
-            return ["type": value.valueKind == .map ? ":Map" : ":" + (value.customTypeName ?? ""), "entries": try (value.materializedMap()?.entries ?? []).map { ["key": $0.key, "value": try encode($0.value)] as [String: Any] }]
+            return [
+                "type": value.valueKind == .map ? ":Map" : ":" + (value.customTypeName ?? ""),
+                "entries": try value.materializedMap().map { map in try (0..<map.length).map { ["key": map.key(at: $0), "value": try encode(map.value(at: $0))] as [String: Any] } } ?? [],
+            ]
         }
         if value.unit != .none { result["unit"] = ":" + String(describing: value.unit) }
         return result

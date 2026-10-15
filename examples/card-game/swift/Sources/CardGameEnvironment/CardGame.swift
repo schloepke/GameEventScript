@@ -576,11 +576,10 @@ private struct BoardExtension: GesExtensionFunction {
 }
 
 private func zoneValue(_ zone: Zone) throws -> GesValue {
-    try .map([
-        .init(key: "id", value: .tag(zone.id)), .init(key: "label", value: .text(zone.label)), .init(key: "position", value: .tag(zone.position)),
-        .init(key: "row", value: .integer(Int64(zone.row))), .init(key: "layout", value: .tag(zone.layout)),
-        .init(key: "count", value: .integer(Int64(zone.cards.count))),
-    ])
+    try .map(
+        keys: ["id", "label", "position", "row", "layout", "count"],
+        values: [.tag(zone.id), .text(zone.label), .tag(zone.position), .integer(Int64(zone.row)), .tag(zone.layout), .integer(Int64(zone.cards.count))]
+    )
 }
 
 func formatDiagnostic(_ diagnostic: GesDiagnostic) -> String {

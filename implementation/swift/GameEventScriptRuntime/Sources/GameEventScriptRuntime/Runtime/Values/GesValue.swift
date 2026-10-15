@@ -443,15 +443,23 @@ public struct GesValue: Hashable, CustomStringConvertible {
         return result
     }
 
-    /// Creates a map in scalar key order, keeping the last entry for duplicate keys.
-    public static func map(_ entries: [GesMapEntry]) -> Self {
+    /// Creates a map from parallel keys and values in scalar key order, keeping the last value for duplicate keys.
+    /// Extra keys or values beyond the shorter array are ignored, as in C# `GesValue.GesMap`.
+    public static func map(keys: [String], values: [GesValue]) -> Self { map(zip(keys, values).map { GesMapEntry(key: $0, value: $1) }) }
+
+    static func map(_ entries: [GesMapEntry]) -> Self {
         var result = Self()
         result.setMap(entries)
         return result
     }
 
-    /// Creates record storage with a type name and canonical field map; does not invoke a script constructor.
-    public static func record(typeName: String, entries: [GesMapEntry]) -> Self {
+    /// Creates a Record from parallel field names and values in scalar key order, keeping the last value for duplicate
+    /// names. Extra names or values beyond the shorter array are ignored, as in C# `GesValue.GesRecord`.
+    public static func record(typeName: String, keys: [String], values: [GesValue]) -> Self {
+        record(typeName: typeName, entries: zip(keys, values).map { GesMapEntry(key: $0, value: $1) })
+    }
+
+    static func record(typeName: String, entries: [GesMapEntry]) -> Self {
         var result = Self()
         result.setRecord(typeName: typeName, entries: entries)
         return result
@@ -588,8 +596,7 @@ public struct GesValue: Hashable, CustomStringConvertible {
     public var asList: [GesValue] { listValue ?? [] }
     /// Stored Dice rolls, or an empty array for other kinds.
     public var asDice: [Int32] { diceRolls ?? [] }
-    /// Canonical Map or Record entries, otherwise nil.
-    public var mapEntries: [GesMapEntry]? { asMap?.entries }
+    var mapEntries: [GesMapEntry]? { asMap?.entries }
     /// Declared Record or external type name, otherwise nil.
     public var customTypeName: String? {
         switch kind {

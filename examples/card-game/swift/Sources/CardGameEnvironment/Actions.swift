@@ -75,7 +75,7 @@ extension Bindings {
     }
 
     func validateFields(_ value: GesValue, _ allowed: [String]) throws {
-        guard let entries = value.mapEntries, entries.allSatisfy({ allowed.contains($0.key) }) else { throw CardGameError("Unknown action specification field") }
+        guard let entries = value.mapPairs, entries.allSatisfy({ allowed.contains($0.key) }) else { throw CardGameError("Unknown action specification field") }
     }
 
     func activate(_ args: GesMessageArguments) throws {
@@ -83,7 +83,7 @@ extension Bindings {
         if args.signatureLabels == ["spec"] {
             try activateSpec(args[0])
         } else {
-            try activateSpec(.map(args.signatureLabels.enumerated().map { .init(key: $0.element, value: args[$0.offset]) }))
+            try activateSpec(.map(keys: args.signatureLabels, values: args.signatureLabels.indices.map { args[$0] }))
         }
     }
 
@@ -134,7 +134,7 @@ extension Bindings {
         guard isGlobal || player != nil else { throw CardGameError("Preparation offers require a player") }
         let kind = try tag(field(spec, "action"))
         try validateTag(kind, player: player, isGlobal: isGlobal)
-        let captions = (spec.mapEntries ?? []).filter { ["label", "button"].contains($0.key) }
+        let captions = (spec.mapPairs ?? []).filter { ["label", "button"].contains($0.key) }
         guard captions.count == 1 else { throw CardGameError("Action requires exactly one label or button") }
         let button = captions[0].key == "button"
         let label = try text(captions[0].value)
@@ -253,7 +253,7 @@ extension Bindings {
     }
 
     func actionEntries(player: Int) throws -> GesValue {
-        func entry(_ pairs: [(String, GesValue)]) -> GesValue { .map(pairs.map { .init(key: $0.0, value: $0.1) }) }
+        func entry(_ pairs: [(String, GesValue)]) -> GesValue { .map(keys: pairs.map(\.0), values: pairs.map(\.1)) }
         let actions = try activations.filter { $0.player == player }.map { action in
             try entry([
                 ("ref", .integer(Int64(action.id))), ("id", .tag(action.kind)), ("kind", .tag("action")), ("player", .integer(Int64(player))),

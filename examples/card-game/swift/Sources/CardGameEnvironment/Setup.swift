@@ -71,7 +71,7 @@ extension Board {
 }
 
 private func fields(_ value: GesValue, allowed: Set<String>) throws {
-    guard let entries = value.mapEntries, entries.allSatisfy({ allowed.contains($0.key) }) else { throw CardGameError("Setup contains invalid or unknown fields") }
+    guard let entries = value.mapPairs, entries.allSatisfy({ allowed.contains($0.key) }) else { throw CardGameError("Setup contains invalid or unknown fields") }
 }
 
 private func list(_ value: GesValue) throws -> [GesValue] {

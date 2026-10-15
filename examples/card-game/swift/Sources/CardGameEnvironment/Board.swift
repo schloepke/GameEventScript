@@ -19,7 +19,7 @@ public struct Card {
     /// Immutable properties such as suit and rank.
     public let properties: GesValue
 
-    var value: GesValue { .map([.init(key: "id", value: .integer(Int64(id))), .init(key: "properties", value: properties)]) }
+    var value: GesValue { .map(keys: ["id", "properties"], values: [.integer(Int64(id)), properties]) }
 }
 
 /// An ordered container. The final card is the top of the pile.
@@ -126,3 +126,8 @@ func tag(_ value: GesValue) throws -> String {
 }
 
 func field(_ value: GesValue, _ name: String) -> GesValue { value.asMap?.get(name) ?? .nothing }
+
+extension GesValue {
+    /// Map or Record fields as key/value pairs in canonical key order, otherwise nil.
+    var mapPairs: [(key: String, value: GesValue)]? { asMap.map { map in (0..<map.length).map { (map.key(at: $0), map.value(at: $0)) } } }
+}

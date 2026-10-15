@@ -149,15 +149,20 @@ extension Array: GesBridgeValueConvertible where Element: GesBridgeValueConverti
 
 extension Dictionary: GesBridgeValueConvertible where Key == String, Value: GesBridgeValueConvertible {
     /// Copies the dictionary into the Runtime's canonical scalar-key order.
-    public func toGesValue() throws -> GesValue { .map(try map { try GesMapEntry(key: $0.key, value: $0.value.toGesValue()) }) }
+    public func toGesValue() throws -> GesValue {
+        let pairs = Array(self)
+        return .map(keys: pairs.map(\.key), values: try pairs.map { try $0.value.toGesValue() })
+    }
 
     /// Rejects scalar-distinct GES keys that Swift String equality would merge.
     public static func fromGesValue(_ value: GesValue) throws -> Self {
         try requireKind(value, .map)
         var result: Self = [:]
-        for entry in value.mapEntries! {
-            guard result.index(forKey: entry.key) == nil else { throw GesBridgeConversionError.dictionaryKeyCollision(entry.key) }
-            result.updateValue(try Value.fromGesValue(entry.value), forKey: entry.key)
+        let map = value.asMap!
+        for index in 0..<map.length {
+            let key = map.key(at: index)
+            guard result.index(forKey: key) == nil else { throw GesBridgeConversionError.dictionaryKeyCollision(key) }
+            result.updateValue(try Value.fromGesValue(map.value(at: index)), forKey: key)
         }
         return result
     }

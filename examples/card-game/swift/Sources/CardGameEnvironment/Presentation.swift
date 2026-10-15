@@ -23,7 +23,7 @@ extension CardGame {
             }
             let shown = visible.map { id in
                 let card = cards[id - 1]
-                let properties = card.properties.mapEntries ?? []
+                let properties = card.properties.mapPairs ?? []
                 return "{\"id\":\(id),\"properties\":{\(properties.map { jsonString($0.key) + ":" + jsonString($0.value.asText) }.joined(separator: ","))}}"
             }.joined(separator: ",")
             return

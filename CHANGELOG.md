@@ -90,6 +90,11 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   longer public. Integer and binary64 ranges are both `.range` (use
   `integerRangeValue`/`floatRangeValue`), and records and external values are
   `.custom`. `GesMessageArguments.kindAt(_:)` returns `GesBytecodeTypeKind`.
+- Swift maps follow the C# model of sorted keys with parallel values:
+  `GesValue.map(keys:values:)` and `GesValue.record(typeName:keys:values:)` create
+  them, and `GesValueMap.key(at:)`/`value(at:)` read them next to `length`,
+  `get(_:)` and `containsKey(_:)`. `GesMapEntry`, `GesValueMap.entries` and
+  `GesValue.mapEntries` are no longer public.
 
 ### Changed
 

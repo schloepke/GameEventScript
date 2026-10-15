@@ -157,8 +157,8 @@ Conversion errors use `GesBridgeConversionError`.
 Swift dictionaries compare canonically equivalent String keys as equal; GES
 maps distinguish their scalar sequences. Decoding a GES map rejects collisions
 such as `é` and `e` plus a combining accent instead of losing an entry. Encoding
-cannot recover keys already merged by a Swift dictionary. Use ordered
-`GesMapEntry` values when both spellings must remain distinct.
+cannot recover keys already merged by a Swift dictionary. Use
+`GesValue.map(keys:values:)` when both spellings must remain distinct.
 
 ## Extensions
 

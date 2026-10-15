@@ -97,10 +97,20 @@ def compare(reference, candidate):
     return geometric_mean, allocation_regressions, missing
 
 
-def evaluate(frozen, elapsed_reference, candidate):
+def incomplete(summary, runs):
+    """Metrics that did not produce a sample in every one of `runs` runs, for example a workload that errored."""
+    return sorted(key for key, metric in summary.items() if metric["runs"] < runs)
+
+
+def evaluate(frozen, elapsed_reference, candidate, runs=None, reference_runs=None):
     """Judge a candidate: elapsed time against `elapsed_reference` (frozen file or interleaved baseline), allocations
-    and metric coverage against the frozen reference. Returns (passed, geometric mean or None, problems)."""
+    and metric coverage against the frozen reference. With `runs`/`reference_runs`, every candidate/reference metric
+    must have been measured in each requested run. Returns (passed, geometric mean or None, problems)."""
     problems = []
+    if runs is not None:
+        problems += [f"candidate metric missing in some runs: {key}" for key in incomplete(candidate, runs)]
+    if reference_runs is not None:
+        problems += [f"baseline metric missing in some runs: {key}" for key in incomplete(elapsed_reference, reference_runs)]
     if not candidate:
         problems.append("candidate produced no measurements")
     if not elapsed_reference:
@@ -198,6 +208,10 @@ def main(argv=None):
         if not args.output:
             parser.error("capture requires --output")
         summary = summarize(run_corpus(args.port, args.runs)[0])
+        missing = incomplete(summary, args.runs)
+        if not summary or missing:
+            print(f"Refusing an incomplete reference: {', '.join(missing) or 'no measurements'}", file=sys.stderr)
+            return 1
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(json.dumps({"port": args.port, "environment": environment(), "metrics": summary}, indent=1, sort_keys=True) + "\n", encoding="utf-8")
         print(f"Captured {len(summary)} {args.port} metrics from {args.runs} runs in {args.output}")
@@ -216,7 +230,8 @@ def main(argv=None):
         elapsed_reference = reference["metrics"]
         source = "frozen reference"
     summary = summarize(candidate)
-    passed, geometric_mean, problems = evaluate(reference["metrics"], elapsed_reference, summary)
+    passed, geometric_mean, problems = evaluate(reference["metrics"], elapsed_reference, summary, runs=args.runs,
+                                                reference_runs=args.runs if args.baseline_commit else None)
     shown = "n/a" if geometric_mean is None else f"{geometric_mean:.4f}"
     print(f"{args.port}: elapsed geometric mean {shown} against {source} (budget {ELAPSED_BUDGET:.2f})")
     if args.details:

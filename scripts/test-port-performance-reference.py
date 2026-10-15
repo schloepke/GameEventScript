@@ -70,6 +70,18 @@ class ReferenceTests(unittest.TestCase):
         self.assertFalse(passed)
         self.assertEqual(["missing metric suite/case-1|run.allocated"], problems)
 
+    def test_metrics_missing_from_individual_runs_fail(self):
+        frozen = reference.summarize([result(10, 5)])
+        # One successful run and four runs whose workload errored without measurements.
+        partial = reference.summarize([result(10, 5)] + [{"cases": [{"id": "suite/case-1", "status": "error"}]}] * 4)
+        self.assertEqual((True, 1.0, []), reference.evaluate(frozen, frozen, partial))
+        passed, _, problems = reference.evaluate(frozen, frozen, partial, runs=5)
+        self.assertFalse(passed)
+        self.assertIn("candidate metric missing in some runs: suite/case-1|run.elapsed", problems)
+        passed, _, problems = reference.evaluate(frozen, partial, frozen, runs=1, reference_runs=5)
+        self.assertFalse(passed)
+        self.assertIn("baseline metric missing in some runs: suite/case-1|run.elapsed", problems)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -70,10 +70,10 @@ final class RunnerTests: XCTestCase {
         let first = try runner.subscribe(start) { message, context in
             let number = Int(message.arguments[0].asInteger)
             trace.append(number)
-            try context.emit("Done", swiftArguments: [("value", number)])
+            try context.emit("Done", nativeArguments: [("value", number)])
         }
         let second = try runner.subscribe(done) { message, _ in trace.append(Int(message.arguments[0].asInteger)) }
-        DispatchQueue.concurrentPerform(iterations: 100) { index in do { try runner.receive(.init(name: "Start", swiftArguments: [("value", index)])) } catch { XCTFail("\(error)") } }
+        DispatchQueue.concurrentPerform(iterations: 100) { index in do { try runner.receive(.init(name: "Start", nativeArguments: [("value", index)])) } catch { XCTFail("\(error)") } }
         while !runner.isIdle { _ = try runner.runToCompletion() }
         let values = trace.values
         XCTAssertEqual(values.count, 200)
@@ -101,11 +101,11 @@ final class RunnerTests: XCTestCase {
             trace.append(number)
             if number == 0 {
                 XCTAssertThrowsError(try runner.runToCompletion())
-                try runner.receive(.init(name: "Start", swiftArguments: [("value", 1)]))
+                try runner.receive(.init(name: "Start", nativeArguments: [("value", 1)]))
                 trace.append(2)
             }
         }
-        try runner.receive(.init(name: "Start", swiftArguments: [("value", 0)]))
+        try runner.receive(.init(name: "Start", nativeArguments: [("value", 0)]))
         while !runner.isIdle { _ = try runner.runToCompletion() }
         XCTAssertEqual(trace.values, [0, 2, 1])
         XCTAssertEqual(runner.lastResult?.processedMessages, 2)

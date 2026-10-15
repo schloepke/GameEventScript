@@ -15,12 +15,12 @@ final class CallbackTests: XCTestCase {
         let low = try host.subscribe(signature) { message, _ in received.append("low:\(message.arguments[0])") }
         _ = try host.subscribe(signature, matchingTags: ["ready"], withoutTags: ["skip"], priority: 5) { _, _ in received.append("high") }
         _ = try host.subscribeMessageName("Start", priority: -1) { _, _ in received.append("name") }
-        host.receive(try .init(name: "Start", swiftArguments: [("value", 42)], tags: ["ready"]))
+        host.receive(try .init(name: "Start", nativeArguments: [("value", 42)], tags: ["ready"]))
         XCTAssertTrue(low.unsubscribe())
         XCTAssertEqual(try host.runToCompletion().state, .completed)
         XCTAssertEqual(received, ["high", "low:42", "name"])
         received.removeAll()
-        host.receive(try .init(name: "Start", swiftArguments: [("value", 43)], tags: ["skip"]))
+        host.receive(try .init(name: "Start", nativeArguments: [("value", 43)], tags: ["skip"]))
         _ = try host.runToCompletion()
         XCTAssertEqual(received, ["name"])
     }
@@ -43,15 +43,15 @@ final class CallbackTests: XCTestCase {
 
     func testNamedDictionaryBindingUsesSignatureOrderAndRejectsMissingOrPositionalLabels() throws {
         let signature = try GesMessageSignature(name: "Done", parameters: ["z", "a"])
-        let message = try signature.withSwiftArguments(["a": "hello", " z ": 12])
+        let message = try signature.withNativeArguments(["a": "hello", " z ": 12])
         XCTAssertEqual(message.signatureId, "Done(z,a)")
         XCTAssertEqual(message.arguments[0], .integer(12))
         XCTAssertEqual(message.arguments[1], .text("hello"))
-        XCTAssertThrowsError(try signature.withSwiftArguments(["a": 1]))
-        XCTAssertThrowsError(try signature.withSwiftArguments(["a": 1, "other": 2]))
-        XCTAssertThrowsError(try signature.withSwiftArguments(["a": 1, " a ": 2]))
-        XCTAssertThrowsError(try GesMessageSignature(name: "Done", parameters: ["_"]).withSwiftArguments(["_": 1]))
-        let positional = try GameEventScriptMessage(name: "Done", swiftArguments: [(nil, 1), (nil, "two")])
+        XCTAssertThrowsError(try signature.withNativeArguments(["a": 1]))
+        XCTAssertThrowsError(try signature.withNativeArguments(["a": 1, "other": 2]))
+        XCTAssertThrowsError(try signature.withNativeArguments(["a": 1, " a ": 2]))
+        XCTAssertThrowsError(try GesMessageSignature(name: "Done", parameters: ["_"]).withNativeArguments(["_": 1]))
+        let positional = try GameEventScriptMessage(name: "Done", nativeArguments: [(nil, 1), (nil, "two")])
         XCTAssertEqual(positional.signatureId, "Done(_,_)")
     }
 
@@ -65,8 +65,8 @@ final class CallbackTests: XCTestCase {
         let host = try GameEventScriptHost.makeBuilder().withRandomSeed(1).withPublishSink(sink).build().startForTest()
         _ = try host.subscribeMessageName("Done") { message, _ in local.append(message) }
         _ = try host.subscribeMessageName("Start") { _, context in
-            try context.emit("Done", swiftArguments: [("value", 1)])
-            let result = try context.publish("Done", swiftArguments: [("value", "published")], tags: ["ready"])
+            try context.emit("Done", nativeArguments: [("value", 1)])
+            let result = try context.publish("Done", nativeArguments: [("value", "published")], tags: ["ready"])
             XCTAssertTrue(result.localAccepted)
             XCTAssertTrue(result.outboundAccepted)
         }
@@ -77,7 +77,7 @@ final class CallbackTests: XCTestCase {
     }
 
     func testExtensionRegistryValidatesIdentityAndFallsBack() throws {
-        let function = try GesBridgeExtension(namespace: "app", name: "value", parameters: ["a", "b"]) { try $0.setSwiftValue(42) }
+        let function = try GesBridgeExtension(namespace: "app", name: "value", parameters: ["a", "b"]) { try $0.setNativeValue(42) }
         let fallback = try GesBridgeExtensionRegistry([function])
         let registry = try GesBridgeExtensionRegistry([], fallback: fallback)
         let call = GesExtensionCall()
@@ -87,6 +87,6 @@ final class CallbackTests: XCTestCase {
         XCTAssertThrowsError(try GesBridgeExtensionRegistry([function, function]))
         XCTAssertThrowsError(try GesBridgeExtension(namespace: "app", name: "value", parameters: ["a", "a"]) { _ in })
         XCTAssertNoThrow(try GesBridgeExtension(namespace: "app", name: "value", parameters: ["_", "_"]) { _ in })
-        XCTAssertThrowsError(try GesValueArguments().swiftValue(at: 0, as: Int?.self))
+        XCTAssertThrowsError(try GesValueArguments().nativeValue(at: 0, as: Int?.self))
     }
 }

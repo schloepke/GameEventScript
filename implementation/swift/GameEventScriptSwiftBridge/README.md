@@ -101,7 +101,7 @@ let subscription = try host.subscribe(done) { message, context in
     print(value)
 }
 guard try host.start().state == .ready else { fatalError("Host startup failed") }
-host.receive(try GameEventScriptMessage(name: "Done", swiftArguments: [("value", 42)]))
+host.receive(try GameEventScriptMessage(name: "Done", nativeArguments: [("value", 42)]))
 let result = try host.runToCompletion()
 subscription.unsubscribe()
 ```
@@ -114,18 +114,18 @@ arguments within their active invocation. Errors propagate to the existing
 Runtime boundary: declared `GesExtensionFaultError` codes survive;
 unexpected errors receive the owning Runtime diagnostic.
 
-Ordered `swiftArguments` accept mixed native types and repeated positional
+Ordered `nativeArguments` accept mixed native types and repeated positional
 arguments using a `nil` label. Dictionary binding requires an existing signature:
 
 ```swift
 let signature = try GesMessageSignature(name: "Done", parameters: ["name", "score"])
-let message = try signature.withSwiftArguments(["score": 42, "name": "Ada"])
+let message = try signature.withNativeArguments(["score": 42, "name": "Ada"])
 // Done(name,score), irrespective of dictionary enumeration order.
 ```
 
 The dictionary must contain exactly the signature's named arguments. Missing,
 extra, duplicate normalized or positional labels are rejected. Context's
-`emit` and `publish` have the same ordered `swiftArguments` convenience.
+`emit` and `publish` have the same ordered `nativeArguments` convenience.
 `GesBridgePublishSink` wraps a synchronous outbound closure.
 
 ## Native value conversion
@@ -165,8 +165,8 @@ cannot recover keys already merged by a Swift dictionary. Use ordered
 ```swift
 let extensions = try GesBridgeExtensionRegistry([
     GesBridgeExtension(namespace: "app", name: "double", parameters: ["_"]) { call in
-        let number: Int = try call.arguments.swiftValue(at: 0)
-        try call.setSwiftValue(number * 2)
+        let number: Int = try call.arguments.nativeValue(at: 0)
+        try call.setNativeValue(number * 2)
     }
 ])
 let host = try GameEventScriptHost.makeBuilder().withRandomSeed(123).withRegistry(extensions).build()
@@ -176,7 +176,7 @@ let host = try GameEventScriptHost.makeBuilder().withRandomSeed(123).withRegistr
 Registration validates names, ordered argument labels and duplicate signatures.
 An optional fallback registry is consulted for signatures absent from the local
 registry. Linking resolves the callbacks once. The extension call and argument
-view are borrowed; `swiftValue(at:as:)` checks bounds and converts one argument
+view are borrowed; `nativeValue(at:as:)` checks bounds and converts one argument
 without materializing the complete argument list.
 
 ## External Swift types
@@ -195,7 +195,7 @@ let player = try GesBridgeTypeBinding<Player>("Player", fields: [
     .init("score", typeName: "Number", keyPath: \Player.score),
 ], constructors: [
     .init(parameters: ["name", "score"]) { arguments in
-        try Player(name: arguments.swiftValue(at: 0), score: arguments.swiftValue(at: 1))
+        try Player(name: arguments.nativeValue(at: 0), score: arguments.nativeValue(at: 1))
     }
 ])
 let types = try GesBridgeExternalTypeRegistry([player.binding])
@@ -232,7 +232,7 @@ let registration = try runner.subscribe(.init(name: "Done", parameters: ["value"
     print(message.arguments[0])
 }
 guard try runner.start().state == .ready else { fatalError("Host startup failed") }
-try runner.receive(.init(name: "Done", swiftArguments: [("value", 42)]))
+try runner.receive(.init(name: "Done", nativeArguments: [("value", 42)]))
 _ = try runner.runToCompletion() // Optional synchronous wait before inspecting output.
 let result = runner.lastResult
 registration.detach()

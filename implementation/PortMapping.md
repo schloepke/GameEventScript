@@ -41,8 +41,9 @@ primary concepts: every port works with the same edge types and roles.
 
 ### Identical names, idiomatic spelling
 
-Corresponding types and members use identical names in both ports. File names
-are free. Only these language-idiomatic mappings may differ:
+Corresponding types and members use identical names in both ports. C# files are
+named after their main type or with a name that summarizes their content; partial
+class files append an aspect (`GesBinaryBuilderOpcodes.cs`). Swift file names are free. Only these language-idiomatic mappings may differ:
 
 | Concept | C# | Swift | Later Java/Kotlin |
 |---|---|---|---|
@@ -310,9 +311,9 @@ contains exactly the measured reference sources plus the recalibrated corpus.
       both ports, internal where not needed publicly. Moved here from phase 1
       because these types expose the internal value model.
 - [ ] `Ges` prefix for C# AST records and remaining unprefixed internal types.
-- [ ] Rename the C# `GameEventScriptExternalTypes.cs` duplicate and split C#
-      collection files (`GameEventScriptProgram.cs`, `GameEventScriptExceptions.cs`)
-      where it helps navigation.
+- [ ] Rename C# files whose type is renamed in this phase (for example
+      `GameEventScriptExternalTypeValueConverter.cs`) and split
+      `GameEventScriptProgram.cs` where it helps navigation.
 
 ### Phase 4 – VM handlers
 

@@ -47,12 +47,12 @@ public struct GesBridgeExtensionRegistry: GesExtensionRegistry {
 
 extension GesExtensionCall {
     /// Converts and stores the result without retaining this borrowed call object.
-    public func setSwiftValue<T: GesBridgeValueConvertible>(_ value: T) throws { setValue(try value.toGesValue()) }
+    public func setNativeValue<T: GesBridgeValueConvertible>(_ value: T) throws { setValue(try value.toGesValue()) }
 }
 
 extension GesValueArguments {
     /// Strict native conversion with bounds checking; only use during the active callback.
-    public func swiftValue<T: GesBridgeValueConvertible>(at index: Int, as type: T.Type = T.self) throws -> T {
+    public func nativeValue<T: GesBridgeValueConvertible>(at index: Int, as type: T.Type = T.self) throws -> T {
         guard index >= 0 && index < count else { throw GesApiError.invalidArgument("Argument index out of range") }
         return try T.fromGesValue(self[index])
     }

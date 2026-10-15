@@ -41,8 +41,8 @@ final class SwiftBridgeIntegrationTests: XCTestCase {
         let types = try GesBridgeExternalTypeRegistry([player.binding])
         let extensions = try GesBridgeExtensionRegistry([
             .init(namespace: "app", name: "double", parameters: ["_"]) { call in
-                let number: Int = try call.arguments.swiftValue(at: 0)
-                try call.setSwiftValue(number * 2)
+                let number: Int = try call.arguments.nativeValue(at: 0)
+                try call.setNativeValue(number * 2)
             }
         ])
         let source = """

@@ -77,6 +77,10 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   `GesBridgeAnyTypeBinding`; `GesBridgeValueConvertible`,
   `GesBridgeConversionError` and `GesBridgeHostRunnerRegistration` replace their
   `GameEventScriptSwift…` predecessors. Attributes and macros keep their names.
+- Swift bridge members no longer name the language: `setSwiftValue(_:)`,
+  `swiftValue(at:as:)`, `withSwiftArguments(_:)` and the `swiftArguments:` labels of
+  message, emit and publish conveniences become `setNativeValue(_:)`,
+  `nativeValue(at:as:)`, `withNativeArguments(_:)` and `nativeArguments:`.
 
 ### Changed
 

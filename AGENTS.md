@@ -82,7 +82,9 @@ sh scripts/test-csharp-conformance.sh
   Host, not a Runner in one port and a Host in another).
 - Corresponding types use identical names in the C# and Swift ports, apart from
   the language-idiomatic mappings in `implementation/PortMapping.md` (for example
-  `Exception`/`Error`, `CreateBuilder()`/`makeBuilder()`). File names are free.
+  `Exception`/`Error`, `CreateBuilder()`/`makeBuilder()`). C# files are named after
+  their main type or summarize their content (partial classes append an aspect,
+  e.g. `GesBinaryBuilderOpcodes.cs`); Swift file names are free.
   The port convergence is in progress; `PortMapping.md` tracks the remaining
   phases and is removed when they are complete.
 - `python3 scripts/verify-port-names.py` enforces the prefix, abbreviation,
@@ -266,7 +268,7 @@ only native handlers or any number of additively loaded Programs.
   one caller at a time is required, while a paused handler may resume on another
   thread after an embedding-provided happens-before handoff.
 - Optional C# synchronization and automatic pumping live in
-  `CSharpBridge/GameEventScriptCSharpHostRunner.cs`.
+  `CSharpBridge/src/GesBridgeHostRunner.cs`.
 
 Hot-path VM mutation goes through `GesVirtualMachine.Set...` methods. Read-only register
 borrows are accepted. Never hold a mutable destination reference across an

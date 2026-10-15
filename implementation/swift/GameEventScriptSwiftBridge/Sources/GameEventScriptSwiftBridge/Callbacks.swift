@@ -46,14 +46,14 @@ extension GameEventScriptHost {
 
 extension GameEventScriptMessage {
     /// Ordered pairs preserve positional arguments and external label order.
-    public init(name: String, swiftArguments: [(String?, any GesBridgeValueConvertible)], tags: [String] = []) throws {
-        try self.init(name: name, arguments: swiftArguments.map { try GesMessageArgument(name: $0.0, value: $0.1.toGesValue()) }, tags: tags)
+    public init(name: String, nativeArguments: [(String?, any GesBridgeValueConvertible)], tags: [String] = []) throws {
+        try self.init(name: name, arguments: nativeArguments.map { try GesMessageArgument(name: $0.0, value: $0.1.toGesValue()) }, tags: tags)
     }
 }
 
 extension GesMessageSignature {
     /// Binds a complete named dictionary in signature order; positional signatures cannot use dictionaries.
-    public func withSwiftArguments(_ values: [String: any GesBridgeValueConvertible]) throws -> GameEventScriptMessage {
+    public func withNativeArguments(_ values: [String: any GesBridgeValueConvertible]) throws -> GameEventScriptMessage {
         guard !parameters.contains("_") else { throw GesMessageError.invalidParameterName }
         var normalized: [String: any GesBridgeValueConvertible] = [:]
         for (key, value) in values {
@@ -73,11 +73,11 @@ extension GesMessageSignature {
 extension GesContext {
     /// Enqueues local delivery without pumping. Returns false if the host no longer exists or rejects the message. The
     /// name overload validates message arguments and may throw.
-    @discardableResult public func emit(_ name: String, swiftArguments: [(String?, any GesBridgeValueConvertible)], tags: [String] = []) throws -> Bool { emit(try .init(name: name, swiftArguments: swiftArguments, tags: tags)) }
+    @discardableResult public func emit(_ name: String, nativeArguments: [(String?, any GesBridgeValueConvertible)], tags: [String] = []) throws -> Bool { emit(try .init(name: name, nativeArguments: nativeArguments, tags: tags)) }
 
     /// Enqueues local delivery and attempts outbound delivery, or stages publication during initialization. Returns
     /// separate acceptance flags. The name overload validates the message and may throw.
-    @discardableResult public func publish(_ name: String, swiftArguments: [(String?, any GesBridgeValueConvertible)], tags: [String] = []) throws -> GesPublishResult {
-        publish(try .init(name: name, swiftArguments: swiftArguments, tags: tags))
+    @discardableResult public func publish(_ name: String, nativeArguments: [(String?, any GesBridgeValueConvertible)], tags: [String] = []) throws -> GesPublishResult {
+        publish(try .init(name: name, nativeArguments: nativeArguments, tags: tags))
     }
 }

@@ -17,7 +17,7 @@ final class ExternalTypeTests: XCTestCase {
         try .init(
             "Player",
             fields: [.init("name", typeName: "Text", keyPath: \Player.name), .init("score", typeName: "Number", keyPath: \Player.score)],
-            constructors: [.init(parameters: ["score", "name"]) { args in try Player(name: args.swiftValue(at: 1), score: args.swiftValue(at: 0)) }]
+            constructors: [.init(parameters: ["score", "name"]) { args in try Player(name: args.nativeValue(at: 1), score: args.nativeValue(at: 0)) }]
         )
     }
 

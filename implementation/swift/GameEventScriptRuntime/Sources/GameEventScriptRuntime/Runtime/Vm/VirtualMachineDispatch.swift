@@ -156,10 +156,10 @@ extension GesVirtualMachine {
                 case .createMap:
                     let layout = linked!.mapLayout(instruction.word1)
                     if layout.inputCount == stageLength {
-                        var entries: [GesMapEntry] = []
-                        entries.reserveCapacity(layout.keys.count)
-                        for index in layout.keys.indices { entries.append(.init(key: layout.keys[index], value: staged(layout.sources[index]))) }
-                        setMap(d, GesValueMap(canonical: entries))
+                        var values: [GesValue] = []
+                        values.reserveCapacity(layout.keys.count)
+                        for source in layout.sources { values.append(staged(source)) }
+                        setMap(d, GesValueMap(canonicalKeys: layout.keys, values: values))
                     } else {
                         setNothing(d)
                     }

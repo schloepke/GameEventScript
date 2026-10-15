@@ -151,11 +151,11 @@ final class GesListIterator: GesIterator {
 // Iterates map and record values in key order over the map's existing entries. Sharing the entry array avoids
 // materializing a value array at iterator creation, so early exits stay O(1) to set up.
 final class GesMapValueIterator: GesIterator {
-    private var entries: [GesMapEntry]
+    private var entries: [GesValue]
     private var index = 0
 
     init(_ map: GesValueMap) {
-        entries = map.entries
+        entries = map.valueStorage
         super.init(patternSequence: true, integerRange: false)
     }
 
@@ -165,7 +165,7 @@ final class GesMapValueIterator: GesIterator {
             return nil
         }
         defer { index += 1 }
-        return entries[index].value
+        return entries[index]
     }
 
     override func next(into output: GesRegisterOutput) -> Bool {
@@ -173,7 +173,7 @@ final class GesMapValueIterator: GesIterator {
             exhausted = true
             return false
         }
-        output.copy(entries[index].value)
+        output.copy(entries[index])
         index += 1
         return true
     }

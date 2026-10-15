@@ -15,8 +15,8 @@ extension GesVirtualMachine {
                 } else if let item {
                     if let list = item.listValue {
                         value = index < list.count ? list[index] : .nothing
-                    } else if item.kind == .map, let map = item.mapEntries {
-                        value = index < map.count ? map[index].value : .nothing
+                    } else if item.kind == .map, let map = item.asMap {
+                        value = index < map.length ? map.value(at: index) : .nothing
                     } else if index == 0 {
                         value = item
                     }

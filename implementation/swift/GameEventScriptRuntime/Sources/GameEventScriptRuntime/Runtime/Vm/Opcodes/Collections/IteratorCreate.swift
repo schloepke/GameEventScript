@@ -11,7 +11,7 @@ extension GesVirtualMachine {
         }
         let result: GesIterator?
         if mode == 6 {
-            if let map = try value(Int(instruction.word1)).materializedMap() { result = GesEntriesIterator(map.entries, budget: context.budget) } else { result = nil }
+            if let map = try value(Int(instruction.word1)).materializedMap() { result = GesEntriesIterator(map, budget: context.budget) } else { result = nil }
         } else {
             let sources = linked!.program.uint16IndexLists[Int(instruction.word1)].map { value(Int($0)) }
             result = GesCompoundSources.create(sources, mode: mode, budget: context.budget)

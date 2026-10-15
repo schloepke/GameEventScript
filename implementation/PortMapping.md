@@ -353,20 +353,15 @@ contains exactly the measured reference sources plus the recalibrated corpus.
       `@inline(__always)`; the VM core, `GesValue` and Add/Modulo/Multiply fast
       paths stay (2–13% on core and low-allocation runs).
 
-- [ ] Map storage layout, decided by measurement in both ports: one sorted entry
-      array (Swift today) versus parallel key and value arrays (C# today). Typical
-      maps hold 3–10 elements, so weigh allocation count and array headers, not
-      only cache behaviour. Add Markdown performance cases first: Record creation
-      and field access, `get` on small and larger maps, value iteration, key
-      iteration with lookup (`for key in map[:keys] { emit Item(key: key, value:
-      map[key]) }`) and pairwise access (`:entries`, JSON). Build the other
-      layout in each port behind the unchanged `GesValueMap` API and compare
-      interleaved (elapsed, instructions, allocation count and bytes). The faster
-      layout wins; if both are close, prefer the one with less memory and fewer
-      allocations, and check whether the entry layout lets C# drop its lazy
-      `_keyList`/`_valueList`/`_entries` caches. Both ports then use the same
-      layout, and the map value iterator follows it (Swift `GesMapValueIterator`
-      over shared entries today, C# `GesListIterator` over the value array).
+- [x] Map storage layout, decided by measurement in both ports with the new
+      `performance.maps` workloads. Parallel key and value arrays win: Swift
+      entries versus parallel arrays run equally fast (±1.5%) but parallel arrays
+      allocate 16–30% fewer bytes at equal allocation counts, because maps built
+      from one constant key layout share its key array; C# entries run 3–10%
+      slower with 4–8% more bytes. Both ports now use parallel arrays. The entry
+      layout would not have let C# drop its caches; the parallel layout drops the
+      `_valueList` copy instead (map-values 10% faster, 43% fewer bytes). Swift's
+      map value iterator iterates the shared value array.
 
 ### Phase 5 – Compiler
 

@@ -453,6 +453,12 @@ public struct GesValue: Hashable, CustomStringConvertible {
         return result
     }
 
+    static func map(_ map: GesValueMap) -> Self {
+        var result = Self()
+        result.setMap(map)
+        return result
+    }
+
     /// Creates a Record from parallel field names and values in scalar key order, keeping the last value for duplicate
     /// names. Extra names or values beyond the shorter array are ignored, as in C# `GesValue.GesRecord`.
     public static func record(typeName: String, keys: [String], values: [GesValue]) -> Self {

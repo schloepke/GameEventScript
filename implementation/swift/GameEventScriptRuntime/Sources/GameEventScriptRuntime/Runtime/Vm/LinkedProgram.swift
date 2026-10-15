@@ -94,7 +94,7 @@ final class GesMapLayout {
     init(_ inputKeys: [String]) {
         inputCount = inputKeys.count
         let canonical = GesValueMap(inputKeys.enumerated().map { GesMapEntry(key: $0.element, value: .integer(Int64($0.offset))) })
-        keys = canonical.entries.map(\.key)
-        sources = canonical.entries.map { Int($0.value.integerValue!) }
+        keys = canonical.keyStorage
+        sources = canonical.valueStorage.map { Int($0.integerValue!) }
     }
 }

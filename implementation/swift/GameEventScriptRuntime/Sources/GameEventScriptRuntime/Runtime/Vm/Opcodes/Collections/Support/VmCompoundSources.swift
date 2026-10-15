@@ -70,8 +70,8 @@ enum GesCompoundSources {
     }
 
     private static func combineMap(_ left: GesValue, _ right: GesValue, mode: UInt8, budget: GesRuntimeBudget) -> GesValue {
-        let map = left.mapEntries!
-        let other = right.kind == .map ? right.mapEntries : nil
+        let map = left.asMap!
+        let other = right.kind == .map ? right.asMap : nil
         let list = right.kind == .list ? right.listValue : nil
         if other == nil && list == nil && !(mode == 3 && (right.kind == .text || right.kind == .tag)) { return .nothing }
         if let list {
@@ -80,7 +80,8 @@ enum GesCompoundSources {
             }
         }
         var result: [GesMapEntry] = []
-        for entry in map {
+        for index in 0..<map.length {
+            let entry = map[index]
             guard budget.loop() else { return .nothing }
             let found = find(entry.key)
             if budget.isExhausted { return .nothing }
@@ -90,7 +91,7 @@ enum GesCompoundSources {
             result.append(.init(key: entry.key, value: value))
         }
         if mode == 1 {
-            for index in 0..<(other?.count ?? list!.count) {
+            for index in 0..<(other?.length ?? list!.count) {
                 let key = other != nil ? other![index].key : list![index].textValue!
                 var found = false
                 for existing in result {
@@ -108,7 +109,7 @@ enum GesCompoundSources {
         return .map(result)
 
         func find(_ key: String) -> Int {
-            for index in 0..<(other?.count ?? list?.count ?? 1) {
+            for index in 0..<(other?.length ?? list?.count ?? 1) {
                 guard budget.loop() else { return -1 }
                 let candidate = other != nil ? other![index].key : list != nil ? list![index].textValue! : right.textValue!
                 if GesText.scalarEqual(key, candidate) { return index }

@@ -15,7 +15,6 @@ public sealed class GesValueMap
     private readonly string[] _keys;
     private readonly GesValue[] _values;
     private GesValue[]? _keyList;
-    private GesValue[]? _valueList;
     private GesValue[]? _entries;
 
     internal GesValueMap(string[] keys, GesValue[] values, int count)
@@ -48,7 +47,8 @@ public sealed class GesValueMap
     public int StorageLength => _keys.Length;
 
     internal GesValue[] KeyList => _keyList ??= CreateListOfKeys();
-    internal GesValue[] ValueList => _valueList ??= CreateListOfValues();
+    // Values are never mutated after construction, so value lists and iterators share the storage array.
+    internal GesValue[] ValueList => _values;
     internal GesValue[] EntryList => _entries ??= CreateListOfEntries();
 
     /// <summary>
@@ -108,16 +108,6 @@ public sealed class GesValueMap
         for (var index = 0; index < _keys.Length; index++)
         {
             list[index].SetText(_keys[index]);
-        }
-        return list;
-    }
-
-    private GesValue[] CreateListOfValues()
-    {
-        var list = new GesValue[_values.Length];
-        for (var index = 0; index < _keys.Length; index++)
-        {
-            list[index] = _values[index];
         }
         return list;
     }

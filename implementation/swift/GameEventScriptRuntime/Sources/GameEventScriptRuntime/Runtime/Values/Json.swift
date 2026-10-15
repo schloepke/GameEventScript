@@ -49,11 +49,12 @@ enum GesJson {
                 try append("]")
             case .map:
                 try append("{")
-                for (index, entry) in value.mapEntries!.enumerated() {
+                let map = value.asMap!
+                for index in 0..<map.length {
                     if index > 0 { try append(",") }
-                    try quoted(entry.key)
+                    try quoted(map.key(at: index))
                     try append(":")
-                    try emit(entry.value, depth + 1)
+                    try emit(map.value(at: index), depth + 1)
                 }
                 try append("}")
             default: throw error()

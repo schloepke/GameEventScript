@@ -35,8 +35,8 @@ final class GesLiteralEvaluation {
             node = nodes[Int(id)]
         } else if let list = value.listValue {
             node = .init(type: "@list", labels: [], arguments: list)
-        } else if value.kind == .map, let entries = value.mapEntries {
-            node = .init(type: "@map", labels: entries.map(\.key), arguments: entries.map(\.value))
+        } else if value.kind == .map, let map = value.asMap {
+            node = .init(type: "@map", labels: map.keyStorage, arguments: map.valueStorage)
         } else {
             node = .init(type: "@value", labels: [], arguments: [value])
         }

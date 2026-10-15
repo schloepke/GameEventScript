@@ -7,7 +7,7 @@ extension GesVirtualMachine {
             let map = registers[x].asMap!
             let keys: [String]
             if registers[y].kind == .map {
-                keys = registers[y].asMap!.entries.map(\.key)
+                keys = registers[y].asMap!.keyStorage
             } else if let list = registers[y].listValue, list.allSatisfy({ $0.textValue != nil }) {
                 keys = list.map(\.asText)
             } else {

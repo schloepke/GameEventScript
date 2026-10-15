@@ -15,7 +15,7 @@ extension GesVirtualMachine {
         }
         guard GesIterator.make(registers[x].registerValue) != nil else { return setNothing(destination) }
 
-        if let values = registers[x].mapEntries { return setValue(destination, values.last?.value ?? .nothing) }
+        if let map = registers[x].asMap { return setValue(destination, map.valueStorage.last ?? .nothing) }
         if registers[x].spatialValue != nil { return setFloat(destination, registers[x].z) }
         return registers[x].index(GesCollectionOperators.length(registers[x].registerValue), sink: output(destination))
     }

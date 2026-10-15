@@ -141,14 +141,14 @@ final class RegisterArithmeticTests: XCTestCase {
         state.setRecord(0, typeName: "Sample", fields: map)
         let record = state.value(0)
         let fields = try XCTUnwrap(record.asMap)
-        map.entries.withUnsafeBufferPointer { original in
-            fields.entries.withUnsafeBufferPointer { stored in XCTAssertEqual(original.baseAddress, stored.baseAddress) }
+        map.valueStorage.withUnsafeBufferPointer { original in
+            fields.valueStorage.withUnsafeBufferPointer { stored in XCTAssertEqual(original.baseAddress, stored.baseAddress) }
         }
         XCTAssertEqual(record.customTypeName, "Sample")
-        XCTAssertEqual(fields.entries.map(\.key), ["a", "z"])
+        XCTAssertEqual(fields.keyStorage, ["a", "z"])
         XCTAssertEqual(fields.get("z"), .integer(3))
-        var exposed = fields.entries
-        exposed[0] = .init(key: "changed", value: .nothing)
+        var exposed = fields.valueStorage
+        exposed[0] = .nothing
         state.setNothing(0)
         XCTAssertEqual(record.asMap, map)
         XCTAssertEqual(record, .record(typeName: "Sample", entries: map.entries))

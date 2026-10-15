@@ -72,7 +72,7 @@ extension GesVirtualMachine {
         case .map:
             let keys: [String]
             switch registers[y].kind {
-            case .map: keys = registers[y].asMap!.entries.map(\.key)
+            case .map: keys = registers[y].asMap!.keyStorage
             case .text, .tag: keys = [registers[y].textValue!]
             case .list where registers[y].listValue!.allSatisfy({ $0.textValue != nil }):
                 keys = registers[y].listValue!.map(\.asText)

@@ -11,7 +11,7 @@ enum GesCollectionOperators {
         let value = slot.registerValue
         if let list = value.listValue { return list }
         if let dice = value.diceRolls { return dice.map { .integer(Int64($0)) } }
-        if ranges && (value.integerRangeValue != nil || value.floatRangeValue != nil) && length(value) <= Int32.max { return read(GesIterator(value)!) }
+        if ranges && (value.integerRangeValue != nil || value.floatRangeValue != nil) && length(value) <= Int32.max { return read(GesIterator.make(value)!) }
         return nil
     }
 

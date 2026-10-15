@@ -171,6 +171,7 @@ def main(argv=None):
     parser.add_argument("--output", type=Path, help="capture: reference file to write")
     parser.add_argument("--reference", type=Path, help="compare: frozen reference file; allocation metrics are checked against it")
     parser.add_argument("--baseline-commit", help="compare: judge elapsed time against this revision, measured interleaved now")
+    parser.add_argument("--details", type=int, default=0, help="compare: also print the N slowest and fastest elapsed ratios")
     args = parser.parse_args(argv)
 
     if args.action == "capture":
@@ -198,6 +199,11 @@ def main(argv=None):
     geometric_mean, _, missing = compare(elapsed_reference, summary)
     _, regressions, _ = compare(reference["metrics"], summary)
     print(f"{args.port}: elapsed geometric mean {geometric_mean:.4f} against {source} (budget {ELAPSED_BUDGET:.2f})")
+    if args.details:
+        ratios = sorted((summary[key]["median"] / expected["median"], key) for key, expected in elapsed_reference.items()
+                        if key in summary and is_elapsed(expected["unit"]) and expected["median"] > 0)
+        for ratio, key in ratios[-args.details:][::-1] + ratios[:args.details]:
+            print(f"  {ratio:.3f} {key}")
     for key, expected, actual, unit in regressions:
         print(f"  allocation increase {key}: {expected:g} -> {actual:g} {unit}")
     for key in missing:

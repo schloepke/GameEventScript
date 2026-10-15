@@ -204,14 +204,14 @@ extension GesVirtualMachine {
                     if nextComponents(instruction) { _ = runtimeBudget.loop() }
                 case .iteratorNext:
                     if let iterator = self.iterator(x), iterator.isIntegerRange {
-                        if let term = iterator.nextIntegerTerm() {
+                        if let term = unsafeDowncast(iterator, to: GesIntegerRangeIterator.self).nextIntegerTerm() {
                             setInteger(d, term)
                             _ = runtimeBudget.loop()
                         } else {
                             setNothing(d)
                             ip = y
                         }
-                    } else if let iterator = self.iterator(x), (iterator.isSourceIterator ? iterator.nextFromSource(sink: output(d)) : iterator.next(sink: output(d))) != nil {
+                    } else if let iterator = self.iterator(x), iterator.next(into: output(d)) {
                         _ = runtimeBudget.loop()
                     } else {
                         setNothing(d)

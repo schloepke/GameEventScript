@@ -311,23 +311,21 @@ contains exactly the measured reference sources plus the recalibrated corpus.
       GesSubscriptionEntry, GesDelayedMessage and GesDeferredPublication; the C#
       range payload merges into GesIntegerRange/GesFloatRange; GesSpatialValue,
       GesSeriesValue, GesExternalStorage, GesCompoundSources, GesSystemClock,
-      GesNumber and GesText use one name in both ports. Open decision: C# keeps one
-      iterator class per source kind while Swift switches inside GesIterator.
+      GesNumber and GesText use one name in both ports.
 - [x] Align public value types: Swift `GesSpatialValue`, `GesText`, `GesNumber`
       become internal and `GesSeriesValue` `@_spi(Compiler)`, as in C#; C#
-      `GesValueSlice` maps idiomatically to Swift `[GesValue]`. Open decision:
-      Swift `GesValueKind` versus C# `GesBytecodeTypeKind` as the public value
-      kind, and Swift `GesMapEntry` versus C# parallel key/value arrays.
+      `GesValueSlice` maps idiomatically to Swift `[GesValue]`.
 - [x] `Ges` prefix for C# AST records and remaining unprefixed internal types
       (no prefix or abbreviation findings remain in the port gate).
 - [x] Rename C# files whose type is renamed in this phase and split
       `GameEventScriptProgram.cs` like the Swift files: `GameEventScriptProgram.cs`,
       `GesProgramSegments.cs`, `GesBytecode.cs`, `GesBinaryFormat.cs`,
       `GesReadOnlyArray.cs`.
-- Open decisions for later phases: the iterator model (C# one class per source
-  kind, Swift one class switching on the source kind), the public value kind
-  (Swift `GesValueKind` versus C# `GesBytecodeTypeKind`), and map entries (Swift
-  `GesMapEntry` versus C# parallel key/value arrays).
+- [x] Decided follow-ups: Swift adopts the C# iterator model with one dedicated
+      iterator per source kind and a non-generic direct register write; the
+      public value kind is `GesBytecodeTypeKind` in both ports; Swift maps expose
+      sorted keys with parallel values like C# (internal storage stays a
+      contiguous sorted entry array).
 
 ### Phase 4 – VM handlers
 

@@ -37,7 +37,7 @@ final class GesProductIterator: GesIterator, GesComponentIterator {
             if !advance(index) { continue }
             for reset in (index + 1)..<iterators.count {
                 iterators[reset].close()
-                iterators[reset] = GesIterator(sources[reset])!
+                iterators[reset] = GesIterator.make(sources[reset])!
                 if !advance(reset) {
                     close()
                     return false

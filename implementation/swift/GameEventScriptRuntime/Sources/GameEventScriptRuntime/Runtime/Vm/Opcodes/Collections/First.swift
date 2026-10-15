@@ -11,7 +11,7 @@ extension GesVirtualMachine {
             guard let first = iterator.next() else { return setNothing(destination) }
             return setValue(destination, first)
         }
-        guard let iterator = GesIterator(registers[x].registerValue) else { return setNothing(destination) }
+        guard let iterator = GesIterator.make(registers[x].registerValue) else { return setNothing(destination) }
         return iterator.next(sink: output(destination)) ?? setNothing(destination)
     }
 }

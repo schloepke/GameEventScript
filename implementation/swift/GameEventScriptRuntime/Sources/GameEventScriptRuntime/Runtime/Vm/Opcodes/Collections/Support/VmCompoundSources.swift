@@ -6,7 +6,7 @@ enum GesCompoundSources {
         if mode == 4 || mode == 5 {
             var iterators: [GesIterator] = []
             for source in sources {
-                guard let iterator = GesIterator(source) else {
+                guard let iterator = GesIterator.make(source) else {
                     for previous in iterators { previous.close() }
                     return nil
                 }
@@ -20,9 +20,9 @@ enum GesCompoundSources {
                 value = combineMap(value, right, mode: mode, budget: budget)
                 if value.kind != .map || budget.isExhausted { return nil }
             }
-            return GesIterator(value)
+            return GesIterator.make(value)
         }
-        guard value.kind == .list || value.kind == .dice, var current = GesIterator(value) else { return nil }
+        guard value.kind == .list || value.kind == .dice, var current = GesIterator.make(value) else { return nil }
         var kind = value.kind
         for right in sources.dropFirst() {
             let valid = right.kind == .list || right.kind == .dice || mode == 3 && (kind == .list && right.kind != .map || kind == .dice && right.kind == .integer && !right.hasUnit && right.asInteger > 0 && right.asInteger <= Int32.max)
@@ -45,11 +45,11 @@ enum GesCompoundSources {
                     guard budget.generated(collected.count + dice.count) else { return nil }
                     collected.append(contentsOf: dice)
                     collected.sort(by: >)
-                    current = GesIterator(.dice(collected))!
+                    current = GesIterator.make(.dice(collected))!
                 } else if let union = current as? GesUnionIterator {
-                    union.append(GesIterator(right)!)
+                    union.append(GesIterator.make(right)!)
                 } else {
-                    current = GesUnionIterator(current, GesIterator(right)!)
+                    current = GesUnionIterator(current, GesIterator.make(right)!)
                 }
             } else {
                 let count = right.listValue?.count ?? right.diceRolls?.count ?? 1

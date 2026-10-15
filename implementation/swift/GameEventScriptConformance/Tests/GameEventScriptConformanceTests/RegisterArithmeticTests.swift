@@ -71,7 +71,7 @@ final class RegisterArithmeticTests: XCTestCase {
         let state = GesVirtualMachine(maxRegisters: 32, maxCallDepth: 4)
         weak var released: GesIterator?
         do {
-            let iterator = try XCTUnwrap(GesIterator(.list([.integer(1)])))
+            let iterator = try XCTUnwrap(GesIterator.make(.list([.integer(1)])))
             released = iterator
             state.setIterator(0, iterator)
         }
@@ -321,7 +321,7 @@ final class RegisterArithmeticTests: XCTestCase {
         try state.value(0).member("x", sink: state.output(0))
         XCTAssertEqual(state.value(0), .integer(42))
 
-        let iterator = GesIterator(.integerRange(from: 1, to: 2))!
+        let iterator = GesIterator.make(.integerRange(from: 1, to: 2))!
         state.setIterator(0, iterator)
         XCTAssertNotNil(iterator.next(sink: state.output(0)))
         XCTAssertEqual(state.value(0), .integer(1))

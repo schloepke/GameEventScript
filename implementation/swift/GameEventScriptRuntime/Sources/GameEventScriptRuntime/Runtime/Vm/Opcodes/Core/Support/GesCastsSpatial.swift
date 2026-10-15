@@ -28,7 +28,7 @@ extension GesCasts {
             z = map.get("z")?.asNumber ?? 0
             if value.kind == .map && (!x.isFinite || !y.isFinite || !z.isFinite) { return sink.nothing }
         } else if value.integerRangeValue != nil || value.floatRangeValue != nil {
-            let iterator = GesIterator(value)!
+            let iterator = GesIterator.make(value)!
             x = iterator.next()?.asNumber ?? 0
             y = iterator.next()?.asNumber ?? 0
             z = iterator.next()?.asNumber ?? 0

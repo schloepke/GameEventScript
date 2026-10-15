@@ -43,7 +43,7 @@ extension GesCasts {
                 let count = value.integerRangeValue?.count ?? value.floatRangeValue!.count
                 if count > Int32.max { return sink.nothing }
                 if !context.budget.range(count) { return sink.list([]) }
-                let iterator = GesIterator(value)!
+                let iterator = GesIterator.make(value)!
                 var result: [GesValue] = []
                 result.reserveCapacity(Int(count))
                 while let item = iterator.next() { result.append(item) }

@@ -11,7 +11,7 @@ extension GesVirtualMachine {
         if right.isRegisterData, registers[y].isNothing { return setNothing(destination) }
 
         let all = false
-        let candidates = [.list, .dice, .text, .tag, .integerRange, .floatRange].contains(registers[x].kind) ? GesIterator(registers[x].registerValue) : nil
+        let candidates = [.list, .dice, .text, .tag, .integerRange, .floatRange].contains(registers[x].kind) ? GesIterator.make(registers[x].registerValue) : nil
         guard let candidates else { return setBoolean(destination, all) }
         defer { candidates.close() }
         let container: GesValue

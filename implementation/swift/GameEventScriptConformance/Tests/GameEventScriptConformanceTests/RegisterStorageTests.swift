@@ -12,7 +12,7 @@ final class RegisterStorageTests: XCTestCase {
         let state = GesVirtualMachine(maxRegisters: 512, maxCallDepth: 8)
         let values: [GesValue] = [.text("retained text 😀"), .list([.text("nested")]), .map([.init(key: "key", value: .text("value"))])]
         for (index, value) in values.enumerated() { state.setValue(index, value) }
-        let iterator = try XCTUnwrap(GesIterator(.list([.integer(7), .integer(9)])))
+        let iterator = try XCTUnwrap(GesIterator.make(.list([.integer(7), .integer(9)])))
         state.setIterator(3, iterator)
         for required in [65, 193, 511] {
             let previous = state.registers.count
@@ -35,13 +35,13 @@ final class RegisterStorageTests: XCTestCase {
         weak var released: GesIterator?
         weak var releasedHighSlot: GesIterator?
         do {
-            let iterator = try XCTUnwrap(GesIterator(.list([.text("owned")])))
+            let iterator = try XCTUnwrap(GesIterator.make(.list([.text("owned")])))
             released = iterator
             state.setIterator(0, iterator)
         }
         XCTAssertTrue(state.ensure(129))
         do {
-            let iterator = try XCTUnwrap(GesIterator(.list([.text("high slot")])))
+            let iterator = try XCTUnwrap(GesIterator.make(.list([.text("high slot")])))
             releasedHighSlot = iterator
             state.setIterator(128, iterator)
         }
@@ -67,14 +67,14 @@ final class RegisterStorageTests: XCTestCase {
         do {
             let state = GesVirtualMachine(maxRegisters: 512, maxCallDepth: 8)
             do {
-                let iterator = try XCTUnwrap(GesIterator(.list([.text("owned")])))
+                let iterator = try XCTUnwrap(GesIterator.make(.list([.text("owned")])))
                 released = iterator
                 state.setIterator(0, iterator)
             }
             XCTAssertTrue(state.ensure(65))
             XCTAssertTrue(state.ensure(257))
             do {
-                let iterator = try XCTUnwrap(GesIterator(.list([.text("high slot")])))
+                let iterator = try XCTUnwrap(GesIterator.make(.list([.text("high slot")])))
                 releasedHighSlot = iterator
                 state.setIterator(256, iterator)
             }

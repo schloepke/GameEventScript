@@ -7,11 +7,6 @@ struct GesMapEntry: Hashable {
     let key: String
     let value: GesValue
 
-    init(key: String, value: GesValue) {
-        self.key = key
-        self.value = value
-    }
-
     static func == (left: Self, right: Self) -> Bool { GesText.scalarEqual(left.key, right.key) && left.value == right.value }
 
     func hash(into hasher: inout Hasher) {

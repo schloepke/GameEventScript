@@ -12,7 +12,7 @@ extension GesVirtualMachine {
 
             return iterator.next() == nil ? setValue(destination, first) : setNothing(destination)
         }
-        guard let iterator = GesIterator(registers[x].registerValue) else { return setNothing(destination) }
+        guard let iterator = GesIterator.make(registers[x].registerValue) else { return setNothing(destination) }
 
         return GesCollectionOperators.length(registers[x].registerValue) == 1 ? iterator.next(sink: output(destination)) ?? setNothing(destination) : setNothing(destination)
     }

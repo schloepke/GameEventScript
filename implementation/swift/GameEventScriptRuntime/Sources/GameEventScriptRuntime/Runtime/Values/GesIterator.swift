@@ -1,109 +1,230 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
+/// Base of all iterators. Source iterators are dedicated subclasses per source kind, as in C#, so a step never
+/// re-dispatches on the source kind or re-reads its payload. Compound iterators override `next(sink:)`.
 class GesIterator {
-    private var source: GesValue
-    // Integer ranges are the hot loop form; iterate unboxed state without touching `source`.
-    // For every valid index the next term is the previous one plus `rangeStep`, which equals
-    // GesIntegerRange.term(at:) without its per-step multiplication and bound checks.
-    private let integerRange: GesIntegerRange?
-    private let rangeCount: Int64
-    private let rangeStep: Int64
-    private var rangeTerm: Int64
-    private var index: Int64 = 0
-    private var textIndex: String.UnicodeScalarView.Index?
-    private var closed = false
+    fileprivate var exhausted = false
     let isPatternSequence: Bool
+    /// Whether this is a `GesIntegerRangeIterator`, whose statically dispatched `nextIntegerTerm()` VM dispatch uses.
+    final let isIntegerRange: Bool
 
     init(patternSequence: Bool) {
-        source = .nothing
-        integerRange = nil
-        rangeCount = 0
-        rangeStep = 0
-        rangeTerm = 0
-        isSourceIterator = false
         isPatternSequence = patternSequence
+        isIntegerRange = false
     }
 
-    init?(_ source: GesValue) {
+    fileprivate init(patternSequence: Bool, integerRange: Bool) {
+        isPatternSequence = patternSequence
+        isIntegerRange = integerRange
+    }
+
+    /// Creates the dedicated iterator for an iterable source, or nil for a non-iterable value.
+    static func make(_ source: GesValue) -> GesIterator? {
         switch source.kind {
-        case .integerRange, .floatRange, .list, .dice, .map, .record, .vector, .point, .text, .tag: break
+        case .integerRange: return GesIntegerRangeIterator(source.integerRangeValue!)
+        case .floatRange: return GesFloatRangeIterator(source.floatRangeValue!)
+        case .list: return GesListIterator(source.listValue!)
+        case .dice: return GesIntIterator(source.diceRolls!)
+        case .map, .record: return GesListIterator(source.asMap!.values)
+        case .vector, .point: return GesTripletIterator(x: source.x, y: source.y, z: source.z)
+        case .text, .tag: return GesStringIterator(source.textValue!)
         default: return nil
         }
-        self.source = source
-        integerRange = source.integerRangeValue
-        rangeCount = integerRange?.count ?? 0
-        rangeStep = integerRange?.step ?? 0
-        rangeTerm = integerRange?.from ?? 0
-        isSourceIterator = true
-        isPatternSequence = [.list, .dice, .map, .record].contains(source.kind)
-        textIndex = source.textValue?.unicodeScalars.startIndex
     }
 
+    /// The next value, or nil once exhausted. Source iterators override this; compound iterators override
+    /// `next(sink:)`, which this default forwards to.
     func next() -> GesValue? { next(sink: GesValueFactory()) }
 
-    /// Whether `nextIntegerTerm()` applies; subclasses never iterate a plain integer range.
-    final var isIntegerRange: Bool { integerRange != nil }
-    /// Whether this iterator walks a source value; subclasses never do, so `nextFromSource` applies.
-    final let isSourceIterator: Bool
+    /// The next value written through `sink`, or nil once exhausted.
+    func next<Output: GesValueOutput>(sink: Output) -> Output.Result? { next().map { sink.copy($0) } }
 
-    // Statically dispatched step for the hot integer-range loop; same semantics as next(sink:).
+    /// Writes the next value directly into a VM register and reports whether one existed. Source iterators override
+    /// this non-generic step so VM dispatch avoids an intermediate value and generic dispatch.
+    func next(into output: GesRegisterOutput) -> Bool { next(sink: output) != nil }
+
+    func close() { exhausted = true }
+}
+
+final class GesIntegerRangeIterator: GesIterator {
+    // For every valid index the next term is the previous one plus `step`, which equals
+    // GesIntegerRange.term(at:) without its per-step multiplication and bound checks.
+    private let count: Int64
+    private let step: Int64
+    private var term: Int64
+    private var index: Int64 = 0
+
+    init(_ range: GesIntegerRange) {
+        count = range.count
+        step = range.step
+        term = range.from
+        super.init(patternSequence: false, integerRange: true)
+    }
+
+    // Statically dispatched step for the hot integer-range loop; same sequence as next().
     @inline(__always)
-    final func nextIntegerTerm() -> Int64? {
-        guard !closed, index < rangeCount else {
-            closed = true
+    func nextIntegerTerm() -> Int64? {
+        guard !exhausted, index < count else {
+            exhausted = true
             return nil
         }
-        let term = rangeTerm
+        let current = term
         if index == .max - 1 {
-            closed = true
+            exhausted = true
         } else {
             index += 1
             // Only advance to a term that exists, so the addition cannot overflow.
-            if index < rangeCount { rangeTerm &+= rangeStep }
+            if index < count { term &+= step }
         }
-        return term
+        return current
     }
 
-    func next<Output: GesValueOutput>(sink: Output) -> Output.Result? { nextFromSource(sink: sink) }
+    override func next() -> GesValue? { nextIntegerTerm().map { .integer($0) } }
 
-    // Statically dispatched, so callers with a concrete sink get a specialized copy; kept out
-    // of line because inlining it into VM dispatch regressed the compute benchmark.
-    @inline(never)
-    final func nextFromSource<Output: GesValueOutput>(sink: Output) -> Output.Result? {
-        if closed { return nil }
-        if integerRange != nil { return nextIntegerTerm().map { sink.integer($0) } }
-        let result: Output.Result?
-        switch source.kind {
-        case .integerRange: result = source.integerRangeValue!.term(at: index + 1).map { sink.integer($0) }
-        case .floatRange: result = source.floatRangeValue!.term(at: index + 1).map { sink.float($0) }
-        case .list:
-            let list = source.listValue!
-            result = index < list.count ? sink.copy(list[Int(index)]) : nil
-        case .dice:
-            let dice = source.diceRolls!
-            result = index < dice.count ? sink.integer(Int64(dice[Int(index)])) : nil
-        case .map, .record:
-            let entries = source.mapEntries!
-            result = index < entries.count ? sink.copy(entries[Int(index)].value) : nil
-        case .vector, .point: result = index < 3 ? sink.float(index == 0 ? source.x : index == 1 ? source.y : source.z) : nil
-        case .text, .tag:
-            let scalars = source.textValue!.unicodeScalars
-            if let current = textIndex, current < scalars.endIndex {
-                result = sink.text(String(scalars[current]))
-                textIndex = scalars.index(after: current)
-            } else {
-                result = nil
-            }
-        default: result = nil
-        }
-        if result == nil || index == .max - 1 { closed = true } else { index += 1 }
-        return result
+    override func next(into output: GesRegisterOutput) -> Bool {
+        guard let term = nextIntegerTerm() else { return false }
+        output.integer(term, unit: .none)
+        return true
+    }
+}
+
+final class GesFloatRangeIterator: GesIterator {
+    private let range: GesFloatRange
+    private var index: Int64 = 0
+
+    init(_ range: GesFloatRange) {
+        self.range = range
+        super.init(patternSequence: false, integerRange: false)
     }
 
-    func close() {
-        closed = true
-        source = .nothing
-        textIndex = nil
+    override func next() -> GesValue? {
+        if exhausted { return nil }
+        guard let term = range.term(at: index + 1) else {
+            exhausted = true
+            return nil
+        }
+        if index == .max - 1 { exhausted = true } else { index += 1 }
+        return .float(term)
+    }
+
+    override func next(into output: GesRegisterOutput) -> Bool {
+        guard let value = next() else { return false }
+        output.float(value.asNumber, unit: .none)
+        return true
+    }
+}
+
+final class GesListIterator: GesIterator {
+    private var values: [GesValue]
+    private var index = 0
+
+    init(_ values: [GesValue]) {
+        self.values = values
+        super.init(patternSequence: true, integerRange: false)
+    }
+
+    override func next() -> GesValue? {
+        guard !exhausted, index < values.count else {
+            exhausted = true
+            return nil
+        }
+        defer { index += 1 }
+        return values[index]
+    }
+
+    override func next(into output: GesRegisterOutput) -> Bool {
+        guard !exhausted, index < values.count else {
+            exhausted = true
+            return false
+        }
+        output.copy(values[index])
+        index += 1
+        return true
+    }
+
+    override func close() {
+        super.close()
+        values = []
+    }
+}
+
+final class GesIntIterator: GesIterator {
+    private var values: [Int32]
+    private var index = 0
+
+    init(_ values: [Int32]) {
+        self.values = values
+        super.init(patternSequence: true, integerRange: false)
+    }
+
+    override func next() -> GesValue? {
+        guard !exhausted, index < values.count else {
+            exhausted = true
+            return nil
+        }
+        defer { index += 1 }
+        return .integer(Int64(values[index]))
+    }
+
+    override func next(into output: GesRegisterOutput) -> Bool {
+        guard !exhausted, index < values.count else {
+            exhausted = true
+            return false
+        }
+        output.integer(Int64(values[index]), unit: .none)
+        index += 1
+        return true
+    }
+
+    override func close() {
+        super.close()
+        values = []
+    }
+}
+
+final class GesStringIterator: GesIterator {
+    private var scalars: String.UnicodeScalarView
+    private var position: String.UnicodeScalarView.Index
+
+    init(_ text: String) {
+        scalars = text.unicodeScalars
+        position = scalars.startIndex
+        super.init(patternSequence: false, integerRange: false)
+    }
+
+    override func next() -> GesValue? {
+        guard !exhausted, position < scalars.endIndex else {
+            exhausted = true
+            return nil
+        }
+        let scalar = scalars[position]
+        position = scalars.index(after: position)
+        return .text(String(scalar))
+    }
+
+    override func close() {
+        super.close()
+        scalars = "".unicodeScalars
+        position = scalars.startIndex
+    }
+}
+
+final class GesTripletIterator: GesIterator {
+    private let components: (Double, Double, Double)
+    private var index = 0
+
+    init(x: Double, y: Double, z: Double) {
+        components = (x, y, z)
+        super.init(patternSequence: false, integerRange: false)
+    }
+
+    override func next() -> GesValue? {
+        guard !exhausted, index < 3 else {
+            exhausted = true
+            return nil
+        }
+        defer { index += 1 }
+        return .float(index == 0 ? components.0 : index == 1 ? components.1 : components.2)
     }
 }

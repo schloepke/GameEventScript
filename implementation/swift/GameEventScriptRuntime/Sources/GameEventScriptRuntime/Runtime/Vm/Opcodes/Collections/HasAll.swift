@@ -8,7 +8,7 @@ extension GesVirtualMachine {
         let x = frameStart + sourceRegister
         let all = true
         let iterator: GesIterator?
-        if let source = registers[x].iteratorValue { iterator = source } else { iterator = GesIterator(registers[x].registerValue) }
+        if let source = registers[x].iteratorValue { iterator = source } else { iterator = GesIterator.make(registers[x].registerValue) }
         if registers[x].isNothing, registers[x].isRegisterData { return setNothing(destination) }
         guard let iterator else { return setBoolean(destination, false) }
         defer { iterator.close() }

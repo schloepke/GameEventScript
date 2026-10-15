@@ -13,7 +13,7 @@ extension GesVirtualMachine {
             return setInteger(destination, count)
         }
         if registers[x].isNothing { return setInteger(destination, 0) }
-        if registers[x].kind == .series || registers[x].kind == .external || GesIterator(registers[x].registerValue) == nil { return setNothing(destination) }
+        if registers[x].kind == .series || registers[x].kind == .external || GesIterator.make(registers[x].registerValue) == nil { return setNothing(destination) }
         return setInteger(destination, GesCollectionOperators.length(registers[x].registerValue))
     }
 }

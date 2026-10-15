@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 extension GesVirtualMachine {
-    @inline(never)
     func executeWrapDegree(_ target: Int, _ x: Int) {
         if !registers[x].isNumeric || !registers[x].asNumber.isFinite || (registers[x].unit != .none && registers[x].unit != .degree) { return registers[target].setNothing() }
         var value = registers[x].asNumber.truncatingRemainder(dividingBy: 360)

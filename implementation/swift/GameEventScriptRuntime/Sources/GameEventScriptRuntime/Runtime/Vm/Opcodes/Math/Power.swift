@@ -10,7 +10,6 @@
 #endif
 
 extension GesVirtualMachine {
-    @inline(never)
     func executePower(_ target: Int, _ x: Int, _ y: Int) {
         if registers[x].isNothing || registers[y].isNothing { return registers[target].setNothing() }
         let left = registers[x].asNumber
@@ -19,7 +18,6 @@ extension GesVirtualMachine {
         return registers[target].setFloat(pow(left, right), unit: right == 1 ? registers[x].unit : .none)
     }
 
-    @inline(never)
     func executePowerNumeric(_ target: Int, _ x: Int, _ y: Int) {
         guard registers[x].isNumeric, registers[y].isNumeric else { return registers[target].setNothing() }
         let left = registers[x].asNumber

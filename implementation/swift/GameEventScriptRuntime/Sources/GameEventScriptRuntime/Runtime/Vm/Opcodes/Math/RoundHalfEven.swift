@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 extension GesVirtualMachine {
-    @inline(never)
     func executeRoundHalfEven(_ target: Int, _ x: Int) {
         guard registers[x].isNumeric else { return registers[target].setNothing() }
         let n = registers[x].asNumber

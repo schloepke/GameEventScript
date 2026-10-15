@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 extension GesVirtualMachine {
-    @inline(never)
     func executeClamp(_ target: Int, _ x: Int, _ y: Int, _ operandA: Int) {
         let upper = operandA
         guard registers[x].unit == registers[y].unit, registers[y].unit == registers[upper].unit, registers[x].isNumeric, registers[y].isNumeric, registers[upper].isNumeric else { return registers[target].setNothing() }
@@ -12,7 +11,6 @@ extension GesVirtualMachine {
         return registers[target].setFloat(Swift.min(Swift.max(registers[x].asNumber, Swift.min(registers[y].asNumber, registers[upper].asNumber)), Swift.max(registers[y].asNumber, registers[upper].asNumber)), unit: registers[x].unit)
     }
 
-    @inline(never)
     func executeClampNumeric(_ target: Int, _ x: Int, _ y: Int, _ operandA: Int) {
         let upper = operandA
         guard registers[x].unit == registers[y].unit, registers[y].unit == registers[upper].unit, registers[x].isNumeric, registers[y].isNumeric, registers[upper].isNumeric else { return registers[target].setNothing() }

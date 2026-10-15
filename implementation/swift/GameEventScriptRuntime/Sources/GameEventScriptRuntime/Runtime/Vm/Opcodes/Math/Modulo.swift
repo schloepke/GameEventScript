@@ -14,7 +14,6 @@ extension GesVirtualMachine {
         registers[target].setInteger(result, unit: unit)
     }
 
-    @inline(never)
     func executeModuloGeneral(_ target: Int, _ x: Int, _ y: Int) {
         if registers[x].kind == .integer && registers[y].kind == .integer {
             let av = registers[x].integerValue!
@@ -75,7 +74,6 @@ extension GesVirtualMachine {
         return registers[target].setFloat(result, unit: unit)
     }
 
-    @inline(never)
     func executeModuloNumeric(_ target: Int, _ x: Int, _ y: Int) {
         guard registers[x].isNumeric, registers[y].isNumeric else { return registers[target].setNothing() }
         if let av = registers[x].numericIntegerValue, let bv = registers[y].numericIntegerValue {

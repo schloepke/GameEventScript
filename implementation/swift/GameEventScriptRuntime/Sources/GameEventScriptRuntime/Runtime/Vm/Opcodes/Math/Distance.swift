@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 extension GesVirtualMachine {
-    @inline(never)
     func executeDistance(_ target: Int, _ x: Int, _ y: Int) {
         guard registers[x].unit == registers[y].unit else { return registers[target].setNothing() }
         if registers[x].isNumeric && registers[y].isNumeric {

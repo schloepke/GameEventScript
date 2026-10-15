@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 extension GesVirtualMachine {
-    @inline(never)
     func executeDropLowest(_ destinationRegister: Int, _ sourceRegister: Int, _ countOperand: Int) {
         let destination = destinationRegister
         let x = frameStart + sourceRegister

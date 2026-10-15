@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 extension GesVirtualMachine {
-    @inline(never)
     func executeStartsWith(_ target: Int, _ x: Int, _ y: Int) {
         if registers[x].isNothing { return registers[target].setNothing() }
         if let at = registers[x].textValue, let bt = registers[y].textValue { return registers[target].setBoolean(at.unicodeScalars.starts(with: bt.unicodeScalars)) }

@@ -14,7 +14,6 @@ extension GesVirtualMachine {
         registers[destination].setInteger(result, unit: unit)
     }
 
-    @inline(never)
     func executeAddGeneral(_ destination: Int, _ x: Int, _ y: Int) {
         let leftKind = registers[x].kind
         let rightKind = registers[y].kind
@@ -95,7 +94,6 @@ extension GesVirtualMachine {
         }
     }
 
-    @inline(never)
     func executeAddNumeric(_ target: Int, _ x: Int, _ y: Int) {
         guard registers[x].isNumeric, registers[y].isNumeric else { return registers[target].setNothing() }
         if let av = registers[x].numericIntegerValue, let bv = registers[y].numericIntegerValue {

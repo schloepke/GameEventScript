@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 extension GesVirtualMachine {
-    @inline(never)
     func executeNormalize(_ target: Int, _ x: Int) {
         guard registers[x].spatialValue != nil else { return registers[target].setNothing() }
         let ax = registers[x].x

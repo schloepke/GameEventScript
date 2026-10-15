@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 extension GesVirtualMachine {
-    @inline(never)
     func executeLast(_ destinationRegister: Int, _ sourceRegister: Int) {
         let destination = destinationRegister
         let x = frameStart + sourceRegister

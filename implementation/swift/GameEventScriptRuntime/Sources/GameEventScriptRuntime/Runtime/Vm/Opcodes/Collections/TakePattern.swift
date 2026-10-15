@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 extension GesVirtualMachine {
-    @inline(never)
     func executeTakePattern(_ destinationRegister: Int, _ sourceRegister: Int, _ countOperand: Int, _ operandA: UInt16, _ operandB: Int) {
         let destination = destinationRegister
         let x = frameStart + sourceRegister

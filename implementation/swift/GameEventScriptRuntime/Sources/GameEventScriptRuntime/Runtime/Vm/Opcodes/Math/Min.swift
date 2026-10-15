@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 extension GesVirtualMachine {
-    @inline(never)
     func executeMin(_ destinationRegister: Int, _ sourceRegister: Int, _ otherRegister: Int) {
         let destination = destinationRegister
         let x = frameStart + sourceRegister
@@ -10,7 +9,6 @@ extension GesVirtualMachine {
         return setValue(destination, GesComparison.extreme(registers[x].registerValue, registers[y].registerValue, maximum: false))
     }
 
-    @inline(never)
     func executeMinNumeric(_ destinationRegister: Int, _ sourceRegister: Int, _ otherRegister: Int) {
         let destination = destinationRegister
         let x = frameStart + sourceRegister

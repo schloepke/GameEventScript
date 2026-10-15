@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 extension GesVirtualMachine {
-    @inline(never)
     func executeDivide(_ target: Int, _ x: Int, _ y: Int) {
         if registers[x].isNothing || registers[y].isNothing { return registers[target].setNothing() }
         switch registers[x].kind {
@@ -46,7 +45,6 @@ extension GesVirtualMachine {
         return registers[x].kind == .percentage && registers[y].kind != .percentage ? registers[target].setPercentage(left / right) : registers[target].setFloat(left / right, unit: unit)
     }
 
-    @inline(never)
     func executeDivideNumeric(_ target: Int, _ x: Int, _ y: Int) {
         guard registers[x].isNumeric, registers[y].isNumeric else { return registers[target].setNothing() }
         if let av = registers[x].numericIntegerValue, let bv = registers[y].numericIntegerValue {

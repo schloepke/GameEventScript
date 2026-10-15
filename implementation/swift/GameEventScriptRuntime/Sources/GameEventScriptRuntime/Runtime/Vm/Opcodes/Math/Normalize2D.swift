@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 extension GesVirtualMachine {
-    @inline(never)
     func executeNormalize2D(_ target: Int, _ x: Int, _ otherRegister: Int) {
         let component0 = x
         let component1 = otherRegister

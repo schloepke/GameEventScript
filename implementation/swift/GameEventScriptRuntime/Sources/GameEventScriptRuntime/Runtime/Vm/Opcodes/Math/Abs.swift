@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 extension GesVirtualMachine {
-    @inline(never)
     func executeAbs(_ target: Int, _ x: Int) {
         let unit = registers[x].unit
         switch registers[x].kind {
@@ -25,7 +24,6 @@ extension GesVirtualMachine {
         }
     }
 
-    @inline(never)
     func executeAbsNumeric(_ target: Int, _ x: Int) {
         guard registers[x].isNumeric else { return registers[target].setNothing() }
         if let integer = registers[x].numericIntegerValue { return integer == .min ? registers[target].setFloat(-Double(integer), unit: registers[x].unit) : registers[target].setInteger(Swift.abs(integer), unit: registers[x].unit) }

@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 extension GesVirtualMachine {
-    @inline(never)
     func executeRemainder(_ target: Int, _ x: Int, _ y: Int) {
         if registers[x].isNothing || registers[y].isNothing { return registers[target].setNothing() }
         switch registers[x].kind {
@@ -50,7 +49,6 @@ extension GesVirtualMachine {
         return registers[target].setFloat(result, unit: unit)
     }
 
-    @inline(never)
     func executeRemainderNumeric(_ target: Int, _ x: Int, _ y: Int) {
         guard registers[x].isNumeric, registers[y].isNumeric else { return registers[target].setNothing() }
         if let av = registers[x].numericIntegerValue, let bv = registers[y].numericIntegerValue {

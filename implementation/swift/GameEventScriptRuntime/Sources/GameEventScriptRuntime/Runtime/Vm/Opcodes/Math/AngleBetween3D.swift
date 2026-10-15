@@ -10,7 +10,6 @@
 #endif
 
 extension GesVirtualMachine {
-    @inline(never)
     func executeAngleBetween3D(_ target: Int, _ x: Int, _ otherRegister: Int, _ operandA: Int, _ operandB: Int, _ operandC: Int, _ operandD: Int) {
         let component0 = x
         let component1 = otherRegister

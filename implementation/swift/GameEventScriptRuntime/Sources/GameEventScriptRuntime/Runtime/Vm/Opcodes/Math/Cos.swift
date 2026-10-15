@@ -10,7 +10,6 @@
 #endif
 
 extension GesVirtualMachine {
-    @inline(never)
     func executeCos(_ target: Int, _ x: Int) {
         guard registers[x].isNumeric, registers[x].unit == .none || registers[x].unit == .degree else { return registers[target].setNothing() }
         let n = registers[x].unit == .degree ? registers[x].asNumber / 180 * Double.pi : registers[x].asNumber

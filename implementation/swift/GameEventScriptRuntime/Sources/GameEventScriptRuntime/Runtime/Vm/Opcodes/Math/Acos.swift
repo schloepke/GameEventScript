@@ -10,7 +10,6 @@
 #endif
 
 extension GesVirtualMachine {
-    @inline(never)
     func executeAcos(_ target: Int, _ x: Int) {
         guard registers[x].isNumeric, !registers[x].hasUnit else { return registers[target].setNothing() }
         return registers[target].setFloat(acos(registers[x].asNumber))

@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 extension GesVirtualMachine {
-    @inline(never)
     func executeContainsValue(_ target: Int, _ x: Int, _ y: Int) {
         if registers[y].isRegisterData, registers[y].isNothing { return registers[target].setNothing() }
         if let entries = registers[y].mapEntries { return registers[target].setBoolean(entries.contains { $0.value == registers[x].registerValue }) }

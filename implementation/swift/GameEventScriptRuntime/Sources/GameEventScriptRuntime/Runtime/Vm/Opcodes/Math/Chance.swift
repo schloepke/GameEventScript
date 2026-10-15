@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 extension GesVirtualMachine {
-    @inline(never)
     func executeChance(_ destinationRegister: Int, _ sourceRegister: Int, _ context: GesContext) {
         let destination = destinationRegister
         let x = frameStart + sourceRegister

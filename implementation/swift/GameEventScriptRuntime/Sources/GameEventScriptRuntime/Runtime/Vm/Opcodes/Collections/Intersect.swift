@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 extension GesVirtualMachine {
-    @inline(never)
     func executeIntersect(_ target: Int, _ x: Int, _ y: Int) {
         if registers[x].kind == .map {
             let map = registers[x].asMap!

@@ -10,7 +10,6 @@
 #endif
 
 extension GesVirtualMachine {
-    @inline(never)
     func executeLogN(_ target: Int, _ x: Int) {
         return registers[x].hasUnit ? registers[target].setNothing() : registers[target].setFloat(log(registers[x].asNumber))
     }

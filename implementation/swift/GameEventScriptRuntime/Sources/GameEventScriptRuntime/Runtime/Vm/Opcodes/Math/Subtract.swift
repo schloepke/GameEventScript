@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 extension GesVirtualMachine {
-    @inline(never)
     func executeSubtract(_ target: Int, _ x: Int, _ y: Int) {
         switch registers[x].kind {
         case .integer where registers[y].kind == .integer:
@@ -94,7 +93,6 @@ extension GesVirtualMachine {
         }
     }
 
-    @inline(never)
     func executeSubtractNumeric(_ target: Int, _ x: Int, _ y: Int) {
         guard registers[x].isNumeric, registers[y].isNumeric else { return registers[target].setNothing() }
         if let av = registers[x].numericIntegerValue, let bv = registers[y].numericIntegerValue {

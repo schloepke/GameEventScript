@@ -64,7 +64,8 @@ final class GesScope {
 }
 
 final class GesCompiler {
-    let modules: [GesModule], sources: [GesSource], options: GesCompileOptions
+    var modules: [GesModule]
+    let sources: [GesSource], options: GesCompileOptions
     let catalog: (any GesExternalTypeCatalog)?
     var moduleName = ""
     var constants: [String: GesExpression] = [:], definitions: [String: GesDefinition] = [:], records: [String: GesRecord] = [:]
@@ -164,6 +165,10 @@ final class GesCompiler {
 
     func compile() throws -> GameEventScriptProgram {
         try validate()
+        let optimizer = GesAstOptimizer(constants: constants)
+        modules = modules.map(optimizer.module)
+        definitions = definitions.mapValues(optimizer.definition)
+        records = records.mapValues(optimizer.record)
         let callables = definitions.values.sorted { $0.signature < $1.signature }
         for definition in callables { routines.append(try routine(definition)) }
         for (id, record) in records.values.sorted(by: { $0.name < $1.name }).enumerated() { recordIDs[record.name] = id }

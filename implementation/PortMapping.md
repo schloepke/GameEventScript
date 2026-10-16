@@ -371,7 +371,9 @@ contains exactly the measured reference sources plus the recalibrated corpus.
       operators keep `predicate`/`notContains`, which preserve the emitted code.
 - [ ] Identical phase types in both ports: `GesLexer`, `GesParser`,
       `GesAstValidator`, `GesShadowingValidator`, `GesAstOptimizer`,
-      `GesBinaryBuilder`. Analyze first how Swift distributes AST optimization.
+      `GesBinaryBuilder`. Swift folded only arithmetic, negation and Number casts
+      during lowering (`scalarConstant`); `GesAstOptimizer` now runs as its own
+      phase after validation, as in C#.
 - [ ] Named optimization passes behind `IGesBinaryOptimizationPass` /
       `GesBinaryOptimizationPass` with the C# pass names.
 - [ ] Verify byte-identical `.gesb` output for the corpus and the

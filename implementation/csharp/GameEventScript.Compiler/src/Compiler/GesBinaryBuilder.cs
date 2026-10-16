@@ -45,17 +45,11 @@ internal sealed partial class GesBinaryBuilder
         return this;
     }
 
-    public GesRegisterRef AddRegister(string name)
-        => AddRegisterInRoutine(name, CurrentRoutineId);
+    public GesRegisterRef AddRegister(string name) => AddRegisterInRoutine(name, CurrentRoutineId);
 
-    internal GesRegisterRef AddCompilerRegister(string name)
-        => AddRegisterInRoutine(name, CurrentRoutineId, debugVisible: false);
+    internal GesRegisterRef AddCompilerRegister(string name) => AddRegisterInRoutine(name, CurrentRoutineId, debugVisible: false);
 
-    internal GesRegisterRef AddCompilerRegisterInRoutine(string name, int routineId)
-        => AddRegisterInRoutine(name, routineId, debugVisible: false);
-
-    public GesRegisterRef AddTemporaryRegister(string? name = null)
-        => AddTemporaryRegisterInRoutine(name, CurrentRoutineId);
+    public GesRegisterRef AddTemporaryRegister(string? name = null) => AddTemporaryRegisterInRoutine(name, CurrentRoutineId);
 
     private GesRegisterRef AddRegisterInRoutine(string name, int routineId, bool debugVisible = true)
     {
@@ -87,55 +81,35 @@ internal sealed partial class GesBinaryBuilder
     private PlanItem[] LinearizePlanItems()
     {
         var count = _rootItems.Count;
-        for (var index = 0; index < _routines.Count; index++)
-        {
-            count += _routines[index].Items.Count;
-        }
-
+        foreach (var routine in _routines) count += routine.Items.Count;
         var result = new PlanItem[count];
-        var offset = 0;
-        offset = CopyPlanItems(_rootItems, result, offset);
-
+        var offset = CopyPlanItems(_rootItems, result, 0);
         var roots = CollectRootRoutines();
         Array.Sort(roots, CompareRoutinePlanForOutput);
-        for (var index = 0; index < roots.Length; index++)
-        {
-            offset = AppendRoutineAndOwnedHelpers(result, offset, roots[index]);
-        }
-
+        foreach (var root in roots) offset = AppendRoutineAndOwnedHelpers(result, offset, root);
         return result;
     }
 
     private RoutinePlan[] CollectRootRoutines()
     {
         var count = 0;
-        for (var index = 0; index < _routines.Count; index++)
-        {
-            if (_routines[index].ParentRoutineId == NoRoutineId) count++;
-        }
-
+        foreach (var routine in _routines)
+            if (routine.ParentRoutineId == NoRoutineId)
+                count++;
         var result = new RoutinePlan[count];
         var offset = 0;
-        for (var index = 0; index < _routines.Count; index++)
-        {
-            var routine = _routines[index];
-            if (routine.ParentRoutineId != NoRoutineId) continue;
-            result[offset++] = routine;
-        }
-
+        foreach (var routine in _routines)
+            if (routine.ParentRoutineId == NoRoutineId)
+                result[offset++] = routine;
         return result;
     }
 
     private int AppendRoutineAndOwnedHelpers(PlanItem[] result, int offset, RoutinePlan routine)
     {
         offset = CopyPlanItems(routine.Items, result, offset);
-        for (var index = 0; index < _routines.Count; index++)
-        {
-            var child = _routines[index];
-            if (child.ParentRoutineId != routine.Id) continue;
-            offset = AppendRoutineAndOwnedHelpers(result, offset, child);
-        }
-
+        foreach (var child in _routines)
+            if (child.ParentRoutineId == routine.Id)
+                offset = AppendRoutineAndOwnedHelpers(result, offset, child);
         return offset;
     }
 
@@ -159,26 +133,12 @@ internal sealed partial class GesBinaryBuilder
         return this;
     }
 
-    public GesBindRef AddBind(
-        GesBinaryBindKind kind,
-        string name,
-        IReadOnlyList<string>? argumentNames = null,
-        GesLabelRef? entryLabel = null,
-        ushort? id = null,
-        IReadOnlyList<string>? requiredTags = null,
+    public GesBindRef AddBind(GesBinaryBindKind kind, string name, IReadOnlyList<string>? argumentNames = null, GesLabelRef? entryLabel = null, ushort? id = null, IReadOnlyList<string>? requiredTags = null,
         IReadOnlyList<string>? excludedTags = null)
     {
         if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("Bind name must be non-empty.", nameof(name));
         if (entryLabel.HasValue) RequireLabel(entryLabel.Value);
-        var bind = new BindPlan(
-            _binds.Count,
-            kind,
-            name,
-            CopyStringList(argumentNames),
-            entryLabel,
-            id,
-            CopyStringList(requiredTags),
-            CopyStringList(excludedTags));
+        var bind = new BindPlan(_binds.Count, kind, name, CopyStringList(argumentNames), entryLabel, id, CopyStringList(requiredTags), CopyStringList(excludedTags));
         _binds.Add(bind);
         return new GesBindRef(bind.Index);
     }
@@ -229,40 +189,11 @@ internal sealed partial class GesBinaryBuilder
             .WithResourceRequirements(resourceAnalysis.RequiredRegisterCount, resourceAnalysis.RequiredCallStackDepth)
             .WithDebugSegments(debugSegments.Symbols, debugSegments.SourceMap, debugSegments.SourceArchive);
 
-        ushort ResolveText(string text)
-        {
-            return builder.AddText(text);
-        }
-
-        ushort ResolveList(IReadOnlyList<GesRegisterRef> registers)
-        {
-            var values = new ushort[registers.Count];
-            for (var index = 0; index < registers.Count; index++)
-            {
-                values[index] = ResolveRegister(registers[index], registerMap);
-            }
-
-            return builder.AddUInt16Slice(values);
-        }
-
-        ushort ResolveTextList(IReadOnlyList<string> values)
-        {
-            var indexes = new ushort[values.Count];
-            for (var index = 0; index < values.Count; index++)
-            {
-                indexes[index] = ResolveText(values[index]);
-            }
-
-            return builder.AddUInt16Slice(indexes);
-        }
-
-        var bindIds = ResolveBinds(builder, ResolveText, labelAddresses, resourceAnalysis);
-        for (var index = 0; index < items.Length; index++)
-        {
-            var item = items[index];
-            if (item.Instruction is null) continue;
-            builder.AddInstruction(EncodeInstruction(item.Instruction, registerMap, labelAddresses, bindIds, ResolveText, ResolveList, ResolveTextList));
-        }
+        var bindIds = ResolveBinds(builder, builder.AddText, labelAddresses, resourceAnalysis);
+        var resolver = new OperandResolver(registerMap, labelAddresses, bindIds, builder);
+        foreach (var item in items)
+            if (item.Instruction is { } instruction)
+                builder.AddInstruction(EncodeInstruction(instruction, resolver));
 
         return builder.Build();
     }
@@ -271,39 +202,21 @@ internal sealed partial class GesBinaryBuilder
     {
         var nextIds = new Dictionary<GesBinaryBindKind, ushort>();
         var result = new ushort[_binds.Count];
-        var orderedBinds = new BindPlan[_binds.Count];
-        for (var index = 0; index < _binds.Count; index++)
-        {
-            orderedBinds[index] = _binds[index];
-        }
-
+        BindPlan[] orderedBinds = [.. _binds];
         Array.Sort(orderedBinds, CompareBindPlanForOutput);
-        for (var index = 0; index < orderedBinds.Length; index++)
+        foreach (var bind in orderedBinds)
         {
-            var bind = orderedBinds[index];
             var id = bind.Id ?? NextId(bind.Kind, nextIds);
             result[bind.Index] = id;
             var argumentNames = ResolveTextList(bind.ArgumentNames, resolveText);
             var requiredTags = ResolveTextList(bind.RequiredTags, resolveText);
             var excludedTags = ResolveTextList(bind.ExcludedTags, resolveText);
-            var entryAddress = bind.EntryLabel.HasValue
-                ? labelAddresses[bind.EntryLabel.Value.Id]
-                : ushort.MaxValue;
-
+            var entryAddress = bind.EntryLabel.HasValue ? labelAddresses[bind.EntryLabel.Value.Id] : ushort.MaxValue;
             var requirements = resourceAnalysis.BindRequirements[bind.Index];
             builder.AddUInt16Slice(argumentNames);
             builder.AddUInt16Slice(requiredTags);
             builder.AddUInt16Slice(excludedTags);
-            builder.AddBind(new GesBindingSegment.Entry(
-                bind.Kind,
-                resolveText(bind.Name),
-                argumentNames,
-                entryAddress,
-                id,
-                requiredTags,
-                excludedTags,
-                requirements.RequiredRegisterCount,
-                requirements.RequiredCallStackDepth));
+            builder.AddBind(new GesBindingSegment.Entry(bind.Kind, resolveText(bind.Name), argumentNames, entryAddress, id, requiredTags, excludedTags, requirements.RequiredRegisterCount, requirements.RequiredCallStackDepth));
         }
 
         return result;
@@ -361,11 +274,7 @@ internal sealed partial class GesBinaryBuilder
         public ushort AddText(string text)
         {
             _ = text ?? throw new ArgumentNullException(nameof(text));
-            if (_textIndexes.TryGetValue(text, out var index))
-            {
-                return index;
-            }
-
+            if (_textIndexes.TryGetValue(text, out var index)) return index;
             index = checked((ushort)_textConstants.Count);
             _textConstants.Add(text);
             _textIndexes.Add(text, index);
@@ -375,13 +284,8 @@ internal sealed partial class GesBinaryBuilder
         public ushort AddUInt16Slice(ushort[] value)
         {
             for (var sliceIndex = 0; sliceIndex < _uint16Slices.Count; sliceIndex++)
-            {
-                if (UInt16SliceEquals(_uint16Slices[sliceIndex], value))
-                {
+                if (_uint16Slices[sliceIndex].AsSpan().SequenceEqual(value))
                     return checked((ushort)sliceIndex);
-                }
-            }
-
             var index = checked((ushort)_uint16Slices.Count);
             _uint16Slices.Add(value);
             return index;
@@ -412,7 +316,7 @@ internal sealed partial class GesBinaryBuilder
                 BuildTextTable(_textConstants),
                 BuildUInt16Table(_uint16Slices),
                 new GesBindingSegment(_binds),
-                new GesCodeSegment(CopyInstructions(_instructions)),
+                new GesCodeSegment([.. _instructions]),
                 _debugSymbols,
                 _sourceMap,
                 _sourceArchive,
@@ -427,58 +331,27 @@ internal sealed partial class GesBinaryBuilder
         private uint ComputeBinaryHash()
         {
             var hash = new BinaryHashBuilder(2166136261u);
-
             hash.MixUShort(_version);
             hash.MixULong(_programVersion);
             hash.MixUShort(_requiredRegisterCount);
             hash.MixUShort(_requiredCallStackDepth);
-
-            for (var index = 0; index < _textConstants.Count; index++)
+            foreach (var text in _textConstants) hash.MixString(text);
+            foreach (var slice in _uint16Slices) hash.MixList(slice);
+            foreach (var bind in _binds)
             {
-                hash.MixString(_textConstants[index]);
-            }
-
-            for (var sliceIndex = 0; sliceIndex < _uint16Slices.Count; sliceIndex++)
-            {
-                var slice = _uint16Slices[sliceIndex];
-                hash.MixInt(slice.Length);
-                for (var index = 0; index < slice.Length; index++)
-                {
-                    hash.MixUShort(slice[index]);
-                }
-            }
-
-            for (var index = 0; index < _binds.Count; index++)
-            {
-                var bind = _binds[index];
                 hash.MixUInt((uint)bind.Kind);
                 hash.MixUShort(bind.Name);
-                hash.MixInt(bind.ArgumentNames.Count);
-                for (var argumentIndex = 0; argumentIndex < bind.ArgumentNames.Count; argumentIndex++)
-                {
-                    hash.MixUShort(bind.ArgumentNames[argumentIndex]);
-                }
-
+                hash.MixList(bind.ArgumentNames);
                 hash.MixUShort(bind.EntryAddress);
                 hash.MixUShort(bind.Id);
                 hash.MixUShort(bind.RequiredRegisterCount);
                 hash.MixUShort(bind.RequiredCallStackDepth);
-                hash.MixInt(bind.RequiredTags.Count);
-                for (var tagIndex = 0; tagIndex < bind.RequiredTags.Count; tagIndex++)
-                {
-                    hash.MixUShort(bind.RequiredTags[tagIndex]);
-                }
-
-                hash.MixInt(bind.ExcludedTags.Count);
-                for (var tagIndex = 0; tagIndex < bind.ExcludedTags.Count; tagIndex++)
-                {
-                    hash.MixUShort(bind.ExcludedTags[tagIndex]);
-                }
+                hash.MixList(bind.RequiredTags);
+                hash.MixList(bind.ExcludedTags);
             }
 
-            for (var index = 0; index < _instructions.Count; index++)
+            foreach (var instruction in _instructions)
             {
-                var instruction = _instructions[index];
                 hash.MixByte((byte)instruction.OpCode);
                 hash.MixByte(instruction.UnitAndFlags);
                 hash.MixUShort(instruction.DestinationRegister);
@@ -490,28 +363,25 @@ internal sealed partial class GesBinaryBuilder
             return hash.Value;
         }
 
-        private struct BinaryHashBuilder
+        // FNV-1a over little-endian fields; lists and strings mix their length first.
+        private struct BinaryHashBuilder(uint hash)
         {
-            private uint _hash;
-
-            internal BinaryHashBuilder(uint hash)
-            {
-                _hash = hash;
-            }
-
-            internal readonly uint Value => _hash;
+            internal readonly uint Value => hash;
 
             internal void MixString(string value)
             {
                 MixInt(value.Length);
-                for (var index = 0; index < value.Length; index++)
-                {
-                    MixUShort(value[index]);
-                }
+                foreach (var character in value) MixUShort(character);
             }
 
-            internal void MixInt(int value)
-                => MixUInt(unchecked((uint)value));
+            internal void MixList(IReadOnlyList<ushort> values)
+            {
+                MixInt(values.Count);
+                // Indexed, so mixing an interface-typed list allocates no enumerator.
+                for (var index = 0; index < values.Count; index++) MixUShort(values[index]);
+            }
+
+            internal void MixInt(int value) => MixUInt(unchecked((uint)value));
 
             internal void MixUShort(ushort value)
             {
@@ -531,11 +401,7 @@ internal sealed partial class GesBinaryBuilder
                 MixUInt((uint)(value >> 32));
             }
 
-            internal void MixByte(byte value)
-            {
-                _hash ^= value;
-                _hash *= 16777619u;
-            }
+            internal void MixByte(byte value) => hash = (hash ^ value) * 16777619u;
         }
 
         private static GesStringConstantSegment BuildTextTable(IReadOnlyList<string> values)
@@ -545,21 +411,13 @@ internal sealed partial class GesBinaryBuilder
             for (var index = 0; index < values.Count; index++)
             {
                 var byteCount = Encoding.UTF8.GetByteCount(values[index]);
-                slices[index] = new GesStringConstantSegment.SliceEntry
-                {
-                    Start = totalLength,
-                    Length = byteCount
-                };
+                slices[index] = new GesStringConstantSegment.SliceEntry { Start = totalLength, Length = byteCount };
                 totalLength += byteCount;
             }
 
             var data = new byte[totalLength];
             var offset = 0;
-            for (var index = 0; index < values.Count; index++)
-            {
-                offset += Encoding.UTF8.GetBytes(values[index], 0, values[index].Length, data, offset);
-            }
-
+            foreach (var value in values) offset += Encoding.UTF8.GetBytes(value, 0, value.Length, data, offset);
             return new GesStringConstantSegment(slices, data);
         }
 
@@ -569,20 +427,14 @@ internal sealed partial class GesBinaryBuilder
             var slices = new GesUInt16IndexListSegment.SliceEntry[values.Count];
             for (var index = 0; index < values.Count; index++)
             {
-                var value = values[index];
-                slices[index] = new GesUInt16IndexListSegment.SliceEntry
-                {
-                    Start = totalLength,
-                    Length = value.Length
-                };
-                totalLength += value.Length;
+                slices[index] = new GesUInt16IndexListSegment.SliceEntry { Start = totalLength, Length = values[index].Length };
+                totalLength += values[index].Length;
             }
 
             var data = new ushort[totalLength];
             var offset = 0;
-            for (var index = 0; index < values.Count; index++)
+            foreach (var value in values)
             {
-                var value = values[index];
                 Array.Copy(value, 0, data, offset, value.Length);
                 offset += value.Length;
             }
@@ -590,17 +442,6 @@ internal sealed partial class GesBinaryBuilder
             return new GesUInt16IndexListSegment(slices, data);
         }
 
-        private static GesBytecodeInstruction[] CopyInstructions(IReadOnlyList<GesBytecodeInstruction> source)
-        {
-            if (source.Count == 0) return [];
-            var result = new GesBytecodeInstruction[source.Count];
-            for (var index = 0; index < source.Count; index++)
-            {
-                result[index] = source[index];
-            }
-
-            return result;
-        }
     }
 
     private static int BindKindOrder(GesBinaryBindKind kind)
@@ -617,8 +458,7 @@ internal sealed partial class GesBinaryBuilder
             _ => 7
         };
 
-    private static int RoutineKindOrder(GesBinaryBindKind? kind)
-        => kind.HasValue ? BindKindOrder(kind.Value) : 7;
+    private static int RoutineKindOrder(GesBinaryBindKind? kind) => kind.HasValue ? BindKindOrder(kind.Value) : 7;
 
     private static int CompareRoutinePlanForOutput(RoutinePlan left, RoutinePlan right)
     {
@@ -644,33 +484,15 @@ internal sealed partial class GesBinaryBuilder
     {
         if (source is null || source.Count == 0) return [];
         var result = new string[source.Count];
-        for (var index = 0; index < source.Count; index++)
-        {
-            result[index] = source[index] ?? throw new ArgumentException("String lists cannot contain null entries.", nameof(source));
-        }
-
+        for (var index = 0; index < source.Count; index++) result[index] = source[index] ?? throw new ArgumentException("String lists cannot contain null entries.", nameof(source));
         return result;
     }
 
-    private static PlanItem[] CopyPlanItems(IReadOnlyList<PlanItem> source)
-    {
-        if (source.Count == 0) return [];
-        var result = new PlanItem[source.Count];
-        for (var index = 0; index < source.Count; index++)
-        {
-            result[index] = source[index];
-        }
-
-        return result;
-    }
+    private static PlanItem[] CopyPlanItems(IReadOnlyList<PlanItem> source) => source.Count == 0 ? [] : [.. source];
 
     private static int CopyPlanItems(IReadOnlyList<PlanItem> source, PlanItem[] destination, int offset)
     {
-        for (var index = 0; index < source.Count; index++)
-        {
-            destination[offset++] = source[index];
-        }
-
+        for (var index = 0; index < source.Count; index++) destination[offset++] = source[index];
         return offset;
     }
 
@@ -678,23 +500,8 @@ internal sealed partial class GesBinaryBuilder
     {
         if (source.Count == 0) return [];
         var result = new ushort[source.Count];
-        for (var index = 0; index < source.Count; index++)
-        {
-            result[index] = resolveText(source[index]);
-        }
-
+        for (var index = 0; index < source.Count; index++) result[index] = resolveText(source[index]);
         return result;
-    }
-
-    private static bool UInt16SliceEquals(IReadOnlyList<ushort> left, IReadOnlyList<ushort> right)
-    {
-        if (left.Count != right.Count) return false;
-        for (var index = 0; index < left.Count; index++)
-        {
-            if (left[index] != right[index]) return false;
-        }
-
-        return true;
     }
 
     private static ushort NextId(GesBinaryBindKind kind, Dictionary<GesBinaryBindKind, ushort> nextIds)
@@ -704,203 +511,63 @@ internal sealed partial class GesBinaryBuilder
         return id;
     }
 
-    private GesBytecodeInstruction EncodeInstruction(
-        InstructionPlan plan,
-        IReadOnlyDictionary<int, ushort> registerMap,
-        IReadOnlyDictionary<int, ushort> labelAddresses,
-        IReadOnlyList<ushort> bindIds,
-        Func<string, ushort> resolveText,
-        Func<IReadOnlyList<GesRegisterRef>, ushort> resolveList,
-        Func<IReadOnlyList<string>, ushort> resolveTextList)
+    private GesBytecodeInstruction EncodeInstruction(InstructionPlan plan, OperandResolver resolver)
     {
-        var instruction = new GesBytecodeInstruction
-        {
-            OpCode = plan.OpCode,
-            UnitAndFlags = GesBytecodeInstruction.EncodeUnitAndFlags(plan.Unit, plan.Flags)
-        };
-
-        instruction = ApplyDestination(instruction, plan.Destination, registerMap, bindIds, resolveList);
-        instruction = ApplyX(instruction, plan.X, registerMap, labelAddresses, bindIds, resolveText, resolveList, resolveTextList);
-        instruction = ApplyY(instruction, plan.Y, registerMap, labelAddresses, resolveText, resolveList, resolveTextList);
-        instruction = ApplySecondaryList(instruction, plan.SecondaryList, registerMap, resolveList, resolveTextList);
-        instruction = ApplyAux(instruction, plan.A, 0, registerMap, labelAddresses, resolveList, resolveTextList);
-        instruction = ApplyAux(instruction, plan.B, 1, registerMap, labelAddresses, resolveList, resolveTextList);
-        instruction = ApplyAux(instruction, plan.C, 2, registerMap, labelAddresses, resolveList, resolveTextList);
-        instruction = ApplyAux(instruction, plan.D, 3, registerMap, labelAddresses, resolveList, resolveTextList);
-
+        // Every named operand field aliases one of the three words or a payload part; slots accept only their operand kinds.
+        var instruction = new GesBytecodeInstruction { OpCode = plan.OpCode, UnitAndFlags = GesBytecodeInstruction.EncodeUnitAndFlags(plan.Unit, plan.Flags) };
+        if (plan.Destination.Kind != GesOperandKind.None) instruction.DestinationRegister = resolver.Resolve(plan.Destination, DestinationOperands, "Destination");
+        if (plan.X.Kind != GesOperandKind.None) instruction.XRegister = resolver.Resolve(plan.X, XOperands, "X");
+        if (plan.Y.Kind != GesOperandKind.None) instruction.YRegister = resolver.Resolve(plan.Y, YOperands, "Y");
+        if (plan.SecondaryList.Kind != GesOperandKind.None) instruction.SecondaryListIndex = resolver.Resolve(plan.SecondaryList, ListOperands, "Secondary list");
+        if (plan.A.Kind != GesOperandKind.None) instruction.AU = resolver.Resolve(plan.A, AuxOperands, "Aux");
+        if (plan.B.Kind != GesOperandKind.None) instruction.BU = resolver.Resolve(plan.B, AuxOperands, "Aux");
+        if (plan.C.Kind != GesOperandKind.None) instruction.CU = resolver.Resolve(plan.C, AuxOperands, "Aux");
+        if (plan.D.Kind != GesOperandKind.None) instruction.DU = resolver.Resolve(plan.D, AuxOperands, "Aux");
         if (plan.Count.HasValue) instruction.Count = plan.Count.Value;
         if (plan.I64.HasValue) instruction.I64 = plan.I64.Value;
         if (plan.F64.HasValue) instruction.F64 = plan.F64.Value;
         return instruction;
     }
 
-    private static GesBytecodeInstruction ApplyDestination(GesBytecodeInstruction instruction, GesOperand operand, IReadOnlyDictionary<int, ushort> registerMap, IReadOnlyList<ushort> bindIds, Func<IReadOnlyList<GesRegisterRef>, ushort> resolveList)
-    {
-        if (operand.Kind == GesOperandKind.None) return instruction;
-        switch (operand.Kind)
-        {
-            case GesOperandKind.Register:
-                instruction.DestinationRegister = ResolveRegister(operand.RegisterRef, registerMap);
-                return instruction;
-            case GesOperandKind.RegisterList:
-                instruction.DestinationRegister = resolveList(operand.RegisterListValue!);
-                return instruction;
-            case GesOperandKind.Bind:
-                instruction.MessageDestination = bindIds[operand.BindRef.Id];
-                return instruction;
-            default:
-                throw new InvalidOperationException($"Destination operand must be a register or bind but was '{operand.Kind}'.");
-        }
-    }
+    private const int DestinationOperands = 1 << (int)GesOperandKind.Register | 1 << (int)GesOperandKind.RegisterList | 1 << (int)GesOperandKind.Bind;
+    private const int ListOperands = 1 << (int)GesOperandKind.RegisterList | 1 << (int)GesOperandKind.TextList;
+    private const int AuxOperands = ListOperands | 1 << (int)GesOperandKind.Register | 1 << (int)GesOperandKind.Label | 1 << (int)GesOperandKind.Type | 1 << (int)GesOperandKind.UShort | 1 << (int)GesOperandKind.Short;
+    private const int YOperands = AuxOperands | 1 << (int)GesOperandKind.Text;
+    private const int XOperands = YOperands | 1 << (int)GesOperandKind.Bind;
 
-    private static GesBytecodeInstruction ApplyX(
-        GesBytecodeInstruction instruction,
-        GesOperand operand,
-        IReadOnlyDictionary<int, ushort> registerMap,
-        IReadOnlyDictionary<int, ushort> labelAddresses,
-        IReadOnlyList<ushort> bindIds,
-        Func<string, ushort> resolveText,
-        Func<IReadOnlyList<GesRegisterRef>, ushort> resolveList,
-        Func<IReadOnlyList<string>, ushort> resolveTextList)
+    // Turns symbolic operands into their encoded word: register numbers, label addresses, pool indexes and bind IDs.
+    private sealed class OperandResolver(IReadOnlyDictionary<int, ushort> registerMap, IReadOnlyDictionary<int, ushort> labelAddresses, IReadOnlyList<ushort> bindIds, BinaryMaterializer materializer)
     {
-        switch (operand.Kind)
+        public ushort Resolve(GesOperand operand, int allowedKinds, string slot)
         {
-            case GesOperandKind.None:
-                return instruction;
-            case GesOperandKind.Register:
-                instruction.XRegister = ResolveRegister(operand.RegisterRef, registerMap);
-                return instruction;
-            case GesOperandKind.Text:
-                instruction.StringIndex = resolveText(operand.TextValue!);
-                return instruction;
-            case GesOperandKind.RegisterList:
-                instruction.SecondaryListIndex = resolveList(operand.RegisterListValue!);
-                return instruction;
-            case GesOperandKind.TextList:
-                instruction.SecondaryListIndex = resolveTextList(operand.TextListValue!);
-                return instruction;
-            case GesOperandKind.Bind:
-                instruction.BindId = bindIds[operand.BindRef.Id];
-                return instruction;
-            case GesOperandKind.Label:
-                instruction.XRegister = labelAddresses[operand.LabelRef.Id];
-                return instruction;
-            case GesOperandKind.Type:
-                instruction.TypeOperand = (ushort)operand.TypeKind;
-                return instruction;
-            case GesOperandKind.UShort:
-                instruction.XRegister = operand.UShort;
-                return instruction;
-            case GesOperandKind.Short:
-                instruction.ImmediateX = operand.Short;
-                return instruction;
-            default:
-                throw new InvalidOperationException($"Unsupported X operand '{operand.Kind}'.");
-        }
-    }
-
-    private static GesBytecodeInstruction ApplyY(
-        GesBytecodeInstruction instruction,
-        GesOperand operand,
-        IReadOnlyDictionary<int, ushort> registerMap,
-        IReadOnlyDictionary<int, ushort> labelAddresses,
-        Func<string, ushort> resolveText,
-        Func<IReadOnlyList<GesRegisterRef>, ushort> resolveList,
-        Func<IReadOnlyList<string>, ushort> resolveTextList)
-    {
-        switch (operand.Kind)
-        {
-            case GesOperandKind.None:
-                return instruction;
-            case GesOperandKind.Register:
-                instruction.YRegister = ResolveRegister(operand.RegisterRef, registerMap);
-                return instruction;
-            case GesOperandKind.Label:
-                instruction.TargetAddress = labelAddresses[operand.LabelRef.Id];
-                return instruction;
-            case GesOperandKind.Text:
-                instruction.SecondaryStringIndex = resolveText(operand.TextValue!);
-                return instruction;
-            case GesOperandKind.RegisterList:
-                instruction.ListIndex = resolveList(operand.RegisterListValue!);
-                return instruction;
-            case GesOperandKind.TextList:
-                instruction.ListIndex = resolveTextList(operand.TextListValue!);
-                return instruction;
-            case GesOperandKind.Type:
-                instruction.TypeKind = operand.TypeKind;
-                return instruction;
-            case GesOperandKind.UShort:
-                instruction.ListIndex = operand.UShort;
-                return instruction;
-            case GesOperandKind.Short:
-                instruction.ImmediateY = operand.Short;
-                return instruction;
-            default:
-                throw new InvalidOperationException($"Unsupported Y operand '{operand.Kind}'.");
-        }
-    }
-
-    private static GesBytecodeInstruction ApplySecondaryList(
-        GesBytecodeInstruction instruction,
-        GesOperand operand,
-        IReadOnlyDictionary<int, ushort> registerMap,
-        Func<IReadOnlyList<GesRegisterRef>, ushort> resolveList,
-        Func<IReadOnlyList<string>, ushort> resolveTextList)
-    {
-        if (operand.Kind == GesOperandKind.None) return instruction;
-        switch (operand.Kind)
-        {
-            case GesOperandKind.RegisterList:
-                instruction.SecondaryListIndex = resolveList(operand.RegisterListValue!);
-                return instruction;
-            case GesOperandKind.TextList:
-                instruction.SecondaryListIndex = resolveTextList(operand.TextListValue!);
-                return instruction;
-            default:
-                throw new InvalidOperationException($"Secondary list operand must be a register or text list but was '{operand.Kind}'.");
-        }
-    }
-
-    private static GesBytecodeInstruction ApplyAux(
-        GesBytecodeInstruction instruction,
-        GesOperand operand,
-        int index,
-        IReadOnlyDictionary<int, ushort> registerMap,
-        IReadOnlyDictionary<int, ushort> labelAddresses,
-        Func<IReadOnlyList<GesRegisterRef>, ushort> resolveList,
-        Func<IReadOnlyList<string>, ushort> resolveTextList)
-    {
-        if (operand.Kind == GesOperandKind.None) return instruction;
-        var value = operand.Kind switch
-        {
-            GesOperandKind.Register => ResolveRegister(operand.RegisterRef, registerMap),
-            GesOperandKind.Label => labelAddresses[operand.LabelRef.Id],
-            GesOperandKind.RegisterList => resolveList(operand.RegisterListValue!),
-            GesOperandKind.TextList => resolveTextList(operand.TextListValue!),
-            GesOperandKind.UShort => operand.UShort,
-            GesOperandKind.Short => unchecked((ushort)operand.Short),
-            GesOperandKind.Type => (ushort)operand.TypeKind,
-            _ => throw new InvalidOperationException($"Unsupported aux operand '{operand.Kind}'.")
-        };
-
-        switch (index)
-        {
-            case 0:
-                instruction.AU = value;
-                break;
-            case 1:
-                instruction.BU = value;
-                break;
-            case 2:
-                instruction.CU = value;
-                break;
-            case 3:
-                instruction.DU = value;
-                break;
+            if ((allowedKinds & 1 << (int)operand.Kind) == 0) throw new InvalidOperationException($"Unsupported {slot} operand '{operand.Kind}'.");
+            return operand.Kind switch
+            {
+                GesOperandKind.Register => ResolveRegister(operand.RegisterRef, registerMap),
+                GesOperandKind.Label => labelAddresses[operand.LabelRef.Id],
+                GesOperandKind.Text => materializer.AddText(operand.TextValue!),
+                GesOperandKind.RegisterList => ResolveList(operand.RegisterListValue!),
+                GesOperandKind.TextList => ResolveTextList(operand.TextListValue!),
+                GesOperandKind.Bind => bindIds[operand.BindRef.Id],
+                GesOperandKind.Type => (ushort)operand.TypeKind,
+                GesOperandKind.UShort => operand.UShort,
+                _ => unchecked((ushort)operand.Short)
+            };
         }
 
-        return instruction;
+        private ushort ResolveList(IReadOnlyList<GesRegisterRef> registers)
+        {
+            var values = new ushort[registers.Count];
+            for (var index = 0; index < registers.Count; index++) values[index] = ResolveRegister(registers[index], registerMap);
+            return materializer.AddUInt16Slice(values);
+        }
+
+        private ushort ResolveTextList(IReadOnlyList<string> texts)
+        {
+            var indexes = new ushort[texts.Count];
+            for (var index = 0; index < texts.Count; index++) indexes[index] = materializer.AddText(texts[index]);
+            return materializer.AddUInt16Slice(indexes);
+        }
     }
 
     private static ushort ResolveRegister(GesRegisterRef register, IReadOnlyDictionary<int, ushort> registerMap)
@@ -914,43 +581,14 @@ internal sealed partial class GesBinaryBuilder
         if (_routines.Count > 0) return AllocateScopedRegisters(intervals);
 
         var result = new Dictionary<int, ushort>();
-
         ushort nextPinned = 0;
-        for (var index = 0; index < _registers.Count; index++)
-        {
-            var register = _registers[index];
-            if (register.IsTemporary) continue;
-            result[register.Id] = nextPinned++;
-        }
-
-        var active = new List<(int RegisterId, int End, ushort Register)>();
-        var freeRegisters = new Stack<ushort>();
-        var nextTempRegister = nextPinned;
-        var tempIntervals = BuildSortedTemporaryIntervals(intervals);
-        for (var intervalIndex = 0; intervalIndex < tempIntervals.Length; intervalIndex++)
-        {
-            var interval = tempIntervals[intervalIndex];
-            if (_registers[interval.RegisterId].RoutineId != NoRoutineId) continue;
-            for (var index = active.Count - 1; index >= 0; index--)
-            {
-                if (active[index].End >= interval.Start) continue;
-                freeRegisters.Push(active[index].Register);
-                active.RemoveAt(index);
-            }
-
-            var register = freeRegisters.Count > 0 ? freeRegisters.Pop() : nextTempRegister++;
-            result[interval.RegisterId] = register;
-            active.Add((interval.RegisterId, interval.End, register));
-        }
-
-        for (var index = 0; index < intervals.Length; index++)
-        {
-            var interval = intervals[index];
-            if (!interval.HasValue) continue;
-            if (_registers[interval.RegisterId].IsTemporary) continue;
-            if (!result.ContainsKey(interval.RegisterId)) result[interval.RegisterId] = nextPinned++;
-        }
-
+        foreach (var register in _registers)
+            if (!register.IsTemporary)
+                result[register.Id] = nextPinned++;
+        AssignTemporaries(BuildSortedTemporaryIntervals(intervals), NoRoutineId, result, nextPinned, null);
+        foreach (var interval in intervals)
+            if (interval.HasValue && !_registers[interval.RegisterId].IsTemporary && !result.ContainsKey(interval.RegisterId))
+                result[interval.RegisterId] = nextPinned++;
         return new RegisterAllocationResult(result, []);
     }
 
@@ -1003,10 +641,7 @@ internal sealed partial class GesBinaryBuilder
         }
 
         if (operand.Kind != GesOperandKind.RegisterList || operand.RegisterListValue is null) return;
-        for (var index = 0; index < operand.RegisterListValue.Count; index++)
-        {
-            AddRegisterInterval(intervals, operand.RegisterListValue[index], instructionIndex);
-        }
+        for (var index = 0; index < operand.RegisterListValue.Count; index++) AddRegisterInterval(intervals, operand.RegisterListValue[index], instructionIndex);
     }
 
     private void AddRegisterInterval(RegisterInterval[] intervals, GesRegisterRef register, int instructionIndex)
@@ -1028,22 +663,13 @@ internal sealed partial class GesBinaryBuilder
         var address = 0;
         for (var index = 0; index < items.Count; index++)
         {
-            var item = items[index];
-            if (item.Label.HasValue)
-            {
-                result[item.Label.Value.Id] = ToUShort(address, "label address");
-                continue;
-            }
-
-            if (item.Instruction is not null) address++;
+            if (items[index].Label is { } label) result[label.Id] = ToUShort(address, "label address");
+            else if (items[index].Instruction is not null) address++;
         }
 
-        for (var index = 0; index < _labels.Count; index++)
-        {
-            var label = _labels[index];
-            if (!result.ContainsKey(label.Id)) throw new InvalidOperationException($"Label '{label.DisplayName}' was declared but never marked.");
-        }
-
+        foreach (var label in _labels)
+            if (!result.ContainsKey(label.Id))
+                throw new InvalidOperationException($"Label '{label.DisplayName}' was declared but never marked.");
         return result;
     }
 
@@ -1060,17 +686,12 @@ internal sealed partial class GesBinaryBuilder
                 RequireLabel(operand.LabelRef);
                 return;
             case GesOperandKind.RegisterList:
-                for (var index = 0; index < operand.RegisterListValue!.Count; index++)
-                {
-                    RequireRegister(operand.RegisterListValue[index]);
-                }
+                for (var index = 0; index < operand.RegisterListValue!.Count; index++) RequireRegister(operand.RegisterListValue[index]);
                 return;
             case GesOperandKind.TextList:
                 for (var index = 0; index < operand.TextListValue!.Count; index++)
-                {
-                    var text = operand.TextListValue[index];
-                    if (text is null) throw new ArgumentException("Text list operands cannot contain null entries.", nameof(operand));
-                }
+                    if (operand.TextListValue[index] is null)
+                        throw new ArgumentException("Text list operands cannot contain null entries.", nameof(operand));
                 return;
             case GesOperandKind.Bind:
                 if (operand.BindRef.Id < 0 || operand.BindRef.Id >= _binds.Count) throw new ArgumentOutOfRangeException(nameof(operand), "Unknown bind reference.");
@@ -1095,175 +716,107 @@ internal sealed partial class GesBinaryBuilder
         if (label.Id < 0 || label.Id >= _labels.Count) throw new ArgumentOutOfRangeException(nameof(label), "Unknown label reference.");
     }
 
-    private static ushort ToUShort(int value, string operand)
-        => value is < 0 or > ushort.MaxValue ? throw new InvalidOperationException($"{operand} '{value}' does not fit into UInt16.") : checked((ushort)value);
+    private static ushort ToUShort(int value, string operand) => value is < 0 or > ushort.MaxValue ? throw new InvalidOperationException($"{operand} '{value}' does not fit into UInt16.") : checked((ushort)value);
 
     private RegisterAllocationResult AllocateScopedRegisters(RegisterInterval[] intervals)
     {
         var result = new Dictionary<int, ushort>();
         var routineLocalCounts = new short[_routines.Count];
         var routineMaxRegisterIndexes = new int[_routines.Count];
-        for (var index = 0; index < routineMaxRegisterIndexes.Length; index++)
-        {
-            routineMaxRegisterIndexes[index] = -1;
-        }
-
+        Array.Fill(routineMaxRegisterIndexes, -1);
         var temporaryIntervals = BuildSortedTemporaryIntervals(intervals);
         var temporaryIntervalOffset = 0;
-
-        for (var routineIndex = 0; routineIndex < _routines.Count; routineIndex++)
+        foreach (var routine in _routines)
         {
-            var routine = _routines[routineIndex];
+            // Arguments come first, then the routine's other pinned registers, then its temporaries.
             ushort nextPinned = 0;
-            for (var argumentIndex = 0; argumentIndex < routine.ArgumentRegisters.Count; argumentIndex++)
+            foreach (var argument in routine.ArgumentRegisters)
             {
-                var argument = routine.ArgumentRegisters[argumentIndex];
                 result[argument.Id] = nextPinned;
-                UpdateRoutineMaxRegisterIndex(routineMaxRegisterIndexes, routine.Id, nextPinned);
-                nextPinned++;
+                UpdateRoutineMaxRegisterIndex(routineMaxRegisterIndexes, routine.Id, nextPinned++);
             }
 
-            for (var registerIndex = 0; registerIndex < _registers.Count; registerIndex++)
+            foreach (var register in _registers)
             {
-                var register = _registers[registerIndex];
-                if (register.RoutineId != routine.Id || register.IsTemporary) continue;
-                if (result.ContainsKey(register.Id)) continue;
+                if (register.RoutineId != routine.Id || register.IsTemporary || result.ContainsKey(register.Id)) continue;
                 result[register.Id] = nextPinned;
-                UpdateRoutineMaxRegisterIndex(routineMaxRegisterIndexes, routine.Id, nextPinned);
-                nextPinned++;
+                UpdateRoutineMaxRegisterIndex(routineMaxRegisterIndexes, routine.Id, nextPinned++);
             }
 
-            var active = new List<(int RegisterId, int End, ushort Register)>();
-            var freeRegisters = new Stack<ushort>();
-            var nextTempRegister = nextPinned;
-            while (temporaryIntervalOffset < temporaryIntervals.Length && _registers[temporaryIntervals[temporaryIntervalOffset].RegisterId].RoutineId < routine.Id)
-            {
-                temporaryIntervalOffset++;
-            }
-
-            var intervalIndex = temporaryIntervalOffset;
-            while (intervalIndex < temporaryIntervals.Length)
-            {
-                var interval = temporaryIntervals[intervalIndex];
-                var intervalRoutineId = _registers[interval.RegisterId].RoutineId;
-                if (intervalRoutineId != routine.Id) break;
-                for (var index = active.Count - 1; index >= 0; index--)
-                {
-                    if (active[index].End >= interval.Start) continue;
-                    freeRegisters.Push(active[index].Register);
-                    active.RemoveAt(index);
-                }
-
-                var register = freeRegisters.Count > 0 ? freeRegisters.Pop() : nextTempRegister++;
-                result[interval.RegisterId] = register;
-                UpdateRoutineMaxRegisterIndex(routineMaxRegisterIndexes, routine.Id, register);
-                active.Add((interval.RegisterId, interval.End, register));
-                intervalIndex++;
-            }
-
-            temporaryIntervalOffset = intervalIndex;
-
+            // Intervals are sorted by routine, so each routine's temporaries form one contiguous run.
+            while (temporaryIntervalOffset < temporaryIntervals.Length && _registers[temporaryIntervals[temporaryIntervalOffset].RegisterId].RoutineId < routine.Id) temporaryIntervalOffset++;
+            var runEnd = temporaryIntervalOffset;
+            while (runEnd < temporaryIntervals.Length && _registers[temporaryIntervals[runEnd].RegisterId].RoutineId == routine.Id) runEnd++;
+            AssignTemporaries(temporaryIntervals.AsSpan(temporaryIntervalOffset, runEnd - temporaryIntervalOffset), routine.Id, result, nextPinned, routineMaxRegisterIndexes);
+            temporaryIntervalOffset = runEnd;
             var localCount = Math.Max(0, routineMaxRegisterIndexes[routine.Id] + 1 - routine.ArgumentRegisters.Count);
-            if (localCount > short.MaxValue)
-            {
-                throw new InvalidOperationException($"Routine '{routine.Name}' requires too many local registers: {localCount}.");
-            }
-
+            if (localCount > short.MaxValue) throw new InvalidOperationException($"Routine '{routine.Name}' requires too many local registers: {localCount}.");
             routineLocalCounts[routine.Id] = (short)localCount;
         }
 
         var hasGlobalIntervals = false;
-        for (var index = 0; index < temporaryIntervals.Length; index++)
-        {
-            if (_registers[temporaryIntervals[index].RegisterId].RoutineId == NoRoutineId)
-            {
-                hasGlobalIntervals = true;
-                break;
-            }
-        }
-
+        foreach (var interval in temporaryIntervals) hasGlobalIntervals |= _registers[interval.RegisterId].RoutineId == NoRoutineId;
         if (hasGlobalIntervals)
         {
             ushort nextPinned = 0;
-            for (var registerIndex = 0; registerIndex < _registers.Count; registerIndex++)
-            {
-                var register = _registers[registerIndex];
-                if (register.RoutineId != NoRoutineId || register.IsTemporary) continue;
-                result[register.Id] = nextPinned++;
-            }
-
-            var active = new List<(int RegisterId, int End, ushort Register)>();
-            var freeRegisters = new Stack<ushort>();
-            var nextTempRegister = nextPinned;
-            for (var intervalIndex = 0; intervalIndex < temporaryIntervals.Length; intervalIndex++)
-            {
-                var interval = temporaryIntervals[intervalIndex];
-                if (_registers[interval.RegisterId].RoutineId != NoRoutineId) continue;
-                for (var index = active.Count - 1; index >= 0; index--)
-                {
-                    if (active[index].End >= interval.Start) continue;
-                    freeRegisters.Push(active[index].Register);
-                    active.RemoveAt(index);
-                }
-
-                var register = freeRegisters.Count > 0 ? freeRegisters.Pop() : nextTempRegister++;
-                result[interval.RegisterId] = register;
-                active.Add((interval.RegisterId, interval.End, register));
-            }
+            foreach (var register in _registers)
+                if (register.RoutineId == NoRoutineId && !register.IsTemporary)
+                    result[register.Id] = nextPinned++;
+            AssignTemporaries(temporaryIntervals, NoRoutineId, result, nextPinned, null);
         }
 
-        for (var index = 0; index < intervals.Length; index++)
-        {
-            var interval = intervals[index];
-            if (!interval.HasValue) continue;
-            if (!result.ContainsKey(interval.RegisterId))
-            {
+        foreach (var interval in intervals)
+            if (interval.HasValue && !result.ContainsKey(interval.RegisterId))
                 throw new InvalidOperationException($"Register '{interval.RegisterId}' was not allocated.");
-            }
-        }
-
         return new RegisterAllocationResult(result, routineLocalCounts);
+    }
+
+    // Linear scan over temporary intervals sorted by start: a register is free again once its interval has ended.
+    private void AssignTemporaries(ReadOnlySpan<RegisterInterval> intervals, int routineId, Dictionary<int, ushort> result, ushort next, int[]? routineMaxRegisterIndexes)
+    {
+        var active = new List<(int End, ushort Register)>();
+        var freeRegisters = new Stack<ushort>();
+        foreach (var interval in intervals)
+        {
+            if (_registers[interval.RegisterId].RoutineId != routineId) continue;
+            for (var index = active.Count - 1; index >= 0; index--)
+            {
+                if (active[index].End >= interval.Start) continue;
+                freeRegisters.Push(active[index].Register);
+                active.RemoveAt(index);
+            }
+
+            var register = freeRegisters.Count > 0 ? freeRegisters.Pop() : next++;
+            result[interval.RegisterId] = register;
+            if (routineMaxRegisterIndexes is not null) UpdateRoutineMaxRegisterIndex(routineMaxRegisterIndexes, routineId, register);
+            active.Add((interval.End, register));
+        }
     }
 
     private RegisterInterval[] BuildSortedTemporaryIntervals(RegisterInterval[] intervals)
     {
         var count = 0;
-        for (var index = 0; index < intervals.Length; index++)
-        {
-            var interval = intervals[index];
-            if (!interval.HasValue) continue;
-            if (_registers[interval.RegisterId].IsTemporary) count++;
-        }
-
+        foreach (var interval in intervals)
+            if (interval.HasValue && _registers[interval.RegisterId].IsTemporary)
+                count++;
         if (count == 0) return [];
         var result = new RegisterInterval[count];
         var offset = 0;
-        for (var index = 0; index < intervals.Length; index++)
-        {
-            var interval = intervals[index];
-            if (!interval.HasValue) continue;
-            if (!_registers[interval.RegisterId].IsTemporary) continue;
-            result[offset++] = interval;
-        }
-
+        foreach (var interval in intervals)
+            if (interval.HasValue && _registers[interval.RegisterId].IsTemporary)
+                result[offset++] = interval;
         Array.Sort(result, CompareRegisterIntervalByRoutineThenStart);
         return result;
     }
 
     private void UpdateRoutineMaxRegisterIndex(int[] routineMaxRegisterIndexes, int routineId, ushort registerIndex)
     {
-        if (routineId == NoRoutineId) return;
-        if (registerIndex > routineMaxRegisterIndexes[routineId])
-        {
-            routineMaxRegisterIndexes[routineId] = registerIndex;
-        }
+        if (routineId != NoRoutineId && registerIndex > routineMaxRegisterIndexes[routineId]) routineMaxRegisterIndexes[routineId] = registerIndex;
     }
 
     private int CompareRegisterIntervalByRoutineThenStart(RegisterInterval left, RegisterInterval right)
     {
-        var leftRoutineId = _registers[left.RegisterId].RoutineId;
-        var rightRoutineId = _registers[right.RegisterId].RoutineId;
-        var routineCompare = leftRoutineId.CompareTo(rightRoutineId);
+        var routineCompare = _registers[left.RegisterId].RoutineId.CompareTo(_registers[right.RegisterId].RoutineId);
         return routineCompare != 0 ? routineCompare : CompareRegisterInterval(left, right);
     }
 
@@ -1293,47 +846,13 @@ internal sealed partial class GesBinaryBuilder
         public static PlanItem ForInstruction(InstructionPlan instruction, GesSourceLocation? sourceRange = null) => new(null, instruction, sourceRange);
     }
 
-    internal sealed record InstructionPlan(
-        int RoutineId,
-        GesBytecodeOpCode OpCode,
-        GesQuantityUnit Unit,
-        GesInstructionFlag Flags,
-        GesOperand Destination,
-        GesOperand X,
-        GesOperand Y,
-        GesOperand A,
-        GesOperand B,
-        GesOperand C,
-        GesOperand D,
-        GesOperand SecondaryList,
-        short? Count,
-        long? I64,
-        double? F64)
+    internal sealed record InstructionPlan(int RoutineId, GesBytecodeOpCode OpCode, GesQuantityUnit Unit, GesInstructionFlag Flags, GesOperand Destination, GesOperand X, GesOperand Y, GesOperand A, GesOperand B,
+        GesOperand C, GesOperand D, GesOperand SecondaryList, short? Count, long? I64, double? F64)
     {
-        public InstructionPlan WithDestination(GesOperand destination)
-            => this with { Destination = destination };
+        public InstructionPlan WithDestination(GesOperand destination) => this with { Destination = destination };
 
         public bool ReadsRegister(GesRegisterRef register)
-        {
-            return X.ContainsRegister(register) ||
-                   Y.ContainsRegister(register) ||
-                   A.ContainsRegister(register) ||
-                   B.ContainsRegister(register) ||
-                   C.ContainsRegister(register) ||
-                   D.ContainsRegister(register) ||
-                   SecondaryList.ContainsRegister(register);
-        }
-
-        public int CountRegisterReads(GesRegisterRef register)
-        {
-            return X.CountRegister(register) +
-                   Y.CountRegister(register) +
-                   A.CountRegister(register) +
-                   B.CountRegister(register) +
-                   C.CountRegister(register) +
-                   D.CountRegister(register) +
-                   SecondaryList.CountRegister(register);
-        }
+            => X.CountRegister(register) + Y.CountRegister(register) + A.CountRegister(register) + B.CountRegister(register) + C.CountRegister(register) + D.CountRegister(register) + SecondaryList.CountRegister(register) > 0;
     }
 }
 
@@ -1356,17 +875,8 @@ internal readonly struct GesOperand
     public readonly ushort UShort;
     public readonly short Short;
 
-    private GesOperand(
-        GesOperandKind kind,
-        GesRegisterRef register = default,
-        GesLabelRef label = default,
-        GesBindRef bind = default,
-        string? text = null,
-        IReadOnlyList<GesRegisterRef>? registerList = null,
-        IReadOnlyList<string>? textList = null,
-        GesBytecodeTypeKind typeKind = GesBytecodeTypeKind.Nothing,
-        ushort uShort = 0,
-        short @short = 0)
+    private GesOperand(GesOperandKind kind, GesRegisterRef register = default, GesLabelRef label = default, GesBindRef bind = default, string? text = null, IReadOnlyList<GesRegisterRef>? registerList = null,
+        IReadOnlyList<string>? textList = null, GesBytecodeTypeKind typeKind = GesBytecodeTypeKind.Nothing, ushort uShort = 0, short @short = 0)
     {
         Kind = kind;
         RegisterRef = register;
@@ -1398,54 +908,21 @@ internal readonly struct GesOperand
 
     public static GesOperand I16(short value) => new(GesOperandKind.Short, @short: value);
 
-    internal bool ContainsRegister(GesRegisterRef register)
-    {
-        switch (Kind)
-        {
-            case GesOperandKind.Register:
-                return RegisterRef.Id == register.Id;
-            case GesOperandKind.RegisterList when RegisterListValue is not null:
-                for (var index = 0; index < RegisterListValue.Count; index++)
-                {
-                    if (RegisterListValue[index].Id == register.Id) return true;
-                }
-
-                return false;
-            default:
-                return false;
-        }
-    }
-
     internal int CountRegister(GesRegisterRef register)
     {
-        switch (Kind)
-        {
-            case GesOperandKind.Register:
-                return RegisterRef.Id == register.Id ? 1 : 0;
-            case GesOperandKind.RegisterList when RegisterListValue is not null:
-                var count = 0;
-                for (var index = 0; index < RegisterListValue.Count; index++)
-                {
-                    if (RegisterListValue[index].Id == register.Id) count++;
-                }
-
-                return count;
-            default:
-                return 0;
-        }
+        if (Kind == GesOperandKind.Register) return RegisterRef.Id == register.Id ? 1 : 0;
+        if (Kind != GesOperandKind.RegisterList || RegisterListValue is null) return 0;
+        var count = 0;
+        for (var index = 0; index < RegisterListValue.Count; index++)
+            if (RegisterListValue[index].Id == register.Id)
+                count++;
+        return count;
     }
 
     private static GesRegisterRef[] CopyRegisterList(IReadOnlyList<GesRegisterRef>? source)
     {
         if (source is null) throw new ArgumentNullException(nameof(source));
-        if (source.Count == 0) return [];
-        var result = new GesRegisterRef[source.Count];
-        for (var index = 0; index < source.Count; index++)
-        {
-            result[index] = source[index];
-        }
-
-        return result;
+        return source.Count == 0 ? [] : [.. source];
     }
 
     private static string[] CopyTextList(IReadOnlyList<string>? source)
@@ -1453,11 +930,7 @@ internal readonly struct GesOperand
         if (source is null) throw new ArgumentNullException(nameof(source));
         if (source.Count == 0) return [];
         var result = new string[source.Count];
-        for (var index = 0; index < source.Count; index++)
-        {
-            result[index] = source[index] ?? throw new ArgumentException("Text list operands cannot contain null entries.", nameof(source));
-        }
-
+        for (var index = 0; index < source.Count; index++) result[index] = source[index] ?? throw new ArgumentException("Text list operands cannot contain null entries.", nameof(source));
         return result;
     }
 }

@@ -18,11 +18,9 @@ internal sealed partial class GesBinaryBuilder
         return this;
     }
 
-    public GesBinaryBuilder ClearSourceRange()
-        => SetSourceRange(null);
+    public GesBinaryBuilder ClearSourceRange() => SetSourceRange(null);
 
-    public GesBinarySourceRangeScope SourceRange(GesSourceLocation? sourceRange)
-        => new(this, sourceRange);
+    public GesBinarySourceRangeScope SourceRange(GesSourceLocation? sourceRange) => new(this, sourceRange);
 
     internal sealed class GesBinarySourceRangeScope : IDisposable
     {

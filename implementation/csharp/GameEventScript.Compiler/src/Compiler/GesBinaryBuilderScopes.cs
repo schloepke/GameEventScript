@@ -27,17 +27,13 @@ internal sealed partial class GesBinaryBuilder
     public GesBinaryRoutineScope BeginMessageNameHandler(string messageName, string messageArgumentName = "message", ushort? id = null, IReadOnlyList<string>? requiredTags = null, IReadOnlyList<string>? excludedTags = null)
         => BeginRoutine(GesBinaryBindKind.MessageNameHandler, messageName, [messageArgumentName], id, requiredTags, excludedTags);
 
-    public GesBinaryRoutineScope BeginFunction(string name, IReadOnlyList<string>? argumentNames = null, ushort? id = null)
-        => BeginRoutine(GesBinaryBindKind.Function, name, argumentNames, id);
+    public GesBinaryRoutineScope BeginFunction(string name, IReadOnlyList<string>? argumentNames = null, ushort? id = null) => BeginRoutine(GesBinaryBindKind.Function, name, argumentNames, id);
 
-    public GesBinaryRoutineScope BeginPredicate(string name, IReadOnlyList<string>? argumentNames = null, ushort? id = null)
-        => BeginRoutine(GesBinaryBindKind.Predicate, name, argumentNames, id);
+    public GesBinaryRoutineScope BeginPredicate(string name, IReadOnlyList<string>? argumentNames = null, ushort? id = null) => BeginRoutine(GesBinaryBindKind.Predicate, name, argumentNames, id);
 
-    public GesBinaryRoutineScope BeginRecordConstructor(string typeName, IReadOnlyList<string>? argumentNames = null, ushort? id = null)
-        => BeginRoutine(GesBinaryBindKind.Record, typeName, argumentNames, id);
+    public GesBinaryRoutineScope BeginRecordConstructor(string typeName, IReadOnlyList<string>? argumentNames = null, ushort? id = null) => BeginRoutine(GesBinaryBindKind.Record, typeName, argumentNames, id);
 
-    public GesBinaryRoutineScope BeginHelper(string name, IReadOnlyList<string>? argumentNames = null)
-        => BeginRoutine(null, name, argumentNames, id: null);
+    public GesBinaryRoutineScope BeginHelper(string name, IReadOnlyList<string>? argumentNames = null) => BeginRoutine(null, name, argumentNames, id: null);
 
     private GesBinaryRoutineScope BeginRoutine(GesBinaryBindKind? kind, string name, IReadOnlyList<string>? argumentNames, ushort? id, IReadOnlyList<string>? requiredTags = null, IReadOnlyList<string>? excludedTags = null)
         => BeginRoutine(DeclareRoutine(kind, name, argumentNames, id, requiredTags, excludedTags));
@@ -46,20 +42,14 @@ internal sealed partial class GesBinaryBuilder
     {
         if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("Routine name must be non-empty.", nameof(name));
         if (kind is null && id.HasValue) throw new ArgumentException("Helper routines cannot have bind ids.", nameof(id));
-        if (kind is null && ((requiredTags?.Count ?? 0) > 0 || (excludedTags?.Count ?? 0) > 0))
-        {
-            throw new ArgumentException("Helper routines cannot have tag filters.", nameof(requiredTags));
-        }
+        if (kind is null && ((requiredTags?.Count ?? 0) > 0 || (excludedTags?.Count ?? 0) > 0)) throw new ArgumentException("Helper routines cannot have tag filters.", nameof(requiredTags));
 
         var parentRoutineId = CurrentRoutineId;
         var routineId = _routines.Count;
         var entryLabel = AddLabel(name);
         var routine = new RoutinePlan(routineId, parentRoutineId, kind, name, entryLabel, CopyStringList(argumentNames));
         _routines.Add(routine);
-        if (kind.HasValue)
-        {
-            routine.Bind = AddBind(kind.Value, name, routine.ArgumentNames, entryLabel, id, requiredTags, excludedTags);
-        }
+        if (kind.HasValue) routine.Bind = AddBind(kind.Value, name, routine.ArgumentNames, entryLabel, id, requiredTags, excludedTags);
 
         return routine;
     }
@@ -80,7 +70,7 @@ internal sealed partial class GesBinaryBuilder
         }
 
         routine.ArgumentRegisters = arguments;
-        RegisterLocals(0);
+        AddOpcode(GesBytecodeOpCode.RegisterLocals, count: 0);
         return new GesBinaryRoutineScope(this, routine);
     }
 
@@ -94,17 +84,11 @@ internal sealed partial class GesBinaryBuilder
 
     private void EndRoutine(int routineId)
     {
-        if (_routineStack.Count == 0 || _routineStack.Peek() != routineId)
-        {
-            throw new InvalidOperationException("Routine scopes must be closed in reverse creation order.");
-        }
+        if (_routineStack.Count == 0 || _routineStack.Peek() != routineId) throw new InvalidOperationException("Routine scopes must be closed in reverse creation order.");
 
         for (var index = 0; index < _scopeStack.Count; index++)
         {
-            if (_scopeStack[index].RoutineId == routineId)
-            {
-                throw new InvalidOperationException($"Routine '{_routines[routineId].Name}' still has open lexical scopes.");
-            }
+            if (_scopeStack[index].RoutineId == routineId) throw new InvalidOperationException($"Routine '{_routines[routineId].Name}' still has open lexical scopes.");
         }
 
         _routines[routineId].IsClosed = true;
@@ -113,10 +97,7 @@ internal sealed partial class GesBinaryBuilder
 
     private void EndLexicalScope(ScopePlan scope)
     {
-        if (_scopeStack.Count == 0 || !_scopeStack[^1].Equals(scope))
-        {
-            throw new InvalidOperationException("Lexical scopes must be closed in reverse creation order.");
-        }
+        if (_scopeStack.Count == 0 || !_scopeStack[^1].Equals(scope)) throw new InvalidOperationException("Lexical scopes must be closed in reverse creation order.");
 
         _scopeStack.RemoveAt(_scopeStack.Count - 1);
     }
@@ -138,10 +119,7 @@ internal sealed partial class GesBinaryBuilder
 
         var result = CopyPlanItems(items);
         var registerLocalsIndexes = new int[_routines.Count];
-        for (var index = 0; index < registerLocalsIndexes.Length; index++)
-        {
-            registerLocalsIndexes[index] = -1;
-        }
+        for (var index = 0; index < registerLocalsIndexes.Length; index++) registerLocalsIndexes[index] = -1;
 
         for (var itemIndex = 0; itemIndex < result.Length; itemIndex++)
         {
@@ -156,10 +134,7 @@ internal sealed partial class GesBinaryBuilder
         {
             var routine = _routines[routineIndex];
             var registerLocalsIndex = registerLocalsIndexes[routine.Id];
-            if (registerLocalsIndex < 0)
-            {
-                throw new InvalidOperationException($"Routine '{routine.Name}' does not have a RegisterLocals prolog.");
-            }
+            if (registerLocalsIndex < 0) throw new InvalidOperationException($"Routine '{routine.Name}' does not have a RegisterLocals prolog.");
 
             var localCount = registerAllocation.RoutineLocalCounts[routine.Id];
             var instruction = result[registerLocalsIndex].Instruction!;
@@ -197,10 +172,7 @@ internal sealed partial class GesBinaryBuilder
         {
             for (var index = 0; index < _routine.ArgumentNames.Count; index++)
             {
-                if (string.Equals(_routine.ArgumentNames[index], name, StringComparison.Ordinal))
-                {
-                    return _routine.ArgumentRegisters[index];
-                }
+                if (string.Equals(_routine.ArgumentNames[index], name, StringComparison.Ordinal)) return _routine.ArgumentRegisters[index];
             }
 
             throw new ArgumentOutOfRangeException(nameof(name), name, $"Routine '{_routine.Name}' does not define an argument named '{name}'.");

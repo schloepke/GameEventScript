@@ -426,8 +426,11 @@ compiler output byte-identical and stays within the performance budget.
       rewriter; one `params ReadOnlySpan` `Match`. Compact instruction storage
       is not pursued: C# compilation already allocates less than Swift
       (`performance.core/case-0005` 357 KiB against 581 KiB), so replacing
-      `InstructionPlan` records has no measured need. Remaining: denser code per
-      phase, largest first (builder, lowering, parser, validation).
+      `InstructionPlan` records has no measured need. Builder: 4,637 to 3,144
+      lines with one operand resolver for encoding, one linear-scan register
+      assignment, no unused rewrite API and switch expressions in the passes.
+      Remaining: denser code per phase, largest first (lowering, parser,
+      validation).
 
 ### Phase 6 – Tools and adapters (low priority)
 

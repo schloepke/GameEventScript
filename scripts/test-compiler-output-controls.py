@@ -50,6 +50,13 @@ class CompilerOutputTests(unittest.TestCase):
         fresh = "suite/other\tmain\tdebug\tdifferent:code"
         self.assertEqual([worse, fresh], compare.regressions([improved, worse, fresh], [old]))
 
+    def test_diagnostics_compare_position_and_code_but_not_message(self):
+        csharp = "/w/a.ges(4,3): error parse.syntax: Unexpected token 'let' (line 4, col 3)\n/w/a.ges: error validate.duplicateType: Type 'T'\n"
+        swift = "a.ges(4,3): error parse.syntax: Unexpected token 'let'. [program=m]\na.ges: error validate.duplicateType: other text\n"
+        self.assertEqual([("a.ges", "4", "3", "parse.syntax"), ("a.ges", None, None, "validate.duplicateType")], compare.diagnostics(csharp))
+        self.assertEqual(compare.diagnostics(csharp), compare.diagnostics(swift))
+        self.assertNotEqual(compare.diagnostics(csharp), compare.diagnostics("a.ges(4,3): error parse.syntax: x\n"))
+
     def test_rejection_by_one_compiler_is_a_difference(self):
         result = {"case": "suite/case", "program": "main", "debug": False, "verdict": "swift-only"}
         self.assertEqual(([compare.baseline_line(result)], []), compare.ratchet([result], set()))

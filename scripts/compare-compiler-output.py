@@ -6,8 +6,11 @@
 
 Both compilers must produce byte-identical Programs for the same sources and debug options. Only the
 BuildMetadata section differs by design, because it names the producing implementation; every other section
-is compared byte for byte. Cases that both compilers reject are counted separately; a program that only one
-compiler accepts, or that compiles to different bytes, is a difference. Differences are ratcheted against
+is compared byte for byte. For programs that both compilers reject, the ordered diagnostic code lists must match;
+both compilers report every diagnostic of a phase, so the lists cover recovery and collection as well. Differing
+source positions are reported but not yet enforced, because the portable position of each diagnostic is not
+specified. A program that only one compiler accepts, that compiles to different bytes or whose rejection reports
+different codes, is a difference. Differences are ratcheted against
 scripts/compiler-output-baseline.txt: a new or resolved difference fails until the baseline is regenerated
 with --update-baseline. Reports and workspaces stay below artifacts/compiler-comparison.
 """
@@ -18,6 +21,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import re
 import shutil
 import struct
 import subprocess
@@ -73,14 +77,25 @@ def programs(requests):
     return unique
 
 
+# One CLI diagnostic line: source, optional (line,column), then "error <code>:"; messages are implementation text.
+DIAGNOSTIC = re.compile(r"^(?P<source>.*?)(?:\((?P<line>\d+),(?P<column>\d+)\))?: error (?P<code>[a-z]+\.[A-Za-z0-9.]+):", re.M)
+
+
+def diagnostics(stderr):
+    """Ordered (source, line, column, code) of every reported diagnostic; message text is not compared."""
+    return [(Path(m["source"]).name, m["line"], m["column"], m["code"]) for m in DIAGNOSTIC.finditer(stderr)]
+
+
 def compile_with(command, directory, program, label):
-    """Compile one program; returns the .gesb bytes or None when the compiler rejects it."""
+    """Compile one program; returns the .gesb bytes, or None and the diagnostics when the compiler rejects it."""
     output = directory / f"{label}.gesb"
     arguments = [*command, "compile", *[source for source, _ in program["sources"]], "-o", str(output), "-q"]
     if not program["debug"]:
         arguments.append("--no-debug")
     result = subprocess.run(arguments, cwd=directory, capture_output=True, check=False)
-    return output.read_bytes() if result.returncode == 0 and output.exists() else None
+    if result.returncode == 0 and output.exists():
+        return output.read_bytes(), []
+    return None, diagnostics(result.stderr.decode("utf-8", errors="replace"))
 
 
 def compare(key, program, csharp, swift):
@@ -90,10 +105,11 @@ def compare(key, program, csharp, swift):
     directory.mkdir(parents=True)
     for name, text in program["sources"]:
         (directory / name).write_text(text, encoding="utf-8")
-    left = compile_with(csharp, directory, program, "csharp")
-    right = compile_with(swift, directory, program, "swift")
+    left, left_diagnostics = compile_with(csharp, directory, program, "csharp")
+    right, right_diagnostics = compile_with(swift, directory, program, "swift")
     if left is None and right is None:
-        verdict = "both-rejected"
+        codes = [item[3] for item in left_diagnostics] == [item[3] for item in right_diagnostics]
+        verdict = "both-rejected" if codes else "diagnostics"
     elif left is None or right is None:
         verdict = "csharp-only" if right is None else "swift-only"
     else:
@@ -101,7 +117,9 @@ def compare(key, program, csharp, swift):
         verdict = "different:" + ",".join(differing) if differing else "identical"
     if verdict in ("identical", "both-rejected"):
         shutil.rmtree(directory)
-    return {"case": program["case"], "program": program["program"], "debug": program["debug"], "verdict": verdict, "workspace": str(directory)}
+    positions = left is None and right is None and left_diagnostics != right_diagnostics
+    return {"case": program["case"], "program": program["program"], "debug": program["debug"], "verdict": verdict, "workspace": str(directory),
+            "diagnostics": {"csharp": left_diagnostics, "swift": right_diagnostics} if positions else None, "positionsDiffer": positions}
 
 
 def baseline_line(result):
@@ -155,7 +173,9 @@ def main(argv=None):
     (WORK / "report.json").write_text(json.dumps({"counts": counts, "results": results}, indent=1) + "\n", encoding="utf-8")
     identical = counts.get("identical", 0)
     rejected = counts.get("both-rejected", 0)
-    print(f"{len(results)} programs: identical {identical}, both rejected {rejected}, different {len(results) - identical - rejected}")
+    positions = sum(1 for result in results if result.get("positionsDiffer"))
+    print(f"{len(results)} programs: identical {identical}, both rejected {rejected}, different {len(results) - identical - rejected}; "
+          f"diagnostic positions differ in {positions} rejected programs")
     lines = BASELINE.read_text(encoding="utf-8").splitlines() if BASELINE.exists() else []
     baseline = {line for line in lines if line and not line.startswith("#")}
     if args.update_baseline:

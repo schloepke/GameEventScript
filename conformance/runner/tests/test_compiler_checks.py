@@ -28,7 +28,7 @@ class CompilerChecksTests(unittest.TestCase):
 
     def test_all_compiler_requests_exclude_expectations(self):
         request = requests(self.cases)
-        self.assertEqual(286, len(request['cases']))
+        self.assertEqual(309, len(request['cases']))
         for case in request['cases']:
             self.assertEqual({'id', 'kind', 'sources', 'compile', 'requires'}, set(case))
 
@@ -60,6 +60,20 @@ class CompilerChecksTests(unittest.TestCase):
         for diagnostics in [[], [{'phase': 'validate', 'code': 'x', 'line': True}]]:
             with self.assertRaises(InvalidDocument):
                 compare(case, {'status': 'compileError', 'diagnostics': diagnostics})
+
+    def test_ordered_diagnostic_list_requires_every_diagnostic_in_order(self):
+        first = {'phase': 'parse', 'code': 'parse.syntax', 'line': 2}
+        second = {'phase': 'parse', 'code': 'parse.syntax', 'line': 5}
+        case = self.case('compileError', {'errors': [first, second]})
+        observed = {'status': 'compileError', 'diagnostics': [dict(first, column=3), dict(second, column=1)]}
+        self.assertEqual('passed', compare(case, observed)[0])
+        for diagnostics in [[first], [second, first], [first, second, second], [first, dict(second, code='parse.sourceNestingExceeded')]]:
+            self.assertEqual('failed', compare(case, {'status': 'compileError', 'diagnostics': diagnostics})[0])
+        self.assertEqual('failed', compare(case, {'status': 'ok'})[0])
+        for expected in [{'errors': []}, {'errors': first}, {'errors': [first], 'error': first}, {'errors': [{'code': 'parse.syntax'}]}]:
+            with self.assertRaises(InvalidDocument):
+                from checks.compiler_checks import expectation
+                expectation(self.case('compileError', expected))
 
     def test_opcode_constraints_and_negative_controls(self):
         case = self.case('bytecode', {'opcodes': {'contains': ['Add'], 'excludes': ['Move'],

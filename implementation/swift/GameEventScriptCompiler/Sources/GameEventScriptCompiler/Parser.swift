@@ -11,6 +11,8 @@ final class GesParser {
     var forSourceDepth: Int?
     var choiceConditionDepth: Int?
     var module = ""
+    // Syntax errors collected while parsing recovers, as the C# parser collects them.
+    var diagnostics: [GesDiagnostic] = []
 
     init(source: GesSource) {
         self.source = source
@@ -134,125 +136,181 @@ final class GesParser {
         return result
     }
 
+    // Parses one source and reports every syntax error it can find: after an error, parsing resumes at the next
+    // declaration keyword, or inside a block at the next statement separator, as the C# parser does. A nesting-limit
+    // error ends parsing immediately.
     func parse() throws -> GesModule {
         separators()
         let start = current
-        if match(.module) {
-            newlines()
-            module = try identifier()
-            while match(.dot) { module += "." + (try identifier()) }
-            if !module.split(separator: ".").allSatisfy({ $0.unicodeScalars.allSatisfy { GesLexer.lower($0) || GesLexer.digit($0) } }) { throw failure("Invalid module name.", previous) }
+        do {
+            if match(.module) {
+                newlines()
+                module = try identifier()
+                while match(.dot) { module += "." + (try identifier()) }
+                if !module.split(separator: ".").allSatisfy({ $0.unicodeScalars.allSatisfy { GesLexer.lower($0) || GesLexer.digit($0) } }) { throw failure("Invalid module name.", previous) }
+            }
+        } catch let error as GesCompileError {
+            try record(error)
+            synchronizeTopLevel()
         }
         separators()
         var definitions: [GesDefinition] = []
         var constants: [(String, GesExpression)] = []
         var records: [GesRecord] = []
         while current.kind != .endOfFile {
-            let begin = current
-            if match(.constant) {
-                guard current.kind == .constantReference else { throw failure("Expected constant name.") }
-                let name = String(advance().text.dropFirst())
-                try expect(.be)
-                newlines()
-                let value = try expression(15)
-                switch value.kind {
-                case .literal: break
-                case .unary(.negate, let operand): guard case .literal(let number) = operand.kind, [.integer, .float, .percentage].contains(number.valueKind) else { throw failure("Expected numeric literal after '-'.", begin) }
-                default: throw failure("Expected scalar literal.", begin)
-                }
-                constants.append((name, value))
-            } else if match(.record) {
-                let name = try typeName()
-                try expect(.`as`)
-                newlines()
-                try expect(.leftBrace)
-                separators()
-                var fields: [GesField] = []
-                while current.kind != .rightBrace {
-                    let fieldStart = current
-                    let unlabeled = match(.underscore)
-                    let field = try identifier()
-                    try expect(.colon)
-                    newlines()
-                    let type = try typeName()
-                    newlines()
-                    var low: GesExpression?
-                    var high: GesExpression?
-                    var computed: GesExpression?
-                    if matchWord("clamped") {
-                        try expectWord("between")
-                        low = try expression(9)
-                        try expect(.operatorAnd)
-                        high = try expression(9)
-                        newlines()
-                    }
-                    if matchWord("computed") {
-                        try expectWord("by")
-                        computed = try assemblyOrExpression(field)
-                    }
-                    if unlabeled && computed != nil { throw failure("Computed field cannot be a parameter.", fieldStart) }
-                    fields.append(.init(name: field, type: type, label: computed == nil ? (unlabeled ? "_" : field) : nil, minimum: low, maximum: high, computed: computed, location: location(fieldStart, previous)))
-                    _ = match(.comma)
-                    separators()
-                }
-                try expect(.rightBrace)
-                records.append(.init(name: name, fields: fields, location: location(begin, previous)))
-            } else if current.kind == .function || current.kind == .predicate {
-                let kind = advance().text
-                let name = try identifier()
-                let params = try parameters()
-                try expect(.be)
-                newlines()
-                let body = try assemblyOrExpression(name, predicate: kind == "predicate")
-                definitions.append(.init(kind: kind, name: name, parameters: params, expression: body, statements: [], required: [], excluded: [], location: location(begin, previous)))
-            } else {
-                try expect(.on)
-                newlines()
-                guard current.kind == .message || current.kind == .identifier && ["initialization", "undeliverable"].contains(current.text) else { throw failure("Expected message name.") }
-                let name = advance().text
-                var kind = "handler"
-                var params: [GesParameter] = []
-                if match(.`as`) {
-                    newlines()
-                    let p = current
-                    let local = try identifier()
-                    kind = "messageNameHandler"
-                    params = [.init(label: "message", name: local, type: "message", location: location(p))]
-                } else if current.kind == .leftParen {
-                    params = try parameters()
-                }
-                var required: [String] = []
-                var excluded: [String] = []
-                while true {
-                    newlines()
-                    guard current.kind == .matching || current.kind == .without else { break }
-                    let include = advance().kind == .matching
-                    repeat {
-                        newlines()
-                        guard current.kind == .tag else { throw failure("Expected tag literal.") }
-                        let tag = String(advance().text.dropFirst())
-                        if include { if !required.contains(tag) { required.append(tag) } } else if !excluded.contains(tag) { excluded.append(tag) }
-                        newlines()
-                    } while match(.comma)
-                }
-                try expect(.leftBrace)
-                let body = try statements()
-                try expect(.rightBrace)
-                definitions.append(.init(kind: kind, name: name, parameters: params, expression: nil, statements: body, required: required, excluded: excluded, location: location(begin, previous)))
+            do { try declaration(&definitions, &constants, &records) } catch let error as GesCompileError {
+                try record(error)
+                synchronizeTopLevel()
             }
-            if current.kind != .endOfFile && current.kind != .newLine && current.kind != .semicolon { throw failure("Expected a declaration separator.") }
-            separators()
         }
+        if !diagnostics.isEmpty { throw GesCompileError(diagnostics: diagnostics) }
         return .init(name: module, definitions: definitions, constants: constants, records: records, location: location(start, previous))
     }
 
+    // Keeps a syntax error and continues; any other failure, such as the nesting limit, ends parsing.
+    func record(_ error: GesCompileError) throws {
+        guard error.diagnostics.allSatisfy({ $0.code == "parse.syntax" }) else { throw error }
+        diagnostics += error.diagnostics
+    }
+
+    func synchronizeTopLevel() {
+        while current.kind != .endOfFile {
+            if [.module, .constant, .record, .predicate, .function, .on].contains(current.kind) { return }
+            advance()
+        }
+    }
+
+    // Skips to the next statement; false when the block or the source ends first.
+    func synchronizeStatement() -> Bool {
+        while current.kind != .endOfFile {
+            if current.kind == .rightBrace { return false }
+            if match(.semicolon) || match(.newLine) {
+                separators()
+                return true
+            }
+            advance()
+        }
+        return false
+    }
+
+    func declaration(_ definitions: inout [GesDefinition], _ constants: inout [(String, GesExpression)], _ records: inout [GesRecord]) throws {
+        let begin = current
+        if current.kind == .illegal {
+            let token = advance()
+            throw failure("Illegal token '\(token.text)'.", token)
+        }
+        if match(.constant) {
+            guard current.kind == .constantReference else { throw failure("Expected constant name.") }
+            let name = String(advance().text.dropFirst())
+            try expect(.be)
+            newlines()
+            let value = try expression(15)
+            switch value.kind {
+            case .literal: break
+            case .unary(.negate, let operand): guard case .literal(let number) = operand.kind, [.integer, .float, .percentage].contains(number.valueKind) else { throw failure("Expected numeric literal after '-'.", begin) }
+            default: throw failure("Expected scalar literal.", begin)
+            }
+            constants.append((name, value))
+        } else if match(.record) {
+            let name = try typeName()
+            try expect(.`as`)
+            newlines()
+            try expect(.leftBrace)
+            separators()
+            var fields: [GesField] = []
+            while current.kind != .rightBrace {
+                let fieldStart = current
+                let unlabeled = match(.underscore)
+                let field = try identifier()
+                try expect(.colon)
+                newlines()
+                let type = try typeName()
+                newlines()
+                var low: GesExpression?
+                var high: GesExpression?
+                var computed: GesExpression?
+                if matchWord("clamped") {
+                    try expectWord("between")
+                    low = try expression(9)
+                    try expect(.operatorAnd)
+                    high = try expression(9)
+                    newlines()
+                }
+                if matchWord("computed") {
+                    try expectWord("by")
+                    computed = try assemblyOrExpression(field)
+                }
+                if unlabeled && computed != nil { throw failure("Computed field cannot be a parameter.", fieldStart) }
+                fields.append(.init(name: field, type: type, label: computed == nil ? (unlabeled ? "_" : field) : nil, minimum: low, maximum: high, computed: computed, location: location(fieldStart, previous)))
+                _ = match(.comma)
+                separators()
+            }
+            try expect(.rightBrace)
+            records.append(.init(name: name, fields: fields, location: location(begin, previous)))
+        } else if current.kind == .function || current.kind == .predicate {
+            let kind = advance().text
+            let name = try identifier()
+            let params = try parameters()
+            try expect(.be)
+            newlines()
+            let body = try assemblyOrExpression(name, predicate: kind == "predicate")
+            definitions.append(.init(kind: kind, name: name, parameters: params, expression: body, statements: [], required: [], excluded: [], location: location(begin, previous)))
+        } else {
+            try expect(.on)
+            newlines()
+            guard current.kind == .message || current.kind == .identifier && ["initialization", "undeliverable"].contains(current.text) else { throw failure("Expected message name.") }
+            let name = advance().text
+            var kind = "handler"
+            var params: [GesParameter] = []
+            if match(.`as`) {
+                newlines()
+                let p = current
+                let local = try identifier()
+                kind = "messageNameHandler"
+                params = [.init(label: "message", name: local, type: "message", location: location(p))]
+            } else if current.kind == .leftParen {
+                params = try parameters()
+            }
+            var required: [String] = []
+            var excluded: [String] = []
+            while true {
+                newlines()
+                guard current.kind == .matching || current.kind == .without else { break }
+                let include = advance().kind == .matching
+                repeat {
+                    newlines()
+                    guard current.kind == .tag else { throw failure("Expected tag literal.") }
+                    let tag = String(advance().text.dropFirst())
+                    if include { if !required.contains(tag) { required.append(tag) } } else if !excluded.contains(tag) { excluded.append(tag) }
+                    newlines()
+                } while match(.comma)
+            }
+            try expect(.leftBrace)
+            let body = try statements()
+            try expect(.rightBrace)
+            definitions.append(.init(kind: kind, name: name, parameters: params, expression: nil, statements: body, required: required, excluded: excluded, location: location(begin, previous)))
+        }
+        if current.kind != .endOfFile && current.kind != .newLine && current.kind != .semicolon { throw failure("Expected a declaration separator.") }
+        separators()
+    }
+
+    // A block's statements up to its closing brace; an error resumes at the next statement of the same block.
     func statements() throws -> [GesStatement] {
         separators()
         var result: [GesStatement] = []
-        while current.kind != .rightBrace && current.kind != .endOfFile {
-            result.append(try statement())
-            if current.kind != .rightBrace && current.kind != .newLine && current.kind != .semicolon { throw failure("Expected a statement separator.") }
-            separators()
+        while current.kind != .rightBrace {
+            if current.kind == .endOfFile {
+                try record(failure("Expected '}' before end of input."))
+                return result
+            }
+            do {
+                result.append(try statement())
+                if current.kind != .rightBrace && current.kind != .newLine && current.kind != .semicolon { throw failure("Expected a statement separator.") }
+                separators()
+            } catch let error as GesCompileError {
+                try record(error)
+                if !synchronizeStatement() { return result }
+            }
         }
         return result
     }

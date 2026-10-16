@@ -189,7 +189,9 @@ portable semantic equality contract.
 
 `compileError` passes only when compilation fails and at least one emitted
 diagnostic matches every present expectation field, including required phase
-and code. Successful compilation fails the case.
+and code. An ordered `errors` expectation instead requires exactly as many
+emitted diagnostics as listed, each matching the constraint at the same
+position. Successful compilation fails the case.
 
 `loadError` first requires successful compilation and optional binary roundtrip.
 It passes only when `Host.Load` fails with a matching diagnostic and leaves the

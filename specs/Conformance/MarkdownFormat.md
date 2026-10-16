@@ -725,6 +725,11 @@ observed context field be absent; omitting the key leaves that field unconstrain
 Human-readable messages and technical details cannot be expectations. The
 diagnostic contract is [Diagnostics](../Diagnostics.md).
 
+A `compileError` expectation may instead contain `errors`, a non-empty ordered
+list of the same constraint objects. It describes the complete diagnostic list:
+the observed diagnostics must have the same count and order, and each must match
+its constraint. `error` and `errors` cannot be combined.
+
 ### `messageApi`
 
 Requires `message-api` and no GES source. The `gesBlock: case` mapping contains:

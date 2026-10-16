@@ -22,8 +22,8 @@ class PerformanceTests(unittest.TestCase):
     def observation(self, value, unit='ms'):
         return {'profile': 'test-profile', 'metrics': [{'id': 'run.elapsed', 'unit': unit, 'value': value}]}
 
-    def test_all_31_workloads_and_every_authored_profile_validate(self):
-        self.assertEqual(31, len(self.cases))
+    def test_all_36_workloads_and_every_authored_profile_validate(self):
+        self.assertEqual(36, len(self.cases))
         for case in self.cases:
             for profile, data in profiles(case).items():
                 with self.subTest(case=case.id, profile=profile):

@@ -25,7 +25,7 @@ extension GesAstValidator {
             guard let d = definitions[key] else { return "unknown" }
             if d.kind == "predicate" { return "boolean" }
             guard !visiting.contains(key), let value = d.expression else { return "unknown" }
-            let declared = Dictionary(uniqueKeysWithValues: d.parameters.compactMap { p in p.type.map { (p.name, $0) } })
+            let declared = Dictionary(d.parameters.compactMap { p in p.type.map { (p.name, $0) } }, uniquingKeysWith: { _, last in last })
             return infer(value, declared, visiting.union([key]))
         case .send: return "boolean"
         case .unary(let op, let value):
@@ -58,7 +58,7 @@ extension GesAstValidator {
         }
     }
 
-    func validateSeed(_ expression: GesExpression, _ types: [String: String]) throws {
+    func validateSeed(_ expression: GesExpression, _ types: [String: String]) {
         if infer(expression, types) == "integer" { return }
 
         func explicit(_ e: GesExpression) -> Bool {
@@ -72,6 +72,6 @@ extension GesAstValidator {
             }
         }
 
-        if !explicit(expression) { throw compileError("validate.invalidTypeConstructor", expression.location, symbol: "Number", kind: .type, message: "A dynamically typed random seed requires an explicit as :Number conversion.") }
+        if !explicit(expression) { report("validate.invalidTypeConstructor", expression.location, symbol: "Number", kind: .type, message: "A dynamically typed random seed requires an explicit as :Number conversion.") }
     }
 }

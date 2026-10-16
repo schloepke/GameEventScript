@@ -119,6 +119,14 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   `steph.ges.compiler.swift` and version `0.1.0`, as the binary format requires
   of every port. Runtime behavior does not depend on it.
 
+### Fixed
+
+- The Swift compiler reports every diagnostic of a failing phase, as C# does,
+  instead of only the first: the parser resumes after a syntax error at the next
+  declaration or statement, and validation reports all semantic errors in the
+  order that `specs/Diagnostics.md` defines. Call, arity and `is`-predicate
+  checks now run during validation, so they appear in that list.
+
 ## [0.4.0] — 2026-10-11
 
 ### Added

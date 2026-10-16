@@ -12,6 +12,7 @@ here. Add or update this matrix in the same change as new portable behavior.
 
 | Behavior | Stable portable case IDs |
 | --- | --- |
+| Compilation reports every diagnostic of the failing phase in order: parse recovery at declarations, statements, nested blocks and the end of input, stopping after the first failing source; complete validation in the program-wide and per-module order | all `compile.diagnostic-collection` cases |
 | Weighted choice predicates and weights cannot resolve each other's sibling binding | `compile.build-errors/choose-sibling-scope-predicate`, `choose-sibling-scope-weight` |
 | CreateMap returns Nothing for mismatched key/value counts without reading unstaged registers, clears staging, and permits subsequent valid construction | `program.binary-format/valid-map-stage-count-mismatch` |
 | Stack-safe compiler resource analysis for deep acyclic calls within portable limits | `compile.deep-call-graph/ten-thousand-calls` |

@@ -176,9 +176,10 @@ final class GesCompiler {
     func compile() throws -> GameEventScriptProgram {
         try validate()
         let optimizer = GesAstOptimizer(constants: constants)
-        modules = modules.map(optimizer.module)
-        definitions = definitions.mapValues(optimizer.definition)
-        records = records.mapValues(optimizer.record)
+        // Rewrites in place: unchanged entries keep their storage.
+        for index in modules.indices { if let module = optimizer.module(modules[index]) { modules[index] = module } }
+        for index in definitions.values.indices { if let definition = optimizer.definition(definitions.values[index]) { definitions.values[index] = definition } }
+        for index in records.values.indices { if let record = optimizer.record(records.values[index]) { records.values[index] = record } }
         let callables = definitions.values.sorted { $0.signature < $1.signature }
         for definition in callables { routines.append(try routine(definition)) }
         for (id, record) in records.values.sorted(by: { $0.name < $1.name }).enumerated() { recordIDs[record.name] = id }
@@ -192,27 +193,29 @@ final class GesCompiler {
             return ak == bk ? a.offset < b.offset : ak < bk
         }.map(\.element)
         let effects = EffectAnalysis(self)
+        let context = routines.first.map { RewriteContext(self, $0, effects) }
         for routine in routines {
             try checkLimits(routine)
-            optimize(routine, effects: effects)
+            if let context { optimize(routine, context) }
             try allocate(routine)
             try checkLimits(routine)
-            analyzeResources(routine)
+            analyzeResources(routine, effects)
         }
         return try finish()
     }
 
     // Calls and argument staging of the final code, as the C# resource analysis reads them after optimization.
-    func analyzeResources(_ r: GesRoutine) {
-        let recordKeys = Dictionary(routines.filter { $0.definition.kind == "record" }.map { ($0.definition.name, $0.key) }, uniquingKeysWith: { first, _ in first })
+    private static let stages: Set<GesBytecodeOpCode> = [.stageRegister, .stageNothing, .stageTrue, .stageFalse, .stageInteger, .stageFloat, .stageText, .stageTag, .stagePercentage]
+
+    private static let clears: Set<GesBytecodeOpCode> = [.createVector, .createPoint, .createList, .createMap, .createExternalType, .returnVoid, .returnValue]
+
+    func analyzeResources(_ r: GesRoutine, _ effects: EffectAnalysis) {
         let calls = Dictionary(r.calls.map { ($0.0, $0.1) }, uniquingKeysWith: { first, _ in first })
-        let stages: Set<GesBytecodeOpCode> = [.stageRegister, .stageNothing, .stageTrue, .stageFalse, .stageInteger, .stageFloat, .stageText, .stageTag, .stagePercentage]
-        let clears: Set<GesBytecodeOpCode> = [.createVector, .createPoint, .createList, .createMap, .createExternalType, .returnVoid, .returnValue]
         var dependencies: Set<String> = []
         var stage = 0
         var maxStage = 0
         for (index, instruction) in r.code.enumerated() {
-            if stages.contains(instruction.opcode) {
+            if Self.stages.contains(instruction.opcode) {
                 stage += 1
                 maxStage = max(maxStage, stage)
             }
@@ -221,12 +224,12 @@ final class GesCompiler {
                 if let key = calls[index] { dependencies.insert(key) }
                 stage = 0
             case .createRecord:
-                if let name = recordIDs.first(where: { $0.value == Int(instruction.word1) })?.key, let key = recordKeys[name] { dependencies.insert(key) }
+                if let key = effects.recordKeysByID[Int(instruction.word1)] { dependencies.insert(key) }
                 stage = 0
             case .castCustom:
-                if Int(instruction.word2) < strings.count, let key = recordKeys[strings[Int(instruction.word2)]] { dependencies.insert(key) }
+                if Int(instruction.word2) < strings.count, let key = effects.recordKeys[strings[Int(instruction.word2)]] { dependencies.insert(key) }
             default:
-                if clears.contains(instruction.opcode) { stage = 0 }
+                if Self.clears.contains(instruction.opcode) { stage = 0 }
             }
         }
         r.dependencies = dependencies

@@ -12,9 +12,9 @@ extension GesCompiler {
         BranchSimplificationPass(), JumpCleanupPass(),
     ]
 
-    func optimize(_ routine: GesRoutine, effects: EffectAnalysis) {
+    func optimize(_ routine: GesRoutine, _ context: RewriteContext) {
         if routine.hasAssembly { return }
-        let context = RewriteContext(self, routine, effects)
+        context.begin(routine)
         for pass in Self.defaultOptimizationPasses { _ = pass.rewrite(context) }
     }
 
@@ -129,12 +129,35 @@ struct GesOperandSlots {
     let lists: [Int]
 
     static func of(_ instruction: GesBytecodeInstruction, _ cache: inout [Int: GesOperandSlots]) -> GesOperandSlots {
-        // Slots depend on the opcode, its flags (iterator modes) and the whitespace split operand.
-        let key = Int(instruction.opcode.rawValue) << 16 | Int(instruction.unitAndFlags) << 1 | (instruction.opcode == .splitText && instruction.a == 1 ? 1 : 0)
+        let opcode = instruction.opcode
+        if let slots = fixed[Int(opcode.rawValue)] { return slots }
+        // The remaining shapes also depend on the flags (iterator and send modes) or on payload word a (split and pattern modes).
+        let key = Int(opcode.rawValue) << 32 | Int(instruction.unitAndFlags) << 16 | Int(instruction.a)
         if let slots = cache[key] { return slots }
-        let slots = GesOperandSlots(registers: GesCompilerSupport.registerSlots(instruction), lists: GesCompilerSupport.listSlots(instruction, text: false))
+        let slots = GesOperandSlots(instruction)
         cache[key] = slots
         return slots
+    }
+
+    private init(_ instruction: GesBytecodeInstruction) {
+        registers = GesCompilerSupport.registerSlots(instruction)
+        lists = GesCompilerSupport.listSlots(instruction, text: false)
+    }
+
+    // Slots of every opcode whose operands depend on the opcode alone, built once per process.
+    private static let fixed: [GesOperandSlots?] = {
+        var table = [GesOperandSlots?](repeating: nil, count: 256)
+        for opcode in GesBytecodeOpCode.allCases where !hasVariableShape(opcode) {
+            table[Int(opcode.rawValue)] = GesOperandSlots(.init(opcode: opcode, unitAndFlags: 0, word0: 0, word1: 0, word2: 0, payload: 0))
+        }
+        return table
+    }()
+
+    private static func hasVariableShape(_ opcode: GesBytecodeOpCode) -> Bool {
+        switch opcode {
+        case .iteratorCreate, .iteratorCreateOrJump, .iteratorNext, .splitText, .hasPattern, .takePattern, .emitInstant, .emitAfter, .publishInstant, .publishAfter: true
+        default: false
+        }
     }
 }
 

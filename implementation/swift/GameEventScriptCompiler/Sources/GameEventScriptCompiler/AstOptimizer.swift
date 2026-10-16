@@ -9,59 +9,132 @@ import Foundation
 struct GesAstOptimizer {
     let constants: [String: GesExpression]
 
-    func definition(_ d: GesDefinition) -> GesDefinition {
-        .init(
+    // Every rewrite returns nil for an unchanged node, so unchanged definitions, statements and lists keep their storage.
+    func definition(_ d: GesDefinition) -> GesDefinition? {
+        let value = d.expression.flatMap(changed)
+        let body = statements(d.statements)
+        guard value != nil || body != nil else { return nil }
+        return .init(
             kind: d.kind,
             name: d.name,
             parameters: d.parameters,
-            expression: d.expression.map(expression),
-            statements: statements(d.statements),
+            expression: value ?? d.expression,
+            statements: body ?? d.statements,
             required: d.required,
             excluded: d.excluded,
             location: d.location
         )
     }
 
-    func record(_ r: GesRecord) -> GesRecord {
-        .init(
-            name: r.name,
-            fields: r.fields.map { field in
-                .init(
-                    name: field.name,
-                    type: field.type,
-                    label: field.label,
-                    minimum: field.minimum.map(expression),
-                    maximum: field.maximum.map(expression),
-                    computed: field.computed.map(expression),
-                    location: field.location
-                )
-            },
-            location: r.location
-        )
+    func record(_ r: GesRecord) -> GesRecord? {
+        let fields = Self.changedMap(r.fields) { field -> GesField? in
+            let minimum = field.minimum.flatMap(changed)
+            let maximum = field.maximum.flatMap(changed)
+            let computed = field.computed.flatMap(changed)
+            guard minimum != nil || maximum != nil || computed != nil else { return nil }
+            return .init(
+                name: field.name,
+                type: field.type,
+                label: field.label,
+                minimum: minimum ?? field.minimum,
+                maximum: maximum ?? field.maximum,
+                computed: computed ?? field.computed,
+                location: field.location
+            )
+        }
+        guard let fields else { return nil }
+        return .init(name: r.name, fields: fields, location: r.location)
     }
 
-    func module(_ m: GesModule) -> GesModule {
-        .init(name: m.name, definitions: m.definitions.map(definition), constants: m.constants, records: m.records.map(record), location: m.location)
+    func module(_ m: GesModule) -> GesModule? {
+        let definitions = Self.changedMap(m.definitions, definition)
+        let records = Self.changedMap(m.records, record)
+        guard definitions != nil || records != nil else { return nil }
+        return .init(name: m.name, definitions: definitions ?? m.definitions, constants: m.constants, records: records ?? m.records, location: m.location)
     }
 
-    func statements(_ list: [GesStatement]) -> [GesStatement] { list.map(statement) }
+    func statements(_ list: [GesStatement]) -> [GesStatement]? { Self.changedMap(list, statement) }
 
-    func statement(_ s: GesStatement) -> GesStatement {
+    func statement(_ s: GesStatement) -> GesStatement? {
         let kind: GesStatement.Kind
         switch s.kind {
-        case .assembly: return s
-        case .expression(let e): kind = .expression(expression(e))
-        case .letBinding(let name, let e): kind = .letBinding(name, expression(e))
-        case .publish(let publish, let message, let tags): kind = .publish(publish, expression(message), tags.map(expression))
+        case .assembly: return nil
+        case .expression(let e):
+            guard let value = changed(e) else { return nil }
+            kind = .expression(value)
+        case .letBinding(let name, let e):
+            guard let value = changed(e) else { return nil }
+            kind = .letBinding(name, value)
+        case .publish(let publish, let message, let tags):
+            let value = changed(message)
+            let optimizedTags = Self.changedMap(tags, changed)
+            guard value != nil || optimizedTags != nil else { return nil }
+            kind = .publish(publish, value ?? message, optimizedTags ?? tags)
         case .condition(let conditions, let then, let otherwise):
-            kind = .condition(conditions.map { ($0.0, expression($0.1)) }, statements(then), statements(otherwise))
-        case .loop(let names, let source, let flag, let body): kind = .loop(names, expression(source), flag, statements(body))
-        case .seeded(let seed, let body): kind = .seeded(expression(seed), statements(body))
+            let optimizedConditions = Self.changedMap(conditions) { condition in changed(condition.1).map { (condition.0, $0) } }
+            let optimizedThen = statements(then)
+            let optimizedOtherwise = statements(otherwise)
+            guard optimizedConditions != nil || optimizedThen != nil || optimizedOtherwise != nil else { return nil }
+            kind = .condition(optimizedConditions ?? conditions, optimizedThen ?? then, optimizedOtherwise ?? otherwise)
+        case .loop(let names, let source, let flag, let body):
+            let value = changed(source)
+            let optimizedBody = statements(body)
+            guard value != nil || optimizedBody != nil else { return nil }
+            kind = .loop(names, value ?? source, flag, optimizedBody ?? body)
+        case .seeded(let seed, let body):
+            let value = changed(seed)
+            let optimizedBody = statements(body)
+            guard value != nil || optimizedBody != nil else { return nil }
+            kind = .seeded(value ?? seed, optimizedBody ?? body)
         }
         return .init(kind: kind, location: s.location)
     }
 
+    // Copies `list` on the first changed element only; nil when `transform` changed nothing.
+    static func changedMap<T>(_ list: [T], _ transform: (T) -> T?) -> [T]? {
+        var result: [T]?
+        for index in list.indices {
+            guard let value = transform(list[index]) else { continue }
+            if result == nil { result = list }
+            result![index] = value
+        }
+        return result
+    }
+
+    func changed(_ e: GesExpression) -> GesExpression? {
+        let optimized = expression(e)
+        return optimized === e ? nil : optimized
+    }
+
     func expression(_ e: GesExpression) -> GesExpression {
+        // Children are visited through `visit`, which records whether any of them changed; an unchanged node is
+        // reused instead of rebuilt, so only folded subtrees allocate.
+        var changed = false
+
+        func visit(_ child: GesExpression) -> GesExpression {
+            let optimized = expression(child)
+            if optimized !== child { changed = true }
+            return optimized
+        }
+
+        func visitPattern(_ child: GesExpression) -> GesExpression {
+            let optimized = pattern(child)
+            if optimized !== child { changed = true }
+            return optimized
+        }
+
+        func visitList(_ list: [GesExpression]) -> [GesExpression] {
+            guard let optimized = Self.changedMap(list, self.changed) else { return list }
+            changed = true
+            return optimized
+        }
+
+        func visitArguments(_ list: [GesArgument]) -> [GesArgument] {
+            guard let optimized = Self.changedMap(list, { argument in self.changed(argument.value).map { GesArgument(label: argument.label, value: $0) } }) else { return list }
+            changed = true
+            return optimized
+        }
+
         let kind: GesExpression.Kind
         switch e.kind {
         case .assembly, .literal, .name, .handler, .dice, .series: return e
@@ -70,32 +143,57 @@ struct GesAstOptimizer {
             let substituted = GesExpression(value.kind, e.location, depth: e.depth)
             substituted.decimalLiteral = value.decimalLiteral
             return fold(substituted)
-        case .unary(let op, let a): kind = .unary(op, expression(a))
-        case .binary(let op, let a, let b): kind = .binary(op, expression(a), expression(b))
-        case .between(let a, let b, let c): kind = .between(expression(a), expression(b), expression(c))
-        case .call(let name, let args): kind = .call(name, arguments(args))
-        case .extensionCall(let ns, let name, let args): kind = .extensionCall(ns, name, arguments(args))
-        case .constructor(let type, let args): kind = .constructor(type, arguments(args))
-        case .send(let publish, let message, let tags, let delay): kind = .send(publish, expression(message), tags.map(expression), delay.map(expression))
-        case .message(let name, let args): kind = .message(name, arguments(args))
-        case .list(let items): kind = .list(items.map(expression))
-        case .map(let entries): kind = .map(entries.map { ($0.0, expression($0.1)) })
-        case .member(let target, let name): kind = .member(expression(target), name)
+        case .unary(let op, let a): kind = .unary(op, visit(a))
+        case .binary(let op, let a, let b): kind = .binary(op, visit(a), visit(b))
+        case .between(let a, let b, let c): kind = .between(visit(a), visit(b), visit(c))
+        case .call(let name, let args): kind = .call(name, visitArguments(args))
+        case .extensionCall(let ns, let name, let args): kind = .extensionCall(ns, name, visitArguments(args))
+        case .constructor(let type, let args): kind = .constructor(type, visitArguments(args))
+        case .send(let publish, let message, let tags, let delay): kind = .send(publish, visit(message), visitList(tags), delay.map(visit))
+        case .message(let name, let args): kind = .message(name, visitArguments(args))
+        case .list(let items): kind = .list(visitList(items))
+        case .map(let entries):
+            let optimized = Self.changedMap(entries) { entry in self.changed(entry.1).map { (entry.0, $0) } }
+            if optimized != nil { changed = true }
+            kind = .map(optimized ?? entries)
+        case .member(let target, let name): kind = .member(visit(target), name)
         case .selector(let target, var selector):
-            selector.expressions = selector.operation == "objectMatch" ? selector.expressions.map(pattern) : selector.expressions.map(expression)
-            kind = .selector(expression(target), selector)
-        case .combined(let mode, let sources): kind = .combined(mode, sources.map(expression))
-        case .cast(let value, let type): kind = .cast(expression(value), type)
-        case .check(let value, let type): kind = .check(expression(value), type)
-        case .predicate(let value, let name): kind = .predicate(value.map(expression), name)
-        case .intrinsic(let name, let args): kind = .intrinsic(name, args.map(expression))
-        case .range(let from, let to, let step): kind = .range(expression(from), expression(to), step.map(expression))
-        case .random(let from, let to): kind = .random(expression(from), expression(to))
-        case .seeded(let seed, let body): kind = .seeded(expression(seed), expression(body))
-        case .choice(let branches, let otherwise): kind = .choice(branches.map { (expression($0.0), expression($0.1)) }, expression(otherwise))
+            if selector.operation == "objectMatch" {
+                if let optimized = Self.changedMap(
+                    selector.expressions,
+                    { child in
+                        let value = pattern(child)
+                        return value === child ? nil : value
+                    }
+                ) {
+                    selector.expressions = optimized
+                    changed = true
+                }
+            } else {
+                selector.expressions = visitList(selector.expressions)
+            }
+            kind = .selector(visit(target), selector)
+        case .combined(let mode, let sources): kind = .combined(mode, visitList(sources))
+        case .cast(let value, let type): kind = .cast(visit(value), type)
+        case .check(let value, let type): kind = .check(visit(value), type)
+        case .predicate(let value, let name): kind = .predicate(value.map(visit), name)
+        case .intrinsic(let name, let args): kind = .intrinsic(name, visitList(args))
+        case .range(let from, let to, let step): kind = .range(visit(from), visit(to), step.map(visit))
+        case .random(let from, let to): kind = .random(visit(from), visit(to))
+        case .seeded(let seed, let body): kind = .seeded(visit(seed), visit(body))
+        case .choice(let branches, let otherwise):
+            let optimized = Self.changedMap(branches) { branch -> (GesExpression, GesExpression)? in
+                let condition = self.changed(branch.0)
+                let value = self.changed(branch.1)
+                guard condition != nil || value != nil else { return nil }
+                return (condition ?? branch.0, value ?? branch.1)
+            }
+            if optimized != nil { changed = true }
+            kind = .choice(optimized ?? branches, visit(otherwise))
         case .generated(let a, let b, let source, let flag, let predicate, let projection):
-            kind = .generated(a, b, expression(source), flag, predicate.map(expression), expression(projection))
+            kind = .generated(a, b, visit(source), flag, predicate.map(visit), visit(projection))
         }
+        if !changed { return fold(e) }
         let optimized = GesExpression(kind, e.location, depth: e.depth)
         optimized.decimalLiteral = e.decimalLiteral
         return fold(optimized)
@@ -104,12 +202,19 @@ struct GesAstOptimizer {
     // An object pattern is not a map literal: as in C#, only its entry values are optimized and nested patterns recurse.
     func pattern(_ e: GesExpression) -> GesExpression {
         guard case .map(let entries) = e.kind else { return expression(e) }
-        let optimized = GesExpression(.map(entries.map { ($0.0, pattern($0.1)) }), e.location, depth: e.depth)
-        optimized.decimalLiteral = e.decimalLiteral
-        return optimized
+        guard
+            let optimized = Self.changedMap(
+                entries,
+                { entry -> (String, GesExpression)? in
+                    let value = pattern(entry.1)
+                    return value === entry.1 ? nil : (entry.0, value)
+                }
+            )
+        else { return e }
+        let result = GesExpression(.map(optimized), e.location, depth: e.depth)
+        result.decimalLiteral = e.decimalLiteral
+        return result
     }
-
-    func arguments(_ list: [GesArgument]) -> [GesArgument] { list.map { .init(label: $0.label, value: expression($0.value)) } }
 
     // Literals keep their source spelling metadata, such as the decimal form that selects continuous random bounds.
     func fold(_ e: GesExpression) -> GesExpression {

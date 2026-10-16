@@ -14,7 +14,7 @@ extension GesParser {
     var isCombinedSelector: Bool { [":cartesian", ":lockstep", ":zip", ":union", ":intersect", ":difference"].contains(current.syntaxText) }
 
     var isPipelineSelector: Bool {
-        current.kind == "selector" && peek().syntaxText != "."
+        current.kind == .selector && peek().syntaxText != "."
             && (isCombinedSelector
                 || [
                     ":entries", ":keys", ":values", ":filter", ":select", ":foreach", ":any", ":all", ":count", ":sum", ":average", ":min", ":max", ":highest", ":lowest", ":fold", ":reduce", ":map", ":first", ":last", ":single", ":choose", ":take",

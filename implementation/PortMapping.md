@@ -365,8 +365,10 @@ contains exactly the measured reference sources plus the recalibrated corpus.
 
 ### Phase 5 – Compiler
 
-- [ ] Swift: typed `GesTokenKind`, `GesBinaryOperator`, `GesUnaryOperator`
-      instead of strings.
+- [x] Swift: typed `GesTokenKind`, `GesBinaryOperator`, `GesUnaryOperator`
+      instead of strings. Case names follow C# where both have the concept; the
+      Swift lexer keeps coarse token kinds (keywords stay identifiers) and the
+      operators keep `predicate`/`notContains`, which preserve the emitted code.
 - [ ] Identical phase types in both ports: `GesLexer`, `GesParser`,
       `GesAstValidator`, `GesShadowingValidator`, `GesAstOptimizer`,
       `GesBinaryBuilder`. Analyze first how Swift distributes AST optimization.

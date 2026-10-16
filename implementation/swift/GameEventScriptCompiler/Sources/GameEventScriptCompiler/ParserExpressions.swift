@@ -9,7 +9,8 @@ extension GesParser {
         if ["-", "!", "not", "parse", "empty"].contains(current.syntaxText) {
             let op = advance().text
             let value = try expression(15)
-            return try combined(.unary(op == "not" ? "!" : op, value), node(.literal(.nothing), start), value)
+            let unary: GesUnaryOperator = op == "-" ? .negate : op == "parse" ? .parse : op == "empty" ? .empty : .not
+            return try combined(.unary(unary, value), node(.literal(.nothing), start), value)
         }
         let unary = ["abs", "ln", "exp", "sqrt", "cbrt", "chance", "floor", "ceil", "truncate", "rad", "deg", "sin", "cos", "tan", "asin", "acos", "atan", "wrap", "round"]
         if unary.contains(current.syntaxText) {
@@ -27,8 +28,9 @@ extension GesParser {
                 op = "roundHalf" + mode.prefix(1).uppercased() + mode.dropFirst()
             }
             let value = try expression(15)
-            if op == "sqrt" || op == "cbrt" { return try combined(.binary("^", value, node(.literal(.float(op == "sqrt" ? 0.5 : 1.0 / 3)), start)), value) }
-            return node(.unary(op, value), start)
+            if op == "sqrt" || op == "cbrt" { return try combined(.binary(.power, value, node(.literal(.float(op == "sqrt" ? 0.5 : 1.0 / 3)), start)), value) }
+            guard let unary = GesUnaryOperator(prefixText: op) else { throw failure("Expected an operator.", start) }
+            return node(.unary(unary, value), start)
         }
         if ["atan2", "hypot", "distance", "length", "normalize", "dot", "cross", "angle"].contains(current.syntaxText) {
             var op = advance().text
@@ -64,7 +66,7 @@ extension GesParser {
             while !isForClauseStart() && match("and") { args.append(try expression(9)) }
             return node(.intrinsic(op, args), start)
         }
-        if current.kind == "selector" && peek().syntaxText == "." {
+        if current.kind == .selector && peek().syntaxText == "." {
             let (ns, function) = try extensionSymbol()
             newlines()
             var args: [GesArgument] = []
@@ -77,7 +79,7 @@ extension GesParser {
             } else if argumentLabel() {
                 repeat { args.append(try argument()) } while argumentLabel()
             } else if !(choiceConditionDepth == delimiterDepth && current.syntaxText == "then")
-                && (["number", "text", "tag", "constant", "type"].contains(current.kind) || current.kind == "word" && !Self.reserved.contains(current.syntaxText)
+                && ([.number, .text, .tag, .constantReference, .typeName].contains(current.kind) || current.kind == .identifier && !Self.reserved.contains(current.syntaxText)
                     || ["-", "!", "[", "true", "false", "nothing", "parse", "random", "roll", "abs", "ln", "exp", "sqrt", "cbrt"].contains(current.syntaxText))
             {
                 args = [.init(label: "_", value: try expression(15))]
@@ -110,7 +112,7 @@ extension GesParser {
         newlines()
         let delay = match("after") ? try expression() : nil
         let message: GesExpression
-        if current.kind == "message" {
+        if current.kind == .message {
             let token = advance()
             let args = current.syntaxText == "(" ? try arguments() : []
             message = node(.message(token.text, args), token)
@@ -130,23 +132,23 @@ extension GesParser {
             newlines()
             let name = try identifier()
             let value = node(.predicate(nil, name), start)
-            return negated ? node(.unary("!", value), start) : value
+            return negated ? node(.unary(.not, value), start) : value
         }
         if current.syntaxText == "emit" || current.syntaxText == "publish" {
             let start = advance()
             return try sendExpression(start.text == "publish", start)
         }
         let start = current
-        if current.kind == "number" {
+        if current.kind == .number {
             let token = advance()
             guard let value = GesCompilerSupport.number(token.text, percentage: token.text.hasSuffix("%")) else { throw failure("Invalid numeric literal.", token) }
             let result = node(.literal(value), start)
             result.decimalLiteral = token.text.contains(".") || value.valueKind == .float
             return result
         }
-        if current.kind == "text" { return node(.literal(.text(advance().text)), start) }
-        if current.kind == "tag" { return node(.literal(try .tag(String(advance().text.dropFirst()))), start) }
-        if current.kind == "constant" { return node(.constant(String(advance().text.dropFirst())), start) }
+        if current.kind == .text { return node(.literal(.text(advance().text)), start) }
+        if current.kind == .tag { return node(.literal(try .tag(String(advance().text.dropFirst()))), start) }
+        if current.kind == .constantReference { return node(.constant(String(advance().text.dropFirst())), start) }
         if match("true") { return node(.literal(.boolean(true)), start) }
         if match("false") { return node(.literal(.boolean(false)), start) }
         if match("nothing") { return node(.literal(.nothing), start) }
@@ -199,7 +201,7 @@ extension GesParser {
             }
             return node(.dice(count, sides), start)
         }
-        if current.kind == "type" {
+        if current.kind == .typeName {
             let type = try typeName()
             newlines()
             if type == "dice" && match("[") {
@@ -257,7 +259,7 @@ extension GesParser {
                 try expect(")")
                 return node(.constructor(type, args), start)
             }
-            if type == "handler", current.syntaxText == "(", peek().kind == "message" {
+            if type == "handler", current.syntaxText == "(", peek().kind == .message {
                 advance()
                 newlines()
                 let name = advance()
@@ -278,7 +280,7 @@ extension GesParser {
                 try expect(")")
                 return node(.constructor(type, [.init(label: "_", value: node(.handler(name.text, parameters), name))]), start)
             }
-            if type == "message", current.syntaxText == "(", peek().kind == "message" {
+            if type == "message", current.syntaxText == "(", peek().kind == .message {
                 advance()
                 newlines()
                 let name = advance()
@@ -294,8 +296,8 @@ extension GesParser {
             }
             return node(.constructor(type, try arguments()), start)
         }
-        if current.kind == "word" && !Self.reserved.contains(current.syntaxText) || current.kind == "message" {
-            let upper = current.kind == "message"
+        if current.kind == .identifier && !Self.reserved.contains(current.syntaxText) || current.kind == .message {
+            let upper = current.kind == .message
             let name = advance().text
             if peek(0).syntaxText == "(" {
                 newlines()
@@ -320,7 +322,7 @@ extension GesParser {
 
     func positiveInteger() throws -> Int {
         let t = current
-        guard t.kind == "number", let n = GesCompilerSupport.number(t.text)?.integerValue, !t.text.hasSuffix("%"), !t.text.hasSuffix("m"), !t.text.hasSuffix("s"), !t.text.hasSuffix("°"), n > 0 && n <= Int32.max else {
+        guard t.kind == .number, let n = GesCompilerSupport.number(t.text)?.integerValue, !t.text.hasSuffix("%"), !t.text.hasSuffix("m"), !t.text.hasSuffix("s"), !t.text.hasSuffix("°"), n > 0 && n <= Int32.max else {
             throw failure("Expected positive Int32 literal.")
         }
         advance()
@@ -329,13 +331,13 @@ extension GesParser {
 
     func isMessageArguments() -> Bool {
         var i = index + 1
-        while i < tokens.count && tokens[i].kind == "newline" { i += 1 }
+        while i < tokens.count && tokens[i].kind == .newLine { i += 1 }
         i += 1
-        while i < tokens.count && tokens[i].kind == "newline" { i += 1 }
+        while i < tokens.count && tokens[i].kind == .newLine { i += 1 }
         return i < tokens.count && tokens[i].syntaxText == ":"
     }
 
-    func argumentLabel() -> Bool { current.kind == "word" && peek().syntaxText == ":" }
+    func argumentLabel() -> Bool { current.kind == .identifier && peek().syntaxText == ":" }
 
     func argument() throws -> GesArgument {
         let label: String
@@ -413,7 +415,7 @@ extension GesParser {
         let dot = current
         try expect(".")
         newlines()
-        guard current.kind == "word" else { throw failure("Expected extension function.") }
+        guard current.kind == .identifier else { throw failure("Expected extension function.") }
         let functionToken = advance()
         if t.endLine != dot.line || t.endColumn != dot.column || dot.endLine != functionToken.line || dot.endColumn != functionToken.column { throw failure("Extension names must be contiguous.", t) }
         let function = functionToken.text
@@ -423,7 +425,7 @@ extension GesParser {
 
     func selector() throws -> GesSelector {
         let start = current
-        if current.kind != "selector" { return .init(operation: "index", expressions: [try expression()]) }
+        if current.kind != .selector { return .init(operation: "index", expressions: [try expression()]) }
         let op = String(advance().text.dropFirst())
         newlines()
         var s = GesSelector(operation: op)
@@ -496,7 +498,7 @@ extension GesParser {
                 s.mode = "random"
             }
             newlines()
-            if current.kind == "word" && (peek().syntaxText == "where" || peek().syntaxText == ",") {
+            if current.kind == .identifier && (peek().syntaxText == "where" || peek().syntaxText == ",") {
                 s.names = try bindingNames()
                 s.name = s.names[0]
                 try expect("where")

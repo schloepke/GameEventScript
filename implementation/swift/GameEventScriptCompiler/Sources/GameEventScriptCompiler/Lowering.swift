@@ -150,50 +150,40 @@ extension GesCompiler {
         case .literal(let value): try literal(value, d, r)
         case .name, .constant: break
         case .unary(let op, let input):
-            if op == "predicate", case .extensionCall(let ns, let function, let args) = input.kind {
+            if op == .predicate, case .extensionCall(let ns, let function, let args) = input.kind {
                 let regs = try args.map { try expression($0.value, r, scope) }
                 r.emit(.callExternal, d, importBinding(.extensionCall, ns + "." + function, args.map(\.label)), list(regs), flags: 0x20)
                 break
             }
             let a = try expression(input, r, scope)
-            let mapping: [String: GesBytecodeOpCode] = [
-                "-": .negate, "!": .not, "parse": .parseLiteral, "empty": .isEmpty, "hasValue": .hasValue, "abs": .abs, "ln": .logN, "exp": .exp, "chance": .chance, "floor": .floor, "ceil": .ceil, "truncate": .truncate, "rad": .degreeToRadians,
-                "deg": .degreeFromRadians, "wrapDegree": .wrapDegree, "roundHalfEven": .roundHalfEven, "roundHalfUp": .roundHalfUp, "roundHalfDown": .roundHalfDown, "sin": .sin, "cos": .cos, "tan": .tan, "asin": .asin, "acos": .acos, "atan": .atan,
-            ]
-            if op == "predicate" {
+            if op == .predicate {
                 r.emit(.loadTrue, d)
                 r.emit(.equal, d, a, d)
-            } else if let opcode = mapping[op] {
-                r.emit(opcode, d, a)
+            } else {
+                r.emit(op.opcode, d, a)
             }
         case .binary(let op, let left, let right):
             let a = try expression(left, r, scope)
-            let shortOpcode: GesBytecodeOpCode? = op == "or" ? .or : op == "and" ? .and : op == "->" ? .implies : nil
+            let shortOpcode: GesBytecodeOpCode? = op == .or ? .or : op == .and ? .and : op == .implies ? .implies : nil
             if let shortOpcode { r.emit(shortOpcode, d, a, a) }
-            let short = shortOpcode != nil ? r.emit(op == "or" ? .jumpIfTrue : .jumpIfFalse, 0, a) : nil
+            let short = shortOpcode != nil ? r.emit(op == .or ? .jumpIfTrue : .jumpIfFalse, 0, a) : nil
             let b = try expression(right, r, scope)
-            let mapping: [String: GesBytecodeOpCode] = [
-                "+": .add, "-": .subtract, "*": .multiply, "/": .divide, "^": .power, "div": .integerDivide, "mod": .modulo, "rem": .remainder, "=": .equal, "<>": .notEqual, "<": .less, ">": .greater, "<=": .lessOrEqual, ">=": .greaterOrEqual,
-                "default": .default, "or": .or, "and": .and, "xor": .xor, "->": .implies, "in": .contains, "not in": .contains, "inValues": .containsValue, "startsWith": .startsWith, "endsWith": .endsWith, "|": .union, "&": .intersect, "zip": .zip,
-            ]
-            if let opcode = mapping[op] {
-                if op == "*" && !knownNonList(left, r, scope) && !knownNonList(right, r, scope) {
-                    let check = r.temporary()
-                    r.emit(.checkType, check, a, Int(GesBytecodeTypeKind.list.rawValue))
-                    let first = r.emit(.jumpIfNotTrue, 0, check)
-                    r.emit(.checkType, check, b, Int(GesBytecodeTypeKind.list.rawValue))
-                    let second = r.emit(.jumpIfNotTrue, 0, check)
-                    r.emit(.cartesian, d, a, b)
-                    let done = r.emit(.jump)
-                    r.patch(first, target: r.code.count)
-                    r.patch(second, target: r.code.count)
-                    r.emit(.multiply, d, a, b)
-                    r.patch(done, target: r.code.count)
-                } else {
-                    r.emit(opcode, d, a, b)
-                }
-                if op == "not in" { r.emit(.not, d, d) }
+            if op == .multiply && !knownNonList(left, r, scope) && !knownNonList(right, r, scope) {
+                let check = r.temporary()
+                r.emit(.checkType, check, a, Int(GesBytecodeTypeKind.list.rawValue))
+                let first = r.emit(.jumpIfNotTrue, 0, check)
+                r.emit(.checkType, check, b, Int(GesBytecodeTypeKind.list.rawValue))
+                let second = r.emit(.jumpIfNotTrue, 0, check)
+                r.emit(.cartesian, d, a, b)
+                let done = r.emit(.jump)
+                r.patch(first, target: r.code.count)
+                r.patch(second, target: r.code.count)
+                r.emit(.multiply, d, a, b)
+                r.patch(done, target: r.code.count)
+            } else {
+                r.emit(op.opcode, d, a, b)
             }
+            if op == .notContains { r.emit(.not, d, d) }
             if let short { r.patch(short, target: r.code.count) }
         case .between(let input, let minimum, let maximum):
             let value = try expression(input, r, scope)
@@ -395,4 +385,73 @@ extension GesCompiler {
         for (i, value) in regs.dropFirst(2).enumerated() { payload |= UInt64(value) << (i * 16) }
         r.emit(opcode, d, regs[0], regs.count > 1 ? regs[1] : 0, payload: payload)
     }
+}
+
+extension GesUnaryOperator {
+    // Opcode of every operator lowered as one instruction; `predicate` lowers to a comparison instead.
+    var opcode: GesBytecodeOpCode {
+        switch self {
+        case .negate: .negate
+        case .not: .not
+        case .parse: .parseLiteral
+        case .empty: .isEmpty
+        case .hasValue: .hasValue
+        case .abs: .abs
+        case .naturalLog: .logN
+        case .exp: .exp
+        case .chance: .chance
+        case .floor: .floor
+        case .ceil: .ceil
+        case .truncate: .truncate
+        case .degreeToRadians: .degreeToRadians
+        case .degreeFromRadians: .degreeFromRadians
+        case .wrapDegree: .wrapDegree
+        case .roundHalfEven: .roundHalfEven
+        case .roundHalfUp: .roundHalfUp
+        case .roundHalfDown: .roundHalfDown
+        case .sin: .sin
+        case .cos: .cos
+        case .tan: .tan
+        case .asin: .asin
+        case .acos: .acos
+        case .atan: .atan
+        case .predicate: .equal
+        }
+    }
+}
+
+extension GesBinaryOperator {
+    var opcode: GesBytecodeOpCode {
+        switch self {
+        case .add: .add
+        case .subtract: .subtract
+        case .multiply: .multiply
+        case .divide: .divide
+        case .power: .power
+        case .integerDivide: .integerDivide
+        case .modulo: .modulo
+        case .remainder: .remainder
+        case .equal: .equal
+        case .notEqual: .notEqual
+        case .less: .less
+        case .greater: .greater
+        case .lessOrEqual: .lessOrEqual
+        case .greaterOrEqual: .greaterOrEqual
+        case .default: .default
+        case .or: .or
+        case .and: .and
+        case .xor: .xor
+        case .implies: .implies
+        case .contains, .notContains: .contains
+        case .containsValue: .containsValue
+        case .startsWith: .startsWith
+        case .endsWith: .endsWith
+        case .union: .union
+        case .intersect: .intersect
+        case .zip: .zip
+        }
+    }
+
+    // Arithmetic operators that constant folding evaluates.
+    var isArithmetic: Bool { [.add, .subtract, .multiply, .divide, .integerDivide, .modulo, .remainder, .power].contains(self) }
 }

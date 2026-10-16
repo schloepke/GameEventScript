@@ -29,22 +29,22 @@ extension GesCompiler {
             return infer(value, declared, visiting.union([key]))
         case .send: return "boolean"
         case .unary(let op, let value):
-            if ["predicate", "empty", "hasValue", "chance"].contains(op) { return "boolean" }
-            if op == "parse" { return "unknown" }
-            if op == "-" { return child(value) }
-            if op == "abs" {
+            if [.predicate, .empty, .hasValue, .chance].contains(op) { return "boolean" }
+            if op == .parse { return "unknown" }
+            if op == .negate { return child(value) }
+            if op == .abs {
                 let input = child(value)
                 if input.hasPrefix("quantity:") { return input }
                 return ["unknown", "other", "vector"].contains(input) ? "other" : "number"
             }
-            if op == "!" { return predicate(child(value)) ? "boolean" : "unknown" }
+            if op == .not { return predicate(child(value)) ? "boolean" : "unknown" }
             return "number"
         case .binary(let op, let a, let b):
-            if ["=", "<>", "<", ">", "<=", ">=", "in", "not in", "inValues", "startsWith", "endsWith"].contains(op) { return "boolean" }
-            if ["and", "or", "xor", "->", "default"].contains(op) {
+            if [.equal, .notEqual, .less, .greater, .lessOrEqual, .greaterOrEqual, .contains, .notContains, .containsValue, .startsWith, .endsWith].contains(op) { return "boolean" }
+            if [.and, .or, .xor, .implies, .default].contains(op) {
                 let left = child(a)
                 let right = child(b)
-                return predicate(left) && predicate(right) ? left == "nothing" && right == "nothing" && op == "default" ? "nothing" : "boolean" : "unknown"
+                return predicate(left) && predicate(right) ? left == "nothing" && right == "nothing" && op == .default ? "nothing" : "boolean" : "unknown"
             }
             return "other"
         case .choice(let branches, let fallback):
@@ -65,7 +65,7 @@ extension GesCompiler {
             switch e.kind {
             case .cast(_, "number"), .constructor("number", _): return true
             case .name(let name): return types[name] == "number"
-            case .unary("-", let value): return explicit(value)
+            case .unary(.negate, let value): return explicit(value)
             case .literal(let value):
                 return !value.hasUnit && value.valueKind == .float && value.asNumber.isFinite && value.asNumber.rounded(.towardZero) == value.asNumber && value.asNumber >= -9_223_372_036_854_775_808 && value.asNumber < 9_223_372_036_854_775_808
             default: return false

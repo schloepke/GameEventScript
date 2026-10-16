@@ -14,7 +14,7 @@ extension GesCompiler {
         case .literal(let value): return value.valueKind != .list
         case .constant(let name): return constants[name].map { knownNonList($0, r, scope) } ?? false
         case .name(let name): return scope.get(name).map { r.nonListBindings.contains($0) } ?? false
-        case .binary(let op, _, _): return ["/", "div", "mod", "rem", "^"].contains(op)
+        case .binary(let op, _, _): return [.divide, .integerDivide, .modulo, .remainder, .power].contains(op)
         default: return false
         }
     }

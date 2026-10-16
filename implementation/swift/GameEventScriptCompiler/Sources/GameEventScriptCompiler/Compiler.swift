@@ -489,10 +489,9 @@ final class GesCompiler {
             let result = GesCompilerSupport.castNumber(value)
             return result.valueKind == .float && !result.asNumber.isFinite ? nil : result
         case .binary(let op, let left, let right):
-            let operations: [String: GesBytecodeOpCode] = ["+": .add, "-": .subtract, "*": .multiply, "/": .divide, "div": .integerDivide, "mod": .modulo, "rem": .remainder, "^": .power]
-            guard let opcode = operations[op], let a = scalarConstant(left), let b = scalarConstant(right), let result = GesCompilerSupport.arithmetic(opcode, a, b), result.valueKind != .float || result.asNumber.isFinite else { return nil }
+            guard op.isArithmetic, let a = scalarConstant(left), let b = scalarConstant(right), let result = GesCompilerSupport.arithmetic(op.opcode, a, b), result.valueKind != .float || result.asNumber.isFinite else { return nil }
             return result
-        case .unary("-", let value):
+        case .unary(.negate, let value):
             guard let value = scalarConstant(value), value.isNumeric else { return nil }
             if let integer = value.integerValue, integer != .min { return .integer(-integer, unit: value.unit) }
             if value.valueKind == .percentage { return .percentage(-value.asNumber) }

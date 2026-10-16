@@ -69,21 +69,21 @@ struct GesLexer {
         let firstColumn = column
         let startByte = byteOffset
 
-        func token(_ kind: String, _ text: String) -> GesToken { .init(kind: kind, text: text, line: firstLine, column: firstColumn, endLine: line, endColumn: column, start: startByte, end: byteOffset) }
+        func token(_ kind: GesTokenKind, _ text: String) -> GesToken { .init(kind: kind, text: text, line: firstLine, column: firstColumn, endLine: line, endColumn: column, start: startByte, end: byteOffset) }
 
-        if index == scalars.count { return token("eof", "") }
+        if index == scalars.count { return token(.endOfFile, "") }
         if current == "\r" || current == "\n" {
             let cr = current == "\r"
             advance()
             if cr && current == "\n" { advance() }
-            return token("newline", "\n")
+            return token(.newLine, "\n")
         }
         let first = current
         if Self.letter(first) || ((first == ":" || first == "#" || first == "$") && Self.letter(peek())) {
             if !Self.letter(first) {
                 if (first == "#" || first == "$") && !Self.lower(peek()) {
                     advance()
-                    return token("illegal", slice(start))
+                    return token(.illegal, slice(start))
                 }
                 advance()
             }
@@ -95,9 +95,9 @@ struct GesLexer {
             let attachedIllegal = current == "&" && peek() == "&" || current == "|" && peek() == "|" || current == "^" && ["&", "|", "^"].contains(peek())
             if !Self.validSuffix(slice(start)) || attachedIllegal || (index < scalars.count && !Self.space(current) && !Self.boundaries.contains(current)) {
                 while index < scalars.count && !Self.space(current) { advance() }
-                return token("illegal", slice(start))
+                return token(.illegal, slice(start))
             }
-            let kind = first == "#" ? "tag" : first == "$" ? "constant" : first == ":" ? (Self.upper(scalars[start + 1]) ? "type" : "selector") : Self.upper(first) ? "message" : "word"
+            let kind: GesTokenKind = first == "#" ? .tag : first == "$" ? .constantReference : first == ":" ? (Self.upper(scalars[start + 1]) ? .typeName : .selector) : Self.upper(first) ? .message : .identifier
             return token(kind, slice(start))
         }
         if Self.digit(first) {
@@ -109,9 +109,9 @@ struct GesLexer {
             if current == "%" || current == "°" { advance() } else if (current == "m" || current == "s") && (peek() == "\0" || Self.space(peek()) || Self.boundaries.contains(peek())) { advance() }
             if index < scalars.count && !Self.letter(current) && !Self.space(current) && !Self.boundaries.contains(current) {
                 while index < scalars.count && !Self.space(current) { advance() }
-                return token("illegal", slice(start))
+                return token(.illegal, slice(start))
             }
-            return token("number", slice(start))
+            return token(.number, slice(start))
         }
         if first == "\"" || first == "'" {
             advance()
@@ -135,22 +135,22 @@ struct GesLexer {
                     break
                 }
             }
-            if let value = GesCompilerSupport.quotedText(slice(start)) { return token("text", value) }
-            return token("illegal", slice(start))
+            if let value = GesCompilerSupport.quotedText(slice(start)) { return token(.text, value) }
+            return token(.illegal, slice(start))
         }
         let pair = String(first) + String(peek())
         if ["<>", "<=", ">=", "->", "=>"].contains(pair) {
             advance()
             advance()
-            return token("symbol", pair)
+            return token(.symbol, pair)
         }
         advance()
         let aliases: [Unicode.Scalar: String] = [
             "·": "*", "×": "*", "÷": "/", "−": "-", "∞": "infinity", "π": "pi", "∏": "pi", "ℇ": "e", "τ": "tau", "√": "sqrt", "∛": "cbrt", "°": "degree", "∧": "and", "∨": "or", "∈": "in", "∉": "not in", "⊕": "xor", "⋅": "*", "≤": "<=", "≥": ">=",
             "¬": "!", "≠": "<>", "→": "->", "⇒": "->", "↦": "=>", "~": "!", "²": "2", "³": "3",
         ]
-        if first == "²" || first == "³" { return token("superscript", aliases[first]!) }
-        if let alias = aliases[first] { return token("symbol", alias) }
-        return token("(){}[],;.:_+=<>|^&-*/!".unicodeScalars.contains(first) ? "symbol" : "illegal", String(first))
+        if first == "²" || first == "³" { return token(.superscript, aliases[first]!) }
+        if let alias = aliases[first] { return token(.symbol, alias) }
+        return token("(){}[],;.:_+=<>|^&-*/!".unicodeScalars.contains(first) ? .symbol : .illegal, String(first))
     }
 }

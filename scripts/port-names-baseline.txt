@@ -21,7 +21,6 @@ only	csharp	Compiler	GesAverageSelectorNode
 only	csharp	Compiler	GesBetweenExpressionNode
 only	csharp	Compiler	GesBinaryBuilder
 only	csharp	Compiler	GesBinaryExpressionNode
-only	csharp	Compiler	GesBinaryOperator
 only	csharp	Compiler	GesBinaryOptimizationPass
 only	csharp	Compiler	GesBindRef
 only	csharp	Compiler	GesBooleanLiteralExpressionNode
@@ -130,7 +129,6 @@ only	csharp	Compiler	GesSyntaxTreeNodeLists
 only	csharp	Compiler	GesTagLiteralExpressionNode
 only	csharp	Compiler	GesTakePatternSelectorNode
 only	csharp	Compiler	GesTextLiteralExpressionNode
-only	csharp	Compiler	GesTokenKind
 only	csharp	Compiler	GesTokenReader
 only	csharp	Compiler	GesTypeCastExpressionNode
 only	csharp	Compiler	GesTypeCheckExpressionNode
@@ -138,7 +136,6 @@ only	csharp	Compiler	GesTypeConstructorExpressionNode
 only	csharp	Compiler	GesTypeDefinitionNode
 only	csharp	Compiler	GesTypeFieldDefinitionNode
 only	csharp	Compiler	GesUnaryExpressionNode
-only	csharp	Compiler	GesUnaryOperator
 only	csharp	Compiler	GesUnitFloatLiteralExpressionNode
 only	csharp	Compiler	GesUnitIntegerLiteralExpressionNode
 only	csharp	Compiler	GesValidationErrors

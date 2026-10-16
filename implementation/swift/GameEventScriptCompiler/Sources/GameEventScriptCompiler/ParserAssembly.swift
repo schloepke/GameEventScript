@@ -28,17 +28,17 @@ extension GesParser {
                 let statement = try statement()
                 guard case .publish(let publish, let message, let tags) = statement.kind else { throw failure("Expected a statement send.", token) }
                 lines.append(.init(name: publish ? "publish" : "emit", label: false, operands: [message] + tags, location: location(token, previous)))
-            } else if current.kind == "word" {
+            } else if current.kind == .identifier {
                 let name = try identifier()
                 try expect(":")
                 lines.append(.init(name: name, label: true, operands: [], location: location(token, previous)))
             } else {
-                guard current.kind == "message" else { throw failure("Expected an assembly instruction.", token) }
+                guard current.kind == .message else { throw failure("Expected an assembly instruction.", token) }
                 let name = advance().text
                 var operands: [GesExpression] = []
-                if current.kind != "newline" && current.syntaxText != ";" && current.syntaxText != "}" {
+                if current.kind != .newLine && current.syntaxText != ";" && current.syntaxText != "}" {
                     repeat {
-                        if assemblyMessageOperand(name, operands.count), current.kind == "message" {
+                        if assemblyMessageOperand(name, operands.count), current.kind == .message {
                             let message = advance().text
                             let arguments = current.syntaxText == "(" ? try arguments() : []
                             operands.append(node(.message(message, arguments), token))
@@ -46,7 +46,7 @@ extension GesParser {
                             advance()
                             advance()
                             operands.append(node(.literal(.integer(Int64.min)), token))
-                        } else if current.kind == "type" && tokens[min(index + 1, tokens.count - 1)].syntaxText != "(" {
+                        } else if current.kind == .typeName && tokens[min(index + 1, tokens.count - 1)].syntaxText != "(" {
                             let type = advance()
                             operands.append(node(.literal(.text(String(type.text.dropFirst()))), type))
                         } else {
@@ -56,7 +56,7 @@ extension GesParser {
                 }
                 lines.append(.init(name: name, label: false, operands: operands, location: location(token, previous)))
             }
-            if current.kind != "newline" && current.syntaxText != ";" && current.syntaxText != "}" { throw failure("Expected assembly line separator.") }
+            if current.kind != .newLine && current.syntaxText != ";" && current.syntaxText != "}" { throw failure("Expected assembly line separator.") }
             separators()
         }
         try expect("}")
@@ -73,7 +73,7 @@ extension GesParser {
 
         let kind: GesExpression.Kind
         switch expression.kind {
-        case .unary("-", let operand):
+        case .unary(.negate, let operand):
             guard case .literal(let value) = operand.kind, value.isNumeric else { return expression }
             if value.valueKind == .percentage {
                 kind = .literal(.percentage(-value.asNumber))

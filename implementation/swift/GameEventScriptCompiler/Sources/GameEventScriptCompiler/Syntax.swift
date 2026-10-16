@@ -9,10 +9,27 @@ struct GesSource {
     let id: UInt32
 }
 
+// Lexical token categories. Keywords and punctuation stay identifiers or symbols and are matched by text.
+enum GesTokenKind {
+    case endOfFile
+    case illegal
+    case newLine
+    case identifier
+    case message
+    case typeName
+    case constantReference
+    case selector
+    case tag
+    case number
+    case text
+    case symbol
+    case superscript
+}
+
 struct GesToken {
     // Decoded Text content never participates in keyword or punctuation matching.
-    var syntaxText: String { kind == "text" ? "" : text }
-    let kind: String
+    var syntaxText: String { kind == .text ? "" : text }
+    let kind: GesTokenKind
     let text: String
     let line: Int
     let column: Int
@@ -20,6 +37,126 @@ struct GesToken {
     let endColumn: Int
     let start: Int
     let end: Int
+}
+
+// Unary operators of the source language; `predicate` wraps an extension predicate call.
+enum GesUnaryOperator {
+    case parse
+    case negate
+    case not
+    case hasValue
+    case empty
+    case chance
+    case abs
+    case naturalLog
+    case exp
+    case floor
+    case ceil
+    case truncate
+    case roundHalfEven
+    case roundHalfUp
+    case roundHalfDown
+    case degreeToRadians
+    case degreeFromRadians
+    case wrapDegree
+    case sin
+    case cos
+    case tan
+    case asin
+    case acos
+    case atan
+    case predicate
+
+    // Function-style prefix operator after multi-word forms such as `wrap degree` are resolved.
+    init?(prefixText: String) {
+        switch prefixText {
+        case "abs": self = .abs
+        case "ln": self = .naturalLog
+        case "exp": self = .exp
+        case "chance": self = .chance
+        case "floor": self = .floor
+        case "ceil": self = .ceil
+        case "truncate": self = .truncate
+        case "rad": self = .degreeToRadians
+        case "deg": self = .degreeFromRadians
+        case "wrapDegree": self = .wrapDegree
+        case "roundHalfEven": self = .roundHalfEven
+        case "roundHalfUp": self = .roundHalfUp
+        case "roundHalfDown": self = .roundHalfDown
+        case "sin": self = .sin
+        case "cos": self = .cos
+        case "tan": self = .tan
+        case "asin": self = .asin
+        case "acos": self = .acos
+        case "atan": self = .atan
+        default: return nil
+        }
+    }
+}
+
+// Binary operators of the source language. `notContains` keeps `not in` a single operator.
+enum GesBinaryOperator {
+    case or
+    case xor
+    case and
+    case implies
+    case equal
+    case notEqual
+    case less
+    case greater
+    case lessOrEqual
+    case greaterOrEqual
+    case add
+    case subtract
+    case multiply
+    case divide
+    case integerDivide
+    case modulo
+    case remainder
+    case power
+    case `default`
+    case contains
+    case notContains
+    case containsValue
+    case startsWith
+    case endsWith
+    case union
+    case intersect
+    case zip
+
+    // Operator spelled by an infix source token, after multi-word forms are resolved.
+    init?(sourceText: String) {
+        switch sourceText {
+        case "or": self = .or
+        case "xor": self = .xor
+        case "and": self = .and
+        case "->": self = .implies
+        case "=": self = .equal
+        case "<>": self = .notEqual
+        case "<": self = .less
+        case ">": self = .greater
+        case "<=": self = .lessOrEqual
+        case ">=": self = .greaterOrEqual
+        case "+": self = .add
+        case "-": self = .subtract
+        case "*": self = .multiply
+        case "/": self = .divide
+        case "div": self = .integerDivide
+        case "mod": self = .modulo
+        case "rem": self = .remainder
+        case "^": self = .power
+        case "default": self = .default
+        case "in": self = .contains
+        case "not in": self = .notContains
+        case "inValues": self = .containsValue
+        case "startsWith": self = .startsWith
+        case "endsWith": self = .endsWith
+        case "|": self = .union
+        case "&": self = .intersect
+        case "zip": self = .zip
+        default: return nil
+        }
+    }
 }
 
 struct GesParameter {
@@ -40,8 +177,8 @@ final class GesExpression {
         case literal(GesValue)
         case name(String)
         case constant(String)
-        case unary(String, GesExpression)
-        case binary(String, GesExpression, GesExpression)
+        case unary(GesUnaryOperator, GesExpression)
+        case binary(GesBinaryOperator, GesExpression, GesExpression)
         case between(GesExpression, GesExpression, GesExpression)
         case call(String, [GesArgument])
         case extensionCall(String, String, [GesArgument])

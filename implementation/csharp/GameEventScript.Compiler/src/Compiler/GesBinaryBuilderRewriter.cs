@@ -465,6 +465,38 @@ internal sealed partial class GesBinaryBuilder
         }
     }
 
+    // Read and write counts per register and, when requested, each register's last writing item.
+    private static void CountRegisterUsage(RewriteContext context, int[] readCounts, int[] writeCounts, int[]? writeIndexes = null)
+    {
+        var items = context.Items;
+        for (var index = 0; index < items.Count; index++)
+        {
+            if (items[index].Instruction is not { } instruction) continue;
+            if (instruction.Destination.Kind == GesOperandKind.Register)
+            {
+                var registerId = instruction.Destination.RegisterRef.Id;
+                writeCounts[registerId]++;
+                if (writeIndexes is not null) writeIndexes[registerId] = index;
+            }
+            else if (instruction.Destination.Kind == GesOperandKind.RegisterList)
+            {
+                foreach (var target in instruction.Destination.RegisterListValue!)
+                {
+                    writeCounts[target.Id]++;
+                    if (writeIndexes is not null) writeIndexes[target.Id] = index;
+                }
+            }
+
+            CountOperandReads(readCounts, instruction.X);
+            CountOperandReads(readCounts, instruction.Y);
+            CountOperandReads(readCounts, instruction.A);
+            CountOperandReads(readCounts, instruction.B);
+            CountOperandReads(readCounts, instruction.C);
+            CountOperandReads(readCounts, instruction.D);
+            CountOperandReads(readCounts, instruction.SecondaryList);
+        }
+    }
+
     private static void CountOperandReads(int[] readCounts, GesOperand operand)
     {
         switch (operand.Kind)
@@ -784,37 +816,6 @@ internal sealed partial class GesBinaryBuilder
             return result / right == left;
         }
 
-        private static void CountRegisterUsage(RewriteContext context, int[] readCounts, int[] writeCounts, int[] writeIndexes)
-        {
-            var items = context.Items;
-            for (var index = 0; index < items.Count; index++)
-            {
-                if (items[index].Instruction is not { } instruction) continue;
-                if (instruction.Destination.Kind == GesOperandKind.Register)
-                {
-                    var registerId = instruction.Destination.RegisterRef.Id;
-                    writeCounts[registerId]++;
-                    writeIndexes[registerId] = index;
-                }
-                else if (instruction.Destination.Kind == GesOperandKind.RegisterList)
-                {
-                    foreach (var target in instruction.Destination.RegisterListValue!)
-                    {
-                        writeCounts[target.Id]++;
-                        writeIndexes[target.Id] = index;
-                    }
-                }
-
-                CountOperandReads(readCounts, instruction.X);
-                CountOperandReads(readCounts, instruction.Y);
-                CountOperandReads(readCounts, instruction.A);
-                CountOperandReads(readCounts, instruction.B);
-                CountOperandReads(readCounts, instruction.C);
-                CountOperandReads(readCounts, instruction.D);
-                CountOperandReads(readCounts, instruction.SecondaryList);
-            }
-        }
-
         private enum ConstantKind
         {
             None,
@@ -1084,37 +1085,6 @@ internal sealed partial class GesBinaryBuilder
             return changed;
         }
 
-        private static void CountRegisterUsage(RewriteContext context, int[] readCounts, int[] writeCounts, int[] writeIndexes)
-        {
-            var items = context.Items;
-            for (var index = 0; index < items.Count; index++)
-            {
-                if (items[index].Instruction is not { } instruction) continue;
-                if (instruction.Destination.Kind == GesOperandKind.Register)
-                {
-                    var registerId = instruction.Destination.RegisterRef.Id;
-                    writeCounts[registerId]++;
-                    writeIndexes[registerId] = index;
-                }
-                else if (instruction.Destination.Kind == GesOperandKind.RegisterList)
-                {
-                    foreach (var target in instruction.Destination.RegisterListValue!)
-                    {
-                        writeCounts[target.Id]++;
-                        writeIndexes[target.Id] = index;
-                    }
-                }
-
-                CountOperandReads(readCounts, instruction.X);
-                CountOperandReads(readCounts, instruction.Y);
-                CountOperandReads(readCounts, instruction.A);
-                CountOperandReads(readCounts, instruction.B);
-                CountOperandReads(readCounts, instruction.C);
-                CountOperandReads(readCounts, instruction.D);
-                CountOperandReads(readCounts, instruction.SecondaryList);
-            }
-        }
-
         private static bool CanMoveDestinationWriteEarlier(RewriteContext context, int writerIndex, int moveIndex, GesRegisterRef destination)
         {
             for (var index = writerIndex + 1; index < moveIndex; index++)
@@ -1254,48 +1224,6 @@ internal sealed partial class GesBinaryBuilder
             }
 
             return changed;
-        }
-
-        private static void CountRegisterUsage(RewriteContext context, int[] readCounts, int[] writeCounts)
-        {
-            var items = context.Items;
-            for (var index = 0; index < items.Count; index++)
-            {
-                if (items[index].Instruction is not { } instruction) continue;
-                if (instruction.Destination.Kind == GesOperandKind.Register)
-                {
-                    writeCounts[instruction.Destination.RegisterRef.Id]++;
-                }
-                else if (instruction.Destination.Kind == GesOperandKind.RegisterList)
-                {
-                    foreach (var target in instruction.Destination.RegisterListValue!) writeCounts[target.Id]++;
-                }
-
-                CountOperandReads(readCounts, instruction.X);
-                CountOperandReads(readCounts, instruction.Y);
-                CountOperandReads(readCounts, instruction.A);
-                CountOperandReads(readCounts, instruction.B);
-                CountOperandReads(readCounts, instruction.C);
-                CountOperandReads(readCounts, instruction.D);
-                CountOperandReads(readCounts, instruction.SecondaryList);
-            }
-        }
-
-        private static void CountOperandReads(int[] readCounts, GesOperand operand)
-        {
-            switch (operand.Kind)
-            {
-                case GesOperandKind.Register:
-                    readCounts[operand.RegisterRef.Id]++;
-                    return;
-                case GesOperandKind.RegisterList when operand.RegisterListValue is not null:
-                    for (var index = 0; index < operand.RegisterListValue.Count; index++)
-                    {
-                        readCounts[operand.RegisterListValue[index].Id]++;
-                    }
-
-                    return;
-            }
         }
     }
 }

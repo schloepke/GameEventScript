@@ -475,11 +475,6 @@ internal sealed partial class GesParser
         {
             SkipNewLines();
             var tagToken = Expect(Tag);
-            if (!tagToken.Text.StartsWith("#", StringComparison.Ordinal))
-            {
-                throw new GameEventScriptParseException($"Expected tag literal but found {tagToken.Text}", tagToken);
-            }
-
             var tag = tagToken.Text[1..];
             var normalized = GameEventScriptMessage.NormalizeTagName(tag);
             if (normalized.Length > 0 && !ContainsTag(tags, normalized))
@@ -1839,7 +1834,7 @@ internal sealed partial class GesParser
         do
         {
             var start = Current;
-            if (MatchTag(":split"))
+            if (MatchSelector(":split"))
             {
                 if (source is null) throw new GameEventScriptParseException("Split requires a source.", start);
                 Expect(On);
@@ -1874,7 +1869,7 @@ internal sealed partial class GesParser
     {
         var startToken = Current;
         SkipNewLines();
-        if (MatchTag(":foreach"))
+        if (MatchSelector(":foreach"))
         {
             var (identifier, names) = ParseBindingNames();
             Expect(ProjectionArrow);
@@ -1910,7 +1905,7 @@ internal sealed partial class GesParser
             return ParseDropSelector();
         }
 
-        if (MatchTag(":term"))
+        if (MatchSelector(":term"))
         {
             return ParseSeriesTermSelector();
         }
@@ -1951,17 +1946,17 @@ internal sealed partial class GesParser
             return WithRange(new GesReverseSelectorNode(), startToken);
         }
 
-        if (MatchTag(":first"))
+        if (MatchSelector(":first"))
         {
             return ParseEdgeSelector("first");
         }
 
-        if (MatchTag(":last"))
+        if (MatchSelector(":last"))
         {
             return ParseEdgeSelector("last");
         }
 
-        if (MatchTag(":single"))
+        if (MatchSelector(":single"))
         {
             return ParseEdgeSelector("single");
         }
@@ -2002,30 +1997,30 @@ internal sealed partial class GesParser
             return WithRange(new GesAverageSelectorNode(identifier, projection) { BindingNames = bindings }, startToken);
         }
 
-        if (MatchTag(":min"))
+        if (MatchSelector(":min"))
         {
             return ParseProjectionSelector("min");
         }
 
-        if (MatchTag(":max"))
+        if (MatchSelector(":max"))
         {
             return ParseProjectionSelector("max");
         }
 
-        if (MatchTag(":highest"))
+        if (MatchSelector(":highest"))
         {
             return ParseProjectionSelector("highest");
         }
 
-        if (MatchTag(":lowest"))
+        if (MatchSelector(":lowest"))
         {
             return ParseProjectionSelector("lowest");
         }
 
-        if (Current.Kind == Tag && (Current.Text == ":fold" || Current.Text == ":reduce"))
+        if (Current.Kind == Selector && Current.Text is ":fold" or ":reduce")
         {
-            var reduce = MatchTag(":reduce");
-            if (!reduce) MatchTag(":fold");
+            var reduce = MatchSelector(":reduce");
+            if (!reduce) MatchSelector(":fold");
             var accumulator = ExpectIdentifier();
             GesExpressionNode? seed = null;
             if (!reduce)
@@ -2049,7 +2044,7 @@ internal sealed partial class GesParser
             return WithRange(new GesSelectSelectorNode(identifier, projection) { BindingNames = bindings }, startToken);
         }
 
-        if (MatchTag(":map"))
+        if (MatchSelector(":map"))
         {
             SkipNewLines();
             var (identifier, bindings) = ParseBindingNames();
@@ -2073,12 +2068,12 @@ internal sealed partial class GesParser
             return ParseContainsSelector();
         }
 
-        if (MatchTag(":distinct"))
+        if (MatchSelector(":distinct"))
         {
             return ParseDistinctSelector();
         }
 
-        if (MatchTag(":group"))
+        if (MatchSelector(":group"))
         {
             return ParseGroupBySelector();
         }
@@ -2088,12 +2083,12 @@ internal sealed partial class GesParser
             return ParseSortSelector();
         }
 
-        if (MatchTag(":order"))
+        if (MatchSelector(":order"))
         {
             return ParseOrderBySelector();
         }
 
-        if (Current.Kind == Tag && Current.Text is ":keys" or ":values" or ":entries")
+        if (Current.Kind == Selector && Current.Text is ":keys" or ":values" or ":entries")
         {
             var selectorToken = Advance();
             var selector = WithRange(new GesTagLiteralExpressionNode(selectorToken.Text[1..]), selectorToken);
@@ -2314,7 +2309,7 @@ internal sealed partial class GesParser
             return ParseCollectionFactoryExpression("list");
         }
 
-        if (Current.Kind == Tag &&
+        if (Current.Kind == Selector &&
             string.Equals(Current.Text, ":set", StringComparison.Ordinal) &&
             IsNextSignificantToken(LeftBracket))
         {
@@ -2369,7 +2364,7 @@ internal sealed partial class GesParser
             return WithRange(new GesNothingLiteralExpressionNode(), Previous);
         }
 
-        if (Current.Kind == Tag && Current.Text.StartsWith("#", StringComparison.Ordinal))
+        if (Current.Kind == Tag)
         {
             var tagToken = Advance();
             return WithRange(new GesTagLiteralExpressionNode(tagToken.Text[1..]), tagToken);
@@ -2958,11 +2953,6 @@ internal sealed partial class GesParser
 
     private GesToken ParseDiceSideCountToken()
     {
-        if (Match(DiceSeparator))
-        {
-            return Expect(GesTokenKind.Float);
-        }
-
         if (Is(Identifier))
         {
             var token = Current;
@@ -3058,37 +3048,22 @@ internal sealed partial class GesParser
         return true;
     }
 
-    private bool Match(GesTokenKind first, GesTokenKind second)
+    // Matches any of the given kinds; the span is stack-allocated, so matching allocates nothing.
+    private bool Match(params ReadOnlySpan<GesTokenKind> kinds)
     {
-        if (!Is(first) && !Is(second)) return false;
-        Advance();
-        return true;
+        foreach (var kind in kinds)
+        {
+            if (!Is(kind)) continue;
+            Advance();
+            return true;
+        }
+
+        return false;
     }
 
-    private bool Match(GesTokenKind first, GesTokenKind second, GesTokenKind third)
+    private bool MatchSelector(string selectorText)
     {
-        if (!Is(first) && !Is(second) && !Is(third)) return false;
-        Advance();
-        return true;
-    }
-
-    private bool Match(GesTokenKind first, GesTokenKind second, GesTokenKind third, GesTokenKind fourth)
-    {
-        if (!Is(first) && !Is(second) && !Is(third) && !Is(fourth)) return false;
-        Advance();
-        return true;
-    }
-
-    private bool Match(GesTokenKind first, GesTokenKind second, GesTokenKind third, GesTokenKind fourth, GesTokenKind fifth)
-    {
-        if (!Is(first) && !Is(second) && !Is(third) && !Is(fourth) && !Is(fifth)) return false;
-        Advance();
-        return true;
-    }
-
-    private bool MatchTag(string tagText)
-    {
-        if (Current.Kind == Tag && Current.Text.StartsWith(":", StringComparison.Ordinal) && string.Equals(Current.Text, tagText, StringComparison.Ordinal))
+        if (Current.Kind == Selector && string.Equals(Current.Text, selectorText, StringComparison.Ordinal))
         {
             Advance();
             return true;
@@ -3170,7 +3145,7 @@ internal sealed partial class GesParser
     }
 
     private bool IsExtensionUnaryArgumentStart()
-        => !IsPipelineSelectorStart() && Current.Kind is Identifier or Message or Tag or TypeName or ConstantReference or GesTokenKind.Float or Percentage or UnitNumber or Text or True or False or Nothing or
+        => !IsPipelineSelectorStart() && Current.Kind is Identifier or Message or Tag or Selector or TypeName or ConstantReference or GesTokenKind.Float or Percentage or UnitNumber or Text or True or False or Nothing or
             MathConstantPi or MathConstantE or MathConstantTau or MathConstantInfinity or
             IntrinsicAbs or IntrinsicLn or IntrinsicExp or IntrinsicSqrt or IntrinsicCbrt or IntrinsicChance or
             IntrinsicFloor or IntrinsicCeil or IntrinsicTruncate or IntrinsicRad or IntrinsicDeg or IntrinsicWrap or IntrinsicRound or

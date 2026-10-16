@@ -419,6 +419,15 @@ compiler output byte-identical and stays within the performance budget.
       by the encoder's materialization.
 - [ ] C# reaches the same model compactly: denser code with identical behaviour,
       and compact instruction storage where measurement supports it.
+      Done: keyword and selector-keyword tables as allocation-free span
+      switches; a `Selector` kind for a `:word` that is not a selector keyword,
+      replacing leading-character checks, as in Swift; the unused
+      `DiceSeparator` kind removed; one shared register-usage count in the
+      rewriter; one `params ReadOnlySpan` `Match`. Compact instruction storage
+      is not pursued: C# compilation already allocates less than Swift
+      (`performance.core/case-0005` 357 KiB against 581 KiB), so replacing
+      `InstructionPlan` records has no measured need. Remaining: denser code per
+      phase, largest first (builder, lowering, parser, validation).
 
 ### Phase 6 – Tools and adapters (low priority)
 

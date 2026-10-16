@@ -181,7 +181,7 @@ final class Tool {
             return 1
         }
         var text = program.dump(includeInstructionAddresses: addresses)
-        if output == nil && io.outputTerminal { text = TextDisplay.expandTabs(text) }
+        if output == nil && io.outputTerminal { text = ToolTextDisplay.expandTabs(text) }
         if let output {
             let data = Data(text.utf8)
             try ToolFiles.write(data, to: output)

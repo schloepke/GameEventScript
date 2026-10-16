@@ -4,7 +4,7 @@
 import GameEventScriptSyntaxHighlighter
 
 // CLI presentation policy; all syntax recognition lives in the standalone package.
-final class Highlighting {
+final class RunHighlighting {
     private let source = try! GesSyntaxHighlighter()
     private let assembly = try! GesSyntaxHighlighter(language: .gesa)
 

@@ -20,7 +20,7 @@ extension Input {
     func values(_ key: String) -> [Input] { self[key]?.arrayValue ?? [] }
 }
 
-enum Values {
+enum RuntimeValues {
     static func unit(_ node: Input) throws -> GesQuantityUnit {
         switch node["unit"]?.stringValue?.replacingOccurrences(of: ":", with: "") {
         case nil, "none": return .none
@@ -31,7 +31,7 @@ enum Values {
         }
     }
 
-    static func number(_ text: String) throws -> Double {
+    static func parseNumber(_ text: String) throws -> Double {
         switch text {
         case "NaN": return .nan
         case "Infinity": return .infinity
@@ -49,7 +49,7 @@ enum Values {
 
     static func signature(_ node: Input) throws -> GesMessageSignature { try GesMessageSignature(name: node.text("name"), parameters: node.values("parameters").map { $0.stringValue }) }
 
-    static func message(_ node: Input) throws -> GameEventScriptMessage {
+    static func decodeMessage(_ node: Input) throws -> GameEventScriptMessage {
         let arguments = try node.values("args").map { argument in try GesMessageArgument(name: argument["name"]?.stringValue, value: decode(argument.required("value"))) }
         return try GameEventScriptMessage(name: node.text("name"), arguments: arguments, tags: node.values("tags").compactMap(\.stringValue))
     }
@@ -61,12 +61,12 @@ enum Values {
         case ":Nothing": return .nothing
         case ":Boolean": return .boolean(node["value"]?.boolValue == true || node["value"]?.stringValue == "true")
         case ":Number.int64", ":Quantity.int64": return try .integer(integer(node.text("value")), unit: unit)
-        case ":Number.binary64", ":Quantity.binary64": return try .float(number(node.text("value")), unit: unit)
-        case ":Percentage": return try .percentage(number(node.text("value")))
+        case ":Number.binary64", ":Quantity.binary64": return try .float(parseNumber(node.text("value")), unit: unit)
+        case ":Percentage": return try .percentage(parseNumber(node.text("value")))
         case ":Text": return try .text(node.text("value"))
         case ":Tag": return try .tag(node.text("value"))
-        case ":Vector": return try .vector(x: number(node.text("x")), y: number(node.text("y")), z: number(node.text("z")), unit: unit)
-        case ":Point": return try .point(x: number(node.text("x")), y: number(node.text("y")), z: number(node.text("z")), unit: unit)
+        case ":Vector": return try .vector(x: parseNumber(node.text("x")), y: parseNumber(node.text("y")), z: parseNumber(node.text("z")), unit: unit)
+        case ":Point": return try .point(x: parseNumber(node.text("x")), y: parseNumber(node.text("y")), z: parseNumber(node.text("z")), unit: unit)
         case ":List":
             var items = try node.values("items").map { try decode($0) }
             let result = GesValue.list(items)
@@ -81,8 +81,8 @@ enum Values {
             if mutateSource && !rolls.isEmpty { rolls[0] = .min }
             return result
         case ":Range.int64": return try .integerRange(from: integer(node.text("from")), to: integer(node.text("to")), step: integer(node.text("step")))
-        case ":Range.binary64": return try .floatRange(from: number(node.text("from")), to: number(node.text("to")), step: number(node.text("step")))
-        case ":Message": return try .message(message(node.required("message")))
+        case ":Range.binary64": return try .floatRange(from: parseNumber(node.text("from")), to: parseNumber(node.text("to")), step: parseNumber(node.text("step")))
+        case ":Message": return try .message(decodeMessage(node.required("message")))
         default:
             let nodes = node.values("entries")
             var keys = try nodes.map { try $0.text("key") }
@@ -98,7 +98,7 @@ enum Values {
 
 }
 
-extension Values {
+extension RuntimeValues {
     static func numberText(_ value: Double) -> String {
         if value.isNaN { return "NaN" }
         if value == .infinity { return "Infinity" }

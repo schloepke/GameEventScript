@@ -147,7 +147,7 @@ final class SwiftPerformanceProvider: @unchecked Sendable {
         let measured = try measure(test, profile: requested.text("profile"))
         let metrics = try requested.values("metrics").map { metric -> [String: Any] in
             guard let value = measured.first(where: { $0.id == metric["id"]?.stringValue }), value.unit == metric["unit"]?.stringValue else { throw ConformanceExecutionError.invalidInput("Unsupported metric") }
-            return ["id": value.id, "value": Values.numberText(value.value), "unit": value.unit]
+            return ["id": value.id, "value": RuntimeValues.numberText(value.value), "unit": value.unit]
         }
         return ["status": "ok", "measurement": ["profile": Self.profile, "metrics": metrics], "evidence": ["provenance": provenance, "samples": evidence.last!]]
     }

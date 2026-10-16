@@ -170,9 +170,9 @@ extension Tool {
         } else if options.interactive {
             guard try runConsole(session, options: options) else { return 1 }
         }
-        if !options.quiet { session.summary() }
-        profiler?.outcome = "Completed (script exit code \(session.observer.exitCode))"
-        return session.observer.exitCode
+        if !options.quiet { session.writeSummary() }
+        profiler?.outcome = "Completed (script exit code \(session.observer.scriptExitCode))"
+        return session.observer.scriptExitCode
     }
 
     static func hasMain(_ program: GameEventScriptProgram) -> Bool {

@@ -4,7 +4,7 @@
 import Foundation
 import GameEventScriptRuntime
 
-final class ConformanceVirtualClock: GesClock {
+final class VirtualClock: GesClock {
     var elapsedMicroseconds: Int64 = 0
 
     func advance(_ amount: String) -> Bool {
@@ -15,12 +15,12 @@ final class ConformanceVirtualClock: GesClock {
     }
 }
 
-final class RuntimeScenario {
-    let clock = ConformanceVirtualClock()
+final class HostScenario {
+    let clock = VirtualClock()
     let test: Input
     let programs: [(id: String, program: GameEventScriptProgram)]
     let host: GameEventScriptHost
-    let collector: RuntimeCollector
+    let collector: RuntimeObservations
     var actionResults: [[String: Any]] = []
     var instances: [String: GesProgramInstance] = [:]
     var subscriptions: [String: GesSubscription] = [:]
@@ -29,7 +29,7 @@ final class RuntimeScenario {
     init(_ test: Input, programs: [(id: String, program: GameEventScriptProgram)]) throws {
         self.test = test
         self.programs = programs
-        collector = RuntimeCollector(sink: test["publishSink"]?.stringValue ?? "accept")
+        collector = RuntimeObservations(sink: test["publishSink"]?.stringValue ?? "accept")
         host = try Self.makeHost(test, observer: collector, publishSink: collector.sink == "absent" ? nil : collector, clock: clock)
     }
 
@@ -51,7 +51,7 @@ final class RuntimeScenario {
             }
             seed = try GesRandomGenerator.seedFromEntropy(bytes)
         }
-        let sequence = try (random?["sequence"]?.arrayValue ?? []).map { try Values.number($0.numberValue ?? $0.stringValue!) }
+        let sequence = try (random?["sequence"]?.arrayValue ?? []).map { try RuntimeValues.parseNumber($0.numberValue ?? $0.stringValue!) }
         let builder = GameEventScriptHost.makeBuilder()
             .withRandomSequence(sequence, fallbackSeed: seed ?? 0)
             .withRuntimeLimits(limits)
@@ -81,7 +81,7 @@ final class RuntimeScenario {
             let id = try step.text("id")
             path = "step/" + id
             try actions(test["stepActions"]?[id]?.arrayValue ?? [], path: path)
-            let accepted = host.receive(try Values.message(step.required("input")))
+            let accepted = host.receive(try RuntimeValues.decodeMessage(step.required("input")))
             var paused = false
             var waiting = false
             switch host.isReady ? step["pump"]?.stringValue : "enqueue" {
@@ -173,10 +173,10 @@ final class RuntimeScenario {
 
 private final class RuntimeNativeHandler: GesNativeMessageHandler {
     let definition: Input
-    unowned let scenario: RuntimeScenario
+    unowned let scenario: HostScenario
     let id: String
 
-    init(definition: Input, scenario: RuntimeScenario, id: String) {
+    init(definition: Input, scenario: HostScenario, id: String) {
         self.definition = definition
         self.scenario = scenario
         self.id = id
@@ -193,13 +193,13 @@ private final class RuntimeNativeHandler: GesNativeMessageHandler {
                 let arguments = try (0..<message.arguments.count).map { try GesMessageArgument(name: message.arguments.nameAt($0), value: message.arguments[$0]) }
                 context.emit(try .init(name: emit.required("message").text("name"), arguments: arguments))
             } else {
-                context.emit(try Values.message(emit.required("message")))
+                context.emit(try RuntimeValues.decodeMessage(emit.required("message")))
             }
         }
     }
 }
 
-final class RuntimeCollector: GesRuntimeObserver, GesPublishSink {
+final class RuntimeObservations: GesRuntimeObserver, GesPublishSink {
     struct Limit {
         let name: String
         let detail: String
@@ -262,14 +262,14 @@ final class RuntimeCollector: GesRuntimeObserver, GesPublishSink {
     }
 }
 
-extension RuntimeCollector {
+extension RuntimeObservations {
     func capture() throws -> [String: Any] {
         [
-            "local": try local.map(Values.encodeMessage), "outbound": try outbound.map(Values.encodeMessage),
+            "local": try local.map(RuntimeValues.encodeMessage), "outbound": try outbound.map(RuntimeValues.encodeMessage),
             "runtimeLimits": limits.map { ["name": $0.name, "limit": $0.limit] }, "diagnostics": diagnostics.map(CompilerObservations.diagnostic),
             "trace": try trace.map { event -> [String: Any] in
                 var item: [String: Any] = ["event": event.kind]
-                if let message = event.message { item["message"] = try Values.encodeMessage(message) }
+                if let message = event.message { item["message"] = try RuntimeValues.encodeMessage(message) }
                 if let signature = event.signature { item["signatureId"] = signature }
                 if let accepted = event.accepted { item["accepted"] = accepted }
                 if let result = event.result { item["result"] = ["localAccepted": result.localAccepted, "outboundAttempted": result.outboundAttempted, "outboundAccepted": result.outboundAccepted, "anyAccepted": result.anyAccepted] }
@@ -282,5 +282,5 @@ extension RuntimeCollector {
 }
 
 func runtime(_ programs: [(id: String, program: GameEventScriptProgram)], _ input: Input) throws -> [String: Any] {
-    try ["hosts": (0..<(input["hostCount"]?.integerValue ?? 1)).map { _ in try RuntimeScenario(input, programs: programs).run() }]
+    try ["hosts": (0..<(input["hostCount"]?.integerValue ?? 1)).map { _ in try HostScenario(input, programs: programs).run() }]
 }

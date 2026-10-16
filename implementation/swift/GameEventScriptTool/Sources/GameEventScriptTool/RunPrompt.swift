@@ -4,7 +4,7 @@
 import Foundation
 import TerminalSupport
 
-enum TextDisplay {
+enum ToolTextDisplay {
     static func width(_ character: Character) -> Int {
         if character.unicodeScalars.contains(where: { $0.value == 0x200d || $0.value == 0xfe0f || $0.properties.isEmojiPresentation }) { return 2 }
         return character.unicodeScalars.reduce(0) { $0 + max(0, Int(ges_scalar_width($1.value))) }
@@ -35,7 +35,7 @@ enum TerminalKey: Equatable {
     case unrecognized([UInt8])
 }
 
-final class TerminalKeys {
+final class RunKeyReader {
     let read: (Int32) -> Int32
 
     init(read: @escaping (Int32) -> Int32 = ges_terminal_read) { self.read = read }
@@ -113,10 +113,10 @@ final class TerminalKeys {
 }
 
 // Raw terminal state is acquired only while editing and restored before host execution.
-final class TerminalPrompt {
+final class RunPrompt {
     let io: ToolIO
-    let keys = TerminalKeys()
-    let highlighting = Highlighting()
+    let keys = RunKeyReader()
+    let highlighting = RunHighlighting()
     var history: [String] = []
 
     let color: Bool
@@ -150,7 +150,7 @@ final class TerminalPrompt {
                     lineColumn = 0
                     continue
                 }
-                let width = character == "\t" ? 4 - lineColumn % 4 : TextDisplay.width(character)
+                let width = character == "\t" ? 4 - lineColumn % 4 : ToolTextDisplay.width(character)
                 if width > 0 && column + width > columns {
                     row += 1
                     column = 0
@@ -164,7 +164,7 @@ final class TerminalPrompt {
         func draw() {
             let columns = max(10, Int(ges_terminal_columns()))
             io.write("\r" + (previousRow > 0 ? "\u{1b}[\(previousRow)A" : "") + "\u{1b}[J", toError: true)
-            let visible = TextDisplay.expandTabs(String(text))
+            let visible = ToolTextDisplay.expandTabs(String(text))
             let colored = (color ? highlighting.render(visible) : visible).replacingOccurrences(of: "\n", with: "\n     ")
             io.write("ges> " + colored, toError: true)
             let end = position(text[...], columns: columns)

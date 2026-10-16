@@ -77,6 +77,7 @@ Guides explain usage and may simplify presentation. The linked normative specifi
 | [Swift CLI](../implementation/swift/GameEventScriptTool/README.md) | `ges`, installation/update, the event console and native CLI verification. |
 | [SwiftBridge](../implementation/swift/GameEventScriptSwiftBridge/README.md) | Native closures, value conversions, typed external bindings and the optional synchronized Host runner; depends only on Runtime. |
 | [Swift performance](../implementation/swift/Performance.md) | Measured profile, instrumentation scope and baseline review workflow. |
+| [Port conventions](../implementation/PortConventions.md) | Shared C#/Swift naming, creation, layer and performance conventions. |
 | [Package releases](guide/distribution/Packages.md) | Shared NuGet/SwiftPM release scope, Xcode consumption, publisher setup and [version policy](guide/distribution/Packages.md#version-policy). |
 | [Platform support](guide/distribution/Platforms.md) | Toolchain requirements, actual CI coverage and evidence required for release claims. |
 | [Changelog](../CHANGELOG.md) | User-visible changes and migration guidance. |

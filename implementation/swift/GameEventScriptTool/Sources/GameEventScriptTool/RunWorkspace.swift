@@ -53,7 +53,7 @@ final class RunWorkspace {
             return draft
         }
         if let id = Int(selector.hasPrefix("@") ? String(selector.dropFirst()) : selector), let draft = drafts[id] { return draft }
-        let entry = try inventory.select(selector, command: ":edit")
+        let entry = try inventory.selectProgram(selector, command: ":edit")
         if let draft = drafts[entry.id] { return draft }
         guard entry.paths.allSatisfy({ $0.lowercased().hasSuffix(".ges") }) else { throw ToolError.usage("Only loaded .ges source programs can be edited; binary programs are read-only.") }
         guard let sources = entry.instance.program.sourceArchive, sources.count == entry.paths.count else { throw ToolError.usage("The loaded program has no complete source archive. Reload its source files first.") }

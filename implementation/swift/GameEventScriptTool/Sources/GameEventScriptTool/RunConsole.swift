@@ -8,7 +8,7 @@ import GameEventScriptRuntime
 extension Tool {
     func runConsole(_ session: RunSession, options: RunOptions) throws -> Bool {
         if io.inputTerminal { io.line("GES event console. Type :help for commands and examples, :load <file> to add a program, or :quit to exit.", toError: true) }
-        let prompt = io.inputTerminal && io.outputTerminal && io.errorTerminal ? TerminalPrompt(io: io, color: options.color) : nil
+        let prompt = io.inputTerminal && io.outputTerminal && io.errorTerminal ? RunPrompt(io: io, color: options.color) : nil
         var success = true
         var lineNumber = 0
         while io.outputError == nil {
@@ -35,11 +35,11 @@ extension Tool {
                 continue
             }
             if command == ":list" && argument.isEmpty {
-                session.inventory.programs()
+                session.inventory.writePrograms()
                 continue
             }
             if command == ":handler" && argument.isEmpty {
-                session.inventory.registeredHandlers()
+                session.inventory.writeHandlers()
                 continue
             }
             if ![":edit", ":save", ":load", ":dump", ":source", ":unload", ":unloadAll", ":reload"].contains(command), command.hasPrefix(":"), command.dropFirst().allSatisfy({ $0 >= "a" && $0 <= "z" }) {
@@ -78,11 +78,11 @@ extension Tool {
                     continue
                 }
                 if command == ":dump" {
-                    try session.inventory.dump(argument, color: options.color)
+                    try session.inventory.writeDump(argument, color: options.color)
                     continue
                 }
                 if command == ":source" {
-                    try session.inventory.source(argument, color: options.color)
+                    try session.inventory.writeSource(argument, color: options.color)
                     continue
                 }
                 if command == ":load" {

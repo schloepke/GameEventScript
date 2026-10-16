@@ -11,13 +11,13 @@ final class TerminalTests: XCTestCase {
     func testExtendedEnterAndPreservationAtDecoderBoundary() throws {
         for sequence in ["\u{1b}[27;2;13~", "\u{1b}[13;2u", "\u{1b}[27;3;13~", "\u{1b}[13;3u", "\u{1b}\r", "\u{1b}\n", "\u{0e}"] {
             var bytes = Array(sequence.utf8).map(Int32.init) + [65]
-            let keys = TerminalKeys(read: { _ in bytes.isEmpty ? -2 : bytes.removeFirst() })
+            let keys = RunKeyReader(read: { _ in bytes.isEmpty ? -2 : bytes.removeFirst() })
             XCTAssertEqual(try keys.next(), .newline, sequence)
             XCTAssertEqual(try keys.next(), .text("A"))
         }
         for sequence in ["\u{1b}", "\u{1b}[27;2;", "\u{1b}[Z"] {
             var bytes = Array(sequence.utf8).map(Int32.init)
-            XCTAssertEqual(try TerminalKeys(read: { _ in bytes.isEmpty ? -2 : bytes.removeFirst() }).next(), .unrecognized(Array(sequence.utf8)))
+            XCTAssertEqual(try RunKeyReader(read: { _ in bytes.isEmpty ? -2 : bytes.removeFirst() }).next(), .unrecognized(Array(sequence.utf8)))
         }
     }
 
@@ -26,7 +26,7 @@ final class TerminalTests: XCTestCase {
         for prefix in ["\u{1b}[", "\u{1b}O"] {
             for (suffix, expected) in directions {
                 var bytes = Array((prefix + suffix + "x").utf8).map(Int32.init)
-                let keys = TerminalKeys(read: { _ in bytes.isEmpty ? -1 : bytes.removeFirst() })
+                let keys = RunKeyReader(read: { _ in bytes.isEmpty ? -1 : bytes.removeFirst() })
                 XCTAssertEqual(try keys.next(), expected)
                 XCTAssertEqual(try keys.next(), .text("x"))
                 XCTAssertEqual(try keys.next(), .eof)
@@ -37,7 +37,7 @@ final class TerminalTests: XCTestCase {
     func testPasteIsOneEditableInputAndUnicodeIsPreserved() throws {
         let payload = "emit ConsoleOut(\"Grüße 👩‍💻\")\r\nemit ConsoleOut(12)"
         var bytes = Array(("\u{1b}[200~" + payload + "\u{1b}[201~").utf8).map(Int32.init)
-        let keys = TerminalKeys(read: { _ in bytes.isEmpty ? -1 : bytes.removeFirst() })
+        let keys = RunKeyReader(read: { _ in bytes.isEmpty ? -1 : bytes.removeFirst() })
         XCTAssertEqual(try keys.next(), .paste(payload.replacingOccurrences(of: "\r\n", with: "\n")))
         XCTAssertEqual(try keys.next(), .eof)
         bytes = Array("ü".utf8).map(Int32.init)
@@ -47,7 +47,7 @@ final class TerminalTests: XCTestCase {
     }
 
     func testHighlightingReusesGrammarsAndProtectsStringsComments() {
-        let highlighter = Highlighting()
+        let highlighter = RunHighlighting()
         XCTAssertEqual(highlighter.render("42"), "\u{1b}[34m42\u{1b}[0m")
         XCTAssertEqual(highlighter.render("\"emit 42\""), "\u{1b}[32m\"emit 42\"\u{1b}[0m")
         XCTAssertEqual(highlighter.render("// emit 42"), "\u{1b}[90m// emit 42\u{1b}[0m")
@@ -63,8 +63,8 @@ final class TerminalTests: XCTestCase {
     func testMultilineStringDoesNotEndEmbeddedSourceAndTabsUseDisplayWidth() {
         ges_terminal_initialize()
         let source = ".segment source \"x\"\nemit ConsoleOut(\"first\n.segment code\nstill text\")\n.region-end \"source\"\n"
-        let rendered = Highlighting().renderAssembly(source)
+        let rendered = RunHighlighting().renderAssembly(source)
         XCTAssertTrue(rendered.contains(".segment code\nstill text"), rendered)
-        XCTAssertEqual(TextDisplay.expandTabs("a\tb\t\n中\te\u{301}\t👩‍💻\tz"), "a   b   \n中  e\u{301}   👩‍💻  z")
+        XCTAssertEqual(ToolTextDisplay.expandTabs("a\tb\t\n中\te\u{301}\t👩‍💻\tz"), "a   b   \n中  e\u{301}   👩‍💻  z")
     }
 }

@@ -197,7 +197,7 @@ enum Validation {
         if let sequence = random["sequence"] {
             let values = try strings(sequence)
             try require(!values.isEmpty)
-            for value in values { try require(Values.number(value).isFinite) }
+            for value in values { try require(RuntimeValues.parseNumber(value).isFinite) }
         }
         if let entropy = random["entropy"] {
             let text = entropy.stringValue ?? ""
@@ -242,10 +242,10 @@ enum Validation {
                 try message(input.required("message"))
             } else if [":Vector", ":Point"].contains(type) {
                 try fields(input, ["type", "x", "y", "z"], optional: ["unit"])
-                for key in ["x", "y", "z"] { _ = try Values.number(input.text(key)) }
+                for key in ["x", "y", "z"] { _ = try RuntimeValues.parseNumber(input.text(key)) }
             } else if [":Range.int64", ":Range.binary64"].contains(type) {
                 try fields(input, ["type", "from", "to", "step"])
-                _ = try Values.decode(input)
+                _ = try RuntimeValues.decode(input)
             } else if type == ":Dice" {
                 try fields(input, ["type", "rolls"])
                 for roll in try array(input.required("rolls")) { try require((1...Int(Int32.max)).contains(roll.integerValue ?? 0)) }

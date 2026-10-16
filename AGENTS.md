@@ -81,12 +81,11 @@ sh scripts/test-csharp-conformance.sh
   primary concepts: every port uses the same edge types and roles (for example a
   Host, not a Runner in one port and a Host in another).
 - Corresponding types use identical names in the C# and Swift ports, apart from
-  the language-idiomatic mappings in `implementation/PortMapping.md` (for example
+  the language-idiomatic mappings in `implementation/PortConventions.md` (for example
   `Exception`/`Error`, `CreateBuilder()`/`makeBuilder()`). C# files are named after
   their main type or summarize their content (partial classes append an aspect,
-  e.g. `GesBinaryBuilderOpcodes.cs`); Swift file names are free.
-  The port convergence is in progress; `PortMapping.md` tracks the remaining
-  phases and is removed when they are complete.
+  e.g. `GesBinaryBuilderOpcodes.cs`); Swift file names are free. CLI and
+  Conformance adapter concepts keep the C# names in both ports.
 - `python3 scripts/verify-port-names.py` enforces the prefix, abbreviation,
   parity and opcode-handler rules against the ratchet baseline
   `scripts/port-names-baseline.txt`; a new or resolved difference fails until

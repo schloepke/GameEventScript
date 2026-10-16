@@ -43,7 +43,7 @@ final class ToolIO {
 
     func line(_ text: String = "", toError: Bool = false) {
         let isDiagnostic = text.hasPrefix("error ") || text.contains(": error ")
-        write((toError && colorErrors && !noColor && isDiagnostic ? Highlighting.paint(text, 31) : text) + "\n", toError: toError)
+        write((toError && colorErrors && !noColor && isDiagnostic ? RunHighlighting.paint(text, 31) : text) + "\n", toError: toError)
     }
 
     func diagnostic(_ diagnostic: GesDiagnostic, fallback: String) {

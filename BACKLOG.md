@@ -151,8 +151,8 @@ here.
   benefit.
 - Revisit a more VM-near extension-call model if boxing at the extension boundary
   becomes material again.
-- After the C#/Swift port convergence (`implementation/PortMapping.md`), reduce
-  library and binary size without noticeable performance loss. Phase 1 grew the
+- Reduce library and binary size without noticeable performance loss now that
+  the C#/Swift port convergence is complete. Its first phase grew the
   release Swift `ges` binary by about 175 KB (3.35 → 3.52 MB, `__TEXT` +16 KB)
   and its peak resident memory by about 110 KiB (+1.5%) on the compute
   benchmark, while instructions grew only 0.14%. Likely contributors are the

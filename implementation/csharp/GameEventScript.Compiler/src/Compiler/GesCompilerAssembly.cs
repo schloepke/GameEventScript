@@ -16,8 +16,7 @@ internal static partial class GesCompiler
             => operand is GesIntegerLiteralExpressionNode or GesFloatLiteralExpressionNode or GesBooleanLiteralExpressionNode or GesNothingLiteralExpressionNode
                 or GesTextLiteralExpressionNode or GesTagLiteralExpressionNode or GesUnitIntegerLiteralExpressionNode or GesUnitFloatLiteralExpressionNode or GesPercentageLiteralExpressionNode;
 
-        private static string AssemblyName(GesExpressionNode operand)
-            => operand is GesIdentifierExpressionNode name ? name.Name : throw AssemblyFailure("Expected a register or label name.");
+        private static string AssemblyName(GesExpressionNode operand) => operand is GesIdentifierExpressionNode name ? name.Name : throw AssemblyFailure("Expected a register or label name.");
 
         private static string AssemblyText(GesExpressionNode operand)
             => operand switch
@@ -46,8 +45,7 @@ internal static partial class GesCompiler
                 _ => throw AssemblyFailure("Expected a numeric literal.")
             };
 
-        private static GesCompileException AssemblyFailure(string message, string? symbol = null)
-            => CompileFailure("compile.invalidAssembly", message, symbol);
+        private static GesCompileException AssemblyFailure(string message, string? symbol = null) => CompileFailure("compile.invalidAssembly", message, symbol);
 
         private void EmitAssembly(GesAssemblyBlockNode block, GesRegisterRef? result, LoweringContext outer)
         {
@@ -310,8 +308,7 @@ internal static partial class GesCompiler
             return null;
         }
 
-        private static bool AssemblyAcceptsResource(string opcode, int operand, string kind)
-            => AssemblyExpectedResource(opcode, operand) == kind;
+        private static bool AssemblyAcceptsResource(string opcode, int operand, string kind) => AssemblyExpectedResource(opcode, operand) == kind;
 
         private static bool AssemblyBooleanOperand(GesExpressionNode operand, IReadOnlyDictionary<string, string> state)
             => operand is GesBooleanLiteralExpressionNode or GesNothingLiteralExpressionNode || operand is GesIdentifierExpressionNode name && state.TryGetValue(name.Name, out var kind) && kind == "boolean";

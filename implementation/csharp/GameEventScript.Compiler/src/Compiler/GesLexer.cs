@@ -187,10 +187,7 @@ internal sealed class GesLexer
         {
             SkipTriviaExceptNewLine();
 
-            if (IsAtEnd)
-            {
-                return new GesToken(GesTokenKind.EndOfFile, string.Empty, _line, _column, _line, _column);
-            }
+            if (IsAtEnd) return new GesToken(GesTokenKind.EndOfFile, string.Empty, _line, _column, _line, _column);
 
             switch (Current)
             {
@@ -199,10 +196,7 @@ internal sealed class GesLexer
                     var newlineLine = _line;
                     var newlineColumn = _column;
                     Advance();
-                    if (!IsAtEnd && Current == '\n')
-                    {
-                        Advance();
-                    }
+                    if (!IsAtEnd && Current == '\n') Advance();
 
                     return new GesToken(GesTokenKind.NewLine, "\\n", newlineLine, newlineColumn, _line, _column);
                 }
@@ -219,31 +213,19 @@ internal sealed class GesLexer
             var startColumn = _column;
             var ch = Current;
 
-            if (IsWordStart(ch))
-            {
-                return ReadWordLikeToken(startLine, startColumn);
-            }
+            if (IsWordStart(ch)) return ReadWordLikeToken(startLine, startColumn);
 
-            if (GesText.IsAsciiDigit(ch))
-            {
-                return ReadNumberLikeToken(startLine, startColumn);
-            }
+            if (GesText.IsAsciiDigit(ch)) return ReadNumberLikeToken(startLine, startColumn);
 
             switch (ch)
             {
                 case '\'':
-                case '"':
-                    return ReadTextToken(startLine, startColumn);
-                case ':' when GesText.IsAsciiUpper(Peek()):
-                    return ReadTypeToken(startLine, startColumn);
-                case ':' when GesText.IsAsciiLower(Peek()):
-                    return ReadSelectorToken(startLine, startColumn);
-                case '#' when GesText.IsAsciiLower(Peek()):
-                    return ReadTagToken(startLine, startColumn);
-                case '$' when GesText.IsAsciiLower(Peek()):
-                    return ReadConstantReferenceToken(startLine, startColumn);
-                default:
-                    return ReadOperatorToken(startLine, startColumn);
+                case '"': return ReadTextToken(startLine, startColumn);
+                case ':' when GesText.IsAsciiUpper(Peek()): return ReadTypeToken(startLine, startColumn);
+                case ':' when GesText.IsAsciiLower(Peek()): return ReadSelectorToken(startLine, startColumn);
+                case '#' when GesText.IsAsciiLower(Peek()): return ReadTagToken(startLine, startColumn);
+                case '$' when GesText.IsAsciiLower(Peek()): return ReadConstantReferenceToken(startLine, startColumn);
+                default: return ReadOperatorToken(startLine, startColumn);
             }
         }
     }
@@ -286,25 +268,17 @@ internal sealed class GesLexer
 
     private void ReadWordName()
     {
-        while (!IsAtEnd && (IsWordLetter(Current) || GesText.IsAsciiDigit(Current)))
-        {
-            Advance();
-        }
+        while (!IsAtEnd && (IsWordLetter(Current) || GesText.IsAsciiDigit(Current))) Advance();
     }
 
     private void ReadDigits()
     {
-        while (!IsAtEnd && GesText.IsAsciiDigit(Current))
-        {
-            Advance();
-        }
+        while (!IsAtEnd && GesText.IsAsciiDigit(Current)) Advance();
     }
 
-    private GesToken CreateToken(GesTokenKind kind, string text, int startLine, int startColumn)
-        => new(kind, text, startLine, startColumn, _line, _column);
+    private GesToken CreateToken(GesTokenKind kind, string text, int startLine, int startColumn) => new(kind, text, startLine, startColumn, _line, _column);
 
-    private GesToken CreateUnitNumberToken(string text, string unitName, int startLine, int startColumn)
-        => new(GesTokenKind.UnitNumber, text, startLine, startColumn, _line, _column, unitName);
+    private GesToken CreateUnitNumberToken(string text, string unitName, int startLine, int startColumn) => new(GesTokenKind.UnitNumber, text, startLine, startColumn, _line, _column, unitName);
 
     private GesToken CreateWordToken(int start, int length, int line, int column, int endLine, int endColumn)
     {
@@ -407,34 +381,22 @@ internal sealed class GesLexer
             Advance();
             if (!ReadValidIdentifierSuffix())
             {
-                while (!IsAtEnd && !GesText.IsTokenWhitespace(Current))
-                {
-                    Advance();
-                }
+                while (!IsAtEnd && !GesText.IsTokenWhitespace(Current)) Advance();
 
                 return CreateToken(GesTokenKind.Illegal, _input[start.._index], line, column);
             }
 
-            if (IsAtEnd || (!StartsAttachedIllegalOperatorSequence() && IsValidWordBoundary(Current)))
-            {
-                return CreateToken(GesTokenKind.Identifier, _input[start.._index], line, column);
-            }
+            if (IsAtEnd || (!StartsAttachedIllegalOperatorSequence() && IsValidWordBoundary(Current))) return CreateToken(GesTokenKind.Identifier, _input[start.._index], line, column);
         }
         if (IsAtEnd || (!StartsAttachedIllegalOperatorSequence() && IsValidWordBoundary(Current))) return CreateWordToken(start, _index - start, line, column, _line, _column);
-        while (!IsAtEnd && !GesText.IsTokenWhitespace(Current))
-        {
-            Advance();
-        }
+        while (!IsAtEnd && !GesText.IsTokenWhitespace(Current)) Advance();
 
         return CreateToken(GesTokenKind.Illegal, _input[start.._index], line, column);
     }
 
     private bool ReadValidIdentifierSuffix()
     {
-        if (IsAtEnd || !GesText.IsAsciiDigit(Current))
-        {
-            return false;
-        }
+        if (IsAtEnd || !GesText.IsAsciiDigit(Current)) return false;
 
         if (Current == '0')
         {
@@ -479,10 +441,7 @@ internal sealed class GesLexer
             return CreateToken(kind, text ?? _input[start.._index], line, column);
         }
 
-        while (!IsAtEnd && !GesText.IsTokenWhitespace(Current))
-        {
-            Advance();
-        }
+        while (!IsAtEnd && !GesText.IsTokenWhitespace(Current)) Advance();
 
         return CreateToken(GesTokenKind.Illegal, _input[start.._index], line, column);
     }
@@ -494,18 +453,12 @@ internal sealed class GesLexer
         var tagStart = _index;
         ReadWordName();
 
-        if (_index == tagStart)
-        {
-            return CreateToken(GesTokenKind.Illegal, _input[start.._index], line, column);
-        }
+        if (_index == tagStart) return CreateToken(GesTokenKind.Illegal, _input[start.._index], line, column);
 
         if (IsAtEnd || (!StartsAttachedIllegalOperatorSequence() && IsValidWordBoundary(Current)))
             return CreateToken(GesTokenKind.Tag, _input[start.._index], line, column);
 
-        while (!IsAtEnd && !GesText.IsTokenWhitespace(Current))
-        {
-            Advance();
-        }
+        while (!IsAtEnd && !GesText.IsTokenWhitespace(Current)) Advance();
 
         return CreateToken(GesTokenKind.Illegal, _input[start.._index], line, column);
     }
@@ -548,10 +501,7 @@ internal sealed class GesLexer
             Advance();
             text = _input[start..(_index - 1)];
             if (IsAtEnd || IsValidNumberBoundary(Current)) return CreateToken(GesTokenKind.Percentage, text, line, column);
-            while (!IsAtEnd && !GesText.IsTokenWhitespace(Current))
-            {
-                Advance();
-            }
+            while (!IsAtEnd && !GesText.IsTokenWhitespace(Current)) Advance();
 
             return CreateToken(GesTokenKind.Illegal, _input[start.._index], line, column);
         }
@@ -561,10 +511,7 @@ internal sealed class GesLexer
             Advance();
             text = _input[start..(_index - 1)];
             if (IsAtEnd || IsValidNumberBoundary(Current)) return CreateUnitNumberToken(text, "degree", line, column);
-            while (!IsAtEnd && !GesText.IsTokenWhitespace(Current))
-            {
-                Advance();
-            }
+            while (!IsAtEnd && !GesText.IsTokenWhitespace(Current)) Advance();
 
             return CreateToken(GesTokenKind.Illegal, _input[start.._index], line, column);
         }
@@ -582,10 +529,7 @@ internal sealed class GesLexer
         if (!IsAtEnd && GesText.IsAsciiLetter(Current)) return CreateToken(GesTokenKind.Float, text, line, column);
 
         if (IsAtEnd || IsValidNumberBoundary(Current)) return CreateToken(GesTokenKind.Float, text, line, column);
-        while (!IsAtEnd && !GesText.IsTokenWhitespace(Current))
-        {
-            Advance();
-        }
+        while (!IsAtEnd && !GesText.IsTokenWhitespace(Current)) Advance();
 
         return CreateToken(GesTokenKind.Illegal, _input[start.._index], line, column);
     }
@@ -629,21 +573,11 @@ internal sealed class GesLexer
         Advance();
         switch (ch)
         {
-            case '<' when next == '>':
-                Advance();
-                return CreateToken(GesTokenKind.OperatorNotEqual, "<>", line, column);
-            case '<' when next == '=':
-                Advance();
-                return CreateToken(GesTokenKind.OperatorLessOrEqual, "<=", line, column);
-            case '>' when next == '=':
-                Advance();
-                return CreateToken(GesTokenKind.OperatorGreaterOrEqual, ">=", line, column);
-            case '-' when next == '>':
-                Advance();
-                return CreateToken(GesTokenKind.OperatorImplication, "->", line, column);
-            case '=' when next == '>':
-                Advance();
-                return CreateToken(GesTokenKind.ProjectionArrow, "=>", line, column);
+            case '<' when next == '>': Advance(); return CreateToken(GesTokenKind.OperatorNotEqual, "<>", line, column);
+            case '<' when next == '=': Advance(); return CreateToken(GesTokenKind.OperatorLessOrEqual, "<=", line, column);
+            case '>' when next == '=': Advance(); return CreateToken(GesTokenKind.OperatorGreaterOrEqual, ">=", line, column);
+            case '-' when next == '>': Advance(); return CreateToken(GesTokenKind.OperatorImplication, "->", line, column);
+            case '=' when next == '>': Advance(); return CreateToken(GesTokenKind.ProjectionArrow, "=>", line, column);
             default:
                 return ch switch
                 {
@@ -719,10 +653,7 @@ internal sealed class GesLexer
             {
                 Advance();
                 Advance();
-                while (!IsAtEnd && Current is not '\n' and not '\r')
-                {
-                    Advance();
-                }
+                while (!IsAtEnd && Current is not '\n' and not '\r') Advance();
 
                 continue;
             }
@@ -750,10 +681,7 @@ internal sealed class GesLexer
 
     private bool StartsAttachedIllegalOperatorSequence()
     {
-        if (IsAtEnd)
-        {
-            return false;
-        }
+        if (IsAtEnd) return false;
 
         return Current switch
         {

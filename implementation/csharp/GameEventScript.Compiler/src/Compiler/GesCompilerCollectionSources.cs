@@ -26,8 +26,7 @@ internal static partial class GesCompiler
 
         private readonly Dictionary<int, ComponentRow> _componentRows = [];
 
-        private static bool IsEntriesSource(GesExpressionNode source)
-            => source is GesCollectionAccessExpressionNode { Selector: GesExpressionSelectorNode { Expression: GesTagLiteralExpressionNode { Name: "entries" } } };
+        private static bool IsEntriesSource(GesExpressionNode source) => source is GesCollectionAccessExpressionNode { Selector: GesExpressionSelectorNode { Expression: GesTagLiteralExpressionNode { Name: "entries" } } };
 
         private static bool NeedsWholeRow(GesCollectionSelectorNode selector)
             => selector is GesSelectSelectorNode { BindingNames.Count: < 2 } or GesSumSelectorNode { BindingNames.Count: < 2 } or GesAverageSelectorNode { BindingNames.Count: < 2 } or

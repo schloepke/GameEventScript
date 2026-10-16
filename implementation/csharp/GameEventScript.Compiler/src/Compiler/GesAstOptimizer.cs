@@ -13,37 +13,24 @@ namespace GameEventScript.Compiler;
 
 internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, GesExpressionNode> constants)
 {
-    public static GesSyntaxTreeModule Optimize(GesSyntaxTreeModule module)
-        => new GesAstOptimizer(module.Constants).OptimizeModule(module);
+    public static GesSyntaxTreeModule Optimize(GesSyntaxTreeModule module) => new GesAstOptimizer(module.Constants).OptimizeModule(module);
 
     private GesSyntaxTreeModule OptimizeModule(GesSyntaxTreeModule module)
     {
         var knownTypeNames = new HashSet<string>(module.TypeDefinitions.Keys, StringComparer.Ordinal);
-        for (var externalTypeIndex = 0; externalTypeIndex < module.ExternalTypeDefinitions.Types.Count; externalTypeIndex++)
-        {
-            knownTypeNames.Add(module.ExternalTypeDefinitions.Types[externalTypeIndex].Name);
-        }
+        for (var externalTypeIndex = 0; externalTypeIndex < module.ExternalTypeDefinitions.Types.Count; externalTypeIndex++) knownTypeNames.Add(module.ExternalTypeDefinitions.Types[externalTypeIndex].Name);
 
         var optimizedTypes = new Dictionary<string, GesTypeDefinitionNode>(module.TypeDefinitions.Count, StringComparer.Ordinal);
-        foreach (var pair in module.TypeDefinitions)
-        {
-            optimizedTypes.Add(pair.Key, OptimizeTypeDefinition(pair.Value, knownTypeNames));
-        }
+        foreach (var pair in module.TypeDefinitions) optimizedTypes.Add(pair.Key, OptimizeTypeDefinition(pair.Value, knownTypeNames));
 
         var optimizedCallables = new Dictionary<string, GesCallableDefinition>(module.Callables.Count, StringComparer.Ordinal);
-        foreach (var pair in module.Callables)
-        {
-            optimizedCallables.Add(pair.Key, OptimizeCallableDefinition(pair.Value, knownTypeNames));
-        }
+        foreach (var pair in module.Callables) optimizedCallables.Add(pair.Key, OptimizeCallableDefinition(pair.Value, knownTypeNames));
 
         var optimizedHandlers = new Dictionary<string, IReadOnlyList<GesEventHandlerNode>>(module.Handlers.Count, StringComparer.Ordinal);
         foreach (var pair in module.Handlers)
         {
             var handlers = new GesEventHandlerNode[pair.Value.Count];
-            for (var index = 0; index < handlers.Length; index++)
-            {
-                handlers[index] = OptimizeHandler(pair.Value[index], knownTypeNames);
-            }
+            for (var index = 0; index < handlers.Length; index++) handlers[index] = OptimizeHandler(pair.Value[index], knownTypeNames);
 
             optimizedHandlers.Add(pair.Key, handlers);
         }
@@ -70,8 +57,7 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, GesExpressionN
         return new GesCallableDefinition(definition.Name, definition.ParameterList, optimized, definition.Kind, definition.SourceRange);
     }
 
-    private GesEventHandlerNode OptimizeHandler(GesEventHandlerNode handler, ISet<string> knownTypeNames)
-        => handler with { Statements = OptimizeStatements(handler.Statements, knownTypeNames) };
+    private GesEventHandlerNode OptimizeHandler(GesEventHandlerNode handler, ISet<string> knownTypeNames) => handler with { Statements = OptimizeStatements(handler.Statements, knownTypeNames) };
 
     private IReadOnlyList<GesIfConditionNode> OptimizeConditions(IReadOnlyList<GesIfConditionNode> conditions, ISet<string> knownTypeNames)
     {
@@ -121,15 +107,11 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, GesExpressionN
             _ => statement
         };
 
-    private GesStatementBodyNode OptimizeBody(GesStatementBodyNode body, ISet<string> knownTypeNames)
-        => body with { Statements = OptimizeStatements(body.Statements, knownTypeNames) };
+    private GesStatementBodyNode OptimizeBody(GesStatementBodyNode body, ISet<string> knownTypeNames) => body with { Statements = OptimizeStatements(body.Statements, knownTypeNames) };
 
     private IReadOnlyList<GesTypeFieldDefinitionNode> OptimizeTypeFields(IReadOnlyList<GesTypeFieldDefinitionNode> fields, ISet<string> knownTypeNames)
     {
-        if (fields.Count == 0)
-        {
-            return [];
-        }
+        if (fields.Count == 0) return [];
 
         var optimized = new GesTypeFieldDefinitionNode[fields.Count];
         for (var index = 0; index < optimized.Length; index++)
@@ -148,42 +130,27 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, GesExpressionN
 
     private IReadOnlyList<GesStatementNode> OptimizeStatements(IReadOnlyList<GesStatementNode> statements, ISet<string> knownTypeNames)
     {
-        if (statements.Count == 0)
-        {
-            return [];
-        }
+        if (statements.Count == 0) return [];
 
         var optimized = new GesStatementNode[statements.Count];
-        for (var index = 0; index < optimized.Length; index++)
-        {
-            optimized[index] = OptimizeStatement(statements[index], knownTypeNames);
-        }
+        for (var index = 0; index < optimized.Length; index++) optimized[index] = OptimizeStatement(statements[index], knownTypeNames);
 
         return optimized;
     }
 
     private IReadOnlyList<GesExpressionNode> OptimizeExpressions(IReadOnlyList<GesExpressionNode> expressions, ISet<string> knownTypeNames)
     {
-        if (expressions.Count == 0)
-        {
-            return [];
-        }
+        if (expressions.Count == 0) return [];
 
         var optimized = new GesExpressionNode[expressions.Count];
-        for (var index = 0; index < optimized.Length; index++)
-        {
-            optimized[index] = OptimizeExpression(expressions[index], knownTypeNames);
-        }
+        for (var index = 0; index < optimized.Length; index++) optimized[index] = OptimizeExpression(expressions[index], knownTypeNames);
 
         return optimized;
     }
 
     private IReadOnlyList<GesGuardedChoiceBranchNode> OptimizeGuardedChoiceBranches(IReadOnlyList<GesGuardedChoiceBranchNode> branches, ISet<string> knownTypeNames)
     {
-        if (branches.Count == 0)
-        {
-            return [];
-        }
+        if (branches.Count == 0) return [];
 
         var optimized = new GesGuardedChoiceBranchNode[branches.Count];
         for (var index = 0; index < optimized.Length; index++)
@@ -199,15 +166,11 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, GesExpressionN
         return optimized;
     }
 
-    private GesArgumentListNode OptimizeArgumentList(GesArgumentListNode argumentList, ISet<string> knownTypeNames)
-        => new(OptimizeArguments(argumentList.Arguments, knownTypeNames));
+    private GesArgumentListNode OptimizeArgumentList(GesArgumentListNode argumentList, ISet<string> knownTypeNames) => new(OptimizeArguments(argumentList.Arguments, knownTypeNames));
 
     private IReadOnlyList<GesArgumentNode> OptimizeArguments(IReadOnlyList<GesArgumentNode> arguments, ISet<string> knownTypeNames)
     {
-        if (arguments.Count == 0)
-        {
-            return [];
-        }
+        if (arguments.Count == 0) return [];
 
         var optimized = new GesArgumentNode[arguments.Count];
         for (var index = 0; index < optimized.Length; index++)
@@ -224,10 +187,7 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, GesExpressionN
 
     private IReadOnlyList<GesMapEntryNode> OptimizeMapEntries(IReadOnlyList<GesMapEntryNode> entries, ISet<string> knownTypeNames)
     {
-        if (entries.Count == 0)
-        {
-            return [];
-        }
+        if (entries.Count == 0) return [];
 
         var optimized = new GesMapEntryNode[entries.Count];
         for (var index = 0; index < optimized.Length; index++)
@@ -380,10 +340,7 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, GesExpressionN
             _ => expression
         };
 
-        if (FoldConstantExpression(optimized) is { } constantFolded)
-        {
-            return constantFolded with { SourceRange = optimized.SourceRange };
-        }
+        if (FoldConstantExpression(optimized) is { } constantFolded) return constantFolded with { SourceRange = optimized.SourceRange };
 
         return optimized;
     }
@@ -391,10 +348,7 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, GesExpressionN
     private static GesExpressionNode? FoldConstantExpression(GesExpressionNode expression)
     {
         // Preserve decimal source spelling metadata used to select continuous random bounds.
-        if (expression is GesFloatLiteralExpressionNode or GesUnitFloatLiteralExpressionNode or GesIntegerLiteralExpressionNode or GesUnitIntegerLiteralExpressionNode)
-        {
-            return null;
-        }
+        if (expression is GesFloatLiteralExpressionNode or GesUnitFloatLiteralExpressionNode or GesIntegerLiteralExpressionNode or GesUnitIntegerLiteralExpressionNode) return null;
 
         return EvaluateConstantValue(expression) is { } value
             ? ConvertValueToLiteral(value)
@@ -495,10 +449,7 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, GesExpressionN
 
     private IReadOnlyList<GesObjectMatchEntryNode> OptimizeObjectMatchEntries(IReadOnlyList<GesObjectMatchEntryNode> entries, ISet<string> knownTypeNames)
     {
-        if (entries.Count == 0)
-        {
-            return [];
-        }
+        if (entries.Count == 0) return [];
 
         var optimized = new GesObjectMatchEntryNode[entries.Count];
         for (var index = 0; index < optimized.Length; index++)
@@ -528,37 +479,27 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, GesExpressionN
     {
         switch (expression)
         {
-            case GesBooleanLiteralExpressionNode booleanLiteral:
-                return GesValue.GesBoolean(booleanLiteral.Value);
-            case GesNothingLiteralExpressionNode:
-                return GesValue.GesNothing();
-            case GesIntegerLiteralExpressionNode integerLiteral:
-                return GesValue.GesInteger(integerLiteral.Value);
+            case GesBooleanLiteralExpressionNode booleanLiteral: return GesValue.GesBoolean(booleanLiteral.Value);
+            case GesNothingLiteralExpressionNode: return GesValue.GesNothing();
+            case GesIntegerLiteralExpressionNode integerLiteral: return GesValue.GesInteger(integerLiteral.Value);
             case GesUnitIntegerLiteralExpressionNode unitIntegerLiteral:
                 return GesQuantityUnits.ParseTypeName(unitIntegerLiteral.UnitName) is { } integerUnit
                     ? GesValue.GesInteger(unitIntegerLiteral.Value, integerUnit)
                     : GesValue.GesNothing();
-            case GesFloatLiteralExpressionNode floatLiteral:
-                return GesValue.GesFloat(floatLiteral.Value);
+            case GesFloatLiteralExpressionNode floatLiteral: return GesValue.GesFloat(floatLiteral.Value);
             case GesUnitFloatLiteralExpressionNode unitFloatLiteral:
                 return GesQuantityUnits.ParseTypeName(unitFloatLiteral.UnitName) is { } unit
                     ? GesValue.GesFloat(unitFloatLiteral.Value, unit)
                     : GesValue.GesNothing();
-            case GesPercentageLiteralExpressionNode percentageLiteral:
-                return GesValue.GesPercentage(percentageLiteral.RatioValue);
-            case GesTextLiteralExpressionNode textLiteral:
-                return GesValue.GesText(textLiteral.Value);
-            case GesTagLiteralExpressionNode tagLiteral:
-                return GesValue.GesTag(tagLiteral.Name);
+            case GesPercentageLiteralExpressionNode percentageLiteral: return GesValue.GesPercentage(percentageLiteral.RatioValue);
+            case GesTextLiteralExpressionNode textLiteral: return GesValue.GesText(textLiteral.Value);
+            case GesTagLiteralExpressionNode tagLiteral: return GesValue.GesTag(tagLiteral.Name);
             case GesListLiteralExpressionNode listLiteral:
             {
                 var items = new GesValue[listLiteral.Items.Count];
                 for (var index = 0; index < listLiteral.Items.Count; index++)
                 {
-                    if (EvaluateConstantValue(listLiteral.Items[index]) is not { } item)
-                    {
-                        return null;
-                    }
+                    if (EvaluateConstantValue(listLiteral.Items[index]) is not { } item) return null;
 
                     items[index] = item;
                 }
@@ -572,10 +513,7 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, GesExpressionN
                 for (var index = 0; index < mapLiteral.Entries.Count; index++)
                 {
                     var entry = mapLiteral.Entries[index];
-                    if (EvaluateConstantValue(entry.Value) is not { } entryValue)
-                    {
-                        return null;
-                    }
+                    if (EvaluateConstantValue(entry.Value) is not { } entryValue) return null;
 
                     keys[index] = entry.Key;
                     values[index] = entryValue;
@@ -583,40 +521,28 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, GesExpressionN
 
                 return GesValue.GesMap(keys, values);
             }
-            case GesTypeCastExpressionNode typeCastExpression:
-                return EvaluateConstantTypeCastValue(typeCastExpression);
-            case GesUnaryExpressionNode unaryExpression:
-                return EvaluateConstantUnaryValue(unaryExpression);
-            case GesBinaryExpressionNode binaryExpression:
-                return EvaluateConstantBinaryValue(binaryExpression);
-            default:
-                return null;
+            case GesTypeCastExpressionNode typeCastExpression: return EvaluateConstantTypeCastValue(typeCastExpression);
+            case GesUnaryExpressionNode unaryExpression: return EvaluateConstantUnaryValue(unaryExpression);
+            case GesBinaryExpressionNode binaryExpression: return EvaluateConstantBinaryValue(binaryExpression);
+            default: return null;
         }
     }
 
     private static GesValue? EvaluateConstantTypeCastValue(GesTypeCastExpressionNode typeCast)
     {
-        if (EvaluateConstantValue(typeCast.Value) is not { } source)
-        {
-            return null;
-        }
+        if (EvaluateConstantValue(typeCast.Value) is not { } source) return null;
 
         switch (typeCast.TypeName)
         {
             case "number":
-            case "numeric":
-                return GesNumber.Cast(in source);
-            default:
-                return null;
+            case "numeric": return GesNumber.Cast(in source);
+            default: return null;
         }
     }
 
     private static GesValue? EvaluateConstantUnaryValue(GesUnaryExpressionNode unary)
     {
-        if (EvaluateConstantValue(unary.Operand) is not { } operand)
-        {
-            return null;
-        }
+        if (EvaluateConstantValue(unary.Operand) is not { } operand) return null;
 
         switch (unary.Operator)
         {
@@ -627,10 +553,8 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, GesExpressionN
                     GesBytecodeTypeKind.Dice
                     ? GesValue.GesNothing()
                     : GesValue.GesBoolean(!operand.AsBoolean());
-            case GesUnaryOperator.HasValue:
-                return GesValue.GesBoolean(operand.HasValue);
-            case GesUnaryOperator.Empty:
-                return GesValue.GesBoolean(!operand.HasValue);
+            case GesUnaryOperator.HasValue: return GesValue.GesBoolean(operand.HasValue);
+            case GesUnaryOperator.Empty: return GesValue.GesBoolean(!operand.HasValue);
             case GesUnaryOperator.Negate
                 when operand.Kind == GesBytecodeTypeKind.Integer &&
                      operand.IntegerValue != long.MinValue:
@@ -657,10 +581,7 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, GesExpressionN
             case GesUnaryOperator.RoundHalfEven:
             case GesUnaryOperator.RoundHalfUp:
             case GesUnaryOperator.RoundHalfDown:
-                if (operand.Kind is not (GesBytecodeTypeKind.Integer or GesBytecodeTypeKind.Float or GesBytecodeTypeKind.Percentage or GesBytecodeTypeKind.Boolean))
-                {
-                    return GesValue.GesNothing();
-                }
+                if (operand.Kind is not (GesBytecodeTypeKind.Integer or GesBytecodeTypeKind.Float or GesBytecodeTypeKind.Percentage or GesBytecodeTypeKind.Boolean)) return GesValue.GesNothing();
 
                 var rounded = unary.Operator switch
                 {
@@ -702,8 +623,7 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, GesExpressionN
                 var wrapped = operand.AsNumber() % 360d;
                 if (wrapped < 0d) wrapped += 360d;
                 return GesValue.GesFloat(wrapped == 360d ? 0d : wrapped, GesQuantityUnit.UnitDegree);
-            default:
-                return null;
+            default: return null;
         }
     }
 
@@ -717,23 +637,15 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, GesExpressionN
 
         switch (binary.Operator)
         {
-            case GesBinaryOperator.Default:
-                return left.HasValue ? left : right;
-            case GesBinaryOperator.Or:
-                return EvaluateConstantOr(left, right);
-            case GesBinaryOperator.And:
-                return EvaluateConstantAnd(left, right);
+            case GesBinaryOperator.Default: return left.HasValue ? left : right;
+            case GesBinaryOperator.Or: return EvaluateConstantOr(left, right);
+            case GesBinaryOperator.And: return EvaluateConstantAnd(left, right);
             case GesBinaryOperator.Xor:
-                if (IsTruthIndeterminate(left) || IsTruthIndeterminate(right))
-                {
-                    return GesValue.GesNothing();
-                }
+                if (IsTruthIndeterminate(left) || IsTruthIndeterminate(right)) return GesValue.GesNothing();
 
                 return GesValue.GesBoolean(left.AsBoolean() ^ right.AsBoolean());
-            case GesBinaryOperator.Implies:
-                return EvaluateConstantImplies(left, right);
-            case GesBinaryOperator.Power:
-                return GesNumber.Power(in left, in right);
+            case GesBinaryOperator.Implies: return EvaluateConstantImplies(left, right);
+            case GesBinaryOperator.Power: return GesNumber.Power(in left, in right);
         }
 
         if (left.IsNothing || right.IsNothing)
@@ -754,10 +666,8 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, GesExpressionN
                     return GesNumber.FloorDivideExact(left.IntegerValue, right.IntegerValue) is { } quotient
                         ? GesValue.GesInteger(quotient, DivideResultUnit(left.Unit))
                         : GesValue.GesFloat(Math.Floor((double)left.IntegerValue / right.IntegerValue), DivideResultUnit(left.Unit));
-                case GesBinaryOperator.Modulo:
-                    return right.IntegerValue == 0 ? GesValue.GesNothing() : GesValue.GesInteger(GesNumber.Modulo(left.IntegerValue, right.IntegerValue), left.Unit);
-                case GesBinaryOperator.Remainder:
-                    return right.IntegerValue == 0 ? GesValue.GesNothing() : GesValue.GesInteger(GesNumber.Remainder(left.IntegerValue, right.IntegerValue), left.Unit);
+                case GesBinaryOperator.Modulo: return right.IntegerValue == 0 ? GesValue.GesNothing() : GesValue.GesInteger(GesNumber.Modulo(left.IntegerValue, right.IntegerValue), left.Unit);
+                case GesBinaryOperator.Remainder: return right.IntegerValue == 0 ? GesValue.GesNothing() : GesValue.GesInteger(GesNumber.Remainder(left.IntegerValue, right.IntegerValue), left.Unit);
             }
         }
 
@@ -787,21 +697,14 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, GesExpressionN
             case GesBinaryOperator.GreaterOrEqual:
                 if (!bothIntegers || !sameUnit) goto default;
                 return GesValue.GesBoolean(left.IntegerValue >= right.IntegerValue);
-            case GesBinaryOperator.Add:
-                return FoldAdd(left, right, leftNumber, rightNumber);
-            case GesBinaryOperator.Subtract:
-                return FoldSubtract(left, right, leftNumber, rightNumber);
-            case GesBinaryOperator.Multiply:
-                return FoldMultiply(left, right, leftNumber, rightNumber);
+            case GesBinaryOperator.Add: return FoldAdd(left, right, leftNumber, rightNumber);
+            case GesBinaryOperator.Subtract: return FoldSubtract(left, right, leftNumber, rightNumber);
+            case GesBinaryOperator.Multiply: return FoldMultiply(left, right, leftNumber, rightNumber);
             case GesBinaryOperator.Divide when rightNumber != 0d && sameUnit:
-                if (left.Kind == GesBytecodeTypeKind.Percentage && right.Kind is GesBytecodeTypeKind.Integer or GesBytecodeTypeKind.Float)
-                {
-                    return GesValue.GesPercentage(leftNumber / rightNumber);
-                }
+                if (left.Kind == GesBytecodeTypeKind.Percentage && right.Kind is GesBytecodeTypeKind.Integer or GesBytecodeTypeKind.Float) return GesValue.GesPercentage(leftNumber / rightNumber);
 
                 return CreateNumber(leftNumber / rightNumber, DivideResultUnit(left.Unit), false);
-            case GesBinaryOperator.IntegerDivide when rightNumber != 0d && sameUnit:
-                return CreateNumber(Math.Floor(leftNumber / rightNumber), DivideResultUnit(left.Unit), true);
+            case GesBinaryOperator.IntegerDivide when rightNumber != 0d && sameUnit: return CreateNumber(Math.Floor(leftNumber / rightNumber), DivideResultUnit(left.Unit), true);
             case GesBinaryOperator.Modulo when rightNumber != 0d && sameUnit:
             {
                 var remainder = leftNumber % rightNumber;
@@ -817,17 +720,13 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, GesExpressionN
             {
                 return CreateNumber(leftNumber % rightNumber, left.Unit, bothIntegers);
             }
-            default:
-                return null;
+            default: return null;
         }
     }
 
     private static GesValue EvaluateConstantOr(GesValue left, GesValue right)
     {
-        if (!IsTruthIndeterminate(left) && left.AsBoolean() || !IsTruthIndeterminate(right) && right.AsBoolean())
-        {
-            return GesValue.GesBoolean(true);
-        }
+        if (!IsTruthIndeterminate(left) && left.AsBoolean() || !IsTruthIndeterminate(right) && right.AsBoolean()) return GesValue.GesBoolean(true);
 
         return IsTruthIndeterminate(left) || IsTruthIndeterminate(right)
             ? GesValue.GesNothing()
@@ -836,10 +735,7 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, GesExpressionN
 
     private static GesValue EvaluateConstantAnd(GesValue left, GesValue right)
     {
-        if (!IsTruthIndeterminate(left) && !left.AsBoolean() || !IsTruthIndeterminate(right) && !right.AsBoolean())
-        {
-            return GesValue.GesBoolean(false);
-        }
+        if (!IsTruthIndeterminate(left) && !left.AsBoolean() || !IsTruthIndeterminate(right) && !right.AsBoolean()) return GesValue.GesBoolean(false);
 
         return IsTruthIndeterminate(left) || IsTruthIndeterminate(right)
             ? GesValue.GesNothing()
@@ -848,10 +744,7 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, GesExpressionN
 
     private static GesValue EvaluateConstantImplies(GesValue left, GesValue right)
     {
-        if (!IsTruthIndeterminate(left) && !left.AsBoolean() || !IsTruthIndeterminate(right) && right.AsBoolean())
-        {
-            return GesValue.GesBoolean(true);
-        }
+        if (!IsTruthIndeterminate(left) && !left.AsBoolean() || !IsTruthIndeterminate(right) && right.AsBoolean()) return GesValue.GesBoolean(true);
 
         return IsTruthIndeterminate(left) || IsTruthIndeterminate(right)
             ? GesValue.GesNothing()
@@ -882,15 +775,9 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, GesExpressionN
             return CreateNumber(leftNumber + rightNumber, left.Unit, false);
         }
 
-        if (left.Kind == GesBytecodeTypeKind.Percentage && right.Kind == GesBytecodeTypeKind.Percentage)
-        {
-            return GesValue.GesPercentage(leftNumber + rightNumber);
-        }
+        if (left.Kind == GesBytecodeTypeKind.Percentage && right.Kind == GesBytecodeTypeKind.Percentage) return GesValue.GesPercentage(leftNumber + rightNumber);
 
-        if (right.Kind == GesBytecodeTypeKind.Percentage && left.Unit.IsNumericUnit())
-        {
-            return CreateNumber(leftNumber + leftNumber * rightNumber, left.Unit, false);
-        }
+        if (right.Kind == GesBytecodeTypeKind.Percentage && left.Unit.IsNumericUnit()) return CreateNumber(leftNumber + leftNumber * rightNumber, left.Unit, false);
 
         return null;
     }
@@ -913,15 +800,9 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, GesExpressionN
             return CreateNumber(leftNumber - rightNumber, left.Unit, false);
         }
 
-        if (left.Kind == GesBytecodeTypeKind.Percentage && right.Kind == GesBytecodeTypeKind.Percentage)
-        {
-            return GesValue.GesPercentage(leftNumber - rightNumber);
-        }
+        if (left.Kind == GesBytecodeTypeKind.Percentage && right.Kind == GesBytecodeTypeKind.Percentage) return GesValue.GesPercentage(leftNumber - rightNumber);
 
-        if (right.Kind == GesBytecodeTypeKind.Percentage && left.Unit.IsNumericUnit())
-        {
-            return CreateNumber(leftNumber - leftNumber * rightNumber, left.Unit, false);
-        }
+        if (right.Kind == GesBytecodeTypeKind.Percentage && left.Unit.IsNumericUnit()) return CreateNumber(leftNumber - leftNumber * rightNumber, left.Unit, false);
 
         return null;
     }
@@ -938,33 +819,18 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, GesExpressionN
                     : GesValue.GesFloat((double)left.IntegerValue * right.IntegerValue);
             }
 
-            if (ProductUnit(left.Unit, right.Unit) is { } productUnit)
-            {
-                return CreateNumber((double)left.IntegerValue * right.IntegerValue, productUnit, false);
-            }
+            if (ProductUnit(left.Unit, right.Unit) is { } productUnit) return CreateNumber((double)left.IntegerValue * right.IntegerValue, productUnit, false);
 
             return null;
         }
 
-        if (left.Kind == GesBytecodeTypeKind.Percentage && right.Kind == GesBytecodeTypeKind.Percentage)
-        {
-            return GesValue.GesPercentage(leftNumber * rightNumber);
-        }
+        if (left.Kind == GesBytecodeTypeKind.Percentage && right.Kind == GesBytecodeTypeKind.Percentage) return GesValue.GesPercentage(leftNumber * rightNumber);
 
-        if (left.Kind == GesBytecodeTypeKind.Percentage)
-        {
-            return CreateNumber(leftNumber * rightNumber, right.Unit, false);
-        }
+        if (left.Kind == GesBytecodeTypeKind.Percentage) return CreateNumber(leftNumber * rightNumber, right.Unit, false);
 
-        if (right.Kind == GesBytecodeTypeKind.Percentage)
-        {
-            return CreateNumber(leftNumber * rightNumber, left.Unit, false);
-        }
+        if (right.Kind == GesBytecodeTypeKind.Percentage) return CreateNumber(leftNumber * rightNumber, left.Unit, false);
 
-        if (ProductUnit(left.Unit, right.Unit) is { } unit)
-        {
-            return CreateNumber(leftNumber * rightNumber, unit, false);
-        }
+        if (ProductUnit(left.Unit, right.Unit) is { } unit) return CreateNumber(leftNumber * rightNumber, unit, false);
 
         return null;
     }
@@ -975,21 +841,15 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, GesExpressionN
         {
             case GesBytecodeTypeKind.Integer:
             case GesBytecodeTypeKind.Float:
-            case GesBytecodeTypeKind.Percentage:
-                return double.IsFinite(value.AsNumber()) ? value.AsNumber() : null;
-            case GesBytecodeTypeKind.Boolean:
-                return value.AsBoolean() ? 1d : 0d;
-            default:
-                return null;
+            case GesBytecodeTypeKind.Percentage: return double.IsFinite(value.AsNumber()) ? value.AsNumber() : null;
+            case GesBytecodeTypeKind.Boolean: return value.AsBoolean() ? 1d : 0d;
+            default: return null;
         }
     }
 
     private static GesValue CreateNumber(double number, GesQuantityUnit unit, bool preferInteger)
     {
-        if (!double.IsFinite(number))
-        {
-            return GesValue.GesNothing();
-        }
+        if (!double.IsFinite(number)) return GesValue.GesNothing();
 
         if (preferInteger &&
             GesNumber.CanRepresentAsInteger(number))
@@ -1002,44 +862,32 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, GesExpressionN
 
     private static GesQuantityUnit? ProductUnit(GesQuantityUnit left, GesQuantityUnit right)
     {
-        if (left.IsNumericUnit() && right.IsNumericUnit())
-        {
-            return null;
-        }
+        if (left.IsNumericUnit() && right.IsNumericUnit()) return null;
 
         return left is GesQuantityUnit.UnitNone ? right : left;
     }
 
-    private static GesQuantityUnit DivideResultUnit(GesQuantityUnit unit)
-        => unit.IsNumericUnit() ? GesQuantityUnit.UnitNone : unit;
+    private static GesQuantityUnit DivideResultUnit(GesQuantityUnit unit) => unit.IsNumericUnit() ? GesQuantityUnit.UnitNone : unit;
 
     private static GesExpressionNode? ConvertValueToLiteral(GesValue value)
     {
         switch (value.Kind)
         {
-            case GesBytecodeTypeKind.Nothing:
-                return new GesNothingLiteralExpressionNode();
-            case GesBytecodeTypeKind.Boolean:
-                return new GesBooleanLiteralExpressionNode(value.AsBoolean());
+            case GesBytecodeTypeKind.Nothing: return new GesNothingLiteralExpressionNode();
+            case GesBytecodeTypeKind.Boolean: return new GesBooleanLiteralExpressionNode(value.AsBoolean());
             case GesBytecodeTypeKind.Integer:
                 return value.Unit.IsNumericUnit()
                     ? new GesUnitIntegerLiteralExpressionNode(value.IntegerValue, value.Unit.ToTypeName())
                     : new GesIntegerLiteralExpressionNode(value.IntegerValue);
             case GesBytecodeTypeKind.Float:
-                if (double.IsNaN(value.AsNumber()) || double.IsInfinity(value.AsNumber()))
-                {
-                    return null;
-                }
+                if (double.IsNaN(value.AsNumber()) || double.IsInfinity(value.AsNumber())) return null;
 
                 return value.Unit.IsNumericUnit()
                     ? new GesUnitFloatLiteralExpressionNode(value.AsNumber(), value.Unit.ToTypeName())
                     : new GesFloatLiteralExpressionNode(value.AsNumber());
-            case GesBytecodeTypeKind.Percentage:
-                return new GesPercentageLiteralExpressionNode(value.AsNumber());
-            case GesBytecodeTypeKind.Text:
-                return new GesTextLiteralExpressionNode(value.TextValue);
-            case GesBytecodeTypeKind.Tag:
-                return new GesTagLiteralExpressionNode(value.TextValue);
+            case GesBytecodeTypeKind.Percentage: return new GesPercentageLiteralExpressionNode(value.AsNumber());
+            case GesBytecodeTypeKind.Text: return new GesTextLiteralExpressionNode(value.TextValue);
+            case GesBytecodeTypeKind.Tag: return new GesTagLiteralExpressionNode(value.TextValue);
             case GesBytecodeTypeKind.Vector:
                 return new GesTypeConstructorExpressionNode(
                     "vector",
@@ -1062,10 +910,7 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, GesExpressionN
                 var items = new GesExpressionNode[source.Length];
                 for (var index = 0; index < items.Length; index++)
                 {
-                    if (ConvertValueToLiteral(source[index]) is not { } itemLiteral)
-                    {
-                        return null;
-                    }
+                    if (ConvertValueToLiteral(source[index]) is not { } itemLiteral) return null;
 
                     items[index] = itemLiteral;
                 }
@@ -1074,27 +919,20 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, GesExpressionN
             }
             case GesBytecodeTypeKind.Map:
             {
-                if (value.AsMap() is not { } map)
-                {
-                    return null;
-                }
+                if (value.AsMap() is not { } map) return null;
 
                 var entries = new GesMapEntryNode[map.Length];
                 for (var index = 0; index < map.StorageLength; index++)
                 {
                     var mapValue = map.ValueAt(index);
-                    if (ConvertValueToLiteral(mapValue) is not { } itemLiteral)
-                    {
-                        return null;
-                    }
+                    if (ConvertValueToLiteral(mapValue) is not { } itemLiteral) return null;
 
                     entries[index] = new GesMapEntryNode(map.KeyAt(index), itemLiteral);
                 }
 
                 return new GesMapLiteralExpressionNode(entries);
             }
-            default:
-                return null;
+            default: return null;
         }
     }
 

@@ -47,18 +47,12 @@ internal sealed class GesValidationErrors
 
     public void ThrowIfAny()
     {
-        if (_errors.Count > 0)
-        {
-            throw new GesCompileException(_errors);
-        }
+        if (_errors.Count > 0) throw new GesCompileException(_errors);
     }
 
     private static GesScriptNode? FindSourceNode(GesParsedScript? module, string symbol, GesDiagnosticSymbolKind symbolKind)
     {
-        if (module is null)
-        {
-            return null;
-        }
+        if (module is null) return null;
 
         return symbolKind switch
         {
@@ -90,55 +84,34 @@ internal sealed class GesValidationErrors
         foreach (var type in parsedScript.TypeDefinitions)
         {
             var field = FindField(type.Fields, symbol);
-            if (field is not null)
-            {
-                return field;
-            }
+            if (field is not null) return field;
         }
 
         foreach (var rule in parsedScript.PredicateDefinitions)
         {
             var parameter = FindParameter(rule.ParameterList, symbol);
-            if (parameter is not null)
-            {
-                return parameter;
-            }
+            if (parameter is not null) return parameter;
 
             var expressionNode = FindNodeInExpression(rule.Expression, symbol);
-            if (expressionNode is not null)
-            {
-                return expressionNode;
-            }
+            if (expressionNode is not null) return expressionNode;
         }
 
         foreach (var select in parsedScript.FunctionDefinitions)
         {
             var parameter = FindParameter(select.ParameterList, symbol);
-            if (parameter is not null)
-            {
-                return parameter;
-            }
+            if (parameter is not null) return parameter;
 
             var expressionNode = FindNodeInExpression(select.Expression, symbol);
-            if (expressionNode is not null)
-            {
-                return expressionNode;
-            }
+            if (expressionNode is not null) return expressionNode;
         }
 
         foreach (var handler in parsedScript.Handlers)
         {
             var parameter = FindParameter(handler.ParameterList, symbol);
-            if (parameter is not null)
-            {
-                return parameter;
-            }
+            if (parameter is not null) return parameter;
 
             var statementNode = FindNodeInStatements(handler.Statements, symbol);
-            if (statementNode is not null)
-            {
-                return statementNode;
-            }
+            if (statementNode is not null) return statementNode;
         }
 
         return null;
@@ -149,28 +122,19 @@ internal sealed class GesValidationErrors
         foreach (var handler in parsedScript.Handlers)
         {
             var statementNode = FindNodeInStatements(handler.Statements, symbol);
-            if (statementNode is not null)
-            {
-                return statementNode;
-            }
+            if (statementNode is not null) return statementNode;
         }
 
         foreach (var rule in parsedScript.PredicateDefinitions)
         {
             var expressionNode = FindNodeInExpression(rule.Expression, symbol);
-            if (expressionNode is not null)
-            {
-                return expressionNode;
-            }
+            if (expressionNode is not null) return expressionNode;
         }
 
         foreach (var select in parsedScript.FunctionDefinitions)
         {
             var expressionNode = FindNodeInExpression(select.Expression, symbol);
-            if (expressionNode is not null)
-            {
-                return expressionNode;
-            }
+            if (expressionNode is not null) return expressionNode;
         }
 
         return null;
@@ -199,10 +163,7 @@ internal sealed class GesValidationErrors
                 _ => null
             };
 
-            if (node is not null)
-            {
-                return node;
-            }
+            if (node is not null) return node;
         }
 
         return null;
@@ -220,20 +181,13 @@ internal sealed class GesValidationErrors
     {
         switch (expression)
         {
-            case GesConstantReferenceExpressionNode constant when string.Equals(constant.Name, symbol, StringComparison.Ordinal):
-                return constant;
-            case GesIdentifierExpressionNode identifier when string.Equals(identifier.Name, symbol, StringComparison.Ordinal):
-                return identifier;
-            case GesCallExpressionNode call when string.Equals(call.Name, symbol, StringComparison.Ordinal):
-                return call;
-            case GesPredicateCallExpressionNode predicateCall when string.Equals(predicateCall.PredicateName, symbol, StringComparison.Ordinal):
-                return predicateCall;
-            case GesTypeConstructorExpressionNode constructor when string.Equals(constructor.TypeName, symbol, StringComparison.Ordinal):
-                return constructor;
-            case GesMessageLiteralExpressionNode message when string.Equals(message.Message, symbol, StringComparison.Ordinal):
-                return message;
-            case GesHandlerLiteralExpressionNode handler when string.Equals(handler.Message, symbol, StringComparison.Ordinal):
-                return handler;
+            case GesConstantReferenceExpressionNode constant when string.Equals(constant.Name, symbol, StringComparison.Ordinal): return constant;
+            case GesIdentifierExpressionNode identifier when string.Equals(identifier.Name, symbol, StringComparison.Ordinal): return identifier;
+            case GesCallExpressionNode call when string.Equals(call.Name, symbol, StringComparison.Ordinal): return call;
+            case GesPredicateCallExpressionNode predicateCall when string.Equals(predicateCall.PredicateName, symbol, StringComparison.Ordinal): return predicateCall;
+            case GesTypeConstructorExpressionNode constructor when string.Equals(constructor.TypeName, symbol, StringComparison.Ordinal): return constructor;
+            case GesMessageLiteralExpressionNode message when string.Equals(message.Message, symbol, StringComparison.Ordinal): return message;
+            case GesHandlerLiteralExpressionNode handler when string.Equals(handler.Message, symbol, StringComparison.Ordinal): return handler;
         }
 
         return expression switch
@@ -280,10 +234,7 @@ internal sealed class GesValidationErrors
         foreach (var expression in expressions)
         {
             var node = FindNodeInExpression(expression, symbol);
-            if (node is not null)
-            {
-                return node;
-            }
+            if (node is not null) return node;
         }
 
         return null;
@@ -293,16 +244,10 @@ internal sealed class GesValidationErrors
     {
         foreach (var argument in arguments)
         {
-            if (string.Equals(argument.Label, symbol, StringComparison.Ordinal))
-            {
-                return argument;
-            }
+            if (string.Equals(argument.Label, symbol, StringComparison.Ordinal)) return argument;
 
             var expressionNode = FindNodeInExpression(argument.Expression, symbol);
-            if (expressionNode is not null)
-            {
-                return expressionNode;
-            }
+            if (expressionNode is not null) return expressionNode;
         }
 
         return null;
@@ -339,10 +284,7 @@ internal sealed class GesValidationErrors
         for (var index = 0; index < definitions.Count; index++)
         {
             var definition = definitions[index];
-            if (string.Equals(definition.Name, symbol, StringComparison.Ordinal))
-            {
-                return definition;
-            }
+            if (string.Equals(definition.Name, symbol, StringComparison.Ordinal)) return definition;
         }
 
         return null;
@@ -353,10 +295,7 @@ internal sealed class GesValidationErrors
         for (var index = 0; index < definitions.Count; index++)
         {
             var definition = definitions[index];
-            if (string.Equals(definition.Name, symbol, StringComparison.Ordinal))
-            {
-                return definition;
-            }
+            if (string.Equals(definition.Name, symbol, StringComparison.Ordinal)) return definition;
         }
 
         return null;
@@ -367,10 +306,7 @@ internal sealed class GesValidationErrors
         for (var index = 0; index < definitions.Count; index++)
         {
             var definition = definitions[index];
-            if (string.Equals(definition.Name, symbol, StringComparison.Ordinal))
-            {
-                return definition;
-            }
+            if (string.Equals(definition.Name, symbol, StringComparison.Ordinal)) return definition;
         }
 
         return null;
@@ -381,10 +317,7 @@ internal sealed class GesValidationErrors
         for (var index = 0; index < handlers.Count; index++)
         {
             var handler = handlers[index];
-            if (string.Equals(handler.Message, symbol, StringComparison.Ordinal))
-            {
-                return handler;
-            }
+            if (string.Equals(handler.Message, symbol, StringComparison.Ordinal)) return handler;
         }
 
         return null;
@@ -395,10 +328,7 @@ internal sealed class GesValidationErrors
         for (var index = 0; index < fields.Count; index++)
         {
             var field = fields[index];
-            if (string.Equals(field.Name, symbol, StringComparison.Ordinal))
-            {
-                return field;
-            }
+            if (string.Equals(field.Name, symbol, StringComparison.Ordinal)) return field;
         }
 
         return null;
@@ -409,10 +339,7 @@ internal sealed class GesValidationErrors
         for (var index = 0; index < parameters.Count; index++)
         {
             var parameter = parameters[index];
-            if (string.Equals(parameter.LocalName, symbol, StringComparison.Ordinal))
-            {
-                return parameter;
-            }
+            if (string.Equals(parameter.LocalName, symbol, StringComparison.Ordinal)) return parameter;
         }
 
         return null;
@@ -425,10 +352,7 @@ internal sealed class GesValidationErrors
             var branch = guarded.Branches[index];
             var node = FindNodeInExpression(branch.ValueExpression, symbol) ??
                        FindNodeInExpression(branch.ConditionExpression, symbol);
-            if (node is not null)
-            {
-                return node;
-            }
+            if (node is not null) return node;
         }
 
         return FindNodeInExpression(guarded.OtherwiseExpression, symbol);
@@ -439,10 +363,7 @@ internal sealed class GesValidationErrors
         for (var index = 0; index < entries.Count; index++)
         {
             var node = FindNodeInExpression(entries[index].Value, symbol);
-            if (node is not null)
-            {
-                return node;
-            }
+            if (node is not null) return node;
         }
 
         return null;

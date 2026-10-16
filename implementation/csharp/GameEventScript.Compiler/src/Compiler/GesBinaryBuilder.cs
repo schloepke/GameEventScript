@@ -677,14 +677,9 @@ internal sealed partial class GesBinaryBuilder
     {
         switch (operand.Kind)
         {
-            case GesOperandKind.None:
-                return;
-            case GesOperandKind.Register:
-                RequireRegister(operand.RegisterRef);
-                return;
-            case GesOperandKind.Label:
-                RequireLabel(operand.LabelRef);
-                return;
+            case GesOperandKind.None: return;
+            case GesOperandKind.Register: RequireRegister(operand.RegisterRef); return;
+            case GesOperandKind.Label: RequireLabel(operand.LabelRef); return;
             case GesOperandKind.RegisterList:
                 for (var index = 0; index < operand.RegisterListValue!.Count; index++) RequireRegister(operand.RegisterListValue[index]);
                 return;
@@ -699,10 +694,8 @@ internal sealed partial class GesBinaryBuilder
             case GesOperandKind.Text:
             case GesOperandKind.Type:
             case GesOperandKind.UShort:
-            case GesOperandKind.Short:
-                return;
-            default:
-                throw new ArgumentOutOfRangeException(nameof(operand), operand.Kind, "Unknown operand kind.");
+            case GesOperandKind.Short: return;
+            default: throw new ArgumentOutOfRangeException(nameof(operand), operand.Kind, "Unknown operand kind.");
         }
     }
 

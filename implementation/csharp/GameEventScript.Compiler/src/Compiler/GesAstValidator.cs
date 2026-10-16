@@ -48,8 +48,7 @@ internal static class GesAstValidator
             return scope;
         }
 
-        public static ValidationScope CreateChild(ValidationScope parent)
-            => new(parent);
+        public static ValidationScope CreateChild(ValidationScope parent) => new(parent);
 
         public IReadOnlyDictionary<string, string> DeclaredTypes => _declaredTypes;
         public IReadOnlyDictionary<string, GesExpressionNode> Constants => _constants;
@@ -64,10 +63,7 @@ internal static class GesAstValidator
 
         private void DeclareType(string name, string? declaredType)
         {
-            if (!string.IsNullOrWhiteSpace(declaredType))
-            {
-                _declaredTypes[name] = declaredType!;
-            }
+            if (!string.IsNullOrWhiteSpace(declaredType)) _declaredTypes[name] = declaredType!;
         }
     }
 
@@ -91,20 +87,11 @@ internal static class GesAstValidator
                     "Field names must start with a lowercase ASCII letter and contain only ASCII letters or digits",
                     errors);
 
-                if (field.MinimumExpression is not null)
-                {
-                    ValidateExpressionReferences(parsedScript, field.MinimumExpression, callables, typeDefinitions, errors);
-                }
+                if (field.MinimumExpression is not null) ValidateExpressionReferences(parsedScript, field.MinimumExpression, callables, typeDefinitions, errors);
 
-                if (field.MaximumExpression is not null)
-                {
-                    ValidateExpressionReferences(parsedScript, field.MaximumExpression, callables, typeDefinitions, errors);
-                }
+                if (field.MaximumExpression is not null) ValidateExpressionReferences(parsedScript, field.MaximumExpression, callables, typeDefinitions, errors);
 
-                if (field.ComputedExpression is not null)
-                {
-                    ValidateExpressionReferences(parsedScript, field.ComputedExpression, callables, typeDefinitions, errors);
-                }
+                if (field.ComputedExpression is not null) ValidateExpressionReferences(parsedScript, field.ComputedExpression, callables, typeDefinitions, errors);
             }
         }
 
@@ -318,10 +305,7 @@ internal static class GesAstValidator
 
     private static void ValidateMessageNameHandler(GesParsedScript parsedScript, GesEventHandlerNode handler, GesValidationErrors errors)
     {
-        if (handler.DispatchKind != GesEventHandlerDispatchKind.MessageName)
-        {
-            return;
-        }
+        if (handler.DispatchKind != GesEventHandlerDispatchKind.MessageName) return;
 
         if (handler.ParameterList.Count != 1)
         {
@@ -414,10 +398,7 @@ internal static class GesAstValidator
                 foreach (var nested in ifStatement.ThenBody.Statements)
                     ValidateStatementReferences(parsedScriptContext, nested, callables, typeDefinitions, errors, conditionScope);
 
-                if (ifStatement.ElseBody is null)
-                {
-                    return;
-                }
+                if (ifStatement.ElseBody is null) return;
 
                 var elseScope = ValidationScope.CreateChild(scope);
                 foreach (var nested in ifStatement.ElseBody.Statements)
@@ -447,9 +428,7 @@ internal static class GesAstValidator
 
                 return;
 
-            case GesExpressionStatementNode expressionStatement:
-                ValidateExpressionReferences(parsedScriptContext, expressionStatement.Expression, callables, typeDefinitions, errors, scope.DeclaredTypes);
-                return;
+            case GesExpressionStatementNode expressionStatement: ValidateExpressionReferences(parsedScriptContext, expressionStatement.Expression, callables, typeDefinitions, errors, scope.DeclaredTypes); return;
         }
     }
 
@@ -543,10 +522,7 @@ internal static class GesAstValidator
             parameterTypes,
             new HashSet<string>(StringComparer.Ordinal));
 
-        if (result.IsPredicateCompatible)
-        {
-            return;
-        }
+        if (result.IsPredicateCompatible) return;
 
         errors.Add(
             parsedScriptContext,
@@ -563,10 +539,7 @@ internal static class GesAstValidator
         for (var index = 0; index < parameters.Count; index++)
         {
             var parameter = parameters[index];
-            if (!string.IsNullOrWhiteSpace(parameter.DeclaredType))
-            {
-                types[parameter.LocalName] = parameter.DeclaredType!;
-            }
+            if (!string.IsNullOrWhiteSpace(parameter.DeclaredType)) types[parameter.LocalName] = parameter.DeclaredType!;
         }
 
         return types;
@@ -576,10 +549,7 @@ internal static class GesAstValidator
     {
         for (var index = 0; index < fields.Count; index++)
         {
-            if (string.Equals(fields[index].Name, name, StringComparison.Ordinal))
-            {
-                return fields[index];
-            }
+            if (string.Equals(fields[index].Name, name, StringComparison.Ordinal)) return fields[index];
         }
 
         return null;
@@ -595,64 +565,47 @@ internal static class GesAstValidator
         switch (expression)
         {
             case GesAssemblyExpressionNode { Block.Predicate: true }:
-            case GesBooleanLiteralExpressionNode:
-                return StaticExpressionInfo.Boolean;
+            case GesBooleanLiteralExpressionNode: return StaticExpressionInfo.Boolean;
 
-            case GesIntegerLiteralExpressionNode:
-                return StaticExpressionInfo.Other("integer");
+            case GesIntegerLiteralExpressionNode: return StaticExpressionInfo.Other("integer");
 
-            case GesUnitIntegerLiteralExpressionNode unitInteger:
-                return StaticExpressionInfo.Other(unitInteger.UnitName);
+            case GesUnitIntegerLiteralExpressionNode unitInteger: return StaticExpressionInfo.Other(unitInteger.UnitName);
 
-            case GesFloatLiteralExpressionNode:
-                return StaticExpressionInfo.Other("float");
+            case GesFloatLiteralExpressionNode: return StaticExpressionInfo.Other("float");
 
-            case GesUnitFloatLiteralExpressionNode unitFloat:
-                return StaticExpressionInfo.Other(unitFloat.UnitName);
+            case GesUnitFloatLiteralExpressionNode unitFloat: return StaticExpressionInfo.Other(unitFloat.UnitName);
 
-            case GesPercentageLiteralExpressionNode:
-                return StaticExpressionInfo.Other("percentage");
+            case GesPercentageLiteralExpressionNode: return StaticExpressionInfo.Other("percentage");
 
-            case GesTextLiteralExpressionNode:
-                return StaticExpressionInfo.Other("text");
+            case GesTextLiteralExpressionNode: return StaticExpressionInfo.Other("text");
 
-            case GesTagLiteralExpressionNode:
-                return StaticExpressionInfo.Other("tag");
+            case GesTagLiteralExpressionNode: return StaticExpressionInfo.Other("tag");
 
             case GesTypeCheckExpressionNode:
             case GesNothingCheckExpressionNode:
             case GesPredicateCallExpressionNode:
-            case GesExtensionPredicateExpressionNode:
-                return StaticExpressionInfo.Boolean;
+            case GesExtensionPredicateExpressionNode: return StaticExpressionInfo.Boolean;
 
-            case GesNothingLiteralExpressionNode:
-                return StaticExpressionInfo.Nothing;
+            case GesNothingLiteralExpressionNode: return StaticExpressionInfo.Nothing;
 
             case GesIdentifierExpressionNode identifier:
                 return declaredTypes.TryGetValue(identifier.Name, out var declaredType)
                     ? FromDeclaredType(declaredType)
                     : StaticExpressionInfo.Unknown;
 
-            case GesMemberAccessExpressionNode memberAccess:
-                return ClassifyMemberAccess(memberAccess, callables, typeDefinitions, declaredTypes, visitedCallables);
+            case GesMemberAccessExpressionNode memberAccess: return ClassifyMemberAccess(memberAccess, callables, typeDefinitions, declaredTypes, visitedCallables);
 
-            case GesCollectionAccessExpressionNode collectionAccess:
-                return ClassifyCollectionAccess(collectionAccess);
+            case GesCollectionAccessExpressionNode collectionAccess: return ClassifyCollectionAccess(collectionAccess);
 
-            case GesCallExpressionNode call:
-                return ClassifyCall(call, callables, typeDefinitions, visitedCallables);
+            case GesCallExpressionNode call: return ClassifyCall(call, callables, typeDefinitions, visitedCallables);
 
-            case GesTypeCastExpressionNode typeCast:
-                return FromDeclaredType(typeCast.TypeName);
+            case GesTypeCastExpressionNode typeCast: return FromDeclaredType(typeCast.TypeName);
 
-            case GesTypeConstructorExpressionNode typeConstructor:
-                return FromDeclaredType(typeConstructor.TypeName);
+            case GesTypeConstructorExpressionNode typeConstructor: return FromDeclaredType(typeConstructor.TypeName);
 
             case GesBetweenExpressionNode:
-            case GesSendExpressionNode:
-                return StaticExpressionInfo.Boolean;
-            case GesUnaryExpressionNode unary:
-                return ClassifyUnary(unary, callables, typeDefinitions, declaredTypes, visitedCallables);
+            case GesSendExpressionNode: return StaticExpressionInfo.Boolean;
+            case GesUnaryExpressionNode unary: return ClassifyUnary(unary, callables, typeDefinitions, declaredTypes, visitedCallables);
 
             case GesIntrinsicCallExpressionNode intrinsic:
                 if (intrinsic.Function is GesIntrinsicFunction.Hypot or GesIntrinsicFunction.Distance)
@@ -662,17 +615,13 @@ internal static class GesAstValidator
                         ? StaticExpressionInfo.Other("vector")
                         : StaticExpressionInfo.Other("number");
 
-            case GesBinaryExpressionNode binary:
-                return ClassifyBinary(binary, callables, typeDefinitions, declaredTypes, visitedCallables);
+            case GesBinaryExpressionNode binary: return ClassifyBinary(binary, callables, typeDefinitions, declaredTypes, visitedCallables);
 
-            case GesGuardedChoiceExpressionNode guardedChoice:
-                return ClassifyGuardedChoice(guardedChoice, callables, typeDefinitions, declaredTypes, visitedCallables);
+            case GesGuardedChoiceExpressionNode guardedChoice: return ClassifyGuardedChoice(guardedChoice, callables, typeDefinitions, declaredTypes, visitedCallables);
 
-            case GesSeededRandomExpressionNode seededRandom:
-                return ClassifyExpression(seededRandom.BodyExpression, callables, typeDefinitions, declaredTypes, visitedCallables);
+            case GesSeededRandomExpressionNode seededRandom: return ClassifyExpression(seededRandom.BodyExpression, callables, typeDefinitions, declaredTypes, visitedCallables);
 
-            default:
-                return StaticExpressionInfo.Other();
+            default: return StaticExpressionInfo.Other();
         }
     }
 
@@ -687,30 +636,15 @@ internal static class GesAstValidator
 
     private static string? InferImmutableBindingType(GesExpressionNode expression, IReadOnlyDictionary<string, GesExpressionNode> constants)
     {
-        if (expression is GesIntegerLiteralExpressionNode)
-        {
-            return "integer";
-        }
+        if (expression is GesIntegerLiteralExpressionNode) return "integer";
 
-        if (expression is GesFloatLiteralExpressionNode floatingPoint && GesNumber.CanRepresentAsInteger(floatingPoint.Value))
-        {
-            return "integer";
-        }
+        if (expression is GesFloatLiteralExpressionNode floatingPoint && GesNumber.CanRepresentAsInteger(floatingPoint.Value)) return "integer";
 
-        if (expression is GesTypeCastExpressionNode typeCast)
-        {
-            return typeCast.TypeName;
-        }
+        if (expression is GesTypeCastExpressionNode typeCast) return typeCast.TypeName;
 
-        if (expression is GesTypeConstructorExpressionNode typeConstructor)
-        {
-            return typeConstructor.TypeName;
-        }
+        if (expression is GesTypeConstructorExpressionNode typeConstructor) return typeConstructor.TypeName;
 
-        if (expression is GesConstantReferenceExpressionNode constant && constants.TryGetValue(constant.Name, out var value))
-        {
-            return InferImmutableBindingType(value, constants);
-        }
+        if (expression is GesConstantReferenceExpressionNode constant && constants.TryGetValue(constant.Name, out var value)) return InferImmutableBindingType(value, constants);
 
         return null;
     }
@@ -782,21 +716,12 @@ internal static class GesAstValidator
     private static StaticExpressionInfo ClassifyCall(GesCallExpressionNode call, IReadOnlyDictionary<string, GesCallableDefinition> callables, IReadOnlyDictionary<string, GesTypeDefinitionNode> typeDefinitions, ISet<string> visitedCallables)
     {
         var callable = GesCallableSignatures.Resolve(callables, call);
-        if (callable is null)
-        {
-            return StaticExpressionInfo.Unknown;
-        }
+        if (callable is null) return StaticExpressionInfo.Unknown;
 
-        if (callable.Kind == GesCallableKind.PredicateCall)
-        {
-            return StaticExpressionInfo.Boolean;
-        }
+        if (callable.Kind == GesCallableKind.PredicateCall) return StaticExpressionInfo.Boolean;
 
         var callableKey = $"{callable.Kind}:{callable.SignatureId}";
-        if (!visitedCallables.Add(callableKey))
-        {
-            return StaticExpressionInfo.Unknown;
-        }
+        if (!visitedCallables.Add(callableKey)) return StaticExpressionInfo.Unknown;
 
         try
         {
@@ -901,10 +826,7 @@ internal static class GesAstValidator
             result = MergePredicateCompatibleResults(
                 result,
                 ClassifyExpression(branch.ValueExpression, callables, typeDefinitions, declaredTypes, visitedCallables));
-            if (!result.IsPredicateCompatible)
-            {
-                return result;
-            }
+            if (!result.IsPredicateCompatible) return result;
         }
 
         return MergePredicateCompatibleResults(
@@ -945,8 +867,7 @@ internal static class GesAstValidator
                     return;
 
                 case GesNothingLiteralExpressionNode:
-                case GesConstantReferenceExpressionNode:
-                    return;
+                case GesConstantReferenceExpressionNode: return;
 
                 case GesIdentifierExpressionNode identifierExpression:
                     ValidateIdentifierCase(
@@ -1047,9 +968,7 @@ internal static class GesAstValidator
 
                     return;
 
-                case GesTypeConstructorExpressionNode typeConstructor:
-                    ValidateTypeConstructorExpression(parsedScriptContext, typeConstructor, callables, typeDefinitions, errors, declaredTypes);
-                    return;
+                case GesTypeConstructorExpressionNode typeConstructor: ValidateTypeConstructorExpression(parsedScriptContext, typeConstructor, callables, typeDefinitions, errors, declaredTypes); return;
 
                 case GesPredicateCallExpressionNode predicateCall:
                     ValidateCallableCase(
@@ -1073,9 +992,7 @@ internal static class GesAstValidator
                     expression = predicateCall.Value;
                     continue;
 
-                case GesExtensionPredicateExpressionNode extensionPredicate:
-                    expression = extensionPredicate.Value;
-                    continue;
+                case GesExtensionPredicateExpressionNode extensionPredicate: expression = extensionPredicate.Value; continue;
 
                 case GesSendExpressionNode send:
                     ValidateExpressionReferences(parsedScriptContext, send.Message, callables, typeDefinitions, errors, declaredTypes);
@@ -1088,9 +1005,7 @@ internal static class GesAstValidator
                     }
                     foreach (var tag in send.Tags) ValidateExpressionReferences(parsedScriptContext, tag, callables, typeDefinitions, errors, declaredTypes);
                     return;
-                case GesUnaryExpressionNode unary:
-                    expression = unary.Operand;
-                    continue;
+                case GesUnaryExpressionNode unary: expression = unary.Operand; continue;
 
                 case GesVariadicTaggedExpressionNode variadic:
                     for (var argumentIndex = 0; argumentIndex < variadic.Arguments.Count; argumentIndex++)
@@ -1144,10 +1059,7 @@ internal static class GesAstValidator
                         $"Generated collection identifier '{generatedCollection.Identifier}' must use identifier casing (start lowercase)",
                         errors);
                     ValidateIterationSourceReferences(parsedScriptContext, generatedCollection.Source, callables, typeDefinitions, errors, declaredTypes);
-                    if (generatedCollection.Predicate is not null)
-                    {
-                        ValidateExpressionReferences(parsedScriptContext, generatedCollection.Predicate, callables, typeDefinitions, errors, declaredTypes);
-                    }
+                    if (generatedCollection.Predicate is not null) ValidateExpressionReferences(parsedScriptContext, generatedCollection.Predicate, callables, typeDefinitions, errors, declaredTypes);
 
                     expression = generatedCollection.Projection;
                     continue;
@@ -1173,9 +1085,7 @@ internal static class GesAstValidator
                     expression = typeCheck.Value;
                     continue;
 
-                case GesNothingCheckExpressionNode nothingCheck:
-                    expression = nothingCheck.Value;
-                    continue;
+                case GesNothingCheckExpressionNode nothingCheck: expression = nothingCheck.Value; continue;
 
                 case GesTypeCastExpressionNode typeCast:
                     ValidateRemovedType(parsedScriptContext, typeCast.TypeName, typeCast, errors);
@@ -1231,12 +1141,8 @@ internal static class GesAstValidator
     {
         switch (source)
         {
-            case GesCollectionIterationSourceNode collectionSource:
-                ValidateExpressionReferences(parsedScriptContext, collectionSource.Expression, callables, typeDefinitions, errors, declaredTypes);
-                return;
-            case GesRangeIterationSourceNode rangeSource:
-                ValidateExpressionReferences(parsedScriptContext, rangeSource.RangeExpression, callables, typeDefinitions, errors, declaredTypes);
-                return;
+            case GesCollectionIterationSourceNode collectionSource: ValidateExpressionReferences(parsedScriptContext, collectionSource.Expression, callables, typeDefinitions, errors, declaredTypes); return;
+            case GesRangeIterationSourceNode rangeSource: ValidateExpressionReferences(parsedScriptContext, rangeSource.RangeExpression, callables, typeDefinitions, errors, declaredTypes); return;
         }
     }
 
@@ -1250,12 +1156,8 @@ internal static class GesAstValidator
     {
         switch (selector)
         {
-            case GesExpressionSelectorNode expressionSelector:
-                ValidateExpressionReferences(parsedScriptContext, expressionSelector.Expression, callables, typeDefinitions, errors, declaredTypes);
-                return;
-            case GesSeriesTermSelectorNode seriesTermSelector:
-                ValidateExpressionReferences(parsedScriptContext, seriesTermSelector.IndexExpression, callables, typeDefinitions, errors, declaredTypes);
-                return;
+            case GesExpressionSelectorNode expressionSelector: ValidateExpressionReferences(parsedScriptContext, expressionSelector.Expression, callables, typeDefinitions, errors, declaredTypes); return;
+            case GesSeriesTermSelectorNode seriesTermSelector: ValidateExpressionReferences(parsedScriptContext, seriesTermSelector.IndexExpression, callables, typeDefinitions, errors, declaredTypes); return;
             case GesPredicateSelectorNode predicateSelector:
                 ValidateIdentifierCase(
                     parsedScriptContext,
@@ -1288,10 +1190,7 @@ internal static class GesAstValidator
                         errors);
                 }
 
-                if (chooseSelector.Predicate is not null)
-                {
-                    ValidateExpressionReferences(parsedScriptContext, chooseSelector.Predicate, callables, typeDefinitions, errors, declaredTypes);
-                }
+                if (chooseSelector.Predicate is not null) ValidateExpressionReferences(parsedScriptContext, chooseSelector.Predicate, callables, typeDefinitions, errors, declaredTypes);
 
                 if (chooseSelector.WeightIdentifier is not null)
                 {
@@ -1304,10 +1203,7 @@ internal static class GesAstValidator
                         errors);
                 }
 
-                if (chooseSelector.WeightExpression is not null)
-                {
-                    ValidateExpressionReferences(parsedScriptContext, chooseSelector.WeightExpression, callables, typeDefinitions, errors, declaredTypes);
-                }
+                if (chooseSelector.WeightExpression is not null) ValidateExpressionReferences(parsedScriptContext, chooseSelector.WeightExpression, callables, typeDefinitions, errors, declaredTypes);
 
                 return;
             case GesEdgeSelectorNode { Predicate: not null } edgeSelector:
@@ -1324,9 +1220,7 @@ internal static class GesAstValidator
 
                 ValidateExpressionReferences(parsedScriptContext, edgeSelector.Predicate, callables, typeDefinitions, errors, declaredTypes);
                 return;
-            case GesForeachSelectorNode each:
-                ValidateExpressionReferences(parsedScriptContext, each.Expression, callables, typeDefinitions, errors, declaredTypes);
-                return;
+            case GesForeachSelectorNode each: ValidateExpressionReferences(parsedScriptContext, each.Expression, callables, typeDefinitions, errors, declaredTypes); return;
             case GesFilterSelectorNode filterSelector:
                 ValidateIdentifierCase(
                     parsedScriptContext,
@@ -1382,10 +1276,7 @@ internal static class GesAstValidator
                     $"Selector identifier '{dictionarySelector.Identifier}' must use identifier casing (start lowercase)",
                     errors);
                 ValidateExpressionReferences(parsedScriptContext, dictionarySelector.KeyProjection, callables, typeDefinitions, errors, declaredTypes);
-                if (dictionarySelector.ValueProjection is not null)
-                {
-                    ValidateExpressionReferences(parsedScriptContext, dictionarySelector.ValueProjection, callables, typeDefinitions, errors, declaredTypes);
-                }
+                if (dictionarySelector.ValueProjection is not null) ValidateExpressionReferences(parsedScriptContext, dictionarySelector.ValueProjection, callables, typeDefinitions, errors, declaredTypes);
 
                 return;
             case GesMinSelectorNode minSelector:
@@ -1408,9 +1299,7 @@ internal static class GesAstValidator
                     errors);
                 ValidateExpressionReferences(parsedScriptContext, maxSelector.Projection, callables, typeDefinitions, errors, declaredTypes);
                 return;
-            case GesContainsSelectorNode containsSelector:
-                ValidateExpressionReferences(parsedScriptContext, containsSelector.ValueExpression, callables, typeDefinitions, errors, declaredTypes);
-                return;
+            case GesContainsSelectorNode containsSelector: ValidateExpressionReferences(parsedScriptContext, containsSelector.ValueExpression, callables, typeDefinitions, errors, declaredTypes); return;
             case GesDistinctSelectorNode { Projection: not null } distinctSelector:
                 if (distinctSelector.Identifier is not null)
                 {
@@ -1499,10 +1388,7 @@ internal static class GesAstValidator
         {
             var expected = expectedLabels[index];
             var actual = arguments[index].Name;
-            if (string.Equals(expected, actual, StringComparison.Ordinal))
-            {
-                continue;
-            }
+            if (string.Equals(expected, actual, StringComparison.Ordinal)) continue;
 
             errors.Add(
                 parsedScriptContext,
@@ -1517,10 +1403,7 @@ internal static class GesAstValidator
     {
         for (var index = 0; index < arguments.Count; index++)
         {
-            if (arguments[index].Label is not null)
-            {
-                return false;
-            }
+            if (arguments[index].Label is not null) return false;
         }
 
         return true;
@@ -1531,10 +1414,7 @@ internal static class GesAstValidator
         var count = 0;
         for (var index = 0; index < arguments.Count; index++)
         {
-            if (arguments[index].Label is null)
-            {
-                count++;
-            }
+            if (arguments[index].Label is null) count++;
         }
 
         return count;
@@ -1545,10 +1425,7 @@ internal static class GesAstValidator
         var count = 0;
         for (var index = 0; index < arguments.Count; index++)
         {
-            if (arguments[index].Label is not null)
-            {
-                count++;
-            }
+            if (arguments[index].Label is not null) count++;
         }
 
         return count;
@@ -1559,26 +1436,17 @@ internal static class GesAstValidator
         var count = 0;
         for (var index = 0; index < fields.Count; index++)
         {
-            if (fields[index].IsConstructorParameter)
-            {
-                count++;
-            }
+            if (fields[index].IsConstructorParameter) count++;
         }
 
-        if (count == 0)
-        {
-            return [];
-        }
+        if (count == 0) return [];
 
         var constructorFields = new GesTypeFieldDefinitionNode[count];
         var targetIndex = 0;
         for (var index = 0; index < fields.Count; index++)
         {
             var field = fields[index];
-            if (field.IsConstructorParameter)
-            {
-                constructorFields[targetIndex++] = field;
-            }
+            if (field.IsConstructorParameter) constructorFields[targetIndex++] = field;
         }
 
         return constructorFields;
@@ -1589,10 +1457,7 @@ internal static class GesAstValidator
         var count = 0;
         for (var index = 0; index < fields.Count; index++)
         {
-            if (string.Equals(fields[index].ConstructorLabel, GesMessageSignature.UnlabeledParameterName, StringComparison.Ordinal))
-            {
-                count++;
-            }
+            if (string.Equals(fields[index].ConstructorLabel, GesMessageSignature.UnlabeledParameterName, StringComparison.Ordinal)) count++;
         }
 
         return count;
@@ -1664,19 +1529,13 @@ internal static class GesAstValidator
         var constructorFields = ReadConstructorFields(typeDefinition.Fields);
         var unlabeledConstructorFieldCount = CountUnlabeledConstructorFields(constructorFields);
         var unlabeledArgumentCount = CountUnlabeledArguments(constructor.Arguments);
-        if (unlabeledArgumentCount > unlabeledConstructorFieldCount)
-        {
-            AddTypeConstructorError(parsedScriptContext, constructor.TypeName, $"Custom type constructor ':{constructor.TypeName}' requires labeled field arguments", errors);
-        }
+        if (unlabeledArgumentCount > unlabeledConstructorFieldCount) AddTypeConstructorError(parsedScriptContext, constructor.TypeName, $"Custom type constructor ':{constructor.TypeName}' requires labeled field arguments", errors);
 
         var fieldNames = BuildLabeledConstructorFieldSet(constructorFields);
         for (var argumentIndex = 0; argumentIndex < constructor.Arguments.Count; argumentIndex++)
         {
             var argument = constructor.Arguments[argumentIndex];
-            if (argument.Label is null)
-            {
-                continue;
-            }
+            if (argument.Label is null) continue;
 
             if (!fieldNames.Contains(argument.Label))
             {
@@ -1694,9 +1553,7 @@ internal static class GesAstValidator
         switch (constructor.TypeName)
         {
             case "vector":
-            case "point":
-                ValidateVectorConstructor(parsedScriptContext, constructor, ["x", "y", "z"], errors);
-                return;
+            case "point": ValidateVectorConstructor(parsedScriptContext, constructor, ["x", "y", "z"], errors); return;
             default:
                 if (constructor.Arguments.Count != 1 || constructor.Arguments[0].Label is not null)
                 {
@@ -1713,10 +1570,7 @@ internal static class GesAstValidator
 
     private static void ValidateVectorConstructor(GesParsedScript parsedScriptContext, GesTypeConstructorExpressionNode constructor, IReadOnlyList<string> labels, GesValidationErrors errors)
     {
-        if (constructor.Arguments.Count == 1 && constructor.Arguments[0].Label is null)
-        {
-            return;
-        }
+        if (constructor.Arguments.Count == 1 && constructor.Arguments[0].Label is null) return;
 
         if (constructor.Arguments.Count is 2 &&
             AllArgumentsUnlabeled(constructor.Arguments))
@@ -1786,10 +1640,7 @@ internal static class GesAstValidator
     {
         for (var index = 0; index < values.Count; index++)
         {
-            if (string.Equals(values[index], value, StringComparison.Ordinal))
-            {
-                return index;
-            }
+            if (string.Equals(values[index], value, StringComparison.Ordinal)) return index;
         }
 
         return -1;
@@ -1879,10 +1730,7 @@ internal static class GesAstValidator
         for (var index = 0; index < arguments.Count; index++)
         {
             var argument = arguments[index];
-            if (argument.Label is null || seen.Add(argument.Name) || !reported.Add(argument.Name))
-            {
-                continue;
-            }
+            if (argument.Label is null || seen.Add(argument.Name) || !reported.Add(argument.Name)) continue;
 
             errors.Add(
                 parsedScriptContext,
@@ -1901,10 +1749,7 @@ internal static class GesAstValidator
         for (var index = 0; index < handlerLiteral.ParameterList.Count; index++)
         {
             var parameter = handlerLiteral.ParameterList[index];
-            if (seen.Add(parameter.LocalName) || !reported.Add(parameter.LocalName))
-            {
-                continue;
-            }
+            if (seen.Add(parameter.LocalName) || !reported.Add(parameter.LocalName)) continue;
 
             errors.Add(
                 parsedScriptContext,
@@ -1930,10 +1775,7 @@ internal static class GesAstValidator
         for (var index = 0; index < parameters.Count; index++)
         {
             var parameter = parameters[index];
-            if (seen.Add(parameter.LocalName) || !reported.Add(parameter.LocalName))
-            {
-                continue;
-            }
+            if (seen.Add(parameter.LocalName) || !reported.Add(parameter.LocalName)) continue;
 
             errors.Add(
                 parsedScriptContext,
@@ -1947,10 +1789,7 @@ internal static class GesAstValidator
 
     private static void ValidateIdentifierCase(GesParsedScript parsedScriptContext, string name, string symbol, GesDiagnosticSymbolKind symbolKind, string message, GesValidationErrors errors)
     {
-        if (IsIdentifierCase(name))
-        {
-            return;
-        }
+        if (IsIdentifierCase(name)) return;
 
         errors.Add(
             parsedScriptContext,
@@ -1974,10 +1813,7 @@ internal static class GesAstValidator
 
     private static void ValidateMessageCase(GesParsedScript parsedScriptContext, string name, string symbol, GesDiagnosticSymbolKind symbolKind, string message, GesValidationErrors errors)
     {
-        if (IsMessageCase(name))
-        {
-            return;
-        }
+        if (IsMessageCase(name)) return;
 
         errors.Add(
             parsedScriptContext,
@@ -1987,9 +1823,7 @@ internal static class GesAstValidator
             GesDiagnosticCodes.ValidateInvalidMessageCase);
     }
 
-    private static bool IsIdentifierCase(string name)
-        => GesText.IsIdentifier(name);
+    private static bool IsIdentifierCase(string name) => GesText.IsIdentifier(name);
 
-    private static bool IsMessageCase(string name)
-        => GesText.IsMessageName(name);
+    private static bool IsMessageCase(string name) => GesText.IsMessageName(name);
 }

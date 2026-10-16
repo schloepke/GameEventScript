@@ -114,38 +114,23 @@ internal static class GesShadowingValidator
                     VisitExpression(seededRandom.SeedExpression, scope, script, errors);
                     VisitStatements(seededRandom.Body.Statements, new Scope(scope), script, errors);
                     break;
-                case GesExpressionStatementNode expressionStatement:
-                    VisitExpression(expressionStatement.Expression, scope, script, errors);
-                    break;
+                case GesExpressionStatementNode expressionStatement: VisitExpression(expressionStatement.Expression, scope, script, errors); break;
             }
         }
     }
 
-    private static void VisitBody(GesStatementBodyNode body, Scope parent, GesParsedScript script, GesValidationErrors errors)
-        => VisitStatements(body.Statements, body.IsBlock ? new Scope(parent) : parent, script, errors);
+    private static void VisitBody(GesStatementBodyNode body, Scope parent, GesParsedScript script, GesValidationErrors errors) => VisitStatements(body.Statements, body.IsBlock ? new Scope(parent) : parent, script, errors);
 
     private static void VisitExpression(GesExpressionNode expression, Scope scope, GesParsedScript script, GesValidationErrors errors)
     {
         switch (expression)
         {
-            case GesMessageLiteralExpressionNode message:
-                VisitArguments(message.ArgumentList.Arguments, scope, script, errors);
-                break;
-            case GesCallExpressionNode call:
-                VisitArguments(call.ArgumentList.Arguments, scope, script, errors);
-                break;
-            case GesExtensionCallExpressionNode extension:
-                VisitArguments(extension.ArgumentList.Arguments, scope, script, errors);
-                break;
-            case GesTypeConstructorExpressionNode constructor:
-                VisitArguments(constructor.ArgumentList.Arguments, scope, script, errors);
-                break;
-            case GesCombinedCollectionExpressionNode combined:
-                VisitExpressions(combined.Sources, scope, script, errors);
-                break;
-            case GesListLiteralExpressionNode list:
-                VisitExpressions(list.Items, scope, script, errors);
-                break;
+            case GesMessageLiteralExpressionNode message: VisitArguments(message.ArgumentList.Arguments, scope, script, errors); break;
+            case GesCallExpressionNode call: VisitArguments(call.ArgumentList.Arguments, scope, script, errors); break;
+            case GesExtensionCallExpressionNode extension: VisitArguments(extension.ArgumentList.Arguments, scope, script, errors); break;
+            case GesTypeConstructorExpressionNode constructor: VisitArguments(constructor.ArgumentList.Arguments, scope, script, errors); break;
+            case GesCombinedCollectionExpressionNode combined: VisitExpressions(combined.Sources, scope, script, errors); break;
+            case GesListLiteralExpressionNode list: VisitExpressions(list.Items, scope, script, errors); break;
             case GesMapLiteralExpressionNode map:
                 for (var index = 0; index < map.Entries.Count; index++) VisitExpression(map.Entries[index].Value, scope, script, errors);
                 break;
@@ -154,15 +139,9 @@ internal static class GesShadowingValidator
                 VisitExpression(send.Message, scope, script, errors);
                 VisitExpressions(send.Tags, scope, script, errors);
                 break;
-            case GesUnaryExpressionNode unary:
-                VisitExpression(unary.Operand, scope, script, errors);
-                break;
-            case GesIntrinsicCallExpressionNode intrinsic:
-                VisitExpressions(intrinsic.Arguments, scope, script, errors);
-                break;
-            case GesVariadicTaggedExpressionNode variadic:
-                VisitExpressions(variadic.Arguments, scope, script, errors);
-                break;
+            case GesUnaryExpressionNode unary: VisitExpression(unary.Operand, scope, script, errors); break;
+            case GesIntrinsicCallExpressionNode intrinsic: VisitExpressions(intrinsic.Arguments, scope, script, errors); break;
+            case GesVariadicTaggedExpressionNode variadic: VisitExpressions(variadic.Arguments, scope, script, errors); break;
             case GesBetweenExpressionNode between:
                 VisitExpression(between.Value, scope, script, errors);
                 VisitExpression(between.Minimum, scope, script, errors);
@@ -207,21 +186,11 @@ internal static class GesShadowingValidator
             case GesPredicateCallExpressionNode predicate:
                 if (predicate.Value is not null) VisitExpression(predicate.Value, scope, script, errors);
                 break;
-            case GesExtensionPredicateExpressionNode predicate:
-                VisitExpression(predicate.Value, scope, script, errors);
-                break;
-            case GesTypeCheckExpressionNode check:
-                VisitExpression(check.Value, scope, script, errors);
-                break;
-            case GesNothingCheckExpressionNode check:
-                VisitExpression(check.Value, scope, script, errors);
-                break;
-            case GesTypeCastExpressionNode cast:
-                VisitExpression(cast.Value, scope, script, errors);
-                break;
-            case GesMemberAccessExpressionNode member:
-                VisitExpression(member.Target, scope, script, errors);
-                break;
+            case GesExtensionPredicateExpressionNode predicate: VisitExpression(predicate.Value, scope, script, errors); break;
+            case GesTypeCheckExpressionNode check: VisitExpression(check.Value, scope, script, errors); break;
+            case GesNothingCheckExpressionNode check: VisitExpression(check.Value, scope, script, errors); break;
+            case GesTypeCastExpressionNode cast: VisitExpression(cast.Value, scope, script, errors); break;
+            case GesMemberAccessExpressionNode member: VisitExpression(member.Target, scope, script, errors); break;
             case GesCollectionAccessExpressionNode access:
                 VisitExpression(access.Target, scope, script, errors);
                 VisitSelector(access.Selector, scope, script, errors);
@@ -236,8 +205,7 @@ internal static class GesShadowingValidator
             case GesExpressionSelectorNode expression: VisitExpression(expression.Expression, scope, script, errors); break;
             case GesSeriesTermSelectorNode term: VisitExpression(term.IndexExpression, scope, script, errors); break;
             case GesPredicateSelectorNode predicate: VisitBoundExpression(predicate.Identifier, predicate.Predicate, predicate, scope, script, errors); break;
-            case GesCountSelectorNode { Predicate: GesBooleanLiteralExpressionNode { Value: true } }:
-                break;
+            case GesCountSelectorNode { Predicate: GesBooleanLiteralExpressionNode { Value: true } }: break;
             case GesCountSelectorNode count: VisitBoundExpression(count.Identifier, count.Predicate, count, scope, script, errors); break;
             case GesChooseSelectorNode choose:
                 if (choose.Identifier is not null && choose.Predicate is not null) VisitBoundExpression(choose.Identifier, choose.Predicate, choose, scope, script, errors);

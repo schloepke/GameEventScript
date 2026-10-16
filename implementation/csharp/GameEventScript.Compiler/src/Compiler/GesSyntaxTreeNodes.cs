@@ -72,48 +72,30 @@ internal static class GesSyntaxTreeNodeLists
 {
     public static IReadOnlyList<string> ToParameterNames(IReadOnlyList<GesParameterNode> parameters)
     {
-        if (parameters.Count == 0)
-        {
-            return [];
-        }
+        if (parameters.Count == 0) return [];
 
         var names = new string[parameters.Count];
-        for (var index = 0; index < names.Length; index++)
-        {
-            names[index] = parameters[index].LocalName;
-        }
+        for (var index = 0; index < names.Length; index++) names[index] = parameters[index].LocalName;
 
         return names;
     }
 
     public static IReadOnlyList<string> ToSignatureLabels(IReadOnlyList<GesParameterNode> parameters)
     {
-        if (parameters.Count == 0)
-        {
-            return [];
-        }
+        if (parameters.Count == 0) return [];
 
         var labels = new string[parameters.Count];
-        for (var index = 0; index < labels.Length; index++)
-        {
-            labels[index] = parameters[index].SignatureLabel;
-        }
+        for (var index = 0; index < labels.Length; index++) labels[index] = parameters[index].SignatureLabel;
 
         return labels;
     }
 
     public static IReadOnlyList<GesExpressionNode> ToExpressions(IReadOnlyList<GesArgumentNode> arguments)
     {
-        if (arguments.Count == 0)
-        {
-            return [];
-        }
+        if (arguments.Count == 0) return [];
 
         var expressions = new GesExpressionNode[arguments.Count];
-        for (var index = 0; index < expressions.Length; index++)
-        {
-            expressions[index] = arguments[index].Expression;
-        }
+        for (var index = 0; index < expressions.Length; index++) expressions[index] = arguments[index].Expression;
 
         return expressions;
     }

@@ -66,20 +66,15 @@ internal sealed partial class GesParser
 
     private string SourceName => _sourceName ??= string.IsNullOrWhiteSpace(_requestedSourceName) ? "UnknownSource" : _requestedSourceName;
 
-    private GesSourceLocation CreateRange(GesToken token)
-        => new(SourceName, token.Line, token.Column, token.EndLine, token.EndColumn, ModuleName, _sourceId);
+    private GesSourceLocation CreateRange(GesToken token) => new(SourceName, token.Line, token.Column, token.EndLine, token.EndColumn, ModuleName, _sourceId);
 
-    private GesSourceLocation CreateRange(GesToken start, GesToken end)
-        => new(SourceName, start.Line, start.Column, end.EndLine, end.EndColumn, ModuleName, _sourceId);
+    private GesSourceLocation CreateRange(GesToken start, GesToken end) => new(SourceName, start.Line, start.Column, end.EndLine, end.EndColumn, ModuleName, _sourceId);
 
     private GesSourceLocation? MergeRanges(GesScriptNode? first, GesScriptNode? last = null)
     {
         var start = first?.SourceRange;
         var end = (last ?? first)?.SourceRange;
-        if (start is null || end is null || start.Line is null || start.Column is null)
-        {
-            return null;
-        }
+        if (start is null || end is null || start.Line is null || start.Column is null) return null;
 
         var endLine = end.EndLine ?? end.Line;
         var endColumn = end.EndColumn ?? end.Column;
@@ -182,34 +177,22 @@ internal sealed partial class GesParser
             }
         }
 
-        if (_errors.Count > 0)
-        {
-            throw new GesCompileException(_errors);
-        }
+        if (_errors.Count > 0) throw new GesCompileException(_errors);
 
         var module = new GesParsedScript(ModuleName, SourceName, constantDefinitions, typeDefinitions, predicateDefinitions, functionDefinitions, handlers);
         var firstToken = _reader.FirstToken;
-        if (firstToken.Kind == EndOfFile)
-        {
-            return module with { SourceRange = CreateRange(firstToken) };
-        }
+        if (firstToken.Kind == EndOfFile) return module with { SourceRange = CreateRange(firstToken) };
 
         return module with { SourceRange = CreateRange(firstToken, _reader.LastNonEofToken) };
     }
 
     private void ParseOptionalModuleDeclaration()
     {
-        if (!Match(Module))
-        {
-            return;
-        }
+        if (!Match(Module)) return;
 
         SkipNewLines();
         ThrowIfIllegalToken();
-        if (!Is(Identifier))
-        {
-            throw new GameEventScriptParseException($"Expected module name but found {Current.Kind}", Current.Line, Current.Column);
-        }
+        if (!Is(Identifier)) throw new GameEventScriptParseException($"Expected module name but found {Current.Kind}", Current.Line, Current.Column);
 
         var builder = new StringBuilder(Advance().Text);
         while (Match(Dot))
@@ -272,10 +255,7 @@ internal sealed partial class GesParser
     {
         var startToken = Current;
         var isUnlabeledConstructorParameter = Match(Underscore);
-        if (isUnlabeledConstructorParameter)
-        {
-            SkipNewLines();
-        }
+        if (isUnlabeledConstructorParameter) SkipNewLines();
 
         var name = ExpectIdentifier();
         Expect(Colon);
@@ -302,10 +282,7 @@ internal sealed partial class GesParser
             computedExpression = ParseAssemblyOrExpression(name);
         }
 
-        if (isUnlabeledConstructorParameter && computedExpression is not null)
-        {
-            throw new GameEventScriptParseException("Computed record fields cannot be constructor parameters.", startToken);
-        }
+        if (isUnlabeledConstructorParameter && computedExpression is not null) throw new GameEventScriptParseException("Computed record fields cannot be constructor parameters.", startToken);
 
         var constructorLabel = computedExpression is null
             ? isUnlabeledConstructorParameter
@@ -345,10 +322,7 @@ internal sealed partial class GesParser
         if (!Is(RightParen))
         {
             parameters.Add(ParseParameter());
-            while (Match(Comma))
-            {
-                parameters.Add(ParseParameter());
-            }
+            while (Match(Comma)) parameters.Add(ParseParameter());
         }
 
         Expect(RightParen);
@@ -374,10 +348,7 @@ internal sealed partial class GesParser
     private string? ParseOptionalParameterDeclaredType()
     {
         SkipNewLines();
-        if (!Match(As))
-        {
-            return null;
-        }
+        if (!Match(As)) return null;
 
         SkipNewLines();
         return ParseTypeName();
@@ -408,10 +379,7 @@ internal sealed partial class GesParser
             if (!Is(RightParen))
             {
                 parameters.Add(ParseParameter());
-                while (Match(Comma))
-                {
-                    parameters.Add(ParseParameter());
-                }
+                while (Match(Comma)) parameters.Add(ParseParameter());
             }
 
             Expect(RightParen);
@@ -433,10 +401,7 @@ internal sealed partial class GesParser
     {
         ThrowIfIllegalToken();
 
-        if (Is(Message))
-        {
-            return Advance().Text;
-        }
+        if (Is(Message)) return Advance().Text;
 
         if (Current.Kind == Identifier &&
             GesSystemEndpoints.IsSystemEndpointName(Current.Text))
@@ -477,10 +442,7 @@ internal sealed partial class GesParser
             var tagToken = Expect(Tag);
             var tag = tagToken.Text[1..];
             var normalized = GameEventScriptMessage.NormalizeTagName(tag);
-            if (normalized.Length > 0 && !ContainsTag(tags, normalized))
-            {
-                tags.Add(normalized);
-            }
+            if (normalized.Length > 0 && !ContainsTag(tags, normalized)) tags.Add(normalized);
 
             SkipNewLines();
         }
@@ -491,10 +453,7 @@ internal sealed partial class GesParser
     {
         for (var index = 0; index < tags.Count; index++)
         {
-            if (string.Equals(tags[index], normalized, StringComparison.Ordinal))
-            {
-                return true;
-            }
+            if (string.Equals(tags[index], normalized, StringComparison.Ordinal)) return true;
         }
 
         return false;
@@ -522,10 +481,7 @@ internal sealed partial class GesParser
             catch (GameEventScriptParseException ex)
             {
                 AddParseError(ex);
-                if (!SynchronizeStatement(closingKind))
-                {
-                    return statements;
-                }
+                if (!SynchronizeStatement(closingKind)) return statements;
             }
         }
 
@@ -540,35 +496,17 @@ internal sealed partial class GesParser
             return WithRange(new GesAssemblyStatementNode(block), block);
         }
 
-        if (IsSeededRandomStatementStart())
-        {
-            return ParseSeededRandomStatement();
-        }
+        if (IsSeededRandomStatementStart()) return ParseSeededRandomStatement();
 
-        if (Match(Emit))
-        {
-            return ParsePublishStatement(GesPublishStatementKind.Emit);
-        }
+        if (Match(Emit)) return ParsePublishStatement(GesPublishStatementKind.Emit);
 
-        if (Match(Publish))
-        {
-            return ParsePublishStatement(GesPublishStatementKind.Publish);
-        }
+        if (Match(Publish)) return ParsePublishStatement(GesPublishStatementKind.Publish);
 
-        if (Match(Let))
-        {
-            return ParseLetStatement();
-        }
+        if (Match(Let)) return ParseLetStatement();
 
-        if (Match(If))
-        {
-            return ParseIfStatement();
-        }
+        if (Match(If)) return ParseIfStatement();
 
-        if (Match(For))
-        {
-            return ParseForStatement();
-        }
+        if (Match(For)) return ParseForStatement();
 
         var expression = ParseExpression();
         return WithRange(new GesExpressionStatementNode(expression), expression);
@@ -599,20 +537,14 @@ internal sealed partial class GesParser
 
     private GesExpressionNode ParsePublishMessageExpression()
     {
-        if (Current.Kind == Message)
-        {
-            return ParseMessageLiteralExpressionCore();
-        }
+        if (Current.Kind == Message) return ParseMessageLiteralExpressionCore();
 
         return ParseExpression();
     }
 
     private IReadOnlyList<GesExpressionNode> ParseOptionalTagExpressions(bool resultSend = false)
     {
-        if (!Match(With))
-        {
-            return [];
-        }
+        if (!Match(With)) return [];
 
         var tags = new List<GesExpressionNode>();
         do
@@ -647,10 +579,7 @@ internal sealed partial class GesParser
     private GesArgumentListNode ParseArgumentListAfterLeftParen()
     {
         SkipNewLines();
-        if (Match(RightParen))
-        {
-            return GesArgumentListNode.Empty;
-        }
+        if (Match(RightParen)) return GesArgumentListNode.Empty;
 
         var arguments = ParseArgumentListAfterFirstArgument(ParseArgument(), RightParen);
         Expect(RightParen);
@@ -682,10 +611,7 @@ internal sealed partial class GesParser
 
     private GesArgumentListNode ParseUngroupedLabeledArgumentList()
     {
-        if (!IsArgumentLabelStart())
-        {
-            return GesArgumentListNode.Empty;
-        }
+        if (!IsArgumentLabelStart()) return GesArgumentListNode.Empty;
 
         var arguments = new List<GesArgumentNode>();
         do
@@ -869,10 +795,7 @@ internal sealed partial class GesParser
             while (Match(Comma))
             {
                 SkipNewLines();
-                if (Is(Otherwise))
-                {
-                    break;
-                }
+                if (Is(Otherwise)) break;
 
                 Match(OperatorOr);
                 SkipNewLines();
@@ -929,10 +852,7 @@ internal sealed partial class GesParser
     private GesExpressionNode ParseImplicationExpression()
     {
         var expression = ParseDefaultExpression();
-        if (!Match(OperatorImplication))
-        {
-            return expression;
-        }
+        if (!Match(OperatorImplication)) return expression;
 
         SkipNewLines();
         if (_expressionNesting >= GesSourceNesting.MaximumExpressionDepth) ThrowNestingLimit(CreateRange(Current));
@@ -1132,10 +1052,7 @@ internal sealed partial class GesParser
     private bool IsValuesOfOperator()
     {
         var first = _reader.PeekSignificant(0);
-        if (first.Kind != Identifier || !string.Equals(first.Text, "values", StringComparison.Ordinal))
-        {
-            return false;
-        }
+        if (first.Kind != Identifier || !string.Equals(first.Text, "values", StringComparison.Ordinal)) return false;
 
         var second = _reader.PeekSignificant(1);
         return second.Kind == Of;
@@ -1156,30 +1073,15 @@ internal sealed partial class GesParser
             return WithRange(new GesDiceCountPatternNode(2, null), startToken);
         }
 
-        if (MatchWord("three"))
-        {
-            return ParseOfPattern(3);
-        }
+        if (MatchWord("three")) return ParseOfPattern(3);
 
-        if (MatchWord("four"))
-        {
-            return ParseOfPattern(4);
-        }
+        if (MatchWord("four")) return ParseOfPattern(4);
 
-        if (MatchWord("five"))
-        {
-            return ParseOfPattern(5);
-        }
+        if (MatchWord("five")) return ParseOfPattern(5);
 
-        if (MatchWord("six"))
-        {
-            return ParseOfPattern(6);
-        }
+        if (MatchWord("six")) return ParseOfPattern(6);
 
-        if (MatchWord("seven"))
-        {
-            return ParseOfPattern(7);
-        }
+        if (MatchWord("seven")) return ParseOfPattern(7);
 
         if (MatchWord("full"))
         {
@@ -1189,10 +1091,7 @@ internal sealed partial class GesParser
             return WithRange(new GesDiceFullHousePatternNode(), startToken);
         }
 
-        if (MatchWord("straight"))
-        {
-            return WithRange(new GesDiceStraightPatternNode(), Previous);
-        }
+        if (MatchWord("straight")) return WithRange(new GesDiceStraightPatternNode(), Previous);
 
         var token = Current;
         throw new GameEventScriptParseException($"Expected dice pattern but found {token.Text}", token.Line, token.Column);
@@ -1227,10 +1126,7 @@ internal sealed partial class GesParser
             {
                 SkipNewLines();
                 var negated = Match(OperatorNot);
-                if (negated)
-                {
-                    SkipNewLines();
-                }
+                if (negated) SkipNewLines();
 
                 if (IsExtensionCallStart())
                 {
@@ -1377,8 +1273,7 @@ internal sealed partial class GesParser
         return expression;
     }
 
-    private GesExpressionNode ParseRelationalComparisonOperand()
-        => ParseAdditiveExpression();
+    private GesExpressionNode ParseRelationalComparisonOperand() => ParseAdditiveExpression();
 
     private GesExpressionNode ParseRelationalExpression()
     {
@@ -1476,11 +1371,9 @@ internal sealed partial class GesParser
         return expression;
     }
 
-    private static bool IsImplicitMultiplicationLeftExpression(GesExpressionNode expression)
-        => expression is GesIntegerLiteralExpressionNode or GesFloatLiteralExpressionNode;
+    private static bool IsImplicitMultiplicationLeftExpression(GesExpressionNode expression) => expression is GesIntegerLiteralExpressionNode or GesFloatLiteralExpressionNode;
 
-    private bool IsImplicitMultiplicationRightStart()
-        => Current.Kind is Identifier or MathConstantPi or MathConstantE or MathConstantTau or MathConstantInfinity;
+    private bool IsImplicitMultiplicationRightStart() => Current.Kind is Identifier or MathConstantPi or MathConstantE or MathConstantTau or MathConstantInfinity;
 
     private static bool AreAdjacent(GesToken left, GesToken right)
         => left.EndLine == right.Line &&
@@ -1522,18 +1415,12 @@ internal sealed partial class GesParser
 
         if (!Match(OperatorNot))
         {
-            if (ParseIntrinsicCallExpression() is { } intrinsicCall)
-            {
-                return intrinsicCall;
-            }
+            if (ParseIntrinsicCallExpression() is { } intrinsicCall) return intrinsicCall;
 
             if (ParseKeywordUnaryOperator() is { } keywordOperator)
             {
                 var keywordOperand = ParseUnaryIntrinsicOperand();
-                if (CreateRootPowerExpression(keywordOperator.RootExponent, keywordOperand, keywordOperator.StartToken) is { } rootExpression)
-                {
-                    return rootExpression;
-                }
+                if (CreateRootPowerExpression(keywordOperator.RootExponent, keywordOperand, keywordOperator.StartToken) is { } rootExpression) return rootExpression;
 
                 return WithRange(new GesUnaryExpressionNode(keywordOperator.Operator, keywordOperand), keywordOperator.StartToken, Previous);
             }
@@ -1549,20 +1436,11 @@ internal sealed partial class GesParser
 
     private GesExpressionNode ParsePowerBaseExpression()
     {
-        if (Match(Series))
-        {
-            return ParseSeriesExpression(Previous);
-        }
+        if (Match(Series)) return ParseSeriesExpression(Previous);
 
-        if (IsExtensionCallStart())
-        {
-            return ParseExtensionCallExpression();
-        }
+        if (IsExtensionCallStart()) return ParseExtensionCallExpression();
 
-        if (Match(Clamp))
-        {
-            return ParseClampExpression();
-        }
+        if (Match(Clamp)) return ParseClampExpression();
 
         if (Is(Min) && IsNextSignificantToken(Of))
         {
@@ -1582,15 +1460,9 @@ internal sealed partial class GesParser
     private GesExpressionNode ParseSeriesExpression(GesToken startToken)
     {
         SkipNewLines();
-        if (Match(Fibonacci))
-        {
-            return WithRange(new GesSeriesExpressionNode(GesBytecodeSeriesKind.Fibonacci), startToken, Previous);
-        }
+        if (Match(Fibonacci)) return WithRange(new GesSeriesExpressionNode(GesBytecodeSeriesKind.Fibonacci), startToken, Previous);
 
-        if (Match(Factorial))
-        {
-            return WithRange(new GesSeriesExpressionNode(GesBytecodeSeriesKind.Factorial), startToken, Previous);
-        }
+        if (Match(Factorial)) return WithRange(new GesSeriesExpressionNode(GesBytecodeSeriesKind.Factorial), startToken, Previous);
 
         var token = Current;
         throw new GameEventScriptParseException("Expected series kind 'fibonacci' or 'factorial'.", token);
@@ -1711,10 +1583,7 @@ internal sealed partial class GesParser
         Expect(LeftParen);
         SkipNewLines();
 
-        if (Match(RightParen))
-        {
-            return [];
-        }
+        if (Match(RightParen)) return [];
 
         var arguments = new List<GesExpressionNode>();
         while (true)
@@ -1722,10 +1591,7 @@ internal sealed partial class GesParser
             arguments.Add(ParseExpression());
             SkipNewLines();
 
-            if (Match(RightParen))
-            {
-                return arguments;
-            }
+            if (Match(RightParen)) return arguments;
 
             if (!Match(Comma))
             {
@@ -1741,26 +1607,18 @@ internal sealed partial class GesParser
     {
         switch (kind)
         {
-            case MathConstantPi:
-                return GesMathConstants.Pi;
-            case MathConstantE:
-                return GesMathConstants.E;
-            case MathConstantTau:
-                return GesMathConstants.Tau;
-            case MathConstantInfinity:
-                return GesMathConstants.Infinity;
-            default:
-                return null;
+            case MathConstantPi: return GesMathConstants.Pi;
+            case MathConstantE: return GesMathConstants.E;
+            case MathConstantTau: return GesMathConstants.Tau;
+            case MathConstantInfinity: return GesMathConstants.Infinity;
+            default: return null;
         }
     }
 
     private GesExpressionNode ParseUnaryIntrinsicOperand()
     {
         SkipNewLines();
-        if (!Match(LeftParen))
-        {
-            return ParseUnaryExpression();
-        }
+        if (!Match(LeftParen)) return ParseUnaryExpression();
 
         SkipNewLines();
         var operand = ParseExpression();
@@ -1771,10 +1629,7 @@ internal sealed partial class GesParser
 
     private GesExpressionNode? CreateRootPowerExpression(double? rootExponent, GesExpressionNode operand, GesToken startToken)
     {
-        if (!rootExponent.HasValue)
-        {
-            return null;
-        }
+        if (!rootExponent.HasValue) return null;
 
         var exponentNode = new GesFloatLiteralExpressionNode(rootExponent.Value)
         {
@@ -1783,8 +1638,7 @@ internal sealed partial class GesParser
         return WithRange(new GesBinaryExpressionNode(operand, GesBinaryOperator.Power, exponentNode), startToken, Previous);
     }
 
-    private GesExpressionNode ParsePostfixExpression()
-        => ParsePostfixSuffixes(ParsePrimaryExpression());
+    private GesExpressionNode ParsePostfixExpression() => ParsePostfixSuffixes(ParsePrimaryExpression());
 
     private GesExpressionNode ParsePostfixSuffixes(GesExpressionNode expression)
     {
@@ -1819,8 +1673,7 @@ internal sealed partial class GesParser
         return (identifier, names);
     }
 
-    private bool IsCombinedSelector()
-        => Current.Text is ":cartesian" or ":lockstep" or ":zip" or ":union" or ":intersect" or ":difference";
+    private bool IsCombinedSelector() => Current.Text is ":cartesian" or ":lockstep" or ":zip" or ":union" or ":intersect" or ":difference";
 
     private bool IsPipelineSelectorStart()
         => !IsExtensionCallStart() && (IsCombinedSelector() || Current.Text is
@@ -1887,36 +1740,21 @@ internal sealed partial class GesParser
         if (Match(SelectorHas))
         {
             SkipNewLines();
-            if (Is(LeftBracket))
-            {
-                return CheckNesting(new GesObjectMatchSelectorNode(ParseObjectMatchPattern()));
-            }
+            if (Is(LeftBracket)) return CheckNesting(new GesObjectMatchSelectorNode(ParseObjectMatchPattern()));
 
             return WithRange(new GesPatternSelectorNode(ParseDicePattern()), startToken);
         }
 
-        if (Match(SelectorTake))
-        {
-            return ParseTakeSelector();
-        }
+        if (Match(SelectorTake)) return ParseTakeSelector();
 
-        if (Match(SelectorDrop))
-        {
-            return ParseDropSelector();
-        }
+        if (Match(SelectorDrop)) return ParseDropSelector();
 
-        if (MatchSelector(":term"))
-        {
-            return ParseSeriesTermSelector();
-        }
+        if (MatchSelector(":term")) return ParseSeriesTermSelector();
 
         if (Match(SelectorCount))
         {
             SkipNewLines();
-            if (Is(RightBracket) || IsPipelineSelectorStart())
-            {
-                return WithRange(new GesCountSelectorNode("value", new GesBooleanLiteralExpressionNode(true)), startToken);
-            }
+            if (Is(RightBracket) || IsPipelineSelectorStart()) return WithRange(new GesCountSelectorNode("value", new GesBooleanLiteralExpressionNode(true)), startToken);
 
             var (identifier, bindings) = ParseBindingNames();
             ExpectWord("where");
@@ -1924,10 +1762,7 @@ internal sealed partial class GesParser
             return WithRange(new GesCountSelectorNode(identifier, predicate) { BindingNames = bindings }, startToken);
         }
 
-        if (Match(SelectorChoose))
-        {
-            return ParseChooseSelector();
-        }
+        if (Match(SelectorChoose)) return ParseChooseSelector();
 
         if (Match(SelectorDraw))
         {
@@ -1936,30 +1771,15 @@ internal sealed partial class GesParser
             return WithRange(new GesDrawSelectorNode(ParsePositiveInteger(countToken, "draw count")), startToken);
         }
 
-        if (Match(SelectorShuffle))
-        {
-            return WithRange(new GesShuffleSelectorNode(), startToken);
-        }
+        if (Match(SelectorShuffle)) return WithRange(new GesShuffleSelectorNode(), startToken);
 
-        if (Match(SelectorReverse))
-        {
-            return WithRange(new GesReverseSelectorNode(), startToken);
-        }
+        if (Match(SelectorReverse)) return WithRange(new GesReverseSelectorNode(), startToken);
 
-        if (MatchSelector(":first"))
-        {
-            return ParseEdgeSelector("first");
-        }
+        if (MatchSelector(":first")) return ParseEdgeSelector("first");
 
-        if (MatchSelector(":last"))
-        {
-            return ParseEdgeSelector("last");
-        }
+        if (MatchSelector(":last")) return ParseEdgeSelector("last");
 
-        if (MatchSelector(":single"))
-        {
-            return ParseEdgeSelector("single");
-        }
+        if (MatchSelector(":single")) return ParseEdgeSelector("single");
 
         if (Match(SelectorFilter))
         {
@@ -1972,10 +1792,7 @@ internal sealed partial class GesParser
         if (Match(SelectorSum))
         {
             SkipNewLines();
-            if (Is(RightBracket) || IsPipelineSelectorStart())
-            {
-                return WithRange(new GesSumSelectorNode("value", new GesIdentifierExpressionNode("value")), startToken);
-            }
+            if (Is(RightBracket) || IsPipelineSelectorStart()) return WithRange(new GesSumSelectorNode("value", new GesIdentifierExpressionNode("value")), startToken);
 
             var (identifier, bindings) = ParseBindingNames();
             Expect(ProjectionArrow);
@@ -1986,10 +1803,7 @@ internal sealed partial class GesParser
         if (Match(SelectorAverage))
         {
             SkipNewLines();
-            if (Is(RightBracket) || IsPipelineSelectorStart())
-            {
-                return WithRange(new GesAverageSelectorNode("value", new GesIdentifierExpressionNode("value")), startToken);
-            }
+            if (Is(RightBracket) || IsPipelineSelectorStart()) return WithRange(new GesAverageSelectorNode("value", new GesIdentifierExpressionNode("value")), startToken);
 
             var (identifier, bindings) = ParseBindingNames();
             Expect(ProjectionArrow);
@@ -1997,25 +1811,13 @@ internal sealed partial class GesParser
             return WithRange(new GesAverageSelectorNode(identifier, projection) { BindingNames = bindings }, startToken);
         }
 
-        if (MatchSelector(":min"))
-        {
-            return ParseProjectionSelector("min");
-        }
+        if (MatchSelector(":min")) return ParseProjectionSelector("min");
 
-        if (MatchSelector(":max"))
-        {
-            return ParseProjectionSelector("max");
-        }
+        if (MatchSelector(":max")) return ParseProjectionSelector("max");
 
-        if (MatchSelector(":highest"))
-        {
-            return ParseProjectionSelector("highest");
-        }
+        if (MatchSelector(":highest")) return ParseProjectionSelector("highest");
 
-        if (MatchSelector(":lowest"))
-        {
-            return ParseProjectionSelector("lowest");
-        }
+        if (MatchSelector(":lowest")) return ParseProjectionSelector("lowest");
 
         if (Current.Kind == Selector && Current.Text is ":fold" or ":reduce")
         {
@@ -2063,30 +1865,15 @@ internal sealed partial class GesParser
             return WithRange(new GesMapSelectorNode(identifier, keyProjection, valueProjection) { BindingNames = bindings }, startToken);
         }
 
-        if (Match(SelectorContains))
-        {
-            return ParseContainsSelector();
-        }
+        if (Match(SelectorContains)) return ParseContainsSelector();
 
-        if (MatchSelector(":distinct"))
-        {
-            return ParseDistinctSelector();
-        }
+        if (MatchSelector(":distinct")) return ParseDistinctSelector();
 
-        if (MatchSelector(":group"))
-        {
-            return ParseGroupBySelector();
-        }
+        if (MatchSelector(":group")) return ParseGroupBySelector();
 
-        if (Match(SelectorSort))
-        {
-            return ParseSortSelector();
-        }
+        if (Match(SelectorSort)) return ParseSortSelector();
 
-        if (MatchSelector(":order"))
-        {
-            return ParseOrderBySelector();
-        }
+        if (MatchSelector(":order")) return ParseOrderBySelector();
 
         if (Current.Kind == Selector && Current.Text is ":keys" or ":values" or ":entries")
         {
@@ -2101,15 +1888,9 @@ internal sealed partial class GesParser
     private string ParseSortDirection()
     {
         SkipNewLines();
-        if (MatchWord("ascending"))
-        {
-            return "ascending";
-        }
+        if (MatchWord("ascending")) return "ascending";
 
-        if (MatchWord("descending"))
-        {
-            return "descending";
-        }
+        if (MatchWord("descending")) return "descending";
 
         var token = Current;
         throw new GameEventScriptParseException($"Expected sort direction but found {token.Text}", token.Line, token.Column);
@@ -2126,10 +1907,7 @@ internal sealed partial class GesParser
     {
         var startToken = Previous;
         SkipNewLines();
-        if (Current.Kind != Identifier)
-        {
-            return WithRange(new GesEdgeSelectorNode(mode, null, null), startToken);
-        }
+        if (Current.Kind != Identifier) return WithRange(new GesEdgeSelectorNode(mode, null, null), startToken);
 
         var (identifier, bindings) = ParseBindingNames();
         ExpectWord("where");
@@ -2189,10 +1967,7 @@ internal sealed partial class GesParser
     {
         var startToken = Previous;
         SkipNewLines();
-        if (!MatchWord("by"))
-        {
-            return WithRange(new GesDistinctSelectorNode(null, null), startToken);
-        }
+        if (!MatchWord("by")) return WithRange(new GesDistinctSelectorNode(null, null), startToken);
 
         SkipNewLines();
         var (identifier, bindings) = ParseBindingNames();
@@ -2269,28 +2044,16 @@ internal sealed partial class GesParser
         if (Match(Publish)) return ParseSendExpression(GesPublishStatementKind.Publish, Previous);
         ThrowIfIllegalToken();
 
-        if (IsTypeConstructorStart())
-        {
-            return ParseTypeConstructorExpression();
-        }
+        if (IsTypeConstructorStart()) return ParseTypeConstructorExpression();
 
-        if (Current.Kind == TypeName && string.Equals(Current.Text, ":Dice", StringComparison.Ordinal) && IsNextSignificantToken(LeftBracket))
-        {
-            return ParseDiceLiteralExpression();
-        }
+        if (Current.Kind == TypeName && string.Equals(Current.Text, ":Dice", StringComparison.Ordinal) && IsNextSignificantToken(LeftBracket)) return ParseDiceLiteralExpression();
 
-        if (MatchWord("from"))
-        {
-            return ParseRangeExpressionCore();
-        }
+        if (MatchWord("from")) return ParseRangeExpressionCore();
 
         if (Match(KeywordRandom))
         {
             SkipNewLines();
-            if (Match(With))
-            {
-                return ParseSeededRandomExpression();
-            }
+            if (Match(With)) return ParseSeededRandomExpression();
 
             return ParseRandomExpression();
         }
@@ -2339,30 +2102,15 @@ internal sealed partial class GesParser
                 : WithRange(new GesUnitFloatLiteralExpressionNode(Previous.FloatValue, Previous.UnitName), Previous);
         }
 
-        if (Match(Text))
-        {
-            return WithRange(new GesTextLiteralExpressionNode(Previous.Text), Previous);
-        }
+        if (Match(Text)) return WithRange(new GesTextLiteralExpressionNode(Previous.Text), Previous);
 
-        if (Match(LeftBracket))
-        {
-            return ParseBracketLiteralExpression();
-        }
+        if (Match(LeftBracket)) return ParseBracketLiteralExpression();
 
-        if (Match(True))
-        {
-            return WithRange(new GesBooleanLiteralExpressionNode(true), Previous);
-        }
+        if (Match(True)) return WithRange(new GesBooleanLiteralExpressionNode(true), Previous);
 
-        if (Match(False))
-        {
-            return WithRange(new GesBooleanLiteralExpressionNode(false), Previous);
-        }
+        if (Match(False)) return WithRange(new GesBooleanLiteralExpressionNode(false), Previous);
 
-        if (Match(Nothing))
-        {
-            return WithRange(new GesNothingLiteralExpressionNode(), Previous);
-        }
+        if (Match(Nothing)) return WithRange(new GesNothingLiteralExpressionNode(), Previous);
 
         if (Current.Kind == Tag)
         {
@@ -2370,10 +2118,7 @@ internal sealed partial class GesParser
             return WithRange(new GesTagLiteralExpressionNode(tagToken.Text[1..]), tagToken);
         }
 
-        if (Match(ConstantReference))
-        {
-            return WithRange(new GesConstantReferenceExpressionNode(Previous.Text[1..]), Previous);
-        }
+        if (Match(ConstantReference)) return WithRange(new GesConstantReferenceExpressionNode(Previous.Text[1..]), Previous);
 
         if (GetMathConstant(Current.Kind) is { } numericConstant)
         {
@@ -2382,10 +2127,7 @@ internal sealed partial class GesParser
             return WithRange(new GesFloatLiteralExpressionNode(numericConstant), constantToken);
         }
 
-        if ((Current.Kind == Identifier || Current.Kind == Message) && IsCallExpressionStart())
-        {
-            return ParseCallOrHandlerBindExpression();
-        }
+        if ((Current.Kind == Identifier || Current.Kind == Message) && IsCallExpressionStart()) return ParseCallOrHandlerBindExpression();
 
         if (Current.Kind == Identifier)
         {
@@ -2440,10 +2182,7 @@ internal sealed partial class GesParser
         var startToken = Current;
         var message = Expect(Message).Text;
         var arguments = GesArgumentListNode.Empty;
-        if (Match(LeftParen))
-        {
-            arguments = ParseArgumentListAfterLeftParen();
-        }
+        if (Match(LeftParen)) arguments = ParseArgumentListAfterLeftParen();
 
         return WithRange(new GesMessageLiteralExpressionNode(message, arguments), startToken);
     }
@@ -2640,10 +2379,7 @@ internal sealed partial class GesParser
 
     private bool IsMapLiteralEntryStart()
     {
-        if (Current.Kind != Identifier)
-        {
-            return false;
-        }
+        if (Current.Kind != Identifier) return false;
 
         return _reader.PeekSignificant(1).Kind == Colon;
     }
@@ -2755,25 +2491,13 @@ internal sealed partial class GesParser
 
     private string? ParseSliceScope()
     {
-        if (MatchWord("first"))
-        {
-            return "first";
-        }
+        if (MatchWord("first")) return "first";
 
-        if (MatchWord("last"))
-        {
-            return "last";
-        }
+        if (MatchWord("last")) return "last";
 
-        if (MatchWord("highest"))
-        {
-            return "highest";
-        }
+        if (MatchWord("highest")) return "highest";
 
-        if (MatchWord("lowest"))
-        {
-            return "lowest";
-        }
+        if (MatchWord("lowest")) return "lowest";
 
         return null;
     }
@@ -2832,10 +2556,7 @@ internal sealed partial class GesParser
     {
         var startToken = Current;
         var (extensionName, functionName, _) = ParseExtensionSymbol();
-        if (extensionName is "integer" or "degree")
-        {
-            throw new GameEventScriptParseException($"Standard extension namespace ':{extensionName}' is not supported; use direct math intrinsics.", startToken);
-        }
+        if (extensionName is "integer" or "degree") throw new GameEventScriptParseException($"Standard extension namespace ':{extensionName}' is not supported; use direct math intrinsics.", startToken);
 
         SkipNewLines();
 
@@ -2981,17 +2702,11 @@ internal sealed partial class GesParser
 
     private static bool IsCompactDiceToken(string text)
     {
-        if (text.Length <= 1 || text[0] != 'd')
-        {
-            return false;
-        }
+        if (text.Length <= 1 || text[0] != 'd') return false;
 
         for (var i = 1; i < text.Length; i++)
         {
-            if (!GesText.IsAsciiDigit(text[i]))
-            {
-                return false;
-            }
+            if (!GesText.IsAsciiDigit(text[i])) return false;
         }
 
         return true;
@@ -3007,10 +2722,7 @@ internal sealed partial class GesParser
             throw new GameEventScriptParseException($"Expected positive integer for {name}", numberToken.Line, numberToken.Column);
         }
 
-        if (value > int.MaxValue)
-        {
-            throw new GameEventScriptParseException($"{name} is too large", numberToken.Line, numberToken.Column);
-        }
+        if (value > int.MaxValue) throw new GameEventScriptParseException($"{name} is too large", numberToken.Line, numberToken.Column);
 
         return (int)value;
     }
@@ -3019,10 +2731,7 @@ internal sealed partial class GesParser
     {
         ThrowIfIllegalToken();
 
-        if (Is(kind))
-        {
-            return Advance();
-        }
+        if (Is(kind)) return Advance();
 
         var token = Current;
         throw new GameEventScriptParseException($"Expected {kind} but found {token.Kind}", token);
@@ -3032,10 +2741,7 @@ internal sealed partial class GesParser
     {
         ThrowIfIllegalToken();
 
-        if (Is(Identifier))
-        {
-            return Advance().Text;
-        }
+        if (Is(Identifier)) return Advance().Text;
 
         var token = Current;
         throw new GameEventScriptParseException($"Expected Identifier but found {token.Kind}", token);
@@ -3074,15 +2780,11 @@ internal sealed partial class GesParser
 
     private bool Is(GesTokenKind kind) => Current.Kind == kind;
 
-    private bool IsNextSignificantToken(GesTokenKind kind)
-        => _reader.PeekSignificant(1).Kind == kind;
+    private bool IsNextSignificantToken(GesTokenKind kind) => _reader.PeekSignificant(1).Kind == kind;
 
     private bool IsSeededRandomStatementStart()
     {
-        if (Current.Kind != KeywordRandom)
-        {
-            return false;
-        }
+        if (Current.Kind != KeywordRandom) return false;
 
         return _reader.PeekSignificant(1).Kind == With;
     }
@@ -3094,40 +2796,25 @@ internal sealed partial class GesParser
 
     private bool IsCallExpressionStart()
     {
-        if (Current.Kind is not (Identifier or Message))
-        {
-            return false;
-        }
+        if (Current.Kind is not (Identifier or Message)) return false;
 
         return _reader.PeekSignificant(1).Kind == LeftParen;
     }
 
     private bool IsExtensionCallStart()
     {
-        if (!Current.Text.StartsWith(":", StringComparison.Ordinal) || Current.Kind == TypeName)
-        {
-            return false;
-        }
+        if (!Current.Text.StartsWith(":", StringComparison.Ordinal) || Current.Kind == TypeName) return false;
 
-        if (_reader.PeekSignificant(1).Kind != Dot)
-        {
-            return false;
-        }
+        if (_reader.PeekSignificant(1).Kind != Dot) return false;
 
-        if (!IsExtensionFunctionNameKind(_reader.PeekSignificant(2).Kind))
-        {
-            return false;
-        }
+        if (!IsExtensionFunctionNameKind(_reader.PeekSignificant(2).Kind)) return false;
 
         return true;
     }
 
     private bool IsTypeConstructorStart()
     {
-        if (Current.Kind != TypeName)
-        {
-            return false;
-        }
+        if (Current.Kind != TypeName) return false;
 
         return _reader.PeekSignificant(1).Kind == LeftParen;
     }
@@ -3156,10 +2843,7 @@ internal sealed partial class GesParser
 
     private bool IsArgumentLabelStart()
     {
-        if (!IsArgumentLabelKind(Current.Kind))
-        {
-            return false;
-        }
+        if (!IsArgumentLabelKind(Current.Kind)) return false;
 
         return _reader.PeekSignificant(1).Kind == Colon;
     }
@@ -3168,10 +2852,7 @@ internal sealed partial class GesParser
     {
         ThrowIfIllegalToken();
 
-        if (IsArgumentLabelKind(Current.Kind))
-        {
-            return Advance().Text;
-        }
+        if (IsArgumentLabelKind(Current.Kind)) return Advance().Text;
 
         var token = Current;
         throw new GameEventScriptParseException($"Expected argument label but found {token.Kind}", token);
@@ -3195,10 +2876,7 @@ internal sealed partial class GesParser
     {
         ThrowIfIllegalToken();
 
-        if (IsExtensionFunctionNameKind(Current.Kind))
-        {
-            return Advance();
-        }
+        if (IsExtensionFunctionNameKind(Current.Kind)) return Advance();
 
         var token = Current;
         throw new GameEventScriptParseException($"Expected extension function name but found {token.Kind}", token);
@@ -3217,10 +2895,7 @@ internal sealed partial class GesParser
         var typeToken = Advance();
         var typeName = typeToken.Text[1..];
 
-        if (string.Equals(typeName, "Numeric", StringComparison.Ordinal))
-        {
-            throw new GameEventScriptParseException("The numeric type helper is a keyword; use numeric without ':'.", typeToken);
-        }
+        if (string.Equals(typeName, "Numeric", StringComparison.Ordinal)) throw new GameEventScriptParseException("The numeric type helper is a keyword; use numeric without ':'.", typeToken);
 
         if (string.Equals(typeName, "Quantity", StringComparison.Ordinal) &&
             Is(LeftParen) &&
@@ -3259,15 +2934,9 @@ internal sealed partial class GesParser
 
     private bool IsQuantityTypeSpecifierAhead()
     {
-        if (_reader.PeekSignificant(0).Kind != LeftParen)
-        {
-            return false;
-        }
+        if (_reader.PeekSignificant(0).Kind != LeftParen) return false;
 
-        if (_reader.PeekSignificant(1).Kind != Identifier)
-        {
-            return false;
-        }
+        if (_reader.PeekSignificant(1).Kind != Identifier) return false;
 
         return _reader.PeekSignificant(2).Kind == RightParen;
     }
@@ -3296,8 +2965,7 @@ internal sealed partial class GesParser
         return false;
     }
 
-    private bool IsWord(string word)
-        => Current.Kind == Identifier && string.Equals(Current.Text, word, StringComparison.Ordinal);
+    private bool IsWord(string word) => Current.Kind == Identifier && string.Equals(Current.Text, word, StringComparison.Ordinal);
 
     private bool IsNextSignificantWord(string word)
     {
@@ -3309,10 +2977,7 @@ internal sealed partial class GesParser
     {
         ThrowIfIllegalToken();
 
-        if (MatchWord(word))
-        {
-            return;
-        }
+        if (MatchWord(word)) return;
 
         throw new GameEventScriptParseException(
             $"Expected {word} but found {Current.Text}",
@@ -3321,18 +2986,12 @@ internal sealed partial class GesParser
 
     private void ThrowIfIllegalToken()
     {
-        if (Current.Kind == Illegal)
-        {
-            throw new GameEventScriptParseException($"Illegal token '{Current.Text}'", Current);
-        }
+        if (Current.Kind == Illegal) throw new GameEventScriptParseException($"Illegal token '{Current.Text}'", Current);
     }
 
     private void SkipNewLines()
     {
-        while (Is(NewLine))
-        {
-            Advance();
-        }
+        while (Is(NewLine)) Advance();
     }
 
     private void SkipStatementSeparators()
@@ -3344,10 +3003,7 @@ internal sealed partial class GesParser
 
     private void RequireStatementSeparatorOrClosing(GesTokenKind closingKind)
     {
-        if (Is(closingKind))
-        {
-            return;
-        }
+        if (Is(closingKind)) return;
 
         if (Match(Semicolon, NewLine))
         {
@@ -3363,10 +3019,7 @@ internal sealed partial class GesParser
 
     private void RequireHandlerSeparatorOrEndOfFile()
     {
-        if (Is(EndOfFile))
-        {
-            return;
-        }
+        if (Is(EndOfFile)) return;
 
         if (Match(Semicolon, NewLine))
         {
@@ -3406,10 +3059,7 @@ internal sealed partial class GesParser
     {
         while (!Is(EndOfFile))
         {
-            if (Is(Module) || Is(Constant) || Is(Record) || Is(Predicate) || Is(Function) || Is(On))
-            {
-                return;
-            }
+            if (Is(Module) || Is(Constant) || Is(Record) || Is(Predicate) || Is(Function) || Is(On)) return;
 
             Advance();
         }
@@ -3419,10 +3069,7 @@ internal sealed partial class GesParser
     {
         while (!Is(EndOfFile))
         {
-            if (Is(closingKind))
-            {
-                return false;
-            }
+            if (Is(closingKind)) return false;
 
             if (Match(Semicolon, NewLine))
             {

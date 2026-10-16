@@ -84,8 +84,7 @@ internal static class GesCallableSignatures
         return Create(name, labels);
     }
 
-    public static string Create(string name, IReadOnlyList<string> labels)
-        => name + "(" + string.Join(",", labels) + ")";
+    public static string Create(string name, IReadOnlyList<string> labels) => name + "(" + string.Join(",", labels) + ")";
 
     public static bool HasName(IReadOnlyDictionary<string, GesCallableDefinition> callables, string name)
     {

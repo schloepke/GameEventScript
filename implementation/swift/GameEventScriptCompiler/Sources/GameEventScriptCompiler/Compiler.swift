@@ -543,17 +543,21 @@ final class GesCompiler {
     }
 
     func stageExpressions(_ values: [GesExpression], _ r: GesRoutine, _ scope: GesScope) throws {
-        let plans = try values.map { value -> (GesValue?, Int?) in
-            if let constant = scalarConstant(value) { return (constant, nil) }
-            return (nil, try expression(value, r, scope))
+        let plans = try values.map { value -> (GesValue?, Int?, GesSourceLocation) in
+            if let constant = scalarConstant(value) { return (constant, nil, value.location) }
+            return (nil, try expression(value, r, scope), value.location)
         }
         r.maxStage = max(r.maxStage, plans.count)
-        for (constant, register) in plans {
+        for (constant, register, location) in plans {
             if let register {
                 r.emit(.stageRegister, 0, register)
                 continue
             }
             guard let value = constant else { continue }
+            // A staged constant maps to its own literal, as C# EmitStageConstant scopes its source range.
+            let outer = r.location
+            r.location = location
+            defer { r.location = outer }
             let flag: UInt8 = value.unit == .degree ? 1 : value.unit == .meter ? 2 : value.unit == .second ? 3 : 0
             switch value.valueKind {
             case .nothing: r.emit(.stageNothing)

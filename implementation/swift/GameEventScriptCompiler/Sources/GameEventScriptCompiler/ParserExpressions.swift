@@ -95,7 +95,7 @@ extension GesParser {
         while true {
             if match(".") {
                 newlines()
-                result = try combined(.member(result, identifier()), result)
+                result = try ranged(.member(result, identifier()), result)
             } else if match("[") {
                 newlines()
                 result = try pipelineSteps(result)

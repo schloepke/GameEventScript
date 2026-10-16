@@ -363,6 +363,14 @@ final class GesParser {
 
     func node(_ kind: GesExpression.Kind, _ start: GesToken) -> GesExpression { .init(kind, location(start, previous)) }
 
+    // A node with exactly the range of `node`, as C# WithRange(node, first) for postfix forms such as member access,
+    // casts and checks: the operator and its operand do not extend the range.
+    func ranged(_ kind: GesExpression.Kind, _ node: GesExpression) throws -> GesExpression {
+        let depth = node.depth + 1
+        if depth > 32 { throw failure("Expression nesting limit exceeded.", code: "parse.sourceNestingExceeded") }
+        return .init(kind, node.location, depth: depth)
+    }
+
     func combined(_ kind: GesExpression.Kind, _ first: GesExpression, _ last: GesExpression? = nil) throws -> GesExpression {
         let a = first.location
         let b = last?.location ?? location(previous)
@@ -401,7 +409,7 @@ final class GesParser {
             let op = advance().text
             newlines()
             if op == "as" {
-                left = try combined(.cast(left, typeName()), left)
+                left = try ranged(.cast(left, typeName()), left)
                 continue
             }
             if op == "is" {
@@ -410,7 +418,7 @@ final class GesParser {
             }
             if op == "has" {
                 try expect("value")
-                left = try combined(.unary(.hasValue, left), left)
+                left = try ranged(.unary(.hasValue, left), left)
                 continue
             }
             var actual = op
@@ -428,7 +436,7 @@ final class GesParser {
             let right = try expression(op == "^" ? 15 : op == "->" ? precedence : precedence + 1)
             if actual == "not in" {
                 let membership = try combined(.binary(.contains, left, right), left, right)
-                left = try combined(.unary(.not, membership), membership)
+                left = try ranged(.unary(.not, membership), membership)
                 continue
             }
             guard let binary = GesBinaryOperator(sourceText: actual) else { throw failure("Expected an operator.", previous) }
@@ -494,15 +502,15 @@ final class GesParser {
         newlines()
         var value: GesExpression
         if current.kind == .typeName {
-            value = try combined(.check(input, typeName()), input)
+            value = try ranged(.check(input, typeName()), input)
         } else if ["numeric", "integer", "fractional", "nothing"].contains(current.syntaxText) {
             let type = advance().text
-            value = try combined(.check(input, type), input)
+            value = try ranged(.check(input, type), input)
         } else if match("empty") {
-            value = try combined(.unary(.empty, input), input)
+            value = try ranged(.unary(.empty, input), input)
         } else if current.kind == .selector && peek().syntaxText == "." {
             let (ns, function) = try extensionSymbol()
-            value = try combined(.unary(.predicate, .init(.extensionCall(ns, function, [.init(label: "_", value: input)]), input.location)), input)
+            value = try ranged(.unary(.predicate, .init(.extensionCall(ns, function, [.init(label: "_", value: input)]), input.location)), input)
         } else if match("between") {
             newlines()
             let minimum = try expression(13)
@@ -524,7 +532,7 @@ final class GesParser {
             let right = try expression(13)
             value = try combined(.binary(mode == "less" ? .less : .greater, input, right), input, right)
         } else if current.kind == .identifier && !Self.reserved.contains(current.syntaxText) {
-            value = try combined(.predicate(input, advance().text), input)
+            value = try ranged(.predicate(input, advance().text), input)
         } else {
             let right = try expression(13)
             newlines()
@@ -540,7 +548,7 @@ final class GesParser {
             }
             value = try combined(.binary(op, input, right), input, right)
         }
-        if negated { value = try combined(.unary(.not, value), value) }
+        if negated { value = try ranged(.unary(.not, value), value) }
         return value
     }
 }

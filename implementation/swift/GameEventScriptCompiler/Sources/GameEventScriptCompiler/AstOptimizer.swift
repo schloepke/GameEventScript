@@ -344,6 +344,9 @@ struct GesAstOptimizer {
         return Int64(value.rounded(.towardZero))
     }
 
+    // Nested nodes of a folded literal have no source range in C#, so their instructions carry no source mapping.
+    static func noRange(_ location: GesSourceLocation) -> GesSourceLocation { .init(sourceName: location.sourceName, moduleName: location.moduleName) }
+
     // The literal form of a folded value; nil keeps the original expression.
     static func literal(_ value: GesValue, _ location: GesSourceLocation, depth: Int) -> GesExpression? {
         switch value.valueKind {
@@ -352,12 +355,12 @@ struct GesAstOptimizer {
             guard value.asNumber.isFinite else { return nil }
             return .init(.literal(value), location, depth: depth)
         case .vector, .point:
-            let components = [value.x, value.y, value.z].map { GesArgument(label: "_", value: .init(.literal(.float($0, unit: value.unit)), location, depth: depth)) }
+            let components = [value.x, value.y, value.z].map { GesArgument(label: "_", value: .init(.literal(.float($0, unit: value.unit)), Self.noRange(location), depth: depth)) }
             return .init(.constructor(value.valueKind == .vector ? "vector" : "point", components), location, depth: depth)
         case .list:
             var items: [GesExpression] = []
             for item in value.asList {
-                guard let literal = literal(item, location, depth: depth) else { return nil }
+                guard let literal = literal(item, Self.noRange(location), depth: depth) else { return nil }
                 items.append(literal)
             }
             return .init(.list(items), location, depth: depth)
@@ -365,7 +368,7 @@ struct GesAstOptimizer {
             guard let map = value.asMap else { return nil }
             var entries: [(String, GesExpression)] = []
             for index in 0..<map.length {
-                guard let literal = literal(map.value(at: index), location, depth: depth) else { return nil }
+                guard let literal = literal(map.value(at: index), Self.noRange(location), depth: depth) else { return nil }
                 entries.append((map.key(at: index), literal))
             }
             return .init(.map(entries), location, depth: depth)

@@ -28,38 +28,38 @@ internal static partial class GesCompiler
             _ => null
         };
 
-        private static GesBytecodeTypeKind AssemblyType(GesExpressionNode operand)
+        private GesBytecodeTypeKind AssemblyType(GesExpressionNode operand)
         {
             var name = AssemblyText(operand);
-            return name == "Number" ? GesBytecodeTypeKind.Float : GetBytecodeTypeKind(name.ToLowerInvariant()) ?? throw AssemblyFailure("Unknown assembly type.", name);
+            return name == "Number" ? GesBytecodeTypeKind.Float : GetBytecodeTypeKind(name.ToLowerInvariant()) ?? throw AssemblyFailure("Unknown assembly type.", name, operand);
         }
 
-        private static GesQuantityUnit AssemblyUnit(GesExpressionNode operand)
+        private GesQuantityUnit AssemblyUnit(GesExpressionNode operand)
             => AssemblyText(operand) switch
             {
                 "none" => GesQuantityUnit.UnitNone,
                 "degree" => GesQuantityUnit.UnitDegree,
                 "m" or "meter" => GesQuantityUnit.UnitMeter,
                 "s" or "second" => GesQuantityUnit.UnitSecond,
-                var name => throw AssemblyFailure("Unknown assembly unit.", name)
+                var name => throw AssemblyFailure("Unknown assembly unit.", name, operand)
             };
 
-        private static GesBytecodeSeriesKind AssemblySeries(GesExpressionNode operand)
+        private GesBytecodeSeriesKind AssemblySeries(GesExpressionNode operand)
             => AssemblyText(operand) switch
             {
                 "fibonacci" => GesBytecodeSeriesKind.Fibonacci,
                 "factorial" => GesBytecodeSeriesKind.Factorial,
-                var name => throw AssemblyFailure("Unknown assembly series.", name)
+                var name => throw AssemblyFailure("Unknown assembly series.", name, operand)
             };
 
-        private static GesBytecodePatternKind AssemblyPattern(GesExpressionNode operand)
+        private GesBytecodePatternKind AssemblyPattern(GesExpressionNode operand)
             => AssemblyText(operand) switch
             {
                 "countAny" => GesBytecodePatternKind.CountAny,
                 "countFace" => GesBytecodePatternKind.CountFace,
                 "fullHouse" => GesBytecodePatternKind.FullHouse,
                 "straight" => GesBytecodePatternKind.Straight,
-                var name => throw AssemblyFailure("Unknown assembly pattern.", name)
+                var name => throw AssemblyFailure("Unknown assembly pattern.", name, operand)
             };
 
         private bool EmitAssemblySpecial(GesAssemblyLine line, GesRegisterRef[] registers)

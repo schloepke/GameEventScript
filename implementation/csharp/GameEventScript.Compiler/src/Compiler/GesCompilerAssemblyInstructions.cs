@@ -11,7 +11,7 @@ internal static partial class GesCompiler
     private sealed partial class BinaryCompiler
     {
         // Explicit source signatures; no numeric opcodes or pool addresses enter source.
-        private static string AssemblySignature(string opcode) => opcode switch
+        private string AssemblySignature(string opcode) => opcode switch
         {
             "Nop" => "",
             "RandomTake" or "RandomTakeFloat" or "PropertyAccess" or "CreateRange" or "CreateRangeIterator" or "Default" or "Or" or "And" or "Xor" or "Implies" or "Equal" or "NotEqual" or "Less" or "Greater" or "LessOrEqual" or

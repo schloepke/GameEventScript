@@ -12,40 +12,46 @@ internal static partial class GesCompiler
 {
     private sealed partial class BinaryCompiler
     {
-        private static bool IsAssemblyScalar(GesExpressionNode operand)
+        private bool IsAssemblyScalar(GesExpressionNode operand)
             => operand is GesIntegerLiteralExpressionNode or GesFloatLiteralExpressionNode or GesBooleanLiteralExpressionNode or GesNothingLiteralExpressionNode
                 or GesTextLiteralExpressionNode or GesTagLiteralExpressionNode or GesUnitIntegerLiteralExpressionNode or GesUnitFloatLiteralExpressionNode or GesPercentageLiteralExpressionNode;
 
-        private static string AssemblyName(GesExpressionNode operand) => operand is GesIdentifierExpressionNode name ? name.Name : throw AssemblyFailure("Expected a register or label name.");
+        private string AssemblyName(GesExpressionNode operand) => operand is GesIdentifierExpressionNode name ? name.Name : throw AssemblyFailure("Expected a register or label name.", operand: operand);
 
-        private static string AssemblyText(GesExpressionNode operand)
+        private string AssemblyText(GesExpressionNode operand)
             => operand switch
             {
                 GesTextLiteralExpressionNode text => text.Value,
                 GesTagLiteralExpressionNode tag => tag.Name,
-                _ => throw AssemblyFailure("Expected literal text or tag.")
+                _ => throw AssemblyFailure("Expected literal text or tag.", operand: operand)
             };
 
-        private static long AssemblyInteger(GesExpressionNode operand, long minimum, long maximum)
+        private long AssemblyInteger(GesExpressionNode operand, long minimum, long maximum)
         {
             var value = operand switch
             {
                 GesIntegerLiteralExpressionNode integer => integer.Value,
-                _ => throw AssemblyFailure("Expected an exact integer literal.")
+                _ => throw AssemblyFailure("Expected an exact integer literal.", operand: operand)
             };
-            if (value < minimum || value > maximum) throw AssemblyFailure("Assembly immediate is out of range.");
+            if (value < minimum || value > maximum) throw AssemblyFailure("Assembly immediate is out of range.", operand: operand);
             return value;
         }
 
-        private static double AssemblyNumber(GesExpressionNode operand)
+        private double AssemblyNumber(GesExpressionNode operand)
             => operand switch
             {
                 GesIntegerLiteralExpressionNode integer => integer.Value,
                 GesFloatLiteralExpressionNode number => number.Value,
-                _ => throw AssemblyFailure("Expected a numeric literal.")
+                _ => throw AssemblyFailure("Expected a numeric literal.", operand: operand)
             };
 
-        private static GesCompileException AssemblyFailure(string message, string? symbol = null) => CompileFailure("compile.invalidAssembly", message, symbol);
+        // An assembly failure at the offending operand when given, otherwise at the line being processed.
+        private GesCompileException AssemblyFailure(string message, string? symbol = null, GesScriptNode? operand = null)
+        {
+            if (operand is null) return CompileFailure("compile.invalidAssembly", message, symbol);
+            using var operandRange = _builder.SourceRange(operand.SourceRange);
+            return CompileFailure("compile.invalidAssembly", message, symbol);
+        }
 
         private void EmitAssembly(GesAssemblyBlockNode block, GesRegisterRef? result, LoweringContext outer)
         {
@@ -76,6 +82,7 @@ internal static partial class GesCompiler
             for (var index = 0; index < block.Lines.Count; index++)
             {
                 var line = block.Lines[index];
+                using var lineRange = _builder.SourceRange(line.SourceRange);
                 if (!line.IsLabel) continue;
                 if (!GesText.IsVariableName(line.Name)) throw AssemblyFailure("Invalid assembly label.", line.Name);
                 if (!targets.TryAdd(line.Name, index)) throw AssemblyFailure("Duplicate assembly label.", line.Name);
@@ -89,6 +96,7 @@ internal static partial class GesCompiler
             for (var index = 0; index < block.Lines.Count; index++)
             {
                 var line = block.Lines[index];
+                using var lineRange = _builder.SourceRange(line.SourceRange);
                 if (!block.AllowSend && (line.Name is "emit" or "publish" || line.Name.StartsWith("Emit", StringComparison.Ordinal) || line.Name.StartsWith("Publish", StringComparison.Ordinal)))
                     throw AssemblyFailure("Expression assembly cannot send messages.", line.Name);
                 var signature = line.IsLabel ? "" : AssemblyIteratorSignature(line) ?? AssemblySymbolicSignature(line) ?? AssemblySpecialSignature(line) ?? AssemblySignature(line.Name);
@@ -110,12 +118,12 @@ internal static partial class GesCompiler
                             break;
                         case 'e':
                             foreach (var read in AssemblySymbolicReads(operand, line.Name == "BindHandler"))
-                                if (read is GesIdentifierExpressionNode symbolicName) context.Require(symbolicName.Name);
+                                if (read is GesIdentifierExpressionNode symbolicName) context.Require(symbolicName.Name, symbolicName.SourceRange);
                             break;
                         case 'r':
                             if (AssemblyExpectedResource(line.Name, operandIndex) is not null && operand is not GesIdentifierExpressionNode)
                                 throw AssemblyFailure("Internal resource operands must name a temporary.");
-                            if (operand is GesIdentifierExpressionNode name) context.Require(name.Name);
+                            if (operand is GesIdentifierExpressionNode name) context.Require(name.Name, name.SourceRange);
                             else if (!IsAssemblyScalar(operand))
                                 throw AssemblyFailure("Assembly register operands accept only names or scalar literals.");
                             break;
@@ -151,7 +159,7 @@ internal static partial class GesCompiler
                 {
                     if (signatures[index][operandIndex] is not ('w' or 'r')) continue;
                     var operand = line.Operands[operandIndex];
-                    if (operand is GesIdentifierExpressionNode name) registers[operandIndex] = context.Require(name.Name);
+                    if (operand is GesIdentifierExpressionNode name) registers[operandIndex] = context.Require(name.Name, name.SourceRange);
                     else
                     {
                         var register = _builder.AddCompilerRegister("assembly_literal");
@@ -187,6 +195,7 @@ internal static partial class GesCompiler
                 var state = new Dictionary<string, string>(states[index]!, StringComparer.Ordinal);
                 if (index == block.Lines.Count) continue;
                 var line = block.Lines[index];
+                using var lineRange = _builder.SourceRange(line.SourceRange);
                 var signature = signatures[index];
                 var depth = randomDepth[index]!.Value;
                 if (line.Name is "RandomPush" or "RandomPushConstant") depth++;
@@ -252,6 +261,7 @@ internal static partial class GesCompiler
             {
                 if (states[index] is not { } state) continue;
                 var line = block.Lines[index];
+                using var lineRange = _builder.SourceRange(line.SourceRange);
                 var signature = signatures[index];
                 for (var operandIndex = 0; operandIndex < signature.Length; operandIndex++)
                 {

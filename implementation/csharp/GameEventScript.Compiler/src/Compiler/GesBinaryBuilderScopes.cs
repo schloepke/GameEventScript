@@ -221,6 +221,9 @@ internal sealed partial class GesBinaryBuilder
         public GesBinaryBindKind? Kind { get; } = kind;
         public string Name { get; } = name;
         public GesLabelRef EntryLabel { get; } = entryLabel;
+
+        // The declaration a diagnostic about the whole routine points at, such as a cycle in the call graph.
+        public GesSourceLocation? SourceRange { get; set; }
         public IReadOnlyList<string> ArgumentNames { get; } = argumentNames;
         public IReadOnlyList<GesRegisterRef> ArgumentRegisters { get; set; } = [];
         public List<PlanItem> Items { get; } = [];

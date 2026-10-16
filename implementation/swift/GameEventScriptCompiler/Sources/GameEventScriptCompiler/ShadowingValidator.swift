@@ -38,10 +38,10 @@ final class GesShadowingValidator {
             case .publish(_, let message, let tags): for value in [message] + tags { expression(value, names.union(ancestors)) }
             case .condition(let conditions, let then, let otherwise):
                 var bindings: Set<String> = []
-                for (binding, value) in conditions {
+                for (binding, value, location) in conditions {
                     expression(value, names.union(ancestors).union(bindings))
                     if let binding {
-                        if names.contains(binding) || ancestors.contains(binding) { report(shadowed(binding, value.location)) }
+                        if names.contains(binding) || ancestors.contains(binding) { report(shadowed(binding, location)) }
                         bindings.insert(binding)
                     }
                 }
@@ -63,11 +63,11 @@ final class GesShadowingValidator {
     }
 
     private func expression(_ e: GesExpression, _ visible: Set<String>) {
-        func bound(_ expressions: [GesExpression], name: String, names: [String] = []) {
+        func bound(_ expressions: [GesExpression], name: String, names: [String] = [], at location: GesSourceLocation? = nil) {
             var bound: Set<String> = []
             for binding in names.isEmpty ? (name.isEmpty ? [] : [name]) : names {
-                if visible.contains(binding) { report(shadowed(binding, e.location)) }
-                if !bound.insert(binding).inserted { report(duplicate(binding, e.location)) }
+                if visible.contains(binding) { report(shadowed(binding, location ?? e.location)) }
+                if !bound.insert(binding).inserted { report(duplicate(binding, location ?? e.location)) }
             }
             let scope = visible.union(bound)
             for expression in expressions { self.expression(expression, scope) }
@@ -88,11 +88,11 @@ final class GesShadowingValidator {
             expression(target, visible)
             if s.operation == "fold" || s.operation == "reduce" {
                 if s.operation == "fold" { expression(s.expressions[0], visible) }
-                bound([s.expressions.last!], name: s.name, names: [s.accumulator] + (s.names.isEmpty ? [s.name] : s.names))
+                bound([s.expressions.last!], name: s.name, names: [s.accumulator] + (s.names.isEmpty ? [s.name] : s.names), at: s.location)
             } else if s.operation == "choose" {
-                for (index, value) in s.expressions.enumerated() { bound([value], name: index == 0 ? s.name : s.weightName, names: index == 0 ? s.names : s.weightNames) }
+                for (index, value) in s.expressions.enumerated() { bound([value], name: index == 0 ? s.name : s.weightName, names: index == 0 ? s.names : s.weightNames, at: s.location) }
             } else if !s.expressions.isEmpty && ["any", "all", "filter", "count", "sum", "average", "foreach", "select", "min", "max", "first", "last", "single", "map", "group", "order", "distinct"].contains(s.operation) {
-                bound(s.expressions, name: s.name, names: s.names)
+                bound(s.expressions, name: s.name, names: s.names, at: s.location)
             } else {
                 children = s.expressions
             }

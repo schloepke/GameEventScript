@@ -57,6 +57,15 @@ class CompilerOutputTests(unittest.TestCase):
         self.assertEqual(compare.diagnostics(csharp), compare.diagnostics(swift))
         self.assertNotEqual(compare.diagnostics(csharp), compare.diagnostics("a.ges(4,3): error parse.syntax: x\n"))
 
+    def test_rejections_must_agree_in_codes_and_positions(self):
+        first = [("a.ges", "4", "3", "parse.syntax"), ("a.ges", "6", "1", "parse.syntax")]
+        self.assertEqual("both-rejected", compare.rejection_verdict(first, list(first)))
+        self.assertEqual("positions", compare.rejection_verdict(first, [first[0], ("a.ges", "6", "2", "parse.syntax")]))
+        self.assertEqual("diagnostics", compare.rejection_verdict(first, first[:1]))
+        self.assertEqual("diagnostics", compare.rejection_verdict(first, [first[0], ("a.ges", "6", "1", "validate.duplicateType")]))
+        result = {"case": "suite/case", "program": "main", "debug": True, "verdict": "positions"}
+        self.assertEqual(([compare.baseline_line(result)], []), compare.ratchet([result], set()))
+
     def test_rejection_by_one_compiler_is_a_difference(self):
         result = {"case": "suite/case", "program": "main", "debug": False, "verdict": "swift-only"}
         self.assertEqual(([compare.baseline_line(result)], []), compare.ratchet([result], set()))

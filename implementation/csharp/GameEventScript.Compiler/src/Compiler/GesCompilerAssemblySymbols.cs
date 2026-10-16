@@ -61,7 +61,7 @@ internal static partial class GesCompiler
             return null;
         }
 
-        private static IEnumerable<GesExpressionNode> AssemblySymbolicReads(GesExpressionNode expression, bool handlerTarget = false)
+        private IEnumerable<GesExpressionNode> AssemblySymbolicReads(GesExpressionNode expression, bool handlerTarget = false)
         {
             if (handlerTarget && expression is GesCallExpressionNode target) yield return new GesIdentifierExpressionNode(target.Name);
             IReadOnlyList<GesExpressionNode> operands;

@@ -71,7 +71,7 @@ struct GesAstOptimizer {
             guard value != nil || optimizedTags != nil else { return nil }
             kind = .publish(publish, value ?? message, optimizedTags ?? tags)
         case .condition(let conditions, let then, let otherwise):
-            let optimizedConditions = Self.changedMap(conditions) { condition in changed(condition.1).map { (condition.0, $0) } }
+            let optimizedConditions = Self.changedMap(conditions) { condition in changed(condition.value).map { (condition.binding, $0, condition.location) } }
             let optimizedThen = statements(then)
             let optimizedOtherwise = statements(otherwise)
             guard optimizedConditions != nil || optimizedThen != nil || optimizedOtherwise != nil else { return nil }

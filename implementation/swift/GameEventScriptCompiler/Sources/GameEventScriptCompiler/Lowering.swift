@@ -25,7 +25,7 @@ extension GesCompiler {
             case .condition(let conditions, let yes, let no):
                 let child = GesScope(scope)
                 var branches: [Int] = []
-                for (binding, value) in conditions {
+                for (binding, value, _) in conditions {
                     var reg: Int
                     if let binding {
                         // As in C#: an ordinary let statement, then a presence check of the binding.

@@ -45,8 +45,8 @@ final class GesAstValidator {
 
     private func declarations() {
         for module in modules {
-            for (name, value) in module.constants {
-                if constants[name] != nil { report("validate.duplicateConstant", value.location, symbol: name, kind: .globalDefinition) } else { constants[name] = value }
+            for (name, value, location) in module.constants {
+                if constants[name] != nil { report("validate.duplicateConstant", location, symbol: name, kind: .globalDefinition) } else { constants[name] = value }
             }
         }
         for module in modules {
@@ -207,9 +207,9 @@ final class GesAstValidator {
             bind(name, value, s.location, &scope)
         case .condition(let conditions, let then, let otherwise):
             var conditionScope = scope.child()
-            for (binding, value) in conditions {
+            for (binding, value, location) in conditions {
                 expression(value, conditionScope.types)
-                if let binding { bind(binding, value, value.location, &conditionScope) }
+                if let binding { bind(binding, value, location, &conditionScope) }
             }
             statements(then, conditionScope)
             statements(otherwise, scope.child())
@@ -255,10 +255,10 @@ final class GesAstValidator {
             labeledArguments(args, name, e.location, visit)
         case .handler(let name, let parameters):
             if !Self.isUpperName(name) { report("validate.invalidMessageCase", e.location, symbol: name, kind: .handler) }
-            for p in parameters where p.label != "_" && !Self.isLowerName(p.label, index: false) { report("validate.invalidIdentifierCase", e.location, symbol: name, kind: .handler) }
+            for p in parameters where p.label != "_" && !Self.isLowerName(p.label, index: false) { report("validate.invalidIdentifierCase", p.location, symbol: name, kind: .handler) }
             var seen: Set<String> = []
             var repeated: Set<String> = []
-            for p in parameters where !seen.insert(p.name).inserted && repeated.insert(p.name).inserted { report("validate.duplicateHandlerParameter", e.location, symbol: name, kind: .handler) }
+            for p in parameters where !seen.insert(p.name).inserted && repeated.insert(p.name).inserted { report("validate.duplicateHandlerParameter", p.location, symbol: name, kind: .handler) }
         case .message(let name, let args):
             if !Self.isUpperName(name) { report("validate.invalidMessageCase", e.location, symbol: name, kind: .message) }
             repeatedArguments(args, name, e.location)
@@ -359,13 +359,13 @@ final class GesAstValidator {
         var seen: Set<String> = []
         var repeated: Set<String> = []
         for argument in args where argument.label != "_" && !seen.insert(argument.label).inserted && repeated.insert(argument.label).inserted {
-            report("validate.duplicatePublishArgument", location, symbol: name, kind: .message)
+            report("validate.duplicatePublishArgument", argument.location, symbol: name, kind: .message)
         }
     }
 
     private func labeledArguments(_ args: [GesArgument], _ name: String, _ location: GesSourceLocation, _ visit: (GesExpression) -> Void) {
         for argument in args {
-            if argument.label != "_" && !Self.isLowerName(argument.label, index: false) { report("validate.invalidIdentifierCase", location, symbol: name) }
+            if argument.label != "_" && !Self.isLowerName(argument.label, index: false) { report("validate.invalidIdentifierCase", argument.location, symbol: name) }
             visit(argument.value)
         }
     }

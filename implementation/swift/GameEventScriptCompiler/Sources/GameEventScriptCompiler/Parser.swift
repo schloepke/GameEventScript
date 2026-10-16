@@ -155,7 +155,7 @@ final class GesParser {
         }
         separators()
         var definitions: [GesDefinition] = []
-        var constants: [(String, GesExpression)] = []
+        var constants: [(name: String, value: GesExpression, location: GesSourceLocation)] = []
         var records: [GesRecord] = []
         while current.kind != .endOfFile {
             do { try declaration(&definitions, &constants, &records) } catch let error as GesCompileError {
@@ -193,7 +193,7 @@ final class GesParser {
         return false
     }
 
-    func declaration(_ definitions: inout [GesDefinition], _ constants: inout [(String, GesExpression)], _ records: inout [GesRecord]) throws {
+    func declaration(_ definitions: inout [GesDefinition], _ constants: inout [(name: String, value: GesExpression, location: GesSourceLocation)], _ records: inout [GesRecord]) throws {
         let begin = current
         if current.kind == .illegal {
             let token = advance()
@@ -201,16 +201,17 @@ final class GesParser {
         }
         if match(.constant) {
             guard current.kind == .constantReference else { throw failure("Expected constant name.") }
-            let name = String(advance().text.dropFirst())
+            let nameToken = advance()
+            let name = String(nameToken.text.dropFirst())
             try expect(.be)
             newlines()
             let value = try expression(15)
             switch value.kind {
             case .literal: break
-            case .unary(.negate, let operand): guard case .literal(let number) = operand.kind, [.integer, .float, .percentage].contains(number.valueKind) else { throw failure("Expected numeric literal after '-'.", begin) }
-            default: throw failure("Expected scalar literal.", begin)
+            case .unary(.negate, let operand): guard case .literal(let number) = operand.kind, [.integer, .float, .percentage].contains(number.valueKind) else { throw failure("Expected numeric literal after '-'.", nameToken) }
+            default: throw failure("Expected scalar literal.", nameToken)
             }
-            constants.append((name, value))
+            constants.append((name, value, location(begin, previous)))
         } else if match(.record) {
             let name = try typeName()
             try expect(.`as`)
@@ -356,16 +357,18 @@ final class GesParser {
             try expect(.be)
             kind = .letBinding(name, try assemblyOrExpression(name, allowSend: true))
         } else if match(.`if`) {
-            var conditions: [(String?, GesExpression)] = []
+            var conditions: [(binding: String?, value: GesExpression, location: GesSourceLocation)] = []
             repeat {
                 newlines()
                 if current.kind == .leftBrace && !conditions.isEmpty { break }
+                let conditionStart = current
                 var binding: String?
                 if match(.`let`) {
                     binding = try identifier()
                     try expect(.be)
                 }
-                conditions.append((binding, try expression()))
+                let value = try expression()
+                conditions.append((binding, value, location(conditionStart, previous)))
                 newlines()
             } while match(.semicolon)
             let then = try body()
@@ -446,16 +449,20 @@ final class GesParser {
     // casts and checks: the operator and its operand do not extend the range.
     func ranged(_ kind: GesExpression.Kind, _ node: GesExpression) throws -> GesExpression {
         let depth = node.depth + 1
-        if depth > 32 { throw failure("Expression nesting limit exceeded.", code: "parse.sourceNestingExceeded") }
+        if depth > 32 { throw nestingLimit(node.location) }
         return .init(kind, node.location, depth: depth)
     }
+
+    // A node that exceeds the expression depth reports at its own range, as C# WithRange does.
+    func nestingLimit(_ location: GesSourceLocation) -> GesCompileError { compileError(.parse, "parse.sourceNestingExceeded", "Expression nesting limit exceeded.", location) }
 
     func combined(_ kind: GesExpression.Kind, _ first: GesExpression, _ last: GesExpression? = nil) throws -> GesExpression {
         let a = first.location
         let b = last?.location ?? location(previous)
         let depth = max(first.depth, last?.depth ?? 0) + 1
-        if depth > 32 { throw failure("Expression nesting limit exceeded.", code: "parse.sourceNestingExceeded") }
-        return .init(kind, .init(sourceName: a.sourceName, line: a.line, column: a.column, endLine: b.endLine, endColumn: b.endColumn, moduleName: module, sourceID: source.id), depth: depth)
+        let range = GesSourceLocation(sourceName: a.sourceName, line: a.line, column: a.column, endLine: b.endLine, endColumn: b.endColumn, moduleName: module, sourceID: source.id)
+        if depth > 32 { throw nestingLimit(range) }
+        return .init(kind, range, depth: depth)
     }
 
     static let precedence: [GesTokenKind: Int] = [
@@ -537,9 +544,8 @@ final class GesParser {
             newlines()
             try expect(.otherwise)
             let fallback = try expression(1)
-            let depth = try guardedChoiceDepth(branches, fallback: fallback)
             left = try combined(.choice(branches, fallback), left, fallback)
-            left.depth = depth
+            left.depth = try guardedChoiceDepth(branches, fallback: fallback, left.location)
         }
         return left
     }
@@ -562,12 +568,13 @@ final class GesParser {
         newlines()
         try expect(.otherwise)
         let fallback = try expression(1)
-        return .init(.choice(branches, fallback), location(start, previous), depth: try guardedChoiceDepth(branches, fallback: fallback))
+        let range = location(start, previous)
+        return .init(.choice(branches, fallback), range, depth: try guardedChoiceDepth(branches, fallback: fallback, range))
     }
 
-    func guardedChoiceDepth(_ branches: [(GesExpression, GesExpression)], fallback: GesExpression) throws -> Int {
+    func guardedChoiceDepth(_ branches: [(GesExpression, GesExpression)], fallback: GesExpression, _ range: GesSourceLocation) throws -> Int {
         let depth = branches.reduce(fallback.depth) { max($0, max($1.0.depth, $1.1.depth)) } + 1
-        if depth > 32 { throw failure("Expression nesting limit exceeded.", code: "parse.sourceNestingExceeded") }
+        if depth > 32 { throw nestingLimit(range) }
         return depth
     }
 
@@ -601,7 +608,7 @@ final class GesParser {
             let maximum = try expression(13)
             value = try combined(.between(input, minimum, maximum), input, maximum)
             value.depth = max(value.depth, minimum.depth + 1)
-            if value.depth > 32 { throw failure("Expression nesting limit exceeded.", code: "parse.sourceNestingExceeded") }
+            if value.depth > 32 { throw nestingLimit(value.location) }
         } else if matchWord("at") {
             let mode = advance()
             guard mode.isIdentifier("least") || mode.isIdentifier("most") else { throw failure("Expected least or most.", previous) }

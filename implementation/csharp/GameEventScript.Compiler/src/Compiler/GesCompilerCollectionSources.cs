@@ -15,7 +15,7 @@ internal static partial class GesCompiler
         private bool IsKnownNonList(GesExpressionNode value, LoweringContext context)
             => value switch
             {
-                GesIdentifierExpressionNode name => _nonListBindings.Contains(context.Require(name.Name).Id),
+                GesIdentifierExpressionNode name => _nonListBindings.Contains(context.Require(name.Name, name.SourceRange).Id),
                 GesIntegerLiteralExpressionNode or GesFloatLiteralExpressionNode or GesUnitIntegerLiteralExpressionNode or GesUnitFloatLiteralExpressionNode or
                     GesPercentageLiteralExpressionNode or GesBooleanLiteralExpressionNode or GesNothingLiteralExpressionNode or GesTextLiteralExpressionNode or GesTagLiteralExpressionNode => true,
                 GesBinaryExpressionNode { Operator: GesBinaryOperator.Divide or GesBinaryOperator.IntegerDivide or GesBinaryOperator.Modulo or GesBinaryOperator.Remainder or GesBinaryOperator.Power } => true,

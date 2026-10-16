@@ -315,6 +315,14 @@ struct GesParameter {
 struct GesArgument {
     let label: String
     let value: GesExpression
+    // From the label through the value; a synthesized argument uses its value's range.
+    let location: GesSourceLocation
+
+    init(label: String, value: GesExpression, location: GesSourceLocation? = nil) {
+        self.label = label
+        self.value = value
+        self.location = location ?? value.location
+    }
 }
 
 final class GesExpression {
@@ -372,6 +380,8 @@ struct GesSelector {
     var mode = ""
     var weightName = ""
     var accumulator = ""
+    // The selector keyword through its last clause; diagnostics about its bindings point here.
+    var location: GesSourceLocation?
 }
 
 struct GesStatement {
@@ -380,7 +390,7 @@ struct GesStatement {
         case expression(GesExpression)
         case letBinding(String, GesExpression)
         case publish(Bool, GesExpression, [GesExpression])
-        case condition([(String?, GesExpression)], [GesStatement], [GesStatement])
+        case condition([(binding: String?, value: GesExpression, location: GesSourceLocation)], [GesStatement], [GesStatement])
         case loop([String], GesExpression, Bool, [GesStatement])
         case seeded(GesExpression, [GesStatement])
     }
@@ -424,7 +434,7 @@ struct GesRecord {
 struct GesModule {
     let name: String
     let definitions: [GesDefinition]
-    let constants: [(String, GesExpression)]
+    let constants: [(name: String, value: GesExpression, location: GesSourceLocation)]
     let records: [GesRecord]
     let location: GesSourceLocation
 }

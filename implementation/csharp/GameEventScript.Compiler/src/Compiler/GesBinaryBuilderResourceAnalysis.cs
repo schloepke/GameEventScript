@@ -9,8 +9,8 @@ namespace GameEventScript.Compiler;
 
 internal sealed partial class GesBinaryBuilder
 {
-    private static GesCompileException CompileFailure(string code, string message, string? symbol = null)
-        => new(new GesDiagnostic(GesDiagnosticPhase.Compile, code, message, symbol));
+    private static GesCompileException CompileFailure(string code, string message, string? symbol = null, GesSourceLocation? location = null)
+        => new(new GesDiagnostic(GesDiagnosticPhase.Compile, code, message, symbol, SourceLocation: location));
 
     private ProgramResourceAnalysis AnalyzeProgramResources(IReadOnlyList<PlanItem> items, RegisterAllocationResult registerAllocation)
     {
@@ -131,7 +131,12 @@ internal sealed partial class GesBinaryBuilder
                     var names = new string[pending.Count - cycleStart + 1];
                     for (var index = cycleStart; index < pending.Count; index++) names[index - cycleStart] = _routines[pending[index].RoutineId].Name;
                     names[^1] = _routines[callee].Name;
-                    throw CompileFailure(GesDiagnosticCodes.CompileCyclicCallGraph, "Recursive calls are not allowed. Cyclic call path: " + string.Join(" -> ", names) + ".");
+                    // At the declaration of the cycle's routine that comes first in the sources, independent of traversal order.
+                    GesSourceLocation? first = null;
+                    for (var index = cycleStart; index < pending.Count; index++)
+                        if (_routines[pending[index].RoutineId].SourceRange is { } range && (first is null || CompareSourcePositions(range, first) < 0))
+                            first = range;
+                    throw CompileFailure(GesDiagnosticCodes.CompileCyclicCallGraph, "Recursive calls are not allowed. Cyclic call path: " + string.Join(" -> ", names) + ".", location: first);
                 }
 
                 visitStates[callee] = 1;
@@ -140,6 +145,14 @@ internal sealed partial class GesBinaryBuilder
         }
 
         return ordered;
+    }
+
+    private static int CompareSourcePositions(GesSourceLocation left, GesSourceLocation right)
+    {
+        var source = (left.SourceId ?? 0).CompareTo(right.SourceId ?? 0);
+        if (source != 0) return source;
+        var line = (left.Line ?? 0).CompareTo(right.Line ?? 0);
+        return line != 0 ? line : (left.Column ?? 0).CompareTo(right.Column ?? 0);
     }
 
     private RoutineResourceRequirement CalculateRoutineRequirement(int routineId, IReadOnlyList<List<int>> calls, int[] maximumStageCounts, RegisterAllocationResult registerAllocation, RoutineResourceRequirement[] requirements)

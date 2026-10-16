@@ -387,6 +387,9 @@ contains exactly the measured reference sources plus the recalibrated corpus.
       (BuildMetadata names the implementation and is excluded). All 1,399
       corpus programs both compilers accept are byte-identical, including
       debug sections; the gate keeps an empty baseline.
+- [x] Both compilers report the same ordered diagnostics for rejected programs,
+      with recovery and collection as in C#, and the same start positions
+      (`specs/Diagnostics.md`); the comparison gate enforces codes and positions.
 
 ### Phase 5a – Compiler safety and compactness
 

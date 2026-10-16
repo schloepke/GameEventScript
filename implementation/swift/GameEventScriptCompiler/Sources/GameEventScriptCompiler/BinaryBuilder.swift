@@ -141,6 +141,8 @@ final class GesBinaryBuilder {
         func requirements(_ name: String) throws -> (Int, Int) {
             if let result = resources[name] { return result }
             var visiting: Set<String> = []
+            // The routines being expanded, in call order; a cycle is the part from the routine entered again.
+            var path: [String] = []
             var pending = [(name, false)]
             while let (key, expanded) = pending.popLast() {
                 if resources[key] != nil { continue }
@@ -154,9 +156,16 @@ final class GesBinaryBuilder {
                         depth = max(depth, childDepth + 1)
                     }
                     visiting.remove(key)
+                    path.removeLast()
                     resources[key] = (regs, depth)
                 } else {
-                    guard visiting.insert(key).inserted else { throw compileError("compile.cyclicCallGraph", r.location, symbol: key, phase: .compile) }
+                    guard visiting.insert(key).inserted else {
+                        // At the declaration of the cycle's routine that comes first in the sources, independent of traversal order.
+                        let cycle = path[path.lastIndex(of: key)!...].compactMap { routinesByName[$0]?.definition.location }
+                        let first = cycle.min { ($0.sourceID ?? 0, $0.line ?? 0, $0.column ?? 0) < ($1.sourceID ?? 0, $1.line ?? 0, $1.column ?? 0) }!
+                        throw compileError("compile.cyclicCallGraph", first, symbol: key, phase: .compile)
+                    }
+                    path.append(key)
                     pending.append((key, true))
                     for target in r.dependencies.sorted().reversed() where resources[target] == nil { pending.append((target, false)) }
                 }

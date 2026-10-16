@@ -41,6 +41,10 @@ internal static partial class GesCompiler
         private readonly Dictionary<string, GesBinaryBuilder.RoutinePlan> _callableRoutines = new(StringComparer.Ordinal);
         private int _helperIndex;
 
+        // A lowering failure at the construct being lowered, so compile diagnostics carry a source position as validation does.
+        private GesCompileException CompileFailure(string code, string message, string? symbol = null)
+            => new(new GesDiagnostic(GesDiagnosticPhase.Compile, code, message, symbol, SourceLocation: _builder.CurrentSourceRange, ProgramName: module.ModuleName));
+
         public GameEventScriptProgram Build()
         {
             var callables = ReadOrderedCallables(module.Callables);
@@ -49,13 +53,17 @@ internal static partial class GesCompiler
             {
                 var callable = callables[index];
                 var kind = callable.Kind == GesCallableKind.PredicateCall ? GesBinaryBindKind.Predicate : GesBinaryBindKind.Function;
-                _callableRoutines.Add(callable.SignatureId, _builder.DeclareRoutine(kind, callable.Name, callable.SignatureLabels));
+                var routine = _builder.DeclareRoutine(kind, callable.Name, callable.SignatureLabels);
+                routine.SourceRange = callable.SourceRange;
+                _callableRoutines.Add(callable.SignatureId, routine);
             }
 
             for (var index = 0; index < types.Length; index++)
             {
                 var type = types[index];
-                _recordConstructors.Add(type.Name, _builder.DeclareRoutine(GesBinaryBindKind.Record, type.Name, ReadConstructorArgumentNames(type.Fields)));
+                var routine = _builder.DeclareRoutine(GesBinaryBindKind.Record, type.Name, ReadConstructorArgumentNames(type.Fields));
+                routine.SourceRange = type.SourceRange;
+                _recordConstructors.Add(type.Name, routine);
             }
 
             EmitCallables(callables);
@@ -221,7 +229,7 @@ internal static partial class GesCompiler
             return null;
         }
 
-        private static string ReadSingleOrDefault(IReadOnlyList<string> values, string fallback)
+        private string ReadSingleOrDefault(IReadOnlyList<string> values, string fallback)
         {
             if (values.Count == 0) return fallback;
             if (values.Count == 1) return values[0];
@@ -503,7 +511,7 @@ internal static partial class GesCompiler
                 case GesNothingLiteralExpressionNode: _builder.LoadNothing(destination); return true;
                 case GesIdentifierExpressionNode identifier:
                 {
-                    var source = context.Require(identifier.Name);
+                    var source = context.Require(identifier.Name, identifier.SourceRange);
                     if (source.Id != destination.Id) _builder.Move(destination, source);
                     return true;
                 }
@@ -653,7 +661,7 @@ internal static partial class GesCompiler
         private GesRegisterRef EmitExpressionForRead(GesExpressionNode expression, LoweringContext context, ExpressionState state)
         {
             return expression is GesIdentifierExpressionNode identifier
-                ? context.Require(identifier.Name)
+                ? context.Require(identifier.Name, identifier.SourceRange)
                 : EmitExpression(expression, context, state);
         }
 
@@ -772,13 +780,13 @@ internal static partial class GesCompiler
             }
         }
 
-        private static void RequireIntrinsicArity(GesIntrinsicCallExpressionNode intrinsic, int arity)
+        private void RequireIntrinsicArity(GesIntrinsicCallExpressionNode intrinsic, int arity)
         {
             if (intrinsic.Arguments.Count == arity) return;
             ThrowInvalidIntrinsicArity(intrinsic, arity.ToString());
         }
 
-        private static void ThrowInvalidIntrinsicArity(GesIntrinsicCallExpressionNode intrinsic, string expected)
+        private void ThrowInvalidIntrinsicArity(GesIntrinsicCallExpressionNode intrinsic, string expected)
             => throw CompileFailure(GesDiagnosticCodes.CompileInvalidArity, $"Intrinsic '{intrinsic.Function.ToSourceText()}' expects {expected} arguments but got {intrinsic.Arguments.Count}.", intrinsic.Function.ToSourceText());
 
         private void EmitCollectionAccessInto(GesCollectionAccessExpressionNode access, GesRegisterRef destination, LoweringContext context, ExpressionState state)
@@ -1926,7 +1934,7 @@ internal static partial class GesCompiler
 
         private void EmitHandlerBindCallInto(GesCallExpressionNode call, GesRegisterRef destination, LoweringContext context, ExpressionState state)
         {
-            var handler = context.Require(call.Name);
+            var handler = context.Require(call.Name, call.SourceRange);
             if (context.ResolveHandlerSignature(call.Name) is { } signature &&
                 !CallArgumentsMatchHandlerSignature(call.ArgumentList.Arguments, signature))
             {
@@ -2340,7 +2348,7 @@ internal static partial class GesCompiler
                 _ => -1
             };
 
-        private static short ToShort(int value, string name)
+        private short ToShort(int value, string name)
             => value is < short.MinValue or > short.MaxValue
                 ? throw CompileFailure(GesDiagnosticCodes.CompileNumericLimitExceeded, $"GameEventScript binary compiler {name} must fit into Int16.", name)
                 : (short)value;
@@ -2428,11 +2436,13 @@ internal static partial class GesCompiler
 
         public bool Contains(string name) => _registers.ContainsKey(name) || _parent?.Contains(name) == true;
 
-        public GesRegisterRef Require(string name)
+        // An unknown name fails at the referencing identifier when its range is given, otherwise at the construct being lowered.
+        public GesRegisterRef Require(string name, GesSourceLocation? location = null)
         {
             if (_registers.TryGetValue(name, out var register)) return register;
-            if (_parent is not null) return _parent.Require(name);
-            throw CompileFailure(GesDiagnosticCodes.CompileUnresolvedSymbol, $"GameEventScript binary compiler could not resolve identifier '{name}'.", name);
+            if (_parent is not null) return _parent.Require(name, location);
+            throw new GesCompileException(new GesDiagnostic(GesDiagnosticPhase.Compile, GesDiagnosticCodes.CompileUnresolvedSymbol, $"GameEventScript binary compiler could not resolve identifier '{name}'.", name,
+                SourceLocation: location ?? _routine.Builder.CurrentSourceRange));
         }
 
         public void DeclareHandlerSignature(string name, GesMessageSignature signature)

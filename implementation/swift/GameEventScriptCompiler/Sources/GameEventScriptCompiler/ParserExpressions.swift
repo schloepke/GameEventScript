@@ -167,7 +167,7 @@ extension GesParser {
             newlines()
             try expect(.rightParen)
             result.depth += 1
-            if result.depth > 32 { throw failure("Expression nesting exceeded.", start, code: "parse.sourceNestingExceeded") }
+            if result.depth > 32 { throw nestingLimit(result.location) }
             return result
         }
         if match(.leftBracket) { return try collection(start) }
@@ -310,6 +310,8 @@ extension GesParser {
                 try expect(.rightParen)
                 return node(.constructor(type, args), start)
             }
+            // A type name that starts no data form or constructor is itself the unexpected token, as in C#.
+            guard current.kind == .leftParen else { throw failure("Unexpected token '\(start.text)'.", start) }
             return node(.constructor(type, try arguments()), start)
         }
         if current.isName || current.kind == .message {
@@ -357,6 +359,7 @@ extension GesParser {
     func argumentLabel() -> Bool { current.isWord && peek().kind == .colon }
 
     func argument() throws -> GesArgument {
+        let start = current
         let label: String
         if argumentLabel() {
             label = advance().text
@@ -365,7 +368,8 @@ extension GesParser {
         } else {
             label = "_"
         }
-        return .init(label: label, value: try expression())
+        let value = try expression()
+        return .init(label: label, value: value, location: location(start, previous))
     }
 
     func arguments() throws -> [GesArgument] {
@@ -552,13 +556,22 @@ extension GesParser {
                     return value.depth
                 }
 
-                if patternDepth(value) + 1 > 32 { throw failure("Expression nesting exceeded.", start, code: "parse.sourceNestingExceeded") }
+                // C# stops when it enters the first pattern at level 32, so the report names that pattern.
+                if patternDepth(value) + 1 > 32 {
+                    var pattern = value
+                    for level in 1..<32 {
+                        guard case .map(let entries) = pattern.kind, let next = entries.first(where: { patternDepth($0.1) >= 32 - level }) else { break }
+                        pattern = next.1
+                    }
+                    throw nestingLimit(pattern.location)
+                }
                 s.expressions = [value]
             } else {
                 s = try pattern(operation: "hasPattern")
             }
         default: throw failure("Unknown selector.", start)
         }
+        s.location = location(start, previous)
         return s
     }
 

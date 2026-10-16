@@ -6,11 +6,10 @@
 
 Both compilers must produce byte-identical Programs for the same sources and debug options. Only the
 BuildMetadata section differs by design, because it names the producing implementation; every other section
-is compared byte for byte. For programs that both compilers reject, the ordered diagnostic code lists must match;
-both compilers report every diagnostic of a phase, so the lists cover recovery and collection as well. Differing
-source positions are reported but not yet enforced, because the portable position of each diagnostic is not
-specified. A program that only one compiler accepts, that compiles to different bytes or whose rejection reports
-different codes, is a difference. Differences are ratcheted against
+is compared byte for byte. For programs that both compilers reject, the ordered diagnostic lists must match in
+source, start line and column, and code (specs/Diagnostics.md); both compilers report every diagnostic of a phase,
+so the lists cover recovery and collection as well. A program that only one compiler accepts, that compiles to
+different bytes or whose rejection reports different codes or positions, is a difference. Differences are ratcheted against
 scripts/compiler-output-baseline.txt: a new or resolved difference fails until the baseline is regenerated
 with --update-baseline. Reports and workspaces stay below artifacts/compiler-comparison.
 """
@@ -108,8 +107,7 @@ def compare(key, program, csharp, swift):
     left, left_diagnostics = compile_with(csharp, directory, program, "csharp")
     right, right_diagnostics = compile_with(swift, directory, program, "swift")
     if left is None and right is None:
-        codes = [item[3] for item in left_diagnostics] == [item[3] for item in right_diagnostics]
-        verdict = "both-rejected" if codes else "diagnostics"
+        verdict = rejection_verdict(left_diagnostics, right_diagnostics)
     elif left is None or right is None:
         verdict = "csharp-only" if right is None else "swift-only"
     else:
@@ -117,9 +115,16 @@ def compare(key, program, csharp, swift):
         verdict = "different:" + ",".join(differing) if differing else "identical"
     if verdict in ("identical", "both-rejected"):
         shutil.rmtree(directory)
-    positions = left is None and right is None and left_diagnostics != right_diagnostics
+    rejected = verdict in ("diagnostics", "positions")
     return {"case": program["case"], "program": program["program"], "debug": program["debug"], "verdict": verdict, "workspace": str(directory),
-            "diagnostics": {"csharp": left_diagnostics, "swift": right_diagnostics} if positions else None, "positionsDiffer": positions}
+            "diagnostics": {"csharp": left_diagnostics, "swift": right_diagnostics} if rejected else None}
+
+
+def rejection_verdict(left, right):
+    """Both compilers rejected the program: equal ordered diagnostics agree; otherwise codes or only positions differ."""
+    if left == right:
+        return "both-rejected"
+    return "diagnostics" if [item[3] for item in left] != [item[3] for item in right] else "positions"
 
 
 def baseline_line(result):
@@ -173,9 +178,7 @@ def main(argv=None):
     (WORK / "report.json").write_text(json.dumps({"counts": counts, "results": results}, indent=1) + "\n", encoding="utf-8")
     identical = counts.get("identical", 0)
     rejected = counts.get("both-rejected", 0)
-    positions = sum(1 for result in results if result.get("positionsDiffer"))
-    print(f"{len(results)} programs: identical {identical}, both rejected {rejected}, different {len(results) - identical - rejected}; "
-          f"diagnostic positions differ in {positions} rejected programs")
+    print(f"{len(results)} programs: identical {identical}, both rejected {rejected}, different {len(results) - identical - rejected}")
     lines = BASELINE.read_text(encoding="utf-8").splitlines() if BASELINE.exists() else []
     baseline = {line for line in lines if line and not line.startswith("#")}
     if args.update_baseline:

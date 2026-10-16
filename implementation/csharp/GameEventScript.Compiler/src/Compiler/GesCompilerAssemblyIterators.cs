@@ -10,7 +10,7 @@ internal static partial class GesCompiler
 {
     private sealed partial class BinaryCompiler
     {
-        private static string? AssemblyIteratorSignature(GesAssemblyLine line)
+        private string? AssemblyIteratorSignature(GesAssemblyLine line)
         {
             if (line.Name == "IteratorNext" && line.Operands.Count == 3 && line.Operands[0] is GesListLiteralExpressionNode targets)
             {
@@ -35,7 +35,7 @@ internal static partial class GesCompiler
             return branch ? "wrlt" : "wrt";
         }
 
-        private static byte AssemblyIteratorMode(GesExpressionNode operand)
+        private byte AssemblyIteratorMode(GesExpressionNode operand)
             => AssemblyText(operand) switch
             {
                 "normal" => 0,
@@ -45,7 +45,7 @@ internal static partial class GesCompiler
                 "lockstep" => 4,
                 "cartesian" => 5,
                 "entries" => 6,
-                _ => throw AssemblyFailure("Unknown iterator mode.")
+                _ => throw AssemblyFailure("Unknown iterator mode.", operand: operand)
             };
 
         private static IEnumerable<GesExpressionNode> AssemblyWriteOperands(char role, GesExpressionNode operand)
@@ -73,7 +73,7 @@ internal static partial class GesCompiler
                 var inputs = new GesRegisterRef[items.Count];
                 for (var index = 0; index < inputs.Length; index++)
                 {
-                    if (items[index] is GesIdentifierExpressionNode name) inputs[index] = context.Require(name.Name);
+                    if (items[index] is GesIdentifierExpressionNode name) inputs[index] = context.Require(name.Name, name.SourceRange);
                     else
                     {
                         inputs[index] = _builder.AddCompilerRegister("assembly_source");

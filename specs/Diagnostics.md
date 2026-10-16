@@ -79,8 +79,24 @@ stops at the end of that phase.
 - Lowering and resource analysis stop at the first `compile.*` diagnostic.
 
 Every implementation reports the same ordered phase and code sequence for the
-same sources. Diagnostic messages, and source positions where this document does
-not specify them, are not part of that contract.
+same sources, and each compiler diagnostic starts at the same source line and
+column. A diagnostic points at the most specific source construct that causes it:
+
+- a syntax error at the offending token, which for an invalid constant
+  initializer is the constant name and for a type name that starts no
+  constructor is the type name;
+- `parse.sourceNestingExceeded` at the first expression, pattern or statement
+  body that exceeds the limit;
+- a repeated or misspelled declaration at that declaration, parameter, field,
+  argument, `if let` condition or binding, and a shadowing binder at the binding
+  construct, such as its selector or loop;
+- a resolution, arity, predicate or type-constructor error at the call,
+  predicate test, constructor or reference;
+- `compile.cyclicCallGraph` at the earliest declaration in the cycle, and other
+  `compile.*` diagnostics at the declaration, statement, expression or assembly
+  line that is being lowered.
+
+Diagnostic messages and end positions are not part of that contract.
 
 Every existing `GesProgramFormatErrorCode` maps losslessly to
 `decode.<lowerCamelErrorCode>`, for example `InvalidMagic` maps to

@@ -47,7 +47,7 @@ extension GesParser {
                 newlines()
                 let whitespace = match("whitespace")
                 let delimiter = whitespace ? node(.literal(.nothing), previous) : try expression()
-                result = try combined(.constructor(whitespace ? "__splitWhitespace" : "__split", whitespace ? [.init(label: "_", value: input)] : [.init(label: "_", value: input), .init(label: "_", value: delimiter)]), input)
+                result = try ranged(.constructor(whitespace ? "__splitWhitespace" : "__split", whitespace ? [.init(label: "_", value: input)] : [.init(label: "_", value: input), .init(label: "_", value: delimiter)]), input)
             } else {
                 guard let input = result else { throw failure("Selector requires a source.", start) }
                 result = try combined(.selector(input, selector()), input)

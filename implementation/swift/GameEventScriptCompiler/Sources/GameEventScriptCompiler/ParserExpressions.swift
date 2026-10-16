@@ -10,7 +10,8 @@ extension GesParser {
             let op = advance().text
             let value = try expression(15)
             let unary: GesUnaryOperator = op == "-" ? .negate : op == "parse" ? .parse : op == "empty" ? .empty : .not
-            return try combined(.unary(unary, value), node(.literal(.nothing), start), value)
+            // From the operator to the last consumed token, as C# WithRange(node, opToken, Previous).
+            return try combined(.unary(unary, value), node(.literal(.nothing), start))
         }
         let unary = ["abs", "ln", "exp", "sqrt", "cbrt", "chance", "floor", "ceil", "truncate", "rad", "deg", "sin", "cos", "tan", "asin", "acos", "atan", "wrap", "round"]
         if unary.contains(current.syntaxText) {
@@ -169,8 +170,10 @@ extension GesParser {
         if match("random") {
             newlines()
             if match("with") {
+                // From `with`, as C# starts the seeded random expression.
+                let withToken = previous
                 let seed = try expression()
-                return node(.seeded(seed, try expression()), start)
+                return node(.seeded(seed, try expression()), withToken)
             }
             _ = match("from")
             let from = try expression(13)
@@ -188,6 +191,8 @@ extension GesParser {
         if match("roll") {
             newlines()
             try expect("dice")
+            // From `dice`, as C# starts the dice expression.
+            let start = previous
             newlines()
             let count = try positiveInteger()
             newlines()
@@ -221,6 +226,7 @@ extension GesParser {
             if type == "list" && match("[") {
                 newlines()
                 try expect(":select")
+                let selectToken = previous
                 newlines()
                 let name = try identifier()
                 newlines()
@@ -240,9 +246,11 @@ extension GesParser {
                 newlines()
                 try expect("=>")
                 let value = try expression()
+                // From :select to the projection, as C# ranges the generated collection.
+                let generated = node(.generated(type, name, sequence, range, condition, value), selectToken)
                 newlines()
                 try expect("]")
-                return node(.generated(type, name, sequence, range, condition, value), start)
+                return generated
             }
             if type == "series", current.syntaxText == "(", ["fibonacci", "factorial"].contains(peek().syntaxText) {
                 advance()

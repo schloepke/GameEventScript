@@ -62,6 +62,7 @@ extension GesCompiler {
             case .seeded(let seed, let body):
                 try randomPush(seed, r, scope)
                 try statements(body, r, GesScope(scope))
+                r.location = statement.location
                 r.emit(.randomPop)
             }
         }

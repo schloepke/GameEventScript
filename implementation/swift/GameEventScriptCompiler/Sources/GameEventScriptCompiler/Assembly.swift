@@ -138,7 +138,7 @@ extension GesCompiler {
                 case "i": payload = UInt64(bitPattern: try assemblyInteger(operand))
                 case "f": payload = try assemblyNumber(operand).bitPattern
                 case "s", "u": value = Int(try assemblyInteger(operand))
-                case "t": value = text(try assemblyText(operand))
+                case "t": value = builder.text(try assemblyText(operand))
                 default: break
                 }
                 if slots[operandIndex] < 7 { fields[slots[operandIndex]] = UInt16(truncatingIfNeeded: value) }

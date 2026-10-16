@@ -3,7 +3,7 @@
 
 @_spi(Compiler) import GameEventScriptRuntime
 
-extension GesCompiler {
+extension GesBinaryBuilder {
     func materialize(_ sourceBindings: [GesBindingSegment.Entry], _ sourceCode: [GesBytecodeInstruction]) -> ([GesBindingSegment.Entry], [GesBytecodeInstruction]) {
         let oldStrings = strings
         let oldLists = lists

@@ -6,20 +6,20 @@
 // One bytecode rewrite over a routine before register allocation; returns whether it changed the code.
 // Each pass mirrors the C# pass of the same name in GesBinaryBuilderRewriter rule for rule.
 protocol GesBinaryOptimizationPass: Sendable {
-    func rewrite(_ context: GesCompiler.RewriteContext) -> Bool
+    func rewrite(_ context: GesBinaryBuilder.RewriteContext) -> Bool
 }
 
 // Nested like the C# GesBinaryBuilder types of the same names.
-extension GesCompiler {
+extension GesBinaryBuilder {
     // A routine's virtual-register code, its persistent labels and the program-wide effect summary.
     // One context serves every routine of a compilation, so its analysis buffers are allocated once.
     final class RewriteContext {
-        let compiler: GesCompiler
+        let builder: GesBinaryBuilder
         let effects: EffectAnalysis
         private(set) var routine: GesRoutine
 
-        init(_ compiler: GesCompiler, _ routine: GesRoutine, _ effects: EffectAnalysis) {
-            self.compiler = compiler
+        init(_ builder: GesBinaryBuilder, _ routine: GesRoutine, _ effects: EffectAnalysis) {
+            self.builder = builder
             self.routine = routine
             self.effects = effects
         }
@@ -28,7 +28,7 @@ extension GesCompiler {
             self.routine = routine
             // The routine entry label, every label marked while lowering and every branch target, as in the C# builder.
             routine.labels.insert(0)
-            for instruction in routine.code where GesCompiler.isBranch(instruction.opcode) { routine.labels.insert(Int(instruction.word2)) }
+            for instruction in routine.code where GesBinaryBuilder.isBranch(instruction.opcode) { routine.labels.insert(Int(instruction.word2)) }
         }
 
         var count: Int { routine.code.count }
@@ -43,7 +43,7 @@ extension GesCompiler {
         func isTemporary(_ register: Int) -> Bool { !routine.pinned.contains(register) }
 
         // Register and register-list operand slots, cached per opcode shape for the whole compilation.
-        func slots(_ instruction: GesBytecodeInstruction) -> GesOperandSlots { GesOperandSlots.of(instruction, &compiler.operandLayouts) }
+        func slots(_ instruction: GesBytecodeInstruction) -> OperandSlots { OperandSlots.of(instruction, &builder.operandLayouts) }
 
         // Register destination of slot 0, if the instruction writes a single register there.
         func destination(_ instruction: GesBytecodeInstruction) -> Int? {
@@ -53,7 +53,7 @@ extension GesCompiler {
         func forEachRead(_ instruction: GesBytecodeInstruction, _ body: (Int) -> Void) {
             let slots = slots(instruction)
             for slot in slots.registers where slot != 0 { body(Int(instruction.field(slot))) }
-            for slot in slots.lists where slot != 0 { for register in compiler.lists[Int(instruction.field(slot))] { body(Int(register)) } }
+            for slot in slots.lists where slot != 0 { for register in builder.lists[Int(instruction.field(slot))] { body(Int(register)) } }
         }
 
         func readsRegister(_ instruction: GesBytecodeInstruction, _ register: Int) -> Bool {
@@ -65,7 +65,7 @@ extension GesCompiler {
         func forEachWrite(_ instruction: GesBytecodeInstruction, _ body: (Int) -> Void) {
             let slots = slots(instruction)
             if slots.registers.contains(0) { return body(Int(instruction.word0)) }
-            if slots.lists.contains(0) { for register in compiler.lists[Int(instruction.word0)] { body(Int(register)) } }
+            if slots.lists.contains(0) { for register in builder.lists[Int(instruction.word0)] { body(Int(register)) } }
         }
 
         // Buffers reused by every pass over this routine, so repeated analyses do not allocate.
@@ -126,7 +126,7 @@ extension GesCompiler {
             var write = 0
             for index in 0..<count where !remove[index] {
                 var instruction = routine.code[index]
-                if GesCompiler.isBranch(instruction.opcode) {
+                if GesBinaryBuilder.isBranch(instruction.opcode) {
                     instruction = .init(
                         opcode: instruction.opcode,
                         unitAndFlags: instruction.unitAndFlags,
@@ -159,23 +159,23 @@ extension GesCompiler {
         private(set) var recordKeysByID: [Int: String] = [:]
         private let strings: [String]
 
-        init(_ compiler: GesCompiler) {
-            strings = compiler.strings
+        init(_ builder: GesBinaryBuilder) {
+            strings = builder.strings
             // With assembly present, optimization runs per routine. Calls into other routines stay conservative.
-            let preserved = compiler.routines.contains { $0.hasAssembly }
-            for routine in compiler.routines where routine.definition.kind == "record" {
+            let preserved = builder.routines.contains { $0.hasAssembly }
+            for routine in builder.routines where routine.definition.kind == "record" {
                 recordKeys[routine.definition.name] = routine.key
-                if let id = compiler.recordIDs[routine.definition.name] { recordKeysByID[id] = routine.key }
+                if let id = builder.recordIDs[routine.definition.name] { recordKeysByID[id] = routine.key }
             }
             // Only record routines are resolved callees; without records every routine call stays effectful.
             if recordKeys.isEmpty { return }
             var callers: [String: [String]] = [:]
             var pending: [String: Int] = [:]
-            for routine in compiler.routines {
+            for routine in builder.routines {
                 routineEffects[routine.key] = preserved
                 pending[routine.key] = 0
             }
-            for routine in compiler.routines {
+            for routine in builder.routines {
                 let calls = Dictionary(routine.calls.map { ($0.0, $0.1) }, uniquingKeysWith: { first, _ in first })
                 for (index, instruction) in routine.code.enumerated() {
                     guard Self.isRoutineCall(instruction.opcode) else {
@@ -192,7 +192,7 @@ extension GesCompiler {
                 }
             }
             // Bottom-up propagation in C# routine order; cyclic or cycle-dependent calls stay effectful.
-            var ready = compiler.routines.map(\.key).filter { pending[$0] == 0 }
+            var ready = builder.routines.map(\.key).filter { pending[$0] == 0 }
             var cursor = 0
             while cursor < ready.count {
                 let callee = ready[cursor]
@@ -545,7 +545,7 @@ extension GesCompiler {
     struct LoopInvariantHoistingPass: GesBinaryOptimizationPass {
         func rewrite(_ context: RewriteContext) -> Bool {
             let before = context.routine.code
-            context.compiler.hoistLoopInvariants(context.routine)
+            context.builder.hoistLoopInvariants(context.routine)
             return context.routine.code != before
         }
     }

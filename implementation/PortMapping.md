@@ -369,15 +369,19 @@ contains exactly the measured reference sources plus the recalibrated corpus.
       instead of strings. Case names follow C# where both have the concept; the
       Swift lexer keeps coarse token kinds (keywords stay identifiers) and the
       operators keep `predicate`/`notContains`, which preserve the emitted code.
-- [ ] Identical phase types in both ports: `GesLexer`, `GesParser`,
+- [x] Identical phase types in both ports: `GesLexer`, `GesParser`,
       `GesAstValidator`, `GesShadowingValidator`, `GesAstOptimizer`,
-      `GesBinaryBuilder`. Swift folded only arithmetic, negation and Number casts
-      during lowering (`scalarConstant`); `GesAstOptimizer` now runs as its own
-      phase after validation, as in C#.
+      `GesCompiler` and `GesBinaryBuilder`. `GesAstValidator` collects the
+      program-wide declarations before lowering; shadowing and repeated
+      component bindings run last in `GesShadowingValidator`, as in C#.
+      `GesCompiler` lowers into `GesBinaryBuilder`, which owns the pools,
+      routines, optimization, register allocation, resource analysis and
+      encoding. Swift keeps its per-routine instruction lists (`GesRoutine`)
+      instead of C#'s plan items.
 - [x] Named optimization passes behind `IGesBinaryOptimizationPass` /
       `GesBinaryOptimizationPass` with the C# pass names and pipeline, nested in
-      `GesCompiler` like their C# counterparts in `GesBinaryBuilder`; labels persist
-      when their jumps disappear, as C# label items do.
+      `GesBinaryBuilder` as in C#; labels persist when their jumps disappear, as
+      C# label items do.
 - [x] Verify byte-identical `.gesb` output for the corpus and the
       `compile.loop-invariants` snapshot with `scripts/compare-compiler-output.py`
       (BuildMetadata names the implementation and is excluded). All 1,399

@@ -17,7 +17,6 @@ only	csharp	Compiler	GesAssemblyExpressionNode
 only	csharp	Compiler	GesAssemblyStatementNode
 only	csharp	Compiler	GesAverageSelectorNode
 only	csharp	Compiler	GesBetweenExpressionNode
-only	csharp	Compiler	GesBinaryBuilder
 only	csharp	Compiler	GesBinaryExpressionNode
 only	csharp	Compiler	GesBindRef
 only	csharp	Compiler	GesBooleanLiteralExpressionNode
@@ -174,9 +173,7 @@ only	swift	Compiler	GesComponentRow
 only	swift	Compiler	GesDefinition
 only	swift	Compiler	GesExpression
 only	swift	Compiler	GesField
-only	swift	Compiler	GesLoopAnalysis
 only	swift	Compiler	GesModule
-only	swift	Compiler	GesOperandSlots
 only	swift	Compiler	GesParameter
 only	swift	Compiler	GesRecord
 only	swift	Compiler	GesRoutine

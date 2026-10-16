@@ -6,7 +6,7 @@
 extension GesCompiler {
     func statements(_ body: [GesStatement], _ r: GesRoutine, _ scope: GesScope) throws {
         for statement in body {
-            try checkLimits(r)
+            try builder.checkLimits(r)
             r.location = statement.location
             switch statement.kind {
             case .assembly(let block): try assembly(block, r, scope)
@@ -16,11 +16,11 @@ extension GesCompiler {
                 let tagRegisters = try tags.map { try expression($0, r, scope) }
                 if case .message(let name, let arguments) = message.kind {
                     let regs = try arguments.map { try expression($0.value, r, scope) }
-                    let bind = importBinding(.outboundMessage, name, arguments.map(\.label))
-                    r.emit(publish ? (tags.isEmpty ? .publishMessage : .publishMessageWithTags) : (tags.isEmpty ? .emitMessage : .emitMessageWithTags), bind, tags.isEmpty ? 0 : list(tagRegisters), list(regs))
+                    let bind = builder.importBinding(.outboundMessage, name, arguments.map(\.label))
+                    r.emit(publish ? (tags.isEmpty ? .publishMessage : .publishMessageWithTags) : (tags.isEmpty ? .emitMessage : .emitMessageWithTags), bind, tags.isEmpty ? 0 : builder.list(tagRegisters), builder.list(regs))
                 } else {
                     let reg = try expression(message, r, scope)
-                    r.emit(publish ? (tags.isEmpty ? .publishMessageValue : .publishMessageValueWithTags) : (tags.isEmpty ? .emitMessageValue : .emitMessageValueWithTags), 0, reg, tags.isEmpty ? 0 : list(tagRegisters))
+                    r.emit(publish ? (tags.isEmpty ? .publishMessageValue : .publishMessageValueWithTags) : (tags.isEmpty ? .emitMessageValue : .emitMessageValueWithTags), 0, reg, tags.isEmpty ? 0 : builder.list(tagRegisters))
                 }
             case .condition(let conditions, let yes, let no):
                 let child = GesScope(scope)
@@ -57,7 +57,7 @@ extension GesCompiler {
                 }
                 let iterator = try iterator(sequence, range, r, scope)
                 let start = r.code.count
-                let next = r.emit(.iteratorNext, items.count == 1 ? items[0] : list(items), iterator, flags: items.count == 1 ? 0 : 32)
+                let next = r.emit(.iteratorNext, items.count == 1 ? items[0] : builder.list(items), iterator, flags: items.count == 1 ? 0 : 32)
                 try statements(body, r, child)
                 r.location = statement.location
                 r.emit(.jump, 0, 0, start)
@@ -129,8 +129,8 @@ extension GesCompiler {
         case .integer: r.emit(.loadInteger, target, payload: UInt64(bitPattern: value.integerValue!), flags: flag)
         case .float: r.emit(.loadFloat, target, payload: value.asNumber.bitPattern, flags: flag)
         case .percentage: r.emit(.loadPercentage, target, payload: value.asNumber.bitPattern)
-        case .text: r.emit(.loadText, target, text(value.textValue!))
-        case .tag: r.emit(.loadTag, target, text(value.textValue!))
+        case .text: r.emit(.loadText, target, builder.text(value.textValue!))
+        case .tag: r.emit(.loadTag, target, builder.text(value.textValue!))
         default: throw compileError("compile.unsupportedConstruct", r.location, phase: .compile)
         }
     }
@@ -163,7 +163,7 @@ extension GesCompiler {
         case .unary(let op, let input):
             if op == .predicate, case .extensionCall(let ns, let function, let args) = input.kind {
                 let regs = try args.map { try expression($0.value, r, scope) }
-                r.emit(.callExternal, d, importBinding(.extensionCall, ns + "." + function, args.map(\.label)), list(regs), flags: 0x20)
+                r.emit(.callExternal, d, builder.importBinding(.extensionCall, ns + "." + function, args.map(\.label)), builder.list(regs), flags: 0x20)
                 break
             }
             let a = try expression(input, r, scope)
@@ -212,7 +212,7 @@ extension GesCompiler {
         case .call(let name, let arguments):
             if let handler = scope.get(name) {
                 let regs = try arguments.map { try expression($0.value, r, scope) }
-                if let labels = scope.handler(name), labels != arguments.map(\.label) { r.emit(.loadNothing, d) } else { r.emit(.bindHandler, d, handler, list(regs)) }
+                if let labels = scope.handler(name), labels != arguments.map(\.label) { r.emit(.loadNothing, d) } else { r.emit(.bindHandler, d, handler, builder.list(regs)) }
             } else {
                 let key = callableSignature(name, arguments.map(\.label))
                 if definitions[key] == nil {
@@ -238,9 +238,9 @@ extension GesCompiler {
             r.dependencies.insert(definition.signature)
         case .extensionCall(let ns, let function, let arguments):
             let regs = try arguments.map { try expression($0.value, r, scope) }
-            let bind = importBinding(.extensionCall, ns + "." + function, arguments.map(\.label))
-            r.emit(.callExternal, d, bind, list(regs))
-        case .handler(let name, let parameters): r.emit(.loadHandler, d, 0, textList([name] + parameters.map(\.label)))
+            let bind = builder.importBinding(.extensionCall, ns + "." + function, arguments.map(\.label))
+            r.emit(.callExternal, d, bind, builder.list(regs))
+        case .handler(let name, let parameters): r.emit(.loadHandler, d, 0, builder.textList([name] + parameters.map(\.label)))
         case .send(let publish, let message, let tags, let delay):
             let time = try delay.map { try expression($0, r, scope) }
             let tagRegisters = try tags.map { try expression($0, r, scope) }
@@ -249,17 +249,17 @@ extension GesCompiler {
             var y = 0
             if case .message(let name, let arguments) = message.kind {
                 let values = try arguments.map { try expression($0.value, r, scope) }
-                x = importBinding(.outboundMessage, name, arguments.map(\.label))
-                y = list(values)
+                x = builder.importBinding(.outboundMessage, name, arguments.map(\.label))
+                y = builder.list(values)
             } else {
                 flags |= 0x80
                 x = try expression(message, r, scope)
             }
             let op: GesBytecodeOpCode = publish ? (time == nil ? .publishInstant : .publishAfter) : (time == nil ? .emitInstant : .emitAfter)
-            r.emit(op, d, x, y, payload: UInt64(tags.isEmpty ? 0 : list(tagRegisters)) | UInt64(time ?? 0) << 16, flags: flags)
+            r.emit(op, d, x, y, payload: UInt64(tags.isEmpty ? 0 : builder.list(tagRegisters)) | UInt64(time ?? 0) << 16, flags: flags)
         case .message(let name, let arguments):
             let regs = try arguments.map { try expression($0.value, r, scope) }
-            r.emit(.loadMessage, d, textList([name] + arguments.map(\.label)), list(regs))
+            r.emit(.loadMessage, d, builder.textList([name] + arguments.map(\.label)), builder.list(regs))
         case .constructor(let type, let arguments): try constructor(type, arguments, d, r, scope)
         case .list(let items):
             let location = r.location
@@ -269,10 +269,10 @@ extension GesCompiler {
             r.emit(.createList, d)
         case .map(let entries):
             try stageExpressions(entries.map(\.1), r, scope)
-            r.emit(.createMap, d, textList(entries.map(\.0)))
+            r.emit(.createMap, d, builder.textList(entries.map(\.0)))
         case .member(let value, let name):
             let a = try expression(value, r, scope)
-            r.emit(.memberAccess, d, text(name), a)
+            r.emit(.memberAccess, d, builder.text(name), a)
         case .combined(let operation, let sources): try combinedCollection(operation, sources, d, r, scope)
         case .selector(let value, let selection): try selector(value, selection, d, r, scope)
         case .intrinsic(let name, let args): try intrinsic(name, args, d, r, scope)
@@ -312,8 +312,8 @@ extension GesCompiler {
             if otherwise != d { r.emit(.move, d, otherwise) }
             r.mark(ends)
         case .generated(_, let name, let source, let range, let condition, let projection):
-            let builder = r.temporary()
-            r.emit(.listBuilderCreate, builder)
+            let collector = r.temporary()
+            r.emit(.listBuilderCreate, collector)
             let child = GesScope(scope)
             let item = r.local()
             let iterator = try iterator(source, range, r, scope)
@@ -323,12 +323,12 @@ extension GesCompiler {
             let next = r.emit(.iteratorNext, item, iterator)
             let skip = try condition.map { r.emit(.jumpIfNotTrue, 0, try expression($0, r, child)) }
             let value = try expression(projection, r, child)
-            r.emit(.listBuilderAdd, 0, builder, value)
+            r.emit(.listBuilderAdd, 0, collector, value)
             if let skip { r.patch(skip, target: r.code.count) }
             r.emit(.jump, 0, 0, begin)
             r.patch(next, target: r.code.count)
             r.emit(.iteratorClose, 0, iterator)
-            r.emit(.listBuilderFinish, d, builder)
+            r.emit(.listBuilderFinish, d, collector)
         }
         return d
     }
@@ -341,7 +341,7 @@ extension GesCompiler {
         }
         if type == "record" || type == "series" || ["number", "range", "message", "nothing", "percentage", "boolean", "text", "tag", "list", "map", "dice", "handler"].contains(type) && (arguments.count != 1 || arguments[0].label != "_") {
             let regs = try arguments.map { try expression($0.value, r, scope) }
-            r.emit(.constructData, d, text(type), list(regs), payload: UInt64(textList(arguments.map(\.label))))
+            r.emit(.constructData, d, builder.text(type), builder.list(regs), payload: UInt64(builder.textList(arguments.map(\.label))))
             return
         }
         if type == "vector" || type == "point" {
@@ -365,7 +365,7 @@ extension GesCompiler {
                 return value ?? .init(.literal(.nothing), r.location)
             }
             try stageExpressions(args, r, scope)
-            r.emit(.createRecord, d, recordIDs[type] ?? records.keys.sorted().firstIndex(of: type)!)
+            r.emit(.createRecord, d, builder.recordIDs[type] ?? records.keys.sorted().firstIndex(of: type)!)
             r.dependencies.insert(callableSignature(type, record.fields.compactMap(\.label)))
             return
         }
@@ -374,7 +374,7 @@ extension GesCompiler {
             guard let ctor = external.constructors.first(where: { $0.parameters.map(\.name).sorted() == labels.sorted() }) else { throw compileError("validate.invalidTypeConstructor", r.location, symbol: type, kind: .type) }
             let ordered = ctor.parameters.map { p in arguments.first { $0.label == p.name }! }
             try stageExpressions(ordered.map(\.value), r, scope)
-            r.emit(.createExternalType, d, importBinding(.externalType, type, ctor.parameters.map(\.name)), textList(ctor.parameters.map(\.name)))
+            r.emit(.createExternalType, d, builder.importBinding(.externalType, type, ctor.parameters.map(\.name)), builder.textList(ctor.parameters.map(\.name)))
             return
         }
         guard arguments.count == 1 else { throw compileError("compile.invalidArity", r.location, symbol: type, phase: .compile) }

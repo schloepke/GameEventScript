@@ -28,7 +28,7 @@ extension GesCompiler {
     func materializeRow(_ current: Int, _ r: GesRoutine) {
         guard let row = r.componentRows[current] else { return }
         stage(row.components, r)
-        if row.entry { r.emit(.createMap, current, list([text("key"), text("value")])) } else { r.emit(.createList, current) }
+        if row.entry { r.emit(.createMap, current, builder.list([builder.text("key"), builder.text("value")])) } else { r.emit(.createList, current) }
     }
 
     func bindComponents(_ names: [String], fallback: String, current: Int, _ r: GesRoutine, _ scope: GesScope) {
@@ -84,7 +84,7 @@ extension GesCompiler {
         {
             combinedResultGuard(sources, allowMap: terminal.operation == "group", &invalid, r)
         }
-        invalid.append(r.emit(.iteratorCreateOrJump, iterator, list(sources), flags: mode << 5))
+        invalid.append(r.emit(.iteratorCreateOrJump, iterator, builder.list(sources), flags: mode << 5))
         return mode >= 4 ? .init(components: expressions.map { _ in r.temporary() }, entry: false) : nil
     }
 

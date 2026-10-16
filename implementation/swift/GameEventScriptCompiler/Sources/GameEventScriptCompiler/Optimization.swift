@@ -3,7 +3,7 @@
 
 @_spi(Compiler) import GameEventScriptRuntime
 
-extension GesCompiler {
+extension GesBinaryBuilder {
     // The C# reference pipeline: two cleanup rounds with loop-invariant hoisting between them.
     static let defaultOptimizationPasses: [any GesBinaryOptimizationPass] = [
         LocalConstantFoldingPass(), DeadTempWriteEliminationPass(), RegisterPressureReductionPass(), PeepholeMoveEliminationPass(),
@@ -44,8 +44,8 @@ extension GesCompiler {
     // Moving instructions inside one loop changes no position outside it, so one analysis serves
     // every loop of a round that neither contains nor overlaps an already rewritten loop. A loop
     // containing a rewritten one waits for the next round and its fresh analysis.
-    private func hoistRound(_ routine: GesRoutine, _ layouts: inout [Int: GesOperandSlots]) -> Bool {
-        let analysis = GesLoopAnalysis(routine, lists, &layouts)
+    private func hoistRound(_ routine: GesRoutine, _ layouts: inout [Int: OperandSlots]) -> Bool {
+        let analysis = LoopAnalysis(routine, lists, &layouts)
         var rewritten: (start: Int, end: Int)?
         var deferred = false
         for end in routine.code.indices {
@@ -76,10 +76,10 @@ extension GesCompiler {
         return deferred
     }
 
-    private func isLoopInvariant(_ routine: GesRoutine, _ index: Int, start: Int, end: Int, analysis: GesLoopAnalysis, hoisted: [Bool], _ layouts: inout [Int: GesOperandSlots]) -> Bool {
+    private func isLoopInvariant(_ routine: GesRoutine, _ index: Int, start: Int, end: Int, analysis: LoopAnalysis, hoisted: [Bool], _ layouts: inout [Int: OperandSlots]) -> Bool {
         let instruction = routine.code[index]
         guard Self.pureTotalOperations.contains(instruction.opcode) else { return false }
-        let slots = GesOperandSlots.of(instruction, &layouts)
+        let slots = OperandSlots.of(instruction, &layouts)
         guard slots.registers.contains(0), slots.lists.isEmpty else { return false }
         // The destination has no other definition and is read only later in this loop body,
         // so no path observes it before this instruction or after a zero-iteration loop.
@@ -123,95 +123,98 @@ extension GesCompiler {
     }
 }
 
-// Register and register-list operand slots of one opcode shape, computed once per compilation.
-struct GesOperandSlots {
-    let registers: [Int]
-    let lists: [Int]
+// Nested like the C# builder's analysis types.
+extension GesBinaryBuilder {
+    // Register and register-list operand slots of one opcode shape, computed once per compilation.
+    struct OperandSlots {
+        let registers: [Int]
+        let lists: [Int]
 
-    static func of(_ instruction: GesBytecodeInstruction, _ cache: inout [Int: GesOperandSlots]) -> GesOperandSlots {
-        let opcode = instruction.opcode
-        if let slots = fixed[Int(opcode.rawValue)] { return slots }
-        // The remaining shapes also depend on the flags (iterator and send modes) or on payload word a (split and pattern modes).
-        let key = Int(opcode.rawValue) << 32 | Int(instruction.unitAndFlags) << 16 | Int(instruction.a)
-        if let slots = cache[key] { return slots }
-        let slots = GesOperandSlots(instruction)
-        cache[key] = slots
-        return slots
-    }
-
-    private init(_ instruction: GesBytecodeInstruction) {
-        registers = GesCompilerSupport.registerSlots(instruction)
-        lists = GesCompilerSupport.listSlots(instruction, text: false)
-    }
-
-    // Slots of every opcode whose operands depend on the opcode alone, built once per process.
-    private static let fixed: [GesOperandSlots?] = {
-        var table = [GesOperandSlots?](repeating: nil, count: 256)
-        for opcode in GesBytecodeOpCode.allCases where !hasVariableShape(opcode) {
-            table[Int(opcode.rawValue)] = GesOperandSlots(.init(opcode: opcode, unitAndFlags: 0, word0: 0, word1: 0, word2: 0, payload: 0))
+        static func of(_ instruction: GesBytecodeInstruction, _ cache: inout [Int: OperandSlots]) -> OperandSlots {
+            let opcode = instruction.opcode
+            if let slots = fixed[Int(opcode.rawValue)] { return slots }
+            // The remaining shapes also depend on the flags (iterator and send modes) or on payload word a (split and pattern modes).
+            let key = Int(opcode.rawValue) << 32 | Int(instruction.unitAndFlags) << 16 | Int(instruction.a)
+            if let slots = cache[key] { return slots }
+            let slots = OperandSlots(instruction)
+            cache[key] = slots
+            return slots
         }
-        return table
-    }()
 
-    private static func hasVariableShape(_ opcode: GesBytecodeOpCode) -> Bool {
-        switch opcode {
-        case .iteratorCreate, .iteratorCreateOrJump, .iteratorNext, .splitText, .hasPattern, .takePattern, .emitInstant, .emitAfter, .publishInstant, .publishAfter: true
-        default: false
+        private init(_ instruction: GesBytecodeInstruction) {
+            registers = GesCompilerSupport.registerSlots(instruction)
+            lists = GesCompilerSupport.listSlots(instruction, text: false)
+        }
+
+        // Slots of every opcode whose operands depend on the opcode alone, built once per process.
+        private static let fixed: [OperandSlots?] = {
+            var table = [OperandSlots?](repeating: nil, count: 256)
+            for opcode in GesBytecodeOpCode.allCases where !hasVariableShape(opcode) {
+                table[Int(opcode.rawValue)] = OperandSlots(.init(opcode: opcode, unitAndFlags: 0, word0: 0, word1: 0, word2: 0, payload: 0))
+            }
+            return table
+        }()
+
+        private static func hasVariableShape(_ opcode: GesBytecodeOpCode) -> Bool {
+            switch opcode {
+            case .iteratorCreate, .iteratorCreateOrJump, .iteratorNext, .splitText, .hasPattern, .takePattern, .emitInstant, .emitAfter, .publishInstant, .publishAfter: true
+            default: false
+            }
         }
     }
-}
 
-// Per-register definition/use positions and per-position branch references of one routine.
-struct GesLoopAnalysis {
-    var writeCount: [Int]
-    var lastWrite: [Int]
-    var firstRead: [Int]
-    var lastRead: [Int]
-    var firstReference: [Int]
-    var lastReference: [Int]
+    // Per-register definition/use positions and per-position branch references of one routine.
+    struct LoopAnalysis {
+        var writeCount: [Int]
+        var lastWrite: [Int]
+        var firstRead: [Int]
+        var lastRead: [Int]
+        var firstReference: [Int]
+        var lastReference: [Int]
 
-    init(_ routine: GesRoutine, _ lists: [[UInt16]], _ layouts: inout [Int: GesOperandSlots]) {
-        // Before allocation, routine.registers counts the virtual registers.
-        let registers = routine.registers
-        writeCount = .init(repeating: 0, count: registers)
-        lastWrite = .init(repeating: -1, count: registers)
-        firstRead = .init(repeating: .max, count: registers)
-        lastRead = .init(repeating: -1, count: registers)
-        firstReference = .init(repeating: .max, count: routine.code.count)
-        lastReference = .init(repeating: -1, count: routine.code.count)
-        for (index, instruction) in routine.code.enumerated() {
-            let target = Int(instruction.word2)
-            if GesCompiler.isBranch(instruction.opcode), target < routine.code.count {
-                firstReference[target] = min(firstReference[target], index)
-                lastReference[target] = index
-            }
-            let slots = GesOperandSlots.of(instruction, &layouts)
-            for slot in slots.registers {
-                let register = Int(instruction.field(slot))
-                // Closing an iterator also clears its register.
-                if slot == 0 || instruction.opcode == .iteratorClose { write(register, index) }
-                if slot != 0 { read(register, index) }
-            }
-            for slot in slots.lists {
-                for register in lists[Int(instruction.field(slot))] {
-                    if slot == 0 { write(Int(register), index) } else { read(Int(register), index) }
+        init(_ routine: GesRoutine, _ lists: [[UInt16]], _ layouts: inout [Int: OperandSlots]) {
+            // Before allocation, routine.registers counts the virtual registers.
+            let registers = routine.registers
+            writeCount = .init(repeating: 0, count: registers)
+            lastWrite = .init(repeating: -1, count: registers)
+            firstRead = .init(repeating: .max, count: registers)
+            lastRead = .init(repeating: -1, count: registers)
+            firstReference = .init(repeating: .max, count: routine.code.count)
+            lastReference = .init(repeating: -1, count: routine.code.count)
+            for (index, instruction) in routine.code.enumerated() {
+                let target = Int(instruction.word2)
+                if GesBinaryBuilder.isBranch(instruction.opcode), target < routine.code.count {
+                    firstReference[target] = min(firstReference[target], index)
+                    lastReference[target] = index
+                }
+                let slots = OperandSlots.of(instruction, &layouts)
+                for slot in slots.registers {
+                    let register = Int(instruction.field(slot))
+                    // Closing an iterator also clears its register.
+                    if slot == 0 || instruction.opcode == .iteratorClose { write(register, index) }
+                    if slot != 0 { read(register, index) }
+                }
+                for slot in slots.lists {
+                    for register in lists[Int(instruction.field(slot))] {
+                        if slot == 0 { write(Int(register), index) } else { read(Int(register), index) }
+                    }
                 }
             }
         }
-    }
 
-    private mutating func write(_ register: Int, _ index: Int) {
-        writeCount[register] += 1
-        lastWrite[register] = index
-    }
+        private mutating func write(_ register: Int, _ index: Int) {
+            writeCount[register] += 1
+            lastWrite[register] = index
+        }
 
-    private mutating func read(_ register: Int, _ index: Int) {
-        firstRead[register] = min(firstRead[register], index)
-        lastRead[register] = index
+        private mutating func read(_ register: Int, _ index: Int) {
+            firstRead[register] = min(firstRead[register], index)
+            lastRead[register] = index
+        }
     }
 }
 
-extension GesCompiler {
+extension GesBinaryBuilder {
     static func isBranch(_ opcode: GesBytecodeOpCode) -> Bool {
         switch opcode {
         case .jump, .jumpIfTrue, .jumpIfFalse, .jumpIfNotTrue, .jumpIfNothing, .iteratorNext, .iteratorCreateOrJump: true

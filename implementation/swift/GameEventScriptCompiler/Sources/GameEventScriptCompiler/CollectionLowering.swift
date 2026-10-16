@@ -45,7 +45,7 @@ extension GesCompiler {
             if case .literal(let v) = index.kind, let n = v.integerValue, (0...65535).contains(n) {
                 r.emit(.indexAccess, d, Int(n), input)
             } else if case .literal(let v) = index.kind, v.valueKind == .tag || v.valueKind == .text, let tag = v.textValue {
-                r.emit(.memberAccess, d, text(tag), input)
+                r.emit(.memberAccess, d, builder.text(tag), input)
             } else {
                 r.emit(.propertyAccess, d, try expression(index, r, scope), input)
             }
@@ -99,7 +99,7 @@ extension GesCompiler {
         if let validSource { invalid.append(r.emit(.jumpIfNotTrue, 0, validSource)) } else { invalid.append(r.emit(.iteratorCreateOrJump, iterator, input)) }
         let first = s.operation == "reduce" ? r.emit(.iteratorNext, accumulator, iterator) : nil
         let loop = r.code.count
-        let end = r.emit(.iteratorNext, row.map { list($0.components) } ?? item, iterator, flags: row == nil ? 0 : 32)
+        let end = r.emit(.iteratorNext, row.map { builder.list($0.components) } ?? item, iterator, flags: row == nil ? 0 : 32)
         if let row { r.componentRows[item] = row }
         let child = GesScope(scope)
         child.values[s.accumulator] = accumulator
@@ -202,7 +202,7 @@ extension GesCompiler {
             row = nil
         }
         let collection = ["filter", "select", "map", "group", "distinct", "order", "take", "drop", "draw"].contains(s.operation)
-        var builder = 0
+        var collector = 0
         var count = d
         var one = 0
         var seen = 0
@@ -211,10 +211,10 @@ extension GesCompiler {
         var compare = 0
         switch s.operation {
         case "filter", "select", "map", "group", "distinct", "order", "take", "drop", "draw":
-            builder = r.temporary()
+            collector = r.temporary()
             let create: GesBytecodeOpCode =
                 s.operation == "map" ? .mapBuilderCreate : s.operation == "group" ? .groupBuilderCreate : s.operation == "distinct" ? .distinctBuilderCreate : s.operation == "order" ? .orderBuilderCreate : .listBuilderCreate
-            r.emit(create, builder)
+            r.emit(create, collector)
         case "count", "average":
             r.emit(.loadInteger, count)
             one = r.temporary()
@@ -247,7 +247,7 @@ extension GesCompiler {
         default: r.emit(.loadNothing, d)
         }
         let start = r.code.count
-        var endJumps = [r.emit(.iteratorNext, row.map { list($0.components) } ?? item, iterator, flags: row == nil ? 0 : 32)]
+        var endJumps = [r.emit(.iteratorNext, row.map { builder.list($0.components) } ?? item, iterator, flags: row == nil ? 0 : 32)]
         if let row { r.componentRows[item] = row }
         var nextJumps: [Int] = []
         var current = item
@@ -271,11 +271,11 @@ extension GesCompiler {
         case "foreach": break
         case "filter", "select", "take", "drop", "draw":
             if s.operation == "filter" && s.expressions.first.flatMap(scalarConstant) != .boolean(true) { nextJumps.append(r.emit(.jumpIfNotTrue, 0, projected)) }
-            r.emit(.listBuilderAdd, 0, builder, s.operation == "select" ? projected : current)
+            r.emit(.listBuilderAdd, 0, collector, s.operation == "select" ? projected : current)
         case "map", "group", "distinct", "order":
             let value = s.operation == "map" && s.expressions.count > 1 ? try expression(s.expressions[1], r, child) : current
             let op: GesBytecodeOpCode = s.operation == "map" ? .mapBuilderAdd : s.operation == "group" ? .groupBuilderAdd : s.operation == "distinct" ? .distinctBuilderAdd : .orderBuilderAdd
-            r.emit(op, 0, builder, projected, payload: UInt64(value))
+            r.emit(op, 0, collector, projected, payload: UInt64(value))
         case "any", "all":
             nextJumps.append(r.emit(s.operation == "all" ? .jumpIfTrue : .jumpIfNotTrue, 0, projected))
             r.emit(s.operation == "all" ? .loadFalse : .loadTrue, d)
@@ -340,10 +340,10 @@ extension GesCompiler {
                     ? .groupBuilderFinish : s.operation == "distinct" ? .distinctBuilderFinish : s.operation == "order" ? (s.mode == "descending" ? .orderBuilderFinishDescending : .orderBuilderFinishAscending) : .listBuilderFinish
             if ["take", "drop", "draw"].contains(s.operation) {
                 let collected = r.temporary()
-                r.emit(finish, collected, builder)
+                r.emit(finish, collected, collector)
                 try slice(s, d, collected, r)
             } else {
-                r.emit(finish, d, builder)
+                r.emit(finish, d, collector)
             }
         }
         var close: [Int] = []
@@ -409,7 +409,7 @@ extension GesCompiler {
         guard case .map(let entries) = pattern.kind else { return result }
         for (name, expression) in entries {
             let member = r.temporary()
-            r.emit(.memberAccess, member, text(name), value)
+            r.emit(.memberAccess, member, builder.text(name), value)
             let match: Int
             if case .map = expression.kind {
                 match = try objectMatch(member, expression, r, scope)

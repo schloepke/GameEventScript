@@ -11,7 +11,7 @@ extension GesBytecodeInstruction {
     }
 }
 
-extension GesCompiler {
+extension GesBinaryBuilder {
     func allocate(_ routine: GesRoutine) throws {
         var intervals: [Int: (Int, Int)] = [:]
         for (index, instruction) in routine.code.enumerated() {

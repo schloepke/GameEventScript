@@ -82,7 +82,7 @@ struct GesAstOptimizer {
         case .map(let entries): kind = .map(entries.map { ($0.0, expression($0.1)) })
         case .member(let target, let name): kind = .member(expression(target), name)
         case .selector(let target, var selector):
-            selector.expressions = selector.expressions.map(expression)
+            selector.expressions = selector.operation == "objectMatch" ? selector.expressions.map(pattern) : selector.expressions.map(expression)
             kind = .selector(expression(target), selector)
         case .combined(let mode, let sources): kind = .combined(mode, sources.map(expression))
         case .cast(let value, let type): kind = .cast(expression(value), type)
@@ -99,6 +99,14 @@ struct GesAstOptimizer {
         let optimized = GesExpression(kind, e.location, depth: e.depth)
         optimized.decimalLiteral = e.decimalLiteral
         return fold(optimized)
+    }
+
+    // An object pattern is not a map literal: as in C#, only its entry values are optimized and nested patterns recurse.
+    func pattern(_ e: GesExpression) -> GesExpression {
+        guard case .map(let entries) = e.kind else { return expression(e) }
+        let optimized = GesExpression(.map(entries.map { ($0.0, pattern($0.1)) }), e.location, depth: e.depth)
+        optimized.decimalLiteral = e.decimalLiteral
+        return optimized
     }
 
     func arguments(_ list: [GesArgument]) -> [GesArgument] { list.map { .init(label: $0.label, value: expression($0.value)) } }
@@ -135,7 +143,6 @@ struct GesAstOptimizer {
             return unary(op, value)
         case .binary(let op, let left, let right):
             guard let a = evaluate(left), let b = evaluate(right) else { return nil }
-            if op == .notContains { return binary(.contains, a, b).flatMap { unary(.not, $0) } }
             return binary(op, a, b)
         default: return nil
         }

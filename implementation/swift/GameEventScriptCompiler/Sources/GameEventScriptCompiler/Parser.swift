@@ -426,6 +426,11 @@ final class GesParser {
                 actual = "inValues"
             }
             let right = try expression(op == "^" ? 15 : op == "->" ? precedence : precedence + 1)
+            if actual == "not in" {
+                let membership = try combined(.binary(.contains, left, right), left, right)
+                left = try combined(.unary(.not, membership), membership)
+                continue
+            }
             guard let binary = GesBinaryOperator(sourceText: actual) else { throw failure("Expected an operator.", previous) }
             left = try combined(.binary(binary, left, right), left, right)
         }

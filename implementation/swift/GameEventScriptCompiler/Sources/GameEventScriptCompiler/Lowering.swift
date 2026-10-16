@@ -188,7 +188,6 @@ extension GesCompiler {
             } else {
                 r.emit(op.opcode, d, a, b)
             }
-            if op == .notContains { r.emit(.not, d, d) }
             if let short { r.patch(short, target: r.code.count) }
         case .between(let input, let minimum, let maximum):
             let value = try expression(input, r, scope)
@@ -295,11 +294,14 @@ extension GesCompiler {
             for (value, condition) in branches {
                 let c = try expression(condition, r, scope)
                 let branch = r.emit(.jumpIfNotTrue, 0, c)
-                _ = try expression(value, r, scope, destination: d)
+                // As C# EmitGuardedChoiceInto: read each value, then move it into the result.
+                let result = try expression(value, r, scope)
+                if result != d { r.emit(.move, d, result) }
                 ends.append(r.emit(.jump))
                 r.patch(branch, target: r.code.count)
             }
-            _ = try expression(fallback, r, scope, destination: d)
+            let otherwise = try expression(fallback, r, scope)
+            if otherwise != d { r.emit(.move, d, otherwise) }
             r.mark(ends)
         case .generated(_, let name, let source, let range, let condition, let projection):
             let builder = r.temporary()
@@ -451,7 +453,7 @@ extension GesBinaryOperator {
         case .and: .and
         case .xor: .xor
         case .implies: .implies
-        case .contains, .notContains: .contains
+        case .contains: .contains
         case .containsValue: .containsValue
         case .startsWith: .startsWith
         case .endsWith: .endsWith

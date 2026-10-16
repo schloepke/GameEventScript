@@ -56,8 +56,10 @@ extension GesCompiler {
                 deferred = true
                 continue
             }
-            // The loop must be entered only by falling into its first instruction.
-            guard !(start...end).contains(where: { analysis.firstReference[$0] < start || analysis.lastReference[$0] > end }) else { continue }
+            // The loop must be entered only by falling into its first instruction. A jump from before the loop to its
+            // first instruction targets a label marked before the C# loop header label (such as for_source_done), so it
+            // does not enter the loop and later lands in front of the hoisted instructions.
+            guard !(start...end).contains(where: { ($0 != start && analysis.firstReference[$0] < start) || analysis.lastReference[$0] > end }) else { continue }
             // One forward sweep finds chains such as a constant load and the product reading it.
             var marked: [Int] = []
             var hoisted: [Bool] = []
@@ -97,6 +99,7 @@ extension GesCompiler {
     // front of it would. Positions outside the loop are unchanged.
     private func moveInstructions(_ routine: GesRoutine, _ marked: [Int], start: Int, end: Int) {
         let span = start...end
+        let labels = routine.labels
         var isMarked = [Bool](repeating: false, count: span.count)
         for index in marked { isMarked[index - start] = true }
         let order = marked + span.filter { !isMarked[$0 - start] }
@@ -107,13 +110,16 @@ extension GesCompiler {
         for offset in stride(from: span.count - 1, through: 0, by: -1) { resolved[offset] = isMarked[offset] ? resolved[offset + 1] : newIndex[offset] }
         routine.code.replaceSubrange(span, with: order.map { routine.code[$0] })
         routine.locations.replaceSubrange(span, with: order.map { routine.locations[$0] })
+        // Jumps from before the loop keep addressing its start, which now holds the hoisted instructions.
+        let outerLabel = routine.code.indices.contains { $0 < start && Self.branches.contains(routine.code[$0].opcode) && Int(routine.code[$0].word2) == start }
         for index in routine.code.indices where Self.branches.contains(routine.code[index].opcode) {
             let target = Int(routine.code[index].word2)
-            if span.contains(target) { routine.patch(index, target: resolved[target - start]) }
+            if span.contains(target) && !(index < start && target == start) { routine.patch(index, target: resolved[target - start]) }
         }
         for index in routine.calls.indices where span.contains(routine.calls[index].0) { routine.calls[index].0 = resolved[routine.calls[index].0 - start] }
         for index in routine.symbols.indices where span.contains(routine.symbols[index].2) { routine.symbols[index].2 = resolved[routine.symbols[index].2 - start] }
-        routine.labels = Set(routine.labels.map { span.contains($0) ? resolved[$0 - start] : $0 })
+        routine.labels = Set(labels.map { span.contains($0) ? resolved[$0 - start] : $0 })
+        if outerLabel { routine.labels.insert(start) }
     }
 }
 

@@ -32,7 +32,8 @@ extension GesCompiler {
             try pipeline(0, prefix, s, d, r, scope, sourceExpression: root)
             return
         }
-        if !prefix.isEmpty && terminals.contains(s.operation) {
+        // As C#: a plain distinct is no inline terminal; the prefix result is collected and the opcode applied.
+        if !prefix.isEmpty && terminals.contains(s.operation) && !(s.operation == "distinct" && s.expressions.isEmpty) {
             try pipeline(expression(root, r, scope), prefix, s, d, r, scope)
             return
         }
@@ -54,7 +55,8 @@ extension GesCompiler {
         case "contains": r.emit(s.mode == "all" ? .containsAll : s.mode == "any" ? .containsAny : .contains, d, try expression(s.expressions[0], r, scope), input)
         case "term": r.emit(.term, d, input, try expression(s.expressions[0], r, scope))
         case "distinct" where s.expressions.isEmpty: r.emit(.distinct, d, input)
-        case "count" where s.expressions.isEmpty: r.emit(.count, d, input)
+        // As C#: a count whose predicate is the literal true counts directly.
+        case "count" where s.expressions.isEmpty || s.expressions.first.flatMap(scalarConstant) == .boolean(true): r.emit(.count, d, input)
         case "first" where s.expressions.isEmpty, "last" where s.expressions.isEmpty, "single" where s.expressions.isEmpty: r.emit(s.operation == "first" ? .first : s.operation == "last" ? .last : .single, d, input)
         case "take", "drop", "draw": try slice(s, d, input, r)
         case "hasPattern", "takePattern":
@@ -400,11 +402,11 @@ extension GesCompiler {
         r.patch(done2, target: r.code.count)
     }
 
+    // As C# EmitObjectPatternPredicate: every entry is checked in source order and combined with And.
     func objectMatch(_ value: Int, _ pattern: GesExpression, _ r: GesRoutine, _ scope: GesScope) throws -> Int {
-        let result = r.temporary()
+        var result = r.temporary()
         r.emit(.loadTrue, result)
         guard case .map(let entries) = pattern.kind else { return result }
-        var failures: [Int] = []
         for (name, expression) in entries {
             let member = r.temporary()
             r.emit(.memberAccess, member, text(name), value)
@@ -412,15 +414,14 @@ extension GesCompiler {
             if case .map = expression.kind {
                 match = try objectMatch(member, expression, r, scope)
             } else {
+                let expected = try self.expression(expression, r, scope)
                 match = r.temporary()
-                r.emit(.equal, match, member, try self.expression(expression, r, scope))
+                r.emit(.equal, match, member, expected)
             }
-            failures.append(r.emit(.jumpIfNotTrue, 0, match))
+            let combined = r.temporary()
+            r.emit(.and, combined, result, match)
+            result = combined
         }
-        let end = r.emit(.jump)
-        r.mark(failures)
-        r.emit(.loadFalse, result)
-        r.patch(end, target: r.code.count)
         return result
     }
 }

@@ -11,7 +11,7 @@ compile.binary-compiler/case-0016	main	debug	different:sourceMap
 compile.binary-compiler/case-0017	main	debug	different:sourceMap
 compile.binary-compiler/case-0019	main	debug	different:sourceMap
 compile.binary-compiler/case-0020	main	debug	different:sourceMap
-compile.binary-compiler/case-0021	main	debug	different:code,debugSymbols,sourceMap
+compile.binary-compiler/case-0021	main	debug	different:sourceMap
 compile.binary-compiler/case-0022	main	debug	different:sourceMap
 compile.binary-compiler/case-0023	main	debug	different:sourceMap
 compile.bytecode-lowering/case-0003	main	debug	different:debugSymbols,sourceMap
@@ -58,7 +58,7 @@ compile.source-nesting/call-boundary	main	debug	different:debugSymbols,sourceMap
 compile.source-nesting/list-boundary	main	debug	different:sourceMap
 compile.source-nesting/map-boundary	main	debug	different:sourceMap
 compile.source-nesting/member-access-boundary	main	debug	different:sourceMap
-compile.source-nesting/object-pattern-boundary	main	debug	different:code,debugSymbols,sourceMap,strings
+compile.source-nesting/object-pattern-boundary	main	debug	different:sourceMap
 compile.source-nesting/type-cast-boundary	main	debug	different:sourceMap
 performance.core/snapshot-0002	main	debug	different:debugSymbols,sourceMap
 performance.core/snapshot-0003	main	debug	different:debugSymbols,sourceMap
@@ -315,7 +315,6 @@ runtime.atomic.control-flow/emit-after-binding-tags	main	debug	different:sourceM
 runtime.atomic.control-flow/emit-after-indirect-tags	main	debug	different:sourceMap
 runtime.atomic.control-flow/fold-guarded	main	debug	different:sourceMap
 runtime.atomic.control-flow/fold-nested	main	debug	different:sourceMap
-runtime.atomic.control-flow/fold-nothing-continues	main	debug	different:sourceMap
 runtime.atomic.control-flow/if-branches-own-scopes-without-braces	main	debug	different:sourceMap
 runtime.atomic.control-flow/if-let-chain	main	debug	different:sourceMap
 runtime.atomic.control-flow/if-let-empty	main	debug	different:sourceMap
@@ -415,7 +414,6 @@ runtime.atomic.iterator-core/combined-sources-evaluate-before-validation-materia
 runtime.atomic.iterator-core/compact-selector-boundaries	main	debug	different:sourceMap
 runtime.atomic.iterator-core/component-asm	main	debug	different:debugSymbols
 runtime.atomic.iterator-core/component-choose	main	debug	different:sourceMap
-runtime.atomic.iterator-core/component-for	main	debug	different:code,sourceMap
 runtime.atomic.iterator-core/component-implicit-aggregates-use-whole-elements	main	debug	different:sourceMap
 runtime.atomic.iterator-core/dice-difference-face-bounds	main	debug	different:sourceMap
 runtime.atomic.iterator-core/entries-components	main	debug	different:sourceMap
@@ -433,7 +431,7 @@ runtime.atomic.iterator-core/take-drop-boolean-tag-order	main	debug	different:so
 runtime.atomic.iterator-core/take-drop-record-map-order	main	debug	different:debugSymbols,sourceMap
 runtime.atomic.iterator-core/union-map-pipeline-values	main	debug	different:sourceMap
 runtime.atomic.iterator-core/union-map-result	main	debug	different:sourceMap
-runtime.atomic.iterator-terminals/case-0001	main	debug	different:code,debugSymbols,indexLists,sourceMap
+runtime.atomic.iterator-terminals/case-0001	main	debug	different:sourceMap
 runtime.atomic.iterator-terminals/case-0002	main	debug	different:sourceMap
 runtime.atomic.iterator-terminals/case-0003	main	debug	different:sourceMap
 runtime.atomic.iterator-terminals/case-0004	main	debug	different:sourceMap
@@ -795,7 +793,7 @@ runtime.atomic.shuffle-reverse/case-0001	main	debug	different:sourceMap
 runtime.atomic.shuffle-reverse/case-0002	main	debug	different:sourceMap
 runtime.atomic.sort-group-distinct/case-0001	main	debug	different:sourceMap
 runtime.atomic.sort-group-distinct/case-0002	main	debug	different:sourceMap
-runtime.atomic.sort-group-distinct/case-0003	main	debug	different:code,debugSymbols,sourceMap
+runtime.atomic.sort-group-distinct/case-0003	main	debug	different:sourceMap
 runtime.atomic.sort-group-distinct/case-0004	main	debug	different:sourceMap
 runtime.atomic.sort-group-distinct/case-0005	main	debug	different:sourceMap
 runtime.atomic.sort-group-distinct/case-0006	main	debug	different:sourceMap
@@ -808,7 +806,7 @@ runtime.collections/case-0006	main	debug	different:sourceMap
 runtime.collections/case-0007	main	debug	different:sourceMap
 runtime.collections/case-0008	main	debug	different:sourceMap
 runtime.collections/case-0009	main	debug	different:sourceMap
-runtime.collections/case-0010	main	debug	different:code,debugSymbols,indexLists,sourceMap,strings
+runtime.collections/case-0010	main	debug	different:sourceMap
 runtime.collections/case-0011	main	debug	different:sourceMap
 runtime.collections/r28-arbitrary-group-key-projections	main	debug	different:sourceMap
 runtime.collections/r28-tag-and-text-key-projections	main	debug	different:sourceMap
@@ -817,7 +815,6 @@ runtime.control-flow/case-0009	main	debug	different:sourceMap
 runtime.control-flow/case-0012	main	debug	different:debugSymbols,sourceMap
 runtime.control-flow/compact-component-bindings	main	debug	different:sourceMap
 runtime.control-flow/condition-first-choice-expression-contexts	main	debug	different:debugSymbols,sourceMap
-runtime.control-flow/condition-first-choice-nested-spellings	main	debug	different:code,sourceMap,strings
 runtime.control-flow/condition-first-choice-parity	main	debug	different:debugSymbols,sourceMap
 runtime.control-flow/condition-first-choice-short-circuit	main	debug	different:sourceMap
 runtime.dice-literals/depth-at-limit	main	debug	different:sourceMap
@@ -1004,7 +1001,7 @@ runtime.types-and-values.custom-and-spatial/case-0018	main	debug	different:sourc
 runtime.types-and-values.numeric-and-units/case-0011	main	debug	different:sourceMap
 runtime.types-and-values.numeric-and-units/case-0013	main	debug	different:sourceMap
 runtime.types-and-values.numeric-and-units/case-0027	main	debug	different:sourceMap
-runtime.types-and-values.numeric-and-units/case-0030	main	debug	different:code,debugSymbols,indexLists,sourceMap,strings
+runtime.types-and-values.numeric-and-units/case-0030	main	debug	different:debugSymbols,sourceMap
 runtime.types-and-values.numeric-and-units/case-0036	main	debug	different:debugSymbols,sourceMap
 runtime.types-and-values.numeric-and-units/case-0038	main	debug	different:sourceMap
 runtime.types-and-values.text-collections-and-checks/case-0019	main	debug	different:sourceMap

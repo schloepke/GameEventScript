@@ -94,7 +94,7 @@ enum GesUnaryOperator {
     }
 }
 
-// Binary operators of the source language. `notContains` keeps `not in` a single operator.
+// Binary operators of the source language. `not in` parses as `not` applied to `contains`, as in C#.
 enum GesBinaryOperator {
     case or
     case xor
@@ -116,7 +116,6 @@ enum GesBinaryOperator {
     case power
     case `default`
     case contains
-    case notContains
     case containsValue
     case startsWith
     case endsWith
@@ -147,7 +146,6 @@ enum GesBinaryOperator {
         case "^": self = .power
         case "default": self = .default
         case "in": self = .contains
-        case "not in": self = .notContains
         case "inValues": self = .containsValue
         case "startsWith": self = .startsWith
         case "endsWith": self = .endsWith

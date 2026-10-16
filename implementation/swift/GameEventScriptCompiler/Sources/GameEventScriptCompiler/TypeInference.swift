@@ -40,7 +40,7 @@ extension GesCompiler {
             if op == .not { return predicate(child(value)) ? "boolean" : "unknown" }
             return "number"
         case .binary(let op, let a, let b):
-            if [.equal, .notEqual, .less, .greater, .lessOrEqual, .greaterOrEqual, .contains, .notContains, .containsValue, .startsWith, .endsWith].contains(op) { return "boolean" }
+            if [.equal, .notEqual, .less, .greater, .lessOrEqual, .greaterOrEqual, .contains, .containsValue, .startsWith, .endsWith].contains(op) { return "boolean" }
             if [.and, .or, .xor, .implies, .default].contains(op) {
                 let left = child(a)
                 let right = child(b)

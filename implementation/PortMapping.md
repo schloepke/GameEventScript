@@ -375,7 +375,8 @@ contains exactly the measured reference sources plus the recalibrated corpus.
 - [ ] Named optimization passes behind `IGesBinaryOptimizationPass` /
       `GesBinaryOptimizationPass` with the C# pass names.
 - [ ] Verify byte-identical `.gesb` output for the corpus and the
-      `compile.loop-invariants` snapshot.
+      `compile.loop-invariants` snapshot with `scripts/compare-compiler-output.py`
+      (BuildMetadata names the implementation and is excluded).
 
 ### Phase 6 – Tools and adapters (low priority)
 

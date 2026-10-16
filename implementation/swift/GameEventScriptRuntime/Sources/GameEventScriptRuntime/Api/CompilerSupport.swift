@@ -42,7 +42,8 @@
         code: [GesBytecodeInstruction],
         debugSymbols: [GesDebugSymbol]?,
         sourceMap: GesSourceMapSegment?,
-        sourceArchive: [GesSourceArchiveEntry]?
+        sourceArchive: [GesSourceArchiveEntry]?,
+        buildMetadata: GesBuildMetadataSegment?
     ) throws -> GameEventScriptProgram {
         let result = GameEventScriptProgram(
             formatVersion: 1,
@@ -57,7 +58,7 @@
             debugSymbols: debugSymbols,
             sourceMap: sourceMap,
             sourceArchive: sourceArchive,
-            buildMetadata: nil,
+            buildMetadata: buildMetadata,
             opaqueSections: []
         )
         try result.validate()

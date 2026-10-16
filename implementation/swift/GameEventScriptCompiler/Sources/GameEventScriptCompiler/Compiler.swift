@@ -386,7 +386,8 @@ final class GesCompiler {
             code: materialized.1,
             debugSymbols: options.debugInfo.contains(.symbols) ? symbols : nil,
             sourceMap: sourceMap,
-            sourceArchive: options.debugInfo.contains(.sourceArchive) ? sources.map { .init(sourceID: $0.id, sourceName: $0.name, utf8Content: Array($0.text.utf8)) } : nil
+            sourceArchive: options.debugInfo.contains(.sourceArchive) ? sources.map { .init(sourceID: $0.id, sourceName: $0.name, utf8Content: Array($0.text.utf8)) } : nil,
+            buildMetadata: .init(compilerID: GesCompilerMetadata.compilerID, compilerVersion: GesCompilerMetadata.compilerVersion)
         )
     }
 

@@ -8,8 +8,10 @@ Both compilers must produce byte-identical Programs for the same sources and deb
 BuildMetadata section differs by design, because it names the producing implementation; every other section
 is compared byte for byte. For programs that both compilers reject, the ordered diagnostic lists must match in
 source, start line and column, and code (specs/Diagnostics.md); both compilers report every diagnostic of a phase,
-so the lists cover recovery and collection as well. A program that only one compiler accepts, that compiles to
-different bytes or whose rejection reports different codes or positions, is a difference. Differences are ratcheted against
+so the lists cover recovery and collection as well. A rejection counts only when the CLI exits with 1 and reports
+compiler diagnostics; a crash, timeout, CLI error or silent failure is a process failure and always a difference.
+A program that only one compiler accepts, that compiles to different bytes or sections in a different order, or
+whose rejection reports different codes or positions, is a difference. Differences are ratcheted against
 scripts/compiler-output-baseline.txt: a new or resolved difference fails until the baseline is regenerated
 with --update-baseline. Reports and workspaces stay below artifacts/compiler-comparison.
 """
@@ -57,9 +59,15 @@ def comparable(data):
 
 
 def differing_sections(left, right):
-    """Names of the comparable sections whose bytes differ or that only one Program contains."""
-    a, b = dict(comparable(left)), dict(comparable(right))
-    return sorted(SECTION_NAMES.get(kind, f"0x{kind:04x}") for kind in set(a) | set(b) if a.get(kind) != b.get(kind))
+    """Names of the comparable sections whose bytes differ or that only one Program contains, plus sectionOrder
+    when the sections both contain appear in a different order or a different number of times."""
+    first, second = comparable(left), comparable(right)
+    a, b = dict(first), dict(second)
+    names = {SECTION_NAMES.get(kind, f"0x{kind:04x}") for kind in set(a) | set(b) if a.get(kind) != b.get(kind)}
+    shared = set(a) & set(b)
+    if [kind for kind, _ in first if kind in shared] != [kind for kind, _ in second if kind in shared]:
+        names.add("sectionOrder")
+    return sorted(names)
 
 
 def programs(requests):
@@ -85,16 +93,34 @@ def diagnostics(stderr):
     return [(Path(m["source"]).name, m["line"], m["column"], m["code"]) for m in DIAGNOSTIC.finditer(stderr)]
 
 
+COMPILER_PHASES = ("parse.", "validate.", "compile.")
+TIMEOUT_SECONDS = 60
+
+
+def outcome(returncode, output, found):
+    """Classifies one compiler run: ("compiled", bytes), ("rejected", diagnostics) for a regular compiler rejection,
+    or ("failed", reason) for anything else, such as a crash, a CLI error or a rejection without compiler
+    diagnostics, so that two failing processes never count as agreeing rejections."""
+    if returncode == 0:
+        return ("compiled", output) if output is not None else ("failed", "exit 0 without output")
+    if returncode == 1 and found and all(item[3].startswith(COMPILER_PHASES) for item in found):
+        return "rejected", found
+    codes = ",".join(item[3] for item in found) or "no compiler diagnostics"
+    return "failed", f"exit {returncode}: {codes}"
+
+
 def compile_with(command, directory, program, label):
-    """Compile one program; returns the .gesb bytes, or None and the diagnostics when the compiler rejects it."""
+    """Compile one program and classify the run (see outcome)."""
     output = directory / f"{label}.gesb"
     arguments = [*command, "compile", *[source for source, _ in program["sources"]], "-o", str(output), "-q"]
     if not program["debug"]:
         arguments.append("--no-debug")
-    result = subprocess.run(arguments, cwd=directory, capture_output=True, check=False)
-    if result.returncode == 0 and output.exists():
-        return output.read_bytes(), []
-    return None, diagnostics(result.stderr.decode("utf-8", errors="replace"))
+    try:
+        result = subprocess.run(arguments, cwd=directory, capture_output=True, check=False, timeout=TIMEOUT_SECONDS)
+    except subprocess.TimeoutExpired:
+        return "failed", f"timeout after {TIMEOUT_SECONDS}s"
+    found = diagnostics(result.stderr.decode("utf-8", errors="replace"))
+    return outcome(result.returncode, output.read_bytes() if output.exists() else None, found)
 
 
 def compare(key, program, csharp, swift):
@@ -104,20 +130,26 @@ def compare(key, program, csharp, swift):
     directory.mkdir(parents=True)
     for name, text in program["sources"]:
         (directory / name).write_text(text, encoding="utf-8")
-    left, left_diagnostics = compile_with(csharp, directory, program, "csharp")
-    right, right_diagnostics = compile_with(swift, directory, program, "swift")
-    if left is None and right is None:
-        verdict = rejection_verdict(left_diagnostics, right_diagnostics)
-    elif left is None or right is None:
-        verdict = "csharp-only" if right is None else "swift-only"
-    else:
-        differing = differing_sections(left, right)
-        verdict = "different:" + ",".join(differing) if differing else "identical"
+    (left_kind, left), (right_kind, right) = compile_with(csharp, directory, program, "csharp"), compile_with(swift, directory, program, "swift")
+    verdict = run_verdict(left_kind, left, right_kind, right)
     if verdict in ("identical", "both-rejected"):
         shutil.rmtree(directory)
-    rejected = verdict in ("diagnostics", "positions")
+    shown = {"csharp": None if left_kind == "compiled" else left, "swift": None if right_kind == "compiled" else right}
+    details = shown if verdict in ("diagnostics", "positions") or verdict.endswith("failed") else None
     return {"case": program["case"], "program": program["program"], "debug": program["debug"], "verdict": verdict, "workspace": str(directory),
-            "diagnostics": {"csharp": left_diagnostics, "swift": right_diagnostics} if rejected else None}
+            "diagnostics": details}
+
+
+def run_verdict(left_kind, left, right_kind, right):
+    """Verdict for the C# (left) and Swift (right) outcomes of one program."""
+    if "failed" in (left_kind, right_kind):
+        return "both-failed" if left_kind == right_kind else ("csharp-failed" if left_kind == "failed" else "swift-failed")
+    if left_kind == right_kind == "rejected":
+        return rejection_verdict(left, right)
+    if left_kind != right_kind:
+        return "csharp-only" if right_kind == "rejected" else "swift-only"
+    differing = differing_sections(left, right)
+    return "different:" + ",".join(differing) if differing else "identical"
 
 
 def rejection_verdict(left, right):

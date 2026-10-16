@@ -243,6 +243,79 @@ errors:
 
 ---
 
+## Test: parse rejects a late module declaration
+
+A module declaration after another declaration is a syntax error at its keyword, and parsing ends normally instead of resuming at the same keyword again.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: parse-rejects-late-module-declaration
+kind: compileError
+level: scenario
+sources:
+  - name: "parse-rejects-late-module-declaration.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Main {}
+module late
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+errors:
+  - phase: "parse"
+    code: "parse.syntax"
+    line: 2
+    column: 1
+```
+
+---
+
+## Test: parse rejects a repeated module declaration
+
+A second module declaration is a syntax error at its keyword; parsing resumes at the next declaration.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: parse-rejects-repeated-module-declaration
+kind: compileError
+level: scenario
+sources:
+  - name: "parse-rejects-repeated-module-declaration.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+module first
+module second
+on Main {}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+errors:
+  - phase: "parse"
+    code: "parse.syntax"
+    line: 2
+    column: 1
+```
+
+---
+
 ## Test: parse recovers in send statements
 
 Malformed sends report each statement and parsing continues with the next handler.

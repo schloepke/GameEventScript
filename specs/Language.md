@@ -113,7 +113,9 @@ Top-level declarations are:
 - `on initialization { ... }`
 - `on undeliverable as localName { ... }`
 
-The module declaration is metadata and does not create a namespace. Definitions
+A source has at most one module declaration, before every other declaration; a
+later or repeated `module` is a `parse.syntax` error at that keyword. The module
+declaration is metadata and does not create a namespace. Definitions
 from every source in one compilation unit share compilation-unit scope and may
 refer to one another independent of source order or alphabetical name order.
 This includes callable bodies constructing records and record field expressions

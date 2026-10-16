@@ -132,6 +132,9 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 - Both compilers reject `:Integer` and `:Float` wherever a type is named; use
   `as :Number` to convert and `is integer` or `is fractional` to check. Casts and
   checks to other custom types bound only at run time remain valid.
+- Both compilers no longer hang on a `module` declaration after another
+  declaration or on a repeated one; it is now a `parse.syntax` error at the
+  `module` keyword.
 - Compiler diagnostics in C# and Swift start at the same, most specific source
   position: the offending token, the repeated or misnamed parameter, argument,
   condition or binding, the failing call or constructor, or the first construct

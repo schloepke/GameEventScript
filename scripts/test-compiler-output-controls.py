@@ -34,6 +34,25 @@ class CompilerOutputTests(unittest.TestCase):
         right = program((0x02, b"b"), (0x10, b"code"))
         self.assertEqual(["sourceMap", "strings"], compare.differing_sections(left, right))
 
+    def test_section_order_is_compared(self):
+        left = program((0x02, b"a"), (0x10, b"code"))
+        right = program((0x10, b"code"), (0x02, b"a"))
+        self.assertEqual(["sectionOrder"], compare.differing_sections(left, right))
+        repeated = program((0x02, b"a"), (0x10, b"code"), (0x10, b"code"))
+        self.assertEqual(["sectionOrder"], compare.differing_sections(left, repeated))
+
+    def test_process_failures_never_agree_as_rejections(self):
+        rejection = [("a.ges", "1", "3", "parse.syntax")]
+        self.assertEqual(("rejected", rejection), compare.outcome(1, None, rejection))
+        self.assertEqual("failed", compare.outcome(70, None, [])[0])
+        self.assertEqual("failed", compare.outcome(1, None, [])[0])
+        self.assertEqual("failed", compare.outcome(1, None, [("", None, None, "cli.io")])[0])
+        self.assertEqual("failed", compare.outcome(0, None, [])[0])
+        self.assertEqual("both-failed", compare.run_verdict("failed", "exit 70", "failed", "exit 70"))
+        self.assertEqual("swift-failed", compare.run_verdict("rejected", rejection, "failed", "timeout"))
+        self.assertEqual("both-rejected", compare.run_verdict("rejected", rejection, "rejected", list(rejection)))
+        self.assertEqual("csharp-only", compare.run_verdict("compiled", b"x", "rejected", rejection))
+
     def test_ratchet_reports_new_and_resolved_differences(self):
         result = {"case": "suite/case", "program": "main", "debug": True, "verdict": "different:code"}
         line = compare.baseline_line(result)

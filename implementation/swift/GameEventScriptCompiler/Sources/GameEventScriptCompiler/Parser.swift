@@ -158,8 +158,11 @@ final class GesParser {
         var constants: [(name: String, value: GesExpression, location: GesSourceLocation)] = []
         var records: [GesRecord] = []
         while current.kind != .endOfFile {
+            let declarationStart = index
             do { try declaration(&definitions, &constants, &records) } catch let error as GesCompileError {
                 try record(error)
+                // A declaration that fails on its first token must still move on, or recovery would stop there again.
+                if index == declarationStart { advance() }
                 synchronizeTopLevel()
             }
         }
@@ -199,6 +202,7 @@ final class GesParser {
             let token = advance()
             throw failure("Illegal token '\(token.text)'.", token)
         }
+        if match(.module) { throw failure("A module declaration must precede all other declarations and appear once.", previous) }
         if match(.constant) {
             guard current.kind == .constantReference else { throw failure("Expected constant name.") }
             let nameToken = advance()

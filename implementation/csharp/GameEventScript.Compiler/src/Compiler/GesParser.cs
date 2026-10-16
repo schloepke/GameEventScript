@@ -140,6 +140,7 @@ internal sealed partial class GesParser
         SkipStatementSeparators();
         while (!Is(EndOfFile))
         {
+            var declarationStart = Current;
             try
             {
                 if (Is(Illegal))
@@ -148,6 +149,7 @@ internal sealed partial class GesParser
                     throw new GameEventScriptParseException($"Illegal token '{token.Text}'", token);
                 }
 
+                if (Match(Module)) throw new GameEventScriptParseException("A module declaration must precede all other declarations and appear once.", Previous);
                 if (Match(Constant)) constantDefinitions.Add(ParseConstantDefinition());
                 else if (Match(Record)) typeDefinitions.Add(ParseTypeDefinition());
                 else if (Match(Predicate)) predicateDefinitions.Add(ParsePredicateDefinition());
@@ -160,6 +162,8 @@ internal sealed partial class GesParser
             catch (GameEventScriptParseException ex)
             {
                 AddParseError(ex);
+                // A declaration that fails on its first token must still move on, or recovery would stop there again.
+                if (Current.Line == declarationStart.Line && Current.Column == declarationStart.Column) Advance();
                 SynchronizeTopLevel();
             }
         }

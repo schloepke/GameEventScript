@@ -171,8 +171,12 @@ final class GesAstValidator {
             || records[type] != nil || catalog?.types.contains { $0.name == type } == true
     }
 
+    // Removed types, and integer and float, which are numeric checks or casts rather than type references.
     private func removedType(_ type: String, _ location: GesSourceLocation) {
         if ["optional", "set", "uuid", "ref"].contains(type) { report("validate.invalidTypeConstructor", location, symbol: type, kind: .type, message: "Type ':\(type)' is not supported.") }
+        if ["Integer", "Float"].contains(type) {
+            report("validate.invalidTypeConstructor", location, symbol: type, kind: .type, message: "Type ':\(type)' is not a type; use 'as :Number' to convert or 'is integer' / 'is fractional' to check.")
+        }
     }
 
     // MARK: Statements
@@ -299,6 +303,7 @@ final class GesAstValidator {
             }
             visit(fallback)
         case .binary(_, let a, let b): [a, b].forEach(visit)
+        // A cast or check may name a custom type that is bound only later, such as a record value a message delivers.
         case .check(let value, let type), .cast(let value, let type):
             removedType(type, e.location)
             visit(value)

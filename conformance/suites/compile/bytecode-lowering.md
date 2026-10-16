@@ -652,3 +652,43 @@ opcodes:
   contains: ["CreateSeries", "Term", "TakeFirst", "DropFirst", "TakeLast", "DropLast", "TakeHighest", "TakeLowest", "DropHighest", "DropLowest"]
   excludes: ["Count", "Distinct", "SortAscending", "SortDescending", "Reverse", "Shuffle", "DistinctBuilderCreate", "DistinctBuilderAdd", "DistinctBuilderFinish", "GroupBuilderCreate", "GroupBuilderAdd", "GroupBuilderFinish", "OrderBuilderCreate", "OrderBuilderAdd", "OrderBuilderFinishAscending", "OrderBuilderFinishDescending"]
 ```
+
+---
+
+## Test: records contain records and casts name later-bound types
+
+This case verifies that a record field may use another record of the program, and that casts and checks may name a custom type that is bound only later, such as a record a message delivers.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: nested-records-and-later-bound-types
+kind: bytecode
+level: atomic
+sources:
+  - name: "nested-records-and-later-bound-types.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+module nestedrecords
+
+record :Inner as { amount: :Number }
+record :Outer as { inner: :Inner, label: :Text }
+
+on Start(value) {
+  let outer be :Outer(inner: :Inner(amount: 1), label: 'x')
+  emit Done(outer: outer, gauge: value as :Gauge, isGauge: value is :Gauge)
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+opcodes:
+  contains: ["CreateRecord", "CastCustom", "CheckCustomType"]
+```

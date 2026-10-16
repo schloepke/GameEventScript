@@ -126,6 +126,12 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   declaration or statement, and validation reports all semantic errors in the
   order that `specs/Diagnostics.md` defines. Call, arity and `is`-predicate
   checks now run during validation, so they appear in that list.
+- The C# compiler rejects records with a repeated field name or an unknown field
+  type, as Swift does. A field type may be a built-in type, a record of the
+  program or a configured external type.
+- Both compilers reject `:Integer` and `:Float` wherever a type is named; use
+  `as :Number` to convert and `is integer` or `is fractional` to check. Casts and
+  checks to other custom types bound only at run time remain valid.
 
 ## [0.4.0] — 2026-10-11
 

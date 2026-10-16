@@ -1227,6 +1227,10 @@ value is fractional
 
 `:integer` and `:float` are not source-level type references. Use `is integer`
 or `is fractional` for checks, and `as :Number` for explicit numeric casts.
+`:Integer` and `:Float` are rejected with `validate.invalidTypeConstructor`
+wherever a type is named, including record declarations. Other custom type names
+in casts and checks need not be declared in the program: they test or convert
+values whose type is bound only later, such as records that messages deliver.
 
 Numeric checks and implicit numeric views use the following rules. A runtime
 value has an `AsNumeric` value exactly when `is numeric` is true. The explicit
@@ -1987,8 +1991,12 @@ let hp be :Gauge(current: 25, maximum: 100)
 
 Field constraints:
 
-- Field names must be unique. The completed Record follows the map/record key
-  order defined in [determinism semantics](Semantics/Determinism.md#iteration-and-ranges).
+- Field names must be unique; a repeated field name is `validate.duplicateVariable`.
+  The completed Record follows the map/record key order defined in
+  [determinism semantics](Semantics/Determinism.md#iteration-and-ranges).
+- A field type is a built-in type, a record of the program in any source, or a
+  configured external type, so records may contain records and external values.
+  Any other field type is `validate.invalidTypeConstructor`.
 - A non-computed field is a constructor parameter. Omitted constructor arguments
   bind `nothing`; unknown labels, duplicate labels, or excess positional
   arguments are static errors.

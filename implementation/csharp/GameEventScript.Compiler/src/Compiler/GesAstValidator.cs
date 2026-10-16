@@ -75,7 +75,7 @@ internal static class GesAstValidator
         {
             var typeDefinition = parsedScript.TypeDefinitions[typeDefinitionIndex];
             ValidateRemovedType(parsedScript, typeDefinition.Name, typeDefinition, errors);
-
+            var fieldNames = new HashSet<string>(StringComparer.Ordinal);
             for (var fieldIndex = 0; fieldIndex < typeDefinition.Fields.Count; fieldIndex++)
             {
                 var field = typeDefinition.Fields[fieldIndex];
@@ -86,6 +86,10 @@ internal static class GesAstValidator
                     GesDiagnosticSymbolKind.Variable,
                     "Field names must start with a lowercase ASCII letter and contain only ASCII letters or digits",
                     errors);
+                if (!fieldNames.Add(field.Name))
+                    errors.Add(parsedScript, $"Record ':{typeDefinition.Name}' declares field '{field.Name}' more than once", field.Name, GesDiagnosticSymbolKind.Variable, GesDiagnosticCodes.ValidateDuplicateVariable, field);
+                if (!IsKnownType(field.TypeName, typeDefinitions))
+                    errors.Add(parsedScript, $"Field '{field.Name}' uses unknown type ':{field.TypeName}'", field.TypeName, GesDiagnosticSymbolKind.Type, GesDiagnosticCodes.ValidateInvalidTypeConstructor, field);
 
                 if (field.MinimumExpression is not null) ValidateExpressionReferences(parsedScript, field.MinimumExpression, callables, typeDefinitions, errors);
 
@@ -1081,6 +1085,7 @@ internal static class GesAstValidator
                     continue;
 
                 case GesTypeCheckExpressionNode typeCheck:
+                    // A check may name a custom type bound only later, such as a record value that a message delivers.
                     ValidateRemovedType(parsedScriptContext, typeCheck.TypeName, typeCheck, errors);
                     expression = typeCheck.Value;
                     continue;
@@ -1652,6 +1657,9 @@ internal static class GesAstValidator
             "list" or "range" or "message" or "handler" or "map" or "dice" ||
             GesQuantityUnits.ParseQuantityTypeName(typeName) is not null;
 
+    private static bool IsKnownType(string typeName, IReadOnlyDictionary<string, GesTypeDefinitionNode> typeDefinitions)
+        => IsBuiltinConstructorType(typeName) || typeName.StartsWith("quantity:", StringComparison.Ordinal) || typeName is "record" or "numeric:integer" or "numeric:fractional" || typeDefinitions.ContainsKey(typeName);
+
     private static void ValidateRemovedType(GesParsedScript parsedScriptContext, string typeName, GesScriptNode sourceNode, GesValidationErrors errors)
     {
         if (string.Equals(typeName, "optional", StringComparison.Ordinal))
@@ -1687,6 +1695,14 @@ internal static class GesAstValidator
                 GesDiagnosticSymbolKind.Type,
                 GesDiagnosticCodes.ValidateInvalidTypeConstructor,
                 sourceNode);
+            return;
+        }
+
+        // Integer and float are numeric checks or casts, never type references.
+        if (typeName is "Integer" or "Float")
+        {
+            errors.Add(parsedScriptContext, $"Type ':{typeName}' is not a type; use 'as :Number' to convert or 'is integer' / 'is fractional' to check.", typeName, GesDiagnosticSymbolKind.Type,
+                GesDiagnosticCodes.ValidateInvalidTypeConstructor, sourceNode);
             return;
         }
 

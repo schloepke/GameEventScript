@@ -72,7 +72,9 @@ public final class GesProgramBuilder {
         let configuration = options ?? self.options
         guard configuration.debugInfo.rawValue & ~GesDebugInfoOptions.all.rawValue == 0 else { throw GesApiError.invalidArgument("Unknown debug information option") }
         let modules = try sources.map { try GesParser(source: $0).parse() }
-        return try GesCompiler(modules: modules, sources: sources, catalog: catalog, options: configuration).compile()
+        var validator = GesAstValidator(modules: modules, catalog: catalog)
+        try validator.validate()
+        return try GesCompiler(validator, sources: sources, options: configuration).compile()
     }
 }
 

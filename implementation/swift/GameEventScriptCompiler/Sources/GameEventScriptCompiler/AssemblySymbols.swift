@@ -107,8 +107,8 @@ extension GesCompiler {
         }
         if ["Call", "CallExternal", "CreateList", "CreateMap", "CreateRecord", "CreateExternalType", "CreateVector", "CreatePoint", "LoadMessage", "LoadHandler", "BindHandler", "ConstructData"].contains(line.name) {
             if line.name == "Call", case .call(let name, let args) = line.operands[1].kind {
-                let key = signature(name, args.map(\.label))
-                guard let definition = definitions[key] else { throw error("compile.unresolvedSymbol", line.location, symbol: name, phase: .compile) }
+                let key = callableSignature(name, args.map(\.label))
+                guard let definition = definitions[key] else { throw compileError("compile.unresolvedSymbol", line.location, symbol: name, phase: .compile) }
                 try stageExpressions(args.map(\.value), r, scope)
                 let instruction = r.emit(.call, regs[0], flags: definition.kind == "predicate" ? 0x20 : 0)
                 r.calls.append((instruction, key))

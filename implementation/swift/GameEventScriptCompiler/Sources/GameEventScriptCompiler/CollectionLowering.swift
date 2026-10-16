@@ -64,7 +64,7 @@ extension GesCompiler {
             let face = try s.expressions.first.map { try expression($0, r, scope) } ?? 0
             r.emit(s.operation == "hasPattern" ? .hasPattern : .takePattern, d, input, s.count, payload: UInt64(kind) | UInt64(face) << 16)
         case "choose":
-            if s.count > Int(Int16.max) { throw error("compile.numericLimitExceeded", r.location, phase: .compile) }
+            if s.count > Int(Int16.max) { throw compileError("compile.numericLimitExceeded", r.location, phase: .compile) }
             if s.expressions.count > 1 {
                 try weightedChoose(input, s, d, r, scope)
             } else {
@@ -163,7 +163,7 @@ extension GesCompiler {
     }
 
     func slice(_ s: GesSelector, _ d: Int, _ source: Int, _ r: GesRoutine) throws {
-        if s.count > Int(Int16.max) { throw error("compile.numericLimitExceeded", r.location, phase: .compile) }
+        if s.count > Int(Int16.max) { throw compileError("compile.numericLimitExceeded", r.location, phase: .compile) }
         if s.operation == "draw" {
             r.emit(s.count == 1 ? .first : .takeFirst, d, source, s.count == 1 ? 0 : s.count)
             return
@@ -325,7 +325,7 @@ extension GesCompiler {
             nextJumps.append(r.emit(.jumpIfNotTrue, 0, match))
             r.emit(.loadTrue, d)
             endJumps.append(r.emit(.jump))
-        default: throw error("compile.unsupportedConstruct", r.location, symbol: s.operation, phase: .compile)
+        default: throw compileError("compile.unsupportedConstruct", r.location, symbol: s.operation, phase: .compile)
         }
         r.componentRows.removeValue(forKey: item)
         r.mark(nextJumps)

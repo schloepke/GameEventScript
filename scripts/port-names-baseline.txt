@@ -15,7 +15,6 @@ only	csharp	Compiler	GesAssemblyBlockNode
 only	csharp	Compiler	GesAssemblyDeclaration
 only	csharp	Compiler	GesAssemblyExpressionNode
 only	csharp	Compiler	GesAssemblyStatementNode
-only	csharp	Compiler	GesAstValidator
 only	csharp	Compiler	GesAverageSelectorNode
 only	csharp	Compiler	GesBetweenExpressionNode
 only	csharp	Compiler	GesBinaryBuilder
@@ -113,7 +112,6 @@ only	csharp	Compiler	GesSendExpressionNode
 only	csharp	Compiler	GesSequenceSliceSelectorNode
 only	csharp	Compiler	GesSeriesExpressionNode
 only	csharp	Compiler	GesSeriesTermSelectorNode
-only	csharp	Compiler	GesShadowingValidator
 only	csharp	Compiler	GesShuffleSelectorNode
 only	csharp	Compiler	GesSortSelectorNode
 only	csharp	Compiler	GesSourceDocument

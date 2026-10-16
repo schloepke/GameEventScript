@@ -3,7 +3,7 @@
 
 import GameEventScriptRuntime
 
-extension GesCompiler {
+extension GesAstValidator {
     func infer(_ expression: GesExpression, _ types: [String: String], _ visiting: Set<String> = []) -> String {
         func child(_ e: GesExpression) -> String { infer(e, types, visiting) }
 
@@ -21,7 +21,7 @@ extension GesCompiler {
         case .member(let value, let name): return records[child(value)]?.fields.first { $0.name == name }?.type ?? "unknown"
         case .selector(_, let selection): return ["any", "all", "contains"].contains(selection.operation) ? "boolean" : "unknown"
         case .call(let name, let args):
-            let key = signature(name, args.map(\.label))
+            let key = callableSignature(name, args.map(\.label))
             guard let d = definitions[key] else { return "unknown" }
             if d.kind == "predicate" { return "boolean" }
             guard !visiting.contains(key), let value = d.expression else { return "unknown" }
@@ -72,6 +72,6 @@ extension GesCompiler {
             }
         }
 
-        if !explicit(expression) { throw error("validate.invalidTypeConstructor", expression.location, symbol: "Number", kind: .type, message: "A dynamically typed random seed requires an explicit as :Number conversion.") }
+        if !explicit(expression) { throw compileError("validate.invalidTypeConstructor", expression.location, symbol: "Number", kind: .type, message: "A dynamically typed random seed requires an explicit as :Number conversion.") }
     }
 }

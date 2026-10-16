@@ -131,7 +131,7 @@ extension GesCompiler {
         case .percentage: r.emit(.loadPercentage, target, payload: value.asNumber.bitPattern)
         case .text: r.emit(.loadText, target, text(value.textValue!))
         case .tag: r.emit(.loadTag, target, text(value.textValue!))
-        default: throw error("compile.unsupportedConstruct", r.location, phase: .compile)
+        default: throw compileError("compile.unsupportedConstruct", r.location, phase: .compile)
         }
     }
 
@@ -140,7 +140,7 @@ extension GesCompiler {
         r.location = e.location
         defer { r.location = oldLocation }
         if case .name(let name) = e.kind {
-            guard let value = scope.get(name) else { throw error("compile.unresolvedSymbol", e.location, symbol: name, phase: .compile) }
+            guard let value = scope.get(name) else { throw compileError("compile.unresolvedSymbol", e.location, symbol: name, phase: .compile) }
             if let destination, destination != value {
                 r.emit(.move, destination, value)
                 return destination
@@ -148,7 +148,7 @@ extension GesCompiler {
             return value
         }
         if case .constant(let name) = e.kind {
-            guard let value = constants[name] else { throw error("compile.unresolvedSymbol", e.location, symbol: name, phase: .compile) }
+            guard let value = constants[name] else { throw compileError("compile.unresolvedSymbol", e.location, symbol: name, phase: .compile) }
             return try expression(GesExpression(value.kind, e.location, depth: value.depth), r, scope, destination: destination)
         }
         let d = destination ?? r.temporary()
@@ -214,12 +214,12 @@ extension GesCompiler {
                 let regs = try arguments.map { try expression($0.value, r, scope) }
                 if let labels = scope.handler(name), labels != arguments.map(\.label) { r.emit(.loadNothing, d) } else { r.emit(.bindHandler, d, handler, list(regs)) }
             } else {
-                let key = signature(name, arguments.map(\.label))
+                let key = callableSignature(name, arguments.map(\.label))
                 if definitions[key] == nil {
                     if let definition = definitions.values.first(where: { $0.name == name }) {
-                        throw error(definition.kind == "predicate" ? "validate.wrongPredicateArity" : "validate.wrongFunctionArity", e.location, symbol: name, kind: definition.kind == "predicate" ? .predicate : .function)
+                        throw compileError(definition.kind == "predicate" ? "validate.wrongPredicateArity" : "validate.wrongFunctionArity", e.location, symbol: name, kind: definition.kind == "predicate" ? .predicate : .function)
                     }
-                    throw error("validate.missingCallable", e.location, symbol: name, kind: .globalDefinition)
+                    throw compileError("validate.missingCallable", e.location, symbol: name, kind: .globalDefinition)
                 }
                 try stageExpressions(arguments.map(\.value), r, scope)
                 let instruction = r.emit(.call, d, flags: definitions[key]?.kind == "predicate" ? 0x20 : 0)
@@ -229,7 +229,9 @@ extension GesCompiler {
         case .predicate(let value, let name):
             let count = value == nil ? 0 : 1
             let matches = definitions.values.filter { $0.name == name && $0.kind == "predicate" && $0.parameters.count == count }
-            guard matches.count == 1, let definition = matches.first else { throw error("validate.invalidPredicate", e.location, symbol: name, kind: .predicate, message: "No unique predicate named '\(name)' with \(count) parameters is available.") }
+            guard matches.count == 1, let definition = matches.first else {
+                throw compileError("validate.invalidPredicate", e.location, symbol: name, kind: .predicate, message: "No unique predicate named '\(name)' with \(count) parameters is available.")
+            }
             if let value { try stageExpressions([value], r, scope) }
             let instruction = r.emit(.call, d, flags: 0x20)
             r.calls.append((instruction, definition.signature))
@@ -292,7 +294,7 @@ extension GesCompiler {
             _ = try expression(value, r, scope, destination: d)
             r.emit(.randomPop)
         case .dice(let count, let sides):
-            if count > Int(Int16.max) || sides > Int(Int16.max) { throw error("compile.numericLimitExceeded", e.location, phase: .compile) }
+            if count > Int(Int16.max) || sides > Int(Int16.max) { throw compileError("compile.numericLimitExceeded", e.location, phase: .compile) }
             r.emit(.createDice, d, count, sides)
         case .series(let kind): r.emit(.createSeries, d, 0, kind == "fibonacci" ? 1 : 2)
         case .choice(let branches, let fallback):
@@ -364,18 +366,18 @@ extension GesCompiler {
             }
             try stageExpressions(args, r, scope)
             r.emit(.createRecord, d, recordIDs[type] ?? records.keys.sorted().firstIndex(of: type)!)
-            r.dependencies.insert(signature(type, record.fields.compactMap(\.label)))
+            r.dependencies.insert(callableSignature(type, record.fields.compactMap(\.label)))
             return
         }
         if type.first?.isUppercase == true, let external = try catalog?.resolve(type) {
             let labels = arguments.map(\.label)
-            guard let ctor = external.constructors.first(where: { $0.parameters.map(\.name).sorted() == labels.sorted() }) else { throw error("validate.invalidTypeConstructor", r.location, symbol: type, kind: .type) }
+            guard let ctor = external.constructors.first(where: { $0.parameters.map(\.name).sorted() == labels.sorted() }) else { throw compileError("validate.invalidTypeConstructor", r.location, symbol: type, kind: .type) }
             let ordered = ctor.parameters.map { p in arguments.first { $0.label == p.name }! }
             try stageExpressions(ordered.map(\.value), r, scope)
             r.emit(.createExternalType, d, importBinding(.externalType, type, ctor.parameters.map(\.name)), textList(ctor.parameters.map(\.name)))
             return
         }
-        guard arguments.count == 1 else { throw error("compile.invalidArity", r.location, symbol: type, phase: .compile) }
+        guard arguments.count == 1 else { throw compileError("compile.invalidArity", r.location, symbol: type, phase: .compile) }
         try cast(d, expression(arguments[0].value, r, scope), type, r)
     }
 
@@ -397,7 +399,7 @@ extension GesCompiler {
             "lengthSquared": [1: .lengthSquared, 2: .lengthSquared2D, 3: .lengthSquared3D], "normalize": [1: .normalize, 2: .normalize2D, 3: .normalize3D], "dot": [2: .dot, 4: .dot2D, 6: .dot3D], "cross": [2: .cross, 4: .cross2D, 6: .cross3D],
             "angleBetween": [2: .angleBetween, 4: .angleBetween2D, 6: .angleBetween3D],
         ]
-        guard let opcode = signatures[name]?[regs.count] else { throw error("compile.invalidArity", r.location, symbol: name, phase: .compile) }
+        guard let opcode = signatures[name]?[regs.count] else { throw compileError("compile.invalidArity", r.location, symbol: name, phase: .compile) }
         var payload: UInt64 = 0
         for (i, value) in regs.dropFirst(2).enumerated() { payload |= UInt64(value) << (i * 16) }
         r.emit(opcode, d, regs[0], regs.count > 1 ? regs[1] : 0, payload: payload)

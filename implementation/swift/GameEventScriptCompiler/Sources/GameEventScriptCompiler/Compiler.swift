@@ -77,8 +77,9 @@ final class GesCompiler {
     var modules: [GesModule]
     let sources: [GesSource], options: GesCompileOptions
     let catalog: (any GesExternalTypeCatalog)?
-    var moduleName = ""
-    var constants: [String: GesExpression] = [:], definitions: [String: GesDefinition] = [:], records: [String: GesRecord] = [:]
+    var moduleName: String
+    let constants: [String: GesExpression]
+    var definitions: [String: GesDefinition], records: [String: GesRecord]
     var strings: [String] = [], lists: [[UInt16]] = [], bindings: [GesBindingSegment.Entry] = []
     // Scalar keys preserve the language's identity instead of Swift's canonical equivalence.
     var stringIDs: [[UInt32]: Int] = [:], listIDs: [[UInt16]: Int] = [:]
@@ -89,10 +90,15 @@ final class GesCompiler {
     var operandLayouts: [Int: GesOperandSlots] = [:]
     var sourcePositions: [UInt32: [UInt64: Int]] = [:]
 
-    init(modules: [GesModule], sources: [GesSource], catalog: (any GesExternalTypeCatalog)?, options: GesCompileOptions) {
-        self.modules = modules
+    // Lowers the modules and declarations of a completed validation.
+    init(_ validated: GesAstValidator, sources: [GesSource], options: GesCompileOptions) {
+        modules = validated.modules
+        catalog = validated.catalog
+        moduleName = validated.moduleName
+        constants = validated.constants
+        definitions = validated.definitions
+        records = validated.records
         self.sources = sources
-        self.catalog = catalog
         self.options = options
     }
 
@@ -129,7 +135,7 @@ final class GesCompiler {
     func textList(_ names: [String]) -> Int { list(names.map(text)) }
 
     func importBinding(_ kind: GesBinaryBindKind, _ name: String, _ labels: [String]) -> Int {
-        let key = "\(kind.rawValue):" + signature(name, labels)
+        let key = "\(kind.rawValue):" + callableSignature(name, labels)
         if let id = imports[key] { return id }
         guard bindings.count < 65535 else {
             numericLimitExceeded = true
@@ -141,40 +147,7 @@ final class GesCompiler {
         return id
     }
 
-    func signature(_ name: String, _ labels: [String]) -> String { name + "(" + labels.joined(separator: ",") + ")" }
-
-    func error(_ code: String, _ location: GesSourceLocation, symbol: String? = nil, kind: GesDiagnosticSymbolKind = .unknown, phase: GesDiagnosticPhase = .validate, message: String? = nil) -> GesCompileError {
-        compileError(phase, code, message ?? diagnosticMessage(code, symbol: symbol), location, symbol: symbol, kind: kind)
-    }
-
-    private func diagnosticMessage(_ code: String, symbol: String?) -> String {
-        let name = symbol.map { "'\($0)'" } ?? "this expression"
-        switch code {
-        case "validate.duplicateConstant": return "Constant \(name) is already declared."
-        case "validate.duplicateType": return "Type \(name) is already declared."
-        case "validate.duplicateFunction": return "Function \(name) already has an overload with these argument labels."
-        case "validate.duplicatePredicate": return "Predicate \(name) already has an overload with these argument labels."
-        case "validate.duplicateVariable": return "Binding \(name) is declared more than once in this scope."
-        case "validate.shadowedVariable": return "Binding \(name) would shadow a binding in an enclosing scope. Use a different name."
-        case "validate.duplicateDefinitionParameter", "validate.duplicateHandlerParameter": return "The parameter list for \(name) contains a duplicate name or label."
-        case "validate.duplicatePublishArgument": return "Message or call \(name) contains a repeated argument label."
-        case "validate.invalidIdentifierCase": return "Identifier \(name) does not follow the naming rules for this declaration."
-        case "validate.invalidMessageCase": return "Invalid handler declaration \(name). Check its name and parameter form."
-        case "validate.invalidPredicate": return "Predicate \(name) must produce a Boolean value or nothing."
-        case "validate.invalidTypeConstructor": return "Invalid arguments for type constructor \(name). Check the argument count and labels."
-        case "validate.predicateFunctionConflict": return "A function and a predicate cannot share the name \(name)."
-        case "validate.missingCallable": return "No function or predicate matches \(name). Check the name and argument labels."
-        case "validate.wrongFunctionArity", "validate.wrongPredicateArity", "compile.invalidArity": return "The arguments for \(name) do not match its declared parameters."
-        case "compile.unresolvedSymbol": return "Unknown symbol \(name). Declare it in this program before using it."
-        case "compile.cyclicCallGraph": return "The call graph contains a cycle involving \(name). Recursive calls are not supported."
-        case "compile.numericLimitExceeded": return "Compilation exceeds a numeric limit of the program format near \(name). Reduce the program size or complexity."
-        case "compile.unsupportedConstruct": return "The compiler cannot generate code for \(name)."
-        default: return "Compilation failed near \(name). See the diagnostic code for the failure category."
-        }
-    }
-
     func compile() throws -> GameEventScriptProgram {
-        try validate()
         let optimizer = GesAstOptimizer(constants: constants)
         // Rewrites in place: unchanged entries keep their storage.
         for index in modules.indices { if let module = optimizer.module(modules[index]) { modules[index] = module } }
@@ -238,7 +211,7 @@ final class GesCompiler {
 
     func checkLimits(_ routine: GesRoutine? = nil) throws {
         if numericLimitExceeded || (routine?.registers ?? 0) >= 65535 || (routine?.code.count ?? 0) >= 65535 {
-            throw error("compile.numericLimitExceeded", routine?.location ?? modules.first?.location ?? .init(sourceName: "UnknownSource"), phase: .compile)
+            throw compileError("compile.numericLimitExceeded", routine?.location ?? modules.first?.location ?? .init(sourceName: "UnknownSource"), phase: .compile)
         }
     }
 
@@ -317,10 +290,10 @@ final class GesCompiler {
         for r in routines {
             addresses[r.key] = address
             address += r.code.count
-            if r.registers - r.definition.parameters.count > Int(Int16.max) || r.registers >= 65535 { throw error("compile.numericLimitExceeded", r.location, phase: .compile) }
+            if r.registers - r.definition.parameters.count > Int(Int16.max) || r.registers >= 65535 { throw compileError("compile.numericLimitExceeded", r.location, phase: .compile) }
             r.code[0] = .init(opcode: .registerLocals, word1: UInt16(r.registers - r.definition.parameters.count))
         }
-        if address >= 65535 || strings.count >= 65535 || lists.count >= 65535 { throw error("compile.numericLimitExceeded", modules.first?.location ?? .init(sourceName: "UnknownSource"), phase: .compile) }
+        if address >= 65535 || strings.count >= 65535 || lists.count >= 65535 { throw compileError("compile.numericLimitExceeded", modules.first?.location ?? .init(sourceName: "UnknownSource"), phase: .compile) }
         var resources: [String: (Int, Int)] = [:]
         let routinesByName = Dictionary(uniqueKeysWithValues: routines.map { ($0.key, $0) })
 
@@ -330,7 +303,7 @@ final class GesCompiler {
             var pending = [(name, false)]
             while let (key, expanded) = pending.popLast() {
                 if resources[key] != nil { continue }
-                guard let r = routinesByName[key] else { throw error("compile.unresolvedSymbol", routines[0].location, symbol: key, phase: .compile) }
+                guard let r = routinesByName[key] else { throw compileError("compile.unresolvedSymbol", routines[0].location, symbol: key, phase: .compile) }
                 if expanded {
                     var regs = r.registers + r.maxStage
                     var depth = 0
@@ -342,7 +315,7 @@ final class GesCompiler {
                     visiting.remove(key)
                     resources[key] = (regs, depth)
                 } else {
-                    guard visiting.insert(key).inserted else { throw error("compile.cyclicCallGraph", r.location, symbol: key, phase: .compile) }
+                    guard visiting.insert(key).inserted else { throw compileError("compile.cyclicCallGraph", r.location, symbol: key, phase: .compile) }
                     pending.append((key, true))
                     for target in r.dependencies.sorted().reversed() where resources[target] == nil { pending.append((target, false)) }
                 }
@@ -363,7 +336,7 @@ final class GesCompiler {
             let offset = code.count
             let isHandler = d.kind.hasSuffix("andler")
             for (i, target) in r.calls {
-                guard let address = addresses[target] else { throw error("compile.unresolvedSymbol", r.location, symbol: target, phase: .compile) }
+                guard let address = addresses[target] else { throw compileError("compile.unresolvedSymbol", r.location, symbol: target, phase: .compile) }
                 r.patch(i, target: address)
             }
             for i in r.code.indices {
@@ -399,7 +372,7 @@ final class GesCompiler {
                 id = executable.filter { $0.kind == kind }.count
             }
             let (registers, depth) = try requirements(r.key)
-            if registers > 65535 || depth > 65535 { throw error("compile.numericLimitExceeded", d.location, phase: .compile) }
+            if registers > 65535 || depth > 65535 { throw compileError("compile.numericLimitExceeded", d.location, phase: .compile) }
             if isHandler {
                 maxRegs = max(maxRegs, registers)
                 maxDepth = max(maxDepth, depth)
@@ -572,7 +545,7 @@ final class GesCompiler {
             case .percentage: r.emit(.stagePercentage, payload: value.asNumber.bitPattern)
             case .text: r.emit(.stageText, 0, text(value.textValue!))
             case .tag: r.emit(.stageTag, 0, text(value.textValue!))
-            default: throw error("compile.unsupportedConstruct", r.location, phase: .compile)
+            default: throw compileError("compile.unsupportedConstruct", r.location, phase: .compile)
             }
         }
     }
@@ -597,7 +570,7 @@ final class GesCompiler {
         }
         if type.hasPrefix("quantity:") || ["meter", "second", "degree"].contains(type) {
             let unit = type.split(separator: ":").last!
-            guard ["m", "meter", "s", "second", "degree", "°", "none"].contains(String(unit)) else { throw error("compile.unsupportedConstruct", r.location, symbol: type, phase: .compile) }
+            guard ["m", "meter", "s", "second", "degree", "°", "none"].contains(String(unit)) else { throw compileError("compile.unsupportedConstruct", r.location, symbol: type, phase: .compile) }
             let flag: UInt8 = unit == "none" ? 0 : ["m", "meter"].contains(String(unit)) ? 2 : ["s", "second"].contains(String(unit)) ? 3 : 1
             r.emit(check ? .checkUnit : .castUnit, d, value, flags: flag)
             return

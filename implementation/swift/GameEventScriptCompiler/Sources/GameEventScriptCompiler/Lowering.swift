@@ -10,13 +10,7 @@ extension GesCompiler {
             r.location = statement.location
             switch statement.kind {
             case .assembly(let block): try assembly(block, r, scope)
-            case .letBinding(let name, let value):
-                let d = r.local()
-                scope.values[name] = d
-                _ = try expression(value, r, scope, destination: d)
-                if knownNonList(value, r, scope) { r.nonListBindings.insert(d) }
-                r.symbols.append((name, d, max(0, r.code.count - 1), false))
-                if case .handler(_, let parameters) = value.kind { scope.handlers[name] = parameters.map(\.label) }
+            case .letBinding(let name, let value): _ = try letBinding(name, value, r, scope)
             case .expression(let value): _ = try expression(value, r, scope)
             case .publish(let publish, let message, let tags):
                 let tagRegisters = try tags.map { try expression($0, r, scope) }
@@ -32,21 +26,21 @@ extension GesCompiler {
                 let child = GesScope(scope)
                 var branches: [Int] = []
                 for (binding, value) in conditions {
-                    var reg = try expression(value, r, child)
+                    var reg: Int
                     if let binding {
-                        child.values[binding] = reg
-                        r.symbols.append((binding, reg, max(0, r.code.count - 1), false))
-                        if case .handler(_, let parameters) = value.kind { child.handlers[binding] = parameters.map(\.label) }
-                        let check = r.temporary()
-                        r.emit(.hasValue, check, reg)
-                        reg = check
+                        // As in C#: an ordinary let statement, then a presence check of the binding.
+                        let bound = try letBinding(binding, value, r, child)
+                        reg = r.temporary()
+                        r.emit(.hasValue, reg, bound)
+                    } else {
+                        reg = try expression(value, r, child)
                     }
                     branches.append(r.emit(.jumpIfNotTrue, 0, reg))
                 }
                 try statements(yes, r, child)
                 r.location = statement.location
                 let end = r.emit(.jump)
-                for branch in branches { r.patch(branch, target: r.code.count) }
+                r.mark(branches)
                 try statements(no, r, GesScope(scope))
                 r.patch(end, target: r.code.count)
             case .loop(let names, let sequence, let range, let body):
@@ -102,12 +96,23 @@ extension GesCompiler {
         } else if isCombinedSource(e) {
             var invalid: [Int] = []
             _ = try componentIterator(target, e, &invalid, r, scope)
-            for jump in invalid { r.patch(jump, target: r.code.count) }
+            r.mark(invalid)
         } else {
             let value = try expression(e, r, scope)
             r.emit(.iteratorCreate, target, value)
         }
         return target
+    }
+
+    // A local binding in its own register, as C# declares it for `let`.
+    func letBinding(_ name: String, _ value: GesExpression, _ r: GesRoutine, _ scope: GesScope) throws -> Int {
+        let d = r.local()
+        scope.values[name] = d
+        _ = try expression(value, r, scope, destination: d)
+        if knownNonList(value, r, scope) { r.nonListBindings.insert(d) }
+        r.symbols.append((name, d, max(0, r.code.count - 1), false))
+        if case .handler(_, let parameters) = value.kind { scope.handlers[name] = parameters.map(\.label) }
+        return d
     }
 
     func literal(_ value: GesValue, _ target: Int, _ r: GesRoutine) throws {
@@ -295,7 +300,7 @@ extension GesCompiler {
                 r.patch(branch, target: r.code.count)
             }
             _ = try expression(fallback, r, scope, destination: d)
-            for end in ends { r.patch(end, target: r.code.count) }
+            r.mark(ends)
         case .generated(_, let name, let source, let range, let condition, let projection):
             let builder = r.temporary()
             r.emit(.listBuilderCreate, builder)

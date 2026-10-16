@@ -9,6 +9,8 @@ final class GesRoutine {
     var code: [GesBytecodeInstruction] = []
     var locations: [GesSourceLocation] = []
     var pinned: Set<Int> = []
+    // Label positions as in the C# builder: a label stays in place when the jumps to it disappear.
+    var labels: Set<Int> = []
     var registers: Int
     var maxStage = 0
     var hasAssembly = false
@@ -45,7 +47,15 @@ final class GesRoutine {
         return i
     }
 
+    // Marks a label at the next instruction, as C# MarkLabel does, and resolves the given jumps to it.
+    // The label exists even when no jump refers to it, so it still bounds basic blocks for the optimizer.
+    func mark(_ jumps: [Int] = []) {
+        labels.insert(code.count)
+        for jump in jumps { patch(jump, target: code.count) }
+    }
+
     func patch(_ i: Int, target: Int) {
+        labels.insert(target)
         let old = code[i]
         code[i] = .init(opcode: old.opcode, unitAndFlags: old.unitAndFlags, word0: old.word0, word1: old.word1, word2: UInt16(truncatingIfNeeded: target), payload: old.payload)
     }
@@ -181,9 +191,10 @@ final class GesCompiler {
             let bk = order[b.element.definition.kind] ?? 4
             return ak == bk ? a.offset < b.offset : ak < bk
         }.map(\.element)
+        let effects = EffectAnalysis(self)
         for routine in routines {
             try checkLimits(routine)
-            optimize(routine)
+            optimize(routine, effects: effects)
             try allocate(routine)
             try checkLimits(routine)
         }

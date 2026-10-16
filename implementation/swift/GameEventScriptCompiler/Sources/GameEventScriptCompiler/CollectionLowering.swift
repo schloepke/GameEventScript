@@ -90,7 +90,7 @@ extension GesCompiler {
             var prepared: [Int] = []
             row = try componentIterator(iterator, sourceExpression, &prepared, r, scope)
             r.emit(.loadTrue, valid)
-            for jump in prepared { r.patch(jump, target: r.code.count) }
+            r.mark(prepared)
             validSource = valid
         }
         if s.operation == "fold" { _ = try expression(s.expressions[0], r, scope, destination: accumulator) } else { r.emit(.loadNothing, accumulator) }
@@ -111,7 +111,7 @@ extension GesCompiler {
         r.emit(.iteratorClose, 0, iterator)
         r.emit(.move, d, accumulator)
         let done = r.emit(.jump)
-        for jump in invalid { r.patch(jump, target: r.code.count) }
+        r.mark(invalid)
         r.emit(.loadNothing, d)
         r.patch(done, target: r.code.count)
     }
@@ -146,7 +146,7 @@ extension GesCompiler {
         skips.append(r.emit(.jumpIfNotTrue, 0, comparison))
         r.emit(.listBuilderAdd, 0, itemsBuilder, item)
         r.emit(.listBuilderAdd, 0, weightsBuilder, weight)
-        for skip in skips { r.patch(skip, target: r.code.count) }
+        r.mark(skips)
         r.emit(.jump, 0, 0, begin)
         r.patch(end, target: r.code.count)
         r.emit(.iteratorClose, 0, iterator)
@@ -189,7 +189,7 @@ extension GesCompiler {
                 guardOK.append(r.emit(.jumpIfTrue, 0, compare))
             }
             invalid.append(r.emit(.jump))
-            for i in guardOK { r.patch(i, target: r.code.count) }
+            r.mark(guardOK)
         }
         let row: GesComponentRow?
         if let sourceExpression {
@@ -325,9 +325,9 @@ extension GesCompiler {
         default: throw error("compile.unsupportedConstruct", r.location, symbol: s.operation, phase: .compile)
         }
         r.componentRows.removeValue(forKey: item)
-        for jump in nextJumps { r.patch(jump, target: r.code.count) }
+        r.mark(nextJumps)
         r.emit(.jump, 0, 0, start)
-        for jump in endJumps { r.patch(jump, target: r.code.count) }
+        r.mark(endJumps)
         r.emit(.iteratorClose, 0, iterator)
         if collection {
             let finish: GesBytecodeOpCode =
@@ -355,9 +355,9 @@ extension GesCompiler {
             r.patch(empty, target: r.code.count)
             r.emit(.loadNothing, d)
         }
-        for jump in close { r.patch(jump, target: r.code.count) }
+        r.mark(close)
         let done = r.emit(.jump)
-        for jump in invalid { r.patch(jump, target: r.code.count) }
+        r.mark(invalid)
         r.emit(.loadNothing, d)
         r.patch(done, target: r.code.count)
     }
@@ -417,7 +417,7 @@ extension GesCompiler {
             failures.append(r.emit(.jumpIfNotTrue, 0, match))
         }
         let end = r.emit(.jump)
-        for failure in failures { r.patch(failure, target: r.code.count) }
+        r.mark(failures)
         r.emit(.loadFalse, result)
         r.patch(end, target: r.code.count)
         return result

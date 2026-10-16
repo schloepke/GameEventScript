@@ -101,7 +101,7 @@ extension GesCompiler {
             valid.append(r.emit(.jumpIfTrue, 0, check))
         }
         invalid.append(r.emit(.jump))
-        for jump in valid { r.patch(jump, target: r.code.count) }
+        r.mark(valid)
     }
 
     func sourceGuard(_ value: Int, _ invalid: inout [Int], _ r: GesRoutine) {
@@ -112,7 +112,7 @@ extension GesCompiler {
             valid.append(r.emit(.jumpIfTrue, 0, check))
         }
         invalid.append(r.emit(.jump))
-        for jump in valid { r.patch(jump, target: r.code.count) }
+        r.mark(valid)
     }
 
     func combinedCollection(_ operation: String, _ sources: [GesExpression], _ d: Int, _ r: GesRoutine, _ scope: GesScope) throws {
@@ -135,7 +135,7 @@ extension GesCompiler {
         }
         r.emit(.move, d, current)
         let done = r.emit(.jump)
-        for jump in invalid { r.patch(jump, target: r.code.count) }
+        r.mark(invalid)
         r.emit(.loadNothing, d)
         r.patch(done, target: r.code.count)
     }

@@ -15,13 +15,11 @@ only	csharp	Compiler	GesAssemblyBlockNode
 only	csharp	Compiler	GesAssemblyDeclaration
 only	csharp	Compiler	GesAssemblyExpressionNode
 only	csharp	Compiler	GesAssemblyStatementNode
-only	csharp	Compiler	GesAstOptimizer
 only	csharp	Compiler	GesAstValidator
 only	csharp	Compiler	GesAverageSelectorNode
 only	csharp	Compiler	GesBetweenExpressionNode
 only	csharp	Compiler	GesBinaryBuilder
 only	csharp	Compiler	GesBinaryExpressionNode
-only	csharp	Compiler	GesBinaryOptimizationPass
 only	csharp	Compiler	GesBindRef
 only	csharp	Compiler	GesBooleanLiteralExpressionNode
 only	csharp	Compiler	GesCallExpressionNode
@@ -34,7 +32,6 @@ only	csharp	Compiler	GesCollectionAccessExpressionNode
 only	csharp	Compiler	GesCollectionIterationSourceNode
 only	csharp	Compiler	GesCollectionSelectorNode
 only	csharp	Compiler	GesCombinedCollectionExpressionNode
-only	csharp	Compiler	GesCompilerMetadata
 only	csharp	Compiler	GesConstantDefinitionNode
 only	csharp	Compiler	GesConstantReferenceExpressionNode
 only	csharp	Compiler	GesContainsSelectorNode

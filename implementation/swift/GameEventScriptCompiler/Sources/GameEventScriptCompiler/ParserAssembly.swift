@@ -39,9 +39,11 @@ extension GesParser {
                 if current.kind != .newLine && current.syntaxText != ";" && current.syntaxText != "}" {
                     repeat {
                         if assemblyMessageOperand(name, operands.count), current.kind == .message {
+                            // The message operand spans from its name, as the C# message literal does.
+                            let messageToken = current
                             let message = advance().text
                             let arguments = current.syntaxText == "(" ? try arguments() : []
-                            operands.append(node(.message(message, arguments), token))
+                            operands.append(node(.message(message, arguments), messageToken))
                         } else if current.syntaxText == "-", peek().text == "9223372036854775808" {
                             advance()
                             advance()

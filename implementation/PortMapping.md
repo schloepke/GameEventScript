@@ -378,9 +378,11 @@ contains exactly the measured reference sources plus the recalibrated corpus.
       `GesBinaryOptimizationPass` with the C# pass names and pipeline, nested in
       `GesCompiler` like their C# counterparts in `GesBinaryBuilder`; labels persist
       when their jumps disappear, as C# label items do.
-- [ ] Verify byte-identical `.gesb` output for the corpus and the
+- [x] Verify byte-identical `.gesb` output for the corpus and the
       `compile.loop-invariants` snapshot with `scripts/compare-compiler-output.py`
-      (BuildMetadata names the implementation and is excluded).
+      (BuildMetadata names the implementation and is excluded). All 1,399
+      corpus programs both compilers accept are byte-identical, including
+      debug sections; the gate keeps an empty baseline.
 
 ### Phase 6 – Tools and adapters (low priority)
 

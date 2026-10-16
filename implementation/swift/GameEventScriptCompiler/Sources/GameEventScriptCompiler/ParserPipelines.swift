@@ -50,7 +50,12 @@ extension GesParser {
                 result = try ranged(.constructor(whitespace ? "__splitWhitespace" : "__split", whitespace ? [.init(label: "_", value: input)] : [.init(label: "_", value: input), .init(label: "_", value: delimiter)]), input)
             } else {
                 guard let input = result else { throw failure("Selector requires a source.", start) }
-                result = try combined(.selector(input, selector()), input)
+                let selector = try selector()
+                result = try combined(.selector(input, selector), input)
+                // C# gives the object-pattern selector no range, which leaves the whole access without one.
+                if selector.operation == "objectMatch", let access = result {
+                    result = GesExpression(access.kind, GesAstOptimizer.noRange(access.location), depth: access.depth)
+                }
             }
             newlines()
         } while isPipelineSelector

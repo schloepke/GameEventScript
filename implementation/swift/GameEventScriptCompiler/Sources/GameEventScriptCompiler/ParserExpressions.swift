@@ -29,7 +29,8 @@ extension GesParser {
                 op = "roundHalf" + mode.prefix(1).uppercased() + mode.dropFirst()
             }
             let value = try expression(15)
-            if op == "sqrt" || op == "cbrt" { return try combined(.binary(.power, value, node(.literal(.float(op == "sqrt" ? 0.5 : 1.0 / 3)), start)), value) }
+            // The root power spans from the operator, as C# CreateRootPowerExpression ranges it.
+            if op == "sqrt" || op == "cbrt" { return try combined(.binary(.power, value, node(.literal(.float(op == "sqrt" ? 0.5 : 1.0 / 3)), start)), node(.literal(.nothing), start)) }
             guard let unary = GesUnaryOperator(prefixText: op) else { throw failure("Expected an operator.", start) }
             return node(.unary(unary, value), start)
         }
@@ -210,6 +211,8 @@ extension GesParser {
             let type = try typeName()
             newlines()
             if type == "dice" && match("[") {
+                // The value list spans its brackets, as in C#; the constructor spans the whole literal.
+                let bracket = previous
                 newlines()
                 var items: [GesExpression] = []
                 if current.syntaxText != "]" {
@@ -221,7 +224,7 @@ extension GesParser {
                     } while match(",")
                 }
                 try expect("]")
-                return node(.constructor(type, [.init(label: "_", value: node(.list(items), start))]), start)
+                return node(.constructor(type, [.init(label: "_", value: node(.list(items), bracket))]), start)
             }
             if type == "list" && match("[") {
                 newlines()
@@ -256,7 +259,8 @@ extension GesParser {
                 advance()
                 newlines()
                 let kind = advance()
-                var args: [GesArgument] = [.init(label: "_", value: node(.literal(.text(kind.text)), kind))]
+                // The series name, the handler literal and the tag list of these data forms have no range in C#.
+                var args: [GesArgument] = [.init(label: "_", value: unranged(.literal(.text(kind.text)), kind))]
                 if match(",") {
                     repeat {
                         newlines()
@@ -286,7 +290,7 @@ extension GesParser {
                 try expect(")")
                 newlines()
                 try expect(")")
-                return node(.constructor(type, [.init(label: "_", value: node(.handler(name.text, parameters), name))]), start)
+                return node(.constructor(type, [.init(label: "_", value: unranged(.handler(name.text, parameters), name))]), start)
             }
             if type == "message", current.syntaxText == "(", peek().kind == .message {
                 advance()
@@ -297,7 +301,7 @@ extension GesParser {
                 if match("with") {
                     var tags = [try expression()]
                     while match(",") { tags.append(try expression()) }
-                    args.append(.init(label: "tags", value: node(.list(tags), start)))
+                    args.append(.init(label: "tags", value: unranged(.list(tags), start)))
                 }
                 try expect(")")
                 return node(.constructor(type, args), start)
@@ -392,6 +396,9 @@ extension GesParser {
             return node(.map([]), start)
         }
         if match("]") { return node(.list([]), start) }
+        // A non-empty literal starts at the last token before its first entry, which is a skipped line break for a
+        // multi-line literal, as C# takes Previous after skipping new lines.
+        let literalStart = previous
         if argumentLabel() {
             var pairs: [(String, GesExpression)] = []
             repeat {
@@ -405,7 +412,7 @@ extension GesParser {
                 newlines()
             } while match(",")
             try expect("]")
-            return node(.map(pairs), start)
+            return node(.map(pairs), literalStart)
         }
         var items: [GesExpression] = []
         repeat {
@@ -413,7 +420,7 @@ extension GesParser {
             newlines()
         } while match(",")
         try expect("]")
-        return node(.list(items), start)
+        return node(.list(items), literalStart)
     }
 
     func extensionSymbol() throws -> (String, String) {

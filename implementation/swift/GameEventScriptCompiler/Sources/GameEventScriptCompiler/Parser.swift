@@ -363,6 +363,9 @@ final class GesParser {
 
     func node(_ kind: GesExpression.Kind, _ start: GesToken) -> GesExpression { .init(kind, location(start, previous)) }
 
+    // A node without a source range, for nodes the C# parser creates without WithRange.
+    func unranged(_ kind: GesExpression.Kind, _ start: GesToken) -> GesExpression { .init(kind, GesAstOptimizer.noRange(location(start, previous))) }
+
     // A node with exactly the range of `node`, as C# WithRange(node, first) for postfix forms such as member access,
     // casts and checks: the operator and its operand do not extend the range.
     func ranged(_ kind: GesExpression.Kind, _ node: GesExpression) throws -> GesExpression {

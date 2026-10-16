@@ -31,7 +31,11 @@ extension GesCompiler {
                         // As in C#: an ordinary let statement, then a presence check of the binding.
                         let bound = try letBinding(binding, value, r, child)
                         reg = r.temporary()
+                        // The synthetic presence check has no source range in C#, so it carries no mapping.
+                        let outer = r.location
+                        r.location = GesAstOptimizer.noRange(outer)
                         r.emit(.hasValue, reg, bound)
+                        r.location = outer
                     } else {
                         reg = try expression(value, r, child)
                     }

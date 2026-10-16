@@ -282,6 +282,8 @@ final class GesCompiler {
                 if case .assembly(let block) = computed.kind {
                     value = scope.get(field.name)!
                     try assembly(block, r, scope, destination: value)
+                    // The cast after the block maps to the field again, as the C# field range scope resumes.
+                    r.location = field.location
                 } else {
                     value = try expression(computed, r, scope)
                 }

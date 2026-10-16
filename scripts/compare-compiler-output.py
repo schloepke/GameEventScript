@@ -114,6 +114,19 @@ def ratchet(results, baseline):
     return sorted(current - baseline), sorted(baseline - current)
 
 
+def differing(line):
+    """Program key and differing section names of a baseline line."""
+    case, program, debug, verdict = line.split("\t")
+    names = set(verdict.split(":", 1)[1].split(",")) if verdict.startswith("different:") else {verdict}
+    return (case, program, debug), names
+
+
+def regressions(new, resolved):
+    """New lines that are not a strict improvement of the resolved line for the same program."""
+    previous = dict(differing(line) for line in resolved)
+    return [line for line in new if not (lambda key, names: key in previous and names < previous[key])(*differing(line))]
+
+
 def summarize(results):
     counts = {}
     for result in results:
@@ -152,10 +165,13 @@ def main(argv=None):
         print(f"Wrote {len(current)} baseline entries to {BASELINE}")
         return 0
     new, resolved = ratchet(results, baseline)
+    worse = set(regressions(new, resolved))
     for line in new:
-        print(f"new difference: {line}")
+        print(f"{'new difference' if line in worse else 'improved difference'}: {line}")
     for line in resolved:
         print(f"resolved difference still in baseline: {line}")
+    if new or resolved:
+        print(f"{len(worse)} new or worse, {len(new) - len(worse)} improved, {len(resolved)} baseline entries changed.")
     if new or resolved:
         print("Fix the compiler, or run scripts/compare-compiler-output.py --update-baseline after a deliberate change.")
         return 1

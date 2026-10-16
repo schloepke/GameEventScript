@@ -200,8 +200,8 @@ extension GesCompiler {
         case .cast(let value, let type): try cast(d, expression(value, r, scope), type, r)
         case .check(let value, let type): try cast(d, expression(value, r, scope), type, r, check: true)
         case .call(let name, let arguments):
-            let regs = try arguments.map { try expression($0.value, r, scope) }
             if let handler = scope.get(name) {
+                let regs = try arguments.map { try expression($0.value, r, scope) }
                 if let labels = scope.handler(name), labels != arguments.map(\.label) { r.emit(.loadNothing, d) } else { r.emit(.bindHandler, d, handler, list(regs)) }
             } else {
                 let key = signature(name, arguments.map(\.label))
@@ -211,7 +211,7 @@ extension GesCompiler {
                     }
                     throw error("validate.missingCallable", e.location, symbol: name, kind: .globalDefinition)
                 }
-                stage(regs, r)
+                try stageExpressions(arguments.map(\.value), r, scope)
                 let instruction = r.emit(.call, d, flags: definitions[key]?.kind == "predicate" ? 0x20 : 0)
                 r.calls.append((instruction, key))
                 r.dependencies.insert(key)
@@ -220,7 +220,7 @@ extension GesCompiler {
             let count = value == nil ? 0 : 1
             let matches = definitions.values.filter { $0.name == name && $0.kind == "predicate" && $0.parameters.count == count }
             guard matches.count == 1, let definition = matches.first else { throw error("validate.invalidPredicate", e.location, symbol: name, kind: .predicate, message: "No unique predicate named '\(name)' with \(count) parameters is available.") }
-            if let value { stage([try expression(value, r, scope)], r) }
+            if let value { try stageExpressions([value], r, scope) }
             let instruction = r.emit(.call, d, flags: 0x20)
             r.calls.append((instruction, definition.signature))
             r.dependencies.insert(definition.signature)

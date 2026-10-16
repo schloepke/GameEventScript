@@ -43,6 +43,13 @@ class CompilerOutputTests(unittest.TestCase):
         worse = dict(result, verdict="different:code,strings")
         self.assertEqual(([compare.baseline_line(worse)], [line]), compare.ratchet([worse], {line}))
 
+    def test_regressions_separate_improvements_from_new_differences(self):
+        old = "suite/case\tmain\tdebug\tdifferent:code,sourceMap"
+        improved = "suite/case\tmain\tdebug\tdifferent:sourceMap"
+        worse = "suite/case\tmain\tdebug\tdifferent:code,sourceMap,strings"
+        fresh = "suite/other\tmain\tdebug\tdifferent:code"
+        self.assertEqual([worse, fresh], compare.regressions([improved, worse, fresh], [old]))
+
     def test_rejection_by_one_compiler_is_a_difference(self):
         result = {"case": "suite/case", "program": "main", "debug": False, "verdict": "swift-only"}
         self.assertEqual(([compare.baseline_line(result)], []), compare.ratchet([result], set()))

@@ -486,24 +486,11 @@ final class GesCompiler {
         return .init(codeStart: UInt32(address), codeLength: 1, sourceID: id, sourceStartByteOffset: UInt32(start), sourceByteLength: UInt32(end - start))
     }
 
+    // The value of a literal. GesAstOptimizer has already folded every constant expression the C# compiler folds,
+    // so lowering never evaluates other expression forms.
     func scalarConstant(_ expression: GesExpression) -> GesValue? {
-        switch expression.kind {
-        case .literal(let value): return value
-        case .constant(let name): return constants[name].flatMap(scalarConstant)
-        case .cast(let source, "number"), .cast(let source, "numeric"):
-            guard let value = scalarConstant(source) else { return nil }
-            let result = GesCompilerSupport.castNumber(value)
-            return result.valueKind == .float && !result.asNumber.isFinite ? nil : result
-        case .binary(let op, let left, let right):
-            guard op.isArithmetic, let a = scalarConstant(left), let b = scalarConstant(right), let result = GesCompilerSupport.arithmetic(op.opcode, a, b), result.valueKind != .float || result.asNumber.isFinite else { return nil }
-            return result
-        case .unary(.negate, let value):
-            guard let value = scalarConstant(value), value.isNumeric else { return nil }
-            if let integer = value.integerValue, integer != .min { return .integer(-integer, unit: value.unit) }
-            if value.valueKind == .percentage { return .percentage(-value.asNumber) }
-            return .float(-value.asNumber, unit: value.unit)
-        default: return nil
-        }
+        if case .literal(let value) = expression.kind { return value }
+        return nil
     }
 
     func stageExpressions(_ values: [GesExpression], _ r: GesRoutine, _ scope: GesScope) throws {

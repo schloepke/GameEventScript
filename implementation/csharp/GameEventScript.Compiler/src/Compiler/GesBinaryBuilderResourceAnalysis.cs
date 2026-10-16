@@ -9,8 +9,7 @@ namespace GameEventScript.Compiler;
 
 internal sealed partial class GesBinaryBuilder
 {
-    private static GesCompileException CompileFailure(string code, string message, string? symbol = null, GesSourceLocation? location = null)
-        => new(new GesDiagnostic(GesDiagnosticPhase.Compile, code, message, symbol, SourceLocation: location));
+    private static GesCompileException CompileFailure(string code, string message, string? symbol = null, GesSourceLocation? location = null) => new(new GesDiagnostic(GesDiagnosticPhase.Compile, code, message, symbol, SourceLocation: location));
 
     private ProgramResourceAnalysis AnalyzeProgramResources(IReadOnlyList<PlanItem> items, RegisterAllocationResult registerAllocation)
     {

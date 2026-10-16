@@ -432,8 +432,11 @@ compiler output byte-identical and stays within the performance budget.
       `InstructionPlan` records has no measured need. Builder: 4,637 to 3,144
       lines with one operand resolver for encoding, one linear-scan register
       assignment, no unused rewrite API and switch expressions in the passes.
-      Remaining: denser code per phase, largest first (lowering, parser,
-      validation).
+      Parser: one table of left-associative binary levels, shared binder and
+      `is`-test helpers, and switch-based unary/intrinsic keywords (3,085 to
+      2,793 lines). Lowering: one key-ordered emission helper, one inline
+      pipeline builder register and shared projection/predicate steps (2,497
+      to 2,330 lines). Remaining: validation.
 
 ### Phase 6 – Tools and adapters (low priority)
 

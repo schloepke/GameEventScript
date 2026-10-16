@@ -22,15 +22,18 @@ extension GesBinaryBuilder {
     // instead of once per iteration. Only pure, total and deterministic operations qualify: they
     // read no random state, call no host code, emit nothing, consume no runtime budget and cannot
     // fail. Results are therefore unchanged; executed opcode counts and register requirements are not.
-    // Mirrors LoopInvariantHoistingPass of the C# reference compiler instruction for instruction.
-    func hoistLoopInvariants(_ routine: GesRoutine) {
-        guard routine.code.indices.contains(where: { Self.backEdges.contains(routine.code[$0].opcode) && Int(routine.code[$0].word2) <= $0 }) else { return }
+    // Mirrors LoopInvariantHoistingPass of the C# reference compiler item for item.
+    func hoistLoopInvariants(_ context: RewriteContext) -> Bool {
+        guard hasBackEdge(context) else { return false }
         // Each round moves at least one instruction outward, so this terminates. Only a loop
         // deferred because it contains a rewritten loop can still have candidates afterwards.
-        while hoistRound(routine, &operandLayouts) {}
+        var changed = false
+        while true {
+            let (moved, deferred) = hoistRound(context)
+            changed = changed || moved
+            if !deferred { return changed }
+        }
     }
-
-    private static let branches: Set<GesBytecodeOpCode> = [.jump, .jumpIfTrue, .jumpIfFalse, .jumpIfNotTrue, .jumpIfNothing, .iteratorNext, .iteratorCreateOrJump]
 
     private static let backEdges: Set<GesBytecodeOpCode> = [.jump, .jumpIfTrue, .jumpIfFalse, .jumpIfNotTrue, .jumpIfNothing]
 
@@ -41,50 +44,65 @@ extension GesBinaryBuilder {
         .add, .subtract, .multiply, .divide, .integerDivide, .modulo, .remainder, .negate, .abs,
     ]
 
+    private func hasBackEdge(_ context: RewriteContext) -> Bool {
+        var placed = [Bool](repeating: false, count: context.labelCount)
+        for index in 0..<context.count {
+            if let label = context.label(at: index) {
+                placed[label] = true
+            } else if let instruction = context.instruction(at: index), Self.backEdges.contains(instruction.opcode), placed[Int(instruction.word2)] {
+                return true
+            }
+        }
+        return false
+    }
+
     // Moving instructions inside one loop changes no position outside it, so one analysis serves
     // every loop of a round that neither contains nor overlaps an already rewritten loop. A loop
     // containing a rewritten one waits for the next round and its fresh analysis.
-    private func hoistRound(_ routine: GesRoutine, _ layouts: inout [Int: OperandSlots]) -> Bool {
-        let analysis = LoopAnalysis(routine, lists, &layouts)
+    private func hoistRound(_ context: RewriteContext) -> (moved: Bool, deferred: Bool) {
+        let analysis = LoopAnalysis(context)
         var rewritten: (start: Int, end: Int)?
         var deferred = false
-        for end in routine.code.indices {
-            let backEdge = routine.code[end]
-            let start = Int(backEdge.word2)
-            guard Self.backEdges.contains(backEdge.opcode), start <= end else { continue }
+        var moved = false
+        for end in 0..<context.count {
+            guard let backEdge = context.instruction(at: end), Self.backEdges.contains(backEdge.opcode) else { continue }
+            let header = Int(backEdge.word2)
+            let start = analysis.labelIndex[header]
+            guard start >= 0, start < end else { continue }
             if let rewritten, start <= rewritten.end && rewritten.start <= end {
                 deferred = true
                 continue
             }
-            // The loop must be entered only by falling into its first instruction. A jump from before the loop to its
-            // first instruction targets a label marked before the C# loop header label (such as for_source_done), so it
-            // does not enter the loop and later lands in front of the hoisted instructions.
-            guard !(start...end).contains(where: { ($0 != start && analysis.firstReference[$0] < start) || analysis.lastReference[$0] > end }) else { continue }
+            guard !context.isRoutineEntryLabel(header), analysis.hasSingleEntry(context, start, end) else { continue }
             // One forward sweep finds chains such as a constant load and the product reading it.
-            var marked: [Int] = []
+            var marked: [Bool] = []
             var hoisted: [Bool] = []
-            for index in start..<end where isLoopInvariant(routine, index, start: start, end: end, analysis: analysis, hoisted: hoisted, &layouts) {
-                if hoisted.isEmpty { hoisted = .init(repeating: false, count: routine.registers) }
-                marked.append(index)
-                hoisted[Int(routine.code[index].word0)] = true
+            for index in (start + 1)..<end {
+                guard let candidate = context.instruction(at: index), isHoistable(context, candidate, index, start: start, end: end, analysis: analysis, hoisted: hoisted) else { continue }
+                if marked.isEmpty {
+                    marked = .init(repeating: false, count: context.count)
+                    hoisted = .init(repeating: false, count: context.routine.registers)
+                }
+                marked[index] = true
+                hoisted[Int(candidate.word0)] = true
             }
             if marked.isEmpty { continue }
-            moveInstructions(routine, marked, start: start, end: end)
+            context.moveMarked(before: start, marked)
             // Loops are visited by ascending end, so later disjoint loops start after this one.
             rewritten = (min(rewritten?.start ?? start, start), end)
+            moved = true
         }
-        return deferred
+        return (moved, deferred)
     }
 
-    private func isLoopInvariant(_ routine: GesRoutine, _ index: Int, start: Int, end: Int, analysis: LoopAnalysis, hoisted: [Bool], _ layouts: inout [Int: OperandSlots]) -> Bool {
-        let instruction = routine.code[index]
+    private func isHoistable(_ context: RewriteContext, _ instruction: GesBytecodeInstruction, _ index: Int, start: Int, end: Int, analysis: LoopAnalysis, hoisted: [Bool]) -> Bool {
         guard Self.pureTotalOperations.contains(instruction.opcode) else { return false }
-        let slots = OperandSlots.of(instruction, &layouts)
+        let slots = context.slots(instruction)
         guard slots.registers.contains(0), slots.lists.isEmpty else { return false }
         // The destination has no other definition and is read only later in this loop body,
         // so no path observes it before this instruction or after a zero-iteration loop.
         let destination = Int(instruction.word0)
-        guard !routine.pinned.contains(destination), analysis.writeCount[destination] == 1 else { return false }
+        guard context.isTemporary(destination), analysis.writeCount[destination] == 1 else { return false }
         if analysis.lastRead[destination] >= 0 && (analysis.firstRead[destination] <= index || analysis.lastRead[destination] > end) { return false }
         // Every input is final before the loop starts, possibly by an earlier hoist of this sweep.
         for slot in slots.registers where slot != 0 {
@@ -92,34 +110,6 @@ extension GesBinaryBuilder {
             if source == destination || !(analysis.lastWrite[source] < start || (!hoisted.isEmpty && hoisted[source])) { return false }
         }
         return true
-    }
-
-    // Moves the marked instructions of the loop start...end, in order, in front of `start`. A position
-    // that referred to a moved instruction now addresses the next remaining one, as a C# label in
-    // front of it would. Positions outside the loop are unchanged.
-    private func moveInstructions(_ routine: GesRoutine, _ marked: [Int], start: Int, end: Int) {
-        let span = start...end
-        let labels = routine.labels
-        var isMarked = [Bool](repeating: false, count: span.count)
-        for index in marked { isMarked[index - start] = true }
-        let order = marked + span.filter { !isMarked[$0 - start] }
-        var newIndex = [Int](repeating: 0, count: span.count)
-        for (offset, old) in order.enumerated() { newIndex[old - start] = start + offset }
-        // A position resolves to the first remaining instruction at or after it.
-        var resolved = [Int](repeating: end + 1, count: span.count + 1)
-        for offset in stride(from: span.count - 1, through: 0, by: -1) { resolved[offset] = isMarked[offset] ? resolved[offset + 1] : newIndex[offset] }
-        routine.code.replaceSubrange(span, with: order.map { routine.code[$0] })
-        routine.locations.replaceSubrange(span, with: order.map { routine.locations[$0] })
-        // Jumps from before the loop keep addressing its start, which now holds the hoisted instructions.
-        let outerLabel = routine.code.indices.contains { $0 < start && Self.branches.contains(routine.code[$0].opcode) && Int(routine.code[$0].word2) == start }
-        for index in routine.code.indices where Self.branches.contains(routine.code[index].opcode) {
-            let target = Int(routine.code[index].word2)
-            if span.contains(target) && !(index < start && target == start) { routine.patch(index, target: resolved[target - start]) }
-        }
-        for index in routine.calls.indices where span.contains(routine.calls[index].0) { routine.calls[index].0 = resolved[routine.calls[index].0 - start] }
-        for index in routine.symbols.indices where span.contains(routine.symbols[index].2) { routine.symbols[index].2 = resolved[routine.symbols[index].2 - start] }
-        routine.labels = Set(labels.map { span.contains($0) ? resolved[$0 - start] : $0 })
-        if outerLabel { routine.labels.insert(start) }
     }
 }
 
@@ -163,31 +153,39 @@ extension GesBinaryBuilder {
         }
     }
 
-    // Per-register definition/use positions and per-position branch references of one routine.
+    // Per-register definition and use item indexes, label item indexes and the first and last item referring to each
+    // label, as the Analysis of the C# LoopInvariantHoistingPass.
     struct LoopAnalysis {
         var writeCount: [Int]
         var lastWrite: [Int]
         var firstRead: [Int]
         var lastRead: [Int]
+        var labelIndex: [Int]
         var firstReference: [Int]
         var lastReference: [Int]
 
-        init(_ routine: GesRoutine, _ lists: [[UInt16]], _ layouts: inout [Int: OperandSlots]) {
+        init(_ context: RewriteContext) {
             // Before allocation, routine.registers counts the virtual registers.
-            let registers = routine.registers
+            let registers = context.routine.registers
             writeCount = .init(repeating: 0, count: registers)
             lastWrite = .init(repeating: -1, count: registers)
             firstRead = .init(repeating: .max, count: registers)
             lastRead = .init(repeating: -1, count: registers)
-            firstReference = .init(repeating: .max, count: routine.code.count)
-            lastReference = .init(repeating: -1, count: routine.code.count)
-            for (index, instruction) in routine.code.enumerated() {
-                let target = Int(instruction.word2)
-                if GesBinaryBuilder.isBranch(instruction.opcode), target < routine.code.count {
-                    firstReference[target] = min(firstReference[target], index)
-                    lastReference[target] = index
+            labelIndex = .init(repeating: -1, count: context.labelCount)
+            firstReference = .init(repeating: .max, count: context.labelCount)
+            lastReference = .init(repeating: -1, count: context.labelCount)
+            for index in 0..<context.count {
+                if let label = context.label(at: index) {
+                    labelIndex[label] = index
+                    continue
                 }
-                let slots = OperandSlots.of(instruction, &layouts)
+                guard let instruction = context.instruction(at: index) else { continue }
+                if GesBinaryBuilder.isBranch(instruction.opcode) {
+                    let label = Int(instruction.word2)
+                    firstReference[label] = min(firstReference[label], index)
+                    lastReference[label] = index
+                }
+                let slots = context.slots(instruction)
                 for slot in slots.registers {
                     let register = Int(instruction.field(slot))
                     // Closing an iterator also clears its register.
@@ -195,11 +193,20 @@ extension GesBinaryBuilder {
                     if slot != 0 { read(register, index) }
                 }
                 for slot in slots.lists {
-                    for register in lists[Int(instruction.field(slot))] {
+                    for register in context.builder.lists[Int(instruction.field(slot))] {
                         if slot == 0 { write(Int(register), index) } else { read(Int(register), index) }
                     }
                 }
             }
+        }
+
+        // The loop body starts at its header label and ends with the back edge. It must be entered
+        // only by falling through the header, so code placed before the header runs on every entry.
+        func hasSingleEntry(_ context: RewriteContext, _ start: Int, _ end: Int) -> Bool {
+            for index in start...end {
+                if let label = context.label(at: index), firstReference[label] < start || lastReference[label] > end { return false }
+            }
+            return true
         }
 
         private mutating func write(_ register: Int, _ index: Int) {

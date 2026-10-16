@@ -3,29 +3,60 @@
 
 @_spi(Compiler) import GameEventScriptRuntime
 
+// One element of a routine's plan, as C# GesBinaryBuilder.PlanItem: a label, or an instruction with the index of its
+// source location. Jumps address labels by ID and calls address their callee by call ID, so passes move and
+// remove items without remapping any position; addresses exist only once the plan is encoded.
+extension GesBinaryBuilder {
+    enum PlanItem: Equatable {
+        case label(Int)
+        case instruction(GesBytecodeInstruction, location: Int)
+
+        var instruction: GesBytecodeInstruction? {
+            if case .instruction(let instruction, _) = self { return instruction }
+            return nil
+        }
+
+        var label: Int? {
+            if case .label(let label) = self { return label }
+            return nil
+        }
+    }
+}
+
 final class GesRoutine {
     let definition: GesDefinition
     var key: String { definition.kind.hasSuffix("andler") ? definition.signature + "@\(definition.location.sourceID ?? 0):\(definition.location.line ?? 0):\(definition.location.column ?? 0)" : definition.signature }
-    var code: [GesBytecodeInstruction] = []
+    // Starts with the routine entry label, as in C#.
+    var items: [GesBinaryBuilder.PlanItem] = [.label(GesRoutine.entryLabel)]
+    var labelCount = 1
+    // Source locations by index; an instruction item keeps the index of its own.
     var locations: [GesSourceLocation] = []
+    // Callee keys by call ID; a call instruction holds its call ID until encoding.
+    var calls: [String] = []
     var pinned: Set<Int> = []
-    // Label positions as in the C# builder: a label stays in place when the jumps to it disappear.
-    var labels: Set<Int> = []
     var registers: Int
     var maxStage = 0
     var hasAssembly = false
     var componentRows: [Int: GesComponentRow] = [:]
     var nonListBindings: Set<Int> = []
-    var calls: [(Int, String)] = []
     var dependencies: Set<String> = []
-    var symbols: [(String, Int, Int, Bool)] = []
+    // Debug symbols: name, register and whether the register is a parameter.
+    var symbols: [(String, Int, Bool)] = []
     var location: GesSourceLocation
+
+    static let entryLabel = 0
 
     init(_ definition: GesDefinition) {
         self.definition = definition
         registers = definition.parameters.count
         location = definition.location
         pinned = Set(0..<registers)
+    }
+
+    var instructionCount: Int {
+        var count = 0
+        for item in items where item.label == nil { count += 1 }
+        return count
     }
 
     func local() -> Int {
@@ -40,24 +71,61 @@ final class GesRoutine {
         return result
     }
 
+    // Appends an instruction and returns its item index, which stays valid while lowering appends items.
     @discardableResult func emit(_ op: GesBytecodeOpCode, _ d: Int = 0, _ x: Int = 0, _ y: Int = 0, payload: UInt64 = 0, flags: UInt8 = 0) -> Int {
-        let i = code.count
-        code.append(.init(opcode: op, unitAndFlags: flags, word0: UInt16(truncatingIfNeeded: d), word1: UInt16(truncatingIfNeeded: x), word2: UInt16(truncatingIfNeeded: y), payload: payload))
+        let instruction = GesBytecodeInstruction(
+            opcode: op,
+            unitAndFlags: flags,
+            word0: UInt16(truncatingIfNeeded: d),
+            word1: UInt16(truncatingIfNeeded: x),
+            word2: UInt16(truncatingIfNeeded: y),
+            payload: payload
+        )
+        items.append(.instruction(instruction, location: locations.count))
         locations.append(location)
-        return i
+        return items.count - 1
     }
 
-    // Marks a label at the next instruction, as C# MarkLabel does, and resolves the given jumps to it.
-    // The label exists even when no jump refers to it, so it still bounds basic blocks for the optimizer.
-    func mark(_ jumps: [Int] = []) {
-        labels.insert(code.count)
-        for jump in jumps { patch(jump, target: code.count) }
+    // A label that `place` puts into the plan later, for targets that are referenced before they are reached.
+    func newLabel() -> Int {
+        defer { labelCount += 1 }
+        return labelCount
     }
 
-    func patch(_ i: Int, target: Int) {
-        labels.insert(target)
-        let old = code[i]
-        code[i] = .init(opcode: old.opcode, unitAndFlags: old.unitAndFlags, word0: old.word0, word1: old.word1, word2: UInt16(truncatingIfNeeded: target), payload: old.payload)
+    func place(_ label: Int) { items.append(.label(label)) }
+
+    // Places a new label at the end of the plan, as C# MarkLabel does, and points the given jumps at it. The label
+    // stays even when no jump refers to it, so it still bounds basic blocks for the optimizer.
+    @discardableResult func mark(_ jumps: [Int] = []) -> Int {
+        let label = newLabel()
+        place(label)
+        for jump in jumps { patch(jump, label: label) }
+        return label
+    }
+
+    // Points the jump at item index `item` to `label`.
+    func patch(_ item: Int, label: Int) {
+        guard case .instruction(let old, let location) = items[item] else { preconditionFailure("Only instructions jump.") }
+        items[item] = .instruction(
+            .init(opcode: old.opcode, unitAndFlags: old.unitAndFlags, word0: old.word0, word1: old.word1, word2: UInt16(truncatingIfNeeded: label), payload: old.payload),
+            location: location
+        )
+    }
+
+    // The call ID of a call to the routine `key`.
+    func call(_ key: String) -> Int {
+        calls.append(key)
+        return calls.count - 1
+    }
+
+    // Instruction ordinal of the first instruction at or after each label, by label ID; -1 for an unplaced label.
+    func labelAddresses() -> [Int] {
+        var addresses = [Int](repeating: -1, count: labelCount)
+        var ordinal = 0
+        for item in items {
+            if let label = item.label { addresses[label] = ordinal } else { ordinal += 1 }
+        }
+        return addresses
     }
 }
 
@@ -124,7 +192,7 @@ final class GesCompiler {
         r.emit(.registerLocals)
         for (i, parameter) in definition.parameters.enumerated() {
             scope.values[parameter.name] = i
-            r.symbols.append((definition.argumentName(parameter), i, 0, true))
+            r.symbols.append((definition.argumentName(parameter), i, true))
             if let type = parameter.type { try cast(i, i, type, r) }
         }
         if let value = definition.expression {
@@ -146,12 +214,12 @@ final class GesCompiler {
         r.emit(.registerLocals)
         for (i, p) in params.enumerated() {
             scope.values[p.name] = i
-            r.symbols.append((p.label, i, 0, true))
+            r.symbols.append((p.label, i, true))
         }
         for field in record.fields where field.computed != nil {
             let reg = r.local()
             scope.values[field.name] = reg
-            r.symbols.append((field.name, reg, 0, false))
+            r.symbols.append((field.name, reg, false))
         }
         for field in record.fields {
             r.location = field.location

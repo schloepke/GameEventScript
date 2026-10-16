@@ -376,8 +376,8 @@ contains exactly the measured reference sources plus the recalibrated corpus.
       component bindings run last in `GesShadowingValidator`, as in C#.
       `GesCompiler` lowers into `GesBinaryBuilder`, which owns the pools,
       routines, optimization, register allocation, resource analysis and
-      encoding. Swift keeps its per-routine instruction lists (`GesRoutine`)
-      instead of C#'s plan items.
+      encoding. Swift keeps one plan per routine (`GesRoutine`), where C#
+      optimizes the linearized plan of all routines.
 - [x] Named optimization passes behind `IGesBinaryOptimizationPass` /
       `GesBinaryOptimizationPass` with the C# pass names and pipeline, nested in
       `GesBinaryBuilder` as in C#; labels persist when their jumps disappear, as
@@ -404,11 +404,19 @@ compiler output byte-identical and stays within the performance budget.
       a `selector` kind for a `:word` that is not a selector keyword, which C#
       folds into `Tag` and distinguishes by its leading character; C#'s unused
       `DiceSeparator` kind has no Swift counterpart.
-- [ ] Swift adopts the safe instruction model of C#: labels are elements of the
-      instruction list, jumps and calls target symbolic label and bind IDs,
-      operands are typed and pool indexes are assigned when encoding, so passes
-      need no position remapping. Instructions stay compact value types without
-      a heap object per instruction; allocations stay at or below the reference.
+- [x] Swift adopts the safe instruction model of C#: a routine's plan is a list
+      of `GesBinaryBuilder.PlanItem` values, a label or an instruction with its
+      source-location index, starting with the routine entry label. Jumps address
+      label IDs and calls address call IDs; addresses exist only in the encoder,
+      so passes move and remove items without remapping any position, and the
+      passes and loop-invariant hoisting follow the C# item logic directly.
+      Debug symbols no longer carry a position. Items are compact value types
+      without a heap object per instruction; compile allocations fell well below
+      the reference (for example `performance.core/case-0005` 595 KB against
+      915 KB). Operand kinds come from the shared opcode operand schema
+      (`OperandSlots`), as the Program validator reads them, instead of a
+      per-operand value type; strings and lists are re-interned in final order
+      by the encoder's materialization.
 - [ ] C# reaches the same model compactly: denser code with identical behaviour,
       and compact instruction storage where measurement supports it.
 

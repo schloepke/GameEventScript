@@ -110,8 +110,7 @@ extension GesCompiler {
                 let key = callableSignature(name, args.map(\.label))
                 guard let definition = definitions[key] else { throw compileError("compile.unresolvedSymbol", line.location, symbol: name, phase: .compile) }
                 try stageExpressions(args.map(\.value), r, scope)
-                let instruction = r.emit(.call, regs[0], flags: definition.kind == "predicate" ? 0x20 : 0)
-                r.calls.append((instruction, key))
+                r.emit(.call, regs[0], 0, r.call(key), flags: definition.kind == "predicate" ? 0x20 : 0)
                 r.dependencies.insert(key)
                 return true
             }

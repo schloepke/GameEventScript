@@ -98,7 +98,7 @@ extension GesCompiler {
         if s.operation == "fold" { _ = try expression(s.expressions[0], r, scope, destination: accumulator) } else { r.emit(.loadNothing, accumulator) }
         if let validSource { invalid.append(r.emit(.jumpIfNotTrue, 0, validSource)) } else { invalid.append(r.emit(.iteratorCreateOrJump, iterator, input)) }
         let first = s.operation == "reduce" ? r.emit(.iteratorNext, accumulator, iterator) : nil
-        let loop = r.code.count
+        let loop = r.mark()
         let end = r.emit(.iteratorNext, row.map { builder.list($0.components) } ?? item, iterator, flags: row == nil ? 0 : 32)
         if let row { r.componentRows[item] = row }
         let child = GesScope(scope)
@@ -108,14 +108,14 @@ extension GesCompiler {
         r.componentRows.removeValue(forKey: item)
         if value != accumulator { r.emit(.move, accumulator, value) }
         r.emit(.jump, 0, 0, loop)
-        r.patch(end, target: r.code.count)
-        if let first { r.patch(first, target: r.code.count) }
+        r.mark([end])
+        if let first { r.mark([first]) }
         r.emit(.iteratorClose, 0, iterator)
         r.emit(.move, d, accumulator)
         let done = r.emit(.jump)
         r.mark(invalid)
         r.emit(.loadNothing, d)
-        r.patch(done, target: r.code.count)
+        r.mark([done])
     }
 
     func weightedChoose(_ input: Int, _ s: GesSelector, _ d: Int, _ r: GesRoutine, _ scope: GesScope) throws {
@@ -131,7 +131,7 @@ extension GesCompiler {
         let invalid = r.emit(.iteratorCreateOrJump, iterator, input)
         r.emit(.listBuilderCreate, itemsBuilder)
         r.emit(.listBuilderCreate, weightsBuilder)
-        let begin = r.code.count
+        let begin = r.mark()
         let end = r.emit(.iteratorNext, item, iterator)
         let predicateScope = GesScope(scope)
         bindComponents(s.names, fallback: s.name, current: item, r, predicateScope)
@@ -151,15 +151,15 @@ extension GesCompiler {
         r.emit(.listBuilderAdd, 0, weightsBuilder, weight)
         r.mark(skips)
         r.emit(.jump, 0, 0, begin)
-        r.patch(end, target: r.code.count)
+        r.mark([end])
         r.emit(.iteratorClose, 0, iterator)
         r.emit(.listBuilderFinish, items, itemsBuilder)
         r.emit(.listBuilderFinish, weights, weightsBuilder)
         if s.count == 1 { r.emit(.oneWeighted, d, items, weights) } else { r.emit(.takeWeighted, d, items, s.count, payload: UInt64(weights)) }
         let done = r.emit(.jump)
-        r.patch(invalid, target: r.code.count)
+        r.mark([invalid])
         r.emit(.loadNothing, d)
-        r.patch(done, target: r.code.count)
+        r.mark([done])
     }
 
     func slice(_ s: GesSelector, _ d: Int, _ source: Int, _ r: GesRoutine) throws {
@@ -246,7 +246,7 @@ extension GesCompiler {
         case "objectMatch": r.emit(.loadFalse, d)
         default: r.emit(.loadNothing, d)
         }
-        let start = r.code.count
+        let start = r.mark()
         var endJumps = [r.emit(.iteratorNext, row.map { builder.list($0.components) } ?? item, iterator, flags: row == nil ? 0 : 32)]
         if let row { r.componentRows[item] = row }
         var nextJumps: [Int] = []
@@ -289,7 +289,7 @@ extension GesCompiler {
             numericCopy(sum, projected, r)
             r.emit(.loadTrue, seen)
             nextJumps.append(r.emit(.jump))
-            r.patch(add, target: r.code.count)
+            r.mark([add])
             r.emit(.add, sum, sum, projected, flags: 64)
         case "min", "max":
             let compareJump = r.emit(.jumpIfTrue, 0, seen)
@@ -297,12 +297,12 @@ extension GesCompiler {
             r.emit(.move, winner, projected)
             r.emit(.loadTrue, seen)
             nextJumps.append(r.emit(.jump))
-            r.patch(compareJump, target: r.code.count)
+            r.mark([compareJump])
             r.emit(s.operation == "min" ? .less : .greater, compare, projected, winner)
             let update = r.emit(.jumpIfTrue, 0, compare)
             r.emit(.loadTrue, seen)
             nextJumps.append(r.emit(.jump))
-            r.patch(update, target: r.code.count)
+            r.mark([update])
             r.emit(.move, d, current)
             r.emit(.move, winner, projected)
             r.emit(.loadTrue, seen)
@@ -313,7 +313,7 @@ extension GesCompiler {
                 r.emit(.move, d, current)
                 r.emit(.add, count, count, one)
                 nextJumps.append(r.emit(.jump))
-                r.patch(duplicate, target: r.code.count)
+                r.mark([duplicate])
                 r.emit(.loadNothing, d)
                 endJumps.append(r.emit(.jump))
             } else {
@@ -355,14 +355,14 @@ extension GesCompiler {
             let empty = r.emit(.jumpIfNotTrue, 0, count)
             r.emit(.divide, d, sum, count, flags: 64)
             close.append(r.emit(.jump))
-            r.patch(empty, target: r.code.count)
+            r.mark([empty])
             r.emit(.loadNothing, d)
         }
         r.mark(close)
         let done = r.emit(.jump)
         r.mark(invalid)
         r.emit(.loadNothing, d)
-        r.patch(done, target: r.code.count)
+        r.mark([done])
     }
 
     func numericCopy(_ destination: Int, _ source: Int, _ r: GesRoutine) {
@@ -383,23 +383,23 @@ extension GesCompiler {
             r.emit(.loadInteger, count, payload: 1)
             r.emit(.loadInteger, one, payload: 1)
         }
-        let loop = r.code.count
+        let loop = r.mark()
         let end = r.emit(.iteratorNext, item, iterator)
         if average { r.emit(.add, count, count, one) }
         r.emit(.add, accumulator, accumulator, item, flags: 64)
         r.emit(.jump, 0, 0, loop)
-        r.patch(empty, target: r.code.count)
+        r.mark([empty])
         r.emit(.iteratorClose, 0, iterator)
         r.emit(average ? .loadNothing : .loadInteger, d)
         let done1 = r.emit(.jump)
-        r.patch(end, target: r.code.count)
+        r.mark([end])
         r.emit(.iteratorClose, 0, iterator)
         if average { r.emit(.divide, d, accumulator, count, flags: 64) }
         let done2 = r.emit(.jump)
-        r.patch(invalid, target: r.code.count)
+        r.mark([invalid])
         r.emit(.loadNothing, d)
-        r.patch(done1, target: r.code.count)
-        r.patch(done2, target: r.code.count)
+        r.mark([done1])
+        r.mark([done2])
     }
 
     // As C# EmitObjectPatternPredicate: every entry is checked in source order and combined with And.

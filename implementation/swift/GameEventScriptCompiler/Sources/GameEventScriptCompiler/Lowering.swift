@@ -46,22 +46,22 @@ extension GesCompiler {
                 let end = r.emit(.jump)
                 r.mark(branches)
                 try statements(no, r, GesScope(scope))
-                r.patch(end, target: r.code.count)
+                r.mark([end])
             case .loop(let names, let sequence, let range, let body):
                 let child = GesScope(scope)
                 let items = names.map { name in
                     let item = r.local()
                     child.values[name] = item
-                    r.symbols.append((name, item, 0, false))
+                    r.symbols.append((name, item, false))
                     return item
                 }
                 let iterator = try iterator(sequence, range, r, scope)
-                let start = r.code.count
+                let start = r.mark()
                 let next = r.emit(.iteratorNext, items.count == 1 ? items[0] : builder.list(items), iterator, flags: items.count == 1 ? 0 : 32)
                 try statements(body, r, child)
                 r.location = statement.location
                 r.emit(.jump, 0, 0, start)
-                r.patch(next, target: r.code.count)
+                r.mark([next])
                 r.emit(.iteratorClose, 0, iterator)
             case .seeded(let seed, let body):
                 try randomPush(seed, r, scope)
@@ -113,7 +113,7 @@ extension GesCompiler {
     func letBinding(_ name: String, _ value: GesExpression, _ r: GesRoutine, _ scope: GesScope) throws -> Int {
         let d = r.local()
         // Declared before its value is evaluated, so the symbol precedes bindings declared inside the value.
-        r.symbols.append((name, d, max(0, r.code.count - 1), false))
+        r.symbols.append((name, d, false))
         scope.values[name] = d
         _ = try expression(value, r, scope, destination: d)
         if knownNonList(value, r, scope) { r.nonListBindings.insert(d) }
@@ -187,14 +187,14 @@ extension GesCompiler {
                 let second = r.emit(.jumpIfNotTrue, 0, check)
                 r.emit(.cartesian, d, a, b)
                 let done = r.emit(.jump)
-                r.patch(first, target: r.code.count)
-                r.patch(second, target: r.code.count)
+                r.mark([first])
+                r.mark([second])
                 r.emit(.multiply, d, a, b)
-                r.patch(done, target: r.code.count)
+                r.mark([done])
             } else {
                 r.emit(op.opcode, d, a, b)
             }
-            if let short { r.patch(short, target: r.code.count) }
+            if let short { r.mark([short]) }
         case .between(let input, let minimum, let maximum):
             let value = try expression(input, r, scope)
             let low = try expression(minimum, r, scope)
@@ -206,7 +206,7 @@ extension GesCompiler {
             let upper = r.temporary()
             r.emit(.lessOrEqual, upper, value, high)
             r.emit(.and, d, lower, upper)
-            r.patch(end, target: r.code.count)
+            r.mark([end])
         case .cast(let value, let type): try cast(d, expression(value, r, scope), type, r)
         case .check(let value, let type): try cast(d, expression(value, r, scope), type, r, check: true)
         case .call(let name, let arguments):
@@ -222,8 +222,7 @@ extension GesCompiler {
                     throw compileError("validate.missingCallable", e.location, symbol: name, kind: .globalDefinition)
                 }
                 try stageExpressions(arguments.map(\.value), r, scope)
-                let instruction = r.emit(.call, d, flags: definitions[key]?.kind == "predicate" ? 0x20 : 0)
-                r.calls.append((instruction, key))
+                r.emit(.call, d, 0, r.call(key), flags: definitions[key]?.kind == "predicate" ? 0x20 : 0)
                 r.dependencies.insert(key)
             }
         case .predicate(let value, let name):
@@ -233,8 +232,7 @@ extension GesCompiler {
                 throw compileError("validate.invalidPredicate", e.location, symbol: name, kind: .predicate, message: "No unique predicate named '\(name)' with \(count) parameters is available.")
             }
             if let value { try stageExpressions([value], r, scope) }
-            let instruction = r.emit(.call, d, flags: 0x20)
-            r.calls.append((instruction, definition.signature))
+            r.emit(.call, d, 0, r.call(definition.signature), flags: 0x20)
             r.dependencies.insert(definition.signature)
         case .extensionCall(let ns, let function, let arguments):
             let regs = try arguments.map { try expression($0.value, r, scope) }
@@ -306,7 +304,7 @@ extension GesCompiler {
                 let result = try expression(value, r, scope)
                 if result != d { r.emit(.move, d, result) }
                 ends.append(r.emit(.jump))
-                r.patch(branch, target: r.code.count)
+                r.mark([branch])
             }
             let otherwise = try expression(fallback, r, scope)
             if otherwise != d { r.emit(.move, d, otherwise) }
@@ -318,15 +316,15 @@ extension GesCompiler {
             let item = r.local()
             let iterator = try iterator(source, range, r, scope)
             child.values[name] = item
-            r.symbols.append((name, item, 0, false))
-            let begin = r.code.count
+            r.symbols.append((name, item, false))
+            let begin = r.mark()
             let next = r.emit(.iteratorNext, item, iterator)
             let skip = try condition.map { r.emit(.jumpIfNotTrue, 0, try expression($0, r, child)) }
             let value = try expression(projection, r, child)
             r.emit(.listBuilderAdd, 0, collector, value)
-            if let skip { r.patch(skip, target: r.code.count) }
+            if let skip { r.mark([skip]) }
             r.emit(.jump, 0, 0, begin)
-            r.patch(next, target: r.code.count)
+            r.mark([next])
             r.emit(.iteratorClose, 0, iterator)
             r.emit(.listBuilderFinish, d, collector)
         }

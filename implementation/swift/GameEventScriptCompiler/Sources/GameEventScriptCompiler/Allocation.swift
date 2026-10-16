@@ -13,8 +13,10 @@ extension GesBytecodeInstruction {
 
 extension GesBinaryBuilder {
     func allocate(_ routine: GesRoutine) throws {
+        // Intervals use instruction ordinals; labels occupy no position.
+        let instructions = routine.items.compactMap(\.instruction)
         var intervals: [Int: (Int, Int)] = [:]
-        for (index, instruction) in routine.code.enumerated() {
+        for (index, instruction) in instructions.enumerated() {
             let fields = instruction.fields
             var registers = GesCompilerSupport.registerSlots(instruction).map { Int(fields[$0]) }
             for slot in GesCompilerSupport.listSlots(instruction, text: false) { registers += lists[Int(fields[slot])].map(Int.init) }
@@ -22,10 +24,11 @@ extension GesBinaryBuilder {
         }
         // Keep values entering a loop alive through its back edge: a later iteration
         // reads them again even if their last textual use precedes other temporaries.
-        for (index, instruction) in routine.code.enumerated() {
+        let addresses = routine.labelAddresses()
+        for (index, instruction) in instructions.enumerated() {
             switch instruction.opcode {
             case .jump, .jumpIfTrue, .jumpIfFalse, .jumpIfNotTrue, .jumpIfNothing:
-                let start = Int(instruction.word2)
+                let start = addresses[Int(instruction.word2)]
                 if start <= index { for register in 0..<routine.registers { if let interval = intervals[register], interval.0 < start, interval.1 >= start, interval.1 < index { intervals[register] = (interval.0, index) } } }
             default: break
             }
@@ -54,14 +57,14 @@ extension GesBinaryBuilder {
             mapping[id] = register
             active.append((interval.1, register))
         }
-        for index in routine.code.indices {
-            let instruction = routine.code[index]
+        for index in routine.items.indices {
+            guard case .instruction(let instruction, let location) = routine.items[index] else { continue }
             var fields = instruction.fields
             for slot in GesCompilerSupport.registerSlots(instruction) { fields[slot] = UInt16(mapping[Int(fields[slot])]!) }
             for slot in GesCompilerSupport.listSlots(instruction, text: false) { fields[slot] = UInt16(list(lists[Int(fields[slot])].map { mapping[Int($0)]! })) }
-            routine.code[index] = instruction.replacing(fields)
+            routine.items[index] = .instruction(instruction.replacing(fields), location: location)
         }
-        routine.symbols = routine.symbols.map { ($0.0, mapping[$0.1]!, $0.2, $0.3) }
+        routine.symbols = routine.symbols.map { ($0.0, mapping[$0.1]!, $0.2) }
         routine.registers = next
     }
 }

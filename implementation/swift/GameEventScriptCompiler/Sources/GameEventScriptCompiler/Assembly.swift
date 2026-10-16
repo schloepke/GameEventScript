@@ -52,7 +52,7 @@ extension GesCompiler {
             let register = r.local()
             scope.values[declaration.name] = register
             // A declared assembly register is a named local, as C# context.Declare makes it.
-            r.symbols.append((declaration.name, register, max(0, r.code.count - 1), false))
+            r.symbols.append((declaration.name, register, false))
         }
         var labels: [String: Int] = [:]
         for (index, line) in block.lines.enumerated() where line.label {
@@ -105,12 +105,13 @@ extension GesCompiler {
         }
         try assemblyFlow(block, signatures, labels, writable, outputs, locals)
         r.hasAssembly = true
-        var addresses: [String: Int] = [:]
+        // Plan labels by assembly label name; jumps may refer to labels defined later, so patches resolve after the block.
+        var planLabels: [String: Int] = [:]
         var patches: [(Int, String)] = []
         for (index, line) in block.lines.enumerated() {
             r.location = line.location
             if line.label {
-                addresses[line.name] = r.code.count
+                planLabels[line.name] = r.mark()
                 continue
             }
             var registers = [Int](repeating: 0, count: line.operands.count)
@@ -134,7 +135,7 @@ extension GesCompiler {
                 var value = 0
                 switch kind {
                 case "w", "r": value = registers[operandIndex]
-                case "l": patches.append((r.code.count, try assemblyName(operand)))
+                case "l": patches.append((r.items.count, try assemblyName(operand)))
                 case "i": payload = UInt64(bitPattern: try assemblyInteger(operand))
                 case "f": payload = try assemblyNumber(operand).bitPattern
                 case "s", "u": value = Int(try assemblyInteger(operand))
@@ -146,7 +147,7 @@ extension GesCompiler {
             let packed = UInt64(fields[3]) | UInt64(fields[4]) << 16 | UInt64(fields[5]) << 32 | UInt64(fields[6]) << 48
             r.emit(op, Int(fields[0]), Int(fields[1]), Int(fields[2]), payload: payload ?? packed)
         }
-        for (instruction, label) in patches { r.patch(instruction, target: addresses[label]!) }
+        for (instruction, label) in patches { r.patch(instruction, label: planLabels[label]!) }
         for declaration in block.declarations where declaration.export { outer.values[declaration.name] = scope.values[declaration.name] }
     }
 

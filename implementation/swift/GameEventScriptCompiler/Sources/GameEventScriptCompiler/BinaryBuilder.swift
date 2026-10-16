@@ -89,18 +89,18 @@ final class GesBinaryBuilder {
     private static let clears: Set<GesBytecodeOpCode> = [.createVector, .createPoint, .createList, .createMap, .createExternalType, .returnVoid, .returnValue]
 
     func analyzeResources(_ r: GesRoutine, _ effects: EffectAnalysis) {
-        let calls = Dictionary(r.calls.map { ($0.0, $0.1) }, uniquingKeysWith: { first, _ in first })
         var dependencies: Set<String> = []
         var stage = 0
         var maxStage = 0
-        for (index, instruction) in r.code.enumerated() {
+        for item in r.items {
+            guard let instruction = item.instruction else { continue }
             if Self.stages.contains(instruction.opcode) {
                 stage += 1
                 maxStage = max(maxStage, stage)
             }
             switch instruction.opcode {
             case .call:
-                if let key = calls[index] { dependencies.insert(key) }
+                dependencies.insert(r.calls[Int(instruction.word2)])
                 stage = 0
             case .createRecord:
                 if let key = effects.recordKeysByID[Int(instruction.word1)] { dependencies.insert(key) }
@@ -116,7 +116,7 @@ final class GesBinaryBuilder {
     }
 
     func checkLimits(_ routine: GesRoutine? = nil) throws {
-        if numericLimitExceeded || (routine?.registers ?? 0) >= 65535 || (routine?.code.count ?? 0) >= 65535 {
+        if numericLimitExceeded || (routine?.registers ?? 0) >= 65535 || (routine?.instructionCount ?? 0) >= 65535 {
             throw compileError("compile.numericLimitExceeded", routine?.location ?? fallbackLocation, phase: .compile)
         }
     }
@@ -127,9 +127,12 @@ final class GesBinaryBuilder {
         var address = 0
         for r in routines {
             addresses[r.key] = address
-            address += r.code.count
+            address += r.instructionCount
             if r.registers - r.definition.parameters.count > Int(Int16.max) || r.registers >= 65535 { throw compileError("compile.numericLimitExceeded", r.location, phase: .compile) }
-            r.code[0] = .init(opcode: .registerLocals, word1: UInt16(r.registers - r.definition.parameters.count))
+            // The prolog is the first instruction; it reserves the allocated locals.
+            let prolog = r.items.firstIndex { $0.instruction != nil }!
+            guard case .instruction(_, let location) = r.items[prolog] else { preconditionFailure() }
+            r.items[prolog] = .instruction(.init(opcode: .registerLocals, word1: UInt16(r.registers - r.definition.parameters.count)), location: location)
         }
         if address >= 65535 || strings.count >= 65535 || lists.count >= 65535 { throw compileError("compile.numericLimitExceeded", fallbackLocation, phase: .compile) }
         var resources: [String: (Int, Int)] = [:]
@@ -173,17 +176,20 @@ final class GesBinaryBuilder {
             let d = r.definition
             let offset = code.count
             let isHandler = d.kind.hasSuffix("andler")
-            for (i, target) in r.calls {
-                guard let address = addresses[target] else { throw compileError("compile.unresolvedSymbol", r.location, symbol: target, phase: .compile) }
-                r.patch(i, target: address)
-            }
-            for i in r.code.indices {
-                var instruction = r.code[i]
-                if [.jump, .jumpIfTrue, .jumpIfFalse, .jumpIfNotTrue, .jumpIfNothing, .iteratorNext, .iteratorCreateOrJump].contains(instruction.opcode) {
-                    instruction = .init(opcode: instruction.opcode, unitAndFlags: instruction.unitAndFlags, word0: instruction.word0, word1: instruction.word1, word2: UInt16(offset + Int(instruction.word2)), payload: instruction.payload)
+            // Calls resolve before the routine is encoded, so an unknown callee fails before any of its code.
+            for target in r.calls where addresses[target] == nil { throw compileError("compile.unresolvedSymbol", r.location, symbol: target, phase: .compile) }
+            let labels = r.labelAddresses()
+            for item in r.items {
+                guard case .instruction(var instruction, let location) = item else { continue }
+                // Labels and call IDs become code addresses only here.
+                let target: Int? =
+                    Self.isBranch(instruction.opcode) ? offset + labels[Int(instruction.word2)] : instruction.opcode == .call ? addresses[r.calls[Int(instruction.word2)]]! : nil
+                if let target {
+                    instruction = .init(opcode: instruction.opcode, unitAndFlags: instruction.unitAndFlags, word0: instruction.word0, word1: instruction.word1, word2: UInt16(target), payload: instruction.payload)
                 }
+                let address = code.count
                 code.append(instruction)
-                if options.debugInfo.contains(.sourceMap), let span = sourceSpan(r.locations[i], address: offset + i) {
+                if options.debugInfo.contains(.sourceMap), let span = sourceSpan(r.locations[location], address: address) {
                     if let previous = spans.last, previous.codeStart + previous.codeLength == span.codeStart, previous.sourceID == span.sourceID,
                         previous.sourceStartByteOffset == span.sourceStartByteOffset, previous.sourceByteLength == span.sourceByteLength
                     {
@@ -229,8 +235,8 @@ final class GesBinaryBuilder {
                 )
             )
             if options.debugInfo.contains(.symbols) {
-                for (name, reg, _, parameter) in r.symbols {
-                    routineSymbols[r.key, default: []].append(.init(kind: parameter ? .parameter : .local, registerID: UInt16(reg), name: name, codeStart: UInt32(offset), codeLength: UInt32(r.code.count)))
+                for (name, reg, parameter) in r.symbols {
+                    routineSymbols[r.key, default: []].append(.init(kind: parameter ? .parameter : .local, registerID: UInt16(reg), name: name, codeStart: UInt32(offset), codeLength: UInt32(code.count - offset)))
                 }
             }
         }

@@ -64,11 +64,11 @@ extension GesCompiler {
         r.emit(.move, targets[0], current)
         for target in targets.dropFirst() { r.emit(.loadNothing, target) }
         let done = r.emit(.jump)
-        r.patch(map, target: r.code.count)
+        r.mark([map])
         r.emit(.valuesOfMap, values, current)
-        r.patch(list, target: r.code.count)
+        r.mark([list])
         for (index, target) in targets.enumerated() { r.emit(.indexAccess, target, index + 1, values) }
-        r.patch(done, target: r.code.count)
+        r.mark([done])
     }
 
     func componentIterator(_ iterator: Int, _ e: GesExpression, _ invalid: inout [Int], _ r: GesRoutine, _ scope: GesScope, guardedTerminal: GesSelector? = nil) throws -> GesComponentRow? {
@@ -137,6 +137,6 @@ extension GesCompiler {
         let done = r.emit(.jump)
         r.mark(invalid)
         r.emit(.loadNothing, d)
-        r.patch(done, target: r.code.count)
+        r.mark([done])
     }
 }

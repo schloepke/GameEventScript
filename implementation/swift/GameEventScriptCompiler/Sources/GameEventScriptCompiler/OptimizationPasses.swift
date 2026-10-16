@@ -11,7 +11,8 @@ protocol GesBinaryOptimizationPass: Sendable {
 
 // Nested like the C# GesBinaryBuilder types of the same names.
 extension GesBinaryBuilder {
-    // A routine's virtual-register code, its persistent labels and the program-wide effect summary.
+    // A routine's plan items and the program-wide effect summary, as C# GesBinaryBuilder.RewriteContext. Passes move
+    // and remove items without remapping: jumps address labels, which stay in place when their instructions go.
     // One context serves every routine of a compilation, so its analysis buffers are allocated once.
     final class RewriteContext {
         let builder: GesBinaryBuilder
@@ -24,21 +25,25 @@ extension GesBinaryBuilder {
             self.effects = effects
         }
 
-        func begin(_ routine: GesRoutine) {
-            self.routine = routine
-            // The routine entry label, every label marked while lowering and every branch target, as in the C# builder.
-            routine.labels.insert(0)
-            for instruction in routine.code where GesBinaryBuilder.isBranch(instruction.opcode) { routine.labels.insert(Int(instruction.word2)) }
+        func begin(_ routine: GesRoutine) { self.routine = routine }
+
+        var count: Int { routine.items.count }
+
+        var labelCount: Int { routine.labelCount }
+
+        // The instruction at an item index, or nil for a label or an index past the end, as C# GetInstruction.
+        func instruction(at index: Int) -> GesBytecodeInstruction? { index < count ? routine.items[index].instruction : nil }
+
+        // The label at an item index, as C# GetLabel.
+        func label(at index: Int) -> Int? { index < count ? routine.items[index].label : nil }
+
+        // Replaces the instruction at an item index and keeps its source location, as C# ReplaceInstruction.
+        func replaceInstruction(_ index: Int, _ instruction: GesBytecodeInstruction) {
+            guard case .instruction(_, let location) = routine.items[index] else { preconditionFailure("Only an instruction item can be replaced.") }
+            routine.items[index] = .instruction(instruction, location: location)
         }
 
-        var count: Int { routine.code.count }
-
-        subscript(index: Int) -> GesBytecodeInstruction {
-            get { routine.code[index] }
-            set { routine.code[index] = newValue }
-        }
-
-        func isLabel(_ position: Int) -> Bool { routine.labels.contains(position) }
+        func isRoutineEntryLabel(_ label: Int) -> Bool { label == GesRoutine.entryLabel }
 
         func isTemporary(_ register: Int) -> Bool { !routine.pinned.contains(register) }
 
@@ -71,18 +76,21 @@ extension GesBinaryBuilder {
         // Buffers reused by every pass over this routine, so repeated analyses do not allocate.
         var reads: [Int] = []
         var writes: [Int] = []
+        // Item index of each register's last writer.
         var lastWrite: [Int] = []
+        // Item index of the first instruction after each label, by label ID, as C# BuildLabelInstructionIndexes.
+        var labelInstructions: [Int] = []
         // Removal marks, sized on the first mark of a pass, so passes that remove nothing allocate nothing.
         private var remove: [Bool] = []
-        private var addresses: [Int] = []
-        private var remappedLabels: [Int] = []
+        private var moved: [GesBinaryBuilder.PlanItem] = []
 
         // Recomputes read and write counts per register and each register's last writer.
         func computeUsage() {
             reset(&reads, 0, routine.registers)
             reset(&writes, 0, routine.registers)
             reset(&lastWrite, -1, routine.registers)
-            for (index, instruction) in routine.code.enumerated() {
+            for index in routine.items.indices {
+                guard let instruction = routine.items[index].instruction else { continue }
                 forEachWrite(instruction) {
                     writes[$0] += 1
                     lastWrite[$0] = index
@@ -91,7 +99,30 @@ extension GesBinaryBuilder {
             }
         }
 
-        // Clears the removal marks for the current code.
+        func computeLabelInstructions() {
+            reset(&labelInstructions, -1, labelCount)
+            var pending: [Int] = []
+            for index in routine.items.indices {
+                if let label = routine.items[index].label {
+                    pending.append(label)
+                } else {
+                    for label in pending { labelInstructions[label] = index }
+                    pending.removeAll(keepingCapacity: true)
+                }
+            }
+        }
+
+        // Item index of the first instruction after `index`, or -1, as C# FindNextInstructionIndex.
+        func nextInstruction(after index: Int) -> Int {
+            var candidate = index + 1
+            while candidate < count {
+                if routine.items[candidate].label == nil { return candidate }
+                candidate += 1
+            }
+            return -1
+        }
+
+        // Clears the removal marks for the current items.
         func resetRemove() { remove.removeAll(keepingCapacity: true) }
 
         func isRemoved(_ index: Int) -> Bool { !remove.isEmpty && remove[index] }
@@ -110,44 +141,41 @@ extension GesBinaryBuilder {
             .init(opcode: instruction.opcode, unitAndFlags: instruction.unitAndFlags, word0: UInt16(register), word1: instruction.word1, word2: instruction.word2, payload: instruction.payload)
         }
 
-        // Removes the marked instructions. A label or position that addressed a removed instruction now
-        // addresses the next remaining one, as a C# label item in front of it would.
+        func replacingTarget(_ instruction: GesBytecodeInstruction, _ label: UInt16) -> GesBytecodeInstruction {
+            .init(opcode: instruction.opcode, unitAndFlags: instruction.unitAndFlags, word0: instruction.word0, word1: instruction.word1, word2: label, payload: instruction.payload)
+        }
+
+        // Removes the marked items in place, as C# RemoveMarked. Labels of removed instructions stay, so no jump changes.
         func removeMarked() {
             // A pass can change code without removing any of it, such as threading a jump.
             if remove.isEmpty { return }
-            reset(&addresses, 0, count + 1)
-            var next = 0
-            for index in 0..<count {
-                addresses[index] = next
-                if !remove[index] { next += 1 }
-            }
-            addresses[count] = next
-            // Compacts in place, so removals reuse the routine's storage instead of copying code and locations.
             var write = 0
             for index in 0..<count where !remove[index] {
-                var instruction = routine.code[index]
-                if GesBinaryBuilder.isBranch(instruction.opcode) {
-                    instruction = .init(
-                        opcode: instruction.opcode,
-                        unitAndFlags: instruction.unitAndFlags,
-                        word0: instruction.word0,
-                        word1: instruction.word1,
-                        word2: UInt16(addresses[Int(instruction.word2)]),
-                        payload: instruction.payload
-                    )
-                }
-                routine.code[write] = instruction
-                if write != index { routine.locations[write] = routine.locations[index] }
+                if write != index { routine.items[write] = routine.items[index] }
                 write += 1
             }
-            routine.code.removeLast(count - write)
-            routine.locations.removeLast(routine.locations.count - write)
-            for index in routine.calls.indices { routine.calls[index].0 = addresses[routine.calls[index].0] }
-            for index in routine.symbols.indices { routine.symbols[index].2 = addresses[routine.symbols[index].2] }
-            remappedLabels.removeAll(keepingCapacity: true)
-            for label in routine.labels { remappedLabels.append(addresses[label]) }
-            routine.labels.removeAll(keepingCapacity: true)
-            for label in remappedLabels { routine.labels.insert(label) }
+            routine.items.removeLast(count - write)
+        }
+
+        // Moves the marked items, in their order, in front of item `target`; every marked index is after `target`, as
+        // C# MoveMarkedBefore.
+        func moveMarked(before target: Int, _ marked: [Bool]) {
+            moved.removeAll(keepingCapacity: true)
+            var write = target
+            for read in target..<count {
+                if marked[read] {
+                    moved.append(routine.items[read])
+                } else {
+                    routine.items[write] = routine.items[read]
+                    write += 1
+                }
+            }
+            var index = count - 1
+            while index >= target + moved.count {
+                routine.items[index] = routine.items[index - moved.count]
+                index -= 1
+            }
+            for (offset, item) in moved.enumerated() { routine.items[target + offset] = item }
         }
     }
 
@@ -176,13 +204,13 @@ extension GesBinaryBuilder {
                 pending[routine.key] = 0
             }
             for routine in builder.routines {
-                let calls = Dictionary(routine.calls.map { ($0.0, $0.1) }, uniquingKeysWith: { first, _ in first })
-                for (index, instruction) in routine.code.enumerated() {
+                for item in routine.items {
+                    guard let instruction = item.instruction else { continue }
                     guard Self.isRoutineCall(instruction.opcode) else {
                         if Self.hasDirectEffects(instruction) { routineEffects[routine.key] = true }
                         continue
                     }
-                    guard let callee = callee(instruction, calls[index]), routineEffects[callee] != nil else {
+                    guard let callee = callee(instruction, instruction.opcode == .call ? routine.calls[Int(instruction.word2)] : nil), routineEffects[callee] != nil else {
                         // Unknown targets must never be assumed pure.
                         routineEffects[routine.key] = true
                         continue
@@ -281,10 +309,9 @@ extension GesBinaryBuilder {
             context.computeUsage()
             var changed = false
             for index in 0..<context.count {
-                let instruction = context[index]
-                guard context.destination(instruction) != nil else { continue }
+                guard let instruction = context.instruction(at: index), context.destination(instruction) != nil else { continue }
                 if let replacement = foldUnary(context, index, instruction) ?? foldBinary(context, index, instruction) {
-                    context[index] = replacement
+                    context.replaceInstruction(index, replacement)
                     changed = true
                 }
             }
@@ -354,10 +381,9 @@ extension GesBinaryBuilder {
         private func constant(_ context: RewriteContext, _ consumer: Int, _ register: Int) -> Constant? {
             guard register < context.reads.count, context.isTemporary(register), context.reads[register] == 1, context.writes[register] == 1 else { return nil }
             let writer = context.lastWrite[register]
-            // A label item between writer and consumer, including one right before the consumer, ends the block.
-            guard writer >= 0, writer < consumer, !((writer + 1)...consumer).contains(where: context.isLabel) else { return nil }
-            let instruction = context[writer]
-            guard context.destination(instruction) == register else { return nil }
+            // A label between writer and consumer ends the basic block.
+            guard writer >= 0, writer < consumer, !((writer + 1)..<consumer).contains(where: { context.label(at: $0) != nil }) else { return nil }
+            guard let instruction = context.instruction(at: writer), context.destination(instruction) == register else { return nil }
             switch instruction.opcode {
             case .loadInteger where instruction.unitAndFlags == 0: return .integer(Int64(bitPattern: instruction.payload))
             case .loadTrue: return .boolean(true)
@@ -385,8 +411,9 @@ extension GesBinaryBuilder {
                 context.resetRemove()
                 var any = false
                 for index in 0..<context.count {
-                    let instruction = context[index]
-                    guard let register = context.destination(instruction), context.isTemporary(register), context.reads[register] == 0, EffectAnalysis.canDiscardResult(instruction.opcode) else { continue }
+                    guard let instruction = context.instruction(at: index), let register = context.destination(instruction), context.isTemporary(register), context.reads[register] == 0, EffectAnalysis.canDiscardResult(instruction.opcode) else {
+                        continue
+                    }
                     // CastCustom resolves its record routine by name; its call entry is irrelevant.
                     let effects = instruction.opcode == .castCustom ? context.effects.hasEffects(instruction, call: nil) : EffectAnalysis.hasDirectEffects(instruction)
                     if effects { continue }
@@ -407,18 +434,16 @@ extension GesBinaryBuilder {
             context.resetRemove()
             var changed = false
             for moveIndex in 0..<context.count {
-                let move = context[moveIndex]
-                guard move.opcode == .move, move.unitAndFlags == 0 else { continue }
+                guard let move = context.instruction(at: moveIndex), move.opcode == .move, move.unitAndFlags == 0 else { continue }
                 let temporary = Int(move.word1)
                 let destination = Int(move.word0)
                 guard context.isTemporary(temporary), context.reads[temporary] == 1, context.writes[temporary] == 1 else { continue }
                 let writerIndex = context.lastWrite[temporary]
                 guard writerIndex >= 0, writerIndex < moveIndex else { continue }
-                let writer = context[writerIndex]
-                guard context.destination(writer) == temporary, !context.readsRegister(writer, destination), Self.canRetargetDestination(writer.opcode),
+                guard let writer = context.instruction(at: writerIndex), context.destination(writer) == temporary, !context.readsRegister(writer, destination), Self.canRetargetDestination(writer.opcode),
                     canMoveWriteEarlier(context, writerIndex, moveIndex, destination)
                 else { continue }
-                context[writerIndex] = context.replacingDestination(writer, destination)
+                context.replaceInstruction(writerIndex, context.replacingDestination(writer, destination))
                 context.markRemoved(moveIndex)
                 changed = true
             }
@@ -427,10 +452,8 @@ extension GesBinaryBuilder {
         }
 
         private func canMoveWriteEarlier(_ context: RewriteContext, _ writer: Int, _ move: Int, _ destination: Int) -> Bool {
-            if context.isLabel(move) { return false }
             for index in (writer + 1)..<move {
-                if context.isLabel(index) { return false }
-                let instruction = context[index]
+                guard let instruction = context.instruction(at: index) else { return false }
                 if Self.controlFlowBoundaries.contains(instruction.opcode) || context.readsRegister(instruction, destination) || context.destination(instruction) == destination { return false }
             }
             return true
@@ -462,13 +485,12 @@ extension GesBinaryBuilder {
             var index = 0
             while index + 1 < context.count {
                 defer { index += 1 }
-                let instruction = context[index]
-                let move = context[index + 1]
-                guard !context.isRemoved(index), !context.isRemoved(index + 1), !context.isLabel(index + 1), instruction.opcode != .iteratorNext, instruction.opcode != .iteratorCreateOrJump, move.opcode == .move, move.unitAndFlags == 0,
+                guard !context.isRemoved(index), !context.isRemoved(index + 1), let instruction = context.instruction(at: index), let move = context.instruction(at: index + 1), instruction.opcode != .iteratorNext,
+                    instruction.opcode != .iteratorCreateOrJump, move.opcode == .move, move.unitAndFlags == 0,
                     let temporary = context.destination(instruction), temporary == Int(move.word1), context.isTemporary(temporary),
                     !context.readsRegister(instruction, Int(move.word0)), context.reads[temporary] == 1, context.writes[temporary] == 1
                 else { continue }
-                context[index] = context.replacingDestination(instruction, Int(move.word0))
+                context.replaceInstruction(index, context.replacingDestination(instruction, Int(move.word0)))
                 context.markRemoved(index + 1)
                 context.reads[temporary] -= 1
                 context.writes[temporary] -= 1
@@ -483,14 +505,16 @@ extension GesBinaryBuilder {
     struct BranchSimplificationPass: GesBinaryOptimizationPass {
         func rewrite(_ context: RewriteContext) -> Bool {
             var changed = false
+            context.computeLabelInstructions()
             context.resetRemove()
-            for index in 0..<context.count where index + 1 < context.count {
-                let branch = context[index]
+            for index in 0..<context.count {
+                guard let branch = context.instruction(at: index) else { continue }
                 let inverse: GesBytecodeOpCode? = branch.opcode == .jumpIfTrue ? .jumpIfFalse : branch.opcode == .jumpIfFalse || branch.opcode == .jumpIfNotTrue ? .jumpIfTrue : nil
-                // A label between the branch and the jump keeps the jump an entry point.
-                guard let inverse, !context.isLabel(index + 1), context[index + 1].opcode == .jump, Int(branch.word2) == index + 2 else { continue }
-                let jump = context[index + 1]
-                context[index] = .init(opcode: inverse, unitAndFlags: branch.unitAndFlags, word0: branch.word0, word1: branch.word1, word2: jump.word2, payload: branch.payload)
+                // The jump must follow directly; a label between them keeps the jump an entry point.
+                guard let inverse, let jump = context.instruction(at: index + 1), jump.opcode == .jump,
+                    context.labelInstructions[Int(branch.word2)] == context.nextInstruction(after: index + 1)
+                else { continue }
+                context.replaceInstruction(index, .init(opcode: inverse, unitAndFlags: branch.unitAndFlags, word0: branch.word0, word1: branch.word1, word2: jump.word2, payload: branch.payload))
                 context.markRemoved(index + 1)
                 changed = true
             }
@@ -506,31 +530,25 @@ extension GesBinaryBuilder {
 
         func rewrite(_ context: RewriteContext) -> Bool {
             var changed = false
+            context.computeLabelInstructions()
             context.resetRemove()
             for index in 0..<context.count {
-                let instruction = context[index]
+                guard let instruction = context.instruction(at: index) else { continue }
                 if Self.jumps.contains(instruction.opcode) {
-                    let target = Int(instruction.word2)
-                    if target == index + 1 {
+                    let target = context.labelInstructions[Int(instruction.word2)]
+                    if target == context.nextInstruction(after: index) {
                         context.markRemoved(index)
                         changed = true
                         continue
                     }
-                    if target < context.count, context[target].opcode == .jump, Int(context[target].word2) != target {
-                        context[index] = .init(
-                            opcode: instruction.opcode,
-                            unitAndFlags: instruction.unitAndFlags,
-                            word0: instruction.word0,
-                            word1: instruction.word1,
-                            word2: context[target].word2,
-                            payload: instruction.payload
-                        )
+                    if target >= 0, let targetJump = context.instruction(at: target), targetJump.opcode == .jump, targetJump.word2 != instruction.word2 {
+                        context.replaceInstruction(index, context.replacingTarget(instruction, targetJump.word2))
                         changed = true
                     }
                 }
                 if Self.stops.contains(instruction.opcode) {
                     var dead = index + 1
-                    while dead < context.count && !context.isLabel(dead) {
+                    while dead < context.count && context.label(at: dead) == nil {
                         context.markRemoved(dead)
                         changed = true
                         dead += 1
@@ -543,10 +561,6 @@ extension GesBinaryBuilder {
     }
 
     struct LoopInvariantHoistingPass: GesBinaryOptimizationPass {
-        func rewrite(_ context: RewriteContext) -> Bool {
-            let before = context.routine.code
-            context.builder.hoistLoopInvariants(context.routine)
-            return context.routine.code != before
-        }
+        func rewrite(_ context: RewriteContext) -> Bool { context.builder.hoistLoopInvariants(context) }
     }
 }

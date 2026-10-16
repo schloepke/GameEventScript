@@ -420,7 +420,7 @@ compiler output byte-identical and stays within the performance budget.
       (`OperandSlots`), as the Program validator reads them, instead of a
       per-operand value type; strings and lists are re-interned in final order
       by the encoder's materialization.
-- [ ] C# reaches the same model compactly: denser code with identical behaviour,
+- [x] C# reaches the same model compactly: denser code with identical behaviour,
       and compact instruction storage where measurement supports it.
       Done: keyword and selector-keyword tables as allocation-free span
       switches; a `Selector` kind for a `:word` that is not a selector keyword,
@@ -436,7 +436,8 @@ compiler output byte-identical and stays within the performance budget.
       `is`-test helpers, and switch-based unary/intrinsic keywords (3,085 to
       2,793 lines). Lowering: one key-ordered emission helper, one inline
       pipeline builder register and shared projection/predicate steps (2,497
-      to 2,330 lines). Remaining: validation.
+      to 2,330 lines). Validation: one selector binder check and joined
+      single-line calls (1,849 to 1,485 lines).
 
 ### Phase 6 – Tools and adapters (low priority)
 

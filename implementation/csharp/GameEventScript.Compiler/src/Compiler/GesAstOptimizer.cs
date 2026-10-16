@@ -35,14 +35,7 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, GesExpressionN
             optimizedHandlers.Add(pair.Key, handlers);
         }
 
-        return new GesSyntaxTreeModule(
-            module.ModuleName,
-            module.Constants,
-            optimizedTypes,
-            optimizedCallables,
-            optimizedHandlers,
-            module.ExternalTypeDefinitions,
-            module.Sources);
+        return new GesSyntaxTreeModule(module.ModuleName, module.Constants, optimizedTypes, optimizedCallables, optimizedHandlers, module.ExternalTypeDefinitions, module.Sources);
     }
 
     private GesTypeDefinitionNode OptimizeTypeDefinition(GesTypeDefinitionNode definition, ISet<string> knownTypeNames)

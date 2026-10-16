@@ -356,10 +356,7 @@ internal sealed partial class GesParser
             var messageToken = Current;
             var messageLocalName = ExpectIdentifier();
             dispatchKind = GesEventHandlerDispatchKind.MessageName;
-            parameters.Add(WithRange(new GesParameterNode(
-                GesSystemEndpoints.MessageArgumentName,
-                messageLocalName,
-                "message"), messageToken));
+            parameters.Add(WithRange(new GesParameterNode(GesSystemEndpoints.MessageArgumentName, messageLocalName, "message"), messageToken));
         }
         else if (Match(LeftParen))
         {
@@ -2394,13 +2391,7 @@ internal sealed partial class GesParser
             if (IsCompactDiceToken(token.Text))
             {
                 Advance();
-                return new GesToken(
-                    GesTokenKind.Float,
-                    token.Text[1..],
-                    token.Line,
-                    token.Column + 1,
-                    token.EndLine,
-                    token.EndColumn);
+                return new GesToken(GesTokenKind.Float, token.Text[1..], token.Line, token.Column + 1, token.EndLine, token.EndColumn);
             }
         }
 
@@ -2657,9 +2648,7 @@ internal sealed partial class GesParser
             return;
         }
 
-        throw new GameEventScriptParseException(
-            $"Expected value but found {Current.Text}",
-            Current);
+        throw new GameEventScriptParseException($"Expected value but found {Current.Text}", Current);
     }
 
     private bool MatchWord(string word)
@@ -2687,9 +2676,7 @@ internal sealed partial class GesParser
 
         if (MatchWord(word)) return;
 
-        throw new GameEventScriptParseException(
-            $"Expected {word} but found {Current.Text}",
-            Current);
+        throw new GameEventScriptParseException($"Expected {word} but found {Current.Text}", Current);
     }
 
     private void ThrowIfIllegalToken()
@@ -2720,9 +2707,7 @@ internal sealed partial class GesParser
         }
 
         var token = Current;
-        throw new GameEventScriptParseException(
-            $"Expected statement separator or '{closingKind}' but found {token.Kind}",
-            token);
+        throw new GameEventScriptParseException($"Expected statement separator or '{closingKind}' but found {token.Kind}", token);
     }
 
     private void RequireHandlerSeparatorOrEndOfFile()
@@ -2736,9 +2721,7 @@ internal sealed partial class GesParser
         }
 
         var token = Current;
-        throw new GameEventScriptParseException(
-            $"Expected event handler separator but found {token.Kind}",
-            token);
+        throw new GameEventScriptParseException($"Expected event handler separator but found {token.Kind}", token);
     }
 
     private GesToken Advance()

@@ -175,13 +175,7 @@ internal static partial class GesCompiler
                 if (declaration.Export) outer.DeclareExisting(declaration.Name, context.Require(declaration.Name));
         }
 
-        private void ValidateAssemblyFlow(
-            GesAssemblyBlockNode block,
-            string[] signatures,
-            IReadOnlyDictionary<string, int> labels,
-            ISet<string> writable,
-            ISet<string> outputs,
-            ISet<string> locals)
+        private void ValidateAssemblyFlow(GesAssemblyBlockNode block, string[] signatures, IReadOnlyDictionary<string, int> labels, ISet<string> writable, ISet<string> outputs, ISet<string> locals)
         {
             var states = new Dictionary<string, string>?[block.Lines.Count + 1];
             states[0] = new(StringComparer.Ordinal);

@@ -79,13 +79,7 @@ internal static class GesAstValidator
             for (var fieldIndex = 0; fieldIndex < typeDefinition.Fields.Count; fieldIndex++)
             {
                 var field = typeDefinition.Fields[fieldIndex];
-                ValidateArgumentLabelCase(
-                    parsedScript,
-                    field.Name,
-                    field.Name,
-                    GesDiagnosticSymbolKind.Variable,
-                    "Field names must start with a lowercase ASCII letter and contain only ASCII letters or digits",
-                    errors, field);
+                ValidateArgumentLabelCase(parsedScript, field.Name, field.Name, GesDiagnosticSymbolKind.Variable, "Field names must start with a lowercase ASCII letter and contain only ASCII letters or digits", errors, field);
                 if (!fieldNames.Add(field.Name))
                     errors.Add(parsedScript, $"Record ':{typeDefinition.Name}' declares field '{field.Name}' more than once", field.Name, GesDiagnosticSymbolKind.Variable, GesDiagnosticCodes.ValidateDuplicateVariable, field);
                 if (!IsKnownType(field.TypeName, typeDefinitions))
@@ -114,35 +108,16 @@ internal static class GesAstValidator
             {
                 var parameterNode = predicateDefinition.ParameterList[parameterIndex];
                 var parameter = parameterNode.LocalName;
-                ValidateIdentifierCase(
-                    parsedScript,
-                    parameter,
-                    predicateDefinition.Name,
-                    GesDiagnosticSymbolKind.Predicate,
-                    $"Predicate '{predicateDefinition.Name}' declares an invalid parameter name '{parameter}'",
-                    errors, parameterNode);
+                ValidateIdentifierCase(parsedScript, parameter, predicateDefinition.Name, GesDiagnosticSymbolKind.Predicate, $"Predicate '{predicateDefinition.Name}' declares an invalid parameter name '{parameter}'", errors, parameterNode);
                 if (parameterNode.ExternalLabel is not null)
                     ValidateArgumentLabelCase(parsedScript, parameterNode.ExternalLabel, predicateDefinition.Name, GesDiagnosticSymbolKind.Predicate,
                         $"Predicate '{predicateDefinition.Name}' declares an invalid external parameter label '{parameterNode.ExternalLabel}'", errors, parameterNode);
             }
 
             ValidateParameterTypeHints(parsedScript, "Predicate", predicateDefinition.Name, predicateDefinition.ParameterList, typeDefinitions, errors);
-            ValidateDuplicateParameterDefinitions(
-                parsedScript,
-                predicateDefinition.Name,
-                GesDiagnosticSymbolKind.Predicate,
-                GesDiagnosticCodes.ValidateDuplicateDefinitionParameter,
-                "Predicate",
-                predicateDefinition.ParameterList,
-                errors);
+            ValidateDuplicateParameterDefinitions(parsedScript, predicateDefinition.Name, GesDiagnosticSymbolKind.Predicate, GesDiagnosticCodes.ValidateDuplicateDefinitionParameter, "Predicate", predicateDefinition.ParameterList, errors);
 
-            ValidateExpressionReferences(
-                parsedScript,
-                predicateDefinition.Expression,
-                callables,
-                typeDefinitions,
-                errors,
-                BuildDeclaredTypeMap(predicateDefinition.ParameterList));
+            ValidateExpressionReferences(parsedScript, predicateDefinition.Expression, callables, typeDefinitions, errors, BuildDeclaredTypeMap(predicateDefinition.ParameterList));
             ValidatePredicateResultExpression(parsedScript, predicateDefinition, callables, typeDefinitions, errors);
         }
 
@@ -161,35 +136,16 @@ internal static class GesAstValidator
             {
                 var parameterNode = functionDefinition.ParameterList[parameterIndex];
                 var parameter = parameterNode.LocalName;
-                ValidateIdentifierCase(
-                    parsedScript,
-                    parameter,
-                    functionDefinition.Name,
-                    GesDiagnosticSymbolKind.Function,
-                    $"Function '{functionDefinition.Name}' declares an invalid parameter name '{parameter}'",
-                    errors, parameterNode);
+                ValidateIdentifierCase(parsedScript, parameter, functionDefinition.Name, GesDiagnosticSymbolKind.Function, $"Function '{functionDefinition.Name}' declares an invalid parameter name '{parameter}'", errors, parameterNode);
                 if (parameterNode.ExternalLabel is not null)
                     ValidateArgumentLabelCase(parsedScript, parameterNode.ExternalLabel, functionDefinition.Name, GesDiagnosticSymbolKind.Function,
                         $"Function '{functionDefinition.Name}' declares an invalid external parameter label '{parameterNode.ExternalLabel}'", errors, parameterNode);
             }
 
             ValidateParameterTypeHints(parsedScript, "Function", functionDefinition.Name, functionDefinition.ParameterList, typeDefinitions, errors);
-            ValidateDuplicateParameterDefinitions(
-                parsedScript,
-                functionDefinition.Name,
-                GesDiagnosticSymbolKind.Function,
-                GesDiagnosticCodes.ValidateDuplicateDefinitionParameter,
-                "Function",
-                functionDefinition.ParameterList,
-                errors);
+            ValidateDuplicateParameterDefinitions(parsedScript, functionDefinition.Name, GesDiagnosticSymbolKind.Function, GesDiagnosticCodes.ValidateDuplicateDefinitionParameter, "Function", functionDefinition.ParameterList, errors);
 
-            ValidateExpressionReferences(
-                parsedScript,
-                functionDefinition.Expression,
-                callables,
-                typeDefinitions,
-                errors,
-                BuildDeclaredTypeMap(functionDefinition.ParameterList));
+            ValidateExpressionReferences(parsedScript, functionDefinition.Expression, callables, typeDefinitions, errors, BuildDeclaredTypeMap(functionDefinition.ParameterList));
         }
 
         for (var handlerIndex = 0; handlerIndex < parsedScript.Handlers.Count; handlerIndex++)
@@ -205,13 +161,7 @@ internal static class GesAstValidator
             }
             else
             {
-                ValidateMessageCase(
-                    parsedScript,
-                    handler.Message,
-                    handler.Message,
-                    GesDiagnosticSymbolKind.Handler,
-                    "Handler message names must start uppercase and contain only ASCII letters or digits",
-                    errors, handler);
+                ValidateMessageCase(parsedScript, handler.Message, handler.Message, GesDiagnosticSymbolKind.Handler, "Handler message names must start uppercase and contain only ASCII letters or digits", errors, handler);
                 ValidateMessageNameHandler(parsedScript, handler, errors);
             }
 
@@ -219,27 +169,14 @@ internal static class GesAstValidator
             {
                 var parameterNode = handler.ParameterList[parameterIndex];
                 var parameter = parameterNode.LocalName;
-                ValidateIdentifierCase(
-                    parsedScript,
-                    parameter,
-                    handler.Message,
-                    GesDiagnosticSymbolKind.Handler,
-                    $"Handler '{handler.Message}' declares an invalid parameter name '{parameter}'",
-                    errors, parameterNode);
+                ValidateIdentifierCase(parsedScript, parameter, handler.Message, GesDiagnosticSymbolKind.Handler, $"Handler '{handler.Message}' declares an invalid parameter name '{parameter}'", errors, parameterNode);
                 if (parameterNode.ExternalLabel is not null)
                     ValidateArgumentLabelCase(parsedScript, parameterNode.ExternalLabel, handler.Message, GesDiagnosticSymbolKind.Handler,
                         $"Handler '{handler.Message}' declares an invalid external parameter label '{parameterNode.ExternalLabel}'", errors, parameterNode);
             }
 
             ValidateParameterTypeHints(parsedScript, "Handler", handler.Message, handler.ParameterList, typeDefinitions, errors);
-            ValidateDuplicateParameterDefinitions(
-                parsedScript,
-                handler.Message,
-                GesDiagnosticSymbolKind.Handler,
-                GesDiagnosticCodes.ValidateDuplicateHandlerParameter,
-                "Handler",
-                handler.ParameterList,
-                errors);
+            ValidateDuplicateParameterDefinitions(parsedScript, handler.Message, GesDiagnosticSymbolKind.Handler, GesDiagnosticCodes.ValidateDuplicateHandlerParameter, "Handler", handler.ParameterList, errors);
 
             var handlerScope = ValidationScope.Create(handler.ParameterList, constants);
             for (var statementIndex = 0; statementIndex < handler.Statements.Count; statementIndex++)
@@ -257,25 +194,13 @@ internal static class GesAstValidator
         if (handler.DispatchKind != GesEventHandlerDispatchKind.ExactSignature ||
             handler.ParameterList.Count != 0)
         {
-            errors.Add(
-                parsedScript,
-                "System endpoint 'initialization' must use parameterless syntax",
-                handler.Message,
-                GesDiagnosticSymbolKind.Handler,
-                GesDiagnosticCodes.ValidateInvalidMessageCase,
-                handler);
+            errors.Add(parsedScript, "System endpoint 'initialization' must use parameterless syntax", handler.Message, GesDiagnosticSymbolKind.Handler, GesDiagnosticCodes.ValidateInvalidMessageCase, handler);
             return;
         }
 
         if (handler.MatchingTags.Count != 0 || handler.WithoutTags.Count != 0)
         {
-            errors.Add(
-                parsedScript,
-                "System endpoint 'initialization' cannot use tag filters",
-                handler.Message,
-                GesDiagnosticSymbolKind.Handler,
-                GesDiagnosticCodes.ValidateInvalidMessageCase,
-                handler);
+            errors.Add(parsedScript, "System endpoint 'initialization' cannot use tag filters", handler.Message, GesDiagnosticSymbolKind.Handler, GesDiagnosticCodes.ValidateInvalidMessageCase, handler);
         }
     }
 
@@ -283,13 +208,7 @@ internal static class GesAstValidator
     {
         if (handler.DispatchKind != GesEventHandlerDispatchKind.MessageName)
         {
-            errors.Add(
-                parsedScript,
-                "System endpoint 'undeliverable' must use 'as message' syntax",
-                handler.Message,
-                GesDiagnosticSymbolKind.Handler,
-                GesDiagnosticCodes.ValidateInvalidMessageCase,
-                handler);
+            errors.Add(parsedScript, "System endpoint 'undeliverable' must use 'as message' syntax", handler.Message, GesDiagnosticSymbolKind.Handler, GesDiagnosticCodes.ValidateInvalidMessageCase, handler);
             return;
         }
 
@@ -297,13 +216,7 @@ internal static class GesAstValidator
         if (!string.Equals(parameter.SignatureLabel, GesSystemEndpoints.MessageArgumentName, StringComparison.Ordinal) ||
             !string.Equals(parameter.DeclaredType, "message", StringComparison.Ordinal))
         {
-            errors.Add(
-                parsedScript,
-                "System endpoint 'undeliverable' must bind a ':Message' value",
-                parameter.LocalName,
-                GesDiagnosticSymbolKind.Handler,
-                GesDiagnosticCodes.ValidateInvalidMessageCase,
-                parameter);
+            errors.Add(parsedScript, "System endpoint 'undeliverable' must bind a ':Message' value", parameter.LocalName, GesDiagnosticSymbolKind.Handler, GesDiagnosticCodes.ValidateInvalidMessageCase, parameter);
         }
     }
 
@@ -313,13 +226,7 @@ internal static class GesAstValidator
 
         if (handler.ParameterList.Count != 1)
         {
-            errors.Add(
-                parsedScript,
-                "Message-name handlers expect exactly one message parameter",
-                handler.Message,
-                GesDiagnosticSymbolKind.Handler,
-                GesDiagnosticCodes.ValidateInvalidMessageCase,
-                handler);
+            errors.Add(parsedScript, "Message-name handlers expect exactly one message parameter", handler.Message, GesDiagnosticSymbolKind.Handler, GesDiagnosticCodes.ValidateInvalidMessageCase, handler);
             return;
         }
 
@@ -327,13 +234,7 @@ internal static class GesAstValidator
         if (!string.Equals(parameter.SignatureLabel, GesSystemEndpoints.MessageArgumentName, StringComparison.Ordinal) ||
             !string.Equals(parameter.DeclaredType, "message", StringComparison.Ordinal))
         {
-            errors.Add(
-                parsedScript,
-                "Message-name handlers must bind a ':Message' value",
-                handler.Message,
-                GesDiagnosticSymbolKind.Handler,
-                GesDiagnosticCodes.ValidateInvalidMessageCase,
-                handler);
+            errors.Add(parsedScript, "Message-name handlers must bind a ':Message' value", handler.Message, GesDiagnosticSymbolKind.Handler, GesDiagnosticCodes.ValidateInvalidMessageCase, handler);
         }
     }
 
@@ -376,13 +277,7 @@ internal static class GesAstValidator
                     errors, let);
                 if (scope.ContainsInCurrentScope(let.Identifier))
                 {
-                    errors.Add(
-                        parsedScriptContext,
-                        $"Variable '{let.Identifier}' is already declared in the current scope",
-                        let.Identifier,
-                        GesDiagnosticSymbolKind.Variable,
-                        GesDiagnosticCodes.ValidateDuplicateVariable,
-                        let);
+                    errors.Add(parsedScriptContext, $"Variable '{let.Identifier}' is already declared in the current scope", let.Identifier, GesDiagnosticSymbolKind.Variable, GesDiagnosticCodes.ValidateDuplicateVariable, let);
                     return;
                 }
 
@@ -519,12 +414,7 @@ internal static class GesAstValidator
         GesValidationErrors errors)
     {
         var parameterTypes = BuildDeclaredTypeMap(predicateDefinition.ParameterList);
-        var result = ClassifyExpression(
-            predicateDefinition.Expression,
-            callables,
-            typeDefinitions,
-            parameterTypes,
-            new HashSet<string>(StringComparer.Ordinal));
+        var result = ClassifyExpression(predicateDefinition.Expression, callables, typeDefinitions, parameterTypes, new HashSet<string>(StringComparer.Ordinal));
 
         if (result.IsPredicateCompatible) return;
 
@@ -729,12 +619,7 @@ internal static class GesAstValidator
 
         try
         {
-            return ClassifyExpression(
-                callable.Expression,
-                callables,
-                typeDefinitions,
-                BuildDeclaredTypeMap(callable.ParameterList),
-                visitedCallables);
+            return ClassifyExpression(callable.Expression, callables, typeDefinitions, BuildDeclaredTypeMap(callable.ParameterList), visitedCallables);
         }
         finally
         {
@@ -827,15 +712,11 @@ internal static class GesAstValidator
         for (var index = 0; index < guardedChoice.Branches.Count; index++)
         {
             var branch = guardedChoice.Branches[index];
-            result = MergePredicateCompatibleResults(
-                result,
-                ClassifyExpression(branch.ValueExpression, callables, typeDefinitions, declaredTypes, visitedCallables));
+            result = MergePredicateCompatibleResults(result, ClassifyExpression(branch.ValueExpression, callables, typeDefinitions, declaredTypes, visitedCallables));
             if (!result.IsPredicateCompatible) return result;
         }
 
-        return MergePredicateCompatibleResults(
-            result,
-            ClassifyExpression(guardedChoice.OtherwiseExpression, callables, typeDefinitions, declaredTypes, visitedCallables));
+        return MergePredicateCompatibleResults(result, ClassifyExpression(guardedChoice.OtherwiseExpression, callables, typeDefinitions, declaredTypes, visitedCallables));
     }
 
     private static StaticExpressionInfo MergePredicateCompatibleResults(StaticExpressionInfo left, StaticExpressionInfo right)
@@ -884,13 +765,7 @@ internal static class GesAstValidator
                     return;
 
                 case GesCallExpressionNode call:
-                    ValidateCallableCase(
-                        parsedScriptContext,
-                        call.Name,
-                        call.Name,
-                        GesDiagnosticSymbolKind.GlobalDefinition,
-                        $"Call target '{call.Name}' must use identifier casing (predicate/function names start lowercase)",
-                        errors, call);
+                    ValidateCallableCase(parsedScriptContext, call.Name, call.Name, GesDiagnosticSymbolKind.GlobalDefinition, $"Call target '{call.Name}' must use identifier casing (predicate/function names start lowercase)", errors, call);
                     ValidateDuplicateNamedArguments(parsedScriptContext, call.Name, call.ArgumentList.Arguments, errors);
                     ValidateCallExpression(parsedScriptContext, call, callables, typeDefinitions, errors);
                     for (var argumentIndex = 0; argumentIndex < call.ArgumentList.Arguments.Count; argumentIndex++)
@@ -898,13 +773,7 @@ internal static class GesAstValidator
                         var argument = call.ArgumentList.Arguments[argumentIndex];
                         if (argument.Label is not null)
                         {
-                            ValidateArgumentLabelCase(
-                                parsedScriptContext,
-                                argument.Label,
-                                call.Name,
-                                GesDiagnosticSymbolKind.GlobalDefinition,
-                                $"Call argument label '{argument.Label}' must use identifier casing",
-                                errors, argument);
+                            ValidateArgumentLabelCase(parsedScriptContext, argument.Label, call.Name, GesDiagnosticSymbolKind.GlobalDefinition, $"Call argument label '{argument.Label}' must use identifier casing", errors, argument);
                         }
 
                         ValidateExpressionReferences(parsedScriptContext, argument.Expression, callables, typeDefinitions, errors, declaredTypes);
@@ -1162,184 +1031,54 @@ internal static class GesAstValidator
     {
         switch (selector)
         {
-            case GesExpressionSelectorNode expressionSelector: ValidateExpressionReferences(parsedScriptContext, expressionSelector.Expression, callables, typeDefinitions, errors, declaredTypes); return;
-            case GesSeriesTermSelectorNode seriesTermSelector: ValidateExpressionReferences(parsedScriptContext, seriesTermSelector.IndexExpression, callables, typeDefinitions, errors, declaredTypes); return;
-            case GesPredicateSelectorNode predicateSelector:
-                ValidateIdentifierCase(
-                    parsedScriptContext,
-                    predicateSelector.Identifier,
-                    predicateSelector.Identifier,
-                    GesDiagnosticSymbolKind.Variable,
-                    $"Selector identifier '{predicateSelector.Identifier}' must use identifier casing (start lowercase)",
-                    errors, predicateSelector);
-                ValidateExpressionReferences(parsedScriptContext, predicateSelector.Predicate, callables, typeDefinitions, errors, declaredTypes);
-                return;
-            case GesCountSelectorNode countSelector:
-                ValidateIdentifierCase(
-                    parsedScriptContext,
-                    countSelector.Identifier,
-                    countSelector.Identifier,
-                    GesDiagnosticSymbolKind.Variable,
-                    $"Selector identifier '{countSelector.Identifier}' must use identifier casing (start lowercase)",
-                    errors, countSelector);
-                ValidateExpressionReferences(parsedScriptContext, countSelector.Predicate, callables, typeDefinitions, errors, declaredTypes);
-                return;
+            case GesExpressionSelectorNode expressionSelector: Visit(expressionSelector.Expression); return;
+            case GesSeriesTermSelectorNode seriesTermSelector: Visit(seriesTermSelector.IndexExpression); return;
+            case GesPredicateSelectorNode predicateSelector: Bound(predicateSelector.Identifier, predicateSelector.Predicate); return;
+            case GesCountSelectorNode countSelector: Bound(countSelector.Identifier, countSelector.Predicate); return;
             case GesChooseSelectorNode chooseSelector:
-                if (chooseSelector.Identifier is not null)
-                {
-                    ValidateIdentifierCase(
-                        parsedScriptContext,
-                        chooseSelector.Identifier,
-                        chooseSelector.Identifier,
-                        GesDiagnosticSymbolKind.Variable,
-                        $"Selector identifier '{chooseSelector.Identifier}' must use identifier casing (start lowercase)",
-                        errors, chooseSelector);
-                }
-
-                if (chooseSelector.Predicate is not null) ValidateExpressionReferences(parsedScriptContext, chooseSelector.Predicate, callables, typeDefinitions, errors, declaredTypes);
-
-                if (chooseSelector.WeightIdentifier is not null)
-                {
-                    ValidateIdentifierCase(
-                        parsedScriptContext,
-                        chooseSelector.WeightIdentifier,
-                        chooseSelector.WeightIdentifier,
-                        GesDiagnosticSymbolKind.Variable,
-                        $"Selector weight identifier '{chooseSelector.WeightIdentifier}' must use identifier casing (start lowercase)",
-                        errors, chooseSelector);
-                }
-
-                if (chooseSelector.WeightExpression is not null) ValidateExpressionReferences(parsedScriptContext, chooseSelector.WeightExpression, callables, typeDefinitions, errors, declaredTypes);
-
+                Bound(chooseSelector.Identifier, chooseSelector.Predicate);
+                Binder(chooseSelector.WeightIdentifier, "Selector weight identifier");
+                Visit(chooseSelector.WeightExpression);
                 return;
-            case GesEdgeSelectorNode { Predicate: not null } edgeSelector:
-                if (edgeSelector.Identifier is not null)
-                {
-                    ValidateIdentifierCase(
-                        parsedScriptContext,
-                        edgeSelector.Identifier,
-                        edgeSelector.Identifier,
-                        GesDiagnosticSymbolKind.Variable,
-                        $"Selector identifier '{edgeSelector.Identifier}' must use identifier casing (start lowercase)",
-                        errors, edgeSelector);
-                }
-
-                ValidateExpressionReferences(parsedScriptContext, edgeSelector.Predicate, callables, typeDefinitions, errors, declaredTypes);
-                return;
-            case GesForeachSelectorNode each: ValidateExpressionReferences(parsedScriptContext, each.Expression, callables, typeDefinitions, errors, declaredTypes); return;
-            case GesFilterSelectorNode filterSelector:
-                ValidateIdentifierCase(
-                    parsedScriptContext,
-                    filterSelector.Identifier,
-                    filterSelector.Identifier,
-                    GesDiagnosticSymbolKind.Variable,
-                    $"Selector identifier '{filterSelector.Identifier}' must use identifier casing (start lowercase)",
-                    errors, filterSelector);
-                ValidateExpressionReferences(parsedScriptContext, filterSelector.Predicate, callables, typeDefinitions, errors, declaredTypes);
-                return;
-            case GesSumSelectorNode sumSelector:
-                ValidateIdentifierCase(
-                    parsedScriptContext,
-                    sumSelector.Identifier,
-                    sumSelector.Identifier,
-                    GesDiagnosticSymbolKind.Variable,
-                    $"Selector identifier '{sumSelector.Identifier}' must use identifier casing (start lowercase)",
-                    errors, sumSelector);
-                ValidateExpressionReferences(parsedScriptContext, sumSelector.Projection, callables, typeDefinitions, errors, declaredTypes);
-                return;
-            case GesAverageSelectorNode averageSelector:
-                ValidateIdentifierCase(
-                    parsedScriptContext,
-                    averageSelector.Identifier,
-                    averageSelector.Identifier,
-                    GesDiagnosticSymbolKind.Variable,
-                    $"Selector identifier '{averageSelector.Identifier}' must use identifier casing (start lowercase)",
-                    errors, averageSelector);
-                ValidateExpressionReferences(parsedScriptContext, averageSelector.Projection, callables, typeDefinitions, errors, declaredTypes);
-                return;
+            case GesEdgeSelectorNode { Predicate: not null } edgeSelector: Bound(edgeSelector.Identifier, edgeSelector.Predicate); return;
+            case GesForeachSelectorNode each: Visit(each.Expression); return;
+            case GesFilterSelectorNode filterSelector: Bound(filterSelector.Identifier, filterSelector.Predicate); return;
+            case GesSumSelectorNode sumSelector: Bound(sumSelector.Identifier, sumSelector.Projection); return;
+            case GesAverageSelectorNode averageSelector: Bound(averageSelector.Identifier, averageSelector.Projection); return;
             case GesFoldSelectorNode fold:
                 ValidateIdentifierCase(parsedScriptContext, fold.Accumulator, fold.Accumulator, GesDiagnosticSymbolKind.Variable, "Accumulator must use identifier casing", errors, fold);
                 ValidateIdentifierCase(parsedScriptContext, fold.Identifier, fold.Identifier, GesDiagnosticSymbolKind.Variable, "Element must use identifier casing", errors, fold);
-                if (fold.Seed is not null) ValidateExpressionReferences(parsedScriptContext, fold.Seed, callables, typeDefinitions, errors, declaredTypes);
-                ValidateExpressionReferences(parsedScriptContext, fold.Projection, callables, typeDefinitions, errors, declaredTypes);
+                Visit(fold.Seed);
+                Visit(fold.Projection);
                 return;
-            case GesSelectSelectorNode selectSelector:
-                ValidateIdentifierCase(
-                    parsedScriptContext,
-                    selectSelector.Identifier,
-                    selectSelector.Identifier,
-                    GesDiagnosticSymbolKind.Variable,
-                    $"Selector identifier '{selectSelector.Identifier}' must use identifier casing (start lowercase)",
-                    errors, selectSelector);
-                ValidateExpressionReferences(parsedScriptContext, selectSelector.Projection, callables, typeDefinitions, errors, declaredTypes);
-                return;
+            case GesSelectSelectorNode selectSelector: Bound(selectSelector.Identifier, selectSelector.Projection); return;
             case GesMapSelectorNode dictionarySelector:
-                ValidateIdentifierCase(
-                    parsedScriptContext,
-                    dictionarySelector.Identifier,
-                    dictionarySelector.Identifier,
-                    GesDiagnosticSymbolKind.Variable,
-                    $"Selector identifier '{dictionarySelector.Identifier}' must use identifier casing (start lowercase)",
-                    errors, dictionarySelector);
-                ValidateExpressionReferences(parsedScriptContext, dictionarySelector.KeyProjection, callables, typeDefinitions, errors, declaredTypes);
-                if (dictionarySelector.ValueProjection is not null) ValidateExpressionReferences(parsedScriptContext, dictionarySelector.ValueProjection, callables, typeDefinitions, errors, declaredTypes);
+                Bound(dictionarySelector.Identifier, dictionarySelector.KeyProjection);
+                Visit(dictionarySelector.ValueProjection);
+                return;
+            case GesMinSelectorNode minSelector: Bound(minSelector.Identifier, minSelector.Projection); return;
+            case GesMaxSelectorNode maxSelector: Bound(maxSelector.Identifier, maxSelector.Projection); return;
+            case GesContainsSelectorNode containsSelector: Visit(containsSelector.ValueExpression); return;
+            case GesDistinctSelectorNode { Projection: not null } distinctSelector: Bound(distinctSelector.Identifier, distinctSelector.Projection); return;
+            case GesGroupBySelectorNode groupBySelector: Bound(groupBySelector.Identifier, groupBySelector.Projection); return;
+            case GesOrderBySelectorNode orderBySelector: Bound(orderBySelector.Identifier, orderBySelector.Projection); return;
+        }
 
-                return;
-            case GesMinSelectorNode minSelector:
-                ValidateIdentifierCase(
-                    parsedScriptContext,
-                    minSelector.Identifier,
-                    minSelector.Identifier,
-                    GesDiagnosticSymbolKind.Variable,
-                    $"Selector identifier '{minSelector.Identifier}' must use identifier casing (start lowercase)",
-                    errors, minSelector);
-                ValidateExpressionReferences(parsedScriptContext, minSelector.Projection, callables, typeDefinitions, errors, declaredTypes);
-                return;
-            case GesMaxSelectorNode maxSelector:
-                ValidateIdentifierCase(
-                    parsedScriptContext,
-                    maxSelector.Identifier,
-                    maxSelector.Identifier,
-                    GesDiagnosticSymbolKind.Variable,
-                    $"Selector identifier '{maxSelector.Identifier}' must use identifier casing (start lowercase)",
-                    errors, maxSelector);
-                ValidateExpressionReferences(parsedScriptContext, maxSelector.Projection, callables, typeDefinitions, errors, declaredTypes);
-                return;
-            case GesContainsSelectorNode containsSelector: ValidateExpressionReferences(parsedScriptContext, containsSelector.ValueExpression, callables, typeDefinitions, errors, declaredTypes); return;
-            case GesDistinctSelectorNode { Projection: not null } distinctSelector:
-                if (distinctSelector.Identifier is not null)
-                {
-                    ValidateIdentifierCase(
-                        parsedScriptContext,
-                        distinctSelector.Identifier,
-                        distinctSelector.Identifier,
-                        GesDiagnosticSymbolKind.Variable,
-                        $"Selector identifier '{distinctSelector.Identifier}' must use identifier casing (start lowercase)",
-                        errors, distinctSelector);
-                }
+        // A selector binder, then the expression it scopes; absent parts are skipped.
+        void Bound(string? identifier, GesExpressionNode? body)
+        {
+            Binder(identifier, "Selector identifier");
+            Visit(body);
+        }
 
-                ValidateExpressionReferences(parsedScriptContext, distinctSelector.Projection, callables, typeDefinitions, errors, declaredTypes);
-                return;
-            case GesGroupBySelectorNode groupBySelector:
-                ValidateIdentifierCase(
-                    parsedScriptContext,
-                    groupBySelector.Identifier,
-                    groupBySelector.Identifier,
-                    GesDiagnosticSymbolKind.Variable,
-                    $"Selector identifier '{groupBySelector.Identifier}' must use identifier casing (start lowercase)",
-                    errors, groupBySelector);
-                ValidateExpressionReferences(parsedScriptContext, groupBySelector.Projection, callables, typeDefinitions, errors, declaredTypes);
-                return;
-            case GesOrderBySelectorNode orderBySelector:
-                ValidateIdentifierCase(
-                    parsedScriptContext,
-                    orderBySelector.Identifier,
-                    orderBySelector.Identifier,
-                    GesDiagnosticSymbolKind.Variable,
-                    $"Selector identifier '{orderBySelector.Identifier}' must use identifier casing (start lowercase)",
-                    errors, orderBySelector);
-                ValidateExpressionReferences(parsedScriptContext, orderBySelector.Projection, callables, typeDefinitions, errors, declaredTypes);
-                return;
+        void Binder(string? identifier, string role)
+        {
+            if (identifier is not null) ValidateIdentifierCase(parsedScriptContext, identifier, identifier, GesDiagnosticSymbolKind.Variable, $"{role} '{identifier}' must use identifier casing (start lowercase)", errors, selector);
+        }
+
+        void Visit(GesExpressionNode? expression)
+        {
+            if (expression is not null) ValidateExpressionReferences(parsedScriptContext, expression, callables, typeDefinitions, errors, declaredTypes);
         }
     }
 
@@ -1504,13 +1243,7 @@ internal static class GesAstValidator
             var argument = constructor.Arguments[argumentIndex];
             if (argument.Label is not null)
             {
-                ValidateArgumentLabelCase(
-                    parsedScriptContext,
-                    argument.Label,
-                    constructor.TypeName,
-                    GesDiagnosticSymbolKind.Type,
-                    $"Type constructor ':{constructor.TypeName}' declares invalid argument label '{argument.Label}'",
-                    errors, argument);
+                ValidateArgumentLabelCase(parsedScriptContext, argument.Label, constructor.TypeName, GesDiagnosticSymbolKind.Type, $"Type constructor ':{constructor.TypeName}' declares invalid argument label '{argument.Label}'", errors, argument);
             }
 
             ValidateExpressionReferences(parsedScriptContext, argument.Expression, callables, typeDefinitions, errors, declaredTypes);
@@ -1548,14 +1281,7 @@ internal static class GesAstValidator
             var argument = constructor.Arguments[argumentIndex];
             if (argument.Label is null) continue;
 
-            if (!fieldNames.Contains(argument.Label))
-            {
-                AddTypeConstructorError(
-                    parsedScriptContext,
-                    constructor,
-                    $"Custom type constructor ':{constructor.TypeName}' has unknown constructor field '{argument.Label}'",
-                    errors);
-            }
+            if (!fieldNames.Contains(argument.Label)) AddTypeConstructorError(parsedScriptContext, constructor, $"Custom type constructor ':{constructor.TypeName}' has unknown constructor field '{argument.Label}'", errors);
         }
     }
 
@@ -1568,11 +1294,7 @@ internal static class GesAstValidator
             default:
                 if (constructor.Arguments.Count != 1 || constructor.Arguments[0].Label is not null)
                 {
-                    AddTypeConstructorError(
-                        parsedScriptContext,
-                        constructor,
-                        $"Type conversion ':{constructor.TypeName}' expects exactly one unlabeled argument",
-                        errors);
+                    AddTypeConstructorError(parsedScriptContext, constructor, $"Type conversion ':{constructor.TypeName}' expects exactly one unlabeled argument", errors);
                 }
 
                 return;
@@ -1592,11 +1314,7 @@ internal static class GesAstValidator
         var labeledCount = CountLabeledArguments(constructor.Arguments);
         if (labeledCount is not 0 && labeledCount != constructor.Arguments.Count)
         {
-            AddTypeConstructorError(
-                parsedScriptContext,
-                constructor,
-                $"Type constructor ':{constructor.TypeName}' cannot mix labeled and unlabeled component arguments",
-                errors);
+            AddTypeConstructorError(parsedScriptContext, constructor, $"Type constructor ':{constructor.TypeName}' cannot mix labeled and unlabeled component arguments", errors);
             return;
         }
 
@@ -1606,14 +1324,7 @@ internal static class GesAstValidator
             return;
         }
 
-        if (constructor.Arguments.Count is < 1 or > 3)
-        {
-            AddTypeConstructorError(
-                parsedScriptContext,
-                constructor,
-                $"Type constructor ':{constructor.TypeName}' expects up to {labels.Count} component arguments",
-                errors);
-        }
+        if (constructor.Arguments.Count is < 1 or > 3) AddTypeConstructorError(parsedScriptContext, constructor, $"Type constructor ':{constructor.TypeName}' expects up to {labels.Count} component arguments", errors);
     }
 
     private static void ValidateLabeledVectorConstructor(GesParsedScript parsedScriptContext, GesTypeConstructorExpressionNode constructor, IReadOnlyList<string> labels, GesValidationErrors errors)
@@ -1625,21 +1336,13 @@ internal static class GesAstValidator
             var componentIndex = IndexOf(labels, label);
             if (componentIndex < 0)
             {
-                AddTypeConstructorError(
-                    parsedScriptContext,
-                    constructor,
-                    $"Type constructor ':{constructor.TypeName}' has unknown component label '{label}'",
-                    errors);
+                AddTypeConstructorError(parsedScriptContext, constructor, $"Type constructor ':{constructor.TypeName}' has unknown component label '{label}'", errors);
                 return;
             }
 
             if (componentIndex <= previousIndex)
             {
-                AddTypeConstructorError(
-                    parsedScriptContext,
-                    constructor,
-                    $"Type constructor ':{constructor.TypeName}' component labels must follow x, y, z order",
-                    errors);
+                AddTypeConstructorError(parsedScriptContext, constructor, $"Type constructor ':{constructor.TypeName}' component labels must follow x, y, z order", errors);
                 return;
             }
 
@@ -1668,60 +1371,17 @@ internal static class GesAstValidator
 
     private static void ValidateRemovedType(GesParsedScript parsedScriptContext, string typeName, GesScriptNode sourceNode, GesValidationErrors errors)
     {
-        if (string.Equals(typeName, "optional", StringComparison.Ordinal))
-        {
-            errors.Add(
-                parsedScriptContext,
-                "Type ':optional' is not supported; use nothing to represent absence.",
-                typeName,
-                GesDiagnosticSymbolKind.Type,
-                GesDiagnosticCodes.ValidateInvalidTypeConstructor,
-                sourceNode);
-            return;
-        }
-
-        if (string.Equals(typeName, "set", StringComparison.Ordinal))
-        {
-            errors.Add(
-                parsedScriptContext,
-                "Type ':set' is not supported; use lists or key-only maps.",
-                typeName,
-                GesDiagnosticSymbolKind.Type,
-                GesDiagnosticCodes.ValidateInvalidTypeConstructor,
-                sourceNode);
-            return;
-        }
-
-        if (string.Equals(typeName, "uuid", StringComparison.Ordinal))
-        {
-            errors.Add(
-                parsedScriptContext,
-                "Type ':Uuid' is not supported; use ':Text' or ':Number' ids in scripts.",
-                typeName,
-                GesDiagnosticSymbolKind.Type,
-                GesDiagnosticCodes.ValidateInvalidTypeConstructor,
-                sourceNode);
-            return;
-        }
-
         // Integer and float are numeric checks or casts, never type references.
-        if (typeName is "Integer" or "Float")
+        var message = typeName switch
         {
-            errors.Add(parsedScriptContext, $"Type ':{typeName}' is not a type; use 'as :Number' to convert or 'is integer' / 'is fractional' to check.", typeName, GesDiagnosticSymbolKind.Type,
-                GesDiagnosticCodes.ValidateInvalidTypeConstructor, sourceNode);
-            return;
-        }
-
-        if (string.Equals(typeName, "ref", StringComparison.Ordinal))
-        {
-            errors.Add(
-                parsedScriptContext,
-                "Type ':ref' is not supported.",
-                typeName,
-                GesDiagnosticSymbolKind.Type,
-                GesDiagnosticCodes.ValidateInvalidTypeConstructor,
-                sourceNode);
-        }
+            "optional" => "Type ':optional' is not supported; use nothing to represent absence.",
+            "set" => "Type ':set' is not supported; use lists or key-only maps.",
+            "uuid" => "Type ':Uuid' is not supported; use ':Text' or ':Number' ids in scripts.",
+            "Integer" or "Float" => $"Type ':{typeName}' is not a type; use 'as :Number' to convert or 'is integer' / 'is fractional' to check.",
+            "ref" => "Type ':ref' is not supported.",
+            _ => null,
+        };
+        if (message is not null) errors.Add(parsedScriptContext, message, typeName, GesDiagnosticSymbolKind.Type, GesDiagnosticCodes.ValidateInvalidTypeConstructor, sourceNode);
     }
 
     private static void AddTypeConstructorError(GesParsedScript parsedScriptContext, GesTypeConstructorExpressionNode constructor, string message, GesValidationErrors errors)
@@ -1750,13 +1410,7 @@ internal static class GesAstValidator
             var argument = arguments[index];
             if (argument.Label is null || seen.Add(argument.Name) || !reported.Add(argument.Name)) continue;
 
-            errors.Add(
-                parsedScriptContext,
-                $"Named argument '{argument.Name}' is declared more than once",
-                symbolName,
-                GesDiagnosticSymbolKind.Handler,
-                GesDiagnosticCodes.ValidateDuplicatePublishArgument,
-                argument);
+            errors.Add(parsedScriptContext, $"Named argument '{argument.Name}' is declared more than once", symbolName, GesDiagnosticSymbolKind.Handler, GesDiagnosticCodes.ValidateDuplicatePublishArgument, argument);
         }
     }
 
@@ -1795,13 +1449,7 @@ internal static class GesAstValidator
             var parameter = parameters[index];
             if (seen.Add(parameter.LocalName) || !reported.Add(parameter.LocalName)) continue;
 
-            errors.Add(
-                parsedScriptContext,
-                $"{declarationKind} '{declarationName}' declares parameter '{parameter.LocalName}' more than once",
-                declarationName,
-                symbolKind,
-                errorCode,
-                parameter);
+            errors.Add(parsedScriptContext, $"{declarationKind} '{declarationName}' declares parameter '{parameter.LocalName}' more than once", declarationName, symbolKind, errorCode, parameter);
         }
     }
 
@@ -1809,13 +1457,7 @@ internal static class GesAstValidator
     {
         if (IsIdentifierCase(name)) return;
 
-        errors.Add(
-            parsedScriptContext,
-            message,
-            symbol,
-            symbolKind,
-            GesDiagnosticCodes.ValidateInvalidIdentifierCase,
-            node);
+        errors.Add(parsedScriptContext, message, symbol, symbolKind, GesDiagnosticCodes.ValidateInvalidIdentifierCase, node);
     }
 
     private static void ValidateCallableCase(GesParsedScript parsedScriptContext, string name, string symbol, GesDiagnosticSymbolKind symbolKind, string message, GesValidationErrors errors, GesScriptNode node)
@@ -1834,13 +1476,7 @@ internal static class GesAstValidator
     {
         if (IsMessageCase(name)) return;
 
-        errors.Add(
-            parsedScriptContext,
-            message,
-            symbol,
-            symbolKind,
-            GesDiagnosticCodes.ValidateInvalidMessageCase,
-            node);
+        errors.Add(parsedScriptContext, message, symbol, symbolKind, GesDiagnosticCodes.ValidateInvalidMessageCase, node);
     }
 
     private static bool IsIdentifierCase(string name) => GesText.IsIdentifier(name);

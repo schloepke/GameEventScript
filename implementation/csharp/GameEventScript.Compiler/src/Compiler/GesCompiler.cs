@@ -19,12 +19,7 @@ internal static partial class GesCompiler
         return program;
     }
 
-    private static GesCompileException CompileFailure(string code, string message, string? symbol = null)
-        => new(new GesDiagnostic(
-            GesDiagnosticPhase.Compile,
-            code,
-            message,
-            symbol));
+    private static GesCompileException CompileFailure(string code, string message, string? symbol = null) => new(new GesDiagnostic(GesDiagnosticPhase.Compile, code, message, symbol));
 
     private sealed partial class BinaryCompiler(GesSyntaxTreeModule module, GesCompileOptions options)
     {
@@ -1838,10 +1833,7 @@ internal static partial class GesCompiler
 
         private void EmitExtensionPredicateInto(GesExtensionPredicateExpressionNode extensionPredicate, GesRegisterRef destination, LoweringContext context, ExpressionState state)
         {
-            var reference = new GesExtensionReference(
-                extensionPredicate.ExtensionName,
-                extensionPredicate.FunctionName,
-                [GesMessageSignature.UnlabeledParameterName]);
+            var reference = new GesExtensionReference(extensionPredicate.ExtensionName, extensionPredicate.FunctionName, [GesMessageSignature.UnlabeledParameterName]);
             var argument = EmitExpressionForRead(extensionPredicate.Value, context, state);
             EmitExtensionReferenceInto(reference, destination, [argument], isPredicate: true);
         }

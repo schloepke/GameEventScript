@@ -35,14 +35,7 @@ internal sealed class GesValidationErrors
             sourceLocation = sourceLocation with { SourceName = sourceName };
         }
 
-        _errors.Add(new GesDiagnostic(
-            GesDiagnosticPhase.Validate,
-            code,
-            message,
-            string.IsNullOrEmpty(symbol) ? null : symbol,
-            symbolKind,
-            sourceLocation,
-            moduleName));
+        _errors.Add(new GesDiagnostic(GesDiagnosticPhase.Validate, code, message, string.IsNullOrEmpty(symbol) ? null : symbol, symbolKind, sourceLocation, moduleName));
     }
 
     public void ThrowIfAny()

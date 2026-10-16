@@ -5,13 +5,16 @@
 
 The shared workloads and correctness expectations live in
 [`conformance/suites/performance`](../../conformance/suites/performance).
-Their Swift profile is `swift-6.4-release-macos26-arm64-m3max`. It was calibrated
+Their Swift profile is `swift-6.4-release-macos27-arm64-m3max`. It was calibrated
 on Apple M3 Max, macOS 26.6.2 (25G83), Apple Swift 6.4
 (`swiftlang-6.4.0.34.1`, clang `2100.3.34.1`), SDK 27.0, Release, on 2026-09-19.
 A selective refresh on 2026-10-10 resolves the reviewed
 [0.4.0 findings](../../docs/development/Release040Performance.md): compact value
 storage, mandatory loading validation and the reproduced compiler-time baseline.
 Only the documented affected metrics changed; zero-dispatch budgets stay zero.
+On 2026-10-16 the same machine moved to macOS 27.0.1 with a software update. The
+profile now requires macOS 27; its references were kept, because hyperfine
+measurements of the same binaries were unchanged across the update.
 A full refresh on 2026-10-14 follows the manually owned register buffer and
 runtime fast paths. Three independent production Release processes supplied the
 references; a separate verification process checks the resulting budgets.
@@ -36,7 +39,7 @@ For a complete corpus report with measured performance, use the built tool:
 
 ```bash
 python3 conformance/runner/main.py run \
-  --performance-profile swift-6.4-release-macos26-arm64-m3max \
+  --performance-profile swift-6.4-release-macos27-arm64-m3max \
   --output artifacts/swift/measured-conformance/ConformanceResults.json \
   --adapter artifacts/swift/conformance/release/ges-conformance-adapter
 ```

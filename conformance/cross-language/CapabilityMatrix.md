@@ -55,8 +55,9 @@ Separate Runtime verification passes **1,363/1,363** cases:
 
 Runtime-only verification covers host dispatch/lifecycle, VM behavior, extensions,
 external callbacks, observer traces, limits, and private random state. The
-measured Swift profile is `swift-6.4-release-macos26-arm64-m3max`, qualified on
-Apple M3 Max/macOS 26.6.2/Swift 6.4 in Release. All sixteen warmed dispatch cases
+measured Swift profile is `swift-6.4-release-macos27-arm64-m3max`, qualified on
+Apple M3 Max/Swift 6.4 in Release, calibrated on macOS 26.6.2 and kept for the
+same machine on macOS 27.0.1. All sixteen warmed dispatch cases
 measure zero cumulative requested bytes and zero allocation events. Text and
 payload budgets are profile-specific; C# numbers are not transferred to Swift.
 The [performance guide](../../implementation/swift/Performance.md) defines scope
@@ -77,7 +78,7 @@ with C# compiler inputs. Generated inputs and reports remain below ignored
 `artifacts`. Swift CI attaches these reports as its `swift-conformance` artifact.
 The profile-matched [measured full report](../../artifacts/swift/measured-conformance/ConformanceResults.json)
 retains instrumentation evidence and is produced separately by selecting
-`--performance-profile swift-6.4-release-macos26-arm64-m3max` in the Python runner.
+`--performance-profile swift-6.4-release-macos27-arm64-m3max` in the Python runner.
 Ordinary verification selects all correctness cases; measured performance remains
 a separate profile-specific gate. See [Swift performance](../../implementation/swift/Performance.md).
 

@@ -11,7 +11,7 @@ import GameEventScriptRuntime
 
 /// Native instrumentation never enters the portable library or shipped Runtime.
 final class SwiftPerformanceProvider: @unchecked Sendable {
-    static let profile = "swift-6.4-release-macos26-arm64-m3max"
+    static let profile = "swift-6.4-release-macos27-arm64-m3max"
     private let lock = NSLock()
     private var evidence: [[String: Any]] = []
     private var escapingControl: AnyObject?
@@ -32,7 +32,7 @@ final class SwiftPerformanceProvider: @unchecked Sendable {
         #if !os(macOS) || !arch(arm64) || !compiler(>=6.4) || compiler(>=6.5)
             throw ConformanceExecutionError.invalidInput("This profile requires Swift 6.4 on macOS arm64")
         #endif
-        guard ProcessInfo.processInfo.operatingSystemVersion.majorVersion == 26 else { throw ConformanceExecutionError.invalidInput("This profile requires macOS 26") }
+        guard ProcessInfo.processInfo.operatingSystemVersion.majorVersion == 27 else { throw ConformanceExecutionError.invalidInput("This profile requires macOS 27") }
         guard ges_allocation_install(), ges_allocation_controls() else { throw ConformanceExecutionError.invalidInput("Allocation instrumentation controls failed or another logger is active") }
         provenance = [
             "profile": Self.profile, "processID": ProcessInfo.processInfo.processIdentifier, "measurementID": UUID().uuidString, "measuredAt": ISO8601DateFormatter().string(from: Date()),
@@ -156,7 +156,7 @@ final class SwiftPerformanceProvider: @unchecked Sendable {
         #if DEBUG || !os(macOS) || !arch(arm64) || !compiler(>=6.4) || compiler(>=6.5)
             return false
         #else
-            return ProcessInfo.processInfo.operatingSystemVersion.majorVersion == 26 && cpu() == "Apple M3 Max"
+            return ProcessInfo.processInfo.operatingSystemVersion.majorVersion == 27 && cpu() == "Apple M3 Max"
         #endif
     }
 }

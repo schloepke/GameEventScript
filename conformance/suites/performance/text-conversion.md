@@ -108,7 +108,7 @@ performance:
           reference: 0
           maximum: 0
           unit: "B"
-    swift-6.4-release-macos26-arm64-m3max:
+    swift-6.4-release-macos27-arm64-m3max:
       metrics:
         compile.allocated:
           reference: 93777
@@ -238,7 +238,7 @@ performance:
           reference: 0
           maximum: 0
           unit: "B"
-    swift-6.4-release-macos26-arm64-m3max:
+    swift-6.4-release-macos27-arm64-m3max:
       metrics:
         compile.allocated:
           reference: 93777
@@ -368,7 +368,7 @@ performance:
           reference: 0
           maximum: 0
           unit: "B"
-    swift-6.4-release-macos26-arm64-m3max:
+    swift-6.4-release-macos27-arm64-m3max:
       metrics:
         compile.allocated:
           reference: 94172
@@ -498,7 +498,7 @@ performance:
           reference: 0
           maximum: 0
           unit: "B"
-    swift-6.4-release-macos26-arm64-m3max:
+    swift-6.4-release-macos27-arm64-m3max:
       metrics:
         compile.allocated:
           reference: 94172
@@ -628,7 +628,7 @@ performance:
           reference: 0
           maximum: 0
           unit: "B"
-    swift-6.4-release-macos26-arm64-m3max:
+    swift-6.4-release-macos27-arm64-m3max:
       metrics:
         compile.allocated:
           reference: 92886
@@ -758,7 +758,7 @@ performance:
           reference: 0
           maximum: 0
           unit: "B"
-    swift-6.4-release-macos26-arm64-m3max:
+    swift-6.4-release-macos27-arm64-m3max:
       metrics:
         compile.allocated:
           reference: 92886
@@ -888,7 +888,7 @@ performance:
           reference: 0
           maximum: 0
           unit: "B"
-    swift-6.4-release-macos26-arm64-m3max:
+    swift-6.4-release-macos27-arm64-m3max:
       metrics:
         compile.allocated:
           reference: 96630
@@ -1018,7 +1018,7 @@ performance:
           reference: 0
           maximum: 0
           unit: "B"
-    swift-6.4-release-macos26-arm64-m3max:
+    swift-6.4-release-macos27-arm64-m3max:
       metrics:
         compile.allocated:
           reference: 96630
@@ -1148,7 +1148,7 @@ performance:
           reference: 176000
           maximum: 192000
           unit: "B"
-    swift-6.4-release-macos26-arm64-m3max:
+    swift-6.4-release-macos27-arm64-m3max:
       metrics:
         compile.allocated:
           reference: 102657
@@ -1278,7 +1278,7 @@ performance:
           reference: 352000
           maximum: 384000
           unit: "B"
-    swift-6.4-release-macos26-arm64-m3max:
+    swift-6.4-release-macos27-arm64-m3max:
       metrics:
         compile.allocated:
           reference: 102657

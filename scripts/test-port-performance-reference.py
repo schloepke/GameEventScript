@@ -98,5 +98,16 @@ class ReferenceTests(unittest.TestCase):
         self.assertEqual(["baseline missing elapsed metric suite/case-2|run.elapsed"], problems)
 
 
+    def test_baseline_adapter_uses_the_current_profile_name(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / reference.SWIFT_MEASUREMENT
+            path.parent.mkdir(parents=True)
+            path.write_text('static let profile = "swift-6.4-release-macos26-arm64-m3max"\nmajorVersion == 26\n', encoding="utf-8")
+            self.assertTrue(reference.align_profiles(directory))
+            self.assertEqual('static let profile = "swift-6.4-release-macos27-arm64-m3max"\nmajorVersion == 27\n', path.read_text(encoding="utf-8"))
+            self.assertFalse(reference.align_profiles(directory))
+
+
 if __name__ == "__main__":
     unittest.main()

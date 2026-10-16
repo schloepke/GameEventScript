@@ -46,7 +46,7 @@ PORTS = {
     "swift": {
         "build": ["swift", "build", "--package-path", "implementation/swift/GameEventScriptConformance", "--scratch-path", "artifacts/swift/conformance",
                   "--disable-build-manifest-caching", "--configuration", "release"],
-        "profiles": ["swift-6.4-release-macos26-arm64-m3max"],
+        "profiles": ["swift-6.4-release-macos27-arm64-m3max"],
         "launcher": [],
         "adapter": "artifacts/swift/conformance/release/ges-conformance-adapter",
     },
@@ -166,6 +166,31 @@ def run_corpus(port, runs, baseline_root=None):
     return candidate, baseline
 
 
+# Profile renames on the same hardware: an older baseline adapter is built under the current profile name and
+# OS check, so interleaved comparisons stay possible across operating-system updates. Measurement code is unchanged.
+PROFILE_RENAMES = [
+    ("swift-6.4-release-macos26-arm64-m3max", "swift-6.4-release-macos27-arm64-m3max"),
+    ("majorVersion == 26", "majorVersion == 27"),
+    ("This profile requires macOS 26", "This profile requires macOS 27"),
+]
+SWIFT_MEASUREMENT = "implementation/swift/GameEventScriptConformance/Sources/GameEventScriptConformanceAdapter/PerformanceMeasurement.swift"
+
+
+def align_profiles(root):
+    """Apply PROFILE_RENAMES to a baseline checkout's Swift measurement adapter; returns whether it changed."""
+    path = Path(root) / SWIFT_MEASUREMENT
+    if not path.exists():
+        return False
+    text = path.read_text(encoding="utf-8")
+    aligned = text
+    for old, new in PROFILE_RENAMES:
+        aligned = aligned.replace(old, new)
+    if aligned == text:
+        return False
+    path.write_text(aligned, encoding="utf-8")
+    return True
+
+
 class Worktree:
     """A detached temporary worktree of a baseline revision, removed on exit."""
 
@@ -176,6 +201,7 @@ class Worktree:
     def __enter__(self):
         self.directory = Path(tempfile.mkdtemp(prefix="ges-baseline-", dir=ROOT / "artifacts"))
         subprocess.run(["git", "-C", str(ROOT), "worktree", "add", "--detach", str(self.directory), self.revision], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        align_profiles(self.directory)
         return self.directory
 
     def __exit__(self, *_):

@@ -15,7 +15,7 @@ from core.transport import execute
 from measurements.performance import correctness_cases, measurement_request
 from checks.performance_checks import compare
 
-PROFILE = 'swift-6.4-release-macos26-arm64-m3max'
+PROFILE = 'swift-6.4-release-macos27-arm64-m3max'
 
 
 def main():

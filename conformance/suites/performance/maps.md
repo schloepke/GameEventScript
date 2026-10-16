@@ -141,7 +141,7 @@ performance:
           reference: 0.484375
           maximum: 0.5086
           unit: KiB
-    swift-6.4-release-macos26-arm64-m3max:
+    swift-6.4-release-macos27-arm64-m3max:
       metrics:
         compile.allocated:
           reference: 241070
@@ -295,7 +295,7 @@ performance:
           reference: 6.9140625
           maximum: 7.2598
           unit: KiB
-    swift-6.4-release-macos26-arm64-m3max:
+    swift-6.4-release-macos27-arm64-m3max:
       metrics:
         compile.allocated:
           reference: 440689
@@ -454,7 +454,7 @@ performance:
           reference: 1.5859375
           maximum: 1.6652
           unit: KiB
-    swift-6.4-release-macos26-arm64-m3max:
+    swift-6.4-release-macos27-arm64-m3max:
       metrics:
         compile.allocated:
           reference: 359663
@@ -656,7 +656,7 @@ performance:
           reference: 3.515625
           maximum: 3.6914
           unit: KiB
-    swift-6.4-release-macos26-arm64-m3max:
+    swift-6.4-release-macos27-arm64-m3max:
       metrics:
         compile.allocated:
           reference: 346579
@@ -820,7 +820,7 @@ performance:
           reference: 12
           maximum: 12.6
           unit: KiB
-    swift-6.4-release-macos26-arm64-m3max:
+    swift-6.4-release-macos27-arm64-m3max:
       metrics:
         compile.allocated:
           reference: 351302

@@ -85,7 +85,7 @@ performance:
     csharp-dotnet-release-macos-arm64:
       metrics:
         run.allocated: { reference: 0, maximum: 0, unit: B }
-    swift-6.4-release-macos26-arm64-m3max:
+    swift-6.4-release-macos27-arm64-m3max:
       metrics:
         compile.allocated:
           reference: 21323
@@ -190,7 +190,7 @@ performance:
     csharp-dotnet-release-macos-arm64:
       metrics:
         run.allocated: { reference: 0, maximum: 0, unit: B }
-    swift-6.4-release-macos26-arm64-m3max:
+    swift-6.4-release-macos27-arm64-m3max:
       metrics:
         compile.allocated:
           reference: 21323
@@ -295,7 +295,7 @@ performance:
     csharp-dotnet-release-macos-arm64:
       metrics:
         run.allocated: { reference: 0, maximum: 0, unit: B }
-    swift-6.4-release-macos26-arm64-m3max:
+    swift-6.4-release-macos27-arm64-m3max:
       metrics:
         compile.allocated:
           reference: 21323
@@ -400,7 +400,7 @@ performance:
     csharp-dotnet-release-macos-arm64:
       metrics:
         run.allocated: { reference: 0, maximum: 0, unit: B }
-    swift-6.4-release-macos26-arm64-m3max:
+    swift-6.4-release-macos27-arm64-m3max:
       metrics:
         compile.allocated:
           reference: 21323
@@ -505,7 +505,7 @@ performance:
     csharp-dotnet-release-macos-arm64:
       metrics:
         run.allocated: { reference: 0, maximum: 0, unit: B }
-    swift-6.4-release-macos26-arm64-m3max:
+    swift-6.4-release-macos27-arm64-m3max:
       metrics:
         compile.allocated:
           reference: 27671
@@ -610,7 +610,7 @@ performance:
     csharp-dotnet-release-macos-arm64:
       metrics:
         run.allocated: { reference: 0, maximum: 0, unit: B }
-    swift-6.4-release-macos26-arm64-m3max:
+    swift-6.4-release-macos27-arm64-m3max:
       metrics:
         compile.allocated:
           reference: 27671
@@ -715,7 +715,7 @@ performance:
     csharp-dotnet-release-macos-arm64:
       metrics:
         run.allocated: { reference: 0, maximum: 0, unit: B }
-    swift-6.4-release-macos26-arm64-m3max:
+    swift-6.4-release-macos27-arm64-m3max:
       metrics:
         compile.allocated:
           reference: 27671
@@ -820,7 +820,7 @@ performance:
     csharp-dotnet-release-macos-arm64:
       metrics:
         run.allocated: { reference: 0, maximum: 0, unit: B }
-    swift-6.4-release-macos26-arm64-m3max:
+    swift-6.4-release-macos27-arm64-m3max:
       metrics:
         compile.allocated:
           reference: 27671
@@ -932,7 +932,7 @@ performance:
     csharp-dotnet-release-macos-arm64:
       metrics:
         run.allocated: { reference: 0, maximum: 0, unit: B }
-    swift-6.4-release-macos26-arm64-m3max:
+    swift-6.4-release-macos27-arm64-m3max:
       metrics:
         compile.allocated:
           reference: 32490
@@ -1044,7 +1044,7 @@ performance:
     csharp-dotnet-release-macos-arm64:
       metrics:
         run.allocated: { reference: 0, maximum: 0, unit: B }
-    swift-6.4-release-macos26-arm64-m3max:
+    swift-6.4-release-macos27-arm64-m3max:
       metrics:
         compile.allocated:
           reference: 32490
@@ -1156,7 +1156,7 @@ performance:
     csharp-dotnet-release-macos-arm64:
       metrics:
         run.allocated: { reference: 0, maximum: 0, unit: B }
-    swift-6.4-release-macos26-arm64-m3max:
+    swift-6.4-release-macos27-arm64-m3max:
       metrics:
         compile.allocated:
           reference: 32490
@@ -1268,7 +1268,7 @@ performance:
     csharp-dotnet-release-macos-arm64:
       metrics:
         run.allocated: { reference: 0, maximum: 0, unit: B }
-    swift-6.4-release-macos26-arm64-m3max:
+    swift-6.4-release-macos27-arm64-m3max:
       metrics:
         compile.allocated:
           reference: 32490
@@ -1380,7 +1380,7 @@ performance:
     csharp-dotnet-release-macos-arm64:
       metrics:
         run.allocated: { reference: 0, maximum: 0, unit: B }
-    swift-6.4-release-macos26-arm64-m3max:
+    swift-6.4-release-macos27-arm64-m3max:
       metrics:
         compile.allocated:
           reference: 44754
@@ -1492,7 +1492,7 @@ performance:
     csharp-dotnet-release-macos-arm64:
       metrics:
         run.allocated: { reference: 0, maximum: 0, unit: B }
-    swift-6.4-release-macos26-arm64-m3max:
+    swift-6.4-release-macos27-arm64-m3max:
       metrics:
         compile.allocated:
           reference: 44754
@@ -1604,7 +1604,7 @@ performance:
     csharp-dotnet-release-macos-arm64:
       metrics:
         run.allocated: { reference: 0, maximum: 0, unit: B }
-    swift-6.4-release-macos26-arm64-m3max:
+    swift-6.4-release-macos27-arm64-m3max:
       metrics:
         compile.allocated:
           reference: 44754
@@ -1716,7 +1716,7 @@ performance:
     csharp-dotnet-release-macos-arm64:
       metrics:
         run.allocated: { reference: 0, maximum: 0, unit: B }
-    swift-6.4-release-macos26-arm64-m3max:
+    swift-6.4-release-macos27-arm64-m3max:
       metrics:
         compile.allocated:
           reference: 44754

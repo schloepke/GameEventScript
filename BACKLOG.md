@@ -72,7 +72,7 @@ here.
 
 - Implement the Kotlin port using the shared corpus and binary fixtures.
 - Add further Swift performance profiles when supported CI hardware/toolchains
-  are available. The initial Swift 6.4/macOS 26/Apple M3 Max profile is measured;
+  are available. The initial Swift 6.4/macOS 27/Apple M3 Max profile is measured;
   keep timing regression runs separate from ordinary portable Conformance CI.
 - Reduce Swift text-conversion temporary allocations when profiling justifies it;
   preserve the independently measured zero-allocation dispatch contract.

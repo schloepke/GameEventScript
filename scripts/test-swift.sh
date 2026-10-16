@@ -26,7 +26,7 @@ python3 "$ges_root/conformance/runner/main.py" run --kind supported \
     --output "$ges_root/artifacts/swift/conformance-results/ConformanceResults.json" \
     --adapter "$ges_scratch/release/ges-conformance-adapter"
 python3 "$ges_root/scripts/test-performance-correctness.py" \
-    --profile swift-6.4-release-macos26-arm64-m3max \
+    --profile swift-6.4-release-macos27-arm64-m3max \
     --output "$ges_root/artifacts/swift/conformance-results/PerformanceCorrectness.json" \
     --adapter "$ges_scratch/release/ges-conformance-adapter"
 python3 "$ges_root/scripts/test-swift-runtime-controls.py"

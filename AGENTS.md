@@ -479,7 +479,7 @@ The full Swift script includes this check; reports live below
 `artifacts/swift/message-json-roundtrip`. See `specs/MessageFormat.md`.
 
 `scripts/test-swift-performance.sh` verifies the measured
-`swift-6.4-release-macos26-arm64-m3max` profile. Five samples per workload use
+`swift-6.4-release-macos27-arm64-m3max` profile. Five samples per workload use
 median elapsed time and maximum cumulative requested libmalloc bytes on the
 calling thread. Sixteen warmed dispatch cases measure zero bytes and allocation
 counts. The native C instrumentation is an executable-only target; portable

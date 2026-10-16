@@ -193,7 +193,7 @@ Verified on 2026-09-23 with Swift 6.4 on macOS arm64, Release:
 - The ordinary hardware-independent report passes **1,648 cases** and skips
   **31 optional performance measurements**. The last calibrated performance run
   passed all 31 measured workloads.
-- The Swift 6.4/macOS 26/Apple M3 Max profile measures cumulative allocations and
+- The Swift 6.4/macOS 27/Apple M3 Max profile measures cumulative allocations and
   elapsed time. All sixteen warmed dispatch variants have **zero allocations**.
   See [Performance.md](Performance.md) for scope, references and reproduction.
 - All 60 shared binary cases pass, including canonical runtime-segment comparisons

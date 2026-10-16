@@ -18,6 +18,6 @@ if [[ "$ges_mode" == --calibrate ]]; then
     python3 "$ges_root/scripts/calibrate-swift-performance.py" "$ges_output" --adapter "$ges_scratch/release/ges-conformance-adapter"
 else
     python3 "$ges_root/conformance/runner/main.py" run --corpus "$ges_root/conformance/suites/performance" \
-        --performance-profile swift-6.4-release-macos26-arm64-m3max \
+        --performance-profile swift-6.4-release-macos27-arm64-m3max \
         --output "$ges_output/ConformanceResults.json" --adapter "$ges_scratch/release/ges-conformance-adapter"
 fi

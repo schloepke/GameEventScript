@@ -9,34 +9,184 @@ struct GesSource {
     let id: UInt32
 }
 
-// Lexical token categories. Keywords and punctuation stay identifiers or symbols and are matched by text.
+// Token kinds of the C# lexer, named like its GesTokenKind cases. Keywords, punctuation and operators have
+// their own kinds; contextual words such as `from` or `where` stay identifiers, as in C#. A `:word` that is not
+// a selector keyword is a `selector`, which the C# lexer folds into Tag.
 enum GesTokenKind {
     case endOfFile
     case illegal
     case newLine
-    case identifier
     case message
+    case identifier
     case typeName
     case constantReference
-    case selector
     case tag
-    case number
+    case selector
+    case float
+    case percentage
+    case unitNumber
     case text
-    case symbol
-    case superscript
+    case `true`
+    case `false`
+    case nothing
+    case mathConstantPi
+    case mathConstantE
+    case mathConstantTau
+    case mathConstantInfinity
+    case intrinsicAbs
+    case intrinsicLn
+    case intrinsicExp
+    case intrinsicSqrt
+    case intrinsicCbrt
+    case intrinsicChance
+    case intrinsicFloor
+    case intrinsicCeil
+    case intrinsicTruncate
+    case intrinsicRad
+    case intrinsicDeg
+    case intrinsicWrap
+    case intrinsicRound
+    case intrinsicSin
+    case intrinsicCos
+    case intrinsicTan
+    case intrinsicAsin
+    case intrinsicAcos
+    case intrinsicAtan
+    case intrinsicAtan2
+    case intrinsicHypot
+    case intrinsicDistance
+    case intrinsicSquared
+    case intrinsicLength
+    case intrinsicNormalize
+    case intrinsicDot
+    case intrinsicCross
+    case intrinsicAngle
+    case keywordRandom
+    case keywordParse
+    case series
+    case fibonacci
+    case factorial
+    case clamp
+    case min
+    case max
+    case zip
+    case roll
+    case `default`
+    case module
+    case constant
+    case record
+    case predicate
+    case function
+    case on
+    case emit
+    case publish
+    case matching
+    case without
+    case `let`
+    case `as`
+    case be
+    case when
+    case otherwise
+    case has
+    case empty
+    case `if`
+    case `else`
+    case `for`
+    case `in`
+    case of
+    case notIn
+    case starts
+    case ends
+    case with
+    case `is`
+    case numeric
+    case to
+    case selectorAny
+    case selectorAll
+    case selectorFilter
+    case selectorHas
+    case selectorTake
+    case selectorDrop
+    case selectorCount
+    case selectorChoose
+    case selectorDraw
+    case selectorShuffle
+    case selectorReverse
+    case selectorSum
+    case selectorAverage
+    case selectorSelect
+    case selectorContains
+    case selectorSort
+    case dot
+    case comma
+    case semicolon
+    case leftParen
+    case rightParen
+    case leftBrace
+    case rightBrace
+    case leftBracket
+    case rightBracket
+    case colon
+    case underscore
+    case operatorImplication
+    case projectionArrow
+    case operatorOr
+    case operatorXor
+    case operatorAnd
+    case operatorCollectionUnion
+    case operatorCollectionIntersect
+    case operatorEqual
+    case operatorNotEqual
+    case operatorLess
+    case operatorGreater
+    case operatorLessOrEqual
+    case operatorGreaterOrEqual
+    case operatorPlus
+    case operatorMinus
+    case operatorMultiply
+    case operatorDivide
+    case operatorIntegerDivide
+    case operatorModulo
+    case operatorRemainder
+    case operatorPower
+    case superscriptInteger
+    case operatorNot
 }
 
 struct GesToken {
-    // Decoded Text content never participates in keyword or punctuation matching.
-    var syntaxText: String { kind == .text ? "" : text }
     let kind: GesTokenKind
     let text: String
+    // A lowercase source word: an identifier or a keyword. Some positions, such as argument labels and extension
+    // function names, accept keywords as names.
+    let isWord: Bool
     let line: Int
     let column: Int
     let endLine: Int
     let endColumn: Int
     let start: Int
     let end: Int
+}
+
+extension GesToken {
+    // A contextual word: an identifier with this spelling, as C# MatchWord compares it.
+    func isIdentifier(_ word: String) -> Bool { kind == .identifier && text == word }
+
+    var isNumber: Bool { kind == .float || kind == .percentage || kind == .unitNumber }
+
+    // A plain identifier spelled as a source word; keywords and the degree sign are not names.
+    var isName: Bool { kind == .identifier && isWord }
+}
+
+extension GesTokenKind {
+    // A `:word`: a selector keyword or any other selector name.
+    var isSelector: Bool {
+        switch self {
+        case .selector, .selectorAny, .selectorAll, .selectorFilter, .selectorHas, .selectorTake, .selectorDrop, .selectorCount, .selectorChoose, .selectorDraw, .selectorShuffle,
+            .selectorReverse, .selectorSum, .selectorAverage, .selectorSelect, .selectorContains, .selectorSort:
+            true
+        default: false
+        }
+    }
 }
 
 // Unary operators of the source language; `predicate` wraps an extension predicate call.
@@ -124,34 +274,32 @@ enum GesBinaryOperator {
     case zip
 
     // Operator spelled by an infix source token, after multi-word forms are resolved.
-    init?(sourceText: String) {
-        switch sourceText {
-        case "or": self = .or
-        case "xor": self = .xor
-        case "and": self = .and
-        case "->": self = .implies
-        case "=": self = .equal
-        case "<>": self = .notEqual
-        case "<": self = .less
-        case ">": self = .greater
-        case "<=": self = .lessOrEqual
-        case ">=": self = .greaterOrEqual
-        case "+": self = .add
-        case "-": self = .subtract
-        case "*": self = .multiply
-        case "/": self = .divide
-        case "div": self = .integerDivide
-        case "mod": self = .modulo
-        case "rem": self = .remainder
-        case "^": self = .power
-        case "default": self = .default
-        case "in": self = .contains
-        case "inValues": self = .containsValue
-        case "startsWith": self = .startsWith
-        case "endsWith": self = .endsWith
-        case "|": self = .union
-        case "&": self = .intersect
-        case "zip": self = .zip
+    // The binary operator a token kind spells; `in`, `starts` and `ends` complete their forms in the parser.
+    init?(_ kind: GesTokenKind) {
+        switch kind {
+        case .operatorOr: self = .or
+        case .operatorXor: self = .xor
+        case .operatorAnd: self = .and
+        case .operatorImplication: self = .implies
+        case .operatorEqual: self = .equal
+        case .operatorNotEqual: self = .notEqual
+        case .operatorLess: self = .less
+        case .operatorGreater: self = .greater
+        case .operatorLessOrEqual: self = .lessOrEqual
+        case .operatorGreaterOrEqual: self = .greaterOrEqual
+        case .operatorPlus: self = .add
+        case .operatorMinus: self = .subtract
+        case .operatorMultiply: self = .multiply
+        case .operatorDivide: self = .divide
+        case .operatorIntegerDivide: self = .integerDivide
+        case .operatorModulo: self = .modulo
+        case .operatorRemainder: self = .remainder
+        case .operatorPower: self = .power
+        case .default: self = .default
+        case .in: self = .contains
+        case .operatorCollectionUnion: self = .union
+        case .operatorCollectionIntersect: self = .intersect
+        case .zip: self = .zip
         default: return nil
         }
     }

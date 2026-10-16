@@ -367,8 +367,8 @@ contains exactly the measured reference sources plus the recalibrated corpus.
 
 - [x] Swift: typed `GesTokenKind`, `GesBinaryOperator`, `GesUnaryOperator`
       instead of strings. Case names follow C# where both have the concept; the
-      Swift lexer keeps coarse token kinds (keywords stay identifiers) and the
       operators keep `predicate`/`notContains`, which preserve the emitted code.
+      Keyword and punctuation kinds follow in Phase 5a.
 - [x] Identical phase types in both ports: `GesLexer`, `GesParser`,
       `GesAstValidator`, `GesShadowingValidator`, `GesAstOptimizer`,
       `GesCompiler` and `GesBinaryBuilder`. `GesAstValidator` collects the
@@ -387,6 +387,30 @@ contains exactly the measured reference sources plus the recalibrated corpus.
       (BuildMetadata names the implementation and is excluded). All 1,399
       corpus programs both compilers accept are byte-identical, including
       debug sections; the gate keeps an empty baseline.
+
+### Phase 5a – Compiler safety and compactness
+
+Compilation favours safety and compactness. Both ports converge on one model in
+which types, not tests, keep the compiler's invariants. Each step keeps the
+compiler output byte-identical and stays within the performance budget.
+
+- [x] Swift lexer classifies keywords, punctuation, operators, selector
+      keywords and number forms into the C# `GesTokenKind` cases; the parser
+      matches token kinds and keeps no text-based `match`/`expect`. Contextual
+      words such as `from` or `where` stay identifiers compared by
+      `matchWord`/`expectWord`, as C# `MatchWord` does. `GesToken.isWord` marks
+      lowercase source words, so positions that accept keyword spellings as names
+      (argument labels, extension functions, unit names) keep doing so. Swift keeps
+      a `selector` kind for a `:word` that is not a selector keyword, which C#
+      folds into `Tag` and distinguishes by its leading character; C#'s unused
+      `DiceSeparator` kind has no Swift counterpart.
+- [ ] Swift adopts the safe instruction model of C#: labels are elements of the
+      instruction list, jumps and calls target symbolic label and bind IDs,
+      operands are typed and pool indexes are assigned when encoding, so passes
+      need no position remapping. Instructions stay compact value types without
+      a heap object per instruction; allocations stay at or below the reference.
+- [ ] C# reaches the same model compactly: denser code with identical behaviour,
+      and compact instruction storage where measurement supports it.
 
 ### Phase 6 – Tools and adapters (low priority)
 

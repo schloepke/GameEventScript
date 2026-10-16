@@ -7,8 +7,9 @@
 Both compilers must produce byte-identical Programs for the same sources and debug options. Only the
 BuildMetadata section differs by design, because it names the producing implementation; every other section
 is compared byte for byte. Cases that both compilers reject are counted separately; a program that only one
-compiler accepts, or that compiles to different bytes, is a difference. Reports and workspaces stay below
-artifacts/compiler-comparison.
+compiler accepts, or that compiles to different bytes, is a difference. Differences are ratcheted against
+scripts/compiler-output-baseline.txt: a new or resolved difference fails until the baseline is regenerated
+with --update-baseline. Reports and workspaces stay below artifacts/compiler-comparison.
 """
 
 import argparse
@@ -24,8 +25,11 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 WORK = ROOT / "artifacts" / "compiler-comparison"
-SWIFT_CLI = ROOT / "artifacts/swift/tool/out/Products/Release/ges"
+SWIFT_CLI = ROOT / "artifacts/swift/tool/release/ges"
 CSHARP_CLI = ROOT / "artifacts/csharp/tool/bin/Release/net8.0/GameEventScript.Tool.dll"
+BASELINE = ROOT / "scripts" / "compiler-output-baseline.txt"
+SECTION_NAMES = {0: "header", 0x01: "metadata", 0x02: "strings", 0x03: "indexLists", 0x04: "bindings", 0x10: "code",
+                 0x20: "debugSymbols", 0x21: "sourceMap", 0x22: "sourceArchive"}
 
 
 BUILD_METADATA = 0x0030
@@ -47,6 +51,12 @@ def sections(data):
 def comparable(data):
     """Every section except the implementation-specific BuildMetadata."""
     return [section for section in sections(data) if section[0] != BUILD_METADATA]
+
+
+def differing_sections(left, right):
+    """Names of the comparable sections whose bytes differ or that only one Program contains."""
+    a, b = dict(comparable(left)), dict(comparable(right))
+    return sorted(SECTION_NAMES.get(kind, f"0x{kind:04x}") for kind in set(a) | set(b) if a.get(kind) != b.get(kind))
 
 
 def programs(requests):
@@ -87,10 +97,21 @@ def compare(key, program, csharp, swift):
     elif left is None or right is None:
         verdict = "csharp-only" if right is None else "swift-only"
     else:
-        verdict = "identical" if comparable(left) == comparable(right) else "different"
+        differing = differing_sections(left, right)
+        verdict = "different:" + ",".join(differing) if differing else "identical"
     if verdict in ("identical", "both-rejected"):
         shutil.rmtree(directory)
     return {"case": program["case"], "program": program["program"], "debug": program["debug"], "verdict": verdict, "workspace": str(directory)}
+
+
+def baseline_line(result):
+    return "\t".join([result["case"], result["program"], "debug" if result["debug"] else "nodebug", result["verdict"]])
+
+
+def ratchet(results, baseline):
+    """(new differences, resolved baseline entries) of this run."""
+    current = {baseline_line(result) for result in results if result["verdict"] not in ("identical", "both-rejected")}
+    return sorted(current - baseline), sorted(baseline - current)
 
 
 def summarize(results):
@@ -105,6 +126,7 @@ def main(argv=None):
     parser.add_argument("--swift", type=Path, default=SWIFT_CLI, help="Swift ges executable")
     parser.add_argument("--csharp", type=Path, default=CSHARP_CLI, help="C# GameEventScript.Tool.dll")
     parser.add_argument("--kind", default="supported", help="Corpus kind filter passed to the runner")
+    parser.add_argument("--update-baseline", action="store_true", help="Record the current differences as the baseline")
     args = parser.parse_args(argv)
     for path in (args.swift, args.csharp):
         if not path.exists():
@@ -118,11 +140,27 @@ def main(argv=None):
         results = list(pool.map(lambda item: compare(item[0], item[1], ["dotnet", str(args.csharp)], [str(args.swift)]), unique.items()))
     counts = summarize(results)
     (WORK / "report.json").write_text(json.dumps({"counts": counts, "results": results}, indent=1) + "\n", encoding="utf-8")
-    print(f"{len(results)} programs: " + ", ".join(f"{verdict} {count}" for verdict, count in sorted(counts.items())))
-    differences = [result for result in results if result["verdict"] not in ("identical", "both-rejected")]
-    for result in differences:
-        print(f"  {result['verdict']}: {result['case']} [{result['program']}] -> {result['workspace']}")
-    return 1 if differences else 0
+    identical = counts.get("identical", 0)
+    rejected = counts.get("both-rejected", 0)
+    print(f"{len(results)} programs: identical {identical}, both rejected {rejected}, different {len(results) - identical - rejected}")
+    lines = BASELINE.read_text(encoding="utf-8").splitlines() if BASELINE.exists() else []
+    baseline = {line for line in lines if line and not line.startswith("#")}
+    if args.update_baseline:
+        current = sorted({baseline_line(result) for result in results if result["verdict"] not in ("identical", "both-rejected")})
+        BASELINE.write_text("# case\tprogram\tdebug\tverdict; regenerate with scripts/compare-compiler-output.py --update-baseline\n"
+                            + "".join(line + "\n" for line in current), encoding="utf-8")
+        print(f"Wrote {len(current)} baseline entries to {BASELINE}")
+        return 0
+    new, resolved = ratchet(results, baseline)
+    for line in new:
+        print(f"new difference: {line}")
+    for line in resolved:
+        print(f"resolved difference still in baseline: {line}")
+    if new or resolved:
+        print("Fix the compiler, or run scripts/compare-compiler-output.py --update-baseline after a deliberate change.")
+        return 1
+    print(f"Compiler output verified ({len(baseline)} baselined differences remain).")
+    return 0
 
 
 if __name__ == "__main__":

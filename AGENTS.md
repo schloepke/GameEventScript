@@ -450,6 +450,12 @@ original Markdown expectations. The manifest binds each input to its binary
 and complete source-document SHA-256. No expected result is exported from C#.
 `verify-swift-bytecode.py` checks the explicit enum and operand registry against
 C#; ordinary package builds do not generate source.
+Both compilers must emit byte-identical Programs, including debug sections; only
+BuildMetadata names the producing implementation. `python3 scripts/compare-compiler-output.py`
+compiles every corpus program with both CLIs and ratchets the remaining differences
+against `scripts/compiler-output-baseline.txt` (`--update-baseline` after a deliberate
+change); its controls are `python3 scripts/test-compiler-output-controls.py`. The full
+Swift test script runs both.
 
 Verified Swift coverage (Release, 2026-09-23): all 1,679 behavior checks from
 96 shared Markdown documents pass with native Swift compilation. The strict

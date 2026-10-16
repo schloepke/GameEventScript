@@ -42,3 +42,7 @@ python3 "$ges_root/scripts/test-binary-reader-fuzz.py" --skip-build
 
 python3 "$ges_root/scripts/test-binary-roundtrip-controls.py"
 python3 "$ges_root/scripts/test-binary-roundtrip-properties.py" --skip-build
+
+dotnet build "$ges_root/implementation/csharp/GameEventScript.Tool/src/GameEventScript.Tool.csproj" --configuration Release
+python3 "$ges_root/scripts/test-compiler-output-controls.py"
+python3 "$ges_root/scripts/compare-compiler-output.py"

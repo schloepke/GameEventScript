@@ -101,14 +101,18 @@ final class SwiftBridgeIntegrationTests: XCTestCase {
         let program = try GesProgramBuilder().addScript("on initialization { emit Ready() }\non Start() { emit Done() }").compile()
         let runner = try GesBridgeHostRunner(GameEventScriptHost.makeBuilder().withRandomSeed(1).build().startForTest())
         defer { runner.close() }
+        // The shared dispatcher may drain work between an isIdle check and an explicit pump, so lastResult can
+        // describe a later empty pump. Per-instance start results and native deliveries are pump-independent.
+        let done = expectation(description: "Done delivered once")
+        _ = try runner.subscribe(.init(name: "Done")) { _, _ in done.fulfill() }
         let instance = try runner.load(program)
         while !runner.isIdle { _ = try runner.runToCompletion() }
-        XCTAssertEqual(runner.lastResult?.state, .completed)
-        XCTAssertEqual(runner.lastResult?.emittedMessages, 1)
+        XCTAssertEqual(instance.startResult?.state, .ready)
+        XCTAssertEqual(instance.startResult?.emittedMessages, 1)
         XCTAssertTrue(instance.isAttached)
         try runner.receive(.init(name: "Start"))
         while !runner.isIdle { _ = try runner.runToCompletion() }
-        XCTAssertEqual(runner.lastResult?.emittedMessages, 1)
+        wait(for: [done], timeout: 5)
         XCTAssertTrue(instance.detach())
         XCTAssertFalse(instance.isAttached)
         XCTAssertFalse(try runner.receive(.init(name: "Start")))
@@ -127,9 +131,13 @@ final class SwiftBridgeIntegrationTests: XCTestCase {
         let secondInstance = try second.load(program)
         while !first.isIdle { _ = try first.runToCompletion() }
         while !second.isIdle { _ = try second.runToCompletion() }
-        XCTAssertEqual(first.lastResult?.emittedMessages, 1)
-        XCTAssertEqual(second.lastResult?.emittedMessages, 1)
+        // Start results are retained per instance whichever pump ran initialization; lastResult is not.
+        XCTAssertEqual(firstInstance.startResult?.state, .ready)
+        XCTAssertEqual(firstInstance.startResult?.emittedMessages, 1)
+        XCTAssertEqual(secondInstance.startResult?.state, .ready)
+        XCTAssertEqual(secondInstance.startResult?.emittedMessages, 1)
         XCTAssertTrue(firstInstance.detach())
+        XCTAssertFalse(firstInstance.isAttached)
         XCTAssertTrue(secondInstance.isAttached)
         XCTAssertNoThrow(try program.encode())
     }

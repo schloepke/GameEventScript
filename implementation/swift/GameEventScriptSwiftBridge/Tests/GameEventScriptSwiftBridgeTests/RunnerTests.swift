@@ -25,6 +25,14 @@ final class RunnerTests: XCTestCase {
         }
     }
 
+    /// Waits for the shared dispatcher without pumping on the test thread. An explicit pump may run on an already
+    /// drained host and replace lastResult with an empty result, so assertions on lastResult must use this wait.
+    private func waitForAutomaticDrain(_ runner: GesBridgeHostRunner, file: StaticString = #filePath, line: UInt = #line) {
+        let deadline = Date().addingTimeInterval(5)
+        while !runner.isIdle && Date() < deadline { Thread.sleep(forTimeInterval: 0.001) }
+        XCTAssertTrue(runner.isIdle, "Runner did not drain automatically", file: file, line: line)
+    }
+
     private struct FrozenClock: GesClock {
         var elapsedMicroseconds: Int64 { 100 }
     }
@@ -106,7 +114,7 @@ final class RunnerTests: XCTestCase {
             }
         }
         try runner.receive(.init(name: "Start", nativeArguments: [("value", 0)]))
-        while !runner.isIdle { _ = try runner.runToCompletion() }
+        waitForAutomaticDrain(runner)
         XCTAssertEqual(trace.values, [0, 2, 1])
         XCTAssertEqual(runner.lastResult?.processedMessages, 2)
     }
@@ -120,7 +128,7 @@ final class RunnerTests: XCTestCase {
         }
         host.receive(try .init(name: "Start"))
         let runner = GesBridgeHostRunner(host)
-        while !runner.isIdle { _ = try runner.runToCompletion() }
+        waitForAutomaticDrain(runner)
         XCTAssertEqual(runner.lastResult?.diagnostic?.code, "app.runner")
         XCTAssertEqual(trace.values, [1])
         XCTAssertEqual(runner.lastResult?.state, .runtimeError)

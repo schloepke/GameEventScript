@@ -348,6 +348,7 @@ final class GesCompiler {
         var code: [GesBytecodeInstruction] = []
         var spans: [GesSourceMapEntry] = []
         var symbols: [GesDebugSymbol] = []
+        var routineSymbols: [String: [GesDebugSymbol]] = [:]
         var handlerIDs: [String: Int] = [:]
         var maxRegs = 0
         var maxDepth = 0
@@ -412,11 +413,16 @@ final class GesCompiler {
                 )
             )
             if options.debugInfo.contains(.symbols) {
-                for (name, reg, start, parameter) in r.symbols where start < r.code.count {
-                    symbols.append(.init(kind: parameter ? .parameter : .local, registerID: UInt16(reg), name: name, codeStart: UInt32(offset), codeLength: UInt32(r.code.count)))
+                for (name, reg, _, parameter) in r.symbols {
+                    routineSymbols[r.key, default: []].append(.init(kind: parameter ? .parameter : .local, registerID: UInt16(reg), name: name, codeStart: UInt32(offset), codeLength: UInt32(r.code.count)))
                 }
             }
         }
+        // C# register creation order: routines are emitted callables first, then records, then handlers, and each
+        // creates its arguments when it begins, followed by its locals.
+        let callables = routines.filter { ["function", "predicate"].contains($0.definition.kind) }.sorted { $0.definition.signature < $1.definition.signature }
+        let recordRoutines = routines.filter { $0.definition.kind == "record" }.sorted { $0.definition.name < $1.definition.name }
+        for r in callables + recordRoutines + routines.filter({ $0.definition.kind.hasSuffix("andler") }) { symbols += routineSymbols[r.key, default: []] }
         try checkLimits()
         let materialized = materialize(executable + bindings, code)
         if moduleName.isEmpty { moduleName = anonymousName(materialized.0, materialized.1, maxRegs, maxDepth) }

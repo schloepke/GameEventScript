@@ -107,10 +107,11 @@ extension GesCompiler {
     // A local binding in its own register, as C# declares it for `let`.
     func letBinding(_ name: String, _ value: GesExpression, _ r: GesRoutine, _ scope: GesScope) throws -> Int {
         let d = r.local()
+        // Declared before its value is evaluated, so the symbol precedes bindings declared inside the value.
+        r.symbols.append((name, d, max(0, r.code.count - 1), false))
         scope.values[name] = d
         _ = try expression(value, r, scope, destination: d)
         if knownNonList(value, r, scope) { r.nonListBindings.insert(d) }
-        r.symbols.append((name, d, max(0, r.code.count - 1), false))
         if case .handler(_, let parameters) = value.kind { scope.handlers[name] = parameters.map(\.label) }
         return d
     }

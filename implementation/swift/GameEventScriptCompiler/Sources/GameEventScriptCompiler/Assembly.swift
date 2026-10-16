@@ -49,7 +49,10 @@ extension GesCompiler {
         for declaration in block.declarations {
             if !writable.insert(declaration.name).inserted || outer.get(declaration.name) != nil { throw assemblyFailure(block.location, "Assembly binding shadows an existing binding.", declaration.name) }
             if declaration.export { outputs.insert(declaration.name) } else { locals.insert(declaration.name) }
-            scope.values[declaration.name] = r.local()
+            let register = r.local()
+            scope.values[declaration.name] = register
+            // A declared assembly register is a named local, as C# context.Declare makes it.
+            r.symbols.append((declaration.name, register, max(0, r.code.count - 1), false))
         }
         var labels: [String: Int] = [:]
         for (index, line) in block.lines.enumerated() where line.label {

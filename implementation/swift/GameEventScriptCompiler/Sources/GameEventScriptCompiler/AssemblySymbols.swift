@@ -109,8 +109,7 @@ extension GesCompiler {
             if line.name == "Call", case .call(let name, let args) = line.operands[1].kind {
                 let key = signature(name, args.map(\.label))
                 guard let definition = definitions[key] else { throw error("compile.unresolvedSymbol", line.location, symbol: name, phase: .compile) }
-                let values = try args.map { try expression($0.value, r, scope) }
-                stage(values, r)
+                try stageExpressions(args.map(\.value), r, scope)
                 let instruction = r.emit(.call, regs[0], flags: definition.kind == "predicate" ? 0x20 : 0)
                 r.calls.append((instruction, key))
                 r.dependencies.insert(key)

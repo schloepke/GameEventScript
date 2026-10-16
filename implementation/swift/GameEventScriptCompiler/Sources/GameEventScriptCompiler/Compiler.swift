@@ -197,8 +197,40 @@ final class GesCompiler {
             optimize(routine, effects: effects)
             try allocate(routine)
             try checkLimits(routine)
+            analyzeResources(routine)
         }
         return try finish()
+    }
+
+    // Calls and argument staging of the final code, as the C# resource analysis reads them after optimization.
+    func analyzeResources(_ r: GesRoutine) {
+        let recordKeys = Dictionary(routines.filter { $0.definition.kind == "record" }.map { ($0.definition.name, $0.key) }, uniquingKeysWith: { first, _ in first })
+        let calls = Dictionary(r.calls.map { ($0.0, $0.1) }, uniquingKeysWith: { first, _ in first })
+        let stages: Set<GesBytecodeOpCode> = [.stageRegister, .stageNothing, .stageTrue, .stageFalse, .stageInteger, .stageFloat, .stageText, .stageTag, .stagePercentage]
+        let clears: Set<GesBytecodeOpCode> = [.createVector, .createPoint, .createList, .createMap, .createExternalType, .returnVoid, .returnValue]
+        var dependencies: Set<String> = []
+        var stage = 0
+        var maxStage = 0
+        for (index, instruction) in r.code.enumerated() {
+            if stages.contains(instruction.opcode) {
+                stage += 1
+                maxStage = max(maxStage, stage)
+            }
+            switch instruction.opcode {
+            case .call:
+                if let key = calls[index] { dependencies.insert(key) }
+                stage = 0
+            case .createRecord:
+                if let name = recordIDs.first(where: { $0.value == Int(instruction.word1) })?.key, let key = recordKeys[name] { dependencies.insert(key) }
+                stage = 0
+            case .castCustom:
+                if Int(instruction.word2) < strings.count, let key = recordKeys[strings[Int(instruction.word2)]] { dependencies.insert(key) }
+            default:
+                if clears.contains(instruction.opcode) { stage = 0 }
+            }
+        }
+        r.dependencies = dependencies
+        r.maxStage = maxStage
     }
 
     func checkLimits(_ routine: GesRoutine? = nil) throws {
@@ -213,7 +245,7 @@ final class GesCompiler {
         r.emit(.registerLocals)
         for (i, parameter) in definition.parameters.enumerated() {
             scope.values[parameter.name] = i
-            r.symbols.append((parameter.label, i, 0, true))
+            r.symbols.append((definition.argumentName(parameter), i, 0, true))
             if let type = parameter.type { try cast(i, i, type, r) }
         }
         if let value = definition.expression {
@@ -370,7 +402,7 @@ final class GesCompiler {
                 .init(
                     kind: kind,
                     name: UInt16(text(d.name)),
-                    argumentNames: d.parameters.map { UInt16(text($0.label)) },
+                    argumentNames: d.parameters.map { UInt16(text(d.argumentName($0))) },
                     entryAddress: UInt16(offset),
                     id: UInt16(id),
                     requiredTags: d.required.map { UInt16(text($0)) },

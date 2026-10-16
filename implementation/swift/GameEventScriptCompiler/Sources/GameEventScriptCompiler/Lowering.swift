@@ -372,14 +372,18 @@ extension GesCompiler {
     }
 
     func intrinsic(_ name: String, _ args: [GesExpression], _ d: Int, _ r: GesRoutine, _ scope: GesScope) throws {
-        let regs = try args.map { try expression($0, r, scope) }
         if name == "min" || name == "max" {
-            if let first = regs.first {
-                r.emit(.move, d, first)
-                for value in regs.dropFirst() { r.emit(name == "min" ? .min : .max, d, d, value) }
+            // As C# EmitVariadic: each further operand is evaluated right before it is combined.
+            guard let first = args.first else {
+                r.emit(.loadNothing, d)
+                return
             }
+            let value = try expression(first, r, scope)
+            if value != d { r.emit(.move, d, value) }
+            for argument in args.dropFirst() { r.emit(name == "min" ? .min : .max, d, d, try expression(argument, r, scope)) }
             return
         }
+        let regs = try args.map { try expression($0, r, scope) }
         let signatures: [String: [Int: GesBytecodeOpCode]] = [
             "clamp": [3: .clamp], "atan2": [2: .atan2], "hypot": [2: .hypot2D, 3: .hypot3D], "distance": [2: .distance, 4: .distance2D, 6: .distance3D], "distanceSquared": [2: .distanceSquared, 4: .distanceSquared2D, 6: .distanceSquared3D],
             "lengthSquared": [1: .lengthSquared, 2: .lengthSquared2D, 3: .lengthSquared3D], "normalize": [1: .normalize, 2: .normalize2D, 3: .normalize3D], "dot": [2: .dot, 4: .dot2D, 6: .dot3D], "cross": [2: .cross, 4: .cross2D, 6: .cross3D],

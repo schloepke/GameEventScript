@@ -134,7 +134,8 @@ extension GesCompiler {
         let predicateScope = GesScope(scope)
         bindComponents(s.names, fallback: s.name, current: item, r, predicateScope)
         var skips: [Int] = []
-        if let condition = s.expressions.first { skips.append(r.emit(.jumpIfNotTrue, 0, try expression(condition, r, predicateScope))) }
+        // Only an explicit filter is evaluated; the parser's placeholder `true` is not, as in C#.
+        if !s.name.isEmpty, let condition = s.expressions.first { skips.append(r.emit(.jumpIfNotTrue, 0, try expression(condition, r, predicateScope))) }
         let weightScope = GesScope(scope)
         bindComponents(s.weightNames, fallback: s.weightName, current: item, r, weightScope)
         let weight = try expression(s.expressions[1], r, weightScope)

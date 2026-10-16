@@ -253,6 +253,10 @@ struct GesDefinition {
     let excluded: [String]
     let location: GesSourceLocation
     var signature: String { name + "(" + parameters.map(\.label).joined(separator: ",") + ")" }
+
+    // Name of an argument register in bindings and debug symbols: a message-name handler names its single
+    // argument after the local binding, every other routine after the argument label, as in C#.
+    func argumentName(_ parameter: GesParameter) -> String { kind == "messageNameHandler" ? parameter.name : parameter.label }
 }
 
 struct GesField {

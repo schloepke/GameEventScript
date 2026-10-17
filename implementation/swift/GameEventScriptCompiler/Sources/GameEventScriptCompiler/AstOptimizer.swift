@@ -385,12 +385,10 @@ struct GesAstOptimizer {
 
     static func multiply(_ left: GesValue, _ right: GesValue, _ l: Double, _ r: Double) -> GesValue? {
         if left.valueKind == .integer && right.valueKind == .integer, let a = left.integerValue, let b = right.integerValue {
-            if !left.hasUnit && !right.hasUnit {
-                let (result, overflow) = a.multipliedReportingOverflow(by: b)
-                return overflow ? .float(Double(a) * Double(b)) : .integer(result)
-            }
+            // As the VM computes it: an exact product stays int64 with the product unit; only an overflow becomes binary64.
             guard let unit = productUnit(left.unit, right.unit) else { return nil }
-            return number(Double(a) * Double(b), unit, preferInteger: false)
+            let (result, overflow) = a.multipliedReportingOverflow(by: b)
+            return overflow ? .float(Double(a) * Double(b), unit: unit) : .integer(result, unit: unit)
         }
         if left.valueKind == .percentage && right.valueKind == .percentage { return .percentage(l * r) }
         if left.valueKind == .percentage { return number(l * r, right.unit, preferInteger: false) }

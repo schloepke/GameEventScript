@@ -166,7 +166,3 @@ here.
   size of Swift for rule-for-rule identical code (GesAstOptimizer) and 6–7x for
   the lexer, validation and API. Check first whether C# implements extra
   behavior there, for example collecting several validation diagnostics.
-- Constant folding diverges from runtime arithmetic for integer products with a
-  unit: `2m * 3` folds to binary64 `6m` (GesAstOptimizer `FoldMultiply`), while
-  the VM computes int64 `6m`. Both compilers now share the rule for byte
-  identity; fix it in both together with a Conformance case.

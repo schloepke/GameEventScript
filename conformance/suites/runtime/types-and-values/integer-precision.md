@@ -2139,3 +2139,247 @@ steps:
           - name: remainder
             value: { type: ":Nothing" }
 ```
+
+---
+
+## Test: unit multiply above53 through direct Program
+
+This case requires an exact integer product with a unit above `2^53`, `3000000000m * 3000000001`, to stay an exact Int64 quantity on every evaluation path; constant folding must not round it through binary64.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: unit-multiply-above53-direct
+compile:
+  binaryRoundTrip: false
+```
+
+### Source code under test
+
+```ges
+module integerprecision
+constant $length be 3000000000m
+constant $factor be 3000000001
+on Start(value, factor) {
+  emit Literal(value: (3000000000m) * (3000000001))
+  emit Constant(value: $length * $factor)
+  emit Runtime(value: value * factor)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args:
+        - name: value
+          value: { type: ":Quantity.int64", value: "3000000000", unit: ":meter" }
+        - name: factor
+          value: { type: ":Number.int64", value: "3000000001" }
+    local:
+      - name: Literal
+        args:
+          - name: value
+            value: { type: ":Quantity.int64", value: "9000000003000000000", unit: ":meter" }
+      - name: Constant
+        args:
+          - name: value
+            value: { type: ":Quantity.int64", value: "9000000003000000000", unit: ":meter" }
+      - name: Runtime
+        args:
+          - name: value
+            value: { type: ":Quantity.int64", value: "9000000003000000000", unit: ":meter" }
+```
+
+---
+
+## Test: unit multiply above53 through binary Program
+
+This case requires an exact integer product with a unit above `2^53`, `3000000000m * 3000000001`, to stay an exact Int64 quantity on every evaluation path; constant folding must not round it through binary64.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: unit-multiply-above53-binary
+compile:
+  binaryRoundTrip: true
+```
+
+### Source code under test
+
+```ges
+module integerprecision
+constant $length be 3000000000m
+constant $factor be 3000000001
+on Start(value, factor) {
+  emit Literal(value: (3000000000m) * (3000000001))
+  emit Constant(value: $length * $factor)
+  emit Runtime(value: value * factor)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args:
+        - name: value
+          value: { type: ":Quantity.int64", value: "3000000000", unit: ":meter" }
+        - name: factor
+          value: { type: ":Number.int64", value: "3000000001" }
+    local:
+      - name: Literal
+        args:
+          - name: value
+            value: { type: ":Quantity.int64", value: "9000000003000000000", unit: ":meter" }
+      - name: Constant
+        args:
+          - name: value
+            value: { type: ":Quantity.int64", value: "9000000003000000000", unit: ":meter" }
+      - name: Runtime
+        args:
+          - name: value
+            value: { type: ":Quantity.int64", value: "9000000003000000000", unit: ":meter" }
+```
+
+---
+
+## Test: unit multiply int64-overflow through direct Program
+
+This case requires an overflowing integer product with a unit to fall back to a binary64 quantity on every evaluation path.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: unit-multiply-int64-overflow-direct
+compile:
+  binaryRoundTrip: false
+```
+
+### Source code under test
+
+```ges
+module integerprecision
+constant $length be 4611686018427387904m
+constant $factor be 4
+on Start(value, factor) {
+  emit Literal(value: (4611686018427387904m) * (4))
+  emit Constant(value: $length * $factor)
+  emit Runtime(value: value * factor)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args:
+        - name: value
+          value: { type: ":Quantity.int64", value: "4611686018427387904", unit: ":meter" }
+        - name: factor
+          value: { type: ":Number.int64", value: "4" }
+    local:
+      - name: Literal
+        args:
+          - name: value
+            value: { type: ":Quantity.binary64", value: "1.8446744073709552e19", unit: ":meter" }
+      - name: Constant
+        args:
+          - name: value
+            value: { type: ":Quantity.binary64", value: "1.8446744073709552e19", unit: ":meter" }
+      - name: Runtime
+        args:
+          - name: value
+            value: { type: ":Quantity.binary64", value: "1.8446744073709552e19", unit: ":meter" }
+```
+
+---
+
+## Test: unit multiply int64-overflow through binary Program
+
+This case requires an overflowing integer product with a unit to fall back to a binary64 quantity on every evaluation path.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: unit-multiply-int64-overflow-binary
+compile:
+  binaryRoundTrip: true
+```
+
+### Source code under test
+
+```ges
+module integerprecision
+constant $length be 4611686018427387904m
+constant $factor be 4
+on Start(value, factor) {
+  emit Literal(value: (4611686018427387904m) * (4))
+  emit Constant(value: $length * $factor)
+  emit Runtime(value: value * factor)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args:
+        - name: value
+          value: { type: ":Quantity.int64", value: "4611686018427387904", unit: ":meter" }
+        - name: factor
+          value: { type: ":Number.int64", value: "4" }
+    local:
+      - name: Literal
+        args:
+          - name: value
+            value: { type: ":Quantity.binary64", value: "1.8446744073709552e19", unit: ":meter" }
+      - name: Constant
+        args:
+          - name: value
+            value: { type: ":Quantity.binary64", value: "1.8446744073709552e19", unit: ":meter" }
+      - name: Runtime
+        args:
+          - name: value
+            value: { type: ":Quantity.binary64", value: "1.8446744073709552e19", unit: ":meter" }
+```

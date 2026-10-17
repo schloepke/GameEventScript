@@ -132,6 +132,9 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 - Both compilers reject `:Integer` and `:Float` wherever a type is named; use
   `as :Number` to convert and `is integer` or `is fractional` to check. Casts and
   checks to other custom types bound only at run time remain valid.
+- Constant folding of integer products with a unit is exact like VM execution:
+  `3000000000m * 3000000001` stays `9000000003000000000m` instead of being
+  rounded through binary64; only an Int64 overflow falls back to binary64.
 - Both compilers no longer hang on a `module` declaration after another
   declaration or on a repeated one; it is now a `parse.syntax` error at the
   `module` keyword.

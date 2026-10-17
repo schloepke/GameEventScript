@@ -802,19 +802,13 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, GesExpressionN
 
     private static GesValue? FoldMultiply(GesValue left, GesValue right, double leftNumber, double rightNumber)
     {
-        if (left.Kind == GesBytecodeTypeKind.Integer &&
-            right.Kind == GesBytecodeTypeKind.Integer)
+        if (left.Kind == GesBytecodeTypeKind.Integer && right.Kind == GesBytecodeTypeKind.Integer)
         {
-            if (left.Unit == GesQuantityUnit.UnitNone && right.Unit == GesQuantityUnit.UnitNone)
-            {
-                return GesNumber.MultiplyExact(left.IntegerValue, right.IntegerValue) is { } integerResult
-                    ? GesValue.GesInteger(integerResult)
-                    : GesValue.GesFloat((double)left.IntegerValue * right.IntegerValue);
-            }
-
-            if (ProductUnit(left.Unit, right.Unit) is { } productUnit) return CreateNumber((double)left.IntegerValue * right.IntegerValue, productUnit, false);
-
-            return null;
+            // As the VM computes it: an exact product stays int64 with the product unit; only an overflow becomes binary64.
+            if (ProductUnit(left.Unit, right.Unit) is not { } productUnit) return null;
+            return GesNumber.MultiplyExact(left.IntegerValue, right.IntegerValue) is { } integerResult
+                ? GesValue.GesInteger(integerResult, productUnit)
+                : GesValue.GesFloat((double)left.IntegerValue * right.IntegerValue, productUnit);
         }
 
         if (left.Kind == GesBytecodeTypeKind.Percentage && right.Kind == GesBytecodeTypeKind.Percentage) return GesValue.GesPercentage(leftNumber * rightNumber);

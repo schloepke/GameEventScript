@@ -327,22 +327,16 @@ zero-allocation hot path, release artifact consumption, and byte-identical
 package reproduction. Performance references are regression gates for the
 current C# implementation, not cross-platform benchmark claims.
 
-Verified baseline (Release, 2026-09-23):
-
-```text
-2196/2196 non-performance test executions passed
-32/32 allocation test executions passed, including the independent zero-allocation hot path
-1679 shared Markdown Conformance cases in 96 documents
-```
-
-The combined verification command for the first two counts is:
+Every non-performance test, including the independent zero-allocation hot path,
+must pass in Release:
 
 ```bash
 dotnet test GameEventScript.sln --configuration Release --filter "TestCategory!=Performance|TestCategory=Allocation"
 ```
 
-Elapsed-time benchmarks are a separate, profile-matched performance gate and
-are not included in these counts.
+Elapsed-time benchmarks are a separate, profile-matched performance gate. Test
+and case counts are not recorded here; the runner's own tests pin the corpus
+case counts, so adding a case updates them in the same change.
 
 ## Package distribution
 
@@ -457,13 +451,11 @@ against `scripts/compiler-output-baseline.txt` (`--update-baseline` after a deli
 change); its controls are `python3 scripts/test-compiler-output-controls.py`. The full
 Swift test script runs both.
 
-Verified Swift coverage (Release, 2026-09-23): all 1,679 behavior checks from
-96 shared Markdown documents pass with native Swift compilation. The strict
-hardware-independent report passes 1,648 cases and skips 31 optional performance
-measurements. The last calibrated performance run passed all 31 measured workloads. Independent
-Runtime verification passes 1,363 cases using C#-compiled Programs. Nineteen Conformance/adapter/bootstrap tests, seventeen SwiftBridge tests, and
-twenty-nine CLI tests pass. `scripts/test-swift.sh` requires strict native acceptance and keeps
-Runtime interoperability reports separate.
+`scripts/test-swift.sh` requires every supported shared Markdown case to pass with
+native Swift compilation, checks the performance scenarios for correctness without
+measuring them, and runs the native Conformance, SwiftBridge and CLI tests. Runtime
+verification with C#-compiled Programs is a separate report; calibrated performance
+measurement is opt-in.
 
 `python3 scripts/test-number-text-roundtrip.py` builds the executable adapters and
 checks actual C# ↔ Swift numeric text exchange using fixed random bits and edge

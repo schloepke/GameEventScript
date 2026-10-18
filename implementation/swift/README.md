@@ -185,21 +185,20 @@ The API gate compares all four library packages' declared exported symbols with
 python3 scripts/verify-swift-api.py --update
 ```
 
-Verified on 2026-09-23 with Swift 6.4 on macOS arm64, Release:
+`scripts/test-swift.sh` requires, in Release:
 
-- **1,679/1,679 behavior checks** from the original 96 Markdown documents pass
-  with native Swift compilation, including 172 expected compilation failures,
-  15 bytecode constraints, three metadata cases, and all eleven source-based GESA snapshots.
-- The ordinary hardware-independent report passes **1,648 cases** and skips
-  **31 optional performance measurements**. The last calibrated performance run
-  passed all 31 measured workloads.
-- The Swift 6.4/macOS 27/Apple M3 Max profile measures cumulative allocations and
-  elapsed time. All sixteen warmed dispatch variants have **zero allocations**.
-  See [Performance.md](Performance.md) for scope, references and reproduction.
-- All 60 shared binary cases pass, including canonical runtime-segment comparisons
-  against Swift compiler output, malformed inputs, rewrites, fixture execution and four GESA snapshots of identical binary inputs.
-- Independent Runtime verification passes **1,363/1,363** cases with C# inputs.
-- Nineteen Conformance/adapter/bootstrap tests pass, including the Markdown bootstrap
+- every supported shared Markdown case to pass with native Swift compilation,
+  including expected compilation failures, bytecode constraints, metadata cases
+  and source-based GESA snapshots;
+- every shared binary case, including canonical runtime-segment comparisons
+  against Swift compiler output, malformed inputs, rewrites, fixture execution
+  and GESA snapshots of identical binary inputs;
+- the performance scenarios to run correctly; measuring them is opt-in. The
+  Swift 6.4/macOS 27/Apple M3 Max profile measures cumulative allocations and
+  elapsed time, and every warmed dispatch variant must stay at zero allocations.
+  See [Performance.md](Performance.md) for scope, references and reproduction;
+- independent Runtime verification with C#-compiled inputs, reported separately;
+- the native Conformance/adapter/bootstrap tests, including the Markdown bootstrap
   fixtures, compiler ownership/options and resource-limit failure paths.
 
 The [CapabilityMatrix](../../conformance/cross-language/CapabilityMatrix.md)

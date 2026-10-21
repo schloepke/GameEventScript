@@ -13,7 +13,7 @@ internal partial class GesVirtualMachine
         switch (b.Kind)
         {
             case Map when b.ObjectValue is GesValueMap map:
-                for (var i = 0; i < map.StorageLength; i++)
+                for (var i = 0; i < map.Length; i++)
                 {
                     var mapValue = map.ValueAt(i);
                     if (!mapValue.EqualsValue(a)) continue;
@@ -25,7 +25,7 @@ internal partial class GesVirtualMachine
                 return;
             case Custom when b.ObjectValue is GesCustomObject customObject:
                 var customMap = customObject.Map;
-                for (var i = 0; i < customMap.StorageLength; i++)
+                for (var i = 0; i < customMap.Length; i++)
                 {
                     var mapValue = customMap.ValueAt(i);
                     if (!mapValue.EqualsValue(a)) continue;

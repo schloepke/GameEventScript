@@ -1115,7 +1115,6 @@ sealed class GameEventScript.Runtime.Values.GesValueMap
   method System.Boolean ContainsKey(System.String key)
   method System.String KeyAt(System.Int32 index)
   property System.Int32 Length { get }
-  property System.Int32 StorageLength { get }
 struct GameEventScript.Runtime.Values.GesValueSlice
   ctor GesValueSlice(GameEventScript.Runtime.Values.GesValue[] values)
   field static GameEventScript.Runtime.Values.GesValueSlice Empty

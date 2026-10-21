@@ -41,10 +41,6 @@ public sealed class GesValueMap
     /// Gets the length.
     /// </summary>
     public int Length => _keys.Length;
-    /// <summary>
-    /// Gets the storage length.
-    /// </summary>
-    public int StorageLength => _keys.Length;
 
     internal GesValue[] KeyList => _keyList ??= CreateListOfKeys();
     // Values are never mutated after construction, so value lists and iterators share the storage array.

@@ -921,8 +921,8 @@ public partial struct GesValue : IEquatable<GesValue>
 
                 return true;
             case Map when ObjectValue is GesValueMap left && other.ObjectValue is GesValueMap right:
-                if (left.StorageLength != right.StorageLength || left.Length != right.Length) return false;
-                for (var i = 0; i < left.StorageLength; i++)
+                if (left.Length != right.Length) return false;
+                for (var i = 0; i < left.Length; i++)
                 {
                     if (!string.Equals(left.KeyAt(i), right.KeyAt(i), StringComparison.Ordinal)) return false;
                     var leftValue = left.ValueAt(i);
@@ -935,8 +935,8 @@ public partial struct GesValue : IEquatable<GesValue>
                 if (!string.Equals(leftCustom.TypeName, rightCustom.TypeName, StringComparison.Ordinal)) return false;
                 var customLeftMap = leftCustom.Map;
                 var customRightMap = rightCustom.Map;
-                if (customLeftMap.StorageLength != customRightMap.StorageLength || customLeftMap.Length != customRightMap.Length) return false;
-                for (var i = 0; i < customLeftMap.StorageLength; i++)
+                if (customLeftMap.Length != customRightMap.Length) return false;
+                for (var i = 0; i < customLeftMap.Length; i++)
                 {
                     if (!string.Equals(customLeftMap.KeyAt(i), customRightMap.KeyAt(i), StringComparison.Ordinal)) return false;
                     var leftValue = customLeftMap.ValueAt(i);
@@ -993,7 +993,7 @@ public partial struct GesValue : IEquatable<GesValue>
                 for (var i = 0; i < list.Length; i++) hash.Add(list[i].GetValueHashCode());
                 break;
             case Map when ObjectValue is GesValueMap map:
-                for (var i = 0; i < map.StorageLength; i++)
+                for (var i = 0; i < map.Length; i++)
                 {
                     hash.Add(map.KeyAt(i), StringComparer.Ordinal);
                     var value = map.ValueAt(i);
@@ -1004,7 +1004,7 @@ public partial struct GesValue : IEquatable<GesValue>
             case Custom when ObjectValue is GesCustomObject custom:
                 hash.Add(custom.TypeName, StringComparer.Ordinal);
                 var customMap = custom.Map;
-                for (var i = 0; i < customMap.StorageLength; i++)
+                for (var i = 0; i < customMap.Length; i++)
                 {
                     hash.Add(customMap.KeyAt(i), StringComparer.Ordinal);
                     var value = customMap.ValueAt(i);
@@ -1128,7 +1128,7 @@ public partial struct GesValue : IEquatable<GesValue>
     {
         var builder = new StringBuilder(valueMap.Length == 0 ? "[:" : "[");
         var first = true;
-        for (var i = 0; i < valueMap.StorageLength; i++)
+        for (var i = 0; i < valueMap.Length; i++)
         {
             if (!first) builder.Append(", ");
             first = false;

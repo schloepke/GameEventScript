@@ -102,7 +102,7 @@ internal static class GesCompoundSources
             }
         var keys = new List<string>();
         var values = new List<GesValue>();
-        for (var index = 0; index < map.StorageLength; index++)
+        for (var index = 0; index < map.Length; index++)
         {
             if (!budget.ConsumeLoopIterationIfAvailable("Map iterator candidate exceeds the configured limit.")) return default;
             var key = map.KeyAt(index);
@@ -115,7 +115,7 @@ internal static class GesCompoundSources
         }
         if (mode == 1)
         {
-            var count = other?.StorageLength ?? list!.Length;
+            var count = other?.Length ?? list!.Length;
             for (var index = 0; index < count; index++)
             {
                 var key = other is not null ? other.KeyAt(index) : list![index].TextValue;
@@ -139,7 +139,7 @@ internal static class GesCompoundSources
 
         int Find(string key)
         {
-            var count = other?.StorageLength ?? list?.Length ?? 1;
+            var count = other?.Length ?? list?.Length ?? 1;
             for (var index = 0; index < count; index++)
             {
                 if (!budget.ConsumeLoopIterationIfAvailable("Map iterator search exceeds the configured limit.")) return -1;
@@ -159,7 +159,7 @@ internal static class GesCompoundSources
         => item.Kind switch
         {
             List when item.ObjectValue is GesValue[] values => index < values.Length ? values[index] : default,
-            Map when item.ObjectValue is GesValueMap map => index < map.StorageLength ? map.ValueAt(index) : default,
+            Map when item.ObjectValue is GesValueMap map => index < map.Length ? map.ValueAt(index) : default,
             _ => index == 0 ? item : default
         };
 }

@@ -22,14 +22,14 @@ internal partial class GesVirtualMachine
         {
             case Map when a.ObjectValue is GesValueMap aMap:
             {
-                var map = new GesVmMapBuilder(aMap.StorageLength);
+                var map = new GesVmMapBuilder(aMap.Length);
                 switch (b.Kind)
                 {
                     case Map when b.ObjectValue is GesValueMap bMap:
                     {
                         var ai = 0;
                         var bi = 0;
-                        while (ai < aMap.StorageLength && bi < bMap.StorageLength)
+                        while (ai < aMap.Length && bi < bMap.Length)
                         {
                             var comparison = GesText.CompareScalarOrdinal(aMap.KeyAt(ai), bMap.KeyAt(bi));
                             if (comparison == 0)
@@ -68,7 +68,7 @@ internal partial class GesVirtualMachine
                         Array.Sort(keys, GesText.ScalarComparer);
                         var ai = 0;
                         var bi = 0;
-                        while (ai < aMap.StorageLength && bi < keys.Length)
+                        while (ai < aMap.Length && bi < keys.Length)
                         {
                             var comparison = GesText.CompareScalarOrdinal(aMap.KeyAt(ai), keys[bi]);
                             if (comparison == 0)

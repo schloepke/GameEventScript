@@ -909,7 +909,7 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, GesExpressionN
                 if (value.AsMap() is not { } map) return null;
 
                 var entries = new GesMapEntryNode[map.Length];
-                for (var index = 0; index < map.StorageLength; index++)
+                for (var index = 0; index < map.Length; index++)
                 {
                     var mapValue = map.ValueAt(index);
                     if (ConvertValueToLiteral(mapValue) is not { } itemLiteral) return null;

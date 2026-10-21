@@ -75,12 +75,11 @@ internal static class GesAstValidator
         {
             var typeDefinition = parsedScript.TypeDefinitions[typeDefinitionIndex];
             ValidateRemovedType(parsedScript, typeDefinition.Name, typeDefinition, errors);
-            var fieldNames = new HashSet<string>(StringComparer.Ordinal);
             for (var fieldIndex = 0; fieldIndex < typeDefinition.Fields.Count; fieldIndex++)
             {
                 var field = typeDefinition.Fields[fieldIndex];
                 ValidateArgumentLabelCase(parsedScript, field.Name, field.Name, GesDiagnosticSymbolKind.Variable, "Field names must start with a lowercase ASCII letter and contain only ASCII letters or digits", errors, field);
-                if (!fieldNames.Add(field.Name))
+                if (HasEarlierField(typeDefinition.Fields, fieldIndex))
                     errors.Add(parsedScript, $"Record ':{typeDefinition.Name}' declares field '{field.Name}' more than once", field.Name, GesDiagnosticSymbolKind.Variable, GesDiagnosticCodes.ValidateDuplicateVariable, field);
                 if (!IsKnownType(field.TypeName, typeDefinitions))
                     errors.Add(parsedScript, $"Field '{field.Name}' uses unknown type ':{field.TypeName}'", field.TypeName, GesDiagnosticSymbolKind.Type, GesDiagnosticCodes.ValidateInvalidTypeConstructor, field);
@@ -1327,6 +1326,14 @@ internal static class GesAstValidator
             "vector" or "point" or "boolean" or "number" or "numeric" or "series" or
             "list" or "range" or "message" or "handler" or "map" or "dice" ||
             GesQuantityUnits.ParseQuantityTypeName(typeName) is not null;
+
+    // Records have few fields, so a scan of the earlier ones finds each repetition without allocating a set.
+    private static bool HasEarlierField(IReadOnlyList<GesTypeFieldDefinitionNode> fields, int index)
+    {
+        for (var earlier = 0; earlier < index; earlier++)
+            if (string.Equals(fields[earlier].Name, fields[index].Name, StringComparison.Ordinal)) return true;
+        return false;
+    }
 
     private static bool IsKnownType(string typeName, IReadOnlyDictionary<string, GesTypeDefinitionNode> typeDefinitions)
         => IsBuiltinConstructorType(typeName) || typeName.StartsWith("quantity:", StringComparison.Ordinal) || typeName is "record" or "numeric:integer" or "numeric:fractional" || typeDefinitions.ContainsKey(typeName);

@@ -19,7 +19,7 @@ internal sealed class GesEntriesIterator(GesValueMap map, GesRuntimeBudget budge
     private int _index = -1;
     private bool _closed;
 
-    public bool MoveNext() => !_closed && ++_index < map.StorageLength;
+    public bool MoveNext() => !_closed && ++_index < map.Length;
 
     public GesValue Component(int index)
     {

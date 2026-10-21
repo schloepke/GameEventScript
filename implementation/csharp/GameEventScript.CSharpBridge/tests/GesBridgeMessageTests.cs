@@ -8,7 +8,7 @@ using GameEventScript.Runtime.Values;
 namespace GameEventScript.Tests.Native.CSharpBridge;
 
 [TestClass]
-public sealed class GameEventScriptCSharpMessageAdapterTests
+public sealed class GesBridgeMessageTests
 {
     [TestMethod]
     public void CSharpDictionaryAdapterBindsValuesInKnownSignatureOrder()

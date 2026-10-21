@@ -278,22 +278,22 @@ internal partial class GesVirtualMachine
                     return;
                 }
 
-                var map = new GesVmMapBuilder(aMap.StorageLength);
+                var map = new GesVmMapBuilder(aMap.Length);
                 if (bMap is not null)
                 {
                     var bi = 0;
-                    for (var ai = 0; ai < aMap.StorageLength; ai++)
+                    for (var ai = 0; ai < aMap.Length; ai++)
                     {
                         var key = aMap.KeyAt(ai);
-                        while (bi < bMap.StorageLength && GesText.CompareScalarOrdinal(bMap.KeyAt(bi), key) < 0) bi++;
-                        if (bi < bMap.StorageLength && string.Equals(bMap.KeyAt(bi), key, StringComparison.Ordinal)) continue;
+                        while (bi < bMap.Length && GesText.CompareScalarOrdinal(bMap.KeyAt(bi), key) < 0) bi++;
+                        if (bi < bMap.Length && string.Equals(bMap.KeyAt(bi), key, StringComparison.Ordinal)) continue;
                         map.Set(key, aMap.ValueAt(ai));
                     }
                 }
                 else if (keys is not null)
                 {
                     var ki = 0;
-                    for (var ai = 0; ai < aMap.StorageLength; ai++)
+                    for (var ai = 0; ai < aMap.Length; ai++)
                     {
                         var key = aMap.KeyAt(ai);
                         while (ki < keys.Length && GesText.CompareScalarOrdinal(keys[ki], key) < 0) ki++;
@@ -303,7 +303,7 @@ internal partial class GesVirtualMachine
                 }
                 else
                 {
-                    for (var ai = 0; ai < aMap.StorageLength; ai++)
+                    for (var ai = 0; ai < aMap.Length; ai++)
                     {
                         var key = aMap.KeyAt(ai);
                         if (string.Equals(key, singleKey, StringComparison.Ordinal)) continue;

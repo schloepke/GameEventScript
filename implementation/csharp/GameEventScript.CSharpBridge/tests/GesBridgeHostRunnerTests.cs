@@ -8,7 +8,7 @@ namespace GameEventScript.Tests.Native.CSharpBridge;
 
 [TestClass]
 [DoNotParallelize]
-public sealed class GameEventScriptCSharpHostRunnerTests
+public sealed class GesBridgeHostRunnerTests
 {
     private sealed class FrozenClock : IGesClock
     {

@@ -238,7 +238,7 @@ internal partial class GesVirtualMachine
             {
                 var sourceEntries = externalValue.ToMap();
                 var entries = new GesVmMapBuilder(sourceEntries.Length);
-                for (var i = 0; i < sourceEntries.StorageLength; i++)
+                for (var i = 0; i < sourceEntries.Length; i++)
                 {
                     var key = sourceEntries.KeyAt(i);
                     entries.Set(key, sourceEntries.ValueAt(i));

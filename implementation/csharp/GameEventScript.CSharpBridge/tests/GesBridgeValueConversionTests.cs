@@ -7,7 +7,7 @@ using GameEventScript.Runtime.Values;
 namespace GameEventScript.Tests.Native.CSharpBridge;
 
 [TestClass]
-public sealed class GameEventScriptCSharpValueAdapterTests
+public sealed class GesBridgeValueConversionTests
 {
     [TestMethod]
     [DataRow(false)]

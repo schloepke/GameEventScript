@@ -95,6 +95,8 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   them, and `GesValueMap.key(at:)`/`value(at:)` read them next to `length`,
   `get(_:)` and `containsKey(_:)`. `GesMapEntry`, `GesValueMap.entries` and
   `GesValue.mapEntries` are no longer public.
+- C# `GesValueMap.StorageLength` is removed; it always equaled `Length`. Use
+  `Length` instead.
 
 ### Changed
 

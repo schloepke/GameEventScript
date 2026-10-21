@@ -25,16 +25,16 @@ internal partial class GesVirtualMachine
                 {
                     case Map when b.ObjectValue is GesValueMap bMap:
                     {
-                        var map = new GesVmMapBuilder(aMap.StorageLength + bMap.StorageLength);
-                        for (var i = 0; i < aMap.StorageLength; i++) map.Set(aMap.KeyAt(i), aMap.ValueAt(i));
-                        for (var i = 0; i < bMap.StorageLength; i++) map.Set(bMap.KeyAt(i), bMap.ValueAt(i));
+                        var map = new GesVmMapBuilder(aMap.Length + bMap.Length);
+                        for (var i = 0; i < aMap.Length; i++) map.Set(aMap.KeyAt(i), aMap.ValueAt(i));
+                        for (var i = 0; i < bMap.Length; i++) map.Set(bMap.KeyAt(i), bMap.ValueAt(i));
                         SetMap(dst, map.ToMap());
                         return;
                     }
                     case List when b.ObjectValue is GesValue[] keys:
                     {
-                        var map = new GesVmMapBuilder(aMap.StorageLength + keys.Length);
-                        for (var i = 0; i < aMap.StorageLength; i++) map.Set(aMap.KeyAt(i), aMap.ValueAt(i));
+                        var map = new GesVmMapBuilder(aMap.Length + keys.Length);
+                        for (var i = 0; i < aMap.Length; i++) map.Set(aMap.KeyAt(i), aMap.ValueAt(i));
                         for (var i = 0; i < keys.Length; i++)
                         {
                             var keyValue = keys[i];

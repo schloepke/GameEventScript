@@ -712,7 +712,7 @@ public struct GesValue: Hashable, CustomStringConvertible {
         case .record:
             let name = customTypeName!
             let map = asMap!
-            return ":Record(" + GesText.quoted(name) + ", " + GesValue.map(map.entries).toText + ")"
+            return ":Record(" + GesText.quoted(name) + ", " + GesValue.map(map).toText + ")"
         case .integerRange:
             let range = integerRangeValue!
             return ":Range(from: \(range.from), to: \(range.to), step: \(range.step))"

@@ -51,7 +51,7 @@ enum GesCasts {
             }
             return sink.list([])
         case .map:
-            if let map = try value.asMap ?? value.externalMap() { return sink.map(map.entries) }
+            if let map = try value.asMap ?? value.externalMap() { return sink.map(map) }
             if value.spatialValue != nil { return sink.map([.init(key: "x", value: .float(value.x, unit: value.unit)), .init(key: "y", value: .float(value.y, unit: value.unit)), .init(key: "z", value: .float(value.z, unit: value.unit))]) }
             return sink.map([])
         default: return check(value, kind) ? sink.copy(value) : sink.nothing

@@ -272,26 +272,27 @@ internal sealed class GesMapLayout
     internal GesMapLayout(GesUInt16IndexList keyNames, string[] stringPool)
     {
         InputCount = keyNames.Length;
-        var keys = new List<string>(keyNames.Length);
-        var sources = new List<int>(keyNames.Length);
-        for (var i = 0; i < keyNames.Length; i++)
+        var keys = new string[keyNames.Length];
+        var sources = new int[keyNames.Length];
+        for (var i = 0; i < keys.Length; i++)
         {
-            var key = stringPool[keyNames[i]];
-            var existing = keys.FindIndex(candidate => string.Equals(candidate, key, StringComparison.Ordinal));
-            if (existing >= 0)
-            {
-                sources[existing] = i;
-                continue;
-            }
-
-            GesText.RequireValidUnicode(key, nameof(keyNames));
-            keys.Add(key);
-            sources.Add(i);
+            keys[i] = stringPool[keyNames[i]];
+            GesText.RequireValidUnicode(keys[i], nameof(keyNames));
+            sources[i] = i;
         }
 
-        Keys = [.. keys];
-        Sources = [.. sources];
-        Array.Sort(Keys, Sources, GesText.ScalarComparer);
+        // Sort by key, then input position, so each run of equal keys ends with its last input: the last value wins.
+        Array.Sort(sources, (left, right) => GesText.ScalarComparer.Compare(keys[left], keys[right]) is var order and not 0 ? order : left.CompareTo(right));
+        var count = 0;
+        for (var i = 0; i < sources.Length; i++)
+        {
+            if (count > 0 && string.Equals(keys[sources[count - 1]], keys[sources[i]], StringComparison.Ordinal)) sources[count - 1] = sources[i];
+            else sources[count++] = sources[i];
+        }
+
+        Keys = new string[count];
+        for (var i = 0; i < count; i++) Keys[i] = keys[sources[i]];
+        Sources = sources.AsSpan(0, count).ToArray();
     }
 
     internal int InputCount { get; }

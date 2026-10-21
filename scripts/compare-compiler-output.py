@@ -11,7 +11,8 @@ source, start line and column, and code (specs/Diagnostics.md); both compilers r
 so the lists cover recovery and collection as well. A rejection counts only when the CLI exits with 1 and reports
 compiler diagnostics; a crash, timeout, CLI error or silent failure is a process failure and always a difference.
 A program that only one compiler accepts, that compiles to different bytes or sections in a different order, or
-whose rejection reports different codes or positions, is a difference. Differences are ratcheted against
+whose rejection reports different codes or positions, is a difference. Checked-in example binaries must also match
+a fresh C# compilation of their source without debug information. Differences are ratcheted against
 scripts/compiler-output-baseline.txt: a new or resolved difference fails until the baseline is regenerated
 with --update-baseline. Reports and workspaces stay below artifacts/compiler-comparison.
 """
@@ -189,6 +190,31 @@ def summarize(results):
     return counts
 
 
+def example_programs(root):
+    """Checked-in example binaries with their single source, compiled without debug information."""
+    return [(path, path.with_suffix(".ges")) for path in sorted((root / "examples").rglob("*.gesb")) if path.with_suffix(".ges").exists()]
+
+
+def stale_examples(examples, compile_source):
+    """Example binaries whose comparable sections differ from compiling their source again; BuildMetadata is ignored,
+    so binaries written before it existed stay current."""
+    stale = []
+    for binary, source in examples:
+        fresh = compile_source(source)
+        differing = differing_sections(binary.read_bytes(), fresh) if fresh is not None else ["compile failed"]
+        if differing:
+            stale.append(f"{binary.relative_to(ROOT).as_posix()}: {','.join(differing)}")
+    return stale
+
+
+def compile_example(command, source):
+    output = WORK / "examples" / (source.stem + ".gesb")
+    output.parent.mkdir(parents=True, exist_ok=True)
+    result = subprocess.run([*command, "compile", source.name, "-o", str(output), "-q", "--no-debug"], cwd=source.parent,
+                            capture_output=True, check=False, timeout=TIMEOUT_SECONDS)
+    return output.read_bytes() if result.returncode == 0 and output.exists() else None
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--swift", type=Path, default=SWIFT_CLI, help="Swift ges executable")
@@ -211,6 +237,12 @@ def main(argv=None):
     identical = counts.get("identical", 0)
     rejected = counts.get("both-rejected", 0)
     print(f"{len(results)} programs: identical {identical}, both rejected {rejected}, different {len(results) - identical - rejected}")
+    stale = stale_examples(example_programs(ROOT), lambda source: compile_example(["dotnet", str(args.csharp)], source))
+    for line in stale:
+        print(f"stale example binary: {line}")
+    if stale:
+        print("Recompile each listed example with `dotnet ges compile <source> -o <binary> --no-debug`.")
+        return 1
     lines = BASELINE.read_text(encoding="utf-8").splitlines() if BASELINE.exists() else []
     baseline = {line for line in lines if line and not line.startswith("#")}
     if args.update_baseline:

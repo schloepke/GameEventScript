@@ -42,8 +42,16 @@ enum GesMath {
         }
         if a.kind == .map && subtract {
             let keys: [String]
-            if b.kind == .map { keys = b.asMap!.keyStorage } else if let key = b.textValue { keys = [key] } else if let list = b.listValue, list.allSatisfy({ $0.textValue != nil }) { keys = list.map(\.asText) } else { return sink.nothing }
-            return sink.map(a.asMap!.filtered { key in !keys.contains { GesText.scalarEqual($0, key) } })
+            if b.kind == .map {
+                keys = b.asMap!.keyStorage
+            } else if let key = b.textValue {
+                keys = [key]
+            } else if let list = b.listValue, list.allSatisfy({ $0.textValue != nil }) {
+                keys = GesValueMap.sortedKeys(list.map(\.asText))
+            } else {
+                return sink.nothing
+            }
+            return sink.map(a.asMap!.selecting(sortedKeys: keys, keep: false))
         }
         if a.spatialValue != nil || b.spatialValue != nil {
             guard a.unit == b.unit else { return sink.nothing }

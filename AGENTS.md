@@ -446,7 +446,8 @@ C#; ordinary package builds do not generate source.
 Both compilers must emit byte-identical Programs, including debug sections; only
 BuildMetadata names the producing implementation. `python3 scripts/compare-compiler-output.py`
 compiles every corpus program with both CLIs, requires equal ordered diagnostic codes and
-start positions for rejected programs, and ratchets the remaining differences
+start positions for rejected programs, checks that checked-in `examples/**/*.gesb` match a
+fresh C# compilation without debug information, and ratchets the remaining differences
 against `scripts/compiler-output-baseline.txt` (`--update-baseline` after a deliberate
 change); its controls are `python3 scripts/test-compiler-output-controls.py`. The full
 Swift test script runs both.

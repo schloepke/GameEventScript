@@ -9,11 +9,11 @@ extension GesVirtualMachine {
             if registers[y].kind == .map {
                 keys = registers[y].asMap!.keyStorage
             } else if let list = registers[y].listValue, list.allSatisfy({ $0.textValue != nil }) {
-                keys = list.map(\.asText)
+                keys = GesValueMap.sortedKeys(list.map(\.asText))
             } else {
                 return registers[target].setNothing()
             }
-            return registers[target].setMap(map.filtered { key in keys.contains { GesText.scalarEqual($0, key) } })
+            return registers[target].setMap(map.selecting(sortedKeys: keys, keep: true))
         }
         guard let left = registers[x].listValue ?? registers[x].diceRolls?.map({ .integer(Int64($0)) }),
             let right = registers[y].listValue ?? registers[y].diceRolls?.map({ .integer(Int64($0)) })

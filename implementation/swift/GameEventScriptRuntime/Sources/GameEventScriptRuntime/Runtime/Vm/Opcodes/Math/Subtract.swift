@@ -75,10 +75,10 @@ extension GesVirtualMachine {
             case .map: keys = registers[y].asMap!.keyStorage
             case .text, .tag: keys = [registers[y].textValue!]
             case .list where registers[y].listValue!.allSatisfy({ $0.textValue != nil }):
-                keys = registers[y].listValue!.map(\.asText)
+                keys = GesValueMap.sortedKeys(registers[y].listValue!.map(\.asText))
             default: return registers[target].setNothing()
             }
-            return registers[target].setMap(registers[x].asMap!.filtered { key in !keys.contains { GesText.scalarEqual($0, key) } })
+            return registers[target].setMap(registers[x].asMap!.selecting(sortedKeys: keys, keep: false))
         case .vector, .point, .percentage:
             return registers[target].setNothing()
         default:

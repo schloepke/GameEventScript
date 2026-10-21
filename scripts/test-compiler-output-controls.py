@@ -8,6 +8,7 @@ import importlib.util
 from pathlib import Path
 import struct
 import sys
+import tempfile
 import unittest
 
 sys.dont_write_bytecode = True
@@ -84,6 +85,23 @@ class CompilerOutputTests(unittest.TestCase):
         self.assertEqual("diagnostics", compare.rejection_verdict(first, [first[0], ("a.ges", "6", "1", "validate.duplicateType")]))
         result = {"case": "suite/case", "program": "main", "debug": True, "verdict": "positions"}
         self.assertEqual(([compare.baseline_line(result)], []), compare.ratchet([result], set()))
+
+    def test_example_binaries_must_match_a_fresh_compilation(self):
+        root = compare.ROOT
+        current = program((0x10, b"code"))
+        stale = program((0x10, b"old"))
+        with tempfile.TemporaryDirectory() as directory:
+            folder = Path(directory)
+            (folder / "a.gesb").write_bytes(current + b"")
+            (folder / "b.gesb").write_bytes(stale)
+            compare.ROOT = folder
+            try:
+                examples = [(folder / "a.gesb", folder / "a.ges"), (folder / "b.gesb", folder / "b.ges")]
+                fresh = program((0x10, b"code"), (0x30, b"metadata"))
+                self.assertEqual(["b.gesb: code"], compare.stale_examples(examples, lambda source: fresh))
+                self.assertEqual(["a.gesb: compile failed", "b.gesb: compile failed"], compare.stale_examples(examples, lambda source: None))
+            finally:
+                compare.ROOT = root
 
     def test_rejection_by_one_compiler_is_a_difference(self):
         result = {"case": "suite/case", "program": "main", "debug": False, "verdict": "swift-only"}

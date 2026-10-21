@@ -101,16 +101,25 @@ public struct GesValueMap: Hashable {
     /// The value at a zero-based index, in the same order as `key(at:)`. Invalid indices are caller errors.
     public func value(at index: Int) -> GesValue { valueStorage[index] }
 
-    // The entries whose key satisfies `keep`; they stay in canonical order, so nothing is sorted again.
-    func filtered(_ keep: (String) -> Bool) -> GesValueMap {
+    // The entries whose key is (`keep`) or is not (`!keep`) among `sortedKeys`, found by merging both scalar-sorted key
+    // sequences in one pass as C# does; the result stays in canonical order, so nothing is sorted again.
+    func selecting(sortedKeys: [String], keep: Bool) -> GesValueMap {
         var keys: [String] = []
         var values: [GesValue] = []
-        for index in keyStorage.indices where keep(keyStorage[index]) {
-            keys.append(keyStorage[index])
-            values.append(valueStorage[index])
+        var other = 0
+        for index in keyStorage.indices {
+            let key = keyStorage[index]
+            while other < sortedKeys.count && GesText.scalarLess(sortedKeys[other], key) { other += 1 }
+            if (other < sortedKeys.count && GesText.scalarEqual(sortedKeys[other], key)) == keep {
+                keys.append(key)
+                values.append(valueStorage[index])
+            }
         }
         return .init(canonicalKeys: keys, values: values)
     }
+
+    // Key operands in scalar order for `selecting`; a map's own keys already are.
+    static func sortedKeys(_ keys: [String]) -> [String] { keys.sorted(by: GesText.scalarLess) }
 
     // Merges two canonical maps in one pass; a key in both takes the right value, as last-entry-wins construction does.
     func merged(with right: GesValueMap) -> GesValueMap {

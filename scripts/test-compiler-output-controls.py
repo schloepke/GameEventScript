@@ -7,6 +7,7 @@
 import importlib.util
 from pathlib import Path
 import struct
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -102,6 +103,17 @@ class CompilerOutputTests(unittest.TestCase):
                 self.assertEqual(["a.gesb: compile failed", "b.gesb: compile failed"], compare.stale_examples(examples, lambda source: None))
             finally:
                 compare.ROOT = root
+
+    def test_only_tracked_example_binaries_are_checked(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            subprocess.run(["git", "init", "-q"], cwd=root, check=True)
+            (root / "examples/a").mkdir(parents=True)
+            for name in ("tracked", "untracked"):
+                (root / "examples/a" / f"{name}.ges").write_text("on Main {}\n", encoding="utf-8")
+                (root / "examples/a" / f"{name}.gesb").write_bytes(b"GESB")
+            subprocess.run(["git", "add", "examples/a/tracked.ges", "examples/a/tracked.gesb"], cwd=root, check=True)
+            self.assertEqual([(root / "examples/a/tracked.gesb", root / "examples/a/tracked.ges")], compare.example_programs(root))
 
     def test_rejection_by_one_compiler_is_a_difference(self):
         result = {"case": "suite/case", "program": "main", "debug": False, "verdict": "swift-only"}

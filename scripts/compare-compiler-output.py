@@ -191,8 +191,10 @@ def summarize(results):
 
 
 def example_programs(root):
-    """Checked-in example binaries with their single source, compiled without debug information."""
-    return [(path, path.with_suffix(".ges")) for path in sorted((root / "examples").rglob("*.gesb")) if path.with_suffix(".ges").exists()]
+    """Tracked example binaries with their single source; untracked local compilations are not examples."""
+    tracked = subprocess.run(["git", "ls-files", "-z", "--", "examples/*.gesb"], cwd=root, capture_output=True, check=True).stdout.decode("utf-8").split("\0")
+    binaries = [root / name for name in sorted(tracked) if name]
+    return [(path, path.with_suffix(".ges")) for path in binaries if path.with_suffix(".ges").exists()]
 
 
 def stale_examples(examples, compile_source):
@@ -213,6 +215,17 @@ def compile_example(command, source):
     result = subprocess.run([*command, "compile", source.name, "-o", str(output), "-q", "--no-debug"], cwd=source.parent,
                             capture_output=True, check=False, timeout=TIMEOUT_SECONDS)
     return output.read_bytes() if result.returncode == 0 and output.exists() else None
+
+
+def report_stale_examples(args):
+    """Reports tracked example binaries that no longer match their source; 1 when any is stale."""
+    stale = stale_examples(example_programs(ROOT), lambda source: compile_example(["dotnet", str(args.csharp)], source))
+    for line in stale:
+        print(f"stale example binary: {line}")
+    if stale:
+        print("Recompile each listed example with `dotnet ges compile <source> -o <binary> --no-debug`.")
+        return 1
+    return 0
 
 
 def main(argv=None):
@@ -237,12 +250,6 @@ def main(argv=None):
     identical = counts.get("identical", 0)
     rejected = counts.get("both-rejected", 0)
     print(f"{len(results)} programs: identical {identical}, both rejected {rejected}, different {len(results) - identical - rejected}")
-    stale = stale_examples(example_programs(ROOT), lambda source: compile_example(["dotnet", str(args.csharp)], source))
-    for line in stale:
-        print(f"stale example binary: {line}")
-    if stale:
-        print("Recompile each listed example with `dotnet ges compile <source> -o <binary> --no-debug`.")
-        return 1
     lines = BASELINE.read_text(encoding="utf-8").splitlines() if BASELINE.exists() else []
     baseline = {line for line in lines if line and not line.startswith("#")}
     if args.update_baseline:
@@ -250,7 +257,7 @@ def main(argv=None):
         BASELINE.write_text("# case\tprogram\tdebug\tverdict; regenerate with scripts/compare-compiler-output.py --update-baseline\n"
                             + "".join(line + "\n" for line in current), encoding="utf-8")
         print(f"Wrote {len(current)} baseline entries to {BASELINE}")
-        return 0
+        return report_stale_examples(args)
     new, resolved = ratchet(results, baseline)
     worse = set(regressions(new, resolved))
     for line in new:
@@ -261,9 +268,10 @@ def main(argv=None):
         print(f"{len(worse)} new or worse, {len(new) - len(worse)} improved, {len(resolved)} baseline entries changed.")
     if new or resolved:
         print("Fix the compiler, or run scripts/compare-compiler-output.py --update-baseline after a deliberate change.")
-        return 1
-    print(f"Compiler output verified ({len(baseline)} baselined differences remain).")
-    return 0
+    else:
+        print(f"Compiler output verified ({len(baseline)} baselined differences remain).")
+    examples = report_stale_examples(args)
+    return 1 if new or resolved else examples
 
 
 if __name__ == "__main__":

@@ -32,6 +32,8 @@ protocol GesValueOutput {
 
     func map(_ value: [GesMapEntry]) -> Result
 
+    func map(_ value: GesValueMap) -> Result
+
     func record(typeName: String, fields: GesValueMap) -> Result
 
     func integerRange(from: Int64, to: Int64, step: Int64) -> Result

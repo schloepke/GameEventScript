@@ -106,13 +106,17 @@ internal sealed partial class GesParser
     private T CheckNesting<T>(T node) where T : GesScriptNode
         => WithRange(node, node.SourceRange);
 
+    // Ends parsing at once, after the syntax errors already collected in this source.
     private void ThrowNestingLimit(GesSourceLocation? location)
-        => throw new GesCompileException([new GesDiagnostic(
+    {
+        _errors.Add(new GesDiagnostic(
             GesDiagnosticPhase.Parse,
             GesDiagnosticCodes.ParseSourceNestingExceeded,
             "Source exceeds the portable expression or statement nesting limit.",
             SourceLocation: location ?? CreateRange(Current),
-            ProgramName: ModuleName)]);
+            ProgramName: ModuleName));
+        throw new GesCompileException(_errors);
+    }
 
     private GesExpressionNode ApplyIsNegation(GesExpressionNode expression, bool negated)
         => negated
@@ -908,7 +912,8 @@ internal sealed partial class GesParser
         OperatorDivide => GesBinaryOperator.Divide,
         OperatorIntegerDivide => GesBinaryOperator.IntegerDivide,
         OperatorModulo => GesBinaryOperator.Modulo,
-        _ => GesBinaryOperator.Remainder,
+        OperatorRemainder => GesBinaryOperator.Remainder,
+        _ => throw new InvalidOperationException($"Token kind {kind} is not a binary operator."),
     };
 
     private GesExpressionNode ParseMembershipExpression()

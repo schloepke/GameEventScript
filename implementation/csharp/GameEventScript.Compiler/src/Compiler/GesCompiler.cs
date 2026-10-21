@@ -42,8 +42,8 @@ internal static partial class GesCompiler
 
         public GameEventScriptProgram Build()
         {
-            var callables = OrderedByKey(module.Callables);
-            var types = OrderedByKey(module.TypeDefinitions);
+            var callables = Ordered(module.Callables, static (left, right) => string.CompareOrdinal(left.SignatureId, right.SignatureId));
+            var types = Ordered(module.TypeDefinitions, static (left, right) => string.CompareOrdinal(left.Name, right.Name));
             for (var index = 0; index < callables.Length; index++)
             {
                 var callable = callables[index];
@@ -67,24 +67,23 @@ internal static partial class GesCompiler
             return _builder.Build();
         }
 
-        // Values in ordinal key order, so emission never depends on dictionary insertion order. The keys are the type
-        // names, callable signature IDs and handler message names that the Program orders by.
-        private static TValue[] OrderedByKey<TValue>(IReadOnlyDictionary<string, TValue> source)
+        // Values ordered by their own ordinal key (the type name, callable signature ID or handler message name, which is also
+        // the dictionary key), so emission never depends on dictionary insertion order.
+        private static TValue[] Ordered<TValue>(IReadOnlyDictionary<string, TValue> source, Comparison<TValue> compare)
         {
             if (source.Count == 0) return [];
-            var keys = new string[source.Count];
             var values = new TValue[source.Count];
             var offset = 0;
             if (source is Dictionary<string, TValue> dictionary)
             {
-                foreach (var pair in dictionary) (keys[offset], values[offset++]) = (pair.Key, pair.Value);
+                foreach (var pair in dictionary) values[offset++] = pair.Value;
             }
             else
             {
-                foreach (var pair in source) (keys[offset], values[offset++]) = (pair.Key, pair.Value);
+                foreach (var pair in source) values[offset++] = pair.Value;
             }
 
-            Array.Sort(keys, values, StringComparer.Ordinal);
+            Array.Sort(values, compare);
             return values;
         }
 
@@ -237,7 +236,8 @@ internal static partial class GesCompiler
 
         private void EmitHandlers()
         {
-            var orderedHandlerGroups = OrderedByKey(module.Handlers);
+            // Groups are keyed by their handlers' message name and never empty.
+            var orderedHandlerGroups = Ordered(module.Handlers, static (left, right) => string.CompareOrdinal(left[0].Message, right[0].Message));
             for (var groupIndex = 0; groupIndex < orderedHandlerGroups.Length; groupIndex++)
             {
                 var handlerGroup = orderedHandlerGroups[groupIndex];

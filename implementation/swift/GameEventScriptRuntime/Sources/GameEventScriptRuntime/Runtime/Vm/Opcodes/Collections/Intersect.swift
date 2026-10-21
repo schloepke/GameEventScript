@@ -13,7 +13,7 @@ extension GesVirtualMachine {
             } else {
                 return registers[target].setNothing()
             }
-            return registers[target].setMap(map.entries.filter { entry in keys.contains { GesText.scalarEqual($0, entry.key) } })
+            return registers[target].setMap(map.filtered { key in keys.contains { GesText.scalarEqual($0, key) } })
         }
         guard let left = registers[x].listValue ?? registers[x].diceRolls?.map({ .integer(Int64($0)) }),
             let right = registers[y].listValue ?? registers[y].diceRolls?.map({ .integer(Int64($0)) })

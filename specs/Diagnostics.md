@@ -67,7 +67,7 @@ stops at the end of that phase.
   inside a block at the next statement separator (`;` or a line break), or at
   the block's closing brace. A block left open at the end of input reports the
   missing brace and the failed closing of its declaration. `parse.sourceNestingExceeded`
-  ends parsing immediately.
+  ends parsing immediately, after the syntax errors already found in that source.
 - Validation reports all semantic diagnostics of the program: first repeated
   constants, repeated record types and record types that an external type also
   declares, repeated predicate signatures, repeated function signatures and

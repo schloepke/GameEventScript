@@ -100,4 +100,38 @@ public struct GesValueMap: Hashable {
 
     /// The value at a zero-based index, in the same order as `key(at:)`. Invalid indices are caller errors.
     public func value(at index: Int) -> GesValue { valueStorage[index] }
+
+    // The entries whose key satisfies `keep`; they stay in canonical order, so nothing is sorted again.
+    func filtered(_ keep: (String) -> Bool) -> GesValueMap {
+        var keys: [String] = []
+        var values: [GesValue] = []
+        for index in keyStorage.indices where keep(keyStorage[index]) {
+            keys.append(keyStorage[index])
+            values.append(valueStorage[index])
+        }
+        return .init(canonicalKeys: keys, values: values)
+    }
+
+    // Merges two canonical maps in one pass; a key in both takes the right value, as last-entry-wins construction does.
+    func merged(with right: GesValueMap) -> GesValueMap {
+        var keys: [String] = []
+        var values: [GesValue] = []
+        keys.reserveCapacity(length + right.length)
+        values.reserveCapacity(length + right.length)
+        var left = 0
+        var other = 0
+        while left < length || other < right.length {
+            if other == right.length || left < length && GesText.scalarLess(keyStorage[left], right.keyStorage[other]) {
+                keys.append(keyStorage[left])
+                values.append(valueStorage[left])
+                left += 1
+            } else {
+                if left < length && GesText.scalarEqual(keyStorage[left], right.keyStorage[other]) { left += 1 }
+                keys.append(right.keyStorage[other])
+                values.append(right.valueStorage[other])
+                other += 1
+            }
+        }
+        return .init(canonicalKeys: keys, values: values)
+    }
 }

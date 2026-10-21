@@ -78,8 +78,7 @@ extension GesVirtualMachine {
                 keys = registers[y].listValue!.map(\.asText)
             default: return registers[target].setNothing()
             }
-            let result = registers[x].mapEntries!.filter { entry in !keys.contains { GesText.scalarEqual($0, entry.key) } }
-            return registers[target].setMap(result)
+            return registers[target].setMap(registers[x].asMap!.filtered { key in !keys.contains { GesText.scalarEqual($0, key) } })
         case .vector, .point, .percentage:
             return registers[target].setNothing()
         default:

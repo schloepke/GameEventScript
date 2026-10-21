@@ -316,6 +316,50 @@ errors:
 
 ---
 
+## Test: parse keeps syntax errors before a nesting limit
+
+The nesting limit ends parsing, but the syntax errors found earlier in the same source are still reported before it.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: parse-keeps-syntax-errors-before-nesting-limit
+kind: compileError
+level: scenario
+sources:
+  - name: "parse-keeps-syntax-errors-before-nesting-limit.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on A {
+  let a be (
+}
+on B {
+  let b be ((((((((((((((((((((((((((((((((((((((((1))))))))))))))))))))))))))))))))))))))))
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+errors:
+  - phase: "parse"
+    code: "parse.syntax"
+    line: 3
+    column: 1
+  - phase: "parse"
+    code: "parse.sourceNestingExceeded"
+    line: 5
+    column: 44
+```
+
+---
+
 ## Test: parse recovers in send statements
 
 Malformed sends report each statement and parsing continues with the next handler.

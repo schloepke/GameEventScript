@@ -140,6 +140,13 @@ final class GesParser {
     // declaration keyword, or inside a block at the next statement separator, as the C# parser does. A nesting-limit
     // error ends parsing immediately.
     func parse() throws -> GesModule {
+        // A failure that ends parsing, such as the nesting limit, follows the syntax errors already collected.
+        do { return try parseModule() } catch let error as GesCompileError where !diagnostics.isEmpty && error.diagnostics.contains(where: { $0.code != "parse.syntax" }) {
+            throw GesCompileError(diagnostics: diagnostics + error.diagnostics)
+        }
+    }
+
+    func parseModule() throws -> GesModule {
         separators()
         let start = current
         do {

@@ -28,6 +28,8 @@ struct GesValueFactory: GesValueOutput {
 
     func map(_ value: [GesMapEntry]) -> GesValue { .map(value) }
 
+    func map(_ value: GesValueMap) -> GesValue { .map(value) }
+
     func record(typeName: String, fields: GesValueMap) -> GesValue { .record(typeName: typeName, fields: fields) }
 
     func integerRange(from: Int64, to: Int64, step: Int64) -> GesValue { .integerRange(from: from, to: to, step: step) }

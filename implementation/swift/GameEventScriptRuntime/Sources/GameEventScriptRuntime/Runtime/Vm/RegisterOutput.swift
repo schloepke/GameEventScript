@@ -30,6 +30,8 @@ struct GesRegisterOutput: GesValueOutput {
 
     func map(_ value: [GesMapEntry]) { state.setMap(index, value) }
 
+    func map(_ value: GesValueMap) { state.setMap(index, value) }
+
     func record(typeName: String, fields: GesValueMap) { state.setRecord(index, typeName: typeName, fields: fields) }
 
     func integerRange(from: Int64, to: Int64, step: Int64) { state.setIntegerRange(index, from: from, to: to, step: step) }

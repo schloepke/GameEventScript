@@ -767,7 +767,7 @@ internal static class GesAstValidator
                 case GesCallExpressionNode call:
                     ValidateCallableCase(parsedScriptContext, call.Name, call.Name, GesDiagnosticSymbolKind.GlobalDefinition, $"Call target '{call.Name}' must use identifier casing (predicate/function names start lowercase)", errors, call);
                     ValidateDuplicateNamedArguments(parsedScriptContext, call.Name, call.ArgumentList.Arguments, errors);
-                    ValidateCallExpression(parsedScriptContext, call, callables, typeDefinitions, errors);
+                    ValidateCallExpression(parsedScriptContext, call, callables, errors);
                     for (var argumentIndex = 0; argumentIndex < call.ArgumentList.Arguments.Count; argumentIndex++)
                     {
                         var argument = call.ArgumentList.Arguments[argumentIndex];
@@ -1082,43 +1082,26 @@ internal static class GesAstValidator
         }
     }
 
-    private static void ValidateCallExpression(
-        GesParsedScript parsedScriptContext,
-        GesCallExpressionNode call,
-        IReadOnlyDictionary<string, GesCallableDefinition> callables,
-        IReadOnlyDictionary<string, GesTypeDefinitionNode> typeDefinitions,
-        GesValidationErrors errors)
+    // A call must name a declared signature (name plus ordered labels); otherwise the name has another arity, or no
+    // callable exists when every argument is positional. A labeled call to an unknown name is a handler call.
+    private static void ValidateCallExpression(GesParsedScript parsedScriptContext, GesCallExpressionNode call, IReadOnlyDictionary<string, GesCallableDefinition> callables, GesValidationErrors errors)
     {
-        var callable = GesCallableSignatures.Resolve(callables, call);
-        if (callable is null)
+        if (GesCallableSignatures.Resolve(callables, call) is not null) return;
+        if (GesCallableSignatures.HasName(callables, call.Name))
         {
-            if (GesCallableSignatures.HasName(callables, call.Name))
-            {
-                var callableKind = FindCallableKind(callables, call.Name);
-                errors.Add(
-                    parsedScriptContext,
-                    $"No overload of '{call.Name}' matches signature '{GesCallableSignatures.Create(call.Name, call.ArgumentList.Arguments)}'",
-                    call.Name,
-                    callableKind == GesCallableKind.PredicateCall ? GesDiagnosticSymbolKind.Predicate : GesDiagnosticSymbolKind.Function,
-                    callableKind == GesCallableKind.PredicateCall ? GesDiagnosticCodes.ValidateWrongPredicateArity : GesDiagnosticCodes.ValidateWrongFunctionArity,
-                    call);
-            }
-            else if (AllArgumentsUnlabeled(call.ArgumentList.Arguments))
-            {
-                errors.Add(
-                    parsedScriptContext,
-                    $"No predicate or function named '{call.Name}' exists",
-                    call.Name,
-                    GesDiagnosticSymbolKind.GlobalDefinition,
-                    GesDiagnosticCodes.ValidateMissingCallable,
+            var predicate = FindCallableKind(callables, call.Name) == GesCallableKind.PredicateCall;
+            errors.Add(
+                parsedScriptContext,
+                $"No overload of '{call.Name}' matches signature '{GesCallableSignatures.Create(call.Name, call.ArgumentList.Arguments)}'",
+                call.Name,
+                predicate ? GesDiagnosticSymbolKind.Predicate : GesDiagnosticSymbolKind.Function,
+                predicate ? GesDiagnosticCodes.ValidateWrongPredicateArity : GesDiagnosticCodes.ValidateWrongFunctionArity,
                 call);
-            }
-
-            return;
         }
-
-        ValidateCallArity(parsedScriptContext, callable.Kind, call, callable.Parameters.Count, errors);
-        ValidateCallLabels(parsedScriptContext, callable.Kind, call, callable.SignatureLabels, errors);
+        else if (AllArgumentsUnlabeled(call.ArgumentList.Arguments))
+        {
+            errors.Add(parsedScriptContext, $"No predicate or function named '{call.Name}' exists", call.Name, GesDiagnosticSymbolKind.GlobalDefinition, GesDiagnosticCodes.ValidateMissingCallable, call);
+        }
     }
 
     private static GesCallableKind FindCallableKind(IReadOnlyDictionary<string, GesCallableDefinition> callables, string name)
@@ -1126,27 +1109,6 @@ internal static class GesAstValidator
         foreach (var callable in callables.Values)
             if (string.Equals(callable.Name, name, StringComparison.Ordinal)) return callable.Kind;
         return GesCallableKind.FunctionCall;
-    }
-
-    private static void ValidateCallLabels(GesParsedScript parsedScriptContext, GesCallableKind kind, GesCallExpressionNode call, IReadOnlyList<string> expectedLabels, GesValidationErrors errors)
-    {
-        var name = call.Name;
-        var arguments = call.ArgumentList.Arguments;
-        var count = Math.Min(expectedLabels.Count, arguments.Count);
-        for (var index = 0; index < count; index++)
-        {
-            var expected = expectedLabels[index];
-            var actual = arguments[index].Name;
-            if (string.Equals(expected, actual, StringComparison.Ordinal)) continue;
-
-            errors.Add(
-                parsedScriptContext,
-                $"{kind} '{name}' argument {index + 1} expects label '{expected}' but received '{actual}'",
-                name,
-                kind == GesCallableKind.PredicateCall ? GesDiagnosticSymbolKind.Predicate : GesDiagnosticSymbolKind.Function,
-                kind == GesCallableKind.PredicateCall ? GesDiagnosticCodes.ValidateWrongPredicateArity : GesDiagnosticCodes.ValidateWrongFunctionArity,
-                arguments[index]);
-        }
     }
 
     private static bool AllArgumentsUnlabeled(IReadOnlyList<GesArgumentNode> arguments)
@@ -1386,20 +1348,6 @@ internal static class GesAstValidator
 
     private static void AddTypeConstructorError(GesParsedScript parsedScriptContext, GesTypeConstructorExpressionNode constructor, string message, GesValidationErrors errors)
         => errors.Add(parsedScriptContext, message, constructor.TypeName, GesDiagnosticSymbolKind.Type, GesDiagnosticCodes.ValidateInvalidTypeConstructor, constructor);
-
-    private static void ValidateCallArity(GesParsedScript parsedScriptContext, GesCallableKind kind, GesCallExpressionNode call, int expectedCount, GesValidationErrors errors)
-    {
-        if (expectedCount != call.Arguments.Count)
-        {
-            errors.Add(
-                parsedScriptContext,
-                $"{kind} '{call.Name}' expects {expectedCount} argument(s) but received {call.Arguments.Count}",
-                call.Name,
-                kind == GesCallableKind.PredicateCall ? GesDiagnosticSymbolKind.Predicate : GesDiagnosticSymbolKind.Function,
-                kind == GesCallableKind.PredicateCall ? GesDiagnosticCodes.ValidateWrongPredicateArity : GesDiagnosticCodes.ValidateWrongFunctionArity,
-                call);
-        }
-    }
 
     private static void ValidateDuplicateNamedArguments(GesParsedScript parsedScriptContext, string symbolName, IReadOnlyList<GesArgumentNode> arguments, GesValidationErrors errors)
     {

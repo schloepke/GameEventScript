@@ -50,10 +50,11 @@ source files, toolchain identity, timestamps, measured workload counts and
 SHA-256 hashes of the collected files. It fails if source changes during the
 run. C# reports must be newly written; native TRX results must contain executed
 passing tests. Both implementations must have complete successful report
-summaries and actual passing measurements. Case IDs and kinds must match the
-approved Conformance reference inventory for the selected performance suites;
-C# emits measured cases only, while Swift also includes their GESA snapshots.
-Removing a case and reducing the summary counts does not produce valid evidence.
+summaries and actual passing measurements. Case IDs and kinds must match every case
+of the performance suites in the corpus of the measured revision, read through the
+Conformance runner; C# emits measured cases only, while Swift also includes their
+GESA snapshots. Omitting a case from a report and reducing the summary counts
+does not produce valid evidence.
 Skips, empty measurements and
 failures are not release evidence. Failed runs retain their logs and failed
 receipt; a process killed before writing a receipt is also not a pass.

@@ -197,15 +197,15 @@ def example_programs(root):
     return [(path, path.with_suffix(".ges")) for path in binaries if path.with_suffix(".ges").exists()]
 
 
-def stale_examples(examples, compile_source):
+def stale_examples(examples, compile_source, root=ROOT):
     """Example binaries whose comparable sections differ from compiling their source again; BuildMetadata is ignored,
-    so binaries written before it existed stay current."""
+    so binaries written before it existed stay current. `compile_source` returns the bytes, or None and the reason."""
     stale = []
     for binary, source in examples:
-        fresh = compile_source(source)
-        differing = differing_sections(binary.read_bytes(), fresh) if fresh is not None else ["compile failed"]
+        fresh, reason = compile_source(source)
+        differing = differing_sections(binary.read_bytes(), fresh) if fresh is not None else [f"compile failed ({reason})"]
         if differing:
-            stale.append(f"{binary.relative_to(ROOT).as_posix()}: {','.join(differing)}")
+            stale.append(f"{binary.relative_to(root).as_posix()}: {','.join(differing)}")
     return stale
 
 
@@ -214,12 +214,15 @@ def compile_example(command, source):
     output.parent.mkdir(parents=True, exist_ok=True)
     result = subprocess.run([*command, "compile", source.name, "-o", str(output), "-q", "--no-debug"], cwd=source.parent,
                             capture_output=True, check=False, timeout=TIMEOUT_SECONDS)
-    return output.read_bytes() if result.returncode == 0 and output.exists() else None
+    if result.returncode == 0 and output.exists():
+        return output.read_bytes(), None
+    lines = result.stderr.decode("utf-8", errors="replace").strip().splitlines()
+    return None, lines[-1] if lines else f"exit {result.returncode}"
 
 
 def report_stale_examples(args):
     """Reports tracked example binaries that no longer match their source; 1 when any is stale."""
-    stale = stale_examples(example_programs(ROOT), lambda source: compile_example(["dotnet", str(args.csharp)], source))
+    stale = stale_examples(example_programs(ROOT), lambda source: compile_example(["dotnet", str(args.csharp)], source), ROOT)
     for line in stale:
         print(f"stale example binary: {line}")
     if stale:

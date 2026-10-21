@@ -110,7 +110,7 @@ correctness kinds and the measurement profiles available on this machine/build.
 required capabilities, but never assertion expectations. Binary `programVersion` is also a compiler input
 when checking provenance, so it is passed to the adapter. Its SHA-256 request digest
 binds observations to the selected normalized inputs; it is not an authenticity
-check and does not replace the complete corpus fingerprint contract.
+check and does not replace the corpus identity that the result records in `sourceDocuments`.
 
 An observation file has this shape:
 

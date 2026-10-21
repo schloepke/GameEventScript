@@ -88,21 +88,15 @@ class CompilerOutputTests(unittest.TestCase):
         self.assertEqual(([compare.baseline_line(result)], []), compare.ratchet([result], set()))
 
     def test_example_binaries_must_match_a_fresh_compilation(self):
-        root = compare.ROOT
-        current = program((0x10, b"code"))
-        stale = program((0x10, b"old"))
         with tempfile.TemporaryDirectory() as directory:
             folder = Path(directory)
-            (folder / "a.gesb").write_bytes(current + b"")
-            (folder / "b.gesb").write_bytes(stale)
-            compare.ROOT = folder
-            try:
-                examples = [(folder / "a.gesb", folder / "a.ges"), (folder / "b.gesb", folder / "b.ges")]
-                fresh = program((0x10, b"code"), (0x30, b"metadata"))
-                self.assertEqual(["b.gesb: code"], compare.stale_examples(examples, lambda source: fresh))
-                self.assertEqual(["a.gesb: compile failed", "b.gesb: compile failed"], compare.stale_examples(examples, lambda source: None))
-            finally:
-                compare.ROOT = root
+            (folder / "a.gesb").write_bytes(program((0x10, b"code")))
+            (folder / "b.gesb").write_bytes(program((0x10, b"old")))
+            examples = [(folder / "a.gesb", folder / "a.ges"), (folder / "b.gesb", folder / "b.ges")]
+            fresh = program((0x10, b"code"), (0x30, b"metadata"))
+            self.assertEqual(["b.gesb: code"], compare.stale_examples(examples, lambda source: (fresh, None), folder))
+            self.assertEqual(["a.gesb: compile failed (a.ges(1,1): error parse.syntax: x)", "b.gesb: compile failed (a.ges(1,1): error parse.syntax: x)"],
+                             compare.stale_examples(examples, lambda source: (None, "a.ges(1,1): error parse.syntax: x"), folder))
 
     def test_only_tracked_example_binaries_are_checked(self):
         with tempfile.TemporaryDirectory() as directory:

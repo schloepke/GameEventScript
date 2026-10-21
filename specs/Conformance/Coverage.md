@@ -90,8 +90,8 @@ opaque optional data, stable structural errors, stable semantic validation
 errors, bounded resource resolution, rewrite identity, runtime execution, and
 canonical dumps of identical Program data across implementations.
 
-Cross-language acceptance, corpus identity, shared parser bootstrap fixtures,
-and the compact C# reference result are defined in
+Cross-language acceptance, corpus identity and shared parser bootstrap fixtures
+are defined in
 [Cross-language acceptance](CrossLanguageAcceptance.md). The comparison is keyed exclusively by the
 stable IDs in this coverage index and the executable corpus.
 

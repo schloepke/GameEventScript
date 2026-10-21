@@ -54,18 +54,18 @@ class EvidenceTests(unittest.TestCase):
             with self.subTest(expected=expected), self.assertRaises(ValueError):
                 GATE['validate_report'](report(), expected)
 
-    def test_approved_inventory_includes_every_performance_suite(self):
+    def test_inventory_lists_every_case_of_every_performance_suite(self):
         inventory = GATE['performance_inventory']()
-        self.assertTrue(inventory)
         self.assertIn('performance', inventory.values())
+        suites = {identity.split('/', 1)[0] for identity in inventory}
+        documents = (Path(__file__).resolve().parent.parent / 'conformance/suites/performance').glob('*.md')
+        self.assertEqual(len(list(documents)), len(suites))
+        self.assertIn('performance.maps', suites)
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             suites = root / 'conformance/suites/performance'
             suites.mkdir(parents=True)
             (suites / 'missing.md').write_text('suiteId: performance.missing\n')
-            reference = root / 'conformance/cross-language/CSharpReferenceResults.json'
-            reference.parent.mkdir()
-            reference.write_text('{"cases": []}')
             function = GATE['performance_inventory']
             original = function.__globals__['ROOT']
             try:

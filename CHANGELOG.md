@@ -117,6 +117,9 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   their loop, so loops execute fewer instructions. Random draws, messages and
   host calls stay in place and results are unchanged; executed opcode counts
   drop and register requirements can grow slightly.
+- The C# and Swift compilers now produce byte-identical Programs for the same
+  sources and compilation options, including debug symbols, source maps and
+  source archives. Only BuildMetadata differs to identify the producing compiler.
 - The Swift compiler now writes the BuildMetadata section with compiler ID
   `steph.ges.compiler.swift` and version `0.1.0`, as the binary format requires
   of every port. Runtime behavior does not depend on it.

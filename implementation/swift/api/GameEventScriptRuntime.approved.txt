@@ -635,6 +635,7 @@ symbol {"access":"public","declaration":"func hash(into hasher: inout Hasher)","
 symbol {"access":"public","declaration":"func hash(into hasher: inout Hasher)","kind":"swift.method","path":"GameEventScriptRuntime.GesMessageArguments.hash(into:)"}
 symbol {"access":"public","declaration":"func hash(into hasher: inout Hasher)","kind":"swift.method","path":"GameEventScriptRuntime.GesMessageSignature.hash(into:)"}
 symbol {"access":"public","declaration":"func hash(into hasher: inout Hasher)","kind":"swift.method","path":"GameEventScriptRuntime.GesValue.hash(into:)"}
+symbol {"access":"public","declaration":"func hash(into hasher: inout Hasher)","kind":"swift.method","path":"GameEventScriptRuntime.GesValueMap.hash(into:)"}
 symbol {"access":"public","declaration":"func indexOf(_ name: String?) throws -> Int?","kind":"swift.method","path":"GameEventScriptRuntime.GesMessageArguments.indexOf(_:)"}
 symbol {"access":"public","declaration":"func instructionStarting(_ address: Int)","kind":"swift.method","path":"GameEventScriptRuntime.GesProgramProfiler.instructionStarting(_:)"}
 symbol {"access":"public","declaration":"func invoke(_ call: GesExtensionCall) throws","kind":"swift.method","path":"GameEventScriptRuntime.GesExtensionFunction.invoke(_:)"}
@@ -908,6 +909,7 @@ symbol {"access":"public","declaration":"protocol GesProgramProfiler : AnyObject
 symbol {"access":"public","declaration":"protocol GesPublishSink","kind":"swift.protocol","path":"GameEventScriptRuntime.GesPublishSink"}
 symbol {"access":"public","declaration":"protocol GesRuntimeObserver","kind":"swift.protocol","path":"GameEventScriptRuntime.GesRuntimeObserver"}
 symbol {"access":"public","declaration":"static func == (a: GesValue, b: GesValue) -> Bool","kind":"swift.func.op","path":"GameEventScriptRuntime.GesValue.==(_:_:)"}
+symbol {"access":"public","declaration":"static func == (left: GesValueMap, right: GesValueMap) -> Bool","kind":"swift.func.op","path":"GameEventScriptRuntime.GesValueMap.==(_:_:)"}
 symbol {"access":"public","declaration":"static func == (lhs: GameEventScriptMessage, rhs: GameEventScriptMessage) -> Bool","kind":"swift.func.op","path":"GameEventScriptRuntime.GameEventScriptMessage.==(_:_:)"}
 symbol {"access":"public","declaration":"static func == (lhs: GesMessageArgument, rhs: GesMessageArgument) -> Bool","kind":"swift.func.op","path":"GameEventScriptRuntime.GesMessageArgument.==(_:_:)"}
 symbol {"access":"public","declaration":"static func == (lhs: GesMessageArguments, rhs: GesMessageArguments) -> Bool","kind":"swift.func.op","path":"GameEventScriptRuntime.GesMessageArguments.==(_:_:)"}

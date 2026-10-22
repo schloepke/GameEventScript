@@ -25,6 +25,13 @@ final class GesBinaryBuilder {
         self.fallbackLocation = fallbackLocation
     }
 
+    // Source order of two declarations: source, then line, then column. Typed explicitly so the type checker stays fast.
+    static func precedesInSource(_ left: GesSourceLocation, _ right: GesSourceLocation) -> Bool {
+        let leftOrder: (UInt32, Int, Int) = (left.sourceID ?? 0, left.line ?? 0, left.column ?? 0)
+        let rightOrder: (UInt32, Int, Int) = (right.sourceID ?? 0, right.line ?? 0, right.column ?? 0)
+        return leftOrder < rightOrder
+    }
+
     func text(_ value: String) -> Int {
         let key = value.unicodeScalars.map(\.value)
         if let i = stringIDs[key] { return i }
@@ -162,7 +169,7 @@ final class GesBinaryBuilder {
                     guard visiting.insert(key).inserted else {
                         // At the declaration of the cycle's routine that comes first in the sources, independent of traversal order.
                         let cycle = path[path.lastIndex(of: key)!...].compactMap { routinesByName[$0]?.definition.location }
-                        let first = cycle.min { ($0.sourceID ?? 0, $0.line ?? 0, $0.column ?? 0) < ($1.sourceID ?? 0, $1.line ?? 0, $1.column ?? 0) }!
+                        let first = cycle.min(by: GesBinaryBuilder.precedesInSource)!
                         throw compileError("compile.cyclicCallGraph", first, symbol: key, phase: .compile)
                     }
                     path.append(key)

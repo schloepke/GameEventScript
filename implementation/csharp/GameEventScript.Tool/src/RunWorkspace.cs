@@ -26,7 +26,7 @@ internal sealed class RunWorkspace
         }
         internal GameEventScriptProgram Compile()
         {
-            var builder = GameEventScriptBuilder.Create();
+            var builder = new GesProgramBuilder();
             for (var index = 0; index < Text.Length; index++) builder.AddScript(Text[index], Paths[index]);
             return builder.Compile();
         }

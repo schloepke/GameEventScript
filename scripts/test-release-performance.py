@@ -10,6 +10,7 @@ from pathlib import Path
 import platform
 import shutil
 import subprocess
+import sys
 import tempfile
 import time
 import xml.etree.ElementTree as ET
@@ -58,15 +59,20 @@ def validate_report(report, expected_cases):
 
 
 def performance_inventory():
+    """Every case of the performance suites with its kind, read through the runner from this revision's corpus."""
+    documents = sorted((ROOT / 'conformance/suites/performance').glob('*.md'))
     suites = {
         next(line.split(':', 1)[1].strip().strip('"') for line in document.read_text().splitlines()
              if line.startswith('suiteId:'))
-        for document in (ROOT / 'conformance/suites/performance').glob('*.md')
+        for document in documents
     }
-    reference = json.loads((ROOT / 'conformance/cross-language/CSharpReferenceResults.json').read_text())
-    cases = {case['id']: case['kind'] for case in reference['cases'] if case['id'].split('/', 1)[0] in suites}
+    runner = str(ROOT / 'conformance/runner')
+    if runner not in sys.path:
+        sys.path.insert(0, runner)
+    from core.corpus import read_corpus
+    cases = {case.id: case.kind for case in read_corpus(documents)}
     if not suites or {identity.split('/', 1)[0] for identity in cases} != suites:
-        raise ValueError('Missing performance suite in the approved reference inventory')
+        raise ValueError('Missing performance cases in the corpus inventory')
     return cases
 
 

@@ -25,12 +25,20 @@ final class RunnerTests: XCTestCase {
         }
     }
 
-    private struct FrozenClock: GameEventScriptClock {
+    /// Waits for the shared dispatcher without pumping on the test thread. An explicit pump may run on an already
+    /// drained host and replace lastResult with an empty result, so assertions on lastResult must use this wait.
+    private func waitForAutomaticDrain(_ runner: GesBridgeHostRunner, file: StaticString = #filePath, line: UInt = #line) {
+        let deadline = Date().addingTimeInterval(5)
+        while !runner.isIdle && Date() < deadline { Thread.sleep(forTimeInterval: 0.001) }
+        XCTAssertTrue(runner.isIdle, "Runner did not drain automatically", file: file, line: line)
+    }
+
+    private struct FrozenClock: GesClock {
         var elapsedMicroseconds: Int64 { 100 }
     }
 
     func testIdleDurationThroughRunner() throws {
-        let runner = try GameEventScriptSwiftHostRunner(GameEventScriptHost(clock: FrozenClock()))
+        let runner = try GesBridgeHostRunner(GameEventScriptHost.makeBuilder().withClock(FrozenClock()).build())
         defer { runner.close() }
         XCTAssertNil(runner.idleDurationMicroseconds)
         let done = expectation(description: "Native handler ran")
@@ -49,7 +57,7 @@ final class RunnerTests: XCTestCase {
     }
 
     func testRunnerWaitsForExplicitStart() throws {
-        let runner = try GameEventScriptSwiftHostRunner(GameEventScriptHost.createBuilder().build())
+        let runner = try GesBridgeHostRunner(GameEventScriptHost.makeBuilder().build())
         defer { runner.close() }
         let trace = Trace()
         _ = try runner.subscribe(.init(name: "Tick")) { _, _ in trace.append(1) }
@@ -63,17 +71,17 @@ final class RunnerTests: XCTestCase {
     }
 
     func testConcurrentReceivesSerializeMessageDispatch() throws {
-        let runner = try GameEventScriptSwiftHostRunner(GameEventScriptHost(seed: 1).startForTest())
+        let runner = try GesBridgeHostRunner(GameEventScriptHost.makeBuilder().withRandomSeed(1).build().startForTest())
         let trace = Trace()
-        let start = try GameEventScriptMessageSignature(name: "Start", parameters: ["value"])
-        let done = try GameEventScriptMessageSignature(name: "Done", parameters: ["value"])
+        let start = try GesMessageSignature(name: "Start", parameters: ["value"])
+        let done = try GesMessageSignature(name: "Done", parameters: ["value"])
         let first = try runner.subscribe(start) { message, context in
             let number = Int(message.arguments[0].asInteger)
             trace.append(number)
-            try context.emit("Done", swiftArguments: [("value", number)])
+            try context.emit("Done", nativeArguments: [("value", number)])
         }
         let second = try runner.subscribe(done) { message, _ in trace.append(Int(message.arguments[0].asInteger)) }
-        DispatchQueue.concurrentPerform(iterations: 100) { index in do { try runner.receive(.init(name: "Start", swiftArguments: [("value", index)])) } catch { XCTFail("\(error)") } }
+        DispatchQueue.concurrentPerform(iterations: 100) { index in do { try runner.receive(.init(name: "Start", nativeArguments: [("value", index)])) } catch { XCTFail("\(error)") } }
         while !runner.isIdle { _ = try runner.runToCompletion() }
         let values = trace.values
         XCTAssertEqual(values.count, 200)
@@ -93,7 +101,7 @@ final class RunnerTests: XCTestCase {
     }
 
     func testRecursiveReceivesEnqueueWithoutRecursiveDispatch() throws {
-        let runner = try GameEventScriptSwiftHostRunner(GameEventScriptHost(seed: 1).startForTest())
+        let runner = try GesBridgeHostRunner(GameEventScriptHost.makeBuilder().withRandomSeed(1).build().startForTest())
         defer { runner.close() }
         let trace = Trace()
         _ = try runner.subscribe(.init(name: "Start", parameters: ["value"])) { message, _ in
@@ -101,26 +109,26 @@ final class RunnerTests: XCTestCase {
             trace.append(number)
             if number == 0 {
                 XCTAssertThrowsError(try runner.runToCompletion())
-                try runner.receive(.init(name: "Start", swiftArguments: [("value", 1)]))
+                try runner.receive(.init(name: "Start", nativeArguments: [("value", 1)]))
                 trace.append(2)
             }
         }
-        try runner.receive(.init(name: "Start", swiftArguments: [("value", 0)]))
-        while !runner.isIdle { _ = try runner.runToCompletion() }
+        try runner.receive(.init(name: "Start", nativeArguments: [("value", 0)]))
+        waitForAutomaticDrain(runner)
         XCTAssertEqual(trace.values, [0, 2, 1])
         XCTAssertEqual(runner.lastResult?.processedMessages, 2)
     }
 
     func testTransferCanDrainPreexistingWorkAndReportsFaults() throws {
         let trace = Trace()
-        let host = try GameEventScriptHost(seed: 1).startForTest()
+        let host = try GameEventScriptHost.makeBuilder().withRandomSeed(1).build().startForTest()
         _ = try host.subscribeMessageName("Start") { _, _ in
             trace.append(1)
-            throw try GameEventScriptExtensionFault(code: "app.runner", message: "Failed")
+            throw try GesExtensionFaultError(code: "app.runner", message: "Failed")
         }
         host.receive(try .init(name: "Start"))
-        let runner = GameEventScriptSwiftHostRunner(host)
-        while !runner.isIdle { _ = try runner.runToCompletion() }
+        let runner = GesBridgeHostRunner(host)
+        waitForAutomaticDrain(runner)
         XCTAssertEqual(runner.lastResult?.diagnostic?.code, "app.runner")
         XCTAssertEqual(trace.values, [1])
         XCTAssertEqual(runner.lastResult?.state, .runtimeError)

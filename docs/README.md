@@ -35,7 +35,7 @@ Every contract area has exactly one owning document. Other documents link to tha
 | Bytecode | [Bytecode](../specs/Bytecode.md) | Instruction model, opcode semantics, operands, and control flow | Normative |
 | Binary format | [Binary format](../specs/BinaryFormat.md) | `.gesb` container, segments, encoding, retention, and decoding | Normative |
 | Assembler format | [Assembler format](../specs/AssemblerFormat.md) | Human-readable `.gesa` dump syntax and presentation metadata | Normative |
-| Inline assembly | [Inline assembly](../specs/InlineAssembly.md) | Syntax, opcode inventory, and implementation gates | Implemented |
+| Inline assembly | [Inline assembly](../specs/InlineAssembly.md) | Syntax, operand forms, register scopes, and safety rules | Normative |
 | Diagnostics | [Diagnostics](../specs/Diagnostics.md) | Stable phases, codes, locations, and propagation rules | Normative |
 | Text semantics | [Text](../specs/Semantics/Text.md) | Unicode, source text, names, ordering, scalar operations, data formatting, and literal recognition | Normative |
 | Number semantics | [Numbers](../specs/Semantics/Numbers.md) | Integer, Binary64, units, arithmetic, conversion, and equality | Normative |
@@ -49,11 +49,6 @@ Every contract area has exactly one owning document. Other documents link to tha
 
 All specification documents in the table are normative.
 
-## Compiler experiments
-
-- [Inline assembly guide](guide/InlineAssembly.md): safe register and symbolic operand syntax.
-- [Collection opcode measurements](guide/InlineAssemblyBenchmarks.md): reproducible ASM comparisons and their limits.
-
 ## Generated API references
 
 - [C# API reference](guide/api/CSharp.md): public assemblies and XML documentation.
@@ -64,57 +59,37 @@ complement the portable specification with concrete language APIs.
 
 ## Non-normative guides
 
-The [standalone CLI downloads](guide/distribution/Tools.md) describe C# and Swift
-archives, installation, checksums and the manual release workflow.
+Guides explain usage and may simplify presentation. The linked normative specification defines exact behavior.
 
-The [Editor packages and syntax highlighting](../tools/editors/README.md) provide downloadable
-JSON and classic XML grammars for `.ges` and `.gesa`, with installation guidance.
+| Guide | Purpose |
+| --- | --- |
+| [Learn Game Event Script](guide/Language.md) | Introduction to the language and its use in game rules. |
+| [Guide index](guide/README.md) | Tutorials, explanations and learning examples. |
+| [C# embedding](guide/CSharp.md) | Embed GES in a C# application. |
+| [Swift embedding](guide/Swift.md) | Embed GES in a Swift application. |
+| [Standalone CLI downloads](guide/distribution/Tools.md) | C# and Swift archives, installation, checksums and manual release workflow. |
+| [Editor packages and syntax highlighting](../tools/editors/README.md) | Editor integrations and downloadable JSON and classic XML grammars for `.ges` and `.gesa`. |
+| [C# implementation](../implementation/csharp/README.md) | Library boundaries, solution, toolchain, build/test commands and Compiler/Runtime integration. |
+| [C# bridge](../implementation/csharp/GameEventScript.CSharpBridge/README.md) | Attribute-based external types, extension functions and native callbacks. |
+| [C# CLI](../implementation/csharp/GameEventScript.Tool/README.md) | `dotnet ges` and the interactive event console. |
+| [C# distribution](guide/distribution/CSharp.md) | Local packages, DLL sets and release verification. |
+| [Swift implementation](../implementation/swift/README.md) | Package boundaries, port coverage, local verification and the [Xcode workspace](../implementation/swift/README.md#xcode-workspace). |
+| [Swift CLI](../implementation/swift/GameEventScriptTool/README.md) | `ges`, installation/update, the event console and native CLI verification. |
+| [SwiftBridge](../implementation/swift/GameEventScriptSwiftBridge/README.md) | Native closures, value conversions, typed external bindings and the optional synchronized Host runner; depends only on Runtime. |
+| [Swift performance](../implementation/swift/Performance.md) | Measured profile, instrumentation scope and baseline review workflow. |
+| [Port conventions](../implementation/PortConventions.md) | Shared C#/Swift naming, creation, layer and performance conventions. |
+| [Package releases](guide/distribution/Packages.md) | Shared NuGet/SwiftPM release scope, Xcode consumption, publisher setup and [version policy](guide/distribution/Packages.md#version-policy). |
+| [Platform support](guide/distribution/Platforms.md) | Toolchain requirements, actual CI coverage and evidence required for release claims. |
+| [Changelog](../CHANGELOG.md) | User-visible changes and migration guidance. |
+| [0.4.0 closing review](development/Release040Review.md) | Recorded limitations and publication gates for release 0.4.0. |
+| [Numeric text roundtrip gate](../conformance/cross-language/NumberTextRoundtrip.md) | Exact Number, Quantity and Percentage text exchange between C# and Swift. |
+| [Product JSON roundtrip gate](../conformance/cross-language/MessageJsonRoundtrip.md) | Ordered message/value interchange checked against independent Markdown oracles. |
 
-Start with [Learn Game Event Script](guide/Language.md), then choose the
-[C# embedding guide](guide/CSharp.md) or [Swift embedding guide](guide/Swift.md).
-
-[Guide](guide/README.md) contains tutorials, explanations, and examples intended for learning. A guide may simplify presentation but must link to the owning specification for exact behavior.
-
-The [C# implementation guide](../implementation/csharp/README.md) describes the
-library boundaries, solution and toolchain, build/test commands, CLI lifecycle
-and Compiler/Runtime embedding. The
-[C# bridge guide](../implementation/csharp/GameEventScript.CSharpBridge/README.md)
-covers attribute-based external types, extension functions and native callbacks. The
-[C# CLI guide](../implementation/csharp/GameEventScript.Tool/README.md)
-documents `dotnet ges` and the interactive event console; the
-[C# distribution guide](guide/distribution/CSharp.md) covers local packages,
-DLL sets and release verification.
-The [package release guide](guide/distribution/Packages.md) describes the shared
-NuGet/SwiftPM release scope, Xcode consumption and publisher setup. Its
-[version policy](guide/distribution/Packages.md#version-policy) defines release
-numbering before and after 1.0.
-The [platform support matrix](guide/distribution/Platforms.md) lists toolchain
-requirements, actual CI coverage and the evidence required for release claims.
-The [changelog](../CHANGELOG.md) collects user-visible changes and migration
-guidance for the next release. The [0.4.0 closing review](development/Release040Review.md)
-records known limitations and remaining publication gates.
-
-The [Swift implementation guide](../implementation/swift/README.md) describes
-the package boundaries, current port coverage, and local verification commands.
-It also documents the [Xcode workspace](../implementation/swift/README.md#xcode-workspace)
-for building and testing all Swift packages together.
-The [Swift CLI guide](../implementation/swift/GameEventScriptTool/README.md)
-describes `ges`, installation/update, the event console and native CLI verification.
-The [SwiftBridge guide](../implementation/swift/GameEventScriptSwiftBridge/README.md)
-describes native closures, value conversions, typed external bindings and the
-optional synchronized Host runner. It depends only on Runtime.
-The [Swift performance guide](../implementation/swift/Performance.md) documents
-the measured profile, instrumentation scope and baseline review workflow.
 The generated performance baseline matrix (`artifacts/conformance/PerformanceMatrix.md`)
 lists every performance case with C# and Swift time/allocation references side by
 side. Create or refresh both tables with
 `ruby --disable-gems scripts/write-performance-matrix.rb`; the report stays under
 `artifacts`, and the shared Markdown remains the source of truth.
-
-The [numeric text roundtrip gate](../conformance/cross-language/NumberTextRoundtrip.md)
-checks exact Number, Quantity and Percentage text exchange between C# and Swift.
-The [product JSON roundtrip gate](../conformance/cross-language/MessageJsonRoundtrip.md)
-checks actual ordered message/value interchange against independent Markdown oracles.
 
 ## Documentation rules
 

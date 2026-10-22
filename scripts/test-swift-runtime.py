@@ -65,7 +65,7 @@ def main():
              if c.kind in {'scriptApi', 'loadError', 'bytecodeSnapshot', 'programBinary', 'performance'}]
     inputs = foreign_inputs(cases, args.programs)
     # Performance scenarios verify behavior here; no Swift compiler/performance claim.
-    converted = correctness_cases([c for c in cases if c.kind == 'performance'], 'swift-6.4-release-macos26-arm64-m3max')
+    converted = correctness_cases([c for c in cases if c.kind == 'performance'], 'swift-6.4-release-macos27-arm64-m3max')
     replacements = {c.id: c for c in converted}
     cases = [replacements.get(c.id, c) for c in cases]
     args.output.parent.mkdir(parents=True, exist_ok=True)

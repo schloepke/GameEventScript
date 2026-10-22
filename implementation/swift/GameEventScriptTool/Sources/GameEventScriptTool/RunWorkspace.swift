@@ -14,10 +14,10 @@ final class RunWorkspace {
         var text: [String]
         var baseline: [Data]
         var applied: [String]?
-        var dirty: Bool { id == 0 ? text.contains { !$0.isEmpty } : zip(text, baseline).contains { !GesText.scalarEqual($0, String(decoding: $1, as: UTF8.self).trimmingPrefixBOM) } }
+        var dirty: Bool { id == 0 ? text.contains { !$0.isEmpty } : zip(text, baseline).contains { !scalarEqual($0, String(decoding: $1, as: UTF8.self).trimmingPrefixBOM) } }
         var pending: Bool {
             guard let applied, applied.count == text.count else { return true }
-            return !zip(applied, text).allSatisfy { GesText.scalarEqual($0, $1) }
+            return !zip(applied, text).allSatisfy { scalarEqual($0, $1) }
         }
 
         init(id: Int, paths: [String], text: [String], baseline: [Data]) {
@@ -37,7 +37,7 @@ final class RunWorkspace {
         }
 
         func compile() throws -> GameEventScriptProgram {
-            let builder = GameEventScriptBuilder()
+            let builder = GesProgramBuilder()
             for (path, value) in zip(paths, text) { builder.addScript(value, sourceName: path) }
             return try builder.compile()
         }
@@ -53,13 +53,13 @@ final class RunWorkspace {
             return draft
         }
         if let id = Int(selector.hasPrefix("@") ? String(selector.dropFirst()) : selector), let draft = drafts[id] { return draft }
-        let entry = try inventory.select(selector, command: ":edit")
+        let entry = try inventory.selectProgram(selector, command: ":edit")
         if let draft = drafts[entry.id] { return draft }
         guard entry.paths.allSatisfy({ $0.lowercased().hasSuffix(".ges") }) else { throw ToolError.usage("Only loaded .ges source programs can be edited; binary programs are read-only.") }
         guard let sources = entry.instance.program.sourceArchive, sources.count == entry.paths.count else { throw ToolError.usage("The loaded program has no complete source archive. Reload its source files first.") }
         let text = sources.map(\.text)
         let baseline = try entry.paths.map { try Data(contentsOf: URL(fileURLWithPath: $0)) }
-        guard zip(text, baseline).allSatisfy({ GesText.scalarEqual($0, String(decoding: $1, as: UTF8.self).trimmingPrefixBOM) }) else { throw ToolError.usage("Sources changed on disk since loading. Reload before starting an edit.") }
+        guard zip(text, baseline).allSatisfy({ scalarEqual($0, String(decoding: $1, as: UTF8.self).trimmingPrefixBOM) }) else { throw ToolError.usage("Sources changed on disk since loading. Reload before starting an edit.") }
         let draft = Draft(id: entry.id, paths: entry.paths, text: text, baseline: baseline)
         draft.applied = text
         drafts[entry.id] = draft
@@ -116,7 +116,7 @@ final class RunWorkspace {
         var writes: [(Draft, Int, String, Data)] = []
         for draft in selected {
             for index in draft.text.indices {
-                if draft.id != 0, GesText.scalarEqual(draft.text[index], String(decoding: draft.baseline[index], as: UTF8.self).trimmingPrefixBOM) { continue }
+                if draft.id != 0, scalarEqual(draft.text[index], String(decoding: draft.baseline[index], as: UTF8.self).trimmingPrefixBOM) { continue }
                 let path = try newPath ?? ToolFiles.fullPath(draft.paths[index])
                 guard !writes.contains(where: { $0.2 == path }) else { throw ToolError.usage("Several modified programs refer to the same file. Save them separately: " + path) }
                 if draft.id == 0 {

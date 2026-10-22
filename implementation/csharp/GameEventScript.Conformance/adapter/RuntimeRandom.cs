@@ -32,7 +32,7 @@ internal static class RuntimeRandom
         }
     }
 
-    internal static void Configure(GameEventScriptHostBuilder builder, JsonElement configuration)
+    internal static void Configure(GesHostBuilder builder, JsonElement configuration)
     {
         if (configuration.TryGetProperty("seed", out var seed)) builder.WithRandomSeed(Seed(seed));
         else if (configuration.TryGetProperty("entropy", out var entropy)) builder.WithRandomEntropy(Convert.FromHexString(entropy.GetString()!));

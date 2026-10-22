@@ -12,7 +12,7 @@ internal static class RunProgramFiles
 
     internal static GameEventScriptProgram Compile(IReadOnlyList<string> paths, ref string? activePath)
     {
-        var builder = GameEventScriptBuilder.Create();
+        var builder = new GesProgramBuilder();
         foreach (var path in paths)
         {
             activePath = path;
@@ -23,7 +23,7 @@ internal static class RunProgramFiles
 
     internal static GameEventScriptProgram ReadOne(string path)
     {
-        if (string.Equals(Path.GetExtension(path), ".gesb", StringComparison.OrdinalIgnoreCase)) return GameEventScriptProgramReader.Read(File.ReadAllBytes(path));
+        if (string.Equals(Path.GetExtension(path), ".gesb", StringComparison.OrdinalIgnoreCase)) return GameEventScriptProgram.Read(File.ReadAllBytes(path));
         string? activePath = path;
         return Compile([path], ref activePath);
     }

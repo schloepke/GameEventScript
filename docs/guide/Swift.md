@@ -32,7 +32,7 @@ import PackageDescription
 
 let package = Package(
     name: "GesExample",
-    platforms: [.macOS("10.15.4")],
+    platforms: [.macOS("10.15")],
     dependencies: [
         .package(url: "https://github.com/schloepke/GameEventScript.git", exact: "<release-version>")
     ],
@@ -46,8 +46,7 @@ let package = Package(
 )
 ```
 
-The current root package declares macOS 10.15.4 to cover the optional CLI
-product’s Foundation I/O as well as its SwiftSyntax build dependency. This is a macOS deployment minimum, not a restriction to Apple
+The current root package declares macOS 10.15 for its SwiftSyntax build dependency. This is a macOS deployment minimum, not a restriction to Apple
 platforms; platform acceptance is recorded in the
 [implementation guide](../../implementation/swift/README.md).
 
@@ -60,7 +59,7 @@ import GameEventScriptRuntime
 import GameEventScriptCompiler
 import GameEventScriptSwiftBridge
 
-let program = try GameEventScriptBuilder.create()
+let program = try GesProgramBuilder()
     .addScript("""
         module tutorial.damage
         function damage(base, bonus) be base + bonus
@@ -70,11 +69,11 @@ let program = try GameEventScriptBuilder.create()
         """, sourceName: "damage.ges")
     .compile()
 
-let host = try GameEventScriptHost.createBuilder()
+let host = try GameEventScriptHost.makeBuilder()
     .withRandomSeed(123)
     .build()
 
-let done = try GameEventScriptMessageSignature(name: "Done", parameters: ["value"])
+let done = try GesMessageSignature(name: "Done", parameters: ["value"])
 let output = try host.subscribe(done) { message, _ in
     print(try Int.fromGesValue(message.arguments[0]))
 }
@@ -84,7 +83,7 @@ guard try host.start().state == .ready else {
     fatalError("Host startup failed.")
 }
 
-host.receive(try GameEventScriptMessage(name: "Calculate", swiftArguments: [
+host.receive(try GameEventScriptMessage(name: "Calculate", nativeArguments: [
     ("base", 30),
     ("bonus", 12),
 ]))
@@ -132,7 +131,7 @@ ges compile damage.ges -o artifacts/damage.gesb
 ```
 
 Then load bytes provided by your application using
-`try GameEventScriptProgramReader.read(bytes)`, where `bytes` is `[UInt8]`.
+`try GameEventScriptProgram.read(bytes)`, where `bytes` is `[UInt8]`.
 Your app performs file or network I/O before this call. The reader and host
 validate the program; they do not require Compiler.
 
@@ -157,7 +156,7 @@ struct BotState {
 }
 
 let bot = try BotState.createGesType()
-let registry = try GameEventScriptSwiftExternalTypeRegistry([bot.binding])
+let registry = try GesBridgeExternalTypeRegistry([bot.binding])
 let value = bot.wrap(BotState(energy: 100, distance: 4))
 ```
 

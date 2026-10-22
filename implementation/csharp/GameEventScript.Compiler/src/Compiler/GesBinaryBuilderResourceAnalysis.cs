@@ -9,31 +9,19 @@ namespace GameEventScript.Compiler;
 
 internal sealed partial class GesBinaryBuilder
 {
-    private static GameEventScriptCompileException CompileFailure(string code, string message, string? symbol = null)
-        => new(new GameEventScriptDiagnostic(
-            GameEventScriptDiagnosticPhase.Compile,
-            code,
-            message,
-            symbol));
+    private static GesCompileException CompileFailure(string code, string message, string? symbol = null, GesSourceLocation? location = null) => new(new GesDiagnostic(GesDiagnosticPhase.Compile, code, message, symbol, SourceLocation: location));
 
     private ProgramResourceAnalysis AnalyzeProgramResources(IReadOnlyList<PlanItem> items, RegisterAllocationResult registerAllocation)
     {
-        if (_routines.Count == 0)
-        {
-            return new ProgramResourceAnalysis([], [], 0, 0);
-        }
+        if (_routines.Count == 0) return new ProgramResourceAnalysis([], [], 0, 0);
 
         var routineByEntryLabel = new int[_labels.Count];
         Array.Fill(routineByEntryLabel, NoRoutineId);
         var recordRoutineByName = new Dictionary<string, int>(StringComparer.Ordinal);
-        for (var routineIndex = 0; routineIndex < _routines.Count; routineIndex++)
+        foreach (var routine in _routines)
         {
-            var routine = _routines[routineIndex];
             routineByEntryLabel[routine.EntryLabel.Id] = routine.Id;
-            if (routine.Kind == GameEventScriptBinaryBindKind.Record)
-            {
-                recordRoutineByName.Add(routine.Name, routine.Id);
-            }
+            if (routine.Kind == GesBinaryBindKind.Record) recordRoutineByName.Add(routine.Name, routine.Id);
         }
 
         var calls = new List<int>[_routines.Count];
@@ -43,10 +31,7 @@ internal sealed partial class GesBinaryBuilder
 
         for (var itemIndex = 0; itemIndex < items.Count; itemIndex++)
         {
-            if (items[itemIndex].Instruction is not { } instruction || instruction.RoutineId == NoRoutineId)
-            {
-                continue;
-            }
+            if (items[itemIndex].Instruction is not { } instruction || instruction.RoutineId == NoRoutineId) continue;
 
             var routineId = instruction.RoutineId;
             if (IsStageOpcode(instruction.OpCode))
@@ -57,22 +42,16 @@ internal sealed partial class GesBinaryBuilder
 
             switch (instruction.OpCode)
             {
-                case GameEventScriptBytecodeOpCode.Call:
+                case GesBytecodeOpCode.Call:
                     AddCallByEntryLabel(calls[routineId], instruction.Y, routineByEntryLabel, _routines[routineId].Name);
                     currentStageCounts[routineId] = 0;
                     break;
-                case GameEventScriptBytecodeOpCode.CreateRecord:
+                case GesBytecodeOpCode.CreateRecord:
                     AddRecordConstructorCall(calls[routineId], instruction.X, routineByEntryLabel, _routines[routineId].Name);
                     currentStageCounts[routineId] = 0;
                     break;
-                case GameEventScriptBytecodeOpCode.CastCustom:
-                    if (instruction.Y.Kind == GesOperandKind.Text &&
-                        instruction.Y.TextValue is { } typeName &&
-                        recordRoutineByName.TryGetValue(typeName, out var recordRoutineId))
-                    {
-                        AddUniqueCall(calls[routineId], recordRoutineId);
-                    }
-
+                case GesBytecodeOpCode.CastCustom:
+                    if (instruction.Y.Kind == GesOperandKind.Text && instruction.Y.TextValue is { } typeName && recordRoutineByName.TryGetValue(typeName, out var recordRoutineId)) AddUniqueCall(calls[routineId], recordRoutineId);
                     break;
                 default:
                     if (ClearsStage(instruction.OpCode)) currentStageCounts[routineId] = 0;
@@ -81,73 +60,43 @@ internal sealed partial class GesBinaryBuilder
         }
 
         var routineRequirements = new RoutineResourceRequirement[_routines.Count];
-        foreach (var routineId in OrderRoutineDependencies(calls))
-        {
-            routineRequirements[routineId] = CalculateRoutineRequirement(routineId, calls, maximumStageCounts, registerAllocation, routineRequirements);
-        }
+        foreach (var routineId in OrderRoutineDependencies(calls)) routineRequirements[routineId] = CalculateRoutineRequirement(routineId, calls, maximumStageCounts, registerAllocation, routineRequirements);
 
         var bindRequirements = new RoutineResourceRequirement[_binds.Count];
         var requiredRegisterCount = 0;
         var requiredCallStackDepth = 0;
-        for (var routineId = 0; routineId < _routines.Count; routineId++)
+        foreach (var routine in _routines)
         {
-            var routine = _routines[routineId];
-            if (routine.Kind is not (GameEventScriptBinaryBindKind.MessageHandler or GameEventScriptBinaryBindKind.MessageNameHandler) ||
-                routine.Bind is not { } bind)
-            {
-                continue;
-            }
-
-            var requirement = routineRequirements[routineId];
+            if (routine.Kind is not (GesBinaryBindKind.MessageHandler or GesBinaryBindKind.MessageNameHandler) || routine.Bind is not { } bind) continue;
+            var requirement = routineRequirements[routine.Id];
             bindRequirements[bind.Id] = requirement;
             requiredRegisterCount = Math.Max(requiredRegisterCount, requirement.RequiredRegisterCount);
             requiredCallStackDepth = Math.Max(requiredCallStackDepth, requirement.RequiredCallStackDepth);
         }
 
-        return new ProgramResourceAnalysis(
-            routineRequirements,
-            bindRequirements,
-            ToResourceUShort(requiredRegisterCount, "program register requirement"),
-            ToResourceUShort(requiredCallStackDepth, "program call-stack requirement"));
+        return new ProgramResourceAnalysis(routineRequirements, bindRequirements, ToResourceUShort(requiredRegisterCount, "program register requirement"), ToResourceUShort(requiredCallStackDepth, "program call-stack requirement"));
     }
 
     private void AddCallByEntryLabel(List<int> calls, GesOperand operand, int[] routineByEntryLabel, string callerName)
     {
-        if (operand.Kind != GesOperandKind.Label ||
-            operand.LabelRef.Id < 0 ||
-            operand.LabelRef.Id >= routineByEntryLabel.Length ||
-            routineByEntryLabel[operand.LabelRef.Id] == NoRoutineId)
-        {
-            throw CompileFailure(GameEventScriptDiagnosticCodes.CompileInvalidResourceMetadata,
-                $"Routine '{callerName}' calls an address that is not a routine entry point.");
-        }
+        if (operand.Kind != GesOperandKind.Label || operand.LabelRef.Id < 0 || operand.LabelRef.Id >= routineByEntryLabel.Length || routineByEntryLabel[operand.LabelRef.Id] == NoRoutineId)
+            throw CompileFailure(GesDiagnosticCodes.CompileInvalidResourceMetadata, $"Routine '{callerName}' calls an address that is not a routine entry point.");
 
         AddUniqueCall(calls, routineByEntryLabel[operand.LabelRef.Id]);
     }
 
     private void AddRecordConstructorCall(List<int> calls, GesOperand operand, int[] routineByEntryLabel, string callerName)
     {
-        if (operand.Kind != GesOperandKind.Bind ||
-            operand.BindRef.Id < 0 ||
-            operand.BindRef.Id >= _binds.Count ||
-            _binds[operand.BindRef.Id] is not { Kind: GameEventScriptBinaryBindKind.Record, EntryLabel: { } entryLabel } ||
+        if (operand.Kind != GesOperandKind.Bind || operand.BindRef.Id < 0 || operand.BindRef.Id >= _binds.Count || _binds[operand.BindRef.Id] is not { Kind: GesBinaryBindKind.Record, EntryLabel: { } entryLabel } ||
             routineByEntryLabel[entryLabel.Id] == NoRoutineId)
-        {
-            throw CompileFailure(GameEventScriptDiagnosticCodes.CompileInvalidResourceMetadata,
-                $"Routine '{callerName}' references an invalid record-constructor call target.");
-        }
+            throw CompileFailure(GesDiagnosticCodes.CompileInvalidResourceMetadata, $"Routine '{callerName}' references an invalid record-constructor call target.");
 
         AddUniqueCall(calls, routineByEntryLabel[entryLabel.Id]);
     }
 
     private static void AddUniqueCall(List<int> calls, int calleeRoutineId)
     {
-        for (var index = 0; index < calls.Count; index++)
-        {
-            if (calls[index] == calleeRoutineId) return;
-        }
-
-        calls.Add(calleeRoutineId);
+        if (!calls.Contains(calleeRoutineId)) calls.Add(calleeRoutineId);
     }
 
     private List<int> OrderRoutineDependencies(IReadOnlyList<List<int>> calls)
@@ -181,8 +130,12 @@ internal sealed partial class GesBinaryBuilder
                     var names = new string[pending.Count - cycleStart + 1];
                     for (var index = cycleStart; index < pending.Count; index++) names[index - cycleStart] = _routines[pending[index].RoutineId].Name;
                     names[^1] = _routines[callee].Name;
-                    throw CompileFailure(GameEventScriptDiagnosticCodes.CompileCyclicCallGraph,
-                        "Recursive calls are not allowed. Cyclic call path: " + string.Join(" -> ", names) + ".");
+                    // At the declaration of the cycle's routine that comes first in the sources, independent of traversal order.
+                    GesSourceLocation? first = null;
+                    for (var index = cycleStart; index < pending.Count; index++)
+                        if (_routines[pending[index].RoutineId].SourceRange is { } range && (first is null || CompareSourcePositions(range, first) < 0))
+                            first = range;
+                    throw CompileFailure(GesDiagnosticCodes.CompileCyclicCallGraph, "Recursive calls are not allowed. Cyclic call path: " + string.Join(" -> ", names) + ".", location: first);
                 }
 
                 visitStates[callee] = 1;
@@ -193,51 +146,42 @@ internal sealed partial class GesBinaryBuilder
         return ordered;
     }
 
+    private static int CompareSourcePositions(GesSourceLocation left, GesSourceLocation right)
+    {
+        var source = (left.SourceId ?? 0).CompareTo(right.SourceId ?? 0);
+        if (source != 0) return source;
+        var line = (left.Line ?? 0).CompareTo(right.Line ?? 0);
+        return line != 0 ? line : (left.Column ?? 0).CompareTo(right.Column ?? 0);
+    }
+
     private RoutineResourceRequirement CalculateRoutineRequirement(int routineId, IReadOnlyList<List<int>> calls, int[] maximumStageCounts, RegisterAllocationResult registerAllocation, RoutineResourceRequirement[] requirements)
     {
         var routine = _routines[routineId];
         var frameRegisterCount = routine.ArgumentRegisters.Count + registerAllocation.RoutineLocalCounts[routineId];
         var requiredRegisterCount = frameRegisterCount + maximumStageCounts[routineId];
         var requiredCallStackDepth = 0;
-        var routineCalls = calls[routineId];
-        for (var index = 0; index < routineCalls.Count; index++)
+        foreach (var calleeId in calls[routineId])
         {
-            var callee = requirements[routineCalls[index]];
+            var callee = requirements[calleeId];
             requiredRegisterCount = Math.Max(requiredRegisterCount, frameRegisterCount + callee.RequiredRegisterCount);
             requiredCallStackDepth = Math.Max(requiredCallStackDepth, 1 + callee.RequiredCallStackDepth);
         }
 
-        var result = new RoutineResourceRequirement(
-            ToResourceUShort(requiredRegisterCount, $"register requirement of routine '{routine.Name}'"),
-            ToResourceUShort(requiredCallStackDepth, $"call-stack requirement of routine '{routine.Name}'"));
-        return result;
+        return new RoutineResourceRequirement(ToResourceUShort(requiredRegisterCount, $"register requirement of routine '{routine.Name}'"), ToResourceUShort(requiredCallStackDepth, $"call-stack requirement of routine '{routine.Name}'"));
     }
 
     private static ushort ToResourceUShort(int value, string name)
         => value is < 0 or > ushort.MaxValue
-            ? throw CompileFailure(GameEventScriptDiagnosticCodes.CompileInvalidResourceMetadata,
-                $"The {name} is {value}, but portable GameEventScript resource metadata is limited to {ushort.MaxValue}.")
+            ? throw CompileFailure(GesDiagnosticCodes.CompileInvalidResourceMetadata, $"The {name} is {value}, but portable GameEventScript resource metadata is limited to {ushort.MaxValue}.")
             : checked((ushort)value);
 
-    private static bool IsStageOpcode(GameEventScriptBytecodeOpCode opcode)
-        => opcode is GameEventScriptBytecodeOpCode.StageRegister or
-            GameEventScriptBytecodeOpCode.StageNothing or
-            GameEventScriptBytecodeOpCode.StageTrue or
-            GameEventScriptBytecodeOpCode.StageFalse or
-            GameEventScriptBytecodeOpCode.StageInteger or
-            GameEventScriptBytecodeOpCode.StageFloat or
-            GameEventScriptBytecodeOpCode.StageText or
-            GameEventScriptBytecodeOpCode.StageTag or
-            GameEventScriptBytecodeOpCode.StagePercentage;
+    private static bool IsStageOpcode(GesBytecodeOpCode opcode)
+        => opcode is GesBytecodeOpCode.StageRegister or GesBytecodeOpCode.StageNothing or GesBytecodeOpCode.StageTrue or GesBytecodeOpCode.StageFalse or GesBytecodeOpCode.StageInteger or GesBytecodeOpCode.StageFloat or
+            GesBytecodeOpCode.StageText or GesBytecodeOpCode.StageTag or GesBytecodeOpCode.StagePercentage;
 
-    private static bool ClearsStage(GameEventScriptBytecodeOpCode opcode)
-        => opcode is GameEventScriptBytecodeOpCode.CreateVector or
-            GameEventScriptBytecodeOpCode.CreatePoint or
-            GameEventScriptBytecodeOpCode.CreateList or
-            GameEventScriptBytecodeOpCode.CreateMap or
-            GameEventScriptBytecodeOpCode.CreateExternalType or
-            GameEventScriptBytecodeOpCode.ReturnVoid or
-            GameEventScriptBytecodeOpCode.ReturnValue;
+    private static bool ClearsStage(GesBytecodeOpCode opcode)
+        => opcode is GesBytecodeOpCode.CreateVector or GesBytecodeOpCode.CreatePoint or GesBytecodeOpCode.CreateList or GesBytecodeOpCode.CreateMap or GesBytecodeOpCode.CreateExternalType or GesBytecodeOpCode.ReturnVoid or
+            GesBytecodeOpCode.ReturnValue;
 
     private sealed record ProgramResourceAnalysis(IReadOnlyList<RoutineResourceRequirement> RoutineRequirements, IReadOnlyList<RoutineResourceRequirement> BindRequirements, ushort RequiredRegisterCount, ushort RequiredCallStackDepth);
 

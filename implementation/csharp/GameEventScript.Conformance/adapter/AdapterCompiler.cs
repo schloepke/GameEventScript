@@ -8,22 +8,22 @@ internal static class AdapterCompiler
 {
     internal static GameEventScriptProgram Compile(JsonElement test, ulong programVersion = 0, string? programId = null)
     {
-        var builder = GameEventScriptBuilder.Create();
+        var builder = new GesProgramBuilder();
         if (test.GetProperty("kind").GetString() is "scriptApi" or "loadError") builder.WithExternalTypeCatalog(GameEventScript.Tests.Conformance.GameEventScriptConformanceExternalTypes.Catalog);
         foreach (var source in test.GetProperty("sources").EnumerateArray())
             if (programId is null || source.GetProperty("program").GetString() == programId) builder.AddScript(source.GetProperty("text").GetString()!, source.GetProperty("name").GetString()!);
         var options = test.GetProperty("compile");
-        var debug = GameEventScriptDebugInfoOptions.None;
+        var debug = GesDebugInfoOptions.None;
         foreach (var item in options.GetProperty("debugInfo").EnumerateArray())
             debug |= item.GetString() switch
             {
-                "debugSymbols" => GameEventScriptDebugInfoOptions.DebugSymbols,
-                "sourceMap" => GameEventScriptDebugInfoOptions.SourceMap,
-                "sourceArchive" => GameEventScriptDebugInfoOptions.SourceArchive,
+                "debugSymbols" => GesDebugInfoOptions.DebugSymbols,
+                "sourceMap" => GesDebugInfoOptions.SourceMap,
+                "sourceArchive" => GesDebugInfoOptions.SourceArchive,
                 _ => throw new ArgumentException("Invalid debug option.")
             };
-        var program = builder.Compile(new GameEventScriptCompileOptions { DebugInfo = debug, ProgramVersion = programVersion });
-        if (options.GetProperty("binaryRoundTrip").GetBoolean()) program = GameEventScriptProgramReader.Read(GameEventScriptProgramWriter.ToArray(program));
+        var program = builder.Compile(new GesCompileOptions { DebugInfo = debug, ProgramVersion = programVersion });
+        if (options.GetProperty("binaryRoundTrip").GetBoolean()) program = GameEventScriptProgram.Read(program.Encode());
         return program;
     }
 }

@@ -110,7 +110,7 @@ class AdapterTests(unittest.TestCase):
                            'initializationPump': 'completion', 'publishSink': 'accept',
                            'steps': [{'id': 'main', 'input': {'name': 'Main', 'args': [], 'tags': []},
                                       'pump': 'completion', 'budget': None}]}
-        case['measurement'] = {'profile': 'swift-6.4-release-macos26-arm64-m3max', 'iterations': 1,
+        case['measurement'] = {'profile': 'swift-6.4-release-macos27-arm64-m3max', 'iterations': 1,
                                'warmupIterations': 1, 'compileWarmupIterations': 0, 'observeRuntime': False,
                                'metrics': [{'id': 'run.allocated', 'unit': 'B'}]}
         mutations = [lambda c: c['runtime']['steps'][0].update(pump='enqueue'),

@@ -71,24 +71,24 @@ public final class CardGame {
         guard rules.utf8.count <= 131_072 else { throw CardGameError("Rule source exceeds 128 KiB") }
         self.players = players
         bindings = Bindings(playerCount: players.count)
-        var limits = GameEventScriptRuntimeLimits()
+        var limits = GesRuntimeLimits()
         limits.maxQueuedMessagesPerRun = 2048
         limits.maxExecutionSteps = 50_000
         limits.maxLoopIterations = 2048
         limits.maxGeneratedCollectionItems = 2048
-        host = try GameEventScriptHost(seed: seed, limits: limits, observer: bindings, extensions: bindings)
+        host = try GameEventScriptHost.makeBuilder().withRandomSeed(seed).withRuntimeLimits(limits).withRuntimeObserver(bindings).withRegistry(bindings).build()
         do {
-            let program = try GameEventScriptBuilder.create().withDebugInfo([.symbols, .sourceMap]).addScript(rules, sourceName: "rules.ges").compile()
+            let program = try GesProgramBuilder().withDebugInfo([.symbols, .sourceMap]).addScript(rules, sourceName: "rules.ges").compile()
             hasEndRound = program.bindings.contains { binding in
                 program.stringConstants[Int(binding.name)] == "EndRound" && binding.requiredTags.isEmpty
                     && (binding.kind == .messageNameHandler || (binding.kind == .messageHandler && binding.argumentNames.map { program.stringConstants[Int($0)] } == ["number", "players"]))
             }
             _ = try host.load(program)
-        } catch let error as GameEventScriptCompileError {
+        } catch let error as GesCompileError {
             throw CardGameError(error.diagnostics.map(formatDiagnostic).joined(separator: "\n"))
         }
         for (name, labels) in Bindings.commands {
-            _ = try host.subscribe(GameEventScriptMessageSignature(name: name, parameters: labels), handler: bindings)
+            _ = try host.subscribe(GesMessageSignature(name: name, parameters: labels), handler: bindings)
         }
         guard try host.start().state == .ready else { throw CardGameError("GES initialization failed") }
         try event("PrepareGame", [("players", bindings.playerValues)], phase: .prepareGame)
@@ -258,7 +258,7 @@ func message(_ name: String, _ values: [(String, GesValue)]) throws -> GameEvent
     try .init(name: name, arguments: values.map { try .init(name: $0.0, value: $0.1) })
 }
 
-final class Bindings: GameEventScriptNativeMessageHandler, GameEventScriptExtensionRegistry, GameEventScriptRuntimeObserver {
+final class Bindings: GesNativeMessageHandler, GesExtensionRegistry, GesRuntimeObserver {
     enum Phase { case prepareGame, beginRound, beginTurn, action, endTurn, endRound, endGame, idle, finished }
 
     struct Pending {
@@ -329,7 +329,7 @@ final class Bindings: GameEventScriptNativeMessageHandler, GameEventScriptExtens
 
     init(playerCount: Int) { self.playerCount = playerCount }
 
-    func resolve(_ reference: GameEventScriptExtensionReference) throws -> (any GameEventScriptExtensionFunction)? {
+    func resolve(_ reference: GesExtensionReference) throws -> (any GesExtensionFunction)? {
         guard reference.extensionName == "board" else { return nil }
         if reference.functionName == "state", reference.argumentLabels == ["player", "key"] { return BoardExtension(bindings: self, name: "playerstate") }
         if reference.functionName == "setstate", reference.argumentLabels == ["player", "key", "value"] { return BoardExtension(bindings: self, name: "setplayerstate") }
@@ -337,7 +337,7 @@ final class Bindings: GameEventScriptNativeMessageHandler, GameEventScriptExtens
         return BoardExtension(bindings: self, name: reference.functionName)
     }
 
-    func handle(_ message: GameEventScriptMessage, context: GameEventScriptContext) throws {
+    func handle(_ message: GameEventScriptMessage, context: GesContext) throws {
         let args = message.arguments
         switch message.name {
         case "BeginRound", "EndRound": break  // Optional script hooks still have a native recipient.
@@ -357,7 +357,7 @@ final class Bindings: GameEventScriptNativeMessageHandler, GameEventScriptExtens
                 let distance = ((next - currentPlayer) * direction + playerCount) % playerCount
                 skipCount = (distance == 0 ? playerCount : distance) - 1
             } else if args.signatureLabels == ["repeatTurnForPlayer"] {
-                guard args[0].kind == .boolean else { throw CardGameError("repeatTurnForPlayer must be Boolean") }
+                guard args[0].valueKind == .boolean else { throw CardGameError("repeatTurnForPlayer must be Boolean") }
                 skipCount = args[0].asBoolean ? playerCount - 1 : 0
             } else {
                 skipCount = 0
@@ -395,12 +395,12 @@ final class Bindings: GameEventScriptNativeMessageHandler, GameEventScriptExtens
             notices.append((text: message, title: title))
         case "NoticeTable":
             if args.signatureLabels == ["pop"] {
-                guard args[0].kind == .boolean else { throw CardGameError("pop must be Boolean") }
+                guard args[0].valueKind == .boolean else { throw CardGameError("pop must be Boolean") }
                 if args[0].asBoolean, let previous = tableNoticeStack.popLast() { tableNotice = previous }
             } else {
                 let replacement = try text(args[0])
                 if args.count == 2 {
-                    guard args[1].kind == .boolean else { throw CardGameError("NoticeTable flags must be Boolean") }
+                    guard args[1].valueKind == .boolean else { throw CardGameError("NoticeTable flags must be Boolean") }
                     if args[1].asBoolean {
                         if args.signatureLabels[1] == "pushOld" {
                             guard tableNoticeStack.count < 64 else { throw CardGameError("Maximum 64 saved table notices") }
@@ -474,12 +474,12 @@ final class Bindings: GameEventScriptNativeMessageHandler, GameEventScriptExtens
         lastAction = request.action.kind
     }
 
-    func runtimeError(_ diagnostic: GameEventScriptDiagnostic) { fault = formatDiagnostic(diagnostic) }
+    func runtimeError(_ diagnostic: GesDiagnostic) { fault = formatDiagnostic(diagnostic) }
 
     func runtimeLimitReached(_ limitName: String, detail: String, limit: Int) { fault = "\(limitName): \(detail) (\(limit))" }
 }
 
-private struct BoardExtension: GameEventScriptExtensionFunction {
+private struct BoardExtension: GesExtensionFunction {
     static let signatures: [String: [String]] = [
         "actions": ["player"], "cards": ["zone"], "card": ["id"], "top": ["zone"], "current": [], "playercount": [], "players": [], "next": ["player"], "table": [], "zones": ["player"], "lastaction": [], "roundnumber": [], "direction": [],
         "state": ["key"], "ending": [],
@@ -549,7 +549,7 @@ private struct BoardExtension: GameEventScriptExtensionFunction {
         case "cards":
             call.setValue(.list(try bindings.board.zone(tag(call.arguments[0])).cards.map { try bindings.board.card($0).value }))
         case "card":
-            if call.arguments[0].kind == .nothing { call.setNothing() } else { call.setValue((try? bindings.board.card(integer(call.arguments[0])).value) ?? .nothing) }
+            if call.arguments[0].valueKind == .nothing { call.setNothing() } else { call.setValue((try? bindings.board.card(integer(call.arguments[0])).value) ?? .nothing) }
         case "top":
             let id = try bindings.board.zone(tag(call.arguments[0])).cards.last
             call.setValue(try id.map { try bindings.board.card($0).value } ?? .nothing)
@@ -576,14 +576,13 @@ private struct BoardExtension: GameEventScriptExtensionFunction {
 }
 
 private func zoneValue(_ zone: Zone) throws -> GesValue {
-    try .map([
-        .init(key: "id", value: .tag(zone.id)), .init(key: "label", value: .text(zone.label)), .init(key: "position", value: .tag(zone.position)),
-        .init(key: "row", value: .integer(Int64(zone.row))), .init(key: "layout", value: .tag(zone.layout)),
-        .init(key: "count", value: .integer(Int64(zone.cards.count))),
-    ])
+    try .map(
+        keys: ["id", "label", "position", "row", "layout", "count"],
+        values: [.tag(zone.id), .text(zone.label), .tag(zone.position), .integer(Int64(zone.row)), .tag(zone.layout), .integer(Int64(zone.cards.count))]
+    )
 }
 
-func formatDiagnostic(_ diagnostic: GameEventScriptDiagnostic) -> String {
+func formatDiagnostic(_ diagnostic: GesDiagnostic) -> String {
     let location = diagnostic.sourceLocation
     let prefix = location.map { $0.sourceName + ($0.line.map { ":\($0)" } ?? "") + ($0.column.map { ":\($0)" } ?? "") + ": " } ?? ""
     var lines = [prefix + diagnostic.code + (diagnostic.message.isEmpty ? "" : ": " + diagnostic.message)]
@@ -593,6 +592,6 @@ func formatDiagnostic(_ diagnostic: GameEventScriptDiagnostic) -> String {
 }
 
 private func setState(_ state: inout [String: GesValue], key: String, value: GesValue) throws {
-    guard value.kind == .nothing || state[key] != nil || state.count < 64 else { throw CardGameError("Maximum 64 rule state keys") }
-    if value.kind == .nothing { state.removeValue(forKey: key) } else { state[key] = value }
+    guard value.valueKind == .nothing || state[key] != nil || state.count < 64 else { throw CardGameError("Maximum 64 rule state keys") }
+    if value.valueKind == .nothing { state.removeValue(forKey: key) } else { state[key] = value }
 }

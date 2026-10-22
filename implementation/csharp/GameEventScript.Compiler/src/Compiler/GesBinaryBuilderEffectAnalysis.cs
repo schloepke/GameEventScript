@@ -4,7 +4,7 @@
 using System;
 using System.Collections.Generic;
 using GameEventScript.Api;
-using OpCode = GameEventScript.Api.GameEventScriptBytecodeOpCode;
+using OpCode = GameEventScript.Api.GesBytecodeOpCode;
 
 namespace GameEventScript.Compiler;
 
@@ -30,7 +30,7 @@ internal sealed partial class GesBinaryBuilder
                 // With assembly present, optimization runs per routine. Preserve
                 // calls whose bodies are outside the current region conservatively.
                 if (builder._preservedRoutines.Count != 0) _routineHasEffects[routine.Id] = true;
-                if (routine.Kind == GameEventScriptBinaryBindKind.Record) _recordRoutineByName.Add(routine.Name, routine.Id);
+                if (routine.Kind == GesBinaryBindKind.Record) _recordRoutineByName.Add(routine.Name, routine.Id);
             }
 
             var callers = new List<int>?[_routineHasEffects.Length];
@@ -95,7 +95,7 @@ internal sealed partial class GesBinaryBuilder
                 return instruction.Y.Kind == GesOperandKind.Label ? ResolveEntryLabel(instruction.Y.LabelRef.Id) : NoRoutineId;
 
             if (instruction.X.Kind == GesOperandKind.Bind && (uint)instruction.X.BindRef.Id < (uint)_builder._binds.Count &&
-                _builder._binds[instruction.X.BindRef.Id] is { Kind: GameEventScriptBinaryBindKind.Record, EntryLabel: { } label })
+                _builder._binds[instruction.X.BindRef.Id] is { Kind: GesBinaryBindKind.Record, EntryLabel: { } label })
                 return ResolveEntryLabel(label.Id);
 
             return NoRoutineId;
@@ -107,7 +107,7 @@ internal sealed partial class GesBinaryBuilder
         {
             // Dynamic external-field access can call host code. Without a purity contract it is conservative, like an extension call.
             if (instruction.OpCode is OpCode.MemberAccess or OpCode.PropertyAccess or OpCode.KeysOfMap or OpCode.ValuesOfMap or OpCode.EntriesOfMap) return true;
-            if (instruction.OpCode == OpCode.Cast) return instruction.Y.Kind != GesOperandKind.Type || instruction.Y.TypeKind == GameEventScriptBytecodeTypeKind.Map;
+            if (instruction.OpCode == OpCode.Cast) return instruction.Y.Kind != GesOperandKind.Type || instruction.Y.TypeKind == GesBytecodeTypeKind.Map;
             if (CanDiscardResult(instruction.OpCode)) return false;
 
             return instruction.OpCode switch
@@ -128,148 +128,20 @@ internal sealed partial class GesBinaryBuilder
         {
             return opcode switch
             {
-                OpCode.CastCustom or
-                    OpCode.RandomTake or
-                    OpCode.RandomTakeFloat or
-                    OpCode.Chance or
-                    OpCode.CreateDice or
-                    OpCode.OneRandom or
-                    OpCode.TakeRandom or
-                    OpCode.OneWeighted or
-                    OpCode.TakeWeighted or
-                    OpCode.Shuffle or
-                    OpCode.Cast or
-                    OpCode.CastUnit or
-                    OpCode.CastNumeric or
-                    OpCode.CheckType or
-                    OpCode.CheckCustomType or
-                    OpCode.CheckUnit or
-                    OpCode.CheckNumeric or
-                    OpCode.CheckInteger or
-                    OpCode.CheckFractional or
-                    OpCode.Move or
-                    OpCode.MemberAccess or
-                    OpCode.IndexAccess or
-                    OpCode.PropertyAccess or
-                    OpCode.BindHandler or
-                    OpCode.LoadNothing or
-                    OpCode.LoadTrue or
-                    OpCode.LoadFalse or
-                    OpCode.LoadInteger or
-                    OpCode.LoadFloat or
-                    OpCode.LoadPercentage or
-                    OpCode.LoadText or
-                    OpCode.LoadTag or
-                    OpCode.LoadHandler or
-                    OpCode.LoadMessage or
-                    OpCode.CreateSeries or
-                    OpCode.CreateRange or
-                    OpCode.CreateRangeWithStep or
-                    OpCode.CreateRangeIterator or
-                    OpCode.CreateRangeIteratorWithStep or
-                    OpCode.CreateRangeIteratorShort or
-                    OpCode.HasValue or
-                    OpCode.IsEmpty or
-                    OpCode.Default or
-                    OpCode.Or or
-                    OpCode.And or
-                    OpCode.Xor or
-                    OpCode.Implies or
-                    OpCode.Not or
-                    OpCode.Equal or
-                    OpCode.NotEqual or
-                    OpCode.Less or
-                    OpCode.Greater or
-                    OpCode.LessOrEqual or
-                    OpCode.GreaterOrEqual or
-                    OpCode.Add or
-                    OpCode.Subtract or
-                    OpCode.Multiply or
-                    OpCode.Divide or
-                    OpCode.Power or
-                    OpCode.IntegerDivide or
-                    OpCode.Modulo or
-                    OpCode.Remainder or
-                    OpCode.Min or
-                    OpCode.Max or
-                    OpCode.Negate or
-                    OpCode.Abs or
-                    OpCode.LogN or
-                    OpCode.Clamp or
-                    OpCode.Term or
-                    OpCode.Exp or
-                    OpCode.Floor or
-                    OpCode.Ceil or
-                    OpCode.Truncate or
-                    OpCode.RoundHalfEven or
-                    OpCode.RoundHalfUp or
-                    OpCode.RoundHalfDown or
-                    OpCode.DegreeToRadians or
-                    OpCode.DegreeFromRadians or
-                    OpCode.WrapDegree or
-                    OpCode.Sin or
-                    OpCode.Cos or
-                    OpCode.Tan or
-                    OpCode.Asin or
-                    OpCode.Acos or
-                    OpCode.Atan or
-                    OpCode.Atan2 or
-                    OpCode.Hypot2D or
-                    OpCode.Hypot3D or
-                    OpCode.Distance or
-                    OpCode.Distance2D or
-                    OpCode.Distance3D or
-                    OpCode.DistanceSquared or
-                    OpCode.DistanceSquared2D or
-                    OpCode.DistanceSquared3D or
-                    OpCode.LengthSquared or
-                    OpCode.LengthSquared2D or
-                    OpCode.LengthSquared3D or
-                    OpCode.Normalize or
-                    OpCode.Normalize2D or
-                    OpCode.Normalize3D or
-                    OpCode.Dot or
-                    OpCode.Dot2D or
-                    OpCode.Dot3D or
-                    OpCode.Cross or
-                    OpCode.Cross2D or
-                    OpCode.Cross3D or
-                    OpCode.AngleBetween or
-                    OpCode.AngleBetween2D or
-                    OpCode.AngleBetween3D or
-                    OpCode.TakeFirst or
-                    OpCode.DropFirst or
-                    OpCode.TakeLast or
-                    OpCode.DropLast or
-                    OpCode.TakeHighest or
-                    OpCode.TakeLowest or
-                    OpCode.DropHighest or
-                    OpCode.DropLowest or
-                    OpCode.Count or
-                    OpCode.StartsWith or
-                    OpCode.EndsWith or
-                    OpCode.Contains or
-                    OpCode.ContainsAny or
-                    OpCode.ContainsAll or
-                    OpCode.HasAny or
-                    OpCode.HasAll or
-                    OpCode.ContainsValue or
-                    OpCode.Union or
-                    OpCode.Intersect or
-                    OpCode.Zip or
-                    OpCode.KeysOfMap or
-                    OpCode.ValuesOfMap or
-                    OpCode.EntriesOfMap or
-                    OpCode.First or
-                    OpCode.Last or
-                    OpCode.Single or
-                    OpCode.IteratorCreate or
-                    OpCode.Distinct or
-                    OpCode.SortAscending or
-                    OpCode.SortDescending or
-                    OpCode.Reverse or
-                    OpCode.HasPattern or
-                    OpCode.TakePattern => true,
+                OpCode.CastCustom or OpCode.RandomTake or OpCode.RandomTakeFloat or OpCode.Chance or OpCode.CreateDice or OpCode.OneRandom or OpCode.TakeRandom or OpCode.OneWeighted or OpCode.TakeWeighted or OpCode.Shuffle or OpCode.Cast or
+                    OpCode.CastUnit or OpCode.CastNumeric or OpCode.CheckType or OpCode.CheckCustomType or OpCode.CheckUnit or OpCode.CheckNumeric or OpCode.CheckInteger or OpCode.CheckFractional or OpCode.Move or OpCode.MemberAccess or
+                    OpCode.IndexAccess or OpCode.PropertyAccess or OpCode.BindHandler or OpCode.LoadNothing or OpCode.LoadTrue or OpCode.LoadFalse or OpCode.LoadInteger or OpCode.LoadFloat or OpCode.LoadPercentage or OpCode.LoadText or
+                    OpCode.LoadTag or OpCode.LoadHandler or OpCode.LoadMessage or OpCode.CreateSeries or OpCode.CreateRange or OpCode.CreateRangeWithStep or OpCode.CreateRangeIterator or OpCode.CreateRangeIteratorWithStep or
+                    OpCode.CreateRangeIteratorShort or OpCode.HasValue or OpCode.IsEmpty or OpCode.Default or OpCode.Or or OpCode.And or OpCode.Xor or OpCode.Implies or OpCode.Not or OpCode.Equal or OpCode.NotEqual or OpCode.Less or
+                    OpCode.Greater or OpCode.LessOrEqual or OpCode.GreaterOrEqual or OpCode.Add or OpCode.Subtract or OpCode.Multiply or OpCode.Divide or OpCode.Power or OpCode.IntegerDivide or OpCode.Modulo or OpCode.Remainder or
+                    OpCode.Min or OpCode.Max or OpCode.Negate or OpCode.Abs or OpCode.LogN or OpCode.Clamp or OpCode.Term or OpCode.Exp or OpCode.Floor or OpCode.Ceil or OpCode.Truncate or OpCode.RoundHalfEven or OpCode.RoundHalfUp or
+                    OpCode.RoundHalfDown or OpCode.DegreeToRadians or OpCode.DegreeFromRadians or OpCode.WrapDegree or OpCode.Sin or OpCode.Cos or OpCode.Tan or OpCode.Asin or OpCode.Acos or OpCode.Atan or OpCode.Atan2 or OpCode.Hypot2D or
+                    OpCode.Hypot3D or OpCode.Distance or OpCode.Distance2D or OpCode.Distance3D or OpCode.DistanceSquared or OpCode.DistanceSquared2D or OpCode.DistanceSquared3D or OpCode.LengthSquared or OpCode.LengthSquared2D or
+                    OpCode.LengthSquared3D or OpCode.Normalize or OpCode.Normalize2D or OpCode.Normalize3D or OpCode.Dot or OpCode.Dot2D or OpCode.Dot3D or OpCode.Cross or OpCode.Cross2D or OpCode.Cross3D or OpCode.AngleBetween or
+                    OpCode.AngleBetween2D or OpCode.AngleBetween3D or OpCode.TakeFirst or OpCode.DropFirst or OpCode.TakeLast or OpCode.DropLast or OpCode.TakeHighest or OpCode.TakeLowest or OpCode.DropHighest or OpCode.DropLowest or
+                    OpCode.Count or OpCode.StartsWith or OpCode.EndsWith or OpCode.Contains or OpCode.ContainsAny or OpCode.ContainsAll or OpCode.HasAny or OpCode.HasAll or OpCode.ContainsValue or OpCode.Union or OpCode.Intersect or
+                    OpCode.Zip or OpCode.KeysOfMap or OpCode.ValuesOfMap or OpCode.EntriesOfMap or OpCode.First or OpCode.Last or OpCode.Single or OpCode.IteratorCreate or OpCode.Distinct or OpCode.SortAscending or OpCode.SortDescending or
+                    OpCode.Reverse or OpCode.HasPattern or OpCode.TakePattern => true,
                 _ => false
             };
         }

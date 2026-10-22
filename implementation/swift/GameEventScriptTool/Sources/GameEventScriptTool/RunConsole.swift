@@ -8,7 +8,7 @@ import GameEventScriptRuntime
 extension Tool {
     func runConsole(_ session: RunSession, options: RunOptions) throws -> Bool {
         if io.inputTerminal { io.line("GES event console. Type :help for commands and examples, :load <file> to add a program, or :quit to exit.", toError: true) }
-        let prompt = io.inputTerminal && io.outputTerminal && io.errorTerminal ? TerminalPrompt(io: io, color: options.color) : nil
+        let prompt = io.inputTerminal && io.outputTerminal && io.errorTerminal ? RunPrompt(io: io, color: options.color) : nil
         var success = true
         var lineNumber = 0
         while io.outputError == nil {
@@ -35,11 +35,11 @@ extension Tool {
                 continue
             }
             if command == ":list" && argument.isEmpty {
-                session.inventory.programs()
+                session.inventory.writePrograms()
                 continue
             }
             if command == ":handler" && argument.isEmpty {
-                session.inventory.registeredHandlers()
+                session.inventory.writeHandlers()
                 continue
             }
             if ![":edit", ":save", ":load", ":dump", ":source", ":unload", ":unloadAll", ":reload"].contains(command), command.hasPrefix(":"), command.dropFirst().allSatisfy({ $0 >= "a" && $0 <= "z" }) {
@@ -47,7 +47,7 @@ extension Tool {
                 success = false
                 continue
             }
-            var instance: GameEventScriptInstance?
+            var instance: GesProgramInstance?
             var path = "<interactive:\(lineNumber)>"
             do {
                 defer { instance?.detach() }
@@ -78,11 +78,11 @@ extension Tool {
                     continue
                 }
                 if command == ":dump" {
-                    try session.inventory.dump(argument, color: options.color)
+                    try session.inventory.writeDump(argument, color: options.color)
                     continue
                 }
                 if command == ":source" {
-                    try session.inventory.source(argument, color: options.color)
+                    try session.inventory.writeSource(argument, color: options.color)
                     continue
                 }
                 if command == ":load" {
@@ -92,7 +92,7 @@ extension Tool {
                     if !options.quiet { io.line("Loaded \(path); initialization completed. Handlers remain active.", toError: true) }
                     continue
                 }
-                let program = try GameEventScriptBuilder().addScript("on initialization {\n" + line + "\n}\n", sourceName: path).compile()
+                let program = try GesProgramBuilder().addScript("on initialization {\n" + line + "\n}\n", sourceName: path).compile()
                 let handlers = program.bindings.filter(isHandler)
                 guard handlers.count == 1, program.stringConstants[Int(handlers[0].name)] == "initialization" else {
                     io.line("error cli.interactiveInput: Enter handler-body statements, not additional handler declarations.", toError: true)

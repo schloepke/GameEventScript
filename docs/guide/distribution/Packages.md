@@ -28,10 +28,10 @@ versions retain their original package contents; icons are included starting wit
 | NuGet tools (since 0.3.0) | `GameEventScript.Tool`, `GameEventScript.Tool.Aot` (plus RID implementation packages) |
 | SwiftPM libraries | `GameEventScriptRuntime`, `GameEventScriptCompiler`, `GameEventScriptSwiftBridge`, `GameEventScriptSyntaxHighlighter` |
 
-SwiftPM also exposes the `ges` executable starting with 0.3.0.
+The root SwiftPM package exposes only libraries. The CLI uses its separate development package.
 
 Compiler and each native Bridge depend on their Runtime. An application can use
-Runtime alone. SyntaxHighlighter is optional and depends on no other GES module. Conformance stays in the repository for development and CI. The SwiftPM CLI product is optional and is not compiled when consuming only the libraries.
+Runtime alone. SyntaxHighlighter is optional and depends on no other GES module. Conformance stays in the repository for development and CI. CLI and terminal targets are not part of the root package.
 Homebrew and local installers remain available. See [standalone CLI downloads](Tools.md) for
 installation and release verification. Deferred distribution work is tracked in
 [BACKLOG.md](../../../BACKLOG.md).
@@ -131,8 +131,8 @@ not a claim of identical native spelling or a completed 1.0 release.
 
 | Reviewed workflow | C# | Swift | Decision |
 | --- | --- | --- | --- |
-| Compile source | `GameEventScriptBuilder.Create()` → `AddScript` → `Compile` | `GameEventScriptBuilder.create()` → `addScript` → `compile` | Keep source-in-memory builders, repeatable compilation and separate declarative external catalogs. |
-| Configure hosts | `GameEventScriptHost.CreateBuilder()` → `With…` → `Build` | `GameEventScriptHost.createBuilder()` → `with…` → `build` | Same configuration responsibilities, including clock, limits, randomness and registries; every build creates an independent host. |
+| Compile source | `new GesProgramBuilder()` → `AddScript` → `Compile` | `GesProgramBuilder()` → `addScript` → `compile` | Keep source-in-memory builders, repeatable compilation and separate declarative external catalogs. |
+| Configure hosts | `GameEventScriptHost.CreateBuilder()` → `With…` → `Build` | `GameEventScriptHost.makeBuilder()` → `with…` → `build` | Same configuration responsibilities, including clock, limits, randomness and registries; every build creates an independent host. |
 | Start and dispatch | `Load`, `Subscribe`, `Start`, `Receive`, `ExecuteFrame`, `RunToCompletion` | Corresponding lower-camel-case operations | Preserve the explicit initial loading phase, structured startup/execution results, later-instance results and delayed-work reporting. |
 | Precompiled programs | Runtime Reader/Writer/Validator/Dumper | Runtime Reader/Writer/Validator/Dumper | No Compiler or Bridge dependency is required for codecs or execution. |
 | Native integration | Interfaces, delegate adapters and reflection attributes | Protocols, closure adapters, macros and manual descriptors | Keep portable catalogs separate from executable registries; native conversions retain their strict guarantees. |
@@ -212,8 +212,7 @@ See [Host runtime](../../../specs/HostRuntime.md),
 
 The repository-root `Package.swift` is the public entry point. It declares four
 library products using the existing source directories; it does not depend on
-the sibling development packages or expose Conformance. Since 0.3.0 it also
-exposes the `ges` executable; library consumers build only their selected products.
+the sibling development packages or expose Conformance or the CLI.
 
 > **Since: 0.2.0 — root-package native tests**
 
@@ -237,7 +236,7 @@ but a Runtime-only dependency does not build or link Compiler or SwiftBridge.
 For a consuming Swift package, after the corresponding version has been released:
 
 ```swift
-platforms: [.macOS("10.15.4")],
+platforms: [.macOS("10.15")],
 dependencies: [
     .package(url: "https://github.com/schloepke/GameEventScript.git", from: "0.1.0")
 ],
@@ -254,8 +253,8 @@ These version numbers are examples, not a claim that they have been published.
 Use `import GameEventScriptRuntime` and optionally the Compiler/SwiftBridge imports.
 
 Swift 6.0 or newer is required. macOS is the currently CI-verified platform;
-other platform support must be verified before being advertised. The root package requires macOS 10.15.4 for CLI Foundation I/O; the local
-SwiftBridge package requires macOS 10.15 for its SwiftSyntax macro dependency. Consuming packages must declare this or a newer
+other platform support must be verified before being advertised. The root package and local
+SwiftBridge package require macOS 10.15 for the SwiftSyntax macro dependency. Consuming packages must declare this or a newer
 macOS target. This is a macOS deployment minimum, not an Apple-only restriction.
 The CLI/Conformance tools separately require macOS 10.15.4.
 

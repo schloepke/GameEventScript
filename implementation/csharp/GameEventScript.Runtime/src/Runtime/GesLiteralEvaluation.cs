@@ -3,16 +3,16 @@
 using System.Collections.Generic;
 using GameEventScript.Api;
 using GameEventScript.Runtime.Values;
-using GameEventScript.Runtime.VM;
-using static GameEventScript.Api.GameEventScriptBindingSegment;
+using GameEventScript.Runtime.Vm;
+using static GameEventScript.Api.GesBindingSegment;
 
 namespace GameEventScript.Runtime;
 // Parser-private nodes never escape into a public value or a Program.
-internal sealed record GesLiteralNode(string Type, string[] Labels, GesValue[] Arguments, GameEventScriptBinaryBindEntry? Constructor = null)
+internal sealed record GesLiteralNode(string Type, string[] Labels, GesValue[] Arguments, GesBindingSegment.Entry? Constructor = null)
 {
     internal GesValue Value => new()
     {
-        Kind = GameEventScriptBytecodeTypeKind.Custom,
+        Kind = GesBytecodeTypeKind.Custom,
         ObjectValue = this
     };
 }
@@ -22,11 +22,11 @@ internal sealed class GesLiteralEvaluation
     private sealed record Operation(GesLiteralNode Node, int[] Inputs);
     private readonly List<Operation> _operations = new();
     private readonly List<GesValue> _results = new();
-    private readonly GesVmState _state;
-    private readonly GameEventScriptContext _context;
+    private readonly GesVirtualMachine _state;
+    private readonly GesContext _context;
     private readonly ushort _destination;
     private int _next;
-    private GesLiteralEvaluation(GesValue root, GesVmState state, GameEventScriptContext context, ushort destination)
+    private GesLiteralEvaluation(GesValue root, GesVirtualMachine state, GesContext context, ushort destination)
     {
         _state = state;
         _context = context;
@@ -34,7 +34,7 @@ internal sealed class GesLiteralEvaluation
         Add(root);
     }
 
-    internal static void Start(GesValue root, GesVmState state, GameEventScriptContext context, ushort destination)
+    internal static void Start(GesValue root, GesVirtualMachine state, GesContext context, ushort destination)
     {
         if (!ContainsNode(root))
         {
@@ -71,9 +71,9 @@ internal sealed class GesLiteralEvaluation
         GesLiteralNode node;
         if (value.ObjectValue is GesLiteralNode literal)
             node = literal;
-        else if (value.ObjectValue is GesValue[] list && value.Kind == GameEventScriptBytecodeTypeKind.List)
+        else if (value.ObjectValue is GesValue[] list && value.Kind == GesBytecodeTypeKind.List)
             node = new("@list", [], list);
-        else if (value.ObjectValue is GesValueMap map && value.Kind == GameEventScriptBytecodeTypeKind.Map)
+        else if (value.ObjectValue is GesValueMap map && value.Kind == GesBytecodeTypeKind.Map)
         {
             var keys = new string[map.Length];
             var values = new GesValue[map.Length];
@@ -131,7 +131,7 @@ internal sealed class GesLiteralEvaluation
                     _state.StageValue(match < 0 ? default : args[match]);
                 }
 
-                if (_state.State == GesVmState.StateValue.Processing && _state.CallAddress(constructor.EntryAddress, _destination))
+                if (_state.State == GesVirtualMachine.StateValue.Processing && _state.CallAddress(constructor.EntryAddress, _destination))
                     _state.CallStack[_state.CallStackPointer - 1].LiteralContinuation = this;
                 return;
             }
@@ -163,7 +163,7 @@ internal sealed class GesLiteralEvaluation
             }
             else if (node.Type.StartsWith("@message:", System.StringComparison.Ordinal))
             {
-                var arguments = new GameEventScriptMessageArgument[args.Length];
+                var arguments = new GesMessageArgument[args.Length];
                 for (var i = 0; i < args.Length; i++)
                     arguments[i] = new(node.Labels[i], args[i]);
                 result = GesValue.GesMessage(GameEventScriptMessage.Create(node.Type.Substring(9), arguments));

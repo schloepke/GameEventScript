@@ -4,22 +4,22 @@
 extension GesParser {
     func bindingNames() throws -> [String] {
         var result = [try identifier()]
-        while match(",") {
+        while match(.comma) {
             newlines()
             result.append(try identifier())
         }
         return result
     }
 
-    var isCombinedSelector: Bool { [":cartesian", ":lockstep", ":zip", ":union", ":intersect", ":difference"].contains(current.syntaxText) }
+    var isCombinedSelector: Bool { current.kind == .selector && [":cartesian", ":lockstep", ":zip", ":union", ":intersect", ":difference"].contains(current.text) }
 
     var isPipelineSelector: Bool {
-        current.kind == "selector" && peek().syntaxText != "."
+        current.kind.isSelector && peek().kind != .dot
             && (isCombinedSelector
                 || [
                     ":entries", ":keys", ":values", ":filter", ":select", ":foreach", ":any", ":all", ":count", ":sum", ":average", ":min", ":max", ":highest", ":lowest", ":fold", ":reduce", ":map", ":first", ":last", ":single", ":choose", ":take",
                     ":drop", ":draw", ":shuffle", ":reverse", ":sort", ":distinct", ":group", ":order", ":contains", ":has", ":term", ":split",
-                ].contains(current.syntaxText))
+                ].contains(current.text))
     }
 
     func pipelineSteps(_ base: GesExpression?) throws -> GesExpression {
@@ -32,7 +32,7 @@ extension GesParser {
                 newlines()
                 var sources = result.map { [$0] } ?? []
                 sources.append(try expression())
-                while match(",") {
+                while match(.comma) {
                     newlines()
                     sources.append(try expression())
                 }
@@ -40,17 +40,22 @@ extension GesParser {
                 result = node(.combined(operation == "zip" ? "lockstep" : operation, sources), start)
                 result!.depth = (sources.map(\.depth).max() ?? 0) + 1
                 if result!.depth > 32 { throw failure("Expression nesting exceeded.", start, code: "parse.sourceNestingExceeded") }
-            } else if match(":split") {
+            } else if matchSelector(":split") {
                 guard let input = result else { throw failure("Selector requires a source.", start) }
                 newlines()
-                try expect("on")
+                try expect(.on)
                 newlines()
-                let whitespace = match("whitespace")
+                let whitespace = matchWord("whitespace")
                 let delimiter = whitespace ? node(.literal(.nothing), previous) : try expression()
-                result = try combined(.constructor(whitespace ? "__splitWhitespace" : "__split", whitespace ? [.init(label: "_", value: input)] : [.init(label: "_", value: input), .init(label: "_", value: delimiter)]), input)
+                result = try ranged(.constructor(whitespace ? "__splitWhitespace" : "__split", whitespace ? [.init(label: "_", value: input)] : [.init(label: "_", value: input), .init(label: "_", value: delimiter)]), input)
             } else {
                 guard let input = result else { throw failure("Selector requires a source.", start) }
-                result = try combined(.selector(input, selector()), input)
+                let selector = try selector()
+                result = try combined(.selector(input, selector), input)
+                // C# gives the object-pattern selector no range, which leaves the whole access without one.
+                if selector.operation == "objectMatch", let access = result {
+                    result = GesExpression(access.kind, GesAstOptimizer.noRange(access.location), depth: access.depth)
+                }
             }
             newlines()
         } while isPipelineSelector

@@ -27,21 +27,21 @@ def enum_values(text, name, swift=False):
 
 
 def main():
-    csharp = (CS / "GameEventScriptProgram.cs").read_text() + (CS / "GameEventScriptProgramFormat.cs").read_text()
-    swift = (SWIFT / "Bytecode.swift").read_text() + (SWIFT / "ProgramFormat.swift").read_text()
+    csharp = "".join((CS / name).read_text() for name in ("GesBytecode.cs", "GesBinaryFormat.cs", "GesProgramSegments.cs", "GesProgramFormat.cs"))
+    swift = (SWIFT / "Api/Program/Bytecode/Bytecode.swift").read_text() + (SWIFT / "Api/Program/Binary/ProgramFormat.swift").read_text()
     names = re.findall(r"public enum (\w+): (?:UInt\d+|Int),", swift)
     for name in names:
         expected, actual = enum_values(csharp, name), enum_values(swift, name, True)
         if not expected or expected != actual:
             raise RuntimeError(f"{name} identifier drift: C#={expected}; Swift={actual}")
-    printer = (CS / "GameEventScriptOpcodePrinter.cs").read_text()
+    printer = (CS / "GesOpcodePrinter.cs").read_text()
     expected = {
         lower(op): [lower(part.strip()) for part in parts.split(",") if part.strip()]
-        for op, parts in re.findall(r"GameEventScriptBytecodeOpCode\.(\w+) => \[([^\]]*)\]", printer)
+        for op, parts in re.findall(r"GesBytecodeOpCode\.(\w+) => \[([^\]]*)\]", printer)
     }
     actual = {
         op: re.findall(r"\.(\w+)", parts)
-        for op, parts in re.findall(r"case \.`?(\w+)`?:\s*\[([^\]]*)\]", (SWIFT / "BytecodeOperands.swift").read_text())
+        for op, parts in re.findall(r"case \.`?(\w+)`?:\s*\[([^\]]*)\]", (SWIFT / "Api/Program/Bytecode/BytecodeOperands.swift").read_text())
     }
     # Iterator operands depend on mode/output bits. Check both C# forms and
     # Swift's base operands here; executable binary fixtures check flag dispatch.
@@ -51,7 +51,7 @@ def main():
         "IteratorNext": [["targetRegister", "iteratorRegister", "jumpTarget"], ["targetRegisterList", "iteratorRegister", "jumpTarget"]],
     }
     for opcode, forms in iterator_forms.items():
-        line = printer.split("GameEventScriptBytecodeOpCode." + opcode + " =>", 1)[1].split("\n", 1)[0]
+        line = printer.split("GesBytecodeOpCode." + opcode + " =>", 1)[1].split("\n", 1)[0]
         found = [[lower(part.strip()) for part in form.split(",")] for form in re.findall(r"\[([^\]]*)\]", line)]
         if found != forms:
             raise RuntimeError(f"Changed dynamic iterator operands: {opcode}")
@@ -62,12 +62,12 @@ def main():
     # Pattern operand arity depends on the instruction payload. Verify the three
     # C# forms and the explicit Swift base plus CountAny/CountFace additions.
     for opcode in ("HasPattern", "TakePattern"):
-        block = printer.split("GameEventScriptBytecodeOpCode." + opcode + " =>", 1)[1].split(",\n\n", 1)[0]
+        block = printer.split("GesBytecodeOpCode." + opcode + " =>", 1)[1].split(",\n\n", 1)[0]
         forms = re.findall(r"\[([^\]]*)\]", block)[:3]
         if forms != ["TargetRegister, IteratorRegister, PatternKind, CountImmediate, FaceRegister", "TargetRegister, IteratorRegister, PatternKind, CountImmediate", "TargetRegister, IteratorRegister, PatternKind"]:
             raise RuntimeError(f"Changed dynamic pattern operands: {opcode}")
-    operands = (SWIFT / "BytecodeOperands.swift").read_text()
-    validator = (SWIFT / "ProgramValidator.swift").read_text()
+    operands = (SWIFT / "Api/Program/Bytecode/BytecodeOperands.swift").read_text()
+    validator = (SWIFT / "Api/Program/Validation/ProgramValidator.swift").read_text()
     for required in ("case .hasPattern, .takePattern: [.targetRegister, .iteratorRegister, .patternKind]",):
         if re.sub(r"\s+", "", required) not in re.sub(r"\s+", "", operands):
             raise RuntimeError("Swift pattern base operands changed")

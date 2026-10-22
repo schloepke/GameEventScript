@@ -65,7 +65,7 @@ internal static class RunConsole
                 continue;
             }
 
-            GameEventScriptInstance? instance = null;
+            GesProgramInstance? instance = null;
             string? activePath = null;
             try
             {
@@ -118,8 +118,8 @@ internal static class RunConsole
                 }
                 var sourceName = $"<interactive:{lineNumber}>";
                 var source = "on initialization {\n" + line + "\n}\n";
-                var program = GameEventScriptBuilder.Create().AddScript(source, sourceName).Compile();
-                var handlers = program.Bindings.Entries.Where(binding => binding.Kind is GameEventScriptBinaryBindKind.MessageHandler or GameEventScriptBinaryBindKind.MessageNameHandler).ToArray();
+                var program = new GesProgramBuilder().AddScript(source, sourceName).Compile();
+                var handlers = program.Bindings.Entries.Where(binding => binding.Kind is GesBinaryBindKind.MessageHandler or GesBinaryBindKind.MessageNameHandler).ToArray();
                 if (handlers.Length != 1 || program.StringConstants.Resolve(handlers[0].Name) != "initialization")
                 {
                     Console.Error.WriteLine("error cli.interactiveInput: Enter handler-body statements, not additional handler declarations.");
@@ -129,17 +129,17 @@ internal static class RunConsole
                 instance = session.Host.Load(program);
                 if (!session.Pump()) return false;
             }
-            catch (GameEventScriptCompileException exception)
+            catch (GesCompileException exception)
             {
                 foreach (var diagnostic in exception.Diagnostics) RunObserver.WriteDiagnostic(diagnostic, "compile");
                 success = false;
             }
-            catch (GameEventScriptDynamicLinkException exception)
+            catch (GesDynamicLinkException exception)
             {
                 RunObserver.WriteDiagnostic(exception.Diagnostic, "link");
                 success = false;
             }
-            catch (GameEventScriptProgramFormatException exception)
+            catch (GesProgramFormatException exception)
             {
                 RunObserver.WriteDiagnostic(exception.Diagnostic, activePath ?? "decode");
                 if (exception.ByteOffset is { } offset) Console.Error.WriteLine($"  byteOffset={offset}");

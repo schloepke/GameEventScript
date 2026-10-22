@@ -4,15 +4,15 @@
 import Foundation
 import GameEventScriptRuntime
 
-final class Receiver: GameEventScriptNativeMessageHandler {
+final class Receiver: GesNativeMessageHandler {
     var value: GesValue = .nothing
 
-    func handle(_ message: GameEventScriptMessage, context: GameEventScriptContext) throws { value = message.arguments[0] }
+    func handle(_ message: GameEventScriptMessage, context: GesContext) throws { value = message.arguments[0] }
 }
 
 let receiver = Receiver()
-let program = try GameEventScriptProgramReader.read(Array(Data(contentsOf: URL(fileURLWithPath: CommandLine.arguments[1]))))
-let host = try GameEventScriptHost.createBuilder().withRandomSeed(1).build()
+let program = try GameEventScriptProgram.read(Array(Data(contentsOf: URL(fileURLWithPath: CommandLine.arguments[1]))))
+let host = try GameEventScriptHost.makeBuilder().withRandomSeed(1).build()
 _ = try host.subscribeMessageName("Done", handler: receiver)
 _ = try host.load(program)
 let startup = try host.start()

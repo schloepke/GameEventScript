@@ -12,6 +12,8 @@ from xml.sax.saxutils import escape
 
 ROOT = Path(__file__).resolve().parent.parent
 OUTPUT = ROOT / "artifacts/website/examples"
+CHECK = object()
+FRAGMENTS = object()
 
 
 def blocks(name, language):
@@ -45,7 +47,7 @@ def csharp():
     bridge_examples = blocks(ROOT / "implementation/csharp/GameEventScript.CSharpBridge/README.md", "csharp")
     bridge_source = bridge_examples[0].replace(
         ".WithExternalTypeRegistry(registry)",
-        ".WithExternalTypeRegistry(registry)\n    .WithRegistry(GameEventScriptCSharpExtensions.CreateRegistry(typeof(CombatFunctions)))",
+        ".WithExternalTypeRegistry(registry)\n    .WithRegistry(GesBridgeExtensionRegistry.Create(typeof(CombatFunctions)))",
     )
     (directory / "Program.cs").write_text(bridge_source + "\n" + bridge_examples[1])
     run(["dotnet", "build", str(directory / "GuideExample.csproj"), "--configuration", "Release", "--nologo"])
@@ -54,16 +56,27 @@ def csharp():
 
     tool = ROOT / "implementation/csharp/GameEventScript.Tool/src/GameEventScript.Tool.csproj"
     run(["dotnet", "build", str(tool), "--configuration", "Release", "--nologo"])
-    expectations = ["Damage: 42", "42\n42", "Damage: 120", "Hello, player", "No player supplied", None, "160, 60", "Ready"]
+    # A string is the expected Main output. CHECK compiles definitions without Main.
+    # FRAGMENTS evaluates each `expression // result` line against its comment.
+    expectations = ["Damage: 42", "42\n42", "Damage: 120", "Hello, player", "No player supplied",
+                    "[20, 60, 40]\nTotal: 60", "160, 60", CHECK, "clubs 7\nclubs A\nhearts 7\nhearts A", CHECK,
+                    "Ready", FRAGMENTS]
     examples = blocks("Language.md", "ges")
     if len(examples) != len(expectations):
         raise RuntimeError("Update the expected outputs when adding language examples.")
+    ges = ["dotnet", "run", "--project", str(tool), "--configuration", "Release", "--no-build", "--"]
     for index, (example, expected) in enumerate(zip(examples, expectations)):
         source = OUTPUT / f"language-{index + 1}.ges"
+        if expected is CHECK:
+            source.write_text(example)
+            run(ges + ["check", str(source)])
+            continue
+        if expected is FRAGMENTS:
+            lines = [line.split("//", 1) for line in example.splitlines() if line.strip()]
+            example = "on Main(args) {\n" + "".join(f"    emit ConsoleOut({code.strip()})\n" for code, _ in lines) + "}\n"
+            expected = "\n".join(comment.strip().strip("'") for _, comment in lines)
         source.write_text(example)
-        actual = run(["dotnet", "run", "--project", str(tool), "--configuration", "Release", "--no-build", "--", "run", str(source), "--quiet"])
-        if expected is None:
-            expected = "[20, 60, 40]\nTotal: 60"
+        actual = run(ges + ["run", str(source), "--quiet"])
         if actual != expected:
             raise RuntimeError(f"Language example {index + 1}: expected {expected!r}, got {actual!r}")
     print(f"C# embedding, bridge annotations and {len(examples)} language examples passed.")

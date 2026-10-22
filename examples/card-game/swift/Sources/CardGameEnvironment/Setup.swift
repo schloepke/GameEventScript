@@ -33,8 +33,8 @@ extension Board {
         for value in try list(values) {
             try fields(value, allowed: ["id", "label", "position", "newRow", "layout", "visibility", "cards"])
             let rowFlag = field(value, "newRow")
-            guard rowFlag.kind == .nothing || rowFlag.kind == .boolean else { throw CardGameError("newRow must be Boolean") }
-            let newRow = rowFlag.kind == .boolean && rowFlag.asBoolean
+            guard rowFlag.valueKind == .nothing || rowFlag.valueKind == .boolean else { throw CardGameError("newRow must be Boolean") }
+            let newRow = rowFlag.valueKind == .boolean && rowFlag.asBoolean
             var position = try defaultTag(value, "position", owner == nil ? "center" : playerPosition)
             if owner == nil {
                 switch position {
@@ -63,7 +63,7 @@ extension Board {
             let visibility = try defaultTag(value, "visibility", owner == nil ? "public" : "owner")
             try addZone(id, owner: owner, position: position, layout: layout, visibility: visibility, label: text(field(value, "label")), row: row)
             let cards = field(value, "cards")
-            if cards.kind != .nothing {
+            if cards.valueKind != .nothing {
                 for card in try list(cards) { try addCard(zone: id, properties: card) }
             }
         }
@@ -71,7 +71,7 @@ extension Board {
 }
 
 private func fields(_ value: GesValue, allowed: Set<String>) throws {
-    guard let entries = value.mapEntries, entries.allSatisfy({ allowed.contains($0.key) }) else { throw CardGameError("Setup contains invalid or unknown fields") }
+    guard let entries = value.mapPairs, entries.allSatisfy({ allowed.contains($0.key) }) else { throw CardGameError("Setup contains invalid or unknown fields") }
 }
 
 private func list(_ value: GesValue) throws -> [GesValue] {
@@ -81,5 +81,5 @@ private func list(_ value: GesValue) throws -> [GesValue] {
 
 private func defaultTag(_ value: GesValue, _ key: String, _ fallback: String) throws -> String {
     let value = field(value, key)
-    return value.kind == .nothing ? fallback : try tag(value)
+    return value.valueKind == .nothing ? fallback : try tag(value)
 }

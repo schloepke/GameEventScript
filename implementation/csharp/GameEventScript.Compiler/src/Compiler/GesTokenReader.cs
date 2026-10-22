@@ -38,25 +38,16 @@ internal sealed class GesTokenReader
     {
         var consumed = _current;
         _previous = consumed;
-        if (_current.Kind != GesTokenKind.EndOfFile)
-        {
-            _current = TakeNextToken();
-        }
+        if (_current.Kind != GesTokenKind.EndOfFile) _current = TakeNextToken();
 
         return consumed;
     }
 
     public GesToken Peek(int offset)
     {
-        if (offset <= 0)
-        {
-            return _current;
-        }
+        if (offset <= 0) return _current;
 
-        while (_lookahead.Count < offset)
-        {
-            _lookahead.Add(ReadToken());
-        }
+        while (_lookahead.Count < offset) _lookahead.Add(ReadToken());
 
         return _lookahead[offset - 1];
     }
@@ -70,18 +61,12 @@ internal sealed class GesTokenReader
             var token = Peek(lookahead);
             if (token.Kind != GesTokenKind.NewLine)
             {
-                if (seen == offset)
-                {
-                    return token;
-                }
+                if (seen == offset) return token;
 
                 seen++;
             }
 
-            if (token.Kind == GesTokenKind.EndOfFile)
-            {
-                return token;
-            }
+            if (token.Kind == GesTokenKind.EndOfFile) return token;
 
             lookahead++;
         }
@@ -89,10 +74,7 @@ internal sealed class GesTokenReader
 
     private GesToken TakeNextToken()
     {
-        if (_lookahead.Count == 0)
-        {
-            return ReadToken();
-        }
+        if (_lookahead.Count == 0) return ReadToken();
 
         var token = _lookahead[0];
         _lookahead.RemoveAt(0);
@@ -101,10 +83,7 @@ internal sealed class GesTokenReader
 
     private GesToken ReadToken()
     {
-        if (_hasEofToken)
-        {
-            return _eofToken;
-        }
+        if (_hasEofToken) return _eofToken;
 
         var token = _lexer.ReadNextToken();
         if (token.Kind == GesTokenKind.EndOfFile)

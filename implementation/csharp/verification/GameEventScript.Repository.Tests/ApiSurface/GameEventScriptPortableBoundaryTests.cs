@@ -17,7 +17,7 @@ public sealed class GameEventScriptPortableBoundaryTests
     /// <param name="assemblyType">A public type identifying the library to inspect.</param>
     [TestMethod]
     [DataRow(typeof(GameEventScriptProgram))]
-    [DataRow(typeof(GameEventScriptBuilder))]
+    [DataRow(typeof(GesProgramBuilder))]
     public void PortableAssemblyHasNoFileSystemDependencies(Type assemblyType)
     {
         using var stream = File.OpenRead(assemblyType.Assembly.Location);
@@ -42,7 +42,7 @@ public sealed class GameEventScriptPortableBoundaryTests
     /// <param name="assemblyType">A public type identifying the library to inspect.</param>
     [TestMethod]
     [DataRow(typeof(GameEventScriptProgram))]
-    [DataRow(typeof(GameEventScriptBuilder))]
+    [DataRow(typeof(GesProgramBuilder))]
     public void PortableAssemblyHasNoAmbientClockOrIdentifierDependencies(Type assemblyType)
     {
         using var stream = File.OpenRead(assemblyType.Assembly.Location);
@@ -66,7 +66,7 @@ public sealed class GameEventScriptPortableBoundaryTests
     /// <param name="assemblyType">A public type identifying the library to inspect.</param>
     [TestMethod]
     [DataRow(typeof(GameEventScriptProgram))]
-    [DataRow(typeof(GameEventScriptBuilder))]
+    [DataRow(typeof(GesProgramBuilder))]
     public void PortablePublicInputsDoNotExposeUnorderedDictionaryAdapters(Type assemblyType)
     {
         var violations = assemblyType.Assembly.GetExportedTypes()

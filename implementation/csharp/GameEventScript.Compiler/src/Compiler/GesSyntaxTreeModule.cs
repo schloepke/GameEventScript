@@ -8,7 +8,7 @@ using GameEventScript.Runtime;
 
 namespace GameEventScript.Compiler;
 
-internal enum GameEventScriptCallableKind
+internal enum GesCallableKind
 {
     PredicateCall,
     FunctionCall
@@ -17,10 +17,10 @@ internal enum GameEventScriptCallableKind
 internal sealed class GesSyntaxTreeModule
 {
     internal GesSyntaxTreeModule(string moduleName,
-        IReadOnlyDictionary<string, ExpressionNode> constants,
-        IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions, IReadOnlyDictionary<string, GesCallableDefinition> callables,
-        IReadOnlyDictionary<string, IReadOnlyList<EventHandlerNode>> handlers,
-        IGameEventScriptExternalTypeCatalog? externalTypeDefinitions = null,
+        IReadOnlyDictionary<string, GesExpressionNode> constants,
+        IReadOnlyDictionary<string, GesTypeDefinitionNode> typeDefinitions, IReadOnlyDictionary<string, GesCallableDefinition> callables,
+        IReadOnlyDictionary<string, IReadOnlyList<GesEventHandlerNode>> handlers,
+        IGesExternalTypeCatalog? externalTypeDefinitions = null,
         IReadOnlyList<GesSourceDocument>? sources = null)
     {
         ModuleName = moduleName ?? throw new ArgumentNullException(nameof(moduleName));
@@ -28,32 +28,32 @@ internal sealed class GesSyntaxTreeModule
         TypeDefinitions = typeDefinitions ?? throw new ArgumentNullException(nameof(typeDefinitions));
         Callables = callables ?? throw new ArgumentNullException(nameof(callables));
         Handlers = handlers ?? throw new ArgumentNullException(nameof(handlers));
-        ExternalTypeDefinitions = externalTypeDefinitions ?? GameEventScriptEmptyExternalTypeCatalog.Instance;
+        ExternalTypeDefinitions = externalTypeDefinitions ?? GesEmptyExternalTypeCatalog.Instance;
         Sources = sources ?? [];
     }
 
     internal string ModuleName { get; }
 
-    internal IReadOnlyDictionary<string, ExpressionNode> Constants { get; }
+    internal IReadOnlyDictionary<string, GesExpressionNode> Constants { get; }
 
-    internal IReadOnlyDictionary<string, TypeDefinitionNode> TypeDefinitions { get; }
+    internal IReadOnlyDictionary<string, GesTypeDefinitionNode> TypeDefinitions { get; }
 
-    internal IGameEventScriptExternalTypeCatalog ExternalTypeDefinitions { get; }
+    internal IGesExternalTypeCatalog ExternalTypeDefinitions { get; }
 
     internal IReadOnlyDictionary<string, GesCallableDefinition> Callables { get; }
 
-    internal IReadOnlyDictionary<string, IReadOnlyList<EventHandlerNode>> Handlers { get; }
+    internal IReadOnlyDictionary<string, IReadOnlyList<GesEventHandlerNode>> Handlers { get; }
 
     internal IReadOnlyList<GesSourceDocument> Sources { get; }
 }
 
 internal sealed record GesSourceDocument(uint SourceId, string SourceName, string Text);
 
-internal sealed class GesCallableDefinition(string name, IReadOnlyList<ParameterNode> parameterList, ExpressionNode expression, GameEventScriptCallableKind kind, GameEventScriptSourceLocation? sourceRange = null)
+internal sealed class GesCallableDefinition(string name, IReadOnlyList<GesParameterNode> parameterList, GesExpressionNode expression, GesCallableKind kind, GesSourceLocation? sourceRange = null)
 {
     public string Name { get; } = name ?? throw new ArgumentNullException(nameof(name));
 
-    public IReadOnlyList<ParameterNode> ParameterList { get; } = parameterList ?? throw new ArgumentNullException(nameof(parameterList));
+    public IReadOnlyList<GesParameterNode> ParameterList { get; } = parameterList ?? throw new ArgumentNullException(nameof(parameterList));
 
     public IReadOnlyList<string> Parameters { get; } = GesSyntaxTreeNodeLists.ToParameterNames(parameterList);
 
@@ -61,31 +61,30 @@ internal sealed class GesCallableDefinition(string name, IReadOnlyList<Parameter
 
     public string SignatureId { get; } = GesCallableSignatures.Create(name, parameterList);
 
-    public ExpressionNode Expression { get; } = expression ?? throw new ArgumentNullException(nameof(expression));
+    public GesExpressionNode Expression { get; } = expression ?? throw new ArgumentNullException(nameof(expression));
 
-    public GameEventScriptCallableKind Kind { get; } = kind;
+    public GesCallableKind Kind { get; } = kind;
 
-    public GameEventScriptSourceLocation? SourceRange { get; } = sourceRange;
+    public GesSourceLocation? SourceRange { get; } = sourceRange;
 }
 
 internal static class GesCallableSignatures
 {
-    public static string Create(string name, IReadOnlyList<ParameterNode> parameters)
+    public static string Create(string name, IReadOnlyList<GesParameterNode> parameters)
     {
         var labels = new string[parameters.Count];
         for (var index = 0; index < labels.Length; index++) labels[index] = parameters[index].SignatureLabel;
         return Create(name, labels);
     }
 
-    public static string Create(string name, IReadOnlyList<ArgumentNode> arguments)
+    public static string Create(string name, IReadOnlyList<GesArgumentNode> arguments)
     {
         var labels = new string[arguments.Count];
         for (var index = 0; index < labels.Length; index++) labels[index] = arguments[index].Name;
         return Create(name, labels);
     }
 
-    public static string Create(string name, IReadOnlyList<string> labels)
-        => name + "(" + string.Join(",", labels) + ")";
+    public static string Create(string name, IReadOnlyList<string> labels) => name + "(" + string.Join(",", labels) + ")";
 
     public static bool HasName(IReadOnlyDictionary<string, GesCallableDefinition> callables, string name)
     {
@@ -94,7 +93,7 @@ internal static class GesCallableSignatures
         return false;
     }
 
-    public static GesCallableDefinition? Resolve(IReadOnlyDictionary<string, GesCallableDefinition> callables, CallExpressionNode call)
+    public static GesCallableDefinition? Resolve(IReadOnlyDictionary<string, GesCallableDefinition> callables, GesCallExpressionNode call)
     {
         callables.TryGetValue(Create(call.Name, call.ArgumentList.Arguments), out var result);
         return result;
@@ -105,7 +104,7 @@ internal static class GesCallableSignatures
         GesCallableDefinition? result = null;
         foreach (var callable in callables.Values)
         {
-            if (callable.Kind != GameEventScriptCallableKind.PredicateCall || callable.Parameters.Count != parameterCount || !string.Equals(callable.Name, name, StringComparison.Ordinal)) continue;
+            if (callable.Kind != GesCallableKind.PredicateCall || callable.Parameters.Count != parameterCount || !string.Equals(callable.Name, name, StringComparison.Ordinal)) continue;
             if (result is not null) return null;
             result = callable;
         }

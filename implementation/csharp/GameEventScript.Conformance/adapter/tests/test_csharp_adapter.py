@@ -381,9 +381,12 @@ class AdapterTests(unittest.TestCase):
                                  '--adapter', *self.command], capture_output=True, text=True, timeout=30)
         self.assertEqual(3, result.returncode, result.stderr)
         report = json.loads(result.stdout)
+        # Every supported case passes; the measured performance workloads are skipped without a profile. The corpus
+        # counts themselves are pinned by the runner's own tests.
+        corpus = read_corpus(sorted((ROOT / 'conformance/suites').rglob('*.md')))
         self.assertEqual(len(self.cases), report['summary']['passed'])
-        self.assertEqual(31, report['summary']['skipped'])
-        self.assertEqual(1956, report['summary']['total'])
+        self.assertEqual(sum(case.kind == 'performance' for case in corpus), report['summary']['skipped'])
+        self.assertEqual(len(corpus), report['summary']['total'])
 
 
 if __name__ == '__main__':

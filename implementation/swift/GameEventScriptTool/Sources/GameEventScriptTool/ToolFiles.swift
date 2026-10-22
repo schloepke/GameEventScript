@@ -48,7 +48,7 @@ enum ToolFiles {
     }
 
     static func compile(_ paths: [String], debug: Bool = true) throws -> GameEventScriptProgram {
-        let builder = GameEventScriptBuilder().withDebugInfo(debug ? .all : .none)
+        let builder = GesProgramBuilder().withDebugInfo(debug ? .all : .none)
         for path in paths { builder.addScript(try source(path), sourceName: path) }
         return try builder.compile()
     }
@@ -56,7 +56,7 @@ enum ToolFiles {
     static func isBinary(_ path: String) -> Bool { (path as NSString).pathExtension.lowercased() == "gesb" }
 
     static func read(_ path: String) throws -> GameEventScriptProgram {
-        if isBinary(path) { return try GameEventScriptProgramReader.read(Array(Data(contentsOf: URL(fileURLWithPath: path)))) }
+        if isBinary(path) { return try GameEventScriptProgram.read(Array(Data(contentsOf: URL(fileURLWithPath: path)))) }
         return try compile([path])
     }
 

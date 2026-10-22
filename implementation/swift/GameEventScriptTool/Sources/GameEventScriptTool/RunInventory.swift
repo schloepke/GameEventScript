@@ -5,19 +5,19 @@ import Foundation
 import GameEventScriptRuntime
 
 final class RunInventory {
-    struct Entry {
+    struct LoadedProgram {
         let id: Int
-        let instance: GameEventScriptInstance
+        let instance: GesProgramInstance
         let paths: [String]
     }
 
     let workspace: RunWorkspace
     let host: GameEventScriptHost
     let io: ToolIO
-    private var entries: [Entry] = []
-    private var native: [(String, GameEventScriptSubscription)] = []
+    private var entries: [LoadedProgram] = []
+    private var native: [(String, GesSubscription)] = []
     private(set) var nextID: Int
-    var active: [Entry] { entries.filter { $0.instance.isAttached } }
+    var activePrograms: [LoadedProgram] { entries.filter { $0.instance.isAttached } }
 
     init(host: GameEventScriptHost, io: ToolIO, workspace: RunWorkspace, nextID: Int = 1) {
         self.workspace = workspace
@@ -26,54 +26,54 @@ final class RunInventory {
         self.nextID = nextID
     }
 
-    @discardableResult func load(_ program: GameEventScriptProgram, paths: [String], id: Int? = nil) throws -> GameEventScriptInstance {
+    @discardableResult func load(_ program: GameEventScriptProgram, paths: [String], id: Int? = nil) throws -> GesProgramInstance {
         let instance = try host.load(program)
         let assignedID = id ?? nextID
-        entries.append(Entry(id: assignedID, instance: instance, paths: paths))
+        entries.append(LoadedProgram(id: assignedID, instance: instance, paths: paths))
         nextID = max(nextID, assignedID + 1)
         return instance
     }
 
     func unload(_ selector: String) throws {
-        if let id = Int(selector.hasPrefix("@") ? String(selector.dropFirst()) : selector), workspace.drafts[id] != nil, !active.contains(where: { $0.id == id }) {
+        if let id = Int(selector.hasPrefix("@") ? String(selector.dropFirst()) : selector), workspace.drafts[id] != nil, !activePrograms.contains(where: { $0.id == id }) {
             try removeDraft(selector)
             return
         }
-        let entry = try select(selector, command: ":unload")
+        let entry = try selectProgram(selector, command: ":unload")
         try removeDraft(selector)
         entry.instance.detach()
         entries.removeAll { $0.id == entry.id }
     }
 
     @discardableResult func unloadAll() -> Int {
-        let count = active.count
+        let count = activePrograms.count
         for entry in entries { entry.instance.detach() }
         entries.removeAll()
         return count
     }
 
-    func subscribe(_ name: String, handler: any GameEventScriptNativeMessageHandler) throws { native.append((name, try host.subscribeMessageName(name, handler: handler))) }
+    func subscribeMessageName(_ name: String, handler: any GesNativeMessageHandler) throws { native.append((name, try host.subscribeMessageName(name, handler: handler))) }
 
-    func handlers(_ program: GameEventScriptProgram) -> [GameEventScriptBinding] { program.bindings.filter { isHandler($0) && program.stringConstants[Int($0.name)] != "initialization" } }
+    func handlers(_ program: GameEventScriptProgram) -> [GesBindingSegment.Entry] { program.bindings.filter { isHandler($0) && program.stringConstants[Int($0.name)] != "initialization" } }
 
-    func programs() {
+    func writePrograms() {
         io.line(toError: true)
-        io.line("Loaded programs (\(active.count)):", toError: true)
-        for entry in active {
+        io.line("Loaded programs (\(activePrograms.count)):", toError: true)
+        for entry in activePrograms {
             let p = entry.instance.program
             io.line("  \(entry.id)  \(entry.id == 0 ? "scratch [no file]" : p.moduleName)  version=\(p.programVersion)  handlers=\(handlers(p).count)\(draftStatus(entry.id))", toError: true)
             io.line("      files: " + entry.paths.map(quoted).joined(separator: ", "), toError: true)
         }
-        for draft in workspace.drafts.values.sorted(by: { $0.id < $1.id }) where !active.contains(where: { $0.id == draft.id }) {
+        for draft in workspace.drafts.values.sorted(by: { $0.id < $1.id }) where !activePrograms.contains(where: { $0.id == draft.id }) {
             io.line("  \(draft.id)  \(draft.id == 0 ? "scratch [no file]" : draft.paths.joined(separator: ", "))\(draftStatus(draft.id))", toError: true)
         }
-        if active.isEmpty && workspace.drafts.isEmpty { io.line("  No programs loaded. Use :load <file>.", toError: true) }
+        if activePrograms.isEmpty && workspace.drafts.isEmpty { io.line("  No programs loaded. Use :load <file>.", toError: true) }
         io.line(toError: true)
     }
 
-    func registeredHandlers() {
+    func writeHandlers() {
         var lines = native.filter { $0.1.isSubscribed }.map { "  native  \($0.0)(...) [name-only]" }
-        for entry in active {
+        for entry in activePrograms {
             let p = entry.instance.program
 
             func tags(_ prefix: String, _ values: [UInt16]) -> String { values.isEmpty ? "" : prefix + values.map { "#" + p.stringConstants[Int($0)] }.joined(separator: ", ") }
@@ -92,7 +92,7 @@ final class RunInventory {
 
     func findDraft(_ selector: String) throws -> RunWorkspace.Draft? {
         if let id = Int(selector.hasPrefix("@") ? String(selector.dropFirst()) : selector) { return workspace.drafts[id] }
-        return try workspace.drafts[select(selector, command: ":source").id]
+        return try workspace.drafts[selectProgram(selector, command: ":source").id]
     }
 
     private func draftStatus(_ id: Int) -> String {
@@ -103,7 +103,7 @@ final class RunInventory {
     func promoteScratch(_ path: String) -> Int {
         let id = nextID
         nextID += 1
-        if let index = entries.firstIndex(where: { $0.id == 0 }) { entries[index] = Entry(id: id, instance: entries[index].instance, paths: [path]) }
+        if let index = entries.firstIndex(where: { $0.id == 0 }) { entries[index] = LoadedProgram(id: id, instance: entries[index].instance, paths: [path]) }
         return id
     }
 
@@ -113,49 +113,49 @@ final class RunInventory {
         if let draft { workspace.drafts.removeValue(forKey: draft.id) }
     }
 
-    func select(_ selector: String, command: String) throws -> Entry {
+    func selectProgram(_ selector: String, command: String) throws -> LoadedProgram {
         guard !selector.isEmpty, !selector.contains(where: \.isWhitespace) else { throw ToolError.usage("Specify one module name or program ID after \(command). Use :list.") }
-        let matches: [Entry]
+        let matches: [LoadedProgram]
         if selector.hasPrefix("@") || RunOptions.integerSpelling(selector, signed: false) {
             let value = selector.hasPrefix("@") ? String(selector.dropFirst()) : selector
             guard RunOptions.integerSpelling(value, signed: false), let id = Int(value), id >= 0 else { throw ToolError.usage("A program ID must be a positive integer, for example \(command) 1.") }
-            matches = active.filter { $0.id == id }
+            matches = activePrograms.filter { $0.id == id }
         } else {
-            matches = active.filter { GesText.scalarEqual($0.instance.program.moduleName, selector) }
+            matches = activePrograms.filter { scalarEqual($0.instance.program.moduleName, selector) }
         }
         guard !matches.isEmpty else { throw ToolError.usage("No loaded program matches '\(selector)'. Use :list.") }
         guard matches.count == 1 else { throw ToolError.usage("Module '\(selector)' is loaded more than once. Use \(command) with one of: " + matches.map { "\($0.id)" }.joined(separator: ", ") + ".") }
         return matches[0]
     }
 
-    func dump(_ selector: String, color: Bool) throws {
+    func writeDump(_ selector: String, color: Bool) throws {
         let selector = RunWorkspace.isScratch(selector) ? "0" : selector
         let draft = try findDraft(selector)
         if selector == "0", draft == nil { throw ToolError.usage("No scratch found. Use :edit to create one.") }
         if let draft, draft.applied == nil { throw ToolError.usage("No successful compile is available for this draft.") }
         if draft?.pending == true { io.line("Draft differs from the last successful compile; showing the previous compiled program.", toError: true) }
-        let p = try select(selector, command: ":dump").instance.program
-        var text = GameEventScriptProgramDumper.dump(p)
-        if io.errorTerminal { text = TextDisplay.expandTabs(text) }
+        let p = try selectProgram(selector, command: ":dump").instance.program
+        var text = p.dump()
+        if io.errorTerminal { text = ToolTextDisplay.expandTabs(text) }
         io.line(toError: true)
-        io.write(color ? Highlighting().renderAssembly(text) : text, toError: true)
+        io.write(color ? RunHighlighting().renderAssembly(text) : text, toError: true)
         io.line(toError: true)
     }
 
-    func source(_ selector: String, color: Bool) throws {
+    func writeSource(_ selector: String, color: Bool) throws {
         let selector = RunWorkspace.isScratch(selector) ? "0" : selector
         let draft = try findDraft(selector)
         if selector == "0", draft == nil { throw ToolError.usage("No scratch found. Use :edit to create one.") }
         if let draft {
             for (path, source) in zip(draft.paths, draft.text) {
                 let header = "// Source: " + quoted(path)
-                io.line(color ? Highlighting.paint(header, 90) : header, toError: true)
-                let text = io.errorTerminal ? TextDisplay.expandTabs(source) : source
-                io.line(color ? Highlighting().render(text) : text, toError: true)
+                io.line(color ? RunHighlighting.paint(header, 90) : header, toError: true)
+                let text = io.errorTerminal ? ToolTextDisplay.expandTabs(source) : source
+                io.line(color ? RunHighlighting().render(text) : text, toError: true)
             }
             return
         }
-        let entry = try select(selector, command: ":source")
+        let entry = try selectProgram(selector, command: ":source")
         io.line(toError: true)
         guard let sources = entry.instance.program.sourceArchive, !sources.isEmpty else {
             io.line("No embedded sources available for \(entry.id) (\(entry.instance.program.moduleName)). Compile with source archive/debug information to include them.", toError: true)
@@ -164,10 +164,10 @@ final class RunInventory {
         }
         for source in sources {
             let header = "// Source: " + quoted(source.sourceName)
-            io.line(color ? Highlighting.paint(header, 90) : header, toError: true)
+            io.line(color ? RunHighlighting.paint(header, 90) : header, toError: true)
             var text = source.text
-            if io.errorTerminal { text = TextDisplay.expandTabs(text) }
-            io.write(color ? Highlighting().render(text) : text, toError: true)
+            if io.errorTerminal { text = ToolTextDisplay.expandTabs(text) }
+            io.write(color ? RunHighlighting().render(text) : text, toError: true)
             if text.utf8.last != 10 && text.utf8.last != 13 { io.line(toError: true) }
             io.line(toError: true)
         }

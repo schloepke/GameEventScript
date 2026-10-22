@@ -4,8 +4,8 @@
 @_spi(Compiler) import GameEventScriptRuntime
 
 extension GesCompiler {
-    func assemblyFailure(_ location: GameEventScriptSourceLocation, _ message: String, _ symbol: String? = nil) -> GameEventScriptCompileError {
-        error("compile.invalidAssembly", location, symbol: symbol, phase: .compile, message: message)
+    func assemblyFailure(_ location: GesSourceLocation, _ message: String, _ symbol: String? = nil) -> GesCompileError {
+        compileError("compile.invalidAssembly", location, symbol: symbol, phase: .compile, message: message)
     }
 
     func assemblyName(_ expression: GesExpression) throws -> String {
@@ -14,7 +14,7 @@ extension GesCompiler {
     }
 
     func assemblyText(_ expression: GesExpression) throws -> String {
-        guard case .literal(let value) = expression.kind, value.kind == .text || value.kind == .tag, let text = value.textValue else { throw assemblyFailure(expression.location, "Expected literal text or tag.") }
+        guard case .literal(let value) = expression.kind, value.valueKind == .text || value.valueKind == .tag, let text = value.textValue else { throw assemblyFailure(expression.location, "Expected literal text or tag.") }
         return text
     }
 
@@ -26,13 +26,13 @@ extension GesCompiler {
     }
 
     func assemblyNumber(_ expression: GesExpression) throws -> Double {
-        guard case .literal(let value) = expression.kind, !value.hasUnit, value.kind == .integer || value.kind == .float else { throw assemblyFailure(expression.location, "Expected a numeric literal.") }
+        guard case .literal(let value) = expression.kind, !value.hasUnit, value.valueKind == .integer || value.valueKind == .float else { throw assemblyFailure(expression.location, "Expected a numeric literal.") }
         return value.asNumber
     }
 
     func assemblyScalar(_ expression: GesExpression) -> Bool {
         guard case .literal(let value) = expression.kind else { return false }
-        return [.nothing, .boolean, .integer, .float, .percentage, .text, .tag].contains(value.kind)
+        return [.nothing, .boolean, .integer, .float, .percentage, .text, .tag].contains(value.valueKind)
     }
 
     func assembly(_ block: GesAssembly, _ r: GesRoutine, _ outer: GesScope, destination: Int? = nil) throws {
@@ -49,7 +49,10 @@ extension GesCompiler {
         for declaration in block.declarations {
             if !writable.insert(declaration.name).inserted || outer.get(declaration.name) != nil { throw assemblyFailure(block.location, "Assembly binding shadows an existing binding.", declaration.name) }
             if declaration.export { outputs.insert(declaration.name) } else { locals.insert(declaration.name) }
-            scope.values[declaration.name] = r.local()
+            let register = r.local()
+            scope.values[declaration.name] = register
+            // A declared assembly register is a named local, as C# context.Declare makes it.
+            r.symbols.append((declaration.name, register, false))
         }
         var labels: [String: Int] = [:]
         for (index, line) in block.lines.enumerated() where line.label {
@@ -78,7 +81,7 @@ extension GesCompiler {
                     let reads = signature[index] == "e" ? try assemblySymbolicReads(operand, handlerTarget: line.name == "BindHandler") : [operand]
                     for read in reads {
                         if case .name(let name) = read.kind {
-                            if scope.get(name) == nil { throw error("compile.unresolvedSymbol", read.location, symbol: name, phase: .compile) }
+                            if scope.get(name) == nil { throw compileError("compile.unresolvedSymbol", read.location, symbol: name, phase: .compile) }
                         } else if !assemblyScalar(read) {
                             throw assemblyFailure(read.location, "Only scalar literals and names are register operands.")
                         }
@@ -102,12 +105,13 @@ extension GesCompiler {
         }
         try assemblyFlow(block, signatures, labels, writable, outputs, locals)
         r.hasAssembly = true
-        var addresses: [String: Int] = [:]
+        // Plan labels by assembly label name; jumps may refer to labels defined later, so patches resolve after the block.
+        var planLabels: [String: Int] = [:]
         var patches: [(Int, String)] = []
         for (index, line) in block.lines.enumerated() {
             r.location = line.location
             if line.label {
-                addresses[line.name] = r.code.count
+                planLabels[line.name] = r.mark()
                 continue
             }
             var registers = [Int](repeating: 0, count: line.operands.count)
@@ -131,11 +135,11 @@ extension GesCompiler {
                 var value = 0
                 switch kind {
                 case "w", "r": value = registers[operandIndex]
-                case "l": patches.append((r.code.count, try assemblyName(operand)))
+                case "l": patches.append((r.items.count, try assemblyName(operand)))
                 case "i": payload = UInt64(bitPattern: try assemblyInteger(operand))
                 case "f": payload = try assemblyNumber(operand).bitPattern
                 case "s", "u": value = Int(try assemblyInteger(operand))
-                case "t": value = text(try assemblyText(operand))
+                case "t": value = builder.text(try assemblyText(operand))
                 default: break
                 }
                 if slots[operandIndex] < 7 { fields[slots[operandIndex]] = UInt16(truncatingIfNeeded: value) }
@@ -143,7 +147,7 @@ extension GesCompiler {
             let packed = UInt64(fields[3]) | UInt64(fields[4]) << 16 | UInt64(fields[5]) << 32 | UInt64(fields[6]) << 48
             r.emit(op, Int(fields[0]), Int(fields[1]), Int(fields[2]), payload: payload ?? packed)
         }
-        for (instruction, label) in patches { r.patch(instruction, target: addresses[label]!) }
+        for (instruction, label) in patches { r.patch(instruction, label: planLabels[label]!) }
         for declaration in block.declarations where declaration.export { outer.values[declaration.name] = scope.values[declaration.name] }
     }
 
@@ -258,7 +262,7 @@ extension GesCompiler {
     }
 
     func assemblyBooleanOperand(_ operand: GesExpression, _ state: [String: String]) -> Bool {
-        if case .literal(let value) = operand.kind { return value.kind == .nothing || value.kind == .boolean }
+        if case .literal(let value) = operand.kind { return value.valueKind == .nothing || value.valueKind == .boolean }
         if case .name(let name) = operand.kind { return state[name] == "boolean" }
         return false
     }
@@ -267,7 +271,7 @@ extension GesCompiler {
         if ["IteratorCreate", "IteratorCreateOrJump", "CreateRangeIterator", "CreateRangeIteratorWithStep", "CreateRangeIteratorShort"].contains(line.name) { return "iterator" }
         if line.name.hasSuffix("BuilderCreate") { return String(line.name.dropLast(6)) }
         if line.name == "Cast", case .literal(let type) = line.operands[2].kind, ["boolean", "nothing"].contains(type.textValue?.lowercased() ?? "") { return "boolean" }
-        if line.name == "Call", case .call(let name, let args) = line.operands[1].kind, definitions[signature(name, args.map(\.label))]?.kind == "predicate" { return "boolean" }
+        if line.name == "Call", case .call(let name, let args) = line.operands[1].kind, definitions[callableSignature(name, args.map(\.label))]?.kind == "predicate" { return "boolean" }
         if line.name == "Move" {
             if assemblyBooleanOperand(line.operands[1], state) { return "boolean" }
             if case .name(let name) = line.operands[1].kind { return state[name] ?? "value" }

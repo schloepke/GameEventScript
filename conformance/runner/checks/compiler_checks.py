@@ -93,6 +93,14 @@ def expectation(case):
         if case.expected is not None or case.assembler is None:
             raise InvalidDocument('Invalid snapshot expectation')
         return
+    if case.kind == 'compileError' and 'errors' in case.expected:
+        # The complete ordered diagnostic list: one constraint per reported diagnostic.
+        closed(case.expected, {'gesBlock', 'errors'}, 'compiler expectation')
+        if case.assembler is not None or not isinstance(case.expected['errors'], list) or not case.expected['errors']:
+            raise InvalidDocument('Invalid ordered diagnostic expectation')
+        for item in case.expected['errors']:
+            diagnostic(item, expectation=True)
+        return
     key = {'compileError': 'error', 'bytecode': 'opcodes', 'compileMetadata': 'metadata'}[case.kind]
     closed(case.expected, {'gesBlock', key}, 'compiler expectation')
     if key not in case.expected or case.assembler is not None:
@@ -139,8 +147,16 @@ def compare(case, observed):
     if status == 'error':
         return 'error', []
     if case.kind == 'compileError':
+        def matches(expected, item):
+            return all(exact(v, item.get(k)) if v is None else k in item and exact(v, item[k]) for k, v in expected.items())
+
+        if 'errors' in case.expected:
+            expected = case.expected['errors']
+            if status == 'compileError' and len(expected) == len(diagnostics) and all(matches(e, item) for e, item in zip(expected, diagnostics)):
+                return 'passed', []
+            return 'failed', [{'path': '/errors', 'expected': expected, 'actual': diagnostics}]
         expected = case.expected['error']
-        if status == 'compileError' and any(all(exact(v, item.get(k)) if v is None else k in item and exact(v, item[k]) for k, v in expected.items()) for item in diagnostics):
+        if status == 'compileError' and any(matches(expected, item) for item in diagnostics):
             return 'passed', []
         return 'failed', [{'path': '/error', 'expected': expected, 'actual': diagnostics}]
     if status == 'compileError':

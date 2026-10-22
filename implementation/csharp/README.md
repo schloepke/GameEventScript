@@ -164,24 +164,24 @@ diagnostic source names; file access remains with the embedding:
 ```csharp
 using GameEventScript.Api;
 
-var program = GameEventScriptBuilder.Create()
+var program = new GesProgramBuilder()
     .AddScript("""
         module example
         function double(_ value as :Number) be value + value
         on Start(value) { emit Done(value: double(value)) }
         """, "example.ges")
     .Compile();
-byte[] bytes = GameEventScriptProgramWriter.ToArray(program);
+byte[] bytes = program.Encode();
 // The embedding can save bytes, or load program directly into a Host.
 ```
 
 Repeated `AddScript` calls compile sources jointly. `Compile()` can be repeated;
 previously returned Programs remain immutable. Debug symbols, source maps and
 source archives are included by default. Use
-`.WithDebugInfo(GameEventScriptDebugInfoOptions.None)` for compact output,
+`.WithDebugInfo(GesDebugInfoOptions.None)` for compact output,
 `.WithProgramVersion(...)` to set the portable version, and
 `.WithExternalTypeCatalog(...)` for declarative external types. Runtime bindings
-remain separate. `GameEventScriptCompileException.Diagnostics` exposes stable
+remain separate. `GesCompileException.Diagnostics` exposes stable
 diagnostic codes and structured context, including source locations.
 
 ## Consume the Runtime
@@ -203,11 +203,11 @@ using System;
 using GameEventScript.Api;
 using GameEventScript.Runtime.Values;
 
-static (GameEventScriptStartResult Start, GameEventScriptExecutionResult? Execution) Execute(byte[] bytes)
+static (GesStartResult Start, GesExecutionResult? Execution) Execute(byte[] bytes)
 {
-    var program = GameEventScriptProgramReader.Read(bytes);
+    var program = GameEventScriptProgram.Read(bytes);
     var host = GameEventScriptHost.CreateBuilder().WithRandomSeed(123).Build();
-    var output = GameEventScriptMessageSignature.Create("Done", ["value"]);
+    var output = GesMessageSignature.Create("Done", ["value"]);
     var subscription = host.Subscribe(output, new Output());
     var instance = host.Load(program);
     try
@@ -216,7 +216,7 @@ static (GameEventScriptStartResult Start, GameEventScriptExecutionResult? Execut
         if (!host.IsReady) return (startup, null);
 
         host.Receive(GameEventScriptMessage.Create("Start", [
-            new GameEventScriptMessageArgument("value", GesValue.GesInteger(42))
+            new GesMessageArgument("value", GesValue.GesInteger(42))
         ]));
         return (startup, host.RunToCompletion());
     }
@@ -227,9 +227,9 @@ static (GameEventScriptStartResult Start, GameEventScriptExecutionResult? Execut
     }
 }
 
-sealed class Output : IGameEventScriptNativeMessageHandler
+sealed class Output : IGesNativeMessageHandler
 {
-    public void Handle(GameEventScriptMessage message, GameEventScriptContext context)
+    public void Handle(GameEventScriptMessage message, GesContext context)
     {
         // Console I/O belongs to this embedding callback, not Runtime.
         Console.WriteLine(message);
@@ -250,7 +250,7 @@ an instance or subscription handle does not detach it; use `Detach()` or
 The immutable Program can be reused in multiple independent Hosts.
 
 Add `GameEventScript.CSharpBridge` when you need delegate handlers, CLR-backed
-external types, attribute-based extensions or `GameEventScriptCSharpHostRunner`
+external types, attribute-based extensions or `GesBridgeHostRunner`
 for synchronization and automatic pumping. It does not add a Compiler dependency.
 The [public API specification](../../specs/PublicApi.md) documents the portable
 contracts and C# mapping; [Host runtime](../../specs/HostRuntime.md) owns lifecycle,
@@ -279,10 +279,10 @@ specifications. Deferred work is tracked only in [`BACKLOG.md`](../../BACKLOG.md
 
 ## Explicit message JSON exchange
 
-The Runtime provides `GameEventScriptMessageJson` for optional product transport.
-Use `Serialize`/`Deserialize` in C#, or `serialize`/`deserialize` in Swift, for
-messages; the corresponding `SerializeValue`/`serializeValue` methods encode a
-standalone value. Decoding reconstructs immutable data and never runs Record or
+The Runtime provides explicit JSON members for optional product transport:
+`message.ToJson()`/`GameEventScriptMessage.FromJson(json)` in C#, or
+`message.json()`/`GameEventScriptMessage(json:)` in Swift; `GesValue` offers the
+same pair for a standalone value. Decoding reconstructs immutable data and never runs Record or
 native constructors. External objects export as typed Record snapshots. Local
 Publish does not serialize; configure encoding explicitly at your I/O boundary.
 The [message format](../../specs/MessageFormat.md) defines the envelope and errors.

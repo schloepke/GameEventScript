@@ -6,6 +6,10 @@ from core.corpus import InvalidDocument
 from checks.numeric_checks import canonical_text as numeric_text
 
 
+def suite_id(case):
+    return case.id.split('/', 1)[0]
+
+
 def canonical(cases, report):
     """Project raw comparison/evidence results into the normative V1 report shape."""
     items = {item['id']: item for item in report['results']}
@@ -47,8 +51,9 @@ def canonical(cases, report):
               'implementation': report['implementation'], 'capabilities': sorted(report.get('capabilities', [])),
               'performanceProfile': profiles[0] if len(profiles) == 1 else None, 'status': status,
               'summary': {'total': len(output), **summary}, 'cases': output}
-    # Bind update reports to exact original bytes, independently of request digests.
-    result['sourceDocuments'] = {case.document.name: case.document.digest for case in cases if case.document}
+    # Bind update reports and corpus identity to exact original bytes, independently of request digests. Suite IDs are
+    # unique and portable, unlike the checkout-specific document paths.
+    result['sourceDocuments'] = {suite_id(case): case.document.digest for case in cases if case.document}
     if report.get('measurementEvidence'):
         result['measurementEvidence'] = report['measurementEvidence']
     return result

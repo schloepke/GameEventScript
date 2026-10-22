@@ -652,3 +652,140 @@ opcodes:
   contains: ["CreateSeries", "Term", "TakeFirst", "DropFirst", "TakeLast", "DropLast", "TakeHighest", "TakeLowest", "DropHighest", "DropLowest"]
   excludes: ["Count", "Distinct", "SortAscending", "SortDescending", "Reverse", "Shuffle", "DistinctBuilderCreate", "DistinctBuilderAdd", "DistinctBuilderFinish", "GroupBuilderCreate", "GroupBuilderAdd", "GroupBuilderFinish", "OrderBuilderCreate", "OrderBuilderAdd", "OrderBuilderFinishAscending", "OrderBuilderFinishDescending"]
 ```
+
+---
+
+## Test: records contain records and casts name later-bound types
+
+This case verifies that a record field may use another record of the program, and that casts and checks may name a custom type that is bound only later, such as a record a message delivers.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: nested-records-and-later-bound-types
+kind: bytecode
+level: atomic
+sources:
+  - name: "nested-records-and-later-bound-types.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+module nestedrecords
+
+record :Inner as { amount: :Number }
+record :Outer as { inner: :Inner, label: :Text }
+
+on Start(value) {
+  let outer be :Outer(inner: :Inner(amount: 1), label: 'x')
+  emit Done(outer: outer, gauge: value as :Gauge, isGauge: value is :Gauge)
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+opcodes:
+  contains: ["CreateRecord", "CastCustom", "CheckCustomType"]
+```
+
+---
+
+## Test: approximation functions stay for the target platform
+
+Constant folding evaluates the exact inner terms but never `ln`, `exp` or a power without an exactly representable integer result; those approximations run on the target platform's math library.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: approximation-functions-stay-for-the-target
+kind: bytecode
+level: scenario
+sources:
+  - name: approximation-functions.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start {
+  emit Done(a: ln(10 + 7 + 30 * 12), b: exp 1, c: 2 ^ 10, d: sqrt 2, e: 3 ^ -1, f: 10 ^ 20)
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+opcodes:
+  counts:
+    LogN: 1
+    Exp: 1
+    Power: 3
+  excludes: ["Add", "Multiply"]
+```
+
+---
+
+## Test: constant and computed approximations agree
+
+A constant approximation and the same computation from a runtime value yield one value, so equality, order and text agree within one execution.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: constant-and-computed-approximations-agree
+kind: scriptApi
+level: scenario
+sources:
+  - name: approximation-agreement.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start(x) {
+  let base be ln 2
+  let root be sqrt 2
+  emit Same(equal: ln x = base, less: ln x < base, greater: ln x > base, text: (ln x as :Text) = (base as :Text), rootText: (x ^ 0.5 as :Text) = (root as :Text))
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion |  |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args:
+        - name: x
+          value: { type: ":Number.int64", value: "2" }
+    local:
+      - name: Same
+        args:
+          - name: equal
+            value: { type: ":Boolean", value: true }
+          - name: less
+            value: { type: ":Boolean", value: false }
+          - name: greater
+            value: { type: ":Boolean", value: false }
+          - name: text
+            value: { type: ":Boolean", value: true }
+          - name: rootText
+            value: { type: ":Boolean", value: true }
+```

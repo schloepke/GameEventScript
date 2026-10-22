@@ -8,29 +8,27 @@ namespace GameEventScript.Compiler;
 
 internal sealed partial class GesBinaryBuilder
 {
-    private GameEventScriptSourceLocation? _currentSourceRange;
+    private GesSourceLocation? _currentSourceRange;
 
-    internal GameEventScriptSourceLocation? CurrentSourceRange => _currentSourceRange;
+    internal GesSourceLocation? CurrentSourceRange => _currentSourceRange;
 
-    public GesBinaryBuilder SetSourceRange(GameEventScriptSourceLocation? sourceRange)
+    public GesBinaryBuilder SetSourceRange(GesSourceLocation? sourceRange)
     {
         _currentSourceRange = sourceRange;
         return this;
     }
 
-    public GesBinaryBuilder ClearSourceRange()
-        => SetSourceRange(null);
+    public GesBinaryBuilder ClearSourceRange() => SetSourceRange(null);
 
-    public GesBinarySourceRangeScope SourceRange(GameEventScriptSourceLocation? sourceRange)
-        => new(this, sourceRange);
+    public GesBinarySourceRangeScope SourceRange(GesSourceLocation? sourceRange) => new(this, sourceRange);
 
     internal sealed class GesBinarySourceRangeScope : IDisposable
     {
         private readonly GesBinaryBuilder _builder;
-        private readonly GameEventScriptSourceLocation? _previousSourceRange;
+        private readonly GesSourceLocation? _previousSourceRange;
         private bool _disposed;
 
-        internal GesBinarySourceRangeScope(GesBinaryBuilder builder, GameEventScriptSourceLocation? sourceRange)
+        internal GesBinarySourceRangeScope(GesBinaryBuilder builder, GesSourceLocation? sourceRange)
         {
             _builder = builder;
             _previousSourceRange = builder._currentSourceRange;

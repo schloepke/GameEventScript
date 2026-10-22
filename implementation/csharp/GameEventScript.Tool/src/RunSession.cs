@@ -8,14 +8,14 @@ namespace GameEventScript.Tool;
 internal sealed class RunSession
 {
     private readonly long? _seed;
-    private readonly GameEventScriptRuntimeLimits _limits;
+    private readonly GesRuntimeLimits _limits;
     private readonly bool _verbose, _color, _interactive;
     internal GameEventScriptHost Host { get; private set; }
     internal RunObserver Observer { get; private set; }
     internal RunWorkspace Workspace { get; }
     internal RunInventory Inventory { get; private set; }
 
-    internal RunSession(long? seed, GameEventScriptRuntimeLimits limits, bool verbose, bool color, bool interactive, int nextId = 1, RunWorkspace? workspace = null, IGameEventScriptProfiler? profiler = null)
+    internal RunSession(long? seed, GesRuntimeLimits limits, bool verbose, bool color, bool interactive, int nextId = 1, RunWorkspace? workspace = null, IGesProfiler? profiler = null)
     {
         Workspace = workspace ?? new RunWorkspace();
         _seed = seed;
@@ -82,9 +82,9 @@ internal sealed class RunSession
             _opcodes += start.ExecutedOpcodes;
             _emits += start.EmittedMessages;
             _publishes += start.PublishedMessages;
-            if (start.State != GameEventScriptStartState.Ready) return false;
+            if (start.State != GesStartState.Ready) return false;
         }
-        GameEventScriptExecutionResult result;
+        GesExecutionResult result;
         do
         {
             result = Host.RunToCompletion();
@@ -98,10 +98,10 @@ internal sealed class RunSession
                 return false;
             }
             if (Observer.Failed) return false;
-            if (!_interactive && result.State == GameEventScriptExecutionState.Waiting && Host.NextMessageDelay is { } delay)
+            if (!_interactive && result.State == GesExecutionState.Waiting && Host.NextMessageDelay is { } delay)
                 Thread.Sleep((int)Math.Min(1000, delay / 1000 + (delay % 1000 == 0 ? 0 : 1)));
-        } while (!_interactive && result.State == GameEventScriptExecutionState.Waiting);
-        return result.State is GameEventScriptExecutionState.Completed or GameEventScriptExecutionState.Waiting;
+        } while (!_interactive && result.State == GesExecutionState.Waiting);
+        return result.State is GesExecutionState.Completed or GesExecutionState.Waiting;
     }
 
     internal void WriteSummary()

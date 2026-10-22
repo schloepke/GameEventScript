@@ -48,7 +48,7 @@ class CompletionTests(unittest.TestCase):
 
     def test_all_cases_validate_no_adapter(self):
         execution.validate(self.cases, ROOT / 'fixtures')
-        self.assertEqual(1956, len(self.cases))
+        self.assertEqual(2006, len(self.cases))
 
     def test_normalized_models_are_immutable_with_explicit_editable_copies(self):
         case = next(c for c in self.cases if c.sources)
@@ -154,13 +154,25 @@ class CompletionTests(unittest.TestCase):
             expected = expected[:a] + b'0' + expected[b:]
         self.assertEqual(expected, output)
 
+    def test_source_documents_are_keyed_by_portable_suite_id(self):
+        case = next(case for case in self.cases if case.document)
+        suite = case.id.split('/')[0]
+        self.assertEqual({suite: case.document.digest}, self.report(case)['sourceDocuments'])
+        self.assertNotIn(str(ROOT), json.dumps(self.report(case)['sourceDocuments']))
+
+    def test_received_reports_a_document_without_cases_as_missing(self):
+        case = next(c for c in self.cases if c.assembler is not None)
+        with self.assertRaises(InvalidDocument) as caught:
+            received.render(case.document, [], self.report(case, actualAssembler=case.assembler), [case.id])
+        self.assertEqual('conformance.received.missingCase', caught.exception.code)
+
     def test_received_rejects_stale_identity_missing_ranges_and_overlap(self):
         original = next(c for c in self.cases if c.assembler is not None)
         for mode, code in [('source', 'staleRange'), ('title', 'invalidReport'), ('range', 'missingRange'), ('duplicate', 'overlappingRange')]:
             case = copy.deepcopy(original)
             report = self.report(case, actualAssembler=case.assembler)
             ids = [case.id]
-            if mode == 'source': report['sourceDocuments'][case.document.name] = 'stale'
+            if mode == 'source': report['sourceDocuments'][case.id.split('/')[0]] = 'stale'
             if mode == 'title': report['cases'][0]['title'] = 'stale'
             if mode == 'range': case.ranges = {}
             if mode == 'duplicate': ids *= 2

@@ -2,19 +2,18 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using System;
-using System.Runtime.CompilerServices;
 using GameEventScript.Api;
 
 namespace GameEventScript.Runtime;
 
-internal sealed class GesRuntimeBudget(GameEventScriptContext context, GameEventScriptRuntimeLimits limits)
+internal sealed class GesRuntimeBudget(GesContext context, GesRuntimeLimits limits)
 {
     private long _executionSteps;
     private long _loopIterations;
     private int _callDepth;
     private bool _exhausted;
 
-    public GameEventScriptRuntimeLimits Limits { get; } = limits;
+    public GesRuntimeLimits Limits { get; } = limits;
 
     public bool IsExhausted => _exhausted;
 
@@ -28,7 +27,6 @@ internal sealed class GesRuntimeBudget(GameEventScriptContext context, GameEvent
         _exhausted = false;
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public int ReserveExecutionSlice(int requestedSteps, string detail)
     {
         if (_exhausted || requestedSteps <= 0) return 0;
@@ -46,7 +44,6 @@ internal sealed class GesRuntimeBudget(GameEventScriptContext context, GameEvent
         return reserved;
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void CompleteExecutionSlice(int executedSteps, int reservedSteps, bool stillProcessing, string detail)
     {
         if (Limits.MaxExecutionSteps <= 0 || _exhausted) return;
@@ -166,10 +163,10 @@ internal static class GesRuntimeLimitUtilities
             return 0;
         }
 
-        return GameEventScriptRangeMath.GetLength(from, to, step);
+        return GesRangeMath.GetLength(from, to, step);
     }
 
     public static long GetRangeLength(double from, double to, double step)
-        => GameEventScriptRangeMath.GetLength(from, to, step);
+        => GesRangeMath.GetLength(from, to, step);
 
 }

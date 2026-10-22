@@ -113,7 +113,9 @@ Top-level declarations are:
 - `on initialization { ... }`
 - `on undeliverable as localName { ... }`
 
-The module declaration is metadata and does not create a namespace. Definitions
+A source has at most one module declaration, before every other declaration; a
+later or repeated `module` is a `parse.syntax` error at that keyword. The module
+declaration is metadata and does not create a namespace. Definitions
 from every source in one compilation unit share compilation-unit scope and may
 refer to one another independent of source order or alphabetical name order.
 This includes callable bodies constructing records and record field expressions
@@ -1227,6 +1229,10 @@ value is fractional
 
 `:integer` and `:float` are not source-level type references. Use `is integer`
 or `is fractional` for checks, and `as :Number` for explicit numeric casts.
+`:Integer` and `:Float` are rejected with `validate.invalidTypeConstructor`
+wherever a type is named, including record declarations. Other custom type names
+in casts and checks need not be declared in the program: they test or convert
+values whose type is bound only later, such as records that messages deliver.
 
 Numeric checks and implicit numeric views use the following rules. A runtime
 value has an `AsNumeric` value exactly when `is numeric` is true. The explicit
@@ -1987,8 +1993,12 @@ let hp be :Gauge(current: 25, maximum: 100)
 
 Field constraints:
 
-- Field names must be unique. The completed Record follows the map/record key
-  order defined in [determinism semantics](Semantics/Determinism.md#iteration-and-ranges).
+- Field names must be unique; a repeated field name is `validate.duplicateVariable`.
+  The completed Record follows the map/record key order defined in
+  [determinism semantics](Semantics/Determinism.md#iteration-and-ranges).
+- A field type is a built-in type, a record of the program in any source, or a
+  configured external type, so records may contain records and external values.
+  Any other field type is `validate.invalidTypeConstructor`.
 - A non-computed field is a constructor parameter. Omitted constructor arguments
   bind `nothing`; unknown labels, duplicate labels, or excess positional
   arguments are static errors.
@@ -2350,8 +2360,8 @@ multiplication operator.
 ## Inline assembly
 
 Inline `asm { ... }` blocks expose explicit instructions inside ordinary GES
-source. The normative syntax, binding and safety rules, operand forms and staged
-implementation status are defined in [Inline assembly](InlineAssembly.md).
+source. The normative syntax, binding and safety rules and operand forms are
+defined in [Inline assembly](InlineAssembly.md).
 Only standalone handler statements, `let` initializers, complete callable bodies
 and computed-field bodies accept this form. Ordinary expressions do not.
 

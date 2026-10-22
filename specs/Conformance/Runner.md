@@ -189,7 +189,9 @@ portable semantic equality contract.
 
 `compileError` passes only when compilation fails and at least one emitted
 diagnostic matches every present expectation field, including required phase
-and code. Successful compilation fails the case.
+and code. An ordered `errors` expectation instead requires exactly as many
+emitted diagnostics as listed, each matching the constraint at the same
+position. Successful compilation fails the case.
 
 `loadError` first requires successful compilation and optional binary roundtrip.
 It passes only when `Host.Load` fails with a matching diagnostic and leaves the
@@ -476,22 +478,15 @@ write such data to a separate nonnormative envelope.
 Result JSON is an execution/exchange format. It is not an alternative test
 authoring format and the runner does not read it as a suite.
 
-## Cross-language result projection
+## Cross-language comparison
 
-The full result intentionally contains implementation identity, diagnostics,
-assembler text, and profile-local performance data. Cross-language comparison
-therefore uses the additional compact artifact produced by
-`ConformanceCrossLanguageResultJsonWriter`.
-
-The writer consumes the complete parsed corpus plus a complete run report. It
-computes the exact corpus fingerprint, sorts cases by full stable ID, and emits
-only case identity, kind, level, Core/optional requirements, status, and stable
-code. It rejects partial, duplicate, additional, or metadata-inconsistent
-reports. It never reruns a case.
-
-The exact fingerprint algorithm, compact JSON schema, C# reference artifact,
-parser bootstrap process, capability policy, and acceptance comparison are
-normatively defined in [Cross-language acceptance](CrossLanguageAcceptance.md).
+Ports are compared through their full canonical results. The comparison uses
+only case identity, kind, level, status, and stable code, and ignores the
+implementation identity, diagnostics, assembler text, and profile-local
+performance data the full result also carries. `sourceDocuments` identifies the
+exact corpus. Corpus identity, parser bootstrap, capability policy, and
+acceptance are normatively defined in
+[Cross-language acceptance](CrossLanguageAcceptance.md).
 
 ## Human-readable Markdown report
 
@@ -539,11 +534,11 @@ ranges, stale range contents, or overlaps. A mixed-line-ending source has no
 unambiguous document style; inserted multiline GESA then uses `LF` while all
 existing bytes remain untouched.
 
-The independent Python tool may retain `sourceDocuments` (logical document name
-mapped to the SHA-256 of its original bytes) and `measurementEvidence` alongside
-the portable report fields. These tooling extensions bind Received updates to
-exact inputs and retain raw instrumentation controls/samples; they never become
-adapter expectations. See [Python runner](PythonRunner.md).
+The independent Python tool retains `sourceDocuments` (suite ID mapped to the
+SHA-256 of the document's original bytes) and may retain `measurementEvidence`
+alongside the portable report fields. `sourceDocuments` identifies the corpus
+and binds Received updates to exact inputs; `measurementEvidence` retains raw
+instrumentation controls/samples. Neither becomes an adapter expectation. See [Python runner](PythonRunner.md).
 
 ## Adapter responsibilities
 
@@ -558,10 +553,10 @@ artifacts. It must:
 - use the same runner path for individual and aggregate execution;
 - avoid replacing skipped/error distinctions with framework-specific guesses;
 - never modify the authored suite without a separate explicit approval action;
-- emit a compact cross-language result for a complete corpus run and retain the
-  full result as the diagnostic source;
-- compare ports by full stable case ID and corpus fingerprint, never by native
-  testframework names or discovery order.
+- retain the full result of a complete corpus run as the comparison and
+  diagnostic source;
+- compare ports by full stable case ID and corpus identity (`sourceDocuments`),
+  never by native testframework names or discovery order.
 
 Framework assertions, reflection-based discovery, environment-variable lookup,
 and filesystem paths belong to adapters, not to the portable parser, normalized

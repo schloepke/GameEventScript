@@ -1,0 +1,143 @@
+// Copyright 2026 Stephan Schlöpke
+// SPDX-License-Identifier: Apache-2.0
+
+using GameEventScript.Api;
+using GameEventScript.CSharpBridge;
+
+namespace GameEventScript.Tests.Native.CSharpBridge;
+
+[TestClass]
+[DoNotParallelize]
+public sealed class GesBridgeHostRunnerTests
+{
+    private sealed class FrozenClock : IGesClock
+    {
+        public long ElapsedMicroseconds => 100;
+    }
+
+    /// <summary>Verifies readiness, callback and disposal semantics through the runner ownership gate.</summary>
+    [TestMethod]
+    public void IdleDurationIsAccessibleThroughTheRunner()
+    {
+        var host = GameEventScriptHost.CreateBuilder().WithClock(new FrozenClock()).Build();
+        Assert.IsNull(host.IdleDurationMicroseconds);
+        using var runner = host.RunAutomatically();
+        Assert.IsNull(runner.IdleDurationMicroseconds);
+        using var done = new ManualResetEventSlim(false);
+        long? callbackIdle = 42;
+        runner.Subscribe("Ping", [], (_, _) =>
+        {
+            callbackIdle = runner.IdleDurationMicroseconds;
+            done.Set();
+        });
+        runner.Start();
+        Assert.AreEqual(0L, runner.IdleDurationMicroseconds);
+        runner.Receive(GameEventScriptMessage.Create("Ping"));
+        Assert.IsTrue(done.Wait(TimeSpan.FromSeconds(5)));
+        runner.RunToCompletion();
+        Assert.IsNull(callbackIdle);
+        Assert.AreEqual(0L, runner.IdleDurationMicroseconds);
+        runner.Dispose();
+        Assert.IsNull(runner.IdleDurationMicroseconds);
+    }
+
+    /// <summary>Verifies timer-driven resumption without another native Receive call.</summary>
+    [TestMethod]
+    public void AutomaticRunnerWakesForDelayedMessagesWithoutFurtherInput()
+    {
+        var host = GameEventScriptHost.CreateBuilder().Build();
+        host.Load(new GesProgramBuilder().AddScript("on Start { emit after 0.02s Done() }").Compile());
+        using var done = new ManualResetEventSlim(false);
+        host.Subscribe("Done", [], (_, _) => done.Set());
+        using var runner = host.RunAutomatically();
+        runner.Start();
+        Assert.IsTrue(runner.Receive(GameEventScriptMessage.Create("Start")));
+        Assert.IsTrue(done.Wait(TimeSpan.FromSeconds(5)), "A future-only queue must wake without another Receive.");
+    }
+
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public void AutomaticRunnerPumpsWorkQueuedBeforeItWasCreated(bool queuedInitialization)
+    {
+        var delivered = new List<GameEventScriptMessage>();
+        var host = GameEventScriptHost.CreateBuilder().Build().StartForTest();
+        host.Subscribe("Ready", [], (message, _) => delivered.Add(message));
+        if (queuedInitialization) host.Load(new GesProgramBuilder().AddScript("on initialization { emit Ready() }").Compile());
+        else Assert.IsTrue(host.Receive(GameEventScriptMessage.Create("Ready")));
+        Assert.IsFalse(host.IsIdle);
+
+        using var barrier = new ManualResetEventSlim(false);
+        using var runner = host.RunAutomatically();
+        // The shared dispatcher has one FIFO worker. This barrier follows any initial
+        // pump scheduled by Create; it does not send another message to the target host.
+        GesBridgeDispatcher.Shared.Enqueue(barrier.Set);
+        Assert.IsTrue(barrier.Wait(TimeSpan.FromSeconds(5)), "The shared dispatcher did not reach the test barrier.");
+        runner.Dispose();
+
+        Assert.HasCount(1, delivered, "Taking ownership must schedule existing work without a subsequent Receive or Load.");
+        Assert.AreEqual("Ready", delivered[0].Name);
+        Assert.IsTrue(host.IsIdle);
+    }
+
+    [TestMethod]
+    public void AutomaticRunnerResumesAnAlreadyPausedScriptHandler()
+    {
+        var delivered = new List<GameEventScriptMessage>();
+        var host = GameEventScriptHost.CreateBuilder().Build().StartForTest();
+        host.Subscribe("Ready", [], (message, _) => delivered.Add(message));
+        host.Load(new GesProgramBuilder().AddScript("on Start { emit Ready() }").Compile());
+        Assert.AreEqual(GesExecutionState.Completed, host.RunToCompletion().State);
+        Assert.IsTrue(host.Receive(GameEventScriptMessage.Create("Start")));
+        Assert.AreEqual(GesExecutionState.Paused, host.ExecuteFrame(1).State);
+        Assert.IsFalse(host.IsIdle);
+
+        using var barrier = new ManualResetEventSlim(false);
+        using var runner = GesBridgeHostRunner.Create(host);
+        GesBridgeDispatcher.Shared.Enqueue(barrier.Set);
+        Assert.IsTrue(barrier.Wait(TimeSpan.FromSeconds(5)), "The shared dispatcher did not resume the paused host.");
+        runner.Dispose();
+
+        Assert.HasCount(1, delivered);
+        Assert.AreEqual("Ready", delivered[0].Name);
+        Assert.IsTrue(host.IsIdle);
+    }
+
+    [TestMethod]
+    public void DisposingBeforeTheInitialPumpPreservesPendingHostWork()
+    {
+        var delivered = new List<GameEventScriptMessage>();
+        var host = GameEventScriptHost.CreateBuilder().Build().StartForTest();
+        host.Subscribe("Ready", [], (message, _) => delivered.Add(message));
+        Assert.IsTrue(host.Receive(GameEventScriptMessage.Create("Ready")));
+
+        using var workerEntered = new ManualResetEventSlim(false);
+        using var releaseWorker = new ManualResetEventSlim(false);
+        using var barrier = new ManualResetEventSlim(false);
+        // Hold the single worker so Dispose deterministically precedes the initial pump.
+        GesBridgeDispatcher.Shared.Enqueue(() =>
+        {
+            workerEntered.Set();
+            releaseWorker.Wait();
+        });
+        try
+        {
+            Assert.IsTrue(workerEntered.Wait(TimeSpan.FromSeconds(5)), "The shared dispatcher did not reach the worker gate.");
+            using var runner = host.RunAutomatically();
+            runner.Dispose();
+            GesBridgeDispatcher.Shared.Enqueue(barrier.Set);
+            releaseWorker.Set();
+            Assert.IsTrue(barrier.Wait(TimeSpan.FromSeconds(5)), "The shared dispatcher did not finish the suppressed pump.");
+
+            Assert.HasCount(0, delivered);
+            Assert.IsFalse(host.IsIdle);
+            Assert.AreEqual(GesExecutionState.Completed, host.RunToCompletion().State);
+            Assert.HasCount(1, delivered);
+            Assert.IsTrue(host.IsIdle);
+        }
+        finally
+        {
+            releaseWorker.Set();
+        }
+    }
+}

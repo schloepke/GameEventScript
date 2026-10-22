@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /// The bundled source or assembler grammar used for presentation.
-public enum GameEventScriptSyntaxLanguage: String, Sendable {
+public enum GesSyntaxLanguage: String, Sendable {
     /// Game Event Script source, including incomplete editor input.
     case ges
     /// GESA assembler with embedded GES source regions.
@@ -10,7 +10,7 @@ public enum GameEventScriptSyntaxLanguage: String, Sendable {
 }
 
 /// Theme-independent categories derived from TextMate scopes; these are not compiler tokens.
-public enum GameEventScriptSyntaxKind: String, CaseIterable, Sendable {
+public enum GesSyntaxKind: String, CaseIterable, Sendable {
     /// Text without a more specific category, including whitespace.
     case plain
     /// A keyword, word operator or boolean literal.
@@ -46,13 +46,13 @@ public enum GameEventScriptSyntaxKind: String, CaseIterable, Sendable {
 }
 
 /// An immutable UTF-16 range with its category and outer-to-inner TextMate scope stack.
-public struct GameEventScriptHighlightSpan: Equatable, Sendable {
+public struct GesHighlightSpan: Equatable, Sendable {
     /// Zero-based UTF-16 offset in the supplied document or line.
     public let start: Int
     /// Range length in UTF-16 code units.
     public let length: Int
     /// The most specific recognized category.
-    public let kind: GameEventScriptSyntaxKind
+    public let kind: GesSyntaxKind
     /// Outer-to-inner TextMate scopes, including the root language scope.
     public let scopes: [String]
 
@@ -60,29 +60,29 @@ public struct GameEventScriptHighlightSpan: Equatable, Sendable {
         self.start = start
         self.length = length
         self.scopes = scopes
-        kind = ScopeKinds.classify(scopes)
+        kind = GesScopeKinds.classify(scopes)
     }
 }
 
 /// Immutable, equatable line-boundary context for incremental convergence; not a serializable document or compiler state.
-public struct GameEventScriptHighlightState: Equatable, Sendable {
+public struct GesHighlightState: Equatable, Sendable {
     /// The grammar this state belongs to. States cannot be reused for another language.
-    public let language: GameEventScriptSyntaxLanguage
+    public let language: GesSyntaxLanguage
     let frames: [Int]
 }
 
 /// A highlighting result. Failed resource bounds return no spans or usable continuation state.
-public struct GameEventScriptHighlightResult: Sendable {
+public struct GesHighlightResult: Sendable {
     /// Ordered, nonoverlapping ranges covering all input when successful.
-    public let spans: [GameEventScriptHighlightSpan]
+    public let spans: [GesHighlightSpan]
     /// Whether all input was highlighted within the resource limits.
     public var isComplete: Bool { nextState != nil }
     /// Context after the final line, or nil when incomplete. Do not cache an incomplete result.
-    public let nextState: GameEventScriptHighlightState?
+    public let nextState: GesHighlightState?
 }
 
 /// Invalid API input; malformed GES/GESA code is accepted and does not produce these errors.
-public enum GameEventScriptHighlightingError: Error {
+public enum GesHighlightingError: Error {
     /// The input-length bound must be positive.
     case invalidInputLimit
     /// A line API call contained an interior CR or LF.
@@ -95,8 +95,8 @@ public enum GameEventScriptHighlightingError: Error {
     case invalidAnsiColor
 }
 
-enum ScopeKinds {
-    static func classify(_ scopes: [String]) -> GameEventScriptSyntaxKind {
+enum GesScopeKinds {
+    static func classify(_ scopes: [String]) -> GesSyntaxKind {
         for scope in scopes.reversed() {
             if scope.hasPrefix("comment") { return .comment }
             if scope.hasPrefix("string") || scope.hasPrefix("constant.character.escape") { return .string }

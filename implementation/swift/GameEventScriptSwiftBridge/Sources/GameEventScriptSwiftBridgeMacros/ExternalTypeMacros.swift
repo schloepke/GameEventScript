@@ -116,9 +116,9 @@ struct GesTypeMacro: MemberMacro {
             var unit: String?
             if let expression = args["unit"] {
                 guard let member = expression.as(MemberAccessExprSyntax.self),
-                    member.base == nil || member.base?.trimmedDescription == "GesUnit" || member.base?.trimmedDescription == "GameEventScriptRuntime.GesUnit",
+                    member.base == nil || member.base?.trimmedDescription == "GesQuantityUnit" || member.base?.trimmedDescription == "GameEventScriptRuntime.GesQuantityUnit",
                     ["none", "meter", "second", "degree"].contains(member.declName.baseName.text)
-                else { throw BindingError("@GesField unit must be a literal GesUnit case.") }
+                else { throw BindingError("@GesField unit must be a literal GesQuantityUnit case.") }
                 if member.declName.baseName.text != "none" { unit = member.declName.baseName.text }
             }
             guard unit == nil || explicitType == nil else { throw BindingError("Use either typeName or unit on @GesField, not both.") }
@@ -166,14 +166,14 @@ struct GesTypeMacro: MemberMacro {
                     throw BindingError("@GesConstruct parameter \(local) must refer to an annotated field.")
                 }
                 labels.append(quoted(field.name))
-                let decode = "try GameEventScriptSwiftValue.decode(arguments[\(index)], as: (\(parameter.type.trimmedDescription)).self\(field.unit.map { ", unit: .\($0)" } ?? ""))"
+                let decode = "try GesBridgeValueConversion.decode(arguments[\(index)], as: (\(parameter.type.trimmedDescription)).self\(field.unit.map { ", unit: .\($0)" } ?? ""))"
                 values.append((external == "_" ? "" : "\(external): ") + decode)
             }
             constructors.append(".init(parameters: [\(labels.joined(separator: ", "))]) { arguments in \(throwsCall ? "try " : "")\(call)(\(values.joined(separator: ", "))) }")
         }
         let entries = fields.map { field in
             if let unit = field.unit {
-                return ".init(\(quoted(field.name)), kind: .float, unit: .\(unit), get: { try GameEventScriptSwiftValue.encode($0.`\(field.swiftName)`, unit: .\(unit)) })"
+                return ".init(\(quoted(field.name)), kind: .float, unit: .\(unit), get: { try GesBridgeValueConversion.encode($0.`\(field.swiftName)`, unit: .\(unit)) })"
             }
             return ".init(\(quoted(field.name)), typeName: \(quoted(field.typeName)), keyPath: \\\(typeName).`\(field.swiftName)` )"
         }
@@ -183,8 +183,8 @@ struct GesTypeMacro: MemberMacro {
                 stringLiteral: """
                     /// Creates a validated native binding. Retain this descriptor for registration, wrapping and unwrapping.
                     /// Each invocation returns a distinct descriptor and may throw for invalid portable declarations.
-                    \(access)static func createGesType() throws -> GameEventScriptSwiftType<\(typeName)> {
-                        try GameEventScriptSwiftType(\(quoted(name)), fields: [\(entries.joined(separator: ", "))], constructors: [\(constructors.joined(separator: ", "))])
+                    \(access)static func createGesType() throws -> GesBridgeTypeBinding<\(typeName)> {
+                        try GesBridgeTypeBinding(\(quoted(name)), fields: [\(entries.joined(separator: ", "))], constructors: [\(constructors.joined(separator: ", "))])
                     }
                     """
             )

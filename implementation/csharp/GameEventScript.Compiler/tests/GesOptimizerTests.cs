@@ -17,13 +17,13 @@ public class GesOptimizerTests
             predicate high(value) be value > 3
             """;
 
-        var module = GameEventScriptBuilder.Create()
+        var module = new GesProgramBuilder()
             .AddScript(script, "optimizer.ges")
             .BuildModule();
 
         var predicate = module.Callables["high(value)"];
-        Assert.AreEqual(GameEventScriptCallableKind.PredicateCall, predicate.Kind);
-        Assert.IsInstanceOfType<BinaryExpressionNode>(predicate.Expression);
+        Assert.AreEqual(GesCallableKind.PredicateCall, predicate.Kind);
+        Assert.IsInstanceOfType<GesBinaryExpressionNode>(predicate.Expression);
         Assert.IsNotNull(predicate.Expression.SourceRange);
     }
 
@@ -39,15 +39,15 @@ public class GesOptimizerTests
             }
             """;
 
-        var module = GameEventScriptBuilder.Create()
+        var module = new GesProgramBuilder()
             .AddScript(script, "constant-math.ges")
             .BuildModule();
 
         var handler = module.Handlers.Values.SelectMany(handlers => handlers).Single();
-        var let = handler.Statements.OfType<LetStatementNode>().Single();
+        var let = handler.Statements.OfType<GesLetStatementNode>().Single();
 
-        Assert.IsInstanceOfType<IntegerLiteralExpressionNode>(let.Expression);
-        Assert.AreEqual(42, ((IntegerLiteralExpressionNode)let.Expression).Value);
+        Assert.IsInstanceOfType<GesIntegerLiteralExpressionNode>(let.Expression);
+        Assert.AreEqual(42, ((GesIntegerLiteralExpressionNode)let.Expression).Value);
     }
 
     [TestMethod]
@@ -63,14 +63,14 @@ public class GesOptimizerTests
             }
             """;
 
-        var module = GameEventScriptBuilder.Create().AddScript(script, "constants.ges").BuildModule();
+        var module = new GesProgramBuilder().AddScript(script, "constants.ges").BuildModule();
         var handler = module.Handlers.Values.SelectMany(handlers => handlers).Single();
-        var expression = handler.Statements.OfType<LetStatementNode>().Single().Expression;
+        var expression = handler.Statements.OfType<GesLetStatementNode>().Single().Expression;
 
-        Assert.IsInstanceOfType<IntegerLiteralExpressionNode>(expression);
-        Assert.AreEqual(6144L, ((IntegerLiteralExpressionNode)expression).Value);
+        Assert.IsInstanceOfType<GesIntegerLiteralExpressionNode>(expression);
+        Assert.AreEqual(6144L, ((GesIntegerLiteralExpressionNode)expression).Value);
         Assert.AreNotSame(module.Constants["rounds"], expression);
-        Assert.AreEqual(48L, ((IntegerLiteralExpressionNode)module.Constants["rounds"]).Value);
+        Assert.AreEqual(48L, ((GesIntegerLiteralExpressionNode)module.Constants["rounds"]).Value);
         Assert.AreEqual(1, module.Constants["rounds"].SourceRange?.Line);
     }
 }

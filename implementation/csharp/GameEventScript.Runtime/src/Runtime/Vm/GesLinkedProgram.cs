@@ -1,0 +1,302 @@
+// Copyright 2026 Stephan Schlöpke
+// SPDX-License-Identifier: Apache-2.0
+
+using System;
+using System.Collections.Generic;
+using GameEventScript.Api;
+using GameEventScript.Runtime.Values;
+using static GameEventScript.Api.GesBinaryBindKind;
+using static GameEventScript.Api.GesBindingSegment;
+
+namespace GameEventScript.Runtime.Vm;
+
+internal sealed class GesLinkedProgram
+{
+    internal readonly struct OutboundMessageSignature
+    {
+        internal OutboundMessageSignature(string name, string[] argumentNames, string signatureId)
+        {
+            Name = name;
+            ArgumentNames = GesReadOnlyArray<string>.FromOwnedArray(argumentNames);
+            SignatureId = signatureId;
+            IsValid = true;
+        }
+
+        internal bool IsValid { get; }
+        internal string Name { get; }
+        internal IReadOnlyList<string> ArgumentNames { get; }
+        internal string SignatureId { get; }
+    }
+
+    internal readonly struct Handler(GesMessageSignature signature, string[] requiredTags, string[] excludedTags, bool matchArguments, ushort entryAddress, ushort requiredRegisterCount, ushort requiredCallStackDepth)
+    {
+        internal GesMessageSignature Signature { get; } = signature;
+        internal string[] RequiredTags { get; } = requiredTags;
+        internal string[] ExcludedTags { get; } = excludedTags;
+        internal bool MatchArguments { get; } = matchArguments;
+        internal ushort EntryAddress { get; } = entryAddress;
+        internal ushort RequiredRegisterCount { get; } = requiredRegisterCount;
+        internal ushort RequiredCallStackDepth { get; } = requiredCallStackDepth;
+    }
+
+    internal IGesProgramProfiler? Profiler { get; set; }
+
+    internal GesLinkedProgram(GameEventScriptProgram program, IGesExtensionRegistry extensionRegistry, IGesExternalTypeRegistry typeRegistry)
+    {
+        Program = program ?? throw new ArgumentNullException(nameof(program));
+        GesProgramCallGraphValidator.Validate(program);
+        ValidateResourceMetadata(program);
+        StringPool = BuildStringPool(program.StringConstants);
+        StringScalarCounts = BuildStringScalarCountsIfNeeded(StringPool);
+        TextConstants = new GesValue[StringPool.Length];
+        for (var i = 0; i < TextConstants.Length; i++) TextConstants[i].SetText(StringPool[i], FetchStringScalarCount((ushort)i));
+        CodeSegmentSize = checked((ushort)program.Code.Length);
+        RecordConstructors = BuildIdIndexedBindTable(program, Record);
+        ExtensionCallBinds = BuildIdIndexedBindTable(program, ExtensionCall);
+        ExternalTypeBinds = BuildIdIndexedBindTable(program, ExternalType);
+        OutboundMessageSignatures = BuildOutboundMessageSignatures(program);
+        BoundExtensionCalls = BindExtensions(extensionRegistry ?? GesEmptyExtensionRegistry.Instance);
+        BoundExternalTypeConstructors = BindExternalTypes(typeRegistry ?? GesEmptyExternalTypeRegistry.Instance);
+        Handlers = BuildHandlers(program);
+        RequiredRegisterCapacity = program.RequiredRegisterCount;
+    }
+
+    private GesMapLayout?[]? _mapLayouts;
+    private readonly Dictionary<uint, int[]?> _dataConstructionPositions = [];
+
+    // Canonical key order of a constant map-literal key list, computed on first use.
+    internal GesMapLayout MapLayout(ushort keyNamesIndex)
+    {
+        _mapLayouts ??= new GesMapLayout?[Program.UInt16IndexLists.Slices.Count];
+        return _mapLayouts[keyNamesIndex] ??= new GesMapLayout(Program.UInt16IndexLists.Resolve(keyNamesIndex), StringPool);
+    }
+
+    // Argument positions of a constant data-construction type and label list, resolved on first use;
+    // null when the shape is invalid and construction yields Nothing.
+    internal int[]? DataConstructionPositions(ushort typeIndex, ushort labelsIndex)
+    {
+        var key = (uint)typeIndex << 16 | labelsIndex;
+        if (_dataConstructionPositions.TryGetValue(key, out var cached)) return cached;
+        var names = Program.UInt16IndexLists.Resolve(labelsIndex);
+        var labels = new string[names.Length];
+        for (var i = 0; i < labels.Length; i++) labels[i] = StringPool[names[i]];
+        var positions = GesDataConstruction.Positions(StringPool[typeIndex], labels);
+        _dataConstructionPositions[key] = positions;
+        return positions;
+    }
+
+    internal GameEventScriptProgram Program { get; }
+    internal string[] StringPool { get; }
+    internal GesValue[] TextConstants { get; }
+    internal int[]? StringScalarCounts { get; }
+    internal ushort CodeSegmentSize { get; }
+    internal OutboundMessageSignature[] OutboundMessageSignatures { get; }
+    internal GesBindingSegment.Entry[] RecordConstructors { get; }
+    internal GesBindingSegment.Entry[] ExtensionCallBinds { get; }
+    internal GesBindingSegment.Entry[] ExternalTypeBinds { get; }
+    internal IGesExtensionFunction?[] BoundExtensionCalls { get; }
+    internal IGesExternalTypeConstructor?[] BoundExternalTypeConstructors { get; }
+    internal Handler[] Handlers { get; }
+    internal int RequiredRegisterCapacity { get; }
+
+    internal string FetchString(ushort index) => StringPool[index];
+    internal int FetchStringScalarCount(ushort index) => StringScalarCounts is { } counts ? counts[index] : StringPool[index].Length;
+
+    private Handler[] BuildHandlers(GameEventScriptProgram program)
+    {
+        var count = 0;
+        foreach (var bind in program.Bindings.Entries)
+        {
+            if (bind.Kind is MessageHandler or MessageNameHandler) count++;
+        }
+
+        if (count == 0) return [];
+        var handlers = new Handler[count];
+        var handlerIndex = 0;
+        foreach (var bind in program.Bindings.Entries)
+        {
+            if (bind.Kind is not (MessageHandler or MessageNameHandler)) continue;
+            var name = FetchString(bind.Name);
+            var arguments = ReadStrings(bind.ArgumentNames);
+            handlers[handlerIndex++] = new Handler(
+                GesMessageSignature.Create(name, arguments),
+                ReadStrings(bind.RequiredTags),
+                ReadStrings(bind.ExcludedTags),
+                bind.Kind == MessageHandler,
+                bind.EntryAddress,
+                bind.RequiredRegisterCount,
+                bind.RequiredCallStackDepth);
+        }
+
+        return handlers;
+    }
+
+    private string[] ReadStrings(System.Collections.Generic.IReadOnlyList<ushort> pointers)
+    {
+        if (pointers.Count == 0) return [];
+        var values = new string[pointers.Count];
+        for (var index = 0; index < values.Length; index++) values[index] = FetchString(pointers[index]);
+        return values;
+    }
+
+    private IGesExtensionFunction?[] BindExtensions(IGesExtensionRegistry registry)
+    {
+        var result = new IGesExtensionFunction?[ExtensionCallBinds.Length];
+        for (ushort bindId = 0; bindId < ExtensionCallBinds.Length; bindId++)
+        {
+            var bind = ExtensionCallBinds[bindId];
+            if (bind.Kind != ExtensionCall || bind.Id != bindId) continue;
+            var fullName = FetchString(bind.Name);
+            var separator = fullName.IndexOf('.');
+            if (separator <= 0 || separator >= fullName.Length - 1)
+                throw LinkError(GesDiagnosticCodes.LinkInvalidExtensionReference,
+                    $"External extension reference '{fullName}' has an invalid name.", fullName);
+            var reference = new GesExtensionReference(fullName[..separator], fullName[(separator + 1)..], ReadStrings(bind.ArgumentNames));
+            result[bindId] = registry.Resolve(reference) ?? throw LinkError(
+                GesDiagnosticCodes.LinkMissingExtension,
+                $"GameEventScript extension '{reference.SignatureId}' was not dynamically bound to external bind id '{bindId}'.",
+                reference.SignatureId);
+        }
+
+        return result;
+    }
+
+    private IGesExternalTypeConstructor?[] BindExternalTypes(IGesExternalTypeRegistry registry)
+    {
+        var result = new IGesExternalTypeConstructor?[ExternalTypeBinds.Length];
+        for (ushort bindId = 0; bindId < ExternalTypeBinds.Length; bindId++)
+        {
+            var bind = ExternalTypeBinds[bindId];
+            if (bind.Kind != ExternalType || bind.Id != bindId) continue;
+            var reference = new GesExternalTypeConstructorReference(FetchString(bind.Name), ReadStrings(bind.ArgumentNames));
+            var constructor = registry.Resolve(reference) ?? throw LinkError(
+                GesDiagnosticCodes.LinkMissingExternalTypeConstructor,
+                $"GameEventScript external type constructor ':{reference.SignatureId}' was not dynamically bound to external bind id '{bindId}'.",
+                reference.SignatureId);
+            if (!string.Equals(constructor.Definition.SignatureId, reference.SignatureId, StringComparison.Ordinal))
+                throw LinkError(
+                    GesDiagnosticCodes.LinkMismatchedExternalTypeConstructor,
+                    $"GameEventScript external type constructor registry returned '{constructor.Definition.SignatureId}' for requested reference '{reference.SignatureId}'.",
+                    reference.SignatureId);
+            result[bindId] = constructor;
+        }
+
+        return result;
+    }
+
+    private OutboundMessageSignature[] BuildOutboundMessageSignatures(GameEventScriptProgram program)
+    {
+        var binds = BuildIdIndexedBindTable(program, OutboundMessage);
+        if (binds.Length == 0) return [];
+        var signatures = new OutboundMessageSignature[binds.Length];
+        for (var index = 0; index < binds.Length; index++)
+        {
+            var bind = binds[index];
+            if (bind.Kind != OutboundMessage || bind.Id != index) continue;
+            var name = FetchString(bind.Name);
+            var arguments = ReadStrings(bind.ArgumentNames);
+            signatures[index] = new OutboundMessageSignature(name, arguments,
+                GesMessageSignature.CreateSignatureId(name, arguments));
+        }
+
+        return signatures;
+    }
+
+    private static GesBindingSegment.Entry[] BuildIdIndexedBindTable(GameEventScriptProgram program, GesBinaryBindKind kind)
+    {
+        var maxId = -1;
+        foreach (var entry in program.Bindings.Entries)
+            if (entry.Kind == kind && entry.Id != ushort.MaxValue && entry.Id > maxId) maxId = entry.Id;
+        if (maxId < 0) return [];
+        var result = new GesBindingSegment.Entry[maxId + 1];
+        foreach (var entry in program.Bindings.Entries)
+            if (entry.Kind == kind && entry.Id != ushort.MaxValue) result[entry.Id] = entry;
+        return result;
+    }
+
+    private static string[] BuildStringPool(GesStringConstantSegment table)
+    {
+        var strings = new string[table.Slices.Length];
+        for (var index = 0; index < strings.Length; index++) strings[index] = table.Resolve((ushort)index);
+        return strings;
+    }
+
+    private static int[]? BuildStringScalarCountsIfNeeded(string[] strings)
+    {
+        for (var index = 0; index < strings.Length; index++)
+        {
+            if (GesText.CountScalars(strings[index]) == strings[index].Length) continue;
+            var counts = new int[strings.Length];
+            for (var countIndex = 0; countIndex < strings.Length; countIndex++)
+                counts[countIndex] = GesText.CountScalars(strings[countIndex]);
+            return counts;
+        }
+
+        return null;
+    }
+
+    private void ValidateResourceMetadata(GameEventScriptProgram program)
+    {
+        ushort requiredRegisterCount = 0;
+        ushort requiredCallStackDepth = 0;
+        foreach (var bind in program.Bindings.Entries)
+        {
+            if (bind.Kind is not (MessageHandler or MessageNameHandler)) continue;
+            requiredRegisterCount = Math.Max(requiredRegisterCount, bind.RequiredRegisterCount);
+            requiredCallStackDepth = Math.Max(requiredCallStackDepth, bind.RequiredCallStackDepth);
+        }
+
+        if (program.RequiredRegisterCount != requiredRegisterCount ||
+            program.RequiredCallStackDepth != requiredCallStackDepth)
+        {
+            throw LinkError(
+                GesDiagnosticCodes.LinkInvalidProgram,
+                $"Program resource metadata is inconsistent. Program requires {program.RequiredRegisterCount} registers and " +
+                $"{program.RequiredCallStackDepth} call-stack entries, but its message handlers require maxima of " +
+                $"{requiredRegisterCount} and {requiredCallStackDepth}.");
+        }
+    }
+
+    private GesDynamicLinkException LinkError(string code, string message, string? symbol = null)
+        => new(new GesDiagnostic(
+            GesDiagnosticPhase.Link,
+            code,
+            message,
+            symbol,
+            ProgramName: Program.ModuleName));
+}
+
+// Canonical GesValueMap order for a fixed key list: ascending scalar keys, last duplicate wins.
+internal sealed class GesMapLayout
+{
+    internal GesMapLayout(GesUInt16IndexList keyNames, string[] stringPool)
+    {
+        InputCount = keyNames.Length;
+        var keys = new string[keyNames.Length];
+        var sources = new int[keyNames.Length];
+        for (var i = 0; i < keys.Length; i++)
+        {
+            keys[i] = stringPool[keyNames[i]];
+            GesText.RequireValidUnicode(keys[i], nameof(keyNames));
+            sources[i] = i;
+        }
+
+        // Sort by key, then input position, so each run of equal keys ends with its last input: the last value wins.
+        Array.Sort(sources, (left, right) => GesText.ScalarComparer.Compare(keys[left], keys[right]) is var order and not 0 ? order : left.CompareTo(right));
+        var count = 0;
+        for (var i = 0; i < sources.Length; i++)
+        {
+            if (count > 0 && string.Equals(keys[sources[count - 1]], keys[sources[i]], StringComparison.Ordinal)) sources[count - 1] = sources[i];
+            else sources[count++] = sources[i];
+        }
+
+        Keys = new string[count];
+        for (var i = 0; i < count; i++) Keys[i] = keys[sources[i]];
+        Sources = sources.AsSpan(0, count).ToArray();
+    }
+
+    internal int InputCount { get; }
+    internal string[] Keys { get; }
+    // Staged input position supplying each canonical entry.
+    internal int[] Sources { get; }
+}

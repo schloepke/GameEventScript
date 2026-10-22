@@ -71,15 +71,15 @@ Entries may share storage that is already immutable. Repeated references to one
 encoded index list must not require a separate copy of its elements for every
 binding. This sharing does not expose mutable aliases or change program data.
 
-The C# implementation enforces this through `GameEventScriptReadOnlyArray<T>`:
+The C# implementation enforces this through `GesReadOnlyArray<T>`:
 
 - construction copies the supplied sequence, or reuses the immutable storage of
-  another `GameEventScriptReadOnlyArray<T>`;
+  another `GesReadOnlyArray<T>`;
 - public access is read-only and indexed;
 - internal bulk reads use `ReadOnlySpan<T>` and never expose the backing array;
 - nested reference entries are themselves immutable and defensively copy their
   byte and index payloads;
-- `GameEventScriptBytecodeInstruction` is returned by value, so its mutable C#
+- `GesBytecodeInstruction` is returned by value, so its mutable C#
   struct representation cannot mutate the stored instruction table.
 
 After a program has been returned by the compiler or reader, no operation may

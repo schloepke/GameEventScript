@@ -12,6 +12,8 @@ here. Add or update this matrix in the same change as new portable behavior.
 
 | Behavior | Stable portable case IDs |
 | --- | --- |
+| Compilation reports every diagnostic of the failing phase in order: parse recovery at declarations, statements, nested blocks and the end of input, stopping after the first failing source; complete validation in the program-wide and per-module order | all `compile.diagnostic-collection` cases |
+| Record fields are unique and typed by built-in types, program records or configured external types; `:Integer`/`:Float` are never types, while casts and checks may name later-bound custom types | `compile.build-errors/record-duplicate-field`, `record-unknown-field-type`, `integer-and-float-are-not-types`; `compile.bytecode-lowering/nested-records-and-later-bound-types` |
 | Weighted choice predicates and weights cannot resolve each other's sibling binding | `compile.build-errors/choose-sibling-scope-predicate`, `choose-sibling-scope-weight` |
 | CreateMap returns Nothing for mismatched key/value counts without reading unstaged registers, clears staging, and permits subsequent valid construction | `program.binary-format/valid-map-stage-count-mismatch` |
 | Stack-safe compiler resource analysis for deep acyclic calls within portable limits | `compile.deep-call-graph/ten-thousand-calls` |
@@ -50,6 +52,7 @@ here. Add or update this matrix in the same change as new portable behavior.
 | Random known-answer vectors, non-consuming bounds, valid nested streams, explicit dynamic-seed conversion, invalid-seed parent restoration, and cleanup after runtime limits | `runtime.atomic.random/case-0002` through `runtime.atomic.random/case-0007`, `runtime.random-dice-ranges/case-0005`, `runtime.random-dice-ranges/case-0018`, `compile.build-errors/case-0038`, `compile.build-errors/case-0039`, `compile.bytecode-lowering/case-0012` |
 | Quantity application, checks, and unit removal through `:Quantity(none)` | `runtime.types-and-values.numeric-and-units/case-0036` |
 | Compiler handler/program resource metadata | `compile.binary-compiler/case-0001`, `api.messages/case-0007` |
+| Loop-invariant constant loads and arithmetic move in front of their loop, including out of nested loops, while random draws, messages and loop-dependent values stay inside and results are unchanged | all four `compile.loop-invariants` cases |
 | Direct recursive call rejection | `compile.build-errors/case-0001` |
 | Callable overload identity by ordered labels, without type dispatch | `runtime.predicates-functions/case-0010`, `compile.build-errors/case-0049` |
 | Predicate/function name separation and ambiguous predicate shorthand | `compile.build-errors/case-0021`, `compile.build-errors/case-0050` |
@@ -87,8 +90,8 @@ opaque optional data, stable structural errors, stable semantic validation
 errors, bounded resource resolution, rewrite identity, runtime execution, and
 canonical dumps of identical Program data across implementations.
 
-Cross-language acceptance, corpus identity, shared parser bootstrap fixtures,
-and the compact C# reference result are defined in
+Cross-language acceptance, corpus identity and shared parser bootstrap fixtures
+are defined in
 [Cross-language acceptance](CrossLanguageAcceptance.md). The comparison is keyed exclusively by the
 stable IDs in this coverage index and the executable corpus.
 

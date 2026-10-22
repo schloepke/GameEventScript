@@ -36,7 +36,7 @@ public sealed class GesUnicodeSemanticsTests
     public void BuilderRejectsInvalidUnicodeScalarSequences()
     {
         var exception = Assert.ThrowsExactly<ArgumentException>(() =>
-            GameEventScriptBuilder.Create().AddScript("on Start { let value be '\uD800' }").Compile());
+            new GesProgramBuilder().AddScript("on Start { let value be '\uD800' }").Compile());
 
         StringAssert.Contains(exception.Message, "valid Unicode scalar values");
     }
@@ -45,14 +45,14 @@ public sealed class GesUnicodeSemanticsTests
     public void SourceArchiveStoresLogicalSourceWithoutBom()
     {
         const string logicalSource = "module bom\r\non Start { emit Done(value: '😀') }\r";
-        var program = GameEventScriptBuilder.Create()
+        var program = new GesProgramBuilder()
             .AddScript("\uFEFF" + logicalSource, "bom.ges")
-            .WithDebugInfo(GameEventScriptDebugInfoOptions.SourceMap | GameEventScriptDebugInfoOptions.SourceArchive)
+            .WithDebugInfo(GesDebugInfoOptions.SourceMap | GesDebugInfoOptions.SourceArchive)
             .Compile();
 
         Assert.AreEqual(logicalSource, program.SourceArchive!.Sources[0].ResolveText());
         CollectionAssert.AreEqual(new uint[] { 0, 12, 50 }, program.SourceMap!.Sources[0].LineStartByteOffsets.ToArray());
-        GameEventScriptProgramValidator.Validate(program);
+        program.Validate();
     }
 
     private static void AssertToken(GesToken actual, GesTokenKind kind, string text, int line, int column, int endLine, int endColumn)

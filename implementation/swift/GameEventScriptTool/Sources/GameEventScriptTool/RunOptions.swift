@@ -8,7 +8,7 @@ struct RunOptions {
     var inputs: [String] = [], scenarios: [String] = [], arguments: [GesValue] = []
     var profilePath: String?
     var seed: Int64?
-    var limits = GameEventScriptRuntimeLimits()
+    var limits = GesRuntimeLimits()
     var verbose = false, quiet = false, interactive = false, color = false, help = false
 
     init(_ args: [String]) throws {
@@ -113,7 +113,7 @@ extension Tool {
         var programs: [GameEventScriptProgram] = []
         if binaries > 0 {
             for path in paths {
-                do { programs.append(try ToolFiles.read(path)) } catch let error as GameEventScriptProgramFormatError {
+                do { programs.append(try ToolFiles.read(path)) } catch let error as GesProgramFormatError {
                     io.report(error, fallback: path)
                     return 1
                 }
@@ -170,9 +170,9 @@ extension Tool {
         } else if options.interactive {
             guard try runConsole(session, options: options) else { return 1 }
         }
-        if !options.quiet { session.summary() }
-        profiler?.outcome = "Completed (script exit code \(session.observer.exitCode))"
-        return session.observer.exitCode
+        if !options.quiet { session.writeSummary() }
+        profiler?.outcome = "Completed (script exit code \(session.observer.scriptExitCode))"
+        return session.observer.scriptExitCode
     }
 
     static func hasMain(_ program: GameEventScriptProgram) -> Bool {

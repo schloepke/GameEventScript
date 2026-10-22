@@ -69,7 +69,7 @@ version change or the unsupported pre-1.0 binaries described in Binary format.
 
 ## Seeded random generator
 
-`GameEventScriptRandomGenerator.FromSeed(Int64)` is a portable seeded stream.
+`GesRandomGenerator.FromSeed(Int64)` is a portable seeded stream.
 The signed seed is reinterpreted as its two's-complement `UInt64` bit pattern.
 All operations in this section use wrapping unsigned 64-bit arithmetic.
 

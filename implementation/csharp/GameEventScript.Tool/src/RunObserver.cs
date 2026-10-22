@@ -8,7 +8,7 @@ using GameEventScript.Runtime.Values;
 
 namespace GameEventScript.Tool;
 
-internal sealed class RunObserver(bool verbose, bool color, bool interactive) : IGameEventScriptRuntimeObserver
+internal sealed class RunObserver(bool verbose, bool color, bool interactive) : IGesRuntimeObserver
 {
     internal bool Failed { get; private set; }
     internal IOException? OutputError { get; private set; }
@@ -28,7 +28,7 @@ internal sealed class RunObserver(bool verbose, bool color, bool interactive) : 
     }
 
     /// <inheritdoc />
-    public void MessagePublished(GameEventScriptMessage message, GameEventScriptPublishResult result)
+    public void MessagePublished(GameEventScriptMessage message, GesPublishResult result)
     {
         if (verbose) WriteTrace($"publish {Format(message)}{(result.LocalAccepted ? string.Empty : " [not queued]")}");
     }
@@ -50,14 +50,14 @@ internal sealed class RunObserver(bool verbose, bool color, bool interactive) : 
     }
 
     /// <inheritdoc />
-    public void RuntimeError(GameEventScriptDiagnostic diagnostic)
+    public void RuntimeError(GesDiagnostic diagnostic)
     {
         Failed = true;
         try { WriteDiagnostic(diagnostic, "runtime"); }
         catch (IOException exception) { OutputError ??= exception; }
     }
 
-    internal static void WriteDiagnostic(GameEventScriptDiagnostic diagnostic, string fallback)
+    internal static void WriteDiagnostic(GesDiagnostic diagnostic, string fallback)
     {
         var location = diagnostic.SourceLocation;
         var prefix = location?.SourceName ?? fallback;
@@ -90,7 +90,7 @@ internal sealed class RunObserver(bool verbose, bool color, bool interactive) : 
                 if (index > 0) text.Append(", ");
                 var value = message.Arguments[index];
                 text.Append(message.Arguments.NameAt(index)).Append(": ");
-                text.Append(message.Arguments.KindAt(index) == GameEventScriptBytecodeTypeKind.Text ? JsonSerializer.Serialize(value.AsText(), ToolJsonContext.Default.String) : value.ToString());
+                text.Append(message.Arguments.KindAt(index) == GesBytecodeTypeKind.Text ? JsonSerializer.Serialize(value.AsText(), ToolJsonContext.Default.String) : value.ToString());
             }
             text.Append(')');
         }
@@ -113,36 +113,36 @@ internal sealed class RunObserver(bool verbose, bool color, bool interactive) : 
 
     private static string ColorValue(GesValue value) => value.ValueKind switch
     {
-        GameEventScriptBytecodeTypeKind.Text => value.ToString(),
-        GameEventScriptBytecodeTypeKind.Integer or GameEventScriptBytecodeTypeKind.Float or GameEventScriptBytecodeTypeKind.Percentage => RunHighlighting.Paint(value.ToString(), 34),
+        GesBytecodeTypeKind.Text => value.ToString(),
+        GesBytecodeTypeKind.Integer or GesBytecodeTypeKind.Float or GesBytecodeTypeKind.Percentage => RunHighlighting.Paint(value.ToString(), 34),
         _ => RunHighlighting.Render(value.ToString())
     };
 
-    private sealed class ConsoleHandler(RunObserver observer, bool error) : IGameEventScriptNativeMessageHandler
+    private sealed class ConsoleHandler(RunObserver observer, bool error) : IGesNativeMessageHandler
     {
         /// <inheritdoc />
-        public void Handle(GameEventScriptMessage message, GameEventScriptContext context) => observer.WriteConsole(message, error);
+        public void Handle(GameEventScriptMessage message, GesContext context) => observer.WriteConsole(message, error);
     }
 
-    private sealed class ErrorCodeHandler(RunObserver observer) : IGameEventScriptNativeMessageHandler
+    private sealed class ErrorCodeHandler(RunObserver observer) : IGesNativeMessageHandler
     {
         /// <inheritdoc />
-        public void Handle(GameEventScriptMessage message, GameEventScriptContext context)
+        public void Handle(GameEventScriptMessage message, GesContext context)
         {
             if (message.Arguments.Count != 1 || message.Arguments.NameAt(0) is not ("code" or "_")) throw InvalidCode();
             var value = message.Arguments[0];
-            if (value.ValueKind == GameEventScriptBytecodeTypeKind.Nothing)
+            if (value.ValueKind == GesBytecodeTypeKind.Nothing)
             {
                 observer.ScriptExitCode = 0;
                 return;
             }
-            if (value.ValueKind is not (GameEventScriptBytecodeTypeKind.Integer or GameEventScriptBytecodeTypeKind.Float)
-                || value.ValueUnit != GameEventScriptBytecodeInstructionUnit.UnitNone) throw InvalidCode();
+            if (value.ValueKind is not (GesBytecodeTypeKind.Integer or GesBytecodeTypeKind.Float)
+                || value.ValueUnit != GesQuantityUnit.UnitNone) throw InvalidCode();
             var number = value.AsNumber();
             if (!double.IsFinite(number) || number < 0 || number > 255 || number != Math.Truncate(number)) throw InvalidCode();
             observer.ScriptExitCode = (int)number;
         }
 
-        private static GameEventScriptExtensionFaultException InvalidCode() => new("cli.errorCodeArgument", "ErrorCode requires one code argument: a unitless integer from 0 to 255, or nothing.");
+        private static GesExtensionFaultException InvalidCode() => new("cli.errorCodeArgument", "ErrorCode requires one code argument: a unitless integer from 0 to 255, or nothing.");
     }
 }

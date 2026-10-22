@@ -5,8 +5,8 @@ import Dispatch
 import Foundation
 import GameEventScriptRuntime
 
-final class RunProfiler: GameEventScriptProfiler {
-    final class Measurement: GameEventScriptProgramProfiler {
+final class RunProfiler: GesProfiler {
+    final class Measurement: GesProgramProfiler {
         let program: GameEventScriptProgram
         var counts: [UInt64]
         var nanoseconds: [UInt64]
@@ -27,7 +27,7 @@ final class RunProfiler: GameEventScriptProfiler {
             nanoseconds = .init(repeating: 0, count: program.code.count)
         }
 
-        func phaseStarting(_ next: GameEventScriptProfilePhase) {
+        func phaseStarting(_ next: GesProfilePhase) {
             let end = DispatchTime.now().uptimeNanoseconds
             closePhase(end)
             if next == .stateCheck { pending = -1 }
@@ -45,7 +45,7 @@ final class RunProfiler: GameEventScriptProfiler {
                 nanoseconds[address] += prelude[index]
                 prelude[index] = 0
             }
-            phase = GameEventScriptProfilePhase.execute.rawValue
+            phase = GesProfilePhase.execute.rawValue
             start = clock?() ?? DispatchTime.now().uptimeNanoseconds
         }
 
@@ -80,7 +80,7 @@ final class RunProfiler: GameEventScriptProfiler {
 
     init(clock: (() -> UInt64)? = nil) { self.clock = clock }
 
-    func createProgramProfiler(_ program: GameEventScriptProgram) -> any GameEventScriptProgramProfiler {
+    func createProgramProfiler(_ program: GameEventScriptProgram) -> any GesProgramProfiler {
         let result = Measurement(program, clock: clock)
         programs.append(result)
         return result
@@ -155,7 +155,7 @@ final class RunProfiler: GameEventScriptProfiler {
         }
 
         output += "\n## Loop phases\n\n| Phase | Visits | Total ms |\n| --- | ---: | ---: |\n"
-        for phase in GameEventScriptProfilePhase.allCases {
+        for phase in GesProfilePhase.allCases {
             let visits = programs.reduce(UInt64(0)) { $0 + $1.phaseCounts[phase.rawValue] }
             output += "| \(phase) | \(visits) | \(Self.number(totals[phase.rawValue] / 1_000_000)) |\n"
         }

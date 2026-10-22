@@ -57,12 +57,12 @@ internal static class SourceNestingProbe
     {
         try
         {
-            GameEventScriptBuilder.Create().AddScript(source, "nesting.ges").Compile();
+            new GesProgramBuilder().AddScript(source, "nesting.ges").Compile();
         }
-        catch (GameEventScriptCompileException exception) when (reject)
+        catch (GesCompileException exception) when (reject)
         {
             var diagnostic = exception.Diagnostics.Single();
-            if (diagnostic.Phase != GameEventScriptDiagnosticPhase.Parse || diagnostic.Code != GameEventScriptDiagnosticCodes.ParseSourceNestingExceeded || diagnostic.SourceLocation?.SourceName != "nesting.ges")
+            if (diagnostic.Phase != GesDiagnosticPhase.Parse || diagnostic.Code != GesDiagnosticCodes.ParseSourceNestingExceeded || diagnostic.SourceLocation?.SourceName != "nesting.ges")
                 throw new InvalidOperationException("Expected a structured source-nesting diagnostic.", exception);
             return;
         }

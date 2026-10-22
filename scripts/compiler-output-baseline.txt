@@ -1,0 +1,1 @@
+# case	program	debug	verdict; regenerate with scripts/compare-compiler-output.py --update-baseline

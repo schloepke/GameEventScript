@@ -36,7 +36,7 @@ final class ConformancePerformanceWorkload {
         warmupIterations = config["warmupIterations"]?.integerValue ?? 0
         compileWarmupIterations = config["compileWarmupIterations"]?.integerValue ?? 0
         observeRuntime = config["observeRuntime"]?.boolValue ?? true
-        inputs = try test["runtime"]!.values("steps").map { try Values.message($0.required("input")) }
+        inputs = try test["runtime"]!.values("steps").map { try RuntimeValues.decodeMessage($0.required("input")) }
         budgets = test["runtime"]!.values("steps").map { $0["pump"]?.stringValue == "frames" ? $0["budget"]?.integerValue : nil }
 
     }
@@ -111,7 +111,7 @@ final class ConformancePerformanceExecution {
     init(_ workload: ConformancePerformanceWorkload, _ program: GameEventScriptProgram) throws {
         self.workload = workload
         observer = PerformanceObserver(accept: workload.test["runtime"]?["publishSink"]?.stringValue != "reject")
-        host = try RuntimeScenario.makeHost(workload.test["runtime"]!, observer: workload.observeRuntime ? observer : nil, publishSink: workload.test["runtime"]?["publishSink"]?.stringValue == "absent" ? nil : observer)
+        host = try HostScenario.makeHost(workload.test["runtime"]!, observer: workload.observeRuntime ? observer : nil, publishSink: workload.test["runtime"]?["publishSink"]?.stringValue == "absent" ? nil : observer)
         _ = try host.load(program)
         guard try host.start().state == .ready, try host.runToCompletion().state == .completed else { throw ConformanceExecutionError.invalidInput("Performance initialization failed") }
     }
@@ -152,7 +152,7 @@ final class ConformancePerformanceExecution {
     }
 }
 
-private final class PerformanceObserver: GameEventScriptRuntimeObserver, GameEventScriptPublishSink {
+private final class PerformanceObserver: GesRuntimeObserver, GesPublishSink {
     var counts = ConformanceWorkCounters()
     let accept: Bool
 
@@ -160,7 +160,7 @@ private final class PerformanceObserver: GameEventScriptRuntimeObserver, GameEve
 
     func messageEmitted(_ message: GameEventScriptMessage, accepted: Bool) { counts.observedEmits += 1 }
 
-    func messagePublished(_ message: GameEventScriptMessage, result: GameEventScriptPublishResult) { counts.observedPublishes += 1 }
+    func messagePublished(_ message: GameEventScriptMessage, result: GesPublishResult) { counts.observedPublishes += 1 }
 
     func dispatchStarted(_ message: GameEventScriptMessage, signatureID: String) { counts.started += 1 }
 
@@ -168,7 +168,7 @@ private final class PerformanceObserver: GameEventScriptRuntimeObserver, GameEve
 
     func runtimeLimitReached(_ limitName: String, detail: String, limit: Int) { counts.limits += 1 }
 
-    func runtimeError(_ diagnostic: GameEventScriptDiagnostic) { counts.errors += 1 }
+    func runtimeError(_ diagnostic: GesDiagnostic) { counts.errors += 1 }
 
     func publish(_ message: GameEventScriptMessage) throws -> Bool {
         counts.outbound += 1

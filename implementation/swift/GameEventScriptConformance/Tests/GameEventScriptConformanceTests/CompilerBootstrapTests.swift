@@ -9,23 +9,23 @@ import XCTest
 /// Native compiler ownership and source-map representation controls.
 final class CompilerBootstrapTests: XCTestCase {
     func testCompilerBuilderOwnershipAndOptions() throws {
-        let builder = GameEventScriptBuilder().addScript("on Start() { emit First() }").addScript("on Start() { emit Second(1, 2, 3) }")
+        let builder = GesProgramBuilder().addScript("on Start() { emit First() }").addScript("on Start() { emit Second(1, 2, 3) }")
         let program = try builder.compile()
         XCTAssertEqual(program.sourceArchive?.map(\.sourceID), [0, 1])
         XCTAssertEqual(program.sourceArchive?.map(\.sourceName), ["UnknownSource", "UnknownSource"])
-        XCTAssertNoThrow(try GameEventScriptProgramReader.read(GameEventScriptProgramWriter.bytes(program)))
+        XCTAssertNoThrow(try GameEventScriptProgram.read(program.encode()))
         let minimal = try builder.withDebugInfo(.none).withProgramVersion(42).compile()
         XCTAssertNil(minimal.sourceArchive)
         XCTAssertNil(minimal.sourceMap)
         XCTAssertNil(minimal.debugSymbols)
         XCTAssertEqual(minimal.programVersion, 42)
         XCTAssertNotNil(program.sourceArchive)
-        XCTAssertThrowsError(try builder.compile(options: .init(debugInfo: .init(rawValue: 128)))) { guard case GameEventScriptAPIError.invalidArgument = $0 else { return XCTFail("Unexpected error: \($0)") } }
+        XCTAssertThrowsError(try builder.compile(options: .init(debugInfo: .init(rawValue: 128)))) { guard case GesApiError.invalidArgument = $0 else { return XCTFail("Unexpected error: \($0)") } }
     }
 
     func testSourceMapCoalescesSpansAndKeepsConstantUseLocation() throws {
         let source = "constant $limit be 7\non Start(value) { let sorted be value[:order by item => item ascending]; emit Done(value + $limit) }"
-        let program = try GameEventScriptBuilder().addScript(source).compile()
+        let program = try GesProgramBuilder().addScript(source).compile()
         let entries = try XCTUnwrap(program.sourceMap?.entries)
         XCTAssertTrue(entries.contains { $0.codeLength > 1 })
         for (previous, current) in zip(entries, entries.dropFirst()) {

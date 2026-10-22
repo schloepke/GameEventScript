@@ -277,7 +277,7 @@ language field are forbidden so identical inputs remain reproducible.
 
 ## Reading, retention, validation, and writing
 
-`GameEventScriptProgramReader` accepts bytes only. `PreserveAll` parses known
+`GameEventScriptProgram.Read`/`read` accepts bytes only. `PreserveAll` parses known
 optional sections and retains unknown optional payloads as immutable opaque sections.
 `PreserveKnown` drops unknown optional sections. `RuntimeOnly` materializes only the
 five required runtime sections. Unknown required sections always fail. A known
@@ -292,7 +292,7 @@ The compiler's final materialization, reader, canonical writer, and `Host.Load`
 all invoke the shared program validator. It validates framing, UTF-8, table
 references, bind and opcode forms, code targets, the acyclic synchronous call
 graph, resource declarations, and debug/source ranges. Failures use
-`GameEventScriptProgramFormatException` with a stable error code and, where
+`GesProgramFormatException` with a stable error code and, where
 available, byte offset, section type, and entry index.
 
 Call-graph depth within the V1 data limits is not an additional format error.

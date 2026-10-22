@@ -10,9 +10,9 @@ internal static partial class GesCompiler
 {
     private sealed partial class BinaryCompiler
     {
-        private static string? AssemblyIteratorSignature(AssemblyLine line)
+        private string? AssemblyIteratorSignature(GesAssemblyLine line)
         {
-            if (line.Name == "IteratorNext" && line.Operands.Count == 3 && line.Operands[0] is ListLiteralExpressionNode targets)
+            if (line.Name == "IteratorNext" && line.Operands.Count == 3 && line.Operands[0] is GesListLiteralExpressionNode targets)
             {
                 var names = new HashSet<string>(System.StringComparer.Ordinal);
                 if (targets.Items.Count == 0) throw AssemblyFailure("Component targets cannot be empty.");
@@ -29,13 +29,13 @@ internal static partial class GesCompiler
             var mode = AssemblyIteratorMode(line.Operands[^1]);
             if (mode is >= 1 and <= 5)
             {
-                if (line.Operands[1] is not ListLiteralExpressionNode { Items.Count: >= 2 }) throw AssemblyFailure("Compound iterators require at least two source registers.");
+                if (line.Operands[1] is not GesListLiteralExpressionNode { Items.Count: >= 2 }) throw AssemblyFailure("Compound iterators require at least two source registers.");
                 return branch ? "welt" : "wet";
             }
             return branch ? "wrlt" : "wrt";
         }
 
-        private static byte AssemblyIteratorMode(ExpressionNode operand)
+        private byte AssemblyIteratorMode(GesExpressionNode operand)
             => AssemblyText(operand) switch
             {
                 "normal" => 0,
@@ -45,21 +45,21 @@ internal static partial class GesCompiler
                 "lockstep" => 4,
                 "cartesian" => 5,
                 "entries" => 6,
-                _ => throw AssemblyFailure("Unknown iterator mode.")
+                _ => throw AssemblyFailure("Unknown iterator mode.", operand: operand)
             };
 
-        private static IEnumerable<ExpressionNode> AssemblyWriteOperands(char role, ExpressionNode operand)
+        private static IEnumerable<GesExpressionNode> AssemblyWriteOperands(char role, GesExpressionNode operand)
         {
             if (role == 'w') yield return operand;
             else if (role == 'W')
-                foreach (var item in ((ListLiteralExpressionNode)operand).Items) yield return item;
+                foreach (var item in ((GesListLiteralExpressionNode)operand).Items) yield return item;
         }
 
-        private void EmitAssemblyIterator(AssemblyLine line, GesRegisterRef[] registers, LoweringContext context, IReadOnlyDictionary<string, GesLabelRef> labels)
+        private void EmitAssemblyIterator(GesAssemblyLine line, GesRegisterRef[] registers, LoweringContext context, IReadOnlyDictionary<string, GesLabelRef> labels)
         {
             if (line.Name == "IteratorNext")
             {
-                var items = ((ListLiteralExpressionNode)line.Operands[0]).Items;
+                var items = ((GesListLiteralExpressionNode)line.Operands[0]).Items;
                 var targets = new GesRegisterRef[items.Count];
                 for (var index = 0; index < targets.Length; index++) targets[index] = context.Require(AssemblyName(items[index]));
                 _builder.IteratorNextComponents(targets, registers[1], labels[AssemblyName(line.Operands[2])]);
@@ -69,11 +69,11 @@ internal static partial class GesCompiler
             GesOperand sources;
             if (mode is >= 1 and <= 5)
             {
-                var items = ((ListLiteralExpressionNode)line.Operands[1]).Items;
+                var items = ((GesListLiteralExpressionNode)line.Operands[1]).Items;
                 var inputs = new GesRegisterRef[items.Count];
                 for (var index = 0; index < inputs.Length; index++)
                 {
-                    if (items[index] is IdentifierExpressionNode name) inputs[index] = context.Require(name.Name);
+                    if (items[index] is GesIdentifierExpressionNode name) inputs[index] = context.Require(name.Name, name.SourceRange);
                     else
                     {
                         inputs[index] = _builder.AddCompilerRegister("assembly_source");
@@ -84,8 +84,8 @@ internal static partial class GesCompiler
             }
             else sources = GesOperand.Register(registers[1]);
             var branch = line.Name == "IteratorCreateOrJump";
-            _builder.AddOpcode(branch ? GameEventScriptBytecodeOpCode.IteratorCreateOrJump : GameEventScriptBytecodeOpCode.IteratorCreate,
-                flags: (GameEventScriptInstructionFlag)(mode << 5), dst: GesOperand.Register(registers[0]), x: sources,
+            _builder.AddOpcode(branch ? GesBytecodeOpCode.IteratorCreateOrJump : GesBytecodeOpCode.IteratorCreate,
+                flags: (GesInstructionFlag)(mode << 5), dst: GesOperand.Register(registers[0]), x: sources,
                 y: branch ? GesOperand.Label(labels[AssemblyName(line.Operands[2])]) : default);
         }
     }

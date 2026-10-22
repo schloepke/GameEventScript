@@ -5,8 +5,8 @@ using System;
 using System.Collections.Generic;
 using GameEventScript.Api;
 using GameEventScript.Runtime.Values;
-using GameEventScript.Runtime.VM;
-using static GameEventScript.Api.GameEventScriptBindingSegment;
+using GameEventScript.Runtime.Vm;
+using static GameEventScript.Api.GesBindingSegment;
 
 namespace GameEventScript.Runtime;
 
@@ -17,12 +17,12 @@ internal struct GesLiteralParser
     internal const int MaximumItems = 65536;
 
     private readonly string _text;
-    private readonly GesVmState _state;
+    private readonly GesVirtualMachine _state;
     private int _position;
     private int _items;
     private string? _limit;
 
-    private GesLiteralParser(string text, GesVmState state)
+    private GesLiteralParser(string text, GesVirtualMachine state)
     {
         _text = text;
         _state = state;
@@ -31,9 +31,9 @@ internal struct GesLiteralParser
         _limit = null;
     }
 
-    internal static GesValue Parse(in GesValue input, GameEventScriptContext context, GesVmState state)
+    internal static GesValue Parse(in GesValue input, GesContext context, GesVirtualMachine state)
     {
-        if (input.Kind != GameEventScriptBytecodeTypeKind.Text) return GesValue.GesNothing();
+        if (input.Kind != GesBytecodeTypeKind.Text) return GesValue.GesNothing();
         if (input.Length > MaximumInputScalars)
         {
             context.RuntimeBudget.Exhaust("MaxLiteralInputScalars", "Literal input exceeds the scalar limit.", MaximumInputScalars);
@@ -56,7 +56,7 @@ internal struct GesLiteralParser
         if (_position == _text.Length) return null;
         if (_text[_position] is '\'' or '"')
         {
-            var text = TextLiteralReader.Read(_text, ref _position);
+            var text = GesTextLiteralReader.Read(_text, ref _position);
             return text is null ? null : GesValue.GesText(text);
         }
         if (_text[_position] == ':')
@@ -98,9 +98,9 @@ internal struct GesLiteralParser
         if (token[0] == '#')
         {
             var name = _text.Substring(start + 1, _position - start - 1);
-            return GameEventScriptTagRules.IsValidTagName(name) ? GesValue.GesTag(name) : null;
+            return GesTagRules.IsValidTagName(name) ? GesValue.GesTag(name) : null;
         }
-        return TextNumberCast.Read(_text, start, _position - start, percentage: token[token.Length - 1] == '%', allowGrouping: false);
+        return GesTextNumberCast.Read(_text, start, _position - start, percentage: token[token.Length - 1] == '%', allowGrouping: false);
     }
 
     private GesValue? ReadTyped(int depth)
@@ -108,15 +108,15 @@ internal struct GesLiteralParser
         if (depth >= MaximumDepth) { _limit = "MaxLiteralDepth"; return null; }
         _position++;
         var name = ReadName();
-        if (name is null || !GameEventScriptText.IsTypeName(name)) return null;
+        if (name is null || !GesText.IsTypeName(name)) return null;
         var builtin = name.ToLowerInvariant();
         // Built-in names are case-sensitive; user Record definitions retain their declared spelling.
         var isBuiltin = GesDataConstruction.IsType(builtin) && name == char.ToUpperInvariant(builtin[0]) + builtin.Substring(1);
-        GameEventScriptBinaryBindEntry? constructor = null;
+        GesBindingSegment.Entry? constructor = null;
         if (!isBuiltin)
         {
             foreach (var binding in _state.Program.Bindings.Entries)
-                if (binding.Kind == GameEventScriptBinaryBindKind.Record && _state.FetchStringByPointer(binding.Name) == name) { constructor = binding; break; }
+                if (binding.Kind == GesBinaryBindKind.Record && _state.FetchStringByPointer(binding.Name) == name) { constructor = binding; break; }
             if (constructor is null) return null;
         }
         SkipWhitespace();
@@ -137,7 +137,7 @@ internal struct GesLiteralParser
                 var label = ReadKey();
                 SkipWhitespace();
                 if (label is null || !Consume(':')) { label = "_"; _position = saved; }
-                else if (!GameEventScriptText.IsFieldName(label) || labels.Contains(label)) return null;
+                else if (!GesText.IsFieldName(label) || labels.Contains(label)) return null;
                 SkipWhitespace();
                 GesValue? value;
                 if (builtin == "series" && values.Count == 0 && _position < _text.Length && _text[_position] is >= 'a' and <= 'z')
@@ -179,7 +179,7 @@ internal struct GesLiteralParser
     {
         var name = ReadName();
         if (name is null) return null;
-        try { _ = GameEventScriptMessageSignature.Create(name, null); }
+        try { _ = GesMessageSignature.Create(name, null); }
         catch (ArgumentException) { return null; }
         SkipWhitespace();
         if (!Consume('(')) return null;
@@ -194,7 +194,7 @@ internal struct GesLiteralParser
                 if (handler)
                 {
                     var label = ReadName();
-                    if (label is null || label != "_" && (!GameEventScriptText.IsFieldName(label) || labels.Contains(label))) return null;
+                    if (label is null || label != "_" && (!GesText.IsFieldName(label) || labels.Contains(label))) return null;
                     labels.Add(label);
                 }
                 else
@@ -203,7 +203,7 @@ internal struct GesLiteralParser
                     var label = ReadKey();
                     SkipWhitespace();
                     if (label is null || !Consume(':')) { label = "_"; _position = saved; }
-                    else if (!GameEventScriptText.IsFieldName(label) || labels.Contains(label)) return null;
+                    else if (!GesText.IsFieldName(label) || labels.Contains(label)) return null;
                     var value = ReadValue(depth);
                     if (value is not { } item) return null;
                     labels.Add(label);
@@ -217,7 +217,7 @@ internal struct GesLiteralParser
             }
         }
         SkipWhitespace();
-        GesValue result = handler ? GesValue.GesHandler(GameEventScriptMessageSignature.Create(name, labels)) : new GesLiteralNode("@message:" + name, labels.ToArray(), values.ToArray()).Value;
+        GesValue result = handler ? GesValue.GesHandler(GesMessageSignature.Create(name, labels)) : new GesLiteralNode("@message:" + name, labels.ToArray(), values.ToArray()).Value;
         if (!handler && _text.AsSpan(_position).StartsWith("with".AsSpan(), StringComparison.Ordinal))
         {
             _position += 4;
@@ -257,7 +257,7 @@ internal struct GesLiteralParser
         var x = 0d;
         var y = 0d;
         var z = 0d;
-        GameEventScriptBytecodeInstructionUnit? unit = null;
+        GesQuantityUnit? unit = null;
         bool? labeled = null;
         var previousIndex = -1;
         SkipWhitespace();
@@ -287,8 +287,8 @@ internal struct GesLiteralParser
                 var start = _position;
                 while (_position < _text.Length && !IsWhitespace(_text[_position]) && _text[_position] is not (',' or ')')) _position++;
                 if (_position == start) return null;
-                var value = TextNumberCast.Read(_text, start, _position - start, percentage: _text[_position - 1] == '%', allowGrouping: false);
-                if (value is not { } component || component.Kind is not (GameEventScriptBytecodeTypeKind.Integer or GameEventScriptBytecodeTypeKind.Float or GameEventScriptBytecodeTypeKind.Percentage))
+                var value = GesTextNumberCast.Read(_text, start, _position - start, percentage: _text[_position - 1] == '%', allowGrouping: false);
+                if (value is not { } component || component.Kind is not (GesBytecodeTypeKind.Integer or GesBytecodeTypeKind.Float or GesBytecodeTypeKind.Percentage))
                     return null;
                 if (unit.HasValue && unit != component.Unit) return null;
                 unit = component.Unit;
@@ -308,10 +308,10 @@ internal struct GesLiteralParser
             }
             return null;
         }
-        return CreateSpatial(point, x, y, z, GameEventScriptBytecodeInstructionUnit.UnitNone);
+        return CreateSpatial(point, x, y, z, GesQuantityUnit.UnitNone);
     }
 
-    private static GesValue CreateSpatial(bool point, double x, double y, double z, GameEventScriptBytecodeInstructionUnit unit)
+    private static GesValue CreateSpatial(bool point, double x, double y, double z, GesQuantityUnit unit)
         => point ? GesValue.GesPoint(x, y, z, unit) : GesValue.GesVector(x, y, z, unit);
 
     private GesValue? ReadDice()
@@ -330,7 +330,7 @@ internal struct GesLiteralParser
             _items++;
             if (_text[_position] is < '0' or > '9') return null;
             var value = ReadValue(0);
-            if (value is not { } roll || roll.Kind != GameEventScriptBytecodeTypeKind.Integer || roll.Unit != GameEventScriptBytecodeInstructionUnit.UnitNone || roll.IntegerValue is <= 0 or > int.MaxValue)
+            if (value is not { } roll || roll.Kind != GesBytecodeTypeKind.Integer || roll.Unit != GesQuantityUnit.UnitNone || roll.IntegerValue is <= 0 or > int.MaxValue)
                 return null;
             rolls.Add((int)roll.IntegerValue);
             SkipWhitespace();
@@ -420,7 +420,7 @@ internal struct GesLiteralParser
     private string? ReadKey()
     {
         SkipWhitespace();
-        if (_position < _text.Length && _text[_position] is '\'' or '"') return TextLiteralReader.Read(_text, ref _position);
+        if (_position < _text.Length && _text[_position] is '\'' or '"') return GesTextLiteralReader.Read(_text, ref _position);
         var start = _position;
         if (_position == _text.Length || _text[_position] is < 'a' or > 'z') return null;
         _position++;

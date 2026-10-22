@@ -95,7 +95,7 @@ final class Tool {
         let program = try ToolFiles.compile(paths, debug: debug)
         var fileSize = 0
         if let output {
-            let bytes = try GameEventScriptProgramWriter.bytes(program)
+            let bytes = try program.encode()
             try ToolFiles.write(Data(bytes), to: output)
             fileSize = bytes.count
         }
@@ -126,7 +126,7 @@ final class Tool {
         io.line("Bytecode: \(program.code.count) instructions, \(16 * program.code.count) bytes (instruction data)")
         io.line("Required registers: \(program.requiredRegisterCount)")
         io.line("Required call stack depth: \(program.requiredCallStackDepth)")
-        let groups: [(String, [GameEventScriptBinaryBindKind])] = [("Message bindings", [.messageHandler, .messageNameHandler, .outboundMessage]), ("Required extensions", [.extensionCall]), ("Required external types", [.externalType])]
+        let groups: [(String, [GesBinaryBindKind])] = [("Message bindings", [.messageHandler, .messageNameHandler, .outboundMessage]), ("Required extensions", [.extensionCall]), ("Required external types", [.externalType])]
         for (title, kinds) in groups {
             let entries = program.bindings.filter { kinds.contains($0.kind) }
             io.line("\(title) (\(entries.count)):")
@@ -176,12 +176,12 @@ final class Tool {
             try ToolFiles.ensureDistinct(path, from: [input])
         }
         let program: GameEventScriptProgram
-        do { program = try GameEventScriptProgramReader.read(Array(Data(contentsOf: URL(fileURLWithPath: input)))) } catch let error as GameEventScriptProgramFormatError {
+        do { program = try GameEventScriptProgram.read(Array(Data(contentsOf: URL(fileURLWithPath: input)))) } catch let error as GesProgramFormatError {
             io.report(error, fallback: input)
             return 1
         }
-        var text = GameEventScriptProgramDumper.dump(program, includeInstructionAddresses: addresses)
-        if output == nil && io.outputTerminal { text = TextDisplay.expandTabs(text) }
+        var text = program.dump(includeInstructionAddresses: addresses)
+        if output == nil && io.outputTerminal { text = ToolTextDisplay.expandTabs(text) }
         if let output {
             let data = Data(text.utf8)
             try ToolFiles.write(data, to: output)
@@ -193,4 +193,4 @@ final class Tool {
     }
 }
 
-func isHandler(_ binding: GameEventScriptBinding) -> Bool { binding.kind == .messageHandler || binding.kind == .messageNameHandler }
+func isHandler(_ binding: GesBindingSegment.Entry) -> Bool { binding.kind == .messageHandler || binding.kind == .messageNameHandler }

@@ -64,14 +64,14 @@ public readonly struct GesValueSlice
     /// </summary>
     /// <param name="index">The index value.</param>
     /// <returns>The result of the operation.</returns>
-    public GameEventScriptBytecodeTypeKind KindAt(int index) => _values![Start + index].Kind;
+    public GesBytecodeTypeKind KindAt(int index) => _values![Start + index].Kind;
 
     /// <summary>
     /// Performs the unit at operation.
     /// </summary>
     /// <param name="index">The index value.</param>
     /// <returns>The result of the operation.</returns>
-    public GameEventScriptBytecodeInstructionUnit UnitAt(int index) => _values![Start + index].Unit;
+    public GesQuantityUnit UnitAt(int index) => _values![Start + index].Unit;
 
     /// <summary>
     /// Determines whether has value at.
@@ -104,10 +104,10 @@ public readonly struct GesValueSlice
         ref readonly var value = ref _values![Start + index];
         return value.Kind switch
         {
-            GameEventScriptBytecodeTypeKind.Integer or GameEventScriptBytecodeTypeKind.Dice => value.IntegerValue,
-            GameEventScriptBytecodeTypeKind.Float or GameEventScriptBytecodeTypeKind.Percentage => GameEventScriptNumber.ToIntegerSaturated(value.FloatValue),
-            GameEventScriptBytecodeTypeKind.Boolean => value.IsTrue ? 1 : 0,
-            _ => GameEventScriptNumber.ToIntegerSaturated(value.AsNumeric)
+            GesBytecodeTypeKind.Integer or GesBytecodeTypeKind.Dice => value.IntegerValue,
+            GesBytecodeTypeKind.Float or GesBytecodeTypeKind.Percentage => GesNumber.ToIntegerSaturated(value.FloatValue),
+            GesBytecodeTypeKind.Boolean => value.IsTrue ? 1 : 0,
+            _ => GesNumber.ToIntegerSaturated(value.AsNumeric)
         };
     }
 
@@ -121,9 +121,9 @@ public readonly struct GesValueSlice
         ref readonly var value = ref _values![Start + index];
         return value.Kind switch
         {
-            GameEventScriptBytecodeTypeKind.Integer or GameEventScriptBytecodeTypeKind.Dice => value.IntegerValue,
-            GameEventScriptBytecodeTypeKind.Float or GameEventScriptBytecodeTypeKind.Percentage => value.FloatValue,
-            GameEventScriptBytecodeTypeKind.Boolean => value.IsTrue ? 1d : 0d,
+            GesBytecodeTypeKind.Integer or GesBytecodeTypeKind.Dice => value.IntegerValue,
+            GesBytecodeTypeKind.Float or GesBytecodeTypeKind.Percentage => value.FloatValue,
+            GesBytecodeTypeKind.Boolean => value.IsTrue ? 1d : 0d,
             _ => value.AsNumeric
         };
     }
@@ -138,10 +138,10 @@ public readonly struct GesValueSlice
         ref readonly var value = ref _values![Start + index];
         return value.Kind switch
         {
-            GameEventScriptBytecodeTypeKind.Boolean => value.IsTrue,
-            GameEventScriptBytecodeTypeKind.Integer => value.IntegerValue != 0,
-            GameEventScriptBytecodeTypeKind.Float or GameEventScriptBytecodeTypeKind.Percentage => value.FloatValue != 0d,
-            GameEventScriptBytecodeTypeKind.Vector or GameEventScriptBytecodeTypeKind.Point when value.ObjectValue is GesValueVectorPoint vector => vector.X != 0d || vector.Y != 0d || vector.Z != 0d,
+            GesBytecodeTypeKind.Boolean => value.IsTrue,
+            GesBytecodeTypeKind.Integer => value.IntegerValue != 0,
+            GesBytecodeTypeKind.Float or GesBytecodeTypeKind.Percentage => value.FloatValue != 0d,
+            GesBytecodeTypeKind.Vector or GesBytecodeTypeKind.Point when value.ObjectValue is GesSpatialValue vector => vector.X != 0d || vector.Y != 0d || vector.Z != 0d,
             _ => value.IsTrue
         };
     }
@@ -154,7 +154,7 @@ public readonly struct GesValueSlice
     public string GetAsText(int index)
     {
         ref readonly var value = ref _values![Start + index];
-        return value.TextValue.Length > 0 || value.Kind is GameEventScriptBytecodeTypeKind.Text or GameEventScriptBytecodeTypeKind.Tag
+        return value.TextValue.Length > 0 || value.Kind is GesBytecodeTypeKind.Text or GesBytecodeTypeKind.Tag
             ? value.TextValue
             : value.ToText;
     }
@@ -164,21 +164,21 @@ public readonly struct GesValueSlice
     /// </summary>
     /// <param name="index">The index value.</param>
     /// <returns>The result of the operation.</returns>
-    public double GetX(int index) => _values![Start + index].ObjectValue is GesValueVectorPoint vector ? vector.X : 0d;
+    public double GetX(int index) => _values![Start + index].ObjectValue is GesSpatialValue vector ? vector.X : 0d;
 
     /// <summary>
     /// Gets the y.
     /// </summary>
     /// <param name="index">The index value.</param>
     /// <returns>The result of the operation.</returns>
-    public double GetY(int index) => _values![Start + index].ObjectValue is GesValueVectorPoint vector ? vector.Y : 0d;
+    public double GetY(int index) => _values![Start + index].ObjectValue is GesSpatialValue vector ? vector.Y : 0d;
 
     /// <summary>
     /// Gets the z.
     /// </summary>
     /// <param name="index">The index value.</param>
     /// <returns>The result of the operation.</returns>
-    public double GetZ(int index) => _values![Start + index].ObjectValue is GesValueVectorPoint vector ? vector.Z : 0d;
+    public double GetZ(int index) => _values![Start + index].ObjectValue is GesSpatialValue vector ? vector.Z : 0d;
 
     internal ref readonly GesValue VmValueAt(int index) => ref _values![Start + index];
 }

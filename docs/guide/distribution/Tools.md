@@ -35,19 +35,18 @@ installation your PATH selects. The tap does not remove other installations.
 
 ## Build with SwiftPM
 
-> **Since: 0.3.0 — public SwiftPM executable**
-
-The root package exposes `ges` alongside the four libraries. With a compatible
-Swift toolchain installed, clone the release and build/run the CLI:
+The CLI has a separate SwiftPM package. With a compatible Swift toolchain
+installed, clone the release and build/run the CLI:
 
 ```sh
-git clone --branch 0.3.0 --depth 1 https://github.com/schloepke/GameEventScript.git
+git clone --branch 0.4.0 --depth 1 https://github.com/schloepke/GameEventScript.git
 cd GameEventScript
-swift run --scratch-path artifacts/swift/public-cli --disable-build-manifest-caching --configuration release ges --help
+swift run --package-path implementation/swift/GameEventScriptTool --scratch-path artifacts/swift/cli --disable-build-manifest-caching --configuration release ges --help
 ```
 
-This compiles from source; it does not download a prebuilt executable. Library
-consumers do not need to build the CLI. Homebrew remains the recommended installation
+This compiles from source; it does not download a prebuilt executable. To install
+or update it locally, run `./scripts/install-swift-tool.sh`. The root package
+contains only libraries; library consumers do not build the CLI. Homebrew remains the recommended installation
 for macOS/Linux users who want a prebuilt tool without a Swift toolchain.
 
 ## Install through NuGet

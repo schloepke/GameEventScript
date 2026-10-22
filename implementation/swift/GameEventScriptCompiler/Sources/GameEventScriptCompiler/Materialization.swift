@@ -3,8 +3,8 @@
 
 @_spi(Compiler) import GameEventScriptRuntime
 
-extension GesCompiler {
-    func materialize(_ sourceBindings: [GameEventScriptBinding], _ sourceCode: [Instruction]) -> ([GameEventScriptBinding], [Instruction]) {
+extension GesBinaryBuilder {
+    func materialize(_ sourceBindings: [GesBindingSegment.Entry], _ sourceCode: [GesBytecodeInstruction]) -> ([GesBindingSegment.Entry], [GesBytecodeInstruction]) {
         let oldStrings = strings
         let oldLists = lists
         strings = []
@@ -14,7 +14,7 @@ extension GesCompiler {
 
         func resolve(_ index: UInt16) -> UInt16 { UInt16(text(oldStrings[Int(index)])) }
 
-        let order: [GameEventScriptBinaryBindKind: Int] = [.messageHandler: 0, .messageNameHandler: 0, .record: 1, .predicate: 2, .function: 3, .outboundMessage: 4, .extensionCall: 5, .externalType: 6]
+        let order: [GesBinaryBindKind: Int] = [.messageHandler: 0, .messageNameHandler: 0, .record: 1, .predicate: 2, .function: 3, .outboundMessage: 4, .extensionCall: 5, .externalType: 6]
         let ordered = sourceBindings.enumerated().sorted { a, b in
             let ak = order[a.element.kind]!
             let bk = order[b.element.kind]!
@@ -27,7 +27,7 @@ extension GesCompiler {
             _ = list(args.map(Int.init))
             _ = list(required.map(Int.init))
             _ = list(excluded.map(Int.init))
-            return GameEventScriptBinding(
+            return GesBindingSegment.Entry(
                 kind: binding.kind,
                 name: resolve(binding.name),
                 argumentNames: args,
@@ -41,9 +41,9 @@ extension GesCompiler {
         }
         let instructions = sourceCode.map { instruction in
             var fields = instruction.fields
-            let texts = GameEventScriptCompilerSupport.textSlots(instruction)
-            let textLists = GameEventScriptCompilerSupport.listSlots(instruction, text: true)
-            let registerLists = GameEventScriptCompilerSupport.listSlots(instruction, text: false)
+            let texts = GesCompilerSupport.textSlots(instruction)
+            let textLists = GesCompilerSupport.listSlots(instruction, text: true)
+            let registerLists = GesCompilerSupport.listSlots(instruction, text: false)
             // Tagged emission resolves its argument list before the secondary tag list.
             let order = instruction.opcode == .emitMessageWithTags || instruction.opcode == .publishMessageWithTags ? [0, 2, 1, 3, 4, 5, 6] : Array(0...6)
             for slot in order {

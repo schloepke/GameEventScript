@@ -6,20 +6,20 @@ import GameEventScriptRuntime
 import XCTest
 
 final class StartupBootstrapTests: XCTestCase {
-    final class Counter: GameEventScriptNativeMessageHandler {
+    final class Counter: GesNativeMessageHandler {
         var delivered = 0
 
-        func handle(_ message: GameEventScriptMessage, context: GameEventScriptContext) throws { delivered += 1 }
+        func handle(_ message: GameEventScriptMessage, context: GesContext) throws { delivered += 1 }
     }
 
     func testBuilderStartIsExplicitAndDoesNotDrainMessages() throws {
-        let builder = GameEventScriptHost.createBuilder().withRandomSeed(42)
+        let builder = GameEventScriptHost.makeBuilder().withRandomSeed(42)
         let host = try builder.build()
         let other = try builder.build()
         XCTAssertFalse(host === other)
         let counter = Counter()
         _ = try host.subscribe(.init(name: "Tick"), handler: counter)
-        let instance = try host.load(GameEventScriptBuilder.create().addScript("on initialization { emit Tick() }").compile())
+        let instance = try host.load(GesProgramBuilder().addScript("on initialization { emit Tick() }").compile())
         XCTAssertFalse(host.isReady)
         XCTAssertNil(instance.startResult)
         XCTAssertFalse(host.receive(try .init(name: "Tick")))

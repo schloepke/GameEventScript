@@ -3,101 +3,244 @@
 
 @_spi(Compiler) import GameEventScriptRuntime
 
-extension GesCompiler {
-    func optimize(_ routine: GesRoutine) {
+extension GesBinaryBuilder {
+    // The C# reference pipeline: two cleanup rounds with loop-invariant hoisting between them.
+    static let defaultOptimizationPasses: [any GesBinaryOptimizationPass] = [
+        LocalConstantFoldingPass(), DeadTempWriteEliminationPass(), RegisterPressureReductionPass(), PeepholeMoveEliminationPass(),
+        BranchSimplificationPass(), JumpCleanupPass(), LoopInvariantHoistingPass(),
+        LocalConstantFoldingPass(), DeadTempWriteEliminationPass(), RegisterPressureReductionPass(), PeepholeMoveEliminationPass(),
+        BranchSimplificationPass(), JumpCleanupPass(),
+    ]
+
+    func optimize(_ routine: GesRoutine, _ context: RewriteContext) {
         if routine.hasAssembly { return }
-        let branches: Set<Op> = [.jump, .jumpIfTrue, .jumpIfFalse, .jumpIfNotTrue, .jumpIfNothing, .iteratorNext, .iteratorCreateOrJump]
-        for _ in 0..<2 {
-            var reads: [Int: Int] = [:]
-            var writes: [Int: [Int]] = [:]
-            for (index, instruction) in routine.code.enumerated() {
-                let fields = instruction.fields
-                for slot in GameEventScriptCompilerSupport.registerSlots(instruction) {
-                    let register = Int(fields[slot])
-                    if slot == 0 { writes[register, default: []].append(index) } else { reads[register, default: 0] += 1 }
+        context.begin(routine)
+        for pass in Self.defaultOptimizationPasses { _ = pass.rewrite(context) }
+    }
+
+    // Moves loop-invariant instructions in front of their loop, so they run once per loop entry
+    // instead of once per iteration. Only pure, total and deterministic operations qualify: they
+    // read no random state, call no host code, emit nothing, consume no runtime budget and cannot
+    // fail. Results are therefore unchanged; executed opcode counts and register requirements are not.
+    // Mirrors LoopInvariantHoistingPass of the C# reference compiler item for item.
+    func hoistLoopInvariants(_ context: RewriteContext) -> Bool {
+        guard hasBackEdge(context) else { return false }
+        // Each round moves at least one instruction outward, so this terminates. Only a loop
+        // deferred because it contains a rewritten loop can still have candidates afterwards.
+        var changed = false
+        while true {
+            let (moved, deferred) = hoistRound(context)
+            changed = changed || moved
+            if !deferred { return changed }
+        }
+    }
+
+    private static let backEdges: Set<GesBytecodeOpCode> = [.jump, .jumpIfTrue, .jumpIfFalse, .jumpIfNotTrue, .jumpIfNothing]
+
+    // Constant loads and arithmetic are side-effect free, never fail (invalid input yields
+    // Nothing or a float result), draw no random numbers and charge no runtime budget.
+    private static let pureTotalOperations: Set<GesBytecodeOpCode> = [
+        .loadNothing, .loadTrue, .loadFalse, .loadInteger, .loadFloat, .loadPercentage, .loadText, .loadTag,
+        .add, .subtract, .multiply, .divide, .integerDivide, .modulo, .remainder, .negate, .abs,
+    ]
+
+    private func hasBackEdge(_ context: RewriteContext) -> Bool {
+        var placed = [Bool](repeating: false, count: context.labelCount)
+        for index in 0..<context.count {
+            if let label = context.label(at: index) {
+                placed[label] = true
+            } else if let instruction = context.instruction(at: index), Self.backEdges.contains(instruction.opcode), placed[Int(instruction.word2)] {
+                return true
+            }
+        }
+        return false
+    }
+
+    // Moving instructions inside one loop changes no position outside it, so one analysis serves
+    // every loop of a round that neither contains nor overlaps an already rewritten loop. A loop
+    // containing a rewritten one waits for the next round and its fresh analysis.
+    private func hoistRound(_ context: RewriteContext) -> (moved: Bool, deferred: Bool) {
+        let analysis = LoopAnalysis(context)
+        var rewritten: (start: Int, end: Int)?
+        var deferred = false
+        var moved = false
+        for end in 0..<context.count {
+            guard let backEdge = context.instruction(at: end), Self.backEdges.contains(backEdge.opcode) else { continue }
+            let header = Int(backEdge.word2)
+            let start = analysis.labelIndex[header]
+            guard start >= 0, start < end else { continue }
+            if let rewritten, start <= rewritten.end && rewritten.start <= end {
+                deferred = true
+                continue
+            }
+            guard !context.isRoutineEntryLabel(header), analysis.hasSingleEntry(context, start, end) else { continue }
+            // One forward sweep finds chains such as a constant load and the product reading it.
+            var marked: [Bool] = []
+            var hoisted: [Bool] = []
+            for index in (start + 1)..<end {
+                guard let candidate = context.instruction(at: index), isHoistable(context, candidate, index, start: start, end: end, analysis: analysis, hoisted: hoisted) else { continue }
+                if marked.isEmpty {
+                    marked = .init(repeating: false, count: context.count)
+                    hoisted = .init(repeating: false, count: context.routine.registers)
                 }
-                for slot in GameEventScriptCompilerSupport.listSlots(instruction, text: false) {
-                    for register in lists[Int(fields[slot])] {
-                        if slot == 0 { writes[Int(register), default: []].append(index) } else { reads[Int(register), default: 0] += 1 }
+                marked[index] = true
+                hoisted[Int(candidate.word0)] = true
+            }
+            if marked.isEmpty { continue }
+            context.moveMarked(before: start, marked)
+            // Loops are visited by ascending end, so later disjoint loops start after this one.
+            rewritten = (min(rewritten?.start ?? start, start), end)
+            moved = true
+        }
+        return (moved, deferred)
+    }
+
+    private func isHoistable(_ context: RewriteContext, _ instruction: GesBytecodeInstruction, _ index: Int, start: Int, end: Int, analysis: LoopAnalysis, hoisted: [Bool]) -> Bool {
+        guard Self.pureTotalOperations.contains(instruction.opcode) else { return false }
+        let slots = context.slots(instruction)
+        guard slots.registers.contains(0), slots.lists.isEmpty else { return false }
+        // The destination has no other definition and is read only later in this loop body,
+        // so no path observes it before this instruction or after a zero-iteration loop.
+        let destination = Int(instruction.word0)
+        guard context.isTemporary(destination), analysis.writeCount[destination] == 1 else { return false }
+        if analysis.lastRead[destination] >= 0 && (analysis.firstRead[destination] <= index || analysis.lastRead[destination] > end) { return false }
+        // Every input is final before the loop starts, possibly by an earlier hoist of this sweep.
+        for slot in slots.registers where slot != 0 {
+            let source = Int(instruction.field(slot))
+            if source == destination || !(analysis.lastWrite[source] < start || (!hoisted.isEmpty && hoisted[source])) { return false }
+        }
+        return true
+    }
+}
+
+// Nested like the C# builder's analysis types.
+extension GesBinaryBuilder {
+    // Register and register-list operand slots of one opcode shape, computed once per compilation.
+    struct OperandSlots {
+        let registers: [Int]
+        let lists: [Int]
+
+        static func of(_ instruction: GesBytecodeInstruction, _ cache: inout [Int: OperandSlots]) -> OperandSlots {
+            let opcode = instruction.opcode
+            if let slots = fixed[Int(opcode.rawValue)] { return slots }
+            // The remaining shapes also depend on the flags (iterator and send modes) or on payload word a (split and pattern modes).
+            let key = Int(opcode.rawValue) << 32 | Int(instruction.unitAndFlags) << 16 | Int(instruction.a)
+            if let slots = cache[key] { return slots }
+            let slots = OperandSlots(instruction)
+            cache[key] = slots
+            return slots
+        }
+
+        private init(_ instruction: GesBytecodeInstruction) {
+            registers = GesCompilerSupport.registerSlots(instruction)
+            lists = GesCompilerSupport.listSlots(instruction, text: false)
+        }
+
+        // Slots of every opcode whose operands depend on the opcode alone, built once per process.
+        private static let fixed: [OperandSlots?] = {
+            var table = [OperandSlots?](repeating: nil, count: 256)
+            for opcode in GesBytecodeOpCode.allCases where !hasVariableShape(opcode) {
+                table[Int(opcode.rawValue)] = OperandSlots(.init(opcode: opcode, unitAndFlags: 0, word0: 0, word1: 0, word2: 0, payload: 0))
+            }
+            return table
+        }()
+
+        private static func hasVariableShape(_ opcode: GesBytecodeOpCode) -> Bool {
+            switch opcode {
+            case .iteratorCreate, .iteratorCreateOrJump, .iteratorNext, .splitText, .hasPattern, .takePattern, .emitInstant, .emitAfter, .publishInstant, .publishAfter: true
+            default: false
+            }
+        }
+    }
+
+    // Per-register definition and use item indexes, label item indexes and the first and last item referring to each
+    // label, as the Analysis of the C# LoopInvariantHoistingPass.
+    struct LoopAnalysis {
+        var writeCount: [Int]
+        var lastWrite: [Int]
+        var firstRead: [Int]
+        var lastRead: [Int]
+        var labelIndex: [Int]
+        var firstReference: [Int]
+        var lastReference: [Int]
+
+        init(_ context: RewriteContext) {
+            // Before allocation, routine.registers counts the virtual registers.
+            let registers = context.routine.registers
+            writeCount = .init(repeating: 0, count: registers)
+            lastWrite = .init(repeating: -1, count: registers)
+            firstRead = .init(repeating: .max, count: registers)
+            lastRead = .init(repeating: -1, count: registers)
+            labelIndex = .init(repeating: -1, count: context.labelCount)
+            firstReference = .init(repeating: .max, count: context.labelCount)
+            lastReference = .init(repeating: -1, count: context.labelCount)
+            for index in 0..<context.count {
+                if let label = context.label(at: index) {
+                    labelIndex[label] = index
+                    continue
+                }
+                guard let instruction = context.instruction(at: index) else { continue }
+                if GesBinaryBuilder.isBranch(instruction.opcode) {
+                    let label = Int(instruction.word2)
+                    firstReference[label] = min(firstReference[label], index)
+                    lastReference[label] = index
+                }
+                let slots = context.slots(instruction)
+                for slot in slots.registers {
+                    let register = Int(instruction.field(slot))
+                    // Closing an iterator also clears its register.
+                    if slot == 0 || instruction.opcode == .iteratorClose { write(register, index) }
+                    if slot != 0 { read(register, index) }
+                }
+                for slot in slots.lists {
+                    for register in context.builder.lists[Int(instruction.field(slot))] {
+                        if slot == 0 { write(Int(register), index) } else { read(Int(register), index) }
                     }
                 }
             }
-            let targets = Set(routine.code.filter { branches.contains($0.opcode) }.map { Int($0.word2) })
-            var removed: Set<Int> = []
-            for (index, move) in routine.code.enumerated() where move.opcode == .move && move.unitAndFlags == 0 {
-                let source = Int(move.word1)
-                let destination = move.word0
-                guard !routine.pinned.contains(source), reads[source] == 1, writes[source]?.count == 1, let writer = writes[source]?.first, writer < index, !removed.contains(writer) else { continue }
-                let instruction = routine.code[writer]
-                if branches.contains(instruction.opcode) { continue }
-                let fields = instruction.fields
-                if GameEventScriptCompilerSupport.registerSlots(instruction).contains(where: { $0 != 0 && fields[$0] == destination }) { continue }
-                var blocked = targets.contains(index)
-                for i in (writer + 1)..<index {
-                    let candidate = routine.code[i]
-                    if targets.contains(i) || branches.contains(candidate.opcode) || candidate.opcode == .returnVoid || candidate.opcode == .returnValue {
-                        blocked = true
-                        break
-                    }
-                    if GameEventScriptCompilerSupport.registerSlots(candidate).contains(where: { candidate.fields[$0] == destination }) {
-                        blocked = true
-                        break
-                    }
-                    for slot in GameEventScriptCompilerSupport.listSlots(candidate, text: false) where lists[Int(candidate.fields[slot])].contains(destination) { blocked = true }
-                }
-                if !blocked {
-                    var fields = fields
-                    fields[0] = destination
-                    routine.code[writer] = instruction.replacing(fields)
-                    removed.insert(index)
-                }
+        }
+
+        // The loop body starts at its header label and ends with the back edge. It must be entered
+        // only by falling through the header, so code placed before the header runs on every entry.
+        func hasSingleEntry(_ context: RewriteContext, _ start: Int, _ end: Int) -> Bool {
+            for index in start...end {
+                if let label = context.label(at: index), firstReference[label] < start || lastReference[label] > end { return false }
             }
-            // Fold a conditional skip over an unconditional jump into its inverse.
-            // A separately targeted jump must remain an entry point.
-            for index in routine.code.indices where index + 1 < routine.code.count {
-                let branch = routine.code[index]
-                let jump = routine.code[index + 1]
-                let inverse: Op? = branch.opcode == .jumpIfTrue ? .jumpIfFalse : branch.opcode == .jumpIfFalse || branch.opcode == .jumpIfNotTrue ? .jumpIfTrue : nil
-                if let inverse, Int(branch.word2) == index + 2, jump.opcode == .jump, !targets.contains(index + 1) {
-                    routine.code[index] = .init(
-                        opcode: inverse,
-                        unitAndFlags: branch.unitAndFlags,
-                        word0: branch.word0,
-                        word1: branch.word1,
-                        word2: jump.word2,
-                        payload: branch.payload
-                    )
-                    removed.insert(index + 1)
-                }
-            }
-            for index in routine.code.indices where branches.contains(routine.code[index].opcode) {
-                let instruction = routine.code[index]
-                var target = Int(instruction.word2)
-                var seen: Set<Int> = []
-                while target < routine.code.count && routine.code[target].opcode == .jump && seen.insert(target).inserted { target = Int(routine.code[target].word2) }
-                routine.patch(index, target: target)
-                if instruction.opcode == .jump && target == index + 1 { removed.insert(index) }
-            }
-            if removed.isEmpty { continue }
-            var addresses = [Int](repeating: 0, count: routine.code.count + 1)
-            var next = 0
-            for index in routine.code.indices {
-                addresses[index] = next
-                if !removed.contains(index) { next += 1 }
-            }
-            addresses[routine.code.count] = next
-            var code: [Instruction] = []
-            var locations: [GameEventScriptSourceLocation] = []
-            for index in routine.code.indices where !removed.contains(index) {
-                let instruction = routine.code[index]
-                var fields = instruction.fields
-                if branches.contains(instruction.opcode) { fields[2] = UInt16(addresses[Int(instruction.word2)]) }
-                code.append(instruction.replacing(fields))
-                locations.append(routine.locations[index])
-            }
-            routine.code = code
-            routine.locations = locations
-            routine.calls = routine.calls.map { (addresses[$0.0], $0.1) }
+            return true
+        }
+
+        private mutating func write(_ register: Int, _ index: Int) {
+            writeCount[register] += 1
+            lastWrite[register] = index
+        }
+
+        private mutating func read(_ register: Int, _ index: Int) {
+            firstRead[register] = min(firstRead[register], index)
+            lastRead[register] = index
+        }
+    }
+}
+
+extension GesBinaryBuilder {
+    static func isBranch(_ opcode: GesBytecodeOpCode) -> Bool {
+        switch opcode {
+        case .jump, .jumpIfTrue, .jumpIfFalse, .jumpIfNotTrue, .jumpIfNothing, .iteratorNext, .iteratorCreateOrJump: true
+        default: false
+        }
+    }
+}
+
+extension GesBytecodeInstruction {
+    // Operand field by slot, without materializing the `fields` array.
+    func field(_ slot: Int) -> UInt16 {
+        switch slot {
+        case 0: word0
+        case 1: word1
+        case 2: word2
+        case 3: a
+        case 4: b
+        case 5: c
+        default: d
         }
     }
 }

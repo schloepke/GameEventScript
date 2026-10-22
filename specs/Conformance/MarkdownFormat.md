@@ -427,7 +427,7 @@ It is absent by default, must not be empty or whitespace-only, must not start
 with `runtime.`, and cannot accompany `throw: true`. Both failure modes abort
 before actions or emits: `throw: true` raises an unanticipated platform exception,
 while `faultCode` reports a deliberate diagnostic using the platform's failure
-transport (`GameEventScriptExtensionFaultException` in C#). The Host supplies
+transport (`GesExtensionFaultException` in C#). The Host supplies
 the active handler context as defined in [Diagnostics](../Diagnostics.md).
 
 With `faultCode`, an optional `faultContext` mapping accepts only `programName`
@@ -725,6 +725,11 @@ observed context field be absent; omitting the key leaves that field unconstrain
 Human-readable messages and technical details cannot be expectations. The
 diagnostic contract is [Diagnostics](../Diagnostics.md).
 
+A `compileError` expectation may instead contain `errors`, a non-empty ordered
+list of the same constraint objects. It describes the complete diagnostic list:
+the observed diagnostics must have the same count and order, and each must match
+its constraint. `error` and `errors` cannot be combined.
+
 ### `messageApi`
 
 Requires `message-api` and no GES source. The `gesBlock: case` mapping contains:
@@ -906,7 +911,7 @@ binary:
 
 `outcome` is exactly `valid`, `readError`, or `validationError`. Read errors
 cover header, framing, section representation, strict UTF-8, and bounded table
-materialization (`GameEventScriptProgramFormatErrorCode` 1 through 21).
+materialization (`GesProgramFormatErrorCode` 1 through 21).
 Validation errors cover cross-reference, opcode/operand, call-graph, resource,
 and debug/source invariants (codes 22 through 38). Error outcomes require the
 canonical `errorCode` name and may constrain `byteOffset`, `sectionType`, and

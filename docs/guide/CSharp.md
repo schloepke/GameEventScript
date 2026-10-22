@@ -45,8 +45,9 @@ using System;
 using GameEventScript.Api;
 using GameEventScript.CSharpBridge;
 using GameEventScript.Runtime.Values;
+using static GameEventScript.Runtime.Values.GesValue;
 
-var program = GameEventScriptBuilder.Create()
+var program = new GesProgramBuilder()
     .AddScript("""
         module tutorial.damage
         function damage(base, bonus) be base + bonus
@@ -64,21 +65,26 @@ var output = host.Subscribe("Done", ["value"], (message, _) =>
     Console.WriteLine(message.Arguments.GetAsInteger("value")));
 var instance = host.Load(program);
 
-if (host.Start().State != GameEventScriptStartState.Ready)
+if (host.Start().State != GesStartState.Ready)
     throw new InvalidOperationException("Host startup failed.");
 
 host.Receive(GameEventScriptMessage.Create("Calculate", [
-    new GameEventScriptMessageArgument("base", GesValue.GesInteger(30)),
-    new GameEventScriptMessageArgument("bonus", GesValue.GesInteger(12))
+    new GesMessageArgument("base", GesInteger(30)),
+    new GesMessageArgument("bonus", GesInteger(12))
 ]));
 
 var result = host.RunToCompletion();
-if (result.State != GameEventScriptExecutionState.Completed)
+if (result.State != GesExecutionState.Completed)
     throw new InvalidOperationException($"Execution stopped: {result.State}");
 
 instance.Detach();
 output.Unsubscribe();
 ```
+
+`using static GameEventScript.Runtime.Values.GesValue` lets value factories read
+like literals: `GesInteger(30)`, `GesText("Ada")` or `GesNothing()`. The `Ges`
+member prefix keeps them distinct from type names such as `List<T>`; Swift writes
+the same values as `.integer(30)` and `.text("Ada")`.
 
 Run `dotnet run`. The callback prints `42`.
 
@@ -121,7 +127,7 @@ Read the file in your application and pass its bytes to Runtime:
 
 ```csharp
 var bytes = System.IO.File.ReadAllBytes("damage.gesb");
-var program = GameEventScriptProgramReader.Read(bytes);
+var program = GameEventScriptProgram.Read(bytes);
 ```
 
 Replace the builder section of the previous example with this code. The
@@ -130,7 +136,7 @@ File access remains in your application, not in the portable runtime.
 
 ## Handle failures and delayed work
 
-Compilation failures throw `GameEventScriptCompileException`, whose `Diagnostics`
+Compilation failures throw `GesCompileException`, whose `Diagnostics`
 contain stable codes and source locations. Check startup and execution results;
 do not assume a returned result means all handlers succeeded. Record structured
 diagnostics rather than parsing English messages.

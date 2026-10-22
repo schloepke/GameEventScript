@@ -27,7 +27,7 @@ must not match it.
 Source locations use the compiler's portable source contract: source name plus
 1-based Unicode-scalar line/column positions. Program and handler identify the
 runtime/link context. Symbol kinds are the numerically specified
-`GameEventScriptSymbolKind` values.
+`GesDiagnosticSymbolKind` values.
 
 ## Stable codes
 
@@ -52,7 +52,53 @@ Compiler lowering/resource analysis uses `compile.unsupportedConstruct`,
 `compile.numericLimitExceeded`, `compile.cyclicCallGraph`,
 `compile.invalidResourceMetadata`, and `compile.invariantViolation`.
 
-Every existing `GameEventScriptProgramFormatErrorCode` maps losslessly to
+## Compiler diagnostic collection
+
+> **Since: Unreleased**
+
+A failing compilation reports every diagnostic of the phase that fails, in a
+defined order, instead of stopping at the first one. Compilation itself still
+stops at the end of that phase.
+
+- Parsing proceeds source by source in input order and stops after the first
+  source that has syntax errors; later sources are not parsed. Within that
+  source, a `parse.syntax` error resumes parsing: at declaration level at the
+  next `module`, `constant`, `record`, `predicate`, `function` or `on` keyword,
+  inside a block at the next statement separator (`;` or a line break), or at
+  the block's closing brace. A block left open at the end of input reports the
+  missing brace and the failed closing of its declaration. `parse.sourceNestingExceeded`
+  ends parsing immediately, after the syntax errors already found in that source.
+- Validation reports all semantic diagnostics of the program: first repeated
+  constants, repeated record types and record types that an external type also
+  declares, repeated predicate signatures, repeated function signatures and
+  predicate/function name conflicts, each group in source order; then, module
+  by module in source order, its records, predicates, functions and handlers
+  followed by its shadowing diagnostics; and finally a module-name mismatch
+  between sources, which is reported only when no other validation diagnostic
+  exists.
+- Lowering and resource analysis stop at the first `compile.*` diagnostic.
+
+Every implementation reports the same ordered phase and code sequence for the
+same sources, and each compiler diagnostic starts at the same source line and
+column. A diagnostic points at the most specific source construct that causes it:
+
+- a syntax error at the offending token, which for an invalid constant
+  initializer is the constant name and for a type name that starts no
+  constructor is the type name;
+- `parse.sourceNestingExceeded` at the first expression, pattern or statement
+  body that exceeds the limit;
+- a repeated or misspelled declaration at that declaration, parameter, field,
+  argument, `if let` condition or binding, and a shadowing binder at the binding
+  construct, such as its selector or loop;
+- a resolution, arity, predicate or type-constructor error at the call,
+  predicate test, constructor or reference;
+- `compile.cyclicCallGraph` at the earliest declaration in the cycle, and other
+  `compile.*` diagnostics at the declaration, statement, expression or assembly
+  line that is being lowered.
+
+Diagnostic messages and end positions are not part of that contract.
+
+Every existing `GesProgramFormatErrorCode` maps losslessly to
 `decode.<lowerCamelErrorCode>`, for example `InvalidMagic` maps to
 `decode.invalidMagic`. The format exception keeps byte offset, section type, and
 entry index as its specialized structured fields as well.
@@ -91,7 +137,7 @@ stream, but must not replace the callback's original failure diagnostic with a
 scope-cleanup diagnostic.
 
 An extension function, external-type constructor, or external-value field
-accessor may throw `GameEventScriptExtensionFaultException` to deliberately
+accessor may throw `GesExtensionFaultException` to deliberately
 report a defined failure with its own caller-chosen code, message, and optional
 symbol; that code must not use the reserved `runtime.` prefix and is therefore
 never one of the codes enumerated above. Any other exception from the same
@@ -102,14 +148,14 @@ current handler; the host remains reusable for subsequently enqueued messages,
 as for any other runtime error. Neither ever evaluates to `nothing`.
 
 Native handlers may likewise deliberately report a caller-chosen fault with
-`GameEventScriptExtensionFaultException`. Unanticipated native-handler exceptions
+`GesExtensionFaultException`. Unanticipated native-handler exceptions
 use `runtime.nativeHandlerFailure`.
 
 ## Transport and execution
 
-Exceptions are only the C# transport mechanism. `GameEventScriptCompileException`,
-`GameEventScriptProgramFormatException`, and
-`GameEventScriptDynamicLinkException` expose portable diagnostic data; callers
+Exceptions are only the C# transport mechanism. `GesCompileException`,
+`GesProgramFormatException`, and
+`GesDynamicLinkException` expose portable diagnostic data; callers
 must branch on phase/code rather than exception message or CLR subtype details.
 
 Runtime handler failures abort and reset only the failing handler. Remaining

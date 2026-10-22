@@ -225,16 +225,23 @@ these limits.
 non-empty diagnostic list. A port may return a result union instead. Diagnostics
 remain the portable failure value.
 
-The C# compiler entry point is
-`GameEventScriptBuilder.Create().AddScript(text, sourceName).Compile(options)`.
-Host construction independently uses `GameEventScriptHost.CreateBuilder()`.
+The compiler entry point is a directly created builder:
+`new GesProgramBuilder().AddScript(text, sourceName).Compile(options)` in C#
+and `GesProgramBuilder().addScript(text, sourceName:).compile(options:)` in Swift.
+The target type offers the same builder as a convenience:
+`GameEventScriptProgram.CreateBuilder()` in C# (a C# 14 static extension member;
+earlier language versions such as Unity use the constructor) and
+`GameEventScriptProgram.makeBuilder()` in Swift. Host construction independently
+uses `new GesHostBuilder()` or `GameEventScriptHost.CreateBuilder()`
+(Swift: `GesHostBuilder()` or `GameEventScriptHost.makeBuilder()`); hosts have
+no public constructor or initializer.
 
 ## Program and bytecode data API
 
 ### Program
 
 `Program` is the immutable, reusable, language-neutral parsed representation of
-one `.gesb` artifact. Only Compiler and ProgramReader create Programs publicly.
+one `.gesb` artifact. Only the Compiler and `Program.Read` create Programs publicly.
 There is no free-form public Program constructor.
 
 The Program exposes:
@@ -292,8 +299,9 @@ native endianness do not define the binary format.
 The following enum-like types expose the fixed numeric IDs from the bytecode and
 binary specifications and must reject undefined values at validation boundaries:
 
-- `BytecodeOpCode`, `BytecodeTypeKind`, `BytecodeInstructionUnit`,
-  `InstructionFlag`, `BytecodePatternKind`, and `BytecodeSeriesKind`;
+- `BytecodeOpCode`, `BytecodeTypeKind`, `QuantityUnit`, `BytecodePatternKind`,
+  and `BytecodeSeriesKind`; instruction flags are exposed only as the raw
+  `UnitAndFlags` byte;
 - `BinaryBindKind`, `SectionType`, `SectionFlags`, and
   `DebugSymbolKind`.
 
@@ -327,9 +335,9 @@ Program validation.
 
 ## Program codec, validation, and dump API
 
-### ProgramReader
+### Reading
 
-`ProgramReader.Read(bytes, options) -> Program` consumes caller-provided bytes
+The static `Program.Read(bytes, options) -> Program` consumes caller-provided bytes
 only. It performs overflow-safe bounded structural decoding followed by complete
 semantic validation. It retains no caller buffer. Success returns a fully valid
 immutable Program; failure returns/throws `ProgramFormatError` with a stable
@@ -350,24 +358,26 @@ All values are validated before allocation. The shared Default object is
 read-only by convention; a mutable language mapping must snapshot settings at
 the start of Read.
 
-### ProgramWriter
+### Writing
+
+Encoding operations are members of the Program:
 
 | Operation | Contract |
 | --- | --- |
-| `GetEncodedSize(program)` | Fully validates Program and returns the exact canonical byte count with checked arithmetic. |
-| `Write(program, destination)` | Fully validates before modifying destination, requires sufficient caller storage, writes canonical Little Endian `.gesb`, and returns bytes written. |
-| `ToArray(program)` | Allocates exactly the required output byte array and delegates to canonical Write semantics. |
+| `GetEncodedSize()` | Fully validates Program and returns the exact canonical byte count with checked arithmetic. |
+| `Write(destination)` | Fully validates before modifying destination, requires sufficient caller storage, writes canonical Little Endian `.gesb`, and returns bytes written. |
+| `Encode()` | Allocates exactly the required output byte array and delegates to canonical Write semantics. |
 
 The writer reconstructs every known section from structured data. Only opaque
 payloads are copied raw. It performs no file or stream I/O.
 
-### ProgramValidator and ProgramDumper
+### Validation and dump
 
-`ProgramValidator.Validate(program)` is deterministic, side-effect free, and
+`Program.Validate()` is deterministic, side-effect free, and
 performs the same complete semantic checks used by Reader, Writer, and Host.Load.
 It does not link executable callbacks. Failure uses ProgramFormatError.
 
-`ProgramDumper.Dump(program, includeInstructionAddresses = false)` returns
+`Program.Dump(includeInstructionAddresses = false)` returns
 canonical `.gesa` text for a valid Program. It uses embedded debug/source
 segments when available, performs no file I/O, and never changes Program. The
 dumper is not a trust boundary and does not replace explicit Program validation.
@@ -638,11 +648,11 @@ above.
 > **Since: Unreleased**
 
 `WithProfiler` / `withProfiler` selects an optional synchronous
-`IGameEventScriptProfiler` / `GameEventScriptProfiler` factory. Swift also accepts
+`IGesProfiler` / `GesProfiler` factory. Swift also accepts
 `profiler` in its Host initializer. The Host calls
 `CreateProgramProfiler(program)` / `createProgramProfiler(program)` once per linked
 load instance, before execution. The result implements
-`IGameEventScriptProgramProfiler` / `GameEventScriptProgramProfiler` and remains
+`IGesProgramProfiler` / `GesProgramProfiler` and remains
 host-specific; no instrumentation state enters the immutable Program. Repeated
 loads, including identical Programs or module names, receive separate collectors.
 The factory can retain collectors for reporting after detach.
@@ -890,10 +900,10 @@ contracts remain in [Runner.md](Conformance/Runner.md).
 ### C# and Unity
 
 `GameEventScript.Runtime` supplies Runtime. The optional
-`GameEventScript.Compiler` package supplies `GameEventScriptBuilder`,
-`GameEventScriptCompileOptions`, and `GameEventScriptCompileException` in the
+`GameEventScript.Compiler` package supplies `GesProgramBuilder`,
+`GesCompileOptions`, and `GesCompileException` in the
 `GameEventScript.Api` namespace. Applications compile through
-`GameEventScriptBuilder.Create()`, construct hosts through
+`new GesProgramBuilder()`, construct hosts through
 `GameEventScriptHost.CreateBuilder()`, and load precompiled Programs through
 the Reader.
 
@@ -901,21 +911,30 @@ Package and assembly identities use `GameEventScript.Runtime`,
 `GameEventScript.Compiler`, `GameEventScript.CSharpBridge`, and
 `GameEventScript.SyntaxHighlighter`. Their shared C# namespace root is
 `GameEventScript`; the module name does not add another namespace layer to
-the public `GameEventScript.Api` contracts. Public type names remain unchanged.
+the public `GameEventScript.Api` contracts.
 
 `GameEventScript.CSharpBridge` depends only on Runtime and must not pull in
 Compiler or Conformance, directly or transitively. It supplies:
 
-- `GameEventScriptCSharpValue.GesMap(entries)` and
-  `GameEventScriptCSharpValue.GesRecord(typeName, fields)` snapshot dictionary
+- `GesBridgeValueConversion.GesMap(entries)` and
+  `GesBridgeValueConversion.GesRecord(typeName, fields)` snapshot dictionary
   entries and delegate to the portable ordered value factories. Null or empty
   dictionaries mean no entries; dictionary enumeration order does not determine
   the resulting canonical key order;
-- tuple/dictionary message and Context conveniences;
-- delegate native-handler adapters;
-- reflection/attribute extension and external-type registries;
-- an optional lock-based automatic Host runner with the ownership-transfer and
+- tuple/dictionary message and Context conveniences (`GesBridgeMessage`,
+  `GesBridgeHostExtensions`, `GesBridgeContextExtensions`);
+- delegate adapters `GesBridgeMessageHandler` and `GesBridgePublishSink`;
+- Reflection/attribute registries `GesBridgeExtensionRegistry.Create(types)` (or
+  `CreateBuilder()` for incremental registration and a fallback registry) and
+  `GesBridgeExternalTypeRegistry.Create(types)`;
+- an optional lock-based automatic `GesBridgeHostRunner` with the ownership-transfer and
   scheduling rules in [HostRuntime](HostRuntime.md#c-automatic-runner).
+
+Bridge types use the `GesBridge` prefix in both languages. A role present in both
+bridges has the same type name (`GesBridgeHostRunner`, `GesBridgeExtensionRegistry`,
+`GesBridgeExternalTypeRegistry`, `GesBridgeMessageHandler`, `GesBridgePublishSink`,
+`GesBridgeValueConversion`); Reflection-specific C# types and Swift descriptor
+types exist in one bridge only.
 
 Source-file reading belongs to the CLI or embedding. The compiler accepts
 `AddScript(text, sourceName)`; CSharpBridge has no compiler-builder extensions.
@@ -925,14 +944,14 @@ DLL and may choose main-thread/manual pumping instead of the automatic runner.
 
 ### Swift
 
-`GesValue`, `GameEventScriptMessage` and `GameEventScriptMessageSignature`
+`GesValue`, `GameEventScriptMessage` and `GesMessageSignature`
 retain immutable public value semantics. Read-only properties may use shared
 immutable backing storage; copying a value and replacing a VM register never
 mutates another copy. Native register layout is an implementation detail and
 does not define binary or JSON encoding.
 
 Swift message arguments retain ordered signature labels and values in separate
-immutable arrays. Their `Iterator` yields `GameEventScriptMessageArgument` pairs
+immutable arrays. Their `Iterator` yields `GesMessageArgument` pairs
 without creating an intermediate pair array. Returned arrays retain Swift
 copy-on-write semantics; caller mutations cannot change a message.
 
@@ -941,42 +960,49 @@ The Swift mapping separates the `GameEventScriptRuntime`,
 Compiler depends only on Runtime; Conformance depends on both. Runtime has no
 dependency on Compiler, a test framework, or Conformance.
 
-`GameEventScriptBuilder.addScript(_:sourceName:)` accepts source text and assigns
+`GesProgramBuilder.addScript(_:sourceName:)` accepts source text and assigns
 an independent source ID to each addition, even when diagnostic names repeat.
 The builder supports `withDebugInfo`, `withProgramVersion`, and a declarative
 `withExternalTypeCatalog`. `compile(options:)` returns a reusable immutable
 Program; repeated compilation does not mutate earlier results. A supplied
-`GameEventScriptCompileOptions` overrides the builder's options for that call.
-`GameEventScriptDebugInfoOptions` independently selects symbols, source maps,
+`GesCompileOptions` overrides the builder's options for that call.
+`GesDebugInfoOptions` independently selects symbols, source maps,
 and source archives; `.all` is the default and `.none` omits all three. Unknown
 option bits are invalid public arguments. Source diagnostics are thrown as
-`GameEventScriptCompileError` with ordered `GameEventScriptDiagnostic` values.
+`GesCompileError` with ordered `GesDiagnostic` values.
 Compiler internals and the compiler-only Runtime SPI are not public embedding APIs.
 
-Runtime exposes `GesValue`, `GesUnit`, immutable range descriptors, messages,
+Runtime exposes `GesValue`, `GesQuantityUnit`, immutable range descriptors, messages,
 signatures, Program data and codecs, `GameEventScriptHost`, Context, lifecycle
 handles, random generators, diagnostics, and the extension/external-type
-protocols. `GameEventScriptHost.createBuilder()` provides the same mutable
+protocols. `GameEventScriptHost.makeBuilder()` provides the same mutable
 configuration workflow as C#, including seed, entropy, sequence, limits, observer,
-sink and registries. Every `build()` creates an independent Host. The direct
-initializer remains available. `GameEventScriptBuilder.create()` creates a
-compiler builder. `load`, `start`, `isReady`, `subscribe`, `receive`, `executeFrame`,
+sink and registries. Every `build()` creates an independent Host; the Host
+initializer is internal. `GesProgramBuilder()` or
+`GameEventScriptProgram.makeBuilder()` creates a compiler builder. `load`, `start`, `isReady`, `subscribe`, `receive`, `executeFrame`,
 and `runToCompletion` retain the host contracts above. The mutable VM is host-private.
 
-Program segments use `let` properties and native Array values with copy-on-write
-storage; callers cannot mutate a Program through a returned array. Int64,
+`GameEventScriptProgram` is a `final`, `Sendable` reference type. Passing it to
+multiple hosts shares one immutable instance rather than copying the Program
+structure. Host-specific links and execution state remain outside that instance.
+The Program exposes the same segments as C# (`metadata`, `stringConstants`,
+`uint16IndexLists`, `bindings`, `code`, optional `debugSymbols`, `sourceMap`,
+`sourceArchive` and `buildMetadata`). Swift segments are immutable value types
+that also conform to `RandomAccessCollection` over their entries; their native
+Array views (`slices`, `data`, `entries`, `instructions`, `symbols`, `sources`)
+use copy-on-write storage, so callers cannot mutate a Program through them. Int64,
 UInt64, UInt16, and Double retain their specified transport widths. Instructions
 expose numeric words and payload bits, independently of Swift enum memory layout.
-`GameEventScriptProgramReader.read`, `GameEventScriptProgramWriter.bytes`,
-`encodedSize`, `write(_:into:)`, `GameEventScriptProgramValidator.validate`, and
-`GameEventScriptProgramDumper.dump` are synchronous and accept/return memory.
+`GameEventScriptProgram.read(_:options:)` and the Program members `encode()`,
+`encodedSize()`, `write(into:)`, `validate()` and `dump(includeInstructionAddresses:)`
+are synchronous and accept/return memory.
 Reader options retain the three portable retention modes and bounded read limits.
 
 Invalid public construction uses structured `throws` errors. Signature message
 creation returns an optional for mismatched arity. Decode failures use
-`GameEventScriptProgramFormatError`; linking uses `GameEventScriptDynamicLinkError`;
-execution results carry `GameEventScriptDiagnostic`. Explicit callback faults use
-`GameEventScriptExtensionFault`; unexpected errors receive the owning runtime
+`GesProgramFormatError`; linking uses `GesDynamicLinkError`;
+execution results carry `GesDiagnostic`. Explicit callback faults use
+`GesExtensionFaultError`; unexpected errors receive the owning runtime
 boundary's stable classification. Call objects and borrowed argument views must
 not outlive their synchronous callback.
 
@@ -1010,7 +1036,7 @@ signatures through an explicit fallback registry. Dictionary message binding
 requires a known signature with exclusively named parameters and exactly one
 value for each normalized label. Ordered tuple inputs support positional labels.
 
-`GameEventScriptSwiftValueConvertible` defines explicit native conversion.
+`GesBridgeValueConvertible` defines explicit native conversion.
 Built-in conformances cover Boolean, Text, signed and unsigned fixed-width Swift
 integers, Float/Double, Optional, Array, String-keyed Dictionary and GesValue.
 Native decoding checks kind and units, rejects fractional or out-of-range integer
@@ -1021,9 +1047,9 @@ NaN, infinity, zero and integral-storage normalization. Nothing represents nil;
 GesValue conversion is identity. Collection conversions recurse and preserve
 canonical GES ordering. Dictionary decoding rejects distinct scalar keys that
 Swift String equality would merge; encoding preserves only keys present in the
-input dictionary. Native failures use `GameEventScriptSwiftConversionError`.
+input dictionary. Native failures use `GesBridgeConversionError`.
 
-`GameEventScriptSwiftType<Root>` exposes only its declared KeyPath/getter fields
+`GesBridgeTypeBinding<Root>` exposes only its declared KeyPath/getter fields
 and constructor closures. Constructor parameter labels refer to declared fields
 and inherit their type definitions. Call arguments follow the constructor's
 declared parameter order. A type-erased binding supplies a validated compiler
@@ -1052,7 +1078,7 @@ attaches the explicit unit to a native numeric magnitude; constructor decoding
 checks the exact unit before stripping it and invoking strict native conversion.
 Nothing retains existing Optional/NaN semantics. No magnitude scaling, truncation
 or implicit reinterpretation of an already unit-bearing value occurs. These
-operations are also exposed by `GameEventScriptSwiftValue.encode(_:unit:)` and
+operations are also exposed by `GesBridgeValueConversion.encode(_:unit:)` and
 `decode(_:as:unit:)`; `.none` delegates to the ordinary strict conversion.
 
 `@GesConstruct` exposes a synchronous, nonfailable initializer or static factory
@@ -1067,7 +1093,7 @@ portable descriptor name/signature validation still occurs when the throwing
 factory executes. Manual descriptors remain available for foreign/generic types
 and throwing getters. Macro expansion adds no GES syntax or portable behavior.
 
-`GameEventScriptSwiftHostRunner` is an optional synchronized embedding adapter.
+`GesBridgeHostRunner` is an optional synchronized embedding adapter.
 It takes exclusive ownership through Swift 6 sending parameters and serializes
 Host access and lifecycle operations with one recursive lock. Transferred Host,
 callback and external-value state must not be accessed outside that ownership
@@ -1137,8 +1163,8 @@ reflection objects remain private or embedding-specific.
 
 > **Since: 0.2.0**
 
-C# `IGameEventScriptClock.ElapsedMicroseconds` and Swift
-`GameEventScriptClock.elapsedMicroseconds` provide a borrowed monotonic Int64
+C# `IGesClock.ElapsedMicroseconds` and Swift
+`GesClock.elapsedMicroseconds` provide a borrowed monotonic Int64
 microsecond source. Host builders accept `WithClock` / `withClock`; absent an
 injected source, each host uses an independent origin on the system monotonic
 clock. A shared injected clock is read serially by its embedding.
@@ -1153,10 +1179,10 @@ reschedule when new work arrives and cancel wake-ups when closed/disposed.
 
 > **Since: 0.2.0**
 
-C# `GameEventScriptMessageJson.Serialize/Deserialize` and Swift
-`GameEventScriptMessageJson.serialize/deserialize` encode/decode messages;
-`SerializeValue/DeserializeValue` and `serializeValue/deserializeValue` handle
-standalone values. These Runtime-only APIs are synchronous, fileless and Host
+Message and value JSON are members of the types they encode: C#
+`message.ToJson()`/`GameEventScriptMessage.FromJson(json)` and
+`value.ToJson()`/`GesValue.FromJson(json)`; Swift `message.json()`/
+`GameEventScriptMessage(json:)` and `value.json()`/`GesValue(json:)`. These Runtime-only APIs are synchronous, fileless and Host
 independent. They implement [MessageFormat](MessageFormat.md), including ordered
 arguments, numeric normalization, limits, data-only reconstruction and explicit
 external-to-Record export. Encoding may propagate external getter failures.
@@ -1187,6 +1213,6 @@ The public bytecode opcode enumeration assigns `Cartesian` the stable value
 Iterator modes and component output reuse existing instruction words and the
 UInt16 list pool; no mutable iterator is added to the portable Program API.
 
-`GameEventScriptInstructionFlag.Numeric` aliases bit `0x40` for Move, Add, Subtract,
+The numeric instruction flag (bit `0x40` of `UnitAndFlags`) applies to Move, Add, Subtract,
 Multiply, Divide, Power, IntegerDivide, Modulo, Remainder, Min, Max, Negate, Abs and Clamp only. The same bit retains WithTags semantics on result-bearing sends;
 interpret flags by opcode.

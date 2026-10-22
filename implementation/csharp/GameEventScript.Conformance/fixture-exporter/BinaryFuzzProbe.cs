@@ -8,9 +8,9 @@ internal static class BinaryFuzzProbe
 {
     internal static int Run(string input, string output)
     {
-        var options = new GameEventScriptProgramReadOptions
+        var options = new GesProgramReadOptions
         {
-            Limits = new GameEventScriptProgramReadLimits
+            Limits = new GesProgramReadLimits
             {
                 MaxFileBytes = 32768,
                 MaxSectionCount = 64,
@@ -29,15 +29,15 @@ internal static class BinaryFuzzProbe
             GameEventScriptProgram program;
             try
             {
-                program = GameEventScriptProgramReader.Read(bytes, options);
+                program = GameEventScriptProgram.Read(bytes, options);
             }
-            catch (GameEventScriptProgramFormatException error)
+            catch (GesProgramFormatException error)
             {
                 writer.WriteLine("reject:" + error.ErrorCode);
                 continue;
             }
-            var canonical = GameEventScriptProgramWriter.ToArray(program);
-            var second = GameEventScriptProgramWriter.ToArray(GameEventScriptProgramReader.Read(canonical, options));
+            var canonical = program.Encode();
+            var second = GameEventScriptProgram.Read(canonical, options).Encode();
             if (!canonical.AsSpan().SequenceEqual(second)) throw new InvalidOperationException("Unstable accepted binary rewrite.");
             writer.WriteLine("accept:" + Convert.ToBase64String(canonical));
         }

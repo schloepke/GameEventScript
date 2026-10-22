@@ -5,7 +5,7 @@ using System.Globalization;
 using System.Text.RegularExpressions;
 using GameEventScript.Api;
 
-internal sealed class VirtualClock : IGameEventScriptClock
+internal sealed class VirtualClock : IGesClock
 {
     /// <summary>Returns deterministic elapsed microseconds advanced only by fixture actions.</summary>
     public long ElapsedMicroseconds { get; private set; }

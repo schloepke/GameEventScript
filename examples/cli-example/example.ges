@@ -1,0 +1,32 @@
+// Copyright 2026 Stephan Schlöpke
+// SPDX-License-Identifier: Apache-2.0
+module ges.cli.example
+
+record :Arguments as {
+	input: :List, 
+	parsed: :List computed by input[:select x => parse x when x is :Text otherwise x]
+}
+
+function double(_ x as :Number) be x + x
+
+on Main(args) {
+	emit ConsoleOut("---- Starting ----")
+	let arguments be :Arguments(input: args) when args is :List otherwise :Arguments(input: [args])
+	arguments.parsed[:foreach x => emit ConsoleOut("Parsed argument: ", x)]
+	arguments.parsed[:foreach x => 
+		when x is :Number and x is not :Dice then emit ConsoleOut("Number argument: f(", x, ") = ", double(x)),
+		when x is :Tag then emit ConsoleOut("Tag: ", x),
+		when x is :Message then emit ConsoleOut("Message: ", x) and emit x,
+		otherwise emit ConsoleOut("Argument: ", x)
+	]
+	emit ConsoleOut("---- Finished ----")
+}
+
+on Test() {
+	if 1 + 1 = 2 {
+		emit ConsoleOut("Test passed")
+	} else {
+		emit ConsoleErr("Test failed")
+	}
+    emit ConsoleOut([:cartesian [1, 2], [3, 4] :select x, y => x + y :sum])
+}

@@ -13,7 +13,7 @@ and the Swift product.
 ```csharp
 using GameEventScript.SyntaxHighlighter;
 
-var highlighter = new GameEventScriptSyntaxHighlighter(); // GES by default
+var highlighter = new GesSyntaxHighlighter(); // GES by default
 var result = highlighter.Highlight(source);
 if (result.IsComplete)
 {
@@ -32,10 +32,10 @@ state converge. Add the document line offset when applying spans. Incomplete
 results have no spans or state: render plain text and do not cache that state.
 
 ```csharp
-var highlighter = new GameEventScriptSyntaxHighlighter(GameEventScriptSyntaxLanguage.Gesa);
+var highlighter = new GesSyntaxHighlighter(GesSyntaxLanguage.Gesa);
 var result = highlighter.Highlight(dump);
 var displayed = result.IsComplete
-    ? GameEventScriptAnsiRenderer.Render(dump, result.Spans)
+    ? GesAnsiRenderer.Render(dump, result.Spans)
     : dump;
 ```
 

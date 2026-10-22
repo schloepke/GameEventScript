@@ -44,11 +44,22 @@ sh scripts/test-csharp-conformance.sh
 - Prefer language-neutral contracts that map cleanly to Swift, Kotlin, Go, Rust,
   C/C++, C#, and Unity.
 - C# is the reference for deliberately chosen implementation architecture as well
-  as behavior, especially on the hot path. Preserve its inline VM dispatch and
-  owner-local, typed register operations when porting; these avoid unnecessary
-  value copies without relying on language-specific ref/in/out features.
-  Architectural deviations require an explicit rationale and performance
-  validation; passing Conformance alone does not establish architecture parity.
+  as behavior. Preserve its owner-local, typed register operations when porting;
+  these avoid unnecessary value copies without relying on language-specific
+  ref/in/out features. Architectural deviations require an explicit rationale and
+  performance validation; passing Conformance alone does not establish
+  architecture parity.
+- Optimize for performance first, then for library/binary size. Hot-path code
+  duplication is acceptable when it is measurably faster. Size reductions through
+  reuse or consolidation are welcome at any time, provided they do not noticeably
+  reduce performance (before/after comparison on the affected workloads;
+  zero-allocation paths stay at zero). This is an implementation detail per port,
+  not an architecture rule.
+- Opcode handlers are `Execute<OpCode>` members of `GesVirtualMachine`, callable
+  only from dispatch (C# `private` in the partial class; Swift `internal`,
+  enforced by the port gate). Trivial opcodes may stay in dispatch. Do not add
+  inlining attributes by default; keep one only with a measured benefit and a
+  short rationale comment.
 - Keep Reflection, Attributes, `System.Type`, delegate-based adapters,
   unordered public dictionary-input adapters, locks, threads, Tasks, and other
   CLR conveniences in `CSharpBridge`.
@@ -57,6 +68,29 @@ sh scripts/test-csharp-conformance.sh
 - Standard-library `TryGetValue`, `TryAdd`, and `TryParse` calls are accepted in
   portable C# code. Do not introduce public GES-level `Try...out` contracts.
 - Use `rg` for source and file searches.
+- Only the API edge types `GameEventScriptHost`, `GameEventScriptProgram` and
+  `GameEventScriptMessage` use the `GameEventScript` prefix: a Program runs in a
+  Host and receives Messages. All other library types, public or internal, use
+  `Ges`; Bridge types use `GesBridge`. Nested, private/fileprivate, executable
+  and test types are exempt. Abbreviations are written as words (`Ges`, `Vm`,
+  never `GES`/`VM`).
+- Ports provide the same functionality, concepts and structure so a developer
+  can move between them easily, while each port follows its language's API
+  design guidelines and feels native, because most users work with one port in
+  their own language. Idioms may change spelling and mechanics, never the
+  primary concepts: every port uses the same edge types and roles (for example a
+  Host, not a Runner in one port and a Host in another).
+- Corresponding types use identical names in the C# and Swift ports, apart from
+  the language-idiomatic mappings in `implementation/PortConventions.md` (for example
+  `Exception`/`Error`, `CreateBuilder()`/`makeBuilder()`). C# files are named after
+  their main type or summarize their content (partial classes append an aspect,
+  e.g. `GesBinaryBuilderOpcodes.cs`); Swift file names are free. CLI and
+  Conformance adapter concepts keep the C# names in both ports.
+- `python3 scripts/verify-port-names.py` enforces the prefix, abbreviation,
+  parity and opcode-handler rules against the ratchet baseline
+  `scripts/port-names-baseline.txt`; a new or resolved difference fails until
+  the baseline is regenerated with `--update-baseline`. Its controls are
+  `python3 scripts/test-port-names.py`; C# CI runs both.
 - Preserve unrelated user changes and never revert them without an explicit
   request.
 
@@ -128,7 +162,7 @@ Bytecode instructions use explicit numeric words and payload bits. CLR struct
 layout never defines `.gesb` encoding. The binary format is canonical Little
 Endian and known V1 sections are uncompressed. Compilation includes
 DebugSymbols, SourceMap, and SourceArchive by default; size-sensitive builds
-opt out with `GameEventScriptDebugInfoOptions.None`.
+opt out with `GesDebugInfoOptions.None`.
 
 The normative owners are `specs/ProgramModel.md`, `specs/Bytecode.md`,
 `specs/BinaryFormat.md`, and `specs/AssemblerFormat.md`.
@@ -152,6 +186,10 @@ belongs to the CLI or embedding; the portable compiler accepts source text.
   Braced and unbraced bodies have identical scope boundaries; no branch binding escapes.
 - `[:fold acc be seed, item => expression]` and `[:reduce acc, item => expression]`
   lower to ordinary iterator loops and an internal accumulator, without new opcodes.
+- Both compilers hoist pure, total loop-invariant loads and arithmetic in front of
+  single-entry loops between their two cleanup rounds (C# `LoopInvariantHoistingPass`,
+  Swift `hoistLoopInvariants`). Keep their positive opcode list, placement and position
+  relocation identical; `compile.loop-invariants` snapshots both outputs.
 - Local declarations use only `let name be expression`. Conversions belong to
   the expression, for example `let value be input as :Number`.
 - Only variable bindings may use a canonical `_number` suffix. Other names may
@@ -176,7 +214,7 @@ belongs to the CLI or embedding; the portable compiler accepts source text.
   recognizes complete input before executing known current-Program Record
   constructors on the normal VM stack; external constructors are never resolved.
 - `:Record("Type", fields)` reconstructs immutable data without a constructor.
-  `GameEventScriptMessageJson` is an explicit Runtime-only V1 codec; external
+  Message/value JSON (`ToJson`/`FromJson`, Swift `json()`/`init(json:)`) is an explicit Runtime-only V1 codec; external
   exports become Record snapshots. Local Publish retains direct value delivery.
 - `[:split on separator]` returns Nothing for empty pieces; whitespace mode
   collapses the specified Unicode White_Space set. No CSV interpretation.
@@ -205,17 +243,18 @@ only native handlers or any number of additively loaded Programs.
   or later-instance success. PublishResult.OutboundDeferred reports staging.
   Ordinary Detach keeps its captured-snapshot semantics. See specs/HostRuntime.md.
 - Native `Subscribe` returns an idempotently detachable
-  `GameEventScriptSubscription`.
+  `GesSubscription`.
 - Instance and subscription handles use stable host-local registration IDs and
   store no detach/unsubscribe closures.
-- Each host owns one `GameEventScriptContext`, one logical-message ring queue,
-  one random generator, and at most one lazily created reusable `GesVmState`.
-- `GameEventScriptVirtualMachine` is a stateless executor. Program-specific
-  dynamic links live in `GesLinkedProgram`.
+- Each host owns one `GesContext`, one logical-message ring queue,
+  one random generator, and at most one lazily created reusable `GesVirtualMachine`.
+- `GesVirtualMachine` owns the resumable execution state and executes it through
+  its `Begin`/`RunSlice` methods. Program-specific dynamic links live in
+  `GesLinkedProgram`.
 - One logical message and all captured handlers complete before the next
   message. Script handlers may pause across frames; native handlers are atomic.
 - `Receive` and `Emit` enqueue locally. `Publish` enqueues locally and then calls
-  one optional synchronous `IGameEventScriptPublishSink`.
+  one optional synchronous `IGesPublishSink`.
 - Result-bearing sends use EmitInstant/EmitAfter/PublishInstant/PublishAfter with
   WithTags/Indirect flags; the original eight statement opcodes retain their encoding.
   Time quantities round upward to whole microseconds against an injectable monotonic clock.
@@ -228,9 +267,9 @@ only native handlers or any number of additively loaded Programs.
   one caller at a time is required, while a paused handler may resume on another
   thread after an embedding-provided happens-before handoff.
 - Optional C# synchronization and automatic pumping live in
-  `CSharpBridge/GameEventScriptCSharpHostRunner.cs`.
+  `CSharpBridge/src/GesBridgeHostRunner.cs`.
 
-Hot-path VM mutation goes through `GesVmState.Set...` methods. Read-only register
+Hot-path VM mutation goes through `GesVirtualMachine.Set...` methods. Read-only register
 borrows are accepted. Never hold a mutable destination reference across an
 operation that may grow or replace register storage.
 
@@ -255,15 +294,15 @@ consumption cannot advance the restored parent stream.
 
 ## Messages, extensions, and external types
 
-Message arguments are ordered `GameEventScriptMessageArgument` values. Argument
+Message arguments are ordered `GesMessageArgument` values. Argument
 order and labels define the signature. Core has no tuple or dictionary factory;
 C# conveniences live in `CSharpBridge`, and dictionary binding requires a known
 signature.
 
-Portable native handlers implement `IGameEventScriptNativeMessageHandler`.
-Extensions receive the host's `GameEventScriptContext`. External types use a
+Portable native handlers implement `IGesNativeMessageHandler`.
+Extensions receive the host's `GesContext`. External types use a
 declarative compiler catalog, a separate host runtime registry, and portable
-`IGameEventScriptExternalValue` instances. CLR objects and Reflection-backed
+`IGesExternalValue` instances. CLR objects and Reflection-backed
 implementations remain in `CSharpBridge`.
 
 ## Conformance and verification
@@ -288,22 +327,16 @@ zero-allocation hot path, release artifact consumption, and byte-identical
 package reproduction. Performance references are regression gates for the
 current C# implementation, not cross-platform benchmark claims.
 
-Verified baseline (Release, 2026-09-23):
-
-```text
-2196/2196 non-performance test executions passed
-32/32 allocation test executions passed, including the independent zero-allocation hot path
-1679 shared Markdown Conformance cases in 96 documents
-```
-
-The combined verification command for the first two counts is:
+Every non-performance test, including the independent zero-allocation hot path,
+must pass in Release:
 
 ```bash
 dotnet test GameEventScript.sln --configuration Release --filter "TestCategory!=Performance|TestCategory=Allocation"
 ```
 
-Elapsed-time benchmarks are a separate, profile-matched performance gate and
-are not included in these counts.
+Elapsed-time benchmarks are a separate, profile-matched performance gate. Test
+and case counts are not recorded here; the runner's own tests pin the corpus
+case counts, so adding a case updates them in the same change.
 
 ## Package distribution
 
@@ -321,9 +354,9 @@ Conformance. Keep the explicit upload allowlist in
 The root `Package.swift` is the public SwiftPM entry point with four library
 products: GameEventScriptRuntime, GameEventScriptCompiler,
 GameEventScriptSwiftBridge and GameEventScriptSyntaxHighlighter. They use existing sources and share a Git tag/version;
-local development packages remain separate. The root manifest also exposes the `ges`
-executable using the existing CLI and TerminalSupport sources; Conformance remains internal.
-The root package requires macOS 10.15.4 for CLI Foundation I/O. Three root test targets reuse the existing SwiftBridge,
+local development packages remain separate. CLI and TerminalSupport belong only to the
+separate GameEventScriptTool package; Conformance remains internal.
+The root package requires macOS 10.15 for the SwiftSyntax macro dependency. Three root test targets reuse the existing SwiftBridge,
 bridge-macro and SyntaxHighlighter test directories; never duplicate their sources
 or add test products. `python3 scripts/test-swift-package.py` checks tagged Git
 consumption, the product/dependency graph, the root tests and Runtime-only builds in disposable
@@ -353,13 +386,22 @@ availability alone is insufficient for reliable native incremental builds.
 `python3 scripts/verify-swift-dependencies.py` checks imports against SwiftPM's
 target/source descriptions; Swift CI runs this gate.
 
-Swift Host and Compiler expose createBuilder()/create() factories matching the
-C# builder workflow. Swift collections use immutable value semantics and copy-on-write storage.
+Swift Host and Program expose makeBuilder() conveniences matching the C#
+CreateBuilder() workflow; builders are also created directly, and the Swift Host
+initializer is internal. Swift collections use immutable value semantics and copy-on-write storage.
 Text and map-key equality/order use Unicode scalars, not Swift String's
 canonical equivalence. Keep Int64 and Binary64 storage separate. Register storage
 follows the C# architecture: one numeric word, an optional
 object reference, kind, unit and cached flags. Typed setters mutate these fields
 in the register array; do not replace this with nested associated-value enums.
+`GesVirtualMachine` owns that array as one manually allocated buffer (`GesRegisterFile`),
+the Swift counterpart of C#'s in-place `ref` register access: elements are
+addressed through its base pointer, without per-access exclusivity or copy-on-write
+checks. Only the VM mutates registers, serially; callbacks use the VM's
+accessors. Storage moves only in `ensureRegisterCapacity`, between instructions. Handler entry
+prewarms the Program requirement, so only dynamic literal parsing grows during
+execution. Access registers through `registers[...]` each time; never keep a view
+or pointer across an operation that may grow storage.
 Immutable Message and Handler payloads are shared by reference behind read-only
 Swift value APIs. VM entry borrows arguments by index rather than allocating an
 argument array. Mutable callback arguments are borrowed only
@@ -401,14 +443,20 @@ original Markdown expectations. The manifest binds each input to its binary
 and complete source-document SHA-256. No expected result is exported from C#.
 `verify-swift-bytecode.py` checks the explicit enum and operand registry against
 C#; ordinary package builds do not generate source.
+Both compilers must emit byte-identical Programs, including debug sections; only
+BuildMetadata names the producing implementation. `python3 scripts/compare-compiler-output.py`
+compiles every corpus program with both CLIs, requires equal ordered diagnostic codes and
+start positions for rejected programs, checks that checked-in `examples/**/*.gesb` match a
+fresh C# compilation without debug information, and ratchets the remaining differences
+against `scripts/compiler-output-baseline.txt` (`--update-baseline` after a deliberate
+change); its controls are `python3 scripts/test-compiler-output-controls.py`. The full
+Swift test script runs both.
 
-Verified Swift coverage (Release, 2026-09-23): all 1,679 behavior checks from
-96 shared Markdown documents pass with native Swift compilation. The strict
-hardware-independent report passes 1,648 cases and skips 31 optional performance
-measurements. The last calibrated performance run passed all 31 measured workloads. Independent
-Runtime verification passes 1,363 cases using C#-compiled Programs. Nineteen Conformance/adapter/bootstrap tests, seventeen SwiftBridge tests, and
-twenty-nine CLI tests pass. `scripts/test-swift.sh` requires strict native acceptance and keeps
-Runtime interoperability reports separate.
+`scripts/test-swift.sh` requires every supported shared Markdown case to pass with
+native Swift compilation, checks the performance scenarios for correctness without
+measuring them, and runs the native Conformance, SwiftBridge and CLI tests. Runtime
+verification with C#-compiled Programs is a separate report; calibrated performance
+measurement is opt-in.
 
 `python3 scripts/test-number-text-roundtrip.py` builds the executable adapters and
 checks actual C# ↔ Swift numeric text exchange using fixed random bits and edge
@@ -424,7 +472,7 @@ The full Swift script includes this check; reports live below
 `artifacts/swift/message-json-roundtrip`. See `specs/MessageFormat.md`.
 
 `scripts/test-swift-performance.sh` verifies the measured
-`swift-6.4-release-macos26-arm64-m3max` profile. Five samples per workload use
+`swift-6.4-release-macos27-arm64-m3max` profile. Five samples per workload use
 median elapsed time and maximum cumulative requested libmalloc bytes on the
 calling thread. Sixteen warmed dispatch cases measure zero bytes and allocation
 counts. The native C instrumentation is an executable-only target; portable

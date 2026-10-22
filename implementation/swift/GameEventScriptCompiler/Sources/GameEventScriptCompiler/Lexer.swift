@@ -26,6 +26,127 @@ struct GesLexer {
         return !digits.isEmpty && (digits.count == 1 || digits.first != "0")
     }
 
+    // Keyword words of the C# lexer; every other lowercase word is an identifier.
+    static let keywords: [String: GesTokenKind] = [
+        "on": .on,
+        "record": .record,
+        "predicate": .predicate,
+        "function": .function,
+        "emit": .emit,
+        "publish": .publish,
+        "matching": .matching,
+        "without": .without,
+        "let": .`let`,
+        "as": .`as`,
+        "be": .be,
+        "when": .when,
+        "otherwise": .otherwise,
+        "has": .has,
+        "parse": .keywordParse,
+        "empty": .empty,
+        "if": .`if`,
+        "else": .`else`,
+        "for": .`for`,
+        "in": .`in`,
+        "of": .of,
+        "starts": .starts,
+        "ends": .ends,
+        "with": .with,
+        "is": .`is`,
+        "numeric": .numeric,
+        "or": .operatorOr,
+        "xor": .operatorXor,
+        "and": .operatorAnd,
+        "div": .operatorIntegerDivide,
+        "mod": .operatorModulo,
+        "rem": .operatorRemainder,
+        "not": .operatorNot,
+        "to": .to,
+        "true": .`true`,
+        "false": .`false`,
+        "nothing": .nothing,
+        "pi": .mathConstantPi,
+        "e": .mathConstantE,
+        "tau": .mathConstantTau,
+        "infinity": .mathConstantInfinity,
+        "abs": .intrinsicAbs,
+        "ln": .intrinsicLn,
+        "exp": .intrinsicExp,
+        "sqrt": .intrinsicSqrt,
+        "cbrt": .intrinsicCbrt,
+        "chance": .intrinsicChance,
+        "floor": .intrinsicFloor,
+        "ceil": .intrinsicCeil,
+        "truncate": .intrinsicTruncate,
+        "rad": .intrinsicRad,
+        "deg": .intrinsicDeg,
+        "wrap": .intrinsicWrap,
+        "round": .intrinsicRound,
+        "sin": .intrinsicSin,
+        "cos": .intrinsicCos,
+        "tan": .intrinsicTan,
+        "asin": .intrinsicAsin,
+        "acos": .intrinsicAcos,
+        "atan": .intrinsicAtan,
+        "atan2": .intrinsicAtan2,
+        "hypot": .intrinsicHypot,
+        "distance": .intrinsicDistance,
+        "squared": .intrinsicSquared,
+        "length": .intrinsicLength,
+        "normalize": .intrinsicNormalize,
+        "dot": .intrinsicDot,
+        "cross": .intrinsicCross,
+        "angle": .intrinsicAngle,
+        "random": .keywordRandom,
+        "series": .series,
+        "fibonacci": .fibonacci,
+        "factorial": .factorial,
+        "clamp": .clamp,
+        "min": .min,
+        "max": .max,
+        "zip": .zip,
+        "roll": .roll,
+        "default": .`default`,
+        "module": .module,
+        "constant": .constant,
+    ]
+
+    // Selector keywords; another `:word` is a selector name.
+    static let selectors: [String: GesTokenKind] = [
+        ":any": .selectorAny,
+        ":all": .selectorAll,
+        ":filter": .selectorFilter,
+        ":has": .selectorHas,
+        ":take": .selectorTake,
+        ":drop": .selectorDrop,
+        ":count": .selectorCount,
+        ":choose": .selectorChoose,
+        ":draw": .selectorDraw,
+        ":shuffle": .selectorShuffle,
+        ":reverse": .selectorReverse,
+        ":sum": .selectorSum,
+        ":average": .selectorAverage,
+        ":select": .selectorSelect,
+        ":contains": .selectorContains,
+        ":sort": .selectorSort,
+    ]
+
+    static let pairs: [String: GesTokenKind] = ["<>": .operatorNotEqual, "<=": .operatorLessOrEqual, ">=": .operatorGreaterOrEqual, "->": .operatorImplication, "=>": .projectionArrow]
+
+    // Punctuation and operator characters with the C# kind and the spelling the parser and lowering read.
+    static let characters: [Unicode.Scalar: (GesTokenKind, String)] = [
+        "(": (.leftParen, "("), ")": (.rightParen, ")"), "{": (.leftBrace, "{"), "}": (.rightBrace, "}"), "[": (.leftBracket, "["), "]": (.rightBracket, "]"),
+        ",": (.comma, ","), ";": (.semicolon, ";"), ".": (.dot, "."), ":": (.colon, ":"), "_": (.underscore, "_"),
+        "=": (.operatorEqual, "="), "<": (.operatorLess, "<"), ">": (.operatorGreater, ">"), "|": (.operatorCollectionUnion, "|"), "^": (.operatorPower, "^"),
+        "&": (.operatorCollectionIntersect, "&"), "+": (.operatorPlus, "+"), "-": (.operatorMinus, "-"), "*": (.operatorMultiply, "*"), "/": (.operatorDivide, "/"), "!": (.operatorNot, "!"),
+        "·": (.operatorMultiply, "*"), "×": (.operatorMultiply, "*"), "⋅": (.operatorMultiply, "*"), "÷": (.operatorDivide, "/"), "−": (.operatorMinus, "-"),
+        "∞": (.mathConstantInfinity, "infinity"), "π": (.mathConstantPi, "pi"), "∏": (.mathConstantPi, "pi"), "ℇ": (.mathConstantE, "e"), "τ": (.mathConstantTau, "tau"),
+        "√": (.intrinsicSqrt, "sqrt"), "∛": (.intrinsicCbrt, "cbrt"), "°": (.identifier, "degree"), "∧": (.operatorAnd, "and"), "∨": (.operatorOr, "or"),
+        "∈": (.in, "in"), "∉": (.notIn, "not in"), "⊕": (.operatorXor, "xor"), "≤": (.operatorLessOrEqual, "<="), "≥": (.operatorGreaterOrEqual, ">="),
+        "¬": (.operatorNot, "!"), "~": (.operatorNot, "!"), "≠": (.operatorNotEqual, "<>"), "→": (.operatorImplication, "->"), "⇒": (.operatorImplication, "->"), "↦": (.projectionArrow, "=>"),
+        "²": (.superscriptInteger, "2"), "³": (.superscriptInteger, "3"),
+    ]
+
     static let boundaries = Set("(){}[],;.:#+-*/!~&|^=<>·×÷−∞∏ℇτφ√∛°∧∨∈∉⊕⋅≤≥¬≠≈≅→⇒↦²³".unicodeScalars)
     var current: Unicode.Scalar { peek(0) }
 
@@ -69,21 +190,23 @@ struct GesLexer {
         let firstColumn = column
         let startByte = byteOffset
 
-        func token(_ kind: String, _ text: String) -> GesToken { .init(kind: kind, text: text, line: firstLine, column: firstColumn, endLine: line, endColumn: column, start: startByte, end: byteOffset) }
+        func token(_ kind: GesTokenKind, _ text: String, word: Bool = false) -> GesToken {
+            .init(kind: kind, text: text, isWord: word, line: firstLine, column: firstColumn, endLine: line, endColumn: column, start: startByte, end: byteOffset)
+        }
 
-        if index == scalars.count { return token("eof", "") }
+        if index == scalars.count { return token(.endOfFile, "") }
         if current == "\r" || current == "\n" {
             let cr = current == "\r"
             advance()
             if cr && current == "\n" { advance() }
-            return token("newline", "\n")
+            return token(.newLine, "\n")
         }
         let first = current
         if Self.letter(first) || ((first == ":" || first == "#" || first == "$") && Self.letter(peek())) {
             if !Self.letter(first) {
                 if (first == "#" || first == "$") && !Self.lower(peek()) {
                     advance()
-                    return token("illegal", slice(start))
+                    return token(.illegal, slice(start))
                 }
                 advance()
             }
@@ -95,10 +218,14 @@ struct GesLexer {
             let attachedIllegal = current == "&" && peek() == "&" || current == "|" && peek() == "|" || current == "^" && ["&", "|", "^"].contains(peek())
             if !Self.validSuffix(slice(start)) || attachedIllegal || (index < scalars.count && !Self.space(current) && !Self.boundaries.contains(current)) {
                 while index < scalars.count && !Self.space(current) { advance() }
-                return token("illegal", slice(start))
+                return token(.illegal, slice(start))
             }
-            let kind = first == "#" ? "tag" : first == "$" ? "constant" : first == ":" ? (Self.upper(scalars[start + 1]) ? "type" : "selector") : Self.upper(first) ? "message" : "word"
-            return token(kind, slice(start))
+            let text = slice(start)
+            if first == "#" { return token(.tag, text) }
+            if first == "$" { return token(.constantReference, text) }
+            if first == ":" { return token(Self.upper(scalars[start + 1]) ? .typeName : Self.selectors[text] ?? .selector, text) }
+            if Self.upper(first) { return token(.message, text) }
+            return token(Self.keywords[text] ?? .identifier, text, word: true)
         }
         if Self.digit(first) {
             while Self.digit(current) || current == "_" && Self.digit(peek()) { advance() }
@@ -109,9 +236,11 @@ struct GesLexer {
             if current == "%" || current == "°" { advance() } else if (current == "m" || current == "s") && (peek() == "\0" || Self.space(peek()) || Self.boundaries.contains(peek())) { advance() }
             if index < scalars.count && !Self.letter(current) && !Self.space(current) && !Self.boundaries.contains(current) {
                 while index < scalars.count && !Self.space(current) { advance() }
-                return token("illegal", slice(start))
+                return token(.illegal, slice(start))
             }
-            return token("number", slice(start))
+            let text = slice(start)
+            let unit = text.unicodeScalars.last!
+            return token(unit == "%" ? .percentage : unit == "°" || unit == "m" || unit == "s" ? .unitNumber : .float, text)
         }
         if first == "\"" || first == "'" {
             advance()
@@ -135,22 +264,17 @@ struct GesLexer {
                     break
                 }
             }
-            if let value = GameEventScriptCompilerSupport.quotedText(slice(start)) { return token("text", value) }
-            return token("illegal", slice(start))
+            if let value = GesCompilerSupport.quotedText(slice(start)) { return token(.text, value) }
+            return token(.illegal, slice(start))
         }
         let pair = String(first) + String(peek())
-        if ["<>", "<=", ">=", "->", "=>"].contains(pair) {
+        if let kind = Self.pairs[pair] {
             advance()
             advance()
-            return token("symbol", pair)
+            return token(kind, pair)
         }
         advance()
-        let aliases: [Unicode.Scalar: String] = [
-            "·": "*", "×": "*", "÷": "/", "−": "-", "∞": "infinity", "π": "pi", "∏": "pi", "ℇ": "e", "τ": "tau", "√": "sqrt", "∛": "cbrt", "°": "degree", "∧": "and", "∨": "or", "∈": "in", "∉": "not in", "⊕": "xor", "⋅": "*", "≤": "<=", "≥": ">=",
-            "¬": "!", "≠": "<>", "→": "->", "⇒": "->", "↦": "=>", "~": "!", "²": "2", "³": "3",
-        ]
-        if first == "²" || first == "³" { return token("superscript", aliases[first]!) }
-        if let alias = aliases[first] { return token("symbol", alias) }
-        return token("(){}[],;.:_+=<>|^&-*/!".unicodeScalars.contains(first) ? "symbol" : "illegal", String(first))
+        if let (kind, text) = Self.characters[first] { return token(kind, text) }
+        return token(.illegal, String(first))
     }
 }

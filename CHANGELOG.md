@@ -10,6 +10,147 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 
 ## Unreleased
 
+### Breaking
+
+- Public API types are renamed so that only the three edge types keep the
+  `GameEventScript` prefix: `GameEventScriptHost`, `GameEventScriptProgram` and
+  `GameEventScriptMessage`. All other public types use `Ges`, identically in C#
+  and Swift, for example `GesContext`, `GesHostBuilder`, `GesMessageArgument`,
+  `GesRuntimeLimits`, `IGesPublishSink` (Swift: `GesPublishSink`) and
+  `GesSyntaxHighlighter`. Deviating names: `GameEventScriptBuilder` becomes
+  `GesProgramBuilder`, `GameEventScriptInstance` becomes `GesProgramInstance`,
+  the C# `GameEventScriptBytecodeInstructionUnit` and Swift `GesUnit` become
+  `GesQuantityUnit`, the concrete `GameEventScriptExternalTypeCatalog` becomes
+  `GesDeclaredExternalTypeCatalog` (the C# interface is `IGesExternalTypeCatalog`,
+  the Swift protocol `GesExternalTypeCatalog`), Swift `GameEventScriptExtensionFault`
+  becomes `GesExtensionFaultError` and Swift `GameEventScriptAPIError` becomes
+  `GesApiError`. Behavior is unchanged; migrate by renaming references.
+- Builders are created directly or through their target type, following each
+  language's idiom. C#: `new GesProgramBuilder()` (the static `Create()` is
+  removed) or, with C# 14, `GameEventScriptProgram.CreateBuilder()`; hosts via
+  `new GesHostBuilder()` or `GameEventScriptHost.CreateBuilder()`. Swift:
+  `GesProgramBuilder()` or `GameEventScriptProgram.makeBuilder()` (`create()` is
+  removed); hosts via `GesHostBuilder()` or `GameEventScriptHost.makeBuilder()`
+  (formerly `createBuilder()`). The Swift `GameEventScriptHost` initializer is no
+  longer public; configure hosts through the builder. Swift factory methods use
+  `make`: `GesMessageSignature.makeMessage(_:)`, `makeSignatureId(name:parameterNames:)`
+  and `GesSyntaxHighlighter.makeState()`.
+- Reading, encoding, validating and dumping Programs are members of
+  `GameEventScriptProgram`; the separate reader, writer, validator and dumper
+  types are no longer public. C#: `GameEventScriptProgram.Read(bytes, options)`,
+  `program.Encode()` (formerly `ToArray`), `program.GetEncodedSize()`,
+  `program.Write(destination)`, `program.Validate()` and `program.Dump(...)`.
+  Swift: `GameEventScriptProgram.read(_:options:)`, `program.encode()` (formerly
+  `bytes`), `program.encodedSize()`, `program.write(into:)`, `program.validate()`
+  and `program.dump(includeInstructionAddresses:)`.
+- The Swift Program exposes the same segments as C#: `metadata`,
+  `stringConstants`, `uint16IndexLists`, `bindings`, `code`, `debugSymbols`,
+  `sourceMap`, `sourceArchive` and `buildMetadata` are segment types
+  (`GesStringConstantSegment`, `GesBindingSegment`, `GesCodeSegment`, …) that are
+  also random-access collections over their entries. The binding entry type is
+  `GesBindingSegment.Entry` in both languages (formerly C#
+  `GameEventScriptBinaryBindEntry`, Swift `GameEventScriptBinding`); Swift
+  `GameEventScriptSourceMap` and `GameEventScriptBuildMetadata` become
+  `GesSourceMapSegment` and `GesBuildMetadataSegment`. Swift
+  `GesDebugInfoOptions` moves from the Compiler to the Runtime module, as in C#.
+- Message and value JSON are members of the encoded types; `GameEventScriptMessageJson`
+  is removed. C#: `message.ToJson()`, `GameEventScriptMessage.FromJson(json)`,
+  `value.ToJson()` and `GesValue.FromJson(json)`. Swift: `message.json()`,
+  `GameEventScriptMessage(json:)`, `value.json()` and `GesValue(json:)`.
+- `GesSymbolKind` is renamed to `GesDiagnosticSymbolKind` in both languages to
+  separate it from `GesDebugSymbolKind`.
+- Swift gains `GesDiagnosticCodes` with the same stable codes as C#, and
+  `GesOpaqueSection.flags` is a `GesSectionFlags` option set instead of a raw
+  `UInt16`, as in C#. The C# `GesInstructionFlag` enum is no longer public; both
+  languages expose the raw `UnitAndFlags`/`unitAndFlags` byte.
+- Bridge types use the `GesBridge` prefix and identical names for shared roles:
+  `GesBridgeHostRunner`, `GesBridgeExtensionRegistry`,
+  `GesBridgeExternalTypeRegistry`, `GesBridgeMessageHandler`,
+  `GesBridgePublishSink` and `GesBridgeValueConversion` (formerly
+  `GameEventScriptCSharp…`/`GameEventScriptSwift…`). C# registries are created with
+  `GesBridgeExtensionRegistry.Create(types)`/`CreateBuilder()` and
+  `GesBridgeExternalTypeRegistry.Create(types)`; the static `GameEventScriptCSharpExtensions`
+  and `GameEventScriptCSharpExternalTypes` entry classes are removed. C# gains the
+  public `GesBridgeMessageHandler` and `GesBridgePublishSink` delegate adapters.
+  Swift descriptors become `GesBridgeFieldBinding<Root>`,
+  `GesBridgeConstructorBinding<Root>`, `GesBridgeTypeBinding<Root>` and
+  `GesBridgeAnyTypeBinding`; `GesBridgeValueConvertible`,
+  `GesBridgeConversionError` and `GesBridgeHostRunnerRegistration` replace their
+  `GameEventScriptSwift…` predecessors. Attributes and macros keep their names.
+- Swift bridge members no longer name the language: `setSwiftValue(_:)`,
+  `swiftValue(at:as:)`, `withSwiftArguments(_:)` and the `swiftArguments:` labels of
+  message, emit and publish conveniences become `setNativeValue(_:)`,
+  `nativeValue(at:as:)`, `withNativeArguments(_:)` and `nativeArguments:`.
+- Swift no longer exposes runtime helper types that C# keeps internal:
+  `GesNumber`, `GesText` and `GesSpatialValue` (use `GesValue.x`/`y`/`z`) are
+  internal, and `GesSeriesValue` with `GesValue.series(_:)`/`seriesValue` is
+  available only to the Compiler.
+- Swift reports the public value kind as `GesValue.valueKind: GesBytecodeTypeKind`,
+  the same single type C# uses for `ValueKind`; `GesValueKind` and `kind` are no
+  longer public. Integer and binary64 ranges are both `.range` (use
+  `integerRangeValue`/`floatRangeValue`), and records and external values are
+  `.custom`. `GesMessageArguments.kindAt(_:)` returns `GesBytecodeTypeKind`.
+- Swift maps follow the C# model of sorted keys with parallel values:
+  `GesValue.map(keys:values:)` and `GesValue.record(typeName:keys:values:)` create
+  them, and `GesValueMap.key(at:)`/`value(at:)` read them next to `length`,
+  `get(_:)` and `containsKey(_:)`. `GesMapEntry`, `GesValueMap.entries` and
+  `GesValue.mapEntries` are no longer public.
+- C# `GesValueMap.StorageLength` is removed; it always equaled `Length`. Use
+  `Length` instead.
+
+### Changed
+
+- The root SwiftPM package now exposes only the four libraries. Build `ges` from
+  `implementation/swift/GameEventScriptTool`, or install it via Homebrew, the
+  install script or standalone downloads. The root macOS minimum is now 10.15;
+  the separate CLI retains its 10.15.4 minimum.
+- Swift `GameEventScriptProgram` is now an immutable `final class`, so hosts and
+  callers share a single Program instance. Program contents, binary encoding and
+  copy-on-write isolation of returned arrays are unchanged.
+- Script handlers execute faster in both runtimes. Integer arithmetic and
+  integer range loops write results in place, constant map literals and data
+  constructions no longer redo per-execution work, and sorting numeric keys is
+  no longer quadratic. The Swift VM additionally mutates registers in place
+  without per-access exclusivity checks or reference counting on integer paths.
+  Behavior and results are unchanged.
+- Both compilers move loop-invariant constant loads and arithmetic in front of
+  their loop, so loops execute fewer instructions. Random draws, messages and
+  host calls stay in place and results are unchanged; executed opcode counts
+  drop and register requirements can grow slightly.
+- The Swift compiler now writes the BuildMetadata section with compiler ID
+  `steph.ges.compiler.swift` and version `0.1.0`, as the binary format requires
+  of every port. Runtime behavior does not depend on it.
+
+### Fixed
+
+- The Swift compiler reports every diagnostic of a failing phase, as C# does,
+  instead of only the first: the parser resumes after a syntax error at the next
+  declaration or statement, and validation reports all semantic errors in the
+  order that `specs/Diagnostics.md` defines. Call, arity and `is`-predicate
+  checks now run during validation, so they appear in that list.
+- The C# compiler rejects records with a repeated field name or an unknown field
+  type, as Swift does. A field type may be a built-in type, a record of the
+  program or a configured external type.
+- Both compilers reject `:Integer` and `:Float` wherever a type is named; use
+  `as :Number` to convert and `is integer` or `is fractional` to check. Casts and
+  checks to other custom types bound only at run time remain valid.
+- `ln`, `exp`, roots and powers without an exactly representable integer result
+  are no longer folded at compile time; they run on the target platform's math
+  library, so a constant such as `ln 2` and `ln x` for `x = 2` always agree
+  within one execution. Their exact inner terms are still folded.
+- Constant folding of integer products with a unit is exact like VM execution:
+  `3000000000m * 3000000001` stays `9000000003000000000m` instead of being
+  rounded through binary64; only an Int64 overflow falls back to binary64.
+- When a source exceeds the nesting limit, both compilers still report the
+  syntax errors found before it in that source.
+- Both compilers no longer hang on a `module` declaration after another
+  declaration or on a repeated one; it is now a `parse.syntax` error at the
+  `module` keyword.
+- Compiler diagnostics in C# and Swift start at the same, most specific source
+  position: the offending token, the repeated or misnamed parameter, argument,
+  condition or binding, the failing call or constructor, or the first construct
+  that exceeds the nesting limit.
+
 ## [0.4.0] — 2026-10-11
 
 ### Added

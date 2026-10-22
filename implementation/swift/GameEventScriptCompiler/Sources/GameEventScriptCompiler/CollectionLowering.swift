@@ -32,7 +32,8 @@ extension GesCompiler {
             try pipeline(0, prefix, s, d, r, scope, sourceExpression: root)
             return
         }
-        if !prefix.isEmpty && terminals.contains(s.operation) {
+        // As C#: a plain distinct is no inline terminal; the prefix result is collected and the opcode applied.
+        if !prefix.isEmpty && terminals.contains(s.operation) && !(s.operation == "distinct" && s.expressions.isEmpty) {
             try pipeline(expression(root, r, scope), prefix, s, d, r, scope)
             return
         }
@@ -43,8 +44,8 @@ extension GesCompiler {
             let index = s.expressions[0]
             if case .literal(let v) = index.kind, let n = v.integerValue, (0...65535).contains(n) {
                 r.emit(.indexAccess, d, Int(n), input)
-            } else if case .literal(let v) = index.kind, v.kind == .tag || v.kind == .text, let tag = v.textValue {
-                r.emit(.memberAccess, d, text(tag), input)
+            } else if case .literal(let v) = index.kind, v.valueKind == .tag || v.valueKind == .text, let tag = v.textValue {
+                r.emit(.memberAccess, d, builder.text(tag), input)
             } else {
                 r.emit(.propertyAccess, d, try expression(index, r, scope), input)
             }
@@ -54,7 +55,8 @@ extension GesCompiler {
         case "contains": r.emit(s.mode == "all" ? .containsAll : s.mode == "any" ? .containsAny : .contains, d, try expression(s.expressions[0], r, scope), input)
         case "term": r.emit(.term, d, input, try expression(s.expressions[0], r, scope))
         case "distinct" where s.expressions.isEmpty: r.emit(.distinct, d, input)
-        case "count" where s.expressions.isEmpty: r.emit(.count, d, input)
+        // As C#: a count whose predicate is the literal true counts directly.
+        case "count" where s.expressions.isEmpty || s.expressions.first.flatMap(scalarConstant) == .boolean(true): r.emit(.count, d, input)
         case "first" where s.expressions.isEmpty, "last" where s.expressions.isEmpty, "single" where s.expressions.isEmpty: r.emit(s.operation == "first" ? .first : s.operation == "last" ? .last : .single, d, input)
         case "take", "drop", "draw": try slice(s, d, input, r)
         case "hasPattern", "takePattern":
@@ -62,7 +64,7 @@ extension GesCompiler {
             let face = try s.expressions.first.map { try expression($0, r, scope) } ?? 0
             r.emit(s.operation == "hasPattern" ? .hasPattern : .takePattern, d, input, s.count, payload: UInt64(kind) | UInt64(face) << 16)
         case "choose":
-            if s.count > Int(Int16.max) { throw error("compile.numericLimitExceeded", r.location, phase: .compile) }
+            if s.count > Int(Int16.max) { throw compileError("compile.numericLimitExceeded", r.location, phase: .compile) }
             if s.expressions.count > 1 {
                 try weightedChoose(input, s, d, r, scope)
             } else {
@@ -90,14 +92,14 @@ extension GesCompiler {
             var prepared: [Int] = []
             row = try componentIterator(iterator, sourceExpression, &prepared, r, scope)
             r.emit(.loadTrue, valid)
-            for jump in prepared { r.patch(jump, target: r.code.count) }
+            r.mark(prepared)
             validSource = valid
         }
         if s.operation == "fold" { _ = try expression(s.expressions[0], r, scope, destination: accumulator) } else { r.emit(.loadNothing, accumulator) }
         if let validSource { invalid.append(r.emit(.jumpIfNotTrue, 0, validSource)) } else { invalid.append(r.emit(.iteratorCreateOrJump, iterator, input)) }
         let first = s.operation == "reduce" ? r.emit(.iteratorNext, accumulator, iterator) : nil
-        let loop = r.code.count
-        let end = r.emit(.iteratorNext, row.map { list($0.components) } ?? item, iterator, flags: row == nil ? 0 : 32)
+        let loop = r.mark()
+        let end = r.emit(.iteratorNext, row.map { builder.list($0.components) } ?? item, iterator, flags: row == nil ? 0 : 32)
         if let row { r.componentRows[item] = row }
         let child = GesScope(scope)
         child.values[s.accumulator] = accumulator
@@ -106,14 +108,14 @@ extension GesCompiler {
         r.componentRows.removeValue(forKey: item)
         if value != accumulator { r.emit(.move, accumulator, value) }
         r.emit(.jump, 0, 0, loop)
-        r.patch(end, target: r.code.count)
-        if let first { r.patch(first, target: r.code.count) }
+        r.mark([end])
+        if let first { r.mark([first]) }
         r.emit(.iteratorClose, 0, iterator)
         r.emit(.move, d, accumulator)
         let done = r.emit(.jump)
-        for jump in invalid { r.patch(jump, target: r.code.count) }
+        r.mark(invalid)
         r.emit(.loadNothing, d)
-        r.patch(done, target: r.code.count)
+        r.mark([done])
     }
 
     func weightedChoose(_ input: Int, _ s: GesSelector, _ d: Int, _ r: GesRoutine, _ scope: GesScope) throws {
@@ -129,12 +131,13 @@ extension GesCompiler {
         let invalid = r.emit(.iteratorCreateOrJump, iterator, input)
         r.emit(.listBuilderCreate, itemsBuilder)
         r.emit(.listBuilderCreate, weightsBuilder)
-        let begin = r.code.count
+        let begin = r.mark()
         let end = r.emit(.iteratorNext, item, iterator)
         let predicateScope = GesScope(scope)
         bindComponents(s.names, fallback: s.name, current: item, r, predicateScope)
         var skips: [Int] = []
-        if let condition = s.expressions.first { skips.append(r.emit(.jumpIfNotTrue, 0, try expression(condition, r, predicateScope))) }
+        // Only an explicit filter is evaluated; the parser's placeholder `true` is not, as in C#.
+        if !s.name.isEmpty, let condition = s.expressions.first { skips.append(r.emit(.jumpIfNotTrue, 0, try expression(condition, r, predicateScope))) }
         let weightScope = GesScope(scope)
         bindComponents(s.weightNames, fallback: s.weightName, current: item, r, weightScope)
         let weight = try expression(s.expressions[1], r, weightScope)
@@ -146,27 +149,27 @@ extension GesCompiler {
         skips.append(r.emit(.jumpIfNotTrue, 0, comparison))
         r.emit(.listBuilderAdd, 0, itemsBuilder, item)
         r.emit(.listBuilderAdd, 0, weightsBuilder, weight)
-        for skip in skips { r.patch(skip, target: r.code.count) }
+        r.mark(skips)
         r.emit(.jump, 0, 0, begin)
-        r.patch(end, target: r.code.count)
+        r.mark([end])
         r.emit(.iteratorClose, 0, iterator)
         r.emit(.listBuilderFinish, items, itemsBuilder)
         r.emit(.listBuilderFinish, weights, weightsBuilder)
         if s.count == 1 { r.emit(.oneWeighted, d, items, weights) } else { r.emit(.takeWeighted, d, items, s.count, payload: UInt64(weights)) }
         let done = r.emit(.jump)
-        r.patch(invalid, target: r.code.count)
+        r.mark([invalid])
         r.emit(.loadNothing, d)
-        r.patch(done, target: r.code.count)
+        r.mark([done])
     }
 
     func slice(_ s: GesSelector, _ d: Int, _ source: Int, _ r: GesRoutine) throws {
-        if s.count > Int(Int16.max) { throw error("compile.numericLimitExceeded", r.location, phase: .compile) }
+        if s.count > Int(Int16.max) { throw compileError("compile.numericLimitExceeded", r.location, phase: .compile) }
         if s.operation == "draw" {
             r.emit(s.count == 1 ? .first : .takeFirst, d, source, s.count == 1 ? 0 : s.count)
             return
         }
         let take = s.operation == "take"
-        let op: Op = s.mode == "first" ? (take ? .takeFirst : .dropFirst) : s.mode == "last" ? (take ? .takeLast : .dropLast) : s.mode == "highest" ? (take ? .takeHighest : .dropHighest) : (take ? .takeLowest : .dropLowest)
+        let op: GesBytecodeOpCode = s.mode == "first" ? (take ? .takeFirst : .dropFirst) : s.mode == "last" ? (take ? .takeLast : .dropLast) : s.mode == "highest" ? (take ? .takeHighest : .dropHighest) : (take ? .takeLowest : .dropLowest)
         r.emit(op, d, source, s.count)
     }
 
@@ -183,13 +186,13 @@ extension GesCompiler {
         var guardOK: [Int] = []
         if sourceExpression == nil && prefix.isEmpty && ["distinct", "order", "group"].contains(s.operation) {
             let compare = r.temporary()
-            let types: [GameEventScriptBytecodeTypeKind] = s.operation == "group" ? [.list, .map, .custom] : [.list]
+            let types: [GesBytecodeTypeKind] = s.operation == "group" ? [.list, .map, .custom] : [.list]
             for type in types {
                 r.emit(.checkType, compare, source, Int(type.rawValue))
                 guardOK.append(r.emit(.jumpIfTrue, 0, compare))
             }
             invalid.append(r.emit(.jump))
-            for i in guardOK { r.patch(i, target: r.code.count) }
+            r.mark(guardOK)
         }
         let row: GesComponentRow?
         if let sourceExpression {
@@ -199,7 +202,7 @@ extension GesCompiler {
             row = nil
         }
         let collection = ["filter", "select", "map", "group", "distinct", "order", "take", "drop", "draw"].contains(s.operation)
-        var builder = 0
+        var collector = 0
         var count = d
         var one = 0
         var seen = 0
@@ -208,9 +211,10 @@ extension GesCompiler {
         var compare = 0
         switch s.operation {
         case "filter", "select", "map", "group", "distinct", "order", "take", "drop", "draw":
-            builder = r.temporary()
-            let create: Op = s.operation == "map" ? .mapBuilderCreate : s.operation == "group" ? .groupBuilderCreate : s.operation == "distinct" ? .distinctBuilderCreate : s.operation == "order" ? .orderBuilderCreate : .listBuilderCreate
-            r.emit(create, builder)
+            collector = r.temporary()
+            let create: GesBytecodeOpCode =
+                s.operation == "map" ? .mapBuilderCreate : s.operation == "group" ? .groupBuilderCreate : s.operation == "distinct" ? .distinctBuilderCreate : s.operation == "order" ? .orderBuilderCreate : .listBuilderCreate
+            r.emit(create, collector)
         case "count", "average":
             r.emit(.loadInteger, count)
             one = r.temporary()
@@ -242,8 +246,8 @@ extension GesCompiler {
         case "objectMatch": r.emit(.loadFalse, d)
         default: r.emit(.loadNothing, d)
         }
-        let start = r.code.count
-        var endJumps = [r.emit(.iteratorNext, row.map { list($0.components) } ?? item, iterator, flags: row == nil ? 0 : 32)]
+        let start = r.mark()
+        var endJumps = [r.emit(.iteratorNext, row.map { builder.list($0.components) } ?? item, iterator, flags: row == nil ? 0 : 32)]
         if let row { r.componentRows[item] = row }
         var nextJumps: [Int] = []
         var current = item
@@ -267,11 +271,11 @@ extension GesCompiler {
         case "foreach": break
         case "filter", "select", "take", "drop", "draw":
             if s.operation == "filter" && s.expressions.first.flatMap(scalarConstant) != .boolean(true) { nextJumps.append(r.emit(.jumpIfNotTrue, 0, projected)) }
-            r.emit(.listBuilderAdd, 0, builder, s.operation == "select" ? projected : current)
+            r.emit(.listBuilderAdd, 0, collector, s.operation == "select" ? projected : current)
         case "map", "group", "distinct", "order":
             let value = s.operation == "map" && s.expressions.count > 1 ? try expression(s.expressions[1], r, child) : current
-            let op: Op = s.operation == "map" ? .mapBuilderAdd : s.operation == "group" ? .groupBuilderAdd : s.operation == "distinct" ? .distinctBuilderAdd : .orderBuilderAdd
-            r.emit(op, 0, builder, projected, payload: UInt64(value))
+            let op: GesBytecodeOpCode = s.operation == "map" ? .mapBuilderAdd : s.operation == "group" ? .groupBuilderAdd : s.operation == "distinct" ? .distinctBuilderAdd : .orderBuilderAdd
+            r.emit(op, 0, collector, projected, payload: UInt64(value))
         case "any", "all":
             nextJumps.append(r.emit(s.operation == "all" ? .jumpIfTrue : .jumpIfNotTrue, 0, projected))
             r.emit(s.operation == "all" ? .loadFalse : .loadTrue, d)
@@ -285,7 +289,7 @@ extension GesCompiler {
             numericCopy(sum, projected, r)
             r.emit(.loadTrue, seen)
             nextJumps.append(r.emit(.jump))
-            r.patch(add, target: r.code.count)
+            r.mark([add])
             r.emit(.add, sum, sum, projected, flags: 64)
         case "min", "max":
             let compareJump = r.emit(.jumpIfTrue, 0, seen)
@@ -293,12 +297,12 @@ extension GesCompiler {
             r.emit(.move, winner, projected)
             r.emit(.loadTrue, seen)
             nextJumps.append(r.emit(.jump))
-            r.patch(compareJump, target: r.code.count)
+            r.mark([compareJump])
             r.emit(s.operation == "min" ? .less : .greater, compare, projected, winner)
             let update = r.emit(.jumpIfTrue, 0, compare)
             r.emit(.loadTrue, seen)
             nextJumps.append(r.emit(.jump))
-            r.patch(update, target: r.code.count)
+            r.mark([update])
             r.emit(.move, d, current)
             r.emit(.move, winner, projected)
             r.emit(.loadTrue, seen)
@@ -309,7 +313,7 @@ extension GesCompiler {
                 r.emit(.move, d, current)
                 r.emit(.add, count, count, one)
                 nextJumps.append(r.emit(.jump))
-                r.patch(duplicate, target: r.code.count)
+                r.mark([duplicate])
                 r.emit(.loadNothing, d)
                 endJumps.append(r.emit(.jump))
             } else {
@@ -321,25 +325,25 @@ extension GesCompiler {
             nextJumps.append(r.emit(.jumpIfNotTrue, 0, match))
             r.emit(.loadTrue, d)
             endJumps.append(r.emit(.jump))
-        default: throw error("compile.unsupportedConstruct", r.location, symbol: s.operation, phase: .compile)
+        default: throw compileError("compile.unsupportedConstruct", r.location, symbol: s.operation, phase: .compile)
         }
         r.componentRows.removeValue(forKey: item)
-        for jump in nextJumps { r.patch(jump, target: r.code.count) }
+        r.mark(nextJumps)
         r.emit(.jump, 0, 0, start)
-        for jump in endJumps { r.patch(jump, target: r.code.count) }
+        r.mark(endJumps)
         r.emit(.iteratorClose, 0, iterator)
         if collection {
-            let finish: Op =
+            let finish: GesBytecodeOpCode =
                 s.operation == "map"
                 ? .mapBuilderFinish
                 : s.operation == "group"
                     ? .groupBuilderFinish : s.operation == "distinct" ? .distinctBuilderFinish : s.operation == "order" ? (s.mode == "descending" ? .orderBuilderFinishDescending : .orderBuilderFinishAscending) : .listBuilderFinish
             if ["take", "drop", "draw"].contains(s.operation) {
                 let collected = r.temporary()
-                r.emit(finish, collected, builder)
+                r.emit(finish, collected, collector)
                 try slice(s, d, collected, r)
             } else {
-                r.emit(finish, d, builder)
+                r.emit(finish, d, collector)
             }
         }
         var close: [Int] = []
@@ -351,14 +355,14 @@ extension GesCompiler {
             let empty = r.emit(.jumpIfNotTrue, 0, count)
             r.emit(.divide, d, sum, count, flags: 64)
             close.append(r.emit(.jump))
-            r.patch(empty, target: r.code.count)
+            r.mark([empty])
             r.emit(.loadNothing, d)
         }
-        for jump in close { r.patch(jump, target: r.code.count) }
+        r.mark(close)
         let done = r.emit(.jump)
-        for jump in invalid { r.patch(jump, target: r.code.count) }
+        r.mark(invalid)
         r.emit(.loadNothing, d)
-        r.patch(done, target: r.code.count)
+        r.mark([done])
     }
 
     func numericCopy(_ destination: Int, _ source: Int, _ r: GesRoutine) {
@@ -379,46 +383,45 @@ extension GesCompiler {
             r.emit(.loadInteger, count, payload: 1)
             r.emit(.loadInteger, one, payload: 1)
         }
-        let loop = r.code.count
+        let loop = r.mark()
         let end = r.emit(.iteratorNext, item, iterator)
         if average { r.emit(.add, count, count, one) }
         r.emit(.add, accumulator, accumulator, item, flags: 64)
         r.emit(.jump, 0, 0, loop)
-        r.patch(empty, target: r.code.count)
+        r.mark([empty])
         r.emit(.iteratorClose, 0, iterator)
         r.emit(average ? .loadNothing : .loadInteger, d)
         let done1 = r.emit(.jump)
-        r.patch(end, target: r.code.count)
+        r.mark([end])
         r.emit(.iteratorClose, 0, iterator)
         if average { r.emit(.divide, d, accumulator, count, flags: 64) }
         let done2 = r.emit(.jump)
-        r.patch(invalid, target: r.code.count)
+        r.mark([invalid])
         r.emit(.loadNothing, d)
-        r.patch(done1, target: r.code.count)
-        r.patch(done2, target: r.code.count)
+        r.mark([done1])
+        r.mark([done2])
     }
 
+    // As C# EmitObjectPatternPredicate: every entry is checked in source order and combined with And.
     func objectMatch(_ value: Int, _ pattern: GesExpression, _ r: GesRoutine, _ scope: GesScope) throws -> Int {
-        let result = r.temporary()
+        var result = r.temporary()
         r.emit(.loadTrue, result)
         guard case .map(let entries) = pattern.kind else { return result }
-        var failures: [Int] = []
         for (name, expression) in entries {
             let member = r.temporary()
-            r.emit(.memberAccess, member, text(name), value)
+            r.emit(.memberAccess, member, builder.text(name), value)
             let match: Int
             if case .map = expression.kind {
                 match = try objectMatch(member, expression, r, scope)
             } else {
+                let expected = try self.expression(expression, r, scope)
                 match = r.temporary()
-                r.emit(.equal, match, member, try self.expression(expression, r, scope))
+                r.emit(.equal, match, member, expected)
             }
-            failures.append(r.emit(.jumpIfNotTrue, 0, match))
+            let combined = r.temporary()
+            r.emit(.and, combined, result, match)
+            result = combined
         }
-        let end = r.emit(.jump)
-        for failure in failures { r.patch(failure, target: r.code.count) }
-        r.emit(.loadFalse, result)
-        r.patch(end, target: r.code.count)
         return result
     }
 }

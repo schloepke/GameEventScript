@@ -39,7 +39,7 @@ public sealed class GameEventScriptDumpCommandTests
         var arguments = addresses ? new[] { "dump", "program file.gesb", "--addresses" } : ["dump", "program file.gesb"];
         var result = Run(arguments);
         AssertSuccess(result);
-        Assert.AreEqual(GameEventScriptProgramReader.Read(bytes).Dump(addresses), result.StandardOutput);
+        Assert.AreEqual(GameEventScriptProgram.Read(bytes).Dump(addresses), result.StandardOutput);
         StringAssert.Contains(result.StandardOutput, "Grüße 😀");
         Assert.AreEqual(addresses, result.StandardOutput.Contains("@0000", StringComparison.Ordinal));
         Assert.AreEqual(debug, result.StandardOutput.Contains(".segment source", StringComparison.Ordinal));
@@ -57,7 +57,7 @@ public sealed class GameEventScriptDumpCommandTests
         var bytes = CreateBinary("program.gesb", true);
         var output = Path.Combine(_directory, "nested output", "program.gesa");
         AssertSuccess(Run("dump", option, "nested output/program.gesa", "program.gesb"));
-        var program = GameEventScriptProgramReader.Read(bytes);
+        var program = GameEventScriptProgram.Read(bytes);
         CollectionAssert.AreEqual(new UTF8Encoding(false, true).GetBytes(program.Dump()), File.ReadAllBytes(output));
         AssertSuccess(Run("dump", "program.gesb", "--addresses", option, "nested output/program.gesa"));
         CollectionAssert.AreEqual(new UTF8Encoding(false, true).GetBytes(program.Dump(true)), File.ReadAllBytes(output));
@@ -80,7 +80,7 @@ public sealed class GameEventScriptDumpCommandTests
     {
         var bytes = File.ReadAllBytes(Path.Combine(TestRepositoryPaths.ConformanceDirectory, "fixtures", "GesbV1", fixture));
         File.WriteAllBytes(Path.Combine(_directory, "invalid.gesb"), bytes);
-        var expected = Assert.ThrowsExactly<GameEventScriptProgramFormatException>(() => GameEventScriptProgramReader.Read(bytes));
+        var expected = Assert.ThrowsExactly<GesProgramFormatException>(() => GameEventScriptProgram.Read(bytes));
         var output = Path.Combine(_directory, "previous.gesa");
         if (existingOutput) File.WriteAllText(output, "previous");
         var result = existingOutput ? Run("dump", "invalid.gesb", "-o", "previous.gesa") : Run("dump", "invalid.gesb");
@@ -153,13 +153,13 @@ public sealed class GameEventScriptDumpCommandTests
         var bytes = CreateBinary("-program.gesb", false);
         var result = Run("dump", "--", "-program.gesb");
         AssertSuccess(result);
-        Assert.AreEqual(GameEventScriptProgramReader.Read(bytes).Dump(), result.StandardOutput);
+        Assert.AreEqual(GameEventScriptProgram.Read(bytes).Dump(), result.StandardOutput);
     }
 
     private byte[] CreateBinary(string name, bool debug)
     {
-        var program = GameEventScriptBuilder.Create().AddScript(Source, "unavailable-source.ges").WithDebugInfo(debug ? GameEventScriptDebugInfoOptions.All : GameEventScriptDebugInfoOptions.None).Compile();
-        var bytes = GameEventScriptProgramWriter.ToArray(program);
+        var program = new GesProgramBuilder().AddScript(Source, "unavailable-source.ges").WithDebugInfo(debug ? GesDebugInfoOptions.All : GesDebugInfoOptions.None).Compile();
+        var bytes = program.Encode();
         File.WriteAllBytes(Path.Combine(_directory, name), bytes);
         return bytes;
     }

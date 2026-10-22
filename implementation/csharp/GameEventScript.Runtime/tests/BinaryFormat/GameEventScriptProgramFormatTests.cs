@@ -13,7 +13,7 @@ public sealed class GameEventScriptProgramFormatTests
     [TestMethod]
     public void CompilerGeneratesAllDebugSectionsByDefault()
     {
-        var program = GameEventScriptBuilder.Create()
+        var program = new GesProgramBuilder()
             .AddScript("module defaultdebug\n\non Start { emit Done(value: 1) }", "default-debug.ges")
             .Compile();
 
@@ -26,37 +26,37 @@ public sealed class GameEventScriptProgramFormatTests
     [TestMethod]
     public void FileAndSectionFramingIsLittleEndianAndUnpadded()
     {
-        var bytes = GameEventScriptProgramWriter.ToArray(Compile(GameEventScriptDebugInfoOptions.None));
+        var bytes = Compile(GesDebugInfoOptions.None).Encode();
         CollectionAssert.AreEqual(Encoding.ASCII.GetBytes("GESB"), bytes[..4]);
         Assert.AreEqual((ushort)1, ReadU16(bytes, 4));
         Assert.AreEqual((ushort)0, ReadU16(bytes, 6));
         Assert.AreEqual((uint)16, ReadU32(bytes, 8));
         Assert.AreEqual((uint)bytes.Length, ReadU32(bytes, 12));
-        Assert.AreEqual((ushort)GameEventScriptSectionType.ProgramMetadata, ReadU16(bytes, 16));
-        Assert.AreEqual((ushort)GameEventScriptSectionFlags.Required, ReadU16(bytes, 18));
+        Assert.AreEqual((ushort)GesSectionType.ProgramMetadata, ReadU16(bytes, 16));
+        Assert.AreEqual((ushort)GesSectionFlags.Required, ReadU16(bytes, 18));
         Assert.AreEqual((ushort)1, ReadU16(bytes, 20));
         Assert.AreEqual((ushort)0, ReadU16(bytes, 22));
         Assert.AreEqual((uint)16, ReadU32(bytes, 24));
-        Assert.AreEqual((ushort)GameEventScriptSectionType.StringConstants, ReadU16(bytes, 44));
+        Assert.AreEqual((ushort)GesSectionType.StringConstants, ReadU16(bytes, 44));
     }
 
     [TestMethod]
     public void CanonicalGoldenBinariesRemainByteStable()
     {
-        var emptyHash = Sha256(GameEventScriptProgramWriter.ToArray(
-            GameEventScriptBuilder.Create().Compile(new GameEventScriptCompileOptions
+        var emptyHash = Sha256(GesProgramWriter.ToArray(
+            new GesProgramBuilder().Compile(new GesCompileOptions
             {
-                DebugInfo = GameEventScriptDebugInfoOptions.None
+                DebugInfo = GesDebugInfoOptions.None
             })));
-        var runtimeHash = Sha256(GameEventScriptProgramWriter.ToArray(Compile(GameEventScriptDebugInfoOptions.None)));
-        var debugHash = Sha256(GameEventScriptProgramWriter.ToArray(Compile(GameEventScriptDebugInfoOptions.All)));
+        var runtimeHash = Sha256(Compile(GesDebugInfoOptions.None).Encode());
+        var debugHash = Sha256(Compile(GesDebugInfoOptions.All).Encode());
 
-        var multipleSources = GameEventScriptBuilder.Create()
+        var multipleSources = new GesProgramBuilder()
             .AddScript("module first\nfunction plusOne(value) be value + 1", "first.ges")
             .AddScript("module first\non Start(value) { emit Done(value: plusOne(value: value)) }", "second.ges")
             .WithDebugInfo()
             .Compile();
-        var multiHash = Sha256(GameEventScriptProgramWriter.ToArray(multipleSources));
+        var multiHash = Sha256(multipleSources.Encode());
         Assert.AreEqual("58B9A2C558CFA5711E9967D6FFF5C3AAC99F2D4AE3DF59BA8CFEBADCAC6D53B5", emptyHash);
         Assert.AreEqual("2B7082CDE65F79533135A6B4FA54CB984B146FD84034DFD36C9E0459454B2050", runtimeHash);
         Assert.AreEqual("15A52F001A8F75A36EAFF7ECEAD9233268706038ED557CC3815CF2035188EDAC", debugHash);
@@ -66,15 +66,15 @@ public sealed class GameEventScriptProgramFormatTests
     [TestMethod]
     public void PreserveKnownAndRuntimeOnlyDropUnknownPayloads()
     {
-        var baseProgram = Compile(GameEventScriptDebugInfoOptions.All);
-        var bytes = GameEventScriptProgramWriter.ToArray(CopyWithOpaque(baseProgram,
-            [new GameEventScriptOpaqueSection(0x8000, GameEventScriptSectionFlags.None, 1, new byte[] { 9 }, 0)]));
+        var baseProgram = Compile(GesDebugInfoOptions.All);
+        var bytes = GesProgramWriter.ToArray(CopyWithOpaque(baseProgram,
+            [new GesOpaqueSection(0x8000, GesSectionFlags.None, 1, new byte[] { 9 }, 0)]));
 
-        var known = GameEventScriptProgramReader.Read(bytes, new GameEventScriptProgramReadOptions { Retention = GameEventScriptProgramRetention.PreserveKnown });
+        var known = GameEventScriptProgram.Read(bytes, new GesProgramReadOptions { Retention = GesProgramRetention.PreserveKnown });
         Assert.HasCount(0, known.OpaqueSections);
         Assert.IsNotNull(known.SourceMap);
 
-        var runtime = GameEventScriptProgramReader.Read(bytes, new GameEventScriptProgramReadOptions { Retention = GameEventScriptProgramRetention.RuntimeOnly });
+        var runtime = GameEventScriptProgram.Read(bytes, new GesProgramReadOptions { Retention = GesProgramRetention.RuntimeOnly });
         Assert.HasCount(0, runtime.OpaqueSections);
         Assert.IsNull(runtime.DebugSymbols);
         Assert.IsNull(runtime.SourceMap);
@@ -85,82 +85,82 @@ public sealed class GameEventScriptProgramFormatTests
     [TestMethod]
     public void ReservedSignatureSectionIsOpaqueAndHasNoTrustSemantics()
     {
-        var program = CopyWithOpaque(Compile(GameEventScriptDebugInfoOptions.None),
-            [new GameEventScriptOpaqueSection((ushort)GameEventScriptSectionType.ReservedSignature, GameEventScriptSectionFlags.None, 1, new byte[] { 7, 8, 9 }, 0)]);
-        var bytes = GameEventScriptProgramWriter.ToArray(program);
-        var decoded = GameEventScriptProgramReader.Read(bytes);
+        var program = CopyWithOpaque(Compile(GesDebugInfoOptions.None),
+            [new GesOpaqueSection((ushort)GesSectionType.ReservedSignature, GesSectionFlags.None, 1, new byte[] { 7, 8, 9 }, 0)]);
+        var bytes = program.Encode();
+        var decoded = GameEventScriptProgram.Read(bytes);
         Assert.HasCount(1, decoded.OpaqueSections);
         CollectionAssert.AreEqual(new byte[] { 7, 8, 9 }, decoded.OpaqueSections[0].RawPayload.ToArray());
 
-        var section = FindSection(bytes, (ushort)GameEventScriptSectionType.ReservedSignature);
-        WriteU16(bytes, section + 2, (ushort)GameEventScriptSectionFlags.Required);
-        Assert.AreEqual(GameEventScriptProgramFormatErrorCode.UnknownRequiredSection,
-            Assert.ThrowsExactly<GameEventScriptProgramFormatException>(() => GameEventScriptProgramReader.Read(bytes)).ErrorCode);
+        var section = FindSection(bytes, (ushort)GesSectionType.ReservedSignature);
+        WriteU16(bytes, section + 2, (ushort)GesSectionFlags.Required);
+        Assert.AreEqual(GesProgramFormatErrorCode.UnknownRequiredSection,
+            Assert.ThrowsExactly<GesProgramFormatException>(() => GameEventScriptProgram.Read(bytes)).ErrorCode);
     }
 
     [TestMethod]
     public void DuplicateBindingIdsProduceStableError()
     {
-        var program = GameEventScriptBuilder.Create()
+        var program = new GesProgramBuilder()
             .AddScript("module duplicateids\non First { }\non Second { }")
             .Compile();
-        var bytes = GameEventScriptProgramWriter.ToArray(program);
-        var bindings = FindSection(bytes, (ushort)GameEventScriptSectionType.Bindings);
+        var bytes = program.Encode();
+        var bindings = FindSection(bytes, (ushort)GesSectionType.Bindings);
         var firstEntry = bindings + 12 + 4;
         var secondEntry = firstEntry + 20;
         WriteU16(bytes, secondEntry + 4, ReadU16(bytes, firstEntry + 4));
 
-        var exception = Assert.ThrowsExactly<GameEventScriptProgramFormatException>(() => GameEventScriptProgramReader.Read(bytes));
-        Assert.AreEqual(GameEventScriptProgramFormatErrorCode.DuplicateBindingId, exception.ErrorCode);
+        var exception = Assert.ThrowsExactly<GesProgramFormatException>(() => GameEventScriptProgram.Read(bytes));
+        Assert.AreEqual(GesProgramFormatErrorCode.DuplicateBindingId, exception.ErrorCode);
     }
 
     [TestMethod]
     public void ProgramValidatorEnforcesPortableCallableIdentity()
     {
-        var program = GameEventScriptBuilder.Create()
+        var program = new GesProgramBuilder()
             .AddScript("function resolve(unit, enemy) be unit + enemy\nfunction resolve(unit, collision) be unit * collision\non Start { emit Done(a: resolve(unit: 2, enemy: 3), b: resolve(unit: 2, collision: 3)) }")
             .Compile();
         var entries = program.Bindings.Entries.ToArray();
-        var functionIndexes = entries.Select((entry, index) => (entry, index)).Where(item => item.entry.Kind == GameEventScriptBinaryBindKind.Function).Select(item => item.index).ToArray();
+        var functionIndexes = entries.Select((entry, index) => (entry, index)).Where(item => item.entry.Kind == GesBinaryBindKind.Function).Select(item => item.index).ToArray();
         Assert.HasCount(2, functionIndexes);
 
         var first = entries[functionIndexes[0]];
         var second = entries[functionIndexes[1]];
         entries[functionIndexes[1]] = CopyBinding(second, argumentNames: first.ArgumentNames);
         var duplicateSignature = CopyWithBindings(program, entries);
-        Assert.AreEqual(GameEventScriptProgramFormatErrorCode.InvalidProgram,
-            Assert.ThrowsExactly<GameEventScriptProgramFormatException>(() => GameEventScriptProgramValidator.Validate(duplicateSignature)).ErrorCode);
+        Assert.AreEqual(GesProgramFormatErrorCode.InvalidProgram,
+            Assert.ThrowsExactly<GesProgramFormatException>(() => duplicateSignature.Validate()).ErrorCode);
 
-        entries[functionIndexes[1]] = CopyBinding(second, kind: GameEventScriptBinaryBindKind.Predicate);
+        entries[functionIndexes[1]] = CopyBinding(second, kind: GesBinaryBindKind.Predicate);
         var overlappingKinds = CopyWithBindings(program, entries);
-        Assert.AreEqual(GameEventScriptProgramFormatErrorCode.InvalidProgram,
-            Assert.ThrowsExactly<GameEventScriptProgramFormatException>(() => GameEventScriptProgramValidator.Validate(overlappingKinds)).ErrorCode);
+        Assert.AreEqual(GesProgramFormatErrorCode.InvalidProgram,
+            Assert.ThrowsExactly<GesProgramFormatException>(() => overlappingKinds.Validate()).ErrorCode);
     }
 
     [TestMethod]
     public void ReaderFileLimitProducesStableError()
     {
-        var bytes = GameEventScriptProgramWriter.ToArray(Compile(GameEventScriptDebugInfoOptions.None));
-        var options = new GameEventScriptProgramReadOptions
+        var bytes = Compile(GesDebugInfoOptions.None).Encode();
+        var options = new GesProgramReadOptions
         {
-            Limits = new GameEventScriptProgramReadLimits { MaxFileBytes = bytes.Length - 1 }
+            Limits = new GesProgramReadLimits { MaxFileBytes = bytes.Length - 1 }
         };
-        Assert.AreEqual(GameEventScriptProgramFormatErrorCode.FileTooLarge,
-            Assert.ThrowsExactly<GameEventScriptProgramFormatException>(() => GameEventScriptProgramReader.Read(bytes, options)).ErrorCode);
+        Assert.AreEqual(GesProgramFormatErrorCode.FileTooLarge,
+            Assert.ThrowsExactly<GesProgramFormatException>(() => GameEventScriptProgram.Read(bytes, options)).ErrorCode);
     }
 
     [TestMethod]
     public void UnsupportedKnownOptionalVersionUsesRetentionPolicy()
     {
-        var bytes = GameEventScriptProgramWriter.ToArray(Compile(GameEventScriptDebugInfoOptions.All));
-        var sourceMap = FindSection(bytes, (ushort)GameEventScriptSectionType.SourceMap);
+        var bytes = Compile(GesDebugInfoOptions.All).Encode();
+        var sourceMap = FindSection(bytes, (ushort)GesSectionType.SourceMap);
         WriteU16(bytes, sourceMap + 4, 2);
 
-        var all = GameEventScriptProgramReader.Read(bytes);
+        var all = GameEventScriptProgram.Read(bytes);
         Assert.IsNull(all.SourceMap);
-        Assert.IsTrue(all.OpaqueSections.ToArray().Any(section => section.SectionType == (ushort)GameEventScriptSectionType.SourceMap));
+        Assert.IsTrue(all.OpaqueSections.ToArray().Any(section => section.SectionType == (ushort)GesSectionType.SourceMap));
 
-        var known = GameEventScriptProgramReader.Read(bytes, new GameEventScriptProgramReadOptions { Retention = GameEventScriptProgramRetention.PreserveKnown });
+        var known = GameEventScriptProgram.Read(bytes, new GesProgramReadOptions { Retention = GesProgramRetention.PreserveKnown });
         Assert.IsNull(known.SourceMap);
         Assert.HasCount(0, known.OpaqueSections);
     }
@@ -168,17 +168,17 @@ public sealed class GameEventScriptProgramFormatTests
     [TestMethod]
     public void UnsupportedKnownOptionalCompressionUsesRetentionPolicy()
     {
-        var bytes = GameEventScriptProgramWriter.ToArray(Compile(GameEventScriptDebugInfoOptions.All));
-        var sourceMap = FindSection(bytes, (ushort)GameEventScriptSectionType.SourceMap);
+        var bytes = Compile(GesDebugInfoOptions.All).Encode();
+        var sourceMap = FindSection(bytes, (ushort)GesSectionType.SourceMap);
         WriteU16(bytes, sourceMap + 2, 0x0010);
 
-        var all = GameEventScriptProgramReader.Read(bytes);
+        var all = GameEventScriptProgram.Read(bytes);
         Assert.IsNull(all.SourceMap);
         Assert.IsTrue(all.OpaqueSections.ToArray().Any(section =>
-            section.SectionType == (ushort)GameEventScriptSectionType.SourceMap &&
-            ((ushort)section.Flags & (ushort)GameEventScriptSectionFlags.CompressionMask) != 0));
+            section.SectionType == (ushort)GesSectionType.SourceMap &&
+            ((ushort)section.Flags & (ushort)GesSectionFlags.CompressionMask) != 0));
 
-        var known = GameEventScriptProgramReader.Read(bytes, new GameEventScriptProgramReadOptions { Retention = GameEventScriptProgramRetention.PreserveKnown });
+        var known = GameEventScriptProgram.Read(bytes, new GesProgramReadOptions { Retention = GesProgramRetention.PreserveKnown });
         Assert.IsNull(known.SourceMap);
         Assert.HasCount(0, known.OpaqueSections);
     }
@@ -187,12 +187,12 @@ public sealed class GameEventScriptProgramFormatTests
     public void UnicodeSourcesUseUtf8ByteOffsetsAndRoundTrip()
     {
         const string source = "module unicode\n\non Start(name) {\n  let text be \"🙂 é \" + name\n  emit Done(text: text)\n}\n";
-        var program = GameEventScriptBuilder.Create().AddScript(source, "ä/logic.ges").WithDebugInfo().Compile();
-        var bytes = GameEventScriptProgramWriter.ToArray(program);
-        var sourceMapSection = FindSection(bytes, (ushort)GameEventScriptSectionType.SourceMap);
+        var program = new GesProgramBuilder().AddScript(source, "ä/logic.ges").WithDebugInfo().Compile();
+        var bytes = program.Encode();
+        var sourceMapSection = FindSection(bytes, (ushort)GesSectionType.SourceMap);
         Assert.AreEqual((uint)1, ReadU32(bytes, sourceMapSection + 12));
         Assert.AreEqual((uint)Encoding.UTF8.GetByteCount("ä/logic.ges"), ReadU32(bytes, sourceMapSection + 16));
-        var decoded = GameEventScriptProgramReader.Read(bytes);
+        var decoded = GameEventScriptProgram.Read(bytes);
 
         Assert.AreEqual(source, decoded.SourceArchive!.Sources[0].ResolveText());
         Assert.AreEqual((uint)Encoding.UTF8.GetByteCount(source), decoded.SourceMap!.Sources[0].SourceByteLength);
@@ -206,12 +206,12 @@ public sealed class GameEventScriptProgramFormatTests
     }
 
     [TestMethod]
-    [DataRow(GameEventScriptDebugInfoOptions.DebugSymbols, true, false, false)]
-    [DataRow(GameEventScriptDebugInfoOptions.SourceMap, false, true, false)]
-    [DataRow(GameEventScriptDebugInfoOptions.SourceArchive, false, false, true)]
-    public void OptionalDebugSectionsCanExistIndependently(GameEventScriptDebugInfoOptions options, bool symbols, bool map, bool archive)
+    [DataRow(GesDebugInfoOptions.DebugSymbols, true, false, false)]
+    [DataRow(GesDebugInfoOptions.SourceMap, false, true, false)]
+    [DataRow(GesDebugInfoOptions.SourceArchive, false, false, true)]
+    public void OptionalDebugSectionsCanExistIndependently(GesDebugInfoOptions options, bool symbols, bool map, bool archive)
     {
-        var decoded = GameEventScriptProgramReader.Read(GameEventScriptProgramWriter.ToArray(Compile(options)));
+        var decoded = GameEventScriptProgram.Read(Compile(options).Encode());
         Assert.AreEqual(symbols, decoded.DebugSymbols is not null);
         Assert.AreEqual(map, decoded.SourceMap is not null);
         Assert.AreEqual(archive, decoded.SourceArchive is not null);
@@ -220,10 +220,10 @@ public sealed class GameEventScriptProgramFormatTests
     [TestMethod]
     public void CompilerIdentityDoesNotChangeRequiredRuntimeSections()
     {
-        var csharp = Compile(GameEventScriptDebugInfoOptions.None);
-        var swift = CopyWithBuildMetadata(csharp, new GameEventScriptBuildMetadataSegment("steph.ges.compiler.swift", "0.1.0"));
-        var csharpBytes = GameEventScriptProgramWriter.ToArray(csharp);
-        var swiftBytes = GameEventScriptProgramWriter.ToArray(swift);
+        var csharp = Compile(GesDebugInfoOptions.None);
+        var swift = CopyWithBuildMetadata(csharp, new GesBuildMetadataSegment("steph.ges.compiler.swift", "0.1.0"));
+        var csharpBytes = csharp.Encode();
+        var swiftBytes = swift.Encode();
 
         Assert.IsFalse(csharpBytes.SequenceEqual(swiftBytes));
         CollectionAssert.AreEqual(ReadRequiredSections(csharpBytes), ReadRequiredSections(swiftBytes));
@@ -232,7 +232,7 @@ public sealed class GameEventScriptProgramFormatTests
     [TestMethod]
     public void DumperUsesEmbeddedSourceAndInterleavesMappedLines()
     {
-        var decoded = GameEventScriptProgramReader.Read(GameEventScriptProgramWriter.ToArray(Compile(GameEventScriptDebugInfoOptions.All)));
+        var decoded = GameEventScriptProgram.Read(Compile(GesDebugInfoOptions.All).Encode());
         var dump = decoded.Dump(includeInstructionAddresses: true);
 
         StringAssert.Contains(dump, ".region \"Source: main.ges\"\n\n.segment source \"main.ges\"\n\n");
@@ -265,37 +265,37 @@ public sealed class GameEventScriptProgramFormatTests
         }
     }
 
-    private static GameEventScriptProgram Compile(GameEventScriptDebugInfoOptions options)
-        => GameEventScriptBuilder.Create()
+    private static GameEventScriptProgram Compile(GesDebugInfoOptions options)
+        => new GesProgramBuilder()
             .AddScript("module binaryone\n\non Start(value) {\n  let result be value + 1\n  emit Done(value: result)\n}\n", "main.ges")
             .WithProgramVersion(42)
             .WithDebugInfo(options)
             .Compile();
 
-    private static GameEventScriptProgram CopyWithOpaque(GameEventScriptProgram program, IReadOnlyList<GameEventScriptOpaqueSection> opaque)
+    private static GameEventScriptProgram CopyWithOpaque(GameEventScriptProgram program, IReadOnlyList<GesOpaqueSection> opaque)
         => new(program.FormatVersion, program.ModuleName, program.ProgramVersion, program.RequiredRegisterCount, program.RequiredCallStackDepth,
             program.StringConstants, program.UInt16IndexLists, program.Bindings, program.Code, program.DebugSymbols, program.SourceMap,
             program.SourceArchive, program.BuildMetadata, opaque);
 
-    private static GameEventScriptProgram CopyWithBuildMetadata(GameEventScriptProgram program, GameEventScriptBuildMetadataSegment metadata)
+    private static GameEventScriptProgram CopyWithBuildMetadata(GameEventScriptProgram program, GesBuildMetadataSegment metadata)
         => new(program.FormatVersion, program.ModuleName, program.ProgramVersion, program.RequiredRegisterCount, program.RequiredCallStackDepth,
             program.StringConstants, program.UInt16IndexLists, program.Bindings, program.Code, program.DebugSymbols, program.SourceMap,
             program.SourceArchive, metadata, program.OpaqueSections);
 
-    private static GameEventScriptProgram CopyWithBindings(GameEventScriptProgram program, IReadOnlyList<GameEventScriptBindingSegment.GameEventScriptBinaryBindEntry> entries)
+    private static GameEventScriptProgram CopyWithBindings(GameEventScriptProgram program, IReadOnlyList<GesBindingSegment.Entry> entries)
         => new(program.FormatVersion, program.ModuleName, program.ProgramVersion, program.RequiredRegisterCount, program.RequiredCallStackDepth,
-            program.StringConstants, program.UInt16IndexLists, new GameEventScriptBindingSegment(entries), program.Code, program.DebugSymbols, program.SourceMap,
+            program.StringConstants, program.UInt16IndexLists, new GesBindingSegment(entries), program.Code, program.DebugSymbols, program.SourceMap,
             program.SourceArchive, program.BuildMetadata, program.OpaqueSections);
 
-    private static GameEventScriptBindingSegment.GameEventScriptBinaryBindEntry CopyBinding(
-        GameEventScriptBindingSegment.GameEventScriptBinaryBindEntry source,
-        GameEventScriptBinaryBindKind? kind = null,
+    private static GesBindingSegment.Entry CopyBinding(
+        GesBindingSegment.Entry source,
+        GesBinaryBindKind? kind = null,
         IReadOnlyList<ushort>? argumentNames = null)
         => new(kind ?? source.Kind, source.Name, argumentNames ?? source.ArgumentNames, source.EntryAddress, source.Id, source.RequiredTags, source.ExcludedTags, source.RequiredRegisterCount, source.RequiredCallStackDepth);
 
     private static byte[] ReadRequiredSections(byte[] bytes)
         => SplitSections(bytes)
-            .Where(section => (ReadU16(section, 2) & (ushort)GameEventScriptSectionFlags.Required) != 0)
+            .Where(section => (ReadU16(section, 2) & (ushort)GesSectionFlags.Required) != 0)
             .SelectMany(section => section)
             .ToArray();
 

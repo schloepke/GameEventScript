@@ -60,16 +60,16 @@ def generate():
                 raise ValueError('Only numbered named captures are supported')
         return [(int(k), v['name']) for k, v in sorted(groups.items(), key=lambda pair: int(pair[0]))]
 
-    cs = HEADER + '\nnamespace GameEventScript.SyntaxHighlighter;\n\ninternal static class EmbeddedGrammars\n{\n'
+    cs = HEADER + '\nnamespace GameEventScript.SyntaxHighlighter;\n\ninternal static class GesEmbeddedGrammars\n{\n'
     for name, ids in zip(['Source', 'Assembly'], roots):
         cs += f'    internal static readonly int[] {name} = [{", ".join(map(str, ids))}];\n'
-    cs += '\n    internal static GrammarRule[] CreateRules() =>\n    [\n'
+    cs += '\n    internal static GesGrammarRule[] CreateRules() =>\n    [\n'
     for p, children in rules:
         values = [p.get('match', p.get('begin', '')), p.get('end', ''), p.get('name', ''), p.get('contentName', '')]
         groups = [captures(p, 'captures'), captures(p, 'beginCaptures'), captures(p, 'endCaptures')]
         cs += '        new(\n' + ',\n'.join('            ' + json.dumps(v, ensure_ascii=False) for v in values) + ',\n'
         for pairs in groups:
-            cs += '            [' + ', '.join(f'new CaptureRule({i}, {json.dumps(n)})' for i, n in pairs) + '],\n'
+            cs += '            [' + ', '.join(f'new GesCaptureRule({i}, {json.dumps(n)})' for i, n in pairs) + '],\n'
         cs += '            [' + ', '.join(map(str, children)) + '], ' + str(bool(p.get('applyEndPatternLast'))).lower() + '),\n'
     cs += '    ];\n}\n'
     payload = {
@@ -82,11 +82,11 @@ def generate():
             'endLast': bool(p.get('applyEndPatternLast')),
         } for p, children in rules],
     }
-    swift = HEADER + '\nenum EmbeddedGrammars {\n    static let json = ####"""\n'
+    swift = HEADER + '\nenum GesEmbeddedGrammars {\n    static let json = ####"""\n'
     swift += '\n'.join('        ' + line for line in json.dumps(payload, ensure_ascii=False, indent=2).splitlines())
     swift += '\n        """####\n}\n'
     return {
-        ROOT / 'implementation/csharp/GameEventScript.SyntaxHighlighter/src/EmbeddedGrammars.g.cs': cs,
+        ROOT / 'implementation/csharp/GameEventScript.SyntaxHighlighter/src/GesEmbeddedGrammars.g.cs': cs,
         ROOT / 'implementation/swift/GameEventScriptSyntaxHighlighter/Sources/GameEventScriptSyntaxHighlighter/EmbeddedGrammars.swift': swift,
     }
 

@@ -40,7 +40,7 @@ public sealed class GameEventScriptConsoleSourceTests
         string[] paths;
         if (binary)
         {
-            var program = GameEventScriptBuilder.Create().AddScript(first, "first.ges").AddScript(second, "second.ges").Compile();
+            var program = new GesProgramBuilder().AddScript(first, "first.ges").AddScript(second, "second.ges").Compile();
             WriteBinary("game.gesb", program);
             paths = ["game.gesb"];
         }
@@ -61,7 +61,7 @@ public sealed class GameEventScriptConsoleSourceTests
     [TestMethod]
     public void MissingArchiveIsInformational()
     {
-        var program = GameEventScriptBuilder.Create().AddScript("module stripped\non Start { emit ConsoleOut(42) }").WithDebugInfo(GameEventScriptDebugInfoOptions.None).Compile();
+        var program = new GesProgramBuilder().AddScript("module stripped\non Start { emit ConsoleOut(42) }").WithDebugInfo(GesDebugInfoOptions.None).Compile();
         WriteBinary("game.gesb", program);
         var result = Interactive(":source stripped\nemit Start\n:quit\n", "game.gesb");
         Assert.AreEqual(0, result.ExitCode, result.StandardError);
@@ -112,7 +112,7 @@ public sealed class GameEventScriptConsoleSourceTests
     public void ColorsAreOptionalAndPreserveText(string command)
     {
         const string source = "module colors\non Start {\n\temit ConsoleOut(\"Grüße 😀\", 12)\n}\n";
-        WriteBinary("game.gesb", GameEventScriptBuilder.Create().AddScript(source, "color.ges").Compile());
+        WriteBinary("game.gesb", new GesProgramBuilder().AddScript(source, "color.ges").Compile());
         var input = command + " @1\n:quit\n";
         var plain = Interactive(input, "game.gesb");
         var colored = Interactive(input, "game.gesb", "--color");
@@ -151,7 +151,7 @@ still inside the string')
     emit ConsoleOut(12)
 }
 """;
-        var program = GameEventScriptBuilder.Create().AddScript(source, "escaped\"name\\file.ges").Compile();
+        var program = new GesProgramBuilder().AddScript(source, "escaped\"name\\file.ges").Compile();
         var dump = program.Dump();
         var colored = RunHighlighting.RenderAssembly(dump);
         Assert.AreEqual(dump, WithoutColor(colored));
@@ -176,7 +176,7 @@ still inside the string')
     }
 
     private void Write(string file, string source) => File.WriteAllText(Path.Combine(_directory, file), source, new UTF8Encoding(false, true));
-    private void WriteBinary(string file, GameEventScriptProgram program) => File.WriteAllBytes(Path.Combine(_directory, file), GameEventScriptProgramWriter.ToArray(program));
+    private void WriteBinary(string file, GameEventScriptProgram program) => File.WriteAllBytes(Path.Combine(_directory, file), program.Encode());
     private DotNetProcessResult Interactive(string input, params string[] paths) => ToolProcess.ExecuteWithInput(_directory, input, ["run", "--interactive", "--quiet", .. paths]);
     private static string Lines(params string[] values) => string.Join(Environment.NewLine, values) + Environment.NewLine;
     private static string WithoutColor(string text) => Regex.Replace(text, "\u001b\\[[0-9;]*m", string.Empty);

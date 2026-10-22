@@ -12,10 +12,10 @@ namespace GameEventScript.Compiler;
 
 internal sealed partial class GesBinaryBuilder
 {
-    private GameEventScriptDebugInfoOptions _debugInfoOptions;
+    private GesDebugInfoOptions _debugInfoOptions;
     private IReadOnlyList<GesSourceDocument> _sourceDocuments = [];
 
-    internal GesBinaryBuilder WithDebugInfo(GameEventScriptDebugInfoOptions options, IReadOnlyList<GesSourceDocument> sources)
+    internal GesBinaryBuilder WithDebugInfo(GesDebugInfoOptions options, IReadOnlyList<GesSourceDocument> sources)
     {
         _debugInfoOptions = options;
         _sourceDocuments = sources ?? [];
@@ -24,19 +24,19 @@ internal sealed partial class GesBinaryBuilder
 
     private DebugSegments BuildDebugSegments(IReadOnlyList<PlanItem> items, IReadOnlyDictionary<int, ushort> registerMap)
     {
-        var symbols = (_debugInfoOptions & GameEventScriptDebugInfoOptions.DebugSymbols) != 0
+        var symbols = (_debugInfoOptions & GesDebugInfoOptions.DebugSymbols) != 0
             ? BuildDebugSymbols(items, registerMap)
             : null;
-        var map = (_debugInfoOptions & GameEventScriptDebugInfoOptions.SourceMap) != 0
+        var map = (_debugInfoOptions & GesDebugInfoOptions.SourceMap) != 0
             ? BuildSourceMap(items)
             : null;
-        var archive = (_debugInfoOptions & GameEventScriptDebugInfoOptions.SourceArchive) != 0
+        var archive = (_debugInfoOptions & GesDebugInfoOptions.SourceArchive) != 0
             ? BuildSourceArchive()
             : null;
         return new DebugSegments(symbols, map, archive);
     }
 
-    private GameEventScriptDebugSymbolsSegment BuildDebugSymbols(IReadOnlyList<PlanItem> items, IReadOnlyDictionary<int, ushort> registerMap)
+    private GesDebugSymbolsSegment BuildDebugSymbols(IReadOnlyList<PlanItem> items, IReadOnlyDictionary<int, ushort> registerMap)
     {
         var routineStarts = new int[_routines.Count];
         var routineEnds = new int[_routines.Count];
@@ -53,7 +53,7 @@ internal sealed partial class GesBinaryBuilder
             codeAddress++;
         }
 
-        var symbols = new List<GameEventScriptDebugSymbol>();
+        var symbols = new List<GesDebugSymbol>();
         for (var registerIndex = 0; registerIndex < _registers.Count; registerIndex++)
         {
             var register = _registers[registerIndex];
@@ -61,16 +61,16 @@ internal sealed partial class GesBinaryBuilder
             var routine = _routines[register.RoutineId];
             if (!routine.Kind.HasValue || routineStarts[routine.Id] < 0) continue;
             var kind = ContainsRegister(routine.ArgumentRegisters, register.Id)
-                ? GameEventScriptDebugSymbolKind.Parameter
-                : GameEventScriptDebugSymbolKind.Local;
-            symbols.Add(new GameEventScriptDebugSymbol(kind, physical, register.Name!, checked((uint)routineStarts[routine.Id]), checked((uint)(routineEnds[routine.Id] - routineStarts[routine.Id]))));
+                ? GesDebugSymbolKind.Parameter
+                : GesDebugSymbolKind.Local;
+            symbols.Add(new GesDebugSymbol(kind, physical, register.Name!, checked((uint)routineStarts[routine.Id]), checked((uint)(routineEnds[routine.Id] - routineStarts[routine.Id]))));
         }
-        return new GameEventScriptDebugSymbolsSegment(symbols);
+        return new GesDebugSymbolsSegment(symbols);
     }
 
-    private GameEventScriptSourceMapSegment BuildSourceMap(IReadOnlyList<PlanItem> items)
+    private GesSourceMapSegment BuildSourceMap(IReadOnlyList<PlanItem> items)
     {
-        var sourceMetadata = new GameEventScriptSourceMapSource[_sourceDocuments.Count];
+        var sourceMetadata = new GesSourceMapSource[_sourceDocuments.Count];
         var sourceData = new SourceData[_sourceDocuments.Count];
         using var sha256 = SHA256.Create();
         for (var index = 0; index < _sourceDocuments.Count; index++)
@@ -81,11 +81,11 @@ internal sealed partial class GesBinaryBuilder
             var byteLines = new uint[charLines.Length];
             for (var line = 0; line < charLines.Length; line++) byteLines[line] = checked((uint)Encoding.UTF8.GetByteCount(document.Text, 0, charLines[line]));
             var hash = sha256.ComputeHash(utf8);
-            sourceMetadata[index] = new GameEventScriptSourceMapSource(document.SourceId, document.SourceName, checked((uint)utf8.Length), hash, byteLines);
+            sourceMetadata[index] = new GesSourceMapSource(document.SourceId, document.SourceName, checked((uint)utf8.Length), hash, byteLines);
             sourceData[index] = new SourceData(document, charLines, utf8.Length);
         }
 
-        var mappings = new List<GameEventScriptSourceMapEntry>();
+        var mappings = new List<GesSourceMapEntry>();
         uint codeAddress = 0;
         for (var itemIndex = 0; itemIndex < items.Count; itemIndex++)
         {
@@ -93,7 +93,7 @@ internal sealed partial class GesBinaryBuilder
             if (item.Instruction is null) continue;
             if (ResolveSourceData(item.SourceRange, sourceData) is { } data && ResolveByteRange(item.SourceRange!, data) is { } range)
             {
-                var mapping = new GameEventScriptSourceMapEntry(codeAddress, 1, data.Document.SourceId, range.Start, range.Length);
+                var mapping = new GesSourceMapEntry(codeAddress, 1, data.Document.SourceId, range.Start, range.Length);
                 if (mappings.Count > 0)
                 {
                     var previous = mappings[^1];
@@ -108,21 +108,21 @@ internal sealed partial class GesBinaryBuilder
             }
             codeAddress++;
         }
-        return new GameEventScriptSourceMapSegment(sourceMetadata, mappings);
+        return new GesSourceMapSegment(sourceMetadata, mappings);
     }
 
-    private GameEventScriptSourceArchiveSegment BuildSourceArchive()
+    private GesSourceArchiveSegment BuildSourceArchive()
     {
-        var sources = new GameEventScriptSourceArchiveEntry[_sourceDocuments.Count];
+        var sources = new GesSourceArchiveEntry[_sourceDocuments.Count];
         for (var index = 0; index < _sourceDocuments.Count; index++)
         {
             var source = _sourceDocuments[index];
-            sources[index] = new GameEventScriptSourceArchiveEntry(source.SourceId, source.SourceName, Encoding.UTF8.GetBytes(source.Text));
+            sources[index] = new GesSourceArchiveEntry(source.SourceId, source.SourceName, Encoding.UTF8.GetBytes(source.Text));
         }
-        return new GameEventScriptSourceArchiveSegment(sources);
+        return new GesSourceArchiveSegment(sources);
     }
 
-    private static SourceData? ResolveSourceData(GameEventScriptSourceLocation? location, IReadOnlyList<SourceData> sources)
+    private static SourceData? ResolveSourceData(GesSourceLocation? location, IReadOnlyList<SourceData> sources)
     {
         if (location is null) return null;
         if (location.SourceId.HasValue)
@@ -133,7 +133,7 @@ internal sealed partial class GesBinaryBuilder
         return null;
     }
 
-    private static ByteRange? ResolveByteRange(GameEventScriptSourceLocation location, SourceData source)
+    private static ByteRange? ResolveByteRange(GesSourceLocation location, SourceData source)
     {
         if (!location.Line.HasValue || !location.Column.HasValue) return null;
         var startChar = ResolveCharacterOffset(source.Document.Text, source.LineStartCharacters, location.Line.Value, location.Column.Value);
@@ -149,7 +149,7 @@ internal sealed partial class GesBinaryBuilder
         var lineIndex = Math.Clamp(line - 1, 0, Math.Max(0, lineStarts.Count - 1));
         var start = lineStarts.Count == 0 ? 0 : lineStarts[lineIndex];
         var end = lineIndex + 1 < lineStarts.Count ? lineStarts[lineIndex + 1] : text.Length;
-        return GameEventScriptText.Utf16OffsetForScalarOffset(text, start, end, Math.Max(0, column - 1));
+        return GesText.Utf16OffsetForScalarOffset(text, start, end, Math.Max(0, column - 1));
     }
 
     private static int[] BuildLineStartCharacters(string text)
@@ -173,7 +173,7 @@ internal sealed partial class GesBinaryBuilder
         return false;
     }
 
-    private sealed record DebugSegments(GameEventScriptDebugSymbolsSegment? Symbols, GameEventScriptSourceMapSegment? SourceMap, GameEventScriptSourceArchiveSegment? SourceArchive);
+    private sealed record DebugSegments(GesDebugSymbolsSegment? Symbols, GesSourceMapSegment? SourceMap, GesSourceArchiveSegment? SourceArchive);
     private sealed record SourceData(GesSourceDocument Document, int[] LineStartCharacters, int Utf8Length);
     private readonly record struct ByteRange(uint Start, uint Length);
 }

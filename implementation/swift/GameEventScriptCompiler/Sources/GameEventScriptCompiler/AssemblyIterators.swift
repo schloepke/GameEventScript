@@ -40,14 +40,14 @@ extension GesCompiler {
         guard try assemblyIteratorSignature(line) != nil else { return false }
         if line.name == "IteratorNext", case .list(let targets) = line.operands[0].kind {
             let values = try targets.map { scope.get(try assemblyName($0))! }
-            let instruction = r.emit(.iteratorNext, list(values), registers[1], flags: 32)
+            let instruction = r.emit(.iteratorNext, builder.list(values), registers[1], flags: 32)
             patches.append((instruction, try assemblyName(line.operands[2])))
             return true
         }
         let mode = try assemblyIteratorMode(line.operands.last!)
         let sources: Int
         if (1...5).contains(mode), case .list(let values) = line.operands[1].kind {
-            sources = try list(
+            sources = try builder.list(
                 values.map { value in
                     if case .name(let name) = value.kind { return scope.get(name)! }
                     let target = r.local()

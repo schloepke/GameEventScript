@@ -4,7 +4,7 @@
 using System.Globalization;
 using System.Text.Json;
 using GameEventScript.Api;
-using static GameEventScript.Api.GameEventScriptBindingSegment;
+using static GameEventScript.Api.GesBindingSegment;
 
 namespace GameEventScript.Tool;
 
@@ -15,7 +15,7 @@ internal sealed class RunInventory(GameEventScriptHost host, RunWorkspace worksp
 
     internal int NextId { get; private set; } = nextId;
 
-    internal GameEventScriptInstance Load(GameEventScriptProgram program, IReadOnlyList<string> paths, int? id = null)
+    internal GesProgramInstance Load(GameEventScriptProgram program, IReadOnlyList<string> paths, int? id = null)
     {
         var instance = host.Load(program);
         var assignedId = id ?? NextId;
@@ -45,7 +45,7 @@ internal sealed class RunInventory(GameEventScriptHost host, RunWorkspace worksp
         return count;
     }
 
-    internal GameEventScriptSubscription SubscribeMessageName(string name, IGameEventScriptNativeMessageHandler handler)
+    internal GesSubscription SubscribeMessageName(string name, IGesNativeMessageHandler handler)
     {
         var subscription = host.SubscribeMessageName(name, handler);
         _nativeHandlers.Add(new NativeHandler(name, subscription));
@@ -81,9 +81,9 @@ internal sealed class RunInventory(GameEventScriptHost host, RunWorkspace worksp
             foreach (var binding in Handlers(entry))
             {
                 var name = strings.Resolve(binding.Name);
-                var signature = binding.Kind == GameEventScriptBinaryBindKind.MessageNameHandler
+                var signature = binding.Kind == GesBinaryBindKind.MessageNameHandler
                     ? name + "(...) [name-only]"
-                    : GameEventScriptMessageSignature.CreateSignatureId(name, binding.ArgumentNames.Select(index => strings.Resolve(index))) + " [signature]";
+                    : GesMessageSignature.CreateSignatureId(name, binding.ArgumentNames.Select(index => strings.Resolve(index))) + " [signature]";
                 var tags = Tags(" matching ", binding.RequiredTags, strings) + Tags(" without ", binding.ExcludedTags, strings);
                 lines.Add($"  {entry.Id}  {entry.Instance.Program.ModuleName}  {signature}{tags}");
             }
@@ -190,13 +190,13 @@ internal sealed class RunInventory(GameEventScriptHost host, RunWorkspace worksp
 
     internal LoadedProgram[] ActivePrograms() => _programs.Where(entry => entry.Instance.IsAttached).ToArray();
 
-    private static IEnumerable<GameEventScriptBinaryBindEntry> Handlers(LoadedProgram entry)
-        => entry.Instance.Program.Bindings.Entries.Where(binding => binding.Kind is GameEventScriptBinaryBindKind.MessageHandler or GameEventScriptBinaryBindKind.MessageNameHandler
+    private static IEnumerable<GesBindingSegment.Entry> Handlers(LoadedProgram entry)
+        => entry.Instance.Program.Bindings.Entries.Where(binding => binding.Kind is GesBinaryBindKind.MessageHandler or GesBinaryBindKind.MessageNameHandler
             && entry.Instance.Program.StringConstants.Resolve(binding.Name) != "initialization");
 
-    private static string Tags(string prefix, GameEventScriptReadOnlyArray<ushort> tags, GameEventScriptStringConstantSegment strings)
+    private static string Tags(string prefix, GesReadOnlyArray<ushort> tags, GesStringConstantSegment strings)
         => tags.Count == 0 ? string.Empty : prefix + string.Join(", ", tags.Select(index => "#" + strings.Resolve(index)));
 
-    internal sealed record LoadedProgram(int Id, GameEventScriptInstance Instance, string[] Paths);
-    private sealed record NativeHandler(string Name, GameEventScriptSubscription Subscription);
+    internal sealed record LoadedProgram(int Id, GesProgramInstance Instance, string[] Paths);
+    private sealed record NativeHandler(string Name, GesSubscription Subscription);
 }

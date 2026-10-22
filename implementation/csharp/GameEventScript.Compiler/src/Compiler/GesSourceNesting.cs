@@ -13,87 +13,87 @@ internal static class GesSourceNesting
 
     // Children have already been checked and annotated. This calculation never
     // walks an expression recursively, including for left-associative chains.
-    internal static int Measure(ScriptNode node)
+    internal static int Measure(GesScriptNode node)
     {
         var children = node switch
         {
-            SendExpressionNode value => Math.Max(Depth(value.Message), Math.Max(Depth(value.Delay), Maximum(value.Tags))),
-            UnaryExpressionNode value => Depth(value.Operand),
-            BinaryExpressionNode value => Math.Max(Depth(value.Left), Depth(value.Right)),
-            MessageLiteralExpressionNode value => Arguments(value.ArgumentList),
-            CallExpressionNode value => Arguments(value.ArgumentList),
-            ExtensionCallExpressionNode value => Arguments(value.ArgumentList),
-            TypeConstructorExpressionNode value => Arguments(value.ArgumentList),
-            ListLiteralExpressionNode value => Maximum(value.Items),
-            CombinedCollectionExpressionNode value => Maximum(value.Sources),
-            ForeachSelectorNode value => Depth(value.Expression),
-            MapLiteralExpressionNode value => Maximum(value.Entries),
-            MapEntryNode value => Depth(value.Value),
-            IntrinsicCallExpressionNode value => Maximum(value.Arguments),
-            VariadicTaggedExpressionNode value => Maximum(value.Arguments),
-            BetweenExpressionNode value => Math.Max(Depth(value.Value), Math.Max(Depth(value.Minimum), Depth(value.Maximum))),
-            ClampExpressionNode value => Math.Max(Depth(value.Value), Math.Max(Depth(value.Minimum), Depth(value.Maximum))),
-            RangeExpressionNode value => Math.Max(Depth(value.FromExpression), Math.Max(Depth(value.ToExpression), Depth(value.StepExpression))),
-            RandomExpressionNode value => Math.Max(Depth(value.FromExpression), Depth(value.ToExpression)),
-            SeededRandomExpressionNode value => Math.Max(Depth(value.SeedExpression), Depth(value.BodyExpression)),
-            GeneratedCollectionExpressionNode value => Math.Max(Depth(value.Source), Math.Max(Depth(value.Predicate), Depth(value.Projection))),
-            GuardedChoiceExpressionNode value => Math.Max(Branches(value.Branches), Depth(value.OtherwiseExpression)),
-            PredicateCallExpressionNode value => Depth(value.Value),
-            ExtensionPredicateExpressionNode value => Depth(value.Value),
-            TypeCheckExpressionNode value => Depth(value.Value),
-            NothingCheckExpressionNode value => Depth(value.Value),
-            TypeCastExpressionNode value => Depth(value.Value),
-            MemberAccessExpressionNode value => Depth(value.Target),
-            CollectionAccessExpressionNode value => Math.Max(Depth(value.Target), Depth(value.Selector)),
-            ExpressionSelectorNode value => Depth(value.Expression),
-            PatternSelectorNode value => Depth(value.Pattern),
-            ObjectMatchSelectorNode value => Depth(value.Pattern),
-            TakePatternSelectorNode value => Depth(value.Pattern),
-            SeriesTermSelectorNode value => Depth(value.IndexExpression),
-            PredicateSelectorNode value => Depth(value.Predicate),
-            CountSelectorNode value => Depth(value.Predicate),
-            ChooseSelectorNode value => Math.Max(Depth(value.Predicate), Depth(value.WeightExpression)),
-            EdgeSelectorNode value => Depth(value.Predicate),
-            FilterSelectorNode value => Depth(value.Predicate),
-            SumSelectorNode value => Depth(value.Projection),
-            AverageSelectorNode value => Depth(value.Projection),
-            FoldSelectorNode value => Math.Max(Depth(value.Seed), Depth(value.Projection)),
-            SelectSelectorNode value => Depth(value.Projection),
-            MapSelectorNode value => Math.Max(Depth(value.KeyProjection), Depth(value.ValueProjection)),
-            MinSelectorNode value => Depth(value.Projection),
-            MaxSelectorNode value => Depth(value.Projection),
-            ContainsSelectorNode value => Depth(value.ValueExpression),
-            DistinctSelectorNode value => Depth(value.Projection),
-            GroupBySelectorNode value => Depth(value.Projection),
-            OrderBySelectorNode value => Depth(value.Projection),
-            DiceCountPatternNode value => Depth(value.Face),
-            ObjectMatchPatternNode value => Maximum(value.Entries),
-            ObjectMatchEntryNode { Value: ObjectMatchExpressionValueNode value } => Depth(value.Expression),
-            ObjectMatchEntryNode { Value: ObjectMatchNestedValueNode value } => Depth(value.Pattern),
-            CollectionIterationSourceNode value => Depth(value.Expression),
-            RangeIterationSourceNode value => Depth(value.RangeExpression),
+            GesSendExpressionNode value => Math.Max(Depth(value.Message), Math.Max(Depth(value.Delay), Maximum(value.Tags))),
+            GesUnaryExpressionNode value => Depth(value.Operand),
+            GesBinaryExpressionNode value => Math.Max(Depth(value.Left), Depth(value.Right)),
+            GesMessageLiteralExpressionNode value => Arguments(value.ArgumentList),
+            GesCallExpressionNode value => Arguments(value.ArgumentList),
+            GesExtensionCallExpressionNode value => Arguments(value.ArgumentList),
+            GesTypeConstructorExpressionNode value => Arguments(value.ArgumentList),
+            GesListLiteralExpressionNode value => Maximum(value.Items),
+            GesCombinedCollectionExpressionNode value => Maximum(value.Sources),
+            GesForeachSelectorNode value => Depth(value.Expression),
+            GesMapLiteralExpressionNode value => Maximum(value.Entries),
+            GesMapEntryNode value => Depth(value.Value),
+            GesIntrinsicCallExpressionNode value => Maximum(value.Arguments),
+            GesVariadicTaggedExpressionNode value => Maximum(value.Arguments),
+            GesBetweenExpressionNode value => Math.Max(Depth(value.Value), Math.Max(Depth(value.Minimum), Depth(value.Maximum))),
+            GesClampExpressionNode value => Math.Max(Depth(value.Value), Math.Max(Depth(value.Minimum), Depth(value.Maximum))),
+            GesRangeExpressionNode value => Math.Max(Depth(value.FromExpression), Math.Max(Depth(value.ToExpression), Depth(value.StepExpression))),
+            GesRandomExpressionNode value => Math.Max(Depth(value.FromExpression), Depth(value.ToExpression)),
+            GesSeededRandomExpressionNode value => Math.Max(Depth(value.SeedExpression), Depth(value.BodyExpression)),
+            GesGeneratedCollectionExpressionNode value => Math.Max(Depth(value.Source), Math.Max(Depth(value.Predicate), Depth(value.Projection))),
+            GesGuardedChoiceExpressionNode value => Math.Max(Branches(value.Branches), Depth(value.OtherwiseExpression)),
+            GesPredicateCallExpressionNode value => Depth(value.Value),
+            GesExtensionPredicateExpressionNode value => Depth(value.Value),
+            GesTypeCheckExpressionNode value => Depth(value.Value),
+            GesNothingCheckExpressionNode value => Depth(value.Value),
+            GesTypeCastExpressionNode value => Depth(value.Value),
+            GesMemberAccessExpressionNode value => Depth(value.Target),
+            GesCollectionAccessExpressionNode value => Math.Max(Depth(value.Target), Depth(value.Selector)),
+            GesExpressionSelectorNode value => Depth(value.Expression),
+            GesPatternSelectorNode value => Depth(value.Pattern),
+            GesObjectMatchSelectorNode value => Depth(value.Pattern),
+            GesTakePatternSelectorNode value => Depth(value.Pattern),
+            GesSeriesTermSelectorNode value => Depth(value.IndexExpression),
+            GesPredicateSelectorNode value => Depth(value.Predicate),
+            GesCountSelectorNode value => Depth(value.Predicate),
+            GesChooseSelectorNode value => Math.Max(Depth(value.Predicate), Depth(value.WeightExpression)),
+            GesEdgeSelectorNode value => Depth(value.Predicate),
+            GesFilterSelectorNode value => Depth(value.Predicate),
+            GesSumSelectorNode value => Depth(value.Projection),
+            GesAverageSelectorNode value => Depth(value.Projection),
+            GesFoldSelectorNode value => Math.Max(Depth(value.Seed), Depth(value.Projection)),
+            GesSelectSelectorNode value => Depth(value.Projection),
+            GesMapSelectorNode value => Math.Max(Depth(value.KeyProjection), Depth(value.ValueProjection)),
+            GesMinSelectorNode value => Depth(value.Projection),
+            GesMaxSelectorNode value => Depth(value.Projection),
+            GesContainsSelectorNode value => Depth(value.ValueExpression),
+            GesDistinctSelectorNode value => Depth(value.Projection),
+            GesGroupBySelectorNode value => Depth(value.Projection),
+            GesOrderBySelectorNode value => Depth(value.Projection),
+            GesDiceCountPatternNode value => Depth(value.Face),
+            GesObjectMatchPatternNode value => Maximum(value.Entries),
+            GesObjectMatchEntryNode { Value: GesObjectMatchExpressionValueNode value } => Depth(value.Expression),
+            GesObjectMatchEntryNode { Value: GesObjectMatchNestedValueNode value } => Depth(value.Pattern),
+            GesCollectionIterationSourceNode value => Depth(value.Expression),
+            GesRangeIterationSourceNode value => Depth(value.RangeExpression),
             _ => 0
         };
-        return Math.Max(node.SourceNesting, children + (node is ExpressionNode or ObjectMatchPatternNode ? 1 : 0));
+        return Math.Max(node.SourceNesting, children + (node is GesExpressionNode or GesObjectMatchPatternNode ? 1 : 0));
     }
 
-    private static int Depth(ScriptNode? node) => node?.SourceNesting ?? 0;
+    private static int Depth(GesScriptNode? node) => node?.SourceNesting ?? 0;
 
-    private static int Maximum<T>(IReadOnlyList<T> nodes) where T : ScriptNode
+    private static int Maximum<T>(IReadOnlyList<T> nodes) where T : GesScriptNode
     {
         var depth = 0;
         for (var index = 0; index < nodes.Count; index++) depth = Math.Max(depth, Depth(nodes[index]));
         return depth;
     }
 
-    private static int Arguments(ArgumentListNode arguments)
+    private static int Arguments(GesArgumentListNode arguments)
     {
         var depth = 0;
         for (var index = 0; index < arguments.Count; index++) depth = Math.Max(depth, Depth(arguments.Arguments[index].Expression));
         return depth;
     }
 
-    private static int Branches(IReadOnlyList<GuardedChoiceBranchNode> branches)
+    private static int Branches(IReadOnlyList<GesGuardedChoiceBranchNode> branches)
     {
         var depth = 0;
         for (var index = 0; index < branches.Count; index++)

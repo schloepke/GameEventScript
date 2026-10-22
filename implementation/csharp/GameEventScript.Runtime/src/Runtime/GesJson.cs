@@ -6,13 +6,13 @@ using System.Globalization;
 using System.Text;
 using GameEventScript.Api;
 using GameEventScript.Runtime.Values;
-using static GameEventScript.Api.GameEventScriptBytecodeTypeKind;
+using static GameEventScript.Api.GesBytecodeTypeKind;
 
 namespace GameEventScript.Runtime;
 // A bounded JSON syntax layer; no host, Compiler, filesystem or JSON platform dependency.
 internal static class GesJson
 {
-    internal static GameEventScriptMessageFormatException Error(string code = "message.invalidValue") => new(code);
+    internal static GesMessageFormatException Error(string code = "message.invalidValue") => new(code);
     internal static GesValue Object(params (string, GesValue)[] fields)
     {
         var keys = new string[fields.Length];
@@ -52,7 +52,7 @@ internal static class GesJson
             case Text:
                 Quote(builder, value.TextValue);
                 break;
-            case GameEventScriptBytecodeTypeKind.Boolean:
+            case GesBytecodeTypeKind.Boolean:
                 builder.Append(value.IsTrue ? "true" : "false");
                 break;
             case Integer:
@@ -97,7 +97,7 @@ internal static class GesJson
 
     private static void Quote(StringBuilder b, string text)
     {
-        GameEventScriptText.RequireValidUnicode(text, nameof(text));
+        GesText.RequireValidUnicode(text, nameof(text));
         if (text.Length > 4194304)
             throw Error("message.resourceLimit");
         b.Append('"');
@@ -237,7 +237,7 @@ internal static class GesJson
                     var result = b.ToString();
                     try
                     {
-                        GameEventScriptText.RequireValidUnicode(result, nameof(text));
+                        GesText.RequireValidUnicode(result, nameof(text));
                     }
                     catch (ArgumentException)
                     {

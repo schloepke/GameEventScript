@@ -10,7 +10,7 @@ using GameEventScript.Tests.Conformance;
 if (args.Length == 3 && args[0] == "--message-json")
 {
     var input = System.Text.Json.JsonSerializer.Deserialize<string[]>(File.ReadAllText(args[1]))!;
-    var normalized = input.Select(json => GameEventScriptMessageJson.Serialize(GameEventScriptMessageJson.Deserialize(json))).ToArray();
+    var normalized = input.Select(json => GameEventScriptMessage.FromJson(json).ToJson()).ToArray();
     File.WriteAllText(args[2], System.Text.Json.JsonSerializer.Serialize(normalized));
     return 0;
 }
@@ -39,19 +39,19 @@ foreach (var testCase in requests.RootElement.EnumerateArray())
     if (groups.Length == 0) rows.Add(string.Join('\t', identity, "", "", "", documentHash));
     foreach (var group in groups)
     {
-        var builder = GameEventScriptBuilder.Create().WithExternalTypeCatalog(GameEventScriptConformanceExternalTypes.Catalog);
+        var builder = new GesProgramBuilder().WithExternalTypeCatalog(GameEventScriptConformanceExternalTypes.Catalog);
         foreach (var source in group) builder.AddScript(source.GetProperty("text").GetString()!, source.GetProperty("name").GetString()!);
-        var debug = GameEventScriptDebugInfoOptions.None;
+        var debug = GesDebugInfoOptions.None;
         foreach (var option in testCase.GetProperty("debugInfo").EnumerateArray())
             debug |= option.GetString() switch
             {
-                "debugSymbols" => GameEventScriptDebugInfoOptions.DebugSymbols,
-                "sourceMap" => GameEventScriptDebugInfoOptions.SourceMap,
-                "sourceArchive" => GameEventScriptDebugInfoOptions.SourceArchive,
+                "debugSymbols" => GesDebugInfoOptions.DebugSymbols,
+                "sourceMap" => GesDebugInfoOptions.SourceMap,
+                "sourceArchive" => GesDebugInfoOptions.SourceArchive,
                 _ => throw new InvalidDataException("Unknown debug option.")
             };
-        var program = builder.Compile(new GameEventScriptCompileOptions { DebugInfo = debug, ProgramVersion = testCase.GetProperty("programVersion").GetUInt64() });
-        var binary = GameEventScriptProgramWriter.ToArray(program);
+        var program = builder.Compile(new GesCompileOptions { DebugInfo = debug, ProgramVersion = testCase.GetProperty("programVersion").GetUInt64() });
+        var binary = program.Encode();
         var hash = Convert.ToHexString(SHA256.HashData(binary));
         var name = hash + ".gesb";
         File.WriteAllBytes(Path.Combine(output, name), binary);

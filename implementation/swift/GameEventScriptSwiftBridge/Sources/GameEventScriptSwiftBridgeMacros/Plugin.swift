@@ -5,6 +5,6 @@ import SwiftCompilerPlugin
 import SwiftSyntaxMacros
 
 @main
-struct GameEventScriptSwiftBridgePlugin: CompilerPlugin {
+struct GesBridgeMacroPlugin: CompilerPlugin {
     let providingMacros: [Macro.Type] = [GesTypeMacro.self, GesFieldMacro.self, GesConstructMacro.self]
 }

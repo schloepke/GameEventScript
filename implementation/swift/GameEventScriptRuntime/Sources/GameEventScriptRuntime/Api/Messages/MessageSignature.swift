@@ -1,0 +1,92 @@
+// Copyright 2026 Stephan Schlöpke
+// SPDX-License-Identifier: Apache-2.0
+
+/// An immutable message identity: its name and ordered external argument labels.
+public struct GesMessageSignature: Hashable, CustomStringConvertible, Sendable {
+    let storage: GesSignatureStorage
+
+    init(storage: GesSignatureStorage) { self.storage = storage }
+
+    /// The label assigned to a positional argument without an external name.
+    public static let unlabeledParameterName = "_"
+
+    /// An empty identity that cannot construct or match a concrete message.
+    public static let empty = GesMessageSignature(normalizedName: "", parameters: [])
+
+    /// The normalized message name.
+    public var name: String { storage.name }
+
+    /// The normalized external labels, in declaration order.
+    public var parameters: [String] { storage.parameters }
+
+    /// The stable language-neutral signature spelling, such as `Done(value)`.
+    public var signatureId: String { storage.signatureId }
+
+    /// Creates a signature, normalizing names and rejecting duplicate named labels.
+    /// Empty message names represent an empty identity; positional `_` labels may repeat.
+    public init(name: String?, parameters: [String?] = []) throws {
+        let normalizedName = try Self.normalizeMessageName(name)
+        var labels: [String] = []
+        labels.reserveCapacity(parameters.count)
+        for parameter in parameters {
+            let label = try Self.normalizeParameterName(parameter)
+            if label != Self.unlabeledParameterName && labels.contains(label) { throw GesMessageError.duplicateArgumentName }
+            labels.append(label)
+        }
+        self.init(normalizedName: normalizedName, parameters: labels)
+    }
+
+    /// Removes surrounding ASCII spaces and tabs and validates the message name.
+    /// Nil and an empty result normalize to the empty identity.
+    public static func normalizeMessageName(_ name: String?) throws -> String {
+        let normalized = GesMessageNames.trim(name ?? "")
+        if normalized.isEmpty || normalized == "initialization" || normalized == "undeliverable" { return normalized }
+        guard GesText.isUpperName(normalized) else { throw GesMessageError.invalidName }
+        return normalized
+    }
+
+    /// Removes surrounding ASCII spaces and tabs and validates an external label.
+    /// Nil, empty, and whitespace-only inputs normalize to `_`.
+    public static func normalizeParameterName(_ name: String?) throws -> String {
+        let normalized = GesMessageNames.trim(name ?? "")
+        if normalized.isEmpty || normalized == unlabeledParameterName { return unlabeledParameterName }
+        guard GesText.isLowerName(normalized) else { throw GesMessageError.invalidParameterName }
+        return normalized
+    }
+
+    /// Formats the normalized name and labels without constructing a signature.
+    /// Label order and repeated positional labels are preserved.
+    public static func makeSignatureId(name: String?, parameterNames: [String?] = []) throws -> String {
+        let normalizedName = try normalizeMessageName(name)
+        let normalizedLabels = try parameterNames.map(normalizeParameterName)
+        return normalizedName + "(" + normalizedLabels.joined(separator: ",") + ")"
+    }
+
+    /// Whether the concrete message has this name and ordered label identity.
+    public func matches(_ message: GameEventScriptMessage) -> Bool { GesText.scalarEqual(signatureId, message.signatureId) }
+
+    /// Binds ordered values to this signature, or returns nil for an empty name or wrong arity.
+    public func makeMessage(_ arguments: [GesValue]) -> GameEventScriptMessage? {
+        guard !name.isEmpty, arguments.count == parameters.count else { return nil }
+        return GameEventScriptMessage(normalizedName: name, arguments: GesMessageArguments(normalizedNames: parameters, values: arguments), signatureId: signatureId, normalizedTags: [])
+    }
+
+    /// Binds ordered values to this signature, throwing when a concrete message cannot be created.
+    public func withArguments(_ arguments: [GesValue]) throws -> GameEventScriptMessage {
+        guard let message = makeMessage(arguments) else { throw GesMessageError.argumentCountMismatch }
+        return message
+    }
+
+    /// The stable signature spelling.
+    public var description: String { signatureId }
+
+    /// Compares exact signature identities without Unicode normalization.
+    public static func == (lhs: Self, rhs: Self) -> Bool { GesText.scalarEqual(lhs.signatureId, rhs.signatureId) }
+
+    /// Hashes the signature identity; the numeric hash is process-local.
+    public func hash(into hasher: inout Hasher) { GesText.hashScalars(signatureId, into: &hasher) }
+
+    private init(normalizedName: String, parameters: [String]) {
+        storage = GesSignatureStorage(name: normalizedName, parameters: parameters, signatureId: normalizedName + "(" + parameters.joined(separator: ",") + ")")
+    }
+}

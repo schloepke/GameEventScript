@@ -11,7 +11,7 @@ final class RegisterArithmeticTests: XCTestCase {
         // C#'s scalar/reference/metadata architecture must not regress to nested payload enums.
         XCTAssertLessThanOrEqual(MemoryLayout<GesValue>.stride, 32)
         XCTAssertEqual(MemoryLayout<GameEventScriptMessage>.stride, MemoryLayout<AnyObject>.stride)
-        XCTAssertEqual(MemoryLayout<GameEventScriptMessageSignature>.stride, MemoryLayout<AnyObject>.stride)
+        XCTAssertEqual(MemoryLayout<GesMessageSignature>.stride, MemoryLayout<AnyObject>.stride)
     }
 
     func testNumericProjectionIsIndependentOfCollectionCount() {
@@ -68,10 +68,10 @@ final class RegisterArithmeticTests: XCTestCase {
     }
 
     func testRegisterOverwriteReleasesInternalObjects() throws {
-        let state = GesVmState(maxRegisters: 32, maxCallDepth: 4)
+        let state = GesVirtualMachine(maxRegisters: 32, maxCallDepth: 4)
         weak var released: GesIterator?
         do {
-            let iterator = try XCTUnwrap(GesIterator(.list([.integer(1)])))
+            let iterator = try XCTUnwrap(GesIterator.make(.list([.integer(1)])))
             released = iterator
             state.setIterator(0, iterator)
         }
@@ -84,8 +84,8 @@ final class RegisterArithmeticTests: XCTestCase {
     }
 
     func testMessageAndHandlerWrapExistingImmutablePayloads() throws {
-        let signature = try GameEventScriptMessageSignature(name: "Done", parameters: ["value"])
-        let message = try XCTUnwrap(signature.createMessage([.integer(7)]))
+        let signature = try GesMessageSignature(name: "Done", parameters: ["value"])
+        let message = try XCTUnwrap(signature.makeMessage([.integer(7)]))
         var value = GesValue.message(message)
         XCTAssertTrue(value.messageValue!.storage === message.storage)
         let copy = value
@@ -97,9 +97,9 @@ final class RegisterArithmeticTests: XCTestCase {
     }
 
     func testMessageArgumentsReuseBuffersAndPreserveSnapshots() throws {
-        let signature = try GameEventScriptMessageSignature(name: "Done", parameters: ["_", "value", "_"])
+        let signature = try GesMessageSignature(name: "Done", parameters: ["_", "value", "_"])
         var input: [GesValue] = [.integer(1), .text("kept"), .boolean(true)]
-        let message = try XCTUnwrap(signature.createMessage(input))
+        let message = try XCTUnwrap(signature.makeMessage(input))
         let arguments = message.arguments
         input.withUnsafeBufferPointer { original in
             arguments.values.withUnsafeBufferPointer { stored in XCTAssertEqual(original.baseAddress, stored.baseAddress) }
@@ -107,8 +107,8 @@ final class RegisterArithmeticTests: XCTestCase {
         signature.parameters.withUnsafeBufferPointer { original in
             arguments.signatureLabels.withUnsafeBufferPointer { stored in XCTAssertEqual(original.baseAddress, stored.baseAddress) }
         }
-        let pairs = try [GameEventScriptMessageArgument(value: .integer(1)), GameEventScriptMessageArgument(name: "value", value: .text("kept")), GameEventScriptMessageArgument(value: .boolean(true))]
-        let rebuilt = try GameEventScriptMessageArguments(pairs)
+        let pairs = try [GesMessageArgument(value: .integer(1)), GesMessageArgument(name: "value", value: .text("kept")), GesMessageArgument(value: .boolean(true))]
+        let rebuilt = try GesMessageArguments(pairs)
         XCTAssertEqual(arguments, rebuilt)
         XCTAssertEqual(arguments.hashValue, rebuilt.hashValue)
         XCTAssertEqual(Array(arguments), pairs)
@@ -129,35 +129,35 @@ final class RegisterArithmeticTests: XCTestCase {
         labels[1] = "changed"
         XCTAssertEqual(message.arguments, rebuilt)
         XCTAssertEqual(message.signatureId, "Done(_,value,_)")
-        XCTAssertEqual(Array(GameEventScriptMessageArguments.empty), [])
-        XCTAssertNil(signature.createMessage([]))
-        XCTAssertThrowsError(try GameEventScriptMessageArguments([.init(name: "value", value: .integer(1)), .init(name: "value", value: .integer(2))]))
+        XCTAssertEqual(Array(GesMessageArguments.empty), [])
+        XCTAssertNil(signature.makeMessage([]))
+        XCTAssertThrowsError(try GesMessageArguments([.init(name: "value", value: .integer(1)), .init(name: "value", value: .integer(2))]))
     }
 
     func testRecordReusesCanonicalMapStorageWhenOverwritingMapRegister() throws {
-        let state = GesVmState(maxRegisters: 32, maxCallDepth: 4)
+        let state = GesVirtualMachine(maxRegisters: 32, maxCallDepth: 4)
         state.setMap(0, [.init(key: "z", value: .integer(1)), .init(key: "a", value: .integer(2)), .init(key: "z", value: .integer(3))])
         let map = try XCTUnwrap(state.value(0).asMap)
         state.setRecord(0, typeName: "Sample", fields: map)
         let record = state.value(0)
         let fields = try XCTUnwrap(record.asMap)
-        map.entries.withUnsafeBufferPointer { original in
-            fields.entries.withUnsafeBufferPointer { stored in XCTAssertEqual(original.baseAddress, stored.baseAddress) }
+        map.valueStorage.withUnsafeBufferPointer { original in
+            fields.valueStorage.withUnsafeBufferPointer { stored in XCTAssertEqual(original.baseAddress, stored.baseAddress) }
         }
         XCTAssertEqual(record.customTypeName, "Sample")
-        XCTAssertEqual(fields.entries.map(\.key), ["a", "z"])
+        XCTAssertEqual(fields.keyStorage, ["a", "z"])
         XCTAssertEqual(fields.get("z"), .integer(3))
-        var exposed = fields.entries
-        exposed[0] = .init(key: "changed", value: .nothing)
+        var exposed = fields.valueStorage
+        exposed[0] = .nothing
         state.setNothing(0)
         XCTAssertEqual(record.asMap, map)
         XCTAssertEqual(record, .record(typeName: "Sample", entries: map.entries))
     }
 
     func testTextIdentityCastCanOverwriteItsSource() throws {
-        let state = GesVmState(maxRegisters: 32, maxCallDepth: 4)
-        let host = try GameEventScriptHost()
-        let context = GameEventScriptContext(host: host, random: .init(seed: 0), limits: .init(), extensions: nil, observer: nil)
+        let state = GesVirtualMachine(maxRegisters: 32, maxCallDepth: 4)
+        let host = try GameEventScriptHost.makeBuilder().build()
+        let context = GesContext(host: host, random: .init(seed: 0), limits: .init(), extensions: nil, observer: nil)
         state.setText(0, "kept 🐉 e\u{301}")
         let snapshot = state.value(0)
         try GesCasts.cast(state.value(0), .text, context, sink: state.output(0))
@@ -167,27 +167,97 @@ final class RegisterArithmeticTests: XCTestCase {
     }
 
     func testIntegerResultsCanOverwriteEitherOperandAfterRegisterGrowth() {
-        let cases: [(GameEventScriptBytecodeOpCode, GesValue)] = [
+        let cases: [(GesBytecodeOpCode, GesValue)] = [
             (.add, .integer(34)), (.subtract, .integer(24)), (.multiply, .integer(145)),
             (.divide, .float(5.8)), (.integerDivide, .integer(5)), (.modulo, .integer(4)), (.remainder, .integer(4)),
         ]
-        let state = GesVmState(maxRegisters: 128, maxCallDepth: 4)
-        XCTAssertTrue(state.ensure(96))
+        let state = GesVirtualMachine(maxRegisters: 128, maxCallDepth: 4)
+        XCTAssertTrue(state.ensureRegisterCapacity(96))
         state.frameStart = 40
         for (opcode, expected) in cases {
             for destination: UInt16 in [0, 1, 2] {
                 state.setValue(0, .integer(29))
                 state.setValue(1, .integer(5))
                 state.setValue(2, .text("previous destination"))
-                XCTAssertTrue(state.setIntegerArithmeticResult(.init(opcode: opcode, word0: destination, word1: 0, word2: 1)))
+                let instruction = GesBytecodeInstruction(opcode: opcode, word0: destination, word1: 0, word2: 1)
+                switch opcode {
+                case .add: state.executeAdd(state.frameStart + Int(destination), state.frameStart, state.frameStart + 1)
+                case .subtract: state.executeSubtract(state.frameStart + Int(instruction.word0), state.frameStart + Int(instruction.word1), state.frameStart + Int(instruction.word2))
+                case .multiply: state.executeMultiply(state.frameStart + Int(instruction.word0), state.frameStart + Int(instruction.word1), state.frameStart + Int(instruction.word2))
+                case .divide: state.executeDivide(state.frameStart + Int(instruction.word0), state.frameStart + Int(instruction.word1), state.frameStart + Int(instruction.word2))
+                case .integerDivide: state.executeIntegerDivide(state.frameStart + Int(instruction.word0), state.frameStart + Int(instruction.word1), state.frameStart + Int(instruction.word2))
+                case .modulo: state.executeModulo(state.frameStart + Int(instruction.word0), state.frameStart + Int(instruction.word1), state.frameStart + Int(instruction.word2))
+                case .remainder: state.executeRemainder(state.frameStart + Int(instruction.word0), state.frameStart + Int(instruction.word1), state.frameStart + Int(instruction.word2))
+                default: XCTFail("Unexpected arithmetic test opcode")
+                }
                 XCTAssertEqual(state.value(Int(destination)), expected)
             }
         }
     }
 
+    func testNumericOpcodesReadInputsBeforeOverwritingEitherRegister() {
+        let state = GesVirtualMachine(maxRegisters: 128, maxCallDepth: 4)
+        XCTAssertTrue(state.ensureRegisterCapacity(96))
+        state.frameStart = 40
+        let cases: [(GesBytecodeOpCode, GesValue)] = [
+            (.add, .integer(6)), (.subtract, .integer(-4)), (.multiply, .integer(5)),
+            (.divide, .float(0.2)), (.integerDivide, .integer(0)), (.modulo, .integer(1)),
+            (.remainder, .integer(1)), (.power, .float(1)), (.min, .integer(1)), (.max, .integer(5)),
+        ]
+        for (opcode, expected) in cases {
+            for destination: UInt16 in [0, 1, 2] {
+                state.setBoolean(0, true)
+                state.setDice(1, [2, 3])
+                state.setText(2, "old destination")
+                let instruction = GesBytecodeInstruction(opcode: opcode, word0: destination, word1: 0, word2: 1)
+                switch opcode {
+                case .add: state.executeAddNumeric(state.frameStart + Int(instruction.word0), state.frameStart + Int(instruction.word1), state.frameStart + Int(instruction.word2))
+                case .subtract: state.executeSubtractNumeric(state.frameStart + Int(instruction.word0), state.frameStart + Int(instruction.word1), state.frameStart + Int(instruction.word2))
+                case .multiply: state.executeMultiplyNumeric(state.frameStart + Int(instruction.word0), state.frameStart + Int(instruction.word1), state.frameStart + Int(instruction.word2))
+                case .divide: state.executeDivideNumeric(state.frameStart + Int(instruction.word0), state.frameStart + Int(instruction.word1), state.frameStart + Int(instruction.word2))
+                case .integerDivide: state.executeIntegerDivideNumeric(state.frameStart + Int(instruction.word0), state.frameStart + Int(instruction.word1), state.frameStart + Int(instruction.word2))
+                case .modulo: state.executeModuloNumeric(state.frameStart + Int(instruction.word0), state.frameStart + Int(instruction.word1), state.frameStart + Int(instruction.word2))
+                case .remainder: state.executeRemainderNumeric(state.frameStart + Int(instruction.word0), state.frameStart + Int(instruction.word1), state.frameStart + Int(instruction.word2))
+                case .power: state.executePowerNumeric(state.frameStart + Int(instruction.word0), state.frameStart + Int(instruction.word1), state.frameStart + Int(instruction.word2))
+                case .min: state.executeMinNumeric(Int(instruction.word0), Int(instruction.word1), Int(instruction.word2))
+                case .max: state.executeMaxNumeric(Int(instruction.word0), Int(instruction.word1), Int(instruction.word2))
+                default: XCTFail("Unexpected numeric test opcode")
+                }
+                XCTAssertEqual(state.value(Int(destination)), expected)
+                XCTAssertEqual(state.value(Int(destination)).kind, expected.kind)
+                if destination != 0 { XCTAssertEqual(state.value(0), .boolean(true)) }
+                if destination != 1 { XCTAssertEqual(state.value(1), .dice([2, 3])) }
+            }
+        }
+    }
+
+    func testNavigationReadsEveryComponentBeforeOverwritingAnInput() {
+        let state = GesVirtualMachine(maxRegisters: 128, maxCallDepth: 4)
+        XCTAssertTrue(state.ensureRegisterCapacity(96))
+        state.frameStart = 40
+        for destination: UInt16 in 0...6 {
+            for index in 0..<6 { state.setFloat(index, Double(index + 1), unit: .meter) }
+            state.setText(6, "old destination")
+            let instruction = GesBytecodeInstruction(opcode: .distanceSquared3D, word0: destination, word1: 0, word2: 1, payload: 2 | (3 << 16) | (4 << 32) | (5 << 48))
+            state.executeDistanceSquared3D(
+                state.frameStart + Int(instruction.word0),
+                state.frameStart + Int(instruction.word1),
+                state.frameStart + Int(instruction.word2),
+                state.frameStart + Int(instruction.a),
+                state.frameStart + Int(instruction.b),
+                state.frameStart + Int(instruction.c),
+                state.frameStart + Int(instruction.d)
+            )
+            XCTAssertEqual(state.value(Int(destination)), .float(27))
+            for index in 0..<6 where index != Int(destination) {
+                XCTAssertEqual(state.value(index), .float(Double(index + 1), unit: .meter))
+            }
+        }
+    }
+
     func testTypedWritesReplaceReferenceValuesAndNormalizeNumbers() {
-        let state = GesVmState(maxRegisters: 128, maxCallDepth: 4)
-        XCTAssertTrue(state.ensure(96))
+        let state = GesVirtualMachine(maxRegisters: 128, maxCallDepth: 4)
+        XCTAssertTrue(state.ensureRegisterCapacity(96))
         state.frameStart = 40
         state.setValue(0, .list([.text("old")]))
         state.setInteger(0, 12, unit: .meter)
@@ -214,41 +284,30 @@ final class RegisterArithmeticTests: XCTestCase {
         XCTAssertEqual(state.value(1), .list([.text("retained")]))
     }
 
-    func testNonIntegerOperandsLeaveRegistersUntouchedForFallback() {
-        let state = GesVmState(maxRegisters: 32, maxCallDepth: 4)
-        for value: GesValue in [.float(1.5), .percentage(0.2), .text("prefix"), .nothing] {
-            for destination: UInt16 in [0, 1, 2] {
-                state.setValue(0, value)
-                state.setValue(1, .integer(5))
-                state.setValue(2, .text("sentinel"))
-                XCTAssertFalse(state.setIntegerArithmeticResult(.init(opcode: .add, word0: destination, word1: 0, word2: 1)))
-                XCTAssertEqual(state.value(0), value)
-                XCTAssertEqual(state.value(1), .integer(5))
-                XCTAssertEqual(state.value(2), .text("sentinel"))
-            }
-        }
-    }
-
     func testTypedHelperOutputsCanOverwriteTheirInputs() throws {
-        let state = GesVmState(maxRegisters: 128, maxCallDepth: 4)
-        XCTAssertTrue(state.ensure(96))
+        let state = GesVirtualMachine(maxRegisters: 128, maxCallDepth: 4)
+        XCTAssertTrue(state.ensureRegisterCapacity(96))
         state.frameStart = 40
-        let host = try GameEventScriptHost()
-        let context = GameEventScriptContext(host: host, random: .init(seed: 0), limits: .init(), extensions: nil, observer: nil)
+        let host = try GameEventScriptHost.makeBuilder().build()
+        let context = GesContext(host: host, random: .init(seed: 0), limits: .init(), extensions: nil, observer: nil)
         for destination in [0, 1, 2] {
             state.setText(0, "prefix")
             state.setInteger(1, 12)
-            GesMath.add(state.value(0), state.value(1), sink: state.output(destination))
+            state.executeAdd(state.frameStart + destination, state.frameStart, state.frameStart + 1)
             XCTAssertEqual(state.value(destination), .text("prefix12"))
 
             state.setFloat(0, 1.25)
             state.setFloat(1, 2.5)
-            GesMath.arithmetic(.multiply, state.value(0), state.value(1), sink: state.output(destination))
+            state.executeMultiply(
+                state.frameStart + Int((GesBytecodeInstruction.init(opcode: .multiply, word0: UInt16(destination), word1: 0, word2: 1)).word0),
+                state.frameStart + Int((GesBytecodeInstruction.init(opcode: .multiply, word0: UInt16(destination), word1: 0, word2: 1)).word1),
+                state.frameStart + Int((GesBytecodeInstruction.init(opcode: .multiply, word0: UInt16(destination), word1: 0, word2: 1)).word2)
+            )
             XCTAssertEqual(state.value(destination), .float(3.125))
 
             state.setVector(0, x: 1, y: 2, z: 3, unit: .meter)
             state.setVector(1, x: 4, y: 5, z: 6, unit: .meter)
-            GesMath.add(state.value(0), state.value(1), sink: state.output(destination))
+            state.executeAdd(state.frameStart + destination, state.frameStart, state.frameStart + 1)
             XCTAssertEqual(state.value(destination), .vector(x: 5, y: 7, z: 9, unit: .meter))
 
             state.setText(0, "12.5%")
@@ -262,7 +321,7 @@ final class RegisterArithmeticTests: XCTestCase {
         try state.value(0).member("x", sink: state.output(0))
         XCTAssertEqual(state.value(0), .integer(42))
 
-        let iterator = GesIterator(.integerRange(from: 1, to: 2))!
+        let iterator = GesIterator.make(.integerRange(from: 1, to: 2))!
         state.setIterator(0, iterator)
         XCTAssertNotNil(iterator.next(sink: state.output(0)))
         XCTAssertEqual(state.value(0), .integer(1))
@@ -273,7 +332,7 @@ final class RegisterArithmeticTests: XCTestCase {
     }
 
     func testTypedStagingSurvivesGrowthAndRejectsOverflowWithoutOverwritingLocals() throws {
-        let state = GesVmState(maxRegisters: 40, maxCallDepth: 4)
+        let state = GesVirtualMachine(maxRegisters: 40, maxCallDepth: 4)
         state.frameStart = 1
         state.frameLength = 30
         state.setText(0, "local")

@@ -9,18 +9,18 @@ enum BinaryObservations {
         let input = try test.required("binary")
         guard let bytes = Data(base64Encoded: try input.text("data")) else { throw ConformanceExecutionError.invalidInput("Invalid Base64") }
         let program: GameEventScriptProgram
-        do { program = try GameEventScriptProgramReader.read(Array(bytes)) } catch let error as GameEventScriptProgramFormatError {
+        do { program = try GameEventScriptProgram.read(Array(bytes)) } catch let error as GesProgramFormatError {
             return [
                 "status": "ok",
                 "binary": [
-                    "outcome": error.code.rawValue <= GameEventScriptProgramFormatErrorCode.tooManyEntries.rawValue ? "readError" : "validationError", "errorCode": title(error.code),
+                    "outcome": error.code.rawValue <= GesProgramFormatErrorCode.tooManyEntries.rawValue ? "readError" : "validationError", "errorCode": title(error.code),
                     "byteOffset": nullable(error.byteOffset), "sectionType": nullable(error.sectionType), "entryIndex": nullable(error.entryIndex),
                 ],
             ]
         }
-        let rewritten = try GameEventScriptProgramWriter.bytes(program)
+        let rewritten = try program.encode()
         let compare = input["compareCompiledRuntime"]?.boolValue == true
-        let compiled = compare ? try GameEventScriptProgramWriter.bytes(CompilerObservations.compile(test, version: UInt64(input.text("programVersion"))!)) : []
+        let compiled = compare ? try CompilerObservations.compile(test, version: UInt64(input.text("programVersion"))!).encode() : []
         var result: [String: Any] = [
             "status": "ok",
             "binary": [
@@ -31,7 +31,7 @@ enum BinaryObservations {
                 "compiledRuntimeSections": compare ? Data(requiredSections(compiled)).base64EncodedString() as Any : NSNull(),
             ],
         ]
-        if input["includeDump"]?.boolValue == true { result["dump"] = GameEventScriptProgramDumper.dump(program) }
+        if input["includeDump"]?.boolValue == true { result["dump"] = program.dump() }
         if let request = input["runtime"], request != .null { result["runtime"] = try runtime([(id: "main", program: program)], request) }
         return result
     }

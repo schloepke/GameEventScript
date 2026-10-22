@@ -1984,3 +1984,102 @@ steps:
             value:
               type: ":Nothing"
 ```
+
+---
+
+## Test: map key operands in any order
+
+Map intersection and subtraction select keys by exact scalar match, whatever the order of a key list and however often a key repeats in it, and accept map operands.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: case-0016
+kind: scriptApi
+level: atomic
+sources:
+  - name: "map key operands.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+module atomiccollectionmapkeyoperands
+on Start {
+  let vMap be [name: 'Ada', hp: 10, mp: 5, xp: 7]
+  emit Done(removeList: vMap - ['xp', #hp, 'xp'], keepList: vMap & ['xp', 'name', #hp, 'name'], keepMap: vMap & [xp: 1, hp: 2], removeMap: vMap - [xp: 1, hp: 2])
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| step-0001 | Start | completion |  |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  step-0001:
+    input:
+      args: []
+    local:
+      - name: "Done"
+        args:
+          - name: "removeList"
+            value:
+              type: ":Map"
+              entries:
+                - key: "mp"
+                  value:
+                    type: ":Number.int64"
+                    value: "5"
+                - key: "name"
+                  value:
+                    type: ":Text"
+                    value: "Ada"
+          - name: "keepList"
+            value:
+              type: ":Map"
+              entries:
+                - key: "hp"
+                  value:
+                    type: ":Number.int64"
+                    value: "10"
+                - key: "name"
+                  value:
+                    type: ":Text"
+                    value: "Ada"
+                - key: "xp"
+                  value:
+                    type: ":Number.int64"
+                    value: "7"
+          - name: "keepMap"
+            value:
+              type: ":Map"
+              entries:
+                - key: "hp"
+                  value:
+                    type: ":Number.int64"
+                    value: "10"
+                - key: "xp"
+                  value:
+                    type: ":Number.int64"
+                    value: "7"
+          - name: "removeMap"
+            value:
+              type: ":Map"
+              entries:
+                - key: "mp"
+                  value:
+                    type: ":Number.int64"
+                    value: "5"
+                - key: "name"
+                  value:
+                    type: ":Text"
+                    value: "Ada"
+```

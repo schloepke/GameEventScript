@@ -14,11 +14,11 @@ internal static class RuntimeValues
         Fields(message, "name", "args", "tags");
         var name = message.GetProperty("name").GetString();
         if (string.IsNullOrEmpty(name)) throw new ArgumentException("Message name required.");
-        var arguments = new List<GameEventScriptMessageArgument>();
+        var arguments = new List<GesMessageArgument>();
         foreach (var arg in message.GetProperty("args").EnumerateArray())
         {
             Fields(arg, "name", "value");
-            arguments.Add(new GameEventScriptMessageArgument(arg.GetProperty("name").GetString() ?? throw new ArgumentException("Argument name required."), Decode(arg.GetProperty("value"))));
+            arguments.Add(new GesMessageArgument(arg.GetProperty("name").GetString() ?? throw new ArgumentException("Argument name required."), Decode(arg.GetProperty("value"))));
         }
         var tags = message.GetProperty("tags").EnumerateArray().Select(tag => tag.GetString() ?? throw new ArgumentException("Tag required.")).ToArray();
         return GameEventScriptMessage.Create(name, arguments.ToArray(), tags);
@@ -77,7 +77,7 @@ internal static class RuntimeValues
                 if (!keys.Add(entry.GetProperty("key").GetString() ?? throw new ArgumentException("Map key required."))) throw new ArgumentException("Duplicate map key.");
             }
         }
-        var unit = type is ":Quantity.int64" or ":Quantity.binary64" ? ReadUnit(value) : GameEventScriptBytecodeInstructionUnit.UnitNone;
+        var unit = type is ":Quantity.int64" or ":Quantity.binary64" ? ReadUnit(value) : GesQuantityUnit.UnitNone;
         return type switch
         {
             ":Nothing" => GesValue.GesNothing(),
@@ -112,27 +112,27 @@ internal static class RuntimeValues
 
         switch (value.ValueKind)
         {
-            case GameEventScriptBytecodeTypeKind.Nothing: return new { type = ":Nothing" };
-            case GameEventScriptBytecodeTypeKind.Boolean: return new { type = ":Boolean", value = value.AsBoolean() ? "true" : "false" };
-            case GameEventScriptBytecodeTypeKind.Text: return new { type = ":Text", value = value.AsText() };
-            case GameEventScriptBytecodeTypeKind.Tag: return new { type = ":Tag", value = value.AsText() };
-            case GameEventScriptBytecodeTypeKind.Dice: return new { type = ":Dice", rolls = value.AsDice().ToArray() };
-            case GameEventScriptBytecodeTypeKind.Integer: return Numeric(value, "int64", value.AsInteger().ToString(CultureInfo.InvariantCulture));
-            case GameEventScriptBytecodeTypeKind.Float: return Numeric(value, "binary64", value.AsNumber().ToString("R", CultureInfo.InvariantCulture));
-            case GameEventScriptBytecodeTypeKind.Percentage: return new { type = ":Percentage", value = value.AsNumber().ToString("R", CultureInfo.InvariantCulture) };
-            case GameEventScriptBytecodeTypeKind.List: return new { type = ":List", items = Enumerable.Range(0, value.AsList().Length).Select(index => Encode(value.AsList()[index])).ToArray() };
-            case GameEventScriptBytecodeTypeKind.Vector:
-            case GameEventScriptBytecodeTypeKind.Point:
+            case GesBytecodeTypeKind.Nothing: return new { type = ":Nothing" };
+            case GesBytecodeTypeKind.Boolean: return new { type = ":Boolean", value = value.AsBoolean() ? "true" : "false" };
+            case GesBytecodeTypeKind.Text: return new { type = ":Text", value = value.AsText() };
+            case GesBytecodeTypeKind.Tag: return new { type = ":Tag", value = value.AsText() };
+            case GesBytecodeTypeKind.Dice: return new { type = ":Dice", rolls = value.AsDice().ToArray() };
+            case GesBytecodeTypeKind.Integer: return Numeric(value, "int64", value.AsInteger().ToString(CultureInfo.InvariantCulture));
+            case GesBytecodeTypeKind.Float: return Numeric(value, "binary64", value.AsNumber().ToString("R", CultureInfo.InvariantCulture));
+            case GesBytecodeTypeKind.Percentage: return new { type = ":Percentage", value = value.AsNumber().ToString("R", CultureInfo.InvariantCulture) };
+            case GesBytecodeTypeKind.List: return new { type = ":List", items = Enumerable.Range(0, value.AsList().Length).Select(index => Encode(value.AsList()[index])).ToArray() };
+            case GesBytecodeTypeKind.Vector:
+            case GesBytecodeTypeKind.Point:
                 var spatial = new Dictionary<string, object>
                 {
-                    ["type"] = value.ValueKind == GameEventScriptBytecodeTypeKind.Vector ? ":Vector" : ":Point",
+                    ["type"] = value.ValueKind == GesBytecodeTypeKind.Vector ? ":Vector" : ":Point",
                     ["x"] = value.X.ToString("R", CultureInfo.InvariantCulture),
                     ["y"] = value.Y.ToString("R", CultureInfo.InvariantCulture),
                     ["z"] = value.Z.ToString("R", CultureInfo.InvariantCulture)
                 };
-                if (value.ValueUnit != GameEventScriptBytecodeInstructionUnit.UnitNone) spatial["unit"] = ":" + value.ValueUnit.ToTypeName();
+                if (value.ValueUnit != GesQuantityUnit.UnitNone) spatial["unit"] = ":" + value.ValueUnit.ToTypeName();
                 return spatial;
-            case GameEventScriptBytecodeTypeKind.Range:
+            case GesBytecodeTypeKind.Range:
                 if (value.IntegerRange is { } integerRange)
                     return new
                     {
@@ -149,25 +149,25 @@ internal static class RuntimeValues
                     to = range.To.ToString("R", CultureInfo.InvariantCulture),
                     step = range.Step.ToString("R", CultureInfo.InvariantCulture)
                 };
-            case GameEventScriptBytecodeTypeKind.Message: return new { type = ":Message", message = EncodeMessage(value.Message!) };
-            case GameEventScriptBytecodeTypeKind.Custom:
-            case GameEventScriptBytecodeTypeKind.Map:
+            case GesBytecodeTypeKind.Message: return new { type = ":Message", message = EncodeMessage(value.Message!) };
+            case GesBytecodeTypeKind.Custom:
+            case GesBytecodeTypeKind.Map:
                 var map = value.AsMap()!;
                 return new
                 {
-                    type = value.ValueKind == GameEventScriptBytecodeTypeKind.Map ? ":Map" : ":" + value.CustomTypeName,
+                    type = value.ValueKind == GesBytecodeTypeKind.Map ? ":Map" : ":" + value.CustomTypeName,
                     entries = Enumerable.Range(0, map.Length).Select(index => new { key = map.KeyAt(index), value = Encode(map.ValueAt(index)) }).ToArray()
                 };
             default: throw new ArgumentException("Unsupported observed runtime value kind: " + value.ValueKind);
         }
     }
-    private static GameEventScriptBytecodeInstructionUnit ReadUnit(JsonElement value) => !value.TryGetProperty("unit", out var unit)
-        ? GameEventScriptBytecodeInstructionUnit.UnitNone
+    private static GesQuantityUnit ReadUnit(JsonElement value) => !value.TryGetProperty("unit", out var unit)
+        ? GesQuantityUnit.UnitNone
         : unit.GetString() switch
         {
-            ":meter" => GameEventScriptBytecodeInstructionUnit.UnitMeter,
-            ":second" => GameEventScriptBytecodeInstructionUnit.UnitSecond,
-            ":degree" => GameEventScriptBytecodeInstructionUnit.UnitDegree,
+            ":meter" => GesQuantityUnit.UnitMeter,
+            ":second" => GesQuantityUnit.UnitSecond,
+            ":degree" => GesQuantityUnit.UnitDegree,
             _ => throw new ArgumentException("Invalid numeric unit.")
         };
 
@@ -184,8 +184,8 @@ internal static class RuntimeValues
 
     private static object Numeric(GesValue value, string storage, string text)
     {
-        var result = new Dictionary<string, object> { ["type"] = (value.ValueUnit == GameEventScriptBytecodeInstructionUnit.UnitNone ? ":Number." : ":Quantity.") + storage, ["value"] = text };
-        if (value.ValueUnit != GameEventScriptBytecodeInstructionUnit.UnitNone) result["unit"] = ":" + value.ValueUnit.ToTypeName();
+        var result = new Dictionary<string, object> { ["type"] = (value.ValueUnit == GesQuantityUnit.UnitNone ? ":Number." : ":Quantity.") + storage, ["value"] = text };
+        if (value.ValueUnit != GesQuantityUnit.UnitNone) result["unit"] = ":" + value.ValueUnit.ToTypeName();
         return result;
     }
 

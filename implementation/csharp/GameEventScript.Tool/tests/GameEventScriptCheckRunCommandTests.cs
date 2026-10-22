@@ -88,8 +88,8 @@ public sealed class GameEventScriptCheckRunCommandTests
         if (binary)
         {
             input = "game.gesb";
-            var program = GameEventScriptBuilder.Create().WithDebugInfo(debug ? GameEventScriptDebugInfoOptions.All : GameEventScriptDebugInfoOptions.None).AddScript(ProgramSource).Compile();
-            File.WriteAllBytes(Path.Combine(_directory, input), GameEventScriptProgramWriter.ToArray(program));
+            var program = new GesProgramBuilder().WithDebugInfo(debug ? GesDebugInfoOptions.All : GesDebugInfoOptions.None).AddScript(ProgramSource).Compile();
+            File.WriteAllBytes(Path.Combine(_directory, input), program.Encode());
         }
         var original = File.ReadAllBytes(Path.Combine(_directory, input));
         var result = Run("run", input, "--scenario", "scenario.ges", "--seed", "42");

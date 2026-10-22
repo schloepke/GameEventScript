@@ -93,90 +93,90 @@ performance:
     csharp-dotnet-release-macos-arm64:
       metrics:
         ast-build.elapsed:
-          reference: 0.0984
-          toleranceAbsolute: 1
+          reference: 0.065
+          toleranceAbsolute: 0.05
           unit: ms
         ast-build.allocated:
-          reference: 23.148
-          maximum: 23.148
+          reference: 21.9921875
+          maximum: 23.091796875
           unit: KiB
         binary-build.elapsed:
-          reference: 0.121
-          toleranceAbsolute: 1
+          reference: 0.1115
+          toleranceAbsolute: 0.05
           unit: ms
         binary-build.allocated:
-          reference: 47.008
-          maximum: 47.008
+          reference: 44.1171875
+          maximum: 46.3232421875
           unit: KiB
         program-load.elapsed:
-          reference: 0.0415
-          toleranceAbsolute: 1
+          reference: 0.0342
+          toleranceAbsolute: 0.05
           unit: ms
         program-load.allocated:
-          reference: 13.367
-          maximum: 13.461
+          reference: 12.34375
+          maximum: 12.9609375
           unit: KiB
         compile.elapsed:
-          reference: 0.2609
-          toleranceAbsolute: 1
+          reference: 0.2112
+          toleranceAbsolute: 0.0528
           unit: ms
         compile.allocated:
-          reference: 83.523
-          maximum: 83.523
+          reference: 78.453125
+          maximum: 82.3759765625
           unit: KiB
         run.elapsed:
-          reference: 2.4191
-          toleranceAbsolute: 1
+          reference: 2.0253
+          toleranceAbsolute: 0.506325
           unit: ms
         run.allocated:
-          reference: 140.656
-          maximum: 171.914
+          reference: 132.8125
+          maximum: 139.453125
           unit: KiB
         run.per-invoke-elapsed:
-          reference: 0.002419
-          toleranceAbsolute: 1
+          reference: 0.0020253
+          toleranceAbsolute: 0.000506325
           unit: ms
         run.per-invoke-allocated:
-          reference: 0.141
-          maximum: 0.172
+          reference: 0.1328125
+          maximum: 0.1396484375
           unit: KiB
-    swift-6.4-release-macos26-arm64-m3max:
+    swift-6.4-release-macos27-arm64-m3max:
       metrics:
         compile.allocated:
-          reference: 168548
-          maximum: 176976
+          reference: 166707
+          maximum: 175043
           unit: B
         compile.elapsed:
-          reference: 0.396709
-          toleranceAbsolute: 0.09917725
+          reference: 0.197958
+          toleranceAbsolute: 0.05
           unit: ms
         program-load.allocated:
-          reference: 14209
-          maximum: 14920
+          reference: 13751
+          maximum: 14439
           unit: B
         program-load.elapsed:
-          reference: 0.018083
+          reference: 0.017042
           toleranceAbsolute: 0.05
           unit: ms
         run.allocated:
-          reference: 192000
-          maximum: 201600
+          reference: 128000
+          maximum: 134400
           unit: B
         run.allocations:
           reference: 2000
           maximum: 2100
           unit: count
         run.elapsed:
-          reference: 1.918416
-          toleranceAbsolute: 0.479604
+          reference: 0.783625
+          toleranceAbsolute: 0.19590625
           unit: ms
         run.per-invoke-allocated:
-          reference: 192
-          maximum: 202
+          reference: 128
+          maximum: 135
           unit: B/iteration
         run.per-invoke-elapsed:
-          reference: 0.001918416
-          toleranceAbsolute: 0.000479604
+          reference: 0.000783625
+          toleranceAbsolute: 0.00019590625
           unit: ms/iteration
 ```
 
@@ -423,90 +423,90 @@ performance:
     csharp-dotnet-release-macos-arm64:
       metrics:
         ast-build.elapsed:
-          reference: 0.0637
-          toleranceAbsolute: 1
+          reference: 0.0465
+          toleranceAbsolute: 0.05
           unit: ms
         ast-build.allocated:
-          reference: 15.164
+          reference: 15.0546875
           maximum: 15.164
           unit: KiB
         binary-build.elapsed:
-          reference: 0.1349
-          toleranceAbsolute: 1
+          reference: 0.134
+          toleranceAbsolute: 0.05
           unit: ms
         binary-build.allocated:
-          reference: 46.734
-          maximum: 46.734
+          reference: 43.9765625
+          maximum: 46.17578125
           unit: KiB
         program-load.elapsed:
-          reference: 0.0404
-          toleranceAbsolute: 1
+          reference: 0.0414
+          toleranceAbsolute: 0.05
           unit: ms
         program-load.allocated:
-          reference: 13.164
+          reference: 12.6640625
           maximum: 13.258
           unit: KiB
         compile.elapsed:
-          reference: 0.239
-          toleranceAbsolute: 1
+          reference: 0.2234
+          toleranceAbsolute: 0.05585
           unit: ms
         compile.allocated:
-          reference: 75.008
+          reference: 71.6953125
           maximum: 75.008
           unit: KiB
         run.elapsed:
-          reference: 45.4494
+          reference: 34.0699
           toleranceAbsolute: 7.657185
           unit: ms
         run.allocated:
-          reference: 11445.344
+          reference: 11437.5
           maximum: 11476.602
           unit: KiB
         run.per-invoke-elapsed:
-          reference: 0.045449
-          toleranceAbsolute: 1
+          reference: 0.0340699
+          toleranceAbsolute: 0.008517475
           unit: ms
         run.per-invoke-allocated:
-          reference: 11.445
+          reference: 11.4375
           maximum: 11.477
           unit: KiB
-    swift-6.4-release-macos26-arm64-m3max:
+    swift-6.4-release-macos27-arm64-m3max:
       metrics:
         compile.allocated:
-          reference: 111822
-          maximum: 117414
+          reference: 112996
+          maximum: 118646
           unit: B
         compile.elapsed:
-          reference: 0.219375
-          toleranceAbsolute: 0.05484375
+          reference: 0.164708
+          toleranceAbsolute: 0.05
           unit: ms
         program-load.allocated:
-          reference: 13544
-          maximum: 14222
+          reference: 13670
+          maximum: 14354
           unit: B
         program-load.elapsed:
-          reference: 0.02325
+          reference: 0.017083
           toleranceAbsolute: 0.05
           unit: ms
         run.allocated:
-          reference: 16641000
-          maximum: 17473050
+          reference: 7988000
+          maximum: 8387400
           unit: B
         run.allocations:
           reference: 16000
           maximum: 16800
           unit: count
         run.elapsed:
-          reference: 28.8175
-          toleranceAbsolute: 7.204375
+          reference: 8.13975
+          toleranceAbsolute: 2.0349375
           unit: ms
         run.per-invoke-allocated:
-          reference: 16641
-          maximum: 17474
+          reference: 7988
+          maximum: 8388
           unit: B/iteration
         run.per-invoke-elapsed:
-          reference: 0.0288175
-          toleranceAbsolute: 0.007204375
+          reference: 0.00813975
+          toleranceAbsolute: 0.0020349375
           unit: ms/iteration
 ```
 
@@ -621,11 +621,11 @@ Start:				 // handler Start()
 .source-line "range select and aggregate.ges" 4 |   let values be :List[:select item from 1 to 100 => item * 2]
 					ListBuilderCreate r4
 					CreateRangeIteratorShort r5, #1, #100, #1
-Start_3:			IteratorNext r1(item), r5, Start_8
 					LoadInteger r6, #2
+Start_4:			IteratorNext r1(item), r5, Start_8
 					Multiply r7, r1(item), r6
 					ListBuilderAdd r4, r7
-					Jump Start_3
+					Jump Start_4
 Start_8:			IteratorClose r5
 					ListBuilderFinish r0(values), r4
 
@@ -740,90 +740,90 @@ performance:
     csharp-dotnet-release-macos-arm64:
       metrics:
         ast-build.elapsed:
-          reference: 0.0823
-          toleranceAbsolute: 1
+          reference: 0.0587
+          toleranceAbsolute: 0.05
           unit: ms
         ast-build.allocated:
-          reference: 19.102
+          reference: 19.015625
           maximum: 19.102
           unit: KiB
         binary-build.elapsed:
-          reference: 0.1487
-          toleranceAbsolute: 1
+          reference: 0.126
+          toleranceAbsolute: 0.05
           unit: ms
         binary-build.allocated:
-          reference: 46.586
-          maximum: 46.586
+          reference: 43.6484375
+          maximum: 45.8310546875
           unit: KiB
         program-load.elapsed:
-          reference: 0.0494
-          toleranceAbsolute: 1
+          reference: 0.0398
+          toleranceAbsolute: 0.05
           unit: ms
         program-load.allocated:
-          reference: 15.258
-          maximum: 15.352
+          reference: 14.390625
+          maximum: 15.1103515625
           unit: KiB
         compile.elapsed:
-          reference: 0.2804
-          toleranceAbsolute: 1
+          reference: 0.2245
+          toleranceAbsolute: 0.056125
           unit: ms
         compile.allocated:
-          reference: 80.938
-          maximum: 80.938
+          reference: 77.0546875
+          maximum: 80.908203125
           unit: KiB
         run.elapsed:
-          reference: 2.7994
-          toleranceAbsolute: 1
+          reference: 2.1449
+          toleranceAbsolute: 0.536225
           unit: ms
         run.allocated:
-          reference: 687.531
-          maximum: 718.789
+          reference: 429.6875
+          maximum: 451.171875
           unit: KiB
         run.per-invoke-elapsed:
-          reference: 0.002799
-          toleranceAbsolute: 1
+          reference: 0.0021449
+          toleranceAbsolute: 0.000536225
           unit: ms
         run.per-invoke-allocated:
-          reference: 0.688
-          maximum: 0.719
+          reference: 0.4296875
+          maximum: 0.451171875
           unit: KiB
-    swift-6.4-release-macos26-arm64-m3max:
+    swift-6.4-release-macos27-arm64-m3max:
       metrics:
         compile.allocated:
-          reference: 172822
-          maximum: 181464
+          reference: 168525
+          maximum: 176952
           unit: B
         compile.elapsed:
-          reference: 0.210416
-          toleranceAbsolute: 0.052604
+          reference: 0.223708
+          toleranceAbsolute: 0.055927
           unit: ms
         program-load.allocated:
-          reference: 16022
-          maximum: 16824
+          reference: 15956
+          maximum: 16754
           unit: B
         program-load.elapsed:
-          reference: 0.017584
+          reference: 0.020458
           toleranceAbsolute: 0.05
           unit: ms
         run.allocated:
-          reference: 2984000
-          maximum: 3133200
+          reference: 416000
+          maximum: 436800
           unit: B
         run.allocations:
-          reference: 13000
-          maximum: 13650
+          reference: 5000
+          maximum: 5250
           unit: count
         run.elapsed:
-          reference: 2.791708
-          toleranceAbsolute: 0.697927
+          reference: 1.358667
+          toleranceAbsolute: 0.33966675
           unit: ms
         run.per-invoke-allocated:
-          reference: 2984
-          maximum: 3134
+          reference: 416
+          maximum: 437
           unit: B/iteration
         run.per-invoke-elapsed:
-          reference: 0.002791708
-          toleranceAbsolute: 0.000697927
+          reference: 0.001358667
+          toleranceAbsolute: 0.00033966675
           unit: ms/iteration
 ```
 
@@ -1075,90 +1075,90 @@ performance:
     csharp-dotnet-release-macos-arm64:
       metrics:
         ast-build.elapsed:
-          reference: 0.1527
-          toleranceAbsolute: 1
+          reference: 0.1118
+          toleranceAbsolute: 0.05
           unit: ms
         ast-build.allocated:
-          reference: 31.641
-          maximum: 31.641
+          reference: 29.46875
+          maximum: 30.9423828125
           unit: KiB
         binary-build.elapsed:
-          reference: 0.2887
-          toleranceAbsolute: 1
+          reference: 0.3167
+          toleranceAbsolute: 0.079175
           unit: ms
         binary-build.allocated:
-          reference: 105.656
-          maximum: 105.656
+          reference: 100.1328125
+          maximum: 105.139648438
           unit: KiB
         program-load.elapsed:
-          reference: 0.0534
-          toleranceAbsolute: 1
+          reference: 0.1002
+          toleranceAbsolute: 0.05
           unit: ms
         program-load.allocated:
-          reference: 18.438
-          maximum: 18.531
+          reference: 18.125
+          maximum: 19.03125
           unit: KiB
         compile.elapsed:
-          reference: 0.4948
-          toleranceAbsolute: 1
+          reference: 0.5215
+          toleranceAbsolute: 0.130375
           unit: ms
         compile.allocated:
-          reference: 155.734
-          maximum: 155.734
+          reference: 145.703125
+          maximum: 152.98828125
           unit: KiB
         run.elapsed:
-          reference: 20.1405
+          reference: 16.2299
           toleranceAbsolute: 2.92875
           unit: ms
         run.allocated:
-          reference: 1281.281
+          reference: 1273.4375
           maximum: 1312.539
           unit: KiB
         run.per-invoke-elapsed:
-          reference: 0.020141
-          toleranceAbsolute: 1
+          reference: 0.0162299
+          toleranceAbsolute: 0.004057475
           unit: ms
         run.per-invoke-allocated:
-          reference: 1.281
+          reference: 1.2734375
           maximum: 1.313
           unit: KiB
-    swift-6.4-release-macos26-arm64-m3max:
+    swift-6.4-release-macos27-arm64-m3max:
       metrics:
         compile.allocated:
-          reference: 273155
-          maximum: 286813
+          reference: 269264
+          maximum: 282728
           unit: B
         compile.elapsed:
-          reference: 0.316
-          toleranceAbsolute: 0.079
+          reference: 0.3485
+          toleranceAbsolute: 0.087125
           unit: ms
         program-load.allocated:
-          reference: 17735
-          maximum: 18622
+          reference: 19114
+          maximum: 20070
           unit: B
         program-load.elapsed:
-          reference: 0.020875
+          reference: 0.024333
           toleranceAbsolute: 0.05
           unit: ms
         run.allocated:
-          reference: 2465000
-          maximum: 2588250
+          reference: 1380000
+          maximum: 1449000
           unit: B
         run.allocations:
           reference: 9000
           maximum: 9450
           unit: count
         run.elapsed:
-          reference: 11.859583
-          toleranceAbsolute: 2.96489575
+          reference: 3.228209
+          toleranceAbsolute: 0.80705225
           unit: ms
         run.per-invoke-allocated:
-          reference: 2465
-          maximum: 2589
+          reference: 1380
+          maximum: 1449
           unit: B/iteration
         run.per-invoke-elapsed:
-          reference: 0.011859583
-          toleranceAbsolute: 0.00296489575
+          reference: 0.003228209
+          toleranceAbsolute: 0.00080705225
           unit: ms/iteration
 ```
 
@@ -1273,7 +1273,7 @@ Outbound_Done:		.bind OutboundMessage id=0 name=T_Done args=[T_directTotal, T_st
 
 .source-line "pipeline filter select sum and direct list slice.ges" 3 | on Start {
 Start:				 // handler Start()
-					RegisterLocals #11
+					RegisterLocals #13
 // compiler-generated
 					StageInteger #1
 					StageInteger #2
@@ -1320,20 +1320,20 @@ Start_34:			LoadNothing r2(directTotal)
 Start_35:			IteratorCreateOrJump r5, r0(values), Start_56
 					LoadFalse r6
 					LoadNothing r3(streamTotal)
-Start_38:			IteratorNext r7, r5, Start_52
-					LoadInteger r8, #2
-					Modulo r9, r7, r8
+					LoadInteger r7, #2
 					LoadInteger r8, #0
-					Equal r10, r9, r8
-					JumpIfNotTrue r10, Start_38
 					LoadInteger r9, #2
-					Multiply r8, r7, r9
+Start_41:			IteratorNext r10, r5, Start_52
+					Modulo r11, r10, r7
+					Equal r12, r11, r8
+					JumpIfNotTrue r12, Start_41
+					Multiply r11, r10, r9
 					JumpIfTrue r6, Start_50
-					Move r3(streamTotal), r8 mode=Numeric
+					Move r3(streamTotal), r11 mode=Numeric
 					LoadTrue r6
-					Jump Start_38
-Start_50:			Add r3(streamTotal), r3(streamTotal), r8 mode=Numeric
-					Jump Start_38
+					Jump Start_41
+Start_50:			Add r3(streamTotal), r3(streamTotal), r11 mode=Numeric
+					Jump Start_41
 Start_52:			IteratorClose r5
 					JumpIfTrue r6, Start_57
 					LoadInteger r3(streamTotal), #0
@@ -1344,12 +1344,12 @@ Start_56:			LoadNothing r3(streamTotal)
 Start_57:			IteratorCreateOrJump r5, r0(values), Start_68
 					LoadInteger r4(streamCount), #0
 					LoadInteger r6, #1
-Start_60:			IteratorNext r7, r5, Start_66
-					LoadInteger r9, #10
-					Greater r8, r7, r9
-					JumpIfNotTrue r8, Start_60
+					LoadInteger r7, #10
+Start_61:			IteratorNext r8, r5, Start_66
+					Greater r9, r8, r7
+					JumpIfNotTrue r9, Start_61
 					Add r4(streamCount), r4(streamCount), r6
-					Jump Start_60
+					Jump Start_61
 Start_66:			IteratorClose r5
 					Jump Start_69
 Start_68:			LoadNothing r4(streamCount)
@@ -1583,90 +1583,90 @@ performance:
     csharp-dotnet-release-macos-arm64:
       metrics:
         ast-build.elapsed:
-          reference: 0.4111
-          toleranceAbsolute: 1
+          reference: 0.2536
+          toleranceAbsolute: 0.0634
           unit: ms
         ast-build.allocated:
-          reference: 84.055
-          maximum: 84.055
+          reference: 79.5
+          maximum: 83.4755859375
           unit: KiB
         binary-build.elapsed:
-          reference: 0.767
-          toleranceAbsolute: 1
+          reference: 0.8864
+          toleranceAbsolute: 0.2216
           unit: ms
         binary-build.allocated:
-          reference: 253.586
+          reference: 242.109375
           maximum: 253.586
           unit: KiB
         program-load.elapsed:
-          reference: 0.1072
-          toleranceAbsolute: 1
+          reference: 0.1042
+          toleranceAbsolute: 0.05
           unit: ms
         program-load.allocated:
-          reference: 32.797
-          maximum: 32.867
+          reference: 26.3984375
+          maximum: 27.71875
           unit: KiB
         compile.elapsed:
-          reference: 1.2853
-          toleranceAbsolute: 1
+          reference: 1.2445
+          toleranceAbsolute: 0.311125
           unit: ms
         compile.allocated:
-          reference: 370.438
-          maximum: 370.438
+          reference: 348.0078125
+          maximum: 365.408203125
           unit: KiB
         run.elapsed:
-          reference: 766.0925
-          toleranceAbsolute: 116.627745
+          reference: 69.9597
+          toleranceAbsolute: 17.489925
           unit: ms
         run.allocated:
-          reference: 2234.406
+          reference: 2257.8125
           maximum: 2265.664
           unit: KiB
         run.per-invoke-elapsed:
-          reference: 0.766093
-          toleranceAbsolute: 1
+          reference: 0.0699597
+          toleranceAbsolute: 0.017489925
           unit: ms
         run.per-invoke-allocated:
-          reference: 2.234
+          reference: 2.2578125
           maximum: 2.266
           unit: KiB
-    swift-6.4-release-macos26-arm64-m3max:
+    swift-6.4-release-macos27-arm64-m3max:
       metrics:
         compile.allocated:
-          reference: 864263
-          maximum: 907477
+          reference: 914510
+          maximum: 960236
           unit: B
         compile.elapsed:
-          reference: 1.028917
-          toleranceAbsolute: 0.25722925
+          reference: 1.003459
+          toleranceAbsolute: 0.25086475
           unit: ms
         program-load.allocated:
-          reference: 27583
-          maximum: 28963
+          reference: 27197
+          maximum: 28557
           unit: B
         program-load.elapsed:
-          reference: 0.052
+          reference: 0.05275
           toleranceAbsolute: 0.05
           unit: ms
         run.allocated:
-          reference: 4333000
-          maximum: 4549650
+          reference: 4124000
+          maximum: 4330200
           unit: B
         run.allocations:
           reference: 40000
           maximum: 42000
           unit: count
         run.elapsed:
-          reference: 426.603
-          toleranceAbsolute: 106.65075
+          reference: 56.53575
+          toleranceAbsolute: 14.1339375
           unit: ms
         run.per-invoke-allocated:
-          reference: 4333
-          maximum: 4550
+          reference: 4124
+          maximum: 4331
           unit: B/iteration
         run.per-invoke-elapsed:
-          reference: 0.426603
-          toleranceAbsolute: 0.10665075
+          reference: 0.05653575
+          toleranceAbsolute: 0.0141339375
           unit: ms/iteration
 ```
 
@@ -1829,25 +1829,25 @@ Outbound_Done:		.bind OutboundMessage id=0 name=T_Done args=[T_total, T_average,
 
 .source-line "engine performance mixed pipelines control flow and messages.ges" 5 | on Start(values) {
 Start:				 // handler Start(values)
-					RegisterLocals #22
+					RegisterLocals #24
 
 .source-line "engine performance mixed pipelines control flow and messages.ges" 6 |   let total be values[:filter value where value is high][:select value => value + 5%][:sum value => floor value]
 					IteratorCreateOrJump r16, r0(values), Start_21
 					LoadFalse r17
 					LoadNothing r1(total)
-Start_4:			IteratorNext r18, r16, Start_17
-					StageRegister r18
-					Call r19, predicate_high flags=NormalizeResultAsPredicate // predicate high(value)
-					JumpIfNotTrue r19, Start_4
-					LoadPercentage r19, #0.05
-					Add r20, r18, r19
-					Floor r18, r20
+					LoadPercentage r18, #0.05
+Start_5:			IteratorNext r19, r16, Start_17
+					StageRegister r19
+					Call r20, predicate_high flags=NormalizeResultAsPredicate // predicate high(value)
+					JumpIfNotTrue r20, Start_5
+					Add r20, r19, r18
+					Floor r19, r20
 					JumpIfTrue r17, Start_15
-					Move r1(total), r18 mode=Numeric
+					Move r1(total), r19 mode=Numeric
 					LoadTrue r17
-					Jump Start_4
-Start_15:			Add r1(total), r1(total), r18 mode=Numeric
-					Jump Start_4
+					Jump Start_5
+Start_15:			Add r1(total), r1(total), r19 mode=Numeric
+					Jump Start_5
 Start_17:			IteratorClose r16
 					JumpIfTrue r17, Start_22
 					LoadInteger r1(total), #0
@@ -1858,25 +1858,25 @@ Start_21:			LoadNothing r1(total)
 Start_22:			IteratorCreateOrJump r16, r0(values), Start_47
 					LoadInteger r2(average), #0
 					LoadInteger r17, #1
-					LoadFalse r20
-					LoadNothing r18
-Start_27:			IteratorNext r19, r16, Start_41
-					StageRegister r19
-					Call r21, predicate_high flags=NormalizeResultAsPredicate // predicate high(value)
-					JumpIfNotTrue r21, Start_27
-					LoadPercentage r21, #0.05
-					Add r22, r19, r21
-					Floor r19, r22
+					LoadFalse r18
+					LoadNothing r20
+					LoadPercentage r19, #0.05
+Start_28:			IteratorNext r21, r16, Start_41
+					StageRegister r21
+					Call r22, predicate_high flags=NormalizeResultAsPredicate // predicate high(value)
+					JumpIfNotTrue r22, Start_28
+					Add r22, r21, r19
+					Floor r21, r22
 					Add r2(average), r2(average), r17
-					JumpIfTrue r20, Start_39
-					Move r18, r19 mode=Numeric
-					LoadTrue r20
-					Jump Start_27
-Start_39:			Add r18, r18, r19 mode=Numeric
-					Jump Start_27
+					JumpIfTrue r18, Start_39
+					Move r20, r21 mode=Numeric
+					LoadTrue r18
+					Jump Start_28
+Start_39:			Add r20, r20, r21 mode=Numeric
+					Jump Start_28
 Start_41:			IteratorClose r16
 					JumpIfNotTrue r2(average), Start_45
-					Divide r2(average), r18, r2(average) mode=Numeric
+					Divide r2(average), r20, r2(average) mode=Numeric
 					Jump Start_48
 Start_45:			LoadNothing r2(average)
 					Jump Start_48
@@ -1886,14 +1886,14 @@ Start_47:			LoadNothing r2(average)
 Start_48:			IteratorCreateOrJump r16, r0(values), Start_61
 					LoadInteger r3(oddCount), #0
 					LoadInteger r17, #1
-Start_51:			IteratorNext r20, r16, Start_59
 					LoadInteger r18, #2
-					Modulo r22, r20, r18
 					LoadInteger r20, #1
-					Equal r18, r22, r20
-					JumpIfNotTrue r18, Start_51
+Start_53:			IteratorNext r19, r16, Start_59
+					Modulo r22, r19, r18
+					Equal r19, r22, r20
+					JumpIfNotTrue r19, Start_53
 					Add r3(oddCount), r3(oddCount), r17
-					Jump Start_51
+					Jump Start_53
 Start_59:			IteratorClose r16
 					Jump Start_62
 Start_61:			LoadNothing r3(oddCount)
@@ -1901,14 +1901,14 @@ Start_61:			LoadNothing r3(oddCount)
 .source-line "engine performance mixed pipelines control flow and messages.ges" 9 |   let firstBoosted be values[:filter value where value is high][:select value => value + 5%][:first]
 Start_62:			IteratorCreateOrJump r16, r0(values), Start_74
 					LoadNothing r4(firstBoosted)
-Start_64:			IteratorNext r17, r16, Start_72
-					StageRegister r17
-					Call r22, predicate_high flags=NormalizeResultAsPredicate // predicate high(value)
-					JumpIfNotTrue r22, Start_64
-					LoadPercentage r22, #0.05
-					Add r4(firstBoosted), r17, r22
+					LoadPercentage r17, #0.05
+Start_65:			IteratorNext r18, r16, Start_72
+					StageRegister r18
+					Call r20, predicate_high flags=NormalizeResultAsPredicate // predicate high(value)
+					JumpIfNotTrue r20, Start_65
+					Add r4(firstBoosted), r18, r17
 					Jump Start_72
-					Jump Start_64
+					Jump Start_65
 Start_72:			IteratorClose r16
 					Jump Start_75
 Start_74:			LoadNothing r4(firstBoosted)
@@ -1924,19 +1924,19 @@ Start_75:			LoadInteger r16, #105, unit:meter
 					IteratorCreateOrJump r16, r0(values), Start_96
 					LoadInteger r7(directOddScaled), #0
 					LoadInteger r17, #1
-Start_81:			IteratorNext r22, r16, Start_94
-					LoadInteger r20, #2
-					Modulo r18, r22, r20
-					LoadInteger r20, #1
-					Equal r19, r18, r20
-					JumpIfNotTrue r19, Start_81
 					LoadInteger r18, #2
-					Multiply r20, r22, r18
-					LoadInteger r22, #10
-					Greater r18, r20, r22
-					JumpIfNotTrue r18, Start_81
+					LoadInteger r20, #1
+					LoadInteger r22, #2
+					LoadInteger r19, #10
+Start_85:			IteratorNext r21, r16, Start_94
+					Modulo r23, r21, r18
+					Equal r24, r23, r20
+					JumpIfNotTrue r24, Start_85
+					Multiply r23, r21, r22
+					Greater r21, r23, r19
+					JumpIfNotTrue r21, Start_85
 					Add r7(directOddScaled), r7(directOddScaled), r17
-					Jump Start_81
+					Jump Start_85
 Start_94:			IteratorClose r16
 					Jump Start_97
 Start_96:			LoadNothing r7(directOddScaled)
@@ -1965,56 +1965,60 @@ Start_97:			LoadInteger r16, #100, unit:meter
 
 .source-line "engine performance mixed pipelines control flow and messages.ges" 20 |   for item from 1 to 16 {
 Start_107:			CreateRangeIteratorShort r16, #1, #16, #1
-Start_108:			IteratorNext r13(item), r16, Start_134
 
 .source-line "engine performance mixed pipelines control flow and messages.ges" 21 |     let foldedBucket be values[:filter value where (value + item) mod 7 > 0][:select value => (value + item) * 2][:sum value => value]
-					IteratorCreateOrJump r17, r0(values), Start_132
-					LoadFalse r20
-					LoadNothing r14(foldedBucket)
-Start_112:			IteratorNext r22, r17, Start_128
-					Add r18, r22, r13(item)
-					LoadInteger r19, #7
-					Modulo r21, r18, r19
+					LoadInteger r17, #7
 					LoadInteger r18, #0
-					Greater r19, r21, r18
-					JumpIfNotTrue r19, Start_112
-					Add r21, r22, r13(item)
-					LoadInteger r22, #2
-					Multiply r18, r21, r22
-					JumpIfTrue r20, Start_126
-					Move r14(foldedBucket), r18 mode=Numeric
-					LoadTrue r20
-					Jump Start_112
-Start_126:			Add r14(foldedBucket), r14(foldedBucket), r18 mode=Numeric
-					Jump Start_112
-Start_128:			IteratorClose r17
-					JumpIfTrue r20, Start_108
+					LoadInteger r20, #2
+
+.source-line "engine performance mixed pipelines control flow and messages.ges" 20 |   for item from 1 to 16 {
+Start_111:			IteratorNext r13(item), r16, Start_134
+
+.source-line "engine performance mixed pipelines control flow and messages.ges" 21 |     let foldedBucket be values[:filter value where (value + item) mod 7 > 0][:select value => (value + item) * 2][:sum value => value]
+					IteratorCreateOrJump r22, r0(values), Start_132
+					LoadFalse r19
+					LoadNothing r14(foldedBucket)
+Start_115:			IteratorNext r23, r22, Start_128
+					Add r21, r23, r13(item)
+					Modulo r24, r21, r17
+					Greater r21, r24, r18
+					JumpIfNotTrue r21, Start_115
+					Add r24, r23, r13(item)
+					Multiply r23, r24, r20
+					JumpIfTrue r19, Start_126
+					Move r14(foldedBucket), r23 mode=Numeric
+					LoadTrue r19
+					Jump Start_115
+Start_126:			Add r14(foldedBucket), r14(foldedBucket), r23 mode=Numeric
+					Jump Start_115
+Start_128:			IteratorClose r22
+					JumpIfTrue r19, Start_111
 					LoadInteger r14(foldedBucket), #0
-					Jump Start_108
+					Jump Start_111
 Start_132:			LoadNothing r14(foldedBucket)
 
 .source-line "engine performance mixed pipelines control flow and messages.ges" 20 |   for item from 1 to 16 {
-					Jump Start_108
+					Jump Start_111
 Start_134:			IteratorClose r16
 
 .source-line "engine performance mixed pipelines control flow and messages.ges" 23 |   let workTotal be values[:filter value where value >= 10][:select value => value + 5%][:select value => value * 2][:sum value => value]
 					IteratorCreateOrJump r16, r0(values), Start_156
 					LoadFalse r17
 					LoadNothing r15(workTotal)
-Start_138:			IteratorNext r20, r16, Start_152
-					LoadInteger r21, #10
-					GreaterOrEqual r22, r20, r21
-					JumpIfNotTrue r22, Start_138
-					LoadPercentage r21, #0.05
-					Add r22, r20, r21
-					LoadInteger r20, #2
-					Multiply r21, r22, r20
+					LoadInteger r18, #10
+					LoadPercentage r20, #0.05
+					LoadInteger r22, #2
+Start_141:			IteratorNext r19, r16, Start_152
+					GreaterOrEqual r24, r19, r18
+					JumpIfNotTrue r24, Start_141
+					Add r24, r19, r20
+					Multiply r19, r24, r22
 					JumpIfTrue r17, Start_150
-					Move r15(workTotal), r21 mode=Numeric
+					Move r15(workTotal), r19 mode=Numeric
 					LoadTrue r17
-					Jump Start_138
-Start_150:			Add r15(workTotal), r15(workTotal), r21 mode=Numeric
-					Jump Start_138
+					Jump Start_141
+Start_150:			Add r15(workTotal), r15(workTotal), r19 mode=Numeric
+					Jump Start_141
 Start_152:			IteratorClose r16
 					JumpIfTrue r17, Start_157
 					LoadInteger r15(workTotal), #0

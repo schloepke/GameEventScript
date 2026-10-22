@@ -43,12 +43,12 @@ def main():
                     if (target / subtree).exists():
                         shutil.rmtree(target / subtree)
                     shutil.copytree(source / subtree, target / subtree)
-        for filename in ['Clock.swift', 'VmMath.swift', 'VmNavigation.swift']:
-            path = stage / 'implementation/swift/GameEventScriptRuntime/Sources/GameEventScriptRuntime' / filename
+        runtime_sources = stage / 'implementation/swift/GameEventScriptRuntime/Sources/GameEventScriptRuntime'
+        for path in runtime_sources.rglob('*.swift'):
             original = path.read_text()
             anchor = '#elseif canImport(Musl)\n    import Musl\n#endif'
             if anchor not in original:
-                raise RuntimeError(f'Platform import anchor changed: {filename}')
+                continue
             path.write_text(original.replace(anchor, '#elseif canImport(Musl)\n    import Musl\n#elseif canImport(WASILibc)\n    import WASILibc\n#endif', 1))
         # WASI's CLOCK_MONOTONIC macro takes an address and is not imported into Swift.
         runtime = stage / 'implementation/swift/GameEventScriptRuntime'
@@ -63,7 +63,7 @@ def main():
         if target_anchor not in runtime_manifest:
             raise RuntimeError('Runtime manifest changed; review the isolated Wasm patch')
         manifest.write_text(runtime_manifest.replace(target_anchor, 'targets: [.target(name: "CardGameWasiClock"), .target(name: "GameEventScriptRuntime", dependencies: ["CardGameWasiClock"])]'))
-        clock = runtime / 'Sources/GameEventScriptRuntime/Clock.swift'
+        clock = runtime / 'Sources/GameEventScriptRuntime/Api/Clock.swift'
         clock_text = clock.read_text().replace('    import WASILibc', '    import WASILibc\n    import CardGameWasiClock')
         body = '        var value = timespec()\n        clock_gettime(CLOCK_MONOTONIC, &value)\n        return Int64(value.tv_sec) * 1_000_000 + Int64(value.tv_nsec) / 1_000'
         if body not in clock_text:

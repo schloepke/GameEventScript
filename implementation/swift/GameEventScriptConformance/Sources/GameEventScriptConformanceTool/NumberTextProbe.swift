@@ -21,11 +21,11 @@ enum NumberTextProbe {
         let percentage: String
     }
 
-    private final class Capture: GameEventScriptNativeMessageHandler {
+    private final class Capture: GesNativeMessageHandler {
         var message: GameEventScriptMessage?
         var count = 0
 
-        func handle(_ message: GameEventScriptMessage, context: GameEventScriptContext) {
+        func handle(_ message: GameEventScriptMessage, context: GesContext) {
             self.message = message
             count += 1
         }
@@ -33,15 +33,15 @@ enum NumberTextProbe {
 
     static func run(input: String, output: String) throws {
         let requests = try JSONDecoder().decode([Request].self, from: Data(contentsOf: URL(fileURLWithPath: input)))
-        let program = try GameEventScriptBuilder().addScript("on Probe(value, text) { emit Result(formatted: value as :Text, number: text as :Number, percentage: text as :Percentage) }").compile()
-        let host = try GameEventScriptHost(seed: 0)
+        let program = try GesProgramBuilder().addScript("on Probe(value, text) { emit Result(formatted: value as :Text, number: text as :Number, percentage: text as :Percentage) }").compile()
+        let host = try GameEventScriptHost.makeBuilder().withRandomSeed(0).build()
         let capture = Capture()
         _ = try host.subscribe(.init(name: "Result", parameters: ["formatted", "number", "percentage"]), handler: capture)
         _ = try host.load(program)
         guard try host.start().state == .ready else { throw ToolError.invalidFixture("Probe host failed to start") }
         var responses: [Response] = []
         for row in requests {
-            let unit: GesUnit
+            let unit: GesQuantityUnit
             switch row.unit {
             case "none": unit = .none
             case "m": unit = .meter
@@ -77,8 +77,8 @@ enum NumberTextProbe {
         case .degree: unit = "degree"
         }
         if let integer = value.integerValue { return "integer:\(integer):\(unit)" }
-        guard value.kind == .float || value.kind == .percentage else { throw ToolError.invalidFixture("Non-numeric result") }
-        let kind = value.kind == .percentage ? "percentage" : "float"
+        guard value.valueKind == .float || value.valueKind == .percentage else { throw ToolError.invalidFixture("Non-numeric result") }
+        let kind = value.valueKind == .percentage ? "percentage" : "float"
         let hex = String(value.asNumber.bitPattern, radix: 16)
         return kind + ":" + String(repeating: "0", count: 16 - hex.count) + hex + ":" + unit
     }

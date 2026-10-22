@@ -11,10 +11,10 @@ struct GesComponentRow {
 extension GesCompiler {
     func knownNonList(_ e: GesExpression, _ r: GesRoutine, _ scope: GesScope) -> Bool {
         switch e.kind {
-        case .literal(let value): return value.kind != .list
+        case .literal(let value): return value.valueKind != .list
         case .constant(let name): return constants[name].map { knownNonList($0, r, scope) } ?? false
         case .name(let name): return scope.get(name).map { r.nonListBindings.contains($0) } ?? false
-        case .binary(let op, _, _): return ["/", "div", "mod", "rem", "^"].contains(op)
+        case .binary(let op, _, _): return [.divide, .integerDivide, .modulo, .remainder, .power].contains(op)
         default: return false
         }
     }
@@ -28,7 +28,7 @@ extension GesCompiler {
     func materializeRow(_ current: Int, _ r: GesRoutine) {
         guard let row = r.componentRows[current] else { return }
         stage(row.components, r)
-        if row.entry { r.emit(.createMap, current, list([text("key"), text("value")])) } else { r.emit(.createList, current) }
+        if row.entry { r.emit(.createMap, current, builder.list([builder.text("key"), builder.text("value")])) } else { r.emit(.createList, current) }
     }
 
     func bindComponents(_ names: [String], fallback: String, current: Int, _ r: GesRoutine, _ scope: GesScope) {
@@ -56,19 +56,19 @@ extension GesCompiler {
             scope.values[name] = target
             return target
         }
-        r.emit(.checkType, check, current, Int(GameEventScriptBytecodeTypeKind.map.rawValue))
+        r.emit(.checkType, check, current, Int(GesBytecodeTypeKind.map.rawValue))
         let map = r.emit(.jumpIfTrue, 0, check)
         r.emit(.move, values, current)
-        r.emit(.checkType, check, current, Int(GameEventScriptBytecodeTypeKind.list.rawValue))
+        r.emit(.checkType, check, current, Int(GesBytecodeTypeKind.list.rawValue))
         let list = r.emit(.jumpIfTrue, 0, check)
         r.emit(.move, targets[0], current)
         for target in targets.dropFirst() { r.emit(.loadNothing, target) }
         let done = r.emit(.jump)
-        r.patch(map, target: r.code.count)
+        r.mark([map])
         r.emit(.valuesOfMap, values, current)
-        r.patch(list, target: r.code.count)
+        r.mark([list])
         for (index, target) in targets.enumerated() { r.emit(.indexAccess, target, index + 1, values) }
-        r.patch(done, target: r.code.count)
+        r.mark([done])
     }
 
     func componentIterator(_ iterator: Int, _ e: GesExpression, _ invalid: inout [Int], _ r: GesRoutine, _ scope: GesScope, guardedTerminal: GesSelector? = nil) throws -> GesComponentRow? {
@@ -84,7 +84,7 @@ extension GesCompiler {
         {
             combinedResultGuard(sources, allowMap: terminal.operation == "group", &invalid, r)
         }
-        invalid.append(r.emit(.iteratorCreateOrJump, iterator, list(sources), flags: mode << 5))
+        invalid.append(r.emit(.iteratorCreateOrJump, iterator, builder.list(sources), flags: mode << 5))
         return mode >= 4 ? .init(components: expressions.map { _ in r.temporary() }, entry: false) : nil
     }
 
@@ -93,26 +93,26 @@ extension GesCompiler {
         // valid Dice/List combination to List. All-Dice results stay Dice.
         let check = r.temporary()
         var valid: [Int] = []
-        r.emit(.checkType, check, sources[0], Int(GameEventScriptBytecodeTypeKind.map.rawValue))
+        r.emit(.checkType, check, sources[0], Int(GesBytecodeTypeKind.map.rawValue))
         let map = r.emit(.jumpIfTrue, 0, check)
         if allowMap { valid.append(map) } else { invalid.append(map) }
         for source in sources {
-            r.emit(.checkType, check, source, Int(GameEventScriptBytecodeTypeKind.list.rawValue))
+            r.emit(.checkType, check, source, Int(GesBytecodeTypeKind.list.rawValue))
             valid.append(r.emit(.jumpIfTrue, 0, check))
         }
         invalid.append(r.emit(.jump))
-        for jump in valid { r.patch(jump, target: r.code.count) }
+        r.mark(valid)
     }
 
     func sourceGuard(_ value: Int, _ invalid: inout [Int], _ r: GesRoutine) {
         let check = r.temporary()
         var valid: [Int] = []
-        for type in [GameEventScriptBytecodeTypeKind.list, .map, .dice] {
+        for type in [GesBytecodeTypeKind.list, .map, .dice] {
             r.emit(.checkType, check, value, Int(type.rawValue))
             valid.append(r.emit(.jumpIfTrue, 0, check))
         }
         invalid.append(r.emit(.jump))
-        for jump in valid { r.patch(jump, target: r.code.count) }
+        r.mark(valid)
     }
 
     func combinedCollection(_ operation: String, _ sources: [GesExpression], _ d: Int, _ r: GesRoutine, _ scope: GesScope) throws {
@@ -129,14 +129,14 @@ extension GesCompiler {
             sourceGuard(current, &invalid, r)
             let result = r.temporary()
             r.emit(operation == "union" ? .union : operation == "intersect" ? .intersect : .subtract, result, current, right)
-            r.emit(.checkType, check, result, Int(GameEventScriptBytecodeTypeKind.nothing.rawValue))
+            r.emit(.checkType, check, result, Int(GesBytecodeTypeKind.nothing.rawValue))
             invalid.append(r.emit(.jumpIfTrue, 0, check))
             current = result
         }
         r.emit(.move, d, current)
         let done = r.emit(.jump)
-        for jump in invalid { r.patch(jump, target: r.code.count) }
+        r.mark(invalid)
         r.emit(.loadNothing, d)
-        r.patch(done, target: r.code.count)
+        r.mark([done])
     }
 }

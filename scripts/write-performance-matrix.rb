@@ -14,7 +14,7 @@ ROOT = Pathname.new(__dir__).parent.realpath
 OUTPUT = ROOT.join('artifacts/conformance/PerformanceMatrix.md')
 PROFILES = {
   'C#' => 'csharp-dotnet-release-macos-arm64',
-  'Swift' => 'swift-6.4-release-macos26-arm64-m3max'
+  'Swift' => 'swift-6.4-release-macos27-arm64-m3max'
 }.freeze
 
 def yaml(text)
@@ -139,7 +139,7 @@ text = <<~MARKDOWN
   - **C#:** `#{PROFILES['C#']}`. The profile identifies Release/macOS/arm64;
     its ID does not pin a CPU or .NET version. The allocation-only suites also have
     matching `csharp-dotnet-release-managed` references.
-  - **Swift:** `#{PROFILES['Swift']}`; Apple M3 Max, macOS 26.6.2,
+  - **Swift:** `#{PROFILES['Swift']}`; Apple M3 Max, macOS 27.0.1 (calibrated on 26.6.2),
     Swift 6.4, Release. See the [measurement guide](../../implementation/swift/Performance.md).
 
   These are implementation regression baselines with different sampling and

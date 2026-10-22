@@ -1,0 +1,8 @@
+// Copyright 2026 Stephan Schlöpke
+// SPDX-License-Identifier: Apache-2.0
+
+struct GesDeferredPublication {
+    let message: GameEventScriptMessage
+    let localAccepted: Bool
+    let instance: GesProgramInstance
+}

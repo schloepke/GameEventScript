@@ -2722,3 +2722,108 @@ error:
   phase: "parse"
   code: "parse.syntax"
 ```
+
+---
+
+## Test: record-duplicate-field
+
+This case verifies that a record cannot declare the same field name twice.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: record-duplicate-field
+kind: compileError
+level: atomic
+```
+
+### Source code under test
+
+```ges
+record :Pair as { left: :Number, left: :Text }
+on Start {}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+errors:
+  - phase: "validate"
+    code: "validate.duplicateVariable"
+    symbol: "left"
+```
+
+---
+
+## Test: record-unknown-field-type
+
+This case verifies that a field type must be a built-in type, a record of the program or a configured external type.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: record-unknown-field-type
+kind: compileError
+level: atomic
+```
+
+### Source code under test
+
+```ges
+record :Holder as { value: :Missing }
+on Start {}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+errors:
+  - phase: "validate"
+    code: "validate.invalidTypeConstructor"
+    symbol: "Missing"
+```
+
+---
+
+## Test: integer-and-float-are-not-types
+
+This case verifies that `:Integer` and `:Float` are rejected as a record name, a check and a cast; numeric checks use `is integer` or `is fractional` and casts use `as :Number`.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: integer-and-float-are-not-types
+kind: compileError
+level: atomic
+```
+
+### Source code under test
+
+```ges
+record :Integer as { value: :Number }
+on Start {
+  let checked be 1 is :Float
+  let cast be 1 as :Integer
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+errors:
+  - phase: "validate"
+    code: "validate.invalidTypeConstructor"
+    symbol: "Integer"
+  - phase: "validate"
+    code: "validate.invalidTypeConstructor"
+    symbol: "Float"
+  - phase: "validate"
+    code: "validate.invalidTypeConstructor"
+    symbol: "Integer"
+```

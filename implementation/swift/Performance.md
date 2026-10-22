@@ -5,13 +5,21 @@
 
 The shared workloads and correctness expectations live in
 [`conformance/suites/performance`](../../conformance/suites/performance).
-Their Swift profile is `swift-6.4-release-macos26-arm64-m3max`. It was calibrated
+Their Swift profile is `swift-6.4-release-macos27-arm64-m3max`. It was calibrated
 on Apple M3 Max, macOS 26.6.2 (25G83), Apple Swift 6.4
 (`swiftlang-6.4.0.34.1`, clang `2100.3.34.1`), SDK 27.0, Release, on 2026-09-19.
 A selective refresh on 2026-10-10 resolves the reviewed
 [0.4.0 findings](../../docs/development/Release040Performance.md): compact value
 storage, mandatory loading validation and the reproduced compiler-time baseline.
 Only the documented affected metrics changed; zero-dispatch budgets stay zero.
+On 2026-10-16 the same machine moved to macOS 27.0.1 with a software update. The
+profile now requires macOS 27; its references were kept, because hyperfine
+measurements of the same binaries were unchanged across the update.
+A full refresh on 2026-10-14 follows the manually owned register buffer and
+runtime fast paths. Three independent production Release processes supplied the
+references; a separate verification process checks the resulting budgets.
+Existing allocation upper bounds were never increased, including the two
+slightly higher measured references described below.
 This is an implementation regression baseline. Other hardware/toolchains need
 an explicitly calibrated profile; raw C# and Swift timings are not equivalence
 criteria. The adapter rejects Debug builds and incompatible profile hosts.
@@ -31,7 +39,7 @@ For a complete corpus report with measured performance, use the built tool:
 
 ```bash
 python3 conformance/runner/main.py run \
-  --performance-profile swift-6.4-release-macos26-arm64-m3max \
+  --performance-profile swift-6.4-release-macos27-arm64-m3max \
   --output artifacts/swift/measured-conformance/ConformanceResults.json \
   --adapter artifacts/swift/conformance/release/ges-conformance-adapter
 ```
@@ -113,13 +121,49 @@ copy approved profile changes into the original Markdown. Re-run regression
 verification in a fresh process. A zero-dispatch target cannot be relaxed by the
 preparation script.
 
-All sixteen warmed dispatch cases measured **zero bytes and zero allocations**,
-including exact/name matching, observers off/on, frame pause/resume and paired
-1000/2000-iteration workloads. Text parsing/casts measured **81–107 requested
-bytes per invocation**; Percentage formatting now measures **575 bytes**. These
-nonzero costs come from temporary byte arrays, filtered digits, text formatting
-and reference payloads. They remain visible as Swift-specific regression budgets
-and are not claimed as zero-allocation text conversion.
+All sixteen warmed dispatch cases still measure **zero bytes and zero allocations**.
+The 2026-10-14 refresh compares the checked-in references with three fresh
+process measurements (each containing five samples):
+
+| Swift workload (1,000 invocations) | Run time, old → new (ms) | Requested run bytes, old → new |
+| --- | ---: | ---: |
+| Arithmetic | 1.918416 → 0.794375 | 192000 → 128000 |
+| Range/select | 28.8175 → 8.206708 | 16641000 → 7988000 |
+| Record construction/casts | 2.791708 → 1.347667 | 2984000 → 416000 |
+| Filter/select/sum | 11.859583 → 3.283125 | 2465000 → 1380000 |
+| Mixed pipelines/control/messages | 426.603 → 63.067334 | 4333000 → 4124000 |
+
+These are comparisons with historical corpus references, not an isolated
+before/after attribution to the latest commit or a cross-language ranking.
+No run-allocation count increased. Range/select loading grows from 13544 to
+13670 requested bytes (+126 B, 0.93%). Mixed-workload compilation grows from
+864263 to 875838 bytes (+11575 B, 1.34%). These are load/compile costs, not
+per-invocation VM costs. Exact causality was not isolated; their existing upper
+bounds remain 14222 and 907477 bytes respectively.
+
+Evidence is retained under `artifacts/swift/performance-refresh-{1,2,3}`;
+reviewed candidates under `artifacts/swift/performance-refresh-candidates`;
+fresh verification under `artifacts/swift/performance-after-refresh`.
+
+### Follow-up calibration after loop hoisting and VM consolidation
+
+A second 2026-10-14 refresh uses three independent production Release processes
+with five samples per workload. Compared with the preceding references,
+requested execution bytes and allocation counts remain unchanged for all 31
+workloads; all sixteen warmed dispatch cases still allocate zero bytes and zero
+objects. Compilation allocations increase by up to 4.42% (mixed workload:
+875838 → 914510 B). Filter/select/sum loading increases from 17578 to 19114 B
+(+1536 B, 8.74%). These increases are accepted as compile/load costs; this
+comparison does not isolate the VM consolidation from the compiler changes.
+
+The mixed-workload run-time reference changes from 63.067334 to 56.53575 ms
+per 1,000 invocations. References use the median of three process medians for
+time and the largest observed allocation values. Existing tolerances and exact
+zero-allocation requirements remain unchanged; C# references are unaffected.
+
+Evidence: `artifacts/swift/vm-unification-calibration-{1,2,3}`; reviewed candidates:
+`artifacts/swift/vm-unification-candidates`; fresh regression verification:
+`artifacts/swift/vm-unification-verified`.
 
 Performance measurements use the production Release build made by
 `scripts/test-swift-performance.sh`. Run that script after `swift test`, rather

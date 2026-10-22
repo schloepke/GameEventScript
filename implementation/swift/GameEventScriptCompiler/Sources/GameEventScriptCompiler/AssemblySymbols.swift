@@ -107,16 +107,16 @@ extension GesCompiler {
         }
         if ["Call", "CallExternal", "CreateList", "CreateMap", "CreateRecord", "CreateExternalType", "CreateVector", "CreatePoint", "LoadMessage", "LoadHandler", "BindHandler", "ConstructData"].contains(line.name) {
             if line.name == "Call", case .call(let name, let args) = line.operands[1].kind {
-                let key = signature(name, args.map(\.label))
-                guard let definition = definitions[key] else { throw error("compile.unresolvedSymbol", line.location, symbol: name, phase: .compile) }
-                let values = try args.map { try expression($0.value, r, scope) }
-                stage(values, r)
-                let instruction = r.emit(.call, regs[0], flags: definition.kind == "predicate" ? 0x20 : 0)
-                r.calls.append((instruction, key))
+                let key = callableSignature(name, args.map(\.label))
+                guard let definition = definitions[key] else { throw compileError("compile.unresolvedSymbol", line.location, symbol: name, phase: .compile) }
+                try stageExpressions(args.map(\.value), r, scope)
+                r.emit(.call, regs[0], 0, r.call(key), flags: definition.kind == "predicate" ? 0x20 : 0)
                 r.dependencies.insert(key)
                 return true
             }
-            _ = try expression(line.operands[1], r, scope, destination: regs[0])
+            // As C#: BindHandler emits under the line's range; other operands lower with their own range.
+            let operand = line.operands[1]
+            _ = try expression(line.name == "BindHandler" ? GesExpression(operand.kind, line.location, depth: operand.depth) : operand, r, scope, destination: regs[0])
             return true
         }
         return false
@@ -124,11 +124,11 @@ extension GesCompiler {
 
     func assemblyType(_ e: GesExpression) throws -> Int {
         let name = try assemblyText(e)
-        let types: [String: GameEventScriptBytecodeTypeKind] = [
+        let types: [String: GesBytecodeTypeKind] = [
             "nothing": .nothing, "boolean": .boolean, "percentage": .percentage, "vector": .vector, "point": .point, "series": .series, "tag": .tag, "text": .text, "list": .list, "range": .range, "message": .message, "handler": .handler, "map": .map,
             "dice": .dice,
         ]
-        if name == "Number" { return Int(GameEventScriptBytecodeTypeKind.float.rawValue) }
+        if name == "Number" { return Int(GesBytecodeTypeKind.float.rawValue) }
         guard let type = types[name.lowercased()] else { throw assemblyFailure(e.location, "Unknown assembly type.", name) }
         return Int(type.rawValue)
     }
@@ -165,7 +165,7 @@ extension GesCompiler {
         let args = line.operands
         if ["Add", "Subtract", "Multiply", "Divide", "Power", "IntegerDivide", "Modulo", "Remainder", "Min", "Max"].contains(line.name) && args.count == 4 {
             guard try assemblyText(args[3]) == "numeric" else { throw assemblyFailure(line.location, "Unknown arithmetic mode.") }
-            let op: Op = ["Add": .add, "Subtract": .subtract, "Multiply": .multiply, "Divide": .divide, "Power": .power, "IntegerDivide": .integerDivide, "Modulo": .modulo, "Remainder": .remainder, "Min": .min, "Max": .max][line.name]!
+            let op: GesBytecodeOpCode = ["Add": .add, "Subtract": .subtract, "Multiply": .multiply, "Divide": .divide, "Power": .power, "IntegerDivide": .integerDivide, "Modulo": .modulo, "Remainder": .remainder, "Min": .min, "Max": .max][line.name]!
             r.emit(op, regs[0], regs[1], regs[2], flags: 64)
             return true
         }

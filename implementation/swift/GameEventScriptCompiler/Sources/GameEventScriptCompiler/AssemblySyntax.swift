@@ -9,12 +9,12 @@ struct GesAssembly {
     let lines: [GesAssemblyLine]
     let predicate: Bool
     let allowSend: Bool
-    let location: GameEventScriptSourceLocation
+    let location: GesSourceLocation
 }
 
 struct GesAssemblyLine {
     let name: String
     let label: Bool
     let operands: [GesExpression]
-    let location: GameEventScriptSourceLocation
+    let location: GesSourceLocation
 }

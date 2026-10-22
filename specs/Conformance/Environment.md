@@ -62,7 +62,7 @@ checksum: Float<UnitNone>
 The runtime constructor retains the four converted arguments and sets
 `checksum` to the Binary64 representation of the Int64 truncation of
 `bearing + range + steps`. Field lookup by any other name returns no value.
-The runtime value exposes only `IGameEventScriptExternalValue`; the portable
+The runtime value exposes only `IGesExternalValue`; the portable
 case must not depend on a language-specific backing object.
 
 ## External type `CallbackProbe`
@@ -94,7 +94,7 @@ Unexpected failures supply no diagnostic context of their own. Unknown `failure`
 or `context` values make construction return `nothing`; unknown field names return
 no value. Exception types and technical details are platform-specific and must
 not decide these cases. Each port implements its own failure transport; C# uses
-`GameEventScriptExtensionFaultException` or the trusted fatal-runtime base when
+`GesExtensionFaultException` or the trusted fatal-runtime base when
 supplying explicit context. No Reflection or host-bound CLR object is required.
 
 ## External type `SpatialProbe`

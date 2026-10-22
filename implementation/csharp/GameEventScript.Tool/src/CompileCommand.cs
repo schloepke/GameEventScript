@@ -55,7 +55,7 @@ successful compilation. Source files must be UTF-8, with an optional UTF-8 BOM.
 
         var sourceArguments = new List<string>();
         string? outputPath = null;
-        var debugInfo = GameEventScriptDebugInfoOptions.All;
+        var debugInfo = GesDebugInfoOptions.All;
         var verbose = false;
         var quiet = false;
         var parseOptions = true;
@@ -74,7 +74,7 @@ successful compilation. Source files must be UTF-8, with an optional UTF-8 BOM.
             }
             else if (!checkOnly && parseOptions && argument == "--no-debug")
             {
-                debugInfo = GameEventScriptDebugInfoOptions.None;
+                debugInfo = GesDebugInfoOptions.None;
             }
             else if (parseOptions && argument is "-v" or "--verbose")
             {
@@ -113,7 +113,7 @@ successful compilation. Source files must be UTF-8, with an optional UTF-8 BOM.
                     if (string.Equals(Path.GetFullPath(sourcePath), outputPath, outputPathComparison)) return UsageError("Source and output must be different files.");
             }
 
-            var builder = GameEventScriptBuilder.Create().WithDebugInfo(debugInfo);
+            var builder = new GesProgramBuilder().WithDebugInfo(debugInfo);
             foreach (var sourcePath in sourcePaths)
             {
                 activeSourcePath = sourcePath;
@@ -126,13 +126,13 @@ successful compilation. Source files must be UTF-8, with an optional UTF-8 BOM.
                 if (!quiet) CompileReport.WriteCheck(Console.Out, program, sourcePaths, stopwatch.Elapsed, verbose);
                 return 0;
             }
-            var bytes = GameEventScriptProgramWriter.ToArray(program);
+            var bytes = program.Encode();
             ToolFileOutput.Write(outputPath!, bytes);
             stopwatch.Stop();
             if (!quiet) CompileReport.Write(Console.Out, program, sourcePaths, outputPath!, bytes.Length, stopwatch.Elapsed, verbose);
             return 0;
         }
-        catch (GameEventScriptCompileException exception)
+        catch (GesCompileException exception)
         {
             foreach (var diagnostic in exception.Diagnostics)
             {

@@ -1,0 +1,18 @@
+// Copyright 2026 Stephan Schlöpke
+// SPDX-License-Identifier: Apache-2.0
+
+extension GesVirtualMachine {
+    func executeSingle(_ destinationRegister: Int, _ sourceRegister: Int) {
+        let destination = destinationRegister
+        let x = frameStart + sourceRegister
+        if let iterator = registers[x].iteratorValue {
+            defer { iterator.close() }
+            guard let first = iterator.next() else { return setNothing(destination) }
+
+            return iterator.next() == nil ? setValue(destination, first) : setNothing(destination)
+        }
+        guard let iterator = GesIterator.make(registers[x].registerValue) else { return setNothing(destination) }
+
+        return GesCollectionOperators.length(registers[x].registerValue) == 1 ? iterator.next(sink: output(destination)) ?? setNothing(destination) : setNothing(destination)
+    }
+}

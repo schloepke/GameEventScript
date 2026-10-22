@@ -20,8 +20,8 @@ class TimingTests(unittest.TestCase):
     def setUpClass(cls):
         cls.cases = [c for c in read_corpus(sorted((ROOT / 'conformance/suites/performance').glob('*.md'))) if c.kind == 'performance' and ALLOCATION_PROFILE not in c.expected['performance']['profiles']]
 
-    def test_five_remaining_workloads_and_no_references_in_request(self):
-        self.assertEqual(5, len(self.cases))
+    def test_ten_remaining_workloads_and_no_references_in_request(self):
+        self.assertEqual(10, len(self.cases))
         cases = copy.deepcopy(self.cases)
         before = measurement_request(cases)
         for case in cases:
@@ -42,7 +42,7 @@ class TimingTests(unittest.TestCase):
         result = run(self.cases, command)
         # Threshold regressions remain visible, but do not invalidate the instrument tests.
         self.assertEqual(0, result['summary']['error'])
-        self.assertEqual(5, result['summary']['passed'] + result['summary']['failed'])
+        self.assertEqual(10, result['summary']['passed'] + result['summary']['failed'])
         case = self.cases[0]
         observed = result['observations']['observations'][case.id]
         for mutate in (lambda e: e.update(ast=e['ast'][:2]),

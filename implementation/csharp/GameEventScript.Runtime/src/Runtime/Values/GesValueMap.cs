@@ -15,7 +15,6 @@ public sealed class GesValueMap
     private readonly string[] _keys;
     private readonly GesValue[] _values;
     private GesValue[]? _keyList;
-    private GesValue[]? _valueList;
     private GesValue[]? _entries;
 
     internal GesValueMap(string[] keys, GesValue[] values, int count)
@@ -26,21 +25,26 @@ public sealed class GesValueMap
         Array.Copy(keys, _keys, count);
         Array.Copy(values, _values, count);
         for (var index = 0; index < _keys.Length; index++)
-            GameEventScriptText.RequireValidUnicode(_keys[index], nameof(keys));
-        Array.Sort(_keys, _values, GameEventScriptText.ScalarComparer);
+            GesText.RequireValidUnicode(_keys[index], nameof(keys));
+        Array.Sort(_keys, _values, GesText.ScalarComparer);
+    }
+
+    // Trusted canonical keys from a GesMapLayout: validated, scalar-sorted and unique. The layout
+    // shares one immutable key array between every map built from the same constant key list.
+    internal GesValueMap(string[] canonicalKeys, GesValue[] values)
+    {
+        _keys = canonicalKeys;
+        _values = values;
     }
 
     /// <summary>
     /// Gets the length.
     /// </summary>
     public int Length => _keys.Length;
-    /// <summary>
-    /// Gets the storage length.
-    /// </summary>
-    public int StorageLength => _keys.Length;
 
     internal GesValue[] KeyList => _keyList ??= CreateListOfKeys();
-    internal GesValue[] ValueList => _valueList ??= CreateListOfValues();
+    // Values are never mutated after construction, so value lists and iterators share the storage array.
+    internal GesValue[] ValueList => _values;
     internal GesValue[] EntryList => _entries ??= CreateListOfEntries();
 
     /// <summary>
@@ -85,7 +89,7 @@ public sealed class GesValueMap
         while (min <= max)
         {
             var mid = min + ((max - min) >> 1);
-            var comparison = GameEventScriptText.CompareScalarOrdinal(_keys[mid], key);
+            var comparison = GesText.CompareScalarOrdinal(_keys[mid], key);
             if (comparison == 0) return mid;
             if (comparison < 0) min = mid + 1;
             else max = mid - 1;
@@ -100,16 +104,6 @@ public sealed class GesValueMap
         for (var index = 0; index < _keys.Length; index++)
         {
             list[index].SetText(_keys[index]);
-        }
-        return list;
-    }
-
-    private GesValue[] CreateListOfValues()
-    {
-        var list = new GesValue[_values.Length];
-        for (var index = 0; index < _keys.Length; index++)
-        {
-            list[index] = _values[index];
         }
         return list;
     }

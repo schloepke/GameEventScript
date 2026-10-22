@@ -87,8 +87,8 @@ xcodebuild -workspace implementation/swift/GameEventScript.xcworkspace \
 
 ### SwiftPM verification
 
-The local SwiftBridge package explicitly requires macOS 10.15 for SwiftSyntax.
-The root distribution (including `ges`), CLI and Conformance packages
+The root distribution and local SwiftBridge package explicitly require macOS 10.15 for SwiftSyntax.
+The separate CLI and Conformance packages
 require macOS 10.15.4 or newer for the executable adapters' throwing Foundation
 file-handle I/O. The standalone Runtime, Compiler and SyntaxHighlighter packages
 do not inherit these package requirements.
@@ -185,21 +185,20 @@ The API gate compares all four library packages' declared exported symbols with
 python3 scripts/verify-swift-api.py --update
 ```
 
-Verified on 2026-09-23 with Swift 6.4 on macOS arm64, Release:
+`scripts/test-swift.sh` requires, in Release:
 
-- **1,679/1,679 behavior checks** from the original 96 Markdown documents pass
-  with native Swift compilation, including 172 expected compilation failures,
-  15 bytecode constraints, three metadata cases, and all eleven source-based GESA snapshots.
-- The ordinary hardware-independent report passes **1,648 cases** and skips
-  **31 optional performance measurements**. The last calibrated performance run
-  passed all 31 measured workloads.
-- The Swift 6.4/macOS 26/Apple M3 Max profile measures cumulative allocations and
-  elapsed time. All sixteen warmed dispatch variants have **zero allocations**.
-  See [Performance.md](Performance.md) for scope, references and reproduction.
-- All 60 shared binary cases pass, including canonical runtime-segment comparisons
-  against Swift compiler output, malformed inputs, rewrites, fixture execution and four GESA snapshots of identical binary inputs.
-- Independent Runtime verification passes **1,363/1,363** cases with C# inputs.
-- Nineteen Conformance/adapter/bootstrap tests pass, including the Markdown bootstrap
+- every supported shared Markdown case to pass with native Swift compilation,
+  including expected compilation failures, bytecode constraints, metadata cases
+  and source-based GESA snapshots;
+- every shared binary case, including canonical runtime-segment comparisons
+  against Swift compiler output, malformed inputs, rewrites, fixture execution
+  and GESA snapshots of identical binary inputs;
+- the performance scenarios to run correctly; measuring them is opt-in. The
+  Swift 6.4/macOS 27/Apple M3 Max profile measures cumulative allocations and
+  elapsed time, and every warmed dispatch variant must stay at zero allocations.
+  See [Performance.md](Performance.md) for scope, references and reproduction;
+- independent Runtime verification with C#-compiled inputs, reported separately;
+- the native Conformance/adapter/bootstrap tests, including the Markdown bootstrap
   fixtures, compiler ownership/options and resource-limit failure paths.
 
 The [CapabilityMatrix](../../conformance/cross-language/CapabilityMatrix.md)
@@ -235,14 +234,14 @@ names; it performs no file I/O:
 import GameEventScriptCompiler
 import GameEventScriptRuntime
 
-let program = try GameEventScriptBuilder.create()
+let program = try GesProgramBuilder()
     .addScript("""
         module example
         function double(_ value as :Number) be value + value
         on Main(args) { emit ConsoleOut(double(21)) }
         """, sourceName: "example.ges")
     .compile()
-let bytes = try GameEventScriptProgramWriter.bytes(program)
+let bytes = try program.encode()
 // The embedding can save bytes, or load program directly into a Host.
 ```
 
@@ -251,7 +250,7 @@ previously returned Programs remain immutable. Debug symbols, source maps and
 source archives are included by default. Use `.withDebugInfo(.none)` for compact
 output, `.withProgramVersion(...)` to set the portable version, and
 `.withExternalTypeCatalog(...)` for declarative external types. Runtime bindings
-remain separate. `GameEventScriptCompileError.diagnostics` exposes stable phase,
+remain separate. `GesCompileError.diagnostics` exposes stable phase,
 code, symbol and source location. Invalid public options throw API errors.
 
 ## Consume the Runtime
@@ -273,23 +272,23 @@ Load bytes supplied by the embedding and execute messages:
 ```swift
 import GameEventScriptRuntime
 
-final class Output: GameEventScriptNativeMessageHandler {
-    func handle(_ message: GameEventScriptMessage, context: GameEventScriptContext) throws {
+final class Output: GesNativeMessageHandler {
+    func handle(_ message: GameEventScriptMessage, context: GesContext) throws {
         // Deliver message.arguments to your product; Runtime performs no I/O.
     }
 }
 
-func execute(_ bytes: [UInt8]) throws -> (start: GameEventScriptStartResult, execution: GameEventScriptExecutionResult?) {
-    let program = try GameEventScriptProgramReader.read(bytes)
-    let host = try GameEventScriptHost.createBuilder().withRandomSeed(123).build()
-    let output = try GameEventScriptMessageSignature(name: "Done", parameters: ["value"])
+func execute(_ bytes: [UInt8]) throws -> (start: GesStartResult, execution: GesExecutionResult?) {
+    let program = try GameEventScriptProgram.read(bytes)
+    let host = try GameEventScriptHost.makeBuilder().withRandomSeed(123).build()
+    let output = try GesMessageSignature(name: "Done", parameters: ["value"])
     _ = try host.subscribe(output, handler: Output())
     let instance = try host.load(program)
     defer { instance.detach() }
     let startup = try host.start()
     guard host.isReady else { return (startup, nil) }
     host.receive(try GameEventScriptMessage(name: "Start", arguments: [
-        GameEventScriptMessageArgument(name: "value", value: .integer(42))
+        GesMessageArgument(name: "value", value: .integer(42))
     ]))
     let result = try host.runToCompletion()
     return (startup, result)
@@ -299,7 +298,7 @@ func execute(_ bytes: [UInt8]) throws -> (start: GameEventScriptStartResult, exe
 `executeFrame(opcodeBudget:)` allows bounded stepping and resumption. The host
 retains subscriptions and loaded Programs until explicitly detached; discarding
 a handle does not unsubscribe it. Enqueue-time snapshots and dispatch ordering
-match the shared Host contract. Configure through `createBuilder()`, then build, load all Programs and call
+match the shared Host contract. Configure through `GameEventScriptHost.makeBuilder()`, then build, load all Programs and call
 `start()`. Start runs only the initial group; its emitted messages wait for normal
 pumping. A later Load with initialization has a pending instance `startResult` until its queued init
 finishes. A failed late init removes that instance, its outputs and captured
@@ -310,6 +309,26 @@ storage. Unicode-scalar identity, exact Int64 ranges, Binary64 values, units, an
 ordered argument labels follow the shared specifications. VM entry reads
 arguments by index; frame/register storage and callback objects are reused.
 Callbacks and argument borrows are synchronous and must not be retained.
+
+Runtime sources follow the C# grouping within one unchanged SwiftPM target:
+
+- `Api` contains host/context APIs, diagnostics, messages, extension contracts,
+  external type descriptors, random streams, profiling and the immutable Program
+  API. `Api/Program` retains the `Binary`, `Bytecode` and `Validation` subfolders.
+- `Runtime/Values` contains the shared value representation, maps, numeric/text
+  helpers, iterators, builders and borrowed value arguments.
+- `Runtime/Vm` contains the virtual machine, linked programs, register outputs and
+  literal evaluation. The context calls the existing Host queue operations directly.
+- `Runtime/Vm/Opcodes` groups opcode extensions by `Core`, `Math` and
+  `Collections`, with one file per opcode entry point and shared algorithms in
+  their `Support` subfolders. Simple instructions remain in the inline dispatch
+  in `Runtime/Vm/VirtualMachineDispatch.swift`; typed register writes remain in
+  `Runtime/Vm/VirtualMachine.swift`.
+
+The context retains a weak reference to its owning Host. No closure delegates, wrapper
+objects or argument copies are introduced; register writes and budget checks
+retain their direct paths. The folders do not define separate packages or alter
+public module names or APIs.
 
 Public SwiftPM consumption uses one repository-root Git dependency after a
 version tag has been published; no Swift registry upload is required. See the
@@ -345,10 +364,10 @@ formatting and the helper’s regression controls run in Swift CI.
 
 ## Explicit message JSON exchange
 
-The Runtime provides `GameEventScriptMessageJson` for optional product transport.
-Use `Serialize`/`Deserialize` in C#, or `serialize`/`deserialize` in Swift, for
-messages; the corresponding `SerializeValue`/`serializeValue` methods encode a
-standalone value. Decoding reconstructs immutable data and never runs Record or
+The Runtime provides explicit JSON members for optional product transport:
+`message.ToJson()`/`GameEventScriptMessage.FromJson(json)` in C#, or
+`message.json()`/`GameEventScriptMessage(json:)` in Swift; `GesValue` offers the
+same pair for a standalone value. Decoding reconstructs immutable data and never runs Record or
 native constructors. External objects export as typed Record snapshots. Local
 Publish does not serialize; configure encoding explicitly at your I/O boundary.
 The [message format](../../specs/MessageFormat.md) defines the envelope and errors.

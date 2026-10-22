@@ -46,7 +46,7 @@ struct BotState {
 }
 
 let bot = try BotState.createGesType()
-let registry = try GameEventScriptSwiftExternalTypeRegistry([bot.binding])
+let registry = try GesBridgeExternalTypeRegistry([bot.binding])
 let value = bot.wrap(BotState(energy: 100, distance: 4))
 ```
 
@@ -94,14 +94,14 @@ remain useful for foreign types, generic types and custom throwing getters.
 import GameEventScriptRuntime
 import GameEventScriptSwiftBridge
 
-let host = try GameEventScriptHost.createBuilder().withRandomSeed(123).build()
-let done = try GameEventScriptMessageSignature(name: "Done", parameters: ["value"])
+let host = try GameEventScriptHost.makeBuilder().withRandomSeed(123).build()
+let done = try GesMessageSignature(name: "Done", parameters: ["value"])
 let subscription = try host.subscribe(done) { message, context in
     let value = try Int.fromGesValue(message.arguments[0])
     print(value)
 }
 guard try host.start().state == .ready else { fatalError("Host startup failed") }
-host.receive(try GameEventScriptMessage(name: "Done", swiftArguments: [("value", 42)]))
+host.receive(try GameEventScriptMessage(name: "Done", nativeArguments: [("value", 42)]))
 let result = try host.runToCompletion()
 subscription.unsubscribe()
 ```
@@ -111,29 +111,29 @@ required tags and excluded tags, and return the Runtime's ordinary subscription
 handle. Closures are retained at registration and invoked synchronously, without
 creating a new callback wrapper on each delivery. Keep Context and borrowed call
 arguments within their active invocation. Errors propagate to the existing
-Runtime boundary: declared `GameEventScriptExtensionFault` codes survive;
+Runtime boundary: declared `GesExtensionFaultError` codes survive;
 unexpected errors receive the owning Runtime diagnostic.
 
-Ordered `swiftArguments` accept mixed native types and repeated positional
+Ordered `nativeArguments` accept mixed native types and repeated positional
 arguments using a `nil` label. Dictionary binding requires an existing signature:
 
 ```swift
-let signature = try GameEventScriptMessageSignature(name: "Done", parameters: ["name", "score"])
-let message = try signature.withSwiftArguments(["score": 42, "name": "Ada"])
+let signature = try GesMessageSignature(name: "Done", parameters: ["name", "score"])
+let message = try signature.withNativeArguments(["score": 42, "name": "Ada"])
 // Done(name,score), irrespective of dictionary enumeration order.
 ```
 
 The dictionary must contain exactly the signature's named arguments. Missing,
 extra, duplicate normalized or positional labels are rejected. Context's
-`emit` and `publish` have the same ordered `swiftArguments` convenience.
-`GameEventScriptSwiftPublishSink` wraps a synchronous outbound closure.
+`emit` and `publish` have the same ordered `nativeArguments` convenience.
+`GesBridgePublishSink` wraps a synchronous outbound closure.
 
 ## Native value conversion
 
-Use `GameEventScriptSwiftValue.encode(value)` and
-`GameEventScriptSwiftValue.decode(value, as: Int.self)`, or the corresponding
+Use `GesBridgeValueConversion.encode(value)` and
+`GesBridgeValueConversion.decode(value, as: Int.self)`, or the corresponding
 `toGesValue()` / `fromGesValue(_:)` methods. Custom types may implement
-`GameEventScriptSwiftValueConvertible` explicitly.
+`GesBridgeValueConvertible` explicitly.
 
 | Swift type | GES representation / decoding |
 | --- | --- |
@@ -152,31 +152,31 @@ a plain `Double`. Fractional numbers cannot decode to an integer. Encoding
 floating-point values uses the portable factory: NaN becomes Nothing, signed zero
 is normalized, and representable integral values use Int64. Use `GesValue`
 explicitly for units, Percentage, Tag, Dice and other specialized values.
-Conversion errors use `GameEventScriptSwiftConversionError`.
+Conversion errors use `GesBridgeConversionError`.
 
 Swift dictionaries compare canonically equivalent String keys as equal; GES
 maps distinguish their scalar sequences. Decoding a GES map rejects collisions
 such as `é` and `e` plus a combining accent instead of losing an entry. Encoding
-cannot recover keys already merged by a Swift dictionary. Use ordered
-`GesMapEntry` values when both spellings must remain distinct.
+cannot recover keys already merged by a Swift dictionary. Use
+`GesValue.map(keys:values:)` when both spellings must remain distinct.
 
 ## Extensions
 
 ```swift
-let extensions = try GameEventScriptSwiftExtensionRegistry([
-    GameEventScriptSwiftExtension(namespace: "app", name: "double", parameters: ["_"]) { call in
-        let number: Int = try call.arguments.swiftValue(at: 0)
-        try call.setSwiftValue(number * 2)
+let extensions = try GesBridgeExtensionRegistry([
+    GesBridgeExtension(namespace: "app", name: "double", parameters: ["_"]) { call in
+        let number: Int = try call.arguments.nativeValue(at: 0)
+        try call.setNativeValue(number * 2)
     }
 ])
-let host = try GameEventScriptHost(seed: 123, extensions: extensions)
+let host = try GameEventScriptHost.makeBuilder().withRandomSeed(123).withRegistry(extensions).build()
 // A loaded script can call :app.double(21).
 ```
 
 Registration validates names, ordered argument labels and duplicate signatures.
 An optional fallback registry is consulted for signatures absent from the local
 registry. Linking resolves the callbacks once. The extension call and argument
-view are borrowed; `swiftValue(at:as:)` checks bounds and converts one argument
+view are borrowed; `nativeValue(at:as:)` checks bounds and converts one argument
 without materializing the complete argument list.
 
 ## External Swift types
@@ -190,16 +190,16 @@ struct Player {
     let score: Int
 }
 
-let player = try GameEventScriptSwiftType<Player>("Player", fields: [
+let player = try GesBridgeTypeBinding<Player>("Player", fields: [
     .init("name", typeName: "Text", keyPath: \Player.name),
     .init("score", typeName: "Number", keyPath: \Player.score),
 ], constructors: [
     .init(parameters: ["name", "score"]) { arguments in
-        try Player(name: arguments.swiftValue(at: 0), score: arguments.swiftValue(at: 1))
+        try Player(name: arguments.nativeValue(at: 0), score: arguments.nativeValue(at: 1))
     }
 ])
-let types = try GameEventScriptSwiftExternalTypeRegistry([player.binding])
-let host = try GameEventScriptHost(seed: 123, externalTypes: types)
+let types = try GesBridgeExternalTypeRegistry([player.binding])
+let host = try GameEventScriptHost.makeBuilder().withRandomSeed(123).withExternalTypeRegistry(types).build()
 
 let value = player.wrap(Player(name: "Ada", score: 42))
 let original = try player.unwrap(value)
@@ -227,12 +227,12 @@ descriptor with the same name.
 ## Optional synchronized runner
 
 ```swift
-let runner = try GameEventScriptSwiftHostRunner(GameEventScriptHost.createBuilder().withRandomSeed(123).build())
+let runner = try GesBridgeHostRunner(GameEventScriptHost.makeBuilder().withRandomSeed(123).build())
 let registration = try runner.subscribe(.init(name: "Done", parameters: ["value"])) { message, _ in
     print(message.arguments[0])
 }
 guard try runner.start().state == .ready else { fatalError("Host startup failed") }
-try runner.receive(.init(name: "Done", swiftArguments: [("value", 42)]))
+try runner.receive(.init(name: "Done", nativeArguments: [("value", 42)]))
 _ = try runner.runToCompletion() // Optional synchronous wait before inspecting output.
 let result = runner.lastResult
 registration.detach()

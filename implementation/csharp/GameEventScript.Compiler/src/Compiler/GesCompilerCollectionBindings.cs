@@ -46,10 +46,10 @@ internal static partial class GesCompiler
             var map = _builder.AddLabel("binding_map");
             var list = _builder.AddLabel("binding_list");
             var done = _builder.AddLabel("binding_done");
-            _builder.CheckType(check, current, GameEventScriptBytecodeTypeKind.Map);
+            _builder.CheckType(check, current, GesBytecodeTypeKind.Map);
             _builder.JumpIfTrue(check, map);
             _builder.Move(values, current);
-            _builder.CheckType(check, current, GameEventScriptBytecodeTypeKind.List);
+            _builder.CheckType(check, current, GesBytecodeTypeKind.List);
             _builder.JumpIfTrue(check, list);
             _builder.Move(targets[0], current);
             for (var index = 1; index < targets.Length; index++) _builder.LoadNothing(targets[index]);

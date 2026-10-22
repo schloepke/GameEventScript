@@ -46,7 +46,7 @@ public sealed class GameEventScriptDocumentationConsistencyTests
         };
         CollectionAssert.AreEqual(expectedFamilies, actualFamilies, "PublicApi.md ownership families changed without updating the consistency gate.");
 
-        var actualNamespaces = new[] { typeof(GameEventScriptProgram).Assembly, typeof(GameEventScriptBuilder).Assembly, typeof(GameEventScriptCSharpHostRunner).Assembly }
+        var actualNamespaces = new[] { typeof(GameEventScriptProgram).Assembly, typeof(GesProgramBuilder).Assembly, typeof(GesBridgeHostRunner).Assembly }
             .SelectMany(assembly => assembly.GetExportedTypes())
             .Select(type => type.Namespace ?? string.Empty)
             .Distinct(StringComparer.Ordinal)
@@ -114,13 +114,13 @@ public sealed class GameEventScriptDocumentationConsistencyTests
         var documentedOpcodes = Regex.Matches(bytecode, @"^\|\s*0x(?<id>[0-9A-Fa-f]{2})\s*\|\s*`(?<name>[A-Za-z0-9]+)`\s*\|", RegexOptions.Multiline)
             .Select(match => new KeyValuePair<string, ulong>(match.Groups["name"].Value, ulong.Parse(match.Groups["id"].Value, NumberStyles.HexNumber, CultureInfo.InvariantCulture)))
             .ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal);
-        AssertEnumMatches<GameEventScriptBytecodeOpCode>(documentedOpcodes, "Bytecode.md opcode table");
+        AssertEnumMatches<GesBytecodeOpCode>(documentedOpcodes, "Bytecode.md opcode table");
 
         var binaryFormat = File.ReadAllText(Path.Combine(specificationDirectory, "BinaryFormat.md"));
         var documentedSections = Regex.Matches(binaryFormat, @"^\|\s*`0x(?<id>[0-9A-Fa-f]{4})`\s*\|\s*(?<name>[A-Za-z0-9]+(?:Segment|Section))\s*\|", RegexOptions.Multiline)
             .Select(match => new KeyValuePair<string, ulong>(match.Groups["name"].Value, ulong.Parse(match.Groups["id"].Value, NumberStyles.HexNumber, CultureInfo.InvariantCulture)))
             .ToDictionary(pair => NormalizeSectionName(pair.Key), pair => pair.Value, StringComparer.Ordinal);
-        AssertEnumMatches<GameEventScriptSectionType>(documentedSections, "BinaryFormat.md section registry");
+        AssertEnumMatches<GesSectionType>(documentedSections, "BinaryFormat.md section registry");
 
         var documentedFormatErrors = new Dictionary<string, ulong>(StringComparer.Ordinal);
         foreach (Match match in Regex.Matches(binaryFormat, @"^\|\s*(?<firstId>[0-9]+)\s*\|\s*(?<firstName>[A-Za-z0-9]+)\s*\|\s*(?<secondId>[0-9]+)\s*\|\s*(?<secondName>[A-Za-z0-9]+)\s*\|", RegexOptions.Multiline))
@@ -129,7 +129,7 @@ public sealed class GameEventScriptDocumentationConsistencyTests
             documentedFormatErrors.Add(match.Groups["secondName"].Value, ulong.Parse(match.Groups["secondId"].Value, CultureInfo.InvariantCulture));
         }
 
-        AssertEnumMatches<GameEventScriptProgramFormatErrorCode>(documentedFormatErrors, "BinaryFormat.md format-error table");
+        AssertEnumMatches<GesProgramFormatErrorCode>(documentedFormatErrors, "BinaryFormat.md format-error table");
     }
 
     /// <summary>
@@ -140,7 +140,7 @@ public sealed class GameEventScriptDocumentationConsistencyTests
     {
         var specificationDirectory = TestRepositoryPaths.SpecificationsDirectory;
         var portableDiagnostics = File.ReadAllText(Path.Combine(specificationDirectory, "Diagnostics.md"));
-        AssertConstantValuesAppear(typeof(GameEventScriptDiagnosticCodes), portableDiagnostics, "Diagnostics.md");
+        AssertConstantValuesAppear(typeof(GesDiagnosticCodes), portableDiagnostics, "Diagnostics.md");
     }
 
     /// <summary>
@@ -181,17 +181,17 @@ public sealed class GameEventScriptDocumentationConsistencyTests
     private static string NormalizeSectionName(string name)
         => name switch
         {
-            "ProgramMetadataSegment" => nameof(GameEventScriptSectionType.ProgramMetadata),
-            "StringConstantSegment" => nameof(GameEventScriptSectionType.StringConstants),
-            "UInt16IndexListSegment" => nameof(GameEventScriptSectionType.UInt16IndexLists),
-            "BindingSegment" => nameof(GameEventScriptSectionType.Bindings),
-            "CodeSegment" => nameof(GameEventScriptSectionType.Code),
-            "DebugSymbolsSegment" => nameof(GameEventScriptSectionType.DebugSymbols),
-            "SourceMapSegment" => nameof(GameEventScriptSectionType.SourceMap),
-            "SourceArchiveSegment" => nameof(GameEventScriptSectionType.SourceArchive),
-            "BuildMetadataSegment" => nameof(GameEventScriptSectionType.BuildMetadata),
-            "ReservedSignatureSegment" => nameof(GameEventScriptSectionType.ReservedSignature),
-            "NamedCustomSection" => nameof(GameEventScriptSectionType.NamedCustom),
+            "ProgramMetadataSegment" => nameof(GesSectionType.ProgramMetadata),
+            "StringConstantSegment" => nameof(GesSectionType.StringConstants),
+            "UInt16IndexListSegment" => nameof(GesSectionType.UInt16IndexLists),
+            "BindingSegment" => nameof(GesSectionType.Bindings),
+            "CodeSegment" => nameof(GesSectionType.Code),
+            "DebugSymbolsSegment" => nameof(GesSectionType.DebugSymbols),
+            "SourceMapSegment" => nameof(GesSectionType.SourceMap),
+            "SourceArchiveSegment" => nameof(GesSectionType.SourceArchive),
+            "BuildMetadataSegment" => nameof(GesSectionType.BuildMetadata),
+            "ReservedSignatureSegment" => nameof(GesSectionType.ReservedSignature),
+            "NamedCustomSection" => nameof(GesSectionType.NamedCustom),
             _ => name
         };
 

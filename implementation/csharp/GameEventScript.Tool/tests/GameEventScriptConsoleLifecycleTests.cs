@@ -134,9 +134,9 @@ public sealed class GameEventScriptConsoleLifecycleTests
         var expectedType = failure switch
         {
             "read" => typeof(FileNotFoundException),
-            "compile" => typeof(GameEventScriptCompileException),
-            "decode" => typeof(GameEventScriptProgramFormatException),
-            _ => typeof(GameEventScriptDynamicLinkException)
+            "compile" => typeof(GesCompileException),
+            "decode" => typeof(GesProgramFormatException),
+            _ => typeof(GesDynamicLinkException)
         };
         Assert.IsInstanceOfType(exception, expectedType);
         Assert.AreSame(oldHost, session.Host);
@@ -198,7 +198,7 @@ public sealed class GameEventScriptConsoleLifecycleTests
         StringAssert.Contains(verbose.StandardError, "Reloaded all");
     }
 
-    private static RunSession Session() => new(42, GameEventScriptRuntimeLimits.Default, false, false, true);
+    private static RunSession Session() => new(42, GesRuntimeLimits.Default, false, false, true);
 
     private static void Deliver(RunSession session, string name)
     {
@@ -216,7 +216,7 @@ public sealed class GameEventScriptConsoleLifecycleTests
     private string Binary(string name, string source)
     {
         var path = Path.Combine(_directory, name);
-        File.WriteAllBytes(path, GameEventScriptProgramWriter.ToArray(GameEventScriptBuilder.Create().AddScript(source).Compile()));
+        File.WriteAllBytes(path, new GesProgramBuilder().AddScript(source).Compile().Encode());
         return path;
     }
 

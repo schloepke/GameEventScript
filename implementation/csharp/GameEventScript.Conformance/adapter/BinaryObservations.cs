@@ -34,20 +34,20 @@ internal static class BinaryObservations
         GameEventScriptProgram program;
         try
         {
-            program = GameEventScriptProgramReader.Read(bytes, new GameEventScriptProgramReadOptions
+            program = GameEventScriptProgram.Read(bytes, new GesProgramReadOptions
             {
-                Retention = GameEventScriptProgramRetention.PreserveAll,
-                Limits = new GameEventScriptProgramReadLimits { MaxFileBytes = MaxResourceBytes }
+                Retention = GesProgramRetention.PreserveAll,
+                Limits = new GesProgramReadLimits { MaxFileBytes = MaxResourceBytes }
             });
         }
-        catch (GameEventScriptProgramFormatException exception)
+        catch (GesProgramFormatException exception)
         {
             return new
             {
                 status = "ok",
                 binary = new
                 {
-                    outcome = exception.ErrorCode <= GameEventScriptProgramFormatErrorCode.TooManyEntries ? "readError" : "validationError",
+                    outcome = exception.ErrorCode <= GesProgramFormatErrorCode.TooManyEntries ? "readError" : "validationError",
                     errorCode = exception.ErrorCode.ToString(),
                     byteOffset = exception.ByteOffset,
                     sectionType = exception.SectionType,
@@ -55,9 +55,9 @@ internal static class BinaryObservations
                 }
             };
         }
-        var rewritten = GameEventScriptProgramWriter.ToArray(program);
+        var rewritten = program.Encode();
         var compare = input.GetProperty("compareCompiledRuntime").GetBoolean();
-        var compiled = compare ? GameEventScriptProgramWriter.ToArray(AdapterCompiler.Compile(test, input.GetProperty("programVersion").GetUInt64())) : null;
+        var compiled = compare ? AdapterCompiler.Compile(test, input.GetProperty("programVersion").GetUInt64()).Encode() : null;
         var result = new Dictionary<string, object?>
         {
             ["status"] = "ok",

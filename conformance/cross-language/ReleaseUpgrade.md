@@ -22,13 +22,16 @@ this release gate; this script does not infer future compatibility promises.
 
 ## Checks
 
-Each language uses the existing distribution consumer sources, unchanged across
-the dependency upgrade. The baseline consumer compiles source, serializes and
-loads it, checks native integration and expects result 42. Swift additionally
+Each language uses the existing distribution consumer sources as committed with
+each version: the baseline builds the consumer from the 0.3.0 commit, the
+candidate the consumer from the tested commit. Breaking pre-1.0 API changes are
+therefore checked as the migration that the changelog documents, not as source
+compatibility. Each consumer compiles source, serializes and loads it, checks
+native integration and expects result 42. Swift additionally
 exercises Bridge macros; both full consumers exercise the highlighter.
 
-The same consumer directory then resolves the candidate version, rebuilds and
-reruns. C# explicitly uses `dotnet build -t:Rebuild`: reproducible package DLLs
+The same consumer directory then receives the candidate consumer source,
+resolves the candidate version, rebuilds and reruns. C# explicitly uses `dotnet build -t:Rebuild`: reproducible package DLLs
 can have identical timestamps and sizes across versions, allowing an incremental
 CopyLocal step to retain an old assembly. A clean rebuild is part of this tested
 minor-version migration; incremental replacement is not claimed by this test.

@@ -5,8 +5,8 @@ using System.Collections.Generic;
 
 namespace GameEventScript.Compiler;
 
-internal sealed record AssemblyExpressionNode(AssemblyBlockNode Block) : ExpressionNode;
-internal sealed record AssemblyStatementNode(AssemblyBlockNode Block) : StatementNode;
-internal sealed record AssemblyBlockNode(string? Output, IReadOnlyList<AssemblyDeclaration> Declarations, IReadOnlyList<AssemblyLine> Lines, bool Predicate = false, bool AllowSend = false) : ScriptNode;
-internal sealed record AssemblyDeclaration(string Name, bool Export) : ScriptNode;
-internal sealed record AssemblyLine(string Name, bool IsLabel, IReadOnlyList<ExpressionNode> Operands) : ScriptNode;
+internal sealed record GesAssemblyExpressionNode(GesAssemblyBlockNode Block) : GesExpressionNode;
+internal sealed record GesAssemblyStatementNode(GesAssemblyBlockNode Block) : GesStatementNode;
+internal sealed record GesAssemblyBlockNode(string? Output, IReadOnlyList<GesAssemblyDeclaration> Declarations, IReadOnlyList<GesAssemblyLine> Lines, bool Predicate = false, bool AllowSend = false) : GesScriptNode;
+internal sealed record GesAssemblyDeclaration(string Name, bool Export) : GesScriptNode;
+internal sealed record GesAssemblyLine(string Name, bool IsLabel, IReadOnlyList<GesExpressionNode> Operands) : GesScriptNode;

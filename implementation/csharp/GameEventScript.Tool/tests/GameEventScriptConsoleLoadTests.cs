@@ -168,7 +168,7 @@ public sealed class GameEventScriptConsoleLoadTests
     private void Write(string path, string source) => File.WriteAllText(Path.Combine(_directory, path), source, new UTF8Encoding(false, true));
 
     private void Binary(string path, string source)
-        => File.WriteAllBytes(Path.Combine(_directory, path), GameEventScriptProgramWriter.ToArray(GameEventScriptBuilder.Create().AddScript(source).Compile()));
+        => File.WriteAllBytes(Path.Combine(_directory, path), new GesProgramBuilder().AddScript(source).Compile().Encode());
 
     private DotNetProcessResult Interactive(string input, params string[] options)
         => ToolProcess.ExecuteWithInput(_directory, input, ["run", "--interactive", .. options]);

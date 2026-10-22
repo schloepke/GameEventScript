@@ -75,10 +75,10 @@ let package = Package(name: "GameEventScriptCompiler",
         raise RuntimeError("Unchanged build recompiled object files.")
 
     builder = runtime_source / "HostBuilder.swift"
-    builder.write_text('public struct GameEventScriptHostBuilder { public init() {} }\n')
+    builder.write_text('public struct GesHostBuilder { public init() {} }\n')
     host.write_text('''public enum Host {
     public static func value() -> Int { 2 }
-    public static func createBuilder() -> GameEventScriptHostBuilder { .init() }
+    public static func createBuilder() -> GesHostBuilder { .init() }
 }
 ''')
     build("04-added-source", 2)

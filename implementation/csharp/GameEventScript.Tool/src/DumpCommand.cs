@@ -81,7 +81,7 @@ Terminal output uses four-column tab stops; files and redirected output retain t
                 if (string.Equals(fullInputPath, outputPath, comparison)) return UsageError("Input and output must be different files.");
             }
 
-            var program = GameEventScriptProgramReader.Read(File.ReadAllBytes(inputPath));
+            var program = GameEventScriptProgram.Read(File.ReadAllBytes(inputPath));
             var text = program.Dump(includeInstructionAddresses: addresses);
             if (outputPath is null && !Console.IsOutputRedirected) text = ToolTextDisplay.ExpandTabs(text);
             var bytes = new UTF8Encoding(false, true).GetBytes(text);
@@ -97,7 +97,7 @@ Terminal output uses four-column tab stops; files and redirected output retain t
             }
             return 0;
         }
-        catch (GameEventScriptProgramFormatException exception)
+        catch (GesProgramFormatException exception)
         {
             var context = new List<string>();
             if (exception.ByteOffset is { } offset) context.Add($"byteOffset={offset}");

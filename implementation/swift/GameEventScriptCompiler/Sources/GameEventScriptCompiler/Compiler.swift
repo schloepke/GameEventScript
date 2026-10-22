@@ -3,30 +3,60 @@
 
 @_spi(Compiler) import GameEventScriptRuntime
 
-typealias Op = GameEventScriptBytecodeOpCode
-typealias Instruction = GameEventScriptBytecodeInstruction
+// One element of a routine's plan, as C# GesBinaryBuilder.PlanItem: a label, or an instruction with the index of its
+// source location. Jumps address labels by ID and calls address their callee by call ID, so passes move and
+// remove items without remapping any position; addresses exist only once the plan is encoded.
+extension GesBinaryBuilder {
+    enum PlanItem: Equatable {
+        case label(Int)
+        case instruction(GesBytecodeInstruction, location: Int)
+
+        var instruction: GesBytecodeInstruction? {
+            if case .instruction(let instruction, _) = self { return instruction }
+            return nil
+        }
+
+        var label: Int? {
+            if case .label(let label) = self { return label }
+            return nil
+        }
+    }
+}
 
 final class GesRoutine {
     let definition: GesDefinition
     var key: String { definition.kind.hasSuffix("andler") ? definition.signature + "@\(definition.location.sourceID ?? 0):\(definition.location.line ?? 0):\(definition.location.column ?? 0)" : definition.signature }
-    var code: [Instruction] = []
-    var locations: [GameEventScriptSourceLocation] = []
+    // Starts with the routine entry label, as in C#.
+    var items: [GesBinaryBuilder.PlanItem] = [.label(GesRoutine.entryLabel)]
+    var labelCount = 1
+    // Source locations by index; an instruction item keeps the index of its own.
+    var locations: [GesSourceLocation] = []
+    // Callee keys by call ID; a call instruction holds its call ID until encoding.
+    var calls: [String] = []
     var pinned: Set<Int> = []
     var registers: Int
     var maxStage = 0
     var hasAssembly = false
     var componentRows: [Int: GesComponentRow] = [:]
     var nonListBindings: Set<Int> = []
-    var calls: [(Int, String)] = []
     var dependencies: Set<String> = []
-    var symbols: [(String, Int, Int, Bool)] = []
-    var location: GameEventScriptSourceLocation
+    // Debug symbols: name, register and whether the register is a parameter.
+    var symbols: [(String, Int, Bool)] = []
+    var location: GesSourceLocation
+
+    static let entryLabel = 0
 
     init(_ definition: GesDefinition) {
         self.definition = definition
         registers = definition.parameters.count
         location = definition.location
         pinned = Set(0..<registers)
+    }
+
+    var instructionCount: Int {
+        var count = 0
+        for item in items where item.label == nil { count += 1 }
+        return count
     }
 
     func local() -> Int {
@@ -41,16 +71,61 @@ final class GesRoutine {
         return result
     }
 
-    @discardableResult func emit(_ op: Op, _ d: Int = 0, _ x: Int = 0, _ y: Int = 0, payload: UInt64 = 0, flags: UInt8 = 0) -> Int {
-        let i = code.count
-        code.append(.init(opcode: op, unitAndFlags: flags, word0: UInt16(truncatingIfNeeded: d), word1: UInt16(truncatingIfNeeded: x), word2: UInt16(truncatingIfNeeded: y), payload: payload))
+    // Appends an instruction and returns its item index, which stays valid while lowering appends items.
+    @discardableResult func emit(_ op: GesBytecodeOpCode, _ d: Int = 0, _ x: Int = 0, _ y: Int = 0, payload: UInt64 = 0, flags: UInt8 = 0) -> Int {
+        let instruction = GesBytecodeInstruction(
+            opcode: op,
+            unitAndFlags: flags,
+            word0: UInt16(truncatingIfNeeded: d),
+            word1: UInt16(truncatingIfNeeded: x),
+            word2: UInt16(truncatingIfNeeded: y),
+            payload: payload
+        )
+        items.append(.instruction(instruction, location: locations.count))
         locations.append(location)
-        return i
+        return items.count - 1
     }
 
-    func patch(_ i: Int, target: Int) {
-        let old = code[i]
-        code[i] = .init(opcode: old.opcode, unitAndFlags: old.unitAndFlags, word0: old.word0, word1: old.word1, word2: UInt16(truncatingIfNeeded: target), payload: old.payload)
+    // A label that `place` puts into the plan later, for targets that are referenced before they are reached.
+    func newLabel() -> Int {
+        defer { labelCount += 1 }
+        return labelCount
+    }
+
+    func place(_ label: Int) { items.append(.label(label)) }
+
+    // Places a new label at the end of the plan, as C# MarkLabel does, and points the given jumps at it. The label
+    // stays even when no jump refers to it, so it still bounds basic blocks for the optimizer.
+    @discardableResult func mark(_ jumps: [Int] = []) -> Int {
+        let label = newLabel()
+        place(label)
+        for jump in jumps { patch(jump, label: label) }
+        return label
+    }
+
+    // Points the jump at item index `item` to `label`.
+    func patch(_ item: Int, label: Int) {
+        guard case .instruction(let old, let location) = items[item] else { preconditionFailure("Only instructions jump.") }
+        items[item] = .instruction(
+            .init(opcode: old.opcode, unitAndFlags: old.unitAndFlags, word0: old.word0, word1: old.word1, word2: UInt16(truncatingIfNeeded: label), payload: old.payload),
+            location: location
+        )
+    }
+
+    // The call ID of a call to the routine `key`.
+    func call(_ key: String) -> Int {
+        calls.append(key)
+        return calls.count - 1
+    }
+
+    // Instruction ordinal of the first instruction at or after each label, by label ID; -1 for an unplaced label.
+    func labelAddresses() -> [Int] {
+        var addresses = [Int](repeating: -1, count: labelCount)
+        var ordinal = 0
+        for item in items {
+            if let label = item.label { addresses[label] = ordinal } else { ordinal += 1 }
+        }
+        return addresses
     }
 }
 
@@ -67,107 +142,37 @@ final class GesScope {
 }
 
 final class GesCompiler {
-    let modules: [GesModule], sources: [GesSource], options: GameEventScriptCompileOptions
-    let catalog: (any GameEventScriptExternalTypeCatalogProtocol)?
-    var moduleName = ""
-    var constants: [String: GesExpression] = [:], definitions: [String: GesDefinition] = [:], records: [String: GesRecord] = [:]
-    var strings: [String] = [], lists: [[UInt16]] = [], bindings: [GameEventScriptBinding] = []
-    // Scalar keys preserve the language's identity instead of Swift's canonical equivalence.
-    var stringIDs: [[UInt32]: Int] = [:], listIDs: [[UInt16]: Int] = [:]
-    var numericLimitExceeded = false
-    var imports: [String: Int] = [:], recordIDs: [String: Int] = [:]
-    var routines: [GesRoutine] = []
-    var sourcePositions: [UInt32: [UInt64: Int]] = [:]
+    var modules: [GesModule]
+    let sources: [GesSource], options: GesCompileOptions
+    let catalog: (any GesExternalTypeCatalog)?
+    var moduleName: String
+    let constants: [String: GesExpression]
+    var definitions: [String: GesDefinition], records: [String: GesRecord]
+    let builder: GesBinaryBuilder
 
-    init(modules: [GesModule], sources: [GesSource], catalog: (any GameEventScriptExternalTypeCatalogProtocol)?, options: GameEventScriptCompileOptions) {
-        self.modules = modules
+    // Lowers the modules and declarations of a completed validation.
+    init(_ validated: GesAstValidator, sources: [GesSource], options: GesCompileOptions) {
+        modules = validated.modules
+        catalog = validated.catalog
+        moduleName = validated.moduleName
+        constants = validated.constants
+        definitions = validated.definitions
+        records = validated.records
         self.sources = sources
-        self.catalog = catalog
         self.options = options
-    }
-
-    func text(_ value: String) -> Int {
-        let key = value.unicodeScalars.map(\.value)
-        if let i = stringIDs[key] { return i }
-        guard strings.count < 65535 else {
-            numericLimitExceeded = true
-            return 0
-        }
-        let id = strings.count
-        strings.append(value)
-        stringIDs[key] = id
-        return id
-    }
-
-    func list(_ values: [Int]) -> Int {
-        guard values.count < 65535, values.allSatisfy({ $0 >= 0 && $0 < 65535 }) else {
-            numericLimitExceeded = true
-            return 0
-        }
-        let values = values.map { UInt16($0) }
-        if let i = listIDs[values] { return i }
-        guard lists.count < 65535 else {
-            numericLimitExceeded = true
-            return 0
-        }
-        let id = lists.count
-        lists.append(values)
-        listIDs[values] = id
-        return id
-    }
-
-    func textList(_ names: [String]) -> Int { list(names.map(text)) }
-
-    func importBinding(_ kind: GameEventScriptBinaryBindKind, _ name: String, _ labels: [String]) -> Int {
-        let key = "\(kind.rawValue):" + signature(name, labels)
-        if let id = imports[key] { return id }
-        guard bindings.count < 65535 else {
-            numericLimitExceeded = true
-            return 0
-        }
-        let id = bindings.filter { $0.kind == kind }.count
-        bindings.append(.init(kind: kind, name: UInt16(truncatingIfNeeded: text(name)), argumentNames: labels.map { UInt16(truncatingIfNeeded: text($0)) }, id: UInt16(truncatingIfNeeded: id)))
-        imports[key] = id
-        return id
-    }
-
-    func signature(_ name: String, _ labels: [String]) -> String { name + "(" + labels.joined(separator: ",") + ")" }
-
-    func error(_ code: String, _ location: GameEventScriptSourceLocation, symbol: String? = nil, kind: GameEventScriptSymbolKind = .unknown, phase: GameEventScriptDiagnosticPhase = .validate, message: String? = nil) -> GameEventScriptCompileError {
-        compileError(phase, code, message ?? diagnosticMessage(code, symbol: symbol), location, symbol: symbol, kind: kind)
-    }
-
-    private func diagnosticMessage(_ code: String, symbol: String?) -> String {
-        let name = symbol.map { "'\($0)'" } ?? "this expression"
-        switch code {
-        case "validate.duplicateConstant": return "Constant \(name) is already declared."
-        case "validate.duplicateType": return "Type \(name) is already declared."
-        case "validate.duplicateFunction": return "Function \(name) already has an overload with these argument labels."
-        case "validate.duplicatePredicate": return "Predicate \(name) already has an overload with these argument labels."
-        case "validate.duplicateVariable": return "Binding \(name) is declared more than once in this scope."
-        case "validate.shadowedVariable": return "Binding \(name) would shadow a binding in an enclosing scope. Use a different name."
-        case "validate.duplicateDefinitionParameter", "validate.duplicateHandlerParameter": return "The parameter list for \(name) contains a duplicate name or label."
-        case "validate.duplicatePublishArgument": return "Message or call \(name) contains a repeated argument label."
-        case "validate.invalidIdentifierCase": return "Identifier \(name) does not follow the naming rules for this declaration."
-        case "validate.invalidMessageCase": return "Invalid handler declaration \(name). Check its name and parameter form."
-        case "validate.invalidPredicate": return "Predicate \(name) must produce a Boolean value or nothing."
-        case "validate.invalidTypeConstructor": return "Invalid arguments for type constructor \(name). Check the argument count and labels."
-        case "validate.predicateFunctionConflict": return "A function and a predicate cannot share the name \(name)."
-        case "validate.missingCallable": return "No function or predicate matches \(name). Check the name and argument labels."
-        case "validate.wrongFunctionArity", "validate.wrongPredicateArity", "compile.invalidArity": return "The arguments for \(name) do not match its declared parameters."
-        case "compile.unresolvedSymbol": return "Unknown symbol \(name). Declare it in this program before using it."
-        case "compile.cyclicCallGraph": return "The call graph contains a cycle involving \(name). Recursive calls are not supported."
-        case "compile.numericLimitExceeded": return "Compilation exceeds a numeric limit of the program format near \(name). Reduce the program size or complexity."
-        case "compile.unsupportedConstruct": return "The compiler cannot generate code for \(name)."
-        default: return "Compilation failed near \(name). See the diagnostic code for the failure category."
-        }
+        builder = GesBinaryBuilder(sources: sources, options: options, fallbackLocation: validated.modules.first?.location ?? .init(sourceName: "UnknownSource"))
     }
 
     func compile() throws -> GameEventScriptProgram {
-        try validate()
+        let optimizer = GesAstOptimizer(constants: constants)
+        // Rewrites in place: unchanged entries keep their storage.
+        for index in modules.indices { if let module = optimizer.module(modules[index]) { modules[index] = module } }
+        for index in definitions.values.indices { if let definition = optimizer.definition(definitions.values[index]) { definitions.values[index] = definition } }
+        for index in records.values.indices { if let record = optimizer.record(records.values[index]) { records.values[index] = record } }
+        var routines: [GesRoutine] = []
         let callables = definitions.values.sorted { $0.signature < $1.signature }
         for definition in callables { routines.append(try routine(definition)) }
-        for (id, record) in records.values.sorted(by: { $0.name < $1.name }).enumerated() { recordIDs[record.name] = id }
+        for (id, record) in records.values.sorted(by: { $0.name < $1.name }).enumerated() { builder.recordIDs[record.name] = id }
         for record in records.values.sorted(by: { $0.name < $1.name }) { routines.append(try recordRoutine(record)) }
         let handlers = modules.flatMap(\.definitions).enumerated().filter { $0.element.kind.hasSuffix("andler") }.sorted { $0.element.name == $1.element.name ? $0.offset < $1.offset : $0.element.name < $1.element.name }
         for entry in handlers { routines.append(try routine(entry.element)) }
@@ -177,19 +182,8 @@ final class GesCompiler {
             let bk = order[b.element.definition.kind] ?? 4
             return ak == bk ? a.offset < b.offset : ak < bk
         }.map(\.element)
-        for routine in routines {
-            try checkLimits(routine)
-            optimize(routine)
-            try allocate(routine)
-            try checkLimits(routine)
-        }
-        return try finish()
-    }
-
-    func checkLimits(_ routine: GesRoutine? = nil) throws {
-        if numericLimitExceeded || (routine?.registers ?? 0) >= 65535 || (routine?.code.count ?? 0) >= 65535 {
-            throw error("compile.numericLimitExceeded", routine?.location ?? modules.first?.location ?? .init(sourceName: "UnknownSource"), phase: .compile)
-        }
+        builder.routines = routines
+        return try builder.build(moduleName: moduleName)
     }
 
     func routine(_ definition: GesDefinition) throws -> GesRoutine {
@@ -198,7 +192,7 @@ final class GesCompiler {
         r.emit(.registerLocals)
         for (i, parameter) in definition.parameters.enumerated() {
             scope.values[parameter.name] = i
-            r.symbols.append((parameter.label, i, 0, true))
+            r.symbols.append((definition.argumentName(parameter), i, true))
             if let type = parameter.type { try cast(i, i, type, r) }
         }
         if let value = definition.expression {
@@ -220,12 +214,12 @@ final class GesCompiler {
         r.emit(.registerLocals)
         for (i, p) in params.enumerated() {
             scope.values[p.name] = i
-            r.symbols.append((p.label, i, 0, true))
+            r.symbols.append((p.label, i, true))
         }
         for field in record.fields where field.computed != nil {
             let reg = r.local()
             scope.values[field.name] = reg
-            r.symbols.append((field.name, reg, 0, false))
+            r.symbols.append((field.name, reg, false))
         }
         for field in record.fields {
             r.location = field.location
@@ -235,6 +229,8 @@ final class GesCompiler {
                 if case .assembly(let block) = computed.kind {
                     value = scope.get(field.name)!
                     try assembly(block, r, scope, destination: value)
+                    // The cast after the block maps to the field again, as the C# field range scope resumes.
+                    r.location = field.location
                 } else {
                     value = try expression(computed, r, scope)
                 }
@@ -253,277 +249,45 @@ final class GesCompiler {
         stage(record.fields.map { scope.get($0.name)! }, r)
         let map = r.temporary()
         let result = r.temporary()
-        r.emit(.createMap, map, textList(record.fields.map(\.name)))
-        r.emit(.createRecordValue, result, map, text(record.name))
+        r.emit(.createMap, map, builder.textList(record.fields.map(\.name)))
+        r.emit(.createRecordValue, result, map, builder.text(record.name))
         r.emit(.returnValue, 0, result)
         return r
     }
 
-    func finish() throws -> GameEventScriptProgram {
-        var addresses: [String: Int] = [:]
-        var address = 0
-        for r in routines {
-            addresses[r.key] = address
-            address += r.code.count
-            if r.registers - r.definition.parameters.count > Int(Int16.max) || r.registers >= 65535 { throw error("compile.numericLimitExceeded", r.location, phase: .compile) }
-            r.code[0] = .init(opcode: .registerLocals, word1: UInt16(r.registers - r.definition.parameters.count))
-        }
-        if address >= 65535 || strings.count >= 65535 || lists.count >= 65535 { throw error("compile.numericLimitExceeded", modules.first?.location ?? .init(sourceName: "UnknownSource"), phase: .compile) }
-        var resources: [String: (Int, Int)] = [:]
-        let routinesByName = Dictionary(uniqueKeysWithValues: routines.map { ($0.key, $0) })
-
-        func requirements(_ name: String) throws -> (Int, Int) {
-            if let result = resources[name] { return result }
-            var visiting: Set<String> = []
-            var pending = [(name, false)]
-            while let (key, expanded) = pending.popLast() {
-                if resources[key] != nil { continue }
-                guard let r = routinesByName[key] else { throw error("compile.unresolvedSymbol", routines[0].location, symbol: key, phase: .compile) }
-                if expanded {
-                    var regs = r.registers + r.maxStage
-                    var depth = 0
-                    for target in r.dependencies {
-                        let (childRegs, childDepth) = resources[target]!
-                        regs = max(regs, r.registers + childRegs)
-                        depth = max(depth, childDepth + 1)
-                    }
-                    visiting.remove(key)
-                    resources[key] = (regs, depth)
-                } else {
-                    guard visiting.insert(key).inserted else { throw error("compile.cyclicCallGraph", r.location, symbol: key, phase: .compile) }
-                    pending.append((key, true))
-                    for target in r.dependencies.sorted().reversed() where resources[target] == nil { pending.append((target, false)) }
-                }
-            }
-            return resources[name]!
-        }
-
-        var code: [Instruction] = []
-        var spans: [GameEventScriptSourceMapEntry] = []
-        var symbols: [GameEventScriptDebugSymbol] = []
-        var handlerIDs: [String: Int] = [:]
-        var maxRegs = 0
-        var maxDepth = 0
-        var executable: [GameEventScriptBinding] = []
-        for r in routines {
-            let d = r.definition
-            let offset = code.count
-            let isHandler = d.kind.hasSuffix("andler")
-            for (i, target) in r.calls {
-                guard let address = addresses[target] else { throw error("compile.unresolvedSymbol", r.location, symbol: target, phase: .compile) }
-                r.patch(i, target: address)
-            }
-            for i in r.code.indices {
-                var instruction = r.code[i]
-                if [.jump, .jumpIfTrue, .jumpIfFalse, .jumpIfNotTrue, .jumpIfNothing, .iteratorNext, .iteratorCreateOrJump].contains(instruction.opcode) {
-                    instruction = .init(opcode: instruction.opcode, unitAndFlags: instruction.unitAndFlags, word0: instruction.word0, word1: instruction.word1, word2: UInt16(offset + Int(instruction.word2)), payload: instruction.payload)
-                }
-                code.append(instruction)
-                if options.debugInfo.contains(.sourceMap), let span = sourceSpan(r.locations[i], address: offset + i) {
-                    if let previous = spans.last, previous.codeStart + previous.codeLength == span.codeStart, previous.sourceID == span.sourceID,
-                        previous.sourceStartByteOffset == span.sourceStartByteOffset, previous.sourceByteLength == span.sourceByteLength
-                    {
-                        spans[spans.count - 1] = .init(
-                            codeStart: previous.codeStart,
-                            codeLength: previous.codeLength + span.codeLength,
-                            sourceID: previous.sourceID,
-                            sourceStartByteOffset: previous.sourceStartByteOffset,
-                            sourceByteLength: previous.sourceByteLength
-                        )
-                    } else {
-                        spans.append(span)
-                    }
-                }
-            }
-            let kind: GameEventScriptBinaryBindKind = d.kind == "handler" ? .messageHandler : d.kind == "messageNameHandler" ? .messageNameHandler : d.kind == "function" ? .function : d.kind == "predicate" ? .predicate : .record
-            let id: Int
-            if isHandler {
-                id = handlerIDs[d.name] ?? 0
-                handlerIDs[d.name] = id + 1
-            } else if d.kind == "record" {
-                id = recordIDs[d.name]!
-            } else {
-                id = executable.filter { $0.kind == kind }.count
-            }
-            let (registers, depth) = try requirements(r.key)
-            if registers > 65535 || depth > 65535 { throw error("compile.numericLimitExceeded", d.location, phase: .compile) }
-            if isHandler {
-                maxRegs = max(maxRegs, registers)
-                maxDepth = max(maxDepth, depth)
-            }
-            executable.append(
-                .init(
-                    kind: kind,
-                    name: UInt16(text(d.name)),
-                    argumentNames: d.parameters.map { UInt16(text($0.label)) },
-                    entryAddress: UInt16(offset),
-                    id: UInt16(id),
-                    requiredTags: d.required.map { UInt16(text($0)) },
-                    excludedTags: d.excluded.map { UInt16(text($0)) },
-                    requiredRegisterCount: isHandler ? UInt16(registers) : 0,
-                    requiredCallStackDepth: isHandler ? UInt16(depth) : 0
-                )
-            )
-            if options.debugInfo.contains(.symbols) {
-                for (name, reg, start, parameter) in r.symbols where start < r.code.count {
-                    symbols.append(.init(kind: parameter ? .parameter : .local, registerID: UInt16(reg), name: name, codeStart: UInt32(offset), codeLength: UInt32(r.code.count)))
-                }
-            }
-        }
-        try checkLimits()
-        let materialized = materialize(executable + bindings, code)
-        if moduleName.isEmpty { moduleName = anonymousName(materialized.0, materialized.1, maxRegs, maxDepth) }
-        _ = text(moduleName)
-        try checkLimits()
-        let sourceMap = options.debugInfo.contains(.sourceMap) ? GameEventScriptSourceMap(sources: sourceDescriptors(), entries: spans) : nil
-        return try GameEventScriptCompilerSupport.program(
-            moduleName: moduleName,
-            programVersion: options.programVersion,
-            requiredRegisterCount: UInt16(maxRegs),
-            requiredCallStackDepth: UInt16(maxDepth),
-            strings: strings,
-            indexLists: lists,
-            bindings: materialized.0,
-            code: materialized.1,
-            debugSymbols: options.debugInfo.contains(.symbols) ? symbols : nil,
-            sourceMap: sourceMap,
-            sourceArchive: options.debugInfo.contains(.sourceArchive) ? sources.map { .init(sourceID: $0.id, sourceName: $0.name, utf8Content: Array($0.text.utf8)) } : nil
-        )
-    }
-
-    func sourceDescriptors() -> [GameEventScriptSourceMapSource] {
-        sources.map { source in
-            let bytes = Array(source.text.utf8)
-            var starts: [UInt32] = [0]
-            for i in bytes.indices { if bytes[i] == 10 || bytes[i] == 13 && (i + 1 == bytes.count || bytes[i + 1] != 10) { starts.append(UInt32(i + 1)) } }
-            return .init(sourceID: source.id, sourceName: source.name, sourceByteLength: UInt32(bytes.count), sha256: GameEventScriptCompilerSupport.sha256(bytes), lineStartByteOffsets: starts)
-        }
-    }
-
-    func anonymousName(_ bindings: [GameEventScriptBinding], _ code: [Instruction], _ registers: Int, _ depth: Int) -> String {
-        var hash: UInt32 = 2_166_136_261
-
-        func mix(_ value: UInt64, _ count: Int) { for shift in 0..<count { hash = (hash ^ UInt32(UInt8(truncatingIfNeeded: value >> (shift * 8)))) &* 16_777_619 } }
-
-        mix(1, 2)
-        mix(options.programVersion, 8)
-        mix(UInt64(registers), 2)
-        mix(UInt64(depth), 2)
-        for string in strings {
-            mix(UInt64(string.utf16.count), 4)
-            for c in string.utf16 { mix(UInt64(c), 2) }
-        }
-        for list in lists {
-            mix(UInt64(list.count), 4)
-            for value in list { mix(UInt64(value), 2) }
-        }
-        for b in bindings {
-            mix(UInt64(b.kind.rawValue), 4)
-            mix(UInt64(b.name), 2)
-            mix(UInt64(b.argumentNames.count), 4)
-            for value in b.argumentNames { mix(UInt64(value), 2) }
-            for value in [b.entryAddress, b.id, b.requiredRegisterCount, b.requiredCallStackDepth] { mix(UInt64(value), 2) }
-            for list in [b.requiredTags, b.excludedTags] {
-                mix(UInt64(list.count), 4)
-                for value in list { mix(UInt64(value), 2) }
-            }
-        }
-        for i in code {
-            mix(UInt64(i.opcode.rawValue), 1)
-            mix(UInt64(i.unitAndFlags), 1)
-            for value in [i.word0, i.word1, i.word2] { mix(UInt64(value), 2) }
-            mix(i.payload, 8)
-        }
-        let hex = String(hash, radix: 16)
-        return "anonymous.m" + String(repeating: "0", count: 8 - hex.count) + hex
-    }
-
-    func sourceSpan(_ location: GameEventScriptSourceLocation, address: Int) -> GameEventScriptSourceMapEntry? {
-        guard let id = location.sourceID, Int(id) < sources.count else { return nil }
-
-        func key(_ line: Int?, _ column: Int?) -> UInt64 { UInt64(line ?? 0) << 32 | UInt64(column ?? 0) }
-
-        if sourcePositions[id] == nil {
-            var needed: Set<UInt64> = []
-            for r in routines {
-                for location in r.locations where location.sourceID == id {
-                    needed.insert(key(location.line, location.column))
-                    needed.insert(key(location.endLine, location.endColumn))
-                }
-            }
-            var positions: [UInt64: Int] = [:]
-            var line = 1
-            var column = 1
-            var offset = 0
-            var previousCR = false
-            for c in sources[Int(id)].text.unicodeScalars {
-                let k = key(line, column)
-                if needed.contains(k) { positions[k] = offset }
-                // Scalar UTF8View requires newer Apple deployment targets; the encoded width is platform-independent.
-                offset += c.value < 0x80 ? 1 : c.value < 0x800 ? 2 : c.value < 0x10000 ? 3 : 4
-                if c == "\r" {
-                    line += 1
-                    column = 1
-                    previousCR = true
-                } else if c == "\n" {
-                    if !previousCR { line += 1 }
-                    column = 1
-                    previousCR = false
-                } else {
-                    column += 1
-                    previousCR = false
-                }
-            }
-            positions[key(line, column)] = offset
-            sourcePositions[id] = positions
-        }
-        guard let start = sourcePositions[id]?[key(location.line, location.column)], let end = sourcePositions[id]?[key(location.endLine, location.endColumn)], end >= start else { return nil }
-        return .init(codeStart: UInt32(address), codeLength: 1, sourceID: id, sourceStartByteOffset: UInt32(start), sourceByteLength: UInt32(end - start))
-    }
-
+    // The value of a literal. GesAstOptimizer has already folded every constant expression the C# compiler folds,
+    // so lowering never evaluates other expression forms.
     func scalarConstant(_ expression: GesExpression) -> GesValue? {
-        switch expression.kind {
-        case .literal(let value): return value
-        case .constant(let name): return constants[name].flatMap(scalarConstant)
-        case .cast(let source, "number"), .cast(let source, "numeric"):
-            guard let value = scalarConstant(source) else { return nil }
-            let result = GameEventScriptCompilerSupport.castNumber(value)
-            return result.kind == .float && !result.asNumber.isFinite ? nil : result
-        case .binary(let op, let left, let right):
-            let operations: [String: Op] = ["+": .add, "-": .subtract, "*": .multiply, "/": .divide, "div": .integerDivide, "mod": .modulo, "rem": .remainder, "^": .power]
-            guard let opcode = operations[op], let a = scalarConstant(left), let b = scalarConstant(right), let result = GameEventScriptCompilerSupport.arithmetic(opcode, a, b), result.kind != .float || result.asNumber.isFinite else { return nil }
-            return result
-        case .unary("-", let value):
-            guard let value = scalarConstant(value), value.isNumeric else { return nil }
-            if let integer = value.integerValue, integer != .min { return .integer(-integer, unit: value.unit) }
-            if value.kind == .percentage { return .percentage(-value.asNumber) }
-            return .float(-value.asNumber, unit: value.unit)
-        default: return nil
-        }
+        if case .literal(let value) = expression.kind { return value }
+        return nil
     }
 
     func stageExpressions(_ values: [GesExpression], _ r: GesRoutine, _ scope: GesScope) throws {
-        let plans = try values.map { value -> (GesValue?, Int?) in
-            if let constant = scalarConstant(value) { return (constant, nil) }
-            return (nil, try expression(value, r, scope))
+        let plans = try values.map { value -> (GesValue?, Int?, GesSourceLocation) in
+            if let constant = scalarConstant(value) { return (constant, nil, value.location) }
+            return (nil, try expression(value, r, scope), value.location)
         }
         r.maxStage = max(r.maxStage, plans.count)
-        for (constant, register) in plans {
+        for (constant, register, location) in plans {
             if let register {
                 r.emit(.stageRegister, 0, register)
                 continue
             }
             guard let value = constant else { continue }
+            // A staged constant maps to its own literal, as C# EmitStageConstant scopes its source range.
+            let outer = r.location
+            r.location = location
+            defer { r.location = outer }
             let flag: UInt8 = value.unit == .degree ? 1 : value.unit == .meter ? 2 : value.unit == .second ? 3 : 0
-            switch value.kind {
+            switch value.valueKind {
             case .nothing: r.emit(.stageNothing)
             case .boolean: r.emit(value.asBoolean ? .stageTrue : .stageFalse)
             case .integer: r.emit(.stageInteger, payload: UInt64(bitPattern: value.integerValue!), flags: flag)
             case .float: r.emit(.stageFloat, payload: value.asNumber.bitPattern, flags: flag)
             case .percentage: r.emit(.stagePercentage, payload: value.asNumber.bitPattern)
-            case .text: r.emit(.stageText, 0, text(value.textValue!))
-            case .tag: r.emit(.stageTag, 0, text(value.textValue!))
-            default: throw error("compile.unsupportedConstruct", r.location, phase: .compile)
+            case .text: r.emit(.stageText, 0, builder.text(value.textValue!))
+            case .tag: r.emit(.stageTag, 0, builder.text(value.textValue!))
+            default: throw compileError("compile.unsupportedConstruct", r.location, phase: .compile)
             }
         }
     }
@@ -548,16 +312,16 @@ final class GesCompiler {
         }
         if type.hasPrefix("quantity:") || ["meter", "second", "degree"].contains(type) {
             let unit = type.split(separator: ":").last!
-            guard ["m", "meter", "s", "second", "degree", "°", "none"].contains(String(unit)) else { throw error("compile.unsupportedConstruct", r.location, symbol: type, phase: .compile) }
+            guard ["m", "meter", "s", "second", "degree", "°", "none"].contains(String(unit)) else { throw compileError("compile.unsupportedConstruct", r.location, symbol: type, phase: .compile) }
             let flag: UInt8 = unit == "none" ? 0 : ["m", "meter"].contains(String(unit)) ? 2 : ["s", "second"].contains(String(unit)) ? 3 : 1
             r.emit(check ? .checkUnit : .castUnit, d, value, flags: flag)
             return
         }
-        if let kind = GameEventScriptBytecodeTypeKind.allCases.first(where: { String(describing: $0) == type }) {
+        if let kind = GesBytecodeTypeKind.allCases.first(where: { String(describing: $0) == type }) {
             r.emit(check ? .checkType : .cast, d, value, Int(kind.rawValue))
             return
         }
-        r.emit(check ? .checkCustomType : .castCustom, d, value, text(type))
+        r.emit(check ? .checkCustomType : .castCustom, d, value, builder.text(type))
         if !check, let record = records[type] { r.dependencies.insert(record.name + "(" + record.fields.compactMap(\.label).joined(separator: ",") + ")") }
     }
 }

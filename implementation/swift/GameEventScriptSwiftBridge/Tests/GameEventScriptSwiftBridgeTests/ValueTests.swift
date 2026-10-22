@@ -8,8 +8,8 @@ import XCTest
 final class ValueTests: XCTestCase {
     func testScalarConversionsAndExactIntegerBoundaries() throws {
         for value: Int64 in [.min, .max, 0, 9_007_199_254_740_993] { XCTAssertEqual(try Int64.fromGesValue(value.toGesValue()), value) }
-        XCTAssertEqual(try GameEventScriptSwiftValue.decode(.boolean(true), as: Bool.self), true)
-        XCTAssertEqual(try GameEventScriptSwiftValue.encode("e\u{301}"), .text("e\u{301}"))
+        XCTAssertEqual(try GesBridgeValueConversion.decode(.boolean(true), as: Bool.self), true)
+        XCTAssertEqual(try GesBridgeValueConversion.encode("e\u{301}"), .text("e\u{301}"))
         XCTAssertEqual(try UInt64.fromGesValue(.integer(.max)), UInt64(Int64.max))
         XCTAssertThrowsError(try UInt64.max.toGesValue())
         XCTAssertThrowsError(try UInt64.fromGesValue(.float(9_223_372_036_854_775_808)))
@@ -36,16 +36,16 @@ final class ValueTests: XCTestCase {
         XCTAssertThrowsError(try Bool.fromGesValue(.text("true")))
         XCTAssertThrowsError(try Double.fromGesValue(.percentage(0.1)))
         XCTAssertThrowsError(try Int.fromGesValue(.integer(3, unit: .meter)))
-        for value in [GesValue.percentage(0.1), .integer(3, unit: .meter), .dice([2, 5]), .nothing] { XCTAssertEqual(try GameEventScriptSwiftValue.decode(value, as: GesValue.self), value) }
+        for value in [GesValue.percentage(0.1), .integer(3, unit: .meter), .dice([2, 5]), .nothing] { XCTAssertEqual(try GesBridgeValueConversion.decode(value, as: GesValue.self), value) }
     }
 
     func testNestedCollectionsAndOptionalValuesAreSnapshots() throws {
         var values: [String: [Int?]] = ["z": [1, nil], "a": [2]]
         let encoded = try values.toGesValue()
         values["z"] = [8]
-        XCTAssertEqual(encoded.mapEntries?.map(\.key), ["a", "z"])
+        XCTAssertEqual(encoded.asMap.map { map in (0..<map.length).map { map.key(at: $0) } }, ["a", "z"])
         XCTAssertEqual(try [String: [Int?]].fromGesValue(encoded), ["z": [1, nil], "a": [2]])
-        let optionalMap = try [String: Int?].fromGesValue(.map([.init(key: "x", value: .nothing)]))
+        let optionalMap = try [String: Int?].fromGesValue(.map(keys: ["x"], values: [.nothing]))
         XCTAssertEqual(optionalMap.count, 1)
         XCTAssertNotNil(optionalMap.index(forKey: "x"))
         XCTAssertNil(try Int?.fromGesValue(.nothing))
@@ -53,9 +53,9 @@ final class ValueTests: XCTestCase {
     }
 
     func testDictionaryDecodeRejectsCanonicalEquivalenceCollisions() throws {
-        let value = GesValue.map([.init(key: "é", value: .integer(1)), .init(key: "e\u{301}", value: .integer(2))])
+        let value = GesValue.map(keys: ["é", "e\u{301}"], values: [.integer(1), .integer(2)])
         XCTAssertEqual(value.length, 2)
-        XCTAssertThrowsError(try [String: Int].fromGesValue(value)) { guard case GameEventScriptSwiftConversionError.dictionaryKeyCollision = $0 else { return XCTFail("\($0)") } }
-        XCTAssertThrowsError(try [String: Int].fromGesValue(.record(typeName: "Thing", entries: [])))
+        XCTAssertThrowsError(try [String: Int].fromGesValue(value)) { guard case GesBridgeConversionError.dictionaryKeyCollision = $0 else { return XCTFail("\($0)") } }
+        XCTAssertThrowsError(try [String: Int].fromGesValue(.record(typeName: "Thing", keys: [], values: [])))
     }
 }

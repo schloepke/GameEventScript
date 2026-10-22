@@ -161,15 +161,31 @@ here.
   Bridge where possible) build for WASI, with a CI gate that builds them and
   rejects new Foundation imports in the portable modules. Runtime and Compiler
   no longer import Foundation.
-- Detach the Swift SyntaxHighlighter from Foundation so WASM consumers such as
-  the card game stop shipping it (the card-game module is about 67 MB, mostly
-  unused Foundation). Replace `NSRegularExpression` with the standard library
-  `Regex` (or a small matcher for the constructs the GES/GESA grammars use),
-  `NSString`/`NSRange` with `String.utf16` positions, and runtime
-  `JSONSerialization` with grammar tables generated as Swift literals by
-  `scripts/sync-highlighter-grammars.py`. Verify against
-  `conformance/highlighting`, keep the C# highlighter equivalent, and compare
-  highlighting performance and module size before and after.
+- Replace the regex-based syntax highlighters with highlighting derived from the
+  compiler's own lexer and parser, in both ports. This drops the Swift
+  highlighter's Foundation dependency (`NSRegularExpression`, `NSString`,
+  `JSONSerialization`), so WASM consumers such as the card game (about 67 MB,
+  mostly unused Foundation) stop shipping it, and a single linear lex/parse pass
+  should outperform repeated pattern matching.
+  - A lossless lexer keeps whitespace, line breaks and comments as trivia on the
+    tokens, so every source character maps to a highlighted span and the source
+    can be reconstructed exactly.
+  - Classification comes from the parsed tree (records, functions, predicates,
+    parameters, messages, …); syntax errors from parser recovery and, where
+    useful, validation diagnostics become error spans.
+  - Open decisions: integrate the highlighter into the Compiler, or turn the
+    SyntaxHighlighter module into a Syntax module (lexer, parser, AST,
+    validator, diagnostics, highlighter) that the Compiler depends on; how much
+    of the tree becomes public API (initially only parse results, diagnostics
+    and highlighting, node details via `InternalsVisibleTo`/`@_spi`); how
+    incremental re-highlighting works; and how GESA assembler text is
+    highlighted.
+  - Rework `specs/SyntaxHighlighting.md` and `conformance/highlighting` from
+    TextMate line states to tree-derived tokens, keep both ports equivalent, and
+    adjust package names, distribution allowlists and documentation if the
+    module changes. The TextMate grammars remain for external editors only.
+  - Compare highlighting performance and the card-game module size before and
+    after.
 - Reduce library and binary size without noticeable performance loss now that
   the C#/Swift port convergence is complete. Its first phase grew the
   release Swift `ges` binary by about 175 KB (3.35 → 3.52 MB, `__TEXT` +16 KB)

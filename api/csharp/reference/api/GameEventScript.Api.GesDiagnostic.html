@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Class GesDiagnostic | Game Event Script C# API — Unreleased (85238ca5672b) </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Class GesDiagnostic | Game Event Script C# API — Unreleased (85238ca5672b) ">
+      
+      <meta name="description" content="Represents a game event script diagnostic.">
+      <link rel="icon" href="../assets/logo.svg">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="../toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="ManagedReference">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../assets/logo.svg" alt="Game Event Script">
+            Game Event Script
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="GameEventScript.Api.GesDiagnostic">
+
+
+
+  <h1 id="GameEventScript_Api_GesDiagnostic" data-uid="GameEventScript.Api.GesDiagnostic" class="text-break">
+Class GesDiagnostic  
+  </h1>
+
+  <div class="facts text-secondary">
+    <dl><dt>Namespace</dt><dd><a class="xref" href="GameEventScript.html">GameEventScript</a>.<a class="xref" href="GameEventScript.Api.html">Api</a></dd></dl>
+  <dl><dt>Assembly</dt><dd>GameEventScript.Runtime.dll</dd></dl>
+  </div>
+
+  <div class="markdown summary"><p>Represents a game event script diagnostic.</p>
+</div>
+  <div class="markdown conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public sealed record GesDiagnostic : IEquatable&lt;GesDiagnostic&gt;</code></pre>
+  </div>
+
+
+
+
+  <dl class="typelist inheritance">
+    <dt>Inheritance</dt>
+    <dd>
+      <div><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object">object</a></div>
+      <div><span class="xref">GesDiagnostic</span></div>
+    </dd>
+  </dl>
+
+  <dl class="typelist implements">
+    <dt>Implements</dt>
+    <dd>
+      <div><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.iequatable-1">IEquatable</a>&lt;<a class="xref" href="GameEventScript.Api.GesDiagnostic.html">GesDiagnostic</a>&gt;</div>
+    </dd>
+  </dl>
+
+
+  <dl class="typelist inheritedMembers">
+    <dt>Inherited Members</dt>
+    <dd>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.gettype">object.GetType()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object-system-object)">object.Equals(object, object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.referenceequals">object.ReferenceEquals(object, object)</a>
+    </div>
+  </dd></dl>
+
+
+
+
+
+
+  <h2 class="section" id="constructors">Constructors
+</h2>
+
+
+  <a id="GameEventScript_Api_GesDiagnostic__ctor_" data-uid="GameEventScript.Api.GesDiagnostic.#ctor*"></a>
+
+  <h3 id="GameEventScript_Api_GesDiagnostic__ctor_GameEventScript_Api_GesDiagnosticPhase_System_String_System_String_System_String_GameEventScript_Api_GesDiagnosticSymbolKind_GameEventScript_Api_GesSourceLocation_System_String_System_String_System_String_" data-uid="GameEventScript.Api.GesDiagnostic.#ctor(GameEventScript.Api.GesDiagnosticPhase,System.String,System.String,System.String,GameEventScript.Api.GesDiagnosticSymbolKind,GameEventScript.Api.GesSourceLocation,System.String,System.String,System.String)">
+  GesDiagnostic(GesDiagnosticPhase, string, string, string?, GesDiagnosticSymbolKind, GesSourceLocation?, string?, string?, string?)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Represents a game event script diagnostic.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public GesDiagnostic(GesDiagnosticPhase Phase, string Code, string Message, string? Symbol = null, GesDiagnosticSymbolKind SymbolKind = GesDiagnosticSymbolKind.Unknown, GesSourceLocation? SourceLocation = null, string? ProgramName = null, string? HandlerName = null, string? TechnicalDetails = null)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>Phase</code> <a class="xref" href="GameEventScript.Api.GesDiagnosticPhase.html">GesDiagnosticPhase</a></dt>
+    <dd><p>The phase value.</p>
+</dd>
+    <dt><code>Code</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
+    <dd><p>The code value.</p>
+</dd>
+    <dt><code>Message</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
+    <dd><p>The message value.</p>
+</dd>
+    <dt><code>Symbol</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
+    <dd><p>The symbol value.</p>
+</dd>
+    <dt><code>SymbolKind</code> <a class="xref" href="GameEventScript.Api.GesDiagnosticSymbolKind.html">GesDiagnosticSymbolKind</a></dt>
+    <dd><p>The symbol kind value.</p>
+</dd>
+    <dt><code>SourceLocation</code> <a class="xref" href="GameEventScript.Api.GesSourceLocation.html">GesSourceLocation</a></dt>
+    <dd><p>The source location value.</p>
+</dd>
+    <dt><code>ProgramName</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
+    <dd><p>The program name value.</p>
+</dd>
+    <dt><code>HandlerName</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
+    <dd><p>The handler name value.</p>
+</dd>
+    <dt><code>TechnicalDetails</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
+    <dd><p>The technical details value.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <h2 class="section" id="properties">Properties
+</h2>
+
+
+  <a id="GameEventScript_Api_GesDiagnostic_Code_" data-uid="GameEventScript.Api.GesDiagnostic.Code*"></a>
+
+  <h3 id="GameEventScript_Api_GesDiagnostic_Code" data-uid="GameEventScript.Api.GesDiagnostic.Code">
+  Code
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>The code value.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public string Code { get; init; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GesDiagnostic_HandlerName_" data-uid="GameEventScript.Api.GesDiagnostic.HandlerName*"></a>
+
+  <h3 id="GameEventScript_Api_GesDiagnostic_HandlerName" data-uid="GameEventScript.Api.GesDiagnostic.HandlerName">
+  HandlerName
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>The handler name value.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public string? HandlerName { get; init; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GesDiagnostic_Message_" data-uid="GameEventScript.Api.GesDiagnostic.Message*"></a>
+
+  <h3 id="GameEventScript_Api_GesDiagnostic_Message" data-uid="GameEventScript.Api.GesDiagnostic.Message">
+  Message
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>The message value.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public string Message { get; init; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GesDiagnostic_Phase_" data-uid="GameEventScript.Api.GesDiagnostic.Phase*"></a>
+
+  <h3 id="GameEventScript_Api_GesDiagnostic_Phase" data-uid="GameEventScript.Api.GesDiagnostic.Phase">
+  Phase
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>The phase value.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public GesDiagnosticPhase Phase { get; init; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Api.GesDiagnosticPhase.html">GesDiagnosticPhase</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GesDiagnostic_ProgramName_" data-uid="GameEventScript.Api.GesDiagnostic.ProgramName*"></a>
+
+  <h3 id="GameEventScript_Api_GesDiagnostic_ProgramName" data-uid="GameEventScript.Api.GesDiagnostic.ProgramName">
+  ProgramName
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>The program name value.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public string? ProgramName { get; init; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GesDiagnostic_SourceLocation_" data-uid="GameEventScript.Api.GesDiagnostic.SourceLocation*"></a>
+
+  <h3 id="GameEventScript_Api_GesDiagnostic_SourceLocation" data-uid="GameEventScript.Api.GesDiagnostic.SourceLocation">
+  SourceLocation
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>The source location value.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public GesSourceLocation? SourceLocation { get; init; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Api.GesSourceLocation.html">GesSourceLocation</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GesDiagnostic_Symbol_" data-uid="GameEventScript.Api.GesDiagnostic.Symbol*"></a>
+
+  <h3 id="GameEventScript_Api_GesDiagnostic_Symbol" data-uid="GameEventScript.Api.GesDiagnostic.Symbol">
+  Symbol
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>The symbol value.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public string? Symbol { get; init; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GesDiagnostic_SymbolKind_" data-uid="GameEventScript.Api.GesDiagnostic.SymbolKind*"></a>
+
+  <h3 id="GameEventScript_Api_GesDiagnostic_SymbolKind" data-uid="GameEventScript.Api.GesDiagnostic.SymbolKind">
+  SymbolKind
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>The symbol kind value.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public GesDiagnosticSymbolKind SymbolKind { get; init; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Api.GesDiagnosticSymbolKind.html">GesDiagnosticSymbolKind</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GesDiagnostic_TechnicalDetails_" data-uid="GameEventScript.Api.GesDiagnostic.TechnicalDetails*"></a>
+
+  <h3 id="GameEventScript_Api_GesDiagnostic_TechnicalDetails" data-uid="GameEventScript.Api.GesDiagnostic.TechnicalDetails">
+  TechnicalDetails
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>The technical details value.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public string? TechnicalDetails { get; init; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <h2 class="section" id="methods">Methods
+</h2>
+
+
+  <a id="GameEventScript_Api_GesDiagnostic_Deconstruct_" data-uid="GameEventScript.Api.GesDiagnostic.Deconstruct*"></a>
+
+  <h3 id="GameEventScript_Api_GesDiagnostic_Deconstruct_GameEventScript_Api_GesDiagnosticPhase__System_String__System_String__System_String__GameEventScript_Api_GesDiagnosticSymbolKind__GameEventScript_Api_GesSourceLocation__System_String__System_String__System_String__" data-uid="GameEventScript.Api.GesDiagnostic.Deconstruct(GameEventScript.Api.GesDiagnosticPhase@,System.String@,System.String@,System.String@,GameEventScript.Api.GesDiagnosticSymbolKind@,GameEventScript.Api.GesSourceLocation@,System.String@,System.String@,System.String@)">
+  Deconstruct(out GesDiagnosticPhase, out string, out string, out string?, out GesDiagnosticSymbolKind, out GesSourceLocation?, out string?, out string?, out string?)
+  
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void Deconstruct(out GesDiagnosticPhase Phase, out string Code, out string Message, out string? Symbol, out GesDiagnosticSymbolKind SymbolKind, out GesSourceLocation? SourceLocation, out string? ProgramName, out string? HandlerName, out string? TechnicalDetails)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>Phase</code> <a class="xref" href="GameEventScript.Api.GesDiagnosticPhase.html">GesDiagnosticPhase</a></dt>
+    <dd></dd>
+    <dt><code>Code</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
+    <dd></dd>
+    <dt><code>Message</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
+    <dd></dd>
+    <dt><code>Symbol</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
+    <dd></dd>
+    <dt><code>SymbolKind</code> <a class="xref" href="GameEventScript.Api.GesDiagnosticSymbolKind.html">GesDiagnosticSymbolKind</a></dt>
+    <dd></dd>
+    <dt><code>SourceLocation</code> <a class="xref" href="GameEventScript.Api.GesSourceLocation.html">GesSourceLocation</a></dt>
+    <dd></dd>
+    <dt><code>ProgramName</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
+    <dd></dd>
+    <dt><code>HandlerName</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
+    <dd></dd>
+    <dt><code>TechnicalDetails</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GesDiagnostic_Equals_" data-uid="GameEventScript.Api.GesDiagnostic.Equals*"></a>
+
+  <h3 id="GameEventScript_Api_GesDiagnostic_Equals_GameEventScript_Api_GesDiagnostic_" data-uid="GameEventScript.Api.GesDiagnostic.Equals(GameEventScript.Api.GesDiagnostic)">
+  Equals(GesDiagnostic?)
+  
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public bool Equals(GesDiagnostic? other)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>other</code> <a class="xref" href="GameEventScript.Api.GesDiagnostic.html">GesDiagnostic</a></dt>
+    <dd></dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GesDiagnostic_Equals_" data-uid="GameEventScript.Api.GesDiagnostic.Equals*"></a>
+
+  <h3 id="GameEventScript_Api_GesDiagnostic_Equals_System_Object_" data-uid="GameEventScript.Api.GesDiagnostic.Equals(System.Object)">
+  Equals(object?)
+  
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public override bool Equals(object? obj)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>obj</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object">object</a></dt>
+    <dd></dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GesDiagnostic_GetHashCode_" data-uid="GameEventScript.Api.GesDiagnostic.GetHashCode*"></a>
+
+  <h3 id="GameEventScript_Api_GesDiagnostic_GetHashCode" data-uid="GameEventScript.Api.GesDiagnostic.GetHashCode">
+  GetHashCode()
+  
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public override int GetHashCode()</code></pre>
+  </div>
+
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GesDiagnostic_ToString_" data-uid="GameEventScript.Api.GesDiagnostic.ToString*"></a>
+
+  <h3 id="GameEventScript_Api_GesDiagnostic_ToString" data-uid="GameEventScript.Api.GesDiagnostic.ToString">
+  ToString()
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Returns the to string result for this value.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public override string ToString()</code></pre>
+  </div>
+
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
+    <dd><p>The result of the operation.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <h2 class="section" id="operators">Operators
+</h2>
+
+
+  <a id="GameEventScript_Api_GesDiagnostic_op_Equality_" data-uid="GameEventScript.Api.GesDiagnostic.op_Equality*"></a>
+
+  <h3 id="GameEventScript_Api_GesDiagnostic_op_Equality_GameEventScript_Api_GesDiagnostic_GameEventScript_Api_GesDiagnostic_" data-uid="GameEventScript.Api.GesDiagnostic.op_Equality(GameEventScript.Api.GesDiagnostic,GameEventScript.Api.GesDiagnostic)">
+  operator ==(GesDiagnostic?, GesDiagnostic?)
+  
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static bool operator ==(GesDiagnostic? left, GesDiagnostic? right)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>left</code> <a class="xref" href="GameEventScript.Api.GesDiagnostic.html">GesDiagnostic</a></dt>
+    <dd></dd>
+    <dt><code>right</code> <a class="xref" href="GameEventScript.Api.GesDiagnostic.html">GesDiagnostic</a></dt>
+    <dd></dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GesDiagnostic_op_Inequality_" data-uid="GameEventScript.Api.GesDiagnostic.op_Inequality*"></a>
+
+  <h3 id="GameEventScript_Api_GesDiagnostic_op_Inequality_GameEventScript_Api_GesDiagnostic_GameEventScript_Api_GesDiagnostic_" data-uid="GameEventScript.Api.GesDiagnostic.op_Inequality(GameEventScript.Api.GesDiagnostic,GameEventScript.Api.GesDiagnostic)">
+  operator !=(GesDiagnostic?, GesDiagnostic?)
+  
+  </h3>
+
+  <div class="markdown level1 summary"></div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static bool operator !=(GesDiagnostic? left, GesDiagnostic? right)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>left</code> <a class="xref" href="GameEventScript.Api.GesDiagnostic.html">GesDiagnostic</a></dt>
+    <dd></dd>
+    <dt><code>right</code> <a class="xref" href="GameEventScript.Api.GesDiagnostic.html">GesDiagnostic</a></dt>
+    <dd></dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+</article>
+
+
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          Game Event Script C# API — Unreleased (85238ca5672b)
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

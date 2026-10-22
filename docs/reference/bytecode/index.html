@@ -92,7 +92,7 @@ and predicate calls use public callable entry addresses in VM-owned frames.
 Helper expressions run through linear entry addresses and isolate their
 temporary registers from handler locals with temporary frame extensions. Predicate
 calls use <code>Call</code> or <code>CallExternal</code> with
-<code>GameEventScriptInstructionFlag.NormalizeResultAsPredicate</code> set in
+the NormalizeResultAsPredicate flag (bit <code>0x20</code>) set in
 <code>UnitAndFlags</code>. Local calls use direct <code>Call</code> instructions with target entry
 addresses and contiguous staged argument sequences. Extension calls use direct
 <code>CallExternal</code> instructions with argument register lists.
@@ -560,7 +560,7 @@ for <code>pc</code>-based execution.</p>
 <li><code>CheckInteger dst src</code></li>
 <li><code>CheckFractional dst src</code></li>
 </ul>
-<p><code>Cast</code> and <code>CheckType</code> use <code>TypeOperand</code> as <code>GameEventScriptBytecodeTypeKind</code>.
+<p><code>Cast</code> and <code>CheckType</code> use <code>TypeOperand</code> as <code>GesBytecodeTypeKind</code>.
 Built-in types are direct kind operands. Custom/external record types use
 <code>CastCustom</code>/<code>CheckCustomType</code> with <code>TypeOperand</code> as the type-name <code>StringPool</code> index.
 Units are not declared type kinds: unit casts and checks use
@@ -1169,7 +1169,7 @@ earlier source item. Empty finite iterators and series sources return <code>noth
 collection semantics: map, distinct, group/order/sort/reverse, weighted
 choose/shuffle, dice/card patterns, object matches, and series term/take/drop
 operations. Pattern operations use <code>HasPattern</code> or <code>TakePattern</code> with <code>AU</code>
-holding a <code>GameEventScriptBytecodePatternKind</code> value. <code>CountAny</code> and
+holding a <code>GesBytecodePatternKind</code> value. <code>CountAny</code> and
 <code>CountFace</code> use <code>ImmediateY</code> as the required count; <code>CountFace</code> additionally
 uses <code>BU</code> as the already-evaluated face register. These opcodes reference only
 source or iterator registers, immediate counts, pattern ids, face registers, and

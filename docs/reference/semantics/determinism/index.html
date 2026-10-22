@@ -126,7 +126,7 @@ retain the compiled artifact as well as its reproduction inputs; source and seed
 alone do not identify the execution. No compatibility guarantee spans a major
 version change or the unsupported pre-1.0 binaries described in Binary format.</p>
 <h2 id="seeded-random-generator">Seeded random generator</h2>
-<p><code>GameEventScriptRandomGenerator.FromSeed(Int64)</code> is a portable seeded stream.
+<p><code>GesRandomGenerator.FromSeed(Int64)</code> is a portable seeded stream.
 The signed seed is reinterpreted as its two’s-complement <code>UInt64</code> bit pattern.
 All operations in this section use wrapping unsigned 64-bit arithmetic.</p>
 <p>The four-word xoshiro state is initialized by four consecutive SplitMix64

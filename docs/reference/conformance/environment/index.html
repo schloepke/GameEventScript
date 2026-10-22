@@ -177,7 +177,7 @@ the original diagnostic and restores the parent random stream.</p>
 <p>The runtime constructor retains the four converted arguments and sets
 <code>checksum</code> to the Binary64 representation of the Int64 truncation of
 <code>bearing + range + steps</code>. Field lookup by any other name returns no value.
-The runtime value exposes only <code>IGameEventScriptExternalValue</code>; the portable
+The runtime value exposes only <code>IGesExternalValue</code>; the portable
 case must not depend on a language-specific backing object.</p>
 <h2 id="external-type-callbackprobe">External type <code>CallbackProbe</code></h2>
 <p>The fixed V1 external-type catalog also declares
@@ -248,7 +248,7 @@ for the portable diagnostic contract.</p>
 or <code>context</code> values make construction return <code>nothing</code>; unknown field names return
 no value. Exception types and technical details are platform-specific and must
 not decide these cases. Each port implements its own failure transport; C# uses
-<code>GameEventScriptExtensionFaultException</code> or the trusted fatal-runtime base when
+<code>GesExtensionFaultException</code> or the trusted fatal-runtime base when
 supplying explicit context. No Reflection or host-bound CLR object is required.</p>
 <h2 id="external-type-spatialprobe">External type <code>SpatialProbe</code></h2>
 <p>The fixed catalog declares <code>SpatialProbe(vector: Vector, point: Point)</code> with

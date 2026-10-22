@@ -487,6 +487,12 @@ non-integer <code>power</code> use the target platform’s IEEE binary64 math li
 the DSL’s unit, domain, absence, and special-value checks. Exact bit identity
 between different correctly rounded or near-correctly-rounded math libraries is
 not required.</p>
+<p>Constant folding never evaluates these approximations. It folds their exact
+operand subterms, and a power only when base and exponent are integers, the
+exponent is not negative and the exact result does not exceed <code>2^53</code> in
+magnitude. Every other approximation runs on the target platform, so a constant
+expression and the same computation from a runtime value yield one value within
+an execution, including for <code>&lt;</code>, ordering and text conversion.</p>
 <p>Conformance expectations therefore compare finite binary64 results by ULP distance.
 The default is 4096 ULPs, allowing bounded cross-library differences. A test or individual step
 can set <code>maxFloatUlps</code>; <code>0</code> requires bit-exact finite results. NaN/nothing,

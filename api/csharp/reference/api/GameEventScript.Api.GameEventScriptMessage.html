@@ -2,9 +2,9 @@
 <html>
   <head>
     <meta charset="utf-8">
-      <title>Class GameEventScriptMessage | Game Event Script C# API — Unreleased (13510f0d601c) </title>
+      <title>Class GameEventScriptMessage | Game Event Script C# API — Unreleased (85238ca5672b) </title>
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <meta name="title" content="Class GameEventScriptMessage | Game Event Script C# API — Unreleased (13510f0d601c) ">
+      <meta name="title" content="Class GameEventScriptMessage | Game Event Script C# API — Unreleased (85238ca5672b) ">
       
       <meta name="description" content="Represents a message used within the Game Event Script system. This message serves as a fundamental unit for communication, allowing for event-driven execution between components, scripts, and handlers.">
       <link rel="icon" href="../assets/logo.svg">
@@ -155,7 +155,7 @@ information required to process the message during event-driven execution.</p>
   <div class="markdown level1 conceptual"></div>
 
   <div class="codewrapper">
-    <pre><code class="lang-csharp hljs">public GameEventScriptMessageArguments Arguments { get; }</code></pre>
+    <pre><code class="lang-csharp hljs">public GesMessageArguments Arguments { get; }</code></pre>
   </div>
 
 
@@ -164,7 +164,7 @@ information required to process the message during event-driven execution.</p>
 
   <h4 class="section">Property Value</h4>
   <dl class="parameters">
-    <dt><a class="xref" href="GameEventScript.Api.GameEventScriptMessageArguments.html">GameEventScriptMessageArguments</a></dt>
+    <dt><a class="xref" href="GameEventScript.Api.GesMessageArguments.html">GesMessageArguments</a></dt>
     <dd></dd>
   </dl>
 
@@ -324,8 +324,8 @@ allowing for precise matching and routing within the game event script system.</
 
   <a id="GameEventScript_Api_GameEventScriptMessage_Create_" data-uid="GameEventScript.Api.GameEventScriptMessage.Create*"></a>
 
-  <h3 id="GameEventScript_Api_GameEventScriptMessage_Create_System_String_System_Collections_Generic_IReadOnlyList_GameEventScript_Api_GameEventScriptMessageArgument__" data-uid="GameEventScript.Api.GameEventScriptMessage.Create(System.String,System.Collections.Generic.IReadOnlyList{GameEventScript.Api.GameEventScriptMessageArgument})">
-  Create(string, IReadOnlyList&lt;GameEventScriptMessageArgument&gt;?)
+  <h3 id="GameEventScript_Api_GameEventScriptMessage_Create_System_String_System_Collections_Generic_IReadOnlyList_GameEventScript_Api_GesMessageArgument__" data-uid="GameEventScript.Api.GameEventScriptMessage.Create(System.String,System.Collections.Generic.IReadOnlyList{GameEventScript.Api.GesMessageArgument})">
+  Create(string, IReadOnlyList&lt;GesMessageArgument&gt;?)
   
   </h3>
 
@@ -336,7 +336,7 @@ arguments, allowing events to be parameterized and passed within the Game Event 
   <div class="markdown level1 conceptual"></div>
 
   <div class="codewrapper">
-    <pre><code class="lang-csharp hljs">public static GameEventScriptMessage Create(string name, IReadOnlyList&lt;GameEventScriptMessageArgument&gt;? arguments)</code></pre>
+    <pre><code class="lang-csharp hljs">public static GameEventScriptMessage Create(string name, IReadOnlyList&lt;GesMessageArgument&gt;? arguments)</code></pre>
   </div>
 
   <h4 class="section">Parameters</h4>
@@ -344,7 +344,7 @@ arguments, allowing events to be parameterized and passed within the Game Event 
     <dt><code>name</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
     <dd><p>The name of the message. This is used to identify the message within the system.</p>
 </dd>
-    <dt><code>arguments</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.collections.generic.ireadonlylist-1">IReadOnlyList</a>&lt;<a class="xref" href="GameEventScript.Api.GameEventScriptMessageArgument.html">GameEventScriptMessageArgument</a>&gt;</dt>
+    <dt><code>arguments</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.collections.generic.ireadonlylist-1">IReadOnlyList</a>&lt;<a class="xref" href="GameEventScript.Api.GesMessageArgument.html">GesMessageArgument</a>&gt;</dt>
     <dd><p>The ordered argument pairs. Their order is part of the message signature.</p>
 </dd>
   </dl>
@@ -368,8 +368,8 @@ arguments, allowing events to be parameterized and passed within the Game Event 
 
   <a id="GameEventScript_Api_GameEventScriptMessage_Create_" data-uid="GameEventScript.Api.GameEventScriptMessage.Create*"></a>
 
-  <h3 id="GameEventScript_Api_GameEventScriptMessage_Create_System_String_System_Collections_Generic_IReadOnlyList_GameEventScript_Api_GameEventScriptMessageArgument__System_Collections_Generic_IEnumerable_System_String__" data-uid="GameEventScript.Api.GameEventScriptMessage.Create(System.String,System.Collections.Generic.IReadOnlyList{GameEventScript.Api.GameEventScriptMessageArgument},System.Collections.Generic.IEnumerable{System.String})">
-  Create(string, IReadOnlyList&lt;GameEventScriptMessageArgument&gt;?, IEnumerable&lt;string&gt;?)
+  <h3 id="GameEventScript_Api_GameEventScriptMessage_Create_System_String_System_Collections_Generic_IReadOnlyList_GameEventScript_Api_GesMessageArgument__System_Collections_Generic_IEnumerable_System_String__" data-uid="GameEventScript.Api.GameEventScriptMessage.Create(System.String,System.Collections.Generic.IReadOnlyList{GameEventScript.Api.GesMessageArgument},System.Collections.Generic.IEnumerable{System.String})">
+  Create(string, IReadOnlyList&lt;GesMessageArgument&gt;?, IEnumerable&lt;string&gt;?)
   
   </h3>
 
@@ -378,7 +378,7 @@ arguments, allowing events to be parameterized and passed within the Game Event 
   <div class="markdown level1 conceptual"></div>
 
   <div class="codewrapper">
-    <pre><code class="lang-csharp hljs">public static GameEventScriptMessage Create(string name, IReadOnlyList&lt;GameEventScriptMessageArgument&gt;? arguments, IEnumerable&lt;string&gt;? tags)</code></pre>
+    <pre><code class="lang-csharp hljs">public static GameEventScriptMessage Create(string name, IReadOnlyList&lt;GesMessageArgument&gt;? arguments, IEnumerable&lt;string&gt;? tags)</code></pre>
   </div>
 
   <h4 class="section">Parameters</h4>
@@ -386,7 +386,7 @@ arguments, allowing events to be parameterized and passed within the Game Event 
     <dt><code>name</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
     <dd><p>The message name.</p>
 </dd>
-    <dt><code>arguments</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.collections.generic.ireadonlylist-1">IReadOnlyList</a>&lt;<a class="xref" href="GameEventScript.Api.GameEventScriptMessageArgument.html">GameEventScriptMessageArgument</a>&gt;</dt>
+    <dt><code>arguments</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.collections.generic.ireadonlylist-1">IReadOnlyList</a>&lt;<a class="xref" href="GameEventScript.Api.GesMessageArgument.html">GesMessageArgument</a>&gt;</dt>
     <dd><p>The ordered message arguments.</p>
 </dd>
     <dt><code>tags</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.collections.generic.ienumerable-1">IEnumerable</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a>&gt;</dt>
@@ -483,6 +483,51 @@ arguments, allowing events to be parameterized and passed within the Game Event 
 
 
 
+  <a id="GameEventScript_Api_GameEventScriptMessage_FromJson_" data-uid="GameEventScript.Api.GameEventScriptMessage.FromJson*"></a>
+
+  <h3 id="GameEventScript_Api_GameEventScriptMessage_FromJson_System_String_" data-uid="GameEventScript.Api.GameEventScriptMessage.FromJson(System.String)">
+  FromJson(string)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Reads a complete V1 message envelope without invoking constructors or host callbacks.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static GameEventScriptMessage FromJson(string json)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>json</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
+    <dd><p>The complete JSON document.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Api.GameEventScriptMessage.html">GameEventScriptMessage</a></dt>
+    <dd><p>The reconstructed immutable message.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <h4 class="section">Exceptions</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Api.GesMessageFormatException.html">GesMessageFormatException</a></dt>
+    <dd><p>The envelope is invalid, unsupported or over-limit.</p>
+</dd>
+  </dl>
+
+
+
   <a id="GameEventScript_Api_GameEventScriptMessage_GetHashCode_" data-uid="GameEventScript.Api.GameEventScriptMessage.GetHashCode*"></a>
 
   <h3 id="GameEventScript_Api_GameEventScriptMessage_GetHashCode" data-uid="GameEventScript.Api.GameEventScriptMessage.GetHashCode">
@@ -550,6 +595,45 @@ arguments, allowing events to be parameterized and passed within the Game Event 
 
 
 
+
+
+
+  <a id="GameEventScript_Api_GameEventScriptMessage_ToJson_" data-uid="GameEventScript.Api.GameEventScriptMessage.ToJson*"></a>
+
+  <h3 id="GameEventScript_Api_GameEventScriptMessage_ToJson" data-uid="GameEventScript.Api.GameEventScriptMessage.ToJson">
+  ToJson()
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Serializes this message and its complete portable data graph as a canonical V1 JSON envelope.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public string ToJson()</code></pre>
+  </div>
+
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
+    <dd><p>The canonical V1 JSON envelope.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <h4 class="section">Exceptions</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Api.GesMessageFormatException.html">GesMessageFormatException</a></dt>
+    <dd><p>The graph is unsupported or exceeds limits.</p>
+</dd>
+  </dl>
 
 
 
@@ -682,7 +766,7 @@ This representation includes the message name and, if present, its associated ar
     <footer class="border-top text-secondary">
       <div class="container-xxl">
         <div class="flex-fill">
-          Game Event Script C# API — Unreleased (13510f0d601c)
+          Game Event Script C# API — Unreleased (85238ca5672b)
         </div>
       </div>
     </footer>

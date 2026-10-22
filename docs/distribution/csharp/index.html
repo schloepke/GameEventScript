@@ -96,7 +96,7 @@ TextMate scopes, incremental states and ANSI rendering, with no GES dependency.<
 tools (since 0.3.0) are separate from these library packages; see <a href="/docs/tools/downloads/">CLI installation</a>.</p>
 <p>For precompiled <code>.gesb</code> execution, reference Runtime and optionally CSharpBridge.
 Source compilation additionally requires Compiler. The direct entry points are
-<code>GameEventScriptBuilder.Create()</code> for compilation and
+<code>new GesProgramBuilder()</code> for compilation and
 <code>GameEventScriptHost.CreateBuilder()</code> for host construction.
 File reading belongs to the CLI or embedding, which supplies text through
 <code>AddScript(text, sourceName)</code>; the previous Bridge <code>AddFile</code> helper is removed.</p>

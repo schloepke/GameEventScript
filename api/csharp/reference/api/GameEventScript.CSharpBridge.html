@@ -2,9 +2,9 @@
 <html>
   <head>
     <meta charset="utf-8">
-      <title>Namespace GameEventScript.CSharpBridge | Game Event Script C# API — Unreleased (13510f0d601c) </title>
+      <title>Namespace GameEventScript.CSharpBridge | Game Event Script C# API — Unreleased (85238ca5672b) </title>
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <meta name="title" content="Namespace GameEventScript.CSharpBridge | Game Event Script C# API — Unreleased (13510f0d601c) ">
+      <meta name="title" content="Namespace GameEventScript.CSharpBridge | Game Event Script C# API — Unreleased (85238ca5672b) ">
       
       
       <link rel="icon" href="../assets/logo.svg">
@@ -81,48 +81,53 @@
 Classes
 </h3>
     <dl class="jumplist">
-      <dt><a class="xref" href="GameEventScript.CSharpBridge.GameEventScriptCSharpContextExtensions.html">GameEventScriptCSharpContextExtensions</a></dt>
+      <dt><a class="xref" href="GameEventScript.CSharpBridge.GesBridgeContextExtensions.html">GesBridgeContextExtensions</a></dt>
       <dd><p>Provides C# tuple and dictionary conveniences for context messaging.</p>
 </dd>
     </dl>
     <dl class="jumplist">
-      <dt><a class="xref" href="GameEventScript.CSharpBridge.GameEventScriptCSharpExtensionRegistryBuilder.html">GameEventScriptCSharpExtensionRegistryBuilder</a></dt>
-      <dd><p>Represents a game event script c sharp extension registry builder.</p>
+      <dt><a class="xref" href="GameEventScript.CSharpBridge.GesBridgeExtensionRegistry.html">GesBridgeExtensionRegistry</a></dt>
+      <dd><p>Immutable extension registry built from <a class="xref" href="GameEventScript.CSharpBridge.GesExtensionAttribute.html">GesExtensionAttribute</a>-annotated types through Reflection.</p>
 </dd>
     </dl>
     <dl class="jumplist">
-      <dt><a class="xref" href="GameEventScript.CSharpBridge.GameEventScriptCSharpExtensions.html">GameEventScriptCSharpExtensions</a></dt>
-      <dd><p>Represents a game event script c sharp extensions.</p>
+      <dt><a class="xref" href="GameEventScript.CSharpBridge.GesBridgeExtensionRegistryBuilder.html">GesBridgeExtensionRegistryBuilder</a></dt>
+      <dd><p>Collects attributed extension types and optionally falls back to a base registry for unknown signatures.</p>
 </dd>
     </dl>
     <dl class="jumplist">
-      <dt><a class="xref" href="GameEventScript.CSharpBridge.GameEventScriptCSharpExternalTypeRegistry.html">GameEventScriptCSharpExternalTypeRegistry</a></dt>
-      <dd><p>Represents a game event script c sharp external type registry.</p>
+      <dt><a class="xref" href="GameEventScript.CSharpBridge.GesBridgeExternalTypeRegistry.html">GesBridgeExternalTypeRegistry</a></dt>
+      <dd><p>Immutable external-type catalog and constructor registry built from <a class="xref" href="GameEventScript.CSharpBridge.GesTypeAttribute.html">GesTypeAttribute</a>-annotated CLR types.</p>
 </dd>
     </dl>
     <dl class="jumplist">
-      <dt><a class="xref" href="GameEventScript.CSharpBridge.GameEventScriptCSharpExternalTypes.html">GameEventScriptCSharpExternalTypes</a></dt>
-      <dd><p>Represents a game event script c sharp external types.</p>
-</dd>
-    </dl>
-    <dl class="jumplist">
-      <dt><a class="xref" href="GameEventScript.CSharpBridge.GameEventScriptCSharpHostExtensions.html">GameEventScriptCSharpHostExtensions</a></dt>
+      <dt><a class="xref" href="GameEventScript.CSharpBridge.GesBridgeHostExtensions.html">GesBridgeHostExtensions</a></dt>
       <dd><p>Provides delegate-based and automatic-runner conveniences that intentionally remain outside the portable Core.</p>
 </dd>
     </dl>
     <dl class="jumplist">
-      <dt><a class="xref" href="GameEventScript.CSharpBridge.GameEventScriptCSharpHostRunner.html">GameEventScriptCSharpHostRunner</a></dt>
+      <dt><a class="xref" href="GameEventScript.CSharpBridge.GesBridgeHostRunner.html">GesBridgeHostRunner</a></dt>
       <dd><p>Optional C# adapter that serializes host access and pumps accepted messages on a shared worker.</p>
 </dd>
     </dl>
     <dl class="jumplist">
-      <dt><a class="xref" href="GameEventScript.CSharpBridge.GameEventScriptCSharpMessage.html">GameEventScriptCSharpMessage</a></dt>
+      <dt><a class="xref" href="GameEventScript.CSharpBridge.GesBridgeMessage.html">GesBridgeMessage</a></dt>
       <dd><p>C#-specific message construction conveniences. Portable code uses ordered
-<a class="xref" href="GameEventScript.Api.GameEventScriptMessageArgument.html">GameEventScriptMessageArgument</a> values directly.</p>
+<a class="xref" href="GameEventScript.Api.GesMessageArgument.html">GesMessageArgument</a> values directly.</p>
 </dd>
     </dl>
     <dl class="jumplist">
-      <dt><a class="xref" href="GameEventScript.CSharpBridge.GameEventScriptCSharpValue.html">GameEventScriptCSharpValue</a></dt>
+      <dt><a class="xref" href="GameEventScript.CSharpBridge.GesBridgeMessageHandler.html">GesBridgeMessageHandler</a></dt>
+      <dd><p>A delegate retained once at subscription time; dispatch invokes it synchronously.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.CSharpBridge.GesBridgePublishSink.html">GesBridgePublishSink</a></dt>
+      <dd><p>A synchronous outbound publish delegate; exceptions retain the Runtime's classification.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.CSharpBridge.GesBridgeValueConversion.html">GesBridgeValueConversion</a></dt>
       <dd><p>Provides C# dictionary factories for portable immutable values.</p>
 </dd>
     </dl>
@@ -174,7 +179,7 @@ Classes
     <footer class="border-top text-secondary">
       <div class="container-xxl">
         <div class="flex-fill">
-          Game Event Script C# API — Unreleased (13510f0d601c)
+          Game Event Script C# API — Unreleased (85238ca5672b)
         </div>
       </div>
     </footer>

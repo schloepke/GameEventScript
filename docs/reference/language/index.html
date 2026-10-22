@@ -154,7 +154,9 @@ an optional module declaration followed by top-level declarations:</p>
 <li><code>on initialization { ... }</code></li>
 <li><code>on undeliverable as localName { ... }</code></li>
 </ul>
-<p>The module declaration is metadata and does not create a namespace. Definitions
+<p>A source has at most one module declaration, before every other declaration; a
+later or repeated <code>module</code> is a <code>parse.syntax</code> error at that keyword. The module
+declaration is metadata and does not create a namespace. Definitions
 from every source in one compilation unit share compilation-unit scope and may
 refer to one another independent of source order or alphabetical name order.
 This includes callable bodies constructing records and record field expressions
@@ -1206,7 +1208,11 @@ constant folding must preserve the same value and unit semantics.</p>
 <p>Numeric checks are keyword constructs, not <code>:</code> type references:</p>
 <div class="expressive-code"><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="ges"><code><div class="ec-line"><div class="code"><span style="--0:#C5E478;--1:#3B61B0">value</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#7FDBCA;--1:#096E72">is</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#7FDBCA;--1:#096E72">numeric</span></div></div><div class="ec-line"><div class="code"><span style="--0:#C5E478;--1:#3B61B0">value</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#7FDBCA;--1:#096E72">is</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#7FDBCA;--1:#096E72">integer</span></div></div><div class="ec-line"><div class="code"><span style="--0:#C5E478;--1:#3B61B0">value</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#7FDBCA;--1:#096E72">is</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#7FDBCA;--1:#096E72">fractional</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="value is numericvalue is integervalue is fractional"><div></div></button></div></figure></div>
 <p><code>:integer</code> and <code>:float</code> are not source-level type references. Use <code>is integer</code>
-or <code>is fractional</code> for checks, and <code>as :Number</code> for explicit numeric casts.</p>
+or <code>is fractional</code> for checks, and <code>as :Number</code> for explicit numeric casts.
+<code>:Integer</code> and <code>:Float</code> are rejected with <code>validate.invalidTypeConstructor</code>
+wherever a type is named, including record declarations. Other custom type names
+in casts and checks need not be declared in the program: they test or convert
+values whose type is bound only later, such as records that messages deliver.</p>
 <p>Numeric checks and implicit numeric views use the following rules. A runtime
 value has an <code>AsNumeric</code> value exactly when <code>is numeric</code> is true. The explicit
 <code>as :Number</code> cast uses the same numeric view, except that it may additionally
@@ -1719,8 +1725,12 @@ evaluation result.</p>
 </div></div><div class="ec-line"><div class="code"><span style="--0:#C792EA;--1:#8844AE">let</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C5E478;--1:#3B61B0">hp</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C792EA;--1:#8844AE">be</span><span style="--1:#403F53"><span style="--0:#D6DEEB"> :Gauge(</span><span style="--0:#D7DBE0">current</span><span style="--0:#D6DEEB">: </span></span><span style="--0:#F78C6C;--1:#AA0982">25</span><span style="--1:#403F53"><span style="--0:#D6DEEB">, </span><span style="--0:#D7DBE0">maximum</span><span style="--0:#D6DEEB">: </span></span><span style="--0:#F78C6C;--1:#AA0982">100</span><span style="--0:#D6DEEB;--1:#403F53">)</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="record :Gauge as {  current: :Number clamped between 0 and maximum,  maximum: :Number clamped between 0 and infinity,  percentage: :Percentage computed by    0% when maximum <= 0,    otherwise (current / maximum) as :Percentage}let hp be :Gauge(current: 25, maximum: 100)"><div></div></button></div></figure></div>
 <p>Field constraints:</p>
 <ul>
-<li>Field names must be unique. The completed Record follows the map/record key
-order defined in <a href="/docs/reference/semantics/determinism/#iteration-and-ranges">determinism semantics</a>.</li>
+<li>Field names must be unique; a repeated field name is <code>validate.duplicateVariable</code>.
+The completed Record follows the map/record key order defined in
+<a href="/docs/reference/semantics/determinism/#iteration-and-ranges">determinism semantics</a>.</li>
+<li>A field type is a built-in type, a record of the program in any source, or a
+configured external type, so records may contain records and external values.
+Any other field type is <code>validate.invalidTypeConstructor</code>.</li>
 <li>A non-computed field is a constructor parameter. Omitted constructor arguments
 bind <code>nothing</code>; unknown labels, duplicate labels, or excess positional
 arguments are static errors.</li>
@@ -1869,8 +1879,8 @@ identifier or math constant; ordinary expressions require an explicit
 multiplication operator.</p>
 <h2 id="inline-assembly">Inline assembly</h2>
 <p>Inline <code>asm { ... }</code> blocks expose explicit instructions inside ordinary GES
-source. The normative syntax, binding and safety rules, operand forms and staged
-implementation status are defined in <a href="/docs/reference/inline-assembly/">Inline assembly</a>.
+source. The normative syntax, binding and safety rules and operand forms are
+defined in <a href="/docs/reference/inline-assembly/">Inline assembly</a>.
 Only standalone handler statements, <code>let</code> initializers, complete callable bodies
 and computed-field bodies accept this form. Ordinary expressions do not.</p>
 <h2 id="compact-selector-chains-and-extension-names">Compact selector chains and extension names</h2>

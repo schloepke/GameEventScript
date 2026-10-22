@@ -88,12 +88,12 @@ message-handler binds and their maxima in the program header model.</p>
 <p><code>GameEventScriptHost</code> is one autonomous serial execution unit. It owns the local
 message queue, exact- and name-subscription indexes, private random stream,
 runtime limits, observer, optional outbound sink, linked program instances, and
-at most one reusable <code>GesVmState</code>. A host may contain only native handlers and
+at most one reusable <code>GesVirtualMachine</code>. A host may contain only native handlers and
 does not create a VM until the first program is loaded. Host construction accepts
 a seed, entropy bytes, or an immutable sequence configuration, never a live
 mutable generator; building two hosts from the same configuration creates two
 independent streams.</p>
-<p><code>GameEventScriptInstance</code> is one host-specific link of one program. <code>Load</code> is
+<p><code>GesProgramInstance</code> is one host-specific link of one program. <code>Load</code> is
 additive and returns an instance. Linking resolves extension and external-type
 references against that host. The host assigns a stable, non-reused registration
 ID. The instance retains only its host and ID for lifecycle operations; it does
@@ -102,32 +102,32 @@ future dispatch snapshots. Before registering anything, loading rejects a cyclic
 synchronous call graph or requirements above <code>MaxRegisterValues</code> and
 <code>MaxCallDepth</code>. It then pre-warms the reusable register storage from the program
 maximum.</p>
-<p><code>GameEventScriptSubscription</code> represents one native registration. <code>Unsubscribe</code>
+<p><code>GesSubscription</code> represents one native registration. <code>Unsubscribe</code>
 uses the same host-owned registration-ID model, is idempotent, and affects future
 snapshots only. Registration IDs are host-local lifecycle identities and are not
 wire or program identities.</p>
-<p>Portable native handlers implement <code>IGameEventScriptNativeMessageHandler</code> and
+<p>Portable native handlers implement <code>IGesNativeMessageHandler</code> and
 receive the message plus the host’s context through <code>Handle</code>. The Core stores the
 handler object directly and contains no <code>Action</code> delegate adapter. C# callers may
-use the <code>Action&lt;GameEventScriptMessage, GameEventScriptContext&gt;</code> convenience
+use the <code>Action&lt;GameEventScriptMessage, GesContext&gt;</code> convenience
 overloads in <code>CSharpBridge</code>; other ports provide their own language-idiomatic
 adapters without changing the Core contract.</p>
-<p>An extension function may throw <code>GameEventScriptExtensionFaultException</code> to
+<p>An extension function may throw <code>GesExtensionFaultException</code> to
 deliberately report a defined failure, or throw any other exception
 unanticipated by the runtime; <a href="/docs/reference/diagnostics/">Diagnostics</a> owns the resulting
 stable codes and the shared “current handler only, host stays reusable, never
 <code>nothing</code>” contract shared with native handlers and the external-type boundary.</p>
-<p><code>GameEventScriptContext</code> is created once per host and passed to native handlers
+<p><code>GesContext</code> is created once per host and passed to native handlers
 and extensions. It exposes the host random stream, limits, <code>Emit</code>, and <code>Publish</code>.
 Its random generator supports nested <code>Push()</code>, <code>Push(Int64)</code>, and <code>Pop()</code> scopes.
 It does not own a queue, VM, or scheduler. A context or its random generator must
 not be retained for asynchronous use after a native or extension callback.</p>
-<p><code>GameEventScriptVirtualMachine</code> is a stateless executor. <code>GesVmState</code> contains
-only the currently resumable execution: active linked program, instruction
+<p><code>GesVirtualMachine</code> is the host’s reusable virtual machine. It executes Programs
+and contains only the currently resumable execution: active linked program, instruction
 pointer, registers, frames, stages, and active message. Random state and its
 scope stack belong to the host-owned generator so extensions observe the same
 active scoped stream as bytecode. The host
-reuses this state serially for every script handler and fully resets it after
+reuses this machine serially for every script handler and fully resets it after
 completion or failure. VM pooling across hosts is not part of this architecture.</p>
 <p>All portable failures follow <a href="/docs/reference/diagnostics/">Diagnostics</a>. Ordinary runtime handler failures
 are reported to the observer, abort/reset only the failing handler, and leave the
@@ -261,18 +261,18 @@ different runtime limit already aborted a script body before its generated pops,
 marker cleanup is expected recovery and adds no second imbalance diagnostic.</p>
 <h2 id="external-type-boundary">External Type Boundary</h2>
 <p>External types use two deliberately separate inputs. Compilation receives an
-<code>IGameEventScriptExternalTypeCatalog</code> containing only declarative type, field,
+<code>IGesExternalTypeCatalog</code> containing only declarative type, field,
 constructor, parameter, and signature data. It does not contain executable
 bindings. The resulting program stores only portable external-constructor import
 bindings; it never stores the catalog or its definitions.</p>
-<p>Host linking receives an <code>IGameEventScriptExternalTypeRegistry</code> that resolves a
-constructor import to an <code>IGameEventScriptExternalTypeConstructor</code>. A resolved
+<p>Host linking receives an <code>IGesExternalTypeRegistry</code> that resolves a
+constructor import to an <code>IGesExternalTypeConstructor</code>. A resolved
 constructor must report exactly the definition requested by the import. Runtime
-values cross the portable boundary as <code>IGameEventScriptExternalValue</code>, exposing
+values cross the portable boundary as <code>IGesExternalValue</code>, exposing
 their declarative definition and field values without exposing a platform host
 object.</p>
 <p>A constructor or a field accessor may likewise throw
-<code>GameEventScriptExtensionFaultException</code> or an unanticipated exception; see
+<code>GesExtensionFaultException</code> or an unanticipated exception; see
 <a href="/docs/reference/diagnostics/">Diagnostics</a> for the resulting codes and contract.</p>
 <p>The C# bridge may implement both inputs with one convenience object. Its
 reflection metadata, attributes, CLR instances, field delegates, conversion,
@@ -281,20 +281,20 @@ conformance uses a manual catalog, constructor registry, and value
 implementation and therefore does not depend on C# reflection.</p>
 <h2 id="message-semantics">Message Semantics</h2>
 <ul>
-<li>Message arguments are ordered <code>GameEventScriptMessageArgument</code> name/value
+<li>Message arguments are ordered <code>GesMessageArgument</code> name/value
 pairs. Their order is part of <code>SignatureId</code>; neither Core construction nor
 conformance decoding derives it from a map’s iteration order.</li>
 <li>Named argument labels must be unique after portable normalization. Repeated
 <code>_</code> labels remain valid because they represent distinct positional arguments.</li>
 <li>C# tuple construction is a <code>CSharpBridge</code> convenience. Its dictionary adapter
-requires a known <code>GameEventScriptMessageSignature</code> and binds values in that
+requires a known <code>GesMessageSignature</code> and binds values in that
 signature’s declared order.</li>
 <li><code>Receive(message)</code> captures current subscription snapshots and queues the
 message locally. It never invokes the outbound sink.</li>
 <li><code>Emit(message)</code> does the same from a running handler.</li>
 <li><code>Publish(message)</code> first attempts the same local enqueue and then calls the
-host’s single synchronous <code>IGameEventScriptPublishSink</code>, if configured.</li>
-<li><code>GameEventScriptPublishResult</code> reports <code>LocalAccepted</code>, <code>OutboundAttempted</code>,
+host’s single synchronous <code>IGesPublishSink</code>, if configured.</li>
+<li><code>GesPublishResult</code> reports <code>LocalAccepted</code>, <code>OutboundAttempted</code>,
 <code>OutboundAccepted</code>, <code>OutboundDeferred</code>, and derived <code>AnyAccepted</code>. Sink rejection or exception
 never rolls back or corrupts local delivery. The observer sees the result.</li>
 <li>Queue limits count logical messages, not handler invocations.</li>
@@ -471,7 +471,7 @@ synchronous Start; successful Start schedules remaining ordinary work. A runner
 wrapping an already ready host schedules its pending work immediately. Both
 runners serialize callbacks on a shared background dispatcher and expose readiness,
 the last execution result and synchronized instance startup results.</p>
-<p><code>CSharpBridge.GameEventScriptCSharpHostRunner</code> serializes access
+<p><code>CSharpBridge.GesBridgeHostRunner</code> serializes access
 to one host with a C# lock and schedules at most one pump job for that host on a
 shared dispatcher. Concurrent <code>Receive</code>, <code>Load</code>, subscribe, detach, and
 unsubscribe calls go through the runner. Creating a runner immediately schedules
@@ -488,7 +488,7 @@ their own actor, executor, event-loop, or main-thread policy around the same
 synchronous core contract.</p>
 <h2 id="hot-path-rules">Hot-Path Rules</h2>
 <ul>
-<li>Script registrations store <code>GameEventScriptInstance + EntryAddress</code>; no
+<li>Script registrations store <code>GesProgramInstance + EntryAddress</code>; no
 per-invocation delegate closure, runner object, or invocation interface exists.</li>
 <li>The queue is a preallocated growing ring of logical message envelopes.</li>
 <li>Dispatch selection walks captured arrays without constructing handler lists.</li>

@@ -2,9 +2,9 @@
 <html>
   <head>
     <meta charset="utf-8">
-      <title>Class GesExtensionCall | Game Event Script C# API — Unreleased (13510f0d601c) </title>
+      <title>Class GesExtensionCall | Game Event Script C# API — Unreleased (85238ca5672b) </title>
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <meta name="title" content="Class GesExtensionCall | Game Event Script C# API — Unreleased (13510f0d601c) ">
+      <meta name="title" content="Class GesExtensionCall | Game Event Script C# API — Unreleased (85238ca5672b) ">
       
       <meta name="description" content="Represents a ges extension call.">
       <link rel="icon" href="../assets/logo.svg">
@@ -165,8 +165,8 @@ Class GesExtensionCall
 
   <a id="GameEventScript_Api_GesExtensionCall__ctor_" data-uid="GameEventScript.Api.GesExtensionCall.#ctor*"></a>
 
-  <h3 id="GameEventScript_Api_GesExtensionCall__ctor_GameEventScript_Api_GameEventScriptContext_" data-uid="GameEventScript.Api.GesExtensionCall.#ctor(GameEventScript.Api.GameEventScriptContext)">
-  GesExtensionCall(GameEventScriptContext)
+  <h3 id="GameEventScript_Api_GesExtensionCall__ctor_GameEventScript_Api_GesContext_" data-uid="GameEventScript.Api.GesExtensionCall.#ctor(GameEventScript.Api.GesContext)">
+  GesExtensionCall(GesContext)
   
   </h3>
 
@@ -175,12 +175,12 @@ Class GesExtensionCall
   <div class="markdown level1 conceptual"></div>
 
   <div class="codewrapper">
-    <pre><code class="lang-csharp hljs">public GesExtensionCall(GameEventScriptContext context)</code></pre>
+    <pre><code class="lang-csharp hljs">public GesExtensionCall(GesContext context)</code></pre>
   </div>
 
   <h4 class="section">Parameters</h4>
   <dl class="parameters">
-    <dt><code>context</code> <a class="xref" href="GameEventScript.Api.GameEventScriptContext.html">GameEventScriptContext</a></dt>
+    <dt><code>context</code> <a class="xref" href="GameEventScript.Api.GesContext.html">GesContext</a></dt>
     <dd><p>The context value.</p>
 </dd>
   </dl>
@@ -244,7 +244,7 @@ Class GesExtensionCall
   <div class="markdown level1 conceptual"></div>
 
   <div class="codewrapper">
-    <pre><code class="lang-csharp hljs">public GameEventScriptContext Context { get; }</code></pre>
+    <pre><code class="lang-csharp hljs">public GesContext Context { get; }</code></pre>
   </div>
 
 
@@ -253,7 +253,7 @@ Class GesExtensionCall
 
   <h4 class="section">Property Value</h4>
   <dl class="parameters">
-    <dt><a class="xref" href="GameEventScript.Api.GameEventScriptContext.html">GameEventScriptContext</a></dt>
+    <dt><a class="xref" href="GameEventScript.Api.GesContext.html">GesContext</a></dt>
     <dd></dd>
   </dl>
 
@@ -276,7 +276,7 @@ Class GesExtensionCall
   <div class="markdown level1 conceptual"></div>
 
   <div class="codewrapper">
-    <pre><code class="lang-csharp hljs">public GameEventScriptRandomGenerator Random { get; }</code></pre>
+    <pre><code class="lang-csharp hljs">public GesRandomGenerator Random { get; }</code></pre>
   </div>
 
 
@@ -285,7 +285,7 @@ Class GesExtensionCall
 
   <h4 class="section">Property Value</h4>
   <dl class="parameters">
-    <dt><a class="xref" href="GameEventScript.Api.GameEventScriptRandomGenerator.html">GameEventScriptRandomGenerator</a></dt>
+    <dt><a class="xref" href="GameEventScript.Api.GesRandomGenerator.html">GesRandomGenerator</a></dt>
     <dd></dd>
   </dl>
 
@@ -340,7 +340,7 @@ Class GesExtensionCall
   <div class="markdown level1 conceptual"></div>
 
   <div class="codewrapper">
-    <pre><code class="lang-csharp hljs">public GameEventScriptRuntimeLimits RuntimeLimits { get; }</code></pre>
+    <pre><code class="lang-csharp hljs">public GesRuntimeLimits RuntimeLimits { get; }</code></pre>
   </div>
 
 
@@ -349,7 +349,7 @@ Class GesExtensionCall
 
   <h4 class="section">Property Value</h4>
   <dl class="parameters">
-    <dt><a class="xref" href="GameEventScript.Api.GameEventScriptRuntimeLimits.html">GameEventScriptRuntimeLimits</a></dt>
+    <dt><a class="xref" href="GameEventScript.Api.GesRuntimeLimits.html">GesRuntimeLimits</a></dt>
     <dd></dd>
   </dl>
 
@@ -399,8 +399,8 @@ Class GesExtensionCall
 
   <a id="GameEventScript_Api_GesExtensionCall_SetFloat_" data-uid="GameEventScript.Api.GesExtensionCall.SetFloat*"></a>
 
-  <h3 id="GameEventScript_Api_GesExtensionCall_SetFloat_System_Double_GameEventScript_Api_GameEventScriptBytecodeInstructionUnit_" data-uid="GameEventScript.Api.GesExtensionCall.SetFloat(System.Double,GameEventScript.Api.GameEventScriptBytecodeInstructionUnit)">
-  SetFloat(double, GameEventScriptBytecodeInstructionUnit)
+  <h3 id="GameEventScript_Api_GesExtensionCall_SetFloat_System_Double_GameEventScript_Api_GesQuantityUnit_" data-uid="GameEventScript.Api.GesExtensionCall.SetFloat(System.Double,GameEventScript.Api.GesQuantityUnit)">
+  SetFloat(double, GesQuantityUnit)
   
   </h3>
 
@@ -409,7 +409,7 @@ Class GesExtensionCall
   <div class="markdown level1 conceptual"></div>
 
   <div class="codewrapper">
-    <pre><code class="lang-csharp hljs">public void SetFloat(double value, GameEventScriptBytecodeInstructionUnit unit = GameEventScriptBytecodeInstructionUnit.UnitNone)</code></pre>
+    <pre><code class="lang-csharp hljs">public void SetFloat(double value, GesQuantityUnit unit = GesQuantityUnit.UnitNone)</code></pre>
   </div>
 
   <h4 class="section">Parameters</h4>
@@ -417,7 +417,7 @@ Class GesExtensionCall
     <dt><code>value</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.double">double</a></dt>
     <dd><p>The value value.</p>
 </dd>
-    <dt><code>unit</code> <a class="xref" href="GameEventScript.Api.GameEventScriptBytecodeInstructionUnit.html">GameEventScriptBytecodeInstructionUnit</a></dt>
+    <dt><code>unit</code> <a class="xref" href="GameEventScript.Api.GesQuantityUnit.html">GesQuantityUnit</a></dt>
     <dd><p>The unit value.</p>
 </dd>
   </dl>
@@ -435,8 +435,8 @@ Class GesExtensionCall
 
   <a id="GameEventScript_Api_GesExtensionCall_SetInteger_" data-uid="GameEventScript.Api.GesExtensionCall.SetInteger*"></a>
 
-  <h3 id="GameEventScript_Api_GesExtensionCall_SetInteger_System_Int64_GameEventScript_Api_GameEventScriptBytecodeInstructionUnit_" data-uid="GameEventScript.Api.GesExtensionCall.SetInteger(System.Int64,GameEventScript.Api.GameEventScriptBytecodeInstructionUnit)">
-  SetInteger(long, GameEventScriptBytecodeInstructionUnit)
+  <h3 id="GameEventScript_Api_GesExtensionCall_SetInteger_System_Int64_GameEventScript_Api_GesQuantityUnit_" data-uid="GameEventScript.Api.GesExtensionCall.SetInteger(System.Int64,GameEventScript.Api.GesQuantityUnit)">
+  SetInteger(long, GesQuantityUnit)
   
   </h3>
 
@@ -445,7 +445,7 @@ Class GesExtensionCall
   <div class="markdown level1 conceptual"></div>
 
   <div class="codewrapper">
-    <pre><code class="lang-csharp hljs">public void SetInteger(long value, GameEventScriptBytecodeInstructionUnit unit = GameEventScriptBytecodeInstructionUnit.UnitNone)</code></pre>
+    <pre><code class="lang-csharp hljs">public void SetInteger(long value, GesQuantityUnit unit = GesQuantityUnit.UnitNone)</code></pre>
   </div>
 
   <h4 class="section">Parameters</h4>
@@ -453,7 +453,7 @@ Class GesExtensionCall
     <dt><code>value</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int64">long</a></dt>
     <dd><p>The value value.</p>
 </dd>
-    <dt><code>unit</code> <a class="xref" href="GameEventScript.Api.GameEventScriptBytecodeInstructionUnit.html">GameEventScriptBytecodeInstructionUnit</a></dt>
+    <dt><code>unit</code> <a class="xref" href="GameEventScript.Api.GesQuantityUnit.html">GesQuantityUnit</a></dt>
     <dd><p>The unit value.</p>
 </dd>
   </dl>
@@ -645,7 +645,7 @@ Class GesExtensionCall
     <footer class="border-top text-secondary">
       <div class="container-xxl">
         <div class="flex-fill">
-          Game Event Script C# API — Unreleased (13510f0d601c)
+          Game Event Script C# API — Unreleased (85238ca5672b)
         </div>
       </div>
     </footer>

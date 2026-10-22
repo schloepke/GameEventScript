@@ -368,7 +368,7 @@ lengths, SHA-256 values, line boundaries, and UTF-8 validity must agree.</p>
 on these values. Timestamps, host names, user names, absolute paths, and a separate
 language field are forbidden so identical inputs remain reproducible.</p>
 <h2 id="reading-retention-validation-and-writing">Reading, retention, validation, and writing</h2>
-<p><code>GameEventScriptProgramReader</code> accepts bytes only. <code>PreserveAll</code> parses known
+<p><code>GameEventScriptProgram.Read</code>/<code>read</code> accepts bytes only. <code>PreserveAll</code> parses known
 optional sections and retains unknown optional payloads as immutable opaque sections.
 <code>PreserveKnown</code> drops unknown optional sections. <code>RuntimeOnly</code> materializes only the
 five required runtime sections. Unknown required sections always fail. A known
@@ -381,7 +381,7 @@ strings, and index lists. Bounds and arithmetic are checked before allocation.</
 all invoke the shared program validator. It validates framing, UTF-8, table
 references, bind and opcode forms, code targets, the acyclic synchronous call
 graph, resource declarations, and debug/source ranges. Failures use
-<code>GameEventScriptProgramFormatException</code> with a stable error code and, where
+<code>GesProgramFormatException</code> with a stable error code and, where
 available, byte offset, section type, and entry index.</p>
 <p>Call-graph depth within the V1 data limits is not an additional format error.
 Validation of an acyclic graph must complete, and a cyclic graph must produce

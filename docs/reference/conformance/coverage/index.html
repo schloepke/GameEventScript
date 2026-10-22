@@ -86,6 +86,14 @@ here. Add or update this matrix in the same change as new portable behavior.</p>
 </thead>
 <tbody>
 <tr>
+<td>Compilation reports every diagnostic of the failing phase in order: parse recovery at declarations, statements, nested blocks and the end of input, stopping after the first failing source; complete validation in the program-wide and per-module order</td>
+<td>all <code>compile.diagnostic-collection</code> cases</td>
+</tr>
+<tr>
+<td>Record fields are unique and typed by built-in types, program records or configured external types; <code>:Integer</code>/<code>:Float</code> are never types, while casts and checks may name later-bound custom types</td>
+<td><code>compile.build-errors/record-duplicate-field</code>, <code>record-unknown-field-type</code>, <code>integer-and-float-are-not-types</code>; <code>compile.bytecode-lowering/nested-records-and-later-bound-types</code></td>
+</tr>
+<tr>
 <td>Weighted choice predicates and weights cannot resolve each other’s sibling binding</td>
 <td><code>compile.build-errors/choose-sibling-scope-predicate</code>, <code>choose-sibling-scope-weight</code></td>
 </tr>
@@ -238,6 +246,10 @@ here. Add or update this matrix in the same change as new portable behavior.</p>
 <td><code>compile.binary-compiler/case-0001</code>, <code>api.messages/case-0007</code></td>
 </tr>
 <tr>
+<td>Loop-invariant constant loads and arithmetic move in front of their loop, including out of nested loops, while random draws, messages and loop-dependent values stay inside and results are unchanged</td>
+<td>all four <code>compile.loop-invariants</code> cases</td>
+</tr>
+<tr>
 <td>Direct recursive call rejection</td>
 <td><code>compile.build-errors/case-0001</code></td>
 </tr>
@@ -361,8 +373,8 @@ GESA cases in <code>compile.program-dumps</code>. It covers canonical and noncan
 opaque optional data, stable structural errors, stable semantic validation
 errors, bounded resource resolution, rewrite identity, runtime execution, and
 canonical dumps of identical Program data across implementations.</p>
-<p>Cross-language acceptance, corpus identity, shared parser bootstrap fixtures,
-and the compact C# reference result are defined in
+<p>Cross-language acceptance, corpus identity and shared parser bootstrap fixtures
+are defined in
 <a href="/docs/reference/conformance/cross-language-acceptance/">Cross-language acceptance</a>. The comparison is keyed exclusively by the
 stable IDs in this coverage index and the executable corpus.</p>
 <h2 id="intentionally-language-specific-coverage">Intentionally language-specific coverage</h2>

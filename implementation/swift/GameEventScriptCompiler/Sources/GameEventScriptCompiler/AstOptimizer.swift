@@ -1,7 +1,6 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
-import Foundation
 @_spi(Compiler) import GameEventScriptRuntime
 
 // Replaces constant references and folds constant subexpressions after validation, before lowering.
@@ -255,6 +254,20 @@ struct GesAstOptimizer {
 
     static func indeterminate(_ value: GesValue) -> Bool { [.nothing, .list, .map, .dice].contains(value.valueKind) }
 
+    // Only a power of integers with an exactly representable result folds: the platform math library returns exactly
+    // that value, so folding cannot differ from run-time evaluation. Every other power is an approximation.
+    static func exactIntegerPower(_ value: GesValue, _ exponent: GesValue) -> Bool {
+        guard value.valueKind == .integer, exponent.valueKind == .integer, let base = value.integerValue, let count = exponent.integerValue, count >= 0 else { return false }
+        if base == 0 || base == 1 || base == -1 { return true }
+        var result: Int64 = 1
+        for _ in 0..<count {
+            let (product, overflow) = result.multipliedReportingOverflow(by: base)
+            if overflow || product.magnitude > 1 << 53 { return false }
+            result = product
+        }
+        return true
+    }
+
     static func roundable(_ value: GesValue) -> Bool { [.integer, .float, .percentage, .boolean].contains(value.valueKind) }
 
     static func unary(_ op: GesUnaryOperator, _ operand: GesValue) -> GesValue? {
@@ -273,10 +286,9 @@ struct GesAstOptimizer {
             if kind == .percentage { return .percentage(Swift.abs(operand.asNumber)) }
             if kind == .float { return .float(Swift.abs(operand.asNumber), unit: operand.unit) }
             return nil
-        case .naturalLog:
-            return !operand.hasUnit && roundable(operand) ? .float(Foundation.log(operand.asNumber)) : .nothing
-        case .exp:
-            return !operand.hasUnit && roundable(operand) ? .float(Foundation.exp(operand.asNumber)) : .nothing
+        // Approximation functions run on the target platform's math library, never at compile time, so a folded value
+        // can never differ from the same computation at run time (specs/Semantics/Numbers.md).
+        case .naturalLog, .exp: return nil
         case .floor, .ceil, .truncate, .roundHalfEven, .roundHalfUp, .roundHalfDown:
             guard roundable(operand) else { return .nothing }
             let number = operand.asNumber
@@ -320,7 +332,7 @@ struct GesAstOptimizer {
         case .implies:
             if !indeterminate(left) && !left.asBoolean || !indeterminate(right) && right.asBoolean { return .boolean(true) }
             return indeterminate(left) || indeterminate(right) ? .nothing : .boolean(false)
-        case .power: return GesCompilerSupport.arithmetic(.power, left, right)
+        case .power: return exactIntegerPower(left, right) ? GesCompilerSupport.arithmetic(.power, left, right) : nil
         default: break
         }
         if left.isNothing || right.isNothing {

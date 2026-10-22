@@ -134,6 +134,10 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 - Both compilers reject `:Integer` and `:Float` wherever a type is named; use
   `as :Number` to convert and `is integer` or `is fractional` to check. Casts and
   checks to other custom types bound only at run time remain valid.
+- `ln`, `exp`, roots and powers without an exactly representable integer result
+  are no longer folded at compile time; they run on the target platform's math
+  library, so a constant such as `ln 2` and `ln x` for `x = 2` always agree
+  within one execution. Their exact inner terms are still folded.
 - Constant folding of integer products with a unit is exact like VM execution:
   `3000000000m * 3000000001` stays `9000000003000000000m` instead of being
   rounded through binary64; only an Int64 overflow falls back to binary64.

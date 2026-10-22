@@ -560,14 +560,9 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, GesExpressionN
                 return operand.Kind == GesBytecodeTypeKind.Percentage
                     ? GesValue.GesPercentage(Math.Abs(operand.AsNumber()))
                     : GesValue.GesFloat(Math.Abs(operand.AsNumber()), operand.Unit);
-            case GesUnaryOperator.NaturalLog:
-                return !operand.Unit.IsNumericUnit() && operand.Kind is GesBytecodeTypeKind.Integer or GesBytecodeTypeKind.Float or GesBytecodeTypeKind.Percentage or GesBytecodeTypeKind.Boolean
-                    ? GesValue.GesFloat(Math.Log(operand.AsNumber()))
-                    : GesValue.GesNothing();
-            case GesUnaryOperator.Exp:
-                return !operand.Unit.IsNumericUnit() && operand.Kind is GesBytecodeTypeKind.Integer or GesBytecodeTypeKind.Float or GesBytecodeTypeKind.Percentage or GesBytecodeTypeKind.Boolean
-                    ? GesValue.GesFloat(Math.Exp(operand.AsNumber()))
-                    : GesValue.GesNothing();
+            // Approximation functions run on the target platform's math library, never at compile time, so a folded value
+            // can never differ from the same computation at run time (specs/Semantics/Numbers.md).
+            case GesUnaryOperator.NaturalLog or GesUnaryOperator.Exp: return null;
             case GesUnaryOperator.Floor:
             case GesUnaryOperator.Ceil:
             case GesUnaryOperator.Truncate:
@@ -638,7 +633,7 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, GesExpressionN
 
                 return GesValue.GesBoolean(left.AsBoolean() ^ right.AsBoolean());
             case GesBinaryOperator.Implies: return EvaluateConstantImplies(left, right);
-            case GesBinaryOperator.Power: return GesNumber.Power(in left, in right);
+            case GesBinaryOperator.Power: return IsExactIntegerPower(left, right) ? GesNumber.Power(in left, in right) : null;
         }
 
         if (left.IsNothing || right.IsNothing)
@@ -820,6 +815,22 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, GesExpressionN
         if (ProductUnit(left.Unit, right.Unit) is { } unit) return CreateNumber(leftNumber * rightNumber, unit, false);
 
         return null;
+    }
+
+    // Only a power of integers with an exactly representable result folds: the platform math library returns exactly
+    // that value, so folding cannot differ from run-time evaluation. Every other power is an approximation.
+    private static bool IsExactIntegerPower(GesValue value, GesValue exponent)
+    {
+        if (value.Kind != GesBytecodeTypeKind.Integer || exponent.Kind != GesBytecodeTypeKind.Integer || exponent.IntegerValue < 0) return false;
+        if (value.IntegerValue is 0 or 1 or -1) return true;
+        long result = 1;
+        for (var step = 0L; step < exponent.IntegerValue; step++)
+        {
+            if (GesNumber.MultiplyExact(result, value.IntegerValue) is not { } product || Math.Abs(product) > 1L << 53) return false;
+            result = product;
+        }
+
+        return true;
     }
 
     private static double? ReadFiniteNumber(GesValue value)

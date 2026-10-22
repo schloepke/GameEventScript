@@ -384,6 +384,13 @@ the DSL's unit, domain, absence, and special-value checks. Exact bit identity
 between different correctly rounded or near-correctly-rounded math libraries is
 not required.
 
+Constant folding never evaluates these approximations. It folds their exact
+operand subterms, and a power only when base and exponent are integers, the
+exponent is not negative and the exact result does not exceed `2^53` in
+magnitude. Every other approximation runs on the target platform, so a constant
+expression and the same computation from a runtime value yield one value within
+an execution, including for `<`, ordering and text conversion.
+
 Conformance expectations therefore compare finite binary64 results by ULP distance.
 The default is 4096 ULPs, allowing bounded cross-library differences. A test or individual step
 can set `maxFloatUlps`; `0` requires bit-exact finite results. NaN/nothing,

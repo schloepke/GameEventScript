@@ -151,6 +151,25 @@ here.
   benefit.
 - Revisit a more VM-near extension-call model if boxing at the extension boundary
   becomes material again.
+- Precompute constant approximations (`ln`, `exp`, non-integer powers) once at
+  program load on the target platform, for example as values in
+  `GesLinkedProgram`, instead of evaluating them on every execution. The
+  compiler would mark such constant expressions instead of folding them; this
+  touches bytecode and `.gesb`. Pursue only if run-time evaluation of constant
+  approximations becomes measurable.
+- Make all Swift library modules (Runtime, Compiler, SyntaxHighlighter, and the
+  Bridge where possible) build for WASI, with a CI gate that builds them and
+  rejects new Foundation imports in the portable modules. Runtime and Compiler
+  no longer import Foundation.
+- Detach the Swift SyntaxHighlighter from Foundation so WASM consumers such as
+  the card game stop shipping it (the card-game module is about 67 MB, mostly
+  unused Foundation). Replace `NSRegularExpression` with the standard library
+  `Regex` (or a small matcher for the constructs the GES/GESA grammars use),
+  `NSString`/`NSRange` with `String.utf16` positions, and runtime
+  `JSONSerialization` with grammar tables generated as Swift literals by
+  `scripts/sync-highlighter-grammars.py`. Verify against
+  `conformance/highlighting`, keep the C# highlighter equivalent, and compare
+  highlighting performance and module size before and after.
 - Reduce library and binary size without noticeable performance loss now that
   the C#/Swift port convergence is complete. Its first phase grew the
   release Swift `ges` binary by about 175 KB (3.35 → 3.52 MB, `__TEXT` +16 KB)

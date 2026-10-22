@@ -17,7 +17,9 @@ def render(document, cases, report, selected):
         fail('invalidReport', 'Expected V1 result report')
     authored = {case.id: case for case in cases if case.document == document}
     suites = {suite_id(case) for case in authored.values()}
-    if len(suites) != 1 or report.get('sourceDocuments', {}).get(next(iter(suites))) != document.digest:
+    if len(suites) != 1:
+        fail('missingCase', 'The document has no cases of exactly one suite in the corpus')
+    if report.get('sourceDocuments', {}).get(next(iter(suites))) != document.digest:
         fail('staleRange', 'Report was not produced from these exact source bytes')
     results = {}
     for item in report['cases']:

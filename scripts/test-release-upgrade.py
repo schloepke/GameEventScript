@@ -48,10 +48,19 @@ def consumer_path(language, name):
     return f'implementation/swift/verification/{name}/main.swift'
 
 
+def consumer_project_path(name):
+    return f'implementation/csharp/verification/GameEventScript.{name}/GameEventScript.{name}.csproj'
+
+
+def committed(revision, path):
+    """A file as committed in `revision`. Each version builds the consumer written for it, so the gate checks the
+    documented migration across breaking pre-1.0 API changes instead of assuming source compatibility, and
+    uncommitted changes never enter a run."""
+    return subprocess.check_output(['git', 'show', f'{revision}:{path}'], cwd=ROOT)
+
+
 def consumer_source(revision, language, name):
-    """The consumer source as committed in `revision`. Each version builds the consumer written for it, so the gate
-    checks the documented migration across breaking pre-1.0 API changes instead of assuming source compatibility."""
-    return subprocess.check_output(['git', 'show', f'{revision}:{consumer_path(language, name)}'], cwd=ROOT)
+    return committed(revision, consumer_path(language, name))
 
 
 def require_versions(actual, expected, names):
@@ -78,14 +87,13 @@ def csharp(workspace, candidate):
     for name in CSHARP_CONSUMERS:
         directory = workspace / name
         directory.mkdir()
-        project = 'GameEventScript.' + name + '.csproj'
-        shutil.copy2(ROOT / 'implementation/csharp/verification' / ('GameEventScript.' + name) / project, directory / project)
         paths[name] = directory
     baseline = workspace / 'baseline.gesb'
     for version, revision in ((BASELINE, BASELINE_COMMIT), (CANDIDATE, candidate)):
         for name, directory in paths.items():
             (directory / 'Program.cs').write_bytes(consumer_source(revision, 'csharp', name))
             project = directory / ('GameEventScript.' + name + '.csproj')
+            project.write_bytes(committed(revision, consumer_project_path(name)))
             sources = 'https://api.nuget.org/v3/index.json' if version == BASELINE else str(feed)
             properties = [f'-p:GesPackageVersion={version}', f'-p:GesPackageSource={sources}',
                           '-p:GesUsePackages=true', f'-p:RestorePackagesPath={workspace / "nuget"}']

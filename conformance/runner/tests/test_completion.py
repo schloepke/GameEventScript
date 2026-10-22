@@ -160,6 +160,12 @@ class CompletionTests(unittest.TestCase):
         self.assertEqual({suite: case.document.digest}, self.report(case)['sourceDocuments'])
         self.assertNotIn(str(ROOT), json.dumps(self.report(case)['sourceDocuments']))
 
+    def test_received_reports_a_document_without_cases_as_missing(self):
+        case = next(c for c in self.cases if c.assembler is not None)
+        with self.assertRaises(InvalidDocument) as caught:
+            received.render(case.document, [], self.report(case, actualAssembler=case.assembler), [case.id])
+        self.assertEqual('conformance.received.missingCase', caught.exception.code)
+
     def test_received_rejects_stale_identity_missing_ranges_and_overlap(self):
         original = next(c for c in self.cases if c.assembler is not None)
         for mode, code in [('source', 'staleRange'), ('title', 'invalidReport'), ('range', 'missingRange'), ('duplicate', 'overlappingRange')]:

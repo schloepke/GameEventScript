@@ -635,7 +635,17 @@ RuntimeObserver receives synchronous callbacks in exact dispatch order:
 - `DispatchStarted(message, dispatchSignatureId)` immediately before a handler;
 - `DispatchCompleted(message, dispatchSignatureId)` when the handler boundary closes, including cleanup after a handler failure or limit;
 - `RuntimeLimitReached(name, detail, limit)` for a limit stop;
-- `RuntimeError(diagnostic)` for a runtime diagnostic.
+- `RuntimeError(diagnostic)` for a runtime diagnostic;
+- `MessageScheduled(message, id, deadline, publish)` once when a delayed Emit
+  or Publish is accepted, before that Emit's `MessageEmitted`;
+- `ScheduledMessageDiscarded(id)` once for each delayed entry removed before it
+  became due.
+
+> **Since: Unreleased** — scheduling callbacks
+
+The scheduling callbacks have empty default implementations, so observers that
+do not need them implement only the other callbacks. Their IDs, deadlines and
+discard rules are defined in `HostRuntime.md#delayed-dispatch`.
 
 An observer is observational only and has no return value. Observer callbacks
 must not throw. Throwing is an embedding-contract violation, is not converted to

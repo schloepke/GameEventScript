@@ -11,6 +11,7 @@ public final class GameEventScriptHost {
     private let limits: GesRuntimeLimits
     private let clock: GesClockSource?
     private var delayed: [GesDelayedMessage] = []
+    private var lastScheduledID: Int64 = 0
     private let sink: (any GesPublishSink)?
     private lazy var context = GesContext(host: self, random: random, limits: limits, extensions: extensions, observer: observer)
     private var exact: [String: [GesSubscriptionEntry]] = [:]
@@ -343,7 +344,8 @@ public final class GameEventScriptHost {
             names = byName["undeliverable"] ?? []
         }
         let pending = GesPendingMessage(message: message, exact: exact, names: names, initializationOutputID: initializationInstance?.registrationID ?? 0)
-        let entry = GesDelayedMessage(deadline: now + microseconds, pending: pending, publish: publish, owner: initializationInstance)
+        lastScheduledID += 1
+        let entry = GesDelayedMessage(deadline: now + microseconds, pending: pending, publish: publish, owner: initializationInstance, id: lastScheduledID)
         var lo = 0
         var hi = delayed.count
         while lo < hi {
@@ -352,6 +354,7 @@ public final class GameEventScriptHost {
         }
         delayed.insert(entry, at: lo)
         idleSinceMicroseconds = nil
+        observer?.messageScheduled(message, id: entry.id, deadline: entry.deadline, publish: publish)
         if publish {
             published += 1
             if initializationInstance != nil { initializationPublishes += 1 }
@@ -368,7 +371,10 @@ public final class GameEventScriptHost {
         let now = elapsedMicroseconds
         while let entry = delayed.first, entry.deadline <= now {
             delayed.removeFirst()
-            if entry.owner?.initializationFailed ?? false { continue }
+            if entry.owner?.initializationFailed ?? false {
+                observer?.scheduledMessageDiscarded(id: entry.id)
+                continue
+            }
             let local = entry.pending.hasRecipients
             if local { queue.enqueue(entry.pending) }
             if entry.publish {
@@ -572,7 +578,7 @@ extension GameEventScriptHost {
                     _ = instance.detach()
                 }
                 queue.clear()
-                delayed.removeAll()
+                clearDelayed()
                 startupQueue.clear()
                 startupPublications.removeAll(keepingCapacity: true)
                 return result
@@ -614,7 +620,28 @@ extension GameEventScriptHost {
         initializationDiagnostic = nil
         active = nil
         queue.removeFailedRecipients(discardingOutputsFrom: instance.registrationID)
-        delayed.removeAll { ($0.owner?.initializationFailed ?? false) || !$0.publish && !$0.pending.hasRecipients }
+        removeFailedDelayed()
+    }
+
+    // Removes delayed entries of a failed initialization and emits left without recipients, in deadline order.
+    private func removeFailedDelayed() {
+        var kept = 0
+        for index in delayed.indices {
+            let entry = delayed[index]
+            if (entry.owner?.initializationFailed ?? false) || !entry.publish && !entry.pending.hasRecipients {
+                observer?.scheduledMessageDiscarded(id: entry.id)
+                continue
+            }
+            delayed[kept] = entry
+            kept += 1
+        }
+        delayed.removeLast(delayed.count - kept)
+    }
+
+    // Discards every delayed entry, reporting each in deadline order.
+    private func clearDelayed() {
+        if let observer { for entry in delayed { observer.scheduledMessageDiscarded(id: entry.id) } }
+        delayed.removeAll()
     }
 
     private func initializationLimitDiagnostic(_ instance: GesProgramInstance?) -> GesDiagnostic {

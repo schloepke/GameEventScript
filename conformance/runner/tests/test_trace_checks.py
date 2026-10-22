@@ -25,6 +25,16 @@ class TraceTests(unittest.TestCase):
             with self.assertRaises(InvalidDocument):
                 normalize([event], message, limit)
 
+    def test_scheduling_shapes(self):
+        scheduled = {'event': 'scheduled', 'message': {'name': 'Ping'}, 'id': '1', 'deadline': '1000000', 'publish': False}
+        discarded = {'event': 'scheduledDiscarded', 'id': '1'}
+        self.assertEqual(['scheduled', 'scheduledDiscarded'], [item['event'] for item in normalize([scheduled, discarded], message, limit)])
+        for event in ({**scheduled, 'id': 1}, {**scheduled, 'deadline': '-1'}, {**scheduled, 'deadline': '\u00b2'},
+                      {**scheduled, 'publish': 0}, {key: value for key, value in scheduled.items() if key != 'deadline'},
+                      {**discarded, 'id': ''}, {**discarded, 'message': {'name': 'Ping'}}):
+            with self.assertRaises(InvalidDocument):
+                normalize([event], message, limit)
+
     def test_order_empty_trace_and_partial_context(self):
         expected = normalize([{'event': 'runtimeLimit', 'runtimeLimit': {'any': True}},
                               {'event': 'diagnostic', 'diagnostic': {'phase': 'runtime', 'code': 'test.error'}}], message, limit, expectation=True)

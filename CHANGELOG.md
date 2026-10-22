@@ -98,6 +98,17 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 - C# `GesValueMap.StorageLength` is removed; it always equaled `Length`. Use
   `Length` instead.
 
+### Added
+
+- Runtime observers can follow delayed messages. C# `MessageScheduled(message, id,
+  deadline, publish)` / Swift `messageScheduled(_:id:deadline:publish:)` reports
+  each accepted `emit … after` or `publish … after` once, with a per-host
+  scheduling ID and its absolute deadline in microseconds on the host clock.
+  `ScheduledMessageDiscarded(id)` / `scheduledMessageDiscarded(id:)` reports
+  delayed messages removed before they became due, such as after a failed
+  initialization. Both callbacks have empty default implementations; hosts
+  without an observer behave as before.
+
 ### Changed
 
 - The root SwiftPM package now exposes only the four libraries. Build `ges` from

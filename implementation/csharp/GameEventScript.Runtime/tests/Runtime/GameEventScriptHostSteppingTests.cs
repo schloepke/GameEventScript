@@ -310,6 +310,44 @@ public sealed class GameEventScriptHostSteppingTests
         Assert.AreEqual(0, GC.GetAllocatedBytesForCurrentThread() - before);
     }
 
+    [TestMethod]
+    public void DelayedMessagesBehaveIdenticallyWithAndWithoutAnObserver()
+    {
+        var silent = RunDelayedScenario(null);
+        var observed = RunDelayedScenario(TestRuntimeObserver.ObserveMessages());
+
+        CollectionAssert.AreEqual(new[] { "delay 1000000", "1000000 Later", "1000000 Later", "2000000 publish Out", "delay none" }, silent);
+        CollectionAssert.AreEqual(silent, observed);
+    }
+
+    private static List<string> RunDelayedScenario(IGesRuntimeObserver? observer)
+    {
+        var clock = new ManualClock();
+        var events = new List<string>();
+        var builder = GameEventScriptHost.CreateBuilder()
+            .WithClock(clock)
+            .WithPublishSink(new TestPublishSink(message => events.Add(clock.ElapsedMicroseconds + " publish " + message.Name)));
+        if (observer is not null) builder.WithRuntimeObserver(observer);
+        var host = builder.Build().StartForTest();
+        host.Load(Compile("on Work { emit after 1s Later(); publish after 2s Out(); emit after 1s Later() }"));
+        host.Subscribe("Later", [], (message, _) => events.Add(clock.ElapsedMicroseconds + " " + message.Name));
+
+        host.Receive(Create("Work"));
+        host.RunToCompletion();
+        events.Add("delay " + host.NextMessageDelay);
+        clock.ElapsedMicroseconds = 1_000_000;
+        host.RunToCompletion();
+        clock.ElapsedMicroseconds = 2_000_000;
+        host.RunToCompletion();
+        events.Add("delay " + (host.NextMessageDelay?.ToString() ?? "none"));
+        return events;
+    }
+
+    private sealed class ManualClock : IGesClock
+    {
+        public long ElapsedMicroseconds { get; set; }
+    }
+
     private static GameEventScriptProgram Compile(string source)
         => new GesProgramBuilder().AddScript(source).Compile();
 

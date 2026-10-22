@@ -953,8 +953,10 @@ interface GameEventScript.Api.IGesRuntimeObserver
   method System.Void DispatchStarted(GameEventScript.Api.GameEventScriptMessage message, System.String dispatchSignatureId)
   method System.Void MessageEmitted(GameEventScript.Api.GameEventScriptMessage message, System.Boolean accepted)
   method System.Void MessagePublished(GameEventScript.Api.GameEventScriptMessage message, GameEventScript.Api.GesPublishResult result)
+  method System.Void MessageScheduled(GameEventScript.Api.GameEventScriptMessage message, System.Int64 id, System.Int64 deadline, System.Boolean publish)
   method System.Void RuntimeError(GameEventScript.Api.GesDiagnostic diagnostic)
   method System.Void RuntimeLimitReached(System.String limitName, System.String detail, System.Int32 limit)
+  method System.Void ScheduledMessageDiscarded(System.Int64 id)
 static class GameEventScript.CSharpBridge.GesBridgeContextExtensions
   method static GameEventScript.Api.GesPublishResult Publish(GameEventScript.Api.GesContext context, GameEventScript.Api.GesMessageSignature signature, System.Collections.Generic.IReadOnlyDictionary<System.String, GameEventScript.Runtime.Values.GesValue> arguments)
   method static GameEventScript.Api.GesPublishResult Publish(GameEventScript.Api.GesContext context, System.String message, System.ValueTuple<System.String, GameEventScript.Runtime.Values.GesValue>[] arguments)

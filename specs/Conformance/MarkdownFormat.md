@@ -594,14 +594,23 @@ trace:
     runtimeLimit: { name: MaxLoopIterations, limit: 10 }
   - event: diagnostic
     diagnostic: { phase: runtime, code: runtime.publishSinkFailure }
+  - event: scheduled
+    message: { name: Later }
+    id: "1"
+    deadline: "1000000"
+    publish: false
+  - event: scheduledDiscarded
+    id: "1"
 ```
 
 Emit requires the complete `accepted` flag. Publish trace assertions require the four final-delivery fields shown above; `outboundAccepted` implies
 `outboundAttempted`, and `anyAccepted` must equal `localAccepted OR
 outboundAccepted`. Dispatch events require the exact dispatched message and
 signature ID. Runtime-limit and diagnostic constraints use the same shapes as
-their standalone expectation lists. Message/value comparison uses the case's
-ordinary Binary64 comparison mode.
+their standalone expectation lists. Scheduling events require the scheduling
+ID and absolute deadline as exact unsigned ASCII decimal strings; `scheduled`
+also requires the exact message and Boolean `publish` flag. Message/value
+comparison uses the case's ordinary Binary64 comparison mode.
 
 An optional top-level `initialization` expectation has `local`, `outbound`,
 `runtimeLimits`, `diagnostics`, and optional exact `trace` with the same meanings.

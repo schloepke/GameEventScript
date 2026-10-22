@@ -1,6 +1,7 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
+using System.Globalization;
 using System.Text.Json;
 using GameEventScript.Api;
 
@@ -158,6 +159,21 @@ internal sealed class RuntimeObservations(string publishSink) : IGesRuntimeObser
     /// <summary>Records dispatch completion in callback order.</summary>
     public void DispatchCompleted(GameEventScriptMessage message, string dispatchSignatureId)
         => _trace.Add(new() { ["event"] = "dispatchCompleted", ["message"] = message, ["signatureId"] = dispatchSignatureId });
+
+    /// <summary>Records a delayed send with its scheduling ID and absolute deadline as exact decimal text.</summary>
+    public void MessageScheduled(GameEventScriptMessage message, long id, long deadline, bool publish)
+        => _trace.Add(new()
+        {
+            ["event"] = "scheduled",
+            ["message"] = message,
+            ["id"] = id.ToString(CultureInfo.InvariantCulture),
+            ["deadline"] = deadline.ToString(CultureInfo.InvariantCulture),
+            ["publish"] = publish
+        });
+
+    /// <summary>Records the scheduling ID of a delayed send removed before it became due.</summary>
+    public void ScheduledMessageDiscarded(long id)
+        => _trace.Add(new() { ["event"] = "scheduledDiscarded", ["id"] = id.ToString(CultureInfo.InvariantCulture) });
 
     /// <summary>Records stable limit fields in both limit observations and the callback trace.</summary>
     public void RuntimeLimitReached(string limitName, string detail, int limit)

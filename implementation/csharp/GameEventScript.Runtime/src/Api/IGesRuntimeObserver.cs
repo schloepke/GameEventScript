@@ -50,4 +50,26 @@ public interface IGesRuntimeObserver
     /// </summary>
     /// <param name="diagnostic">The language-neutral diagnostic.</param>
     void RuntimeError(GesDiagnostic diagnostic);
+
+    /// <summary>
+    /// Observes acceptance of one delayed <c>emit … after</c> or <c>publish … after</c>, once, when it is scheduled.
+    /// The default implementation does nothing.
+    /// </summary>
+    /// <param name="message">The scheduled message.</param>
+    /// <param name="id">The per-host scheduling ID; it increases monotonically, so repeated identical messages differ.</param>
+    /// <param name="deadline">The absolute due time in whole microseconds on the host's monotonic clock, the clock
+    /// <see cref="GameEventScriptHost.NextMessageDelay"/> uses; neither a relative delay nor wall-clock time.</param>
+    /// <param name="publish">Whether the send is a publish rather than an emit.</param>
+    void MessageScheduled(GameEventScriptMessage message, long id, long deadline, bool publish)
+    {
+    }
+
+    /// <summary>
+    /// Observes removal of a scheduled message before it became due, for example because its initialization failed.
+    /// A due message is not reported here; its ordinary delivery callbacks follow. The default implementation does nothing.
+    /// </summary>
+    /// <param name="id">The scheduling ID that <see cref="MessageScheduled"/> reported.</param>
+    void ScheduledMessageDiscarded(long id)
+    {
+    }
 }

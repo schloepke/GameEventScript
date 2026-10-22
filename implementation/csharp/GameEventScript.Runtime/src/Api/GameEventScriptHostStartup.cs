@@ -60,7 +60,7 @@ public sealed partial class GameEventScriptHost
                         instance.Detach();
                     }
                     _queue.Clear();
-                    _delayed?.Clear();
+                    ClearDelayed();
                     _startupQueue.Clear();
                     _startupPublications?.Clear();
                     return failure;

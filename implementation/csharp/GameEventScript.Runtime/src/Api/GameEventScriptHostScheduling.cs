@@ -24,6 +24,7 @@ public sealed partial class GameEventScriptHost
 
     private readonly IGesClock _clock;
     private List<GesDelayedMessage>? _delayed;
+    private long _lastScheduledId;
 
     /// <summary>Gets whole microseconds until the earliest delayed message, or null when no delayed message remains. Reading never pumps the host.</summary>
     public long? NextMessageDelay => _delayed is { Count: > 0 } ? Math.Max(0, _delayed[0].Deadline - _clock.ElapsedMicroseconds) : null;
@@ -59,7 +60,7 @@ public sealed partial class GameEventScriptHost
             names = Get(_byName, GesSystemEndpoints.UndeliverableName);
         }
         var pending = new GesPendingMessage(message, exact, names, initializationOutput: _initializationInstance);
-        var delayed = new GesDelayedMessage(now + microseconds, pending, publish, _initializationInstance);
+        var delayed = new GesDelayedMessage(now + microseconds, pending, publish, _initializationInstance, ++_lastScheduledId);
         _delayed ??= new();
         var lo = 0;
         var hi = _delayed.Count;
@@ -71,6 +72,7 @@ public sealed partial class GameEventScriptHost
         }
         _delayed.Insert(lo, delayed);
         _idleSinceMicroseconds = null;
+        _observer?.MessageScheduled(message, delayed.Id, delayed.Deadline, publish);
         if (publish)
         {
             _stepPublishedMessages++;
@@ -93,7 +95,11 @@ public sealed partial class GameEventScriptHost
         {
             var delayed = _delayed[0];
             _delayed.RemoveAt(0);
-            if (delayed.Owner?.StartResult is { State: not GesStartState.Ready }) continue;
+            if (delayed.Owner?.StartResult is { State: not GesStartState.Ready })
+            {
+                _observer?.ScheduledMessageDiscarded(delayed.Id);
+                continue;
+            }
             var localAccepted = delayed.Pending.HasRecipients();
             if (localAccepted) _queue.Enqueue(delayed.Pending);
             if (!delayed.Publish) continue;
@@ -111,13 +117,35 @@ public sealed partial class GameEventScriptHost
         }
     }
 
+    // Removes delayed entries of a failed initialization and emits left without recipients, in deadline order.
     private void RemoveFailedDelayed()
     {
         if (_delayed is null) return;
-        for (var index = _delayed.Count - 1; index >= 0; index--)
+        var kept = 0;
+        for (var index = 0; index < _delayed.Count; index++)
         {
             var item = _delayed[index];
-            if (item.Owner?.StartResult is { State: not GesStartState.Ready } || !item.Publish && !item.Pending.HasRecipients()) _delayed.RemoveAt(index);
+            if (item.Owner?.StartResult is { State: not GesStartState.Ready } || !item.Publish && !item.Pending.HasRecipients())
+            {
+                _observer?.ScheduledMessageDiscarded(item.Id);
+                continue;
+            }
+
+            _delayed[kept++] = item;
         }
+
+        _delayed.RemoveRange(kept, _delayed.Count - kept);
+    }
+
+    // Discards every delayed entry, reporting each in deadline order.
+    private void ClearDelayed()
+    {
+        if (_delayed is null) return;
+        if (_observer is { } observer)
+        {
+            for (var index = 0; index < _delayed.Count; index++) observer.ScheduledMessageDiscarded(_delayed[index].Id);
+        }
+
+        _delayed.Clear();
     }
 }

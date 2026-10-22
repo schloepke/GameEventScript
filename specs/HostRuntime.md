@@ -507,6 +507,25 @@ rejection or failure cannot change the Boolean already returned to script.
 The existing sink diagnostic behavior remains applicable. Emit observations occur
 at acceptance; delayed publish observations occur when the publication is released.
 
+> **Since: Unreleased** — scheduling observation
+
+When an observer is configured, each accepted delayed send reports
+`MessageScheduled` once, immediately after it enters the delayed queue and before
+the `MessageEmitted` of a delayed emit. Its scheduling ID is a positive Int64 that
+starts at 1 for each Host and increases by one per accepted delayed send, so
+identical messages remain distinguishable. Its deadline is the absolute entry
+deadline in whole microseconds on the Host clock that `NextMessageDelay` uses,
+neither a relative delay nor wall-clock time; the publish flag distinguishes
+`publish … after` from `emit … after`. Rejected sends report no scheduling ID.
+
+An entry removed before it becomes due reports `ScheduledMessageDiscarded` with
+its scheduling ID exactly once, in deadline order: every entry on initial-group
+failure, and on later-instance failure every entry staged by that instance and
+every delayed emit left without recipients. An entry that becomes due reports no
+scheduling callback; its ordinary delivery and dispatch callbacks follow.
+Without an observer, scheduling IDs remain unobservable and scheduling,
+ordering and determinism are unchanged.
+
 Init computes deadlines when the expression executes but cannot release its
 outputs before its initial group or later-instance initialization succeeds.
 Already due entries become eligible after that barrier. Initial-group failure

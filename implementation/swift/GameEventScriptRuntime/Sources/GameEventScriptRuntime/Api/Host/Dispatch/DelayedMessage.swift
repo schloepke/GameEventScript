@@ -6,4 +6,5 @@ struct GesDelayedMessage {
     let pending: GesPendingMessage
     let publish: Bool
     let owner: GesProgramInstance?
+    let id: Int64
 }

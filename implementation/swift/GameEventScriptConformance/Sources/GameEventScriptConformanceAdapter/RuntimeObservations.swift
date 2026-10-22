@@ -214,6 +214,9 @@ final class RuntimeObservations: GesRuntimeObserver, GesPublishSink {
         var result: GesPublishResult?
         var limit: Limit?
         var diagnostic: GesDiagnostic?
+        var schedulingID: Int64?
+        var deadline: Int64?
+        var publish: Bool?
     }
 
     let sink: String
@@ -260,6 +263,12 @@ final class RuntimeObservations: GesRuntimeObserver, GesPublishSink {
         diagnostics.append(diagnostic)
         trace.append(.init(kind: "diagnostic", diagnostic: diagnostic))
     }
+
+    func messageScheduled(_ message: GameEventScriptMessage, id: Int64, deadline: Int64, publish: Bool) {
+        trace.append(.init(kind: "scheduled", message: message, schedulingID: id, deadline: deadline, publish: publish))
+    }
+
+    func scheduledMessageDiscarded(id: Int64) { trace.append(.init(kind: "scheduledDiscarded", schedulingID: id)) }
 }
 
 extension RuntimeObservations {
@@ -272,6 +281,9 @@ extension RuntimeObservations {
                 if let message = event.message { item["message"] = try RuntimeValues.encodeMessage(message) }
                 if let signature = event.signature { item["signatureId"] = signature }
                 if let accepted = event.accepted { item["accepted"] = accepted }
+                if let id = event.schedulingID { item["id"] = String(id) }
+                if let deadline = event.deadline { item["deadline"] = String(deadline) }
+                if let publish = event.publish { item["publish"] = publish }
                 if let result = event.result { item["result"] = ["localAccepted": result.localAccepted, "outboundAttempted": result.outboundAttempted, "outboundAccepted": result.outboundAccepted, "anyAccepted": result.anyAccepted] }
                 if let diagnostic = event.diagnostic { item["diagnostic"] = CompilerObservations.diagnostic(diagnostic) }
                 if let limit = event.limit { item["runtimeLimit"] = ["name": limit.name, "limit": limit.limit] }

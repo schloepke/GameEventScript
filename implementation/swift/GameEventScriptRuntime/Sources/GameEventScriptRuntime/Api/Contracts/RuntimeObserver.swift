@@ -21,6 +21,18 @@ public protocol GesRuntimeObserver {
 
     /// Observes a classified runtime failure; the default implementation does nothing.
     func runtimeError(_ diagnostic: GesDiagnostic)
+
+    /// Observes acceptance of one delayed `emit … after` or `publish … after`, once, when it is scheduled. `id` is the
+    /// per-host scheduling ID and increases monotonically, so repeated identical messages differ. `deadline` is the
+    /// absolute due time in whole microseconds on the host's monotonic clock, the clock `nextMessageDelay` uses; it is
+    /// neither a relative delay nor wall-clock time. `publish` distinguishes a publish from an emit. The default
+    /// implementation does nothing.
+    func messageScheduled(_ message: GameEventScriptMessage, id: Int64, deadline: Int64, publish: Bool)
+
+    /// Observes removal of a scheduled message before it became due, for example because its initialization failed,
+    /// by the `id` that `messageScheduled` reported. A due message is not reported here; its ordinary delivery callbacks
+    /// follow. The default implementation does nothing.
+    func scheduledMessageDiscarded(id: Int64)
 }
 
 extension GesRuntimeObserver {
@@ -42,4 +54,10 @@ extension GesRuntimeObserver {
 
     /// Observes a classified runtime failure; the default implementation does nothing.
     public func runtimeError(_ diagnostic: GesDiagnostic) {}
+
+    /// Observes acceptance of one delayed `emit … after` or `publish … after`; the default implementation does nothing.
+    public func messageScheduled(_ message: GameEventScriptMessage, id: Int64, deadline: Int64, publish: Bool) {}
+
+    /// Observes removal of a scheduled message before it became due; the default implementation does nothing.
+    public func scheduledMessageDiscarded(id: Int64) {}
 }

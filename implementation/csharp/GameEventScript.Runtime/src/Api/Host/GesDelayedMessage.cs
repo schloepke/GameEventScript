@@ -10,4 +10,4 @@ using static GameEventScript.Runtime.Vm.GesVirtualMachine.StateValue;
 namespace GameEventScript.Api;
 
 /// <summary>A message or publication waiting for its monotonic deadline.</summary>
-internal readonly record struct GesDelayedMessage(long Deadline, GesPendingMessage Pending, bool Publish, GesProgramInstance? Owner);
+internal readonly record struct GesDelayedMessage(long Deadline, GesPendingMessage Pending, bool Publish, GesProgramInstance? Owner, long Id);

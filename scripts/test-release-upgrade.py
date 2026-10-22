@@ -2,7 +2,8 @@
 # Copyright 2026 Stephan Schlöpke
 # SPDX-License-Identifier: Apache-2.0
 
-"""Isolated 0.3.0 consumer upgrade smoke tests; never publishes packages or tags."""
+"""Isolated 0.3.0 consumer upgrade smoke tests; never publishes packages or tags. Each version builds the consumer
+source committed with it, so breaking pre-1.0 API changes are checked as the documented migration."""
 import argparse
 import base64
 import hashlib
@@ -37,6 +38,22 @@ def snapshot(revision, destination, workspace):
     archive.unlink()
 
 
+CSHARP_CONSUMERS = ('PackageConsumer', 'RuntimeConsumer')
+SWIFT_CONSUMERS = ('SwiftPMConsumer', 'RuntimeConsumer')
+
+
+def consumer_path(language, name):
+    if language == 'csharp':
+        return f'implementation/csharp/verification/GameEventScript.{name}/Program.cs'
+    return f'implementation/swift/verification/{name}/main.swift'
+
+
+def consumer_source(revision, language, name):
+    """The consumer source as committed in `revision`. Each version builds the consumer written for it, so the gate
+    checks the documented migration across breaking pre-1.0 API changes instead of assuming source compatibility."""
+    return subprocess.check_output(['git', 'show', f'{revision}:{consumer_path(language, name)}'], cwd=ROOT)
+
+
 def require_versions(actual, expected, names):
     for name in names:
         if actual.get(name) != expected:
@@ -58,16 +75,16 @@ def csharp(workspace, candidate):
     (workspace / 'Directory.Build.props').write_text('<Project />\n')
     (workspace / 'Directory.Build.targets').write_text('<Project />\n')
     paths = {}
-    for name in ('PackageConsumer', 'RuntimeConsumer'):
+    for name in CSHARP_CONSUMERS:
         directory = workspace / name
         directory.mkdir()
-        original = ROOT / 'implementation/csharp/verification' / ('GameEventScript.' + name)
-        for file in ('Program.cs', 'GameEventScript.' + name + '.csproj'):
-            shutil.copy2(original / file, directory / file)
+        project = 'GameEventScript.' + name + '.csproj'
+        shutil.copy2(ROOT / 'implementation/csharp/verification' / ('GameEventScript.' + name) / project, directory / project)
         paths[name] = directory
     baseline = workspace / 'baseline.gesb'
-    for version in (BASELINE, CANDIDATE):
+    for version, revision in ((BASELINE, BASELINE_COMMIT), (CANDIDATE, candidate)):
         for name, directory in paths.items():
+            (directory / 'Program.cs').write_bytes(consumer_source(revision, 'csharp', name))
             project = directory / ('GameEventScript.' + name + '.csproj')
             sources = 'https://api.nuget.org/v3/index.json' if version == BASELINE else str(feed)
             properties = [f'-p:GesPackageVersion={version}', f'-p:GesPackageSource={sources}',
@@ -112,13 +129,12 @@ def swift(workspace, candidate):
              '-c', 'commit.gpgsign=false', 'commit', '-m', version], repository, log)
         run(['git', '-c', 'tag.gpgsign=false', 'tag', version], repository, log)
     baseline = workspace / 'baseline.gesb'
-    for version in (BASELINE, CANDIDATE):
-        for name in ('SwiftPMConsumer', 'RuntimeConsumer'):
+    for version, revision in ((BASELINE, BASELINE_COMMIT), (CANDIDATE, candidate)):
+        for name in SWIFT_CONSUMERS:
             directory = workspace / name
             sources = directory / 'Sources' / name
             sources.mkdir(parents=True, exist_ok=True)
-            if version == BASELINE:
-                shutil.copy2(ROOT / 'implementation/swift/verification' / name / 'main.swift', sources / 'main.swift')
+            (sources / 'main.swift').write_bytes(consumer_source(revision, 'swift', name))
             modules = MODULES if name == 'SwiftPMConsumer' else ('Runtime',)
             products = ', '.join(f'.product(name: "GameEventScript{module}", package: "GameEventScript")' for module in modules)
             (directory / 'Package.swift').write_text(f'''// swift-tools-version: 6.0
@@ -152,16 +168,14 @@ def main():
         fixture = (csharp if args.language == 'csharp' else swift)(workspace, candidate)
         data = fixture.read_bytes()
         require_fixture(args.language, data)
-        source_paths = ([ROOT / 'implementation/csharp/verification' / ('GameEventScript.' + name) / 'Program.cs'
-                         for name in ('PackageConsumer', 'RuntimeConsumer')] if args.language == 'csharp' else
-                        [ROOT / 'implementation/swift/verification' / name / 'main.swift'
-                         for name in ('SwiftPMConsumer', 'RuntimeConsumer')])
+        consumers = CSHARP_CONSUMERS if args.language == 'csharp' else SWIFT_CONSUMERS
         (workspace / 'summary.log').write_text(json.dumps({
             'status': 'passed', 'language': args.language, 'baselineVersion': BASELINE,
             'baselineCommit': baseline, 'candidateCommit': candidate, 'candidatePackageVersion': CANDIDATE,
             'binaryPolicy': 'selected-smoke-only-not-general-0.x-compatibility',
-            'consumerSourceSha256': {str(path.relative_to(ROOT)): hashlib.sha256(path.read_bytes()).hexdigest()
-                                     for path in source_paths},
+            'consumerSourceSha256': {f'{version}:{consumer_path(args.language, name)}':
+                                     hashlib.sha256(consumer_source(revision, args.language, name)).hexdigest()
+                                     for version, revision in ((BASELINE, baseline), (CANDIDATE, candidate)) for name in consumers},
             'baselineFixtureSha256': hashlib.sha256(data).hexdigest(),
             'baselineFixtureBase64': base64.b64encode(data).decode(),
         }, indent=2) + '\n')

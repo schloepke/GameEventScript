@@ -154,13 +154,19 @@ class CompletionTests(unittest.TestCase):
             expected = expected[:a] + b'0' + expected[b:]
         self.assertEqual(expected, output)
 
+    def test_source_documents_are_keyed_by_portable_suite_id(self):
+        case = next(case for case in self.cases if case.document)
+        suite = case.id.split('/')[0]
+        self.assertEqual({suite: case.document.digest}, self.report(case)['sourceDocuments'])
+        self.assertNotIn(str(ROOT), json.dumps(self.report(case)['sourceDocuments']))
+
     def test_received_rejects_stale_identity_missing_ranges_and_overlap(self):
         original = next(c for c in self.cases if c.assembler is not None)
         for mode, code in [('source', 'staleRange'), ('title', 'invalidReport'), ('range', 'missingRange'), ('duplicate', 'overlappingRange')]:
             case = copy.deepcopy(original)
             report = self.report(case, actualAssembler=case.assembler)
             ids = [case.id]
-            if mode == 'source': report['sourceDocuments'][case.document.name] = 'stale'
+            if mode == 'source': report['sourceDocuments'][case.id.split('/')[0]] = 'stale'
             if mode == 'title': report['cases'][0]['title'] = 'stale'
             if mode == 'range': case.ranges = {}
             if mode == 'duplicate': ids *= 2

@@ -3,7 +3,7 @@
 """Surgical Received-Markdown updates; never write to the authored document."""
 from core.corpus import InvalidDocument, logical_lines
 from checks.performance_checks import profiles, upper_bound
-from reporting.reports import numeric_text
+from reporting.reports import numeric_text, suite_id
 from core.yaml_subset import inline
 
 
@@ -15,9 +15,10 @@ def render(document, cases, report, selected):
     """Return bytes, changing only selected GESA payloads and performance references."""
     if report.get('schemaVersion') != 1 or not isinstance(report.get('cases'), list):
         fail('invalidReport', 'Expected V1 result report')
-    if report.get('sourceDocuments', {}).get(document.name) != document.digest:
-        fail('staleRange', 'Report was not produced from these exact source bytes')
     authored = {case.id: case for case in cases if case.document == document}
+    suites = {suite_id(case) for case in authored.values()}
+    if len(suites) != 1 or report.get('sourceDocuments', {}).get(next(iter(suites))) != document.digest:
+        fail('staleRange', 'Report was not produced from these exact source bytes')
     results = {}
     for item in report['cases']:
         if not isinstance(item, dict) or not isinstance(item.get('id'), str) or item['id'] in results:

@@ -89,7 +89,7 @@ Normalized inputs are immutable snapshots; explicit copies support negative
 controls. The fileless byte-buffer parser retains original UTF-8 ranges; the CLI
 owns file access. The complete selection is validated before execution.
 `run` and observation-file `verify` emit the portable V1 report fields. Two tooling
-extensions retain `sourceDocuments` (logical input name to original-byte SHA-256)
+extensions retain `sourceDocuments` (suite ID to original-byte SHA-256)
 and optional `measurementEvidence` (qualified raw provider reports).
 
 The `received` command requires a single source document, explicit case selection,

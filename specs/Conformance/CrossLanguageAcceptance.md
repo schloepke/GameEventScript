@@ -31,7 +31,7 @@ load the files from a filesystem, package resources, or caller-provided memory.
 
 The full canonical result (`ConformanceResults.json`, see [Runner](Runner.md))
 records under `sourceDocuments` the SHA-256 of the exact bytes of every authored
-Markdown document it ran, keyed by document name. Two results describe the same
+Markdown document it ran, keyed by suite ID. Two results describe the same
 corpus when their `sourceDocuments` maps are equal. Binary resources need no
 separate entry: their resource IDs and expected SHA-256 values are part of the
 hashed Markdown, and the runner verifies the resolved bytes before decoding them.

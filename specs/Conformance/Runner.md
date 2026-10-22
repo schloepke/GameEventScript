@@ -534,11 +534,11 @@ ranges, stale range contents, or overlaps. A mixed-line-ending source has no
 unambiguous document style; inserted multiline GESA then uses `LF` while all
 existing bytes remain untouched.
 
-The independent Python tool may retain `sourceDocuments` (logical document name
-mapped to the SHA-256 of its original bytes) and `measurementEvidence` alongside
-the portable report fields. These tooling extensions bind Received updates to
-exact inputs and retain raw instrumentation controls/samples; they never become
-adapter expectations. See [Python runner](PythonRunner.md).
+The independent Python tool retains `sourceDocuments` (suite ID mapped to the
+SHA-256 of the document's original bytes) and may retain `measurementEvidence`
+alongside the portable report fields. `sourceDocuments` identifies the corpus
+and binds Received updates to exact inputs; `measurementEvidence` retains raw
+instrumentation controls/samples. Neither becomes an adapter expectation. See [Python runner](PythonRunner.md).
 
 ## Adapter responsibilities
 

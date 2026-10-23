@@ -136,7 +136,15 @@ final class ToolTests: XCTestCase {
         let source = try file("game.ges", "on Main(args) { emit after 0.001s Later(); publish after 0.002s Out() }\non Later {}\n")
         let result = run(["run", source, "--verbose"])
         XCTAssertEqual(result.code, 0, result.error)
-        XCTAssertNotNil(result.error.range(of: #"dispatch #1 Main\(args\) <- Main\(args: \[\]\)\nschedule #2 emit Later at \d+us\nemit #2 Later\nschedule #3 publish Out at \d+us"#, options: .regularExpression), result.error)
+        let time = #"(\d{4}-\d{2}-\d{2} )?\d{2}:\d{2}:\d{2}\.\d{3}"#
+        let trace = #"dispatch #1 Main\(args\) <- Main\(args: \[\]\)\nschedule #2 emit Later at "# + time + #"\nemit #2 Later\nschedule #3 publish Out at "# + time
+        XCTAssertNotNil(result.error.range(of: trace, options: .regularExpression), result.error)
+    }
+
+    func testRunClockShowsDeadlinesAsLocalTimes() {
+        let clock = RunClock()
+        XCTAssertNotNil(clock.formatDeadline(172_800_000_000).range(of: #"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}$"#, options: .regularExpression))
+        XCTAssertTrue(clock.formatDeadline(.max).hasPrefix("in "))
     }
 
     func testJointCompilationOrderWildcardAndDeduplication() throws {

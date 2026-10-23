@@ -17,8 +17,9 @@ final class RunSession {
         self.workspace = workspace ?? RunWorkspace()
         self.options = options
         self.io = io
-        observer = RunObserver(io: io, options: options)
-        let builder = GameEventScriptHost.makeBuilder().withRuntimeLimits(options.limits).withRuntimeObserver(observer)
+        let clock = RunClock()
+        observer = RunObserver(io: io, options: options, clock: clock)
+        let builder = GameEventScriptHost.makeBuilder().withClock(clock).withRuntimeLimits(options.limits).withRuntimeObserver(observer)
         if let seed = options.seed { builder.withRandomSeed(seed) }
         if let profiler { builder.withProfiler(profiler) }
         host = try builder.build()
@@ -101,13 +102,15 @@ final class RunSession {
 final class RunObserver: GesRuntimeObserver {
     let io: ToolIO
     let options: RunOptions
+    let clock: RunClock
     private lazy var highlighting = RunHighlighting()
     var failed = false
     var scriptExitCode = 0
 
-    init(io: ToolIO, options: RunOptions) {
+    init(io: ToolIO, options: RunOptions, clock: RunClock) {
         self.io = io
         self.options = options
+        self.clock = clock
     }
 
     func subscribeConsoleHandlers(_ inventory: RunInventory) throws {
@@ -122,7 +125,7 @@ final class RunObserver: GesRuntimeObserver {
 
     func dispatchStarted(_ message: GameEventScriptMessage, id: Int64, signatureID: String) { writeTrace("dispatch #\(id) \(signatureID) <- " + format(message)) }
 
-    func messageScheduled(_ message: GameEventScriptMessage, id: Int64, deadline: Int64, publish: Bool) { writeTrace("schedule #\(id) \(publish ? "publish" : "emit") " + format(message) + " at \(deadline)us") }
+    func messageScheduled(_ message: GameEventScriptMessage, id: Int64, deadline: Int64, publish: Bool) { writeTrace("schedule #\(id) \(publish ? "publish" : "emit") " + format(message) + " at " + clock.formatDeadline(deadline)) }
 
     func scheduledMessageDiscarded(id: Int64) { writeTrace("discard #\(id)") }
 

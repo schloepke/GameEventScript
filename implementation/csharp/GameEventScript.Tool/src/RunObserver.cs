@@ -8,7 +8,7 @@ using GameEventScript.Runtime.Values;
 
 namespace GameEventScript.Tool;
 
-internal sealed class RunObserver(bool verbose, bool color, bool interactive) : IGesRuntimeObserver
+internal sealed class RunObserver(bool verbose, bool color, bool interactive, RunClock clock) : IGesRuntimeObserver
 {
     internal bool Failed { get; private set; }
     internal IOException? OutputError { get; private set; }
@@ -42,7 +42,7 @@ internal sealed class RunObserver(bool verbose, bool color, bool interactive) : 
     /// <inheritdoc />
     public void MessageScheduled(GameEventScriptMessage message, long id, long deadline, bool publish)
     {
-        if (verbose) WriteTrace($"schedule #{id} {(publish ? "publish" : "emit")} {Format(message)} at {deadline}us");
+        if (verbose) WriteTrace($"schedule #{id} {(publish ? "publish" : "emit")} {Format(message)} at {clock.FormatDeadline(deadline)}");
     }
 
     /// <inheritdoc />

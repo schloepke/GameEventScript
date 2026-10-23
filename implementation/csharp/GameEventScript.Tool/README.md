@@ -576,9 +576,10 @@ Only ConsoleOut values go to stdout. General event traces are shown on stderr wi
 or publish had no local enqueue; that alone is not an error. `#<id>` shows the
 host-local send ID, so `dispatch #<id>` lines match the `emit #<id>` or
 `publish #<id>` that caused them; an emit that was not queued shows none. A
-delayed send adds `schedule #<id> emit|publish <message> at <deadline>us` with
-its absolute deadline on the host clock; `discard #<id>` reports a scheduled
-message removed before it became due. No outbound sink is
+delayed send adds `schedule #<id> emit|publish <message> at <time>`, showing its
+deadline as local wall-clock time (`HH:mm:ss.fff`, preceded by the date when it
+is not today), measured from the session start; `discard #<id>` reports a
+scheduled message removed before it became due. No outbound sink is
 configured, so publications only reach local subscribers. Nothing is sent to an
 external service. Root Text arguments in verbose traces use JSON quoting/escaping;
 other values use the existing GES text representation. Trace rendering is distinct

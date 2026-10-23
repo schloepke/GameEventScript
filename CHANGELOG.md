@@ -121,8 +121,8 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   initialization. Hosts without an observer behave as before.
 - C# `IGesRuntimeObserver` gives every callback an empty default implementation,
   like Swift, so an observer implements only the callbacks it needs. `ges run --verbose` traces them as
-  `schedule #<id> …` and `discard #<id>` and shows the send ID on emit, publish
-  and dispatch lines.
+  `schedule #<id> … at <local time>` and `discard #<id>` and shows the send ID on
+  emit, publish and dispatch lines.
 
 ### Changed
 

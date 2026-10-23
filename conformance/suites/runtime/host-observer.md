@@ -56,18 +56,23 @@ steps:
       - name: Remote
     trace:
       - event: dispatchStarted
+        id: "1"
         message: { name: Start }
         signatureId: "Start()"
       - event: publish
+        id: "2"
         message: { name: Remote }
         result: { localAccepted: true, outboundAttempted: false, outboundAccepted: false, anyAccepted: true }
       - event: dispatchCompleted
+        id: "1"
         message: { name: Start }
         signatureId: "Start()"
       - event: dispatchStarted
+        id: "2"
         message: { name: Remote }
         signatureId: "Remote()"
       - event: dispatchCompleted
+        id: "2"
         message: { name: Remote }
         signatureId: "Remote()"
 ```
@@ -111,18 +116,23 @@ steps:
       - name: Remote
     trace:
       - event: dispatchStarted
+        id: "1"
         message: { name: Start }
         signatureId: "Start()"
       - event: publish
+        id: "2"
         message: { name: Remote }
         result: { localAccepted: true, outboundAttempted: true, outboundAccepted: true, anyAccepted: true }
       - event: dispatchCompleted
+        id: "1"
         message: { name: Start }
         signatureId: "Start()"
       - event: dispatchStarted
+        id: "2"
         message: { name: Remote }
         signatureId: "Remote()"
       - event: dispatchCompleted
+        id: "2"
         message: { name: Remote }
         signatureId: "Remote()"
 ```
@@ -166,18 +176,23 @@ steps:
       - name: Remote
     trace:
       - event: dispatchStarted
+        id: "1"
         message: { name: Start }
         signatureId: "Start()"
       - event: publish
+        id: "2"
         message: { name: Remote }
         result: { localAccepted: true, outboundAttempted: true, outboundAccepted: false, anyAccepted: true }
       - event: dispatchCompleted
+        id: "1"
         message: { name: Start }
         signatureId: "Start()"
       - event: dispatchStarted
+        id: "2"
         message: { name: Remote }
         signatureId: "Remote()"
       - event: dispatchCompleted
+        id: "2"
         message: { name: Remote }
         signatureId: "Remote()"
 ```
@@ -225,6 +240,7 @@ steps:
         handlerName: "Start()"
     trace:
       - event: dispatchStarted
+        id: "1"
         message: { name: Start }
         signatureId: "Start()"
       - event: diagnostic
@@ -233,15 +249,19 @@ steps:
           code: runtime.publishSinkFailure
           handlerName: "Start()"
       - event: publish
+        id: "2"
         message: { name: Remote }
         result: { localAccepted: true, outboundAttempted: true, outboundAccepted: false, anyAccepted: true }
       - event: dispatchCompleted
+        id: "1"
         message: { name: Start }
         signatureId: "Start()"
       - event: dispatchStarted
+        id: "2"
         message: { name: Remote }
         signatureId: "Remote()"
       - event: dispatchCompleted
+        id: "2"
         message: { name: Remote }
         signatureId: "Remote()"
 ```
@@ -290,12 +310,15 @@ steps:
           limit: 1
     trace:
       - event: dispatchStarted
+        id: "1"
         message: { name: Start }
         signatureId: "Start()"
       - event: emit
+        id: "2"
         message: { name: Deferred }
         accepted: true
       - event: dispatchCompleted
+        id: "1"
         message: { name: Start }
         signatureId: "Start()"
       - event: runtimeLimit
@@ -311,9 +334,11 @@ steps:
           limit: 1
     trace:
       - event: dispatchStarted
+        id: "2"
         message: { name: Deferred }
         signatureId: "Deferred()"
       - event: dispatchCompleted
+        id: "2"
         message: { name: Deferred }
         signatureId: "Deferred()"
 ```
@@ -375,12 +400,15 @@ steps:
           limit: 2
     trace:
       - event: dispatchStarted
+        id: "1"
         message: { name: Start }
         signatureId: "Start()"
       - event: emit
+        id: "2"
         message: { name: A }
         accepted: true
       - event: emit
+        id: "3"
         message: { name: B }
         accepted: true
       - event: runtimeLimit
@@ -388,21 +416,27 @@ steps:
           name: MaxQueuedMessagesPerRun
           limit: 2
       - event: emit
+        id: "0"
         message: { name: C }
         accepted: false
       - event: dispatchCompleted
+        id: "1"
         message: { name: Start }
         signatureId: "Start()"
       - event: dispatchStarted
+        id: "2"
         message: { name: A }
         signatureId: "A()"
       - event: dispatchCompleted
+        id: "2"
         message: { name: A }
         signatureId: "A()"
       - event: dispatchStarted
+        id: "3"
         message: { name: B }
         signatureId: "B()"
       - event: dispatchCompleted
+        id: "3"
         message: { name: B }
         signatureId: "B()"
 ```
@@ -449,9 +483,11 @@ steps:
           limit: 1
     trace:
       - event: dispatchStarted
+        id: "1"
         message: { name: Start }
         signatureId: "Start()"
       - event: dispatchCompleted
+        id: "1"
         message: { name: Start }
         signatureId: "Start()"
 ```
@@ -501,18 +537,23 @@ steps:
           limit: 2
     trace:
       - event: dispatchStarted
+        id: "1"
         message: { name: Start }
         signatureId: "Start()"
       - event: emit
+        id: "2"
         message: { name: Deferred }
         accepted: true
       - event: dispatchCompleted
+        id: "1"
         message: { name: Start }
         signatureId: "Start()"
       - event: dispatchStarted
+        id: "2"
         message: { name: Deferred }
         signatureId: "Deferred()"
       - event: dispatchCompleted
+        id: "2"
         message: { name: Deferred }
         signatureId: "Deferred()"
 ```
@@ -559,9 +600,11 @@ steps:
           limit: 1
     trace:
       - event: dispatchStarted
+        id: "1"
         message: { name: Start }
         signatureId: "Start()"
       - event: dispatchCompleted
+        id: "1"
         message: { name: Start }
         signatureId: "Start()"
 ```
@@ -611,18 +654,23 @@ steps:
           limit: 2
     trace:
       - event: dispatchStarted
+        id: "1"
         message: { name: Start }
         signatureId: "Start()"
       - event: emit
+        id: "2"
         message: { name: Deferred }
         accepted: true
       - event: dispatchCompleted
+        id: "1"
         message: { name: Start }
         signatureId: "Start()"
       - event: dispatchStarted
+        id: "2"
         message: { name: Deferred }
         signatureId: "Deferred()"
       - event: dispatchCompleted
+        id: "2"
         message: { name: Deferred }
         signatureId: "Deferred()"
 ```
@@ -667,9 +715,11 @@ steps:
           limit: 1
     trace:
       - event: dispatchStarted
+        id: "1"
         message: { name: Start }
         signatureId: "Start()"
       - event: dispatchCompleted
+        id: "1"
         message: { name: Start }
         signatureId: "Start()"
 ```
@@ -722,18 +772,23 @@ steps:
           limit: 2
     trace:
       - event: dispatchStarted
+        id: "1"
         message: { name: Start }
         signatureId: "Start()"
       - event: emit
+        id: "2"
         message: { name: Deferred }
         accepted: true
       - event: dispatchCompleted
+        id: "1"
         message: { name: Start }
         signatureId: "Start()"
       - event: dispatchStarted
+        id: "2"
         message: { name: Deferred }
         signatureId: "Deferred()"
       - event: dispatchCompleted
+        id: "2"
         message: { name: Deferred }
         signatureId: "Deferred()"
 ```
@@ -778,9 +833,11 @@ steps:
           limit: 1
     trace:
       - event: dispatchStarted
+        id: "1"
         message: { name: Start }
         signatureId: "Start()"
       - event: dispatchCompleted
+        id: "1"
         message: { name: Start }
         signatureId: "Start()"
 ```
@@ -833,18 +890,23 @@ steps:
           limit: 2
     trace:
       - event: dispatchStarted
+        id: "1"
         message: { name: Start }
         signatureId: "Start()"
       - event: emit
+        id: "2"
         message: { name: Deferred }
         accepted: true
       - event: dispatchCompleted
+        id: "1"
         message: { name: Start }
         signatureId: "Start()"
       - event: dispatchStarted
+        id: "2"
         message: { name: Deferred }
         signatureId: "Deferred()"
       - event: dispatchCompleted
+        id: "2"
         message: { name: Deferred }
         signatureId: "Deferred()"
 ```
@@ -896,12 +958,15 @@ steps:
           limit: 1
     trace:
       - event: dispatchStarted
+        id: "1"
         message: { name: Start }
         signatureId: "Start()"
       - event: emit
+        id: "2"
         message: { name: Deferred }
         accepted: true
       - event: dispatchCompleted
+        id: "1"
         message: { name: Start }
         signatureId: "Start()"
       - event: runtimeLimit
@@ -917,9 +982,11 @@ steps:
           limit: 1
     trace:
       - event: dispatchStarted
+        id: "2"
         message: { name: Deferred }
         signatureId: "Deferred()"
       - event: dispatchCompleted
+        id: "2"
         message: { name: Deferred }
         signatureId: "Deferred()"
 ```
@@ -971,12 +1038,15 @@ steps:
           limit: 1
     trace:
       - event: dispatchStarted
+        id: "1"
         message: { name: Start }
         signatureId: "Start()"
       - event: emit
+        id: "2"
         message: { name: Deferred }
         accepted: true
       - event: dispatchCompleted
+        id: "1"
         message: { name: Start }
         signatureId: "Start()"
       - event: runtimeLimit
@@ -992,9 +1062,11 @@ steps:
           limit: 1
     trace:
       - event: dispatchStarted
+        id: "2"
         message: { name: Deferred }
         signatureId: "Deferred()"
       - event: dispatchCompleted
+        id: "2"
         message: { name: Deferred }
         signatureId: "Deferred()"
 ```
@@ -1043,12 +1115,15 @@ steps:
           limit: 1
     trace:
       - event: dispatchStarted
+        id: "1"
         message: { name: Start }
         signatureId: "Start()"
       - event: emit
+        id: "2"
         message: { name: Deferred }
         accepted: true
       - event: dispatchCompleted
+        id: "1"
         message: { name: Start }
         signatureId: "Start()"
       - event: runtimeLimit
@@ -1064,9 +1139,11 @@ steps:
           limit: 1
     trace:
       - event: dispatchStarted
+        id: "2"
         message: { name: Deferred }
         signatureId: "Deferred()"
       - event: dispatchCompleted
+        id: "2"
         message: { name: Deferred }
         signatureId: "Deferred()"
 ```
@@ -1114,18 +1191,23 @@ steps:
           limit: 3
     trace:
       - event: dispatchStarted
+        id: "1"
         message: { name: Start }
         signatureId: "Start()"
       - event: emit
+        id: "2"
         message: { name: Deferred }
         accepted: true
       - event: dispatchCompleted
+        id: "1"
         message: { name: Start }
         signatureId: "Start()"
       - event: dispatchStarted
+        id: "2"
         message: { name: Deferred }
         signatureId: "Deferred()"
       - event: dispatchCompleted
+        id: "2"
         message: { name: Deferred }
         signatureId: "Deferred()"
 ```

@@ -12,6 +12,17 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 
 ### Breaking
 
+- Runtime observer callbacks report the host-local send ID of the message they
+  describe: C# `MessageEmitted(message, id, accepted)`,
+  `MessagePublished(message, id, result)`, `DispatchStarted(message, id,
+  dispatchSignatureId)` and `DispatchCompleted(message, id, dispatchSignatureId)`;
+  Swift `messageEmitted(_:id:accepted:)`, `messagePublished(_:id:result:)`,
+  `dispatchStarted(_:id:signatureID:)` and `dispatchCompleted(_:id:signatureID:)`.
+  Every accepted send gets the next ID of its host, so a trace can match each
+  dispatch to its emit, publish or delayed send; 0 marks an emit that was not
+  queued. Messages themselves carry no ID. Migrate by adding the `id` parameter.
+  Swift observers that keep the old signatures compile against the default
+  implementations but are no longer called.
 - Public API types are renamed so that only the three edge types keep the
   `GameEventScript` prefix: `GameEventScriptHost`, `GameEventScriptProgram` and
   `GameEventScriptMessage`. All other public types use `Ges`, identically in C#
@@ -102,13 +113,14 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 
 - Runtime observers can follow delayed messages. C# `MessageScheduled(message, id,
   deadline, publish)` / Swift `messageScheduled(_:id:deadline:publish:)` reports
-  each accepted `emit … after` or `publish … after` once, with a per-host
-  scheduling ID and its absolute deadline in microseconds on the host clock.
+  each accepted `emit … after` or `publish … after` once, with its send ID and its
+  absolute deadline in microseconds on the host clock.
   `ScheduledMessageDiscarded(id)` / `scheduledMessageDiscarded(id:)` reports
   delayed messages removed before they became due, such as after a failed
   initialization. Both callbacks have empty default implementations; hosts
   without an observer behave as before. `ges run --verbose` traces them as
-  `schedule #<id> …` and `discard #<id>`.
+  `schedule #<id> …` and `discard #<id>` and shows the send ID on emit, publish
+  and dispatch lines.
 
 ### Changed
 

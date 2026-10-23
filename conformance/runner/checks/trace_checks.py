@@ -13,8 +13,8 @@ def normalize(events, message, limit, expectation=False):
         if not isinstance(item, dict):
             raise InvalidDocument('Expected observer event')
         event = item.get('event')
-        fields = {'emit': {'message', 'accepted'}, 'publish': {'message', 'result'},
-                  'dispatchStarted': {'message', 'signatureId'}, 'dispatchCompleted': {'message', 'signatureId'},
+        fields = {'emit': {'message', 'id', 'accepted'}, 'publish': {'message', 'id', 'result'},
+                  'dispatchStarted': {'message', 'id', 'signatureId'}, 'dispatchCompleted': {'message', 'id', 'signatureId'},
                   'runtimeLimit': {'runtimeLimit'}, 'diagnostic': {'diagnostic'},
                   'scheduled': {'message', 'id', 'deadline', 'publish'}, 'scheduledDiscarded': {'id'}}
         if not isinstance(event, str) or event not in fields:
@@ -36,10 +36,10 @@ def normalize(events, message, limit, expectation=False):
                 raise InvalidDocument('Incomplete publish result')
             if (flags['outboundAccepted'] and not flags['outboundAttempted']) or flags['anyAccepted'] != (flags['localAccepted'] or flags['outboundAccepted']):
                 raise InvalidDocument('Inconsistent publish result')
-        # Scheduling IDs and absolute deadlines are exact whole numbers, transported as decimal text.
+        # Send IDs and absolute deadlines are exact whole numbers, transported as decimal text; send ID 0 means none.
         for key in ('id', 'deadline'):
             if key in item and (not isinstance(item[key], str) or not (item[key].isascii() and item[key].isdigit())):
-                raise InvalidDocument('Invalid scheduling ' + key)
+                raise InvalidDocument('Invalid send ' + key)
         if event == 'scheduled' and type(item['publish']) is not bool:
             raise InvalidDocument('Invalid scheduling publish flag')
         if event.startswith('dispatch') and (not isinstance(item['signatureId'], str) or not item['signatureId']):

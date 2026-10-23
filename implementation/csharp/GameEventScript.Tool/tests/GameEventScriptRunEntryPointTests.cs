@@ -157,8 +157,8 @@ public sealed class GameEventScriptRunEntryPointTests
         StringAssert.Contains(result.StandardError, "note");
         if (verbose)
         {
-            StringAssert.Contains(result.StandardError, "publish ConsoleOut(value: 42)");
-            StringAssert.Contains(result.StandardError, "dispatch Main(args)");
+            StringAssert.Contains(result.StandardError, "publish #2 ConsoleOut(value: 42)");
+            StringAssert.Contains(result.StandardError, "dispatch #1 Main(args)");
         }
         else Assert.AreEqual(Lines("note"), result.StandardError);
     }

@@ -4,6 +4,8 @@
 struct GesPendingMessage {
     let message: GameEventScriptMessage
     let exact: [GesSubscriptionEntry], names: [GesSubscriptionEntry]
+    /// Host-local send ID that observer callbacks report for this message.
+    let id: Int64
     var initialization: GesProgramInstance? = nil
     var initializationOutputID: Int64 = 0
     var exactIndex = 0, nameIndex = 0

@@ -17,9 +17,10 @@ internal struct GesPendingMessage
     private int _exactIndex;
     private int _nameIndex;
 
-    internal GesPendingMessage(GameEventScriptMessage message, GesSubscriptionEntry[] exact, GesSubscriptionEntry[] names, GesProgramInstance? initialization = null, GesProgramInstance? initializationOutput = null)
+    internal GesPendingMessage(GameEventScriptMessage message, GesSubscriptionEntry[] exact, GesSubscriptionEntry[] names, long id, GesProgramInstance? initialization = null, GesProgramInstance? initializationOutput = null)
     {
         Message = message;
+        Id = id;
         Initialization = initialization;
         InitializationOutput = initializationOutput;
         _exact = exact;
@@ -29,6 +30,8 @@ internal struct GesPendingMessage
     }
 
     internal GameEventScriptMessage Message { get; }
+    /// <summary>Gets the host-local send ID that observer callbacks report for this message.</summary>
+    internal long Id { get; }
     internal GesProgramInstance? Initialization { get; }
     private GesProgramInstance? InitializationOutput { get; }
     internal bool HasRecipients()

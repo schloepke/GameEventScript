@@ -30,6 +30,8 @@ public sealed partial class GameEventScriptHost
     private readonly GesContext _context;
     private GesVirtualMachine? _vm;
     private GesPendingMessage _activeMessage;
+    // Host-local send IDs start at 1; 0 reports a send without an ID.
+    private long _lastSendId;
     private GesSubscriptionEntry? _activeHandler;
     private bool _hasActiveMessage;
     private bool _scriptHandlerActive;
@@ -154,7 +156,7 @@ public sealed partial class GameEventScriptHost
         {
             var message = GesSystemEndpoints.CreateInitializationMessage();
             // No host callbacks occur between the capacity check and this initialization enqueue.
-            var pending = new GesPendingMessage(message, Sort(initialization.ToArray()), [], instance);
+            var pending = new GesPendingMessage(message, Sort(initialization.ToArray()), [], ++_lastSendId, instance);
             _idleSinceMicroseconds = null;
             if (IsReady) _queue.Enqueue(pending);
             else _startupQueue.Enqueue(pending);
@@ -261,7 +263,7 @@ public sealed partial class GameEventScriptHost
     {
         _ = message ?? throw new ArgumentNullException(nameof(message));
         if (!IsReady || message.Name.Length == 0 || GesSystemEndpoints.IsInitializationName(message.Name)) return false;
-        return EnqueueMessage(message);
+        return EnqueueMessage(message) != 0;
     }
 
     /// <summary>
@@ -430,28 +432,30 @@ public sealed partial class GameEventScriptHost
 
     internal bool EmitFromContext(GameEventScriptMessage message)
     {
-        var accepted = !_random.HasActiveScopeFault && EnqueueMessage(message, _initializationInstance is not null);
+        var id = _random.HasActiveScopeFault ? 0 : EnqueueMessage(message, _initializationInstance is not null);
         _stepEmittedMessages++;
         if (_initializationInstance is not null) _initializationEmits++;
-        _observer?.MessageEmitted(message, accepted);
-        return accepted;
+        _observer?.MessageEmitted(message, id, id != 0);
+        return id != 0;
     }
 
     internal GesPublishResult PublishFromContext(GameEventScriptMessage message)
     {
         if (_initializationInstance is not null) _initializationPublishes++;
         var randomScopeFault = _random.HasActiveScopeFault;
-        var localAccepted = !randomScopeFault && EnqueueMessage(message, _initializationInstance is not null);
+        // A publish owns its ID even without local recipients; the local entry reuses it.
+        var id = randomScopeFault ? 0 : ++_lastSendId;
+        var localAccepted = !randomScopeFault && EnqueueMessage(message, _initializationInstance is not null, id) != 0;
         if (_initializationInstance is not null)
         {
             if (randomScopeFault)
             {
                 _stepPublishedMessages++;
-                _observer?.MessagePublished(message, default);
+                _observer?.MessagePublished(message, 0, default);
                 return default;
             }
             _initializationPublications ??= new();
-            _initializationPublications.Add(new(message, localAccepted, _initializationInstance));
+            _initializationPublications.Add(new(message, id, localAccepted, _initializationInstance));
             _stepPublishedMessages++;
             return new(localAccepted, false, false, !randomScopeFault && _publishSink is not null);
         }
@@ -472,7 +476,7 @@ public sealed partial class GameEventScriptHost
 
         var result = new GesPublishResult(localAccepted, attempted, outboundAccepted);
         _stepPublishedMessages++;
-        _observer?.MessagePublished(message, result);
+        _observer?.MessagePublished(message, id, result);
         return result;
     }
 
@@ -529,7 +533,7 @@ public sealed partial class GameEventScriptHost
     {
         _activeHandler = handler;
         _activeRandomBoundary = _context.BeginHandler();
-        _observer?.DispatchStarted(_activeMessage.Message, handler.DispatchSignatureId);
+        _observer?.DispatchStarted(_activeMessage.Message, _activeMessage.Id, handler.DispatchSignatureId);
     }
 
     private void CompleteActiveHandler()
@@ -555,23 +559,27 @@ public sealed partial class GameEventScriptHost
         _activeHandler = null;
         if (_pendingVmWarmupCapacity > 0 && _vm is not null && _vm.PrepareCapacity(_pendingVmWarmupCapacity))
             _pendingVmWarmupCapacity = 0;
-        if (handler is not null) _observer?.DispatchCompleted(_activeMessage.Message, handler.DispatchSignatureId);
+        if (handler is not null) _observer?.DispatchCompleted(_activeMessage.Message, _activeMessage.Id, handler.DispatchSignatureId);
     }
 
-    private bool EnqueueMessage(GameEventScriptMessage message, bool initializationOutput = false)
+    // Enqueues under a fresh send ID, or under the ID a publish reserved. Returns that ID, or 0 when nothing was enqueued.
+    private long EnqueueMessage(GameEventScriptMessage message, bool initializationOutput = false, long reservedId = 0)
     {
-        if (string.IsNullOrWhiteSpace(message.Name)) return false;
+        if (string.IsNullOrWhiteSpace(message.Name)) return 0;
         var exact = Get(_exact, message.SignatureId);
         var names = Get(_byName, message.Name);
         if (!HasMatch(message, exact, names))
         {
-            if (GesSystemEndpoints.IsUndeliverableName(message.Name)) return false;
+            if (GesSystemEndpoints.IsUndeliverableName(message.Name)) return 0;
             exact = Get(_exact, GesSystemEndpoints.UndeliverableSignatureId);
             names = Get(_byName, GesSystemEndpoints.UndeliverableName);
-            if (!HasMatch(message, exact, names)) return false;
+            if (!HasMatch(message, exact, names)) return 0;
         }
 
-        return EnqueuePlan(new GesPendingMessage(message, exact, names, initializationOutput: initializationOutput ? _initializationInstance : null), initializationOutput);
+        var id = reservedId != 0 ? reservedId : _lastSendId + 1;
+        if (!EnqueuePlan(new GesPendingMessage(message, exact, names, id, initializationOutput: initializationOutput ? _initializationInstance : null), initializationOutput)) return 0;
+        if (reservedId == 0) _lastSendId = id;
+        return id;
     }
 
     private bool IsMessageQueueFull => _limits.MaxQueuedMessagesPerRun > 0 && PendingMessageCount >= _limits.MaxQueuedMessagesPerRun;

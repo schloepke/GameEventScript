@@ -136,7 +136,7 @@ final class ToolTests: XCTestCase {
         let source = try file("game.ges", "on Main(args) { emit after 0.001s Later(); publish after 0.002s Out() }\non Later {}\n")
         let result = run(["run", source, "--verbose"])
         XCTAssertEqual(result.code, 0, result.error)
-        XCTAssertNotNil(result.error.range(of: #"schedule #1 emit Later at \d+us\nemit Later\nschedule #2 publish Out at \d+us"#, options: .regularExpression), result.error)
+        XCTAssertNotNil(result.error.range(of: #"dispatch #1 Main\(args\) <- Main\(args: \[\]\)\nschedule #2 emit Later at \d+us\nemit #2 Later\nschedule #3 publish Out at \d+us"#, options: .regularExpression), result.error)
     }
 
     func testJointCompilationOrderWildcardAndDeduplication() throws {

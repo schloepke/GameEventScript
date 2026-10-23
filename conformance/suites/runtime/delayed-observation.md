@@ -17,13 +17,13 @@ tags: [host, delayed, observer]
 > - Keep its structural elements in the form required by the Conformance Test Markdown syntax.
 > - Validate every edit with a conforming parser and runner.
 
-These cases verify that the runtime observer sees each delayed `emit … after` and `publish … after` once when it is scheduled, with its per-host scheduling ID and absolute deadline on the host clock, and sees each delayed message removed before it became due exactly once.
+These cases verify that the runtime observer sees each delayed `emit … after` and `publish … after` once when it is scheduled, with its per-host send ID and absolute deadline on the host clock, and sees each delayed message removed before it became due exactly once.
 
 ---
 
 ## Test: scheduling reports absolute deadlines and distinct ids
 
-Two identical delayed emits and one delayed publish report increasing scheduling IDs and absolute deadlines on the virtual clock. Becoming due adds no scheduling callback; the ordinary delivery callbacks follow.
+Two identical delayed emits and one delayed publish report distinct send IDs and absolute deadlines on the virtual clock. Becoming due adds no scheduling callback; the ordinary delivery callbacks follow and repeat each send ID.
 
 ### Case description
 
@@ -64,30 +64,34 @@ steps:
     local: [{ name: Later }, { name: Later }]
     trace:
       - event: dispatchStarted
+        id: "1"
         message: { name: Work }
         signatureId: "Work()"
       - event: scheduled
-        message: { name: Later }
-        id: "1"
-        deadline: "1000000"
-        publish: false
-      - event: emit
-        message: { name: Later }
-        accepted: true
-      - event: scheduled
-        message: { name: Later }
         id: "2"
+        message: { name: Later }
         deadline: "1000000"
         publish: false
       - event: emit
+        id: "2"
         message: { name: Later }
         accepted: true
       - event: scheduled
-        message: { name: Out }
         id: "3"
+        message: { name: Later }
+        deadline: "1000000"
+        publish: false
+      - event: emit
+        id: "3"
+        message: { name: Later }
+        accepted: true
+      - event: scheduled
+        id: "4"
+        message: { name: Out }
         deadline: "2000000"
         publish: true
       - event: dispatchCompleted
+        id: "1"
         message: { name: Work }
         signatureId: "Work()"
   due:
@@ -97,18 +101,23 @@ steps:
     outbound: [{ name: Out }]
     trace:
       - event: publish
+        id: "4"
         message: { name: Out }
         result: { localAccepted: false, outboundAttempted: true, outboundAccepted: true, anyAccepted: true }
       - event: dispatchStarted
+        id: "2"
         message: { name: Later }
         signatureId: "Later()"
       - event: dispatchCompleted
+        id: "2"
         message: { name: Later }
         signatureId: "Later()"
       - event: dispatchStarted
+        id: "3"
         message: { name: Later }
         signatureId: "Later()"
       - event: dispatchCompleted
+        id: "3"
         message: { name: Later }
         signatureId: "Later()"
 ```
@@ -117,7 +126,7 @@ steps:
 
 ## Test: delayed emit without recipients is not scheduled
 
-A delayed emit whose recipient snapshot is empty behaves exactly like the instant emit: the script result is true, the emit is observed as not queued, it receives no scheduling ID and leaves no delayed work.
+A delayed emit whose recipient snapshot is empty behaves exactly like the instant emit: the script result is true, the emit is observed as not queued, it reports send ID 0 and leaves no delayed work.
 
 ### Case description
 
@@ -153,20 +162,24 @@ steps:
     local: [{ name: Nobody }, { name: Later }]
     trace:
       - event: dispatchStarted
+        id: "1"
         message: { name: Work }
         signatureId: "Work()"
       - event: emit
+        id: "0"
         message: { name: Nobody }
         accepted: false
       - event: scheduled
+        id: "2"
         message: { name: Later }
-        id: "1"
         deadline: "1000000"
         publish: false
       - event: emit
+        id: "2"
         message: { name: Later }
         accepted: true
       - event: dispatchCompleted
+        id: "1"
         message: { name: Work }
         signatureId: "Work()"
 ```
@@ -175,7 +188,7 @@ steps:
 
 ## Test: zero delay is observed as an instant send
 
-`emit after 0s` and `publish after 0s` behave exactly like the same sends without `after`: they receive no scheduling ID, leave no delayed work, and are observed and delivered within the same pump.
+`emit after 0s` and `publish after 0s` behave exactly like the same sends without `after`: they report no scheduling callback, leave no delayed work, and are observed and delivered within the same pump under ordinary send IDs.
 
 ### Case description
 
@@ -213,21 +226,27 @@ steps:
     outbound: [{ name: Out }]
     trace:
       - event: dispatchStarted
+        id: "1"
         message: { name: Work }
         signatureId: "Work()"
       - event: emit
+        id: "2"
         message: { name: Now }
         accepted: true
       - event: publish
+        id: "3"
         message: { name: Out }
         result: { localAccepted: false, outboundAttempted: true, outboundAccepted: true, anyAccepted: true }
       - event: dispatchCompleted
+        id: "1"
         message: { name: Work }
         signatureId: "Work()"
       - event: dispatchStarted
+        id: "2"
         message: { name: Now }
         signatureId: "Now()"
       - event: dispatchCompleted
+        id: "2"
         message: { name: Now }
         signatureId: "Now()"
 ```
@@ -277,40 +296,44 @@ initialization:
       handlerName: initialization()
   trace:
     - event: dispatchStarted
+      id: "1"
       message: { name: initialization }
       signatureId: "initialization()"
     - event: scheduled
+      id: "2"
       message: { name: Leak }
-      id: "1"
       deadline: "1000000"
       publish: false
     - event: emit
+      id: "2"
       message: { name: Leak }
       accepted: true
     - event: scheduled
+      id: "3"
       message: { name: Out }
-      id: "2"
       deadline: "2000000"
       publish: true
     - event: scheduled
+      id: "4"
       message: { name: Leak }
-      id: "3"
       deadline: "1000000"
       publish: false
     - event: emit
+      id: "4"
       message: { name: Leak }
       accepted: true
     - event: diagnostic
       diagnostic: { phase: runtime, code: test.declaredFault, programName: main, handlerName: initialization() }
     - event: dispatchCompleted
+      id: "1"
       message: { name: initialization }
       signatureId: "initialization()"
     - event: scheduledDiscarded
-      id: "1"
+      id: "2"
+    - event: scheduledDiscarded
+      id: "4"
     - event: scheduledDiscarded
       id: "3"
-    - event: scheduledDiscarded
-      id: "2"
 steps:
   idle:
     accepted: false
@@ -370,36 +393,41 @@ initialization:
       handlerName: initialization()
   trace:
     - event: dispatchStarted
+      id: "1"
       message: { name: initialization }
       signatureId: "initialization()"
     - event: scheduled
+      id: "3"
       message: { name: Out }
-      id: "1"
       deadline: "1000000"
       publish: true
     - event: scheduled
+      id: "4"
       message: { name: Ping }
-      id: "2"
       deadline: "2000000"
       publish: false
     - event: emit
+      id: "4"
       message: { name: Ping }
       accepted: true
     - event: dispatchCompleted
+      id: "1"
       message: { name: initialization }
       signatureId: "initialization()"
     - event: dispatchStarted
+      id: "2"
       message: { name: initialization }
       signatureId: "initialization()"
     - event: diagnostic
       diagnostic: { phase: runtime, code: test.declaredFault, programName: receiver, handlerName: initialization() }
     - event: dispatchCompleted
+      id: "2"
       message: { name: initialization }
       signatureId: "initialization()"
     - event: scheduledDiscarded
-      id: "1"
+      id: "3"
     - event: scheduledDiscarded
-      id: "2"
+      id: "4"
 steps:
   idle:
     accepted: false
@@ -469,31 +497,35 @@ steps:
         handlerName: initialization()
     trace:
       - event: dispatchStarted
+        id: "1"
         message: { name: Start }
         signatureId: "Start()"
       - event: scheduled
+        id: "3"
         message: { name: Tick }
-        id: "1"
         deadline: "1000000"
         publish: true
       - event: dispatchCompleted
+        id: "1"
         message: { name: Start }
         signatureId: "Start()"
       - event: dispatchStarted
+        id: "2"
         message: { name: initialization }
         signatureId: "initialization()"
       - event: scheduled
+        id: "4"
         message: { name: Leak }
-        id: "2"
         deadline: "1000000"
         publish: true
       - event: diagnostic
         diagnostic: { phase: runtime, code: test.declaredFault, programName: late, handlerName: initialization() }
       - event: dispatchCompleted
+        id: "2"
         message: { name: initialization }
         signatureId: "initialization()"
       - event: scheduledDiscarded
-        id: "2"
+        id: "4"
   due:
     accepted: false
     waiting: false
@@ -501,12 +533,15 @@ steps:
     outbound: [{ name: Tick }]
     trace:
       - event: publish
+        id: "3"
         message: { name: Tick }
         result: { localAccepted: true, outboundAttempted: true, outboundAccepted: true, anyAccepted: true }
       - event: dispatchStarted
+        id: "3"
         message: { name: Tick }
         signatureId: "Tick()"
       - event: dispatchCompleted
+        id: "3"
         message: { name: Tick }
         signatureId: "Tick()"
 ```

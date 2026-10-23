@@ -22,25 +22,25 @@ internal sealed class RunObserver(bool verbose, bool color, bool interactive) : 
     }
 
     /// <inheritdoc />
-    public void MessageEmitted(GameEventScriptMessage message, bool accepted)
+    public void MessageEmitted(GameEventScriptMessage message, long id, bool accepted)
     {
-        if (verbose) WriteTrace($"emit {Format(message)}{(accepted ? string.Empty : " [not queued]")}");
+        if (verbose) WriteTrace($"emit {TraceId(id)}{Format(message)}{(accepted ? string.Empty : " [not queued]")}");
     }
 
     /// <inheritdoc />
-    public void MessagePublished(GameEventScriptMessage message, GesPublishResult result)
+    public void MessagePublished(GameEventScriptMessage message, long id, GesPublishResult result)
     {
-        if (verbose) WriteTrace($"publish {Format(message)}{(result.LocalAccepted ? string.Empty : " [not queued]")}");
+        if (verbose) WriteTrace($"publish {TraceId(id)}{Format(message)}{(result.LocalAccepted ? string.Empty : " [not queued]")}");
     }
 
     /// <inheritdoc />
-    public void DispatchStarted(GameEventScriptMessage message, string dispatchSignatureId)
+    public void DispatchStarted(GameEventScriptMessage message, long id, string dispatchSignatureId)
     {
-        if (verbose) WriteTrace($"dispatch {dispatchSignatureId} <- {Format(message)}");
+        if (verbose) WriteTrace($"dispatch #{id} {dispatchSignatureId} <- {Format(message)}");
     }
 
     /// <inheritdoc />
-    public void DispatchCompleted(GameEventScriptMessage message, string dispatchSignatureId) { }
+    public void DispatchCompleted(GameEventScriptMessage message, long id, string dispatchSignatureId) { }
 
     /// <inheritdoc />
     public void MessageScheduled(GameEventScriptMessage message, long id, long deadline, bool publish)
@@ -81,6 +81,9 @@ internal sealed class RunObserver(bool verbose, bool color, bool interactive) : 
         var suffix = context.Count == 0 ? string.Empty : " [" + string.Join(", ", context) + "]";
         Console.Error.WriteLine($"{prefix}: error {diagnostic.Code}: {diagnostic.Message}{suffix}");
     }
+
+    // Sends without an ID (0) show none.
+    private static string TraceId(long id) => id == 0 ? string.Empty : $"#{id} ";
 
     private void WriteTrace(string text) => Write(Console.Error, color && interactive ? RunHighlighting.Paint(text, 33) : text);
 

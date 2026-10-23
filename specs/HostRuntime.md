@@ -479,6 +479,25 @@ language in the monorepo. Message `args` are always encoded as an ordered YAML
 sequence of mappings with `name` and `value` entries, including nested message
 values and expected local/outbound messages.
 
+## Send IDs
+
+> **Since: Unreleased**
+
+Each accepted send carries a host-local send ID, a positive Int64. A Host starts
+at 1 and assigns the next ID to each send it accepts, in acceptance order:
+`Receive`, Emit, Publish, delayed sends and initialization messages. A rejected
+or unqueued Emit, including one without recipients, consumes no ID; a Publish
+the Host accepts owns an ID even without local recipients and independent of
+the sink outcome. Send IDs therefore depend only on the accepted sends and are
+deterministic for identical inputs.
+
+The ID belongs to the send, not to the immutable Message: it is never part of a
+Program, a Message value, its JSON form or the outbound sink call, and IDs of
+different Hosts are unrelated. Observer callbacks report the ID of the send they
+describe: the Emit or Publish itself, its scheduling, and every dispatch of it,
+including `undeliverable` fallback dispatch. Send ID 0 reports a send without an
+ID. Without an observer, send IDs are unobservable and change no behavior.
+
 ## Delayed dispatch
 
 > **Since: 0.2.0**
@@ -515,23 +534,20 @@ at acceptance; delayed publish observations occur when the publication is releas
 > **Since: Unreleased** — scheduling observation
 
 When an observer is configured, each accepted delayed send reports
-`MessageScheduled` once, immediately after it enters the delayed queue and before
-the `MessageEmitted` of a delayed emit. Its scheduling ID is a positive Int64 that
-starts at 1 for each Host and increases by one per accepted delayed send, so
-identical messages remain distinguishable. Its deadline is the absolute entry
-deadline in whole microseconds on the Host clock that `NextMessageDelay` uses,
-neither a relative delay nor wall-clock time; the publish flag distinguishes
-`publish … after` from `emit … after`. Rejected sends report no scheduling ID.
-A zero delay is an instant send (see `Language.md`), so it enters no delayed
-queue and reports no `MessageScheduled`.
+`MessageScheduled` once with its send ID, immediately after it enters the delayed
+queue and before the `MessageEmitted` of a delayed emit. Its deadline is the
+absolute entry deadline in whole microseconds on the Host clock that
+`NextMessageDelay` uses, neither a relative delay nor wall-clock time; the
+publish flag distinguishes `publish … after` from `emit … after`. A zero delay is
+an instant send (see `Language.md`), so it enters no delayed queue and reports
+no `MessageScheduled`.
 
 An entry removed before it becomes due reports `ScheduledMessageDiscarded` with
-its scheduling ID exactly once, in deadline order: every entry on initial-group
+its send ID exactly once, in deadline order: every entry on initial-group
 failure, and on later-instance failure every entry staged by that instance and
 every delayed emit left without recipients. An entry that becomes due reports no
-scheduling callback; its ordinary delivery and dispatch callbacks follow.
-Without an observer, scheduling IDs remain unobservable and scheduling,
-ordering and determinism are unchanged.
+scheduling callback; its ordinary publish and dispatch callbacks follow with the
+same send ID.
 
 Init computes deadlines when the expression executes but cannot release its
 outputs before its initial group or later-instance initialization succeeds.

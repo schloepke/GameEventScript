@@ -133,7 +133,7 @@ public sealed partial class GameEventScriptHost
                         TechnicalDetails: GesRuntimeExceptionText.Describe(exception)));
                 }
             }
-            _observer?.MessagePublished(publication.Message, new(publication.LocalAccepted, attempted, accepted));
+            _observer?.MessagePublished(publication.Message, publication.Id, new(publication.LocalAccepted, attempted, accepted));
         }
         publications.Clear();
     }

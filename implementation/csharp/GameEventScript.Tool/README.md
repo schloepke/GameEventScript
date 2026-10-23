@@ -573,10 +573,12 @@ execution counters across successful reloads.
 
 Only ConsoleOut values go to stdout. General event traces are shown on stderr with
 `--verbose`, retaining argument order and tags. `[not queued]` indicates an emit
-or publish had no local enqueue; that alone is not an error. A delayed send adds
-`schedule #<id> emit|publish <message> at <deadline>us` with its per-host
-scheduling ID and absolute deadline on the host clock; `discard #<id>` reports a
-scheduled message removed before it became due. No outbound sink is
+or publish had no local enqueue; that alone is not an error. `#<id>` shows the
+host-local send ID, so `dispatch #<id>` lines match the `emit #<id>` or
+`publish #<id>` that caused them; an emit that was not queued shows none. A
+delayed send adds `schedule #<id> emit|publish <message> at <deadline>us` with
+its absolute deadline on the host clock; `discard #<id>` reports a scheduled
+message removed before it became due. No outbound sink is
 configured, so publications only reach local subscribers. Nothing is sent to an
 external service. Root Text arguments in verbose traces use JSON quoting/escaping;
 other values use the existing GES text representation. Trace rendering is distinct

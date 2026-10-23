@@ -158,13 +158,13 @@ private final class PerformanceObserver: GesRuntimeObserver, GesPublishSink {
 
     init(accept: Bool) { self.accept = accept }
 
-    func messageEmitted(_ message: GameEventScriptMessage, accepted: Bool) { counts.observedEmits += 1 }
+    func messageEmitted(_ message: GameEventScriptMessage, id: Int64, accepted: Bool) { counts.observedEmits += 1 }
 
-    func messagePublished(_ message: GameEventScriptMessage, result: GesPublishResult) { counts.observedPublishes += 1 }
+    func messagePublished(_ message: GameEventScriptMessage, id: Int64, result: GesPublishResult) { counts.observedPublishes += 1 }
 
-    func dispatchStarted(_ message: GameEventScriptMessage, signatureID: String) { counts.started += 1 }
+    func dispatchStarted(_ message: GameEventScriptMessage, id: Int64, signatureID: String) { counts.started += 1 }
 
-    func dispatchCompleted(_ message: GameEventScriptMessage, signatureID: String) { counts.completed += 1 }
+    func dispatchCompleted(_ message: GameEventScriptMessage, id: Int64, signatureID: String) { counts.completed += 1 }
 
     func runtimeLimitReached(_ limitName: String, detail: String, limit: Int) { counts.limits += 1 }
 

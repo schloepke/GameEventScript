@@ -214,7 +214,7 @@ final class RuntimeObservations: GesRuntimeObserver, GesPublishSink {
         var result: GesPublishResult?
         var limit: Limit?
         var diagnostic: GesDiagnostic?
-        var schedulingID: Int64?
+        var id: Int64?
         var deadline: Int64?
         var publish: Bool?
     }
@@ -239,19 +239,19 @@ final class RuntimeObservations: GesRuntimeObserver, GesPublishSink {
         return sink == "accept"
     }
 
-    func messageEmitted(_ message: GameEventScriptMessage, accepted: Bool) {
+    func messageEmitted(_ message: GameEventScriptMessage, id: Int64, accepted: Bool) {
         local.append(message)
-        trace.append(.init(kind: "emit", message: message, accepted: accepted))
+        trace.append(.init(kind: "emit", message: message, accepted: accepted, id: id))
     }
 
-    func messagePublished(_ message: GameEventScriptMessage, result: GesPublishResult) {
+    func messagePublished(_ message: GameEventScriptMessage, id: Int64, result: GesPublishResult) {
         local.append(message)
-        trace.append(.init(kind: "publish", message: message, result: result))
+        trace.append(.init(kind: "publish", message: message, result: result, id: id))
     }
 
-    func dispatchStarted(_ message: GameEventScriptMessage, signatureID: String) { trace.append(.init(kind: "dispatchStarted", message: message, signature: signatureID)) }
+    func dispatchStarted(_ message: GameEventScriptMessage, id: Int64, signatureID: String) { trace.append(.init(kind: "dispatchStarted", message: message, signature: signatureID, id: id)) }
 
-    func dispatchCompleted(_ message: GameEventScriptMessage, signatureID: String) { trace.append(.init(kind: "dispatchCompleted", message: message, signature: signatureID)) }
+    func dispatchCompleted(_ message: GameEventScriptMessage, id: Int64, signatureID: String) { trace.append(.init(kind: "dispatchCompleted", message: message, signature: signatureID, id: id)) }
 
     func runtimeLimitReached(_ limitName: String, detail: String, limit: Int) {
         let value = Limit(name: limitName, detail: detail, limit: limit)
@@ -265,10 +265,10 @@ final class RuntimeObservations: GesRuntimeObserver, GesPublishSink {
     }
 
     func messageScheduled(_ message: GameEventScriptMessage, id: Int64, deadline: Int64, publish: Bool) {
-        trace.append(.init(kind: "scheduled", message: message, schedulingID: id, deadline: deadline, publish: publish))
+        trace.append(.init(kind: "scheduled", message: message, id: id, deadline: deadline, publish: publish))
     }
 
-    func scheduledMessageDiscarded(id: Int64) { trace.append(.init(kind: "scheduledDiscarded", schedulingID: id)) }
+    func scheduledMessageDiscarded(id: Int64) { trace.append(.init(kind: "scheduledDiscarded", id: id)) }
 }
 
 extension RuntimeObservations {
@@ -281,7 +281,7 @@ extension RuntimeObservations {
                 if let message = event.message { item["message"] = try RuntimeValues.encodeMessage(message) }
                 if let signature = event.signature { item["signatureId"] = signature }
                 if let accepted = event.accepted { item["accepted"] = accepted }
-                if let id = event.schedulingID { item["id"] = String(id) }
+                if let id = event.id { item["id"] = String(id) }
                 if let deadline = event.deadline { item["deadline"] = String(deadline) }
                 if let publish = event.publish { item["publish"] = publish }
                 if let result = event.result { item["result"] = ["localAccepted": result.localAccepted, "outboundAttempted": result.outboundAttempted, "outboundAccepted": result.outboundAccepted, "anyAccepted": result.anyAccepted] }

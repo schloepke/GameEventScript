@@ -949,10 +949,10 @@ interface GameEventScript.Api.IGesProgramProfiler
 interface GameEventScript.Api.IGesPublishSink
   method System.Boolean Publish(GameEventScript.Api.GameEventScriptMessage message)
 interface GameEventScript.Api.IGesRuntimeObserver
-  method System.Void DispatchCompleted(GameEventScript.Api.GameEventScriptMessage message, System.String dispatchSignatureId)
-  method System.Void DispatchStarted(GameEventScript.Api.GameEventScriptMessage message, System.String dispatchSignatureId)
-  method System.Void MessageEmitted(GameEventScript.Api.GameEventScriptMessage message, System.Boolean accepted)
-  method System.Void MessagePublished(GameEventScript.Api.GameEventScriptMessage message, GameEventScript.Api.GesPublishResult result)
+  method System.Void DispatchCompleted(GameEventScript.Api.GameEventScriptMessage message, System.Int64 id, System.String dispatchSignatureId)
+  method System.Void DispatchStarted(GameEventScript.Api.GameEventScriptMessage message, System.Int64 id, System.String dispatchSignatureId)
+  method System.Void MessageEmitted(GameEventScript.Api.GameEventScriptMessage message, System.Int64 id, System.Boolean accepted)
+  method System.Void MessagePublished(GameEventScript.Api.GameEventScriptMessage message, System.Int64 id, GameEventScript.Api.GesPublishResult result)
   method System.Void MessageScheduled(GameEventScript.Api.GameEventScriptMessage message, System.Int64 id, System.Int64 deadline, System.Boolean publish)
   method System.Void RuntimeError(GameEventScript.Api.GesDiagnostic diagnostic)
   method System.Void RuntimeLimitReached(System.String limitName, System.String detail, System.Int32 limit)

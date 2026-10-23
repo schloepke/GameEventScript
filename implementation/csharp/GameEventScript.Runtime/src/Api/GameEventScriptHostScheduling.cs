@@ -24,7 +24,6 @@ public sealed partial class GameEventScriptHost
 
     private readonly IGesClock _clock;
     private List<GesDelayedMessage>? _delayed;
-    private long _lastScheduledId;
 
     /// <summary>Gets whole microseconds until the earliest delayed message, or null when no delayed message remains. Reading never pumps the host.</summary>
     public long? NextMessageDelay => _delayed is { Count: > 0 } ? Math.Max(0, _delayed[0].Deadline - _clock.ElapsedMicroseconds) : null;
@@ -67,8 +66,8 @@ public sealed partial class GameEventScriptHost
             _context.RuntimeBudget.Exhaust(nameof(GesRuntimeLimits.MaxQueuedMessagesPerRun), "Delayed message queue limit reached.", _limits.MaxQueuedMessagesPerRun);
             return false;
         }
-        var pending = new GesPendingMessage(message, exact, names, initializationOutput: _initializationInstance);
-        var delayed = new GesDelayedMessage(now + microseconds, pending, publish, _initializationInstance, ++_lastScheduledId);
+        var pending = new GesPendingMessage(message, exact, names, ++_lastSendId, initializationOutput: _initializationInstance);
+        var delayed = new GesDelayedMessage(now + microseconds, pending, publish, _initializationInstance);
         _delayed ??= new();
         var lo = 0;
         var hi = _delayed.Count;
@@ -90,7 +89,7 @@ public sealed partial class GameEventScriptHost
         {
             _stepEmittedMessages++;
             if (_initializationInstance is not null) _initializationEmits++;
-            _observer?.MessageEmitted(message, true);
+            _observer?.MessageEmitted(message, delayed.Id, true);
         }
         return true;
     }
@@ -117,7 +116,7 @@ public sealed partial class GameEventScriptHost
                     _observer?.RuntimeError(CreateRuntimeDiagnostic(GesDiagnosticCodes.RuntimePublishSinkFailure, "Publish sink failed.", GesRuntimeExceptionText.Describe(exception)));
                 }
             }
-            _observer?.MessagePublished(delayed.Pending.Message, new(localAccepted, attempted, accepted));
+            _observer?.MessagePublished(delayed.Pending.Message, delayed.Id, new(localAccepted, attempted, accepted));
         }
     }
 

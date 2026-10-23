@@ -116,11 +116,11 @@ final class RunObserver: GesRuntimeObserver {
         try inventory.subscribeMessageName("ErrorCode", handler: ErrorCodeHandler(observer: self))
     }
 
-    func messageEmitted(_ message: GameEventScriptMessage, accepted: Bool) { writeTrace("emit " + format(message) + (accepted ? "" : " [not queued]")) }
+    func messageEmitted(_ message: GameEventScriptMessage, id: Int64, accepted: Bool) { writeTrace("emit " + traceID(id) + format(message) + (accepted ? "" : " [not queued]")) }
 
-    func messagePublished(_ message: GameEventScriptMessage, result: GesPublishResult) { writeTrace("publish " + format(message) + (result.localAccepted ? "" : " [not queued]")) }
+    func messagePublished(_ message: GameEventScriptMessage, id: Int64, result: GesPublishResult) { writeTrace("publish " + traceID(id) + format(message) + (result.localAccepted ? "" : " [not queued]")) }
 
-    func dispatchStarted(_ message: GameEventScriptMessage, signatureID: String) { writeTrace("dispatch \(signatureID) <- " + format(message)) }
+    func dispatchStarted(_ message: GameEventScriptMessage, id: Int64, signatureID: String) { writeTrace("dispatch #\(id) \(signatureID) <- " + format(message)) }
 
     func messageScheduled(_ message: GameEventScriptMessage, id: Int64, deadline: Int64, publish: Bool) { writeTrace("schedule #\(id) \(publish ? "publish" : "emit") " + format(message) + " at \(deadline)us") }
 
@@ -135,6 +135,9 @@ final class RunObserver: GesRuntimeObserver {
         failed = true
         io.diagnostic(diagnostic, fallback: "runtime")
     }
+
+    // Sends without an ID (0) show none.
+    private func traceID(_ id: Int64) -> String { id == 0 ? "" : "#\(id) " }
 
     private func writeTrace(_ text: String) { if options.verbose { io.line(options.color && options.interactive ? RunHighlighting.paint(text, 33) : text, toError: true) } }
 

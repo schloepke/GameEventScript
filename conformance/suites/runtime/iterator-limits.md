@@ -1525,10 +1525,12 @@ steps:
           limit: 2
     trace:
       - event: "dispatchStarted"
+        id: "1"
         message:
           name: "Start"
         signatureId: "Start()"
       - event: "emit"
+        id: "2"
         message:
           name: "Deferred"
         accepted: true
@@ -1537,6 +1539,7 @@ steps:
           name: "MaxGeneratedCollectionItems"
           limit: 2
       - event: "dispatchCompleted"
+        id: "1"
         message:
           name: "Start"
         signatureId: "Start()"
@@ -2321,6 +2324,7 @@ steps:
           limit: 1
     trace:
       - event: "dispatchStarted"
+        id: "1"
         message:
           name: "Start"
         signatureId: "Start()"
@@ -2329,6 +2333,7 @@ steps:
           name: "MaxLoopIterations"
           limit: 1
       - event: "dispatchCompleted"
+        id: "1"
         message:
           name: "Start"
         signatureId: "Start()"

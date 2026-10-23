@@ -124,7 +124,7 @@ public sealed class GameEventScriptCheckRunCommandTests
         var result = Run("run", "main-*.ges", "main-a.ges", "--scenario", "scenario-a.ges", "--scenario", "scenario-b.ges", "--verbose");
         Assert.AreEqual(0, result.ExitCode, result.StandardError);
         Assert.AreEqual(Lines("42"), result.StandardOutput);
-        StringAssert.Contains(result.StandardError, "dispatch Start(value)");
+        StringAssert.Matches(result.StandardError, new Regex(@"dispatch #\d+ Start\(value\)"));
         Assert.HasCount(4, Directory.GetFiles(_directory));
     }
 
@@ -171,7 +171,7 @@ public sealed class GameEventScriptCheckRunCommandTests
         Write("game.ges", "on Main(args) { emit after 0.001s Later(); publish after 0.002s Out() }\non Later {}\n");
         var result = Run("run", "game.ges", "--verbose");
         Assert.AreEqual(0, result.ExitCode, result.StandardError);
-        StringAssert.Matches(result.StandardError, new Regex(@"schedule #1 emit Later at \d+us\r?\nemit Later\r?\nschedule #2 publish Out at \d+us"));
+        StringAssert.Matches(result.StandardError, new Regex(@"dispatch #1 Main\(args\) <- Main\(args: \[\]\)\r?\nschedule #2 emit Later at \d+us\r?\nemit #2 Later\r?\nschedule #3 publish Out at \d+us"));
     }
 
     /// <summary>Verifies bounded termination of an event cycle and per-handler execution limits.</summary>

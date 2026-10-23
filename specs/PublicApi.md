@@ -628,12 +628,14 @@ It may Emit, Publish, and use Context.Random synchronously. An implementation
 failure becomes `runtime.nativeHandlerFailure`; it aborts that handler, restores
 runtime boundaries, and does not corrupt Host state.
 
-RuntimeObserver receives synchronous callbacks in exact dispatch order:
+RuntimeObserver receives synchronous callbacks in exact dispatch order. `id` is
+the send ID defined in `HostRuntime.md#send-ids`; 0 reports a send without one.
 
-- `MessageEmitted(message, accepted)` after each Emit attempt;
-- `MessagePublished(message, result)` after local/outbound Publish processing;
-- `DispatchStarted(message, dispatchSignatureId)` immediately before a handler;
-- `DispatchCompleted(message, dispatchSignatureId)` when the handler boundary closes, including cleanup after a handler failure or limit;
+- `MessageEmitted(message, id, accepted)` after each Emit attempt; `id` is 0 when
+  the Emit was not queued;
+- `MessagePublished(message, id, result)` after local/outbound Publish processing;
+- `DispatchStarted(message, id, dispatchSignatureId)` immediately before a handler;
+- `DispatchCompleted(message, id, dispatchSignatureId)` when the handler boundary closes, including cleanup after a handler failure or limit;
 - `RuntimeLimitReached(name, detail, limit)` for a limit stop;
 - `RuntimeError(diagnostic)` for a runtime diagnostic;
 - `MessageScheduled(message, id, deadline, publish)` once when a delayed Emit
@@ -644,8 +646,10 @@ RuntimeObserver receives synchronous callbacks in exact dispatch order:
 > **Since: Unreleased** — scheduling callbacks
 
 The scheduling callbacks have empty default implementations, so observers that
-do not need them implement only the other callbacks. Their IDs, deadlines and
-discard rules are defined in `HostRuntime.md#delayed-dispatch`.
+do not need them implement only the other callbacks. Their deadlines and discard
+rules are defined in `HostRuntime.md#delayed-dispatch`. Swift spells the
+callbacks `messageEmitted(_:id:accepted:)`, `messagePublished(_:id:result:)`,
+`dispatchStarted(_:id:signatureID:)` and `dispatchCompleted(_:id:signatureID:)`.
 
 An observer is observational only and has no return value. Observer callbacks
 must not throw. Throwing is an embedding-contract violation, is not converted to

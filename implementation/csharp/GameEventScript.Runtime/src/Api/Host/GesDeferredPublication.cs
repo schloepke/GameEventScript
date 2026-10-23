@@ -10,4 +10,4 @@ using static GameEventScript.Runtime.Vm.GesVirtualMachine.StateValue;
 namespace GameEventScript.Api;
 
 /// <summary>An outbound publication staged until its initializing instance succeeds.</summary>
-internal readonly record struct GesDeferredPublication(GameEventScriptMessage Message, bool LocalAccepted, GesProgramInstance Instance);
+internal readonly record struct GesDeferredPublication(GameEventScriptMessage Message, long Id, bool LocalAccepted, GesProgramInstance Instance);

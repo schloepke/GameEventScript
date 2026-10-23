@@ -517,6 +517,8 @@ identical messages remain distinguishable. Its deadline is the absolute entry
 deadline in whole microseconds on the Host clock that `NextMessageDelay` uses,
 neither a relative delay nor wall-clock time; the publish flag distinguishes
 `publish … after` from `emit … after`. Rejected sends report no scheduling ID.
+A zero delay is an instant send (see `Language.md`), so it enters no delayed
+queue and reports no `MessageScheduled`.
 
 An entry removed before it becomes due reports `ScheduledMessageDiscarded` with
 its scheduling ID exactly once, in deadline order: every entry on initial-group

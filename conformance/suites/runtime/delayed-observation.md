@@ -115,6 +115,67 @@ steps:
 
 ---
 
+## Test: zero delay is observed as an instant send
+
+`emit after 0s` and `publish after 0s` behave exactly like the same sends without `after`: they receive no scheduling ID, leave no delayed work, and are observed and delivered within the same pump.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: zero-delay-is-instant-send
+sources:
+  - name: zero.ges
+    program: main
+publishSink: accept
+```
+
+### Source code under test
+
+```ges
+module main
+on Work { emit after 0s Now(); publish after 0s Out() }
+on Now {}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| begin | Work | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  begin:
+    waiting: false
+    local: [{ name: Now }, { name: Out }]
+    outbound: [{ name: Out }]
+    trace:
+      - event: dispatchStarted
+        message: { name: Work }
+        signatureId: "Work()"
+      - event: emit
+        message: { name: Now }
+        accepted: true
+      - event: publish
+        message: { name: Out }
+        result: { localAccepted: false, outboundAttempted: true, outboundAccepted: true, anyAccepted: true }
+      - event: dispatchCompleted
+        message: { name: Work }
+        signatureId: "Work()"
+      - event: dispatchStarted
+        message: { name: Now }
+        signatureId: "Now()"
+      - event: dispatchCompleted
+        message: { name: Now }
+        signatureId: "Now()"
+```
+
+---
+
 ## Test: failed initial group discards every scheduled message once
 
 When the initial group fails, every delayed message it scheduled is reported as discarded exactly once, in deadline order.

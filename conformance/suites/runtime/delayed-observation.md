@@ -253,6 +253,71 @@ steps:
 
 ---
 
+## Test: zero delay on a full queue matches the result-bearing instant send
+
+On a full queue, `emit after 0s` behaves like the result-bearing `emit` without `after`: it is not observed as an emit, reports the queue limit and stops the handler before later sends.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: zero-delay-full-queue-matches-result-bearing-send
+sources:
+  - name: zero-full.ges
+    program: main
+runtimeLimits:
+  maxQueuedMessagesPerRun: 1
+```
+
+### Source code under test
+
+```ges
+module main
+on Start { emit after 1s Ping(); emit after 0s Ping(); emit Bad() }
+on Ping {}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    local: [{ name: Ping }]
+    runtimeLimits:
+      include:
+        - name: MaxQueuedMessagesPerRun
+          limit: 1
+    trace:
+      - event: dispatchStarted
+        id: "1"
+        message: { name: Start }
+        signatureId: "Start()"
+      - event: scheduled
+        id: "2"
+        message: { name: Ping }
+        deadline: "1000000"
+        publish: false
+      - event: emit
+        id: "2"
+        message: { name: Ping }
+        accepted: true
+      - event: runtimeLimit
+        runtimeLimit: { name: MaxQueuedMessagesPerRun, limit: 1 }
+      - event: dispatchCompleted
+        id: "1"
+        message: { name: Start }
+        signatureId: "Start()"
+```
+
+---
+
 ## Test: failed initial group discards every scheduled message once
 
 When the initial group fails, every delayed message it scheduled is reported as discarded exactly once, in deadline order.

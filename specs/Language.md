@@ -455,8 +455,9 @@ not a unitless number or another unit. Unit-preserving computations such as
 when its unit is unknown. Statically established wrong types produce
 `validate.invalidTypeConstructor`; dynamically invalid values, nothing, negative
 values, nonfinite values or unrepresentable delays produce false without sending.
-A zero duration is identical to the same send without `after`: the message is
-not delayed and has the same acceptance, ordering and observations. Timing, rounding, delivery snapshots and
+A zero duration is identical to the same result-bearing send without `after`:
+the message is not delayed and has the same result, acceptance, ordering,
+queue-limit behavior and observations. Timing, rounding, delivery snapshots and
 initialization staging are defined in HostRuntime. Emit/publish do not become
 synchronous handler calls. A result-bearing send also returns false when its
 message operand is not a Message or its tag clause cannot be normalized.

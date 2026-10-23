@@ -32,9 +32,15 @@ class TraceTests(unittest.TestCase):
         scheduled = {'event': 'scheduled', 'message': {'name': 'Ping'}, 'id': '1', 'deadline': '1000000', 'publish': False}
         discarded = {'event': 'scheduledDiscarded', 'id': '1'}
         self.assertEqual(['scheduled', 'scheduledDiscarded'], [item['event'] for item in normalize([scheduled, discarded], message, limit)])
+        unqueued = [{'event': 'emit', 'message': {'name': 'Ping'}, 'id': '0', 'accepted': False},
+                    {'event': 'publish', 'message': {'name': 'Ping'}, 'id': '0', 'result': {
+                        'localAccepted': False, 'outboundAttempted': False, 'outboundAccepted': False, 'anyAccepted': False}}]
+        self.assertEqual(['0', '0'], [item['id'] for item in normalize(unqueued, message, limit)])
         for event in ({**scheduled, 'id': 1}, {**scheduled, 'deadline': '-1'}, {**scheduled, 'deadline': '\u00b2'},
                       {**scheduled, 'publish': 0}, {key: value for key, value in scheduled.items() if key != 'deadline'},
-                      {**discarded, 'id': ''}, {**discarded, 'message': {'name': 'Ping'}}):
+                      {**discarded, 'id': ''}, {**discarded, 'id': '0'}, {**scheduled, 'id': '0'},
+                      {'event': 'dispatchStarted', 'message': {'name': 'Ping'}, 'id': '0', 'signatureId': 'Ping()'},
+                      {**discarded, 'message': {'name': 'Ping'}}):
             with self.assertRaises(InvalidDocument):
                 normalize([event], message, limit)
 

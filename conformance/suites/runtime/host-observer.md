@@ -1211,3 +1211,75 @@ steps:
         message: { name: Deferred }
         signatureId: "Deferred()"
 ```
+
+---
+
+## Test: Undeliverable fallback dispatch reports the original send ID
+
+Each message without a direct recipient is dispatched to the `undeliverable` fallback under the send ID of its own emit, so repeated identical messages stay distinguishable.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: undeliverable-fallback-reports-send-id
+sources:
+  - name: undeliverable-send-id.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+module main
+on Start { emit Missing(); emit Missing() }
+on undeliverable as message {}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    local: [{ name: Missing }, { name: Missing }]
+    trace:
+      - event: dispatchStarted
+        id: "1"
+        message: { name: Start }
+        signatureId: "Start()"
+      - event: emit
+        id: "2"
+        message: { name: Missing }
+        accepted: true
+      - event: emit
+        id: "3"
+        message: { name: Missing }
+        accepted: true
+      - event: dispatchCompleted
+        id: "1"
+        message: { name: Start }
+        signatureId: "Start()"
+      - event: dispatchStarted
+        id: "2"
+        message: { name: Missing }
+        signatureId: "undeliverable(*)"
+      - event: dispatchCompleted
+        id: "2"
+        message: { name: Missing }
+        signatureId: "undeliverable(*)"
+      - event: dispatchStarted
+        id: "3"
+        message: { name: Missing }
+        signatureId: "undeliverable(*)"
+      - event: dispatchCompleted
+        id: "3"
+        message: { name: Missing }
+        signatureId: "undeliverable(*)"
+```

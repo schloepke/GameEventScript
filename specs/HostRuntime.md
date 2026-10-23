@@ -273,6 +273,12 @@ implementation and therefore does not depend on C# reflection.
   `OutboundAccepted`, `OutboundDeferred`, and derived `AnyAccepted`. Sink rejection or exception
   never rolls back or corrupts local delivery. The observer sees the result.
 - Queue limits count logical messages, not handler invocations.
+- A send needs a queue slot for an instant message with local recipients and
+  for every delayed entry. When it finds `MaxQueuedMessagesPerRun` reached
+  outside initialization, an Emit or Publish statement and a native Emit or
+  Publish drop the local message, report the limit to the observer and continue
+  the handler. A result-bearing or delayed send instead stops its handler with
+  that limit before the send is observed.
 - Each queued message owns immutable exact/name subscription snapshots and a
   cursor. Every matching handler finishes in priority/registration order before
   the next logical message starts.

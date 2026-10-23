@@ -131,8 +131,9 @@ public final class GameEventScriptHost {
         }
         instances[instance.registrationID] = instance
         if !initialization.isEmpty {
+            let message = try GameEventScriptMessage(name: "initialization")
             lastSendID += 1
-            let pending = GesPendingMessage(message: try GameEventScriptMessage(name: "initialization"), exact: initialization.sorted(by: GesSubscriptionEntry.precedes), names: [], id: lastSendID, initialization: instance)
+            let pending = GesPendingMessage(message: message, exact: initialization.sorted(by: GesSubscriptionEntry.precedes), names: [], id: lastSendID, initialization: instance)
             idleSinceMicroseconds = nil
             if isReady { queue.enqueue(pending) } else { startupQueue.enqueue(pending) }
         } else if isReady {

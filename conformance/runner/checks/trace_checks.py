@@ -40,6 +40,9 @@ def normalize(events, message, limit, expectation=False):
         for key in ('id', 'deadline'):
             if key in item and (not isinstance(item[key], str) or not (item[key].isascii() and item[key].isdigit())):
                 raise InvalidDocument('Invalid send ' + key)
+        # Only an emit or publish may lack a send ID; every other event names an accepted send.
+        if 'id' in item and item['id'] == '0' and event not in ('emit', 'publish'):
+            raise InvalidDocument('Send ID required')
         if event == 'scheduled' and type(item['publish']) is not bool:
             raise InvalidDocument('Invalid scheduling publish flag')
         if event.startswith('dispatch') and (not isinstance(item['signatureId'], str) or not item['signatureId']):

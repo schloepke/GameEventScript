@@ -115,6 +115,64 @@ steps:
 
 ---
 
+## Test: delayed emit without recipients is not scheduled
+
+A delayed emit whose recipient snapshot is empty behaves exactly like the instant emit: the script result is true, the emit is observed as not queued, it receives no scheduling ID and leaves no delayed work.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delayed-emit-without-recipients-is-not-scheduled
+sources:
+  - name: orphan.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+module main
+on Work { if emit after 1s Nobody() { emit after 1s Later() } }
+on Later {}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| begin | Work | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  begin:
+    waiting: true
+    local: [{ name: Nobody }, { name: Later }]
+    trace:
+      - event: dispatchStarted
+        message: { name: Work }
+        signatureId: "Work()"
+      - event: emit
+        message: { name: Nobody }
+        accepted: false
+      - event: scheduled
+        message: { name: Later }
+        id: "1"
+        deadline: "1000000"
+        publish: false
+      - event: emit
+        message: { name: Later }
+        accepted: true
+      - event: dispatchCompleted
+        message: { name: Work }
+        signatureId: "Work()"
+```
+
+---
+
 ## Test: zero delay is observed as an instant send
 
 `emit after 0s` and `publish after 0s` behave exactly like the same sends without `after`: they receive no scheduling ID, leave no delayed work, and are observed and delivered within the same pump.

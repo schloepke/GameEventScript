@@ -111,6 +111,12 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 
 ### Changed
 
+- A delayed `emit after …` without recipients now behaves like the same emit
+  without `after`: it is not scheduled and is observed as not queued, so it no
+  longer keeps the host waiting, counts towards the queue limit or appears in
+  `NextMessageDelay`. Its script result stays true. Delayed publishes are still
+  scheduled for the outbound sink.
+
 - The root SwiftPM package now exposes only the four libraries. Build `ges` from
   `implementation/swift/GameEventScriptTool`, or install it via Homebrew, the
   install script or standalone downloads. The root macOS minimum is now 10.15;

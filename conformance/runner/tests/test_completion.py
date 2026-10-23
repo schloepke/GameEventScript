@@ -48,7 +48,7 @@ class CompletionTests(unittest.TestCase):
 
     def test_all_cases_validate_no_adapter(self):
         execution.validate(self.cases, ROOT / 'fixtures')
-        self.assertEqual(2011, len(self.cases))
+        self.assertEqual(2012, len(self.cases))
 
     def test_normalized_models_are_immutable_with_explicit_editable_copies(self):
         case = next(c for c in self.cases if c.sources)

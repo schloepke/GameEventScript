@@ -333,15 +333,22 @@ public final class GameEventScriptHost {
         }
         let now = elapsedMicroseconds
         guard now >= 0 && microseconds <= Int64.max - now else { return false }
+        var exact = self.exact[message.signatureId] ?? []
+        var names = byName[message.name] ?? []
+        var local = exact.contains(where: { $0.matches(message) }) || names.contains(where: { $0.matches(message) })
+        if !local && message.name != "undeliverable" {
+            exact = self.exact["undeliverable(message)"] ?? []
+            names = byName["undeliverable"] ?? []
+            local = exact.contains(where: { $0.matches(message) }) || names.contains(where: { $0.matches(message) })
+        }
+        // An emit without recipients can never be delivered; like the instant emit it is observed as not queued.
+        if !local && !publish {
+            _ = emit(message)
+            return !context.budget.isExhausted
+        }
         if queueFull {
             context.budget.exhaust("MaxQueuedMessagesPerRun", limits.maxQueuedMessagesPerRun)
             return false
-        }
-        var exact = self.exact[message.signatureId] ?? []
-        var names = byName[message.name] ?? []
-        if !exact.contains(where: { $0.matches(message) }) && !names.contains(where: { $0.matches(message) }) && message.name != "undeliverable" {
-            exact = self.exact["undeliverable(message)"] ?? []
-            names = byName["undeliverable"] ?? []
         }
         let pending = GesPendingMessage(message: message, exact: exact, names: names, initializationOutputID: initializationInstance?.registrationID ?? 0)
         lastScheduledID += 1

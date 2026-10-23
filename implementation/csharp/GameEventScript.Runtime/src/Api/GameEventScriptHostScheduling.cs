@@ -47,17 +47,25 @@ public sealed partial class GameEventScriptHost
         }
         var now = _clock.ElapsedMicroseconds;
         if (now < 0 || microseconds > long.MaxValue - now) return false;
+        var exact = Get(_exact, message.SignatureId);
+        var names = Get(_byName, message.Name);
+        var local = HasMatch(message, exact, names);
+        if (!local && !GesSystemEndpoints.IsUndeliverableName(message.Name))
+        {
+            exact = Get(_exact, GesSystemEndpoints.UndeliverableSignatureId);
+            names = Get(_byName, GesSystemEndpoints.UndeliverableName);
+            local = HasMatch(message, exact, names);
+        }
+        // An emit without recipients can never be delivered; like the instant emit it is observed as not queued.
+        if (!local && !publish)
+        {
+            EmitFromContext(message);
+            return !_context.RuntimeBudget.IsExhausted;
+        }
         if (IsMessageQueueFull)
         {
             _context.RuntimeBudget.Exhaust(nameof(GesRuntimeLimits.MaxQueuedMessagesPerRun), "Delayed message queue limit reached.", _limits.MaxQueuedMessagesPerRun);
             return false;
-        }
-        var exact = Get(_exact, message.SignatureId);
-        var names = Get(_byName, message.Name);
-        if (!HasMatch(message, exact, names) && !GesSystemEndpoints.IsUndeliverableName(message.Name))
-        {
-            exact = Get(_exact, GesSystemEndpoints.UndeliverableSignatureId);
-            names = Get(_byName, GesSystemEndpoints.UndeliverableName);
         }
         var pending = new GesPendingMessage(message, exact, names, initializationOutput: _initializationInstance);
         var delayed = new GesDelayedMessage(now + microseconds, pending, publish, _initializationInstance, ++_lastScheduledId);

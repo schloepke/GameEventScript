@@ -496,7 +496,12 @@ delay; overflow rejects the send. This is a minimum scheduling delay, not a
 real-time execution guarantee.
 
 Delayed entries capture the same recipient snapshot as instant enqueue. Newly
-registered recipients do not receive older entries. Ordinary detach retains its
+registered recipients do not receive older entries. A delayed emit whose
+snapshot, including the `undeliverable` fallback, is empty at acceptance behaves
+exactly like the instant emit without recipients: it is not scheduled, is
+observed as not queued, and its script result is unchanged. A delayed publish
+is scheduled without local recipients, because its outbound sink invocation
+remains due. Ordinary detach retains its
 captured-delivery behavior. When deadlines become due, entries are appended to
 the runnable FIFO in deadline order; equal deadlines retain enqueue order.
 Promotion occurs between complete logical messages, never in the middle of an

@@ -201,6 +201,95 @@ steps:
 
 ---
 
+## Test: failed initial group reports discards across programs in deadline order
+
+A delayed emit that loses its only recipient when another program of the initial group fails is reported together with all other entries, in one deadline-ordered pass.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: failed-initial-group-discards-in-deadline-order
+sources:
+  - name: sender.ges
+    program: sender
+  - name: receiver.ges
+    program: receiver
+```
+
+### Source code under test
+
+```ges
+module sender
+on initialization { publish after 1s Out(); emit after 2s Ping() }
+```
+
+```ges
+module receiver
+on Ping {}
+on initialization { let failure be :test.declaredFault() }
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| idle | Unknown | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+initialization:
+  hostReady: false
+  programStarts: { sender: runtimeError, receiver: runtimeError }
+  local: [{ name: Ping }]
+  diagnostics:
+    - phase: runtime
+      code: test.declaredFault
+      programName: receiver
+      handlerName: initialization()
+  trace:
+    - event: dispatchStarted
+      message: { name: initialization }
+      signatureId: "initialization()"
+    - event: scheduled
+      message: { name: Out }
+      id: "1"
+      deadline: "1000000"
+      publish: true
+    - event: scheduled
+      message: { name: Ping }
+      id: "2"
+      deadline: "2000000"
+      publish: false
+    - event: emit
+      message: { name: Ping }
+      accepted: true
+    - event: dispatchCompleted
+      message: { name: initialization }
+      signatureId: "initialization()"
+    - event: dispatchStarted
+      message: { name: initialization }
+      signatureId: "initialization()"
+    - event: diagnostic
+      diagnostic: { phase: runtime, code: test.declaredFault, programName: receiver, handlerName: initialization() }
+    - event: dispatchCompleted
+      message: { name: initialization }
+      signatureId: "initialization()"
+    - event: scheduledDiscarded
+      id: "1"
+    - event: scheduledDiscarded
+      id: "2"
+steps:
+  idle:
+    accepted: false
+    waiting: false
+    trace: []
+```
+
+---
+
 ## Test: failed later initialization discards only its scheduled message
 
 A later-loaded program whose initialization fails reports its own delayed message as discarded, while an independent delayed message keeps its ID and is delivered when due.

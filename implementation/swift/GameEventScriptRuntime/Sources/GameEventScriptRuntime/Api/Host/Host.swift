@@ -620,7 +620,8 @@ extension GameEventScriptHost {
         initializationDiagnostic = nil
         active = nil
         queue.removeFailedRecipients(discardingOutputsFrom: instance.registrationID)
-        removeFailedDelayed()
+        // A failure during start fails the whole group, whose clearDelayed reports every entry in one deadline-ordered pass.
+        if !starting { removeFailedDelayed() }
     }
 
     // Removes delayed entries of a failed initialization and emits left without recipients, in deadline order.

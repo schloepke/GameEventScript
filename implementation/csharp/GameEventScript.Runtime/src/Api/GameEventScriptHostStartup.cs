@@ -107,7 +107,8 @@ public sealed partial class GameEventScriptHost
         _initializationDiagnostic = null;
         _hasActiveMessage = false;
         _queue.RemoveFailedRecipients();
-        RemoveFailedDelayed();
+        // A failure during Start fails the whole group, whose ClearDelayed reports every entry in one deadline-ordered pass.
+        if (!_starting) RemoveFailedDelayed();
     }
 
     private static GesDiagnostic InitializationLimitDiagnostic(GesProgramInstance? instance)

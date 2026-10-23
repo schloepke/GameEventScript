@@ -43,6 +43,18 @@ internal sealed class RunObserver(bool verbose, bool color, bool interactive) : 
     public void DispatchCompleted(GameEventScriptMessage message, string dispatchSignatureId) { }
 
     /// <inheritdoc />
+    public void MessageScheduled(GameEventScriptMessage message, long id, long deadline, bool publish)
+    {
+        if (verbose) WriteTrace($"schedule #{id} {(publish ? "publish" : "emit")} {Format(message)} at {deadline}us");
+    }
+
+    /// <inheritdoc />
+    public void ScheduledMessageDiscarded(long id)
+    {
+        if (verbose) WriteTrace($"discard #{id}");
+    }
+
+    /// <inheritdoc />
     public void RuntimeLimitReached(string limitName, string detail, int limit)
     {
         Failed = true;

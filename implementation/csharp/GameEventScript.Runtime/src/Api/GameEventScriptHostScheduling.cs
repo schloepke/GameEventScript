@@ -101,13 +101,9 @@ public sealed partial class GameEventScriptHost
         var now = _clock.ElapsedMicroseconds;
         while (_delayed.Count > 0 && _delayed[0].Deadline <= now)
         {
+            // Failed initializations removed their entries already, so every due entry is delivered.
             var delayed = _delayed[0];
             _delayed.RemoveAt(0);
-            if (delayed.Owner?.StartResult is { State: not GesStartState.Ready })
-            {
-                _observer?.ScheduledMessageDiscarded(delayed.Id);
-                continue;
-            }
             var localAccepted = delayed.Pending.HasRecipients();
             if (localAccepted) _queue.Enqueue(delayed.Pending);
             if (!delayed.Publish) continue;
@@ -125,24 +121,20 @@ public sealed partial class GameEventScriptHost
         }
     }
 
-    // Removes delayed entries of a failed initialization and emits left without recipients, in deadline order.
+    // Removes entries abandoned by a failed initialization. Each is reported in deadline order before the list
+    // changes, so a throwing observer cannot leave it inconsistent.
     private void RemoveFailedDelayed()
     {
         if (_delayed is null) return;
-        var kept = 0;
-        for (var index = 0; index < _delayed.Count; index++)
+        if (_observer is { } observer)
         {
-            var item = _delayed[index];
-            if (item.Owner?.StartResult is { State: not GesStartState.Ready } || !item.Publish && !item.Pending.HasRecipients())
+            for (var index = 0; index < _delayed.Count; index++)
             {
-                _observer?.ScheduledMessageDiscarded(item.Id);
-                continue;
+                if (_delayed[index].IsAbandoned) observer.ScheduledMessageDiscarded(_delayed[index].Id);
             }
-
-            _delayed[kept++] = item;
         }
 
-        _delayed.RemoveRange(kept, _delayed.Count - kept);
+        _delayed.RemoveAll(static item => item.IsAbandoned);
     }
 
     // Discards every delayed entry, reporting each in deadline order.

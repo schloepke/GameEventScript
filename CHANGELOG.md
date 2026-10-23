@@ -107,7 +107,8 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   `ScheduledMessageDiscarded(id)` / `scheduledMessageDiscarded(id:)` reports
   delayed messages removed before they became due, such as after a failed
   initialization. Both callbacks have empty default implementations; hosts
-  without an observer behave as before.
+  without an observer behave as before. `ges run --verbose` traces them as
+  `schedule #<id> …` and `discard #<id>`.
 
 ### Changed
 

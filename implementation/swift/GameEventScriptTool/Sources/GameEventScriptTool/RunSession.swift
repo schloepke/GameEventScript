@@ -122,6 +122,10 @@ final class RunObserver: GesRuntimeObserver {
 
     func dispatchStarted(_ message: GameEventScriptMessage, signatureID: String) { writeTrace("dispatch \(signatureID) <- " + format(message)) }
 
+    func messageScheduled(_ message: GameEventScriptMessage, id: Int64, deadline: Int64, publish: Bool) { writeTrace("schedule #\(id) \(publish ? "publish" : "emit") " + format(message) + " at \(deadline)us") }
+
+    func scheduledMessageDiscarded(id: Int64) { writeTrace("discard #\(id)") }
+
     func runtimeLimitReached(_ limitName: String, detail: String, limit: Int) {
         failed = true
         io.line("error cli.runtimeLimit: \(limitName)=\(limit): \(detail)", toError: true)

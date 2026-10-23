@@ -132,6 +132,13 @@ final class ToolTests: XCTestCase {
         XCTAssertNil(decoded.debugSymbols)
     }
 
+    func testVerboseTraceReportsScheduledMessages() throws {
+        let source = try file("game.ges", "on Main(args) { emit after 0.001s Later(); publish after 0.002s Out() }\non Later {}\n")
+        let result = run(["run", source, "--verbose"])
+        XCTAssertEqual(result.code, 0, result.error)
+        XCTAssertNotNil(result.error.range(of: #"schedule #1 emit Later at \d+us\nemit Later\nschedule #2 publish Out at \d+us"#, options: .regularExpression), result.error)
+    }
+
     func testJointCompilationOrderWildcardAndDeduplication() throws {
         let a = try file("parts/a.ges", "on Main(args) { emit ConsoleOut(double(21)) }")
         let b = try file("parts/b.ges", "function double(_ x) be x + x")

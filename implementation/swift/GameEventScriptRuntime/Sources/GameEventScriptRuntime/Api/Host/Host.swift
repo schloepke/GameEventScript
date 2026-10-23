@@ -377,11 +377,8 @@ public final class GameEventScriptHost {
         guard !delayed.isEmpty else { return }
         let now = elapsedMicroseconds
         while let entry = delayed.first, entry.deadline <= now {
+            // Failed initializations removed their entries already, so every due entry is delivered.
             delayed.removeFirst()
-            if entry.owner?.initializationFailed ?? false {
-                observer?.scheduledMessageDiscarded(id: entry.id)
-                continue
-            }
             let local = entry.pending.hasRecipients
             if local { queue.enqueue(entry.pending) }
             if entry.publish {
@@ -631,19 +628,11 @@ extension GameEventScriptHost {
         if !starting { removeFailedDelayed() }
     }
 
-    // Removes delayed entries of a failed initialization and emits left without recipients, in deadline order.
+    // Removes entries abandoned by a failed initialization. Each is reported in deadline order before the array
+    // changes, so a throwing observer cannot leave it inconsistent.
     private func removeFailedDelayed() {
-        var kept = 0
-        for index in delayed.indices {
-            let entry = delayed[index]
-            if (entry.owner?.initializationFailed ?? false) || !entry.publish && !entry.pending.hasRecipients {
-                observer?.scheduledMessageDiscarded(id: entry.id)
-                continue
-            }
-            delayed[kept] = entry
-            kept += 1
-        }
-        delayed.removeLast(delayed.count - kept)
+        if let observer { for entry in delayed where entry.isAbandoned { observer.scheduledMessageDiscarded(id: entry.id) } }
+        delayed.removeAll { $0.isAbandoned }
     }
 
     // Discards every delayed entry, reporting each in deadline order.

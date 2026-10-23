@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using System.Text;
+using System.Text.RegularExpressions;
 using GameEventScript.Api;
 
 namespace GameEventScript.Tests.Native.Tool;
@@ -161,6 +162,16 @@ public sealed class GameEventScriptCheckRunCommandTests
         Assert.AreEqual(0, result.ExitCode, result.StandardError);
         Assert.AreEqual(string.Empty, result.StandardOutput);
         StringAssert.Contains(result.StandardError, "emit Unhandled(text: \"hello\\nworld\") [not queued]");
+    }
+
+    /// <summary>Verifies that the verbose trace reports delayed sends with their scheduling ID and absolute deadline.</summary>
+    [TestMethod]
+    public void RunTracesScheduledMessages()
+    {
+        Write("game.ges", "on Main(args) { emit after 0.001s Later(); publish after 0.002s Out() }\non Later {}\n");
+        var result = Run("run", "game.ges", "--verbose");
+        Assert.AreEqual(0, result.ExitCode, result.StandardError);
+        StringAssert.Matches(result.StandardError, new Regex(@"schedule #1 emit Later at \d+us\r?\nemit Later\r?\nschedule #2 publish Out at \d+us"));
     }
 
     /// <summary>Verifies bounded termination of an event cycle and per-handler execution limits.</summary>

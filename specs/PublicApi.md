@@ -645,8 +645,8 @@ the send ID defined in `HostRuntime.md#send-ids`; 0 reports a send without one.
 
 > **Since: Unreleased** — scheduling callbacks
 
-The scheduling callbacks have empty default implementations, so observers that
-do not need them implement only the other callbacks. Their deadlines and discard
+Every callback has an empty default implementation in both ports, so an observer
+implements only the callbacks it needs. The scheduling deadlines and discard
 rules are defined in `HostRuntime.md#delayed-dispatch`. Swift spells the
 callbacks `messageEmitted(_:id:accepted:)`, `messagePublished(_:id:result:)`,
 `dispatchStarted(_:id:signatureID:)` and `dispatchCompleted(_:id:signatureID:)`.

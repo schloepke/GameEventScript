@@ -50,14 +50,6 @@ internal sealed class TestRuntimeObserver : IGesRuntimeObserver
         _publishResult?.Invoke(result);
     }
 
-    public void DispatchStarted(GameEventScriptMessage message, long id, string dispatchSignatureId)
-    {
-    }
-
-    public void DispatchCompleted(GameEventScriptMessage message, long id, string dispatchSignatureId)
-    {
-    }
-
     public void RuntimeLimitReached(string limitName, string detail, int limit)
         => _runtimeLimitReached?.Invoke(limitName, detail, limit);
 

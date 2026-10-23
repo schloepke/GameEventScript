@@ -20,9 +20,10 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   `dispatchStarted(_:id:signatureID:)` and `dispatchCompleted(_:id:signatureID:)`.
   Every accepted send gets the next ID of its host, so a trace can match each
   dispatch to its emit, publish or delayed send; 0 marks an emit that was not
-  queued. Messages themselves carry no ID. Migrate by adding the `id` parameter.
-  Swift observers that keep the old signatures compile against the default
-  implementations but are no longer called.
+  queued or a publish the host did not accept. Messages themselves carry no ID.
+  Migrate by adding the `id` parameter: every callback now has an empty default
+  implementation in both ports, so an observer that keeps an old signature still
+  compiles but no longer receives that callback.
 - Public API types are renamed so that only the three edge types keep the
   `GameEventScript` prefix: `GameEventScriptHost`, `GameEventScriptProgram` and
   `GameEventScriptMessage`. All other public types use `Ges`, identically in C#
@@ -117,8 +118,9 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   absolute deadline in microseconds on the host clock.
   `ScheduledMessageDiscarded(id)` / `scheduledMessageDiscarded(id:)` reports
   delayed messages removed before they became due, such as after a failed
-  initialization. Both callbacks have empty default implementations; hosts
-  without an observer behave as before. `ges run --verbose` traces them as
+  initialization. Hosts without an observer behave as before.
+- C# `IGesRuntimeObserver` gives every callback an empty default implementation,
+  like Swift, so an observer implements only the callbacks it needs. `ges run --verbose` traces them as
   `schedule #<id> …` and `discard #<id>` and shows the send ID on emit, publish
   and dispatch lines.
 

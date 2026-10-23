@@ -141,6 +141,13 @@ final class ToolTests: XCTestCase {
         XCTAssertNotNil(result.error.range(of: trace, options: .regularExpression), result.error)
     }
 
+    func testVerboseTraceReportsDiscardedScheduledMessages() throws {
+        let source = try file("game.ges", "on initialization {\n  emit after 1s Tick()\n  for item in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] { let doubled be item * 2 }\n}\non Tick {}\non Main(args) {}\n")
+        let result = run(["run", source, "--verbose", "--max-steps", "10"])
+        XCTAssertEqual(result.code, 1, result.error)
+        XCTAssertNotNil(result.error.range(of: #"emit #2 Tick\nerror cli\.runtimeLimit: MaxExecutionSteps=10: [^\n]*\ndiscard #2\n"#, options: .regularExpression), result.error)
+    }
+
     func testRunClockShowsDeadlinesAsLocalTimes() {
         let clock = RunClock()
         XCTAssertNotNil(clock.formatDeadline(172_800_000_000).range(of: #"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}$"#, options: .regularExpression))

@@ -118,11 +118,11 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   absolute deadline in microseconds on the host clock.
   `ScheduledMessageDiscarded(id)` / `scheduledMessageDiscarded(id:)` reports
   delayed messages removed before they became due, such as after a failed
-  initialization. Hosts without an observer behave as before.
+  initialization. Hosts without an observer behave as before. `ges run --verbose`
+  traces them as `schedule #<id> … at <local time>` and `discard #<id>` and shows
+  the send ID on emit, publish and dispatch lines.
 - C# `IGesRuntimeObserver` gives every callback an empty default implementation,
-  like Swift, so an observer implements only the callbacks it needs. `ges run --verbose` traces them as
-  `schedule #<id> … at <local time>` and `discard #<id>` and shows the send ID on
-  emit, publish and dispatch lines.
+  like Swift, so an observer implements only the callbacks it needs.
 
 ### Changed
 
@@ -131,7 +131,6 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   longer keeps the host waiting, counts towards the queue limit or appears in
   `NextMessageDelay`. Its script result stays true. Delayed publishes are still
   scheduled for the outbound sink.
-
 - The root SwiftPM package now exposes only the four libraries. Build `ges` from
   `implementation/swift/GameEventScriptTool`, or install it via Homebrew, the
   install script or standalone downloads. The root macOS minimum is now 10.15;

@@ -634,6 +634,7 @@ the send ID defined in `HostRuntime.md#send-ids`; 0 reports a send without one.
 - `MessageEmitted(message, id, accepted)` after each Emit attempt; `id` is 0 when
   the Emit was not queued;
 - `MessagePublished(message, id, result)` after local/outbound Publish processing;
+  `id` is 0 when the Host did not accept the Publish;
 - `DispatchStarted(message, id, dispatchSignatureId)` immediately before a handler;
 - `DispatchCompleted(message, id, dispatchSignatureId)` when the handler boundary closes, including cleanup after a handler failure or limit;
 - `RuntimeLimitReached(name, detail, limit)` for a limit stop;

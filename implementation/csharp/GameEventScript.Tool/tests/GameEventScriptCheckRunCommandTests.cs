@@ -165,7 +165,17 @@ public sealed class GameEventScriptCheckRunCommandTests
         StringAssert.Contains(result.StandardError, "emit Unhandled(text: \"hello\\nworld\") [not queued]");
     }
 
-    /// <summary>Verifies that the verbose trace reports delayed sends with their scheduling ID and absolute deadline.</summary>
+    /// <summary>Verifies that a failed initial group reports its scheduled message as discarded in the verbose trace.</summary>
+    [TestMethod]
+    public void RunTracesDiscardedScheduledMessages()
+    {
+        Write("game.ges", "on initialization {\n  emit after 1s Tick()\n  for item in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] { let doubled be item * 2 }\n}\non Tick {}\non Main(args) {}\n");
+        var result = Run("run", "game.ges", "--verbose", "--max-steps", "10");
+        Assert.AreEqual(1, result.ExitCode, result.StandardError);
+        StringAssert.Matches(result.StandardError, new Regex(@"emit #2 Tick\r?\nerror cli\.runtimeLimit: MaxExecutionSteps=10: [^\r\n]*\r?\ndiscard #2\r?\n"));
+    }
+
+    /// <summary>Verifies that the verbose trace reports delayed sends with their send ID and local deadline.</summary>
     [TestMethod]
     public void RunTracesScheduledMessages()
     {

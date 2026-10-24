@@ -143,7 +143,8 @@ the host ready and returns `StartResult.Ready`, while emitted messages may remai
 queued. StartResult also reports initialization opcode, completed-snapshot, emit,
 and publish counters; these exclude subsequent ordinary dispatch. A runtime fault or exhausted safety limit returns `RuntimeError` or
 `RuntimeLimitReached`, with a structured diagnostic. Failure removes the group's
-registrations and discards all its queued outputs. The host remains not ready and
+registrations and discards all its queued outputs, reporting each discarded
+message as defined in [Send IDs](#send-ids). The host remains not ready and
 cannot be started again. Repeating Start returns its original result without
 executing code. Reentrant Start and pump calls are rejected.
 
@@ -161,7 +162,8 @@ stores RuntimeError or RuntimeLimitReached and its diagnostic, removes the
 instance's registrations, discards its buffered outputs, and cancels every pending
 recipient entry belonging to that instance. Other recipients of the same logical
 message retain their order and still execute. Messages with no surviving recipient
-are removed without dispatch or undeliverable redistribution. This failure
+are removed without dispatch or undeliverable redistribution. Each discarded
+output and removed message is reported as defined in [Send IDs](#send-ids). This failure
 cancellation is stronger than ordinary Detach, which retains captured recipients.
 The host remains ready; the embedding decides whether to retry with a new Load.
 A new instance never inherits the previous instance's captured deliveries.
@@ -534,16 +536,19 @@ delay; overflow rejects the send. This is a minimum scheduling delay, not a
 real-time execution guarantee.
 
 Delayed entries capture the same recipient snapshot as instant enqueue. Newly
-registered recipients do not receive older entries. A delayed emit whose
-snapshot, including the `undeliverable` fallback, is empty at acceptance behaves
-exactly like the instant emit without recipients: it is not scheduled, is
-observed as not queued, and its script result is unchanged. A delayed publish
-is scheduled without local recipients, because its outbound sink invocation
-remains due. Ordinary detach retains its
+registered recipients do not receive older entries. Ordinary detach retains its
 captured-delivery behavior. When deadlines become due, entries are appended to
 the runnable FIFO in deadline order; equal deadlines retain enqueue order.
 Promotion occurs between complete logical messages, never in the middle of an
 active or paused handler. Future entries do not block runnable messages.
+
+> **Since: Unreleased** — delayed emits without recipients
+
+A delayed emit whose snapshot, including the `undeliverable` fallback, is empty
+at acceptance behaves exactly like the instant emit without recipients: it is
+not scheduled, is observed as not queued, and its script result is unchanged. A
+delayed publish is scheduled without local recipients, because its outbound sink
+invocation remains due.
 
 Publish delays both local delivery and the outbound sink invocation. A later sink
 rejection or failure cannot change the Boolean already returned to script.

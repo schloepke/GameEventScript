@@ -580,7 +580,8 @@ delayed send adds `schedule #<id> emit|publish <message> at <time>`, showing its
 deadline as local wall-clock time (`HH:mm:ss.fff`, preceded by the date when it
 is not today), measured from the session start; `discard #<id>` reports a
 message removed before it was dispatched, for example after a failed
-initialization. No outbound sink is
+initialization. `:edit` and `:reload` replace the host instead of clearing it, so
+the queued messages they drop print no `discard` lines. No outbound sink is
 configured, so publications only reach local subscribers. Nothing is sent to an
 external service. Root Text arguments in verbose traces use JSON quoting/escaping;
 other values use the existing GES text representation. Trace rendering is distinct

@@ -173,8 +173,8 @@ internal sealed class RuntimeObservations(string publishSink) : IGesRuntimeObser
         });
 
     /// <summary>Records the send ID of a delayed send removed before it became due.</summary>
-    public void ScheduledMessageDiscarded(long id)
-        => _trace.Add(new() { ["event"] = "scheduledDiscarded", ["id"] = Id(id) });
+    public void MessageDiscarded(long id)
+        => _trace.Add(new() { ["event"] = "discarded", ["id"] = Id(id) });
 
     // Send IDs are exact Int64 values, transported as decimal text.
     private static string Id(long id) => id.ToString(CultureInfo.InvariantCulture);

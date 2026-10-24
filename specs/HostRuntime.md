@@ -489,13 +489,16 @@ values and expected local/outbound messages.
 
 > **Since: Unreleased**
 
-Each accepted send carries a host-local send ID, a positive Int64. A Host starts
-at 1 and assigns the next ID to each send it accepts, in acceptance order:
-`Receive`, Emit, Publish, delayed sends and initialization messages. A rejected
-or unqueued Emit, including one without recipients, consumes no ID; a Publish
-the Host accepts owns an ID even without local recipients and independent of
-the sink outcome. Send IDs therefore depend only on the accepted sends and are
-deterministic for identical inputs.
+Every message the Host queues or processes carries a host-local send ID, a
+positive Int64. A Host starts at 1 and assigns the next ID, in order of
+occurrence, to each message queued by `Receive` or Emit, each processed Publish,
+each delayed send and each queued initialization message. An Emit or `Receive`
+that queues nothing, for example without recipients or on a full queue, and a
+Publish rejected by an active random-scope fault get no ID; every other Publish
+owns an ID, even without local recipients and independent of the sink outcome.
+This is independent of the Boolean script result of a send: an Emit without
+recipients returns true but has no ID. Send IDs therefore depend only on these
+sends and are deterministic for identical inputs.
 
 The ID belongs to the send, not to the immutable Message: it is never part of a
 Program, a Message value, its JSON form or the outbound sink call, and IDs of
@@ -503,6 +506,16 @@ different Hosts are unrelated. Observer callbacks report the ID of the send they
 describe: the Emit or Publish itself, its scheduling, and every dispatch of it,
 including `undeliverable` fallback dispatch. Send ID 0 reports a send without an
 ID. Without an observer, send IDs are unobservable and change no behavior.
+
+A message with an ID that is removed before it is dispatched reports
+`MessageDiscarded` with that ID exactly once. On initial-group failure these are
+every pending initialization in load order, then every queued message in queue
+order, then every delayed entry in deadline order. On later-instance failure
+they are the failed instance's staged outputs and every message it left without
+recipients: queued messages in queue order, then delayed entries in deadline
+order. A deferred initialization Publish is never released by a failed
+initialization, so its ID can appear only in this callback. Dispatched and due
+messages report no discard; their ordinary callbacks follow.
 
 ## Delayed dispatch
 
@@ -548,10 +561,8 @@ publish flag distinguishes `publish … after` from `emit … after`. A zero del
 an instant send (see `Language.md`), so it enters no delayed queue and reports
 no `MessageScheduled`.
 
-An entry removed before it becomes due reports `ScheduledMessageDiscarded` with
-its send ID exactly once, in deadline order: every entry on initial-group
-failure, and on later-instance failure every entry staged by that instance and
-every delayed emit left without recipients. An entry that becomes due reports no
+A delayed entry removed before it becomes due reports `MessageDiscarded` as
+defined in [Send IDs](#send-ids). An entry that becomes due reports no
 scheduling callback; its ordinary publish and dispatch callbacks follow with the
 same send ID.
 

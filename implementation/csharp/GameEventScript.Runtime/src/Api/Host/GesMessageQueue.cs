@@ -37,12 +37,27 @@ internal sealed class GesMessageQueue
         return true;
     }
 
-    internal void Clear()
+    // Discards every entry. Each is reported in queue order before the queue changes, so a throwing observer cannot
+    // leave it inconsistent.
+    internal void Clear(IGesRuntimeObserver? observer)
     {
+        if (observer is not null)
+            for (var index = 0; index < Count; index++) observer.MessageDiscarded(_items[(_head + index) % _items.Length].Id);
         while (Dequeue(out _)) { }
     }
-    internal void RemoveFailedRecipients()
+
+    // Removes entries a failed initialization left without recipients, reporting each in queue order first.
+    internal void RemoveFailedRecipients(IGesRuntimeObserver? observer)
     {
+        if (observer is not null)
+        {
+            for (var index = 0; index < Count; index++)
+            {
+                var item = _items[(_head + index) % _items.Length];
+                if (!item.HasRecipients()) observer.MessageDiscarded(item.Id);
+            }
+        }
+
         var count = Count;
         for (var index = 0; index < count; index++)
             if (Dequeue(out var item) && item.HasRecipients()) Enqueue(item);

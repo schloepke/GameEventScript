@@ -30,8 +30,8 @@ class TraceTests(unittest.TestCase):
 
     def test_scheduling_shapes(self):
         scheduled = {'event': 'scheduled', 'message': {'name': 'Ping'}, 'id': '1', 'deadline': '1000000', 'publish': False}
-        discarded = {'event': 'scheduledDiscarded', 'id': '1'}
-        self.assertEqual(['scheduled', 'scheduledDiscarded'], [item['event'] for item in normalize([scheduled, discarded], message, limit)])
+        discarded = {'event': 'discarded', 'id': '1'}
+        self.assertEqual(['scheduled', 'discarded'], [item['event'] for item in normalize([scheduled, discarded], message, limit)])
         unqueued = [{'event': 'emit', 'message': {'name': 'Ping'}, 'id': '0', 'accepted': False},
                     {'event': 'publish', 'message': {'name': 'Ping'}, 'id': '0', 'result': {
                         'localAccepted': False, 'outboundAttempted': False, 'outboundAccepted': False, 'anyAccepted': False}}]

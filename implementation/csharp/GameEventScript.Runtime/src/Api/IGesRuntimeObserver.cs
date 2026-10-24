@@ -6,8 +6,9 @@ namespace GameEventScript.Api;
 /// <summary>
 /// Observes synchronous host behavior without participating in dispatch.
 /// Implementations must not throw and must not recursively pump the observed host.
-/// Each accepted send carries a host-local send ID: it starts at 1, increases by one per accepted send and is reported
-/// by every callback about that send, from emit, publish or scheduling to each dispatch. 0 reports a send without an ID.
+/// Every queued emit, processed publish, received message, delayed send and initialization message carries a host-local
+/// send ID: it starts at 1, increases by one per such send and is reported by every callback about that send, from emit,
+/// publish or scheduling to each dispatch or discard. 0 reports a send without an ID.
 /// Every callback has an empty default implementation, so an observer implements only the callbacks it needs.
 /// </summary>
 public interface IGesRuntimeObserver
@@ -83,11 +84,11 @@ public interface IGesRuntimeObserver
     }
 
     /// <summary>
-    /// Observes removal of a scheduled message before it became due, for example because its initialization failed.
-    /// A due message is not reported here; its ordinary delivery callbacks follow.
+    /// Observes removal of a queued, pending-initialization or delayed message before it was dispatched, for example
+    /// because an initialization failed. A dispatched or due message is not reported here; its ordinary callbacks follow.
     /// </summary>
-    /// <param name="id">The send ID that <see cref="MessageScheduled"/> reported.</param>
-    void ScheduledMessageDiscarded(long id)
+    /// <param name="id">The send ID of the discarded message.</param>
+    void MessageDiscarded(long id)
     {
     }
 }

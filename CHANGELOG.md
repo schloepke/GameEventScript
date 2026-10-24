@@ -18,9 +18,10 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   dispatchSignatureId)` and `DispatchCompleted(message, id, dispatchSignatureId)`;
   Swift `messageEmitted(_:id:accepted:)`, `messagePublished(_:id:result:)`,
   `dispatchStarted(_:id:signatureID:)` and `dispatchCompleted(_:id:signatureID:)`.
-  Every accepted send gets the next ID of its host, so a trace can match each
-  dispatch to its emit, publish or delayed send; 0 marks an emit that was not
-  queued or a publish the host did not accept. Messages themselves carry no ID.
+  Every queued emit or received message, processed publish, delayed send and
+  initialization gets the next ID of its host, so a trace can match each dispatch
+  to its emit, publish or delayed send; 0 marks an emit that was not queued or a
+  publish the host did not accept. Messages themselves carry no ID.
   Migrate by adding the `id` parameter: every callback now has an empty default
   implementation in both ports, so an observer that keeps an old signature still
   compiles but no longer receives that callback.
@@ -116,9 +117,10 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   deadline, publish)` / Swift `messageScheduled(_:id:deadline:publish:)` reports
   each accepted `emit … after` or `publish … after` once, with its send ID and its
   absolute deadline in microseconds on the host clock.
-  `ScheduledMessageDiscarded(id)` / `scheduledMessageDiscarded(id:)` reports
-  delayed messages removed before they became due, such as after a failed
-  initialization. Hosts without an observer behave as before. `ges run --verbose`
+  `MessageDiscarded(id)` / `messageDiscarded(id:)` reports every queued,
+  pending-initialization or delayed message removed before it was dispatched,
+  such as after a failed initialization, so each send ID ends in a dispatch or a
+  discard. Hosts without an observer behave as before. `ges run --verbose`
   traces them as `schedule #<id> … at <local time>` and `discard #<id>` and shows
   the send ID on emit, publish and dispatch lines.
 - C# `IGesRuntimeObserver` gives every callback an empty default implementation,

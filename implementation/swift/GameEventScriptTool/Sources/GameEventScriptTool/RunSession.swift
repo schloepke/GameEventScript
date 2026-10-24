@@ -127,7 +127,7 @@ final class RunObserver: GesRuntimeObserver {
 
     func messageScheduled(_ message: GameEventScriptMessage, id: Int64, deadline: Int64, publish: Bool) { writeTrace("schedule #\(id) \(publish ? "publish" : "emit") " + format(message) + " at " + clock.formatDeadline(deadline)) }
 
-    func scheduledMessageDiscarded(id: Int64) { writeTrace("discard #\(id)") }
+    func messageDiscarded(id: Int64) { writeTrace("discard #\(id)") }
 
     func runtimeLimitReached(_ limitName: String, detail: String, limit: Int) {
         failed = true

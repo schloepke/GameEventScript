@@ -268,7 +268,7 @@ final class RuntimeObservations: GesRuntimeObserver, GesPublishSink {
         trace.append(.init(kind: "scheduled", message: message, id: id, deadline: deadline, publish: publish))
     }
 
-    func scheduledMessageDiscarded(id: Int64) { trace.append(.init(kind: "scheduledDiscarded", id: id)) }
+    func messageDiscarded(id: Int64) { trace.append(.init(kind: "discarded", id: id)) }
 }
 
 extension RuntimeObservations {

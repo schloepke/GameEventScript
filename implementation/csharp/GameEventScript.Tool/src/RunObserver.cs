@@ -46,7 +46,7 @@ internal sealed class RunObserver(bool verbose, bool color, bool interactive, Ru
     }
 
     /// <inheritdoc />
-    public void ScheduledMessageDiscarded(long id)
+    public void MessageDiscarded(long id)
     {
         if (verbose) WriteTrace($"discard #{id}");
     }

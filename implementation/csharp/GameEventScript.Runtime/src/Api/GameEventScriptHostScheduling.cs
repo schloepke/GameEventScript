@@ -129,7 +129,7 @@ public sealed partial class GameEventScriptHost
         {
             for (var index = 0; index < _delayed.Count; index++)
             {
-                if (_delayed[index].IsAbandoned) observer.ScheduledMessageDiscarded(_delayed[index].Id);
+                if (_delayed[index].IsAbandoned) observer.MessageDiscarded(_delayed[index].Id);
             }
         }
 
@@ -142,7 +142,7 @@ public sealed partial class GameEventScriptHost
         if (_delayed is null) return;
         if (_observer is { } observer)
         {
-            for (var index = 0; index < _delayed.Count; index++) observer.ScheduledMessageDiscarded(_delayed[index].Id);
+            for (var index = 0; index < _delayed.Count; index++) observer.MessageDiscarded(_delayed[index].Id);
         }
 
         _delayed.Clear();

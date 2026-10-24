@@ -593,9 +593,10 @@ extension GameEventScriptHost {
                     )
                     _ = instance.detach()
                 }
-                queue.clear()
+                // Discards are reported once: pending initializations, then queued messages, then delayed entries.
+                startupQueue.clear(reportingTo: observer)
+                queue.clear(reportingTo: observer)
                 clearDelayed()
-                startupQueue.clear()
                 startupPublications.removeAll(keepingCapacity: true)
                 return result
             }
@@ -635,21 +636,22 @@ extension GameEventScriptHost {
         initializationInstance = nil
         initializationDiagnostic = nil
         active = nil
-        queue.removeFailedRecipients(discardingOutputsFrom: instance.registrationID)
-        // A failure during start fails the whole group, whose clearDelayed reports every entry in one deadline-ordered pass.
-        if !starting { removeFailedDelayed() }
+        // A failure during start fails the whole group, which then discards and reports every entry in one pass.
+        if starting { return }
+        queue.removeFailedRecipients(discardingOutputsFrom: instance.registrationID, reportingTo: observer)
+        removeFailedDelayed()
     }
 
     // Removes entries abandoned by a failed initialization. Each is reported in deadline order before the array
     // changes, so a throwing observer cannot leave it inconsistent.
     private func removeFailedDelayed() {
-        if let observer { for entry in delayed where entry.isAbandoned { observer.scheduledMessageDiscarded(id: entry.id) } }
+        if let observer { for entry in delayed where entry.isAbandoned { observer.messageDiscarded(id: entry.id) } }
         delayed.removeAll { $0.isAbandoned }
     }
 
     // Discards every delayed entry, reporting each in deadline order.
     private func clearDelayed() {
-        if let observer { for entry in delayed { observer.scheduledMessageDiscarded(id: entry.id) } }
+        if let observer { for entry in delayed { observer.messageDiscarded(id: entry.id) } }
         delayed.removeAll()
     }
 

@@ -393,11 +393,11 @@ initialization:
       id: "1"
       message: { name: initialization }
       signatureId: "initialization()"
-    - event: scheduledDiscarded
+    - event: discarded
       id: "2"
-    - event: scheduledDiscarded
+    - event: discarded
       id: "4"
-    - event: scheduledDiscarded
+    - event: discarded
       id: "3"
 steps:
   idle:
@@ -489,15 +489,187 @@ initialization:
       id: "2"
       message: { name: initialization }
       signatureId: "initialization()"
-    - event: scheduledDiscarded
+    - event: discarded
       id: "3"
-    - event: scheduledDiscarded
+    - event: discarded
       id: "4"
 steps:
   idle:
     accepted: false
     waiting: false
     trace: []
+```
+
+---
+
+## Test: failed initial group discards pending, queued and delayed messages
+
+When the initial group fails, every message that was not dispatched is reported once: pending initializations first, then queued messages, then delayed entries in deadline order.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: failed-initial-group-discards-all-undispatched
+sources:
+  - name: first.ges
+    program: first
+  - name: second.ges
+    program: second
+```
+
+### Source code under test
+
+```ges
+module first
+on initialization { emit Tick(); emit after 1s Tick(); let failure be :test.declaredFault() }
+on Tick {}
+```
+
+```ges
+module second
+on initialization {}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| idle | Unknown | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+initialization:
+  hostReady: false
+  programStarts: { first: runtimeError, second: runtimeError }
+  local: [{ name: Tick }, { name: Tick }]
+  diagnostics:
+    - phase: runtime
+      code: test.declaredFault
+      programName: first
+      handlerName: initialization()
+  trace:
+    - event: dispatchStarted
+      id: "1"
+      message: { name: initialization }
+      signatureId: "initialization()"
+    - event: emit
+      id: "3"
+      message: { name: Tick }
+      accepted: true
+    - event: scheduled
+      id: "4"
+      message: { name: Tick }
+      deadline: "1000000"
+      publish: false
+    - event: emit
+      id: "4"
+      message: { name: Tick }
+      accepted: true
+    - event: diagnostic
+      diagnostic: { phase: runtime, code: test.declaredFault, programName: first, handlerName: initialization() }
+    - event: dispatchCompleted
+      id: "1"
+      message: { name: initialization }
+      signatureId: "initialization()"
+    - event: discarded
+      id: "2"
+    - event: discarded
+      id: "3"
+    - event: discarded
+      id: "4"
+steps:
+  idle:
+    accepted: false
+    waiting: false
+    trace: []
+```
+
+---
+
+## Test: failed later initialization discards its queued and delayed outputs
+
+A later instance whose initialization fails reports its staged instant output before its delayed output; independent work is unaffected.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: failed-later-initialization-discards-queued-and-delayed
+deferredPrograms: [late]
+sources:
+  - name: base.ges
+    program: base
+  - name: late.ges
+    program: late
+stepActions:
+  load:
+    - loadProgram: late
+```
+
+### Source code under test
+
+```ges
+module base
+on Tick {}
+```
+
+```ges
+module late
+on initialization { emit Tick(); emit after 1s Tick(); let failure be :test.declaredFault() }
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| load | Unknown | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  load:
+    accepted: false
+    waiting: false
+    local: [{ name: Tick }, { name: Tick }]
+    programStarts: { late: runtimeError }
+    diagnostics:
+      - phase: runtime
+        code: test.declaredFault
+        programName: late
+        handlerName: initialization()
+    trace:
+      - event: dispatchStarted
+        id: "1"
+        message: { name: initialization }
+        signatureId: "initialization()"
+      - event: emit
+        id: "2"
+        message: { name: Tick }
+        accepted: true
+      - event: scheduled
+        id: "3"
+        message: { name: Tick }
+        deadline: "1000000"
+        publish: false
+      - event: emit
+        id: "3"
+        message: { name: Tick }
+        accepted: true
+      - event: diagnostic
+        diagnostic: { phase: runtime, code: test.declaredFault, programName: late, handlerName: initialization() }
+      - event: dispatchCompleted
+        id: "1"
+        message: { name: initialization }
+        signatureId: "initialization()"
+      - event: discarded
+        id: "2"
+      - event: discarded
+        id: "3"
 ```
 
 ---
@@ -589,7 +761,7 @@ steps:
         id: "2"
         message: { name: initialization }
         signatureId: "initialization()"
-      - event: scheduledDiscarded
+      - event: discarded
         id: "4"
   due:
     accepted: false

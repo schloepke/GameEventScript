@@ -628,29 +628,31 @@ It may Emit, Publish, and use Context.Random synchronously. An implementation
 failure becomes `runtime.nativeHandlerFailure`; it aborts that handler, restores
 runtime boundaries, and does not corrupt Host state.
 
-RuntimeObserver receives synchronous callbacks in exact dispatch order. `id` is
-the send ID defined in `HostRuntime.md#send-ids`; 0 reports a send without one.
+RuntimeObserver receives synchronous callbacks in exact dispatch order:
 
-- `MessageEmitted(message, id, accepted)` after each Emit attempt; `id` is 0 when
-  the Emit was not queued;
+- `MessageEmitted(message, id, accepted)` after each Emit attempt;
 - `MessagePublished(message, id, result)` after local/outbound Publish processing;
-  `id` is 0 when the Host did not accept the Publish;
 - `DispatchStarted(message, id, dispatchSignatureId)` immediately before a handler;
 - `DispatchCompleted(message, id, dispatchSignatureId)` when the handler boundary closes, including cleanup after a handler failure or limit;
 - `RuntimeLimitReached(name, detail, limit)` for a limit stop;
 - `RuntimeError(diagnostic)` for a runtime diagnostic;
 - `MessageScheduled(message, id, deadline, publish)` once when a delayed Emit
   or Publish is accepted, before that Emit's `MessageEmitted`;
-- `ScheduledMessageDiscarded(id)` once for each delayed entry removed before it
-  became due.
+- `MessageDiscarded(id)` once for each message removed before it was dispatched.
 
-> **Since: Unreleased** — scheduling callbacks
+Swift spells these `messageEmitted(_:id:accepted:)`, `messagePublished(_:id:result:)`,
+`dispatchStarted(_:id:signatureID:)`, `dispatchCompleted(_:id:signatureID:)`,
+`runtimeLimitReached(_:detail:limit:)`, `runtimeError(_:)`,
+`messageScheduled(_:id:deadline:publish:)` and `messageDiscarded(id:)`.
 
-Every callback has an empty default implementation in both ports, so an observer
-implements only the callbacks it needs. The scheduling deadlines and discard
-rules are defined in `HostRuntime.md#delayed-dispatch`. Swift spells the
-callbacks `messageEmitted(_:id:accepted:)`, `messagePublished(_:id:result:)`,
-`dispatchStarted(_:id:signatureID:)` and `dispatchCompleted(_:id:signatureID:)`.
+> **Since: Unreleased** — send IDs, scheduling and discard callbacks, default implementations
+
+`id` is the send ID defined in `HostRuntime.md#send-ids`; it is 0 for an Emit
+that was not queued and for a Publish the Host did not accept. The same section
+defines when `MessageDiscarded` occurs; scheduling deadlines are defined in
+`HostRuntime.md#delayed-dispatch`. Every callback has an empty default
+implementation in both ports, so an observer implements only the callbacks it
+needs.
 
 An observer is observational only and has no return value. Observer callbacks
 must not throw. Throwing is an embedding-contract violation, is not converted to

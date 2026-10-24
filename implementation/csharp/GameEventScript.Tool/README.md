@@ -579,7 +579,8 @@ host-local send ID, so `dispatch #<id>` lines match the `emit #<id>` or
 delayed send adds `schedule #<id> emit|publish <message> at <time>`, showing its
 deadline as local wall-clock time (`HH:mm:ss.fff`, preceded by the date when it
 is not today), measured from the session start; `discard #<id>` reports a
-scheduled message removed before it became due. No outbound sink is
+message removed before it was dispatched, for example after a failed
+initialization. No outbound sink is
 configured, so publications only reach local subscribers. Nothing is sent to an
 external service. Root Text arguments in verbose traces use JSON quoting/escaping;
 other values use the existing GES text representation. Trace rendering is distinct

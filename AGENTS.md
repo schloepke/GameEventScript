@@ -261,7 +261,13 @@ only native handlers or any number of additively loaded Programs.
   Future-only work returns Waiting; portable pumps never sleep. Delayed publications
   reach the sink only when due. Equal deadlines preserve enqueue order.
 - Subscription snapshots are captured when a message is enqueued. Lifecycle
-  changes affect subsequently enqueued messages.
+  changes affect subsequently enqueued messages. A delayed emit without
+  recipients is not scheduled; it behaves like the instant emit.
+- Every queued or processed send carries a host-local send ID in its pending
+  queue entry, never in the immutable Message. Observer callbacks report it from
+  emit, publish or `MessageScheduled` to each dispatch or `MessageDiscarded`;
+  0 means no ID. Every observer callback has an empty default in both ports.
+  See specs/HostRuntime.md#send-ids.
 - Dispatch order is descending priority followed by registration order.
 - Core is threadless and unsynchronized. A host is serial but not thread-affine:
   one caller at a time is required, while a paused handler may resume on another

@@ -16,7 +16,7 @@ def normalize(events, message, limit, expectation=False):
         fields = {'emit': {'message', 'id', 'accepted'}, 'publish': {'message', 'id', 'result'},
                   'dispatchStarted': {'message', 'id', 'signatureId'}, 'dispatchCompleted': {'message', 'id', 'signatureId'},
                   'runtimeLimit': {'runtimeLimit'}, 'diagnostic': {'diagnostic'},
-                  'scheduled': {'message', 'id', 'deadline', 'publish'}, 'scheduledDiscarded': {'id'}}
+                  'scheduled': {'message', 'id', 'deadline', 'publish'}, 'discarded': {'id'}}
         if not isinstance(event, str) or event not in fields:
             raise InvalidDocument('Unknown observer event')
         allowed = fields[event] | {'event'}
@@ -40,7 +40,7 @@ def normalize(events, message, limit, expectation=False):
         for key in ('id', 'deadline'):
             if key in item and (not isinstance(item[key], str) or not (item[key].isascii() and item[key].isdigit())):
                 raise InvalidDocument('Invalid send ' + key)
-        # Only an emit or publish may lack a send ID; every other event names an accepted send.
+        # Only an emit or publish may lack a send ID; every other event names a queued or processed send.
         if 'id' in item and item['id'] == '0' and event not in ('emit', 'publish'):
             raise InvalidDocument('Send ID required')
         if event == 'scheduled' and type(item['publish']) is not bool:

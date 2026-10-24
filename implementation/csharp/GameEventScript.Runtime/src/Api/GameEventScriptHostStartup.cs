@@ -59,9 +59,10 @@ public sealed partial class GameEventScriptHost
                             prior?.EmittedMessages ?? 0, prior?.PublishedMessages ?? 0);
                         instance.Detach();
                     }
-                    _queue.Clear();
+                    // Discards are reported once: pending initializations, then queued messages, then delayed entries.
+                    _startupQueue.Clear(_observer);
+                    _queue.Clear(_observer);
                     ClearDelayed();
-                    _startupQueue.Clear();
                     _startupPublications?.Clear();
                     return failure;
                 }
@@ -106,9 +107,10 @@ public sealed partial class GameEventScriptHost
         _initializationInstance = null;
         _initializationDiagnostic = null;
         _hasActiveMessage = false;
-        _queue.RemoveFailedRecipients();
-        // A failure during Start fails the whole group, whose ClearDelayed reports every entry in one deadline-ordered pass.
-        if (!_starting) RemoveFailedDelayed();
+        // A failure during Start fails the whole group, which then discards and reports every entry in one pass.
+        if (_starting) return;
+        _queue.RemoveFailedRecipients(_observer);
+        RemoveFailedDelayed();
     }
 
     private static GesDiagnostic InitializationLimitDiagnostic(GesProgramInstance? instance)

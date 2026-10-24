@@ -3,8 +3,9 @@
 
 /// Synchronous observation hooks for host dispatch and failures. Default implementations do nothing.
 ///
-/// Each accepted send carries a host-local send ID: it starts at 1, increases by one per accepted send and is reported
-/// by every callback about that send, from emit, publish or scheduling to each dispatch. 0 reports a send without an ID.
+/// Every queued emit, processed publish, received message, delayed send and initialization message carries a host-local
+/// send ID: it starts at 1, increases by one per such send and is reported by every callback about that send, from emit,
+/// publish or scheduling to each dispatch or discard. 0 reports a send without an ID.
 public protocol GesRuntimeObserver {
     /// Observes a local emit, its send ID (0 when not queued) and whether the host accepted it; the default
     /// implementation does nothing.
@@ -36,10 +37,10 @@ public protocol GesRuntimeObserver {
     /// implementation does nothing.
     func messageScheduled(_ message: GameEventScriptMessage, id: Int64, deadline: Int64, publish: Bool)
 
-    /// Observes removal of a scheduled message before it became due, for example because its initialization failed,
-    /// by the `id` that `messageScheduled` reported. A due message is not reported here; its ordinary delivery callbacks
-    /// follow. The default implementation does nothing.
-    func scheduledMessageDiscarded(id: Int64)
+    /// Observes removal of a queued, pending-initialization or delayed message before it was dispatched, for example
+    /// because an initialization failed, by its send ID. A dispatched or due message is not reported here; its ordinary
+    /// callbacks follow. The default implementation does nothing.
+    func messageDiscarded(id: Int64)
 }
 
 extension GesRuntimeObserver {
@@ -65,6 +66,6 @@ extension GesRuntimeObserver {
     /// Observes acceptance of one delayed `emit … after` or `publish … after`; the default implementation does nothing.
     public func messageScheduled(_ message: GameEventScriptMessage, id: Int64, deadline: Int64, publish: Bool) {}
 
-    /// Observes removal of a scheduled message before it became due; the default implementation does nothing.
-    public func scheduledMessageDiscarded(id: Int64) {}
+    /// Observes removal of a message before it was dispatched; the default implementation does nothing.
+    public func messageDiscarded(id: Int64) {}
 }

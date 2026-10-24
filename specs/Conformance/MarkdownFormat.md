@@ -603,7 +603,7 @@ trace:
     id: "4"
     deadline: "1000000"
     publish: false
-  - event: scheduledDiscarded
+  - event: discarded
     id: "4"
 ```
 
@@ -611,12 +611,12 @@ Emit requires the complete `accepted` flag. Publish trace assertions require the
 `outboundAttempted`, and `anyAccepted` must equal `localAccepted OR
 outboundAccepted`. Dispatch events require the exact dispatched message and
 signature ID. Runtime-limit and diagnostic constraints use the same shapes as
-their standalone expectation lists. Emit, publish, dispatch and scheduling
-events require the send ID as an exact unsigned ASCII decimal string, `"0"` for
-a send without an ID; scheduling events also require the absolute deadline in
-the same form, and `scheduled` requires the exact message and Boolean `publish`
-flag. Message/value
-comparison uses the case's ordinary Binary64 comparison mode.
+their standalone expectation lists. Emit, publish, dispatch, `scheduled` and
+`discarded` events require the send ID as an exact unsigned ASCII decimal
+string; only emit and publish may use `"0"` for a send without an ID. `scheduled`
+also requires the absolute deadline in the same form, the exact message and the
+Boolean `publish` flag. Message/value comparison uses the case's ordinary
+Binary64 comparison mode.
 
 An optional top-level `initialization` expectation has `local`, `outbound`,
 `runtimeLimits`, `diagnostics`, and optional exact `trace` with the same meanings.

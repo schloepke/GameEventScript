@@ -17,7 +17,7 @@ tags: [host, delayed, observer]
 > - Keep its structural elements in the form required by the Conformance Test Markdown syntax.
 > - Validate every edit with a conforming parser and runner.
 
-These cases verify that the runtime observer sees each delayed `emit … after` and `publish … after` once when it is scheduled, with its per-host send ID and absolute deadline on the host clock, and sees each delayed message removed before it became due exactly once.
+These cases verify how the runtime observer follows delayed and discarded messages: each delayed `emit … after` and `publish … after` is reported once when it is scheduled, with its send ID and absolute deadline on the host clock; delayed emits without recipients and zero-delay sends behave like their instant counterparts; and every queued, pending-initialization or delayed message removed before dispatch is reported as discarded exactly once.
 
 ---
 
@@ -188,7 +188,7 @@ steps:
 
 ## Test: zero delay is observed as an instant send
 
-`emit after 0s` and `publish after 0s` behave exactly like the same sends without `after`: they report no scheduling callback, leave no delayed work, and are observed and delivered within the same pump under ordinary send IDs.
+`emit after 0s` and `publish after 0s` behave exactly like the same result-bearing sends without `after`: they report no scheduling callback, leave no delayed work, and are observed and delivered within the same pump under ordinary send IDs.
 
 ### Case description
 
@@ -591,7 +591,7 @@ steps:
 
 ## Test: failed later initialization discards its queued and delayed outputs
 
-A later instance whose initialization fails reports its staged instant output before its delayed output; independent work is unaffected.
+A later instance whose initialization fails reports its staged instant output before its delayed output.
 
 ### Case description
 

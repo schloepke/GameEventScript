@@ -318,6 +318,103 @@ steps:
 
 ---
 
+## Test: delayed send rejected by the queue limit consumes no send ID
+
+A delayed publish rejected by the queue limit stops its handler without a scheduling callback and without consuming a send ID, so the next accepted send continues the sequence.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: rejected-delayed-send-consumes-no-send-id
+sources:
+  - name: rejected-delayed.ges
+    program: main
+publishSink: accept
+runtimeLimits:
+  maxQueuedMessagesPerRun: 1
+stepActions:
+  due:
+    - advanceMicroseconds: "1000000"
+```
+
+### Source code under test
+
+```ges
+module main
+on Start { publish after 1s Ping(); publish after 1s Ping() }
+on Ping {}
+on Next {}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| begin | Start | completion | |
+| due | Unknown | completion | |
+| next | Next | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  begin:
+    waiting: false
+    runtimeLimits:
+      include:
+        - name: MaxQueuedMessagesPerRun
+          limit: 1
+    trace:
+      - event: dispatchStarted
+        id: "1"
+        message: { name: Start }
+        signatureId: "Start()"
+      - event: scheduled
+        id: "2"
+        message: { name: Ping }
+        deadline: "1000000"
+        publish: true
+      - event: runtimeLimit
+        runtimeLimit: { name: MaxQueuedMessagesPerRun, limit: 1 }
+      - event: dispatchCompleted
+        id: "1"
+        message: { name: Start }
+        signatureId: "Start()"
+  due:
+    accepted: false
+    waiting: false
+    local: [{ name: Ping }]
+    outbound: [{ name: Ping }]
+    trace:
+      - event: publish
+        id: "2"
+        message: { name: Ping }
+        result: { localAccepted: true, outboundAttempted: true, outboundAccepted: true, anyAccepted: true }
+      - event: dispatchStarted
+        id: "2"
+        message: { name: Ping }
+        signatureId: "Ping()"
+      - event: dispatchCompleted
+        id: "2"
+        message: { name: Ping }
+        signatureId: "Ping()"
+  next:
+    waiting: false
+    trace:
+      - event: dispatchStarted
+        id: "3"
+        message: { name: Next }
+        signatureId: "Next()"
+      - event: dispatchCompleted
+        id: "3"
+        message: { name: Next }
+        signatureId: "Next()"
+```
+
+---
+
 ## Test: failed initial group discards every scheduled message once
 
 When the initial group fails, every delayed message it scheduled is reported as discarded exactly once, in deadline order.

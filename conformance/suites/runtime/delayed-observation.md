@@ -415,6 +415,84 @@ steps:
 
 ---
 
+## Test: unrepresentable deadline rejects the send without a send ID
+
+A delay the VM accepts but whose deadline would exceed the Int64 range at the current clock reading is rejected by the Host: the send returns false, reports no callback and consumes no send ID.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: unrepresentable-deadline-consumes-no-send-id
+sources:
+  - name: deadline-overflow.ges
+    program: main
+stepActions:
+  advance:
+    - advanceMicroseconds: "1000000"
+```
+
+### Source code under test
+
+```ges
+module main
+on Start { let accepted be emit after 9223372036854s Ping(); emit Result(value: accepted); emit after 1s Ping() }
+on Ping {}
+on Result(value) {}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| advance | Unknown | completion | |
+| begin | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  advance:
+    accepted: false
+    trace: []
+  begin:
+    waiting: true
+    local: [{ name: Result, args: [{ name: value, value: { type: ":Boolean", value: false } }] }, { name: Ping }]
+    trace:
+      - event: dispatchStarted
+        id: "1"
+        message: { name: Start }
+        signatureId: "Start()"
+      - event: emit
+        id: "2"
+        message: { name: Result, args: [{ name: value, value: { type: ":Boolean", value: false } }] }
+        accepted: true
+      - event: scheduled
+        id: "3"
+        message: { name: Ping }
+        deadline: "2000000"
+        publish: false
+      - event: emit
+        id: "3"
+        message: { name: Ping }
+        accepted: true
+      - event: dispatchCompleted
+        id: "1"
+        message: { name: Start }
+        signatureId: "Start()"
+      - event: dispatchStarted
+        id: "2"
+        message: { name: Result, args: [{ name: value, value: { type: ":Boolean", value: false } }] }
+        signatureId: "Result(value)"
+      - event: dispatchCompleted
+        id: "2"
+        message: { name: Result, args: [{ name: value, value: { type: ":Boolean", value: false } }] }
+        signatureId: "Result(value)"
+```
+
+---
+
 ## Test: failed initial group discards every scheduled message once
 
 When the initial group fails, every delayed message it scheduled is reported as discarded exactly once, in deadline order.

@@ -495,9 +495,12 @@ Every message the Host queues or processes carries a host-local send ID, a
 positive Int64. A Host starts at 1 and assigns the next ID, in order of
 occurrence, to each message queued by `Receive` or Emit, each processed Publish,
 each delayed send and each queued initialization message. An Emit or `Receive`
-that queues nothing, for example without recipients or on a full queue, and a
-Publish rejected by an active random-scope fault get no ID; every other Publish
-owns an ID, even without local recipients and independent of the sink outcome.
+that queues nothing, for example without recipients or on a full queue, gets no
+ID. Neither does a send rejected before it is processed: by an active
+random-scope fault, an invalid or unrepresentable delay, a negative clock reading,
+or a queue limit that stops a result-bearing or delayed send. Every Publish the
+Host processes owns an ID, even without local recipients and independent of the
+sink outcome.
 This is independent of the Boolean script result of a send: an Emit without
 recipients returns true but has no ID. Send IDs therefore depend only on these
 sends and are deterministic for identical inputs.

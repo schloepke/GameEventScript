@@ -3501,6 +3501,7 @@ stepActions:
 
 ```ges
 function whole(_ value) be floor value
+function span(_ value as :Quantity(s)) be round half up value
 on Start {
   let delay be ceil 0.5s
   emit after (floor 1.5s) Ping(value: 1)
@@ -3510,6 +3511,7 @@ on Start {
   emit after (round half even 1.4s) Ping(value: 5)
   emit after (round half up 0.5s) Ping(value: 6)
   emit after (round half down 1.5s) Ping(value: 7)
+  emit after (span(0.6s)) Ping(value: 8)
 }
 on Tick {}
 on Ping(value) { emit Done(value: value) }
@@ -3526,7 +3528,7 @@ on Ping(value) { emit Done(value: value) }
 
 ```yaml
 gesBlock: expect
-steps: {"step-0001": {"local": [{"name": "Ping", "args": [{"name": "value", "value": {"type": ":Number.int64", "value": "1"}}]}, {"name": "Ping", "args": [{"name": "value", "value": {"type": ":Number.int64", "value": "2"}}]}, {"name": "Ping", "args": [{"name": "value", "value": {"type": ":Number.int64", "value": "3"}}]}, {"name": "Ping", "args": [{"name": "value", "value": {"type": ":Number.int64", "value": "4"}}]}, {"name": "Ping", "args": [{"name": "value", "value": {"type": ":Number.int64", "value": "5"}}]}, {"name": "Ping", "args": [{"name": "value", "value": {"type": ":Number.int64", "value": "6"}}]}, {"name": "Ping", "args": [{"name": "value", "value": {"type": ":Number.int64", "value": "7"}}]}], "waiting": true}, "step-0002": {"waiting": false, "local": [{"name": "Done", "args": [{"name": "value", "value": {"type": ":Number.int64", "value": "1"}}]}, {"name": "Done", "args": [{"name": "value", "value": {"type": ":Number.int64", "value": "2"}}]}, {"name": "Done", "args": [{"name": "value", "value": {"type": ":Number.int64", "value": "3"}}]}, {"name": "Done", "args": [{"name": "value", "value": {"type": ":Number.int64", "value": "4"}}]}, {"name": "Done", "args": [{"name": "value", "value": {"type": ":Number.int64", "value": "5"}}]}, {"name": "Done", "args": [{"name": "value", "value": {"type": ":Number.int64", "value": "6"}}]}, {"name": "Done", "args": [{"name": "value", "value": {"type": ":Number.int64", "value": "7"}}]}]}}
+steps: {"step-0001": {"local": [{"name": "Ping", "args": [{"name": "value", "value": {"type": ":Number.int64", "value": "1"}}]}, {"name": "Ping", "args": [{"name": "value", "value": {"type": ":Number.int64", "value": "2"}}]}, {"name": "Ping", "args": [{"name": "value", "value": {"type": ":Number.int64", "value": "3"}}]}, {"name": "Ping", "args": [{"name": "value", "value": {"type": ":Number.int64", "value": "4"}}]}, {"name": "Ping", "args": [{"name": "value", "value": {"type": ":Number.int64", "value": "5"}}]}, {"name": "Ping", "args": [{"name": "value", "value": {"type": ":Number.int64", "value": "6"}}]}, {"name": "Ping", "args": [{"name": "value", "value": {"type": ":Number.int64", "value": "7"}}]}, {"name": "Ping", "args": [{"name": "value", "value": {"type": ":Number.int64", "value": "8"}}]}], "waiting": true}, "step-0002": {"waiting": false, "local": [{"name": "Done", "args": [{"name": "value", "value": {"type": ":Number.int64", "value": "1"}}]}, {"name": "Done", "args": [{"name": "value", "value": {"type": ":Number.int64", "value": "2"}}]}, {"name": "Done", "args": [{"name": "value", "value": {"type": ":Number.int64", "value": "3"}}]}, {"name": "Done", "args": [{"name": "value", "value": {"type": ":Number.int64", "value": "4"}}]}, {"name": "Done", "args": [{"name": "value", "value": {"type": ":Number.int64", "value": "5"}}]}, {"name": "Done", "args": [{"name": "value", "value": {"type": ":Number.int64", "value": "6"}}]}, {"name": "Done", "args": [{"name": "value", "value": {"type": ":Number.int64", "value": "7"}}]}, {"name": "Done", "args": [{"name": "value", "value": {"type": ":Number.int64", "value": "8"}}]}]}}
 ```
 
 ---
@@ -3551,6 +3553,69 @@ sources:
 
 ```ges
 on Start { emit after (floor 150%) Ping() }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error: {"phase": "validate", "code": "validate.invalidTypeConstructor"}
+```
+
+---
+
+## Test: delay-rejects-rounded-distance
+
+This case verifies that rounding keeps a distance unit, so a rounded distance does not yield a send delay.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delay-rejects-rounded-distance
+kind: compileError
+level: atomic
+sources:
+  - name: "delay-rejects-rounded-distance.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start { emit after (floor 1.5m) Ping() }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error: {"phase": "validate", "code": "validate.invalidTypeConstructor"}
+```
+
+---
+
+## Test: delay-rejects-rounded-speed-parameter
+
+This case verifies that rounding a declared speed parameter keeps its unit, so the result does not yield a send delay.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delay-rejects-rounded-speed-parameter
+kind: compileError
+level: atomic
+sources:
+  - name: "delay-rejects-rounded-speed-parameter.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+function whole(_ value as :Quantity(m/s)) be round half up value
+on Start { emit after (whole(1.5m/s)) Ping() }
 ```
 
 ### Expectation

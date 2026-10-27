@@ -637,10 +637,10 @@ internal static class GesAstValidator
         {
             GesUnaryOperator.Parse => StaticExpressionInfo.Unknown,
             GesUnaryOperator.HasValue or GesUnaryOperator.Empty or GesUnaryOperator.Chance => StaticExpressionInfo.Boolean,
-            GesUnaryOperator.Abs => ClassifyAbsolute(unary.Operand, callables, typeDefinitions, declaredTypes, visitedCallables),
-            GesUnaryOperator.Floor or GesUnaryOperator.Ceil or GesUnaryOperator.Truncate or
+            GesUnaryOperator.Abs or
+                GesUnaryOperator.Floor or GesUnaryOperator.Ceil or GesUnaryOperator.Truncate or
                 GesUnaryOperator.RoundHalfEven or GesUnaryOperator.RoundHalfUp or GesUnaryOperator.RoundHalfDown
-                => ClassifyRounding(unary.Operand, callables, typeDefinitions, declaredTypes, visitedCallables),
+                => ClassifyUnitPreserving(unary.Operand, callables, typeDefinitions, declaredTypes, visitedCallables),
             GesUnaryOperator.NaturalLog or GesUnaryOperator.Exp or
                 GesUnaryOperator.DegreeToRadians or GesUnaryOperator.DegreeFromRadians or GesUnaryOperator.WrapDegree or
                 GesUnaryOperator.Sin or GesUnaryOperator.Cos or GesUnaryOperator.Tan or
@@ -653,7 +653,8 @@ internal static class GesAstValidator
         };
     }
 
-    private static StaticExpressionInfo ClassifyAbsolute(
+    // abs and rounding keep a scalar Quantity's unit, so a statically unknown operand leaves the result unknown too.
+    private static StaticExpressionInfo ClassifyUnitPreserving(
         GesExpressionNode operand,
         IReadOnlyDictionary<string, GesCallableDefinition> callables,
         IReadOnlyDictionary<string, GesTypeDefinitionNode> typeDefinitions,
@@ -661,26 +662,11 @@ internal static class GesAstValidator
         ISet<string> visitedCallables)
     {
         var type = ClassifyExpression(operand, callables, typeDefinitions, declaredTypes, visitedCallables).TypeName;
-        if (IsQuantityTypeName(type)) return StaticExpressionInfo.Other(type);
+        if (type is "s" or "m" || GesQuantityUnits.ParseTypeName(type) is not null || type?.StartsWith("quantity:", StringComparison.Ordinal) == true)
+            return StaticExpressionInfo.Other(type);
         // Vector magnitude retains the vector's unit, which the nominal type alone does not expose.
         return type is null or "vector" ? StaticExpressionInfo.Other() : StaticExpressionInfo.Other("number");
     }
-
-    private static StaticExpressionInfo ClassifyRounding(
-        GesExpressionNode operand,
-        IReadOnlyDictionary<string, GesCallableDefinition> callables,
-        IReadOnlyDictionary<string, GesTypeDefinitionNode> typeDefinitions,
-        IReadOnlyDictionary<string, string> declaredTypes,
-        ISet<string> visitedCallables)
-    {
-        // Rounding keeps a scalar Quantity's unit, so a statically unknown operand leaves the result unknown too.
-        var type = ClassifyExpression(operand, callables, typeDefinitions, declaredTypes, visitedCallables).TypeName;
-        if (IsQuantityTypeName(type)) return StaticExpressionInfo.Other(type);
-        return type is null or "vector" ? StaticExpressionInfo.Other() : StaticExpressionInfo.Other("number");
-    }
-
-    private static bool IsQuantityTypeName(string? type)
-        => type is "s" or "m" || GesQuantityUnits.ParseTypeName(type) is not null || type?.StartsWith("quantity:", StringComparison.Ordinal) == true;
 
     private static StaticExpressionInfo ClassifyBinary(
         GesBinaryExpressionNode binary,

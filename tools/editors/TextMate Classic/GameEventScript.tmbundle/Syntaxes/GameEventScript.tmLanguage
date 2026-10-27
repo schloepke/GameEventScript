@@ -368,7 +368,7 @@
 						</dict>
 					</dict>
 					<key>match</key>
-					<string>:(Quantity)(\()((?:none|m|meter|s|second|degree|°))(\))(?=$|[^A-Za-z0-9_])</string>
+					<string>:(Quantity)(\()((?:none|m/s²|m/s\^2|deg/s|degree/s|°/s|m/s|degree|meter|second|deg|kg|Hz|°|m|s|N|J|W|V|A|K))(\))(?=$|[^A-Za-z0-9_])</string>
 					<key>name</key>
 					<string>support.type.primitive.quantity.gameeventscript</string>
 				</dict>
@@ -1204,7 +1204,7 @@
 				</dict>
 				<dict>
 					<key>match</key>
-					<string>\b\d(?:[\d_]*\d)?(?:\.\d(?:[\d_]*\d)?)?(?:m|s|°)(?=$|[^A-Za-z0-9_])</string>
+					<string>\b\d(?:[\d_]*\d)?(?:\.\d(?:[\d_]*\d)?)?(?:m/s²|m/s\^2|deg/s|°/s|m/s|kWh|kHz|deg|Wh|Hz|km|ms|kg|kN|kJ|MJ|kW|MW|kV|°|m|s|N|J|W|V|A|K)(?=$|[^A-Za-z0-9_])</string>
 					<key>name</key>
 					<string>constant.numeric.unit.gameeventscript</string>
 				</dict>

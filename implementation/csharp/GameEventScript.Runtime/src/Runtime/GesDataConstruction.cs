@@ -109,14 +109,8 @@ internal static class GesDataConstruction
                 return number;
             if (values[1].Kind != Text)
                 return default;
-            var unit = values[1].TextValue switch
-            {
-                "" or "none" => GesQuantityUnit.UnitNone,
-                "s" or "second" => GesQuantityUnit.UnitSecond,
-                "m" or "meter" => GesQuantityUnit.UnitMeter,
-                "°" or "degree" => GesQuantityUnit.UnitDegree,
-                _ => GesQuantityUnit.UnitInvalid
-            };
+            // The unit text accepts the same names as `:Quantity(...)`, plus the empty text for none.
+            var unit = values[1].TextValue.Length == 0 ? GesQuantityUnit.UnitNone : GesQuantityUnits.ParseQuantityName(values[1].TextValue) ?? GesQuantityUnit.UnitInvalid;
             if (unit == GesQuantityUnit.UnitInvalid || number.Kind is not (Integer or Float))
                 return default;
             if (number.Unit != GesQuantityUnit.UnitNone && number.Unit != unit)

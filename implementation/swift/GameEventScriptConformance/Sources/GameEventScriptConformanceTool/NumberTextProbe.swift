@@ -46,8 +46,9 @@ enum NumberTextProbe {
             case "none": unit = .none
             case "m": unit = .meter
             case "s": unit = .second
-            case "degree": unit = .degree
-            default: throw ToolError.invalidFixture("Unknown unit")
+            default:
+                guard let named = GesQuantityUnit(rawValue: row.unit) else { throw ToolError.invalidFixture("Unknown unit") }
+                unit = named
             }
             let value: GesValue
             if row.kind == "integer", let integer = Int64(row.payload) {
@@ -74,7 +75,7 @@ enum NumberTextProbe {
         case .none: unit = "none"
         case .meter: unit = "m"
         case .second: unit = "s"
-        case .degree: unit = "degree"
+        default: unit = value.unit.rawValue
         }
         if let integer = value.integerValue { return "integer:\(integer):\(unit)" }
         guard value.valueKind == .float || value.valueKind == .percentage else { throw ToolError.invalidFixture("Non-numeric result") }

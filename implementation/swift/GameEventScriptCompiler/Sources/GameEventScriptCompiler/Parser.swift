@@ -100,16 +100,33 @@ final class GesParser {
         var name = String(advance().text.dropFirst())
         let builtins = ["Nothing", "Number", "Boolean", "Percentage", "Vector", "Point", "Series", "Tag", "Text", "List", "Range", "Message", "Handler", "Map", "Dice", "Record"]
         if builtins.contains(name) { name = name.lowercased() }
-        if name == "Quantity", current.kind == .leftParen, peek().isWord || peek().isIdentifier("degree"), peek(2).kind == .rightParen {
+        // Uppercase unit symbols such as N or Hz read as message-name tokens.
+        if name == "Quantity", current.kind == .leftParen, peek().isWord || peek().isIdentifier("degree") || peek().kind == .message, quantityUnitAhead() {
             advance()
             newlines()
-            guard current.isWord || current.isIdentifier("degree") else { throw failure("Expected a unit name.") }
-            let unit = advance().text
-            newlines()
+            var unit = ""
+            while current.kind != .rightParen {
+                unit += quantityUnitPart(advance())
+                newlines()
+            }
             try expect(.rightParen)
             name = "quantity:" + unit
         }
         return name
+    }
+
+    // A quantity unit is a name optionally followed by `/` and further unit parts, such as `m/s`, `m/s^2` or `°/s`.
+    func quantityUnitAhead() -> Bool {
+        for offset in 2..<8 {
+            let kind = peek(offset).kind
+            if kind == .rightParen { return true }
+            if ![.identifier, .message, .operatorDivide, .operatorPower, .superscriptInteger, .float].contains(kind) { return false }
+        }
+        return false
+    }
+
+    func quantityUnitPart(_ token: GesToken) -> String {
+        token.kind == .superscriptInteger ? token.text == "2" ? "²" : "³" : token.text
     }
 
     func parameters(_ allowType: Bool = true) throws -> [GesParameter] {

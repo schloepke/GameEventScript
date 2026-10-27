@@ -52,7 +52,7 @@ class ComposedValueTests(unittest.TestCase):
 
     def test_invalid_composite_fields_rejected(self):
         for raw in [{'type': ':Vector', 'x': '1', 'y': '2'},
-                    {'type': ':Point', 'x': '1', 'y': '2', 'z': '3', 'unit': 'kg'},
+                    {'type': ':Point', 'x': '1', 'y': '2', 'z': '3', 'unit': 'lb'},
                     {'type': ':Range.int64', 'from': '1.5', 'to': '2', 'step': '1'},
                     {'type': ':Range.binary64', 'from': '1', 'to': '2', 'step': 1},
                     {'type': ':Box', 'entries': [], 'extra': True},

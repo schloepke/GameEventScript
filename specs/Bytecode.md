@@ -206,30 +206,34 @@ component output. Iterator instructions require zero UnitId. Undefined flag comb
 The UnitId map keeps the defined ids stable and reserves
 room for likely game-domain units:
 
-| UnitId | Unit | Intended use |
-| --- | --- | --- |
-| `0` | none | Unitless scalar. |
-| `1` | degree | Angles, headings, rotations. |
-| `2` | meter | Positions, distances, ranges, radii. |
-| `3` | second | Durations, cooldowns, tick time. |
-| `4` | meter per second | Speed and velocity magnitude. |
-| `5` | meter per second squared | Acceleration. |
-| `6` | kilogram | Mass, load, inertia. |
-| `7` | newton | Force, thrust, recoil. |
-| `8` | joule | Energy, battery charge, heat energy. |
-| `9` | watt | Power, generator output, energy consumption over time. |
-| `10` | volt | Voltage for electrotechnical systems. |
-| `11` | ampere | Current, charge flow, overload/thermal balancing. |
-| `12` | hertz | Frequency, fire rate, polling, radio cadence. |
-| `13` | bit | Information amount. |
-| `14` | byte | Storage amount. |
-| `15` | bit per second | Bandwidth and communication throughput. |
-| `16` | kelvin | Temperature; Celsius/Fahrenheit syntax should normalize to Kelvin. |
-| `17..31` | reserved | Additional built-in or domain units. |
+> **Since: Unreleased** — UnitIds 4 to 12, 16 and 17
 
-The compiler must only emit units supported by its matching runtime. The
-extended map keeps additional unit IDs representable without reshaping the
-instruction word.
+| UnitId | Unit | Portable name | Intended use |
+| --- | --- | --- | --- |
+| `0` | none | | Unitless scalar. |
+| `1` | degree | `degree` | Angles, headings, rotations. |
+| `2` | meter | `meter` | Positions, distances, ranges, radii. |
+| `3` | second | `second` | Durations, cooldowns, tick time. |
+| `4` | meter per second | `meterPerSecond` | Speed and velocity magnitude. |
+| `5` | meter per second squared | `meterPerSecondSquared` | Acceleration. |
+| `6` | kilogram | `kilogram` | Mass, load, inertia. |
+| `7` | newton | `newton` | Force, thrust, recoil. |
+| `8` | joule | `joule` | Energy, battery charge, heat energy. |
+| `9` | watt | `watt` | Power, generator output, energy consumption over time. |
+| `10` | volt | `volt` | Voltage for electrotechnical systems. |
+| `11` | ampere | `ampere` | Current, charge flow, overload/thermal balancing. |
+| `12` | hertz | `hertz` | Frequency, fire rate, polling, radio cadence. |
+| `13` | reserved: bit | | Information amount; not implemented. |
+| `14` | reserved: byte | | Storage amount; not implemented. |
+| `15` | reserved: bit per second | | Bandwidth; not implemented. |
+| `16` | kelvin | `kelvin` | Temperature. |
+| `17` | degree per second | `degreePerSecond` | Angular speed, turn rate. |
+| `18..31` | reserved | | Additional built-in or domain units. |
+
+Programs may encode only the defined UnitIds 0 to 12, 16 and 17; validation
+rejects reserved ids. Unit arithmetic, symbols and literal spellings are
+defined in [Language quantities](Language.md#quantities). The extended map keeps
+additional unit IDs representable without reshaping the instruction word.
 
 ## Parameter Type Hints
 

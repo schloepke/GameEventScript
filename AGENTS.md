@@ -177,6 +177,12 @@ belongs to the CLI or embedding; the portable compiler accepts source text.
 - Source types use PascalCase, for example `:Number`, `:Quantity(m)`, and
   `:Unit`. Extension namespaces and functions remain lowercase, for example
   `:math.distance`.
+- Quantity units form a closed set with stable UnitIds (specs/Bytecode.md) and
+  one central table per runtime (C# `GesQuantityUnits`, Swift `QuantityUnits.swift`)
+  for symbols, prefixed literal spellings and the product/quotient derivation
+  table. Lexer, `parse`, constant folding and the VM all read that table; the
+  Swift `@GesField` macro mirrors the unit names because it cannot import the
+  runtime. Integer division, percentages and points keep derivation-free rules.
 - Module identifiers are dot-separated lowercase components with optional
   digits.
 - `constant $name be LITERAL` declares a program-wide compile-time scalar.

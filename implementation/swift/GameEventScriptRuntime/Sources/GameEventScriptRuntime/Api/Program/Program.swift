@@ -261,17 +261,10 @@ public struct GesBytecodeInstruction: Sendable, Equatable {
     public var c: UInt16 { UInt16(truncatingIfNeeded: payload >> 32) }
     /// Payload bits 48...63 interpreted as UInt16.
     public var d: UInt16 { UInt16(truncatingIfNeeded: payload >> 48) }
-    /// Decoded degree, meter or second unit; other codes yield none. Validation rejects invalid encodings.
+    /// Decoded quantity unit; unassigned codes yield none. Validation rejects invalid encodings.
     public var unit: GesQuantityUnit { decodedUnit }
     // Inlined into VM dispatch; the public accessor shares this single mapping.
-    var decodedUnit: GesQuantityUnit {
-        switch unitAndFlags & 0x1f {
-        case 1: .degree
-        case 2: .meter
-        case 3: .second
-        default: .none
-        }
-    }
+    var decodedUnit: GesQuantityUnit { GesQuantityUnit(unitID: unitAndFlags & 0x1f) ?? .none }
     /// Whether the instruction requests Boolean predicate normalization (flag 0x20).
     public var normalizeResultAsPredicate: Bool { unitAndFlags & 0x20 != 0 }
 }

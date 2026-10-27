@@ -134,12 +134,15 @@ extension GesCompiler {
     }
 
     func assemblyUnit(_ e: GesExpression) throws -> UInt8 {
-        switch try assemblyText(e) {
+        // Unit tags are the portable unit type names, plus the short tags #m and #s.
+        let name = try assemblyText(e)
+        switch name {
         case "none": return 0
-        case "degree": return 1
-        case "m", "meter": return 2
-        case "s", "second": return 3
-        default: throw assemblyFailure(e.location, "Unknown assembly unit.")
+        case "m": return 2
+        case "s": return 3
+        default:
+            guard name != "°", let unit = GesCompilerSupport.unit(typeName: name) else { throw assemblyFailure(e.location, "Unknown assembly unit.") }
+            return GesCompilerSupport.unitID(unit)
         }
     }
 

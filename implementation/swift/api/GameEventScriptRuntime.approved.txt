@@ -127,6 +127,7 @@ relationship {"kind":"conformsTo","source":"GameEventScriptRuntime.GesPublishRes
 relationship {"kind":"conformsTo","source":"GameEventScriptRuntime.GesQuantityUnit :: enum GesQuantityUnit","target":"Swift.Equatable"}
 relationship {"kind":"conformsTo","source":"GameEventScriptRuntime.GesQuantityUnit :: enum GesQuantityUnit","target":"Swift.Hashable"}
 relationship {"kind":"conformsTo","source":"GameEventScriptRuntime.GesQuantityUnit :: enum GesQuantityUnit","target":"Swift.RawRepresentable"}
+relationship {"kind":"conformsTo","source":"GameEventScriptRuntime.GesQuantityUnit :: enum GesQuantityUnit","target":"Swift.Sendable"}
 relationship {"kind":"conformsTo","source":"GameEventScriptRuntime.GesRuntimeLimits :: struct GesRuntimeLimits","target":"Swift.Sendable"}
 relationship {"kind":"conformsTo","source":"GameEventScriptRuntime.GesSectionFlags :: struct GesSectionFlags","target":"Swift.Equatable"}
 relationship {"kind":"conformsTo","source":"GameEventScriptRuntime.GesSectionFlags :: struct GesSectionFlags","target":"Swift.ExpressibleByArrayLiteral"}
@@ -238,6 +239,7 @@ symbol {"access":"public","declaration":"case abs","kind":"swift.enum.case","pat
 symbol {"access":"public","declaration":"case acos","kind":"swift.enum.case","path":"GameEventScriptRuntime.GesBytecodeOpCode.acos"}
 symbol {"access":"public","declaration":"case add","kind":"swift.enum.case","path":"GameEventScriptRuntime.GesBytecodeOpCode.add"}
 symbol {"access":"public","declaration":"case advance","kind":"swift.enum.case","path":"GameEventScriptRuntime.GesProfilePhase.advance"}
+symbol {"access":"public","declaration":"case ampere","kind":"swift.enum.case","path":"GameEventScriptRuntime.GesQuantityUnit.ampere"}
 symbol {"access":"public","declaration":"case and","kind":"swift.enum.case","path":"GameEventScriptRuntime.GesBytecodeOpCode.and"}
 symbol {"access":"public","declaration":"case angleBetween","kind":"swift.enum.case","path":"GameEventScriptRuntime.GesBytecodeOpCode.angleBetween"}
 symbol {"access":"public","declaration":"case angleBetween2D","kind":"swift.enum.case","path":"GameEventScriptRuntime.GesBytecodeOpCode.angleBetween2D"}
@@ -302,6 +304,7 @@ symbol {"access":"public","declaration":"case debugSymbols","kind":"swift.enum.c
 symbol {"access":"public","declaration":"case decode","kind":"swift.enum.case","path":"GameEventScriptRuntime.GesDiagnosticPhase.decode"}
 symbol {"access":"public","declaration":"case degree","kind":"swift.enum.case","path":"GameEventScriptRuntime.GesQuantityUnit.degree"}
 symbol {"access":"public","declaration":"case degreeFromRadians","kind":"swift.enum.case","path":"GameEventScriptRuntime.GesBytecodeOpCode.degreeFromRadians"}
+symbol {"access":"public","declaration":"case degreePerSecond","kind":"swift.enum.case","path":"GameEventScriptRuntime.GesQuantityUnit.degreePerSecond"}
 symbol {"access":"public","declaration":"case degreeToRadians","kind":"swift.enum.case","path":"GameEventScriptRuntime.GesBytecodeOpCode.degreeToRadians"}
 symbol {"access":"public","declaration":"case dice","kind":"swift.enum.case","path":"GameEventScriptRuntime.GesBytecodeTypeKind.dice"}
 symbol {"access":"public","declaration":"case distance","kind":"swift.enum.case","path":"GameEventScriptRuntime.GesBytecodeOpCode.distance"}
@@ -364,6 +367,7 @@ symbol {"access":"public","declaration":"case hasAll","kind":"swift.enum.case","
 symbol {"access":"public","declaration":"case hasAny","kind":"swift.enum.case","path":"GameEventScriptRuntime.GesBytecodeOpCode.hasAny"}
 symbol {"access":"public","declaration":"case hasPattern","kind":"swift.enum.case","path":"GameEventScriptRuntime.GesBytecodeOpCode.hasPattern"}
 symbol {"access":"public","declaration":"case hasValue","kind":"swift.enum.case","path":"GameEventScriptRuntime.GesBytecodeOpCode.hasValue"}
+symbol {"access":"public","declaration":"case hertz","kind":"swift.enum.case","path":"GameEventScriptRuntime.GesQuantityUnit.hertz"}
 symbol {"access":"public","declaration":"case hypot2D","kind":"swift.enum.case","path":"GameEventScriptRuntime.GesBytecodeOpCode.hypot2D"}
 symbol {"access":"public","declaration":"case hypot3D","kind":"swift.enum.case","path":"GameEventScriptRuntime.GesBytecodeOpCode.hypot3D"}
 symbol {"access":"public","declaration":"case implies","kind":"swift.enum.case","path":"GameEventScriptRuntime.GesBytecodeOpCode.implies"}
@@ -404,12 +408,15 @@ symbol {"access":"public","declaration":"case iteratorClose","kind":"swift.enum.
 symbol {"access":"public","declaration":"case iteratorCreate","kind":"swift.enum.case","path":"GameEventScriptRuntime.GesBytecodeOpCode.iteratorCreate"}
 symbol {"access":"public","declaration":"case iteratorCreateOrJump","kind":"swift.enum.case","path":"GameEventScriptRuntime.GesBytecodeOpCode.iteratorCreateOrJump"}
 symbol {"access":"public","declaration":"case iteratorNext","kind":"swift.enum.case","path":"GameEventScriptRuntime.GesBytecodeOpCode.iteratorNext"}
+symbol {"access":"public","declaration":"case joule","kind":"swift.enum.case","path":"GameEventScriptRuntime.GesQuantityUnit.joule"}
 symbol {"access":"public","declaration":"case jump","kind":"swift.enum.case","path":"GameEventScriptRuntime.GesBytecodeOpCode.jump"}
 symbol {"access":"public","declaration":"case jumpIfFalse","kind":"swift.enum.case","path":"GameEventScriptRuntime.GesBytecodeOpCode.jumpIfFalse"}
 symbol {"access":"public","declaration":"case jumpIfNotTrue","kind":"swift.enum.case","path":"GameEventScriptRuntime.GesBytecodeOpCode.jumpIfNotTrue"}
 symbol {"access":"public","declaration":"case jumpIfNothing","kind":"swift.enum.case","path":"GameEventScriptRuntime.GesBytecodeOpCode.jumpIfNothing"}
 symbol {"access":"public","declaration":"case jumpIfTrue","kind":"swift.enum.case","path":"GameEventScriptRuntime.GesBytecodeOpCode.jumpIfTrue"}
+symbol {"access":"public","declaration":"case kelvin","kind":"swift.enum.case","path":"GameEventScriptRuntime.GesQuantityUnit.kelvin"}
 symbol {"access":"public","declaration":"case keysOfMap","kind":"swift.enum.case","path":"GameEventScriptRuntime.GesBytecodeOpCode.keysOfMap"}
+symbol {"access":"public","declaration":"case kilogram","kind":"swift.enum.case","path":"GameEventScriptRuntime.GesQuantityUnit.kilogram"}
 symbol {"access":"public","declaration":"case last","kind":"swift.enum.case","path":"GameEventScriptRuntime.GesBytecodeOpCode.last"}
 symbol {"access":"public","declaration":"case lengthSquared","kind":"swift.enum.case","path":"GameEventScriptRuntime.GesBytecodeOpCode.lengthSquared"}
 symbol {"access":"public","declaration":"case lengthSquared2D","kind":"swift.enum.case","path":"GameEventScriptRuntime.GesBytecodeOpCode.lengthSquared2D"}
@@ -446,6 +453,8 @@ symbol {"access":"public","declaration":"case message","kind":"swift.enum.case",
 symbol {"access":"public","declaration":"case messageHandler","kind":"swift.enum.case","path":"GameEventScriptRuntime.GesBinaryBindKind.messageHandler"}
 symbol {"access":"public","declaration":"case messageNameHandler","kind":"swift.enum.case","path":"GameEventScriptRuntime.GesBinaryBindKind.messageNameHandler"}
 symbol {"access":"public","declaration":"case meter","kind":"swift.enum.case","path":"GameEventScriptRuntime.GesQuantityUnit.meter"}
+symbol {"access":"public","declaration":"case meterPerSecond","kind":"swift.enum.case","path":"GameEventScriptRuntime.GesQuantityUnit.meterPerSecond"}
+symbol {"access":"public","declaration":"case meterPerSecondSquared","kind":"swift.enum.case","path":"GameEventScriptRuntime.GesQuantityUnit.meterPerSecondSquared"}
 symbol {"access":"public","declaration":"case min","kind":"swift.enum.case","path":"GameEventScriptRuntime.GesBytecodeOpCode.min"}
 symbol {"access":"public","declaration":"case missingArgument","kind":"swift.enum.case","path":"GameEventScriptRuntime.GesMessageError.missingArgument"}
 symbol {"access":"public","declaration":"case missingRequiredSection","kind":"swift.enum.case","path":"GameEventScriptRuntime.GesProgramFormatErrorCode.missingRequiredSection"}
@@ -454,6 +463,7 @@ symbol {"access":"public","declaration":"case move","kind":"swift.enum.case","pa
 symbol {"access":"public","declaration":"case multiply","kind":"swift.enum.case","path":"GameEventScriptRuntime.GesBytecodeOpCode.multiply"}
 symbol {"access":"public","declaration":"case namedCustom","kind":"swift.enum.case","path":"GameEventScriptRuntime.GesSectionType.namedCustom"}
 symbol {"access":"public","declaration":"case negate","kind":"swift.enum.case","path":"GameEventScriptRuntime.GesBytecodeOpCode.negate"}
+symbol {"access":"public","declaration":"case newton","kind":"swift.enum.case","path":"GameEventScriptRuntime.GesQuantityUnit.newton"}
 symbol {"access":"public","declaration":"case none","kind":"swift.enum.case","path":"GameEventScriptRuntime.GesQuantityUnit.none"}
 symbol {"access":"public","declaration":"case nop","kind":"swift.enum.case","path":"GameEventScriptRuntime.GesBytecodeOpCode.nop"}
 symbol {"access":"public","declaration":"case normalize","kind":"swift.enum.case","path":"GameEventScriptRuntime.GesBytecodeOpCode.normalize"}
@@ -569,7 +579,9 @@ symbol {"access":"public","declaration":"case validate","kind":"swift.enum.case"
 symbol {"access":"public","declaration":"case valuesOfMap","kind":"swift.enum.case","path":"GameEventScriptRuntime.GesBytecodeOpCode.valuesOfMap"}
 symbol {"access":"public","declaration":"case variable","kind":"swift.enum.case","path":"GameEventScriptRuntime.GesDiagnosticSymbolKind.variable"}
 symbol {"access":"public","declaration":"case vector","kind":"swift.enum.case","path":"GameEventScriptRuntime.GesBytecodeTypeKind.vector"}
+symbol {"access":"public","declaration":"case volt","kind":"swift.enum.case","path":"GameEventScriptRuntime.GesQuantityUnit.volt"}
 symbol {"access":"public","declaration":"case waiting","kind":"swift.enum.case","path":"GameEventScriptRuntime.GesExecutionState.waiting"}
+symbol {"access":"public","declaration":"case watt","kind":"swift.enum.case","path":"GameEventScriptRuntime.GesQuantityUnit.watt"}
 symbol {"access":"public","declaration":"case wrapDegree","kind":"swift.enum.case","path":"GameEventScriptRuntime.GesBytecodeOpCode.wrapDegree"}
 symbol {"access":"public","declaration":"case xor","kind":"swift.enum.case","path":"GameEventScriptRuntime.GesBytecodeOpCode.xor"}
 symbol {"access":"public","declaration":"case zip","kind":"swift.enum.case","path":"GameEventScriptRuntime.GesBytecodeOpCode.zip"}

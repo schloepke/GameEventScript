@@ -163,13 +163,9 @@ internal static class RuntimeValues
     }
     private static GesQuantityUnit ReadUnit(JsonElement value) => !value.TryGetProperty("unit", out var unit)
         ? GesQuantityUnit.UnitNone
-        : unit.GetString() switch
-        {
-            ":meter" => GesQuantityUnit.UnitMeter,
-            ":second" => GesQuantityUnit.UnitSecond,
-            ":degree" => GesQuantityUnit.UnitDegree,
-            _ => throw new ArgumentException("Invalid numeric unit.")
-        };
+        : unit.GetString() is { } name && name.StartsWith(":", StringComparison.Ordinal) && name != ":\u00B0" && GesQuantityUnits.ParseTypeName(name.Substring(1)) is { } parsed
+            ? parsed
+            : throw new ArgumentException("Invalid numeric unit.");
 
     internal static double ParseNumber(string text)
     {

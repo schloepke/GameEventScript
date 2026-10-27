@@ -249,6 +249,72 @@ message:
 
 ---
 
+## Test: derived-quantity
+
+This case verifies that a derived unit uses its canonical symbol.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: "derived-quantity"
+messageApi:
+  signature:
+    name: "Done"
+    parameters:
+      - "value"
+  message:
+    name: "Done"
+    args: []
+  json: "{\"message\":{\"args\":[{\"name\":\"value\",\"value\":{\"type\":\"Number\",\"unit\":\"m/s²\",\"value\":\"9.81\"}}],\"name\":\"Done\",\"tags\":[\"ready\"]},\"version\":1}"
+  roundTripJson: true
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+message:
+  json: "{\"message\":{\"args\":[{\"name\":\"value\",\"value\":{\"type\":\"Number\",\"unit\":\"m/s²\",\"value\":\"9.81\"}}],\"name\":\"Done\",\"tags\":[\"ready\"]},\"version\":1}"
+  messageSignatureId: "Done(value)"
+  argumentCount: 1
+```
+
+---
+
+## Test: angular-speed-vector
+
+This case verifies a vector carrying a derived non-ASCII unit symbol.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: "angular-speed-vector"
+messageApi:
+  signature:
+    name: "Done"
+    parameters:
+      - "value"
+  message:
+    name: "Done"
+    args: []
+  json: "{\"message\":{\"args\":[{\"name\":\"value\",\"value\":{\"type\":\"Vector\",\"unit\":\"°/s\",\"x\":\"0\",\"y\":\"0\",\"z\":\"120\"}}],\"name\":\"Done\",\"tags\":[\"ready\"]},\"version\":1}"
+  roundTripJson: true
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+message:
+  json: "{\"message\":{\"args\":[{\"name\":\"value\",\"value\":{\"type\":\"Vector\",\"unit\":\"°/s\",\"x\":\"0\",\"y\":\"0\",\"z\":\"120\"}}],\"name\":\"Done\",\"tags\":[\"ready\"]},\"version\":1}"
+  messageSignatureId: "Done(value)"
+  argumentCount: 1
+```
+
+---
+
 ## Test: percentage
 
 This case verifies percentage.

@@ -78,6 +78,13 @@ private final class ConditionalBindingVisitor: SyntaxVisitor {
 }
 
 struct GesTypeMacro: MemberMacro {
+    // GesQuantityUnit cases other than none with their canonical symbols; the macro target cannot import the runtime,
+    // so this table mirrors the enum.
+    static let unitSymbols: [String: String] = [
+        "degree": "°", "meter": "m", "second": "s", "meterPerSecond": "m/s", "meterPerSecondSquared": "m/s²", "kilogram": "kg", "newton": "N",
+        "joule": "J", "watt": "W", "volt": "V", "ampere": "A", "hertz": "Hz", "kelvin": "K", "degreePerSecond": "°/s",
+    ]
+
     static func expansion(of node: AttributeSyntax, providingMembersOf declaration: some DeclGroupSyntax, in context: some MacroExpansionContext) throws -> [DeclSyntax] {
         let typeName: String
         if let type = declaration.as(StructDeclSyntax.self), type.genericParameterClause == nil {
@@ -117,7 +124,7 @@ struct GesTypeMacro: MemberMacro {
             if let expression = args["unit"] {
                 guard let member = expression.as(MemberAccessExprSyntax.self),
                     member.base == nil || member.base?.trimmedDescription == "GesQuantityUnit" || member.base?.trimmedDescription == "GameEventScriptRuntime.GesQuantityUnit",
-                    ["none", "meter", "second", "degree"].contains(member.declName.baseName.text)
+                    member.declName.baseName.text == "none" || Self.unitSymbols[member.declName.baseName.text] != nil
                 else { throw BindingError("@GesField unit must be a literal GesQuantityUnit case.") }
                 if member.declName.baseName.text != "none" { unit = member.declName.baseName.text }
             }
@@ -126,8 +133,7 @@ struct GesTypeMacro: MemberMacro {
                 throw BindingError("Cannot infer the GES field type; specify @GesField(typeName: ...).")
             }
             guard unit == nil || inferred == "Number" else { throw BindingError("@GesField unit requires a native numeric property.") }
-            let suffix = ["meter": "m", "second": "s", "degree": "°"]
-            let fieldType = unit.map { "Quantity(\(suffix[$0]!))" } ?? inferred
+            let fieldType = unit.flatMap { Self.unitSymbols[$0] }.map { "Quantity(\($0))" } ?? inferred
             guard !fields.contains(where: { $0.name == fieldName }) else { throw BindingError("Duplicate @GesField name: \(fieldName)") }
             fields.append(Field(swiftName: identifier.identifier.text, name: fieldName, typeName: fieldType, unit: unit))
         }

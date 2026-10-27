@@ -778,6 +778,17 @@ enum GameEventScript.Api.GesQuantityUnit
   enum-field UnitDegree = 1
   enum-field UnitMeter = 2
   enum-field UnitSecond = 3
+  enum-field UnitMeterPerSecond = 4
+  enum-field UnitMeterPerSecondSquared = 5
+  enum-field UnitKilogram = 6
+  enum-field UnitNewton = 7
+  enum-field UnitJoule = 8
+  enum-field UnitWatt = 9
+  enum-field UnitVolt = 10
+  enum-field UnitAmpere = 11
+  enum-field UnitHertz = 12
+  enum-field UnitKelvin = 16
+  enum-field UnitDegreePerSecond = 17
   enum-field UnitInvalid = 255
 static class GameEventScript.Api.GesQuantityUnits
   method static GameEventScript.Api.GesQuantityUnit? ParseQuantityTypeName(System.String typeName)

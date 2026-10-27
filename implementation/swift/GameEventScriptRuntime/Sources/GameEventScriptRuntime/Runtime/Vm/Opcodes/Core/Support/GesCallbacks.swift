@@ -3,14 +3,6 @@
 
 enum GesCallbacks {
     static func convert(_ value: GesValue, to name: String, _ c: GesContext) throws -> GesValue {
-        let unit: GesQuantityUnit?
-        switch name {
-        case "Quantity(m)", "meter": unit = .meter
-        case "Quantity(s)", "second": unit = .second
-        case "Quantity(°)", "degree": unit = .degree
-        default: unit = nil
-        }
-        if let unit { return GesCasts.unit(value, unit) }
         if name == "numeric" { return GesCasts.number(value) }
         let kind: GesBytecodeTypeKind
         switch name {
@@ -28,7 +20,17 @@ enum GesCallbacks {
         case "List": kind = .list
         case "Map": kind = .map
         case "Dice": kind = .dice
-        default: return .nothing
+        default:
+            // Unit names are checked only after the built-in type names. `Quantity(...)` takes any quantity type name;
+            // a bare name is a portable unit type name such as `meter`.
+            let unit: GesQuantityUnit?
+            if name.hasPrefix("Quantity("), name.hasSuffix(")") {
+                unit = GesQuantityUnit(quantityName: String(name.dropFirst(9).dropLast()))
+            } else {
+                unit = name == "°" ? nil : GesQuantityUnit(typeName: name)
+            }
+            guard let unit else { return .nothing }
+            return GesCasts.unit(value, unit)
         }
         return try GesCasts.cast(value, kind, c)
     }

@@ -300,7 +300,9 @@ order is retained.
 `:take highest`, `:take lowest`, `:drop highest`, and `:drop lowest` use the
 same selection order for direct collections and iterator pipelines. This order
 is distinct from the sort order above. If both values have numeric views,
-compare units first (`none`, degrees, meters, seconds), then numeric values;
+compare units first in ascending UnitId order (`none`, degrees, meters,
+seconds, then the further units by their [UnitId](../Bytecode.md#numeric-unit-encoding-target)),
+then numeric values;
 Boolean and Dice participate through their numeric views. Otherwise use:
 
 | Rank | Kinds |

@@ -147,6 +147,7 @@ struct GesLexer {
         "²": (.superscriptInteger, "2"), "³": (.superscriptInteger, "3"),
     ]
 
+    static let unitStarts = Set("msdkMWHNJVAK°".unicodeScalars)
     static let boundaries = Set("(){}[],;.:#+-*/!~&|^=<>·×÷−∞∏ℇτφ√∛°∧∨∈∉⊕⋅≤≥¬≠≈≅→⇒↦²³".unicodeScalars)
     var current: Unicode.Scalar { peek(0) }
 
@@ -233,14 +234,26 @@ struct GesLexer {
                 advance()
                 while Self.digit(current) || current == "_" && Self.digit(peek()) { advance() }
             }
-            if current == "%" || current == "°" { advance() } else if (current == "m" || current == "s") && (peek() == "\0" || Self.space(peek()) || Self.boundaries.contains(peek())) { advance() }
+            // The longest unit spelling directly followed by a boundary forms one quantity literal, so `10m/s` is a speed
+            // and `10m / s` a division. The token text keeps the spelling, whose decoding applies prefix scaling.
+            var quantity = false
+            // Only these characters start a unit spelling, so unitless numbers skip the table.
+            let suffixLength = Self.unitStarts.contains(current) ? GesCompilerSupport.unitSuffixLength(scalars, at: index) { Self.space($0) || Self.boundaries.contains($0) } : 0
+            if current == "%" {
+                advance()
+            } else if suffixLength > 0 {
+                for _ in 0..<suffixLength { advance() }
+                quantity = true
+            } else if current == "°" {
+                advance()
+                quantity = true
+            }
             if index < scalars.count && !Self.letter(current) && !Self.space(current) && !Self.boundaries.contains(current) {
                 while index < scalars.count && !Self.space(current) { advance() }
                 return token(.illegal, slice(start))
             }
             let text = slice(start)
-            let unit = text.unicodeScalars.last!
-            return token(unit == "%" ? .percentage : unit == "°" || unit == "m" || unit == "s" ? .unitNumber : .float, text)
+            return token(quantity ? .unitNumber : text.unicodeScalars.last == "%" ? .percentage : .float, text)
         }
         if first == "\"" || first == "'" {
             advance()

@@ -29,7 +29,7 @@ internal static class NumberTextProbe
                 "none" => GesQuantityUnit.UnitNone,
                 "m" => GesQuantityUnit.UnitMeter,
                 "s" => GesQuantityUnit.UnitSecond,
-                "degree" => GesQuantityUnit.UnitDegree,
+                var name when name != "\u00B0" && GesQuantityUnits.ParseTypeName(name) is { } parsed => parsed,
                 _ => throw new InvalidOperationException("Unknown unit.")
             };
             var value = kind == "integer" ? GesValue.GesInteger(long.Parse(payload, CultureInfo.InvariantCulture), unit)
@@ -65,8 +65,7 @@ internal static class NumberTextProbe
             GesQuantityUnit.UnitNone => "none",
             GesQuantityUnit.UnitMeter => "m",
             GesQuantityUnit.UnitSecond => "s",
-            GesQuantityUnit.UnitDegree => "degree",
-            _ => throw new InvalidOperationException("Unexpected result unit.")
+            var other => other.ToTypeName()
         };
         if (value.ValueKind == GesBytecodeTypeKind.Integer) return "integer:" + value.AsInteger().ToString(CultureInfo.InvariantCulture) + ":" + unit;
         var kind = value.ValueKind == GesBytecodeTypeKind.Percentage ? "percentage" : value.ValueKind == GesBytecodeTypeKind.Float ? "float" : throw new InvalidOperationException("Non-numeric result.");

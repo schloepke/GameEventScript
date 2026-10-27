@@ -111,13 +111,13 @@ enum GesMath {
             let (result, overflow) = op == .subtract ? a.subtractingReportingOverflow(b) : a.addingReportingOverflow(b)
             return overflow ? .float(op == .subtract ? Double(a) - Double(b) : Double(a) + Double(b), unit: leftUnit) : .integer(result, unit: leftUnit)
         case .multiply:
-            guard leftUnit == .none || rightUnit == .none else { return .nothing }
-            let unit = leftUnit == .none ? rightUnit : leftUnit
+            guard let unit = GesQuantityUnit.product(leftUnit, rightUnit) else { return .nothing }
             let (result, overflow) = a.multipliedReportingOverflow(by: b)
             return overflow ? .float(Double(a) * Double(b), unit: unit) : .integer(result, unit: unit)
         case .divide, .integerDivide:
-            guard rightUnit == .none || leftUnit == rightUnit else { return .nothing }
-            let unit: GesQuantityUnit = rightUnit == .none ? leftUnit : .none
+            // Division follows the derivation table; integer division keeps the derivation-free rules.
+            let derived = op == .divide ? GesQuantityUnit.quotient(leftUnit, rightUnit) : rightUnit == .none ? leftUnit : leftUnit == rightUnit ? GesQuantityUnit.none : nil
+            guard let unit = derived else { return .nothing }
             if op == .integerDivide, b != 0, !(a == .min && b == -1) {
                 var result = a / b
                 if a % b != 0 && (a < 0) != (b < 0) { result -= 1 }
@@ -147,8 +147,10 @@ enum GesMath {
         }
         let unit: GesQuantityUnit?
         if op == .multiply {
-            unit = a.hasUnit && b.hasUnit ? nil : a.hasUnit ? a.unit : b.unit
-        } else if op == .divide || op == .integerDivide {
+            unit = GesQuantityUnit.product(a.unit, b.unit)
+        } else if op == .divide {
+            unit = a.kind == .percentage && b.hasUnit ? nil : GesQuantityUnit.quotient(a.unit, b.unit)
+        } else if op == .integerDivide {
             unit = !b.hasUnit ? a.unit : a.unit == b.unit ? GesQuantityUnit.none : nil
         } else {
             unit = a.unit == b.unit ? a.unit : nil

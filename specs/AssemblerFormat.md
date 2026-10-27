@@ -188,7 +188,7 @@ An instruction consists of the opcode name followed by its operands in the order
 | Signed or floating immediate | `#` plus invariant numeric text | `#-1`, `#0.5` |
 | Code target | generated Code label | `Start_12` |
 | Text, list, or bind reference | generated label | `T_name`, `Args_2`, `Outbound_Done` |
-| Unit | `unit:` plus the portable unit type name | `unit:meter` |
+| Unit | `unit:` plus the portable unit name from [Bytecode](Bytecode.md#numeric-unit-encoding-target) | `unit:meter`, `unit:meterPerSecond` |
 | Enum operand | portable enum member name | `Fibonacci` |
 
 Binary64 immediates use the following canonical, locale-independent spelling after `#`:

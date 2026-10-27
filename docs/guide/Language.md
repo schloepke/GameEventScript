@@ -100,7 +100,13 @@ on Main(args) {
 ```
 
 Common data values include Number, Boolean, Text, Tag, List, Map and `nothing`.
-Numbers may carry seconds (`0.2s`), meters (`10m`) or degrees (`90°`). A percentage
+Numbers may carry a unit, such as seconds (`0.2s`), meters (`10m`), degrees
+(`90°`), speeds (`3m/s`), forces (`21400N`) or frequencies (`20Hz`). Prefixed
+spellings like `250ms` or `2km` are converted to the base unit. Units follow
+physics where it is defined: `10m / 2s` is `5m/s`, `2kg * 3m/s²` is `6N`, and
+`1 / 2s` is `0.5Hz`; unsupported combinations such as `2m * 3m` give `nothing`.
+The complete unit list and derivation table are in the
+[language specification](../../specs/Language.md#quantities). A percentage
 such as `20%` represents the ratio `0.2`, so `100 * 20%` gives `20`.
 
 Adding a Percentage to a Number applies a relative increase: `base + bonus`

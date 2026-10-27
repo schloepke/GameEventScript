@@ -311,6 +311,20 @@ binary specifications and must reject undefined values at validation boundaries:
 `BytecodeInstructionUnits` supplies pure conversions between type names, units,
 and suffixes. Parse operations return absence for an unknown valid string;
 predicate operations never use locale; formatting returns canonical GES text.
+
+> **Since: Unreleased** — physical units
+
+`QuantityUnit` has one member per defined UnitId: C# `UnitNone`, `UnitDegree`,
+`UnitMeter`, `UnitSecond`, `UnitMeterPerSecond`, `UnitMeterPerSecondSquared`,
+`UnitKilogram`, `UnitNewton`, `UnitJoule`, `UnitWatt`, `UnitVolt`, `UnitAmpere`,
+`UnitHertz`, `UnitKelvin` and `UnitDegreePerSecond`, plus the invalid sentinel
+`UnitInvalid`; Swift uses the same cases in lower camel case (`.none`,
+`.meterPerSecond`, …), whose raw values are the portable unit names. C#
+`GesQuantityUnits.ToTypeName`/`ParseTypeName` convert portable names and
+`ToSuffix` returns the canonical symbol, which Swift exposes as `suffix`;
+`IsNumericUnit` is true for every defined unit other than none. Swift
+`GesQuantityUnit` is `Sendable`. Symbols, names and arithmetic are defined in
+[Language quantities](Language.md#quantities).
 `BinaryFormat` exposes the fixed V1 magic bytes, format version, file-header
 size, and section-header size as named constants; their numeric values are owned
 by BinaryFormat.md.
@@ -1089,8 +1103,8 @@ infers Map; Optional delegates to its wrapped type. Aliases, custom convertible
 types and GesValue require explicit `typeName`. Swift compiler type checking
 still requires the existing strict value-conversion conformances.
 
-`@GesField(unit:)` may instead declare a numeric quantity in meters, seconds or
-degrees. It cannot be combined with `typeName` or a nonnumeric field. Encoding
+`@GesField(unit:)` may instead declare a numeric quantity in any `GesQuantityUnit`
+other than `.none`, for example `@GesField(unit: .meterPerSecond)`. It cannot be combined with `typeName` or a nonnumeric field. Encoding
 attaches the explicit unit to a native numeric magnitude; constructor decoding
 checks the exact unit before stripping it and invoking strict native conversion.
 Nothing retains existing Optional/NaN semantics. No magnitude scaling, truncation

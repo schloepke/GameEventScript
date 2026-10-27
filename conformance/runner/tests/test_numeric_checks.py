@@ -63,7 +63,7 @@ class NumericChecksTests(unittest.TestCase):
                        {'mode': 'ulp', 'maxUlps': -1}, {'mode': 'ulp', 'maxUlps': 2**64}, {'mode': 'approximate'}]:
             with self.assertRaises(InvalidDocument):
                 options(SimpleNamespace(metadata={'comparison': {'binary64': config}}))
-        for item in [{'type': ':Quantity.int64', 'value': '1'}, {'type': ':Quantity.binary64', 'value': '1', 'unit': 'kg'},
+        for item in [{'type': ':Quantity.int64', 'value': '1'}, {'type': ':Quantity.binary64', 'value': '1', 'unit': 'lb'},
                      {'type': ':Number.binary64', 'value': 1.0}]:
             with self.assertRaises(InvalidDocument):
                 value(item)

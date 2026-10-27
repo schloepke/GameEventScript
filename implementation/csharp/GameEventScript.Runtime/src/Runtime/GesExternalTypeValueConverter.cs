@@ -62,20 +62,15 @@ internal static class GesExternalTypeValueConverter
             case "Percentage":
                 result.SetPercentage(value.AsNumeric);
                 return result;
-            case "degree":
-                result.SetFloat(value.AsNumeric, GesQuantityUnit.UnitDegree);
-                return result;
-            case "meter":
-                result.SetFloat(value.AsNumeric, GesQuantityUnit.UnitMeter);
-                return result;
-            case "second":
-                result.SetFloat(value.AsNumeric, GesQuantityUnit.UnitSecond);
-                return result;
             case "Number":
                 result.SetFloat(value.AsNumeric);
                 return result;
             case "Boolean":
                 result.SetBoolean(value.IsTrue);
+                return result;
+            // Unit names are checked only after the constant type names, which keeps those cases a direct dispatch.
+            case var unitName when unitName != "\u00B0" && GesQuantityUnits.ParseTypeName(unitName) is { } unit:
+                result.SetFloat(value.AsNumeric, unit);
                 return result;
             default:
                 return value;

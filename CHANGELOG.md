@@ -12,6 +12,10 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 
 ### Breaking
 
+- A number directly followed by a unit spelling is now one quantity literal, so
+  `10m/s`, `6m/s²` or `120°/s` are a speed, an acceleration and an angular speed
+  rather than divisions by a binding `s`. Write `10m / s` with whitespace to
+  divide. Text such as `'250ms'` now parses as `0.25s` instead of failing.
 - Runtime observer callbacks report the host-local send ID of the message they
   describe: C# `MessageEmitted(message, id, accepted)`,
   `MessagePublished(message, id, result)`, `DispatchStarted(message, id,
@@ -113,6 +117,19 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 
 ### Added
 
+- Physical units in C# and Swift: meter per second (`m/s`), meter per second
+  squared (`m/s²`, ASCII `m/s^2`), kilogram (`kg`), newton (`N`), joule (`J`),
+  watt (`W`), volt (`V`), ampere (`A`), hertz (`Hz`), kelvin (`K`) and degree
+  per second (`°/s`, ASCII `deg/s`), next to meters, seconds and degrees (ASCII
+  `deg`). Literals accept the prefixed spellings `km`, `ms`, `kN`, `kJ`, `MJ`,
+  `kW`, `MW`, `kV`, `kHz`, `Wh` and `kWh`, which normalize exactly to the base
+  unit. Products and quotients follow a closed derivation table, for example
+  `10m / 2s` is `5m/s`, `2kg * 3m/s²` is `6N` and `1 / 2s` is `0.5Hz` (formerly
+  `nothing`); other combinations of two units remain `nothing`. Every unit works
+  in `:Quantity(...)`, text formatting and parsing, message JSON, vectors and
+  points, inline assembly (`#meterPerSecond`) and host APIs, including Swift
+  `@GesField(unit: .meterPerSecond)`. The new UnitIds are 4 to 12, 16 and 17;
+  Swift `GesQuantityUnit` is now `Sendable`.
 - Runtime observers can follow delayed messages. C# `MessageScheduled(message, id,
   deadline, publish)` / Swift `messageScheduled(_:id:deadline:publish:)` reports
   each accepted `emit … after` or `publish … after` once, with its send ID and its

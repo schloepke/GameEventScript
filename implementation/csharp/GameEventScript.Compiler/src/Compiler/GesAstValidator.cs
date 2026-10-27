@@ -661,7 +661,7 @@ internal static class GesAstValidator
     {
         var input = ClassifyExpression(operand, callables, typeDefinitions, declaredTypes, visitedCallables);
         var type = input.TypeName;
-        if (type is "s" or "second" or "m" or "meter" or "degree" || type?.StartsWith("quantity:", StringComparison.Ordinal) == true)
+        if (type is "s" or "m" || GesQuantityUnits.ParseTypeName(type) is not null || type?.StartsWith("quantity:", StringComparison.Ordinal) == true)
             return StaticExpressionInfo.Other(type);
         // Vector magnitude retains the vector's unit, which the nominal type alone does not expose.
         return type is null or "vector" ? StaticExpressionInfo.Other() : StaticExpressionInfo.Other("number");

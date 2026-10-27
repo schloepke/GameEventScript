@@ -132,14 +132,8 @@ internal partial class GesVirtualMachine
                 case "Dice":
                     converted = CastValue(in source, Dice, this, destinationRegister);
                     break;
-                case "degree":
-                    converted = CastUnitValue(in source, UnitDegree, this);
-                    break;
-                case "meter":
-                    converted = CastUnitValue(in source, UnitMeter, this);
-                    break;
-                case "second":
-                    converted = CastUnitValue(in source, UnitSecond, this);
+                case var unitName when unitName != "\u00B0" && GesQuantityUnits.ParseTypeName(unitName) is { } unit:
+                    converted = CastUnitValue(in source, unit, this);
                     break;
                 default:
                     converted = new GesValue();

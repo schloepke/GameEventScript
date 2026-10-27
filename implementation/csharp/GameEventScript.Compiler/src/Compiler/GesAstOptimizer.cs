@@ -688,10 +688,13 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, GesExpressionN
             case GesBinaryOperator.Add: return FoldAdd(left, right, leftNumber, rightNumber);
             case GesBinaryOperator.Subtract: return FoldSubtract(left, right, leftNumber, rightNumber);
             case GesBinaryOperator.Multiply: return FoldMultiply(left, right, leftNumber, rightNumber);
-            case GesBinaryOperator.Divide when rightNumber != 0d && sameUnit:
+            // Quotients of differing units follow the derivation table, as in the VM; percentages keep their own rules.
+            case GesBinaryOperator.Divide when rightNumber != 0d &&
+                                               (sameUnit || left.Kind != GesBytecodeTypeKind.Percentage && right.Kind != GesBytecodeTypeKind.Percentage) &&
+                                               GesQuantityUnits.Quotient(left.Unit, right.Unit) is { } quotientUnit:
                 if (left.Kind == GesBytecodeTypeKind.Percentage && right.Kind is GesBytecodeTypeKind.Integer or GesBytecodeTypeKind.Float) return GesValue.GesPercentage(leftNumber / rightNumber);
 
-                return CreateNumber(leftNumber / rightNumber, DivideResultUnit(left.Unit), false);
+                return CreateNumber(leftNumber / rightNumber, quotientUnit, false);
             case GesBinaryOperator.IntegerDivide when rightNumber != 0d && sameUnit: return CreateNumber(Math.Floor(leftNumber / rightNumber), DivideResultUnit(left.Unit), true);
             case GesBinaryOperator.Modulo when rightNumber != 0d && sameUnit:
             {
@@ -858,12 +861,7 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, GesExpressionN
         return GesValue.GesFloat(number, unit);
     }
 
-    private static GesQuantityUnit? ProductUnit(GesQuantityUnit left, GesQuantityUnit right)
-    {
-        if (left.IsNumericUnit() && right.IsNumericUnit()) return null;
-
-        return left is GesQuantityUnit.UnitNone ? right : left;
-    }
+    private static GesQuantityUnit? ProductUnit(GesQuantityUnit left, GesQuantityUnit right) => GesQuantityUnits.Product(left, right);
 
     private static GesQuantityUnit DivideResultUnit(GesQuantityUnit unit) => unit.IsNumericUnit() ? GesQuantityUnit.UnitNone : unit;
 

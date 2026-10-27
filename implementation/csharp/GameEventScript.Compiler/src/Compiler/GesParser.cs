@@ -2612,10 +2612,14 @@ internal sealed partial class GesParser
             SkipNewLines();
             Expect(LeftParen);
             SkipNewLines();
-            var unitToken = Expect(Identifier);
-            SkipNewLines();
+            var unit = new StringBuilder();
+            while (!Is(RightParen))
+            {
+                unit.Append(QuantityUnitPart(Advance()));
+                SkipNewLines();
+            }
             Expect(RightParen);
-            return $"quantity:{unitToken.Text}";
+            return $"quantity:{unit}";
         }
 
         return typeName switch
@@ -2640,14 +2644,26 @@ internal sealed partial class GesParser
         };
     }
 
+    // A quantity unit is a name optionally followed by `/` and further unit parts, such as `m/s`, `m/s^2` or `°/s`.
     private bool IsQuantityTypeSpecifierAhead()
     {
         if (_reader.PeekSignificant(0).Kind != LeftParen) return false;
 
-        if (_reader.PeekSignificant(1).Kind != Identifier) return false;
+        // Uppercase unit symbols such as N or Hz read as message-name tokens.
+        if (_reader.PeekSignificant(1).Kind is not (Identifier or Message or GesTokenKind.IntrinsicDeg)) return false;
 
-        return _reader.PeekSignificant(2).Kind == RightParen;
+        for (var offset = 2; offset < 8; offset++)
+        {
+            var kind = _reader.PeekSignificant(offset).Kind;
+            if (kind == RightParen) return true;
+            if (kind is not (Identifier or Message or GesTokenKind.OperatorDivide or GesTokenKind.OperatorPower or GesTokenKind.SuperscriptInteger or GesTokenKind.Float)) return false;
+        }
+
+        return false;
     }
+
+    private static string QuantityUnitPart(GesToken token)
+        => token.Kind == GesTokenKind.SuperscriptInteger ? token.Text == "2" ? "\u00B2" : "\u00B3" : token.Text;
 
     private void ExpectValueWord()
     {

@@ -42,7 +42,7 @@ There are no public Integer/Binary64 value tags.
 | type | Additional fields |
 | --- | --- |
 | `Nothing` | none |
-| `Number` | `value`: numeric Text; `unit`: `""`, `"s"`, `"m"` or `"°"` |
+| `Number` | `value`: numeric Text; `unit`: `""` or the canonical unit symbol, such as `"s"`, `"m/s"` or `"°/s"`; ASCII and prefixed spellings are invalid |
 | `Percentage` | `value`: numeric Text containing the ratio, e.g. `"0.1"` for 10% |
 | `Boolean` | `value`: JSON Boolean |
 | `Text` | `value`: JSON string |

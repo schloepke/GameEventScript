@@ -28,7 +28,7 @@ class CompilerChecksTests(unittest.TestCase):
 
     def test_all_compiler_requests_exclude_expectations(self):
         request = requests(self.cases)
-        self.assertEqual(317, len(request['cases']))
+        self.assertEqual(320, len(request['cases']))
         for case in request['cases']:
             self.assertEqual({'id', 'kind', 'sources', 'compile', 'requires'}, set(case))
 

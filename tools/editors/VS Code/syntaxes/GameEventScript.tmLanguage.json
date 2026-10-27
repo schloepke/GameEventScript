@@ -185,7 +185,7 @@
           "name": "constant.numeric.percentage.gameeventscript"
         },
         {
-          "match": "\\b\\d(?:[\\d_]*\\d)?(?:\\.\\d(?:[\\d_]*\\d)?)?(?:m|s|°)(?=$|[^A-Za-z0-9_])",
+          "match": "\\b\\d(?:[\\d_]*\\d)?(?:\\.\\d(?:[\\d_]*\\d)?)?(?:m/s²|m/s\\^2|deg/s|°/s|m/s|kWh|kHz|deg|Wh|Hz|km|ms|kg|kN|kJ|MJ|kW|MW|kV|°|m|s|N|J|W|V|A|K)(?=$|[^A-Za-z0-9_])",
           "name": "constant.numeric.unit.gameeventscript"
         },
         {
@@ -352,7 +352,7 @@
       "comment": "Parenthesized extension calls accept trailing member and collection suffixes; existing punctuation and selector rules tokenize them without an extra scope.",
       "patterns": [
         {
-          "match": ":(Quantity)(\\()((?:none|m|meter|s|second|degree|°))(\\))(?=$|[^A-Za-z0-9_])",
+          "match": ":(Quantity)(\\()((?:none|m/s²|m/s\\^2|deg/s|degree/s|°/s|m/s|degree|meter|second|deg|kg|Hz|°|m|s|N|J|W|V|A|K))(\\))(?=$|[^A-Za-z0-9_])",
           "name": "support.type.primitive.quantity.gameeventscript",
           "captures": {
             "1": {

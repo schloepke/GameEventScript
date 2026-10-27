@@ -591,6 +591,89 @@ steps:
 
 ---
 
+## Test: rounding keeps the quantity unit
+
+floor, ceil, truncate and every round mode keep the unit of a quantity, identically for constant-folded literals and runtime arguments; rounded percentages stay unitless numbers.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: rounding-keeps-units
+sources:
+  - name: rounding-keeps-units.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+module main
+on Derive(force, speed, heading) {
+  emit Runtime(floor: floor force, ceil: ceil force, truncate: truncate force, halfEven: round half even speed, halfUp: round half up speed, halfDown: round half down speed, heading: floor heading)
+  emit Folded(floor: floor 2.5N, ceil: ceil 2.5N, truncate: truncate -2.5N, halfEven: round half even 2.5m/s, halfUp: round half up 2.5m/s, halfDown: round half down 2.5m/s, heading: floor 43.9°, percentage: floor 150%)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| derive | Derive | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  derive:
+    input:
+      args:
+        - name: force
+          value: { type: ":Quantity.binary64", value: "2.5", unit: ":newton" }
+        - name: speed
+          value: { type: ":Quantity.binary64", value: "2.5", unit: ":meterPerSecond" }
+        - name: heading
+          value: { type: ":Quantity.binary64", value: "43.9", unit: ":degree" }
+    local:
+      - name: Runtime
+        args:
+          - name: floor
+            value: { type: ":Quantity.int64", value: "2", unit: ":newton" }
+          - name: ceil
+            value: { type: ":Quantity.int64", value: "3", unit: ":newton" }
+          - name: truncate
+            value: { type: ":Quantity.int64", value: "2", unit: ":newton" }
+          - name: halfEven
+            value: { type: ":Quantity.int64", value: "2", unit: ":meterPerSecond" }
+          - name: halfUp
+            value: { type: ":Quantity.int64", value: "3", unit: ":meterPerSecond" }
+          - name: halfDown
+            value: { type: ":Quantity.int64", value: "2", unit: ":meterPerSecond" }
+          - name: heading
+            value: { type: ":Quantity.int64", value: "43", unit: ":degree" }
+      - name: Folded
+        args:
+          - name: floor
+            value: { type: ":Quantity.int64", value: "2", unit: ":newton" }
+          - name: ceil
+            value: { type: ":Quantity.int64", value: "3", unit: ":newton" }
+          - name: truncate
+            value: { type: ":Quantity.int64", value: "-2", unit: ":newton" }
+          - name: halfEven
+            value: { type: ":Quantity.int64", value: "2", unit: ":meterPerSecond" }
+          - name: halfUp
+            value: { type: ":Quantity.int64", value: "3", unit: ":meterPerSecond" }
+          - name: halfDown
+            value: { type: ":Quantity.int64", value: "2", unit: ":meterPerSecond" }
+          - name: heading
+            value: { type: ":Quantity.int64", value: "43", unit: ":degree" }
+          - name: percentage
+            value: { type: ":Number.int64", value: "1" }
+```
+
+---
+
 ## Test: unsupported unit combinations give nothing
 
 Products and quotients outside the derivation table, sums of different units, integer division and percentage quotients with units give nothing; comparisons keep their existing results.
@@ -678,7 +761,7 @@ steps:
 
 ## Test: quantity casts and checks accept every unit name
 
-Casts apply a unit to unitless input, keep a matching unit, reject a conflicting unit and remove units with none; checks match the exact unit.
+Casts apply a unit to unitless input, keep a matching unit, reject a conflicting unit and remove units with none; whitespace in a unit name is ignored and ÷ reads as /; checks match the exact unit.
 
 ### Case description
 
@@ -695,7 +778,7 @@ sources:
 ```ges
 module main
 on Start {
-  emit Cast(force: 5 as :Quantity(N), speed: 5 as :Quantity(m/s), accel: 5 as :Quantity(m/s²), accelAscii: 5 as :Quantity(m/s^2), turn: 5 as :Quantity(°/s), turnAscii: 5 as :Quantity(deg/s), turnName: 5 as :Quantity(degree/s), kept: 5N as :Quantity(N), conflict: 5N as :Quantity(J), removed: 5m/s as :Quantity(none))
+  emit Cast(force: 5 as :Quantity(N), speed: 5 as :Quantity(m/s), accel: 5 as :Quantity(m/s²), accelAscii: 5 as :Quantity(m/s^2), turn: 5 as :Quantity(°/s), turnAscii: 5 as :Quantity(deg/s), turnName: 5 as :Quantity(degree/s), spaced: 5 as :Quantity(m / s), divided: 5 as :Quantity(m÷s), kept: 5N as :Quantity(N), conflict: 5N as :Quantity(J), removed: 5m/s as :Quantity(none))
   emit Check(force: 5N is :Quantity(N), other: 5N is :Quantity(J), hertz: 2Hz is :Quantity(Hz), kelvin: 350K is :Quantity(K), unitless: 5 is :Quantity(none))
 }
 ```
@@ -729,6 +812,10 @@ steps:
             value: { type: ":Quantity.int64", value: "5", unit: ":degreePerSecond" }
           - name: turnName
             value: { type: ":Quantity.int64", value: "5", unit: ":degreePerSecond" }
+          - name: spaced
+            value: { type: ":Quantity.int64", value: "5", unit: ":meterPerSecond" }
+          - name: divided
+            value: { type: ":Quantity.int64", value: "5", unit: ":meterPerSecond" }
           - name: kept
             value: { type: ":Quantity.int64", value: "5", unit: ":newton" }
           - name: conflict

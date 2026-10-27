@@ -97,8 +97,9 @@ enum GesTextNumberCast {
 
     // The longest unit suffix spelling ending the text; it belongs to the number only when it directly follows a digit
     // or the special values, so `NaN` keeps its trailing N.
-    // Only these scalars end a unit spelling, so plain numbers and other text skip the suffix table.
-    private static func possibleSuffixEnd(_ text: String) -> Bool {
+    // Only these scalars end a unit spelling, so plain numbers and other text skip the suffix table. A native test keeps
+    // the switch in step with the suffix table.
+    static func possibleSuffixEnd(_ text: String) -> Bool {
         let scalars = text.unicodeScalars
         switch scalars.last {
         case "s", "m", "h", "z", "g", "N", "J", "W", "V", "A", "K", "°", "²": return true

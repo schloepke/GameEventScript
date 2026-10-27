@@ -1378,7 +1378,9 @@ Fahrenheit, bits, bytes and bit rates are not units.
 
 `:Quantity(unit)` accepts `none`, every symbol and ASCII spelling, and the long
 names `meter`, `second` and `degree`; `degree/s` is accepted for `°/s` because
-`°` reads as `degree`. Prefixed spellings are not type names. `:Percentage` is
+`°` reads as `degree`. Whitespace between the parts of a unit name is ignored and
+`÷` reads as `/`, so `:Quantity(m / s)` and `:Quantity(m÷s)` are `:Quantity(m/s)`.
+Prefixed spellings are not type names. `:Percentage` is
 not a quantity unit; it is a separate value kind. The names `meter`, `second`,
 `degree`, and `seconds` are not quantity types of their own. `:Quantity(none)`
 removes a supported numeric or spatial unit and produces the corresponding

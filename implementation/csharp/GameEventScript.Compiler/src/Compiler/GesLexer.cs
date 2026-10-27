@@ -509,8 +509,7 @@ internal sealed class GesLexer
 
         // The longest unit spelling directly followed by a boundary forms one quantity literal, so `10m/s` is a speed
         // and `10m / s` a division. The token text keeps the spelling, whose decoding applies prefix scaling.
-        // Only these characters start a unit spelling, so unitless numbers skip the table.
-        if (!IsAtEnd && Current is 'm' or 's' or 'd' or 'k' or 'M' or 'W' or 'H' or 'N' or 'J' or 'V' or 'A' or 'K' or '\u00B0')
+        if (!IsAtEnd && MayStartUnitSuffix(Current))
             foreach (var suffix in GesQuantityUnits.Suffixes)
             {
                 var length = suffix.Text.Length;
@@ -666,6 +665,11 @@ internal sealed class GesLexer
     private static bool IsValidWordBoundary(char ch) => GesText.IsTokenWhitespace(ch) || IsStructuralBoundary(ch);
 
     private bool IsValidNumberBoundary(char ch) => GesText.IsTokenWhitespace(ch) || IsStructuralBoundary(ch) || (ch == 'd' && GesText.IsAsciiDigit(Peek()));
+
+    // Only these characters start a unit spelling, so unitless numbers skip the suffix table. A native test keeps the
+    // set in step with GesQuantityUnits.Suffixes.
+    internal static bool MayStartUnitSuffix(char ch) =>
+        ch is 'm' or 's' or 'd' or 'k' or 'M' or 'W' or 'H' or 'N' or 'J' or 'V' or 'A' or 'K' or '\u00B0';
 
     private static bool IsValidUnitBoundary(char ch) => ch == '\0' || GesText.IsTokenWhitespace(ch) || IsStructuralBoundary(ch);
 

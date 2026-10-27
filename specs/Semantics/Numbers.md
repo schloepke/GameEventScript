@@ -103,6 +103,10 @@ saturating conversion:
 - `round half up`: nearest; an exact half goes away from zero.
 - `round half down`: nearest; an exact half goes toward zero.
 
+The integer result keeps the unit of a scalar Quantity, so `floor 2.5m` is `2m`.
+A percentage operand is a ratio without a unit, so `floor 150%` is the unitless
+`1`.
+
 These names describe the existing DSL semantics; they are not delegated to a
 host language's similarly named default overload.
 

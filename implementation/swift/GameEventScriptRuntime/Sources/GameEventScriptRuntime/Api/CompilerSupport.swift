@@ -28,6 +28,9 @@
     /// Unit of a quotient of two quantities by the closed derivation table, or nil when unsupported.
     public static func quotientUnit(_ dividend: GesQuantityUnit, _ divisor: GesQuantityUnit) -> GesQuantityUnit? { GesQuantityUnit.quotient(dividend, divisor) }
 
+    /// The first scalars of every unit suffix spelling, so a lexer can skip the suffix table for unitless numbers.
+    public static let unitSuffixStarts = Set(GesQuantityUnit.suffixes.compactMap(\.scalars.first))
+
     /// The longest unit suffix spelling at `start` that ends at a token boundary, as its scalar count; 0 when none matches.
     public static func unitSuffixLength(_ scalars: [Unicode.Scalar], at start: Int, boundary: (Unicode.Scalar) -> Bool) -> Int {
         for suffix in GesQuantityUnit.suffixes {

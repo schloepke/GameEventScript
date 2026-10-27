@@ -1554,12 +1554,12 @@ separate approximate-equality opcode.
 | 0x6E | `RandomPop` | - | - | - | - | - | Restores the previous random scope. |
 | 0x6F | `Term` | - | result register | `XRegister`=series | `YRegister`=index | - | Reads a zero-based mathematical series term; non-series sources yield `nothing`. |
 | 0x70 | `Exp` | - | result register | `XRegister`=operand | - | - | Natural exponential. Unitless numeric input only; overflow to `+Infinity` is valid. |
-| 0x71 | `Floor` | - | result register | `XRegister`=operand | - | - | Floors a unitless numeric value and writes an integer. |
-| 0x72 | `Ceil` | - | result register | `XRegister`=operand | - | - | Ceils a unitless numeric value and writes an integer. |
-| 0x73 | `Truncate` | - | result register | `XRegister`=operand | - | - | Truncates a unitless numeric value toward zero and writes an integer. |
-| 0x74 | `RoundHalfEven` | - | result register | `XRegister`=operand | - | - | Rounds a unitless numeric value using midpoint-to-even and writes an integer. |
-| 0x75 | `RoundHalfUp` | - | result register | `XRegister`=operand | - | - | Rounds midpoint values away from zero and writes an integer. |
-| 0x76 | `RoundHalfDown` | - | result register | `XRegister`=operand | - | - | Rounds midpoint values toward zero and writes an integer. |
+| 0x71 | `Floor` | - | result register | `XRegister`=operand | - | - | Floors a numeric value and writes an integer with the operand's quantity unit. |
+| 0x72 | `Ceil` | - | result register | `XRegister`=operand | - | - | Ceils a numeric value and writes an integer with the operand's quantity unit. |
+| 0x73 | `Truncate` | - | result register | `XRegister`=operand | - | - | Truncates a numeric value toward zero and writes an integer with the operand's quantity unit. |
+| 0x74 | `RoundHalfEven` | - | result register | `XRegister`=operand | - | - | Rounds a numeric value using midpoint-to-even and writes an integer with the operand's quantity unit. |
+| 0x75 | `RoundHalfUp` | - | result register | `XRegister`=operand | - | - | Rounds midpoint values away from zero and writes an integer with the operand's quantity unit. |
+| 0x76 | `RoundHalfDown` | - | result register | `XRegister`=operand | - | - | Rounds midpoint values toward zero and writes an integer with the operand's quantity unit. |
 | 0x77 | `DegreeToRadians` | - | result register | `XRegister`=operand | - | - | Converts degrees to unitless radians. |
 | 0x78 | `DegreeFromRadians` | - | result register | `XRegister`=operand | - | - | Converts unitless radians to a degree quantity. |
 | 0x79 | `WrapDegree` | - | result register | `XRegister`=operand | - | - | Normalizes a degree or unitless numeric value into `[0, 360)` degrees. |

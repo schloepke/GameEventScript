@@ -147,7 +147,7 @@ struct GesLexer {
         "²": (.superscriptInteger, "2"), "³": (.superscriptInteger, "3"),
     ]
 
-    static let unitStarts = Set("msdkMWHNJVAK°".unicodeScalars)
+    static let unitStarts = GesCompilerSupport.unitSuffixStarts
     static let boundaries = Set("(){}[],;.:#+-*/!~&|^=<>·×÷−∞∏ℇτφ√∛°∧∨∈∉⊕⋅≤≥¬≠≈≅→⇒↦²³".unicodeScalars)
     var current: Unicode.Scalar { peek(0) }
 

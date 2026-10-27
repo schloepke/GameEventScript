@@ -197,8 +197,9 @@ internal static class GesTextNumberCast
             : GesValue.GesFloat(number, unit);
     }
 
-    // Only these characters end a unit spelling, so plain numbers and other text skip the suffix table.
-    private static bool MayEndWithSuffix(string text, int start, int end)
+    // Only these characters end a unit spelling, so plain numbers and other text skip the suffix table. A native test
+    // keeps the set in step with GesQuantityUnits.Suffixes.
+    internal static bool MayEndWithSuffix(string text, int start, int end)
     {
         var last = text[end - 1];
         return last is 's' or 'm' or 'h' or 'z' or 'g' or 'N' or 'J' or 'W' or 'V' or 'A' or 'K' or '\u00B0' or '\u00B2'

@@ -581,7 +581,8 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, GesExpressionN
                     GesUnaryOperator.RoundHalfDown => RoundHalfTowardZero(operand.AsNumber()),
                     _ => 0d
                 };
-                return GesValue.GesInteger(ToIntegerSaturated(rounded));
+                // Rounding keeps the quantity unit, as in the VM.
+                return GesValue.GesInteger(ToIntegerSaturated(rounded), operand.Unit);
             case GesUnaryOperator.DegreeToRadians:
                 if ((operand.Unit.IsNumericUnit() && operand.Unit != GesQuantityUnit.UnitDegree) ||
                     operand.Kind is not (GesBytecodeTypeKind.Integer or GesBytecodeTypeKind.Float or GesBytecodeTypeKind.Percentage or GesBytecodeTypeKind.Boolean) ||

@@ -16,6 +16,15 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   `10m/s`, `6m/s²` or `120°/s` are a speed, an acceleration and an angular speed
   rather than divisions by a binding `s`. Write `10m / s` with whitespace to
   divide. Text such as `'250ms'` now parses as `0.25s` instead of failing.
+- `floor`, `ceil`, `truncate` and the three `round` forms keep the unit of a
+  quantity, at runtime and in constant folding: `floor 2.5m` is now `2m` instead
+  of the unitless `2`, and `round half even 2.5m/s` is `2m/s`. Percentages still
+  round to unitless numbers. Remove the unit explicitly with
+  `as :Quantity(none)` where a plain number is needed.
+- Swift `GesQuantityUnit` has new cases for the added physical units, so an
+  exhaustive `switch` over it must handle `kilogram`, `newton`, `joule`, `watt`,
+  `volt`, `ampere`, `hertz`, `kelvin` and `degreePerSecond` (or add a `default`).
+  C# `GesQuantityUnit` gains the same members; existing values keep their numbers.
 - Runtime observer callbacks report the host-local send ID of the message they
   describe: C# `MessageEmitted(message, id, accepted)`,
   `MessagePublished(message, id, result)`, `DispatchStarted(message, id,

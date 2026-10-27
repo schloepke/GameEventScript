@@ -301,7 +301,8 @@ struct GesAstOptimizer {
             case .roundHalfUp: rounded = number.rounded(.toNearestOrAwayFromZero)
             default: rounded = roundHalfTowardZero(number)
             }
-            return .integer(saturated(rounded))
+            // Rounding keeps the quantity unit, as in the VM.
+            return .integer(saturated(rounded), unit: operand.unit)
         case .degreeToRadians:
             guard !(operand.hasUnit && operand.unit != .degree), roundable(operand), operand.asNumber.isFinite else { return .nothing }
             return .float(operand.asNumber / 180 * Double.pi)

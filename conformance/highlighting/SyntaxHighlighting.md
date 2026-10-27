@@ -30,7 +30,7 @@ of full-document and incremental-line results, including every scope and offset.
 ```
 
 ```highlight
-{"name":"physical unit literals and quantity types","language":"ges","source":"let speed be 10m/s\nlet split be 10m / s\nlet delay be 250ms\nlet turn be 120deg/s\nlet x be 5 as :Quantity(m/s^2)\nlet f be 21400N","expect":[{"text":"10m/s","kind":"number"},{"text":"10m","kind":"number","occurrence":1},{"text":"250ms","kind":"number"},{"text":"120deg/s","kind":"number"},{"text":"Quantity","kind":"type"},{"text":"m/s^2","kind":"builtin","scope":"entity.other.attribute-name.unit.gameeventscript"},{"text":"21400N","kind":"number"}]}
+{"name":"physical unit literals and quantity types","language":"ges","source":"let speed be 10m/s\nlet split be 10m / s\nlet delay be 250ms\nlet turn be 120deg/s\nlet x be 5 as :Quantity(m/s^2)\nlet f be 21400N\nlet gap be 10mm\nlet energy be 1.5kWh\nlet push be 6m/s²\nlet rate be 5 as :Quantity(Hz)","expect":[{"text":"10m/s","kind":"number"},{"text":"10m","kind":"number","occurrence":1},{"text":"250ms","kind":"number"},{"text":"120deg/s","kind":"number"},{"text":"Quantity","kind":"type"},{"text":"m/s^2","kind":"builtin","scope":"entity.other.attribute-name.unit.gameeventscript"},{"text":"21400N","kind":"number"},{"text":"10mm","kind":"number"},{"text":"1.5kWh","kind":"number"},{"text":"6m/s²","kind":"number"},{"text":"Quantity","kind":"type","occurrence":1},{"text":"Hz","kind":"builtin","scope":"entity.other.attribute-name.unit.gameeventscript"}]}
 ```
 
 ```highlight

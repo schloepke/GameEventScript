@@ -32,8 +32,7 @@ internal static class GesTextNumberCast
         var shift = percent ? -2 : 0;
         var factor = 1;
         if (text[end - 1] == '%') end--;
-        // A trailing digit ends a plain number unless it belongs to the `^2` spelling, so most input skips the table.
-        else if ((!IsDigit(text[end - 1]) || text[end - 1] == '2' && end - start > 2 && text[end - 2] == '^') &&
+        else if (MayEndWithSuffix(text, start, end) &&
                  GesQuantityUnits.TryMatchTrailingSuffix(text, start, end, out var suffix) && IsSuffixAttached(text, start, end - suffix.Text.Length))
         {
             unit = suffix.Unit;
@@ -196,6 +195,14 @@ internal static class GesTextNumberCast
         return percentage
             ? double.IsFinite(number) ? GesValue.GesPercentage(number) : GesValue.GesNothing()
             : GesValue.GesFloat(number, unit);
+    }
+
+    // Only these characters end a unit spelling, so plain numbers and other text skip the suffix table.
+    private static bool MayEndWithSuffix(string text, int start, int end)
+    {
+        var last = text[end - 1];
+        return last is 's' or 'm' or 'h' or 'z' or 'g' or 'N' or 'J' or 'W' or 'V' or 'A' or 'K' or '\u00B0' or '\u00B2'
+            || last == '2' && end - start > 2 && text[end - 2] == '^';
     }
 
     // A unit suffix belongs to the number only when it directly follows a digit or the special values.

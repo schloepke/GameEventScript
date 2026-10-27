@@ -97,19 +97,35 @@ enum GesTextNumberCast {
 
     // The longest unit suffix spelling ending the text; it belongs to the number only when it directly follows a digit
     // or the special values, so `NaN` keeps its trailing N.
-    // A trailing digit ends a plain number unless it belongs to the `^2` spelling, so most input skips the table.
+    // Only these scalars end a unit spelling, so plain numbers and other text skip the suffix table.
     private static func possibleSuffixEnd(_ text: String) -> Bool {
         let scalars = text.unicodeScalars
-        guard let last = scalars.last, ("0"..."9").contains(last) else { return true }
-        return last == "2" && scalars.dropLast().last == "^"
+        switch scalars.last {
+        case "s", "m", "h", "z", "g", "N", "J", "W", "V", "A", "K", "°", "²": return true
+        case "2": return scalars.dropLast().last == "^"
+        default: return false
+        }
     }
 
+    // Compares backwards over the scalar view, so matching allocates nothing.
     private static func trailingSuffix(_ text: String) -> GesQuantityUnit.Suffix? {
-        let scalars = Array(text.unicodeScalars)
+        let scalars = text.unicodeScalars
         for suffix in GesQuantityUnit.suffixes {
-            let spelling = suffix.scalars
-            guard scalars.count > spelling.count, scalars.suffix(spelling.count).elementsEqual(spelling) else { continue }
-            let remainder = scalars.prefix(scalars.count - spelling.count)
+            var index = scalars.endIndex
+            var matched = true
+            for expected in suffix.scalars.reversed() {
+                guard index > scalars.startIndex else {
+                    matched = false
+                    break
+                }
+                index = scalars.index(before: index)
+                if scalars[index] != expected {
+                    matched = false
+                    break
+                }
+            }
+            guard matched, index > scalars.startIndex else { continue }
+            let remainder = scalars[..<index]
             if let last = remainder.last, ("0"..."9").contains(last) { return suffix }
             let unsigned = remainder.first == "+" || remainder.first == "-" ? remainder.dropFirst() : remainder[...]
             if unsigned.elementsEqual("Infinity".unicodeScalars) || remainder.elementsEqual("NaN".unicodeScalars) { return suffix }

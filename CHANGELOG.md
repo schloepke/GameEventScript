@@ -121,7 +121,7 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   squared (`m/s²`, ASCII `m/s^2`), kilogram (`kg`), newton (`N`), joule (`J`),
   watt (`W`), volt (`V`), ampere (`A`), hertz (`Hz`), kelvin (`K`) and degree
   per second (`°/s`, ASCII `deg/s`), next to meters, seconds and degrees (ASCII
-  `deg`). Literals accept the prefixed spellings `km`, `ms`, `kN`, `kJ`, `MJ`,
+  `deg`). Literals accept the prefixed spellings `km`, `mm`, `ms`, `kN`, `kJ`, `MJ`,
   `kW`, `MW`, `kV`, `kHz`, `Wh` and `kWh`, which normalize exactly to the base
   unit. Products and quotients follow a closed derivation table, for example
   `10m / 2s` is `5m/s`, `2kg * 3m/s²` is `6N` and `1 / 2s` is `0.5Hz` (formerly

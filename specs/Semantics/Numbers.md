@@ -159,7 +159,7 @@ trailing signs, multiple suffixes, unknown suffixes, and unconsumed characters
 are invalid. A decimal point requires digits on both sides. An exponent
 requires at least one digit. Examples of invalid input are `12,34`, `100,2`,
 `1__000`, `1_.25`, `1,_000`, `1,000.2_5`, `.5`, `1.`, `1e`, `1e+`, `1000-`,
-`10 m`, and `10mm`.
+`10 m`, and `10ft`.
 
 Invalid input is a failed numeric conversion. An internal NaN or invalid-result
 marker is normalized to script-visible `nothing`, just as invalid mathematics

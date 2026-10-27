@@ -44,6 +44,7 @@ public static class GesQuantityUnits
         new("Hz", UnitHertz),
         new("km", UnitMeter, 3),
         new("ms", UnitSecond, -3),
+        new("mm", UnitMeter, -3),
         new("kg", UnitKilogram),
         new("kN", UnitNewton, 3),
         new("kJ", UnitJoule, 3),
@@ -257,6 +258,13 @@ public static class GesQuantityUnits
             (UnitWatt, UnitVolt) => UnitAmpere,
             (UnitWatt, UnitAmpere) => UnitVolt,
             (UnitWatt, UnitHertz) => UnitJoule,
+            (UnitWatt, UnitJoule) => UnitHertz,
+            (UnitMeterPerSecond, UnitHertz) => UnitMeter,
+            (UnitMeterPerSecond, UnitMeter) => UnitHertz,
+            (UnitDegreePerSecond, UnitHertz) => UnitDegree,
+            (UnitDegreePerSecond, UnitDegree) => UnitHertz,
+            (UnitMeterPerSecondSquared, UnitHertz) => UnitMeterPerSecond,
+            (UnitMeterPerSecondSquared, UnitMeterPerSecond) => UnitHertz,
             _ => null
         };
     }

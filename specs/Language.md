@@ -1367,7 +1367,7 @@ formats with the base symbol:
 
 | Spelling | Value |
 | --- | --- |
-| `km` | 1000 m |
+| `km`, `mm` | 1000 m, 0.001 m |
 | `ms` | 0.001 s |
 | `kN`, `kJ`, `kW`, `kV`, `kHz` | 1000 N, J, W, V, Hz |
 | `MJ`, `MW` | 1 000 000 J, W |
@@ -1426,6 +1426,13 @@ combination, such as `2m * 3m`, `2N + 3J` or `6kg / 2s`, gives `nothing`:
 | `m/s × Hz` | `m/s²` |
 | `J × Hz` | `W` |
 | `W / Hz` | `J` |
+| `W / J` | `Hz` |
+| `m/s / Hz` | `m` |
+| `m/s / m` | `Hz` |
+| `°/s / Hz` | `°` |
+| `°/s / °` | `Hz` |
+| `m/s² / Hz` | `m/s` |
+| `m/s² / (m/s)` | `Hz` |
 
 So `1 / 2s` is `0.5Hz`; use `as :Quantity(none)` when a plain number is
 needed. The derivations apply to numbers and to a vector multiplied or divided

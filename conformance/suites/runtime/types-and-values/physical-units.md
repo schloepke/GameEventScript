@@ -118,7 +118,7 @@ sources:
 ```ges
 module main
 on Start {
-  emit Prefixed(km: 2km, ms: 3ms, halfKm: 0.5km, kN: 1.5kN, kJ: 2kJ, megaJoule: 1MJ, kW: 3kW, megaWatt: 2MW, kV: 11kV, kHz: 2kHz, wattHour: 1Wh, kWh: 1.5kWh, smallMs: 0.1ms)
+  emit Prefixed(km: 2km, mm: 250mm, ms: 3ms, halfKm: 0.5km, kN: 1.5kN, kJ: 2kJ, megaJoule: 1MJ, kW: 3kW, megaWatt: 2MW, kV: 11kV, kHz: 2kHz, wattHour: 1Wh, kWh: 1.5kWh, smallMs: 0.1ms)
 }
 ```
 
@@ -139,6 +139,8 @@ steps:
         args:
           - name: km
             value: { type: ":Quantity.int64", value: "2000", unit: ":meter" }
+          - name: mm
+            value: { type: ":Quantity.binary64", value: "0.25", unit: ":meter" }
           - name: ms
             value: { type: ":Quantity.binary64", value: "0.003", unit: ":second" }
           - name: halfKm
@@ -403,7 +405,9 @@ sources:
 module main
 on Derive(n, s, hz, m, heading, speed, energy, power) {
   emit Runtime(frequency: n / s, period: n / hz, cycles: hz * s, cyclesSwapped: s * hz, speed: m * hz, turn: heading * hz, accel: speed * hz, power: energy * hz, energy: power / hz)
+  emit Inverse(rate: power / energy, distance: speed / hz, speedRate: speed / m, heading: (heading * hz) / hz, turnRate: (heading * hz) / heading, speed: (speed * hz) / hz, accelRate: (speed * hz) / speed)
   emit Folded(frequency: 1 / 2s, period: 1 / 4Hz, cycles: 4Hz * 2s, cyclesSwapped: 2s * 4Hz, speed: 3m * 2Hz, turn: 90° * 2Hz, accel: 5m/s * 2Hz, power: 10J * 2Hz, energy: 20W / 2Hz)
+  emit FoldedInverse(rate: 20W / 10J, distance: 6m/s / 2Hz, speedRate: 6m/s / 3m, heading: 180°/s / 2Hz, turnRate: 180°/s / 90°, speed: 10m/s² / 2Hz, accelRate: 10m/s² / 5m/s)
 }
 ```
 
@@ -458,6 +462,22 @@ steps:
             value: { type: ":Quantity.int64", value: "40", unit: ":watt" }
           - name: energy
             value: { type: ":Quantity.int64", value: "5", unit: ":joule" }
+      - name: Inverse
+        args:
+          - name: rate
+            value: { type: ":Quantity.int64", value: "2", unit: ":hertz" }
+          - name: distance
+            value: { type: ":Quantity.binary64", value: "1.25", unit: ":meter" }
+          - name: speedRate
+            value: { type: ":Quantity.binary64", value: "1.6666666666666667", unit: ":hertz" }
+          - name: heading
+            value: { type: ":Quantity.int64", value: "90", unit: ":degree" }
+          - name: turnRate
+            value: { type: ":Quantity.int64", value: "4", unit: ":hertz" }
+          - name: speed
+            value: { type: ":Quantity.int64", value: "5", unit: ":meterPerSecond" }
+          - name: accelRate
+            value: { type: ":Quantity.int64", value: "4", unit: ":hertz" }
       - name: Folded
         args:
           - name: frequency
@@ -478,6 +498,22 @@ steps:
             value: { type: ":Quantity.int64", value: "20", unit: ":watt" }
           - name: energy
             value: { type: ":Quantity.int64", value: "10", unit: ":joule" }
+      - name: FoldedInverse
+        args:
+          - name: rate
+            value: { type: ":Quantity.int64", value: "2", unit: ":hertz" }
+          - name: distance
+            value: { type: ":Quantity.int64", value: "3", unit: ":meter" }
+          - name: speedRate
+            value: { type: ":Quantity.int64", value: "2", unit: ":hertz" }
+          - name: heading
+            value: { type: ":Quantity.int64", value: "90", unit: ":degree" }
+          - name: turnRate
+            value: { type: ":Quantity.int64", value: "2", unit: ":hertz" }
+          - name: speed
+            value: { type: ":Quantity.int64", value: "5", unit: ":meterPerSecond" }
+          - name: accelRate
+            value: { type: ":Quantity.int64", value: "2", unit: ":hertz" }
 ```
 
 ---
@@ -574,8 +610,8 @@ sources:
 ```ges
 module main
 on Derive(m, s, force, energy, mass) {
-  emit Runtime(area: m * m, mixed: force + energy, massRate: mass / s, integerDivision: m div s, percentage: 50% / s, inverseRate: (m / s) / 2Hz, less: m < s)
-  emit Folded(area: 2m * 3m, mixed: 2N + 3J, massRate: 6kg / 2s, integerDivision: 10m div 2s, percentage: 50% / 2s, inverseRate: 5m/s / 2Hz, less: 2m < 3s)
+  emit Runtime(area: m * m, mixed: force + energy, massRate: mass / s, integerDivision: m div s, percentage: 50% / s, pace: s / m, less: m < s)
+  emit Folded(area: 2m * 3m, mixed: 2N + 3J, massRate: 6kg / 2s, integerDivision: 10m div 2s, percentage: 50% / 2s, pace: 2s / 3m, less: 2m < 3s)
 }
 ```
 
@@ -616,7 +652,7 @@ steps:
             value: { type: ":Nothing" }
           - name: percentage
             value: { type: ":Nothing" }
-          - name: inverseRate
+          - name: pace
             value: { type: ":Nothing" }
           - name: less
             value: { type: ":Boolean", value: false }
@@ -632,7 +668,7 @@ steps:
             value: { type: ":Nothing" }
           - name: percentage
             value: { type: ":Nothing" }
-          - name: inverseRate
+          - name: pace
             value: { type: ":Nothing" }
           - name: less
             value: { type: ":Boolean", value: false }
@@ -735,7 +771,7 @@ sources:
 module main
 on Start {
   emit Formatted(speed: 3m/s as :Text, accel: 0.1m/s² as :Text, turn: 120deg/s as :Text, energy: 1.5kWh as :Text, delay: 250ms as :Text, frequency: 20Hz as :Text)
-  emit Parsed(speed: '3m/s' as :Number, accel: '6m/s^2' as :Number, turn: '120deg/s' as :Number, energy: '1.5kWh' as :Number, delay: '250ms' as :Number, force: '5N' as :Number, nan: 'NaN' as :Number, millimeter: '10mm' as :Number, roundtrip: ((0.1m/s² as :Text) as :Number) = 0.1m/s²)
+  emit Parsed(speed: '3m/s' as :Number, accel: '6m/s^2' as :Number, turn: '120deg/s' as :Number, energy: '1.5kWh' as :Number, delay: '250ms' as :Number, force: '5N' as :Number, nan: 'NaN' as :Number, millimeter: '10mm' as :Number, unknown: '10ft' as :Number, roundtrip: ((0.1m/s² as :Text) as :Number) = 0.1m/s²)
 }
 ```
 
@@ -783,6 +819,8 @@ steps:
           - name: nan
             value: { type: ":Nothing" }
           - name: millimeter
+            value: { type: ":Quantity.binary64", value: "0.01", unit: ":meter" }
+          - name: unknown
             value: { type: ":Nothing" }
           - name: roundtrip
             value: { type: ":Boolean", value: true }

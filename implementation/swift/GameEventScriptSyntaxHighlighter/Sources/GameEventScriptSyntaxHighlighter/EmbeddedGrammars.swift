@@ -1387,7 +1387,7 @@ enum GesEmbeddedGrammars {
               "endLast": false
             },
             {
-              "pattern": "\\b\\d(?:[\\d_]*\\d)?(?:\\.\\d(?:[\\d_]*\\d)?)?(?:m/s²|m/s\\^2|deg/s|°/s|m/s|kWh|kHz|deg|Wh|Hz|km|ms|kg|kN|kJ|MJ|kW|MW|kV|°|m|s|N|J|W|V|A|K)(?=$|[^A-Za-z0-9_])",
+              "pattern": "\\b\\d(?:[\\d_]*\\d)?(?:\\.\\d(?:[\\d_]*\\d)?)?(?:m/s²|m/s\\^2|deg/s|°/s|m/s|kWh|kHz|deg|Wh|Hz|km|mm|ms|kg|kN|kJ|MJ|kW|MW|kV|°|m|s|N|J|W|V|A|K)(?=$|[^A-Za-z0-9_])",
               "end": "",
               "name": "constant.numeric.unit.gameeventscript",
               "contentName": "",
@@ -3945,7 +3945,7 @@ enum GesEmbeddedGrammars {
               "endLast": false
             },
             {
-              "pattern": "\\b\\d(?:[\\d_]*\\d)?(?:\\.\\d(?:[\\d_]*\\d)?)?(?:m/s²|m/s\\^2|deg/s|°/s|m/s|kWh|kHz|deg|Wh|Hz|km|ms|kg|kN|kJ|MJ|kW|MW|kV|°|m|s|N|J|W|V|A|K)(?=$|[^A-Za-z0-9_])",
+              "pattern": "\\b\\d(?:[\\d_]*\\d)?(?:\\.\\d(?:[\\d_]*\\d)?)?(?:m/s²|m/s\\^2|deg/s|°/s|m/s|kWh|kHz|deg|Wh|Hz|km|mm|ms|kg|kN|kJ|MJ|kW|MW|kV|°|m|s|N|J|W|V|A|K)(?=$|[^A-Za-z0-9_])",
               "end": "",
               "name": "constant.numeric.unit.gameeventscript",
               "contentName": "",

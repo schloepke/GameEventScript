@@ -35,6 +35,7 @@ extension GesQuantityUnit {
         .init(text: "Hz", unit: .hertz),
         .init(text: "km", unit: .meter, exponent: 3),
         .init(text: "ms", unit: .second, exponent: -3),
+        .init(text: "mm", unit: .meter, exponent: -3),
         .init(text: "kg", unit: .kilogram),
         .init(text: "kN", unit: .newton, exponent: 3),
         .init(text: "kJ", unit: .joule, exponent: 3),
@@ -171,6 +172,13 @@ extension GesQuantityUnit {
         case (.watt, .volt): return .ampere
         case (.watt, .ampere): return .volt
         case (.watt, .hertz): return .joule
+        case (.watt, .joule): return .hertz
+        case (.meterPerSecond, .hertz): return .meter
+        case (.meterPerSecond, .meter): return .hertz
+        case (.degreePerSecond, .hertz): return .degree
+        case (.degreePerSecond, .degree): return .hertz
+        case (.meterPerSecondSquared, .hertz): return .meterPerSecond
+        case (.meterPerSecondSquared, .meterPerSecond): return .hertz
         default: return nil
         }
     }

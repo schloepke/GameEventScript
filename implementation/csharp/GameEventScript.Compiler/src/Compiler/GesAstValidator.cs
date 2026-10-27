@@ -637,10 +637,10 @@ internal static class GesAstValidator
         {
             GesUnaryOperator.Parse => StaticExpressionInfo.Unknown,
             GesUnaryOperator.HasValue or GesUnaryOperator.Empty or GesUnaryOperator.Chance => StaticExpressionInfo.Boolean,
-            GesUnaryOperator.Abs or
-                GesUnaryOperator.Floor or GesUnaryOperator.Ceil or GesUnaryOperator.Truncate or
+            GesUnaryOperator.Abs => ClassifyUnitPreserving(unary.Operand, vectorMagnitude: true, callables, typeDefinitions, declaredTypes, visitedCallables),
+            GesUnaryOperator.Floor or GesUnaryOperator.Ceil or GesUnaryOperator.Truncate or
                 GesUnaryOperator.RoundHalfEven or GesUnaryOperator.RoundHalfUp or GesUnaryOperator.RoundHalfDown
-                => ClassifyUnitPreserving(unary.Operand, callables, typeDefinitions, declaredTypes, visitedCallables),
+                => ClassifyUnitPreserving(unary.Operand, vectorMagnitude: false, callables, typeDefinitions, declaredTypes, visitedCallables),
             GesUnaryOperator.NaturalLog or GesUnaryOperator.Exp or
                 GesUnaryOperator.DegreeToRadians or GesUnaryOperator.DegreeFromRadians or GesUnaryOperator.WrapDegree or
                 GesUnaryOperator.Sin or GesUnaryOperator.Cos or GesUnaryOperator.Tan or
@@ -654,8 +654,11 @@ internal static class GesAstValidator
     }
 
     // abs and rounding keep a scalar Quantity's unit, so a statically unknown operand leaves the result unknown too.
+    // Only abs accepts a vector, whose magnitude keeps a unit the nominal type does not expose; rounding a vector is
+    // nothing, so it classifies as a unitless number.
     private static StaticExpressionInfo ClassifyUnitPreserving(
         GesExpressionNode operand,
+        bool vectorMagnitude,
         IReadOnlyDictionary<string, GesCallableDefinition> callables,
         IReadOnlyDictionary<string, GesTypeDefinitionNode> typeDefinitions,
         IReadOnlyDictionary<string, string> declaredTypes,
@@ -664,8 +667,7 @@ internal static class GesAstValidator
         var type = ClassifyExpression(operand, callables, typeDefinitions, declaredTypes, visitedCallables).TypeName;
         if (type is "s" or "m" || GesQuantityUnits.ParseTypeName(type) is not null || type?.StartsWith("quantity:", StringComparison.Ordinal) == true)
             return StaticExpressionInfo.Other(type);
-        // Vector magnitude retains the vector's unit, which the nominal type alone does not expose.
-        return type is null or "vector" ? StaticExpressionInfo.Other() : StaticExpressionInfo.Other("number");
+        return type is null || vectorMagnitude && type == "vector" ? StaticExpressionInfo.Other() : StaticExpressionInfo.Other("number");
     }
 
     private static StaticExpressionInfo ClassifyBinary(

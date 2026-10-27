@@ -87,7 +87,7 @@ internal static class GesTextNumberCast
         }
         if (position != end || grouping && underscores) return null;
 
-        if (factor != 1) return ReadFactored(text, digitsStart, mantissaEnd, negative, percentage, fractionalDigits, exponent + shift, factor, unit);
+        if (factor != 1) return ReadFactored(text, digitsStart, mantissaEnd, negative, fractionalDigits, exponent + shift, factor, unit);
 
         var digits = 0;
         var first = -1;
@@ -148,7 +148,8 @@ internal static class GesTextNumberCast
     }
 
     // The energy spellings Wh and kWh multiply the mantissa digits exactly by a non-decimal factor before rounding.
-    private static GesValue? ReadFactored(string text, int digitsStart, int mantissaEnd, bool negative, bool percentage, int fractionalDigits, long exponent, int factor, GesQuantityUnit unit)
+    // They carry a unit, so the caller has already rejected percentage decoding.
+    private static GesValue? ReadFactored(string text, int digitsStart, int mantissaEnd, bool negative, int fractionalDigits, long exponent, int factor, GesQuantityUnit unit)
     {
         var mantissaDigits = 0;
         for (var i = digitsStart; i < mantissaEnd; i++)
@@ -167,10 +168,10 @@ internal static class GesTextNumberCast
             if (first < 0) first = i;
             last = i;
         }
-        if (first < 0) return percentage ? GesValue.GesPercentage(0) : GesValue.GesInteger(0, unit);
+        if (first < 0) return GesValue.GesInteger(0, unit);
 
         var power = exponent - fractionalDigits + digits - last - 1;
-        if (!percentage && power >= 0 && last - first + 1 + power <= 19)
+        if (power >= 0 && last - first + 1 + power <= 19)
         {
             ulong magnitude = 0;
             for (var i = first; i <= last; i++) magnitude = magnitude * 10 + (uint)(digitBuffer[i] - '0');
@@ -191,10 +192,7 @@ internal static class GesTextNumberCast
         buffer[count++] = 'e';
         (exponent - fractionalDigits).TryFormat(buffer.Slice(count), out var written, provider: CultureInfo.InvariantCulture);
         count += written;
-        if (!double.TryParse(buffer.Slice(0, count), DecimalStyles, CultureInfo.InvariantCulture, out var number)) return null;
-        return percentage
-            ? double.IsFinite(number) ? GesValue.GesPercentage(number) : GesValue.GesNothing()
-            : GesValue.GesFloat(number, unit);
+        return double.TryParse(buffer.Slice(0, count), DecimalStyles, CultureInfo.InvariantCulture, out var number) ? GesValue.GesFloat(number, unit) : null;
     }
 
     // Only these characters end a unit spelling, so plain numbers and other text skip the suffix table. A native test

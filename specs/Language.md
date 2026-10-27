@@ -1392,7 +1392,8 @@ value is meant. Vectors and points may carry any unit.
 Addition, subtraction, comparisons, `min`, `max` and `clamp` keep their
 same-unit rules. Multiplying or dividing a quantity by a unitless number keeps
 its unit, and dividing two quantities of the same unit gives a unitless number,
-so `10m / 2m` is `5`. `abs`, `hypot` and rounding keep the unit; trigonometry
+so `10m / 2m` is `5`. `abs` and `hypot` keep the unit, rounding follows
+[Number semantics](Semantics/Numbers.md#conversion-and-rounding); trigonometry
 and powers are unchanged. Any other product or quotient of two units follows
 this derivation table, where multiplication is commutative; every other
 combination, such as `2m * 3m`, `2N + 3J` or `6kg / 2s`, gives `nothing`:

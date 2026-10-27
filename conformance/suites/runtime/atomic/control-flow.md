@@ -3478,6 +3478,90 @@ error: {"phase": "validate", "code": "validate.invalidTypeConstructor"}
 
 ---
 
+## Test: delays-preserve-rounded-quantity-units
+
+This case verifies that rounding a time quantity yields a valid send delay.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delays-preserve-rounded-quantity-units
+kind: scriptApi
+level: atomic
+sources:
+  - name: "delays-preserve-rounded-quantity-units.ges"
+    program: main
+stepActions:
+  step-0002:
+    - advanceMicroseconds: "1000000"
+```
+
+### Source code under test
+
+```ges
+function whole(_ value) be floor value
+on Start {
+  let delay be ceil 0.5s
+  emit after (floor 1.5s) Ping(value: 1)
+  emit after (whole(1.9s)) Ping(value: 2)
+  emit after (delay) Ping(value: 3)
+  emit after (truncate 1.9s) Ping(value: 4)
+  emit after (round half even 1.4s) Ping(value: 5)
+  emit after (round half up 0.5s) Ping(value: 6)
+  emit after (round half down 1.5s) Ping(value: 7)
+}
+on Tick {}
+on Ping(value) { emit Done(value: value) }
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| step-0001 | Start | completion |  |
+| step-0002 | Tick | completion |  |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps: {"step-0001": {"local": [{"name": "Ping", "args": [{"name": "value", "value": {"type": ":Number.int64", "value": "1"}}]}, {"name": "Ping", "args": [{"name": "value", "value": {"type": ":Number.int64", "value": "2"}}]}, {"name": "Ping", "args": [{"name": "value", "value": {"type": ":Number.int64", "value": "3"}}]}, {"name": "Ping", "args": [{"name": "value", "value": {"type": ":Number.int64", "value": "4"}}]}, {"name": "Ping", "args": [{"name": "value", "value": {"type": ":Number.int64", "value": "5"}}]}, {"name": "Ping", "args": [{"name": "value", "value": {"type": ":Number.int64", "value": "6"}}]}, {"name": "Ping", "args": [{"name": "value", "value": {"type": ":Number.int64", "value": "7"}}]}], "waiting": true}, "step-0002": {"waiting": false, "local": [{"name": "Done", "args": [{"name": "value", "value": {"type": ":Number.int64", "value": "1"}}]}, {"name": "Done", "args": [{"name": "value", "value": {"type": ":Number.int64", "value": "2"}}]}, {"name": "Done", "args": [{"name": "value", "value": {"type": ":Number.int64", "value": "3"}}]}, {"name": "Done", "args": [{"name": "value", "value": {"type": ":Number.int64", "value": "4"}}]}, {"name": "Done", "args": [{"name": "value", "value": {"type": ":Number.int64", "value": "5"}}]}, {"name": "Done", "args": [{"name": "value", "value": {"type": ":Number.int64", "value": "6"}}]}, {"name": "Done", "args": [{"name": "value", "value": {"type": ":Number.int64", "value": "7"}}]}]}}
+```
+
+---
+
+## Test: delay-rejects-rounded-unitless
+
+This case verifies that rounding a percentage does not yield a send delay.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delay-rejects-rounded-unitless
+kind: compileError
+level: atomic
+sources:
+  - name: "delay-rejects-rounded-unitless.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start { emit after (floor 150%) Ping() }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error: {"phase": "validate", "code": "validate.invalidTypeConstructor"}
+```
+
+---
+
 ## Test: delay-rejects-abs-distance
 
 This case verifies delay-rejects-abs-distance.
@@ -3511,7 +3595,7 @@ error: {"phase": "validate", "code": "validate.invalidTypeConstructor"}
 
 ## Test: delay-rejects-floor-unitless
 
-This case verifies delay-rejects-floor-unitless.
+This case verifies that rounding a unitless number does not yield a send delay.
 
 ### Case description
 
@@ -3528,7 +3612,7 @@ sources:
 ### Source code under test
 
 ```ges
-on Start { emit after (floor 1s) Ping() }
+on Start { emit after (floor 1.5) Ping() }
 ```
 
 ### Expectation

@@ -38,6 +38,12 @@ extension GesAstValidator {
                 return ["unknown", "other", "vector"].contains(input) ? "other" : "number"
             }
             if op == .not { return predicate(child(value)) ? "boolean" : "unknown" }
+            // Rounding keeps a scalar Quantity's unit, so a statically unknown operand leaves the result unknown too.
+            if [.floor, .ceil, .truncate, .roundHalfEven, .roundHalfUp, .roundHalfDown].contains(op) {
+                let input = child(value)
+                if input.hasPrefix("quantity:") { return input }
+                return ["unknown", "other", "vector"].contains(input) ? "other" : "number"
+            }
             return "number"
         case .binary(let op, let a, let b):
             if [.equal, .notEqual, .less, .greater, .lessOrEqual, .greaterOrEqual, .contains, .containsValue, .startsWith, .endsWith].contains(op) { return "boolean" }

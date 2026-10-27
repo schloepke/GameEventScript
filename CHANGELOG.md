@@ -19,8 +19,9 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 - `floor`, `ceil`, `truncate` and the three `round` forms keep the unit of a
   quantity, at runtime and in constant folding: `floor 2.5m` is now `2m` instead
   of the unitless `2`, and `round half even 2.5m/s` is `2m/s`. Percentages still
-  round to unitless numbers. Remove the unit explicitly with
-  `as :Quantity(none)` where a plain number is needed.
+  round to unitless numbers. A rounded time such as `floor 1.5s` is therefore a
+  valid send delay. Remove the unit explicitly with `as :Quantity(none)` where a
+  plain number is needed.
 - Swift `GesQuantityUnit` has new cases for the added physical units, so an
   exhaustive `switch` over it must handle `kilogram`, `newton`, `joule`, `watt`,
   `volt`, `ampere`, `hertz`, `kelvin` and `degreePerSecond` (or add a `default`).

@@ -488,7 +488,15 @@ The first two statements schedule local delivery and publication, respectively.
 The publication reaches the outbound sink only when due. The Boolean check in
 the last example confirms acceptance, not successful delivery. Use a time
 quantity such as `0.2s`; `emit after 10 Fire()` is invalid because `10` has no
-time unit.
+time unit. The compiler rejects every delay whose type it knows statically and
+that is not a time quantity, for example `10m`, `floor 1.5m` or `abs (-1)`.
+`abs` and rounding keep the unit of a scalar quantity, so `abs (-1s)` and
+`floor 1.5s` are valid delays. `abs` of a vector is its magnitude with the
+vector's unit, while rounding a vector produces `nothing` and is rejected. A
+delay whose type is statically unknown, such as an untyped function parameter,
+is checked when the send executes: a value that is not a valid time quantity
+rejects the send as described in
+[Host and runtime](HostRuntime.md#delayed-dispatch).
 
 ### `let`
 

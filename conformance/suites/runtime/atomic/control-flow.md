@@ -2013,6 +2013,53 @@ steps:
 
 ---
 
+## Test: delay-unknown-operand-checked-at-runtime
+
+This case verifies that a delay whose type is statically unknown compiles and that a value without a time unit rejects the send at runtime.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delay-unknown-operand-checked-at-runtime
+kind: scriptApi
+level: atomic
+sources:
+  - name: "delay-unknown-operand-checked-at-runtime.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+function pass(_ value) be value
+on Start {
+  let span be emit after (pass(10m)) Ping()
+  let rounded be emit after (floor pass(1.5m)) Ping()
+  let magnitude be emit after (abs pass(-1)) Ping()
+  emit Done(span: span, rounded: rounded, magnitude: magnitude)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| step-0001 | Start | completion |  |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  step-0001:
+    input: { args: [] }
+    waiting: false
+    local: [{ name: Done, args: [{ name: span, value: { type: ":Boolean", value: false } }, { name: rounded, value: { type: ":Boolean", value: false } }, { name: magnitude, value: { type: ":Boolean", value: false } }] }]
+```
+
+---
+
 ## Test: delay-negative
 
 This case verifies delay-negative.

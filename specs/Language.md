@@ -463,8 +463,10 @@ form add a delay. Duration is evaluated first, then additional tags and message
 arguments using the existing send argument order; each is evaluated once. The
 message and tags are captured immediately. Duration must be a numeric Quantity(s),
 not a unitless number or another unit. Unit-preserving computations such as
-`abs (-0.2s)` are valid durations; a numeric result must not be assumed unitless
-when its unit is unknown. Statically established wrong types produce
+`abs (-0.2s)`, `floor 1.5s` or `abs` of a time Vector are valid durations; a
+numeric result must not be assumed unitless when its unit is unknown, for
+example an untyped function parameter. Statically established wrong types, such
+as `10m`, `floor 1.5m` or a rounded Vector, produce
 `validate.invalidTypeConstructor`; dynamically invalid values, nothing, negative
 values, nonfinite values or unrepresentable delays produce false without sending.
 A zero duration is identical to the same result-bearing send without `after`:
@@ -488,15 +490,7 @@ The first two statements schedule local delivery and publication, respectively.
 The publication reaches the outbound sink only when due. The Boolean check in
 the last example confirms acceptance, not successful delivery. Use a time
 quantity such as `0.2s`; `emit after 10 Fire()` is invalid because `10` has no
-time unit. The compiler rejects every delay whose type it knows statically and
-that is not a time quantity, for example `10m`, `floor 1.5m` or `abs (-1)`.
-`abs` and rounding keep the unit of a scalar quantity, so `abs (-1s)` and
-`floor 1.5s` are valid delays. `abs` of a vector is its magnitude with the
-vector's unit, while rounding a vector produces `nothing` and is rejected. A
-delay whose type is statically unknown, such as an untyped function parameter,
-is checked when the send executes: a value that is not a valid time quantity
-rejects the send as described in
-[Host and runtime](HostRuntime.md#delayed-dispatch).
+time unit.
 
 ### `let`
 
@@ -928,7 +922,8 @@ is the natural exponential counterpart of `ln`.
 
 Unary intrinsics accept either `operation expression` or
 `operation(expression)`. `floor`, `ceil`, `truncate`, and the three `round`
-forms return integers using [Number semantics](Semantics/Numbers.md). `rad`
+forms return integers using [Number semantics](Semantics/Numbers.md); a Vector
+or Point operand produces `nothing`. `rad`
 converts degrees to unitless radians; `deg` converts unitless radians to a degree
 quantity; `wrap degree` reduces a unitless or degree-valued angle to `[0°, 360°)`.
 `chance` accepts a unitless percentage or numeric probability: integer inputs and
@@ -1329,7 +1324,8 @@ coercion; the complete contract is in
 
 `abs` preserves the operand's numeric family for percentages and quantities:
 absolute percentages remain `:Percentage`, and absolute quantities keep their
-unit. Finite numeric results that are exactly integral are represented as
+unit. `abs` of a Vector is its length with the Vector's unit; `abs` of a Point
+produces `nothing`. Finite numeric results that are exactly integral are represented as
 integer values.
 
 ### Quantities

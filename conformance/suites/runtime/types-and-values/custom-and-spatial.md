@@ -1142,6 +1142,63 @@ steps:
 
 ---
 
+## Test: abs measures a vector while rounding rejects spatial values
+
+This runtime case verifies that `abs` of a Point and every rounding operation on a Vector or Point produce `nothing`; `abs` of a Vector is its length.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: spatial-abs-and-rounding
+kind: scriptApi
+level: atomic
+sources:
+  - name: "spatial-abs-and-rounding.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start {
+  emit Done(pointAbs: abs :Point(3m, 4m), vectorFloor: floor :Vector(1.5m, 2.5m), pointRound: round half up :Point(1.5, 0.5), vectorCeil: ceil :Vector(0.5s, 1s))
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| step-0001 | Start | completion |  |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  step-0001:
+    input:
+      args: []
+    local:
+      - name: "Done"
+        args:
+          - name: "pointAbs"
+            value:
+              type: ":Nothing"
+          - name: "vectorFloor"
+            value:
+              type: ":Nothing"
+          - name: "pointRound"
+            value:
+              type: ":Nothing"
+          - name: "vectorCeil"
+            value:
+              type: ":Nothing"
+```
+
+---
+
 ## Test: invalid vector arithmetic returns nan
 
 This runtime case exercises “invalid vector arithmetic returns nan” and verifies the declared messages, values, and execution result.

@@ -81,14 +81,10 @@ private final class GesMessageJsonCodec {
         return name
     }
 
+    // Units use their canonical symbols, for example "m/s"; the empty string is unitless.
     static func unit(_ value: GesValue) throws -> GesQuantityUnit {
-        switch try string(value) {
-        case "": .none
-        case "s": .second
-        case "m": .meter
-        case "°": .degree
-        default: throw GesJson.error()
-        }
+        guard let unit = GesQuantityUnit(symbol: try string(value)) else { throw GesJson.error() }
+        return unit
     }
 
     static func envelope(_ value: GesValue, _ content: String) throws -> GesValue {

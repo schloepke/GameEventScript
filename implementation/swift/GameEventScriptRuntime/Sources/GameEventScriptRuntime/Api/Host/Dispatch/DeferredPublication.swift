@@ -3,6 +3,7 @@
 
 struct GesDeferredPublication {
     let message: GameEventScriptMessage
+    let id: Int64
     let localAccepted: Bool
     let instance: GesProgramInstance
 }

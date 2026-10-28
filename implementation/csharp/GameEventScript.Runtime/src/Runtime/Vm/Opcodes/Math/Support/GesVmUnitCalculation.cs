@@ -27,16 +27,15 @@ internal class GesVmUnitCalculation
 
         return null;
     }
+    // Products and quotients of two quantities follow the closed derivation table; the unitless cases stay inline.
     internal static GesQuantityUnit? ProductUnit(in GesValue a, in GesValue b)
-    {
-        if (a.HasUnit && b.HasUnit)
-        {
-            return null;
-        }
+        => a.Unit == UnitNone ? b.Unit : b.Unit == UnitNone ? a.Unit : GesQuantityUnits.Product(a.Unit, b.Unit);
 
-        return a.Unit is UnitNone ? b.Unit : a.Unit;
-    }
     internal static GesQuantityUnit? QuotientUnit(in GesValue a, in GesValue b)
+        => b.Unit == UnitNone ? a.Unit : a.Unit == b.Unit ? UnitNone : GesQuantityUnits.Quotient(a.Unit, b.Unit);
+
+    // Integer division keeps the derivation-free rules: a unitless divisor keeps the unit and equal units cancel.
+    internal static GesQuantityUnit? IntegerQuotientUnit(in GesValue a, in GesValue b)
     {
         switch (a.HasUnit)
         {
@@ -48,5 +47,4 @@ internal class GesVmUnitCalculation
                 return a.Unit == b.Unit ? UnitNone : null;
         }
     }
-
 }

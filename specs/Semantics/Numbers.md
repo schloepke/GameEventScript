@@ -103,6 +103,10 @@ saturating conversion:
 - `round half up`: nearest; an exact half goes away from zero.
 - `round half down`: nearest; an exact half goes toward zero.
 
+The integer result keeps the unit of a scalar Quantity, so `floor 2.5m` is `2m`.
+A percentage operand is a ratio without a unit, so `floor 150%` is the unitless
+`1`.
+
 These names describe the existing DSL semantics; they are not delegated to a
 host language's similarly named default overload.
 
@@ -128,10 +132,15 @@ GroupedDigits = FirstGroup "," ThreeDigits {"," ThreeDigits}
 FirstGroup  = Digit [Digit [Digit]]
 ThreeDigits = Digit Digit Digit
 Digit       = "0".."9"
-Suffix      = "m" | "s" | "°" | "%"
+Suffix      = UnitSpelling | "%"
 ```
 
-All digits and signs are ASCII. Special tokens and suffixes are case-sensitive.
+`UnitSpelling` is any unit symbol, ASCII spelling or prefixed spelling listed in
+[Language quantities](../Language.md#quantities), such as `m/s`, `deg/s`, `ms`
+or `kWh`. The suffix is the longest spelling that ends the token; it must
+directly follow a digit, `Infinity` or `NaN`, so `NaN` itself has no newton
+suffix. All digits and signs are ASCII. Special tokens and suffixes are
+case-sensitive.
 Leading zeroes are allowed in the integer part and exponent. Both `e` and `E`,
 an explicit positive exponent sign, and exponent leading zeroes are accepted.
 Thus `1000`, `100.2`, `1.02e20`, `1e03`, and `1E+003` are valid inputs.
@@ -154,7 +163,7 @@ trailing signs, multiple suffixes, unknown suffixes, and unconsumed characters
 are invalid. A decimal point requires digits on both sides. An exponent
 requires at least one digit. Examples of invalid input are `12,34`, `100,2`,
 `1__000`, `1_.25`, `1,_000`, `1,000.2_5`, `.5`, `1.`, `1e`, `1e+`, `1000-`,
-`10 m`, and `10ms`.
+`10 m`, and `10ft`.
 
 Invalid input is a failed numeric conversion. An internal NaN or invalid-result
 marker is normalized to script-visible `nothing`, just as invalid mathematics
@@ -191,8 +200,13 @@ For `as :Number`, the decimal significand and exponent denote one exact
 mathematical decimal value before conversion to GES storage:
 
 - With no suffix, the result is a unitless Number.
-- With `m`, `s`, or `°`, the result is a Number carrying that Quantity unit.
-  The suffix neither rescales nor rounds the numeric value.
+- With a unit symbol or ASCII spelling, the result is a Number carrying that
+  Quantity unit. The suffix neither rescales nor rounds the numeric value.
+- With a prefixed spelling, the mathematical decimal value is multiplied
+  exactly by the spelling's factor (a power of ten, 3600 for `Wh` or 3 600 000
+  for `kWh`) before numeric conversion, and the result carries the base unit.
+  Source literals use the same decoding, so `250ms` and `'250ms' as :Number`
+  are both `0.25s`.
 - With `%`, the mathematical decimal value is divided by exactly 100 before
   numeric conversion. The result of `as :Number` is the unitless ratio, not a
   Percentage value. This is the same numeric view as casting a Percentage to
@@ -211,8 +225,8 @@ underflow follows the same rounding rule through subnormal values to zero.
 Zero is canonicalized to positive zero. Parsing does not saturate at Int64
 bounds and does not use the runtime equality ULP tolerance.
 
-Percentage scaling is part of the exact decimal interpretation, before that
-single rounding step. Parsing a percentage by first rounding its displayed
+Percentage and prefix scaling are part of the exact decimal interpretation,
+before that single rounding step. Parsing a percentage by first rounding its displayed
 number to Binary64 and then dividing by 100 is permitted only if it produces
 the same required result. This also avoids intermediate overflow for a finite
 ratio whose percentage magnitude exceeds the Binary64 range.
@@ -233,7 +247,11 @@ unitless. `NaN` produces `nothing` with or without a suffix.
 | `1.00001e02` | nearest Binary64 to decimal `100.001` |
 | `1e03m` | Int64 Quantity `1000m` |
 | `100.2s` | Binary64 Quantity with unit `s` |
-| `90°` | Int64 Quantity `90°` |
+| `90°` or `90deg` | Int64 Quantity `90°` |
+| `3m/s` | Int64 Quantity `3m/s` |
+| `2km` | Int64 Quantity `2000m` |
+| `3ms` | nearest Binary64 to decimal `0.003`, with unit `s` |
+| `1.5kWh` | Int64 Quantity `5400000J` |
 | `10%` or `1e1%` | unitless Number with the same numeric value as `0.1` |
 | `100%` | unitless Int64 `1` |
 
@@ -308,7 +326,8 @@ preserve every bit after zero and integral-storage canonicalization; approximate
 numeric equality is insufficient. This guarantee holds when one conforming
 implementation writes the text and another reads it.
 
-Quantity formatting appends its unit suffix. Percentage formatting appends `%`
+Quantity formatting appends the canonical symbol of its unit, never a prefixed
+or ASCII spelling. Percentage formatting appends `%`
 and expresses the stored ratio as a decimal percentage magnitude. Parsing
 that text with `as :Number` must recover the Percentage's numeric ratio after
 normal Number canonicalization. This guarantee preserves the numeric meaning;

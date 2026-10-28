@@ -177,6 +177,12 @@ belongs to the CLI or embedding; the portable compiler accepts source text.
 - Source types use PascalCase, for example `:Number`, `:Quantity(m)`, and
   `:Unit`. Extension namespaces and functions remain lowercase, for example
   `:math.distance`.
+- Quantity units form a closed set with stable UnitIds (specs/Bytecode.md) and
+  one central table per runtime (C# `GesQuantityUnits`, Swift `QuantityUnits.swift`)
+  for symbols, prefixed literal spellings and the product/quotient derivation
+  table. Lexer, `parse`, constant folding and the VM all read that table; the
+  Swift `@GesField` macro mirrors the unit names because it cannot import the
+  runtime. Integer division, percentages and points keep derivation-free rules.
 - Module identifiers are dot-separated lowercase components with optional
   digits.
 - `constant $name be LITERAL` declares a program-wide compile-time scalar.
@@ -261,7 +267,13 @@ only native handlers or any number of additively loaded Programs.
   Future-only work returns Waiting; portable pumps never sleep. Delayed publications
   reach the sink only when due. Equal deadlines preserve enqueue order.
 - Subscription snapshots are captured when a message is enqueued. Lifecycle
-  changes affect subsequently enqueued messages.
+  changes affect subsequently enqueued messages. A delayed emit without
+  recipients is not scheduled; it behaves like the instant emit.
+- Every queued or processed send carries a host-local send ID in its pending
+  queue entry, never in the immutable Message. Observer callbacks report it from
+  emit, publish or `MessageScheduled` to each dispatch or `MessageDiscarded`;
+  0 means no ID. Every observer callback has an empty default in both ports.
+  See specs/HostRuntime.md#send-ids.
 - Dispatch order is descending priority followed by registration order.
 - Core is threadless and unsynchronized. A host is serial but not thread-affine:
   one caller at a time is required, while a paused handler may resume on another

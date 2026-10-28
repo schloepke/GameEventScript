@@ -468,8 +468,9 @@ A numeric cast or an ordinary function call does not establish that result type.
 `Cast`/`CheckType` accept a built-in type such as `:Number`. These are the direct
 VM operations; use `CastNumeric` for the VM's numeric conversion operation.
 `CastCustom`/`CheckCustomType` take literal type names. `CastUnit`/`CheckUnit` and
-optional third operands of `LoadInteger`/`LoadFloat` accept unit tags `#none`,
-`#degree`, `#m`/`#meter`, `#s`/`#second`.
+optional third operands of `LoadInteger`/`LoadFloat` accept `#none`, `#m`, `#s`
+and the portable unit name of every unit as a tag, such as `#degree`, `#meter`
+or `#meterPerSecond`.
 `CreateSeries` accepts `#fibonacci` or `#factorial`. `HasPattern`/`TakePattern`
 accept a pattern tag (`#countAny`, `#countFace`, `#fullHouse`, `#straight`), an
 Int16 count, and a face register only for `#countFace`. `SplitText` takes a

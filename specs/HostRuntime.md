@@ -143,7 +143,8 @@ the host ready and returns `StartResult.Ready`, while emitted messages may remai
 queued. StartResult also reports initialization opcode, completed-snapshot, emit,
 and publish counters; these exclude subsequent ordinary dispatch. A runtime fault or exhausted safety limit returns `RuntimeError` or
 `RuntimeLimitReached`, with a structured diagnostic. Failure removes the group's
-registrations and discards all its queued outputs. The host remains not ready and
+registrations and discards all its queued outputs, reporting each discarded
+message as defined in [Send IDs](#send-ids). The host remains not ready and
 cannot be started again. Repeating Start returns its original result without
 executing code. Reentrant Start and pump calls are rejected.
 
@@ -161,7 +162,8 @@ stores RuntimeError or RuntimeLimitReached and its diagnostic, removes the
 instance's registrations, discards its buffered outputs, and cancels every pending
 recipient entry belonging to that instance. Other recipients of the same logical
 message retain their order and still execute. Messages with no surviving recipient
-are removed without dispatch or undeliverable redistribution. This failure
+are removed without dispatch or undeliverable redistribution. Each discarded
+output and removed message is reported as defined in [Send IDs](#send-ids). This failure
 cancellation is stronger than ordinary Detach, which retains captured recipients.
 The host remains ready; the embedding decides whether to retry with a new Load.
 A new instance never inherits the previous instance's captured deliveries.
@@ -273,6 +275,12 @@ implementation and therefore does not depend on C# reflection.
   `OutboundAccepted`, `OutboundDeferred`, and derived `AnyAccepted`. Sink rejection or exception
   never rolls back or corrupts local delivery. The observer sees the result.
 - Queue limits count logical messages, not handler invocations.
+- A send needs a queue slot for an instant message with local recipients and
+  for every delayed entry. When it finds `MaxQueuedMessagesPerRun` reached
+  outside initialization, an Emit or Publish statement and a native Emit or
+  Publish drop the local message, report the limit to the observer and continue
+  the handler. A result-bearing or delayed send instead stops its handler with
+  that limit before the send is observed.
 - Each queued message owns immutable exact/name subscription snapshots and a
   cursor. Every matching handler finishes in priority/registration order before
   the next logical message starts.
@@ -479,6 +487,41 @@ language in the monorepo. Message `args` are always encoded as an ordered YAML
 sequence of mappings with `name` and `value` entries, including nested message
 values and expected local/outbound messages.
 
+## Send IDs
+
+> **Since: Unreleased**
+
+Every message the Host queues or processes carries a host-local send ID, a
+positive Int64. A Host starts at 1 and assigns the next ID, in order of
+occurrence, to each message queued by `Receive` or Emit, each processed Publish,
+each delayed send and each queued initialization message. An Emit or `Receive`
+that queues nothing, for example without recipients or on a full queue, gets no
+ID. Neither does a send rejected before it is processed: by an active
+random-scope fault, an invalid or unrepresentable delay, a negative clock reading,
+or a queue limit that stops a result-bearing or delayed send. Every Publish the
+Host processes owns an ID, even without local recipients and independent of the
+sink outcome.
+This is independent of the Boolean script result of a send: an Emit without
+recipients returns true but has no ID. Send IDs therefore depend only on these
+sends and are deterministic for identical inputs.
+
+The ID belongs to the send, not to the immutable Message: it is never part of a
+Program, a Message value, its JSON form or the outbound sink call, and IDs of
+different Hosts are unrelated. Observer callbacks report the ID of the send they
+describe: the Emit or Publish itself, its scheduling, and every dispatch of it,
+including `undeliverable` fallback dispatch. Send ID 0 reports a send without an
+ID. Without an observer, send IDs are unobservable and change no behavior.
+
+A message with an ID that is removed before it is dispatched reports
+`MessageDiscarded` with that ID exactly once. On initial-group failure these are
+every pending initialization in load order, then every queued message in queue
+order, then every delayed entry in deadline order. On later-instance failure
+they are the failed instance's staged outputs and every message it left without
+recipients: queued messages in queue order, then delayed entries in deadline
+order. A deferred initialization Publish is never released by a failed
+initialization, so its ID can appear only in this callback. Dispatched and due
+messages report no discard; their ordinary callbacks follow.
+
 ## Delayed dispatch
 
 > **Since: 0.2.0**
@@ -502,10 +545,34 @@ the runnable FIFO in deadline order; equal deadlines retain enqueue order.
 Promotion occurs between complete logical messages, never in the middle of an
 active or paused handler. Future entries do not block runnable messages.
 
+> **Since: Unreleased** — delayed emits without recipients
+
+A delayed emit whose snapshot, including the `undeliverable` fallback, is empty
+at acceptance behaves exactly like the instant emit without recipients: it is
+not scheduled, is observed as not queued, and its script result is unchanged. A
+delayed publish is scheduled without local recipients, because its outbound sink
+invocation remains due.
+
 Publish delays both local delivery and the outbound sink invocation. A later sink
 rejection or failure cannot change the Boolean already returned to script.
 The existing sink diagnostic behavior remains applicable. Emit observations occur
 at acceptance; delayed publish observations occur when the publication is released.
+
+> **Since: Unreleased** — scheduling observation
+
+When an observer is configured, each accepted delayed send reports
+`MessageScheduled` once with its send ID, immediately after it enters the delayed
+queue and before the `MessageEmitted` of a delayed emit. Its deadline is the
+absolute entry deadline in whole microseconds on the Host clock that
+`NextMessageDelay` uses, neither a relative delay nor wall-clock time; the
+publish flag distinguishes `publish … after` from `emit … after`. A zero delay is
+an instant send (see `Language.md`), so it enters no delayed queue and reports
+no `MessageScheduled`.
+
+A delayed entry removed before it becomes due reports `MessageDiscarded` as
+defined in [Send IDs](#send-ids). An entry that becomes due reports no
+scheduling callback; its ordinary publish and dispatch callbacks follow with the
+same send ID.
 
 Init computes deadlines when the expression executes but cannot release its
 outputs before its initial group or later-instance initialization succeeds.

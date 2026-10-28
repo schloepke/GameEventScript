@@ -1645,7 +1645,7 @@ steps:
         - name: "value"
           value:
             type: ":Text"
-            value: "10ms"
+            value: "10ft"
     local:
       - name: "Done"
         args:
@@ -1658,7 +1658,7 @@ steps:
           - name: "parsed"
             value:
               type: ":Text"
-              value: "10ms"
+              value: "10ft"
     runtimeLimits:
       exclude:
         - any: true

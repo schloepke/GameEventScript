@@ -8,9 +8,14 @@ from core.corpus import InvalidDocument, closed
 from checks.compiler_checks import exact
 
 FLOAT_TYPES = {':Number.binary64', ':Quantity.binary64', ':Percentage'}
-UNITS = {'m': ':meter', 'meter': ':meter', ':meter': ':meter',
-         's': ':second', 'second': ':second', ':second': ':second',
-         '°': ':degree', 'degree': ':degree', ':degree': ':degree'}
+# Each unit is written by its symbol, ASCII spelling, portable name or `:name`; all normalize to `:name`.
+UNIT_SPELLINGS = {
+    'degree': ('°', 'deg'), 'meter': ('m',), 'second': ('s',), 'meterPerSecond': ('m/s',),
+    'meterPerSecondSquared': ('m/s²', 'm/s^2'), 'kilogram': ('kg',), 'newton': ('N',), 'joule': ('J',),
+    'watt': ('W',), 'volt': ('V',), 'ampere': ('A',), 'hertz': ('Hz',), 'kelvin': ('K',),
+    'degreePerSecond': ('°/s', 'deg/s'),
+}
+UNITS = {spelling: ':' + name for name, spellings in UNIT_SPELLINGS.items() for spelling in (name, ':' + name, *spellings)}
 
 
 def number(text):

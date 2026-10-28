@@ -49,22 +49,9 @@ internal sealed class GesMessageJsonCodec
     }
 
     private static GesValue[] List(GesValue value) => value.Kind == GesBytecodeTypeKind.List && value.ObjectValue is GesValue[] items ? items : throw Error();
-    private static GesQuantityUnit Unit(GesValue value) => String(value) switch
-    {
-        "" => GesQuantityUnit.UnitNone,
-        "s" => GesQuantityUnit.UnitSecond,
-        "m" => GesQuantityUnit.UnitMeter,
-        "°" => GesQuantityUnit.UnitDegree,
-        _ => throw Error()
-    };
-    private static string UnitName(GesQuantityUnit unit) => unit switch
-    {
-        GesQuantityUnit.UnitNone => "",
-        GesQuantityUnit.UnitSecond => "s",
-        GesQuantityUnit.UnitMeter => "m",
-        GesQuantityUnit.UnitDegree => "°",
-        _ => throw Error()
-    };
+    // Units use their canonical symbols, for example "m/s"; the empty string is unitless.
+    private static GesQuantityUnit Unit(GesValue value) => GesQuantityUnits.ParseSymbol(String(value)) ?? throw Error();
+    private static string UnitName(GesQuantityUnit unit) => unit == GesQuantityUnit.UnitNone ? "" : unit.IsNumericUnit() ? unit.ToSuffix() : throw Error();
     private static GesValue Number(GesValue value)
     {
         var text = String(value);

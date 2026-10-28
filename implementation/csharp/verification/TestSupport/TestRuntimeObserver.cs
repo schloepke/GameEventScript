@@ -41,21 +41,13 @@ internal sealed class TestRuntimeObserver : IGesRuntimeObserver
     public static TestRuntimeObserver ObservePublishResults(Action<GesPublishResult> publishResult)
         => new(null, null, null, publishResult);
 
-    public void MessageEmitted(GameEventScriptMessage message, bool accepted)
+    public void MessageEmitted(GameEventScriptMessage message, long id, bool accepted)
         => _messageEmitted?.Invoke(message);
 
-    public void MessagePublished(GameEventScriptMessage message, GesPublishResult result)
+    public void MessagePublished(GameEventScriptMessage message, long id, GesPublishResult result)
     {
         _messagePublished?.Invoke(message);
         _publishResult?.Invoke(result);
-    }
-
-    public void DispatchStarted(GameEventScriptMessage message, string dispatchSignatureId)
-    {
-    }
-
-    public void DispatchCompleted(GameEventScriptMessage message, string dispatchSignatureId)
-    {
     }
 
     public void RuntimeLimitReached(string limitName, string detail, int limit)

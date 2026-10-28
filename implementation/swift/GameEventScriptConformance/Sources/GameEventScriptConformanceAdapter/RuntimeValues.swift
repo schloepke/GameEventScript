@@ -24,10 +24,12 @@ enum RuntimeValues {
     static func unit(_ node: Input) throws -> GesQuantityUnit {
         switch node["unit"]?.stringValue?.replacingOccurrences(of: ":", with: "") {
         case nil, "none": return .none
-        case "m", "meter": return .meter
-        case "s", "second": return .second
-        case "°", "degree": return .degree
-        default: throw ConformanceExecutionError.invalidInput("Unknown unit")
+        case "m": return .meter
+        case "s": return .second
+        case "°": return .degree
+        case let name?:
+            guard let unit = GesQuantityUnit(rawValue: name) else { throw ConformanceExecutionError.invalidInput("Unknown unit") }
+            return unit
         }
     }
 

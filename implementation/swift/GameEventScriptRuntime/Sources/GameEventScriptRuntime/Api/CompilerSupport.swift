@@ -22,6 +22,34 @@
         }
     }
 
+    /// Unit of a product of two quantities by the closed derivation table, or nil when unsupported.
+    public static func productUnit(_ left: GesQuantityUnit, _ right: GesQuantityUnit) -> GesQuantityUnit? { GesQuantityUnit.product(left, right) }
+
+    /// Unit of a quotient of two quantities by the closed derivation table, or nil when unsupported.
+    public static func quotientUnit(_ dividend: GesQuantityUnit, _ divisor: GesQuantityUnit) -> GesQuantityUnit? { GesQuantityUnit.quotient(dividend, divisor) }
+
+    /// The first scalars of every unit suffix spelling, so a lexer can skip the suffix table for unitless numbers.
+    public static let unitSuffixStarts = Set(GesQuantityUnit.suffixes.compactMap(\.scalars.first))
+
+    /// The longest unit suffix spelling at `start` that ends at a token boundary, as its scalar count; 0 when none matches.
+    public static func unitSuffixLength(_ scalars: [Unicode.Scalar], at start: Int, boundary: (Unicode.Scalar) -> Bool) -> Int {
+        for suffix in GesQuantityUnit.suffixes {
+            let end = start + suffix.scalars.count
+            guard end <= scalars.count, scalars[start..<end].elementsEqual(suffix.scalars) else { continue }
+            if end == scalars.count || boundary(scalars[end]) { return suffix.scalars.count }
+        }
+        return 0
+    }
+
+    /// Parses a `:Quantity(...)` unit name, such as `m/s`, `°/s` or `none`.
+    public static func quantityUnit(_ name: String) -> GesQuantityUnit? { GesQuantityUnit(quantityName: name) }
+
+    /// Parses a portable unit type name such as `meterPerSecond`.
+    public static func unit(typeName: String) -> GesQuantityUnit? { GesQuantityUnit(typeName: typeName) }
+
+    /// The stable bytecode UnitId of a unit.
+    public static func unitID(_ unit: GesQuantityUnit) -> UInt8 { unit.unitID }
+
     /// Decodes a complete quoted source Text literal, or returns nil for invalid syntax or escapes.
     public static func quotedText(_ text: String) -> String? { GesLiteralParser.sourceText(text) }
 

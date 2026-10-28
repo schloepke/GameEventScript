@@ -59,9 +59,10 @@ public sealed partial class GameEventScriptHost
                             prior?.EmittedMessages ?? 0, prior?.PublishedMessages ?? 0);
                         instance.Detach();
                     }
-                    _queue.Clear();
-                    _delayed?.Clear();
-                    _startupQueue.Clear();
+                    // Discards are reported once: pending initializations, then queued messages, then delayed entries.
+                    _startupQueue.Clear(_observer);
+                    _queue.Clear(_observer);
+                    ClearDelayed();
                     _startupPublications?.Clear();
                     return failure;
                 }
@@ -106,7 +107,9 @@ public sealed partial class GameEventScriptHost
         _initializationInstance = null;
         _initializationDiagnostic = null;
         _hasActiveMessage = false;
-        _queue.RemoveFailedRecipients();
+        // A failure during Start fails the whole group, which then discards and reports every entry in one pass.
+        if (_starting) return;
+        _queue.RemoveFailedRecipients(_observer);
         RemoveFailedDelayed();
     }
 
@@ -132,7 +135,7 @@ public sealed partial class GameEventScriptHost
                         TechnicalDetails: GesRuntimeExceptionText.Describe(exception)));
                 }
             }
-            _observer?.MessagePublished(publication.Message, new(publication.LocalAccepted, attempted, accepted));
+            _observer?.MessagePublished(publication.Message, publication.Id, new(publication.LocalAccepted, attempted, accepted));
         }
         publications.Clear();
     }

@@ -25,6 +25,7 @@ internal partial class GesVirtualMachine
             return;
         }
 
-        SetInteger(destinationRegister, ToIntegerSaturated(Math.Round(a.AsNumeric, 0, MidpointRounding.AwayFromZero)));
+        // Rounding keeps the quantity unit; percentages and Booleans have none.
+        SetInteger(destinationRegister, ToIntegerSaturated(Math.Round(a.AsNumeric, 0, MidpointRounding.AwayFromZero)), a.Unit);
     }
 }

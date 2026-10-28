@@ -20,12 +20,26 @@ struct GesMessageQueue {
         count += 1
     }
 
-    mutating func clear() { while dequeue() != nil {} }
-
-    mutating func removeFailedRecipients(discardingOutputsFrom id: Int64) {
-        let length = count
-        for _ in 0..<length { if let item = dequeue(), item.initializationOutputID != id, item.hasRecipients { enqueue(item) } }
+    // Discards every entry. Each is reported in queue order before the queue changes, so a throwing observer cannot
+    // leave it inconsistent.
+    mutating func clear(reportingTo observer: (any GesRuntimeObserver)?) {
+        if let observer { for index in 0..<count { if let item = items[(head + index) % items.count] { observer.messageDiscarded(id: item.id) } } }
+        while dequeue() != nil {}
     }
+
+    // Removes the failed initialization's outputs and entries it left without recipients, reporting each in queue
+    // order first.
+    mutating func removeFailedRecipients(discardingOutputsFrom id: Int64, reportingTo observer: (any GesRuntimeObserver)?) {
+        if let observer {
+            for index in 0..<count {
+                if let item = items[(head + index) % items.count], !Self.keeps(item, discardingOutputsFrom: id) { observer.messageDiscarded(id: item.id) }
+            }
+        }
+        let length = count
+        for _ in 0..<length { if let item = dequeue(), Self.keeps(item, discardingOutputsFrom: id) { enqueue(item) } }
+    }
+
+    private static func keeps(_ item: GesPendingMessage, discardingOutputsFrom id: Int64) -> Bool { item.initializationOutputID != id && item.hasRecipients }
 
     mutating func dequeue() -> GesPendingMessage? {
         if count == 0 { return nil }

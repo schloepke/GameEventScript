@@ -3,6 +3,7 @@
 
 using System;
 using System.Globalization;
+using GameEventScript.Api;
 using GameEventScript.Runtime;
 
 namespace GameEventScript.Compiler;
@@ -506,24 +507,23 @@ internal sealed class GesLexer
             return CreateToken(GesTokenKind.Illegal, _input[start.._index], line, column);
         }
 
+        // The longest unit spelling directly followed by a boundary forms one quantity literal, so `10m/s` is a speed
+        // and `10m / s` a division. The token text keeps the spelling, whose decoding applies prefix scaling.
+        if (!IsAtEnd && MayStartUnitSuffix(Current))
+            foreach (var suffix in GesQuantityUnits.Suffixes)
+            {
+                var length = suffix.Text.Length;
+                var next = _index + length;
+                if (next > _length || string.CompareOrdinal(_input, _index, suffix.Text, 0, length) != 0 || next < _length && !IsValidUnitBoundary(_input[next])) continue;
+                for (var i = 0; i < length; i++) Advance();
+                return CreateUnitNumberToken(_input[start.._index], suffix.Unit.ToTypeName(), line, column);
+            }
+
         if (!IsAtEnd && Current == '\u00B0')
         {
-            Advance();
-            text = _input[start..(_index - 1)];
-            if (IsAtEnd || IsValidNumberBoundary(Current)) return CreateUnitNumberToken(text, "degree", line, column);
             while (!IsAtEnd && !GesText.IsTokenWhitespace(Current)) Advance();
 
             return CreateToken(GesTokenKind.Illegal, _input[start.._index], line, column);
-        }
-
-        if (!IsAtEnd &&
-            Current is 'm' or 's' &&
-            IsValidUnitBoundary(Peek()))
-        {
-            var unitName = Current == 'm' ? "meter" : "second";
-            Advance();
-            text = _input[start..(_index - 1)];
-            return CreateUnitNumberToken(text, unitName, line, column);
         }
 
         if (!IsAtEnd && GesText.IsAsciiLetter(Current)) return CreateToken(GesTokenKind.Float, text, line, column);
@@ -665,6 +665,11 @@ internal sealed class GesLexer
     private static bool IsValidWordBoundary(char ch) => GesText.IsTokenWhitespace(ch) || IsStructuralBoundary(ch);
 
     private bool IsValidNumberBoundary(char ch) => GesText.IsTokenWhitespace(ch) || IsStructuralBoundary(ch) || (ch == 'd' && GesText.IsAsciiDigit(Peek()));
+
+    // Only these characters start a unit spelling, so unitless numbers skip the suffix table. A native test keeps the
+    // set in step with GesQuantityUnits.Suffixes.
+    internal static bool MayStartUnitSuffix(char ch) =>
+        ch is 'm' or 's' or 'd' or 'k' or 'M' or 'W' or 'H' or 'N' or 'J' or 'V' or 'A' or 'K' or '\u00B0';
 
     private static bool IsValidUnitBoundary(char ch) => ch == '\0' || GesText.IsTokenWhitespace(ch) || IsStructuralBoundary(ch);
 

@@ -46,7 +46,7 @@ internal partial class GesVirtualMachine
         switch (a.Kind)
         {
             case Integer when b.Kind is Integer:
-                if (QuotientUnit(in a, in b) is { } integerUnit)
+                if (IntegerQuotientUnit(in a, in b) is { } integerUnit)
                 {
                     if (GesNumber.FloorDivideExact(a.IntegerValue, b.IntegerValue) is { } integerResult) dst.SetInteger(integerResult, integerUnit);
                     else dst.SetFloat(Math.Floor((double)a.IntegerValue / b.IntegerValue), integerUnit);
@@ -55,7 +55,7 @@ internal partial class GesVirtualMachine
 
                 return dst;
             case Float when b.Kind is Float:
-                if (QuotientUnit(in a, in b) is { } floatUnit)
+                if (IntegerQuotientUnit(in a, in b) is { } floatUnit)
                 {
                     var result = Math.Floor(a.FloatValue / b.FloatValue);
                     dst.SetFloat(result, floatUnit);
@@ -64,7 +64,7 @@ internal partial class GesVirtualMachine
 
                 return dst;
             case Float or Integer when b.Kind is Float or Integer:
-                if (QuotientUnit(in a, in b) is { } mixedUnit)
+                if (IntegerQuotientUnit(in a, in b) is { } mixedUnit)
                 {
                     var result = Math.Floor(a.AsNumeric / b.AsNumeric);
                     dst.SetFloat(result, mixedUnit);
@@ -73,7 +73,7 @@ internal partial class GesVirtualMachine
 
                 return dst;
             case Integer or Float when b.Kind is Percentage:
-                if (QuotientUnit(in a, in b) is { } percentageRightUnit)
+                if (IntegerQuotientUnit(in a, in b) is { } percentageRightUnit)
                 {
                     var result = Math.Floor(a.AsNumeric / b.FloatValue);
                     dst.SetFloat(result, percentageRightUnit);
@@ -82,7 +82,7 @@ internal partial class GesVirtualMachine
 
                 return dst;
             case Percentage when b.Kind is Integer or Float or Percentage:
-                if (QuotientUnit(in a, in b) is { } percentageLeftUnit)
+                if (IntegerQuotientUnit(in a, in b) is { } percentageLeftUnit)
                 {
                     var result = Math.Floor(a.FloatValue / b.AsNumeric);
                     dst.SetFloat(result, percentageLeftUnit);
@@ -108,7 +108,7 @@ internal partial class GesVirtualMachine
             return dst;
         }
 
-        if (b.Kind is Vector or Point || QuotientUnit(in a, in b) is not { } unit)
+        if (b.Kind is Vector or Point || IntegerQuotientUnit(in a, in b) is not { } unit)
         {
             dst.SetFloat(double.NaN);
             return dst;

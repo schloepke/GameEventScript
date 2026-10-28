@@ -255,8 +255,9 @@ list literal.
 Numeric literals contain an integer part and an optional fractional part, use
 `.` as decimal separator, and have no sign or exponent syntax; unary minus
 supplies a negative sign. Single underscores may separate adjacent digits but
-may not lead, trail, or repeat. A following `%`, `m`, `s`, or `°` forms a
-percentage or unit literal without intervening whitespace:
+may not lead, trail, or repeat. A directly following `%` forms a percentage
+literal, and a directly following unit spelling from [Quantities](#quantities)
+forms a quantity literal:
 
 ```ges
 let integer be 42
@@ -267,7 +268,18 @@ let probability be 25%         // percentage literal
 let distance be 3.5m           // meter quantity
 let duration be 2s             // second quantity
 let angle be 90°               // degree quantity
+let speed be 3m/s              // meter-per-second quantity
+let delay be 250ms             // prefixed spelling of 0.25s
 ```
+
+> **Since: Unreleased** — physical unit literals
+
+The lexer takes the longest unit spelling that is followed by whitespace, a
+structural character or the end of input, so `10m/s` is one quantity literal
+while `10m / s` divides `10m` by the binding `s`. This changes the meaning of
+attached spellings such as `10m/s` or `6m/s²`, which earlier versions read as
+a division. Without a matching spelling the number ends before the letters, as
+before.
 
 Literal value decoding shares the numeric conversion rules with text casts as
 defined in [Number semantics](Semantics/Numbers.md#shared-conversion-and-source-token-boundaries).
@@ -451,11 +463,15 @@ form add a delay. Duration is evaluated first, then additional tags and message
 arguments using the existing send argument order; each is evaluated once. The
 message and tags are captured immediately. Duration must be a numeric Quantity(s),
 not a unitless number or another unit. Unit-preserving computations such as
-`abs (-0.2s)` are valid durations; a numeric result must not be assumed unitless
-when its unit is unknown. Statically established wrong types produce
+`abs (-0.2s)`, `floor 1.5s` or `abs` of a time Vector are valid durations; a
+numeric result must not be assumed unitless when its unit is unknown, for
+example an untyped function parameter. Statically established wrong types, such
+as `10m`, `floor 1.5m` or a rounded Vector, produce
 `validate.invalidTypeConstructor`; dynamically invalid values, nothing, negative
 values, nonfinite values or unrepresentable delays produce false without sending.
-Zero seconds uses the instant send path. Timing, rounding, delivery snapshots and
+A zero duration is identical to the same result-bearing send without `after`:
+the message is not delayed and has the same result, acceptance, ordering,
+queue-limit behavior and observations. Timing, rounding, delivery snapshots and
 initialization staging are defined in HostRuntime. Emit/publish do not become
 synchronous handler calls. A result-bearing send also returns false when its
 message operand is not a Message or its tag clause cannot be normalized.
@@ -906,7 +922,10 @@ is the natural exponential counterpart of `ln`.
 
 Unary intrinsics accept either `operation expression` or
 `operation(expression)`. `floor`, `ceil`, `truncate`, and the three `round`
-forms return integers using [Number semantics](Semantics/Numbers.md). `rad`
+forms round the operand's [numeric view](#numbers) to an integer using
+[Number semantics](Semantics/Numbers.md), so Booleans round as `0` or `1` and
+dice as the sum of their rolls; an operand without a numeric view, such as a
+Vector, Point, Text or List, produces `nothing`. `rad`
 converts degrees to unitless radians; `deg` converts unitless radians to a degree
 quantity; `wrap degree` reduces a unitless or degree-valued angle to `[0°, 360°)`.
 `chance` accepts a unitless percentage or numeric probability: integer inputs and
@@ -949,8 +968,8 @@ arity is a compile error.
 
 Numeric component overloads require numeric operands with one common unit.
 Object-pair overloads require matching spatial kinds and units. Dot, cross,
-squared-distance, and squared-length results are unitless because the language
-has no compound-unit representation. Normalizing a zero vector and computing an
+squared-distance, and squared-length results are unitless because the closed
+unit set has no squared or general product units. Normalizing a zero vector and computing an
 angle with a zero-length operand produce `nothing`. Unsupported operand shapes,
 incompatible units, and absent operands likewise produce `nothing`.
 
@@ -1011,7 +1030,7 @@ The source language recognizes these built-in types:
 - `:Boolean`
 - `:Number`
 - `:Percentage`
-- `:Quantity(none)`, `:Quantity(m)`, `:Quantity(meter)`, `:Quantity(s)`, `:Quantity(second)`, `:Quantity(degree)`
+- `:Quantity(none)` and `:Quantity(unit)` for every unit name in [Quantities](#quantities), such as `:Quantity(m)`, `:Quantity(m/s)` or `:Quantity(°/s)`
 - `:Vector`
 - `:Point`
 - `:Series`
@@ -1116,9 +1135,10 @@ let snapshot be :Record("Hit", [amount: 100])
 `:Map(value)`, `:Dice(value)` and the one-argument numeric/spatial forms retain
 their cast behavior. The single argument may also use the label `value`
 (except spatial forms, which retain their component labels). `:Dice[...]` remains a deterministic result literal.
-`:Number(value, unit)` accepts the unit names/suffixes `none`/empty Text,
-`second`/`s`, `meter`/`m`, and `degree`/`°`; a conflicting existing unit yields
-`nothing`. Percentage construction uses the numeric ratio.
+`:Number(value, unit)` accepts empty Text and every `:Quantity(...)` unit name
+from [Quantities](#quantities), such as `none`, `m`, `second`, `m/s` or
+`deg/s`; prefixed spellings and unknown names yield `nothing`, as does a
+conflicting existing unit. Percentage construction uses the numeric ratio.
 `:Range(from, to, step)` defaults its step to 1. `:Series(kind, offset)` accepts
 `fibonacci`/`factorial` (bare or quoted), defaulting offset to zero; it must be a
 nonnegative unitless integer. Range and Series remain lazy.
@@ -1306,7 +1326,10 @@ coercion; the complete contract is in
 
 `abs` preserves the operand's numeric family for percentages and quantities:
 absolute percentages remain `:Percentage`, and absolute quantities keep their
-unit. Finite numeric results that are exactly integral are represented as
+unit. `abs` of a Vector is its length with the Vector's unit. Any other
+operand uses its numeric view, so a Boolean gives `0` or `1` and dice give the
+sum of their rolls; an operand without one, such as a Point, Text or Tag,
+produces `nothing`. Finite numeric results that are exactly integral are represented as
 integer values.
 
 ### Quantities
@@ -1323,14 +1346,109 @@ let b be 90 as :Quantity(°)
 let unitlessDistance be distance as :Quantity(none)
 ```
 
-`:Percentage` is not a quantity unit; it is a separate value kind. The names
-`meter`, `second`, `degree`, and `seconds` are not quantity type aliases. Use
-`:Quantity(m)`, `:Quantity(s)`, or `:Quantity(°)`/`:Quantity(degree)` for casts
-and checks. `:Quantity(none)` removes a supported numeric or spatial unit and
-produces the corresponding unitless value; as a check it matches only numeric
-or spatial values that are already unitless. `none` is a unit name only in this
-type form and is not the absence value `nothing`. Use `#meter` or `#degree` only
-when an ordinary tag value is meant.
+> **Since: Unreleased** — units other than meter, second and degree
+
+The unit set is closed; there is no general dimensional algebra. Each unit has
+a canonical symbol, which literals, `:Quantity(...)` and formatting use, and a
+portable name used by bytecode, assembler text and host APIs:
+
+| Unit | Symbol | ASCII spelling | Portable name |
+| --- | --- | --- | --- |
+| degree | `°` | `deg` | `degree` |
+| meter | `m` | | `meter` |
+| second | `s` | | `second` |
+| meter per second | `m/s` | | `meterPerSecond` |
+| meter per second squared | `m/s²` | `m/s^2` | `meterPerSecondSquared` |
+| kilogram | `kg` | | `kilogram` |
+| newton | `N` | | `newton` |
+| joule | `J` | | `joule` |
+| watt | `W` | | `watt` |
+| volt | `V` | | `volt` |
+| ampere | `A` | | `ampere` |
+| hertz | `Hz` | | `hertz` |
+| kelvin | `K` | | `kelvin` |
+| degree per second | `°/s` | `deg/s` | `degreePerSecond` |
+
+Literals additionally accept prefixed spellings as sugar. They scale the value
+exactly to the base unit at compile time; the value keeps the base unit and
+formats with the base symbol:
+
+| Spelling | Value |
+| --- | --- |
+| `km`, `mm` | 1000 m, 0.001 m |
+| `ms` | 0.001 s |
+| `kN`, `kJ`, `kW`, `kV`, `kHz` | 1000 N, J, W, V, Hz |
+| `MJ`, `MW` | 1 000 000 J, W |
+| `Wh`, `kWh` | 3600 J, 3 600 000 J |
+
+For example `1.5kWh` is `5400000J` and `250ms` is `0.25s`. Celsius,
+Fahrenheit, bits, bytes and bit rates are not units.
+
+`:Quantity(unit)` accepts `none`, every symbol and ASCII spelling, and the long
+names `meter`, `second` and `degree`; `degree/s` is accepted for `°/s` because
+`°` reads as `degree`. Whitespace between the parts of a unit name is ignored and
+`÷` reads as `/`, so `:Quantity(m / s)` and `:Quantity(m÷s)` are `:Quantity(m/s)`.
+Prefixed spellings are not type names. `:Percentage` is
+not a quantity unit; it is a separate value kind. The names `meter`, `second`,
+`degree`, and `seconds` are not quantity types of their own. `:Quantity(none)`
+removes a supported numeric or spatial unit and produces the corresponding
+unitless value; as a check it matches only numeric or spatial values that are
+already unitless. `none` is a unit name only in this type form and is not the
+absence value `nothing`. Use `#meter` or `#degree` only when an ordinary tag
+value is meant. Vectors and points may carry any unit.
+
+Addition, subtraction, comparisons, `min`, `max` and `clamp` keep their
+same-unit rules. Multiplying or dividing a quantity by a unitless number keeps
+its unit, and dividing two quantities of the same unit gives a unitless number,
+so `10m / 2m` is `5`. `abs` and `hypot` keep the unit, rounding follows
+[Number semantics](Semantics/Numbers.md#conversion-and-rounding); trigonometry
+and powers are unchanged. Any other product or quotient of two units follows
+this derivation table, where multiplication is commutative; every other
+combination, such as `2m * 3m`, `2N + 3J` or `6kg / 2s`, gives `nothing`:
+
+| Operation | Result |
+| --- | --- |
+| `m / s` | `m/s` |
+| `m/s × s` | `m` |
+| `m / (m/s)` | `s` |
+| `m/s / s` | `m/s²` |
+| `m/s² × s` | `m/s` |
+| `m/s / (m/s²)` | `s` |
+| `° / s` | `°/s` |
+| `°/s × s` | `°` |
+| `° / (°/s)` | `s` |
+| `kg × m/s²` | `N` |
+| `N / kg` | `m/s²` |
+| `N / (m/s²)` | `kg` |
+| `N × m` | `J` |
+| `J / m` | `N` |
+| `J / N` | `m` |
+| `J / s` | `W` |
+| `W × s` | `J` |
+| `J / W` | `s` |
+| `V × A` | `W` |
+| `W / V` | `A` |
+| `W / A` | `V` |
+| unitless `/ s` | `Hz` |
+| unitless `/ Hz` | `s` |
+| `Hz × s` | unitless |
+| `m × Hz` | `m/s` |
+| `° × Hz` | `°/s` |
+| `m/s × Hz` | `m/s²` |
+| `J × Hz` | `W` |
+| `W / Hz` | `J` |
+| `W / J` | `Hz` |
+| `m/s / Hz` | `m` |
+| `m/s / m` | `Hz` |
+| `°/s / Hz` | `°` |
+| `°/s / °` | `Hz` |
+| `m/s² / Hz` | `m/s` |
+| `m/s² / (m/s)` | `Hz` |
+
+So `1 / 2s` is `0.5Hz`; use `as :Quantity(none)` when a plain number is
+needed. The derivations apply to numbers and to a vector multiplied or divided
+by a number. Integer division (`div`), `mod`, `rem`, points and percentages
+keep their derivation-free rules, so `10m div 2s` and `50% / 2s` are `nothing`.
 
 ### Percentages
 

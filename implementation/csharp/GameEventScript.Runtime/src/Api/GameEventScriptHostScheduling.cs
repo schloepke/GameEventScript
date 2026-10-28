@@ -46,19 +46,27 @@ public sealed partial class GameEventScriptHost
         }
         var now = _clock.ElapsedMicroseconds;
         if (now < 0 || microseconds > long.MaxValue - now) return false;
+        var exact = Get(_exact, message.SignatureId);
+        var names = Get(_byName, message.Name);
+        var local = HasMatch(message, exact, names);
+        if (!local && !GesSystemEndpoints.IsUndeliverableName(message.Name))
+        {
+            exact = Get(_exact, GesSystemEndpoints.UndeliverableSignatureId);
+            names = Get(_byName, GesSystemEndpoints.UndeliverableName);
+            local = HasMatch(message, exact, names);
+        }
+        // An emit without recipients can never be delivered; like the instant emit it is observed as not queued.
+        if (!local && !publish)
+        {
+            EmitFromContext(message);
+            return !_context.RuntimeBudget.IsExhausted;
+        }
         if (IsMessageQueueFull)
         {
             _context.RuntimeBudget.Exhaust(nameof(GesRuntimeLimits.MaxQueuedMessagesPerRun), "Delayed message queue limit reached.", _limits.MaxQueuedMessagesPerRun);
             return false;
         }
-        var exact = Get(_exact, message.SignatureId);
-        var names = Get(_byName, message.Name);
-        if (!HasMatch(message, exact, names) && !GesSystemEndpoints.IsUndeliverableName(message.Name))
-        {
-            exact = Get(_exact, GesSystemEndpoints.UndeliverableSignatureId);
-            names = Get(_byName, GesSystemEndpoints.UndeliverableName);
-        }
-        var pending = new GesPendingMessage(message, exact, names, initializationOutput: _initializationInstance);
+        var pending = new GesPendingMessage(message, exact, names, ++_lastSendId, initializationOutput: _initializationInstance);
         var delayed = new GesDelayedMessage(now + microseconds, pending, publish, _initializationInstance);
         _delayed ??= new();
         var lo = 0;
@@ -71,6 +79,7 @@ public sealed partial class GameEventScriptHost
         }
         _delayed.Insert(lo, delayed);
         _idleSinceMicroseconds = null;
+        _observer?.MessageScheduled(message, delayed.Id, delayed.Deadline, publish);
         if (publish)
         {
             _stepPublishedMessages++;
@@ -80,7 +89,7 @@ public sealed partial class GameEventScriptHost
         {
             _stepEmittedMessages++;
             if (_initializationInstance is not null) _initializationEmits++;
-            _observer?.MessageEmitted(message, true);
+            _observer?.MessageEmitted(message, delayed.Id, true);
         }
         return true;
     }
@@ -91,9 +100,9 @@ public sealed partial class GameEventScriptHost
         var now = _clock.ElapsedMicroseconds;
         while (_delayed.Count > 0 && _delayed[0].Deadline <= now)
         {
+            // Failed initializations removed their entries already, so every due entry is delivered.
             var delayed = _delayed[0];
             _delayed.RemoveAt(0);
-            if (delayed.Owner?.StartResult is { State: not GesStartState.Ready }) continue;
             var localAccepted = delayed.Pending.HasRecipients();
             if (localAccepted) _queue.Enqueue(delayed.Pending);
             if (!delayed.Publish) continue;
@@ -107,17 +116,35 @@ public sealed partial class GameEventScriptHost
                     _observer?.RuntimeError(CreateRuntimeDiagnostic(GesDiagnosticCodes.RuntimePublishSinkFailure, "Publish sink failed.", GesRuntimeExceptionText.Describe(exception)));
                 }
             }
-            _observer?.MessagePublished(delayed.Pending.Message, new(localAccepted, attempted, accepted));
+            _observer?.MessagePublished(delayed.Pending.Message, delayed.Id, new(localAccepted, attempted, accepted));
         }
     }
 
+    // Removes entries abandoned by a failed initialization. Each is reported in deadline order before the list
+    // changes, so a throwing observer cannot leave it inconsistent.
     private void RemoveFailedDelayed()
     {
         if (_delayed is null) return;
-        for (var index = _delayed.Count - 1; index >= 0; index--)
+        if (_observer is { } observer)
         {
-            var item = _delayed[index];
-            if (item.Owner?.StartResult is { State: not GesStartState.Ready } || !item.Publish && !item.Pending.HasRecipients()) _delayed.RemoveAt(index);
+            for (var index = 0; index < _delayed.Count; index++)
+            {
+                if (_delayed[index].IsAbandoned) observer.MessageDiscarded(_delayed[index].Id);
+            }
         }
+
+        _delayed.RemoveAll(static item => item.IsAbandoned);
+    }
+
+    // Discards every delayed entry, reporting each in deadline order.
+    private void ClearDelayed()
+    {
+        if (_delayed is null) return;
+        if (_observer is { } observer)
+        {
+            for (var index = 0; index < _delayed.Count; index++) observer.MessageDiscarded(_delayed[index].Id);
+        }
+
+        _delayed.Clear();
     }
 }

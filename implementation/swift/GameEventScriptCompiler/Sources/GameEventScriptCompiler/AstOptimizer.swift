@@ -301,7 +301,8 @@ struct GesAstOptimizer {
             case .roundHalfUp: rounded = number.rounded(.toNearestOrAwayFromZero)
             default: rounded = roundHalfTowardZero(number)
             }
-            return .integer(saturated(rounded))
+            // Rounding keeps the quantity unit, as in the VM.
+            return .integer(saturated(rounded), unit: operand.unit)
         case .degreeToRadians:
             guard !(operand.hasUnit && operand.unit != .degree), roundable(operand), operand.asNumber.isFinite else { return .nothing }
             return .float(operand.asNumber / 180 * Double.pi)
@@ -367,9 +368,11 @@ struct GesAstOptimizer {
         case .add: return add(left, right, l, r, subtract: false)
         case .subtract: return add(left, right, l, r, subtract: true)
         case .multiply: return multiply(left, right, l, r)
-        case .divide where r != 0 && sameUnit:
+        // Quotients of differing units follow the derivation table, as in the VM; percentages keep their own rules.
+        case .divide where r != 0 && (sameUnit || left.valueKind != .percentage && right.valueKind != .percentage):
+            guard let quotientUnit = GesCompilerSupport.quotientUnit(left.unit, right.unit) else { return nil }
             if left.valueKind == .percentage && [.integer, .float].contains(right.valueKind) { return .percentage(l / r) }
-            return number(l / r, divideUnit(left.unit), preferInteger: false)
+            return number(l / r, quotientUnit, preferInteger: false)
         case .integerDivide where r != 0 && sameUnit:
             return number((l / r).rounded(.down), divideUnit(left.unit), preferInteger: true)
         case .modulo where r != 0 && sameUnit:
@@ -425,10 +428,7 @@ struct GesAstOptimizer {
         return .float(value, unit: unit)
     }
 
-    static func productUnit(_ left: GesQuantityUnit, _ right: GesQuantityUnit) -> GesQuantityUnit? {
-        if left != .none && right != .none { return nil }
-        return left == .none ? right : left
-    }
+    static func productUnit(_ left: GesQuantityUnit, _ right: GesQuantityUnit) -> GesQuantityUnit? { GesCompilerSupport.productUnit(left, right) }
 
     static func divideUnit(_ unit: GesQuantityUnit) -> GesQuantityUnit { unit != .none ? .none : unit }
 

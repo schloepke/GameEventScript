@@ -78,14 +78,8 @@ enum GesDataConstruction {
 
     // Switches instead of per-call dictionary literals; same exact-name mapping as before.
     private static func unit(named name: String) -> GesQuantityUnit? {
-        switch name {
-        // Qualified: a bare `.none` in an optional context would mean nil, not the unitless unit.
-        case "", "none": GesQuantityUnit.none
-        case "s", "second": GesQuantityUnit.second
-        case "m", "meter": GesQuantityUnit.meter
-        case "°", "degree": GesQuantityUnit.degree
-        default: nil
-        }
+        // The unit text accepts the same names as `:Quantity(...)`, plus the empty text for none.
+        name.isEmpty ? GesQuantityUnit.none : GesQuantityUnit(quantityName: name)
     }
 
     private static func castKind(_ type: String) -> GesBytecodeTypeKind {

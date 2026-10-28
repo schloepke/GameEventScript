@@ -311,6 +311,20 @@ binary specifications and must reject undefined values at validation boundaries:
 `BytecodeInstructionUnits` supplies pure conversions between type names, units,
 and suffixes. Parse operations return absence for an unknown valid string;
 predicate operations never use locale; formatting returns canonical GES text.
+
+> **Since: Unreleased** — physical units
+
+`QuantityUnit` has one member per defined UnitId: C# `UnitNone`, `UnitDegree`,
+`UnitMeter`, `UnitSecond`, `UnitMeterPerSecond`, `UnitMeterPerSecondSquared`,
+`UnitKilogram`, `UnitNewton`, `UnitJoule`, `UnitWatt`, `UnitVolt`, `UnitAmpere`,
+`UnitHertz`, `UnitKelvin` and `UnitDegreePerSecond`, plus the invalid sentinel
+`UnitInvalid`; Swift uses the same cases in lower camel case (`.none`,
+`.meterPerSecond`, …), whose raw values are the portable unit names. C#
+`GesQuantityUnits.ToTypeName`/`ParseTypeName` convert portable names and
+`ToSuffix` returns the canonical symbol, which Swift exposes as `suffix`;
+`IsNumericUnit` is true for every defined unit other than none. Swift
+`GesQuantityUnit` is `Sendable`. Symbols, names and arithmetic are defined in
+[Language quantities](Language.md#quantities).
 `BinaryFormat` exposes the fixed V1 magic bytes, format version, file-header
 size, and section-header size as named constants; their numeric values are owned
 by BinaryFormat.md.
@@ -630,12 +644,29 @@ runtime boundaries, and does not corrupt Host state.
 
 RuntimeObserver receives synchronous callbacks in exact dispatch order:
 
-- `MessageEmitted(message, accepted)` after each Emit attempt;
-- `MessagePublished(message, result)` after local/outbound Publish processing;
-- `DispatchStarted(message, dispatchSignatureId)` immediately before a handler;
-- `DispatchCompleted(message, dispatchSignatureId)` when the handler boundary closes, including cleanup after a handler failure or limit;
+- `MessageEmitted(message, id, accepted)` after each Emit attempt;
+- `MessagePublished(message, id, result)` after local/outbound Publish processing;
+- `DispatchStarted(message, id, dispatchSignatureId)` immediately before a handler;
+- `DispatchCompleted(message, id, dispatchSignatureId)` when the handler boundary closes, including cleanup after a handler failure or limit;
 - `RuntimeLimitReached(name, detail, limit)` for a limit stop;
-- `RuntimeError(diagnostic)` for a runtime diagnostic.
+- `RuntimeError(diagnostic)` for a runtime diagnostic;
+- `MessageScheduled(message, id, deadline, publish)` once when a delayed Emit
+  or Publish is accepted, before that Emit's `MessageEmitted`;
+- `MessageDiscarded(id)` once for each message removed before it was dispatched.
+
+Swift spells these `messageEmitted(_:id:accepted:)`, `messagePublished(_:id:result:)`,
+`dispatchStarted(_:id:signatureID:)`, `dispatchCompleted(_:id:signatureID:)`,
+`runtimeLimitReached(_:detail:limit:)`, `runtimeError(_:)`,
+`messageScheduled(_:id:deadline:publish:)` and `messageDiscarded(id:)`.
+
+> **Since: Unreleased** — send IDs, scheduling and discard callbacks, default implementations
+
+`id` is the send ID defined in `HostRuntime.md#send-ids`; it is 0 for an Emit
+that was not queued and for a Publish the Host did not accept. The same section
+defines when `MessageDiscarded` occurs; scheduling deadlines are defined in
+`HostRuntime.md#delayed-dispatch`. Every callback has an empty default
+implementation in both ports, so an observer implements only the callbacks it
+needs.
 
 An observer is observational only and has no return value. Observer callbacks
 must not throw. Throwing is an embedding-contract violation, is not converted to
@@ -1072,8 +1103,8 @@ infers Map; Optional delegates to its wrapped type. Aliases, custom convertible
 types and GesValue require explicit `typeName`. Swift compiler type checking
 still requires the existing strict value-conversion conformances.
 
-`@GesField(unit:)` may instead declare a numeric quantity in meters, seconds or
-degrees. It cannot be combined with `typeName` or a nonnumeric field. Encoding
+`@GesField(unit:)` may instead declare a numeric quantity in any `GesQuantityUnit`
+other than `.none`, for example `@GesField(unit: .meterPerSecond)`. It cannot be combined with `typeName` or a nonnumeric field. Encoding
 attaches the explicit unit to a native numeric magnitude; constructor decoding
 checks the exact unit before stripping it and invoking strict native conversion.
 Nothing retains existing Optional/NaN semantics. No magnitude scaling, truncation

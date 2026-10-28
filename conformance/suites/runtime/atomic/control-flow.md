@@ -2013,6 +2013,53 @@ steps:
 
 ---
 
+## Test: delay-unknown-operand-checked-at-runtime
+
+This case verifies that a delay whose type is statically unknown compiles and that a value without a time unit rejects the send at runtime.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delay-unknown-operand-checked-at-runtime
+kind: scriptApi
+level: atomic
+sources:
+  - name: "delay-unknown-operand-checked-at-runtime.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+function pass(_ value) be value
+on Start {
+  let span be emit after (pass(10m)) Ping()
+  let rounded be emit after (floor pass(1.5m)) Ping()
+  let magnitude be emit after (abs pass(-1)) Ping()
+  emit Done(span: span, rounded: rounded, magnitude: magnitude)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| step-0001 | Start | completion |  |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  step-0001:
+    input: { args: [] }
+    waiting: false
+    local: [{ name: Done, args: [{ name: span, value: { type: ":Boolean", value: false } }, { name: rounded, value: { type: ":Boolean", value: false } }, { name: magnitude, value: { type: ":Boolean", value: false } }] }]
+```
+
+---
+
 ## Test: delay-negative
 
 This case verifies delay-negative.
@@ -3426,6 +3473,7 @@ on Start {
   emit after (clamp 1s between 0s and 2s) Ping(value: 6)
   emit after (min of 1s and 2s) Ping(value: 7)
   emit after (max of 0s and 1s) Ping(value: 8)
+  emit after (abs :Vector(x: 0s, y: -1s, z: 0s)) Ping(value: 9)
 }
 on Tick {}
 on Ping(value) { emit Done(value: value) }
@@ -3442,7 +3490,7 @@ on Ping(value) { emit Done(value: value) }
 
 ```yaml
 gesBlock: expect
-steps: {"step-0001": {"local": [{"name": "Ping", "args": [{"name": "value", "value": {"type": ":Number.int64", "value": "1"}}]}, {"name": "Ping", "args": [{"name": "value", "value": {"type": ":Number.int64", "value": "2"}}]}, {"name": "Ping", "args": [{"name": "value", "value": {"type": ":Number.int64", "value": "3"}}]}, {"name": "Ping", "args": [{"name": "value", "value": {"type": ":Number.int64", "value": "4"}}]}, {"name": "Ping", "args": [{"name": "value", "value": {"type": ":Number.int64", "value": "5"}}]}, {"name": "Ping", "args": [{"name": "value", "value": {"type": ":Number.int64", "value": "6"}}]}, {"name": "Ping", "args": [{"name": "value", "value": {"type": ":Number.int64", "value": "7"}}]}, {"name": "Ping", "args": [{"name": "value", "value": {"type": ":Number.int64", "value": "8"}}]}], "waiting": true}, "step-0002": {"waiting": false, "local": [{"name": "Done", "args": [{"name": "value", "value": {"type": ":Number.int64", "value": "1"}}]}, {"name": "Done", "args": [{"name": "value", "value": {"type": ":Number.int64", "value": "2"}}]}, {"name": "Done", "args": [{"name": "value", "value": {"type": ":Number.int64", "value": "3"}}]}, {"name": "Done", "args": [{"name": "value", "value": {"type": ":Number.int64", "value": "4"}}]}, {"name": "Done", "args": [{"name": "value", "value": {"type": ":Number.int64", "value": "5"}}]}, {"name": "Done", "args": [{"name": "value", "value": {"type": ":Number.int64", "value": "6"}}]}, {"name": "Done", "args": [{"name": "value", "value": {"type": ":Number.int64", "value": "7"}}]}, {"name": "Done", "args": [{"name": "value", "value": {"type": ":Number.int64", "value": "8"}}]}]}}
+steps: {"step-0001": {"local": [{"name": "Ping", "args": [{"name": "value", "value": {"type": ":Number.int64", "value": "1"}}]}, {"name": "Ping", "args": [{"name": "value", "value": {"type": ":Number.int64", "value": "2"}}]}, {"name": "Ping", "args": [{"name": "value", "value": {"type": ":Number.int64", "value": "3"}}]}, {"name": "Ping", "args": [{"name": "value", "value": {"type": ":Number.int64", "value": "4"}}]}, {"name": "Ping", "args": [{"name": "value", "value": {"type": ":Number.int64", "value": "5"}}]}, {"name": "Ping", "args": [{"name": "value", "value": {"type": ":Number.int64", "value": "6"}}]}, {"name": "Ping", "args": [{"name": "value", "value": {"type": ":Number.int64", "value": "7"}}]}, {"name": "Ping", "args": [{"name": "value", "value": {"type": ":Number.int64", "value": "8"}}]}, {"name": "Ping", "args": [{"name": "value", "value": {"type": ":Number.int64", "value": "9"}}]}], "waiting": true}, "step-0002": {"waiting": false, "local": [{"name": "Done", "args": [{"name": "value", "value": {"type": ":Number.int64", "value": "1"}}]}, {"name": "Done", "args": [{"name": "value", "value": {"type": ":Number.int64", "value": "2"}}]}, {"name": "Done", "args": [{"name": "value", "value": {"type": ":Number.int64", "value": "3"}}]}, {"name": "Done", "args": [{"name": "value", "value": {"type": ":Number.int64", "value": "4"}}]}, {"name": "Done", "args": [{"name": "value", "value": {"type": ":Number.int64", "value": "5"}}]}, {"name": "Done", "args": [{"name": "value", "value": {"type": ":Number.int64", "value": "6"}}]}, {"name": "Done", "args": [{"name": "value", "value": {"type": ":Number.int64", "value": "7"}}]}, {"name": "Done", "args": [{"name": "value", "value": {"type": ":Number.int64", "value": "8"}}]}, {"name": "Done", "args": [{"name": "value", "value": {"type": ":Number.int64", "value": "9"}}]}]}}
 ```
 
 ---
@@ -3467,6 +3515,186 @@ sources:
 
 ```ges
 on Start { emit after (abs (-1)) Ping() }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error: {"phase": "validate", "code": "validate.invalidTypeConstructor"}
+```
+
+---
+
+## Test: delays-preserve-rounded-quantity-units
+
+This case verifies that rounding a time quantity yields a valid send delay.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delays-preserve-rounded-quantity-units
+kind: scriptApi
+level: atomic
+sources:
+  - name: "delays-preserve-rounded-quantity-units.ges"
+    program: main
+stepActions:
+  step-0002:
+    - advanceMicroseconds: "1000000"
+```
+
+### Source code under test
+
+```ges
+function whole(_ value) be floor value
+function span(_ value as :Quantity(s)) be round half up value
+on Start {
+  let delay be ceil 0.5s
+  emit after (floor 1.5s) Ping(value: 1)
+  emit after (whole(1.9s)) Ping(value: 2)
+  emit after (delay) Ping(value: 3)
+  emit after (truncate 1.9s) Ping(value: 4)
+  emit after (round half even 1.4s) Ping(value: 5)
+  emit after (round half up 0.5s) Ping(value: 6)
+  emit after (round half down 1.5s) Ping(value: 7)
+  emit after (span(0.6s)) Ping(value: 8)
+}
+on Tick {}
+on Ping(value) { emit Done(value: value) }
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| step-0001 | Start | completion |  |
+| step-0002 | Tick | completion |  |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps: {"step-0001": {"local": [{"name": "Ping", "args": [{"name": "value", "value": {"type": ":Number.int64", "value": "1"}}]}, {"name": "Ping", "args": [{"name": "value", "value": {"type": ":Number.int64", "value": "2"}}]}, {"name": "Ping", "args": [{"name": "value", "value": {"type": ":Number.int64", "value": "3"}}]}, {"name": "Ping", "args": [{"name": "value", "value": {"type": ":Number.int64", "value": "4"}}]}, {"name": "Ping", "args": [{"name": "value", "value": {"type": ":Number.int64", "value": "5"}}]}, {"name": "Ping", "args": [{"name": "value", "value": {"type": ":Number.int64", "value": "6"}}]}, {"name": "Ping", "args": [{"name": "value", "value": {"type": ":Number.int64", "value": "7"}}]}, {"name": "Ping", "args": [{"name": "value", "value": {"type": ":Number.int64", "value": "8"}}]}], "waiting": true}, "step-0002": {"waiting": false, "local": [{"name": "Done", "args": [{"name": "value", "value": {"type": ":Number.int64", "value": "1"}}]}, {"name": "Done", "args": [{"name": "value", "value": {"type": ":Number.int64", "value": "2"}}]}, {"name": "Done", "args": [{"name": "value", "value": {"type": ":Number.int64", "value": "3"}}]}, {"name": "Done", "args": [{"name": "value", "value": {"type": ":Number.int64", "value": "4"}}]}, {"name": "Done", "args": [{"name": "value", "value": {"type": ":Number.int64", "value": "5"}}]}, {"name": "Done", "args": [{"name": "value", "value": {"type": ":Number.int64", "value": "6"}}]}, {"name": "Done", "args": [{"name": "value", "value": {"type": ":Number.int64", "value": "7"}}]}, {"name": "Done", "args": [{"name": "value", "value": {"type": ":Number.int64", "value": "8"}}]}]}}
+```
+
+---
+
+## Test: delay-rejects-rounded-unitless
+
+This case verifies that rounding a percentage does not yield a send delay.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delay-rejects-rounded-unitless
+kind: compileError
+level: atomic
+sources:
+  - name: "delay-rejects-rounded-unitless.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start { emit after (floor 150%) Ping() }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error: {"phase": "validate", "code": "validate.invalidTypeConstructor"}
+```
+
+---
+
+## Test: delay-rejects-rounded-distance
+
+This case verifies that a rounded distance is rejected as a send delay. It guards against treating every rounded quantity as a time; the positive rounded-delay case pins that the unit is kept.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delay-rejects-rounded-distance
+kind: compileError
+level: atomic
+sources:
+  - name: "delay-rejects-rounded-distance.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start { emit after (floor 1.5m) Ping() }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error: {"phase": "validate", "code": "validate.invalidTypeConstructor"}
+```
+
+---
+
+## Test: delay-rejects-rounded-speed-parameter
+
+This case verifies that a rounded speed parameter is rejected as a send delay. It guards against treating every rounded quantity as a time; the positive rounded-delay case pins that the unit is kept.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delay-rejects-rounded-speed-parameter
+kind: compileError
+level: atomic
+sources:
+  - name: "delay-rejects-rounded-speed-parameter.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+function whole(_ value as :Quantity(m/s)) be round half up value
+on Start { emit after (whole(1.5m/s)) Ping() }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error: {"phase": "validate", "code": "validate.invalidTypeConstructor"}
+```
+
+---
+
+## Test: delay-rejects-rounded-vector
+
+This case verifies that a rounded vector is rejected as a send delay, because rounding a vector produces nothing; only `abs` turns a vector into a magnitude with its unit.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delay-rejects-rounded-vector
+kind: compileError
+level: atomic
+sources:
+  - name: "delay-rejects-rounded-vector.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start { emit after (floor :Vector(x: 1.5s, y: 0s, z: 0s)) Ping() }
 ```
 
 ### Expectation
@@ -3511,7 +3739,7 @@ error: {"phase": "validate", "code": "validate.invalidTypeConstructor"}
 
 ## Test: delay-rejects-floor-unitless
 
-This case verifies delay-rejects-floor-unitless.
+This case verifies that rounding a unitless number does not yield a send delay.
 
 ### Case description
 
@@ -3528,7 +3756,7 @@ sources:
 ### Source code under test
 
 ```ges
-on Start { emit after (floor 1s) Ping() }
+on Start { emit after (floor 1.5) Ping() }
 ```
 
 ### Expectation

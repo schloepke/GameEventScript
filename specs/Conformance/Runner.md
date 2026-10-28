@@ -156,8 +156,8 @@ not an implementation exception escaping the runner.
 - Local messages, outbound sink messages, runtime-limit observations, and
   runtime diagnostics are recorded and compared separately. When an expectation
   contains `trace`, every Emit, Publish, DispatchStarted, DispatchCompleted,
-  RuntimeLimitReached, and RuntimeError callback is additionally compared as one
-  exact ordered sequence.
+  RuntimeLimitReached, RuntimeError, MessageScheduled, and MessageDiscarded
+  callback is additionally compared as one exact ordered sequence.
 - Any unhandled implementation exception is caught at the runner boundary and
   becomes an `error`. Its platform text may be included as nonnormative technical
   detail but never determines a pass.

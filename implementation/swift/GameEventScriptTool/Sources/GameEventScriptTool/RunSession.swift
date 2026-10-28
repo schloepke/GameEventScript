@@ -17,8 +17,9 @@ final class RunSession {
         self.workspace = workspace ?? RunWorkspace()
         self.options = options
         self.io = io
-        observer = RunObserver(io: io, options: options)
-        let builder = GameEventScriptHost.makeBuilder().withRuntimeLimits(options.limits).withRuntimeObserver(observer)
+        let clock = RunClock()
+        observer = RunObserver(io: io, options: options, clock: clock)
+        let builder = GameEventScriptHost.makeBuilder().withClock(clock).withRuntimeLimits(options.limits).withRuntimeObserver(observer)
         if let seed = options.seed { builder.withRandomSeed(seed) }
         if let profiler { builder.withProfiler(profiler) }
         host = try builder.build()
@@ -101,13 +102,15 @@ final class RunSession {
 final class RunObserver: GesRuntimeObserver {
     let io: ToolIO
     let options: RunOptions
+    let clock: RunClock
     private lazy var highlighting = RunHighlighting()
     var failed = false
     var scriptExitCode = 0
 
-    init(io: ToolIO, options: RunOptions) {
+    init(io: ToolIO, options: RunOptions, clock: RunClock) {
         self.io = io
         self.options = options
+        self.clock = clock
     }
 
     func subscribeConsoleHandlers(_ inventory: RunInventory) throws {
@@ -116,11 +119,15 @@ final class RunObserver: GesRuntimeObserver {
         try inventory.subscribeMessageName("ErrorCode", handler: ErrorCodeHandler(observer: self))
     }
 
-    func messageEmitted(_ message: GameEventScriptMessage, accepted: Bool) { writeTrace("emit " + format(message) + (accepted ? "" : " [not queued]")) }
+    func messageEmitted(_ message: GameEventScriptMessage, id: Int64, accepted: Bool) { writeTrace("emit " + traceID(id) + format(message) + (accepted ? "" : " [not queued]")) }
 
-    func messagePublished(_ message: GameEventScriptMessage, result: GesPublishResult) { writeTrace("publish " + format(message) + (result.localAccepted ? "" : " [not queued]")) }
+    func messagePublished(_ message: GameEventScriptMessage, id: Int64, result: GesPublishResult) { writeTrace("publish " + traceID(id) + format(message) + (result.localAccepted ? "" : " [not queued]")) }
 
-    func dispatchStarted(_ message: GameEventScriptMessage, signatureID: String) { writeTrace("dispatch \(signatureID) <- " + format(message)) }
+    func dispatchStarted(_ message: GameEventScriptMessage, id: Int64, signatureID: String) { writeTrace("dispatch #\(id) \(signatureID) <- " + format(message)) }
+
+    func messageScheduled(_ message: GameEventScriptMessage, id: Int64, deadline: Int64, publish: Bool) { writeTrace("schedule #\(id) \(publish ? "publish" : "emit") " + format(message) + " at " + clock.formatDeadline(deadline)) }
+
+    func messageDiscarded(id: Int64) { writeTrace("discard #\(id)") }
 
     func runtimeLimitReached(_ limitName: String, detail: String, limit: Int) {
         failed = true
@@ -131,6 +138,9 @@ final class RunObserver: GesRuntimeObserver {
         failed = true
         io.diagnostic(diagnostic, fallback: "runtime")
     }
+
+    // Sends without an ID (0) show none.
+    private func traceID(_ id: Int64) -> String { id == 0 ? "" : "#\(id) " }
 
     private func writeTrace(_ text: String) { if options.verbose { io.line(options.color && options.interactive ? RunHighlighting.paint(text, 33) : text, toError: true) } }
 

@@ -122,7 +122,7 @@ extension GesCompiler {
     }
 
     func literal(_ value: GesValue, _ target: Int, _ r: GesRoutine) throws {
-        let flag: UInt8 = value.unit == .degree ? 1 : value.unit == .meter ? 2 : value.unit == .second ? 3 : 0
+        let flag = GesCompilerSupport.unitID(value.unit)
         switch value.valueKind {
         case .nothing: r.emit(.loadNothing, target)
         case .boolean: r.emit(value.asBoolean ? .loadTrue : .loadFalse, target)

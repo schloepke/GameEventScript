@@ -1142,6 +1142,169 @@ steps:
 
 ---
 
+## Test: constant abs and rounding use the numeric view
+
+This runtime case verifies with constant operands that `abs` of a Point and rounding a Vector, Point or Text produce `nothing`, while Booleans and dice round through their numeric view.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: spatial-abs-and-rounding
+kind: scriptApi
+level: atomic
+sources:
+  - name: "spatial-abs-and-rounding.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start {
+  emit Done(pointAbs: abs :Point(3m, 4m), vectorFloor: floor :Vector(1.5m, 2.5m), pointRound: round half up :Point(1.5, 0.5), vectorCeil: ceil :Vector(0.5s, 1s), textFloor: floor "2.5", booleanRound: round half even true, diceFloor: floor :Dice[3, 4], diceAbs: abs :Dice[3])
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| step-0001 | Start | completion |  |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  step-0001:
+    input:
+      args: []
+    local:
+      - name: "Done"
+        args:
+          - name: "pointAbs"
+            value:
+              type: ":Nothing"
+          - name: "vectorFloor"
+            value:
+              type: ":Nothing"
+          - name: "pointRound"
+            value:
+              type: ":Nothing"
+          - name: "vectorCeil"
+            value:
+              type: ":Nothing"
+          - name: "textFloor"
+            value:
+              type: ":Nothing"
+          - name: "booleanRound"
+            value:
+              type: ":Number.int64"
+              value: "1"
+          - name: "diceFloor"
+            value:
+              type: ":Number.int64"
+              value: "7"
+          - name: "diceAbs"
+            value:
+              type: ":Number.int64"
+              value: "3"
+```
+
+---
+
+## Test: runtime abs and rounding use the numeric view
+
+This runtime case passes every operand through an untyped function, so `abs` and rounding run in the VM rather than in constant folding. Spatial, Text, List and Tag operands have no numeric view and produce `nothing`; Booleans and dice use their numeric view.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: non-numeric-abs-and-rounding-at-runtime
+kind: scriptApi
+level: atomic
+sources:
+  - name: "non-numeric-abs-and-rounding-at-runtime.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+function pass(_ value) be value
+
+on Start {
+  emit Done(pointAbs: abs pass(:Point(3m, 4m)), vectorFloor: floor pass(:Vector(1.5m, 2.5m)), pointRound: round half up pass(:Point(1.5, 0.5)), vectorCeil: ceil pass(:Vector(0.5s, 1s)), textFloor: floor pass("2.5"), listTruncate: truncate pass([1.5]), tagRound: round half even pass(#ready), textAbs: abs pass("-2"), booleanFloor: floor pass(true), booleanAbs: abs pass(true), falseCeil: ceil pass(false), diceRound: round half down pass(:Dice[3, 4]), diceAbs: abs pass(:Dice[2, 5]))
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| step-0001 | Start | completion |  |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  step-0001:
+    input:
+      args: []
+    local:
+      - name: "Done"
+        args:
+          - name: "pointAbs"
+            value:
+              type: ":Nothing"
+          - name: "vectorFloor"
+            value:
+              type: ":Nothing"
+          - name: "pointRound"
+            value:
+              type: ":Nothing"
+          - name: "vectorCeil"
+            value:
+              type: ":Nothing"
+          - name: "textFloor"
+            value:
+              type: ":Nothing"
+          - name: "listTruncate"
+            value:
+              type: ":Nothing"
+          - name: "tagRound"
+            value:
+              type: ":Nothing"
+          - name: "textAbs"
+            value:
+              type: ":Nothing"
+          - name: "booleanFloor"
+            value:
+              type: ":Number.int64"
+              value: "1"
+          - name: "booleanAbs"
+            value:
+              type: ":Number.int64"
+              value: "1"
+          - name: "falseCeil"
+            value:
+              type: ":Number.int64"
+              value: "0"
+          - name: "diceRound"
+            value:
+              type: ":Number.int64"
+              value: "7"
+          - name: "diceAbs"
+            value:
+              type: ":Number.int64"
+              value: "7"
+```
+
+---
+
 ## Test: invalid vector arithmetic returns nan
 
 This runtime case exercises “invalid vector arithmetic returns nan” and verifies the declared messages, values, and execution result.

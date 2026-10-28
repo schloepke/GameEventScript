@@ -278,7 +278,7 @@ final class GesCompiler {
             let outer = r.location
             r.location = location
             defer { r.location = outer }
-            let flag: UInt8 = value.unit == .degree ? 1 : value.unit == .meter ? 2 : value.unit == .second ? 3 : 0
+            let flag = GesCompilerSupport.unitID(value.unit)
             switch value.valueKind {
             case .nothing: r.emit(.stageNothing)
             case .boolean: r.emit(value.asBoolean ? .stageTrue : .stageFalse)
@@ -311,10 +311,9 @@ final class GesCompiler {
             return
         }
         if type.hasPrefix("quantity:") || ["meter", "second", "degree"].contains(type) {
-            let unit = type.split(separator: ":").last!
-            guard ["m", "meter", "s", "second", "degree", "°", "none"].contains(String(unit)) else { throw compileError("compile.unsupportedConstruct", r.location, symbol: type, phase: .compile) }
-            let flag: UInt8 = unit == "none" ? 0 : ["m", "meter"].contains(String(unit)) ? 2 : ["s", "second"].contains(String(unit)) ? 3 : 1
-            r.emit(check ? .checkUnit : .castUnit, d, value, flags: flag)
+            let name = type.hasPrefix("quantity:") ? String(type.dropFirst(9)) : type
+            guard let unit = GesCompilerSupport.quantityUnit(name) else { throw compileError("compile.unsupportedConstruct", r.location, symbol: type, phase: .compile) }
+            r.emit(check ? .checkUnit : .castUnit, d, value, flags: GesCompilerSupport.unitID(unit))
             return
         }
         if let kind = GesBytecodeTypeKind.allCases.first(where: { String(describing: $0) == type }) {

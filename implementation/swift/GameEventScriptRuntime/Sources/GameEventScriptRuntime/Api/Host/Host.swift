@@ -11,6 +11,8 @@ public final class GameEventScriptHost {
     private let limits: GesRuntimeLimits
     private let clock: GesClockSource?
     private var delayed: [GesDelayedMessage] = []
+    // Host-local send IDs start at 1; 0 reports a send without an ID.
+    private var lastSendID: Int64 = 0
     private let sink: (any GesPublishSink)?
     private lazy var context = GesContext(host: self, random: random, limits: limits, extensions: extensions, observer: observer)
     private var exact: [String: [GesSubscriptionEntry]] = [:]
@@ -129,7 +131,9 @@ public final class GameEventScriptHost {
         }
         instances[instance.registrationID] = instance
         if !initialization.isEmpty {
-            let pending = GesPendingMessage(message: try GameEventScriptMessage(name: "initialization"), exact: initialization.sorted(by: GesSubscriptionEntry.precedes), names: [], initialization: instance)
+            let message = try GameEventScriptMessage(name: "initialization")
+            lastSendID += 1
+            let pending = GesPendingMessage(message: message, exact: initialization.sorted(by: GesSubscriptionEntry.precedes), names: [], id: lastSendID, initialization: instance)
             idleSinceMicroseconds = nil
             if isReady { queue.enqueue(pending) } else { startupQueue.enqueue(pending) }
         } else if isReady {
@@ -170,7 +174,7 @@ public final class GameEventScriptHost {
     /// initialization messages, or when the queue rejects delivery.
     @discardableResult public func receive(_ message: GameEventScriptMessage) -> Bool {
         if !isReady || message.name.isEmpty || message.name == "initialization" { return false }
-        return enqueue(message)
+        return enqueue(message) != 0
     }
 
     /// Processes queued work up to an opcode budget, preserving a paused script for the next frame. Native callbacks
@@ -251,7 +255,7 @@ public final class GameEventScriptHost {
             }
             activeHandler = next
             randomBoundary = context.beginHandler()
-            observer?.dispatchStarted(active!.message, signatureID: next.dispatchSignature)
+            observer?.dispatchStarted(active!.message, id: active!.id, signatureID: next.dispatchSignature)
             if let handler = next.native {
                 do { try handler.handle(active!.message, context: context) } catch let fault as GesExtensionFaultError { record(fault.diagnostic) } catch let fault as GesRuntimeError { record(fault.diagnostic) } catch {
                     record(runtimeDiagnostic("runtime.nativeHandlerFailure", error: error))
@@ -332,17 +336,25 @@ public final class GameEventScriptHost {
         }
         let now = elapsedMicroseconds
         guard now >= 0 && microseconds <= Int64.max - now else { return false }
+        var exact = self.exact[message.signatureId] ?? []
+        var names = byName[message.name] ?? []
+        var local = exact.contains(where: { $0.matches(message) }) || names.contains(where: { $0.matches(message) })
+        if !local && message.name != "undeliverable" {
+            exact = self.exact["undeliverable(message)"] ?? []
+            names = byName["undeliverable"] ?? []
+            local = exact.contains(where: { $0.matches(message) }) || names.contains(where: { $0.matches(message) })
+        }
+        // An emit without recipients can never be delivered; like the instant emit it is observed as not queued.
+        if !local && !publish {
+            _ = emit(message)
+            return !context.budget.isExhausted
+        }
         if queueFull {
             context.budget.exhaust("MaxQueuedMessagesPerRun", limits.maxQueuedMessagesPerRun)
             return false
         }
-        var exact = self.exact[message.signatureId] ?? []
-        var names = byName[message.name] ?? []
-        if !exact.contains(where: { $0.matches(message) }) && !names.contains(where: { $0.matches(message) }) && message.name != "undeliverable" {
-            exact = self.exact["undeliverable(message)"] ?? []
-            names = byName["undeliverable"] ?? []
-        }
-        let pending = GesPendingMessage(message: message, exact: exact, names: names, initializationOutputID: initializationInstance?.registrationID ?? 0)
+        lastSendID += 1
+        let pending = GesPendingMessage(message: message, exact: exact, names: names, id: lastSendID, initializationOutputID: initializationInstance?.registrationID ?? 0)
         let entry = GesDelayedMessage(deadline: now + microseconds, pending: pending, publish: publish, owner: initializationInstance)
         var lo = 0
         var hi = delayed.count
@@ -352,13 +364,14 @@ public final class GameEventScriptHost {
         }
         delayed.insert(entry, at: lo)
         idleSinceMicroseconds = nil
+        observer?.messageScheduled(message, id: entry.id, deadline: entry.deadline, publish: publish)
         if publish {
             published += 1
             if initializationInstance != nil { initializationPublishes += 1 }
         } else {
             emitted += 1
             if initializationInstance != nil { initializationEmits += 1 }
-            observer?.messageEmitted(message, accepted: true)
+            observer?.messageEmitted(message, id: entry.id, accepted: true)
         }
         return true
     }
@@ -367,39 +380,45 @@ public final class GameEventScriptHost {
         guard !delayed.isEmpty else { return }
         let now = elapsedMicroseconds
         while let entry = delayed.first, entry.deadline <= now {
+            // Failed initializations removed their entries already, so every due entry is delivered.
             delayed.removeFirst()
-            if entry.owner?.initializationFailed ?? false { continue }
             let local = entry.pending.hasRecipients
             if local { queue.enqueue(entry.pending) }
             if entry.publish {
                 let attempted = sink != nil
                 var accepted = false
                 if attempted { do { accepted = try sink!.publish(entry.pending.message) } catch { observer?.runtimeError(runtimeDiagnostic("runtime.publishSinkFailure", error: error)) } }
-                observer?.messagePublished(entry.pending.message, result: .init(localAccepted: local, outboundAttempted: attempted, outboundAccepted: accepted))
+                observer?.messagePublished(entry.pending.message, id: entry.id, result: .init(localAccepted: local, outboundAttempted: attempted, outboundAccepted: accepted))
             }
         }
     }
 
     func emit(_ message: GameEventScriptMessage) -> Bool {
-        let accepted = !random.hasActiveScopeFault && enqueue(message, initializationOutput: initializationInstance != nil)
+        let id = random.hasActiveScopeFault ? 0 : enqueue(message, initializationOutput: initializationInstance != nil)
         emitted += 1
         if initializationInstance != nil { initializationEmits += 1 }
-        observer?.messageEmitted(message, accepted: accepted)
-        return accepted
+        observer?.messageEmitted(message, id: id, accepted: id != 0)
+        return id != 0
     }
 
     func publish(_ message: GameEventScriptMessage) -> GesPublishResult {
         if initializationInstance != nil { initializationPublishes += 1 }
         let fault = random.hasActiveScopeFault
-        let accepted = !fault && enqueue(message, initializationOutput: initializationInstance != nil)
+        // A publish owns its ID even without local recipients; the local entry reuses it.
+        var id: Int64 = 0
+        if !fault {
+            lastSendID += 1
+            id = lastSendID
+        }
+        let accepted = !fault && enqueue(message, initializationOutput: initializationInstance != nil, reservedID: id) != 0
         if let instance = initializationInstance {
             if fault {
                 published += 1
                 let result = GesPublishResult(localAccepted: false, outboundAttempted: false, outboundAccepted: false)
-                observer?.messagePublished(message, result: result)
+                observer?.messagePublished(message, id: 0, result: result)
                 return result
             }
-            initializationPublications.append(.init(message: message, localAccepted: accepted, instance: instance))
+            initializationPublications.append(.init(message: message, id: id, localAccepted: accepted, instance: instance))
             published += 1
             return .init(localAccepted: accepted, outboundAttempted: false, outboundAccepted: false, outboundDeferred: !fault && sink != nil)
         }
@@ -408,7 +427,7 @@ public final class GameEventScriptHost {
         if attempted { do { outbound = try sink!.publish(message) } catch { observer?.runtimeError(runtimeDiagnostic("runtime.publishSinkFailure", error: error)) } }
         let result = GesPublishResult(localAccepted: accepted, outboundAttempted: attempted, outboundAccepted: outbound)
         published += 1
-        observer?.messagePublished(message, result: result)
+        observer?.messagePublished(message, id: id, result: result)
         return result
     }
 
@@ -434,19 +453,20 @@ public final class GameEventScriptHost {
         scriptActive = false
         let handler = activeHandler
         activeHandler = nil
-        if let handler { observer?.dispatchCompleted(active!.message, signatureID: handler.dispatchSignature) }
+        if let handler { observer?.dispatchCompleted(active!.message, id: active!.id, signatureID: handler.dispatchSignature) }
     }
 
     private var queueFull: Bool { limits.maxQueuedMessagesPerRun > 0 && pendingMessageCount >= limits.maxQueuedMessagesPerRun }
 
-    private func enqueue(_ message: GameEventScriptMessage, initializationOutput: Bool = false) -> Bool {
+    // Enqueues under a fresh send ID, or under the ID a publish reserved. Returns that ID, or 0 when nothing was enqueued.
+    private func enqueue(_ message: GameEventScriptMessage, initializationOutput: Bool = false, reservedID: Int64 = 0) -> Int64 {
         var exact = self.exact[message.signatureId] ?? []
         var names = byName[message.name] ?? []
         if !exact.contains(where: { $0.matches(message) }) && !names.contains(where: { $0.matches(message) }) {
-            if message.name == "undeliverable" { return false }
+            if message.name == "undeliverable" { return 0 }
             exact = self.exact["undeliverable(message)"] ?? []
             names = byName["undeliverable"] ?? []
-            if !exact.contains(where: { $0.matches(message) }) && !names.contains(where: { $0.matches(message) }) { return false }
+            if !exact.contains(where: { $0.matches(message) }) && !names.contains(where: { $0.matches(message) }) { return 0 }
         }
         if queueFull {
             if initializationOutput {
@@ -454,11 +474,13 @@ public final class GameEventScriptHost {
             } else {
                 observer?.runtimeLimitReached("MaxQueuedMessagesPerRun", detail: "Message queue limit reached. Dropped '" + message.name + "'.", limit: limits.maxQueuedMessagesPerRun)
             }
-            return false
+            return 0
         }
         idleSinceMicroseconds = nil
-        queue.enqueue(GesPendingMessage(message: message, exact: exact, names: names, initializationOutputID: initializationOutput ? (initializationInstance?.registrationID ?? 0) : 0))
-        return true
+        let id = reservedID != 0 ? reservedID : lastSendID + 1
+        queue.enqueue(GesPendingMessage(message: message, exact: exact, names: names, id: id, initializationOutputID: initializationOutput ? (initializationInstance?.registrationID ?? 0) : 0))
+        if reservedID == 0 { lastSendID = id }
+        return id
     }
 
     private func registrationID() throws -> Int64 {
@@ -571,9 +593,10 @@ extension GameEventScriptHost {
                     )
                     _ = instance.detach()
                 }
-                queue.clear()
-                delayed.removeAll()
-                startupQueue.clear()
+                // Discards are reported once: pending initializations, then queued messages, then delayed entries.
+                startupQueue.clear(reportingTo: observer)
+                queue.clear(reportingTo: observer)
+                clearDelayed()
                 startupPublications.removeAll(keepingCapacity: true)
                 return result
             }
@@ -613,8 +636,23 @@ extension GameEventScriptHost {
         initializationInstance = nil
         initializationDiagnostic = nil
         active = nil
-        queue.removeFailedRecipients(discardingOutputsFrom: instance.registrationID)
-        delayed.removeAll { ($0.owner?.initializationFailed ?? false) || !$0.publish && !$0.pending.hasRecipients }
+        // A failure during start fails the whole group, which then discards and reports every entry in one pass.
+        if starting { return }
+        queue.removeFailedRecipients(discardingOutputsFrom: instance.registrationID, reportingTo: observer)
+        removeFailedDelayed()
+    }
+
+    // Removes entries abandoned by a failed initialization. Each is reported in deadline order before the array
+    // changes, so a throwing observer cannot leave it inconsistent.
+    private func removeFailedDelayed() {
+        if let observer { for entry in delayed where entry.isAbandoned { observer.messageDiscarded(id: entry.id) } }
+        delayed.removeAll { $0.isAbandoned }
+    }
+
+    // Discards every delayed entry, reporting each in deadline order.
+    private func clearDelayed() {
+        if let observer { for entry in delayed { observer.messageDiscarded(id: entry.id) } }
+        delayed.removeAll()
     }
 
     private func initializationLimitDiagnostic(_ instance: GesProgramInstance?) -> GesDiagnostic {
@@ -630,7 +668,7 @@ extension GameEventScriptHost {
                     observer?.runtimeError(.init(phase: .runtime, code: "runtime.publishSinkFailure", programName: publication.instance.program.moduleName, handlerName: "initialization()", technicalDetails: String(describing: error)))
                 }
             }
-            observer?.messagePublished(publication.message, result: .init(localAccepted: publication.localAccepted, outboundAttempted: attempted, outboundAccepted: accepted))
+            observer?.messagePublished(publication.message, id: publication.id, result: .init(localAccepted: publication.localAccepted, outboundAttempted: attempted, outboundAccepted: accepted))
         }
     }
 }

@@ -1,6 +1,7 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
+using System.Globalization;
 using System.Text.Json;
 using GameEventScript.Api;
 
@@ -121,20 +122,21 @@ internal sealed class RuntimeObservations(string publishSink) : IGesRuntimeObser
     }
 
     /// <summary>Records the attempted emission and its acceptance at the callback position.</summary>
-    public void MessageEmitted(GameEventScriptMessage message, bool accepted)
+    public void MessageEmitted(GameEventScriptMessage message, long id, bool accepted)
     {
         _local.Add(message);
-        _trace.Add(new() { ["event"] = "emit", ["message"] = message, ["accepted"] = accepted });
+        _trace.Add(new() { ["event"] = "emit", ["message"] = message, ["id"] = Id(id), ["accepted"] = accepted });
     }
 
     /// <summary>Records publication with all final-delivery acceptance flags.</summary>
-    public void MessagePublished(GameEventScriptMessage message, GesPublishResult result)
+    public void MessagePublished(GameEventScriptMessage message, long id, GesPublishResult result)
     {
         _local.Add(message);
         _trace.Add(new()
         {
             ["event"] = "publish",
             ["message"] = message,
+            ["id"] = Id(id),
             ["result"] = new { localAccepted = result.LocalAccepted, outboundAttempted = result.OutboundAttempted, outboundAccepted = result.OutboundAccepted, anyAccepted = result.AnyAccepted }
         });
     }
@@ -152,12 +154,30 @@ internal sealed class RuntimeObservations(string publishSink) : IGesRuntimeObser
     }
 
     /// <summary>Records dispatch entry without serializing message values inside the callback.</summary>
-    public void DispatchStarted(GameEventScriptMessage message, string dispatchSignatureId)
-        => _trace.Add(new() { ["event"] = "dispatchStarted", ["message"] = message, ["signatureId"] = dispatchSignatureId });
+    public void DispatchStarted(GameEventScriptMessage message, long id, string dispatchSignatureId)
+        => _trace.Add(new() { ["event"] = "dispatchStarted", ["message"] = message, ["id"] = Id(id), ["signatureId"] = dispatchSignatureId });
 
     /// <summary>Records dispatch completion in callback order.</summary>
-    public void DispatchCompleted(GameEventScriptMessage message, string dispatchSignatureId)
-        => _trace.Add(new() { ["event"] = "dispatchCompleted", ["message"] = message, ["signatureId"] = dispatchSignatureId });
+    public void DispatchCompleted(GameEventScriptMessage message, long id, string dispatchSignatureId)
+        => _trace.Add(new() { ["event"] = "dispatchCompleted", ["message"] = message, ["id"] = Id(id), ["signatureId"] = dispatchSignatureId });
+
+    /// <summary>Records a delayed send with its send ID and absolute deadline as exact decimal text.</summary>
+    public void MessageScheduled(GameEventScriptMessage message, long id, long deadline, bool publish)
+        => _trace.Add(new()
+        {
+            ["event"] = "scheduled",
+            ["message"] = message,
+            ["id"] = Id(id),
+            ["deadline"] = deadline.ToString(CultureInfo.InvariantCulture),
+            ["publish"] = publish
+        });
+
+    /// <summary>Records the send ID of a delayed send removed before it became due.</summary>
+    public void MessageDiscarded(long id)
+        => _trace.Add(new() { ["event"] = "discarded", ["id"] = Id(id) });
+
+    // Send IDs are exact Int64 values, transported as decimal text.
+    private static string Id(long id) => id.ToString(CultureInfo.InvariantCulture);
 
     /// <summary>Records stable limit fields in both limit observations and the callback trace.</summary>
     public void RuntimeLimitReached(string limitName, string detail, int limit)

@@ -2,7 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using System.Text;
+using System.Text.RegularExpressions;
 using GameEventScript.Api;
+using GameEventScript.Tool;
 
 namespace GameEventScript.Tests.Native.Tool;
 
@@ -123,7 +125,7 @@ public sealed class GameEventScriptCheckRunCommandTests
         var result = Run("run", "main-*.ges", "main-a.ges", "--scenario", "scenario-a.ges", "--scenario", "scenario-b.ges", "--verbose");
         Assert.AreEqual(0, result.ExitCode, result.StandardError);
         Assert.AreEqual(Lines("42"), result.StandardOutput);
-        StringAssert.Contains(result.StandardError, "dispatch Start(value)");
+        StringAssert.Matches(result.StandardError, new Regex(@"dispatch #\d+ Start\(value\)"));
         Assert.HasCount(4, Directory.GetFiles(_directory));
     }
 
@@ -161,6 +163,35 @@ public sealed class GameEventScriptCheckRunCommandTests
         Assert.AreEqual(0, result.ExitCode, result.StandardError);
         Assert.AreEqual(string.Empty, result.StandardOutput);
         StringAssert.Contains(result.StandardError, "emit Unhandled(text: \"hello\\nworld\") [not queued]");
+    }
+
+    /// <summary>Verifies that a failed initial group reports its scheduled message as discarded in the verbose trace.</summary>
+    [TestMethod]
+    public void RunTracesDiscardedScheduledMessages()
+    {
+        Write("game.ges", "on initialization {\n  emit after 1s Tick()\n  for item in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] { let doubled be item * 2 }\n}\non Tick {}\non Main(args) {}\n");
+        var result = Run("run", "game.ges", "--verbose", "--max-steps", "10");
+        Assert.AreEqual(1, result.ExitCode, result.StandardError);
+        StringAssert.Matches(result.StandardError, new Regex(@"emit #2 Tick\r?\nerror cli\.runtimeLimit: MaxExecutionSteps=10: [^\r\n]*\r?\ndiscard #2\r?\n"));
+    }
+
+    /// <summary>Verifies that the verbose trace reports delayed sends with their send ID and local deadline.</summary>
+    [TestMethod]
+    public void RunTracesScheduledMessages()
+    {
+        Write("game.ges", "on Main(args) { emit after 0.001s Later(); publish after 0.002s Out() }\non Later {}\n");
+        var result = Run("run", "game.ges", "--verbose");
+        Assert.AreEqual(0, result.ExitCode, result.StandardError);
+        StringAssert.Matches(result.StandardError, new Regex(@"dispatch #1 Main\(args\) <- Main\(args: \[\]\)\r?\nschedule #2 emit Later at (\d{4}-\d{2}-\d{2} )?\d{2}:\d{2}:\d{2}\.\d{3}\r?\nemit #2 Later\r?\nschedule #3 publish Out at (\d{4}-\d{2}-\d{2} )?\d{2}:\d{2}:\d{2}\.\d{3}"));
+    }
+
+    /// <summary>Verifies that trace deadlines are shown as local wall-clock times, with the date when not today.</summary>
+    [TestMethod]
+    public void RunClockShowsDeadlinesAsLocalTimes()
+    {
+        var clock = new RunClock();
+        StringAssert.Matches(clock.FormatDeadline(172_800_000_000), new Regex(@"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}$"));
+        StringAssert.StartsWith(clock.FormatDeadline(long.MaxValue), "in ");
     }
 
     /// <summary>Verifies bounded termination of an event cycle and per-handler execution limits.</summary>

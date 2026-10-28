@@ -23,8 +23,9 @@ internal sealed class RunSession
         _verbose = verbose;
         _color = color;
         _interactive = interactive;
-        Observer = new RunObserver(verbose, color, interactive);
-        var builder = GameEventScriptHost.CreateBuilder().WithRuntimeObserver(Observer).WithRuntimeLimits(limits);
+        var clock = new RunClock();
+        Observer = new RunObserver(verbose, color, interactive, clock);
+        var builder = GameEventScriptHost.CreateBuilder().WithClock(clock).WithRuntimeObserver(Observer).WithRuntimeLimits(limits);
         if (profiler is not null) builder.WithProfiler(profiler);
         if (seed is { } configuredSeed) builder.WithRandomSeed(configuredSeed);
         Host = builder.Build();

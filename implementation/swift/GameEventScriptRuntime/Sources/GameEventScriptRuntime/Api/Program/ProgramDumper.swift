@@ -194,7 +194,7 @@ private final class GesProgramDump {
         case .stepImmediate: return "#" + String(Int16(bitPattern: i.a))
         case .integerImmediate: return "#" + String(i.integer)
         case .floatImmediate: return floatImmediate(i.float)
-        case .unit: return i.unit == .none ? "" : "unit:" + (i.unit == .meter ? "meter" : i.unit == .second ? "second" : "degree")
+        case .unit: return i.unit == .none ? "" : "unit:" + i.unit.rawValue
         case .typeKind: return GesBytecodeTypeKind(rawValue: i.word2).map(enumName) ?? "Unknown"
         case .patternKind: return GesBytecodePatternKind(rawValue: i.a).map(enumName) ?? "Unknown"
         case .seriesKind: return GesBytecodeSeriesKind(rawValue: i.word2).map(enumName) ?? "Unknown"

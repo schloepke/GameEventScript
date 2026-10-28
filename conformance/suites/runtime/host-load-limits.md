@@ -108,14 +108,17 @@ steps:
         - any: true
     trace:
       - event: "dispatchStarted"
+        id: "1"
         message:
           name: "Before"
         signatureId: "Before()"
       - event: "emit"
+        id: "0"
         message:
           name: "BeforeSeen"
         accepted: false
       - event: "dispatchCompleted"
+        id: "1"
         message:
           name: "Before"
         signatureId: "Before()"
@@ -702,14 +705,17 @@ steps:
         - any: true
     trace:
       - event: "dispatchStarted"
+        id: "1"
         message:
           name: "Before"
         signatureId: "Before()"
       - event: "emit"
+        id: "0"
         message:
           name: "BeforeSeen"
         accepted: false
       - event: "dispatchCompleted"
+        id: "1"
         message:
           name: "Before"
         signatureId: "Before()"

@@ -378,12 +378,15 @@ steps:
           limit: 2
     trace:
       - event: dispatchStarted
+        id: "1"
         message: { name: Start }
         signatureId: "Start()"
       - event: emit
+        id: "2"
         message: { name: A }
         accepted: true
       - event: emit
+        id: "3"
         message: { name: B }
         accepted: true
       - event: runtimeLimit
@@ -391,21 +394,27 @@ steps:
           name: MaxQueuedMessagesPerRun
           limit: 2
       - event: emit
+        id: "0"
         message: { name: C }
         accepted: false
       - event: dispatchCompleted
+        id: "1"
         message: { name: Start }
         signatureId: "Start()"
       - event: dispatchStarted
+        id: "2"
         message: { name: A }
         signatureId: "A()"
       - event: dispatchCompleted
+        id: "2"
         message: { name: A }
         signatureId: "A()"
       - event: dispatchStarted
+        id: "3"
         message: { name: B }
         signatureId: "B()"
       - event: dispatchCompleted
+        id: "3"
         message: { name: B }
         signatureId: "B()"
 ```

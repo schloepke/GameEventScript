@@ -778,6 +778,17 @@ enum GameEventScript.Api.GesQuantityUnit
   enum-field UnitDegree = 1
   enum-field UnitMeter = 2
   enum-field UnitSecond = 3
+  enum-field UnitMeterPerSecond = 4
+  enum-field UnitMeterPerSecondSquared = 5
+  enum-field UnitKilogram = 6
+  enum-field UnitNewton = 7
+  enum-field UnitJoule = 8
+  enum-field UnitWatt = 9
+  enum-field UnitVolt = 10
+  enum-field UnitAmpere = 11
+  enum-field UnitHertz = 12
+  enum-field UnitKelvin = 16
+  enum-field UnitDegreePerSecond = 17
   enum-field UnitInvalid = 255
 static class GameEventScript.Api.GesQuantityUnits
   method static GameEventScript.Api.GesQuantityUnit? ParseQuantityTypeName(System.String typeName)
@@ -949,10 +960,12 @@ interface GameEventScript.Api.IGesProgramProfiler
 interface GameEventScript.Api.IGesPublishSink
   method System.Boolean Publish(GameEventScript.Api.GameEventScriptMessage message)
 interface GameEventScript.Api.IGesRuntimeObserver
-  method System.Void DispatchCompleted(GameEventScript.Api.GameEventScriptMessage message, System.String dispatchSignatureId)
-  method System.Void DispatchStarted(GameEventScript.Api.GameEventScriptMessage message, System.String dispatchSignatureId)
-  method System.Void MessageEmitted(GameEventScript.Api.GameEventScriptMessage message, System.Boolean accepted)
-  method System.Void MessagePublished(GameEventScript.Api.GameEventScriptMessage message, GameEventScript.Api.GesPublishResult result)
+  method System.Void DispatchCompleted(GameEventScript.Api.GameEventScriptMessage message, System.Int64 id, System.String dispatchSignatureId)
+  method System.Void DispatchStarted(GameEventScript.Api.GameEventScriptMessage message, System.Int64 id, System.String dispatchSignatureId)
+  method System.Void MessageDiscarded(System.Int64 id)
+  method System.Void MessageEmitted(GameEventScript.Api.GameEventScriptMessage message, System.Int64 id, System.Boolean accepted)
+  method System.Void MessagePublished(GameEventScript.Api.GameEventScriptMessage message, System.Int64 id, GameEventScript.Api.GesPublishResult result)
+  method System.Void MessageScheduled(GameEventScript.Api.GameEventScriptMessage message, System.Int64 id, System.Int64 deadline, System.Boolean publish)
   method System.Void RuntimeError(GameEventScript.Api.GesDiagnostic diagnostic)
   method System.Void RuntimeLimitReached(System.String limitName, System.String detail, System.Int32 limit)
 static class GameEventScript.CSharpBridge.GesBridgeContextExtensions

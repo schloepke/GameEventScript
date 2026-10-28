@@ -179,13 +179,13 @@ internal static class AllocationObservations
 
         internal void Reset() => Counts = default;
         /// <summary>Counts DispatchStarted callbacks without allocating.</summary>
-        public void DispatchStarted(GameEventScriptMessage message, string dispatchSignatureId) => Counts = Counts with { Started = Counts.Started + 1 };
+        public void DispatchStarted(GameEventScriptMessage message, long id, string dispatchSignatureId) => Counts = Counts with { Started = Counts.Started + 1 };
         /// <summary>Counts DispatchCompleted callbacks without allocating.</summary>
-        public void DispatchCompleted(GameEventScriptMessage message, string dispatchSignatureId) => Counts = Counts with { Completed = Counts.Completed + 1 };
+        public void DispatchCompleted(GameEventScriptMessage message, long id, string dispatchSignatureId) => Counts = Counts with { Completed = Counts.Completed + 1 };
         /// <summary>Counts MessageEmitted callbacks without allocating.</summary>
-        public void MessageEmitted(GameEventScriptMessage message, bool accepted) => Counts = Counts with { Emitted = Counts.Emitted + 1 };
+        public void MessageEmitted(GameEventScriptMessage message, long id, bool accepted) => Counts = Counts with { Emitted = Counts.Emitted + 1 };
         /// <summary>Counts MessagePublished callbacks without allocating.</summary>
-        public void MessagePublished(GameEventScriptMessage message, GesPublishResult result) => Counts = Counts with { Published = Counts.Published + 1 };
+        public void MessagePublished(GameEventScriptMessage message, long id, GesPublishResult result) => Counts = Counts with { Published = Counts.Published + 1 };
         /// <summary>Counts RuntimeLimitReached callbacks without allocating.</summary>
         public void RuntimeLimitReached(string limitName, string detail, int limit) => Counts = Counts with { Limits = Counts.Limits + 1 };
         /// <summary>Counts RuntimeError callbacks without allocating.</summary>

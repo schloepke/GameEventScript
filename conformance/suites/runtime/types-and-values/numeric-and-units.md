@@ -661,16 +661,19 @@ steps:
               value: "NaN"
           - name: "floorDegree"
             value:
-              type: ":Number.int64"
+              type: ":Quantity.int64"
               value: "43"
+              unit: ":degree"
           - name: "ceilDegree"
             value:
-              type: ":Number.int64"
+              type: ":Quantity.int64"
               value: "44"
+              unit: ":degree"
           - name: "roundEvenDegree"
             value:
-              type: ":Number.int64"
+              type: ":Quantity.int64"
               value: "42"
+              unit: ":degree"
           - name: "minDegree"
             value:
               type: ":Quantity.int64"

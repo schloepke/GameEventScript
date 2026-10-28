@@ -12,18 +12,16 @@ enum GesTextNumberCast {
         var text = GesMessageNames.trim(input)
         guard !text.isEmpty else { return nil }
         var unit: GesQuantityUnit = .none
-        let scaled = percentageMagnitude || text.hasSuffix("%")
+        // A unit suffix scales the decimal value by factor × 10^exponent; a percentage by 10^-2.
+        var shift = percentageMagnitude || text.hasSuffix("%") ? -2 : 0
+        var factor = 1
         if text.hasSuffix("%") {
             text.removeLast()
-        } else if text.hasSuffix("m") {
-            unit = .meter
-            text.removeLast()
-        } else if text.hasSuffix("s") {
-            unit = .second
-            text.removeLast()
-        } else if text.hasSuffix("°") {
-            unit = .degree
-            text.removeLast()
+        } else if let suffix = possibleSuffixEnd(text) ? trailingSuffix(text) : nil {
+            unit = suffix.unit
+            shift = suffix.exponent
+            factor = suffix.factor
+            text = String(String.UnicodeScalarView(text.unicodeScalars.dropLast(suffix.scalars.count)))
         }
         if percentage && unit != .none || text.isEmpty { return nil }
         if text == "NaN" { return sink.nothing }
@@ -79,19 +77,78 @@ enum GesTextNumberCast {
             if exponentNegative { exponent = -exponent }
         }
         if position != bytes.count || grouping && underscores { return nil }
-        let digits = bytes[digitsStart..<mantissaEnd].filter(digit)
+        // Collect the mantissa digits; a non-decimal factor multiplies them exactly before any rounding.
+        var digits = bytes[digitsStart..<mantissaEnd].filter(digit)
+        if factor != 1 { multiplyDecimal(&digits, by: factor) }
         guard let first = digits.firstIndex(where: { $0 != 48 }), let last = digits.lastIndex(where: { $0 != 48 }) else { return percentage ? sink.percentage(0) : sink.integer(0, unit: unit) }
-        let power = exponent - Int64(fractionalDigits) + Int64(digits.count - last - 1) - (scaled ? 2 : 0)
+        let power = exponent - Int64(fractionalDigits) + Int64(digits.count - last - 1) + Int64(shift)
         if !percentage && power >= 0 && Int64(last - first + 1) + power <= 19 {
             var magnitude: UInt64 = 0
             for byte in digits[first...last] { magnitude = magnitude * 10 + UInt64(byte - 48) }
             for _ in 0..<Int(power) { magnitude *= 10 }
             if magnitude <= (negative ? UInt64(1) << 63 : UInt64(Int64.max)) { return sink.integer(Int64(bitPattern: negative ? 0 &- magnitude : magnitude), unit: unit) }
         }
+        // Scaling adjusts the decimal exponent before the single binary64 rounding.
         let decimal: String
-        if !underscores && !grouping && !scaled { decimal = text } else { decimal = String(decoding: bytes[..<mantissaEnd].filter { $0 != 95 && $0 != 44 }, as: UTF8.self) + "e" + String(exponent - (scaled ? 2 : 0)) }
+        if !underscores && !grouping && shift == 0 && factor == 1 { decimal = text } else { decimal = (negative ? "-" : "") + String(decoding: digits, as: UTF8.self) + "e" + String(exponent - Int64(fractionalDigits) + Int64(shift)) }
         guard let number = Double(decimal) else { return nil }
         return percentage ? number.isFinite ? sink.percentage(number) : sink.nothing : sink.float(number, unit: unit)
+    }
+
+    // The longest unit suffix spelling ending the text; it belongs to the number only when it directly follows a digit
+    // or the special values, so `NaN` keeps its trailing N.
+    // Only these scalars end a unit spelling, so plain numbers and other text skip the suffix table. A native test keeps
+    // the switch in step with the suffix table.
+    static func possibleSuffixEnd(_ text: String) -> Bool {
+        let scalars = text.unicodeScalars
+        switch scalars.last {
+        case "s", "m", "h", "z", "g", "N", "J", "W", "V", "A", "K", "°", "²": return true
+        case "2": return scalars.dropLast().last == "^"
+        default: return false
+        }
+    }
+
+    // Compares backwards over the scalar view, so matching allocates nothing.
+    private static func trailingSuffix(_ text: String) -> GesQuantityUnit.Suffix? {
+        let scalars = text.unicodeScalars
+        for suffix in GesQuantityUnit.suffixes {
+            var index = scalars.endIndex
+            var matched = true
+            for expected in suffix.scalars.reversed() {
+                guard index > scalars.startIndex else {
+                    matched = false
+                    break
+                }
+                index = scalars.index(before: index)
+                if scalars[index] != expected {
+                    matched = false
+                    break
+                }
+            }
+            guard matched, index > scalars.startIndex else { continue }
+            let remainder = scalars[..<index]
+            if let last = remainder.last, ("0"..."9").contains(last) { return suffix }
+            let unsigned = remainder.first == "+" || remainder.first == "-" ? remainder.dropFirst() : remainder[...]
+            if unsigned.elementsEqual("Infinity".unicodeScalars) || remainder.elementsEqual("NaN".unicodeScalars) { return suffix }
+            return nil
+        }
+        return nil
+    }
+
+    // Multiplies ASCII decimal digits in place by a small positive factor.
+    private static func multiplyDecimal(_ digits: inout [UInt8], by factor: Int) {
+        var carry = 0
+        for index in digits.indices.reversed() {
+            let product = Int(digits[index] - 48) * factor + carry
+            digits[index] = UInt8(48 + product % 10)
+            carry = product / 10
+        }
+        var prefix: [UInt8] = []
+        while carry > 0 {
+            prefix.insert(UInt8(48 + carry % 10), at: 0)
+            carry /= 10
+        }
+        digits.insert(contentsOf: prefix, at: 0)
     }
 
     static func percentage(_ value: GesValue) -> GesValue {

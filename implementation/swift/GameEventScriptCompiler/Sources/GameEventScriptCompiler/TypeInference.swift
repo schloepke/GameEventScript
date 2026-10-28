@@ -32,10 +32,13 @@ extension GesAstValidator {
             if [.predicate, .empty, .hasValue, .chance].contains(op) { return "boolean" }
             if op == .parse { return "unknown" }
             if op == .negate { return child(value) }
-            if op == .abs {
+            // abs and rounding keep a scalar Quantity's unit, so a statically unknown operand leaves the result unknown too.
+            // Only abs accepts a vector, whose magnitude keeps a unit the nominal type does not expose; rounding a vector
+            // is nothing, so it infers as a unitless number.
+            if [.abs, .floor, .ceil, .truncate, .roundHalfEven, .roundHalfUp, .roundHalfDown].contains(op) {
                 let input = child(value)
                 if input.hasPrefix("quantity:") { return input }
-                return ["unknown", "other", "vector"].contains(input) ? "other" : "number"
+                return input == "unknown" || input == "other" || op == .abs && input == "vector" ? "other" : "number"
             }
             if op == .not { return predicate(child(value)) ? "boolean" : "unknown" }
             return "number"

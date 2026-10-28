@@ -30,7 +30,7 @@ class RunnerTests(unittest.TestCase):
 
     def test_inventory_and_request_isolation(self):
         self.assertGreater(len(self.cases), 1900)
-        self.assertEqual(17, len(self.snapshots))
+        self.assertEqual(18, len(self.snapshots))
         exported = requests(self.snapshots)
         self.assertNotIn('assembler', exported['cases'][0])
         self.assertNotIn('expected', exported['cases'][0])
@@ -41,7 +41,7 @@ class RunnerTests(unittest.TestCase):
 
     def test_exact_snapshots_pass_without_runtime(self):
         result = verify(self.snapshots, self.observations())
-        self.assertEqual({'passed': 17, 'failed': 0, 'error': 0, 'skipped': 0}, result['summary'])
+        self.assertEqual({'passed': 18, 'failed': 0, 'error': 0, 'skipped': 0}, result['summary'])
 
     def test_negative_snapshot_control_and_unicode(self):
         observed = self.observations()
@@ -57,7 +57,7 @@ class RunnerTests(unittest.TestCase):
         for capability, status in [('compiler', 'error'), ('bytecode-snapshot', 'skipped')]:
             observed = self.observations()
             observed['capabilities'].remove(capability)
-            self.assertEqual(17, verify(self.snapshots, observed)['summary'][status])
+            self.assertEqual(18, verify(self.snapshots, observed)['summary'][status])
         observed = self.observations()
         observed['capabilities'].remove('program-binary')
         expected = sum(case.metadata.get('compile', {}).get('binaryRoundTrip', False) for case in self.snapshots)
@@ -143,7 +143,7 @@ class RunnerTests(unittest.TestCase):
                 observations.write_text(json.dumps(data))
                 result = subprocess.run(command, capture_output=True, text=True)
                 self.assertEqual(expected, result.returncode, result.stderr)
-                self.assertEqual(17, json.loads(output.read_text())['summary']['total'])
+                self.assertEqual(18, json.loads(output.read_text())['summary']['total'])
 
 
 if __name__ == '__main__':

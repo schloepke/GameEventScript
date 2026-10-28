@@ -30,7 +30,7 @@ boundary, maximum finite values, adjacent representable values at notation
 thresholds, familiar decimal fractions, the binary64 exact-integer boundary,
 and both Int64 limits.
 
-Each Number is also tested with meters, seconds and degrees. Binary64 inputs
+Each Number is also tested with every quantity unit. Binary64 inputs
 are additionally tested as Percentage ratios. Values cross the adapter boundary
 as hexadecimal bits or decimal Int64 strings, never JSON numeric payloads.
 

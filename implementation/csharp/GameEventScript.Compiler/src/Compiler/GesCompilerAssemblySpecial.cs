@@ -34,13 +34,14 @@ internal static partial class GesCompiler
             return name == "Number" ? GesBytecodeTypeKind.Float : GetBytecodeTypeKind(name.ToLowerInvariant()) ?? throw AssemblyFailure("Unknown assembly type.", name, operand);
         }
 
+        // Unit tags are the portable unit type names, plus the short tags #m and #s.
         private GesQuantityUnit AssemblyUnit(GesExpressionNode operand)
             => AssemblyText(operand) switch
             {
                 "none" => GesQuantityUnit.UnitNone,
-                "degree" => GesQuantityUnit.UnitDegree,
-                "m" or "meter" => GesQuantityUnit.UnitMeter,
-                "s" or "second" => GesQuantityUnit.UnitSecond,
+                "m" => GesQuantityUnit.UnitMeter,
+                "s" => GesQuantityUnit.UnitSecond,
+                var name when name != "\u00B0" && GesQuantityUnits.ParseTypeName(name) is { } unit => unit,
                 var name => throw AssemblyFailure("Unknown assembly unit.", name, operand)
             };
 

@@ -77,6 +77,7 @@ steps:
     diagnostics: []
     trace:
       - event: "dispatchStarted"
+        id: "1"
         message:
           name: "Start"
           args:
@@ -86,6 +87,7 @@ steps:
                 value: "12345"
         signatureId: "Start(value)"
       - event: "dispatchCompleted"
+        id: "1"
         message:
           name: "Start"
           args:
@@ -207,6 +209,7 @@ steps:
     diagnostics: []
     trace:
       - event: "dispatchStarted"
+        id: "1"
         message:
           name: "Start"
           args:
@@ -216,6 +219,7 @@ steps:
                 value: "12345"
         signatureId: "Start(value)"
       - event: "dispatchCompleted"
+        id: "1"
         message:
           name: "Start"
           args:
@@ -337,6 +341,7 @@ steps:
     diagnostics: []
     trace:
       - event: "dispatchStarted"
+        id: "1"
         message:
           name: "Start"
           args:
@@ -346,6 +351,7 @@ steps:
                 value: "Hello, world"
         signatureId: "Start(value)"
       - event: "dispatchCompleted"
+        id: "1"
         message:
           name: "Start"
           args:
@@ -467,6 +473,7 @@ steps:
     diagnostics: []
     trace:
       - event: "dispatchStarted"
+        id: "1"
         message:
           name: "Start"
           args:
@@ -476,6 +483,7 @@ steps:
                 value: "Hello, world"
         signatureId: "Start(value)"
       - event: "dispatchCompleted"
+        id: "1"
         message:
           name: "Start"
           args:
@@ -597,6 +605,7 @@ steps:
     diagnostics: []
     trace:
       - event: "dispatchStarted"
+        id: "1"
         message:
           name: "Start"
           args:
@@ -606,6 +615,7 @@ steps:
                 value: "1_234.5"
         signatureId: "Start(value)"
       - event: "dispatchCompleted"
+        id: "1"
         message:
           name: "Start"
           args:
@@ -727,6 +737,7 @@ steps:
     diagnostics: []
     trace:
       - event: "dispatchStarted"
+        id: "1"
         message:
           name: "Start"
           args:
@@ -736,6 +747,7 @@ steps:
                 value: "1_234.5"
         signatureId: "Start(value)"
       - event: "dispatchCompleted"
+        id: "1"
         message:
           name: "Start"
           args:
@@ -857,6 +869,7 @@ steps:
     diagnostics: []
     trace:
       - event: "dispatchStarted"
+        id: "1"
         message:
           name: "Start"
           args:
@@ -866,6 +879,7 @@ steps:
                 value: "1.005%"
         signatureId: "Start(value)"
       - event: "dispatchCompleted"
+        id: "1"
         message:
           name: "Start"
           args:
@@ -987,6 +1001,7 @@ steps:
     diagnostics: []
     trace:
       - event: "dispatchStarted"
+        id: "1"
         message:
           name: "Start"
           args:
@@ -996,6 +1011,7 @@ steps:
                 value: "1.005%"
         signatureId: "Start(value)"
       - event: "dispatchCompleted"
+        id: "1"
         message:
           name: "Start"
           args:
@@ -1117,6 +1133,7 @@ steps:
     diagnostics: []
     trace:
       - event: "dispatchStarted"
+        id: "1"
         message:
           name: "Start"
           args:
@@ -1126,6 +1143,7 @@ steps:
                 value: "0.1005"
         signatureId: "Start(value)"
       - event: "dispatchCompleted"
+        id: "1"
         message:
           name: "Start"
           args:
@@ -1247,6 +1265,7 @@ steps:
     diagnostics: []
     trace:
       - event: "dispatchStarted"
+        id: "1"
         message:
           name: "Start"
           args:
@@ -1256,6 +1275,7 @@ steps:
                 value: "0.1005"
         signatureId: "Start(value)"
       - event: "dispatchCompleted"
+        id: "1"
         message:
           name: "Start"
           args:

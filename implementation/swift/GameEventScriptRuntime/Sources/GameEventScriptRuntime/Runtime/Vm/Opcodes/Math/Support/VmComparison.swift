@@ -56,16 +56,7 @@ enum GesComparison {
         } else if rank(a.kind) != rank(b.kind) {
             comparison = rank(a.kind) < rank(b.kind) ? -1 : 1
         } else if a.spatialValue != nil && a.kind == b.kind && a.unit != b.unit {
-            func unitRank(_ unit: GesQuantityUnit) -> Int {
-                switch unit {
-                case .none: 0
-                case .degree: 1
-                case .meter: 2
-                case .second: 3
-                }
-            }
-
-            comparison = unitRank(a.unit) < unitRank(b.unit) ? -1 : 1
+            comparison = a.unit.unitID < b.unit.unitID ? -1 : 1
         } else if a.kind == .dice && b.kind == .dice {
             comparison = 0
         } else if a.kind != b.kind {

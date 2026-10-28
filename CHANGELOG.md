@@ -12,6 +12,33 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 
 ### Breaking
 
+- A number directly followed by a unit spelling is now one quantity literal, so
+  `10m/s`, `6m/s²` or `120°/s` are a speed, an acceleration and an angular speed
+  rather than divisions by a binding `s`. Write `10m / s` with whitespace to
+  divide. Text such as `'250ms'` now parses as `0.25s` instead of failing.
+- `floor`, `ceil`, `truncate` and the three `round` forms keep the unit of a
+  quantity, at runtime and in constant folding: `floor 2.5m` is now `2m` instead
+  of the unitless `2`, and `round half even 2.5m/s` is `2m/s`. Percentages still
+  round to unitless numbers. A rounded time such as `floor 1.5s` is therefore a
+  valid send delay. Remove the unit explicitly with `as :Quantity(none)` where a
+  plain number is needed.
+- Swift `GesQuantityUnit` has new cases for the added physical units, so an
+  exhaustive `switch` over it must handle `kilogram`, `newton`, `joule`, `watt`,
+  `volt`, `ampere`, `hertz`, `kelvin` and `degreePerSecond` (or add a `default`).
+  C# `GesQuantityUnit` gains the same members; existing values keep their numbers.
+- Runtime observer callbacks report the host-local send ID of the message they
+  describe: C# `MessageEmitted(message, id, accepted)`,
+  `MessagePublished(message, id, result)`, `DispatchStarted(message, id,
+  dispatchSignatureId)` and `DispatchCompleted(message, id, dispatchSignatureId)`;
+  Swift `messageEmitted(_:id:accepted:)`, `messagePublished(_:id:result:)`,
+  `dispatchStarted(_:id:signatureID:)` and `dispatchCompleted(_:id:signatureID:)`.
+  Every queued emit or received message, processed publish, delayed send and
+  initialization gets the next ID of its host, so a trace can match each dispatch
+  to its emit, publish or delayed send; 0 marks an emit that was not queued or a
+  publish the host did not accept. Messages themselves carry no ID.
+  Migrate by adding the `id` parameter: every callback now has an empty default
+  implementation in both ports, so an observer that keeps an old signature still
+  compiles but no longer receives that callback.
 - Public API types are renamed so that only the three edge types keep the
   `GameEventScript` prefix: `GameEventScriptHost`, `GameEventScriptProgram` and
   `GameEventScriptMessage`. All other public types use `Ges`, identically in C#
@@ -98,8 +125,41 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 - C# `GesValueMap.StorageLength` is removed; it always equaled `Length`. Use
   `Length` instead.
 
+### Added
+
+- Physical units in C# and Swift: meter per second (`m/s`), meter per second
+  squared (`m/s²`, ASCII `m/s^2`), kilogram (`kg`), newton (`N`), joule (`J`),
+  watt (`W`), volt (`V`), ampere (`A`), hertz (`Hz`), kelvin (`K`) and degree
+  per second (`°/s`, ASCII `deg/s`), next to meters, seconds and degrees (ASCII
+  `deg`). Literals accept the prefixed spellings `km`, `mm`, `ms`, `kN`, `kJ`, `MJ`,
+  `kW`, `MW`, `kV`, `kHz`, `Wh` and `kWh`, which normalize exactly to the base
+  unit. Products and quotients follow a closed derivation table, for example
+  `10m / 2s` is `5m/s`, `2kg * 3m/s²` is `6N` and `1 / 2s` is `0.5Hz` (formerly
+  `nothing`); other combinations of two units remain `nothing`. Every unit works
+  in `:Quantity(...)`, text formatting and parsing, message JSON, vectors and
+  points, inline assembly (`#meterPerSecond`) and host APIs, including Swift
+  `@GesField(unit: .meterPerSecond)`. The new UnitIds are 4 to 12, 16 and 17;
+  Swift `GesQuantityUnit` is now `Sendable`.
+- Runtime observers can follow delayed messages. C# `MessageScheduled(message, id,
+  deadline, publish)` / Swift `messageScheduled(_:id:deadline:publish:)` reports
+  each accepted `emit … after` or `publish … after` once, with its send ID and its
+  absolute deadline in microseconds on the host clock.
+  `MessageDiscarded(id)` / `messageDiscarded(id:)` reports every queued,
+  pending-initialization or delayed message removed before it was dispatched,
+  such as after a failed initialization, so each send ID ends in a dispatch or a
+  discard. Hosts without an observer behave as before. `ges run --verbose`
+  traces them as `schedule #<id> … at <local time>` and `discard #<id>` and shows
+  the send ID on emit, publish and dispatch lines.
+- C# `IGesRuntimeObserver` gives every callback an empty default implementation,
+  like Swift, so an observer implements only the callbacks it needs.
+
 ### Changed
 
+- A delayed `emit after …` without recipients now behaves like the same emit
+  without `after`: it is not scheduled and is observed as not queued, so it no
+  longer keeps the host waiting, counts towards the queue limit or appears in
+  `NextMessageDelay`. Its script result stays true. Delayed publishes are still
+  scheduled for the outbound sink.
 - The root SwiftPM package now exposes only the four libraries. Build `ges` from
   `implementation/swift/GameEventScriptTool`, or install it via Homebrew, the
   install script or standalone downloads. The root macOS minimum is now 10.15;
@@ -117,6 +177,9 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   their loop, so loops execute fewer instructions. Random draws, messages and
   host calls stay in place and results are unchanged; executed opcode counts
   drop and register requirements can grow slightly.
+- The C# and Swift compilers now produce byte-identical Programs for the same
+  sources and compilation options, including debug symbols, source maps and
+  source archives. Only BuildMetadata differs to identify the producing compiler.
 - The Swift compiler now writes the BuildMetadata section with compiler ID
   `steph.ges.compiler.swift` and version `0.1.0`, as the binary format requires
   of every port. Runtime behavior does not depend on it.

@@ -292,7 +292,7 @@ internal static class GesEmbeddedGrammars
             [],
             [], false),
         new(
-            ":(Quantity)(\\()((?:none|m|meter|s|second|degree|°))(\\))(?=$|[^A-Za-z0-9_])",
+            ":(Quantity)(\\()((?:none|m/s²|m/s\\^2|deg/s|degree/s|°/s|m/s|degree|meter|second|deg|kg|Hz|°|m|s|N|J|W|V|A|K))(\\))(?=$|[^A-Za-z0-9_])",
             "",
             "support.type.primitive.quantity.gameeventscript",
             "",
@@ -445,7 +445,7 @@ internal static class GesEmbeddedGrammars
             [],
             [], false),
         new(
-            "\\b\\d(?:[\\d_]*\\d)?(?:\\.\\d(?:[\\d_]*\\d)?)?(?:m|s|°)(?=$|[^A-Za-z0-9_])",
+            "\\b\\d(?:[\\d_]*\\d)?(?:\\.\\d(?:[\\d_]*\\d)?)?(?:m/s²|m/s\\^2|deg/s|°/s|m/s|kWh|kHz|deg|Wh|Hz|km|mm|ms|kg|kN|kJ|MJ|kW|MW|kV|°|m|s|N|J|W|V|A|K)(?=$|[^A-Za-z0-9_])",
             "",
             "constant.numeric.unit.gameeventscript",
             "",
@@ -1039,7 +1039,7 @@ internal static class GesEmbeddedGrammars
             [],
             [], false),
         new(
-            ":(Quantity)(\\()((?:none|m|meter|s|second|degree|°))(\\))(?=$|[^A-Za-z0-9_])",
+            ":(Quantity)(\\()((?:none|m/s²|m/s\\^2|deg/s|degree/s|°/s|m/s|degree|meter|second|deg|kg|Hz|°|m|s|N|J|W|V|A|K))(\\))(?=$|[^A-Za-z0-9_])",
             "",
             "support.type.primitive.quantity.gameeventscript",
             "",
@@ -1192,7 +1192,7 @@ internal static class GesEmbeddedGrammars
             [],
             [], false),
         new(
-            "\\b\\d(?:[\\d_]*\\d)?(?:\\.\\d(?:[\\d_]*\\d)?)?(?:m|s|°)(?=$|[^A-Za-z0-9_])",
+            "\\b\\d(?:[\\d_]*\\d)?(?:\\.\\d(?:[\\d_]*\\d)?)?(?:m/s²|m/s\\^2|deg/s|°/s|m/s|kWh|kHz|deg|Wh|Hz|km|mm|ms|kg|kN|kJ|MJ|kW|MW|kV|°|m|s|N|J|W|V|A|K)(?=$|[^A-Za-z0-9_])",
             "",
             "constant.numeric.unit.gameeventscript",
             "",

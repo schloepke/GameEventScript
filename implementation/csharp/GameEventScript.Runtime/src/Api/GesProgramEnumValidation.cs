@@ -23,11 +23,7 @@ internal static class GesProgramEnumValidation
             or GesBinaryBindKind.ExternalType;
 
     internal static bool IsDefined(GesQuantityUnit value)
-        => value is GesQuantityUnit.UnitNone
-            or GesQuantityUnit.UnitDegree
-            or GesQuantityUnit.UnitMeter
-            or GesQuantityUnit.UnitSecond
-            or GesQuantityUnit.UnitInvalid;
+        => value is GesQuantityUnit.UnitNone or GesQuantityUnit.UnitInvalid || value.IsNumericUnit();
 
     internal static bool IsDefined(GesBytecodeTypeKind value)
         => value is GesBytecodeTypeKind.Nothing

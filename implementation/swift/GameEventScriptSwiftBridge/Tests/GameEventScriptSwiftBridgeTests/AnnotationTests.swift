@@ -23,6 +23,16 @@ private struct AnnotatedPlayer {
 }
 
 @GesType
+private struct AnnotatedThruster {
+    @GesField(unit: .meterPerSecond)
+    var speed: Double = 3
+    @GesField(unit: .newton)
+    var thrust: Double = 21400
+    @GesField(unit: .degreePerSecond)
+    var turnRate: Double = 120
+}
+
+@GesType
 private final class AnnotatedSensor {
     @GesField(unit: .meter)
     var distance: Double
@@ -96,6 +106,15 @@ final class AnnotationTests: XCTestCase {
         XCTAssertThrowsError(try AnnotatedPlayer.createGesType().unwrap(call.result))
         let invalid = GesExternalTypeConstructorCall(arguments: .init([.float(1.5), .text("Ada")]))
         XCTAssertThrowsError(try constructor.invoke(invalid))
+    }
+
+    func testPhysicalUnitFieldsKeepTheirUnits() throws {
+        let type = try AnnotatedThruster.createGesType()
+        XCTAssertEqual(type.definition.fields.map { $0.unit }, [GesQuantityUnit.meterPerSecond, .newton, .degreePerSecond])
+        let value = type.wrap(AnnotatedThruster())
+        XCTAssertEqual(try value.externalValue?.field("speed"), .integer(3, unit: .meterPerSecond))
+        XCTAssertEqual(try value.externalValue?.field("thrust"), .integer(21400, unit: .newton))
+        XCTAssertEqual(try value.externalValue?.field("turnRate"), .integer(120, unit: .degreePerSecond))
     }
 
     func testUnitsComputedFieldsCollectionsAndStaticFactory() throws {

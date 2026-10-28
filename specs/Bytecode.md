@@ -206,30 +206,34 @@ component output. Iterator instructions require zero UnitId. Undefined flag comb
 The UnitId map keeps the defined ids stable and reserves
 room for likely game-domain units:
 
-| UnitId | Unit | Intended use |
-| --- | --- | --- |
-| `0` | none | Unitless scalar. |
-| `1` | degree | Angles, headings, rotations. |
-| `2` | meter | Positions, distances, ranges, radii. |
-| `3` | second | Durations, cooldowns, tick time. |
-| `4` | meter per second | Speed and velocity magnitude. |
-| `5` | meter per second squared | Acceleration. |
-| `6` | kilogram | Mass, load, inertia. |
-| `7` | newton | Force, thrust, recoil. |
-| `8` | joule | Energy, battery charge, heat energy. |
-| `9` | watt | Power, generator output, energy consumption over time. |
-| `10` | volt | Voltage for electrotechnical systems. |
-| `11` | ampere | Current, charge flow, overload/thermal balancing. |
-| `12` | hertz | Frequency, fire rate, polling, radio cadence. |
-| `13` | bit | Information amount. |
-| `14` | byte | Storage amount. |
-| `15` | bit per second | Bandwidth and communication throughput. |
-| `16` | kelvin | Temperature; Celsius/Fahrenheit syntax should normalize to Kelvin. |
-| `17..31` | reserved | Additional built-in or domain units. |
+> **Since: Unreleased** — UnitIds 4 to 12, 16 and 17
 
-The compiler must only emit units supported by its matching runtime. The
-extended map keeps additional unit IDs representable without reshaping the
-instruction word.
+| UnitId | Unit | Portable name | Intended use |
+| --- | --- | --- | --- |
+| `0` | none | | Unitless scalar. |
+| `1` | degree | `degree` | Angles, headings, rotations. |
+| `2` | meter | `meter` | Positions, distances, ranges, radii. |
+| `3` | second | `second` | Durations, cooldowns, tick time. |
+| `4` | meter per second | `meterPerSecond` | Speed and velocity magnitude. |
+| `5` | meter per second squared | `meterPerSecondSquared` | Acceleration. |
+| `6` | kilogram | `kilogram` | Mass, load, inertia. |
+| `7` | newton | `newton` | Force, thrust, recoil. |
+| `8` | joule | `joule` | Energy, battery charge, heat energy. |
+| `9` | watt | `watt` | Power, generator output, energy consumption over time. |
+| `10` | volt | `volt` | Voltage for electrotechnical systems. |
+| `11` | ampere | `ampere` | Current, charge flow, overload/thermal balancing. |
+| `12` | hertz | `hertz` | Frequency, fire rate, polling, radio cadence. |
+| `13` | reserved: bit | | Information amount; not implemented. |
+| `14` | reserved: byte | | Storage amount; not implemented. |
+| `15` | reserved: bit per second | | Bandwidth; not implemented. |
+| `16` | kelvin | `kelvin` | Temperature. |
+| `17` | degree per second | `degreePerSecond` | Angular speed, turn rate. |
+| `18..31` | reserved | | Additional built-in or domain units. |
+
+Programs may encode only the defined UnitIds 0 to 12, 16 and 17; validation
+rejects reserved ids. Unit arithmetic, symbols and literal spellings are
+defined in [Language quantities](Language.md#quantities). The extended map keeps
+additional unit IDs representable without reshaping the instruction word.
 
 ## Parameter Type Hints
 
@@ -1550,12 +1554,12 @@ separate approximate-equality opcode.
 | 0x6E | `RandomPop` | - | - | - | - | - | Restores the previous random scope. |
 | 0x6F | `Term` | - | result register | `XRegister`=series | `YRegister`=index | - | Reads a zero-based mathematical series term; non-series sources yield `nothing`. |
 | 0x70 | `Exp` | - | result register | `XRegister`=operand | - | - | Natural exponential. Unitless numeric input only; overflow to `+Infinity` is valid. |
-| 0x71 | `Floor` | - | result register | `XRegister`=operand | - | - | Floors a unitless numeric value and writes an integer. |
-| 0x72 | `Ceil` | - | result register | `XRegister`=operand | - | - | Ceils a unitless numeric value and writes an integer. |
-| 0x73 | `Truncate` | - | result register | `XRegister`=operand | - | - | Truncates a unitless numeric value toward zero and writes an integer. |
-| 0x74 | `RoundHalfEven` | - | result register | `XRegister`=operand | - | - | Rounds a unitless numeric value using midpoint-to-even and writes an integer. |
-| 0x75 | `RoundHalfUp` | - | result register | `XRegister`=operand | - | - | Rounds midpoint values away from zero and writes an integer. |
-| 0x76 | `RoundHalfDown` | - | result register | `XRegister`=operand | - | - | Rounds midpoint values toward zero and writes an integer. |
+| 0x71 | `Floor` | - | result register | `XRegister`=operand | - | - | Floors a numeric value and writes an integer with the operand's quantity unit. |
+| 0x72 | `Ceil` | - | result register | `XRegister`=operand | - | - | Ceils a numeric value and writes an integer with the operand's quantity unit. |
+| 0x73 | `Truncate` | - | result register | `XRegister`=operand | - | - | Truncates a numeric value toward zero and writes an integer with the operand's quantity unit. |
+| 0x74 | `RoundHalfEven` | - | result register | `XRegister`=operand | - | - | Rounds a numeric value using midpoint-to-even and writes an integer with the operand's quantity unit. |
+| 0x75 | `RoundHalfUp` | - | result register | `XRegister`=operand | - | - | Rounds midpoint values away from zero and writes an integer with the operand's quantity unit. |
+| 0x76 | `RoundHalfDown` | - | result register | `XRegister`=operand | - | - | Rounds midpoint values toward zero and writes an integer with the operand's quantity unit. |
 | 0x77 | `DegreeToRadians` | - | result register | `XRegister`=operand | - | - | Converts degrees to unitless radians. |
 | 0x78 | `DegreeFromRadians` | - | result register | `XRegister`=operand | - | - | Converts unitless radians to a degree quantity. |
 | 0x79 | `WrapDegree` | - | result register | `XRegister`=operand | - | - | Normalizes a degree or unitless numeric value into `[0, 360)` degrees. |

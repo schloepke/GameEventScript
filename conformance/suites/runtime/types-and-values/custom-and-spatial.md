@@ -1144,7 +1144,7 @@ steps:
 
 ## Test: abs measures a vector while rounding rejects spatial values
 
-This runtime case verifies that `abs` of a Point and every rounding operation on a Vector or Point produce `nothing`; `abs` of a Vector is its length.
+This runtime case verifies with constant operands that `abs` of a Point and rounding a Vector, Point or Text produce `nothing`, while a Boolean rounds as `1`; `abs` of a Vector is its length.
 
 ### Case description
 
@@ -1162,7 +1162,7 @@ sources:
 
 ```ges
 on Start {
-  emit Done(pointAbs: abs :Point(3m, 4m), vectorFloor: floor :Vector(1.5m, 2.5m), pointRound: round half up :Point(1.5, 0.5), vectorCeil: ceil :Vector(0.5s, 1s))
+  emit Done(pointAbs: abs :Point(3m, 4m), vectorFloor: floor :Vector(1.5m, 2.5m), pointRound: round half up :Point(1.5, 0.5), vectorCeil: ceil :Vector(0.5s, 1s), textFloor: floor "2.5", booleanRound: round half even true)
 }
 ```
 
@@ -1195,6 +1195,92 @@ steps:
           - name: "vectorCeil"
             value:
               type: ":Nothing"
+          - name: "textFloor"
+            value:
+              type: ":Nothing"
+          - name: "booleanRound"
+            value:
+              type: ":Number.int64"
+              value: "1"
+```
+
+---
+
+## Test: abs and rounding of non-numeric runtime values produce nothing
+
+This runtime case passes every operand through an untyped function, so `abs` and rounding run in the VM rather than in constant folding. Spatial, Text, List and Tag operands produce `nothing`; Booleans round as `1`.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: non-numeric-abs-and-rounding-at-runtime
+kind: scriptApi
+level: atomic
+sources:
+  - name: "non-numeric-abs-and-rounding-at-runtime.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+function pass(_ value) be value
+
+on Start {
+  emit Done(pointAbs: abs pass(:Point(3m, 4m)), vectorFloor: floor pass(:Vector(1.5m, 2.5m)), pointRound: round half up pass(:Point(1.5, 0.5)), vectorCeil: ceil pass(:Vector(0.5s, 1s)), textFloor: floor pass("2.5"), listTruncate: truncate pass([1.5]), tagRound: round half even pass(#ready), textAbs: abs pass("-2"), booleanFloor: floor pass(true), booleanAbs: abs pass(true))
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| step-0001 | Start | completion |  |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  step-0001:
+    input:
+      args: []
+    local:
+      - name: "Done"
+        args:
+          - name: "pointAbs"
+            value:
+              type: ":Nothing"
+          - name: "vectorFloor"
+            value:
+              type: ":Nothing"
+          - name: "pointRound"
+            value:
+              type: ":Nothing"
+          - name: "vectorCeil"
+            value:
+              type: ":Nothing"
+          - name: "textFloor"
+            value:
+              type: ":Nothing"
+          - name: "listTruncate"
+            value:
+              type: ":Nothing"
+          - name: "tagRound"
+            value:
+              type: ":Nothing"
+          - name: "textAbs"
+            value:
+              type: ":Nothing"
+          - name: "booleanFloor"
+            value:
+              type: ":Number.int64"
+              value: "1"
+          - name: "booleanAbs"
+            value:
+              type: ":Number.int64"
+              value: "1"
 ```
 
 ---

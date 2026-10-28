@@ -922,8 +922,9 @@ is the natural exponential counterpart of `ln`.
 
 Unary intrinsics accept either `operation expression` or
 `operation(expression)`. `floor`, `ceil`, `truncate`, and the three `round`
-forms return integers using [Number semantics](Semantics/Numbers.md); a Vector
-or Point operand produces `nothing`. `rad`
+forms return integers using [Number semantics](Semantics/Numbers.md); Booleans
+round as `0` or `1`, and any other operand that is not a Number, Quantity or
+Percentage, such as a Vector, Point, Text or List, produces `nothing`. `rad`
 converts degrees to unitless radians; `deg` converts unitless radians to a degree
 quantity; `wrap degree` reduces a unitless or degree-valued angle to `[0°, 360°)`.
 `chance` accepts a unitless percentage or numeric probability: integer inputs and
@@ -1324,7 +1325,8 @@ coercion; the complete contract is in
 
 `abs` preserves the operand's numeric family for percentages and quantities:
 absolute percentages remain `:Percentage`, and absolute quantities keep their
-unit. `abs` of a Vector is its length with the Vector's unit; `abs` of a Point
+unit. `abs` of a Vector is its length with the Vector's unit, a Boolean gives
+`0` or `1`, and any other non-numeric operand, such as a Point, Text or Tag,
 produces `nothing`. Finite numeric results that are exactly integral are represented as
 integer values.
 

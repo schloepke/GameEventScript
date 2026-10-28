@@ -12,14 +12,15 @@ struct GesLiteralParser {
     private var position = 0, items = 0
     private var limit: String?
     private var nodes: [GesLiteralNode] = []
+    // Absent outside a running Program: Program Record constructors are then unknown types.
     private var state: GesVirtualMachine?
 
-    static func evaluate(_ input: GesValue, context: GesContext, state: GesVirtualMachine, destination: Int) throws {
-        let (value, nodes) = parse(input, context: context, state: state)
+    static func evaluate(_ input: GesValue, strict: Bool, context: GesContext, state: GesVirtualMachine, destination: Int) throws {
+        let (value, nodes) = parse(input, strict: strict, context: context, state: state)
         if nodes.isEmpty { state.setValue(destination, value) } else { try GesLiteralEvaluation(value, nodes: nodes, state: state, context: context, destination: destination).run() }
     }
 
-    static func parse(_ input: GesValue, context: GesContext, state: GesVirtualMachine? = nil) -> (GesValue, [GesLiteralNode]) {
+    static func parse(_ input: GesValue, strict: Bool, context: GesContext, state: GesVirtualMachine) -> (GesValue, [GesLiteralNode]) {
         guard input.kind == .text, let text = input.textValue else { return (.nothing, []) }
         if text.unicodeScalars.count > 1_048_576 {
             context.budget.exhaust("MaxLiteralInputScalars", 1_048_576)
@@ -27,14 +28,32 @@ struct GesLiteralParser {
         }
         var parser = Self(bytes: Array(text.utf8))
         parser.state = state
-        let result = parser.value(depth: 0)
-        parser.whitespace()
+        let result = parser.recognize()
         if let limit = parser.limit {
-            context.budget.exhaust(limit, limit == "MaxLiteralDepth" ? 64 : 65536)
+            context.budget.exhaust(limit, limitValue(limit))
             return (.nothing, [])
         }
-        if parser.position == parser.bytes.count, let result { return (result, parser.nodes) }
-        return (input, [])
+        if let result { return (result, parser.nodes) }
+        return (strict ? .nothing : input, [])
+    }
+
+    /// Recognizes data literals outside a running Program, for the public GesValue API; nil when the input is
+    /// not a complete data literal. Throws GesLiteralLimitError when a fixed parsing bound is exceeded.
+    static func parseData(_ text: String) throws -> GesValue? {
+        if text.unicodeScalars.count > 1_048_576 { throw GesLiteralLimitError(limitName: "MaxLiteralInputScalars", limit: 1_048_576) }
+        var parser = Self(bytes: Array(text.utf8))
+        let result = parser.recognize()
+        if let limit = parser.limit { throw GesLiteralLimitError(limitName: limit, limit: limitValue(limit)) }
+        guard let result else { return nil }
+        return parser.nodes.isEmpty ? result : try GesLiteralEvaluation.evaluate(result, nodes: parser.nodes)
+    }
+
+    private static func limitValue(_ limit: String) -> Int { limit == "MaxLiteralDepth" ? 64 : 65536 }
+
+    private mutating func recognize() -> GesValue? {
+        let result = value(depth: 0)
+        whitespace()
+        return limit == nil && position == bytes.count ? result : nil
     }
 
     private mutating func value(depth: Int) -> GesValue? {

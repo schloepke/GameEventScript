@@ -14,6 +14,7 @@ internal static partial class GesCompiler
         {
             "Add" or "Subtract" or "Multiply" or "Divide" or "Power" or "IntegerDivide" or "Modulo" or "Remainder" or "Min" or "Max" when line.Operands.Count == 4 => "wrrt",
             "Move" or "Negate" or "Abs" when line.Operands.Count == 3 => "wrt",
+            "ParseLiteral" when line.Operands.Count == 3 => "wrt",
             "Clamp" when line.Operands.Count == 5 => "wrrrt",
             "LoadInteger" when line.Operands.Count == 3 => "wiq",
             "LoadFloat" when line.Operands.Count == 3 => "wfq",
@@ -75,6 +76,10 @@ internal static partial class GesCompiler
                 case "Move" or "Negate" or "Abs" when args.Count == 3:
                     if (AssemblyText(args[2]) != "numeric") throw AssemblyFailure("Unknown arithmetic mode.");
                     _builder.NumericUnary(Enum.Parse<GesBytecodeOpCode>(line.Name), registers[0], registers[1]);
+                    break;
+                case "ParseLiteral" when args.Count == 3:
+                    if (AssemblyText(args[2]) != "strict") throw AssemblyFailure("Unknown parse mode.");
+                    _builder.ParseLiteral(registers[0], registers[1], strict: true);
                     break;
                 case "Clamp" when args.Count == 5:
                     if (AssemblyText(args[4]) != "numeric") throw AssemblyFailure("Unknown arithmetic mode.");

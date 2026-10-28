@@ -12,6 +12,17 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 
 ### Breaking
 
+- `parse` materializes at most `MaxRangeItems` Range items into Lists per
+  invocation in total, so many `:List(:Range(...))` forms in one Text cannot
+  multiply the per-Range limit. Exceeding the total stops the handler with the
+  `MaxRangeItems` runtime limit. This includes a single Range longer than the
+  limit, such as `parse ":List(:Range(1, 10001))"` with the default limit, which
+  previously produced an empty List and let the handler continue. Migrate by
+  raising `MaxRangeItems` or keeping such Ranges lazy, for example
+  `:Range(1, 10001)` without `:List(...)`.
+- `strict` directly after `parse` is now the strict mode word. To parse a
+  binding named `strict`, write `parse (strict)`; `parse strict` alone is a
+  syntax error.
 - A number directly followed by a unit spelling is now one quantity literal, so
   `10m/s`, `6m/s²` or `120°/s` are a speed, an acceleration and an angular speed
   rather than divisions by a binding `s`. Write `10m / s` with whitespace to
@@ -127,6 +138,19 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 
 ### Added
 
+- `parse strict input` recognizes the same literals as `parse`, but produces
+  `nothing` instead of the original Text when the input is not a complete data
+  literal: `parse strict "standard"` and `parse strict "[1, 2"` are `nothing`,
+  while `parse strict "'standard'"` is the Text `standard`. The bytecode encodes
+  it as `ParseLiteral` with the Strict flag (`mode=Strict` in GESA, `#strict` in
+  inline assembly).
+- Literal parsing without a Host for extensions, configuration and other
+  embedding code: C# `GesValue.ParseLiteral(text)` and
+  `GesValue.ParseLiteralStrict(text)`, Swift `GesValue(literal:)` and
+  `GesValue(strictLiteral:)`. They follow `parse` and `parse strict`, return
+  `null`/`nil` for unrecognized strict input, never run constructors, and throw
+  `GesLiteralLimitException`/`GesLiteralLimitError` when a parsing limit is
+  exceeded, including more than 10,000 items materialized from Ranges in total.
 - Physical units in C# and Swift: meter per second (`m/s`), meter per second
   squared (`m/s²`, ASCII `m/s^2`), kilogram (`kg`), newton (`N`), joule (`J`),
   watt (`W`), volt (`V`), ampere (`A`), hertz (`Hz`), kelvin (`K`) and degree

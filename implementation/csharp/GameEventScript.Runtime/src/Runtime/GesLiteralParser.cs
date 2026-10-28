@@ -17,12 +17,13 @@ internal struct GesLiteralParser
     internal const int MaximumItems = 65536;
 
     private readonly string _text;
-    private readonly GesVirtualMachine _state;
+    // Absent outside a running Program: Program Record constructors are then unknown types.
+    private readonly GesVirtualMachine? _state;
     private int _position;
     private int _items;
     private string? _limit;
 
-    private GesLiteralParser(string text, GesVirtualMachine state)
+    private GesLiteralParser(string text, GesVirtualMachine? state)
     {
         _text = text;
         _state = state;
@@ -31,7 +32,7 @@ internal struct GesLiteralParser
         _limit = null;
     }
 
-    internal static GesValue Parse(in GesValue input, GesContext context, GesVirtualMachine state)
+    internal static GesValue Parse(in GesValue input, bool strict, GesContext context, GesVirtualMachine state)
     {
         if (input.Kind != GesBytecodeTypeKind.Text) return GesValue.GesNothing();
         if (input.Length > MaximumInputScalars)
@@ -40,14 +41,34 @@ internal struct GesLiteralParser
             return GesValue.GesNothing();
         }
         var parser = new GesLiteralParser(input.TextValue, state);
-        var result = parser.ReadValue(0);
-        parser.SkipWhitespace();
+        var result = parser.Recognize();
         if (parser._limit is { } limit)
         {
-            context.RuntimeBudget.Exhaust(limit, "Literal parsing exceeds the resource limit.", limit == "MaxLiteralDepth" ? MaximumDepth : MaximumItems);
+            context.RuntimeBudget.Exhaust(limit, "Literal parsing exceeds the resource limit.", LimitValue(limit));
             return GesValue.GesNothing();
         }
-        return result is { } value && parser._position == parser._text.Length ? value : input;
+        return result ?? (strict ? GesValue.GesNothing() : input);
+    }
+
+    /// <summary>Recognizes data literals outside a running Program, for the public GesValue API.</summary>
+    /// <returns>The evaluated value, or <see langword="null"/> when the input is not a complete data literal.</returns>
+    /// <exception cref="GesLiteralLimitException">A fixed literal parsing bound is exceeded.</exception>
+    internal static GesValue? ParseData(in GesValue input)
+    {
+        if (input.Length > MaximumInputScalars) throw new GesLiteralLimitException("MaxLiteralInputScalars", MaximumInputScalars);
+        var parser = new GesLiteralParser(input.TextValue, null);
+        var result = parser.Recognize();
+        if (parser._limit is { } limit) throw new GesLiteralLimitException(limit, LimitValue(limit));
+        return result is { } value ? GesLiteralEvaluation.Evaluate(value) : null;
+    }
+
+    private static int LimitValue(string limit) => limit == "MaxLiteralDepth" ? MaximumDepth : MaximumItems;
+
+    private GesValue? Recognize()
+    {
+        var result = ReadValue(0);
+        SkipWhitespace();
+        return _limit is null && _position == _text.Length ? result : null;
     }
 
     private GesValue? ReadValue(int depth)
@@ -115,6 +136,7 @@ internal struct GesLiteralParser
         GesBindingSegment.Entry? constructor = null;
         if (!isBuiltin)
         {
+            if (_state is null) return null;
             foreach (var binding in _state.Program.Bindings.Entries)
                 if (binding.Kind == GesBinaryBindKind.Record && _state.FetchStringByPointer(binding.Name) == name) { constructor = binding; break; }
             if (constructor is null) return null;
@@ -163,7 +185,7 @@ internal struct GesLiteralParser
         if (constructor is { } record)
         {
             var allowed = new List<string>();
-            foreach (var parameter in record.ArgumentNames) allowed.Add(_state.FetchStringByPointer(parameter));
+            foreach (var parameter in record.ArgumentNames) allowed.Add(_state!.FetchStringByPointer(parameter));
             var count = 0;
             foreach (var label in labels)
             {

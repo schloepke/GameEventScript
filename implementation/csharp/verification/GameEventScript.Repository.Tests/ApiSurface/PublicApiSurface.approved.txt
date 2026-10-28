@@ -616,6 +616,10 @@ sealed class GameEventScript.Api.GesIntegerRange
   property System.Int64 From { get }
   property System.Int64 Step { get }
   property System.Int64 To { get }
+sealed class GameEventScript.Api.GesLiteralLimitException
+  ctor GesLiteralLimitException(System.String limitName, System.Int32 limit)
+  property System.Int32 Limit { get }
+  property System.String LimitName { get }
 struct GameEventScript.Api.GesMessageArgument
   ctor GesMessageArgument(System.String name, GameEventScript.Runtime.Values.GesValue value)
   property GameEventScript.Runtime.Values.GesValue Value { get }
@@ -1088,6 +1092,8 @@ struct GameEventScript.Runtime.Values.GesValue
   method static GameEventScript.Runtime.Values.GesValue GesTag(System.String tag)
   method static GameEventScript.Runtime.Values.GesValue GesText(System.String text)
   method static GameEventScript.Runtime.Values.GesValue GesVector(System.Double x, System.Double y, System.Double z, GameEventScript.Api.GesQuantityUnit unit)
+  method static GameEventScript.Runtime.Values.GesValue ParseLiteral(System.String input)
+  method static GameEventScript.Runtime.Values.GesValue? ParseLiteralStrict(System.String input)
   property GameEventScript.Api.GameEventScriptMessage Message { get }
   property GameEventScript.Api.GesBytecodeTypeKind ValueKind { get }
   property GameEventScript.Api.GesFloatRange FloatRange { get }

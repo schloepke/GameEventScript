@@ -112,3 +112,7 @@ of full-document and incremental-line results, including every scope and offset.
 ```highlight
 {"name":"condition-first guarded choice","language":"ges","source":"let rank be\n  when value = 14 then 'A',\n  when value = 13 then 'K'\n  otherwise value as :Text","expect":[{"text":"when","kind":"keyword"},{"text":"then","kind":"keyword"},{"text":"when","occurrence":1,"kind":"keyword"},{"text":"then","occurrence":1,"kind":"keyword"},{"text":"otherwise","kind":"keyword"}]}
 ```
+
+```highlight
+{"name":"strict literal parsing","language":"ges","source":"let a be parse strict input\nlet b be parse input\nlet strict be 1","expect":[{"text":"parse","occurrence":0,"kind":"keyword","scope":"keyword.operator.word.gameeventscript"},{"text":"strict","occurrence":0,"kind":"keyword","scope":"keyword.operator.word.gameeventscript"},{"text":"input","occurrence":0,"kind":"identifier"},{"text":"parse","occurrence":1,"kind":"keyword"},{"text":"strict","occurrence":1,"kind":"identifier"}]}
+```

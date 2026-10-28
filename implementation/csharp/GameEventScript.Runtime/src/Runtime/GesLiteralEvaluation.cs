@@ -20,13 +20,17 @@ internal sealed record GesLiteralNode(string Type, string[] Labels, GesValue[] A
 internal sealed class GesLiteralEvaluation
 {
     private sealed record Operation(GesLiteralNode Node, int[] Inputs);
+    // Data-only evaluation has no Host and uses the default host limit for its Range item total.
+    private static readonly int DataRangeItems = new GesRuntimeLimits().MaxRangeItems;
     private readonly List<Operation> _operations = new();
     private readonly List<GesValue> _results = new();
-    private readonly GesVirtualMachine _state;
-    private readonly GesContext _context;
+    // Both are absent for data-only evaluation, which never contains constructor nodes.
+    private readonly GesVirtualMachine? _state;
+    private readonly GesContext? _context;
     private readonly ushort _destination;
+    private long _materializedRangeItems;
     private int _next;
-    private GesLiteralEvaluation(GesValue root, GesVirtualMachine state, GesContext context, ushort destination)
+    private GesLiteralEvaluation(GesValue root, GesVirtualMachine? state, GesContext? context, ushort destination)
     {
         _state = state;
         _context = context;
@@ -43,6 +47,16 @@ internal sealed class GesLiteralEvaluation
         }
 
         new GesLiteralEvaluation(root, state, context, destination).Run();
+    }
+
+    /// <exception cref="GesLiteralLimitException">A fixed literal limit or the default MaxRangeItems total is exceeded.</exception>
+    internal static GesValue Evaluate(GesValue root)
+    {
+        if (!ContainsNode(root))
+            return root;
+        var evaluation = new GesLiteralEvaluation(root, null, null, 0);
+        evaluation.Run();
+        return evaluation._results[evaluation._results.Count - 1];
     }
 
     private static bool ContainsNode(GesValue value)
@@ -96,6 +110,20 @@ internal sealed class GesLiteralEvaluation
         return index;
     }
 
+    // One parse materializes at most MaxRangeItems Range items into Lists in total, not only per Range. Data-only
+    // evaluation throws GesLiteralLimitException; a Host exhausts the handler.
+    private bool WithinRangeItems(long count)
+    {
+        var limit = _context?.RuntimeLimits.MaxRangeItems ?? DataRangeItems;
+        _materializedRangeItems += count;
+        if (limit <= 0 || _materializedRangeItems <= limit)
+            return true;
+        if (_context is null)
+            throw new GesLiteralLimitException(nameof(GesRuntimeLimits.MaxRangeItems), limit);
+        _context.RuntimeBudget.Exhaust(nameof(GesRuntimeLimits.MaxRangeItems), "Literal parsing materializes more Range items than the limit.", limit);
+        return false;
+    }
+
     internal void Resume(GesValue value)
     {
         _results[_next++] = value;
@@ -104,14 +132,14 @@ internal sealed class GesLiteralEvaluation
 
     private void Run()
     {
-        while (_next < _operations.Count && !_context.RuntimeBudget.IsExhausted)
+        while (_next < _operations.Count && _context?.RuntimeBudget.IsExhausted != true)
         {
             var operation = _operations[_next];
             var node = operation.Node;
             var args = new GesValue[operation.Inputs.Length];
             for (var i = 0; i < args.Length; i++)
                 args[i] = _results[operation.Inputs[i]];
-            if (node.Constructor is { } constructor)
+            if (node.Constructor is { } constructor && _state is not null)
             {
                 _state.ClearStage();
                 var unnamed = 0;
@@ -169,11 +197,15 @@ internal sealed class GesLiteralEvaluation
                 result = GesValue.GesMessage(GameEventScriptMessage.Create(node.Type.Substring(9), arguments));
             }
             else
+            {
+                if (node.Type == "list" && args.Length == 1 && args[0].Kind == GesBytecodeTypeKind.Range && !WithinRangeItems(args[0].CollectionCount))
+                    return;
                 result = GesDataConstruction.Create(node.Type, node.Labels, args, _state, _context);
+            }
             _results[_next++] = result;
         }
 
         if (_next == _operations.Count)
-            _state.SetValue(_destination, _results[_results.Count - 1]);
+            _state?.SetValue(_destination, _results[_results.Count - 1]);
     }
 }

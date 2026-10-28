@@ -144,6 +144,19 @@ arguments that look like numbers. Convert deliberately with `as :Number`, or use
 `parse` when you want literal recognition. Failed Number conversions yield
 `nothing`; see [Number semantics](../../specs/Semantics/Numbers.md) for exact rules.
 
+> **Since: Unreleased** — `parse strict`
+
+`parse` returns unrecognized input unchanged as Text, so `parse "standard"` and
+`parse "[1, 2"` are both Text. Use `parse strict` when only complete literals are
+acceptable: it yields `nothing` instead, and Text must then be quoted:
+
+```ges
+on Main(args) {
+    let energy be parse strict args[0] default 100kW
+    emit ConsoleOut("Energy: ", energy)
+}
+```
+
 > **Since: 0.2.0**
 
 Conditional bindings combine a presence check and a local name:

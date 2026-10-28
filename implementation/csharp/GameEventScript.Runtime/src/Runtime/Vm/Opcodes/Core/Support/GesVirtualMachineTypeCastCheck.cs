@@ -38,7 +38,7 @@ internal partial class GesVirtualMachine
         }
     }
 
-    internal static GesValue CastValue(in GesValue xValue, GesBytecodeTypeKind type, GesVirtualMachine state, ushort destinationRegister, GesContext? context = null)
+    internal static GesValue CastValue(in GesValue xValue, GesBytecodeTypeKind type, GesVirtualMachine? state, ushort destinationRegister, GesContext? context = null)
     {
         var dst = new GesValue();
         switch (type)
@@ -112,7 +112,7 @@ internal partial class GesVirtualMachine
         }
     }
 
-    private static GesValue CastNumericValue(in GesValue xValue, GesVirtualMachine state)
+    private static GesValue CastNumericValue(in GesValue xValue, GesVirtualMachine? state)
         => GesNumber.Cast(in xValue);
 
     private static GesValue CastText(in GesValue xValue)
@@ -127,7 +127,7 @@ internal partial class GesVirtualMachine
         return dst;
     }
 
-    private static GesValue CastList(GesVirtualMachine vm, in GesValue xValue, GesContext? context)
+    private static GesValue CastList(GesVirtualMachine? vm, in GesValue xValue, GesContext? context)
     {
         var dst = new GesValue();
         switch (xValue.Kind)
@@ -139,7 +139,7 @@ internal partial class GesVirtualMachine
                 var text = xValue.TextValue;
                 if (text.Length == 0)
                 {
-                    dst.SetList(vm.EmptyList);
+                    dst.SetList(vm?.EmptyList ?? []);
                     return dst;
                 }
 
@@ -180,7 +180,7 @@ internal partial class GesVirtualMachine
 
                 if (context is not null && !context.RuntimeBudget.CheckRangeLengthWithinLimit(xValue.CollectionCount, "Range length exceeds the configured limit."))
                 {
-                    dst.SetList(vm.EmptyList);
+                    dst.SetList(vm?.EmptyList ?? []);
                     return dst;
                 }
 
@@ -205,7 +205,7 @@ internal partial class GesVirtualMachine
 
                 if (context is not null && !context.RuntimeBudget.CheckRangeLengthWithinLimit(xValue.CollectionCount, "Range length exceeds the configured limit."))
                 {
-                    dst.SetList(vm.EmptyList);
+                    dst.SetList(vm?.EmptyList ?? []);
                     return dst;
                 }
 
@@ -219,12 +219,12 @@ internal partial class GesVirtualMachine
                 return dst;
             }
             default:
-                dst.SetList(vm.EmptyList);
+                dst.SetList(vm?.EmptyList ?? []);
                 return dst;
         }
     }
 
-    private static GesValue CastMap(GesVirtualMachine vm, in GesValue xValue)
+    private static GesValue CastMap(GesVirtualMachine? vm, in GesValue xValue)
     {
         var dst = new GesValue();
         switch (xValue.Kind)

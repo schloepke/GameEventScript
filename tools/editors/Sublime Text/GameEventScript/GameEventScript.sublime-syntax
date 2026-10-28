@@ -80,6 +80,12 @@
       "match": "\\b(?:or|xor|and|not|is|empty|div|mod|rem|of)\\b"
       "scope": "keyword.operator.word.gameeventscript"
     -
+      "match": "\\b(parse)([ \\t]+)(strict)\\b"
+      "scope": "meta.keyword-phrase.gameeventscript"
+      "captures":
+        1: "keyword.operator.word.gameeventscript"
+        3: "keyword.operator.word.gameeventscript"
+    -
       "match": "\\b(?:parse|random|clamp|min|max|zip|default)\\b"
       "scope": "keyword.operator.word.gameeventscript"
     -

@@ -17,7 +17,8 @@ OUTPUT = ROOT / 'artifacts/swift/binary-reader-fuzz'
 SEED = 0x47455342
 MAX_BYTES = 32768
 FIXTURES = ('valid-runtime.gesb', 'valid-debug.gesb', 'valid-opaque.gesb',
-            'valid-nested-call.gesb', 'valid-result-send.gesb', 'valid-parse-literal.gesb')
+            'valid-nested-call.gesb', 'valid-result-send.gesb', 'valid-parse-literal.gesb',
+            'valid-parse-literal-strict.gesb')
 
 
 def stream(seed):

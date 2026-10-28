@@ -10,7 +10,6 @@ enum GesEmbeddedGrammars {
             0,
             2,
             4,
-            95,
             96,
             97,
             98,
@@ -92,14 +91,14 @@ enum GesEmbeddedGrammars {
             174,
             175,
             176,
-            177
+            177,
+            178,
+            179
           ],
           "assembly": [
-            178,
-            183,
-            184,
+            180,
+            185,
             186,
-            187,
             188,
             189,
             190,
@@ -118,7 +117,9 @@ enum GesEmbeddedGrammars {
             203,
             204,
             205,
-            206
+            206,
+            207,
+            208
           ],
           "rules": [
             {
@@ -2594,6 +2595,44 @@ enum GesEmbeddedGrammars {
               "endLast": false
             },
             {
+              "pattern": "\\b(parse)([ \\t]+)(strict)\\b",
+              "end": "",
+              "name": "meta.keyword-phrase.gameeventscript",
+              "contentName": "",
+              "captures": [
+                [
+                  1,
+                  "keyword.operator.word.gameeventscript"
+                ],
+                [
+                  3,
+                  "keyword.operator.word.gameeventscript"
+                ]
+              ],
+              "beginCaptures": [
+                [
+                  1,
+                  "keyword.operator.word.gameeventscript"
+                ],
+                [
+                  3,
+                  "keyword.operator.word.gameeventscript"
+                ]
+              ],
+              "endCaptures": [
+                [
+                  1,
+                  "keyword.operator.word.gameeventscript"
+                ],
+                [
+                  3,
+                  "keyword.operator.word.gameeventscript"
+                ]
+              ],
+              "children": [],
+              "endLast": false
+            },
+            {
               "pattern": "\\b(?:parse|random|clamp|min|max|zip|default)\\b",
               "end": "",
               "name": "keyword.operator.word.gameeventscript",
@@ -2826,7 +2865,8 @@ enum GesEmbeddedGrammars {
                 91,
                 92,
                 93,
-                94
+                94,
+                95
               ],
               "endLast": false
             },
@@ -5152,6 +5192,44 @@ enum GesEmbeddedGrammars {
               "endLast": false
             },
             {
+              "pattern": "\\b(parse)([ \\t]+)(strict)\\b",
+              "end": "",
+              "name": "meta.keyword-phrase.gameeventscript",
+              "contentName": "",
+              "captures": [
+                [
+                  1,
+                  "keyword.operator.word.gameeventscript"
+                ],
+                [
+                  3,
+                  "keyword.operator.word.gameeventscript"
+                ]
+              ],
+              "beginCaptures": [
+                [
+                  1,
+                  "keyword.operator.word.gameeventscript"
+                ],
+                [
+                  3,
+                  "keyword.operator.word.gameeventscript"
+                ]
+              ],
+              "endCaptures": [
+                [
+                  1,
+                  "keyword.operator.word.gameeventscript"
+                ],
+                [
+                  3,
+                  "keyword.operator.word.gameeventscript"
+                ]
+              ],
+              "children": [],
+              "endLast": false
+            },
+            {
               "pattern": "\\b(?:parse|random|clamp|min|max|zip|default)\\b",
               "end": "",
               "name": "keyword.operator.word.gameeventscript",
@@ -5308,7 +5386,6 @@ enum GesEmbeddedGrammars {
                 0,
                 2,
                 4,
-                95,
                 96,
                 97,
                 98,
@@ -5390,7 +5467,9 @@ enum GesEmbeddedGrammars {
                 174,
                 175,
                 176,
-                177
+                177,
+                178,
+                179
               ],
               "endLast": false
             },
@@ -5414,7 +5493,7 @@ enum GesEmbeddedGrammars {
               "beginCaptures": [],
               "endCaptures": [],
               "children": [
-                179
+                181
               ],
               "endLast": true
             },
@@ -5438,7 +5517,7 @@ enum GesEmbeddedGrammars {
               "beginCaptures": [],
               "endCaptures": [],
               "children": [
-                181
+                183
               ],
               "endLast": true
             },
@@ -5468,12 +5547,11 @@ enum GesEmbeddedGrammars {
               ],
               "endCaptures": [],
               "children": [
-                180,
                 182,
+                184,
                 0,
                 2,
                 4,
-                95,
                 96,
                 97,
                 98,
@@ -5555,7 +5633,9 @@ enum GesEmbeddedGrammars {
                 174,
                 175,
                 176,
-                177
+                177,
+                178,
+                179
               ],
               "endLast": false
             },
@@ -5590,7 +5670,7 @@ enum GesEmbeddedGrammars {
               "beginCaptures": [],
               "endCaptures": [],
               "children": [
-                185
+                187
               ],
               "endLast": false
             },

@@ -504,3 +504,586 @@ value:
   equalHash: true
   hasValue: true
 ```
+
+---
+
+## Test: lenient literal parsing recognizes a quantity
+
+This public API case parses the literal input with `ParseLiteral` and verifies the recognized value, the strict rejection, or the reported limit.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: literal-lenient-quantity
+kind: valueApi
+level: atomic
+valueApi:
+  literal:
+    text: "150kW"
+    mode: lenient
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+literal:
+  value: { type: ":Quantity.int64", value: "150000", unit: ":watt" }
+```
+
+---
+
+## Test: lenient literal parsing keeps a bare word as Text
+
+This public API case parses the literal input with `ParseLiteral` and verifies the recognized value, the strict rejection, or the reported limit.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: literal-lenient-bare-word
+kind: valueApi
+level: atomic
+valueApi:
+  literal:
+    text: "standard"
+    mode: lenient
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+literal:
+  value: { type: ":Text", value: "standard" }
+```
+
+---
+
+## Test: lenient literal parsing keeps malformed syntax as unchanged Text
+
+This public API case parses the literal input with `ParseLiteral` and verifies the recognized value, the strict rejection, or the reported limit.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: literal-lenient-malformed
+kind: valueApi
+level: atomic
+valueApi:
+  literal:
+    text: "[1, 2"
+    mode: lenient
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+literal:
+  value: { type: ":Text", value: "[1, 2" }
+```
+
+---
+
+## Test: lenient literal parsing keeps a Program Record constructor as Text
+
+This public API case parses the literal input with `ParseLiteral` and verifies the recognized value, the strict rejection, or the reported limit.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: literal-lenient-program-record
+kind: valueApi
+level: atomic
+valueApi:
+  literal:
+    text: ":Hit(5)"
+    mode: lenient
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+literal:
+  value: { type: ":Text", value: ":Hit(5)" }
+```
+
+---
+
+## Test: strict literal parsing recognizes a quantity
+
+This public API case parses the literal input with `ParseLiteralStrict` and verifies the recognized value, the strict rejection, or the reported limit.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: literal-strict-quantity
+kind: valueApi
+level: atomic
+valueApi:
+  literal:
+    text: "150kW"
+    mode: strict
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+literal:
+  value: { type: ":Quantity.int64", value: "150000", unit: ":watt" }
+```
+
+---
+
+## Test: strict literal parsing rejects an unquoted word
+
+This public API case parses the literal input with `ParseLiteralStrict` and verifies the recognized value, the strict rejection, or the reported limit.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: literal-strict-bare-word
+kind: valueApi
+level: atomic
+valueApi:
+  literal:
+    text: "standard"
+    mode: strict
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+literal:
+  unrecognized: true
+```
+
+---
+
+## Test: strict literal parsing decodes quoted Text
+
+This public API case parses the literal input with `ParseLiteralStrict` and verifies the recognized value, the strict rejection, or the reported limit.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: literal-strict-quoted-text
+kind: valueApi
+level: atomic
+valueApi:
+  literal:
+    text: "'standard'"
+    mode: strict
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+literal:
+  value: { type: ":Text", value: "standard" }
+```
+
+---
+
+## Test: strict literal parsing recognizes a Tag
+
+This public API case parses the literal input with `ParseLiteralStrict` and verifies the recognized value, the strict rejection, or the reported limit.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: literal-strict-tag
+kind: valueApi
+level: atomic
+valueApi:
+  literal:
+    text: "#standard"
+    mode: strict
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+literal:
+  value: { type: ":Tag", value: "standard" }
+```
+
+---
+
+## Test: strict literal parsing rejects malformed syntax
+
+This public API case parses the literal input with `ParseLiteralStrict` and verifies the recognized value, the strict rejection, or the reported limit.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: literal-strict-malformed
+kind: valueApi
+level: atomic
+valueApi:
+  literal:
+    text: "[1, 2"
+    mode: strict
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+literal:
+  unrecognized: true
+```
+
+---
+
+## Test: strict literal parsing rejects empty input
+
+This public API case parses the literal input with `ParseLiteralStrict` and verifies the recognized value, the strict rejection, or the reported limit.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: literal-strict-empty
+kind: valueApi
+level: atomic
+valueApi:
+  literal:
+    text: ""
+    mode: strict
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+literal:
+  unrecognized: true
+```
+
+---
+
+## Test: strict literal parsing recognizes the nothing literal
+
+This public API case parses the literal input with `ParseLiteralStrict` and verifies the recognized value, the strict rejection, or the reported limit.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: literal-strict-nothing
+kind: valueApi
+level: atomic
+valueApi:
+  literal:
+    text: "nothing"
+    mode: strict
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+literal:
+  value: { type: ":Nothing" }
+```
+
+---
+
+## Test: strict literal parsing accepts whitespace around a literal
+
+This public API case parses the literal input with `ParseLiteralStrict` and verifies the recognized value, the strict rejection, or the reported limit.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: literal-strict-surrounding-whitespace
+kind: valueApi
+level: atomic
+valueApi:
+  literal:
+    text: "  [1]\n"
+    mode: strict
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+literal:
+  value: { type: ":List", items: [{ type: ":Number.int64", value: "1" }] }
+```
+
+---
+
+## Test: strict literal parsing recognizes a Map
+
+This public API case parses the literal input with `ParseLiteralStrict` and verifies the recognized value, the strict rejection, or the reported limit.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: literal-strict-map
+kind: valueApi
+level: atomic
+valueApi:
+  literal:
+    text: "[energy: 150kW, mode: #standard]"
+    mode: strict
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+literal:
+  value:
+    type: ":Map"
+    entries:
+      - key: energy
+        value: { type: ":Quantity.int64", value: "150000", unit: ":watt" }
+      - key: mode
+        value: { type: ":Tag", value: "standard" }
+```
+
+---
+
+## Test: strict literal parsing reconstructs Record data
+
+This public API case parses the literal input with `ParseLiteralStrict` and verifies the recognized value, the strict rejection, or the reported limit.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: literal-strict-record-data
+kind: valueApi
+level: atomic
+valueApi:
+  literal:
+    text: ":Record(\"Hit\", [damage: 5])"
+    mode: strict
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+literal:
+  value:
+    type: ":Hit"
+    entries:
+      - key: damage
+        value: { type: ":Number.int64", value: "5" }
+```
+
+---
+
+## Test: strict literal parsing rejects a Program Record constructor without a Program
+
+This public API case parses the literal input with `ParseLiteralStrict` and verifies the recognized value, the strict rejection, or the reported limit.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: literal-strict-program-record
+kind: valueApi
+level: atomic
+valueApi:
+  literal:
+    text: ":Hit(5)"
+    mode: strict
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+literal:
+  unrecognized: true
+```
+
+---
+
+## Test: literal parsing outside a host reports the depth limit
+
+This public API case parses the literal input with `ParseLiteral` and verifies the recognized value, the strict rejection, or the reported limit.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: literal-depth-limit
+kind: valueApi
+level: atomic
+valueApi:
+  literal:
+    text: "[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]"
+    mode: lenient
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+literal:
+  limit: { name: "MaxLiteralDepth", limit: 64 }
+```
+
+---
+
+## Test: literal parsing outside a host reports the item limit
+
+This public API case parses a List of 65,537 items with `ParseLiteral`; the item past MaxLiteralItems reports the limit instead of returning Text.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: literal-items-limit
+kind: valueApi
+level: atomic
+valueApi:
+  literal:
+    text:
+      prefix: "["
+      repeat: "0,"
+      count: 65536
+      suffix: "0]"
+    mode: lenient
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+literal:
+  limit: { name: "MaxLiteralItems", limit: 65536 }
+```
+
+---
+
+## Test: strict literal parsing outside a host reports the input scalar limit
+
+This public API case parses whitespace one scalar longer than MaxLiteralInputScalars with `ParseLiteralStrict`; the input length is checked before recognition, so the limit is reported instead of absence.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: literal-strict-input-scalars-limit
+kind: valueApi
+level: atomic
+valueApi:
+  literal:
+    text:
+      repeat: " "
+      count: 1048577
+    mode: strict
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+literal:
+  limit: { name: "MaxLiteralInputScalars", limit: 1048576 }
+```
+
+---
+
+## Test: strict literal parsing outside a host reports the depth limit
+
+This public API case parses the literal input with `ParseLiteralStrict` and verifies the recognized value, the strict rejection, or the reported limit.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: literal-strict-depth-limit
+kind: valueApi
+level: atomic
+valueApi:
+  literal:
+    text: "[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]"
+    mode: strict
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+literal:
+  limit: { name: "MaxLiteralDepth", limit: 64 }
+```
+
+---
+
+## Test: literal parsing outside a host bounds Range materialization by the default MaxRangeItems
+
+This public API case parses the literal input with `ParseLiteralStrict` and verifies the recognized value, the strict rejection, or the reported limit.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: literal-range-materialization-limit
+kind: valueApi
+level: atomic
+valueApi:
+  literal:
+    text: ":List(:Range(1, 10001))"
+    mode: strict
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+literal:
+  limit: { name: "MaxRangeItems", limit: 10000 }
+```
+
+---
+
+## Test: literal parsing outside a host bounds Range materialization in total
+
+This public API case parses two Range materializations of 6,000 items each with `ParseLiteralStrict`; each stays below the default MaxRangeItems, but their total exceeds it.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: literal-range-materialization-total-limit
+kind: valueApi
+level: atomic
+valueApi:
+  literal:
+    text: "[:List(:Range(1, 6000)), :List(:Range(1, 6000))]"
+    mode: strict
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+literal:
+  limit: { name: "MaxRangeItems", limit: 10000 }
+```

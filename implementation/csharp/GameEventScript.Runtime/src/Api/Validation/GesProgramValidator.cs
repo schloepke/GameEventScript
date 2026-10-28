@@ -192,7 +192,7 @@ internal static class GesProgramValidator
             or GesBytecodeOpCode.Clamp;
         if (numericArithmetic && (encodedUnit != 0 || (instruction.OpCode == GesBytecodeOpCode.Clamp ? (instruction.Payload & ~0xFFFFUL) != 0 : instruction.Payload != 0)))
             InvalidOperand("Arithmetic instruction contains reserved unit or payload bits.", instructionIndex);
-        var allowedFlags = numericArithmetic ? 0x40 : iteratorCreate ? 0xE0 : resultSend ? 0xC0 : (byte)GesInstructionFlag.NormalizeResultAsPredicate;
+        var allowedFlags = numericArithmetic || instruction.OpCode == GesBytecodeOpCode.ParseLiteral ? 0x40 : iteratorCreate ? 0xE0 : resultSend ? 0xC0 : (byte)GesInstructionFlag.NormalizeResultAsPredicate;
         if ((iteratorCreate || iteratorNext) && (encodedUnit != 0 || instruction.Payload != 0 ||
             iteratorCreate && (encodedFlags == 0xE0 || instruction.OpCode == GesBytecodeOpCode.IteratorCreate && instruction.YRegister != 0)))
             InvalidOperand("Iterator instruction contains an invalid mode or reserved operands.", instructionIndex);
@@ -212,8 +212,8 @@ internal static class GesProgramValidator
         if (instruction.OpCode == GesBytecodeOpCode.Cartesian && (instruction.UnitAndFlags != 0 || instruction.Payload != 0))
             InvalidOperand("Cartesian reserves the unit/flag byte and payload.", instructionIndex);
         if (instruction.OpCode == GesBytecodeOpCode.ParseLiteral &&
-            (instruction.UnitAndFlags != 0 || instruction.YRegister != 0 || instruction.Payload != 0))
-            InvalidOperand("ParseLiteral reserves the unit/flag byte, Y word, and payload.", instructionIndex);
+            ((instruction.UnitAndFlags & ~0x40) != 0 || instruction.YRegister != 0 || instruction.Payload != 0))
+            InvalidOperand("ParseLiteral reserves the unit, flags other than Strict, Y word, and payload.", instructionIndex);
 
         var operands = GesOpcodePrinter.PrintInstruction(instruction);
         for (var operandIndex = 0; operandIndex < operands.Length; operandIndex++)

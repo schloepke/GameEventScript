@@ -1968,6 +1968,7 @@ internal static partial class GesCompiler
             switch (operation)
             {
                 case GesUnaryOperator.Parse: _builder.ParseLiteral(destination, operand); break;
+                case GesUnaryOperator.ParseStrict: _builder.ParseLiteral(destination, operand, strict: true); break;
                 case GesUnaryOperator.Negate: _builder.Negate(destination, operand); return;
                 case GesUnaryOperator.Not: _builder.Not(destination, operand); return;
                 case GesUnaryOperator.HasValue: _builder.HasValue(destination, operand); return;

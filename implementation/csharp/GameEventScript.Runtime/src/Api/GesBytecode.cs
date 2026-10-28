@@ -136,6 +136,8 @@ internal enum GesInstructionFlag : byte
     NormalizeResultAsPredicate = 0x20,
     /// <summary>Selects the strict numeric view for Move and scalar arithmetic for binary arithmetic, Min, Max, Negate, Abs and Clamp.</summary>
     Numeric = 0x40,
+    /// <summary>Makes ParseLiteral write Nothing instead of the original Text when recognition fails.</summary>
+    Strict = 0x40,
     /// <summary>Supplies an additional tag register list to a result-bearing send instruction.</summary>
     WithTags = 0x40,
     /// <summary>Reads a Message value rather than an outbound binding in a result-bearing send instruction.</summary>

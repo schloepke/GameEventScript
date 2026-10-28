@@ -171,7 +171,7 @@ extension GesCompiler {
                 r.emit(.loadTrue, d)
                 r.emit(.equal, d, a, d)
             } else {
-                r.emit(op.opcode, d, a)
+                r.emit(op.opcode, d, a, flags: op == .parseStrict ? 64 : 0)
             }
         case .binary(let op, let left, let right):
             let a = try expression(left, r, scope)
@@ -410,7 +410,7 @@ extension GesUnaryOperator {
         switch self {
         case .negate: .negate
         case .not: .not
-        case .parse: .parseLiteral
+        case .parse, .parseStrict: .parseLiteral
         case .empty: .isEmpty
         case .hasValue: .hasValue
         case .abs: .abs

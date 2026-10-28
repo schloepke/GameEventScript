@@ -7892,3 +7892,433 @@ steps:
       exclude:
         - any: true
 ```
+
+---
+
+## Test: parse-strict-recognition
+
+This case checks the following contract: `parse strict` returns recognized literals like `parse`, including Record constructors of the running Program, but produces `nothing` instead of the original Text for bare words, malformed syntax, empty input, unknown constructors and non-Text operands.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: "parse-strict-recognition"
+compile:
+  binaryRoundTrip: true
+```
+
+### Source code under test
+
+```ges
+record :Hit as {
+  _ damage: :Number
+}
+
+on Start {
+  emit Done(quantity: parse strict "150kW", quoted: parse strict "'standard'", tag: parse strict "#standard", map: parse strict " [energy: 150kW] ", hit: parse strict ":Hit(5)", nothingLiteral: parse strict "nothing", bare: parse strict "standard", malformed: parse strict "[1, 2", emptyInput: parse strict "", unknownRecord: parse strict ":Miss(5)", nonText: parse strict 5, lenientBare: parse "standard", lenientMalformed: parse "[1, 2")
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args: []
+    local:
+      - name: "Done"
+        args:
+          - name: "quantity"
+            value: { type: ":Quantity.int64", value: "150000", unit: ":watt" }
+          - name: "quoted"
+            value: { type: ":Text", value: "standard" }
+          - name: "tag"
+            value: { type: ":Tag", value: "standard" }
+          - name: "map"
+            value:
+              type: ":Map"
+              entries:
+                - key: energy
+                  value: { type: ":Quantity.int64", value: "150000", unit: ":watt" }
+          - name: "hit"
+            value:
+              type: ":Hit"
+              entries:
+                - key: damage
+                  value: { type: ":Number.int64", value: "5" }
+          - name: "nothingLiteral"
+            value: { type: ":Nothing" }
+          - name: "bare"
+            value: { type: ":Nothing" }
+          - name: "malformed"
+            value: { type: ":Nothing" }
+          - name: "emptyInput"
+            value: { type: ":Nothing" }
+          - name: "unknownRecord"
+            value: { type: ":Nothing" }
+          - name: "nonText"
+            value: { type: ":Nothing" }
+          - name: "lenientBare"
+            value: { type: ":Text", value: "standard" }
+          - name: "lenientMalformed"
+            value: { type: ":Text", value: "[1, 2" }
+    runtimeLimits:
+      exclude:
+        - any: true
+```
+
+---
+
+## Test: parse-strict-mode-word
+
+This case checks the following contract: `strict` directly after `parse` is the mode word, so a variable named `strict` is parsed through parentheses, and `parse strict` combines with ordinary operators at unary precedence.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: "parse-strict-mode-word"
+compile:
+  binaryRoundTrip: true
+```
+
+### Source code under test
+
+```ges
+on Start(strict) {
+  emit Done(variable: parse (strict), strictVariable: parse strict strict, converted: parse strict strict as :Text, defaulted: parse strict "oops" default 7)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args:
+        - name: "strict"
+          value: { type: ":Text", value: "12" }
+    local:
+      - name: "Done"
+        args:
+          - name: "variable"
+            value: { type: ":Number.int64", value: "12" }
+          - name: "strictVariable"
+            value: { type: ":Number.int64", value: "12" }
+          - name: "converted"
+            value: { type: ":Text", value: "12" }
+          - name: "defaulted"
+            value: { type: ":Number.int64", value: "7" }
+    runtimeLimits:
+      exclude:
+        - any: true
+```
+
+---
+
+## Test: parse-strict-depth-limit
+
+This case checks the following contract: `parse strict` applies the same fixed literal parsing limits as `parse`; the first excess nested container stops the handler instead of producing `nothing`.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: "parse-strict-depth-limit"
+compile:
+  binaryRoundTrip: true
+```
+
+### Source code under test
+
+```ges
+on Start(value) { emit Before; emit After(value: parse strict value) }
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args:
+        - name: "value"
+          value:
+            type: ":Text"
+            value: "[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[0]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]"
+    local:
+      - name: "Before"
+        args: []
+    runtimeLimits:
+      include:
+        - name: "MaxLiteralDepth"
+```
+
+---
+
+## Test: parse-strict-mode-word-same-line
+
+This case checks the following contract: `strict` is the mode word only on the same line as `parse`; after a line break it is the operand, so `parse` followed by `strict` on the next line parses the binding `strict` leniently.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: "parse-strict-mode-word-same-line"
+compile:
+  binaryRoundTrip: true
+```
+
+### Source code under test
+
+```ges
+on Start(strict) {
+  emit Done(value: parse
+    strict)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args:
+        - name: "strict"
+          value: { type: ":Text", value: "standard" }
+    local:
+      - name: "Done"
+        args:
+          - name: "value"
+            value: { type: ":Text", value: "standard" }
+    runtimeLimits:
+      exclude:
+        - any: true
+```
+
+---
+
+## Test: parse-range-items-total
+
+This case checks the following contract: Ranges materialized into Lists by one `parse` share one MaxRangeItems total; small materializations below the total succeed.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: "parse-range-items-total"
+compile:
+  binaryRoundTrip: true
+```
+
+### Source code under test
+
+```ges
+on Start(value) { emit Done(value: parse value) }
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args:
+        - name: "value"
+          value: { type: ":Text", value: "[:List(:Range(1, 3)), :List(:Range(1, 2))]" }
+    local:
+      - name: "Done"
+        args:
+          - name: "value"
+            value:
+              type: ":List"
+              items:
+                - type: ":List"
+                  items:
+                    - { type: ":Number.int64", value: "1" }
+                    - { type: ":Number.int64", value: "2" }
+                    - { type: ":Number.int64", value: "3" }
+                - type: ":List"
+                  items:
+                    - { type: ":Number.int64", value: "1" }
+                    - { type: ":Number.int64", value: "2" }
+    runtimeLimits:
+      exclude:
+        - any: true
+```
+
+---
+
+## Test: parse-range-items-total-limit
+
+This case checks the following contract: Two Range materializations of 6,000 items each stay below MaxRangeItems individually, but their total exceeds it, so `parse` stops the handler with the MaxRangeItems runtime limit instead of producing a value.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: "parse-range-items-total-limit"
+compile:
+  binaryRoundTrip: true
+```
+
+### Source code under test
+
+```ges
+on Start(value) { emit Before; emit After(value: parse value) }
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args:
+        - name: "value"
+          value: { type: ":Text", value: "[:List(:Range(1, 6000)), :List(:Range(1, 6000))]" }
+    local:
+      - name: "Before"
+        args: []
+    runtimeLimits:
+      include:
+        - name: "MaxRangeItems"
+```
+
+---
+
+## Test: parse-range-items-single-range-limit
+
+This case checks the following contract: A single Range longer than MaxRangeItems already exceeds the `parse` total, so `parse` stops the handler with the MaxRangeItems runtime limit instead of producing an empty List as the ordinary `as :List` cast does.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: "parse-range-items-single-range-limit"
+compile:
+  binaryRoundTrip: true
+```
+
+### Source code under test
+
+```ges
+on Start(value) { emit Before; emit After(value: parse value) }
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args:
+        - name: "value"
+          value: { type: ":Text", value: ":List(:Range(1, 10001))" }
+    local:
+      - name: "Before"
+        args: []
+    runtimeLimits:
+      include:
+        - name: "MaxRangeItems"
+```
+
+---
+
+## Test: parse-range-items-total-after-constructor
+
+This case checks the following contract: The Range item total also stops the handler when it is exceeded after a Program Record constructor in the same Text has already run and evaluation resumed; no partial value is produced.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: "parse-range-items-total-after-constructor"
+compile:
+  binaryRoundTrip: true
+```
+
+### Source code under test
+
+```ges
+record :Hit as { _ amount: :Number }
+
+on Start(value) { emit Before; emit After(value: parse value) }
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args:
+        - name: "value"
+          value: { type: ":Text", value: "[:Hit(1), :List(:Range(1, 6000)), :List(:Range(1, 6000))]" }
+    local:
+      - name: "Before"
+        args: []
+    runtimeLimits:
+      include:
+        - name: "MaxRangeItems"
+```

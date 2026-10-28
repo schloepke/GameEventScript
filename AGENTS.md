@@ -222,6 +222,11 @@ belongs to the CLI or embedding; the portable compiler accepts source text.
 - `:Record("Type", fields)` reconstructs immutable data without a constructor.
   Message/value JSON (`ToJson`/`FromJson`, Swift `json()`/`init(json:)`) is an explicit Runtime-only V1 codec; external
   exports become Record snapshots. Local Publish retains direct value delivery.
+- `parse strict` shares recognition and limits with `parse` but yields Nothing
+  instead of the original Text (ParseLiteral Strict flag `0x40`). The data-only
+  API `GesValue.ParseLiteral`/`ParseLiteralStrict` (Swift `init(literal:)`/
+  `init?(strictLiteral:)`) never resolves Program Record constructors and throws
+  `GesLiteralLimit...` on limits instead of exhausting a handler.
 - `[:split on separator]` returns Nothing for empty pieces; whitespace mode
   collapses the specified Unicode White_Space set. No CSV interpretation.
 - Integral Int64-representable Range components normalize to exact integer

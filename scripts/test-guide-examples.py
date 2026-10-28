@@ -58,7 +58,7 @@ def csharp():
     run(["dotnet", "build", str(tool), "--configuration", "Release", "--nologo"])
     # A string is the expected Main output. CHECK compiles definitions without Main.
     # FRAGMENTS evaluates each `expression // result` line against its comment.
-    expectations = ["Damage: 42", "42\n42", "Damage: 120", "Hello, player", "No player supplied",
+    expectations = ["Damage: 42", "42\n42", "Damage: 120", "Hello, player", "Energy: 100000W", "No player supplied",
                     "[20, 60, 40]\nTotal: 60", "160, 60", CHECK, "clubs 7\nclubs A\nhearts 7\nhearts A", CHECK,
                     "Ready", FRAGMENTS]
     examples = blocks("Language.md", "ges")

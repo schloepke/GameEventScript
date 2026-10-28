@@ -1178,7 +1178,13 @@ internal sealed partial class GesParser
         {
             var opToken = Previous;
             var operation = opToken.Kind switch { OperatorMinus => GesUnaryOperator.Negate, KeywordParse => GesUnaryOperator.Parse, Empty => GesUnaryOperator.Empty, _ => GesUnaryOperator.Not };
-            if (operation != GesUnaryOperator.Parse) SkipNewLines();
+            // `strict` directly after `parse` on the same line is always the mode word, never an operand.
+            if (operation == GesUnaryOperator.Parse && Current.Kind == Identifier && Current.Text == "strict")
+            {
+                Advance();
+                operation = GesUnaryOperator.ParseStrict;
+            }
+            if (operation is not (GesUnaryOperator.Parse or GesUnaryOperator.ParseStrict)) SkipNewLines();
             var operand = ParseUnaryExpression();
             return WithRange(new GesUnaryExpressionNode(operation, operand), opToken, Previous);
         }

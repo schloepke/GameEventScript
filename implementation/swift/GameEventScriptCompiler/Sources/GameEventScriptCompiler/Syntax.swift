@@ -192,6 +192,7 @@ extension GesTokenKind {
 // Unary operators of the source language; `predicate` wraps an extension predicate call.
 enum GesUnaryOperator {
     case parse
+    case parseStrict
     case negate
     case not
     case hasValue

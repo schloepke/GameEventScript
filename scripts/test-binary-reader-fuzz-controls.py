@@ -21,9 +21,9 @@ class FuzzControls(unittest.TestCase):
         first = list(fuzz.cases(fuzz.SEED, 128))
         self.assertEqual(first, list(fuzz.cases(fuzz.SEED, 128)))
         self.assertNotEqual(first, list(fuzz.cases(fuzz.SEED + 1, 128)))
-        self.assertEqual(136, len(first))
+        self.assertEqual(137, len(first))
         self.assertTrue(all(len(data) <= fuzz.MAX_BYTES + 1 for _, data in first))
-        self.assertEqual(set(range(7)), {meta['operation'] for meta, _ in first[8:]})
+        self.assertEqual(set(range(7)), {meta['operation'] for meta, _ in first[9:]})
 
     def test_reject_all_accept_all_and_missing_output_fail_controls(self):
         rows = [({'expected': 'accept'}, b'valid'), ({'expected': 'reject'}, b'bad')]

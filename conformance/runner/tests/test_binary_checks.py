@@ -23,14 +23,14 @@ class BinaryTests(unittest.TestCase):
 
     def test_inventory_and_requests(self):
         cases = [c for c in self.cases if supported(c)]
-        self.assertEqual(160, len(cases))
+        self.assertEqual(162, len(cases))
         for entry in requests(cases)['cases']:
             self.assertEqual({'data', 'includeDump', 'compareCompiledRuntime', 'programVersion', 'runtime'}, set(entry['binary']))
             self.assertNotIn('binaryFixture', entry)
             self.assertNotIn('expected', entry)
             if not entry['binary']['compareCompiledRuntime']:
                 self.assertEqual([], entry['sources'])
-        self.assertEqual(36, sum(bool(c.steps) for c in cases))
+        self.assertEqual(37, sum(bool(c.steps) for c in cases))
 
     def test_error_catalog_matches_spec(self):
         text = (ROOT / 'specs/BinaryFormat.md').read_text().split('The portable numeric error codes are fixed as follows:', 1)[1].split('The writer exposes', 1)[0]

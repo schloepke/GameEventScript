@@ -271,7 +271,7 @@ discriminator is `gesBlock: case`. It supports:
 | `nativeHandlers` | sequence | no | declarative portable native handlers |
 | `stepActions` | mapping | no | ordered host actions performed immediately before a named step's Receive |
 | `messageApi` | mapping | `messageApi` only | signature and message input |
-| `valueApi` | mapping | `valueApi` only | portable value construction, comparison and copy input |
+| `valueApi` | mapping | `valueApi` only | portable value construction, comparison, copy or literal parsing input |
 | `externalTypeApi` | mapping | `externalTypeApi` only | portable external-type catalog input |
 | `binaryFixture` | mapping | `programBinary` only | immutable `.gesb` fixture manifest entry |
 | `performance` | mapping | `performance` only | workload configuration |
@@ -835,6 +835,30 @@ value:
   length: 1
   equal: true
   equalHash: true
+```
+
+> **Since: Unreleased** — literal parsing input
+
+Alternatively, `valueApi.literal` parses `text` through the public literal
+parsing API, with `mode` `lenient` or `strict`, and allows no other `valueApi`
+field. Its expectation is a `literal` mapping with exactly one outcome: the
+recognized `value`, `unrecognized: true` (strict mode only), or the reported
+`limit` with its stable `name` and numeric `limit`. For limit-sized inputs,
+`text` may instead be a mapping with a non-empty `repeat` Text, a positive
+`count`, and optional `prefix` and `suffix` Text; the runner sends `prefix`,
+`count` copies of `repeat` and `suffix` as one Text of at most 2,097,152
+Unicode scalars, so adapters always receive plain Text.
+
+```yaml
+valueApi:
+  literal:
+    text: "[1, 2"
+    mode: strict
+```
+
+```yaml
+literal:
+  unrecognized: true
 ```
 
 ### `externalTypeApi`

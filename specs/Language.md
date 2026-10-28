@@ -693,7 +693,7 @@ From high to low precedence:
 
 1. Postfix: member access `x.y`, lookup/selector `x[...]`
 2. Power: `^`, `²`, `³`
-3. Unary: `-`, `not`, `!`, `~`, `¬`, `empty`, `parse`, prefix intrinsics
+3. Unary: `-`, `not`, `!`, `~`, `¬`, `empty`, `parse`, `parse strict`, prefix intrinsics
 4. Multiplicative: `*`, `×`, `·`, `⋅`, `/`, `÷`, `div`, `mod`, `rem`
 5. Additive: `+`, `-`, `−`
 6. Relational: `<`, `>`, `<=`, `>=`, `≤`, `≥`
@@ -1112,6 +1112,20 @@ let restored be parse (value as :Text)
 For example, `parse input as :Number` means `(parse input) as :Number`.
 Literal recognition, quoted Text decoding, and the exact original-Text fallback
 are owned by [Text semantics](Semantics/Text.md#literal-recognition-from-text).
+
+> **Since: Unreleased** — strict literal parsing
+
+`parse strict` recognizes the same literals but produces `nothing` instead of the
+original Text when its operand is not a complete data literal:
+
+```ges
+let energy be parse strict input
+let level be parse strict input default #standard
+```
+
+`strict` directly after `parse` on the same line is always the mode word, never
+the operand. To parse a binding named `strict`, write `parse (strict)` or
+`parse strict strict`; `parse strict` without a further operand is a syntax error.
 
 ### Explicit data constructors
 
@@ -2355,7 +2369,7 @@ type_operation ::= 'as' type_reference |
 relational_expression ::= additive_expression (('<' | '>' | '<=' | '>=' | '≤' | '≥') additive_expression)*
 additive_expression ::= multiplicative_expression (('+' | '-' | '−') multiplicative_expression)*
 multiplicative_expression ::= unary_expression (('*' | '×' | '·' | '⋅' | '/' | '÷' | 'div' | 'mod' | 'rem') unary_expression)*
-unary_expression ::= ('-' | '−' | not_operator | 'empty' | 'parse') unary_expression | unary_intrinsic_expression | power_expression
+unary_expression ::= ('-' | '−' | not_operator | 'empty' | 'parse' ['strict']) unary_expression | unary_intrinsic_expression | power_expression
 not_operator ::= 'not' | '!' | '~' | '¬'
 power_expression ::= power_base_expression [('^' unary_expression) | '²' | '³']
 power_base_expression ::= series_expression | extension_call_expression | intrinsic_call_expression | clamp_expression | variadic_expression | postfix_expression

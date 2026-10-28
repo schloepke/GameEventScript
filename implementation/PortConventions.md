@@ -73,6 +73,9 @@ the static import, so they omit the redundant prefix.
 - `GameEventScriptMessage` uses the idiomatic constructor/initializer and JSON
   members (C# `GameEventScriptMessage.FromJson(...)`/`message.ToJson()`, Swift
   `GameEventScriptMessage(json:)`/`message.json()`).
+- Value literal parsing follows the same pattern: C# `GesValue.ParseLiteral(...)`
+  and `GesValue.ParseLiteralStrict(...)`, Swift `GesValue(literal:)` and the
+  failable `GesValue(strictLiteral:)`.
 - Builders are directly creatable. A builder accessor on the target type is only
   a convenience.
 - `GameEventScriptProgram.CreateBuilder()` is a C# 14 static extension member in

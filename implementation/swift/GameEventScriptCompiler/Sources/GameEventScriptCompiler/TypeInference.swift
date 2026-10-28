@@ -30,7 +30,7 @@ extension GesAstValidator {
         case .send: return "boolean"
         case .unary(let op, let value):
             if [.predicate, .empty, .hasValue, .chance].contains(op) { return "boolean" }
-            if op == .parse { return "unknown" }
+            if op == .parse || op == .parseStrict { return "unknown" }
             if op == .negate { return child(value) }
             // abs and rounding keep a scalar Quantity's unit, so a statically unknown operand leaves the result unknown too.
             // Only abs accepts a vector, whose magnitude keeps a unit the nominal type does not expose; rounding a vector

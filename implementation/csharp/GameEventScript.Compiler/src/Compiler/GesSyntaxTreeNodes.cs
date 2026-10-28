@@ -165,6 +165,7 @@ internal sealed record GesExpressionStatementNode(GesExpressionNode Expression) 
 internal enum GesUnaryOperator
 {
     Parse,
+    ParseStrict,
     Negate,
     Not,
     HasValue,
@@ -242,6 +243,7 @@ internal static class GesOperatorText
         => op switch
         {
             GesUnaryOperator.Parse => "parse",
+            GesUnaryOperator.ParseStrict => "parse strict",
             GesUnaryOperator.Negate => "-",
             GesUnaryOperator.Not => "!",
             GesUnaryOperator.HasValue => "has value",

@@ -42,6 +42,7 @@ extension GesCompiler {
         }
         if ["Add", "Subtract", "Multiply", "Divide", "Power", "IntegerDivide", "Modulo", "Remainder", "Min", "Max"].contains(line.name) && line.operands.count == 4 { return "wrrt" }
         if ["Move", "Negate", "Abs"].contains(line.name) && line.operands.count == 3 { return "wrt" }
+        if line.name == "ParseLiteral" && line.operands.count == 3 { return "wrt" }
         if line.name == "Clamp" && line.operands.count == 5 { return "wrrrt" }
         switch line.name {
         case "LoadInteger" where line.operands.count == 3: return "wiq"
@@ -175,6 +176,11 @@ extension GesCompiler {
         if ["Move", "Negate", "Abs"].contains(line.name) && args.count == 3 {
             guard try assemblyText(args[2]) == "numeric" else { throw assemblyFailure(line.location, "Unknown arithmetic mode.") }
             r.emit(line.name == "Move" ? .move : line.name == "Negate" ? .negate : .abs, regs[0], regs[1], flags: 64)
+            return true
+        }
+        if line.name == "ParseLiteral" && args.count == 3 {
+            guard try assemblyText(args[2]) == "strict" else { throw assemblyFailure(line.location, "Unknown parse mode.") }
+            r.emit(.parseLiteral, regs[0], regs[1], flags: 64)
             return true
         }
         if line.name == "Clamp" && args.count == 5 {

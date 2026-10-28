@@ -1669,3 +1669,38 @@ error:
   phase: parse
   code: parse.syntax
 ```
+
+---
+
+## Test: parse strict requires an operand
+
+This negative compiler case verifies that `strict` directly after `parse` is always the mode word, so a variable named `strict` cannot be the bare operand of `parse`.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: parse-strict-without-operand
+kind: compileError
+level: scenario
+sources:
+  - name: "parse strict requires an operand.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start(strict) {
+  emit Done(value: parse strict)
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "parse"
+  code: "parse.syntax"
+```

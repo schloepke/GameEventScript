@@ -3249,3 +3249,88 @@ on Start(source) {
 gesBlock: expect
 error: { phase: compile, code: compile.invalidAssembly }
 ```
+
+---
+
+## Test: parse literal strict mode
+
+This case verifies that inline assembly selects strict literal recognition only through the final `#strict` mode operand.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: parse-literal-strict-mode
+kind: scriptApi
+level: atomic
+sources:
+  - name: parse-literal-strict-mode.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+function strictparse(_ text) be asm { ParseLiteral strictparse, text, #strict }
+function lenientparse(_ text) be asm { ParseLiteral lenientparse, text }
+
+on Start {
+  emit Done(strictWord: strictparse("standard"), lenientWord: lenientparse("standard"), strictQuoted: strictparse("'standard'"))
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args: []
+    local:
+      - name: Done
+        args:
+          - name: strictWord
+            value: { type: ":Nothing" }
+          - name: lenientWord
+            value: { type: ":Text", value: "standard" }
+          - name: strictQuoted
+            value: { type: ":Text", value: "standard" }
+```
+
+---
+
+## Test: parse literal unknown mode
+
+This case verifies that ParseLiteral accepts no inline assembly mode other than `#strict`.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: parse-literal-unknown-mode
+kind: compileError
+level: scenario
+sources:
+  - name: parse-literal-unknown-mode.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start(text) { let result be asm { ParseLiteral result, text, #lenient } }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error: { phase: compile, code: compile.invalidAssembly }
+```

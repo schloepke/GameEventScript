@@ -9,6 +9,7 @@ enum ApiObservations {
         let input = try test.required("api")
         switch test["kind"]?.stringValue {
         case "valueApi":
+            if let literal = input["literal"] { return try self.literal(literal) }
             let value = try RuntimeValues.decode(input.required("value"), mutateSource: input["mutateSourceAfterCreate"]?.boolValue == true)
             let other = try input["equalTo"].flatMap { $0 == .null ? nil : try RuntimeValues.decode($0) }
             let different = try input["notEqualTo"].flatMap { $0 == .null ? nil : try RuntimeValues.decode($0) }
@@ -36,6 +37,17 @@ enum ApiObservations {
                 _ = try host.load(CompilerObservations.compile(test))
                 return ["status": "loaded", "diagnostics": []]
             } catch let error as GesDynamicLinkError { return ["status": "loadError", "diagnostics": [CompilerObservations.diagnostic(error.diagnostic)]] }
+        }
+    }
+
+    // Literal parsing through the public data API; a limit becomes an observation, not an adapter error.
+    static func literal(_ literal: Input) throws -> [String: Any] {
+        let text = try literal.text("text")
+        do {
+            let value = try literal.text("mode") == "strict" ? GesValue(strictLiteral: text) : GesValue(literal: text)
+            return ["status": "ok", "literal": ["value": nullable(try value.map { try RuntimeValues.encode($0) }), "limit": NSNull()]]
+        } catch let error as GesLiteralLimitError {
+            return ["status": "ok", "literal": ["value": NSNull(), "limit": ["name": error.limitName, "limit": error.limit]]]
         }
     }
 

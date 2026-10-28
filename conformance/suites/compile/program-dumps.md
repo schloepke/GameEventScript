@@ -361,6 +361,94 @@ Start:				 // handler Start(value)
 
 ---
 
+## Test: parse-literal-strict
+
+This snapshot checks that `parse strict` lowers to the same literal-reading instruction with the Strict mode annotation.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: parse-literal-strict
+compile:
+  debugInfo: []
+```
+
+### Source code under test
+
+```ges
+module parsefixture
+on Start(value) { emit Done(value: parse strict value) }
+```
+
+### Expected Game Event Script Assembler
+
+```gesa
+// -------------------------------------------------------------------------------
+//  Module: parsefixture
+//  Type: Game Event Script Assembler
+//  Format version: 1.0
+// -------------------------------------------------------------------------------
+
+.gesb 1
+.module "parsefixture"
+.program-version 0
+
+// -------------------------------------------------------------------------------
+.region "Text"
+
+.segment text
+
+T_value:			.text "value"
+T_Start:			.text "Start"
+T_Done:				.text "Done"
+T_parsefixture:		.text "parsefixture"
+
+.region-end "Text"
+// -------------------------------------------------------------------------------
+
+// -------------------------------------------------------------------------------
+.region "Lists"
+
+.segment lists
+
+U16_0:				.u16 [0]
+U16_1:				.u16 []
+Args_2:				.registers [r1]
+
+.region-end "Lists"
+// -------------------------------------------------------------------------------
+
+// -------------------------------------------------------------------------------
+.region "Bindings"
+
+.segment bind
+
+Handler_Start:		.bind MessageHandler id=0 name=T_Start args=[T_value] entry=Start // "Start(value)"
+Outbound_Done:		.bind OutboundMessage id=0 name=T_Done args=[T_value] // "Done(value)"
+
+.region-end "Bindings"
+// -------------------------------------------------------------------------------
+
+// -------------------------------------------------------------------------------
+.region "Code"
+
+.segment code
+
+// compiler-generated
+Start:				 // handler Start(value)
+					RegisterLocals #1
+					ParseLiteral r1, r0 mode=Strict
+					EmitMessage Outbound_Done, Args_2 // "Done(value)"
+					ReturnVoid
+
+.region-end "Code"
+// -------------------------------------------------------------------------------
+
+```
+
+---
+
 ## Test: floating immediates use portable exponent spelling
 
 This snapshot covers positive and negative scientific exponents in Number operands.

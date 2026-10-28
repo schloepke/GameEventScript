@@ -498,6 +498,11 @@ internal static class GesProgramDumper
             if ((instruction.UnitAndFlags & 0x40) != 0) builder.Append(" mode=Numeric");
             return;
         }
+        if (instruction.OpCode == GesBytecodeOpCode.ParseLiteral)
+        {
+            if ((instruction.UnitAndFlags & 0x40) != 0) builder.Append(" mode=Strict");
+            return;
+        }
         if (GesOpcodePrinter.IsResultSend(instruction.OpCode))
         {
             var sendFlags = instruction.UnitAndFlags & 0xC0;

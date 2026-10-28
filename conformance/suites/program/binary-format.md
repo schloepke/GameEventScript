@@ -1776,6 +1776,122 @@ binary:
 
 ---
 
+## Test: valid-parse-literal-strict
+
+This case checks the ParseLiteral binary contract. Canonical strict ParseLiteral sets only the Strict flag `0x40` in the unit/flag byte and writes `nothing` for unrecognized Text.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: valid-parse-literal-strict
+compile:
+  debugInfo: []
+binaryFixture:
+  id: gesb-v1-valid-parse-literal-strict
+  resourceId: gesb-v1.valid-parse-literal-strict
+  relativePath: GesbV1/valid-parse-literal-strict.gesb
+  sha256: B8D347079C0A95E256134A1B6E411F7FD9D51F9235CF12A8AF20CDB59AFFB2E6
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 0
+  derivation: "Canonical strict ParseLiteral with a separate input and output register."
+  compareCompiledRuntime: true
+```
+
+### Source code under test
+
+```ges
+module parsefixture
+on Start(value) { emit Done(value: parse strict value) }
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| recognized | Start | completion | |
+| unrecognized | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+binary:
+  outcome: valid
+  rewriteByteExact: true
+  rewriteSha256: B8D347079C0A95E256134A1B6E411F7FD9D51F9235CF12A8AF20CDB59AFFB2E6
+  moduleName: parsefixture
+  requiredRegisterCount: 2
+  requiredCallStackDepth: 0
+  opaqueSectionCount: 0
+steps:
+  recognized:
+    input:
+      args:
+        - name: value
+          value: { type: ":Text", value: "'standard'" }
+    local:
+      - name: Done
+        args:
+          - name: value
+            value: { type: ":Text", value: "standard" }
+  unrecognized:
+    input:
+      args:
+        - name: value
+          value: { type: ":Text", value: "standard" }
+    local:
+      - name: Done
+        args:
+          - name: value
+            value: { type: ":Nothing" }
+```
+
+---
+
+## Test: invalid-parse-strict-flags
+
+This case checks the ParseLiteral binary contract. Replace byte(s) at strict ParseLiteral instruction 1, operand offset 1, with 60, adding a reserved flag to Strict.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: invalid-parse-strict-flags
+compile:
+  debugInfo: []
+binaryFixture:
+  id: gesb-v1-invalid-parse-strict-flags
+  resourceId: gesb-v1.invalid-parse-strict-flags
+  relativePath: GesbV1/invalid-parse-strict-flags.gesb
+  sha256: 561E1EBBB3EA80705C749BE6CBC64AA476B1059EFDC509C155A3004FDADBB918
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 0
+  derivation: "Replace byte(s) at strict ParseLiteral instruction 1, operand offset 1, with 60."
+```
+
+### Source code under test
+
+```ges
+module parsefixture
+on Start(value) { emit Done(value: parse strict value) }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+binary:
+  outcome: validationError
+  errorCode: InvalidOperand
+  sectionType: 16
+  entryIndex: 1
+```
+
+---
+
 ## Test: invalid-reserved-opcode-e1
 
 This case checks the ParseLiteral binary contract. Replace byte(s) at ParseLiteral instruction 1, operand offset 0, with e1.

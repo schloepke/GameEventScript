@@ -1600,7 +1600,13 @@ separate approximate-equality opcode.
 `ParseLiteral dst src` implements the `parse` expression described by
 [Text semantics](Semantics/Text.md#literal-recognition-from-text). Non-Text input
 writes `nothing`. It reads `XRegister` before writing the destination; source
-and destination may alias. `YRegister`, payload words, and flags are zero.
+and destination may alias. `YRegister`, payload words, and the unit bits are zero.
+
+> **Since: Unreleased** — strict literal parsing
+
+The only permitted flag is Strict (`0x40`), which implements `parse strict`:
+recognition failure writes `nothing` instead of the original Text. Every other
+unit or flag bit is invalid.
 
 > **Since: 0.2.0 — Record construction through ParseLiteral**
 
@@ -1667,7 +1673,7 @@ remain protection limits, not additional optimizer-observable effects.
 | 0xD6 | `OrderBuilderFinishDescending` | - | result register | `XRegister`=builder | - | - | Sorts by stored keys descending and materializes the ordered values as a list. |
 | 0xD7 | `HasPattern` | - | result register | `XRegister`=source/iterator | `ImmediateY`=count for count patterns | `AU`=pattern kind, `BU`=face register for `CountFace` | Tests a dice/card pattern and returns boolean. |
 | 0xD8 | `TakePattern` | - | result register | `XRegister`=source/iterator | `ImmediateY`=count for count patterns | `AU`=pattern kind, `BU`=face register for `CountFace` | Takes items matching a dice/card pattern. Dice sources produce dice; list sources produce lists. |
-| 0xD9 | `ParseLiteral` | - | result register | `XRegister`=Text input | - | - | Recognizes one complete data literal, preserving original Text on recognition failure. |
+| 0xD9 | `ParseLiteral` | Strict | result register | `XRegister`=Text input | - | - | Recognizes one complete data literal, preserving original Text on recognition failure or writing `nothing` when Strict. |
 | 0xDA | `EmitInstant` | WithTags / Indirect | Boolean result | binding ID or Message register | argument-register list, or zero if indirect | `AU`=tags if flagged | Accepts immediate dispatch; see result-bearing sends below. |
 | 0xDB | `EmitAfter` | WithTags / Indirect | Boolean result | binding ID or Message register | argument-register list, or zero if indirect | `AU`=tags if flagged, `BU`=duration register | Accepts delayed dispatch; see result-bearing sends below. |
 | 0xDC | `PublishInstant` | WithTags / Indirect | Boolean result | binding ID or Message register | argument-register list, or zero if indirect | `AU`=tags if flagged | Accepts immediate dispatch; see result-bearing sends below. |

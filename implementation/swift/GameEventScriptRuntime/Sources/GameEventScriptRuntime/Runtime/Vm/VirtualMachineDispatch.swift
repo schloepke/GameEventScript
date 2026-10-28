@@ -91,7 +91,7 @@ extension GesVirtualMachine {
                         setNothing(d)
                     }
                 case .splitText: GesTextSplit.split(value(x), value(y), whitespace: instruction.a == 1, sink: output(d))
-                case .parseLiteral: try GesLiteralParser.evaluate(value(x), context: context, state: self, destination: d)
+                case .parseLiteral: try GesLiteralParser.evaluate(value(x), strict: instruction.unitAndFlags & 64 != 0, context: context, state: self, destination: d)
                 case .checkType: setBoolean(d, GesCasts.check(value(x), GesBytecodeTypeKind(rawValue: instruction.word2)!))
                 case .checkCustomType: setBoolean(d, value(x).customTypeName == text(instruction.word2))
                 case .checkUnit:

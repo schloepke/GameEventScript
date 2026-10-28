@@ -14,6 +14,8 @@ exercise real value construction, normalization, flags, length, equality, hash
 equality and defensive copies. Input entry order and duplicate keys are preserved
 across transport; only the implementation normalizes them. Copy checks mutate the
 original source array after construction and observe the resulting value.
+Literal-input `valueApi` cases call the public lenient or strict literal parsing
+API; adapters report the recognized value, absence or the literal limit.
 Expected results remain exclusively in Python. The initial 21 `messageApi` cases
 cover ordered signatures and arguments, construction failures, equality/hash
 equality and signature-based creation. Another 48 cases qualify the independent conformance-message comparison against

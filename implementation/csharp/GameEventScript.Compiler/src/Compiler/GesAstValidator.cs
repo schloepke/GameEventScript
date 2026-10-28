@@ -635,7 +635,7 @@ internal static class GesAstValidator
     {
         return unary.Operator switch
         {
-            GesUnaryOperator.Parse => StaticExpressionInfo.Unknown,
+            GesUnaryOperator.Parse or GesUnaryOperator.ParseStrict => StaticExpressionInfo.Unknown,
             GesUnaryOperator.HasValue or GesUnaryOperator.Empty or GesUnaryOperator.Chance => StaticExpressionInfo.Boolean,
             GesUnaryOperator.Abs => ClassifyUnitPreserving(unary.Operand, vectorMagnitude: true, callables, typeDefinitions, declaredTypes, visitedCallables),
             GesUnaryOperator.Floor or GesUnaryOperator.Ceil or GesUnaryOperator.Truncate or

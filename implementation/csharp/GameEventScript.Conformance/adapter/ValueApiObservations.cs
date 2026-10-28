@@ -10,6 +10,14 @@ internal static class ValueApiObservations
 {
     internal static void Validate(JsonElement input)
     {
+        if (input.TryGetProperty("literal", out var literal))
+        {
+            RuntimeValues.Fields(input, "literal");
+            RuntimeValues.Fields(literal, "text", "mode");
+            _ = literal.GetProperty("text").GetString() ?? throw new ArgumentException("Literal text required.");
+            if (literal.GetProperty("mode").GetString() is not ("lenient" or "strict")) throw new ArgumentException("Invalid literal mode.");
+            return;
+        }
         RuntimeValues.Fields(input, "value", "equalTo", "notEqualTo", "mutateSourceAfterCreate");
         _ = input.GetProperty("mutateSourceAfterCreate").GetBoolean();
         foreach (var key in new[] { "value", "equalTo", "notEqualTo" })
@@ -18,6 +26,7 @@ internal static class ValueApiObservations
 
     internal static object Run(JsonElement input)
     {
+        if (input.TryGetProperty("literal", out var literal)) return RunLiteral(literal);
         var value = Construct(input.GetProperty("value"), input.GetProperty("mutateSourceAfterCreate").GetBoolean());
         var equalInput = input.GetProperty("equalTo");
         var other = equalInput.ValueKind == JsonValueKind.Null ? (GesValue?)null : Construct(equalInput);
@@ -40,6 +49,20 @@ internal static class ValueApiObservations
                 notEqual = differentInput.ValueKind == JsonValueKind.Null ? (bool?)null : !value.Equals(Construct(differentInput))
             }
         };
+    }
+
+    private static object RunLiteral(JsonElement literal)
+    {
+        var text = literal.GetProperty("text").GetString()!;
+        try
+        {
+            var value = literal.GetProperty("mode").GetString() == "strict" ? GesValue.ParseLiteralStrict(text) : GesValue.ParseLiteral(text);
+            return new { status = "ok", literal = new { value = value.HasValue ? RuntimeValues.Encode(value.Value) : null, limit = (object?)null } };
+        }
+        catch (GesLiteralLimitException exception)
+        {
+            return new { status = "ok", literal = new { value = (object?)null, limit = (object?)new { name = exception.LimitName, limit = exception.Limit } } };
+        }
     }
 
     internal static GesValue Construct(JsonElement input, bool mutate = false)

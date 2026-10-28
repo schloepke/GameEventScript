@@ -76,6 +76,12 @@ enum Validation {
                 case "externalTypeApi":
                     try self.fields(api, ["typeNames"])
                     _ = try strings(api.required("typeNames"))
+                case "valueApi" where api["literal"] != nil:
+                    try self.fields(api, ["literal"])
+                    let literal = try api.required("literal")
+                    try self.fields(literal, ["text", "mode"])
+                    _ = try literal.text("text")
+                    try require(["lenient", "strict"].contains(try literal.text("mode")))
                 case "valueApi":
                     try self.fields(api, ["value", "equalTo", "notEqualTo", "mutateSourceAfterCreate"])
                     try require(api["mutateSourceAfterCreate"]?.boolValue != nil)

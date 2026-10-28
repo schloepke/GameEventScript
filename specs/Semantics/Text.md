@@ -307,6 +307,47 @@ of `nothing`; the Text fallback belongs to `parse`. Resource-limit handling is
 separate from literal-recognition failure and follows the fixed
 [Host runtime parse limits](../HostRuntime.md#literal-parsing-limits).
 
+### Strict recognition
+
+> **Since: Unreleased**
+
+`parse strict` applies exactly the same recognition, evaluation and limits as
+`parse`. The only difference is the recognition-failure result: where `parse`
+returns the original Text, `parse strict` produces `nothing`. Text values must
+therefore be quoted; a bare word such as `standard`, empty or whitespace-only
+input, malformed syntax, trailing input and unknown type constructors all
+produce `nothing`. A recognized `nothing` literal also produces `nothing`, so a
+script that must distinguish both cases inspects the input Text. A non-Text
+operand produces `nothing` in both modes.
+
+| Input contents | `parse` | `parse strict` |
+| --- | --- | --- |
+| `150kW` | Quantity `150000 W` | Quantity `150000 W` |
+| `#standard` | Tag `standard` | Tag `standard` |
+| `'standard'` | Text `standard` | Text `standard` |
+| `standard` | Text `standard` | `nothing` |
+| `[1, 2` | Text `[1, 2` | `nothing` |
+| empty | empty Text | `nothing` |
+
+### Recognition outside a Program
+
+> **Since: Unreleased**
+
+The public value API exposes the same recognition without a Host as
+`ParseLiteral` and `ParseLiteralStrict` (see [Public API](../PublicApi.md)). It
+follows the rules of `parse` and `parse strict` with these differences:
+
+- No Program is available, so a Program Record constructor such as `:Hit(5)` is
+  an unknown type constructor. `:Record("Hit", [...])` still reconstructs Record
+  data. No constructor or host callback is ever executed.
+- Strict recognition failure is reported as absence (`null`/`nil`) rather than
+  `nothing`, so it is distinguishable from a recognized `nothing` literal.
+- The [literal parsing limits](../HostRuntime.md#literal-parsing-limits) apply
+  unchanged, including the Range item total, which uses the default
+  `MaxRangeItems` of 10,000. Exceeding a bound fails
+  with a literal limit error naming the limit and its value instead of producing
+  a value.
+
 ### Explicit data forms
 
 > **Since: 0.2.0**

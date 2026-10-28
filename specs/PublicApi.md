@@ -305,8 +305,9 @@ binary specifications and must reject undefined values at validation boundaries:
 - `BinaryBindKind`, `SectionType`, `SectionFlags`, and
   `DebugSymbolKind`.
 
-`BytecodeOpCode.ParseLiteral` exposes the portable `parse` operation at opcode
-`0xD9`, with operand and limit semantics owned by [Bytecode](Bytecode.md).
+`BytecodeOpCode.ParseLiteral` exposes the portable `parse` and `parse strict`
+operations at opcode `0xD9`, with operand, Strict flag and limit semantics owned
+by [Bytecode](Bytecode.md).
 
 `BytecodeInstructionUnits` supplies pure conversions between type names, units,
 and suffixes. Parse operations return absence for an unknown valid string;
@@ -488,6 +489,27 @@ operation that supplied its backing storage.
 `IntegerRange` and `FloatRange` are immutable triples `(from, to, step)`; they do
 not enumerate by themselves. Range termination and overflow behavior belong to
 the deterministic language semantics.
+
+#### Literal parsing
+
+> **Since: Unreleased**
+
+`Value` recognizes one complete data literal from Text without a Host, with the
+rules of `parse` and `parse strict` as owned by
+[Text semantics](Semantics/Text.md#recognition-outside-a-program):
+
+| Operation | C# | Swift |
+| --- | --- | --- |
+| lenient | `GesValue GesValue.ParseLiteral(string input)` | `GesValue(literal:) throws` |
+| strict | `GesValue? GesValue.ParseLiteralStrict(string input)` | `GesValue(strictLiteral:) throws`, failable |
+
+Lenient parsing returns unrecognized input as unchanged Text. Strict parsing
+returns absence for unrecognized input and Nothing for the `nothing` literal.
+Both are synchronous and data-only: they never execute constructors or callbacks.
+Exceeding a fixed parsing limit fails with `GesLiteralLimitException` (C#) or
+`GesLiteralLimitError` (Swift), exposing the stable `LimitName`/`limitName`
+and the numeric `Limit`/`limit`. C# rejects a null input with
+`ArgumentNullException` and unpaired surrogates with `ArgumentException`.
 
 ## Host construction and lifecycle API
 

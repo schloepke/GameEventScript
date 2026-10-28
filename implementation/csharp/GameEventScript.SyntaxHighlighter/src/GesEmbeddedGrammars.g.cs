@@ -7,8 +7,8 @@ namespace GameEventScript.SyntaxHighlighter;
 
 internal static class GesEmbeddedGrammars
 {
-    internal static readonly int[] Source = [0, 2, 4, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173, 174, 175, 176, 177];
-    internal static readonly int[] Assembly = [178, 183, 184, 186, 187, 188, 189, 190, 191, 192, 193, 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206];
+    internal static readonly int[] Source = [0, 2, 4, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173, 174, 175, 176, 177, 178, 179];
+    internal static readonly int[] Assembly = [180, 185, 186, 188, 189, 190, 191, 192, 193, 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 207, 208];
 
     internal static GesGrammarRule[] CreateRules() =>
     [
@@ -760,6 +760,15 @@ internal static class GesEmbeddedGrammars
             [],
             [], false),
         new(
+            "\\b(parse)([ \\t]+)(strict)\\b",
+            "",
+            "meta.keyword-phrase.gameeventscript",
+            "",
+            [new GesCaptureRule(1, "keyword.operator.word.gameeventscript"), new GesCaptureRule(3, "keyword.operator.word.gameeventscript")],
+            [new GesCaptureRule(1, "keyword.operator.word.gameeventscript"), new GesCaptureRule(3, "keyword.operator.word.gameeventscript")],
+            [new GesCaptureRule(1, "keyword.operator.word.gameeventscript"), new GesCaptureRule(3, "keyword.operator.word.gameeventscript")],
+            [], false),
+        new(
             "\\b(?:parse|random|clamp|min|max|zip|default)\\b",
             "",
             "keyword.operator.word.gameeventscript",
@@ -875,7 +884,7 @@ internal static class GesEmbeddedGrammars
             [],
             [new GesCaptureRule(0, "keyword.other.assembly.gameeventscript")],
             [],
-            [5, 7, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94], false),
+            [5, 7, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95], false),
         new(
             "\\b(module)\\s+([a-z][a-z0-9]*(?:\\.[a-z][a-z0-9]*)*)\\b",
             "",
@@ -1507,6 +1516,15 @@ internal static class GesEmbeddedGrammars
             [],
             [], false),
         new(
+            "\\b(parse)([ \\t]+)(strict)\\b",
+            "",
+            "meta.keyword-phrase.gameeventscript",
+            "",
+            [new GesCaptureRule(1, "keyword.operator.word.gameeventscript"), new GesCaptureRule(3, "keyword.operator.word.gameeventscript")],
+            [new GesCaptureRule(1, "keyword.operator.word.gameeventscript"), new GesCaptureRule(3, "keyword.operator.word.gameeventscript")],
+            [new GesCaptureRule(1, "keyword.operator.word.gameeventscript"), new GesCaptureRule(3, "keyword.operator.word.gameeventscript")],
+            [], false),
+        new(
             "\\b(?:parse|random|clamp|min|max|zip|default)\\b",
             "",
             "keyword.operator.word.gameeventscript",
@@ -1622,7 +1640,7 @@ internal static class GesEmbeddedGrammars
             [],
             [new GesCaptureRule(1, "keyword.control.directive.segment.gameeventscript.assembler"), new GesCaptureRule(2, "entity.other.attribute-name.tag.gameeventscript"), new GesCaptureRule(3, "string.quoted.double.source-name.gameeventscript.assembler")],
             [],
-            [0, 2, 4, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173, 174, 175, 176, 177], false),
+            [0, 2, 4, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173, 174, 175, 176, 177, 178, 179], false),
         new(
             "''",
             "",
@@ -1640,7 +1658,7 @@ internal static class GesEmbeddedGrammars
             [],
             [],
             [],
-            [179], true),
+            [181], true),
         new(
             "\"\"",
             "",
@@ -1658,7 +1676,7 @@ internal static class GesEmbeddedGrammars
             [],
             [],
             [],
-            [181], true),
+            [183], true),
         new(
             "^\\s*(\\.source-line)\\s+(\"(?:\\\\.|[^\"\\\\])*\")\\s+(\\d+)\\s+(\\|)\\s?",
             "$",
@@ -1667,7 +1685,7 @@ internal static class GesEmbeddedGrammars
             [],
             [new GesCaptureRule(1, "keyword.control.directive.source.gameeventscript.assembler"), new GesCaptureRule(2, "string.quoted.double.source-name.gameeventscript.assembler"), new GesCaptureRule(3, "constant.numeric.line.gameeventscript.assembler"), new GesCaptureRule(4, "punctuation.separator.embedded.gameeventscript.assembler")],
             [],
-            [180, 182, 0, 2, 4, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173, 174, 175, 176, 177], false),
+            [182, 184, 0, 2, 4, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173, 174, 175, 176, 177, 178, 179], false),
         new(
             "//.*$",
             "",
@@ -1694,7 +1712,7 @@ internal static class GesEmbeddedGrammars
             [],
             [],
             [],
-            [185], false),
+            [187], false),
         new(
             "^\\s*\\.region\\s+\"(?:\\\\.|[^\"\\\\])*\"\\s*$",
             "",

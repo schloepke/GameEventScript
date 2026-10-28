@@ -76,11 +76,12 @@ enum GesProgramValidator {
             if i.unitAndFlags & ~UInt8(32) != 0 || i.payload != 0 { throw failure(.invalidOperand, 16, index) }
         } else if [.move, .add, .subtract, .multiply, .divide, .power, .integerDivide, .modulo, .remainder, .min, .max, .negate, .abs, .clamp].contains(i.opcode) {
             if i.unitAndFlags & ~UInt8(64) != 0 || (i.opcode == .clamp ? i.payload & ~UInt64(0xffff) != 0 : i.payload != 0) { throw failure(.invalidOperand, 16, index) }
+        } else if i.opcode == .parseLiteral {
+            if i.unitAndFlags & ~UInt8(64) != 0 || i.word2 != 0 || i.payload != 0 { throw failure(.invalidOperand, 16, index) }
         } else if GesQuantityUnit(unitID: i.unitAndFlags & 0x1f) == nil || i.unitAndFlags & 0xc0 != 0 {
             throw failure(.invalidOperand, 16, index)
         }
         if i.opcode == .cartesian && (i.unitAndFlags != 0 || i.payload != 0) { throw failure(.invalidOperand, 16, index) }
-        if i.opcode == .parseLiteral && (i.unitAndFlags != 0 || i.word2 != 0 || i.payload != 0) { throw failure(.invalidOperand, 16, index) }
         if [.constructData, .splitText].contains(i.opcode) && (i.unitAndFlags != 0 || i.b != 0 || i.c != 0 || i.d != 0 || i.opcode == .splitText && (i.a > 1 || i.a == 1 && i.word2 != 0)) { throw failure(.invalidOperand, 16, index) }
         for (position, operand) in i.operands.enumerated() {
             if operand.isRegister {

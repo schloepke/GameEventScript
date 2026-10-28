@@ -14,19 +14,30 @@ final class GesLiteralEvaluation {
         let inputs: [Int]
     }
 
+    // Data-only evaluation has no Host and uses the default host limit for its Range item total.
+    private static let dataRangeItems = GesRuntimeLimits().maxRangeItems
     private var operations: [Operation] = [], results: [GesValue] = []
     private var next = 0
-    private unowned let state: GesVirtualMachine
-    private let context: GesContext
+    private var materializedRangeItems: Int64 = 0
+    // Both are absent for data-only evaluation, which never contains constructor nodes.
+    private unowned let state: GesVirtualMachine?
+    private let context: GesContext?
     private let destination: Int
     private let nodes: [GesLiteralNode]
 
-    init(_ root: GesValue, nodes: [GesLiteralNode], state: GesVirtualMachine, context: GesContext, destination: Int) {
+    init(_ root: GesValue, nodes: [GesLiteralNode], state: GesVirtualMachine?, context: GesContext?, destination: Int) {
         self.nodes = nodes
         self.state = state
         self.context = context
         self.destination = destination
         _ = add(root)
+    }
+
+    // Throws GesLiteralLimitError when a fixed literal limit or the default maxRangeItems total is exceeded.
+    static func evaluate(_ root: GesValue, nodes: [GesLiteralNode]) throws -> GesValue {
+        let evaluation = GesLiteralEvaluation(root, nodes: nodes, state: nil, context: nil, destination: 0)
+        try evaluation.run()
+        return evaluation.results.last!
     }
 
     private func add(_ value: GesValue) -> Int {
@@ -47,6 +58,17 @@ final class GesLiteralEvaluation {
         return index
     }
 
+    // One parse materializes at most maxRangeItems Range items into Lists in total, not only per Range. Data-only
+    // evaluation throws GesLiteralLimitError; a Host exhausts the handler.
+    private func withinRangeItems(_ count: Int64) throws -> Bool {
+        let limit = context?.budget.limits.maxRangeItems ?? Self.dataRangeItems
+        materializedRangeItems += count
+        if limit <= 0 || materializedRangeItems <= Int64(limit) { return true }
+        guard let context else { throw GesLiteralLimitError(limitName: "MaxRangeItems", limit: limit) }
+        context.budget.exhaust("MaxRangeItems", limit)
+        return false
+    }
+
     func resume(_ value: GesValue) throws {
         results[next] = value
         next += 1
@@ -54,11 +76,11 @@ final class GesLiteralEvaluation {
     }
 
     func run() throws {
-        while next < operations.count && !context.budget.isExhausted {
+        while next < operations.count && context?.budget.isExhausted != true {
             let operation = operations[next]
             let node = operation.node
             let args = operation.inputs.map { results[$0] }
-            if let constructor = node.constructor {
+            if let constructor = node.constructor, let state {
                 state.clearStage()
                 var unnamed = 0
                 for index in constructor.argumentNames {
@@ -83,12 +105,13 @@ final class GesLiteralEvaluation {
                 if node.type.hasPrefix("@message:") {
                     result = .message(try .init(name: String(node.type.dropFirst(9)), arguments: try zip(node.labels, args).map { try .init(name: $0.0, value: $0.1) }))
                 } else {
+                    if node.type == "list", args.count == 1, let count = args[0].integerRangeValue?.count ?? args[0].floatRangeValue?.count, try !withinRangeItems(count) { return }
                     result = try GesDataConstruction.create(node.type, node.labels, args, context)
                 }
             }
             results[next] = result
             next += 1
         }
-        if next == operations.count { state.setValue(destination, results.last!) }
+        if next == operations.count { state?.setValue(destination, results.last!) }
     }
 }

@@ -8,8 +8,11 @@ extension GesParser {
         let start = current
         if [.operatorMinus, .operatorNot, .keywordParse, .empty].contains(current.kind) {
             let op = advance().kind
+            // `strict` directly after `parse` on the same line is always the mode word, never an operand.
+            let strict = op == .keywordParse && current.kind == .identifier && current.text == "strict"
+            if strict { advance() }
             let value = try expression(15)
-            let unary: GesUnaryOperator = op == .operatorMinus ? .negate : op == .keywordParse ? .parse : op == .empty ? .empty : .not
+            let unary: GesUnaryOperator = op == .operatorMinus ? .negate : op == .keywordParse ? (strict ? .parseStrict : .parse) : op == .empty ? .empty : .not
             // From the operator to the last consumed token, as C# WithRange(node, opToken, Previous).
             return try combined(.unary(unary, value), node(.literal(.nothing), start))
         }

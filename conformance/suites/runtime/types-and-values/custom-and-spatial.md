@@ -1142,9 +1142,9 @@ steps:
 
 ---
 
-## Test: abs measures a vector while rounding rejects spatial values
+## Test: constant abs and rounding use the numeric view
 
-This runtime case verifies with constant operands that `abs` of a Point and rounding a Vector, Point or Text produce `nothing`, while a Boolean rounds as `1`; `abs` of a Vector is its length.
+This runtime case verifies with constant operands that `abs` of a Point and rounding a Vector, Point or Text produce `nothing`, while Booleans and dice round through their numeric view.
 
 ### Case description
 
@@ -1162,7 +1162,7 @@ sources:
 
 ```ges
 on Start {
-  emit Done(pointAbs: abs :Point(3m, 4m), vectorFloor: floor :Vector(1.5m, 2.5m), pointRound: round half up :Point(1.5, 0.5), vectorCeil: ceil :Vector(0.5s, 1s), textFloor: floor "2.5", booleanRound: round half even true)
+  emit Done(pointAbs: abs :Point(3m, 4m), vectorFloor: floor :Vector(1.5m, 2.5m), pointRound: round half up :Point(1.5, 0.5), vectorCeil: ceil :Vector(0.5s, 1s), textFloor: floor "2.5", booleanRound: round half even true, diceFloor: floor :Dice[3, 4], diceAbs: abs :Dice[3])
 }
 ```
 
@@ -1202,13 +1202,21 @@ steps:
             value:
               type: ":Number.int64"
               value: "1"
+          - name: "diceFloor"
+            value:
+              type: ":Number.int64"
+              value: "7"
+          - name: "diceAbs"
+            value:
+              type: ":Number.int64"
+              value: "3"
 ```
 
 ---
 
-## Test: abs and rounding of non-numeric runtime values produce nothing
+## Test: runtime abs and rounding use the numeric view
 
-This runtime case passes every operand through an untyped function, so `abs` and rounding run in the VM rather than in constant folding. Spatial, Text, List and Tag operands produce `nothing`; Booleans round as `1`.
+This runtime case passes every operand through an untyped function, so `abs` and rounding run in the VM rather than in constant folding. Spatial, Text, List and Tag operands have no numeric view and produce `nothing`; Booleans and dice use their numeric view.
 
 ### Case description
 
@@ -1228,7 +1236,7 @@ sources:
 function pass(_ value) be value
 
 on Start {
-  emit Done(pointAbs: abs pass(:Point(3m, 4m)), vectorFloor: floor pass(:Vector(1.5m, 2.5m)), pointRound: round half up pass(:Point(1.5, 0.5)), vectorCeil: ceil pass(:Vector(0.5s, 1s)), textFloor: floor pass("2.5"), listTruncate: truncate pass([1.5]), tagRound: round half even pass(#ready), textAbs: abs pass("-2"), booleanFloor: floor pass(true), booleanAbs: abs pass(true))
+  emit Done(pointAbs: abs pass(:Point(3m, 4m)), vectorFloor: floor pass(:Vector(1.5m, 2.5m)), pointRound: round half up pass(:Point(1.5, 0.5)), vectorCeil: ceil pass(:Vector(0.5s, 1s)), textFloor: floor pass("2.5"), listTruncate: truncate pass([1.5]), tagRound: round half even pass(#ready), textAbs: abs pass("-2"), booleanFloor: floor pass(true), booleanAbs: abs pass(true), falseCeil: ceil pass(false), diceRound: round half down pass(:Dice[3, 4]), diceAbs: abs pass(:Dice[2, 5]))
 }
 ```
 
@@ -1281,6 +1289,18 @@ steps:
             value:
               type: ":Number.int64"
               value: "1"
+          - name: "falseCeil"
+            value:
+              type: ":Number.int64"
+              value: "0"
+          - name: "diceRound"
+            value:
+              type: ":Number.int64"
+              value: "7"
+          - name: "diceAbs"
+            value:
+              type: ":Number.int64"
+              value: "7"
 ```
 
 ---

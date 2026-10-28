@@ -848,7 +848,7 @@
       "Uid": null,
       "IsMRef": true,
       "Title": "GameEventScript.Api.GesQuantityUnits",
-      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GesQuantityUnits.yml\" sourcestartlinenumber=\"1\">Represents a game event script bytecode instruction units.</p>\n"
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GesQuantityUnits.yml\" sourcestartlinenumber=\"1\">Names, spellings and arithmetic of the closed set of GameEventScript quantity units.</p>\n"
     },
     {
       "type": "ManagedReference",
@@ -1282,7 +1282,7 @@
       "Uid": null,
       "IsMRef": true,
       "Title": "GameEventScript.Api.IGesRuntimeObserver",
-      "Summary": "<p sourcefile=\"api/GameEventScript.Api.IGesRuntimeObserver.yml\" sourcestartlinenumber=\"1\">Observes synchronous host behavior without participating in dispatch.\nImplementations must not throw and must not recursively pump the observed host.</p>\n"
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.IGesRuntimeObserver.yml\" sourcestartlinenumber=\"1\">Observes synchronous host behavior without participating in dispatch.\nImplementations must not throw and must not recursively pump the observed host.\nEvery queued emit, processed publish, received message, delayed send and initialization message carries a host-local\nsend ID: it starts at 1, increases by one per such send and is reported by every callback about that send, from emit,\npublish or scheduling to each dispatch or discard. 0 reports a send without an ID.\nEvery callback has an empty default implementation, so an observer implements only the callbacks it needs.</p>\n"
     },
     {
       "type": "ManagedReference",
@@ -1750,11 +1750,11 @@
       "type": "Toc",
       "source_relative_path": "api/toc.yml",
       "output": {
-        ".html": {
-          "relative_path": "api/toc.html"
-        },
         ".json": {
           "relative_path": "api/toc.json"
+        },
+        ".html": {
+          "relative_path": "api/toc.html"
         }
       },
       "version": ""
@@ -1783,11 +1783,11 @@
       "type": "Toc",
       "source_relative_path": "toc.yml",
       "output": {
-        ".html": {
-          "relative_path": "toc.html"
-        },
         ".json": {
           "relative_path": "toc.json"
+        },
+        ".html": {
+          "relative_path": "toc.html"
         }
       },
       "version": ""

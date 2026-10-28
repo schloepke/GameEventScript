@@ -207,8 +207,8 @@ executed inside native handlers.</li>
 <li>Local messages, outbound sink messages, runtime-limit observations, and
 runtime diagnostics are recorded and compared separately. When an expectation
 contains <code>trace</code>, every Emit, Publish, DispatchStarted, DispatchCompleted,
-RuntimeLimitReached, and RuntimeError callback is additionally compared as one
-exact ordered sequence.</li>
+RuntimeLimitReached, RuntimeError, MessageScheduled, and MessageDiscarded
+callback is additionally compared as one exact ordered sequence.</li>
 <li>Any unhandled implementation exception is caught at the runner boundary and
 becomes an <code>error</code>. Its platform text may be included as nonnormative technical
 detail but never determines a pass.</li>

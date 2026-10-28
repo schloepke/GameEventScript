@@ -557,7 +557,15 @@ execution counters across successful reloads.</p>
 <h3 id="output-limits-and-host-configuration">Output, limits, and host configuration</h3>
 <p>Only ConsoleOut values go to stdout. General event traces are shown on stderr with
 <code>--verbose</code>, retaining argument order and tags. <code>[not queued]</code> indicates an emit
-or publish had no local enqueue; that alone is not an error. No outbound sink is
+or publish had no local enqueue; that alone is not an error. <code>#&lt;id&gt;</code> shows the
+host-local send ID, so <code>dispatch #&lt;id&gt;</code> lines match the <code>emit #&lt;id&gt;</code> or
+<code>publish #&lt;id&gt;</code> that caused them; an emit that was not queued shows none. A
+delayed send adds <code>schedule #&lt;id&gt; emit|publish &lt;message&gt; at &lt;time&gt;</code>, showing its
+deadline as local wall-clock time (<code>HH:mm:ss.fff</code>, preceded by the date when it
+is not today), measured from the session start; <code>discard #&lt;id&gt;</code> reports a
+message removed before it was dispatched, for example after a failed
+initialization. <code>:edit</code> and <code>:reload</code> replace the host instead of clearing it, so
+the queued messages they drop print no <code>discard</code> lines. No outbound sink is
 configured, so publications only reach local subscribers. Nothing is sent to an
 external service. Root Text arguments in verbose traces use JSON quoting/escaping;
 other values use the existing GES text representation. Trace rendering is distinct

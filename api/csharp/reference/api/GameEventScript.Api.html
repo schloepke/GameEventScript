@@ -2,9 +2,9 @@
 <html>
   <head>
     <meta charset="utf-8">
-      <title>Namespace GameEventScript.Api | Game Event Script C# API — Unreleased (85238ca5672b) </title>
+      <title>Namespace GameEventScript.Api | Game Event Script C# API — Unreleased (f9cc9ca82d74) </title>
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <meta name="title" content="Namespace GameEventScript.Api | Game Event Script C# API — Unreleased (85238ca5672b) ">
+      <meta name="title" content="Namespace GameEventScript.Api | Game Event Script C# API — Unreleased (f9cc9ca82d74) ">
       
       
       <link rel="icon" href="../assets/logo.svg">
@@ -279,7 +279,7 @@ to normalize, validate, and match message signatures accurately.</p>
     </dl>
     <dl class="jumplist">
       <dt><a class="xref" href="GameEventScript.Api.GesQuantityUnits.html">GesQuantityUnits</a></dt>
-      <dd><p>Represents a game event script bytecode instruction units.</p>
+      <dd><p>Names, spellings and arithmetic of the closed set of GameEventScript quantity units.</p>
 </dd>
     </dl>
     <dl class="jumplist">
@@ -480,7 +480,11 @@ or modify execution. No callback is made while the host waits between slices.</p
     <dl class="jumplist">
       <dt><a class="xref" href="GameEventScript.Api.IGesRuntimeObserver.html">IGesRuntimeObserver</a></dt>
       <dd><p>Observes synchronous host behavior without participating in dispatch.
-Implementations must not throw and must not recursively pump the observed host.</p>
+Implementations must not throw and must not recursively pump the observed host.
+Every queued emit, processed publish, received message, delayed send and initialization message carries a host-local
+send ID: it starts at 1, increases by one per such send and is reported by every callback about that send, from emit,
+publish or scheduling to each dispatch or discard. 0 reports a send without an ID.
+Every callback has an empty default implementation, so an observer implements only the callbacks it needs.</p>
 </dd>
     </dl>
     <h3 id="enums">
@@ -592,7 +596,7 @@ to process and verify them appropriately.</p>
     <footer class="border-top text-secondary">
       <div class="container-xxl">
         <div class="flex-fill">
-          Game Event Script C# API — Unreleased (85238ca5672b)
+          Game Event Script C# API — Unreleased (f9cc9ca82d74)
         </div>
       </div>
     </footer>

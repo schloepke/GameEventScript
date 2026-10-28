@@ -6980,24 +6980,78 @@ references:
   commentId: T:GameEventScript.Api.GesQuantityUnit
   fullName: GameEventScript.Api.GesQuantityUnit
   nameWithType: GesQuantityUnit
+- uid: GameEventScript.Api.GesQuantityUnit.UnitAmpere
+  name: UnitAmpere
+  href: api/GameEventScript.Api.GesQuantityUnit.html#GameEventScript_Api_GesQuantityUnit_UnitAmpere
+  commentId: F:GameEventScript.Api.GesQuantityUnit.UnitAmpere
+  fullName: GameEventScript.Api.GesQuantityUnit.UnitAmpere
+  nameWithType: GesQuantityUnit.UnitAmpere
 - uid: GameEventScript.Api.GesQuantityUnit.UnitDegree
   name: UnitDegree
   href: api/GameEventScript.Api.GesQuantityUnit.html#GameEventScript_Api_GesQuantityUnit_UnitDegree
   commentId: F:GameEventScript.Api.GesQuantityUnit.UnitDegree
   fullName: GameEventScript.Api.GesQuantityUnit.UnitDegree
   nameWithType: GesQuantityUnit.UnitDegree
+- uid: GameEventScript.Api.GesQuantityUnit.UnitDegreePerSecond
+  name: UnitDegreePerSecond
+  href: api/GameEventScript.Api.GesQuantityUnit.html#GameEventScript_Api_GesQuantityUnit_UnitDegreePerSecond
+  commentId: F:GameEventScript.Api.GesQuantityUnit.UnitDegreePerSecond
+  fullName: GameEventScript.Api.GesQuantityUnit.UnitDegreePerSecond
+  nameWithType: GesQuantityUnit.UnitDegreePerSecond
+- uid: GameEventScript.Api.GesQuantityUnit.UnitHertz
+  name: UnitHertz
+  href: api/GameEventScript.Api.GesQuantityUnit.html#GameEventScript_Api_GesQuantityUnit_UnitHertz
+  commentId: F:GameEventScript.Api.GesQuantityUnit.UnitHertz
+  fullName: GameEventScript.Api.GesQuantityUnit.UnitHertz
+  nameWithType: GesQuantityUnit.UnitHertz
 - uid: GameEventScript.Api.GesQuantityUnit.UnitInvalid
   name: UnitInvalid
   href: api/GameEventScript.Api.GesQuantityUnit.html#GameEventScript_Api_GesQuantityUnit_UnitInvalid
   commentId: F:GameEventScript.Api.GesQuantityUnit.UnitInvalid
   fullName: GameEventScript.Api.GesQuantityUnit.UnitInvalid
   nameWithType: GesQuantityUnit.UnitInvalid
+- uid: GameEventScript.Api.GesQuantityUnit.UnitJoule
+  name: UnitJoule
+  href: api/GameEventScript.Api.GesQuantityUnit.html#GameEventScript_Api_GesQuantityUnit_UnitJoule
+  commentId: F:GameEventScript.Api.GesQuantityUnit.UnitJoule
+  fullName: GameEventScript.Api.GesQuantityUnit.UnitJoule
+  nameWithType: GesQuantityUnit.UnitJoule
+- uid: GameEventScript.Api.GesQuantityUnit.UnitKelvin
+  name: UnitKelvin
+  href: api/GameEventScript.Api.GesQuantityUnit.html#GameEventScript_Api_GesQuantityUnit_UnitKelvin
+  commentId: F:GameEventScript.Api.GesQuantityUnit.UnitKelvin
+  fullName: GameEventScript.Api.GesQuantityUnit.UnitKelvin
+  nameWithType: GesQuantityUnit.UnitKelvin
+- uid: GameEventScript.Api.GesQuantityUnit.UnitKilogram
+  name: UnitKilogram
+  href: api/GameEventScript.Api.GesQuantityUnit.html#GameEventScript_Api_GesQuantityUnit_UnitKilogram
+  commentId: F:GameEventScript.Api.GesQuantityUnit.UnitKilogram
+  fullName: GameEventScript.Api.GesQuantityUnit.UnitKilogram
+  nameWithType: GesQuantityUnit.UnitKilogram
 - uid: GameEventScript.Api.GesQuantityUnit.UnitMeter
   name: UnitMeter
   href: api/GameEventScript.Api.GesQuantityUnit.html#GameEventScript_Api_GesQuantityUnit_UnitMeter
   commentId: F:GameEventScript.Api.GesQuantityUnit.UnitMeter
   fullName: GameEventScript.Api.GesQuantityUnit.UnitMeter
   nameWithType: GesQuantityUnit.UnitMeter
+- uid: GameEventScript.Api.GesQuantityUnit.UnitMeterPerSecond
+  name: UnitMeterPerSecond
+  href: api/GameEventScript.Api.GesQuantityUnit.html#GameEventScript_Api_GesQuantityUnit_UnitMeterPerSecond
+  commentId: F:GameEventScript.Api.GesQuantityUnit.UnitMeterPerSecond
+  fullName: GameEventScript.Api.GesQuantityUnit.UnitMeterPerSecond
+  nameWithType: GesQuantityUnit.UnitMeterPerSecond
+- uid: GameEventScript.Api.GesQuantityUnit.UnitMeterPerSecondSquared
+  name: UnitMeterPerSecondSquared
+  href: api/GameEventScript.Api.GesQuantityUnit.html#GameEventScript_Api_GesQuantityUnit_UnitMeterPerSecondSquared
+  commentId: F:GameEventScript.Api.GesQuantityUnit.UnitMeterPerSecondSquared
+  fullName: GameEventScript.Api.GesQuantityUnit.UnitMeterPerSecondSquared
+  nameWithType: GesQuantityUnit.UnitMeterPerSecondSquared
+- uid: GameEventScript.Api.GesQuantityUnit.UnitNewton
+  name: UnitNewton
+  href: api/GameEventScript.Api.GesQuantityUnit.html#GameEventScript_Api_GesQuantityUnit_UnitNewton
+  commentId: F:GameEventScript.Api.GesQuantityUnit.UnitNewton
+  fullName: GameEventScript.Api.GesQuantityUnit.UnitNewton
+  nameWithType: GesQuantityUnit.UnitNewton
 - uid: GameEventScript.Api.GesQuantityUnit.UnitNone
   name: UnitNone
   href: api/GameEventScript.Api.GesQuantityUnit.html#GameEventScript_Api_GesQuantityUnit_UnitNone
@@ -7010,6 +7064,18 @@ references:
   commentId: F:GameEventScript.Api.GesQuantityUnit.UnitSecond
   fullName: GameEventScript.Api.GesQuantityUnit.UnitSecond
   nameWithType: GesQuantityUnit.UnitSecond
+- uid: GameEventScript.Api.GesQuantityUnit.UnitVolt
+  name: UnitVolt
+  href: api/GameEventScript.Api.GesQuantityUnit.html#GameEventScript_Api_GesQuantityUnit_UnitVolt
+  commentId: F:GameEventScript.Api.GesQuantityUnit.UnitVolt
+  fullName: GameEventScript.Api.GesQuantityUnit.UnitVolt
+  nameWithType: GesQuantityUnit.UnitVolt
+- uid: GameEventScript.Api.GesQuantityUnit.UnitWatt
+  name: UnitWatt
+  href: api/GameEventScript.Api.GesQuantityUnit.html#GameEventScript_Api_GesQuantityUnit_UnitWatt
+  commentId: F:GameEventScript.Api.GesQuantityUnit.UnitWatt
+  fullName: GameEventScript.Api.GesQuantityUnit.UnitWatt
+  nameWithType: GesQuantityUnit.UnitWatt
 - uid: GameEventScript.Api.GesQuantityUnits
   name: GesQuantityUnits
   href: api/GameEventScript.Api.GesQuantityUnits.html
@@ -8903,63 +8969,96 @@ references:
   commentId: T:GameEventScript.Api.IGesRuntimeObserver
   fullName: GameEventScript.Api.IGesRuntimeObserver
   nameWithType: IGesRuntimeObserver
-- uid: GameEventScript.Api.IGesRuntimeObserver.DispatchCompleted(GameEventScript.Api.GameEventScriptMessage,System.String)
-  name: DispatchCompleted(GameEventScriptMessage, string)
-  href: api/GameEventScript.Api.IGesRuntimeObserver.html#GameEventScript_Api_IGesRuntimeObserver_DispatchCompleted_GameEventScript_Api_GameEventScriptMessage_System_String_
-  commentId: M:GameEventScript.Api.IGesRuntimeObserver.DispatchCompleted(GameEventScript.Api.GameEventScriptMessage,System.String)
-  name.vb: DispatchCompleted(GameEventScriptMessage, String)
-  fullName: GameEventScript.Api.IGesRuntimeObserver.DispatchCompleted(GameEventScript.Api.GameEventScriptMessage, string)
-  fullName.vb: GameEventScript.Api.IGesRuntimeObserver.DispatchCompleted(GameEventScript.Api.GameEventScriptMessage, String)
-  nameWithType: IGesRuntimeObserver.DispatchCompleted(GameEventScriptMessage, string)
-  nameWithType.vb: IGesRuntimeObserver.DispatchCompleted(GameEventScriptMessage, String)
+- uid: GameEventScript.Api.IGesRuntimeObserver.DispatchCompleted(GameEventScript.Api.GameEventScriptMessage,System.Int64,System.String)
+  name: DispatchCompleted(GameEventScriptMessage, long, string)
+  href: api/GameEventScript.Api.IGesRuntimeObserver.html#GameEventScript_Api_IGesRuntimeObserver_DispatchCompleted_GameEventScript_Api_GameEventScriptMessage_System_Int64_System_String_
+  commentId: M:GameEventScript.Api.IGesRuntimeObserver.DispatchCompleted(GameEventScript.Api.GameEventScriptMessage,System.Int64,System.String)
+  name.vb: DispatchCompleted(GameEventScriptMessage, Long, String)
+  fullName: GameEventScript.Api.IGesRuntimeObserver.DispatchCompleted(GameEventScript.Api.GameEventScriptMessage, long, string)
+  fullName.vb: GameEventScript.Api.IGesRuntimeObserver.DispatchCompleted(GameEventScript.Api.GameEventScriptMessage, Long, String)
+  nameWithType: IGesRuntimeObserver.DispatchCompleted(GameEventScriptMessage, long, string)
+  nameWithType.vb: IGesRuntimeObserver.DispatchCompleted(GameEventScriptMessage, Long, String)
 - uid: GameEventScript.Api.IGesRuntimeObserver.DispatchCompleted*
   name: DispatchCompleted
   href: api/GameEventScript.Api.IGesRuntimeObserver.html#GameEventScript_Api_IGesRuntimeObserver_DispatchCompleted_
   commentId: Overload:GameEventScript.Api.IGesRuntimeObserver.DispatchCompleted
   fullName: GameEventScript.Api.IGesRuntimeObserver.DispatchCompleted
   nameWithType: IGesRuntimeObserver.DispatchCompleted
-- uid: GameEventScript.Api.IGesRuntimeObserver.DispatchStarted(GameEventScript.Api.GameEventScriptMessage,System.String)
-  name: DispatchStarted(GameEventScriptMessage, string)
-  href: api/GameEventScript.Api.IGesRuntimeObserver.html#GameEventScript_Api_IGesRuntimeObserver_DispatchStarted_GameEventScript_Api_GameEventScriptMessage_System_String_
-  commentId: M:GameEventScript.Api.IGesRuntimeObserver.DispatchStarted(GameEventScript.Api.GameEventScriptMessage,System.String)
-  name.vb: DispatchStarted(GameEventScriptMessage, String)
-  fullName: GameEventScript.Api.IGesRuntimeObserver.DispatchStarted(GameEventScript.Api.GameEventScriptMessage, string)
-  fullName.vb: GameEventScript.Api.IGesRuntimeObserver.DispatchStarted(GameEventScript.Api.GameEventScriptMessage, String)
-  nameWithType: IGesRuntimeObserver.DispatchStarted(GameEventScriptMessage, string)
-  nameWithType.vb: IGesRuntimeObserver.DispatchStarted(GameEventScriptMessage, String)
+- uid: GameEventScript.Api.IGesRuntimeObserver.DispatchStarted(GameEventScript.Api.GameEventScriptMessage,System.Int64,System.String)
+  name: DispatchStarted(GameEventScriptMessage, long, string)
+  href: api/GameEventScript.Api.IGesRuntimeObserver.html#GameEventScript_Api_IGesRuntimeObserver_DispatchStarted_GameEventScript_Api_GameEventScriptMessage_System_Int64_System_String_
+  commentId: M:GameEventScript.Api.IGesRuntimeObserver.DispatchStarted(GameEventScript.Api.GameEventScriptMessage,System.Int64,System.String)
+  name.vb: DispatchStarted(GameEventScriptMessage, Long, String)
+  fullName: GameEventScript.Api.IGesRuntimeObserver.DispatchStarted(GameEventScript.Api.GameEventScriptMessage, long, string)
+  fullName.vb: GameEventScript.Api.IGesRuntimeObserver.DispatchStarted(GameEventScript.Api.GameEventScriptMessage, Long, String)
+  nameWithType: IGesRuntimeObserver.DispatchStarted(GameEventScriptMessage, long, string)
+  nameWithType.vb: IGesRuntimeObserver.DispatchStarted(GameEventScriptMessage, Long, String)
 - uid: GameEventScript.Api.IGesRuntimeObserver.DispatchStarted*
   name: DispatchStarted
   href: api/GameEventScript.Api.IGesRuntimeObserver.html#GameEventScript_Api_IGesRuntimeObserver_DispatchStarted_
   commentId: Overload:GameEventScript.Api.IGesRuntimeObserver.DispatchStarted
   fullName: GameEventScript.Api.IGesRuntimeObserver.DispatchStarted
   nameWithType: IGesRuntimeObserver.DispatchStarted
-- uid: GameEventScript.Api.IGesRuntimeObserver.MessageEmitted(GameEventScript.Api.GameEventScriptMessage,System.Boolean)
-  name: MessageEmitted(GameEventScriptMessage, bool)
-  href: api/GameEventScript.Api.IGesRuntimeObserver.html#GameEventScript_Api_IGesRuntimeObserver_MessageEmitted_GameEventScript_Api_GameEventScriptMessage_System_Boolean_
-  commentId: M:GameEventScript.Api.IGesRuntimeObserver.MessageEmitted(GameEventScript.Api.GameEventScriptMessage,System.Boolean)
-  name.vb: MessageEmitted(GameEventScriptMessage, Boolean)
-  fullName: GameEventScript.Api.IGesRuntimeObserver.MessageEmitted(GameEventScript.Api.GameEventScriptMessage, bool)
-  fullName.vb: GameEventScript.Api.IGesRuntimeObserver.MessageEmitted(GameEventScript.Api.GameEventScriptMessage, Boolean)
-  nameWithType: IGesRuntimeObserver.MessageEmitted(GameEventScriptMessage, bool)
-  nameWithType.vb: IGesRuntimeObserver.MessageEmitted(GameEventScriptMessage, Boolean)
+- uid: GameEventScript.Api.IGesRuntimeObserver.MessageDiscarded(System.Int64)
+  name: MessageDiscarded(long)
+  href: api/GameEventScript.Api.IGesRuntimeObserver.html#GameEventScript_Api_IGesRuntimeObserver_MessageDiscarded_System_Int64_
+  commentId: M:GameEventScript.Api.IGesRuntimeObserver.MessageDiscarded(System.Int64)
+  name.vb: MessageDiscarded(Long)
+  fullName: GameEventScript.Api.IGesRuntimeObserver.MessageDiscarded(long)
+  fullName.vb: GameEventScript.Api.IGesRuntimeObserver.MessageDiscarded(Long)
+  nameWithType: IGesRuntimeObserver.MessageDiscarded(long)
+  nameWithType.vb: IGesRuntimeObserver.MessageDiscarded(Long)
+- uid: GameEventScript.Api.IGesRuntimeObserver.MessageDiscarded*
+  name: MessageDiscarded
+  href: api/GameEventScript.Api.IGesRuntimeObserver.html#GameEventScript_Api_IGesRuntimeObserver_MessageDiscarded_
+  commentId: Overload:GameEventScript.Api.IGesRuntimeObserver.MessageDiscarded
+  fullName: GameEventScript.Api.IGesRuntimeObserver.MessageDiscarded
+  nameWithType: IGesRuntimeObserver.MessageDiscarded
+- uid: GameEventScript.Api.IGesRuntimeObserver.MessageEmitted(GameEventScript.Api.GameEventScriptMessage,System.Int64,System.Boolean)
+  name: MessageEmitted(GameEventScriptMessage, long, bool)
+  href: api/GameEventScript.Api.IGesRuntimeObserver.html#GameEventScript_Api_IGesRuntimeObserver_MessageEmitted_GameEventScript_Api_GameEventScriptMessage_System_Int64_System_Boolean_
+  commentId: M:GameEventScript.Api.IGesRuntimeObserver.MessageEmitted(GameEventScript.Api.GameEventScriptMessage,System.Int64,System.Boolean)
+  name.vb: MessageEmitted(GameEventScriptMessage, Long, Boolean)
+  fullName: GameEventScript.Api.IGesRuntimeObserver.MessageEmitted(GameEventScript.Api.GameEventScriptMessage, long, bool)
+  fullName.vb: GameEventScript.Api.IGesRuntimeObserver.MessageEmitted(GameEventScript.Api.GameEventScriptMessage, Long, Boolean)
+  nameWithType: IGesRuntimeObserver.MessageEmitted(GameEventScriptMessage, long, bool)
+  nameWithType.vb: IGesRuntimeObserver.MessageEmitted(GameEventScriptMessage, Long, Boolean)
 - uid: GameEventScript.Api.IGesRuntimeObserver.MessageEmitted*
   name: MessageEmitted
   href: api/GameEventScript.Api.IGesRuntimeObserver.html#GameEventScript_Api_IGesRuntimeObserver_MessageEmitted_
   commentId: Overload:GameEventScript.Api.IGesRuntimeObserver.MessageEmitted
   fullName: GameEventScript.Api.IGesRuntimeObserver.MessageEmitted
   nameWithType: IGesRuntimeObserver.MessageEmitted
-- uid: GameEventScript.Api.IGesRuntimeObserver.MessagePublished(GameEventScript.Api.GameEventScriptMessage,GameEventScript.Api.GesPublishResult)
-  name: MessagePublished(GameEventScriptMessage, GesPublishResult)
-  href: api/GameEventScript.Api.IGesRuntimeObserver.html#GameEventScript_Api_IGesRuntimeObserver_MessagePublished_GameEventScript_Api_GameEventScriptMessage_GameEventScript_Api_GesPublishResult_
-  commentId: M:GameEventScript.Api.IGesRuntimeObserver.MessagePublished(GameEventScript.Api.GameEventScriptMessage,GameEventScript.Api.GesPublishResult)
-  fullName: GameEventScript.Api.IGesRuntimeObserver.MessagePublished(GameEventScript.Api.GameEventScriptMessage, GameEventScript.Api.GesPublishResult)
-  nameWithType: IGesRuntimeObserver.MessagePublished(GameEventScriptMessage, GesPublishResult)
+- uid: GameEventScript.Api.IGesRuntimeObserver.MessagePublished(GameEventScript.Api.GameEventScriptMessage,System.Int64,GameEventScript.Api.GesPublishResult)
+  name: MessagePublished(GameEventScriptMessage, long, GesPublishResult)
+  href: api/GameEventScript.Api.IGesRuntimeObserver.html#GameEventScript_Api_IGesRuntimeObserver_MessagePublished_GameEventScript_Api_GameEventScriptMessage_System_Int64_GameEventScript_Api_GesPublishResult_
+  commentId: M:GameEventScript.Api.IGesRuntimeObserver.MessagePublished(GameEventScript.Api.GameEventScriptMessage,System.Int64,GameEventScript.Api.GesPublishResult)
+  name.vb: MessagePublished(GameEventScriptMessage, Long, GesPublishResult)
+  fullName: GameEventScript.Api.IGesRuntimeObserver.MessagePublished(GameEventScript.Api.GameEventScriptMessage, long, GameEventScript.Api.GesPublishResult)
+  fullName.vb: GameEventScript.Api.IGesRuntimeObserver.MessagePublished(GameEventScript.Api.GameEventScriptMessage, Long, GameEventScript.Api.GesPublishResult)
+  nameWithType: IGesRuntimeObserver.MessagePublished(GameEventScriptMessage, long, GesPublishResult)
+  nameWithType.vb: IGesRuntimeObserver.MessagePublished(GameEventScriptMessage, Long, GesPublishResult)
 - uid: GameEventScript.Api.IGesRuntimeObserver.MessagePublished*
   name: MessagePublished
   href: api/GameEventScript.Api.IGesRuntimeObserver.html#GameEventScript_Api_IGesRuntimeObserver_MessagePublished_
   commentId: Overload:GameEventScript.Api.IGesRuntimeObserver.MessagePublished
   fullName: GameEventScript.Api.IGesRuntimeObserver.MessagePublished
   nameWithType: IGesRuntimeObserver.MessagePublished
+- uid: GameEventScript.Api.IGesRuntimeObserver.MessageScheduled(GameEventScript.Api.GameEventScriptMessage,System.Int64,System.Int64,System.Boolean)
+  name: MessageScheduled(GameEventScriptMessage, long, long, bool)
+  href: api/GameEventScript.Api.IGesRuntimeObserver.html#GameEventScript_Api_IGesRuntimeObserver_MessageScheduled_GameEventScript_Api_GameEventScriptMessage_System_Int64_System_Int64_System_Boolean_
+  commentId: M:GameEventScript.Api.IGesRuntimeObserver.MessageScheduled(GameEventScript.Api.GameEventScriptMessage,System.Int64,System.Int64,System.Boolean)
+  name.vb: MessageScheduled(GameEventScriptMessage, Long, Long, Boolean)
+  fullName: GameEventScript.Api.IGesRuntimeObserver.MessageScheduled(GameEventScript.Api.GameEventScriptMessage, long, long, bool)
+  fullName.vb: GameEventScript.Api.IGesRuntimeObserver.MessageScheduled(GameEventScript.Api.GameEventScriptMessage, Long, Long, Boolean)
+  nameWithType: IGesRuntimeObserver.MessageScheduled(GameEventScriptMessage, long, long, bool)
+  nameWithType.vb: IGesRuntimeObserver.MessageScheduled(GameEventScriptMessage, Long, Long, Boolean)
+- uid: GameEventScript.Api.IGesRuntimeObserver.MessageScheduled*
+  name: MessageScheduled
+  href: api/GameEventScript.Api.IGesRuntimeObserver.html#GameEventScript_Api_IGesRuntimeObserver_MessageScheduled_
+  commentId: Overload:GameEventScript.Api.IGesRuntimeObserver.MessageScheduled
+  fullName: GameEventScript.Api.IGesRuntimeObserver.MessageScheduled
+  nameWithType: IGesRuntimeObserver.MessageScheduled
 - uid: GameEventScript.Api.IGesRuntimeObserver.RuntimeError(GameEventScript.Api.GesDiagnostic)
   name: RuntimeError(GesDiagnostic)
   href: api/GameEventScript.Api.IGesRuntimeObserver.html#GameEventScript_Api_IGesRuntimeObserver_RuntimeError_GameEventScript_Api_GesDiagnostic_

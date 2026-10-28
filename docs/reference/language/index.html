@@ -264,9 +264,19 @@ list literal.</p>
 <p>Numeric literals contain an integer part and an optional fractional part, use
 <code>.</code> as decimal separator, and have no sign or exponent syntax; unary minus
 supplies a negative sign. Single underscores may separate adjacent digits but
-may not lead, trail, or repeat. A following <code>%</code>, <code>m</code>, <code>s</code>, or <code>°</code> forms a
-percentage or unit literal without intervening whitespace:</p>
-<div class="expressive-code"><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="ges"><code><div class="ec-line"><div class="code"><span style="--0:#C792EA;--1:#8844AE">let</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C5E478;--1:#3B61B0">integer</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C792EA;--1:#8844AE">be</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">42</span></div></div><div class="ec-line"><div class="code"><span style="--0:#C792EA;--1:#8844AE">let</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C5E478;--1:#3B61B0">groupedInteger</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C792EA;--1:#8844AE">be</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">1_000_000</span></div></div><div class="ec-line"><div class="code"><span style="--0:#C792EA;--1:#8844AE">let</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C5E478;--1:#3B61B0">fraction</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C792EA;--1:#8844AE">be</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">12.5</span></div></div><div class="ec-line"><div class="code"><span style="--0:#C792EA;--1:#8844AE">let</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C5E478;--1:#3B61B0">negative</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C792EA;--1:#8844AE">be</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C792EA;--1:#8844AE">-</span><span style="--0:#F78C6C;--1:#AA0982">7</span><span style="--0:#D6DEEB;--1:#403F53">             </span><span style="--0:#919F9F;--1:#5D6376">// unary minus followed by an integer literal</span></div></div><div class="ec-line"><div class="code"><span style="--0:#C792EA;--1:#8844AE">let</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C5E478;--1:#3B61B0">probability</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C792EA;--1:#8844AE">be</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">25%</span><span style="--0:#D6DEEB;--1:#403F53">         </span><span style="--0:#919F9F;--1:#5D6376">// percentage literal</span></div></div><div class="ec-line"><div class="code"><span style="--0:#C792EA;--1:#8844AE">let</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C5E478;--1:#3B61B0">distance</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C792EA;--1:#8844AE">be</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">3.5m</span><span style="--0:#D6DEEB;--1:#403F53">           </span><span style="--0:#919F9F;--1:#5D6376">// meter quantity</span></div></div><div class="ec-line"><div class="code"><span style="--0:#C792EA;--1:#8844AE">let</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C5E478;--1:#3B61B0">duration</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C792EA;--1:#8844AE">be</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">2s</span><span style="--0:#D6DEEB;--1:#403F53">             </span><span style="--0:#919F9F;--1:#5D6376">// second quantity</span></div></div><div class="ec-line"><div class="code"><span style="--0:#C792EA;--1:#8844AE">let</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C5E478;--1:#3B61B0">angle</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C792EA;--1:#8844AE">be</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">90°</span><span style="--0:#D6DEEB;--1:#403F53">               </span><span style="--0:#919F9F;--1:#5D6376">// degree quantity</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="let integer be 42let groupedInteger be 1_000_000let fraction be 12.5let negative be -7             // unary minus followed by an integer literallet probability be 25%         // percentage literallet distance be 3.5m           // meter quantitylet duration be 2s             // second quantitylet angle be 90°               // degree quantity"><div></div></button></div></figure></div>
+may not lead, trail, or repeat. A directly following <code>%</code> forms a percentage
+literal, and a directly following unit spelling from <a href="#quantities">Quantities</a>
+forms a quantity literal:</p>
+<div class="expressive-code"><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="ges"><code><div class="ec-line"><div class="code"><span style="--0:#C792EA;--1:#8844AE">let</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C5E478;--1:#3B61B0">integer</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C792EA;--1:#8844AE">be</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">42</span></div></div><div class="ec-line"><div class="code"><span style="--0:#C792EA;--1:#8844AE">let</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C5E478;--1:#3B61B0">groupedInteger</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C792EA;--1:#8844AE">be</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">1_000_000</span></div></div><div class="ec-line"><div class="code"><span style="--0:#C792EA;--1:#8844AE">let</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C5E478;--1:#3B61B0">fraction</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C792EA;--1:#8844AE">be</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">12.5</span></div></div><div class="ec-line"><div class="code"><span style="--0:#C792EA;--1:#8844AE">let</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C5E478;--1:#3B61B0">negative</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C792EA;--1:#8844AE">be</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C792EA;--1:#8844AE">-</span><span style="--0:#F78C6C;--1:#AA0982">7</span><span style="--0:#D6DEEB;--1:#403F53">             </span><span style="--0:#919F9F;--1:#5D6376">// unary minus followed by an integer literal</span></div></div><div class="ec-line"><div class="code"><span style="--0:#C792EA;--1:#8844AE">let</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C5E478;--1:#3B61B0">probability</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C792EA;--1:#8844AE">be</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">25%</span><span style="--0:#D6DEEB;--1:#403F53">         </span><span style="--0:#919F9F;--1:#5D6376">// percentage literal</span></div></div><div class="ec-line"><div class="code"><span style="--0:#C792EA;--1:#8844AE">let</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C5E478;--1:#3B61B0">distance</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C792EA;--1:#8844AE">be</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">3.5m</span><span style="--0:#D6DEEB;--1:#403F53">           </span><span style="--0:#919F9F;--1:#5D6376">// meter quantity</span></div></div><div class="ec-line"><div class="code"><span style="--0:#C792EA;--1:#8844AE">let</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C5E478;--1:#3B61B0">duration</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C792EA;--1:#8844AE">be</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">2s</span><span style="--0:#D6DEEB;--1:#403F53">             </span><span style="--0:#919F9F;--1:#5D6376">// second quantity</span></div></div><div class="ec-line"><div class="code"><span style="--0:#C792EA;--1:#8844AE">let</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C5E478;--1:#3B61B0">angle</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C792EA;--1:#8844AE">be</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">90°</span><span style="--0:#D6DEEB;--1:#403F53">               </span><span style="--0:#919F9F;--1:#5D6376">// degree quantity</span></div></div><div class="ec-line"><div class="code"><span style="--0:#C792EA;--1:#8844AE">let</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C5E478;--1:#3B61B0">speed</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C792EA;--1:#8844AE">be</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">3m/s</span><span style="--0:#D6DEEB;--1:#403F53">              </span><span style="--0:#919F9F;--1:#5D6376">// meter-per-second quantity</span></div></div><div class="ec-line"><div class="code"><span style="--0:#C792EA;--1:#8844AE">let</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C5E478;--1:#3B61B0">delay</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C792EA;--1:#8844AE">be</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">250ms</span><span style="--0:#D6DEEB;--1:#403F53">             </span><span style="--0:#919F9F;--1:#5D6376">// prefixed spelling of 0.25s</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="let integer be 42let groupedInteger be 1_000_000let fraction be 12.5let negative be -7             // unary minus followed by an integer literallet probability be 25%         // percentage literallet distance be 3.5m           // meter quantitylet duration be 2s             // second quantitylet angle be 90°               // degree quantitylet speed be 3m/s              // meter-per-second quantitylet delay be 250ms             // prefixed spelling of 0.25s"><div></div></button></div></figure></div>
+<blockquote>
+<p><strong>Since: Unreleased</strong> — physical unit literals</p>
+</blockquote>
+<p>The lexer takes the longest unit spelling that is followed by whitespace, a
+structural character or the end of input, so <code>10m/s</code> is one quantity literal
+while <code>10m / s</code> divides <code>10m</code> by the binding <code>s</code>. This changes the meaning of
+attached spellings such as <code>10m/s</code> or <code>6m/s²</code>, which earlier versions read as
+a division. Without a matching spelling the number ends before the letters, as
+before.</p>
 <p>Literal value decoding shares the numeric conversion rules with text casts as
 defined in <a href="/docs/reference/semantics/numbers/#shared-conversion-and-source-token-boundaries">Number semantics</a>.
 The source lexer still owns token boundaries; in particular, commas remain
@@ -412,11 +422,15 @@ form add a delay. Duration is evaluated first, then additional tags and message
 arguments using the existing send argument order; each is evaluated once. The
 message and tags are captured immediately. Duration must be a numeric Quantity(s),
 not a unitless number or another unit. Unit-preserving computations such as
-<code>abs (-0.2s)</code> are valid durations; a numeric result must not be assumed unitless
-when its unit is unknown. Statically established wrong types produce
+<code>abs (-0.2s)</code>, <code>floor 1.5s</code> or <code>abs</code> of a time Vector are valid durations; a
+numeric result must not be assumed unitless when its unit is unknown, for
+example an untyped function parameter. Statically established wrong types, such
+as <code>10m</code>, <code>floor 1.5m</code> or a rounded Vector, produce
 <code>validate.invalidTypeConstructor</code>; dynamically invalid values, nothing, negative
 values, nonfinite values or unrepresentable delays produce false without sending.
-Zero seconds uses the instant send path. Timing, rounding, delivery snapshots and
+A zero duration is identical to the same result-bearing send without <code>after</code>:
+the message is not delayed and has the same result, acceptance, ordering,
+queue-limit behavior and observations. Timing, rounding, delivery snapshots and
 initialization staging are defined in HostRuntime. Emit/publish do not become
 synchronous handler calls. A result-bearing send also returns false when its
 message operand is not a Message or its tag clause cannot be normalized.</p>
@@ -844,7 +858,10 @@ the result is also <code>nothing</code>.</p>
 is the natural exponential counterpart of <code>ln</code>.</p>
 <p>Unary intrinsics accept either <code>operation expression</code> or
 <code>operation(expression)</code>. <code>floor</code>, <code>ceil</code>, <code>truncate</code>, and the three <code>round</code>
-forms return integers using <a href="/docs/reference/semantics/numbers/">Number semantics</a>. <code>rad</code>
+forms round the operand’s <a href="#numbers">numeric view</a> to an integer using
+<a href="/docs/reference/semantics/numbers/">Number semantics</a>, so Booleans round as <code>0</code> or <code>1</code> and
+dice as the sum of their rolls; an operand without a numeric view, such as a
+Vector, Point, Text or List, produces <code>nothing</code>. <code>rad</code>
 converts degrees to unitless radians; <code>deg</code> converts unitless radians to a degree
 quantity; <code>wrap degree</code> reduces a unitless or degree-valued angle to <code>[0°, 360°)</code>.
 <code>chance</code> accepts a unitless percentage or numeric probability: integer inputs and
@@ -967,8 +984,8 @@ arity is a compile error.</p>
 </table>
 <p>Numeric component overloads require numeric operands with one common unit.
 Object-pair overloads require matching spatial kinds and units. Dot, cross,
-squared-distance, and squared-length results are unitless because the language
-has no compound-unit representation. Normalizing a zero vector and computing an
+squared-distance, and squared-length results are unitless because the closed
+unit set has no squared or general product units. Normalizing a zero vector and computing an
 angle with a zero-length operand produce <code>nothing</code>. Unsupported operand shapes,
 incompatible units, and absent operands likewise produce <code>nothing</code>.</p>
 <h3 id="declared-constants-and-mathematical-constants">Declared constants and mathematical constants</h3>
@@ -1004,7 +1021,7 @@ types, and namespace-like extension references.</p>
 <li><code>:Boolean</code></li>
 <li><code>:Number</code></li>
 <li><code>:Percentage</code></li>
-<li><code>:Quantity(none)</code>, <code>:Quantity(m)</code>, <code>:Quantity(meter)</code>, <code>:Quantity(s)</code>, <code>:Quantity(second)</code>, <code>:Quantity(degree)</code></li>
+<li><code>:Quantity(none)</code> and <code>:Quantity(unit)</code> for every unit name in <a href="#quantities">Quantities</a>, such as <code>:Quantity(m)</code>, <code>:Quantity(m/s)</code> or <code>:Quantity(°/s)</code></li>
 <li><code>:Vector</code></li>
 <li><code>:Point</code></li>
 <li><code>:Series</code></li>
@@ -1129,9 +1146,10 @@ source expressions and their data-only argument forms are recognized by <code>pa
 <code>:Map(value)</code>, <code>:Dice(value)</code> and the one-argument numeric/spatial forms retain
 their cast behavior. The single argument may also use the label <code>value</code>
 (except spatial forms, which retain their component labels). <code>:Dice[...]</code> remains a deterministic result literal.
-<code>:Number(value, unit)</code> accepts the unit names/suffixes <code>none</code>/empty Text,
-<code>second</code>/<code>s</code>, <code>meter</code>/<code>m</code>, and <code>degree</code>/<code>°</code>; a conflicting existing unit yields
-<code>nothing</code>. Percentage construction uses the numeric ratio.
+<code>:Number(value, unit)</code> accepts empty Text and every <code>:Quantity(...)</code> unit name
+from <a href="#quantities">Quantities</a>, such as <code>none</code>, <code>m</code>, <code>second</code>, <code>m/s</code> or
+<code>deg/s</code>; prefixed spellings and unknown names yield <code>nothing</code>, as does a
+conflicting existing unit. Percentage construction uses the numeric ratio.
 <code>:Range(from, to, step)</code> defaults its step to 1. <code>:Series(kind, offset)</code> accepts
 <code>fibonacci</code>/<code>factorial</code> (bare or quoted), defaulting offset to zero; it must be a
 nonnegative unitless integer. Range and Series remain lazy.
@@ -1329,20 +1347,330 @@ coercion; the complete contract is in
 <a href="/docs/reference/semantics/determinism/">Determinism</a>.</p>
 <p><code>abs</code> preserves the operand’s numeric family for percentages and quantities:
 absolute percentages remain <code>:Percentage</code>, and absolute quantities keep their
-unit. Finite numeric results that are exactly integral are represented as
+unit. <code>abs</code> of a Vector is its length with the Vector’s unit. Any other
+operand uses its numeric view, so a Boolean gives <code>0</code> or <code>1</code> and dice give the
+sum of their rolls; an operand without one, such as a Point, Text or Tag,
+produces <code>nothing</code>. Finite numeric results that are exactly integral are represented as
 integer values.</p>
 <h3 id="quantities">Quantities</h3>
 <p>Quantities attach a numeric unit to an integer or float:</p>
 <div class="expressive-code"><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="ges"><code><div class="ec-line"><div class="code"><span style="--0:#C792EA;--1:#8844AE">let</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C5E478;--1:#3B61B0">distance</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C792EA;--1:#8844AE">be</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">10m</span></div></div><div class="ec-line"><div class="code"><span style="--0:#C792EA;--1:#8844AE">let</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C5E478;--1:#3B61B0">duration</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C792EA;--1:#8844AE">be</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">2s</span></div></div><div class="ec-line"><div class="code"><span style="--0:#C792EA;--1:#8844AE">let</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C5E478;--1:#3B61B0">angle</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C792EA;--1:#8844AE">be</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">90°</span></div></div><div class="ec-line"><div class="code">
 </div></div><div class="ec-line"><div class="code"><span style="--0:#C792EA;--1:#8844AE">let</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C5E478;--1:#3B61B0">a</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C792EA;--1:#8844AE">be</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">100</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C792EA;--1:#8844AE">as</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C5E478;--1:#3B61B0">:Quantity(m)</span></div></div><div class="ec-line"><div class="code"><span style="--0:#C792EA;--1:#8844AE">let</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C5E478;--1:#3B61B0">b</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C792EA;--1:#8844AE">be</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#F78C6C;--1:#AA0982">90</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C792EA;--1:#8844AE">as</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C5E478;--1:#3B61B0">:Quantity(°)</span></div></div><div class="ec-line"><div class="code"><span style="--0:#C792EA;--1:#8844AE">let</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C5E478;--1:#3B61B0">unitlessDistance</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C792EA;--1:#8844AE">be</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C5E478;--1:#3B61B0">distance</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C792EA;--1:#8844AE">as</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C5E478;--1:#3B61B0">:Quantity(none)</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="let distance be 10mlet duration be 2slet angle be 90°let a be 100 as :Quantity(m)let b be 90 as :Quantity(°)let unitlessDistance be distance as :Quantity(none)"><div></div></button></div></figure></div>
-<p><code>:Percentage</code> is not a quantity unit; it is a separate value kind. The names
-<code>meter</code>, <code>second</code>, <code>degree</code>, and <code>seconds</code> are not quantity type aliases. Use
-<code>:Quantity(m)</code>, <code>:Quantity(s)</code>, or <code>:Quantity(°)</code>/<code>:Quantity(degree)</code> for casts
-and checks. <code>:Quantity(none)</code> removes a supported numeric or spatial unit and
-produces the corresponding unitless value; as a check it matches only numeric
-or spatial values that are already unitless. <code>none</code> is a unit name only in this
-type form and is not the absence value <code>nothing</code>. Use <code>#meter</code> or <code>#degree</code> only
-when an ordinary tag value is meant.</p>
+<blockquote>
+<p><strong>Since: Unreleased</strong> — units other than meter, second and degree</p>
+</blockquote>
+<p>The unit set is closed; there is no general dimensional algebra. Each unit has
+a canonical symbol, which literals, <code>:Quantity(...)</code> and formatting use, and a
+portable name used by bytecode, assembler text and host APIs:</p>
+<table>
+<thead>
+<tr>
+<th>Unit</th>
+<th>Symbol</th>
+<th>ASCII spelling</th>
+<th>Portable name</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>degree</td>
+<td><code>°</code></td>
+<td><code>deg</code></td>
+<td><code>degree</code></td>
+</tr>
+<tr>
+<td>meter</td>
+<td><code>m</code></td>
+<td></td>
+<td><code>meter</code></td>
+</tr>
+<tr>
+<td>second</td>
+<td><code>s</code></td>
+<td></td>
+<td><code>second</code></td>
+</tr>
+<tr>
+<td>meter per second</td>
+<td><code>m/s</code></td>
+<td></td>
+<td><code>meterPerSecond</code></td>
+</tr>
+<tr>
+<td>meter per second squared</td>
+<td><code>m/s²</code></td>
+<td><code>m/s^2</code></td>
+<td><code>meterPerSecondSquared</code></td>
+</tr>
+<tr>
+<td>kilogram</td>
+<td><code>kg</code></td>
+<td></td>
+<td><code>kilogram</code></td>
+</tr>
+<tr>
+<td>newton</td>
+<td><code>N</code></td>
+<td></td>
+<td><code>newton</code></td>
+</tr>
+<tr>
+<td>joule</td>
+<td><code>J</code></td>
+<td></td>
+<td><code>joule</code></td>
+</tr>
+<tr>
+<td>watt</td>
+<td><code>W</code></td>
+<td></td>
+<td><code>watt</code></td>
+</tr>
+<tr>
+<td>volt</td>
+<td><code>V</code></td>
+<td></td>
+<td><code>volt</code></td>
+</tr>
+<tr>
+<td>ampere</td>
+<td><code>A</code></td>
+<td></td>
+<td><code>ampere</code></td>
+</tr>
+<tr>
+<td>hertz</td>
+<td><code>Hz</code></td>
+<td></td>
+<td><code>hertz</code></td>
+</tr>
+<tr>
+<td>kelvin</td>
+<td><code>K</code></td>
+<td></td>
+<td><code>kelvin</code></td>
+</tr>
+<tr>
+<td>degree per second</td>
+<td><code>°/s</code></td>
+<td><code>deg/s</code></td>
+<td><code>degreePerSecond</code></td>
+</tr>
+</tbody>
+</table>
+<p>Literals additionally accept prefixed spellings as sugar. They scale the value
+exactly to the base unit at compile time; the value keeps the base unit and
+formats with the base symbol:</p>
+<table>
+<thead>
+<tr>
+<th>Spelling</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>km</code>, <code>mm</code></td>
+<td>1000 m, 0.001 m</td>
+</tr>
+<tr>
+<td><code>ms</code></td>
+<td>0.001 s</td>
+</tr>
+<tr>
+<td><code>kN</code>, <code>kJ</code>, <code>kW</code>, <code>kV</code>, <code>kHz</code></td>
+<td>1000 N, J, W, V, Hz</td>
+</tr>
+<tr>
+<td><code>MJ</code>, <code>MW</code></td>
+<td>1 000 000 J, W</td>
+</tr>
+<tr>
+<td><code>Wh</code>, <code>kWh</code></td>
+<td>3600 J, 3 600 000 J</td>
+</tr>
+</tbody>
+</table>
+<p>For example <code>1.5kWh</code> is <code>5400000J</code> and <code>250ms</code> is <code>0.25s</code>. Celsius,
+Fahrenheit, bits, bytes and bit rates are not units.</p>
+<p><code>:Quantity(unit)</code> accepts <code>none</code>, every symbol and ASCII spelling, and the long
+names <code>meter</code>, <code>second</code> and <code>degree</code>; <code>degree/s</code> is accepted for <code>°/s</code> because
+<code>°</code> reads as <code>degree</code>. Whitespace between the parts of a unit name is ignored and
+<code>÷</code> reads as <code>/</code>, so <code>:Quantity(m / s)</code> and <code>:Quantity(m÷s)</code> are <code>:Quantity(m/s)</code>.
+Prefixed spellings are not type names. <code>:Percentage</code> is
+not a quantity unit; it is a separate value kind. The names <code>meter</code>, <code>second</code>,
+<code>degree</code>, and <code>seconds</code> are not quantity types of their own. <code>:Quantity(none)</code>
+removes a supported numeric or spatial unit and produces the corresponding
+unitless value; as a check it matches only numeric or spatial values that are
+already unitless. <code>none</code> is a unit name only in this type form and is not the
+absence value <code>nothing</code>. Use <code>#meter</code> or <code>#degree</code> only when an ordinary tag
+value is meant. Vectors and points may carry any unit.</p>
+<p>Addition, subtraction, comparisons, <code>min</code>, <code>max</code> and <code>clamp</code> keep their
+same-unit rules. Multiplying or dividing a quantity by a unitless number keeps
+its unit, and dividing two quantities of the same unit gives a unitless number,
+so <code>10m / 2m</code> is <code>5</code>. <code>abs</code> and <code>hypot</code> keep the unit, rounding follows
+<a href="/docs/reference/semantics/numbers/#conversion-and-rounding">Number semantics</a>; trigonometry
+and powers are unchanged. Any other product or quotient of two units follows
+this derivation table, where multiplication is commutative; every other
+combination, such as <code>2m * 3m</code>, <code>2N + 3J</code> or <code>6kg / 2s</code>, gives <code>nothing</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Operation</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>m / s</code></td>
+<td><code>m/s</code></td>
+</tr>
+<tr>
+<td><code>m/s × s</code></td>
+<td><code>m</code></td>
+</tr>
+<tr>
+<td><code>m / (m/s)</code></td>
+<td><code>s</code></td>
+</tr>
+<tr>
+<td><code>m/s / s</code></td>
+<td><code>m/s²</code></td>
+</tr>
+<tr>
+<td><code>m/s² × s</code></td>
+<td><code>m/s</code></td>
+</tr>
+<tr>
+<td><code>m/s / (m/s²)</code></td>
+<td><code>s</code></td>
+</tr>
+<tr>
+<td><code>° / s</code></td>
+<td><code>°/s</code></td>
+</tr>
+<tr>
+<td><code>°/s × s</code></td>
+<td><code>°</code></td>
+</tr>
+<tr>
+<td><code>° / (°/s)</code></td>
+<td><code>s</code></td>
+</tr>
+<tr>
+<td><code>kg × m/s²</code></td>
+<td><code>N</code></td>
+</tr>
+<tr>
+<td><code>N / kg</code></td>
+<td><code>m/s²</code></td>
+</tr>
+<tr>
+<td><code>N / (m/s²)</code></td>
+<td><code>kg</code></td>
+</tr>
+<tr>
+<td><code>N × m</code></td>
+<td><code>J</code></td>
+</tr>
+<tr>
+<td><code>J / m</code></td>
+<td><code>N</code></td>
+</tr>
+<tr>
+<td><code>J / N</code></td>
+<td><code>m</code></td>
+</tr>
+<tr>
+<td><code>J / s</code></td>
+<td><code>W</code></td>
+</tr>
+<tr>
+<td><code>W × s</code></td>
+<td><code>J</code></td>
+</tr>
+<tr>
+<td><code>J / W</code></td>
+<td><code>s</code></td>
+</tr>
+<tr>
+<td><code>V × A</code></td>
+<td><code>W</code></td>
+</tr>
+<tr>
+<td><code>W / V</code></td>
+<td><code>A</code></td>
+</tr>
+<tr>
+<td><code>W / A</code></td>
+<td><code>V</code></td>
+</tr>
+<tr>
+<td>unitless <code>/ s</code></td>
+<td><code>Hz</code></td>
+</tr>
+<tr>
+<td>unitless <code>/ Hz</code></td>
+<td><code>s</code></td>
+</tr>
+<tr>
+<td><code>Hz × s</code></td>
+<td>unitless</td>
+</tr>
+<tr>
+<td><code>m × Hz</code></td>
+<td><code>m/s</code></td>
+</tr>
+<tr>
+<td><code>° × Hz</code></td>
+<td><code>°/s</code></td>
+</tr>
+<tr>
+<td><code>m/s × Hz</code></td>
+<td><code>m/s²</code></td>
+</tr>
+<tr>
+<td><code>J × Hz</code></td>
+<td><code>W</code></td>
+</tr>
+<tr>
+<td><code>W / Hz</code></td>
+<td><code>J</code></td>
+</tr>
+<tr>
+<td><code>W / J</code></td>
+<td><code>Hz</code></td>
+</tr>
+<tr>
+<td><code>m/s / Hz</code></td>
+<td><code>m</code></td>
+</tr>
+<tr>
+<td><code>m/s / m</code></td>
+<td><code>Hz</code></td>
+</tr>
+<tr>
+<td><code>°/s / Hz</code></td>
+<td><code>°</code></td>
+</tr>
+<tr>
+<td><code>°/s / °</code></td>
+<td><code>Hz</code></td>
+</tr>
+<tr>
+<td><code>m/s² / Hz</code></td>
+<td><code>m/s</code></td>
+</tr>
+<tr>
+<td><code>m/s² / (m/s)</code></td>
+<td><code>Hz</code></td>
+</tr>
+</tbody>
+</table>
+<p>So <code>1 / 2s</code> is <code>0.5Hz</code>; use <code>as :Quantity(none)</code> when a plain number is
+needed. The derivations apply to numbers and to a vector multiplied or divided
+by a number. Integer division (<code>div</code>), <code>mod</code>, <code>rem</code>, points and percentages
+keep their derivation-free rules, so <code>10m div 2s</code> and <code>50% / 2s</code> are <code>nothing</code>.</p>
 <h3 id="percentages">Percentages</h3>
 <p>A percentage literal stores a ratio:</p>
 <div class="expressive-code"><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="ges"><code><div class="ec-line"><div class="code"><span style="--0:#F78C6C;--1:#AA0982">25%</span><span style="--0:#D6DEEB;--1:#403F53">       </span><span style="--0:#919F9F;--1:#5D6376">// ratio 0.25</span></div></div><div class="ec-line"><div class="code"><span style="--0:#F78C6C;--1:#AA0982">100%</span><span style="--0:#D6DEEB;--1:#403F53">      </span><span style="--0:#919F9F;--1:#5D6376">// ratio 1.0</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="25%       // ratio 0.25100%      // ratio 1.0"><div></div></button></div></figure></div>

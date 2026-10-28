@@ -377,7 +377,21 @@ and <code>BytecodeSeriesKind</code>; instruction flags are exposed only as the r
 <code>0xD9</code>, with operand and limit semantics owned by <a href="/docs/reference/bytecode/">Bytecode</a>.</p>
 <p><code>BytecodeInstructionUnits</code> supplies pure conversions between type names, units,
 and suffixes. Parse operations return absence for an unknown valid string;
-predicate operations never use locale; formatting returns canonical GES text.
+predicate operations never use locale; formatting returns canonical GES text.</p>
+<blockquote>
+<p><strong>Since: Unreleased</strong> — physical units</p>
+</blockquote>
+<p><code>QuantityUnit</code> has one member per defined UnitId: C# <code>UnitNone</code>, <code>UnitDegree</code>,
+<code>UnitMeter</code>, <code>UnitSecond</code>, <code>UnitMeterPerSecond</code>, <code>UnitMeterPerSecondSquared</code>,
+<code>UnitKilogram</code>, <code>UnitNewton</code>, <code>UnitJoule</code>, <code>UnitWatt</code>, <code>UnitVolt</code>, <code>UnitAmpere</code>,
+<code>UnitHertz</code>, <code>UnitKelvin</code> and <code>UnitDegreePerSecond</code>, plus the invalid sentinel
+<code>UnitInvalid</code>; Swift uses the same cases in lower camel case (<code>.none</code>,
+<code>.meterPerSecond</code>, …), whose raw values are the portable unit names. C#
+<code>GesQuantityUnits.ToTypeName</code>/<code>ParseTypeName</code> convert portable names and
+<code>ToSuffix</code> returns the canonical symbol, which Swift exposes as <code>suffix</code>;
+<code>IsNumericUnit</code> is true for every defined unit other than none. Swift
+<code>GesQuantityUnit</code> is <code>Sendable</code>. Symbols, names and arithmetic are defined in
+<a href="/docs/reference/language/#quantities">Language quantities</a>.
 <code>BinaryFormat</code> exposes the fixed V1 magic bytes, format version, file-header
 size, and section-header size as named constants; their numeric values are owned
 by BinaryFormat.md.</p>
@@ -812,13 +826,29 @@ failure becomes <code>runtime.nativeHandlerFailure</code>; it aborts that handle
 runtime boundaries, and does not corrupt Host state.</p>
 <p>RuntimeObserver receives synchronous callbacks in exact dispatch order:</p>
 <ul>
-<li><code>MessageEmitted(message, accepted)</code> after each Emit attempt;</li>
-<li><code>MessagePublished(message, result)</code> after local/outbound Publish processing;</li>
-<li><code>DispatchStarted(message, dispatchSignatureId)</code> immediately before a handler;</li>
-<li><code>DispatchCompleted(message, dispatchSignatureId)</code> when the handler boundary closes, including cleanup after a handler failure or limit;</li>
+<li><code>MessageEmitted(message, id, accepted)</code> after each Emit attempt;</li>
+<li><code>MessagePublished(message, id, result)</code> after local/outbound Publish processing;</li>
+<li><code>DispatchStarted(message, id, dispatchSignatureId)</code> immediately before a handler;</li>
+<li><code>DispatchCompleted(message, id, dispatchSignatureId)</code> when the handler boundary closes, including cleanup after a handler failure or limit;</li>
 <li><code>RuntimeLimitReached(name, detail, limit)</code> for a limit stop;</li>
-<li><code>RuntimeError(diagnostic)</code> for a runtime diagnostic.</li>
+<li><code>RuntimeError(diagnostic)</code> for a runtime diagnostic;</li>
+<li><code>MessageScheduled(message, id, deadline, publish)</code> once when a delayed Emit
+or Publish is accepted, before that Emit’s <code>MessageEmitted</code>;</li>
+<li><code>MessageDiscarded(id)</code> once for each message removed before it was dispatched.</li>
 </ul>
+<p>Swift spells these <code>messageEmitted(_:id:accepted:)</code>, <code>messagePublished(_:id:result:)</code>,
+<code>dispatchStarted(_:id:signatureID:)</code>, <code>dispatchCompleted(_:id:signatureID:)</code>,
+<code>runtimeLimitReached(_:detail:limit:)</code>, <code>runtimeError(_:)</code>,
+<code>messageScheduled(_:id:deadline:publish:)</code> and <code>messageDiscarded(id:)</code>.</p>
+<blockquote>
+<p><strong>Since: Unreleased</strong> — send IDs, scheduling and discard callbacks, default implementations</p>
+</blockquote>
+<p><code>id</code> is the send ID defined in <code>HostRuntime.md#send-ids</code>; it is 0 for an Emit
+that was not queued and for a Publish the Host did not accept. The same section
+defines when <code>MessageDiscarded</code> occurs; scheduling deadlines are defined in
+<code>HostRuntime.md#delayed-dispatch</code>. Every callback has an empty default
+implementation in both ports, so an observer implements only the callbacks it
+needs.</p>
 <p>An observer is observational only and has no return value. Observer callbacks
 must not throw. Throwing is an embedding-contract violation, is not converted to
 a GES diagnostic, and lies outside Host state/recovery guarantees. This differs
@@ -1179,8 +1209,8 @@ Number, Bool infers Boolean, String infers Text, Array infers List and Dictionar
 infers Map; Optional delegates to its wrapped type. Aliases, custom convertible
 types and GesValue require explicit <code>typeName</code>. Swift compiler type checking
 still requires the existing strict value-conversion conformances.</p>
-<p><code>@GesField(unit:)</code> may instead declare a numeric quantity in meters, seconds or
-degrees. It cannot be combined with <code>typeName</code> or a nonnumeric field. Encoding
+<p><code>@GesField(unit:)</code> may instead declare a numeric quantity in any <code>GesQuantityUnit</code>
+other than <code>.none</code>, for example <code>@GesField(unit: .meterPerSecond)</code>. It cannot be combined with <code>typeName</code> or a nonnumeric field. Encoding
 attaches the explicit unit to a native numeric magnitude; constructor decoding
 checks the exact unit before stripping it and invoking strict native conversion.
 Nothing retains existing Optional/NaN semantics. No magnitude scaling, truncation

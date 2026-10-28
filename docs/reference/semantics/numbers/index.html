@@ -178,6 +178,9 @@ saturating conversion:</p>
 <li><code>round half up</code>: nearest; an exact half goes away from zero.</li>
 <li><code>round half down</code>: nearest; an exact half goes toward zero.</li>
 </ul>
+<p>The integer result keeps the unit of a scalar Quantity, so <code>floor 2.5m</code> is <code>2m</code>.
+A percentage operand is a ratio without a unit, so <code>floor 150%</code> is the unitless
+<code>1</code>.</p>
 <p>These names describe the existing DSL semantics; they are not delegated to a
 host language’s similarly named default overload.</p>
 <h2 id="text-and-number-conversion">Text and number conversion</h2>
@@ -186,8 +189,13 @@ host language’s similarly named default overload.</p>
 text token. It ignores ASCII space (<code>U+0020</code>) and tab (<code>U+0009</code>) before and after
 the token.
 No whitespace is allowed inside it. The grammar is:</p>
-<div class="expressive-code"><link rel="stylesheet" href="/_astro/ec.w36nc.css"><script type="module" src="/_astro/ec.0vx5m.js"></script><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="text"><code><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">NumericText = Padding NumberToken Padding</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">Padding     = { " " | "\t" }</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">NumberToken = (Finite | Infinity | "NaN") [Suffix]</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">Finite      = [Sign] (Digits | GroupedDigits) ["." Digits] [Exponent]</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">Infinity    = [Sign] "Infinity"</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">Exponent    = ("e" | "E") [Sign] Digits</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">Sign        = "+" | "-"</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">Digits      = Digit {["_"] Digit}</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">GroupedDigits = FirstGroup "," ThreeDigits {"," ThreeDigits}</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">FirstGroup  = Digit [Digit [Digit]]</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">ThreeDigits = Digit Digit Digit</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">Digit       = "0".."9"</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">Suffix      = "m" | "s" | "°" | "%"</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="NumericText = Padding NumberToken PaddingPadding     = { &quot; &quot; | &quot;\t&quot; }NumberToken = (Finite | Infinity | &quot;NaN&quot;) [Suffix]Finite      = [Sign] (Digits | GroupedDigits) [&quot;.&quot; Digits] [Exponent]Infinity    = [Sign] &quot;Infinity&quot;Exponent    = (&quot;e&quot; | &quot;E&quot;) [Sign] DigitsSign        = &quot;+&quot; | &quot;-&quot;Digits      = Digit {[&quot;_&quot;] Digit}GroupedDigits = FirstGroup &quot;,&quot; ThreeDigits {&quot;,&quot; ThreeDigits}FirstGroup  = Digit [Digit [Digit]]ThreeDigits = Digit Digit DigitDigit       = &quot;0&quot;..&quot;9&quot;Suffix      = &quot;m&quot; | &quot;s&quot; | &quot;°&quot; | &quot;%&quot;"><div></div></button></div></figure></div>
-<p>All digits and signs are ASCII. Special tokens and suffixes are case-sensitive.
+<div class="expressive-code"><link rel="stylesheet" href="/_astro/ec.w36nc.css"><script type="module" src="/_astro/ec.0vx5m.js"></script><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="text"><code><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">NumericText = Padding NumberToken Padding</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">Padding     = { " " | "\t" }</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">NumberToken = (Finite | Infinity | "NaN") [Suffix]</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">Finite      = [Sign] (Digits | GroupedDigits) ["." Digits] [Exponent]</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">Infinity    = [Sign] "Infinity"</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">Exponent    = ("e" | "E") [Sign] Digits</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">Sign        = "+" | "-"</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">Digits      = Digit {["_"] Digit}</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">GroupedDigits = FirstGroup "," ThreeDigits {"," ThreeDigits}</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">FirstGroup  = Digit [Digit [Digit]]</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">ThreeDigits = Digit Digit Digit</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">Digit       = "0".."9"</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">Suffix      = UnitSpelling | "%"</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="NumericText = Padding NumberToken PaddingPadding     = { &quot; &quot; | &quot;\t&quot; }NumberToken = (Finite | Infinity | &quot;NaN&quot;) [Suffix]Finite      = [Sign] (Digits | GroupedDigits) [&quot;.&quot; Digits] [Exponent]Infinity    = [Sign] &quot;Infinity&quot;Exponent    = (&quot;e&quot; | &quot;E&quot;) [Sign] DigitsSign        = &quot;+&quot; | &quot;-&quot;Digits      = Digit {[&quot;_&quot;] Digit}GroupedDigits = FirstGroup &quot;,&quot; ThreeDigits {&quot;,&quot; ThreeDigits}FirstGroup  = Digit [Digit [Digit]]ThreeDigits = Digit Digit DigitDigit       = &quot;0&quot;..&quot;9&quot;Suffix      = UnitSpelling | &quot;%&quot;"><div></div></button></div></figure></div>
+<p><code>UnitSpelling</code> is any unit symbol, ASCII spelling or prefixed spelling listed in
+<a href="/docs/reference/language/#quantities">Language quantities</a>, such as <code>m/s</code>, <code>deg/s</code>, <code>ms</code>
+or <code>kWh</code>. The suffix is the longest spelling that ends the token; it must
+directly follow a digit, <code>Infinity</code> or <code>NaN</code>, so <code>NaN</code> itself has no newton
+suffix. All digits and signs are ASCII. Special tokens and suffixes are
+case-sensitive.
 Leading zeroes are allowed in the integer part and exponent. Both <code>e</code> and <code>E</code>,
 an explicit positive exponent sign, and exponent leading zeroes are accepted.
 Thus <code>1000</code>, <code>100.2</code>, <code>1.02e20</code>, <code>1e03</code>, and <code>1E+003</code> are valid inputs.</p>
@@ -207,7 +215,7 @@ trailing signs, multiple suffixes, unknown suffixes, and unconsumed characters
 are invalid. A decimal point requires digits on both sides. An exponent
 requires at least one digit. Examples of invalid input are <code>12,34</code>, <code>100,2</code>,
 <code>1__000</code>, <code>1_.25</code>, <code>1,_000</code>, <code>1,000.2_5</code>, <code>.5</code>, <code>1.</code>, <code>1e</code>, <code>1e+</code>, <code>1000-</code>,
-<code>10 m</code>, and <code>10ms</code>.</p>
+<code>10 m</code>, and <code>10ft</code>.</p>
 <p>Invalid input is a failed numeric conversion. An internal NaN or invalid-result
 marker is normalized to script-visible <code>nothing</code>, just as invalid mathematics
 is. Explicit <code>NaN</code> text has the same result. There is no observable scalar NaN
@@ -236,8 +244,13 @@ literal.</p>
 mathematical decimal value before conversion to GES storage:</p>
 <ul>
 <li>With no suffix, the result is a unitless Number.</li>
-<li>With <code>m</code>, <code>s</code>, or <code>°</code>, the result is a Number carrying that Quantity unit.
-The suffix neither rescales nor rounds the numeric value.</li>
+<li>With a unit symbol or ASCII spelling, the result is a Number carrying that
+Quantity unit. The suffix neither rescales nor rounds the numeric value.</li>
+<li>With a prefixed spelling, the mathematical decimal value is multiplied
+exactly by the spelling’s factor (a power of ten, 3600 for <code>Wh</code> or 3 600 000
+for <code>kWh</code>) before numeric conversion, and the result carries the base unit.
+Source literals use the same decoding, so <code>250ms</code> and <code>'250ms' as :Number</code>
+are both <code>0.25s</code>.</li>
 <li>With <code>%</code>, the mathematical decimal value is divided by exactly 100 before
 numeric conversion. The result of <code>as :Number</code> is the unitless ratio, not a
 Percentage value. This is the same numeric view as casting a Percentage to
@@ -254,8 +267,8 @@ storage canonicalization then applies. Overflow yields signed infinity;
 underflow follows the same rounding rule through subnormal values to zero.
 Zero is canonicalized to positive zero. Parsing does not saturate at Int64
 bounds and does not use the runtime equality ULP tolerance.</p>
-<p>Percentage scaling is part of the exact decimal interpretation, before that
-single rounding step. Parsing a percentage by first rounding its displayed
+<p>Percentage and prefix scaling are part of the exact decimal interpretation,
+before that single rounding step. Parsing a percentage by first rounding its displayed
 number to Binary64 and then dividing by 100 is permitted only if it produces
 the same required result. This also avoids intermediate overflow for a finite
 ratio whose percentage magnitude exceeds the Binary64 range.</p>
@@ -311,8 +324,24 @@ unitless. <code>NaN</code> produces <code>nothing</code> with or without a suffi
 <td>Binary64 Quantity with unit <code>s</code></td>
 </tr>
 <tr>
-<td><code>90°</code></td>
+<td><code>90°</code> or <code>90deg</code></td>
 <td>Int64 Quantity <code>90°</code></td>
+</tr>
+<tr>
+<td><code>3m/s</code></td>
+<td>Int64 Quantity <code>3m/s</code></td>
+</tr>
+<tr>
+<td><code>2km</code></td>
+<td>Int64 Quantity <code>2000m</code></td>
+</tr>
+<tr>
+<td><code>3ms</code></td>
+<td>nearest Binary64 to decimal <code>0.003</code>, with unit <code>s</code></td>
+</tr>
+<tr>
+<td><code>1.5kWh</code></td>
+<td>Int64 Quantity <code>5400000J</code></td>
 </tr>
 <tr>
 <td><code>10%</code> or <code>1e1%</code></td>
@@ -421,7 +450,8 @@ canonicalization. Int64 roundtrips preserve every bit. Binary64 roundtrips
 preserve every bit after zero and integral-storage canonicalization; approximate
 numeric equality is insufficient. This guarantee holds when one conforming
 implementation writes the text and another reads it.</p>
-<p>Quantity formatting appends its unit suffix. Percentage formatting appends <code>%</code>
+<p>Quantity formatting appends the canonical symbol of its unit, never a prefixed
+or ASCII spelling. Percentage formatting appends <code>%</code>
 and expresses the stored ratio as a decimal percentage magnitude. Parsing
 that text with <code>as :Number</code> must recover the Percentage’s numeric ratio after
 normal Number canonicalization. This guarantee preserves the numeric meaning;

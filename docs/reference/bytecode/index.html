@@ -245,11 +245,15 @@ uses bits 5..7 as the mode field defined below; IteratorNext uses bit 5 for
 component output. Iterator instructions require zero UnitId. Undefined flag combinations are invalid.</p>
 <p>The UnitId map keeps the defined ids stable and reserves
 room for likely game-domain units:</p>
+<blockquote>
+<p><strong>Since: Unreleased</strong> — UnitIds 4 to 12, 16 and 17</p>
+</blockquote>
 <table>
 <thead>
 <tr>
 <th>UnitId</th>
 <th>Unit</th>
+<th>Portable name</th>
 <th>Intended use</th>
 </tr>
 </thead>
@@ -257,98 +261,123 @@ room for likely game-domain units:</p>
 <tr>
 <td><code>0</code></td>
 <td>none</td>
+<td></td>
 <td>Unitless scalar.</td>
 </tr>
 <tr>
 <td><code>1</code></td>
 <td>degree</td>
+<td><code>degree</code></td>
 <td>Angles, headings, rotations.</td>
 </tr>
 <tr>
 <td><code>2</code></td>
 <td>meter</td>
+<td><code>meter</code></td>
 <td>Positions, distances, ranges, radii.</td>
 </tr>
 <tr>
 <td><code>3</code></td>
 <td>second</td>
+<td><code>second</code></td>
 <td>Durations, cooldowns, tick time.</td>
 </tr>
 <tr>
 <td><code>4</code></td>
 <td>meter per second</td>
+<td><code>meterPerSecond</code></td>
 <td>Speed and velocity magnitude.</td>
 </tr>
 <tr>
 <td><code>5</code></td>
 <td>meter per second squared</td>
+<td><code>meterPerSecondSquared</code></td>
 <td>Acceleration.</td>
 </tr>
 <tr>
 <td><code>6</code></td>
 <td>kilogram</td>
+<td><code>kilogram</code></td>
 <td>Mass, load, inertia.</td>
 </tr>
 <tr>
 <td><code>7</code></td>
 <td>newton</td>
+<td><code>newton</code></td>
 <td>Force, thrust, recoil.</td>
 </tr>
 <tr>
 <td><code>8</code></td>
 <td>joule</td>
+<td><code>joule</code></td>
 <td>Energy, battery charge, heat energy.</td>
 </tr>
 <tr>
 <td><code>9</code></td>
 <td>watt</td>
+<td><code>watt</code></td>
 <td>Power, generator output, energy consumption over time.</td>
 </tr>
 <tr>
 <td><code>10</code></td>
 <td>volt</td>
+<td><code>volt</code></td>
 <td>Voltage for electrotechnical systems.</td>
 </tr>
 <tr>
 <td><code>11</code></td>
 <td>ampere</td>
+<td><code>ampere</code></td>
 <td>Current, charge flow, overload/thermal balancing.</td>
 </tr>
 <tr>
 <td><code>12</code></td>
 <td>hertz</td>
+<td><code>hertz</code></td>
 <td>Frequency, fire rate, polling, radio cadence.</td>
 </tr>
 <tr>
 <td><code>13</code></td>
-<td>bit</td>
-<td>Information amount.</td>
+<td>reserved: bit</td>
+<td></td>
+<td>Information amount; not implemented.</td>
 </tr>
 <tr>
 <td><code>14</code></td>
-<td>byte</td>
-<td>Storage amount.</td>
+<td>reserved: byte</td>
+<td></td>
+<td>Storage amount; not implemented.</td>
 </tr>
 <tr>
 <td><code>15</code></td>
-<td>bit per second</td>
-<td>Bandwidth and communication throughput.</td>
+<td>reserved: bit per second</td>
+<td></td>
+<td>Bandwidth; not implemented.</td>
 </tr>
 <tr>
 <td><code>16</code></td>
 <td>kelvin</td>
-<td>Temperature; Celsius/Fahrenheit syntax should normalize to Kelvin.</td>
+<td><code>kelvin</code></td>
+<td>Temperature.</td>
 </tr>
 <tr>
-<td><code>17..31</code></td>
+<td><code>17</code></td>
+<td>degree per second</td>
+<td><code>degreePerSecond</code></td>
+<td>Angular speed, turn rate.</td>
+</tr>
+<tr>
+<td><code>18..31</code></td>
 <td>reserved</td>
+<td></td>
 <td>Additional built-in or domain units.</td>
 </tr>
 </tbody>
 </table>
-<p>The compiler must only emit units supported by its matching runtime. The
-extended map keeps additional unit IDs representable without reshaping the
-instruction word.</p>
+<p>Programs may encode only the defined UnitIds 0 to 12, 16 and 17; validation
+rejects reserved ids. Unit arithmetic, symbols and literal spellings are
+defined in <a href="/docs/reference/language/#quantities">Language quantities</a>. The extended map keeps
+additional unit IDs representable without reshaping the instruction word.</p>
 <h2 id="parameter-type-hints">Parameter Type Hints</h2>
 <p>Handlers, predicates, and functions may declare optional parameter type hints
 using the same <code>as :type</code> language as value coercion:</p>
@@ -2333,7 +2362,7 @@ separate approximate-equality opcode.</p>
 <td><code>XRegister</code>=operand</td>
 <td>-</td>
 <td>-</td>
-<td>Floors a unitless numeric value and writes an integer.</td>
+<td>Floors a numeric value and writes an integer with the operand’s quantity unit.</td>
 </tr>
 <tr>
 <td>0x72</td>
@@ -2343,7 +2372,7 @@ separate approximate-equality opcode.</p>
 <td><code>XRegister</code>=operand</td>
 <td>-</td>
 <td>-</td>
-<td>Ceils a unitless numeric value and writes an integer.</td>
+<td>Ceils a numeric value and writes an integer with the operand’s quantity unit.</td>
 </tr>
 <tr>
 <td>0x73</td>
@@ -2353,7 +2382,7 @@ separate approximate-equality opcode.</p>
 <td><code>XRegister</code>=operand</td>
 <td>-</td>
 <td>-</td>
-<td>Truncates a unitless numeric value toward zero and writes an integer.</td>
+<td>Truncates a numeric value toward zero and writes an integer with the operand’s quantity unit.</td>
 </tr>
 <tr>
 <td>0x74</td>
@@ -2363,7 +2392,7 @@ separate approximate-equality opcode.</p>
 <td><code>XRegister</code>=operand</td>
 <td>-</td>
 <td>-</td>
-<td>Rounds a unitless numeric value using midpoint-to-even and writes an integer.</td>
+<td>Rounds a numeric value using midpoint-to-even and writes an integer with the operand’s quantity unit.</td>
 </tr>
 <tr>
 <td>0x75</td>
@@ -2373,7 +2402,7 @@ separate approximate-equality opcode.</p>
 <td><code>XRegister</code>=operand</td>
 <td>-</td>
 <td>-</td>
-<td>Rounds midpoint values away from zero and writes an integer.</td>
+<td>Rounds midpoint values away from zero and writes an integer with the operand’s quantity unit.</td>
 </tr>
 <tr>
 <td>0x76</td>
@@ -2383,7 +2412,7 @@ separate approximate-equality opcode.</p>
 <td><code>XRegister</code>=operand</td>
 <td>-</td>
 <td>-</td>
-<td>Rounds midpoint values toward zero and writes an integer.</td>
+<td>Rounds midpoint values toward zero and writes an integer with the operand’s quantity unit.</td>
 </tr>
 <tr>
 <td>0x77</td>

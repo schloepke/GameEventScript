@@ -386,7 +386,9 @@ order is retained.</p>
 <p><code>:take highest</code>, <code>:take lowest</code>, <code>:drop highest</code>, and <code>:drop lowest</code> use the
 same selection order for direct collections and iterator pipelines. This order
 is distinct from the sort order above. If both values have numeric views,
-compare units first (<code>none</code>, degrees, meters, seconds), then numeric values;
+compare units first in ascending UnitId order (<code>none</code>, degrees, meters,
+seconds, then the further units by their <a href="/docs/reference/bytecode/#numeric-unit-encoding-target">UnitId</a>),
+then numeric values;
 Boolean and Dice participate through their numeric views. Otherwise use:</p>
 <table>
 <thead>

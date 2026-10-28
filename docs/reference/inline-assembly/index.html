@@ -1171,8 +1171,9 @@ A numeric cast or an ordinary function call does not establish that result type.
 <p><code>Cast</code>/<code>CheckType</code> accept a built-in type such as <code>:Number</code>. These are the direct
 VM operations; use <code>CastNumeric</code> for the VM’s numeric conversion operation.
 <code>CastCustom</code>/<code>CheckCustomType</code> take literal type names. <code>CastUnit</code>/<code>CheckUnit</code> and
-optional third operands of <code>LoadInteger</code>/<code>LoadFloat</code> accept unit tags <code>#none</code>,
-<code>#degree</code>, <code>#m</code>/<code>#meter</code>, <code>#s</code>/<code>#second</code>.
+optional third operands of <code>LoadInteger</code>/<code>LoadFloat</code> accept <code>#none</code>, <code>#m</code>, <code>#s</code>
+and the portable unit name of every unit as a tag, such as <code>#degree</code>, <code>#meter</code>
+or <code>#meterPerSecond</code>.
 <code>CreateSeries</code> accepts <code>#fibonacci</code> or <code>#factorial</code>. <code>HasPattern</code>/<code>TakePattern</code>
 accept a pattern tag (<code>#countAny</code>, <code>#countFace</code>, <code>#fullHouse</code>, <code>#straight</code>), an
 Int16 count, and a face register only for <code>#countFace</code>. <code>SplitText</code> takes a

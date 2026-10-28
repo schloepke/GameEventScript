@@ -2,11 +2,11 @@
 <html>
   <head>
     <meta charset="utf-8">
-      <title>Interface IGesRuntimeObserver | Game Event Script C# API — Unreleased (85238ca5672b) </title>
+      <title>Interface IGesRuntimeObserver | Game Event Script C# API — Unreleased (f9cc9ca82d74) </title>
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <meta name="title" content="Interface IGesRuntimeObserver | Game Event Script C# API — Unreleased (85238ca5672b) ">
+      <meta name="title" content="Interface IGesRuntimeObserver | Game Event Script C# API — Unreleased (f9cc9ca82d74) ">
       
-      <meta name="description" content="Observes synchronous host behavior without participating in dispatch. Implementations must not throw and must not recursively pump the observed host.">
+      <meta name="description" content="Observes synchronous host behavior without participating in dispatch. Implementations must not throw and must not recursively pump the observed host. Every queued emit, processed publish, received message, delayed send and initialization message carries a host-local send ID: it starts at 1, increases by one per such send and is reported by every callback about that send, from emit, publish or scheduling to each dispatch or discard. 0 reports a send without an ID. Every callback has an empty default implementation, so an observer implements only the callbacks it needs.">
       <link rel="icon" href="../assets/logo.svg">
       <link rel="stylesheet" href="../public/docfx.min.css">
       <link rel="stylesheet" href="../public/main.css">
@@ -84,7 +84,11 @@ Interface IGesRuntimeObserver
   </div>
 
   <div class="markdown summary"><p>Observes synchronous host behavior without participating in dispatch.
-Implementations must not throw and must not recursively pump the observed host.</p>
+Implementations must not throw and must not recursively pump the observed host.
+Every queued emit, processed publish, received message, delayed send and initialization message carries a host-local
+send ID: it starts at 1, increases by one per such send and is reported by every callback about that send, from emit,
+publish or scheduling to each dispatch or discard. 0 reports a send without an ID.
+Every callback has an empty default implementation, so an observer implements only the callbacks it needs.</p>
 </div>
   <div class="markdown conceptual"></div>
 
@@ -110,8 +114,8 @@ Implementations must not throw and must not recursively pump the observed host.<
 
   <a id="GameEventScript_Api_IGesRuntimeObserver_DispatchCompleted_" data-uid="GameEventScript.Api.IGesRuntimeObserver.DispatchCompleted*"></a>
 
-  <h3 id="GameEventScript_Api_IGesRuntimeObserver_DispatchCompleted_GameEventScript_Api_GameEventScriptMessage_System_String_" data-uid="GameEventScript.Api.IGesRuntimeObserver.DispatchCompleted(GameEventScript.Api.GameEventScriptMessage,System.String)">
-  DispatchCompleted(GameEventScriptMessage, string)
+  <h3 id="GameEventScript_Api_IGesRuntimeObserver_DispatchCompleted_GameEventScript_Api_GameEventScriptMessage_System_Int64_System_String_" data-uid="GameEventScript.Api.IGesRuntimeObserver.DispatchCompleted(GameEventScript.Api.GameEventScriptMessage,System.Int64,System.String)">
+  DispatchCompleted(GameEventScriptMessage, long, string)
   
   </h3>
 
@@ -120,13 +124,16 @@ Implementations must not throw and must not recursively pump the observed host.<
   <div class="markdown level1 conceptual"></div>
 
   <div class="codewrapper">
-    <pre><code class="lang-csharp hljs">void DispatchCompleted(GameEventScriptMessage message, string dispatchSignatureId)</code></pre>
+    <pre><code class="lang-csharp hljs">void DispatchCompleted(GameEventScriptMessage message, long id, string dispatchSignatureId)</code></pre>
   </div>
 
   <h4 class="section">Parameters</h4>
   <dl class="parameters">
     <dt><code>message</code> <a class="xref" href="GameEventScript.Api.GameEventScriptMessage.html">GameEventScriptMessage</a></dt>
     <dd><p>The message that was dispatched.</p>
+</dd>
+    <dt><code>id</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int64">long</a></dt>
+    <dd><p>The send ID of the dispatched message.</p>
 </dd>
     <dt><code>dispatchSignatureId</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
     <dd><p>The stable matched signature identifier.</p>
@@ -146,8 +153,8 @@ Implementations must not throw and must not recursively pump the observed host.<
 
   <a id="GameEventScript_Api_IGesRuntimeObserver_DispatchStarted_" data-uid="GameEventScript.Api.IGesRuntimeObserver.DispatchStarted*"></a>
 
-  <h3 id="GameEventScript_Api_IGesRuntimeObserver_DispatchStarted_GameEventScript_Api_GameEventScriptMessage_System_String_" data-uid="GameEventScript.Api.IGesRuntimeObserver.DispatchStarted(GameEventScript.Api.GameEventScriptMessage,System.String)">
-  DispatchStarted(GameEventScriptMessage, string)
+  <h3 id="GameEventScript_Api_IGesRuntimeObserver_DispatchStarted_GameEventScript_Api_GameEventScriptMessage_System_Int64_System_String_" data-uid="GameEventScript.Api.IGesRuntimeObserver.DispatchStarted(GameEventScript.Api.GameEventScriptMessage,System.Int64,System.String)">
+  DispatchStarted(GameEventScriptMessage, long, string)
   
   </h3>
 
@@ -156,13 +163,16 @@ Implementations must not throw and must not recursively pump the observed host.<
   <div class="markdown level1 conceptual"></div>
 
   <div class="codewrapper">
-    <pre><code class="lang-csharp hljs">void DispatchStarted(GameEventScriptMessage message, string dispatchSignatureId)</code></pre>
+    <pre><code class="lang-csharp hljs">void DispatchStarted(GameEventScriptMessage message, long id, string dispatchSignatureId)</code></pre>
   </div>
 
   <h4 class="section">Parameters</h4>
   <dl class="parameters">
     <dt><code>message</code> <a class="xref" href="GameEventScript.Api.GameEventScriptMessage.html">GameEventScriptMessage</a></dt>
     <dd><p>The message being dispatched.</p>
+</dd>
+    <dt><code>id</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int64">long</a></dt>
+    <dd><p>The send ID of the dispatched message.</p>
 </dd>
     <dt><code>dispatchSignatureId</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
     <dd><p>The stable matched signature identifier.</p>
@@ -180,10 +190,44 @@ Implementations must not throw and must not recursively pump the observed host.<
 
 
 
+  <a id="GameEventScript_Api_IGesRuntimeObserver_MessageDiscarded_" data-uid="GameEventScript.Api.IGesRuntimeObserver.MessageDiscarded*"></a>
+
+  <h3 id="GameEventScript_Api_IGesRuntimeObserver_MessageDiscarded_System_Int64_" data-uid="GameEventScript.Api.IGesRuntimeObserver.MessageDiscarded(System.Int64)">
+  MessageDiscarded(long)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Observes removal of a queued, pending-initialization or delayed message before it was dispatched, for example
+because an initialization failed. A dispatched or due message is not reported here; its ordinary callbacks follow.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">void MessageDiscarded(long id)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>id</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int64">long</a></dt>
+    <dd><p>The send ID of the discarded message.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
   <a id="GameEventScript_Api_IGesRuntimeObserver_MessageEmitted_" data-uid="GameEventScript.Api.IGesRuntimeObserver.MessageEmitted*"></a>
 
-  <h3 id="GameEventScript_Api_IGesRuntimeObserver_MessageEmitted_GameEventScript_Api_GameEventScriptMessage_System_Boolean_" data-uid="GameEventScript.Api.IGesRuntimeObserver.MessageEmitted(GameEventScript.Api.GameEventScriptMessage,System.Boolean)">
-  MessageEmitted(GameEventScriptMessage, bool)
+  <h3 id="GameEventScript_Api_IGesRuntimeObserver_MessageEmitted_GameEventScript_Api_GameEventScriptMessage_System_Int64_System_Boolean_" data-uid="GameEventScript.Api.IGesRuntimeObserver.MessageEmitted(GameEventScript.Api.GameEventScriptMessage,System.Int64,System.Boolean)">
+  MessageEmitted(GameEventScriptMessage, long, bool)
   
   </h3>
 
@@ -192,13 +236,16 @@ Implementations must not throw and must not recursively pump the observed host.<
   <div class="markdown level1 conceptual"></div>
 
   <div class="codewrapper">
-    <pre><code class="lang-csharp hljs">void MessageEmitted(GameEventScriptMessage message, bool accepted)</code></pre>
+    <pre><code class="lang-csharp hljs">void MessageEmitted(GameEventScriptMessage message, long id, bool accepted)</code></pre>
   </div>
 
   <h4 class="section">Parameters</h4>
   <dl class="parameters">
     <dt><code>message</code> <a class="xref" href="GameEventScript.Api.GameEventScriptMessage.html">GameEventScriptMessage</a></dt>
     <dd><p>The emitted message.</p>
+</dd>
+    <dt><code>id</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int64">long</a></dt>
+    <dd><p>The send ID, or 0 when the emit was not queued.</p>
 </dd>
     <dt><code>accepted</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
     <dd><p>Whether the local queue accepted it.</p>
@@ -218,8 +265,8 @@ Implementations must not throw and must not recursively pump the observed host.<
 
   <a id="GameEventScript_Api_IGesRuntimeObserver_MessagePublished_" data-uid="GameEventScript.Api.IGesRuntimeObserver.MessagePublished*"></a>
 
-  <h3 id="GameEventScript_Api_IGesRuntimeObserver_MessagePublished_GameEventScript_Api_GameEventScriptMessage_GameEventScript_Api_GesPublishResult_" data-uid="GameEventScript.Api.IGesRuntimeObserver.MessagePublished(GameEventScript.Api.GameEventScriptMessage,GameEventScript.Api.GesPublishResult)">
-  MessagePublished(GameEventScriptMessage, GesPublishResult)
+  <h3 id="GameEventScript_Api_IGesRuntimeObserver_MessagePublished_GameEventScript_Api_GameEventScriptMessage_System_Int64_GameEventScript_Api_GesPublishResult_" data-uid="GameEventScript.Api.IGesRuntimeObserver.MessagePublished(GameEventScript.Api.GameEventScriptMessage,System.Int64,GameEventScript.Api.GesPublishResult)">
+  MessagePublished(GameEventScriptMessage, long, GesPublishResult)
   
   </h3>
 
@@ -228,7 +275,7 @@ Implementations must not throw and must not recursively pump the observed host.<
   <div class="markdown level1 conceptual"></div>
 
   <div class="codewrapper">
-    <pre><code class="lang-csharp hljs">void MessagePublished(GameEventScriptMessage message, GesPublishResult result)</code></pre>
+    <pre><code class="lang-csharp hljs">void MessagePublished(GameEventScriptMessage message, long id, GesPublishResult result)</code></pre>
   </div>
 
   <h4 class="section">Parameters</h4>
@@ -236,8 +283,54 @@ Implementations must not throw and must not recursively pump the observed host.<
     <dt><code>message</code> <a class="xref" href="GameEventScript.Api.GameEventScriptMessage.html">GameEventScriptMessage</a></dt>
     <dd><p>The published message.</p>
 </dd>
+    <dt><code>id</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int64">long</a></dt>
+    <dd><p>The send ID, also without local recipients, or 0 when the host did not accept the publish.</p>
+</dd>
     <dt><code>result</code> <a class="xref" href="GameEventScript.Api.GesPublishResult.html">GesPublishResult</a></dt>
     <dd><p>The independent local and outbound outcomes.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_IGesRuntimeObserver_MessageScheduled_" data-uid="GameEventScript.Api.IGesRuntimeObserver.MessageScheduled*"></a>
+
+  <h3 id="GameEventScript_Api_IGesRuntimeObserver_MessageScheduled_GameEventScript_Api_GameEventScriptMessage_System_Int64_System_Int64_System_Boolean_" data-uid="GameEventScript.Api.IGesRuntimeObserver.MessageScheduled(GameEventScript.Api.GameEventScriptMessage,System.Int64,System.Int64,System.Boolean)">
+  MessageScheduled(GameEventScriptMessage, long, long, bool)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Observes acceptance of one delayed <code>emit … after</code> or <code>publish … after</code>, once, when it is scheduled.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">void MessageScheduled(GameEventScriptMessage message, long id, long deadline, bool publish)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>message</code> <a class="xref" href="GameEventScript.Api.GameEventScriptMessage.html">GameEventScriptMessage</a></dt>
+    <dd><p>The scheduled message.</p>
+</dd>
+    <dt><code>id</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int64">long</a></dt>
+    <dd><p>The send ID, which later emit, publish and dispatch callbacks of this message repeat.</p>
+</dd>
+    <dt><code>deadline</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int64">long</a></dt>
+    <dd><p>The absolute due time in whole microseconds on the host's monotonic clock, the clock
+<a class="xref" href="GameEventScript.Api.GameEventScriptHost.html#GameEventScript_Api_GameEventScriptHost_NextMessageDelay">NextMessageDelay</a> uses; neither a relative delay nor wall-clock time.</p>
+</dd>
+    <dt><code>publish</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd><p>Whether the send is a publish rather than an emit.</p>
 </dd>
   </dl>
 
@@ -341,7 +434,7 @@ Implementations must not throw and must not recursively pump the observed host.<
     <footer class="border-top text-secondary">
       <div class="container-xxl">
         <div class="flex-fill">
-          Game Event Script C# API — Unreleased (85238ca5672b)
+          Game Event Script C# API — Unreleased (f9cc9ca82d74)
         </div>
       </div>
     </footer>

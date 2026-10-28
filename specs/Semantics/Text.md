@@ -360,6 +360,8 @@ inside Text. This includes Number with an optional unit, Percentage, Boolean,
 Text, Tag, Nothing, List, Map, Dice, Range, built-in Series, Handler, Message and
 Record data. Existing literals remain accepted, and guessing/fallback behavior is
 unchanged. Explicit forms allow disambiguation such as `:Text("123")`.
+As in source, the type name follows its `:` directly: `: Number(5)` and
+`[: Text("a")]` are not typed forms and fail recognition of the complete input.
 
 `as :Text` writes Range as `:Range(from: ..., to: ..., step: ...)`, Series as
 `:Series(fibonacci, offset: ...)` or `:Series(factorial, offset: ...)`, Handler as

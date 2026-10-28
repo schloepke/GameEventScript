@@ -1009,6 +1009,33 @@ literal:
 
 ---
 
+## Test: literal parsing outside a host requires the type name directly after its colon
+
+This public API case parses a typed form with whitespace after its colon with `ParseLiteralStrict`; as in source, the form is not recognized.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: literal-strict-type-name-after-colon
+kind: valueApi
+level: atomic
+valueApi:
+  literal:
+    text: ": Number(5)"
+    mode: strict
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+literal:
+  unrecognized: true
+```
+
+---
+
 ## Test: strict literal parsing outside a host reports the depth limit
 
 This public API case parses the literal input with `ParseLiteralStrict` and verifies the recognized value, the strict rejection, or the reported limit.

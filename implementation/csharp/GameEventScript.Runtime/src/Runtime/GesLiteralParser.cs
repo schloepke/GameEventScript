@@ -457,10 +457,9 @@ internal struct GesLiteralParser
         return new GesLiteralNode("message", ["_", "tags"], [message, list], null, formStart).Value;
     }
 
+    // Callers skip any permitted whitespace first; a type name follows its `:` directly, like the source type token.
     private string? ReadName()
     {
-        // Documents read type and message names directly after `:` or `(`, as the Swift parser does for `parse`.
-        if (!_document) SkipWhitespace();
         var start = _position;
         while (_position < _text.Length && IsNameCharacter(_text[_position])) _position++;
         return _position == start ? null : _text.Substring(start, _position - start);

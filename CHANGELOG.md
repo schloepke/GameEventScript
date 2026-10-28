@@ -223,6 +223,10 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 
 ### Fixed
 
+- C# `parse` and `GesValue.ParseLiteral` no longer accept whitespace between `:`
+  and a type name, such as `: Number(5)`, matching Swift and the source type
+  syntax; such input now fails recognition like any other malformed literal.
+
 - The Swift compiler rejects reserved keywords such as `empty`, `record` or `if`
   as argument labels, map literal keys and extension function names with
   `parse.syntax`, like the C# compiler; `to`, `nothing`, the math constants and

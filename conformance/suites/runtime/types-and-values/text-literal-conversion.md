@@ -7978,6 +7978,65 @@ steps:
 
 ---
 
+## Test: parse-type-name-follows-colon
+
+This case checks the following contract: as in source, the type name of a typed literal form follows its `:` directly; whitespace after the colon makes the input unrecognized, so `parse` keeps the original Text and `parse strict` produces `nothing`, while whitespace after the type name remains allowed.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: "parse-type-name-follows-colon"
+compile:
+  binaryRoundTrip: true
+```
+
+### Source code under test
+
+```ges
+on Start {
+  emit Done(number: parse ": Number(5)", vector: parse ": Vector(1, 2)", nested: parse "[: Text('a')]", recordForm: parse ": Record('A', [x: 1])", strictForm: parse strict ": Number(5)", direct: parse ":Number(5)", spaced: parse ":Dice [6, 1]")
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args: []
+    local:
+      - name: "Done"
+        args:
+          - name: "number"
+            value: { type: ":Text", value: ": Number(5)" }
+          - name: "vector"
+            value: { type: ":Text", value: ": Vector(1, 2)" }
+          - name: "nested"
+            value: { type: ":Text", value: "[: Text('a')]" }
+          - name: "recordForm"
+            value: { type: ":Text", value: ": Record('A', [x: 1])" }
+          - name: "strictForm"
+            value: { type: ":Nothing" }
+          - name: "direct"
+            value: { type: ":Number.int64", value: "5" }
+          - name: "spaced"
+            value: { type: ":Dice", rolls: [6, 1] }
+    runtimeLimits:
+      exclude:
+        - any: true
+```
+
+---
+
 ## Test: parse-strict-mode-word
 
 This case checks the following contract: `strict` directly after `parse` is the mode word, so a variable named `strict` is parsed through parentheses, and `parse strict` combines with ordinary operators at unary precedence.

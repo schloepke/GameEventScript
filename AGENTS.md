@@ -460,6 +460,8 @@ original Markdown expectations. The manifest binds each input to its binary
 and complete source-document SHA-256. No expected result is exported from C#.
 `verify-swift-bytecode.py` checks the explicit enum and operand registry against
 C#; ordinary package builds do not generate source.
+`verify-swift-parser-tokens.py` checks the keyword tokens Swift accepts as argument
+labels and extension names against C#; its controls are `test-swift-parser-tokens.py`.
 Both compilers must emit byte-identical Programs, including debug sections; only
 BuildMetadata names the producing implementation. `python3 scripts/compare-compiler-output.py`
 compiles every corpus program with both CLIs, requires equal ordered diagnostic codes and

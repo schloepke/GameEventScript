@@ -75,7 +75,7 @@ extension GesParser {
             while !isForClauseStart() && match(.operatorAnd) { args.append(try expression(9)) }
             return node(.intrinsic(op, args), start)
         }
-        if current.kind.isSelector && peek().kind == .dot {
+        if isExtensionCallStart() {
             let (ns, function) = try extensionSymbol()
             newlines()
             var args: [GesArgument] = []
@@ -350,16 +350,27 @@ extension GesParser {
         return Int(n)
     }
 
+    // A labeled first argument, as C# IsArgumentLabelStart after the opening parenthesis.
     func isMessageArguments() -> Bool {
         var i = index + 1
         while i < tokens.count && tokens[i].kind == .newLine { i += 1 }
+        guard i < tokens.count, tokens[i].kind == .identifier || Self.labelKeywords.contains(tokens[i].kind) else { return false }
         i += 1
         while i < tokens.count && tokens[i].kind == .newLine { i += 1 }
         return i < tokens.count && tokens[i].kind == .colon
     }
 
-    // Labels may be spelled like keywords, such as `to:`.
-    func argumentLabel() -> Bool { current.isWord && peek().kind == .colon }
+    // Prefix intrinsic names, which C# accepts as extension function names and argument labels.
+    static let intrinsicNames: Set<GesTokenKind> = [
+        .intrinsicAbs, .intrinsicLn, .intrinsicExp, .intrinsicSqrt, .intrinsicCbrt, .intrinsicChance, .intrinsicFloor, .intrinsicCeil, .intrinsicTruncate, .intrinsicRad, .intrinsicDeg,
+        .intrinsicWrap, .intrinsicRound, .intrinsicSin, .intrinsicCos, .intrinsicTan, .intrinsicAsin, .intrinsicAcos, .intrinsicAtan, .intrinsicAtan2, .intrinsicHypot, .intrinsicDistance,
+        .intrinsicSquared, .intrinsicLength, .intrinsicNormalize, .intrinsicDot, .intrinsicCross, .intrinsicAngle,
+    ]
+
+    // Labels are identifiers or the keyword-like words C# accepts, such as `to:`; other keywords are not labels.
+    static let labelKeywords: Set<GesTokenKind> = intrinsicNames.union([.to, .nothing, .mathConstantPi, .mathConstantE, .mathConstantTau, .mathConstantInfinity])
+
+    func argumentLabel() -> Bool { (current.kind == .identifier || Self.labelKeywords.contains(current.kind)) && peek().kind == .colon }
 
     func argument() throws -> GesArgument {
         let start = current
@@ -411,7 +422,8 @@ extension GesParser {
         // A non-empty literal starts at the last token before its first entry, which is a skipped line break for a
         // multi-line literal, as C# takes Previous after skipping new lines.
         let literalStart = previous
-        if argumentLabel() {
+        // A map entry starts with a plain identifier key, as C# IsMapLiteralEntryStart.
+        if current.kind == .identifier && peek().kind == .colon {
             var pairs: [(String, GesExpression)] = []
             repeat {
                 newlines()
@@ -435,6 +447,11 @@ extension GesParser {
         return node(.list(items), literalStart)
     }
 
+    // A namespace, a dot and an extension function name, as C# IsExtensionCallStart.
+    func isExtensionCallStart() -> Bool {
+        current.kind.isSelector && peek().kind == .dot && (peek(2).kind == .identifier || Self.intrinsicNames.contains(peek(2).kind))
+    }
+
     func extensionSymbol() throws -> (String, String) {
         let t = advance()
         let ns = String(t.text.dropFirst())
@@ -442,7 +459,8 @@ extension GesParser {
         let dot = current
         try expect(.dot)
         newlines()
-        guard current.isWord else { throw failure("Expected extension function.") }
+        // Identifiers and prefix intrinsic names, as C# IsExtensionFunctionNameKind; other keywords are not names.
+        guard current.kind == .identifier || Self.intrinsicNames.contains(current.kind) else { throw failure("Expected extension function.") }
         let functionToken = advance()
         if t.endLine != dot.line || t.endColumn != dot.column || dot.endLine != functionToken.line || dot.endColumn != functionToken.column { throw failure("Extension names must be contiguous.", t) }
         let function = functionToken.text

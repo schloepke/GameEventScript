@@ -210,6 +210,11 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 
 ### Fixed
 
+- The Swift compiler rejects reserved keywords such as `empty`, `record` or `if`
+  as argument labels, map literal keys and extension function names with
+  `parse.syntax`, like the C# compiler; `to`, `nothing`, the math constants and
+  prefix intrinsic names stay valid labels. It also accepts `°` (`degree`)
+  wherever an identifier is expected, such as a map key.
 - The Swift compiler reports every diagnostic of a failing phase, as C# does,
   instead of only the first: the parser resumes after a syntax error at the next
   declaration or statement, and validation reports all semantic errors in the

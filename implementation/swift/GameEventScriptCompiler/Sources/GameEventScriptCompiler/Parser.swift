@@ -624,7 +624,7 @@ final class GesParser {
             value = try ranged(.check(input, type), input)
         } else if match(.empty) {
             value = try ranged(.unary(.empty, input), input)
-        } else if current.kind.isSelector && peek().kind == .dot {
+        } else if isExtensionCallStart() {
             let (ns, function) = try extensionSymbol()
             value = try ranged(.unary(.predicate, .init(.extensionCall(ns, function, [.init(label: "_", value: input)]), input.location)), input)
         } else if matchWord("between") {

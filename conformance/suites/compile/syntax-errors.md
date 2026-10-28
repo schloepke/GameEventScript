@@ -1704,3 +1704,253 @@ error:
   phase: "parse"
   code: "parse.syntax"
 ```
+
+---
+
+## Test: keyword message argument label is rejected
+
+This negative compiler case verifies that a reserved keyword such as `empty` cannot be a message argument label.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: keyword-message-argument-label
+kind: compileError
+level: scenario
+sources:
+  - name: "keyword message argument label is rejected.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start {
+  emit Done(empty: 1)
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "parse"
+  code: "parse.syntax"
+```
+
+---
+
+## Test: keyword call argument label is rejected
+
+This negative compiler case verifies that a reserved keyword such as `record` cannot be a call argument label.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: keyword-call-argument-label
+kind: compileError
+level: scenario
+sources:
+  - name: "keyword call argument label is rejected.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+function pick(_ value) be value
+
+on Start {
+  emit Done(value: pick(record: 1))
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "parse"
+  code: "parse.syntax"
+```
+
+---
+
+## Test: keyword later argument label is rejected
+
+This negative compiler case verifies that a reserved keyword cannot be a later argument label after an accepted one.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: keyword-later-argument-label
+kind: compileError
+level: scenario
+sources:
+  - name: "keyword later argument label is rejected.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start {
+  emit Done(value: 1, if: 2)
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "parse"
+  code: "parse.syntax"
+```
+
+---
+
+## Test: keyword message value label is rejected
+
+This negative compiler case verifies that a reserved keyword cannot label an argument of a Message value expression.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: keyword-message-literal-label
+kind: compileError
+level: scenario
+sources:
+  - name: "keyword message value label is rejected.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start {
+  let message be Done(empty: 1)
+  emit Sent(value: message)
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "parse"
+  code: "parse.syntax"
+```
+
+---
+
+## Test: keyword map literal key is rejected
+
+This negative compiler case verifies that a map literal key is a plain name: even `to`, which is accepted as an argument label, cannot start a map entry.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: keyword-map-literal-key
+kind: compileError
+level: scenario
+sources:
+  - name: "keyword map literal key is rejected.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start {
+  emit Done(value: [to: 1])
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "parse"
+  code: "parse.syntax"
+```
+
+---
+
+## Test: keyword extension function name is rejected
+
+This negative compiler case verifies that a reserved keyword such as `empty` cannot be an extension function name; `:ns.empty(1)` does not start an extension call.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: keyword-extension-function-name
+kind: compileError
+level: scenario
+sources:
+  - name: "keyword extension function name is rejected.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start {
+  emit Done(value: :ns.empty(1))
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "parse"
+  code: "parse.syntax"
+```
+
+---
+
+## Test: keyword extension predicate name is rejected
+
+This negative compiler case verifies that a reserved keyword cannot name an extension predicate after `is`.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: keyword-extension-predicate-name
+kind: compileError
+level: scenario
+sources:
+  - name: "keyword extension predicate name is rejected.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+predicate ready(value) be value is :ns.empty
+
+on Start {
+  emit Done(value: 1)
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "parse"
+  code: "parse.syntax"
+```

@@ -1007,3 +1007,158 @@ on Start() { let result be when true then { emit Done() } otherwise 0 }
 gesBlock: expect
 error: { phase: parse, code: parse.syntax }
 ```
+
+---
+
+## Test: keyword-like argument labels are accepted
+
+This compiler case verifies that the keyword-like words `to`, `nothing`, the math constants and prefix intrinsic names remain valid argument labels.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: keyword-like-argument-labels
+kind: scriptApi
+level: atomic
+sources:
+  - name: keyword-like-argument-labels.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start {
+  emit Done(to: 1, nothing: 2, pi: 3, abs: 4, round: 5)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args: []
+    local:
+      - name: Done
+        args:
+          - name: to
+            value: { type: ":Number.int64", value: "1" }
+          - name: nothing
+            value: { type: ":Number.int64", value: "2" }
+          - name: pi
+            value: { type: ":Number.int64", value: "3" }
+          - name: abs
+            value: { type: ":Number.int64", value: "4" }
+          - name: round
+            value: { type: ":Number.int64", value: "5" }
+```
+
+---
+
+## Test: degree sign is a map literal key
+
+This compiler case verifies that the `°` spelling of the identifier `degree` starts a map literal entry like any other identifier.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: degree-sign-map-key
+kind: scriptApi
+level: atomic
+sources:
+  - name: degree-sign-map-key.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start {
+  emit Done(value: [°: 1])
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args: []
+    local:
+      - name: Done
+        args:
+          - name: value
+            value:
+              type: ":Map"
+              entries:
+                - key: degree
+                  value: { type: ":Number.int64", value: "1" }
+```
+
+---
+
+## Test: degree sign is a binding name
+
+This compiler case verifies that the `°` spelling of the identifier `degree` names a parameter and is referenced like any other binding.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: degree-sign-binding
+kind: scriptApi
+level: atomic
+sources:
+  - name: degree-sign-binding.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start(°) {
+  emit Done(value: ° + 1)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args:
+        - name: degree
+          value: { type: ":Number.int64", value: "41" }
+    local:
+      - name: Done
+        args:
+          - name: value
+            value: { type: ":Number.int64", value: "42" }
+```

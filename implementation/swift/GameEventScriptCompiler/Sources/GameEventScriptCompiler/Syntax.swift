@@ -173,8 +173,8 @@ extension GesToken {
 
     var isNumber: Bool { kind == .float || kind == .percentage || kind == .unitNumber }
 
-    // A plain identifier spelled as a source word; keywords and the degree sign are not names.
-    var isName: Bool { kind == .identifier && isWord }
+    // Every identifier token, including the non-word `°` spelling of `degree`, as C# GesTokenKind.Identifier.
+    var isName: Bool { kind == .identifier }
 }
 
 extension GesTokenKind {

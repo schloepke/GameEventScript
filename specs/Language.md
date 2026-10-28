@@ -208,6 +208,16 @@ Names are intentionally narrow:
 - Callable names, argument labels, fields, map keys, tags, constant names, and
   extension namespace/function components start with a lowercase ASCII letter
   and continue with ASCII letters or digits. They never contain `_`.
+- An argument label is such a name or one of the keyword-like words `to`,
+  `nothing`, `pi`, `e`, `tau`, `infinity` and the prefix intrinsic names (`abs`,
+  `ln`, `exp`, `sqrt`, `cbrt`, `chance`, `floor`, `ceil`, `truncate`, `rad`,
+  `deg`, `wrap`, `round`, `sin`, `cos`, `tan`, `asin`, `acos`, `atan`, `atan2`,
+  `hypot`, `distance`, `squared`, `length`, `normalize`, `dot`, `cross`,
+  `angle`). Any other keyword, such as `empty`, `record` or `if`, followed by `:`
+  is a `parse.syntax` error. A map literal key is always a plain name; even
+  `to:` does not start a map entry. An extension function name after
+  `:namespace.` is a plain name or a prefix intrinsic name, so `:ns.empty(1)`
+  is not an extension call.
 - Local binding names use that same lower-name form and may additionally end in
   one canonical derivation suffix `_0`, `_1`, and so on. Leading zeroes are
   forbidden except for `_0`; `_01` is invalid. This suffix is available only to

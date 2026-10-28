@@ -132,7 +132,7 @@ class AdapterTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         description = json.loads(result.stdout)
         self.assertTrue(description['supportedBinarySteps'])
-        self.assertEqual(set(description['supportedKinds']), {'bytecodeSnapshot', 'bytecode', 'compileError', 'compileMetadata', 'programBinary', 'scriptApi', 'loadError', 'externalTypeApi', 'valueApi', 'messageApi'})
+        self.assertEqual(set(description['supportedKinds']), {'bytecodeSnapshot', 'bytecode', 'compileError', 'compileMetadata', 'programBinary', 'scriptApi', 'loadError', 'externalTypeApi', 'valueApi', 'messageApi', 'documentApi'})
         result = self.run_adapter(json.dumps(request()).encode(), '--measure')
         self.assertNotEqual(result.returncode, 0)
         self.assertEqual(result.stdout, b'')

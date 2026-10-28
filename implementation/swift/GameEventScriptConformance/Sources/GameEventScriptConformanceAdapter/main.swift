@@ -5,8 +5,8 @@ import Foundation
 import GameEventScriptCompiler
 import GameEventScriptRuntime
 
-let capabilities = ["compiler", "program-binary", "bytecode-snapshot", "host", "vm", "observer", "publish-sink", "external-types", "native-handlers", "value-api", "message-api"]
-let kinds = ["bytecodeSnapshot", "compileError", "bytecode", "compileMetadata", "programBinary", "scriptApi", "loadError", "externalTypeApi", "valueApi", "messageApi"]
+let capabilities = ["compiler", "program-binary", "bytecode-snapshot", "host", "vm", "observer", "publish-sink", "external-types", "native-handlers", "value-api", "message-api", "document-api"]
+let kinds = ["bytecodeSnapshot", "compileError", "bytecode", "compileMetadata", "programBinary", "scriptApi", "loadError", "externalTypeApi", "valueApi", "messageApi", "documentApi"]
 let identity = ["id": "swift", "version": "development"]
 let maxBytes = 32 * 1024 * 1024
 
@@ -45,7 +45,7 @@ do {
             do {
                 if let provider {
                     observations[id] = try provider.observation(test)
-                } else if ["loadError", "externalTypeApi", "valueApi", "messageApi"].contains(kind) {
+                } else if ["loadError", "externalTypeApi", "valueApi", "messageApi", "documentApi"].contains(kind) {
                     observations[id] = try ApiObservations.run(test)
                 } else if kind == "programBinary" {
                     observations[id] = try BinaryObservations.run(test)

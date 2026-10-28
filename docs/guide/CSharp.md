@@ -153,6 +153,32 @@ A host accepts one caller at a time. Keep raw host access serialized. The native
 runner supplies synchronization and automatic pumping; use its API consistently
 rather than mixing runner calls with unsynchronized raw host access.
 
+## Read data documents
+
+> **Since: Unreleased**
+
+Configuration and content files can use [GES documents](../../specs/Documents.md)
+(`.gesd`), whose values are written like GES literals. GES does not touch the
+file system; read the text yourself and pass it to `GesDocument.Parse`:
+
+```csharp
+using GameEventScript.Api;
+using GameEventScript.Runtime.Values;
+
+var document = GesDocument.Parse("""
+    :Schema(:DriveUnit)
+    name: 'Basic Track Drive'
+    maxForce: 21.4kN   // newton
+    """);
+Console.WriteLine(document.Schema?.Name);                 // DriveUnit
+Console.WriteLine(document.Entries.Get("maxForce"));      // 21400N
+Console.Write(document.Print());                          // maxForce: 21.4kN ...
+```
+
+Invalid text throws `GesDocumentException` with a stable `Code` such as
+`document.unquotedText` and the `Line` and `Column` of the error. The schema
+header is a reference for your application; GES does not validate it.
+
 ## Connect native data
 
 CSharpBridge supplies attribute-based external type bindings with `GesType`,

@@ -171,6 +171,29 @@ getter bindings remain available for foreign or unsupported native types.
 See the [SwiftBridge guide](../../implementation/swift/GameEventScriptSwiftBridge/README.md)
 for complete binding examples and conversion guarantees.
 
+## Read data documents
+
+> **Since: Unreleased**
+
+Configuration and content files can use [GES documents](../../specs/Documents.md)
+(`.gesd`), whose values are written like GES literals. GES does not touch the
+file system; read the text yourself and pass it to `GesDocument(parsing:)`:
+
+```swift
+let document = try GesDocument(parsing: """
+    :Schema(:DriveUnit)
+    name: 'Basic Track Drive'
+    maxForce: 21.4kN   // newton
+    """)
+print(document.schema?.name ?? "")                  // DriveUnit
+print(document.entries.get("maxForce")!)            // 21400N
+print(document.text(), terminator: "")              // maxForce: 21.4kN ...
+```
+
+Invalid text throws `GesDocumentError` with a stable `code` such as
+`document.unquotedText` and the `line` and `column` of the error. The schema
+header is a reference for your application; GES does not validate it.
+
 ## Integrate with your event loop
 
 The portable host is synchronous and expects serialized access. It does not

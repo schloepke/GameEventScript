@@ -8,7 +8,8 @@ using static GameEventScript.Api.GesBindingSegment;
 
 namespace GameEventScript.Runtime;
 // Parser-private nodes never escape into a public value or a Program.
-internal sealed record GesLiteralNode(string Type, string[] Labels, GesValue[] Arguments, GesBindingSegment.Entry? Constructor = null)
+// Offset is the source position of a typed form, reported by document limit errors.
+internal sealed record GesLiteralNode(string Type, string[] Labels, GesValue[] Arguments, GesBindingSegment.Entry? Constructor = null, int Offset = 0)
 {
     internal GesValue Value => new()
     {
@@ -30,6 +31,9 @@ internal sealed class GesLiteralEvaluation
     private readonly ushort _destination;
     private long _materializedRangeItems;
     private int _next;
+    // Documents reject explicit forms whose construction fails instead of reading them as nothing.
+    private bool _document;
+    private int _invalidOffset = -1;
     private GesLiteralEvaluation(GesValue root, GesVirtualMachine? state, GesContext? context, ushort destination)
     {
         _state = state;
@@ -57,6 +61,18 @@ internal sealed class GesLiteralEvaluation
         var evaluation = new GesLiteralEvaluation(root, null, null, 0);
         evaluation.Run();
         return evaluation._results[evaluation._results.Count - 1];
+    }
+
+    /// <summary>Evaluates a document root; a failed explicit construction stops with its source offset.</summary>
+    /// <returns>The value, or <see langword="null"/> with <paramref name="invalidOffset"/> set when an explicit form
+    /// other than <c>:Nothing(...)</c> constructs nothing.</returns>
+    /// <exception cref="GesLiteralLimitException">The default MaxRangeItems total is exceeded.</exception>
+    internal static GesValue? EvaluateDocument(GesValue root, out int invalidOffset)
+    {
+        var evaluation = new GesLiteralEvaluation(root, null, null, 0) { _document = true };
+        evaluation.Run();
+        invalidOffset = evaluation._invalidOffset;
+        return invalidOffset >= 0 ? null : evaluation._results[evaluation._results.Count - 1];
     }
 
     private static bool ContainsNode(GesValue value)
@@ -112,14 +128,14 @@ internal sealed class GesLiteralEvaluation
 
     // One parse materializes at most MaxRangeItems Range items into Lists in total, not only per Range. Data-only
     // evaluation throws GesLiteralLimitException; a Host exhausts the handler.
-    private bool WithinRangeItems(long count)
+    private bool WithinRangeItems(long count, int offset)
     {
         var limit = _context?.RuntimeLimits.MaxRangeItems ?? DataRangeItems;
         _materializedRangeItems += count;
         if (limit <= 0 || _materializedRangeItems <= limit)
             return true;
         if (_context is null)
-            throw new GesLiteralLimitException(nameof(GesRuntimeLimits.MaxRangeItems), limit);
+            throw new GesLiteralLimitException(nameof(GesRuntimeLimits.MaxRangeItems), limit) { Offset = offset };
         _context.RuntimeBudget.Exhaust(nameof(GesRuntimeLimits.MaxRangeItems), "Literal parsing materializes more Range items than the limit.", limit);
         return false;
     }
@@ -198,9 +214,14 @@ internal sealed class GesLiteralEvaluation
             }
             else
             {
-                if (node.Type == "list" && args.Length == 1 && args[0].Kind == GesBytecodeTypeKind.Range && !WithinRangeItems(args[0].CollectionCount))
+                if (node.Type == "list" && args.Length == 1 && args[0].Kind == GesBytecodeTypeKind.Range && !WithinRangeItems(args[0].CollectionCount, node.Offset))
                     return;
                 result = GesDataConstruction.Create(node.Type, node.Labels, args, _state, _context);
+                if (_document && result.Kind == GesBytecodeTypeKind.Nothing && node.Type != "nothing")
+                {
+                    _invalidOffset = node.Offset;
+                    return;
+                }
             }
             _results[_next++] = result;
         }

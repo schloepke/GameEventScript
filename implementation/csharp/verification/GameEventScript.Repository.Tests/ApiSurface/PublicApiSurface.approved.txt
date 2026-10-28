@@ -510,6 +510,50 @@ enum GameEventScript.Api.GesDiagnosticSymbolKind
   enum-field Message = 5
   enum-field Variable = 6
   enum-field GlobalDefinition = 7
+sealed class GameEventScript.Api.GesDocument
+  ctor GesDocument(GameEventScript.Runtime.Values.GesValue value, GameEventScript.Api.GesDocumentSchema schema)
+  method System.Boolean Equals(GameEventScript.Api.GesDocument other)
+  method System.Boolean Equals(System.Object obj)
+  method System.Int32 GetHashCode()
+  method System.String Print(GameEventScript.Api.GesDocumentFormat format)
+  method static GameEventScript.Api.GesDocument Parse(System.String text)
+  property GameEventScript.Api.GesDocumentSchema Schema { get }
+  property GameEventScript.Runtime.Values.GesValue Value { get }
+  property GameEventScript.Runtime.Values.GesValueMap Entries { get }
+sealed class GameEventScript.Api.GesDocumentException
+  ctor GesDocumentException(System.String code, System.Int32 line, System.Int32 column, System.String limitName, System.Int32? limit)
+  property System.Int32 Column { get }
+  property System.Int32 Line { get }
+  property System.Int32? Limit { get }
+  property System.String Code { get }
+  property System.String LimitName { get }
+sealed class GameEventScript.Api.GesDocumentFormat
+  ctor GesDocumentFormat()
+  field static System.Int32 MaximumIndentation
+  method GameEventScript.Api.GesDocumentFormat <Clone>$()
+  method System.Boolean Equals(GameEventScript.Api.GesDocumentFormat other)
+  method System.Boolean Equals(System.Object obj)
+  method System.Int32 GetHashCode()
+  method System.String ToString()
+  method static System.Boolean op_Equality(GameEventScript.Api.GesDocumentFormat left, GameEventScript.Api.GesDocumentFormat right)
+  method static System.Boolean op_Inequality(GameEventScript.Api.GesDocumentFormat left, GameEventScript.Api.GesDocumentFormat right)
+  property System.Boolean PrefixedUnits { get set }
+  property System.Int32 Indentation { get set }
+  property System.Int32 LineWidth { get set }
+sealed class GameEventScript.Api.GesDocumentSchema
+  ctor GesDocumentSchema(GameEventScript.Api.GesDocumentSchemaKind kind, System.String name)
+  method GameEventScript.Api.GesDocumentSchema <Clone>$()
+  method System.Boolean Equals(GameEventScript.Api.GesDocumentSchema other)
+  method System.Boolean Equals(System.Object obj)
+  method System.Int32 GetHashCode()
+  method System.String ToString()
+  method static System.Boolean op_Equality(GameEventScript.Api.GesDocumentSchema left, GameEventScript.Api.GesDocumentSchema right)
+  method static System.Boolean op_Inequality(GameEventScript.Api.GesDocumentSchema left, GameEventScript.Api.GesDocumentSchema right)
+  property GameEventScript.Api.GesDocumentSchemaKind Kind { get }
+  property System.String Name { get }
+enum GameEventScript.Api.GesDocumentSchemaKind
+  enum-field Type = 0
+  enum-field File = 1
 sealed class GameEventScript.Api.GesDynamicLinkException
   ctor GesDynamicLinkException(GameEventScript.Api.GesDiagnostic diagnostic)
   property GameEventScript.Api.GesDiagnostic Diagnostic { get }
@@ -1071,6 +1115,7 @@ struct GameEventScript.Runtime.Values.GesValue
   method System.Int32[] AsDice()
   method System.Int64 AsInteger()
   method System.String AsText()
+  method System.String Format(GameEventScript.Api.GesDocumentFormat format)
   method System.String ToJson()
   method System.String ToString()
   method static GameEventScript.Runtime.Values.GesValue FromJson(System.String json)

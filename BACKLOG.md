@@ -42,6 +42,14 @@ here.
 
 ## Language
 
+- Validate GES documents against schemas: `.gess` files hold record declarations
+  and a later reading operation receives the available schemas (from a Program or
+  loaded `.gess` files) to construct and check the root record, with document
+  positions for missing, unknown or mistyped fields, no implicit unit casts,
+  rejected computed fields and a validation option for `clamped` violations.
+  Decide whether record fields need an explicit optional marker. The header
+  format in specs/Documents.md already admits this; printing a schema prints
+  record declarations.
 - Explore computed handler bindings, for example `on Main(value computed by
   parseArguments(input: args), context) { ... }`. The message signature remains
   `Main(args, context)`, while only `value` and `context` are visible in the body.
@@ -91,6 +99,8 @@ here.
 
 ## Developer tooling
 
+- Add `.gesd` document support to the editor packages (TextMate/Sublime grammars,
+  highlighter cases) and CLI commands to check and format documents.
 - Design a single implementation-independent Conformance orchestrator with thin
   language adapters, so corpus parsing, assertions and reporting do not need to
   be ported for each runtime. Keep native allocation and platform integration

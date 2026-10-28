@@ -19,4 +19,10 @@ extension GesValue {
         guard let value = try GesLiteralParser.parseData(input) else { return nil }
         self = value
     }
+
+    /// Formats this value with the GES document printer: literal text that `GesValue(literal:)` reads back to an equal
+    /// value within the literal parsing limits, with Text quoted and large containers in indented block form.
+    /// Throws `GesApiError.invalidArgument` when the value is or contains an External value, a Dice roll below 1 or a
+    /// Record whose type name is not a type name.
+    public func formatted(_ format: GesDocumentFormat = .init()) throws -> String { try GesDocumentFormatter.format(self, format) }
 }

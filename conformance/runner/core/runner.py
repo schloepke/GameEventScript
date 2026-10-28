@@ -28,7 +28,7 @@ def unsupported_reason(case):
 def supported(case):
     return unsupported_reason(case) is None
 
-CORE = {'compiler', 'program-binary', 'host', 'vm', 'message-api', 'value-api',
+CORE = {'compiler', 'program-binary', 'host', 'vm', 'message-api', 'value-api', 'document-api',
         'external-types', 'native-handlers', 'publish-sink', 'observer'}
 OPTIONAL = {'performance', 'bytecode-snapshot'}
 
@@ -81,6 +81,8 @@ def case_request(case, fixtures):
         fields.update({'messageApi', 'comparison'})
     elif case.kind == 'valueApi':
         fields.update({'valueApi', 'comparison'})
+    elif case.kind == 'documentApi':
+        fields.update({'documentApi', 'comparison'})
     elif case.kind == 'externalTypeApi':
         fields.add('externalTypeApi')
     closed(case.metadata, fields | ({'binaryFixture', 'runtimeLimits'} if binary is not None else set()), 'case metadata')
@@ -98,7 +100,7 @@ def case_request(case, fixtures):
     requires = case.metadata.get('requires', {})
     closed(requires, {'core', 'optional'}, 'requirements')
     requirements = {}
-    core = ['message-api'] if case.kind == 'messageApi' else ['value-api'] if case.kind == 'valueApi' else ['external-types'] if case.kind == 'externalTypeApi' else ['program-binary'] if binary is not None else ['compiler']
+    core = ['message-api'] if case.kind == 'messageApi' else ['value-api'] if case.kind == 'valueApi' else ['document-api'] if case.kind == 'documentApi' else ['external-types'] if case.kind == 'externalTypeApi' else ['program-binary'] if binary is not None else ['compiler']
     if case.kind == 'loadError':
         core.extend(['host', 'vm'])
     if runtime is not None or (binary is not None and case.steps):

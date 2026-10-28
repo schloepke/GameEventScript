@@ -10,9 +10,15 @@ public struct GesLiteralLimitError: Error, Equatable {
     /// The exceeded limit value.
     public let limit: Int
 
+    // Source position of the form whose evaluation exceeded the limit, for document errors; not part of equality.
+    var offset = 0
+
     /// Creates a limit failure for the named limit.
     public init(limitName: String, limit: Int) {
         self.limitName = limitName
         self.limit = limit
     }
+
+    /// Compares the limit name and value.
+    public static func == (left: Self, right: Self) -> Bool { left.limitName == right.limitName && left.limit == right.limit }
 }

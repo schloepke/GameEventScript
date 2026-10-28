@@ -386,6 +386,7 @@ can run normally. The counters are local to one parse invocation; programs
 without `parse` maintain no parsing state or counters. The public literal
 parsing API has no handler to exhaust and instead fails with a literal limit
 error, as owned by [Text semantics](Semantics/Text.md#recognition-outside-a-program).
+[GES documents](Documents.md#limits) apply the same bounds per document.
 
 ### Iterator and Generated-Collection Limits
 

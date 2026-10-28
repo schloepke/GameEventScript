@@ -1137,6 +1137,12 @@ let level be parse strict input default #standard
 the operand. To parse a binding named `strict`, write `parse (strict)` or
 `parse strict strict`; `parse strict` without a further operand is a syntax error.
 
+> **Since: Unreleased** — GES documents
+
+Hosts read configuration and content files written with the same data literals
+from [GES documents](Documents.md) (`.gesd`). Documents are not scripts; `parse`
+itself is unchanged.
+
 ### Explicit data constructors
 
 > **Since: 0.2.0**

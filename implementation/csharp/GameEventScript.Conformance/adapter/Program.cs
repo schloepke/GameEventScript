@@ -6,13 +6,13 @@ using System.Text.Json;
 using GameEventScript.Api;
 
 const int maxBytes = 32 * 1024 * 1024;
-var capabilities = new[] { "compiler", "program-binary", "bytecode-snapshot", "host", "vm", "observer", "publish-sink", "external-types", "native-handlers", "value-api", "message-api" };
+var capabilities = new[] { "compiler", "program-binary", "bytecode-snapshot", "host", "vm", "observer", "publish-sink", "external-types", "native-handlers", "value-api", "message-api", "document-api" };
 var implementation = new { id = "csharp", version = typeof(GesProgramBuilder).Assembly.GetName().Version!.ToString() };
 try
 {
     if (args.SequenceEqual(new[] { "--describe" }))
     {
-        var supportedKinds = new[] { "bytecodeSnapshot", "compileError", "bytecode", "compileMetadata", "programBinary", "scriptApi", "loadError", "externalTypeApi", "valueApi", "messageApi" };
+        var supportedKinds = new[] { "bytecodeSnapshot", "compileError", "bytecode", "compileMetadata", "programBinary", "scriptApi", "loadError", "externalTypeApi", "valueApi", "messageApi", "documentApi" };
         var performanceProfiles = new List<string>();
 #if !DEBUG
         performanceProfiles.Add(AllocationObservations.Profile);
@@ -59,7 +59,7 @@ try
                     ? TimingObservations.Run(test) : AllocationObservations.Run(test);
                 continue;
             }
-            if (Text(test, "kind") is "loadError" or "externalTypeApi" or "valueApi" or "messageApi")
+            if (Text(test, "kind") is "loadError" or "externalTypeApi" or "valueApi" or "messageApi" or "documentApi")
             {
                 observations[id] = ApiObservations.Run(test);
                 continue;
@@ -131,7 +131,7 @@ static void ValidateCase(JsonElement test, IReadOnlyCollection<string> capabilit
 {
     if (allocation && Text(test, "kind") != "scriptApi") throw new ArgumentException("Allocation mode requires script input.");
     var binary = Text(test, "kind") == "programBinary";
-    if (Text(test, "kind") is "loadError" or "externalTypeApi" or "valueApi" or "messageApi") Fields(test, "id", "kind", "sources", "compile", "requires", "api");
+    if (Text(test, "kind") is "loadError" or "externalTypeApi" or "valueApi" or "messageApi" or "documentApi") Fields(test, "id", "kind", "sources", "compile", "requires", "api");
     else if (binary) Fields(test, "id", "kind", "sources", "compile", "requires", "binary");
     else if (Text(test, "kind") == "scriptApi")
     {
@@ -140,10 +140,10 @@ static void ValidateCase(JsonElement test, IReadOnlyCollection<string> capabilit
     }
     else Fields(test, "id", "kind", "sources", "compile", "requires");
     _ = Text(test, "id");
-    if (Text(test, "kind") is not ("bytecodeSnapshot" or "compileError" or "bytecode" or "compileMetadata" or "programBinary" or "scriptApi" or "loadError" or "externalTypeApi" or "valueApi" or "messageApi"))
+    if (Text(test, "kind") is not ("bytecodeSnapshot" or "compileError" or "bytecode" or "compileMetadata" or "programBinary" or "scriptApi" or "loadError" or "externalTypeApi" or "valueApi" or "messageApi" or "documentApi"))
         throw new ArgumentException("Unsupported test kind.");
     var sources = test.GetProperty("sources");
-    if (sources.ValueKind != JsonValueKind.Array || (!binary && Text(test, "kind") is not ("scriptApi" or "externalTypeApi" or "valueApi" or "messageApi") && sources.GetArrayLength() == 0)) throw new ArgumentException("Sources required.");
+    if (sources.ValueKind != JsonValueKind.Array || (!binary && Text(test, "kind") is not ("scriptApi" or "externalTypeApi" or "valueApi" or "messageApi" or "documentApi") && sources.GetArrayLength() == 0)) throw new ArgumentException("Sources required.");
     string? program = null;
     foreach (var source in sources.EnumerateArray())
     {
@@ -201,6 +201,11 @@ static void ValidateCase(JsonElement test, IReadOnlyCollection<string> capabilit
     {
         if (sources.GetArrayLength() != 0) throw new ArgumentException("Value API cannot contain source.");
         ValueApiObservations.Validate(test.GetProperty("api"));
+    }
+    if (Text(test, "kind") == "documentApi")
+    {
+        if (sources.GetArrayLength() != 0) throw new ArgumentException("Document API cannot contain source.");
+        DocumentApiObservations.Validate(test.GetProperty("api"));
     }
     if (allocation && Text(test.GetProperty("measurement"), "profile") == TimingObservations.Profile) TimingObservations.Validate(test);
     else if (allocation) AllocationObservations.Validate(test);

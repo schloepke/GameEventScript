@@ -272,6 +272,7 @@ discriminator is `gesBlock: case`. It supports:
 | `stepActions` | mapping | no | ordered host actions performed immediately before a named step's Receive |
 | `messageApi` | mapping | `messageApi` only | signature and message input |
 | `valueApi` | mapping | `valueApi` only | portable value construction, comparison, copy or literal parsing input |
+| `documentApi` | mapping | `documentApi` only | GES document text or root value, with optional printing |
 | `externalTypeApi` | mapping | `externalTypeApi` only | portable external-type catalog input |
 | `binaryFixture` | mapping | `programBinary` only | immutable `.gesb` fixture manifest entry |
 | `performance` | mapping | `performance` only | workload configuration |
@@ -692,8 +693,8 @@ last-entry-wins semantics before scalar-ordinal key sorting.
 ## Expectation fields by test kind
 
 Supported V1 kinds are `scriptApi`, `compileError`, `loadError`, `messageApi`,
-`valueApi`, `externalTypeApi`, `compileMetadata`, `bytecode`, `performance`, and
-`bytecodeSnapshot`, and `programBinary`. A kind's
+`valueApi`, `documentApi`, `externalTypeApi`, `compileMetadata`, `bytecode`,
+`performance`, and `bytecodeSnapshot`, and `programBinary`. A kind's
 required core capabilities are additive to explicit `requires.core`.
 
 The presence of `nativeHandlers` implicitly requires `native-handlers`.
@@ -859,6 +860,37 @@ valueApi:
 ```yaml
 literal:
   unrecognized: true
+```
+
+### `documentApi`
+
+> **Since: Unreleased**
+
+Requires `document-api` and no GES source. `documentApi.text` reads
+[GES document](../Documents.md) text through the public document API; it may use
+the same repeated-text mapping as `valueApi.literal.text`. Alternatively,
+`documentApi.value` builds a document from a value with the `valueApi.value`
+encoding and an optional `schema` mapping with `kind` (`type` or `file`) and
+`name`. An optional `print` is `true` or a mapping of `indentation`, `lineWidth`
+and `prefixedUnits`; a document built from a value requires it. Printing reads
+the printed text back with the same implementation.
+
+The expectation is a `document` mapping with exactly one outcome: the expected
+root `value` with an optional `schema`, an `error` with `code` (without the
+`document.` prefix), `line`, `column` and, for `limitExceeded` only, `limitName`
+and `limit`, or `rejected: true` for a value that cannot be a document. An error
+expectation reads text without printing. A value expectation must hold for the
+read document and for the printed-and-reread document; printed text itself is
+never compared, because document layout is not normative.
+
+```yaml
+documentApi:
+  text: "a: 1\na: 2"
+```
+
+```yaml
+document:
+  error: { code: duplicateKey, line: 2, column: 1 }
 ```
 
 ### `externalTypeApi`

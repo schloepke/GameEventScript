@@ -36,4 +36,14 @@ public partial struct GesValue
         var text = GesText(input ?? throw new ArgumentNullException(nameof(input)));
         return GesLiteralParser.ParseData(in text);
     }
+
+    /// <summary>
+    /// Formats this value with the GES document printer: literal text that <see cref="ParseLiteral"/> reads back to an
+    /// equal value within the literal parsing limits, with Text quoted and large containers in indented block form.
+    /// </summary>
+    /// <param name="format">Layout options, or <see langword="null"/> for the defaults.</param>
+    /// <returns>The formatted literal text without a trailing line break.</returns>
+    /// <exception cref="ArgumentException">The value is or contains an External value, a Dice roll below 1 or a Record
+    /// whose type name is not a type name.</exception>
+    public readonly string Format(GesDocumentFormat? format = null) => GesDocumentFormatter.Format(in this, format ?? new GesDocumentFormat());
 }

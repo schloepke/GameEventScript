@@ -22,6 +22,7 @@ enum ApiObservations {
                 ],
             ]
         case "messageApi": return try message(input)
+        case "documentApi": return try DocumentApiObservations.run(input)
         case "externalTypeApi":
             let definitions = try input.values("typeNames").map { try GesExternalTypeDefinition(name: $0.stringValue!, fields: [], constructors: []) }
             do {

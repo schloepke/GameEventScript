@@ -76,6 +76,11 @@ the static import, so they omit the redundant prefix.
 - Value literal parsing follows the same pattern: C# `GesValue.ParseLiteral(...)`
   and `GesValue.ParseLiteralStrict(...)`, Swift `GesValue(literal:)` and the
   failable `GesValue(strictLiteral:)`.
+- GES documents read and print the same way: C# `GesDocument.Parse(...)`,
+  `document.Print(...)` and `value.Format(...)`, Swift `GesDocument(parsing:)`,
+  `document.text(format:)` and `value.formatted(_:)`. Swift additionally offers
+  the `GesDocumentSchema.type(_:)`/`.file(_:)` factories for the C# constructor
+  `new GesDocumentSchema(kind, name)`.
 - Builders are directly creatable. A builder accessor on the target type is only
   a convenience.
 - `GameEventScriptProgram.CreateBuilder()` is a C# 14 static extension member in

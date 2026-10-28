@@ -144,6 +144,19 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   while `parse strict "'standard'"` is the Text `standard`. The bytecode encodes
   it as `ParseLiteral` with the Strict flag (`mode=Strict` in GESA, `#strict` in
   inline assembly).
+- GES documents (`.gesd`): human-editable data files whose values are written
+  like GES literals, such as `maxForce: 21.4kN` or `mount: :Vector(x: 0m, y: -0.8m)`.
+  C# `GesDocument.Parse(text)`/`document.Print()` and Swift
+  `GesDocument(parsing:)`/`document.text()` read and print them. The root is a
+  Map or, with a `:Schema(:TypeName)` header, a Record; `:Schema('file.gess')`
+  references a schema file. Entries are separated by commas or line breaks,
+  `//` comments are allowed, and reading is strict: unquoted Text, duplicate
+  keys and explicit forms that construct nothing, such as `:Range(1)`, fail with
+  a `GesDocumentException`/`GesDocumentError` carrying a stable `document.*`
+  code, line and column. Printing writes exact prefixed units such
+  as `1kW` or `250ms` and reads back bit-identically in every implementation;
+  `GesValue.Format()`/`formatted()` print a single value. Schemas are only
+  referenced, not validated.
 - Literal parsing without a Host for extensions, configuration and other
   embedding code: C# `GesValue.ParseLiteral(text)` and
   `GesValue.ParseLiteralStrict(text)`, Swift `GesValue(literal:)` and

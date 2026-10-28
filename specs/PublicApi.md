@@ -511,6 +511,38 @@ Exceeding a fixed parsing limit fails with `GesLiteralLimitException` (C#) or
 and the numeric `Limit`/`limit`. C# rejects a null input with
 `ArgumentNullException` and unpaired surrogates with `ArgumentException`.
 
+#### Documents
+
+> **Since: Unreleased**
+
+`Document` is an immutable [GES document](Documents.md): a Map or Record root
+with an optional schema reference, read from and printed to `.gesd` text.
+
+| Concept | C# | Swift |
+| --- | --- | --- |
+| document | `sealed class GesDocument : IEquatable<GesDocument>` | `struct GesDocument: Hashable` |
+| from a root value | `new GesDocument(GesValue value, GesDocumentSchema? schema = null)` | `GesDocument(_ value:, schema:) throws` |
+| read | `static GesDocument GesDocument.Parse(string text)` | `GesDocument(parsing:) throws` |
+| print | `string Print(GesDocumentFormat? format = null)` | `text(format:) -> String` |
+| root, schema, entries | `Value`, `Schema`, `Entries` | `value`, `schema`, `entries` |
+| schema reference | `sealed record GesDocumentSchema(GesDocumentSchemaKind Kind, string Name)` | `struct GesDocumentSchema` with `kind`, `name`, `.type(_:)`, `.file(_:)` |
+| schema kind | `enum GesDocumentSchemaKind { Type, File }` | `enum GesDocumentSchemaKind { case type, file }` |
+| layout options | `sealed record GesDocumentFormat` with `Indentation`, `LineWidth`, `PrefixedUnits` | `struct GesDocumentFormat` with `indentation`, `lineWidth`, `prefixedUnits` |
+| reading error | `GesDocumentException` with `Code`, `Line`, `Column`, `LimitName`, `Limit` | `GesDocumentError` with `code`, `line`, `column`, `limitName`, `limit`, `message` |
+| single-value printer | `string GesValue.Format(GesDocumentFormat? format = null)` | `GesValue.formatted(_:) throws -> String` |
+
+Building a document validates the root and schema as owned by the document
+specification; C# throws `ArgumentException` and Swift `GesApiError.invalidArgument`.
+A schema reference validates its name the same way. Reading throws only the
+document error, whose `Code` is one of the stable `document.*` codes; C# also
+rejects a null text and unpaired surrogates like `ParseLiteral`. Printing never
+fails: documents cannot contain values without literal text. The single-value
+printer rejects the same values as the document constructor: External values,
+Dice rolls below 1 and Records whose type name is not a `TypeName`. Indentation is
+limited to `MaximumIndentation`/`maximumIndentation` (100). C# layout options reject
+an indentation outside 0 to 100 and a line width below 1; Swift prints such values
+clamped to that range. Equality compares the root values and schema references.
+
 ## Host construction and lifecycle API
 
 ### HostBuilder

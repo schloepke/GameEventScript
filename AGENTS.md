@@ -227,6 +227,13 @@ belongs to the CLI or embedding; the portable compiler accepts source text.
   API `GesValue.ParseLiteral`/`ParseLiteralStrict` (Swift `init(literal:)`/
   `init?(strictLiteral:)`) never resolves Program Record constructors and throws
   `GesLiteralLimit...` on limits instead of exhausting a handler.
+- GES documents (`.gesd`, specs/Documents.md) reuse that parser in a document
+  mode (comments, line-break separators, duplicate-key errors, `document.*` error
+  codes with line/column). `GesDocument` holds a Map or Record root and an
+  optional schema reference; schemas are references only. Reading is normative
+  per port; printed layout is not, only the print/read roundtrip.
+  `python3 scripts/test-document-roundtrip.py` exchanges printed documents
+  between C# and Swift; `test-swift.sh` runs it.
 - `[:split on separator]` returns Nothing for empty pieces; whitespace mode
   collapses the specified Unicode White_Space set. No CSV interpretation.
 - Integral Int64-representable Range components normalize to exact integer

@@ -342,6 +342,8 @@ follows the rules of `parse` and `parse strict` with these differences:
   data. No constructor or host callback is ever executed.
 - Strict recognition failure is reported as absence (`null`/`nil`) rather than
   `nothing`, so it is distinguishable from a recognized `nothing` literal.
+- [GES documents](../Documents.md) build on this recognition for whole
+  `.gesd` files with a bracket-free root, comments and strict error positions.
 - The [literal parsing limits](../HostRuntime.md#literal-parsing-limits) apply
   unchanged, including the Range item total, which uses the default
   `MaxRangeItems` of 10,000. Exceeding a bound fails

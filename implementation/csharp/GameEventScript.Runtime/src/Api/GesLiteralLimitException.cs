@@ -23,4 +23,7 @@ public sealed class GesLiteralLimitException : Exception
 
     /// <summary>The exceeded limit value.</summary>
     public int Limit { get; }
+
+    // Source position of the form whose evaluation exceeded the limit, for document errors.
+    internal int Offset { get; init; }
 }

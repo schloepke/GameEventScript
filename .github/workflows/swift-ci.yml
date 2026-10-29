@@ -132,7 +132,7 @@ jobs:
         run: python3 scripts/verify-swift-api.py --reuse-local-builds
 
       - name: Upload conformance and runtime interoperability results
-        if: ${{ always() && needs.changes.outputs.swift == 'true' && (steps.conformance.outcome == 'success' || hashFiles('artifacts/swift/conformance-results/**', 'artifacts/swift/number-text-roundtrip/**', 'artifacts/swift/message-json-roundtrip/**', 'artifacts/swift/binary-reader-fuzz/**', 'artifacts/swift/binary-roundtrip-properties/**') != '') }}
+        if: ${{ always() && needs.changes.outputs.swift == 'true' && (steps.conformance.outcome == 'success' || hashFiles('artifacts/swift/conformance-results/**', 'artifacts/swift/number-text-roundtrip/**', 'artifacts/swift/message-json-roundtrip/**', 'artifacts/swift/document-roundtrip/**', 'artifacts/swift/binary-reader-fuzz/**', 'artifacts/swift/binary-roundtrip-properties/**') != '') }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: swift-conformance
@@ -140,6 +140,7 @@ jobs:
             artifacts/swift/conformance-results/
             artifacts/swift/number-text-roundtrip/
             artifacts/swift/message-json-roundtrip/
+            artifacts/swift/document-roundtrip/
             artifacts/swift/binary-reader-fuzz/
             artifacts/swift/binary-roundtrip-properties/
           if-no-files-found: error

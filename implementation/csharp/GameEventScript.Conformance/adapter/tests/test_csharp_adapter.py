@@ -267,7 +267,7 @@ class AdapterTests(unittest.TestCase):
                 execute(self.command, request)
 
     def test_value_api_order_equality_and_defensive_storage_controls(self):
-        cases = [copy.deepcopy(c) for c in self.cases if c.kind == 'valueApi']
+        cases = [copy.deepcopy(c) for c in self.cases if c.kind == 'valueApi' and 'literal' not in c.metadata['valueApi']]
         self.assertEqual(15, len(cases))
         observed = execute(self.command, requests(cases))
         self.assertEqual(15, verify(cases, observed)['summary']['passed'])
@@ -286,6 +286,44 @@ class AdapterTests(unittest.TestCase):
             mutate(request['cases'][0]['api'])
             with self.assertRaises(InvalidDocument):
                 execute(self.command, request)
+
+    def test_literal_api_modes_and_limits_are_checked_only_in_python(self):
+        cases = [copy.deepcopy(c) for c in self.cases if c.kind == 'valueApi' and 'literal' in c.metadata['valueApi']]
+        self.assertEqual(22, len(cases))
+        observed = execute(self.command, requests(cases))
+        self.assertEqual(22, verify(cases, observed)['summary']['passed'])
+        case = next(c for c in cases if c.id.endswith('literal-lenient-quantity'))
+        observed['observations'][case.id]['literal']['value']['unit'] = ':newton'
+        self.assertEqual(1, verify(cases, observed)['summary']['failed'])
+        before = requests([case])
+        case.expected['literal']['value']['value'] = '1'
+        self.assertEqual(before, requests([case]))
+        for mutate in (lambda api: api['literal'].update(mode='loose'),
+                       lambda api: api.update(expected='must not reach adapter')):
+            request = requests([case])
+            mutate(request['cases'][0]['api'])
+            with self.assertRaises(InvalidDocument):
+                execute(self.command, request)
+
+    def test_document_reading_printing_and_errors_are_checked_only_in_python(self):
+        cases = [copy.deepcopy(c) for c in self.cases if c.kind == 'documentApi']
+        self.assertEqual(86, len(cases))
+        observed = execute(self.command, requests(cases))
+        self.assertEqual(86, verify(cases, observed)['summary']['passed'])
+        failure = next(c for c in cases if c.id.endswith('unquoted-text'))
+        observed['observations'][failure.id]['document']['read']['error']['column'] += 1
+        self.assertEqual(1, verify(cases, observed)['summary']['failed'])
+        observed['observations'][failure.id]['document']['read']['error']['column'] -= 1
+        printed = next(c for c in cases if c.id.endswith('drive-unit'))
+        observed['observations'][printed.id]['document']['reread']['value']['entries'].pop()
+        self.assertEqual(1, verify(cases, observed)['summary']['failed'])
+        before = requests([failure])
+        failure.expected['document']['error']['line'] = 2
+        self.assertEqual(before, requests([failure]))
+        request = requests([failure])
+        request['cases'][0]['api'].update(expected='must not reach adapter')
+        with self.assertRaises(InvalidDocument):
+            execute(self.command, request)
 
     def test_all_hosts_are_observed_and_compared(self):
         cases = [copy.deepcopy(c) for c in self.cases if c.metadata.get('hostCount', 1) > 1]

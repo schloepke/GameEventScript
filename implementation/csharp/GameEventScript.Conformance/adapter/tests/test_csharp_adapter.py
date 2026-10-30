@@ -175,10 +175,10 @@ class AdapterTests(unittest.TestCase):
         cases = [copy.deepcopy(c) for c in self.cases if c.kind == 'scriptApi'
                  and ('external-types' in c.metadata.get('requires', {}).get('core', [])
                       or c.id == 'runtime.control-flow/case-0006')]
-        self.assertEqual(10, len(cases))
+        self.assertEqual(12, len(cases))
         request = requests(cases)
         observed = execute(self.command, request)
-        self.assertEqual(10, verify(cases, observed)['summary']['passed'])
+        self.assertEqual(12, verify(cases, observed)['summary']['passed'])
         queue = next(c for c in cases if c.id == 'runtime.control-flow/case-0006')
         events = observed['observations'][queue.id]['runtime']['hosts'][0]['steps']['step-0001']['trace']
         rejected = next(e for e in events if e['event'] == 'emit' and e['message']['name'] == 'C')

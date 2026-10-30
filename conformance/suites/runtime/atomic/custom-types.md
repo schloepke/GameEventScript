@@ -1204,3 +1204,183 @@ steps:
             value: { type: ":Number.int64", value: "42" }
       - name: After
 ```
+
+---
+
+## Test: external-declared-fields-keep-nothing
+
+This case checks that Nothing stays Nothing for every declared external field type, both as a constructor argument and as a direct field value, while present values still follow their declared types.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: external-declared-fields-keep-nothing
+kind: scriptApi
+level: atomic
+requires:
+  core: [external-types]
+sources:
+  - name: "external declared fields keep nothing.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+module externaldeclaredfieldskeepnothing
+on Start(missing) {
+  let absentProbe be :OptionalProbe(mount: missing, label: missing, armed: missing, share: missing, power: missing)
+  let textProbe be :OptionalProbe(mount: 'gun', label: #gun, armed: 1, share: 0.5, power: 3)
+  let tagProbe be :OptionalProbe(mount: #turret, label: 'turret', armed: false, share: 25%, power: 2kW)
+  emit Empty(mount: absentProbe.mount, mountIsNothing: absentProbe.mount is nothing, label: absentProbe.label, armed: absentProbe.armed, share: absentProbe.share, power: absentProbe.power, stall: absentProbe.stall, stallIsNothing: absentProbe.stall is nothing, fields: absentProbe as :Map)
+  emit Full(mount: textProbe.mount, label: textProbe.label, armed: textProbe.armed, share: textProbe.share, power: textProbe.power, stall: textProbe.stall)
+  emit Tagged(mount: tagProbe.mount, label: tagProbe.label, armed: tagProbe.armed, share: tagProbe.share, power: tagProbe.power)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args:
+        - name: missing
+          value: { type: ":Nothing" }
+    local:
+      - name: Empty
+        args:
+          - name: mount
+            value: { type: ":Nothing" }
+          - name: mountIsNothing
+            value: { type: ":Boolean", value: true }
+          - name: label
+            value: { type: ":Nothing" }
+          - name: armed
+            value: { type: ":Nothing" }
+          - name: share
+            value: { type: ":Nothing" }
+          - name: power
+            value: { type: ":Nothing" }
+          - name: stall
+            value: { type: ":Nothing" }
+          - name: stallIsNothing
+            value: { type: ":Boolean", value: true }
+          - name: fields
+            value: { type: ":Map", entries: [] }
+      - name: Full
+        args:
+          - name: mount
+            value: { type: ":Tag", value: "gun" }
+          - name: label
+            value: { type: ":Text", value: "#gun" }
+          - name: armed
+            value: { type: ":Boolean", value: true }
+          - name: share
+            value: { type: ":Percentage", value: "0.5" }
+          - name: power
+            value: { type: ":Quantity.int64", unit: ":watt", value: "3" }
+          - name: stall
+            value: { type: ":Nothing" }
+      - name: Tagged
+        args:
+          - name: mount
+            value: { type: ":Tag", value: "turret" }
+          - name: label
+            value: { type: ":Text", value: "turret" }
+          - name: armed
+            value: { type: ":Boolean", value: false }
+          - name: share
+            value: { type: ":Percentage", value: "0.25" }
+          - name: power
+            value: { type: ":Quantity.int64", unit: ":watt", value: "2000" }
+```
+
+---
+
+## Test: external-field-reads-follow-declared-types
+
+This case checks that values returned by an external field follow the field's declared type, both for direct reads and for Map materialization.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: external-field-reads-follow-declared-types
+kind: scriptApi
+level: atomic
+requires:
+  core: [external-types]
+sources:
+  - name: "external field reads follow declared types.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+module externalfieldreadsfollowdeclaredtypes
+on Start {
+  let probe be :DeclaredProbe(name: 'probe')
+  emit Fields(name: probe.name, power: probe.power, heading: probe.heading, ratio: probe.ratio, label: probe.label, kind: probe.kind, ready: probe.ready, fields: probe as :Map)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args: []
+    local:
+      - name: Fields
+        args:
+          - name: name
+            value: { type: ":Text", value: "probe" }
+          - name: power
+            value: { type: ":Quantity.int64", unit: ":watt", value: "3" }
+          - name: heading
+            value: { type: ":Vector", unit: ":meter", x: "1", y: "2", z: "3" }
+          - name: ratio
+            value: { type: ":Percentage", value: "0.5" }
+          - name: label
+            value: { type: ":Text", value: "#gun" }
+          - name: kind
+            value: { type: ":Tag", value: "turret" }
+          - name: ready
+            value: { type: ":Boolean", value: true }
+          - name: fields
+            value:
+              type: ":Map"
+              entries:
+                - key: heading
+                  value: { type: ":Vector", unit: ":meter", x: "1", y: "2", z: "3" }
+                - key: kind
+                  value: { type: ":Tag", value: "turret" }
+                - key: label
+                  value: { type: ":Text", value: "#gun" }
+                - key: name
+                  value: { type: ":Text", value: "probe" }
+                - key: power
+                  value: { type: ":Quantity.int64", unit: ":watt", value: "3" }
+                - key: ratio
+                  value: { type: ":Percentage", value: "0.5" }
+                - key: ready
+                  value: { type: ":Boolean", value: true }
+```

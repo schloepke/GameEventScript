@@ -19,8 +19,43 @@ internal static class GameEventScriptConformanceExternalTypes
         ],
         [new GesExternalTypeConstructorDefinition("SpatialProbe", [new GesExternalTypeParameterDefinition("vector", "Vector"), new GesExternalTypeParameterDefinition("point", "Point")])]);
 
+    private static readonly GesExternalTypeDefinition OptionalDefinition = new(
+        "OptionalProbe",
+        [
+            new GesExternalTypeFieldDefinition("mount", GesBytecodeTypeKind.Tag),
+            new GesExternalTypeFieldDefinition("label", GesBytecodeTypeKind.Text),
+            new GesExternalTypeFieldDefinition("armed", GesBytecodeTypeKind.Boolean),
+            new GesExternalTypeFieldDefinition("share", GesBytecodeTypeKind.Percentage),
+            new GesExternalTypeFieldDefinition("power", GesBytecodeTypeKind.Float, GesQuantityUnit.UnitWatt),
+            new GesExternalTypeFieldDefinition("stall", GesBytecodeTypeKind.Tag)
+        ],
+        [
+            new GesExternalTypeConstructorDefinition(
+                "OptionalProbe",
+                [
+                    new GesExternalTypeParameterDefinition("mount", GesBytecodeTypeKind.Tag),
+                    new GesExternalTypeParameterDefinition("label", GesBytecodeTypeKind.Text),
+                    new GesExternalTypeParameterDefinition("armed", GesBytecodeTypeKind.Boolean),
+                    new GesExternalTypeParameterDefinition("share", GesBytecodeTypeKind.Percentage),
+                    new GesExternalTypeParameterDefinition("power", GesBytecodeTypeKind.Float, GesQuantityUnit.UnitWatt)
+                ])
+        ]);
+
+    private static readonly GesExternalTypeDefinition DeclaredDefinition = new(
+        "DeclaredProbe",
+        [
+            new GesExternalTypeFieldDefinition("name", GesBytecodeTypeKind.Text),
+            new GesExternalTypeFieldDefinition("power", GesBytecodeTypeKind.Float, GesQuantityUnit.UnitWatt),
+            new GesExternalTypeFieldDefinition("heading", GesBytecodeTypeKind.Vector, GesQuantityUnit.UnitMeter),
+            new GesExternalTypeFieldDefinition("ratio", GesBytecodeTypeKind.Percentage),
+            new GesExternalTypeFieldDefinition("label", GesBytecodeTypeKind.Text),
+            new GesExternalTypeFieldDefinition("kind", GesBytecodeTypeKind.Tag),
+            new GesExternalTypeFieldDefinition("ready", GesBytecodeTypeKind.Boolean)
+        ],
+        [new GesExternalTypeConstructorDefinition("DeclaredProbe", [new GesExternalTypeParameterDefinition("name", GesBytecodeTypeKind.Text)])]);
+
     internal static readonly IGesExternalTypeCatalog Catalog =
-        new GesDeclaredExternalTypeCatalog([AimDefinition, GameEventScriptConformanceCallbackProbe.Definition, SpatialDefinition]);
+        new GesDeclaredExternalTypeCatalog([AimDefinition, GameEventScriptConformanceCallbackProbe.Definition, SpatialDefinition, OptionalDefinition, DeclaredDefinition]);
 
     internal static readonly IGesExternalTypeRegistry Registry =
         new TestRuntimeRegistry();
@@ -53,6 +88,8 @@ internal static class GameEventScriptConformanceExternalTypes
     {
         private readonly AimConstructor _constructor = new(AimDefinition.Constructors[0]);
         private readonly SpatialConstructor _spatialConstructor = new();
+        private readonly OptionalConstructor _optionalConstructor = new();
+        private readonly DeclaredConstructor _declaredConstructor = new();
 
         public IGesExternalTypeConstructor? Resolve(GesExternalTypeConstructorReference reference)
             => string.Equals(reference.SignatureId, _constructor.Definition.SignatureId, StringComparison.Ordinal)
@@ -61,7 +98,11 @@ internal static class GameEventScriptConformanceExternalTypes
                     ? GameEventScriptConformanceCallbackProbe.Constructor
                     : string.Equals(reference.SignatureId, _spatialConstructor.Definition.SignatureId, StringComparison.Ordinal)
                         ? _spatialConstructor
-                        : null;
+                        : string.Equals(reference.SignatureId, _optionalConstructor.Definition.SignatureId, StringComparison.Ordinal)
+                            ? _optionalConstructor
+                            : string.Equals(reference.SignatureId, _declaredConstructor.Definition.SignatureId, StringComparison.Ordinal)
+                                ? _declaredConstructor
+                                : null;
     }
 
     private sealed class SpatialConstructor : IGesExternalTypeConstructor
@@ -83,6 +124,58 @@ internal static class GameEventScriptConformanceExternalTypes
                 "point" => point,
                 "storedVector" => GesValue.GesVector(1, 2, 3, GesQuantityUnit.UnitMeter),
                 "storedPoint" => GesValue.GesPoint(4, 5, 6, GesQuantityUnit.UnitSecond),
+                _ => null
+            };
+    }
+
+    private sealed class OptionalConstructor : IGesExternalTypeConstructor
+    {
+        public GesExternalTypeConstructorDefinition Definition { get; } = OptionalDefinition.Constructors[0];
+
+        public void Invoke(GesExternalTypeConstructorCall call)
+            => call.SetExternalValue(new OptionalValue(call.Arguments[0], call.Arguments[1], call.Arguments[2], call.Arguments[3], call.Arguments[4]));
+    }
+
+    private sealed class OptionalValue(GesValue mount, GesValue label, GesValue armed, GesValue share, GesValue power) : IGesExternalValue
+    {
+        public GesExternalTypeDefinition Definition { get; } = OptionalDefinition;
+
+        public GesValue? GetField(string fieldName)
+            => fieldName switch
+            {
+                "mount" => mount,
+                "label" => label,
+                "armed" => armed,
+                "share" => share,
+                "power" => power,
+                "stall" => GesValue.GesNothing(),
+                _ => null
+            };
+    }
+
+    private sealed class DeclaredConstructor : IGesExternalTypeConstructor
+    {
+        public GesExternalTypeConstructorDefinition Definition { get; } = DeclaredDefinition.Constructors[0];
+
+        public void Invoke(GesExternalTypeConstructorCall call)
+            => call.SetExternalValue(new DeclaredValue(call.Arguments[0]));
+    }
+
+    // Every field except name returns a value that differs from its declaration.
+    private sealed class DeclaredValue(GesValue name) : IGesExternalValue
+    {
+        public GesExternalTypeDefinition Definition { get; } = DeclaredDefinition;
+
+        public GesValue? GetField(string fieldName)
+            => fieldName switch
+            {
+                "name" => name,
+                "power" => GesValue.GesInteger(3),
+                "heading" => GesValue.GesVector(1, 2, 3, GesQuantityUnit.UnitSecond),
+                "ratio" => GesValue.GesFloat(0.5),
+                "label" => GesValue.GesTag("gun"),
+                "kind" => GesValue.GesText("turret"),
+                "ready" => GesValue.GesInteger(1),
                 _ => null
             };
     }

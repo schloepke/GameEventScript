@@ -52,11 +52,15 @@ extension GesExternalTypeNames {
     }
 
     static func coerce(_ value: GesValue, kind: GesBytecodeTypeKind?, unit: GesQuantityUnit) -> GesValue {
+        // Nothing marks an absent value and is never converted into a value of the declared type.
+        if value.kind == .nothing { return value }
         switch kind {
         case .float: return .float(value.asNumber, unit: unit)
         case .vector where value.spatialValue != nil: return .vector(x: value.x, y: value.y, z: value.z, unit: unit == .none ? value.unit : unit)
         case .point where value.spatialValue != nil: return .point(x: value.x, y: value.y, z: value.z, unit: unit == .none ? value.unit : unit)
         case .tag:
+            // A Tag keeps its name; its text form carries the leading '#', which is not a tag name.
+            if value.kind == .tag { return value }
             if value.kind == .boolean { return try! .tag(value.asBoolean ? "true" : "false") }
             var name = value.toText
             if value.kind == .text {

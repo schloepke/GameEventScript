@@ -58,7 +58,7 @@ internal sealed class GesExternalStorage
             }
 
             keys[count] = field.Name;
-            values[count] = sourceValue.Value;
+            values[count] = GesExternalTypeValueConverter.CoerceToDeclaredType(sourceValue.Value, field);
             count++;
         }
 

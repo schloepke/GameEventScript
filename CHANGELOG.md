@@ -227,6 +227,15 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   and a type name, such as `: Number(5)`, matching Swift and the source type
   syntax; such input now fails recognition like any other malformed literal.
 
+- C# external field reads now follow the field's declared type, as in Swift:
+  a field declared `Float<Watt>` that returns the integer `3` reads as `3W`,
+  and the same applies to Map conversion, keys, values, entries and iteration.
+  Before, C# returned the raw field value.
+- External type fields and constructor parameters declared as Tag keep a Tag
+  value unchanged; before, C# turned it into `nothing` and Swift into the Tag
+  `#nothing`. `nothing` stays `nothing` under every declared type, so a missing
+  optional Tag field in Swift no longer reads as `#nothing`, and a Boolean
+  constructor parameter no longer turns `nothing` into `false`.
 - The Swift compiler no longer exhausts small thread stacks on deeply nested
   sources. Its parser and compiler passes need far less stack per nesting level,
   so sources at the expression and statement nesting limits compile on a 512 KB

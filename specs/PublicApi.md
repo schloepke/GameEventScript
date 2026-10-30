@@ -881,6 +881,16 @@ rescaling components. This applies equally to constructor arguments, direct
 field reads, and fields materialized by conversion to Map. A missing spatial
 unit constraint must never silently strip an existing unit.
 
+Constructor arguments and field values follow their declared builtin type before
+a constructor or script sees them. This applies equally to direct field reads
+and fields materialized by conversion to Map, so a field declared
+`Float<Watt>` reads an integer `3` as `3W` and a Tag field reads Text `'turret'`
+as `#turret`. A field declared with a custom type name keeps its value.
+Nothing stays Nothing under every declared type, for constructor arguments and
+field values alike; it is never converted into a value of that type, such as
+the Tag `#nothing`, Text `nothing` or Boolean `false`. A Tag value keeps its name
+under a Tag declaration.
+
 Construction copies sequences and rejects null entries, duplicate fields,
 duplicate constructor signatures, duplicate parameter labels, constructors for
 another type, and constructor parameters that are not declared fields.

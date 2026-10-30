@@ -137,9 +137,9 @@ struct GesLiteralParser {
             if !seen.insert(Array(key.unicodeScalars)).inserted { return (fail(GesDocumentErrorCodes.duplicateKey, entryStart), schema) }
             spacesAndComments()
             if !consume(58) { return (fail(GesDocumentErrorCodes.missingColon, position), schema) }
-            guard let value = entryValue(depth: 0) else { return (nil, schema) }
+            guard let entry = keyOnly() ? .boolean(true) : value(depth: 0) else { return (nil, schema) }
             keys.append(key)
-            values.append(value)
+            values.append(entry)
             spacesAndComments()
             if position == bytes.count { break }
             if !consume(44) && !atLineBreak { return (fail(GesDocumentErrorCodes.unexpectedToken, position), schema) }
@@ -190,42 +190,62 @@ struct GesLiteralParser {
         }
     }
 
-    // The value after a Map or root key: key-only entries are true; otherwise the value starts on the key's line.
-    private mutating func entryValue(depth: Int) -> GesValue? {
+    // Before the value after a Map or root key: true for a key-only entry, whose value is true; otherwise the value
+    // starts on the key's line.
+    private mutating func keyOnly() -> Bool {
         if !document {
             whitespace()
-            return position < bytes.count && (bytes[position] == 44 || bytes[position] == 93) ? .boolean(true) : value(depth: depth)
+            return position < bytes.count && (bytes[position] == 44 || bytes[position] == 93)
         }
         spacesAndComments()
-        return position == bytes.count || atLineBreak || bytes[position] == 44 || bytes[position] == 93 ? .boolean(true) : value(depth: depth)
+        return position == bytes.count || atLineBreak || bytes[position] == 44 || bytes[position] == 93
     }
 
+    // Nested values recurse through `value`, `collection`, `list`/`map`, `typed`, `typedArguments`, `messageArguments`
+    // and `messageEnd`. Debug builds reserve stack for every local of a function on each call, so these stay
+    // payload-free dispatchers and leave non-recursive work to their own functions: hosts may parse at the
+    // MaxLiteralDepth limit on a 512 KB Swift concurrency thread.
     private mutating func value(depth: Int) -> GesValue? {
         whitespace()
-        if position == bytes.count { return fail(GesDocumentErrorCodes.unexpectedToken, position) }
-        let valueStart = position
-        if bytes[position] == 34 || bytes[position] == 39 {
-            guard let text = quoted() else { return fail(GesDocumentErrorCodes.unclosedText, valueStart) }
-            return .text(text)
-        }
-        if starts(":Vector") { return spatial(depth: depth, point: false) }
-        if starts(":Point") { return spatial(depth: depth, point: true) }
-        if bytes[position] == 58 && !starts(":Dice[") {
+        switch valueForm() {
+        case 1: return depth >= 64 ? setLimit("MaxLiteralDepth", position) : collection(depth: depth + 1)
+        case 2:
             let saved = position
             if let result = typed(depth: depth) { return result }
             if document && (error != nil || limit != nil) { return nil }
             position = saved
+            return leaf(depth: depth)
+        case 3: return spatial(depth: depth, point: false)
+        case 4: return spatial(depth: depth, point: true)
+        default: return leaf(depth: depth)
         }
-        let dice = starts(":Dice")
-        if dice {
-            position += 5
-            whitespace()
-            if position == bytes.count || bytes[position] != 91 { return fail(GesDocumentErrorCodes.invalidLiteral, valueStart) }
-        }
-        if bytes[position] == 91 {
-            if depth >= 64 { return setLimit("MaxLiteralDepth", position) }
-            return dice ? readDice(formStart: valueStart) : collection(depth: depth + 1)
-        }
+    }
+
+    // 1 for a collection, 2 for an explicit `:Type(...)` form to try first, 3 and 4 for a Vector and a Point, 0 for any
+    // other value.
+    private func valueForm() -> Int {
+        if position == bytes.count { return 0 }
+        if bytes[position] == 91 { return 1 }
+        if bytes[position] != 58 { return 0 }
+        if starts(":Vector") { return 3 }
+        if starts(":Point") { return 4 }
+        return starts(":Dice[") ? 0 : 2
+    }
+
+    // Text, Dice rolls or an unquoted token; `value` dispatches Vectors and Points itself.
+    private mutating func leaf(depth: Int) -> GesValue? {
+        if position == bytes.count { return fail(GesDocumentErrorCodes.unexpectedToken, position) }
+        if bytes[position] == 34 || bytes[position] == 39 { return quotedValue() }
+        return starts(":Dice") ? dice(depth: depth) : scalar()
+    }
+
+    private mutating func quotedValue() -> GesValue? {
+        let valueStart = position
+        guard let text = quoted() else { return fail(GesDocumentErrorCodes.unclosedText, valueStart) }
+        return .text(text)
+    }
+
+    private mutating func scalar() -> GesValue? {
         let start = position
         while position < bytes.count && !Self.space(bytes[position]) && ![44, 93, 91, 41].contains(bytes[position]) { position += 1 }
         if document { endTokenAtComment(start) }
@@ -259,143 +279,215 @@ struct GesLiteralParser {
 
     private static func nameByte(_ byte: UInt8) -> Bool { GesNames.lower(byte) || (65...90).contains(byte) || GesNames.digit(byte) || byte == 95 }
 
+    // The opened form `:Type(`: a built-in data type without constructor, or a current-Program Record type.
+    private struct TypedHead {
+        enum Form { case data, handler, message }
+
+        let type: String
+        let constructor: GesBindingSegment.Entry?
+        let open: Int
+        let form: Form
+    }
+
     private mutating func typed(depth: Int) -> GesValue? {
         let formStart = position
         if depth >= 64 { return setLimit("MaxLiteralDepth", formStart) }
+        guard let head = typedHead(formStart) else { return nil }
+        switch head.form {
+        case .data: return typedArguments(depth: depth + 1, head, formStart: formStart)
+        case .handler: return handlerForm(formStart: formStart, outerOpen: head.open)
+        case .message:
+            guard let message = messageArguments(depth: depth + 1, formStart: formStart, outerOpen: head.open) else { return nil }
+            return messageEnd(depth: depth + 1, message, formStart: formStart, outerOpen: head.open)
+        }
+    }
+
+    private mutating func typedHead(_ formStart: Int) -> TypedHead? {
         position += 1
-        guard let name = name(), GesNames.type(name) else { return fail(GesDocumentErrorCodes.invalidLiteral, formStart) }
+        guard let name = name(), GesNames.type(name) else {
+            fail(GesDocumentErrorCodes.invalidLiteral, formStart)
+            return nil
+        }
         let type = name.lowercased()
         let builtin = GesDataConstructionShape.types.contains(type) && name == type.prefix(1).uppercased() + type.dropFirst()
         let constructor = builtin ? nil : state?.linked?.recordsByName[name]
-        if !builtin && constructor == nil { return fail(GesDocumentErrorCodes.unknownType, formStart) }
+        if !builtin && constructor == nil {
+            fail(GesDocumentErrorCodes.unknownType, formStart)
+            return nil
+        }
         whitespace()
         let open = position
         // `:Dice [...]` with whitespace is the Dice result literal, read after this form fails.
-        guard consume(40) else { return type == "dice" ? nil : fail(GesDocumentErrorCodes.invalidLiteral, formStart) }
-        whitespace()
-        if ["handler", "message"].contains(type), position < bytes.count, (65...90).contains(bytes[position]) || starts("initialization") || starts("undeliverable") {
-            return messageForm(depth: depth + 1, handler: type == "handler", formStart: formStart, outerOpen: open)
+        guard consume(40) else {
+            if type != "dice" { fail(GesDocumentErrorCodes.invalidLiteral, formStart) }
+            return nil
         }
+        whitespace()
+        var form = TypedHead.Form.data
+        if ["handler", "message"].contains(type), position < bytes.count, (65...90).contains(bytes[position]) || starts("initialization") || starts("undeliverable") {
+            form = type == "handler" ? .handler : .message
+        }
+        return TypedHead(type: type, constructor: constructor, open: open, form: form)
+    }
+
+    private mutating func typedArguments(depth: Int, _ head: TypedHead, formStart: Int) -> GesValue? {
         var labels: [String] = []
         var args: [GesValue] = []
-        if document && position == bytes.count { return fail(GesDocumentErrorCodes.unclosedBracket, open) }
+        if document && position == bytes.count { return fail(GesDocumentErrorCodes.unclosedBracket, head.open) }
         if !consume(41) {
             while position < bytes.count {
                 if !item() { return nil }
-                let saved = position
-                var label = key()
-                inline()
-                if label == nil || !consume(58) {
-                    label = "_"
-                    position = saved
-                } else if !GesNames.plain(label!) {
-                    return fail(GesDocumentErrorCodes.invalidKey, saved)
-                } else if labels.contains(label!) {
-                    return fail(GesDocumentErrorCodes.duplicateKey, saved)
-                }
-                whitespace()
-                if document && position == bytes.count { return fail(GesDocumentErrorCodes.unclosedBracket, open) }
-                let argument: GesValue?
-                if type == "series", args.isEmpty, position < bytes.count, GesNames.lower(bytes[position]) {
-                    let valueStart = position
-                    let kind = self.name()
-                    if kind == "fibonacci" || kind == "factorial" {
-                        argument = .text(kind!)
-                    } else {
-                        position = valueStart
-                        argument = value(depth: depth + 1)
-                    }
+                guard let label = argumentLabel(labels, open: head.open) else { return nil }
+                let argument: GesValue
+                if let kind = seriesKind(head.type, first: args.isEmpty) {
+                    argument = kind
                 } else {
-                    argument = value(depth: depth + 1)
+                    guard let parsed = value(depth: depth) else { return nil }
+                    argument = parsed
                 }
-                guard let argument else { return nil }
-                labels.append(label!)
+                labels.append(label)
                 args.append(argument)
-                let next = separator(41, open)
+                let next = separator(41, head.open)
                 if next < 0 { return nil }
                 if next > 0 { break }
             }
             if position == 0 || bytes[position - 1] != 41 { return nil }
         }
-        if builtin && GesDataConstructionShape.positions(type, labels) == nil { return fail(GesDocumentErrorCodes.invalidLiteral, formStart) }
-        if let constructor, let state {
+        return typedNode(head, labels, args, formStart: formStart)
+    }
+
+    // An optional `label:` before a constructor or Message argument: "_" when unlabeled, nil after a failure.
+    private mutating func argumentLabel(_ labels: [String], open: Int) -> String? {
+        let saved = position
+        var label = key()
+        inline()
+        if label == nil || !consume(58) {
+            label = "_"
+            position = saved
+        } else if !GesNames.plain(label!) {
+            fail(GesDocumentErrorCodes.invalidKey, saved)
+            return nil
+        } else if labels.contains(label!) {
+            fail(GesDocumentErrorCodes.duplicateKey, saved)
+            return nil
+        }
+        whitespace()
+        if document && position == bytes.count {
+            fail(GesDocumentErrorCodes.unclosedBracket, open)
+            return nil
+        }
+        return label
+    }
+
+    // The built-in sequence name as the first `:Series(...)` argument; nil, without consuming input, otherwise.
+    private mutating func seriesKind(_ type: String, first: Bool) -> GesValue? {
+        guard first, type == "series", position < bytes.count, GesNames.lower(bytes[position]) else { return nil }
+        let valueStart = position
+        let kind = name()
+        if kind == "fibonacci" || kind == "factorial" { return .text(kind!) }
+        position = valueStart
+        return nil
+    }
+
+    private mutating func typedNode(_ head: TypedHead, _ labels: [String], _ args: [GesValue], formStart: Int) -> GesValue? {
+        if head.constructor == nil && GesDataConstructionShape.positions(head.type, labels) == nil { return fail(GesDocumentErrorCodes.invalidLiteral, formStart) }
+        if let constructor = head.constructor, let state {
             let allowed = constructor.argumentNames.map(state.text)
             if labels.filter({ $0 == "_" }).count > allowed.filter({ $0 == "_" }).count || labels.contains(where: { $0 != "_" && !allowed.contains($0) }) { return nil }
         }
-        return node(type, labels, args, constructor, offset: formStart)
+        return node(head.type, labels, args, head.constructor, offset: formStart)
     }
 
-    private mutating func messageForm(depth: Int, handler: Bool, formStart: Int, outerOpen: Int) -> GesValue? {
-        guard let name = name(), GesNames.message(name) else { return fail(GesDocumentErrorCodes.invalidLiteral, formStart) }
+    // The message name and opening parenthesis inside `:Handler(` or `:Message(`.
+    private mutating func messageHead(_ formStart: Int) -> (name: String, open: Int)? {
+        guard let name = name(), GesNames.message(name) else {
+            fail(GesDocumentErrorCodes.invalidLiteral, formStart)
+            return nil
+        }
         whitespace()
         let open = position
-        guard consume(40) else { return fail(GesDocumentErrorCodes.invalidLiteral, formStart) }
+        guard consume(40) else {
+            fail(GesDocumentErrorCodes.invalidLiteral, formStart)
+            return nil
+        }
         whitespace()
+        if document && position == bytes.count {
+            fail(GesDocumentErrorCodes.unclosedBracket, open)
+            return nil
+        }
+        return (name, open)
+    }
+
+    private mutating func handlerForm(formStart: Int, outerOpen: Int) -> GesValue? {
+        guard let (name, open) = messageHead(formStart) else { return nil }
         var labels: [String] = []
-        var args: [GesValue] = []
-        if document && position == bytes.count { return fail(GesDocumentErrorCodes.unclosedBracket, open) }
         if !consume(41) {
             while position < bytes.count {
                 if !item() { return nil }
-                if handler {
-                    let labelStart = position
-                    guard let label = self.name() else { return fail(GesDocumentErrorCodes.invalidLiteral, formStart) }
-                    if label != "_" && !GesNames.plain(label) { return fail(GesDocumentErrorCodes.invalidKey, labelStart) }
-                    if label != "_" && labels.contains(label) { return fail(GesDocumentErrorCodes.duplicateKey, labelStart) }
-                    labels.append(label)
-                } else {
-                    let saved = position
-                    var label = key()
-                    inline()
-                    if label == nil || !consume(58) {
-                        label = "_"
-                        position = saved
-                    } else if !GesNames.plain(label!) {
-                        return fail(GesDocumentErrorCodes.invalidKey, saved)
-                    } else if labels.contains(label!) {
-                        return fail(GesDocumentErrorCodes.duplicateKey, saved)
-                    }
-                    if document {
-                        whitespace()
-                        if position == bytes.count { return fail(GesDocumentErrorCodes.unclosedBracket, open) }
-                    }
-                    guard let arg = value(depth: depth) else { return nil }
-                    labels.append(label!)
-                    args.append(arg)
-                }
+                let labelStart = position
+                guard let label = self.name() else { return fail(GesDocumentErrorCodes.invalidLiteral, formStart) }
+                if label != "_" && !GesNames.plain(label) { return fail(GesDocumentErrorCodes.invalidKey, labelStart) }
+                if label != "_" && labels.contains(label) { return fail(GesDocumentErrorCodes.duplicateKey, labelStart) }
+                labels.append(label)
                 let next = separator(41, open)
                 if next < 0 { return nil }
                 if next > 0 { break }
             }
         }
         whitespace()
-        var result: GesValue
-        if handler {
-            guard let signature = try? GesMessageSignature(name: name, parameters: labels) else { return fail(GesDocumentErrorCodes.invalidLiteral, formStart) }
-            result = .handler(signature)
-        } else {
-            result = node("@message:" + name, labels, args, offset: formStart)
-        }
-        if !handler && starts("with") {
-            position += 4
-            var tags: [GesValue] = []
-            if document {
-                while true {
-                    guard let tag = value(depth: depth) else { return nil }
-                    tags.append(tag)
-                    let next = separator(41, outerOpen)
-                    if next < 0 { return nil }
-                    if next > 0 { break }
-                }
-                return node("message", ["_", "tags"], [result, .list(tags)], offset: formStart)
+        guard let signature = try? GesMessageSignature(name: name, parameters: labels) else { return fail(GesDocumentErrorCodes.invalidLiteral, formStart) }
+        return closeMessage(.handler(signature), outerOpen: outerOpen)
+    }
+
+    // The `Name(arguments)` of a Message form, before optional tags.
+    private mutating func messageArguments(depth: Int, formStart: Int, outerOpen: Int) -> GesValue? {
+        guard let head = messageHead(formStart) else { return nil }
+        var labels: [String] = []
+        var args: [GesValue] = []
+        if !consume(41) {
+            while position < bytes.count {
+                if !item() { return nil }
+                guard let label = argumentLabel(labels, open: head.open) else { return nil }
+                guard let arg = value(depth: depth) else { return nil }
+                labels.append(label)
+                args.append(arg)
+                let next = separator(41, head.open)
+                if next < 0 { return nil }
+                if next > 0 { break }
             }
-            repeat {
+        }
+        return node("@message:" + head.name, labels, args, offset: formStart)
+    }
+
+    // Optional `with` tags and the closing parenthesis of a Message form.
+    private mutating func messageEnd(depth: Int, _ message: GesValue, formStart: Int, outerOpen: Int) -> GesValue? {
+        whitespace()
+        if !starts("with") { return closeMessage(message, outerOpen: outerOpen) }
+        position += 4
+        var tags: [GesValue] = []
+        if document {
+            while true {
                 guard let tag = value(depth: depth) else { return nil }
                 tags.append(tag)
-                whitespace()
-            } while consume(44)
-            result = node("message", ["_", "tags"], [result, .list(tags)], offset: formStart)
+                let next = separator(41, outerOpen)
+                if next < 0 { return nil }
+                if next > 0 { break }
+            }
+            return taggedMessage(message, tags, formStart: formStart)
         }
+        repeat {
+            guard let tag = value(depth: depth) else { return nil }
+            tags.append(tag)
+            whitespace()
+        } while consume(44)
+        return closeMessage(taggedMessage(message, tags, formStart: formStart), outerOpen: outerOpen)
+    }
+
+    private mutating func taggedMessage(_ message: GesValue, _ tags: [GesValue], formStart: Int) -> GesValue {
+        node("message", ["_", "tags"], [message, .list(tags)], offset: formStart)
+    }
+
+    private mutating func closeMessage(_ result: GesValue, outerOpen: Int) -> GesValue? {
         if consume(41) { return result }
         return position == bytes.count ? fail(GesDocumentErrorCodes.unclosedBracket, outerOpen) : fail(GesDocumentErrorCodes.unexpectedToken, position)
     }
@@ -451,6 +543,16 @@ struct GesLiteralParser {
         return point ? .point(x: 0) : .vector(x: 0)
     }
 
+    // `:Dice` followed by its bracketed rolls, after the explicit `:Dice(...)` form did not apply.
+    private mutating func dice(depth: Int) -> GesValue? {
+        let valueStart = position
+        position += 5
+        whitespace()
+        if position == bytes.count || bytes[position] != 91 { return fail(GesDocumentErrorCodes.invalidLiteral, valueStart) }
+        if depth >= 64 { return setLimit("MaxLiteralDepth", position) }
+        return readDice(formStart: valueStart)
+    }
+
     private mutating func readDice(formStart: Int) -> GesValue? {
         let open = position
         position += 1
@@ -473,44 +575,87 @@ struct GesLiteralParser {
 
     private mutating func collection(depth: Int) -> GesValue? {
         let open = position
+        switch collectionStart() {
+        case 0: return .list([])
+        case 1: return .map([])
+        case 2: return list(depth: depth, open: open)
+        case 3: return map(depth: depth, open: open)
+        default: return nil
+        }
+    }
+
+    // Opens a collection: 0 and 1 for the closed empty List and Map, 2 and 3 for a List or Map with entries, -1 on failure.
+    private mutating func collectionStart() -> Int {
+        let open = position
         position += 1
         whitespace()
-        if consume(93) { return .list([]) }
+        if consume(93) { return 0 }
         let contentStart = position
         if consume(58) {
             whitespace()
-            if consume(93) { return .map([]) }
+            if consume(93) { return 1 }
             position = contentStart
         }
-        if document && position == bytes.count { return fail(GesDocumentErrorCodes.unclosedBracket, open) }
+        if document && position == bytes.count {
+            fail(GesDocumentErrorCodes.unclosedBracket, open)
+            return -1
+        }
         let saved = position
         let firstKey = key()
         inline()
         let isMap = firstKey != nil && consume(58)
         position = saved
+        return isMap ? 3 : 2
+    }
+
+    private mutating func list(depth: Int, open: Int) -> GesValue? {
         var values: [GesValue] = []
-        var entries: [GesMapEntry] = []
+        while position < bytes.count {
+            if !item() { return nil }
+            guard let parsed = value(depth: depth) else { return nil }
+            values.append(parsed)
+            let next = separator(93, open)
+            if next < 0 { return nil }
+            if next > 0 { return .list(values) }
+        }
+        return nil
+    }
+
+    private mutating func map(depth: Int, open: Int) -> GesValue? {
+        var keys: [String] = []
+        var values: [GesValue] = []
         var seen: Set<[Unicode.Scalar]> = []
         while position < bytes.count {
             if !item() { return nil }
-            if isMap {
-                whitespace()
-                let keyStart = position
-                guard let key = key() else { return fail(keyStart < bytes.count && (bytes[keyStart] == 34 || bytes[keyStart] == 39) ? GesDocumentErrorCodes.unclosedText : GesDocumentErrorCodes.invalidKey, keyStart) }
-                if document && !seen.insert(Array(key.unicodeScalars)).inserted { return fail(GesDocumentErrorCodes.duplicateKey, keyStart) }
-                inline()
-                if !consume(58) { return fail(GesDocumentErrorCodes.missingColon, position) }
-                guard let parsed = entryValue(depth: depth) else { return nil }
-                entries.append(.init(key: key, value: parsed))
-            } else {
-                guard let parsed = value(depth: depth) else { return nil }
-                values.append(parsed)
-            }
+            guard let key = mapKey(&seen) else { return nil }
+            guard let parsed = keyOnly() ? .boolean(true) : value(depth: depth) else { return nil }
+            keys.append(key)
+            values.append(parsed)
             let next = separator(93, open)
             if next < 0 { return nil }
-            if next > 0 { return isMap ? node("@map", entries.map(\.key), entries.map(\.value)) : .list(values) }
+            if next > 0 { return node("@map", keys, values) }
         }
         return nil
+    }
+
+    // A Map entry key and its colon; nil after a failure. Documents reject duplicate keys.
+    private mutating func mapKey(_ seen: inout Set<[Unicode.Scalar]>) -> String? {
+        whitespace()
+        let keyStart = position
+        guard let key = key() else {
+            fail(keyStart < bytes.count && (bytes[keyStart] == 34 || bytes[keyStart] == 39) ? GesDocumentErrorCodes.unclosedText : GesDocumentErrorCodes.invalidKey, keyStart)
+            return nil
+        }
+        if document && !seen.insert(Array(key.unicodeScalars)).inserted {
+            fail(GesDocumentErrorCodes.duplicateKey, keyStart)
+            return nil
+        }
+        inline()
+        if !consume(58) {
+            fail(GesDocumentErrorCodes.missingColon, position)
+            return nil
+        }
+        return key
     }
 
     private mutating func key() -> String? {

@@ -17,14 +17,14 @@ extension GesParser {
         separators()
         var declarations: [(name: String, export: Bool)] = []
         var lines: [GesAssemblyLine] = []
-        while current.kind != .rightBrace {
+        while currentKind != .rightBrace {
             let token = current
             let exported = match(.`let`)
             if exported || match(.dot) {
                 if !exported { try expectWord("register") }
                 if !lines.isEmpty || exported && output != nil { throw failure("Assembly declarations must precede instructions and only standalone blocks export bindings.", token) }
                 repeat { declarations.append((try identifier(), exported)) } while match(.comma)
-            } else if current.kind == .emit || current.kind == .publish {
+            } else if currentKind == .emit || currentKind == .publish {
                 let statement = try statement()
                 guard case .publish(let publish, let message, let tags) = statement.kind else { throw failure("Expected a statement send.", token) }
                 lines.append(.init(name: publish ? "publish" : "emit", label: false, operands: [message] + tags, location: location(token, previous)))
@@ -33,22 +33,22 @@ extension GesParser {
                 try expect(.colon)
                 lines.append(.init(name: name, label: true, operands: [], location: location(token, previous)))
             } else {
-                guard current.kind == .message else { throw failure("Expected an assembly instruction.", token) }
+                guard currentKind == .message else { throw failure("Expected an assembly instruction.", token) }
                 let name = advance().text
                 var operands: [GesExpression] = []
-                if current.kind != .newLine && current.kind != .semicolon && current.kind != .rightBrace {
+                if currentKind != .newLine && currentKind != .semicolon && currentKind != .rightBrace {
                     repeat {
-                        if assemblyMessageOperand(name, operands.count), current.kind == .message {
+                        if assemblyMessageOperand(name, operands.count), currentKind == .message {
                             // The message operand spans from its name, as the C# message literal does.
                             let messageToken = current
                             let message = advance().text
-                            let arguments = current.kind == .leftParen ? try arguments() : []
+                            let arguments = currentKind == .leftParen ? try arguments() : []
                             operands.append(node(.message(message, arguments), messageToken))
-                        } else if current.kind == .operatorMinus, peek().text == "9223372036854775808" {
+                        } else if currentKind == .operatorMinus, peek().text == "9223372036854775808" {
                             advance()
                             advance()
                             operands.append(node(.literal(.integer(Int64.min)), token))
-                        } else if current.kind == .typeName && tokens[min(index + 1, tokens.count - 1)].kind != .leftParen {
+                        } else if currentKind == .typeName && tokens[min(index + 1, tokens.count - 1)].kind != .leftParen {
                             let type = advance()
                             operands.append(node(.literal(.text(String(type.text.dropFirst()))), type))
                         } else {
@@ -58,7 +58,7 @@ extension GesParser {
                 }
                 lines.append(.init(name: name, label: false, operands: operands, location: location(token, previous)))
             }
-            if current.kind != .newLine && current.kind != .semicolon && current.kind != .rightBrace { throw failure("Expected assembly line separator.") }
+            if currentKind != .newLine && currentKind != .semicolon && currentKind != .rightBrace { throw failure("Expected assembly line separator.") }
             separators()
         }
         try expect(.rightBrace)

@@ -431,6 +431,12 @@ Swift value APIs. VM entry borrows arguments by index rather than allocating an
 argument array. Mutable callback arguments are borrowed only
 for the synchronous invocation.
 
+The recursive Swift parser and compiler passes keep payload-free dispatchers and
+one function per form: Debug builds reserve stack for every local and case
+binding of a function on each call. Their few `@inline(never)` attributes carry
+measured rationales. `CompilerStackDepthTests` compiles sources at the nesting
+limits on a 512 KB thread, the stack of Swift concurrency tasks.
+
 `./scripts/build-swift.sh` builds all SwiftPM packages independently in Release
 without .NET; `--configuration debug` selects Debug. `./scripts/format-swift.sh`
 checks the formatter configuration; `--fix` applies formatting. Swift uses a

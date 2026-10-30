@@ -267,6 +267,11 @@ final class GesCompiler {
             if let constant = scalarConstant(value) { return (constant, nil, value.location) }
             return (nil, try expression(value, r, scope), value.location)
         }
+        try stagePlans(plans, r)
+    }
+
+    // Stages evaluated registers and constants in order; apart from the values above, this runs in its own frame.
+    func stagePlans(_ plans: [(GesValue?, Int?, GesSourceLocation)], _ r: GesRoutine) throws {
         r.maxStage = max(r.maxStage, plans.count)
         for (constant, register, location) in plans {
             if let register {

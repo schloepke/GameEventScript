@@ -227,6 +227,11 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   and a type name, such as `: Number(5)`, matching Swift and the source type
   syntax; such input now fails recognition like any other malformed literal.
 
+- The Swift compiler no longer exhausts small thread stacks on deeply nested
+  sources. Its parser and compiler passes need far less stack per nesting level,
+  so sources at the expression and statement nesting limits compile on a 512 KB
+  thread, the stack of Swift concurrency tasks, also in Debug builds. Before,
+  about 25 nested calls could crash an unoptimized build there.
 - The Swift compiler rejects reserved keywords such as `empty`, `record` or `if`
   as argument labels, map literal keys and extension function names with
   `parse.syntax`, like the C# compiler; `to`, `nothing`, the math constants and

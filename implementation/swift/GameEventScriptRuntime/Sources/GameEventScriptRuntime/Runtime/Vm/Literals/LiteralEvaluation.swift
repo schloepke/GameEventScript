@@ -55,22 +55,26 @@ final class GesLiteralEvaluation {
         return (evaluation.results.last!, -1)
     }
 
+    // Recurses once per nesting level of the parsed literal. Debug builds reserve stack for every local of a function
+    // on each call, so the node is built by its own function and the arguments are added without a closure.
     private func add(_ value: GesValue) -> Int {
-        let node: GesLiteralNode
-        if value.customTypeName == "@literal", let id = value.asMap?.get("id")?.integerValue, id >= 0, id < nodes.count {
-            node = nodes[Int(id)]
-        } else if let list = value.listValue {
-            node = .init(type: "@list", labels: [], arguments: list)
-        } else if value.kind == .map, let map = value.asMap {
-            node = .init(type: "@map", labels: map.keyStorage, arguments: map.valueStorage)
-        } else {
-            node = .init(type: "@value", labels: [], arguments: [value])
+        let node = self.node(value)
+        var inputs: [Int] = []
+        if node.type != "@value" {
+            inputs.reserveCapacity(node.arguments.count)
+            for argument in node.arguments { inputs.append(add(argument)) }
         }
-        let inputs = node.type == "@value" ? [] : node.arguments.map(add)
         let index = operations.count
         operations.append(.init(node: node, inputs: inputs))
         results.append(.nothing)
         return index
+    }
+
+    private func node(_ value: GesValue) -> GesLiteralNode {
+        if value.customTypeName == "@literal", let id = value.asMap?.get("id")?.integerValue, id >= 0, id < nodes.count { return nodes[Int(id)] }
+        if let list = value.listValue { return .init(type: "@list", labels: [], arguments: list) }
+        if value.kind == .map, let map = value.asMap { return .init(type: "@map", labels: map.keyStorage, arguments: map.valueStorage) }
+        return .init(type: "@value", labels: [], arguments: [value])
     }
 
     // One parse materializes at most maxRangeItems Range items into Lists in total, not only per Range. Data-only

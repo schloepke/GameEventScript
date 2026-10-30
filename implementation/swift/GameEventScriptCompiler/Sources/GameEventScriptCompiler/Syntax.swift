@@ -327,8 +327,10 @@ struct GesArgument {
 }
 
 final class GesExpression {
+    // The assembly and selector payloads are boxed: inline they would size every Kind value, and unoptimized builds
+    // reserve stack for each one that the recursive parser and compiler passes create.
     enum Kind {
-        case assembly(GesAssembly)
+        indirect case assembly(GesAssembly)
         case literal(GesValue)
         case name(String)
         case constant(String)
@@ -344,7 +346,7 @@ final class GesExpression {
         case list([GesExpression])
         case map([(String, GesExpression)])
         case member(GesExpression, String)
-        case selector(GesExpression, GesSelector)
+        indirect case selector(GesExpression, GesSelector)
         case combined(String, [GesExpression])
         case cast(GesExpression, String)
         case check(GesExpression, String)

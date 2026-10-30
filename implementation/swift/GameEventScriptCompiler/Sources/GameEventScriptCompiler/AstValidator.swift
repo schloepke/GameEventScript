@@ -241,85 +241,149 @@ final class GesAstValidator {
     // MARK: Expressions
 
     // Visits an expression in the order of the C# ValidateExpressionReferences; names resolve during lowering.
+    // The dispatcher binds no payloads: an unoptimized build reserves stack for the bindings of every case on each
+    // call, so each form function reads its own.
     private func expression(_ e: GesExpression, _ types: [String: String]) {
-        func visit(_ child: GesExpression) { expression(child, types) }
-
         switch e.kind {
-        case .assembly(let block): for line in block.lines { line.operands.forEach(visit) }
         case .literal, .constant, .dice, .series: break
-        case .name(let name): if !Self.isLowerName(name, index: true) { report("validate.invalidIdentifierCase", e.location, symbol: name, kind: .variable) }
+        case .unary, .binary, .between, .range, .random, .combined, .list, .extensionCall, .assembly: operands(e, types)
+        case .name, .handler, .member, .map, .generated: namedReferences(e, types)
+        case .call, .message, .constructor: argumentReferences(e, types)
+        case .predicate, .send, .intrinsic, .seeded, .check, .cast: checkedOperands(e, types)
+        case .choice: choiceReferences(e, types)
+        case .selector: selectorReferences(e, types)
+        }
+    }
+
+    // Forms whose operands are visited without further checks.
+    private func operands(_ e: GesExpression, _ types: [String: String]) {
+        switch e.kind {
+        case .unary(_, let a): expression(a, types)
+        case .binary(_, let a, let b):
+            expression(a, types)
+            expression(b, types)
+        case .between(let value, let minimum, let maximum):
+            expression(value, types)
+            expression(minimum, types)
+            expression(maximum, types)
+        case .range(let from, let to, let step):
+            expression(from, types)
+            expression(to, types)
+            if let step { expression(step, types) }
+        case .random(let from, let to):
+            expression(from, types)
+            expression(to, types)
+        case .combined(_, let items), .list(let items): for item in items { expression(item, types) }
+        case .extensionCall(_, _, let args): for argument in args { expression(argument.value, types) }
+        case .assembly(let block): for line in block.lines { for operand in line.operands { expression(operand, types) } }
+        default: preconditionFailure()
+        }
+    }
+
+    // Forms that name variables, members, map keys or handlers.
+    private func namedReferences(_ e: GesExpression, _ types: [String: String]) {
+        switch e.kind {
+        case .name(let name): lowerName(name, index: true, e.location, kind: .variable)
+        case .handler(let name, let parameters): handlerLiteral(name, parameters, e.location)
+        case .member(let target, let name):
+            lowerName(name, index: false, e.location, kind: .variable)
+            expression(target, types)
+        case .map(let entries):
+            for (key, value) in entries {
+                lowerName(key, index: false, e.location, kind: .variable)
+                expression(value, types)
+            }
+        case .generated(_, let name, let source, _, let predicate, let projection):
+            lowerName(name, index: true, e.location, kind: .variable)
+            expression(source, types)
+            if let predicate { expression(predicate, types) }
+            expression(projection, types)
+        default: preconditionFailure()
+        }
+    }
+
+    private func argumentReferences(_ e: GesExpression, _ types: [String: String]) {
+        switch e.kind {
         case .call(let name, let args):
-            if !Self.isLowerName(name, index: false) { report("validate.invalidIdentifierCase", e.location, symbol: name, kind: .globalDefinition) }
+            lowerName(name, index: false, e.location, kind: .globalDefinition)
             repeatedArguments(args, name, e.location)
             call(name, args, e.location)
-            labeledArguments(args, name, e.location, visit)
-        case .handler(let name, let parameters):
-            if !Self.isUpperName(name) { report("validate.invalidMessageCase", e.location, symbol: name, kind: .handler) }
-            for p in parameters where p.label != "_" && !Self.isLowerName(p.label, index: false) { report("validate.invalidIdentifierCase", p.location, symbol: name, kind: .handler) }
-            var seen: Set<String> = []
-            var repeated: Set<String> = []
-            for p in parameters where !seen.insert(p.name).inserted && repeated.insert(p.name).inserted { report("validate.duplicateHandlerParameter", p.location, symbol: name, kind: .handler) }
+            labeledArguments(args, name, e.location) { expression($0, types) }
         case .message(let name, let args):
             if !Self.isUpperName(name) { report("validate.invalidMessageCase", e.location, symbol: name, kind: .message) }
             repeatedArguments(args, name, e.location)
-            labeledArguments(args, name, e.location, visit)
-        case .extensionCall(_, _, let args): args.map(\.value).forEach(visit)
-        case .constructor(let type, let args): constructor(type, args, e, visit)
+            labeledArguments(args, name, e.location) { expression($0, types) }
+        case .constructor(let type, let args): constructor(type, args, e) { expression($0, types) }
+        default: preconditionFailure()
+        }
+    }
+
+    // Forms with a check of their own besides their operands.
+    private func checkedOperands(_ e: GesExpression, _ types: [String: String]) {
+        switch e.kind {
         case .predicate(let value, let name):
-            if !Self.isLowerName(name, index: false) { report("validate.invalidIdentifierCase", e.location, symbol: name, kind: .predicate) }
-            let count = value == nil ? 0 : 1
-            if definitions.values.filter({ $0.name == name && $0.kind == "predicate" && $0.parameters.count == count }).count != 1 {
-                report("validate.invalidPredicate", e.location, symbol: name, kind: .predicate, message: "No unique predicate named '\(name)' with \(count) parameters is available.")
-            }
-            if let value { visit(value) }
+            predicateReference(name, count: value == nil ? 0 : 1, e.location)
+            if let value { expression(value, types) }
         case .send(_, let message, let tags, let delay):
-            visit(message)
+            expression(message, types)
             if let delay {
-                visit(delay)
-                if !["unknown", "other", "nothing", "quantity:s", "quantity:second"].contains(infer(delay, types)) {
-                    report("validate.invalidTypeConstructor", delay.location, symbol: "Quantity(s)", kind: .type, message: "Send delay requires a time quantity, for example 0.2s.")
-                }
+                expression(delay, types)
+                sendDelay(delay, types)
             }
-            tags.forEach(visit)
-        case .unary(_, let a): visit(a)
+            for tag in tags { expression(tag, types) }
         // Geometric intrinsics are not visited, as in C#; clamp, min and max visit their operands.
-        case .intrinsic(let name, let args): if ["clamp", "min", "max"].contains(name) { args.forEach(visit) }
-        case .between(let value, let minimum, let maximum): [value, minimum, maximum].forEach(visit)
-        case .range(let from, let to, let step): ([from, to] + (step.map { [$0] } ?? [])).forEach(visit)
-        case .random(let from, let to): [from, to].forEach(visit)
+        case .intrinsic(let name, let args): if Self.visitedIntrinsics.contains(name) { for arg in args { expression(arg, types) } }
         case .seeded(let seed, let body):
-            visit(seed)
+            expression(seed, types)
             validateSeed(seed, types)
-            visit(body)
-        case .generated(_, let name, let source, _, let predicate, let projection):
-            if !Self.isLowerName(name, index: true) { report("validate.invalidIdentifierCase", e.location, symbol: name, kind: .variable) }
-            visit(source)
-            if let predicate { visit(predicate) }
-            visit(projection)
-        case .choice(let branches, let fallback):
-            for (value, condition) in branches {
-                visit(value)
-                visit(condition)
-            }
-            visit(fallback)
-        case .binary(_, let a, let b): [a, b].forEach(visit)
+            expression(body, types)
         // A cast or check may name a custom type that is bound only later, such as a record value a message delivers.
         case .check(let value, let type), .cast(let value, let type):
             removedType(type, e.location)
-            visit(value)
-        case .member(let target, let name):
-            if !Self.isLowerName(name, index: false) { report("validate.invalidIdentifierCase", e.location, symbol: name, kind: .variable) }
-            visit(target)
-        case .selector(let target, let s):
-            visit(target)
-            selector(s, e.location, visit)
-        case .combined(_, let sources): sources.forEach(visit)
-        case .list(let items): items.forEach(visit)
-        case .map(let entries):
-            for (key, value) in entries {
-                if !Self.isLowerName(key, index: false) { report("validate.invalidIdentifierCase", e.location, symbol: key, kind: .variable) }
-                visit(value)
-            }
+            expression(value, types)
+        default: preconditionFailure()
+        }
+    }
+
+    private func choiceReferences(_ e: GesExpression, _ types: [String: String]) {
+        guard case .choice(let branches, let fallback) = e.kind else { preconditionFailure() }
+        for (value, condition) in branches {
+            expression(value, types)
+            expression(condition, types)
+        }
+        expression(fallback, types)
+    }
+
+    private func selectorReferences(_ e: GesExpression, _ types: [String: String]) {
+        guard case .selector(let target, let s) = e.kind else { preconditionFailure() }
+        expression(target, types)
+        selector(s, e.location) { expression($0, types) }
+    }
+
+    static let visitedIntrinsics: Set<String> = ["clamp", "min", "max"]
+
+    private func lowerName(_ name: String, index: Bool, _ location: GesSourceLocation, kind: GesDiagnosticSymbolKind) {
+        if !Self.isLowerName(name, index: index) { report("validate.invalidIdentifierCase", location, symbol: name, kind: kind) }
+    }
+
+    private func handlerLiteral(_ name: String, _ parameters: [GesParameter], _ location: GesSourceLocation) {
+        if !Self.isUpperName(name) { report("validate.invalidMessageCase", location, symbol: name, kind: .handler) }
+        for p in parameters where p.label != "_" && !Self.isLowerName(p.label, index: false) { report("validate.invalidIdentifierCase", p.location, symbol: name, kind: .handler) }
+        var seen: Set<String> = []
+        var repeated: Set<String> = []
+        for p in parameters where !seen.insert(p.name).inserted && repeated.insert(p.name).inserted { report("validate.duplicateHandlerParameter", p.location, symbol: name, kind: .handler) }
+    }
+
+    private func predicateReference(_ name: String, count: Int, _ location: GesSourceLocation) {
+        lowerName(name, index: false, location, kind: .predicate)
+        if definitions.values.filter({ $0.name == name && $0.kind == "predicate" && $0.parameters.count == count }).count != 1 {
+            report("validate.invalidPredicate", location, symbol: name, kind: .predicate, message: "No unique predicate named '\(name)' with \(count) parameters is available.")
+        }
+    }
+
+    private func sendDelay(_ delay: GesExpression, _ types: [String: String]) {
+        if !["unknown", "other", "nothing", "quantity:s", "quantity:second"].contains(infer(delay, types)) {
+            report("validate.invalidTypeConstructor", delay.location, symbol: "Quantity(s)", kind: .type, message: "Send delay requires a time quantity, for example 0.2s.")
         }
     }
 

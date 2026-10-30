@@ -105,97 +105,143 @@ struct GesAstOptimizer {
         return optimized === e ? nil : optimized
     }
 
+    func changed(_ a: GesExpression, _ b: GesExpression) -> (GesExpression, GesExpression)? {
+        let x = expression(a)
+        let y = expression(b)
+        return x === a && y === b ? nil : (x, y)
+    }
+
+    func changedList(_ list: [GesExpression]) -> [GesExpression]? { Self.changedMap(list, changed) }
+
+    func changedArguments(_ list: [GesArgument]) -> [GesArgument]? { Self.changedMap(list) { argument in changed(argument.value).map { GesArgument(label: argument.label, value: $0) } } }
+
+    // Children are optimized first; an unchanged node is reused instead of rebuilt, so only folded subtrees allocate.
+    // Nested expressions recurse through this function and optimizedChildren, which build each form in a function of
+    // its own, so that an unoptimized build does not reserve stack for every form on each level.
     func expression(_ e: GesExpression) -> GesExpression {
-        // Children are visited through `visit`, which records whether any of them changed; an unchanged node is
-        // reused instead of rebuilt, so only folded subtrees allocate.
-        var changed = false
-
-        func visit(_ child: GesExpression) -> GesExpression {
-            let optimized = expression(child)
-            if optimized !== child { changed = true }
-            return optimized
-        }
-
-        func visitPattern(_ child: GesExpression) -> GesExpression {
-            let optimized = pattern(child)
-            if optimized !== child { changed = true }
-            return optimized
-        }
-
-        func visitList(_ list: [GesExpression]) -> [GesExpression] {
-            guard let optimized = Self.changedMap(list, self.changed) else { return list }
-            changed = true
-            return optimized
-        }
-
-        func visitArguments(_ list: [GesArgument]) -> [GesArgument] {
-            guard let optimized = Self.changedMap(list, { argument in self.changed(argument.value).map { GesArgument(label: argument.label, value: $0) } }) else { return list }
-            changed = true
-            return optimized
-        }
-
-        let kind: GesExpression.Kind
         switch e.kind {
         case .assembly, .literal, .name, .handler, .dice, .series: return e
-        case .constant(let name):
-            guard let value = constants[name] else { return e }
-            let substituted = GesExpression(value.kind, e.location, depth: e.depth)
-            substituted.decimalLiteral = value.decimalLiteral
-            return fold(substituted)
-        case .unary(let op, let a): kind = .unary(op, visit(a))
-        case .binary(let op, let a, let b): kind = .binary(op, visit(a), visit(b))
-        case .between(let a, let b, let c): kind = .between(visit(a), visit(b), visit(c))
-        case .call(let name, let args): kind = .call(name, visitArguments(args))
-        case .extensionCall(let ns, let name, let args): kind = .extensionCall(ns, name, visitArguments(args))
-        case .constructor(let type, let args): kind = .constructor(type, visitArguments(args))
-        case .send(let publish, let message, let tags, let delay): kind = .send(publish, visit(message), visitList(tags), delay.map(visit))
-        case .message(let name, let args): kind = .message(name, visitArguments(args))
-        case .list(let items): kind = .list(visitList(items))
-        case .map(let entries):
-            let optimized = Self.changedMap(entries) { entry in self.changed(entry.1).map { (entry.0, $0) } }
-            if optimized != nil { changed = true }
-            kind = .map(optimized ?? entries)
-        case .member(let target, let name): kind = .member(visit(target), name)
-        case .selector(let target, var selector):
-            if selector.operation == "objectMatch" {
-                if let optimized = Self.changedMap(
-                    selector.expressions,
-                    { child in
-                        let value = pattern(child)
-                        return value === child ? nil : value
-                    }
-                ) {
-                    selector.expressions = optimized
-                    changed = true
-                }
-            } else {
-                selector.expressions = visitList(selector.expressions)
-            }
-            kind = .selector(visit(target), selector)
-        case .combined(let mode, let sources): kind = .combined(mode, visitList(sources))
-        case .cast(let value, let type): kind = .cast(visit(value), type)
-        case .check(let value, let type): kind = .check(visit(value), type)
-        case .predicate(let value, let name): kind = .predicate(value.map(visit), name)
-        case .intrinsic(let name, let args): kind = .intrinsic(name, visitList(args))
-        case .range(let from, let to, let step): kind = .range(visit(from), visit(to), step.map(visit))
-        case .random(let from, let to): kind = .random(visit(from), visit(to))
-        case .seeded(let seed, let body): kind = .seeded(visit(seed), visit(body))
-        case .choice(let branches, let otherwise):
-            let optimized = Self.changedMap(branches) { branch -> (GesExpression, GesExpression)? in
-                let condition = self.changed(branch.0)
-                let value = self.changed(branch.1)
-                guard condition != nil || value != nil else { return nil }
-                return (condition ?? branch.0, value ?? branch.1)
-            }
-            if optimized != nil { changed = true }
-            kind = .choice(optimized ?? branches, visit(otherwise))
-        case .generated(let a, let b, let source, let flag, let predicate, let projection):
-            kind = .generated(a, b, visit(source), flag, predicate.map(visit), visit(projection))
+        case .constant(let name): return constant(name, e)
+        default: break
         }
-        if !changed { return fold(e) }
+        guard let kind = optimizedChildren(e.kind) else { return fold(e) }
         let optimized = GesExpression(kind, e.location, depth: e.depth)
         optimized.decimalLiteral = e.decimalLiteral
         return fold(optimized)
+    }
+
+    func constant(_ name: String, _ e: GesExpression) -> GesExpression {
+        guard let value = constants[name] else { return e }
+        let substituted = GesExpression(value.kind, e.location, depth: e.depth)
+        substituted.decimalLiteral = value.decimalLiteral
+        return fold(substituted)
+    }
+
+    // The kind with its optimized children; nil when no child changed. The dispatcher binds no payloads: an
+    // unoptimized build reserves stack for the bindings of every case on each call, so each group reads its own.
+    // The groups are never inlined: optimized builds would otherwise merge all of them into the recursive frame
+    // (nested lists at the nesting limit: 233 instead of 125 KB of stack, arm64).
+    func optimizedChildren(_ kind: GesExpression.Kind) -> GesExpression.Kind? {
+        switch kind {
+        case .assembly, .literal, .name, .constant, .handler, .dice, .series: return nil
+        case .unary, .member, .cast, .check, .predicate: return optimizedOperand(kind)
+        case .binary, .random, .seeded: return optimizedPair(kind)
+        case .call, .extensionCall, .constructor, .message: return optimizedArguments(kind)
+        case .between, .list, .combined, .intrinsic, .map: return optimizedItems(kind)
+        case .send, .range, .choice, .generated: return optimizedClauses(kind)
+        case .selector: return optimizedSelector(kind)
+        }
+    }
+
+    @inline(never) func optimizedOperand(_ kind: GesExpression.Kind) -> GesExpression.Kind? {
+        switch kind {
+        case .unary(let op, let a): return changed(a).map { .unary(op, $0) }
+        case .member(let target, let name): return changed(target).map { .member($0, name) }
+        case .cast(let value, let type): return changed(value).map { .cast($0, type) }
+        case .check(let value, let type): return changed(value).map { .check($0, type) }
+        case .predicate(let value, let name): return value.flatMap(changed).map { .predicate($0, name) }
+        default: preconditionFailure()
+        }
+    }
+
+    @inline(never) func optimizedPair(_ kind: GesExpression.Kind) -> GesExpression.Kind? {
+        switch kind {
+        case .binary(let op, let a, let b): return changed(a, b).map { .binary(op, $0.0, $0.1) }
+        case .random(let from, let to): return changed(from, to).map { .random($0.0, $0.1) }
+        case .seeded(let seed, let body): return changed(seed, body).map { .seeded($0.0, $0.1) }
+        default: preconditionFailure()
+        }
+    }
+
+    @inline(never) func optimizedArguments(_ kind: GesExpression.Kind) -> GesExpression.Kind? {
+        switch kind {
+        case .call(let name, let args): return changedArguments(args).map { .call(name, $0) }
+        case .extensionCall(let ns, let name, let args): return changedArguments(args).map { .extensionCall(ns, name, $0) }
+        case .constructor(let type, let args): return changedArguments(args).map { .constructor(type, $0) }
+        case .message(let name, let args): return changedArguments(args).map { .message(name, $0) }
+        default: preconditionFailure()
+        }
+    }
+
+    @inline(never) func optimizedItems(_ kind: GesExpression.Kind) -> GesExpression.Kind? {
+        switch kind {
+        case .between(let a, let b, let c): return changedList([a, b, c]).map { .between($0[0], $0[1], $0[2]) }
+        case .list(let items): return changedList(items).map { .list($0) }
+        case .combined(let mode, let sources): return changedList(sources).map { .combined(mode, $0) }
+        case .intrinsic(let name, let args): return changedList(args).map { .intrinsic(name, $0) }
+        case .map(let entries): return Self.changedMap(entries) { entry in changed(entry.1).map { (entry.0, $0) } }.map { .map($0) }
+        default: preconditionFailure()
+        }
+    }
+
+    // Forms with optional or repeated parts, each rebuilt only when one of them changed.
+    @inline(never) func optimizedClauses(_ kind: GesExpression.Kind) -> GesExpression.Kind? {
+        switch kind {
+        case .send(let publish, let message, let tags, let delay):
+            let value = changed(message)
+            let optimizedTags = changedList(tags)
+            let optimizedDelay = delay.flatMap(changed)
+            guard value != nil || optimizedTags != nil || optimizedDelay != nil else { return nil }
+            return .send(publish, value ?? message, optimizedTags ?? tags, optimizedDelay ?? delay)
+        case .range(let from, let to, let step):
+            let a = changed(from)
+            let b = changed(to)
+            let c = step.flatMap(changed)
+            guard a != nil || b != nil || c != nil else { return nil }
+            return .range(a ?? from, b ?? to, c ?? step)
+        case .choice(let branches, let otherwise):
+            let optimized = Self.changedMap(branches) { branch -> (GesExpression, GesExpression)? in
+                let condition = changed(branch.0)
+                let value = changed(branch.1)
+                guard condition != nil || value != nil else { return nil }
+                return (condition ?? branch.0, value ?? branch.1)
+            }
+            let fallback = changed(otherwise)
+            guard optimized != nil || fallback != nil else { return nil }
+            return .choice(optimized ?? branches, fallback ?? otherwise)
+        case .generated(let a, let b, let source, let flag, let predicate, let projection):
+            let optimizedSource = changed(source)
+            let optimizedPredicate = predicate.flatMap(changed)
+            let optimizedProjection = changed(projection)
+            guard optimizedSource != nil || optimizedPredicate != nil || optimizedProjection != nil else { return nil }
+            return .generated(a, b, optimizedSource ?? source, flag, optimizedPredicate ?? predicate, optimizedProjection ?? projection)
+        default: preconditionFailure()
+        }
+    }
+
+    @inline(never) func optimizedSelector(_ kind: GesExpression.Kind) -> GesExpression.Kind? {
+        guard case .selector(let target, let selector) = kind else { preconditionFailure() }
+        let expressions =
+            selector.operation == "objectMatch"
+            ? Self.changedMap(selector.expressions) { child in
+                let value = pattern(child)
+                return value === child ? nil : value
+            } : changedList(selector.expressions)
+        let optimizedTarget = changed(target)
+        guard expressions != nil || optimizedTarget != nil else { return nil }
+        var optimized = selector
+        if let expressions { optimized.expressions = expressions }
+        return .selector(optimizedTarget ?? target, optimized)
     }
 
     // An object pattern is not a map literal: as in C#, only its entry values are optimized and nested patterns recurse.
@@ -216,7 +262,9 @@ struct GesAstOptimizer {
     }
 
     // Literals keep their source spelling metadata, such as the decimal form that selects continuous random bounds.
-    func fold(_ e: GesExpression) -> GesExpression {
+    // Never inlined, like the child groups: optimized builds would otherwise merge the folding rules into the
+    // recursive frames (nested pipelines at the nesting limit: 176 instead of 144 KB of stack, arm64).
+    @inline(never) func fold(_ e: GesExpression) -> GesExpression {
         if case .literal = e.kind { return e }
         guard let value = Self.evaluate(e), let literal = Self.literal(value, e.location, depth: e.depth) else { return e }
         return literal

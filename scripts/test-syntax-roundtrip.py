@@ -10,7 +10,7 @@ in Unicode scalars. The tokens of a source must cover it without gaps, leading t
 checks before the real observations are judged.
 
 With `--trees`, a port's syntax trees must hold every token exactly once and nest correctly; valid sources must have no
-error nodes and the same tree shape in both ports.
+error nodes, and every source must have the same tree in both ports, error nodes included.
 """
 
 import argparse
@@ -150,11 +150,9 @@ def error_nodes(node):
     return (node[0] == "Error") + sum(error_nodes(child) for child in node[3])
 
 
-def significant_shape(node, tokens):
-    # Node boundaries at their first and last significant token, so ports may consume line breaks at different places.
+def shape(node):
     kind, start, stop, children = node
-    significant = [index for index in range(start, stop) if tokens[index][0] not in ("NewLine", "EndOfFile")]
-    return [kind, significant[0] if significant else None, significant[-1] if significant else None, [significant_shape(child, tokens) for child in children]]
+    return [kind, start, stop, [shape(child) for child in children]]
 
 
 def first_difference(left, right, left_port, right_port, path="CompilationUnit"):
@@ -183,11 +181,11 @@ def tree_problems(sources, lexed, parsed, valid):
             problems += [f"{key} ({port}): {problem}" for problem in node_problems(root, 0, len(tokens), "")]
             if key in valid and error_nodes(root):
                 problems.append(f"{key} ({port}): a valid source has error nodes")
-            shapes[port] = significant_shape(root, tokens)
-        # Sources with syntax errors stop at port-specific tokens until both parsers share their recovery.
-        if key in valid and len(shapes) > 1 and len({json.dumps(shape) for shape in shapes.values()}) > 1:
-            (port, shape), (other, other_shape) = list(shapes.items())[:2]
-            problems.append(f"{key}: the ports build different trees; {first_difference(shape, other_shape, port, other)}")
+            shapes[port] = shape(root)
+        # Both parsers share their recovery, so also sources with syntax errors have equal trees.
+        if len(shapes) > 1 and len({json.dumps(tree) for tree in shapes.values()}) > 1:
+            (port, tree), (other, other_tree) = list(shapes.items())[:2]
+            problems.append(f"{key}: the ports build different trees; {first_difference(tree, other_tree, port, other)}")
     return problems
 
 
@@ -241,6 +239,15 @@ def main():
     valid = {case["id"] + "#" + str(index) for case in request["cases"] if case["kind"] in ("bytecode", "bytecodeSnapshot", "compileMetadata", "scriptApi")
              for index, _ in enumerate(case["sources"])}
     parsed = {port: trees(port, request) for port in args.trees}
+    if len(parsed) > 1:
+        # A node that one port closes a token later must be detected, so equal trees are meaningful.
+        port = next(iter(parsed))
+        key = next(key for key, entry in parsed[port].items() if len(entry["tree"]) > 2)
+        changed = copy.deepcopy(parsed)
+        node = changed[port][key]["tree"][-1]
+        node[1] = node[1] - 1 if node[1] > 0 else node[1] + 1
+        if not tree_problems({key: sources[key]}, observed, {name: {key: data[key]} for name, data in changed.items()}, valid):
+            raise SystemExit("A negative control was not detected by the tree checks.")
     problems += tree_problems(sources, observed, parsed, valid)
     for problem in problems[:40]:
         print(problem)

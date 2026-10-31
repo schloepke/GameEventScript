@@ -78,6 +78,8 @@
     var module = ""
     var diagnostics: [GesSyntaxDiagnostic] = []
     var tree = GesSyntaxTreeBuilder()
+    // Where the open declarations and statements start; a failure turns the innermost one into an error node.
+    var recoveryPoints: [(depth: Int, start: GesSyntaxTreeBuilder.Checkpoint)] = []
     var completedInfixKind = GesSyntaxNodeKind.binaryExpression
     // Set while the brackets after `:has` form an object pattern rather than a collection literal.
     var objectPattern = false
@@ -92,8 +94,13 @@
     @_spi(Syntax) public static func parse(_ text: String) -> GesSyntaxTree {
         let parser = GesSyntaxParser(text)
         do { try parser.parseModule() } catch let failure as Failure {
-            // The nesting limit ends parsing; the syntax errors found before it stay reported.
+            // The nesting limit ends parsing; the syntax errors found before it stay reported. The innermost open
+            // statement or declaration and the rest of the source form one error node.
             parser.diagnostics.append(failure.diagnostic)
+            let (depth, start) = parser.recoveryPoints[parser.recoveryPoints.count - 1]
+            parser.tree.discard(to: depth, start)
+            parser.startNode(at: start, .error)
+            while parser.currentKind != .endOfFile { parser.advance() }
         } catch {}
         return parser.completeTree()
     }
@@ -118,14 +125,20 @@
         return value
     }
 
-    // Recovery skips tokens until a synchronization point; they form one error node.
-    @discardableResult func recover(_ depth: Int, _ synchronize: () -> Bool) -> Bool {
-        tree.finish(to: depth, at: index)
-        startNode(.error)
+    // Recovery skips tokens until a synchronization point. The failed declaration or statement, from its start, and the
+    // skipped tokens form one error node, whatever part of it was parsed before the failure.
+    @discardableResult func recover(_ synchronize: () -> Bool) -> Bool {
+        let (depth, start) = recoveryPoints[recoveryPoints.count - 1]
+        tree.discard(to: depth, start)
+        startNode(at: start, .error)
         let result = synchronize()
         finishNode()
         return result
     }
+
+    func enterRecoveryPoint() { recoveryPoints.append((tree.depth, mark())) }
+
+    func leaveRecoveryPoint() { recoveryPoints.removeLast() }
 
     // Closes the open nodes, attaches the tokens a failure left unread as an error node and ends with endOfFile.
     func completeTree() -> GesSyntaxTree {
@@ -294,6 +307,7 @@
     func parseModule() throws {
         startNode(.compilationUnit)
         separators()
+        enterRecoveryPoint()
         do {
             if currentKind == .module {
                 startNode(.moduleDeclaration)
@@ -306,23 +320,26 @@
             }
         } catch let error as Failure {
             try record(error)
-            recover(1) {
+            recover {
                 synchronizeTopLevel()
                 return true
             }
         }
+        leaveRecoveryPoint()
         separators()
         while currentKind != .endOfFile {
             let declarationStart = index
+            enterRecoveryPoint()
             do { try declaration() } catch let error as Failure {
                 try record(error)
-                recover(1) {
+                recover {
                     // A declaration that fails on its first token must still move on, or recovery would stop there again.
                     if index == declarationStart { advance() }
                     synchronizeTopLevel()
                     return true
                 }
             }
+            leaveRecoveryPoint()
         }
     }
 
@@ -486,15 +503,19 @@
                 try record(failure("Expected '}' before end of input."))
                 return
             }
-            let depth = tree.depth
+            enterRecoveryPoint()
             do {
                 try statement()
                 if currentKind != .rightBrace && currentKind != .newLine && currentKind != .semicolon { throw failure("Expected a statement separator.") }
                 separators()
             } catch let error as Failure {
                 try record(error)
-                if !recover(depth, { synchronizeStatement() }) { return }
+                if !recover({ synchronizeStatement() }) {
+                    leaveRecoveryPoint()
+                    return
+                }
             }
+            leaveRecoveryPoint()
         }
     }
 

@@ -26,7 +26,12 @@ internal sealed partial class GesSyntaxParser
         }
         catch (NestingLimitException)
         {
-            // The nesting limit ends parsing at once; the syntax errors found before it stay reported.
+            // The nesting limit ends parsing at once; the syntax errors found before it stay reported. The innermost
+            // open statement or declaration and the rest of the source form one error node.
+            var (depth, start) = parser._recoveryPoints[^1];
+            parser._tree.DiscardTo(depth, start);
+            parser._tree.StartNodeAt(start, GesSyntaxNodeKind.Error);
+            while (!parser.Is(EndOfFile)) parser.Advance();
         }
 
         return parser.CompleteTree(text);
@@ -35,6 +40,8 @@ internal sealed partial class GesSyntaxParser
     private readonly GesTokenReader _reader;
     private readonly GesSyntaxTreeBuilder _tree;
     private readonly List<GesSyntaxDiagnostic> _errors = [];
+    // Where the open declarations and statements start; a failure turns the innermost one into an error node.
+    private readonly List<(int Depth, GesSyntaxTreeBuilder.Checkpoint Start)> _recoveryPoints = [];
     private string _moduleName = string.Empty;
     private int _expressionNesting;
     private int _statementNesting;
@@ -164,20 +171,27 @@ internal sealed partial class GesSyntaxParser
         return value;
     }
 
-    // Recovery skips tokens until a synchronization point; they form one error node.
-    private bool RecoverInto(int depth, Func<bool> synchronize)
+    // Recovery skips tokens until a synchronization point. The failed declaration or statement, from its start, and the
+    // skipped tokens form one error node, whatever part of it was parsed before the failure.
+    private bool RecoverInto(Func<bool> synchronize)
     {
-        _tree.FinishTo(depth);
-        _tree.StartNode(GesSyntaxNodeKind.Error);
+        var (depth, start) = _recoveryPoints[^1];
+        _tree.DiscardTo(depth, start);
+        _tree.StartNodeAt(start, GesSyntaxNodeKind.Error);
         var result = synchronize();
         _tree.FinishNode();
         return result;
     }
 
+    private void EnterRecoveryPoint() => _recoveryPoints.Add((_tree.Depth, _tree.Mark()));
+
+    private void LeaveRecoveryPoint() => _recoveryPoints.RemoveAt(_recoveryPoints.Count - 1);
+
     private void ParseScript()
     {
         _tree.StartNode(GesSyntaxNodeKind.CompilationUnit);
         SkipStatementSeparators();
+        EnterRecoveryPoint();
         try
         {
             ParseOptionalModuleDeclaration();
@@ -185,13 +199,16 @@ internal sealed partial class GesSyntaxParser
         catch (ParseException ex)
         {
             AddParseError(ex);
-            RecoverInto(1, () => { SynchronizeTopLevel(); return true; });
+            RecoverInto(() => { SynchronizeTopLevel(); return true; });
         }
+
+        LeaveRecoveryPoint();
 
         SkipStatementSeparators();
         while (!Is(EndOfFile))
         {
             var declarationStart = Current;
+            EnterRecoveryPoint();
             try
             {
                 _tree.StartNode(Current.Kind switch
@@ -223,7 +240,7 @@ internal sealed partial class GesSyntaxParser
             catch (ParseException ex)
             {
                 AddParseError(ex);
-                RecoverInto(1, () =>
+                RecoverInto(() =>
                 {
                     // A declaration that fails on its first token must still move on, or recovery would stop there again.
                     if (Current.Line == declarationStart.Line && Current.Column == declarationStart.Column) Advance();
@@ -231,6 +248,8 @@ internal sealed partial class GesSyntaxParser
                     return true;
                 });
             }
+
+            LeaveRecoveryPoint();
         }
     }
 
@@ -454,7 +473,7 @@ internal sealed partial class GesSyntaxParser
                 return;
             }
 
-            var depth = _tree.Depth;
+            EnterRecoveryPoint();
             try
             {
                 ParseStatement();
@@ -463,8 +482,14 @@ internal sealed partial class GesSyntaxParser
             catch (ParseException ex)
             {
                 AddParseError(ex);
-                if (!RecoverInto(depth, () => SynchronizeStatement(closingKind))) return;
+                if (!RecoverInto(() => SynchronizeStatement(closingKind)))
+                {
+                    LeaveRecoveryPoint();
+                    return;
+                }
             }
+
+            LeaveRecoveryPoint();
         }
     }
 

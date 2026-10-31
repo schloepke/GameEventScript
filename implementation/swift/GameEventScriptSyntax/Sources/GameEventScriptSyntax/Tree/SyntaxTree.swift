@@ -72,6 +72,13 @@
         children.append(node)
     }
 
+    /// Drops the nodes opened or completed since the checkpoint, taken at the given depth, so that its tokens can form one
+    /// error node; the tokens themselves stay.
+    @_spi(Syntax) public mutating func discard(to depth: Int, _ checkpoint: Checkpoint) {
+        open.removeSubrange(depth...)
+        children.removeSubrange(checkpoint.child...)
+    }
+
     /// Closes the nodes a failed production left open, down to the depth it started at.
     @_spi(Syntax) public mutating func finish(to depth: Int, at token: Int) {
         while open.count > depth { finishNode(at: token) }

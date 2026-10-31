@@ -160,6 +160,14 @@ internal sealed class GesSyntaxTreeBuilder
         _children.Add(new GesSyntaxNode(kind, firstToken, _tokens.Count, children));
     }
 
+    // Drops the nodes opened or completed since the checkpoint, taken at the given depth, so that its tokens can form one
+    // error node; the tokens themselves stay.
+    internal void DiscardTo(int depth, Checkpoint checkpoint)
+    {
+        _open.RemoveRange(depth, _open.Count - depth);
+        _children.RemoveRange(checkpoint.Child, _children.Count - checkpoint.Child);
+    }
+
     // Closes the nodes a failed production left open, down to the depth it started at.
     internal void FinishTo(int depth)
     {

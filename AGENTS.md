@@ -198,8 +198,11 @@ belongs to the CLI or embedding; the portable compiler accepts source text.
   `parse.sourceNestingExceeded` diagnostics; of each expression it keeps only
   its nesting depth, range and literal shape. The Compiler's `GesSyntaxBinder`
   builds the semantic tree from a tree without errors by reading each node's
-  tokens in parser order. `--trees` checks token coverage, nesting and equal
-  tree shapes of valid sources in both ports.
+  tokens in parser order. A declaration or statement with a syntax error
+  becomes one error node from its start through the recovery point; a
+  nesting-limit stop turns the innermost open statement and the rest of the
+  source into one. `--trees` checks token coverage, nesting and identical
+  trees, error nodes included, for every source in both ports.
 - Module identifiers are dot-separated lowercase components with optional
   digits.
 - `constant $name be LITERAL` declares a program-wide compile-time scalar.

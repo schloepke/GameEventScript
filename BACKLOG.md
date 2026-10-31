@@ -205,13 +205,12 @@ here.
     builds the semantic tree from the syntax tree. Before the old parsers were
     removed, both pipelines produced identical semantic trees, diagnostics and
     syntax trees on the whole corpus and on generated nesting-limit sources.
-    Syntax diagnostics live in Syntax and the Compiler converts them. Next:
-    trees of sources with syntax errors become equal across ports with the
-    shared recovery.
-  - Parser: builds the immutable lossless tree with recovery, missing and
-    skipped tokens and error nodes carrying one diagnostic each; a binder in
-    the Compiler produces the existing semantic tree, so optimizer, lowering
-    and Programs stay byte-identical. Keep the stack-safe recursion structure.
+    Syntax diagnostics live in Syntax and the Compiler converts them.
+  - Done: both parsers recover alike: a failed declaration or statement
+    becomes one error node from its start, so every corpus source has the
+    same tree in both ports, error nodes included.
+  - Parser (remaining): error nodes carry their diagnostic, for the
+    highlighter's error spans. Keep the stack-safe recursion structure.
   - Validator: single-source checks (naming, duplicates, shadowing, constants,
     labels, nesting) move into Syntax; checks across sources and catalogs stay
     in the Compiler and read a source-neutral declaration set, so external

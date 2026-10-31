@@ -1,7 +1,7 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
-/// Reusable GES/GESA highlighting from the lossless syntax tree, without a Compiler, Runtime, UI or terminal dependency.
+/// Reusable GES, GESA and GES document highlighting, without a Compiler, Runtime, UI or terminal dependency.
 public final class GesSyntaxHighlighter: Sendable {
     /// The language this highlighter reads.
     public let language: GesSyntaxLanguage
@@ -17,13 +17,18 @@ public final class GesSyntaxHighlighter: Sendable {
     }
 
     /// Highlights a complete document, preserving CR, LF, CRLF and all UTF-16 offsets. Invalid source remains
-    /// highlightable; GES diagnostics report its syntax errors or, without those, its violated single-source rules.
+    /// highlightable; GES diagnostics report its syntax errors or, without those, its violated single-source rules, and
+    /// GES document diagnostics its first document error.
     public func highlight(_ text: String) -> GesHighlightResult {
         guard text.utf16.count <= maxInputLength else { return .init(spans: [], diagnostics: [], isComplete: false) }
         var spans = GesSpanBuilder(Array(text.utf8))
         if language == .ges {
             var diagnostics: [GesSpanBuilder.Diagnostic] = []
             GesSourceHighlighting.highlight(text, offset: 0, &spans, diagnostics: &diagnostics)
+            return spans.finish(diagnostics)
+        }
+        if language == .gesd {
+            let diagnostics = GesDocumentHighlighting.highlight(text, &spans)
             return spans.finish(diagnostics)
         }
         GesAssemblyHighlighting.highlight(&spans)

@@ -259,6 +259,15 @@ def main():
         case["id"] = f"syntax.highlighting/case-{index:02d}"
         case["sources"] = [{"name": "highlighting." + highlight["language"], "program": "main", "text": highlight["source"]}]
         request["cases"].append(case)
+    # The texts of the document cases take part as GES documents.
+    documents = [case for case in read_corpus(sorted((ROOT / "conformance/suites").rglob("*.md"))) if case.kind == "documentApi"]
+    for document in requests(documents)["cases"]:
+        if "text" not in document.get("api", {}):
+            continue
+        case = copy.deepcopy(template)
+        case["id"] = document["id"]
+        case["sources"] = [{"name": "document.gesd", "program": "main", "text": document["api"]["text"]}]
+        request["cases"].append(case)
     sources = {case["id"] + "#" + str(index): source["text"] for case in request["cases"] for index, source in enumerate(case["sources"])}
 
     observed = {}

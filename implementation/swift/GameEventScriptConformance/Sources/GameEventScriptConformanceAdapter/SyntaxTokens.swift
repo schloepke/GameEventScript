@@ -31,7 +31,8 @@ enum SyntaxTokens {
                 let text = try source.text("text")
                 let tree = GesProgramBuilder.syntaxTree(text)
                 let fragment = GesSyntaxParser.parse(text, fragment: true)
-                let language: GesSyntaxLanguage = (try? source.text("name"))?.hasSuffix(".gesa") == true ? .gesa : .ges
+                let sourceName = (try? source.text("name")) ?? ""
+                let language: GesSyntaxLanguage = sourceName.hasSuffix(".gesa") ? .gesa : sourceName.hasSuffix(".gesd") ? .gesd : .ges
                 let highlight = try GesSyntaxHighlighter(language: language, maxInputLength: Int.max).highlight(text)
                 let offsets = scalarOffsets(text)
                 sources[id + "#" + String(index)] = [

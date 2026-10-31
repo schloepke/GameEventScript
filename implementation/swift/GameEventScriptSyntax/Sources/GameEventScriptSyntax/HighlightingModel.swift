@@ -7,6 +7,8 @@ public enum GesSyntaxLanguage: String, Sendable {
     case ges
     /// GESA assembler with embedded GES source regions.
     case gesa
+    /// GES document data (`.gesd`) with its schema header; diagnostics report its first document error.
+    case gesd
 }
 
 /// Theme-independent categories the highlighter derives from the syntax tree; these are not compiler tokens.

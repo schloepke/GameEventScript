@@ -17,14 +17,14 @@ public sealed class HighlightingTests
     {
         var markdown = File.ReadAllText(Path.Combine(TestRepositoryPaths.Root, "conformance/highlighting/SyntaxHighlighting.md"));
         var cases = Regex.Matches(markdown, "```highlight\\s*\\n(.*?)\\n```", RegexOptions.Singleline);
-        Assert.IsGreaterThanOrEqualTo(36, cases.Count);
+        Assert.IsGreaterThanOrEqualTo(46, cases.Count);
         foreach (Match match in cases)
         {
             using var json = JsonDocument.Parse(match.Groups[1].Value);
             var data = json.RootElement;
             var name = data.GetProperty("name").GetString()!;
             var source = data.GetProperty("source").GetString()!;
-            var language = data.GetProperty("language").GetString() == "ges" ? GesSyntaxLanguage.Ges : GesSyntaxLanguage.Gesa;
+            var language = data.GetProperty("language").GetString() switch { "ges" => GesSyntaxLanguage.Ges, "gesd" => GesSyntaxLanguage.Gesd, _ => GesSyntaxLanguage.Gesa };
             var result = new GesSyntaxHighlighter(language).Highlight(source);
             Assert.IsTrue(result.IsComplete, name);
             var units = Expand(result.Spans, source.Length);

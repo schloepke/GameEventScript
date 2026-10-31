@@ -6,7 +6,7 @@ using System.Collections.Generic;
 
 namespace GameEventScript.Syntax;
 
-/// <summary>Reusable GES/GESA highlighting from the lossless syntax tree, without a Compiler, Runtime, UI or terminal dependency.</summary>
+/// <summary>Reusable GES, GESA and GES document highlighting, without a Compiler, Runtime, UI or terminal dependency.</summary>
 public sealed class GesSyntaxHighlighter
 {
     /// <summary>The language this highlighter reads.</summary>
@@ -18,7 +18,7 @@ public sealed class GesSyntaxHighlighter
     /// <exception cref="ArgumentOutOfRangeException">The language is unknown or maxInputLength is not positive.</exception>
     public GesSyntaxHighlighter(GesSyntaxLanguage language = GesSyntaxLanguage.Ges, int maxInputLength = 262144)
     {
-        if (language is not (GesSyntaxLanguage.Ges or GesSyntaxLanguage.Gesa)) throw new ArgumentOutOfRangeException(nameof(language));
+        if (language is not (GesSyntaxLanguage.Ges or GesSyntaxLanguage.Gesa or GesSyntaxLanguage.Gesd)) throw new ArgumentOutOfRangeException(nameof(language));
         if (maxInputLength <= 0) throw new ArgumentOutOfRangeException(nameof(maxInputLength));
         Language = language;
         MaxInputLength = maxInputLength;
@@ -26,7 +26,8 @@ public sealed class GesSyntaxHighlighter
 
     /// <summary>
     /// Highlights a complete document, preserving CR, LF, CRLF and all UTF-16 offsets. Invalid source remains highlightable;
-    /// GES diagnostics report its syntax errors or, without those, its violated single-source rules.
+    /// GES diagnostics report its syntax errors or, without those, its violated single-source rules, and GES document
+    /// diagnostics its first document error.
     /// </summary>
     /// <exception cref="ArgumentNullException">text is null.</exception>
     /// <exception cref="ArgumentException">text contains an unpaired UTF-16 surrogate.</exception>
@@ -38,6 +39,7 @@ public sealed class GesSyntaxHighlighter
         var spans = new GesSpanBuilder();
         var diagnostics = new List<GesHighlightDiagnostic>();
         if (Language == GesSyntaxLanguage.Ges) GesSourceHighlighting.Highlight(text, 0, spans, diagnostics);
+        else if (Language == GesSyntaxLanguage.Gesd) GesDocumentHighlighting.Highlight(text, spans, diagnostics);
         else GesAssemblyHighlighting.Highlight(text, spans);
         return new GesHighlightResult(spans.Finish(text.Length, diagnostics), diagnostics.ToArray(), true);
     }

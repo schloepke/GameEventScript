@@ -10,7 +10,7 @@ using GameEventScript.Syntax;
 internal static class SyntaxTokens
 {
     // Parses every source; the lossless syntax tree also exists for sources with errors. A source named `*.gesa` is
-    // highlighted as GESA.
+    // highlighted as GESA and one named `*.gesd` as a GES document.
     internal static object RunTrees(JsonElement cases)
     {
         var sources = new Dictionary<string, object>(StringComparer.Ordinal);
@@ -23,7 +23,9 @@ internal static class SyntaxTokens
                 var tree = GesSyntaxParser.Parse(text);
 
                 var fragment = GesSyntaxParser.Parse(text, fragment: true);
-                var language = source.TryGetProperty("name", out var name) && name.GetString()!.EndsWith(".gesa", StringComparison.Ordinal) ? GesSyntaxLanguage.Gesa : GesSyntaxLanguage.Ges;
+                var sourceName = source.TryGetProperty("name", out var name) ? name.GetString()! : "";
+                var language = sourceName.EndsWith(".gesa", StringComparison.Ordinal) ? GesSyntaxLanguage.Gesa
+                    : sourceName.EndsWith(".gesd", StringComparison.Ordinal) ? GesSyntaxLanguage.Gesd : GesSyntaxLanguage.Ges;
                 var highlight = new GesSyntaxHighlighter(language, int.MaxValue).Highlight(text);
                 var scalarOffsets = ScalarOffsets(text);
                 sources[test.GetProperty("id").GetString()! + "#" + index++] = new

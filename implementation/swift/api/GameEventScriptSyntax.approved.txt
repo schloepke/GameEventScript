@@ -36,6 +36,7 @@ symbol {"access":"public","declaration":"case degreePerSecond","kind":"swift.enu
 symbol {"access":"public","declaration":"case function","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesSyntaxKind.function"}
 symbol {"access":"public","declaration":"case ges","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesSyntaxLanguage.ges"}
 symbol {"access":"public","declaration":"case gesa","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesSyntaxLanguage.gesa"}
+symbol {"access":"public","declaration":"case gesd","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesSyntaxLanguage.gesd"}
 symbol {"access":"public","declaration":"case hertz","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesQuantityUnit.hertz"}
 symbol {"access":"public","declaration":"case identifier","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesSyntaxKind.identifier"}
 symbol {"access":"public","declaration":"case invalidAnsiColor","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesHighlightingError.invalidAnsiColor"}

@@ -7,21 +7,23 @@
 
 This document owns the structure of the Syntax module that both ports share:
 its dependencies, the lossless token stream, the syntax tree with error nodes,
-name roles, fragment parsing and the split between single-source and
-program-wide validation. The grammar itself is owned by
-[Language](Language.md); diagnostic codes, recovery points and diagnostic
-positions by [Diagnostics](Diagnostics.md); highlighting by
-[Syntax highlighting](SyntaxHighlighting.md).
+name roles, fragment parsing, the split between single-source and
+program-wide validation, and the split of document reading between Syntax and
+Runtime. The grammar itself is owned by [Language](Language.md); diagnostic
+codes, recovery points and diagnostic positions by
+[Diagnostics](Diagnostics.md); documents by [Documents](Documents.md);
+highlighting by [Syntax highlighting](SyntaxHighlighting.md).
 
-The lexer, parser, tree and validator are internal to the module. Their public
-results are the Compiler's diagnostics and the highlighter's spans; the rules
+The lexer, parser, tree, validator and document reader are internal to the
+module. Their public results are the Compiler's diagnostics, document errors
+and the highlighter's spans; the rules
 below make those results equal across ports.
 
 ## Dependencies
 
 Syntax depends on no other GES module and no third-party package. Runtime
-builds on it for the Quantity unit table and the text, number-text and name
-rules; the Compiler builds on it for lexing, parsing and single-source
+builds on it for the Quantity unit table, the text, number-text and name
+rules, the explicit form parameters and the document reader; the Compiler builds on it for lexing, parsing and single-source
 validation. In Swift, Syntax, Runtime and Compiler import only each other and
 the platform's C library, never Foundation.
 
@@ -89,13 +91,25 @@ the rules that need other sources, the external catalog or the host, and
 reports both groups in the order
 [Diagnostics](Diagnostics.md#compiler-diagnostic-collection) defines.
 
+## Documents
+
+The Syntax module also reads [GES documents](Documents.md). Its reader
+recognizes the schema header, entries, separators, comments and every data
+literal, reports the first reading error with its code and position, and
+builds a value tree of scalars, containers and explicit forms. Runtime builds
+the document value from that tree and constructs the explicit forms, which
+reports construction errors and the Range materialization total. The
+recognition of number text and the parameters of the explicit forms live in
+Syntax and are shared with Runtime's `parse`.
+
 ## Verification
 
 `scripts/test-syntax-roundtrip.py` requires that each port's tokens reproduce
 every corpus source and that both ports produce equal token streams. With
 `--trees` it also requires equal trees, error nodes, roles and diagnostic
 ranges, equal fragment trees and equal highlighting for every source in both
-ports, including sources at the nesting limits.
+ports, including sources at the nesting limits, and equal document
+highlighting and diagnostics for the texts of the document suite.
 `scripts/verify-swift-portable-imports.py` rejects other imports and remote
 package dependencies in those three Swift packages; its controls are
 `scripts/test-swift-portable-imports.py`.

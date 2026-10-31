@@ -5,9 +5,10 @@
 
 > **Since: Unreleased**
 
-`GameEventScriptSyntax` is the SwiftPM module with the GES lexer, parser and
-single-source validator that Runtime and Compiler build on. For editors and
-terminals it highlights GES and GESA from the lossless syntax tree, without
+`GameEventScriptSyntax` is the SwiftPM module with the GES lexer, parser,
+single-source validator and GES document reader that Runtime and Compiler build
+on. For editors and terminals it highlights GES and GESA from the lossless syntax
+tree and GES documents (`.gesd`) with their first document error, without
 Foundation, AppKit, UIKit, Compiler or Runtime dependency, alike to the C#
 package. The public repository-root package exports this product; this directory
 is its standalone development package.

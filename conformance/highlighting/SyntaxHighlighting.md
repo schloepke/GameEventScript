@@ -160,3 +160,43 @@ and ANSI text preservation.
 ```highlight
 {"name":"assembler text with line breaks and regions","language":"gesa","source":".region \"Text\"\n.segment text\nT_note:             .text \"first\nNULL: second\"\nT_x:                .text \"x\"\n.region-end \"Text\"\n","expect":[{"text":".region \"Text\"","kind":"comment"},{"text":".text","kind":"keyword"},{"text":"\"first\nNULL: second\"","kind":"string"},{"text":"T_x","kind":"label"},{"text":".region-end \"Text\"","kind":"comment"}]}
 ```
+
+```highlight
+{"name": "document header keys and scalars", "language": "gesd", "source": ":Schema(:DriveUnit)\n// Engine and gearbox\nid: 'drive.tracked.basic'\nkind: #drive\ntier: 1\nmaxSpeed: 10m/s\nefficiency: 90%\nready: true\n", "expect": [{"text": ":Schema", "kind": "keyword"}, {"text": ":DriveUnit", "kind": "type"}, {"text": "// Engine and gearbox", "kind": "comment"}, {"text": "id", "kind": "identifier"}, {"text": ":", "kind": "symbol", "occurrence": 2}, {"text": "'drive.tracked.basic'", "kind": "string"}, {"text": "#drive", "kind": "tag"}, {"text": "1", "kind": "number"}, {"text": "10m/s", "kind": "number"}, {"text": "90%", "kind": "number"}, {"text": "true", "kind": "keyword"}], "diagnostics": []}
+```
+
+```highlight
+{"name": "document containers and forms", "language": "gesd", "source": "cost: [buildCost: 80, 'weight': 550kg]\nmount: :Vector(x: 0m, y: -0.8m)\nrolls: :Dice[6, 3]\nrange: :Range(from: 1, to: 5)\nseries: :Series(fibonacci)\n", "expect": [{"text": "[", "kind": "symbol"}, {"text": "buildCost", "kind": "identifier"}, {"text": "'weight'", "kind": "string"}, {"text": "550kg", "kind": "number"}, {"text": ":Vector", "kind": "type"}, {"text": "x", "kind": "identifier", "occurrence": 0}, {"text": "-0.8m", "kind": "number"}, {"text": ":Dice", "kind": "type"}, {"text": "6", "kind": "number"}, {"text": "from", "kind": "identifier"}, {"text": "fibonacci", "kind": "builtin"}], "diagnostics": []}
+```
+
+```highlight
+{"name": "document messages and handlers", "language": "gesd", "source": "done: :Message(Done(v: 1) with #a)\non: :Handler(Done(v, _))\n", "expect": [{"text": ":Message", "kind": "type"}, {"text": "Done", "kind": "message"}, {"text": "v", "kind": "identifier"}, {"text": "with", "kind": "keyword"}, {"text": "#a", "kind": "tag"}, {"text": ":Handler", "kind": "type"}, {"text": "Done", "kind": "message", "occurrence": 1}, {"text": "v", "kind": "identifier", "occurrence": 1}, {"text": "_", "kind": "identifier"}], "diagnostics": []}
+```
+
+```highlight
+{"name": "document unquoted text", "language": "gesd", "source": "name: Basic Track Drive\n", "expect": [{"text": "name", "kind": "identifier"}, {"text": "Basic", "kind": "plain"}], "diagnostics": [{"code": "document.unquotedText", "text": "Basic"}]}
+```
+
+```highlight
+{"name": "document unknown unit and comment end", "language": "gesd", "source": "cooling: 2   // per second\nspeed: 12furlongs// note\n", "expect": [{"text": "// per second", "kind": "comment"}, {"text": "12furlongs", "kind": "number"}, {"text": "// note", "kind": "comment"}], "diagnostics": [{"code": "document.unknownUnit", "text": "12furlongs"}]}
+```
+
+```highlight
+{"name": "document unclosed bracket and duplicate key", "language": "gesd", "source": "a: 1\na: [1,\n  2\n", "expect": [{"text": "a", "kind": "identifier", "occurrence": 1}], "diagnostics": [{"code": "document.duplicateKey", "text": "a", "occurrence": 1}]}
+```
+
+```highlight
+{"name": "document unclosed list", "language": "gesd", "source": "items: [1, 2\n", "expect": [{"text": "[", "kind": "symbol"}], "diagnostics": [{"code": "document.unclosedBracket", "text": "["}]}
+```
+
+```highlight
+{"name": "document missing colon at a line break", "language": "gesd", "source": "tier 1\n", "expect": [{"text": "tier", "kind": "plain"}], "diagnostics": [{"code": "document.missingColon", "text": "tier ", "after": true, "length": 1}]}
+```
+
+```highlight
+{"name": "document unknown type and misplaced header", "language": "gesd", "source": "hit: :Hit(5)\n", "expect": [{"text": ":Hit", "kind": "type"}], "diagnostics": [{"code": "document.unknownType", "text": ":Hit"}]}
+```
+
+```highlight
+{"name": "document unclosed text runs to the end", "language": "gesd", "source": "\ufeffname: 'open\nnext: 1\n", "expect": [{"text": "'open\nnext: 1\n", "kind": "string"}], "diagnostics": [{"code": "document.unclosedText", "text": "'"}]}
+```

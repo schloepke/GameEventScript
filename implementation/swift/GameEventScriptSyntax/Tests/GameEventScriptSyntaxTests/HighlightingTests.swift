@@ -15,13 +15,13 @@ final class HighlightingTests: XCTestCase {
         let markdown = try String(contentsOf: root.appendingPathComponent("conformance/highlighting/SyntaxHighlighting.md"), encoding: .utf8) as NSString
         let regex = try NSRegularExpression(pattern: "```highlight\\s*\\n(.*?)\\n```", options: [.dotMatchesLineSeparators])
         let cases = regex.matches(in: markdown as String, range: NSRange(location: 0, length: markdown.length))
-        XCTAssertGreaterThanOrEqual(cases.count, 36)
+        XCTAssertGreaterThanOrEqual(cases.count, 46)
         for match in cases {
             let data = try JSONSerialization.jsonObject(with: Data(markdown.substring(with: match.range(at: 1)).utf8)) as! [String: Any]
             let name = data["name"] as! String
             let source = data["source"] as! String
             let length = (source as NSString).length
-            let result = try GesSyntaxHighlighter(language: data["language"] as! String == "ges" ? .ges : .gesa).highlight(source)
+            let result = try GesSyntaxHighlighter(language: GesSyntaxLanguage(rawValue: data["language"] as! String)!).highlight(source)
             XCTAssertTrue(result.isComplete, name)
             guard result.isComplete else { continue }
             let units = expand(result.spans, length: length)

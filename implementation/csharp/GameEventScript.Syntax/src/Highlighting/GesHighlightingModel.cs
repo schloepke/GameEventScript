@@ -12,7 +12,9 @@ public enum GesSyntaxLanguage
     /// <summary>Game Event Script source, including incomplete editor input.</summary>
     Ges,
     /// <summary>GESA assembler with embedded GES source regions.</summary>
-    Gesa
+    Gesa,
+    /// <summary>GES document data (<c>.gesd</c>) with its schema header; diagnostics report its first document error.</summary>
+    Gesd
 }
 
 /// <summary>Theme-independent categories the highlighter derives from the syntax tree; these are not compiler tokens.</summary>

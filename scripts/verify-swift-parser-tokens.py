@@ -14,8 +14,8 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-CSHARP = ROOT / "implementation/csharp/GameEventScript.Compiler/src/Compiler/GesParser.cs"
-SWIFT = ROOT / "implementation/swift/GameEventScriptCompiler/Sources/GameEventScriptCompiler/ParserExpressions.swift"
+CSHARP = ROOT / "implementation/csharp/GameEventScript.Syntax/src/Parsing/GesSyntaxParser.cs"
+SWIFT = ROOT / "implementation/swift/GameEventScriptSyntax/Sources/GameEventScriptSyntax/Parsing/SyntaxParserExpressions.swift"
 
 
 def lower(name):
@@ -23,7 +23,7 @@ def lower(name):
 
 
 def csharp_kinds(text, method):
-    match = re.search(r"private static bool " + method + r"\(GesTokenKind kind\)\s*=>\s*kind is ([^;]+);", text, re.S)
+    match = re.search(r"(?:private|internal) static bool " + method + r"\(GesTokenKind kind\)\s*=>\s*kind is ([^;]+);", text, re.S)
     if not match:
         raise RuntimeError(f"Missing C# {method}")
     return {lower(name) for name in re.split(r"\s+or\s+", match[1].strip())} - {"identifier"}

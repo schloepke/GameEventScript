@@ -96,6 +96,31 @@ internal static class GesText
     internal static bool IsTypeName(string value)
         => IsUpperName(value);
 
+    // The canonical name of a source type name without its colon; built-in types are lowercase, such as `number`.
+    internal static string CanonicalTypeName(string typeName) => typeName switch
+    {
+        "Record" => "record",
+        "Nothing" => "nothing",
+        "Boolean" => "boolean",
+        "Number" => "number",
+        "Percentage" => "percentage",
+        "Vector" => "vector",
+        "Point" => "point",
+        "Series" => "series",
+        "Range" => "range",
+        "Message" => "message",
+        "Handler" => "handler",
+        "Tag" => "tag",
+        "Text" => "text",
+        "List" => "list",
+        "Map" => "map",
+        "Dice" => "dice",
+        _ => typeName
+    };
+
+    // The built-in endpoints a handler may name instead of a message.
+    internal static bool IsSystemEndpointName(string value) => value is "initialization" or "undeliverable";
+
     internal static bool IsModuleName(string value)
     {
         if (value.Length == 0) return false;

@@ -117,7 +117,7 @@ extension GesCompiler {
             }
             // As C#: BindHandler emits under the line's range; other operands lower with their own range.
             let operand = line.operands[1]
-            _ = try expression(line.name == "BindHandler" ? GesExpression(operand.kind, line.location, depth: operand.depth) : operand, r, scope, destination: regs[0])
+            _ = try expression(line.name == "BindHandler" ? GesExpression(operand.kind, line.location) : operand, r, scope, destination: regs[0])
             return true
         }
         return false

@@ -562,14 +562,7 @@ internal sealed partial class GesSyntaxBinder
         }
     }
 
-    private static bool IsArgumentLabelKind(GesTokenKind kind)
-        => kind is Identifier or To or Nothing or MathConstantPi or MathConstantE or MathConstantTau or MathConstantInfinity or
-            IntrinsicAbs or IntrinsicLn or IntrinsicExp or IntrinsicSqrt or IntrinsicCbrt or IntrinsicChance or
-            IntrinsicFloor or IntrinsicCeil or IntrinsicTruncate or IntrinsicRad or IntrinsicDeg or IntrinsicWrap or IntrinsicRound or
-            IntrinsicSin or IntrinsicCos or IntrinsicTan or IntrinsicAsin or IntrinsicAcos or IntrinsicAtan or IntrinsicAtan2 or
-            IntrinsicHypot or IntrinsicDistance or IntrinsicSquared or IntrinsicLength or IntrinsicNormalize or IntrinsicDot or IntrinsicCross or IntrinsicAngle;
-
-    private static bool IsLabelStart(ref Cursor c) => c.IsOwnToken && IsArgumentLabelKind(c.Current.Kind) && c.PeekSignificant(1).Kind == Colon;
+    private static bool IsLabelStart(ref Cursor c) => c.IsOwnToken && GesSyntaxParser.IsArgumentLabelKind(c.Current.Kind) && c.PeekSignificant(1).Kind == Colon;
 
     private GesArgumentNode BindArgument(GesSyntaxNode node)
     {
@@ -941,7 +934,7 @@ internal sealed partial class GesSyntaxBinder
         return Set(new GesHandlerLiteralExpressionNode(start.Text, parameters), start, c.Previous);
     }
 
-    // Parentheses leave no semantic node; they count toward the source nesting depth.
+    // Parentheses leave no semantic node; the enclosed expression keeps its own range.
     private GesExpressionNode BindParenthesized(GesSyntaxNode node)
     {
         var c = new Cursor(this, node);
@@ -950,8 +943,7 @@ internal sealed partial class GesSyntaxBinder
         var expression = Expression(ref c);
         c.SkipNewLines();
         c.Expect(RightParen);
-        var nested = expression with { SourceNesting = expression.SourceNesting + 1 };
-        return Set(nested, nested.SourceRange);
+        return expression;
     }
 
     // A send statement owns the emit or publish keyword of its delayed send; a send expression starts with it.

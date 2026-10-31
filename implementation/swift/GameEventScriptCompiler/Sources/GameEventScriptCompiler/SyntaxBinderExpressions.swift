@@ -28,7 +28,7 @@ extension GesSyntaxBinder {
         case .nothing: return node(.literal(.nothing), token, token)
         case .identifier: return node(.name(token.text), token, token)
         default:
-            guard let constant = GesParser.mathConstants[token.kind] else { throw Mismatch(token: 0) }
+            guard let constant = Self.mathConstants[token.kind] else { throw Mismatch(token: 0) }
             return node(.literal(.float(constant)), token, token)
         }
     }
@@ -92,7 +92,7 @@ extension GesSyntaxBinder {
             try c.newlines()
             try c.expect(.otherwise)
             let fallback = try expression(&c)
-            return .init(.choice(branches, fallback), location(start, c.previous), depth: choiceDepth(branches, fallback))
+            return .init(.choice(branches, fallback), location(start, c.previous))
         }
         var b = cursor(try c.takeNode(.choiceBranch))
         let first = try expression(&b)
@@ -111,13 +111,7 @@ extension GesSyntaxBinder {
         try c.newlines()
         try c.expect(.otherwise)
         let fallback = try expression(&c)
-        let result = combined(.choice(branches, fallback), first, fallback, c.previous)
-        result.depth = choiceDepth(branches, fallback)
-        return result
-    }
-
-    func choiceDepth(_ branches: [(GesExpression, GesExpression)], _ fallback: GesExpression) -> Int {
-        branches.reduce(fallback.depth) { max($0, max($1.0.depth, $1.1.depth)) } + 1
+        return combined(.choice(branches, fallback), first, fallback, c.previous)
     }
 
     func binary(_ binary: GesSyntaxNode) throws -> GesExpression {
@@ -202,9 +196,7 @@ extension GesSyntaxBinder {
             try c.expect(.operatorAnd)
             try c.newlines()
             let maximum = try expression(&c)
-            let value = combined(.between(input, minimum, maximum), input, maximum, c.previous)
-            value.depth = max(value.depth, minimum.depth + 1)
-            return value
+            return combined(.between(input, minimum, maximum), input, maximum, c.previous)
         }
         if try c.matchWord("at") {
             let op: GesBinaryOperator = try c.advance().text == "least" ? .greaterOrEqual : .lessOrEqual
@@ -241,15 +233,15 @@ extension GesSyntaxBinder {
     func unary(_ unary: GesSyntaxNode) throws -> GesExpression {
         var c = cursor(unary)
         let start = c.current
-        if GesParser.prefixOperators.contains(start.kind) {
+        if Self.prefixOperators.contains(start.kind) {
             let op = try c.advance().kind
             // `strict` directly after `parse` is the mode word.
             var strict = false
             if op == .keywordParse { strict = try c.matchWord("strict") }
             let operation: GesUnaryOperator = op == .operatorMinus ? .negate : op == .keywordParse ? (strict ? .parseStrict : .parse) : op == .empty ? .empty : .not
             let value = try expression(&c)
-            // From the operator to the last consumed token; the parser ranges it from a placeholder of depth one.
-            return .init(.unary(operation, value), location(start, c.previous), depth: 2)
+            // From the operator to the last consumed token.
+            return .init(.unary(operation, value), location(start, c.previous))
         }
         var op = try c.advance().text
         try c.newlines()
@@ -274,7 +266,7 @@ extension GesSyntaxBinder {
         }
         if op == "sqrt" || op == "cbrt" {
             let exponent = node(.literal(.float(op == "sqrt" ? 0.5 : 1.0 / 3)), start, c.previous)
-            return .init(.binary(.power, value, exponent), location(start, c.previous), depth: 2)
+            return .init(.binary(.power, value, exponent), location(start, c.previous))
         }
         guard let operation = GesUnaryOperator(prefixText: op) else { throw Mismatch(token: unary.firstToken) }
         return node(.unary(operation, value), start, c.previous)
@@ -379,7 +371,7 @@ extension GesSyntaxBinder {
         var c = cursor(argument)
         let start = c.current
         var label = "_"
-        if c.isOwnToken, c.current.kind == .identifier || GesParser.labelKeywords.contains(c.current.kind), c.peekSignificant(1).kind == .colon {
+        if c.isOwnToken, c.current.kind == .identifier || GesSyntaxParser.labelKeywords.contains(c.current.kind), c.peekSignificant(1).kind == .colon {
             label = try c.advance().text
             try c.newlines()
             try c.expect(.colon)
@@ -641,14 +633,13 @@ extension GesSyntaxBinder {
         return node(.handler(start.text, try parameters(&c, allowType: false)), start, c.previous)
     }
 
-    // Parentheses leave no semantic node; they count toward the depth of the enclosed expression.
+    // Parentheses leave no semantic node; the enclosed expression keeps its own range.
     func parenthesized(_ parenthesized: GesSyntaxNode) throws -> GesExpression {
         var c = cursor(parenthesized)
         try c.expect(.leftParen)
         let result = try expression(&c)
         try c.newlines()
         try c.expect(.rightParen)
-        result.depth += 1
         return result
     }
 
@@ -678,7 +669,7 @@ extension GesSyntaxBinder {
             try c.newlines()
             var s = cursor(try c.takeNode(.collectionSelector))
             let start = s.current
-            if s.isOwnToken && start.kind == .selector && GesParser.combinedSelectors.contains(start.text) {
+            if s.isOwnToken && start.kind == .selector && Self.combinedSelectors.contains(start.text) {
                 let operation = String(try s.advance().text.dropFirst())
                 try s.newlines()
                 var sources = result.map { [$0] } ?? []
@@ -687,9 +678,7 @@ extension GesSyntaxBinder {
                     try s.newlines()
                     sources.append(try expression(&s))
                 }
-                let combinedResult = node(.combined(operation == "zip" ? "lockstep" : operation, sources), start, s.previous)
-                combinedResult.depth = (sources.map(\.depth).max() ?? 0) + 1
-                result = combinedResult
+                result = node(.combined(operation == "zip" ? "lockstep" : operation, sources), start, s.previous)
             } else if try s.matchSelector(":split") {
                 guard let input = result else { throw Mismatch(token: s.position) }
                 try s.newlines()
@@ -703,7 +692,7 @@ extension GesSyntaxBinder {
                 let selector = try self.selector(&s)
                 let access = combined(.selector(input, selector), input, nil, s.previous)
                 // The object-pattern selector has no range, which leaves the whole access without one.
-                result = selector.operation == "objectMatch" ? GesExpression(access.kind, GesAstOptimizer.noRange(access.location), depth: access.depth) : access
+                result = selector.operation == "objectMatch" ? GesExpression(access.kind, GesAstOptimizer.noRange(access.location)) : access
             }
             try c.newlines()
         } while c.isNode(.collectionSelector)

@@ -192,10 +192,14 @@ belongs to the CLI or embedding; the portable compiler accepts source text.
   exactly. Numeric token values stay in the Compiler. `python3
   scripts/test-syntax-roundtrip.py` checks coverage on every corpus source and
   equal token streams of both ports; `test-swift.sh` runs it, C# CI with
-  `--port csharp`. Both parsers also build the lossless syntax tree, and a
-  Compiler binder (C# `GesSyntaxBinder`, Swift `GesSyntaxBinder`) rebuilds the
-  semantic tree from it by reading each node's tokens in the parser's order;
-  `--trees` and `--binding` check the trees and the binder against the parser.
+  `--port csharp`.
+- The parser (`GesSyntaxParser`) also lives in Syntax. It builds the lossless
+  syntax tree with error nodes and reports `parse.syntax` and
+  `parse.sourceNestingExceeded` diagnostics; of each expression it keeps only
+  its nesting depth, range and literal shape. The Compiler's `GesSyntaxBinder`
+  builds the semantic tree from a tree without errors by reading each node's
+  tokens in parser order. `--trees` checks token coverage, nesting and equal
+  tree shapes of valid sources in both ports.
 - Module identifiers are dot-separated lowercase components with optional
   digits.
 - `constant $name be LITERAL` declares a program-wide compile-time scalar.
@@ -413,8 +417,8 @@ Reader/Writer, GESA dumping, serial host lifecycle, the register VM, private
 random streams/scopes, extensions/external types, and runtime literal parsing.
 Runtime remains independent of Conformance and Compiler. The separate
 `implementation/swift/GameEventScriptCompiler` package depends only on Runtime
-and implements source parsing, validation, lowering, optimization, register
-allocation and Program generation. Conformance depends on both packages.
+and implements binding of the Syntax parser's tree, validation, lowering,
+optimization, register allocation and Program generation. Conformance depends on both packages.
 There is no extra Core package. File I/O belongs to the executable adapter/tests.
 
 Every Swift target, including executable and test targets, declares a direct

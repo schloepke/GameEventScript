@@ -90,14 +90,29 @@ internal sealed class GesSyntaxNode(GesSyntaxNodeKind kind, int firstToken, int 
     internal IReadOnlyList<GesSyntaxNode> Children { get; } = children;
 }
 
-/// <summary>A source with its tokens and syntax nodes; its tokens, including their trivia, reproduce the source exactly.</summary>
-internal sealed class GesSyntaxTree(string text, IReadOnlyList<GesToken> tokens, GesSyntaxNode root)
+/// <summary>
+/// A source with its tokens and syntax nodes; its tokens, including their trivia, reproduce the source exactly. A tree
+/// exists also for a source with syntax errors, which its diagnostics report in source order.
+/// </summary>
+internal sealed class GesSyntaxTree(string text, IReadOnlyList<GesToken> tokens, GesSyntaxNode root, IReadOnlyList<GesSyntaxDiagnostic>? diagnostics = null)
 {
     internal string Text { get; } = text;
 
     internal IReadOnlyList<GesToken> Tokens { get; } = tokens;
 
     internal GesSyntaxNode Root { get; } = root;
+
+    internal IReadOnlyList<GesSyntaxDiagnostic> Diagnostics { get; } = diagnostics ?? [];
+}
+
+/// <summary>
+/// A syntax error of one source, with the module name declared before it. Lines and columns are one-based and count
+/// UTF-16 code units, as token positions do.
+/// </summary>
+internal sealed record GesSyntaxDiagnostic(string Code, string Message, int Line, int Column, int EndLine, int EndColumn, string ModuleName)
+{
+    internal const string Syntax = "parse.syntax";
+    internal const string SourceNestingExceeded = "parse.sourceNestingExceeded";
 }
 
 /// <summary>
@@ -116,6 +131,10 @@ internal sealed class GesSyntaxTreeBuilder
     internal readonly record struct Checkpoint(int Token, int Child);
 
     internal int Depth => _open.Count;
+
+    internal int TokenCount => _tokens.Count;
+
+    internal GesToken TokenAt(int index) => _tokens[index];
 
     internal Checkpoint Mark() => new(_tokens.Count, _children.Count);
 
@@ -147,12 +166,12 @@ internal sealed class GesSyntaxTreeBuilder
         while (_open.Count > depth) FinishNode();
     }
 
-    internal GesSyntaxTree Finish(string text)
+    internal GesSyntaxTree Finish(string text, IReadOnlyList<GesSyntaxDiagnostic>? diagnostics = null)
     {
         FinishTo(0);
         var root = _children.Count == 1 && _children[0].Kind == GesSyntaxNodeKind.CompilationUnit
             ? _children[0]
             : new GesSyntaxNode(GesSyntaxNodeKind.CompilationUnit, 0, _tokens.Count, _children.ToArray());
-        return new GesSyntaxTree(text, _tokens, root);
+        return new GesSyntaxTree(text, _tokens, root, diagnostics);
     }
 }

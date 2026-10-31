@@ -19,15 +19,7 @@ internal static class SyntaxTokens
             foreach (var source in test.GetProperty("sources").EnumerateArray())
             {
                 var text = source.GetProperty("text").GetString()!;
-                GesSyntaxTree tree;
-                try
-                {
-                    tree = GesParser.ParseWithTree(text).Tree;
-                }
-                catch (GesCompileException exception)
-                {
-                    tree = (GesSyntaxTree)exception.Data[GesParser.SyntaxTreeKey]!;
-                }
+                var tree = GesSyntaxParser.Parse(text);
 
                 var scalarOffsets = ScalarOffsets(text);
                 sources[test.GetProperty("id").GetString()! + "#" + index++] = new

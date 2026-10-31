@@ -13,7 +13,7 @@ using NodeKind = GameEventScript.Syntax.GesSyntaxNodeKind;
 namespace GameEventScript.Compiler;
 
 // Builds the semantic tree of one source from its lossless syntax tree. Each node's tokens are read in the order the
-// parser consumed them, so every semantic node receives the source range the parser gives it.
+// parser consumed them; a semantic node ranges over the tokens of its syntax, except where noted.
 internal sealed partial class GesSyntaxBinder
 {
     private readonly GesSyntaxTree _tree;
@@ -28,6 +28,24 @@ internal sealed partial class GesSyntaxBinder
         _tokens = tree.Tokens;
         _sourceName = string.IsNullOrWhiteSpace(sourceName) ? "UnknownSource" : sourceName!;
         _sourceId = sourceId;
+    }
+
+    // Parses one source and binds its syntax tree; syntax errors fail the parse phase with their diagnostics.
+    internal static GesParsedScript Parse(string text, string? sourceName = null, uint? sourceId = null)
+    {
+        var tree = GesSyntaxParser.Parse(text);
+        if (tree.Diagnostics.Count == 0) return Bind(tree, sourceName, sourceId);
+
+        var name = string.IsNullOrWhiteSpace(sourceName) ? "UnknownSource" : sourceName!;
+        var diagnostics = new List<GesDiagnostic>(tree.Diagnostics.Count);
+        foreach (var diagnostic in tree.Diagnostics)
+        {
+            var location = new GesSourceLocation(name, diagnostic.Line, diagnostic.Column, diagnostic.EndLine, diagnostic.EndColumn, diagnostic.ModuleName, sourceId);
+            var code = diagnostic.Code == GesSyntaxDiagnostic.SourceNestingExceeded ? GesDiagnosticCodes.ParseSourceNestingExceeded : GesDiagnosticCodes.ParseSyntax;
+            diagnostics.Add(new GesDiagnostic(GesDiagnosticPhase.Parse, code, diagnostic.Message, SourceLocation: location, ProgramName: diagnostic.ModuleName));
+        }
+
+        throw new GesCompileException(diagnostics);
     }
 
     // The tree must come from a source without syntax errors.
@@ -171,7 +189,6 @@ internal sealed partial class GesSyntaxBinder
     private static T Set<T>(T node, GesSourceLocation? location) where T : GesScriptNode
     {
         node.SourceRange = location;
-        node.SourceNesting = GesSourceNesting.Measure(node);
         return node;
     }
 

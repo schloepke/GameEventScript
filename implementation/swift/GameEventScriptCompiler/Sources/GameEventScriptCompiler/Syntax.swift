@@ -184,13 +184,11 @@ final class GesExpression {
 
     let kind: Kind
     let location: GesSourceLocation
-    var depth: Int
     var decimalLiteral = false
 
-    init(_ kind: Kind, _ location: GesSourceLocation, depth: Int = 1) {
+    init(_ kind: Kind, _ location: GesSourceLocation) {
         self.kind = kind
         self.location = location
-        self.depth = depth
     }
 }
 

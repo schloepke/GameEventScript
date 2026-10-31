@@ -25,9 +25,8 @@ try
     var benchmarkRounds = args.Length == 2 && args[0] == "--benchmark-compile" && int.TryParse(args[1], out var rounds) && rounds is > 0 and <= 1000 ? rounds : 0;
     var syntaxTokens = args.SequenceEqual(new[] { "--syntax-tokens" });
     var syntaxTrees = args.SequenceEqual(new[] { "--syntax-trees" });
-    var syntaxBinding = args.SequenceEqual(new[] { "--syntax-binding" });
-    if (args.Length != 0 && !allocation && benchmarkRounds == 0 && !syntaxTokens && !syntaxTrees && !syntaxBinding)
-        throw new ArgumentException("Use no arguments for a JSON batch on stdin, --measure, --benchmark-compile <rounds>, --syntax-tokens, --syntax-trees, --syntax-binding, or --describe.");
+    if (args.Length != 0 && !allocation && benchmarkRounds == 0 && !syntaxTokens && !syntaxTrees)
+        throw new ArgumentException("Use no arguments for a JSON batch on stdin, --measure, --benchmark-compile <rounds>, --syntax-tokens, --syntax-trees, or --describe.");
     using var input = Console.OpenStandardInput();
     using var buffer = new MemoryStream();
     var chunk = new byte[8192];
@@ -57,11 +56,6 @@ try
     {
         using var tokenOutput = Console.OpenStandardOutput();
         JsonSerializer.Serialize(tokenOutput, new { formatVersion = 1, implementation, sources = syntaxTrees ? SyntaxTokens.RunTrees(cases) : SyntaxTokens.Run(cases) });
-        return 0;
-    }
-    if (syntaxBinding)
-    {
-        Console.WriteLine(JsonSerializer.Serialize(new { formatVersion = 1, implementation, sources = SyntaxBinding.Run(cases) }));
         return 0;
     }
     if (benchmarkRounds > 0)

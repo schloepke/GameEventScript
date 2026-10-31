@@ -125,14 +125,14 @@ struct GesAstOptimizer {
         default: break
         }
         guard let kind = optimizedChildren(e.kind) else { return fold(e) }
-        let optimized = GesExpression(kind, e.location, depth: e.depth)
+        let optimized = GesExpression(kind, e.location)
         optimized.decimalLiteral = e.decimalLiteral
         return fold(optimized)
     }
 
     func constant(_ name: String, _ e: GesExpression) -> GesExpression {
         guard let value = constants[name] else { return e }
-        let substituted = GesExpression(value.kind, e.location, depth: e.depth)
+        let substituted = GesExpression(value.kind, e.location)
         substituted.decimalLiteral = value.decimalLiteral
         return fold(substituted)
     }
@@ -256,7 +256,7 @@ struct GesAstOptimizer {
                 }
             )
         else { return e }
-        let result = GesExpression(.map(optimized), e.location, depth: e.depth)
+        let result = GesExpression(.map(optimized), e.location)
         result.decimalLiteral = e.decimalLiteral
         return result
     }
@@ -266,7 +266,7 @@ struct GesAstOptimizer {
     // recursive frames (nested pipelines at the nesting limit: 176 instead of 144 KB of stack, arm64).
     @inline(never) func fold(_ e: GesExpression) -> GesExpression {
         if case .literal = e.kind { return e }
-        guard let value = Self.evaluate(e), let literal = Self.literal(value, e.location, depth: e.depth) else { return e }
+        guard let value = Self.evaluate(e), let literal = Self.literal(value, e.location) else { return e }
         return literal
     }
 
@@ -511,30 +511,30 @@ struct GesAstOptimizer {
     static func noRange(_ location: GesSourceLocation) -> GesSourceLocation { .init(sourceName: location.sourceName, moduleName: location.moduleName) }
 
     // The literal form of a folded value; nil keeps the original expression.
-    static func literal(_ value: GesValue, _ location: GesSourceLocation, depth: Int) -> GesExpression? {
+    static func literal(_ value: GesValue, _ location: GesSourceLocation) -> GesExpression? {
         switch value.valueKind {
-        case .nothing, .boolean, .integer, .percentage, .text, .tag: return .init(.literal(value), location, depth: depth)
+        case .nothing, .boolean, .integer, .percentage, .text, .tag: return .init(.literal(value), location)
         case .float:
             guard value.asNumber.isFinite else { return nil }
-            return .init(.literal(value), location, depth: depth)
+            return .init(.literal(value), location)
         case .vector, .point:
-            let components = [value.x, value.y, value.z].map { GesArgument(label: "_", value: .init(.literal(.float($0, unit: value.unit)), Self.noRange(location), depth: depth)) }
-            return .init(.constructor(value.valueKind == .vector ? "vector" : "point", components), location, depth: depth)
+            let components = [value.x, value.y, value.z].map { GesArgument(label: "_", value: .init(.literal(.float($0, unit: value.unit)), Self.noRange(location))) }
+            return .init(.constructor(value.valueKind == .vector ? "vector" : "point", components), location)
         case .list:
             var items: [GesExpression] = []
             for item in value.asList {
-                guard let literal = literal(item, Self.noRange(location), depth: depth) else { return nil }
+                guard let literal = literal(item, Self.noRange(location)) else { return nil }
                 items.append(literal)
             }
-            return .init(.list(items), location, depth: depth)
+            return .init(.list(items), location)
         case .map:
             guard let map = value.asMap else { return nil }
             var entries: [(String, GesExpression)] = []
             for index in 0..<map.length {
-                guard let literal = literal(map.value(at: index), Self.noRange(location), depth: depth) else { return nil }
+                guard let literal = literal(map.value(at: index), Self.noRange(location)) else { return nil }
                 entries.append((map.key(at: index), literal))
             }
-            return .init(.map(entries), location, depth: depth)
+            return .init(.map(entries), location)
         default: return nil
         }
     }

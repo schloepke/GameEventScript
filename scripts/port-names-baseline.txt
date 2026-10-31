@@ -114,7 +114,6 @@ only	csharp	Compiler	GesSeriesTermSelectorNode
 only	csharp	Compiler	GesShuffleSelectorNode
 only	csharp	Compiler	GesSortSelectorNode
 only	csharp	Compiler	GesSourceDocument
-only	csharp	Compiler	GesSourceNesting
 only	csharp	Compiler	GesStatementBodyNode
 only	csharp	Compiler	GesStatementNode
 only	csharp	Compiler	GesSumSelectorNode
@@ -123,7 +122,6 @@ only	csharp	Compiler	GesSyntaxTreeNodeLists
 only	csharp	Compiler	GesTagLiteralExpressionNode
 only	csharp	Compiler	GesTakePatternSelectorNode
 only	csharp	Compiler	GesTextLiteralExpressionNode
-only	csharp	Compiler	GesTokenReader
 only	csharp	Compiler	GesTypeCastExpressionNode
 only	csharp	Compiler	GesTypeCheckExpressionNode
 only	csharp	Compiler	GesTypeConstructorExpressionNode
@@ -166,6 +164,7 @@ only	csharp	Runtime	GesVmListBuilder
 only	csharp	Runtime	GesVmMapBuilder
 only	csharp	Runtime	GesVmOrderBuilder
 only	csharp	Runtime	GesVmUnitCalculation
+only	csharp	Syntax	GesTokenReader
 only	swift	Compiler	GesArgument
 only	swift	Compiler	GesAssembly
 only	swift	Compiler	GesComponentRow

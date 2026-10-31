@@ -26,12 +26,9 @@ internal abstract record GesIterationSourceNode : GesScriptNode;
 
 internal abstract record GesScriptNode
 {
-    // Parser construction assigns metadata before attaching a fresh node to its
-    // parent. Subsequent compiler passes retain copy-on-rewrite semantics.
+    // Binding assigns the range before attaching a fresh node to its parent.
+    // Subsequent compiler passes retain copy-on-rewrite semantics.
     public GesSourceLocation? SourceRange { get; set; }
-
-    // Parser-only source depth, including parentheses removed from the semantic tree.
-    public int SourceNesting { get; set; }
 }
 
 // Root node of the syntax tree

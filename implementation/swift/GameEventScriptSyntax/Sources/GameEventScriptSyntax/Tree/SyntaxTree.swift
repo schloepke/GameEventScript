@@ -36,6 +36,8 @@
     @_spi(Syntax) public let text: String
     @_spi(Syntax) public let tokens: [GesToken]
     @_spi(Syntax) public let root: GesSyntaxNode
+    /// The syntax errors of the source in source order; empty for a source without syntax errors.
+    @_spi(Syntax) public let diagnostics: [GesSyntaxDiagnostic]
 }
 
 /// Builds a syntax tree while a parser consumes tokens by index. A checkpoint taken before a token lets a later node
@@ -75,9 +77,9 @@
         while open.count > depth { finishNode(at: token) }
     }
 
-    @_spi(Syntax) public mutating func finish(text: String, tokens: [GesToken]) -> GesSyntaxTree {
+    @_spi(Syntax) public mutating func finish(text: String, tokens: [GesToken], diagnostics: [GesSyntaxDiagnostic] = []) -> GesSyntaxTree {
         finish(to: 0, at: tokens.count)
         let root = children.count == 1 && children[0].kind == .compilationUnit ? children[0] : GesSyntaxNode(kind: .compilationUnit, firstToken: 0, endToken: tokens.count, children: children)
-        return .init(text: text, tokens: tokens, root: root)
+        return .init(text: text, tokens: tokens, root: root, diagnostics: diagnostics)
     }
 }

@@ -3,9 +3,8 @@
 
 using System;
 using System.Collections.Generic;
-using GameEventScript.Syntax;
 
-namespace GameEventScript.Compiler;
+namespace GameEventScript.Syntax;
 
 internal sealed class GesTokenReader
 {

@@ -207,7 +207,7 @@ extension GesCompiler {
     func constantValue(_ e: GesExpression) throws -> GesExpression {
         guard case .constant(let name) = e.kind else { preconditionFailure() }
         guard let value = constants[name] else { throw compileError("compile.unresolvedSymbol", e.location, symbol: name, phase: .compile) }
-        return GesExpression(value.kind, e.location, depth: value.depth)
+        return GesExpression(value.kind, e.location)
     }
 
     // Loads a scalar literal into `d`; false for every other expression.

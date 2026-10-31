@@ -114,7 +114,7 @@ public sealed class GesProgramBuilder
         for (var index = 0; index < _sources.Count; index++)
         {
             var source = _sources[index];
-            modules[index] = GesParser.Parse(source.Text, source.SourceName, checked((uint)index));
+            modules[index] = GesSyntaxBinder.Parse(source.Text, source.SourceName, checked((uint)index));
         }
 
         var errors = new GesValidationErrors();

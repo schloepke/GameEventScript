@@ -5,7 +5,7 @@
 @_spi(Syntax) import GameEventScriptSyntax
 
 // Builds the semantic module of one source from its lossless syntax tree. Each node's tokens are read in the order the
-// parser consumed them, so every semantic node receives the source range and depth the parser gives it.
+// parser consumed them; a semantic node ranges over the tokens of its syntax, except where noted.
 final class GesSyntaxBinder {
     // The tree does not have the form the binder expects at this token.
     struct Mismatch: Error {
@@ -131,10 +131,32 @@ final class GesSyntaxBinder {
     let source: GesSource
     var module = ""
 
+    static let builtinTypeNames: Set<String> = ["Nothing", "Number", "Boolean", "Percentage", "Vector", "Point", "Series", "Tag", "Text", "List", "Range", "Message", "Handler", "Map", "Dice", "Record"]
+
+    static let mathConstants: [GesTokenKind: Double] = [.mathConstantPi: Double.pi, .mathConstantE: 2.718281828459045, .mathConstantTau: Double.pi * 2, .mathConstantInfinity: Double.infinity]
+
+    static let prefixOperators: Set<GesTokenKind> = [.operatorMinus, .operatorNot, .keywordParse, .empty]
+
+    static let combinedSelectors: Set<String> = [":cartesian", ":lockstep", ":zip", ":union", ":intersect", ":difference"]
+
     init(tree: GesSyntaxTree, source: GesSource) {
         self.tree = tree
         tokens = tree.tokens
         self.source = source
+    }
+
+    // Parses one source and binds its syntax tree; syntax errors fail the parse phase with their diagnostics.
+    static func parse(_ source: GesSource) throws -> GesModule {
+        let tree = GesSyntaxParser.parse(source.text)
+        guard tree.diagnostics.isEmpty else {
+            throw GesCompileError(
+                diagnostics: tree.diagnostics.map {
+                    let location = GesSourceLocation(sourceName: source.name, line: $0.line, column: $0.column, endLine: $0.endLine, endColumn: $0.endColumn, moduleName: $0.moduleName, sourceID: source.id)
+                    return GesDiagnostic(phase: .parse, code: $0.code, message: $0.message, symbol: nil, symbolKind: .unknown, sourceLocation: location, programName: $0.moduleName)
+                }
+            )
+        }
+        return try bind(tree, source)
     }
 
     // The tree must come from a source without syntax errors.
@@ -152,15 +174,15 @@ final class GesSyntaxBinder {
     // A node without a source range, as the parser's unranged nodes.
     func unranged(_ kind: GesExpression.Kind, _ start: GesToken, _ end: GesToken) -> GesExpression { .init(kind, GesAstOptimizer.noRange(location(start, end))) }
 
-    // A node with exactly the range of `node`, as the parser's ranged nodes.
-    func ranged(_ kind: GesExpression.Kind, _ node: GesExpression) -> GesExpression { .init(kind, node.location, depth: node.depth + 1) }
+    // A node with exactly the range of `node`, such as a member access with the range of its target.
+    func ranged(_ kind: GesExpression.Kind, _ node: GesExpression) -> GesExpression { .init(kind, node.location) }
 
-    // From the start of `first` to the end of `last`, or to `previous` without `last`, as the parser's combined nodes.
+    // From the start of `first` to the end of `last`, or to `previous` without `last`.
     func combined(_ kind: GesExpression.Kind, _ first: GesExpression, _ last: GesExpression?, _ previous: GesToken) -> GesExpression {
         let a = first.location
         let b = last?.location ?? location(previous)
         let range = GesSourceLocation(sourceName: a.sourceName, line: a.line, column: a.column, endLine: b.endLine, endColumn: b.endColumn, moduleName: module, sourceID: source.id)
-        return .init(kind, range, depth: max(first.depth, last?.depth ?? 0) + 1)
+        return .init(kind, range)
     }
 
     func bindModule() throws -> GesModule {
@@ -330,7 +352,7 @@ final class GesSyntaxBinder {
 
     func typeNameCore(_ c: inout Cursor) throws -> String {
         var name = String(try c.expect(.typeName).text.dropFirst())
-        if GesParser.builtinTypeNames.contains(name) { name = name.lowercased() }
+        if Self.builtinTypeNames.contains(name) { name = name.lowercased() }
         // Only a quantity type owns a parenthesized unit, such as `:Quantity(m/s)`.
         if name == "Quantity", c.is(.leftParen) {
             try c.advance()
@@ -540,8 +562,36 @@ final class GesSyntaxBinder {
         }
         try c.expect(.rightBrace)
         let normalizedLines = lines.map { line in
-            GesAssemblyLine(name: line.name, label: line.label, operands: line.operands.map(GesParser.normalizeAssemblyOperand), location: line.location)
+            GesAssemblyLine(name: line.name, label: line.label, operands: line.operands.map(Self.normalizeAssemblyOperand), location: line.location)
         }
         return .init(output: output, declarations: declarations, lines: normalizedLines, predicate: predicate, allowSend: allowSend, location: location(start, c.previous))
+    }
+
+    // Negated numeric literals become literals, and nested call arguments and collection items are normalized alike.
+    static func normalizeAssemblyOperand(_ expression: GesExpression) -> GesExpression {
+        func arguments(_ args: [GesArgument]) -> [GesArgument] {
+            args.map { .init(label: $0.label, value: normalizeAssemblyOperand($0.value)) }
+        }
+
+        let kind: GesExpression.Kind
+        switch expression.kind {
+        case .unary(.negate, let operand):
+            guard case .literal(let value) = operand.kind, value.isNumeric else { return expression }
+            if value.valueKind == .percentage {
+                kind = .literal(.percentage(-value.asNumber))
+            } else if let integer = value.integerValue, integer != Int64.min {
+                kind = .literal(.integer(-integer, unit: value.unit))
+            } else {
+                kind = .literal(.float(-value.asNumber, unit: value.unit))
+            }
+        case .call(let name, let args): kind = .call(name, arguments(args))
+        case .extensionCall(let namespace, let name, let args): kind = .extensionCall(namespace, name, arguments(args))
+        case .constructor(let type, let args): kind = .constructor(type, arguments(args))
+        case .message(let name, let args): kind = .message(name, arguments(args))
+        case .list(let items): kind = .list(items.map(normalizeAssemblyOperand))
+        case .map(let entries): kind = .map(entries.map { ($0.0, normalizeAssemblyOperand($0.1)) })
+        default: return expression
+        }
+        return .init(kind, expression.location)
     }
 }

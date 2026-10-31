@@ -5,9 +5,9 @@
 
     <PropertyGroup>
         <TargetFramework>netstandard2.1</TargetFramework>
-        <AssemblyName>GameEventScript.SyntaxHighlighter</AssemblyName>
-        <RootNamespace>GameEventScript.SyntaxHighlighter</RootNamespace>
-        <PackageId>GameEventScript.SyntaxHighlighter</PackageId>
+        <AssemblyName>GameEventScript.Syntax</AssemblyName>
+        <RootNamespace>GameEventScript.Syntax</RootNamespace>
+        <PackageId>GameEventScript.Syntax</PackageId>
         <Version>0.1.0</Version>
         <Authors>Stephan Schlöpke</Authors>
         <Copyright>Copyright 2026 Stephan Schlöpke</Copyright>

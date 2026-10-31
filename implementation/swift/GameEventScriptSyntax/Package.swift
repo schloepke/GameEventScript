@@ -5,10 +5,10 @@
 import PackageDescription
 
 let package = Package(
-    name: "GameEventScriptSyntaxHighlighter",
-    products: [.library(name: "GameEventScriptSyntaxHighlighter", targets: ["GameEventScriptSyntaxHighlighter"])],
+    name: "GameEventScriptSyntax",
+    products: [.library(name: "GameEventScriptSyntax", targets: ["GameEventScriptSyntax"])],
     targets: [
-        .target(name: "GameEventScriptSyntaxHighlighter"),
-        .testTarget(name: "GameEventScriptSyntaxHighlighterTests", dependencies: ["GameEventScriptSyntaxHighlighter"]),
+        .target(name: "GameEventScriptSyntax"),
+        .testTarget(name: "GameEventScriptSyntaxTests", dependencies: ["GameEventScriptSyntax"]),
     ]
 )

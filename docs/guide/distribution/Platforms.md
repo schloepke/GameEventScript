@@ -17,15 +17,15 @@ successful library build is not full Conformance on that platform.
 
 | Product | Declared package contract | CI host and toolchain | Verification |
 | --- | --- | --- | --- |
-| C# Runtime, Compiler, CSharpBridge, SyntaxHighlighter | .NET Standard 2.1 | Linux x64, `ubuntu-latest`; SDK **10.0.201**, .NET **8.0.x** runtime | Full C# Conformance and native tests, allocation gate, .NET 8 package consumers, reproducibility: [C# CI](../../../.github/workflows/csharp-ci.yml), job `verify` |
-| Swift Runtime, Compiler, SwiftBridge, SyntaxHighlighter | Swift tools **6.0**; root package declares macOS **10.15.4** | macOS ARM64, `macos-15`; runner-provided Swift/Xcode, exact Swift identity recorded in the job log | Native Swift Conformance, C# binary interoperability, native tests and API checks: [Swift CI](../../../.github/workflows/swift-ci.yml), job `native`; fresh tagged package consumers and root tests: job `distribution` |
-| Standalone Swift SyntaxHighlighter | Swift tools **6.0** | Linux x64, `swift:6.0` container | Highlighter package tests only: Swift CI job `highlighter-linux` |
+| C# Runtime, Compiler, CSharpBridge, Syntax | .NET Standard 2.1 | Linux x64, `ubuntu-latest`; SDK **10.0.201**, .NET **8.0.x** runtime | Full C# Conformance and native tests, allocation gate, .NET 8 package consumers, reproducibility: [C# CI](../../../.github/workflows/csharp-ci.yml), job `verify` |
+| Swift Runtime, Compiler, SwiftBridge, Syntax | Swift tools **6.0**; root package declares macOS **10.15.4** | macOS ARM64, `macos-15`; runner-provided Swift/Xcode, exact Swift identity recorded in the job log | Native Swift Conformance, C# binary interoperability, native tests and API checks: [Swift CI](../../../.github/workflows/swift-ci.yml), job `native`; fresh tagged package consumers and root tests: job `distribution` |
+| Standalone Swift Syntax | Swift tools **6.0** | Linux x64, `swift:6.0` container | Highlighter package tests only: Swift CI job `highlighter-linux` |
 
 The pinned .NET SDK is defined in [global.json](../../../global.json).
 Swift's package tools version is a manifest requirement, not a claim that every
 product is tested with every Swift compiler from 6.0 onward. The macOS deployment
 target likewise does not mean that tests run on macOS 10.15.4. The local Runtime,
-Compiler and SyntaxHighlighter packages have no explicit Apple platform floor;
+Compiler and Syntax packages have no explicit Apple platform floor;
 the public root package contains the Bridge, while the CLI is a separate package. See
 [Package.swift](../../../Package.swift) for the actual distribution contract.
 

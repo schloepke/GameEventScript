@@ -11,9 +11,9 @@
 | `GameEventScriptRuntime` | Immutable values and Programs, `.gesb` codecs/validation, GESA dumping, Host, VM, random streams, extensions and external types | Swift standard library and platform math library |
 | `GameEventScriptCompiler` | Source lexer/parser, validation, lowering, optimization, register allocation, immutable Programs and debug sections | Runtime |
 | [`GameEventScriptSwiftBridge`](GameEventScriptSwiftBridge/README.md) | Native closure adapters, typed value conversion, KeyPath/external-type bindings and an optional synchronized Host runner | Runtime; Foundation for the runner |
-| [`GameEventScriptSyntaxHighlighter`](GameEventScriptSyntaxHighlighter/README.md) | GES/GESA UTF-16 spans, TextMate scopes, incremental states and ANSI rendering | Foundation |
+| [`GameEventScriptSyntax`](GameEventScriptSyntax/README.md) | GES/GESA UTF-16 spans, TextMate scopes, incremental states and ANSI rendering | Foundation |
 | `GameEventScriptConformance` | Internal observation adapter, codec probes and native implementation tests | Runtime and Compiler |
-| `GameEventScriptTool` / `ges` executable | Compile/check/run/dump, interactive console, filesystem and terminal adapters | Runtime, Compiler, SyntaxHighlighter, Foundation and POSIX |
+| `GameEventScriptTool` / `ges` executable | Compile/check/run/dump, interactive console, filesystem and terminal adapters | Runtime, Compiler, Syntax, Foundation and POSIX |
 
 Runtime and Compiler APIs are synchronous, fileless, and independent of a test framework.
 The optional SwiftBridge macro target uses the official swift-syntax build dependency.
@@ -27,7 +27,7 @@ is the user-facing tool.
 ## Build and verify
 
 For application dependencies, use the repository-root SwiftPM package. It exposes
-Runtime, Compiler, SwiftBridge and SyntaxHighlighter as four selectable library products with one
+Runtime, Compiler, SwiftBridge and Syntax as four selectable library products with one
 shared version. The packages below this directory remain local development entry
 points; CLI and Conformance are internal to the repository distribution.
 See the [package release guide](../../docs/guide/distribution/Packages.md) for
@@ -42,7 +42,7 @@ library products. Full language/host Conformance runs through Python and the int
 ### Xcode workspace
 
 [`GameEventScript.xcworkspace`](GameEventScript.xcworkspace) opens Runtime,
-Compiler, SwiftBridge, SyntaxHighlighter, Conformance and the CLI together. The workspace references the local
+Compiler, SwiftBridge, Syntax, Conformance and the CLI together. The workspace references the local
 SwiftPM packages directly; their `Package.swift` manifests remain the build configuration.
 There are no duplicate `.xcodeproj` targets or source lists to maintain.
 
@@ -59,7 +59,7 @@ are ignored by Git; the workspace and shared test scheme are tracked. After the
 first setup, the workspace can also be opened directly in Finder.
 
 Select **My Mac** and one of the `GameEventScriptRuntime`,
-`GameEventScriptCompiler`, `GameEventScriptSwiftBridge`, `GameEventScriptSyntaxHighlighter`, `GameEventScriptConformance` or `GameEventScriptTool`
+`GameEventScriptCompiler`, `GameEventScriptSwiftBridge`, `GameEventScriptSyntax`, `GameEventScriptConformance` or `GameEventScriptTool`
 schemes to build with **Cmd+B**. The shared `GameEventScriptTool` scheme builds the
 `ges` executable: **Cmd+R** launches it with `--help`, **Cmd+U** runs its native CLI
 tests, and Profile uses the Release executable. Change CLI arguments under
@@ -90,7 +90,7 @@ xcodebuild -workspace implementation/swift/GameEventScript.xcworkspace \
 The root distribution and local SwiftBridge package explicitly require macOS 10.15 for SwiftSyntax.
 The separate CLI and Conformance packages
 require macOS 10.15.4 or newer for the executable adapters' throwing Foundation
-file-handle I/O. The standalone Runtime, Compiler and SyntaxHighlighter packages
+file-handle I/O. The standalone Runtime, Compiler and Syntax packages
 do not inherit these package requirements.
 
 All entry points are in the repository's `scripts` directory and can also be

@@ -209,4 +209,4 @@ only	swift	Runtime	GesValueFactory
 only	swift	Runtime	GesValueKind
 only	swift	Runtime	GesValueObject
 only	swift	Runtime	GesValueOutput
-only	swift	SyntaxHighlighter	GesGrammar
+only	swift	Syntax	GesGrammar

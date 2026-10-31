@@ -11,8 +11,8 @@
 - C# adapters: `implementation/csharp/GameEventScript.CSharpBridge/src`.
 - Independent Python Conformance runner: `conformance/runner`.
 - Internal C# Conformance adapter: `implementation/csharp/GameEventScript.Conformance/adapter`.
-- Optional C# highlighter: `implementation/csharp/GameEventScript.SyntaxHighlighter`.
-- Optional Swift highlighter: `implementation/swift/GameEventScriptSyntaxHighlighter`.
+- Optional C# highlighter: `implementation/csharp/GameEventScript.Syntax`.
+- Optional Swift highlighter: `implementation/swift/GameEventScriptSyntax`.
 - C# CLI tool: `implementation/csharp/GameEventScript.Tool/src`.
 - C# native tests: each module’s `tests` directory; shared test support and
   repository/distribution gates: `implementation/csharp/verification`.
@@ -364,7 +364,7 @@ case counts, so adding a case updates them in the same change.
 
 ## Package distribution
 
-Public NuGet distribution consists of Runtime, Compiler, CSharpBridge and SyntaxHighlighter,
+Public NuGet distribution consists of Runtime, Compiler, CSharpBridge and Syntax,
 with one release version and canonical packages below
 `artifacts/csharp/packages/<version>`. Conformance is not packable. CLI NuGet
 packages are `GameEventScript.Tool` and `GameEventScript.Tool.Aot` plus six RID
@@ -377,11 +377,11 @@ Conformance. Keep the explicit upload allowlist in
 
 The root `Package.swift` is the public SwiftPM entry point with four library
 products: GameEventScriptRuntime, GameEventScriptCompiler,
-GameEventScriptSwiftBridge and GameEventScriptSyntaxHighlighter. They use existing sources and share a Git tag/version;
+GameEventScriptSwiftBridge and GameEventScriptSyntax. They use existing sources and share a Git tag/version;
 local development packages remain separate. CLI and TerminalSupport belong only to the
 separate GameEventScriptTool package; Conformance remains internal.
 The root package requires macOS 10.15 for the SwiftSyntax macro dependency. Three root test targets reuse the existing SwiftBridge,
-bridge-macro and SyntaxHighlighter test directories; never duplicate their sources
+bridge-macro and Syntax test directories; never duplicate their sources
 or add test products. `python3 scripts/test-swift-package.py` checks tagged Git
 consumption, the product/dependency graph, the root tests and Runtime-only builds in disposable
 repositories under artifacts, without changing this repository's tags.
@@ -522,7 +522,7 @@ ignored `artifacts`. Public Swift API changes update `specs/PublicApi.md` and
 `implementation/swift/api`. The separate `GameEventScriptTool` package implements
 the native Swift `ges` CLI; it depends on Runtime and Compiler, never Conformance.
 Filesystem/console I/O and POSIX terminal editing remain in that
-executable package. The optional standalone SyntaxHighlighter uses Foundation
+executable package. The optional standalone Syntax uses Foundation
 Regex and has no Runtime/Compiler dependency. Both CLIs delegate highlighting
 to their platform highlighter package. UTF-16 spans, TextMate scopes and incremental
 states are specified in specs/SyntaxHighlighting.md and share Markdown cases under
@@ -649,7 +649,7 @@ Generate public C#/Swift API references first with
 `python3 scripts/build-api-docs.py --language csharp` and `--language swift`.
 Website preparation rejects missing/stale references using source revision and
 input hashes; its failure controls are `python3 scripts/test-api-docs.py`.
-Only Runtime, Compiler, Bridge and SyntaxHighlighter appear in DocFX/DocC output.
+Only Runtime, Compiler, Bridge and Syntax appear in DocFX/DocC output.
 Transport Swift API output and the final website between CI jobs as tar archives;
 DocC filenames contain colons rejected by GitHub's individual-file artifact upload.
 Swift symbol extraction includes extension blocks; staging also checks public

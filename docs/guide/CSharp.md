@@ -34,7 +34,7 @@ checkout instead; see the [implementation guide](../../implementation/csharp/REA
 | Runtime | Always: values, programs and execution |
 | Compiler | When your application compiles source text |
 | CSharpBridge | Delegate callbacks, native bindings and optional background pumping |
-| SyntaxHighlighter | Optional editor or terminal highlighting |
+| Syntax | Optional editor or terminal highlighting |
 
 ## Compile and execute a rule
 

@@ -5,6 +5,6 @@
     <ItemGroup>
         <Compile Remove="../../verification/TestSupport/*.cs" />
         <Compile Include="../../verification/TestSupport/TestRepositoryPaths.cs" Link="TestSupport/TestRepositoryPaths.cs" />
-        <ProjectReference Include="../src/GameEventScript.SyntaxHighlighter.csproj" />
+        <ProjectReference Include="../src/GameEventScript.Syntax.csproj" />
     </ItemGroup>
 </Project>

@@ -34,7 +34,7 @@ def main():
             command[0] = str(installed[0])
         # Temporary compatibility experiment: never alter the main branch's Runtime.
         stage = ARTIFACTS / 'wasm-source'
-        for source in [package, ROOT / 'implementation/swift/GameEventScriptRuntime', ROOT / 'implementation/swift/GameEventScriptCompiler', ROOT / 'implementation/swift/GameEventScriptSyntaxHighlighter']:
+        for source in [package, ROOT / 'implementation/swift/GameEventScriptRuntime', ROOT / 'implementation/swift/GameEventScriptCompiler', ROOT / 'implementation/swift/GameEventScriptSyntax']:
             target = stage / source.relative_to(ROOT)
             target.mkdir(parents=True, exist_ok=True)
             shutil.copy2(source / 'Package.swift', target / 'Package.swift')

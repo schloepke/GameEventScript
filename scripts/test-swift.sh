@@ -9,8 +9,8 @@ ges_package="$ges_root/implementation/swift/GameEventScriptConformance"
 ges_scratch="$ges_root/artifacts/swift/conformance"
 
 python3 "$ges_root/scripts/sync-highlighter-grammars.py" --check
-swift test --package-path "$ges_root/implementation/swift/GameEventScriptSyntaxHighlighter" \
-    --scratch-path "$ges_root/artifacts/swift/syntaxhighlighter" --disable-build-manifest-caching --configuration release
+swift test --package-path "$ges_root/implementation/swift/GameEventScriptSyntax" \
+    --scratch-path "$ges_root/artifacts/swift/syntax" --disable-build-manifest-caching --configuration release
 
 swift test --package-path "$ges_root/implementation/swift/GameEventScriptSwiftBridge" \
     --scratch-path "$ges_root/artifacts/swift/swiftbridge" --disable-build-manifest-caching --configuration release

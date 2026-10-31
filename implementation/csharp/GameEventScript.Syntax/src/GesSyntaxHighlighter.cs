@@ -7,7 +7,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text.RegularExpressions;
 
-namespace GameEventScript.SyntaxHighlighter;
+namespace GameEventScript.Syntax;
 
 /// <summary>Reusable GES/GESA TextMate highlighting without a Compiler, Runtime, UI or terminal dependency.</summary>
 public sealed class GesSyntaxHighlighter

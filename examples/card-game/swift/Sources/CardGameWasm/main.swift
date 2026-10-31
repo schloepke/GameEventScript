@@ -4,7 +4,7 @@
 import CardGameEnvironment
 import GameEventScriptCompiler
 import GameEventScriptRuntime
-import GameEventScriptSyntaxHighlighter
+import GameEventScriptSyntax
 
 // This adapter is invoked serially by one browser worker. No state is shared across workers.
 // Reactor exports run without the executable main; use lazy static initialization.

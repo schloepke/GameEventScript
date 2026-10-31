@@ -8,13 +8,13 @@ let package = Package(
     name: "GameEventScriptTool",
     platforms: [.macOS("10.15.4")],
     products: [.executable(name: "ges", targets: ["GameEventScriptTool"])],
-    dependencies: [.package(path: "../GameEventScriptRuntime"), .package(path: "../GameEventScriptCompiler"), .package(path: "../GameEventScriptSyntaxHighlighter")],
+    dependencies: [.package(path: "../GameEventScriptRuntime"), .package(path: "../GameEventScriptCompiler"), .package(path: "../GameEventScriptSyntax")],
     targets: [
         .target(name: "TerminalSupport"),
         .executableTarget(
             name: "GameEventScriptTool",
             dependencies: [
-                .product(name: "GameEventScriptSyntaxHighlighter", package: "GameEventScriptSyntaxHighlighter"), .product(name: "GameEventScriptRuntime", package: "GameEventScriptRuntime"),
+                .product(name: "GameEventScriptSyntax", package: "GameEventScriptSyntax"), .product(name: "GameEventScriptRuntime", package: "GameEventScriptRuntime"),
                 .product(name: "GameEventScriptCompiler", package: "GameEventScriptCompiler"), "TerminalSupport",
             ]
         ),

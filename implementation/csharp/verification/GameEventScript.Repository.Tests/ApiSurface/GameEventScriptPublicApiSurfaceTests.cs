@@ -6,7 +6,7 @@ using System.Text;
 using System.Xml.Linq;
 using GameEventScript.Api;
 using GameEventScript.CSharpBridge;
-using GameEventScript.SyntaxHighlighter;
+using GameEventScript.Syntax;
 
 namespace GameEventScript.Tests.Native.ApiSurface;
 

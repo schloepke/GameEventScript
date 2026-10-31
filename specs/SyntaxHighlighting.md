@@ -103,9 +103,9 @@ whether coloring is enabled belong to the embedding, not this library.
 
 ## Mapping and verification
 
-- C#: `GameEventScript.SyntaxHighlighter` package and namespace, .NET Standard 2.1,
+- C#: `GameEventScript.Syntax` package and namespace, .NET Standard 2.1,
   no third-party or other GES library dependency.
-- Swift: `GameEventScriptSyntaxHighlighter` SwiftPM product; Foundation supplies
+- Swift: `GameEventScriptSyntax` SwiftPM product; Foundation supplies
   regex and embedded grammar decoding. No AppKit, UIKit, Runtime or Compiler
   dependency. Foundation is also available on supported non-Apple Swift platforms;
   platform availability is verified separately from the API contract.

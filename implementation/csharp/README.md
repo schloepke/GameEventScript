@@ -15,9 +15,9 @@ separate libraries; the CLI and internal Conformance adapter are executables.
 | [`GameEventScript.Runtime`](GameEventScript.Runtime) | Immutable values and Programs, `.gesb` codecs/validation, GESA dumping, Host, VM, random streams, extensions and external types | .NET Standard library |
 | [`GameEventScript.Compiler`](GameEventScript.Compiler) | Source lexer/parser, validation, lowering, optimization, register allocation, immutable Programs and debug sections | Runtime |
 | [`GameEventScript.CSharpBridge`](GameEventScript.CSharpBridge) | Delegate adapters, Reflection/attribute bindings, CLR value conversion and optional automatic host pumping | Runtime |
-| [`GameEventScript.SyntaxHighlighter`](GameEventScript.SyntaxHighlighter/README.md) | GES/GESA UTF-16 spans, TextMate scopes, incremental states and ANSI rendering | .NET Standard library |
+| [`GameEventScript.Syntax`](GameEventScript.Syntax/README.md) | GES/GESA UTF-16 spans, TextMate scopes, incremental states and ANSI rendering | .NET Standard library |
 | [`GameEventScript.Conformance`](GameEventScript.Conformance/README.md) | Internal observation adapter for the independent Python runner | Runtime and Compiler |
-| [`GameEventScript.Tool`](GameEventScript.Tool/README.md) / `dotnet ges` | Compile/check/run/dump, interactive console, filesystem and terminal adapters | Runtime, Compiler, CSharpBridge, SyntaxHighlighter and PrettyPrompt |
+| [`GameEventScript.Tool`](GameEventScript.Tool/README.md) / `dotnet ges` | Compile/check/run/dump, interactive console, filesystem and terminal adapters | Runtime, Compiler, CSharpBridge, Syntax and PrettyPrompt |
 
 All four libraries target **.NET Standard 2.1** and use **C# 12**. Runtime,
 and Compiler are synchronous, fileless and independent of a test
@@ -258,7 +258,7 @@ ordering, execution limits and diagnostic behavior.
 
 ## Distribution
 
-Runtime, Compiler, CSharpBridge and SyntaxHighlighter are packaged independently with a shared
+Runtime, Compiler, CSharpBridge and Syntax are packaged independently with a shared
 release version. Conformance stays internal. NuGet CLI tools (since 0.3.0) are
 packaged separately as `GameEventScript.Tool` and `GameEventScript.Tool.Aot`;
 see [CLI installation](../../docs/guide/distribution/Tools.md).

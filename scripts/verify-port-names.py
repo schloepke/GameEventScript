@@ -38,7 +38,7 @@ MODULES = (
     ("Runtime", "implementation/csharp/GameEventScript.Runtime/src", "implementation/swift/GameEventScriptRuntime/Sources"),
     ("Compiler", "implementation/csharp/GameEventScript.Compiler/src", "implementation/swift/GameEventScriptCompiler/Sources"),
     ("Bridge", "implementation/csharp/GameEventScript.CSharpBridge/src", "implementation/swift/GameEventScriptSwiftBridge/Sources"),
-    ("SyntaxHighlighter", "implementation/csharp/GameEventScript.SyntaxHighlighter/src", "implementation/swift/GameEventScriptSyntaxHighlighter/Sources"),
+    ("Syntax", "implementation/csharp/GameEventScript.Syntax/src", "implementation/swift/GameEventScriptSyntax/Sources"),
 )
 
 # Permanent, deliberate single-port types (normalized names). Temporary
@@ -55,7 +55,7 @@ PLATFORM_ONLY = {
     ("swift", "Runtime", "GesValueError"): "idiomatic mapping: C# throws BCL argument exceptions for invalid values",
     ("swift", "Runtime", "GesApiError"): "idiomatic mapping: C# throws BCL ArgumentException/InvalidOperationException",
     ("swift", "Runtime", "GesMessageError"): "idiomatic mapping: C# throws BCL argument exceptions for invalid message input",
-    ("swift", "SyntaxHighlighter", "GesHighlightingError"): "idiomatic mapping: C# throws BCL argument exceptions for invalid input",
+    ("swift", "Syntax", "GesHighlightingError"): "idiomatic mapping: C# throws BCL argument exceptions for invalid input",
     ("swift", "Runtime", "GesCompilerSupport"): "idiomatic mapping: @_spi(Compiler) surface; C# uses InternalsVisibleTo",
     ("csharp", "Bridge", "GesBridgeContextExtensions"): "C# extension-method container; Swift extends GesContext directly",
     ("csharp", "Bridge", "GesBridgeHostExtensions"): "C# extension-method container; Swift extends GameEventScriptHost directly",

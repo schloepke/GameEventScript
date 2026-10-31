@@ -5,7 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace GameEventScript.SyntaxHighlighter;
+namespace GameEventScript.Syntax;
 
 /// <summary>Optional pure string renderer. Terminal detection, NO_COLOR, console output and diagnostics belong to the embedding.</summary>
 public static class GesAnsiRenderer

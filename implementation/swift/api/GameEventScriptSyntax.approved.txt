@@ -1,74 +1,74 @@
 # Copyright 2026 Stephan Schlöpke
 # SPDX-License-Identifier: Apache-2.0
 # Swift declared public API snapshot v1
-# Module: GameEventScriptSyntaxHighlighter
+# Module: GameEventScriptSyntax
 # Update explicitly with: python3 scripts/verify-swift-api.py --update
 
-relationship {"kind":"conformsTo","source":"GameEventScriptSyntaxHighlighter.GesHighlightResult :: struct GesHighlightResult","target":"Swift.Sendable"}
-relationship {"kind":"conformsTo","source":"GameEventScriptSyntaxHighlighter.GesHighlightSpan :: struct GesHighlightSpan","target":"Swift.Equatable"}
-relationship {"kind":"conformsTo","source":"GameEventScriptSyntaxHighlighter.GesHighlightSpan :: struct GesHighlightSpan","target":"Swift.Sendable"}
-relationship {"kind":"conformsTo","source":"GameEventScriptSyntaxHighlighter.GesHighlightState :: struct GesHighlightState","target":"Swift.Equatable"}
-relationship {"kind":"conformsTo","source":"GameEventScriptSyntaxHighlighter.GesHighlightState :: struct GesHighlightState","target":"Swift.Sendable"}
-relationship {"kind":"conformsTo","source":"GameEventScriptSyntaxHighlighter.GesHighlightingError :: enum GesHighlightingError","target":"Swift.Equatable"}
-relationship {"kind":"conformsTo","source":"GameEventScriptSyntaxHighlighter.GesHighlightingError :: enum GesHighlightingError","target":"Swift.Error"}
-relationship {"kind":"conformsTo","source":"GameEventScriptSyntaxHighlighter.GesHighlightingError :: enum GesHighlightingError","target":"Swift.Hashable"}
-relationship {"kind":"conformsTo","source":"GameEventScriptSyntaxHighlighter.GesHighlightingError :: enum GesHighlightingError","target":"Swift.Sendable"}
-relationship {"kind":"conformsTo","source":"GameEventScriptSyntaxHighlighter.GesSyntaxHighlighter :: final class GesSyntaxHighlighter","target":"Swift.Sendable"}
-relationship {"kind":"conformsTo","source":"GameEventScriptSyntaxHighlighter.GesSyntaxKind :: enum GesSyntaxKind","target":"Swift.CaseIterable"}
-relationship {"kind":"conformsTo","source":"GameEventScriptSyntaxHighlighter.GesSyntaxKind :: enum GesSyntaxKind","target":"Swift.Equatable"}
-relationship {"kind":"conformsTo","source":"GameEventScriptSyntaxHighlighter.GesSyntaxKind :: enum GesSyntaxKind","target":"Swift.Hashable"}
-relationship {"kind":"conformsTo","source":"GameEventScriptSyntaxHighlighter.GesSyntaxKind :: enum GesSyntaxKind","target":"Swift.RawRepresentable"}
-relationship {"kind":"conformsTo","source":"GameEventScriptSyntaxHighlighter.GesSyntaxKind :: enum GesSyntaxKind","target":"Swift.Sendable"}
-relationship {"kind":"conformsTo","source":"GameEventScriptSyntaxHighlighter.GesSyntaxLanguage :: enum GesSyntaxLanguage","target":"Swift.Equatable"}
-relationship {"kind":"conformsTo","source":"GameEventScriptSyntaxHighlighter.GesSyntaxLanguage :: enum GesSyntaxLanguage","target":"Swift.Hashable"}
-relationship {"kind":"conformsTo","source":"GameEventScriptSyntaxHighlighter.GesSyntaxLanguage :: enum GesSyntaxLanguage","target":"Swift.RawRepresentable"}
-relationship {"kind":"conformsTo","source":"GameEventScriptSyntaxHighlighter.GesSyntaxLanguage :: enum GesSyntaxLanguage","target":"Swift.Sendable"}
-symbol {"access":"public","declaration":"case builtin","kind":"swift.enum.case","path":"GameEventScriptSyntaxHighlighter.GesSyntaxKind.builtin"}
-symbol {"access":"public","declaration":"case comment","kind":"swift.enum.case","path":"GameEventScriptSyntaxHighlighter.GesSyntaxKind.comment"}
-symbol {"access":"public","declaration":"case constant","kind":"swift.enum.case","path":"GameEventScriptSyntaxHighlighter.GesSyntaxKind.constant"}
-symbol {"access":"public","declaration":"case expectedSingleLine","kind":"swift.enum.case","path":"GameEventScriptSyntaxHighlighter.GesHighlightingError.expectedSingleLine"}
-symbol {"access":"public","declaration":"case function","kind":"swift.enum.case","path":"GameEventScriptSyntaxHighlighter.GesSyntaxKind.function"}
-symbol {"access":"public","declaration":"case ges","kind":"swift.enum.case","path":"GameEventScriptSyntaxHighlighter.GesSyntaxLanguage.ges"}
-symbol {"access":"public","declaration":"case gesa","kind":"swift.enum.case","path":"GameEventScriptSyntaxHighlighter.GesSyntaxLanguage.gesa"}
-symbol {"access":"public","declaration":"case identifier","kind":"swift.enum.case","path":"GameEventScriptSyntaxHighlighter.GesSyntaxKind.identifier"}
-symbol {"access":"public","declaration":"case incompatibleState","kind":"swift.enum.case","path":"GameEventScriptSyntaxHighlighter.GesHighlightingError.incompatibleState"}
-symbol {"access":"public","declaration":"case invalidAnsiColor","kind":"swift.enum.case","path":"GameEventScriptSyntaxHighlighter.GesHighlightingError.invalidAnsiColor"}
-symbol {"access":"public","declaration":"case invalidInputLimit","kind":"swift.enum.case","path":"GameEventScriptSyntaxHighlighter.GesHighlightingError.invalidInputLimit"}
-symbol {"access":"public","declaration":"case invalidSpans","kind":"swift.enum.case","path":"GameEventScriptSyntaxHighlighter.GesHighlightingError.invalidSpans"}
-symbol {"access":"public","declaration":"case keyword","kind":"swift.enum.case","path":"GameEventScriptSyntaxHighlighter.GesSyntaxKind.keyword"}
-symbol {"access":"public","declaration":"case label","kind":"swift.enum.case","path":"GameEventScriptSyntaxHighlighter.GesSyntaxKind.label"}
-symbol {"access":"public","declaration":"case message","kind":"swift.enum.case","path":"GameEventScriptSyntaxHighlighter.GesSyntaxKind.message"}
-symbol {"access":"public","declaration":"case module","kind":"swift.enum.case","path":"GameEventScriptSyntaxHighlighter.GesSyntaxKind.module"}
-symbol {"access":"public","declaration":"case number","kind":"swift.enum.case","path":"GameEventScriptSyntaxHighlighter.GesSyntaxKind.number"}
-symbol {"access":"public","declaration":"case plain","kind":"swift.enum.case","path":"GameEventScriptSyntaxHighlighter.GesSyntaxKind.plain"}
-symbol {"access":"public","declaration":"case register","kind":"swift.enum.case","path":"GameEventScriptSyntaxHighlighter.GesSyntaxKind.register"}
-symbol {"access":"public","declaration":"case string","kind":"swift.enum.case","path":"GameEventScriptSyntaxHighlighter.GesSyntaxKind.string"}
-symbol {"access":"public","declaration":"case symbol","kind":"swift.enum.case","path":"GameEventScriptSyntaxHighlighter.GesSyntaxKind.symbol"}
-symbol {"access":"public","declaration":"case tag","kind":"swift.enum.case","path":"GameEventScriptSyntaxHighlighter.GesSyntaxKind.tag"}
-symbol {"access":"public","declaration":"case type","kind":"swift.enum.case","path":"GameEventScriptSyntaxHighlighter.GesSyntaxKind.type"}
-symbol {"access":"public","declaration":"enum GesAnsiRenderer","kind":"swift.enum","path":"GameEventScriptSyntaxHighlighter.GesAnsiRenderer"}
-symbol {"access":"public","declaration":"enum GesHighlightingError","kind":"swift.enum","path":"GameEventScriptSyntaxHighlighter.GesHighlightingError"}
-symbol {"access":"public","declaration":"enum GesSyntaxKind","kind":"swift.enum","path":"GameEventScriptSyntaxHighlighter.GesSyntaxKind"}
-symbol {"access":"public","declaration":"enum GesSyntaxLanguage","kind":"swift.enum","path":"GameEventScriptSyntaxHighlighter.GesSyntaxLanguage"}
-symbol {"access":"public","declaration":"final class GesSyntaxHighlighter","kind":"swift.class","path":"GameEventScriptSyntaxHighlighter.GesSyntaxHighlighter"}
-symbol {"access":"public","declaration":"func highlight(_ text: String) -> GesHighlightResult","kind":"swift.method","path":"GameEventScriptSyntaxHighlighter.GesSyntaxHighlighter.highlight(_:)"}
-symbol {"access":"public","declaration":"func highlightLine(_ text: String, state: GesHighlightState? = nil) throws -> GesHighlightResult","kind":"swift.method","path":"GameEventScriptSyntaxHighlighter.GesSyntaxHighlighter.highlightLine(_:state:)"}
-symbol {"access":"public","declaration":"func makeState() -> GesHighlightState","kind":"swift.method","path":"GameEventScriptSyntaxHighlighter.GesSyntaxHighlighter.makeState()"}
-symbol {"access":"public","declaration":"init(language: GesSyntaxLanguage = .ges, maxInputLength: Int = 262_144) throws","kind":"swift.init","path":"GameEventScriptSyntaxHighlighter.GesSyntaxHighlighter.init(language:maxInputLength:)"}
-symbol {"access":"public","declaration":"init?(rawValue: String)","kind":"swift.init","path":"GameEventScriptSyntaxHighlighter.GesSyntaxKind.init(rawValue:)"}
-symbol {"access":"public","declaration":"init?(rawValue: String)","kind":"swift.init","path":"GameEventScriptSyntaxHighlighter.GesSyntaxLanguage.init(rawValue:)"}
-symbol {"access":"public","declaration":"let kind: GesSyntaxKind","kind":"swift.property","path":"GameEventScriptSyntaxHighlighter.GesHighlightSpan.kind"}
-symbol {"access":"public","declaration":"let language: GesSyntaxLanguage","kind":"swift.property","path":"GameEventScriptSyntaxHighlighter.GesHighlightState.language"}
-symbol {"access":"public","declaration":"let language: GesSyntaxLanguage","kind":"swift.property","path":"GameEventScriptSyntaxHighlighter.GesSyntaxHighlighter.language"}
-symbol {"access":"public","declaration":"let length: Int","kind":"swift.property","path":"GameEventScriptSyntaxHighlighter.GesHighlightSpan.length"}
-symbol {"access":"public","declaration":"let maxInputLength: Int","kind":"swift.property","path":"GameEventScriptSyntaxHighlighter.GesSyntaxHighlighter.maxInputLength"}
-symbol {"access":"public","declaration":"let nextState: GesHighlightState?","kind":"swift.property","path":"GameEventScriptSyntaxHighlighter.GesHighlightResult.nextState"}
-symbol {"access":"public","declaration":"let scopes: [String]","kind":"swift.property","path":"GameEventScriptSyntaxHighlighter.GesHighlightSpan.scopes"}
-symbol {"access":"public","declaration":"let spans: [GesHighlightSpan]","kind":"swift.property","path":"GameEventScriptSyntaxHighlighter.GesHighlightResult.spans"}
-symbol {"access":"public","declaration":"let start: Int","kind":"swift.property","path":"GameEventScriptSyntaxHighlighter.GesHighlightSpan.start"}
-symbol {"access":"public","declaration":"static func defaultColor(_ kind: GesSyntaxKind) -> Int?","kind":"swift.type.method","path":"GameEventScriptSyntaxHighlighter.GesAnsiRenderer.defaultColor(_:)"}
-symbol {"access":"public","declaration":"static func render(_ source: String, spans: [GesHighlightSpan], color: (GesSyntaxKind) -> Int? = defaultColor) throws -> String","kind":"swift.type.method","path":"GameEventScriptSyntaxHighlighter.GesAnsiRenderer.render(_:spans:color:)"}
-symbol {"access":"public","declaration":"struct GesHighlightResult","kind":"swift.struct","path":"GameEventScriptSyntaxHighlighter.GesHighlightResult"}
-symbol {"access":"public","declaration":"struct GesHighlightSpan","kind":"swift.struct","path":"GameEventScriptSyntaxHighlighter.GesHighlightSpan"}
-symbol {"access":"public","declaration":"struct GesHighlightState","kind":"swift.struct","path":"GameEventScriptSyntaxHighlighter.GesHighlightState"}
-symbol {"access":"public","declaration":"var isComplete: Bool { get }","kind":"swift.property","path":"GameEventScriptSyntaxHighlighter.GesHighlightResult.isComplete"}
+relationship {"kind":"conformsTo","source":"GameEventScriptSyntax.GesHighlightResult :: struct GesHighlightResult","target":"Swift.Sendable"}
+relationship {"kind":"conformsTo","source":"GameEventScriptSyntax.GesHighlightSpan :: struct GesHighlightSpan","target":"Swift.Equatable"}
+relationship {"kind":"conformsTo","source":"GameEventScriptSyntax.GesHighlightSpan :: struct GesHighlightSpan","target":"Swift.Sendable"}
+relationship {"kind":"conformsTo","source":"GameEventScriptSyntax.GesHighlightState :: struct GesHighlightState","target":"Swift.Equatable"}
+relationship {"kind":"conformsTo","source":"GameEventScriptSyntax.GesHighlightState :: struct GesHighlightState","target":"Swift.Sendable"}
+relationship {"kind":"conformsTo","source":"GameEventScriptSyntax.GesHighlightingError :: enum GesHighlightingError","target":"Swift.Equatable"}
+relationship {"kind":"conformsTo","source":"GameEventScriptSyntax.GesHighlightingError :: enum GesHighlightingError","target":"Swift.Error"}
+relationship {"kind":"conformsTo","source":"GameEventScriptSyntax.GesHighlightingError :: enum GesHighlightingError","target":"Swift.Hashable"}
+relationship {"kind":"conformsTo","source":"GameEventScriptSyntax.GesHighlightingError :: enum GesHighlightingError","target":"Swift.Sendable"}
+relationship {"kind":"conformsTo","source":"GameEventScriptSyntax.GesSyntaxHighlighter :: final class GesSyntaxHighlighter","target":"Swift.Sendable"}
+relationship {"kind":"conformsTo","source":"GameEventScriptSyntax.GesSyntaxKind :: enum GesSyntaxKind","target":"Swift.CaseIterable"}
+relationship {"kind":"conformsTo","source":"GameEventScriptSyntax.GesSyntaxKind :: enum GesSyntaxKind","target":"Swift.Equatable"}
+relationship {"kind":"conformsTo","source":"GameEventScriptSyntax.GesSyntaxKind :: enum GesSyntaxKind","target":"Swift.Hashable"}
+relationship {"kind":"conformsTo","source":"GameEventScriptSyntax.GesSyntaxKind :: enum GesSyntaxKind","target":"Swift.RawRepresentable"}
+relationship {"kind":"conformsTo","source":"GameEventScriptSyntax.GesSyntaxKind :: enum GesSyntaxKind","target":"Swift.Sendable"}
+relationship {"kind":"conformsTo","source":"GameEventScriptSyntax.GesSyntaxLanguage :: enum GesSyntaxLanguage","target":"Swift.Equatable"}
+relationship {"kind":"conformsTo","source":"GameEventScriptSyntax.GesSyntaxLanguage :: enum GesSyntaxLanguage","target":"Swift.Hashable"}
+relationship {"kind":"conformsTo","source":"GameEventScriptSyntax.GesSyntaxLanguage :: enum GesSyntaxLanguage","target":"Swift.RawRepresentable"}
+relationship {"kind":"conformsTo","source":"GameEventScriptSyntax.GesSyntaxLanguage :: enum GesSyntaxLanguage","target":"Swift.Sendable"}
+symbol {"access":"public","declaration":"case builtin","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesSyntaxKind.builtin"}
+symbol {"access":"public","declaration":"case comment","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesSyntaxKind.comment"}
+symbol {"access":"public","declaration":"case constant","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesSyntaxKind.constant"}
+symbol {"access":"public","declaration":"case expectedSingleLine","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesHighlightingError.expectedSingleLine"}
+symbol {"access":"public","declaration":"case function","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesSyntaxKind.function"}
+symbol {"access":"public","declaration":"case ges","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesSyntaxLanguage.ges"}
+symbol {"access":"public","declaration":"case gesa","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesSyntaxLanguage.gesa"}
+symbol {"access":"public","declaration":"case identifier","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesSyntaxKind.identifier"}
+symbol {"access":"public","declaration":"case incompatibleState","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesHighlightingError.incompatibleState"}
+symbol {"access":"public","declaration":"case invalidAnsiColor","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesHighlightingError.invalidAnsiColor"}
+symbol {"access":"public","declaration":"case invalidInputLimit","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesHighlightingError.invalidInputLimit"}
+symbol {"access":"public","declaration":"case invalidSpans","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesHighlightingError.invalidSpans"}
+symbol {"access":"public","declaration":"case keyword","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesSyntaxKind.keyword"}
+symbol {"access":"public","declaration":"case label","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesSyntaxKind.label"}
+symbol {"access":"public","declaration":"case message","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesSyntaxKind.message"}
+symbol {"access":"public","declaration":"case module","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesSyntaxKind.module"}
+symbol {"access":"public","declaration":"case number","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesSyntaxKind.number"}
+symbol {"access":"public","declaration":"case plain","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesSyntaxKind.plain"}
+symbol {"access":"public","declaration":"case register","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesSyntaxKind.register"}
+symbol {"access":"public","declaration":"case string","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesSyntaxKind.string"}
+symbol {"access":"public","declaration":"case symbol","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesSyntaxKind.symbol"}
+symbol {"access":"public","declaration":"case tag","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesSyntaxKind.tag"}
+symbol {"access":"public","declaration":"case type","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesSyntaxKind.type"}
+symbol {"access":"public","declaration":"enum GesAnsiRenderer","kind":"swift.enum","path":"GameEventScriptSyntax.GesAnsiRenderer"}
+symbol {"access":"public","declaration":"enum GesHighlightingError","kind":"swift.enum","path":"GameEventScriptSyntax.GesHighlightingError"}
+symbol {"access":"public","declaration":"enum GesSyntaxKind","kind":"swift.enum","path":"GameEventScriptSyntax.GesSyntaxKind"}
+symbol {"access":"public","declaration":"enum GesSyntaxLanguage","kind":"swift.enum","path":"GameEventScriptSyntax.GesSyntaxLanguage"}
+symbol {"access":"public","declaration":"final class GesSyntaxHighlighter","kind":"swift.class","path":"GameEventScriptSyntax.GesSyntaxHighlighter"}
+symbol {"access":"public","declaration":"func highlight(_ text: String) -> GesHighlightResult","kind":"swift.method","path":"GameEventScriptSyntax.GesSyntaxHighlighter.highlight(_:)"}
+symbol {"access":"public","declaration":"func highlightLine(_ text: String, state: GesHighlightState? = nil) throws -> GesHighlightResult","kind":"swift.method","path":"GameEventScriptSyntax.GesSyntaxHighlighter.highlightLine(_:state:)"}
+symbol {"access":"public","declaration":"func makeState() -> GesHighlightState","kind":"swift.method","path":"GameEventScriptSyntax.GesSyntaxHighlighter.makeState()"}
+symbol {"access":"public","declaration":"init(language: GesSyntaxLanguage = .ges, maxInputLength: Int = 262_144) throws","kind":"swift.init","path":"GameEventScriptSyntax.GesSyntaxHighlighter.init(language:maxInputLength:)"}
+symbol {"access":"public","declaration":"init?(rawValue: String)","kind":"swift.init","path":"GameEventScriptSyntax.GesSyntaxKind.init(rawValue:)"}
+symbol {"access":"public","declaration":"init?(rawValue: String)","kind":"swift.init","path":"GameEventScriptSyntax.GesSyntaxLanguage.init(rawValue:)"}
+symbol {"access":"public","declaration":"let kind: GesSyntaxKind","kind":"swift.property","path":"GameEventScriptSyntax.GesHighlightSpan.kind"}
+symbol {"access":"public","declaration":"let language: GesSyntaxLanguage","kind":"swift.property","path":"GameEventScriptSyntax.GesHighlightState.language"}
+symbol {"access":"public","declaration":"let language: GesSyntaxLanguage","kind":"swift.property","path":"GameEventScriptSyntax.GesSyntaxHighlighter.language"}
+symbol {"access":"public","declaration":"let length: Int","kind":"swift.property","path":"GameEventScriptSyntax.GesHighlightSpan.length"}
+symbol {"access":"public","declaration":"let maxInputLength: Int","kind":"swift.property","path":"GameEventScriptSyntax.GesSyntaxHighlighter.maxInputLength"}
+symbol {"access":"public","declaration":"let nextState: GesHighlightState?","kind":"swift.property","path":"GameEventScriptSyntax.GesHighlightResult.nextState"}
+symbol {"access":"public","declaration":"let scopes: [String]","kind":"swift.property","path":"GameEventScriptSyntax.GesHighlightSpan.scopes"}
+symbol {"access":"public","declaration":"let spans: [GesHighlightSpan]","kind":"swift.property","path":"GameEventScriptSyntax.GesHighlightResult.spans"}
+symbol {"access":"public","declaration":"let start: Int","kind":"swift.property","path":"GameEventScriptSyntax.GesHighlightSpan.start"}
+symbol {"access":"public","declaration":"static func defaultColor(_ kind: GesSyntaxKind) -> Int?","kind":"swift.type.method","path":"GameEventScriptSyntax.GesAnsiRenderer.defaultColor(_:)"}
+symbol {"access":"public","declaration":"static func render(_ source: String, spans: [GesHighlightSpan], color: (GesSyntaxKind) -> Int? = defaultColor) throws -> String","kind":"swift.type.method","path":"GameEventScriptSyntax.GesAnsiRenderer.render(_:spans:color:)"}
+symbol {"access":"public","declaration":"struct GesHighlightResult","kind":"swift.struct","path":"GameEventScriptSyntax.GesHighlightResult"}
+symbol {"access":"public","declaration":"struct GesHighlightSpan","kind":"swift.struct","path":"GameEventScriptSyntax.GesHighlightSpan"}
+symbol {"access":"public","declaration":"struct GesHighlightState","kind":"swift.struct","path":"GameEventScriptSyntax.GesHighlightState"}
+symbol {"access":"public","declaration":"var isComplete: Bool { get }","kind":"swift.property","path":"GameEventScriptSyntax.GesHighlightResult.isComplete"}

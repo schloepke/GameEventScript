@@ -5,7 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace GameEventScript.SyntaxHighlighter;
+namespace GameEventScript.Syntax;
 
 /// <summary>The bundled source or assembler grammar used for presentation.</summary>
 public enum GesSyntaxLanguage

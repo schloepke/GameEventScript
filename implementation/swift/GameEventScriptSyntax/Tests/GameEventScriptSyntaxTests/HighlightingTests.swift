@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import Foundation
-import GameEventScriptSyntaxHighlighter
+import GameEventScriptSyntax
 import XCTest
 
 final class HighlightingTests: XCTestCase {

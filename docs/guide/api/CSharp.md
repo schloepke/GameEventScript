@@ -12,7 +12,7 @@ in the latest NuGet release; check the [changelog](../../../CHANGELOG.md) and
 
 DocFX generates the reference from the public assemblies and their XML
 comments, including signatures, parameters, return values and exceptions.
-It includes Runtime, Compiler, CSharpBridge and SyntaxHighlighter.
+It includes Runtime, Compiler, CSharpBridge and Syntax.
 CLI, Conformance and implementation internals are not published here.
 
 Start with the [C# embedding guide](../CSharp.md) for a working application,

@@ -19,7 +19,7 @@ dependency URL, not a package collection URL.
 
 Select a published tag and add `GameEventScriptRuntime`,
 `GameEventScriptCompiler` and `GameEventScriptSwiftBridge` to your target.
-`GameEventScriptSyntaxHighlighter` is optional for editors and terminal displays.
+`GameEventScriptSyntax` is optional for editors and terminal displays.
 
 For a command-line SwiftPM project, create this `Package.swift` and replace
 `<release-version>` with a real [release](https://github.com/schloepke/GameEventScript/releases)

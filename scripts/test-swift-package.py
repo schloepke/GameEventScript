@@ -20,11 +20,11 @@ from verification_workspace import verification_workspace
 
 ROOT = Path(__file__).resolve().parent.parent
 MACROS = "GameEventScriptSwiftBridgeMacros"
-MODULES = ("GameEventScriptRuntime", "GameEventScriptCompiler", "GameEventScriptSwiftBridge", "GameEventScriptSyntaxHighlighter")
+MODULES = ("GameEventScriptRuntime", "GameEventScriptCompiler", "GameEventScriptSwiftBridge", "GameEventScriptSyntax")
 TESTS = {
     "GameEventScriptSwiftBridgeTests": ("GameEventScriptSwiftBridge", ["GameEventScriptSwiftBridge", "GameEventScriptRuntime"], []),
     "GameEventScriptSwiftBridgeMacrosTests": ("GameEventScriptSwiftBridge", [MACROS], ["SwiftSyntaxMacros", "SwiftSyntaxMacrosTestSupport"]),
-    "GameEventScriptSyntaxHighlighterTests": ("GameEventScriptSyntaxHighlighter", ["GameEventScriptSyntaxHighlighter"], []),
+    "GameEventScriptSyntaxTests": ("GameEventScriptSyntax", ["GameEventScriptSyntax"], []),
 }
 
 
@@ -98,7 +98,7 @@ def verify(workspace):
     for module in MODULES:
         if products[module]["type"] != {"library": ["automatic"]} or products[module]["targets"] != [module]:
             raise RuntimeError(f"Unexpected product definition for {module}")
-        expected = [] if module in ("GameEventScriptRuntime", "GameEventScriptSyntaxHighlighter") else ["GameEventScriptRuntime"]
+        expected = [] if module in ("GameEventScriptRuntime", "GameEventScriptSyntax") else ["GameEventScriptRuntime"]
         if module == "GameEventScriptSwiftBridge":
             expected.append(MACROS)
         if targets[module].get("target_dependencies", []) != expected:

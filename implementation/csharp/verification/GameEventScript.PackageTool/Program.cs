@@ -20,7 +20,7 @@ internal static class Program
         new(RuntimePackage, []),
         new("GameEventScript.Compiler", [RuntimePackage]),
         new("GameEventScript.CSharpBridge", [RuntimePackage]),
-        new("GameEventScript.SyntaxHighlighter", [])
+        new("GameEventScript.Syntax", [])
     ];
 
     private static int Main(string[] arguments)

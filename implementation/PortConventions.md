@@ -34,7 +34,7 @@ primary concepts: every port works with the same edge types and roles.
   mark user types and are not Bridge objects.
 - Abbreviations are written as words: `Ges`, `Vm`, `Api`; never `GES`, `VM`, `API`.
 - No type may share its name with a Swift module (for example
-  `GameEventScriptCompiler`, `GameEventScriptSyntaxHighlighter`); such a type
+  `GameEventScriptCompiler`, `GameEventScriptSyntax`); such a type
   breaks module qualification.
 
 ## Identical names, idiomatic spelling
@@ -106,7 +106,7 @@ the static import, so they omit the redundant prefix.
 - Bridge adapts the Core to the platform (threads, locks, dispatchers,
   Reflection versus KeyPath/macros, delegates versus closures). The same role
   has the same name; platform-only types are allowed.
-- SyntaxHighlighter is a separate module with the entry type
+- Syntax is a separate module with the entry type
   `GesSyntaxHighlighter`.
 
 ## Tools and adapters

@@ -5,7 +5,7 @@ import Foundation
 import GameEventScriptCompiler
 import GameEventScriptRuntime
 import GameEventScriptSwiftBridge
-import GameEventScriptSyntaxHighlighter
+import GameEventScriptSyntax
 
 @GesType("ConsumerPoint")
 struct ConsumerPoint {

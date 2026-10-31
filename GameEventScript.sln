@@ -43,11 +43,11 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GameEventScript.RuntimeCons
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GameEventScript.PackageTool", "implementation\csharp\verification\GameEventScript.PackageTool\GameEventScript.PackageTool.csproj", "{E1934447-E8C7-4FEE-8BC0-D9BEE3285C0F}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "GameEventScript.SyntaxHighlighter", "GameEventScript.SyntaxHighlighter", "{3A71803E-BA04-0518-E510-AB0F48CCEF4A}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "GameEventScript.Syntax", "GameEventScript.Syntax", "{3A71803E-BA04-0518-E510-AB0F48CCEF4A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GameEventScript.SyntaxHighlighter", "implementation\csharp\GameEventScript.SyntaxHighlighter\src\GameEventScript.SyntaxHighlighter.csproj", "{807BF48B-FADC-4032-8B24-82030DBC1EB8}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GameEventScript.Syntax", "implementation\csharp\GameEventScript.Syntax\src\GameEventScript.Syntax.csproj", "{807BF48B-FADC-4032-8B24-82030DBC1EB8}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GameEventScript.SyntaxHighlighter.Tests", "implementation\csharp\GameEventScript.SyntaxHighlighter\tests\GameEventScript.SyntaxHighlighter.Tests.csproj", "{2581371B-A2A8-439F-94DE-EDE72D11C435}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GameEventScript.Syntax.Tests", "implementation\csharp\GameEventScript.Syntax\tests\GameEventScript.Syntax.Tests.csproj", "{2581371B-A2A8-439F-94DE-EDE72D11C435}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GameEventScript.ConformanceAdapter", "implementation\csharp\GameEventScript.Conformance\adapter\GameEventScript.ConformanceAdapter.csproj", "{95941FB4-E5D4-4AA7-B607-E324F7FA7B31}"
 EndProject

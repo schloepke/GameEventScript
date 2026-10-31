@@ -435,7 +435,7 @@ the top discard retained. A completely blocked game ends in a draw.
 
 ## Web highlighting
 
-The Wasm adapter imports the unchanged Swift SyntaxHighlighter package and exports
+The Wasm adapter imports the unchanged Swift Syntax package and exports
 `cardgame_highlight`. It returns completion plus `[start, length, kind]` arrays in
 UTF-16 offsets. A single worker shares one Wasm reactor between gameplay, compilation and
 highlighting. Editor input is debounced and stale results are ignored. New games

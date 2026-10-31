@@ -5,14 +5,14 @@
    <BuildAction parallelizeBuildables="YES" buildImplicitDependencies="YES">
       <BuildActionEntries>
          <BuildActionEntry buildForTesting="YES" buildForRunning="YES" buildForProfiling="YES" buildForArchiving="YES" buildForAnalyzing="YES">
-            <BuildableReference BuildableIdentifier="primary" BlueprintIdentifier="GameEventScriptSyntaxHighlighter" BuildableName="GameEventScriptSyntaxHighlighter" BlueprintName="GameEventScriptSyntaxHighlighter" ReferencedContainer="container:GameEventScriptSyntaxHighlighter"/>
+            <BuildableReference BuildableIdentifier="primary" BlueprintIdentifier="GameEventScriptSyntax" BuildableName="GameEventScriptSyntax" BlueprintName="GameEventScriptSyntax" ReferencedContainer="container:GameEventScriptSyntax"/>
          </BuildActionEntry>
       </BuildActionEntries>
    </BuildAction>
    <TestAction buildConfiguration="Debug" selectedDebuggerIdentifier="Xcode.DebuggerFoundation.Debugger.LLDB" selectedLauncherIdentifier="Xcode.IDEFoundation.Launcher.LLDB" shouldUseLaunchSchemeArgsEnv="YES">
       <Testables>
          <TestableReference skipped="NO" parallelizable="NO">
-            <BuildableReference BuildableIdentifier="primary" BlueprintIdentifier="GameEventScriptSyntaxHighlighterTests" BuildableName="GameEventScriptSyntaxHighlighterTests" BlueprintName="GameEventScriptSyntaxHighlighterTests" ReferencedContainer="container:GameEventScriptSyntaxHighlighter"/>
+            <BuildableReference BuildableIdentifier="primary" BlueprintIdentifier="GameEventScriptSyntaxTests" BuildableName="GameEventScriptSyntaxTests" BlueprintName="GameEventScriptSyntaxTests" ReferencedContainer="container:GameEventScriptSyntax"/>
          </TestableReference>
       </Testables>
    </TestAction>

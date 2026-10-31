@@ -42,6 +42,19 @@ here.
 
 ## Language
 
+- Declare external types and extensions in source and import them, so Programs
+  compile without a host catalog and bind only at `Host.Load`. A
+  `declaration module gamedata` contains only external declarations, for
+  example `external record :Unit as { id: :Text, mount: :Tag }` with its
+  constructor signatures and `external function :nav.shortestTurn(from:, to:)`;
+  it produces no bytecode. Scripts make them visible with `import gamedata`;
+  importing script modules with code is out of scope. Declarations become
+  strict, but binding through the host stays available so game scripts can
+  stay small; alternatively a game adds a standard import script. The Program
+  stores the used declarations and `Host.Load` checks them against the
+  registry and extensions. Decide whether `WithExternalTypeCatalog` remains as a
+  convenience, and whether the Bridges generate declaration modules. Schedule
+  after the Syntax module rework, on its source-neutral declaration set.
 - Validate GES documents against schemas: `.gess` files hold record declarations
   and a later reading operation receives the available schemas (from a Program or
   loaded `.gess` files) to construct and check the root record, with document
@@ -167,35 +180,43 @@ here.
   compiler would mark such constant expressions instead of folding them; this
   touches bytecode and `.gesb`. Pursue only if run-time evaluation of constant
   approximations becomes measurable.
-- Make all Swift library modules (Runtime, Compiler, SyntaxHighlighter, and the
+- Make all Swift library modules (Runtime, Compiler, Syntax, and the
   Bridge where possible) build for WASI, with a CI gate that builds them and
   rejects new Foundation imports in the portable modules. Runtime and Compiler
   no longer import Foundation.
-- Replace the regex-based syntax highlighters with highlighting derived from the
-  compiler's own lexer and parser, in both ports. This drops the Swift
+- Base the compiler front end and highlighting on a lossless syntax tree in the
+  Syntax module (in progress on `feature/syntax-modul`). This drops the Swift
   highlighter's Foundation dependency (`NSRegularExpression`, `NSString`,
   `JSONSerialization`), so WASM consumers such as the card game (about 67 MB,
-  mostly unused Foundation) stop shipping it, and a single linear lex/parse pass
-  should outperform repeated pattern matching.
-  - A lossless lexer keeps whitespace, line breaks and comments as trivia on the
-    tokens, so every source character maps to a highlighted span and the source
-    can be reconstructed exactly.
-  - Classification comes from the parsed tree (records, functions, predicates,
-    parameters, messages, …); syntax errors from parser recovery and, where
-    useful, validation diagnostics become error spans.
-  - Open decisions: integrate the highlighter into the Compiler, or turn the
-    SyntaxHighlighter module into a Syntax module (lexer, parser, AST,
-    validator, diagnostics, highlighter) that the Compiler depends on; how much
-    of the tree becomes public API (initially only parse results, diagnostics
-    and highlighting, node details via `InternalsVisibleTo`/`@_spi`); how
-    incremental re-highlighting works; and how GESA assembler text is
-    highlighted.
-  - Rework `specs/SyntaxHighlighting.md` and `conformance/highlighting` from
-    TextMate line states to tree-derived tokens, keep both ports equivalent, and
-    adjust package names, distribution allowlists and documentation if the
-    module changes. The TextMate grammars remain for external editors only.
-  - Compare highlighting performance and the card-game module size before and
-    after.
+  mostly unused Foundation) stop shipping it. Syntax, Runtime and Compiler end
+  without Foundation or package dependencies; the Bridges and the CLI may keep
+  theirs. Compile time may grow by at most 10 % against
+  `scripts/benchmark-compile.py`, with unchanged VM time and allocations.
+  - Done: the SyntaxHighlighter packages are renamed to Syntax; the compile
+    benchmark records the baseline.
+  - Lexer: keeps whitespace, line breaks, comments and a BOM as token trivia
+    and token text instead of evaluated values, so the tree reproduces the
+    source exactly. Unit symbols, text and name rules, diagnostics and source
+    locations move into Syntax; Runtime builds on Syntax for them. The
+    allocation-free runtime literal parser keeps its own implementation.
+  - Parser: builds the immutable lossless tree with recovery, missing and
+    skipped tokens and error nodes carrying one diagnostic each; a binder in
+    the Compiler produces the existing semantic tree, so optimizer, lowering
+    and Programs stay byte-identical. Keep the stack-safe recursion structure.
+  - Validator: single-source checks (naming, duplicates, shadowing, constants,
+    labels, nesting) move into Syntax; checks across sources and catalogs stay
+    in the Compiler and read a source-neutral declaration set, so external
+    declarations can later feed it. Both attach diagnostics to nodes.
+  - Highlighter: categories and diagnostics per span, derived from the tree; no
+    TextMate concepts, line states or scope stacks. GESA gets a small lossless
+    lexer that highlights embedded source through the GES tree. The CLI moves
+    onto the Syntax module. Public API: parse results, diagnostics and
+    highlighting; node details via `InternalsVisibleTo`/`@_spi(Compiler)`.
+  - Then rework `specs/SyntaxHighlighting.md` and `conformance/highlighting`,
+    add `specs/Syntax.md` and a lossless roundtrip over the whole corpus, and
+    compare highlighting performance and the card-game module size.
+- Generate the TextMate editor bundles from the Syntax module's token and node
+  classification instead of maintaining the grammars separately.
 - Reduce library and binary size without noticeable performance loss now that
   the C#/Swift port convergence is complete. Its first phase grew the
   release Swift `ges` binary by about 175 KB (3.35 → 3.52 MB, `__TEXT` +16 KB)

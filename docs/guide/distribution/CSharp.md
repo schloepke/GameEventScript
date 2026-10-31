@@ -13,7 +13,7 @@ packages under the `GameEventScript` product name:
 - `GameEventScript.CSharpBridge` contains optional C# delegate, reflection,
   dictionary, and automatic-runner adapters and depends only on Runtime.
 
-- `GameEventScript.SyntaxHighlighter` contains optional GES/GESA editor ranges,
+- `GameEventScript.Syntax` contains optional GES/GESA editor ranges,
   TextMate scopes, incremental states and ANSI rendering, with no GES dependency.
 
 Conformance remains an internal project for repository verification. CLI NuGet
@@ -80,10 +80,10 @@ artifacts/csharp/
     GameEventScript.Compiler.<version>.snupkg
     GameEventScript.CSharpBridge.<version>.nupkg
     GameEventScript.CSharpBridge.<version>.snupkg
-    GameEventScript.SyntaxHighlighter.<version>.nupkg
-    GameEventScript.SyntaxHighlighter.<version>.snupkg
+    GameEventScript.Syntax.<version>.nupkg
+    GameEventScript.Syntax.<version>.snupkg
   dll/<version>/
-    syntaxhighlighter/ # Standalone highlighter DLL, PDB and XML
+    syntax/ # Standalone highlighter DLL, PDB and XML
     runtime/
     compiler/
     unity/
@@ -136,5 +136,5 @@ follow-up work is tracked in `BACKLOG.md`.
 
 The [package release guide](Packages.md) describes owner configuration, Trusted
 Publishing and the shared Git-tag/version workflow. The upload script explicitly
-selects Runtime, Compiler, CSharpBridge and SyntaxHighlighter at the requested version, including
+selects Runtime, Compiler, CSharpBridge and Syntax at the requested version, including
 their symbol packages. It never uploads every package found in a directory.

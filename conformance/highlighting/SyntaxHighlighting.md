@@ -4,7 +4,7 @@
 # Shared syntax-highlighting cases
 
 These presentation cases are consumed by the independent C# and Swift
-SyntaxHighlighter native test adapters. They are not VM/language acceptance
+Syntax native test adapters. They are not VM/language acceptance
 cases and do not require Runtime, Compiler or Conformance packages.
 
 Each `highlight` block has source, language and expected ranges selected by text

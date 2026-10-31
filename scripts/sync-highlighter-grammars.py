@@ -60,7 +60,7 @@ def generate():
                 raise ValueError('Only numbered named captures are supported')
         return [(int(k), v['name']) for k, v in sorted(groups.items(), key=lambda pair: int(pair[0]))]
 
-    cs = HEADER + '\nnamespace GameEventScript.SyntaxHighlighter;\n\ninternal static class GesEmbeddedGrammars\n{\n'
+    cs = HEADER + '\nnamespace GameEventScript.Syntax;\n\ninternal static class GesEmbeddedGrammars\n{\n'
     for name, ids in zip(['Source', 'Assembly'], roots):
         cs += f'    internal static readonly int[] {name} = [{", ".join(map(str, ids))}];\n'
     cs += '\n    internal static GesGrammarRule[] CreateRules() =>\n    [\n'
@@ -86,8 +86,8 @@ def generate():
     swift += '\n'.join('        ' + line for line in json.dumps(payload, ensure_ascii=False, indent=2).splitlines())
     swift += '\n        """####\n}\n'
     return {
-        ROOT / 'implementation/csharp/GameEventScript.SyntaxHighlighter/src/GesEmbeddedGrammars.g.cs': cs,
-        ROOT / 'implementation/swift/GameEventScriptSyntaxHighlighter/Sources/GameEventScriptSyntaxHighlighter/EmbeddedGrammars.swift': swift,
+        ROOT / 'implementation/csharp/GameEventScript.Syntax/src/GesEmbeddedGrammars.g.cs': cs,
+        ROOT / 'implementation/swift/GameEventScriptSyntax/Sources/GameEventScriptSyntax/EmbeddedGrammars.swift': swift,
     }
 
 

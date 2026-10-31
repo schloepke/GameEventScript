@@ -35,8 +35,8 @@ const documents = new Map([
   ['implementation/swift/GameEventScriptTool/README.md', 'docs/tools/swift-cli'],
   ['implementation/csharp/GameEventScript.CSharpBridge/README.md', 'docs/integration/csharp-bridge'],
   ['implementation/swift/GameEventScriptSwiftBridge/README.md', 'docs/integration/swift-bridge'],
-  ['implementation/csharp/GameEventScript.SyntaxHighlighter/README.md', 'docs/tools/csharp-highlighter'],
-  ['implementation/swift/GameEventScriptSyntaxHighlighter/README.md', 'docs/tools/swift-highlighter'],
+  ['implementation/csharp/GameEventScript.Syntax/README.md', 'docs/tools/csharp-highlighter'],
+  ['implementation/swift/GameEventScriptSyntax/README.md', 'docs/tools/swift-highlighter'],
   ['CHANGELOG.md', 'docs/changelog'],
   ['tools/editors/README.md', 'docs/tools/editor-bundles'],
 ]);

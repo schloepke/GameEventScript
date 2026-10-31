@@ -1198,31 +1198,31 @@ struct GameEventScript.Runtime.Values.GesValueSlice
   property GameEventScript.Runtime.Values.GesValue& Item { get }
   property System.Int32 Length { get }
   property System.Int32 Start { get }
-static class GameEventScript.SyntaxHighlighter.GesAnsiRenderer
-  method static System.Int32? DefaultColor(GameEventScript.SyntaxHighlighter.GesSyntaxKind kind)
-  method static System.String Render(System.String source, System.Collections.Generic.IReadOnlyList<GameEventScript.SyntaxHighlighter.GesHighlightSpan> spans, System.Func<GameEventScript.SyntaxHighlighter.GesSyntaxKind, System.Int32?> color)
-sealed class GameEventScript.SyntaxHighlighter.GesHighlightResult
-  property GameEventScript.SyntaxHighlighter.GesHighlightState NextState { get }
+static class GameEventScript.Syntax.GesAnsiRenderer
+  method static System.Int32? DefaultColor(GameEventScript.Syntax.GesSyntaxKind kind)
+  method static System.String Render(System.String source, System.Collections.Generic.IReadOnlyList<GameEventScript.Syntax.GesHighlightSpan> spans, System.Func<GameEventScript.Syntax.GesSyntaxKind, System.Int32?> color)
+sealed class GameEventScript.Syntax.GesHighlightResult
+  property GameEventScript.Syntax.GesHighlightState NextState { get }
   property System.Boolean IsComplete { get }
-  property System.Collections.Generic.IReadOnlyList<GameEventScript.SyntaxHighlighter.GesHighlightSpan> Spans { get }
-sealed class GameEventScript.SyntaxHighlighter.GesHighlightSpan
-  property GameEventScript.SyntaxHighlighter.GesSyntaxKind Kind { get }
+  property System.Collections.Generic.IReadOnlyList<GameEventScript.Syntax.GesHighlightSpan> Spans { get }
+sealed class GameEventScript.Syntax.GesHighlightSpan
+  property GameEventScript.Syntax.GesSyntaxKind Kind { get }
   property System.Collections.Generic.IReadOnlyList<System.String> Scopes { get }
   property System.Int32 Length { get }
   property System.Int32 Start { get }
-sealed class GameEventScript.SyntaxHighlighter.GesHighlightState
-  method System.Boolean Equals(GameEventScript.SyntaxHighlighter.GesHighlightState other)
+sealed class GameEventScript.Syntax.GesHighlightState
+  method System.Boolean Equals(GameEventScript.Syntax.GesHighlightState other)
   method System.Boolean Equals(System.Object obj)
   method System.Int32 GetHashCode()
-  property GameEventScript.SyntaxHighlighter.GesSyntaxLanguage Language { get }
-sealed class GameEventScript.SyntaxHighlighter.GesSyntaxHighlighter
-  ctor GesSyntaxHighlighter(GameEventScript.SyntaxHighlighter.GesSyntaxLanguage language, System.Int32 maxInputLength)
-  method GameEventScript.SyntaxHighlighter.GesHighlightResult Highlight(System.String text)
-  method GameEventScript.SyntaxHighlighter.GesHighlightResult HighlightLine(System.String text, GameEventScript.SyntaxHighlighter.GesHighlightState state)
-  method GameEventScript.SyntaxHighlighter.GesHighlightState CreateState()
-  property GameEventScript.SyntaxHighlighter.GesSyntaxLanguage Language { get }
+  property GameEventScript.Syntax.GesSyntaxLanguage Language { get }
+sealed class GameEventScript.Syntax.GesSyntaxHighlighter
+  ctor GesSyntaxHighlighter(GameEventScript.Syntax.GesSyntaxLanguage language, System.Int32 maxInputLength)
+  method GameEventScript.Syntax.GesHighlightResult Highlight(System.String text)
+  method GameEventScript.Syntax.GesHighlightResult HighlightLine(System.String text, GameEventScript.Syntax.GesHighlightState state)
+  method GameEventScript.Syntax.GesHighlightState CreateState()
+  property GameEventScript.Syntax.GesSyntaxLanguage Language { get }
   property System.Int32 MaxInputLength { get }
-enum GameEventScript.SyntaxHighlighter.GesSyntaxKind
+enum GameEventScript.Syntax.GesSyntaxKind
   enum-field Plain = 0
   enum-field Keyword = 1
   enum-field Builtin = 2
@@ -1239,6 +1239,6 @@ enum GameEventScript.SyntaxHighlighter.GesSyntaxKind
   enum-field Module = 13
   enum-field Label = 14
   enum-field Register = 15
-enum GameEventScript.SyntaxHighlighter.GesSyntaxLanguage
+enum GameEventScript.Syntax.GesSyntaxLanguage
   enum-field Ges = 0
   enum-field Gesa = 1

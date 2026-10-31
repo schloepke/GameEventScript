@@ -75,7 +75,7 @@ require them.
 ## Embedding API baseline and compatibility
 
 The reviewed application API baseline consists of Runtime, the optional Compiler
-and the native Bridge in each implementation. SyntaxHighlighter is a separate
+and the native Bridge in each implementation. Syntax is a separate
 optional product with its own [contract](SyntaxHighlighting.md). CLI and
 Conformance are not application library products. Public implementation details
 must not be inferred from private types, compiler SPI or the shape of generated
@@ -1004,7 +1004,7 @@ the Reader.
 
 Package and assembly identities use `GameEventScript.Runtime`,
 `GameEventScript.Compiler`, `GameEventScript.CSharpBridge`, and
-`GameEventScript.SyntaxHighlighter`. Their shared C# namespace root is
+`GameEventScript.Syntax`. Their shared C# namespace root is
 `GameEventScript`; the module name does not add another namespace layer to
 the public `GameEventScript.Api` contracts.
 

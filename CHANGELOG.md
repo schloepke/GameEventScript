@@ -12,6 +12,13 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 
 ### Breaking
 
+- The optional highlighter packages are renamed to the Syntax module, which
+  will hold the shared lexer, parser and syntax tree: NuGet
+  `GameEventScript.SyntaxHighlighter` becomes `GameEventScript.Syntax` (namespace
+  `GameEventScript.Syntax`), and the SwiftPM product and module
+  `GameEventScriptSyntaxHighlighter` become `GameEventScriptSyntax`. Type names
+  such as `GesSyntaxHighlighter` are unchanged. Migrate by replacing the package
+  reference and the `using`/`import`.
 - `parse` materializes at most `MaxRangeItems` Range items into Lists per
   invocation in total, so many `:List(:Range(...))` forms in one Text cannot
   multiply the per-Range limit. Exceeding the total stops the handler with the

@@ -95,7 +95,7 @@ The browser uses a small [WASI reactor interface](https://book.swiftwasm.org/exa
 without a JavaScriptKit or SwiftSyntax dependency. The uncompressed prototype
 Wasm including Foundation/ICU for the Swift highlighter is about 67 MB; download/startup optimization is not part of this first pass.
 
-The Wasm build stages Runtime, Compiler, and SyntaxHighlighter sources under
+The Wasm build stages Runtime, Compiler, and Syntax sources under
 `artifacts/card-game/wasm-source`. It adds WASILibc imports and a tiny monotonic
 clock C shim **only to that staged Runtime copy**. No tracked repository source
 is patched. Patch anchors deliberately fail if the source changes incompatibly.

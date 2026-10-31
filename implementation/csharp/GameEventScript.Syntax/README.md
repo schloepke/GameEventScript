@@ -5,13 +5,13 @@
 
 > **Since: Unreleased**
 
-`GameEventScript.SyntaxHighlighter` is an optional .NET Standard 2.1 library for
+`GameEventScript.Syntax` is an optional .NET Standard 2.1 library for
 GES/GESA editors and terminals. It uses BCL Regex, with no third-party, Compiler,
 Runtime or UI dependency. It shares the canonical TextMate rules with the CLI
 and the Swift product.
 
 ```csharp
-using GameEventScript.SyntaxHighlighter;
+using GameEventScript.Syntax;
 
 var highlighter = new GesSyntaxHighlighter(); // GES by default
 var result = highlighter.Highlight(source);
@@ -42,7 +42,7 @@ var displayed = result.IsComplete
 The ANSI renderer accepts an optional category-to-SGR-color callback. Terminal
 capabilities, `NO_COLOR`, redirection and color enablement remain caller decisions.
 
-Run `dotnet test implementation/csharp/GameEventScript.SyntaxHighlighter/tests`.
+Run `dotnet test implementation/csharp/GameEventScript.Syntax/tests`.
 C# and Swift execute the same [Markdown cases](../../../conformance/highlighting/SyntaxHighlighting.md).
 See the [contract](../../../specs/SyntaxHighlighting.md) for ranges, categories,
 limits, incremental states and supported TextMate features. The NuGet package is

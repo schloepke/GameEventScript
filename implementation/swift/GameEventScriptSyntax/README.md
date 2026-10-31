@@ -5,7 +5,7 @@
 
 > **Since: Unreleased**
 
-`GameEventScriptSyntaxHighlighter` is an optional SwiftPM library for GES and GESA
+`GameEventScriptSyntax` is an optional SwiftPM library for GES and GESA
 editors and terminals. It uses Foundation, with no AppKit, UIKit, Compiler or
 Runtime dependency. Both CLI highlighting and this library use the canonical
 TextMate grammars. The public repository-root package exports this product;
@@ -14,7 +14,7 @@ this directory is its standalone development package.
 ## Highlight an editor document
 
 ```swift
-import GameEventScriptSyntaxHighlighter
+import GameEventScriptSyntax
 
 let highlighter = try GesSyntaxHighlighter() // .ges by default
 let result = highlighter.highlight(source)
@@ -31,7 +31,7 @@ attributes without changing text or undo history:
 
 ```swift
 import AppKit
-import GameEventScriptSyntaxHighlighter
+import GameEventScriptSyntax
 
 func highlight(_ view: NSTextView, using highlighter: GesSyntaxHighlighter) {
     guard let layout = view.layoutManager else { return }
@@ -80,8 +80,8 @@ retain their embedded GES scopes.
 ## Verification
 
 ```sh
-swift test --package-path implementation/swift/GameEventScriptSyntaxHighlighter \
-  --scratch-path artifacts/swift/syntaxhighlighter \
+swift test --package-path implementation/swift/GameEventScriptSyntax \
+  --scratch-path artifacts/swift/syntax \
   --disable-build-manifest-caching --configuration release
 python3 scripts/sync-highlighter-grammars.py --check
 ```

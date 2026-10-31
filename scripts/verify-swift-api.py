@@ -22,7 +22,7 @@ import sys
 
 
 ROOT = Path(__file__).resolve().parent.parent
-PACKAGES = ("GameEventScriptRuntime", "GameEventScriptCompiler", "GameEventScriptSwiftBridge", "GameEventScriptSyntaxHighlighter")
+PACKAGES = ("GameEventScriptRuntime", "GameEventScriptCompiler", "GameEventScriptSwiftBridge", "GameEventScriptSyntax")
 SNAPSHOTS = ROOT / "implementation" / "swift" / "api"
 ARTIFACTS = ROOT / "artifacts" / "swift-api"
 RELATIONSHIPS = {
@@ -66,7 +66,7 @@ def build_options(package, reuse_local_builds):
     if reuse_local_builds:
         owner, directory = {
             "GameEventScriptSwiftBridge": ("GameEventScriptSwiftBridge", "swiftbridge"),
-            "GameEventScriptSyntaxHighlighter": ("GameEventScriptSyntaxHighlighter", "syntaxhighlighter"),
+            "GameEventScriptSyntax": ("GameEventScriptSyntax", "syntax"),
         }.get(package, ("GameEventScriptConformance", "conformance"))
         scratch = ROOT / "artifacts/swift" / directory
     else:

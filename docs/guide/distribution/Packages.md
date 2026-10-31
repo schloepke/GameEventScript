@@ -24,14 +24,14 @@ versions retain their original package contents; icons are included starting wit
 
 | Distribution | Public products |
 | --- | --- |
-| NuGet | `GameEventScript.Runtime`, `GameEventScript.Compiler`, `GameEventScript.CSharpBridge`, `GameEventScript.SyntaxHighlighter` |
+| NuGet | `GameEventScript.Runtime`, `GameEventScript.Compiler`, `GameEventScript.CSharpBridge`, `GameEventScript.Syntax` |
 | NuGet tools (since 0.3.0) | `GameEventScript.Tool`, `GameEventScript.Tool.Aot` (plus RID implementation packages) |
-| SwiftPM libraries | `GameEventScriptRuntime`, `GameEventScriptCompiler`, `GameEventScriptSwiftBridge`, `GameEventScriptSyntaxHighlighter` |
+| SwiftPM libraries | `GameEventScriptRuntime`, `GameEventScriptCompiler`, `GameEventScriptSwiftBridge`, `GameEventScriptSyntax` |
 
 The root SwiftPM package exposes only libraries. The CLI uses its separate development package.
 
 Compiler and each native Bridge depend on their Runtime. An application can use
-Runtime alone. SyntaxHighlighter is optional and depends on no other GES module. Conformance stays in the repository for development and CI. CLI and terminal targets are not part of the root package.
+Runtime alone. Syntax is optional and depends on no other GES module. Conformance stays in the repository for development and CI. CLI and terminal targets are not part of the root package.
 Homebrew and local installers remain available. See [standalone CLI downloads](Tools.md) for
 installation and release verification. Deferred distribution work is tracked in
 [BACKLOG.md](../../../BACKLOG.md).
@@ -217,7 +217,7 @@ the sibling development packages or expose Conformance or the CLI.
 > **Since: 0.2.0 — root-package native tests**
 
 The root package also declares three test targets that reuse the existing
-SwiftBridge, bridge-macro and SyntaxHighlighter test sources. They are not
+SwiftBridge, bridge-macro and Syntax test sources. They are not
 library products and are not compiled when an application consumes the libraries.
 Run them from a repository checkout with:
 

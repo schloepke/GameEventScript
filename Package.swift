@@ -10,7 +10,7 @@ let package = Package(
     name: "GameEventScript",
     platforms: [.macOS("10.15")],
     products: [
-        .library(name: "GameEventScriptSyntaxHighlighter", targets: ["GameEventScriptSyntaxHighlighter"]),
+        .library(name: "GameEventScriptSyntax", targets: ["GameEventScriptSyntax"]),
         .library(name: "GameEventScriptRuntime", targets: ["GameEventScriptRuntime"]),
         .library(name: "GameEventScriptCompiler", targets: ["GameEventScriptCompiler"]),
         .library(name: "GameEventScriptSwiftBridge", targets: ["GameEventScriptSwiftBridge"]),
@@ -27,7 +27,7 @@ let package = Package(
             ],
             path: "implementation/swift/GameEventScriptSwiftBridge/Sources/GameEventScriptSwiftBridgeMacros"
         ),
-        .target(name: "GameEventScriptSyntaxHighlighter", path: "implementation/swift/GameEventScriptSyntaxHighlighter/Sources/GameEventScriptSyntaxHighlighter"),
+        .target(name: "GameEventScriptSyntax", path: "implementation/swift/GameEventScriptSyntax/Sources/GameEventScriptSyntax"),
         .target(name: "GameEventScriptRuntime", path: "implementation/swift/GameEventScriptRuntime/Sources/GameEventScriptRuntime"),
         .target(name: "GameEventScriptCompiler", dependencies: ["GameEventScriptRuntime"], path: "implementation/swift/GameEventScriptCompiler/Sources/GameEventScriptCompiler"),
         .target(name: "GameEventScriptSwiftBridge", dependencies: ["GameEventScriptRuntime", "GameEventScriptSwiftBridgeMacros"], path: "implementation/swift/GameEventScriptSwiftBridge/Sources/GameEventScriptSwiftBridge"),
@@ -46,9 +46,9 @@ let package = Package(
             path: "implementation/swift/GameEventScriptSwiftBridge/Tests/GameEventScriptSwiftBridgeMacrosTests"
         ),
         .testTarget(
-            name: "GameEventScriptSyntaxHighlighterTests",
-            dependencies: ["GameEventScriptSyntaxHighlighter"],
-            path: "implementation/swift/GameEventScriptSyntaxHighlighter/Tests/GameEventScriptSyntaxHighlighterTests"
+            name: "GameEventScriptSyntaxTests",
+            dependencies: ["GameEventScriptSyntax"],
+            path: "implementation/swift/GameEventScriptSyntax/Tests/GameEventScriptSyntaxTests"
         ),
     ]
 )

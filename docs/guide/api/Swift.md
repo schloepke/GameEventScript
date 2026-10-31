@@ -13,7 +13,7 @@ the latest SwiftPM release; check the [changelog](../../../CHANGELOG.md) and
 | Runtime | [GameEventScriptRuntime](https://gameeventscript.org/api/swift/gameeventscriptruntime/documentation/gameeventscriptruntime/) |
 | Compiler | [GameEventScriptCompiler](https://gameeventscript.org/api/swift/gameeventscriptcompiler/documentation/gameeventscriptcompiler/) |
 | Swift bridge | [GameEventScriptSwiftBridge](https://gameeventscript.org/api/swift/gameeventscriptswiftbridge/documentation/gameeventscriptswiftbridge/) |
-| Syntax highlighter | [GameEventScriptSyntaxHighlighter](https://gameeventscript.org/api/swift/gameeventscriptsyntaxhighlighter/documentation/gameeventscriptsyntaxhighlighter/) |
+| Syntax highlighter | [GameEventScriptSyntax](https://gameeventscript.org/api/swift/gameeventscriptsyntax/documentation/gameeventscriptsyntax/) |
 
 DocC builds these pages from public Swift symbol graphs and their documentation
 comments. The internal macro implementation, CLI and Conformance are excluded;

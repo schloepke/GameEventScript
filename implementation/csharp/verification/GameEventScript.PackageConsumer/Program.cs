@@ -1,7 +1,7 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
-using GameEventScript.SyntaxHighlighter;
+using GameEventScript.Syntax;
 using GameEventScript.Api;
 using GameEventScript.CSharpBridge;
 using GameEventScript.Runtime.Values;

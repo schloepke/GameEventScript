@@ -131,7 +131,7 @@ enum GesProgramValidator {
         if i.opcode == .constructData {
             let type = p.stringConstants[Int(i.word1)]
             let labels = p.uint16IndexLists[Int(i.a)].map { p.stringConstants[Int($0)] }
-            if !GesDataConstructionShape.types.contains(type) || GesDataConstructionShape.positions(type, labels) == nil || labels.count != p.uint16IndexLists[Int(i.word2)].count { throw failure(.invalidOperand, 16, index) }
+            if !GesLiteralForms.types.contains(type) || GesLiteralForms.positions(type, labels) == nil || labels.count != p.uint16IndexLists[Int(i.word2)].count { throw failure(.invalidOperand, 16, index) }
         }
     }
 

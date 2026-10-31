@@ -9,7 +9,7 @@
     public static func number(_ text: String, percentage: Bool = false) -> GesValue? { GesTextNumberCast.read(text, percentage: percentage, allowGrouping: false) }
 
     /// Validates labels for an explicit built-in data constructor without evaluating its arguments.
-    public static func dataArguments(_ type: String, _ labels: [String]) -> Bool { GesDataConstructionShape.positions(type, labels) != nil }
+    public static func dataArguments(_ type: String, _ labels: [String]) -> Bool { GesLiteralForms.positions(type, labels) != nil }
 
     /// Applies the source Number cast, including text parsing and invalid-input-to-Nothing conversion.
     public static func castNumber(_ value: GesValue) -> GesValue { GesCasts.number(value) }

@@ -10,7 +10,7 @@ import XCTest
 final class UnitSuffixSetTests: XCTestCase {
     func testTextDecoderPrecheckAcceptsTheEndOfEverySuffix() {
         for suffix in GesQuantityUnit.suffixes {
-            XCTAssertTrue(GesTextNumberCast.possibleSuffixEnd("1" + suffix.text), suffix.text)
+            XCTAssertTrue(GesNumberLiteral.possibleSuffixEnd("1" + suffix.text), suffix.text)
         }
     }
 }

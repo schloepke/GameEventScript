@@ -70,8 +70,9 @@ public sealed class GesDocument : IEquatable<GesDocument>
     /// <exception cref="GesDocumentException">The text is not a valid document or exceeds a literal parsing limit.</exception>
     public static GesDocument Parse(string text)
     {
-        var input = GesValue.GesText(text ?? throw new ArgumentNullException(nameof(text)));
-        var root = GesLiteralParser.ParseDocument(in input, out var schema);
+        if (text is null) throw new ArgumentNullException(nameof(text));
+        GesText.RequireValidUnicode(text, nameof(text));
+        var root = GesDocumentReading.Read(text, out var schema);
         return new GesDocument(root, schema, false);
     }
 

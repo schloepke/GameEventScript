@@ -1,6 +1,8 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
+@_spi(Syntax) import GameEventScriptSyntax
+
 /// Host-specific resolution; this object is never retained by the portable Program.
 final class GesLinkedProgram {
     struct Handler {
@@ -30,7 +32,7 @@ final class GesLinkedProgram {
     func dataConstructionPositions(type: UInt16, labels: UInt16) -> [Int]? {
         let key = UInt32(type) << 16 | UInt32(labels)
         if let positions = dataPositions[key] { return positions }
-        let positions = GesDataConstructionShape.positions(program.stringConstants[Int(type)], program.uint16IndexLists[Int(labels)].map { program.stringConstants[Int($0)] })
+        let positions = GesLiteralForms.positions(program.stringConstants[Int(type)], program.uint16IndexLists[Int(labels)].map { program.stringConstants[Int($0)] })
         dataPositions[key] = .some(positions)
         return positions
     }

@@ -40,7 +40,7 @@ public struct GesDocument: Hashable {
     /// code and the line and column of the first error when the text is not a valid document or exceeds a literal
     /// parsing limit.
     public init(parsing text: String) throws {
-        (value, schema) = try GesLiteralParser.parseDocument(text)
+        (value, schema) = try GesDocumentReading.read(text)
     }
 
     /// The root entries: the Map entries or the Record fields, in Map order.
@@ -96,11 +96,7 @@ public struct GesDocumentSchema: Hashable, Sendable {
         GesText.hashScalars(name, into: &hasher)
     }
 
-    static func isRecordTypeName(_ name: String) -> Bool {
-        guard GesNames.type(name) else { return false }
-        let type = name.lowercased()
-        return !(GesDataConstructionShape.types.contains(type) && name == type.prefix(1).uppercased() + type.dropFirst())
-    }
+    static func isRecordTypeName(_ name: String) -> Bool { GesLiteralForms.isRecordTypeName(name) }
 }
 
 /// Layout options for printing GES documents and values. Layout is a recommendation: every printed document reads
@@ -160,21 +156,4 @@ public struct GesDocumentError: Error, Hashable, Sendable {
         if let limitName { return "GES document exceeds \(limitName) (\(limit ?? 0)) at line \(line), column \(column)." }
         return "Invalid GES document (\(code)) at line \(line), column \(column)."
     }
-}
-
-// Stable document error codes owned by specs/Documents.md.
-enum GesDocumentErrorCodes {
-    static let invalidKey = "document.invalidKey"
-    static let missingColon = "document.missingColon"
-    static let duplicateKey = "document.duplicateKey"
-    static let unquotedText = "document.unquotedText"
-    static let unknownUnit = "document.unknownUnit"
-    static let invalidLiteral = "document.invalidLiteral"
-    static let unknownType = "document.unknownType"
-    static let unexpectedToken = "document.unexpectedToken"
-    static let unclosedBracket = "document.unclosedBracket"
-    static let unclosedText = "document.unclosedText"
-    static let invalidSchemaHeader = "document.invalidSchemaHeader"
-    static let misplacedSchemaHeader = "document.misplacedSchemaHeader"
-    static let limitExceeded = "document.limitExceeded"
 }

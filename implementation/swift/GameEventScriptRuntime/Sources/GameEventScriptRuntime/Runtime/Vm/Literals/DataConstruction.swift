@@ -9,11 +9,11 @@ enum GesDataConstruction {
     }
 
     static func create<Output: GesValueOutput>(_ type: String, _ labels: [String], _ arguments: [GesValue], _ context: GesContext?, sink: Output) throws -> Output.Result {
-        guard let positions = GesDataConstructionShape.positions(type, labels) else { return sink.nothing }
+        guard let positions = GesLiteralForms.positions(type, labels) else { return sink.nothing }
         return try create(type, positions: positions, arguments, context, sink: sink)
     }
 
-    // Positions come from GesDataConstructionShape, resolved once per constant type/label list.
+    // Positions come from GesLiteralForms, resolved once per constant type/label list.
     static func create<Output: GesValueOutput>(_ type: String, positions: [Int], _ arguments: [GesValue], _ context: GesContext?, sink: Output) throws -> Output.Result {
         guard arguments.count == positions.count else { return sink.nothing }
         var slots = (GesValue.nothing, GesValue.nothing, GesValue.nothing)

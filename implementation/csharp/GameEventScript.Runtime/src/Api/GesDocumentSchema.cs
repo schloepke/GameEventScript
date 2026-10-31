@@ -55,10 +55,5 @@ public sealed record GesDocumentSchema
     /// <summary>The record type name or the schema file path.</summary>
     public string Name { get; }
 
-    internal static bool IsRecordTypeName(string name)
-    {
-        if (!GesText.IsTypeName(name)) return false;
-        var builtin = name.ToLowerInvariant();
-        return !(GesDataConstruction.IsType(builtin) && name == char.ToUpperInvariant(builtin[0]) + builtin.Substring(1));
-    }
+    internal static bool IsRecordTypeName(string name) => GesLiteralForms.IsRecordTypeName(name);
 }

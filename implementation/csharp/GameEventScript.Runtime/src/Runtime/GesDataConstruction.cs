@@ -12,68 +12,9 @@ namespace GameEventScript.Runtime;
 
 internal static class GesDataConstruction
 {
-    internal static bool IsType(string name) => name is "nothing" or "number" or "percentage" or "boolean" or "text" or "tag" or "list" or "map" or "dice" or "vector" or "point" or "range" or "series" or "message" or "handler" or "record";
-    // Returns parameter positions in evaluation order, without reordering evaluation of source arguments.
-    internal static int[]? Positions(string type, IReadOnlyList<string> labels)
-    {
-        var parameters = type switch
-        {
-            "number" => new[]
-            {
-                "value",
-                "unit"
-            },
-            "range" => new[]
-            {
-                "from",
-                "to",
-                "step"
-            },
-            "series" => new[]
-            {
-                "kind",
-                "offset"
-            },
-            "record" => new[]
-            {
-                "type",
-                "fields"
-            },
-            "message" => new[]
-            {
-                "value",
-                "tags"
-            },
-            "vector" or "point" => new[]
-            {
-                "x",
-                "y",
-                "z"
-            },
-            _ => new[]
-            {
-                "value"
-            }
-        };
-        if (labels.Count > parameters.Length || labels.Count == 0 && type is not ("nothing" or "vector" or "point"))
-            return null;
-        var result = new int[labels.Count];
-        var used = new bool[parameters.Length];
-        for (var i = 0; i < labels.Count; i++)
-        {
-            var position = labels[i] == "_" ? i : Array.IndexOf(parameters, labels[i]);
-            if (position < 0 || used[position])
-                return null;
-            used[position] = true;
-            result[i] = position;
-        }
+    internal static bool IsType(string name) => GesLiteralForms.IsType(name);
 
-        if (type == "record" && (!used[0] || !used[1]) || type == "range" && labels.Count > 1 && (!used[0] || !used[1]))
-            return null;
-        if (type is not ("nothing" or "vector" or "point") && !used[0])
-            return null;
-        return result;
-    }
+    internal static int[]? Positions(string type, IReadOnlyList<string> labels) => GesLiteralForms.Positions(type, labels);
 
     internal static GesValue Create(string type, string[] labels, GesValue[] arguments, GesVirtualMachine? state, GesContext? context)
     {

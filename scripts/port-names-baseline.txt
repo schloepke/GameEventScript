@@ -164,6 +164,7 @@ only	csharp	Runtime	GesVmListBuilder
 only	csharp	Runtime	GesVmMapBuilder
 only	csharp	Runtime	GesVmOrderBuilder
 only	csharp	Runtime	GesVmUnitCalculation
+only	csharp	Syntax	GesDocumentNodeKind
 only	csharp	Syntax	GesTokenReader
 only	swift	Compiler	GesArgument
 only	swift	Compiler	GesAssembly
@@ -186,7 +187,6 @@ only	swift	Runtime	GesClockSource
 only	swift	Runtime	GesCollectionBuilder
 only	swift	Runtime	GesCollectionOperators
 only	swift	Runtime	GesComparison
-only	swift	Runtime	GesDataConstructionShape
 only	swift	Runtime	GesMapEntry
 only	swift	Runtime	GesMapValueIterator
 only	swift	Runtime	GesMath

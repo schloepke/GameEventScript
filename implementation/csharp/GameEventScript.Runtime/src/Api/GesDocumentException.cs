@@ -41,21 +41,3 @@ public sealed class GesDocumentException : Exception
     /// <summary>The exceeded limit value for <c>document.limitExceeded</c>.</summary>
     public int? Limit { get; }
 }
-
-// Stable document error codes owned by specs/Documents.md.
-internal static class GesDocumentErrorCodes
-{
-    internal const string InvalidKey = "document.invalidKey";
-    internal const string MissingColon = "document.missingColon";
-    internal const string DuplicateKey = "document.duplicateKey";
-    internal const string UnquotedText = "document.unquotedText";
-    internal const string UnknownUnit = "document.unknownUnit";
-    internal const string InvalidLiteral = "document.invalidLiteral";
-    internal const string UnknownType = "document.unknownType";
-    internal const string UnexpectedToken = "document.unexpectedToken";
-    internal const string UnclosedBracket = "document.unclosedBracket";
-    internal const string UnclosedText = "document.unclosedText";
-    internal const string InvalidSchemaHeader = "document.invalidSchemaHeader";
-    internal const string MisplacedSchemaHeader = "document.misplacedSchemaHeader";
-    internal const string LimitExceeded = "document.limitExceeded";
-}

@@ -227,6 +227,9 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 
 ### Changed
 
+- Swift Syntax, Runtime and Compiler no longer use Foundation. The Card Lab
+  WebAssembly module shrinks from about 71 MB to about 19 MB. Highlighting the
+  shared corpus is about 20 times faster in Swift and 3.5 times faster in C#.
 - A delayed `emit after …` without recipients now behaves like the same emit
   without `after`: it is not scheduled and is observed as not queued, so it no
   longer keeps the host waiting, counts towards the queue limit or appears in

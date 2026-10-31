@@ -184,52 +184,10 @@ here.
   Bridge where possible) build for WASI, with a CI gate that builds them.
   Syntax, Runtime and Compiler import no Foundation, which
   `scripts/verify-swift-portable-imports.py` enforces.
-- Base the compiler front end and highlighting on a lossless syntax tree in the
-  Syntax module (in progress on `feature/syntax-modul`). This drops the Swift
-  highlighter's Foundation dependency (`NSRegularExpression`, `NSString`,
-  `JSONSerialization`), so WASM consumers such as the card game (about 67 MB,
-  mostly unused Foundation) stop shipping it. Syntax, Runtime and Compiler end
-  without Foundation or package dependencies; the Bridges and the CLI may keep
-  theirs. Compile time may grow by at most 10 % against
-  `scripts/benchmark-compile.py`, with unchanged VM time and allocations.
-  - Done: the SyntaxHighlighter packages are renamed to Syntax; the compile
-    benchmark records the baseline. Unit table, text and name rules and the
-    lossless lexer live in Syntax, Runtime builds on it, and
-    `scripts/test-syntax-roundtrip.py` checks both ports' token streams. The
-    allocation-free runtime literal parser keeps its own implementation.
-  - Done: both parsers also build the lossless syntax tree (Syntax module
-    model and builder); `test-syntax-roundtrip.py --trees` checks token
-    coverage, nesting and equal tree shapes for valid sources in both ports.
-  - Done: the parser lives in Syntax and keeps of each expression only its
-    nesting depth, range and literal shape; a Compiler binder in both ports
-    builds the semantic tree from the syntax tree. Before the old parsers were
-    removed, both pipelines produced identical semantic trees, diagnostics and
-    syntax trees on the whole corpus and on generated nesting-limit sources.
-    Syntax diagnostics live in Syntax and the Compiler converts them.
-  - Done: both parsers recover alike: a failed declaration or statement
-    becomes one error node from its start, so every corpus source has the
-    same tree in both ports, error nodes included.
-  - Done: the parsers record each name token's role and each expression
-    node's diagnostic range; `GesSyntaxValidator` in Syntax checks the rules of
-    one source (spelling, repetitions, shadowing, system endpoints, removed
-    types), and the Compiler keeps the rules that need other sources, the
-    catalog or the runtime. Next with the external declarations: the
-    Compiler's program-wide rules read a source-neutral declaration set.
-  - Done: the highlighter derives categories from the tree (token kind, the
-    parser's roles, including contextual keywords, and owning nodes) and gives
-    each span the diagnostics overlapping it; editor fragments with top-level
-    statements parse in a fragment mode. GESA uses a small line lexer that
-    highlights embedded source as GES. TextMate evaluation, embedded grammars,
-    line states, scope stacks and the Swift Foundation import are gone;
-    `test-syntax-roundtrip.py --trees` requires equal highlighting in both ports.
-  - Done: `specs/Syntax.md` owns the module's structure;
-    `scripts/verify-swift-portable-imports.py` keeps Syntax, Runtime and
-    Compiler free of Foundation in Swift CI. Highlighting the corpus takes
-    about 20x less time in Swift (5.2 s → 0.27 s) and 3.5x less in C#; on the
-    same corpus Swift compilation is about 3–4 % slower than at the benchmark
-    baseline commit.
-  - Remaining: measure the card-game Wasm module size before and after (needs
-    the pinned Swift Wasm SDK from `examples/card-game/scripts/setup-wasm.py`).
+- Let the Compiler's program-wide validation rules read a source-neutral
+  declaration set built from each source's syntax tree and from the external
+  type catalog, instead of the semantic tree, so that external declarations and
+  source declarations are checked by the same rules.
 - Generate the TextMate editor bundles from the Syntax module's token and node
   classification instead of maintaining the grammars separately.
 - Reduce library and binary size without noticeable performance loss now that

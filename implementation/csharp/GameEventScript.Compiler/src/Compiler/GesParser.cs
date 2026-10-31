@@ -8,7 +8,7 @@ using System.Text;
 using GameEventScript.Api;
 using GameEventScript.Runtime;
 using GameEventScript.Syntax;
-using static GameEventScript.Compiler.GesTokenKind;
+using static GameEventScript.Syntax.GesTokenKind;
 
 namespace GameEventScript.Compiler;
 
@@ -2407,7 +2407,8 @@ internal sealed partial class GesParser
             if (IsCompactDiceToken(token.Text))
             {
                 Advance();
-                return new GesToken(GesTokenKind.Float, token.Text[1..], token.Line, token.Column + 1, token.EndLine, token.EndColumn);
+                // The rest of a compact dice token such as `d6` is its side count.
+                return token with { Kind = GesTokenKind.Float, Text = token.Text[1..], Column = token.Column + 1, FullStart = token.Start + 1, Start = token.Start + 1 };
             }
         }
 

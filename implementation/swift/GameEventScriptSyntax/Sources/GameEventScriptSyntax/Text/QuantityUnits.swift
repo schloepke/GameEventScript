@@ -55,6 +55,19 @@ extension GesQuantityUnit {
     ]
 
     /// Stable bytecode UnitId from the Bytecode specification; it also orders units in sorting and map keys.
+    /// The first scalars of every unit suffix spelling, so a lexer can skip the suffix table for unitless numbers.
+    @_spi(Syntax) public static let suffixStarts = Set(suffixes.compactMap(\.scalars.first))
+
+    /// The longest unit suffix spelling at `start` that ends at a token boundary, as its scalar count; 0 when none matches.
+    @_spi(Syntax) public static func suffixLength(_ scalars: [Unicode.Scalar], at start: Int, boundary: (Unicode.Scalar) -> Bool) -> Int {
+        for suffix in suffixes {
+            let end = start + suffix.scalars.count
+            guard end <= scalars.count, scalars[start..<end].elementsEqual(suffix.scalars) else { continue }
+            if end == scalars.count || boundary(scalars[end]) { return suffix.scalars.count }
+        }
+        return 0
+    }
+
     @_spi(Syntax) public var unitID: UInt8 {
         switch self {
         case .none: 0

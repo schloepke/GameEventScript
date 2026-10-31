@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using GameEventScript.Syntax;
 
 namespace GameEventScript.Compiler;
 

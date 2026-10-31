@@ -3,6 +3,7 @@
 
 using GameEventScript.Api;
 using GameEventScript.Compiler;
+using GameEventScript.Syntax;
 
 namespace GameEventScript.Tests.Native.Compiler;
 

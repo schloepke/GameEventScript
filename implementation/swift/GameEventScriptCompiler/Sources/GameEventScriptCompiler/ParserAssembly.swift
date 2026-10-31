@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 @_spi(Compiler) import GameEventScriptRuntime
+@_spi(Syntax) import GameEventScriptSyntax
 
 extension GesParser {
     func assemblyOrExpression(_ output: String, predicate: Bool = false, allowSend: Bool = false) throws -> GesExpression {

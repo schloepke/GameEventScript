@@ -10,3 +10,4 @@ using System.Runtime.CompilerServices;
 [assembly: InternalsVisibleTo("GameEventScript.Runtime.Tests")]
 [assembly: InternalsVisibleTo("GameEventScript.Compiler.Tests")]
 [assembly: InternalsVisibleTo("GameEventScript.CSharpBridge.Tests")]
+[assembly: InternalsVisibleTo("GameEventScript.ConformanceAdapter")]

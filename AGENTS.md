@@ -186,6 +186,13 @@ belongs to the CLI or embedding; the portable compiler accepts source text.
   modules reach Syntax internals through `@_spi(Syntax)`. Lexer, `parse`, constant folding and the VM all read that table; the
   Swift `@GesField` macro mirrors the unit names because it cannot import the
   runtime. Integer division, percentages and points keep derivation-free rules.
+- The lexer lives in the Syntax module of both ports and is lossless: each token
+  carries `FullStart`/`Start`/`End` offsets, and its leading trivia holds inline
+  whitespace, `//` comments and a leading BOM, so the tokens reproduce the source
+  exactly. Numeric token values stay in the Compiler. `python3
+  scripts/test-syntax-roundtrip.py` checks coverage on every corpus source and
+  equal token streams of both ports; `test-swift.sh` runs it, C# CI with
+  `--port csharp`.
 - Module identifiers are dot-separated lowercase components with optional
   digits.
 - `constant $name be LITERAL` declares a program-wide compile-time scalar.

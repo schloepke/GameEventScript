@@ -29,7 +29,7 @@ let package = Package(
         ),
         .target(name: "GameEventScriptSyntax", path: "implementation/swift/GameEventScriptSyntax/Sources/GameEventScriptSyntax"),
         .target(name: "GameEventScriptRuntime", dependencies: ["GameEventScriptSyntax"], path: "implementation/swift/GameEventScriptRuntime/Sources/GameEventScriptRuntime"),
-        .target(name: "GameEventScriptCompiler", dependencies: ["GameEventScriptRuntime"], path: "implementation/swift/GameEventScriptCompiler/Sources/GameEventScriptCompiler"),
+        .target(name: "GameEventScriptCompiler", dependencies: ["GameEventScriptRuntime", "GameEventScriptSyntax"], path: "implementation/swift/GameEventScriptCompiler/Sources/GameEventScriptCompiler"),
         .target(name: "GameEventScriptSwiftBridge", dependencies: ["GameEventScriptRuntime", "GameEventScriptSwiftBridgeMacros"], path: "implementation/swift/GameEventScriptSwiftBridge/Sources/GameEventScriptSwiftBridge"),
         .testTarget(
             name: "GameEventScriptSwiftBridgeTests",

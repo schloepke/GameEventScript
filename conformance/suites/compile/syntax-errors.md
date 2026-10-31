@@ -1954,3 +1954,73 @@ error:
   phase: "parse"
   code: "parse.syntax"
 ```
+
+---
+
+## Test: vertical tab is not whitespace
+
+This negative compiler case checks that a vertical tab (U+000B) is not source whitespace: only space, tab and the line breaks LF, CRLF and CR separate tokens.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: vertical-tab-is-not-whitespace
+kind: compileError
+level: atomic
+sources:
+  - name: "vertical-tab-is-not-whitespace.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start {
+  emit Done(value: 1)
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "parse"
+  code: "parse.syntax"
+```
+
+---
+
+## Test: form feed is not whitespace
+
+This negative compiler case checks that a form feed (U+000C) is not source whitespace: only space, tab and the line breaks LF, CRLF and CR separate tokens.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: form-feed-is-not-whitespace
+kind: compileError
+level: atomic
+sources:
+  - name: "form-feed-is-not-whitespace.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start {
+  emit Done(value: 1)
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "parse"
+  code: "parse.syntax"
+```

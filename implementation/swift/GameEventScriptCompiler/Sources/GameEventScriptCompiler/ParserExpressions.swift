@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 @_spi(Compiler) import GameEventScriptRuntime
+@_spi(Syntax) import GameEventScriptSyntax
 
 extension GesParser {
     static let prefixOperators: Set<GesTokenKind> = [.operatorMinus, .operatorNot, .keywordParse, .empty]

@@ -237,6 +237,13 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 
 ### Fixed
 
+- The Swift compiler treats a backslash in a source Text literal as ordinary
+  text, as the language specifies and C# does, so `'C:\'` and `"path\"` compile.
+  Before, the backslash escaped the closing quote and the literal failed with
+  `parse.syntax`.
+- The Swift compiler rejects a vertical tab or form feed between tokens with
+  `parse.syntax`, like C#; only space, tab and the line breaks LF, CRLF and CR
+  are source whitespace.
 - C# `parse` and `GesValue.ParseLiteral` no longer accept whitespace between `:`
   and a type name, such as `: Number(5)`, matching Swift and the source type
   syntax; such input now fails recognition like any other malformed literal.

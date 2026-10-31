@@ -2,12 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using System;
-using System.Globalization;
+using System.Collections.Generic;
 using GameEventScript.Api;
-using GameEventScript.Runtime;
-using GameEventScript.Syntax;
 
-namespace GameEventScript.Compiler;
+namespace GameEventScript.Syntax;
 
 internal enum GesTokenKind
 {
@@ -152,19 +150,11 @@ internal enum GesTokenKind
     OperatorNot
 }
 
-internal readonly record struct GesToken(GesTokenKind Kind, string Text, int Line, int Column, int EndLine, int EndColumn, string UnitName = "")
+// Text is the token's normalized value, such as a decoded Text literal or `*` for `×`. Offsets index the lexed source:
+// [FullStart, Start) is the leading trivia (inline whitespace, comments and a leading BOM) and [Start, End) the token's
+// own spelling, so the tokens of a source, ending with EndOfFile, cover it without gaps.
+internal readonly record struct GesToken(GesTokenKind Kind, string Text, int Line, int Column, int EndLine, int EndColumn, string UnitName = "", int FullStart = 0, int Start = 0, int End = 0)
 {
-    private Runtime.Values.GesValue NumericValue => GesTextNumberCast.Read(Text, percentage: Kind == GesTokenKind.Percentage,
-        allowGrouping: false, percentageMagnitude: Kind == GesTokenKind.Percentage) ?? Runtime.Values.GesValue.GesNothing();
-
-    public double FloatValue => NumericValue.AsNumber();
-
-    public long? GetIntegerValue()
-    {
-        var value = NumericValue;
-        return value.Kind == Api.GesBytecodeTypeKind.Integer ? value.IntegerValue : null;
-    }
-
     public override string ToString() => $"{Kind}('{Text}', {Line}:{Column}-{EndLine}:{EndColumn})";
 }
 
@@ -176,20 +166,38 @@ internal sealed class GesLexer
     private int _line = 1;
     private int _column = 1;
     private bool _previousWasCarriageReturn;
+    private int _fullStart;
+    private int _start;
 
     public GesLexer(string input)
     {
-        _input = GesText.PrepareSource(input ?? throw new ArgumentNullException(nameof(input)), nameof(input));
+        _input = input ?? throw new ArgumentNullException(nameof(input));
+        GesText.RequireValidUnicode(_input, nameof(input));
         _length = _input.Length;
+        // A leading BOM is trivia of the first token and occupies no column.
+        if (_length > 0 && _input[0] == '\uFEFF') _index = 1;
+    }
+
+    // Every token of a source, ending with EndOfFile; together they reproduce the source exactly.
+    public static List<GesToken> Tokenize(string input)
+    {
+        var lexer = new GesLexer(input);
+        var tokens = new List<GesToken>();
+        GesToken token;
+        do tokens.Add(token = lexer.ReadNextToken());
+        while (token.Kind != GesTokenKind.EndOfFile);
+        return tokens;
     }
 
     public GesToken ReadNextToken()
     {
+        _fullStart = _tokenEnd;
         while (true)
         {
             SkipTriviaExceptNewLine();
+            _start = _index;
 
-            if (IsAtEnd) return new GesToken(GesTokenKind.EndOfFile, string.Empty, _line, _column, _line, _column);
+            if (IsAtEnd) return Finish(new GesToken(GesTokenKind.EndOfFile, string.Empty, _line, _column, _line, _column));
 
             switch (Current)
             {
@@ -200,14 +208,14 @@ internal sealed class GesLexer
                     Advance();
                     if (!IsAtEnd && Current == '\n') Advance();
 
-                    return new GesToken(GesTokenKind.NewLine, "\\n", newlineLine, newlineColumn, _line, _column);
+                    return Finish(new GesToken(GesTokenKind.NewLine, "\\n", newlineLine, newlineColumn, _line, _column));
                 }
                 case '\n':
                 {
                     var newlineLine = _line;
                     var newlineColumn = _column;
                     Advance();
-                    return new GesToken(GesTokenKind.NewLine, "\\n", newlineLine, newlineColumn, _line, _column);
+                    return Finish(new GesToken(GesTokenKind.NewLine, "\\n", newlineLine, newlineColumn, _line, _column));
                 }
             }
 
@@ -278,9 +286,18 @@ internal sealed class GesLexer
         while (!IsAtEnd && GesText.IsAsciiDigit(Current)) Advance();
     }
 
-    private GesToken CreateToken(GesTokenKind kind, string text, int startLine, int startColumn) => new(kind, text, startLine, startColumn, _line, _column);
+    private GesToken CreateToken(GesTokenKind kind, string text, int startLine, int startColumn) => Finish(new(kind, text, startLine, startColumn, _line, _column));
 
-    private GesToken CreateUnitNumberToken(string text, string unitName, int startLine, int startColumn) => new(GesTokenKind.UnitNumber, text, startLine, startColumn, _line, _column, unitName);
+    private GesToken CreateUnitNumberToken(string text, string unitName, int startLine, int startColumn) => Finish(new(GesTokenKind.UnitNumber, text, startLine, startColumn, _line, _column, unitName));
+
+    // Attaches the source offsets; the next token's leading trivia starts where this token ends.
+    private GesToken Finish(GesToken token)
+    {
+        _tokenEnd = _index;
+        return token with { FullStart = _fullStart, Start = _start, End = _index };
+    }
+
+    private int _tokenEnd;
 
     private GesToken CreateWordToken(int start, int length, int line, int column, int endLine, int endColumn)
     {
@@ -370,7 +387,7 @@ internal sealed class GesLexer
             "constant" => (GesTokenKind.Constant, "constant"),
             _ => (GesText.IsAsciiUpper(_input[start]) ? GesTokenKind.Message : GesTokenKind.Identifier, null)
         };
-        return new GesToken(kind, text ?? _input[start..(start + length)], line, column, endLine, endColumn);
+        return Finish(new GesToken(kind, text ?? _input[start..(start + length)], line, column, endLine, endColumn));
     }
 
     private GesToken ReadWordLikeToken(int line, int column)

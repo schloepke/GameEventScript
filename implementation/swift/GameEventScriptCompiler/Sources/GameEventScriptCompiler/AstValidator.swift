@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 @_spi(Compiler) import GameEventScriptRuntime
+@_spi(Syntax) import GameEventScriptSyntax
 
 // Validates parsed modules and collects their program-wide declarations, as GesAstValidator of the C# compiler
 // together with the declaration checks of its GesProgramBuilder. Every rule reports into one ordered diagnostic list

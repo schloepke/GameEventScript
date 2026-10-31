@@ -1,24 +1,31 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
-@_spi(Compiler) import GameEventScriptRuntime
-
-struct GesLexer {
+@_spi(Syntax) public struct GesLexer {
     let scalars: [Unicode.Scalar]
     var index = 0, line = 1, column = 1, byteOffset = 0
     var previousCR = false
 
-    init(_ text: String) { scalars = Array(text.unicodeScalars) }
+    @_spi(Syntax) public init(_ text: String) { scalars = Array(text.unicodeScalars) }
 
-    static func lower(_ c: Unicode.Scalar) -> Bool { (97...122).contains(c.value) }
+    /// Every token of a source, ending with endOfFile; together they reproduce the source exactly.
+    @_spi(Syntax) public static func tokenize(_ text: String) -> [GesToken] {
+        var lexer = GesLexer(text)
+        var tokens: [GesToken] = []
+        repeat { tokens.append(lexer.read()) } while tokens[tokens.count - 1].kind != .endOfFile
+        return tokens
+    }
 
-    static func upper(_ c: Unicode.Scalar) -> Bool { (65...90).contains(c.value) }
+    @_spi(Syntax) public static func lower(_ c: Unicode.Scalar) -> Bool { (97...122).contains(c.value) }
 
-    static func letter(_ c: Unicode.Scalar) -> Bool { lower(c) || upper(c) }
+    @_spi(Syntax) public static func upper(_ c: Unicode.Scalar) -> Bool { (65...90).contains(c.value) }
 
-    static func digit(_ c: Unicode.Scalar) -> Bool { (48...57).contains(c.value) }
+    @_spi(Syntax) public static func letter(_ c: Unicode.Scalar) -> Bool { lower(c) || upper(c) }
 
-    static func space(_ c: Unicode.Scalar) -> Bool { [9, 10, 11, 12, 13, 32].contains(c.value) }
+    @_spi(Syntax) public static func digit(_ c: Unicode.Scalar) -> Bool { (48...57).contains(c.value) }
+
+    // Only space, tab and the line breaks LF and CR are portable source whitespace.
+    static func space(_ c: Unicode.Scalar) -> Bool { [9, 10, 13, 32].contains(c.value) }
 
     static func validSuffix(_ text: String) -> Bool {
         guard let separator = text.firstIndex(of: "_") else { return true }
@@ -147,7 +154,7 @@ struct GesLexer {
         "²": (.superscriptInteger, "2"), "³": (.superscriptInteger, "3"),
     ]
 
-    static let unitStarts = GesCompilerSupport.unitSuffixStarts
+    static let unitStarts = GesQuantityUnit.suffixStarts
     static let boundaries = Set("(){}[],;.:#+-*/!~&|^=<>·×÷−∞∏ℇτφ√∛°∧∨∈∉⊕⋅≤≥¬≠≈≅→⇒↦²³".unicodeScalars)
     var current: Unicode.Scalar { peek(0) }
 
@@ -174,9 +181,16 @@ struct GesLexer {
 
     func slice(_ start: Int) -> String { String(String.UnicodeScalarView(scalars[start..<index])) }
 
-    mutating func read() -> GesToken {
+    @_spi(Syntax) public mutating func read() -> GesToken {
+        // Each read starts where the previous token ended, so everything skipped here is leading trivia.
+        let fullStart = byteOffset
+        // A leading BOM is trivia of the first token and occupies no column.
+        if index == 0 && current == "\u{FEFF}" {
+            index = 1
+            byteOffset = 3
+        }
         while index < scalars.count {
-            if [9, 11, 12, 32].contains(current.value) {
+            if current == " " || current == "\t" {
                 advance()
                 continue
             }
@@ -192,7 +206,7 @@ struct GesLexer {
         let startByte = byteOffset
 
         func token(_ kind: GesTokenKind, _ text: String, word: Bool = false) -> GesToken {
-            .init(kind: kind, text: text, isWord: word, line: firstLine, column: firstColumn, endLine: line, endColumn: column, start: startByte, end: byteOffset)
+            .init(kind: kind, text: text, isWord: word, line: firstLine, column: firstColumn, endLine: line, endColumn: column, fullStart: fullStart, start: startByte, end: byteOffset)
         }
 
         if index == scalars.count { return token(.endOfFile, "") }
@@ -238,7 +252,7 @@ struct GesLexer {
             // and `10m / s` a division. The token text keeps the spelling, whose decoding applies prefix scaling.
             var quantity = false
             // Only these characters start a unit spelling, so unitless numbers skip the table.
-            let suffixLength = Self.unitStarts.contains(current) ? GesCompilerSupport.unitSuffixLength(scalars, at: index) { Self.space($0) || Self.boundaries.contains($0) } : 0
+            let suffixLength = Self.unitStarts.contains(current) ? GesQuantityUnit.suffixLength(scalars, at: index) { Self.space($0) || Self.boundaries.contains($0) } : 0
             if current == "%" {
                 advance()
             } else if suffixLength > 0 {
@@ -256,29 +270,11 @@ struct GesLexer {
             return token(quantity ? .unitNumber : text.unicodeScalars.last == "%" ? .percentage : .float, text)
         }
         if first == "\"" || first == "'" {
-            advance()
-            var escaped = false
-            while index < scalars.count {
-                let c = current
-                advance()
-                if escaped {
-                    escaped = false
-                    continue
-                }
-                if c == "\\" {
-                    escaped = true
-                    continue
-                }
-                if c == first {
-                    if current == first {
-                        advance()
-                        continue
-                    }
-                    break
-                }
-            }
-            if let value = GesCompilerSupport.quotedText(slice(start)) { return token(.text, value) }
-            return token(.illegal, slice(start))
+            // Only a doubled delimiter escapes the quote; a backslash is ordinary text.
+            var end = index
+            let value = GesTextLiteralReader.read(scalars, &end)
+            while index < end { advance() }
+            return value.map { token(.text, $0) } ?? token(.illegal, slice(start))
         }
         let pair = String(first) + String(peek())
         if let kind = Self.pairs[pair] {

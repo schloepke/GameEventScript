@@ -99,7 +99,8 @@ def verify(workspace):
         if products[module]["type"] != {"library": ["automatic"]} or products[module]["targets"] != [module]:
             raise RuntimeError(f"Unexpected product definition for {module}")
         # Runtime builds on the Syntax module's lexical tables; Syntax depends on nothing.
-        expected = {"GameEventScriptSyntax": [], "GameEventScriptRuntime": ["GameEventScriptSyntax"]}.get(module, ["GameEventScriptRuntime"])
+        expected = {"GameEventScriptSyntax": [], "GameEventScriptRuntime": ["GameEventScriptSyntax"],
+                    "GameEventScriptCompiler": ["GameEventScriptRuntime", "GameEventScriptSyntax"]}.get(module, ["GameEventScriptRuntime"])
         if module == "GameEventScriptSwiftBridge":
             expected.append(MACROS)
         if targets[module].get("target_dependencies", []) != expected:

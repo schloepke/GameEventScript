@@ -8381,3 +8381,51 @@ steps:
       include:
         - name: "MaxRangeItems"
 ```
+
+---
+
+## Test: source-text-backslash-has-no-escape-meaning
+
+This case checks the following contract: a backslash in a source Text literal is ordinary text, so it may end the literal directly before the closing quote, and only a doubled delimiter escapes the quote.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: "source-text-backslash-has-no-escape-meaning"
+compile:
+  binaryRoundTrip: true
+```
+
+### Source code under test
+
+```ges
+on Start { emit Done(single: 'C:\', double: "path\", doubled: 'a\''b', twice: '\\') }
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args: []
+    local:
+      - name: "Done"
+        args:
+          - name: "single"
+            value: { type: ":Text", value: "C:\\" }
+          - name: "double"
+            value: { type: ":Text", value: "path\\" }
+          - name: "doubled"
+            value: { type: ":Text", value: "a\\'b" }
+          - name: "twice"
+            value: { type: ":Text", value: "\\\\" }
+```

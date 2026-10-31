@@ -193,12 +193,11 @@ here.
   theirs. Compile time may grow by at most 10 % against
   `scripts/benchmark-compile.py`, with unchanged VM time and allocations.
   - Done: the SyntaxHighlighter packages are renamed to Syntax; the compile
-    benchmark records the baseline.
-  - Lexer: keeps whitespace, line breaks, comments and a BOM as token trivia
-    and token text instead of evaluated values, so the tree reproduces the
-    source exactly. Unit symbols, text and name rules, diagnostics and source
-    locations move into Syntax; Runtime builds on Syntax for them. The
+    benchmark records the baseline. Unit table, text and name rules and the
+    lossless lexer live in Syntax, Runtime builds on it, and
+    `scripts/test-syntax-roundtrip.py` checks both ports' token streams. The
     allocation-free runtime literal parser keeps its own implementation.
+  - Diagnostics and source locations move into Syntax together with the parser.
   - Parser: builds the immutable lossless tree with recovery, missing and
     skipped tokens and error nodes carrying one diagnostic each; a binder in
     the Compiler produces the existing semantic tree, so optimizer, lowering

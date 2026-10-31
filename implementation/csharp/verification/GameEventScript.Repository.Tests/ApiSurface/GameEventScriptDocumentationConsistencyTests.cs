@@ -149,8 +149,7 @@ public sealed class GameEventScriptDocumentationConsistencyTests
     [TestMethod]
     public void LexerWordVocabularyAppearsInNormativeGrammar()
     {
-        var projectDirectory = TestRepositoryPaths.CompilerProjectDirectory;
-        var lexer = File.ReadAllText(Path.Combine(projectDirectory, "Compiler", "GesLexer.cs"));
+        var lexer = File.ReadAllText(Path.Combine(TestRepositoryPaths.SyntaxProjectDirectory, "Lexing", "GesLexer.cs"));
         var language = File.ReadAllText(Path.Combine(TestRepositoryPaths.SpecificationsDirectory, "Language.md"));
         var grammarStart = language.IndexOf("```bnf", StringComparison.Ordinal);
         var grammarEnd = grammarStart < 0 ? -1 : language.IndexOf("```", grammarStart + 6, StringComparison.Ordinal);

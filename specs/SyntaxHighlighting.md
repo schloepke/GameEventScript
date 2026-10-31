@@ -5,91 +5,94 @@
 
 > **Since: 0.2.0**
 
-This document owns the optional presentation API. Highlighting is tolerant lexical
-classification, not source validation or a replacement for Compiler diagnostics.
-It never executes source. Runtime, Compiler and native Bridges do not depend on it.
+This document owns the optional presentation API of the Syntax module.
+Highlighting classifies source text for display and reports the diagnostics a
+single source can know. It never executes source and does not replace the
+Compiler's diagnostics. Runtime, Compiler and native Bridges do not depend on it.
 
-## Grammar and matching
+> **Since: Unreleased** — tree-based highlighting, span diagnostics
 
-The canonical GES and GESA TextMate JSON grammars under `tools/editors/TextMate`
-are the sole rule source. The Classic plist grammars represent the same rules.
-`scripts/sync-highlighter-grammars.py` embeds immutable tables into C# and Swift;
-consumer builds need neither the generator nor grammar files on disk.
-
-The bundled evaluator supports ordered `match` and `begin`/`end` rules, numbered
-named captures, `name`, `contentName`, local includes, embedded GES and
-`applyEndPatternLast`. The earliest match wins; rule order breaks ties. A current
-region's end wins an equal-position tie unless `applyEndPatternLast` is enabled.
-Strings use that exception so doubled delimiters remain escapes. Captures append
-scopes from the outermost range inward. Zero-width ends may close a region without
-consuming the next token, as used by GESA source blocks.
-
-This is not a general-purpose TextMate/Oniguruma engine. C# uses BCL Regex; Swift
-uses Foundation NSRegularExpression. Changes to the bundled grammar must work in
-both engines and pass the shared highlighting corpus. Unsupported structural
-features fail generation instead of silently disappearing. No separate keyword
-list is maintained by the CLI or highlighter.
-
-## Input, spans and categories
+## Input and result
 
 A reusable highlighter selects GES or GESA. `Highlight`/`highlight` processes a
-whole document. `HighlightLine`/`highlightLine` processes exactly one physical
-line with an optional final LF, CR or CRLF. Interior line endings are an API error.
-An empty document or line is valid. Input is never normalized or expanded.
-Only CR, LF and CRLF delimit physical lines. Regex line anchors and dot matching
-must not treat U+0085, U+2028, U+2029, vertical tab or form feed as additional line
-boundaries. These characters remain content, including inside comments and
-strings in GESA source annotations.
+whole document; there is no line API and no continuation state. An empty
+document is valid. Input is never normalized or expanded. CR, LF and CRLF are
+line breaks; U+0085, U+2028, U+2029, vertical tab and form feed are content.
 
-A complete result supplies ordered, nonoverlapping, positive-length spans covering
-all input, including whitespace and line endings. Empty input has no spans.
-`Start`/`start` and `Length`/`length` count UTF-16 code units relative to the supplied
-document or line; they are directly usable as .NET string offsets and `NSRange`.
-Spans carry an immutable outer-to-inner TextMate scope stack, including the root
-language scope, plus a theme-independent category. Editors may theme either the
-category or the complete scope stack. No colors or UI objects occur in spans.
+A complete result supplies ordered, nonoverlapping, positive-length spans
+covering all input, including whitespace and line breaks. Empty input has no
+spans. `Start`/`start` and `Length`/`length` count UTF-16 code units of the
+supplied document; they are directly usable as .NET string offsets and
+`NSRange`. Adjacent ranges with the same category and the same diagnostics form
+one span. No colors or UI objects occur in spans.
 
-Categories are Plain, Keyword, Builtin, Identifier, Message, Type, Tag, Constant,
-Number, String, Comment, Symbol, Function, Module, Label and Register. The innermost
-recognized scope determines the category. String escapes belong to String;
-Boolean literals and word operators belong to Keyword. Unknown/unclassified text
-belongs to Plain. Declaration keywords retain their keyword category even when
-the declared name is on the next line or has not been entered yet. Contextual
-declaration rules take precedence when their complete pattern matches.
+The result also lists the document's diagnostics in source order, each with its
+stable code, a message whose wording is not stable, and a UTF-16 range; a range
+of length zero marks a position. Each span lists the diagnostics whose range
+overlaps it. A diagnostic of length zero overlaps the span at its position, or
+the last span when it lies at the end of the document.
+
+## GES
+
+GES is categorized from the lossless syntax tree: each token's kind, the role
+the parser recorded for it, and for a few constructs the node that owns it.
+Leading trivia contributes Plain whitespace, a leading BOM as Plain and `//`
+comments as Comment.
+
+Input is parsed as a fragment: besides declarations, it may hold statements
+outside a handler, as editor and console input does, and those are categorized
+as statements. Parsing recovers after each failed declaration or statement, so
+the rest of the document keeps its categories; the tokens of a failed one keep
+their token-kind category.
+
+Diagnostics are those the Compiler reports for the document as one source: its
+syntax errors or, when there are none, the violated rules that need only this
+source, such as name spelling, repeated parameters, fields or bindings, and
+shadowing (`specs/Diagnostics.md`). Rules that need other sources, catalogs or
+a host are not reported.
+
+## GESA
+
+GESA is categorized line by line. A dumper string may contain line breaks and
+then continues its line. A `.segment source` line opens embedded GES that ends
+before the first line, outside a GES token, that starts with `.region-end` or
+`.segment`; a `.source-line` annotation holds one GES line after its `|`. Both
+are categorized as GES without diagnostics. `.region` and `.region-end` lines
+are Comment. GESA has no diagnostics.
+
+## Categories
+
+Categories are Plain, Keyword, Builtin, Identifier, Message, Type, Tag,
+Constant, Number, String, Comment, Symbol, Function, Module, Label and Register.
+
+| Category | GES | GESA |
+| --- | --- | --- |
+| Plain | whitespace, line breaks, a BOM, unrecognized text | whitespace, other words |
+| Keyword | keywords, contextual keywords such as `between`, `from`, `first`, operators, `true`, `false`, `nothing` | directives, mnemonics, `unit`, `=` |
+| Builtin | intrinsics, selectors, `:namespace.name` extension names, units of `:Quantity(...)`, inline-assembly opcodes | — |
+| Identifier | variables, bindings, parameters, fields, members, argument labels, map keys | attribute names before `=` |
+| Message | message and handler names | — |
+| Type | type names such as `:Number` and record types | capitalized words that name no label |
+| Tag | tags | segment names, units after `unit:` |
+| Constant | `$constant` references | — |
+| Number | numeric literals with units, compact dice such as `2d6`, math constants | numbers, `#` immediates |
+| String | strings, including an unterminated string to the end of the document | dumper strings |
+| Comment | `//` comments | comments, `@` addresses, region lines |
+| Symbol | punctuation, `_` | punctuation |
+| Function | function and predicate names where declared, called or tested | — |
+| Module | the module name of a module declaration | — |
+| Label | inline-assembly labels | label definitions and references, symbolic register names |
+| Register | — | registers such as `r1` |
+
 Classification does not prove that text is valid GES.
-
-## Incremental editing
-
-Every complete result supplies an immutable, equatable continuation state after
-its final processed line. An initial state starts outside any region. Open strings
-and embedded GES regions survive line boundaries; line terminators retain the
-scope active after matching the line's content. A GESA `.source-line` annotation
-is limited to that line, including unfinished strings; source blocks retain normal
-multiline GES strings.
-
-States are opaque, belong to one language and may be used by another highlighter
-instance of the same library version and language. They are not a persistence
-format. Passing a GES state to a GESA highlighter, or vice versa, is an API error.
-
-An editor caches each line's text, spans and exit state. After an edit, start with
-the preceding line's state and reprocess subsequent lines until both the unchanged
-text and exit state converge. Shift line-relative spans by the document line
-start when applying styles. Including original line terminators permits exact
-comparison with whole-document highlighting. The state is for the next line,
-not for appending another chunk to the same line.
 
 ## Resource bounds and failure
 
 Each call accepts at most a configurable positive UTF-16 length, default 262144.
-The evaluator limits nesting to 128 regions and uses a cooperative 1000 ms matching
-budget. C# additionally uses a 100 ms timeout per regex; Swift observes the budget
-through Foundation progress callbacks. These are responsiveness safeguards, not
-hard real-time guarantees or cross-platform performance requirements.
-
-Exceeding a bound returns `IsComplete == false` / `isComplete == false`, no spans
-and no continuation state. The caller displays unchanged plain text and must not
-cache that result as a successful lexical state. Large documents should use the
-line API. An unfinished source construct alone is not failure.
+A longer input returns `IsComplete == false` / `isComplete == false`, no spans
+and no diagnostics; the caller displays unchanged plain text. C# rejects text
+with an unpaired surrogate with `ArgumentException`; Swift strings cannot hold
+one. Malformed source is never an API error.
 
 ## ANSI presentation
 
@@ -105,28 +108,22 @@ whether coloring is enabled belong to the embedding, not this library.
 
 - C#: `GameEventScript.Syntax` package and namespace, .NET Standard 2.1,
   no third-party or other GES library dependency.
-- Swift: `GameEventScriptSyntax` SwiftPM product; Foundation supplies
-  regex and embedded grammar decoding. No AppKit, UIKit, Runtime or Compiler
-  dependency. Foundation is also available on supported non-Apple Swift platforms;
-  platform availability is verified separately from the API contract.
+- Swift: `GameEventScriptSyntax` SwiftPM product without Foundation, Runtime or
+  Compiler dependency.
 
-Both implementations expose `GesSyntaxHighlighter`,
-`GesSyntaxLanguage`, `GesSyntaxKind`,
-`GesHighlightSpan`, `GesHighlightResult`,
-`GesHighlightState` and `GesAnsiRenderer`.
-Swift reports invalid API input through `GesHighlightingError`.
+Both implementations expose `GesSyntaxHighlighter`, `GesSyntaxLanguage`,
+`GesSyntaxKind`, `GesHighlightSpan`, `GesHighlightDiagnostic`,
+`GesHighlightResult` and `GesAnsiRenderer`. Swift reports invalid API input
+through `GesHighlightingError`.
 
 The shared executable examples live in
 [`conformance/highlighting/SyntaxHighlighting.md`](../conformance/highlighting/SyntaxHighlighting.md).
-Native package adapters run those Markdown cases without Runtime or Compiler and
-verify categories, scope stacks, Unicode offsets, whole-document/line equivalence
-and ANSI text preservation. They are presentation conformance, separate from the
-VM capability corpus; optional highlighting does not add a Runtime dependency.
+Native package tests run those Markdown cases without Runtime or Compiler and
+verify categories, diagnostics, span coverage and ANSI text preservation.
+`scripts/test-syntax-roundtrip.py --trees` additionally requires both ports to
+produce identical spans and diagnostics for every corpus source and every
+shared case. These are presentation conformance, separate from the VM
+capability corpus.
 
-## Combined pipeline selectors
-
-The selector vocabulary includes `cartesian`, `lockstep`, `zip`, `union`,
-`intersect`, `difference` and `foreach`. Colon-prefixed selector steps use the
-existing builtin scope both in separate brackets and in compact chains. The
-GESA opcode vocabulary includes Cartesian. Qualified extension names follow
-the contiguous spelling specified in Language.md.
+The TextMate grammars under `tools/editors` serve editor bundles only; the
+highlighter does not read them.

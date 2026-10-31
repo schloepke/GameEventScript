@@ -13,11 +13,11 @@ namespace GameEventScript.Tests;
 public sealed class HighlightingTests
 {
     [TestMethod]
-    public void SharedMarkdownCasesMatchAndIncrementalStatesPreserveScopes()
+    public void SharedMarkdownCasesMatchKindsAndDiagnostics()
     {
         var markdown = File.ReadAllText(Path.Combine(TestRepositoryPaths.Root, "conformance/highlighting/SyntaxHighlighting.md"));
         var cases = Regex.Matches(markdown, "```highlight\\s*\\n(.*?)\\n```", RegexOptions.Singleline);
-        Assert.IsGreaterThanOrEqualTo(11, cases.Count);
+        Assert.IsGreaterThanOrEqualTo(36, cases.Count);
         foreach (Match match in cases)
         {
             using var json = JsonDocument.Parse(match.Groups[1].Value);
@@ -25,57 +25,45 @@ public sealed class HighlightingTests
             var name = data.GetProperty("name").GetString()!;
             var source = data.GetProperty("source").GetString()!;
             var language = data.GetProperty("language").GetString() == "ges" ? GesSyntaxLanguage.Ges : GesSyntaxLanguage.Gesa;
-            var highlighter = new GesSyntaxHighlighter(language);
-            var result = highlighter.Highlight(source);
+            var result = new GesSyntaxHighlighter(language).Highlight(source);
             Assert.IsTrue(result.IsComplete, name);
             var units = Expand(result.Spans, source.Length);
             foreach (var expected in data.GetProperty("expect").EnumerateArray())
             {
-                var text = expected.GetProperty("text").GetString()!;
-                var occurrence = expected.TryGetProperty("occurrence", out var value) ? value.GetInt32() : 0;
-                var start = -1;
-                for (var i = 0; i <= occurrence; i++) start = source.IndexOf(text, start + 1, StringComparison.Ordinal);
-                Assert.IsGreaterThanOrEqualTo(0, start, name);
+                var (start, length) = Select(source, expected, name);
                 var kind = Enum.Parse<GesSyntaxKind>(expected.GetProperty("kind").GetString()!, true);
-                for (var i = start; i < start + text.Length; i++)
-                {
-                    Assert.AreEqual(kind, units[i].Kind, name + ": " + text);
-                    if (expected.TryGetProperty("scope", out var scope)) Assert.IsTrue(units[i].Scopes.Contains(scope.GetString()!), name);
-                }
+                for (var i = start; i < start + length; i++) Assert.AreEqual(kind, units[i].Kind, name + ": " + expected.GetProperty("text").GetString());
             }
-            var cursor = 0;
-            var state = highlighter.CreateState();
-            foreach (Match line in Regex.Matches(source, "[^\\r\\n]*(?:\\r\\n|\\r|\\n|$)"))
+
+            var diagnostics = data.TryGetProperty("diagnostics", out var list) ? list.EnumerateArray().ToArray() : result.Diagnostics.Select(_ => default(JsonElement)).ToArray();
+            Assert.HasCount(diagnostics.Length, result.Diagnostics, name);
+            for (var i = 0; i < diagnostics.Length && diagnostics[i].ValueKind != JsonValueKind.Undefined; i++)
             {
-                if (line.Length == 0 && cursor == source.Length) break;
-                var incremental = highlighter.HighlightLine(line.Value, state);
-                Assert.IsTrue(incremental.IsComplete, name);
-                var parts = Expand(incremental.Spans, line.Length);
-                for (var i = 0; i < parts.Length; i++)
-                {
-                    Assert.AreEqual(units[cursor + i].Kind, parts[i].Kind, name);
-                    CollectionAssert.AreEqual(units[cursor + i].Scopes.ToArray(), parts[i].Scopes.ToArray(), name);
-                }
-                cursor += line.Length;
-                state = incremental.NextState!;
+                var (start, length) = Select(source, diagnostics[i], name);
+                Assert.AreEqual(diagnostics[i].GetProperty("code").GetString(), result.Diagnostics[i].Code, name);
+                Assert.AreEqual(start, result.Diagnostics[i].Start, name);
+                Assert.AreEqual(length, result.Diagnostics[i].Length, name);
             }
-            Assert.AreEqual(result.NextState, state, name);
+
+            foreach (var span in result.Spans)
+            {
+                var overlapping = result.Diagnostics.Where(diagnostic => Overlaps(diagnostic, span, source.Length)).ToArray();
+                CollectionAssert.AreEqual(overlapping, span.Diagnostics.ToArray(), name);
+            }
+
             var ansi = GesAnsiRenderer.Render(source, result.Spans);
             Assert.AreEqual(source, Regex.Replace(ansi, "\u001b\\[[0-9;]*m", ""), name);
         }
     }
 
     [TestMethod]
-    public void EditChangesContinuationAndStatesWorkAcrossInstances()
+    public void DiagnosticsWithoutLengthBelongToTheSpanAtTheirPosition()
     {
-        var highlighter = new GesSyntaxHighlighter();
-        var open = highlighter.HighlightLine("'open\n");
-        var inside = new GesSyntaxHighlighter().HighlightLine("emit Done()", open.NextState);
-        Assert.IsTrue(inside.Spans.All(span => span.Kind == GesSyntaxKind.String));
-        var closed = highlighter.HighlightLine("'closed'\n");
-        Assert.AreEqual(highlighter.CreateState(), closed.NextState);
-        Assert.AreNotEqual(open.NextState, closed.NextState);
-        Assert.AreEqual(GesSyntaxKind.Keyword, highlighter.HighlightLine("emit Done()", closed.NextState).Spans[0].Kind);
+        var result = new GesSyntaxHighlighter().Highlight("on Start() {");
+        Assert.IsNotEmpty(result.Diagnostics);
+        Assert.IsTrue(result.Diagnostics.All(diagnostic => diagnostic.Start == 12 && diagnostic.Length == 0));
+        CollectionAssert.AreEqual(result.Diagnostics.ToArray(), result.Spans[^1].Diagnostics.ToArray());
+        Assert.IsTrue(result.Spans.Take(result.Spans.Count - 1).All(span => span.Diagnostics.Count == 0));
     }
 
     [TestMethod]
@@ -83,16 +71,34 @@ public sealed class HighlightingTests
     {
         var small = new GesSyntaxHighlighter(maxInputLength: 4);
         Assert.IsFalse(small.Highlight("12345").IsComplete);
-        Assert.IsNull(small.Highlight("12345").NextState);
         Assert.HasCount(0, small.Highlight("12345").Spans);
+        Assert.HasCount(0, small.Highlight("12345").Diagnostics);
         Assert.IsTrue(small.Highlight("").IsComplete);
-        Assert.ThrowsExactly<ArgumentException>(() => small.HighlightLine("x\ny"));
-        Assert.ThrowsExactly<ArgumentException>(() => small.HighlightLine("x", new GesSyntaxHighlighter(GesSyntaxLanguage.Gesa).CreateState()));
+        Assert.HasCount(0, small.Highlight("").Spans);
         Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => new GesSyntaxHighlighter(maxInputLength: 0));
+        Assert.ThrowsExactly<ArgumentException>(() => small.Highlight("\ud800"));
         var spans = small.Highlight("1234").Spans;
         Assert.ThrowsExactly<ArgumentException>(() => GesAnsiRenderer.Render("1", spans));
         Assert.ThrowsExactly<ArgumentException>(() => GesAnsiRenderer.Render("1234", spans, _ => 123));
         Assert.AreEqual("\u001b[31m1234\u001b[0m", GesAnsiRenderer.Render("1234", spans, _ => 31));
+    }
+
+    private static (int Start, int Length) Select(string source, JsonElement expected, string name)
+    {
+        var text = expected.GetProperty("text").GetString()!;
+        var occurrence = expected.TryGetProperty("occurrence", out var value) ? value.GetInt32() : 0;
+        var start = -1;
+        for (var i = 0; i <= occurrence; i++) start = source.IndexOf(text, start + 1, StringComparison.Ordinal);
+        Assert.IsGreaterThanOrEqualTo(0, start, name + ": " + text);
+        if (expected.TryGetProperty("after", out var after) && after.GetBoolean()) start += text.Length;
+        return (start, expected.TryGetProperty("length", out var length) ? length.GetInt32() : text.Length);
+    }
+
+    private static bool Overlaps(GesHighlightDiagnostic diagnostic, GesHighlightSpan span, int length)
+    {
+        var start = Math.Min(diagnostic.Start, Math.Max(length - 1, 0));
+        var end = Math.Max(diagnostic.Start + diagnostic.Length, start + 1);
+        return start < span.Start + span.Length && span.Start < end;
     }
 
     private static GesHighlightSpan[] Expand(IReadOnlyList<GesHighlightSpan> spans, int length)
@@ -102,6 +108,7 @@ public sealed class HighlightingTests
         foreach (var span in spans)
         {
             Assert.AreEqual(cursor, span.Start);
+            Assert.IsGreaterThan(0, span.Length);
             for (var i = 0; i < span.Length; i++) units[cursor++] = span;
         }
         Assert.AreEqual(length, cursor);

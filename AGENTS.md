@@ -11,8 +11,8 @@
 - C# adapters: `implementation/csharp/GameEventScript.CSharpBridge/src`.
 - Independent Python Conformance runner: `conformance/runner`.
 - Internal C# Conformance adapter: `implementation/csharp/GameEventScript.Conformance/adapter`.
-- Optional C# highlighter: `implementation/csharp/GameEventScript.Syntax`.
-- Optional Swift highlighter: `implementation/swift/GameEventScriptSyntax`.
+- C# Syntax module (lexer, parser, validator, highlighter): `implementation/csharp/GameEventScript.Syntax`.
+- Swift Syntax module: `implementation/swift/GameEventScriptSyntax`.
 - C# CLI tool: `implementation/csharp/GameEventScript.Tool/src`.
 - C# native tests: each module’s `tests` directory; shared test support and
   repository/distribution gates: `implementation/csharp/verification`.
@@ -547,14 +547,16 @@ ignored `artifacts`. Public Swift API changes update `specs/PublicApi.md` and
 `implementation/swift/api`. The separate `GameEventScriptTool` package implements
 the native Swift `ges` CLI; it depends on Runtime and Compiler, never Conformance.
 Filesystem/console I/O and POSIX terminal editing remain in that
-executable package. The optional standalone Syntax uses Foundation
-Regex and has no Runtime/Compiler dependency. Both CLIs delegate highlighting
-to their platform highlighter package. UTF-16 spans, TextMate scopes and incremental
-states are specified in specs/SyntaxHighlighting.md and share Markdown cases under
-conformance/highlighting. `scripts/test-swift-tool.sh` verifies CLI adapters and real
-process/PTY behavior without .NET; the full Swift test script includes it.
-The GES/GESA grammars are embedded from the canonical TextMate files; refresh
-them with `scripts/sync-highlighter-grammars.py` and verify with `--check`.
+executable package. Syntax has no Runtime/Compiler dependency and no Foundation
+import. Both CLIs delegate highlighting to the Syntax module, which classifies GES
+from the syntax tree (token kinds, parser roles, owning nodes) and GESA with a small
+line lexer; it parses editor fragments with top-level statements, while its
+diagnostics are those of a source. UTF-16 spans with categories and diagnostics are
+specified in specs/SyntaxHighlighting.md and share Markdown cases under
+conformance/highlighting; `test-syntax-roundtrip.py --trees` also requires equal
+fragment trees and highlighting in both ports. `scripts/test-swift-tool.sh` verifies
+CLI adapters and real process/PTY behavior without .NET; the full Swift test script
+includes it. TextMate grammars serve only the editor bundles.
 `install-swift-tool.sh` builds and installs/updates `ges` in `$HOME/.local/bin`
 or a selected `--tool-path`; the matching uninstall script removes only its
 owned binary. The C# `dotnet ges` and Swift `ges` commands can coexist.
@@ -628,7 +630,7 @@ disables it. Interactive verbose event traces are yellow when color is enabled.
 Live editing and Up/Down history work with or without `--color`.
 Live editing requires terminal input/output streams; redirected input
 uses the plain line reader. Terminal editing and its dependencies belong only to
-the CLI. Highlighting reuses the embedded GES and GESA TextMate grammars. The editor uses Ctrl+N
+the CLI. Highlighting uses the Syntax highlighter for GES and GESA. The editor uses Ctrl+N
 for a newline and Enter to submit; Shift/Alt+Enter depend on terminal modifier reporting.
 The CLI decodes Ghostty's extended xterm and CSI-u Shift/Alt+Enter sequences before
 the editor reads them; unrecognized or incomplete input remains unchanged at that boundary.

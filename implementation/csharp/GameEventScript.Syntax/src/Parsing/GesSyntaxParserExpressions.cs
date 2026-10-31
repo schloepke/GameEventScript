@@ -14,7 +14,7 @@ internal sealed partial class GesSyntaxParser
         if (!IsWord("asm")) return ParseExpression();
         _tree.StartNode(GesSyntaxNodeKind.AssemblyBlock);
         var start = CurrentIndex;
-        Advance();
+        AdvanceKeyword();
         ParseAssemblyBlock(standalone: false);
         return FinishNode(Node(0, start));
     }
@@ -50,12 +50,14 @@ internal sealed partial class GesSyntaxParser
             else if (Is(Identifier))
             {
                 Advance();
+                Role(GesSyntaxRole.AssemblyLabel);
                 Expect(Colon);
                 lines++;
             }
             else
             {
                 var name = Expect(Message).Text;
+                Role(GesSyntaxRole.Opcode);
                 if (!Is(NewLine) && !Is(Semicolon) && !Is(RightBrace))
                 {
                     var operands = 0;
@@ -326,7 +328,7 @@ internal sealed partial class GesSyntaxParser
         if (MatchWord("straight")) return 0;
 
         var token = Current;
-        throw new ParseException($"Expected dice pattern but found {token.Text}", token.Line, token.Column);
+        throw new ParseException($"Expected dice pattern but found {token.Text}", token);
     }
 
     private Expression ParseTypeOperationExpression()
@@ -391,12 +393,12 @@ internal sealed partial class GesSyntaxParser
         {
             SkipNewLines();
             if (MatchWord("least") || MatchWord("most")) return ParseIsComparison(subject);
-            throw new ParseException($"Expected least or most but found {Current.Text}", Current.Line, Current.Column);
+            throw new ParseException($"Expected least or most but found {Current.Text}", Current);
         }
 
         if (IsWord("less") || IsWord("more"))
         {
-            Advance();
+            AdvanceKeyword();
             SkipNewLines();
             ExpectWord("than");
             return ParseIsComparison(subject);
@@ -415,7 +417,7 @@ internal sealed partial class GesSyntaxParser
         if (!Match(OperatorOr)) return Binary(subject, threshold);
         SkipNewLines();
         if (MatchWord("less") || MatchWord("more")) return Binary(subject, threshold);
-        throw new ParseException($"Expected less or more but found {Current.Text}", Current.Line, Current.Column);
+        throw new ParseException($"Expected less or more but found {Current.Text}", Current);
     }
 
     // The right operand of an `is` comparison after its operator words.
@@ -498,7 +500,7 @@ internal sealed partial class GesSyntaxParser
             var operation = Advance().Kind;
             var opToken = PreviousIndex;
             // `strict` directly after `parse` on the same line is always the mode word, never an operand.
-            if (operation == KeywordParse && Current.Kind == Identifier && Current.Text == "strict") Advance();
+            if (operation == KeywordParse && Current.Kind == Identifier && Current.Text == "strict") AdvanceKeyword();
             if (operation != KeywordParse) SkipNewLines();
             var operand = ParseUnaryExpression();
             var shape = operation == OperatorMinus && operand.Shape is Shape.Number or Shape.Numeric ? Shape.NegatedNumeric : Shape.None;
@@ -786,7 +788,7 @@ internal sealed partial class GesSyntaxParser
             if (!MatchSliceScope())
             {
                 var token = Current;
-                throw new ParseException($"Expected drop scope but found {token.Text}", token.Line, token.Column);
+                throw new ParseException($"Expected drop scope but found {token.Text}", token);
             }
 
             SkipNewLines();
@@ -932,7 +934,7 @@ internal sealed partial class GesSyntaxParser
         if (MatchWord("ascending") || MatchWord("descending")) return;
 
         var token = Current;
-        throw new ParseException($"Expected sort direction but found {token.Text}", token.Line, token.Column);
+        throw new ParseException($"Expected sort direction but found {token.Text}", token);
     }
 
     private bool MatchSliceScope() => MatchWord("first") || MatchWord("last") || MatchWord("highest") || MatchWord("lowest");
@@ -1045,7 +1047,7 @@ internal sealed partial class GesSyntaxParser
         if (IsWord("from"))
         {
             _tree.StartNode(GesSyntaxNodeKind.RangeExpression);
-            Advance();
+            AdvanceKeyword();
             return FinishNode(ParseRangeExpressionCore());
         }
 
@@ -1125,7 +1127,7 @@ internal sealed partial class GesSyntaxParser
         }
 
         var token = Current;
-        throw new ParseException($"Unexpected token '{token.Text}'", token.Line, token.Column);
+        throw new ParseException($"Unexpected token '{token.Text}'", token);
     }
 
     private Expression ParseBracketLiteralExpression(GesSyntaxTreeBuilder.Checkpoint start)
@@ -1284,7 +1286,7 @@ internal sealed partial class GesSyntaxParser
         }
 
         var token = Current;
-        throw new ParseException($"Expected :select but found {token.Text}", token.Line, token.Column);
+        throw new ParseException($"Expected :select but found {token.Text}", token);
     }
 
     private Expression ParseGeneratedCollectionExpression()
@@ -1298,7 +1300,7 @@ internal sealed partial class GesSyntaxParser
         if (IsWord("from"))
         {
             _tree.StartNode(GesSyntaxNodeKind.RangeExpression);
-            Advance();
+            AdvanceKeyword();
             depth = FinishNode(ParseRangeExpressionCore()).Depth;
         }
         else if (Match(In))
@@ -1306,7 +1308,7 @@ internal sealed partial class GesSyntaxParser
             SkipNewLines();
             if (Current.Kind == Identifier && string.Equals(Current.Text, "from", StringComparison.Ordinal))
             {
-                throw new ParseException("Direct ranges are not allowed after 'in'; use ':select item from ... to ...' or iterate a range value", Current.Line, Current.Column);
+                throw new ParseException("Direct ranges are not allowed after 'in'; use ':select item from ... to ...' or iterate a range value", Current);
             }
 
             depth = ParseExpression().Depth;
@@ -1314,7 +1316,7 @@ internal sealed partial class GesSyntaxParser
         else
         {
             var token = Current;
-            throw new ParseException($"Expected 'from' or {In} but found {token.Text}", token.Line, token.Column);
+            throw new ParseException($"Expected 'from' or {In} but found {token.Text}", token);
         }
 
         SkipNewLines();
@@ -1552,7 +1554,7 @@ internal sealed partial class GesSyntaxParser
         }
 
         var current = Current;
-        throw new ParseException($"Expected dice separator but found {current.Kind}", current.Line, current.Column);
+        throw new ParseException($"Expected dice separator but found {current.Kind}", current);
     }
 
     private static bool IsCompactDiceToken(string text)
@@ -1572,9 +1574,9 @@ internal sealed partial class GesSyntaxParser
         var value = GesNumberText.Value(numberToken.Text);
         if (!double.IsFinite(value) || value <= 0 || value != Math.Truncate(value))
         {
-            throw new ParseException($"Expected positive integer for {name}", numberToken.Line, numberToken.Column);
+            throw new ParseException($"Expected positive integer for {name}", numberToken);
         }
 
-        if (value > int.MaxValue) throw new ParseException($"{name} is too large", numberToken.Line, numberToken.Column);
+        if (value > int.MaxValue) throw new ParseException($"{name} is too large", numberToken);
     }
 }

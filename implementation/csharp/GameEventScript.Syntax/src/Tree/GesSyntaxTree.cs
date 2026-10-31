@@ -138,7 +138,11 @@ internal enum GesSyntaxRole : byte
     ArgumentLabel,
     Member,
     MapKey,
-    MessageName
+    MessageName,
+    // An identifier the grammar reads as a contextual keyword, such as `between`.
+    Keyword,
+    Opcode,
+    AssemblyLabel
 }
 
 /// <summary>
@@ -161,8 +165,8 @@ internal sealed class GesSyntaxTree(string text, IReadOnlyList<GesToken> tokens,
 }
 
 /// <summary>
-/// A syntax error of one source, with the module name declared before it. Lines and columns are one-based and count
-/// UTF-16 code units, as token positions do.
+/// A syntax error of one source, with the module name declared before it. Lines and columns are one-based; columns
+/// count Unicode scalars, as token positions do.
 /// </summary>
 internal sealed record GesSyntaxDiagnostic(string Code, string Message, int Line, int Column, int EndLine, int EndColumn, string ModuleName,
     string? Symbol = null, GesSyntaxSymbolKind SymbolKind = GesSyntaxSymbolKind.Unknown)

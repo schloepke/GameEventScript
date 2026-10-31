@@ -322,7 +322,7 @@ rendered input use stderr. Redirected streams fall back to the normal line reade
 script output can still be colored with `--color`.
 
 The CLI-only editor uses [PrettyPrompt](https://github.com/waf/PrettyPrompt/tree/v4.1.1).
-Highlighting uses the bundled GES and GESA TextMate grammars and tolerates incomplete input;
+Highlighting uses the Syntax module's GES and GESA highlighter and tolerates incomplete input;
 compilation remains the authority for valid GES. Runtime and Compiler acquire no
 terminal dependencies. Dependency licenses and source links are included in
 [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).

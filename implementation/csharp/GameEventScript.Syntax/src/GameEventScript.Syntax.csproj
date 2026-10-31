@@ -11,7 +11,7 @@
         <Version>0.1.0</Version>
         <Authors>Stephan Schlöpke</Authors>
         <Copyright>Copyright 2026 Stephan Schlöpke</Copyright>
-        <Description>TextMate-based GES and GESA syntax highlighting for editors and terminals. Independent of Runtime and Compiler.</Description>
+        <Description>GES lexer, parser and single-source validator, plus GES and GESA syntax highlighting for editors and terminals. Independent of Runtime and Compiler.</Description>
         <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
         <PackageReadmeFile>README.md</PackageReadmeFile>
         <PackageIcon>icon.png</PackageIcon>

@@ -25,6 +25,22 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   `GameEventScriptSyntaxHighlighter` become `GameEventScriptSyntax`. Type names
   such as `GesSyntaxHighlighter` are unchanged. Migrate by replacing the package
   reference and the `using`/`import`.
+- Highlighting is derived from the lossless syntax tree instead of the bundled
+  TextMate grammars, in both ports. Spans carry a category and the diagnostics
+  overlapping them, and `GesHighlightResult.Diagnostics`/`diagnostics` lists the
+  document's syntax errors or, without those, its violated single-source rules
+  as new `GesHighlightDiagnostic` values with UTF-16 ranges. The line API
+  (`HighlightLine`/`highlightLine`), `GesHighlightState`, `NextState`/`nextState`,
+  `CreateState`/`makeState` and the TextMate `Scopes`/`scopes` are removed;
+  highlight the whole document after an edit and theme by `Kind`/`kind`. Swift
+  `GesHighlightingError` loses `expectedSingleLine` and `incompatibleState`. Some
+  categories become more precise: function and predicate names are Function,
+  contextual keywords such as `between`, `from` or `ascending` are Keyword,
+  brackets and braces are Symbol, extension names are Builtin, and GESA label
+  definitions are Label. Input with statements outside a handler, as console
+  input has, keeps its statement categories. The Swift module no longer imports
+  Foundation, and `scripts/sync-highlighter-grammars.py` is removed; the TextMate
+  grammars remain for the editor bundles.
 - Runtime now depends on the Syntax module, which owns the quantity unit table
   and the text and name rules. `GesQuantityUnit` and `GesQuantityUnits` move to
   the Syntax assembly in C# with the unchanged namespace `GameEventScript.Api`;
@@ -91,8 +107,7 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   removed); hosts via `GesHostBuilder()` or `GameEventScriptHost.makeBuilder()`
   (formerly `createBuilder()`). The Swift `GameEventScriptHost` initializer is no
   longer public; configure hosts through the builder. Swift factory methods use
-  `make`: `GesMessageSignature.makeMessage(_:)`, `makeSignatureId(name:parameterNames:)`
-  and `GesSyntaxHighlighter.makeState()`.
+  `make`: `GesMessageSignature.makeMessage(_:)` and `makeSignatureId(name:parameterNames:)`.
 - Reading, encoding, validating and dumping Programs are members of
   `GameEventScriptProgram`; the separate reader, writer, validator and dumper
   types are no longer public. C#: `GameEventScriptProgram.Read(bytes, options)`,
@@ -242,6 +257,9 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   of every port. Runtime behavior does not depend on it.
 
 ### Fixed
+- C# syntax errors that name an unexpected token, such as `Unexpected token '}'`,
+  now range over that token, as in Swift, instead of having no length; their
+  start positions are unchanged.
 - Unbraced `for` and `random with` bodies open a scope of their own during
   validation, as braced bodies do: a binding there no longer escapes into the
   enclosing scope or repeats the loop binding, and shadows it instead.

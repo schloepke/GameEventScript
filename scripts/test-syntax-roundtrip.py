@@ -10,12 +10,15 @@ in Unicode scalars. The tokens of a source must cover it without gaps, leading t
 checks before the real observations are judged.
 
 With `--trees`, a port's syntax trees must hold every token exactly once and nest correctly; valid sources must have no
-error nodes, and every source must have the same tree in both ports, error nodes included.
+error nodes, and every source must have the same tree in both ports, error nodes included. Both ports must also parse
+every source alike as a fragment and highlight it alike, spans and diagnostics included; the shared highlighting cases,
+GESA among them, join the corpus sources for this.
 """
 
 import argparse
 import copy
 import json
+import re
 from pathlib import Path
 import subprocess
 import sys
@@ -169,7 +172,7 @@ def first_difference(left, right, left_port, right_port, path="CompilationUnit")
 def tree_problems(sources, lexed, parsed, valid):
     problems = []
     for key, source in sources.items():
-        shapes = {}
+        shapes, fragments, highlights = {}, {}, {}
         for port, data in parsed.items():
             entry = data.get(key)
             if entry is None:
@@ -184,6 +187,8 @@ def tree_problems(sources, lexed, parsed, valid):
             if key in valid and error_nodes(root):
                 problems.append(f"{key} ({port}): a valid source has error nodes")
             shapes[port] = [shape(root), entry.get("roles", [])]
+            fragments[port] = [shape(nested(entry["fragmentTree"])), entry["fragmentRoles"]] if "fragmentTree" in entry else None
+            highlights[port] = entry.get("highlight")
         # Both parsers share their recovery, so also sources with syntax errors have equal trees.
         if len(shapes) > 1 and len({json.dumps(tree) for tree in shapes.values()}) > 1:
             (port, (tree, roles)), (other, (other_tree, other_roles)) = list(shapes.items())[:2]
@@ -192,7 +197,21 @@ def tree_problems(sources, lexed, parsed, valid):
                 problems.append(f"{key}: the ports give token {index} different roles: {port} {roles[index:index + 1]}, {other} {other_roles[index:index + 1]}")
             else:
                 problems.append(f"{key}: the ports build different trees; {first_difference(tree, other_tree, port, other)}")
+        # Fragment parsing, which highlighting uses, and the highlighting itself are equal across ports as well.
+        if len(fragments) > 1 and len({json.dumps(fragment) for fragment in fragments.values()}) > 1:
+            (port, fragment), (other, other_fragment) = list(fragments.items())[:2]
+            problems.append(f"{key}: the ports parse the fragment differently; {port} {json.dumps(fragment)[:300]}, {other} {json.dumps(other_fragment)[:300]}")
+        if len(highlights) > 1 and len({json.dumps(highlight, sort_keys=True) for highlight in highlights.values()}) > 1:
+            (port, highlight), (other, other_highlight) = list(highlights.items())[:2]
+            problems.append(f"{key}: the ports highlight differently; {highlight_difference(highlight, other_highlight, port, other)}")
     return problems
+
+
+def highlight_difference(left, right, left_port, right_port):
+    if left["diagnostics"] != right["diagnostics"]:
+        return f"diagnostics {left_port} {left['diagnostics']}, {right_port} {right['diagnostics']}"
+    index = next((i for i, (a, b) in enumerate(zip(left["spans"], right["spans"])) if a != b), min(len(left["spans"]), len(right["spans"])))
+    return f"span {index}: {left_port} {left['spans'][index:index + 1]}, {right_port} {right['spans'][index:index + 1]}"
 
 
 def controls(sources, observed):
@@ -232,6 +251,14 @@ def main():
         case["id"] = f"syntax.synthetic/case-{index:02d}"
         case["sources"] = [{"name": "synthetic.ges", "program": "main", "text": text}]
         request["cases"].append(case)
+    # The shared highlighting cases, GESA among them, take part in the comparison of highlighting.
+    markdown = (ROOT / "conformance/highlighting/SyntaxHighlighting.md").read_text(encoding="utf-8")
+    for index, block in enumerate(re.findall(r"```highlight\n(.*?)\n```", markdown, re.S)):
+        highlight = json.loads(block)
+        case = copy.deepcopy(template)
+        case["id"] = f"syntax.highlighting/case-{index:02d}"
+        case["sources"] = [{"name": "highlighting." + highlight["language"], "program": "main", "text": highlight["source"]}]
+        request["cases"].append(case)
     sources = {case["id"] + "#" + str(index): source["text"] for case in request["cases"] for index, source in enumerate(case["sources"])}
 
     observed = {}
@@ -254,6 +281,18 @@ def main():
         node[1] = node[1] - 1 if node[1] > 0 else node[1] + 1
         if not tree_problems({key: sources[key]}, observed, {name: {key: data[key]} for name, data in changed.items()}, valid):
             raise SystemExit("A negative control was not detected by the tree checks.")
+        # So must a fragment node closed a token later and a span of another kind.
+        for field in ("fragmentTree", "highlight"):
+            changed = copy.deepcopy(parsed)
+            entry = changed[port][key]
+            if field == "highlight":
+                span = entry["highlight"]["spans"][0]
+                span[0] = "Keyword" if span[0] != "Keyword" else "Plain"
+            else:
+                node = entry["fragmentTree"][-1]
+                node[1] = node[1] - 1 if node[1] > 0 else node[1] + 1
+            if not tree_problems({key: sources[key]}, observed, {name: {key: data[key]} for name, data in changed.items()}, valid):
+                raise SystemExit(f"A negative control of {field} was not detected by the tree checks.")
     problems += tree_problems(sources, observed, parsed, valid)
     for problem in problems[:40]:
         print(problem)

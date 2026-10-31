@@ -16,10 +16,11 @@ internal sealed partial class GesSyntaxParser
     private const int MaximumExpressionDepth = 32;
     private const int MaximumStatementDepth = 32;
 
-    internal static GesSyntaxTree Parse(string text)
+    // A fragment may also hold statements outside a handler, as editor input does; the Compiler never parses fragments.
+    internal static GesSyntaxTree Parse(string text, bool fragment = false)
     {
         _ = text ?? throw new ArgumentNullException(nameof(text));
-        var parser = new GesSyntaxParser(new GesTokenReader(new GesLexer(text)), text.Length);
+        var parser = new GesSyntaxParser(new GesTokenReader(new GesLexer(text)), text.Length) { _fragment = fragment };
         try
         {
             parser.ParseScript();
@@ -43,6 +44,7 @@ internal sealed partial class GesSyntaxParser
     // Where the open declarations and statements start; a failure turns the innermost one into an error node.
     private readonly List<(int Depth, GesSyntaxTreeBuilder.Checkpoint Start)> _recoveryPoints = [];
     private string _moduleName = string.Empty;
+    private bool _fragment;
     private int _expressionNesting;
     private int _statementNesting;
     private int _delimiterDepth;
@@ -224,6 +226,12 @@ internal sealed partial class GesSyntaxParser
         SkipStatementSeparators();
         while (!Is(EndOfFile))
         {
+            if (_fragment && !Is(Constant) && !Is(Record) && !Is(Predicate) && !Is(Function) && !Is(Module) && !Is(On) && !Is(Illegal))
+            {
+                ParseFragmentStatement();
+                continue;
+            }
+
             var declarationStart = Current;
             EnterRecoveryPoint();
             try
@@ -270,6 +278,24 @@ internal sealed partial class GesSyntaxParser
         }
     }
 
+    private void ParseFragmentStatement()
+    {
+        EnterRecoveryPoint();
+        try
+        {
+            ParseStatement();
+            RequireStatementSeparatorOrClosing(EndOfFile);
+            SkipStatementSeparators();
+        }
+        catch (ParseException ex)
+        {
+            AddParseError(ex);
+            RecoverInto(() => SynchronizeStatement(EndOfFile));
+        }
+
+        LeaveRecoveryPoint();
+    }
+
     private void ParseOptionalModuleDeclaration()
     {
         if (!Is(Module)) return;
@@ -278,7 +304,7 @@ internal sealed partial class GesSyntaxParser
 
         SkipNewLines();
         ThrowIfIllegalToken();
-        if (!Is(Identifier)) throw new ParseException($"Expected module name but found {Current.Kind}", Current.Line, Current.Column);
+        if (!Is(Identifier)) throw new ParseException($"Expected module name but found {Current.Kind}", Current);
 
         var builder = new StringBuilder(Advance().Text);
         while (Match(Dot))
@@ -660,7 +686,7 @@ internal sealed partial class GesSyntaxParser
         }
 
         var token = Current;
-        throw new ParseException($"Expected {Be} but found {token.Kind}", token.Line, token.Column);
+        throw new ParseException($"Expected {Be} but found {token.Kind}", token);
     }
 
     private void ParseIfStatement()
@@ -709,7 +735,7 @@ internal sealed partial class GesSyntaxParser
                 SkipNewLines();
                 if (Current.Kind == Identifier && string.Equals(Current.Text, "from", StringComparison.Ordinal))
                 {
-                    throw new ParseException("Direct ranges are not allowed after 'in'; use 'for item from ... to ...' or iterate a range variable", Current.Line, Current.Column);
+                    throw new ParseException("Direct ranges are not allowed after 'in'; use 'for item from ... to ...' or iterate a range variable", Current);
                 }
 
                 ParseExpression();
@@ -717,13 +743,13 @@ internal sealed partial class GesSyntaxParser
             else if (IsWord("from"))
             {
                 _tree.StartNode(GesSyntaxNodeKind.RangeExpression);
-                Advance();
+                AdvanceKeyword();
                 FinishNode(ParseRangeExpressionCore());
             }
             else
             {
                 var token = Current;
-                throw new ParseException($"Expected {In} or 'from' but found {token.Text}", token.Line, token.Column);
+                throw new ParseException($"Expected {In} or 'from' but found {token.Text}", token);
             }
         }
         finally { _forSourceDepth = previousSourceDepth; }
@@ -984,7 +1010,7 @@ internal sealed partial class GesSyntaxParser
     {
         if (Current.Kind == Identifier && string.Equals(Current.Text, "value", StringComparison.Ordinal))
         {
-            Advance();
+            AdvanceKeyword();
             return;
         }
 
@@ -994,7 +1020,7 @@ internal sealed partial class GesSyntaxParser
     private bool MatchWord(string word)
     {
         if (!IsWord(word)) return false;
-        Advance();
+        AdvanceKeyword();
         return true;
     }
 
@@ -1068,6 +1094,13 @@ internal sealed partial class GesSyntaxParser
         if (token.Kind is LeftParen or LeftBracket or LeftBrace) _delimiterDepth++;
         else if (token.Kind is RightParen or RightBracket or RightBrace) _delimiterDepth--;
         return token;
+    }
+
+    // Consumes an identifier the grammar reads as a contextual keyword, such as `between` or `from`.
+    private void AdvanceKeyword()
+    {
+        Advance();
+        Role(GesSyntaxRole.Keyword);
     }
 
     private GesToken Current => _reader.Current;

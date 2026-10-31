@@ -112,6 +112,7 @@
     var forSourceDepth: Int?
     var choiceConditionDepth: Int?
     var module = ""
+    var fragment = false
     var diagnostics: [GesSyntaxDiagnostic] = []
     var tree = GesSyntaxTreeBuilder()
     var roles: [GesSyntaxRole] = []
@@ -131,9 +132,11 @@
     // Records the role of the token consumed last.
     func role(_ role: GesSyntaxRole) { roles[previousIndex] = role }
 
-    /// Parses one source into its lossless syntax tree, whose diagnostics report its syntax errors in source order.
-    @_spi(Syntax) public static func parse(_ text: String) -> GesSyntaxTree {
+    /// Parses one source into its lossless syntax tree, whose diagnostics report its syntax errors in source order. A
+    /// fragment may also hold statements outside a handler, as editor input does; the Compiler never parses fragments.
+    @_spi(Syntax) public static func parse(_ text: String, fragment: Bool = false) -> GesSyntaxTree {
         let parser = GesSyntaxParser(text)
+        parser.fragment = fragment
         do { try parser.parseModule() } catch let failure as Failure {
             // The nesting limit ends parsing; the syntax errors found before it stay reported. The innermost open
             // statement or declaration and the rest of the source form one error node.
@@ -252,7 +255,7 @@
     // Contextual words are identifiers compared by spelling.
     func matchWord(_ word: String) -> Bool {
         if current.isIdentifier(word) {
-            advance()
+            advanceKeyword()
             return true
         }
         return false
@@ -260,7 +263,13 @@
 
     func expectWord(_ word: String) throws {
         if !current.isIdentifier(word) { throw failure("Expected '\(word)'.") }
+        advanceKeyword()
+    }
+
+    // Consumes an identifier the grammar reads as a contextual keyword, such as `between` or `from`.
+    func advanceKeyword() {
         advance()
+        role(.keyword)
     }
 
     func matchSelector(_ name: String) -> Bool {
@@ -381,6 +390,10 @@
         leaveRecoveryPoint()
         separators()
         while currentKind != .endOfFile {
+            if fragment && !Self.declarationKinds.contains(currentKind) && currentKind != .illegal {
+                try fragmentStatement()
+                continue
+            }
             let declarationStart = index
             enterRecoveryPoint()
             do { try declaration() } catch let error as Failure {
@@ -394,6 +407,19 @@
             }
             leaveRecoveryPoint()
         }
+    }
+
+    func fragmentStatement() throws {
+        enterRecoveryPoint()
+        do {
+            try statement()
+            if currentKind != .endOfFile && currentKind != .newLine && currentKind != .semicolon { throw failure("Expected a statement separator.") }
+            separators()
+        } catch let error as Failure {
+            try record(error)
+            recover { synchronizeStatement(until: .endOfFile) }
+        }
+        leaveRecoveryPoint()
     }
 
     // Keeps a syntax error and continues; the nesting limit ends parsing.
@@ -412,9 +438,9 @@
     }
 
     // Skips to the next statement; false when the block or the source ends first.
-    func synchronizeStatement() -> Bool {
+    func synchronizeStatement(until closing: GesTokenKind = .rightBrace) -> Bool {
         while currentKind != .endOfFile {
-            if currentKind == .rightBrace { return false }
+            if currentKind == closing { return false }
             if match(.semicolon) || match(.newLine) {
                 separators()
                 return true
@@ -697,7 +723,7 @@
         let range = current.isIdentifier("from")
         if range {
             startNode(.rangeExpression)
-            advance()
+            advanceKeyword()
             _ = finishNode(try forSource(range: true))
         } else {
             _ = try forSource(range: false)

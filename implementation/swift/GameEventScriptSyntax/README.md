@@ -1,15 +1,16 @@
 <!-- Copyright 2026 Stephan Schlöpke -->
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 
-# Swift syntax highlighting
+# Swift Syntax module
 
 > **Since: Unreleased**
 
-`GameEventScriptSyntax` is an optional SwiftPM library for GES and GESA
-editors and terminals. It uses Foundation, with no AppKit, UIKit, Compiler or
-Runtime dependency. Both CLI highlighting and this library use the canonical
-TextMate grammars. The public repository-root package exports this product;
-this directory is its standalone development package.
+`GameEventScriptSyntax` is the SwiftPM module with the GES lexer, parser and
+single-source validator that Runtime and Compiler build on. For editors and
+terminals it highlights GES and GESA from the lossless syntax tree, without
+Foundation, AppKit, UIKit, Compiler or Runtime dependency, alike to the C#
+package. The public repository-root package exports this product; this directory
+is its standalone development package.
 
 ## Highlight an editor document
 
@@ -20,8 +21,8 @@ let highlighter = try GesSyntaxHighlighter() // .ges by default
 let result = highlighter.highlight(source)
 if result.isComplete {
     for span in result.spans {
-        // start/length are UTF-16 offsets; scopes are TextMate scope names.
-        applyStyle(span.kind, start: span.start, length: span.length)
+        // start/length are UTF-16 offsets; span.diagnostics lists the diagnostics overlapping it.
+        applyStyle(span.kind, start: span.start, length: span.length, underlined: !span.diagnostics.isEmpty)
     }
 }
 ```
@@ -57,11 +58,11 @@ func highlight(_ view: NSTextView, using highlighter: GesSyntaxHighlighter) {
 }
 ```
 
-For large documents, cache per-line results from
-`try highlighter.highlightLine(line, state: previousState)`. Keep line terminators
-and add each line's document offset to its spans. After edits, continue until
-unchanged text and `nextState` match the cache. An incomplete result has no state;
-render it plain and do not cache it as a successful result.
+Highlight the whole document after each edit; input may be a fragment with
+statements outside a handler, as console input is. `result.diagnostics` lists the
+syntax errors, or else the violated single-source rules, with UTF-16 ranges. An
+incomplete result, for an input above the length bound, has no spans: render it
+plain.
 
 ## Terminal and GESA
 
@@ -75,7 +76,7 @@ let displayed = result.isComplete
 
 The renderer accepts a custom category-to-SGR-color callback. Terminal detection,
 `NO_COLOR` and enabling colors remain application decisions. GESA source blocks
-retain their embedded GES scopes.
+and source-line annotations are highlighted as GES.
 
 ## Verification
 
@@ -83,10 +84,9 @@ retain their embedded GES scopes.
 swift test --package-path implementation/swift/GameEventScriptSyntax \
   --scratch-path artifacts/swift/syntax \
   --disable-build-manifest-caching --configuration release
-python3 scripts/sync-highlighter-grammars.py --check
 ```
 
 C# and Swift execute the same [Markdown cases](../../../conformance/highlighting/SyntaxHighlighting.md).
-See the [contract](../../../specs/SyntaxHighlighting.md) for limits, state semantics
-and supported TextMate features. The new product is available from the next
+See the [contract](../../../specs/SyntaxHighlighting.md) for categories,
+diagnostics and limits. The new product is available from the next
 release, or directly from a checkout containing it.

@@ -49,7 +49,7 @@ extension GesSyntaxParser {
         if !current.isIdentifier("asm") { return try expression() }
         startNode(.assemblyBlock)
         let start = index
-        advance()
+        advanceKeyword()
         try assemblyBlock(standalone: false)
         return finishNode(node(start))
     }
@@ -81,11 +81,13 @@ extension GesSyntaxParser {
                 lines += 1
             } else if current.isWord {
                 _ = try identifier()
+                role(.assemblyLabel)
                 try expect(.colon)
                 lines += 1
             } else {
                 guard currentKind == .message else { throw failure("Expected an assembly instruction.", token) }
                 let name = advance().text
+                role(.opcode)
                 var operands = 0
                 if currentKind != .newLine && currentKind != .semicolon && currentKind != .rightBrace {
                     repeat {
@@ -204,7 +206,7 @@ extension GesSyntaxParser {
             newlines()
         }
         if op == .in && current.isIdentifier("values") && peekKind() == .of {
-            advance()
+            advanceKeyword()
             newlines()
             try expect(.of)
         }
@@ -287,7 +289,7 @@ extension GesSyntaxParser {
             return try ranged(input)
         }
         if currentKind == .numeric || currentKind == .nothing || current.isIdentifier("integer") || current.isIdentifier("fractional") {
-            advance()
+            if currentKind == .identifier { advanceKeyword() } else { advance() }
             return try ranged(input)
         }
         if match(.empty) { return try ranged(input) }
@@ -299,10 +301,11 @@ extension GesSyntaxParser {
         if matchWord("at") {
             let mode = advance()
             guard mode.isIdentifier("least") || mode.isIdentifier("most") else { throw failure("Expected least or most.", previous) }
+            role(.keyword)
             return try combined(input, try expression(13))
         }
         if current.isIdentifier("less") || current.isIdentifier("more") {
-            advance()
+            advanceKeyword()
             try expectWord("than")
             return try combined(input, try expression(13))
         }
@@ -358,7 +361,7 @@ extension GesSyntaxParser {
         let start = index
         let op = advance().kind
         // `strict` directly after `parse` on the same line is always the mode word, never an operand.
-        if op == .keywordParse && currentKind == .identifier && current.text == "strict" { advance() }
+        if op == .keywordParse && currentKind == .identifier && current.text == "strict" { advanceKeyword() }
         let value = try expression(15)
         let negated: Shape = value.shape == .number || value.shape == .quantity ? .negated : .negatedOther
         return finishNode(Expression(depth: 2, start: start, end: previousIndex, shape: op == .operatorMinus ? negated : .none))
@@ -392,6 +395,7 @@ extension GesSyntaxParser {
             newlines()
             let token = advance()
             guard token.kind == .identifier, ["even", "up", "down"].contains(token.text) else { throw failure("Expected rounding mode.", previous) }
+            role(.keyword)
         }
     }
 
@@ -535,7 +539,7 @@ extension GesSyntaxParser {
         case .typeName: return try typeExpression()
         case .identifier where current.isIdentifier("from"):
             startNode(.rangeExpression)
-            advance()
+            advanceKeyword()
             return finishNode(try rangeExpression(previousIndex))
         case .identifier, .message: return try nameExpression()
         default:
@@ -734,7 +738,7 @@ extension GesSyntaxParser {
         newlines()
         if current.isIdentifier("from") {
             startNode(.rangeExpression)
-            advance()
+            advanceKeyword()
             _ = finishNode(try rangeExpression(previousIndex))
         } else {
             try expect(.`in`)
@@ -987,7 +991,7 @@ extension GesSyntaxParser {
         case .key: try keyClause(op)
         case .direction: try direction()
         case .contains:
-            if currentKind == .identifier && ["all", "any"].contains(current.text) { advance() }
+            if currentKind == .identifier && ["all", "any"].contains(current.text) { advanceKeyword() }
             _ = try expression()
         case .term: _ = try expression()
         case .count: try positiveInteger()
@@ -1077,7 +1081,7 @@ extension GesSyntaxParser {
 
     func sliceClause(_ op: String) throws {
         if currentKind == .identifier && ["first", "last", "highest", "lowest"].contains(current.text) {
-            advance()
+            advanceKeyword()
             try positiveInteger()
         } else if op == "take" {
             startNode(.dicePattern)
@@ -1117,7 +1121,7 @@ extension GesSyntaxParser {
     func direction() throws {
         newlines()
         guard currentKind == .identifier && ["ascending", "descending"].contains(current.text) else { throw failure("Expected sort direction.") }
-        advance()
+        advanceKeyword()
     }
 
     func pattern() throws {
@@ -1128,6 +1132,7 @@ extension GesSyntaxParser {
         if matchWord("straight") { return }
         let t = advance()
         guard t.kind == .identifier, ["pair", "three", "four", "five", "six", "seven"].contains(t.text) else { throw failure("Expected dice pattern.", t) }
+        role(.keyword)
         newlines()
         // `pair` takes an optional face; the larger counts take a face or `a kind`.
         if t.text == "pair" {

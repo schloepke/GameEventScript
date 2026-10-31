@@ -209,22 +209,22 @@ here.
   - Done: both parsers recover alike: a failed declaration or statement
     becomes one error node from its start, so every corpus source has the
     same tree in both ports, error nodes included.
-  - Parser (remaining): error nodes carry their diagnostic, for the
-    highlighter's error spans. Keep the stack-safe recursion structure.
   - Done: the parsers record each name token's role and each expression
     node's diagnostic range; `GesSyntaxValidator` in Syntax checks the rules of
     one source (spelling, repetitions, shadowing, system endpoints, removed
     types), and the Compiler keeps the rules that need other sources, the
     catalog or the runtime. Next with the external declarations: the
     Compiler's program-wide rules read a source-neutral declaration set.
-  - Highlighter: categories and diagnostics per span, derived from the tree; no
-    TextMate concepts, line states or scope stacks. GESA gets a small lossless
-    lexer that highlights embedded source through the GES tree. The CLI moves
-    onto the Syntax module. Public API: parse results, diagnostics and
-    highlighting; node details via `InternalsVisibleTo`/`@_spi(Compiler)`.
-  - Then rework `specs/SyntaxHighlighting.md` and `conformance/highlighting`,
-    add `specs/Syntax.md` and a lossless roundtrip over the whole corpus, and
-    compare highlighting performance and the card-game module size.
+  - Done: the highlighter derives categories from the tree (token kind, the
+    parser's roles, including contextual keywords, and owning nodes) and gives
+    each span the diagnostics overlapping it; editor fragments with top-level
+    statements parse in a fragment mode. GESA uses a small line lexer that
+    highlights embedded source as GES. TextMate evaluation, embedded grammars,
+    line states, scope stacks and the Swift Foundation import are gone;
+    `test-syntax-roundtrip.py --trees` requires equal highlighting in both ports.
+  - Remaining: add `specs/Syntax.md`, a CI gate against Foundation imports in
+    Syntax, Runtime and Compiler, and compare highlighting performance and the
+    card-game module size before and after.
 - Generate the TextMate editor bundles from the Syntax module's token and node
   classification instead of maintaining the grammars separately.
 - Reduce library and binary size without noticeable performance loss now that

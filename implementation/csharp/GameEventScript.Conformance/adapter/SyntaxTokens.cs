@@ -9,7 +9,8 @@ using GameEventScript.Syntax;
 // Lexes every source of a request losslessly. Offsets are Unicode scalar offsets, so both ports report the same values.
 internal static class SyntaxTokens
 {
-    // Parses every source; the lossless syntax tree also exists for sources with errors.
+    // Parses every source; the lossless syntax tree also exists for sources with errors. A source named `*.gesa` is
+    // highlighted as GESA.
     internal static object RunTrees(JsonElement cases)
     {
         var sources = new Dictionary<string, object>(StringComparer.Ordinal);
@@ -21,17 +22,35 @@ internal static class SyntaxTokens
                 var text = source.GetProperty("text").GetString()!;
                 var tree = GesSyntaxParser.Parse(text);
 
+                var fragment = GesSyntaxParser.Parse(text, fragment: true);
+                var language = source.TryGetProperty("name", out var name) && name.GetString()!.EndsWith(".gesa", StringComparison.Ordinal) ? GesSyntaxLanguage.Gesa : GesSyntaxLanguage.Ges;
+                var highlight = new GesSyntaxHighlighter(language, int.MaxValue).Highlight(text);
                 var scalarOffsets = ScalarOffsets(text);
                 sources[test.GetProperty("id").GetString()! + "#" + index++] = new
                 {
                     tokens = tree.Tokens.Select(token => (object)new object[] { token.Kind.ToString(), scalarOffsets[token.FullStart], scalarOffsets[token.Start], scalarOffsets[token.End], token.Text }).ToArray(),
                     roles = tree.Roles.Select(role => role.ToString()).ToArray(),
-                    tree = Nodes(tree.Root)
+                    tree = Nodes(tree.Root),
+                    fragmentRoles = fragment.Roles.Select(role => role.ToString()).ToArray(),
+                    fragmentTree = Nodes(fragment.Root),
+                    // UTF-16 spans as [kind, start, length, diagnostic indices] and diagnostics as [code, start, length].
+                    highlight = new
+                    {
+                        spans = highlight.Spans.Select(span => (object)new object[] { span.Kind.ToString(), span.Start, span.Length, span.Diagnostics.Select(diagnostic => IndexOf(highlight.Diagnostics, diagnostic)).ToArray() }).ToArray(),
+                        diagnostics = highlight.Diagnostics.Select(diagnostic => (object)new object[] { diagnostic.Code, diagnostic.Start, diagnostic.Length }).ToArray()
+                    }
                 };
             }
         }
 
         return sources;
+    }
+
+    private static int IndexOf(IReadOnlyList<GesHighlightDiagnostic> diagnostics, GesHighlightDiagnostic diagnostic)
+    {
+        for (var i = 0; i < diagnostics.Count; i++)
+            if (ReferenceEquals(diagnostics[i], diagnostic)) return i;
+        return -1;
     }
 
     // Nodes in preorder as [kind, first token, end token, parent index, range start, range end]; flat, so deep trees stay

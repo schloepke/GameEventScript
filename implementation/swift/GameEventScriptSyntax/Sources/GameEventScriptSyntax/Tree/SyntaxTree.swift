@@ -59,6 +59,12 @@
     case mapKey
     /// A message name of a handler, message literal or handler literal.
     case messageName
+    /// An identifier the grammar reads as a contextual keyword, such as `between`.
+    case keyword
+    /// The instruction name of an inline-assembly line.
+    case opcode
+    /// A label an inline-assembly line declares.
+    case assemblyLabel
 }
 
 /// A node of the lossless syntax tree. It spans the tokens `firstToken..<endToken` of its tree; its own tokens are those

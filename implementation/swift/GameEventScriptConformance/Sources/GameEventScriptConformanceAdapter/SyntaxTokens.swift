@@ -21,7 +21,8 @@ enum SyntaxTokens {
         return sources
     }
 
-    // Parses every source; the lossless syntax tree also exists for sources with errors.
+    // Parses every source; the lossless syntax tree also exists for sources with errors. A source named `*.gesa` is
+    // highlighted as GESA.
     static func runTrees(_ input: Input) throws -> [String: Any] {
         var sources: [String: Any] = [:]
         for test in input.values("cases") {
@@ -29,11 +30,23 @@ enum SyntaxTokens {
             for (index, source) in test.values("sources").enumerated() {
                 let text = try source.text("text")
                 let tree = GesProgramBuilder.syntaxTree(text)
+                let fragment = GesSyntaxParser.parse(text, fragment: true)
+                let language: GesSyntaxLanguage = (try? source.text("name"))?.hasSuffix(".gesa") == true ? .gesa : .ges
+                let highlight = try GesSyntaxHighlighter(language: language, maxInputLength: Int.max).highlight(text)
                 let offsets = scalarOffsets(text)
                 sources[id + "#" + String(index)] = [
                     "tokens": tree.tokens.map { token -> [Any] in [kindName(token.kind), offsets[token.fullStart]!, offsets[token.start]!, offsets[token.end]!, token.text] },
                     "roles": tree.roles.map { name(String(describing: $0)) },
                     "tree": nodes(tree.root),
+                    "fragmentRoles": fragment.roles.map { name(String(describing: $0)) },
+                    "fragmentTree": nodes(fragment.root),
+                    // UTF-16 spans as [kind, start, length, diagnostic indices] and diagnostics as [code, start, length].
+                    "highlight": [
+                        "spans": highlight.spans.map { span -> [Any] in
+                            [name(span.kind.rawValue), span.start, span.length, span.diagnostics.map { diagnostic in highlight.diagnostics.firstIndex(of: diagnostic) ?? -1 }]
+                        },
+                        "diagnostics": highlight.diagnostics.map { diagnostic -> [Any] in [diagnostic.code, diagnostic.start, diagnostic.length] },
+                    ],
                 ]
             }
         }

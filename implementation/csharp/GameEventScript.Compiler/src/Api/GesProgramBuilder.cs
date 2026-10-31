@@ -111,13 +111,16 @@ public sealed class GesProgramBuilder
     {
         var compileOptions = options ?? _options;
         var modules = new GesParsedScript[_sources.Count];
+        // Each source's own rules report first, in source order; the program-wide rules follow.
+        var sourceDiagnostics = new List<GesDiagnostic>();
         for (var index = 0; index < _sources.Count; index++)
         {
             var source = _sources[index];
-            modules[index] = GesSyntaxBinder.Parse(source.Text, source.SourceName, checked((uint)index));
+            modules[index] = GesSyntaxBinder.Parse(source.Text, source.SourceName, checked((uint)index), sourceDiagnostics);
         }
 
         var errors = new GesValidationErrors();
+        errors.AddRange(sourceDiagnostics);
         var constants = BuildConstantDefinitionMap(modules, errors);
         var typeDefinitions = BuildTypeDefinitionMap(modules, errors);
         var validationTypeDefinitions = BuildValidationTypeDefinitionMap(typeDefinitions, _externalTypeCatalog, modules, errors);

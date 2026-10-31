@@ -68,14 +68,23 @@ stops at the end of that phase.
   the block's closing brace. A block left open at the end of input reports the
   missing brace and the failed closing of its declaration. `parse.sourceNestingExceeded`
   ends parsing immediately, after the syntax errors already found in that source.
-- Validation reports all semantic diagnostics of the program: first repeated
-  constants, repeated record types and record types that an external type also
-  declares, repeated predicate signatures, repeated function signatures and
-  predicate/function name conflicts, each group in source order; then, module
-  by module in source order, its records, predicates, functions and handlers
-  followed by its shadowing diagnostics; and finally a module-name mismatch
-  between sources, which is reported only when no other validation diagnostic
-  exists.
+- Validation reports all semantic diagnostics of the program. First, source by
+  source in input order, the rules of each source on its own: the spelling of
+  names, labels, members and map keys, repeated parameters, argument labels,
+  record fields and bindings, the forms of the system endpoints, removed type
+  names, and shadowing. They come in source order of their start positions; at
+  one position, shadowing follows the other rules, which keep the order of the
+  checks of their construct (a declaration's name before each parameter's name
+  and label, these before repeated parameters; a call's or literal's name before
+  repeated labels, these before each argument's label). Then the program-wide
+  rules: repeated constants, repeated record types and record types that an
+  external type also declares, repeated predicate signatures, repeated function
+  signatures and predicate/function name conflicts, each group in source order;
+  then, module by module in source order, the rules that need other sources or
+  the host's catalog (unknown types, calls and predicate tests, constructors,
+  predicate results, seeds and send delays) for its records, predicates,
+  functions and handlers; and finally a module-name mismatch between sources,
+  which is reported only when no other validation diagnostic exists.
 - Lowering and resource analysis stop at the first `compile.*` diagnostic.
 
 Every implementation reports the same ordered phase and code sequence for the

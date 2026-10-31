@@ -11,6 +11,12 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 ## Unreleased
 
 ### Breaking
+- Validation reports the rules of each source on its own first, source by source
+  and in source order of their positions: spelling of names and labels,
+  repeated parameters, arguments, fields and bindings, shadowing, system
+  endpoint forms and removed type names. The program-wide rules follow. A
+  program with errors of both kinds therefore lists its diagnostics in a new
+  order; their codes and positions are unchanged.
 
 - The optional highlighter packages are renamed to the Syntax module, which
   will hold the shared lexer, parser and syntax tree: NuGet
@@ -236,6 +242,16 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   of every port. Runtime behavior does not depend on it.
 
 ### Fixed
+- Unbraced `for` and `random with` bodies open a scope of their own during
+  validation, as braced bodies do: a binding there no longer escapes into the
+  enclosing scope or repeats the loop binding, and shadows it instead.
+- `:sum` and `:average` without a binding no longer report that they shadow an
+  enclosing binding named `value`.
+- A repeated parameter of a `:Handler(Msg(...))` data form is reported at the
+  parameter instead of the start of the source.
+- Swift no longer accepts `pair of a kind`, which only the counts from `three`
+  take, and reads the face after `pair of` as an expression also when it starts
+  with a binding named `a`.
 
 - The Swift compiler treats a backslash in a source Text literal as ordinary
   text, as the language specifies and C# does, so `'C:\'` and `"path\"` compile.

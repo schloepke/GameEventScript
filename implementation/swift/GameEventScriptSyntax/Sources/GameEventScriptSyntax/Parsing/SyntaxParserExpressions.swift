@@ -48,11 +48,10 @@ extension GesSyntaxParser {
     func assemblyOrExpression() throws -> Expression {
         if !current.isIdentifier("asm") { return try expression() }
         startNode(.assemblyBlock)
-        defer { finishNode() }
         let start = index
         advance()
         try assemblyBlock(standalone: false)
-        return node(start)
+        return finishNode(node(start))
     }
 
     func assemblyBlock(standalone: Bool = true) throws {
@@ -66,7 +65,10 @@ extension GesSyntaxParser {
             if exported || match(.dot) {
                 if !exported { try expectWord("register") }
                 if lines > 0 || exported && !standalone { throw failure("Assembly declarations must precede instructions and only standalone blocks export bindings.", token) }
-                repeat { _ = try identifier() } while match(.comma)
+                repeat {
+                    _ = try identifier()
+                    role(.assemblyDeclaration)
+                } while match(.comma)
             } else if currentKind == .emit || currentKind == .publish {
                 // An assembly send has the form of a statement send, but no statement node; a delayed send is no line.
                 if peek().isIdentifier("after") {
@@ -89,9 +91,11 @@ extension GesSyntaxParser {
                     repeat {
                         if Self.assemblyMessageOperand(name, operands), currentKind == .message {
                             startNode(.messageExpression)
+                            let messageStart = index
                             advance()
+                            role(.messageName)
                             if currentKind == .leftParen { try arguments() }
-                            finishNode()
+                            _ = finishNode(node(messageStart))
                         } else if currentKind == .operatorMinus, peek().text == "9223372036854775808" {
                             advance()
                             advance()
@@ -304,6 +308,7 @@ extension GesSyntaxParser {
         }
         if current.isName {
             advance()
+            role(.predicateTarget)
             return try ranged(input)
         }
         return try equalityTest(input)
@@ -405,7 +410,6 @@ extension GesSyntaxParser {
 
     func clampIntrinsic() throws -> Expression {
         startNode(.clampExpression)
-        defer { finishNode() }
         let start = index
         advance()
         _ = try expression(15)
@@ -414,19 +418,18 @@ extension GesSyntaxParser {
         _ = try expression(9)
         try expect(.operatorAnd)
         _ = try expression(9)
-        return node(start)
+        return finishNode(node(start))
     }
 
     func variadicIntrinsic() throws -> Expression {
         startNode(.variadicExpression)
-        defer { finishNode() }
         let start = index
         advance()
         newlines()
         try expect(.of)
         _ = try expression(9)
         while !isForClauseStart() && match(.operatorAnd) { _ = try expression(9) }
-        return node(start)
+        return finishNode(node(start))
     }
 
     func extensionCall() throws -> Expression {
@@ -467,6 +470,7 @@ extension GesSyntaxParser {
                 startNode(at: start, .memberAccessExpression)
                 newlines()
                 _ = try identifier()
+                role(.member)
                 result = finishNode(try ranged(result))
             } else if match(.leftBracket) {
                 startNode(at: start, .collectionAccessExpression)
@@ -474,7 +478,7 @@ extension GesSyntaxParser {
                 result = try pipelineSteps(result)
                 newlines()
                 try expect(.rightBracket)
-                finishNode()
+                result = finishNode(result)
             } else {
                 break
             }
@@ -489,9 +493,11 @@ extension GesSyntaxParser {
         if currentKind == .message {
             newlines()
             startNode(.messageExpression)
+            let messageStart = index
             advance()
+            role(.messageName)
             if currentKind == .leftParen { try arguments() }
-            finishNode()
+            _ = finishNode(node(messageStart))
         } else {
             _ = try expression(15)
         }
@@ -543,14 +549,14 @@ extension GesSyntaxParser {
     // `is name` or `is not name`: a predicate of the implicit subject.
     func predicateReference() throws -> Expression {
         startNode(.typeOperationExpression)
-        defer { finishNode() }
         let start = index
         advance()
         newlines()
         _ = match(.operatorNot)
         newlines()
         _ = try identifier()
-        return node(start)
+        role(.predicateTarget)
+        return finishNode(node(start))
     }
 
     func scalar(_ shape: Shape) -> Expression {
@@ -570,14 +576,13 @@ extension GesSyntaxParser {
 
     func parenthesized() throws -> Expression {
         startNode(.parenthesizedExpression)
-        defer { finishNode() }
         advance()
         var result = try expression()
         newlines()
         try expect(.rightParen)
         result.depth += 1
         if result.depth > 32 { throw nestingLimit(result.start, result.end) }
-        return result
+        return finishNode(result)
     }
 
     func randomExpression() throws -> Expression {
@@ -601,18 +606,16 @@ extension GesSyntaxParser {
 
     func seriesExpression() throws -> Expression {
         startNode(.seriesExpression)
-        defer { finishNode() }
         let start = index
         advance()
         newlines()
         let token = advance()
         guard token.kind == .fibonacci || token.kind == .factorial else { throw failure("Expected series kind.", previous) }
-        return node(start)
+        return finishNode(node(start))
     }
 
     func diceRoll() throws -> Expression {
         startNode(.diceExpression)
-        defer { finishNode() }
         advance()
         newlines()
         try expectWord("dice")
@@ -626,7 +629,7 @@ extension GesSyntaxParser {
             let t = advance()
             guard t.text.hasPrefix("d"), let n = Int(t.text.dropFirst()), n > 0 && n <= Int(Int32.max) else { throw failure("Invalid dice sides.", t) }
         }
-        return node(start)
+        return finishNode(node(start))
     }
 
     // A type name starts a data form or a constructor call.
@@ -665,12 +668,16 @@ extension GesSyntaxParser {
             advance()
             newlines()
             advance()
+            role(.messageName)
             try expect(.leftParen)
             newlines()
             if currentKind != .rightParen {
                 repeat {
                     newlines()
-                    if !match(.underscore) { _ = try identifier() }
+                    if !match(.underscore) {
+                        _ = try identifier()
+                        role(.parameter)
+                    }
                     newlines()
                 } while match(.comma)
             }
@@ -683,9 +690,11 @@ extension GesSyntaxParser {
             advance()
             newlines()
             startNode(.messageExpression)
+            let messageStart = index
             advance()
+            role(.messageName)
             try arguments()
-            finishNode()
+            _ = finishNode(node(messageStart))
             if currentKind == .with {
                 startNode(.tagClause)
                 advance()
@@ -721,6 +730,7 @@ extension GesSyntaxParser {
         let selectToken = previousIndex
         newlines()
         _ = try identifier()
+        role(.generatedBinding)
         newlines()
         if current.isIdentifier("from") {
             startNode(.rangeExpression)
@@ -750,6 +760,7 @@ extension GesSyntaxParser {
         let upper = currentKind == .message
         advance()
         if peekKind(0) == .leftParen {
+            role(upper ? .messageName : .callTarget)
             newlines()
             if upper && !isMessageArguments() {
                 try parameters(false, listNode: false)
@@ -759,6 +770,7 @@ extension GesSyntaxParser {
             return wrap(checkpoint, upper ? .messageExpression : .callExpression, node(start))
         }
         if upper { throw failure("Expected handler signature.", tokens[start]) }
+        role(.variable)
         return node(start)
     }
 
@@ -795,6 +807,7 @@ extension GesSyntaxParser {
         defer { finishNode() }
         if argumentLabel() {
             advance()
+            role(.argumentLabel)
             newlines()
             try expect(.colon)
         }
@@ -854,6 +867,7 @@ extension GesSyntaxParser {
             startNode(pattern ? .objectPatternEntry : .mapEntry)
             let t = index
             _ = try identifier()
+            role(.mapKey)
             try expect(.colon)
             newlines()
             // A nested pattern value is itself a pattern.
@@ -1008,20 +1022,21 @@ extension GesSyntaxParser {
 
     // Binding names, then `word` or the projection arrow, then one expression.
     func bindingClause(word: String?) throws {
-        _ = try bindingNames()
+        _ = try bindingNames(.selectorBinding)
         if let word { try expectWord(word) } else { try expect(.projectionArrow) }
         _ = try expression()
     }
 
     func accumulatorClause(_ op: String) throws {
         _ = try identifier()
+        role(.foldAccumulator)
         if op == "fold" {
             try expect(.be)
             _ = try expression()
         }
         try expect(.comma)
         newlines()
-        _ = try bindingNames()
+        _ = try bindingNames(.selectorBinding)
         try expect(.projectionArrow)
         newlines()
         _ = try expression()
@@ -1029,11 +1044,11 @@ extension GesSyntaxParser {
 
     func keyClause(_ op: String) throws {
         if op == "map" {
-            _ = try bindingNames()
+            _ = try bindingNames(.selectorBinding)
             try expectWord("by")
         } else {
             try expectWord("by")
-            _ = try bindingNames()
+            _ = try bindingNames(.selectorBinding)
             try expect(.projectionArrow)
         }
         _ = try expression()
@@ -1047,14 +1062,14 @@ extension GesSyntaxParser {
         if matchWord("at") { try expect(.keywordRandom) }
         newlines()
         if current.isWord && (peek().isIdentifier("where") || peekKind() == .comma) {
-            _ = try bindingNames()
+            _ = try bindingNames(.selectorBinding)
             try expectWord("where")
             _ = try expression()
         }
         newlines()
         if matchWord("weighted") {
             try expectWord("by")
-            _ = try bindingNames()
+            _ = try bindingNames(.weightBinding)
             try expect(.projectionArrow)
             _ = try expression()
         }
@@ -1114,8 +1129,18 @@ extension GesSyntaxParser {
         let t = advance()
         guard t.kind == .identifier, ["pair", "three", "four", "five", "six", "seven"].contains(t.text) else { throw failure("Expected dice pattern.", t) }
         newlines()
-        if t.text != "pair" { try expect(.of) } else if !match(.of) { return }
+        // `pair` takes an optional face; the larger counts take a face or `a kind`.
+        if t.text == "pair" {
+            if match(.of) {
+                newlines()
+                _ = try expression(15)
+            }
+            return
+        }
+        try expect(.of)
+        newlines()
         if matchWord("a") {
+            newlines()
             try expectWord("kind")
         } else {
             _ = try expression(15)

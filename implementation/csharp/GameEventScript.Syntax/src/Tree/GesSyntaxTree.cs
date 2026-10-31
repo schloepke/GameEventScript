@@ -88,17 +88,72 @@ internal sealed class GesSyntaxNode(GesSyntaxNodeKind kind, int firstToken, int 
     internal int EndToken { get; } = endToken;
 
     internal IReadOnlyList<GesSyntaxNode> Children { get; } = children;
+
+    // The tokens an expression node's diagnostics range over, which can differ from its own tokens: a parenthesized
+    // expression ranges over its content and a member access over its target. -1 without such a range.
+    internal int RangeStart { get; private set; } = -1;
+
+    internal int RangeEnd { get; private set; } = -1;
+
+    internal void SetRange(int start, int end)
+    {
+        RangeStart = start;
+        RangeEnd = end;
+    }
+}
+
+/// <summary>The kind of declaration a diagnostic's symbol names; the Compiler maps it to its diagnostic symbol kinds.</summary>
+internal enum GesSyntaxSymbolKind : byte
+{
+    Unknown,
+    Type,
+    Predicate,
+    Function,
+    Handler,
+    Message,
+    Variable,
+    GlobalDefinition
+}
+
+/// <summary>The role a name token plays, recorded while parsing for validation and highlighting.</summary>
+internal enum GesSyntaxRole : byte
+{
+    None,
+    Variable,
+    LetBinding,
+    ConditionBinding,
+    LoopBinding,
+    SelectorBinding,
+    WeightBinding,
+    FoldAccumulator,
+    GeneratedBinding,
+    AssemblyDeclaration,
+    Parameter,
+    UnlabeledParameter,
+    Field,
+    UnlabeledField,
+    Callable,
+    CallTarget,
+    PredicateTarget,
+    ArgumentLabel,
+    Member,
+    MapKey,
+    MessageName
 }
 
 /// <summary>
 /// A source with its tokens and syntax nodes; its tokens, including their trivia, reproduce the source exactly. A tree
 /// exists also for a source with syntax errors, which its diagnostics report in source order.
 /// </summary>
-internal sealed class GesSyntaxTree(string text, IReadOnlyList<GesToken> tokens, GesSyntaxNode root, IReadOnlyList<GesSyntaxDiagnostic>? diagnostics = null)
+internal sealed class GesSyntaxTree(string text, IReadOnlyList<GesToken> tokens, GesSyntaxNode root, IReadOnlyList<GesSyntaxDiagnostic>? diagnostics = null,
+    IReadOnlyList<GesSyntaxRole>? roles = null)
 {
     internal string Text { get; } = text;
 
     internal IReadOnlyList<GesToken> Tokens { get; } = tokens;
+
+    // The role of each token; None for tokens that name nothing.
+    internal IReadOnlyList<GesSyntaxRole> Roles { get; } = roles ?? [];
 
     internal GesSyntaxNode Root { get; } = root;
 
@@ -109,7 +164,8 @@ internal sealed class GesSyntaxTree(string text, IReadOnlyList<GesToken> tokens,
 /// A syntax error of one source, with the module name declared before it. Lines and columns are one-based and count
 /// UTF-16 code units, as token positions do.
 /// </summary>
-internal sealed record GesSyntaxDiagnostic(string Code, string Message, int Line, int Column, int EndLine, int EndColumn, string ModuleName)
+internal sealed record GesSyntaxDiagnostic(string Code, string Message, int Line, int Column, int EndLine, int EndColumn, string ModuleName,
+    string? Symbol = null, GesSyntaxSymbolKind SymbolKind = GesSyntaxSymbolKind.Unknown)
 {
     internal const string Syntax = "parse.syntax";
     internal const string SourceNestingExceeded = "parse.sourceNestingExceeded";
@@ -122,9 +178,14 @@ internal sealed record GesSyntaxDiagnostic(string Code, string Message, int Line
 internal sealed class GesSyntaxTreeBuilder
 {
     private readonly List<GesToken> _tokens;
+    private readonly List<GesSyntaxRole> _roles;
 
     // A source has roughly one token per four characters; sizing for that avoids most regrowth.
-    internal GesSyntaxTreeBuilder(int sourceLength = 0) => _tokens = new List<GesToken>(sourceLength / 4 + 8);
+    internal GesSyntaxTreeBuilder(int sourceLength = 0)
+    {
+        _tokens = new List<GesToken>(sourceLength / 4 + 8);
+        _roles = new List<GesSyntaxRole>(sourceLength / 4 + 8);
+    }
     private readonly List<GesSyntaxNode> _children = [];
     private readonly List<(GesSyntaxNodeKind Kind, int FirstToken, int FirstChild)> _open = [];
 
@@ -138,7 +199,16 @@ internal sealed class GesSyntaxTreeBuilder
 
     internal Checkpoint Mark() => new(_tokens.Count, _children.Count);
 
-    internal void Token(GesToken token) => _tokens.Add(token);
+    internal void Token(GesToken token)
+    {
+        _tokens.Add(token);
+        _roles.Add(GesSyntaxRole.None);
+    }
+
+    internal void SetRole(int token, GesSyntaxRole role) => _roles[token] = role;
+
+    // Sets the diagnostic range of the node completed last.
+    internal void SetLastRange(int start, int end) => _children[^1].SetRange(start, end);
 
     internal void StartNode(GesSyntaxNodeKind kind) => _open.Add((kind, _tokens.Count, _children.Count));
 
@@ -180,6 +250,8 @@ internal sealed class GesSyntaxTreeBuilder
         var root = _children.Count == 1 && _children[0].Kind == GesSyntaxNodeKind.CompilationUnit
             ? _children[0]
             : new GesSyntaxNode(GesSyntaxNodeKind.CompilationUnit, 0, _tokens.Count, _children.ToArray());
-        return new GesSyntaxTree(text, _tokens, root, diagnostics);
+        // The end of file has no role.
+        while (_roles.Count < _tokens.Count) _roles.Add(GesSyntaxRole.None);
+        return new GesSyntaxTree(text, _tokens, root, diagnostics, _roles);
     }
 }

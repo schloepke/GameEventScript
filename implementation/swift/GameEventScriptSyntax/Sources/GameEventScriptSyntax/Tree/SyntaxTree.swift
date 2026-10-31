@@ -15,6 +15,52 @@
     case typeConstructorExpression, clampExpression, variadicExpression, error
 }
 
+/// The role a name token plays, recorded while parsing for validation and highlighting.
+@_spi(Syntax) public enum GesSyntaxRole: UInt8, Sendable {
+    /// A token that names nothing.
+    case none
+    /// A name expression.
+    case variable
+    /// The name of a let binding.
+    case letBinding
+    /// The name of an if-let binding.
+    case conditionBinding
+    /// A name a for loop binds.
+    case loopBinding
+    /// A name a selector binds.
+    case selectorBinding
+    /// A name a weighted choice binds.
+    case weightBinding
+    /// The accumulator of a fold or reduce.
+    case foldAccumulator
+    /// The element of a generated collection.
+    case generatedBinding
+    /// A register an assembly block declares.
+    case assemblyDeclaration
+    /// A parameter whose name is also its label.
+    case parameter
+    /// A parameter without a label.
+    case unlabeledParameter
+    /// A record field that is a labeled constructor parameter or computed.
+    case field
+    /// A record field that is an unlabeled constructor parameter.
+    case unlabeledField
+    /// The name of a predicate or function definition.
+    case callable
+    /// The name a call targets.
+    case callTarget
+    /// The predicate an `is` test names.
+    case predicateTarget
+    /// An argument label.
+    case argumentLabel
+    /// A member name.
+    case member
+    /// A map or object pattern key.
+    case mapKey
+    /// A message name of a handler, message literal or handler literal.
+    case messageName
+}
+
 /// A node of the lossless syntax tree. It spans the tokens `firstToken..<endToken` of its tree; its own tokens are those
 /// not covered by a child.
 @_spi(Syntax) public final class GesSyntaxNode: Sendable {
@@ -22,12 +68,19 @@
     @_spi(Syntax) public let firstToken: Int
     @_spi(Syntax) public let endToken: Int
     @_spi(Syntax) public let children: [GesSyntaxNode]
+    /// The first token an expression node's diagnostics range over, which can differ from its own first token: a
+    /// parenthesized expression ranges over its content and a member access over its target; -1 without a range.
+    @_spi(Syntax) public let rangeStart: Int
+    /// The last token of that range, or -1.
+    @_spi(Syntax) public let rangeEnd: Int
 
-    init(kind: GesSyntaxNodeKind, firstToken: Int, endToken: Int, children: [GesSyntaxNode]) {
+    init(kind: GesSyntaxNodeKind, firstToken: Int, endToken: Int, children: [GesSyntaxNode], rangeStart: Int = -1, rangeEnd: Int = -1) {
         self.kind = kind
         self.firstToken = firstToken
         self.endToken = endToken
         self.children = children
+        self.rangeStart = rangeStart
+        self.rangeEnd = rangeEnd
     }
 }
 
@@ -38,6 +91,8 @@
     @_spi(Syntax) public let root: GesSyntaxNode
     /// The syntax errors of the source in source order; empty for a source without syntax errors.
     @_spi(Syntax) public let diagnostics: [GesSyntaxDiagnostic]
+    /// The role of each token; `none` for tokens that name nothing.
+    @_spi(Syntax) public let roles: [GesSyntaxRole]
 }
 
 /// Builds a syntax tree while a parser consumes tokens by index. A checkpoint taken before a token lets a later node
@@ -65,9 +120,9 @@
         open.append((kind, checkpoint.token, checkpoint.child))
     }
 
-    @_spi(Syntax) public mutating func finishNode(at token: Int) {
+    @_spi(Syntax) public mutating func finishNode(at token: Int, range: (start: Int, end: Int) = (-1, -1)) {
         let (kind, firstToken, firstChild) = open.removeLast()
-        let node = GesSyntaxNode(kind: kind, firstToken: firstToken, endToken: token, children: Array(children[firstChild...]))
+        let node = GesSyntaxNode(kind: kind, firstToken: firstToken, endToken: token, children: Array(children[firstChild...]), rangeStart: range.start, rangeEnd: range.end)
         children.removeSubrange(firstChild...)
         children.append(node)
     }
@@ -84,9 +139,9 @@
         while open.count > depth { finishNode(at: token) }
     }
 
-    @_spi(Syntax) public mutating func finish(text: String, tokens: [GesToken], diagnostics: [GesSyntaxDiagnostic] = []) -> GesSyntaxTree {
+    @_spi(Syntax) public mutating func finish(text: String, tokens: [GesToken], diagnostics: [GesSyntaxDiagnostic] = [], roles: [GesSyntaxRole] = []) -> GesSyntaxTree {
         finish(to: 0, at: tokens.count)
         let root = children.count == 1 && children[0].kind == .compilationUnit ? children[0] : GesSyntaxNode(kind: .compilationUnit, firstToken: 0, endToken: tokens.count, children: children)
-        return .init(text: text, tokens: tokens, root: root, diagnostics: diagnostics)
+        return .init(text: text, tokens: tokens, root: root, diagnostics: diagnostics, roles: roles.count == tokens.count ? roles : Array(repeating: .none, count: tokens.count))
     }
 }

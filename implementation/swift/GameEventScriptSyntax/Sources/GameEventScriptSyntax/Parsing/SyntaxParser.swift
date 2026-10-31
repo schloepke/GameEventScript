@@ -18,9 +18,45 @@
     @_spi(Syntax) public let endColumn: Int?
     /// The module name declared before the error, or empty.
     @_spi(Syntax) public let moduleName: String
+    /// The name the diagnostic is about, if any.
+    @_spi(Syntax) public let symbol: String?
+    /// The kind of declaration the symbol names.
+    @_spi(Syntax) public let symbolKind: GesSyntaxSymbolKind
+
+    init(code: String, message: String, line: Int?, column: Int?, endLine: Int?, endColumn: Int?, moduleName: String, symbol: String? = nil, symbolKind: GesSyntaxSymbolKind = .unknown) {
+        self.code = code
+        self.message = message
+        self.line = line
+        self.column = column
+        self.endLine = endLine
+        self.endColumn = endColumn
+        self.moduleName = moduleName
+        self.symbol = symbol
+        self.symbolKind = symbolKind
+    }
 
     static let syntax = "parse.syntax"
     static let sourceNestingExceeded = "parse.sourceNestingExceeded"
+}
+
+/// The kind of declaration a diagnostic's symbol names; the Compiler maps it to its diagnostic symbol kinds.
+@_spi(Syntax) public enum GesSyntaxSymbolKind: Sendable {
+    /// No particular kind.
+    case unknown
+    /// A type.
+    case type
+    /// A predicate.
+    case predicate
+    /// A function.
+    case function
+    /// A handler or handler literal.
+    case handler
+    /// A message literal.
+    case message
+    /// A binding, parameter, field, member or key.
+    case variable
+    /// A program-wide definition such as a call target.
+    case globalDefinition
 }
 
 /// Parses one source into its lossless syntax tree and reports its syntax errors. After an error, parsing resumes at the
@@ -78,6 +114,7 @@
     var module = ""
     var diagnostics: [GesSyntaxDiagnostic] = []
     var tree = GesSyntaxTreeBuilder()
+    var roles: [GesSyntaxRole] = []
     // Where the open declarations and statements start; a failure turns the innermost one into an error node.
     var recoveryPoints: [(depth: Int, start: GesSyntaxTreeBuilder.Checkpoint)] = []
     var completedInfixKind = GesSyntaxNodeKind.binaryExpression
@@ -88,7 +125,11 @@
         self.text = text
         var lexer = GesLexer(text)
         repeat { tokens.append(lexer.read()) } while tokens.last!.kind != .endOfFile
+        roles = Array(repeating: .none, count: tokens.count)
     }
+
+    // Records the role of the token consumed last.
+    func role(_ role: GesSyntaxRole) { roles[previousIndex] = role }
 
     /// Parses one source into its lossless syntax tree, whose diagnostics report its syntax errors in source order.
     @_spi(Syntax) public static func parse(_ text: String) -> GesSyntaxTree {
@@ -114,6 +155,12 @@
         return value
     }
 
+    // Completes an expression node with the expression's diagnostic range.
+    func finishNode(_ value: Expression) -> Expression {
+        tree.finishNode(at: index, range: (value.start, value.end))
+        return value
+    }
+
     func mark() -> GesSyntaxTreeBuilder.Checkpoint { tree.mark(index) }
 
     func startNode(at checkpoint: GesSyntaxTreeBuilder.Checkpoint, _ kind: GesSyntaxNodeKind) { tree.startNode(at: checkpoint, kind) }
@@ -123,6 +170,11 @@
         tree.startNode(at: checkpoint, kind)
         tree.finishNode(at: index)
         return value
+    }
+
+    func wrap(_ checkpoint: GesSyntaxTreeBuilder.Checkpoint, _ kind: GesSyntaxNodeKind, _ value: Expression) -> Expression {
+        tree.startNode(at: checkpoint, kind)
+        return finishNode(value)
     }
 
     // Recovery skips tokens until a synchronization point. The failed declaration or statement, from its start, and the
@@ -148,7 +200,7 @@
             while currentKind != .endOfFile { advance() }
             finishNode()
         }
-        return tree.finish(text: text, tokens: tokens, diagnostics: diagnostics)
+        return tree.finish(text: text, tokens: tokens, diagnostics: diagnostics, roles: roles)
     }
 
     var current: GesToken { tokens[index] }
@@ -290,9 +342,10 @@
         repeat {
             newlines()
             startNode(.parameter)
-            _ = match(.underscore)
+            let unlabeled = match(.underscore)
             newlines()
             _ = try identifier()
+            role(unlabeled ? .unlabeledParameter : .parameter)
             newlines()
             if allowType && match(.`as`) {
                 newlines()
@@ -431,6 +484,7 @@
         let fieldStart = current
         let unlabeled = match(.underscore)
         _ = try identifier()
+        role(unlabeled ? .unlabeledField : .field)
         try expect(.colon)
         newlines()
         try typeName()
@@ -455,6 +509,7 @@
     func routineDeclaration() throws {
         advance()
         _ = try identifier()
+        role(.callable)
         try parameters()
         try expect(.be)
         newlines()
@@ -466,11 +521,13 @@
         newlines()
         guard currentKind == .message || currentKind == .identifier && ["initialization", "undeliverable"].contains(current.text) else { throw failure("Expected message name.") }
         advance()
+        role(.messageName)
         if currentKind == .`as` {
             startNode(.parameter)
             advance()
             newlines()
             _ = try identifier()
+            role(.parameter)
             finishNode()
         } else if currentKind == .leftParen {
             try parameters()
@@ -569,6 +626,7 @@
             try publishStatement()
         } else if match(.`let`) {
             _ = try identifier()
+            role(.letBinding)
             try expect(.be)
             _ = try assemblyOrExpression()
         } else if match(.`if`) {
@@ -591,9 +649,11 @@
         newlines()
         if currentKind == .message {
             startNode(.messageExpression)
+            let messageStart = index
             advance()
+            role(.messageName)
             if currentKind == .leftParen { try arguments() }
-            finishNode()
+            _ = finishNode(node(messageStart))
         } else {
             _ = try expression()
         }
@@ -613,6 +673,7 @@
             startNode(.ifCondition)
             if match(.`let`) {
                 _ = try identifier()
+                role(.conditionBinding)
                 try expect(.be)
             }
             _ = try expression()
@@ -631,14 +692,13 @@
     }
 
     func forClause() throws {
-        _ = try bindingNames()
+        _ = try bindingNames(.loopBinding)
         newlines()
         let range = current.isIdentifier("from")
         if range {
             startNode(.rangeExpression)
             advance()
-            _ = try forSource(range: true)
-            finishNode()
+            _ = finishNode(try forSource(range: true))
         } else {
             _ = try forSource(range: false)
         }
@@ -687,12 +747,14 @@
         return peekKind(offset) == .in || peek(offset).isIdentifier("from")
     }
 
-    func bindingNames() throws -> Int {
+    func bindingNames(_ binding: GesSyntaxRole) throws -> Int {
         _ = try identifier()
+        role(binding)
         var count = 1
         while match(.comma) {
             newlines()
             _ = try identifier()
+            role(binding)
             count += 1
         }
         return count

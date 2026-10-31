@@ -72,8 +72,10 @@ public final class GesProgramBuilder {
     public func compile(options: GesCompileOptions? = nil) throws -> GameEventScriptProgram {
         let configuration = options ?? self.options
         guard configuration.debugInfo.rawValue & ~GesDebugInfoOptions.all.rawValue == 0 else { throw GesApiError.invalidArgument("Unknown debug information option") }
-        let modules = try sources.map { try GesSyntaxBinder.parse($0) }
-        let validator = GesAstValidator(modules: modules, catalog: catalog)
+        // Each source's own rules report first, in source order; the program-wide rules follow.
+        var sourceDiagnostics: [GesDiagnostic] = []
+        let modules = try sources.map { try GesSyntaxBinder.parse($0, validation: &sourceDiagnostics) }
+        let validator = GesAstValidator(modules: modules, catalog: catalog, diagnostics: sourceDiagnostics)
         try validator.validate()
         return try GesCompiler(validator, sources: sources, options: configuration).compile()
     }

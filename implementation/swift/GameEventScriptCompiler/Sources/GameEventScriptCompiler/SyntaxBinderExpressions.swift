@@ -826,8 +826,17 @@ extension GesSyntaxBinder {
         s.count = ["pair": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7][token.text] ?? 0
         s.mode = "kind"
         try c.newlines()
-        if token.text != "pair" { try c.expect(.of) } else if !(try c.match(.of)) { return s }
+        // `pair` takes an optional face; the larger counts take a face or `a kind`.
+        if token.text == "pair" {
+            guard try c.match(.of) else { return s }
+            s.mode = "face"
+            s.expressions = [try expression(&c)]
+            return s
+        }
+        try c.expect(.of)
+        try c.newlines()
         if try c.matchWord("a") {
+            try c.newlines()
             try c.expectWord("kind")
         } else {
             s.mode = "face"

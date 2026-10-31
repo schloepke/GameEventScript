@@ -30,22 +30,45 @@ internal sealed partial class GesSyntaxBinder
         _sourceId = sourceId;
     }
 
-    // Parses one source and binds its syntax tree; syntax errors fail the parse phase with their diagnostics.
-    internal static GesParsedScript Parse(string text, string? sourceName = null, uint? sourceId = null)
+    // Parses one source and binds its syntax tree; syntax errors fail the parse phase with their diagnostics. The
+    // source's own validation diagnostics are added to `validation`.
+    internal static GesParsedScript Parse(string text, string? sourceName = null, uint? sourceId = null, List<GesDiagnostic>? validation = null)
     {
         var tree = GesSyntaxParser.Parse(text);
-        if (tree.Diagnostics.Count == 0) return Bind(tree, sourceName, sourceId);
-
         var name = string.IsNullOrWhiteSpace(sourceName) ? "UnknownSource" : sourceName!;
-        var diagnostics = new List<GesDiagnostic>(tree.Diagnostics.Count);
-        foreach (var diagnostic in tree.Diagnostics)
+        if (tree.Diagnostics.Count != 0)
         {
-            var location = new GesSourceLocation(name, diagnostic.Line, diagnostic.Column, diagnostic.EndLine, diagnostic.EndColumn, diagnostic.ModuleName, sourceId);
-            var code = diagnostic.Code == GesSyntaxDiagnostic.SourceNestingExceeded ? GesDiagnosticCodes.ParseSourceNestingExceeded : GesDiagnosticCodes.ParseSyntax;
-            diagnostics.Add(new GesDiagnostic(GesDiagnosticPhase.Parse, code, diagnostic.Message, SourceLocation: location, ProgramName: diagnostic.ModuleName));
+            var diagnostics = new List<GesDiagnostic>(tree.Diagnostics.Count);
+            foreach (var diagnostic in tree.Diagnostics) diagnostics.Add(Convert(diagnostic, GesDiagnosticPhase.Parse, name, sourceId));
+            throw new GesCompileException(diagnostics);
         }
 
-        throw new GesCompileException(diagnostics);
+        if (validation is not null)
+            foreach (var diagnostic in GesSyntaxValidator.Validate(tree)) validation.Add(Convert(diagnostic, GesDiagnosticPhase.Validate, name, sourceId));
+        return Bind(tree, sourceName, sourceId);
+    }
+
+    private static GesDiagnostic Convert(GesSyntaxDiagnostic diagnostic, GesDiagnosticPhase phase, string sourceName, uint? sourceId)
+    {
+        var location = new GesSourceLocation(sourceName, diagnostic.Line, diagnostic.Column, diagnostic.EndLine, diagnostic.EndColumn, diagnostic.ModuleName, sourceId);
+        var code = diagnostic.Code switch
+        {
+            GesSyntaxDiagnostic.SourceNestingExceeded => GesDiagnosticCodes.ParseSourceNestingExceeded,
+            GesSyntaxDiagnostic.Syntax => GesDiagnosticCodes.ParseSyntax,
+            _ => diagnostic.Code
+        };
+        var kind = diagnostic.SymbolKind switch
+        {
+            GesSyntaxSymbolKind.Type => GesDiagnosticSymbolKind.Type,
+            GesSyntaxSymbolKind.Predicate => GesDiagnosticSymbolKind.Predicate,
+            GesSyntaxSymbolKind.Function => GesDiagnosticSymbolKind.Function,
+            GesSyntaxSymbolKind.Handler => GesDiagnosticSymbolKind.Handler,
+            GesSyntaxSymbolKind.Message => GesDiagnosticSymbolKind.Message,
+            GesSyntaxSymbolKind.Variable => GesDiagnosticSymbolKind.Variable,
+            GesSyntaxSymbolKind.GlobalDefinition => GesDiagnosticSymbolKind.GlobalDefinition,
+            _ => GesDiagnosticSymbolKind.Unknown
+        };
+        return new GesDiagnostic(phase, code, diagnostic.Message, diagnostic.Symbol, kind, location, diagnostic.ModuleName);
     }
 
     // The tree must come from a source without syntax errors.

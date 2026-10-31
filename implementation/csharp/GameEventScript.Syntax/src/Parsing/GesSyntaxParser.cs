@@ -171,6 +171,23 @@ internal sealed partial class GesSyntaxParser
         return value;
     }
 
+    // Completes an expression node with the expression's diagnostic range.
+    private Expression FinishNode(Expression value)
+    {
+        _tree.FinishNode();
+        _tree.SetLastRange(value.Start, value.End);
+        return value;
+    }
+
+    private Expression WrapNode(GesSyntaxTreeBuilder.Checkpoint start, GesSyntaxNodeKind kind, Expression value)
+    {
+        _tree.StartNodeAt(start, kind);
+        return FinishNode(value);
+    }
+
+    // Records the role of the token consumed last.
+    private void Role(GesSyntaxRole role) => _tree.SetRole(PreviousIndex, role);
+
     // Recovery skips tokens until a synchronization point. The failed declaration or statement, from its start, and the
     // skipped tokens form one error node, whatever part of it was parsed before the failure.
     private bool RecoverInto(Func<bool> synchronize)
@@ -315,6 +332,7 @@ internal sealed partial class GesSyntaxParser
         if (isUnlabeledConstructorParameter) SkipNewLines();
 
         ExpectIdentifier();
+        Role(isUnlabeledConstructorParameter ? GesSyntaxRole.UnlabeledField : GesSyntaxRole.Field);
         Expect(Colon);
         SkipNewLines();
         ParseTypeName();
@@ -343,6 +361,7 @@ internal sealed partial class GesSyntaxParser
     private void ParseCallableDefinition()
     {
         ExpectIdentifier();
+        Role(GesSyntaxRole.Callable);
         ParseDefinitionParameters();
         Expect(Be);
         SkipNewLines();
@@ -366,8 +385,10 @@ internal sealed partial class GesSyntaxParser
     private void ParseParameter(bool allowDeclaredType = true)
     {
         _tree.StartNode(GesSyntaxNodeKind.Parameter);
-        if (Match(Underscore)) SkipNewLines();
+        var unlabeled = Match(Underscore);
+        if (unlabeled) SkipNewLines();
         ExpectIdentifier();
+        Role(unlabeled ? GesSyntaxRole.UnlabeledParameter : GesSyntaxRole.Parameter);
         if (allowDeclaredType) ParseOptionalParameterDeclaredType();
         _tree.FinishNode();
     }
@@ -393,6 +414,7 @@ internal sealed partial class GesSyntaxParser
             Advance();
             SkipNewLines();
             ExpectIdentifier();
+            Role(GesSyntaxRole.Parameter);
             _tree.FinishNode();
         }
         else if (Is(LeftParen))
@@ -423,15 +445,10 @@ internal sealed partial class GesSyntaxParser
     {
         ThrowIfIllegalToken();
 
-        if (Is(Message))
+        if (Is(Message) || Current.Kind == Identifier && GesText.IsSystemEndpointName(Current.Text))
         {
             Advance();
-            return;
-        }
-
-        if (Current.Kind == Identifier && GesText.IsSystemEndpointName(Current.Text))
-        {
-            Advance();
+            Role(GesSyntaxRole.MessageName);
             return;
         }
 
@@ -569,6 +586,7 @@ internal sealed partial class GesSyntaxParser
         if (IsArgumentLabelStart())
         {
             ExpectArgumentLabel();
+            Role(GesSyntaxRole.ArgumentLabel);
             SkipNewLines();
             Match(Colon);
             SkipNewLines();
@@ -634,6 +652,7 @@ internal sealed partial class GesSyntaxParser
     private void ParseLetStatement()
     {
         ExpectIdentifier();
+        Role(GesSyntaxRole.LetBinding);
         if (Match(Be))
         {
             ParseAssemblyOrExpression();
@@ -655,6 +674,7 @@ internal sealed partial class GesSyntaxParser
             if (Match(Let))
             {
                 ExpectIdentifier();
+                Role(GesSyntaxRole.ConditionBinding);
                 Expect(Be);
             }
 
@@ -678,7 +698,7 @@ internal sealed partial class GesSyntaxParser
 
     private void ParseForStatement()
     {
-        ParseBindingNames();
+        ParseBindingNames(GesSyntaxRole.LoopBinding);
         SkipNewLines();
         var previousSourceDepth = _forSourceDepth;
         _forSourceDepth = _delimiterDepth;
@@ -698,8 +718,7 @@ internal sealed partial class GesSyntaxParser
             {
                 _tree.StartNode(GesSyntaxNodeKind.RangeExpression);
                 Advance();
-                ParseRangeExpressionCore();
-                _tree.FinishNode();
+                FinishNode(ParseRangeExpressionCore());
             }
             else
             {

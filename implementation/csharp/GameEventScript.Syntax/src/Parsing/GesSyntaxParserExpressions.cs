@@ -34,7 +34,12 @@ internal sealed partial class GesSyntaxParser
                 if (!exported) ExpectWord("register");
                 if (lines != 0 || (exported && !standalone))
                     throw new ParseException("Assembly declarations must precede instructions; only standalone blocks export bindings.", token);
-                do ExpectIdentifier(); while (Match(Comma));
+                do
+                {
+                    ExpectIdentifier();
+                    Role(GesSyntaxRole.AssemblyDeclaration);
+                }
+                while (Match(Comma));
             }
             else if (Match(Emit) || Match(Publish))
             {
@@ -269,7 +274,7 @@ internal sealed partial class GesSyntaxParser
                     expression = Binary(expression, ParseTypeOperationExpression());
                     break;
             }
-            _tree.FinishNode();
+            FinishNode(expression);
         }
 
         return expression;
@@ -400,6 +405,7 @@ internal sealed partial class GesSyntaxParser
         if (Current.Kind == Identifier)
         {
             Advance();
+            Role(GesSyntaxRole.PredicateTarget);
             return Merged(subject.Depth, subject);
         }
 
@@ -642,6 +648,7 @@ internal sealed partial class GesSyntaxParser
                 _tree.StartNodeAt(start, GesSyntaxNodeKind.MemberAccessExpression);
                 SkipNewLines();
                 ExpectIdentifier();
+                Role(GesSyntaxRole.Member);
                 expression = FinishNode(Merged(expression.Depth, expression));
                 continue;
             }
@@ -652,7 +659,7 @@ internal sealed partial class GesSyntaxParser
                 SkipNewLines();
                 expression = ParsePipelineSteps(expression);
                 Expect(RightBracket);
-                _tree.FinishNode();
+                FinishNode(expression);
                 continue;
             }
 
@@ -663,7 +670,7 @@ internal sealed partial class GesSyntaxParser
     // `names where predicate`: a selector's binders and the predicate they scope.
     private int ParseBoundWhere()
     {
-        ParseBindingNames();
+        ParseBindingNames(GesSyntaxRole.SelectorBinding);
         ExpectWord("where");
         return ParseExpression().Depth;
     }
@@ -671,18 +678,20 @@ internal sealed partial class GesSyntaxParser
     // `names => projection`: a selector's binders and the projection they scope.
     private int ParseBoundProjection()
     {
-        ParseBindingNames();
+        ParseBindingNames(GesSyntaxRole.SelectorBinding);
         Expect(ProjectionArrow);
         return ParseExpression().Depth;
     }
 
-    private void ParseBindingNames()
+    private void ParseBindingNames(GesSyntaxRole role)
     {
         ExpectIdentifier();
+        Role(role);
         while (Match(Comma))
         {
             SkipNewLines();
             ExpectIdentifier();
+            Role(role);
         }
     }
 
@@ -833,6 +842,7 @@ internal sealed partial class GesSyntaxParser
             var reduce = MatchSelector(":reduce");
             if (!reduce) MatchSelector(":fold");
             ExpectIdentifier();
+            Role(GesSyntaxRole.FoldAccumulator);
             var depth = 0;
             if (!reduce)
             {
@@ -842,7 +852,7 @@ internal sealed partial class GesSyntaxParser
 
             Expect(Comma);
             SkipNewLines();
-            ParseBindingNames();
+            ParseBindingNames(GesSyntaxRole.SelectorBinding);
             Expect(ProjectionArrow);
             SkipNewLines();
             return Selected(Deepest(depth, ParseExpression().Depth), start);
@@ -851,7 +861,7 @@ internal sealed partial class GesSyntaxParser
         if (MatchSelector(":map"))
         {
             SkipNewLines();
-            ParseBindingNames();
+            ParseBindingNames(GesSyntaxRole.SelectorBinding);
             SkipNewLines();
             ExpectWord("by");
             SkipNewLines();
@@ -953,7 +963,7 @@ internal sealed partial class GesSyntaxParser
             SkipNewLines();
             ExpectWord("by");
             SkipNewLines();
-            ParseBindingNames();
+            ParseBindingNames(GesSyntaxRole.WeightBinding);
             SkipNewLines();
             Expect(ProjectionArrow);
             SkipNewLines();
@@ -998,6 +1008,7 @@ internal sealed partial class GesSyntaxParser
     {
         _tree.StartNode(GesSyntaxNodeKind.ObjectPatternEntry);
         ExpectIdentifier();
+        Role(GesSyntaxRole.MapKey);
         Expect(Colon);
         SkipNewLines();
         return FinishNode(Is(LeftBracket) ? ParseObjectMatchPattern().Depth : ParseExpression().Depth);
@@ -1014,6 +1025,7 @@ internal sealed partial class GesSyntaxParser
             var negated = Match(OperatorNot);
             SkipNewLines();
             Expect(Identifier);
+            Role(GesSyntaxRole.PredicateTarget);
             return FinishNode(ApplyIsNegation(Node(0, startToken), negated));
         }
 
@@ -1096,6 +1108,7 @@ internal sealed partial class GesSyntaxParser
         if (Current.Kind == Identifier)
         {
             Advance();
+            Role(GesSyntaxRole.Variable);
             return Leaf(PreviousIndex);
         }
 
@@ -1151,6 +1164,7 @@ internal sealed partial class GesSyntaxParser
         _tree.StartNode(GesSyntaxNodeKind.MessageExpression);
         var startToken = CurrentIndex;
         Expect(Message);
+        Role(GesSyntaxRole.MessageName);
         var depth = Match(LeftParen) ? ParseArgumentListAfterLeftParen() : 0;
         return FinishNode(Node(depth, startToken));
     }
@@ -1162,6 +1176,7 @@ internal sealed partial class GesSyntaxParser
         var isMessageCallee = Current.Kind == Message;
         if (isMessageCallee) Expect(Message);
         else ExpectIdentifier();
+        Role(isMessageCallee ? GesSyntaxRole.MessageName : GesSyntaxRole.CallTarget);
         Expect(LeftParen);
         SkipNewLines();
         if (Is(RightParen))
@@ -1277,13 +1292,14 @@ internal sealed partial class GesSyntaxParser
         var startToken = PreviousIndex;
         SkipNewLines();
         ExpectIdentifier();
+        Role(GesSyntaxRole.GeneratedBinding);
         SkipNewLines();
         int depth;
         if (IsWord("from"))
         {
             _tree.StartNode(GesSyntaxNodeKind.RangeExpression);
             Advance();
-            depth = FinishNode(ParseRangeExpressionCore().Depth);
+            depth = FinishNode(ParseRangeExpressionCore()).Depth;
         }
         else if (Match(In))
         {
@@ -1340,6 +1356,7 @@ internal sealed partial class GesSyntaxParser
     {
         _tree.StartNode(GesSyntaxNodeKind.MapEntry);
         ExpectIdentifier();
+        Role(GesSyntaxRole.MapKey);
         Expect(Colon);
         SkipNewLines();
         return FinishNode(Is(Comma) || Is(RightBracket) ? 1 : ParseExpression().Depth);
@@ -1438,6 +1455,7 @@ internal sealed partial class GesSyntaxParser
         {
             // The handler literal of this data form adds no level of its own.
             Advance();
+            Role(GesSyntaxRole.MessageName);
             Expect(LeftParen);
             SkipNewLines();
             if (!Is(RightParen))
@@ -1445,7 +1463,12 @@ internal sealed partial class GesSyntaxParser
                 do
                 {
                     SkipNewLines();
-                    if (!Match(Underscore)) ExpectIdentifier();
+                    if (!Match(Underscore))
+                    {
+                        ExpectIdentifier();
+                        Role(GesSyntaxRole.Parameter);
+                    }
+
                     SkipNewLines();
                 } while (Match(Comma));
             }

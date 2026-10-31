@@ -211,10 +211,12 @@ here.
     same tree in both ports, error nodes included.
   - Parser (remaining): error nodes carry their diagnostic, for the
     highlighter's error spans. Keep the stack-safe recursion structure.
-  - Validator: single-source checks (naming, duplicates, shadowing, constants,
-    labels, nesting) move into Syntax; checks across sources and catalogs stay
-    in the Compiler and read a source-neutral declaration set, so external
-    declarations can later feed it. Both attach diagnostics to nodes.
+  - Done: the parsers record each name token's role and each expression
+    node's diagnostic range; `GesSyntaxValidator` in Syntax checks the rules of
+    one source (spelling, repetitions, shadowing, system endpoints, removed
+    types), and the Compiler keeps the rules that need other sources, the
+    catalog or the runtime. Next with the external declarations: the
+    Compiler's program-wide rules read a source-neutral declaration set.
   - Highlighter: categories and diagnostics per span, derived from the tree; no
     TextMate concepts, line states or scope stacks. GESA gets a small lossless
     lexer that highlights embedded source through the GES tree. The CLI moves

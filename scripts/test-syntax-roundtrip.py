@@ -125,15 +125,16 @@ def trees(port, request):
 
 def nested(nodes):
     # Rebuilds [kind, first, end, children] from the flat preorder list without recursion.
-    built = [[kind, first, end, []] for kind, first, end, _ in nodes]
-    for index, (_, _, _, parent) in enumerate(nodes):
+    # A node also carries the diagnostic range the parser recorded, or none.
+    built = [[kind, first, end, [], tuple(rest[1:3])] for kind, first, end, *rest in nodes]
+    for index, (_, _, _, parent, *_) in enumerate(nodes):
         if parent >= 0:
             built[parent][3].append(built[index])
     return built[0]
 
 
 def node_problems(node, first, end, path):
-    kind, start, stop, children = node
+    kind, start, stop, children, _ = node
     problems = []
     if not first <= start <= stop <= end:
         return [f"{path}/{kind} spans tokens {start}..{stop} outside {first}..{end}"]
@@ -151,8 +152,9 @@ def error_nodes(node):
 
 
 def shape(node):
-    kind, start, stop, children = node
-    return [kind, start, stop, [shape(child) for child in children]]
+    kind, start, stop, children, diagnostic_range = node
+    label = kind if diagnostic_range in ((), (-1, -1)) else f"{kind}{list(diagnostic_range)}"
+    return [label, start, stop, [shape(child) for child in children]]
 
 
 def first_difference(left, right, left_port, right_port, path="CompilationUnit"):
@@ -181,11 +183,15 @@ def tree_problems(sources, lexed, parsed, valid):
             problems += [f"{key} ({port}): {problem}" for problem in node_problems(root, 0, len(tokens), "")]
             if key in valid and error_nodes(root):
                 problems.append(f"{key} ({port}): a valid source has error nodes")
-            shapes[port] = shape(root)
+            shapes[port] = [shape(root), entry.get("roles", [])]
         # Both parsers share their recovery, so also sources with syntax errors have equal trees.
         if len(shapes) > 1 and len({json.dumps(tree) for tree in shapes.values()}) > 1:
-            (port, tree), (other, other_tree) = list(shapes.items())[:2]
-            problems.append(f"{key}: the ports build different trees; {first_difference(tree, other_tree, port, other)}")
+            (port, (tree, roles)), (other, (other_tree, other_roles)) = list(shapes.items())[:2]
+            if roles != other_roles:
+                index = next(i for i, (a, b) in enumerate(zip(roles + [None], other_roles + [None])) if a != b)
+                problems.append(f"{key}: the ports give token {index} different roles: {port} {roles[index:index + 1]}, {other} {other_roles[index:index + 1]}")
+            else:
+                problems.append(f"{key}: the ports build different trees; {first_difference(tree, other_tree, port, other)}")
     return problems
 
 

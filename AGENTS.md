@@ -201,8 +201,13 @@ belongs to the CLI or embedding; the portable compiler accepts source text.
   tokens in parser order. A declaration or statement with a syntax error
   becomes one error node from its start through the recovery point; a
   nesting-limit stop turns the innermost open statement and the rest of the
-  source into one. `--trees` checks token coverage, nesting and identical
-  trees, error nodes included, for every source in both ports.
+  source into one. The parser also records each name token's role and each
+  expression node's diagnostic range. `GesSyntaxValidator` checks the rules of
+  one source on that tree (spelling, repeated parameters, arguments, fields and
+  bindings, shadowing, system endpoints, removed types); the Compiler validator
+  keeps the rules that need other sources, the catalog or the runtime.
+  `--trees` checks token coverage, nesting and identical trees, roles and
+  ranges, error nodes included, for every source in both ports.
 - Module identifiers are dot-separated lowercase components with optional
   digits.
 - `constant $name be LITERAL` declares a program-wide compile-time scalar.

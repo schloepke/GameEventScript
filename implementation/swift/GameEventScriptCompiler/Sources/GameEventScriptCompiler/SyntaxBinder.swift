@@ -146,17 +146,35 @@ final class GesSyntaxBinder {
     }
 
     // Parses one source and binds its syntax tree; syntax errors fail the parse phase with their diagnostics.
-    static func parse(_ source: GesSource) throws -> GesModule {
+    static func parse(_ source: GesSource, validation: inout [GesDiagnostic]) throws -> GesModule {
         let tree = GesSyntaxParser.parse(source.text)
-        guard tree.diagnostics.isEmpty else {
-            throw GesCompileError(
-                diagnostics: tree.diagnostics.map {
-                    let location = GesSourceLocation(sourceName: source.name, line: $0.line, column: $0.column, endLine: $0.endLine, endColumn: $0.endColumn, moduleName: $0.moduleName, sourceID: source.id)
-                    return GesDiagnostic(phase: .parse, code: $0.code, message: $0.message, symbol: nil, symbolKind: .unknown, sourceLocation: location, programName: $0.moduleName)
-                }
-            )
-        }
+        guard tree.diagnostics.isEmpty else { throw GesCompileError(diagnostics: tree.diagnostics.map { convert($0, .parse, source) }) }
+        validation += GesSyntaxValidator.validate(tree).map { convert($0, .validate, source) }
         return try bind(tree, source)
+    }
+
+    static func convert(_ diagnostic: GesSyntaxDiagnostic, _ phase: GesDiagnosticPhase, _ source: GesSource) -> GesDiagnostic {
+        let location = GesSourceLocation(
+            sourceName: source.name,
+            line: diagnostic.line,
+            column: diagnostic.column,
+            endLine: diagnostic.endLine,
+            endColumn: diagnostic.endColumn,
+            moduleName: diagnostic.moduleName,
+            sourceID: source.id
+        )
+        let kind: GesDiagnosticSymbolKind =
+            switch diagnostic.symbolKind {
+            case .unknown: .unknown
+            case .type: .type
+            case .predicate: .predicate
+            case .function: .function
+            case .handler: .handler
+            case .message: .message
+            case .variable: .variable
+            case .globalDefinition: .globalDefinition
+            }
+        return GesDiagnostic(phase: phase, code: diagnostic.code, message: diagnostic.message, symbol: diagnostic.symbol, symbolKind: kind, sourceLocation: location, programName: diagnostic.moduleName)
     }
 
     // The tree must come from a source without syntax errors.

@@ -18,7 +18,7 @@ final class ToolTests: XCTestCase {
 
     func testCompilerErrorsExplainTheirCause() throws {
         let cases = [
-            ("on Main(args) { let x be 1; let x be 2 }", "validate.duplicateVariable", "declared more than once"),
+            ("on Main(args) { let x be 1; let x be 2 }", "validate.duplicateVariable", "already declared in the current scope"),
             ("on Main(args) { emit ConsoleOut(missing) }", "compile.unresolvedSymbol", "Unknown symbol"),
             ("on Main(args) { emit after 10 Tick() }", "validate.invalidTypeConstructor", "requires a time quantity"),
             ("record :Data as { input: :List }\non Main(args) { let y be :Data(wrong: []) }", "validate.invalidTypeConstructor", "argument count and labels"),

@@ -25,6 +25,7 @@ internal static class SyntaxTokens
                 sources[test.GetProperty("id").GetString()! + "#" + index++] = new
                 {
                     tokens = tree.Tokens.Select(token => (object)new object[] { token.Kind.ToString(), scalarOffsets[token.FullStart], scalarOffsets[token.Start], scalarOffsets[token.End], token.Text }).ToArray(),
+                    roles = tree.Roles.Select(role => role.ToString()).ToArray(),
                     tree = Nodes(tree.Root)
                 };
             }
@@ -33,7 +34,8 @@ internal static class SyntaxTokens
         return sources;
     }
 
-    // Nodes in preorder as [kind, first token, end token, parent index]; flat, so deep trees stay within JSON depth limits.
+    // Nodes in preorder as [kind, first token, end token, parent index, range start, range end]; flat, so deep trees stay
+    // within JSON depth limits.
     private static object[] Nodes(GesSyntaxNode root)
     {
         var nodes = new List<object>();
@@ -43,7 +45,7 @@ internal static class SyntaxTokens
         {
             var (node, parent) = pending.Pop();
             var index = nodes.Count;
-            nodes.Add(new object[] { node.Kind.ToString(), node.FirstToken, node.EndToken, parent });
+            nodes.Add(new object[] { node.Kind.ToString(), node.FirstToken, node.EndToken, parent, node.RangeStart, node.RangeEnd });
             for (var child = node.Children.Count - 1; child >= 0; child--) pending.Push((node.Children[child], index));
         }
 

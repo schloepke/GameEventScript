@@ -6,8 +6,9 @@
 
 // Validates parsed modules and collects their program-wide declarations, as GesAstValidator of the C# compiler
 // together with the declaration checks of its GesProgramBuilder. Every rule reports into one ordered diagnostic list
-// instead of stopping at the first error: program-wide duplicates and conflicts, then per module its records,
-// predicates, functions and handlers followed by GesShadowingValidator, and last the module name.
+// instead of stopping at the first error: the sources' own rules from the Syntax validator, program-wide duplicates and
+// conflicts, then per module the rules of its records, predicates, functions and handlers that need other sources or
+// the catalog, and last the module name.
 final class GesAstValidator {
     let modules: [GesModule]
     let catalog: (any GesExternalTypeCatalog)?
@@ -18,17 +19,15 @@ final class GesAstValidator {
     private(set) var records: [String: GesRecord] = [:]
     private var diagnostics: [GesDiagnostic] = []
 
-    init(modules: [GesModule], catalog: (any GesExternalTypeCatalog)?) {
+    init(modules: [GesModule], catalog: (any GesExternalTypeCatalog)?, diagnostics: [GesDiagnostic] = []) {
         self.modules = modules
         self.catalog = catalog
+        self.diagnostics = diagnostics
     }
 
     func validate() throws {
         declarations()
-        for module in modules {
-            validate(module)
-            diagnostics += GesShadowingValidator().validate(module)
-        }
+        for module in modules { validate(module) }
         try throwIfAny()
         resolveModuleName()
         try throwIfAny()
@@ -107,12 +106,7 @@ final class GesAstValidator {
 
     private func validate(_ module: GesModule) {
         for record in module.records {
-            removedType(record.name, record.location)
-            var names: Set<String> = []
             for field in record.fields {
-                if !Self.isLowerName(field.name, index: false) { report("validate.invalidIdentifierCase", field.location, symbol: field.name, kind: .variable) }
-                // Swift additionally rejects repeated fields and unknown field types.
-                if !names.insert(field.name).inserted { report("validate.duplicateVariable", field.location, symbol: field.name, kind: .variable) }
                 if !knownType(field.type) { report("validate.invalidTypeConstructor", field.location, symbol: field.type, kind: .type, message: "Unknown type ':\(field.type)' in this program.") }
                 for value in [field.minimum, field.maximum, field.computed].compactMap({ $0 }) { expression(value, [:]) }
             }
@@ -123,8 +117,7 @@ final class GesAstValidator {
     }
 
     private func callable(_ d: GesDefinition, symbolKind: GesDiagnosticSymbolKind) {
-        if !Self.isLowerName(d.name, index: false) { report("validate.invalidIdentifierCase", d.location, symbol: d.name, kind: symbolKind) }
-        parameters(d, symbolKind: symbolKind, duplicateCode: "validate.duplicateDefinitionParameter")
+        parameterTypeHints(d)
         guard let value = d.expression else { return }
         let types = parameterTypes(d)
         expression(value, types)
@@ -132,35 +125,15 @@ final class GesAstValidator {
     }
 
     private func handler(_ d: GesDefinition) {
-        if d.name == "initialization" {
-            if d.kind != "handler" || !d.parameters.isEmpty {
-                report("validate.invalidMessageCase", d.location, symbol: d.name, kind: .handler, message: "System endpoint 'initialization' must use parameterless syntax.")
-            } else if !d.required.isEmpty || !d.excluded.isEmpty {
-                report("validate.invalidMessageCase", d.location, symbol: d.name, kind: .handler, message: "System endpoint 'initialization' cannot use tag filters.")
-            }
-        } else if d.name == "undeliverable" {
-            if d.kind != "messageNameHandler" {
-                report("validate.invalidMessageCase", d.location, symbol: d.name, kind: .handler, message: "System endpoint 'undeliverable' must use 'as message' syntax.")
-            } else if let parameter = d.parameters.first, parameter.label != "message" || parameter.type != "message" {
-                report("validate.invalidMessageCase", parameter.location, symbol: parameter.name, kind: .handler)
-            }
-        } else if !Self.isUpperName(d.name) {
-            report("validate.invalidMessageCase", d.location, symbol: d.name, kind: .handler)
-        }
-        parameters(d, symbolKind: .handler, duplicateCode: "validate.duplicateHandlerParameter")
+        parameterTypeHints(d)
         let scope = Scope(names: Set(d.parameters.map(\.name)), types: parameterTypes(d))
         statements(d.statements, scope)
     }
 
-    // Parameter names, type hints and repeated names, in this order, as the C# validator checks them.
-    private func parameters(_ d: GesDefinition, symbolKind: GesDiagnosticSymbolKind, duplicateCode: String) {
-        for p in d.parameters where !Self.isLowerName(p.name, index: true) { report("validate.invalidIdentifierCase", p.location, symbol: d.name, kind: symbolKind) }
+    private func parameterTypeHints(_ d: GesDefinition) {
         for p in d.parameters {
             if let type = p.type, !knownType(type) { report("validate.invalidTypeConstructor", p.location, symbol: type, kind: .type, message: "Unknown type ':\(type)' in this program.") }
         }
-        var seen: Set<String> = []
-        var repeated: Set<String> = []
-        for p in d.parameters where !seen.insert(p.name).inserted && repeated.insert(p.name).inserted { report(duplicateCode, p.location, symbol: d.name, kind: symbolKind) }
     }
 
     // A repeated parameter name, already reported, keeps its last declared type, as in C#.
@@ -170,14 +143,6 @@ final class GesAstValidator {
         ["record", "number", "numeric", "nothing", "boolean", "percentage", "vector", "point", "series", "tag", "text", "list", "range", "message", "handler", "map", "dice", "unit", "integer", "fractional"].contains(type)
             || type.hasPrefix("quantity:")
             || records[type] != nil || catalog?.types.contains { $0.name == type } == true
-    }
-
-    // Removed types, and integer and float, which are numeric checks or casts rather than type references.
-    private func removedType(_ type: String, _ location: GesSourceLocation) {
-        if ["optional", "set", "uuid", "ref"].contains(type) { report("validate.invalidTypeConstructor", location, symbol: type, kind: .type, message: "Type ':\(type)' is not supported.") }
-        if ["Integer", "Float"].contains(type) {
-            report("validate.invalidTypeConstructor", location, symbol: type, kind: .type, message: "Type ':\(type)' is not a type; use 'as :Number' to convert or 'is integer' / 'is fractional' to check.")
-        }
     }
 
     // MARK: Statements
@@ -216,7 +181,6 @@ final class GesAstValidator {
             statements(otherwise, scope.child())
         case .loop(let bindings, let source, _, let body):
             expression(source, scope.types)
-            if let first = bindings.first, !Self.isLowerName(first, index: true) { report("validate.invalidIdentifierCase", s.location, symbol: first, kind: .variable) }
             var loopScope = scope.child()
             if let first = bindings.first { loopScope.names.insert(first) }
             statements(body, loopScope.child())
@@ -228,13 +192,10 @@ final class GesAstValidator {
         }
     }
 
-    // Declares a let, if-let or exported assembly binding; a repeated name in the same scope is reported, not declared.
+    // Declares a let, if-let or exported assembly binding; a repeated name in the same scope, which the Syntax
+    // validator reports, keeps the type of the first.
     private func bind(_ name: String, _ value: GesExpression?, _ location: GesSourceLocation, _ scope: inout Scope) {
-        if !Self.isLowerName(name, index: true) { report("validate.invalidIdentifierCase", location, symbol: name, kind: .variable) }
-        if scope.names.contains(name) {
-            report("validate.duplicateVariable", location, symbol: name, kind: .variable)
-            return
-        }
+        if scope.names.contains(name) { return }
         scope.names.insert(name)
         if let value { scope.types[name] = infer(value, scope.types) }
     }
@@ -284,18 +245,10 @@ final class GesAstValidator {
     // Forms that name variables, members, map keys or handlers.
     private func namedReferences(_ e: GesExpression, _ types: [String: String]) {
         switch e.kind {
-        case .name(let name): lowerName(name, index: true, e.location, kind: .variable)
-        case .handler(let name, let parameters): handlerLiteral(name, parameters, e.location)
-        case .member(let target, let name):
-            lowerName(name, index: false, e.location, kind: .variable)
-            expression(target, types)
-        case .map(let entries):
-            for (key, value) in entries {
-                lowerName(key, index: false, e.location, kind: .variable)
-                expression(value, types)
-            }
-        case .generated(_, let name, let source, _, let predicate, let projection):
-            lowerName(name, index: true, e.location, kind: .variable)
+        case .name, .handler: break
+        case .member(let target, _): expression(target, types)
+        case .map(let entries): for (_, value) in entries { expression(value, types) }
+        case .generated(_, _, let source, _, let predicate, let projection):
             expression(source, types)
             if let predicate { expression(predicate, types) }
             expression(projection, types)
@@ -306,14 +259,9 @@ final class GesAstValidator {
     private func argumentReferences(_ e: GesExpression, _ types: [String: String]) {
         switch e.kind {
         case .call(let name, let args):
-            lowerName(name, index: false, e.location, kind: .globalDefinition)
-            repeatedArguments(args, name, e.location)
             call(name, args, e.location)
-            labeledArguments(args, name, e.location) { expression($0, types) }
-        case .message(let name, let args):
-            if !Self.isUpperName(name) { report("validate.invalidMessageCase", e.location, symbol: name, kind: .message) }
-            repeatedArguments(args, name, e.location)
-            labeledArguments(args, name, e.location) { expression($0, types) }
+            for argument in args { expression(argument.value, types) }
+        case .message(_, let args): for argument in args { expression(argument.value, types) }
         case .constructor(let type, let args): constructor(type, args, e) { expression($0, types) }
         default: preconditionFailure()
         }
@@ -339,9 +287,7 @@ final class GesAstValidator {
             validateSeed(seed, types)
             expression(body, types)
         // A cast or check may name a custom type that is bound only later, such as a record value a message delivers.
-        case .check(let value, let type), .cast(let value, let type):
-            removedType(type, e.location)
-            expression(value, types)
+        case .check(let value, _), .cast(let value, _): expression(value, types)
         default: preconditionFailure()
         }
     }
@@ -363,20 +309,7 @@ final class GesAstValidator {
 
     static let visitedIntrinsics: Set<String> = ["clamp", "min", "max"]
 
-    private func lowerName(_ name: String, index: Bool, _ location: GesSourceLocation, kind: GesDiagnosticSymbolKind) {
-        if !Self.isLowerName(name, index: index) { report("validate.invalidIdentifierCase", location, symbol: name, kind: kind) }
-    }
-
-    private func handlerLiteral(_ name: String, _ parameters: [GesParameter], _ location: GesSourceLocation) {
-        if !Self.isUpperName(name) { report("validate.invalidMessageCase", location, symbol: name, kind: .handler) }
-        for p in parameters where p.label != "_" && !Self.isLowerName(p.label, index: false) { report("validate.invalidIdentifierCase", p.location, symbol: name, kind: .handler) }
-        var seen: Set<String> = []
-        var repeated: Set<String> = []
-        for p in parameters where !seen.insert(p.name).inserted && repeated.insert(p.name).inserted { report("validate.duplicateHandlerParameter", p.location, symbol: name, kind: .handler) }
-    }
-
     private func predicateReference(_ name: String, count: Int, _ location: GesSourceLocation) {
-        lowerName(name, index: false, location, kind: .predicate)
         if definitions.values.filter({ $0.name == name && $0.kind == "predicate" && $0.parameters.count == count }).count != 1 {
             report("validate.invalidPredicate", location, symbol: name, kind: .predicate, message: "No unique predicate named '\(name)' with \(count) parameters is available.")
         }
@@ -389,21 +322,10 @@ final class GesAstValidator {
     }
 
     private func selector(_ s: GesSelector, _ location: GesSourceLocation, _ visit: (GesExpression) -> Void) {
-        func binding(_ name: String) { if !name.isEmpty && !Self.isLowerName(name, index: true) { report("validate.invalidIdentifierCase", location, symbol: name, kind: .variable) } }
-
-        switch s.operation {
-        case "fold", "reduce":
-            binding(s.accumulator)
-            binding(s.name)
-        case "choose":
-            binding(s.name)
+        if s.operation == "choose" {
             if let predicate = s.expressions.first { visit(predicate) }
-            binding(s.weightName)
             if s.expressions.count > 1 { visit(s.expressions[1]) }
             return
-        case "any", "all", "filter", "count", "sum", "average", "select", "min", "max", "first", "last", "single", "map", "group", "order", "distinct":
-            if !s.expressions.isEmpty { binding(s.name) }
-        default: break
         }
         s.expressions.forEach(visit)
     }
@@ -419,25 +341,8 @@ final class GesAstValidator {
         }
     }
 
-    // Each repeated label once, at its second use.
-    private func repeatedArguments(_ args: [GesArgument], _ name: String, _ location: GesSourceLocation) {
-        var seen: Set<String> = []
-        var repeated: Set<String> = []
-        for argument in args where argument.label != "_" && !seen.insert(argument.label).inserted && repeated.insert(argument.label).inserted {
-            report("validate.duplicatePublishArgument", argument.location, symbol: name, kind: .message)
-        }
-    }
-
-    private func labeledArguments(_ args: [GesArgument], _ name: String, _ location: GesSourceLocation, _ visit: (GesExpression) -> Void) {
-        for argument in args {
-            if argument.label != "_" && !Self.isLowerName(argument.label, index: false) { report("validate.invalidIdentifierCase", argument.location, symbol: name) }
-            visit(argument.value)
-        }
-    }
-
     private func constructor(_ type: String, _ args: [GesArgument], _ e: GesExpression, _ visit: (GesExpression) -> Void) {
-        repeatedArguments(args, type, e.location)
-        labeledArguments(args, type, e.location, visit)
+        for argument in args { visit(argument.value) }
 
         func invalid() { report("validate.invalidTypeConstructor", e.location, symbol: type, kind: .type) }
 
@@ -477,25 +382,5 @@ final class GesAstValidator {
         if args.filter({ $0.label == "_" }).count > labels.filter({ $0 == "_" }).count { invalid() }
         let named = Set(labels.filter { $0 != "_" })
         for argument in args where argument.label != "_" && !named.contains(argument.label) { invalid() }
-    }
-
-    // MARK: Names
-
-    // A lowercase ASCII name of letters and digits; variables may end in one canonical `_index` suffix.
-    static func isLowerName(_ name: String, index allowsIndex: Bool) -> Bool {
-        let scalars = Array(name.unicodeScalars)
-        guard let first = scalars.first, GesLexer.lower(first) else { return false }
-        var index = 1
-        while index < scalars.count && (GesLexer.letter(scalars[index]) || GesLexer.digit(scalars[index])) { index += 1 }
-        if index == scalars.count { return true }
-        guard allowsIndex, scalars[index] == "_", index + 1 < scalars.count else { return false }
-        index += 1
-        if scalars[index] == "0" { return index + 1 == scalars.count }
-        return scalars[index...].allSatisfy(GesLexer.digit)
-    }
-
-    static func isUpperName(_ name: String) -> Bool {
-        guard let first = name.unicodeScalars.first, GesLexer.upper(first) else { return false }
-        return name.unicodeScalars.dropFirst().allSatisfy { GesLexer.letter($0) || GesLexer.digit($0) }
     }
 }

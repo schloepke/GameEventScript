@@ -38,6 +38,8 @@ internal sealed class GesValidationErrors
         _errors.Add(new GesDiagnostic(GesDiagnosticPhase.Validate, code, message, string.IsNullOrEmpty(symbol) ? null : symbol, symbolKind, sourceLocation, moduleName));
     }
 
+    public void AddRange(IEnumerable<GesDiagnostic> diagnostics) => _errors.AddRange(diagnostics);
+
     public void ThrowIfAny()
     {
         if (_errors.Count > 0) throw new GesCompileException(_errors);

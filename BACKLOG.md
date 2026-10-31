@@ -181,9 +181,9 @@ here.
   touches bytecode and `.gesb`. Pursue only if run-time evaluation of constant
   approximations becomes measurable.
 - Make all Swift library modules (Runtime, Compiler, Syntax, and the
-  Bridge where possible) build for WASI, with a CI gate that builds them and
-  rejects new Foundation imports in the portable modules. Runtime and Compiler
-  no longer import Foundation.
+  Bridge where possible) build for WASI, with a CI gate that builds them.
+  Syntax, Runtime and Compiler import no Foundation, which
+  `scripts/verify-swift-portable-imports.py` enforces.
 - Base the compiler front end and highlighting on a lossless syntax tree in the
   Syntax module (in progress on `feature/syntax-modul`). This drops the Swift
   highlighter's Foundation dependency (`NSRegularExpression`, `NSString`,
@@ -222,9 +222,14 @@ here.
     highlights embedded source as GES. TextMate evaluation, embedded grammars,
     line states, scope stacks and the Swift Foundation import are gone;
     `test-syntax-roundtrip.py --trees` requires equal highlighting in both ports.
-  - Remaining: add `specs/Syntax.md`, a CI gate against Foundation imports in
-    Syntax, Runtime and Compiler, and compare highlighting performance and the
-    card-game module size before and after.
+  - Done: `specs/Syntax.md` owns the module's structure;
+    `scripts/verify-swift-portable-imports.py` keeps Syntax, Runtime and
+    Compiler free of Foundation in Swift CI. Highlighting the corpus takes
+    about 20x less time in Swift (5.2 s → 0.27 s) and 3.5x less in C#; on the
+    same corpus Swift compilation is about 3–4 % slower than at the benchmark
+    baseline commit.
+  - Remaining: measure the card-game Wasm module size before and after (needs
+    the pinned Swift Wasm SDK from `examples/card-game/scripts/setup-wasm.py`).
 - Generate the TextMate editor bundles from the Syntax module's token and node
   classification instead of maintaining the grammars separately.
 - Reduce library and binary size without noticeable performance loss now that

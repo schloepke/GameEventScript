@@ -267,7 +267,8 @@ belongs to the CLI or embedding; the portable compiler accepts source text.
   `parse` recognizes numeric positional or ordered labeled components with
   matching units and preserves kind, binary64 components, and unit on roundtrip.
 
-The complete language contract is `specs/Language.md`; text and number details
+The Syntax module's tokens, tree, roles, fragments and validation split are
+owned by `specs/Syntax.md`. The complete language contract is `specs/Language.md`; text and number details
 are owned by `specs/Semantics/Text.md` and `specs/Semantics/Numbers.md`.
 
 ## Host and runtime
@@ -547,8 +548,10 @@ ignored `artifacts`. Public Swift API changes update `specs/PublicApi.md` and
 `implementation/swift/api`. The separate `GameEventScriptTool` package implements
 the native Swift `ges` CLI; it depends on Runtime and Compiler, never Conformance.
 Filesystem/console I/O and POSIX terminal editing remain in that
-executable package. Syntax has no Runtime/Compiler dependency and no Foundation
-import. Both CLIs delegate highlighting to the Syntax module, which classifies GES
+executable package. Syntax has no Runtime/Compiler dependency. Syntax, Runtime and
+Compiler import no Foundation: `python3 scripts/verify-swift-portable-imports.py`
+allows only these modules and the platform C library (controls:
+`python3 scripts/test-swift-portable-imports.py`); Swift CI runs both. Both CLIs delegate highlighting to the Syntax module, which classifies GES
 from the syntax tree (token kinds, parser roles, owning nodes) and GESA with a small
 line lexer; it parses editor fragments with top-level statements, while its
 diagnostics are those of a source. UTF-16 spans with categories and diagnostics are

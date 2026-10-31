@@ -111,6 +111,12 @@ jobs:
         run: python3 scripts/verify-swift-dependencies.py
 
       - if: needs.changes.outputs.swift == 'true'
+        name: Verify Foundation-free portable Swift libraries
+        run: |
+          python3 scripts/test-swift-portable-imports.py
+          python3 scripts/verify-swift-portable-imports.py
+
+      - if: needs.changes.outputs.swift == 'true'
         name: Verify temporary workspace cleanup
         run: python3 scripts/test-verification-workspace.py
 

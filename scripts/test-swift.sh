@@ -17,6 +17,8 @@ swift test --package-path "$ges_root/implementation/swift/GameEventScriptSwiftBr
 python3 "$ges_root/scripts/verify-swift-bytecode.py"
 python3 "$ges_root/scripts/verify-swift-parser-tokens.py"
 python3 "$ges_root/scripts/test-swift-parser-tokens.py"
+python3 "$ges_root/scripts/verify-swift-portable-imports.py"
+python3 "$ges_root/scripts/test-swift-portable-imports.py"
 python3 "$ges_root/scripts/prepare-runtime-fixtures.py" "$ges_root/conformance/suites" "$ges_root/artifacts/swift/runtime-fixtures/requests.json"
 dotnet run --project "$ges_root/implementation/csharp/GameEventScript.Conformance/fixture-exporter" \
     --configuration Release --artifacts-path "$ges_root/artifacts/swift/csharp-exporter" -- \

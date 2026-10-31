@@ -27,7 +27,8 @@ Every contract area has exactly one owning document. Other documents link to tha
 | Contract area | Owning document | Responsibility | Status |
 | --- | --- | --- | --- |
 | Language | [Language](../specs/Language.md) | Lexical grammar, syntax, static semantics, and language constructs | Normative |
-| Syntax highlighting | [Highlighting](../specs/SyntaxHighlighting.md) | Optional editor/terminal ranges, TextMate scopes and incremental states | Normative |
+| Syntax module | [Syntax](../specs/Syntax.md) | Lossless tokens, syntax tree, error nodes, roles, fragments and single-source validation | Normative |
+| Syntax highlighting | [Highlighting](../specs/SyntaxHighlighting.md) | Optional editor/terminal categories and diagnostics for GES and GESA | Normative |
 | Public API | [Public API](../specs/PublicApi.md) | Language-neutral API responsibilities and per-language mappings | Normative |
 | Product JSON | [Message format](../specs/MessageFormat.md) | Optional versioned message/value transport and external snapshots | Normative |
 | GES documents | [Documents](../specs/Documents.md) | `.gesd` data files: schema header, strict reading, error positions and printing | Normative |

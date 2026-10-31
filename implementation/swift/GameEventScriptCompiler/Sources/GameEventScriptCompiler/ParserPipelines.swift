@@ -28,6 +28,7 @@ extension GesParser {
         var result = base
         repeat {
             newlines()
+            startNode(.collectionSelector)
             let start = current
             if isCombinedSelector {
                 result = try combinedStep(result, start)
@@ -36,6 +37,7 @@ extension GesParser {
             } else {
                 result = try selectorStep(result, start)
             }
+            finishNode()
             newlines()
         } while isPipelineSelector
         return result!

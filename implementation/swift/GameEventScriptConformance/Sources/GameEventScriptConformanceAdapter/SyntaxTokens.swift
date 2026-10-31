@@ -1,6 +1,7 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
+@_spi(Syntax) import GameEventScriptCompiler
 @_spi(Syntax) import GameEventScriptSyntax
 
 // Lexes every source of a request losslessly. Offsets are Unicode scalar offsets, so both ports report the same values.
@@ -18,6 +19,41 @@ enum SyntaxTokens {
             }
         }
         return sources
+    }
+
+    // Parses every source; the lossless syntax tree also exists for sources with errors.
+    static func runTrees(_ input: Input) throws -> [String: Any] {
+        var sources: [String: Any] = [:]
+        for test in input.values("cases") {
+            let id = try test.text("id")
+            for (index, source) in test.values("sources").enumerated() {
+                let text = try source.text("text")
+                let tree = GesProgramBuilder.syntaxTree(text)
+                let offsets = scalarOffsets(text)
+                sources[id + "#" + String(index)] = [
+                    "tokens": tree.tokens.map { token -> [Any] in [kindName(token.kind), offsets[token.fullStart]!, offsets[token.start]!, offsets[token.end]!, token.text] },
+                    "tree": nodes(tree.root),
+                ]
+            }
+        }
+        return sources
+    }
+
+    // Nodes in preorder as [kind, first token, end token, parent index]; flat, so deep trees stay within JSON depth limits.
+    private static func nodes(_ root: GesSyntaxNode) -> [[Any]] {
+        var result: [[Any]] = []
+        var pending: [(GesSyntaxNode, Int)] = [(root, -1)]
+        while let (node, parent) = pending.popLast() {
+            let index = result.count
+            result.append([name(node.kind), node.firstToken, node.endToken, parent])
+            for child in node.children.reversed() { pending.append((child, index)) }
+        }
+        return result
+    }
+
+    private static func name(_ kind: GesSyntaxNodeKind) -> String {
+        let name = String(describing: kind)
+        return name.prefix(1).uppercased() + name.dropFirst()
     }
 
     // The C# GesTokenKind spelling of a kind, such as `OperatorPlus` for `.operatorPlus`.

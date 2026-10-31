@@ -34,15 +34,17 @@ extension GesParser {
         if kind == .clamp { return try clampIntrinsic() }
         if kind == .min || kind == .max, peekKind() == .of { return try variadicIntrinsic() }
         if isExtensionCallStart() { return try extensionCall() }
-        return try postfixSuffixes(primary())
+        let start = mark()
+        return try postfixSuffixes(primary(), start)
     }
 
     func prefixOperation() throws -> GesExpression {
+        startNode(.unaryExpression)
         let start = current
         let op = prefixOperator()
         let value = try expression(15)
         // From the operator to the last consumed token, as C# WithRange(node, opToken, Previous).
-        return try combined(.unary(op, value), node(.literal(.nothing), start))
+        return finishNode(try combined(.unary(op, value), node(.literal(.nothing), start)))
     }
 
     func prefixOperator() -> GesUnaryOperator {
@@ -54,10 +56,20 @@ extension GesParser {
     }
 
     func unaryIntrinsic() throws -> GesExpression {
+        startNode(.unaryExpression)
         let start = current
         let op = try unaryIntrinsicName()
-        let value = try expression(15)
-        return try unaryIntrinsic(op, value, start)
+        // A parenthesized operand belongs to the intrinsic, as in C#: its parentheses add no depth and end the operand.
+        let value = currentKind == .leftParen ? try intrinsicParenthesizedOperand() : try expression(15)
+        return finishNode(try unaryIntrinsic(op, value, start))
+    }
+
+    func intrinsicParenthesizedOperand() throws -> GesExpression {
+        advance()
+        let value = try expression()
+        newlines()
+        try expect(.rightParen)
+        return value
     }
 
     // The intrinsic word including its mode words, such as `round half even` as roundHalfEven.
@@ -87,9 +99,10 @@ extension GesParser {
     }
 
     func listIntrinsic() throws -> GesExpression {
+        startNode(.intrinsicCallExpression)
         let start = current
         let op = try listIntrinsicName()
-        return try positionalIntrinsic(op, arguments(), start)
+        return finishNode(try positionalIntrinsic(op, arguments(nodes: false), start))
     }
 
     func listIntrinsicName() throws -> String {
@@ -114,6 +127,8 @@ extension GesParser {
     }
 
     func clampIntrinsic() throws -> GesExpression {
+        startNode(.clampExpression)
+        defer { finishNode() }
         let start = advance()
         let value = try expression(15)
         newlines()
@@ -125,6 +140,8 @@ extension GesParser {
     }
 
     func variadicIntrinsic() throws -> GesExpression {
+        startNode(.variadicExpression)
+        defer { finishNode() }
         let start = current
         let op = advance().text
         newlines()
@@ -135,11 +152,12 @@ extension GesParser {
     }
 
     func extensionCall() throws -> GesExpression {
+        let checkpoint = mark()
         let start = current
         let (ns, function) = try extensionSymbol()
         newlines()
-        if currentKind == .leftParen { return try postfixSuffixes(node(.extensionCall(ns, function, arguments()), start)) }
-        return node(.extensionCall(ns, function, try extensionOperands()), start)
+        if currentKind == .leftParen { return try postfixSuffixes(wrap(checkpoint, .extensionCallExpression, node(.extensionCall(ns, function, arguments()), start)), checkpoint) }
+        return wrap(checkpoint, .extensionCallExpression, node(.extensionCall(ns, function, try extensionOperands()), start))
     }
 
     // The operands of an unparenthesized extension call: `of` operands, labeled arguments or one operand.
@@ -161,17 +179,20 @@ extension GesParser {
         !(choiceConditionDepth == delimiterDepth && current.isIdentifier("then")) && (current.isNumber || current.isName || Self.extensionOperandKinds.contains(currentKind))
     }
 
-    func postfixSuffixes(_ base: GesExpression) throws -> GesExpression {
+    func postfixSuffixes(_ base: GesExpression, _ start: GesSyntaxTreeBuilder.Checkpoint) throws -> GesExpression {
         var result = base
         while true {
             if match(.dot) {
+                startNode(at: start, .memberAccessExpression)
                 newlines()
-                result = try ranged(.member(result, identifier()), result)
+                result = finishNode(try ranged(.member(result, identifier()), result))
             } else if match(.leftBracket) {
+                startNode(at: start, .collectionAccessExpression)
                 newlines()
                 result = try pipelineSteps(result)
                 newlines()
                 try expect(.rightBracket)
+                finishNode()
             } else {
                 break
             }
@@ -179,36 +200,50 @@ extension GesParser {
         return result
     }
 
-    func sendExpression(_ publish: Bool, _ start: GesToken) throws -> GesExpression {
+    func sendExpression(_ publish: Bool, _ start: GesToken, _ checkpoint: GesSyntaxTreeBuilder.Checkpoint) throws -> GesExpression {
+        startNode(at: checkpoint, .sendExpression)
         newlines()
         let delay = matchWord("after") ? try expression() : nil
         let message: GesExpression
         if currentKind == .message {
+            newlines()
+            startNode(.messageExpression)
             let token = advance()
             let args = currentKind == .leftParen ? try arguments() : []
-            message = node(.message(token.text, args), token)
+            message = finishNode(node(.message(token.text, args), token))
         } else {
             message = try expression(15)
         }
         var tags: [GesExpression] = []
-        if match(.with) { repeat { tags.append(try expression(15)) } while match(.comma) }
-        return node(.send(publish, message, tags, delay), start)
+        if currentKind == .with {
+            startNode(.tagClause)
+            advance()
+            repeat { tags.append(try expression(15)) } while match(.comma)
+            finishNode()
+        }
+        return finishNode(node(.send(publish, message, tags, delay), start))
     }
 
     func primary() throws -> GesExpression {
         switch currentKind {
         case .`is`: return try predicateReference()
         case .emit, .publish:
+            // The send node of an expression includes its emit or publish keyword.
+            let checkpoint = mark()
             let start = advance()
-            return try sendExpression(start.kind == .publish, start)
+            return try sendExpression(start.kind == .publish, start, checkpoint)
         case .text, .tag, .constantReference, .`true`, .`false`, .nothing, .mathConstantPi, .mathConstantE, .mathConstantTau, .mathConstantInfinity: return try scalarLiteral()
         case .leftParen: return try parenthesized()
-        case .leftBracket: return try collection(advance())
+        case .leftBracket:
+            let checkpoint = mark()
+            return try collection(advance(), checkpoint)
         case .keywordRandom: return try randomExpression()
         case .series: return try seriesExpression()
         case .roll: return try diceRoll()
         case .typeName: return try typeExpression()
-        case .identifier where current.isIdentifier("from"): return try rangeExpression(advance())
+        case .identifier where current.isIdentifier("from"):
+            startNode(.rangeExpression)
+            return finishNode(try rangeExpression(advance()))
         case .identifier, .message: return try nameExpression()
         default:
             if current.isNumber { return try numberLiteral() }
@@ -220,6 +255,8 @@ extension GesParser {
 
     // `is name` or `is not name`: a predicate of the implicit subject.
     func predicateReference() throws -> GesExpression {
+        startNode(.typeOperationExpression)
+        defer { finishNode() }
         let start = advance()
         newlines()
         let negated = match(.operatorNot)
@@ -251,6 +288,8 @@ extension GesParser {
     }
 
     func parenthesized() throws -> GesExpression {
+        startNode(.parenthesizedExpression)
+        defer { finishNode() }
         advance()
         let result = try expression()
         newlines()
@@ -261,14 +300,19 @@ extension GesParser {
     }
 
     func randomExpression() throws -> GesExpression {
+        let checkpoint = mark()
         let start = advance()
         newlines()
         if match(.with) {
             // From `with`, as C# starts the seeded random expression.
             let withToken = previous
             let seed = try expression()
-            return node(.seeded(seed, try expression()), withToken)
+            return wrap(checkpoint, .seededRandomExpression, node(.seeded(seed, try expression()), withToken))
         }
+        return wrap(checkpoint, .randomExpression, try randomRange(start))
+    }
+
+    func randomRange(_ start: GesToken) throws -> GesExpression {
         _ = matchWord("from")
         let from = try expression(13)
         newlines()
@@ -278,6 +322,8 @@ extension GesParser {
     }
 
     func seriesExpression() throws -> GesExpression {
+        startNode(.seriesExpression)
+        defer { finishNode() }
         let start = advance()
         newlines()
         let token = advance()
@@ -286,6 +332,8 @@ extension GesParser {
     }
 
     func diceRoll() throws -> GesExpression {
+        startNode(.diceExpression)
+        defer { finishNode() }
         advance()
         newlines()
         try expectWord("dice")
@@ -308,10 +356,21 @@ extension GesParser {
     // A type name starts a data form or a constructor call.
     func typeExpression() throws -> GesExpression {
         let start = current
+        // `:Dice[...]` and `:List[...]` are data forms that own their type token, as in C#.
+        if current.text == ":Dice" || current.text == ":List", peekKind() == .leftBracket {
+            startNode(current.text == ":Dice" ? .diceLiteralExpression : .collectionFactoryExpression)
+            let type = try typeNameCore()
+            newlines()
+            advance()
+            return finishNode(type == "dice" ? try diceLiteral(type, start) : try generatedList(type))
+        }
+        startNode(.typeConstructorExpression)
+        return finishNode(try typeConstructor(start))
+    }
+
+    func typeConstructor(_ start: GesToken) throws -> GesExpression {
         let type = try typeName()
         newlines()
-        if type == "dice" && match(.leftBracket) { return try diceLiteral(type, start) }
-        if type == "list" && match(.leftBracket) { return try generatedList(type) }
         if type == "series", currentKind == .leftParen, [.fibonacci, .factorial].contains(peekKind()) { return try seriesConstructor(type, start) }
         if type == "handler", currentKind == .leftParen, peekKind() == .message { return try handlerConstructor(type, start) }
         if type == "message", currentKind == .leftParen, peekKind() == .message { return try messageConstructor(type, start) }
@@ -344,10 +403,11 @@ extension GesParser {
         newlines()
         let name = try identifier()
         newlines()
-        let range = matchWord("from")
+        let range = current.isIdentifier("from")
         let sequence: GesExpression
         if range {
-            sequence = try rangeExpression(previous)
+            startNode(.rangeExpression)
+            sequence = finishNode(try rangeExpression(advance()))
         } else {
             try expect(.`in`)
             newlines()
@@ -409,12 +469,16 @@ extension GesParser {
     func messageConstructor(_ type: String, _ start: GesToken) throws -> GesExpression {
         advance()
         newlines()
+        startNode(.messageExpression)
         let name = advance()
-        let message = node(.message(name.text, try arguments()), name)
+        let message = finishNode(node(.message(name.text, try arguments()), name))
         var args: [GesArgument] = [.init(label: "_", value: message)]
-        if match(.with) {
+        if currentKind == .with {
+            startNode(.tagClause)
+            advance()
             var tags = [try expression()]
             while match(.comma) { tags.append(try expression()) }
+            finishNode()
             args.append(.init(label: "tags", value: unranged(.list(tags), start)))
         }
         try expect(.rightParen)
@@ -423,19 +487,20 @@ extension GesParser {
 
     // A name, a function call, a message or a handler literal.
     func nameExpression() throws -> GesExpression {
+        let checkpoint = mark()
         let start = current
         let upper = currentKind == .message
         let name = advance().text
-        if peekKind(0) == .leftParen { return try callExpression(name, upper, start) }
+        if peekKind(0) == .leftParen { return try callExpression(name, upper, start, checkpoint) }
         if upper { throw failure("Expected handler signature.", start) }
         return node(.name(name), start)
     }
 
-    func callExpression(_ name: String, _ upper: Bool, _ start: GesToken) throws -> GesExpression {
+    func callExpression(_ name: String, _ upper: Bool, _ start: GesToken, _ checkpoint: GesSyntaxTreeBuilder.Checkpoint) throws -> GesExpression {
         newlines()
-        if upper && !isMessageArguments() { return node(.handler(name, try parameters(false)), start) }
+        if upper && !isMessageArguments() { return wrap(checkpoint, .handlerLiteralExpression, node(.handler(name, try parameters(false, listNode: false)), start)) }
         let args = try arguments()
-        return node(upper ? .message(name, args) : .call(name, args), start)
+        return wrap(checkpoint, upper ? .messageExpression : .callExpression, node(upper ? .message(name, args) : .call(name, args), start))
     }
 
     func rangeExpression(_ start: GesToken) throws -> GesExpression {
@@ -479,6 +544,8 @@ extension GesParser {
     func argumentLabel() -> Bool { (currentKind == .identifier || Self.labelKeywords.contains(currentKind)) && peekKind() == .colon }
 
     func argument() throws -> GesArgument {
+        startNode(.argument)
+        defer { finishNode() }
         let start = current
         let label: String
         if argumentLabel() {
@@ -492,13 +559,14 @@ extension GesParser {
         return .init(label: label, value: value, location: location(start, previous))
     }
 
-    func arguments() throws -> [GesArgument] {
+    // Arguments in parentheses; positional intrinsic operands have no argument nodes, as in C#.
+    func arguments(nodes: Bool = true) throws -> [GesArgument] {
         try expect(.leftParen)
         newlines()
         var result: [GesArgument] = []
         if match(.rightParen) { return result }
         while true {
-            result.append(try argument())
+            result.append(try nodes ? argument() : .init(label: "_", value: expression()))
             newlines()
             if match(.comma) {
                 newlines()
@@ -510,38 +578,48 @@ extension GesParser {
         }
     }
 
-    func collection(_ start: GesToken) throws -> GesExpression {
+    func collection(_ start: GesToken, _ checkpoint: GesSyntaxTreeBuilder.Checkpoint) throws -> GesExpression {
         newlines()
         if isCombinedSelector {
+            // A combined selector without a source, such as `[:cartesian a, b]`.
             let result = try pipelineSteps(nil)
             newlines()
             try expect(.rightBracket)
-            return result
+            return wrap(checkpoint, .collectionAccessExpression, result)
         }
         newlines()
+        // In an object pattern after `:has`, brackets form patterns and their entries, as in C#.
+        let pattern = objectPattern
+        objectPattern = false
+        defer { objectPattern = pattern }
         if match(.colon) {
             newlines()
             try expect(.rightBracket)
-            return node(.map([]), start)
+            return wrap(checkpoint, pattern ? .objectPattern : .mapLiteralExpression, node(.map([]), start))
         }
-        if match(.rightBracket) { return node(.list([]), start) }
+        if match(.rightBracket) { return wrap(checkpoint, pattern ? .objectPattern : .listLiteralExpression, node(.list([]), start)) }
         // A non-empty literal starts at the last token before its first entry, which is a skipped line break for a
         // multi-line literal, as C# takes Previous after skipping new lines.
         // A map entry starts with a plain identifier key, as C# IsMapLiteralEntryStart.
-        if currentKind == .identifier && peekKind() == .colon { return try mapLiteral(previous) }
-        return try listLiteral(previous)
+        if currentKind == .identifier && peekKind() == .colon { return wrap(checkpoint, pattern ? .objectPattern : .mapLiteralExpression, try mapLiteral(previous, pattern: pattern)) }
+        return wrap(checkpoint, pattern ? .objectPattern : .listLiteralExpression, try listLiteral(previous))
     }
 
-    func mapLiteral(_ literalStart: GesToken) throws -> GesExpression {
+    func mapLiteral(_ literalStart: GesToken, pattern: Bool = false) throws -> GesExpression {
         var pairs: [(String, GesExpression)] = []
         repeat {
             newlines()
+            startNode(pattern ? .objectPatternEntry : .mapEntry)
             let t = current
             let key = try identifier()
             try expect(.colon)
             newlines()
+            // A nested pattern value is itself a pattern.
+            objectPattern = pattern && currentKind == .leftBracket
             let value = currentKind == .comma || currentKind == .rightBracket ? node(.literal(.boolean(true)), t) : try expression()
+            objectPattern = false
             pairs.append((key, value))
+            finishNode()
             newlines()
         } while match(.comma)
         try expect(.rightBracket)
@@ -705,19 +783,25 @@ extension GesParser {
             s.mode = advance().text
             s.count = try positiveInteger()
         } else if op == "take" {
+            startNode(.dicePattern)
             s = try pattern(operation: "takePattern")
+            finishNode()
         } else {
             throw failure("Expected slice scope.")
         }
     }
 
     func hasClause(_ s: inout GesSelector) throws {
-        guard match(.leftBracket) else {
+        guard currentKind == .leftBracket else {
+            startNode(.dicePattern)
             s = try pattern(operation: "hasPattern")
+            finishNode()
             return
         }
         s.operation = "objectMatch"
-        let value = try collection(previous)
+        let checkpoint = mark()
+        objectPattern = true
+        let value = try collection(advance(), checkpoint)
 
         func patternDepth(_ value: GesExpression) -> Int {
             if case .map(let entries) = value.kind { return 1 + (entries.map { patternDepth($0.1) }.max() ?? 0) }

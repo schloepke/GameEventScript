@@ -113,6 +113,81 @@ def compare(sources, observed):
     return problems
 
 
+def trees(port, request):
+    completed = subprocess.run([*ADAPTERS[port], "--syntax-trees"], input=json.dumps(request), capture_output=True, text=True, check=False)
+    if completed.returncode != 0:
+        raise SystemExit(f"{port} adapter failed: {completed.stderr.strip()}")
+    return json.loads(completed.stdout)["sources"]
+
+
+def nested(nodes):
+    # Rebuilds [kind, first, end, children] from the flat preorder list without recursion.
+    built = [[kind, first, end, []] for kind, first, end, _ in nodes]
+    for index, (_, _, _, parent) in enumerate(nodes):
+        if parent >= 0:
+            built[parent][3].append(built[index])
+    return built[0]
+
+
+def node_problems(node, first, end, path):
+    kind, start, stop, children = node
+    problems = []
+    if not first <= start <= stop <= end:
+        return [f"{path}/{kind} spans tokens {start}..{stop} outside {first}..{end}"]
+    position = start
+    for index, child in enumerate(children):
+        if child[1] < position:
+            problems.append(f"{path}/{kind} child {index} {child[0]} starts at token {child[1]} before {position}")
+        problems += node_problems(child, start, stop, f"{path}/{kind}")
+        position = max(position, child[2])
+    return problems
+
+
+def error_nodes(node):
+    return (node[0] == "Error") + sum(error_nodes(child) for child in node[3])
+
+
+def significant_shape(node, tokens):
+    # Node boundaries at their first and last significant token, so ports may consume line breaks at different places.
+    kind, start, stop, children = node
+    significant = [index for index in range(start, stop) if tokens[index][0] not in ("NewLine", "EndOfFile")]
+    return [kind, significant[0] if significant else None, significant[-1] if significant else None, [significant_shape(child, tokens) for child in children]]
+
+
+def first_difference(left, right, left_port, right_port, path="CompilationUnit"):
+    if left[:3] != right[:3]:
+        return f"at {path}: {left_port} {left[:3]}, {right_port} {right[:3]}"
+    for index, (a, b) in enumerate(zip(left[3], right[3])):
+        if a != b:
+            return first_difference(a, b, left_port, right_port, f"{path}/{index}:{a[0]}")
+    return f"at {path}: {left_port} has {len(left[3])} children, {right_port} {len(right[3])}"
+
+
+def tree_problems(sources, lexed, parsed, valid):
+    problems = []
+    for key, source in sources.items():
+        shapes = {}
+        for port, data in parsed.items():
+            entry = data.get(key)
+            if entry is None:
+                problems.append(f"{key}: {port} reported no tree")
+                continue
+            tokens, root = entry["tokens"], nested(entry["tree"])
+            if [token[:4] for token in tokens] != [token[:4] for token in lexed[port][key]]:
+                problems.append(f"{key} ({port}): the tree does not hold every lexed token exactly once and in order")
+            if root[0] != "CompilationUnit" or root[1] != 0 or root[2] != len(tokens):
+                problems.append(f"{key} ({port}): the root {root[0]} spans {root[1]}..{root[2]} of {len(tokens)} tokens")
+            problems += [f"{key} ({port}): {problem}" for problem in node_problems(root, 0, len(tokens), "")]
+            if key in valid and error_nodes(root):
+                problems.append(f"{key} ({port}): a valid source has error nodes")
+            shapes[port] = significant_shape(root, tokens)
+        # Sources with syntax errors stop at port-specific tokens until both parsers share their recovery.
+        if key in valid and len(shapes) > 1 and len({json.dumps(shape) for shape in shapes.values()}) > 1:
+            (port, shape), (other, other_shape) = list(shapes.items())[:2]
+            problems.append(f"{key}: the ports build different trees; {first_difference(shape, other_shape, port, other)}")
+    return problems
+
+
 def controls(sources, observed):
     # Each mutation must be detected, so a passing comparison is meaningful.
     key = next(key for key, source in sources.items() if len(observed[next(iter(observed))].get(key, [])) > 2)
@@ -133,9 +208,12 @@ def controls(sources, observed):
 
 
 def main():
+    # Trees at the portable nesting limits are deeper than Python's default recursion limit.
+    sys.setrecursionlimit(20000)
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--port", choices=sorted(ADAPTERS), action="append", help="Port to check; repeat for several (default: both)")
     parser.add_argument("--skip-build", action="store_true", help="Use the existing Release adapters")
+    parser.add_argument("--trees", choices=sorted(ADAPTERS), action="append", default=[], help="Also check this port's syntax trees; repeat for several")
     args = parser.parse_args()
     ports = args.port or sorted(ADAPTERS)
 
@@ -156,11 +234,17 @@ def main():
         observed[port] = tokens(port, request)
     controls(sources, observed)
     problems = compare(sources, observed)
+    # Sources of cases that compile successfully must parse without error nodes.
+    valid = {case["id"] + "#" + str(index) for case in request["cases"] if case["kind"] in ("bytecode", "bytecodeSnapshot", "compileMetadata", "scriptApi")
+             for index, _ in enumerate(case["sources"])}
+    parsed = {port: trees(port, request) for port in args.trees}
+    problems += tree_problems(sources, observed, parsed, valid)
     for problem in problems[:40]:
         print(problem)
     if problems:
         raise SystemExit(f"{len(problems)} lossless lexing problems in {len(sources)} sources.")
-    print(f"{len(sources)} sources lexed losslessly" + (" and identically by " + " and ".join(ports) if len(ports) > 1 else f" by {ports[0]}") + ".")
+    print(f"{len(sources)} sources lexed losslessly" + (" and identically by " + " and ".join(ports) if len(ports) > 1 else f" by {ports[0]}") + "."
+          + (f" Syntax trees of {' and '.join(args.trees)} hold every token." if args.trees else ""))
 
 
 if __name__ == "__main__":

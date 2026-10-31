@@ -6,8 +6,10 @@
 
 extension GesParser {
     func assemblyOrExpression(_ output: String, predicate: Bool = false, allowSend: Bool = false) throws -> GesExpression {
-        if !matchWord("asm") { return try expression() }
-        let start = previous
+        if !current.isIdentifier("asm") { return try expression() }
+        startNode(.assemblyBlock)
+        defer { finishNode() }
+        let start = advance()
         return node(.assembly(try assemblyBlock(output, predicate: predicate, allowSend: allowSend)), start)
     }
 
@@ -26,7 +28,8 @@ extension GesParser {
                 if !lines.isEmpty || exported && output != nil { throw failure("Assembly declarations must precede instructions and only standalone blocks export bindings.", token) }
                 repeat { declarations.append((try identifier(), exported)) } while match(.comma)
             } else if currentKind == .emit || currentKind == .publish {
-                let statement = try statement()
+                // An assembly send has the form of a statement send, but no statement node, as in C#.
+                let statement = try statementCore()
                 guard case .publish(let publish, let message, let tags) = statement.kind else { throw failure("Expected a statement send.", token) }
                 lines.append(.init(name: publish ? "publish" : "emit", label: false, operands: [message] + tags, location: location(token, previous)))
             } else if current.isWord {
@@ -41,10 +44,11 @@ extension GesParser {
                     repeat {
                         if assemblyMessageOperand(name, operands.count), currentKind == .message {
                             // The message operand spans from its name, as the C# message literal does.
+                            startNode(.messageExpression)
                             let messageToken = current
                             let message = advance().text
                             let arguments = currentKind == .leftParen ? try arguments() : []
-                            operands.append(node(.message(message, arguments), messageToken))
+                            operands.append(finishNode(node(.message(message, arguments), messageToken)))
                         } else if currentKind == .operatorMinus, peek().text == "9223372036854775808" {
                             advance()
                             advance()

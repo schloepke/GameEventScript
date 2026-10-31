@@ -14,11 +14,56 @@ final class GesParser {
     var module = ""
     // Syntax errors collected while parsing recovers, as the C# parser collects them.
     var diagnostics: [GesDiagnostic] = []
+    // The lossless syntax tree, built while parsing; node boundaries are token indexes, as in the C# parser.
+    var tree = GesSyntaxTreeBuilder()
+    var completedInfixKind = GesSyntaxNodeKind.binaryExpression
+    // Set while the brackets after `:has` form an object pattern rather than a collection literal.
+    var objectPattern = false
 
     init(source: GesSource) {
         self.source = source
         var lexer = GesLexer(source.text)
         repeat { tokens.append(lexer.read()) } while tokens.last!.kind != .endOfFile
+    }
+
+    func startNode(_ kind: GesSyntaxNodeKind) { tree.startNode(kind, at: index) }
+
+    func finishNode() { tree.finishNode(at: index) }
+
+    func finishNode<T>(_ value: T) -> T {
+        tree.finishNode(at: index)
+        return value
+    }
+
+    func mark() -> GesSyntaxTreeBuilder.Checkpoint { tree.mark(index) }
+
+    func startNode(at checkpoint: GesSyntaxTreeBuilder.Checkpoint, _ kind: GesSyntaxNodeKind) { tree.startNode(at: checkpoint, kind) }
+
+    // Wraps everything parsed since the checkpoint into one node, for nodes whose kind is known only at their end.
+    func wrap<T>(_ checkpoint: GesSyntaxTreeBuilder.Checkpoint, _ kind: GesSyntaxNodeKind, _ value: T) -> T {
+        tree.startNode(at: checkpoint, kind)
+        tree.finishNode(at: index)
+        return value
+    }
+
+    // Recovery skips tokens until a synchronization point; they form one error node.
+    @discardableResult func recover(_ depth: Int, _ synchronize: () -> Bool) -> Bool {
+        tree.finish(to: depth, at: index)
+        startNode(.error)
+        let result = synchronize()
+        finishNode()
+        return result
+    }
+
+    // Closes the open nodes, attaches the tokens a failure left unread as an error node and ends with endOfFile.
+    func completeTree() -> GesSyntaxTree {
+        tree.finish(to: 1, at: index)
+        if currentKind != .endOfFile {
+            startNode(.error)
+            while currentKind != .endOfFile { advance() }
+            finishNode()
+        }
+        return tree.finish(text: source.text, tokens: tokens)
     }
 
     var current: GesToken { tokens[index] }
@@ -111,6 +156,11 @@ final class GesParser {
 
     func typeName() throws -> String {
         guard currentKind == .typeName else { throw failure("Expected a type name.") }
+        startNode(.typeReference)
+        return finishNode(try typeNameCore())
+    }
+
+    func typeNameCore() throws -> String {
         var name = String(advance().text.dropFirst())
         if Self.builtinTypeNames.contains(name) { name = name.lowercased() }
         // Uppercase unit symbols such as N or Hz read as message-name tokens.
@@ -142,13 +192,17 @@ final class GesParser {
         token.kind == .superscriptInteger ? token.text == "2" ? "²" : "³" : token.text
     }
 
-    func parameters(_ allowType: Bool = true) throws -> [GesParameter] {
+    // A handler literal's parameters have no list node of their own, as in C#.
+    func parameters(_ allowType: Bool = true, listNode: Bool = true) throws -> [GesParameter] {
+        if listNode { startNode(.parameterList) }
+        defer { if listNode { finishNode() } }
         try expect(.leftParen)
         newlines()
         var result: [GesParameter] = []
         if match(.rightParen) { return result }
         repeat {
             newlines()
+            startNode(.parameter)
             let start = current
             let unlabeled = match(.underscore)
             newlines()
@@ -161,9 +215,16 @@ final class GesParser {
                 newlines()
             }
             result.append(.init(label: unlabeled ? "_" : name, name: name, type: type, location: location(start, previous)))
+            finishNode()
         } while match(.comma)
         try expect(.rightParen)
         return result
+    }
+
+    /// Parses the source into its module and its lossless syntax tree; the tree also exists when parsing fails.
+    func parseWithTree() -> (module: Result<GesModule, any Error>, tree: GesSyntaxTree) {
+        let module = Result { try parse() }
+        return (module, completeTree())
     }
 
     // Parses one source and reports every syntax error it can find: after an error, parsing resumes at the next
@@ -177,18 +238,25 @@ final class GesParser {
     }
 
     func parseModule() throws -> GesModule {
+        startNode(.compilationUnit)
         separators()
         let start = current
         do {
-            if match(.module) {
+            if currentKind == .module {
+                startNode(.moduleDeclaration)
+                advance()
                 newlines()
                 module = try identifier()
                 while match(.dot) { module += "." + (try identifier()) }
                 if !module.split(separator: ".").allSatisfy({ $0.unicodeScalars.allSatisfy { GesLexer.lower($0) || GesLexer.digit($0) } }) { throw failure("Invalid module name.", previous) }
+                finishNode()
             }
         } catch let error as GesCompileError {
             try record(error)
-            synchronizeTopLevel()
+            recover(1) {
+                synchronizeTopLevel()
+                return true
+            }
         }
         separators()
         var definitions: [GesDefinition] = []
@@ -198,9 +266,12 @@ final class GesParser {
             let declarationStart = index
             do { try declaration(&definitions, &constants, &records) } catch let error as GesCompileError {
                 try record(error)
-                // A declaration that fails on its first token must still move on, or recovery would stop there again.
-                if index == declarationStart { advance() }
-                synchronizeTopLevel()
+                recover(1) {
+                    // A declaration that fails on its first token must still move on, or recovery would stop there again.
+                    if index == declarationStart { advance() }
+                    synchronizeTopLevel()
+                    return true
+                }
             }
         }
         if !diagnostics.isEmpty { throw GesCompileError(diagnostics: diagnostics) }
@@ -237,6 +308,15 @@ final class GesParser {
 
     func declaration(_ definitions: inout [GesDefinition], _ constants: inout [(name: String, value: GesExpression, location: GesSourceLocation)], _ records: inout [GesRecord]) throws {
         let begin = current
+        switch currentKind {
+        case .constant: startNode(.constantDefinition)
+        case .record: startNode(.recordDefinition)
+        case .predicate: startNode(.predicateDefinition)
+        case .function: startNode(.functionDefinition)
+        case .module: startNode(.moduleDeclaration)
+        case .illegal: startNode(.error)
+        default: startNode(.eventHandler)
+        }
         if currentKind == .illegal {
             let token = advance()
             throw failure("Illegal token '\(token.text)'.", token)
@@ -251,6 +331,7 @@ final class GesParser {
         } else {
             definitions.append(try handlerDeclaration(begin))
         }
+        finishNode()
         if currentKind != .endOfFile && currentKind != .newLine && currentKind != .semicolon { throw failure("Expected a declaration separator.") }
         separators()
     }
@@ -287,6 +368,7 @@ final class GesParser {
     }
 
     func recordField() throws -> GesField {
+        startNode(.recordField)
         let fieldStart = current
         let unlabeled = match(.underscore)
         let field = try identifier()
@@ -309,7 +391,7 @@ final class GesParser {
             computed = try assemblyOrExpression(field)
         }
         if unlabeled && computed != nil { throw failure("Computed field cannot be a parameter.", fieldStart) }
-        return .init(name: field, type: type, label: computed == nil ? (unlabeled ? "_" : field) : nil, minimum: low, maximum: high, computed: computed, location: location(fieldStart, previous))
+        return finishNode(.init(name: field, type: type, label: computed == nil ? (unlabeled ? "_" : field) : nil, minimum: low, maximum: high, computed: computed, location: location(fieldStart, previous)))
     }
 
     func routineDeclaration(_ begin: GesToken) throws -> GesDefinition {
@@ -329,12 +411,15 @@ final class GesParser {
         let name = advance().text
         var kind = "handler"
         var params: [GesParameter] = []
-        if match(.`as`) {
+        if currentKind == .`as` {
+            startNode(.parameter)
+            advance()
             newlines()
             let p = current
             let local = try identifier()
             kind = "messageNameHandler"
             params = [.init(label: "message", name: local, type: "message", location: location(p))]
+            finishNode()
         } else if currentKind == .leftParen {
             params = try parameters()
         }
@@ -343,6 +428,7 @@ final class GesParser {
         while true {
             newlines()
             guard currentKind == .matching || currentKind == .without else { break }
+            startNode(.handlerTagFilter)
             let include = advance().kind == .matching
             repeat {
                 newlines()
@@ -351,10 +437,13 @@ final class GesParser {
                 if include { if !required.contains(tag) { required.append(tag) } } else if !excluded.contains(tag) { excluded.append(tag) }
                 newlines()
             } while match(.comma)
+            finishNode()
         }
+        startNode(.block)
         try expect(.leftBrace)
         let body = try statements()
         try expect(.rightBrace)
+        finishNode()
         return .init(kind: kind, name: name, parameters: params, expression: nil, statements: body, required: required, excluded: excluded, location: location(begin, previous))
     }
 
@@ -367,13 +456,14 @@ final class GesParser {
                 try record(failure("Expected '}' before end of input."))
                 return result
             }
+            let depth = tree.depth
             do {
                 result.append(try statement())
                 if currentKind != .rightBrace && currentKind != .newLine && currentKind != .semicolon { throw failure("Expected a statement separator.") }
                 separators()
             } catch let error as GesCompileError {
                 try record(error)
-                if !synchronizeStatement() { return result }
+                if !recover(depth, { synchronizeStatement() }) { return result }
             }
         }
         return result
@@ -384,10 +474,12 @@ final class GesParser {
         statementDepth += 1
         defer { statementDepth -= 1 }
         newlines()
-        if match(.leftBrace) {
+        if currentKind == .leftBrace {
+            startNode(.block)
+            advance()
             let result = try statements()
             try expect(.rightBrace)
-            return result
+            return finishNode(result)
         }
         return [try statement()]
     }
@@ -395,6 +487,24 @@ final class GesParser {
     // Nested blocks recurse through `statement`, `body` and `statements`, so each statement form parses in its own
     // function, as nested expressions do.
     func statement() throws -> GesStatement {
+        if current.isIdentifier("asm") {
+            startNode(.assemblyBlock)
+        } else if currentKind == .keywordRandom && peekKind() == .with {
+            startNode(.seededRandomStatement)
+        } else {
+            switch currentKind {
+            case .emit: startNode(.emitStatement)
+            case .publish: startNode(.publishStatement)
+            case .`let`: startNode(.letStatement)
+            case .`if`: startNode(.ifStatement)
+            case .`for`: startNode(.forStatement)
+            default: startNode(.expressionStatement)
+            }
+        }
+        return finishNode(try statementCore())
+    }
+
+    func statementCore() throws -> GesStatement {
         let start = current
         let kind: GesStatement.Kind
         if matchWord("asm") {
@@ -419,7 +529,7 @@ final class GesParser {
     // A send with a delay is a result-bearing send expression in statement position.
     func sendStatement(_ start: GesToken) throws -> GesStatement {
         let publish = advance().kind == .publish
-        let send = try sendExpression(publish, start)
+        let send = try sendExpression(publish, start, mark())
         return GesStatement(kind: .expression(send), location: send.location)
     }
 
@@ -429,14 +539,20 @@ final class GesParser {
         newlines()
         let message: GesExpression
         if currentKind == .message {
+            startNode(.messageExpression)
             let name = advance().text
             let args = currentKind == .leftParen ? try arguments() : []
-            message = node(.message(name, args), start)
+            message = finishNode(node(.message(name, args), start))
         } else {
             message = try expression()
         }
         var tags: [GesExpression] = []
-        if match(.with) { repeat { tags.append(try expression()) } while match(.comma) }
+        if currentKind == .with {
+            startNode(.tagClause)
+            advance()
+            repeat { tags.append(try expression()) } while match(.comma)
+            finishNode()
+        }
         return .publish(publish, message, tags)
     }
 
@@ -451,15 +567,19 @@ final class GesParser {
         repeat {
             newlines()
             if currentKind == .leftBrace && !conditions.isEmpty { break }
+            startNode(.ifCondition)
             conditions.append(try condition())
+            finishNode()
             newlines()
         } while match(.semicolon)
         let then = try body()
         var otherwise: [GesStatement] = []
         if peekKind(0) == .`else` {
             newlines()
+            startNode(.elseClause)
             try expect(.`else`)
             otherwise = try body()
+            finishNode()
         }
         return .condition(conditions, then, otherwise)
     }
@@ -487,16 +607,21 @@ final class GesParser {
     func forClause(_ start: GesToken) throws -> GesStatement.Kind {
         let names = try bindingNames()
         newlines()
-        let range = matchWord("from")
-        let sequence = try forSource(start, range: range)
+        let range = current.isIdentifier("from")
+        if range { startNode(.rangeExpression) }
+        if range { advance() }
+        let sequence = range ? finishNode(try forSource(start, range: range)) : try forSource(start, range: range)
         newlines()
         if isForClauseStart(requireSourceContext: false) {
             if statementDepth >= 32 { throw failure("Statement nesting limit exceeded.", code: "parse.sourceNestingExceeded") }
+            // `and item in ...` continues with a nested for statement.
+            startNode(.forStatement)
             let next = advance()
             newlines()
             statementDepth += 1
             defer { statementDepth -= 1 }
             let inner = try forClause(next)
+            finishNode()
             return .loop(names, sequence, range, [.init(kind: inner, location: location(next, previous))])
         }
         return .loop(names, sequence, range, try body())
@@ -579,23 +704,43 @@ final class GesParser {
         expressionDepth += 1
         defer { expressionDepth -= 1 }
         newlines()
-        if minimum == 0 && match(.when) { return try conditionFirstChoice(previous) }
+        if minimum == 0 && currentKind == .when {
+            startNode(.guardedChoiceExpression)
+            advance()
+            return finishNode(try conditionFirstChoice(previous))
+        }
+        // Each operator wraps its left operand, which starts here, into the operator's node.
+        let start = mark()
         var left = try prefix()
         while let step = try infixStep(left, minimum) {
             switch step {
-            case .complete(let value): left = value
-            case .test: left = try isExpression(left)
-            case .operand(let op, let binary, let rightMinimum): left = try infix(op, binary, left, expression(rightMinimum))
+            case .complete(let value): left = wrap(start, completedInfixKind, value)
+            case .test: left = wrap(start, .typeOperationExpression, try isExpression(left))
+            case .operand(let op, let binary, let rightMinimum): left = wrap(start, Self.infixNodeKind(op), try infix(op, binary, left, expression(rightMinimum)))
             }
         }
-        if minimum == 0 && match(.when) { left = try trailingChoice(left) }
+        if minimum == 0 && currentKind == .when {
+            startNode(at: start, .guardedChoiceExpression)
+            startNode(at: start, .choiceBranch)
+            advance()
+            left = finishNode(try trailingChoice(left))
+        }
         return left
     }
 
-    // Consumes the operator after `left`; nil ends the operator loop.
+    static func infixNodeKind(_ op: GesTokenKind) -> GesSyntaxNodeKind {
+        switch op {
+        case .in, .notIn, .starts, .ends, .has: .membershipExpression
+        default: .binaryExpression
+        }
+    }
+
+    // Consumes the operator after `left`; nil ends the operator loop. A completed postfix form also sets
+    // `completedInfixKind`, kept outside the step so that the recursive frames stay small.
     func infixStep(_ left: GesExpression, _ minimum: Int) throws -> InfixStep? {
         if isForClauseStart() { return nil }
         if minimum <= 16 && currentKind == .superscriptInteger {
+            completedInfixKind = .binaryExpression
             let exponent = node(.literal(.integer(Int64(advance().text)!)), previous)
             return .complete(try combined(.binary(.power, left, exponent), left, exponent))
         }
@@ -607,9 +752,13 @@ final class GesParser {
         guard let precedence = Self.precedence[currentKind], precedence >= minimum else { return nil }
         let op = advance().kind
         newlines()
-        if op == .as { return .complete(try ranged(.cast(left, typeName()), left)) }
+        if op == .as {
+            completedInfixKind = .typeOperationExpression
+            return .complete(try ranged(.cast(left, typeName()), left))
+        }
         if op == .is { return .test }
         if op == .has {
+            completedInfixKind = .membershipExpression
             try expectWord("value")
             return .complete(try ranged(.unary(.hasValue, left), left))
         }
@@ -637,17 +786,20 @@ final class GesParser {
         return try combined(.binary(binary, left, right), left, right)
     }
 
-    // `value when condition, … otherwise fallback` after its first value and `when`.
+    // `value when condition, … otherwise fallback` after its first value and `when`, inside the open first branch.
     func trailingChoice(_ first: GesExpression) throws -> GesExpression {
         var branches = [(first, try expression(1))]
+        finishNode()
         while match(.comma) {
             newlines()
             if currentKind == .otherwise { break }
             _ = match(.operatorOr)
             newlines()
+            startNode(.choiceBranch)
             let value = try expression(1)
             try expect(.when)
             branches.append((value, try expression(1)))
+            finishNode()
         }
         newlines()
         try expect(.otherwise)
@@ -660,11 +812,14 @@ final class GesParser {
     func conditionFirstChoice(_ start: GesToken) throws -> GesExpression {
         var branches: [(GesExpression, GesExpression)] = []
         while true {
+            newlines()
+            startNode(.choiceBranch)
             let condition = try choiceCondition()
             newlines()
             try expectWord("then")
             let value = try expression(1)
             branches.append((value, condition))
+            finishNode()
             if !match(.comma) { break }
             newlines()
             if currentKind == .otherwise { break }

@@ -24,8 +24,9 @@ try
     var allocation = args.SequenceEqual(new[] { "--measure" });
     var benchmarkRounds = args.Length == 2 && args[0] == "--benchmark-compile" && int.TryParse(args[1], out var rounds) && rounds is > 0 and <= 1000 ? rounds : 0;
     var syntaxTokens = args.SequenceEqual(new[] { "--syntax-tokens" });
-    if (args.Length != 0 && !allocation && benchmarkRounds == 0 && !syntaxTokens)
-        throw new ArgumentException("Use no arguments for a JSON batch on stdin, --measure, --benchmark-compile <rounds>, --syntax-tokens, or --describe.");
+    var syntaxTrees = args.SequenceEqual(new[] { "--syntax-trees" });
+    if (args.Length != 0 && !allocation && benchmarkRounds == 0 && !syntaxTokens && !syntaxTrees)
+        throw new ArgumentException("Use no arguments for a JSON batch on stdin, --measure, --benchmark-compile <rounds>, --syntax-tokens, --syntax-trees, or --describe.");
     using var input = Console.OpenStandardInput();
     using var buffer = new MemoryStream();
     var chunk = new byte[8192];
@@ -51,10 +52,10 @@ try
         ValidateCase(test, capabilities, allocation);
         if (!observations.TryAdd(Text(test, "id"), null!)) throw new ArgumentException("Duplicate case ID.");
     }
-    if (syntaxTokens)
+    if (syntaxTokens || syntaxTrees)
     {
         using var tokenOutput = Console.OpenStandardOutput();
-        JsonSerializer.Serialize(tokenOutput, new { formatVersion = 1, implementation, sources = SyntaxTokens.Run(cases) });
+        JsonSerializer.Serialize(tokenOutput, new { formatVersion = 1, implementation, sources = syntaxTrees ? SyntaxTokens.RunTrees(cases) : SyntaxTokens.Run(cases) });
         return 0;
     }
     if (benchmarkRounds > 0)

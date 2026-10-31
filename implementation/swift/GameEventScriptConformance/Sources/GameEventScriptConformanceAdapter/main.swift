@@ -28,7 +28,8 @@ do {
         let arguments = Array(CommandLine.arguments.dropFirst())
         let benchmarkRounds = arguments.count == 2 && arguments[0] == "--benchmark-compile" ? Int(arguments[1]).flatMap { (1...1000).contains($0) ? $0 : nil } ?? 0 : 0
         let syntaxTokens = arguments == ["--syntax-tokens"]
-        guard CommandLine.arguments.count == 1 || measuring || foreign || benchmarkRounds > 0 || syntaxTokens else { throw ConformanceExecutionError.invalidInput("Unknown arguments") }
+        let syntaxTrees = arguments == ["--syntax-trees"]
+        guard CommandLine.arguments.count == 1 || measuring || foreign || benchmarkRounds > 0 || syntaxTokens || syntaxTrees else { throw ConformanceExecutionError.invalidInput("Unknown arguments") }
         var data = Data()
         while let chunk = try FileHandle.standardInput.read(upToCount: 8192), !chunk.isEmpty {
             data.append(chunk)
@@ -39,8 +40,9 @@ do {
         let input = try JSONDecoder().decode(Input.self, from: data)
         guard input["formatVersion"]?.integerValue == 1, let digest = input["requestDigest"]?.stringValue, digest.count == 64 else { throw ConformanceExecutionError.invalidInput("Invalid envelope") }
         try Validation.batch(input, measuring: measuring)
-        if syntaxTokens {
-            FileHandle.standardOutput.write(try JSONSerialization.data(withJSONObject: ["formatVersion": 1, "implementation": identity, "sources": try SyntaxTokens.run(input)], options: [.sortedKeys]))
+        if syntaxTokens || syntaxTrees {
+            let sources = syntaxTrees ? try SyntaxTokens.runTrees(input) : try SyntaxTokens.run(input)
+            FileHandle.standardOutput.write(try JSONSerialization.data(withJSONObject: ["formatVersion": 1, "implementation": identity, "sources": sources], options: [.sortedKeys]))
             exit(0)
         }
         if benchmarkRounds > 0 {

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import GameEventScriptRuntime
+@_spi(Syntax) import GameEventScriptSyntax
 
 /// Compiler output configuration; no host state or file-system paths are required.
 public struct GesCompileOptions: Sendable {
@@ -82,4 +83,11 @@ extension GameEventScriptProgram {
     /// Creates an empty source builder with default compile options; equivalent to `GesProgramBuilder()`. Available
     /// when the Compiler module is imported.
     public static func makeBuilder() -> GesProgramBuilder { .init() }
+}
+
+extension GesProgramBuilder {
+    /// The lossless syntax tree of one source, also when the source has syntax errors.
+    @_spi(Syntax) public static func syntaxTree(_ text: String) -> GesSyntaxTree {
+        GesParser(source: .init(text: text, name: "UnknownSource", id: 0)).parseWithTree().tree
+    }
 }

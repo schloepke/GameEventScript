@@ -3,6 +3,7 @@
 
 using System.Collections.Generic;
 using System.Linq;
+using GameEventScript.Syntax;
 using static GameEventScript.Syntax.GesTokenKind;
 
 namespace GameEventScript.Compiler;
@@ -11,9 +12,11 @@ internal sealed partial class GesParser
 {
     private GesExpressionNode ParseAssemblyOrExpression(string output, bool predicate = false, bool allowSend = false)
     {
-        if (!MatchWord("asm")) return ParseExpression();
+        if (!IsWord("asm")) return ParseExpression();
+        _tree.StartNode(GesSyntaxNodeKind.AssemblyBlock);
+        Advance();
         var block = ParseAssemblyBlock(output) with { Predicate = predicate, AllowSend = allowSend };
-        return WithRange(new GesAssemblyExpressionNode(block), block);
+        return FinishNode(WithRange(new GesAssemblyExpressionNode(block), block));
     }
 
     private GesAssemblyBlockNode ParseAssemblyBlock(string? output)

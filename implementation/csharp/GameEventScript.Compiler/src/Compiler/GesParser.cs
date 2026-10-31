@@ -17,12 +17,73 @@ internal sealed partial class GesParser
     private const double SquareRootExponent = 0.5d;
     private const double CubeRootExponent = 0.3333333333333333333333333333d;
 
-    public static GesParsedScript Parse(string script, string? sourceName = null, uint? sourceId = null)
+    public static GesParsedScript Parse(string script, string? sourceName = null, uint? sourceId = null) => ParseWithTree(script, sourceName, sourceId).Script;
+
+    // Parses one source into its semantic tree and its lossless syntax tree. The syntax tree is complete also when the
+    // source has errors; the semantic tree is then absent and the exception carries the diagnostics.
+    internal static (GesParsedScript Script, GesSyntaxTree Tree) ParseWithTree(string script, string? sourceName = null, uint? sourceId = null)
     {
         _ = script ?? throw new ArgumentNullException(nameof(script));
 
         var reader = new GesTokenReader(new GesLexer(script));
-        return new GesParser(reader, sourceName, sourceId).ParseScript();
+        var parser = new GesParser(reader, sourceName, sourceId, script.Length);
+        try
+        {
+            var parsed = parser.ParseScript();
+            return (parsed, parser.CompleteTree(script));
+        }
+        catch (GesCompileException exception)
+        {
+            parser.SyntaxTree = parser.CompleteTree(script);
+            exception.Data[SyntaxTreeKey] = parser.SyntaxTree;
+            throw;
+        }
+    }
+
+    // The lossless syntax tree of a source that failed to parse travels with its compile exception.
+    internal const string SyntaxTreeKey = "GesSyntaxTree";
+
+    internal GesSyntaxTree? SyntaxTree { get; private set; }
+
+    private readonly GesSyntaxTreeBuilder _tree;
+
+    // Closes the open nodes, attaches the tokens a failure left unread as an error node and ends with EndOfFile.
+    private GesSyntaxTree CompleteTree(string text)
+    {
+        _tree.FinishTo(1);
+        if (!Is(EndOfFile))
+        {
+            _tree.StartNode(GesSyntaxNodeKind.Error);
+            while (!Is(EndOfFile)) Advance();
+            _tree.FinishNode();
+        }
+
+        _tree.Token(Current);
+        return _tree.Finish(text);
+    }
+
+    // Wraps everything parsed since the checkpoint into one node, for nodes whose kind is known only at their end.
+    private T WrapNode<T>(GesSyntaxTreeBuilder.Checkpoint start, GesSyntaxNodeKind kind, T value)
+    {
+        _tree.StartNodeAt(start, kind);
+        _tree.FinishNode();
+        return value;
+    }
+
+    private T FinishNode<T>(T value)
+    {
+        _tree.FinishNode();
+        return value;
+    }
+
+    // Recovery skips tokens until a synchronization point; they form one error node.
+    private bool RecoverInto(int depth, Func<bool> synchronize)
+    {
+        _tree.FinishTo(depth);
+        _tree.StartNode(GesSyntaxNodeKind.Error);
+        var result = synchronize();
+        _tree.FinishNode();
+        return result;
     }
 
     private sealed class GameEventScriptParseException(string message, int line, int column) : Exception($"{message} (line {line}, col {column})")
@@ -55,12 +116,13 @@ internal sealed partial class GesParser
     private int? _forSourceDepth;
     private int? _choiceConditionDepth;
 
-    private GesParser(GesTokenReader reader, string? sourceName, uint? sourceId)
+    private GesParser(GesTokenReader reader, string? sourceName, uint? sourceId, int sourceLength)
     {
         _reader = reader;
         _requestedSourceName = sourceName;
         _sourceId = sourceId;
         _errors = [];
+        _tree = new GesSyntaxTreeBuilder(sourceLength);
     }
 
     private string ModuleName => _moduleName ?? string.Empty;
@@ -131,6 +193,7 @@ internal sealed partial class GesParser
         var predicateDefinitions = new List<GesPredicateDefinitionNode>();
         var functionDefinitions = new List<GesFunctionDefinitionNode>();
         var handlers = new List<GesEventHandlerNode>();
+        _tree.StartNode(GesSyntaxNodeKind.CompilationUnit);
         SkipStatementSeparators();
         try
         {
@@ -139,7 +202,7 @@ internal sealed partial class GesParser
         catch (GameEventScriptParseException ex)
         {
             AddParseError(ex);
-            SynchronizeTopLevel();
+            RecoverInto(1, () => { SynchronizeTopLevel(); return true; });
         }
 
         SkipStatementSeparators();
@@ -148,6 +211,16 @@ internal sealed partial class GesParser
             var declarationStart = Current;
             try
             {
+                _tree.StartNode(Current.Kind switch
+                {
+                    Constant => GesSyntaxNodeKind.ConstantDefinition,
+                    Record => GesSyntaxNodeKind.RecordDefinition,
+                    Predicate => GesSyntaxNodeKind.PredicateDefinition,
+                    Function => GesSyntaxNodeKind.FunctionDefinition,
+                    Module => GesSyntaxNodeKind.ModuleDeclaration,
+                    Illegal => GesSyntaxNodeKind.Error,
+                    _ => GesSyntaxNodeKind.EventHandler
+                });
                 if (Is(Illegal))
                 {
                     var token = Advance();
@@ -160,6 +233,7 @@ internal sealed partial class GesParser
                 else if (Match(Predicate)) predicateDefinitions.Add(ParsePredicateDefinition());
                 else if (Match(Function)) functionDefinitions.Add(ParseFunctionDefinition());
                 else handlers.Add(ParseEventHandler());
+                _tree.FinishNode();
 
                 RequireHandlerSeparatorOrEndOfFile();
                 SkipStatementSeparators();
@@ -167,9 +241,13 @@ internal sealed partial class GesParser
             catch (GameEventScriptParseException ex)
             {
                 AddParseError(ex);
-                // A declaration that fails on its first token must still move on, or recovery would stop there again.
-                if (Current.Line == declarationStart.Line && Current.Column == declarationStart.Column) Advance();
-                SynchronizeTopLevel();
+                RecoverInto(1, () =>
+                {
+                    // A declaration that fails on its first token must still move on, or recovery would stop there again.
+                    if (Current.Line == declarationStart.Line && Current.Column == declarationStart.Column) Advance();
+                    SynchronizeTopLevel();
+                    return true;
+                });
             }
         }
 
@@ -184,7 +262,9 @@ internal sealed partial class GesParser
 
     private void ParseOptionalModuleDeclaration()
     {
-        if (!Match(Module)) return;
+        if (!Is(Module)) return;
+        _tree.StartNode(GesSyntaxNodeKind.ModuleDeclaration);
+        Advance();
 
         SkipNewLines();
         ThrowIfIllegalToken();
@@ -199,6 +279,7 @@ internal sealed partial class GesParser
 
         _moduleName = builder.ToString();
         if (!GesText.IsModuleName(_moduleName)) throw new GameEventScriptParseException($"Invalid module identifier '{_moduleName}'", Previous);
+        _tree.FinishNode();
     }
 
     private GesConstantDefinitionNode ParseConstantDefinition()
@@ -249,6 +330,7 @@ internal sealed partial class GesParser
 
     private GesTypeFieldDefinitionNode ParseTypeFieldDefinition()
     {
+        _tree.StartNode(GesSyntaxNodeKind.RecordField);
         var startToken = Current;
         var isUnlabeledConstructorParameter = Match(Underscore);
         if (isUnlabeledConstructorParameter) SkipNewLines();
@@ -286,7 +368,7 @@ internal sealed partial class GesParser
                 : name
             : null;
 
-        return WithRange(new GesTypeFieldDefinitionNode(name, typeName, minimumExpression, maximumExpression, computedExpression, constructorLabel), startToken);
+        return FinishNode(WithRange(new GesTypeFieldDefinitionNode(name, typeName, minimumExpression, maximumExpression, computedExpression, constructorLabel), startToken));
     }
 
     private GesPredicateDefinitionNode ParsePredicateDefinition()
@@ -314,6 +396,7 @@ internal sealed partial class GesParser
     private IReadOnlyList<GesParameterNode> ParseDefinitionParameters()
     {
         var parameters = new List<GesParameterNode>();
+        _tree.StartNode(GesSyntaxNodeKind.ParameterList);
         Expect(LeftParen);
         if (!Is(RightParen))
         {
@@ -322,23 +405,24 @@ internal sealed partial class GesParser
         }
 
         Expect(RightParen);
-        return parameters;
+        return FinishNode(parameters);
     }
 
     private GesParameterNode ParseParameter(bool allowDeclaredType = true)
     {
+        _tree.StartNode(GesSyntaxNodeKind.Parameter);
         var startToken = Current;
         if (Match(Underscore))
         {
             SkipNewLines();
             var localName = ExpectIdentifier();
             var declaredType = allowDeclaredType ? ParseOptionalParameterDeclaredType() : null;
-            return WithRange(new GesParameterNode(null, localName, declaredType), startToken);
+            return FinishNode(WithRange(new GesParameterNode(null, localName, declaredType), startToken));
         }
 
         var name = ExpectIdentifier();
         var typeName = allowDeclaredType ? ParseOptionalParameterDeclaredType() : null;
-        return WithRange(new GesParameterNode(name, name, typeName), startToken);
+        return FinishNode(WithRange(new GesParameterNode(name, name, typeName), startToken));
     }
 
     private string? ParseOptionalParameterDeclaredType()
@@ -359,16 +443,21 @@ internal sealed partial class GesParser
 
         var dispatchKind = GesEventHandlerDispatchKind.ExactSignature;
         var parameters = new List<GesParameterNode>();
-        if (Match(As))
+        if (Is(As))
         {
+            _tree.StartNode(GesSyntaxNodeKind.Parameter);
+            Advance();
             SkipNewLines();
             var messageToken = Current;
             var messageLocalName = ExpectIdentifier();
             dispatchKind = GesEventHandlerDispatchKind.MessageName;
             parameters.Add(WithRange(new GesParameterNode(GesSystemEndpoints.MessageArgumentName, messageLocalName, "message"), messageToken));
+            _tree.FinishNode();
         }
-        else if (Match(LeftParen))
+        else if (Is(LeftParen))
         {
+            _tree.StartNode(GesSyntaxNodeKind.ParameterList);
+            Advance();
             if (!Is(RightParen))
             {
                 parameters.Add(ParseParameter());
@@ -376,6 +465,7 @@ internal sealed partial class GesParser
             }
 
             Expect(RightParen);
+            _tree.FinishNode();
         }
 
         var requiredTags = new List<string>();
@@ -383,9 +473,11 @@ internal sealed partial class GesParser
         ParseOptionalHandlerTagFilters(requiredTags, excludedTags);
 
         SkipNewLines();
+        _tree.StartNode(GesSyntaxNodeKind.Block);
         Expect(LeftBrace);
         var statements = ParseStatementsUntil(RightBrace);
         Expect(RightBrace);
+        _tree.FinishNode();
 
         return WithRange(new GesEventHandlerNode(message, dispatchKind, parameters, statements, requiredTags, excludedTags), startToken);
     }
@@ -411,15 +503,11 @@ internal sealed partial class GesParser
         while (true)
         {
             SkipNewLines();
-            if (Match(Matching))
+            if (Is(Matching) || Is(Without))
             {
-                ParseHandlerTagList(requiredTags);
-                continue;
-            }
-
-            if (Match(Without))
-            {
-                ParseHandlerTagList(excludedTags);
+                _tree.StartNode(GesSyntaxNodeKind.HandlerTagFilter);
+                ParseHandlerTagList(Advance().Kind == Matching ? requiredTags : excludedTags);
+                _tree.FinishNode();
                 continue;
             }
 
@@ -466,6 +554,7 @@ internal sealed partial class GesParser
                 return statements;
             }
 
+            var depth = _tree.Depth;
             try
             {
                 statements.Add(ParseStatement());
@@ -474,7 +563,7 @@ internal sealed partial class GesParser
             catch (GameEventScriptParseException ex)
             {
                 AddParseError(ex);
-                if (!SynchronizeStatement(closingKind)) return statements;
+                if (!RecoverInto(depth, () => SynchronizeStatement(closingKind))) return statements;
             }
         }
 
@@ -482,6 +571,20 @@ internal sealed partial class GesParser
     }
 
     private GesStatementNode ParseStatement()
+    {
+        _tree.StartNode(IsWord("asm") ? GesSyntaxNodeKind.AssemblyBlock : IsSeededRandomStatementStart() ? GesSyntaxNodeKind.SeededRandomStatement : Current.Kind switch
+        {
+            Emit => GesSyntaxNodeKind.EmitStatement,
+            Publish => GesSyntaxNodeKind.PublishStatement,
+            Let => GesSyntaxNodeKind.LetStatement,
+            If => GesSyntaxNodeKind.IfStatement,
+            For => GesSyntaxNodeKind.ForStatement,
+            _ => GesSyntaxNodeKind.ExpressionStatement
+        });
+        return FinishNode(ParseStatementCore());
+    }
+
+    private GesStatementNode ParseStatementCore()
     {
         if (MatchWord("asm"))
         {
@@ -511,7 +614,7 @@ internal sealed partial class GesParser
         SkipNewLines();
         if (IsWord("after"))
         {
-            var send = ParseSendExpression(kind, startToken);
+            var send = ParseSendExpression(kind, startToken, _tree.Mark());
             return WithRange(new GesExpressionStatementNode(send), startToken);
         }
         var messageExpression = ParsePublishMessageExpression();
@@ -519,13 +622,14 @@ internal sealed partial class GesParser
         return WithRange(new GesPublishStatementNode(kind, messageExpression, tagExpressions), startToken);
     }
 
-    private GesExpressionNode ParseSendExpression(GesPublishStatementKind kind, GesToken startToken)
+    private GesExpressionNode ParseSendExpression(GesPublishStatementKind kind, GesToken startToken, GesSyntaxTreeBuilder.Checkpoint start)
     {
+        _tree.StartNodeAt(start, GesSyntaxNodeKind.SendExpression);
         SkipNewLines();
         GesExpressionNode? delay = null;
         if (MatchWord("after")) delay = ParseExpression();
         var message = Current.Kind == Message ? ParseMessageLiteralExpressionCore() : ParseUnaryExpression();
-        return WithRange(new GesSendExpressionNode(kind, message, ParseOptionalTagExpressions(resultSend: true), delay), startToken);
+        return FinishNode(WithRange(new GesSendExpressionNode(kind, message, ParseOptionalTagExpressions(resultSend: true), delay), startToken));
     }
 
     private GesExpressionNode ParsePublishMessageExpression()
@@ -537,8 +641,10 @@ internal sealed partial class GesParser
 
     private IReadOnlyList<GesExpressionNode> ParseOptionalTagExpressions(bool resultSend = false)
     {
-        if (!Match(With)) return [];
+        if (!Is(With)) return [];
 
+        _tree.StartNode(GesSyntaxNodeKind.TagClause);
+        Advance();
         var tags = new List<GesExpressionNode>();
         do
         {
@@ -547,11 +653,12 @@ internal sealed partial class GesParser
         }
         while (Match(Comma));
 
-        return tags;
+        return FinishNode(tags);
     }
 
     private GesArgumentNode ParseArgument()
     {
+        _tree.StartNode(GesSyntaxNodeKind.Argument);
         var startToken = Current;
         if (IsArgumentLabelStart())
         {
@@ -561,12 +668,12 @@ internal sealed partial class GesParser
             {
                 SkipNewLines();
                 var expression = ParseExpression();
-                return WithRange(new GesArgumentNode(label, expression), startToken);
+                return FinishNode(WithRange(new GesArgumentNode(label, expression), startToken));
             }
         }
 
         var value = ParseExpression();
-        return WithRange(new GesArgumentNode(null, value), startToken);
+        return FinishNode(WithRange(new GesArgumentNode(null, value), startToken));
     }
 
     private GesArgumentListNode ParseArgumentListAfterLeftParen()
@@ -652,6 +759,7 @@ internal sealed partial class GesParser
         {
             SkipNewLines();
             if (Is(LeftBrace) && conditions.Count > 0) break;
+            _tree.StartNode(GesSyntaxNodeKind.IfCondition);
             var conditionStart = Current;
             string? binding = null;
             if (Match(Let))
@@ -660,6 +768,7 @@ internal sealed partial class GesParser
                 Expect(Be);
             }
             conditions.Add(WithRange(new GesIfConditionNode(ParseExpression(), binding), conditionStart));
+            _tree.FinishNode();
             SkipNewLines();
         } while (Match(Semicolon));
         var thenBody = ParseStatementBody();
@@ -668,8 +777,10 @@ internal sealed partial class GesParser
         if (IsElseClauseStart())
         {
             SkipNewLines();
+            _tree.StartNode(GesSyntaxNodeKind.ElseClause);
             Expect(Else);
             elseBody = ParseStatementBody();
+            _tree.FinishNode();
         }
 
         return WithRange(new GesIfStatementNode(conditions, thenBody, elseBody), startToken);
@@ -696,10 +807,12 @@ internal sealed partial class GesParser
                 var sourceStart = Current;
                 source = WithRange(new GesCollectionIterationSourceNode(ParseExpression()), sourceStart);
             }
-            else if (MatchWord("from"))
+            else if (IsWord("from"))
             {
+                _tree.StartNode(GesSyntaxNodeKind.RangeExpression);
+                Advance();
                 var fromToken = Previous;
-                source = WithRange(new GesRangeIterationSourceNode(ParseRangeExpressionCore()), fromToken);
+                source = FinishNode(WithRange(new GesRangeIterationSourceNode(ParseRangeExpressionCore()), fromToken));
             }
             else
             {
@@ -714,11 +827,14 @@ internal sealed partial class GesParser
         if (IsForClauseStart(requireSourceContext: false))
         {
             if (_statementNesting >= GesSourceNesting.MaximumStatementDepth) ThrowNestingLimit(CreateRange(Current));
+            // `and item in ...` continues with a nested for statement.
+            _tree.StartNode(GesSyntaxNodeKind.ForStatement);
             Advance();
             SkipNewLines();
             _statementNesting++;
             try { body = WithRange(new GesStatementBodyNode(false, [ParseForStatement()]), startToken); }
             finally { _statementNesting--; }
+            _tree.FinishNode();
         }
         else body = ParseStatementBody();
         return WithRange(new GesForStatementNode(identifier, source, body) { BindingNames = bindings }, startToken);
@@ -762,11 +878,13 @@ internal sealed partial class GesParser
     {
         var startToken = Current;
         SkipNewLines();
-        if (Match(LeftBrace))
+        if (Is(LeftBrace))
         {
+            _tree.StartNode(GesSyntaxNodeKind.Block);
+            Advance();
             var statements = ParseStatementsUntil(RightBrace);
             Expect(RightBrace);
-            return WithRange(new GesStatementBodyNode(true, statements), startToken);
+            return FinishNode(WithRange(new GesStatementBodyNode(true, statements), startToken));
         }
 
         return WithRange(new GesStatementBodyNode(false, [ParseStatement()]), startToken);
@@ -777,13 +895,23 @@ internal sealed partial class GesParser
     private GesExpressionNode ParseGuardedChoiceExpression()
     {
         SkipNewLines();
-        if (Match(When)) return ParseConditionFirstChoiceExpression();
-        var expression = ParseImplicationExpression();
-        if (Match(When))
+        if (Is(When))
         {
+            _tree.StartNode(GesSyntaxNodeKind.GuardedChoiceExpression);
+            Advance();
+            return FinishNode(ParseConditionFirstChoiceExpression());
+        }
+        var start = _tree.Mark();
+        var expression = ParseImplicationExpression();
+        if (Is(When))
+        {
+            _tree.StartNodeAt(start, GesSyntaxNodeKind.GuardedChoiceExpression);
+            _tree.StartNodeAt(start, GesSyntaxNodeKind.ChoiceBranch);
+            Advance();
             var branches = new List<GesGuardedChoiceBranchNode>();
             var conditionExpression = ParseImplicationExpression();
             branches.Add(new GesGuardedChoiceBranchNode(expression, conditionExpression));
+            _tree.FinishNode();
 
             while (Match(Comma))
             {
@@ -793,19 +921,21 @@ internal sealed partial class GesParser
                 Match(OperatorOr);
                 SkipNewLines();
 
+                _tree.StartNode(GesSyntaxNodeKind.ChoiceBranch);
                 var branchValue = ParseImplicationExpression();
                 SkipNewLines();
                 Expect(When);
                 SkipNewLines();
                 var branchCondition = ParseImplicationExpression();
                 branches.Add(new GesGuardedChoiceBranchNode(branchValue, branchCondition));
+                _tree.FinishNode();
             }
 
             SkipNewLines();
             Expect(Otherwise);
             SkipNewLines();
             var otherwiseExpression = ParseImplicationExpression();
-            expression = WithRange(new GesGuardedChoiceExpressionNode(branches, otherwiseExpression), expression, otherwiseExpression);
+            expression = FinishNode(WithRange(new GesGuardedChoiceExpressionNode(branches, otherwiseExpression), expression, otherwiseExpression));
         }
 
         return expression;
@@ -818,6 +948,7 @@ internal sealed partial class GesParser
         while (true)
         {
             SkipNewLines();
+            _tree.StartNode(GesSyntaxNodeKind.ChoiceBranch);
             var savedConditionDepth = _choiceConditionDepth;
             _choiceConditionDepth = _delimiterDepth;
             GesExpressionNode condition;
@@ -828,6 +959,7 @@ internal sealed partial class GesParser
             SkipNewLines();
             var value = ParseImplicationExpression();
             branches.Add(new GesGuardedChoiceBranchNode(value, condition));
+            _tree.FinishNode();
             if (!Match(Comma)) break;
             SkipNewLines();
             if (Is(Otherwise)) break;
@@ -844,16 +976,19 @@ internal sealed partial class GesParser
 
     private GesExpressionNode ParseImplicationExpression()
     {
+        var start = _tree.Mark();
         var expression = ParseDefaultExpression();
-        if (!Match(OperatorImplication)) return expression;
+        if (!Is(OperatorImplication)) return expression;
 
+        _tree.StartNodeAt(start, GesSyntaxNodeKind.BinaryExpression);
+        Advance();
         SkipNewLines();
         if (_expressionNesting >= GesSourceNesting.MaximumExpressionDepth) ThrowNestingLimit(CreateRange(Current));
         _expressionNesting++;
         GesExpressionNode right;
         try { right = ParseImplicationExpression(); }
         finally { _expressionNesting--; }
-        return Binary(expression, GesBinaryOperator.Implies, right);
+        return FinishNode(Binary(expression, GesBinaryOperator.Implies, right));
     }
 
     // Left-associative binary levels, loosest first. A null level ends a chain at its tighter, non-table form:
@@ -880,13 +1015,15 @@ internal sealed partial class GesParser
     private GesExpressionNode ParseBinaryLevel(int level)
     {
         if (BinaryLevels[level] is not { } operators) return level < RelationalLevel ? ParseMembershipExpression() : ParseMultiplicativeExpression();
+        var start = _tree.Mark();
         var expression = ParseBinaryLevel(level + 1);
         while ((level != AndLevel || !IsForClauseStart()) && Match(operators))
         {
+            _tree.StartNodeAt(start, GesSyntaxNodeKind.BinaryExpression);
             var op = BinaryOperator(Previous.Kind);
             SkipNewLines();
             var right = ParseBinaryLevel(level + 1);
-            expression = Binary(expression, op, right);
+            expression = FinishNode(Binary(expression, op, right));
         }
 
         return expression;
@@ -919,9 +1056,11 @@ internal sealed partial class GesParser
 
     private GesExpressionNode ParseMembershipExpression()
     {
+        var start = _tree.Mark();
         var expression = ParseTypeOperationExpression();
         while (Match(Has, In, NotIn, Starts, Ends))
         {
+            _tree.StartNodeAt(start, GesSyntaxNodeKind.MembershipExpression);
             var operatorKind = Previous.Kind;
             SkipNewLines();
             switch (operatorKind)
@@ -948,6 +1087,7 @@ internal sealed partial class GesParser
                     expression = Binary(expression, operatorKind == Starts ? GesBinaryOperator.StartsWith : GesBinaryOperator.EndsWith, ParseTypeOperationExpression());
                     break;
             }
+            _tree.FinishNode();
         }
 
         return expression;
@@ -963,6 +1103,12 @@ internal sealed partial class GesParser
     }
 
     private GesDicePatternNode ParseDicePattern()
+    {
+        _tree.StartNode(GesSyntaxNodeKind.DicePattern);
+        return FinishNode(ParseDicePatternCore());
+    }
+
+    private GesDicePatternNode ParseDicePatternCore()
     {
         if (MatchWord("pair"))
         {
@@ -1022,20 +1168,25 @@ internal sealed partial class GesParser
 
     private GesExpressionNode ParseTypeOperationExpression()
     {
+        var start = _tree.Mark();
         var expression = ParseRelationalExpression();
         while (true)
         {
-            if (Match(GesTokenKind.Is))
+            if (Is(GesTokenKind.Is))
             {
+                _tree.StartNodeAt(start, GesSyntaxNodeKind.TypeOperationExpression);
+                Advance();
                 SkipNewLines();
                 var negated = Match(OperatorNot);
                 if (negated) SkipNewLines();
-                expression = ApplyIsNegation(ParseIsTest(expression), negated);
+                expression = FinishNode(ApplyIsNegation(ParseIsTest(expression), negated));
             }
-            else if (Match(As))
+            else if (Is(As))
             {
+                _tree.StartNodeAt(start, GesSyntaxNodeKind.TypeOperationExpression);
+                Advance();
                 SkipNewLines();
-                expression = WithRange(new GesTypeCastExpressionNode(expression, ParseTypeName()), expression);
+                expression = FinishNode(WithRange(new GesTypeCastExpressionNode(expression, ParseTypeName()), expression));
             }
             else return expression;
         }
@@ -1107,25 +1258,29 @@ internal sealed partial class GesParser
 
     private GesExpressionNode ParseMultiplicativeExpression()
     {
+        var start = _tree.Mark();
         var expression = ParseUnaryExpression();
 
         while (true)
         {
             if (Match(OperatorMultiply, OperatorDivide, OperatorIntegerDivide, OperatorModulo, OperatorRemainder))
             {
+                _tree.StartNodeAt(start, GesSyntaxNodeKind.BinaryExpression);
                 var op = BinaryOperator(Previous.Kind);
                 SkipNewLines();
                 var right = ParseUnaryExpression();
-                expression = Binary(expression, op, right);
+                expression = FinishNode(Binary(expression, op, right));
                 continue;
             }
 
+            // Implicit multiplication, such as `2pi`, has no operator token.
             if (IsImplicitMultiplicationLeftExpression(expression) &&
                 IsImplicitMultiplicationRightStart() &&
                 AreAdjacent(Previous, Current))
             {
+                _tree.StartNodeAt(start, GesSyntaxNodeKind.BinaryExpression);
                 var right = ParseUnaryExpression();
-                expression = Binary(expression, GesBinaryOperator.Multiply, right);
+                expression = FinishNode(Binary(expression, GesBinaryOperator.Multiply, right));
                 continue;
             }
 
@@ -1137,20 +1292,23 @@ internal sealed partial class GesParser
 
     private GesExpressionNode ParsePowerExpression()
     {
+        var start = _tree.Mark();
         var expression = ParsePowerBaseExpression();
 
         if (Match(OperatorPower))
         {
+            _tree.StartNodeAt(start, GesSyntaxNodeKind.BinaryExpression);
             SkipNewLines();
             var right = ParseUnaryExpression();
-            expression = Binary(expression, GesBinaryOperator.Power, right);
+            expression = FinishNode(Binary(expression, GesBinaryOperator.Power, right));
         }
         else if (Match(SuperscriptInteger))
         {
+            _tree.StartNodeAt(start, GesSyntaxNodeKind.BinaryExpression);
             var exponentToken = Previous;
             var exponent = long.Parse(exponentToken.Text, CultureInfo.InvariantCulture);
             var right = WithRange(new GesIntegerLiteralExpressionNode(exponent), exponentToken);
-            expression = Binary(expression, GesBinaryOperator.Power, right);
+            expression = FinishNode(Binary(expression, GesBinaryOperator.Power, right));
         }
 
         return expression;
@@ -1175,8 +1333,10 @@ internal sealed partial class GesParser
     private GesExpressionNode ParseUnaryExpressionCore()
     {
         SkipNewLines();
-        if (Match(OperatorMinus, KeywordParse, Empty, OperatorNot))
+        if (Current.Kind is OperatorMinus or KeywordParse or Empty or OperatorNot)
         {
+            _tree.StartNode(GesSyntaxNodeKind.UnaryExpression);
+            Advance();
             var opToken = Previous;
             var operation = opToken.Kind switch { OperatorMinus => GesUnaryOperator.Negate, KeywordParse => GesUnaryOperator.Parse, Empty => GesUnaryOperator.Empty, _ => GesUnaryOperator.Not };
             // `strict` directly after `parse` on the same line is always the mode word, never an operand.
@@ -1187,34 +1347,48 @@ internal sealed partial class GesParser
             }
             if (operation is not (GesUnaryOperator.Parse or GesUnaryOperator.ParseStrict)) SkipNewLines();
             var operand = ParseUnaryExpression();
-            return WithRange(new GesUnaryExpressionNode(operation, operand), opToken, Previous);
+            return FinishNode(WithRange(new GesUnaryExpressionNode(operation, operand), opToken, Previous));
         }
 
         if (ParseIntrinsicCallExpression() is { } intrinsicCall) return intrinsicCall;
+        var start = _tree.Mark();
         if (ParseKeywordUnaryOperator() is not { } keywordOperator) return ParsePowerExpression();
+        _tree.StartNodeAt(start, GesSyntaxNodeKind.UnaryExpression);
         var keywordOperand = ParseUnaryIntrinsicOperand();
-        if (CreateRootPowerExpression(keywordOperator.RootExponent, keywordOperand, keywordOperator.StartToken) is { } rootExpression) return rootExpression;
-        return WithRange(new GesUnaryExpressionNode(keywordOperator.Operator, keywordOperand), keywordOperator.StartToken, Previous);
+        if (CreateRootPowerExpression(keywordOperator.RootExponent, keywordOperand, keywordOperator.StartToken) is { } rootExpression) return FinishNode(rootExpression);
+        return FinishNode(WithRange(new GesUnaryExpressionNode(keywordOperator.Operator, keywordOperand), keywordOperator.StartToken, Previous));
     }
 
     private GesExpressionNode ParsePowerBaseExpression()
     {
-        if (Match(Series)) return ParseSeriesExpression(Previous);
+        if (Is(Series))
+        {
+            _tree.StartNode(GesSyntaxNodeKind.SeriesExpression);
+            Advance();
+            return FinishNode(ParseSeriesExpression(Previous));
+        }
 
         if (IsExtensionCallStart()) return ParseExtensionCallExpression();
 
-        if (Match(Clamp)) return ParseClampExpression();
+        if (Is(Clamp))
+        {
+            _tree.StartNode(GesSyntaxNodeKind.ClampExpression);
+            Advance();
+            return FinishNode(ParseClampExpression());
+        }
 
         if (Is(Min) && IsNextSignificantToken(Of))
         {
+            _tree.StartNode(GesSyntaxNodeKind.VariadicExpression);
             Advance();
-            return ParseVariadicTaggedExpression("min");
+            return FinishNode(ParseVariadicTaggedExpression("min"));
         }
 
         if (Is(Max) && IsNextSignificantToken(Of))
         {
+            _tree.StartNode(GesSyntaxNodeKind.VariadicExpression);
             Advance();
-            return ParseVariadicTaggedExpression("max");
+            return FinishNode(ParseVariadicTaggedExpression("max"));
         }
 
         return ParsePostfixExpression();
@@ -1281,6 +1455,7 @@ internal sealed partial class GesParser
 
     private GesExpressionNode? ParseIntrinsicCallExpression()
     {
+        var start = _tree.Mark();
         var startToken = Current;
         GesIntrinsicFunction? simple = Current.Kind switch
         {
@@ -1316,9 +1491,10 @@ internal sealed partial class GesParser
         }
         else return null;
 
+        _tree.StartNodeAt(start, GesSyntaxNodeKind.IntrinsicCallExpression);
         SkipNewLines();
         var arguments = ParseIntrinsicArgumentExpressions(function);
-        return WithRange(new GesIntrinsicCallExpressionNode(function, arguments), startToken, Previous);
+        return FinishNode(WithRange(new GesIntrinsicCallExpressionNode(function, arguments), startToken, Previous));
     }
 
     private IReadOnlyList<GesExpressionNode> ParseIntrinsicArgumentExpressions(GesIntrinsicFunction function)
@@ -1381,25 +1557,32 @@ internal sealed partial class GesParser
         return WithRange(new GesBinaryExpressionNode(operand, GesBinaryOperator.Power, exponentNode), startToken, Previous);
     }
 
-    private GesExpressionNode ParsePostfixExpression() => ParsePostfixSuffixes(ParsePrimaryExpression());
+    private GesExpressionNode ParsePostfixExpression()
+    {
+        var start = _tree.Mark();
+        return ParsePostfixSuffixes(ParsePrimaryExpression(), start);
+    }
 
-    private GesExpressionNode ParsePostfixSuffixes(GesExpressionNode expression)
+    private GesExpressionNode ParsePostfixSuffixes(GesExpressionNode expression, GesSyntaxTreeBuilder.Checkpoint start)
     {
         while (true)
         {
             if (Match(Dot))
             {
+                _tree.StartNodeAt(start, GesSyntaxNodeKind.MemberAccessExpression);
                 SkipNewLines();
                 var member = ExpectIdentifier();
-                expression = WithRange(new GesMemberAccessExpressionNode(expression, member), expression);
+                expression = FinishNode(WithRange(new GesMemberAccessExpressionNode(expression, member), expression));
                 continue;
             }
 
             if (Match(LeftBracket))
             {
+                _tree.StartNodeAt(start, GesSyntaxNodeKind.CollectionAccessExpression);
                 SkipNewLines();
                 expression = ParsePipelineSteps(expression);
                 Expect(RightBracket);
+                _tree.FinishNode();
                 continue;
             }
 
@@ -1445,6 +1628,7 @@ internal sealed partial class GesParser
     {
         do
         {
+            _tree.StartNode(GesSyntaxNodeKind.CollectionSelector);
             var start = Current;
             if (MatchSelector(":split"))
             {
@@ -1472,6 +1656,7 @@ internal sealed partial class GesParser
                 var selector = ParseCollectionSelector();
                 source = WithRange(new GesCollectionAccessExpressionNode(source, selector), source, selector);
             }
+            _tree.FinishNode();
             SkipNewLines();
         } while (IsPipelineSelectorStart());
         return source!;
@@ -1734,6 +1919,7 @@ internal sealed partial class GesParser
 
     private GesObjectMatchPatternNode ParseObjectMatchPatternCore()
     {
+        _tree.StartNode(GesSyntaxNodeKind.ObjectPattern);
         var startToken = Current;
         Expect(LeftBracket);
         SkipNewLines();
@@ -1750,11 +1936,12 @@ internal sealed partial class GesParser
 
         SkipNewLines();
         Expect(RightBracket);
-        return WithRange(new GesObjectMatchPatternNode(entries), startToken);
+        return FinishNode(WithRange(new GesObjectMatchPatternNode(entries), startToken));
     }
 
     private GesObjectMatchEntryNode ParseObjectMatchEntry()
     {
+        _tree.StartNode(GesSyntaxNodeKind.ObjectPatternEntry);
         var startToken = Current;
         var key = ExpectIdentifier();
         Expect(Colon);
@@ -1762,50 +1949,63 @@ internal sealed partial class GesParser
         GesObjectMatchValueNode value = Is(LeftBracket)
             ? new GesObjectMatchNestedValueNode(ParseObjectMatchPattern())
             : new GesObjectMatchExpressionValueNode(ParseExpression());
-        return WithRange(new GesObjectMatchEntryNode(key, value), startToken);
+        return FinishNode(WithRange(new GesObjectMatchEntryNode(key, value), startToken));
     }
 
     private GesExpressionNode ParsePrimaryExpression()
     {
-        if (Match(GesTokenKind.Is))
+        if (Is(GesTokenKind.Is))
         {
+            _tree.StartNode(GesSyntaxNodeKind.TypeOperationExpression);
+            Advance();
             var startToken = Previous;
             SkipNewLines();
             var negated = Match(OperatorNot);
             SkipNewLines();
             var name = Expect(Identifier).Text;
-            return ApplyIsNegation(WithRange(new GesPredicateCallExpressionNode(null, name), startToken), negated);
+            return FinishNode(ApplyIsNegation(WithRange(new GesPredicateCallExpressionNode(null, name), startToken), negated));
         }
-        if (Match(Emit)) return ParseSendExpression(GesPublishStatementKind.Emit, Previous);
-        if (Match(Publish)) return ParseSendExpression(GesPublishStatementKind.Publish, Previous);
+        // The send node of an expression includes its emit or publish keyword.
+        var sendStart = _tree.Mark();
+        if (Match(Emit)) return ParseSendExpression(GesPublishStatementKind.Emit, Previous, sendStart);
+        if (Match(Publish)) return ParseSendExpression(GesPublishStatementKind.Publish, Previous, sendStart);
         ThrowIfIllegalToken();
 
         if (IsTypeConstructorStart()) return ParseTypeConstructorExpression();
 
         if (Current.Kind == TypeName && string.Equals(Current.Text, ":Dice", StringComparison.Ordinal) && IsNextSignificantToken(LeftBracket)) return ParseDiceLiteralExpression();
 
-        if (MatchWord("from")) return ParseRangeExpressionCore();
-
-        if (Match(KeywordRandom))
+        if (IsWord("from"))
         {
-            SkipNewLines();
-            if (Match(With)) return ParseSeededRandomExpression();
+            _tree.StartNode(GesSyntaxNodeKind.RangeExpression);
+            Advance();
+            return FinishNode(ParseRangeExpressionCore());
+        }
 
-            return ParseRandomExpression();
+        if (Is(KeywordRandom))
+        {
+            var randomStart = _tree.Mark();
+            Advance();
+            SkipNewLines();
+            if (Match(With)) return WrapNode(randomStart, GesSyntaxNodeKind.SeededRandomExpression, ParseSeededRandomExpression());
+
+            return WrapNode(randomStart, GesSyntaxNodeKind.RandomExpression, ParseRandomExpression());
         }
 
         if (Is(Roll) && IsNextSignificantWord("dice"))
         {
+            _tree.StartNode(GesSyntaxNodeKind.DiceExpression);
             Advance();
             SkipNewLines();
             ExpectWord("dice");
-            return ParseDiceExpression();
+            return FinishNode(ParseDiceExpression());
         }
 
         if (Current.Kind == TypeName && string.Equals(Current.Text, ":List", StringComparison.Ordinal) && IsNextSignificantToken(LeftBracket))
         {
+            _tree.StartNode(GesSyntaxNodeKind.CollectionFactoryExpression);
             Advance();
-            return ParseCollectionFactoryExpression("list");
+            return FinishNode(ParseCollectionFactoryExpression("list"));
         }
 
         if (Current.Kind == Selector &&
@@ -1840,7 +2040,12 @@ internal sealed partial class GesParser
 
         if (Match(Text)) return WithRange(new GesTextLiteralExpressionNode(Previous.Text), Previous);
 
-        if (Match(LeftBracket)) return ParseBracketLiteralExpression();
+        if (Is(LeftBracket))
+        {
+            var bracketStart = _tree.Mark();
+            Advance();
+            return ParseBracketLiteralExpression(bracketStart);
+        }
 
         if (Match(True)) return WithRange(new GesBooleanLiteralExpressionNode(true), Previous);
 
@@ -1871,60 +2076,65 @@ internal sealed partial class GesParser
             return WithRange(new GesIdentifierExpressionNode(identifierToken.Text), identifierToken);
         }
 
-        if (Match(LeftParen))
+        if (Is(LeftParen))
         {
+            _tree.StartNode(GesSyntaxNodeKind.ParenthesizedExpression);
+            Advance();
             SkipNewLines();
             var expression = ParseExpression();
             SkipNewLines();
             Expect(RightParen);
-            return CheckNesting(expression with { SourceNesting = expression.SourceNesting + 1 });
+            return FinishNode(CheckNesting(expression with { SourceNesting = expression.SourceNesting + 1 }));
         }
 
         var token = Current;
         throw new GameEventScriptParseException($"Unexpected token '{token.Text}'", token.Line, token.Column);
     }
 
-    private GesExpressionNode ParseBracketLiteralExpression()
+    private GesExpressionNode ParseBracketLiteralExpression(GesSyntaxTreeBuilder.Checkpoint start)
     {
         var startToken = Previous;
         SkipNewLines();
         if (IsCombinedSelector())
         {
+            // A combined selector without a source, such as `[:cartesian a, b]`.
             var combined = ParsePipelineSteps(null);
             Expect(RightBracket);
-            return combined;
+            return WrapNode(start, GesSyntaxNodeKind.CollectionAccessExpression, combined);
         }
         if (Match(Colon))
         {
             SkipNewLines();
             Expect(RightBracket);
-            return WithRange(new GesMapLiteralExpressionNode(Array.Empty<GesMapEntryNode>()), startToken);
+            return WrapNode(start, GesSyntaxNodeKind.MapLiteralExpression, WithRange(new GesMapLiteralExpressionNode(Array.Empty<GesMapEntryNode>()), startToken));
         }
 
         if (Is(RightBracket))
         {
             Expect(RightBracket);
-            return WithRange(new GesListLiteralExpressionNode(Array.Empty<GesExpressionNode>()), startToken);
+            return WrapNode(start, GesSyntaxNodeKind.ListLiteralExpression, WithRange(new GesListLiteralExpressionNode(Array.Empty<GesExpressionNode>()), startToken));
         }
 
         return IsMapLiteralEntryStart()
-            ? ParseDictionaryLiteralExpression()
-            : ParseListLiteralExpression();
+            ? WrapNode(start, GesSyntaxNodeKind.MapLiteralExpression, ParseDictionaryLiteralExpression())
+            : WrapNode(start, GesSyntaxNodeKind.ListLiteralExpression, ParseListLiteralExpression());
     }
 
     private GesMessageLiteralExpressionNode ParseMessageLiteralExpressionCore()
     {
         SkipNewLines();
+        _tree.StartNode(GesSyntaxNodeKind.MessageExpression);
         var startToken = Current;
         var message = Expect(Message).Text;
         var arguments = GesArgumentListNode.Empty;
         if (Match(LeftParen)) arguments = ParseArgumentListAfterLeftParen();
 
-        return WithRange(new GesMessageLiteralExpressionNode(message, arguments), startToken);
+        return FinishNode(WithRange(new GesMessageLiteralExpressionNode(message, arguments), startToken));
     }
 
     private GesExpressionNode ParseCallOrHandlerBindExpression()
     {
+        var start = _tree.Mark();
         var startToken = Current;
         var isMessageCallee = Current.Kind == Message;
         var name = isMessageCallee ? Expect(Message).Text : ExpectIdentifier();
@@ -1934,8 +2144,8 @@ internal sealed partial class GesParser
         {
             Expect(RightParen);
             return isMessageCallee
-                ? WithRange(new GesHandlerLiteralExpressionNode(name, Array.Empty<GesParameterNode>()), startToken)
-                : WithRange(new GesCallExpressionNode(name, GesArgumentListNode.Empty), startToken);
+                ? WrapNode(start, GesSyntaxNodeKind.HandlerLiteralExpression, WithRange(new GesHandlerLiteralExpressionNode(name, Array.Empty<GesParameterNode>()), startToken))
+                : WrapNode(start, GesSyntaxNodeKind.CallExpression, WithRange(new GesCallExpressionNode(name, GesArgumentListNode.Empty), startToken));
         }
 
         if (IsArgumentLabelStart())
@@ -1943,8 +2153,8 @@ internal sealed partial class GesParser
             var labeledArguments = ParseArgumentListAfterFirstArgument(ParseArgument(), RightParen);
             Expect(RightParen);
             return isMessageCallee
-                ? WithRange(new GesMessageLiteralExpressionNode(name, labeledArguments), startToken)
-                : WithRange(new GesCallExpressionNode(name, labeledArguments), startToken);
+                ? WrapNode(start, GesSyntaxNodeKind.MessageExpression, WithRange(new GesMessageLiteralExpressionNode(name, labeledArguments), startToken))
+                : WrapNode(start, GesSyntaxNodeKind.CallExpression, WithRange(new GesCallExpressionNode(name, labeledArguments), startToken));
         }
 
         if (isMessageCallee)
@@ -1958,19 +2168,21 @@ internal sealed partial class GesParser
 
             SkipNewLines();
             Expect(RightParen);
-            return WithRange(new GesHandlerLiteralExpressionNode(name, parameters), startToken);
+            return WrapNode(start, GesSyntaxNodeKind.HandlerLiteralExpression, WithRange(new GesHandlerLiteralExpressionNode(name, parameters), startToken));
         }
 
-        var arguments = new List<GesArgumentNode> { new(null, ParseExpression()) };
+        var argument = _tree.Mark();
+        var arguments = new List<GesArgumentNode> { WrapNode(argument, GesSyntaxNodeKind.Argument, new GesArgumentNode(null, ParseExpression())) };
         while (Match(Comma))
         {
             SkipNewLines();
-            arguments.Add(new GesArgumentNode(null, ParseExpression()));
+            argument = _tree.Mark();
+            arguments.Add(WrapNode(argument, GesSyntaxNodeKind.Argument, new GesArgumentNode(null, ParseExpression())));
         }
 
         SkipNewLines();
         Expect(RightParen);
-        return WithRange(new GesCallExpressionNode(name, new GesArgumentListNode(arguments)), startToken);
+        return WrapNode(start, GesSyntaxNodeKind.CallExpression, WithRange(new GesCallExpressionNode(name, new GesArgumentListNode(arguments)), startToken));
     }
 
     private GesListLiteralExpressionNode ParseListLiteralExpression()
@@ -1995,6 +2207,7 @@ internal sealed partial class GesParser
 
     private GesTypeConstructorExpressionNode ParseDiceLiteralExpression()
     {
+        _tree.StartNode(GesSyntaxNodeKind.DiceLiteralExpression);
         var startToken = Advance();
         SkipNewLines();
         var bracketToken = Expect(LeftBracket);
@@ -2016,7 +2229,7 @@ internal sealed partial class GesParser
         Expect(RightBracket);
         var values = WithRange(new GesListLiteralExpressionNode(items), bracketToken);
         // Reuse deterministic list-to-Dice conversion; CreateDice is a random roll.
-        return WithRange(new GesTypeConstructorExpressionNode("dice", new GesArgumentListNode([new GesArgumentNode(null, values)])), startToken);
+        return FinishNode(WithRange(new GesTypeConstructorExpressionNode("dice", new GesArgumentListNode([new GesArgumentNode(null, values)])), startToken));
     }
 
     private GesExpressionNode ParseCollectionFactoryExpression(string collectionType)
@@ -2044,10 +2257,12 @@ internal sealed partial class GesParser
         var identifier = ExpectIdentifier();
         SkipNewLines();
         GesIterationSourceNode source;
-        if (MatchWord("from"))
+        if (IsWord("from"))
         {
+            _tree.StartNode(GesSyntaxNodeKind.RangeExpression);
+            Advance();
             var fromToken = Previous;
-            source = WithRange(new GesRangeIterationSourceNode(ParseRangeExpressionCore()), fromToken);
+            source = FinishNode(WithRange(new GesRangeIterationSourceNode(ParseRangeExpressionCore()), fromToken));
         }
         else if (Match(In))
         {
@@ -2103,6 +2318,7 @@ internal sealed partial class GesParser
 
     private GesMapEntryNode ParseDictionaryEntry()
     {
+        _tree.StartNode(GesSyntaxNodeKind.MapEntry);
         var startToken = Current;
         var key = ExpectIdentifier();
         Expect(Colon);
@@ -2110,7 +2326,7 @@ internal sealed partial class GesParser
         var value = Is(Comma) || Is(RightBracket)
             ? WithRange(new GesBooleanLiteralExpressionNode(true), startToken)
             : ParseExpression();
-        return WithRange(new GesMapEntryNode(key, value), startToken);
+        return FinishNode(WithRange(new GesMapEntryNode(key, value), startToken));
     }
 
     private bool IsMapLiteralEntryStart()
@@ -2290,6 +2506,7 @@ internal sealed partial class GesParser
 
     private GesExpressionNode ParseExtensionCallExpression()
     {
+        var start = _tree.Mark();
         var startToken = Current;
         var (extensionName, functionName, _) = ParseExtensionSymbol();
         if (extensionName is "integer" or "degree") throw new GameEventScriptParseException($"Standard extension namespace ':{extensionName}' is not supported; use direct math intrinsics.", startToken);
@@ -2304,11 +2521,17 @@ internal sealed partial class GesParser
         else if (IsExtensionUnaryArgumentStart() && !(_choiceConditionDepth == _delimiterDepth && Current.Kind == Identifier && Current.Text == "then")) arguments = new GesArgumentListNode([new GesArgumentNode(null, ParseUnaryExpression())]);
         else arguments = GesArgumentListNode.Empty;
 
-        var expression = WithRange(new GesExtensionCallExpressionNode(extensionName, functionName, arguments), startToken);
-        return parenthesized ? ParsePostfixSuffixes(expression) : expression;
+        var expression = WrapNode(start, GesSyntaxNodeKind.ExtensionCallExpression, WithRange(new GesExtensionCallExpressionNode(extensionName, functionName, arguments), startToken));
+        return parenthesized ? ParsePostfixSuffixes(expression, start) : expression;
     }
 
     private GesTypeConstructorExpressionNode ParseTypeConstructorExpression()
+    {
+        _tree.StartNode(GesSyntaxNodeKind.TypeConstructorExpression);
+        return FinishNode(ParseTypeConstructorExpressionCore());
+    }
+
+    private GesTypeConstructorExpressionNode ParseTypeConstructorExpressionCore()
     {
         var startToken = Current;
         var typeName = ParseTypeName();
@@ -2601,7 +2824,12 @@ internal sealed partial class GesParser
     private string ParseTypeName()
     {
         ThrowIfIllegalToken();
+        _tree.StartNode(GesSyntaxNodeKind.TypeReference);
+        return FinishNode(ParseTypeNameCore());
+    }
 
+    private string ParseTypeNameCore()
+    {
         if (!Is(TypeName))
         {
             var token = Current;
@@ -2760,6 +2988,8 @@ internal sealed partial class GesParser
     private GesToken Advance()
     {
         var token = _reader.Advance();
+        // EndOfFile is never consumed; the tree receives it once, when it is completed.
+        if (token.Kind != EndOfFile) _tree.Token(token);
         if (token.Kind is LeftParen or LeftBracket or LeftBrace) _delimiterDepth++;
         else if (token.Kind is RightParen or RightBracket or RightBrace) _delimiterDepth--;
         return token;

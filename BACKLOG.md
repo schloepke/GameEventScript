@@ -197,6 +197,12 @@ here.
     lossless lexer live in Syntax, Runtime builds on it, and
     `scripts/test-syntax-roundtrip.py` checks both ports' token streams. The
     allocation-free runtime literal parser keeps its own implementation.
+  - Done: both parsers also build the lossless syntax tree (Syntax module
+    model and builder); `test-syntax-roundtrip.py --trees` checks token
+    coverage, nesting and equal tree shapes for valid sources in both ports.
+    Next: a Compiler binder from the tree to the semantic tree, compared on the
+    corpus, then the parser moves into Syntax; trees of sources with syntax
+    errors become equal with the shared recovery.
   - Diagnostics and source locations move into Syntax together with the parser.
   - Parser: builds the immutable lossless tree with recovery, missing and
     skipped tokens and error nodes carrying one diagnostic each; a binder in

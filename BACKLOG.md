@@ -200,8 +200,11 @@ here.
   - Done: both parsers also build the lossless syntax tree (Syntax module
     model and builder); `test-syntax-roundtrip.py --trees` checks token
     coverage, nesting and equal tree shapes for valid sources in both ports.
-    Next: a Compiler binder from the tree to the semantic tree, compared on the
-    corpus, then the parser moves into Syntax; trees of sources with syntax
+  - Done: a Compiler binder in both ports rebuilds the semantic tree from the
+    syntax tree; `test-syntax-roundtrip.py --binding` requires it to equal the
+    parser's semantic tree, including ranges and depths, for every valid corpus
+    source. Next: the Compiler compiles through the binder, the parser keeps
+    only the syntax tree and moves into Syntax; trees of sources with syntax
     errors become equal with the shared recovery.
   - Diagnostics and source locations move into Syntax together with the parser.
   - Parser: builds the immutable lossless tree with recovery, missing and

@@ -70,7 +70,7 @@ jobs:
           dotnet build implementation/csharp/GameEventScript.Conformance/adapter/GameEventScript.ConformanceAdapter.csproj --configuration Release
           dotnet format whitespace implementation/csharp/GameEventScript.Conformance/adapter/GameEventScript.ConformanceAdapter.csproj --no-restore --verify-no-changes
           GES_CSHARP_ADAPTER="$PWD/artifacts/csharp/conformance-adapter/bin/Release/net10.0/GameEventScript.ConformanceAdapter.dll" python3 -m unittest discover -s implementation/csharp/GameEventScript.Conformance/adapter/tests -p 'test_*.py'
-          python3 scripts/test-syntax-roundtrip.py --port csharp --skip-build --trees csharp
+          python3 scripts/test-syntax-roundtrip.py --port csharp --skip-build --trees csharp --binding csharp
 
       - name: Run shared corpus and managed allocation gate
         run: sh scripts/test-csharp-conformance.sh

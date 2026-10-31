@@ -192,7 +192,10 @@ belongs to the CLI or embedding; the portable compiler accepts source text.
   exactly. Numeric token values stay in the Compiler. `python3
   scripts/test-syntax-roundtrip.py` checks coverage on every corpus source and
   equal token streams of both ports; `test-swift.sh` runs it, C# CI with
-  `--port csharp`.
+  `--port csharp`. Both parsers also build the lossless syntax tree, and a
+  Compiler binder (C# `GesSyntaxBinder`, Swift `GesSyntaxBinder`) rebuilds the
+  semantic tree from it by reading each node's tokens in the parser's order;
+  `--trees` and `--binding` check the trees and the binder against the parser.
 - Module identifiers are dot-separated lowercase components with optional
   digits.
 - `constant $name be LITERAL` declares a program-wide compile-time scalar.

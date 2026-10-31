@@ -68,12 +68,12 @@ extension GesParser {
         }
         try expect(.rightBrace)
         let normalizedLines = lines.map { line in
-            GesAssemblyLine(name: line.name, label: line.label, operands: line.operands.map(normalizeAssemblyOperand), location: line.location)
+            GesAssemblyLine(name: line.name, label: line.label, operands: line.operands.map(Self.normalizeAssemblyOperand), location: line.location)
         }
         return .init(output: output, declarations: declarations, lines: normalizedLines, predicate: predicate, allowSend: allowSend, location: location(start, previous))
     }
 
-    func normalizeAssemblyOperand(_ expression: GesExpression) -> GesExpression {
+    static func normalizeAssemblyOperand(_ expression: GesExpression) -> GesExpression {
         func arguments(_ args: [GesArgument]) -> [GesArgument] {
             args.map { .init(label: $0.label, value: normalizeAssemblyOperand($0.value)) }
         }

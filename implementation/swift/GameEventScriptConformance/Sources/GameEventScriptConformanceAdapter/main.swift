@@ -29,7 +29,8 @@ do {
         let benchmarkRounds = arguments.count == 2 && arguments[0] == "--benchmark-compile" ? Int(arguments[1]).flatMap { (1...1000).contains($0) ? $0 : nil } ?? 0 : 0
         let syntaxTokens = arguments == ["--syntax-tokens"]
         let syntaxTrees = arguments == ["--syntax-trees"]
-        guard CommandLine.arguments.count == 1 || measuring || foreign || benchmarkRounds > 0 || syntaxTokens || syntaxTrees else { throw ConformanceExecutionError.invalidInput("Unknown arguments") }
+        let syntaxBinding = arguments == ["--syntax-binding"]
+        guard CommandLine.arguments.count == 1 || measuring || foreign || benchmarkRounds > 0 || syntaxTokens || syntaxTrees || syntaxBinding else { throw ConformanceExecutionError.invalidInput("Unknown arguments") }
         var data = Data()
         while let chunk = try FileHandle.standardInput.read(upToCount: 8192), !chunk.isEmpty {
             data.append(chunk)
@@ -43,6 +44,10 @@ do {
         if syntaxTokens || syntaxTrees {
             let sources = syntaxTrees ? try SyntaxTokens.runTrees(input) : try SyntaxTokens.run(input)
             FileHandle.standardOutput.write(try JSONSerialization.data(withJSONObject: ["formatVersion": 1, "implementation": identity, "sources": sources], options: [.sortedKeys]))
+            exit(0)
+        }
+        if syntaxBinding {
+            FileHandle.standardOutput.write(try JSONSerialization.data(withJSONObject: ["formatVersion": 1, "implementation": identity, "sources": try SyntaxBinding.run(input)], options: [.sortedKeys]))
             exit(0)
         }
         if benchmarkRounds > 0 {

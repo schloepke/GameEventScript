@@ -90,4 +90,13 @@ extension GesProgramBuilder {
     @_spi(Syntax) public static func syntaxTree(_ text: String) -> GesSyntaxTree {
         GesParser(source: .init(text: text, name: "UnknownSource", id: 0)).parseWithTree().tree
     }
+
+    /// The parser's semantic module of one source and the module bound from its syntax tree, for comparing the two;
+    /// nil when the source has syntax errors. The binding fails when the tree does not have the expected form.
+    @_spi(Syntax) public static func syntaxBinding(_ text: String, sourceID: UInt32) -> (parsed: Any, bound: Result<Any, any Error>)? {
+        let parser = GesParser(source: .init(text: text, name: "source.ges", id: sourceID))
+        let (module, tree) = parser.parseWithTree()
+        guard case .success(let parsed) = module else { return nil }
+        return (parsed, Result { try GesSyntaxBinder.bind(tree, parser.source) as Any })
+    }
 }

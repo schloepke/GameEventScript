@@ -8,6 +8,10 @@ Each port's adapter lexes every source with `--syntax-tokens` and reports kind, 
 in Unicode scalars. The tokens of a source must cover it without gaps, leading trivia may only hold inline whitespace,
 `//` comments and a leading BOM, and both ports must report identical token streams. Negative controls qualify the
 checks before the real observations are judged.
+
+With `--trees`, a port's syntax trees must hold every token exactly once and nest correctly; valid sources must have no
+error nodes and the same tree shape in both ports. With `--binding`, a port binds the syntax tree of every valid source
+with `--syntax-binding` and reports whether the result equals the parser's semantic tree, including source ranges.
 """
 
 import argparse
@@ -188,6 +192,20 @@ def tree_problems(sources, lexed, parsed, valid):
     return problems
 
 
+def binding(port, request):
+    completed = subprocess.run([*ADAPTERS[port], "--syntax-binding"], input=json.dumps(request), capture_output=True, text=True, check=False)
+    if completed.returncode != 0:
+        raise SystemExit(f"{port} adapter failed: {completed.stderr.strip()}")
+    return json.loads(completed.stdout)["sources"]
+
+
+def binding_problems(port, bound, valid):
+    # Every source the parser accepts must bind to the parser's semantic tree; sources with syntax errors have none.
+    problems = [f"{key} ({port}): {result}" for key, result in sorted(bound.items()) if result not in ("equal", "invalid")]
+    problems += [f"{key} ({port}): a valid source did not parse" for key in sorted(valid) if bound.get(key) == "invalid"]
+    return problems
+
+
 def controls(sources, observed):
     # Each mutation must be detected, so a passing comparison is meaningful.
     key = next(key for key, source in sources.items() if len(observed[next(iter(observed))].get(key, [])) > 2)
@@ -214,6 +232,7 @@ def main():
     parser.add_argument("--port", choices=sorted(ADAPTERS), action="append", help="Port to check; repeat for several (default: both)")
     parser.add_argument("--skip-build", action="store_true", help="Use the existing Release adapters")
     parser.add_argument("--trees", choices=sorted(ADAPTERS), action="append", default=[], help="Also check this port's syntax trees; repeat for several")
+    parser.add_argument("--binding", choices=sorted(ADAPTERS), action="append", default=[], help="Also bind this port's syntax trees to semantic trees; repeat for several")
     args = parser.parse_args()
     ports = args.port or sorted(ADAPTERS)
 
@@ -239,12 +258,16 @@ def main():
              for index, _ in enumerate(case["sources"])}
     parsed = {port: trees(port, request) for port in args.trees}
     problems += tree_problems(sources, observed, parsed, valid)
+    bound = {port: binding(port, request) for port in args.binding}
+    for port, results in bound.items():
+        problems += binding_problems(port, results, valid)
     for problem in problems[:40]:
         print(problem)
     if problems:
         raise SystemExit(f"{len(problems)} lossless lexing problems in {len(sources)} sources.")
     print(f"{len(sources)} sources lexed losslessly" + (" and identically by " + " and ".join(ports) if len(ports) > 1 else f" by {ports[0]}") + "."
-          + (f" Syntax trees of {' and '.join(args.trees)} hold every token." if args.trees else ""))
+          + (f" Syntax trees of {' and '.join(args.trees)} hold every token." if args.trees else "")
+          + "".join(f" {port} binds {sum(result == 'equal' for result in results.values())} syntax trees to the parser's semantic trees." for port, results in bound.items()))
 
 
 if __name__ == "__main__":

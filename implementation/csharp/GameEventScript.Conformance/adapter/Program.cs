@@ -22,7 +22,8 @@ try
         return 0;
     }
     var allocation = args.SequenceEqual(new[] { "--measure" });
-    if (args.Length != 0 && !allocation) throw new ArgumentException("Use no arguments for a JSON batch on stdin, or --describe.");
+    var benchmarkRounds = args.Length == 2 && args[0] == "--benchmark-compile" && int.TryParse(args[1], out var rounds) && rounds is > 0 and <= 1000 ? rounds : 0;
+    if (args.Length != 0 && !allocation && benchmarkRounds == 0) throw new ArgumentException("Use no arguments for a JSON batch on stdin, --measure, --benchmark-compile <rounds>, or --describe.");
     using var input = Console.OpenStandardInput();
     using var buffer = new MemoryStream();
     var chunk = new byte[8192];
@@ -47,6 +48,11 @@ try
     {
         ValidateCase(test, capabilities, allocation);
         if (!observations.TryAdd(Text(test, "id"), null!)) throw new ArgumentException("Duplicate case ID.");
+    }
+    if (benchmarkRounds > 0)
+    {
+        Console.WriteLine(JsonSerializer.Serialize(new { formatVersion = 1, implementation, benchmark = CompileBenchmark.Run(cases, benchmarkRounds) }));
+        return 0;
     }
     foreach (var test in cases.EnumerateArray())
     {

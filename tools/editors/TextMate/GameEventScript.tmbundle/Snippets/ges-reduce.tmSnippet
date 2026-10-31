@@ -9,7 +9,7 @@
 	<key>uuid</key>
 	<string>740126E3-84AA-5F09-BA76-8D485E2052E7</string>
 	<key>scope</key>
-	<string>source.gameeventscript - source.gameeventscript.assembler - comment - string</string>
+	<string>source.gameeventscript - source.gameeventscript.assembler - source.gameeventscript.document - comment - string</string>
 	<key>tabTrigger</key>
 	<string>ges-reduce</string>
 	<key>content</key>

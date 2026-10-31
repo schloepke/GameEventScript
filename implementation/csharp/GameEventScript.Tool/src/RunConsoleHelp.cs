@@ -51,6 +51,7 @@ Inspect the current session
   :dump <module>        Show the loaded program as GESA, using its exact module name.
   :dump 1              Select a program by its session ID from :list.
   :source <module|ID>  Show current draft or embedded source; defaults to scratch 0.
+  :show <file>         Show a .ges, .gesa or .gesd file and mark its errors, without loading it.
 
 Numeric IDs select programs; the legacy @1 spelling is also accepted.
 Each successful persistent load receives a stable ID. Jointly compiled sources
@@ -65,13 +66,19 @@ Use --color for GES source colors and GESA dump colors, including embedded GES.
 NO_COLOR disables both. No source text is reconstructed from bytecode.
 Terminal displays use four-column tab stops; redirected output retains tabs.
 
+:show reads the file again on each call and selects GES, GESA or GES document
+highlighting by its extension. Each error is listed below the text with its line,
+column and code, followed by the line and a caret marker. A GES document reports its
+first reading or construction error; GES source reports its syntax errors or
+single-source rule violations. Errors in the file do not fail the session.
+
 :handler includes ConsoleOut, ConsoleErr, and ErrorCode. (...) [name-only] matches
 any argument signature; [signature] matches the shown ordered argument labels.
 Matching and excluded tags are shown. Completed initialization handlers, functions,
 predicates, outbound message bindings, and temporary console inputs are not listed.
 
 These commands write to stderr, even with --quiet, with a blank line before and
-after their output. They do not execute handlers or re-read source/binary files.
+after their output. They do not execute handlers; only :show reads a file.
 An invalid command or missing/ambiguous module is recoverable but makes the final
 session exit code 1, like other rejected console commands.
 """;
@@ -139,6 +146,7 @@ Commands:
   :handler              List registered script and native handlers.
   :dump <module|ID>    Show a loaded program as GESA, e.g. :dump game or :dump 1.
   :source <module|ID>  Show current draft or embedded sources; --color highlights source and dumps.
+  :show <file>         Show a .ges, .gesa or .gesd file and mark its errors, without loading it.
   :edit [ID]            Edit scratch 0 or a loaded source program. See :help edit.
   :save [ID]            Save modified drafts; :save 0 "file.ges" saves scratch.
   :quit                 End the session unless there are unsaved changes.
@@ -193,7 +201,7 @@ Editing:
             "load" or ":load" => Load,
             "edit" or ":edit" or "save" or ":save" or "quit" or ":quit" => Edit,
             "unload" or ":unload" or "unloadAll" or ":unloadAll" or "reload" or ":reload" => Lifecycle,
-            "list" or ":list" or "handler" or ":handler" or "dump" or ":dump" or "source" or ":source" => Inspection,
+            "list" or ":list" or "handler" or ":handler" or "dump" or ":dump" or "source" or ":source" or "show" or ":show" => Inspection,
             _ => null
         };
         if (help is null)

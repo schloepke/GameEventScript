@@ -252,9 +252,13 @@ belongs to the CLI or embedding; the portable compiler accepts source text.
   API `GesValue.ParseLiteral`/`ParseLiteralStrict` (Swift `init(literal:)`/
   `init?(strictLiteral:)`) never resolves Program Record constructors and throws
   `GesLiteralLimit...` on limits instead of exhausting a handler.
-- GES documents (`.gesd`, specs/Documents.md) reuse that parser in a document
-  mode (comments, line-break separators, duplicate-key errors, `document.*` error
-  codes with line/column). `GesDocument` holds a Map or Record root and an
+- GES documents (`.gesd`, specs/Documents.md) use the literal syntax of `parse`
+  with comments, line-break separators, duplicate-key errors and `document.*` error
+  codes with line/column. The Syntax module's `GesDocumentReader` reads them into
+  a node tree and reports reading errors; Runtime builds the values and keeps
+  construction errors and the Range total (specs/Syntax.md#documents). The number
+  grammar (`GesNumberLiteral`) and form parameters (`GesLiteralForms`) live in
+  Syntax and serve `parse` too, whose parser has no document mode. `GesDocument` holds a Map or Record root and an
   optional schema reference; schemas are references only. Reading is normative
   per port; printed layout is not, only the print/read roundtrip.
   `python3 scripts/test-document-roundtrip.py` exchanges printed documents
@@ -553,7 +557,8 @@ Compiler import no Foundation: `python3 scripts/verify-swift-portable-imports.py
 allows only these modules and the platform C library (controls:
 `python3 scripts/test-swift-portable-imports.py`); Swift CI runs both. Both CLIs delegate highlighting to the Syntax module, which classifies GES
 from the syntax tree (token kinds, parser roles, owning nodes) and GESA with a small
-line lexer; it parses editor fragments with top-level statements, while its
+line lexer, and GES documents token by token with the document reader's first
+error; it parses editor fragments with top-level statements, while its
 diagnostics are those of a source. UTF-16 spans with categories and diagnostics are
 specified in specs/SyntaxHighlighting.md and share Markdown cases under
 conformance/highlighting; `test-syntax-roundtrip.py --trees` also requires equal
@@ -609,7 +614,9 @@ The C# `dotnet ges` and Swift `ges` tools provide `compile`, `check`, `run`, and
 `dump`. The C# NuGet package remains `GameEventScript.Tool`; the installed command is
 `dotnet-ges`, resolved by `dotnet ges` when the tool directory is on `PATH`.
 `check` uses the complete compiler pipeline without writing a binary or executing
-handlers.
+handlers. `document check` reads `.gesd` files and reports the first error of each
+as `path(line,column): error document.code: message`; `document format` prints the
+recommended layout (`--color`, `-o`).
 `run` accepts jointly compiled sources or multiple `.gesb` files loaded in input
 order. All Programs are loaded into one host before execution. By default it
 drains initialization and then sends one `Main(args)` message, with a List of Text
@@ -648,6 +655,8 @@ lists registered script and native handlers, excluding completed initialization
 and detached temporary inputs. `:dump <module|ID>` uses the loaded Program's GESA
 dump; `:source <module|ID>` shows only embedded source documents, with a successful
 notice if no source archive is present. Both support syntax colors via `--color`.
+`:show <file>` highlights a `.ges`, `.gesa` or `.gesd` file by extension and lists
+its errors with a caret line, without loading it or failing the session.
 The editor and terminal source/dump displays use four-column tab stops. Tab
 expansion is presentation-only; redirected output and saved GESA retain tabs.
 Duplicate/anonymous modules can be selected by ID. These inspection commands
@@ -731,7 +740,7 @@ the current task, and remove the entry in the completing change.
 
 ## Editor package generation
 
-`python3 scripts/sync-editor-bundles.py` derives Sublime GES/GESA grammars from
+`python3 scripts/sync-editor-bundles.py` derives Sublime GES/GESA/GESD grammars from
 canonical TextMate JSON and generates TextMate commands and both editors’ snippets.
 `tools/editors/support` owns completion data and adapter sources. Use `--check`
 and `python3 scripts/test-editor-bundles.py` to verify generated assets and adapters;

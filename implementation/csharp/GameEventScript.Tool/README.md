@@ -438,6 +438,7 @@ Interactive commands are:
 | `:dump <module>` | Show the GESA dump of the loaded Program with that exact module name |
 | `:dump @<ID>` | Select a Program by session ID, including anonymous or duplicate modules |
 | `:source <module\|ID>` | Show only embedded source documents, each with a filename heading |
+| `:show <file>` | Show a `.ges`, `.gesa` or `.gesd` file highlighted and mark its errors, without loading it |
 | `:quit` | End the session; EOF also exits |
 
 Help, prompts, and load/unload/reload reports go to stderr. Prompts and the introductory message
@@ -649,6 +650,32 @@ Malformed or unsupported binaries return exit code `1` and report a stable
 `decode.*` code on stderr, with byte offset, section type, and entry index when
 provided by the Reader. File errors use `cli.io`, and invalid arguments use
 `cli.usage` with exit code `2`. Failed decoding produces no dump text.
+
+## Check and format GES documents
+
+```sh
+dotnet ges document check data/drive.gesd data/weapons.gesd
+dotnet ges document format data/drive.gesd
+dotnet ges document format data/drive.gesd --color
+dotnet ges document format data/drive.gesd -o data/drive.gesd.new
+dotnet ges document --help
+```
+
+`document check` reads each [GES document](../../../specs/Documents.md) with the
+strict document rules and reports the first error of each invalid file as
+`path(line,column): error document.code: message` on stderr, continuing with the
+next file. It prints a short success report on stdout unless `-q` is given and
+returns `1` if any document is invalid. `document format` prints one document in
+the recommended layout; comments and layout are not kept, and the output reads
+back to an equal document. `--color` highlights terminal output unless `NO_COLOR`
+is set. `-o` writes a UTF-8 file instead, replacing an existing one only after
+successful reading; input and output must differ. Schema references are kept,
+but schema files are not read. Invalid arguments use `cli.usage` with exit code `2`.
+
+In the event console, `:show <file>` displays a `.ges`, `.gesa` or `.gesd` file
+on stderr, highlighted with `--color`, and lists each error below the text with
+its line, column and code, followed by the line and a caret marker. It neither
+loads the file nor fails the session.
 
 ## Run from the repository
 

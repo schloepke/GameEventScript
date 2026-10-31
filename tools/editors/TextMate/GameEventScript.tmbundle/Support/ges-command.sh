@@ -16,6 +16,7 @@ run_ges() {
     cd -- "$(dirname -- "$TM_FILEPATH")" || return
     case "$1" in
         check|compile|run) ges "$1" "$TM_FILEPATH" ;;
+        document-check|document-format) ges document "${1#document-}" "$TM_FILEPATH" ;;
         dump)
             local binary="$TM_FILEPATH"
             [[ "$binary" == *.gesb ]] || binary="${binary%.*}.gesb"

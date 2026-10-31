@@ -3,6 +3,6 @@
 <snippet>
 <content>${1:items}[:reduce ${2:acc}, ${3:item} =&gt; ${4:acc + item}]$0</content>
 <tabTrigger>ges-reduce</tabTrigger>
-<scope>source.gameeventscript - source.gameeventscript.assembler - comment - string</scope>
+<scope>source.gameeventscript - source.gameeventscript.assembler - source.gameeventscript.document - comment - string</scope>
 <description>Reduce collection</description>
 </snippet>

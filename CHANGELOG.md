@@ -173,6 +173,12 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 
 ### Added
 
+- GES document highlighting: `GesSyntaxLanguage.Gesd` (Swift `.gesd`) categorizes
+  `.gesd` text and reports its first document error as a diagnostic with a UTF-16
+  range, in both Syntax packages. The CLIs add `document check` and `document
+  format` for `.gesd` files and the console command `:show <file>`, which
+  highlights a `.ges`, `.gesa` or `.gesd` file and marks its errors. TextMate,
+  Sublime Text, bat and VS Code grammars cover `.gesd` files.
 - `parse strict input` recognizes the same literals as `parse`, but produces
   `nothing` instead of the original Text when the input is not a complete data
   literal: `parse strict "standard"` and `parse strict "[1, 2"` are `nothing`,

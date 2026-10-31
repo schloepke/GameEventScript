@@ -1,7 +1,7 @@
 {
   "name": "gameeventscript",
   "displayName": "Game Event Script",
-  "description": "GES and GESA syntax highlighting, snippets, and CLI commands.",
+  "description": "GES, GESA and GES document syntax highlighting, snippets, and CLI commands.",
   "version": "0.4.2",
   "publisher": "schloepke",
   "license": "Apache-2.0",
@@ -15,6 +15,7 @@
   "keywords": [
     "GES",
     "GESA",
+    "GESD",
     "GameEventScript"
   ],
   "repository": {
@@ -45,6 +46,17 @@
           ".gesa"
         ],
         "configuration": "./gesa-language-configuration.json"
+      },
+      {
+        "id": "gesd",
+        "aliases": [
+          "Game Event Script Document",
+          "GESD"
+        ],
+        "extensions": [
+          ".gesd"
+        ],
+        "configuration": "./gesd-language-configuration.json"
       }
     ],
     "grammars": [
@@ -61,6 +73,11 @@
           "meta.embedded.block.gameeventscript.assembler": "ges",
           "meta.embedded.line.gameeventscript.assembler": "ges"
         }
+      },
+      {
+        "language": "gesd",
+        "scopeName": "source.gameeventscript.document",
+        "path": "./syntaxes/GameEventScriptDocument.tmLanguage.json"
       },
       {
         "scopeName": "markdown.ges.codeblock",
@@ -109,7 +126,7 @@
       },
       {
         "command": "ges.runWithArguments",
-        "title": "GES: Run with Arguments\u2026",
+        "title": "GES: Run with Arguments…",
         "enablement": "isWorkspaceTrusted && editorLangId == ges && resourceScheme == file",
         "icon": "$(run-all)"
       },

@@ -98,7 +98,7 @@ final class ToolTests: XCTestCase {
     func testHelpVersionAndUsage() {
         XCTAssertEqual(run([]).code, 0)
         XCTAssertTrue(run(["--version"]).output.contains("(Swift)"))
-        for command in ["compile", "check", "run", "dump"] {
+        for command in ["compile", "check", "run", "dump", "document"] {
             let help = run([command, "--help"])
             XCTAssertEqual(help.code, 0)
             XCTAssertTrue(help.output.contains("ges " + command))

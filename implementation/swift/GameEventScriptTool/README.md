@@ -76,6 +76,8 @@ ges compile game.ges
 ges compile handlers.ges definitions.ges -o build/game.gesb --verbose
 ges check "scripts/*.ges"
 ges dump build/game.gesb --addresses
+ges document check data/drive.gesd
+ges document format data/drive.gesd --color
 ges run game.ges --args 12 Hello 34
 ges run first.gesb second.gesb -- 12 Hello --color
 ges run game.ges --scenario scenario.ges --seed 42
@@ -105,10 +107,16 @@ stopping execution. Runtime/CLI failures override it with 1; invalid command-lin
 usage returns 2. Diagnostics, event traces and run summaries go to stderr.
 Compilation/check reports and ordinary dumps go to stdout.
 
+`document check` reads GES documents and reports the first error of each as
+`path(line,column): error document.code: message`; `document format` prints a
+document in the recommended layout or writes it with `-o`. Both behave like the
+C# commands documented in the C# CLI README.
+
 ## Event console
 
 Use `:help`, `:help load`, `:help reload` and `:help dump` for details. The console supports
-`:load <file>`, `:list`, `:handler`, `:dump <module|ID>`, `:source <module|ID>`
+`:load <file>`, `:list`, `:handler`, `:dump <module|ID>`, `:source <module|ID>`,
+`:show <file>` (highlight a `.ges`, `.gesa` or `.gesd` file and mark its errors without loading it)
 as well as `:unload <module|ID>`, `:unloadAll`, `:reload` and `:quit`. Successful loads retain their handlers and receive stable session
 IDs. Each ordinary input executes in a temporary initialization handler and is
 then detached; local variables/functions do not persist. Use `:load` for

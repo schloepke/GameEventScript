@@ -7,10 +7,13 @@ import GameEventScriptSyntax
 final class RunHighlighting {
     private let source = try! GesSyntaxHighlighter()
     private let assembly = try! GesSyntaxHighlighter(language: .gesa)
+    private let document = try! GesSyntaxHighlighter(language: .gesd)
 
     static func paint(_ text: String, _ color: Int) -> String { "\u{1b}[\(color)m" + text + "\u{1b}[0m" }
 
     func render(_ text: String) -> String { (try? GesAnsiRenderer.render(text, spans: source.highlight(text).spans)) ?? text }
 
     func renderAssembly(_ text: String) -> String { (try? GesAnsiRenderer.render(text, spans: assembly.highlight(text).spans)) ?? text }
+
+    func renderDocument(_ text: String) -> String { (try? GesAnsiRenderer.render(text, spans: document.highlight(text).spans)) ?? text }
 }

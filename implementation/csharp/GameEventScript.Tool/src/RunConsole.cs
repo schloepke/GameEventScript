@@ -58,7 +58,7 @@ internal static class RunConsole
                 session.Inventory.WriteHandlers();
                 continue;
             }
-            if (command is not (":edit" or ":save" or ":load" or ":dump" or ":source" or ":unload" or ":unloadAll" or ":reload") && command.StartsWith(':') && command.AsSpan(1).IndexOfAnyExceptInRange('a', 'z') < 0)
+            if (command is not (":edit" or ":save" or ":load" or ":show" or ":dump" or ":source" or ":unload" or ":unloadAll" or ":reload") && command.StartsWith(':') && command.AsSpan(1).IndexOfAnyExceptInRange('a', 'z') < 0)
             {
                 Console.Error.WriteLine($"error cli.consoleCommand: Unknown command or arguments '{trimmed}'. Use :help.");
                 success = false;
@@ -106,6 +106,12 @@ internal static class RunConsole
                 if (command == ":source")
                 {
                     session.Inventory.WriteSource(commandArgument, color);
+                    continue;
+                }
+                if (command == ":show")
+                {
+                    activePath = LoadPath(commandArgument);
+                    RunShow.Write(activePath, color);
                     continue;
                 }
                 if (command == ":load")

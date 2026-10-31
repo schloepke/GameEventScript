@@ -8,6 +8,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using GameEventScript.Api;
 using GameEventScript.Runtime;
+using GameEventScript.Syntax;
 using static GameEventScript.Api.GesBytecodeTypeKind;
 using static GameEventScript.Api.GesQuantityUnit;
 using static GameEventScript.Runtime.Values.GesValue.GesValueFlags;
@@ -118,7 +119,7 @@ public partial struct GesValue : IEquatable<GesValue>
     public static GesValue GesText(string text)
     {
         text ??= string.Empty;
-        Runtime.GesText.RequireValidUnicode(text, nameof(text));
+        GameEventScript.Syntax.GesText.RequireValidUnicode(text, nameof(text));
         var value = new GesValue();
         value.SetText(text);
         return value;
@@ -132,7 +133,7 @@ public partial struct GesValue : IEquatable<GesValue>
     public static GesValue GesTag(string tag)
     {
         tag ??= string.Empty;
-        if (!Runtime.GesText.IsTagValue(tag))
+        if (!GameEventScript.Syntax.GesText.IsTagValue(tag))
             throw new ArgumentException("Tag values must use the portable ASCII name grammar.", nameof(tag));
         var value = new GesValue();
         value.SetTag(tag);
@@ -606,14 +607,14 @@ public partial struct GesValue : IEquatable<GesValue>
     }
 
     internal void SetText(string text)
-        => SetText(text, Runtime.GesText.CountScalars(text));
+        => SetText(text, GameEventScript.Syntax.GesText.CountScalars(text));
 
     internal void SetText(string text, int scalarCount)
     {
         Kind = Text;
         Flags = StorageObjectFlag |
                 (text.Length == 0 ? None : HasValueFlag) |
-                (Runtime.GesText.EqualsAsciiIgnoreCase(text, "true") || text == "1" ? IsTrueFlag : IsFalseFlag);
+                (GameEventScript.Syntax.GesText.EqualsAsciiIgnoreCase(text, "true") || text == "1" ? IsTrueFlag : IsFalseFlag);
         Unit = UnitNone;
         IntegerValue = 0;
         ObjectValue = scalarCount == text.Length ? text : new GesTextPayload(text, scalarCount);
@@ -1133,7 +1134,7 @@ public partial struct GesValue : IEquatable<GesValue>
             if (!first) builder.Append(", ");
             first = false;
             var key = valueMap.KeyAt(i);
-            if (Runtime.GesText.IsFieldName(key)) builder.Append(key);
+            if (GameEventScript.Syntax.GesText.IsFieldName(key)) builder.Append(key);
             else GesTextLiteralReader.AppendQuoted(builder, key);
             builder.Append(": ");
             GesValue tempQualifier = valueMap.ValueAt(i);

@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using GameEventScript.Api;
 using GameEventScript.Runtime.Values;
+using GameEventScript.Syntax;
 using static GameEventScript.Api.GesBinaryBindKind;
 using static GameEventScript.Api.GesBindingSegment;
 

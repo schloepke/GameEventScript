@@ -7,6 +7,7 @@ using System.Globalization;
 using System.Text;
 using GameEventScript.Api;
 using GameEventScript.Runtime;
+using GameEventScript.Syntax;
 using static GameEventScript.Compiler.GesTokenKind;
 
 namespace GameEventScript.Compiler;

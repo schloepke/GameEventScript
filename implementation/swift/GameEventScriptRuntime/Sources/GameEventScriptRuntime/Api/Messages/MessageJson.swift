@@ -1,6 +1,8 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
+@_spi(Syntax) import GameEventScriptSyntax
+
 /// Invalid, unsupported or over-limit portable message/value JSON.
 public struct GesMessageFormatError: Error, Equatable {
     /// Stable language-neutral message.* failure code.

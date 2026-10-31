@@ -1,6 +1,8 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
+@_spi(Syntax) import GameEventScriptSyntax
+
 // The recommended document layout of specs/Documents.md. Only its round trip through GesLiteralParser is normative.
 enum GesDocumentFormatter {
     static func print(_ document: GesDocument, _ format: GesDocumentFormat) -> String {

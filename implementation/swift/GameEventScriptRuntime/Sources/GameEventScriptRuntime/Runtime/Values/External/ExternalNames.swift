@@ -1,6 +1,8 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
+@_spi(Syntax) import GameEventScriptSyntax
+
 enum GesExternalTypeNames {
     static func identifier(_ text: String) throws -> String {
         let text = GesMessageNames.trim(text)

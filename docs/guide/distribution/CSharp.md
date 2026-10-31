@@ -83,15 +83,16 @@ artifacts/csharp/
     GameEventScript.Syntax.<version>.nupkg
     GameEventScript.Syntax.<version>.snupkg
   dll/<version>/
-    syntax/ # Standalone highlighter DLL, PDB and XML
+    syntax/ # Standalone Syntax DLL, PDB and XML
     runtime/
     compiler/
     unity/
 ```
 
-The `runtime` set contains Runtime alone; `compiler` contains Runtime and
-Compiler; `unity` contains Runtime and CSharpBridge. All sets include matching
-XML and PDB files.
+The `runtime` set contains Syntax and Runtime; `compiler` contains Syntax,
+Runtime and Compiler; `unity` contains Syntax, Runtime and CSharpBridge. Runtime
+depends on Syntax for the shared lexical rules. All sets include matching XML
+and PDB files.
 
 ## Unity DLL use
 

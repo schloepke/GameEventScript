@@ -11,6 +11,7 @@ let package = Package(
     products: [.library(name: "GameEventScriptSwiftBridge", targets: ["GameEventScriptSwiftBridge"])],
     dependencies: [
         .package(path: "../GameEventScriptRuntime"),
+        .package(path: "../GameEventScriptSyntax"),
         .package(url: "https://github.com/swiftlang/swift-syntax.git", exact: "600.0.1"),
     ],
     targets: [
@@ -32,6 +33,12 @@ let package = Package(
             ]
         ),
         .target(name: "GameEventScriptSwiftBridge", dependencies: [.product(name: "GameEventScriptRuntime", package: "GameEventScriptRuntime"), "GameEventScriptSwiftBridgeMacros"]),
-        .testTarget(name: "GameEventScriptSwiftBridgeTests", dependencies: ["GameEventScriptSwiftBridge", .product(name: "GameEventScriptRuntime", package: "GameEventScriptRuntime")]),
+        .testTarget(
+            name: "GameEventScriptSwiftBridgeTests",
+            dependencies: [
+                "GameEventScriptSwiftBridge", .product(name: "GameEventScriptRuntime", package: "GameEventScriptRuntime"),
+                .product(name: "GameEventScriptSyntax", package: "GameEventScriptSyntax"),
+            ]
+        ),
     ]
 )

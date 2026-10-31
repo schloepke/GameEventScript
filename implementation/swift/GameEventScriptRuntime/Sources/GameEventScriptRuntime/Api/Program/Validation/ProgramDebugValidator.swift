@@ -1,6 +1,8 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
+@_spi(Syntax) import GameEventScriptSyntax
+
 /// Validates optional debug, source-map, source-archive and opaque sections.
 enum GesProgramDebugValidator {
     static func validate(_ p: GameEventScriptProgram) throws {

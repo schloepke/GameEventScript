@@ -1,6 +1,8 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
+@_spi(Syntax) import GameEventScriptSyntax
+
 /// An immutable message identity: its name and ordered external argument labels.
 public struct GesMessageSignature: Hashable, CustomStringConvertible, Sendable {
     let storage: GesSignatureStorage

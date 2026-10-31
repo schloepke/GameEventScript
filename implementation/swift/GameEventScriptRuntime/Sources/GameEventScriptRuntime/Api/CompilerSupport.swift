@@ -1,6 +1,8 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
+@_spi(Syntax) import GameEventScriptSyntax
+
 /// Shared implementation boundary for the separately packaged compiler.
 @_spi(Compiler) public enum GesCompilerSupport {
     /// Recognizes a source numeric literal using the runtime's numeric rules; returns nil for invalid input.

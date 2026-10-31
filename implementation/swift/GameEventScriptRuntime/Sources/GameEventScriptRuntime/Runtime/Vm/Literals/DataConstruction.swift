@@ -1,6 +1,8 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
+@_spi(Syntax) import GameEventScriptSyntax
+
 enum GesDataConstruction {
     static func create(_ type: String, _ labels: [String], _ arguments: [GesValue], _ context: GesContext?) throws -> GesValue {
         try create(type, labels, arguments, context, sink: GesValueFactory())

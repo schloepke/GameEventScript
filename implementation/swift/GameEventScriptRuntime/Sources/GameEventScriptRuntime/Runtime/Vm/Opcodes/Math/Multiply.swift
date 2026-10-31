@@ -1,6 +1,8 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
+@_spi(Syntax) import GameEventScriptSyntax
+
 extension GesVirtualMachine {
     // Integer operands are the hot case and run inline in dispatch; every other
     // combination, including overflow, takes the general body.

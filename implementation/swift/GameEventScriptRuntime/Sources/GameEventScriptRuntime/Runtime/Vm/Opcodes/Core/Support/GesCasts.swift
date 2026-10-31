@@ -1,6 +1,8 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
+@_spi(Syntax) import GameEventScriptSyntax
+
 enum GesCasts {
     static func cast(_ value: GesValue, _ kind: GesBytecodeTypeKind, _ context: GesContext?) throws -> GesValue {
         try cast(value, kind, context, sink: GesValueFactory())

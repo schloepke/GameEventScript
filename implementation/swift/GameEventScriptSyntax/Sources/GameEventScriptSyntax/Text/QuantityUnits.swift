@@ -4,15 +4,15 @@
 extension GesQuantityUnit {
     /// One spelling of a unit suffix. Prefixed and energy spellings scale the decimal value exactly by
     /// `factor × 10^exponent` before the single binary64 rounding; the value keeps the base unit.
-    struct Suffix: Sendable {
-        let text: String
+    @_spi(Syntax) public struct Suffix: Sendable {
+        @_spi(Syntax) public let text: String
         /// The spelling's Unicode scalars, kept so matching allocates nothing.
-        let scalars: [Unicode.Scalar]
-        let unit: GesQuantityUnit
-        let exponent: Int
-        let factor: Int
+        @_spi(Syntax) public let scalars: [Unicode.Scalar]
+        @_spi(Syntax) public let unit: GesQuantityUnit
+        @_spi(Syntax) public let exponent: Int
+        @_spi(Syntax) public let factor: Int
 
-        init(text: String, unit: GesQuantityUnit, exponent: Int = 0, factor: Int = 1) {
+        @_spi(Syntax) public init(text: String, unit: GesQuantityUnit, exponent: Int = 0, factor: Int = 1) {
             self.text = text
             scalars = Array(text.unicodeScalars)
             self.unit = unit
@@ -22,7 +22,7 @@ extension GesQuantityUnit {
     }
 
     // Longest spellings first, so a suffix match is always the longest matching spelling.
-    static let suffixes: [Suffix] = [
+    @_spi(Syntax) public static let suffixes: [Suffix] = [
         .init(text: "m/s²", unit: .meterPerSecondSquared),
         .init(text: "m/s^2", unit: .meterPerSecondSquared),
         .init(text: "deg/s", unit: .degreePerSecond),
@@ -55,7 +55,7 @@ extension GesQuantityUnit {
     ]
 
     /// Stable bytecode UnitId from the Bytecode specification; it also orders units in sorting and map keys.
-    var unitID: UInt8 {
+    @_spi(Syntax) public var unitID: UInt8 {
         switch self {
         case .none: 0
         case .degree: 1
@@ -76,7 +76,7 @@ extension GesQuantityUnit {
     }
 
     /// The unit for a bytecode UnitId, or nil for an unassigned id.
-    init?(unitID: UInt8) {
+    @_spi(Syntax) public init?(unitID: UInt8) {
         switch unitID {
         case 0: self = .none
         case 1: self = .degree
@@ -98,7 +98,7 @@ extension GesQuantityUnit {
     }
 
     /// A portable unit type name such as `meterPerSecond`; `°` is also accepted for degree.
-    init?(typeName: String) {
+    @_spi(Syntax) public init?(typeName: String) {
         if typeName == "°" {
             self = .degree
         } else if typeName != "none", let unit = GesQuantityUnit(rawValue: typeName) {
@@ -110,7 +110,7 @@ extension GesQuantityUnit {
 
     // `:Quantity(...)` accepts none, every unit symbol and its ASCII spelling, and the long names meter, second and
     // degree. Prefixed spellings are literal sugar only. `degree` also stands for `°` because the lexer reads `°` so.
-    init?(quantityName: String) {
+    @_spi(Syntax) public init?(quantityName: String) {
         switch quantityName {
         case "none": self = .none
         case "degree", "°", "deg": self = .degree
@@ -132,7 +132,7 @@ extension GesQuantityUnit {
     }
 
     /// A canonical unit symbol exactly as formatting writes it, for example `m/s`; the empty symbol is none.
-    init?(symbol: String) {
+    @_spi(Syntax) public init?(symbol: String) {
         if symbol.isEmpty {
             self = .none
             return
@@ -143,7 +143,7 @@ extension GesQuantityUnit {
 
     // Unit of a product. Multiplying by a unitless factor keeps the unit; other products follow the closed derivation
     // table and are otherwise unsupported.
-    static func product(_ left: GesQuantityUnit, _ right: GesQuantityUnit) -> GesQuantityUnit? {
+    @_spi(Syntax) public static func product(_ left: GesQuantityUnit, _ right: GesQuantityUnit) -> GesQuantityUnit? {
         if left == .none { return right }
         if right == .none { return left }
         return derivedProduct(left, right) ?? derivedProduct(right, left)
@@ -151,7 +151,7 @@ extension GesQuantityUnit {
 
     // Unit of a quotient. Dividing by a unitless divisor keeps the unit, equal units cancel, and other quotients follow
     // the closed derivation table and are otherwise unsupported.
-    static func quotient(_ dividend: GesQuantityUnit, _ divisor: GesQuantityUnit) -> GesQuantityUnit? {
+    @_spi(Syntax) public static func quotient(_ dividend: GesQuantityUnit, _ divisor: GesQuantityUnit) -> GesQuantityUnit? {
         if divisor == .none { return dividend }
         if dividend == divisor { return GesQuantityUnit.none }
         switch (dividend, divisor) {

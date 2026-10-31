@@ -106,8 +106,10 @@ the static import, so they omit the redundant prefix.
 - Bridge adapts the Core to the platform (threads, locks, dispatchers,
   Reflection versus KeyPath/macros, delegates versus closures). The same role
   has the same name; platform-only types are allowed.
-- Syntax is a separate module with the entry type
-  `GesSyntaxHighlighter`.
+- Syntax is the base module below Runtime. It owns the lexical rules, such as
+  the quantity unit table, and the highlighter entry type `GesSyntaxHighlighter`.
+  C# reaches its internals through `InternalsVisibleTo`, Swift through
+  `@_spi(Syntax)`.
 
 ## Tools and adapters
 

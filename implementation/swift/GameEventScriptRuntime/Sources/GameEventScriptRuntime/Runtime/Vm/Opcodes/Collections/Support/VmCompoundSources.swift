@@ -1,6 +1,8 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
+@_spi(Syntax) import GameEventScriptSyntax
+
 enum GesCompoundSources {
     static func create(_ sources: [GesValue], mode: UInt8, budget: GesRuntimeBudget) -> GesIterator? {
         if mode == 4 || mode == 5 {

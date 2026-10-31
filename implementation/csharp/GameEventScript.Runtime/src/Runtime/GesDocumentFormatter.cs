@@ -7,6 +7,7 @@ using System.Globalization;
 using System.Text;
 using GameEventScript.Api;
 using GameEventScript.Runtime.Values;
+using GameEventScript.Syntax;
 using static GameEventScript.Api.GesBytecodeTypeKind;
 
 namespace GameEventScript.Runtime;

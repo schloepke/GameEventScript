@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Text;
 using GameEventScript.Runtime;
 using GameEventScript.Runtime.Values;
+using GameEventScript.Syntax;
 
 namespace GameEventScript.Api;
 

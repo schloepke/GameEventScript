@@ -169,7 +169,8 @@ The normative owners are `specs/ProgramModel.md`, `specs/Bytecode.md`,
 
 ## Language and compiler
 
-The separate Compiler package depends only on Runtime. Runtime and CSharpBridge
+The separate Compiler package depends only on Runtime and Syntax; Runtime depends
+only on Syntax, which depends on no GES module. Runtime and CSharpBridge
 must never depend on Compiler or Conformance. Shared value semantics, runtime
 literal parsing, Program data and codecs remain in Runtime. Source-file I/O
 belongs to the CLI or embedding; the portable compiler accepts source text.
@@ -178,9 +179,11 @@ belongs to the CLI or embedding; the portable compiler accepts source text.
   `:Unit`. Extension namespaces and functions remain lowercase, for example
   `:math.distance`.
 - Quantity units form a closed set with stable UnitIds (specs/Bytecode.md) and
-  one central table per runtime (C# `GesQuantityUnits`, Swift `QuantityUnits.swift`)
-  for symbols, prefixed literal spellings and the product/quotient derivation
-  table. Lexer, `parse`, constant folding and the VM all read that table; the
+  one central table per port in the Syntax module (C# `GesQuantityUnits`, Swift
+  `QuantityUnits.swift`) for symbols, prefixed literal spellings and the
+  product/quotient derivation table. Runtime depends on Syntax for this table and
+  the text and name rules; Swift Runtime re-exports `GesQuantityUnit` and other
+  modules reach Syntax internals through `@_spi(Syntax)`. Lexer, `parse`, constant folding and the VM all read that table; the
   Swift `@GesField` macro mirrors the unit names because it cannot import the
   runtime. Integer division, percentages and points keep derivation-free rules.
 - Module identifiers are dot-separated lowercase components with optional

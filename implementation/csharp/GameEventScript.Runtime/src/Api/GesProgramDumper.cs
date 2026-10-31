@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
 using GameEventScript.Runtime;
+using GameEventScript.Syntax;
 using static GameEventScript.Api.GesOpcodePrinter.OperandPart;
 
 namespace GameEventScript.Api;

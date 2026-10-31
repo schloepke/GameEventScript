@@ -1,6 +1,8 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
+@_spi(Syntax) import GameEventScriptSyntax
+
 struct GesLiteralParser {
     static func sourceText(_ text: String) -> String? {
         var parser = Self(bytes: Array(text.utf8))

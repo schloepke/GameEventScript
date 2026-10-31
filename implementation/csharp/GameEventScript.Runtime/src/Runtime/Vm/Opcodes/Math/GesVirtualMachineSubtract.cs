@@ -5,6 +5,7 @@ using System;
 using System.Diagnostics.CodeAnalysis;
 using GameEventScript.Api;
 using GameEventScript.Runtime.Values;
+using GameEventScript.Syntax;
 using static GameEventScript.Api.GesBytecodeTypeKind;
 using static GameEventScript.Api.GesQuantityUnit;
 using static GameEventScript.Runtime.Vm.GesVmUnitCalculation;

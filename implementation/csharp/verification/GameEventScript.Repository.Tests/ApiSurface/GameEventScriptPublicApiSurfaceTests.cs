@@ -73,9 +73,9 @@ public sealed class GameEventScriptPublicApiSurfaceTests
         Assert.IsTrue(bridge.GetExportedTypes().All(type => IsNamespace(type, "GameEventScript.CSharpBridge")));
 
         AssertProductReferences(typeof(GesSyntaxHighlighter).Assembly);
-        AssertProductReferences(runtime);
-        AssertProductReferences(compiler, "GameEventScript.Runtime");
-        AssertProductReferences(bridge, "GameEventScript.Runtime");
+        AssertProductReferences(runtime, "GameEventScript.Syntax");
+        AssertProductReferences(compiler, "GameEventScript.Runtime", "GameEventScript.Syntax");
+        AssertProductReferences(bridge, "GameEventScript.Runtime", "GameEventScript.Syntax");
     }
 
     /// <summary>

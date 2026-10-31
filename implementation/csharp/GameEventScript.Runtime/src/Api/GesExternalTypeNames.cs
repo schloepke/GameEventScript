@@ -3,6 +3,7 @@
 
 using System;
 using GameEventScript.Runtime;
+using GameEventScript.Syntax;
 
 namespace GameEventScript.Api;
 

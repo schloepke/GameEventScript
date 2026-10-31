@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using GameEventScript.Api;
+using GameEventScript.Syntax;
 
 namespace GameEventScript.Compiler;
 
@@ -263,7 +264,7 @@ internal static class GesShadowingValidator
         for (var index = 0; index < names.Count; index++)
         {
             var name = names[index];
-            if (name != identifier && !GameEventScript.Runtime.GesText.IsVariableName(name))
+            if (name != identifier && !GameEventScript.Syntax.GesText.IsVariableName(name))
                 errors.Add(script, "Invalid component binding name", name, GesDiagnosticSymbolKind.Variable, GesDiagnosticCodes.ValidateInvalidIdentifierCase, node);
             if (parent.ContainsVisible(name)) AddShadowError(script, errors, name, node);
             if (child.ContainsVisible(name) && !parent.ContainsVisible(name))

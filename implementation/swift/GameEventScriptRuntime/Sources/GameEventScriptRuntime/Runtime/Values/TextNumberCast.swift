@@ -1,6 +1,8 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
+@_spi(Syntax) import GameEventScriptSyntax
+
 /// GES grammar, exact Int64 conversion, and decimal percentage scaling.
 /// Swift's decimal conversion is used only after grammar validation for binary64 rounding.
 enum GesTextNumberCast {

@@ -1,6 +1,8 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
+@_spi(Syntax) import GameEventScriptSyntax
+
 /// An immutable, shared reference to a portable `.gesb` program.
 /// Only validated readers and compilers create programs. Hosts share the same instance;
 /// arrays returned to callers retain copy-on-write isolation from the program.

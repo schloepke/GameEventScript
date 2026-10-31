@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using GameEventScript.Compiler;
 using GameEventScript.Runtime;
+using GameEventScript.Syntax;
 using static GameEventScript.Api.GesDiagnosticCodes;
 using static GameEventScript.Api.GesDiagnosticSymbolKind;
 using static GameEventScript.Compiler.GesCallableKind;

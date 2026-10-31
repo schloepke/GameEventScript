@@ -1,6 +1,8 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
+@_spi(Syntax) import GameEventScriptSyntax
+
 extension GesVirtualMachine {
     // Quotient unit by the derivation table; a percentage divided by a quantity stays unsupported.
     private func divisionUnit(_ x: Int, _ y: Int) -> GesQuantityUnit? {

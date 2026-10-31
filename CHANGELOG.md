@@ -19,6 +19,13 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   `GameEventScriptSyntaxHighlighter` become `GameEventScriptSyntax`. Type names
   such as `GesSyntaxHighlighter` are unchanged. Migrate by replacing the package
   reference and the `using`/`import`.
+- Runtime now depends on the Syntax module, which owns the quantity unit table
+  and the text and name rules. `GesQuantityUnit` and `GesQuantityUnits` move to
+  the Syntax assembly in C# with the unchanged namespace `GameEventScript.Api`;
+  Swift Runtime re-exports `GesQuantityUnit`, so source code is unchanged. The
+  NuGet Runtime, Compiler and CSharpBridge packages declare the Syntax
+  dependency, and the `runtime`, `compiler` and `unity` DLL sets now include
+  `GameEventScript.Syntax.dll`, which manual DLL installations must copy too.
 - `parse` materializes at most `MaxRangeItems` Range items into Lists per
   invocation in total, so many `:List(:Range(...))` forms in one Text cannot
   multiply the per-Range limit. Exceeding the total stops the handler with the

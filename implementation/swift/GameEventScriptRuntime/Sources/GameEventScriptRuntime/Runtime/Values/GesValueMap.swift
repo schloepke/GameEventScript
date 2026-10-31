@@ -1,6 +1,8 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
+@_spi(Syntax) import GameEventScriptSyntax
+
 // One canonical map entry; keys compare by exact Unicode scalar sequence. Storage only; the public map API
 // exposes keys and values separately, as in C#.
 struct GesMapEntry: Hashable {

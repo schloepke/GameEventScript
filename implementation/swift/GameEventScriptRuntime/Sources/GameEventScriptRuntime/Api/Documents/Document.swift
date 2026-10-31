@@ -1,6 +1,8 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
+@_spi(Syntax) import GameEventScriptSyntax
+
 /// An immutable GES document: a Map or Record root with an optional schema reference, read from and printed to
 /// human-editable `.gesd` text. Comments and layout are not part of a document; equality compares the root value
 /// and the schema reference.

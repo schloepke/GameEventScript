@@ -1,6 +1,8 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
+@_spi(Syntax) import GameEventScriptSyntax
+
 /// Complete, host-independent validation shared by reading, writing, and loading.
 enum GesProgramValidator {
     /// Checks complete Program structure, references, debug data and resource metadata without resolving host imports.

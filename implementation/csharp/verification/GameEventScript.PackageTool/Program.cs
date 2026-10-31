@@ -13,14 +13,15 @@ namespace GameEventScript.PackageTool;
 internal static class Program
 {
     private const string RuntimePackage = "GameEventScript.Runtime";
+    private const string SyntaxPackage = "GameEventScript.Syntax";
     private static readonly DateTimeOffset CanonicalTimestamp = new(2000, 1, 1, 0, 0, 0, TimeSpan.Zero);
     private static readonly UTF8Encoding Utf8 = new(false, true);
     private static readonly PackageDefinition[] Packages =
     [
-        new(RuntimePackage, []),
-        new("GameEventScript.Compiler", [RuntimePackage]),
-        new("GameEventScript.CSharpBridge", [RuntimePackage]),
-        new("GameEventScript.Syntax", [])
+        new(SyntaxPackage, []),
+        new(RuntimePackage, [SyntaxPackage]),
+        new("GameEventScript.Compiler", [RuntimePackage, SyntaxPackage]),
+        new("GameEventScript.CSharpBridge", [RuntimePackage, SyntaxPackage])
     ];
 
     private static int Main(string[] arguments)

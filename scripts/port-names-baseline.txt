@@ -157,7 +157,6 @@ only	csharp	Runtime	GesSeriesStep
 only	csharp	Runtime	GesSystemEndpoints
 only	csharp	Runtime	GesTagBuffer
 only	csharp	Runtime	GesTagRules
-only	csharp	Runtime	GesTextLiteralReader
 only	csharp	Runtime	GesTextPayload
 only	csharp	Runtime	GesVirtualMachineDumper
 only	csharp	Runtime	GesVmDistinctBuilder
@@ -167,6 +166,7 @@ only	csharp	Runtime	GesVmListBuilder
 only	csharp	Runtime	GesVmMapBuilder
 only	csharp	Runtime	GesVmOrderBuilder
 only	csharp	Runtime	GesVmUnitCalculation
+only	csharp	Syntax	GesTextLiteralReader
 only	swift	Compiler	GesArgument
 only	swift	Compiler	GesAssembly
 only	swift	Compiler	GesComponentRow
@@ -194,7 +194,6 @@ only	swift	Runtime	GesMapValueIterator
 only	swift	Runtime	GesMath
 only	swift	Runtime	GesMessageNames
 only	swift	Runtime	GesMessageStorage
-only	swift	Runtime	GesNames
 only	swift	Runtime	GesOperand
 only	swift	Runtime	GesRegisterFile
 only	swift	Runtime	GesRegisterOutput
@@ -210,3 +209,4 @@ only	swift	Runtime	GesValueKind
 only	swift	Runtime	GesValueObject
 only	swift	Runtime	GesValueOutput
 only	swift	Syntax	GesGrammar
+only	swift	Syntax	GesNames

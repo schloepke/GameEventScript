@@ -3,7 +3,7 @@
 
 using System.Text;
 
-namespace GameEventScript.Runtime;
+namespace GameEventScript.Syntax;
 
 internal static class GesTextLiteralReader
 {

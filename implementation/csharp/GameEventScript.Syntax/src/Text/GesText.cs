@@ -4,7 +4,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace GameEventScript.Runtime;
+namespace GameEventScript.Syntax;
 
 /// <summary>
 /// Implements the language-level text rules without depending on platform Unicode

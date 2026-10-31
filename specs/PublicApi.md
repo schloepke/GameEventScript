@@ -75,8 +75,8 @@ require them.
 ## Embedding API baseline and compatibility
 
 The reviewed application API baseline consists of Runtime, the optional Compiler
-and the native Bridge in each implementation. Syntax is a separate
-optional product with its own [contract](SyntaxHighlighting.md). CLI and
+and the native Bridge in each implementation. Syntax is a separate product
+that Runtime builds on; its highlighting has its own [contract](SyntaxHighlighting.md). CLI and
 Conformance are not application library products. Public implementation details
 must not be inferred from private types, compiler SPI or the shape of generated
 code.

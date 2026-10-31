@@ -7,6 +7,7 @@ using System.Security.Cryptography;
 using System.Text;
 using GameEventScript.Api;
 using GameEventScript.Runtime;
+using GameEventScript.Syntax;
 
 namespace GameEventScript.Compiler;
 

@@ -4,6 +4,7 @@
 using System;
 using GameEventScript.Api;
 using GameEventScript.Runtime.Values;
+using GameEventScript.Syntax;
 using static GameEventScript.Api.GesBytecodeTypeKind;
 using static GameEventScript.Api.GesQuantityUnit;
 

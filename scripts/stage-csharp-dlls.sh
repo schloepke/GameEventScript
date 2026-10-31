@@ -38,10 +38,12 @@ mkdir -p "$staging_root/runtime" "$staging_root/compiler" "$staging_root/unity" 
 
 for extension in dll pdb xml; do
     cp "$highlighter_output/GameEventScript.Syntax.$extension" "$staging_root/syntax/"
-    cp "$runtime_output/GameEventScript.Runtime.$extension" "$staging_root/runtime/"
-    cp "$runtime_output/GameEventScript.Runtime.$extension" "$staging_root/compiler/"
+    # Runtime depends on Syntax, so every Runtime set carries the Syntax assembly.
+    for set in runtime compiler unity; do
+        cp "$highlighter_output/GameEventScript.Syntax.$extension" "$staging_root/$set/"
+        cp "$runtime_output/GameEventScript.Runtime.$extension" "$staging_root/$set/"
+    done
     cp "$compiler_output/GameEventScript.Compiler.$extension" "$staging_root/compiler/"
-    cp "$runtime_output/GameEventScript.Runtime.$extension" "$staging_root/unity/"
     cp "$bridge_output/GameEventScript.CSharpBridge.$extension" "$staging_root/unity/"
 done
 

@@ -1,6 +1,8 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
+@_spi(Syntax) import GameEventScriptSyntax
+
 /// Canonical little-endian `.gesb` encoding, independent of host state and memory layout.
 enum GesProgramWriter {
     /// Validates a Program and computes its canonical encoded byte count without producing the binary buffer.

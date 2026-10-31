@@ -4,6 +4,7 @@
 using System;
 using GameEventScript.Runtime;
 using GameEventScript.Runtime.Values;
+using GameEventScript.Syntax;
 
 namespace GameEventScript.Api;
 

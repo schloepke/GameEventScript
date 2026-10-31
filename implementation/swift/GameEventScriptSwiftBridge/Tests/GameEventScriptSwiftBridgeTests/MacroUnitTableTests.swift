@@ -1,11 +1,11 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
+import GameEventScriptRuntime
 import GameEventScriptSwiftBridge
+// Enumerating every runtime unit needs the UnitId initializer of the Syntax unit table.
+@_spi(Syntax) import GameEventScriptSyntax
 import XCTest
-
-// Enumerating every runtime unit needs the internal UnitId initializer.
-@testable import GameEventScriptRuntime
 
 // One field per unit, named after its case, so the macro's mirrored unit table is checked against the runtime.
 @GesType

@@ -7,6 +7,7 @@ using System.Runtime.CompilerServices;
 using GameEventScript.Api;
 using GameEventScript.Runtime.Values;
 using GameEventScript.Runtime.Vm;
+using GameEventScript.Syntax;
 using static GameEventScript.Api.GesBindingSegment;
 using Code = GameEventScript.Api.GesDocumentErrorCodes;
 

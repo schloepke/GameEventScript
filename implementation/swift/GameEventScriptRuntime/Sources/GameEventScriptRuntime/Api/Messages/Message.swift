@@ -1,6 +1,8 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
+@_spi(Syntax) import GameEventScriptSyntax
+
 /// An immutable portable message with ordered arguments and delivery-tag metadata.
 public struct GameEventScriptMessage: Hashable, CustomStringConvertible {
     let storage: GesMessageStorage

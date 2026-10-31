@@ -5,6 +5,7 @@ using System;
 using System.Globalization;
 using GameEventScript.Api;
 using GameEventScript.Runtime;
+using GameEventScript.Syntax;
 
 namespace GameEventScript.Compiler;
 

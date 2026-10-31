@@ -30,8 +30,9 @@ versions retain their original package contents; icons are included starting wit
 
 The root SwiftPM package exposes only libraries. The CLI uses its separate development package.
 
-Compiler and each native Bridge depend on their Runtime. An application can use
-Runtime alone. Syntax is optional and depends on no other GES module. Conformance stays in the repository for development and CI. CLI and terminal targets are not part of the root package.
+Runtime depends on Syntax, which holds the shared lexical rules such as the
+quantity unit table and depends on no other GES module. Compiler and each native
+Bridge depend on their Runtime. An application can use Runtime with Syntax alone. Conformance stays in the repository for development and CI. CLI and terminal targets are not part of the root package.
 Homebrew and local installers remain available. See [standalone CLI downloads](Tools.md) for
 installation and release verification. Deferred distribution work is tracked in
 [BACKLOG.md](../../../BACKLOG.md).
@@ -297,7 +298,7 @@ isolated Git repository under `artifacts/swift-package`, creates a local test
 tag, and resolves that version from two independent consumers. It checks all
 four products, the dependency graph and the explicit macOS minimum in both macro
 manifests, compiles/serializes/executes a Program,
-and runs that Program with Runtime alone. It also rejects builds of Compiler or
+and runs that Program with Runtime and Syntax alone. It also rejects builds of Compiler or
 Bridge in the Runtime-only consumer and compilation of test targets/support in
 either consuming application. It executes the three root test targets in the
 isolated checkout. No tag or commit is added to the working repository and

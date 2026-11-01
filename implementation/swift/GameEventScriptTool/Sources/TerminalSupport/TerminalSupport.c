@@ -4,9 +4,7 @@
 #define _DEFAULT_SOURCE
 #include "TerminalSupport.h"
 #include <errno.h>
-#include <locale.h>
 #include <poll.h>
-#include <pthread.h>
 #include <signal.h>
 #include <spawn.h>
 #include <sys/wait.h>
@@ -16,7 +14,6 @@ extern char **environ;
 #include <sys/ioctl.h>
 #include <termios.h>
 #include <unistd.h>
-#include <wchar.h>
 
 static struct termios saved;
 static volatile sig_atomic_t active;
@@ -31,15 +28,7 @@ static void interrupted(int signal_number) {
     }
     _exit(128 + signal_number);
 }
-static pthread_once_t locale_once = PTHREAD_ONCE_INIT;
-static void select_unicode_locale(void) {
-    setlocale(LC_CTYPE, "");
-    /* GUI launchers and LANG=C still edit UTF-8, so wcwidth needs a Unicode locale. */
-    if (MB_CUR_MAX < 4 && !setlocale(LC_CTYPE, "C.UTF-8")) setlocale(LC_CTYPE, "en_US.UTF-8");
-}
-void ges_unicode_locale(void) { pthread_once(&locale_once, select_unicode_locale); }
 void ges_terminal_initialize(void) {
-    ges_unicode_locale();
     signal(SIGPIPE, SIG_IGN);
     atexit(ges_terminal_end);
 }
@@ -80,7 +69,6 @@ int ges_terminal_columns(void) {
     struct winsize size;
     return ioctl(STDERR_FILENO, TIOCGWINSZ, &size) == 0 && size.ws_col > 0 ? size.ws_col : 80;
 }
-int ges_scalar_width(uint32_t scalar) { return wcwidth((wchar_t)scalar); }
 
 /* Foundation Process may put children in a background process group on Darwin.
  * Editors instead inherit our foreground group and restored terminal. Ignore

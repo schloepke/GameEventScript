@@ -7,13 +7,29 @@ import TerminalSupport
 enum ToolTextDisplay {
     static let tabSize = 4
 
-    // wcwidth measures Unicode only in a UTF-8 locale; `ges` selects it once at startup, other callers on first use.
-    private static let unicodeLocale: Void = ges_unicode_locale()
-
+    // The terminal width of a grapheme cluster, measured like the C# CLI: a cluster joined by ZWJ, with an emoji
+    // variation selector or with a wide scalar occupies two columns, any other the sum of its scalars.
     static func width(_ character: Character) -> Int {
-        _ = unicodeLocale
-        if character.unicodeScalars.contains(where: { $0.value == 0x200d || $0.value == 0xfe0f || $0.properties.isEmojiPresentation }) { return 2 }
-        return character.unicodeScalars.reduce(0) { $0 + max(0, Int(ges_scalar_width($1.value))) }
+        var total = 0
+        for scalar in character.unicodeScalars {
+            let width = scalarWidth(scalar.value)
+            if width == 2 || scalar.value == 0x200d || scalar.value == 0xfe0f { return 2 }
+            total += width
+        }
+        return total
+    }
+
+    // The columns of one scalar from the generated table both CLIs share.
+    static func scalarWidth(_ scalar: UInt32) -> Int {
+        if scalar >= 0x20 && scalar < 0x7f { return 1 }
+        let starts = ToolTextWidths.starts
+        var low = 0
+        var high = starts.count - 1
+        while low < high {
+            let middle = (low + high + 1) / 2
+            if starts[middle] <= scalar { low = middle } else { high = middle - 1 }
+        }
+        return Int(ToolTextWidths.widths[low])
     }
 
     static func expandTabs(_ text: String) -> String {

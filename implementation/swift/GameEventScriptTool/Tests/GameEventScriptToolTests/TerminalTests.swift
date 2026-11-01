@@ -11,12 +11,22 @@ final class TerminalTests: XCTestCase {
     // The widths match the C# CLI per grapheme cluster.
     func testClusterWidthsAndTabColumns() {
         let clusters: [(Character, Int)] = [
-            ("a", 1), ("e\u{301}", 1), ("\u{65E5}", 2), ("\u{231A}", 2), ("\u{2764}\u{FE0F}", 2), ("\u{1F1E6}", 2), ("\u{1F44D}\u{1F3FD}", 2), ("\u{1F1E9}\u{1F1EA}", 2), ("\u{1F468}\u{200D}\u{1F469}\u{200D}\u{1F467}", 2),
+            ("a", 1), ("e\u{301}", 1), ("\u{65E5}", 2), ("\u{231A}", 2), ("\u{2764}\u{FE0F}", 2), ("\u{1F1E6}", 2), ("\u{1F44D}\u{1F3FD}", 2), ("\u{1F1E9}\u{1F1EA}", 2), ("\u{1F468}\u{200D}\u{1F469}\u{200D}\u{1F467}", 2), ("\u{1D400}", 1),
+            ("\u{65E5}\u{E0100}", 2), ("\u{30000}", 2), ("\u{200B}", 0),
         ]
         for (cluster, width) in clusters { XCTAssertEqual(ToolTextDisplay.width(cluster), width, String(cluster)) }
         XCTAssertEqual(ToolTextDisplay.columns("a\tb"), 5)
         XCTAssertEqual(ToolTextDisplay.columns("\u{65E5}\u{2764}\u{FE0F}\tb"), 9)
         XCTAssertEqual(ToolTextDisplay.expandTabs("\u{65E5}\u{2764}\u{FE0F}\tb"), "\u{65E5}\u{2764}\u{FE0F}    b")
+    }
+
+    // The generated table must keep every Emoji_Presentation scalar of this Swift's Unicode data wide.
+    func testGeneratedWidthTableCoversEmojiPresentation() {
+        XCTAssertEqual(ToolTextDisplay.scalarWidth(0), 0)
+        for value in UInt32(0)...0x10FFFF {
+            guard let scalar = Unicode.Scalar(value), scalar.properties.isEmojiPresentation else { continue }
+            XCTAssertEqual(ToolTextDisplay.scalarWidth(value), 2, String(value, radix: 16))
+        }
     }
 
     // Tab spaces wrap individually and wide characters move whole, like the C# waiting input.

@@ -3,8 +3,6 @@
 #ifndef GES_TERMINAL_SUPPORT_H
 #define GES_TERMINAL_SUPPORT_H
 #include <stdint.h>
-/* Select the user's locale, or a UTF-8 locale when it cannot measure Unicode widths; only the first call does. */
-void ges_unicode_locale(void);
 void ges_terminal_initialize(void);
 int ges_terminal_isatty(int fd);
 int ges_terminal_begin(void);
@@ -12,7 +10,6 @@ void ges_terminal_end(void);
 /* A byte, -1 at EOF, -2 on timeout, or -3 on an I/O error. */
 int ges_terminal_read(int timeout_ms);
 int ges_terminal_columns(void);
-int ges_scalar_width(uint32_t scalar);
 /* Synchronously run an editor in the inherited foreground process group.
  * Returns a POSIX error number, or zero with an exit/signal status. */
 int ges_terminal_run_editor(char *const argv[], int *exit_code);

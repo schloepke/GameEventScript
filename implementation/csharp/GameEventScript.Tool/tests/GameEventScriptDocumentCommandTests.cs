@@ -109,6 +109,7 @@ public sealed class GameEventScriptDocumentCommandTests
         Write("bad.gesd", "a: 1\nname: Basic Track\n");
         Write("form.gesd", "range: :Range(1)\n");
         Write("source.ges", "on Start {\n");
+        Write("wide.gesd", "t: ['\u65E5\u672C',\tBasic]\n");
         var result = ToolProcess.ExecuteWithInput(_directory, ":show bad.gesd\n:show form.gesd\n:show source.ges\n:quit\n", ["run", "--interactive", "--quiet"]);
         Assert.AreEqual(0, result.ExitCode, result.StandardError);
         Assert.AreEqual(Lines(
@@ -119,6 +120,11 @@ public sealed class GameEventScriptDocumentCommandTests
             "", "// File: \"source.ges\"", "on Start {"), result.StandardError[..result.StandardError.IndexOf("source.ges(", StringComparison.Ordinal)]);
         StringAssert.Contains(result.StandardError, "source.ges(2,1): error parse.syntax:");
         Assert.AreEqual(string.Empty, result.StandardOutput);
+
+        // Tabs and wide characters before the range move the caret by their display width.
+        var wide = ToolProcess.ExecuteWithInput(_directory, ":show wide.gesd\n:quit\n", ["run", "--interactive", "--quiet"]);
+        StringAssert.Contains(wide.StandardError, Lines(
+            "wide.gesd(1,11): error document.unquotedText: Text values must be quoted.", "  t: ['\u65E5\u672C', Basic]", "              ^^^^^"));
     }
 
     private void Write(string file, string text) => File.WriteAllText(Path.Combine(_directory, file), text, new UTF8Encoding(false, true));

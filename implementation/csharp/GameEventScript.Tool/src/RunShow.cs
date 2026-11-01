@@ -4,6 +4,7 @@
 using System.Text;
 using System.Text.Json;
 using GameEventScript.Syntax;
+using PrettyPrompt.Rendering;
 
 namespace GameEventScript.Tool;
 
@@ -50,11 +51,10 @@ internal static class RunShow
             Console.Error.WriteLine(color ? RunHighlighting.Paint(report, 31) : report);
             var source = mark.Line <= lines.Length ? lines[mark.Line - 1] : "";
             Console.Error.WriteLine("  " + ToolTextDisplay.ExpandTabs(source));
-            var prefix = ToolTextDisplay.ExpandTabs(Prefix(source, mark.Column - 1));
-            // A range that continues on later lines is marked to the end of its first line, in expanded columns.
-            var through = ToolTextDisplay.ExpandTabs(Prefix(source, mark.Column - 1 + mark.Length));
-            var caret = new string('^', Math.Max(1, ScalarCount(through, 0, through.Length) - ScalarCount(prefix, 0, prefix.Length)));
-            Console.Error.WriteLine("  " + new string(' ', ScalarCount(prefix, 0, prefix.Length)) + (color ? RunHighlighting.Paint(caret, 31) : caret));
+            // A range that continues on later lines is marked to the end of its first line, in display columns.
+            var start = DisplayColumn(source, mark.Column - 1);
+            var caret = new string('^', Math.Max(1, DisplayColumn(source, mark.Column - 1 + mark.Length) - start));
+            Console.Error.WriteLine("  " + new string(' ', start) + (color ? RunHighlighting.Paint(caret, 31) : caret));
         }
         Console.Error.WriteLine();
     }
@@ -100,6 +100,22 @@ internal static class RunShow
     }
 
     // The first `scalars` Unicode scalars of a line.
+    // The display column after the first `scalars` scalars of a line, with tabs expanded as by ToolTextDisplay.ExpandTabs.
+    private static int DisplayColumn(string line, int scalars)
+    {
+        var end = Prefix(line, scalars).Length;
+        var column = 0;
+        var start = 0;
+        for (var index = 0; index < end; index++)
+        {
+            if (line[index] != '\t') continue;
+            column += Math.Max(0, UnicodeWidth.GetWidth(line.AsSpan(start, index - start)));
+            column += ToolTextDisplay.TabSize - column % ToolTextDisplay.TabSize;
+            start = index + 1;
+        }
+        return column + Math.Max(0, UnicodeWidth.GetWidth(line.AsSpan(start, end - start)));
+    }
+
     private static string Prefix(string line, int scalars)
     {
         var index = 0;

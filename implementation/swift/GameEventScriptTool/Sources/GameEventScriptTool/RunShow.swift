@@ -51,16 +51,21 @@ extension Tool {
             io.write((color ? RunHighlighting.paint(report, 31) : report) + "\n", toError: true)
             let source = mark.line <= lines.count ? lines[mark.line - 1] : ""
             io.line("  " + ToolTextDisplay.expandTabs(source), toError: true)
-            let scalars = Array(source.unicodeScalars)
-            let start = min(mark.column - 1, scalars.count)
-            // A range that continues on later lines is marked to the end of its first line, in expanded columns.
-            let end = min(scalars.count, start + mark.length)
-            let prefix = ToolTextDisplay.expandTabs(String(String.UnicodeScalarView(scalars[..<start])))
-            let through = ToolTextDisplay.expandTabs(String(String.UnicodeScalarView(scalars[..<end])))
-            let caret = String(repeating: "^", count: max(1, through.unicodeScalars.count - prefix.unicodeScalars.count))
-            io.line("  " + String(repeating: " ", count: prefix.unicodeScalars.count) + (color ? RunHighlighting.paint(caret, 31) : caret), toError: true)
+            // A range that continues on later lines is marked to the end of its first line, in display columns.
+            let start = Self.displayColumn(source, mark.column - 1)
+            let caret = String(repeating: "^", count: max(1, Self.displayColumn(source, mark.column - 1 + mark.length) - start))
+            io.line("  " + String(repeating: " ", count: start) + (color ? RunHighlighting.paint(caret, 31) : caret), toError: true)
         }
         io.line(toError: true)
+    }
+
+    // The display column after the first `scalars` scalars of a line, with tabs expanded as by ToolTextDisplay.expandTabs.
+    private static func displayColumn(_ line: String, _ scalars: Int) -> Int {
+        var column = 0
+        for character in String(String.UnicodeScalarView(line.unicodeScalars.prefix(scalars))) {
+            column += character == "\t" ? 4 - column % 4 : ToolTextDisplay.width(character)
+        }
+        return column
     }
 
     private static func lines(_ text: String) -> [String] {

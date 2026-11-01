@@ -10,7 +10,8 @@ internal static class RunHighlighting
 {
     private static readonly GesSyntaxHighlighter Source = new();
     private static readonly GesSyntaxHighlighter Assembly = new(GesSyntaxLanguage.Gesa);
-    private static readonly GesSyntaxHighlighter Document = new(GesSyntaxLanguage.Gesd);
+    // Documents are formatted or shown whole, so their highlighting has no input limit.
+    private static readonly GesSyntaxHighlighter Document = new(GesSyntaxLanguage.Gesd, int.MaxValue);
 
     internal static string Paint(string text, int color) => $"\u001b[{color}m{text}\u001b[0m";
     internal static string Render(string text) => GesAnsiRenderer.Render(text, Source.Highlight(text).Spans);

@@ -1,6 +1,7 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
+using System.Buffers;
 using System.Globalization;
 using System.Text;
 
@@ -42,7 +43,7 @@ internal static class ToolTextDisplay
         var total = 0;
         while (!text.IsEmpty)
         {
-            var length = StringInfo.GetNextTextElementLength(text);
+            var length = ClusterLength(text);
             var width = 0;
             var wide = false;
             foreach (var rune in text[..length].EnumerateRunes())
@@ -55,6 +56,31 @@ internal static class ToolTextDisplay
             text = text[length..];
         }
         return total;
+    }
+
+    // The length of the grapheme cluster at the start of text. .NET's text elements lack the Indic conjunct rule GB9c,
+    // so a cluster ending in consonant, linker and marks joins a following consonant, like a Swift Character.
+    internal static int ClusterLength(ReadOnlySpan<char> text)
+    {
+        var length = StringInfo.GetNextTextElementLength(text);
+        while (length < text.Length && EndsInConjunctLinker(text[..length])
+            && Rune.DecodeFromUtf16(text[length..], out var next, out _) == OperationStatus.Done
+            && ToolTextWidths.ConjunctConsonants.BinarySearch(next.Value) >= 0)
+            length += StringInfo.GetNextTextElementLength(text[length..]);
+        return length;
+    }
+
+    // Consonant [Extend|Linker]* Linker [Extend|Linker]*, with zero-width scalars standing in for InCB=Extend.
+    private static bool EndsInConjunctLinker(ReadOnlySpan<char> cluster)
+    {
+        var linked = false;
+        while (Rune.DecodeLastFromUtf16(cluster, out var rune, out var size) == OperationStatus.Done)
+        {
+            if (ToolTextWidths.ConjunctLinkers.BinarySearch(rune.Value) >= 0) linked = true;
+            else if (ScalarWidth(rune.Value) != 0) return linked && ToolTextWidths.ConjunctConsonants.BinarySearch(rune.Value) >= 0;
+            cluster = cluster[..^size];
+        }
+        return false;
     }
 
     // The columns of one scalar from the generated table both CLIs share.
@@ -73,13 +99,13 @@ internal static class ToolTextDisplay
     }
 
     // The index after the grapheme cluster at index, so editing never splits a cluster.
-    internal static int NextCluster(string text, int index) => index + StringInfo.GetNextTextElementLength(text.AsSpan(index));
+    internal static int NextCluster(string text, int index) => index + ClusterLength(text.AsSpan(index));
 
     // The number of grapheme clusters in text.
     internal static int ClusterCount(ReadOnlySpan<char> text)
     {
         var count = 0;
-        for (; !text.IsEmpty; count++) text = text[StringInfo.GetNextTextElementLength(text)..];
+        for (; !text.IsEmpty; count++) text = text[ClusterLength(text)..];
         return count;
     }
 

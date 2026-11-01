@@ -1,7 +1,6 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
-using System.Globalization;
 
 namespace GameEventScript.Tool;
 
@@ -108,7 +107,7 @@ internal static class RunWaitingInput
         var index = 0;
         while (index < value.Length)
         {
-            var length = StringInfo.GetNextTextElementLength(value.AsSpan(index));
+            var length = ToolTextDisplay.ClusterLength(value.AsSpan(index));
             var element = value.AsSpan(index, length);
             index += length;
             if (element is "\n" or "\r\n") { row++; column = 5; lineColumn = 0; }

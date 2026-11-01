@@ -26,6 +26,7 @@ public sealed class GameEventScriptTextDisplayTests
     [DataRow("\u65E5\uDB40\uDD00", 2)]
     [DataRow("\uD880\uDC00", 2)]
     [DataRow("\u200B", 0)]
+    [DataRow("\u0915\u094D\u200D\u0937", 2)]
     public void ClusterWidth(string text, int width) => Assert.AreEqual(width, ToolTextDisplay.Width(text));
 
     /// <summary>Verifies that line columns expand tabs to the next stop after wide clusters.</summary>
@@ -51,6 +52,12 @@ public sealed class GameEventScriptTextDisplayTests
         Assert.AreEqual(4, ToolTextDisplay.ClusterCount(text));
         Assert.AreEqual(8, ToolTextDisplay.ClusterIndex(text, 3));
         Assert.AreEqual(text.Length, ToolTextDisplay.ClusterIndex(text, 9));
+
+        // Indic conjuncts form one cluster (GB9c), which .NET's text elements split.
+        Assert.AreEqual(1, ToolTextDisplay.ClusterCount("\u0915\u094D\u0937\u094D\u092E"));
+        Assert.AreEqual(1, ToolTextDisplay.ClusterCount("\u0915\u094D\u200D\u0937"));
+        Assert.AreEqual(2, ToolTextDisplay.ClusterCount("\u0915\u094Da"));
+        Assert.AreEqual(2, ToolTextDisplay.ClusterCount("\u0915\u0937"));
     }
 
     /// <summary>Verifies the generated width table's shape: ascending runs from U+0000 with one width each.</summary>

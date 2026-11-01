@@ -311,6 +311,8 @@ history with Up/Down, and Ctrl+N to insert a newline; Enter submits the entire i
 These editing features also work without colors. `--color` additionally enables
 live syntax highlighting; `NO_COLOR` disables colors without disabling editing.
 The editor uses a tab width of four columns.
+Its cursor follows PrettyPrompt's character widths, which may misplace it after
+characters outside the Basic Multilingual Plane, such as mathematical letters.
 Shift+Enter and Alt/Option+Enter also insert a newline if the terminal reports
 the modifier. Ghostty's default Shift+Enter encoding is recognized without a
 custom keybinding. The editor decodes both the extended xterm and CSI-u forms

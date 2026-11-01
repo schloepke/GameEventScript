@@ -5,7 +5,13 @@ import Foundation
 import TerminalSupport
 
 enum ToolTextDisplay {
+    static let tabSize = 4
+
+    // wcwidth measures Unicode only in a UTF-8 locale; `ges` selects it at startup, other callers on first use.
+    private static let unicodeLocale: Void = ges_unicode_locale()
+
     static func width(_ character: Character) -> Int {
+        _ = unicodeLocale
         if character.unicodeScalars.contains(where: { $0.value == 0x200d || $0.value == 0xfe0f || $0.properties.isEmojiPresentation }) { return 2 }
         return character.unicodeScalars.reduce(0) { $0 + max(0, Int(ges_scalar_width($1.value))) }
     }
@@ -15,7 +21,7 @@ enum ToolTextDisplay {
         var column = 0
         for character in text {
             if character == "\t" {
-                let count = 4 - column % 4
+                let count = tabSize - column % tabSize
                 result += String(repeating: " ", count: count)
                 column += count
             } else {
@@ -24,6 +30,13 @@ enum ToolTextDisplay {
             }
         }
         return result
+    }
+
+    // The display width of one line after expandTabs, without building the expanded text.
+    static func columns(_ line: String) -> Int {
+        var column = 0
+        for character in line { column += character == "\t" ? tabSize - column % tabSize : width(character) }
+        return column
     }
 }
 
@@ -150,7 +163,7 @@ final class RunPrompt {
                     lineColumn = 0
                     continue
                 }
-                let width = character == "\t" ? 4 - lineColumn % 4 : ToolTextDisplay.width(character)
+                let width = character == "\t" ? ToolTextDisplay.tabSize - lineColumn % ToolTextDisplay.tabSize : ToolTextDisplay.width(character)
                 if width > 0 && column + width > columns {
                     row += 1
                     column = 0

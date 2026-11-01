@@ -93,13 +93,9 @@ final class DocumentTests: XCTestCase {
         XCTAssertTrue(result.error.contains("\(source)(2,1): error parse.syntax:"), result.error)
         XCTAssertEqual(result.output, "")
 
-        // Tabs and wide characters before the range move the caret by their display width. Like `ges` at startup, the
-        // test needs a UTF-8 locale for wcwidth.
-        let locale = setlocale(LC_CTYPE, nil).map { String(cString: $0) }
-        defer { _ = setlocale(LC_CTYPE, locale) }
-        if setlocale(LC_CTYPE, "C.UTF-8") == nil { _ = setlocale(LC_CTYPE, "en_US.UTF-8") }
-        let wide = try tool.file("wide.gesd", "t: ['\u{65E5}\u{672C}',\tBasic]\n")
+        // Tabs and wide characters before the range move the caret by their display width.
+        let wide = try tool.file("wide.gesd", "t: ['\u{65E5}\u{672C}', '\u{1F468}\u{200D}\u{1F469}\u{200D}\u{1F467}',\tBasic]\n")
         let shown = tool.run(["run", "--interactive", "--quiet"], input: [":show \(wide)", ":quit"])
-        XCTAssertTrue(shown.error.contains("\(wide)(1,11): error document.unquotedText: Text values must be quoted.\n  t: ['\u{65E5}\u{672C}', Basic]\n              ^^^^^\n"), shown.error)
+        XCTAssertTrue(shown.error.contains("\(wide)(1,20): error document.unquotedText: Text values must be quoted.\n  t: ['\u{65E5}\u{672C}', '\u{1F468}\u{200D}\u{1F469}\u{200D}\u{1F467}',   Basic]\n                      ^^^^^\n"), shown.error)
     }
 }

@@ -59,13 +59,9 @@ extension Tool {
         io.line(toError: true)
     }
 
-    // The display column after the first `scalars` scalars of a line, with tabs expanded as by ToolTextDisplay.expandTabs.
+    // The display column after the first `scalars` scalars of a line.
     private static func displayColumn(_ line: String, _ scalars: Int) -> Int {
-        var column = 0
-        for character in String(String.UnicodeScalarView(line.unicodeScalars.prefix(scalars))) {
-            column += character == "\t" ? 4 - column % 4 : ToolTextDisplay.width(character)
-        }
-        return column
+        ToolTextDisplay.columns(String(String.UnicodeScalarView(line.unicodeScalars.prefix(scalars))))
     }
 
     private static func lines(_ text: String) -> [String] {

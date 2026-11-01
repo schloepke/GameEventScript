@@ -4,7 +4,6 @@
 using System.Text;
 using System.Text.Json;
 using GameEventScript.Syntax;
-using PrettyPrompt.Rendering;
 
 namespace GameEventScript.Tool;
 
@@ -100,21 +99,8 @@ internal static class RunShow
     }
 
     // The first `scalars` Unicode scalars of a line.
-    // The display column after the first `scalars` scalars of a line, with tabs expanded as by ToolTextDisplay.ExpandTabs.
-    private static int DisplayColumn(string line, int scalars)
-    {
-        var end = Prefix(line, scalars).Length;
-        var column = 0;
-        var start = 0;
-        for (var index = 0; index < end; index++)
-        {
-            if (line[index] != '\t') continue;
-            column += Math.Max(0, UnicodeWidth.GetWidth(line.AsSpan(start, index - start)));
-            column += ToolTextDisplay.TabSize - column % ToolTextDisplay.TabSize;
-            start = index + 1;
-        }
-        return column + Math.Max(0, UnicodeWidth.GetWidth(line.AsSpan(start, end - start)));
-    }
+    // The display column after the first `scalars` scalars of a line.
+    private static int DisplayColumn(string line, int scalars) => ToolTextDisplay.Columns(Prefix(line, scalars));
 
     private static string Prefix(string line, int scalars)
     {

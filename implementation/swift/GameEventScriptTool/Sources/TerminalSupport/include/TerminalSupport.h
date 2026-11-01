@@ -3,6 +3,8 @@
 #ifndef GES_TERMINAL_SUPPORT_H
 #define GES_TERMINAL_SUPPORT_H
 #include <stdint.h>
+/* Select the user's locale, or a UTF-8 locale when it cannot measure Unicode widths. */
+void ges_unicode_locale(void);
 void ges_terminal_initialize(void);
 int ges_terminal_isatty(int fd);
 int ges_terminal_begin(void);

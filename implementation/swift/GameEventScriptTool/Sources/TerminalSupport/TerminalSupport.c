@@ -30,10 +30,13 @@ static void interrupted(int signal_number) {
     }
     _exit(128 + signal_number);
 }
-void ges_terminal_initialize(void) {
+void ges_unicode_locale(void) {
     setlocale(LC_CTYPE, "");
     /* GUI launchers and LANG=C still edit UTF-8, so wcwidth needs a Unicode locale. */
     if (MB_CUR_MAX < 4 && !setlocale(LC_CTYPE, "C.UTF-8")) setlocale(LC_CTYPE, "en_US.UTF-8");
+}
+void ges_terminal_initialize(void) {
+    ges_unicode_locale();
     signal(SIGPIPE, SIG_IGN);
     atexit(ges_terminal_end);
 }

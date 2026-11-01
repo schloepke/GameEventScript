@@ -75,9 +75,7 @@ internal sealed class GesDocumentReader
         return GesDocumentNode.Map(keys.ToArray(), values.ToArray());
     }
 
-    private bool IsSchemaHeader()
-        => _text.AsSpan(_position).StartsWith(":Schema".AsSpan(), StringComparison.Ordinal)
-            && (_position + 7 == _text.Length || !IsNameCharacter(_text[_position + 7]));
+    private bool IsSchemaHeader() => StartsWord(":Schema");
 
     private bool ReadSchemaHeader(out GesDocumentSchemaSyntax schema, out string name)
     {

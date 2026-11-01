@@ -19,7 +19,8 @@ internal static class RunShow
         var text = StrictUtf8.GetString(File.ReadAllBytes(path));
         var language = path.EndsWith(".gesd", StringComparison.OrdinalIgnoreCase) ? GesSyntaxLanguage.Gesd
             : path.EndsWith(".gesa", StringComparison.OrdinalIgnoreCase) ? GesSyntaxLanguage.Gesa : GesSyntaxLanguage.Ges;
-        var result = new GesSyntaxHighlighter(language, int.MaxValue).Highlight(text);
+        var highlighter = new GesSyntaxHighlighter(language, int.MaxValue);
+        var result = highlighter.Highlight(text);
         // Columns do not count a leading byte order mark.
         var lines = (text.Length > 0 && text[0] == '\uFEFF' ? text.Substring(1) : text).Split(["\r\n", "\r", "\n"], StringSplitOptions.None);
         var marks = new List<Mark>();
@@ -39,13 +40,9 @@ internal static class RunShow
         var header = "// File: " + JsonSerializer.Serialize(path, ToolJsonContext.Default.String);
         Console.Error.WriteLine(color ? RunHighlighting.Paint(header, 90) : header);
         var display = Console.IsErrorRedirected ? text : ToolTextDisplay.ExpandTabs(text);
-        // Without expanded tabs the spans of the diagnostics' highlighting also color the display.
-        Console.Error.Write(!color ? display : ReferenceEquals(display, text) ? GesAnsiRenderer.Render(text, result.Spans) : language switch
-        {
-            GesSyntaxLanguage.Gesd => RunHighlighting.RenderDocument(display),
-            GesSyntaxLanguage.Gesa => RunHighlighting.RenderAssembly(display),
-            _ => RunHighlighting.Render(display)
-        });
+        // An expanded display is highlighted again with the same highlighter, so tabs never change its colors.
+        Console.Error.Write(!color ? display
+            : GesAnsiRenderer.Render(display, ReferenceEquals(display, text) ? result.Spans : highlighter.Highlight(display).Spans));
         if (text.Length > 0 && !text.EndsWith('\n') && !text.EndsWith('\r')) Console.Error.WriteLine();
         foreach (var mark in marks)
         {
@@ -54,8 +51,9 @@ internal static class RunShow
             var source = mark.Line <= lines.Length ? lines[mark.Line - 1] : "";
             Console.Error.WriteLine("  " + ToolTextDisplay.ExpandTabs(source));
             var prefix = ToolTextDisplay.ExpandTabs(Prefix(source, mark.Column - 1));
-            // A range that continues on later lines is marked to the end of its first line.
-            var caret = new string('^', Math.Max(1, Math.Min(mark.Length, ScalarCount(source, 0, source.Length) - mark.Column + 1)));
+            // A range that continues on later lines is marked to the end of its first line, in expanded columns.
+            var through = ToolTextDisplay.ExpandTabs(Prefix(source, mark.Column - 1 + mark.Length));
+            var caret = new string('^', Math.Max(1, ScalarCount(through, 0, through.Length) - ScalarCount(prefix, 0, prefix.Length)));
             Console.Error.WriteLine("  " + new string(' ', ScalarCount(prefix, 0, prefix.Length)) + (color ? RunHighlighting.Paint(caret, 31) : caret));
         }
         Console.Error.WriteLine();

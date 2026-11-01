@@ -50,6 +50,11 @@ public sealed class GameEventScriptDocumentCommandTests
         Assert.AreEqual(1, partial.ExitCode);
         StringAssert.Contains(partial.StandardError, "error cli.io:");
         StringAssert.EndsWith(partial.StandardError, Lines("text.gesd(2,7): error document.unquotedText: Text values must be quoted."));
+        File.WriteAllBytes(Path.Combine(_directory, "binary.gesd"), [0x61, 0x3A, 0x20, 0xFF, 0x0A]);
+        var encoding = Run("document", "check", "binary.gesd", "text.gesd");
+        Assert.AreEqual(1, encoding.ExitCode);
+        StringAssert.StartsWith(encoding.StandardError, "binary.gesd: error cli.invalidEncoding:");
+        StringAssert.EndsWith(encoding.StandardError, Lines("text.gesd(2,7): error document.unquotedText: Text values must be quoted."));
     }
 
     /// <summary>Verifies that format prints the document's recommended layout, which reads back to an equal document.</summary>

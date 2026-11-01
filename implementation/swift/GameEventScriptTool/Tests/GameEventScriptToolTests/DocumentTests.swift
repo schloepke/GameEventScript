@@ -37,6 +37,12 @@ final class DocumentTests: XCTestCase {
         XCTAssertEqual(partial.code, 1)
         XCTAssertTrue(partial.error.contains("error cli.io:"), partial.error)
         XCTAssertTrue(partial.error.hasSuffix("\(text)(2,7): error document.unquotedText: Text values must be quoted.\n"), partial.error)
+        let binary = tool.directory.appendingPathComponent("binary.gesd")
+        try Data([0x61, 0x3A, 0x20, 0xFF, 0x0A]).write(to: binary)
+        let encoding = tool.run(["document", "check", binary.path, text])
+        XCTAssertEqual(encoding.code, 1)
+        XCTAssertTrue(encoding.error.hasPrefix("\(binary.path): error cli.invalidEncoding:"), encoding.error)
+        XCTAssertTrue(encoding.error.hasSuffix("\(text)(2,7): error document.unquotedText: Text values must be quoted.\n"), encoding.error)
     }
 
     func testFormatPrintsAndWritesTheRecommendedLayout() throws {

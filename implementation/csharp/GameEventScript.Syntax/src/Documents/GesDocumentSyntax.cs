@@ -134,7 +134,8 @@ internal sealed record GesDocumentDiagnostic(string Code, int Start, int End, st
         UnclosedText => "This Text is never closed.",
         InvalidSchemaHeader => "A schema header names one record type or a schema file.",
         MisplacedSchemaHeader => "The schema header must come before the first entry.",
-        _ => $"The document exceeds {limitName ?? "a limit"} ({limitValue})."
+        LimitExceeded => $"The document exceeds {limitName ?? "a limit"} ({limitValue}).",
+        _ => "This is not a valid document."
     };
 }
 

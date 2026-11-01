@@ -61,9 +61,7 @@
         return (.map(keys: keys, values: values), schema)
     }
 
-    private func isSchemaHeader() -> Bool {
-        starts(":Schema") && (position + 7 == bytes.count || !Self.nameByte(bytes[position + 7]))
-    }
+    private func isSchemaHeader() -> Bool { startsWord(":Schema") }
 
     private mutating func schemaHeader() -> GesDocumentSchemaSyntax? {
         position += 7

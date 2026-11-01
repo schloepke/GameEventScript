@@ -18,7 +18,8 @@ extension Tool {
         let text = try ToolFiles.source(path)
         let lower = path.lowercased()
         let language: GesSyntaxLanguage = lower.hasSuffix(".gesd") ? .gesd : lower.hasSuffix(".gesa") ? .gesa : .ges
-        let result = try GesSyntaxHighlighter(language: language, maxInputLength: Int.max).highlight(text)
+        let highlighter = try GesSyntaxHighlighter(language: language, maxInputLength: Int.max)
+        let result = try highlighter.highlight(text)
         // Columns do not count a leading byte order mark.
         let lines = Self.lines(text.hasPrefix("\u{feff}") ? String(text.unicodeScalars.dropFirst()) : text)
         let units = Array(text.utf16)
@@ -37,16 +38,10 @@ extension Tool {
         io.line(color ? RunHighlighting.paint(header, 90) : header, toError: true)
         let expandsTabs = io.errorTerminal && text.utf8.contains(9)
         let display = expandsTabs ? ToolTextDisplay.expandTabs(text) : text
-        if color && !expandsTabs {
-            // Without expanded tabs the spans of the diagnostics' highlighting also color the display.
-            io.write((try? GesAnsiRenderer.render(text, spans: result.spans)) ?? text, toError: true)
-        } else if color {
-            let highlighting = RunHighlighting()
-            switch language {
-            case .gesd: io.write(highlighting.renderDocument(display), toError: true)
-            case .gesa: io.write(highlighting.renderAssembly(display), toError: true)
-            case .ges: io.write(highlighting.render(display), toError: true)
-            }
+        if color {
+            // An expanded display is highlighted again with the same highlighter, so tabs never change its colors.
+            let spans = expandsTabs ? try highlighter.highlight(display).spans : result.spans
+            io.write(try GesAnsiRenderer.render(display, spans: spans), toError: true)
         } else {
             io.write(display, toError: true)
         }
@@ -56,9 +51,13 @@ extension Tool {
             io.write((color ? RunHighlighting.paint(report, 31) : report) + "\n", toError: true)
             let source = mark.line <= lines.count ? lines[mark.line - 1] : ""
             io.line("  " + ToolTextDisplay.expandTabs(source), toError: true)
-            let prefix = ToolTextDisplay.expandTabs(String(String.UnicodeScalarView(source.unicodeScalars.prefix(mark.column - 1))))
-            // A range that continues on later lines is marked to the end of its first line.
-            let caret = String(repeating: "^", count: max(1, min(mark.length, source.unicodeScalars.count - mark.column + 1)))
+            let scalars = Array(source.unicodeScalars)
+            let start = min(mark.column - 1, scalars.count)
+            // A range that continues on later lines is marked to the end of its first line, in expanded columns.
+            let end = min(scalars.count, start + mark.length)
+            let prefix = ToolTextDisplay.expandTabs(String(String.UnicodeScalarView(scalars[..<start])))
+            let through = ToolTextDisplay.expandTabs(String(String.UnicodeScalarView(scalars[..<end])))
+            let caret = String(repeating: "^", count: max(1, through.unicodeScalars.count - prefix.unicodeScalars.count))
             io.line("  " + String(repeating: " ", count: prefix.unicodeScalars.count) + (color ? RunHighlighting.paint(caret, 31) : caret), toError: true)
         }
         io.line(toError: true)

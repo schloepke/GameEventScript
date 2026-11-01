@@ -76,7 +76,8 @@
         case unclosedText: return "This Text is never closed."
         case invalidSchemaHeader: return "A schema header names one record type or a schema file."
         case misplacedSchemaHeader: return "The schema header must come before the first entry."
-        default: return "The document exceeds \(limitName ?? "a limit") (\(limitValue))."
+        case limitExceeded: return "The document exceeds \(limitName ?? "a limit") (\(limitValue))."
+        default: return "This is not a valid document."
         }
     }
 }

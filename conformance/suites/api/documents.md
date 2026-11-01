@@ -2358,19 +2358,19 @@ document:
 
 ---
 
-## Test: a longer type name is not a Vector or Point
+## Test: a longer type name is not a Vector
 
-This case checks the following contract: `:Vectors(...)` and `:Points(...)` name unknown types; the Vector and Point forms need the exact type name.
+This case checks the following contract: `:Vectors(...)` names an unknown type; the Vector form needs the exact type name.
 
 ### Case description
 
 ```yaml
 gesBlock: "case"
-id: "spatial-prefix-name"
+id: "vector-prefix-name"
 kind: "documentApi"
 level: "atomic"
 documentApi:
-  text: "a: :Vectors(1)\nb: :Points(1)"
+  text: "a: :Vectors(1)"
 ```
 
 ### Expectation
@@ -2381,6 +2381,34 @@ document:
   error:
     code: "unknownType"
     line: 1
+    column: 4
+```
+
+---
+
+## Test: a longer type name is not a Point
+
+This case checks the following contract: `:Points(...)` names an unknown type; the Point form needs the exact type name.
+
+### Case description
+
+```yaml
+gesBlock: "case"
+id: "point-prefix-name"
+kind: "documentApi"
+level: "atomic"
+documentApi:
+  text: "a: 1\nb: :Points(1)"
+```
+
+### Expectation
+
+```yaml
+gesBlock: "expect"
+document:
+  error:
+    code: "unknownType"
+    line: 2
     column: 4
 ```
 

@@ -63,19 +63,23 @@ internal static class ToolTextDisplay
     internal static int ClusterLength(ReadOnlySpan<char> text)
     {
         var length = StringInfo.GetNextTextElementLength(text);
-        while (length < text.Length && EndsInConjunctLinker(text[..length])
+        // The cheap consonant test on the next scalar comes first, so other scripts skip the backward scan.
+        while (length < text.Length
             && Rune.DecodeFromUtf16(text[length..], out var next, out _) == OperationStatus.Done
-            && ToolTextWidths.ConjunctConsonants.BinarySearch(next.Value) >= 0)
+            && ToolTextWidths.ConjunctConsonants.BinarySearch(next.Value) >= 0
+            && EndsInConjunctLinker(text[..length]))
             length += StringInfo.GetNextTextElementLength(text[length..]);
         return length;
     }
 
     // Consonant [Extend|Linker]* Linker [Extend|Linker]*, with zero-width scalars standing in for InCB=Extend.
+    // ZWNJ is zero-width but not InCB=Extend: it deliberately prevents the conjunct.
     private static bool EndsInConjunctLinker(ReadOnlySpan<char> cluster)
     {
         var linked = false;
         while (Rune.DecodeLastFromUtf16(cluster, out var rune, out var size) == OperationStatus.Done)
         {
+            if (rune.Value == 0x200C) return false;
             if (ToolTextWidths.ConjunctLinkers.BinarySearch(rune.Value) >= 0) linked = true;
             else if (ScalarWidth(rune.Value) != 0) return linked && ToolTextWidths.ConjunctConsonants.BinarySearch(rune.Value) >= 0;
             cluster = cluster[..^size];

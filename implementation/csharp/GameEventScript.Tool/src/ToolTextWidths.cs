@@ -6,8 +6,6 @@ namespace GameEventScript.Tool;
 
 internal static class ToolTextWidths
 {
-    internal const string UnicodeVersion = "17.0.0";
-
     // Each run starts at its scalar and lasts until the next start.
     internal static ReadOnlySpan<int> Starts =>
     [

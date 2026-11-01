@@ -57,6 +57,7 @@ public sealed class GameEventScriptTextDisplayTests
         Assert.AreEqual(1, ToolTextDisplay.ClusterCount("\u0915\u094D\u0937\u094D\u092E"));
         Assert.AreEqual(1, ToolTextDisplay.ClusterCount("\u0915\u094D\u200D\u0937"));
         Assert.AreEqual(2, ToolTextDisplay.ClusterCount("\u0915\u094Da"));
+        Assert.AreEqual(2, ToolTextDisplay.ClusterCount("\u0915\u094D\u200C\u0937"));
         Assert.AreEqual(2, ToolTextDisplay.ClusterCount("\u0915\u0937"));
     }
 

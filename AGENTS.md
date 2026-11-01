@@ -661,7 +661,8 @@ Both CLIs measure terminal columns per grapheme cluster with one table generated
 `python3 scripts/generate-terminal-widths.py` (C# `ToolTextWidths.cs`, Swift
 `ToolTextWidths.swift`), not libc `wcwidth`. The C# clusters add the Indic conjunct rule
 GB9c that .NET lacks, from linker/consonant data the generator takes from Swift's
-segmentation and the Swift tests verify. `--check` requires identical tables and, with a
+segmentation (so generation needs Swift) and the Swift tests verify from their own
+generated `ToolTextConjuncts.swift`. `--check` requires identical tables and, with a
 matching Python Unicode version, current widths. Only the C# PrettyPrompt line editor keeps
 PrettyPrompt's own widths, which count each UTF-16 unit outside the BMP as a column.
 The editor and terminal source/dump displays use four-column tab stops. Tab

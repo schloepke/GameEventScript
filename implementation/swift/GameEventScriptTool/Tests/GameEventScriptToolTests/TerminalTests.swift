@@ -44,8 +44,10 @@ final class TerminalTests: XCTestCase {
             default: break
             }
         }
-        XCTAssertEqual(linkers, ToolTextWidths.conjunctLinkers)
-        XCTAssertEqual(consonants, ToolTextWidths.conjunctConsonants)
+        // ZWNJ prevents the conjunct, which the C# CLI handles explicitly.
+        XCTAssertEqual(("\u{915}\u{94D}\u{200C}\u{937}").count, 2)
+        XCTAssertEqual(linkers, ToolTextConjuncts.conjunctLinkers)
+        XCTAssertEqual(consonants, ToolTextConjuncts.conjunctConsonants)
     }
 
     // Tab spaces wrap individually and wide characters move whole, like the C# waiting input.

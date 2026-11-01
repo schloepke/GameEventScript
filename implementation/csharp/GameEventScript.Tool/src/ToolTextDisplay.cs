@@ -79,17 +79,29 @@ internal static class ToolTextDisplay
         return scalar >= consonants[0] && scalar <= consonants[^1] && consonants.BinarySearch(scalar) >= 0;
     }
 
-    // Consonant [Extend|Linker]* Linker [Extend|Linker]*, with zero-width scalars standing in for InCB=Extend.
-    // ZWNJ is zero-width but not InCB=Extend: it deliberately prevents the conjunct.
+    // Consonant [Extend|Linker]* Linker [Extend|Linker]*, with the InCB classes from Swift's segmentation.
     private static bool EndsInConjunctLinker(ReadOnlySpan<char> cluster)
     {
         var linked = false;
         while (Rune.DecodeLastFromUtf16(cluster, out var rune, out var size) == OperationStatus.Done)
         {
-            if (rune.Value == 0x200C) return false;
             if (ToolTextWidths.ConjunctLinkers.BinarySearch(rune.Value) >= 0) linked = true;
-            else if (ScalarWidth(rune.Value) != 0) return linked && IsConjunctConsonant(rune.Value);
+            else if (!IsConjunctExtender(rune.Value)) return linked && IsConjunctConsonant(rune.Value);
             cluster = cluster[..^size];
+        }
+        return false;
+    }
+
+    private static bool IsConjunctExtender(int scalar)
+    {
+        var ranges = ToolTextWidths.ConjunctExtenders;
+        int low = 0, high = ranges.Length / 2 - 1;
+        while (low <= high)
+        {
+            var middle = (low + high) / 2;
+            if (scalar < ranges[2 * middle]) high = middle - 1;
+            else if (scalar > ranges[2 * middle + 1]) low = middle + 1;
+            else return true;
         }
         return false;
     }

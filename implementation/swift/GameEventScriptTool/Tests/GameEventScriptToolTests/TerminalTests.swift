@@ -30,40 +30,39 @@ final class TerminalTests: XCTestCase {
     }
 
     // The C# CLI's GB9c data must match this Swift's segmentation: a linker joins two consonants, a consonant joins a
-    // preceding consonant and virama without extending a lone consonant.
+    // preceding consonant and virama without extending a lone consonant, and an extender extends a consonant and keeps
+    // the conjunct joined both before and after the virama.
     func testConjunctTablesMatchNativeSegmentation() {
         let ka = "\u{915}"
+        let virama = "\u{94D}"
+        let ssa = "\u{937}"
         var linkers: [UInt32] = []
         var consonants: [UInt32] = []
+        var extenders: [UInt32] = []
         for value in UInt32(0)...0x10FFFF {
             guard let scalar = Unicode.Scalar(value) else { continue }
             let text = String(scalar)
-            switch scalar.properties.generalCategory {
-            case .nonspacingMark: if (ka + text + ka).count == 1 { linkers.append(value) }
-            case .otherLetter: if (ka + "\u{94D}" + text).count == 1 && (ka + text).count == 2 { consonants.append(value) }
-            default: break
+            if (ka + text).count == 1 {
+                if (ka + text + ka).count == 1 {
+                    linkers.append(value)
+                } else if (ka + text + virama + ssa).count == 1 {
+                    XCTAssertEqual((ka + virama + text + ssa).count, 1, String(value, radix: 16))
+                    extenders.append(value)
+                } else {
+                    XCTAssertEqual((ka + virama + text + ssa).count, 2, String(value, radix: 16))
+                }
+            } else if scalar.properties.generalCategory == .otherLetter && (ka + virama + text).count == 1 {
+                consonants.append(value)
             }
         }
-        // ZWNJ prevents the conjunct, which the C# CLI handles explicitly.
-        XCTAssertEqual(("\u{915}\u{94D}\u{200C}\u{937}").count, 2)
+        var ranges: [UInt32] = []
+        for value in extenders {
+            if let last = ranges.last, last == value - 1 { ranges[ranges.count - 1] = value } else { ranges += [value, value] }
+        }
         XCTAssertEqual(linkers, ToolTextConjuncts.conjunctLinkers)
         XCTAssertEqual(consonants, ToolTextConjuncts.conjunctConsonants)
-    }
-
-    // The C# CLI treats every zero-width scalar except ZWNJ as InCB=Extend within a conjunct; Swift's segmentation must
-    // agree for each one that extends a consonant, before and after the linker.
-    func testConjunctExtendApproximationMatchesNativeSegmentation() {
-        let ka = "\u{915}"
-        let ssa = "\u{937}"
-        let virama = "\u{94D}"
-        for value in UInt32(0)...0x10FFFF {
-            guard let scalar = Unicode.Scalar(value), ToolTextDisplay.scalarWidth(value) == 0 else { continue }
-            let text = String(scalar)
-            guard (ka + text).count == 1 else { continue }
-            let joins = value != 0x200c
-            XCTAssertEqual((ka + text + virama + ssa).count == 1, joins, String(value, radix: 16))
-            XCTAssertEqual((ka + virama + text + ssa).count == 1, joins, String(value, radix: 16))
-        }
+        XCTAssertEqual(ranges, ToolTextConjuncts.conjunctExtenders)
+        XCTAssertFalse(extenders.contains(0x200c))
     }
 
     // Tab spaces wrap individually and wide characters move whole, like the C# waiting input.

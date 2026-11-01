@@ -8,6 +8,15 @@ import XCTest
 @testable import GameEventScriptTool
 
 final class TerminalTests: XCTestCase {
+    // The widths match the C# CLI per grapheme cluster.
+    func testClusterWidthsAndTabColumns() {
+        let clusters: [(Character, Int)] = [("a", 1), ("e\u{301}", 1), ("\u{65E5}", 2), ("\u{2764}\u{FE0F}", 2), ("\u{1F44D}\u{1F3FD}", 2), ("\u{1F1E9}\u{1F1EA}", 2), ("\u{1F468}\u{200D}\u{1F469}\u{200D}\u{1F467}", 2)]
+        for (cluster, width) in clusters { XCTAssertEqual(ToolTextDisplay.width(cluster), width, String(cluster)) }
+        XCTAssertEqual(ToolTextDisplay.columns("a\tb"), 5)
+        XCTAssertEqual(ToolTextDisplay.columns("\u{65E5}\u{2764}\u{FE0F}\tb"), 9)
+        XCTAssertEqual(ToolTextDisplay.expandTabs("\u{65E5}\u{2764}\u{FE0F}\tb"), "\u{65E5}\u{2764}\u{FE0F}    b")
+    }
+
     func testExtendedEnterAndPreservationAtDecoderBoundary() throws {
         for sequence in ["\u{1b}[27;2;13~", "\u{1b}[13;2u", "\u{1b}[27;3;13~", "\u{1b}[13;3u", "\u{1b}\r", "\u{1b}\n", "\u{0e}"] {
             var bytes = Array(sequence.utf8).map(Int32.init) + [65]

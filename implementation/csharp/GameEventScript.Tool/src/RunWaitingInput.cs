@@ -1,8 +1,8 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
+using System.Globalization;
 using System.Text;
-using PrettyPrompt.Rendering;
 
 namespace GameEventScript.Tool;
 
@@ -43,10 +43,13 @@ internal static class RunWaitingInput
             var column = 5;
             var lineColumn = 0;
             var width = Math.Max(10, Console.WindowWidth);
-            foreach (var rune in value.EnumerateRunes())
+            // Clusters are measured like the expanded text Draw writes.
+            var elements = StringInfo.GetTextElementEnumerator(value);
+            while (elements.MoveNext())
             {
-                if (rune.Value == '\n') { row++; column = 5; lineColumn = 0; continue; }
-                var size = rune.Value == '\t' ? 4 - lineColumn % 4 : Math.Max(0, UnicodeWidth.GetWidth(rune.ToString()));
+                var element = elements.GetTextElement();
+                if (element is "\n" or "\r\n") { row++; column = 5; lineColumn = 0; continue; }
+                var size = element == "\t" ? ToolTextDisplay.TabSize - lineColumn % ToolTextDisplay.TabSize : ToolTextDisplay.Width(element);
                 if (column + size > width) { row++; column = 0; }
                 column += size;
                 lineColumn += size;

@@ -41,6 +41,7 @@ internal static class ToolTextDisplay
     internal static int Width(ReadOnlySpan<char> text)
     {
         var total = 0;
+        Span<char> scalar = stackalloc char[2];
         while (!text.IsEmpty)
         {
             var length = StringInfo.GetNextTextElementLength(text);
@@ -50,7 +51,7 @@ internal static class ToolTextDisplay
             var hasWide = false;
             foreach (var rune in text[..length].EnumerateRunes())
             {
-                var runeWidth = Math.Max(0, UnicodeWidth.GetWidth(rune.ToString()));
+                var runeWidth = Math.Max(0, UnicodeWidth.GetWidth(scalar[..rune.EncodeToUtf16(scalar)]));
                 width += runeWidth;
                 joined |= rune.Value is 0x200D or 0xFE0F;
                 hasWide |= runeWidth == 2;

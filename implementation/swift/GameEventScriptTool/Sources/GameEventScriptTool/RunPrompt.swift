@@ -7,7 +7,7 @@ import TerminalSupport
 enum ToolTextDisplay {
     static let tabSize = 4
 
-    // wcwidth measures Unicode only in a UTF-8 locale; `ges` selects it at startup, other callers on first use.
+    // wcwidth measures Unicode only in a UTF-8 locale; `ges` selects it once at startup, other callers on first use.
     private static let unicodeLocale: Void = ges_unicode_locale()
 
     static func width(_ character: Character) -> Int {

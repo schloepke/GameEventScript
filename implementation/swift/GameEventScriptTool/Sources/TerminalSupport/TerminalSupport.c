@@ -6,6 +6,7 @@
 #include <errno.h>
 #include <locale.h>
 #include <poll.h>
+#include <pthread.h>
 #include <signal.h>
 #include <spawn.h>
 #include <sys/wait.h>
@@ -30,11 +31,13 @@ static void interrupted(int signal_number) {
     }
     _exit(128 + signal_number);
 }
-void ges_unicode_locale(void) {
+static pthread_once_t locale_once = PTHREAD_ONCE_INIT;
+static void select_unicode_locale(void) {
     setlocale(LC_CTYPE, "");
     /* GUI launchers and LANG=C still edit UTF-8, so wcwidth needs a Unicode locale. */
     if (MB_CUR_MAX < 4 && !setlocale(LC_CTYPE, "C.UTF-8")) setlocale(LC_CTYPE, "en_US.UTF-8");
 }
+void ges_unicode_locale(void) { pthread_once(&locale_once, select_unicode_locale); }
 void ges_terminal_initialize(void) {
     ges_unicode_locale();
     signal(SIGPIPE, SIG_IGN);

@@ -43,7 +43,13 @@ public sealed class GameEventScriptDocumentCommandTests
         Assert.AreEqual(string.Empty, invalid.StandardOutput);
         Assert.AreEqual(Lines(
             "text.gesd(2,7): error document.unquotedText: Text values must be quoted.",
-            "form.gesd(1,8): error document.invalidLiteral: This explicit form does not construct a value."), invalid.StandardError);
+            "form.gesd(1,8): error document.invalidLiteral: This is not a valid literal."), invalid.StandardError);
+
+        // An unreadable file does not stop the check of the remaining files.
+        var partial = Run("document", "check", "missing.gesd", "text.gesd");
+        Assert.AreEqual(1, partial.ExitCode);
+        StringAssert.Contains(partial.StandardError, "error cli.io:");
+        StringAssert.EndsWith(partial.StandardError, Lines("text.gesd(2,7): error document.unquotedText: Text values must be quoted."));
     }
 
     /// <summary>Verifies that format prints the document's recommended layout, which reads back to an equal document.</summary>
@@ -104,7 +110,7 @@ public sealed class GameEventScriptDocumentCommandTests
             "", "// File: \"bad.gesd\"", "a: 1", "name: Basic Track",
             "bad.gesd(2,7): error document.unquotedText: Text values must be quoted.", "  name: Basic Track", "        ^^^^^", "",
             "", "// File: \"form.gesd\"", "range: :Range(1)",
-            "form.gesd(1,8): error document.invalidLiteral: This explicit form does not construct a value.", "  range: :Range(1)", "         ^^^^^^", "",
+            "form.gesd(1,8): error document.invalidLiteral: This is not a valid literal.", "  range: :Range(1)", "         ^^^^^^", "",
             "", "// File: \"source.ges\"", "on Start {"), result.StandardError[..result.StandardError.IndexOf("source.ges(", StringComparison.Ordinal)]);
         StringAssert.Contains(result.StandardError, "source.ges(2,1): error parse.syntax:");
         Assert.AreEqual(string.Empty, result.StandardOutput);

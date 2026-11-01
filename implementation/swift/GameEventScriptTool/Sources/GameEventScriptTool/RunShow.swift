@@ -28,15 +28,19 @@ extension Tool {
             marks.append(Mark(line: line, column: column, length: max(1, Self.scalarCount(units, diagnostic.start, diagnostic.length)), code: diagnostic.code, message: diagnostic.message))
         }
         // A document read without error can still fail to construct an explicit form.
-        if language == .gesd && marks.isEmpty, let failure = ToolDocuments.read(text).1 {
+        if language == .gesd && marks.isEmpty, let failure = try ToolDocuments.read(text).1 {
             marks.append(Mark(line: failure.line, column: failure.column, length: Self.formLength(lines, failure.line, failure.column), code: failure.code, message: failure.message))
         }
 
         io.line(toError: true)
         let header = "// File: " + quoted(path)
         io.line(color ? RunHighlighting.paint(header, 90) : header, toError: true)
-        let display = io.errorTerminal ? ToolTextDisplay.expandTabs(text) : text
-        if color {
+        let expandsTabs = io.errorTerminal && text.utf8.contains(9)
+        let display = expandsTabs ? ToolTextDisplay.expandTabs(text) : text
+        if color && !expandsTabs {
+            // Without expanded tabs the spans of the diagnostics' highlighting also color the display.
+            io.write((try? GesAnsiRenderer.render(text, spans: result.spans)) ?? text, toError: true)
+        } else if color {
             let highlighting = RunHighlighting()
             switch language {
             case .gesd: io.write(highlighting.renderDocument(display), toError: true)
@@ -53,7 +57,8 @@ extension Tool {
             let source = mark.line <= lines.count ? lines[mark.line - 1] : ""
             io.line("  " + ToolTextDisplay.expandTabs(source), toError: true)
             let prefix = ToolTextDisplay.expandTabs(String(String.UnicodeScalarView(source.unicodeScalars.prefix(mark.column - 1))))
-            let caret = String(repeating: "^", count: mark.length)
+            // A range that continues on later lines is marked to the end of its first line.
+            let caret = String(repeating: "^", count: max(1, min(mark.length, source.unicodeScalars.count - mark.column + 1)))
             io.line("  " + String(repeating: " ", count: prefix.unicodeScalars.count) + (color ? RunHighlighting.paint(caret, 31) : caret), toError: true)
         }
         io.line(toError: true)

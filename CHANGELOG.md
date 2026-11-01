@@ -192,7 +192,8 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   Map or, with a `:Schema(:TypeName)` header, a Record; `:Schema('file.gess')`
   references a schema file. Entries are separated by commas or line breaks,
   `//` comments are allowed, and reading is strict: unquoted Text, duplicate
-  keys and explicit forms that construct nothing, such as `:Range(1)`, fail with
+  keys and explicit forms or number tokens that construct nothing, such as
+  `:Range(1)` or `NaN`, fail with
   a `GesDocumentException`/`GesDocumentError` carrying a stable `document.*`
   code, line and column. Printing writes exact prefixed units such
   as `1kW` or `250ms` and reads back bit-identically in every implementation;

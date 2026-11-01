@@ -198,5 +198,9 @@ and ANSI text preservation.
 ```
 
 ```highlight
+{"name": "document NaN constructs no value", "language": "gesd", "source": "ratio: NaN\n", "expect": [{"text": "NaN", "kind": "number"}], "diagnostics": [{"code": "document.invalidLiteral", "text": "NaN"}]}
+```
+
+```highlight
 {"name": "document unclosed text runs to the end", "language": "gesd", "source": "\ufeffname: 'open\nnext: 1\n", "expect": [{"text": "'open\nnext: 1\n", "kind": "string"}], "diagnostics": [{"code": "document.unclosedText", "text": "'"}]}
 ```

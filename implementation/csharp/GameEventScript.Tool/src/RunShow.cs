@@ -39,7 +39,8 @@ internal static class RunShow
         var header = "// File: " + JsonSerializer.Serialize(path, ToolJsonContext.Default.String);
         Console.Error.WriteLine(color ? RunHighlighting.Paint(header, 90) : header);
         var display = Console.IsErrorRedirected ? text : ToolTextDisplay.ExpandTabs(text);
-        Console.Error.Write(!color ? display : language switch
+        // Without expanded tabs the spans of the diagnostics' highlighting also color the display.
+        Console.Error.Write(!color ? display : ReferenceEquals(display, text) ? GesAnsiRenderer.Render(text, result.Spans) : language switch
         {
             GesSyntaxLanguage.Gesd => RunHighlighting.RenderDocument(display),
             GesSyntaxLanguage.Gesa => RunHighlighting.RenderAssembly(display),
@@ -53,7 +54,8 @@ internal static class RunShow
             var source = mark.Line <= lines.Length ? lines[mark.Line - 1] : "";
             Console.Error.WriteLine("  " + ToolTextDisplay.ExpandTabs(source));
             var prefix = ToolTextDisplay.ExpandTabs(Prefix(source, mark.Column - 1));
-            var caret = new string('^', mark.Length);
+            // A range that continues on later lines is marked to the end of its first line.
+            var caret = new string('^', Math.Max(1, Math.Min(mark.Length, ScalarCount(source, 0, source.Length) - mark.Column + 1)));
             Console.Error.WriteLine("  " + new string(' ', ScalarCount(prefix, 0, prefix.Length)) + (color ? RunHighlighting.Paint(caret, 31) : caret));
         }
         Console.Error.WriteLine();

@@ -274,7 +274,7 @@ internal static class GesSourceHighlighting
     // The offset each line starts at; a BOM occupies no column, so the first line starts after it.
     private static List<int> LineStarts(string text)
     {
-        var starts = new List<int> { text.Length > 0 && text[0] == '﻿' ? 1 : 0 };
+        var starts = new List<int> { text.Length > 0 && text[0] == '\uFEFF' ? 1 : 0 };
         for (var i = 0; i < text.Length; i++)
         {
             if (text[i] == '\r' && i + 1 < text.Length && text[i + 1] == '\n') i++;

@@ -118,6 +118,24 @@ internal sealed record GesDocumentDiagnostic(string Code, int Start, int End, st
     internal const string InvalidSchemaHeader = "document.invalidSchemaHeader";
     internal const string MisplacedSchemaHeader = "document.misplacedSchemaHeader";
     internal const string LimitExceeded = "document.limitExceeded";
+
+    // The English explanation of an error code for highlighters and tools; it is not part of the contract.
+    internal static string Explain(string code, string? limitName, int limitValue) => code switch
+    {
+        InvalidKey => "An entry must start with a key; a record field must be a field name.",
+        MissingColon => "A key must be followed by ':' on its line.",
+        DuplicateKey => "This key is already used in its container.",
+        UnquotedText => "Text values must be quoted.",
+        UnknownUnit => "The number has an unknown unit.",
+        InvalidLiteral => "This is not a valid literal.",
+        UnknownType => "Documents know only the built-in types.",
+        UnexpectedToken => "An entry, separator or closing bracket is expected here.",
+        UnclosedBracket => "This bracket is never closed.",
+        UnclosedText => "This Text is never closed.",
+        InvalidSchemaHeader => "A schema header names one record type or a schema file.",
+        MisplacedSchemaHeader => "The schema header must come before the first entry.",
+        _ => $"The document exceeds {limitName ?? "a limit"} ({limitValue})."
+    };
 }
 
 /// <summary>
@@ -144,7 +162,7 @@ internal sealed class GesDocumentSyntax(string text, GesDocumentNode? root, GesD
     {
         var line = 1;
         var column = 1;
-        var index = text.Length > 0 && text[0] == '﻿' ? 1 : 0;
+        var index = text.Length > 0 && text[0] == '\uFEFF' ? 1 : 0;
         while (index < offset && index < text.Length)
         {
             var c = text[index++];

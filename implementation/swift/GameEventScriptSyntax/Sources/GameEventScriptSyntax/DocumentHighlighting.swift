@@ -95,7 +95,7 @@ enum GesDocumentHighlighting {
         }
 
         guard let diagnostic = GesDocumentReader.read(text).diagnostic else { return [] }
-        return [GesSpanBuilder.Diagnostic(code: diagnostic.code, message: message(diagnostic), start: diagnostic.start, end: diagnostic.end)]
+        return [GesSpanBuilder.Diagnostic(code: diagnostic.code, message: GesDocumentDiagnostic.explain(diagnostic.code, limitName: diagnostic.limitName, limitValue: diagnostic.limitValue), start: diagnostic.start, end: diagnostic.end)]
     }
 
     private static func isSpace(_ c: UInt8) -> Bool { c == 32 || c == 9 || c == 10 || c == 13 }
@@ -153,23 +153,5 @@ enum GesDocumentHighlighting {
             }
         }
         return false
-    }
-
-    private static func message(_ diagnostic: GesDocumentDiagnostic) -> String {
-        switch diagnostic.code {
-        case GesDocumentDiagnostic.invalidKey: return "An entry must start with a key; a record field must be a field name."
-        case GesDocumentDiagnostic.missingColon: return "A key must be followed by ':' on its line."
-        case GesDocumentDiagnostic.duplicateKey: return "This key is already used in its container."
-        case GesDocumentDiagnostic.unquotedText: return "Text values must be quoted."
-        case GesDocumentDiagnostic.unknownUnit: return "The number has an unknown unit."
-        case GesDocumentDiagnostic.invalidLiteral: return "This is not a valid literal."
-        case GesDocumentDiagnostic.unknownType: return "Documents know only the built-in types."
-        case GesDocumentDiagnostic.unexpectedToken: return "An entry, separator or closing bracket is expected here."
-        case GesDocumentDiagnostic.unclosedBracket: return "This bracket is never closed."
-        case GesDocumentDiagnostic.unclosedText: return "This Text is never closed."
-        case GesDocumentDiagnostic.invalidSchemaHeader: return "A schema header names one record type or a schema file."
-        case GesDocumentDiagnostic.misplacedSchemaHeader: return "The schema header must come before the first entry."
-        default: return "The document exceeds \(diagnostic.limitName ?? "a limit") (\(diagnostic.limitValue))."
-        }
     }
 }

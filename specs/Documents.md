@@ -106,6 +106,9 @@ value and never falls back to Text.
   identity, so `a` and `'a'` are duplicates.
 - Number tokens with an unknown unit suffix, invalid Tag names, malformed
   containers, unclosed brackets or quoted Text and trailing input are errors.
+- A number token that is recognized but constructs `nothing`, such as `NaN`,
+  `Infinity%` or a percentage that overflows binary64 like `1e400%`, is an error
+  instead of the value `nothing`; `Infinity` and `-Infinity` remain numbers.
 - An explicit form other than `:Nothing(...)` whose arguments are recognized but
   construct `nothing`, such as `:Range(1)`, `:Number("abc")` or
   `:Message(Done(v: 1) with 5)`, is an error instead of the value `nothing`.
@@ -177,7 +180,7 @@ order, which evaluates arguments before their form and siblings left to right.
 | `document.duplicateKey` | a key or label repeats in the same container | start of the repeated key |
 | `document.unquotedText` | a value token that starts with an ASCII letter or `_` is not a literal | start of the token |
 | `document.unknownUnit` | a number is followed by a suffix that is not a unit spelling | start of the token |
-| `document.invalidLiteral` | any other value or explicit form is not a valid literal, or an explicit form constructs `nothing` | start of the value; the `:` of a form |
+| `document.invalidLiteral` | any other value or explicit form is not a valid literal, or a number token or explicit form constructs `nothing` | start of the value; the `:` of a form |
 | `document.unknownType` | a typed form names an unknown or non-constructible type | the `:` of the form |
 | `document.unexpectedToken` | input appears where an entry, separator or closing bracket is expected | that input |
 | `document.unclosedBracket` | the text ends inside a container or argument list | the opening `[` or `(` |

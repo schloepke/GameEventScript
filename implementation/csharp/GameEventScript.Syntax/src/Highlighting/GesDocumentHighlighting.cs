@@ -28,7 +28,7 @@ internal static class GesDocumentHighlighting
         Context? pending = null;
         var first = false;
         var position = 0;
-        if (text.Length > 0 && text[0] == '﻿') spans.Add(position++, 1, GesSyntaxKind.Plain);
+        if (text.Length > 0 && text[0] == '\uFEFF') spans.Add(position++, 1, GesSyntaxKind.Plain);
         while (position < text.Length)
         {
             var c = text[position];
@@ -119,7 +119,7 @@ internal static class GesDocumentHighlighting
 
         var syntax = GesDocumentReader.Read(text);
         if (syntax.Diagnostic is { } diagnostic)
-            diagnostics.Add(new GesHighlightDiagnostic(diagnostic.Code, Message(diagnostic), diagnostic.Start, diagnostic.End - diagnostic.Start));
+            diagnostics.Add(new GesHighlightDiagnostic(diagnostic.Code, Code.Explain(diagnostic.Code, diagnostic.LimitName, diagnostic.LimitValue), diagnostic.Start, diagnostic.End - diagnostic.Start));
     }
 
     private static bool IsComment(string text, int position) => position + 1 < text.Length && text[position] == '/' && text[position + 1] == '/';
@@ -172,21 +172,4 @@ internal static class GesDocumentHighlighting
         }
         return false;
     }
-
-    private static string Message(GesDocumentDiagnostic diagnostic) => diagnostic.Code switch
-    {
-        Code.InvalidKey => "An entry must start with a key; a record field must be a field name.",
-        Code.MissingColon => "A key must be followed by ':' on its line.",
-        Code.DuplicateKey => "This key is already used in its container.",
-        Code.UnquotedText => "Text values must be quoted.",
-        Code.UnknownUnit => "The number has an unknown unit.",
-        Code.InvalidLiteral => "This is not a valid literal.",
-        Code.UnknownType => "Documents know only the built-in types.",
-        Code.UnexpectedToken => "An entry, separator or closing bracket is expected here.",
-        Code.UnclosedBracket => "This bracket is never closed.",
-        Code.UnclosedText => "This Text is never closed.",
-        Code.InvalidSchemaHeader => "A schema header names one record type or a schema file.",
-        Code.MisplacedSchemaHeader => "The schema header must come before the first entry.",
-        _ => $"The document exceeds {diagnostic.LimitName} ({diagnostic.LimitValue})."
-    };
 }

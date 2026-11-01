@@ -38,7 +38,7 @@ internal sealed class GesDocumentReader
     {
         schema = GesDocumentSchemaSyntax.None;
         schemaName = "";
-        if (_text.Length > 0 && _text[0] == '﻿') _position = 1;
+        if (_text.Length > 0 && _text[0] == '\uFEFF') _position = 1;
         SkipWhitespace();
         if (IsSchemaHeader())
         {
@@ -137,8 +137,8 @@ internal sealed class GesDocumentReader
         }
         if (_text[_position] == ':')
         {
-            if (_text.AsSpan(_position).StartsWith(":Vector".AsSpan(), StringComparison.Ordinal)) return ReadSpatial(depth, point: false);
-            if (_text.AsSpan(_position).StartsWith(":Point".AsSpan(), StringComparison.Ordinal)) return ReadSpatial(depth, point: true);
+            if (StartsWord(":Vector")) return ReadSpatial(depth, point: false);
+            if (StartsWord(":Point")) return ReadSpatial(depth, point: true);
         }
         if (_text[_position] == ':' && !_text.AsSpan(_position).StartsWith(":Dice[".AsSpan(), StringComparison.Ordinal))
         {
@@ -174,7 +174,9 @@ internal sealed class GesDocumentReader
             return GesText.IsTagName(name) ? GesDocumentNode.Tag(name) : Fail(Code.InvalidLiteral, start, _position);
         }
         var number = GesNumberLiteral.Read(_text, start, _position - start, percentage: token[token.Length - 1] == '%', allowGrouping: false);
-        return number.IsValid ? GesDocumentNode.NumberValue(number) : TokenFailure(start, _position);
+        if (!number.IsValid) return TokenFailure(start, _position);
+        // A number token that constructs nothing, such as `NaN` or `Infinity%`, is no value in a document.
+        return number.Kind == GesNumberLiteralKind.Nothing ? Fail(Code.InvalidLiteral, start, _position) : GesDocumentNode.NumberValue(number);
     }
 
     private GesDocumentNode? ReadTyped(int depth)
@@ -280,7 +282,7 @@ internal sealed class GesDocumentReader
         }
         SkipWhitespace();
         var result = handler ? GesDocumentNode.Handler(name, labels.ToArray()) : GesDocumentNode.Message(name, labels.ToArray(), values.ToArray(), formStart);
-        if (!handler && _text.AsSpan(_position).StartsWith("with".AsSpan(), StringComparison.Ordinal))
+        if (!handler && StartsWord("with"))
         {
             _position += 4;
             var tags = new List<GesDocumentNode>();
@@ -305,6 +307,11 @@ internal sealed class GesDocumentReader
         while (_position < _text.Length && IsNameCharacter(_text[_position])) _position++;
         return _position == start ? null : _text.Substring(start, _position - start);
     }
+
+    // Whether the text continues with `word` and no further name character.
+    private bool StartsWord(string word)
+        => _text.AsSpan(_position).StartsWith(word.AsSpan(), StringComparison.Ordinal)
+            && (_position + word.Length == _text.Length || !IsNameCharacter(_text[_position + word.Length]));
 
     private static bool IsNameCharacter(char value) => value is >= 'a' and <= 'z' or >= 'A' and <= 'Z' or >= '0' and <= '9' or '_';
 

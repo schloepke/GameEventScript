@@ -3,9 +3,9 @@
 
 import Foundation
 import GameEventScriptRuntime
-import GameEventScriptSyntax
+@_spi(Syntax) import GameEventScriptSyntax
 
-// Reads GES documents for the document commands and :show, with the highlighter's explanation of a reading error.
+// Reads GES documents for the document commands and :show, with the Syntax module's explanation of an error.
 enum ToolDocuments {
     struct Failure {
         let line: Int
@@ -14,23 +14,13 @@ enum ToolDocuments {
         let message: String
     }
 
-    // The document, or nil with the error of reading it.
-    static func read(_ text: String) -> (GesDocument?, Failure?) {
+    // The document, or nil with the error of reading it; other errors propagate.
+    static func read(_ text: String) throws -> (GesDocument?, Failure?) {
         do {
             return (try GesDocument(parsing: text), nil)
         } catch let error as GesDocumentError {
-            let reading = (try? GesSyntaxHighlighter(language: .gesd, maxInputLength: Int.max).highlight(text).diagnostics) ?? []
-            let message: String
-            if let first = reading.first, first.code == error.code {
-                message = first.message
-            } else if let limit = error.limitName {
-                message = "The document exceeds \(limit) (\(error.limit ?? 0))."
-            } else {
-                message = "This explicit form does not construct a value."
-            }
+            let message = GesDocumentDiagnostic.explain(error.code, limitName: error.limitName, limitValue: error.limit ?? 0)
             return (nil, Failure(line: error.line, column: error.column, code: error.code, message: message))
-        } catch {
-            return (nil, Failure(line: 1, column: 1, code: "document.invalidLiteral", message: "\(error)"))
         }
     }
 
@@ -82,11 +72,22 @@ extension Tool {
         }
         if check {
             var failed = 0
-            for path in paths where readDocument(path, try ToolFiles.source(path)) == nil { failed += 1 }
+            // An unreadable file fails like an invalid one; the remaining files are still checked.
+            for path in paths {
+                let text: String
+                do {
+                    text = try ToolFiles.source(path)
+                } catch {
+                    io.report(error)
+                    failed += 1
+                    continue
+                }
+                if try readDocument(path, text) == nil { failed += 1 }
+            }
             if !quiet && failed == 0 { io.line(paths.count == 1 ? "Checked \(paths[0])." : "Checked \(paths.count) documents.") }
             return failed == 0 ? 0 : 1
         }
-        guard let document = readDocument(paths[0], try ToolFiles.source(paths[0])) else { return 1 }
+        guard let document = try readDocument(paths[0], ToolFiles.source(paths[0])) else { return 1 }
         var text = document.text()
         if let output {
             try ToolFiles.write(Data(text.utf8), to: output)
@@ -99,8 +100,8 @@ extension Tool {
     }
 
     // Reads one document and reports its error as `path(line,column): error code: message`.
-    private func readDocument(_ path: String, _ text: String) -> GesDocument? {
-        let (document, failure) = ToolDocuments.read(text)
+    private func readDocument(_ path: String, _ text: String) throws -> GesDocument? {
+        let (document, failure) = try ToolDocuments.read(text)
         if let failure { io.line(ToolDocuments.format(path, failure), toError: true) }
         return document
     }

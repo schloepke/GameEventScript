@@ -28,8 +28,15 @@ final class DocumentTests: XCTestCase {
         XCTAssertEqual(invalid.output, "")
         XCTAssertEqual(
             invalid.error,
-            "\(text)(2,7): error document.unquotedText: Text values must be quoted.\n\(form)(1,8): error document.invalidLiteral: This explicit form does not construct a value.\n"
+            "\(text)(2,7): error document.unquotedText: Text values must be quoted.\n\(form)(1,8): error document.invalidLiteral: This is not a valid literal.\n"
         )
+
+        // An unreadable file does not stop the check of the remaining files.
+        let missing = tool.directory.appendingPathComponent("missing.gesd").path
+        let partial = tool.run(["document", "check", missing, text])
+        XCTAssertEqual(partial.code, 1)
+        XCTAssertTrue(partial.error.contains("error cli.io:"), partial.error)
+        XCTAssertTrue(partial.error.hasSuffix("\(text)(2,7): error document.unquotedText: Text values must be quoted.\n"), partial.error)
     }
 
     func testFormatPrintsAndWritesTheRecommendedLayout() throws {
@@ -73,7 +80,7 @@ final class DocumentTests: XCTestCase {
             "", "// File: \"\(bad)\"", "a: 1", "name: Basic Track",
             "\(bad)(2,7): error document.unquotedText: Text values must be quoted.", "  name: Basic Track", "        ^^^^^", "",
             "", "// File: \"\(form)\"", "range: :Range(1)",
-            "\(form)(1,8): error document.invalidLiteral: This explicit form does not construct a value.", "  range: :Range(1)", "         ^^^^^^", "",
+            "\(form)(1,8): error document.invalidLiteral: This is not a valid literal.", "  range: :Range(1)", "         ^^^^^^", "",
             "", "// File: \"\(source)\"", "on Start {", "",
         ].joined(separator: "\n")
         XCTAssertTrue(result.error.hasPrefix(expected), result.error)

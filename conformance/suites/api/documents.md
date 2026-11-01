@@ -1770,6 +1770,90 @@ document:
 
 ---
 
+## Test: NaN is no document value
+
+This case checks the following contract: A number token that is recognized but constructs nothing, such as `NaN`, is `document.invalidLiteral` instead of the value nothing.
+
+### Case description
+
+```yaml
+gesBlock: "case"
+id: "nan-number"
+kind: "documentApi"
+level: "atomic"
+documentApi:
+  text: "ok: 1\nvalue: NaN"
+```
+
+### Expectation
+
+```yaml
+gesBlock: "expect"
+document:
+  error:
+    code: "invalidLiteral"
+    line: 2
+    column: 8
+```
+
+---
+
+## Test: infinite percentages are no document values
+
+This case checks the following contract: `Infinity%` constructs no Percentage and is `document.invalidLiteral`.
+
+### Case description
+
+```yaml
+gesBlock: "case"
+id: "infinite-percentage"
+kind: "documentApi"
+level: "atomic"
+documentApi:
+  text: "share: [Infinity%]"
+```
+
+### Expectation
+
+```yaml
+gesBlock: "expect"
+document:
+  error:
+    code: "invalidLiteral"
+    line: 1
+    column: 9
+```
+
+---
+
+## Test: overflowing percentages are no document values
+
+This case checks the following contract: A percentage that overflows binary64, such as `1e400%`, is `document.invalidLiteral`.
+
+### Case description
+
+```yaml
+gesBlock: "case"
+id: "overflowing-percentage"
+kind: "documentApi"
+level: "atomic"
+documentApi:
+  text: "share: 1e400%"
+```
+
+### Expectation
+
+```yaml
+gesBlock: "expect"
+document:
+  error:
+    code: "invalidLiteral"
+    line: 1
+    column: 8
+```
+
+---
+
 ## Test: a key needs a colon
 
 This case checks the following contract: A key followed by anything but `:` is `document.missingColon` at the first non-trivia scalar after the key.
@@ -2270,6 +2354,62 @@ document:
     code: "unknownType"
     line: 1
     column: 6
+```
+
+---
+
+## Test: a longer type name is not a Vector or Point
+
+This case checks the following contract: `:Vectors(...)` and `:Points(...)` name unknown types; the Vector and Point forms need the exact type name.
+
+### Case description
+
+```yaml
+gesBlock: "case"
+id: "spatial-prefix-name"
+kind: "documentApi"
+level: "atomic"
+documentApi:
+  text: "a: :Vectors(1)\nb: :Points(1)"
+```
+
+### Expectation
+
+```yaml
+gesBlock: "expect"
+document:
+  error:
+    code: "unknownType"
+    line: 1
+    column: 4
+```
+
+---
+
+## Test: `with` needs a word boundary
+
+This case checks the following contract: A word that only starts with `with` does not open the tag list of a Message form.
+
+### Case description
+
+```yaml
+gesBlock: "case"
+id: "message-with-prefix"
+kind: "documentApi"
+level: "atomic"
+documentApi:
+  text: "a: :Message(Foo() withx #t)"
+```
+
+### Expectation
+
+```yaml
+gesBlock: "expect"
+document:
+  error:
+    code: "unexpectedToken"
+    line: 1
+    column: 19
 ```
 
 ---

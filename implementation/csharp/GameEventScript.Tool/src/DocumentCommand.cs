@@ -76,10 +76,23 @@ successful reading. The schema reference is kept, but schema files are not read.
             if (check)
             {
                 var failed = 0;
+                // An unreadable file fails like an invalid one; the remaining files are still checked.
                 foreach (var path in paths)
                 {
-                    activePath = path;
-                    if (Read(path) is null) failed++;
+                    try
+                    {
+                        if (Read(path) is null) failed++;
+                    }
+                    catch (DecoderFallbackException exception)
+                    {
+                        Console.Error.WriteLine($"{path}: error cli.invalidEncoding: {exception.Message}");
+                        failed++;
+                    }
+                    catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+                    {
+                        Console.Error.WriteLine($"error cli.io: {exception.Message}");
+                        failed++;
+                    }
                 }
                 if (!quiet && failed == 0) Console.WriteLine(paths.Count == 1 ? $"Checked {paths[0]}." : $"Checked {paths.Count} documents.");
                 return failed == 0 ? 0 : 1;

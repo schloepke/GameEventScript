@@ -135,8 +135,8 @@
         if position == bytes.count { return 0 }
         if bytes[position] == 91 { return 1 }
         if bytes[position] != 58 { return 0 }
-        if starts(":Vector") { return 3 }
-        if starts(":Point") { return 4 }
+        if startsWord(":Vector") { return 3 }
+        if startsWord(":Point") { return 4 }
         return starts(":Dice[") ? 0 : 2
     }
 
@@ -171,7 +171,9 @@
             return .tag(tag)
         }
         let number = GesNumberLiteral.read(token, percentage: token.hasSuffix("%"), allowGrouping: false)
-        return number.isValid ? .number(number) : tokenFailure(start, position)
+        if !number.isValid { return tokenFailure(start, position) }
+        // A number token that constructs nothing, such as `NaN` or `Infinity%`, is no value in a document.
+        return number.kind == .nothing ? fail(Code.invalidLiteral, start, end: position) : .number(number)
     }
 
     private mutating func name() -> String? {
@@ -354,7 +356,7 @@
     // Optional `with` tags and the closing parenthesis of a Message form.
     private mutating func messageEnd(depth: Int, _ message: GesDocumentNode, formStart: Int, outerOpen: Int) -> GesDocumentNode? {
         whitespace()
-        if !starts("with") { return closeMessage(message, outerOpen: outerOpen) }
+        if !startsWord("with") { return closeMessage(message, outerOpen: outerOpen) }
         position += 4
         var tags: [GesDocumentNode] = []
         while true {
@@ -716,4 +718,10 @@
     private static func space(_ byte: UInt8) -> Bool { byte == 32 || byte == 9 || byte == 10 || byte == 13 }
 
     private func starts(_ token: String) -> Bool { bytes[position...].starts(with: token.utf8) }
+
+    // Whether the text continues with `word` and no further name character.
+    private func startsWord(_ word: String) -> Bool {
+        let end = position + word.utf8.count
+        return starts(word) && (end == bytes.count || !Self.nameByte(bytes[end]))
+    }
 }

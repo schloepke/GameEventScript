@@ -60,6 +60,25 @@
     @_spi(Syntax) public static let invalidSchemaHeader = "document.invalidSchemaHeader"
     @_spi(Syntax) public static let misplacedSchemaHeader = "document.misplacedSchemaHeader"
     @_spi(Syntax) public static let limitExceeded = "document.limitExceeded"
+
+    // The English explanation of an error code for highlighters and tools; it is not part of the contract.
+    @_spi(Syntax) public static func explain(_ code: String, limitName: String?, limitValue: Int) -> String {
+        switch code {
+        case invalidKey: return "An entry must start with a key; a record field must be a field name."
+        case missingColon: return "A key must be followed by ':' on its line."
+        case duplicateKey: return "This key is already used in its container."
+        case unquotedText: return "Text values must be quoted."
+        case unknownUnit: return "The number has an unknown unit."
+        case invalidLiteral: return "This is not a valid literal."
+        case unknownType: return "Documents know only the built-in types."
+        case unexpectedToken: return "An entry, separator or closing bracket is expected here."
+        case unclosedBracket: return "This bracket is never closed."
+        case unclosedText: return "This Text is never closed."
+        case invalidSchemaHeader: return "A schema header names one record type or a schema file."
+        case misplacedSchemaHeader: return "The schema header must come before the first entry."
+        default: return "The document exceeds \(limitName ?? "a limit") (\(limitValue))."
+        }
+    }
 }
 
 /// A read document: the Map root of its entries and its schema reference, or the first error that stops reading.

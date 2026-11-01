@@ -6,11 +6,9 @@ using GameEventScript.Syntax;
 
 namespace GameEventScript.Tool;
 
-// Reads GES documents for the document commands and :show, with the highlighter's explanation of a reading error.
+// Reads GES documents for the document commands and :show, with the Syntax module's explanation of an error.
 internal static class ToolDocuments
 {
-    private static readonly GesSyntaxHighlighter Highlighter = new(GesSyntaxLanguage.Gesd, int.MaxValue);
-
     internal readonly record struct Error(int Line, int Column, string Code, string Message);
 
     // The document, or null with the error of reading it.
@@ -23,10 +21,7 @@ internal static class ToolDocuments
         }
         catch (GesDocumentException exception)
         {
-            var reading = Highlighter.Highlight(text).Diagnostics;
-            var message = reading.Count > 0 && reading[0].Code == exception.Code ? reading[0].Message
-                : exception.LimitName is { } limit ? $"The document exceeds {limit} ({exception.Limit})."
-                : "This explicit form does not construct a value.";
+            var message = GesDocumentDiagnostic.Explain(exception.Code, exception.LimitName, exception.Limit ?? 0);
             error = new Error(exception.Line, exception.Column, exception.Code, message);
             return null;
         }

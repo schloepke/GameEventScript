@@ -10,11 +10,24 @@ import XCTest
 final class TerminalTests: XCTestCase {
     // The widths match the C# CLI per grapheme cluster.
     func testClusterWidthsAndTabColumns() {
-        let clusters: [(Character, Int)] = [("a", 1), ("e\u{301}", 1), ("\u{65E5}", 2), ("\u{2764}\u{FE0F}", 2), ("\u{1F44D}\u{1F3FD}", 2), ("\u{1F1E9}\u{1F1EA}", 2), ("\u{1F468}\u{200D}\u{1F469}\u{200D}\u{1F467}", 2)]
+        let clusters: [(Character, Int)] = [
+            ("a", 1), ("e\u{301}", 1), ("\u{65E5}", 2), ("\u{231A}", 2), ("\u{2764}\u{FE0F}", 2), ("\u{1F1E6}", 2), ("\u{1F44D}\u{1F3FD}", 2), ("\u{1F1E9}\u{1F1EA}", 2), ("\u{1F468}\u{200D}\u{1F469}\u{200D}\u{1F467}", 2),
+        ]
         for (cluster, width) in clusters { XCTAssertEqual(ToolTextDisplay.width(cluster), width, String(cluster)) }
         XCTAssertEqual(ToolTextDisplay.columns("a\tb"), 5)
         XCTAssertEqual(ToolTextDisplay.columns("\u{65E5}\u{2764}\u{FE0F}\tb"), 9)
         XCTAssertEqual(ToolTextDisplay.expandTabs("\u{65E5}\u{2764}\u{FE0F}\tb"), "\u{65E5}\u{2764}\u{FE0F}    b")
+    }
+
+    // Tab spaces wrap individually and wide characters move whole, like the C# waiting input.
+    func testPromptPositions() {
+        let tab = Array("abcd\tx")
+        XCTAssertTrue(RunPrompt.position(tab[...], columns: 10) == (1, 4))
+        XCTAssertTrue(RunPrompt.position(tab[..<5], columns: 10) == (1, 3))
+        let wide = Array("abcd\u{65E5}")
+        XCTAssertTrue(RunPrompt.position(wide[...], columns: 10) == (1, 2))
+        XCTAssertTrue(RunPrompt.position(wide[..<4], columns: 10) == (0, 9))
+        XCTAssertTrue(RunPrompt.position(Array("a\nb")[...], columns: 10) == (1, 6))
     }
 
     func testExtendedEnterAndPreservationAtDecoderBoundary() throws {

@@ -58,19 +58,25 @@ internal static class ToolTextDisplay
         return total;
     }
 
-    // The length of the grapheme cluster at the start of text. .NET's text elements lack the Indic conjunct rule GB9c,
-    // so a cluster ending in consonant, linker and marks joins a following consonant, like a Swift Character.
+    // The length of the grapheme cluster at the start of text, like a Swift Character. .NET's text elements lack the
+    // Indic conjunct rule GB9c and treat marks newer than its Unicode data as separate clusters, so a following
+    // attaching scalar joins any cluster not ending in a control (GB4, GB9/GB9a), and a following consonant joins a
+    // cluster ending in consonant, linker and extenders (GB9c).
     internal static int ClusterLength(ReadOnlySpan<char> text)
     {
         var length = StringInfo.GetNextTextElementLength(text);
-        // The cheap consonant test on the next scalar comes first, so other scripts skip the backward scan.
+        // The cheap tests on the next scalar come first, so most text skips the backward scans.
         while (length < text.Length
             && Rune.DecodeFromUtf16(text[length..], out var next, out _) == OperationStatus.Done
-            && IsConjunctConsonant(next.Value)
-            && EndsInConjunctLinker(text[..length]))
+            && (InRanges(ToolTextWidths.ClusterAttachers, next.Value) && !EndsInControl(text[..length])
+                || IsConjunctConsonant(next.Value) && EndsInConjunctLinker(text[..length])))
             length += StringInfo.GetNextTextElementLength(text[length..]);
         return length;
     }
+
+    private static bool EndsInControl(ReadOnlySpan<char> cluster) =>
+        Rune.DecodeLastFromUtf16(cluster, out var rune, out _) != OperationStatus.Done
+        || InRanges(ToolTextWidths.ClusterControls, rune.Value);
 
     // The range guard keeps the table search out of text in other scripts.
     private static bool IsConjunctConsonant(int scalar)
@@ -86,15 +92,16 @@ internal static class ToolTextDisplay
         while (Rune.DecodeLastFromUtf16(cluster, out var rune, out var size) == OperationStatus.Done)
         {
             if (ToolTextWidths.ConjunctLinkers.BinarySearch(rune.Value) >= 0) linked = true;
-            else if (!IsConjunctExtender(rune.Value)) return linked && IsConjunctConsonant(rune.Value);
+            else if (!InRanges(ToolTextWidths.ConjunctExtenders, rune.Value)) return linked && IsConjunctConsonant(rune.Value);
             cluster = cluster[..^size];
         }
         return false;
     }
 
-    private static bool IsConjunctExtender(int scalar)
+    // Whether scalar lies in one of the inclusive start/end pairs; the range guard skips the search outside them.
+    private static bool InRanges(ReadOnlySpan<int> ranges, int scalar)
     {
-        var ranges = ToolTextWidths.ConjunctExtenders;
+        if (scalar < ranges[0] || scalar > ranges[^1]) return false;
         int low = 0, high = ranges.Length / 2 - 1;
         while (low <= high)
         {

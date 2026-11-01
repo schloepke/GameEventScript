@@ -29,9 +29,9 @@ final class TerminalTests: XCTestCase {
         }
     }
 
-    // The C# CLI's GB9c data must match this Swift's segmentation: a linker joins two consonants, a consonant joins a
-    // preceding consonant and virama without extending a lone consonant, and an extender extends a consonant and keeps
-    // the conjunct joined both before and after the virama.
+    // The C# CLI's cluster data must match this Swift's segmentation: an attacher extends a consonant, a control does not
+    // take a following combining acute, a linker joins two consonants, a consonant joins a preceding consonant and
+    // virama without extending a lone consonant, and an extender keeps the conjunct joined before and after the virama.
     func testConjunctTablesMatchNativeSegmentation() {
         let ka = "\u{915}"
         let virama = "\u{94D}"
@@ -39,10 +39,14 @@ final class TerminalTests: XCTestCase {
         var linkers: [UInt32] = []
         var consonants: [UInt32] = []
         var extenders: [UInt32] = []
+        var attachers: [UInt32] = []
+        var controls: [UInt32] = []
         for value in UInt32(0)...0x10FFFF {
             guard let scalar = Unicode.Scalar(value) else { continue }
             let text = String(scalar)
+            if (text + "\u{301}").count == 2 { controls.append(value) }
             if (ka + text).count == 1 {
+                attachers.append(value)
                 if (ka + text + ka).count == 1 {
                     linkers.append(value)
                 } else if (ka + text + virama + ssa).count == 1 {
@@ -55,13 +59,20 @@ final class TerminalTests: XCTestCase {
                 consonants.append(value)
             }
         }
-        var ranges: [UInt32] = []
-        for value in extenders {
-            if let last = ranges.last, last == value - 1 { ranges[ranges.count - 1] = value } else { ranges += [value, value] }
+
+        func ranges(_ values: [UInt32]) -> [UInt32] {
+            var result: [UInt32] = []
+            for value in values {
+                if let last = result.last, last == value - 1 { result[result.count - 1] = value } else { result += [value, value] }
+            }
+            return result
         }
-        XCTAssertEqual(linkers, ToolTextConjuncts.conjunctLinkers)
-        XCTAssertEqual(consonants, ToolTextConjuncts.conjunctConsonants)
-        XCTAssertEqual(ranges, ToolTextConjuncts.conjunctExtenders)
+
+        XCTAssertEqual(ranges(attachers), ToolTextClusters.clusterAttachers)
+        XCTAssertEqual(ranges(controls), ToolTextClusters.clusterControls)
+        XCTAssertEqual(linkers, ToolTextClusters.conjunctLinkers)
+        XCTAssertEqual(consonants, ToolTextClusters.conjunctConsonants)
+        XCTAssertEqual(ranges(extenders), ToolTextClusters.conjunctExtenders)
         XCTAssertFalse(extenders.contains(0x200c))
     }
 

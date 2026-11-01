@@ -60,6 +60,11 @@ public sealed class GameEventScriptTextDisplayTests
         Assert.AreEqual(2, ToolTextDisplay.ClusterCount("\u0915\u094D\u200C\u0937"));
         Assert.AreEqual(1, ToolTextDisplay.ClusterCount("\u0915\u0D57\u094D\u0937"));
         Assert.AreEqual(1, ToolTextDisplay.ClusterCount("\u0915\u094D\uD83C\uDFFD\u0937"));
+
+        // Marks newer than .NET's Unicode data attach like in Swift, except after a control.
+        Assert.AreEqual(1, ToolTextDisplay.ClusterCount("\uD804\uDF92\uD804\uDFB8"));
+        Assert.AreEqual(2, ToolTextDisplay.ClusterCount("\n\u0301"));
+        Assert.AreEqual(2, ToolTextDisplay.ClusterCount("\n\uD804\uDFB8"));
         Assert.AreEqual(2, ToolTextDisplay.ClusterCount("\u0915\u0937"));
     }
 

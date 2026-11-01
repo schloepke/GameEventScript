@@ -14,8 +14,9 @@ Swift toolchain's segmentation, because .NET's text elements lack that rule and
 Python has no Indic_Conjunct_Break data, so generation needs Swift; the Swift CLI
 tests verify them against that segmentation.
 
---check verifies that both generated files hold the same tables and, when this
-Python's Unicode version matches the recorded one, that the widths are current.
+--check verifies that the C# table and the two Swift files (CLI widths, test-only
+conjunct data) hold the same tables and, when this Python's Unicode version
+matches the recorded one, that the widths are current.
 """
 
 from __future__ import annotations

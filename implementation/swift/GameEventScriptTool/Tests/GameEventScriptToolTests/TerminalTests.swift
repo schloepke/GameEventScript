@@ -50,6 +50,22 @@ final class TerminalTests: XCTestCase {
         XCTAssertEqual(consonants, ToolTextConjuncts.conjunctConsonants)
     }
 
+    // The C# CLI treats every zero-width scalar except ZWNJ as InCB=Extend within a conjunct; Swift's segmentation must
+    // agree for each one that extends a consonant, before and after the linker.
+    func testConjunctExtendApproximationMatchesNativeSegmentation() {
+        let ka = "\u{915}"
+        let ssa = "\u{937}"
+        let virama = "\u{94D}"
+        for value in UInt32(0)...0x10FFFF {
+            guard let scalar = Unicode.Scalar(value), ToolTextDisplay.scalarWidth(value) == 0 else { continue }
+            let text = String(scalar)
+            guard (ka + text).count == 1 else { continue }
+            let joins = value != 0x200c
+            XCTAssertEqual((ka + text + virama + ssa).count == 1, joins, String(value, radix: 16))
+            XCTAssertEqual((ka + virama + text + ssa).count == 1, joins, String(value, radix: 16))
+        }
+    }
+
     // Tab spaces wrap individually and wide characters move whole, like the C# waiting input.
     func testPromptPositions() {
         let tab = Array("abcd\tx")

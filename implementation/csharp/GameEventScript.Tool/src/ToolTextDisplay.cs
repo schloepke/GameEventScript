@@ -66,10 +66,17 @@ internal static class ToolTextDisplay
         // The cheap consonant test on the next scalar comes first, so other scripts skip the backward scan.
         while (length < text.Length
             && Rune.DecodeFromUtf16(text[length..], out var next, out _) == OperationStatus.Done
-            && ToolTextWidths.ConjunctConsonants.BinarySearch(next.Value) >= 0
+            && IsConjunctConsonant(next.Value)
             && EndsInConjunctLinker(text[..length]))
             length += StringInfo.GetNextTextElementLength(text[length..]);
         return length;
+    }
+
+    // The range guard keeps the table search out of text in other scripts.
+    private static bool IsConjunctConsonant(int scalar)
+    {
+        var consonants = ToolTextWidths.ConjunctConsonants;
+        return scalar >= consonants[0] && scalar <= consonants[^1] && consonants.BinarySearch(scalar) >= 0;
     }
 
     // Consonant [Extend|Linker]* Linker [Extend|Linker]*, with zero-width scalars standing in for InCB=Extend.
@@ -81,7 +88,7 @@ internal static class ToolTextDisplay
         {
             if (rune.Value == 0x200C) return false;
             if (ToolTextWidths.ConjunctLinkers.BinarySearch(rune.Value) >= 0) linked = true;
-            else if (ScalarWidth(rune.Value) != 0) return linked && ToolTextWidths.ConjunctConsonants.BinarySearch(rune.Value) >= 0;
+            else if (ScalarWidth(rune.Value) != 0) return linked && IsConjunctConsonant(rune.Value);
             cluster = cluster[..^size];
         }
         return false;

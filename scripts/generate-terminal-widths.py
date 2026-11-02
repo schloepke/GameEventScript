@@ -219,6 +219,8 @@ def swift_clusters(version: str, data: dict[str, list[int]]) -> str:
 // The C# CLI's cluster data, which the tests verify against Swift's native segmentation. Attachers, prepends,
 // controls and conjunct extenders are inclusive start/end pairs.
 enum ToolTextClusters {{
+    static let unicodeVersion = "{version}"
+
 {arrays}
 }}
 """

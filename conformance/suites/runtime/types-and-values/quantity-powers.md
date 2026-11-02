@@ -410,7 +410,7 @@ steps:
 
 ## Test: integer unitless exponents through direct Program
 
-This case verifies that only unitless zero and one are valid Quantity exponents, including Boolean and Percentage numeric coercion.
+This case verifies that unitless zero and one are valid Quantity exponents, including Boolean and Percentage numeric coercion, that two squares the meter into a square meter, and that one half has no derived unit.
 
 ### Case description
 
@@ -481,7 +481,7 @@ steps:
           - name: one
             value: { type: ":Quantity.int64", value: "10", unit: ":meter" }
           - name: two
-            value: { type: ":Nothing" }
+            value: { type: ":Quantity.int64", value: "100", unit: ":squareMeter" }
           - name: fraction
             value: { type: ":Nothing" }
           - name: enabled
@@ -499,7 +499,7 @@ steps:
           - name: one
             value: { type: ":Quantity.int64", value: "10", unit: ":meter" }
           - name: two
-            value: { type: ":Nothing" }
+            value: { type: ":Quantity.int64", value: "100", unit: ":squareMeter" }
           - name: fraction
             value: { type: ":Nothing" }
           - name: enabled
@@ -517,7 +517,7 @@ steps:
           - name: one
             value: { type: ":Quantity.int64", value: "10", unit: ":meter" }
           - name: two
-            value: { type: ":Nothing" }
+            value: { type: ":Quantity.int64", value: "100", unit: ":squareMeter" }
           - name: fraction
             value: { type: ":Nothing" }
           - name: enabled
@@ -534,7 +534,7 @@ steps:
 
 ## Test: integer unitless exponents through binary roundtrip
 
-This case verifies that only unitless zero and one are valid Quantity exponents, including Boolean and Percentage numeric coercion.
+This case verifies that unitless zero and one are valid Quantity exponents, including Boolean and Percentage numeric coercion, that two squares the meter into a square meter, and that one half has no derived unit.
 
 ### Case description
 
@@ -605,7 +605,7 @@ steps:
           - name: one
             value: { type: ":Quantity.int64", value: "10", unit: ":meter" }
           - name: two
-            value: { type: ":Nothing" }
+            value: { type: ":Quantity.int64", value: "100", unit: ":squareMeter" }
           - name: fraction
             value: { type: ":Nothing" }
           - name: enabled
@@ -623,7 +623,7 @@ steps:
           - name: one
             value: { type: ":Quantity.int64", value: "10", unit: ":meter" }
           - name: two
-            value: { type: ":Nothing" }
+            value: { type: ":Quantity.int64", value: "100", unit: ":squareMeter" }
           - name: fraction
             value: { type: ":Nothing" }
           - name: enabled
@@ -641,7 +641,7 @@ steps:
           - name: one
             value: { type: ":Quantity.int64", value: "10", unit: ":meter" }
           - name: two
-            value: { type: ":Nothing" }
+            value: { type: ":Quantity.int64", value: "100", unit: ":squareMeter" }
           - name: fraction
             value: { type: ":Nothing" }
           - name: enabled
@@ -658,7 +658,7 @@ steps:
 
 ## Test: fractional unitless exponents through direct Program
 
-This case verifies that exponent one retains the fractional Quantity value and unit; exponent zero returns unitless one.
+This case verifies that exponent one retains the fractional Quantity value and unit, exponent two squares it into a square meter, and exponent zero returns unitless one.
 
 ### Case description
 
@@ -729,7 +729,7 @@ steps:
           - name: one
             value: { type: ":Quantity.binary64", value: "10.5", unit: ":meter" }
           - name: two
-            value: { type: ":Nothing" }
+            value: { type: ":Quantity.binary64", value: "110.25", unit: ":squareMeter" }
           - name: fraction
             value: { type: ":Nothing" }
           - name: enabled
@@ -747,7 +747,7 @@ steps:
           - name: one
             value: { type: ":Quantity.binary64", value: "10.5", unit: ":meter" }
           - name: two
-            value: { type: ":Nothing" }
+            value: { type: ":Quantity.binary64", value: "110.25", unit: ":squareMeter" }
           - name: fraction
             value: { type: ":Nothing" }
           - name: enabled
@@ -765,7 +765,7 @@ steps:
           - name: one
             value: { type: ":Quantity.binary64", value: "10.5", unit: ":meter" }
           - name: two
-            value: { type: ":Nothing" }
+            value: { type: ":Quantity.binary64", value: "110.25", unit: ":squareMeter" }
           - name: fraction
             value: { type: ":Nothing" }
           - name: enabled
@@ -782,7 +782,7 @@ steps:
 
 ## Test: fractional unitless exponents through binary roundtrip
 
-This case verifies that exponent one retains the fractional Quantity value and unit; exponent zero returns unitless one.
+This case verifies that exponent one retains the fractional Quantity value and unit, exponent two squares it into a square meter, and exponent zero returns unitless one.
 
 ### Case description
 
@@ -853,7 +853,7 @@ steps:
           - name: one
             value: { type: ":Quantity.binary64", value: "10.5", unit: ":meter" }
           - name: two
-            value: { type: ":Nothing" }
+            value: { type: ":Quantity.binary64", value: "110.25", unit: ":squareMeter" }
           - name: fraction
             value: { type: ":Nothing" }
           - name: enabled
@@ -871,7 +871,7 @@ steps:
           - name: one
             value: { type: ":Quantity.binary64", value: "10.5", unit: ":meter" }
           - name: two
-            value: { type: ":Nothing" }
+            value: { type: ":Quantity.binary64", value: "110.25", unit: ":squareMeter" }
           - name: fraction
             value: { type: ":Nothing" }
           - name: enabled
@@ -889,7 +889,7 @@ steps:
           - name: one
             value: { type: ":Quantity.binary64", value: "10.5", unit: ":meter" }
           - name: two
-            value: { type: ":Nothing" }
+            value: { type: ":Quantity.binary64", value: "110.25", unit: ":squareMeter" }
           - name: fraction
             value: { type: ":Nothing" }
           - name: enabled

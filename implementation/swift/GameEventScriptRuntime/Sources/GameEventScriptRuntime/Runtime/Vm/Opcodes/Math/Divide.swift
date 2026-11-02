@@ -6,7 +6,7 @@
 extension GesVirtualMachine {
     // Quotient unit by the derivation table; a percentage divided by a quantity stays unsupported.
     private func divisionUnit(_ x: Int, _ y: Int) -> GesQuantityUnit? {
-        if registers[x].kind == .percentage && registers[y].hasUnit { return nil }
+        if registers[x].kind == .percentage && registers[y].hasUnit || percentageMismatch(x, y) { return nil }
         return GesQuantityUnit.quotient(registers[x].unit, registers[y].unit)
     }
 

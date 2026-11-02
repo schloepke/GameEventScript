@@ -61,6 +61,18 @@ public enum GesQuantityUnit : byte
     /// </summary>
     UnitHertz = 12,
     /// <summary>
+    /// Identifies the square meter (m²), for areas.
+    /// </summary>
+    UnitSquareMeter = 13,
+    /// <summary>
+    /// Identifies the cubic meter (m³), for volumes.
+    /// </summary>
+    UnitCubicMeter = 14,
+    /// <summary>
+    /// Identifies the watt per square meter (W/m²), for flux and intensity.
+    /// </summary>
+    UnitWattPerSquareMeter = 15,
+    /// <summary>
     /// Identifies the kelvin (K), for temperature.
     /// </summary>
     UnitKelvin = 16,
@@ -68,6 +80,10 @@ public enum GesQuantityUnit : byte
     /// Identifies the degree per second (°/s), for angular speed.
     /// </summary>
     UnitDegreePerSecond = 17,
+    /// <summary>
+    /// Identifies the decibel (dB), for levels on a logarithmic scale.
+    /// </summary>
+    UnitDecibel = 18,
 
     /// <summary>
     /// Identifies the unit invalid value.

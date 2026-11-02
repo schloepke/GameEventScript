@@ -140,8 +140,8 @@
     @_spi(Syntax) public static func possibleSuffixEnd(_ text: String) -> Bool {
         let scalars = text.unicodeScalars
         switch scalars.last {
-        case "s", "m", "h", "z", "g", "N", "J", "W", "V", "A", "K", "°", "²": return true
-        case "2": return scalars.dropLast().last == "^"
+        case "s", "m", "h", "z", "g", "t", "B", "N", "J", "W", "V", "A", "K", "°", "²", "³": return true
+        case "2", "3": return scalars.dropLast().last == "^"
         default: return false
         }
     }

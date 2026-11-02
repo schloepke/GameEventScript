@@ -69,7 +69,7 @@ internal partial class GesVirtualMachine
                 dst.SetPercentage(a.FloatValue / b.AsNumeric);
                 return dst;
             case Integer or Float when b.Kind is Percentage:
-                if (QuotientUnit(in a, in b) is { } percentageRightUnit) dst.SetFloat(a.AsNumeric / b.FloatValue, percentageRightUnit);
+                if (PercentageUnit(in a) is { } percentageRightUnit) dst.SetFloat(a.AsNumeric / b.FloatValue, percentageRightUnit);
                 else dst.SetFloat(double.NaN);
                 return dst;
             case Vector when b.Kind is Integer:
@@ -83,7 +83,8 @@ internal partial class GesVirtualMachine
                 else dst.SetFloat(double.NaN);
                 return dst;
             case Vector when b.Kind is Percentage:
-                if (a.ObjectValue is GesSpatialValue vectorPercent && b.FloatValue != 0d) dst.SetVector(vectorPercent.X / b.FloatValue, vectorPercent.Y / b.FloatValue, vectorPercent.Z / b.FloatValue, a.Unit);
+                if (a.ObjectValue is GesSpatialValue vectorPercent && b.FloatValue != 0d && PercentageUnit(in a) is { } vectorPercentUnit)
+                    dst.SetVector(vectorPercent.X / b.FloatValue, vectorPercent.Y / b.FloatValue, vectorPercent.Z / b.FloatValue, vectorPercentUnit);
                 else dst.SetFloat(double.NaN);
                 return dst;
             case Vector when b.Kind is Nothing:

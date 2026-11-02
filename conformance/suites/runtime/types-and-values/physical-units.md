@@ -76,7 +76,7 @@ steps:
           - name: angle
             value: { type: ":Quantity.int64", value: "90", unit: ":degree" }
           - name: squared
-            value: { type: ":Nothing" }
+            value: { type: ":Quantity.int64", value: "10", unit: ":squareMeter" }
       - name: Units
         args:
           - name: mass
@@ -518,6 +518,534 @@ steps:
 
 ---
 
+## Test: area, volume, flux, level and rate spellings form one literal
+
+The square and cube meter, watt per square meter and decibel take their symbols and ASCII spellings, `2/s` is a rate while `2 / s` divides, `(2m)²` squares, and the new prefixed spellings scale exactly to the base unit.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: area-volume-flux-level-literals
+sources:
+  - name: area-volume-flux-level-literals.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+module main
+on Start {
+  let s be 4
+  emit Lexed(area: 2m², areaAscii: 2m^2, volume: 0.5m³, volumeAscii: 3m^3, flux: 3W/m², fluxAscii: 3W/m^2, level: 6dB, rate: 2/s, divided: 2 / s, squared: (2m)²)
+  emit Prefixed(centimeter: 3cm², kilometer: 2km^2, milliwatt: 3mW, sensitivity: 14mW/m², kiloFlux: 2kW/m², tonne: 2t, halfTonne: 0.5t)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| start | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  start:
+    local:
+      - name: Lexed
+        args:
+          - name: area
+            value: { type: ":Quantity.int64", value: "2", unit: ":squareMeter" }
+          - name: areaAscii
+            value: { type: ":Quantity.int64", value: "2", unit: ":squareMeter" }
+          - name: volume
+            value: { type: ":Quantity.binary64", value: "0.5", unit: ":cubicMeter" }
+          - name: volumeAscii
+            value: { type: ":Quantity.int64", value: "3", unit: ":cubicMeter" }
+          - name: flux
+            value: { type: ":Quantity.int64", value: "3", unit: ":wattPerSquareMeter" }
+          - name: fluxAscii
+            value: { type: ":Quantity.int64", value: "3", unit: ":wattPerSquareMeter" }
+          - name: level
+            value: { type: ":Quantity.int64", value: "6", unit: ":decibel" }
+          - name: rate
+            value: { type: ":Quantity.int64", value: "2", unit: ":hertz" }
+          - name: divided
+            value: { type: ":Number.binary64", value: "0.5" }
+          - name: squared
+            value: { type: ":Quantity.int64", value: "4", unit: ":squareMeter" }
+      - name: Prefixed
+        args:
+          - name: centimeter
+            value: { type: ":Quantity.binary64", value: "0.0003", unit: ":squareMeter" }
+          - name: kilometer
+            value: { type: ":Quantity.int64", value: "2000000", unit: ":squareMeter" }
+          - name: milliwatt
+            value: { type: ":Quantity.binary64", value: "0.003", unit: ":watt" }
+          - name: sensitivity
+            value: { type: ":Quantity.binary64", value: "0.014", unit: ":wattPerSquareMeter" }
+          - name: kiloFlux
+            value: { type: ":Quantity.int64", value: "2000", unit: ":wattPerSquareMeter" }
+          - name: tonne
+            value: { type: ":Quantity.int64", value: "2000", unit: ":kilogram" }
+          - name: halfTonne
+            value: { type: ":Quantity.int64", value: "500", unit: ":kilogram" }
+```
+
+---
+
+## Test: area, volume and flux derivations match for folded and runtime operands
+
+Meters multiply into areas and volumes and divide back, and watts divided by an area give a flux that multiplies back into watts, identically for constant-folded literals and runtime arguments.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: area-volume-flux-derivations
+sources:
+  - name: area-volume-flux-derivations.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+module main
+on Derive(m, area, volume, power, flux) {
+  emit Runtime(area: m * m, volume: area * m, volumeSwapped: m * area, length: area / m, areaFromVolume: volume / m, lengthFromVolume: volume / area, flux: power / area, power: flux * area, powerSwapped: area * flux, aperture: power / flux)
+  emit Folded(area: 3m * 3m, volume: 6m² * 3m, volumeSwapped: 3m * 6m², length: 6m² / 3m, areaFromVolume: 12m³ / 3m, lengthFromVolume: 12m³ / 6m², flux: 10W / 6m², power: 5W/m² * 6m², powerSwapped: 6m² * 5W/m², aperture: 10W / 5W/m²)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| derive | Derive | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  derive:
+    input:
+      args:
+        - name: m
+          value: { type: ":Quantity.int64", value: "3", unit: ":meter" }
+        - name: area
+          value: { type: ":Quantity.int64", value: "6", unit: ":squareMeter" }
+        - name: volume
+          value: { type: ":Quantity.int64", value: "12", unit: ":cubicMeter" }
+        - name: power
+          value: { type: ":Quantity.int64", value: "10", unit: ":watt" }
+        - name: flux
+          value: { type: ":Quantity.int64", value: "5", unit: ":wattPerSquareMeter" }
+    local:
+      - name: Runtime
+        args:
+          - name: area
+            value: { type: ":Quantity.int64", value: "9", unit: ":squareMeter" }
+          - name: volume
+            value: { type: ":Quantity.int64", value: "18", unit: ":cubicMeter" }
+          - name: volumeSwapped
+            value: { type: ":Quantity.int64", value: "18", unit: ":cubicMeter" }
+          - name: length
+            value: { type: ":Quantity.int64", value: "2", unit: ":meter" }
+          - name: areaFromVolume
+            value: { type: ":Quantity.int64", value: "4", unit: ":squareMeter" }
+          - name: lengthFromVolume
+            value: { type: ":Quantity.int64", value: "2", unit: ":meter" }
+          - name: flux
+            value: { type: ":Quantity.binary64", value: "1.6666666666666667", unit: ":wattPerSquareMeter" }
+          - name: power
+            value: { type: ":Quantity.int64", value: "30", unit: ":watt" }
+          - name: powerSwapped
+            value: { type: ":Quantity.int64", value: "30", unit: ":watt" }
+          - name: aperture
+            value: { type: ":Quantity.int64", value: "2", unit: ":squareMeter" }
+      - name: Folded
+        args:
+          - name: area
+            value: { type: ":Quantity.int64", value: "9", unit: ":squareMeter" }
+          - name: volume
+            value: { type: ":Quantity.int64", value: "18", unit: ":cubicMeter" }
+          - name: volumeSwapped
+            value: { type: ":Quantity.int64", value: "18", unit: ":cubicMeter" }
+          - name: length
+            value: { type: ":Quantity.int64", value: "2", unit: ":meter" }
+          - name: areaFromVolume
+            value: { type: ":Quantity.int64", value: "4", unit: ":squareMeter" }
+          - name: lengthFromVolume
+            value: { type: ":Quantity.int64", value: "2", unit: ":meter" }
+          - name: flux
+            value: { type: ":Quantity.binary64", value: "1.6666666666666667", unit: ":wattPerSquareMeter" }
+          - name: power
+            value: { type: ":Quantity.int64", value: "30", unit: ":watt" }
+          - name: powerSwapped
+            value: { type: ":Quantity.int64", value: "30", unit: ":watt" }
+          - name: aperture
+            value: { type: ":Quantity.int64", value: "2", unit: ":squareMeter" }
+```
+
+---
+
+## Test: quantity squares, cubes and roots follow the unit derivations
+
+Exponents 2 and 3 take the unit of the derived product, square and cube roots invert it, and powers without a derivation are invalid, identically for constant-folded literals and runtime arguments.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: quantity-squares-cubes-roots
+sources:
+  - name: quantity-squares-cubes-roots.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+module main
+on Power(m, area, volume, s) {
+  emit Runtime(square: m², squareAscii: m ^ 2, cube: m³, cubeAscii: m ^ 3, root: sqrt area, rootSymbol: √area, cubeRoot: cbrt volume, cubeRootSymbol: ∛volume, time: s², rootOfLength: sqrt m, squareOfArea: area², half: m ^ 0.5)
+  emit Folded(square: (3m)², squareAscii: (3m) ^ 2, cube: (2m)³, cubeAscii: (2m) ^ 3, root: sqrt 16m², rootSymbol: √16m², cubeRoot: cbrt 8m³, cubeRootSymbol: ∛8m³, time: (2s)², rootOfLength: sqrt 4m, squareOfArea: (2m²)², half: (4m) ^ 0.5)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| power | Power | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  power:
+    input:
+      args:
+        - name: m
+          value: { type: ":Quantity.int64", value: "3", unit: ":meter" }
+        - name: area
+          value: { type: ":Quantity.int64", value: "16", unit: ":squareMeter" }
+        - name: volume
+          value: { type: ":Quantity.int64", value: "8", unit: ":cubicMeter" }
+        - name: s
+          value: { type: ":Quantity.int64", value: "2", unit: ":second" }
+    local:
+      - name: Runtime
+        args:
+          - name: square
+            value: { type: ":Quantity.int64", value: "9", unit: ":squareMeter" }
+          - name: squareAscii
+            value: { type: ":Quantity.int64", value: "9", unit: ":squareMeter" }
+          - name: cube
+            value: { type: ":Quantity.int64", value: "27", unit: ":cubicMeter" }
+          - name: cubeAscii
+            value: { type: ":Quantity.int64", value: "27", unit: ":cubicMeter" }
+          - name: root
+            value: { type: ":Quantity.int64", value: "4", unit: ":meter" }
+          - name: rootSymbol
+            value: { type: ":Quantity.int64", value: "4", unit: ":meter" }
+          - name: cubeRoot
+            value: { type: ":Quantity.int64", value: "2", unit: ":meter" }
+          - name: cubeRootSymbol
+            value: { type: ":Quantity.int64", value: "2", unit: ":meter" }
+          - name: time
+            value: { type: ":Nothing" }
+          - name: rootOfLength
+            value: { type: ":Nothing" }
+          - name: squareOfArea
+            value: { type: ":Nothing" }
+          - name: half
+            value: { type: ":Nothing" }
+      - name: Folded
+        args:
+          - name: square
+            value: { type: ":Quantity.int64", value: "9", unit: ":squareMeter" }
+          - name: squareAscii
+            value: { type: ":Quantity.int64", value: "9", unit: ":squareMeter" }
+          - name: cube
+            value: { type: ":Quantity.int64", value: "8", unit: ":cubicMeter" }
+          - name: cubeAscii
+            value: { type: ":Quantity.int64", value: "8", unit: ":cubicMeter" }
+          - name: root
+            value: { type: ":Quantity.int64", value: "4", unit: ":meter" }
+          - name: rootSymbol
+            value: { type: ":Quantity.int64", value: "4", unit: ":meter" }
+          - name: cubeRoot
+            value: { type: ":Quantity.int64", value: "2", unit: ":meter" }
+          - name: cubeRootSymbol
+            value: { type: ":Quantity.int64", value: "2", unit: ":meter" }
+          - name: time
+            value: { type: ":Nothing" }
+          - name: rootOfLength
+            value: { type: ":Nothing" }
+          - name: squareOfArea
+            value: { type: ":Nothing" }
+          - name: half
+            value: { type: ":Nothing" }
+```
+
+---
+
+## Test: decibel levels keep same-unit rules without derivations or percentages
+
+Levels add, compare and scale by unitless numbers, a level divided by a level is unitless, and every combination with another unit or a percentage gives nothing, while other quantities keep the percentage rule.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: decibel-levels
+sources:
+  - name: decibel-levels.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+module main
+on Level(level, gain, percent, power) {
+  emit Runtime(sum: level + gain, difference: level - gain, half: level * 0.5, scaled: 2 * gain, ratio: level / gain, lower: min of level and gain, louder: level > gain, magnitude: abs (gain - level))
+  emit Rejected(plus: level + percent, minus: level - percent, times: level * percent, timesSwapped: percent * level, over: level / percent, integerOver: level div percent, watts: level * power, mixed: level + power)
+  emit Folded(sum: 3dB + 3dB, half: 6dB * 0.5, ratio: 6dB / 2dB, plus: 6dB + 50%, times: 6dB * 50%, timesSwapped: 50% * 6dB, watts: 3dB * 2W, meters: 10m + 50%)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| level | Level | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  level:
+    input:
+      args:
+        - name: level
+          value: { type: ":Quantity.int64", value: "6", unit: ":decibel" }
+        - name: gain
+          value: { type: ":Quantity.int64", value: "3", unit: ":decibel" }
+        - name: percent
+          value: { type: ":Percentage", value: "0.5" }
+        - name: power
+          value: { type: ":Quantity.int64", value: "2", unit: ":watt" }
+    local:
+      - name: Runtime
+        args:
+          - name: sum
+            value: { type: ":Quantity.int64", value: "9", unit: ":decibel" }
+          - name: difference
+            value: { type: ":Quantity.int64", value: "3", unit: ":decibel" }
+          - name: half
+            value: { type: ":Quantity.int64", value: "3", unit: ":decibel" }
+          - name: scaled
+            value: { type: ":Quantity.int64", value: "6", unit: ":decibel" }
+          - name: ratio
+            value: { type: ":Number.int64", value: "2" }
+          - name: lower
+            value: { type: ":Quantity.int64", value: "3", unit: ":decibel" }
+          - name: louder
+            value: { type: ":Boolean", value: true }
+          - name: magnitude
+            value: { type: ":Quantity.int64", value: "3", unit: ":decibel" }
+      - name: Rejected
+        args:
+          - name: plus
+            value: { type: ":Nothing" }
+          - name: minus
+            value: { type: ":Nothing" }
+          - name: times
+            value: { type: ":Nothing" }
+          - name: timesSwapped
+            value: { type: ":Nothing" }
+          - name: over
+            value: { type: ":Nothing" }
+          - name: integerOver
+            value: { type: ":Nothing" }
+          - name: watts
+            value: { type: ":Nothing" }
+          - name: mixed
+            value: { type: ":Nothing" }
+      - name: Folded
+        args:
+          - name: sum
+            value: { type: ":Quantity.int64", value: "6", unit: ":decibel" }
+          - name: half
+            value: { type: ":Quantity.int64", value: "3", unit: ":decibel" }
+          - name: ratio
+            value: { type: ":Number.int64", value: "3" }
+          - name: plus
+            value: { type: ":Nothing" }
+          - name: times
+            value: { type: ":Nothing" }
+          - name: timesSwapped
+            value: { type: ":Nothing" }
+          - name: watts
+            value: { type: ":Nothing" }
+          - name: meters
+            value: { type: ":Quantity.int64", value: "15", unit: ":meter" }
+```
+
+---
+
+## Test: area, volume, flux and level names are quantity types
+
+Casts and checks accept the new symbols and ASCII spellings, also with whitespace between their parts, and reject a conflicting unit.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: area-volume-flux-level-types
+sources:
+  - name: area-volume-flux-level-types.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+module main
+on Start {
+  emit Cast(area: 5 as :Quantity(m²), areaAscii: 5 as :Quantity(m^2), volume: 5 as :Quantity(m³), volumeAscii: 5 as :Quantity(m^3), flux: 5 as :Quantity(W/m²), fluxSpaced: 5 as :Quantity(W / m ^ 2), level: 5 as :Quantity(dB), conflict: 5m² as :Quantity(m³))
+  emit Check(area: 2m² is :Quantity(m^2), volume: 2m³ is :Quantity(m²), flux: 14mW/m² is :Quantity(W/m²), level: 6dB is :Quantity(dB))
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| start | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  start:
+    local:
+      - name: Cast
+        args:
+          - name: area
+            value: { type: ":Quantity.int64", value: "5", unit: ":squareMeter" }
+          - name: areaAscii
+            value: { type: ":Quantity.int64", value: "5", unit: ":squareMeter" }
+          - name: volume
+            value: { type: ":Quantity.int64", value: "5", unit: ":cubicMeter" }
+          - name: volumeAscii
+            value: { type: ":Quantity.int64", value: "5", unit: ":cubicMeter" }
+          - name: flux
+            value: { type: ":Quantity.int64", value: "5", unit: ":wattPerSquareMeter" }
+          - name: fluxSpaced
+            value: { type: ":Quantity.int64", value: "5", unit: ":wattPerSquareMeter" }
+          - name: level
+            value: { type: ":Quantity.int64", value: "5", unit: ":decibel" }
+          - name: conflict
+            value: { type: ":Nothing" }
+      - name: Check
+        args:
+          - name: area
+            value: { type: ":Boolean", value: true }
+          - name: volume
+            value: { type: ":Boolean", value: false }
+          - name: flux
+            value: { type: ":Boolean", value: true }
+          - name: level
+            value: { type: ":Boolean", value: true }
+```
+
+---
+
+## Test: area, volume, flux, level and rate format with the base symbol and parse back
+
+Formatting writes the base symbol, so prefixed, tonne and rate spellings appear in their base unit; parsing accepts every new symbol, ASCII and prefixed spelling.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: area-volume-flux-level-text
+sources:
+  - name: area-volume-flux-level-text.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+module main
+on Start {
+  emit Formatted(area: 2m² as :Text, volume: 0.5m³ as :Text, sensitivity: 14mW/m² as :Text, level: 6dB as :Text, tonne: 2t as :Text, rate: 2/s as :Text)
+  emit Parsed(area: '2m^2' as :Number, volume: '0.5m³' as :Number, sensitivity: '14mW/m²' as :Number, level: '-3dB' as :Number, tonne: '2t' as :Number, rate: '2/s' as :Number, square: '3km²' as :Number, roundtrip: ((14mW/m² as :Text) as :Number) = 14mW/m²)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| start | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  start:
+    local:
+      - name: Formatted
+        args:
+          - name: area
+            value: { type: ":Text", value: "2m²" }
+          - name: volume
+            value: { type: ":Text", value: "0.5m³" }
+          - name: sensitivity
+            value: { type: ":Text", value: "0.014W/m²" }
+          - name: level
+            value: { type: ":Text", value: "6dB" }
+          - name: tonne
+            value: { type: ":Text", value: "2000kg" }
+          - name: rate
+            value: { type: ":Text", value: "2Hz" }
+      - name: Parsed
+        args:
+          - name: area
+            value: { type: ":Quantity.int64", value: "2", unit: ":squareMeter" }
+          - name: volume
+            value: { type: ":Quantity.binary64", value: "0.5", unit: ":cubicMeter" }
+          - name: sensitivity
+            value: { type: ":Quantity.binary64", value: "0.014", unit: ":wattPerSquareMeter" }
+          - name: level
+            value: { type: ":Quantity.int64", value: "-3", unit: ":decibel" }
+          - name: tonne
+            value: { type: ":Quantity.int64", value: "2000", unit: ":kilogram" }
+          - name: rate
+            value: { type: ":Quantity.int64", value: "2", unit: ":hertz" }
+          - name: square
+            value: { type: ":Quantity.int64", value: "3000000", unit: ":squareMeter" }
+          - name: roundtrip
+            value: { type: ":Boolean", value: true }
+```
+
+---
+
 ## Test: same-unit quotients cancel and scalars keep the unit
 
 Dividing equal units gives a unitless number, scalar factors keep any unit, and vectors divided by seconds become velocities.
@@ -693,8 +1221,8 @@ sources:
 ```ges
 module main
 on Derive(m, s, force, energy, mass) {
-  emit Runtime(area: m * m, mixed: force + energy, massRate: mass / s, integerDivision: m div s, percentage: 50% / s, pace: s / m, less: m < s)
-  emit Folded(area: 2m * 3m, mixed: 2N + 3J, massRate: 6kg / 2s, integerDivision: 10m div 2s, percentage: 50% / 2s, pace: 2s / 3m, less: 2m < 3s)
+  emit Runtime(squaredTime: s * s, mixed: force + energy, massRate: mass / s, integerDivision: m div s, percentage: 50% / s, pace: s / m, less: m < s)
+  emit Folded(squaredTime: 2s * 3s, mixed: 2N + 3J, massRate: 6kg / 2s, integerDivision: 10m div 2s, percentage: 50% / 2s, pace: 2s / 3m, less: 2m < 3s)
 }
 ```
 
@@ -725,7 +1253,7 @@ steps:
     local:
       - name: Runtime
         args:
-          - name: area
+          - name: squaredTime
             value: { type: ":Nothing" }
           - name: mixed
             value: { type: ":Nothing" }
@@ -741,7 +1269,7 @@ steps:
             value: { type: ":Boolean", value: false }
       - name: Folded
         args:
-          - name: area
+          - name: squaredTime
             value: { type: ":Nothing" }
           - name: mixed
             value: { type: ":Nothing" }
@@ -997,9 +1525,9 @@ error: { phase: compile, code: compile.unsupportedConstruct }
 
 ---
 
-## Test: reserved units are not quantity type names
+## Test: information units are not quantity type names
 
-Bits, bytes and bit rates are reserved and unimplemented, so `:Quantity(bit)` is rejected.
+Bits, bytes and bit rates are not units, so `:Quantity(bit)` is rejected.
 
 ### Case description
 

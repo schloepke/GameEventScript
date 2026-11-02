@@ -44,22 +44,27 @@ internal partial class GesVirtualMachine
                 else SetFloat(dst, double.NaN);
                 return;
             case Integer when b.Kind is Percentage:
-                SetFloat(dst, a.IntegerValue * b.FloatValue, a.Unit);
+                if (PercentageUnit(in a) is { } integerPercentUnit) SetFloat(dst, a.IntegerValue * b.FloatValue, integerPercentUnit);
+                else SetFloat(dst, double.NaN);
                 return;
             case Float when b.Kind is Percentage:
-                SetFloat(dst, a.FloatValue * b.FloatValue, a.Unit);
+                if (PercentageUnit(in a) is { } floatPercentUnit) SetFloat(dst, a.FloatValue * b.FloatValue, floatPercentUnit);
+                else SetFloat(dst, double.NaN);
                 return;
             case Percentage when b.Kind is Percentage:
                 SetPercentage(dst, a.FloatValue * b.FloatValue);
                 return;
             case Percentage when b.Kind is Integer:
-                SetFloat(dst, a.FloatValue * b.IntegerValue, b.Unit);
+                if (PercentageUnit(in b) is { } percentIntegerUnit) SetFloat(dst, a.FloatValue * b.IntegerValue, percentIntegerUnit);
+                else SetFloat(dst, double.NaN);
                 return;
             case Percentage when b.Kind is Float:
-                SetFloat(dst, a.FloatValue * b.FloatValue, b.Unit);
+                if (PercentageUnit(in b) is { } percentFloatUnit) SetFloat(dst, a.FloatValue * b.FloatValue, percentFloatUnit);
+                else SetFloat(dst, double.NaN);
                 return;
             case Percentage when b.Kind is Vector:
-                if (b.ObjectValue is GesSpatialValue percentageVector) SetVector(dst, a.FloatValue * percentageVector.X, a.FloatValue * percentageVector.Y, a.FloatValue * percentageVector.Z, b.Unit);
+                if (b.ObjectValue is GesSpatialValue percentageVector && PercentageUnit(in b) is { } percentVectorUnit)
+                    SetVector(dst, a.FloatValue * percentageVector.X, a.FloatValue * percentageVector.Y, a.FloatValue * percentageVector.Z, percentVectorUnit);
                 else SetFloat(dst, double.NaN);
                 return;
             case Percentage when b.Kind is Point:
@@ -76,7 +81,8 @@ internal partial class GesVirtualMachine
                 else SetFloat(dst, double.NaN);
                 return;
             case Vector when b.Kind is Percentage:
-                if (a.ObjectValue is GesSpatialValue vectorPercent) SetVector(dst, vectorPercent.X * b.FloatValue, vectorPercent.Y * b.FloatValue, vectorPercent.Z * b.FloatValue, a.Unit);
+                if (a.ObjectValue is GesSpatialValue vectorPercent && PercentageUnit(in a) is { } vectorPercentUnit)
+                    SetVector(dst, vectorPercent.X * b.FloatValue, vectorPercent.Y * b.FloatValue, vectorPercent.Z * b.FloatValue, vectorPercentUnit);
                 else SetFloat(dst, double.NaN);
                 return;
             case Vector when b.Kind is Nothing:

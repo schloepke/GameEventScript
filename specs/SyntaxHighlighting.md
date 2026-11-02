@@ -103,7 +103,7 @@ Constant, Number, String, Comment, Symbol, Function, Module, Label and Register.
 | Type | type names such as `:Number` and record types | capitalized words that name no label | `:Name` of typed forms and the schema type |
 | Tag | tags | segment names, units after `unit:` | tags |
 | Constant | `$constant` references | — | — |
-| Number | numeric literals with units, compact dice such as `2d6`, math constants | numbers, `#` immediates | numbers with units, `Infinity`, `NaN` |
+| Number | numeric literals with their whole unit spelling, such as `2m²`, `2m^2` and `4/s`, compact dice such as `2d6`, math constants | numbers, `#` immediates | numbers with units, `Infinity`, `NaN` |
 | String | strings, including an unterminated string to the end of the document | dumper strings | quoted Text and keys, also unterminated |
 | Comment | `//` comments | comments, `@` addresses, region lines | `//` comments |
 | Symbol | punctuation, `_` | punctuation | brackets, parentheses, commas, colons |

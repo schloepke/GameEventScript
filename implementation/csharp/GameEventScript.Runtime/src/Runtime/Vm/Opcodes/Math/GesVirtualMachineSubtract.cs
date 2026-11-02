@@ -37,10 +37,12 @@ internal partial class GesVirtualMachine
                 else SetFloat(dst, double.NaN);
                 return;
             case Integer when b.Kind is Percentage:
-                SetFloat(dst, a.IntegerValue - a.IntegerValue * b.FloatValue, a.Unit);
+                if (PercentageUnit(in a) is { } integerPercentUnit) SetFloat(dst, a.IntegerValue - a.IntegerValue * b.FloatValue, integerPercentUnit);
+                else SetFloat(dst, double.NaN);
                 return;
             case Float when b.Kind is Percentage:
-                SetFloat(dst, a.FloatValue - a.FloatValue * b.FloatValue, a.Unit);
+                if (PercentageUnit(in a) is { } floatPercentUnit) SetFloat(dst, a.FloatValue - a.FloatValue * b.FloatValue, floatPercentUnit);
+                else SetFloat(dst, double.NaN);
                 return;
             case Percentage when b.Kind is Percentage:
                 SetPercentage(dst, a.FloatValue - b.FloatValue);

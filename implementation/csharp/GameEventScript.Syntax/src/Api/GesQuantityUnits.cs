@@ -29,19 +29,36 @@ public static class GesQuantityUnits
         internal int Factor { get; }
     }
 
-    // Longest spellings first, so a suffix match is always the longest matching spelling.
+    // Each spelling precedes every shorter one it starts or ends with, so a match is always the longest one; the
+    // symbol precedes its ASCII spelling, which document formatting relies on.
     internal static readonly Suffix[] Suffixes =
     [
+        new("mW/m²", UnitWattPerSquareMeter, -3),
+        new("mW/m^2", UnitWattPerSquareMeter, -3),
+        new("kW/m²", UnitWattPerSquareMeter, 3),
+        new("kW/m^2", UnitWattPerSquareMeter, 3),
+        new("W/m²", UnitWattPerSquareMeter),
+        new("W/m^2", UnitWattPerSquareMeter),
         new("m/s²", UnitMeterPerSecondSquared),
         new("m/s^2", UnitMeterPerSecondSquared),
         new("deg/s", UnitDegreePerSecond),
+        new("cm²", UnitSquareMeter, -4),
+        new("cm^2", UnitSquareMeter, -4),
+        new("km²", UnitSquareMeter, 6),
+        new("km^2", UnitSquareMeter, 6),
         new("°/s", UnitDegreePerSecond),
         new("m/s", UnitMeterPerSecond),
+        new("m²", UnitSquareMeter),
+        new("m^2", UnitSquareMeter),
+        new("m³", UnitCubicMeter),
+        new("m^3", UnitCubicMeter),
         new("kWh", UnitJoule, 5, 36),
         new("kHz", UnitHertz, 3),
         new("deg", UnitDegree),
         new("Wh", UnitJoule, 2, 36),
         new("Hz", UnitHertz),
+        new("/s", UnitHertz),
+        new("dB", UnitDecibel),
         new("km", UnitMeter, 3),
         new("ms", UnitSecond, -3),
         new("mm", UnitMeter, -3),
@@ -49,12 +66,14 @@ public static class GesQuantityUnits
         new("kN", UnitNewton, 3),
         new("kJ", UnitJoule, 3),
         new("MJ", UnitJoule, 6),
+        new("mW", UnitWatt, -3),
         new("kW", UnitWatt, 3),
         new("MW", UnitWatt, 6),
         new("kV", UnitVolt, 3),
         new("°", UnitDegree),
         new("m", UnitMeter),
         new("s", UnitSecond),
+        new("t", UnitKilogram, 3),
         new("N", UnitNewton),
         new("J", UnitJoule),
         new("W", UnitWatt),
@@ -69,7 +88,7 @@ public static class GesQuantityUnits
     /// <param name="unit">The unit value.</param>
     /// <returns><see langword="true"/> for a defined unit other than <see cref="GesQuantityUnit.UnitNone"/>.</returns>
     public static bool IsNumericUnit(this GesQuantityUnit unit)
-        => (uint)unit - 1 <= (uint)UnitHertz - 1 || unit is UnitKelvin or UnitDegreePerSecond; // UnitIds 1 to 12, 16 and 17
+        => (uint)unit - 1 <= (uint)UnitDecibel - 1; // UnitIds 1 to 18
 
     internal static GesQuantityUnit ToStoredUnit(this GesQuantityUnit? unit)
         => unit is { } value && value.IsNumericUnit() ? value : UnitNone;
@@ -105,8 +124,12 @@ public static class GesQuantityUnits
             UnitVolt => "volt",
             UnitAmpere => "ampere",
             UnitHertz => "hertz",
+            UnitSquareMeter => "squareMeter",
+            UnitCubicMeter => "cubicMeter",
+            UnitWattPerSquareMeter => "wattPerSquareMeter",
             UnitKelvin => "kelvin",
             UnitDegreePerSecond => "degreePerSecond",
+            UnitDecibel => "decibel",
             _ => throw new ArgumentOutOfRangeException(nameof(unit), unit, "Unknown GameEventScript numeric unit.")
         };
 
@@ -130,8 +153,12 @@ public static class GesQuantityUnits
             UnitVolt => "V",
             UnitAmpere => "A",
             UnitHertz => "Hz",
+            UnitSquareMeter => "m²",
+            UnitCubicMeter => "m³",
+            UnitWattPerSquareMeter => "W/m²",
             UnitKelvin => "K",
             UnitDegreePerSecond => "°/s",
+            UnitDecibel => "dB",
             _ => throw new ArgumentOutOfRangeException(nameof(unit), unit, "Unknown GameEventScript numeric unit.")
         };
 
@@ -155,8 +182,12 @@ public static class GesQuantityUnits
             "volt" => UnitVolt,
             "ampere" => UnitAmpere,
             "hertz" => UnitHertz,
+            "squareMeter" => UnitSquareMeter,
+            "cubicMeter" => UnitCubicMeter,
+            "wattPerSquareMeter" => UnitWattPerSquareMeter,
             "kelvin" => UnitKelvin,
             "degreePerSecond" => UnitDegreePerSecond,
+            "decibel" => UnitDecibel,
             _ => null
         };
 
@@ -193,8 +224,12 @@ public static class GesQuantityUnits
             "V" => UnitVolt,
             "A" => UnitAmpere,
             "Hz" => UnitHertz,
+            "m²" or "m^2" => UnitSquareMeter,
+            "m³" or "m^3" => UnitCubicMeter,
+            "W/m²" or "W/m^2" => UnitWattPerSquareMeter,
             "K" => UnitKelvin,
             "°/s" or "degree/s" or "deg/s" => UnitDegreePerSecond,
+            "dB" => UnitDecibel,
             _ => null
         };
 
@@ -265,9 +300,33 @@ public static class GesQuantityUnits
             (UnitDegreePerSecond, UnitDegree) => UnitHertz,
             (UnitMeterPerSecondSquared, UnitHertz) => UnitMeterPerSecond,
             (UnitMeterPerSecondSquared, UnitMeterPerSecond) => UnitHertz,
+            (UnitSquareMeter, UnitMeter) => UnitMeter,
+            (UnitCubicMeter, UnitMeter) => UnitSquareMeter,
+            (UnitCubicMeter, UnitSquareMeter) => UnitMeter,
+            (UnitWatt, UnitSquareMeter) => UnitWattPerSquareMeter,
+            (UnitWatt, UnitWattPerSquareMeter) => UnitSquareMeter,
             _ => null
         };
     }
+
+    // Unit of a power. Exponents 0 and 1 give none and the unit itself; 2 and 3 follow the product derivations, and
+    // the square and cube root exponents 0.5 and binary64 1/3 invert them, so `m` squared is `m²` and the cube root of
+    // `m³` is `m`. Every other quantity power is unsupported.
+    internal static GesQuantityUnit? Power(GesQuantityUnit unit, double exponent)
+    {
+        if (unit == UnitNone || exponent == 0d) return UnitNone;
+        if (exponent == 1d) return unit;
+        if (exponent == 2d) return Product(unit, unit);
+        if (exponent == 3d) return Product(unit, unit) is { } square ? Product(square, unit) : null;
+        if (exponent is not (0.5d or 1d / 3d)) return null;
+        for (var candidate = UnitDegree; candidate <= UnitDecibel; candidate++)
+            if (candidate.IsNumericUnit() && Power(candidate, exponent == 0.5d ? 2d : 3d) == unit) return candidate;
+        return null;
+    }
+
+    // Percentages scale and offset a quantity by its own magnitude. A decibel level is logarithmic, so a percentage of
+    // it has no meaning and every arithmetic combination with a percentage is invalid.
+    internal static bool AcceptsPercentage(this GesQuantityUnit unit) => unit != UnitDecibel;
 
     private static GesQuantityUnit? DerivedProduct(GesQuantityUnit left, GesQuantityUnit right)
         => (left, right) switch
@@ -284,6 +343,9 @@ public static class GesQuantityUnits
             (UnitDegree, UnitHertz) => UnitDegreePerSecond,
             (UnitMeterPerSecond, UnitHertz) => UnitMeterPerSecondSquared,
             (UnitJoule, UnitHertz) => UnitWatt,
+            (UnitMeter, UnitMeter) => UnitSquareMeter,
+            (UnitSquareMeter, UnitMeter) => UnitCubicMeter,
+            (UnitWattPerSquareMeter, UnitSquareMeter) => UnitWatt,
             _ => null
         };
 }

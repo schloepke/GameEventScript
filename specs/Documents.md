@@ -279,11 +279,12 @@ Printed text must satisfy these rules so that every implementation can read it:
   delimiters, except for scalar Quantities, including those inside Lists, Maps,
   Records and Message arguments. With prefixed units enabled, choose among the
   base symbol and the decimal prefixes accepted for that unit, `km`/`mm`, `ms`,
-  `kN`, `kJ`/`MJ`, `kW`/`MW`, `kV` and `kHz`, the spelling whose magnitude lies
-  in [1, 1000), or otherwise the one closest to that interval on a logarithmic
-  scale. `Wh` and `kWh` are never chosen. Zero, infinities, units without
-  prefixes such as `m/s`, `kg` or `°/s`, and Vector, Point, Range and Series
-  components use the base symbol.
+  `t`, `kN`, `kJ`/`MJ`, `mW`/`kW`/`MW`, `kV`, `kHz`, `cm²`/`km²` and
+  `mW/m²`/`kW/m²`, the spelling whose magnitude lies in [1, 1000), or otherwise
+  the one closest to that interval on a logarithmic scale. Prefixes keep the
+  unit symbol rather than its ASCII spelling. `Wh`, `kWh` and `/s` are never
+  chosen. Zero, infinities, units without prefixes such as `m/s`, `m³`, `dB` or
+  `°/s`, and Vector, Point, Range and Series components use the base symbol.
 - Printing options: indentation (default 2 spaces, at most 100), maximum line
   width (default 100 Unicode scalars) and prefixed units (default on). Disabling
   prefixed units prints every Quantity with its base symbol.

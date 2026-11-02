@@ -280,16 +280,20 @@ let duration be 2s             // second quantity
 let angle be 90°               // degree quantity
 let speed be 3m/s              // meter-per-second quantity
 let delay be 250ms             // prefixed spelling of 0.25s
+let area be 2m²                // square-meter quantity, not (2m)²
+let rate be 4/s                // spelling of 4Hz
 ```
 
 > **Since: Unreleased** — physical unit literals
 
 The lexer takes the longest unit spelling that is followed by whitespace, a
 structural character or the end of input, so `10m/s` is one quantity literal
-while `10m / s` divides `10m` by the binding `s`. This changes the meaning of
-attached spellings such as `10m/s` or `6m/s²`, which earlier versions read as
-a division. Without a matching spelling the number ends before the letters, as
-before.
+while `10m / s` divides `10m` by the binding `s`. Likewise `2/s` is the rate
+`2Hz` while `2 / s`, `2/ s` and `2 /s` divide by `s`, and `2m²` or `2m^2` is
+two square meters while `(2m)²` squares `2m` to `4m²`. This changes the meaning
+of attached spellings such as `10m/s`, `6m/s²`, `2/s` or `2m²`, which earlier
+versions read as a division or a power. Without a matching spelling the number
+ends before the letters, as before.
 
 Literal value decoding shares the numeric conversion rules with text casts as
 defined in [Number semantics](Semantics/Numbers.md#shared-conversion-and-source-token-boundaries).
@@ -1259,14 +1263,21 @@ valid mathematics: `point * scalar`, `scalar * point`, `point / scalar`,
 Unary negation follows the same model: `-vector` negates each component, while
 `-point` is invalid mathematics and produces numeric `NaN`.
 
-Power with quantity units is intentionally narrow because compound units such
-as `m²` are not represented. A quantity may be raised only to a unitless
-numeric exponent of `0` or `1`; booleans participate in the normal lenient
-numeric coercion, so `10m ^ true` is `10m` and `10m ^ false` is unitless `1`.
-An exponent carrying a quantity unit is invalid for every base, including
-exponents `0m` and `1m` and units matching the base. Other quantity powers
-produce numeric `NaN` unless an operand is `nothing`. These rules apply equally
-to literal operands, program constants, and values supplied at runtime;
+> **Since: Unreleased** — quantity squares, cubes and roots
+
+Power with quantity units follows the closed unit set. A quantity may be raised
+only to a unitless numeric exponent: `0` gives a unitless value and `1` keeps the
+unit; booleans participate in the normal lenient numeric coercion, so
+`10m ^ true` is `10m` and `10m ^ false` is unitless `1`. Exponents `2` and `3`
+take the unit of the corresponding product in the
+[derivation table](#quantities), so `(3m)²` is `9m²` and `(2m)³` is `8m³`. The
+exponents `0.5` and binary64 `1/3`, which `sqrt`/`√` and `cbrt`/`∛` produce,
+invert those products, so `sqrt(16m²)` is `4m` and `∛(27m³)` is `3m`. A power
+whose unit has no such derivation, for example `(2s)²` or `sqrt(4m)`, is
+invalid. An exponent carrying a quantity unit is invalid for every base,
+including exponents `0m` and `1m` and units matching the base. Invalid quantity
+powers produce numeric `NaN` unless an operand is `nothing`. These rules apply
+equally to literal operands, program constants, and values supplied at runtime;
 constant folding must preserve the same value and unit semantics.
 
 Numeric checks are keyword constructs, not `:` type references:
@@ -1396,8 +1407,18 @@ portable name used by bytecode, assembler text and host APIs:
 | volt | `V` | | `volt` |
 | ampere | `A` | | `ampere` |
 | hertz | `Hz` | | `hertz` |
+| square meter | `m²` | `m^2` | `squareMeter` |
+| cubic meter | `m³` | `m^3` | `cubicMeter` |
+| watt per square meter | `W/m²` | `W/m^2` | `wattPerSquareMeter` |
 | kelvin | `K` | | `kelvin` |
 | degree per second | `°/s` | `deg/s` | `degreePerSecond` |
+| decibel | `dB` | | `decibel` |
+
+Each quantity has exactly one unit: temperature is kelvin only, mass kilogram
+only, and display scales such as Celsius are the host's business. The square
+and cube meter carry areas and volumes, the watt per square meter carries flux
+or intensity at a receiver, and the decibel carries a level on a logarithmic
+scale.
 
 Literals additionally accept prefixed spellings as sugar. They scale the value
 exactly to the base unit at compile time; the value keeps the base unit and
@@ -1407,17 +1428,26 @@ formats with the base symbol:
 | --- | --- |
 | `km`, `mm` | 1000 m, 0.001 m |
 | `ms` | 0.001 s |
+| `t` | 1000 kg |
 | `kN`, `kJ`, `kW`, `kV`, `kHz` | 1000 N, J, W, V, Hz |
 | `MJ`, `MW` | 1 000 000 J, W |
+| `mW` | 0.001 W |
 | `Wh`, `kWh` | 3600 J, 3 600 000 J |
+| `cm²`/`cm^2`, `km²`/`km^2` | 0.0001 m², 1 000 000 m² |
+| `mW/m²`/`mW/m^2`, `kW/m²`/`kW/m^2` | 0.001 W/m², 1000 W/m² |
+| `/s` | 1 Hz |
 
-For example `1.5kWh` is `5400000J` and `250ms` is `0.25s`. Celsius,
-Fahrenheit, bits, bytes and bit rates are not units.
+For example `1.5kWh` is `5400000J`, `250ms` is `0.25s`, `14mW/m²` is
+`0.014W/m²` and `2t` is `2000kg`. `/s` directly after the number reads a rate
+that is not periodic, such as messages per second: `4/s` is `4Hz`. Gram,
+Celsius, Fahrenheit, bits, bytes and bit rates are not units; rates of
+information are frequencies.
 
 `:Quantity(unit)` accepts `none`, every symbol and ASCII spelling, and the long
 names `meter`, `second` and `degree`; `degree/s` is accepted for `°/s` because
 `°` reads as `degree`. Whitespace between the parts of a unit name is ignored and
-`÷` reads as `/`, so `:Quantity(m / s)` and `:Quantity(m÷s)` are `:Quantity(m/s)`.
+`÷` reads as `/`, so `:Quantity(m / s)` and `:Quantity(m÷s)` are `:Quantity(m/s)`
+and `:Quantity(W / m ^ 2)` is `:Quantity(W/m²)`.
 Prefixed spellings are not type names. `:Percentage` is
 not a quantity unit; it is a separate value kind. The names `meter`, `second`,
 `degree`, and `seconds` are not quantity types of their own. `:Quantity(none)`
@@ -1432,9 +1462,10 @@ same-unit rules. Multiplying or dividing a quantity by a unitless number keeps
 its unit, and dividing two quantities of the same unit gives a unitless number,
 so `10m / 2m` is `5`. `abs` and `hypot` keep the unit, rounding follows
 [Number semantics](Semantics/Numbers.md#conversion-and-rounding); trigonometry
-and powers are unchanged. Any other product or quotient of two units follows
-this derivation table, where multiplication is commutative; every other
-combination, such as `2m * 3m`, `2N + 3J` or `6kg / 2s`, gives `nothing`:
+is unchanged, and powers follow [Numbers](#numbers) with this table. Any
+other product or quotient of two units follows this derivation table, where
+multiplication is commutative; every other combination, such as `2N + 3J`,
+`6kg / 2s` or `2K * 3K`, gives `nothing`:
 
 | Operation | Result |
 | --- | --- |
@@ -1474,11 +1505,29 @@ combination, such as `2m * 3m`, `2N + 3J` or `6kg / 2s`, gives `nothing`:
 | `°/s / °` | `Hz` |
 | `m/s² / Hz` | `m/s` |
 | `m/s² / (m/s)` | `Hz` |
+| `m × m` | `m²` |
+| `m² / m` | `m` |
+| `m² × m` | `m³` |
+| `m³ / m` | `m²` |
+| `m³ / m²` | `m` |
+| `W / m²` | `W/m²` |
+| `W/m² × m²` | `W` |
+| `W / (W/m²)` | `m²` |
 
 So `1 / 2s` is `0.5Hz`; use `as :Quantity(none)` when a plain number is
 needed. The derivations apply to numbers and to a vector multiplied or divided
 by a number. Integer division (`div`), `mod`, `rem`, points and percentages
 keep their derivation-free rules, so `10m div 2s` and `50% / 2s` are `nothing`.
+
+The decibel has no derivations: a level never converts to or from watts, so
+`3dB * 2W` is `nothing`. Same-unit rules apply as for every unit, so levels add
+(`3dB + 3dB` is `6dB`), compare and pass through `min`, `max`, `clamp` and
+`abs`; multiplying or dividing by a unitless number keeps `dB`, so `6dB * 0.5`
+is `3dB`, and `6dB / 2dB` is `3`. A percentage scales and offsets a quantity by
+its own magnitude, which has no meaning for a logarithmic level: every
+arithmetic combination of a `dB` operand with a percentage, such as
+`6dB + 50%`, `6dB * 50%` or `50% * 6dB`, gives `nothing`. The mapping of a
+control position to a level belongs to the host or the script.
 
 ### Percentages
 
@@ -2309,7 +2358,8 @@ IntelliJ-based editors. A rule uses `::=`; adjacent expressions form a sequence;
 zero-or-more / one-or-more repetitions. Quoted text is a terminal. Uppercase
 bare names such as `LOWER_NAME`, `VARIABLE_NAME`, `TYPE_TAG`, `MODULE_NAME`,
 `CONSTANT_REFERENCE`, `MESSAGE_NAME`, `NUMBER`, and `NL` are lexical token
-categories governed by the lexical rules above.
+categories governed by the lexical rules above; `UNIT_SYMBOL` is a unit symbol
+or ASCII spelling from [Quantities](#quantities).
 
 This is only a notation contract. The specification does not adopt Grammar-Kit
 rule attributes, parser generation, recovery, pinning, or PEG conflict
@@ -2489,7 +2539,7 @@ built_in_type_tag ::= ':Boolean' | ':Number' | ':Percentage' |
                       ':Series' | ':Range' | ':Message' | ':Handler' | ':Tag' |
                       ':Text' | ':List' | ':Map' | ':Dice' | ':Nothing'
 custom_type_tag ::= TYPE_TAG
-unit_name ::= 'none' | 'm' | 'meter' | 's' | 'second' | 'degree' | '°'
+unit_name ::= 'none' | 'meter' | 'second' | 'degree' | 'degree/s' | UNIT_SYMBOL
 numeric_check ::= 'numeric' | 'integer' | 'fractional'
 ```
 

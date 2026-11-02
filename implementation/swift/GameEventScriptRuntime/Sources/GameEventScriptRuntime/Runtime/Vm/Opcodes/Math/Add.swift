@@ -1,6 +1,8 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
+@_spi(Syntax) import GameEventScriptSyntax
+
 extension GesVirtualMachine {
     // Indices are absolute register offsets decoded by the dispatcher. Integer operands with
     // matching units are the hot case and run inline; everything else, including overflow,
@@ -83,6 +85,7 @@ extension GesVirtualMachine {
         case .percentage:
             registers[destination].setNothing()
         case _ where rightKind == .percentage:
+            guard registers[x].unit.acceptsPercentage else { return registers[destination].setNothing() }
             let left = registers[x].asNumber
             let result = left + left * registers[y].asNumber
             let unit = registers[x].unit
@@ -117,7 +120,10 @@ extension GesVirtualMachine {
             guard registers[y].kind == .percentage else { return registers[target].setNothing() }
             return registers[target].setPercentage(left + right)
         }
-        if registers[y].kind == .percentage { return registers[target].setFloat(left + left * right, unit: registers[x].unit) }
+        if registers[y].kind == .percentage {
+            guard registers[x].unit.acceptsPercentage else { return registers[target].setNothing() }
+            return registers[target].setFloat(left + left * right, unit: registers[x].unit)
+        }
         guard registers[x].unit == registers[y].unit else { return registers[target].setNothing() }
         return registers[target].setFloat(left + right, unit: registers[x].unit)
     }

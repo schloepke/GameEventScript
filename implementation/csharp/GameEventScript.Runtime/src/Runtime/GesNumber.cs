@@ -44,11 +44,12 @@ internal static class GesNumber
         var right = exponent.AsNumeric;
         if (double.IsNaN(right)) return GesValue.GesFloat(double.NaN);
 
+        // Quantity powers follow the unit derivations, for example `m` squared is `m²`; others are invalid.
         var unit = GesQuantityUnit.UnitNone;
         if (value.HasUnit)
         {
-            if (right == 1d) unit = value.Unit;
-            else if (right != 0d) return GesValue.GesFloat(double.NaN);
+            if (GesQuantityUnits.Power(value.Unit, right) is not { } powered) return GesValue.GesFloat(double.NaN);
+            unit = powered;
         }
 
         var left = value.AsNumeric;

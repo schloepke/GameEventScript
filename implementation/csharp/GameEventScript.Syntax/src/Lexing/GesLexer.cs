@@ -687,7 +687,7 @@ internal sealed class GesLexer
     // Only these characters start a unit spelling, so unitless numbers skip the suffix table. A native test keeps the
     // set in step with GesQuantityUnits.Suffixes.
     internal static bool MayStartUnitSuffix(char ch) =>
-        ch is 'm' or 's' or 'd' or 'k' or 'M' or 'W' or 'H' or 'N' or 'J' or 'V' or 'A' or 'K' or '\u00B0';
+        ch is 'm' or 's' or 'd' or 'k' or 'c' or 't' or 'M' or 'W' or 'H' or 'N' or 'J' or 'V' or 'A' or 'K' or '/' or '\u00B0';
 
     private static bool IsValidUnitBoundary(char ch) => ch == '\0' || GesText.IsTokenWhitespace(ch) || IsStructuralBoundary(ch);
 

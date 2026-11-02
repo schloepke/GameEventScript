@@ -34,10 +34,18 @@ private struct EveryUnit {
     var ampere: Double = 1
     @GesField(unit: .hertz)
     var hertz: Double = 1
+    @GesField(unit: .squareMeter)
+    var squareMeter: Double = 1
+    @GesField(unit: .cubicMeter)
+    var cubicMeter: Double = 1
+    @GesField(unit: .wattPerSquareMeter)
+    var wattPerSquareMeter: Double = 1
     @GesField(unit: .kelvin)
     var kelvin: Double = 1
     @GesField(unit: .degreePerSecond)
     var degreePerSecond: Double = 1
+    @GesField(unit: .decibel)
+    var decibel: Double = 1
 }
 
 final class MacroUnitTableTests: XCTestCase {

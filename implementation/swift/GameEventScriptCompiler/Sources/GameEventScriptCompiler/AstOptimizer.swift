@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 @_spi(Compiler) import GameEventScriptRuntime
+@_spi(Syntax) import GameEventScriptSyntax
 
 // Replaces constant references and folds constant subexpressions after validation, before lowering.
 // Mirrors GesAstOptimizer of the C# reference compiler rule for rule, so both ports lower the same tree.
@@ -442,7 +443,8 @@ struct GesAstOptimizer {
             return number(subtract ? l - r : l + r, left.unit, preferInteger: false)
         }
         if left.valueKind == .percentage && right.valueKind == .percentage { return .percentage(subtract ? l - r : l + r) }
-        if right.valueKind == .percentage && left.hasUnit { return number(subtract ? l - l * r : l + l * r, left.unit, preferInteger: false) }
+        // A decibel level takes no percentage; the VM produces the invalid result.
+        if right.valueKind == .percentage && left.hasUnit && left.unit.acceptsPercentage { return number(subtract ? l - l * r : l + l * r, left.unit, preferInteger: false) }
         return nil
     }
 
@@ -454,8 +456,8 @@ struct GesAstOptimizer {
             return overflow ? .float(Double(a) * Double(b), unit: unit) : .integer(result, unit: unit)
         }
         if left.valueKind == .percentage && right.valueKind == .percentage { return .percentage(l * r) }
-        if left.valueKind == .percentage { return number(l * r, right.unit, preferInteger: false) }
-        if right.valueKind == .percentage { return number(l * r, left.unit, preferInteger: false) }
+        if left.valueKind == .percentage { return right.unit.acceptsPercentage ? number(l * r, right.unit, preferInteger: false) : nil }
+        if right.valueKind == .percentage { return left.unit.acceptsPercentage ? number(l * r, left.unit, preferInteger: false) : nil }
         guard let unit = productUnit(left.unit, right.unit) else { return nil }
         return number(l * r, unit, preferInteger: false)
     }

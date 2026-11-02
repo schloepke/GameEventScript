@@ -238,8 +238,8 @@ internal readonly struct GesNumberLiteral
     internal static bool MayEndWithSuffix(string text, int start, int end)
     {
         var last = text[end - 1];
-        return last is 's' or 'm' or 'h' or 'z' or 'g' or 'N' or 'J' or 'W' or 'V' or 'A' or 'K' or '\u00B0' or '\u00B2'
-            || last == '2' && end - start > 2 && text[end - 2] == '^';
+        return last is 's' or 'm' or 'h' or 'z' or 'g' or 't' or 'B' or 'N' or 'J' or 'W' or 'V' or 'A' or 'K' or '\u00B0' or '\u00B2' or '\u00B3'
+            || last is '2' or '3' && end - start > 2 && text[end - 2] == '^';
     }
 
     // A unit suffix belongs to the number only when it directly follows a digit or the special values.

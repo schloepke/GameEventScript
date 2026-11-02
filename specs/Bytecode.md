@@ -206,7 +206,7 @@ component output. Iterator instructions require zero UnitId. Undefined flag comb
 The UnitId map keeps the defined ids stable and reserves
 room for likely game-domain units:
 
-> **Since: Unreleased** — UnitIds 4 to 12, 16 and 17
+> **Since: Unreleased** — UnitIds 4 to 18
 
 | UnitId | Unit | Portable name | Intended use |
 | --- | --- | --- | --- |
@@ -223,15 +223,16 @@ room for likely game-domain units:
 | `10` | volt | `volt` | Voltage for electrotechnical systems. |
 | `11` | ampere | `ampere` | Current, charge flow, overload/thermal balancing. |
 | `12` | hertz | `hertz` | Frequency, fire rate, polling, radio cadence. |
-| `13` | reserved: bit | | Information amount; not implemented. |
-| `14` | reserved: byte | | Storage amount; not implemented. |
-| `15` | reserved: bit per second | | Bandwidth; not implemented. |
+| `13` | square meter | `squareMeter` | Areas: hull surfaces, apertures, cross sections. |
+| `14` | cubic meter | `cubicMeter` | Volumes: tanks, hulls, cargo. |
+| `15` | watt per square meter | `wattPerSquareMeter` | Flux or intensity at a sensor, sensor sensitivity, background noise. |
 | `16` | kelvin | `kelvin` | Temperature. |
 | `17` | degree per second | `degreePerSecond` | Angular speed, turn rate. |
-| `18..31` | reserved | | Additional built-in or domain units. |
+| `18` | decibel | `decibel` | Levels on a logarithmic scale: gains, attenuation, signal-to-noise. |
+| `19..31` | reserved | | Additional built-in or domain units. |
 
-Programs may encode only the defined UnitIds 0 to 12, 16 and 17; validation
-rejects reserved ids. Unit arithmetic, symbols and literal spellings are
+Programs may encode only the defined UnitIds 0 to 18; validation rejects
+reserved ids. Unit arithmetic, symbols and literal spellings are
 defined in [Language quantities](Language.md#quantities). The extended map keeps
 additional unit IDs representable without reshaping the instruction word.
 

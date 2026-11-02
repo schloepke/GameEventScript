@@ -29,10 +29,18 @@ public enum GesQuantityUnit: String, Hashable, Sendable {
     case ampere
     /// Frequency measured in hertz.
     case hertz
+    /// Area measured in square meters.
+    case squareMeter
+    /// Volume measured in cubic meters.
+    case cubicMeter
+    /// Flux or intensity measured in watts per square meter.
+    case wattPerSquareMeter
     /// Temperature measured in kelvins.
     case kelvin
     /// Angular speed measured in degrees per second.
     case degreePerSecond
+    /// A level on a logarithmic scale measured in decibels.
+    case decibel
 
     /// Canonical text suffix that formatting appends, such as `m`, `m/s` or `°/s`; empty for unitless values.
     public var suffix: String {
@@ -50,8 +58,12 @@ public enum GesQuantityUnit: String, Hashable, Sendable {
         case .volt: "V"
         case .ampere: "A"
         case .hertz: "Hz"
+        case .squareMeter: "m²"
+        case .cubicMeter: "m³"
+        case .wattPerSquareMeter: "W/m²"
         case .kelvin: "K"
         case .degreePerSecond: "°/s"
+        case .decibel: "dB"
         }
     }
 }

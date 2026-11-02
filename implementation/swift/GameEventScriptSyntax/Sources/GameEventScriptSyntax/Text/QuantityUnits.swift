@@ -21,18 +21,35 @@ extension GesQuantityUnit {
         }
     }
 
-    // Longest spellings first, so a suffix match is always the longest matching spelling.
+    // Each spelling precedes every shorter one it starts or ends with, so a match is always the longest one; the
+    // symbol precedes its ASCII spelling, which document formatting relies on.
     @_spi(Syntax) public static let suffixes: [Suffix] = [
+        .init(text: "mW/m²", unit: .wattPerSquareMeter, exponent: -3),
+        .init(text: "mW/m^2", unit: .wattPerSquareMeter, exponent: -3),
+        .init(text: "kW/m²", unit: .wattPerSquareMeter, exponent: 3),
+        .init(text: "kW/m^2", unit: .wattPerSquareMeter, exponent: 3),
+        .init(text: "W/m²", unit: .wattPerSquareMeter),
+        .init(text: "W/m^2", unit: .wattPerSquareMeter),
         .init(text: "m/s²", unit: .meterPerSecondSquared),
         .init(text: "m/s^2", unit: .meterPerSecondSquared),
         .init(text: "deg/s", unit: .degreePerSecond),
+        .init(text: "cm²", unit: .squareMeter, exponent: -4),
+        .init(text: "cm^2", unit: .squareMeter, exponent: -4),
+        .init(text: "km²", unit: .squareMeter, exponent: 6),
+        .init(text: "km^2", unit: .squareMeter, exponent: 6),
         .init(text: "°/s", unit: .degreePerSecond),
         .init(text: "m/s", unit: .meterPerSecond),
+        .init(text: "m²", unit: .squareMeter),
+        .init(text: "m^2", unit: .squareMeter),
+        .init(text: "m³", unit: .cubicMeter),
+        .init(text: "m^3", unit: .cubicMeter),
         .init(text: "kWh", unit: .joule, exponent: 5, factor: 36),
         .init(text: "kHz", unit: .hertz, exponent: 3),
         .init(text: "deg", unit: .degree),
         .init(text: "Wh", unit: .joule, exponent: 2, factor: 36),
         .init(text: "Hz", unit: .hertz),
+        .init(text: "/s", unit: .hertz),
+        .init(text: "dB", unit: .decibel),
         .init(text: "km", unit: .meter, exponent: 3),
         .init(text: "ms", unit: .second, exponent: -3),
         .init(text: "mm", unit: .meter, exponent: -3),
@@ -40,12 +57,14 @@ extension GesQuantityUnit {
         .init(text: "kN", unit: .newton, exponent: 3),
         .init(text: "kJ", unit: .joule, exponent: 3),
         .init(text: "MJ", unit: .joule, exponent: 6),
+        .init(text: "mW", unit: .watt, exponent: -3),
         .init(text: "kW", unit: .watt, exponent: 3),
         .init(text: "MW", unit: .watt, exponent: 6),
         .init(text: "kV", unit: .volt, exponent: 3),
         .init(text: "°", unit: .degree),
         .init(text: "m", unit: .meter),
         .init(text: "s", unit: .second),
+        .init(text: "t", unit: .kilogram, exponent: 3),
         .init(text: "N", unit: .newton),
         .init(text: "J", unit: .joule),
         .init(text: "W", unit: .watt),
@@ -83,8 +102,12 @@ extension GesQuantityUnit {
         case .volt: 10
         case .ampere: 11
         case .hertz: 12
+        case .squareMeter: 13
+        case .cubicMeter: 14
+        case .wattPerSquareMeter: 15
         case .kelvin: 16
         case .degreePerSecond: 17
+        case .decibel: 18
         }
     }
 
@@ -104,8 +127,12 @@ extension GesQuantityUnit {
         case 10: self = .volt
         case 11: self = .ampere
         case 12: self = .hertz
+        case 13: self = .squareMeter
+        case 14: self = .cubicMeter
+        case 15: self = .wattPerSquareMeter
         case 16: self = .kelvin
         case 17: self = .degreePerSecond
+        case 18: self = .decibel
         default: return nil
         }
     }
@@ -138,8 +165,12 @@ extension GesQuantityUnit {
         case "V": self = .volt
         case "A": self = .ampere
         case "Hz": self = .hertz
+        case "m²", "m^2": self = .squareMeter
+        case "m³", "m^3": self = .cubicMeter
+        case "W/m²", "W/m^2": self = .wattPerSquareMeter
         case "K": self = .kelvin
         case "°/s", "degree/s", "deg/s": self = .degreePerSecond
+        case "dB": self = .decibel
         default: return nil
         }
     }
@@ -192,9 +223,30 @@ extension GesQuantityUnit {
         case (.degreePerSecond, .degree): return .hertz
         case (.meterPerSecondSquared, .hertz): return .meterPerSecond
         case (.meterPerSecondSquared, .meterPerSecond): return .hertz
+        case (.squareMeter, .meter): return .meter
+        case (.cubicMeter, .meter): return .squareMeter
+        case (.cubicMeter, .squareMeter): return .meter
+        case (.watt, .squareMeter): return .wattPerSquareMeter
+        case (.watt, .wattPerSquareMeter): return .squareMeter
         default: return nil
         }
     }
+
+    // Unit of a power. Exponents 0 and 1 give none and the unit itself; 2 and 3 follow the product derivations, and
+    // the square and cube root exponents 0.5 and binary64 1/3 invert them, so `m` squared is `m²` and the cube root of
+    // `m³` is `m`. Every other quantity power is unsupported.
+    @_spi(Syntax) public static func power(_ unit: GesQuantityUnit, _ exponent: Double) -> GesQuantityUnit? {
+        if unit == .none || exponent == 0 { return GesQuantityUnit.none }
+        if exponent == 1 { return unit }
+        if exponent == 2 { return product(unit, unit) }
+        if exponent == 3 { return product(unit, unit).flatMap { product($0, unit) } }
+        guard exponent == 0.5 || exponent == 1.0 / 3.0 else { return nil }
+        return (UInt8(1)...18).lazy.compactMap { GesQuantityUnit(unitID: $0) }.first { power($0, exponent == 0.5 ? 2 : 3) == unit }
+    }
+
+    // Percentages scale and offset a quantity by its own magnitude. A decibel level is logarithmic, so a percentage of
+    // it has no meaning and every arithmetic combination with a percentage is invalid.
+    @_spi(Syntax) public var acceptsPercentage: Bool { self != .decibel }
 
     private static func derivedProduct(_ left: GesQuantityUnit, _ right: GesQuantityUnit) -> GesQuantityUnit? {
         switch (left, right) {
@@ -210,6 +262,9 @@ extension GesQuantityUnit {
         case (.degree, .hertz): .degreePerSecond
         case (.meterPerSecond, .hertz): .meterPerSecondSquared
         case (.joule, .hertz): .watt
+        case (.meter, .meter): .squareMeter
+        case (.squareMeter, .meter): .cubicMeter
+        case (.wattPerSquareMeter, .squareMeter): .watt
         default: nil
         }
     }

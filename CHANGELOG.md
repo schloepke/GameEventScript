@@ -61,8 +61,10 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   syntax error.
 - A number directly followed by a unit spelling is now one quantity literal, so
   `10m/s`, `6m/s²` or `120°/s` are a speed, an acceleration and an angular speed
-  rather than divisions by a binding `s`. Write `10m / s` with whitespace to
-  divide. Text such as `'250ms'` now parses as `0.25s` instead of failing.
+  rather than divisions by a binding `s`, `2/s` is the rate `2Hz`, and `2m²` or
+  `2m^2` is an area rather than the square of `2m`. Write `10m / s` or `2 / s`
+  with whitespace to divide and `(2m)²` to square. Text such as `'250ms'` now
+  parses as `0.25s` instead of failing.
 - `floor`, `ceil`, `truncate` and the three `round` forms keep the unit of a
   quantity, at runtime and in constant folding: `floor 2.5m` is now `2m` instead
   of the unitless `2`, and `round half even 2.5m/s` is `2m/s`. Percentages still
@@ -71,7 +73,8 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   plain number is needed.
 - Swift `GesQuantityUnit` has new cases for the added physical units, so an
   exhaustive `switch` over it must handle `kilogram`, `newton`, `joule`, `watt`,
-  `volt`, `ampere`, `hertz`, `kelvin` and `degreePerSecond` (or add a `default`).
+  `volt`, `ampere`, `hertz`, `squareMeter`, `cubicMeter`, `wattPerSquareMeter`,
+  `kelvin`, `degreePerSecond` and `decibel` (or add a `default`).
   C# `GesQuantityUnit` gains the same members; existing values keep their numbers.
 - Runtime observer callbacks report the host-local send ID of the message they
   describe: C# `MessageEmitted(message, id, accepted)`,
@@ -208,17 +211,26 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   exceeded, including more than 10,000 items materialized from Ranges in total.
 - Physical units in C# and Swift: meter per second (`m/s`), meter per second
   squared (`m/s²`, ASCII `m/s^2`), kilogram (`kg`), newton (`N`), joule (`J`),
-  watt (`W`), volt (`V`), ampere (`A`), hertz (`Hz`), kelvin (`K`) and degree
-  per second (`°/s`, ASCII `deg/s`), next to meters, seconds and degrees (ASCII
-  `deg`). Literals accept the prefixed spellings `km`, `mm`, `ms`, `kN`, `kJ`, `MJ`,
-  `kW`, `MW`, `kV`, `kHz`, `Wh` and `kWh`, which normalize exactly to the base
-  unit. Products and quotients follow a closed derivation table, for example
-  `10m / 2s` is `5m/s`, `2kg * 3m/s²` is `6N` and `1 / 2s` is `0.5Hz` (formerly
-  `nothing`); other combinations of two units remain `nothing`. Every unit works
-  in `:Quantity(...)`, text formatting and parsing, message JSON, vectors and
-  points, inline assembly (`#meterPerSecond`) and host APIs, including Swift
-  `@GesField(unit: .meterPerSecond)`. The new UnitIds are 4 to 12, 16 and 17;
-  Swift `GesQuantityUnit` is now `Sendable`.
+  watt (`W`), volt (`V`), ampere (`A`), hertz (`Hz`), square meter (`m²`, ASCII
+  `m^2`), cubic meter (`m³`, ASCII `m^3`), watt per square meter (`W/m²`, ASCII
+  `W/m^2`), kelvin (`K`), degree per second (`°/s`, ASCII `deg/s`) and decibel
+  (`dB`), next to meters, seconds and degrees (ASCII `deg`). Literals accept the
+  prefixed spellings `km`, `mm`, `cm²`, `km²`, `ms`, `t`, `kN`, `kJ`, `MJ`, `mW`,
+  `kW`, `MW`, `mW/m²`, `kW/m²`, `kV`, `kHz`, `Wh` and `kWh`, which normalize
+  exactly to the base unit, and `/s` after a number for a rate such as `4/s`.
+  Products and quotients follow a closed derivation table, for example
+  `10m / 2s` is `5m/s`, `2kg * 3m/s²` is `6N`, `2m * 3m` is `6m²`, `10W / 2m²`
+  is `5W/m²` and `1 / 2s` is `0.5Hz` (formerly `nothing`); other combinations of
+  two units remain `nothing`. Squares and cubes follow the same table and roots
+  invert them, so `(3m)²` is `9m²` and `sqrt 16m²` is `4m` (formerly `NaN`).
+  Decibel levels add and scale by numbers but derive with no other unit and
+  give `nothing` with a percentage. Every unit works in `:Quantity(...)`, text
+  formatting and parsing, message JSON, vectors and points, inline assembly
+  (`#meterPerSecond`) and host APIs, including Swift
+  `@GesField(unit: .meterPerSecond)`. The UnitIds are 0 to 18; the formerly
+  reserved bit, byte and bit-per-second ids 13 to 15 now hold the square meter,
+  cubic meter and watt per square meter. Swift `GesQuantityUnit` is now
+  `Sendable`.
 - Runtime observers can follow delayed messages. C# `MessageScheduled(message, id,
   deadline, publish)` / Swift `messageScheduled(_:id:deadline:publish:)` reports
   each accepted `emit … after` or `publish … after` once, with its send ID and its

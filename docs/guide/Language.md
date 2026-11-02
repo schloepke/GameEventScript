@@ -101,10 +101,12 @@ on Main(args) {
 
 Common data values include Number, Boolean, Text, Tag, List, Map and `nothing`.
 Numbers may carry a unit, such as seconds (`0.2s`), meters (`10m`), degrees
-(`90°`), speeds (`3m/s`), forces (`21400N`) or frequencies (`20Hz`). Prefixed
-spellings like `250ms` or `2km` are converted to the base unit. Units follow
-physics where it is defined: `10m / 2s` is `5m/s`, `2kg * 3m/s²` is `6N`, and
-`1 / 2s` is `0.5Hz`; unsupported combinations such as `2m * 3m` give `nothing`.
+(`90°`), speeds (`3m/s`), forces (`21400N`), frequencies (`20Hz` or `20/s`),
+areas (`2m²`), volumes (`0.5m³`), intensities (`0.014W/m²`) or levels (`6dB`).
+Prefixed spellings like `250ms`, `2km` or `2t` are converted to the base unit.
+Units follow physics where it is defined: `10m / 2s` is `5m/s`, `2kg * 3m/s²`
+is `6N`, `2m * 3m` is `6m²`, `(3m)²` is `9m²` and `1 / 2s` is `0.5Hz`;
+unsupported combinations such as `2N + 3J` give `nothing`.
 The complete unit list and derivation table are in the
 [language specification](../../specs/Language.md#quantities). A percentage
 such as `20%` represents the ratio `0.2`, so `100 * 20%` gives `20`.

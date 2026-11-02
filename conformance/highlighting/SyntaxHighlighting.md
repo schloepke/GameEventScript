@@ -38,6 +38,10 @@ and ANSI text preservation.
 ```
 
 ```highlight
+{"name":"area volume flux level and rate literals","language":"ges","source":"let area be 2m²\nlet sq be 2m^2\nlet vol be 0.5m³\nlet flux be 14mW/m²\nlet level be 6dB\nlet mass be 2t\nlet split be 4 / s\nlet rate be 4/s\nlet power be (2m)²\nlet x be 5 as :Quantity(W/m^2)","expect":[{"text":"2m²","kind":"number"},{"text":"2m^2","kind":"number"},{"text":"0.5m³","kind":"number"},{"text":"14mW/m²","kind":"number"},{"text":"6dB","kind":"number"},{"text":"2t","kind":"number"},{"text":"4","kind":"number","occurrence":1},{"text":"s","kind":"identifier","occurrence":4},{"text":"4/s","kind":"number"},{"text":"2m","kind":"number","occurrence":2},{"text":"²","kind":"keyword","occurrence":2},{"text":"W/m^2","kind":"builtin"}]}
+```
+
+```highlight
 {"name":"new syntax and selectors","language":"ges","source":"if let x be value; x has value { emit after 0.2s Done(x) }\nlet result be values[:fold acc be 0, item => acc + item]\nlet parts be text[:split on whitespace]","expect":[{"text":"if","kind":"keyword"},{"text":"let","kind":"keyword"},{"text":"after","kind":"keyword"},{"text":"0.2s","kind":"number"},{"text":":fold","kind":"builtin"},{"text":":split","kind":"builtin"},{"text":"=>","kind":"keyword"}]}
 ```
 

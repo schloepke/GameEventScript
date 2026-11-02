@@ -29,51 +29,46 @@ final class TerminalTests: XCTestCase {
         }
     }
 
-    // The C# CLI's cluster data must match this Swift's segmentation: an attacher extends a consonant, a control does not
-    // take a following combining acute, a linker joins two consonants, a consonant joins a preceding consonant and
-    // virama without extending a lone consonant, and an extender keeps the conjunct joined before and after the virama.
-    func testConjunctTablesMatchNativeSegmentation() {
+    // The C# CLI's cluster data must match this Swift's segmentation: an attacher extends a consonant, a prepend joins a
+    // following letter, a control does not take a following combining acute, a linker joins two consonants, a consonant
+    // joins a preceding consonant and virama without extending a lone consonant, and an extender keeps the conjunct
+    // joined before and after the virama. On macOS the segmentation data belongs to the OS's Swift runtime, so only
+    // scalars that runtime knows are compared, and conjuncts only when it implements GB9c.
+    func testClusterTablesMatchNativeSegmentation() {
         let ka = "\u{915}"
         let virama = "\u{94D}"
         let ssa = "\u{937}"
-        var linkers: [UInt32] = []
-        var consonants: [UInt32] = []
-        var extenders: [UInt32] = []
-        var attachers: [UInt32] = []
-        var controls: [UInt32] = []
+        var derived: [String: Set<UInt32>] = [:]
         for value in UInt32(0)...0x10FFFF {
-            guard let scalar = Unicode.Scalar(value) else { continue }
+            guard let scalar = Unicode.Scalar(value), scalar.properties.age != nil else { continue }
             let text = String(scalar)
-            if (text + "\u{301}").count == 2 { controls.append(value) }
+            if (text + "\u{301}").count == 2 { derived["clusterControls", default: []].insert(value) }
+            if (text + "a").count == 1 { derived["clusterPrepends", default: []].insert(value) }
             if (ka + text).count == 1 {
-                attachers.append(value)
+                derived["clusterAttachers", default: []].insert(value)
                 if (ka + text + ka).count == 1 {
-                    linkers.append(value)
+                    derived["conjunctLinkers", default: []].insert(value)
                 } else if (ka + text + virama + ssa).count == 1 {
                     XCTAssertEqual((ka + virama + text + ssa).count, 1, String(value, radix: 16))
-                    extenders.append(value)
-                } else {
-                    XCTAssertEqual((ka + virama + text + ssa).count, 2, String(value, radix: 16))
+                    derived["conjunctExtenders", default: []].insert(value)
                 }
             } else if scalar.properties.generalCategory == .otherLetter && (ka + virama + text).count == 1 {
-                consonants.append(value)
+                derived["conjunctConsonants", default: []].insert(value)
             }
         }
 
-        func ranges(_ values: [UInt32]) -> [UInt32] {
-            var result: [UInt32] = []
-            for value in values {
-                if let last = result.last, last == value - 1 { result[result.count - 1] = value } else { result += [value, value] }
-            }
-            return result
-        }
+        func known(_ values: some Sequence<UInt32>) -> Set<UInt32> { Set(values.filter { Unicode.Scalar($0)?.properties.age != nil }) }
 
-        XCTAssertEqual(ranges(attachers), ToolTextClusters.clusterAttachers)
-        XCTAssertEqual(ranges(controls), ToolTextClusters.clusterControls)
-        XCTAssertEqual(linkers, ToolTextClusters.conjunctLinkers)
-        XCTAssertEqual(consonants, ToolTextClusters.conjunctConsonants)
-        XCTAssertEqual(ranges(extenders), ToolTextClusters.conjunctExtenders)
-        XCTAssertFalse(extenders.contains(0x200c))
+        func expand(_ ranges: [UInt32]) -> Set<UInt32> { known(stride(from: 0, to: ranges.count, by: 2).flatMap { ranges[$0]...ranges[$0 + 1] }) }
+
+        XCTAssertEqual(derived["clusterAttachers", default: []], expand(ToolTextClusters.clusterAttachers))
+        XCTAssertEqual(derived["clusterPrepends", default: []], expand(ToolTextClusters.clusterPrepends))
+        XCTAssertEqual(derived["clusterControls", default: []], expand(ToolTextClusters.clusterControls))
+        guard (ka + virama + ssa).count == 1 else { return }
+        XCTAssertEqual(derived["conjunctLinkers", default: []], known(ToolTextClusters.conjunctLinkers))
+        XCTAssertEqual(derived["conjunctConsonants", default: []], known(ToolTextClusters.conjunctConsonants))
+        XCTAssertEqual(derived["conjunctExtenders", default: []], expand(ToolTextClusters.conjunctExtenders))
+        XCTAssertFalse(derived["conjunctExtenders", default: []].contains(0x200c))
     }
 
     // Tab spaces wrap individually and wide characters move whole, like the C# waiting input.

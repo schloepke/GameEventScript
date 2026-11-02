@@ -59,24 +59,29 @@ internal static class ToolTextDisplay
     }
 
     // The length of the grapheme cluster at the start of text, like a Swift Character. .NET's text elements lack the
-    // Indic conjunct rule GB9c and treat marks newer than its Unicode data as separate clusters, so a following
-    // attaching scalar joins any cluster not ending in a control (GB4, GB9/GB9a), and a following consonant joins a
-    // cluster ending in consonant, linker and extenders (GB9c).
+    // Indic conjunct rule GB9c and do not know scalars newer than their Unicode data, so clusters are joined across
+    // .NET's boundaries by the grapheme rules with data from Swift's segmentation.
     internal static int ClusterLength(ReadOnlySpan<char> text)
     {
         var length = StringInfo.GetNextTextElementLength(text);
-        // The cheap tests on the next scalar come first, so most text skips the backward scans.
         while (length < text.Length
             && Rune.DecodeFromUtf16(text[length..], out var next, out _) == OperationStatus.Done
-            && (InRanges(ToolTextWidths.ClusterAttachers, next.Value) && !EndsInControl(text[..length])
-                || IsConjunctConsonant(next.Value) && EndsInConjunctLinker(text[..length])))
+            && Rune.DecodeLastFromUtf16(text[..length], out var last, out _) == OperationStatus.Done
+            && Joins(text[..length], last.Value, next.Value))
             length += StringInfo.GetNextTextElementLength(text[length..]);
         return length;
     }
 
-    private static bool EndsInControl(ReadOnlySpan<char> cluster) =>
-        Rune.DecodeLastFromUtf16(cluster, out var rune, out _) != OperationStatus.Done
-        || InRanges(ToolTextWidths.ClusterControls, rune.Value);
+    // The range guards fail first for ASCII and most other text, so ordinary boundaries skip every table search.
+    private static bool Joins(ReadOnlySpan<char> cluster, int last, int next)
+    {
+        // GB9/GB9a: an attacher extends any cluster except after a control (GB4).
+        if (InRanges(ToolTextWidths.ClusterAttachers, next)) return !InRanges(ToolTextWidths.ClusterControls, last);
+        // GB9b: a prepended scalar joins anything except a following control (GB5).
+        if (InRanges(ToolTextWidths.ClusterPrepends, last)) return !InRanges(ToolTextWidths.ClusterControls, next);
+        // GB9c: consonant, linker and extenders join a following consonant.
+        return IsConjunctConsonant(next) && EndsInConjunctLinker(cluster);
+    }
 
     // The range guard keeps the table search out of text in other scripts.
     private static bool IsConjunctConsonant(int scalar)

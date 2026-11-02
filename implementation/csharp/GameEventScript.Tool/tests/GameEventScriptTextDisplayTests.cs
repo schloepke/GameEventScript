@@ -65,6 +65,11 @@ public sealed class GameEventScriptTextDisplayTests
         Assert.AreEqual(1, ToolTextDisplay.ClusterCount("\uD804\uDF92\uD804\uDFB8"));
         Assert.AreEqual(2, ToolTextDisplay.ClusterCount("\n\u0301"));
         Assert.AreEqual(2, ToolTextDisplay.ClusterCount("\n\uD804\uDFB8"));
+
+        // A prepended scalar joins the following letter (GB9b), but not a following control (GB5).
+        Assert.AreEqual(1, ToolTextDisplay.ClusterCount("\u0600a"));
+        Assert.AreEqual(1, ToolTextDisplay.ClusterCount("\uD804\uDFD1\uD804\uDF92"));
+        Assert.AreEqual(2, ToolTextDisplay.ClusterCount("\u0600\n"));
         Assert.AreEqual(2, ToolTextDisplay.ClusterCount("\u0915\u0937"));
     }
 

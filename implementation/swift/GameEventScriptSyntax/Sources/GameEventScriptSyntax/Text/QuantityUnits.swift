@@ -241,7 +241,8 @@ extension GesQuantityUnit {
         if exponent == 2 { return product(unit, unit) }
         if exponent == 3 { return product(unit, unit).flatMap { product($0, unit) } }
         guard exponent == 0.5 || exponent == 1.0 / 3.0 else { return nil }
-        return (UInt8(1)...18).lazy.compactMap { GesQuantityUnit(unitID: $0) }.first { power($0, exponent == 0.5 ? 2 : 3) == unit }
+        // Every unit has its symbol in the spelling table, so the search needs no UnitId bound.
+        return suffixes.first { power($0.unit, exponent == 0.5 ? 2 : 3) == unit }?.unit
     }
 
     // Percentages scale and offset a quantity by its own magnitude. A decibel level is logarithmic, so a percentage of

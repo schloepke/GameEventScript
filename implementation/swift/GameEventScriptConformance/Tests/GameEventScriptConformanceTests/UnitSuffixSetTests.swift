@@ -18,7 +18,10 @@ final class UnitSuffixSetTests: XCTestCase {
     func testUnitIdsZeroToEighteenAreDefinedAndTheRestReserved() {
         for raw in UInt8(0)..<32 {
             XCTAssertEqual(GesQuantityUnit(unitID: raw) != nil, raw <= 18, "\(raw)")
-            if let unit = GesQuantityUnit(unitID: raw) { XCTAssertEqual(unit.unitID, raw) }
+            guard let unit = GesQuantityUnit(unitID: raw) else { continue }
+            XCTAssertEqual(unit.unitID, raw)
+            // The root search relies on every unit having its symbol in the spelling table.
+            if unit != .none { XCTAssertTrue(GesQuantityUnit.suffixes.contains { $0.unit == unit && $0.exponent == 0 && $0.text == unit.suffix }, unit.rawValue) }
         }
     }
 

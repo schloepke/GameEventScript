@@ -1465,7 +1465,11 @@ on Start {
   let speed be asm { LoadInteger speed, 5, #meterPerSecond }
   let force be asm { LoadFloat force, 2.5, #newton }
   let turn be asm { CastUnit turn, 3, #degreePerSecond }
-  emit Assembled(speed: speed, force: force, turn: turn)
+  let area be asm { LoadInteger area, 4, #squareMeter }
+  let volume be asm { LoadFloat volume, 0.5, #cubicMeter }
+  let flux be asm { CastUnit flux, 3, #wattPerSquareMeter }
+  let level be asm { LoadInteger level, 6, #decibel }
+  emit Assembled(speed: speed, force: force, turn: turn, area: area, volume: volume, flux: flux, level: level)
 }
 ```
 
@@ -1490,6 +1494,14 @@ steps:
             value: { type: ":Quantity.binary64", value: "2.5", unit: ":newton" }
           - name: turn
             value: { type: ":Quantity.int64", value: "3", unit: ":degreePerSecond" }
+          - name: area
+            value: { type: ":Quantity.int64", value: "4", unit: ":squareMeter" }
+          - name: volume
+            value: { type: ":Quantity.binary64", value: "0.5", unit: ":cubicMeter" }
+          - name: flux
+            value: { type: ":Quantity.int64", value: "3", unit: ":wattPerSquareMeter" }
+          - name: level
+            value: { type: ":Quantity.int64", value: "6", unit: ":decibel" }
 ```
 
 ---

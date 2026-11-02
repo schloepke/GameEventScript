@@ -319,8 +319,9 @@ public static class GesQuantityUnits
         if (exponent == 2d) return Product(unit, unit);
         if (exponent == 3d) return Product(unit, unit) is { } square ? Product(square, unit) : null;
         if (exponent is not (0.5d or 1d / 3d)) return null;
-        for (var candidate = UnitDegree; candidate <= UnitDecibel; candidate++)
-            if (candidate.IsNumericUnit() && Power(candidate, exponent == 0.5d ? 2d : 3d) == unit) return candidate;
+        // Every unit has its symbol in the spelling table, so the search needs no UnitId bound.
+        foreach (var candidate in Suffixes)
+            if (Power(candidate.Unit, exponent == 0.5d ? 2d : 3d) == unit) return candidate.Unit;
         return null;
     }
 

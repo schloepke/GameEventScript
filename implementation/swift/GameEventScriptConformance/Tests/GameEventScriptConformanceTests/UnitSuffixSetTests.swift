@@ -21,7 +21,9 @@ final class UnitSuffixSetTests: XCTestCase {
             guard let unit = GesQuantityUnit(unitID: raw) else { continue }
             XCTAssertEqual(unit.unitID, raw)
             // The root search relies on every unit having its symbol in the spelling table.
-            if unit != .none { XCTAssertTrue(GesQuantityUnit.suffixes.contains { $0.unit == unit && $0.exponent == 0 && $0.text == unit.suffix }, unit.rawValue) }
+            guard unit != .none else { continue }
+            XCTAssertTrue(GesQuantityUnit.suffixes.contains { $0.unit == unit && $0.exponent == 0 && $0.text == unit.suffix }, unit.rawValue)
+            XCTAssertEqual(GesQuantityUnit(typeName: unit.rawValue), unit)
         }
     }
 

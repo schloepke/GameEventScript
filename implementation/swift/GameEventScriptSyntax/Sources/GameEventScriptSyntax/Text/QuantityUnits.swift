@@ -73,6 +73,11 @@ extension GesQuantityUnit {
         .init(text: "K", unit: .kelvin),
     ]
 
+    // The distinct units of the spelling table in table order, so the root search tests each unit once.
+    private static let spelledUnits: [GesQuantityUnit] = suffixes.reduce(into: []) { units, suffix in
+        if !units.contains(suffix.unit) { units.append(suffix.unit) }
+    }
+
     /// Stable bytecode UnitId from the Bytecode specification; it also orders units in sorting and map keys.
     /// The first scalars of every unit suffix spelling, so a lexer can skip the suffix table for unitless numbers.
     @_spi(Syntax) public static let suffixStarts = Set(suffixes.compactMap(\.scalars.first))
@@ -242,7 +247,7 @@ extension GesQuantityUnit {
         if exponent == 3 { return product(unit, unit).flatMap { product($0, unit) } }
         guard exponent == 0.5 || exponent == 1.0 / 3.0 else { return nil }
         // Every unit has its symbol in the spelling table, so the search needs no UnitId bound.
-        return suffixes.first { power($0.unit, exponent == 0.5 ? 2 : 3) == unit }?.unit
+        return spelledUnits.first { power($0, exponent == 0.5 ? 2 : 3) == unit }
     }
 
     // Percentages scale and offset a quantity by its own magnitude. A decibel level is logarithmic, so a percentage of

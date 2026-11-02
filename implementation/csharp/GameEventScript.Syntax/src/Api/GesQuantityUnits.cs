@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using System;
+using System.Collections.Generic;
 using static GameEventScript.Api.GesQuantityUnit;
 
 namespace GameEventScript.Api;
@@ -81,6 +82,17 @@ public static class GesQuantityUnits
         new("A", UnitAmpere),
         new("K", UnitKelvin),
     ];
+
+    // The distinct units of the spelling table in table order, so the root search tests each unit once.
+    private static readonly GesQuantityUnit[] SpelledUnits = DistinctSpelledUnits();
+
+    private static GesQuantityUnit[] DistinctSpelledUnits()
+    {
+        var units = new List<GesQuantityUnit>();
+        foreach (var suffix in Suffixes)
+            if (!units.Contains(suffix.Unit)) units.Add(suffix.Unit);
+        return units.ToArray();
+    }
 
     /// <summary>
     /// Determines whether the unit is a defined quantity unit other than none.
@@ -320,8 +332,8 @@ public static class GesQuantityUnits
         if (exponent == 3d) return Product(unit, unit) is { } square ? Product(square, unit) : null;
         if (exponent is not (0.5d or 1d / 3d)) return null;
         // Every unit has its symbol in the spelling table, so the search needs no UnitId bound.
-        foreach (var candidate in Suffixes)
-            if (Power(candidate.Unit, exponent == 0.5d ? 2d : 3d) == unit) return candidate.Unit;
+        foreach (var candidate in SpelledUnits)
+            if (Power(candidate, exponent == 0.5d ? 2d : 3d) == unit) return candidate;
         return null;
     }
 

@@ -78,7 +78,6 @@ extension GesQuantityUnit {
         if !units.contains(suffix.unit) { units.append(suffix.unit) }
     }
 
-    /// Stable bytecode UnitId from the Bytecode specification; it also orders units in sorting and map keys.
     /// The first scalars of every unit suffix spelling, so a lexer can skip the suffix table for unitless numbers.
     @_spi(Syntax) public static let suffixStarts = Set(suffixes.compactMap(\.scalars.first))
 
@@ -92,6 +91,7 @@ extension GesQuantityUnit {
         return 0
     }
 
+    /// Stable bytecode UnitId from the Bytecode specification; it also orders units in sorting and map keys.
     @_spi(Syntax) public var unitID: UInt8 {
         switch self {
         case .none: 0

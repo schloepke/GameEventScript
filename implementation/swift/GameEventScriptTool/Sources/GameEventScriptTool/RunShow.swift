@@ -19,7 +19,7 @@ extension Tool {
         let lower = path.lowercased()
         let language: GesSyntaxLanguage = lower.hasSuffix(".gesd") ? .gesd : lower.hasSuffix(".gesa") ? .gesa : .ges
         let highlighter = try GesSyntaxHighlighter(language: language, maxInputLength: Int.max)
-        let result = try highlighter.highlight(text)
+        let result = highlighter.highlight(text)
         // Columns do not count a leading byte order mark.
         let lines = Self.lines(text.hasPrefix("\u{feff}") ? String(text.unicodeScalars.dropFirst()) : text)
         let units = Array(text.utf16)
@@ -40,7 +40,7 @@ extension Tool {
         let display = expandsTabs ? ToolTextDisplay.expandTabs(text) : text
         if color {
             // An expanded display is highlighted again with the same highlighter, so tabs never change its colors.
-            let spans = expandsTabs ? try highlighter.highlight(display).spans : result.spans
+            let spans = expandsTabs ? highlighter.highlight(display).spans : result.spans
             io.write(try GesAnsiRenderer.render(display, spans: spans), toError: true)
         } else {
             io.write(display, toError: true)

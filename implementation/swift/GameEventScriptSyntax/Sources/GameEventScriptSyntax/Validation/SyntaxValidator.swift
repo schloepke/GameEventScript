@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /// Checks the rules of one source that need no other source, catalog or runtime: the spelling of names and labels,
-/// repeated parameters, arguments, fields and bindings, shadowing, the forms of system endpoints and removed type names.
+/// repeated parameters, arguments, fields and bindings, shadowing, variables without a visible binding, the forms of
+/// system endpoints and removed type names.
 /// The diagnostics come in source order; at one position, shadowing follows the other rules, which keep their check
 /// order.
 @_spi(Syntax) public enum GesSyntaxValidator {
@@ -14,6 +15,7 @@
     static let duplicateDefinitionParameter = "validate.duplicateDefinitionParameter"
     static let duplicateHandlerParameter = "validate.duplicateHandlerParameter"
     static let duplicatePublishArgument = "validate.duplicatePublishArgument"
+    static let unresolvedVariable = "validate.unresolvedVariable"
 
     /// The validation diagnostics of a source without syntax errors, in source order.
     @_spi(Syntax) public static func validate(_ tree: GesSyntaxTree) -> [GesSyntaxDiagnostic] { Walker(tree).run() }
@@ -301,7 +303,7 @@
                     if let element {
                         if self.isExpression(element) { self.expression(element, shadow, validate: true, shadow: true) }
                     } else {
-                        self.token(token)
+                        self.token(token, shadow)
                     }
                 }
                 self.body(body, validation, shadow)
@@ -367,7 +369,9 @@
             // A nested clause ranges from the last line break after its `and`.
             if nested { while tokens[start + 1].kind == .newLine { start += 1 } }
             let anchor = (start, node.endToken - 1)
+            // The source is the range or the first element after `in`; the body follows it.
             var bodyNode: GesSyntaxNode?
+            var afterIn = false
             var afterSource = false
             elements(node) { element, token in
                 if let element {
@@ -377,9 +381,13 @@
                         self.expression(element, shadow, validate: true, shadow: true)
                         afterSource = true
                     }
-                } else if self.roles[token] == .variable && !afterSource {
-                    self.token(token)
-                    afterSource = true
+                } else if !afterSource && self.tokens[token].kind != .newLine {
+                    if self.tokens[token].kind == .in {
+                        afterIn = true
+                    } else if afterIn {
+                        self.token(token, shadow)
+                        afterSource = true
+                    }
                 }
             }
             let identifier = text(names[0])
@@ -420,10 +428,16 @@
 
         // MARK: Expressions
 
-        func token(_ token: Int) {
+        // A variable reference: its spelling, then a binding visible in its scope. Only the source's own bindings can
+        // declare a bare name, so one without a visible binding is unresolvable in every program. Assembly operands
+        // follow the assembly rules of the compiler and pass no scope.
+        func token(_ token: Int, _ scope: Scope?) {
             guard roles[token] == .variable else { return }
             let name = text(token)
             identifierCase(name, "Identifier '\(name)' must start lowercase, contain ASCII letters or digits, and may use one canonical final _index suffix", name, .variable, (token, token))
+            if let scope, !scope.containsVisible(name) {
+                report(unresolvedVariable, "Unknown variable '\(name)'. Declare it with let, a parameter or a binding before using it in this scope.", name, .variable, (token, token))
+            }
         }
 
         // The expressions among a node's elements: its name tokens and its expression children.
@@ -436,7 +450,7 @@
                         self.expression(element, scope, validate: validate, shadow: shadow)
                     }
                 } else if validate {
-                    self.token(token)
+                    self.token(token, shadow ? scope : nil)
                 }
             }
         }
@@ -492,7 +506,7 @@
                 report(duplicatePublishArgument, "Named argument '\(text(label))' is declared more than once", symbol, .handler, span(argument))
             }
             elements(node) { element, token in
-                guard let element else { return self.token(token) }
+                guard let element else { return self.token(token, shadow ? scope : nil) }
                 if element.kind == .argument {
                     let label = self.ownToken(element, .argumentLabel)
                     if label >= 0 { self.labelCase(self.text(label), labelMessage(self.text(label)), symbol, labelKind, self.span(element)) }
@@ -549,14 +563,18 @@
         func generated(_ node: GesSyntaxNode, _ scope: Scope, validate: Bool, shadow: Bool) {
             let name = text(ownToken(node, .generatedBinding))
             if validate { identifierCase(name, "Generated collection identifier '\(name)' must use identifier casing (start lowercase)", name, .variable, range(node)) }
-            // The source comes before `where` or the projection; the binding scopes the rest.
+            // The source, the range or the first element after `in`, comes before `where` or the projection; the binding
+            // scopes the rest.
+            var afterIn = false
             var inner: Scope?
             elements(node) { element, token in
                 if let element {
                     if self.isExpression(element) { self.expression(element, inner ?? scope, validate: validate, shadow: shadow) }
                 } else {
-                    guard self.roles[token] == .variable else { return }
-                    if validate { self.token(token) }
+                    let kind = self.tokens[token].kind
+                    if kind == .in { afterIn = true }
+                    if inner == nil && !afterIn || kind == .in || kind == .newLine { return }
+                    if validate { self.token(token, shadow ? inner ?? scope : nil) }
                 }
                 if inner == nil { inner = shadow ? self.binderScope(scope, name, self.range(node)) : Scope(scope) }
             }
@@ -570,7 +588,7 @@
                     if self.isExpression(element) { self.expression(element, seeded ? Scope(scope) : scope, validate: validate, shadow: shadow) }
                     seeded = true
                 } else if self.roles[token] == .variable {
-                    if validate { self.token(token) }
+                    if validate { self.token(token, shadow ? scope : nil) }
                     seeded = true
                 }
             }
@@ -585,7 +603,7 @@
                         self.expression(element, scope, validate: validate, shadow: shadow)
                     }
                 } else if validate {
-                    self.token(token)
+                    self.token(token, shadow ? scope : nil)
                 }
             }
         }
@@ -602,7 +620,7 @@
             let operation = keyword.kind.isSelector ? keyword.text : ""
             if operation == ":split" || Self.combined.contains(operation) { return elements(node, scope, validate: validate, shadow: shadow) }
             if Self.patterns.contains(operation) {
-                // Patterns are no references; their face values and object values only meet the shadowing rule.
+                // Patterns bind nothing; their face values and object values are ordinary expressions of the enclosing scope.
                 if shadow { patternValues(node, scope) }
                 return
             }
@@ -649,16 +667,16 @@
                     }
                     return
                 }
-                if validate { self.token(token) }
+                if validate { self.token(token, shadow ? foldScope : nil) }
             }
         }
 
         func patternValues(_ node: GesSyntaxNode, _ scope: Scope) {
             for child in node.children {
                 switch child.kind {
-                case .dicePattern: elements(child, scope, validate: false, shadow: true)
+                case .dicePattern: elements(child, scope, validate: true, shadow: true)
                 case .objectPatternEntry:
-                    elements(child, scope, validate: false, shadow: true)
+                    elements(child, scope, validate: true, shadow: true)
                     patternValues(child, scope)
                 case .objectPattern: patternValues(child, scope)
                 default: break

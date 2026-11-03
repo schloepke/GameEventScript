@@ -41,7 +41,7 @@ internal static class ApiObservations
         }
         catch (GesDynamicLinkException exception)
         {
-            return new { status = "loadError", diagnostics = new[] { CompilerObservations.Diagnostic(exception.Diagnostic) } };
+            return new { status = "loadError", diagnostics = exception.Diagnostics.Select(CompilerObservations.Diagnostic).ToArray() };
         }
     }
 

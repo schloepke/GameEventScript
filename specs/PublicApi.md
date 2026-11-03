@@ -942,7 +942,10 @@ variable, and global definition. `DiagnosticCodes` exposes stable named constant
 `Decode(formatErrorCode)` maps a `.gesb` format failure to its stable decode code.
 
 `CompileException`, `DynamicLinkException`, `ProgramFormatException`, and the
-abstract fatal-runtime base are C# failure transports carrying diagnostics. A
+abstract fatal-runtime base are C# failure transports carrying diagnostics.
+`DynamicLinkException` carries the ordered `Diagnostics` of a link failure, one
+per call site of a failed import, and `Diagnostic` as their first one; see
+[Diagnostics](Diagnostics.md#link-call-sites). A
 language may use thrown errors or result unions. Callers must be able to inspect
 the same structured portable fields without parsing text. Runtime diagnostics
 normally flow through Observer and ExecutionResult rather than escaping callbacks;
@@ -1096,7 +1099,8 @@ Reader options retain the three portable retention modes and bounded read limits
 
 Invalid public construction uses structured `throws` errors. Signature message
 creation returns an optional for mismatched arity. Decode failures use
-`GesProgramFormatError`; linking uses `GesDynamicLinkError`;
+`GesProgramFormatError`; linking uses `GesDynamicLinkError`, whose
+`diagnostics` lists every link diagnostic and `diagnostic` their first;
 execution results carry `GesDiagnostic`. Explicit callback faults use
 `GesExtensionFaultError`; unexpected errors receive the owning runtime
 boundary's stable classification. Call objects and borrowed argument views must

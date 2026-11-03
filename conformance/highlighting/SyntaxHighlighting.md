@@ -134,6 +134,26 @@ and ANSI text preservation.
 ```
 
 ```highlight
+{"name":"unresolved variable diagnostics","language":"ges","source":"on Boot(bot) { publish Probe(value: x) }\non Start(items) { if let first be items; first > 1 { emit Found(value: first) }; emit Gone(value: first) }","expect":[{"text":"x","kind":"identifier"},{"text":"first","occurrence":3,"kind":"identifier"}],"diagnostics":[{"code":"validate.unresolvedVariable","text":"x"},{"code":"validate.unresolvedVariable","text":"first","occurrence":3}]}
+```
+
+```highlight
+{"name":"bindings and later declarations resolve","language":"ges","source":"on Start(items) {\n  let best be items[:max s => s.level]\n  if let first be best; first > $limit { emit Found(value: double(first)) }\n  for item in items and copy in [item] emit Seen(value: copy)\n  emit Sum(total: items[:fold total be 0, entry => total + entry], picked: :List[:select n in 10 => n], ext: :navigation.intercept(n: unknownArgument))\n}\nfunction double(_ x) be x + x\nconstant $limit be 2","expect":[{"text":"double","kind":"function"}],"diagnostics":[{"code":"validate.unresolvedVariable","text":"unknownArgument"}]}
+```
+
+```highlight
+{"name":"pattern values resolve like other expressions","language":"ges","source":"on Start(items, wanted) {\n  emit Has(found: items[:has [level: wanted]], gone: items[:has [level: lost]], pair: items[:take pair of none])\n}","expect":[{"text":"wanted","occurrence":1,"kind":"identifier"}],"diagnostics":[{"code":"validate.unresolvedVariable","text":"lost"},{"code":"validate.unresolvedVariable","text":"none"}]}
+```
+
+```highlight
+{"name":"assembler names are not resolved","language":"gesa","source":".segment source \"bot.ges\"\non Start() { emit Done(value: missing) }\n.region-end \"source\"\n.segment code\nLoadInteger answer, 0\nAdd answer, answer, missing\n","expect":[{"text":"LoadInteger","kind":"keyword"}],"diagnostics":[]}
+```
+
+```highlight
+{"name":"inline assembly operands are not resolved","language":"ges","source":"on Start(input) {\n  asm {\n    .register temp, list\n    LoadInteger temp, input\n    Call temp, scale(value: temp, by: list[1])\n    CreateList list, [temp, temp]\n    emit Done(value: temp, first: list[1], total: list[:fold acc be 0, item => acc + temp])\n  }\n}","expect":[{"text":"asm","kind":"keyword"}],"diagnostics":[]}
+```
+
+```highlight
 {"name":"unterminated string runs to the end","language":"ges","source":"on Start() { emit Done('open\nemit Next() }","expect":[{"text":"'open\nemit Next() }","kind":"string"}],"diagnostics":[{"code":"parse.syntax","text":"'open\nemit Next() }"},{"code":"parse.syntax","text":"}","after":true,"length":0}]}
 ```
 

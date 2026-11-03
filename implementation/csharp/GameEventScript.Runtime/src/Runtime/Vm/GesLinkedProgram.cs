@@ -153,10 +153,10 @@ internal sealed class GesLinkedProgram
                 throw LinkError(GesDiagnosticCodes.LinkInvalidExtensionReference,
                     $"External extension reference '{fullName}' has an invalid name.", fullName);
             var reference = new GesExtensionReference(fullName[..separator], fullName[(separator + 1)..], ReadStrings(bind.ArgumentNames));
-            result[bindId] = registry.Resolve(reference) ?? throw LinkError(
+            result[bindId] = registry.Resolve(reference) ?? throw CallSiteLinkError(
                 GesDiagnosticCodes.LinkMissingExtension,
-                $"GameEventScript extension '{reference.SignatureId}' was not dynamically bound to external bind id '{bindId}'.",
-                reference.SignatureId);
+                $"Unknown extension :{reference.SignatureId}",
+                reference.SignatureId, GesBytecodeOpCode.CallExternal, bindId);
         }
 
         return result;
@@ -170,15 +170,15 @@ internal sealed class GesLinkedProgram
             var bind = ExternalTypeBinds[bindId];
             if (bind.Kind != ExternalType || bind.Id != bindId) continue;
             var reference = new GesExternalTypeConstructorReference(FetchString(bind.Name), ReadStrings(bind.ArgumentNames));
-            var constructor = registry.Resolve(reference) ?? throw LinkError(
+            var constructor = registry.Resolve(reference) ?? throw CallSiteLinkError(
                 GesDiagnosticCodes.LinkMissingExternalTypeConstructor,
-                $"GameEventScript external type constructor ':{reference.SignatureId}' was not dynamically bound to external bind id '{bindId}'.",
-                reference.SignatureId);
+                $"Unknown external type constructor :{reference.SignatureId}",
+                reference.SignatureId, GesBytecodeOpCode.CreateExternalType, bindId);
             if (!string.Equals(constructor.Definition.SignatureId, reference.SignatureId, StringComparison.Ordinal))
-                throw LinkError(
+                throw CallSiteLinkError(
                     GesDiagnosticCodes.LinkMismatchedExternalTypeConstructor,
-                    $"GameEventScript external type constructor registry returned '{constructor.Definition.SignatureId}' for requested reference '{reference.SignatureId}'.",
-                    reference.SignatureId);
+                    $"External type constructor registry returned :{constructor.Definition.SignatureId} for :{reference.SignatureId}",
+                    reference.SignatureId, GesBytecodeOpCode.CreateExternalType, bindId);
             result[bindId] = constructor;
         }
 
@@ -265,6 +265,18 @@ internal sealed class GesLinkedProgram
             message,
             symbol,
             ProgramName: Program.ModuleName));
+
+    // A failure of an import that the source calls: one diagnostic per call site the SourceMap locates, in source
+    // order, or one without a location.
+    private GesDynamicLinkException CallSiteLinkError(string code, string message, string symbol, GesBytecodeOpCode opCode, ushort bindId)
+    {
+        var locations = GesSourceCallSites.Locate(Program, opCode, bindId);
+        if (locations.Count == 0) return LinkError(code, message, symbol);
+        var diagnostics = new GesDiagnostic[locations.Count];
+        for (var index = 0; index < diagnostics.Length; index++)
+            diagnostics[index] = new GesDiagnostic(GesDiagnosticPhase.Link, code, message, symbol, SourceLocation: locations[index], ProgramName: Program.ModuleName);
+        return new(diagnostics);
+    }
 }
 
 // Canonical GesValueMap order for a fixed key list: ascending scalar keys, last duplicate wins.

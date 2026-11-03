@@ -1895,7 +1895,12 @@ on Start() { asm { .register temp; LoadInteger temp, 1 }; emit Done(value: temp)
 
 ```yaml
 gesBlock: expect
-error: { phase: compile, code: compile.unresolvedSymbol }
+errors:
+  - phase: "validate"
+    code: "validate.unresolvedVariable"
+    symbol: "temp"
+    line: 1
+    column: 76
 ```
 
 ---
@@ -1926,7 +1931,12 @@ on Start() { if true { asm { let result; LoadInteger result, 1 } }; emit Done(va
 
 ```yaml
 gesBlock: expect
-error: { phase: compile, code: compile.unresolvedSymbol }
+errors:
+  - phase: "validate"
+    code: "validate.unresolvedVariable"
+    symbol: "result"
+    line: 1
+    column: 86
 ```
 
 ---

@@ -78,7 +78,10 @@ here. Add or update this matrix in the same change as new portable behavior.
 | Runtime limits reset per script handler | `runtime.host-lifecycle/runtime-limits-per-handler` |
 | Pause/resume under frame budget | `runtime.host-dispatch/case-0009` |
 | External types without Reflection | `runtime.atomic.custom-types/case-0003` |
-| Missing and mismatched external runtime constructors | `compile.external-type-linking/missing-runtime-constructor`, `compile.external-type-linking/mismatched-runtime-constructor` |
+| Missing and mismatched external runtime constructors at each call site | `compile.external-type-linking/missing-runtime-constructor`, `compile.external-type-linking/mismatched-runtime-constructor` |
+| Missing extension call sites with and without SourceArchive or SourceMap | `compile.extension-linking/missing-extension-call-sites`, `compile.extension-linking/missing-extension-lines-only`, `compile.extension-linking/missing-extension-without-debug-info` |
+| Every link diagnostic of a failed load inside a host scenario, which continues afterwards | `runtime.host-load-limits/missing-extension-lists-call-sites` |
+| Bare names without a visible binding, including selector pattern values, and resolving bindings | `compile.lexical-boundaries/unresolved-variable-reports-each-bare-name`, `compile.lexical-boundaries/bindings-and-later-declarations-resolve` |
 | Portable external-type catalog duplicate rejection | `api.external-types/duplicate-type-name` |
 | Canonical binding, message-name and embedded-source dumps | `compile.program-dumps/compact-bindings`, `compile.program-dumps/message-name-and-source` |
 | Canonical GESA binary64 immediates: exponent spelling, decimal/scientific boundaries, exact significant digits, zero, subnormal/normal limits, infinity, Percentage ratios and staged operands | Binary fixtures: `compile.program-dumps/float-exponents`, `float-notation-boundaries`, `float-extremes`, `float-staging`; native compiler: `float-source` |

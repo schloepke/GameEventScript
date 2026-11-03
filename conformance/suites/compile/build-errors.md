@@ -156,9 +156,12 @@ on Start {
 
 ```yaml
 gesBlock: expect
-error:
-  phase: "compile"
-  code: "compile.unresolvedSymbol"
+errors:
+  - phase: "validate"
+    code: "validate.unresolvedVariable"
+    symbol: "missing"
+    line: 2
+    column: 12
 ```
 
 ---
@@ -206,9 +209,22 @@ on Start(items, seed as :Number) {
 
 ```yaml
 gesBlock: expect
-error:
-  phase: "compile"
-  code: "compile.unresolvedSymbol"
+errors:
+  - phase: "validate"
+    code: "validate.unresolvedVariable"
+    symbol: "fromIf"
+    line: 15
+    column: 6
+  - phase: "validate"
+    code: "validate.unresolvedVariable"
+    symbol: "fromLoop"
+    line: 16
+    column: 6
+  - phase: "validate"
+    code: "validate.unresolvedVariable"
+    symbol: "fromRandom"
+    line: 17
+    column: 6
 ```
 
 ---
@@ -2343,7 +2359,12 @@ on Start {
 
 ```yaml
 gesBlock: expect
-error: { phase: compile, code: compile.unresolvedSymbol, symbol: weight }
+errors:
+  - phase: "validate"
+    code: "validate.unresolvedVariable"
+    symbol: "weight"
+    line: 2
+    column: 48
 ```
 
 ---
@@ -2376,7 +2397,12 @@ on Start {
 
 ```yaml
 gesBlock: expect
-error: { phase: compile, code: compile.unresolvedSymbol, symbol: item }
+errors:
+  - phase: "validate"
+    code: "validate.unresolvedVariable"
+    symbol: "item"
+    line: 2
+    column: 79
 ```
 
 ---

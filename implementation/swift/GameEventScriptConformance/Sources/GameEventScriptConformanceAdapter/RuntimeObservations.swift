@@ -129,9 +129,9 @@ final class HostScenario {
                 case "unsubscribeHandler": result = subscriptions[target]?.unsubscribe() ?? false
                 default: throw ConformanceExecutionError.invalidInput("Unknown action")
                 }
-                results.append(["result": result, "error": NSNull()])
+                results.append(["result": result, "errors": [Any]()])
             } catch let error as GesDynamicLinkError {
-                results.append(["result": NSNull(), "error": CompilerObservations.diagnostic(error.diagnostic)])
+                results.append(["result": NSNull(), "errors": error.diagnostics.map(CompilerObservations.diagnostic)])
             }
         }
         actionResults[group]["results"] = results

@@ -258,7 +258,7 @@ contain fixture inputs only. Native and pre-Receive step actions support `loadPr
 loaded explicitly. Actions use `{operation, target}` transport without expectations.
 Each phase records ordered action invocations with an origin (`step/ID` or
 `native/ID`) and a complete result sequence. Results contain a Boolean `result`
-and null `error`, or null `result` and a structured link diagnostic. Python checks
+and empty `errors`, or null `result` and the ordered link diagnostics in `errors`. Python checks
 expected results and errors, including errors handled inside native callbacks.
 No expectation influences whether the adapter catches a link error and continues.
 The `advanceMicroseconds` action advances a host-local virtual clock without
@@ -279,7 +279,7 @@ when it rejects or throws. No sink is installed for `absent`.
 inputs. The adapter compiles first, then invokes `Host.Load` without starting the
 Host. Registry modes are `environment`, `absent`, and the fixed `mismatch` fixture.
 Observations use `status: loaded` with empty diagnostics, or `status: loadError`
-with one structured link diagnostic. Compile failures and unrelated exceptions
+with every structured link diagnostic in order. Compile failures and unrelated exceptions
 are execution errors; they cannot satisfy an expected link failure.
 
 `externalTypeApi` transmits `api: {typeNames: [...]}` without GES source. The

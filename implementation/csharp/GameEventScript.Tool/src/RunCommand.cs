@@ -255,7 +255,7 @@ external types are registered. Runtime errors/limits exit with 1; usage errors w
         }
         catch (GesDynamicLinkException exception)
         {
-            RunObserver.WriteDiagnostic(exception.Diagnostic, "link");
+            foreach (var diagnostic in exception.Diagnostics) RunObserver.WriteDiagnostic(diagnostic, "link");
             return 1;
         }
         catch (DecoderFallbackException exception)

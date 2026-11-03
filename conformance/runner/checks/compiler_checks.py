@@ -19,12 +19,16 @@ def exact(left, right):
     return type(left) is type(right) and left == right
 
 
+# A link expectation may require an absent location, such as for a Program without a SourceMap.
+LINK_NULLABLE = ('programName', 'handlerName', 'sourceName', 'line', 'column', 'endLine', 'endColumn')
+
+
 def natural(value):
     if type(value) is not int or not 0 <= value <= 18446744073709551615:
         raise InvalidDocument('Expected nonnegative bounded integer')
 
 
-def diagnostic(value, expectation=False, phases=('parse', 'validate', 'compile')):
+def diagnostic(value, expectation=False, phases=('parse', 'validate', 'compile'), nullable=('programName', 'handlerName')):
     closed(value, DIAGNOSTIC, 'diagnostic')
     for key in ('phase', 'code'):
         if not isinstance(value.get(key), str) or not value[key]:
@@ -33,7 +37,7 @@ def diagnostic(value, expectation=False, phases=('parse', 'validate', 'compile')
         raise InvalidDocument('Invalid compiler diagnostic phase')
     for key, item in value.items():
         if item is None:
-            if expectation and key not in ('programName', 'handlerName'):
+            if expectation and key not in nullable:
                 raise InvalidDocument('Unexpected null diagnostic constraint')
         elif key in POSITIONS:
             natural(item)

@@ -11,6 +11,12 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 ## Unreleased
 
 ### Breaking
+- A bare name without a visible binding of its own source is now the
+  validation diagnostic `validate.unresolvedVariable` at the name, reported for
+  every such name, instead of the first `compile.unresolvedSymbol` of lowering.
+  The Syntax module reports it too, so editors see it while typing.
+  `$constants`, calls, extension calls and inline-assembly operands are not
+  affected; an unknown `$constant` remains `compile.unresolvedSymbol`.
 - Validation reports the rules of each source on its own first, source by source
   and in source order of their positions: spelling of names and labels,
   repeated parameters, arguments, fields and bindings, shadowing, system
@@ -176,6 +182,14 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 
 ### Added
 
+- Link failures of an import that the source calls carry one diagnostic per
+  call site with its source location, in source order:
+  `GesDynamicLinkException.Diagnostics` and Swift
+  `GesDynamicLinkError.diagnostics`, whose first entry remains
+  `Diagnostic`/`diagnostic`. The message names the import, for example
+  `Unknown extension :navigation.nope(x)`. Columns need the SourceArchive;
+  without a SourceMap the single diagnostic keeps only the symbol. Both CLIs
+  print every call site.
 - GES document highlighting: `GesSyntaxLanguage.Gesd` (Swift `.gesd`) categorizes
   `.gesd` text and reports its first document error as a diagnostic with a UTF-16
   range, in both Syntax packages. The CLIs add `document check` and `document
@@ -279,6 +293,8 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   of every port. Runtime behavior does not depend on it.
 
 ### Fixed
+- Swift link diagnostics for exceeded register and call-stack limits and a full
+  initialization queue now carry a message, as in C#, instead of an empty one.
 - C# syntax errors that name an unexpected token, such as `Unexpected token '}'`,
   now range over that token, as in Swift, instead of having no length; their
   start positions are unchanged.

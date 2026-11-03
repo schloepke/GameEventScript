@@ -104,10 +104,24 @@ public final class GameEventScriptHost {
         try program.validate()
         let registers = min(65535, limits.maxRegisterValues > 0 ? limits.maxRegisterValues : 512)
         let depth = min(65535, max(0, limits.maxCallDepth))
-        if program.requiredRegisterCount > registers { throw GesDynamicLinkError(code: "link.requiredRegisterCountExceeded", program: program.moduleName) }
-        if program.requiredCallStackDepth > depth { throw GesDynamicLinkError(code: "link.requiredCallStackDepthExceeded", program: program.moduleName) }
+        if program.requiredRegisterCount > registers {
+            throw GesDynamicLinkError(
+                code: "link.requiredRegisterCountExceeded",
+                program: program.moduleName,
+                message: "Program requires \(program.requiredRegisterCount) registers but the host limit is \(registers)."
+            )
+        }
+        if program.requiredCallStackDepth > depth {
+            throw GesDynamicLinkError(
+                code: "link.requiredCallStackDepthExceeded",
+                program: program.moduleName,
+                message: "Program requires call-stack depth \(program.requiredCallStackDepth) but the host limit is \(depth)."
+            )
+        }
         let linked = try GesLinkedProgram(program, extensions: extensions, types: externalTypes)
-        if queueFull && linked.handlers.contains(where: { $0.signature.name == "initialization" }) { throw GesDynamicLinkError(code: "link.initializationQueueFull", program: program.moduleName) }
+        if queueFull && linked.handlers.contains(where: { $0.signature.name == "initialization" }) {
+            throw GesDynamicLinkError(code: "link.initializationQueueFull", program: program.moduleName, message: "The host message queue has no capacity for program initialization.")
+        }
         if vm == nil { vm = GesVirtualMachine(maxRegisters: registers, maxCallDepth: depth) }
         vm!.prepareCapacity(Int(program.requiredRegisterCount))
         let id = try registrationID()

@@ -263,6 +263,18 @@ public sealed class GameEventScriptCheckRunCommandTests
         Assert.AreEqual(string.Empty, run.StandardOutput);
     }
 
+    /// <summary>Verifies run reports a missing extension once per call site, naming the extension at each location.</summary>
+    [TestMethod]
+    public void RunReportsEveryMissingExtensionCallSite()
+    {
+        Write("game.ges", "on initialization {\n    publish First(value: :probe.missing(1))\n    publish Second(value: :probe.missing(2))\n}\n");
+        var run = Run("run", "game.ges");
+        Assert.AreEqual(1, run.ExitCode);
+        StringAssert.Contains(run.StandardError, "game.ges(2,26): error link.missingExtension: Unknown extension :probe.missing(_)");
+        StringAssert.Contains(run.StandardError, "game.ges(3,27): error link.missingExtension: Unknown extension :probe.missing(_)");
+        Assert.AreEqual(string.Empty, run.StandardOutput);
+    }
+
     /// <summary>Verifies existing malformed-binary fixtures are rejected before execution.</summary>
     [TestMethod]
     public void RunReportsBinaryDecodeFailure()

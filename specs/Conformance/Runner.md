@@ -150,7 +150,8 @@ not an implementation exception escaping the runner.
   diagnostic. The runner compares phase, code, and every specified context
   field, records the diagnostic in the case result, and continues after the
   handled failure. A successful load or mismatched diagnostic is an assertion
-  failure. Expected action diagnostics do not become runtime observer events.
+  failure. `expectErrors` instead lists every diagnostic of the failure in order.
+  Expected action diagnostics do not become runtime observer events.
   Both error and boolean expectations are checked for `stepActions` and actions
   executed inside native handlers.
 - Native handlers are atomic according to the portable Host contract.
@@ -195,8 +196,8 @@ emitted diagnostics as listed, each matching the constraint at the same
 position. Successful compilation fails the case.
 
 `loadError` first requires successful compilation and optional binary roundtrip.
-It passes only when `Host.Load` fails with a matching diagnostic and leaves the
-new host observably unchanged. A compile failure is an error in the test setup,
+It passes only when `Host.Load` fails with a matching diagnostic, or with the
+ordered diagnostics of `errors`, and leaves the new host observably unchanged. A compile failure is an error in the test setup,
 not the expected load failure.
 
 Diagnostic message text, exception class names, stack traces, and technical

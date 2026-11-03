@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 """Link failures and external catalogs: input transport and independent assertions."""
 from core.corpus import InvalidDocument, closed
-from checks.compiler_checks import diagnostic, exact
+from checks.compiler_checks import LINK_NULLABLE, diagnostic, exact
 from checks.runtime_checks import LIMITS
 from checks import value_api_checks
 from checks import message_api_checks
@@ -23,8 +23,15 @@ def prepare(case):
     if case.kind == 'loadError':
         if not case.sources or len({s['program'] for s in case.sources}) != 1:
             raise InvalidDocument('Load error requires one Program')
-        closed(case.expected, {'gesBlock', 'error'}, 'load error expectation')
-        diagnostic(case.expected.get('error'), expectation=True, phases=('link',))
+        closed(case.expected, {'gesBlock', 'error', 'errors'}, 'load error expectation')
+        # `error` constrains the first diagnostic; `errors` lists every diagnostic in order.
+        if ('error' in case.expected) == ('errors' in case.expected):
+            raise InvalidDocument('Load error expects error or errors')
+        expected = case.expected['errors'] if 'errors' in case.expected else [case.expected['error']]
+        if not isinstance(expected, list) or not expected:
+            raise InvalidDocument('Expected load diagnostics')
+        for item in expected:
+            diagnostic(item, expectation=True, phases=('link',), nullable=LINK_NULLABLE)
         limits = case.metadata.get('runtimeLimits', {})
         closed(limits, LIMITS, 'runtime limits')
         if any(type(v) is not int or not 0 < v < 2**31 for v in limits.values()) or limits.get('maxRandomScopeDepth', 0) > 65535:
@@ -67,10 +74,15 @@ def compare(case, observed):
         if set(observed) != {'status', 'diagnostics'} or status not in ('loaded', 'loadError'):
             raise InvalidDocument('Invalid load outcome')
         diagnostics = observed['diagnostics']
-        if not isinstance(diagnostics, list) or len(diagnostics) != (1 if status == 'loadError' else 0):
+        if not isinstance(diagnostics, list) or (len(diagnostics) == 0) != (status == 'loaded'):
             raise InvalidDocument('Invalid load diagnostics')
         for item in diagnostics:
             diagnostic(item, phases=('link',))
+        if 'errors' in case.expected:
+            expected = case.expected['errors']
+            if len(diagnostics) == len(expected) and all(exact(v, d.get(k)) for e, d in zip(expected, diagnostics) for k, v in e.items()):
+                return 'passed', []
+            return 'failed', [{'path': '/errors', 'expected': expected, 'actual': diagnostics}]
         expected = case.expected['error']
         if diagnostics and all(exact(v, diagnostics[0].get(k)) for k, v in expected.items()):
             return 'passed', []

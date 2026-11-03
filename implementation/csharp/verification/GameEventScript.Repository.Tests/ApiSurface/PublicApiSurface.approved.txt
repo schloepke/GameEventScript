@@ -491,6 +491,7 @@ static class GameEventScript.Api.GesDiagnosticCodes
   field static System.String ValidateMissingCallable
   field static System.String ValidatePredicateFunctionConflict
   field static System.String ValidateShadowedVariable
+  field static System.String ValidateUnresolvedVariable
   field static System.String ValidateWrongFunctionArity
   field static System.String ValidateWrongPredicateArity
   method static System.String Decode(GameEventScript.Api.GesProgramFormatErrorCode code)
@@ -556,7 +557,9 @@ enum GameEventScript.Api.GesDocumentSchemaKind
   enum-field File = 1
 sealed class GameEventScript.Api.GesDynamicLinkException
   ctor GesDynamicLinkException(GameEventScript.Api.GesDiagnostic diagnostic)
+  ctor GesDynamicLinkException(System.Collections.Generic.IReadOnlyList<GameEventScript.Api.GesDiagnostic> diagnostics)
   property GameEventScript.Api.GesDiagnostic Diagnostic { get }
+  property System.Collections.Generic.IReadOnlyList<GameEventScript.Api.GesDiagnostic> Diagnostics { get }
 struct GameEventScript.Api.GesExecutionResult
   ctor GesExecutionResult(GameEventScript.Api.GesExecutionState state, System.Int32 executedOpcodes, System.Int32 processedMessages, System.Int32 emittedMessages, System.Int32 publishedMessages, GameEventScript.Api.GesDiagnostic diagnostic)
   property GameEventScript.Api.GesDiagnostic Diagnostic { get }

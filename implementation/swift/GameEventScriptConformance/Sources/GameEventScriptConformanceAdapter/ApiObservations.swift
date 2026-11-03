@@ -37,7 +37,7 @@ enum ApiObservations {
             do {
                 _ = try host.load(CompilerObservations.compile(test))
                 return ["status": "loaded", "diagnostics": []]
-            } catch let error as GesDynamicLinkError { return ["status": "loadError", "diagnostics": [CompilerObservations.diagnostic(error.diagnostic)]] }
+            } catch let error as GesDynamicLinkError { return ["status": "loadError", "diagnostics": error.diagnostics.map(CompilerObservations.diagnostic)] }
         }
     }
 

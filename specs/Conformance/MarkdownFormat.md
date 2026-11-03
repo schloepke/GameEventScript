@@ -439,15 +439,15 @@ is invalid. This is portable diagnostic input, not an exception-class selector.
 
 Each action mapping contains exactly one of `loadProgram`, `detachProgram`,
 `subscribeHandler`, or `unsubscribeHandler`, plus an optional boolean
-`expectResult` or diagnostic `expectError`. Its operation value is an existing program
-or native-handler ID of the appropriate kind. Only a program listed in
+`expectResult` or diagnostic `expectError` or `expectErrors`. Its operation value
+is an existing program or native-handler ID of the appropriate kind. Only a program listed in
 `deferredPrograms` may be a `loadProgram` target. Actions execute in metadata
 order before emits. `expectResult` compares the portable boolean operation
 result. Repeated detach/unsubscribe operations return false after the first
 state change; load/subscribe ensure the target is active and return true.
 
-Only `loadProgram` accepts `expectError`, which is mutually exclusive with
-`expectResult`. It uses the structured diagnostic fields described below,
+Only `loadProgram` accepts `expectError` and `expectErrors`, which are mutually
+exclusive with `expectResult`. It uses the structured diagnostic fields described below,
 requires `phase: link` and a `code`, and may constrain context such as
 `programName`:
 
@@ -461,6 +461,8 @@ stepActions:
         programName: rules
 ```
 
+`expectError` constrains the first diagnostic of the failure; `expectErrors`,
+exclusive with it, is a non-empty list that matches every diagnostic in order.
 The runner requires the load to fail with that diagnostic, handles the expected
 failure, and continues subsequent actions and steps. Successful loading or a
 different diagnostic fails the assertion. The diagnostic is an action result,
@@ -736,13 +738,16 @@ error:
 ```
 
 `phase` and `code` are required. Other fields are optional exact constraints.
-For `programName` and `handlerName`, an explicit YAML null requires that the
-observed context field be absent; omitting the key leaves that field unconstrained.
+For `programName` and `handlerName`, and in a link expectation also for
+`sourceName`, `line`, `column`, `endLine` and `endColumn`, an explicit YAML null
+requires that the observed field be absent; omitting the key leaves that field
+unconstrained.
 Human-readable messages and technical details cannot be expectations. The
 diagnostic contract is [Diagnostics](../Diagnostics.md).
 
-A `compileError` expectation may instead contain `errors`, a non-empty ordered
-list of the same constraint objects. It describes the complete diagnostic list:
+A `compileError` or `loadError` expectation may instead contain `errors`, a
+non-empty ordered list of the same constraint objects. It describes the complete
+diagnostic list:
 the observed diagnostics must have the same count and order, and each must match
 its constraint. `error` and `errors` cannot be combined.
 

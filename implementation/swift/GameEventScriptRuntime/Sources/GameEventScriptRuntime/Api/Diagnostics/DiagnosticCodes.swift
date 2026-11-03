@@ -55,6 +55,9 @@ public enum GesDiagnosticCodes {
     /// Defines the validate shadowed variable value.
     public static let validateShadowedVariable = "validate.shadowedVariable"
 
+    /// Defines the validate unresolved variable value: a bare name without a visible binding of its own source.
+    public static let validateUnresolvedVariable = "validate.unresolvedVariable"
+
     /// Defines the validate invalid identifier case value.
     public static let validateInvalidIdentifierCase = "validate.invalidIdentifierCase"
 

@@ -85,11 +85,28 @@ block. Fragment parsing serves highlighting; compilation parses whole sources.
 
 `GesSyntaxValidator` checks the rules a single source decides on its own tree:
 name spelling, repeated parameters, argument labels, record fields and
-bindings, the forms of the system endpoints, removed type names and
-shadowing. It runs only on a tree without syntax errors. The Compiler keeps
+bindings, the forms of the system endpoints, removed type names,
+shadowing and variable references without a visible binding. It runs only on a
+tree without syntax errors. The Compiler keeps
 the rules that need other sources, the external catalog or the host, and
 reports both groups in the order
 [Diagnostics](Diagnostics.md#compiler-diagnostic-collection) defines.
+
+> **Since: Unreleased** — unresolved variables
+
+A bare name in an expression (the Variable role) refers only to a binding of
+its own source: a parameter, a `let`, `if let`, loop, selector, weight, fold or
+generated-collection binding, or an inline-assembly `let` export, each in the
+scope [Language](Language.md#let) defines. Another source can declare none of
+them, so a bare name without such a visible binding is
+`validate.unresolvedVariable` at the name, whatever the other sources of the
+program declare. The check leaves alone what another source, the host or the
+assembly rules may resolve: `$constants`, called functions and predicates,
+extension calls, types and record constructors, which the Compiler checks, and
+the operands inside inline assembly. A name in a record field expression
+resolves against all fields of its record. The value of a selector pattern,
+such as `:has [level: wanted]` or `:has pair of face`, is an ordinary expression. Top-level statements of a fragment
+are not validated.
 
 ## Documents
 

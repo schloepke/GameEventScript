@@ -142,7 +142,7 @@ internal static class RunConsole
             }
             catch (GesDynamicLinkException exception)
             {
-                RunObserver.WriteDiagnostic(exception.Diagnostic, "link");
+                foreach (var diagnostic in exception.Diagnostics) RunObserver.WriteDiagnostic(diagnostic, "link");
                 success = false;
             }
             catch (GesProgramFormatException exception)

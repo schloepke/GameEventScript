@@ -204,8 +204,10 @@ belongs to the CLI or embedding; the portable compiler accepts source text.
   source into one. The parser also records each name token's role and each
   expression node's diagnostic range. `GesSyntaxValidator` checks the rules of
   one source on that tree (spelling, repeated parameters, arguments, fields and
-  bindings, shadowing, system endpoints, removed types); the Compiler validator
-  keeps the rules that need other sources, the catalog or the runtime.
+  bindings, shadowing, bare names without a visible binding or module
+  declaration as `validate.unresolvedVariable`, system endpoints, removed
+  types); the Compiler validator keeps the rules that need other sources, the
+  catalog or the runtime.
   `--trees` checks token coverage, nesting and identical trees, roles and
   ranges, error nodes included, for every source in both ports.
 - Module identifiers are dot-separated lowercase components with optional
@@ -290,6 +292,12 @@ only native handlers or any number of additively loaded Programs.
 - Init emits retain enqueue order and wait for success; outbound publication waits for initial-group
   or later-instance success. PublishResult.OutboundDeferred reports staging.
   Ordinary Detach keeps its captured-snapshot semantics. See specs/HostRuntime.md.
+- Call-based link errors (a missing extension, a missing or mismatched external
+  type constructor) name the call and yield one diagnostic per call site,
+  located through the SourceMap and SourceArchive
+  (`GesDynamicLinkException.Diagnostics`, Swift
+  `GesDynamicLinkError.diagnostics`); without a SourceMap one unlocated
+  diagnostic remains. See specs/Diagnostics.md#link-call-sites.
 - Native `Subscribe` returns an idempotently detachable
   `GesSubscription`.
 - Instance and subscription handles use stable host-local registration IDs and

@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 """Lifecycle fixture inputs and independent action-result assertions."""
 from core.corpus import InvalidDocument, closed
-from checks.compiler_checks import diagnostic
+from checks.compiler_checks import LINK_NULLABLE, diagnostic
 from checks.lifecycle_checks import duration
 
 OPERATIONS = {'loadProgram', 'detachProgram', 'subscribeHandler', 'unsubscribeHandler', 'advanceMicroseconds'}
@@ -13,7 +13,7 @@ def actions(raw, programs, deferred, handlers):
         raise InvalidDocument('Expected host action sequence')
     result = []
     for action in raw:
-        closed(action, OPERATIONS | {'expectResult', 'expectError'}, 'host action')
+        closed(action, OPERATIONS | {'expectResult', 'expectError', 'expectErrors'}, 'host action')
         operations = OPERATIONS & action.keys()
         if len(operations) != 1:
             raise InvalidDocument('Exactly one host action required')
@@ -26,10 +26,15 @@ def actions(raw, programs, deferred, handlers):
             raise InvalidDocument('Unknown host action target')
         if 'expectResult' in action and type(action['expectResult']) is not bool:
             raise InvalidDocument('Expected Boolean action result')
-        if 'expectError' in action:
-            if operation != 'loadProgram' or 'expectResult' in action:
+        # `expectError` constrains the first diagnostic; `expectErrors` lists every diagnostic in order.
+        if 'expectError' in action or 'expectErrors' in action:
+            if operation != 'loadProgram' or 'expectResult' in action or ('expectError' in action and 'expectErrors' in action):
                 raise InvalidDocument('Only load supports an exclusive error expectation')
-            diagnostic(action['expectError'], expectation=True, phases=('link',))
+            expected = action['expectErrors'] if 'expectErrors' in action else [action['expectError']]
+            if not isinstance(expected, list) or not expected:
+                raise InvalidDocument('Expected load diagnostics')
+            for item in expected:
+                diagnostic(item, expectation=True, phases=('link',), nullable=LINK_NULLABLE)
         result.append({'operation': operation, 'target': target})
     return result
 
@@ -72,24 +77,32 @@ def compare(case, observed, step, check):
         if not isinstance(results, list) or len(results) != len(expected) or not expected:
             raise InvalidDocument('Incomplete action results')
         for index, (action, result) in enumerate(zip(expected, results)):
-            closed(result, {'result', 'error'}, 'action result')
-            if set(result) != {'result', 'error'}:
+            closed(result, {'result', 'errors'}, 'action result')
+            if set(result) != {'result', 'errors'}:
                 raise InvalidDocument('Incomplete action result')
-            error = result['error']
+            errors = result['errors']
+            if not isinstance(errors, list):
+                raise InvalidDocument('Expected action diagnostics')
             path = '/actions/' + str(call_index) + '/' + str(index)
-            if error is None:
+            if not errors:
                 if type(result['result']) is not bool:
                     raise InvalidDocument('Action result must be Boolean')
-                check(path + '/error', action.get('expectError'), None)
+                check(path + '/error', action.get('expectError', action.get('expectErrors')), None)
                 if 'expectResult' in action:
                     check(path + '/result', action['expectResult'], result['result'])
             else:
-                diagnostic(error, phases=('link',))
+                for error in errors:
+                    diagnostic(error, phases=('link',))
                 if result['result'] is not None:
                     raise InvalidDocument('Error action has a Boolean result')
-                expectation = action.get('expectError')
-                if expectation is None:
-                    check(path + '/error', None, error)
+                if 'expectErrors' in action:
+                    expected_errors = action['expectErrors']
+                    check(path + '/errors/count', len(expected_errors), len(errors))
+                    for position, (expectation, error) in enumerate(zip(expected_errors, errors)):
+                        for key, value in expectation.items():
+                            check(path + '/errors/' + str(position) + '/' + key, value, error.get(key))
+                elif 'expectError' in action:
+                    for key, value in action['expectError'].items():
+                        check(path + '/error/' + key, value, errors[0].get(key))
                 else:
-                    for key, value in expectation.items():
-                        check(path + '/error/' + key, value, error.get(key))
+                    check(path + '/error', None, errors[0])

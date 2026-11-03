@@ -19,7 +19,8 @@ final class ToolTests: XCTestCase {
     func testCompilerErrorsExplainTheirCause() throws {
         let cases = [
             ("on Main(args) { let x be 1; let x be 2 }", "validate.duplicateVariable", "already declared in the current scope"),
-            ("on Main(args) { emit ConsoleOut(missing) }", "compile.unresolvedSymbol", "Unknown symbol"),
+            ("on Main(args) { emit ConsoleOut(missing) }", "validate.unresolvedVariable", "Unknown variable"),
+            ("on Main(args) { emit ConsoleOut($missing) }", "compile.unresolvedSymbol", "Unknown symbol"),
             ("on Main(args) { emit after 10 Tick() }", "validate.invalidTypeConstructor", "requires a time quantity"),
             ("record :Data as { input: :List }\non Main(args) { let y be :Data(wrong: []) }", "validate.invalidTypeConstructor", "argument count and labels"),
         ]
@@ -93,6 +94,15 @@ final class ToolTests: XCTestCase {
             noColor: noColor
         )
         return Result(code: Tool(io: io).run(arguments), output: stdout, error: stderr)
+    }
+
+    func testRunReportsEveryMissingExtensionCallSite() throws {
+        let source = try file("game.ges", "on initialization {\n    publish First(value: :probe.missing(1))\n    publish Second(value: :probe.missing(2))\n}\n")
+        let result = run(["run", source])
+        XCTAssertEqual(result.code, 1)
+        XCTAssertTrue(result.error.contains("game.ges(2,26): error link.missingExtension: Unknown extension :probe.missing(_)"), result.error)
+        XCTAssertTrue(result.error.contains("game.ges(3,27): error link.missingExtension: Unknown extension :probe.missing(_)"), result.error)
+        XCTAssertEqual(result.output, "")
     }
 
     func testHelpVersionAndUsage() {

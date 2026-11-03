@@ -43,7 +43,8 @@ Validation uses the following semantic codes:
   `validate.duplicateConstant`,
   `validate.duplicateDefinitionParameter`,
   `validate.duplicatePublishArgument`, `validate.duplicateVariable`,
-  `validate.shadowedVariable`;
+  `validate.shadowedVariable`, `validate.unresolvedVariable` (a bare name without
+  a visible binding, see [Syntax](Syntax.md#validation));
 - `validate.invalidIdentifierCase`, `validate.invalidMessageCase`,
   `validate.invalidTypeConstructor`.
 
@@ -72,14 +73,16 @@ stops at the end of that phase.
   source in input order, the rules of each source on its own: the spelling of
   names, labels, members and map keys, repeated parameters, argument labels,
   record fields and bindings, the forms of the system endpoints, removed type
-  names, and shadowing. They come in source order of their start positions; at
-  one position, shadowing follows the other rules, which keep the order of the
-  checks of their construct (a declaration's name before each parameter's name
-  and label, these before repeated parameters; a call's or literal's name before
-  repeated labels, these before each argument's label). Then the program-wide
-  rules: repeated constants, repeated record types and record types that an
-  external type also declares, repeated predicate signatures, repeated function
-  signatures and predicate/function name conflicts, each group in source order;
+  names, shadowing, and variables without a visible binding. They come in source
+  order of their start positions; at one position, shadowing follows the other
+  rules, which keep the order of the checks of their construct (a declaration's
+  name before each parameter's name and label, these before repeated parameters;
+  a call's or literal's name before repeated labels, these before each
+  argument's label; a variable's spelling before its resolution). Then the
+  program-wide rules: repeated constants, repeated record types and record types
+  that an external type also declares, repeated predicate signatures, repeated
+  function signatures and predicate/function name conflicts, each group in source
+  order;
   then, module by module in source order, the rules that need other sources or
   the host's catalog (unknown types, calls and predicate tests, constructors,
   predicate results, seeds and send delays) for its records, predicates,
@@ -120,6 +123,28 @@ Linking uses `link.requiredRegisterCountExceeded`,
 host cannot enqueue the instance's initialization snapshot. It carries the
 Program's module name in `programName`; its atomicity and retry rules are defined
 in [Host runtime](HostRuntime.md#loading-and-startup).
+
+### Link call sites
+
+> **Since: Unreleased**
+
+A link failure carries a non-empty ordered list of diagnostics; its first one is
+the failure's diagnostic. A failure of an import that the source calls
+(`link.missingExtension`, `link.missingExternalTypeConstructor` and
+`link.mismatchedExternalTypeConstructor`) has one diagnostic per call site, each
+with the same code, message and `symbol` (the signature ID, such as
+`navigation.nope(x)`) and the `sourceLocation` of that call. The call sites are
+the instructions that use the import's binding (`CallExternal` for extensions,
+`CreateExternalType` for external type constructors); the shortest SourceMap
+entry covering an instruction gives its source range, so a call site is the
+call expression. Equal ranges count once, ordered by source ID, start and
+length. The location takes its source name, source ID, line and end line from
+the SourceMap and its Unicode-scalar columns from the SourceArchive; without a
+SourceArchive the columns are absent. Without a SourceMap, or when no
+instruction maps to the source, the failure has a single diagnostic without
+location. Every other link failure has a single diagnostic without location.
+The message names the import, for example
+`Unknown extension :navigation.nope(x)`.
 
 Runtime uses these stable codes:
 
@@ -166,6 +191,9 @@ Exceptions are only the C# transport mechanism. `GesCompileException`,
 `GesProgramFormatException`, and
 `GesDynamicLinkException` expose portable diagnostic data; callers
 must branch on phase/code rather than exception message or CLR subtype details.
+`GesDynamicLinkException.Diagnostics` and Swift `GesDynamicLinkError.diagnostics`
+hold the [call-site diagnostics](#link-call-sites); `Diagnostic`/`diagnostic`
+is their first one.
 
 Runtime handler failures abort and reset only the failing handler. Remaining
 handlers from the immutable subscription snapshot continue in deterministic

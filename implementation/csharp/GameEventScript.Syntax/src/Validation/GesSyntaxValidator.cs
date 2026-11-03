@@ -10,7 +10,8 @@ using NodeKind = GameEventScript.Syntax.GesSyntaxNodeKind;
 namespace GameEventScript.Syntax;
 
 // Checks the rules of one source that need no other source, catalog or runtime: the spelling of names and labels,
-// repeated parameters, arguments, fields and bindings, shadowing, the forms of system endpoints and removed type names.
+// repeated parameters, arguments, fields and bindings, shadowing, variables without a visible binding, the forms of
+// system endpoints and removed type names.
 // The diagnostics come in source order; at one position, shadowing follows the other rules, which keep their check order.
 internal static class GesSyntaxValidator
 {
@@ -22,6 +23,7 @@ internal static class GesSyntaxValidator
     internal const string DuplicateDefinitionParameter = "validate.duplicateDefinitionParameter";
     internal const string DuplicateHandlerParameter = "validate.duplicateHandlerParameter";
     internal const string DuplicatePublishArgument = "validate.duplicatePublishArgument";
+    internal const string UnresolvedVariable = "validate.unresolvedVariable";
 
     // The tree must come from a source without syntax errors.
     internal static IReadOnlyList<GesSyntaxDiagnostic> Validate(GesSyntaxTree tree) => new Walker(tree).Run();
@@ -355,7 +357,7 @@ internal static class GesSyntaxValidator
                     continue;
                 }
 
-                Token(token);
+                Token(token, shadow);
             }
         }
 
@@ -427,8 +429,10 @@ internal static class GesSyntaxValidator
             if (nested)
                 while (_tokens[start + 1].Kind == NewLine) start++;
             var anchor = (start, node.EndToken - 1);
+            // The source is the range or the first element after `in`; the body follows it.
             GesSyntaxNode? bodyNode = null;
             var child = 0;
+            var afterIn = false;
             var afterSource = false;
             for (var token = node.FirstToken; token < node.EndToken; token++)
             {
@@ -451,9 +455,11 @@ internal static class GesSyntaxValidator
                     continue;
                 }
 
-                if (_roles[token] == GesSyntaxRole.Variable && !afterSource)
+                if (afterSource || _tokens[token].Kind == NewLine) continue;
+                if (_tokens[token].Kind == In) afterIn = true;
+                else if (afterIn)
                 {
-                    Token(token);
+                    Token(token, shadow);
                     afterSource = true;
                 }
             }
@@ -505,11 +511,16 @@ internal static class GesSyntaxValidator
 
         // Expressions ---------------------------------------------------------------------------------------------
 
-        private void Token(int token)
+        // A variable reference: its spelling, then a binding visible in its scope. Only the source's own bindings can
+        // declare a bare name, so one without a visible binding is unresolvable in every program. Assembly operands
+        // follow the assembly rules of the compiler and pass no scope.
+        private void Token(int token, Scope? scope)
         {
             if (_roles[token] != GesSyntaxRole.Variable) return;
             var name = Text(token);
             IdentifierCase(name, $"Identifier '{name}' must start lowercase, contain ASCII letters or digits, and may use one canonical final _index suffix", name, GesSyntaxSymbolKind.Variable, (token, token));
+            if (scope is not null && !scope.ContainsVisible(name))
+                Report(UnresolvedVariable, $"Unknown variable '{name}'. Declare it with let, a parameter or a binding before using it in this scope.", name, GesSyntaxSymbolKind.Variable, (token, token));
         }
 
         // The expressions among a node's elements: its name tokens and its expression children.
@@ -527,7 +538,7 @@ internal static class GesSyntaxValidator
                     continue;
                 }
 
-                if (validate) Token(token);
+                if (validate) Token(token, shadow ? scope : null);
             }
         }
 
@@ -612,7 +623,7 @@ internal static class GesSyntaxValidator
                         }
 
                         if (_roles[token] != GesSyntaxRole.Variable) continue;
-                        if (validate) Token(token);
+                        if (validate) Token(token, shadow ? scope : null);
                         seeded = true;
                     }
 
@@ -649,7 +660,7 @@ internal static class GesSyntaxValidator
                     continue;
                 }
 
-                Token(token);
+                Token(token, shadow ? scope : null);
             }
         }
 
@@ -730,8 +741,10 @@ internal static class GesSyntaxValidator
             var binding = OwnToken(node, GesSyntaxRole.GeneratedBinding);
             var name = Text(binding);
             if (validate) IdentifierCase(name, $"Generated collection identifier '{name}' must use identifier casing (start lowercase)", name, GesSyntaxSymbolKind.Variable, Range(node));
-            // The source comes before `where` or the projection; the binding scopes the rest.
+            // The source, the range or the first element after `in`, comes before `where` or the projection; the binding
+            // scopes the rest.
             var child = 0;
+            var afterIn = false;
             Scope? inner = null;
             for (var token = node.FirstToken; token < node.EndToken; token++)
             {
@@ -744,8 +757,9 @@ internal static class GesSyntaxValidator
                     continue;
                 }
 
-                if (_roles[token] != GesSyntaxRole.Variable) continue;
-                if (validate) Token(token);
+                if (_tokens[token].Kind == In) afterIn = true;
+                if (inner is null && !afterIn || _tokens[token].Kind is In or NewLine) continue;
+                if (validate) Token(token, shadow ? inner ?? scope : null);
                 inner ??= shadow ? BinderScope(scope, name, Range(node)) : new Scope(scope);
             }
         }
@@ -764,7 +778,7 @@ internal static class GesSyntaxValidator
                     continue;
                 }
 
-                if (validate) Token(token);
+                if (validate) Token(token, shadow ? scope : null);
             }
         }
 
@@ -788,7 +802,7 @@ internal static class GesSyntaxValidator
 
             if (operation is ":has" or ":take" or ":drop" or ":draw" or ":shuffle" or ":reverse" or ":sort")
             {
-                // Patterns are no references; their face values and object values only meet the shadowing rule.
+                // Patterns bind nothing; their face values and object values are ordinary expressions of the enclosing scope.
                 if (shadow) PatternValues(node, scope);
                 return;
             }
@@ -828,7 +842,7 @@ internal static class GesSyntaxValidator
                         continue;
                     }
 
-                    if (validate) Token(token);
+                    if (validate) Token(token, shadow ? foldScope : null);
                 }
 
                 return;
@@ -877,7 +891,7 @@ internal static class GesSyntaxValidator
                     continue;
                 }
 
-                if (token > after && validate) Token(token);
+                if (token > after && validate) Token(token, shadow ? scope : null);
             }
         }
 
@@ -887,9 +901,9 @@ internal static class GesSyntaxValidator
             {
                 switch (child.Kind)
                 {
-                    case NodeKind.DicePattern: Elements(child, scope, validate: false, shadow: true); break;
+                    case NodeKind.DicePattern: Elements(child, scope, validate: true, shadow: true); break;
                     case NodeKind.ObjectPatternEntry:
-                        Elements(child, scope, validate: false, shadow: true);
+                        Elements(child, scope, validate: true, shadow: true);
                         PatternValues(child, scope);
                         break;
                     case NodeKind.ObjectPattern: PatternValues(child, scope); break;

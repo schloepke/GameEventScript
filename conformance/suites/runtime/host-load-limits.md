@@ -802,3 +802,70 @@ steps:
       exclude:
         - any: true
 ```
+
+---
+
+## Test: missing-extension-lists-call-sites
+
+A failed load inside a scenario reports every diagnostic of the link failure, one per call site, and the host continues.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: "missing-extension-lists-call-sites"
+deferredPrograms:
+  - "late"
+nativeHandlers:
+  - id: "ping"
+    message: "Ping"
+    emit:
+      - name: "Pong"
+        args: []
+stepActions:
+  rejected:
+    - loadProgram: "late"
+      expectErrors:
+        - phase: "link"
+          code: "link.missingExtension"
+          symbol: "navigation.nope(x)"
+          line: 2
+          column: 30
+        - phase: "link"
+          code: "link.missingExtension"
+          symbol: "navigation.nope(x)"
+          line: 3
+          column: 30
+sources:
+  - name: "missing-extension-lists-call-sites-late.ges"
+    program: "late"
+```
+
+### Source code under test
+
+```ges
+module late
+on Tick() { emit Seen(value: :navigation.nope(x: 1)) }
+on Tock() { emit Seen(value: :navigation.nope(x: 2)) }
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| rejected | NoHandler | completion |  |
+| after | Ping | completion |  |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  rejected:
+    accepted: false
+    local: []
+  after:
+    accepted: true
+    local:
+      - name: "Pong"
+```

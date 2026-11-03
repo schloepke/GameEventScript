@@ -788,7 +788,12 @@ on Start() { for x in [1] and y in [x] emit Done(value: y); emit Done(value: y) 
 
 ```yaml
 gesBlock: expect
-error: {"phase": "compile", "code": "compile.unresolvedSymbol", "symbol": "y"}
+errors:
+  - phase: "validate"
+    code: "validate.unresolvedVariable"
+    symbol: "y"
+    line: 1
+    column: 78
 ```
 
 ---
@@ -819,7 +824,12 @@ on Start() { for x in [y] and y in [1] emit Done(value: x) }
 
 ```yaml
 gesBlock: expect
-error: {"phase": "compile", "code": "compile.unresolvedSymbol", "symbol": "y"}
+errors:
+  - phase: "validate"
+    code: "validate.unresolvedVariable"
+    symbol: "y"
+    line: 1
+    column: 24
 ```
 
 ---
@@ -1161,4 +1171,157 @@ steps:
         args:
           - name: value
             value: { type: ":Number.int64", value: "42" }
+```
+
+---
+
+## Test: unresolved-variable-reports-each-bare-name
+
+This case verifies that every bare name without a visible binding of its own source is `validate.unresolvedVariable` at the name, in handlers and callables, including a binding used outside the scope that declares it.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: unresolved-variable-reports-each-bare-name
+kind: compileError
+level: scenario
+sources:
+  - name: unresolved-variable-reports-each-bare-name.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Boot(bot) { publish Probe(value: x) }
+function scaled(_ value) be value * factor
+on Start(items) {
+  if let first be items; first > 1 { emit Found(value: first) }
+  emit Gone(value: first, best: items[:max s => s], level: s)
+  emit Has(object: items[:has [level: wanted]], pair: items[:has pair of face], taken: items[:take pair of face])
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+errors:
+  - phase: "validate"
+    code: "validate.unresolvedVariable"
+    symbol: "x"
+    line: 1
+    column: 37
+  - phase: "validate"
+    code: "validate.unresolvedVariable"
+    symbol: "factor"
+    line: 2
+    column: 37
+  - phase: "validate"
+    code: "validate.unresolvedVariable"
+    symbol: "first"
+    line: 5
+    column: 20
+  - phase: "validate"
+    code: "validate.unresolvedVariable"
+    symbol: "s"
+    line: 5
+    column: 60
+  - phase: "validate"
+    code: "validate.unresolvedVariable"
+    symbol: "wanted"
+    line: 6
+    column: 39
+  - phase: "validate"
+    code: "validate.unresolvedVariable"
+    symbol: "face"
+    line: 6
+    column: 74
+  - phase: "validate"
+    code: "validate.unresolvedVariable"
+    symbol: "face"
+    line: 6
+    column: 108
+```
+
+---
+
+## Test: bindings-and-later-declarations-resolve
+
+This case verifies that parameters, `let`, `if let`, compact loop, selector, fold and generated-collection bindings resolve in their scopes, and that a constant and a function declared after their use resolve as well.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: bindings-and-later-declarations-resolve
+kind: scriptApi
+level: atomic
+sources:
+  - name: bindings-and-later-declarations-resolve.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start(items) {
+  let best be items[:max s => s]
+  if let first be best; first > $limit { emit Found(value: double(first)) }
+  for item in items and copy in [item] emit Seen(value: copy)
+  emit Sum(total: items[:fold total be 0, entry => total + entry], picked: :List[:select n in items where n > $limit => n], doubled: :List[:select n from 1 to 2 => double(n)])
+}
+function double(_ x) be x + x
+constant $limit be 2
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args:
+        - name: items
+          value:
+            type: ":List"
+            items:
+              - { type: ":Number.int64", value: "1" }
+              - { type: ":Number.int64", value: "5" }
+    local:
+      - name: Found
+        args:
+          - name: value
+            value: { type: ":Number.int64", value: "10" }
+      - name: Seen
+        args:
+          - name: value
+            value: { type: ":Number.int64", value: "1" }
+      - name: Seen
+        args:
+          - name: value
+            value: { type: ":Number.int64", value: "5" }
+      - name: Sum
+        args:
+          - name: total
+            value: { type: ":Number.int64", value: "6" }
+          - name: picked
+            value:
+              type: ":List"
+              items:
+                - { type: ":Number.int64", value: "5" }
+          - name: doubled
+            value:
+              type: ":List"
+              items:
+                - { type: ":Number.int64", value: "2" }
+                - { type: ":Number.int64", value: "4" }
 ```

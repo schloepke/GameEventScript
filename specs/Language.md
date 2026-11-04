@@ -1427,7 +1427,7 @@ formats with the base symbol:
 
 | Spelling | Value |
 | --- | --- |
-| `km`, `mm` | 1000 m, 0.001 m |
+| `km`, `cm`, `mm` | 1000 m, 0.01 m, 0.001 m |
 | `ms` | 0.001 s |
 | `t` | 1000 kg |
 | `kN`, `kJ`, `kW`, `kV`, `kHz` | 1000 N, J, W, V, Hz |

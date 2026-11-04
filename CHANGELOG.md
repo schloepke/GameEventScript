@@ -182,6 +182,9 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 
 ### Added
 
+- `cm` is a prefixed literal spelling of the meter, like `km` and `mm`: `150cm` is
+  `1.5m`. It adds no unit, `:Quantity(cm)` remains invalid, and printing documents
+  does not choose it.
 - Link failures of an import that the source calls carry one diagnostic per
   call site with its source location, in source order:
   `GesDynamicLinkException.Diagnostics` and Swift

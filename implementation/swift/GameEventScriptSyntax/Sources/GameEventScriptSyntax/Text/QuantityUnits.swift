@@ -53,6 +53,8 @@ extension GesQuantityUnit {
         .init(text: "km", unit: .meter, exponent: 3),
         .init(text: "ms", unit: .second, exponent: -3),
         .init(text: "mm", unit: .meter, exponent: -3),
+        // After mm: document printing keeps the first of equally close spellings, so it never chooses cm.
+        .init(text: "cm", unit: .meter, exponent: -2),
         .init(text: "kg", unit: .kilogram),
         .init(text: "kN", unit: .newton, exponent: 3),
         .init(text: "kJ", unit: .joule, exponent: 3),

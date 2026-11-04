@@ -142,7 +142,7 @@
       "match": "\\b\\d(?:[\\d_]*\\d)?(?:\\.\\d(?:[\\d_]*\\d)?)?%"
       "scope": "constant.numeric.percentage.gameeventscript"
     -
-      "match": "\\b\\d(?:[\\d_]*\\d)?(?:\\.\\d(?:[\\d_]*\\d)?)?(?:mW/m²|mW/m\\^2|kW/m²|kW/m\\^2|W/m²|W/m\\^2|m/s²|m/s\\^2|deg/s|cm²|cm\\^2|km²|km\\^2|°/s|m/s|m²|m\\^2|m³|m\\^3|kWh|kHz|deg|Wh|Hz|/s|dB|km|mm|ms|kg|kN|kJ|MJ|mW|kW|MW|kV|°|m|s|t|N|J|W|V|A|K)(?=$|[^A-Za-z0-9_])"
+      "match": "\\b\\d(?:[\\d_]*\\d)?(?:\\.\\d(?:[\\d_]*\\d)?)?(?:mW/m²|mW/m\\^2|kW/m²|kW/m\\^2|W/m²|W/m\\^2|m/s²|m/s\\^2|deg/s|cm²|cm\\^2|km²|km\\^2|°/s|m/s|m²|m\\^2|m³|m\\^3|kWh|kHz|deg|Wh|Hz|/s|dB|km|mm|cm|ms|kg|kN|kJ|MJ|mW|kW|MW|kV|°|m|s|t|N|J|W|V|A|K)(?=$|[^A-Za-z0-9_])"
       "scope": "constant.numeric.unit.gameeventscript"
     -
       "match": "\\b\\d(?:[\\d_]*\\d)?(?:\\.\\d(?:[\\d_]*\\d)?)?\\b"

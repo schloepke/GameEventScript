@@ -151,14 +151,15 @@ decide how to interpret the document.
 
 > **Planned** — informative, not implemented.
 
-A schema will be a GES record definition, and a `.gess` file GES source that
-holds record declarations. `:Schema(:DriveUnit)` will refer to such a record
-from a `.gess` file or a Program, `:Schema('DriveUnit.gess')` to a file and the
-record it declares. A separate reading operation that receives the available
-schemas will construct and check the root record; plain reading stays as
-specified here. Validation is expected to report missing, unknown and
-mistyped fields with document positions and to reject computed fields in
-documents. The header syntax above already admits these additions.
+A schema is a declaration in a `.gess` file, written in the one schema language
+of [GES schemas](Schemas.md). The same schemas describe the compact binary
+encoding. `:Schema(:DriveUnit)` will refer to a `schema` of a schema set,
+`:Schema('DriveUnit.gess')` to a file and its root schema. A separate operation
+that receives the schema set will check the root and construct its record; plain
+reading stays as specified here. It reports missing, unknown and mistyped fields
+and values out of range with document positions, without implicit unit casts. A
+schema has no computed fields. The header syntax above already admits these
+additions. See [document checking](Schemas.md#document-checking).
 
 ## Errors
 
@@ -281,7 +282,8 @@ Printed text must satisfy these rules so that every implementation can read it:
   base symbol and the decimal prefixes accepted for that unit, `km`/`mm`, `ms`,
   `t`, `kN`, `kJ`/`MJ`, `mW`/`kW`/`MW`, `kV`, `kHz`, `cm²`/`km²` and
   `mW/m²`/`kW/m²`, the spelling whose magnitude lies in [1, 1000), or otherwise
-  the one closest to that interval on a logarithmic scale. Prefixes keep the
+  the one closest to that interval on a logarithmic scale. `cm` is read but
+  never chosen, because `mm` covers its magnitudes. Prefixes keep the
   unit symbol rather than its ASCII spelling. `Wh`, `kWh` and `/s` are never
   chosen. Zero, infinities, units without prefixes such as `m/s`, `m³`, `dB` or
   `°/s`, and Vector, Point, Range and Series components use the base symbol.

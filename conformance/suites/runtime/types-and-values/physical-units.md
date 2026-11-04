@@ -118,7 +118,7 @@ sources:
 ```ges
 module main
 on Start {
-  emit Prefixed(km: 2km, mm: 250mm, ms: 3ms, halfKm: 0.5km, kN: 1.5kN, kJ: 2kJ, megaJoule: 1MJ, kW: 3kW, megaWatt: 2MW, kV: 11kV, kHz: 2kHz, wattHour: 1Wh, kWh: 1.5kWh, smallMs: 0.1ms)
+  emit Prefixed(km: 2km, mm: 250mm, cm: 150cm, wholeCm: 200cm, ms: 3ms, halfKm: 0.5km, kN: 1.5kN, kJ: 2kJ, megaJoule: 1MJ, kW: 3kW, megaWatt: 2MW, kV: 11kV, kHz: 2kHz, wattHour: 1Wh, kWh: 1.5kWh, smallMs: 0.1ms)
 }
 ```
 
@@ -141,6 +141,10 @@ steps:
             value: { type: ":Quantity.int64", value: "2000", unit: ":meter" }
           - name: mm
             value: { type: ":Quantity.binary64", value: "0.25", unit: ":meter" }
+          - name: cm
+            value: { type: ":Quantity.binary64", value: "1.5", unit: ":meter" }
+          - name: wholeCm
+            value: { type: ":Quantity.int64", value: "2", unit: ":meter" }
           - name: ms
             value: { type: ":Quantity.binary64", value: "0.003", unit: ":second" }
           - name: halfKm
@@ -1526,6 +1530,38 @@ sources:
 ```ges
 module main
 on Start { let value be 5 as :Quantity(km) }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error: { phase: compile, code: compile.unsupportedConstruct }
+```
+
+
+---
+
+## Test: prefixed spellings are not quantity type names (centimeter)
+
+Prefixed spellings are literal sugar only, so `:Quantity(cm)` is rejected.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: centimeter-type-name-rejected
+kind: compileError
+sources:
+  - name: centimeter-type-name-rejected.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+module main
+on Start { let value be 5 as :Quantity(cm) }
 ```
 
 ### Expectation

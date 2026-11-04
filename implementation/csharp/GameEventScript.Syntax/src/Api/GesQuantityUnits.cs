@@ -63,6 +63,8 @@ public static class GesQuantityUnits
         new("km", UnitMeter, 3),
         new("ms", UnitSecond, -3),
         new("mm", UnitMeter, -3),
+        // After mm: document printing keeps the first of equally close spellings, so it never chooses cm.
+        new("cm", UnitMeter, -2),
         new("kg", UnitKilogram),
         new("kN", UnitNewton, 3),
         new("kJ", UnitJoule, 3),

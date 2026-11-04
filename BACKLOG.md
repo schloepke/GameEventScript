@@ -55,14 +55,10 @@ here.
   registry and extensions. Decide whether `WithExternalTypeCatalog` remains as a
   convenience, and whether the Bridges generate declaration modules. Schedule
   after the Syntax module rework, on its source-neutral declaration set.
-- Validate GES documents against schemas: `.gess` files hold record declarations
-  and a later reading operation receives the available schemas (from a Program or
-  loaded `.gess` files) to construct and check the root record, with document
-  positions for missing, unknown or mistyped fields, no implicit unit casts,
-  rejected computed fields and a validation option for `clamped` violations.
-  Decide whether record fields need an explicit optional marker. The header
-  format in specs/Documents.md already admits this; printing a schema prints
-  record declarations.
+- Implement GES schemas and their compact binary encoding once the draft
+  specs/Schemas.md is accepted: `.gess` reading in Syntax, a Schema module with
+  binding, hash, quantization, writer and reader, the value path, the dump tool,
+  document checking, and later deltas and generated code.
 - Explore computed handler bindings, for example `on Main(value computed by
   parseArguments(input: args), context) { ... }`. The message signature remains
   `Main(args, context)`, while only `value` and `context` are visible in the body.

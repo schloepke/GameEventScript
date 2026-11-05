@@ -23,7 +23,7 @@ This suite verifies schema source and binding errors, the canonical form and has
 
 ## Test: the Bot of the worked example
 
-The full record takes 101 bits in 13 bytes, a delta at most 14 bytes, and the hashes match the specified vectors.
+The full record takes 101 bits in 13 bytes, and the hashes match the specified vectors.
 
 ### Case description
 
@@ -97,7 +97,7 @@ schema:
   canonical: "gess1\nparameter worldHeight Quantity(meter)\nparameter worldWidth Quantity(meter)\nschema Bot\nfield id Number integer between 0e0 65535e0 key\nfield x Quantity(meter) between 0e0 worldWidth step 1e-2 delta 127e-2\nfield y Quantity(meter) between 0e0 worldHeight step 1e-2 delta 127e-2\nfield heading Quantity(degree) wrapping between 0e0 36e1 step 1e-1 delta 8e0\nfield turretBearing Quantity(degree) wrapping between 0e0 36e1 step 1e-1 delta 8e0\nfield radarBearing Quantity(degree) wrapping between 0e0 36e1 step 1e-1 delta 8e0\nfield health Number integer between 0e0 135e0\nfield firing Boolean\nfield shielded Boolean\nfield overheated Boolean\n"
   hash: "baecf12abb34e7c1"
   bindingHash: "551dd726cf2392d4"
-  maxByteCount: 14
+  maxByteCount: 13
   encoded:
     bytes: "2a0040e201093da30200191c16"
   decoded:
@@ -1407,6 +1407,114 @@ schema:
 
 ---
 
+## Test: a schema with a built-in name
+
+A built-in type name is taken in every kind of declaration.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-schema-builtin-name
+schemaApi:
+  sources:
+    - "schema :Map as { a: :Boolean }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.duplicateName"
+    line: 1
+    column: 1
+```
+
+---
+
+## Test: a schema named Record
+
+Record is no schema type, but the language's type of all Records.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-schema-record-name
+schemaApi:
+  sources:
+    - "schema :Record as { a: :Boolean }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.duplicateName"
+    line: 1
+    column: 1
+```
+
+---
+
+## Test: a message with a built-in name
+
+A built-in type name is taken in every kind of declaration.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-message-builtin-name
+schemaApi:
+  sources:
+    - "message Text()\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.duplicateName"
+    line: 1
+    column: 1
+```
+
+---
+
+## Test: a message set with a built-in name
+
+A built-in type name is taken in every kind of declaration.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-set-builtin-name
+schemaApi:
+  sources:
+    - "message A()\nmessages :Dice as (A)\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.duplicateName"
+    line: 2
+    column: 1
+```
+
+---
+
 ## Test: a repeated schema
 
 The error has its stable code and position.
@@ -1894,7 +2002,7 @@ schema:
 
 ---
 
-## Test: a union alternative with step
+## Test: a union alternative with a delta range
 
 The error has its stable code and position.
 
@@ -1902,10 +2010,10 @@ The error has its stable code and position.
 
 ```yaml
 gesBlock: case
-id: error-union-step
+id: error-union-delta
 schemaApi:
   sources:
-    - "schema :A as {\n  a: :Quantity(m) between 0m and 1m step 1m | :Text\n}\n"
+    - "schema :A as {\n  a: :Quantity(m) between 0m and 9m step 1m delta within 1m | :Text\n}\n"
 ```
 
 ### Expectation
@@ -2176,9 +2284,9 @@ schema:
 
 ---
 
-## Test: a union cannot be bound for encoding
+## Test: a union with a document-only alternative cannot be bound for encoding
 
-The error has its stable code and position.
+The error has its stable code and points at the alternative.
 
 ### Case description
 
@@ -2187,7 +2295,7 @@ gesBlock: case
 id: notencodable-union
 schemaApi:
   sources:
-    - "schema :A as {\n  a: :Text max 2 | :Boolean\n}\n"
+    - "schema :A as {\n  a: :Text max 2 | :Map\n}\n"
   root: "A"
 ```
 
@@ -2199,7 +2307,7 @@ schema:
   error:
     code: "schema.notEncodable"
     line: 2
-    column: 3
+    column: 20
 ```
 
 ---
@@ -2778,6 +2886,1706 @@ schema:
     error:
       code: "wire.typeMismatch"
       path: "v"
+```
+
+---
+
+## Test: a union writes the index of its alternative
+
+One bit selects the Tag, and a union alternative may have a step.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: union-tag
+schemaApi:
+  sources:
+    - "schema :S as { facing: :Quantity(°) wrapping between 0° and 360° step 1° | :Tag(#north, #east, #south, #west) }\n"
+  root: "S"
+  encode:
+    type: ":S"
+    entries:
+      - key: "facing"
+        value:
+          type: ":Tag"
+          value: "south"
+  decode: "05"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  maxByteCount: 2
+  encoded:
+    bytes: "05"
+  decoded:
+    value:
+      type: ":S"
+      entries:
+        - key: "facing"
+          value:
+            type: ":Tag"
+            value: "south"
+    byteCount: 1
+```
+
+---
+
+## Test: the first alternative of a union
+
+The index is zero and the quantized value follows.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: union-quantity
+schemaApi:
+  sources:
+    - "schema :S as { facing: :Quantity(°) wrapping between 0° and 360° step 1° | :Tag(#north, #east, #south, #west) }\n"
+  root: "S"
+  encode:
+    type: ":S"
+    entries:
+      - key: "facing"
+        value:
+          type: ":Quantity.int64"
+          value: "90"
+          unit: "degree"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "b400"
+```
+
+---
+
+## Test: a value that fits no alternative
+
+The kind selects the alternative, and no other kind converts.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: union-mismatch
+schemaApi:
+  sources:
+    - "schema :S as { facing: :Quantity(°) wrapping between 0° and 360° step 1° | :Tag(#north, #east, #south, #west) }\n"
+  root: "S"
+  encode:
+    type: ":S"
+    entries:
+      - key: "facing"
+        value:
+          type: ":Boolean"
+          value: true
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    error:
+      code: "wire.typeMismatch"
+      path: "facing"
+```
+
+---
+
+## Test: a value outside the alternative its kind selects
+
+The error names the alternative.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: union-out-of-range
+schemaApi:
+  sources:
+    - "schema :S as { a: :Number integer between 0 and 7 | :Text max 1 }\n"
+  root: "S"
+  encode:
+    type: ":S"
+    entries:
+      - key: "a"
+        value:
+          type: ":Number.int64"
+          value: "8"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    error:
+      code: "wire.outOfRange"
+      path: "a:Number"
+```
+
+---
+
+## Test: a Nothing alternative takes no bits
+
+Only the index is written.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: union-nothing
+schemaApi:
+  sources:
+    - "schema :S as { a: :Text max 3 | :Nothing }\n"
+  root: "S"
+  encode:
+    type: ":S"
+    entries: []
+  decode: "01"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "01"
+  decoded:
+    value:
+      type: ":S"
+      entries:
+        - key: "a"
+          value:
+            type: ":Nothing"
+    byteCount: 1
+```
+
+---
+
+## Test: a union with Nothing still holds text
+
+The count and bytes follow the index.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: union-nothing-text
+schemaApi:
+  sources:
+    - "schema :S as { a: :Text max 3 | :Nothing }\n"
+  root: "S"
+  encode:
+    type: ":S"
+    entries:
+      - key: "a"
+        value:
+          type: ":Text"
+          value: "hi"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "444b03"
+```
+
+---
+
+## Test: a list of a union
+
+Each element has its own index.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: union-list
+schemaApi:
+  sources:
+    - "schema :S as { l: :List(:Number integer between 0 and 7 | :Text max 1) max 2 }\n"
+  root: "S"
+  encode:
+    type: ":S"
+    entries:
+      - key: "l"
+        value:
+          type: ":List"
+          items:
+            - type: ":Number.int64"
+              value: "5"
+            - type: ":Text"
+              value: "a"
+  decode: "ea61"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "ea61"
+  decoded:
+    value:
+      type: ":S"
+      entries:
+        - key: "l"
+          value:
+            type: ":List"
+            items:
+              - type: ":Number.int64"
+                value: "5"
+              - type: ":Text"
+                value: "a"
+    byteCount: 2
+```
+
+---
+
+## Test: a field follows a union whose schema alternative ended
+
+The next field comes after the union, not at the next alternative.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: union-then-field
+schemaApi:
+  sources:
+    - "schema :U as { n: :Boolean }\nschema :S as { a: :U | :Text max 1, b: :Boolean }\n"
+  root: "S"
+  encode:
+    type: ":S"
+    entries:
+      - key: "a"
+        value:
+          type: ":U"
+          entries:
+            - key: "n"
+              value:
+                type: ":Boolean"
+                value: true
+      - key: "b"
+        value:
+          type: ":Boolean"
+          value: true
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "06"
+```
+
+---
+
+## Test: a Map selects the first schema that holds
+
+A Record of a schema selects it by name; a Map has no name.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: union-map
+schemaApi:
+  sources:
+    - "schema :P as { x: :Boolean }\nschema :Q as { y: :Boolean }\nschema :S as { a: :P | :Q }\n"
+  root: "S"
+  encode:
+    type: ":S"
+    entries:
+      - key: "a"
+        value:
+          type: ":Map"
+          entries:
+            - key: "y"
+              value:
+                type: ":Boolean"
+                value: true
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "03"
+```
+
+---
+
+## Test: a Map with a key the first schema lacks
+
+An alternative without required fields does not hold a Map with another key, so no data is lost.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: union-map-unknown-key
+schemaApi:
+  sources:
+    - "schema :P as { x: :Boolean optional }\nschema :Q as { y: :Boolean }\nschema :S as { a: :P | :Q }\n"
+  root: "S"
+  encode:
+    type: ":S"
+    entries:
+      - key: "a"
+        value:
+          type: ":Map"
+          entries:
+            - key: "y"
+              value:
+                type: ":Boolean"
+                value: true
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "03"
+```
+
+---
+
+## Test: a nested Map with a key the first schema lacks
+
+The key decides at every level of the alternative.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: union-map-unknown-nested
+schemaApi:
+  sources:
+    - "schema :C as { x: :Boolean optional }\nschema :D as { y: :Boolean }\nschema :P as { c: :C }\nschema :Q as { c: :D }\nschema :S as { a: :P | :Q }\n"
+  root: "S"
+  encode:
+    type: ":S"
+    entries:
+      - key: "a"
+        value:
+          type: ":Map"
+          entries:
+            - key: "c"
+              value:
+                type: ":Map"
+                entries:
+                  - key: "y"
+                    value:
+                      type: ":Boolean"
+                      value: true
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "03"
+```
+
+---
+
+## Test: a Map that no schema holds
+
+The last alternative reports why not.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: union-map-none-holds
+schemaApi:
+  sources:
+    - "schema :P as { x: :Boolean optional }\nschema :Q as { z: :Boolean optional }\nschema :S as { a: :P | :Q }\n"
+  root: "S"
+  encode:
+    type: ":S"
+    entries:
+      - key: "a"
+        value:
+          type: ":Map"
+          entries:
+            - key: "y"
+              value:
+                type: ":Boolean"
+                value: true
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    error:
+      code: "wire.typeMismatch"
+      path: "a:Q"
+```
+
+---
+
+## Test: a Record in a union keeps its other fields out
+
+A Record selects by name, so a field without a schema entry is not transmitted, as for a computed field.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: union-record-extra-field
+schemaApi:
+  sources:
+    - "schema :P as { x: :Boolean }\nschema :Q as { y: :Boolean }\nschema :S as { a: :P | :Q }\n"
+  root: "S"
+  encode:
+    type: ":S"
+    entries:
+      - key: "a"
+        value:
+          type: ":Q"
+          entries:
+            - key: "y"
+              value:
+                type: ":Boolean"
+                value: true
+            - key: "e"
+              value:
+                type: ":Boolean"
+                value: true
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "03"
+```
+
+---
+
+## Test: a Map outside a union ignores other keys
+
+Only the choice of an alternative looks at them.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: map-extra-key
+schemaApi:
+  sources:
+    - "schema :S as { x: :Boolean }\n"
+  root: "S"
+  encode:
+    type: ":Map"
+    entries:
+      - key: "x"
+        value:
+          type: ":Boolean"
+          value: true
+      - key: "e"
+        value:
+          type: ":Boolean"
+          value: true
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "01"
+```
+
+---
+
+## Test: a Message holds an argument with a Nothing alternative
+
+Labels and their order are the signature of a Message, so it cannot leave one out.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: message-union-omitted
+schemaApi:
+  sources:
+    - "message N(a: :Boolean, b: :Text max 2 | :Nothing)\n"
+  root: "N"
+  encode:
+    type: ":Message"
+    message:
+      name: "N"
+      args:
+        - name: "a"
+          value:
+            type: ":Boolean"
+            value: true
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    error:
+      code: "wire.missingField"
+      path: "b"
+```
+
+---
+
+## Test: a Message passes nothing to a union argument
+
+The index of the Nothing alternative follows.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: message-union-nothing
+schemaApi:
+  sources:
+    - "message N(a: :Boolean, b: :Text max 2 | :Nothing)\n"
+  root: "N"
+  encode:
+    type: ":Message"
+    message:
+      name: "N"
+      args:
+        - name: "a"
+          value:
+            type: ":Boolean"
+            value: true
+        - name: "b"
+          value:
+            type: ":Nothing"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "03"
+```
+
+---
+
+## Test: an optional union
+
+The presence bit comes before the index.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: union-optional
+schemaApi:
+  sources:
+    - "schema :S as { a: :Boolean | :Text max 1 optional }\n"
+  root: "S"
+  encode:
+    type: ":S"
+    entries:
+      - key: "a"
+        value:
+          type: ":Boolean"
+          value: true
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "05"
+```
+
+---
+
+## Test: an index no alternative has
+
+Data from a peer is untrusted.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: union-invalid-index
+schemaApi:
+  sources:
+    - "schema :S as { a: :Boolean | :Text max 1 | :Nothing }\n"
+  root: "S"
+  decode: "03"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  decoded:
+    error:
+      code: "wire.invalidIndex"
+      path: "a"
+```
+
+---
+
+## Test: a Map in a list with a key the first schema lacks
+
+The key decides inside a list too.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: union-map-unknown-list
+schemaApi:
+  sources:
+    - "schema :C as { x: :Boolean optional }\nschema :D as { y: :Boolean }\nschema :P as { l: :List(:C) max 1 }\nschema :Q as { l: :List(:D) max 1 }\nschema :S as { a: :P | :Q }\n"
+  root: "S"
+  encode:
+    type: ":S"
+    entries:
+      - key: "a"
+        value:
+          type: ":Map"
+          entries:
+            - key: "l"
+              value:
+                type: ":List"
+                items:
+                  - type: ":Map"
+                    entries:
+                      - key: "y"
+                        value:
+                          type: ":Boolean"
+                          value: true
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "07"
+```
+
+---
+
+## Test: a Map in an inner union with a key the first schema lacks
+
+An inner alternative selected by its kind stays part of the outer choice.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: union-map-unknown-inner
+schemaApi:
+  sources:
+    - "schema :C as { x: :Boolean optional }\nschema :D as { y: :Boolean }\nschema :P as { c: :List(:C) max 1 | :Nothing }\nschema :Q as { c: :List(:D) max 1 | :Nothing }\nschema :S as { a: :P | :Q }\n"
+  root: "S"
+  encode:
+    type: ":S"
+    entries:
+      - key: "a"
+        value:
+          type: ":Map"
+          entries:
+            - key: "c"
+              value:
+                type: ":List"
+                items:
+                  - type: ":Map"
+                    entries:
+                      - key: "y"
+                        value:
+                          type: ":Boolean"
+                          value: true
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "0d"
+```
+
+---
+
+## Test: a Message holds an optional argument
+
+An absent argument is passed as nothing.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: message-optional-omitted
+schemaApi:
+  sources:
+    - "message O(a: :Boolean, b: :Text max 2 optional)\n"
+  root: "O"
+  encode:
+    type: ":Message"
+    message:
+      name: "O"
+      args:
+        - name: "a"
+          value:
+            type: ":Boolean"
+            value: true
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    error:
+      code: "wire.missingField"
+      path: "b"
+```
+
+---
+
+## Test: Dice, lists and absent fields in a dump
+
+Lists and Dice show their count, and each element follows.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: dump-lists
+schemaApi:
+  sources:
+    - "schema :S as { d: :Dice max 3 between 1 and 6, o: :Boolean optional, l: :List(:Tag(#a, #b)) max 2 }\n"
+  root: "S"
+  dump: "5501"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  dump:
+    text: "d bit=0 width=2 value=count=1\nd[] bit=2 width=3 value=6\no bit=5 width=1 value=absent\nl bit=6 width=2 value=count=1\nl[] bit=8 width=1 value=#b index=1\nbytes 2\n"
+    valid: true
+```
+
+---
+
+## Test: a presence bit and Nothing in a dump
+
+The width includes the presence bit, and a Nothing alternative has no line of its own.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: dump-presence
+schemaApi:
+  sources:
+    - "schema :S as { l: :List(:Boolean) max 1 optional, u: :Boolean | :Nothing }\n"
+  root: "S"
+  dump: "05"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  dump:
+    text: "l bit=0 width=2 value=count=0\nu bit=2 width=1 value=Nothing index=1\nbytes 1\n"
+    valid: true
+```
+
+---
+
+## Test: a union in a dump
+
+The union names its alternative.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: union-dump
+schemaApi:
+  sources:
+    - "schema :S as { a: :Text max 1 | :Tag(#x, #y) }\n"
+  root: "S"
+  dump: "03"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  dump:
+    text: "a bit=0 width=1 value=Tag index=1\na:Tag bit=1 width=1 value=#y index=1\nbytes 1\n"
+    valid: true
+```
+
+---
+
+## Test: Dice with a maximum and a range
+
+The rolls are written in descending order, whatever order they came in.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: dice-range
+schemaApi:
+  sources:
+    - "schema :S as { d: :Dice max 3 between 1 and 6 }\n"
+  root: "S"
+  encode:
+    type: ":S"
+    entries:
+      - key: "d"
+        value:
+          type: ":Dice"
+          rolls: [3, 6, 1]
+  decode: "5700"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  canonical: "gess1\nschema S\nfield d Dice max 3 between 1e0 6e0\n"
+  encoded:
+    bytes: "5700"
+  decoded:
+    value:
+      type: ":S"
+      entries:
+        - key: "d"
+          value:
+            type: ":Dice"
+            rolls: [6, 3, 1]
+    byteCount: 2
+```
+
+---
+
+## Test: Dice decoded in any order
+
+Creating the value sorts the rolls.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: dice-any-order
+schemaApi:
+  sources:
+    - "schema :S as { d: :Dice max 2 between 1 and 6 }\n"
+  root: "S"
+  decode: "6a"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  decoded:
+    value:
+      type: ":S"
+      entries:
+        - key: "d"
+          value:
+            type: ":Dice"
+            rolls: [4, 3]
+    byteCount: 1
+```
+
+---
+
+## Test: Dice without a range
+
+A roll takes 31 bits, as a positive Int32.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: dice-no-range
+schemaApi:
+  sources:
+    - "schema :S as { d: :Dice max 1 }\n"
+  root: "S"
+  encode:
+    type: ":S"
+    entries:
+      - key: "d"
+        value:
+          type: ":Dice"
+          rolls: [7]
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "0d000000"
+```
+
+---
+
+## Test: too many rolls
+
+The maximum counts rolls.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: dice-too-long
+schemaApi:
+  sources:
+    - "schema :S as { d: :Dice max 1 between 1 and 6 }\n"
+  root: "S"
+  encode:
+    type: ":S"
+    entries:
+      - key: "d"
+        value:
+          type: ":Dice"
+          rolls: [2, 1]
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    error:
+      code: "wire.tooLong"
+      path: "d"
+```
+
+---
+
+## Test: a roll outside the range
+
+Nothing is clamped.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: dice-out-of-range
+schemaApi:
+  sources:
+    - "schema :S as { d: :Dice max 1 between 1 and 6 }\n"
+  root: "S"
+  encode:
+    type: ":S"
+    entries:
+      - key: "d"
+        value:
+          type: ":Dice"
+          rolls: [7]
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    error:
+      code: "wire.outOfRange"
+      path: "d[]"
+```
+
+---
+
+## Test: a roll index outside the range
+
+Data from a peer is untrusted.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: dice-invalid-index
+schemaApi:
+  sources:
+    - "schema :S as { d: :Dice max 1 between 1 and 6 }\n"
+  root: "S"
+  decode: "0f"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  decoded:
+    error:
+      code: "wire.invalidIndex"
+      path: "d[]"
+```
+
+---
+
+## Test: Dice without a maximum cannot be bound for encoding
+
+The error has its stable code and position.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: notencodable-dice
+schemaApi:
+  sources:
+    - "schema :S as { d: :Dice between 1 and 6 }\n"
+  root: "S"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.notEncodable"
+    line: 1
+    column: 19
+```
+
+---
+
+## Test: a Dice range below one
+
+A roll is positive.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-dice-bound
+schemaApi:
+  sources:
+    - "schema :S as { d: :Dice max 1 between 0 and 6 }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidBound"
+    line: 1
+    column: 19
+```
+
+---
+
+## Test: a Dice range beyond Int32
+
+A roll is a positive Int32.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-dice-upper
+schemaApi:
+  sources:
+    - "schema :S as { d: :Dice max 1 between 1 and 2147483648 }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidBound"
+    line: 1
+    column: 19
+```
+
+---
+
+## Test: Dice with a step
+
+A Dice has only a range.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-dice-step
+schemaApi:
+  sources:
+    - "schema :S as { d: :Dice max 1 between 1 and 6 step 1 }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidConstraint"
+    line: 1
+    column: 19
+```
+
+---
+
+## Test: a document with Dice within its limits
+
+Documents check the same limits.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: document-dice
+schemaApi:
+  sources:
+    - "schema :S as { d: :Dice max 2 between 1 and 6 }\n"
+  document: ":Schema(:S)\nd: :Dice[6, 1]\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  document:
+    ok: true
+```
+
+---
+
+## Test: a document with too many rolls
+
+The error is positioned at the value.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: document-dice-long
+schemaApi:
+  sources:
+    - "schema :S as { d: :Dice max 1 between 1 and 6 }\n"
+  document: ":Schema(:S)\nd: :Dice[6, 1]\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  document:
+    error:
+      code: "document.outOfRange"
+      line: 2
+      column: 4
+```
+
+---
+
+## Test: a document with a roll outside the range
+
+The error is positioned at the value.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: document-dice-range
+schemaApi:
+  sources:
+    - "schema :S as { d: :Dice max 2 between 1 and 6 }\n"
+  document: ":Schema(:S)\nd: :Dice[7]\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  document:
+    error:
+      code: "document.outOfRange"
+      line: 2
+      column: 4
+```
+
+---
+
+## Test: Nothing as a list element
+
+The element is only its index.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: union-list-nothing
+schemaApi:
+  sources:
+    - "schema :S as { l: :List(:Text max 1 | :Nothing) max 2 }\n"
+  root: "S"
+  encode:
+    type: ":S"
+    entries:
+      - key: "l"
+        value:
+          type: ":List"
+          items:
+            - type: ":Nothing"
+            - type: ":Text"
+              value: "a"
+  decode: "360c"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "360c"
+  decoded:
+    value:
+      type: ":S"
+      entries:
+        - key: "l"
+          value:
+            type: ":List"
+            items:
+              - type: ":Nothing"
+              - type: ":Text"
+                value: "a"
+    byteCount: 2
+```
+
+---
+
+## Test: a schema alternative without fields
+
+The next field comes behind the union.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: union-empty-schema
+schemaApi:
+  sources:
+    - "schema :E as { }\nschema :S as { a: :E | :Text max 1, b: :Boolean }\n"
+  root: "S"
+  encode:
+    type: ":S"
+    entries:
+      - key: "a"
+        value:
+          type: ":E"
+          entries: []
+      - key: "b"
+        value:
+          type: ":Boolean"
+          value: true
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "02"
+```
+
+---
+
+## Test: a list as an alternative in a list
+
+Both lists continue correctly when the inner one ends.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: union-list-in-list
+schemaApi:
+  sources:
+    - "schema :S as { l: :List(:List(:Boolean) max 2 | :Text max 1) max 2 }\n"
+  root: "S"
+  encode:
+    type: ":S"
+    entries:
+      - key: "l"
+        value:
+          type: ":List"
+          items:
+            - type: ":List"
+              items:
+                - type: ":Boolean"
+                  value: true
+            - type: ":Text"
+              value: ""
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "6a"
+```
+
+---
+
+## Test: a union in a referenced schema
+
+The next field of the outer schema follows.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: union-in-reference
+schemaApi:
+  sources:
+    - "schema :U as { a: :Boolean, c: :Text max 1 | :Boolean }\nschema :S as { u: :U, z: :Boolean }\n"
+  root: "S"
+  encode:
+    type: ":S"
+    entries:
+      - key: "u"
+        value:
+          type: ":U"
+          entries:
+            - key: "a"
+              value:
+                type: ":Boolean"
+                value: true
+            - key: "c"
+              value:
+                type: ":Boolean"
+                value: true
+      - key: "z"
+        value:
+          type: ":Boolean"
+          value: true
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "0f"
+```
+
+---
+
+## Test: a union at the end of an alternative
+
+The inner union continues behind the outer one.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: union-in-union
+schemaApi:
+  sources:
+    - "schema :U as { c: :Text max 1 | :Boolean }\nschema :S as { a: :U | :Text max 1, z: :Boolean }\n"
+  root: "S"
+  encode:
+    type: ":S"
+    entries:
+      - key: "a"
+        value:
+          type: ":U"
+          entries:
+            - key: "c"
+              value:
+                type: ":Boolean"
+                value: true
+      - key: "z"
+        value:
+          type: ":Boolean"
+          value: true
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "0e"
+```
+
+---
+
+## Test: a Map that fits no schema alternative
+
+The last schema reports why.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: union-map-error
+schemaApi:
+  sources:
+    - "schema :P as { x: :Number integer between 0 and 1 }\nschema :S as { a: :P | :Text max 1 }\n"
+  root: "S"
+  encode:
+    type: ":S"
+    entries:
+      - key: "a"
+        value:
+          type: ":Map"
+          entries:
+            - key: "x"
+              value:
+                type: ":Number.int64"
+                value: "5"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    error:
+      code: "wire.outOfRange"
+      path: "a:P.x"
+```
+
+---
+
+## Test: a Map with too small a buffer
+
+A full buffer is no reason to try the next schema.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: union-map-buffer
+schemaApi:
+  sources:
+    - "schema :P as { x: :Number }\nschema :Q as { y: :Number optional }\nschema :S as { a: :P | :Q }\n"
+  root: "S"
+  encode:
+    type: ":S"
+    entries:
+      - key: "a"
+        value:
+          type: ":Map"
+          entries:
+            - key: "x"
+              value:
+                type: ":Number.binary64"
+                value: "1.5"
+  encodeBuffer: 1
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    error:
+      code: "wire.bufferTooSmall"
+```
+
+---
+
+## Test: an optional union with Nothing
+
+Nothing would have two encodings.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-union-optional-nothing
+schemaApi:
+  sources:
+    - "schema :S as { a: :Text max 2 | :Nothing optional }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidUnion"
+    line: 1
+    column: 16
+```
+
+---
+
+## Test: a document may leave out a field with a Nothing alternative
+
+It counts as nothing, as in a value.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: document-union-nothing-omitted
+schemaApi:
+  sources:
+    - "schema :S as { a: :Text max 2 | :Nothing, b: :Boolean }\n"
+  document: ":Schema(:S)\nb: true\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  document:
+    ok: true
+```
+
+---
+
+## Test: a document may not leave out another union
+
+Only a Nothing alternative or optional allows it.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: document-union-omitted
+schemaApi:
+  sources:
+    - "schema :S as { a: :Text max 2 | :Boolean, b: :Boolean }\n"
+  document: ":Schema(:S)\nb: true\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  document:
+    error:
+      code: "document.missingField"
+      line: 1
+      column: 1
+```
+
+---
+
+## Test: the description of Dice
+
+Its limits are read-only data, like those of a number.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: describe-dice
+schemaApi:
+  sources:
+    - "schema :S as { d: :Dice max 3 between 1 and 6, e: :Dice }\n"
+  root: "S"
+  bind: false
+  describe: true
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  description:
+    name: "S"
+    kind: "Schema"
+    fields:
+      - name: "d"
+        alternatives:
+          - kind: "Dice"
+            lower: "1e0"
+            upper: "6e0"
+            max: 3
+      - name: "e"
+        alternatives:
+          - kind: "Dice"
 ```
 
 ---
@@ -4334,7 +6142,7 @@ gesBlock: case
 id: error-set-too-large
 schemaApi:
   sources:
-    - "message A(t: :Text max 1048573, a: :Boolean, b: :Boolean, c: :Boolean)\nmessage B()\nmessages :S as (A, B)\n"
+    - "message A(t: :Text max 1048573, a: :Boolean, b: :Boolean, c: :Boolean, d: :Boolean)\nmessage B()\nmessages :S as (A, B)\n"
   root: "S"
 ```
 
@@ -4486,7 +6294,7 @@ schemaApi:
 ```yaml
 gesBlock: expect
 schema:
-  maxByteCount: 17
+  maxByteCount: 16
 ```
 
 ---

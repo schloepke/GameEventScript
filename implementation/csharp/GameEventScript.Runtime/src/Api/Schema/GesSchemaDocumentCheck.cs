@@ -60,7 +60,7 @@ internal sealed class GesSchemaDocumentCheck
         }
 
         foreach (var field in schema.Fields)
-            if (!seen.Contains(field.Name) && field.Marker != GesSchemaFieldMarker.Optional) throw new Failure(MissingField, start);
+            if (!seen.Contains(field.Name) && field.Marker != GesSchemaFieldMarker.Optional && !Array.Exists(field.Alternatives, alternative => alternative.Kind == GesSchemaTypeKind.Nothing)) throw new Failure(MissingField, start);
     }
 
     private void Union(GesResolvedField field, GesDocumentNode value)
@@ -132,7 +132,11 @@ internal sealed class GesSchemaDocumentCheck
             case GesSchemaTypeKind.Map: Require(value, value.Kind == GesDocumentNodeKind.Map); break;
             case GesSchemaTypeKind.Range: Require(value, IsForm(value, "range")); break;
             case GesSchemaTypeKind.Series: Require(value, IsForm(value, "series")); break;
-            case GesSchemaTypeKind.Dice: Require(value, value.Kind == GesDocumentNodeKind.Dice); break;
+            case GesSchemaTypeKind.Dice:
+                Require(value, value.Kind == GesDocumentNodeKind.Dice);
+                if (type.Max is { } diceMax && value.Rolls.Length > diceMax) throw new Failure(OutOfRange, value.Start);
+                foreach (var roll in value.Rolls) Numeric(type.Constraints, true, roll, roll, value);
+                break;
             case GesSchemaTypeKind.Message: Require(value, value.Kind == GesDocumentNodeKind.Message || IsForm(value, "message")); break;
             case GesSchemaTypeKind.Handler: Require(value, value.Kind == GesDocumentNodeKind.Handler || IsForm(value, "handler")); break;
             default: Require(value, value.Kind == GesDocumentNodeKind.Nothing); break;

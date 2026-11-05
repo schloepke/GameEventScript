@@ -258,6 +258,9 @@ final class GesFileScope {
             default:
                 let kind: GesSchemaKind = declaration.kind == .schema ? .schema : declaration.kind == .message ? .message : .messages
                 let resolved = GesResolvedDeclaration(kind: kind, name: declaration.name, offset: declaration.offset, scope: self, syntax: declaration, tags: declaration.tags)
+                if GesSchemaTypeNames.isBuiltIn(declaration.name) {
+                    throw error(Code.duplicateName, declaration.offset, "'\(declaration.name)' is a built-in type.")
+                }
                 if all[declaration.name] != nil { throw error(Code.duplicateName, declaration.offset, "'\(declaration.name)' is declared twice.") }
                 all[declaration.name] = resolved
                 ordered.append(resolved)
@@ -299,6 +302,9 @@ final class GesFileScope {
                 throw error(Code.invalidKey, field.offset, "A key is the first field of a schema, an integer or a Tag with a set, without delta within or a union.")
             }
         }
+        if field.marker == .optional && alternatives.count > 1 && alternatives.contains(where: { $0.kind == .nothing }) {
+            throw error(Code.invalidUnion, field.offset, "A union with Nothing already holds an absent value; it is not optional as well.")
+        }
         return GesResolvedField(name: field.name, unlabeled: field.unlabeled, alternatives: alternatives, marker: field.marker, offset: field.offset)
     }
 
@@ -311,7 +317,7 @@ final class GesFileScope {
             // The type name decides: a unit does not distinguish alternatives.
             let name = alternative.kind == .reference ? ":" + alternative.name : alternative.kind.rawValue
             if !seen.insert(name).inserted { throw error(Code.invalidUnion, alternative.offset, "A union repeats a type name; a unit does not distinguish alternatives.") }
-            if alternative.constraints.step != nil || alternative.constraints.delta != nil { throw error(Code.invalidUnion, alternative.offset, "A union alternative has no step or delta within.") }
+            if alternative.constraints.delta != nil { throw error(Code.invalidUnion, alternative.offset, "A union alternative has no delta within.") }
         }
         return result
     }
@@ -327,6 +333,9 @@ final class GesFileScope {
             for tag in tags where !seen.insert(tag).inserted { throw error(Code.duplicateName, type.offset, "Tag '#\(tag)' is listed twice.") }
         }
         if let max = type.max, max <= 0 { throw error(Code.invalidConstraint, type.offset, "A maximum is positive.") }
+        if type.kind == .dice && (type.constraints.integer || type.constraints.wrapping || type.constraints.step != nil || type.constraints.delta != nil) {
+            throw error(Code.invalidConstraint, type.offset, "A Dice has only a range.")
+        }
         var axes: [GesResolvedAxis]?
         if let written = type.axes {
             var seen: Set<String> = []
@@ -339,13 +348,15 @@ final class GesFileScope {
         }
         var element: [GesResolvedType]?
         if let written = type.element { element = try resolveUnion(written, all) }
+        let constraints = try resolveConstraints(type.constraints, type.unit, type.kind == .percentage, type.offset)
+        if type.kind == .dice { try GesSchemaBinder.checkDice(self, constraints, type.offset, nil) }
         return GesResolvedType(
             kind: type.kind,
             unit: type.unit,
             tags: type.tags,
             max: type.max,
             element: element,
-            constraints: try resolveConstraints(type.constraints, type.unit, type.kind == .percentage, type.offset),
+            constraints: constraints,
             axes: axes,
             reference: reference,
             referenceName: type.name,
@@ -506,6 +517,10 @@ enum GesSchemaCanonical {
         case .text:
             output += "Text"
             if let max = type.max { output += " max \(max)" }
+        case .dice:
+            output += "Dice"
+            if let max = type.max { output += " max \(max)" }
+            writeConstraints(type.constraints, &output)
         case .list:
             output += "List"
             if let element = type.element {

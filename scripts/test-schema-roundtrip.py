@@ -23,7 +23,12 @@ from checks.numeric_checks import canonical_text, number as parsed_number  # noq
 
 REPORTS = ROOT / 'artifacts/swift/schema-roundtrip'
 SEED = 20261104
-SCHEMA = """schema :Sample as {
+SCHEMA = """schema :Inner as {
+  v: :Number integer between 0 and 3
+  c: :Text max 1 | :Boolean
+}
+
+schema :Sample as {
   id: :Number integer between -5 and 65530 key
   x: :Quantity(m) between -100m and 5000m step 1cm
   y: :Quantity(m) between 0m and 3km step 5cm
@@ -35,6 +40,13 @@ SCHEMA = """schema :Sample as {
   state: :Tag(#a, #b, #c)
   label: :Text max 6 optional
   items: :List(:Number integer between 0 and 7) max 3
+  choice: :Number integer between 0 and 7 | :Text max 1 | :Nothing
+  rolls: :Dice max 3 between 1 and 6
+  mixed: :List(:Boolean | :Nothing) max 2
+  pick: :Inner | :Text max 1
+  boxed: :List(:Boolean) max 2 | :Boolean
+  maybe: :Boolean | :Tag(#a, #b) optional
+  tail: :Boolean
 }
 """
 
@@ -123,12 +135,89 @@ def sample(rng):
     bits.put(len(items), 2)
     for item in items:
         bits.put(item, 3)
+    choice = rng.choice((None, 'a', rng.randrange(8)))
+    if isinstance(choice, int):
+        bits.put(0, 2)
+        bits.put(choice, 3)
+    elif choice is None:
+        bits.put(2, 2)
+    else:
+        bits.put(1, 2)
+        bits.put(1, 1)
+        bits.put(ord(choice), 8)
+    rolls = sorted((rng.randrange(1, 7) for _ in range(rng.randrange(4))), reverse=True)
+    bits.put(len(rolls), 2)
+    for roll in rolls:
+        bits.put(roll - 1, 3)
+    mixed = [rng.choice((None, False, True)) for _ in range(rng.randrange(3))]
+    bits.put(len(mixed), 2)
+    for item in mixed:
+        if item is None:
+            bits.put(1, 1)
+        else:
+            bits.put(0, 1)
+            bits.put(1 if item else 0, 1)
+    if rng.random() < 0.5:
+        inner, inner_text = rng.randrange(4), rng.choice(('a', False, True))
+        bits.put(0, 1)
+        bits.put(inner, 2)
+        if isinstance(inner_text, str):
+            bits.put(0, 1)
+            bits.put(1, 1)
+            bits.put(ord(inner_text), 8)
+            inner_value = {'type': ':Text', 'value': inner_text}
+        else:
+            bits.put(1, 1)
+            bits.put(1 if inner_text else 0, 1)
+            inner_value = {'type': ':Boolean', 'value': inner_text}
+        pick = {'type': ':Inner', 'entries': [{'key': 'c', 'value': inner_value}, {'key': 'v', 'value': number(inner)}]}
+    else:
+        picked = rng.choice(('', 'a'))
+        bits.put(1, 1)
+        bits.put(len(picked), 1)
+        for byte in picked.encode():
+            bits.put(byte, 8)
+        pick = {'type': ':Text', 'value': picked}
+    if rng.random() < 0.5:
+        flags = [rng.random() < 0.5 for _ in range(rng.randrange(3))]
+        bits.put(0, 1)
+        bits.put(len(flags), 2)
+        for item in flags:
+            bits.put(1 if item else 0, 1)
+        boxed = {'type': ':List', 'items': [{'type': ':Boolean', 'value': item} for item in flags]}
+    else:
+        single = rng.random() < 0.5
+        bits.put(1, 1)
+        bits.put(1 if single else 0, 1)
+        boxed = {'type': ':Boolean', 'value': single}
+    maybe_kind = rng.randrange(3)
+    if maybe_kind == 0:
+        bits.put(0, 1)
+        maybe = {'type': ':Nothing'}
+    elif maybe_kind == 1:
+        single = rng.random() < 0.5
+        bits.put(1, 1)
+        bits.put(0, 1)
+        bits.put(1 if single else 0, 1)
+        maybe = {'type': ':Boolean', 'value': single}
+    else:
+        tag = rng.randrange(2)
+        bits.put(1, 1)
+        bits.put(1, 1)
+        bits.put(tag, 1)
+        maybe = {'type': ':Tag', 'value': 'ab'[tag]}
+    tail = rng.random() < 0.5
+    bits.put(1 if tail else 0, 1)
     fields = {
         'id': number(identifier), 'x': quantity(x, 'meter'), 'y': quantity(y, 'meter'), 'bearing': quantity(bearing, 'degree'),
         'wide': number(wide), 'ratio': {'type': ':Percentage', 'value': text(ratio) if ratio else '0'}, 'raw': number(raw),
         'flag': {'type': ':Boolean', 'value': flag}, 'state': {'type': ':Tag', 'value': 'abc'[state]},
         'label': {'type': ':Nothing'} if label is None else {'type': ':Text', 'value': label},
         'items': {'type': ':List', 'items': [number(item) for item in items]},
+        'choice': {'type': ':Nothing'} if choice is None else {'type': ':Text', 'value': choice} if isinstance(choice, str) else number(choice),
+        'rolls': {'type': ':Dice', 'rolls': rolls},
+        'mixed': {'type': ':List', 'items': [{'type': ':Nothing'} if item is None else {'type': ':Boolean', 'value': item} for item in mixed]},
+        'pick': pick, 'boxed': boxed, 'maybe': maybe, 'tail': {'type': ':Boolean', 'value': tail},
     }
     entries = [{'key': key, 'value': fields[key]} for key in sorted(fields)]
     return {'type': ':Sample', 'entries': entries}, bits.hex()

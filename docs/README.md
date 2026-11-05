@@ -32,7 +32,7 @@ Every contract area has exactly one owning document. Other documents link to tha
 | Public API | [Public API](../specs/PublicApi.md) | Language-neutral API responsibilities and per-language mappings | Normative |
 | Product JSON | [Message format](../specs/MessageFormat.md) | Optional versioned message/value transport and external snapshots | Normative |
 | GES documents | [Documents](../specs/Documents.md) | `.gesd` data files: schema header, strict reading, error positions and printing | Normative |
-| GES schemas | [Schemas](../specs/Schemas.md) | `.gess` data formats, compact binary encoding, canonical hash and planned deltas | Normative |
+| GES schemas | [Schemas](../specs/Schemas.md) | `.gess` data formats, compact binary encoding and canonical hash | Normative |
 | Host runtime | [Host runtime](../specs/HostRuntime.md) | Host lifecycle, dispatch, execution, context, and outbound behavior | Normative |
 | Program model | [Program model](../specs/ProgramModel.md) | Immutable transport data, ownership, validation, and linking boundary | Normative |
 | Bytecode | [Bytecode](../specs/Bytecode.md) | Instruction model, opcode semantics, operands, and control flow | Normative |
@@ -70,6 +70,8 @@ Guides explain usage and may simplify presentation. The linked normative specifi
 | [Guide index](guide/README.md) | Tutorials, explanations and learning examples. |
 | [C# embedding](guide/CSharp.md) | Embed GES in a C# application. |
 | [Swift embedding](guide/Swift.md) | Embed GES in a Swift application. |
+| [Schemas](guide/Schemas.md) | Describe data formats step by step, encode them compactly and check documents. |
+| [Schema deltas plan](plans/SchemaDeltas.md) | Design of the planned deltas; not implemented and not normative. |
 | [Standalone CLI downloads](guide/distribution/Tools.md) | C# and Swift archives, installation, checksums and manual release workflow. |
 | [Editor packages and syntax highlighting](../tools/editors/README.md) | Editor integrations and downloadable JSON and classic XML grammars for `.ges` and `.gesa`. |
 | [C# implementation](../implementation/csharp/README.md) | Library boundaries, solution, toolchain, build/test commands and Compiler/Runtime integration. |

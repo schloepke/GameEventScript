@@ -84,6 +84,13 @@ internal static class GesSchemaNumbers
 
     internal static double Value(in GesSchemaNode node, ulong index) => (((long)index + node.Lower) * node.P) / node.SBinary;
 
+    internal static int Alternative(GesSchemaNode[] nodes, int union, int alternative)
+    {
+        var index = union + 1;
+        for (var skipped = 0; skipped < alternative; skipped++) index = nodes[index].Next;
+        return index;
+    }
+
     internal static bool IsValidUtf8(ReadOnlySpan<byte> bytes)
     {
         var index = 0;
@@ -168,7 +175,7 @@ public ref struct GesSchemaWriter
     {
         ref readonly var node = ref Enter(field, GesSchemaNodeKind.Boolean);
         Put(value ? 1UL : 0UL, 1);
-        Leave(node.Next);
+        Leave(node.After);
     }
 
     /// <summary>Writes an Int64 to a numeric field.</summary>
@@ -191,7 +198,7 @@ public ref struct GesSchemaWriter
 
                 Presence(in node);
                 Put(index, node.Width);
-                Leave(node.Next);
+                Leave(node.After);
                 break;
             case GesSchemaNodeKind.Quantized:
                 if (value is >= (1L << 53) or <= -(1L << 53)) throw new GesWireException(GesWireException.OutOfRange, node.Path);
@@ -219,14 +226,14 @@ public ref struct GesSchemaWriter
                 var index = GesSchemaNumbers.Index(in node, value);
                 Presence(in node);
                 Put(index, node.Width);
-                Leave(node.Next);
+                Leave(node.After);
                 break;
             case GesSchemaNodeKind.Float:
                 if (double.IsNaN(value)) throw new GesWireException(GesWireException.NotRepresentable, node.Path);
                 if (node.HasRange && (value < node.LowerValue || value > node.UpperValue)) throw new GesWireException(GesWireException.OutOfRange, node.Path);
                 Presence(in node);
                 Put((ulong)BitConverter.DoubleToInt64Bits(value == 0 ? 0d : value), 64);
-                Leave(node.Next);
+                Leave(node.After);
                 break;
             case GesSchemaNodeKind.Integer:
                 if (value != Math.Floor(value) || value is >= 9223372036854775808d or < -9223372036854775808d || double.IsNaN(value))
@@ -248,7 +255,7 @@ public ref struct GesSchemaWriter
         if (index > node.MaxIndex) throw new GesWireException(GesWireException.OutOfRange, node.Path);
         Presence(in node);
         Put(index, node.Width);
-        Leave(node.Next);
+        Leave(node.After);
     }
 
     /// <summary>Writes a tag of a closed set by its index in declared order.</summary>
@@ -261,7 +268,7 @@ public ref struct GesSchemaWriter
         if (tagIndex < 0 || (ulong)tagIndex > node.MaxIndex) throw new GesWireException(GesWireException.UnknownTag, node.Path);
         Presence(in node);
         Put((ulong)tagIndex, node.Width);
-        Leave(node.Next);
+        Leave(node.After);
     }
 
     /// <summary>Writes a Text from its UTF-8 bytes.</summary>
@@ -276,7 +283,7 @@ public ref struct GesSchemaWriter
         Presence(in node);
         Put((ulong)utf8.Length, node.Width);
         foreach (var value in utf8) Put(value, 8);
-        Leave(node.Next);
+        Leave(node.After);
     }
 
     /// <summary>Starts a list with its element count; the elements follow.</summary>
@@ -291,11 +298,11 @@ public ref struct GesSchemaWriter
         Put((ulong)count, node.Width);
         if (count == 0)
         {
-            Leave(node.Next);
+            Leave(node.After);
             return;
         }
 
-        _lists.Push(node.Next, field.Index + 1, count);
+        _lists.Push(node.After, field.Index + 1, count);
         _cursor = field.Index + 1;
     }
 
@@ -303,8 +310,23 @@ public ref struct GesSchemaWriter
     /// <param name="field">The field's handle.</param>
     public void BeginNested(GesSchemaField field)
     {
-        _ = ref Enter(field, GesSchemaNodeKind.Group);
-        Leave(field.Index + 1);
+        ref readonly var node = ref Enter(field, GesSchemaNodeKind.Group);
+        Leave(node.Next == field.Index + 1 ? node.After : field.Index + 1);
+    }
+
+    /// <summary>Selects an alternative of a union and writes its index; the alternative follows, unless it is <c>:Nothing</c>.</summary>
+    /// <param name="field">The union's handle.</param>
+    /// <param name="alternative">The alternative's index in declared order.</param>
+    public void SelectAlternative(GesSchemaField field, int alternative)
+    {
+        ref readonly var node = ref Current(field);
+        if (node.Kind != GesSchemaNodeKind.Union) throw new GesWireException(GesWireException.TypeMismatch, node.Path);
+        if (alternative < 0 || (ulong)alternative > node.MaxIndex) throw new GesWireException(GesWireException.OutOfRange, node.Path);
+        Presence(in node);
+        Put((ulong)alternative, node.Width);
+        var selected = GesSchemaNumbers.Alternative(_nodes, field.Index, alternative);
+        if (_nodes[selected].Kind == GesSchemaNodeKind.Nothing) Leave(_nodes[selected].After);
+        else _cursor = selected;
     }
 
     /// <summary>Marks an <c>optional</c> field as absent.</summary>
@@ -314,7 +336,7 @@ public ref struct GesSchemaWriter
         ref readonly var node = ref Current(field);
         if (!node.Optional) throw new GesWireException(GesWireException.MissingField, node.Path);
         Put(0, 1);
-        Leave(node.Next);
+        Leave(node.After);
     }
 
     /// <summary>Ends the record with padding to a byte boundary.</summary>
@@ -443,7 +465,7 @@ public ref struct GesSchemaReader
             return true;
         }
 
-        Leave(node.Next);
+        Leave(node.After);
         return false;
     }
 
@@ -454,7 +476,7 @@ public ref struct GesSchemaReader
     {
         ref readonly var node = ref Enter(field, GesSchemaNodeKind.Boolean);
         var value = Get(1, node.Path) == 1;
-        Leave(node.Next);
+        Leave(node.After);
         return value;
     }
 
@@ -466,7 +488,7 @@ public ref struct GesSchemaReader
         ref readonly var node = ref Enter(field, GesSchemaNodeKind.Integer);
         var index = Get(node.Width, node.Path);
         if (index > node.MaxIndex) throw new GesWireException(GesWireException.InvalidIndex, node.Path);
-        Leave(node.Next);
+        Leave(node.After);
         return node.HasRange ? (long)((ulong)node.Lower + index) : (long)index;
     }
 
@@ -480,7 +502,7 @@ public ref struct GesSchemaReader
         {
             case GesSchemaNodeKind.Quantized:
                 var index = EnteredIndex(in node);
-                Leave(node.Next);
+                Leave(node.After);
                 return GesSchemaNumbers.Value(in node, index);
             case GesSchemaNodeKind.Float:
                 RequirePresence(in node);
@@ -489,7 +511,7 @@ public ref struct GesSchemaReader
                 if (double.IsNaN(value) || bits == long.MinValue || (node.HasRange && double.IsInfinity(value)) || (node.HasRange && (value < node.LowerValue || value > node.UpperValue)))
                     throw new GesWireException(double.IsNaN(value) || bits == long.MinValue || double.IsInfinity(value) ? GesWireException.InvalidNumber : GesWireException.OutOfRange, node.Path);
                 _present = false;
-                Leave(node.Next);
+                Leave(node.After);
                 return value;
             case GesSchemaNodeKind.Integer:
                 return ReadInteger(field);
@@ -506,7 +528,7 @@ public ref struct GesSchemaReader
         ref readonly var node = ref Current(field);
         if (node.Kind is not (GesSchemaNodeKind.Integer or GesSchemaNodeKind.Quantized or GesSchemaNodeKind.Tag)) throw new GesWireException(GesWireException.TypeMismatch, node.Path);
         var index = EnteredIndex(in node);
-        Leave(node.Next);
+        Leave(node.After);
         return index;
     }
 
@@ -518,7 +540,7 @@ public ref struct GesSchemaReader
         ref readonly var node = ref Enter(field, GesSchemaNodeKind.Tag);
         var index = Get(node.Width, node.Path);
         if (index > node.MaxIndex) throw new GesWireException(GesWireException.InvalidIndex, node.Path);
-        Leave(node.Next);
+        Leave(node.After);
         return (int)index;
     }
 
@@ -553,7 +575,7 @@ public ref struct GesSchemaReader
     {
         for (var index = 0; index < destination.Length; index++) destination[index] = (byte)Get(8, node.Path);
         if (!GesSchemaNumbers.IsValidUtf8(destination)) throw new GesWireException(GesWireException.InvalidText, node.Path);
-        Leave(node.Next);
+        Leave(node.After);
     }
 
     /// <summary>Starts a list; its elements follow.</summary>
@@ -566,11 +588,11 @@ public ref struct GesSchemaReader
         if (count > (ulong)node.MaxCount) throw new GesWireException(GesWireException.InvalidCount, node.Path);
         if (count == 0)
         {
-            Leave(node.Next);
+            Leave(node.After);
             return 0;
         }
 
-        _lists.Push(node.Next, field.Index + 1, (long)count);
+        _lists.Push(node.After, field.Index + 1, (long)count);
         _cursor = field.Index + 1;
         return (int)count;
     }
@@ -579,8 +601,22 @@ public ref struct GesSchemaReader
     /// <param name="field">The field's handle.</param>
     public void BeginNested(GesSchemaField field)
     {
-        _ = ref Enter(field, GesSchemaNodeKind.Group);
-        Leave(field.Index + 1);
+        ref readonly var node = ref Enter(field, GesSchemaNodeKind.Group);
+        Leave(node.Next == field.Index + 1 ? node.After : field.Index + 1);
+    }
+
+    /// <summary>Reads which alternative of a union follows, and selects it. A <c>:Nothing</c> alternative is complete.</summary>
+    /// <param name="field">The union's handle.</param>
+    /// <returns>The alternative's index in declared order.</returns>
+    public int ReadAlternative(GesSchemaField field)
+    {
+        ref readonly var node = ref Enter(field, GesSchemaNodeKind.Union);
+        var index = Get(node.Width, node.Path);
+        if (index > node.MaxIndex) throw new GesWireException(GesWireException.InvalidIndex, node.Path);
+        var selected = GesSchemaNumbers.Alternative(_nodes, field.Index, (int)index);
+        if (_nodes[selected].Kind == GesSchemaNodeKind.Nothing) Leave(_nodes[selected].After);
+        else _cursor = selected;
+        return (int)index;
     }
 
     /// <summary>Ends the record and checks its padding.</summary>

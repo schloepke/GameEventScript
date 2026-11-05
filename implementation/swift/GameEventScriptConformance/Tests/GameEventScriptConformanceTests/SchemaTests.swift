@@ -44,7 +44,7 @@ final class SchemaTests: XCTestCase {
 
     func testWriterAndReaderMatchTheWorkedExample() throws {
         let schema = try bot()
-        XCTAssertEqual(schema.maxByteCount, 14)
+        XCTAssertEqual(schema.maxByteCount, 13)
         let (id, x, y, heading) = (schema.field("id")!, schema.field("x")!, schema.field("y")!, schema.field("heading")!)
         let (turret, radar, health) = (schema.field("turretBearing")!, schema.field("radarBearing")!, schema.field("health")!)
         let (firing, shielded, overheated) = (schema.field("firing")!, schema.field("shielded")!, schema.field("overheated")!)
@@ -181,5 +181,19 @@ final class SchemaTests: XCTestCase {
             XCTAssertTrue(try reader.readBoolean(next))
             XCTAssertEqual(try reader.finish(), length)
         }
+    }
+
+    func testAnInvalidAlternativeWritesNothing() throws {
+        let bound = try GesSchemaSet(parsing: "schema :S as { a: :Boolean | :Text max 1 optional }").schema("S").bind()
+        let (a, flag) = (bound.field("a")!, bound.field("a:Boolean")!)
+        var buffer = [UInt8](repeating: 0, count: 8)
+        try buffer.withUnsafeMutableBytes { bytes in
+            var writer = GesSchemaWriter(bound, into: bytes)
+            XCTAssertThrowsError(try writer.selectAlternative(a, 2))
+            try writer.selectAlternative(a, 0)
+            try writer.writeBoolean(flag, true)
+            XCTAssertEqual(try writer.finish(), 1)
+        }
+        XCTAssertEqual(buffer[0], 0b101)
     }
 }

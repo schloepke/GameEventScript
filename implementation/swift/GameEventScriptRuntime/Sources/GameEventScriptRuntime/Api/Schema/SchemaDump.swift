@@ -71,6 +71,12 @@ public enum GesSchemaDump {
                 try self.field(&reader, schema, index + 1, &output)
                 item += 1
             }
+        case .union:
+            let position = try reader.readAlternative(field)
+            let selected = GesSchemaNumbers.alternative(schema.nodes, index, position)
+            let alternative = schema.infos[selected].path
+            line("\(alternative[alternative.index(after: alternative.lastIndex(of: ":")!)...]) index=\(position)")
+            if schema.nodes[selected].kind != .nothing { try self.field(&reader, schema, selected, &output) }
         case .group:
             try reader.beginNested(field)
             try walk(&reader, schema, index + 1, node.next, &output)

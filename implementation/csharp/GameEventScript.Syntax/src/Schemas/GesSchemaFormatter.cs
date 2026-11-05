@@ -127,6 +127,10 @@ internal static class GesSchemaFormatter
 
                 if (type.Max is { } listMax) builder.Append(" max ").Append(listMax);
                 return;
+            case GesSchemaTypeKind.Dice:
+                builder.Append(":Dice");
+                if (type.Max is { } diceMax) builder.Append(" max ").Append(diceMax);
+                break;
             case GesSchemaTypeKind.Reference:
                 builder.Append(':').Append(type.Name);
                 return;

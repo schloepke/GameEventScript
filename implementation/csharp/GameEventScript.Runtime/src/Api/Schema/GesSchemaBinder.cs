@@ -89,10 +89,13 @@ internal enum GesSchemaNodeKind : byte
     Tag,
     Text,
     List,
-    Group
+    Group,
+    Union,
+    Nothing
 }
 
-// One field of a bound layout. A subtree occupies consecutive nodes, and Next is the first node after it.
+// One field of a bound layout. A subtree occupies consecutive nodes, and Next is the first node after it. After is where
+// writing goes on: the same, except that the end of a union alternative continues behind the union.
 internal struct GesSchemaNode
 {
     internal GesSchemaNodeKind Kind;
@@ -103,6 +106,7 @@ internal struct GesSchemaNode
     internal bool IsTagBit;
     internal int Width;
     internal int Next;
+    internal int After;
     internal string Name;
     internal string Path;
     internal string[]? Tags;
@@ -116,10 +120,6 @@ internal struct GesSchemaNode
     internal double LowerValue;
     internal double UpperValue;
     internal long MaxCount;
-
-    // A delta range in indices with the width of its payload; DeltaWidth is 0 without one.
-    internal ulong DeltaRange;
-    internal int DeltaWidth;
 
     // What a value of this node is, for the value path.
     internal GesSchemaTypeKind ValueKind;
@@ -179,7 +179,7 @@ public sealed class GesBoundSchema
     internal long MaxBitCount { get; init; }
 
     /// <summary>Gets the handle of a field; resolve it once and reuse it.</summary>
-    /// <param name="path">The path, such as <c>x</c>, <c>position.x</c>, <c>units[]</c>, <c>units[].name</c> or <c>#critical</c>.</param>
+    /// <param name="path">The path, such as <c>x</c>, <c>position.x</c>, <c>units[]</c>, <c>units[].name</c>, <c>#critical</c>, or <c>facing:Tag</c> for a union alternative.</param>
     /// <returns>The handle.</returns>
     /// <exception cref="ArgumentException">The field does not exist.</exception>
     public GesSchemaField Field(string path)
@@ -447,67 +447,103 @@ internal static class GesSchemaBinder
         foreach (var tag in declaration.Tags)
             inner.Nodes.Add(new GesSchemaNode { Kind = GesSchemaNodeKind.Boolean, IsTagBit = true, Width = 1, Name = tag, Path = "#" + tag, Next = inner.Nodes.Count + 1, SchemaName = "" });
         var nodes = inner.Nodes.ToArray();
-        var (full, delta) = Cost(nodes, 0, nodes.Length, top: true);
-        var bits = Math.Max(full, delta);
+        Seal(nodes);
+        var bits = Cost(nodes, 0, nodes.Length);
         if (bits > MaximumByteCount * 8) throw declaration.Scope.Error(Code.TooLarge, declaration.Offset, $"The largest encoding of '{declaration.Name}' exceeds {MaximumByteCount} bytes.");
         var labels = new string[declaration.Fields.Length];
         for (var index = 0; index < labels.Length; index++) labels[index] = declaration.Fields[index].Unlabeled ? "_" : declaration.Fields[index].Name;
         return new GesBoundSchema(declaration.Public, declaration.Name, declaration.Kind, nodes, [], 0, (bits + 7) / 8, hash, bindingHash) { Labels = labels, MaxBitCount = bits };
     }
 
-    // The largest full and delta encoding in bits. Sums stop growing beyond the limit, so nothing overflows.
-    private static (long Full, long Delta) Cost(GesSchemaNode[] nodes, int start, int end, bool top)
+    private static void Seal(GesSchemaNode[] nodes)
+    {
+        for (var index = 0; index < nodes.Length; index++) nodes[index].After = nodes[index].Next;
+        for (var union = 0; union < nodes.Length; union++)
+        {
+            if (nodes[union].Kind != GesSchemaNodeKind.Union) continue;
+            for (var alternative = union + 1; alternative < nodes[union].Next; alternative = nodes[alternative].Next)
+            {
+                var end = nodes[alternative].Next;
+                for (var index = alternative; index < end; index++)
+                    if (nodes[index].After == end) nodes[index].After = nodes[union].After;
+            }
+        }
+    }
+
+    // The largest encoding in bits. Sums stop growing beyond the limit, so nothing overflows.
+    private static long Cost(GesSchemaNode[] nodes, int start, int end)
     {
         var limit = MaximumByteCount * 8 + 1;
         long full = 0;
-        long delta = 0;
         for (var index = start; index < end; index = nodes[index].Next)
         {
             ref readonly var node = ref nodes[index];
-            long fieldFull;
-            long fieldDelta;
+            long field;
             switch (node.Kind)
             {
                 case GesSchemaNodeKind.Boolean:
-                    fieldFull = 1;
-                    fieldDelta = 0;
+                    field = 1;
                     break;
                 case GesSchemaNodeKind.Text:
-                    fieldFull = node.Width + Math.Min(node.MaxCount, limit) * 8;
-                    fieldDelta = fieldFull;
+                    field = node.Width + Math.Min(node.MaxCount, limit) * 8;
                     break;
                 case GesSchemaNodeKind.List:
-                    var element = Cost(nodes, index + 1, node.Next, top: false).Full;
-                    fieldFull = node.Width + (element == 0 ? 0 : Math.Min(node.MaxCount, limit / Math.Max(element, 1) + 1) * element);
-                    fieldDelta = fieldFull;
+                    var element = Cost(nodes, index + 1, node.Next);
+                    field = node.Width + (element == 0 ? 0 : Math.Min(node.MaxCount, limit / Math.Max(element, 1) + 1) * element);
                     break;
                 case GesSchemaNodeKind.Group:
-                    (fieldFull, fieldDelta) = Cost(nodes, index + 1, node.Next, top: false);
+                    field = Cost(nodes, index + 1, node.Next);
+                    break;
+                case GesSchemaNodeKind.Union:
+                    long largest = 0;
+                    for (var alternative = index + 1; alternative < node.Next; alternative = nodes[alternative].Next)
+                        largest = Math.Max(largest, Cost(nodes, alternative, nodes[alternative].Next));
+                    field = node.Width + largest;
                     break;
                 default:
-                    fieldFull = node.Width;
-                    fieldDelta = node.DeltaWidth > 0 ? 1 + Math.Max(node.DeltaWidth, node.Width) : node.Width;
+                    field = node.Width;
                     break;
             }
 
-            if (node.Optional)
-            {
-                fieldDelta = 1 + Math.Max(fieldDelta, fieldFull);
-                fieldFull++;
-            }
-
-            full = Math.Min(full + fieldFull, limit);
-            delta = Math.Min(delta + (node.Key && top ? fieldFull : 1 + fieldDelta), limit);
+            if (node.Optional) field++;
+            full = Math.Min(full + field, limit);
         }
 
-        return (full, delta);
+        return full;
     }
 
     private static void AddField(Build build, GesFileScope scope, GesResolvedField field, string prefix, int lists, bool top)
     {
-        if (field.Alternatives.Length != 1) throw scope.Error(Code.NotEncodable, field.Offset, $"Field '{field.Name}' is a union, which is only for documents.");
         var path = prefix.Length == 0 ? field.Name : prefix + "." + field.Name;
-        AddType(build, scope, field.Alternatives[0], field.Name, path, field.Marker == GesSchemaFieldMarker.Optional, top && field.Marker == GesSchemaFieldMarker.Key, lists);
+        AddUnion(build, scope, field.Alternatives, field.Name, path, field.Marker == GesSchemaFieldMarker.Optional, top && field.Marker == GesSchemaFieldMarker.Key, lists);
+    }
+
+    private static void AddUnion(Build build, GesFileScope scope, GesResolvedType[] alternatives, string name, string path, bool optional, bool key, int lists)
+    {
+        if (alternatives.Length == 1)
+        {
+            AddType(build, scope, alternatives[0], name, path, optional, key, lists);
+            return;
+        }
+
+        CheckNodeCount(build, scope, alternatives[0].Offset);
+        var index = build.Nodes.Count;
+        var maxIndex = (ulong)alternatives.Length - 1;
+        build.Nodes.Add(new GesSchemaNode { Kind = GesSchemaNodeKind.Union, Name = name, Path = path, Optional = optional, MaxIndex = maxIndex, Width = BitLength(maxIndex), SchemaName = "" });
+        foreach (var alternative in alternatives)
+        {
+            var alternativePath = path + ":" + (alternative.Kind == GesSchemaTypeKind.Reference ? alternative.ReferenceName : alternative.Kind.ToString());
+            if (alternative.Kind == GesSchemaTypeKind.Nothing)
+            {
+                CheckNodeCount(build, scope, alternative.Offset);
+                build.Nodes.Add(new GesSchemaNode { Kind = GesSchemaNodeKind.Nothing, ValueKind = GesSchemaTypeKind.Nothing, Name = name, Path = alternativePath, Next = build.Nodes.Count + 1, SchemaName = "" });
+            }
+            else AddType(build, scope, alternative, name, alternativePath, false, false, lists);
+        }
+
+        var added = build.Nodes[index];
+        added.Next = build.Nodes.Count;
+        build.Nodes[index] = added;
     }
 
     private static void AddType(Build build, GesFileScope scope, GesResolvedType type, string name, string path, bool optional, bool key, int lists)
@@ -542,13 +578,25 @@ internal static class GesSchemaBinder
             case GesSchemaTypeKind.List:
                 if (type.Element is not { } element || type.Max is not { } listMax) throw scope.Error(Code.NotEncodable, type.Offset, "A List without element type and max has no hard limit.");
                 if (lists >= MaximumListNesting) throw scope.Error(Code.NotEncodable, type.Offset, $"Lists nest at most {MaximumListNesting} levels for encoding.");
-                if (element.Length != 1) throw scope.Error(Code.NotEncodable, type.Offset, "A List of a union is only for documents.");
                 node.Kind = GesSchemaNodeKind.List;
                 node.MaxCount = listMax;
                 node.Width = BitLength((ulong)listMax);
                 build.Nodes.Add(node);
-                AddType(build, scope, element[0], "[]", path + "[]", false, false, lists + 1);
+                AddUnion(build, scope, element, "[]", path + "[]", false, false, lists + 1);
                 if (!HasBits(build.Nodes, index + 1)) throw scope.Error(Code.NotEncodable, type.Offset, "A List element without bits has a count that no data limits.");
+                break;
+            case GesSchemaTypeKind.Dice:
+                if (type.Max is not { } diceMax) throw scope.Error(Code.NotEncodable, type.Offset, "A Dice without max has no hard limit.");
+                if (lists >= MaximumListNesting) throw scope.Error(Code.NotEncodable, type.Offset, $"Lists nest at most {MaximumListNesting} levels for encoding.");
+                CheckDice(scope, type.Constraints, type.Offset, Bound(build));
+                node.Kind = GesSchemaNodeKind.List;
+                node.MaxCount = diceMax;
+                node.Width = BitLength((ulong)diceMax);
+                build.Nodes.Add(node);
+                CheckNodeCount(build, scope, type.Offset);
+                var roll = new GesSchemaNode { Name = "[]", Path = path + "[]", ValueKind = GesSchemaTypeKind.Number, SchemaName = "", Next = index + 2 };
+                Number(build, scope, RollConstraints(type.Constraints), type.Offset, ref roll);
+                build.Nodes.Add(roll);
                 break;
             case GesSchemaTypeKind.Point:
             case GesSchemaTypeKind.Vector:
@@ -605,13 +653,31 @@ internal static class GesSchemaBinder
         build.Nodes.Add(node);
     }
 
+    private static Func<GesResolvedValue, GesSchemaDecimal> Bound(Build build) => value =>
+    {
+        build.Parameters.TryGet(value.Parameter, out var bound);
+        return bound.Number;
+    };
+
+    // The rolls of a Dice are positive Int32 values.
+    private static GesResolvedConstraints RollConstraints(GesResolvedConstraints constraints) => new()
+    {
+        Integer = true,
+        Lower = constraints.Lower ?? new GesResolvedValue { Value = new GesSchemaDecimal(1, 0) },
+        Upper = constraints.Upper ?? new GesResolvedValue { Value = new GesSchemaDecimal(int.MaxValue, 0) }
+    };
+
+    internal static void CheckDice(GesFileScope scope, GesResolvedConstraints constraints, int offset, Func<GesResolvedValue, GesSchemaDecimal>? parameter)
+    {
+        var rolls = RollConstraints(constraints);
+        var numeric = Compute(scope, rolls, parameter);
+        if ((parameter is not null || !rolls.Lower!.IsParameter) && numeric.Lower < 1) throw scope.Error(Code.InvalidBound, offset, "A Dice roll is at least 1.");
+        if ((parameter is not null || !rolls.Upper!.IsParameter) && numeric.Upper > int.MaxValue) throw scope.Error(Code.InvalidBound, offset, "A Dice roll fits Int32.");
+    }
+
     private static void Number(Build build, GesFileScope scope, GesResolvedConstraints constraints, int offset, ref GesSchemaNode node)
     {
-        var numeric = Compute(scope, constraints, value =>
-        {
-            build.Parameters.TryGet(value.Parameter, out var bound);
-            return bound.Number;
-        });
+        var numeric = Compute(scope, constraints, Bound(build));
         node.HasRange = constraints.Lower is not null;
         node.Wrapping = constraints.Wrapping;
         if (constraints.Step is not null)
@@ -658,9 +724,7 @@ internal static class GesSchemaBinder
 
         if (constraints.Delta is not null)
         {
-            node.DeltaRange = numeric.DeltaRange;
-            node.DeltaWidth = BitLength(numeric.DeltaRange * 2);
-            if (node.DeltaWidth >= node.Width) throw scope.Error(Code.InvalidConstraint, constraints.Delta.Offset, "A delta range is narrower than its field.");
+            if (BitLength(numeric.DeltaRange * 2) >= node.Width) throw scope.Error(Code.InvalidConstraint, constraints.Delta.Offset, "A delta range is narrower than its field.");
         }
     }
 

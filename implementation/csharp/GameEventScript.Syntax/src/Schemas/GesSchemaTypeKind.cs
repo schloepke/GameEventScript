@@ -57,3 +57,31 @@ public enum GesSchemaTypeKind : byte
     /// <summary>Nothing.</summary>
     Nothing
 }
+
+internal static class GesSchemaTypeNames
+{
+    // A name no declaration can take: the types below and the language's Record, which is no schema type.
+    internal static bool IsBuiltIn(string name) => name == "Record" || Kind(name) is not null;
+
+    // The built-in type of a name; any other name refers to a declaration.
+    internal static GesSchemaTypeKind? Kind(string name) => name switch
+    {
+        "Boolean" => GesSchemaTypeKind.Boolean,
+        "Number" => GesSchemaTypeKind.Number,
+        "Percentage" => GesSchemaTypeKind.Percentage,
+        "Quantity" => GesSchemaTypeKind.Quantity,
+        "Point" => GesSchemaTypeKind.Point,
+        "Vector" => GesSchemaTypeKind.Vector,
+        "Tag" => GesSchemaTypeKind.Tag,
+        "Text" => GesSchemaTypeKind.Text,
+        "List" => GesSchemaTypeKind.List,
+        "Map" => GesSchemaTypeKind.Map,
+        "Range" => GesSchemaTypeKind.Range,
+        "Series" => GesSchemaTypeKind.Series,
+        "Dice" => GesSchemaTypeKind.Dice,
+        "Message" => GesSchemaTypeKind.Message,
+        "Handler" => GesSchemaTypeKind.Handler,
+        "Nothing" => GesSchemaTypeKind.Nothing,
+        _ => null
+    };
+}

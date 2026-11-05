@@ -168,21 +168,21 @@
         try expect(58)
         let written = try name(GesNames.type, "type name")
         skipSpaces()
-        switch written {
-        case "Boolean": result.kind = .boolean
-        case "Number":
+        switch GesSchemaTypeNames.kind(written) {
+        case .boolean: result.kind = .boolean
+        case .number:
             result.kind = .number
             result.constraints = try constraints()
-        case "Percentage":
+        case .percentage:
             result.kind = .percentage
             result.constraints = try constraints()
-        case "Quantity":
+        case .quantity:
             guard let unit = try unit() else { throw failure("Expected a unit in parentheses.") }
             skipSpaces()
             result.unit = unit
             result.kind = unit == .none ? .number : .quantity
             result.constraints = try constraints()
-        case "Point", "Vector":
+        case .point, .vector:
             result.kind = written == "Point" ? .point : .vector
             if position < bytes.count && bytes[position] == 40 { result.unit = try unit() ?? .none }
             skipSpaces()
@@ -201,13 +201,13 @@
                 if axes.isEmpty { throw Failure(offset: result.offset, message: "An axis block names at least one axis.") }
                 result.axes = axes
             }
-        case "Tag":
+        case .tag:
             result.kind = .tag
             if position < bytes.count && bytes[position] == 40 { result.tags = try tagSet() }
-        case "Text":
+        case .text:
             result.kind = .text
             result.max = try maximum()
-        case "List":
+        case .list:
             result.kind = .list
             if consume(40) {
                 // Every pass over a type recurses, so its nesting has a limit below any stack.
@@ -221,13 +221,16 @@
                 skipSpaces()
                 result.max = try maximum()
             }
-        case "Map": result.kind = .map
-        case "Range": result.kind = .range
-        case "Series": result.kind = .series
-        case "Dice": result.kind = .dice
-        case "Message": result.kind = .message
-        case "Handler": result.kind = .handler
-        case "Nothing": result.kind = .nothing
+        case .map: result.kind = .map
+        case .range: result.kind = .range
+        case .series: result.kind = .series
+        case .dice:
+            result.kind = .dice
+            result.max = try maximum()
+            result.constraints = try constraints()
+        case .message: result.kind = .message
+        case .handler: result.kind = .handler
+        case .nothing: result.kind = .nothing
         default:
             result.kind = .reference
             result.name = written

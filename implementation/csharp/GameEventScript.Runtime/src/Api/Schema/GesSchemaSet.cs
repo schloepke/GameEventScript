@@ -341,6 +341,8 @@ internal sealed class GesFileScope
                         Syntax = declaration,
                         Tags = declaration.Tags
                     };
+                    if (GesSchemaTypeNames.IsBuiltIn(declaration.Name))
+                        throw Error(Code.DuplicateName, declaration.Offset, $"'{declaration.Name}' is a built-in type.");
                     if (!all.TryAdd(declaration.Name, resolved)) throw Error(Code.DuplicateName, declaration.Offset, $"'{declaration.Name}' is declared twice.");
                     ordered.Add(resolved);
                     _own.Add(resolved);
@@ -397,6 +399,8 @@ internal sealed class GesFileScope
                 throw Error(Code.InvalidKey, field.Offset, "A key is the first field of a schema, an integer or a Tag with a set, without delta within or a union.");
         }
 
+        if (field.Marker == GesSchemaFieldMarker.Optional && alternatives.Length > 1 && Array.Exists(alternatives, alternative => alternative.Kind == GesSchemaTypeKind.Nothing))
+            throw Error(Code.InvalidUnion, field.Offset, "A union with Nothing already holds an absent value; it is not optional as well.");
         return new GesResolvedField { Name = field.Name, Unlabeled = field.Unlabeled, Alternatives = alternatives, Marker = field.Marker, Offset = field.Offset };
     }
 
@@ -412,8 +416,7 @@ internal sealed class GesFileScope
             // The type name decides: a unit does not distinguish alternatives.
             var name = alternative.Kind == GesSchemaTypeKind.Reference ? ":" + alternative.Name : alternative.Kind.ToString();
             if (!seen.Add(name)) throw Error(Code.InvalidUnion, alternative.Offset, "A union repeats a type name; a unit does not distinguish alternatives.");
-            if (alternative.Constraints.Step is not null || alternative.Constraints.Delta is not null)
-                throw Error(Code.InvalidUnion, alternative.Offset, "A union alternative has no step or delta within.");
+            if (alternative.Constraints.Delta is not null) throw Error(Code.InvalidUnion, alternative.Offset, "A union alternative has no delta within.");
         }
 
         return result;
@@ -432,6 +435,8 @@ internal sealed class GesFileScope
         }
 
         if (type.Max is <= 0) throw Error(Code.InvalidConstraint, type.Offset, "A maximum is positive.");
+        if (type.Kind == GesSchemaTypeKind.Dice && (type.Constraints.Integer || type.Constraints.Wrapping || type.Constraints.Step is not null || type.Constraints.Delta is not null))
+            throw Error(Code.InvalidConstraint, type.Offset, "A Dice has only a range.");
         GesResolvedAxis[]? axes = null;
         if (type.Axes is { } written)
         {
@@ -446,6 +451,8 @@ internal sealed class GesFileScope
             Array.Sort(axes, (left, right) => left.Axis.CompareTo(right.Axis));
         }
 
+        var constraints = ResolveConstraints(type.Constraints, type.Unit, type.Kind == GesSchemaTypeKind.Percentage, type.Offset);
+        if (type.Kind == GesSchemaTypeKind.Dice) GesSchemaBinder.CheckDice(this, constraints, type.Offset, null);
         return new GesResolvedType
         {
             Kind = type.Kind,
@@ -453,7 +460,7 @@ internal sealed class GesFileScope
             Tags = type.Tags,
             Max = type.Max,
             Element = type.Element is { } element ? ResolveUnion(element, all) : null,
-            Constraints = ResolveConstraints(type.Constraints, type.Unit, type.Kind == GesSchemaTypeKind.Percentage, type.Offset),
+            Constraints = constraints,
             Axes = axes,
             Reference = reference,
             ReferenceName = type.Name,
@@ -663,6 +670,11 @@ internal static class GesSchemaCanonical
             case GesSchemaTypeKind.Text:
                 builder.Append("Text");
                 if (type.Max is { } textMax) builder.Append(" max ").Append(textMax);
+                break;
+            case GesSchemaTypeKind.Dice:
+                builder.Append("Dice");
+                if (type.Max is { } diceMax) builder.Append(" max ").Append(diceMax);
+                WriteConstraints(type.Constraints, builder);
                 break;
             case GesSchemaTypeKind.List:
                 builder.Append("List");

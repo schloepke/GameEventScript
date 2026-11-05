@@ -26,9 +26,8 @@ consult the [changelog](../../CHANGELOG.md) when targeting a published release.
 - [GES documents](../../specs/Documents.md) (`.gesd`) hold configuration and content
   written like GES literals. The [C#](CSharp.md#read-data-documents) and
   [Swift](Swift.md#read-data-documents) guides show how to read them.
-- [GES schemas](../../specs/Schemas.md) (`.gess`) describe data formats, check documents
-  and encode data compactly in binary. The [C#](CSharp.md#send-data-compactly-with-a-schema)
-  and [Swift](Swift.md#send-data-compactly-with-a-schema) guides show the writer and reader.
+- [Describe data with schemas](Schemas.md) (`.gess`) builds a data format step by step: ranges and
+  steps, messages and message sets, binding, the hash and document checks.
 
 ## Instruction-level experiments
 

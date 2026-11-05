@@ -93,6 +93,13 @@ public static class GesSchemaDump
                 Line(builder, node.Path, offset, reader.BitPosition - offset, "count=" + length.ToString(CultureInfo.InvariantCulture));
                 for (var item = 0; item < length; item++) Field(ref reader, schema, index + 1, builder);
                 break;
+            case GesSchemaNodeKind.Union:
+                var position = reader.ReadAlternative(field);
+                var selected = GesSchemaNumbers.Alternative(schema.Nodes, index, position);
+                var alternative = schema.Nodes[selected].Path;
+                Line(builder, node.Path, offset, reader.BitPosition - offset, alternative.Substring(alternative.LastIndexOf(':') + 1) + " index=" + position.ToString(CultureInfo.InvariantCulture));
+                if (schema.Nodes[selected].Kind != GesSchemaNodeKind.Nothing) Field(ref reader, schema, selected, builder);
+                break;
             case GesSchemaNodeKind.Group:
                 reader.BeginNested(field);
                 Walk(ref reader, schema, index + 1, node.Next, builder);

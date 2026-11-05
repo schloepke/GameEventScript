@@ -184,13 +184,12 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 
 - GES schemas (`.gess`) describe data formats and yield a very compact binary encoding for
   server-driven multiplayer games: ranges, steps and wrapping values with exact quantization,
-  closed tag sets, lists and text with hard limits, optional fields, nested schemas, keys,
+  closed tag sets, lists, Dice and text with hard limits, optional fields, unions, nested schemas, keys,
   messages and message sets, parameters bound per session, and a canonical FNV-1a 64 hash. In
   Runtime, `GesSchemaSet`, `GesSchema` (a read-only description with its fields), `GesBoundSchema`, `GesSchemaWriter`, `GesSchemaReader` and
   `GesSchemaDump` use no VM, and the writer and reader allocate nothing on success; `GesSchemaValues`
   converts Records and Messages. Schemas also check documents, including union types, through
   `CheckDocument`. The CLIs add `schema check`, `format`, `hash`, `canonical` and `dump`.
-  Deltas are specified but not implemented yet.
 - `cm` is a prefixed literal spelling of the meter, like `km` and `mm`: `150cm` is
   `1.5m`. It adds no unit, `:Quantity(cm)` remains invalid, and printing documents
   does not choose it.

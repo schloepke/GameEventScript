@@ -39,6 +39,34 @@ public enum GesSchemaTypeKind: String, Sendable, Equatable {
     case nothing = "Nothing"
 }
 
+@_spi(Syntax) public enum GesSchemaTypeNames {
+    // A name no declaration can take: the types below and the language's Record, which is no schema type.
+    @_spi(Syntax) public static func isBuiltIn(_ name: String) -> Bool { name == "Record" || kind(name) != nil }
+
+    // The built-in type of a name; any other name refers to a declaration.
+    @_spi(Syntax) public static func kind(_ name: String) -> GesSchemaTypeKind? {
+        switch name {
+        case "Boolean": .boolean
+        case "Number": .number
+        case "Percentage": .percentage
+        case "Quantity": .quantity
+        case "Point": .point
+        case "Vector": .vector
+        case "Tag": .tag
+        case "Text": .text
+        case "List": .list
+        case "Map": .map
+        case "Range": .range
+        case "Series": .series
+        case "Dice": .dice
+        case "Message": .message
+        case "Handler": .handler
+        case "Nothing": .nothing
+        default: nil
+        }
+    }
+}
+
 @_spi(Syntax) public enum GesSchemaFieldMarker: Sendable, Equatable {
     case none
     case optional

@@ -13,7 +13,8 @@ clients about 20 times per second per client. The same schemas check
 
 The encoding is independent of `.gesb`, of [product JSON](MessageFormat.md) and of
 the script language. `.gess` is a small language of its own in record notation.
-Scripts do not change, and a schema is not a script record.
+Scripts do not change, and a schema is not a script record. The
+[schema guide](../docs/guide/Schemas.md) introduces it step by step.
 
 Not part of this document: transport, publish/subscribe, interest management and
 the transfer of large data. [Extension points](#extension-points) names where they
@@ -87,7 +88,8 @@ type        = ":Boolean"
             | ":Text" [ "max" integer ]
             | ":List" [ "(" union ")" [ "max" integer ] ]
             | ":" TypeName
-            | ":Map" | ":Range" | ":Series" | ":Dice" | ":Message" | ":Handler" | ":Nothing"
+            | ":Dice" [ "max" integer ] constraints
+            | ":Map" | ":Range" | ":Series" | ":Message" | ":Handler" | ":Nothing"
 numeric     = ( ":Number" | ":Percentage" | quantity ) constraints
 quantity    = ":Quantity" "(" unit ")"
 spatial     = ( ":Point" | ":Vector" ) [ "(" unit ")" ] [ "{" axis { axis } "}" ]
@@ -99,15 +101,87 @@ value       = literal | "$" ConstantName
 tagset      = "(" "#" TagName { "," "#" TagName } ")"
 ```
 
-Fields and axes are separated by commas or line breaks. Message names and tags
-follow the [portable grammars](Semantics/Text.md#portable-name-grammars). `unit`
-accepts what [`:Quantity(unit)`](Language.md#records-and-custom-types) accepts.
+`LowerName`, `ConstantName`, `TypeName`, `MessageName` and `TagName` follow the
+[portable grammars](Semantics/Text.md#portable-name-grammars). `unit` accepts what
+[`:Quantity(unit)`](Language.md#records-and-custom-types) accepts. `literal` is one exact
+finite number of the [number grammar](Semantics/Numbers.md#text-and-number-conversion), with an
+optional `%` or unit suffix; a Text, a constant or a parameter is no literal. `integer` is
+at most 12 decimal digits without a leading zero.
+
+**Layout.** Spaces and tabs may separate any two tokens, and a line comment may end any
+line. A source may start with a BOM. Fields and axes are separated by commas or line breaks,
+and repeated or trailing separators are allowed. Arguments, members and tags are separated by
+exactly one comma. A line break is allowed only in these places: between declarations, after
+`as`, inside the parentheses of an argument list, a member list, a tag set or a `:List`, inside
+the braces of a schema or an axis block, and after `|`. Each field, with its type and marker,
+otherwise stays on one line.
+
+### Declarations
+
+A source is a sequence of declarations in any order; a reference may come before what it names.
+
+- **`constant $name be literal`** names one value of this file. It is replaced where it is used
+  and leaves no trace in the [canonical form](#canonical-form).
+- **`parameter name: kind`** names a value that is supplied at [binding](#binding), with its
+  kind and unit and no other constraint. It serves only as a bound of a range in this file. A
+  parameter that a root does not reach is not part of that root.
+- **`schema :Name as { ... }`** declares a record type: named fields in order, none or many.
+  It can be a root, the type of a field, argument or list element, and the type name of a
+  [Record](#record-values). A schema without fields encodes to no bits.
+- **`message Name(...) tags (...)`** declares one message signature: its name, its arguments in
+  order, and a closed set of tags, of which any subset may be present. An argument has the
+  label of its name, as in `target: 5`, or with `_` none, so `_ damage` is passed by position
+  and its name serves only the [field handle](#writer-and-reader) and the
+  [description](#description). A message can have no arguments. It can be a root, but it is
+  not a type: a field cannot name it.
+- **`messages :Name as (A, B)`** declares a message set: a closed, ordered choice of one
+  of the listed messages, at least one, each once. Its encoding starts with the index of the chosen
+  message, so a receiver learns which message follows; see [messages](#messages). A set
+  can be a root and nothing else: it is not a type, and a message may belong to several sets.
+
+Schemas, messages and message sets share one namespace across all sources.
+
+A field or argument has one of these markers at most:
+
+- **`optional`** allows the value to be absent, which reads as `nothing`, and takes a presence
+  bit. It applies to the whole union, and only to a field or argument, not to a list element.
+- **`key`** marks the [key](#keys) of a schema.
+
+Types:
+
+| Type | Values |
+| --- | --- |
+| `:Boolean` | `true` or `false` |
+| `:Number`, `:Percentage`, `:Quantity(unit)` | a number, a percentage, or a number with that unit; `:Quantity(none)` is `:Number`. Limited by [constraints](#constraints) |
+| `:Point`, `:Vector`, with an optional unit | three components with one unit. A block lists the axes that are transmitted, in any order, each with its own constraints |
+| `:Tag(#a, #b)`, `:Tag` | one tag of the closed set, or any tag |
+| `:Text max n`, `:Text` | a text of at most `n` UTF-8 bytes, or any text |
+| `:List(T) max n`, `:List(T)`, `:List` | at most `n` elements of `T`, any number of them, or any elements |
+| `:Dice max n between a and b`, `:Dice` | at most `n` rolls, each within the range, or any rolls |
+| `:Name` | a Record of the schema `Name` |
+| `T \| U` | a value of one of the alternatives; see [rules](#rules) |
+| `:Nothing` | `nothing`, which is useful as an alternative |
+| `:Map`, `:Range`, `:Series`, `:Message`, `:Handler` | a value of that kind |
+
+A schema, message or message set cannot take the name of a built-in type of this table, nor
+`Record`, the language's type of all Records.
+
+### Constraints
+
+In this order, all optional:
+
+- **`integer`** requires whole values, stored exactly. Not for a `:Percentage`.
+- **`between a and b`** is a closed range, **`wrapping between a and b`** a circular one; see
+  [rules](#rules) and [wrapping values](#wrapping-values).
+- **`step s`** quantizes to multiples of `s`; see [quantization](#quantization).
+- **`delta within d`** declares an expected change; see [rules](#rules).
+
+Together, the type and the constraints decide a field's [encoding](#field-encodings).
 
 ### Rules
 
 - A bound is a literal, a declared constant or a parameter; it cannot refer to a field.
-  A step and a delta range are literals or constants, never parameters, so the width of
-  a delta range does not depend on the map. No expression is evaluated, so reading and
+  A step and a delta range are literals or constants, never parameters. No expression is evaluated, so reading and
   binding need neither a compiler nor a VM.
 - `between a and b` is the closed range `[a, b]`; `wrapping between a and b`
   is the half-open range `[a, b)`. The lower bound must be below the upper bound, and
@@ -121,18 +195,27 @@ accepts what [`:Quantity(unit)`](Language.md#records-and-custom-types) accepts.
 - The bounds of an `integer` field are integral and lie within Int64, `-2^63` to
   `2^63 - 1`, so its width is at most 64 bits. Anything else is `schema.invalidBound`, at
   binding also for a parameter with a fractional value.
-- `delta within` requires a range and, unless `integer`, a step. See [Deltas](#deltas).
+- `delta within D` declares the largest change expected between two updates of a value:
+  `d = D / step` indices, or `D` for an `integer` field. It requires a range and, unless
+  `integer`, a step. `D` is positive and a multiple of the step, and `width(2d + 1)` is below
+  the [width](#field-encodings) of the field. It belongs to the description and the hash and
+  does not change the encoding of a record.
 - Omitted axes of a spatial block are not transmitted and must be zero.
 - `key` marks the [key](#keys) of a schema. It is the first field, at most one per schema,
   and an `integer` numeric or a `:Tag` with a set; it excludes `optional` and `delta within`
   and cannot be a union. Anything else is `schema.invalidKey`.
-- A union lists the types a value may have, for [document checking](#document-checking):
+- A union lists the types a value may have:
   `facing: :Quantity(°) between 0° and 360° | :Tag(#north, #south)` or
-  `units: :List(:Text | :Unit)`. Each alternative has its own constraints; `optional`
-  applies to the whole union. An alternative that repeats a type name, or that has
-  `step` or `delta within`, is `schema.invalidUnion`. `:Quantity(m) | :Quantity(s)` repeats
-  the type name `:Quantity`: a unit does not distinguish alternatives. Unions are never
-  encodable.
+  `units: :List(:Text max 8 | :Unit | :Nothing) max 4`. Each alternative has its own constraints;
+  `optional` applies to the whole union. An alternative that repeats a type name, or that has
+  `delta within`, is `schema.invalidUnion`, and so is `optional` on a union with `:Nothing`, which
+  would give `nothing` two encodings. `:Quantity(m) | :Quantity(s)` repeats
+  the type name `:Quantity`: a unit does not distinguish alternatives.
+- A Dice has no constraint other than a range, whose bounds lie within `1` to `2^31 - 1`, as a roll is a
+  positive Int32. Anything else is `schema.invalidConstraint` or `schema.invalidBound`.
+- A field with a `:Nothing` alternative may be left out, in a value and in a document, which
+  counts as `nothing`. A Message holds every argument of its signature, with `nothing` where one
+  is absent, since its labels and their order are its signature.
 - A schema reference names a `schema`; references must not form a cycle. Nesting is
   limited to 32 levels. Lists nest at most 4 levels for encoding, so that a writer and
   a reader keep their running lists without allocating; deeper lists are
@@ -141,10 +224,12 @@ accepts what [`:Quantity(unit)`](Language.md#records-and-custom-types) accepts.
   [Records](#record-values).
 - Constants and parameters are visible only in the file that declares them. Schema,
   message and message set names are visible across all sources.
+- A `max` is positive.
 - A position relative to something else, such as a carrier, is a schema of its own
   with its own bounds.
-- Names are unique within their kind: fields within a schema, arguments within a
-  message, axes within a block. A Message's labels and their order are part of its
+- Names are unique: declarations of schemas, messages and sets together, constants and
+  parameters per file, fields within a schema, arguments within a
+  message, axes within a block, tags within a set, members within a message set. A Message's labels and their order are part of its
   signature, as everywhere in GES.
 
 ### Encodable and document-only types
@@ -159,10 +244,11 @@ be encoded; binding a schema that reaches another type for encoding fails with
 | `:Tag(#a, #b)` | yes | yes |
 | `:Text max n` | yes | yes |
 | `:List(T) max n` with an encodable `T` | yes | yes |
+| `:Dice max n` | yes | yes |
 | `:TypeName` with only encodable fields | yes | yes |
-| A union, such as `:Text \| :Unit` | no | yes |
-| `:Tag`, `:Text`, `:List`, `:List(T)` without a set or `max` | no | yes |
-| `:Map`, `:Range`, `:Series`, `:Dice`, `:Message`, `:Handler`, `:Nothing` | no | yes |
+| A union of encodable alternatives, such as `:Text max 8 \| :Unit \| :Nothing` | yes | yes |
+| `:Tag`, `:Text`, `:List`, `:List(T)`, `:Dice` without a set or `max` | no | yes |
+| `:Map`, `:Range`, `:Series`, `:Message`, `:Handler`, `:Nothing` outside a union | no | yes |
 
 ### Source errors
 
@@ -172,17 +258,17 @@ Source errors use the phase `schema` with line and column, in the manner of
 | Code | Condition |
 | --- | --- |
 | `schema.syntax` | the source does not match the grammar |
-| `schema.duplicateName` | a name repeats within its kind |
+| `schema.duplicateName` | a name repeats within its kind, or a schema, message or message set takes the name of a built-in type or `Record` |
 | `schema.unknownName` | a type, message, constant or parameter is not declared |
 | `schema.cycle` | schema references form a cycle, or references or `:List` types nest more than 32 levels |
 | `schema.unitMismatch` | a bound, step or delta range has another unit than its field |
 | `schema.invalidRange` | a lower bound is not below its upper bound |
 | `schema.invalidStep` | a step is not positive, not exact, or a bound or delta range is no multiple of it |
-| `schema.invalidConstraint` | `integer` with `step`, `step` or `delta within` without a range, `delta within` without a step or not narrower than the field |
+| `schema.invalidConstraint` | `integer` with `step` or on a Percentage, a Dice constraint other than a range, a `max` that is not positive, `step` or `delta within` without a range, `delta within` without a step or not narrower than the field |
 | `schema.notEncodable` | encoding reaches a document-only type |
 | `schema.invalidKey` | a `key` breaks the [key rules](#rules) |
-| `schema.invalidUnion` | a union alternative repeats a type name or has `step` or `delta within` |
-| `schema.invalidBound` | an `integer` bound is fractional or outside Int64 |
+| `schema.invalidUnion` | a union alternative repeats a type name or has `delta within`, or a union with `:Nothing` is `optional` |
+| `schema.invalidBound` | an `integer` bound is fractional or outside Int64, or a Dice bound is outside `1` to `2^31 - 1` |
 | `schema.tooWide` | a quantized field exceeds the [limits](#quantization), or a bound of a fractional field becomes infinite or zero in binary64 |
 | `schema.tooLarge` | the [largest encoding](#largest-encoding) exceeds its limit or overflows |
 
@@ -213,7 +299,7 @@ largeZone = schemas.Schema("ZonedPosition").Bind({ zoneSize: 4km })
 
 The wire does not say which binding a record uses; the caller knows it from its
 context, such as the zone of a connection or channel. A binding has its own widths, so
-records and [delta baselines](#deltas) belong to the binding that wrote them. Bindings
+a record belongs to the binding that wrote it. Bindings
 share nothing mutable and cost nothing per record.
 
 Parameters are supplied by name, as an exact literal such as `5km` or as a number in base
@@ -230,9 +316,8 @@ GES sets no world size; only the limits apply.
 
 ### Largest encoding
 
-A bound schema has `MaxByteCount`, the size of its largest top-level encoding, full or
-delta. It is computed at binding with checked arithmetic, counting every optional as
-present and every Text and List at its `max`. It may be at most 1 048 576 bytes (1 MiB).
+A bound schema has `MaxByteCount`, the size of its largest top-level encoding. It is computed at binding with checked arithmetic, counting every optional as
+present, every Text, List and Dice at its `max`, and every union as its index and its largest alternative. It may be at most 1 048 576 bytes (1 MiB).
 Exceeding this, or an overflow while computing it, fails binding with `schema.tooLarge`.
 A message set adds its index to the bits of its largest member, before rounding up to bytes.
 A bound layout has at most 1 048 576 fields, counting each use of a referenced schema and each
@@ -290,6 +375,7 @@ member <MessageName>
 | axis block | after the type, `{ <axis> <constraints> ; ... }` in order x, y, z |
 | `:Tag(#a, #b)`, `:Tag` | `Tag(#a #b)`, `Tag` |
 | `:Text max n`, `:Text` | `Text max <n>`, `Text` |
+| `:Dice max n between a and b`, `:Dice` | `Dice max <n> between <a> <b>`, each part only when written; `Dice` |
 | `:List(T) max n` | `List(<T>) max <n>`; `List(<T>)` and `List` without `max` or `T` |
 | `:TypeName`, `:Map`, ... | `TypeName`, `Map`, ... |
 
@@ -373,6 +459,15 @@ several receivers and records can be concatenated. A decoder rejects nonzero
 padding. An encoding contains no header and no length; the caller frames records.
 The decoder reports the bytes it consumed.
 
+### Keys
+
+A `key` lets a receiver find the object a record belongs to before it reads the rest. A key
+is the first field, so it starts at bit 0 of a top-level record, in its ordinary encoding.
+Only the width of the key is needed to read it. The marker takes effect at the top level: a
+schema with a key that is reached as a nested field or a list element writes the same bits,
+and no key can be read from there. The caller owns the mapping from keys to objects. Message
+arguments have no key.
+
 ### Field encodings
 
 `width(n)` is the smallest `w` with `2^w >= n`, and `width(1)` is 0.
@@ -390,15 +485,16 @@ The decoder reports the bytes it consumed.
 | `:Tag(...)` with `n` tags | index in declared order, `width(n)` bits |
 | `:Text max n` | UTF-8 byte count, `width(n + 1)` bits, then the bytes |
 | `:List(T) max n` | element count, `width(n + 1)` bits, then the elements |
+| `:Dice max n` | roll count, `width(n + 1)` bits, then each roll as an `integer` of its range, `1` to `2^31 - 1` without one. The [value path](#value-path) writes them in descending order and a typed writer in the order of its caller; a decoder accepts any order, since creating a Dice sorts its rolls |
+| union of `n` alternatives | index in declared order, `width(n)` bits, then the alternative |
+| `:Nothing` as an alternative | no bits |
 | `:TypeName` | its fields inline |
 
 `max` counts UTF-8 bytes for Text and elements for a List. A range's index never
 exceeds `n - 1`; a decoder rejects a larger bit pattern. Units come from the schema.
 
 A fractional field without a step stays at 64 bits, which is a deliberate choice in the
-schema; there is no 32-bit form. Flags are one `:Boolean` per flag. A later
-`:Flags(#a, #b)` type would look identical on the wire, one bit per flag, and change only
-how a program sees them.
+schema; there is no 32-bit form. Flags are one `:Boolean` per flag.
 
 ### Messages
 
@@ -523,129 +619,6 @@ with `N = value`, for every Int64. A decoder rejects `i >= n` and returns `lower
   patterns and negative zero, because neither is a canonical value. Infinities are
   valid only without a range.
 
-## Deltas
-
-> **Planned** — specified so that the format needs no rework, not implemented yet. The
-> full encoding above does not change when deltas are added. `delta within` is read,
-> validated and part of the hash.
-
-`encode(value, baseline)` writes what differs from a baseline. The caller chooses and
-confirms baselines; the format assumes nothing about the transport. A delta and a
-full record are different operations and are not marked on the wire, so a caller that
-mixes them marks them in its own framing.
-
-### Form
-
-A delta of a schema is one change bit per field in declaration order, followed by the
-payload of each changed field in that order. Padding follows at the top level as in
-[records](#records). Comparison uses wire values: indices, not the original numbers.
-A movement smaller than a step is no change and costs nothing. A top-level [key](#keys)
-precedes the change bits and has none.
-
-| Type | Payload of a changed field |
-| --- | --- |
-| `:Boolean` | none; the change bit toggles the baseline |
-| numeric with `delta within` | [range form](#delta-range) |
-| other numeric, `:Tag`, `:Text`, `:List` | the full encoding |
-| `:Point`, `:Vector` with a block | one change bit per declared axis, then the payloads of the changed axes |
-| `:Point`, `:Vector` without a block | three change bits, then a raw 64-bit binary64 for each changed axis; bits are compared |
-| `:TypeName` | a nested delta: its own change bits and payloads |
-| `optional` | presence bit; when present and the baseline also has a value, the field's delta payload, otherwise its full encoding |
-
-A list is replaced as a whole. Tracking list elements requires identities that the
-caller owns.
-
-For example, with `worldWidth = worldHeight = 5000m`:
-
-```gess
-schema :Beacon as {
-  position: :Point(m) {
-    x between 0m and worldWidth step 1cm delta within 1.27m
-    y between 0m and worldHeight step 1cm delta within 1.27m
-  }
-  active: :Boolean
-}
-```
-
-A full record takes 19 + 19 + 1 = 39 bits, 5 bytes. A delta has 2 change bits for the
-fields and, when `position` changed, 2 for its axes:
-
-| Situation | Bits | Bytes |
-| --- | --- | --- |
-| Only `active` toggled | 2 | 1 |
-| Moved along `x` | 2 + 2 + 9 = 13 | 2 |
-| Moved along both axes | 2 + 2 + 9 + 9 = 22 | 3 |
-| `x` through the fallback, `y` in range | 2 + 2 + 20 + 9 = 33 | 5 |
-
-### Keys
-
-A `key` lets a receiver find the object and its baseline before it reads the rest.
-
-- A key is the first field, so it comes first at bit 0 of a full record and of a delta,
-  always in its full encoding with the same width. A reader can take it without knowing
-  which of the two it holds.
-- A delta writes it unconditionally, without a change bit, also when nothing else changed.
-- A key identifies the object, so it is not compared like other fields but required to be
-  equal: encoding against a baseline with another key is `wire.keyMismatch`, and decoding
-  against one is `wire.invalidDelta`. This keeps comparison on wire values and the
-  [canonical form](#canonical-delta-form) intact: there is no change bit that could be set
-  wrongly, and no second encoding.
-- The marker takes effect at the top level. A schema with a key that is reached as a nested
-  field or a list element writes it as its ordinary first field, with a change bit in a
-  nested delta.
-- The caller owns the mapping from keys to baselines. Message arguments have no key.
-
-### Delta range
-
-`delta within D` declares `d = D / step` indices (or `D` for an `integer`), and needs
-`width(2d + 1)` to be below the width of the field. The payload is:
-
-- bit `0`, then `delta + d` in `width(2d + 1)` bits, when `|delta| <= d`;
-- bit `1`, then the full index otherwise.
-
-`delta` is the signed difference of the indices. For a wrapping field with period `n`
-it takes the shorter way: `delta = ((index - base + floor(n / 2)) mod n) - floor(n / 2)`
-with a nonnegative remainder, and the decoder computes `(base + delta) mod n`. An
-exact half period therefore counts as negative. Differences of `integer` fields are
-computed without overflow, also across the whole Int64 range.
-
-### Canonical delta form
-
-A delta has one valid encoding, so ports stay byte-identical. A decoder rejects a set
-change bit for an unchanged value (except a Boolean, where it is the change), a nested
-delta or axis group whose change bits are all zero, a payload of `bit 1` for a difference
-within `d`, a non-wrapping result outside the range, and a key that differs from the
-baseline's.
-
-### Zones
-
-Very large worlds are split by the game into zones, which needs no feature here:
-
-```gess
-parameter zoneSize: :Quantity(m)
-
-schema :LocalPosition as {
-  x: :Quantity(m) between 0m and zoneSize step 1cm delta within 1.27m
-  y: :Quantity(m) between 0m and zoneSize step 1cm delta within 1.27m
-}
-
-schema :ZonedPosition as {
-  zone: :Number integer between 0 and 65535
-  local: :LocalPosition
-}
-```
-
-With `zoneSize = 1000m`, `x` and `y` take 17 bits each, and a full `ZonedPosition`
-takes 50 bits, 7 bytes. A move inside a zone takes 2 change bits, 2 nested change
-bits and two 9-bit range forms: 22 bits, 3 bytes. A zone change needs nothing special:
-`zone` is written in full, and the local coordinates are compared with the baseline as
-usual and leave their delta range through the fallback bit, 1 + 17 bits each: 2 + 2 +
-16 + 18 + 18 = 56 bits, 7 bytes.
-
-Zones of different size use [one binding each](#binding). A baseline belongs to its
-binding, so an object that moves to a zone of another size is sent as a full record of
-the new binding.
-
 ## Decoding untrusted data
 
 A bound schema knows its largest encoding, so a caller can size buffers and a decoder
@@ -655,12 +628,11 @@ one record. Decoding fails without partial results for:
 | Code | Condition |
 | --- | --- |
 | `wire.truncated` | the data ends before the record does |
-| `wire.invalidIndex` | an index is at least `n`, for a range, tag or message set |
-| `wire.invalidCount` | a Text or List count exceeds its `max` |
+| `wire.invalidIndex` | an index is at least `n`, for a range, tag, union or message set |
+| `wire.invalidCount` | a Text, List or Dice count exceeds its `max` |
 | `wire.invalidText` | Text is not valid UTF-8 |
 | `wire.invalidNumber` | NaN or negative zero, or an infinity with a range |
 | `wire.invalidPadding` | a padding bit is not zero |
-| `wire.invalidDelta` | with deltas: a delta is not [canonical](#canonical-delta-form), leaves its range, or its key differs from the baseline's |
 | `wire.limitExceeded` | the record exceeds the caller's limit |
 
 Encoding reports to the caller, and writes no partial record that is reported as
@@ -670,11 +642,10 @@ complete:
 | --- | --- |
 | `wire.outOfRange` | a value is outside its range, not finite in a quantized field, or more than `2^50` steps from zero, also for a wrapping field |
 | `wire.notRepresentable` | an integer field receives a fractional value, or a value does not fit its stored form |
-| `wire.missingField` | a field that is not `optional` has no value |
-| `wire.typeMismatch` | a value has another kind or unit than its field, a nonzero omitted axis, or a Message whose labels differ from its signature |
+| `wire.missingField` | a field that is neither `optional` nor has a `:Nothing` alternative has no value, or a Message lacks trailing arguments of its signature |
+| `wire.typeMismatch` | a value has another kind or unit than its field, a nonzero omitted axis, a Message whose labels differ from its signature, or a Map with a key that a union alternative does not have |
 | `wire.unknownTag` | a tag is not in its set |
-| `wire.keyMismatch` | with deltas: a value and its baseline have different keys |
-| `wire.tooLong` | a Text or List exceeds its `max` |
+| `wire.tooLong` | a Text, List or Dice exceeds its `max` |
 | `wire.bufferTooSmall` | the caller's buffer is too small |
 | `wire.fieldOrder` | a typed writer or reader uses a field out of order |
 
@@ -687,11 +658,17 @@ The convenient path converts between `GesValue` and the wire.
 - A schema `:Bot` corresponds to a Record with the type name `Bot`. Fields are matched
   by name; a Map works too. Encoding does not convert units.
 - Record fields without a schema entry are not transmitted. This covers the computed
-  fields of a script record.
+  fields of a script record. The same holds for the keys of a Map, except when it selects a union
+  alternative.
 - Decoding builds `:Record("Bot", fields)` without a constructor, as in
   [product JSON](MessageFormat.md). A host with a Program may pass the fields to the
   record's constructor, which derives its computed fields on the normal VM.
 - A Message converts in the same way, with its signature and tags.
+- A value selects a union alternative by its kind, with unit, or for a Record by its type name; no
+  other kind converts. Since alternatives repeat no type name, a union value has exactly one encoding. A Map
+  has no type name: the first schema alternative that holds it decides. An alternative holds a Map
+  when all its fields fit and every key is one of its fields, also in the Maps nested in it, as in
+  a [document check](#document-checking). When none holds, the error of the last one is reported.
 
 ## Document checking
 
@@ -733,36 +710,22 @@ facing: #north
 ```
 
 - A value outside a closed range is an error. A wrapping field accepts any finite
-  value. `max` and `integer` are checked; `step` and `delta within` only concern the
-  encoding and are not.
+  value. `max` and `integer` are checked; `step` and `delta within` are not.
 - A bound that uses an unbound parameter is not checked. A value that is given must have the
   declared kind and unit, otherwise the check fails with `schema.unitMismatch`.
 - Printing a schema prints `.gess` source; printing a document is unchanged.
 
 ## API
 
-### Fast path: variants
+### Writer and reader
 
-The fast path encodes into a caller's buffer and decodes without `GesValue` or boxing.
-
-| Variant | Allocation free | Speed | Needs a build step | Works under IL2CPP | Remarks |
-| --- | --- | --- | --- | --- | --- |
-| A. Schema-bound writer and reader over field handles | yes | good; one interpreted step per field | no | yes | Same API for all schemas; misuse found at runtime; also carries the dump tool and the value path |
-| B. Generated code per schema (`ges schema generate`) | yes | best; constants inlined, typed structs | yes | yes | Compile-time field names; generated code must stay in step with the schema, guarded by the hash |
-| C. Field visitor with callbacks | only with care | medium | no | yes | A delegate per field or a protocol witness; awkward with allocation-free decoding |
-| D. Code emitted at runtime (`Reflection.Emit`, expression trees) | yes | best | no | **no** | IL2CPP has no runtime code generation; ruled out |
-
-A is implemented; B is planned. **Recommendation: A first, B on top of it.** A is needed in any case, has no build
-step, and works on every platform, including [Unity](#unity). B then adds typed structs and the highest speed for
-the few types that dominate a profile. It shares A's bit primitives and is verified by
-the same byte comparison. Whether B is needed is decided by measurement.
-
-### Variant A
+The writer and reader encode into a caller's buffer and decode without `GesValue` or boxing.
+One interpreted step runs per field, and the same API serves every schema, with no build step,
+on every platform including [Unity](#unity). The dump tool and the value path use them too.
 
 Names follow [port conventions](../implementation/PortConventions.md); the concepts are
-the same in every port. Errors of schemas are their own types (C# `GesSchemaException`
-and `GesWireException`, Swift `GesSchemaError` and `GesWireError`), since it has no
-dependency on Runtime. In C#:
+the same in every port. Errors of schemas are their own types: C# `GesSchemaException`
+and `GesWireException`, Swift `GesSchemaError` and `GesWireError`. In C#:
 
 ```csharp
 var schemas = GesSchemaSet.Parse(sources);                        // once
@@ -788,28 +751,29 @@ var positionX = reader.ReadNumber(x);                             // double, wit
   immutable and can be shared between threads; a writer or reader belongs to one caller
   at a time. No port requires locks or threads.
 - Field handles are resolved once by path, such as `x`, `position.x`, `units[]`,
-  `units[].name` or `#critical` for a message tag. Reusing a handle costs no lookup.
+  `units[].name`, `#critical` for a message tag, `facing:Tag` for a union alternative or
+  `units[]:Unit.name` inside one. Reusing a handle costs no lookup.
 - Typed operations: `Boolean`, `Integer` (Int64), `Number` (binary64), `Index` (the raw
   wire index, for game code that stores quantized values and skips the conversion), `Tag`
   (index) and `Text` (validated UTF-8). A reader copies Text into a caller's buffer of the
   field's `max`, since a value need not start at a byte boundary.
-- `BeginList` writes or reads the element count, and the elements follow, each entered at
+- `BeginList` writes or reads the element count of a List or Dice, and the elements follow, each entered at
   the `[]` handle. `BeginNested` enters a nested schema, Point or Vector. There is no end
   call: the cursor knows where a list or nesting ends.
 - `WriteAbsent` marks an `optional` field as absent; any other write sets its presence bit.
   `ReadPresence` reads the bit, and a reader calls it before an `optional` field.
+- `SelectAlternative` writes the index of a union's alternative, in declared order, and `ReadAlternative`
+  reads it. The alternative's own handle follows, except for `:Nothing`, which is then complete.
 - For a message set, `SelectMember` and `ReadMember` write and read the index and move on
   to the member, whose handles come from `bound.Member("Hit")`.
 - Fields are used in declaration order; anything else is `wire.fieldOrder`.
 - `bot.MaxByteCount` is the [largest encoding](#largest-encoding), for sizing buffers.
 - For a schema with a [key](#keys), `reader.ReadKey()` returns it first, as an Int64 or a
-  tag index, before the caller chooses a baseline.
+  tag index, before the rest is read.
 - `Finish` ends the record. A writer adds the padding and returns the bytes written; a
   reader checks the padding and returns the bytes consumed.
 - Success allocates nothing and boxes nothing. A failure is reported through the normal
   error mechanism of the port and may allocate.
-- Deltas add `WriteDelta...` with a baseline value and matching reads, with no change to
-  existing calls.
 
 ### Description
 
@@ -861,7 +825,13 @@ or `dump` for a parameter the root does not reach fails with `schema.unknownName
 misspelled name cannot go unnoticed; naming a parameter twice is a usage error. `dump` makes binary
 data readable through the schema: it lists each field with path, bit offset, width and
 decoded value, and ends with the first error, its field path and bit offset; invalid data
-gives exit code 1. Its text is the same in every port. A Text is quoted with `'` on one line:
+gives exit code 1. Its text is the same in every port. Each field is one line,
+`<path> bit=<offset> width=<bits> value=<value>`, whose width includes a presence bit. The value
+is `true` or `false`, a number, a quoted Text, `#<tag> index=<i>`, `count=<n>` for a List or Dice,
+`<alternative> index=<i>` for a union, with the type name of the alternative, or `absent`. A nested
+schema, Point or Vector has no line of its own, only its fields. A message set starts with
+`message <name> index=<i>`. A valid record ends with `bytes <n>`, an invalid one with
+`error <code> path=<path> bit=<offset>`. A Text is quoted with `'` on one line:
 `\\`, `\'`, `\n`, `\r` and `\t` are escaped, and other controls are written `\u{hex}`. A
 decoded number uses its shortest digits. It is positional, without a trailing `.0`, when it
 has at most 21 digits before the decimal point or at most 3 zeros directly after `0.`,
@@ -904,11 +874,10 @@ at binding uses checked Int64 within the [limits](#quantization), without `UInt1
 
 - the public API can be used from C# 9, without `init` setters, `required` members, ref
   fields or static abstract members. A `ref struct` writer over `Span<byte>` is fine;
-- generated code (variant B) is itself C# 9, since Unity compiles it;
 - `unsafe` is not part of the public API, so a project needs no special player setting.
 
-**IL2CPP.** There is no code generation at runtime, which rules out variant D. The
-schema code uses no Reflection, so managed code stripping removes nothing it needs, and no
+**IL2CPP.** There is no code generation at runtime, and the schema code needs none. It
+uses no Reflection, so managed code stripping removes nothing it needs, and no
 generic virtual methods over value types. A cast from binary64 to Int64 happens only
 after the range check of [encoding](#encoding), because an out-of-range cast has no
 defined result in the generated C++. The rounding of [quantization](#why-this-is-exact)
@@ -927,8 +896,6 @@ These build on this format and are not part of it.
 - **Transport** frames top-level records, adds its own type and sequence fields, and
   carries the hash at connection setup. The byte-aligned, reusable records allow
   concatenation into packets.
-- **Delta baselines** are selected by acknowledgements in the transport and found by
-  [key](#keys). Receivers that acknowledged the same baseline can share one encoded delta.
 - **Interest management** decides which records a client receives. It owns object
   identities; a list or a packet then holds only what it selected.
 - **Publish/subscribe** maps channels to message sets or schemas.
@@ -943,34 +910,19 @@ Bytes are the size of the record alone, without transport framing.
 
 Schema [above](#source-language), with `worldWidth = worldHeight = 5000m`.
 
-At 20 updates per second, a delta range of `8°` covers turning up to 160°/s, above the
-150°/s of the fastest units.
-
-| Field | Values `n` | Full bits | Delta range | Range form | Fallback |
-| --- | --- | --- | --- | --- | --- |
-| `id`, the key | 65536 | 16 | always written | 16 | |
-| `x` | 500001 | 19 | ±127 | 1 + 8 | 1 + 19 |
-| `y` | 500001 | 19 | ±127 | 1 + 8 | 1 + 19 |
-| `heading` | 3600 | 12 | ±80 | 1 + 8 | 1 + 12 |
-| `turretBearing` | 3600 | 12 | ±80 | 1 + 8 | 1 + 12 |
-| `radarBearing` | 3600 | 12 | ±80 | 1 + 8 | 1 + 12 |
-| `health` | 136 | 8 | none | 8 | |
-| `firing`, `shielded`, `overheated` | | 3 | | 0 each | |
-
-**Full record:** 16 + 19 + 19 + 12 + 12 + 12 + 8 + 3 = **101 bits, 13 bytes**.
-
-**Delta** with the 16-bit key and 9 change bits, so 25 bits before any payload:
-
-| Situation | Bits | Bytes |
+| Field | Values `n` | Bits |
 | --- | --- | --- |
-| Unchanged; the caller may send nothing | 16 + 9 = 25 | 4 |
-| Standing, radar turning | 25 + 9 = 34 | 5 |
-| Moving, all angles turning | 25 + 9 + 9 + 9 + 9 + 9 = 70 | 9 |
-| Same, hit and starting to fire | 70 + 8 + 0 = 78 | 10 |
-| Teleport: `x` and `y` through the fallback | 25 + 20 + 20 = 65 | 9 |
+| `id`, the key | 65536 | 16 |
+| `x` | 500001 | 19 |
+| `y` | 500001 | 19 |
+| `heading` | 3600 | 12 |
+| `turretBearing` | 3600 | 12 |
+| `radarBearing` | 3600 | 12 |
+| `health` | 136 | 8 |
+| `firing`, `shielded`, `overheated` | | 3 |
 
-100 visible bots at 20 updates per second take 26 000 bytes/s in full and 18 000 bytes/s
-as moving deltas, without framing.
+16 + 19 + 19 + 12 + 12 + 12 + 8 + 3 = **101 bits, 13 bytes**. 100 visible bots at 20 updates
+per second take 26 000 bytes/s, without framing.
 
 ### Drone
 
@@ -986,28 +938,16 @@ schema :Drone as {
 }
 ```
 
-| Field | Values `n` | Full bits | Delta range | Range form | Fallback |
-| --- | --- | --- | --- | --- | --- |
-| `id`, the key | 256 | 8 | always written | 8 | |
-| `x` | 8001 | 13 | ±31 | 1 + 6 | 1 + 13 |
-| `y` | 8001 | 13 | ±31 | 1 + 6 | 1 + 13 |
-| `heading` | 720 | 10 | ±31 | 1 + 6 | 1 + 10 |
-
-**Full record:** 8 + 13 + 13 + 10 = **44 bits, 6 bytes**.
-
-**Delta** with the 8-bit key and 3 change bits, so 11 bits before any payload:
-
-| Situation | Bits | Bytes |
+| Field | Values `n` | Bits |
 | --- | --- | --- |
-| At rest relative to the carrier; the caller may send nothing | 8 + 3 = 11 | 2 |
-| Flying straight | 11 + 7 + 7 = 25 | 4 |
-| Flying and turning | 11 + 7 + 7 + 7 = 32 | 4 |
-| `x` through the fallback | 11 + 14 = 25 | 4 |
+| `id`, the key | 256 | 8 |
+| `x` | 8001 | 13 |
+| `y` | 8001 | 13 |
+| `heading` | 720 | 10 |
 
-The relative position is such a schema of its own, with bounds that fit the carrier, not
-the world. A carrier with `drones: :List(:Drone) max 15` packs them inline: 4 + 15 × 44 = 664 bits,
-83 bytes instead of 90. As a list it is replaced in full by a delta, so drones that change
-often are better sent as separate records.
+8 + 13 + 13 + 10 = **44 bits, 6 bytes**. The relative position is a schema of its own, with
+bounds that fit the carrier, not the world. A carrier with `drones: :List(:Drone) max 15` packs
+them inline: 4 + 15 × 44 = 664 bits, 83 bytes instead of 90.
 
 ## Verification
 
@@ -1019,24 +959,21 @@ Parity is verified like every GES feature.
   - every `schema.*` error, including `schema.invalidKey`, `schema.invalidUnion`,
     `schema.invalidBound`, `schema.tooLarge` and a parameter with a fractional value as an
     `integer` bound;
-  - every `wire.*` error of full records; `wire.keyMismatch` and `wire.invalidDelta` follow
-    with deltas;
+  - every `wire.*` error;
   - `key`: its position, a key read before the rest, and its place in the canonical form;
-  - unions: first-match order, `:Quantity(m) | :Quantity(s)` rejected, and rejection for
-    encoding with `schema.notEncodable`;
+  - unions: first-match order, `:Quantity(m) | :Quantity(s)` rejected, the index, `:Nothing`,
+    lists of unions, a field after a union, and rejection of a document-only alternative with
+    `schema.notEncodable`;
   - the document errors `document.missingField`, `document.unknownField`,
     `document.fieldType` and `document.outOfRange`, with their positions.
-- A cross-language script such as `scripts/test-message-json-roundtrip.py` exchanges real
+- `scripts/test-schema-roundtrip.py` exchanges real
   bytes between C# and Swift, with random values, edge values at each bound and half-step
   ties, and compares bytes and decoded binary64 bits in both directions. Negative controls
   qualify the comparison.
 - The same script compares the canonical form and both hashes of every schema in the
   corpus, byte for byte between the ports, against the [hash vectors](#hash-vectors) and against
   respelled sources that must not change them: comments, layout, `50kN` and `50000N`.
-- A real Unity project runs the byte and vector suites in an IL2CPP player on arm64 and x64
-  and under Mono in the editor, and measures allocations. This is a manual gate, because CI
-  has no Unity.
 - A fuzz run feeds random and mutated bytes to the decoders of both ports, which must
   agree on accept or reject.
 - Allocation tests prove that the writer and reader allocate nothing on success in both
-  ports, as for the existing hot paths; performance references follow by measurement.
+  ports, as for the existing hot paths.

@@ -211,29 +211,29 @@ internal sealed class GesSchemaSourceReader
         Expect(':');
         var name = ReadName(GesText.IsTypeName, "type name");
         SkipSpaces();
-        switch (name)
+        switch (GesSchemaTypeNames.Kind(name))
         {
-            case "Boolean": return new GesSchemaTypeSyntax { Kind = GesSchemaTypeKind.Boolean, Offset = offset };
-            case "Number": return new GesSchemaTypeSyntax { Kind = GesSchemaTypeKind.Number, Offset = offset, Constraints = ReadConstraints() };
-            case "Percentage": return new GesSchemaTypeSyntax { Kind = GesSchemaTypeKind.Percentage, Offset = offset, Constraints = ReadConstraints() };
-            case "Quantity":
+            case GesSchemaTypeKind.Boolean: return new GesSchemaTypeSyntax { Kind = GesSchemaTypeKind.Boolean, Offset = offset };
+            case GesSchemaTypeKind.Number: return new GesSchemaTypeSyntax { Kind = GesSchemaTypeKind.Number, Offset = offset, Constraints = ReadConstraints() };
+            case GesSchemaTypeKind.Percentage: return new GesSchemaTypeSyntax { Kind = GesSchemaTypeKind.Percentage, Offset = offset, Constraints = ReadConstraints() };
+            case GesSchemaTypeKind.Quantity:
             {
                 var unit = ReadUnit() ?? throw new SyntaxFailure(_position, "Expected a unit in parentheses.");
                 SkipSpaces();
                 var kind = unit == GesQuantityUnit.UnitNone ? GesSchemaTypeKind.Number : GesSchemaTypeKind.Quantity;
                 return new GesSchemaTypeSyntax { Kind = kind, Unit = unit, Offset = offset, Constraints = ReadConstraints() };
             }
-            case "Point":
-            case "Vector":
+            case GesSchemaTypeKind.Point:
+            case GesSchemaTypeKind.Vector:
                 return ReadSpatial(name == "Point" ? GesSchemaTypeKind.Point : GesSchemaTypeKind.Vector, offset);
-            case "Tag":
+            case GesSchemaTypeKind.Tag:
             {
                 var tags = _position < _text.Length && _text[_position] == '(' ? ReadTagSet() : null;
                 return new GesSchemaTypeSyntax { Kind = GesSchemaTypeKind.Tag, Tags = tags, Offset = offset };
             }
-            case "Text":
+            case GesSchemaTypeKind.Text:
                 return new GesSchemaTypeSyntax { Kind = GesSchemaTypeKind.Text, Max = ReadMax(), Offset = offset };
-            case "List":
+            case GesSchemaTypeKind.List:
             {
                 GesSchemaTypeSyntax[]? element = null;
                 long? max = null;
@@ -252,13 +252,13 @@ internal sealed class GesSchemaSourceReader
 
                 return new GesSchemaTypeSyntax { Kind = GesSchemaTypeKind.List, Element = element, Max = max, Offset = offset };
             }
-            case "Map": return new GesSchemaTypeSyntax { Kind = GesSchemaTypeKind.Map, Offset = offset };
-            case "Range": return new GesSchemaTypeSyntax { Kind = GesSchemaTypeKind.Range, Offset = offset };
-            case "Series": return new GesSchemaTypeSyntax { Kind = GesSchemaTypeKind.Series, Offset = offset };
-            case "Dice": return new GesSchemaTypeSyntax { Kind = GesSchemaTypeKind.Dice, Offset = offset };
-            case "Message": return new GesSchemaTypeSyntax { Kind = GesSchemaTypeKind.Message, Offset = offset };
-            case "Handler": return new GesSchemaTypeSyntax { Kind = GesSchemaTypeKind.Handler, Offset = offset };
-            case "Nothing": return new GesSchemaTypeSyntax { Kind = GesSchemaTypeKind.Nothing, Offset = offset };
+            case GesSchemaTypeKind.Map: return new GesSchemaTypeSyntax { Kind = GesSchemaTypeKind.Map, Offset = offset };
+            case GesSchemaTypeKind.Range: return new GesSchemaTypeSyntax { Kind = GesSchemaTypeKind.Range, Offset = offset };
+            case GesSchemaTypeKind.Series: return new GesSchemaTypeSyntax { Kind = GesSchemaTypeKind.Series, Offset = offset };
+            case GesSchemaTypeKind.Dice: return new GesSchemaTypeSyntax { Kind = GesSchemaTypeKind.Dice, Max = ReadMax(), Constraints = ReadConstraints(), Offset = offset };
+            case GesSchemaTypeKind.Message: return new GesSchemaTypeSyntax { Kind = GesSchemaTypeKind.Message, Offset = offset };
+            case GesSchemaTypeKind.Handler: return new GesSchemaTypeSyntax { Kind = GesSchemaTypeKind.Handler, Offset = offset };
+            case GesSchemaTypeKind.Nothing: return new GesSchemaTypeSyntax { Kind = GesSchemaTypeKind.Nothing, Offset = offset };
             default: return new GesSchemaTypeSyntax { Kind = GesSchemaTypeKind.Reference, Name = name, Offset = offset };
         }
     }

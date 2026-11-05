@@ -1042,6 +1042,7 @@ symbol {"access":"public","declaration":"mutating func beginNested(_ field: GesS
 symbol {"access":"public","declaration":"mutating func finish() throws(GesWireError) -> Int","kind":"swift.method","path":"GameEventScriptRuntime.GesSchemaReader.finish()"}
 symbol {"access":"public","declaration":"mutating func finish() throws(GesWireError) -> Int","kind":"swift.method","path":"GameEventScriptRuntime.GesSchemaWriter.finish()"}
 symbol {"access":"public","declaration":"mutating func next() -> GesMessageArgument?","kind":"swift.method","path":"GameEventScriptRuntime.GesMessageArguments.Iterator.next()"}
+symbol {"access":"public","declaration":"mutating func readAlternative(_ field: GesSchemaField) throws(GesWireError) -> Int","kind":"swift.method","path":"GameEventScriptRuntime.GesSchemaReader.readAlternative(_:)"}
 symbol {"access":"public","declaration":"mutating func readBoolean(_ field: GesSchemaField) throws(GesWireError) -> Bool","kind":"swift.method","path":"GameEventScriptRuntime.GesSchemaReader.readBoolean(_:)"}
 symbol {"access":"public","declaration":"mutating func readIndex(_ field: GesSchemaField) throws(GesWireError) -> UInt64","kind":"swift.method","path":"GameEventScriptRuntime.GesSchemaReader.readIndex(_:)"}
 symbol {"access":"public","declaration":"mutating func readInteger(_ field: GesSchemaField) throws(GesWireError) -> Int64","kind":"swift.method","path":"GameEventScriptRuntime.GesSchemaReader.readInteger(_:)"}
@@ -1051,6 +1052,7 @@ symbol {"access":"public","declaration":"mutating func readNumber(_ field: GesSc
 symbol {"access":"public","declaration":"mutating func readPresence(_ field: GesSchemaField) throws(GesWireError) -> Bool","kind":"swift.method","path":"GameEventScriptRuntime.GesSchemaReader.readPresence(_:)"}
 symbol {"access":"public","declaration":"mutating func readTag(_ field: GesSchemaField) throws(GesWireError) -> Int","kind":"swift.method","path":"GameEventScriptRuntime.GesSchemaReader.readTag(_:)"}
 symbol {"access":"public","declaration":"mutating func readText(_ field: GesSchemaField, into destination: UnsafeMutableRawBufferPointer) throws(GesWireError) -> Int","kind":"swift.method","path":"GameEventScriptRuntime.GesSchemaReader.readText(_:into:)"}
+symbol {"access":"public","declaration":"mutating func selectAlternative(_ field: GesSchemaField, _ alternative: Int) throws(GesWireError)","kind":"swift.method","path":"GameEventScriptRuntime.GesSchemaWriter.selectAlternative(_:_:)"}
 symbol {"access":"public","declaration":"mutating func selectMember(_ member: Int) throws(GesWireError)","kind":"swift.method","path":"GameEventScriptRuntime.GesSchemaWriter.selectMember(_:)"}
 symbol {"access":"public","declaration":"mutating func writeAbsent(_ field: GesSchemaField) throws(GesWireError)","kind":"swift.method","path":"GameEventScriptRuntime.GesSchemaWriter.writeAbsent(_:)"}
 symbol {"access":"public","declaration":"mutating func writeBoolean(_ field: GesSchemaField, _ value: Bool) throws(GesWireError)","kind":"swift.method","path":"GameEventScriptRuntime.GesSchemaWriter.writeBoolean(_:_:)"}

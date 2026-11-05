@@ -90,6 +90,9 @@
             }
             if let max = type.max { output += " max \(max)" }
             return
+        case .dice:
+            output += ":Dice"
+            if let max = type.max { output += " max \(max)" }
         case .reference:
             output += ":\(type.name)"
             return

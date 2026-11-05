@@ -22,6 +22,7 @@ const documents = new Map([
   ['docs/guide/Language.md', 'docs/learn/language'],
   ['docs/guide/CSharp.md', 'docs/learn/csharp'],
   ['docs/guide/Swift.md', 'docs/learn/swift'],
+  ['docs/guide/Schemas.md', 'docs/learn/schemas'],
   ['docs/guide/api/CSharp.md', 'api/csharp'],
   ['docs/guide/api/Swift.md', 'api/swift'],
   ['docs/guide/distribution/Packages.md', 'docs/distribution/packages'],

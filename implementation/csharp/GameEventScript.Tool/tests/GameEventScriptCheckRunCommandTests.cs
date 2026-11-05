@@ -284,6 +284,8 @@ public sealed class GameEventScriptCheckRunCommandTests
         var canonical = Run("schema", "canonical", "drone.gess", "--root", "Drone");
         StringAssert.Contains(canonical.StandardOutput, "field x Quantity(meter) between 0e0 2e3 step 1e-2");
         Assert.AreEqual(16, Run("schema", "hash", "drone.gess", "--root", "Drone").StandardOutput.Trim().Length);
+        Write("dice.gess", "schema :S as { d: :Dice max 2 between 1 and 6, e: :Dice, u: :Text max 1 | :Nothing }\n");
+        Assert.AreEqual("schema :S as {\n  d: :Dice max 2 between 1 and 6\n  e: :Dice\n  u: :Text max 1 | :Nothing\n}\n", Run("schema", "format", "dice.gess").StandardOutput);
         var format = Run("schema", "format", "drone.gess");
         StringAssert.Contains(format.StandardOutput, "x: :Quantity(m) between 0m and 2km step 1cm");
         Assert.IsFalse(format.StandardOutput.Contains("// note", StringComparison.Ordinal));

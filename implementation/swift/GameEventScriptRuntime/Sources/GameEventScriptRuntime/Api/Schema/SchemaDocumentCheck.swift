@@ -49,7 +49,7 @@ struct GesSchemaDocumentCheck {
             if field.marker == .optional, case .nothing = value { continue }
             try union(field.alternatives, value, valueOffsets[index])
         }
-        for field in schema.fields where !seen.contains(field.name) && field.marker != .optional {
+        for field in schema.fields where !seen.contains(field.name) && field.marker != .optional && !field.alternatives.contains(where: { $0.kind == .nothing }) {
             throw Failure(code: Self.missingField, offset: start)
         }
     }
@@ -131,8 +131,9 @@ struct GesSchemaDocumentCheck {
             if case .form("series", _, _, _) = value { return }
             try require(false)
         case .dice:
-            if case .dice = value { return }
-            try require(false)
+            guard case .dice(let rolls) = value else { return try require(false) }
+            if let max = type.max, rolls.count > max { throw Failure(code: Self.outOfRange, offset: start) }
+            for roll in rolls { try numeric(type.constraints, true, Int64(roll), Double(roll), start) }
         case .message:
             if case .message = value { return }
             if case .form("message", _, _, _) = value { return }

@@ -27,7 +27,8 @@ public readonly struct GesSchemaDecoded
 
 /// <summary>
 /// The convenient path between GES values and the wire, for rare data. A Record or Map encodes by field name, and fields
-/// without a schema entry, such as computed fields, are not transmitted. Time-critical code uses
+/// without a schema entry, such as computed fields, are not transmitted. Only a Map that selects a union alternative must
+/// have a field for each of its keys. Time-critical code uses
 /// <see cref="GesSchemaWriter"/> and <see cref="GesSchemaReader"/>.
 /// </summary>
 public static class GesSchemaValues
@@ -57,7 +58,7 @@ public static class GesSchemaValues
         {
             if (value.CustomTypeName is { } name && name != current.Name) throw new GesWireException(GesWireException.TypeMismatch, "");
             var fields = value.AsMap() ?? throw new GesWireException(GesWireException.TypeMismatch, "");
-            EncodeFields(ref writer, current, 0, current.Nodes.Length, fields);
+            EncodeFields(ref writer, current, 0, current.Nodes.Length, fields, false);
         }
 
         return writer.Finish();
@@ -106,7 +107,7 @@ public static class GesSchemaValues
             var current = arguments[argument];
             if (current.Name != schema.Labels[argument]) throw new GesWireException(GesWireException.TypeMismatch, nodes[index].Path);
             argument++;
-            EncodeNode(ref writer, schema, index, current.Value);
+            EncodeNode(ref writer, schema, index, current.Value, false);
         }
 
         if (argument != arguments.Count) throw new GesWireException(GesWireException.TypeMismatch, "");
@@ -138,7 +139,7 @@ public static class GesSchemaValues
         return GesValue.GesMessage(GameEventScriptMessage.Create(schema.Name, arguments, tags));
     }
 
-    private static void EncodeFields(ref GesSchemaWriter writer, GesBoundSchema schema, int start, int end, GesValueMap fields)
+    private static void EncodeFields(ref GesSchemaWriter writer, GesBoundSchema schema, int start, int end, GesValueMap fields, bool strict)
     {
         for (var index = start; index < end; index = schema.Nodes[index].Next)
         {
@@ -146,15 +147,16 @@ public static class GesSchemaValues
             var name = schema.Nodes[index].Name;
             for (var key = 0; key < fields.Length; key++)
                 if (fields.KeyAt(key) == name) value = fields.ValueAt(key);
-            EncodeNode(ref writer, schema, index, value);
+            EncodeNode(ref writer, schema, index, value, strict);
         }
     }
 
-    private static void EncodeNode(ref GesSchemaWriter writer, GesBoundSchema schema, int index, GesValue value)
+    // Strict encoding is the trial of a Map against a union alternative: a key without a field means that the alternative does not hold.
+    private static void EncodeNode(ref GesSchemaWriter writer, GesBoundSchema schema, int index, GesValue value, bool strict)
     {
         ref readonly var node = ref schema.Nodes[index];
         var field = new GesSchemaField(schema, index);
-        if (value.IsNothing)
+        if (value.IsNothing && (node.Optional || node.Kind != GesSchemaNodeKind.Union))
         {
             if (!node.Optional) throw new GesWireException(GesWireException.MissingField, node.Path);
             writer.WriteAbsent(field);
@@ -177,14 +179,23 @@ public static class GesSchemaValues
                 if (value.ValueKind != GesBytecodeTypeKind.Text) throw new GesWireException(GesWireException.TypeMismatch, node.Path);
                 writer.WriteText(field, Encoding.UTF8.GetBytes(value.AsText()));
                 break;
+            case GesSchemaNodeKind.List when node.ValueKind == GesSchemaTypeKind.Dice:
+                if (value.ValueKind != GesBytecodeTypeKind.Dice) throw new GesWireException(GesWireException.TypeMismatch, node.Path);
+                var rolls = value.AsDice();
+                writer.BeginList(field, rolls.Length);
+                foreach (var roll in rolls) writer.WriteInteger(new GesSchemaField(schema, index + 1), roll);
+                break;
             case GesSchemaNodeKind.List:
                 if (value.ValueKind != GesBytecodeTypeKind.List) throw new GesWireException(GesWireException.TypeMismatch, node.Path);
                 var items = value.AsList();
                 writer.BeginList(field, items.Length);
-                for (var item = 0; item < items.Length; item++) EncodeNode(ref writer, schema, index + 1, items[item]);
+                for (var item = 0; item < items.Length; item++) EncodeNode(ref writer, schema, index + 1, items[item], strict);
                 break;
             case GesSchemaNodeKind.Group:
-                EncodeGroup(ref writer, schema, index, value);
+                EncodeGroup(ref writer, schema, index, value, strict);
+                break;
+            case GesSchemaNodeKind.Union:
+                EncodeUnion(ref writer, schema, index, value, strict);
                 break;
             default:
                 EncodeNumber(ref writer, field, in node, value);
@@ -192,7 +203,62 @@ public static class GesSchemaValues
         }
     }
 
-    private static void EncodeGroup(ref GesSchemaWriter writer, GesBoundSchema schema, int index, GesValue value)
+    // The kind and type name of a value select one alternative. Only a Map can fit several schemas, and the first that holds decides.
+    private static void EncodeUnion(ref GesSchemaWriter writer, GesBoundSchema schema, int index, GesValue value, bool strict)
+    {
+        ref readonly var node = ref schema.Nodes[index];
+        var field = new GesSchemaField(schema, index);
+        var position = 0;
+        GesWireException? failure = null;
+        for (var alternative = index + 1; alternative < node.Next; alternative = schema.Nodes[alternative].Next, position++)
+        {
+            ref readonly var candidate = ref schema.Nodes[alternative];
+            if (candidate.Kind == GesSchemaNodeKind.Group && candidate.SchemaName.Length > 0 && value.ValueKind == GesBytecodeTypeKind.Map && value.CustomTypeName is null)
+            {
+                var attempt = writer;
+                try
+                {
+                    attempt.SelectAlternative(field, position);
+                    EncodeNode(ref attempt, schema, alternative, value, true);
+                    writer = attempt;
+                    return;
+                }
+                catch (GesWireException exception) when (exception.Code != GesWireException.BufferTooSmall)
+                {
+                    // The next schema may hold; otherwise the last one reports why not.
+                    failure = exception;
+                }
+            }
+            else if (Selects(in candidate, value))
+            {
+                writer.SelectAlternative(field, position);
+                if (candidate.Kind != GesSchemaNodeKind.Nothing) EncodeNode(ref writer, schema, alternative, value, strict);
+                return;
+            }
+        }
+
+        throw failure ?? new GesWireException(value.IsNothing ? GesWireException.MissingField : GesWireException.TypeMismatch, node.Path);
+    }
+
+    private static bool Selects(in GesSchemaNode candidate, GesValue value)
+    {
+        switch (candidate.ValueKind)
+        {
+            case GesSchemaTypeKind.Nothing: return value.IsNothing;
+            case GesSchemaTypeKind.Boolean: return value.ValueKind == GesBytecodeTypeKind.Boolean;
+            case GesSchemaTypeKind.Tag: return value.ValueKind == GesBytecodeTypeKind.Tag;
+            case GesSchemaTypeKind.Text: return value.ValueKind == GesBytecodeTypeKind.Text;
+            case GesSchemaTypeKind.List: return value.ValueKind == GesBytecodeTypeKind.List;
+            case GesSchemaTypeKind.Dice: return value.ValueKind == GesBytecodeTypeKind.Dice;
+            case GesSchemaTypeKind.Point: return value.ValueKind == GesBytecodeTypeKind.Point;
+            case GesSchemaTypeKind.Vector: return value.ValueKind == GesBytecodeTypeKind.Vector;
+            case GesSchemaTypeKind.Percentage: return value.ValueKind == GesBytecodeTypeKind.Percentage;
+            case GesSchemaTypeKind.Reference: return value.CustomTypeName == candidate.SchemaName;
+            default: return value.ValueKind is GesBytecodeTypeKind.Integer or GesBytecodeTypeKind.Float && value.ValueUnit == candidate.Unit;
+        }
+    }
+
+    private static void EncodeGroup(ref GesSchemaWriter writer, GesBoundSchema schema, int index, GesValue value, bool strict)
     {
         ref readonly var node = ref schema.Nodes[index];
         var field = new GesSchemaField(schema, index);
@@ -219,8 +285,21 @@ public static class GesSchemaValues
 
         if (value.CustomTypeName is { } name2 && name2 != node.SchemaName) throw new GesWireException(GesWireException.TypeMismatch, node.Path);
         var fields = value.AsMap() ?? throw new GesWireException(GesWireException.TypeMismatch, node.Path);
+        if (strict && value.CustomTypeName is null && !HasEveryKey(schema, index, fields)) throw new GesWireException(GesWireException.TypeMismatch, node.Path);
         writer.BeginNested(field);
-        EncodeFields(ref writer, schema, index + 1, node.Next, fields);
+        EncodeFields(ref writer, schema, index + 1, node.Next, fields, strict);
+    }
+
+    private static bool HasEveryKey(GesBoundSchema schema, int index, GesValueMap fields)
+    {
+        for (var key = 0; key < fields.Length; key++)
+        {
+            var found = false;
+            for (var child = index + 1; child < schema.Nodes[index].Next && !found; child = schema.Nodes[child].Next) found = schema.Nodes[child].Name == fields.KeyAt(key);
+            if (!found) return false;
+        }
+
+        return true;
     }
 
     private static void EncodeNumber(ref GesSchemaWriter writer, GesSchemaField field, in GesSchemaNode node, GesValue value)
@@ -256,6 +335,14 @@ public static class GesSchemaValues
             case GesSchemaNodeKind.Boolean: return GesValue.GesBoolean(reader.ReadBoolean(field));
             case GesSchemaNodeKind.Tag: return GesValue.GesTag(node.Tags![reader.ReadTag(field)]);
             case GesSchemaNodeKind.Text: return GesValue.GesText(reader.ReadTextValue(field));
+            case GesSchemaNodeKind.List when node.ValueKind == GesSchemaTypeKind.Dice:
+                var count = reader.BeginList(field);
+                var rolls = new List<int>(Math.Min(count, 1024));
+                for (var roll = 0; roll < count; roll++) rolls.Add((int)reader.ReadInteger(new GesSchemaField(schema, index + 1)));
+                return GesValue.GesDice(rolls.ToArray());
+            case GesSchemaNodeKind.Union:
+                var selected = GesSchemaNumbers.Alternative(schema.Nodes, index, reader.ReadAlternative(field));
+                return schema.Nodes[selected].Kind == GesSchemaNodeKind.Nothing ? default : DecodeNode(ref reader, schema, selected);
             case GesSchemaNodeKind.List:
                 var length = reader.BeginList(field);
                 var items = new List<GesValue>(Math.Min(length, 1024));

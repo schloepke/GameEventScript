@@ -291,7 +291,7 @@ Unity receives it as a precompiled assembly, so it stays within the `netstandard
 `init` setters, Reflection or `unsafe` in its API. Quantization formulas use no addition next to a
 multiplication, so that no compiler can fuse them. Bytes stay byte-identical between the ports;
 `python3 scripts/test-schema-roundtrip.py` compares real bytes, hashes and fuzzed decoding
-against an independent oracle, and `test-swift.sh` runs it. Deltas are specified but planned.
+against an independent oracle, and `test-swift.sh` runs it. Deltas are planned in `docs/plans/SchemaDeltas.md`.
 
 ## Host and runtime
 

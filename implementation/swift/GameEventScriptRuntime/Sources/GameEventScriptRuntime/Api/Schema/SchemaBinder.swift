@@ -57,10 +57,13 @@ enum GesSchemaNodeKind: UInt8, Sendable {
     case text
     case list
     case group
+    case union
+    case nothing
 }
 
 // The numbers of one field of a bound layout, free of references so that the hot path never counts them. A subtree occupies
-// consecutive nodes, and `next` is the first node after it.
+// consecutive nodes, and `next` is the first node after it. `after` is where writing goes on: the same, except that the
+// end of a union alternative continues behind the union.
 struct GesSchemaNode: Sendable {
     var kind = GesSchemaNodeKind.boolean
     var optional = false
@@ -70,6 +73,7 @@ struct GesSchemaNode: Sendable {
     var isTagBit = false
     var width = 0
     var next = 0
+    var after = 0
     // Integer: its lower bound. Quantized: lowerN. The largest valid index; for a wrapping field the period is one more.
     var lower: Int64 = 0
     var maxIndex: UInt64 = 0
@@ -80,9 +84,6 @@ struct GesSchemaNode: Sendable {
     var lowerValue = 0.0
     var upperValue = 0.0
     var maxCount: Int64 = 0
-    // A delta range in indices with the width of its payload; deltaWidth is 0 without one.
-    var deltaRange: UInt64 = 0
-    var deltaWidth = 0
 }
 
 // What a node is called and what its values are, for error paths and the value path.
@@ -153,7 +154,7 @@ public final class GesBoundSchema: Sendable {
     public var hasKey: Bool { !nodes.isEmpty && nodes[0].key }
 
     /// The handle of a field; resolve it once and reuse it.
-    /// - Parameter path: The path, such as `x`, `position.x`, `units[]`, `units[].name` or `#critical`.
+    /// - Parameter path: The path, such as `x`, `position.x`, `units[]`, `units[].name`, `#critical`, or `facing:Tag` for a union alternative.
     /// - Returns: The handle, or nil when the field does not exist.
     public func field(_ path: String) -> GesSchemaField? { fields[path].map { GesSchemaField(owner: self, index: $0) } }
 
@@ -387,8 +388,8 @@ enum GesSchemaBinder {
             info.path = "#" + tag
             build.infos.append(info)
         }
-        let (full, delta) = cost(build.nodes, 0, build.nodes.count, top: true)
-        let bits = max(full, delta)
+        seal(&build.nodes)
+        let bits = cost(build.nodes, 0, build.nodes.count)
         if bits > maximumByteCount * 8 { throw declaration.scope.error(Code.tooLarge, declaration.offset, "The largest encoding of '\(declaration.name)' exceeds \(maximumByteCount) bytes.") }
         return GesBoundSchema(
             schema: declaration.schema!,
@@ -406,48 +407,91 @@ enum GesSchemaBinder {
         )
     }
 
-    // The largest full and delta encoding in bits. Sums stop growing beyond the limit, so nothing overflows.
-    private static func cost(_ nodes: [GesSchemaNode], _ start: Int, _ end: Int, top: Bool) -> (full: Int64, delta: Int64) {
+    private static func seal(_ nodes: inout [GesSchemaNode]) {
+        for index in nodes.indices { nodes[index].after = nodes[index].next }
+        for union in nodes.indices where nodes[union].kind == .union {
+            var alternative = union + 1
+            while alternative < nodes[union].next {
+                let end = nodes[alternative].next
+                for index in alternative..<end where nodes[index].after == end { nodes[index].after = nodes[union].after }
+                alternative = end
+            }
+        }
+    }
+
+    // The largest encoding in bits. Sums stop growing beyond the limit, so nothing overflows.
+    private static func cost(_ nodes: [GesSchemaNode], _ start: Int, _ end: Int) -> Int64 {
         let limit = maximumByteCount * 8 + 1
         var full: Int64 = 0
-        var delta: Int64 = 0
         var index = start
         while index < end {
             let node = nodes[index]
-            var fieldFull: Int64
-            var fieldDelta: Int64
+            var field: Int64
             switch node.kind {
             case .boolean:
-                fieldFull = 1
-                fieldDelta = 0
+                field = 1
             case .text:
-                fieldFull = Int64(node.width) + min(node.maxCount, limit) * 8
-                fieldDelta = fieldFull
+                field = Int64(node.width) + min(node.maxCount, limit) * 8
             case .list:
-                let element = cost(nodes, index + 1, node.next, top: false).full
-                fieldFull = Int64(node.width) + (element == 0 ? 0 : min(node.maxCount, limit / max(element, 1) + 1) * element)
-                fieldDelta = fieldFull
+                let element = cost(nodes, index + 1, node.next)
+                field = Int64(node.width) + (element == 0 ? 0 : min(node.maxCount, limit / max(element, 1) + 1) * element)
             case .group:
-                (fieldFull, fieldDelta) = cost(nodes, index + 1, node.next, top: false)
+                field = cost(nodes, index + 1, node.next)
+            case .union:
+                var largest: Int64 = 0
+                var alternative = index + 1
+                while alternative < node.next {
+                    largest = max(largest, cost(nodes, alternative, nodes[alternative].next))
+                    alternative = nodes[alternative].next
+                }
+                field = Int64(node.width) + largest
             default:
-                fieldFull = Int64(node.width)
-                fieldDelta = node.deltaWidth > 0 ? 1 + Int64(max(node.deltaWidth, node.width)) : Int64(node.width)
+                field = Int64(node.width)
             }
-            if node.optional {
-                fieldDelta = 1 + max(fieldDelta, fieldFull)
-                fieldFull += 1
-            }
-            full = min(full + fieldFull, limit)
-            delta = min(delta + (node.key && top ? fieldFull : 1 + fieldDelta), limit)
+            if node.optional { field += 1 }
+            full = min(full + field, limit)
             index = node.next
         }
-        return (full, delta)
+        return full
     }
 
     private static func addField(_ build: inout Build, _ scope: GesFileScope, _ field: GesResolvedField, _ prefix: String, _ lists: Int, top: Bool) throws {
-        if field.alternatives.count != 1 { throw scope.error(Code.notEncodable, field.offset, "Field '\(field.name)' is a union, which is only for documents.") }
         let path = prefix.isEmpty ? field.name : prefix + "." + field.name
-        try addType(&build, scope, field.alternatives[0], field.name, path, optional: field.marker == .optional, key: top && field.marker == .key, lists)
+        try addUnion(&build, scope, field.alternatives, field.name, path, optional: field.marker == .optional, key: top && field.marker == .key, lists)
+    }
+
+    private static func addUnion(_ build: inout Build, _ scope: GesFileScope, _ alternatives: [GesResolvedType], _ name: String, _ path: String, optional: Bool, key: Bool, _ lists: Int) throws {
+        if alternatives.count == 1 { return try addType(&build, scope, alternatives[0], name, path, optional: optional, key: key, lists) }
+        try checkNodeCount(build, scope, alternatives[0].offset)
+        let index = build.nodes.count
+        var node = GesSchemaNode()
+        node.kind = .union
+        node.optional = optional
+        node.maxIndex = UInt64(alternatives.count) - 1
+        node.width = bitLength(node.maxIndex)
+        build.nodes.append(node)
+        var info = GesSchemaNodeInfo()
+        info.name = name
+        info.path = path
+        build.infos.append(info)
+        for alternative in alternatives {
+            let alternativePath = path + ":" + (alternative.kind == .reference ? alternative.referenceName : alternative.kind.rawValue)
+            if alternative.kind == .nothing {
+                try checkNodeCount(build, scope, alternative.offset)
+                var nothing = GesSchemaNode()
+                nothing.kind = .nothing
+                nothing.next = build.nodes.count + 1
+                build.nodes.append(nothing)
+                var nothingInfo = GesSchemaNodeInfo()
+                nothingInfo.name = name
+                nothingInfo.path = alternativePath
+                nothingInfo.valueKind = .nothing
+                build.infos.append(nothingInfo)
+            } else {
+                try addType(&build, scope, alternative, name, alternativePath, optional: false, key: false, lists)
+            }
+        }
+        build.nodes[index].next = build.nodes.count
     }
 
     private static func addType(_ build: inout Build, _ scope: GesFileScope, _ type: GesResolvedType, _ name: String, _ path: String, optional: Bool, key: Bool, _ lists: Int) throws {
@@ -484,12 +528,28 @@ enum GesSchemaBinder {
         case .list:
             guard let element = type.element, let max = type.max else { throw scope.error(Code.notEncodable, type.offset, "A List without element type and max has no hard limit.") }
             if lists >= maximumListNesting { throw scope.error(Code.notEncodable, type.offset, "Lists nest at most \(maximumListNesting) levels for encoding.") }
-            if element.count != 1 { throw scope.error(Code.notEncodable, type.offset, "A List of a union is only for documents.") }
             node.kind = .list
             node.maxCount = max
             node.width = bitLength(UInt64(max))
-            try addType(&build, scope, element[0], "[]", path + "[]", optional: false, key: false, lists + 1)
+            try addUnion(&build, scope, element, "[]", path + "[]", optional: false, key: false, lists + 1)
             if !build.nodes[(index + 1)...].contains(where: { $0.width > 0 || $0.optional }) { throw scope.error(Code.notEncodable, type.offset, "A List element without bits has a count that no data limits.") }
+        case .dice:
+            guard let max = type.max else { throw scope.error(Code.notEncodable, type.offset, "A Dice without max has no hard limit.") }
+            if lists >= maximumListNesting { throw scope.error(Code.notEncodable, type.offset, "Lists nest at most \(maximumListNesting) levels for encoding.") }
+            try checkDice(scope, type.constraints, type.offset, build.parameters)
+            node.kind = .list
+            node.maxCount = max
+            node.width = bitLength(UInt64(max))
+            try checkNodeCount(build, scope, type.offset)
+            var roll = GesSchemaNode()
+            roll.next = build.nodes.count + 1
+            try number(build.parameters, scope, rollConstraints(type.constraints), type.offset, &roll)
+            build.nodes.append(roll)
+            var rollInfo = GesSchemaNodeInfo()
+            rollInfo.name = "[]"
+            rollInfo.path = path + "[]"
+            rollInfo.valueKind = .number
+            build.infos.append(rollInfo)
         case .point, .vector:
             node.kind = .group
             if let axes = type.axes {
@@ -526,6 +586,22 @@ enum GesSchemaBinder {
         info.path = path + "." + axis
         info.valueKind = .number
         build.infos.append(info)
+    }
+
+    // The rolls of a Dice are positive Int32 values.
+    private static func rollConstraints(_ constraints: GesResolvedConstraints) -> GesResolvedConstraints {
+        var rolls = GesResolvedConstraints()
+        rolls.integer = true
+        rolls.lower = constraints.lower ?? GesResolvedValue(value: GesSchemaDecimal(1, 0))
+        rolls.upper = constraints.upper ?? GesResolvedValue(value: GesSchemaDecimal(Int64(Int32.max), 0))
+        return rolls
+    }
+
+    static func checkDice(_ scope: GesFileScope, _ constraints: GesResolvedConstraints, _ offset: Int, _ parameters: GesSchemaParameters?) throws {
+        let rolls = rollConstraints(constraints)
+        let numeric = try compute(scope, rolls, parameters)
+        if (parameters != nil || !rolls.lower!.isParameter) && numeric.lower < 1 { throw scope.error(Code.invalidBound, offset, "A Dice roll is at least 1.") }
+        if (parameters != nil || !rolls.upper!.isParameter) && numeric.upper > Int64(Int32.max) { throw scope.error(Code.invalidBound, offset, "A Dice roll fits Int32.") }
     }
 
     private static func number(_ parameters: GesSchemaParameters, _ scope: GesFileScope, _ constraints: GesResolvedConstraints, _ offset: Int, _ node: inout GesSchemaNode) throws {
@@ -565,9 +641,7 @@ enum GesSchemaBinder {
             }
         }
         if let delta = constraints.delta {
-            node.deltaRange = numeric.deltaRange
-            node.deltaWidth = bitLength(numeric.deltaRange * 2)
-            if node.deltaWidth >= node.width { throw scope.error(Code.invalidConstraint, delta.offset, "A delta range is narrower than its field.") }
+            if bitLength(numeric.deltaRange * 2) >= node.width { throw scope.error(Code.invalidConstraint, delta.offset, "A delta range is narrower than its field.") }
         }
     }
 

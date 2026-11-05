@@ -48,7 +48,7 @@ public sealed class GesSchemaTests
     public void WriterAndReaderMatchTheWorkedExample()
     {
         var bot = Bot();
-        Assert.AreEqual(14, bot.MaxByteCount);
+        Assert.AreEqual(13, bot.MaxByteCount);
         Span<byte> buffer = stackalloc byte[32];
         var writer = new GesSchemaWriter(bot, buffer);
         writer.WriteInteger(bot.Field("id"), 42);
@@ -165,6 +165,73 @@ public sealed class GesSchemaTests
         Round();
         var before = GC.GetAllocatedBytesForCurrentThread();
         for (var round = 0; round < 1000; round++) Round();
+        Assert.AreEqual(before, GC.GetAllocatedBytesForCurrentThread());
+    }
+
+    [TestMethod]
+    public void AnInvalidAlternativeWritesNothing()
+    {
+        var bound = GesSchemaSet.Parse("schema :S as { a: :Boolean | :Text max 1 optional }").Schema("S").Bind();
+        var (a, flag) = (bound.Field("a"), bound.Field("a:Boolean"));
+        var buffer = new byte[8];
+        var writer = new GesSchemaWriter(bound, buffer);
+        var code = "";
+        try
+        {
+            writer.SelectAlternative(a, 2);
+        }
+        catch (GesWireException exception)
+        {
+            code = exception.Code;
+        }
+
+        Assert.AreEqual(GesWireException.OutOfRange, code);
+        writer.SelectAlternative(a, 0);
+        writer.WriteBoolean(flag, true);
+        Assert.AreEqual(1, writer.Finish());
+        Assert.AreEqual(0b101, buffer[0]);
+    }
+
+    [TestMethod]
+    [TestCategory("Allocation")]
+    public void UnionsAndDiceAllocateNothing()
+    {
+        var bound = GesSchemaSet.Parse("schema :S as { v: :Quantity(°) wrapping between 0° and 360° step 1° | :Tag(#a, #b) | :Nothing, next: :Boolean, d: :Dice max 2 between 1 and 6 }").Schema("S").Bind();
+        var (v, tag, next, d, roll) = (bound.Field("v"), bound.Field("v:Tag"), bound.Field("next"), bound.Field("d"), bound.Field("d[]"));
+        Span<byte> buffer = stackalloc byte[(int)bound.MaxByteCount];
+
+        void Round(Span<byte> memory)
+        {
+            var writer = new GesSchemaWriter(bound, memory);
+            writer.SelectAlternative(v, 1);
+            writer.WriteTag(tag, 1);
+            writer.WriteBoolean(next, true);
+            writer.BeginList(d, 1);
+            writer.WriteInteger(roll, 4);
+            var length = writer.Finish();
+            var reader = new GesSchemaReader(bound, memory.Slice(0, length));
+            Assert.AreEqual(1, reader.ReadAlternative(v));
+            Assert.AreEqual(1, reader.ReadTag(tag));
+            Assert.IsTrue(reader.ReadBoolean(next));
+            Assert.AreEqual(1, reader.BeginList(d));
+            Assert.AreEqual(4, reader.ReadInteger(roll));
+            reader.Finish();
+
+            writer = new GesSchemaWriter(bound, memory);
+            writer.SelectAlternative(v, 2);
+            writer.WriteBoolean(next, false);
+            writer.BeginList(d, 0);
+            length = writer.Finish();
+            reader = new GesSchemaReader(bound, memory.Slice(0, length));
+            Assert.AreEqual(2, reader.ReadAlternative(v));
+            Assert.IsFalse(reader.ReadBoolean(next));
+            Assert.AreEqual(0, reader.BeginList(d));
+            reader.Finish();
+        }
+
+        Round(buffer);
+        var before = GC.GetAllocatedBytesForCurrentThread();
+        for (var round = 0; round < 1000; round++) Round(buffer);
         Assert.AreEqual(before, GC.GetAllocatedBytesForCurrentThread());
     }
 

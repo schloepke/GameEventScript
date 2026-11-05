@@ -83,6 +83,16 @@ enum GesSchemaNumbers {
         return (Double(multiple) / node.sBinary, multiple)
     }
 
+    static func alternative(_ nodes: [GesSchemaNode], _ union: Int, _ alternative: Int) -> Int {
+        var index = union + 1
+        var skipped = 0
+        while skipped < alternative {
+            index = nodes[index].next
+            skipped += 1
+        }
+        return index
+    }
+
     static func isValidUTF8(_ bytes: UnsafeRawBufferPointer) -> Bool {
         var index = 0
         while index < bytes.count {
@@ -153,7 +163,7 @@ public struct GesSchemaWriter {
     public mutating func writeBoolean(_ field: GesSchemaField, _ value: Bool) throws(GesWireError) {
         try enter(field, .boolean)
         try put(value ? 1 : 0, 1)
-        leave(schema.nodes[field.index].next)
+        leave(schema.nodes[field.index].after)
     }
 
     /// Writes an Int64 to a numeric field.
@@ -174,7 +184,7 @@ public struct GesSchemaWriter {
             }
             try presence(node)
             try put(index, node.width)
-            leave(node.next)
+            leave(node.after)
         case .quantized:
             if value >= 1 << 53 || value <= -(1 << 53) { throw GesWireError(GesWireError.outOfRange, field.path) }
             try writeNumber(field, Double(value))
@@ -197,13 +207,13 @@ public struct GesSchemaWriter {
             let index = try GesSchemaNumbers.index(node, value, field.path)
             try presence(node)
             try put(index, node.width)
-            leave(node.next)
+            leave(node.after)
         case .float:
             if value.isNaN { throw GesWireError(GesWireError.notRepresentable, field.path) }
             if node.hasRange && (value < node.lowerValue || value > node.upperValue) { throw GesWireError(GesWireError.outOfRange, field.path) }
             try presence(node)
             try put((value == 0 ? 0.0 : value).bitPattern, 64)
-            leave(node.next)
+            leave(node.after)
         case .integer:
             if value.isNaN || value != value.rounded(.down) || value >= 9_223_372_036_854_775_808 || value < -9_223_372_036_854_775_808 { throw GesWireError(GesWireError.notRepresentable, field.path) }
             try writeInteger(field, Int64(value))
@@ -221,7 +231,7 @@ public struct GesSchemaWriter {
         if index > node.maxIndex { throw GesWireError(GesWireError.outOfRange, field.path) }
         try presence(node)
         try put(index, node.width)
-        leave(node.next)
+        leave(node.after)
     }
 
     /// Writes a tag of a closed set by its index in declared order.
@@ -233,7 +243,7 @@ public struct GesSchemaWriter {
         if tagIndex < 0 || UInt64(tagIndex) > node.maxIndex { throw GesWireError(GesWireError.unknownTag, field.path) }
         try presence(node)
         try put(UInt64(tagIndex), node.width)
-        leave(node.next)
+        leave(node.after)
     }
 
     /// Writes a Text from its UTF-8 bytes.
@@ -251,7 +261,7 @@ public struct GesSchemaWriter {
             try put(UInt64(utf8[index]), 8)
             index += 1
         }
-        leave(node.next)
+        leave(node.after)
     }
 
     /// Starts a list with its element count; the elements follow.
@@ -263,8 +273,8 @@ public struct GesSchemaWriter {
         if count < 0 || Int64(count) > node.maxCount { throw GesWireError(GesWireError.tooLong, field.path) }
         try presence(node)
         try put(UInt64(count), node.width)
-        if count == 0 { return leave(node.next) }
-        lists.push(end: node.next, element: field.index + 1, count: Int64(count))
+        if count == 0 { return leave(node.after) }
+        lists.push(end: node.after, element: field.index + 1, count: Int64(count))
         cursor = field.index + 1
     }
 
@@ -272,7 +282,28 @@ public struct GesSchemaWriter {
     /// - Throws: `GesWireError` when the field is used out of order.
     public mutating func beginNested(_ field: GesSchemaField) throws(GesWireError) {
         try enter(field, .group)
-        leave(field.index + 1)
+        let node = schema.nodes[field.index]
+        leave(node.next == field.index + 1 ? node.after : field.index + 1)
+    }
+
+    /// Selects an alternative of a union and writes its index; the alternative follows, unless it is `:Nothing`.
+    /// - Parameters:
+    ///   - field: The union's handle.
+    ///   - alternative: The alternative's index in declared order.
+    /// - Throws: `GesWireError` when the field is no union or the index does not exist.
+    public mutating func selectAlternative(_ field: GesSchemaField, _ alternative: Int) throws(GesWireError) {
+        try current(field)
+        let node = schema.nodes[field.index]
+        if node.kind != .union { throw GesWireError(GesWireError.typeMismatch, field.path) }
+        if alternative < 0 || UInt64(alternative) > node.maxIndex { throw GesWireError(GesWireError.outOfRange, field.path) }
+        try presence(node)
+        try put(UInt64(alternative), node.width)
+        let selected = GesSchemaNumbers.alternative(schema.nodes, field.index, alternative)
+        if schema.nodes[selected].kind == .nothing {
+            leave(schema.nodes[selected].after)
+        } else {
+            cursor = selected
+        }
     }
 
     /// Marks an `optional` field as absent.
@@ -282,7 +313,7 @@ public struct GesSchemaWriter {
         let node = schema.nodes[field.index]
         if !node.optional { throw GesWireError(GesWireError.missingField, field.path) }
         try put(0, 1)
-        leave(node.next)
+        leave(node.after)
     }
 
     /// Ends the record with padding to a byte boundary.
@@ -394,7 +425,7 @@ public struct GesSchemaReader {
             present = true
             return true
         }
-        leave(node.next)
+        leave(node.after)
         return false
     }
 
@@ -403,7 +434,7 @@ public struct GesSchemaReader {
     public mutating func readBoolean(_ field: GesSchemaField) throws(GesWireError) -> Bool {
         try enter(field, .boolean)
         let value = try get(1, field.index) == 1
-        leave(schema.nodes[field.index].next)
+        leave(schema.nodes[field.index].after)
         return value
     }
 
@@ -414,7 +445,7 @@ public struct GesSchemaReader {
         let node = schema.nodes[field.index]
         let index = try get(node.width, field.index)
         if index > node.maxIndex { throw GesWireError(GesWireError.invalidIndex, field.path) }
-        leave(node.next)
+        leave(node.after)
         return node.hasRange ? Int64(bitPattern: UInt64(bitPattern: node.lower) &+ index) : Int64(bitPattern: index)
     }
 
@@ -426,7 +457,7 @@ public struct GesSchemaReader {
         switch node.kind {
         case .quantized:
             let index = try enteredIndex(field)
-            leave(node.next)
+            leave(node.after)
             return GesSchemaNumbers.value(node, index).value
         case .float:
             try requirePresence(field)
@@ -435,7 +466,7 @@ public struct GesSchemaReader {
             if value.isNaN || bits == 1 << 63 || (node.hasRange && value.isInfinite) { throw GesWireError(GesWireError.invalidNumber, field.path) }
             if node.hasRange && (value < node.lowerValue || value > node.upperValue) { throw GesWireError(GesWireError.outOfRange, field.path) }
             present = false
-            leave(node.next)
+            leave(node.after)
             return value
         case .integer:
             return Double(try readInteger(field))
@@ -449,7 +480,7 @@ public struct GesSchemaReader {
     mutating func readExactNumber(_ field: GesSchemaField) throws(GesWireError) -> (value: Double, integer: Int64?) {
         let node = schema.nodes[field.index]
         let index = try enteredIndex(field)
-        leave(node.next)
+        leave(node.after)
         let (value, multiple) = GesSchemaNumbers.value(node, index)
         return (value, multiple % node.tenPower == 0 ? multiple / node.tenPower : nil)
     }
@@ -461,7 +492,7 @@ public struct GesSchemaReader {
         let node = schema.nodes[field.index]
         if node.kind != .integer && node.kind != .quantized && node.kind != .tag { throw GesWireError(GesWireError.typeMismatch, field.path) }
         let index = try enteredIndex(field)
-        leave(node.next)
+        leave(node.after)
         return index
     }
 
@@ -472,7 +503,7 @@ public struct GesSchemaReader {
         let node = schema.nodes[field.index]
         let index = try get(node.width, field.index)
         if index > node.maxIndex { throw GesWireError(GesWireError.invalidIndex, field.path) }
-        leave(node.next)
+        leave(node.after)
         return Int(index)
     }
 
@@ -493,7 +524,7 @@ public struct GesSchemaReader {
             index += 1
         }
         if !GesSchemaNumbers.isValidUTF8(UnsafeRawBufferPointer(rebasing: destination[0..<Int(count)])) { throw GesWireError(GesWireError.invalidText, field.path) }
-        leave(node.next)
+        leave(node.after)
         return Int(count)
     }
 
@@ -511,7 +542,7 @@ public struct GesSchemaReader {
             index += 1
         }
         if !bytes.withUnsafeBytes({ GesSchemaNumbers.isValidUTF8($0) }) { throw GesWireError(GesWireError.invalidText, field.path) }
-        leave(node.next)
+        leave(node.after)
         return String(decoding: bytes, as: UTF8.self)
     }
 
@@ -524,10 +555,10 @@ public struct GesSchemaReader {
         let count = try get(node.width, field.index)
         if count > UInt64(node.maxCount) { throw GesWireError(GesWireError.invalidCount, field.path) }
         if count == 0 {
-            leave(node.next)
+            leave(node.after)
             return 0
         }
-        lists.push(end: node.next, element: field.index + 1, count: Int64(count))
+        lists.push(end: node.after, element: field.index + 1, count: Int64(count))
         cursor = field.index + 1
         return Int(count)
     }
@@ -536,7 +567,25 @@ public struct GesSchemaReader {
     /// - Throws: `GesWireError` when the data is invalid.
     public mutating func beginNested(_ field: GesSchemaField) throws(GesWireError) {
         try enter(field, .group)
-        leave(field.index + 1)
+        let node = schema.nodes[field.index]
+        leave(node.next == field.index + 1 ? node.after : field.index + 1)
+    }
+
+    /// Reads which alternative of a union follows, and selects it. A `:Nothing` alternative is complete.
+    /// - Returns: The alternative's index in declared order.
+    /// - Throws: `GesWireError` when the field is no union or the data is invalid.
+    public mutating func readAlternative(_ field: GesSchemaField) throws(GesWireError) -> Int {
+        try enter(field, .union)
+        let node = schema.nodes[field.index]
+        let index = try get(node.width, field.index)
+        if index > node.maxIndex { throw GesWireError(GesWireError.invalidIndex, field.path) }
+        let selected = GesSchemaNumbers.alternative(schema.nodes, field.index, Int(index))
+        if schema.nodes[selected].kind == .nothing {
+            leave(schema.nodes[selected].after)
+        } else {
+            cursor = selected
+        }
+        return Int(index)
     }
 
     /// Ends the record and checks its padding.

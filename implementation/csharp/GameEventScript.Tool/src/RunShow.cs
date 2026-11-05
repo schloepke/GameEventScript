@@ -18,6 +18,7 @@ internal static class RunShow
     {
         var text = StrictUtf8.GetString(File.ReadAllBytes(path));
         var language = path.EndsWith(".gesd", StringComparison.OrdinalIgnoreCase) ? GesSyntaxLanguage.Gesd
+            : path.EndsWith(".gess", StringComparison.OrdinalIgnoreCase) ? GesSyntaxLanguage.Gess
             : path.EndsWith(".gesa", StringComparison.OrdinalIgnoreCase) ? GesSyntaxLanguage.Gesa : GesSyntaxLanguage.Ges;
         var highlighter = new GesSyntaxHighlighter(language, int.MaxValue);
         var result = highlighter.Highlight(text);

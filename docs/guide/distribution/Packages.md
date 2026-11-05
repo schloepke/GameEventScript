@@ -31,8 +31,8 @@ versions retain their original package contents; icons are included starting wit
 The root SwiftPM package exposes only libraries. The CLI uses its separate development package.
 
 Runtime depends on Syntax, which holds the shared lexical rules such as the
-quantity unit table and depends on no other GES module. Compiler and each native
-Bridge depend on their Runtime. An application can use Runtime with Syntax alone. Conformance stays in the repository for development and CI. CLI and terminal targets are not part of the root package.
+quantity unit table and depends on no other GES module. Compiler and each native Bridge depend on their Runtime. An application can use
+Runtime with Syntax alone, also for documents, schemas and binary data. Conformance stays in the repository for development and CI. CLI and terminal targets are not part of the root package.
 Homebrew and local installers remain available. See [standalone CLI downloads](Tools.md) for
 installation and release verification. Deferred distribution work is tracked in
 [BACKLOG.md](../../../BACKLOG.md).
@@ -226,7 +226,7 @@ Run them from a repository checkout with:
 swift test --scratch-path artifacts/swift/root-tests --disable-build-manifest-caching --configuration release
 ```
 
-The highlighter tests read the shared Markdown fixture under
+The Syntax tests read the shared Markdown fixture under
 `conformance/highlighting`; no Conformance library dependency is added.
 
 In Xcode, select **File → Add Package Dependencies**, enter

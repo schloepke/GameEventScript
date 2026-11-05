@@ -6,10 +6,10 @@
 > **Since: Unreleased**
 
 `GameEventScript.Syntax` is the .NET Standard 2.1 module with the GES lexer,
-parser, single-source validator and GES document reader that Runtime and
-Compiler build on. For editors and terminals it highlights GES and GESA from the
+parser, single-source validator and GES document and schema readers that
+Runtime and Compiler build on. For editors and terminals it highlights GES and GESA from the
 lossless syntax tree and GES documents (`GesSyntaxLanguage.Gesd`) with their
-first document error, with no third-party, Compiler, Runtime or UI dependency. The CLI and the Swift
+first document error and GES schemas (`GesSyntaxLanguage.Gess`), with no third-party, Compiler, Runtime or UI dependency. The CLI and the Swift
 product classify alike.
 
 ```csharp

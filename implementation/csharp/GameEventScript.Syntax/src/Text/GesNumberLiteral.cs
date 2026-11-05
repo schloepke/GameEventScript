@@ -47,11 +47,11 @@ internal readonly struct GesNumberLiteral
 
     internal bool IsValid => Kind != GesNumberLiteralKind.Invalid;
 
-    private static GesNumberLiteral Integer(long value, GesQuantityUnit unit) => new(GesNumberLiteralKind.Integer, value, 0, unit);
+    internal static GesNumberLiteral Integer(long value, GesQuantityUnit unit) => new(GesNumberLiteralKind.Integer, value, 0, unit);
 
-    private static GesNumberLiteral Float(double value, GesQuantityUnit unit) => new(GesNumberLiteralKind.Float, 0, value, unit);
+    internal static GesNumberLiteral Float(double value, GesQuantityUnit unit) => new(GesNumberLiteralKind.Float, 0, value, unit);
 
-    private static GesNumberLiteral Percentage(double ratio) => new(GesNumberLiteralKind.Percentage, 0, ratio, GesQuantityUnit.UnitNone);
+    internal static GesNumberLiteral Percentage(double ratio) => new(GesNumberLiteralKind.Percentage, 0, ratio, GesQuantityUnit.UnitNone);
 
     // Invalid distinguishes failed recognition from a successfully recognized NaN/nothing value.
     internal static GesNumberLiteral Read(string text, bool percentage = false, bool allowGrouping = true, bool percentageMagnitude = false)

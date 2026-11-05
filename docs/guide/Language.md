@@ -332,6 +332,13 @@ sends its starting message. `:handler` lists registered handlers; `:source` and
 `:dump` inspect a selected module. Ctrl+N inserts a newline; Enter submits input.
 Temporary input bindings do not persist between submissions.
 
+> **Since: Unreleased** — GES documents and schemas
+
+Data can live outside scripts. [GES documents](../../specs/Documents.md)
+(`.gesd`) use the same literal syntax for configuration and content, and
+[GES schemas](../../specs/Schemas.md) (`.gess`) describe their structure and a compact binary
+encoding. `ges document check` and `ges schema check` verify these files.
+
 For exact syntax, read the [language reference](../../specs/Language.md).
 For message ordering, initialization, limits and timing, read the
 [host runtime contract](../../specs/HostRuntime.md). The

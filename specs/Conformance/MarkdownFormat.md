@@ -272,6 +272,7 @@ discriminator is `gesBlock: case`. It supports:
 | `stepActions` | mapping | no | ordered host actions performed immediately before a named step's Receive |
 | `messageApi` | mapping | `messageApi` only | signature and message input |
 | `valueApi` | mapping | `valueApi` only | portable value construction, comparison, copy or literal parsing input |
+| `schemaApi` | mapping | `schemaApi` only | Schema sources, a root, parameters and what to encode, decode or check |
 | `documentApi` | mapping | `documentApi` only | GES document text or root value, with optional printing |
 | `externalTypeApi` | mapping | `externalTypeApi` only | portable external-type catalog input |
 | `binaryFixture` | mapping | `programBinary` only | immutable `.gesb` fixture manifest entry |
@@ -695,7 +696,7 @@ last-entry-wins semantics before scalar-ordinal key sorting.
 ## Expectation fields by test kind
 
 Supported V1 kinds are `scriptApi`, `compileError`, `loadError`, `messageApi`,
-`valueApi`, `documentApi`, `externalTypeApi`, `compileMetadata`, `bytecode`,
+`valueApi`, `documentApi`, `schemaApi`, `externalTypeApi`, `compileMetadata`, `bytecode`,
 `performance`, and `bytecodeSnapshot`, and `programBinary`. A kind's
 required core capabilities are additive to explicit `requires.core`.
 
@@ -866,6 +867,21 @@ valueApi:
 literal:
   unrecognized: true
 ```
+
+### `schemaApi`
+
+> **Since: Unreleased**
+
+Requires `schema-api` and no GES source. `schemaApi.sources` lists schema source texts, named
+`schema0.gess` and so on; `root` names a declaration and `parameters` maps parameter names to
+literals or to Int64 or Binary64 Number or Quantity values in the `valueApi.value` transport. `encode` holds a value with the `valueApi.value` transport, `encodeBuffer` an optional
+buffer size, `decode` lowercase hexadecimal bytes, `decodeLimit` an optional byte limit, `key`
+bytes whose key is read, `dump` bytes to dump, `describe: true` to observe the root's description, and `document` a document text to check. `bind` overrides whether the
+root is bound, which by default holds for a root without a document. The expectation `schema`
+contains any of `error` (`code` with optional `line` and `column`; it stands alone), `canonical`,
+`hash`, `bindingHash`, `maxByteCount`, `encoded` (`bytes` or `error` with `code` and optional
+`path`), `decoded` (`value` and `byteCount`, or `error`), `key`, `dump` (`text` and `valid`), `description` and `document` (`ok: true` or
+`error`). The contract is [GES schemas](../Schemas.md).
 
 ### `documentApi`
 

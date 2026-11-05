@@ -67,7 +67,7 @@ const clearedBadges = game.start(source, 42).state;
 assert.equal(clearedBadges.tableBadge, '');
 assert.equal(clearedBadges.tableBadgeColor, '');
 assert.ok(clearedBadges.zones.every(zone => zone.badge === '' && zone.badgeColor === ''));
-// Exercise the actual Swift/Foundation highlighter, including UTF-16 astral characters.
+// Exercise the actual Swift Syntax highlighter, including UTF-16 astral characters.
 const sample = "// 😀 comment\non Test(value) { emit Done(value: 'hello', count: 7) }";
 const colored = game.highlight(sample);
 assert.equal(colored.complete, true);

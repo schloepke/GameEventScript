@@ -55,10 +55,13 @@ here.
   registry and extensions. Decide whether `WithExternalTypeCatalog` remains as a
   convenience, and whether the Bridges generate declaration modules. Schedule
   after the Syntax module rework, on its source-neutral declaration set.
-- Implement GES schemas and their compact binary encoding once the draft
-  specs/Schemas.md is accepted: `.gess` reading in Syntax, a Schema module with
-  binding, hash, quantization, writer and reader, the value path, the dump tool,
-  document checking, and later deltas and generated code.
+- Implement the deltas of specs/Schemas.md: `encode(value, baseline)`, change bits, delta
+  ranges, `wire.keyMismatch` and `wire.invalidDelta`, with corpus cases and the dump tool's
+  `--baseline`. The format and `delta within` are already in place.
+- Generate typed C# (language version 9 for Unity) and Swift code from schemas when a
+  measured profile shows that the schema-bound writer and reader are too slow.
+- Run the schema byte and vector suites and an allocation measurement in a real Unity
+  project: an IL2CPP player on arm64 and x64 and Mono in the editor.
 - Explore computed handler bindings, for example `on Main(value computed by
   parseArguments(input: args), context) { ... }`. The message signature remains
   `Main(args, context)`, while only `value` and `context` are visible in the body.
@@ -108,8 +111,6 @@ here.
 
 ## Developer tooling
 
-- Add `.gesd` document support to the editor packages (TextMate/Sublime grammars,
-  highlighter cases) and CLI commands to check and format documents.
 - Design a single implementation-independent Conformance orchestrator with thin
   language adapters, so corpus parsing, assertions and reporting do not need to
   be ported for each runtime. Keep native allocation and platform integration

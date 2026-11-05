@@ -15,7 +15,7 @@
 /// their decimal digits, and percentage ratios. GES grammar, exact Int64 conversion and decimal percentage scaling are
 /// GES rules; Swift's decimal conversion is used only after grammar validation for binary64 rounding. Runtime turns it
 /// into a value; documents only test it.
-@_spi(Syntax) public struct GesNumberLiteral: Sendable {
+@_spi(Syntax) public struct GesNumberLiteral: Sendable, Hashable {
     @_spi(Syntax) public let kind: GesNumberLiteralKind
     @_spi(Syntax) public let integerValue: Int64
     /// The binary64 value, or the ratio of a percentage.
@@ -27,11 +27,11 @@
 
     @_spi(Syntax) public var isValid: Bool { kind != .invalid }
 
-    private static func integer(_ value: Int64, unit: GesQuantityUnit) -> Self { Self(kind: .integer, integerValue: value, floatValue: 0, unit: unit) }
+    @_spi(Syntax) public static func integer(_ value: Int64, unit: GesQuantityUnit) -> Self { Self(kind: .integer, integerValue: value, floatValue: 0, unit: unit) }
 
-    private static func float(_ value: Double, unit: GesQuantityUnit) -> Self { Self(kind: .float, integerValue: 0, floatValue: value, unit: unit) }
+    @_spi(Syntax) public static func float(_ value: Double, unit: GesQuantityUnit) -> Self { Self(kind: .float, integerValue: 0, floatValue: value, unit: unit) }
 
-    private static func percentage(_ ratio: Double) -> Self { Self(kind: .percentage, integerValue: 0, floatValue: ratio, unit: .none) }
+    @_spi(Syntax) public static func percentage(_ ratio: Double) -> Self { Self(kind: .percentage, integerValue: 0, floatValue: ratio, unit: .none) }
 
     private static func trim(_ input: String) -> String {
         let scalars = input.unicodeScalars

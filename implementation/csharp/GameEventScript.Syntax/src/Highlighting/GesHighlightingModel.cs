@@ -14,7 +14,9 @@ public enum GesSyntaxLanguage
     /// <summary>GESA assembler with embedded GES source regions.</summary>
     Gesa,
     /// <summary>GES document data (<c>.gesd</c>) with its schema header; diagnostics report its first document error.</summary>
-    Gesd
+    Gesd,
+    /// <summary>GES schema source (<c>.gess</c>); diagnostics report its first syntax error.</summary>
+    Gess
 }
 
 /// <summary>Theme-independent categories the highlighter derives from the syntax tree; these are not compiler tokens.</summary>

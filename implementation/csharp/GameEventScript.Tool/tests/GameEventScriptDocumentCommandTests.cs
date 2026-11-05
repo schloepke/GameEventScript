@@ -93,6 +93,8 @@ public sealed class GameEventScriptDocumentCommandTests
     [DataRow("document", "format", "a.gesd", "b.gesd")]
     [DataRow("document", "format", "a.gesd", "-o", "a.gesd")]
     [DataRow("document", "check", "--color", "a.gesd")]
+    [DataRow("document", "check", "")]
+    [DataRow("document", "format", "", "-o", "out.gesd")]
     public void UsageErrorsExitWithTwo(params string[] arguments)
     {
         Write("a.gesd", Valid);

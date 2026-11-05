@@ -24,7 +24,7 @@ public sealed class HighlightingTests
             var data = json.RootElement;
             var name = data.GetProperty("name").GetString()!;
             var source = data.GetProperty("source").GetString()!;
-            var language = data.GetProperty("language").GetString() switch { "ges" => GesSyntaxLanguage.Ges, "gesd" => GesSyntaxLanguage.Gesd, _ => GesSyntaxLanguage.Gesa };
+            var language = data.GetProperty("language").GetString() switch { "ges" => GesSyntaxLanguage.Ges, "gesd" => GesSyntaxLanguage.Gesd, "gess" => GesSyntaxLanguage.Gess, _ => GesSyntaxLanguage.Gesa };
             var result = new GesSyntaxHighlighter(language).Highlight(source);
             Assert.IsTrue(result.IsComplete, name);
             var units = Expand(result.Spans, source.Length);

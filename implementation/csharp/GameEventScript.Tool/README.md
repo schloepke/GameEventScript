@@ -440,7 +440,7 @@ Interactive commands are:
 | `:dump <module>` | Show the GESA dump of the loaded Program with that exact module name |
 | `:dump @<ID>` | Select a Program by session ID, including anonymous or duplicate modules |
 | `:source <module\|ID>` | Show only embedded source documents, each with a filename heading |
-| `:show <file>` | Show a `.ges`, `.gesa` or `.gesd` file highlighted and mark its errors, without loading it |
+| `:show <file>` | Show a `.ges`, `.gesa`, `.gesd` or `.gess` file highlighted and mark its errors, without loading it |
 | `:quit` | End the session; EOF also exits |
 
 Help, prompts, and load/unload/reload reports go to stderr. Prompts and the introductory message
@@ -674,10 +674,25 @@ is set. `-o` writes a UTF-8 file instead, replacing an existing one only after
 successful reading; input and output must differ. Schema references are kept,
 but schema files are not read. Invalid arguments use `cli.usage` with exit code `2`.
 
-In the event console, `:show <file>` displays a `.ges`, `.gesa` or `.gesd` file
+In the event console, `:show <file>` displays a `.ges`, `.gesa`, `.gesd` or `.gess` file
 on stderr, highlighted with `--color`, and lists each error below the text with
 its line, column and code, followed by the line and a caret marker. It neither
 loads the file nor fails the session.
+
+
+## Check GES schemas and read binary data
+
+```sh
+dotnet ges schema check bot.gess
+dotnet ges schema format bot.gess
+dotnet ges schema hash bot.gess --root Bot --param worldWidth=5000m --param worldHeight=5km
+dotnet ges schema canonical bot.gess --root Bot
+dotnet ges schema dump bot.gess --root Bot --param worldWidth=5000m --param worldHeight=5km --data data.bin
+```
+
+`hash` prints the schema hash and, with parameters, the binding hash. `dump` lists each field of
+binary data with its bit offset, width and value, and ends with the first error. Formatting drops
+comments, so input and output must differ. See [GES schemas](../../../specs/Schemas.md).
 
 ## Run from the repository
 

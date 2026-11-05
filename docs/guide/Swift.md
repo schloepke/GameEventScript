@@ -194,6 +194,49 @@ Invalid text throws `GesDocumentError` with a stable `code` such as
 `document.unquotedText` and the `line` and `column` of the error. The schema
 header is a reference for your application; GES does not validate it.
 
+
+## Send data compactly with a schema
+
+> **Since: Unreleased**
+
+A [schema](../../specs/Schemas.md) (`.gess`) describes a data format with ranges and steps and
+yields a very compact binary encoding. The writer and reader allocate nothing on success and need no VM.
+
+```swift
+let schemas = try GesSchemaSet(parsing: """
+    schema :Drone as {
+      id: :Number integer between 0 and 255 key
+      x: :Quantity(m) between -200m and 200m step 5cm
+      heading: :Quantity(°) wrapping between 0° and 360° step 0.5°
+    }
+    """)
+let drone = try schemas.schema("Drone").bind()
+let (id, x, heading) = (drone.field("id")!, drone.field("x")!, drone.field("heading")!)
+
+var buffer = [UInt8](repeating: 0, count: drone.maxByteCount)
+try buffer.withUnsafeMutableBytes { bytes in
+    var writer = GesSchemaWriter(drone, into: bytes)
+    try writer.writeInteger(id, 7)
+    try writer.writeNumber(x, 12.34)
+    try writer.writeNumber(heading, 90)
+    let length = try writer.finish()                      // 4 bytes
+
+    var reader = GesSchemaReader(drone, data: UnsafeRawBufferPointer(rebasing: bytes[0..<length]))
+    print(try reader.readKey())                           // 7
+    print(try reader.readNumber(x))                       // 12.35
+}
+
+for field in try schemas.schema("Drone").fields {         // id: Number, x: Quantity, heading: Quantity
+    print("\(field.name): \(field.alternatives[0].kind.rawValue)")
+}
+```
+
+`GesSchema` is the read-only description of a declaration: its fields with their types, limits and
+markers, its parameters and its hash. Binding turns it into the layout that writer and reader use.
+
+A value outside its range is an error, never clamped. `CheckDocument` checks GES documents against
+the same schemas.
+
 ## Integrate with your event loop
 
 The portable host is synchronous and expects serialized access. It does not

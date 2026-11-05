@@ -16,6 +16,8 @@ across transport; only the implementation normalizes them. Copy checks mutate th
 original source array after construction and observe the resulting value.
 Literal-input `valueApi` cases call the public lenient or strict literal parsing
 API; adapters report the recognized value, absence or the literal limit.
+`schemaApi` cases read and bind schemas, encode, decode and check documents; adapter
+observations hold exact bytes and hashes, and Python compares them.
 `documentApi` cases read GES documents or build them from values; adapters report
 the read document or its error, and for printing cases the printed text and the
 reread document. Python compares only read documents, never the printed layout.

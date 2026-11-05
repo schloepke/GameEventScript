@@ -46,6 +46,8 @@ MODULES = (
 PLATFORM_ONLY = {
     ("csharp", "Runtime", "IsExternalInit"): "C# compiler support type for init accessors on netstandard2.1",
     ("csharp", "Compiler", "IsExternalInit"): "C# compiler support type for init accessors on netstandard2.1",
+    ("csharp", "Schema", "IsExternalInit"): "C# compiler support type for init accessors on netstandard2.1",
+    ("swift", "Schema", "GesSchemaNodeInfo"): "Swift keeps the reference-free GesSchemaNode apart from its names, so the hot path counts no references",
     ("csharp", "Bridge", "IsExternalInit"): "C# compiler support type for init accessors on netstandard2.1",
     ("csharp", "Syntax", "IsExternalInit"): "C# compiler support type for init accessors on netstandard2.1",
     ("csharp", "Runtime", "GesReadOnlyArray"): "idiomatic mapping: Swift exposes [T]",

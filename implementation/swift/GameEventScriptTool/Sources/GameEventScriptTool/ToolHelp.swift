@@ -16,6 +16,7 @@ enum ToolHelp {
           ges dump <program.gesb> [-o <output.gesa>] [--addresses]
           ges document check <data.gesd> [more.gesd ...] [-q]
           ges document format <data.gesd> [-o <output.gesd>] [--color]
+          ges schema <check|format|hash|canonical|dump> <schema.gess> ...
 
         Commands:
           compile     Compile UTF-8 source files together to .gesb. Use 'ges compile --help' for options.
@@ -23,6 +24,7 @@ enum ToolHelp {
           run         Run Main(args), an event scenario, or the event console. Use 'ges run --help' for options.
           dump        Dump a .gesb file as GESA text. Use 'ges dump --help' for options.
           document    Check or format GES documents (.gesd). Use 'ges document --help' for options.
+          schema      Check, format or hash GES schemas (.gess) and dump binary data. Use 'ges schema --help' for options.
 
         Options:
           -h, --help  Show this help.
@@ -123,7 +125,7 @@ enum ToolHelp {
           :handler              List registered script and native handlers.
           :dump <module|ID>     Show a loaded program as GESA. Use :help dump for details.
           :source <module|ID>   Show current draft or embedded sources. --color highlights source and dumps.
-          :show <file>          Show a .ges, .gesa or .gesd file and mark its errors, without loading it.
+          :show <file>          Show a .ges, .gesa, .gesd or .gess file and mark its errors, without loading it.
           :quit                 End the session (or use EOF).
 
         ConsoleOut(...) writes to stdout; ConsoleErr(...) writes to stderr.
@@ -149,7 +151,7 @@ enum ToolHelp {
           :handler              List registered script and native handlers.
           :dump <module|ID>    Show a loaded program as GESA, e.g. :dump game or :dump 1.
           :source <module|ID>  Show current draft or embedded sources; --color highlights source and dumps.
-          :show <file>         Show a .ges, .gesa or .gesd file and mark its errors, without loading it.
+          :show <file>         Show a .ges, .gesa, .gesd or .gess file and mark its errors, without loading it.
           :edit [ID]            Edit scratch 0 or a loaded source program. See :help edit.
           :save [ID]            Save modified drafts; :save 0 "file.ges" saves scratch.
           :quit                 End the session unless there are unsaved changes.
@@ -286,7 +288,7 @@ enum ToolHelp {
           :dump <module>        Show the loaded program as GESA, using its exact module name.
           :dump 1              Select a program by its session ID from :list.
           :source <module|ID>  Show current draft or embedded source; defaults to scratch 0.
-          :show <file>         Show a .ges, .gesa or .gesd file and mark its errors, without loading it.
+          :show <file>         Show a .ges, .gesa, .gesd or .gess file and mark its errors, without loading it.
 
         Numeric IDs select programs; the legacy @1 spelling is also accepted.
         Each successful persistent load receives a stable ID. Jointly compiled sources
@@ -301,8 +303,8 @@ enum ToolHelp {
         NO_COLOR disables both. No source text is reconstructed from bytecode.
         Terminal displays use four-column tab stops; redirected output retains tabs.
 
-        :show reads the file again on each call and selects GES, GESA or GES document
-        highlighting by its extension. Each error is listed below the text with its line,
+        :show reads the file again on each call and selects GES, GESA, GES document or GES
+        schema highlighting by its extension. Each error is listed below the text with its line,
         column and code, followed by the line and a caret marker. A GES document reports its
         first reading or construction error; GES source reports its syntax errors or
         single-source rule violations. Errors in the file do not fail the session.

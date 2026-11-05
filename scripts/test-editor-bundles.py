@@ -50,6 +50,7 @@ class EditorTests(unittest.TestCase):
     @unittest.skipUnless(shutil.which('node'), 'Node.js required for VS Code execution checks')
     def test_vscode_commands_and_packaged_markdown_highlighting(self):
         subprocess.run(['node', '--test', str(ROOT / 'scripts/test-vscode-extension.cjs')], check=True, capture_output=True)
+        subprocess.run(['node', '--test', str(ROOT / 'scripts/test-vscode-gesb.cjs')], check=True, capture_output=True)
         with tempfile.TemporaryDirectory() as directory:
             with zipfile.ZipFile(ROOT / 'tools/editors/VS Code/GameEventScript-VSCode.vsix') as archive:
                 archive.extractall(directory)
@@ -65,6 +66,9 @@ class EditorTests(unittest.TestCase):
             'extension.js': 'extension.js',
             'markdown-preview.js': 'markdown-preview.js',
             'markdown-preview.css': 'markdown-preview.css',
+            'gesb-reader.js': 'gesb-reader.js',
+            'gesb-viewer.js': 'gesb-viewer.js',
+            'gesb-viewer.css': 'gesb-viewer.css',
             'readme.md': 'README.md',
             'LICENSE.txt': 'LICENSE',
         }
@@ -100,6 +104,7 @@ class EditorTests(unittest.TestCase):
         self.assertEqual({'.ges'}, set(languages['ges']['extensions']))
         self.assertEqual({'.gesa'}, set(languages['gesa']['extensions']))
         self.assertEqual({'.gesd'}, set(languages['gesd']['extensions']))
+        self.assertEqual({'.gess'}, set(languages['gess']['extensions']))
         scopes = {}
         for grammar in contributions['grammars']:
             data = json.loads((root / grammar['path']).read_text())

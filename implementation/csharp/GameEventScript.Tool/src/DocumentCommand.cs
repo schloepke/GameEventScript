@@ -64,6 +64,7 @@ successful reading. The schema reference is kept, but schema files are not read.
             else if (parseOptions && check && argument is "-q" or "--quiet") quiet = true;
             else if (parseOptions && !check && argument == "--color") color = Environment.GetEnvironmentVariable("NO_COLOR") is null;
             else if (parseOptions && argument.StartsWith('-')) return UsageError($"Unknown document {arguments[0]} option '{argument}'.");
+            else if (string.IsNullOrWhiteSpace(argument)) return UsageError("Document paths must not be empty.");
             else paths.Add(argument);
         }
 

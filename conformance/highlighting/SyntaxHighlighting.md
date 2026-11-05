@@ -150,6 +150,14 @@ and ANSI text preservation.
 ```
 
 ```highlight
+{"name":"schema source categories","language":"gess","source":"// note\nconstant $max be 135\nparameter width: :Quantity(m)\nschema :Bot as {\n  id: :Number integer between 0 and $max key\n  x: :Quantity(m) between 0m and width step 1cm\n  kind: :Tag(#a) | :Text\n}\nmessage Hit(_ damage: :Boolean)\n","expect":[{"text":"// note","kind":"comment"},{"text":"constant","kind":"keyword"},{"text":"$max","occurrence":0,"kind":"constant"},{"text":"135","kind":"number"},{"text":":Quantity","occurrence":0,"kind":"type"},{"text":"schema","kind":"keyword"},{"text":":Bot","kind":"type"},{"text":"between","occurrence":0,"kind":"keyword"},{"text":"key","kind":"keyword"},{"text":"1cm","kind":"number"},{"text":"#a","kind":"tag"},{"text":"Hit","kind":"message"}],"diagnostics":[]}
+```
+
+```highlight
+{"name":"schema source first syntax error","language":"gess","source":"schema :A as { a }\n","expect":[{"text":"schema","kind":"keyword"}],"diagnostics":[{"code":"schema.syntax","text":"}"}]}
+```
+
+```highlight
 {"name":"inline assembly operands are not resolved","language":"ges","source":"on Start(input) {\n  asm {\n    .register temp, list\n    LoadInteger temp, input\n    Call temp, scale(value: temp, by: list[1])\n    CreateList list, [temp, temp]\n    emit Done(value: temp, first: list[1], total: list[:fold acc be 0, item => acc + temp])\n  }\n}","expect":[{"text":"asm","kind":"keyword"}],"diagnostics":[]}
 ```
 

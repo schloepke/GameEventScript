@@ -59,6 +59,7 @@ extension Tool {
             } else if options && argument.hasPrefix("-") {
                 throw ToolError.usage("Unknown document \(arguments[0]) option '\(argument)'.")
             } else {
+                guard !argument.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { throw ToolError.usage("Document paths must not be empty.") }
                 paths.append(argument)
             }
             index += 1

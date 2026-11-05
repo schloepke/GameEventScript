@@ -25,6 +25,7 @@ let package = Package(
         .testTarget(
             name: "GameEventScriptConformanceTests",
             dependencies: [
+                "ConformanceInstrumentation",
                 .product(name: "GameEventScriptRuntime", package: "GameEventScriptRuntime"), .product(name: "GameEventScriptCompiler", package: "GameEventScriptCompiler"),
                 .product(name: "GameEventScriptSwiftBridge", package: "GameEventScriptSwiftBridge"), .product(name: "GameEventScriptSyntax", package: "GameEventScriptSyntax"),
             ]

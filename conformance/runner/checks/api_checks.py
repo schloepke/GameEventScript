@@ -7,8 +7,9 @@ from checks.runtime_checks import LIMITS
 from checks import value_api_checks
 from checks import message_api_checks
 from checks import document_api_checks
+from checks import schema_api_checks
 
-KINDS = {'loadError', 'externalTypeApi', 'valueApi', 'messageApi', 'documentApi'}
+KINDS = {'loadError', 'externalTypeApi', 'valueApi', 'messageApi', 'documentApi', 'schemaApi'}
 
 
 def prepare(case):
@@ -18,6 +19,8 @@ def prepare(case):
         return value_api_checks.prepare(case)
     if case.kind == 'documentApi':
         return document_api_checks.prepare(case)
+    if case.kind == 'schemaApi':
+        return schema_api_checks.prepare(case)
     if case.steps or case.assembler is not None:
         raise InvalidDocument('API case cannot contain Steps or assembler')
     if case.kind == 'loadError':
@@ -64,6 +67,8 @@ def compare(case, observed):
         return value_api_checks.compare(case, observed)
     if case.kind == 'documentApi':
         return document_api_checks.compare(case, observed)
+    if case.kind == 'schemaApi':
+        return schema_api_checks.compare(case, observed)
     closed(observed, {'status', 'detail', 'diagnostics', 'externalType'}, 'API observation')
     status = observed.get('status')
     if status == 'error':

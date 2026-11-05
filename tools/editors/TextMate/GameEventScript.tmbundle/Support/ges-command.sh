@@ -17,6 +17,7 @@ run_ges() {
     case "$1" in
         check|compile|run) ges "$1" "$TM_FILEPATH" ;;
         document-check|document-format) ges document "${1#document-}" "$TM_FILEPATH" ;;
+        schema-check|schema-format) ges schema "${1#schema-}" "$TM_FILEPATH" ;;
         dump)
             local binary="$TM_FILEPATH"
             [[ "$binary" == *.gesb ]] || binary="${binary%.*}.gesb"

@@ -544,6 +544,34 @@ limited to `MaximumIndentation`/`maximumIndentation` (100). C# layout options re
 an indentation outside 0 to 100 and a line width below 1; Swift prints such values
 clamped to that range. Equality compares the root values and schema references.
 
+
+### Schemas
+
+> **Since: Unreleased**
+
+GES schemas ([Schemas](Schemas.md)) live in Runtime. Apart from the value path, they use neither
+`GesValue` nor the VM, and report their own error types.
+
+| Concept | C# | Swift |
+| --- | --- | --- |
+| source | `readonly struct GesSchemaSource(string name, string text)` | `struct GesSchemaSource` with `init(name:text:)` |
+| schema set | `sealed class GesSchemaSet` with `static Parse(params GesSchemaSource[])`, `static Parse(string)` | `final class GesSchemaSet` with `init(sources:) throws`, `init(parsing:) throws` |
+| declarations | `Schemas`, `Schema(name)` | `schemas`, `schema(_:)` |
+| document check by header | `CheckDocument(text, parameters)` | `checkDocument(_:parameters:)` |
+| description | `sealed class GesSchema` with `Name`, `Kind`, `Hash`, `CanonicalForm`, `Parameters`, `Fields`, `Tags`, `Members`, `Bind(parameters)`, `CheckDocument(text, parameters)` | `final class GesSchema` with `name`, `kind`, `hash`, `canonicalForm`, `parameters`, `fields`, `tags`, `members`, `bind(parameters:)`, `checkDocument(_:parameters:)` |
+| description parts | `enum GesSchemaKind`, `GesSchemaTypeKind`; `sealed class GesSchemaParameterInfo`, `GesSchemaFieldInfo`, `GesSchemaType`, `GesSchemaAxisInfo`; `readonly struct GesSchemaBound` with `ToDouble()` | `enum GesSchemaKind`, `GesSchemaTypeKind`; `struct GesSchemaParameterInfo`, `GesSchemaFieldInfo`, `GesSchemaType`, `GesSchemaAxisInfo`, `GesSchemaBound` with `doubleValue` |
+| parameters | `sealed class GesSchemaParameters` with `With(name, literal)`, `With(name, long, unit)`, `With(name, double, unit)` | `final class GesSchemaParameters` with `with(_:literal:)`, `with(_:_:unit:)` |
+| bound schema | `sealed class GesBoundSchema` with `Schema`, `Name`, `MaxByteCount`, `Hash`, `BindingHash`, `HasKey`, `Field(path)`, `Member(name)`, `MemberIndex(name)` | `final class GesBoundSchema` with `schema`, `name`, `maxByteCount`, `hash`, `bindingHash`, `hasKey`, `field(_:)`, `member(_:)`, `memberIndex(_:)` |
+| field handle | `readonly struct GesSchemaField` with `Path` | `struct GesSchemaField` with `path` |
+| writer | `ref struct GesSchemaWriter(schema, Span<byte>)`: `SelectMember`, `WriteBoolean`, `WriteInteger`, `WriteNumber`, `WriteIndex`, `WriteTag`, `WriteText`, `BeginList`, `BeginNested`, `WriteAbsent`, `Finish` | `struct GesSchemaWriter(_:into:)` over an `UnsafeMutableRawBufferPointer`, with the same operations |
+| reader | `ref struct GesSchemaReader(schema, ReadOnlySpan<byte>, byteLimit)`: `ReadMember`, `ReadKey`, `ReadPresence`, `ReadBoolean`, `ReadInteger`, `ReadNumber`, `ReadIndex`, `ReadTag`, `ReadText`, `BeginList`, `BeginNested`, `Finish` | `struct GesSchemaReader(_:data:byteLimit:)` over an `UnsafeRawBufferPointer`, with the same operations |
+| dump | `static GesSchemaDump.Read(schema, data)` returning `GesSchemaDumpResult` with `Text`, `IsValid` | `GesSchemaDump.read(_:data:)` returning `GesSchemaDumpResult` with `text`, `isValid` |
+| source and binding error | `GesSchemaException` with `Code`, `SourceName`, `Line`, `Column` | `GesSchemaError` with `code`, `sourceName`, `line`, `column`, `message` |
+| wire error | `GesWireException` with `Code`, `Path` | `GesWireError` with `code`, `path` |
+| value path (Runtime) | `static GesSchemaValues.Encode`, `Decode` returning `GesSchemaDecoded`, `ReadKey` | `GesSchemaValues.encode`, `decode` returning `GesSchemaDecoded`, `readKey` |
+
+`GesSyntaxLanguage` adds `Gess` (Swift `.gess`) for highlighting schema sources.
+
 ## Host construction and lifecycle API
 
 ### HostBuilder

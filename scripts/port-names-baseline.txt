@@ -196,6 +196,7 @@ only	swift	Runtime	GesOperand
 only	swift	Runtime	GesRegisterFile
 only	swift	Runtime	GesRegisterOutput
 only	swift	Runtime	GesRuntimeError
+only	swift	Runtime	GesSchemaNodeInfo
 only	swift	Runtime	GesSelectionOrder
 only	swift	Runtime	GesSha256
 only	swift	Runtime	GesSignatureStorage

@@ -18,6 +18,7 @@ internal static class TestRepositoryPaths
     internal static string SyntaxProjectDirectory { get; } = Path.Combine(CSharpDirectory, "GameEventScript.Syntax", "src");
 
 
+
     internal static IReadOnlyList<string> ProductProjectDirectories { get; } = [LibraryProjectDirectory, CompilerProjectDirectory, CSharpBridgeProjectDirectory, SyntaxProjectDirectory];
 
     internal static string RepositoryTestDirectory { get; } = Path.Combine(Root, "implementation", "csharp", "verification", "GameEventScript.Repository.Tests");

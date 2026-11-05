@@ -4,7 +4,7 @@
 # Editor packages and syntax highlighting
 
 Download highlighting for Game Event Script source (`.ges`), assembler dumps
-(`.gesa`) and GES documents (`.gesd`), together with optional CLI commands, syntax completions and snippets.
+(`.gesa`), GES documents (`.gesd`) and GES schemas (`.gess`), together with optional CLI commands, syntax completions and snippets.
 Each ZIP includes installation notes and the Apache-2.0 license. Highlighting
 works without the CLI; commands require `ges` on the editor process’s `PATH`.
 No compiler or language server is bundled.
@@ -15,8 +15,10 @@ The local [VS Code extension](VS%20Code/README.md) includes GES, GESA and GES
 document highlighting, embedded source highlighting, language configuration and snippets.
 It also offers Check, Run and Dump editor buttons using an installed GES CLI,
 plus Compile in the Command Palette. Dump opens a read-only highlighted document.
-Markdown blocks tagged `ges` or `gesa` are highlighted in both the source editor
+Markdown blocks tagged `ges`, `gesa`, `gesd` or `gess` are highlighted in both the source editor
 and the built-in Markdown preview using the same grammars.
+The VS Code extension also opens `.gesb` files in a viewer of their segments, messages,
+functions, predicates, externals and sources.
 In VS Code, run **Extensions: Install from VSIX...** from the Command Palette
 and select the prebuilt [GameEventScript-VSCode.vsix](VS%20Code/GameEventScript-VSCode.vsix)
 under `tools/editors/VS Code`. No build step, Marketplace account or GES CLI
@@ -41,10 +43,10 @@ Git tag.
 1. For TextMate itself, choose the Classic XML download. Choose JSON only for
    importers that explicitly support JSON TextMate grammars. Extract the ZIP.
 2. Import or copy `GameEventScript.tmbundle`,
-   `GameEventScriptAssembler.tmbundle` and `GameEventScriptDocument.tmbundle`
+   `GameEventScriptAssembler.tmbundle`, `GameEventScriptDocument.tmbundle` and `GameEventScriptSchema.tmbundle`
    into the editor's bundle location. Install the first two together so
    assembler dumps can also highlight embedded source code.
-3. Reload the editor's bundles or restart it, then open a `.ges`, `.gesa` or `.gesd` file.
+3. Reload the editor's bundles or restart it, then open a `.ges`, `.gesa`, `.gesd` or `.gess` file.
 
 Use the editor's bundle/grammar import workflow; support for whole `.tmbundle`
 directories and raw grammar files varies by editor. Choose one format rather
@@ -57,7 +59,7 @@ than installing both variants, which describe the same syntax and scopes.
 Extract the download and copy its `GameEventScript` directory into the directory
 opened by **Preferences → Browse Packages**. Keep that directory name: the
 completion plugin loads its shared data from `Packages/GameEventScript`.
-Restart Sublime Text or reload the package, then open a `.ges`, `.gesa` or `.gesd` file.
+Restart Sublime Text or reload the package, then open a `.ges`, `.gesa`, `.gesd` or `.gess` file.
 `.gesd` files have their own build system: Check runs `ges document check`, the
 Format variant `ges document format`.
 
@@ -146,7 +148,8 @@ Both editors provide the same Tab-triggered snippets: `ges-on`, `ges-iflet`,
 - `TextMate/`: JSON TextMate bundle for modern TextMate-compatible tooling.
 
 Both editor folders contain bundles for GameEventScript source (`.ges`),
-GameEventScript assembler (`.gesa`) and GameEventScript documents (`.gesd`). The modern and classic bundles describe the
+GameEventScript assembler (`.gesa`), GameEventScript documents (`.gesd`) and
+GameEventScript schemas (`.gess`). The modern and classic bundles describe the
 same grammars; only the file format is different.
 
 The JSON grammars under `TextMate/` are the maintained source. The XML plist

@@ -144,22 +144,20 @@ schema     = ":" TypeName | quoted Text
   header is an error.
 
 The schema is a reference only. Reading does not load `.gess` files, look up
-record definitions or validate fields. Hosts inspect `GesDocument.Schema` to
+record definitions or validate fields; that is the job of a schema check. Hosts inspect `GesDocument.Schema` to
 decide how to interpret the document.
 
-### Planned schemas
+### Checking against a schema
 
-> **Planned** — informative, not implemented.
+> **Since: Unreleased**
 
-A schema is a declaration in a `.gess` file, written in the one schema language
-of [GES schemas](Schemas.md). The same schemas describe the compact binary
-encoding. `:Schema(:DriveUnit)` will refer to a `schema` of a schema set,
-`:Schema('DriveUnit.gess')` to a file and its root schema. A separate operation
-that receives the schema set will check the root and construct its record; plain
-reading stays as specified here. It reports missing, unknown and mistyped fields
-and values out of range with document positions, without implicit unit casts. A
-schema has no computed fields. The header syntax above already admits these
-additions. See [document checking](Schemas.md#document-checking).
+A schema is a declaration in a `.gess` file, written in the one schema language of
+[GES schemas](Schemas.md), which also describes the compact binary encoding.
+`:Schema(:DriveUnit)` refers to a `schema` of a schema set, `:Schema('DriveUnit.gess')`
+to a file and its root schema. Plain reading stays as specified here; the separate
+operation [`CheckDocument`](Schemas.md#document-checking) of a schema set reports missing,
+unknown and mistyped fields and values out of range with their document positions, without
+implicit unit casts. A schema has no computed fields.
 
 ## Errors
 

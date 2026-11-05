@@ -7,6 +7,8 @@ const { execFile } = require('node:child_process');
 const fs = require('node:fs/promises');
 const os = require('node:os');
 const path = require('node:path');
+const { createHighlighter, createMarkdownExtension } = require('./markdown-preview');
+const { registerGesbViewer } = require('./gesb-viewer');
 
 // Split arguments without invoking a shell or expanding variables/globs.
 function parseArguments(text) {
@@ -46,7 +48,13 @@ async function activate(context) {
     let lastArguments = '';
     const output = vscode.window.createOutputChannel('GES');
     let sequence = 0;
+    // Without the highlighter, the viewer and the commands still work.
+    const highlighter = createHighlighter().catch(error => {
+        output.appendLine(`GES highlighting is unavailable. ${error.message}`);
+        return null;
+    });
     context.subscriptions.push(output,
+        registerGesbViewer(vscode, context, highlighter),
         vscode.window.onDidCloseTerminal(terminal => {
             for (const [source, session] of sessions) {
                 if (session === terminal) sessions.delete(source);
@@ -78,6 +86,52 @@ async function activate(context) {
         });
     }
 
+    function configuredCli(uri) {
+        const cli = vscode.workspace.getConfiguration('ges', uri).get('cliPath', 'ges').trim();
+        if (!cli) throw new Error('Set ges.cliPath to ges, dotnet-ges, or an absolute executable path.');
+        return cli;
+    }
+
+    async function showDump(cli, binary, name, cwd, token, viewColumn) {
+        const text = await invoke(cli, ['dump', binary], cwd, token);
+        if (token.isCancellationRequested) return;
+        const uri = vscode.Uri.from({
+            scheme: 'ges-dump', path: '/' + path.basename(name, path.extname(name)) + '.gesa',
+            query: String(++sequence),
+        });
+        dumps.set(uri.toString(), text);
+        try {
+            const dump = await vscode.workspace.openTextDocument(uri);
+            await vscode.languages.setTextDocumentLanguage(dump, 'gesa');
+            await vscode.window.showTextDocument(dump, { preview: true, viewColumn });
+        } catch (error) {
+            dumps.delete(uri.toString());
+            throw error;
+        }
+    }
+
+    // The editor title passes the file; the command palette has only the active tab.
+    // The dump opens beside the viewer, which it would otherwise replace in a preview tab.
+    async function dumpBinary(resource) {
+        if (!vscode.workspace.isTrusted) {
+            throw new Error('Trust this workspace before running GES CLI commands.');
+        }
+        const uri = resource ?? vscode.window.tabGroups.activeTabGroup.activeTab?.input?.uri;
+        if (uri?.scheme !== 'file') throw new Error('Open a saved .gesb file first.');
+        const binary = uri.fsPath;
+        const cli = configuredCli(uri);
+        await vscode.window.withProgress({
+            location: vscode.ProgressLocation.Notification,
+            title: 'GES: Creating dump', cancellable: true,
+        }, async (_progress, token) => {
+            try {
+                await showDump(cli, binary, binary, path.dirname(binary), token, vscode.ViewColumn.Beside);
+            } catch (error) {
+                if (!token.isCancellationRequested) throw error;
+            }
+        });
+    }
+
     async function execute(action) {
         if (!vscode.workspace.isTrusted) {
             throw new Error('Trust this workspace before running GES CLI commands.');
@@ -101,8 +155,7 @@ async function activate(context) {
         if (document.isDirty && !await document.save()) return;
         const source = document.uri.fsPath;
         const cwd = path.dirname(source);
-        const cli = vscode.workspace.getConfiguration('ges', document.uri).get('cliPath', 'ges').trim();
-        if (!cli) throw new Error('Set ges.cliPath to ges, dotnet-ges, or an absolute executable path.');
+        const cli = configuredCli(document.uri);
 
         if (action === 'startInteractive' || action === 'restartInteractive') {
             const existing = sessions.get(source);
@@ -150,21 +203,7 @@ async function activate(context) {
                 const binary = path.join(directory, 'program.gesb');
                 await invoke(cli, ['compile', source, '-o', binary], cwd, token);
                 if (token.isCancellationRequested) return;
-                const text = await invoke(cli, ['dump', binary], cwd, token);
-                if (token.isCancellationRequested) return;
-                const uri = vscode.Uri.from({
-                    scheme: 'ges-dump', path: '/' + path.basename(source, path.extname(source)) + '.gesa',
-                    query: String(++sequence),
-                });
-                dumps.set(uri.toString(), text);
-                try {
-                    const dump = await vscode.workspace.openTextDocument(uri);
-                    await vscode.languages.setTextDocumentLanguage(dump, 'gesa');
-                    await vscode.window.showTextDocument(dump, { preview: true });
-                } catch (error) {
-                    dumps.delete(uri.toString());
-                    throw error;
-                }
+                await showDump(cli, binary, source, cwd, token);
             } catch (error) {
                 if (!token.isCancellationRequested) throw error;
             } finally {
@@ -173,26 +212,34 @@ async function activate(context) {
         });
     }
 
+    async function report(action, body) {
+        try {
+            await body();
+        } catch (error) {
+            output.appendLine(error.message);
+            output.show(true);
+            const message = error.code === 'ENOENT'
+                ? 'GES CLI not found. Install ges or dotnet-ges and configure ges.cliPath if needed.'
+                : `GES ${action} failed. ${error.message}`;
+            await vscode.window.showErrorMessage(message);
+        }
+    }
+
     for (const action of ['check', 'run', 'compile', 'dump', 'runWithArguments', 'startInteractive', 'restartInteractive']) {
         context.subscriptions.push(vscode.commands.registerCommand(`ges.${action}`, async () => {
             const interactive = action === 'startInteractive' || action === 'restartInteractive';
             if (interactive && interactiveBusy) return;
             if (interactive) interactiveBusy = true;
             try {
-                await execute(action);
-            } catch (error) {
-                output.appendLine(error.message);
-                output.show(true);
-                const message = error.code === 'ENOENT'
-                    ? 'GES CLI not found. Install ges or dotnet-ges and configure ges.cliPath if needed.'
-                    : `GES ${action} failed. ${error.message}`;
-                await vscode.window.showErrorMessage(message);
+                await report(action, () => execute(action));
             } finally {
                 if (interactive) interactiveBusy = false;
             }
         }));
     }
-    return { extendMarkdownIt: await require('./markdown-preview').createMarkdownExtension() };
+    context.subscriptions.push(vscode.commands.registerCommand('ges.dumpBinary', resource => report('dump', () => dumpBinary(resource))));
+    const highlight = await highlighter;
+    return highlight ? { extendMarkdownIt: createMarkdownExtension(highlight) } : {};
 }
 
 module.exports = { activate, parseArguments };

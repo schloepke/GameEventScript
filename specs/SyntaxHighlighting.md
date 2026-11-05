@@ -14,7 +14,7 @@ Compiler's diagnostics. Runtime, Compiler and native Bridges do not depend on it
 
 ## Input and result
 
-A reusable highlighter selects GES, GESA or GES documents (`.gesd`).
+A reusable highlighter selects GES, GESA, GES documents (`.gesd`) or GES schemas (`.gess`).
 `Highlight`/`highlight` processes a whole document; there is no line API and no continuation state. An empty
 document is valid. Input is never normalized or expanded. CR, LF and CRLF are
 line breaks; U+0085, U+2028, U+2029, vertical tab and form feed are content.

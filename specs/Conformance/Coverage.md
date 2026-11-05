@@ -81,6 +81,7 @@ here. Add or update this matrix in the same change as new portable behavior.
 | Missing and mismatched external runtime constructors at each call site | `compile.external-type-linking/missing-runtime-constructor`, `compile.external-type-linking/mismatched-runtime-constructor` |
 | Missing extension call sites with and without SourceArchive or SourceMap | `compile.extension-linking/missing-extension-call-sites`, `compile.extension-linking/missing-extension-lines-only`, `compile.extension-linking/missing-extension-without-debug-info` |
 | Every link diagnostic of a failed load inside a host scenario, which continues afterwards | `runtime.host-load-limits/missing-extension-lists-call-sites` |
+| Schema source and binding errors, canonical form and hash, exact bytes, quantization and wrapping vectors, keys, unions, messages, wire errors and document checks | `api.schemas/*` |
 | Bare names without a visible binding, including selector pattern values, and resolving bindings | `compile.lexical-boundaries/unresolved-variable-reports-each-bare-name`, `compile.lexical-boundaries/bindings-and-later-declarations-resolve` |
 | Portable external-type catalog duplicate rejection | `api.external-types/duplicate-type-name` |
 | Canonical binding, message-name and embedded-source dumps | `compile.program-dumps/compact-bindings`, `compile.program-dumps/message-name-and-source` |

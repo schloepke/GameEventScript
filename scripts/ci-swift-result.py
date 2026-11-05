@@ -16,7 +16,7 @@ def accepted(scope_result, run_swift, results):
 
 if __name__ == "__main__":
     results = [os.environ.get(name) for name in
-               ("NATIVE_RESULT", "DISTRIBUTION_RESULT", "HIGHLIGHTER_RESULT")]
+               ("NATIVE_RESULT", "DISTRIBUTION_RESULT", "SYNTAX_RESULT")]
     success = accepted(os.environ.get("SCOPE_RESULT"), os.environ.get("RUN_SWIFT"), results)
     print("Swift verification passed." if success else f"Swift verification failed: {results}")
     sys.exit(0 if success else 1)

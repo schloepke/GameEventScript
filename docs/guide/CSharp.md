@@ -179,6 +179,46 @@ Invalid text throws `GesDocumentException` with a stable `Code` such as
 `document.unquotedText` and the `Line` and `Column` of the error. The schema
 header is a reference for your application; GES does not validate it.
 
+
+## Send data compactly with a schema
+
+> **Since: Unreleased**
+
+A [schema](../../specs/Schemas.md) (`.gess`) describes a data format with ranges and steps and
+yields a very compact binary encoding. The writer and reader allocate nothing on success and need no VM.
+
+```csharp
+var schemas = GesSchemaSet.Parse("""
+    schema :Drone as {
+      id: :Number integer between 0 and 255 key
+      x: :Quantity(m) between -200m and 200m step 5cm
+      heading: :Quantity(°) wrapping between 0° and 360° step 0.5°
+    }
+    """);
+var drone = schemas.Schema("Drone").Bind();
+var (id, x, heading) = (drone.Field("id"), drone.Field("x"), drone.Field("heading"));
+
+Span<byte> buffer = stackalloc byte[(int)drone.MaxByteCount];
+var writer = new GesSchemaWriter(drone, buffer);
+writer.WriteInteger(id, 7);
+writer.WriteNumber(x, 12.34);
+writer.WriteNumber(heading, 90);
+var length = writer.Finish();                             // 4 bytes
+
+var reader = new GesSchemaReader(drone, buffer.Slice(0, length));
+Console.WriteLine(reader.ReadKey());                      // 7
+Console.WriteLine(reader.ReadNumber(x));                  // 12.35
+
+foreach (var field in schemas.Schema("Drone").Fields)     // id: Number, x: Quantity, heading: Quantity
+    Console.WriteLine($"{field.Name}: {field.Alternatives[0].Kind}");
+```
+
+`GesSchema` is the read-only description of a declaration: its fields with their types, limits and
+markers, its parameters and its hash. Binding turns it into the layout that writer and reader use.
+
+A value outside its range is an error, never clamped. `CheckDocument` checks GES documents against
+the same schemas.
+
 ## Connect native data
 
 CSharpBridge supplies attribute-based external type bindings with `GesType`,

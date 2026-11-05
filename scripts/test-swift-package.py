@@ -58,7 +58,7 @@ def verify(workspace):
     for name, (owner, _, _) in TESTS.items():
         relative = Path("implementation/swift") / owner / "Tests" / name
         shutil.copytree(ROOT / relative, repository / relative)
-    # The highlighter's native test reads the canonical Markdown oracle. It does
+    # The Syntax module's native test reads the canonical Markdown oracle. It does
     # not depend on the Conformance library or a separate copy of expectations.
     corpus = Path("conformance/highlighting/SyntaxHighlighting.md")
     (repository / corpus).parent.mkdir(parents=True)

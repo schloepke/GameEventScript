@@ -49,6 +49,7 @@ internal sealed class GesDocumentReader
         }
         var record = schema == GesDocumentSchemaSyntax.Type;
         var keys = new List<string>();
+        var keyOffsets = new List<int>();
         var values = new List<GesDocumentNode>();
         var seen = new HashSet<string>(StringComparer.Ordinal);
         while (_position < _text.Length)
@@ -65,6 +66,7 @@ internal sealed class GesDocumentReader
             if (!Consume(':')) return Fail(Code.MissingColon, _position);
             if (ReadEntryValue(0) is not { } value) return null;
             keys.Add(key);
+            keyOffsets.Add(entryStart);
             values.Add(value);
             SkipSpacesAndComments();
             if (_position == _text.Length) break;
@@ -72,7 +74,7 @@ internal sealed class GesDocumentReader
             SkipWhitespace();
             if (_position < _text.Length && _text[_position] == ',') return Fail(Code.UnexpectedToken, _position);
         }
-        return GesDocumentNode.Map(keys.ToArray(), values.ToArray());
+        return GesDocumentNode.Map(keys.ToArray(), values.ToArray(), keyOffsets.ToArray());
     }
 
     private bool IsSchemaHeader() => StartsWord(":Schema");
@@ -120,12 +122,27 @@ internal sealed class GesDocumentReader
     private GesDocumentNode? ReadEntryValue(int depth)
     {
         SkipSpacesAndComments();
-        return _position == _text.Length || AtLineBreak || _text[_position] is ',' or ']' ? GesDocumentNode.BooleanValue(true) : ReadValue(depth);
+        if (_position == _text.Length || AtLineBreak || _text[_position] is ',' or ']')
+        {
+            var implied = GesDocumentNode.BooleanValue(true);
+            implied.Start = _position;
+            return implied;
+        }
+
+        return ReadValue(depth);
     }
 
     private GesDocumentNode? ReadValue(int depth)
     {
         SkipWhitespace();
+        var start = _position;
+        var value = ReadValueAtPosition(depth);
+        if (value is not null) value.Start = start;
+        return value;
+    }
+
+    private GesDocumentNode? ReadValueAtPosition(int depth)
+    {
         if (_position == _text.Length) return Fail(Code.UnexpectedToken, _position);
         var valueStart = _position;
         if (_text[_position] is '\'' or '"')
@@ -422,6 +439,7 @@ internal sealed class GesDocumentReader
         var isMap = key is not null && Consume(':');
         _position = saved;
         var keys = isMap ? new List<string>() : null;
+        var keyOffsets = isMap ? new List<int>() : null;
         var seen = isMap ? new HashSet<string>(StringComparer.Ordinal) : null;
         var values = new List<GesDocumentNode>();
         while (_position < _text.Length)
@@ -439,6 +457,7 @@ internal sealed class GesDocumentReader
                 if (!Consume(':')) return Fail(Code.MissingColon, _position);
                 if (ReadEntryValue(depth) is not { } entry) return null;
                 keys!.Add(key);
+                keyOffsets!.Add(keyStart);
                 values.Add(entry);
             }
             else
@@ -448,7 +467,7 @@ internal sealed class GesDocumentReader
             }
             var separator = Separator(']', open);
             if (separator < 0) return null;
-            if (separator > 0) return isMap ? GesDocumentNode.Map(keys!.ToArray(), values.ToArray()) : GesDocumentNode.List(values.ToArray());
+            if (separator > 0) return isMap ? GesDocumentNode.Map(keys!.ToArray(), values.ToArray(), keyOffsets!.ToArray()) : GesDocumentNode.List(values.ToArray());
         }
         return null;
     }

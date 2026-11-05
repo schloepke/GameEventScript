@@ -5,6 +5,9 @@
 !extension.js
 !markdown-preview.js
 !markdown-preview.css
+!gesb-reader.js
+!gesb-viewer.js
+!gesb-viewer.css
 !node_modules/**
 !README.md
 !LICENSE

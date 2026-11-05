@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Copyright 2026 Stephan Schlöpke -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>name</key>
+	<string>GES: Format</string>
+	<key>uuid</key>
+	<string>0A35A864-9230-5D01-9016-9857C257E6AF</string>
+	<key>scope</key>
+	<string>source.gameeventscript.schema</string>
+	<key>beforeRunningCommand</key>
+	<string>saveActiveFile</string>
+	<key>input</key>
+	<string>none</string>
+	<key>output</key>
+	<string>showAsHTML</string>
+	<key>command</key>
+	<string>#!/bin/bash
+/bin/bash "$TM_BUNDLE_SUPPORT/ges-command.sh" schema-format
+</string>
+</dict>
+</plist>

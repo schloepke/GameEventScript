@@ -18,7 +18,7 @@ public sealed class GesSyntaxHighlighter
     /// <exception cref="ArgumentOutOfRangeException">The language is unknown or maxInputLength is not positive.</exception>
     public GesSyntaxHighlighter(GesSyntaxLanguage language = GesSyntaxLanguage.Ges, int maxInputLength = 262144)
     {
-        if (language is not (GesSyntaxLanguage.Ges or GesSyntaxLanguage.Gesa or GesSyntaxLanguage.Gesd)) throw new ArgumentOutOfRangeException(nameof(language));
+        if (language is not (GesSyntaxLanguage.Ges or GesSyntaxLanguage.Gesa or GesSyntaxLanguage.Gesd or GesSyntaxLanguage.Gess)) throw new ArgumentOutOfRangeException(nameof(language));
         if (maxInputLength <= 0) throw new ArgumentOutOfRangeException(nameof(maxInputLength));
         Language = language;
         MaxInputLength = maxInputLength;
@@ -40,6 +40,7 @@ public sealed class GesSyntaxHighlighter
         var diagnostics = new List<GesHighlightDiagnostic>();
         if (Language == GesSyntaxLanguage.Ges) GesSourceHighlighting.Highlight(text, 0, spans, diagnostics);
         else if (Language == GesSyntaxLanguage.Gesd) GesDocumentHighlighting.Highlight(text, spans, diagnostics);
+        else if (Language == GesSyntaxLanguage.Gess) GesSchemaHighlighting.Highlight(text, spans, diagnostics);
         else GesAssemblyHighlighting.Highlight(text, spans);
         return new GesHighlightResult(spans.Finish(text.Length, diagnostics), diagnostics.ToArray(), true);
     }

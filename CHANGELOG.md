@@ -182,6 +182,15 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 
 ### Added
 
+- GES schemas (`.gess`) describe data formats and yield a very compact binary encoding for
+  server-driven multiplayer games: ranges, steps and wrapping values with exact quantization,
+  closed tag sets, lists and text with hard limits, optional fields, nested schemas, keys,
+  messages and message sets, parameters bound per session, and a canonical FNV-1a 64 hash. In
+  Runtime, `GesSchemaSet`, `GesSchema` (a read-only description with its fields), `GesBoundSchema`, `GesSchemaWriter`, `GesSchemaReader` and
+  `GesSchemaDump` use no VM, and the writer and reader allocate nothing on success; `GesSchemaValues`
+  converts Records and Messages. Schemas also check documents, including union types, through
+  `CheckDocument`. The CLIs add `schema check`, `format`, `hash`, `canonical` and `dump`.
+  Deltas are specified but not implemented yet.
 - `cm` is a prefixed literal spelling of the meter, like `km` and `mm`: `150cm` is
   `1.5m`. It adds no unit, `:Quantity(cm)` remains invalid, and printing documents
   does not choose it.
@@ -199,6 +208,10 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   format` for `.gesd` files and the console command `:show <file>`, which
   highlights a `.ges`, `.gesa` or `.gesd` file and marks its errors. TextMate,
   Sublime Text, bat and VS Code grammars cover `.gesd` files.
+- The VS Code extension opens `.gesb` files in a read-only viewer: segments with
+  offsets and sizes, inbound and outbound messages, functions, predicates, records,
+  extensions, external types, embedded sources and texts. The viewer needs neither
+  the CLI nor workspace trust; **GES: Show Assembler Dump** opens the `ges dump` output.
 - `parse strict input` recognizes the same literals as `parse`, but produces
   `nothing` instead of the original Text when the input is not a complete data
   literal: `parse strict "standard"` and `parse strict "[1, 2"` are `nothing`,

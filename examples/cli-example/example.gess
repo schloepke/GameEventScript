@@ -1,0 +1,23 @@
+// Copyright 2026 Stephan Schlöpke
+// SPDX-License-Identifier: Apache-2.0
+// Constants and parameters belong to this file.
+constant $maxHealth be 135
+parameter worldWidth: :Quantity(m)
+parameter worldHeight: :Quantity(m)
+
+schema :Bot as {
+  id: :Number integer between 0 and 65535 key
+  x: :Quantity(m) between 0m and worldWidth step 1cm delta within 1.27m
+  y: :Quantity(m) between 0m and worldHeight step 1cm delta within 1.27m
+  heading: :Quantity(°) wrapping between 0° and 360° step 0.1° delta within 8°
+  turretBearing: :Quantity(°) wrapping between 0° and 360° step 0.1° delta within 8°
+  radarBearing: :Quantity(°) wrapping between 0° and 360° step 0.1° delta within 8°
+  health: :Number integer between 0 and $maxHealth
+  firing: :Boolean
+  shielded: :Boolean
+  overheated: :Boolean
+}
+
+message Hit(target: :Number integer between 0 and 65535, _ damage: :Number integer between 0 and 1000) tags (#critical, #splash)
+message Died(target: :Number integer between 0 and 65535)
+messages :Combat as (Hit, Died)

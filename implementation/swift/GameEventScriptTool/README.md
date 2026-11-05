@@ -78,6 +78,8 @@ ges check "scripts/*.ges"
 ges dump build/game.gesb --addresses
 ges document check data/drive.gesd
 ges document format data/drive.gesd --color
+ges schema check bot.gess
+ges schema dump bot.gess --root Bot --param worldWidth=5000m --param worldHeight=5km --data data.bin
 ges run game.ges --args 12 Hello 34
 ges run first.gesb second.gesb -- 12 Hello --color
 ges run game.ges --scenario scenario.ges --seed 42
@@ -116,7 +118,7 @@ C# commands documented in the C# CLI README.
 
 Use `:help`, `:help load`, `:help reload` and `:help dump` for details. The console supports
 `:load <file>`, `:list`, `:handler`, `:dump <module|ID>`, `:source <module|ID>`,
-`:show <file>` (highlight a `.ges`, `.gesa` or `.gesd` file and mark its errors without loading it)
+`:show <file>` (highlight a `.ges`, `.gesa`, `.gesd` or `.gess` file and mark its errors without loading it)
 as well as `:unload <module|ID>`, `:unloadAll`, `:reload` and `:quit`. Successful loads retain their handlers and receive stable session
 IDs. Each ordinary input executes in a temporary initialization handler and is
 then detached; local variables/functions do not persist. Use `:load` for

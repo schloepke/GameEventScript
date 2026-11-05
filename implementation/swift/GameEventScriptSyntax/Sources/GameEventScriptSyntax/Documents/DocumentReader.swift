@@ -38,6 +38,8 @@
         if case .type = schema { record = true }
         var keys: [String] = []
         var values: [GesDocumentNode] = []
+        var keyOffsets: [Int] = []
+        var valueOffsets: [Int] = []
         var seen: Set<[Unicode.Scalar]> = []
         while position < bytes.count {
             let entryStart = position
@@ -49,8 +51,13 @@
             if !seen.insert(Array(key.unicodeScalars)).inserted { return (fail(Code.duplicateKey, entryStart), schema) }
             spacesAndComments()
             if !consume(58) { return (fail(Code.missingColon, position), schema) }
-            guard let entry = keyOnly() ? .boolean(true) : value(depth: 0) else { return (nil, schema) }
+            let implied = keyOnly()
+            whitespaceBeforeValue(implied)
+            let valueStart = position
+            guard let entry = implied ? .boolean(true) : value(depth: 0) else { return (nil, schema) }
             keys.append(key)
+            keyOffsets.append(entryStart)
+            valueOffsets.append(valueStart)
             values.append(entry)
             spacesAndComments()
             if position == bytes.count { break }
@@ -58,7 +65,12 @@
             whitespace()
             if position < bytes.count && bytes[position] == 44 { return (fail(Code.unexpectedToken, position), schema) }
         }
-        return (.map(keys: keys, values: values), schema)
+        return (.map(keys: keys, values: values, keyOffsets: keyOffsets, valueOffsets: valueOffsets), schema)
+    }
+
+    // A value starts after whitespace; a key-only entry has none.
+    private mutating func whitespaceBeforeValue(_ implied: Bool) {
+        if !implied { whitespace() }
     }
 
     private func isSchemaHeader() -> Bool { startsWord(":Schema") }
@@ -364,7 +376,7 @@
             if next < 0 { return nil }
             if next > 0 { break }
         }
-        return .form(type: "message", labels: ["_", "tags"], arguments: [message, .list(tags)], offset: formStart)
+        return .form(type: "message", labels: ["_", "tags"], arguments: [message, .list(tags, offsets: [])], offset: formStart)
     }
 
     private mutating func closeMessage(_ result: GesDocumentNode, outerOpen: Int) -> GesDocumentNode? {
@@ -457,8 +469,8 @@
     private mutating func collection(depth: Int) -> GesDocumentNode? {
         let open = position
         switch collectionStart() {
-        case 0: return .list([])
-        case 1: return .map(keys: [], values: [])
+        case 0: return .list([], offsets: [])
+        case 1: return .map(keys: [], values: [], keyOffsets: [], valueOffsets: [])
         case 2: return list(depth: depth, open: open)
         case 3: return map(depth: depth, open: open)
         default: return nil
@@ -491,13 +503,16 @@
 
     private mutating func list(depth: Int, open: Int) -> GesDocumentNode? {
         var values: [GesDocumentNode] = []
+        var offsets: [Int] = []
         while position < bytes.count {
             if !item() { return nil }
+            whitespace()
+            offsets.append(position)
             guard let parsed = value(depth: depth) else { return nil }
             values.append(parsed)
             let next = separator(93, open)
             if next < 0 { return nil }
-            if next > 0 { return .list(values) }
+            if next > 0 { return .list(values, offsets: offsets) }
         }
         return nil
     }
@@ -505,16 +520,25 @@
     private mutating func map(depth: Int, open: Int) -> GesDocumentNode? {
         var keys: [String] = []
         var values: [GesDocumentNode] = []
+        var keyOffsets: [Int] = []
+        var valueOffsets: [Int] = []
         var seen: Set<[Unicode.Scalar]> = []
         while position < bytes.count {
             if !item() { return nil }
+            whitespace()
+            let keyStart = position
             guard let key = mapKey(&seen) else { return nil }
-            guard let parsed = keyOnly() ? .boolean(true) : value(depth: depth) else { return nil }
+            let implied = keyOnly()
+            whitespaceBeforeValue(implied)
+            let valueStart = position
+            guard let parsed = implied ? .boolean(true) : value(depth: depth) else { return nil }
             keys.append(key)
+            keyOffsets.append(keyStart)
+            valueOffsets.append(valueStart)
             values.append(parsed)
             let next = separator(93, open)
             if next < 0 { return nil }
-            if next > 0 { return .map(keys: keys, values: values) }
+            if next > 0 { return .map(keys: keys, values: values, keyOffsets: keyOffsets, valueOffsets: valueOffsets) }
         }
         return nil
     }

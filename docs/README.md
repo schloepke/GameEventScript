@@ -32,7 +32,7 @@ Every contract area has exactly one owning document. Other documents link to tha
 | Public API | [Public API](../specs/PublicApi.md) | Language-neutral API responsibilities and per-language mappings | Normative |
 | Product JSON | [Message format](../specs/MessageFormat.md) | Optional versioned message/value transport and external snapshots | Normative |
 | GES documents | [Documents](../specs/Documents.md) | `.gesd` data files: schema header, strict reading, error positions and printing | Normative |
-| GES schemas | [Schemas](../specs/Schemas.md) | `.gess` data formats, compact binary encoding, canonical hash and deltas | Draft: not implemented and not yet normative |
+| GES schemas | [Schemas](../specs/Schemas.md) | `.gess` data formats, compact binary encoding, canonical hash and planned deltas | Normative |
 | Host runtime | [Host runtime](../specs/HostRuntime.md) | Host lifecycle, dispatch, execution, context, and outbound behavior | Normative |
 | Program model | [Program model](../specs/ProgramModel.md) | Immutable transport data, ownership, validation, and linking boundary | Normative |
 | Bytecode | [Bytecode](../specs/Bytecode.md) | Instruction model, opcode semantics, operands, and control flow | Normative |

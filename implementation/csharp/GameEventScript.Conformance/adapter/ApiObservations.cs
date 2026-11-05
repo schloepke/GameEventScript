@@ -12,6 +12,7 @@ internal static class ApiObservations
         if (test.GetProperty("kind").GetString() == "messageApi") return MessageApiObservations.Run(input);
         if (test.GetProperty("kind").GetString() == "valueApi") return ValueApiObservations.Run(input);
         if (test.GetProperty("kind").GetString() == "documentApi") return DocumentApiObservations.Run(input);
+        if (test.GetProperty("kind").GetString() == "schemaApi") return SchemaApiObservations.Run(input);
         if (test.GetProperty("kind").GetString() == "externalTypeApi")
         {
             var names = input.GetProperty("typeNames").EnumerateArray().Select(n => n.GetString()!).ToArray();

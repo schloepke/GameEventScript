@@ -39,7 +39,7 @@ enum Validation {
             let kind = try test.text("kind")
             try require(kinds.contains(kind) && (!measuring || kind == "scriptApi"))
             var fields = ["id", "kind", "sources", "compile", "requires"]
-            if ["loadError", "messageApi", "valueApi", "externalTypeApi", "documentApi"].contains(kind) { fields.append("api") }
+            if ["loadError", "messageApi", "valueApi", "externalTypeApi", "documentApi", "schemaApi"].contains(kind) { fields.append("api") }
             if kind == "scriptApi" { fields.append("runtime") }
             if kind == "programBinary" { fields.append("binary") }
             if measuring { fields.append("measurement") }
@@ -76,6 +76,8 @@ enum Validation {
                 case "externalTypeApi":
                     try self.fields(api, ["typeNames"])
                     _ = try strings(api.required("typeNames"))
+                case "schemaApi":
+                    try self.fields(api, ["sources", "root", "parameters", "bind", "encode", "encodeBuffer", "decode", "decodeLimit", "key", "dump", "describe", "document"])
                 case "documentApi":
                     if api["text"] != nil {
                         try self.fields(api, ["text", "print"])

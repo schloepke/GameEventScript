@@ -1,0 +1,578 @@
+// Copyright 2026 Stephan Schlöpke
+// SPDX-License-Identifier: Apache-2.0
+
+@_spi(Syntax) import GameEventScriptSyntax
+
+private typealias Code = GesSchemaDiagnostic
+
+/// The parameter values of one binding.
+public final class GesSchemaParameters {
+    struct Value {
+        let number: GesSchemaDecimal
+        let unit: GesQuantityUnit
+        let isPercent: Bool
+        // A literal says whether it is a percentage; a plain number is the ratio of either kind.
+        let isLiteral: Bool
+    }
+
+    private var values: [String: Value] = [:]
+
+    /// Creates empty parameter values.
+    public init() {}
+
+    /// Sets a parameter from a literal such as `5km` or `10%`, exactly as written.
+    /// - Returns: This instance.
+    /// - Throws: `GesSchemaError` with `schema.syntax` when the text is no exact finite literal.
+    @discardableResult public func with(_ name: String, literal: String) throws -> GesSchemaParameters {
+        guard let read = GesSchemaLiterals.read(literal) else { throw GesSchemaError(code: GesSchemaDiagnostic.syntax, sourceName: "", line: 0, column: 0, message: "Expected an exact finite literal.") }
+        values[name] = Value(number: read.value, unit: read.unit, isPercent: read.isPercent, isLiteral: true)
+        return self
+    }
+
+    /// Sets a parameter to an integer in base units.
+    /// - Returns: This instance.
+    @discardableResult public func with(_ name: String, _ value: Int64, unit: GesQuantityUnit = .none) -> GesSchemaParameters {
+        values[name] = Value(number: GesSchemaDecimal(value, 0), unit: unit, isPercent: false, isLiteral: false)
+        return self
+    }
+
+    /// Sets a parameter to a Binary64 in base units, which converts through its shortest roundtrip text.
+    /// - Returns: This instance.
+    /// - Throws: `GesSchemaError` with `schema.invalidBound` when the value is not finite.
+    @discardableResult public func with(_ name: String, _ value: Double, unit: GesQuantityUnit = .none) throws -> GesSchemaParameters {
+        guard value.isFinite, let read = GesSchemaLiterals.read(value.description) else { throw GesSchemaError(code: GesSchemaDiagnostic.invalidBound, sourceName: "", line: 0, column: 0, message: "Expected a finite value.") }
+        values[name] = Value(number: read.value, unit: unit, isPercent: false, isLiteral: false)
+        return self
+    }
+
+    func value(_ name: String) -> Value? { values[name] }
+}
+
+enum GesSchemaNodeKind: UInt8, Sendable {
+    case boolean
+    case integer
+    case quantized
+    case float
+    case tag
+    case text
+    case list
+    case group
+}
+
+// The numbers of one field of a bound layout, free of references so that the hot path never counts them. A subtree occupies
+// consecutive nodes, and `next` is the first node after it.
+struct GesSchemaNode: Sendable {
+    var kind = GesSchemaNodeKind.boolean
+    var optional = false
+    var key = false
+    var wrapping = false
+    var hasRange = false
+    var isTagBit = false
+    var width = 0
+    var next = 0
+    // Integer: its lower bound. Quantized: lowerN. The largest valid index; for a wrapping field the period is one more.
+    var lower: Int64 = 0
+    var maxIndex: UInt64 = 0
+    var p: Int64 = 0
+    var tenPower: Int64 = 1
+    var pBinary = 1.0
+    var sBinary = 1.0
+    var lowerValue = 0.0
+    var upperValue = 0.0
+    var maxCount: Int64 = 0
+    // A delta range in indices with the width of its payload; deltaWidth is 0 without one.
+    var deltaRange: UInt64 = 0
+    var deltaWidth = 0
+}
+
+// What a node is called and what its values are, for error paths and the value path.
+struct GesSchemaNodeInfo: Sendable {
+    var name = ""
+    var path = ""
+    var tags: [String] = []
+    var valueKind = GesSchemaTypeKind.nothing
+    var unit = GesQuantityUnit.none
+    var schemaName = ""
+}
+
+/// A schema, message or message set bound to parameter values. Immutable; it can be shared between threads.
+public final class GesBoundSchema: Sendable {
+    /// The description this binding comes from.
+    public let schema: GesSchema
+    /// The declaration's name.
+    public let name: String
+    /// The size of the largest encoding in bytes.
+    public let maxByteCount: Int
+    /// The schema hash, independent of parameter values.
+    public let hash: UInt64
+    /// The hash over the schema hash and the parameter values.
+    public let bindingHash: UInt64
+    let kind: GesSchemaKind
+    let nodes: [GesSchemaNode]
+    let infos: [GesSchemaNodeInfo]
+    let members: [GesBoundSchema]
+    let memberWidth: Int
+    // The largest encoding of a schema or message in bits, which a message set adds its index to.
+    let maxBitCount: Int64
+    // The labels of a message's arguments, `_` for an unlabeled one.
+    let labels: [String]
+    private let fields: [String: Int]
+
+    init(
+        schema: GesSchema,
+        name: String,
+        kind: GesSchemaKind,
+        nodes: [GesSchemaNode],
+        infos: [GesSchemaNodeInfo],
+        members: [GesBoundSchema],
+        memberWidth: Int,
+        maxByteCount: Int,
+        maxBitCount: Int64,
+        hash: UInt64,
+        bindingHash: UInt64,
+        labels: [String]
+    ) {
+        self.schema = schema
+        self.name = name
+        self.kind = kind
+        self.nodes = nodes
+        self.infos = infos
+        self.members = members
+        self.memberWidth = memberWidth
+        self.maxByteCount = maxByteCount
+        self.maxBitCount = maxBitCount
+        self.hash = hash
+        self.bindingHash = bindingHash
+        self.labels = labels
+        var fields: [String: Int] = [:]
+        for (index, info) in infos.enumerated() { fields[info.path] = index }
+        self.fields = fields
+    }
+
+    /// Whether the first field is a key that a reader can take first.
+    public var hasKey: Bool { !nodes.isEmpty && nodes[0].key }
+
+    /// The handle of a field; resolve it once and reuse it.
+    /// - Parameter path: The path, such as `x`, `position.x`, `units[]`, `units[].name` or `#critical`.
+    /// - Returns: The handle, or nil when the field does not exist.
+    public func field(_ path: String) -> GesSchemaField? { fields[path].map { GesSchemaField(owner: self, index: $0) } }
+
+    /// A member of a message set, or nil when the set has no such message.
+    public func member(_ name: String) -> GesBoundSchema? { members.first { $0.name == name } }
+
+    /// A member's index, which selects it in a writer, or nil when the set has no such message.
+    public func memberIndex(_ name: String) -> Int? { members.firstIndex { $0.name == name } }
+}
+
+/// The handle of a field in a bound schema. Resolving it once makes further uses free of lookups.
+public struct GesSchemaField: Sendable {
+    let owner: GesBoundSchema
+    let index: Int
+
+    init(owner: GesBoundSchema, index: Int) {
+        self.owner = owner
+        self.index = index
+    }
+
+    /// The field's path.
+    public var path: String { owner.infos[index].path }
+}
+
+/// Builds the layout of a declaration for fixed parameter values.
+enum GesSchemaBinder {
+    static let maximumByteCount: Int64 = 1_048_576
+    private static let maximumNodeCount = 1_048_576
+    private static let largestSteps: Int64 = 1 << 50
+    private static let largestMultiple: Int64 = 1 << 53
+    private static let maximumFractionDigits = 15
+    private static let maximumListNesting = 4
+
+    // The numbers of a numeric field, from literals alone or with parameter values. Parameters without a value leave the
+    // checks that need them to binding.
+    private struct Numeric {
+        var lower: Int64 = 0
+        var upper: Int64 = 0
+        var p: Int64 = 1
+        var k = 0
+        var deltaRange: UInt64 = 0
+    }
+
+    static func checkLiterals(_ scope: GesFileScope, _ constraints: GesResolvedConstraints) throws { _ = try compute(scope, constraints, nil) }
+
+    private static func compute(_ scope: GesFileScope, _ constraints: GesResolvedConstraints, _ parameters: GesSchemaParameters?) throws -> Numeric {
+        var numeric = Numeric()
+
+        func resolved(_ value: GesResolvedValue?) -> GesSchemaDecimal? {
+            guard let value else { return nil }
+            return value.isParameter ? parameters?.value(value.parameter)?.number : value.value
+        }
+
+        let lower = resolved(constraints.lower)
+        let upper = resolved(constraints.upper)
+        if let step = constraints.step {
+            if step.value.significand <= 0 { throw scope.error(Code.invalidStep, step.offset, "A step is positive.") }
+            let exponent = step.value.exponent
+            numeric.k = exponent < 0 ? -exponent : 0
+            if numeric.k > maximumFractionDigits { throw scope.error(Code.tooWide, step.offset, "A step has at most 15 fractional digits.") }
+            guard let p = scale(step.value.significand, exponent < 0 ? 0 : exponent) else { throw scope.error(Code.tooWide, step.offset, "A step is too large.") }
+            numeric.p = p
+            if let lower { numeric.lower = try steps(scope, lower, numeric, constraints.lower!) }
+            if let upper { numeric.upper = try steps(scope, upper, numeric, constraints.upper!) }
+            if lower != nil && upper != nil && numeric.lower >= numeric.upper { throw scope.error(Code.invalidRange, constraints.lower!.offset, "A lower bound is below its upper bound.") }
+            if let delta = constraints.delta {
+                if delta.value.significand <= 0 { throw scope.error(Code.invalidStep, delta.offset, "A delta range is positive.") }
+                numeric.deltaRange = UInt64(try steps(scope, delta.value, numeric, delta))
+            }
+        } else if constraints.integer {
+            if let lower { numeric.lower = try whole(scope, lower, constraints.lower!) }
+            if let upper { numeric.upper = try whole(scope, upper, constraints.upper!) }
+            if lower != nil && upper != nil && numeric.lower >= numeric.upper { throw scope.error(Code.invalidRange, constraints.lower!.offset, "A lower bound is below its upper bound.") }
+            if let delta = constraints.delta {
+                if delta.value.significand <= 0 { throw scope.error(Code.invalidStep, delta.offset, "A delta range is positive.") }
+                numeric.deltaRange = UInt64(try whole(scope, delta.value, delta))
+            }
+        } else {
+            if let lower { try checkBinary(scope, lower, constraints.lower!) }
+            if let upper { try checkBinary(scope, upper, constraints.upper!) }
+            if let lower, let upper, compare(lower, upper) >= 0 {
+                throw scope.error(Code.invalidRange, constraints.lower!.offset, "A lower bound is below its upper bound.")
+            }
+        }
+        return numeric
+    }
+
+    // A fractional field compares in binary64, so its bounds must keep their meaning there.
+    private static func checkBinary(_ scope: GesFileScope, _ value: GesSchemaDecimal, _ origin: GesResolvedValue) throws {
+        guard let binary = Double(value.canonical), binary.isFinite, binary != 0 || value.significand == 0 else {
+            throw scope.error(Code.tooWide, origin.offset, "A bound of a fractional field lies beyond binary64.")
+        }
+    }
+
+    // value / step as an exact integer within the limits.
+    private static func steps(_ scope: GesFileScope, _ value: GesSchemaDecimal, _ numeric: Numeric, _ origin: GesResolvedValue) throws -> Int64 {
+        let shift = value.exponent + numeric.k
+        if shift < 0 { throw scope.error(Code.invalidStep, origin.offset, "A bound or delta range is a multiple of the step.") }
+        guard let scaled = scale(value.significand, shift) else { throw scope.error(Code.tooWide, origin.offset, "A value exceeds 2^50 steps.") }
+        if scaled % numeric.p != 0 { throw scope.error(Code.invalidStep, origin.offset, "A bound or delta range is a multiple of the step.") }
+        let steps = scaled / numeric.p
+        if steps > largestSteps || steps < -largestSteps || scaled > largestMultiple || scaled < -largestMultiple { throw scope.error(Code.tooWide, origin.offset, "A value exceeds 2^50 steps.") }
+        return steps
+    }
+
+    private static func whole(_ scope: GesFileScope, _ value: GesSchemaDecimal, _ origin: GesResolvedValue) throws -> Int64 {
+        guard value.exponent >= 0, let whole = scale(value.significand, value.exponent) else { throw scope.error(Code.invalidBound, origin.offset, "An integer bound is integral and within Int64.") }
+        return whole
+    }
+
+    private static func scale(_ value: Int64, _ power: Int) -> Int64? {
+        var result = value
+        var index = 0
+        while index < power && result != 0 {
+            let (next, overflow) = result.multipliedReportingOverflow(by: 10)
+            if overflow { return nil }
+            result = next
+            index += 1
+        }
+        return result
+    }
+
+    static func compare(_ left: GesSchemaDecimal, _ right: GesSchemaDecimal) -> Int {
+        let a = left.significand
+        let b = right.significand
+        if a == 0 || b == 0 || (a < 0) != (b < 0) { return a < b ? -1 : a > b ? 1 : 0 }
+        let magnitude = digits(a) + left.exponent
+        let other = digits(b) + right.exponent
+        if magnitude != other { return (a > 0) == (magnitude > other) ? 1 : -1 }
+        let common = min(left.exponent, right.exponent)
+        let first = scaledMagnitude(a, left.exponent - common)
+        let second = scaledMagnitude(b, right.exponent - common)
+        if first == second { return 0 }
+        return (first < second) == (a > 0) ? -1 : 1
+    }
+
+    // Equal magnitudes have at most 19 digits when scaled, which a UInt64 holds also where an Int64 does not.
+    private static func scaledMagnitude(_ value: Int64, _ power: Int) -> UInt64 {
+        var result = value.magnitude
+        var index = 0
+        while index < power {
+            result *= 10
+            index += 1
+        }
+        return result
+    }
+
+    private static func digits(_ value: Int64) -> Int {
+        var value = value
+        var count = 1
+        while value >= 10 || value <= -10 {
+            value /= 10
+            count += 1
+        }
+        return count
+    }
+
+    // The width of n values given n - 1: the bit length.
+    static func bitLength(_ value: UInt64) -> Int { UInt64.bitWidth - value.leadingZeroBitCount }
+
+    private struct Build {
+        var nodes: [GesSchemaNode] = []
+        var infos: [GesSchemaNodeInfo] = []
+        let parameters: GesSchemaParameters
+    }
+
+    static func bind(_ root: GesResolvedDeclaration, _ parameters: GesSchemaParameters) throws -> GesBoundSchema {
+        var declarations: [GesResolvedDeclaration] = []
+        var reached: [String: GesSchemaTypeSyntax] = [:]
+        try GesSchemaCanonical.reach(root, &declarations, &reached)
+        let hash = GesSchemaCanonical.hash(try GesSchemaCanonical.form(root))
+        var lines = GesSchemaCanonical.hex(hash) + "\n"
+        for name in reached.keys.sorted(by: { Array($0.utf8).lexicographicallyPrecedes(Array($1.utf8)) }) {
+            guard let value = parameters.value(name) else { throw root.scope.error(Code.unknownName, root.offset, "Parameter '\(name)' has no value.") }
+            try checkKind(root, name, reached[name]!, value)
+            lines += "\(name) \(value.number.canonical)\n"
+        }
+        let bindingHash = GesSchemaCanonical.hash(lines)
+        if root.kind == .messages {
+            let members = try root.members.map { try bindNodes($0, parameters, hash, bindingHash) }
+            let largest = members.map(\.maxBitCount).max() ?? 0
+            let width = bitLength(UInt64(members.count) - 1)
+            let total = largest + Int64(width)
+            if total > maximumByteCount * 8 { throw root.scope.error(Code.tooLarge, root.offset, "The largest encoding of '\(root.name)' exceeds \(maximumByteCount) bytes.") }
+            return GesBoundSchema(
+                schema: root.schema!,
+                name: root.name,
+                kind: .messages,
+                nodes: [],
+                infos: [],
+                members: members,
+                memberWidth: width,
+                maxByteCount: Int((total + 7) / 8),
+                maxBitCount: total,
+                hash: hash,
+                bindingHash: bindingHash,
+                labels: []
+            )
+        }
+        return try bindNodes(root, parameters, hash, bindingHash)
+    }
+
+    // The values a document check uses must have their declared kind and unit, as at binding; others stay unchecked.
+    static func checkParameters(_ root: GesResolvedDeclaration, _ parameters: GesSchemaParameters) throws {
+        var declarations: [GesResolvedDeclaration] = []
+        var reached: [String: GesSchemaTypeSyntax] = [:]
+        try GesSchemaCanonical.reach(root, &declarations, &reached)
+        for name in reached.keys.sorted(by: { Array($0.utf8).lexicographicallyPrecedes(Array($1.utf8)) }) {
+            if let value = parameters.value(name) { try checkKind(root, name, reached[name]!, value) }
+        }
+    }
+
+    private static func checkKind(_ root: GesResolvedDeclaration, _ name: String, _ declared: GesSchemaTypeSyntax, _ value: GesSchemaParameters.Value) throws {
+        if value.unit != declared.unit || (value.isLiteral && value.isPercent != (declared.kind == .percentage)) {
+            throw root.scope.error(Code.unitMismatch, root.offset, "Parameter '\(name)' has another kind or unit.")
+        }
+    }
+
+    private static func bindNodes(_ declaration: GesResolvedDeclaration, _ parameters: GesSchemaParameters, _ hash: UInt64, _ bindingHash: UInt64) throws -> GesBoundSchema {
+        var build = Build(parameters: parameters)
+        for field in declaration.fields { try addField(&build, declaration.scope, field, "", 0, top: true) }
+        for tag in declaration.tags {
+            var node = GesSchemaNode()
+            node.kind = .boolean
+            node.isTagBit = true
+            node.width = 1
+            node.next = build.nodes.count + 1
+            build.nodes.append(node)
+            var info = GesSchemaNodeInfo()
+            info.name = tag
+            info.path = "#" + tag
+            build.infos.append(info)
+        }
+        let (full, delta) = cost(build.nodes, 0, build.nodes.count, top: true)
+        let bits = max(full, delta)
+        if bits > maximumByteCount * 8 { throw declaration.scope.error(Code.tooLarge, declaration.offset, "The largest encoding of '\(declaration.name)' exceeds \(maximumByteCount) bytes.") }
+        return GesBoundSchema(
+            schema: declaration.schema!,
+            name: declaration.name,
+            kind: declaration.kind,
+            nodes: build.nodes,
+            infos: build.infos,
+            members: [],
+            memberWidth: 0,
+            maxByteCount: Int((bits + 7) / 8),
+            maxBitCount: bits,
+            hash: hash,
+            bindingHash: bindingHash,
+            labels: declaration.fields.map { $0.unlabeled ? "_" : $0.name }
+        )
+    }
+
+    // The largest full and delta encoding in bits. Sums stop growing beyond the limit, so nothing overflows.
+    private static func cost(_ nodes: [GesSchemaNode], _ start: Int, _ end: Int, top: Bool) -> (full: Int64, delta: Int64) {
+        let limit = maximumByteCount * 8 + 1
+        var full: Int64 = 0
+        var delta: Int64 = 0
+        var index = start
+        while index < end {
+            let node = nodes[index]
+            var fieldFull: Int64
+            var fieldDelta: Int64
+            switch node.kind {
+            case .boolean:
+                fieldFull = 1
+                fieldDelta = 0
+            case .text:
+                fieldFull = Int64(node.width) + min(node.maxCount, limit) * 8
+                fieldDelta = fieldFull
+            case .list:
+                let element = cost(nodes, index + 1, node.next, top: false).full
+                fieldFull = Int64(node.width) + (element == 0 ? 0 : min(node.maxCount, limit / max(element, 1) + 1) * element)
+                fieldDelta = fieldFull
+            case .group:
+                (fieldFull, fieldDelta) = cost(nodes, index + 1, node.next, top: false)
+            default:
+                fieldFull = Int64(node.width)
+                fieldDelta = node.deltaWidth > 0 ? 1 + Int64(max(node.deltaWidth, node.width)) : Int64(node.width)
+            }
+            if node.optional {
+                fieldDelta = 1 + max(fieldDelta, fieldFull)
+                fieldFull += 1
+            }
+            full = min(full + fieldFull, limit)
+            delta = min(delta + (node.key && top ? fieldFull : 1 + fieldDelta), limit)
+            index = node.next
+        }
+        return (full, delta)
+    }
+
+    private static func addField(_ build: inout Build, _ scope: GesFileScope, _ field: GesResolvedField, _ prefix: String, _ lists: Int, top: Bool) throws {
+        if field.alternatives.count != 1 { throw scope.error(Code.notEncodable, field.offset, "Field '\(field.name)' is a union, which is only for documents.") }
+        let path = prefix.isEmpty ? field.name : prefix + "." + field.name
+        try addType(&build, scope, field.alternatives[0], field.name, path, optional: field.marker == .optional, key: top && field.marker == .key, lists)
+    }
+
+    private static func addType(_ build: inout Build, _ scope: GesFileScope, _ type: GesResolvedType, _ name: String, _ path: String, optional: Bool, key: Bool, _ lists: Int) throws {
+        try checkNodeCount(build, scope, type.offset)
+        let index = build.nodes.count
+        var node = GesSchemaNode()
+        node.optional = optional
+        node.key = key
+        var info = GesSchemaNodeInfo()
+        info.name = name
+        info.path = path
+        info.valueKind = type.kind
+        info.unit = type.unit
+        // The node keeps its place before its children.
+        build.nodes.append(node)
+        build.infos.append(info)
+        switch type.kind {
+        case .boolean:
+            node.kind = .boolean
+            node.width = 1
+        case .number, .percentage, .quantity:
+            try number(build.parameters, scope, type.constraints, type.offset, &node)
+        case .tag:
+            guard let tags = type.tags else { throw scope.error(Code.notEncodable, type.offset, "A Tag without a set has no width.") }
+            node.kind = .tag
+            info.tags = tags
+            node.maxIndex = UInt64(tags.count) - 1
+            node.width = bitLength(node.maxIndex)
+        case .text:
+            guard let max = type.max else { throw scope.error(Code.notEncodable, type.offset, "A Text without max has no hard limit.") }
+            node.kind = .text
+            node.maxCount = max
+            node.width = bitLength(UInt64(max))
+        case .list:
+            guard let element = type.element, let max = type.max else { throw scope.error(Code.notEncodable, type.offset, "A List without element type and max has no hard limit.") }
+            if lists >= maximumListNesting { throw scope.error(Code.notEncodable, type.offset, "Lists nest at most \(maximumListNesting) levels for encoding.") }
+            if element.count != 1 { throw scope.error(Code.notEncodable, type.offset, "A List of a union is only for documents.") }
+            node.kind = .list
+            node.maxCount = max
+            node.width = bitLength(UInt64(max))
+            try addType(&build, scope, element[0], "[]", path + "[]", optional: false, key: false, lists + 1)
+            if !build.nodes[(index + 1)...].contains(where: { $0.width > 0 || $0.optional }) { throw scope.error(Code.notEncodable, type.offset, "A List element without bits has a count that no data limits.") }
+        case .point, .vector:
+            node.kind = .group
+            if let axes = type.axes {
+                for axis in axes { try addAxis(&build, scope, axis.axis, axis.constraints, path, type.offset) }
+            } else {
+                for axis in ["x", "y", "z"] { try addAxis(&build, scope, axis, GesResolvedConstraints(), path, type.offset) }
+            }
+        case .reference:
+            node.kind = .group
+            info.schemaName = type.referenceName
+            let reference = type.reference!
+            for field in reference.fields { try addField(&build, reference.scope, field, path, lists, top: false) }
+        default:
+            throw scope.error(Code.notEncodable, type.offset, "A \(type.kind.rawValue) has no width and is only for documents.")
+        }
+        node.next = build.nodes.count
+        build.nodes[index] = node
+        build.infos[index] = info
+    }
+
+    // References expand into nodes, so a small source can ask for more than any encoding holds.
+    private static func checkNodeCount(_ build: Build, _ scope: GesFileScope, _ offset: Int) throws {
+        if build.nodes.count >= maximumNodeCount { throw scope.error(Code.tooLarge, offset, "A bound layout has at most \(maximumNodeCount) fields.") }
+    }
+
+    private static func addAxis(_ build: inout Build, _ scope: GesFileScope, _ axis: String, _ constraints: GesResolvedConstraints, _ path: String, _ offset: Int) throws {
+        try checkNodeCount(build, scope, offset)
+        var node = GesSchemaNode()
+        node.next = build.nodes.count + 1
+        try number(build.parameters, scope, constraints, offset, &node)
+        build.nodes.append(node)
+        var info = GesSchemaNodeInfo()
+        info.name = axis
+        info.path = path + "." + axis
+        info.valueKind = .number
+        build.infos.append(info)
+    }
+
+    private static func number(_ parameters: GesSchemaParameters, _ scope: GesFileScope, _ constraints: GesResolvedConstraints, _ offset: Int, _ node: inout GesSchemaNode) throws {
+        let numeric = try compute(scope, constraints, parameters)
+        node.hasRange = constraints.lower != nil
+        node.wrapping = constraints.wrapping
+        if constraints.step != nil {
+            node.kind = .quantized
+            node.p = numeric.p
+            node.tenPower = scale(1, numeric.k) ?? 1
+            node.pBinary = Double(numeric.p)
+            node.sBinary = Double(node.tenPower)
+            node.lower = numeric.lower
+            let span = UInt64(numeric.upper - numeric.lower)
+            node.maxIndex = constraints.wrapping ? span - 1 : span
+            node.width = bitLength(node.maxIndex)
+            node.lowerValue = Double(numeric.lower * numeric.p) / node.sBinary
+            node.upperValue = Double(numeric.upper * numeric.p) / node.sBinary
+        } else if constraints.integer {
+            node.kind = .integer
+            node.lower = numeric.lower
+            if node.hasRange {
+                let span = UInt64(bitPattern: numeric.upper) &- UInt64(bitPattern: numeric.lower)
+                node.maxIndex = constraints.wrapping ? span - 1 : span
+                node.width = bitLength(node.maxIndex)
+            } else {
+                node.maxIndex = .max
+                node.width = 64
+            }
+        } else {
+            if constraints.wrapping { throw scope.error(Code.notEncodable, offset, "A wrapping field without a step or integer has no index and is only for documents.") }
+            node.kind = .float
+            node.width = 64
+            if node.hasRange {
+                node.lowerValue = binary(constraints.lower!, parameters)
+                node.upperValue = binary(constraints.upper!, parameters)
+            }
+        }
+        if let delta = constraints.delta {
+            node.deltaRange = numeric.deltaRange
+            node.deltaWidth = bitLength(numeric.deltaRange * 2)
+            if node.deltaWidth >= node.width { throw scope.error(Code.invalidConstraint, delta.offset, "A delta range is narrower than its field.") }
+        }
+    }
+
+    private static func binary(_ value: GesResolvedValue, _ parameters: GesSchemaParameters) -> Double {
+        let number = value.isParameter ? (parameters.value(value.parameter)?.number ?? value.value) : value.value
+        return Double(number.canonical) ?? 0
+    }
+}

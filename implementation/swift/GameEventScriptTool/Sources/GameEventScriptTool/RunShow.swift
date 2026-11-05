@@ -12,12 +12,12 @@ extension Tool {
         let message: String
     }
 
-    // `:show <file>` displays a GES source, GESA or GES document file and marks its errors below the text, without
+    // `:show <file>` displays a GES source, GESA, GES document or GES schema file and marks its errors below the text, without
     // loading it.
     func writeShow(_ path: String, color: Bool) throws {
         let text = try ToolFiles.source(path)
         let lower = path.lowercased()
-        let language: GesSyntaxLanguage = lower.hasSuffix(".gesd") ? .gesd : lower.hasSuffix(".gesa") ? .gesa : .ges
+        let language: GesSyntaxLanguage = lower.hasSuffix(".gesd") ? .gesd : lower.hasSuffix(".gess") ? .gess : lower.hasSuffix(".gesa") ? .gesa : .ges
         let highlighter = try GesSyntaxHighlighter(language: language, maxInputLength: Int.max)
         let result = highlighter.highlight(text)
         // Columns do not count a leading byte order mark.

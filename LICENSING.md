@@ -47,7 +47,8 @@ SwiftPM manifests place the required `swift-tools-version` directive first,
 followed by the two license-comment lines. Python uses equivalent `#` comments.
 
 The header applies to handwritten production and test C/C#/Swift, Python tooling, product documentation,
-specifications, guides, README files, C# project files, the scoped EditorConfig,
+specifications, guides, README files, C# project files, GES example programs, documents
+and schemas (`.ges`, `.gesd`, `.gess`), the scoped EditorConfig,
 the root Git ignore file, MSBuild configuration, GitHub Actions workflows,
 solution and shell entry-point files, and XML-based TextMate bundle files.
 

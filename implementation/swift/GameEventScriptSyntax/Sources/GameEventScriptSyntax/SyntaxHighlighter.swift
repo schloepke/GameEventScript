@@ -31,6 +31,10 @@ public final class GesSyntaxHighlighter: Sendable {
             let diagnostics = GesDocumentHighlighting.highlight(text, &spans)
             return spans.finish(diagnostics)
         }
+        if language == .gess {
+            let diagnostics = GesSchemaHighlighting.highlight(text, &spans)
+            return spans.finish(diagnostics)
+        }
         GesAssemblyHighlighting.highlight(&spans)
         return spans.finish([])
     }

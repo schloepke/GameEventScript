@@ -59,6 +59,11 @@ internal sealed class GesDocumentNode
 
     internal GesQuantityUnit Unit { get; private init; }
 
+    // The UTF-16 offset where this value starts, and of each key of a Map; schema checks report them.
+    internal int Start { get; set; }
+
+    internal int[] KeyOffsets { get; private init; } = [];
+
     // The UTF-16 offset of a form's `:`, where construction errors point.
     internal int Offset { get; private init; }
 
@@ -74,7 +79,7 @@ internal sealed class GesDocumentNode
 
     internal static GesDocumentNode List(GesDocumentNode[] items) => new(GesDocumentNodeKind.List) { Children = items };
 
-    internal static GesDocumentNode Map(string[] keys, GesDocumentNode[] values) => new(GesDocumentNodeKind.Map) { Labels = keys, Children = values };
+    internal static GesDocumentNode Map(string[] keys, GesDocumentNode[] values, int[]? keyOffsets = null) => new(GesDocumentNodeKind.Map) { KeyOffsets = keyOffsets ?? [], Labels = keys, Children = values };
 
     internal static GesDocumentNode Dice(int[] rolls) => new(GesDocumentNodeKind.Dice) { Rolls = rolls };
 

@@ -69,7 +69,9 @@ final class DocumentTests: XCTestCase {
     func testUsageErrorsExitWithTwo() throws {
         let a = try tool.file("a.gesd", valid)
         let b = try tool.file("b.gesd", valid)
-        for arguments in [["document"], ["document", "lint", a], ["document", "check"], ["document", "format", a, b], ["document", "format", a, "-o", a], ["document", "check", "--color", a]] {
+        for arguments in [
+            ["document"], ["document", "lint", a], ["document", "check"], ["document", "format", a, b], ["document", "format", a, "-o", a], ["document", "check", "--color", a], ["document", "check", ""], ["document", "format", "", "-o", "out.gesd"],
+        ] {
             let result = tool.run(arguments)
             XCTAssertEqual(result.code, 2, "\(arguments) \(result.error)")
             if arguments.count > 1 { XCTAssertTrue(result.error.contains("cli.usage"), result.error) }

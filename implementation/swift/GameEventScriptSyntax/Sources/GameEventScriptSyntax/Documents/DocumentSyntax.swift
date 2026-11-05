@@ -3,14 +3,16 @@
 
 /// A value of a read document. Scalars carry their recognized value; Runtime builds the values of forms, messages
 /// and handlers.
-@_spi(Syntax) public indirect enum GesDocumentNode: Sendable {
+@_spi(Syntax) public indirect enum GesDocumentNode: Sendable, Hashable {
     case text(String)
     case boolean(Bool)
     case nothing
     case tag(String)
     case number(GesNumberLiteral)
-    case list([GesDocumentNode])
-    case map(keys: [String], values: [GesDocumentNode])
+    /// A List with the UTF-8 offset of each item, which schema checks report.
+    case list([GesDocumentNode], offsets: [Int])
+    /// A Map with the UTF-8 offsets of its keys and values, which schema checks report.
+    case map(keys: [String], values: [GesDocumentNode], keyOffsets: [Int], valueOffsets: [Int])
     case dice([Int32])
     case spatial(point: Bool, x: Double, y: Double, z: Double, unit: GesQuantityUnit)
     /// An explicit form such as `:Range(1, 5)` with its lowercase type, labels (`_` when unlabeled), arguments and
@@ -94,7 +96,10 @@
 
     /// The 1-based line and column of a UTF-8 offset, in Unicode scalars; CRLF is one line break and a leading byte
     /// order mark is not counted.
-    @_spi(Syntax) public func location(_ offset: Int) -> (line: Int, column: Int) {
+    @_spi(Syntax) public func location(_ offset: Int) -> (line: Int, column: Int) { Self.location(bytes, offset) }
+
+    /// The 1-based line and column of a UTF-8 offset in any text, by the same rules.
+    @_spi(Syntax) public static func location(_ bytes: [UInt8], _ offset: Int) -> (line: Int, column: Int) {
         var line = 1
         var column = 1
         var index = bytes.starts(with: [0xEF, 0xBB, 0xBF]) ? 3 : 0

@@ -14,6 +14,29 @@ namespace GameEventScript.Tests.Native.ApiSurface;
 public sealed class GameEventScriptPublicApiSurfaceTests
 {
     [TestMethod]
+    public void SchemaCodeUsesNeitherValuesNorTheVirtualMachine()
+    {
+        var pattern = new System.Text.RegularExpressions.Regex(@"\b(GesValue\w*|GesVirtualMachine|GesContext|GameEventScriptHost|GameEventScriptProgram|GameEventScriptMessage)\b");
+        string[] directories =
+        [
+            Path.Combine(TestRepositoryPaths.LibraryProjectDirectory, "Api", "Schema"),
+            Path.Combine(TestRepositoryPaths.Root, "implementation", "swift", "GameEventScriptRuntime", "Sources", "GameEventScriptRuntime", "Api", "Schema")
+        ];
+        foreach (var directory in directories)
+        {
+            var files = Directory.GetFiles(directory);
+            Assert.AreNotEqual(0, files.Length, directory);
+            foreach (var file in files)
+            {
+                // The value path converts between both worlds and is the one exception.
+                if (Path.GetFileNameWithoutExtension(file) is "GesSchemaValues" or "SchemaValues") continue;
+                var match = pattern.Match(File.ReadAllText(file));
+                Assert.IsFalse(match.Success, $"{file} uses {match.Value}.");
+            }
+        }
+    }
+
+    [TestMethod]
     public void PublicApiSurfaceMatchesApprovedSnapshot()
     {
         var actual = BuildPublicSurfaceSnapshot();

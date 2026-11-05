@@ -3,8 +3,9 @@
 
 # GameEventScript.Runtime
 
-Portable values, Programs, binary codecs, Host and VM. The production project
-has no Compiler or Conformance dependency.
+Portable values, Programs, binary codecs, Host and VM, plus GES documents and
+schemas. The production project depends only on Syntax and has no Compiler or
+Conformance dependency.
 
 - `src/GameEventScript.Runtime.csproj`: library project.
 - `tests/GameEventScript.Runtime.Tests.csproj`: native implementation tests.

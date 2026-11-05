@@ -115,6 +115,7 @@ internal sealed class GesSchemaDocumentCheck
             case GesSchemaTypeKind.Vector: Spatial(type, value, GesDocumentNodeKind.Vector); break;
             case GesSchemaTypeKind.Tag:
                 Require(value, value.Kind == GesDocumentNodeKind.Tag && (type.Tags is null || Array.IndexOf(type.Tags, value.Name) >= 0));
+                if (type.Max is { } tagMax && Encoding.UTF8.GetByteCount(value.Name) > tagMax) throw new Failure(OutOfRange, value.Start);
                 break;
             case GesSchemaTypeKind.Text:
                 Require(value, value.Kind == GesDocumentNodeKind.Text);

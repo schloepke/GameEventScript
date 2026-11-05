@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using System;
+using System.Text;
 using GameEventScript.Api;
 using GameEventScript.Runtime.Values;
 
@@ -193,11 +194,41 @@ public sealed class GesSchemaTests
     }
 
     [TestMethod]
+    public void ATagWithAMaximumWritesOnlyTagNames()
+    {
+        var bound = GesSchemaSet.Parse("schema :S as { t: :Tag max 3 }").Schema("S").Bind();
+        var field = bound.Field("t");
+        var buffer = new byte[8];
+        var writer = new GesSchemaWriter(bound, buffer);
+        foreach (var invalid in new[] { "", "Ab", "a_", "1a", "ä" })
+        {
+            var code = "";
+            try
+            {
+                writer.WriteText(field, Encoding.UTF8.GetBytes(invalid));
+            }
+            catch (GesWireException exception)
+            {
+                code = exception.Code;
+            }
+
+            Assert.AreEqual(GesWireException.InvalidTag, code, invalid);
+        }
+
+        writer.WriteText(field, "ab"u8);
+        Assert.AreEqual(3, writer.Finish());
+        CollectionAssert.AreEqual(new byte[] { 0x86, 0x89, 0x01 }, buffer.AsSpan(0, 3).ToArray());
+    }
+
+    [TestMethod]
     [TestCategory("Allocation")]
     public void UnionsAndDiceAllocateNothing()
     {
-        var bound = GesSchemaSet.Parse("schema :S as { v: :Quantity(°) wrapping between 0° and 360° step 1° | :Tag(#a, #b) | :Nothing, next: :Boolean, d: :Dice max 2 between 1 and 6 }").Schema("S").Bind();
+        var bound = GesSchemaSet.Parse("schema :S as { v: :Quantity(°) wrapping between 0° and 360° step 1° | :Tag(#a, #b) | :Nothing, next: :Boolean, d: :Dice max 2 between 1 and 6, n: :Tag max 3 }").Schema("S").Bind();
         var (v, tag, next, d, roll) = (bound.Field("v"), bound.Field("v:Tag"), bound.Field("next"), bound.Field("d"), bound.Field("d[]"));
+        var name = bound.Field("n");
+        var tagName = new byte[] { 0x61, 0x62 };
+        var received = new byte[3];
         Span<byte> buffer = stackalloc byte[(int)bound.MaxByteCount];
 
         void Round(Span<byte> memory)
@@ -208,6 +239,7 @@ public sealed class GesSchemaTests
             writer.WriteBoolean(next, true);
             writer.BeginList(d, 1);
             writer.WriteInteger(roll, 4);
+            writer.WriteText(name, tagName);
             var length = writer.Finish();
             var reader = new GesSchemaReader(bound, memory.Slice(0, length));
             Assert.AreEqual(1, reader.ReadAlternative(v));
@@ -215,17 +247,20 @@ public sealed class GesSchemaTests
             Assert.IsTrue(reader.ReadBoolean(next));
             Assert.AreEqual(1, reader.BeginList(d));
             Assert.AreEqual(4, reader.ReadInteger(roll));
+            Assert.AreEqual(2, reader.ReadText(name, received));
             reader.Finish();
 
             writer = new GesSchemaWriter(bound, memory);
             writer.SelectAlternative(v, 2);
             writer.WriteBoolean(next, false);
             writer.BeginList(d, 0);
+            writer.WriteText(name, tagName);
             length = writer.Finish();
             reader = new GesSchemaReader(bound, memory.Slice(0, length));
             Assert.AreEqual(2, reader.ReadAlternative(v));
             Assert.IsFalse(reader.ReadBoolean(next));
             Assert.AreEqual(0, reader.BeginList(d));
+            Assert.AreEqual(2, reader.ReadText(name, received));
             reader.Finish();
         }
 

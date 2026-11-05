@@ -1414,12 +1414,15 @@ portable name used by bytecode, assembler text and host APIs:
 | kelvin | `K` | | `kelvin` |
 | degree per second | `°/s` | `deg/s` | `degreePerSecond` |
 | decibel | `dB` | | `decibel` |
+| watt per kelvin | `W/K` | | `wattPerKelvin` |
+| joule per kelvin | `J/K` | | `joulePerKelvin` |
 
 Each quantity has exactly one unit: temperature is kelvin only, mass kilogram
 only, and display scales such as Celsius are the host's business. The square
 and cube meter carry areas and volumes, the watt per square meter carries flux
-or intensity at a receiver, and the decibel carries a level on a logarithmic
-scale.
+or intensity at a receiver, the decibel carries a level on a logarithmic
+scale, the watt per kelvin carries thermal conductance and the joule per kelvin
+heat capacity.
 
 Literals additionally accept prefixed spellings as sugar. They scale the value
 exactly to the base unit at compile time; the value keeps the base unit and
@@ -1436,6 +1439,8 @@ formats with the base symbol:
 | `Wh`, `kWh` | 3600 J, 3 600 000 J |
 | `cm²`/`cm^2`, `km²`/`km^2` | 0.0001 m², 1 000 000 m² |
 | `mW/m²`/`mW/m^2`, `kW/m²`/`kW/m^2` | 0.001 W/m², 1000 W/m² |
+| `mW/K`, `kW/K`, `MW/K` | 0.001 W/K, 1000 W/K, 1 000 000 W/K |
+| `kJ/K`, `MJ/K` | 1000 J/K, 1 000 000 J/K |
 | `/s` | 1 Hz |
 
 For example `1.5kWh` is `5400000J`, `250ms` is `0.25s`, `14mW/m²` is
@@ -1514,6 +1519,18 @@ multiplication is commutative; every other combination, such as `2N + 3J`,
 | `W / m²` | `W/m²` |
 | `W/m² × m²` | `W` |
 | `W / (W/m²)` | `m²` |
+| `W / K` | `W/K` |
+| `W/K × K` | `W` |
+| `W / (W/K)` | `K` |
+| `J / K` | `J/K` |
+| `J/K × K` | `J` |
+| `J / (J/K)` | `K` |
+| `W/K × s` | `J/K` |
+| `J/K / s` | `W/K` |
+| `J/K / (W/K)` | `s` |
+| `J/K × Hz` | `W/K` |
+| `W/K / Hz` | `J/K` |
+| `W/K / (J/K)` | `Hz` |
 
 So `1 / 2s` is `0.5Hz`; use `as :Quantity(none)` when a plain number is
 needed. The derivations apply to numbers and to a vector multiplied or divided

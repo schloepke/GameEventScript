@@ -80,7 +80,8 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 - Swift `GesQuantityUnit` has new cases for the added physical units, so an
   exhaustive `switch` over it must handle `kilogram`, `newton`, `joule`, `watt`,
   `volt`, `ampere`, `hertz`, `squareMeter`, `cubicMeter`, `wattPerSquareMeter`,
-  `kelvin`, `degreePerSecond` and `decibel` (or add a `default`).
+  `kelvin`, `degreePerSecond`, `decibel`, `wattPerKelvin` and `joulePerKelvin`
+  (or add a `default`).
   C# `GesQuantityUnit` gains the same members; existing values keep their numbers.
 - Runtime observer callbacks report the host-local send ID of the message they
   describe: C# `MessageEmitted(message, id, accepted)`,
@@ -184,7 +185,7 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 
 - GES schemas (`.gess`) describe data formats and yield a very compact binary encoding for
   server-driven multiplayer games: ranges, steps and wrapping values with exact quantization,
-  closed tag sets, lists, Dice and text with hard limits, optional fields, unions, nested schemas, keys,
+  closed tag sets, tags, lists, Dice and text with hard limits, optional fields, unions, nested schemas, keys,
   messages and message sets, parameters bound per session, and a canonical FNV-1a 64 hash. In
   Runtime, `GesSchemaSet`, `GesSchema` (a read-only description with its fields), `GesBoundSchema`, `GesSchemaWriter`, `GesSchemaReader` and
   `GesSchemaDump` use no VM, and the writer and reader allocate nothing on success; `GesSchemaValues`
@@ -242,14 +243,15 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   squared (`m/s²`, ASCII `m/s^2`), kilogram (`kg`), newton (`N`), joule (`J`),
   watt (`W`), volt (`V`), ampere (`A`), hertz (`Hz`), square meter (`m²`, ASCII
   `m^2`), cubic meter (`m³`, ASCII `m^3`), watt per square meter (`W/m²`, ASCII
-  `W/m^2`), kelvin (`K`), degree per second (`°/s`, ASCII `deg/s`) and decibel
-  (`dB`), next to meters, seconds and degrees (ASCII `deg`). Literals accept the
+  `W/m^2`), kelvin (`K`), degree per second (`°/s`, ASCII `deg/s`), decibel
+  (`dB`), watt per kelvin (`W/K`) and joule per kelvin (`J/K`), next to meters, seconds and degrees (ASCII `deg`). Literals accept the
   prefixed spellings `km`, `mm`, `cm²`, `km²`, `ms`, `t`, `kN`, `kJ`, `MJ`, `mW`,
-  `kW`, `MW`, `mW/m²`, `kW/m²`, `kV`, `kHz`, `Wh` and `kWh`, which normalize
+  `kW`, `MW`, `mW/m²`, `kW/m²`, `mW/K`, `kW/K`, `MW/K`, `kJ/K`, `MJ/K`, `kV`,
+  `kHz`, `Wh` and `kWh`, which normalize
   exactly to the base unit, and `/s` after a number for a rate such as `4/s`.
   Products and quotients follow a closed derivation table, for example
   `10m / 2s` is `5m/s`, `2kg * 3m/s²` is `6N`, `2m * 3m` is `6m²`, `10W / 2m²`
-  is `5W/m²` and `1 / 2s` is `0.5Hz` (formerly `nothing`); other combinations of
+  is `5W/m²`, `10W / 2K` is `5W/K` and `1 / 2s` is `0.5Hz` (formerly `nothing`); other combinations of
   two units remain `nothing`. Squares and cubes follow the same table and roots
   invert them, so `(3m)²` is `9m²` and `sqrt 16m²` is `4m` (formerly `NaN`).
   Decibel levels add and scale by numbers but derive with no other unit and

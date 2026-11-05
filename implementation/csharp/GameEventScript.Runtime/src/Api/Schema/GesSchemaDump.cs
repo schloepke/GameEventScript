@@ -86,7 +86,7 @@ public static class GesSchemaDump
                 break;
             case GesSchemaNodeKind.Text:
                 var text = reader.ReadTextValue(field);
-                Line(builder, node.Path, offset, reader.BitPosition - offset, Quoted(text));
+                Line(builder, node.Path, offset, reader.BitPosition - offset, node.IsTagText ? "#" + text : Quoted(text));
                 break;
             case GesSchemaNodeKind.List:
                 var length = reader.BeginList(field);

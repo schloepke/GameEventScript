@@ -21,7 +21,8 @@ MASK = (1 << 64) - 1
 SEED = 0x4745534E554D4245
 RANDOM_COUNT = 4096
 UNITS = ("none", "m", "s", "degree", "meterPerSecond", "meterPerSecondSquared", "kilogram", "newton", "joule", "watt", "volt",
-         "ampere", "hertz", "squareMeter", "cubicMeter", "wattPerSquareMeter", "kelvin", "degreePerSecond", "decibel")
+         "ampere", "hertz", "squareMeter", "cubicMeter", "wattPerSquareMeter", "kelvin", "degreePerSecond", "decibel", "wattPerKelvin",
+         "joulePerKelvin")
 
 
 def bits(value):

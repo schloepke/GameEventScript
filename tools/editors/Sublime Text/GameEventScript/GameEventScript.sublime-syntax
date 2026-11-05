@@ -142,7 +142,7 @@
       "match": "\\b\\d(?:[\\d_]*\\d)?(?:\\.\\d(?:[\\d_]*\\d)?)?%"
       "scope": "constant.numeric.percentage.gameeventscript"
     -
-      "match": "\\b\\d(?:[\\d_]*\\d)?(?:\\.\\d(?:[\\d_]*\\d)?)?(?:mW/m²|mW/m\\^2|kW/m²|kW/m\\^2|W/m²|W/m\\^2|m/s²|m/s\\^2|deg/s|cm²|cm\\^2|km²|km\\^2|°/s|m/s|m²|m\\^2|m³|m\\^3|kWh|kHz|deg|Wh|Hz|/s|dB|km|mm|cm|ms|kg|kN|kJ|MJ|mW|kW|MW|kV|°|m|s|t|N|J|W|V|A|K)(?=$|[^A-Za-z0-9_])"
+      "match": "\\b\\d(?:[\\d_]*\\d)?(?:\\.\\d(?:[\\d_]*\\d)?)?(?:mW/K|kW/K|MW/K|W/K|kJ/K|MJ/K|J/K|mW/m²|mW/m\\^2|kW/m²|kW/m\\^2|W/m²|W/m\\^2|m/s²|m/s\\^2|deg/s|cm²|cm\\^2|km²|km\\^2|°/s|m/s|m²|m\\^2|m³|m\\^3|kWh|kHz|deg|Wh|Hz|/s|dB|km|mm|cm|ms|kg|kN|kJ|MJ|mW|kW|MW|kV|°|m|s|t|N|J|W|V|A|K)(?=$|[^A-Za-z0-9_])"
       "scope": "constant.numeric.unit.gameeventscript"
     -
       "match": "\\b\\d(?:[\\d_]*\\d)?(?:\\.\\d(?:[\\d_]*\\d)?)?\\b"
@@ -229,7 +229,7 @@
       "scope": "support.function.selector.pipeline.gameeventscript"
   "extensions-and-types":
     -
-      "match": ":(Quantity)(\\()((?:none|W/m²|W/m\\^2|m/s²|m/s\\^2|deg/s|degree/s|°/s|m/s|m²|m\\^2|m³|m\\^3|degree|meter|second|deg|kg|Hz|dB|°|m|s|N|J|W|V|A|K))(\\))(?=$|[^A-Za-z0-9_])"
+      "match": ":(Quantity)(\\()((?:none|W/K|J/K|W/m²|W/m\\^2|m/s²|m/s\\^2|deg/s|degree/s|°/s|m/s|m²|m\\^2|m³|m\\^3|degree|meter|second|deg|kg|Hz|dB|°|m|s|N|J|W|V|A|K))(\\))(?=$|[^A-Za-z0-9_])"
       "scope": "support.type.primitive.quantity.gameeventscript"
       "captures":
         1: "support.type.primitive.gameeventscript"

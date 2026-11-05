@@ -84,6 +84,14 @@ public enum GesQuantityUnit : byte
     /// Identifies the decibel (dB), for levels on a logarithmic scale.
     /// </summary>
     UnitDecibel = 18,
+    /// <summary>
+    /// Identifies the watt per kelvin (W/K), for thermal conductance.
+    /// </summary>
+    UnitWattPerKelvin = 19,
+    /// <summary>
+    /// Identifies the joule per kelvin (J/K), for heat capacity.
+    /// </summary>
+    UnitJoulePerKelvin = 20,
 
     /// <summary>
     /// Identifies the unit invalid value.

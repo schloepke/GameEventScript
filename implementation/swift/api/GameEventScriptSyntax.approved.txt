@@ -53,6 +53,7 @@ symbol {"access":"public","declaration":"case invalidAnsiColor","kind":"swift.en
 symbol {"access":"public","declaration":"case invalidInputLimit","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesHighlightingError.invalidInputLimit"}
 symbol {"access":"public","declaration":"case invalidSpans","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesHighlightingError.invalidSpans"}
 symbol {"access":"public","declaration":"case joule","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesQuantityUnit.joule"}
+symbol {"access":"public","declaration":"case joulePerKelvin","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesQuantityUnit.joulePerKelvin"}
 symbol {"access":"public","declaration":"case kelvin","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesQuantityUnit.kelvin"}
 symbol {"access":"public","declaration":"case keyword","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesSyntaxKind.keyword"}
 symbol {"access":"public","declaration":"case kilogram","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesQuantityUnit.kilogram"}
@@ -89,6 +90,7 @@ symbol {"access":"public","declaration":"case type","kind":"swift.enum.case","pa
 symbol {"access":"public","declaration":"case vector","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesSchemaTypeKind.vector"}
 symbol {"access":"public","declaration":"case volt","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesQuantityUnit.volt"}
 symbol {"access":"public","declaration":"case watt","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesQuantityUnit.watt"}
+symbol {"access":"public","declaration":"case wattPerKelvin","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesQuantityUnit.wattPerKelvin"}
 symbol {"access":"public","declaration":"case wattPerSquareMeter","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesQuantityUnit.wattPerSquareMeter"}
 symbol {"access":"public","declaration":"enum GesAnsiRenderer","kind":"swift.enum","path":"GameEventScriptSyntax.GesAnsiRenderer"}
 symbol {"access":"public","declaration":"enum GesHighlightingError","kind":"swift.enum","path":"GameEventScriptSyntax.GesHighlightingError"}

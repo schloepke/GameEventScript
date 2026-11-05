@@ -76,6 +76,7 @@
         case .tag:
             output += ":Tag"
             if let set = type.tags { tags(set, &output) }
+            if let max = type.max { output += " max \(max)" }
             return
         case .text:
             output += ":Text"

@@ -81,7 +81,9 @@ schema :Tank as {
 }
 ```
 
-- `:Tag(...)` is one tag of a closed set, stored as its index: 2 bits for `kind`.
+- `:Tag(...)` is one tag of a closed set, stored as its index: 2 bits for `kind`. `:Tag max 32` allows any
+  tag of up to 32 characters, stored like a Text: 6 bits and 8 per character. Prefer a closed set for data
+  you send often.
 - `:Text max n` and `:List(T) max n` store a count, then their contents. `max` counts UTF-8 bytes or
   elements, and without it a field cannot be encoded.
 - `:Dice max 5 between 1 and 20` stores up to 5 rolls in 5 bits each, here for a d20. Without a range a

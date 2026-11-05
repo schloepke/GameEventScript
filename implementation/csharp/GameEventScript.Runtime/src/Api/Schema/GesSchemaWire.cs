@@ -91,6 +91,15 @@ internal static class GesSchemaNumbers
         return index;
     }
 
+    // The portable tag grammar on bytes: a lowercase ASCII letter, then ASCII letters and digits.
+    internal static bool IsTagName(ReadOnlySpan<byte> bytes)
+    {
+        if (bytes.Length == 0 || bytes[0] is < 0x61 or > 0x7A) return false;
+        for (var index = 1; index < bytes.Length; index++)
+            if (bytes[index] is not (>= 0x30 and <= 0x39 or >= 0x41 and <= 0x5A or >= 0x61 and <= 0x7A)) return false;
+        return true;
+    }
+
     internal static bool IsValidUtf8(ReadOnlySpan<byte> bytes)
     {
         var index = 0;
@@ -271,15 +280,19 @@ public ref struct GesSchemaWriter
         Leave(node.After);
     }
 
-    /// <summary>Writes a Text from its UTF-8 bytes.</summary>
+    /// <summary>Writes a Text from its UTF-8 bytes, or a <c>:Tag max n</c> from its name.</summary>
     /// <param name="field">The field's handle.</param>
-    /// <param name="utf8">The bytes, which must be valid UTF-8.</param>
+    /// <param name="utf8">The bytes, which must be valid UTF-8, or a tag name for a <c>:Tag max n</c>, without its <c>#</c>.</param>
     public void WriteText(GesSchemaField field, ReadOnlySpan<byte> utf8)
     {
         ref readonly var node = ref Current(field);
         if (node.Kind != GesSchemaNodeKind.Text) throw new GesWireException(GesWireException.TypeMismatch, node.Path);
         if (utf8.Length > node.MaxCount) throw new GesWireException(GesWireException.TooLong, node.Path);
-        if (!GesSchemaNumbers.IsValidUtf8(utf8)) throw new GesWireException(GesWireException.InvalidText, node.Path);
+        if (node.IsTagText)
+        {
+            if (!GesSchemaNumbers.IsTagName(utf8)) throw new GesWireException(GesWireException.InvalidTag, node.Path);
+        }
+        else if (!GesSchemaNumbers.IsValidUtf8(utf8)) throw new GesWireException(GesWireException.InvalidText, node.Path);
         Presence(in node);
         Put((ulong)utf8.Length, node.Width);
         foreach (var value in utf8) Put(value, 8);
@@ -544,7 +557,7 @@ public ref struct GesSchemaReader
         return (int)index;
     }
 
-    /// <summary>Reads a Text into a caller's buffer as validated UTF-8.</summary>
+    /// <summary>Reads a Text into a caller's buffer as validated UTF-8, or the name of a <c>:Tag max n</c>.</summary>
     /// <param name="field">The field's handle.</param>
     /// <param name="destination">The buffer; its maximum is the field's <c>max</c>.</param>
     /// <returns>The number of bytes.</returns>
@@ -574,7 +587,11 @@ public ref struct GesSchemaReader
     private void ReadTextBytes(in GesSchemaNode node, Span<byte> destination)
     {
         for (var index = 0; index < destination.Length; index++) destination[index] = (byte)Get(8, node.Path);
-        if (!GesSchemaNumbers.IsValidUtf8(destination)) throw new GesWireException(GesWireException.InvalidText, node.Path);
+        if (node.IsTagText)
+        {
+            if (!GesSchemaNumbers.IsTagName(destination)) throw new GesWireException(GesWireException.InvalidTag, node.Path);
+        }
+        else if (!GesSchemaNumbers.IsValidUtf8(destination)) throw new GesWireException(GesWireException.InvalidText, node.Path);
         Leave(node.After);
     }
 

@@ -95,7 +95,8 @@ internal enum GesSchemaNodeKind : byte
 }
 
 // One field of a bound layout. A subtree occupies consecutive nodes, and Next is the first node after it. After is where
-// writing goes on: the same, except that the end of a union alternative continues behind the union.
+// writing goes on: the same, except that the end of a union alternative continues behind the union. IsTagText marks a Text
+// on the wire that holds a tag name, for a Tag with a max instead of a set.
 internal struct GesSchemaNode
 {
     internal GesSchemaNodeKind Kind;
@@ -104,6 +105,7 @@ internal struct GesSchemaNode
     internal bool Wrapping;
     internal bool HasRange;
     internal bool IsTagBit;
+    internal bool IsTagText;
     internal int Width;
     internal int Next;
     internal int After;
@@ -563,7 +565,16 @@ internal static class GesSchemaBinder
                 Number(build, scope, type.Constraints, type.Offset, ref node);
                 break;
             case GesSchemaTypeKind.Tag:
-                if (type.Tags is null) throw scope.Error(Code.NotEncodable, type.Offset, "A Tag without a set has no width.");
+                if (type.Tags is null)
+                {
+                    if (type.Max is not { } tagMax) throw scope.Error(Code.NotEncodable, type.Offset, "A Tag without a set or max has no hard limit.");
+                    node.Kind = GesSchemaNodeKind.Text;
+                    node.IsTagText = true;
+                    node.MaxCount = tagMax;
+                    node.Width = BitLength((ulong)tagMax);
+                    break;
+                }
+
                 node.Kind = GesSchemaNodeKind.Tag;
                 node.Tags = type.Tags;
                 node.MaxIndex = (ulong)type.Tags.Length - 1;

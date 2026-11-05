@@ -38,6 +38,10 @@ and ANSI text preservation.
 ```
 
 ```highlight
+{"name":"thermal unit literals and quantity types","language":"ges","source":"let g be 3W/K\nlet m be 250mW/K\nlet c be 2kJ/K\nlet split be 10W / K\nlet x be 5 as :Quantity(J/K)","expect":[{"text":"3W/K","kind":"number"},{"text":"250mW/K","kind":"number"},{"text":"2kJ/K","kind":"number"},{"text":"10W","kind":"number"},{"text":"J/K","kind":"builtin","occurrence":1}]}
+```
+
+```highlight
 {"name":"area volume flux level and rate literals","language":"ges","source":"let area be 2m²\nlet sq be 2m^2\nlet vol be 0.5m³\nlet flux be 14mW/m²\nlet level be 6dB\nlet mass be 2t\nlet split be 4 / s\nlet rate be 4/s\nlet power be (2m)²\nlet x be 5 as :Quantity(W/m^2)","expect":[{"text":"2m²","kind":"number"},{"text":"2m^2","kind":"number"},{"text":"0.5m³","kind":"number"},{"text":"14mW/m²","kind":"number"},{"text":"6dB","kind":"number"},{"text":"2t","kind":"number"},{"text":"4","kind":"number","occurrence":1},{"text":"s","kind":"identifier","occurrence":4},{"text":"4/s","kind":"number"},{"text":"2m","kind":"number","occurrence":2},{"text":"²","kind":"keyword","occurrence":2},{"text":"W/m^2","kind":"builtin"}]}
 ```
 

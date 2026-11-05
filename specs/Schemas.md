@@ -84,7 +84,7 @@ union       = type { "|" type }
 type        = ":Boolean"
             | numeric
             | spatial
-            | ":Tag" [ tagset ]
+            | ":Tag" [ tagset | "max" integer ]
             | ":Text" [ "max" integer ]
             | ":List" [ "(" union ")" [ "max" integer ] ]
             | ":" TypeName
@@ -154,7 +154,7 @@ Types:
 | `:Boolean` | `true` or `false` |
 | `:Number`, `:Percentage`, `:Quantity(unit)` | a number, a percentage, or a number with that unit; `:Quantity(none)` is `:Number`. Limited by [constraints](#constraints) |
 | `:Point`, `:Vector`, with an optional unit | three components with one unit. A block lists the axes that are transmitted, in any order, each with its own constraints |
-| `:Tag(#a, #b)`, `:Tag` | one tag of the closed set, or any tag |
+| `:Tag(#a, #b)`, `:Tag max n`, `:Tag` | one tag of the closed set, a tag of at most `n` characters, or any tag |
 | `:Text max n`, `:Text` | a text of at most `n` UTF-8 bytes, or any text |
 | `:List(T) max n`, `:List(T)`, `:List` | at most `n` elements of `T`, any number of them, or any elements |
 | `:Dice max n between a and b`, `:Dice` | at most `n` rolls, each within the range, or any rolls |
@@ -241,7 +241,7 @@ be encoded; binding a schema that reaches another type for encoding fails with
 | Type | Encodable | Document check |
 | --- | --- | --- |
 | `:Boolean`, numeric, `:Point`, `:Vector` | yes | yes |
-| `:Tag(#a, #b)` | yes | yes |
+| `:Tag(#a, #b)`, `:Tag max n` | yes | yes |
 | `:Text max n` | yes | yes |
 | `:List(T) max n` with an encodable `T` | yes | yes |
 | `:Dice max n` | yes | yes |
@@ -373,7 +373,7 @@ member <MessageName>
 | `:Quantity(unit)` | `Quantity(<portable unit name>)`; `:Quantity(none)` is `Number` |
 | `:Point(unit)`, `:Vector(unit)` | `Point(<portable unit name>)`, `Vector(...)`; no unit or `none` is `Point(none)` |
 | axis block | after the type, `{ <axis> <constraints> ; ... }` in order x, y, z |
-| `:Tag(#a, #b)`, `:Tag` | `Tag(#a #b)`, `Tag` |
+| `:Tag(#a, #b)`, `:Tag max n`, `:Tag` | `Tag(#a #b)`, `Tag max <n>`, `Tag` |
 | `:Text max n`, `:Text` | `Text max <n>`, `Text` |
 | `:Dice max n between a and b`, `:Dice` | `Dice max <n> between <a> <b>`, each part only when written; `Dice` |
 | `:List(T) max n` | `List(<T>) max <n>`; `List(<T>)` and `List` without `max` or `T` |
@@ -483,6 +483,7 @@ arguments have no key.
 | fractional without a step | IEEE 754 bits of the binary64, 64 bits; a range is checked but does not narrow it |
 | `:Point`, `:Vector` | declared axes in order x, y, z, each as a numeric; without a block x, y, z as 64-bit binary64 |
 | `:Tag(...)` with `n` tags | index in declared order, `width(n)` bits |
+| `:Tag max n` | as `:Text max n`: the tag name without `#`, its byte count, then its bytes |
 | `:Text max n` | UTF-8 byte count, `width(n + 1)` bits, then the bytes |
 | `:List(T) max n` | element count, `width(n + 1)` bits, then the elements |
 | `:Dice max n` | roll count, `width(n + 1)` bits, then each roll as an `integer` of its range, `1` to `2^31 - 1` without one. The [value path](#value-path) writes them in descending order and a typed writer in the order of its caller; a decoder accepts any order, since creating a Dice sorts its rolls |
@@ -490,7 +491,8 @@ arguments have no key.
 | `:Nothing` as an alternative | no bits |
 | `:TypeName` | its fields inline |
 
-`max` counts UTF-8 bytes for Text and elements for a List. A range's index never
+`max` counts UTF-8 bytes for Text, characters for a Tag, which is ASCII, elements for a List and
+rolls for a Dice. A range's index never
 exceeds `n - 1`; a decoder rejects a larger bit pattern. Units come from the schema.
 
 A fractional field without a step stays at 64 bits, which is a deliberate choice in the
@@ -629,8 +631,9 @@ one record. Decoding fails without partial results for:
 | --- | --- |
 | `wire.truncated` | the data ends before the record does |
 | `wire.invalidIndex` | an index is at least `n`, for a range, tag, union or message set |
-| `wire.invalidCount` | a Text, List or Dice count exceeds its `max` |
+| `wire.invalidCount` | a Text, Tag, List or Dice count exceeds its `max` |
 | `wire.invalidText` | Text is not valid UTF-8 |
+| `wire.invalidTag` | a `:Tag max n` holds no valid [tag name](Semantics/Text.md#portable-name-grammars) |
 | `wire.invalidNumber` | NaN or negative zero, or an infinity with a range |
 | `wire.invalidPadding` | a padding bit is not zero |
 | `wire.limitExceeded` | the record exceeds the caller's limit |
@@ -645,7 +648,8 @@ complete:
 | `wire.missingField` | a field that is neither `optional` nor has a `:Nothing` alternative has no value, or a Message lacks trailing arguments of its signature |
 | `wire.typeMismatch` | a value has another kind or unit than its field, a nonzero omitted axis, a Message whose labels differ from its signature, or a Map with a key that a union alternative does not have |
 | `wire.unknownTag` | a tag is not in its set |
-| `wire.tooLong` | a Text, List or Dice exceeds its `max` |
+| `wire.invalidTag` | a typed writer gives a `:Tag max n` no valid tag name |
+| `wire.tooLong` | a Text, Tag, List or Dice exceeds its `max` |
 | `wire.bufferTooSmall` | the caller's buffer is too small |
 | `wire.fieldOrder` | a typed writer or reader uses a field out of order |
 
@@ -755,7 +759,7 @@ var positionX = reader.ReadNumber(x);                             // double, wit
   `units[]:Unit.name` inside one. Reusing a handle costs no lookup.
 - Typed operations: `Boolean`, `Integer` (Int64), `Number` (binary64), `Index` (the raw
   wire index, for game code that stores quantized values and skips the conversion), `Tag`
-  (index) and `Text` (validated UTF-8). A reader copies Text into a caller's buffer of the
+  (index) and `Text` (validated UTF-8, or for a `:Tag max n` a validated tag name without `#`). A reader copies Text into a caller's buffer of the
   field's `max`, since a value need not start at a byte boundary.
 - `BeginList` writes or reads the element count of a List or Dice, and the elements follow, each entered at
   the `[]` handle. `BeginNested` enters a nested schema, Point or Vector. There is no end
@@ -827,7 +831,7 @@ data readable through the schema: it lists each field with path, bit offset, wid
 decoded value, and ends with the first error, its field path and bit offset; invalid data
 gives exit code 1. Its text is the same in every port. Each field is one line,
 `<path> bit=<offset> width=<bits> value=<value>`, whose width includes a presence bit. The value
-is `true` or `false`, a number, a quoted Text, `#<tag> index=<i>`, `count=<n>` for a List or Dice,
+is `true` or `false`, a number, a quoted Text, `#<tag> index=<i>`, `#<tag>` for a `:Tag max n`, `count=<n>` for a List or Dice,
 `<alternative> index=<i>` for a union, with the type name of the alternative, or `absent`. A nested
 schema, Point or Vector has no line of its own, only its fields. A message set starts with
 `message <name> index=<i>`. A valid record ends with `bytes <n>`, an invalid one with

@@ -62,7 +62,8 @@ public enum GesSchemaDump {
             let tag = try reader.readTag(field)
             line("#\(info.tags[tag]) index=\(tag)")
         case .text:
-            line(quoted(try reader.readTextValue(field)))
+            let text = try reader.readTextValue(field)
+            line(node.isTagText ? "#" + text : quoted(text))
         case .list:
             let length = try reader.beginList(field)
             line("count=\(length)")

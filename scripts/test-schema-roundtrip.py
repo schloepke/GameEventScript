@@ -46,6 +46,7 @@ schema :Sample as {
   pick: :Inner | :Text max 1
   boxed: :List(:Boolean) max 2 | :Boolean
   maybe: :Boolean | :Tag(#a, #b) optional
+  named: :Tag max 3
   tail: :Boolean
 }
 """
@@ -206,6 +207,10 @@ def sample(rng):
         bits.put(1, 1)
         bits.put(tag, 1)
         maybe = {'type': ':Tag', 'value': 'ab'[tag]}
+    named = rng.choice(('a', 'aB', 'x1Y'))
+    bits.put(len(named), 2)
+    for byte in named.encode():
+        bits.put(byte, 8)
     tail = rng.random() < 0.5
     bits.put(1 if tail else 0, 1)
     fields = {
@@ -217,7 +222,7 @@ def sample(rng):
         'choice': {'type': ':Nothing'} if choice is None else {'type': ':Text', 'value': choice} if isinstance(choice, str) else number(choice),
         'rolls': {'type': ':Dice', 'rolls': rolls},
         'mixed': {'type': ':List', 'items': [{'type': ':Nothing'} if item is None else {'type': ':Boolean', 'value': item} for item in mixed]},
-        'pick': pick, 'boxed': boxed, 'maybe': maybe, 'tail': {'type': ':Boolean', 'value': tail},
+        'pick': pick, 'boxed': boxed, 'maybe': maybe, 'named': {'type': ':Tag', 'value': named}, 'tail': {'type': ':Boolean', 'value': tail},
     }
     entries = [{'key': key, 'value': fields[key]} for key in sorted(fields)]
     return {'type': ':Sample', 'entries': entries}, bits.hex()

@@ -666,6 +666,8 @@ internal static class GesSchemaCanonical
                     builder.Append(')');
                 }
 
+                if (type.Max is { } tagMax) builder.Append(" max ").Append(tagMax);
+
                 break;
             case GesSchemaTypeKind.Text:
                 builder.Append("Text");

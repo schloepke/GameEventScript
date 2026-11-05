@@ -93,6 +93,24 @@ enum GesSchemaNumbers {
         return index
     }
 
+    // The portable tag grammar on bytes: a lowercase ASCII letter, then ASCII letters and digits.
+    static func isTagName(_ bytes: UnsafeRawBufferPointer) -> Bool {
+        if bytes.isEmpty || !(0x61...0x7A).contains(bytes[0]) { return false }
+        var index = 1
+        while index < bytes.count {
+            let byte = bytes[index]
+            if !((0x30...0x39).contains(byte) || (0x41...0x5A).contains(byte) || (0x61...0x7A).contains(byte)) { return false }
+            index += 1
+        }
+        return true
+    }
+
+    // The error of Text bytes on the wire, if any.
+    static func textError(_ node: GesSchemaNode, _ bytes: UnsafeRawBufferPointer) -> String? {
+        if node.isTagText { return isTagName(bytes) ? nil : GesWireError.invalidTag }
+        return isValidUTF8(bytes) ? nil : GesWireError.invalidText
+    }
+
     static func isValidUTF8(_ bytes: UnsafeRawBufferPointer) -> Bool {
         var index = 0
         while index < bytes.count {
@@ -246,14 +264,14 @@ public struct GesSchemaWriter {
         leave(node.after)
     }
 
-    /// Writes a Text from its UTF-8 bytes.
-    /// - Throws: `GesWireError` when the bytes are too long or not valid UTF-8.
+    /// Writes a Text from its UTF-8 bytes, or a `:Tag max n` from its name without `#`.
+    /// - Throws: `GesWireError` when the bytes are too long, not valid UTF-8 or no valid tag name.
     public mutating func writeText(_ field: GesSchemaField, _ utf8: UnsafeRawBufferPointer) throws(GesWireError) {
         try current(field)
         let node = schema.nodes[field.index]
         if node.kind != .text { throw GesWireError(GesWireError.typeMismatch, field.path) }
         if Int64(utf8.count) > node.maxCount { throw GesWireError(GesWireError.tooLong, field.path) }
-        if !GesSchemaNumbers.isValidUTF8(utf8) { throw GesWireError(GesWireError.invalidText, field.path) }
+        if let code = GesSchemaNumbers.textError(node, utf8) { throw GesWireError(code, field.path) }
         try presence(node)
         try put(UInt64(utf8.count), node.width)
         var index = 0
@@ -507,7 +525,7 @@ public struct GesSchemaReader {
         return Int(index)
     }
 
-    /// Reads a Text into a caller's buffer as validated UTF-8.
+    /// Reads a Text into a caller's buffer as validated UTF-8, or a `:Tag max n` as a validated name without `#`.
     /// - Parameter destination: The buffer; its maximum is the field's `max`.
     /// - Returns: The number of bytes.
     /// - Throws: `GesWireError` when the data is invalid or the buffer too small.
@@ -523,7 +541,7 @@ public struct GesSchemaReader {
             destination[index] = UInt8(truncatingIfNeeded: try get(8, field.index))
             index += 1
         }
-        if !GesSchemaNumbers.isValidUTF8(UnsafeRawBufferPointer(rebasing: destination[0..<Int(count)])) { throw GesWireError(GesWireError.invalidText, field.path) }
+        if let code = GesSchemaNumbers.textError(node, UnsafeRawBufferPointer(rebasing: destination[0..<Int(count)])) { throw GesWireError(code, field.path) }
         leave(node.after)
         return Int(count)
     }
@@ -541,7 +559,7 @@ public struct GesSchemaReader {
             bytes[index] = UInt8(truncatingIfNeeded: try get(8, field.index))
             index += 1
         }
-        if !bytes.withUnsafeBytes({ GesSchemaNumbers.isValidUTF8($0) }) { throw GesWireError(GesWireError.invalidText, field.path) }
+        if let code = bytes.withUnsafeBytes({ GesSchemaNumbers.textError(node, $0) }) { throw GesWireError(code, field.path) }
         leave(node.after)
         return String(decoding: bytes, as: UTF8.self)
     }

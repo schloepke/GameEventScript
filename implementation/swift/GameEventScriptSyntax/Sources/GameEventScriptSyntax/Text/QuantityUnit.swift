@@ -41,6 +41,10 @@ public enum GesQuantityUnit: String, Hashable, Sendable {
     case degreePerSecond
     /// A level on a logarithmic scale measured in decibels.
     case decibel
+    /// Thermal conductance measured in watts per kelvin.
+    case wattPerKelvin
+    /// Heat capacity measured in joules per kelvin.
+    case joulePerKelvin
 
     /// Canonical text suffix that formatting appends, such as `m`, `m/s` or `°/s`; empty for unitless values.
     public var suffix: String {
@@ -64,6 +68,8 @@ public enum GesQuantityUnit: String, Hashable, Sendable {
         case .kelvin: "K"
         case .degreePerSecond: "°/s"
         case .decibel: "dB"
+        case .wattPerKelvin: "W/K"
+        case .joulePerKelvin: "J/K"
         }
     }
 }

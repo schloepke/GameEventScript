@@ -30,6 +30,13 @@ extension GesQuantityUnit {
         .init(text: "kW/m^2", unit: .wattPerSquareMeter, exponent: 3),
         .init(text: "W/m²", unit: .wattPerSquareMeter),
         .init(text: "W/m^2", unit: .wattPerSquareMeter),
+        .init(text: "mW/K", unit: .wattPerKelvin, exponent: -3),
+        .init(text: "kW/K", unit: .wattPerKelvin, exponent: 3),
+        .init(text: "MW/K", unit: .wattPerKelvin, exponent: 6),
+        .init(text: "W/K", unit: .wattPerKelvin),
+        .init(text: "kJ/K", unit: .joulePerKelvin, exponent: 3),
+        .init(text: "MJ/K", unit: .joulePerKelvin, exponent: 6),
+        .init(text: "J/K", unit: .joulePerKelvin),
         .init(text: "m/s²", unit: .meterPerSecondSquared),
         .init(text: "m/s^2", unit: .meterPerSecondSquared),
         .init(text: "deg/s", unit: .degreePerSecond),
@@ -115,6 +122,8 @@ extension GesQuantityUnit {
         case .kelvin: 16
         case .degreePerSecond: 17
         case .decibel: 18
+        case .wattPerKelvin: 19
+        case .joulePerKelvin: 20
         }
     }
 
@@ -140,6 +149,8 @@ extension GesQuantityUnit {
         case 16: self = .kelvin
         case 17: self = .degreePerSecond
         case 18: self = .decibel
+        case 19: self = .wattPerKelvin
+        case 20: self = .joulePerKelvin
         default: return nil
         }
     }
@@ -178,6 +189,8 @@ extension GesQuantityUnit {
         case "K": self = .kelvin
         case "°/s", "degree/s", "deg/s": self = .degreePerSecond
         case "dB": self = .decibel
+        case "W/K": self = .wattPerKelvin
+        case "J/K": self = .joulePerKelvin
         default: return nil
         }
     }
@@ -235,6 +248,14 @@ extension GesQuantityUnit {
         case (.cubicMeter, .squareMeter): return .meter
         case (.watt, .squareMeter): return .wattPerSquareMeter
         case (.watt, .wattPerSquareMeter): return .squareMeter
+        case (.watt, .kelvin): return .wattPerKelvin
+        case (.watt, .wattPerKelvin): return .kelvin
+        case (.joule, .kelvin): return .joulePerKelvin
+        case (.joule, .joulePerKelvin): return .kelvin
+        case (.joulePerKelvin, .second): return .wattPerKelvin
+        case (.joulePerKelvin, .wattPerKelvin): return .second
+        case (.wattPerKelvin, .hertz): return .joulePerKelvin
+        case (.wattPerKelvin, .joulePerKelvin): return .hertz
         default: return nil
         }
     }
@@ -273,6 +294,10 @@ extension GesQuantityUnit {
         case (.meter, .meter): .squareMeter
         case (.squareMeter, .meter): .cubicMeter
         case (.wattPerSquareMeter, .squareMeter): .watt
+        case (.wattPerKelvin, .kelvin): .watt
+        case (.joulePerKelvin, .kelvin): .joule
+        case (.wattPerKelvin, .second): .joulePerKelvin
+        case (.joulePerKelvin, .hertz): .wattPerKelvin
         default: nil
         }
     }

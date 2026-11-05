@@ -63,7 +63,8 @@ enum GesSchemaNodeKind: UInt8, Sendable {
 
 // The numbers of one field of a bound layout, free of references so that the hot path never counts them. A subtree occupies
 // consecutive nodes, and `next` is the first node after it. `after` is where writing goes on: the same, except that the
-// end of a union alternative continues behind the union.
+// end of a union alternative continues behind the union. `isTagText` marks a Text on the wire that holds a tag name, for a
+// Tag with a max instead of a set.
 struct GesSchemaNode: Sendable {
     var kind = GesSchemaNodeKind.boolean
     var optional = false
@@ -71,6 +72,7 @@ struct GesSchemaNode: Sendable {
     var wrapping = false
     var hasRange = false
     var isTagBit = false
+    var isTagText = false
     var width = 0
     var next = 0
     var after = 0
@@ -515,7 +517,14 @@ enum GesSchemaBinder {
         case .number, .percentage, .quantity:
             try number(build.parameters, scope, type.constraints, type.offset, &node)
         case .tag:
-            guard let tags = type.tags else { throw scope.error(Code.notEncodable, type.offset, "A Tag without a set has no width.") }
+            guard let tags = type.tags else {
+                guard let max = type.max else { throw scope.error(Code.notEncodable, type.offset, "A Tag without a set or max has no hard limit.") }
+                node.kind = .text
+                node.isTagText = true
+                node.maxCount = max
+                node.width = bitLength(UInt64(max))
+                break
+            }
             node.kind = .tag
             info.tags = tags
             node.maxIndex = UInt64(tags.count) - 1

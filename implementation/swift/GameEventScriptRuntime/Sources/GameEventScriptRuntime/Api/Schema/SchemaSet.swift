@@ -514,6 +514,7 @@ enum GesSchemaCanonical {
         case .tag:
             output += "Tag"
             if let tags = type.tags { output += "(" + tags.map { "#" + $0 }.joined(separator: " ") + ")" }
+            if let max = type.max { output += " max \(max)" }
         case .text:
             output += "Text"
             if let max = type.max { output += " max \(max)" }

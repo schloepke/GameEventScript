@@ -101,6 +101,7 @@ struct GesSchemaDocumentCheck {
         case .tag:
             guard case .tag(let name) = value else { return try require(false) }
             try require(type.tags?.contains(name) ?? true)
+            if let max = type.max, name.utf8.count > max { throw Failure(code: Self.outOfRange, offset: start) }
         case .text:
             guard case .text(let text) = value else { return try require(false) }
             if let max = type.max, text.utf8.count > max { throw Failure(code: Self.outOfRange, offset: start) }

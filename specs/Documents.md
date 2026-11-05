@@ -278,8 +278,8 @@ Printed text must satisfy these rules so that every implementation can read it:
   delimiters, except for scalar Quantities, including those inside Lists, Maps,
   Records and Message arguments. With prefixed units enabled, choose among the
   base symbol and the decimal prefixes accepted for that unit, `km`/`mm`, `ms`,
-  `t`, `kN`, `kJ`/`MJ`, `mW`/`kW`/`MW`, `kV`, `kHz`, `cm²`/`km²` and
-  `mW/m²`/`kW/m²`, the spelling whose magnitude lies in [1, 1000), or otherwise
+  `t`, `kN`, `kJ`/`MJ`, `mW`/`kW`/`MW`, `kV`, `kHz`, `cm²`/`km²`,
+  `mW/m²`/`kW/m²`, `mW/K`/`kW/K`/`MW/K` and `kJ/K`/`MJ/K`, the spelling whose magnitude lies in [1, 1000), or otherwise
   the one closest to that interval on a logarithmic scale. `cm` is read but
   never chosen, because `mm` covers its magnitudes. Prefixes keep the
   unit symbol rather than its ASCII spelling. `Wh`, `kWh` and `/s` are never

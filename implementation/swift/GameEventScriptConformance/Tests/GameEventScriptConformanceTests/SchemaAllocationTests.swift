@@ -58,10 +58,17 @@ final class SchemaAllocationTests: XCTestCase {
             throw XCTSkip("The allocation counter uses libmalloc.")
         #else
             guard ges_allocation_install(), ges_allocation_controls() else { throw XCTSkip("The allocation counter is not available.") }
-            let schema = try GesSchemaSet(parsing: "schema :S as { v: :Quantity(°) wrapping between 0° and 360° step 1° | :Tag(#a, #b) | :Nothing, next: :Boolean, d: :Dice max 2 between 1 and 6 }").schema("S").bind()
+            let schema = try GesSchemaSet(parsing: "schema :S as { v: :Quantity(°) wrapping between 0° and 360° step 1° | :Tag(#a, #b) | :Nothing, next: :Boolean, d: :Dice max 2 between 1 and 6, n: :Tag max 3 }").schema("S").bind()
             let (v, tag, next, d, roll) = (schema.field("v")!, schema.field("v:Tag")!, schema.field("next")!, schema.field("d")!, schema.field("d[]")!)
             let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: 32, alignment: 8)
             defer { buffer.deallocate() }
+            let name = schema.field("n")!
+            let tagName = UnsafeMutableRawBufferPointer.allocate(byteCount: 2, alignment: 1)
+            defer { tagName.deallocate() }
+            tagName[0] = 0x61
+            tagName[1] = 0x62
+            let received = UnsafeMutableRawBufferPointer.allocate(byteCount: 3, alignment: 1)
+            defer { received.deallocate() }
 
             func round() throws {
                 var writer = GesSchemaWriter(schema, into: buffer)
@@ -70,6 +77,7 @@ final class SchemaAllocationTests: XCTestCase {
                 try writer.writeBoolean(next, true)
                 try writer.beginList(d, count: 1)
                 try writer.writeInteger(roll, 4)
+                try writer.writeText(name, UnsafeRawBufferPointer(tagName))
                 var length = try writer.finish()
                 var reader = GesSchemaReader(schema, data: UnsafeRawBufferPointer(rebasing: buffer[0..<length]))
                 if try reader.readAlternative(v) != 1 { throw Mismatch() }
@@ -77,17 +85,20 @@ final class SchemaAllocationTests: XCTestCase {
                 if try !reader.readBoolean(next) { throw Mismatch() }
                 if try reader.beginList(d) != 1 { throw Mismatch() }
                 if try reader.readInteger(roll) != 4 { throw Mismatch() }
+                if try reader.readText(name, into: received) != 2 { throw Mismatch() }
                 _ = try reader.finish()
 
                 writer = GesSchemaWriter(schema, into: buffer)
                 try writer.selectAlternative(v, 2)
                 try writer.writeBoolean(next, false)
                 try writer.beginList(d, count: 0)
+                try writer.writeText(name, UnsafeRawBufferPointer(tagName))
                 length = try writer.finish()
                 reader = GesSchemaReader(schema, data: UnsafeRawBufferPointer(rebasing: buffer[0..<length]))
                 if try reader.readAlternative(v) != 2 { throw Mismatch() }
                 if try reader.readBoolean(next) { throw Mismatch() }
                 if try reader.beginList(d) != 0 { throw Mismatch() }
+                if try reader.readText(name, into: received) != 2 { throw Mismatch() }
                 _ = try reader.finish()
             }
 

@@ -1050,6 +1050,278 @@ steps:
 
 ---
 
+## Test: thermal conductance and heat capacity literals
+
+The watt and joule per kelvin read with their prefixes, normalize to the base unit, and a spaced quotient derives the same unit.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: thermal-literals
+sources:
+  - name: thermal-literals.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+module main
+on Start {
+  emit Lexed(conductance: 3W/K, milli: 250mW/K, kilo: 2kW/K, mega: 2MW/K, capacity: 4J/K, kiloCapacity: 2kJ/K, megaCapacity: 3MJ/K, split: 10W / 2K)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| start | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  start:
+    local:
+      - name: Lexed
+        args:
+          - name: conductance
+            value: { type: ":Quantity.int64", value: "3", unit: ":wattPerKelvin" }
+          - name: milli
+            value: { type: ":Quantity.binary64", value: "0.25", unit: ":wattPerKelvin" }
+          - name: kilo
+            value: { type: ":Quantity.int64", value: "2000", unit: ":wattPerKelvin" }
+          - name: mega
+            value: { type: ":Quantity.int64", value: "2000000", unit: ":wattPerKelvin" }
+          - name: capacity
+            value: { type: ":Quantity.int64", value: "4", unit: ":joulePerKelvin" }
+          - name: kiloCapacity
+            value: { type: ":Quantity.int64", value: "2000", unit: ":joulePerKelvin" }
+          - name: megaCapacity
+            value: { type: ":Quantity.int64", value: "3000000", unit: ":joulePerKelvin" }
+          - name: split
+            value: { type: ":Quantity.int64", value: "5", unit: ":wattPerKelvin" }
+```
+
+---
+
+## Test: thermal derivations match for folded and runtime operands
+
+Conductance and capacity multiply by a temperature into power and energy and divide back, and they convert into each other through time and frequency, identically for constant-folded literals and runtime arguments.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: thermal-derivations
+sources:
+  - name: thermal-derivations.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+module main
+on Derive(t, g, c, p, q, s, f) {
+  emit Runtime(power: g * t, powerSwapped: t * g, energy: c * t, conductance: p / t, capacity: q / t, fromPower: p / g, fromEnergy: q / c, capacityOverTime: g * s, conductanceFromTime: c / s, timeConstant: c / g, conductanceFromRate: c * f, capacityFromRate: g / f, rate: g / c)
+  emit Folded(power: 3W/K * 4K, powerSwapped: 4K * 3W/K, energy: 6J/K * 4K, conductance: 12W / 4K, capacity: 24J / 4K, fromPower: 12W / 3W/K, fromEnergy: 24J / 6J/K, capacityOverTime: 3W/K * 2s, conductanceFromTime: 6J/K / 2s, timeConstant: 6J/K / 3W/K, conductanceFromRate: 6J/K * 2Hz, capacityFromRate: 3W/K / 2Hz, rate: 3W/K / 6J/K)
+  emit Other(squared: 2W/K * 3W/K, mixed: 2W/K + 3J/K, cancelled: 6W/K / 3W/K)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| derive | Derive | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  derive:
+    input:
+      args:
+        - name: t
+          value: { type: ":Quantity.int64", value: "4", unit: ":kelvin" }
+        - name: g
+          value: { type: ":Quantity.int64", value: "3", unit: ":wattPerKelvin" }
+        - name: c
+          value: { type: ":Quantity.int64", value: "6", unit: ":joulePerKelvin" }
+        - name: p
+          value: { type: ":Quantity.int64", value: "12", unit: ":watt" }
+        - name: q
+          value: { type: ":Quantity.int64", value: "24", unit: ":joule" }
+        - name: s
+          value: { type: ":Quantity.int64", value: "2", unit: ":second" }
+        - name: f
+          value: { type: ":Quantity.int64", value: "2", unit: ":hertz" }
+    local:
+      - name: Runtime
+        args:
+          - name: power
+            value: { type: ":Quantity.int64", value: "12", unit: ":watt" }
+          - name: powerSwapped
+            value: { type: ":Quantity.int64", value: "12", unit: ":watt" }
+          - name: energy
+            value: { type: ":Quantity.int64", value: "24", unit: ":joule" }
+          - name: conductance
+            value: { type: ":Quantity.int64", value: "3", unit: ":wattPerKelvin" }
+          - name: capacity
+            value: { type: ":Quantity.int64", value: "6", unit: ":joulePerKelvin" }
+          - name: fromPower
+            value: { type: ":Quantity.int64", value: "4", unit: ":kelvin" }
+          - name: fromEnergy
+            value: { type: ":Quantity.int64", value: "4", unit: ":kelvin" }
+          - name: capacityOverTime
+            value: { type: ":Quantity.int64", value: "6", unit: ":joulePerKelvin" }
+          - name: conductanceFromTime
+            value: { type: ":Quantity.int64", value: "3", unit: ":wattPerKelvin" }
+          - name: timeConstant
+            value: { type: ":Quantity.int64", value: "2", unit: ":second" }
+          - name: conductanceFromRate
+            value: { type: ":Quantity.int64", value: "12", unit: ":wattPerKelvin" }
+          - name: capacityFromRate
+            value: { type: ":Quantity.binary64", value: "1.5", unit: ":joulePerKelvin" }
+          - name: rate
+            value: { type: ":Quantity.binary64", value: "0.5", unit: ":hertz" }
+      - name: Folded
+        args:
+          - name: power
+            value: { type: ":Quantity.int64", value: "12", unit: ":watt" }
+          - name: powerSwapped
+            value: { type: ":Quantity.int64", value: "12", unit: ":watt" }
+          - name: energy
+            value: { type: ":Quantity.int64", value: "24", unit: ":joule" }
+          - name: conductance
+            value: { type: ":Quantity.int64", value: "3", unit: ":wattPerKelvin" }
+          - name: capacity
+            value: { type: ":Quantity.int64", value: "6", unit: ":joulePerKelvin" }
+          - name: fromPower
+            value: { type: ":Quantity.int64", value: "4", unit: ":kelvin" }
+          - name: fromEnergy
+            value: { type: ":Quantity.int64", value: "4", unit: ":kelvin" }
+          - name: capacityOverTime
+            value: { type: ":Quantity.int64", value: "6", unit: ":joulePerKelvin" }
+          - name: conductanceFromTime
+            value: { type: ":Quantity.int64", value: "3", unit: ":wattPerKelvin" }
+          - name: timeConstant
+            value: { type: ":Quantity.int64", value: "2", unit: ":second" }
+          - name: conductanceFromRate
+            value: { type: ":Quantity.int64", value: "12", unit: ":wattPerKelvin" }
+          - name: capacityFromRate
+            value: { type: ":Quantity.binary64", value: "1.5", unit: ":joulePerKelvin" }
+          - name: rate
+            value: { type: ":Quantity.binary64", value: "0.5", unit: ":hertz" }
+      - name: Other
+        args:
+          - name: squared
+            value: { type: ":Nothing" }
+          - name: mixed
+            value: { type: ":Nothing" }
+          - name: cancelled
+            value: { type: ":Number.int64", value: "2" }
+```
+
+---
+
+## Test: thermal units are quantity types and format with their base symbol
+
+Casts and checks accept the symbol with ignored whitespace and ÷, and formatting uses the base symbol, also after a prefixed spelling.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: thermal-names
+sources:
+  - name: thermal-names.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+module main
+on Start {
+  emit Names(conductance: 5 as :Quantity(W/K), capacity: 5 as :Quantity(J/K), spaced: 5 as :Quantity(W / K), division: 5 as :Quantity(J÷K), matches: 5W/K is :Quantity(W/K), other: 5W/K is :Quantity(J/K))
+  emit Formatted(conductance: 2kW/K as :Text, capacity: 2kJ/K as :Text)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| start | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  start:
+    local:
+      - name: Names
+        args:
+          - name: conductance
+            value: { type: ":Quantity.int64", value: "5", unit: ":wattPerKelvin" }
+          - name: capacity
+            value: { type: ":Quantity.int64", value: "5", unit: ":joulePerKelvin" }
+          - name: spaced
+            value: { type: ":Quantity.int64", value: "5", unit: ":wattPerKelvin" }
+          - name: division
+            value: { type: ":Quantity.int64", value: "5", unit: ":joulePerKelvin" }
+          - name: matches
+            value: { type: ":Boolean", value: true }
+          - name: other
+            value: { type: ":Boolean", value: false }
+      - name: Formatted
+        args:
+          - name: conductance
+            value: { type: ":Text", value: "2000W/K" }
+          - name: capacity
+            value: { type: ":Text", value: "2000J/K" }
+```
+
+---
+
+## Test: prefixed thermal spellings are not quantity type names
+
+Prefixed spellings are literal sugar only, so `:Quantity(kW/K)` is rejected.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: thermal-prefixed-type-name-rejected
+kind: compileError
+sources:
+  - name: thermal-prefixed-type-name-rejected.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+module main
+on Start { let value be 5 as :Quantity(kW/K) }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error: { phase: compile, code: compile.unsupportedConstruct }
+```
+
+---
+
 ## Test: same-unit quotients cancel and scalars keep the unit
 
 Dividing equal units gives a unitless number, scalar factors keep any unit, and vectors divided by seconds become velocities.

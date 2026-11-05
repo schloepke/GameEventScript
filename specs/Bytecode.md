@@ -229,9 +229,11 @@ room for likely game-domain units:
 | `16` | kelvin | `kelvin` | Temperature. |
 | `17` | degree per second | `degreePerSecond` | Angular speed, turn rate. |
 | `18` | decibel | `decibel` | Levels on a logarithmic scale: gains, attenuation, signal-to-noise. |
-| `19..31` | reserved | | Additional built-in or domain units. |
+| `19` | watt per kelvin | `wattPerKelvin` | Thermal conductance: radiators, hull coupling, cooling. |
+| `20` | joule per kelvin | `joulePerKelvin` | Heat capacity: hulls, tanks, heat sinks. |
+| `21..31` | reserved | | Additional built-in or domain units. |
 
-Programs may encode only the defined UnitIds 0 to 18; validation rejects
+Programs may encode only the defined UnitIds 0 to 20; validation rejects
 reserved ids. Unit arithmetic, symbols and literal spellings are
 defined in [Language quantities](Language.md#quantities). The extended map keeps
 additional unit IDs representable without reshaping the instruction word.

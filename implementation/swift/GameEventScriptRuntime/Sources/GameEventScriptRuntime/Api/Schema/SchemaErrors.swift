@@ -28,6 +28,7 @@ public struct GesWireError: Error, Sendable, Equatable {
     static let invalidIndex = "wire.invalidIndex"
     static let invalidCount = "wire.invalidCount"
     static let invalidText = "wire.invalidText"
+    static let invalidTag = "wire.invalidTag"
     static let invalidNumber = "wire.invalidNumber"
     static let invalidPadding = "wire.invalidPadding"
     static let limitExceeded = "wire.limitExceeded"

@@ -15,6 +15,7 @@ UNIT_SPELLINGS = {
     'watt': ('W',), 'volt': ('V',), 'ampere': ('A',), 'hertz': ('Hz',), 'squareMeter': ('m²', 'm^2'),
     'cubicMeter': ('m³', 'm^3'), 'wattPerSquareMeter': ('W/m²', 'W/m^2'), 'kelvin': ('K',),
     'degreePerSecond': ('°/s', 'deg/s'), 'decibel': ('dB',),
+    'wattPerKelvin': ('W/K',), 'joulePerKelvin': ('J/K',),
 }
 UNITS = {spelling: ':' + name for name, spellings in UNIT_SPELLINGS.items() for spelling in (name, ':' + name, *spellings)}
 

@@ -142,7 +142,7 @@ public enum GesSchemaValues {
             guard let tag = info.tags.firstIndex(of: value.asText) else { throw GesWireError(code: "wire.unknownTag", path: info.path) }
             try writer.writeTag(field, tag)
         case .text:
-            if value.valueKind != .text { throw GesWireError(code: "wire.typeMismatch", path: info.path) }
+            if value.valueKind != (node.isTagText ? .tag : .text) { throw GesWireError(code: "wire.typeMismatch", path: info.path) }
             let bytes = Array(value.asText.utf8)
             try bytes.withUnsafeBytes { try writer.writeText(field, $0) }
         case .list where info.valueKind == .dice:
@@ -282,7 +282,7 @@ public enum GesSchemaValues {
         switch node.kind {
         case .boolean: return .boolean(try reader.readBoolean(field))
         case .tag: return try .tag(info.tags[try reader.readTag(field)])
-        case .text: return .text(try reader.readTextValue(field))
+        case .text: return node.isTagText ? try .tag(try reader.readTextValue(field)) : .text(try reader.readTextValue(field))
         case .list where info.valueKind == .dice:
             let length = try reader.beginList(field)
             var rolls: [Int32] = []

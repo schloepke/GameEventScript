@@ -36,7 +36,7 @@ public sealed class GesDocumentRoundTripTests
         }
         Assert.AreEqual("[1kW, 250ms]", GesValue.ParseLiteral("[1000W, 0.25s]").Format());
         // Prefixes keep the unit symbol, never its ASCII spelling; units without prefixes print their symbol.
-        Assert.AreEqual("[3cm², 2t, 14mW/m², 2.5kW/m², 3km², 4mW, 2m³, 6dB, 3Hz]", GesValue.ParseLiteral("[0.0003m², 2000kg, 0.014W/m², 2500W/m², 3000000m², 0.004W, 2m³, 6dB, 3Hz]").Format());
+        Assert.AreEqual("[3cm², 2t, 14mW/m², 2.5kW/m², 3km², 4mW, 2m³, 6dB, 3Hz, 2.5kW/K, 250mW/K, 4MJ/K, 3J/K]", GesValue.ParseLiteral("[0.0003m², 2000kg, 0.014W/m², 2500W/m², 3000000m², 0.004W, 2m³, 6dB, 3Hz, 2500W/K, 0.25W/K, 4000000J/K, 3J/K]").Format());
     }
 
     [TestMethod]

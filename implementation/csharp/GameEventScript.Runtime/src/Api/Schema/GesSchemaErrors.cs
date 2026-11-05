@@ -42,6 +42,7 @@ public sealed class GesWireException : Exception
     internal const string InvalidIndex = "wire.invalidIndex";
     internal const string InvalidCount = "wire.invalidCount";
     internal const string InvalidText = "wire.invalidText";
+    internal const string InvalidTag = "wire.invalidTag";
     internal const string InvalidNumber = "wire.invalidNumber";
     internal const string InvalidPadding = "wire.invalidPadding";
     internal const string LimitExceeded = "wire.limitExceeded";

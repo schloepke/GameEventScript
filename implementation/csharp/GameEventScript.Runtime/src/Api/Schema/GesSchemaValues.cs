@@ -176,7 +176,7 @@ public static class GesSchemaValues
                 writer.WriteTag(field, tag);
                 break;
             case GesSchemaNodeKind.Text:
-                if (value.ValueKind != GesBytecodeTypeKind.Text) throw new GesWireException(GesWireException.TypeMismatch, node.Path);
+                if (value.ValueKind != (node.IsTagText ? GesBytecodeTypeKind.Tag : GesBytecodeTypeKind.Text)) throw new GesWireException(GesWireException.TypeMismatch, node.Path);
                 writer.WriteText(field, Encoding.UTF8.GetBytes(value.AsText()));
                 break;
             case GesSchemaNodeKind.List when node.ValueKind == GesSchemaTypeKind.Dice:
@@ -334,7 +334,7 @@ public static class GesSchemaValues
         {
             case GesSchemaNodeKind.Boolean: return GesValue.GesBoolean(reader.ReadBoolean(field));
             case GesSchemaNodeKind.Tag: return GesValue.GesTag(node.Tags![reader.ReadTag(field)]);
-            case GesSchemaNodeKind.Text: return GesValue.GesText(reader.ReadTextValue(field));
+            case GesSchemaNodeKind.Text: return node.IsTagText ? GesValue.GesTag(reader.ReadTextValue(field)) : GesValue.GesText(reader.ReadTextValue(field));
             case GesSchemaNodeKind.List when node.ValueKind == GesSchemaTypeKind.Dice:
                 var count = reader.BeginList(field);
                 var rolls = new List<int>(Math.Min(count, 1024));

@@ -3749,6 +3749,469 @@ schema:
 
 ---
 
+## Test: a Tag with a maximum
+
+It travels like a Text and arrives as a Tag.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: tag-max
+schemaApi:
+  sources:
+    - "schema :S as { t: :Tag max 3 }\n"
+  root: "S"
+  encode:
+    type: ":S"
+    entries:
+      - key: "t"
+        value:
+          type: ":Tag"
+          value: "ab"
+  decode: "868901"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  canonical: "gess1\nschema S\nfield t Tag max 3\n"
+  encoded:
+    bytes: "868901"
+  decoded:
+    value:
+      type: ":S"
+      entries:
+        - key: "t"
+          value:
+            type: ":Tag"
+            value: "ab"
+    byteCount: 3
+```
+
+---
+
+## Test: a Tag beyond its maximum
+
+The maximum counts characters.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: tag-max-too-long
+schemaApi:
+  sources:
+    - "schema :S as { t: :Tag max 3 }\n"
+  root: "S"
+  encode:
+    type: ":S"
+    entries:
+      - key: "t"
+        value:
+          type: ":Tag"
+          value: "abcd"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    error:
+      code: "wire.tooLong"
+      path: "t"
+```
+
+---
+
+## Test: a Text in a Tag field
+
+Kinds do not convert, even with the same bytes on the wire.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: tag-max-text
+schemaApi:
+  sources:
+    - "schema :S as { t: :Tag max 3 }\n"
+  root: "S"
+  encode:
+    type: ":S"
+    entries:
+      - key: "t"
+        value:
+          type: ":Text"
+          value: "ab"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    error:
+      code: "wire.typeMismatch"
+      path: "t"
+```
+
+---
+
+## Test: a decoded Tag with an uppercase start
+
+Data from a peer is untrusted, and only a valid name becomes a Tag.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: tag-max-invalid-upper
+schemaApi:
+  sources:
+    - "schema :S as { t: :Tag max 3 }\n"
+  root: "S"
+  decode: "068901"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  decoded:
+    error:
+      code: "wire.invalidTag"
+      path: "t"
+```
+
+---
+
+## Test: a decoded Tag with an empty name
+
+Data from a peer is untrusted, and only a valid name becomes a Tag.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: tag-max-invalid-empty
+schemaApi:
+  sources:
+    - "schema :S as { t: :Tag max 3 }\n"
+  root: "S"
+  decode: "00"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  decoded:
+    error:
+      code: "wire.invalidTag"
+      path: "t"
+```
+
+---
+
+## Test: a decoded Tag with a byte outside ASCII
+
+Data from a peer is untrusted, and only a valid name becomes a Tag.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: tag-max-invalid-byte
+schemaApi:
+  sources:
+    - "schema :S as { t: :Tag max 3 }\n"
+  root: "S"
+  decode: "fd03"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  decoded:
+    error:
+      code: "wire.invalidTag"
+      path: "t"
+```
+
+---
+
+## Test: a decoded Tag with an underscore
+
+Data from a peer is untrusted, and only a valid name becomes a Tag.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: tag-max-invalid-underscore
+schemaApi:
+  sources:
+    - "schema :S as { t: :Tag max 3 }\n"
+  root: "S"
+  decode: "867d01"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  decoded:
+    error:
+      code: "wire.invalidTag"
+      path: "t"
+```
+
+---
+
+## Test: a Tag with a set and a maximum
+
+The set already fixes the width.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-tag-set-max
+schemaApi:
+  sources:
+    - "schema :S as { t: :Tag(#a) max 3 }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.syntax"
+    line: 1
+    column: 28
+```
+
+---
+
+## Test: a Tag with a maximum as a key
+
+A key has a fixed width.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-tag-max-key
+schemaApi:
+  sources:
+    - "schema :S as { t: :Tag max 3 key }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidKey"
+    line: 1
+    column: 16
+```
+
+---
+
+## Test: a Tag with a maximum of zero
+
+A maximum is positive.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-tag-max-zero
+schemaApi:
+  sources:
+    - "schema :S as { t: :Tag max 0 }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidConstraint"
+    line: 1
+    column: 19
+```
+
+---
+
+## Test: a Tag with a maximum in a union
+
+The value selects the alternative by its kind.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: tag-max-union
+schemaApi:
+  sources:
+    - "schema :S as { t: :Tag max 2 | :Boolean }\n"
+  root: "S"
+  encode:
+    type: ":S"
+    entries:
+      - key: "t"
+        value:
+          type: ":Tag"
+          value: "a"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "0a03"
+```
+
+---
+
+## Test: a Tag with a maximum next to a Tag with a set
+
+Both have the type name Tag.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-tag-max-union
+schemaApi:
+  sources:
+    - "schema :S as { t: :Tag(#a) | :Tag max 2 }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidUnion"
+    line: 1
+    column: 30
+```
+
+---
+
+## Test: a Tag with a maximum in a dump
+
+It shows the name and has no index.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: tag-max-dump
+schemaApi:
+  sources:
+    - "schema :S as { t: :Tag max 3 }\n"
+  root: "S"
+  dump: "868901"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  dump:
+    text: "t bit=0 width=18 value=#ab\nbytes 3\n"
+    valid: true
+```
+
+---
+
+## Test: a document Tag beyond its maximum
+
+The maximum is checked in a document too.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: document-tag-max
+schemaApi:
+  sources:
+    - "schema :S as { t: :Tag max 2 }\n"
+  document: ":Schema(:S)\nt: #abc\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  document:
+    error:
+      code: "document.outOfRange"
+      line: 2
+      column: 4
+```
+
+---
+
+## Test: a thermal unit in a schema
+
+A quantity field with a prefixed bound uses the base unit on the wire and in the canonical form.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: thermal-field
+schemaApi:
+  sources:
+    - "schema :S as { g: :Quantity(W/K) between 0W/K and 5kW/K step 1W/K }\n"
+  root: "S"
+  encode:
+    type: ":S"
+    entries:
+      - key: "g"
+        value:
+          type: ":Quantity.int64"
+          value: "1000"
+          unit: ":wattPerKelvin"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  canonical: "gess1\nschema S\nfield g Quantity(wattPerKelvin) between 0e0 5e3 step 1e0\n"
+  encoded:
+    bytes: "e803"
+```
+
+---
+
 ## Test: a union in a dump
 
 The union names its alternative.

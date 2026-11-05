@@ -319,7 +319,8 @@ predicate operations never use locale; formatting returns canonical GES text.
 `UnitMeter`, `UnitSecond`, `UnitMeterPerSecond`, `UnitMeterPerSecondSquared`,
 `UnitKilogram`, `UnitNewton`, `UnitJoule`, `UnitWatt`, `UnitVolt`, `UnitAmpere`,
 `UnitHertz`, `UnitSquareMeter`, `UnitCubicMeter`, `UnitWattPerSquareMeter`,
-`UnitKelvin`, `UnitDegreePerSecond` and `UnitDecibel`, plus the invalid sentinel
+`UnitKelvin`, `UnitDegreePerSecond`, `UnitDecibel`, `UnitWattPerKelvin` and
+`UnitJoulePerKelvin`, plus the invalid sentinel
 `UnitInvalid`; Swift uses the same cases in lower camel case (`.none`,
 `.meterPerSecond`, …), whose raw values are the portable unit names. C#
 `GesQuantityUnits.ToTypeName`/`ParseTypeName` convert portable names and

@@ -854,6 +854,8 @@ enum GameEventScript.Api.GesQuantityUnit
   enum-field UnitKelvin = 16
   enum-field UnitDegreePerSecond = 17
   enum-field UnitDecibel = 18
+  enum-field UnitWattPerKelvin = 19
+  enum-field UnitJoulePerKelvin = 20
   enum-field UnitInvalid = 255
 static class GameEventScript.Api.GesQuantityUnits
   method static GameEventScript.Api.GesQuantityUnit? ParseQuantityTypeName(System.String typeName)

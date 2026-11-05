@@ -102,7 +102,8 @@ on Main(args) {
 Common data values include Number, Boolean, Text, Tag, List, Map and `nothing`.
 Numbers may carry a unit, such as seconds (`0.2s`), meters (`10m`), degrees
 (`90°`), speeds (`3m/s`), forces (`21400N`), frequencies (`20Hz` or `20/s`),
-areas (`2m²`), volumes (`0.5m³`), intensities (`0.014W/m²`) or levels (`6dB`).
+areas (`2m²`), volumes (`0.5m³`), intensities (`0.014W/m²`), levels (`6dB`),
+thermal conductance (`3kW/K`) or heat capacity (`2kJ/K`).
 Prefixed spellings like `250ms`, `2km` or `2t` are converted to the base unit.
 Units follow physics where it is defined: `10m / 2s` is `5m/s`, `2kg * 3m/s²`
 is `6N`, `2m * 3m` is `6m²`, `(3m)²` is `9m²` and `1 / 2s` is `0.5Hz`;

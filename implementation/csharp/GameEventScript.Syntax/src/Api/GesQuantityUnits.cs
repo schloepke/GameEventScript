@@ -40,6 +40,13 @@ public static class GesQuantityUnits
         new("kW/m^2", UnitWattPerSquareMeter, 3),
         new("W/m²", UnitWattPerSquareMeter),
         new("W/m^2", UnitWattPerSquareMeter),
+        new("mW/K", UnitWattPerKelvin, -3),
+        new("kW/K", UnitWattPerKelvin, 3),
+        new("MW/K", UnitWattPerKelvin, 6),
+        new("W/K", UnitWattPerKelvin),
+        new("kJ/K", UnitJoulePerKelvin, 3),
+        new("MJ/K", UnitJoulePerKelvin, 6),
+        new("J/K", UnitJoulePerKelvin),
         new("m/s²", UnitMeterPerSecondSquared),
         new("m/s^2", UnitMeterPerSecondSquared),
         new("deg/s", UnitDegreePerSecond),
@@ -102,7 +109,7 @@ public static class GesQuantityUnits
     /// <param name="unit">The unit value.</param>
     /// <returns><see langword="true"/> for a defined unit other than <see cref="GesQuantityUnit.UnitNone"/>.</returns>
     public static bool IsNumericUnit(this GesQuantityUnit unit)
-        => (uint)unit - 1 <= (uint)UnitDecibel - 1; // UnitIds 1 to 18
+        => (uint)unit - 1 <= (uint)UnitJoulePerKelvin - 1; // UnitIds 1 to 20
 
     internal static GesQuantityUnit ToStoredUnit(this GesQuantityUnit? unit)
         => unit is { } value && value.IsNumericUnit() ? value : UnitNone;
@@ -144,6 +151,8 @@ public static class GesQuantityUnits
             UnitKelvin => "kelvin",
             UnitDegreePerSecond => "degreePerSecond",
             UnitDecibel => "decibel",
+            UnitWattPerKelvin => "wattPerKelvin",
+            UnitJoulePerKelvin => "joulePerKelvin",
             _ => throw new ArgumentOutOfRangeException(nameof(unit), unit, "Unknown GameEventScript numeric unit.")
         };
 
@@ -173,6 +182,8 @@ public static class GesQuantityUnits
             UnitKelvin => "K",
             UnitDegreePerSecond => "°/s",
             UnitDecibel => "dB",
+            UnitWattPerKelvin => "W/K",
+            UnitJoulePerKelvin => "J/K",
             _ => throw new ArgumentOutOfRangeException(nameof(unit), unit, "Unknown GameEventScript numeric unit.")
         };
 
@@ -202,6 +213,8 @@ public static class GesQuantityUnits
             "kelvin" => UnitKelvin,
             "degreePerSecond" => UnitDegreePerSecond,
             "decibel" => UnitDecibel,
+            "wattPerKelvin" => UnitWattPerKelvin,
+            "joulePerKelvin" => UnitJoulePerKelvin,
             _ => null
         };
 
@@ -244,6 +257,8 @@ public static class GesQuantityUnits
             "K" => UnitKelvin,
             "°/s" or "degree/s" or "deg/s" => UnitDegreePerSecond,
             "dB" => UnitDecibel,
+            "W/K" => UnitWattPerKelvin,
+            "J/K" => UnitJoulePerKelvin,
             _ => null
         };
 
@@ -319,6 +334,14 @@ public static class GesQuantityUnits
             (UnitCubicMeter, UnitSquareMeter) => UnitMeter,
             (UnitWatt, UnitSquareMeter) => UnitWattPerSquareMeter,
             (UnitWatt, UnitWattPerSquareMeter) => UnitSquareMeter,
+            (UnitWatt, UnitKelvin) => UnitWattPerKelvin,
+            (UnitWatt, UnitWattPerKelvin) => UnitKelvin,
+            (UnitJoule, UnitKelvin) => UnitJoulePerKelvin,
+            (UnitJoule, UnitJoulePerKelvin) => UnitKelvin,
+            (UnitJoulePerKelvin, UnitSecond) => UnitWattPerKelvin,
+            (UnitJoulePerKelvin, UnitWattPerKelvin) => UnitSecond,
+            (UnitWattPerKelvin, UnitHertz) => UnitJoulePerKelvin,
+            (UnitWattPerKelvin, UnitJoulePerKelvin) => UnitHertz,
             _ => null
         };
     }
@@ -361,6 +384,10 @@ public static class GesQuantityUnits
             (UnitMeter, UnitMeter) => UnitSquareMeter,
             (UnitSquareMeter, UnitMeter) => UnitCubicMeter,
             (UnitWattPerSquareMeter, UnitSquareMeter) => UnitWatt,
+            (UnitWattPerKelvin, UnitKelvin) => UnitWatt,
+            (UnitJoulePerKelvin, UnitKelvin) => UnitJoule,
+            (UnitWattPerKelvin, UnitSecond) => UnitJoulePerKelvin,
+            (UnitJoulePerKelvin, UnitHertz) => UnitWattPerKelvin,
             _ => null
         };
 }

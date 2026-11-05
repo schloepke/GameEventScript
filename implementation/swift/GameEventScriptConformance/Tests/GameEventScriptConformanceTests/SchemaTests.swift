@@ -183,6 +183,23 @@ final class SchemaTests: XCTestCase {
         }
     }
 
+    func testATagWithAMaximumWritesOnlyTagNames() throws {
+        let bound = try GesSchemaSet(parsing: "schema :S as { t: :Tag max 3 }").schema("S").bind()
+        let field = bound.field("t")!
+        var buffer = [UInt8](repeating: 0, count: 8)
+        try buffer.withUnsafeMutableBytes { bytes in
+            var writer = GesSchemaWriter(bound, into: bytes)
+            for invalid in ["", "Ab", "a_", "1a", "ä"] {
+                XCTAssertThrowsError(try Array(invalid.utf8).withUnsafeBytes { try writer.writeText(field, $0) }) { error in
+                    XCTAssertEqual((error as? GesWireError)?.code, "wire.invalidTag", invalid)
+                }
+            }
+            try Array("ab".utf8).withUnsafeBytes { try writer.writeText(field, $0) }
+            XCTAssertEqual(try writer.finish(), 3)
+        }
+        XCTAssertEqual(Array(buffer[0..<3]), [0x86, 0x89, 0x01])
+    }
+
     func testAnInvalidAlternativeWritesNothing() throws {
         let bound = try GesSchemaSet(parsing: "schema :S as { a: :Boolean | :Text max 1 optional }").schema("S").bind()
         let (a, flag) = (bound.field("a")!, bound.field("a:Boolean")!)

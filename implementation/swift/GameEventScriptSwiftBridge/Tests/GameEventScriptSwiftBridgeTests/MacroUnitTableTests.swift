@@ -46,6 +46,10 @@ private struct EveryUnit {
     var degreePerSecond: Double = 1
     @GesField(unit: .decibel)
     var decibel: Double = 1
+    @GesField(unit: .wattPerKelvin)
+    var wattPerKelvin: Double = 1
+    @GesField(unit: .joulePerKelvin)
+    var joulePerKelvin: Double = 1
 }
 
 final class MacroUnitTableTests: XCTestCase {

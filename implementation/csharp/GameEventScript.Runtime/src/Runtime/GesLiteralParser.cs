@@ -313,7 +313,7 @@ internal struct GesLiteralParser
                     SkipWhitespace();
                 }
                 if (hasLabel && index == previousIndex) return null;
-                if (index > 2 || index <= previousIndex) return null;
+                if (index > 2 || index <= previousIndex || previousIndex >= 0 && index != previousIndex + 1) return null;
                 previousIndex = index;
                 var start = _position;
                 while (_position < _text.Length && !IsWhitespace(_text[_position]) && _text[_position] is not (',' or ')')) _position++;

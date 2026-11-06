@@ -33,17 +33,6 @@ internal static class GesDataConstruction
         var first = values[0];
         if (type == "nothing")
             return default;
-        if (type is "vector" or "point")
-        {
-            var unit = arguments.Length == 0 ? GesQuantityUnit.UnitNone : arguments[0].Unit;
-            foreach (var argument in arguments)
-                if (argument.Kind is not (Integer or Float) || argument.Unit != unit)
-                    return default;
-            return type == "vector"
-                ? GesValue.GesVector(values[0].AsNumeric, values[1].IsNothing ? 0 : values[1].AsNumeric, values[2].IsNothing ? 0 : values[2].AsNumeric, unit)
-                : GesValue.GesPoint(values[0].IsNothing ? 0 : values[0].AsNumeric, values[1].IsNothing ? 0 : values[1].AsNumeric, values[2].IsNothing ? 0 : values[2].AsNumeric, unit);
-        }
-
         if (type == "number")
         {
             var number = GesNumber.Cast(first);
@@ -118,8 +107,6 @@ internal static class GesDataConstruction
             "list" => List,
             "map" => Map,
             "dice" => Dice,
-            "vector" => Vector,
-            "point" => Point,
             "range" => GesBytecodeTypeKind.Range,
             "series" => Series,
             "message" => Message,

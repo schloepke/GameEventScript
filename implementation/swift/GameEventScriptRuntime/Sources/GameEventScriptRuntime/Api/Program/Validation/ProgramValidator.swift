@@ -84,6 +84,7 @@ enum GesProgramValidator {
             throw failure(.invalidOperand, 16, index)
         }
         if i.opcode == .cartesian && (i.unitAndFlags != 0 || i.payload != 0) { throw failure(.invalidOperand, 16, index) }
+        if [.createVector, .createPoint].contains(i.opcode) && !(0...3).contains(i.signedWord1) { throw failure(.invalidOperand, 16, index) }
         if [.constructData, .splitText].contains(i.opcode) && (i.unitAndFlags != 0 || i.b != 0 || i.c != 0 || i.d != 0 || i.opcode == .splitText && (i.a > 1 || i.a == 1 && i.word2 != 0)) { throw failure(.invalidOperand, 16, index) }
         for (position, operand) in i.operands.enumerated() {
             if operand.isRegister {
@@ -131,7 +132,7 @@ enum GesProgramValidator {
         if i.opcode == .constructData {
             let type = p.stringConstants[Int(i.word1)]
             let labels = p.uint16IndexLists[Int(i.a)].map { p.stringConstants[Int($0)] }
-            if !GesLiteralForms.types.contains(type) || GesLiteralForms.positions(type, labels) == nil || labels.count != p.uint16IndexLists[Int(i.word2)].count { throw failure(.invalidOperand, 16, index) }
+            if type == "vector" || type == "point" || !GesLiteralForms.types.contains(type) || GesLiteralForms.positions(type, labels) == nil || labels.count != p.uint16IndexLists[Int(i.word2)].count { throw failure(.invalidOperand, 16, index) }
         }
     }
 

@@ -608,6 +608,7 @@ internal sealed partial class GesSyntaxBinder
         var typeName = BindTypeName(c.TakeNode(NodeKind.TypeReference));
         c.SkipNewLines();
         c.Expect(LeftParen);
+        if (typeName is "handler" or "message" or "series") c.SkipNewLines();
         if (typeName == "handler" && c.Is(Message))
         {
             var name = c.Advance().Text;
@@ -651,7 +652,9 @@ internal sealed partial class GesSyntaxBinder
         if (typeName == "message" && c.IsNode(NodeKind.MessageExpression))
         {
             var message = BindMessageLiteral(c.TakeNode());
+            c.SkipNewLines();
             var tags = OptionalTags(ref c);
+            c.SkipNewLines();
             c.Expect(RightParen);
             var items = new List<GesArgumentNode> { new(null, message) };
             if (tags.Count > 0) items.Add(new GesArgumentNode("tags", new GesListLiteralExpressionNode(tags)));
@@ -661,6 +664,7 @@ internal sealed partial class GesSyntaxBinder
         if (typeName == "series" && (c.Is(Fibonacci) || c.Is(Factorial)))
         {
             var items = new List<GesArgumentNode> { new(null, new GesTextLiteralExpressionNode(c.Advance().Text)) };
+            c.SkipNewLines();
             if (c.Match(Comma)) items.AddRange(ArgumentsAfterLeftParen(ref c).Arguments);
             else c.Expect(RightParen);
             return Set(new GesTypeConstructorExpressionNode(typeName, new GesArgumentListNode(items)), start, c.Previous);

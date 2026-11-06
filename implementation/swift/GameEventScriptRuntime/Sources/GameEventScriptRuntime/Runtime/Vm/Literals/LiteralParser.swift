@@ -330,7 +330,7 @@ struct GesLiteralParser {
                     whitespace()
                 }
                 if hasLabel && index == previous { return nil }
-                if index > 2 || index <= previous { return nil }
+                if index > 2 || index <= previous || (previous >= 0 && index != previous + 1) { return nil }
                 previous = index
                 let start = position
                 while position < bytes.count && !Self.space(bytes[position]) && bytes[position] != 44 && bytes[position] != 41 { position += 1 }

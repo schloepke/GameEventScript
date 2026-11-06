@@ -93,8 +93,6 @@ enum GesDataConstruction {
         case "list": .list
         case "map": .map
         case "dice": .dice
-        case "vector": .vector
-        case "point": .point
         case "range": .range
         case "series": .series
         case "message": .message

@@ -1095,8 +1095,8 @@ constructors reference `Record` bind ids; external type, list, map, vector, and
 point constructors consume staged values instead of argument register lists.
 Vector and point constructors are fixed built-ins. Their source arguments are
 lowered into staged component values in canonical `x, y, z` order; `immediateX`
-stores the first staged component index (`0`, `1`, or `2`) so leading missing
-components do not need explicit zero stages.
+stores the start form listed in the opcode table, so leading missing components
+do not need explicit zero stages.
 Seeded random uses no side table or helper expression opcode. The lowerer emits
 `RandomPush*`, the inline body instructions, and `RandomPop`.
 Constant seeds are unitless signed `Int64`, so negative seeds such as `-145`
@@ -1470,8 +1470,8 @@ nibble is a format convention, not a second runtime dispatch step.
 | 0x34 | `StageTag` | - | - | `StringIndex` | - | - | Stages a tag literal from `StringPool`. |
 | 0x35 | `StagePercentage` | - | - | - | - | `F64`=ratio | Stages an inline percentage ratio value. |
 | 0x36 | `CreateDice` | - | result register | `Count`=dice count | `ImmediateY`=side count | - | Creates a dice value; `X` and `Y` are not registers. |
-| 0x37 | `CreateVector` | - | result register | `ImmediateX`=first staged component index | - | - | Creates a vector from the staged component sequence. `ImmediateX` is `0` for x, `1` for y, or `2` for z; missing components become `0`. |
-| 0x38 | `CreatePoint` | - | result register | `ImmediateX`=first staged component index | - | - | Creates a point from the staged component sequence. `ImmediateX` is `0` for x, `1` for y, or `2` for z; missing components become `0`. |
+| 0x37 | `CreateVector` | - | result register | `ImmediateX`=start form | - | - | Creates a vector from the staged component sequence. `ImmediateX` is `0` for the positional form starting at x, whose first component may be a Vector or Point to lift, `1` for labeled y, `2` for labeled z, or `3` for labeled x, which never lifts; missing components become `0`. Other values are `InvalidOperand`. |
+| 0x38 | `CreatePoint` | - | result register | `ImmediateX`=start form | - | - | Creates a point from the staged component sequence. `ImmediateX` is `0` for the positional form starting at x, whose first component may be a Vector or Point to lift, `1` for labeled y, `2` for labeled z, or `3` for labeled x, which never lifts; missing components become `0`. Other values are `InvalidOperand`. |
 | 0x39 | `CreateList` | - | result register | - | - | - | Creates a list from the contiguous staged value sequence immediately before the opcode. |
 | 0x3A | `CreateMap` | - | result register | `SecondaryListIndex`=key names | - | - | Creates a map from key names and the contiguous staged value sequence immediately before the opcode. |
 | 0x3B | `CreateRange` | - | result register | `XRegister`=from | `YRegister`=to | - | Creates a range value with implicit step `1`. |
@@ -1733,8 +1733,8 @@ No fold/reduce opcode or implicit per-element budget surcharge is introduced.
 
 `ConstructData` uses a lowercase built-in type name, ordered argument registers,
 and a same-length label list (`_` for positional arguments). Type/arity/label
-validation follows the explicit constructor contract; unknown names or invalid
-shapes are InvalidOperand. Label lists may not duplicate named labels. Flags,
+validation follows the explicit constructor contract; unknown names, `vector`,
+`point` (see `CreateVector` and `CreatePoint`) or invalid shapes are InvalidOperand. Label lists may not duplicate named labels. Flags,
 unit, BU, CU and DU must be zero. Arguments are copied before assigning the
 result, so destination/source aliasing is valid. It never invokes a user Record
 constructor; `ParseLiteral` manages those calls after full recognition.

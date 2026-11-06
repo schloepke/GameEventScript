@@ -1022,6 +1022,13 @@ internal static class GesAstValidator
 
     private static void ValidateVectorConstructor(GesParsedScript parsedScriptContext, GesTypeConstructorExpressionNode constructor, IReadOnlyList<string> labels, GesValidationErrors errors)
     {
+        foreach (var argument in constructor.Arguments)
+        {
+            if (argument.Expression is not GesBooleanLiteralExpressionNode) continue;
+            AddTypeConstructorError(parsedScriptContext, constructor, $"Type constructor ':{constructor.TypeName}' cannot have a true or false literal as a component.", errors);
+            return;
+        }
+
         if (constructor.Arguments.Count == 1 && constructor.Arguments[0].Label is null) return;
 
         if (constructor.Arguments.Count is 2 &&
@@ -1059,7 +1066,7 @@ internal static class GesAstValidator
                 return;
             }
 
-            if (componentIndex <= previousIndex)
+            if (componentIndex <= previousIndex || previousIndex >= 0 && componentIndex != previousIndex + 1)
             {
                 AddTypeConstructorError(parsedScriptContext, constructor, $"Type constructor ':{constructor.TypeName}' component labels must follow x, y, z order", errors);
                 return;

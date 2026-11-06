@@ -1393,3 +1393,140 @@ steps:
               type: ":Number.binary64"
               value: "NaN"
 ```
+
+---
+
+## Test: spatial-component-forms
+
+A Vector or Point has no components, a positional run or a labeled run without gaps, and omitted components are zero with the unit of the others. Only a positional form lifts a Vector or Point; labeled components are numeric.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: spatial-component-forms
+kind: scriptApi
+level: atomic
+compile:
+  binaryRoundTrip: true
+```
+
+### Source code under test
+
+```ges
+constant $on be true
+
+on Start {
+  let a be 4
+  let flag be true
+  let v be :Vector(1, 2)
+  emit Done(zero: :Vector() as :Text, xOnly: :Vector(x: 1) as :Text, yOnly: :Vector(y: 1) as :Text, zOnly: :Vector(z: 1) as :Text, xy: :Vector(x: 1, y: 2) as :Text, yz: :Vector(y: 1, z: 2) as :Text, xyz: :Vector(x: 1, y: 2, z: 3) as :Text, xUnit: :Point(x: 2m) as :Text, zUnit: :Point(z: 2m) as :Text, one: :Vector(1) as :Text, two: :Vector(1, 2) as :Text, dynamic: :Vector(x: a, y: a + 1) as :Text, fromBoolean: :Vector(x: flag) as :Text, fromExpression: :Vector(x: 1 > 0) as :Text, fromNegation: :Vector(not true) as :Text, fromConstant: :Vector($on) as :Text, ratio: :Vector(x: 50%) as :Text, lifted: :Vector(v, 7) as :Text, liftedAlone: :Vector(v) as :Text, labeledSpatial: :Vector(x: v), labeledLift: :Vector(x: v, y: 3), mixed: :Vector(x: 1m, y: 2s))
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args: []
+    local:
+      - name: Done
+        args:
+          - name: zero
+            value:
+              type: ":Text"
+              value: ":Vector(x: 0, y: 0, z: 0)"
+          - name: xOnly
+            value:
+              type: ":Text"
+              value: ":Vector(x: 1, y: 0, z: 0)"
+          - name: yOnly
+            value:
+              type: ":Text"
+              value: ":Vector(x: 0, y: 1, z: 0)"
+          - name: zOnly
+            value:
+              type: ":Text"
+              value: ":Vector(x: 0, y: 0, z: 1)"
+          - name: xy
+            value:
+              type: ":Text"
+              value: ":Vector(x: 1, y: 2, z: 0)"
+          - name: yz
+            value:
+              type: ":Text"
+              value: ":Vector(x: 0, y: 1, z: 2)"
+          - name: xyz
+            value:
+              type: ":Text"
+              value: ":Vector(x: 1, y: 2, z: 3)"
+          - name: xUnit
+            value:
+              type: ":Text"
+              value: ":Point(x: 2m, y: 0m, z: 0m)"
+          - name: zUnit
+            value:
+              type: ":Text"
+              value: ":Point(x: 0m, y: 0m, z: 2m)"
+          - name: one
+            value:
+              type: ":Text"
+              value: ":Vector(x: 1, y: 0, z: 0)"
+          - name: two
+            value:
+              type: ":Text"
+              value: ":Vector(x: 1, y: 2, z: 0)"
+          - name: dynamic
+            value:
+              type: ":Text"
+              value: ":Vector(x: 4, y: 5, z: 0)"
+          - name: fromBoolean
+            value:
+              type: ":Text"
+              value: ":Vector(x: 1, y: 0, z: 0)"
+          - name: fromExpression
+            value:
+              type: ":Text"
+              value: ":Vector(x: 1, y: 0, z: 0)"
+          - name: fromNegation
+            value:
+              type: ":Text"
+              value: ":Vector(x: 0, y: 0, z: 0)"
+          - name: fromConstant
+            value:
+              type: ":Text"
+              value: ":Vector(x: 1, y: 0, z: 0)"
+          - name: ratio
+            value:
+              type: ":Text"
+              value: ":Vector(x: 0.5, y: 0, z: 0)"
+          - name: lifted
+            value:
+              type: ":Text"
+              value: ":Vector(x: 1, y: 2, z: 7)"
+          - name: liftedAlone
+            value:
+              type: ":Text"
+              value: ":Vector(x: 1, y: 2, z: 0)"
+          - name: labeledSpatial
+            value:
+              type: ":Nothing"
+          - name: labeledLift
+            value:
+              type: ":Nothing"
+          - name: mixed
+            value:
+              type: ":Nothing"
+    runtimeLimits:
+      exclude:
+        - any: true
+```

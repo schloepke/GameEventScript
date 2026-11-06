@@ -41,18 +41,12 @@ internal static class GesLiteralForms
                 "value",
                 "tags"
             },
-            "vector" or "point" => new[]
-            {
-                "x",
-                "y",
-                "z"
-            },
             _ => new[]
             {
                 "value"
             }
         };
-        if (labels.Count > parameters.Length || labels.Count == 0 && type is not ("nothing" or "vector" or "point"))
+        if (labels.Count > parameters.Length || labels.Count == 0 && type != "nothing")
             return null;
         var result = new int[labels.Count];
         var used = new bool[parameters.Length];
@@ -67,7 +61,7 @@ internal static class GesLiteralForms
 
         if (type == "record" && (!used[0] || !used[1]) || type == "range" && labels.Count > 1 && (!used[0] || !used[1]))
             return null;
-        if (type is not ("nothing" or "vector" or "point") && !used[0])
+        if (type != "nothing" && !used[0])
             return null;
         return result;
     }

@@ -1996,3 +1996,217 @@ steps:
       exclude:
         - any: true
 ```
+
+---
+
+## Test: message-short-form
+
+In source, `:Message(Done)` is short for `:Message(Done())`; Text writes the argument list and does not read the short form.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: message-short-form
+compile:
+  binaryRoundTrip: true
+```
+
+### Source code under test
+
+```ges
+on Start {
+  emit Done(plain: :Message(Ping) as :Text, tagged: :Message(Unit_Ping with #ready) as :Text, same: :Message(Ping) = :Message(Ping()), parsed: parse ':Message(Ping)', strict: parse strict ':Message(Ping)')
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args: []
+    local:
+      - name: Done
+        args:
+          - name: plain
+            value:
+              type: ":Text"
+              value: ":Message(Ping())"
+          - name: tagged
+            value:
+              type: ":Text"
+              value: ":Message(Unit_Ping() with #ready)"
+          - name: same
+            value:
+              type: ":Boolean"
+              value: true
+          - name: parsed
+            value:
+              type: ":Text"
+              value: ":Message(Ping)"
+          - name: strict
+            value:
+              type: ":Nothing"
+    runtimeLimits:
+      exclude:
+        - any: true
+```
+
+---
+
+## Test: message-across-lines
+
+Line breaks may stand around the message, its tags and the closing parenthesis, as in other type constructors.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: message-across-lines
+compile:
+  binaryRoundTrip: true
+```
+
+### Source code under test
+
+```ges
+on Start {
+  emit Done(full: :Message(
+    Ping()
+  ) as :Text, short: :Message(
+    Ping
+  ) as :Text, tagged: :Message(
+    Ping(v: 1)
+    with #ready
+  ) as :Text)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args: []
+    local:
+      - name: Done
+        args:
+          - name: full
+            value:
+              type: ":Text"
+              value: ":Message(Ping())"
+          - name: short
+            value:
+              type: ":Text"
+              value: ":Message(Ping())"
+          - name: tagged
+            value:
+              type: ":Text"
+              value: ":Message(Ping(v: 1) with #ready)"
+    runtimeLimits:
+      exclude:
+        - any: true
+```
+
+---
+
+## Test: constructors-across-lines
+
+Line breaks may stand around each argument and before the closing parenthesis of every type constructor.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: constructors-across-lines
+compile:
+  binaryRoundTrip: true
+```
+
+### Source code under test
+
+```ges
+on Start {
+  emit Done(handler: :Handler(
+    Foo(x, _)
+  ) as :Text, plainSeries: :Series(
+    fibonacci
+  ) as :Text, offset: :Series(
+    factorial
+    ,
+    offset: 2
+  ) as :Text, range: :Range(
+    1,
+    3
+  ) as :Text, data: :Record(
+    "Hit",
+    [a: 1]
+  ) as :Text, spatial: :Vector(
+    y: 1,
+    z: 2
+  ) as :Text)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args: []
+    local:
+      - name: Done
+        args:
+          - name: handler
+            value:
+              type: ":Text"
+              value: ":Handler(Foo(x,_))"
+          - name: plainSeries
+            value:
+              type: ":Text"
+              value: ":Series(fibonacci, offset: 0)"
+          - name: offset
+            value:
+              type: ":Text"
+              value: ":Series(factorial, offset: 2)"
+          - name: range
+            value:
+              type: ":Text"
+              value: ":Range(from: 1, to: 3, step: 1)"
+          - name: data
+            value:
+              type: ":Text"
+              value: ":Record(\"Hit\", [a: 1])"
+          - name: spatial
+            value:
+              type: ":Text"
+              value: ":Vector(x: 0, y: 1, z: 2)"
+    runtimeLimits:
+      exclude:
+        - any: true
+```

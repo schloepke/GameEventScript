@@ -195,8 +195,10 @@ not as an additional source-compilation limit.
 ## Lexical Rules
 
 ASCII space and tab separate tokens. `LF`, `CRLF`, `CR`, and semicolons separate
-statements where the grammar permits a separator. Line comments start with `//`
-and continue up to, but do not consume, the next logical newline.
+statements where the grammar permits a separator. Inside the parentheses of an
+argument list or type constructor, line breaks separate nothing: they may stand
+before and after each argument and before the closing parenthesis. Line comments
+start with `//` and continue up to, but do not consume, the next logical newline.
 
 ```ges
 let x be 10
@@ -1181,7 +1183,9 @@ conflicting existing unit. Percentage construction uses the numeric ratio.
 `fibonacci`/`factorial` (bare or quoted), defaulting offset to zero; it must be a
 nonnegative unitless integer. Range and Series remain lazy.
 `:Message(...)` explicitly distinguishes a message instance, including an
-argumentless one, from `:Handler(Name(labels))`. Handler labels describe data,
+argumentless one, from `:Handler(Name(labels))`. In source, `:Message(Done)` is
+short for `:Message(Done())`, as `emit Done` is for `emit Done()`; Text and
+documents write the argument list. Handler labels describe data,
 not local variable bindings; repeated `_` labels are allowed.
 
 `:Record(type, fields)` requires a Text name of the
@@ -1609,6 +1613,18 @@ let p be :Point(x: 10m, y: 20m, z: 0m)
 
 let x be p.x
 ```
+
+`:Vector()` is the unitless zero vector. Labeled components are a run without
+gaps in `x`, `y`, `z` order, such as `:Point(y: 1m, z: 2m)`; `:Vector(x: 1, z: 2)`
+is `validate.invalidTypeConstructor`. Labels cannot be mixed with positional
+components, as in `:Vector(v, z: 2)`. Every omitted component is zero with the
+unit of the others. Positional components fill `x`, `y` and `z` in order, except
+that a Vector or Point as first of one or two positional components supplies its
+components, and a second one replaces `z`: `:Vector(v, 7)` adds height to a 2D
+value. Labeled components never lift, so `:Vector(x: v, y: 3)` is `nothing`. Different units, `NaN` and non-numeric components yield `nothing`.
+The literals `true` and `false` are no components
+(`validate.invalidTypeConstructor`); every other Boolean value, such as a variable,
+a constant or a comparison, counts as 0 or 1.
 
 Vectors describe deltas and may be scaled by scalar numeric values. Points
 describe positions and may only be translated by vectors or subtracted from

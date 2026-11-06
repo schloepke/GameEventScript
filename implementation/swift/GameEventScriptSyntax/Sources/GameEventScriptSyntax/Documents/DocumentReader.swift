@@ -414,7 +414,7 @@
                 if position == bytes.count { return fail(Code.unclosedBracket, open) }
             }
             if hasLabel && index == previous { return fail(Code.duplicateKey, labelStart) }
-            if index > 2 || index <= previous { return fail(Code.invalidLiteral, formStart) }
+            if index > 2 || index <= previous || (previous >= 0 && index != previous + 1) { return fail(Code.invalidLiteral, formStart) }
             previous = index
             let start = position
             while position < bytes.count && !Self.space(bytes[position]) && bytes[position] != 44 && bytes[position] != 41 { position += 1 }

@@ -1453,9 +1453,10 @@ internal sealed partial class GesSyntaxParser
         var typeName = GesText.CanonicalTypeName(ParseTypeName());
         SkipNewLines();
         Expect(LeftParen);
-        if (typeName == "handler" && Current.Kind == Message)
+        if (typeName == "handler" && _reader.PeekSignificant(0).Kind == Message)
         {
             // The handler literal of this data form adds no level of its own.
+            SkipNewLines();
             Advance();
             Role(GesSyntaxRole.MessageName);
             Expect(LeftParen);
@@ -1481,18 +1482,22 @@ internal sealed partial class GesSyntaxParser
             return Node(0, startToken);
         }
 
-        if (typeName == "message" && Current.Kind == Message)
+        if (typeName == "message" && _reader.PeekSignificant(0).Kind == Message)
         {
             // Its tag list adds no level, as the message is its only measured argument.
             var message = ParseMessageLiteralExpressionCore();
+            SkipNewLines();
             ParseOptionalTagExpressions();
+            SkipNewLines();
             Expect(RightParen);
             return Node(message.Depth, startToken);
         }
 
-        if (typeName == "series" && Current.Kind is Fibonacci or Factorial)
+        if (typeName == "series" && _reader.PeekSignificant(0).Kind is Fibonacci or Factorial)
         {
+            SkipNewLines();
             Advance();
+            SkipNewLines();
             var depth = 0;
             if (Match(Comma)) depth = ParseArgumentListAfterLeftParen();
             else Expect(RightParen);

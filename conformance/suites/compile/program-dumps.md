@@ -1807,3 +1807,124 @@ record_Unit_Mount:	 // record Unit_Mount(slot)
 // -------------------------------------------------------------------------------
 
 ```
+
+---
+
+## Test: spatial creation start forms
+
+This snapshot checks the `ImmediateX` value of each positional and labeled spatial form.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: spatial-start-forms
+```
+
+### Source code under test
+
+```ges
+module spatialforms
+
+on Start(value) {
+  emit Done(a: :Vector(value, 1), b: :Vector(x: value, y: 1), c: :Point(y: value), d: :Point(z: value))
+}
+```
+
+### Expected Game Event Script Assembler
+
+```gesa
+// -------------------------------------------------------------------------------
+//  Module: spatialforms
+//  Type: Game Event Script Assembler
+//  Format version: 1.0
+// -------------------------------------------------------------------------------
+
+.gesb 1
+.module "spatialforms"
+.program-version 0
+
+// -------------------------------------------------------------------------------
+.region "Source: compile.program-dumps.spatial-start-forms.ges"
+
+.segment source "compile.program-dumps.spatial-start-forms.ges"
+
+module spatialforms
+
+on Start(value) {
+  emit Done(a: :Vector(value, 1), b: :Vector(x: value, y: 1), c: :Point(y: value), d: :Point(z: value))
+}
+
+.region-end "Source: compile.program-dumps.spatial-start-forms.ges"
+// -------------------------------------------------------------------------------
+
+// -------------------------------------------------------------------------------
+.region "Text"
+
+.segment text
+
+T_value:			.text "value"
+T_Start:			.text "Start"
+T_a:				.text "a"
+T_b:				.text "b"
+T_c:				.text "c"
+T_d:				.text "d"
+T_Done:				.text "Done"
+T_spatialforms:		.text "spatialforms"
+
+.region-end "Text"
+// -------------------------------------------------------------------------------
+
+// -------------------------------------------------------------------------------
+.region "Lists"
+
+.segment lists
+
+U16_0:				.u16 [0]
+U16_1:				.u16 []
+U16_2:				.u16 [2, 3, 4, 5]
+Args_3:				.registers [r1, r2, r3, r4]
+
+.region-end "Lists"
+// -------------------------------------------------------------------------------
+
+// -------------------------------------------------------------------------------
+.region "Bindings"
+
+.segment bind
+
+Handler_Start:		.bind MessageHandler id=0 name=T_Start args=[T_value] entry=Start // "Start(value)"
+Outbound_Done:		.bind OutboundMessage id=0 name=T_Done args=[T_a, T_b, T_c, T_d] // "Done(a, b, c, d)"
+
+.region-end "Bindings"
+// -------------------------------------------------------------------------------
+
+// -------------------------------------------------------------------------------
+.region "Code"
+
+.segment code
+
+.source-line "compile.program-dumps.spatial-start-forms.ges" 3 | on Start(value) {
+Start:				 // handler Start(value)
+					RegisterLocals #4
+
+.source-line "compile.program-dumps.spatial-start-forms.ges" 4 |   emit Done(a: :Vector(value, 1), b: :Vector(x: value, y: 1), c: :Point(y: value), d: :Point(z: value))
+					StageRegister r0(value)
+					StageInteger #1
+					CreateVector r1, #0
+					StageRegister r0(value)
+					StageInteger #1
+					CreateVector r2, #3
+					StageRegister r0(value)
+					CreatePoint r3, #1
+					StageRegister r0(value)
+					CreatePoint r4, #2
+					EmitMessage Outbound_Done, Args_3 // "Done(a, b, c, d)"
+
+.source-line "compile.program-dumps.spatial-start-forms.ges" 3 | on Start(value) {
+					ReturnVoid
+
+.region-end "Code"
+// -------------------------------------------------------------------------------
+
+```

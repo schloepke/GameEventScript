@@ -2159,13 +2159,13 @@ internal static partial class GesCompiler
             var lastComponent = GetSpatialComponentIndex(sourceArguments[^1].Label);
             if (firstComponent < 0 || lastComponent < 0) return null;
             if (lastComponent - firstComponent + 1 != sourceArguments.Count) return null;
-            if (firstComponent == 0 && sourceArguments.Count == 1) return null;
             for (var index = 0; index < sourceArguments.Count; index++)
             {
                 if (GetSpatialComponentIndex(sourceArguments[index].Label) != firstComponent + index) return null;
             }
 
-            return (firstComponent, sourceArguments);
+            // Start 0 may lift a spatial first component, which a labeled `x` must not do.
+            return (firstComponent == 0 ? 3 : firstComponent, sourceArguments);
         }
 
         private static int GetSpatialComponentIndex(string? label)

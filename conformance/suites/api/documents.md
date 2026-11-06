@@ -3415,3 +3415,87 @@ document:
     line: 1
     column: 4
 ```
+
+---
+
+## Test: a Message form needs its argument list in a document
+
+This case checks the following contract: The short form `:Message(Done)` belongs to source; a document writes `:Message(Done())`.
+
+### Case description
+
+```yaml
+gesBlock: "case"
+id: "message-without-argument-list"
+kind: "documentApi"
+level: "atomic"
+documentApi:
+  text: "a: :Message(Done)\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: "expect"
+document:
+  error:
+    code: "invalidLiteral"
+    line: 1
+    column: 4
+```
+
+---
+
+## Test: labeled Vector components need a run without gaps
+
+This case checks the following contract: `:Vector(x: 1, z: 2)` skips `y`, so it is `document.invalidLiteral`.
+
+### Case description
+
+```yaml
+gesBlock: "case"
+id: "vector-labeled-gap"
+kind: "documentApi"
+level: "atomic"
+documentApi:
+  text: "a: :Vector(x: 1, z: 2)\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: "expect"
+document:
+  error:
+    code: "invalidLiteral"
+    line: 1
+    column: 4
+```
+
+---
+
+## Test: Boolean literals are no Vector components
+
+This case checks the following contract: `true` and `false` are no components of a Vector, so the component is `document.unquotedText`.
+
+### Case description
+
+```yaml
+gesBlock: "case"
+id: "vector-boolean-literals"
+kind: "documentApi"
+level: "atomic"
+documentApi:
+  text: "a: :Vector(true, false)\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: "expect"
+document:
+  error:
+    code: "unquotedText"
+    line: 1
+    column: 12
+```

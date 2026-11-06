@@ -658,6 +658,7 @@ extension GesSyntaxParser {
             advance()
             newlines()
             advance()
+            newlines()
             if match(.comma) {
                 repeat {
                     newlines()
@@ -697,8 +698,9 @@ extension GesSyntaxParser {
             let messageStart = index
             advance()
             role(.messageName)
-            try arguments()
+            if currentKind == .leftParen { try arguments() }
             _ = finishNode(node(messageStart))
+            newlines()
             if currentKind == .with {
                 startNode(.tagClause)
                 advance()
@@ -706,6 +708,7 @@ extension GesSyntaxParser {
                 while match(.comma) { _ = try expression() }
                 finishNode()
             }
+            newlines()
             try expect(.rightParen)
             return node(start)
         }

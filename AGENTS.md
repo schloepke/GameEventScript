@@ -272,8 +272,10 @@ belongs to the CLI or embedding; the portable compiler accepts source text.
 - Integral Int64-representable Range components normalize to exact integer
   ranges, including floating API inputs. Ranges and built-in Series remain lazy.
 - Vector/Point text uses `:Vector(x: ..., y: ..., z: ...)` and `:Point(...)`.
-  `parse` recognizes numeric positional or ordered labeled components with
-  matching units and preserves kind, binary64 components, and unit on roundtrip.
+  `parse` recognizes numeric positional components or a labeled run without gaps
+  with matching units and preserves kind, binary64 components, and unit on
+  roundtrip. Source uses the same run rule, rejects the literals `true` and `false`
+  as components and alone may lift a Vector or Point in positional form.
 
 The Syntax module's tokens, tree, roles, fragments and validation split are
 owned by `specs/Syntax.md`. The complete language contract is `specs/Language.md`; text and number details

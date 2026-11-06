@@ -13,17 +13,16 @@
         case "series": parameters = ["kind", "offset"]
         case "record": parameters = ["type", "fields"]
         case "message": parameters = ["value", "tags"]
-        case "vector", "point": parameters = ["x", "y", "z"]
         default: parameters = ["value"]
         }
-        if labels.count > parameters.count || labels.isEmpty && !["nothing", "vector", "point"].contains(type) { return nil }
+        if labels.count > parameters.count || labels.isEmpty && type != "nothing" { return nil }
         var positions: [Int] = []
         for (i, label) in labels.enumerated() {
             guard let position = label == "_" ? i : parameters.firstIndex(of: label), !positions.contains(position) else { return nil }
             positions.append(position)
         }
         if (type == "record" || type == "range" && labels.count > 1) && (!positions.contains(0) || !positions.contains(1)) { return nil }
-        if !["nothing", "vector", "point"].contains(type) && !positions.contains(0) { return nil }
+        if type != "nothing" && !positions.contains(0) { return nil }
         return positions
     }
 

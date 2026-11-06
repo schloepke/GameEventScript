@@ -50,6 +50,7 @@ internal partial class GesVirtualMachine
             }
         }
 
+        if (start == 3) start = 0;
         ushort i = 0;
         GesQuantityUnit? unitX = null;
         GesQuantityUnit? unitY = null;

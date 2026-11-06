@@ -230,7 +230,7 @@ commas are invalid. Arbitrary source expressions are not recognized. A non-Text 
 Vector and Point recognition uses case-sensitive `:Vector(...)` and
 `:Point(...)` with the runtime whitespace rules below. These data forms have
 zero through three numeric components, either positional in `x`, `y`, `z`
-order or labeled with an ordered subset of `x:`, `y:`, `z:`. Labels cannot be
+order or labeled with a run without gaps of `x:`, `y:`, `z:`. Labels cannot be
 mixed with positional components, repeated, reordered, or replaced with other
 names. Omitted components are zero; an empty form constructs the unitless zero
 value. Supplied components must share one unit (or all be unitless); omitted
@@ -241,11 +241,11 @@ Components use [numeric text](Numbers.md#text-and-number-conversion), including
 signs, exponents, underscores, supported quantity suffixes, and signed
 infinities. Percentage components contribute their unitless ratios. Components
 are stored as binary64 using the existing spatial value representation; zero
-is canonicalized to positive zero. `NaN`, `nothing`, non-numeric values, mixed
+is canonicalized to positive zero. `NaN`, `nothing`, `true`, `false`, other non-numeric values, mixed
 units, trailing commas, and malformed forms fail recognition of the complete
 input. Commas separate components, never digit groups. Variables, constants,
 arithmetic, nested constructors, and calls are not evaluated. The source
-compiler's general component constructors retain their existing behavior.
+constructors are owned by [Language](../Language.md#vector-and-point).
 
 Within the parse resource bounds, `parse (value as :Text)` reconstructs the
 same Vector/Point kind, exact binary64 components, and unit, including spatial
@@ -302,7 +302,8 @@ The following examples show the actual input Text contents:
 | `:Dice[1, 3, 6, 3]` | Dice containing rolls `6`, `3`, `3`, `1` |
 | `[rolls: :Dice[]]` | Map containing empty Dice |
 | `:Vector(10, 20)` | Vector with components `10`, `20`, `0` |
-| `:Point(x: 1m, z: 3m)` | Point with components `1m`, `0m`, `3m` |
+| `:Point(y: 1m, z: 3m)` | Point with components `0m`, `1m`, `3m` |
+| `:Point(x: 1m, z: 3m)` | unchanged Text because `y` is skipped |
 | `:Point(1m, 0)` | unchanged Text because the supplied units differ |
 | `[1, broken]` | unchanged Text `[1, broken]` |
 | `"Hello` | unchanged Text including the opening double quote |
@@ -385,7 +386,8 @@ In a running Program, `parse ':Hit(100)'` may resolve that Program's own declare
 Record constructor. Recognition first checks the complete input, including nested
 syntax and argument labels. A malformed suffix or nested value returns the original
 Text without executing any constructor. Unknown type constructors also preserve
-Text. No native/external constructor registry is consulted.
+Text, and so does a Message form without its argument list, such as
+`:Message(Done)`. No native/external constructor registry is consulted.
 
 A complete built-in form whose values are invalid is recognized and yields
 `nothing` in both `parse` and `parse strict`: `:Record("hit", [a: 1])`, whose Text

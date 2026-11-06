@@ -1249,3 +1249,111 @@ gesBlock: expect
 literal:
   value: { type: ":Nothing" }
 ```
+
+---
+
+## Test: lenient parsing keeps a Vector with a labeled gap as Text
+
+This public API case parses a Vector whose labels skip `y`: the form is not recognized.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: literal-spatial-gap-lenient
+kind: valueApi
+level: atomic
+valueApi:
+  literal:
+    text: ":Vector(x: 1, z: 2)"
+    mode: lenient
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+literal:
+  value: { type: ":Text", value: ":Vector(x: 1, z: 2)" }
+```
+
+---
+
+## Test: strict parsing does not recognize a Vector with a labeled gap
+
+This public API case parses a Vector whose labels skip `y`: the form is not recognized.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: literal-spatial-gap-strict
+kind: valueApi
+level: atomic
+valueApi:
+  literal:
+    text: ":Vector(x: 1, z: 2)"
+    mode: strict
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+literal:
+  unrecognized: true
+```
+
+---
+
+## Test: lenient parsing keeps a Vector of Boolean literals as Text
+
+This public API case parses a Vector whose components are `true` and `false`: the form is not recognized.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: literal-spatial-boolean-lenient
+kind: valueApi
+level: atomic
+valueApi:
+  literal:
+    text: ":Vector(true, false, true)"
+    mode: lenient
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+literal:
+  value: { type: ":Text", value: ":Vector(true, false, true)" }
+```
+
+---
+
+## Test: strict parsing does not recognize a Vector of Boolean literals
+
+This public API case parses a Vector whose components are `true` and `false`: the form is not recognized.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: literal-spatial-boolean-strict
+kind: valueApi
+level: atomic
+valueApi:
+  literal:
+    text: ":Vector(true, false, true)"
+    mode: strict
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+literal:
+  unrecognized: true
+```

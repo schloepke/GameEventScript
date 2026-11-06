@@ -3338,3 +3338,164 @@ binary:
   sectionType: 4
   entryIndex: 1
 ```
+
+---
+
+## Test: A CreateVector immediate above 3 is a semantic validation error
+
+`ImmediateX` is 0 for the positional form, 1 or 2 for labeled y or z, and 3 for labeled x.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: invalid-create-vector-immediate
+compile:
+  debugInfo: []
+binaryFixture:
+  id: gesb-v1-invalid-create-vector-immediate
+  resourceId: gesb-v1.invalid-create-vector-immediate
+  relativePath: GesbV1/invalid-create-vector-immediate.gesb
+  sha256: 493FBC1612B6FBABE5BFC8F871F52FA312C4851ADADC0E49D1DCD2E3B72AD0A0
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 0
+  derivation: "set ImmediateX of instruction 3 from 0 to 4"
+```
+
+### Source code under test
+
+```ges
+module binaryfixture
+
+on Start(value) {
+  emit Done(value: :Vector(value, 2))
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+binary:
+  outcome: validationError
+  errorCode: InvalidOperand
+  sectionType: 16
+  entryIndex: 3
+```
+
+---
+
+## Test: ConstructData with a spatial type is a semantic validation error
+
+Vectors and Points have their own opcodes, so `ConstructData` does not build them.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: invalid-construct-data-spatial
+compile:
+  debugInfo: []
+binaryFixture:
+  id: gesb-v1-invalid-construct-data-spatial
+  resourceId: gesb-v1.invalid-construct-data-spatial
+  relativePath: GesbV1/invalid-construct-data-spatial.gesb
+  sha256: 4404BAF5FEE9BE9C022FD5783DAE77A37D33BA4FBF341825BDE7418D27FD0393
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 0
+  derivation: "replace the string constant range with point"
+```
+
+### Source code under test
+
+```ges
+module binaryfixture
+
+on Start(value) {
+  emit Done(value: :Range(value, 2))
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+binary:
+  outcome: validationError
+  errorCode: InvalidOperand
+  sectionType: 16
+  entryIndex: 2
+```
+
+---
+
+## Test: Canonical spatial program keeps every start form
+
+This canonical fixture pins the `ImmediateX` values of positional and labeled spatial forms, and it must read, rewrite and run like a fresh compilation.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: valid-spatial-start-forms
+compile:
+  debugInfo: []
+binaryFixture:
+  id: gesb-v1-valid-spatial-start-forms
+  resourceId: gesb-v1.valid-spatial-start-forms
+  relativePath: GesbV1/valid-spatial-start-forms.gesb
+  sha256: E7D440C687B762465D0650E6C9BCAE3288FC2332DEF8D8DF42A42B7A03A29501
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 0
+  compareCompiledRuntime: true
+```
+
+### Source code under test
+
+```ges
+module binaryfixture
+
+on Start(value) {
+  emit Done(a: :Vector(value, 2), b: :Vector(x: value, y: 2), c: :Point(y: value), d: :Point(z: value))
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| execute | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+binary:
+  outcome: valid
+  rewriteByteExact: true
+  rewriteSha256: E7D440C687B762465D0650E6C9BCAE3288FC2332DEF8D8DF42A42B7A03A29501
+  moduleName: binaryfixture
+  requiredRegisterCount: 7
+  requiredCallStackDepth: 0
+  opaqueSectionCount: 0
+steps:
+  execute:
+    input:
+      args:
+        - name: value
+          value: { type: ":Number.int64", value: "1" }
+    local:
+      - name: Done
+        args:
+          - name: a
+            value: { type: ":Vector", x: "1", y: "2", z: "0" }
+          - name: b
+            value: { type: ":Vector", x: "1", y: "2", z: "0" }
+          - name: c
+            value: { type: ":Point", x: "0", y: "1", z: "0" }
+          - name: d
+            value: { type: ":Point", x: "0", y: "0", z: "1" }
+```

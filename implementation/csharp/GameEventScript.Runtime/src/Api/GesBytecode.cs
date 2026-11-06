@@ -629,11 +629,13 @@ public enum GesBytecodeOpCode : byte
     /// </summary>
     CreateDice = 0x36,
     /// <summary>
-    /// Identifies the create vector value.
+    /// Creates a vector from the staged components. ImmediateX is 0 for the positional form starting at x, whose first
+    /// component may lift a Vector or Point, 1 for labeled y, 2 for labeled z, or 3 for labeled x, which never lifts.
     /// </summary>
     CreateVector = 0x37,
     /// <summary>
-    /// Identifies the create point value.
+    /// Creates a point from the staged components. ImmediateX is 0 for the positional form starting at x, whose first
+    /// component may lift a Vector or Point, 1 for labeled y, 2 for labeled z, or 3 for labeled x, which never lifts.
     /// </summary>
     CreatePoint = 0x38,
     /// <summary>

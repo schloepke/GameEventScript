@@ -11,6 +11,13 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 ## Unreleased
 
 ### Breaking
+- Labeled Vector and Point components must be a run without gaps:
+  `:Vector(x: 1, z: 2)` is `validate.invalidTypeConstructor` in source, stays Text
+  for `parse` and is `document.invalidLiteral` in documents. The literals `true`
+  and `false` are no components either, though a Boolean variable counts as 0 or 1.
+  `ConstructData` no longer accepts `vector` and `point`. `CreateVector` and
+  `CreatePoint` use `ImmediateX` 3 for labeled `x`, which never lifts; values above
+  3 fail validation. Recompile `.gesb` files to get the `:Vector(x: v, y: 3)` fix.
 - A bare name without a visible binding of its own source is now the
   validation diagnostic `validate.unresolvedVariable` at the name, reported for
   every such name, instead of the first `compile.unresolvedSymbol` of lowering.
@@ -314,6 +321,13 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   of every port. Runtime behavior does not depend on it.
 
 ### Fixed
+- `:Vector(x: 1)` and `:Point(x: 1m)` compile in C# like in Swift, and
+  `:Vector(x: v, y: 3)` with a Vector `v` is `nothing` instead of writing 3 into `z`.
+- The Swift compiler accepts the source short form `:Message(Done)`, like the C#
+  compiler.
+- `:Message(...)`, `:Handler(...)` and `:Series(...)` can span lines like other
+  type constructors. Depending on the form, a line break made the value `nothing`
+  in C# or was a syntax error in one or both compilers.
 - Swift link diagnostics for exceeded register and call-stack limits and a full
   initialization queue now carry a message, as in C#, instead of an empty one.
 - C# syntax errors that name an unexpected token, such as `Unexpected token '}'`,

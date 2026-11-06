@@ -352,13 +352,16 @@ final class GesAstValidator {
             return
         }
         if ["vector", "point"].contains(type) {
+            for argument in args {
+                if case .literal(let value) = argument.value.kind, value.valueKind == .boolean { return invalid() }
+            }
             let labeled = args.filter { $0.label != "_" }
             if labeled.isEmpty && (args.count == 1 || args.count == 2) { return }
             if !labeled.isEmpty && labeled.count != args.count { return invalid() }
             if !labeled.isEmpty || args.isEmpty {
                 var previous = -1
                 for argument in args {
-                    guard let index = ["x", "y", "z"].firstIndex(of: argument.label), index > previous else { return invalid() }
+                    guard let index = ["x", "y", "z"].firstIndex(of: argument.label), index > previous, previous < 0 || index == previous + 1 else { return invalid() }
                     previous = index
                 }
                 return

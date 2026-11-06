@@ -411,6 +411,7 @@ extension GesSyntaxBinder {
             let kind = try c.advance()
             // The series name, the handler literal and the tag list of these data forms have no range.
             var args: [GesArgument] = [.init(label: "_", value: unranged(.literal(.text(kind.text)), kind, c.previous))]
+            try c.newlines()
             if try c.match(.comma) {
                 repeat {
                     try c.newlines()
@@ -442,6 +443,7 @@ extension GesSyntaxBinder {
         }
         if type == "message" && c.isNode(.messageExpression) {
             var args: [GesArgument] = [.init(label: "_", value: try messageLiteral(c.takeNode()))]
+            try c.newlines()
             if c.isNode(.tagClause) {
                 var t = cursor(try c.takeNode())
                 try t.expect(.with)
@@ -449,6 +451,7 @@ extension GesSyntaxBinder {
                 while try t.match(.comma) { tags.append(try expression(&t)) }
                 args.append(.init(label: "tags", value: unranged(.list(tags), start, c.previous)))
             }
+            try c.newlines()
             try c.expect(.rightParen)
             return node(.constructor(type, args), start, c.previous)
         }

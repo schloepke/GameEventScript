@@ -2853,3 +2853,188 @@ errors:
     code: "validate.invalidTypeConstructor"
     symbol: "Integer"
 ```
+
+---
+
+## Test: vector constructor rejects labels with a gap
+
+Labeled components are a run without gaps, so `x` and `z` need `y` between them.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: vector-labels-with-gap
+kind: compileError
+level: atomic
+sources:
+  - name: "vector constructor rejects labels with a gap.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start {
+  let position be :Vector(x: 1, z: 2)
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "validate"
+  code: "validate.invalidTypeConstructor"
+  symbol: "vector"
+  symbolKind: "type"
+```
+
+---
+
+## Test: point constructor rejects labels with a gap
+
+Labeled components are a run without gaps, so `x` and `z` need `y` between them.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: point-labels-with-gap
+kind: compileError
+level: atomic
+sources:
+  - name: "point constructor rejects labels with a gap.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start {
+  let position be :Point(x: 1m, z: 2m)
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "validate"
+  code: "validate.invalidTypeConstructor"
+  symbol: "point"
+  symbolKind: "type"
+```
+
+---
+
+## Test: vector-boolean-literals
+
+A component cannot be the literal `true` or `false`; only a Boolean value in a variable counts as 0 or 1.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: vector-boolean-literals
+kind: compileError
+level: atomic
+sources:
+  - name: "vector-boolean-literals.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start {
+  let position be :Vector(true, false, true)
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "validate"
+  code: "validate.invalidTypeConstructor"
+  symbol: "vector"
+  symbolKind: "type"
+```
+
+---
+
+## Test: point-labeled-boolean-literal
+
+A component cannot be the literal `true` or `false`; only a Boolean value in a variable counts as 0 or 1.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: point-labeled-boolean-literal
+kind: compileError
+level: atomic
+sources:
+  - name: "point-labeled-boolean-literal.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start {
+  let position be :Point(x: true, y: 1)
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "validate"
+  code: "validate.invalidTypeConstructor"
+  symbol: "point"
+  symbolKind: "type"
+```
+
+---
+
+## Test: vector-single-boolean-literal
+
+A component cannot be the literal `true` or `false`; only a Boolean value in a variable counts as 0 or 1.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: vector-single-boolean-literal
+kind: compileError
+level: atomic
+sources:
+  - name: "vector-single-boolean-literal.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start {
+  let position be :Vector(false)
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "validate"
+  code: "validate.invalidTypeConstructor"
+  symbol: "vector"
+  symbolKind: "type"
+```

@@ -509,7 +509,8 @@ extension GesCompiler {
 
     func spatial(_ type: String, _ arguments: [GesArgument], _ d: Int, _ r: GesRoutine, _ scope: GesScope) throws {
         let first = arguments.first?.label ?? "_"
-        let start = ["x", "y", "z"].firstIndex(of: first) ?? 0
+        // Start 0 may lift a spatial first component, which a labeled `x` must not do.
+        let start = first == "x" ? 3 : ["x", "y", "z"].firstIndex(of: first) ?? 0
         try stageExpressions(arguments.map(\.value), r, scope)
         r.emit(type == "vector" ? .createVector : .createPoint, d, start)
     }

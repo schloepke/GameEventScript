@@ -365,7 +365,7 @@ internal sealed class GesDocumentReader
                 if (_position == _text.Length) return Fail(Code.UnclosedBracket, open);
             }
             if (hasLabel && index == previousIndex) return Fail(Code.DuplicateKey, labelStart);
-            if (index > 2 || index <= previousIndex) return Fail(Code.InvalidLiteral, formStart);
+            if (index > 2 || index <= previousIndex || previousIndex >= 0 && index != previousIndex + 1) return Fail(Code.InvalidLiteral, formStart);
             previousIndex = index;
             var start = _position;
             while (_position < _text.Length && !IsWhitespace(_text[_position]) && _text[_position] is not (',' or ')')) _position++;

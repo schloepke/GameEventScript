@@ -415,7 +415,7 @@ internal static class GesProgramDumper
             LocalRegisterDelta => Immediate(instruction.Count),
             DiceCount => Immediate(instruction.Count),
             DiceSideCount => Immediate(instruction.ImmediateY),
-            ComponentCount => Immediate(instruction.ImmediateX),
+            SpatialStart => Immediate(instruction.ImmediateX),
             CountImmediate => Immediate(instruction.OpCode == GesBytecodeOpCode.SplitText ? instruction.AU : instruction.ImmediateY),
             IndexImmediate => Immediate(instruction.Index),
             FromImmediate => Immediate(instruction.ImmediateX),

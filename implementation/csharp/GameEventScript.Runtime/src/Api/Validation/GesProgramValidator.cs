@@ -210,6 +210,8 @@ internal static class GesProgramValidator
             (instruction.UnitAndFlags != 0 || instruction.BU != 0 || instruction.CU != 0 || instruction.DU != 0
                 || instruction.OpCode == GesBytecodeOpCode.SplitText && (instruction.AU > 1 || instruction.AU == 1 && instruction.YRegister != 0)))
             InvalidOperand("Data instruction contains nonzero reserved operands.", instructionIndex);
+        if (instruction.OpCode is GesBytecodeOpCode.CreateVector or GesBytecodeOpCode.CreatePoint && instruction.ImmediateX is < 0 or > 3)
+            InvalidOperand("Spatial creation needs the positional form 0, a first component 1 or 2, or the labeled x form 3.", instructionIndex);
         if (instruction.OpCode == GesBytecodeOpCode.Cartesian && (instruction.UnitAndFlags != 0 || instruction.Payload != 0))
             InvalidOperand("Cartesian reserves the unit/flag byte and payload.", instructionIndex);
         if (instruction.OpCode == GesBytecodeOpCode.ParseLiteral &&
@@ -268,7 +270,7 @@ internal static class GesProgramValidator
             var names = program.UInt16IndexLists.Resolve(instruction.AU);
             var labels = new string[names.Length];
             for (var index = 0; index < labels.Length; index++) labels[index] = program.StringConstants.Resolve(names[index]);
-            if (!GameEventScript.Runtime.GesDataConstruction.IsType(type) || GameEventScript.Runtime.GesDataConstruction.Positions(type, labels) is null || names.Length != program.UInt16IndexLists.Resolve(instruction.ListIndex).Length)
+            if (type is "vector" or "point" || !GameEventScript.Runtime.GesDataConstruction.IsType(type) || GameEventScript.Runtime.GesDataConstruction.Positions(type, labels) is null || names.Length != program.UInt16IndexLists.Resolve(instruction.ListIndex).Length)
                 InvalidOperand("Invalid data constructor type or argument shape.", instructionIndex);
         }
     }

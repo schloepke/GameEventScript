@@ -3044,3 +3044,297 @@ binary:
   sectionType: 16
   entryIndex: 3
 ```
+
+---
+
+## Test: The message name Unit__ire is a semantic validation error
+
+A `_` in a message name joins two segments that each start uppercase.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: invalid-message-name-doubled-underscore
+compile:
+  debugInfo: []
+binaryFixture:
+  id: gesb-v1-invalid-message-name-doubled-underscore
+  resourceId: gesb-v1.invalid-message-name-doubled-underscore
+  relativePath: GesbV1/invalid-message-name-doubled-underscore.gesb
+  sha256: 6BADDAC29DE82529C87ACC90016036B92793458129DD9329E6473123B3A5B3B8
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 0
+  derivation: "replace the string constant Unit_Fire with Unit__ire"
+```
+
+### Source code under test
+
+```ges
+module binaryfixture
+
+record :Unit_Mount as {
+  slot: :Number
+}
+
+on Unit_Fire {
+  emit Done(value: :Unit_Mount(slot: 1))
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+binary:
+  outcome: validationError
+  errorCode: InvalidProgram
+  sectionType: 4
+  entryIndex: 0
+```
+
+---
+
+## Test: The message name Unit_1ire is a semantic validation error
+
+A `_` in a message name joins two segments that each start uppercase.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: invalid-message-name-digit-segment
+compile:
+  debugInfo: []
+binaryFixture:
+  id: gesb-v1-invalid-message-name-digit-segment
+  resourceId: gesb-v1.invalid-message-name-digit-segment
+  relativePath: GesbV1/invalid-message-name-digit-segment.gesb
+  sha256: AB2CD85E84ED051164310FA230F0744E6EAA0FBF2C9D861B135F8DA06C453517
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 0
+  derivation: "replace the string constant Unit_Fire with Unit_1ire"
+```
+
+### Source code under test
+
+```ges
+module binaryfixture
+
+record :Unit_Mount as {
+  slot: :Number
+}
+
+on Unit_Fire {
+  emit Done(value: :Unit_Mount(slot: 1))
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+binary:
+  outcome: validationError
+  errorCode: InvalidProgram
+  sectionType: 4
+  entryIndex: 0
+```
+
+---
+
+## Test: The message name Unit_fire is a semantic validation error
+
+A `_` in a message name joins two segments that each start uppercase.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: invalid-message-name-lowercase-segment
+compile:
+  debugInfo: []
+binaryFixture:
+  id: gesb-v1-invalid-message-name-lowercase-segment
+  resourceId: gesb-v1.invalid-message-name-lowercase-segment
+  relativePath: GesbV1/invalid-message-name-lowercase-segment.gesb
+  sha256: 593C0B06A77F58B7B76B3B384CA1162D87EEC89B632C582F2406099FD1234970
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 0
+  derivation: "replace the string constant Unit_Fire with Unit_fire"
+```
+
+### Source code under test
+
+```ges
+module binaryfixture
+
+record :Unit_Mount as {
+  slot: :Number
+}
+
+on Unit_Fire {
+  emit Done(value: :Unit_Mount(slot: 1))
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+binary:
+  outcome: validationError
+  errorCode: InvalidProgram
+  sectionType: 4
+  entryIndex: 0
+```
+
+---
+
+## Test: The message name Unit_Fir_ is a semantic validation error
+
+A `_` in a message name joins two segments that each start uppercase.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: invalid-message-name-trailing-underscore
+compile:
+  debugInfo: []
+binaryFixture:
+  id: gesb-v1-invalid-message-name-trailing-underscore
+  resourceId: gesb-v1.invalid-message-name-trailing-underscore
+  relativePath: GesbV1/invalid-message-name-trailing-underscore.gesb
+  sha256: F037502185838C9C1957AE1BA2F2E312FDC6183CE2DECC370A9F65CB96D3FD08
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 0
+  derivation: "replace the string constant Unit_Fire with Unit_Fir_"
+```
+
+### Source code under test
+
+```ges
+module binaryfixture
+
+record :Unit_Mount as {
+  slot: :Number
+}
+
+on Unit_Fire {
+  emit Done(value: :Unit_Mount(slot: 1))
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+binary:
+  outcome: validationError
+  errorCode: InvalidProgram
+  sectionType: 4
+  entryIndex: 0
+```
+
+---
+
+## Test: The type name Unit__ount is a semantic validation error
+
+A `_` in a type name joins two segments that each start uppercase.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: invalid-type-name-doubled-underscore
+compile:
+  debugInfo: []
+binaryFixture:
+  id: gesb-v1-invalid-type-name-doubled-underscore
+  resourceId: gesb-v1.invalid-type-name-doubled-underscore
+  relativePath: GesbV1/invalid-type-name-doubled-underscore.gesb
+  sha256: D5485B2C61954D4AD4AA6E1432A5C99419B417879559C641E294E70C88A3D711
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 0
+  derivation: "replace the string constant Unit_Mount with Unit__ount"
+```
+
+### Source code under test
+
+```ges
+module binaryfixture
+
+record :Unit_Mount as {
+  slot: :Number
+}
+
+on Unit_Fire {
+  emit Done(value: :Unit_Mount(slot: 1))
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+binary:
+  outcome: validationError
+  errorCode: InvalidProgram
+  sectionType: 4
+  entryIndex: 1
+```
+
+---
+
+## Test: The type name Unit_1ount is a semantic validation error
+
+A `_` in a type name joins two segments that each start uppercase.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: invalid-type-name-digit-segment
+compile:
+  debugInfo: []
+binaryFixture:
+  id: gesb-v1-invalid-type-name-digit-segment
+  resourceId: gesb-v1.invalid-type-name-digit-segment
+  relativePath: GesbV1/invalid-type-name-digit-segment.gesb
+  sha256: A64D4F96371BB27AC95C87EC681DF560B603605AE9EB73DA092E02EF1666F21E
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 0
+  derivation: "replace the string constant Unit_Mount with Unit_1ount"
+```
+
+### Source code under test
+
+```ges
+module binaryfixture
+
+record :Unit_Mount as {
+  slot: :Number
+}
+
+on Unit_Fire {
+  emit Done(value: :Unit_Mount(slot: 1))
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+binary:
+  outcome: validationError
+  errorCode: InvalidProgram
+  sectionType: 4
+  entryIndex: 1
+```

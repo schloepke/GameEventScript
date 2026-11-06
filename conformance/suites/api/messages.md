@@ -756,3 +756,187 @@ gesBlock: expect
 message:
   createdMessageSignatureId: "Ping(amount)"
 ```
+
+---
+
+## Test: message names join segments with single underscores
+
+This public API case verifies that a message name can consist of several segments.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: underscore-message-name
+kind: messageApi
+level: atomic
+messageApi:
+  signature:
+    name: "Unit_Fire_Type1"
+    parameters: []
+  message:
+    name: "Unit_Fire_Type1"
+    args: []
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+message:
+  name: "Unit_Fire_Type1"
+  signatureId: "Unit_Fire_Type1()"
+  messageSignatureId: "Unit_Fire_Type1()"
+  matches: true
+  argumentCount: 0
+```
+
+---
+
+## Test: the message name Unit_1 is rejected
+
+Each segment of a message name starts uppercase, and a single `_` joins two segments.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: invalid-underscore-message-name-1
+kind: messageApi
+level: atomic
+messageApi:
+  signature:
+    name: "Unit_1"
+    parameters: []
+  message:
+    name: Ping
+    args: []
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+message:
+  error: invalidMessage
+```
+
+---
+
+## Test: the message name Unit_fire is rejected
+
+Each segment of a message name starts uppercase, and a single `_` joins two segments.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: invalid-underscore-message-name-2
+kind: messageApi
+level: atomic
+messageApi:
+  signature:
+    name: "Unit_fire"
+    parameters: []
+  message:
+    name: Ping
+    args: []
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+message:
+  error: invalidMessage
+```
+
+---
+
+## Test: the message name Unit__Fire is rejected
+
+Each segment of a message name starts uppercase, and a single `_` joins two segments.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: invalid-underscore-message-name-3
+kind: messageApi
+level: atomic
+messageApi:
+  signature:
+    name: "Unit__Fire"
+    parameters: []
+  message:
+    name: Ping
+    args: []
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+message:
+  error: invalidMessage
+```
+
+---
+
+## Test: the message name Unit_ is rejected
+
+Each segment of a message name starts uppercase, and a single `_` joins two segments.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: invalid-underscore-message-name-4
+kind: messageApi
+level: atomic
+messageApi:
+  signature:
+    name: "Unit_"
+    parameters: []
+  message:
+    name: Ping
+    args: []
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+message:
+  error: invalidMessage
+```
+
+---
+
+## Test: the message name _Unit is rejected
+
+Each segment of a message name starts uppercase, and a single `_` joins two segments.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: invalid-underscore-message-name-5
+kind: messageApi
+level: atomic
+messageApi:
+  signature:
+    name: "_Unit"
+    parameters: []
+  message:
+    name: Ping
+    args: []
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+message:
+  error: invalidMessage
+```

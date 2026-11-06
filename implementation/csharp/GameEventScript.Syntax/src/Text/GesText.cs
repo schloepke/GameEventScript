@@ -165,12 +165,32 @@ internal static class GesText
         return true;
     }
 
+    // Segments that each start uppercase, joined by single underscores.
     private static bool IsUpperName(string value)
     {
-        if (value.Length == 0 || !IsAsciiUpper(value[0])) return false;
-        for (var index = 1; index < value.Length; index++)
-            if (!IsAsciiLetter(value[index]) && !IsAsciiDigit(value[index])) return false;
-        return true;
+        var atSegmentStart = true;
+        foreach (var c in value)
+        {
+            if (atSegmentStart)
+            {
+                if (!IsAsciiUpper(c)) return false;
+                atSegmentStart = false;
+            }
+            else if (c == '_') atSegmentStart = true;
+            else if (!IsAsciiLetter(c) && !IsAsciiDigit(c)) return false;
+        }
+        return !atSegmentStart;
+    }
+
+    // The end of an uppercase name, from the end of its first segment. Any other `_` is not part of the name.
+    internal static int UpperNameEnd(string text, int position)
+    {
+        while (position + 1 < text.Length && text[position] == '_' && IsAsciiUpper(text[position + 1]))
+        {
+            position += 2;
+            while (position < text.Length && (IsAsciiLetter(text[position]) || IsAsciiDigit(text[position]))) position++;
+        }
+        return position;
     }
 
     private static bool IsModuleSegment(string value, int start, int end)

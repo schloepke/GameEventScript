@@ -240,3 +240,19 @@ and ANSI text preservation.
 ```highlight
 {"name": "document unclosed text runs to the end", "language": "gesd", "source": "\ufeffname: 'open\nnext: 1\n", "expect": [{"text": "'open\nnext: 1\n", "kind": "string"}], "diagnostics": [{"code": "document.unclosedText", "text": "'"}]}
 ```
+
+```highlight
+{"name":"underscore names","language":"ges","source":"record :Unit_Weapon as {\n  a: :Number\n}\non Unit_Fire(x) {\n  emit Unit_Fire(x: x is :Unit_Weapon)\n}\n","expect":[{"text":":Unit_Weapon","occurrence":0,"kind":"type"},{"text":":Unit_Weapon","occurrence":1,"kind":"type"},{"text":"Unit_Fire","occurrence":0,"kind":"message"},{"text":"Unit_Fire","occurrence":1,"kind":"message"}]}
+```
+
+```highlight
+{"name":"schema underscore names","language":"gess","source":"schema :Unit_Weapon as { a: :Boolean }\nmessage Unit_Fire()\n","expect":[{"text":":Unit_Weapon","kind":"type"},{"text":"Unit_Fire","kind":"message"}],"diagnostics":[]}
+```
+
+```highlight
+{"name":"schema names with a doubled underscore","language":"gess","source":"schema :Unit__Weapon as { a: :Boolean }\n","expect":[{"text":":Unit","kind":"type"}],"diagnostics":[{"code":"schema.syntax","text":"_"}]}
+```
+
+```highlight
+{"name":"document underscore names","language":"gesd","source":":Schema(:Unit_Weapon)\ndone: :Message(Unit_Fire(v: 1))\non: :Handler(Unit_Fire(v))\n","expect":[{"text":":Unit_Weapon","kind":"type"},{"text":"Unit_Fire","occurrence":0,"kind":"message"},{"text":"Unit_Fire","occurrence":1,"kind":"message"}],"diagnostics":[]}
+```

@@ -67,7 +67,7 @@
 			<array>
 				<dict>
 					<key>match</key>
-					<string>:[A-Z][A-Za-z0-9]*</string>
+					<string>:[A-Z][A-Za-z0-9]*(?:_[A-Z][A-Za-z0-9]*)*</string>
 					<key>name</key>
 					<string>support.type.gameeventscript.schema</string>
 				</dict>
@@ -127,7 +127,7 @@
 			<array>
 				<dict>
 					<key>match</key>
-					<string>\b[A-Z][A-Za-z0-9]*\b</string>
+					<string>\b[A-Z][A-Za-z0-9]*(?:_[A-Z][A-Za-z0-9]*)*\b</string>
 					<key>name</key>
 					<string>entity.name.type.message.gameeventscript.schema</string>
 				</dict>

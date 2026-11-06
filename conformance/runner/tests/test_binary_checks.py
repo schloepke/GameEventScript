@@ -23,7 +23,7 @@ class BinaryTests(unittest.TestCase):
 
     def test_inventory_and_requests(self):
         cases = [c for c in self.cases if supported(c)]
-        self.assertEqual(162, len(cases))
+        self.assertEqual(168, len(cases))
         for entry in requests(cases)['cases']:
             self.assertEqual({'data', 'includeDump', 'compareCompiledRuntime', 'programVersion', 'runtime'}, set(entry['binary']))
             self.assertNotIn('binaryFixture', entry)

@@ -37,12 +37,20 @@
         return true
     }
 
-    /// Whether text is a PascalCase-starting ASCII type or message name.
+    /// Whether text is an ASCII type or message name: segments that each start uppercase, joined by single underscores.
     public static func isUpperName(_ text: String) -> Bool {
-        var bytes = text.utf8.makeIterator()
-        guard let first = bytes.next(), first >= 65, first <= 90 else { return false }
-        while let byte = bytes.next() { if !(byte >= 65 && byte <= 90 || byte >= 97 && byte <= 122 || byte >= 48 && byte <= 57) { return false } }
-        return true
+        var atSegmentStart = true
+        for byte in text.utf8 {
+            if atSegmentStart {
+                if !(byte >= 65 && byte <= 90) { return false }
+                atSegmentStart = false
+            } else if byte == 95 {
+                atSegmentStart = true
+            } else if !(byte >= 65 && byte <= 90 || byte >= 97 && byte <= 122 || byte >= 48 && byte <= 57) {
+                return false
+            }
+        }
+        return !atSegmentStart
     }
 
     /// Quotes a GES text literal by doubling embedded double quotes.

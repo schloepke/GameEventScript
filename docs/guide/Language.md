@@ -68,6 +68,13 @@ functions and tags start with lowercase letters: `amount`, `damage`, `#critical`
 A `module` name such as `tutorial.damage` identifies the program; it does not
 create a namespace.
 
+> **Since: Unreleased** — underscores in message and type names
+
+Message and type names can group related names with single underscores:
+`Unit_Fire`, `:Unit_Weapon_Sniper`. Each part starts with an uppercase letter, so
+write `:Unit_Type1` instead of `:Unit_1`. The underscore belongs to the name and
+forms no hierarchy: a `:Unit_Weapon` is no `:Unit`.
+
 Argument labels are part of a message or function's signature:
 
 ```ges

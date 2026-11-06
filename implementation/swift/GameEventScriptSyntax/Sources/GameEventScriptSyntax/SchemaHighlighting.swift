@@ -24,7 +24,7 @@ enum GesSchemaHighlighting {
                 while position < bytes.count && bytes[position] != 13 && bytes[position] != 10 { position += 1 }
                 kind = .comment
             } else if byte == 58 && GesNames.upper(next) {
-                position = wordEnd(bytes, position + 1)
+                position = GesNames.upperNameEnd(bytes, wordEnd(bytes, position + 1))
                 kind = .type
             } else if byte == 35 && (GesNames.lower(next) || GesNames.upper(next)) {
                 position = wordEnd(bytes, position + 1)
@@ -38,6 +38,7 @@ enum GesSchemaHighlighting {
                 kind = .number
             } else if GesNames.lower(byte) || GesNames.upper(byte) {
                 position = wordEnd(bytes, position)
+                if GesNames.upper(byte) { position = GesNames.upperNameEnd(bytes, position) }
                 let word = String(decoding: bytes[start..<position], as: UTF8.self)
                 kind = keywords.contains(word) ? .keyword : GesNames.upper(byte) ? .message : .identifier
             } else {

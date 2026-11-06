@@ -175,8 +175,8 @@ must never depend on Compiler or Conformance. Shared value semantics, runtime
 literal parsing, Program data and codecs remain in Runtime. Source-file I/O
 belongs to the CLI or embedding; the portable compiler accepts source text.
 
-- Source types use PascalCase, for example `:Number`, `:Quantity(m)`, and
-  `:Unit`. Extension namespaces and functions remain lowercase, for example
+- Source types use PascalCase, optionally as `_`-joined segments, for example
+  `:Number`, `:Quantity(m)`, `:Unit` and `:Unit_Weapon`. Extension namespaces and functions remain lowercase, for example
   `:math.distance`.
 - Quantity units form a closed set with stable UnitIds (specs/Bytecode.md) and
   one central table per port in the Syntax module (C# `GesQuantityUnits`, Swift
@@ -225,8 +225,10 @@ belongs to the CLI or embedding; the portable compiler accepts source text.
   relocation identical; `compile.loop-invariants` snapshots both outputs.
 - Local declarations use only `let name be expression`. Conversions belong to
   the expression, for example `let value be input as :Number`.
-- Only variable bindings may use a canonical `_number` suffix. Other names may
-  contain digits without underscores according to their owning grammar.
+- Only variable bindings may use a canonical `_number` suffix. Type and message
+  names join uppercase-starting segments with single `_`, such as `:Unit_Weapon`
+  and `Unit_Fire`; the `_` forms no hierarchy. Other names may contain digits
+  without underscores according to their owning grammar.
 - Calls are acyclic. Callable overload identity is name plus ordered external
   argument labels, never declared types. Functions and predicates cannot share
   a base name.

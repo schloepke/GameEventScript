@@ -203,6 +203,8 @@ let x be 10
 let y be 20; let z be x + y // same statement separator model
 ```
 
+> **Since: Unreleased** — underscores in message and type names
+
 Names are intentionally narrow:
 
 - Callable names, argument labels, fields, map keys, tags, constant names, and
@@ -226,20 +228,21 @@ Names are intentionally narrow:
 - Local names must resolve to a local, parameter, or capture visible at compile
   time. Callable names resolve in the program-wide callable namespace. Unknown
   names are compile errors; they do not evaluate to `nothing`.
-- Message names start with an uppercase ASCII letter and continue with ASCII
-  letters or digits.
+- Message names are one or more segments joined by single `_`. Every segment
+  starts with an uppercase ASCII letter and continues with ASCII letters or
+  digits, for example `Fire` or `Unit_Fire`.
 - Tags start with `#` and use a lower name without `_`. `#true`, `#false`,
   `#pi`, and `#infinity` are ordinary tag values.
 - Constants start with `$` and use a lower name without `_`.
-- Built-in and custom type names start with an uppercase ASCII letter and
-  continue with ASCII letters or digits. Type references, generated collection
-  forms, and type constructors use `:` followed by that PascalCase name.
+- Built-in and custom type names follow the same rule as message names, for
+  example `:Unit` or `:Unit_Weapon`. Type references, generated collection
+  forms, and type constructors use `:` followed by that name.
 - Extension references use lowercase `:namespace.function` components.
 - A module name is one or more dot-separated components. Every component starts
   with a lowercase ASCII letter and continues with lowercase ASCII letters or
   digits. Uppercase letters, `_`, and `-` are forbidden.
 
-All of these name grammars use ASCII letters and digits; they do not depend on
+All of these name grammars use only ASCII characters; they do not depend on
 platform Unicode classification. Source is strict UTF-8, an optional initial BOM
 is removed, and only ASCII space/tab plus `LF`, `CRLF`, or `CR` are portable
 whitespace/newlines. The complete normative contract is in
@@ -1181,7 +1184,8 @@ nonnegative unitless integer. Range and Series remain lazy.
 argumentless one, from `:Handler(Name(labels))`. Handler labels describe data,
 not local variable bindings; repeated `_` labels are allowed.
 
-`:Record(type, fields)` requires a PascalCase Text name and a Map. It creates
+`:Record(type, fields)` requires a Text name of the
+[`TypeName`](Semantics/Text.md#portable-name-grammars) grammar and a Map. It creates
 immutable typed data directly. It does not require a Record definition or invoke
 its constructor. `:Hit(...)` retains the ordinary declared constructor behavior.
 Arguments in a source expression evaluate in source order. Invalid constructor

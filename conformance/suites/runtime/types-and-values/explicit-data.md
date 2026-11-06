@@ -1817,3 +1817,182 @@ steps:
       - name: Alive
     diagnostics: []
 ```
+
+---
+
+## Test: underscore-names
+
+Type and message names join segments with single underscores in every source form. The underscore forms no
+hierarchy, so a `:Unit_Weapon_Sniper` is no `:Unit`.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: underscore-names
+compile:
+  binaryRoundTrip: true
+```
+
+### Source code under test
+
+```ges
+record :Unit_Weapon_Sniper as {
+  range: :Number
+}
+
+on Unit_Fire(value) {
+  emit Fired(isSniper: value is :Unit_Weapon_Sniper, isUnit: value is :Unit, range: value.range)
+}
+
+on Start {
+  emit Unit_Fire(value: :Unit_Weapon_Sniper(range: 3))
+  emit Done(text: :Unit_Weapon_Sniper(range: 3) as :Text, parsed: parse ':Unit_Weapon_Sniper(range: 4)', data: :Record("Unit_Weapon_Sniper", [range: 5]), handler: :Handler(Unit_Fire(value)) as :Text, message: :Message(Unit_Fire(value: 1)) as :Text)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args: []
+    local:
+      - name: Unit_Fire
+        args:
+          - name: value
+            value:
+              type: ":Unit_Weapon_Sniper"
+              entries:
+                - key: "range"
+                  value:
+                    type: ":Number.int64"
+                    value: "3"
+      - name: Done
+        args:
+          - name: text
+            value:
+              type: ":Text"
+              value: ":Record(\"Unit_Weapon_Sniper\", [range: 3])"
+          - name: parsed
+            value:
+              type: ":Unit_Weapon_Sniper"
+              entries:
+                - key: "range"
+                  value:
+                    type: ":Number.int64"
+                    value: "4"
+          - name: data
+            value:
+              type: ":Unit_Weapon_Sniper"
+              entries:
+                - key: "range"
+                  value:
+                    type: ":Number.int64"
+                    value: "5"
+          - name: handler
+            value:
+              type: ":Text"
+              value: ":Handler(Unit_Fire(value))"
+          - name: message
+            value:
+              type: ":Text"
+              value: ":Message(Unit_Fire(value: 1))"
+      - name: Fired
+        args:
+          - name: isSniper
+            value:
+              type: ":Boolean"
+              value: true
+          - name: isUnit
+            value:
+              type: ":Boolean"
+              value: false
+          - name: range
+            value:
+              type: ":Number.int64"
+              value: "3"
+    runtimeLimits:
+      exclude:
+        - any: true
+```
+
+---
+
+## Test: invalid-underscore-names-in-data
+
+A name that breaks the segment rule constructs nothing. A `:Record` name is a value, so the form yields Nothing; a message
+or handler name is syntax, so `parse` keeps the original Text and `parse strict` yields Nothing.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: invalid-underscore-names-in-data
+compile:
+  binaryRoundTrip: true
+```
+
+### Source code under test
+
+```ges
+on Start {
+  emit Done(doubled: :Record("Unit__Weapon", [a: 1]), digit: :Record("Unit_1", [a: 1]), parsedHandler: parse ':Handler(Unit__Fire(value))', parsedMessage: parse ':Message(Unit_1())', strictHandler: parse strict ':Handler(Unit__Fire(value))', strictMessage: parse strict ':Message(Unit_1())', strictRecord: parse strict ':Record("Unit__Weapon", [a: 1])', parsedRecord: parse ':Record("Unit__Weapon", [a: 1])')
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args: []
+    local:
+      - name: Done
+        args:
+          - name: doubled
+            value:
+              type: ":Nothing"
+          - name: digit
+            value:
+              type: ":Nothing"
+          - name: parsedHandler
+            value:
+              type: ":Text"
+              value: ":Handler(Unit__Fire(value))"
+          - name: parsedMessage
+            value:
+              type: ":Text"
+              value: ":Message(Unit_1())"
+          - name: strictHandler
+            value:
+              type: ":Nothing"
+          - name: strictMessage
+            value:
+              type: ":Nothing"
+          - name: strictRecord
+            value:
+              type: ":Nothing"
+          - name: parsedRecord
+            value:
+              type: ":Nothing"
+    runtimeLimits:
+      exclude:
+        - any: true
+```

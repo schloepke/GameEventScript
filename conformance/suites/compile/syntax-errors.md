@@ -2024,3 +2024,319 @@ error:
   phase: "parse"
   code: "parse.syntax"
 ```
+
+---
+
+## Test: a type segment that starts with a digit
+
+A `_` in a type or message name joins two segments that each start uppercase.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: underscore-name-1
+kind: compileError
+level: atomic
+sources:
+  - name: "a type segment that starts with a digit.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start {
+  let a be 1 is :Unit_1
+  emit Done(a: a)
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "parse"
+  code: "parse.syntax"
+```
+
+---
+
+## Test: a type segment that starts lowercase
+
+A `_` in a type or message name joins two segments that each start uppercase.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: underscore-name-2
+kind: compileError
+level: atomic
+sources:
+  - name: "a type segment that starts lowercase.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+record :Unit_weapon as {
+  value: :Number
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "parse"
+  code: "parse.syntax"
+```
+
+---
+
+## Test: a doubled underscore in a type name
+
+A `_` in a type or message name joins two segments that each start uppercase.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: underscore-name-3
+kind: compileError
+level: atomic
+sources:
+  - name: "a doubled underscore in a type name.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+record :Unit__Weapon as {
+  value: :Number
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "parse"
+  code: "parse.syntax"
+```
+
+---
+
+## Test: a trailing underscore in a type name
+
+A `_` in a type or message name joins two segments that each start uppercase.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: underscore-name-4
+kind: compileError
+level: atomic
+sources:
+  - name: "a trailing underscore in a type name.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+record :Unit_ as {
+  value: :Number
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "parse"
+  code: "parse.syntax"
+```
+
+---
+
+## Test: a message segment that starts with a digit
+
+A `_` in a type or message name joins two segments that each start uppercase.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: underscore-name-5
+kind: compileError
+level: atomic
+sources:
+  - name: "a message segment that starts with a digit.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Unit_1 {
+  emit Done
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "parse"
+  code: "parse.syntax"
+```
+
+---
+
+## Test: a message segment that starts lowercase
+
+A `_` in a type or message name joins two segments that each start uppercase.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: underscore-name-6
+kind: compileError
+level: atomic
+sources:
+  - name: "a message segment that starts lowercase.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Unit_fire {
+  emit Done
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "parse"
+  code: "parse.syntax"
+```
+
+---
+
+## Test: a doubled underscore in a message name
+
+A `_` in a type or message name joins two segments that each start uppercase.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: underscore-name-7
+kind: compileError
+level: atomic
+sources:
+  - name: "a doubled underscore in a message name.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Unit__Fire {
+  emit Done
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "parse"
+  code: "parse.syntax"
+```
+
+---
+
+## Test: a trailing underscore in a message name
+
+A `_` in a type or message name joins two segments that each start uppercase.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: underscore-name-8
+kind: compileError
+level: atomic
+sources:
+  - name: "a trailing underscore in a message name.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start {
+  emit Unit_
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "parse"
+  code: "parse.syntax"
+```
+
+---
+
+## Test: a leading underscore in a message name
+
+A `_` in a type or message name joins two segments that each start uppercase.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: underscore-name-9
+kind: compileError
+level: atomic
+sources:
+  - name: "a leading underscore in a message name.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on _Unit {
+  emit Done
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "parse"
+  code: "parse.syntax"
+```

@@ -54,7 +54,7 @@ public sealed class GesMessageSignature : IEquatable<GesMessageSignature>
         var normalized = GesText.TrimAsciiWhitespace(name);
         if (normalized.Length == 0) return string.Empty;
         if (!GesText.IsMessageName(normalized) && normalized is not ("initialization" or "undeliverable"))
-            throw new ArgumentException("Message names must start with an upper-case ASCII letter and contain ASCII letters or digits.", nameof(name));
+            throw new ArgumentException("Message names must be segments of ASCII letters or digits that start with an upper-case letter, joined by single underscores.", nameof(name));
         return normalized;
     }
 

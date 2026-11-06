@@ -503,6 +503,15 @@ internal sealed class GesSchemaSourceReader
     {
         var start = _position;
         var name = ReadWord();
+        if (name.Length > 0 && GesText.IsAsciiUpper(name[0]))
+        {
+            var end = GesText.UpperNameEnd(_text, _position);
+            if (end != _position)
+            {
+                _position = end;
+                name = _text.Substring(start, end - start);
+            }
+        }
         if (!valid(name)) throw new SyntaxFailure(start, "Expected a " + description + ".");
         return name;
     }

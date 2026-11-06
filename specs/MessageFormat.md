@@ -49,7 +49,7 @@ There are no public Integer/Binary64 value tags.
 | `Tag` | `value`: bare valid tag name |
 | `List` | `items`: ordered value objects |
 | `Map` | `entries`: ordered `{key: Text, value: value-object}` objects |
-| `Record` | `name`: PascalCase type name; `entries`: Map-style entries |
+| `Record` | `name`: type name; `entries`: Map-style entries |
 | `Vector`, `Point` | `x`, `y`, `z`: numeric Text; `unit`: the Number unit strings |
 | `Dice` | `rolls`: positive Int32 decimal numeric strings, descending on output |
 | `Range` | `from`, `to`, `step`: unitless numeric Text |

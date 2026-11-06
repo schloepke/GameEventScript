@@ -43,7 +43,7 @@
     "types": {
       "patterns": [
         {
-          "match": ":[A-Z][A-Za-z0-9]*",
+          "match": ":[A-Z][A-Za-z0-9]*(?:_[A-Z][A-Za-z0-9]*)*",
           "name": "support.type.gameeventscript.schema"
         }
       ]
@@ -83,7 +83,7 @@
     "messages": {
       "patterns": [
         {
-          "match": "\\b[A-Z][A-Za-z0-9]*\\b",
+          "match": "\\b[A-Z][A-Za-z0-9]*(?:_[A-Z][A-Za-z0-9]*)*\\b",
           "name": "entity.name.type.message.gameeventscript.schema"
         }
       ]

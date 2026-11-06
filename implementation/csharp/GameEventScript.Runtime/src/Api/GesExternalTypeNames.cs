@@ -75,7 +75,7 @@ internal static class GesExternalTypeNames
 
         if (!GesText.IsTypeName(normalized))
         {
-            throw new ArgumentException($"External GameEventScript type name ':{normalized}' must start with an upper-case ASCII letter and contain ASCII letters or digits.");
+            throw new ArgumentException($"External GameEventScript type name ':{normalized}' must be segments of ASCII letters or digits that start with an upper-case letter, joined by single underscores.");
         }
 
         return normalized;

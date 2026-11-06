@@ -87,7 +87,7 @@ internal static class ValueApiObservations
         if (input.TryGetProperty("entries", out var entries))
         {
             RuntimeValues.Fields(input, "type", "entries");
-            if (type is null || !Regex.IsMatch(type, @"\A:[A-Z][A-Za-z0-9]*\z")) throw new ArgumentException("Invalid collection type.");
+            if (type is null || !Regex.IsMatch(type, @"\A:[A-Z][A-Za-z0-9]*(?:_[A-Z][A-Za-z0-9]*)*\z")) throw new ArgumentException("Invalid collection type.");
             foreach (var entry in entries.EnumerateArray()) RuntimeValues.Fields(entry, "key", "value");
             var keys = entries.EnumerateArray().Select(e => e.GetProperty("key").GetString() ?? throw new ArgumentException("Key required.")).ToArray();
             var values = entries.EnumerateArray().Select(e => Construct(e.GetProperty("value"))).ToArray();

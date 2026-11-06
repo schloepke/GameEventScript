@@ -452,7 +452,14 @@
 
     private mutating func name(_ valid: (String) -> Bool, _ description: String) throws -> String {
         let start = position
-        let written = word()
+        var written = word()
+        if position > start && GesNames.upper(bytes[start]) {
+            let end = GesNames.upperNameEnd(bytes, position)
+            if end != position {
+                position = end
+                written = String(decoding: bytes[start..<end], as: UTF8.self)
+            }
+        }
         if !valid(written) { throw Failure(offset: start, message: "Expected a \(description).") }
         return written
     }

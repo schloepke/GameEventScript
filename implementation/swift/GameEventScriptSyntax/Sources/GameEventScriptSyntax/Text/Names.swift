@@ -15,9 +15,16 @@
         return bytes.first.map(lower) == true && bytes.dropFirst().allSatisfy(alnum)
     }
 
-    @_spi(Syntax) public static func type(_ text: String) -> Bool {
-        let bytes = Array(text.utf8)
-        return bytes.first.map(upper) == true && bytes.dropFirst().allSatisfy(alnum)
+    @_spi(Syntax) public static func type(_ text: String) -> Bool { GesText.isUpperName(text) }
+
+    // The end of an uppercase name, from the end of its first segment. Any other `_` is not part of the name.
+    static func upperNameEnd(_ bytes: [UInt8], _ start: Int) -> Int {
+        var position = start
+        while position + 1 < bytes.count && bytes[position] == 95 && upper(bytes[position + 1]) {
+            position += 2
+            while position < bytes.count && alnum(bytes[position]) { position += 1 }
+        }
+        return position
     }
 
     @_spi(Syntax) public static func message(_ text: String) -> Bool { type(text) || text == "initialization" || text == "undeliverable" }

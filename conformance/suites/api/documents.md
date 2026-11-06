@@ -3296,3 +3296,122 @@ document:
     limitName: "MaxLiteralInputScalars"
     limit: 1048576
 ```
+
+---
+
+## Test: a schema header type with underscores
+
+This case checks the following contract: A header type can join segments with single underscores.
+
+### Case description
+
+```yaml
+gesBlock: "case"
+id: "header-underscore-type"
+kind: "documentApi"
+level: "atomic"
+documentApi:
+  text: ":Schema(:Unit_Weapon)\nrange: 3\n"
+  print: true
+```
+
+### Expectation
+
+```yaml
+gesBlock: "expect"
+document:
+  value:
+    type: ":Unit_Weapon"
+    entries:
+      - key: "range"
+        value:
+          type: ":Number.int64"
+          value: "3"
+  schema:
+    kind: "type"
+    name: "Unit_Weapon"
+```
+
+---
+
+## Test: a schema header type with a doubled underscore is invalid
+
+This case checks the following contract: A `_` joins two segments that each start uppercase, in a document too.
+
+### Case description
+
+```yaml
+gesBlock: "case"
+id: "underscore-name-1"
+kind: "documentApi"
+level: "atomic"
+documentApi:
+  text: ":Schema(:Unit__Weapon)\na: 1\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: "expect"
+document:
+  error:
+    code: "invalidSchemaHeader"
+    line: 1
+    column: 9
+```
+
+---
+
+## Test: a schema header type with a digit segment is invalid
+
+This case checks the following contract: A `_` joins two segments that each start uppercase, in a document too.
+
+### Case description
+
+```yaml
+gesBlock: "case"
+id: "underscore-name-2"
+kind: "documentApi"
+level: "atomic"
+documentApi:
+  text: ":Schema(:Unit_1)\na: 1\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: "expect"
+document:
+  error:
+    code: "invalidSchemaHeader"
+    line: 1
+    column: 9
+```
+
+---
+
+## Test: a Handler form with a doubled underscore is an invalid literal
+
+This case checks the following contract: A `_` joins two segments that each start uppercase, in a document too.
+
+### Case description
+
+```yaml
+gesBlock: "case"
+id: "underscore-name-3"
+kind: "documentApi"
+level: "atomic"
+documentApi:
+  text: "a: :Handler(Unit__Fire())\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: "expect"
+document:
+  error:
+    code: "invalidLiteral"
+    line: 1
+    column: 4
+```

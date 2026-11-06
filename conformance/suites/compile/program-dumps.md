@@ -1672,3 +1672,138 @@ Main:				 // handler Main(value)
 // -------------------------------------------------------------------------------
 
 ```
+
+---
+
+## Test: underscore names keep their labels in the dump
+
+This snapshot checks the labels of a Record, handler and outbound message whose names contain underscores.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: underscore-names
+```
+
+### Source code under test
+
+```ges
+module underscorenames
+
+record :Unit_Mount as {
+  slot: :Number
+}
+
+on Unit_Fire(x) {
+  emit Hit_Now(y: :Unit_Mount(slot: x))
+}
+```
+
+### Expected Game Event Script Assembler
+
+```gesa
+// -------------------------------------------------------------------------------
+//  Module: underscorenames
+//  Type: Game Event Script Assembler
+//  Format version: 1.0
+// -------------------------------------------------------------------------------
+
+.gesb 1
+.module "underscorenames"
+.program-version 0
+
+// -------------------------------------------------------------------------------
+.region "Source: compile.program-dumps.underscore-names.ges"
+
+.segment source "compile.program-dumps.underscore-names.ges"
+
+module underscorenames
+
+record :Unit_Mount as {
+  slot: :Number
+}
+
+on Unit_Fire(x) {
+  emit Hit_Now(y: :Unit_Mount(slot: x))
+}
+
+.region-end "Source: compile.program-dumps.underscore-names.ges"
+// -------------------------------------------------------------------------------
+
+// -------------------------------------------------------------------------------
+.region "Text"
+
+.segment text
+
+T_x:				.text "x"
+T_Unit_Fire:		.text "Unit_Fire"
+T_slot:				.text "slot"
+T_Unit_Mount:		.text "Unit_Mount"
+T_y:				.text "y"
+T_Hit_Now:			.text "Hit_Now"
+T_underscorenames:	.text "underscorenames"
+
+.region-end "Text"
+// -------------------------------------------------------------------------------
+
+// -------------------------------------------------------------------------------
+.region "Lists"
+
+.segment lists
+
+U16_0:				.u16 [0]
+U16_1:				.u16 []
+Keys_2:				.texts [T_slot] // "slot"
+U16_3:				.u16 [4]
+Args_4:				.registers [r1]
+
+.region-end "Lists"
+// -------------------------------------------------------------------------------
+
+// -------------------------------------------------------------------------------
+.region "Bindings"
+
+.segment bind
+
+Handler_Unit_Fire:	.bind MessageHandler id=0 name=T_Unit_Fire args=[T_x] entry=Unit_Fire // "Unit_Fire(x)"
+Record_Unit_Mount:	.bind Record id=0 name=T_Unit_Mount args=[T_slot] entry=record_Unit_Mount // "Unit_Mount(slot)"
+Outbound_Hit_Now:	.bind OutboundMessage id=0 name=T_Hit_Now args=[T_y] // "Hit_Now(y)"
+
+.region-end "Bindings"
+// -------------------------------------------------------------------------------
+
+// -------------------------------------------------------------------------------
+.region "Code"
+
+.segment code
+
+.source-line "compile.program-dumps.underscore-names.ges" 7 | on Unit_Fire(x) {
+Unit_Fire:			 // handler Unit_Fire(x)
+					RegisterLocals #1
+
+.source-line "compile.program-dumps.underscore-names.ges" 8 |   emit Hit_Now(y: :Unit_Mount(slot: x))
+					StageRegister r0(x)
+					CreateRecord r1, Record_Unit_Mount // "Unit_Mount(slot)"
+					EmitMessage Outbound_Hit_Now, Args_4 // "Hit_Now(y)"
+
+.source-line "compile.program-dumps.underscore-names.ges" 7 | on Unit_Fire(x) {
+					ReturnVoid
+
+.source-line "compile.program-dumps.underscore-names.ges" 3 | record :Unit_Mount as {
+record_Unit_Mount:	 // record Unit_Mount(slot)
+					RegisterLocals #2
+
+.source-line "compile.program-dumps.underscore-names.ges" 4 |   slot: :Number
+					CastNumeric r0(slot), r0(slot)
+
+.source-line "compile.program-dumps.underscore-names.ges" 3 | record :Unit_Mount as {
+					StageRegister r0(slot)
+					CreateMap r1, Keys_2 // "slot"
+					CreateRecordValue r2, r1, T_Unit_Mount // "Unit_Mount"
+					ReturnValue r2
+
+.region-end "Code"
+// -------------------------------------------------------------------------------
+
+```

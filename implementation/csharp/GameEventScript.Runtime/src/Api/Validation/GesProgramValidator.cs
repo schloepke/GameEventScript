@@ -368,7 +368,7 @@ internal static class GesProgramValidator
             if (!textIndexes) continue;
             if (role == GesOpcodePrinter.OperandPart.MessageShapeList && index == 0)
             {
-                if (!IsPortableMessageName(program.StringConstants, list[index])) InvalidOperand("Message shape names must start uppercase and contain only ASCII letters or digits.", instructionIndex);
+                if (!IsPortableMessageName(program.StringConstants, list[index])) InvalidOperand("Message shape names must be segments of ASCII letters or digits that start uppercase, joined by single underscores.", instructionIndex);
             }
             else if (!IsPortableUnlabeled(program.StringConstants, list[index]) && !IsPortablePlainName(program.StringConstants, list[index]))
             {
@@ -435,9 +435,7 @@ internal static class GesProgramValidator
         var data = strings.Data.AsSpan();
         if (!IsAsciiUpper(data[slice.Start]))
             return MatchesAscii(strings, stringIndex, "initialization") || MatchesAscii(strings, stringIndex, "undeliverable");
-        for (var index = slice.Start + 1; index < slice.Start + slice.Length; index++)
-            if (!IsAsciiLetterOrDigit(data[index])) return false;
-        return true;
+        return IsPortableTypeName(strings, stringIndex);
     }
 
     private static bool IsPortableIdentifier(GesStringConstantSegment strings, ushort stringIndex)
@@ -446,15 +444,23 @@ internal static class GesProgramValidator
     private static bool IsPortablePlainName(GesStringConstantSegment strings, ushort stringIndex)
         => IsPortableName(strings, stringIndex, allowNumericSuffix: false);
 
+    // Segments that each start uppercase, joined by single underscores; regular message names follow it too.
     private static bool IsPortableTypeName(GesStringConstantSegment strings, ushort stringIndex)
     {
         var slice = strings.Slices[stringIndex];
-        if (slice.Length == 0) return false;
         var data = strings.Data.AsSpan();
-        if (!IsAsciiUpper(data[slice.Start])) return false;
-        for (var index = slice.Start + 1; index < slice.Start + slice.Length; index++)
-            if (!IsAsciiLetterOrDigit(data[index])) return false;
-        return true;
+        var atSegmentStart = true;
+        for (var index = slice.Start; index < slice.Start + slice.Length; index++)
+        {
+            if (atSegmentStart)
+            {
+                if (!IsAsciiUpper(data[index])) return false;
+                atSegmentStart = false;
+            }
+            else if (data[index] == (byte)'_') atSegmentStart = true;
+            else if (!IsAsciiLetterOrDigit(data[index])) return false;
+        }
+        return !atSegmentStart;
     }
 
     private static bool IsPortableName(GesStringConstantSegment strings, ushort stringIndex, bool allowNumericSuffix)

@@ -281,6 +281,16 @@ internal sealed class GesLexer
         while (!IsAtEnd && (IsWordLetter(Current) || GesText.IsAsciiDigit(Current))) Advance();
     }
 
+    // Any other `_` stays behind the name, which makes the whole word illegal.
+    private void ReadUpperNameSegments()
+    {
+        while (!IsAtEnd && Current == '_' && GesText.IsAsciiUpper(Peek()))
+        {
+            Advance();
+            ReadWordName();
+        }
+    }
+
     private void ReadDigits()
     {
         while (!IsAtEnd && GesText.IsAsciiDigit(Current)) Advance();
@@ -395,6 +405,7 @@ internal sealed class GesLexer
         var start = _index;
         var first = Current;
         ReadWordName();
+        if (GesText.IsAsciiUpper(first)) ReadUpperNameSegments();
         if (GesText.IsAsciiLower(first) && !IsAtEnd && Current == '_')
         {
             Advance();
@@ -487,6 +498,7 @@ internal sealed class GesLexer
         var start = _index;
         Advance();
         ReadWordName();
+        ReadUpperNameSegments();
         if (IsAtEnd || (!StartsAttachedIllegalOperatorSequence() && IsValidWordBoundary(Current)))
             return CreateToken(GesTokenKind.TypeName, _input[start.._index], line, column);
         while (!IsAtEnd && !GesText.IsTokenWhitespace(Current)) Advance();

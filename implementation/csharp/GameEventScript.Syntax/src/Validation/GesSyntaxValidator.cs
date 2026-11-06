@@ -285,7 +285,7 @@ internal static class GesSyntaxValidator
             }
             else
             {
-                MessageCase(message, "Handler message names must start uppercase and contain only ASCII letters or digits", message, GesSyntaxSymbolKind.Handler, Span(node));
+                MessageCase(message, "Handler message names must be segments of ASCII letters or digits that start uppercase, joined by single underscores", message, GesSyntaxSymbolKind.Handler, Span(node));
             }
 
             CheckParameters(parameters, "Handler", message, GesSyntaxSymbolKind.Handler, DuplicateHandlerParameter);
@@ -563,7 +563,7 @@ internal static class GesSyntaxValidator
                     if (validate)
                     {
                         var message = Text(OwnToken(node, GesSyntaxRole.MessageName));
-                        MessageCase(message, $"Message literal '{message}' must start uppercase and contain only ASCII letters or digits", message, GesSyntaxSymbolKind.Message, Range(node));
+                        MessageCase(message, $"Message literal '{message}' must be segments of ASCII letters or digits that start uppercase, joined by single underscores", message, GesSyntaxSymbolKind.Message, Range(node));
                         Arguments(node, message, GesSyntaxSymbolKind.Message, label => $"Message literal '{message}' declares invalid argument name '{label}'", scope, shadow);
                     }
                     else Elements(node, scope, false, shadow);
@@ -678,7 +678,7 @@ internal static class GesSyntaxValidator
         // A handler literal of the `:Handler` data form has no parameter nodes; its diagnostics point at the names.
         private void HandlerLiteral(string message, (int, int) anchor, List<(GesSyntaxNode Node, int Name, bool Labeled, bool MessageName)> parameters, bool ranged)
         {
-            MessageCase(message, $"Handler literal '{message}' must start uppercase and contain only ASCII letters or digits", message, GesSyntaxSymbolKind.Handler, anchor);
+            MessageCase(message, $"Handler literal '{message}' must be segments of ASCII letters or digits that start uppercase, joined by single underscores", message, GesSyntaxSymbolKind.Handler, anchor);
             foreach (var parameter in parameters)
             {
                 var name = Text(parameter.Name);

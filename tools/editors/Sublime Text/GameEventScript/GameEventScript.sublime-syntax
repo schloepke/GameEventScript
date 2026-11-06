@@ -52,13 +52,13 @@
       "scope": "comment.line.double-slash.gameeventscript"
   "messages":
     -
-      "match": "\\b(emit|publish)\\s+([A-Z][A-Za-z0-9]*)\\b"
+      "match": "\\b(emit|publish)\\s+([A-Z][A-Za-z0-9]*(?:_[A-Z][A-Za-z0-9]*)*)\\b"
       "scope": "meta.message.dispatch.gameeventscript"
       "captures":
         1: "keyword.control.emit.gameeventscript"
         2: "entity.name.type.class.message.gameeventscript"
     -
-      "match": "\\b[A-Z][A-Za-z0-9]*\\b"
+      "match": "\\b[A-Z][A-Za-z0-9]*(?:_[A-Z][A-Za-z0-9]*)*\\b"
       "scope": "entity.name.type.class.message.gameeventscript"
   "keywords":
     -
@@ -99,7 +99,7 @@
         1: "keyword.control.module.gameeventscript"
         2: "entity.name.namespace.gameeventscript"
     -
-      "match": "\\b(record)\\s+(:[A-Z][A-Za-z0-9]*)\\b"
+      "match": "\\b(record)\\s+(:[A-Z][A-Za-z0-9]*(?:_[A-Z][A-Za-z0-9]*)*)\\b"
       "scope": "meta.record.gameeventscript"
       "captures":
         1: "keyword.other.definition.gameeventscript"
@@ -117,7 +117,7 @@
         1: "keyword.other.definition.gameeventscript"
         2: "entity.name.function.predicate.gameeventscript"
     -
-      "match": "\\b(on)\\s+([A-Z][A-Za-z0-9]*|initialization|undeliverable)\\b"
+      "match": "\\b(on)\\s+([A-Z][A-Za-z0-9]*(?:_[A-Z][A-Za-z0-9]*)*|initialization|undeliverable)\\b"
       "scope": "meta.handler.gameeventscript"
       "captures":
         1: "keyword.control.handler.gameeventscript"
@@ -283,7 +283,7 @@
       "match": ":(?:Nothing|Text|Boolean|Number|Percentage|Vector|Point|Series|Range|Message|Handler|Tag|List|Map|Dice|Record)(?=$|[^A-Za-z0-9_])"
       "scope": "support.type.primitive.gameeventscript"
     -
-      "match": ":[A-Z][A-Za-z0-9]*(?=$|[^A-Za-z0-9_])"
+      "match": ":[A-Z][A-Za-z0-9]*(?:_[A-Z][A-Za-z0-9]*)*(?=$|[^A-Za-z0-9_])"
       "scope": "entity.name.type.custom.gameeventscript"
   "strings":
     -

@@ -32,7 +32,7 @@ internal static class GesSchemaHighlighting
             }
             else if (c == ':' && position + 1 < text.Length && GesText.IsAsciiUpper(text[position + 1]))
             {
-                position = WordEnd(text, position + 1);
+                position = GesText.UpperNameEnd(text, WordEnd(text, position + 1));
                 kind = GesSyntaxKind.Type;
             }
             else if (c == '#' && position + 1 < text.Length && GesText.IsAsciiLetter(text[position + 1]))
@@ -54,6 +54,7 @@ internal static class GesSchemaHighlighting
             else if (GesText.IsAsciiLetter(c))
             {
                 position = WordEnd(text, position);
+                if (GesText.IsAsciiUpper(c)) position = GesText.UpperNameEnd(text, position);
                 var word = text.Substring(start, position - start);
                 kind = Keywords.Contains(word) ? GesSyntaxKind.Keyword : char.IsUpper(c) ? GesSyntaxKind.Message : GesSyntaxKind.Identifier;
             }

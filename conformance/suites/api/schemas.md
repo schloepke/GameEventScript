@@ -7866,3 +7866,303 @@ schema:
   error:
     code: "schema.duplicateName"
 ```
+
+---
+
+## Test: type names with underscores
+
+A schema reference and its canonical form keep the whole name.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: underscore-type-names
+schemaApi:
+  sources:
+    - "schema :Unit_Mount as { slot: :Number integer between 0 and 7 }\nschema :Unit_Weapon as { mount: :Unit_Mount }\n"
+  root: "Unit_Weapon"
+  encode:
+    type: ":Unit_Weapon"
+    entries:
+      - key: "mount"
+        value:
+          type: ":Unit_Mount"
+          entries:
+            - key: "slot"
+              value:
+                type: ":Number.int64"
+                value: "5"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  canonical: "gess1\nschema Unit_Weapon\nfield mount Unit_Mount\nschema Unit_Mount\nfield slot Number integer between 0e0 7e0\n"
+  encoded:
+    bytes: "05"
+```
+
+---
+
+## Test: a union alternative with an underscore in a path
+
+The field after the alternative stays apart from its type name.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: underscore-union-path
+schemaApi:
+  sources:
+    - "schema :Unit_Mount as { x: :Number integer between 0 and 1 }\nschema :S as { a: :Unit_Mount | :Text max 1 }\n"
+  root: "S"
+  encode:
+    type: ":S"
+    entries:
+      - key: "a"
+        value:
+          type: ":Map"
+          entries:
+            - key: "x"
+              value:
+                type: ":Number.int64"
+                value: "5"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    error:
+      code: "wire.outOfRange"
+      path: "a:Unit_Mount.x"
+```
+
+---
+
+## Test: the invalid underscore name in schema :Unit_1
+
+A `_` joins two segments that each start uppercase.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-underscore-name-1
+schemaApi:
+  sources:
+    - "schema :Unit_1 as { a: :Boolean }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.syntax"
+```
+
+---
+
+## Test: the invalid underscore name in schema :Unit__Weapon
+
+A `_` joins two segments that each start uppercase.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-underscore-name-2
+schemaApi:
+  sources:
+    - "schema :Unit__Weapon as { a: :Boolean }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.syntax"
+```
+
+---
+
+## Test: the invalid underscore name in schema :Unit_
+
+A `_` joins two segments that each start uppercase.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-underscore-name-3
+schemaApi:
+  sources:
+    - "schema :Unit_ as { a: :Boolean }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.syntax"
+```
+
+---
+
+## Test: the invalid underscore name in schema :Unit_weapon
+
+A `_` joins two segments that each start uppercase.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-underscore-name-4
+schemaApi:
+  sources:
+    - "schema :Unit_weapon as { a: :Boolean }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.syntax"
+```
+
+---
+
+## Test: the invalid underscore name in message Unit__Fire()
+
+A `_` joins two segments that each start uppercase.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-underscore-name-5
+schemaApi:
+  sources:
+    - "message Unit__Fire()\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.syntax"
+```
+
+---
+
+## Test: the invalid underscore name in message Unit_1()
+
+A `_` joins two segments that each start uppercase.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-underscore-name-6
+schemaApi:
+  sources:
+    - "message Unit_1()\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.syntax"
+```
+
+---
+
+## Test: the invalid underscore name in a message set
+
+A `_` joins two segments that each start uppercase.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-underscore-name-7
+schemaApi:
+  sources:
+    - "messages :All as (Unit__Fire)\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.syntax"
+```
+
+---
+
+## Test: message and message set names with underscores
+
+A message set finds its members by the whole name, and the index comes first.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: underscore-message-names
+schemaApi:
+  sources:
+    - "message Unit_Fire(target: :Number integer between 0 and 15)\nmessage Unit_Stop()\nmessages :Unit_Events as (Unit_Fire, Unit_Stop)\n"
+  root: "Unit_Events"
+  encode:
+    type: ":Message"
+    message:
+      name: "Unit_Fire"
+      args:
+        - name: "target"
+          value:
+            type: ":Number.int64"
+            value: "9"
+  decode: "12"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  canonical: "gess1\nmessages Unit_Events\nmember Unit_Fire\nmember Unit_Stop\nmessage Unit_Fire\nargument target Number integer between 0e0 15e0\nmessage Unit_Stop\n"
+  encoded:
+    bytes: "12"
+  decoded:
+    value:
+      type: ":Message"
+      message:
+        name: "Unit_Fire"
+        args:
+          - name: "target"
+            value:
+              type: ":Number.int64"
+              value: "9"
+    byteCount: 1
+```

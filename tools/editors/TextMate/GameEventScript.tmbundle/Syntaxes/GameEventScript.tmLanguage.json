@@ -31,7 +31,7 @@
     "messages": {
       "patterns": [
         {
-          "match": "\\b(emit|publish)\\s+([A-Z][A-Za-z0-9]*)\\b",
+          "match": "\\b(emit|publish)\\s+([A-Z][A-Za-z0-9]*(?:_[A-Z][A-Za-z0-9]*)*)\\b",
           "name": "meta.message.dispatch.gameeventscript",
           "captures": {
             "1": {
@@ -43,7 +43,7 @@
           }
         },
         {
-          "match": "\\b[A-Z][A-Za-z0-9]*\\b",
+          "match": "\\b[A-Z][A-Za-z0-9]*(?:_[A-Z][A-Za-z0-9]*)*\\b",
           "name": "entity.name.type.class.message.gameeventscript"
         }
       ]
@@ -113,7 +113,7 @@
           }
         },
         {
-          "match": "\\b(record)\\s+(:[A-Z][A-Za-z0-9]*)\\b",
+          "match": "\\b(record)\\s+(:[A-Z][A-Za-z0-9]*(?:_[A-Z][A-Za-z0-9]*)*)\\b",
           "name": "meta.record.gameeventscript",
           "captures": {
             "1": {
@@ -149,7 +149,7 @@
           }
         },
         {
-          "match": "\\b(on)\\s+([A-Z][A-Za-z0-9]*|initialization|undeliverable)\\b",
+          "match": "\\b(on)\\s+([A-Z][A-Za-z0-9]*(?:_[A-Z][A-Za-z0-9]*)*|initialization|undeliverable)\\b",
           "name": "meta.handler.gameeventscript",
           "captures": {
             "1": {
@@ -469,7 +469,7 @@
           "name": "support.type.primitive.gameeventscript"
         },
         {
-          "match": ":[A-Z][A-Za-z0-9]*(?=$|[^A-Za-z0-9_])",
+          "match": ":[A-Z][A-Za-z0-9]*(?:_[A-Z][A-Za-z0-9]*)*(?=$|[^A-Za-z0-9_])",
           "name": "entity.name.type.custom.gameeventscript"
         }
       ]

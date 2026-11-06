@@ -56,7 +56,7 @@
       "match": ":Schema\\b"
       "scope": "keyword.other.declaration.schema.gameeventscript.document"
     -
-      "match": "(:(?:Message|Handler))\\s*(\\()\\s*([A-Z][A-Za-z0-9]*|initialization|undeliverable)\\b"
+      "match": "(:(?:Message|Handler))\\s*(\\()\\s*([A-Z][A-Za-z0-9]*(?:_[A-Z][A-Za-z0-9]*)*|initialization|undeliverable)\\b"
       "captures":
         1: "support.type.primitive.gameeventscript.document"
         2: "punctuation.bracket.gameeventscript.document"
@@ -71,7 +71,7 @@
       "match": ":(?:Nothing|Number|Percentage|Boolean|Text|Tag|List|Map|Dice|Vector|Point|Range|Series|Message|Handler|Record)\\b"
       "scope": "support.type.primitive.gameeventscript.document"
     -
-      "match": ":[A-Z][A-Za-z0-9_]*"
+      "match": ":[A-Z][A-Za-z0-9]*(?:_[A-Z][A-Za-z0-9]*)*"
       "scope": "entity.name.type.record.gameeventscript.document"
   "keys":
     -

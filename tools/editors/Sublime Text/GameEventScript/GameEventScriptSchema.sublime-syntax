@@ -32,7 +32,7 @@
       "scope": "comment.line.double-slash.gameeventscript.schema"
   "types":
     -
-      "match": ":[A-Z][A-Za-z0-9]*"
+      "match": ":[A-Z][A-Za-z0-9]*(?:_[A-Z][A-Za-z0-9]*)*"
       "scope": "support.type.gameeventscript.schema"
   "tags":
     -
@@ -52,7 +52,7 @@
       "scope": "keyword.other.gameeventscript.schema"
   "messages":
     -
-      "match": "\\b[A-Z][A-Za-z0-9]*\\b"
+      "match": "\\b[A-Z][A-Za-z0-9]*(?:_[A-Z][A-Za-z0-9]*)*\\b"
       "scope": "entity.name.type.message.gameeventscript.schema"
   "punctuation":
     -

@@ -58,7 +58,7 @@ internal static class RuntimeValues
             Fields(value, "type", "message");
             return GesValue.GesMessage(DecodeMessage(value.GetProperty("message")));
         }
-        if (type != ":Map" && type is not null && Regex.IsMatch(type, @"\A:[A-Z][A-Za-z0-9]*\z") && value.TryGetProperty("entries", out var recordEntries))
+        if (type != ":Map" && type is not null && Regex.IsMatch(type, @"\A:[A-Z][A-Za-z0-9]*(?:_[A-Z][A-Za-z0-9]*)*\z") && value.TryGetProperty("entries", out var recordEntries))
         {
             Fields(value, "type", "entries");
             foreach (var entry in recordEntries.EnumerateArray()) Fields(entry, "key", "value");

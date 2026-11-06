@@ -1114,3 +1114,138 @@ gesBlock: expect
 literal:
   limit: { name: "MaxRangeItems", limit: 10000 }
 ```
+
+---
+
+## Test: lenient parsing keeps a Handler form with a doubled underscore as Text
+
+This public API case parses a literal whose name breaks the segment rule: it constructs nothing.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: literal-invalid-underscore-name-1
+kind: valueApi
+level: atomic
+valueApi:
+  literal:
+    text: ":Handler(Unit__Fire(value))"
+    mode: lenient
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+literal:
+  value: { type: ":Text", value: ":Handler(Unit__Fire(value))" }
+```
+
+---
+
+## Test: strict parsing does not recognize a Handler form with a doubled underscore
+
+This public API case parses a literal whose name breaks the segment rule: it constructs nothing.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: literal-invalid-underscore-name-2
+kind: valueApi
+level: atomic
+valueApi:
+  literal:
+    text: ":Handler(Unit__Fire(value))"
+    mode: strict
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+literal:
+  unrecognized: true
+```
+
+---
+
+## Test: strict parsing does not recognize a Message form with a digit segment
+
+This public API case parses a literal whose name breaks the segment rule: it constructs nothing.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: literal-invalid-underscore-name-3
+kind: valueApi
+level: atomic
+valueApi:
+  literal:
+    text: ":Message(Unit_1())"
+    mode: strict
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+literal:
+  unrecognized: true
+```
+
+---
+
+## Test: a strict Record form with an invalid type name yields Nothing
+
+This public API case parses a literal whose name breaks the segment rule: it constructs nothing.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: literal-invalid-underscore-name-4
+kind: valueApi
+level: atomic
+valueApi:
+  literal:
+    text: ":Record(\"Unit__Weapon\", [a: 1])"
+    mode: strict
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+literal:
+  value: { type: ":Nothing" }
+```
+
+---
+
+## Test: a lenient Record form with an invalid type name yields Nothing
+
+This public API case parses a complete `:Record` form whose Text is no type name: the form is recognized and its value is Nothing.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: literal-invalid-underscore-record-lenient
+kind: valueApi
+level: atomic
+valueApi:
+  literal:
+    text: ":Record(\"Unit__Weapon\", [a: 1])"
+    mode: lenient
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+literal:
+  value: { type: ":Nothing" }
+```

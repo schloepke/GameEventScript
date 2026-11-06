@@ -226,6 +226,12 @@
                 advance()
             }
             while Self.letter(current) || Self.digit(current) { advance() }
+            if Self.upper(first) || (first == ":" && Self.upper(scalars[start + 1])) {
+                while current == "_" && Self.upper(peek()) {
+                    advance()
+                    while Self.letter(current) || Self.digit(current) { advance() }
+                }
+            }
             if Self.lower(first) && current == "_" {
                 advance()
                 while Self.digit(current) { advance() }

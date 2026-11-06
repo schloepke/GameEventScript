@@ -72,7 +72,7 @@
           "name": "keyword.other.declaration.schema.gameeventscript.document"
         },
         {
-          "match": "(:(?:Message|Handler))\\s*(\\()\\s*([A-Z][A-Za-z0-9]*|initialization|undeliverable)\\b",
+          "match": "(:(?:Message|Handler))\\s*(\\()\\s*([A-Z][A-Za-z0-9]*(?:_[A-Z][A-Za-z0-9]*)*|initialization|undeliverable)\\b",
           "captures": {
             "1": {
               "name": "support.type.primitive.gameeventscript.document"
@@ -104,7 +104,7 @@
           "name": "support.type.primitive.gameeventscript.document"
         },
         {
-          "match": ":[A-Z][A-Za-z0-9_]*",
+          "match": ":[A-Z][A-Za-z0-9]*(?:_[A-Z][A-Za-z0-9]*)*",
           "name": "entity.name.type.record.gameeventscript.document"
         }
       ]

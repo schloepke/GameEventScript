@@ -260,7 +260,7 @@
             } else if message == "undeliverable" {
                 if asParameter == nil { report(invalidMessageCase, "System endpoint 'undeliverable' must use 'as message' syntax", message, .handler, span(node)) }
             } else {
-                messageCase(message, "Handler message names must start uppercase and contain only ASCII letters or digits", message, .handler, span(node))
+                messageCase(message, "Handler message names must be segments of ASCII letters or digits that start uppercase, joined by single underscores", message, .handler, span(node))
             }
             checkParameters(parameters, "Handler", message, .handler, duplicateHandlerParameter)
             let validation = Scope()
@@ -492,7 +492,7 @@
                 arguments(node, name, .globalDefinition, { "Call argument label '\($0)' must use identifier casing" }, scope, shadow: shadow)
             } else {
                 let message = text(ownToken(node, .messageName))
-                messageCase(message, "Message literal '\(message)' must start uppercase and contain only ASCII letters or digits", message, .message, range(node))
+                messageCase(message, "Message literal '\(message)' must be segments of ASCII letters or digits that start uppercase, joined by single underscores", message, .message, range(node))
                 arguments(node, message, .message, { "Message literal '\(message)' declares invalid argument name '\($0)'" }, scope, shadow: shadow)
             }
         }
@@ -521,7 +521,7 @@
 
         // A handler literal of the `:Handler` data form has no parameter nodes; its diagnostics point at the names.
         func handlerLiteral(_ message: String, _ anchor: Anchor, _ parameters: [Parameter], ranged: Bool) {
-            messageCase(message, "Handler literal '\(message)' must start uppercase and contain only ASCII letters or digits", message, .handler, anchor)
+            messageCase(message, "Handler literal '\(message)' must be segments of ASCII letters or digits that start uppercase, joined by single underscores", message, .handler, anchor)
             for parameter in parameters {
                 let name = text(parameter.name)
                 labelCase(name, "Handler literal '\(message)' declares invalid parameter '\(name)'", message, .handler, ranged ? anchor : (parameter.name, parameter.name))

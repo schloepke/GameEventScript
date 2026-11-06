@@ -182,6 +182,10 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   `Length` instead.
 
 ### Added
+- Type, message and handler names can join segments with single underscores, such
+  as `:Unit_Weapon` and `Unit_Fire`. Each segment starts with an uppercase letter,
+  so `:Unit_1` and `Unit__Fire` stay invalid; use `:Unit_Type1`. The underscore
+  forms no hierarchy: `is :Unit` is false for a `:Unit_Weapon`.
 
 - GES schemas (`.gess`) describe data formats and yield a very compact binary encoding for
   server-driven multiplayer games: ranges, steps and wrapping values with exact quantization,

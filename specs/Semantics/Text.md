@@ -55,14 +55,18 @@ NonZeroDigit       = "1".."9"
 NumericSuffix      = "_" ("0" | NonZeroDigit { "0".."9" })
 LowerName          = LowerLetter { AsciiLetter | Digit }
 VariableName       = LowerName [ NumericSuffix ]
-MessageName        = UpperLetter { AsciiLetter | Digit }
+UpperSegment       = UpperLetter { AsciiLetter | Digit }
+UpperName          = UpperSegment { "_" UpperSegment }
+MessageName        = UpperName
 TagName            = LowerName
 ConstantName       = LowerName
-TypeName           = UpperLetter { AsciiLetter | Digit }
+TypeName           = UpperName
 ModuleSegment      = LowerLetter { LowerLetter | Digit }
 ModuleName         = ModuleSegment { "." ModuleSegment }
 UnlabeledArgument  = "_"
 ```
+
+> **Since: Unreleased** — underscores in message and type names
 
 Consequences:
 
@@ -71,6 +75,11 @@ Consequences:
 - Local variables, loop/selector variables, message-name bindings, and the local
   name of an unlabeled parameter use `VariableName`. `_` is reserved for an
   unlabeled argument and `_number` is permitted nowhere except a variable name.
+- A `_` in a `MessageName` or `TypeName` joins two segments, and each segment
+  starts with an uppercase letter: `Unit_Weapon`, `Unit_Weapon_Sniper` and
+  `Unit_Type1` are names; `Unit_1`, `Unit_weapon`, `Unit__Weapon`, `_Unit` and
+  `Unit_` are not. The `_` is an ordinary part of the name and forms no hierarchy:
+  `:Unit_Weapon` has no relation to `:Unit`, and neither needs the other.
 - Regular message names use `MessageName`. The lowercase system endpoint names
   `initialization` and `undeliverable` are reserved grammar tokens rather than
   ordinary message names.
@@ -377,6 +386,11 @@ Record constructor. Recognition first checks the complete input, including neste
 syntax and argument labels. A malformed suffix or nested value returns the original
 Text without executing any constructor. Unknown type constructors also preserve
 Text. No native/external constructor registry is consulted.
+
+A complete built-in form whose values are invalid is recognized and yields
+`nothing` in both `parse` and `parse strict`: `:Record("hit", [a: 1])`, whose Text
+is no `TypeName`, `:Record("Hit", 1)` or `:Range(1, "x")`. A message or handler
+name is syntax rather than a value, so an invalid one is a malformed form.
 
 After successful recognition, nested arguments are evaluated left to right,
 children before parents; map entries evaluate in authored order even when later

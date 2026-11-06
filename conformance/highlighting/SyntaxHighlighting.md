@@ -202,6 +202,10 @@ and ANSI text preservation.
 ```
 
 ```highlight
+{"name": "document series kinds and message forms", "language": "gesd", "source": "a: :Series(fibonacci)\nb: :Series(offset: 2, kind: factorial)\nc: :Message(Done())\n", "expect": [{"text": "fibonacci", "kind": "builtin"}, {"text": "offset", "kind": "identifier"}, {"text": "kind", "kind": "identifier"}, {"text": "factorial", "kind": "builtin"}, {"text": "Done", "kind": "message"}], "diagnostics": []}
+```
+
+```highlight
 {"name": "document containers and forms", "language": "gesd", "source": "cost: [buildCost: 80, 'weight': 550kg]\nmount: :Vector(x: 0m, y: -0.8m)\nrolls: :Dice[6, 3]\nrange: :Range(from: 1, to: 5)\nseries: :Series(fibonacci)\n", "expect": [{"text": "[", "kind": "symbol"}, {"text": "buildCost", "kind": "identifier"}, {"text": "'weight'", "kind": "string"}, {"text": "550kg", "kind": "number"}, {"text": ":Vector", "kind": "type"}, {"text": "x", "kind": "identifier", "occurrence": 0}, {"text": "-0.8m", "kind": "number"}, {"text": ":Dice", "kind": "type"}, {"text": "6", "kind": "number"}, {"text": "from", "kind": "identifier"}, {"text": "fibonacci", "kind": "builtin"}], "diagnostics": []}
 ```
 

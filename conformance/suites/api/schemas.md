@@ -8166,3 +8166,210 @@ schema:
               value: "9"
     byteCount: 1
 ```
+
+---
+
+## Test: nothing in a required field is no value for the wire
+
+nothing in a required field is no value for the wire.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: wire-nothing-field
+schemaApi:
+  sources:
+    - "schema :S as { v: :Number integer between 0 and 4 }\n"
+  root: "S"
+  encode:
+    type: ":S"
+    entries:
+      - key: "v"
+        value:
+          type: ":Nothing"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    error:
+      code: "wire.nothingValue"
+      path: "v"
+```
+
+
+---
+
+## Test: nothing as a list element without a Nothing alternative is no value for the wire
+
+nothing as a list element without a Nothing alternative is no value for the wire.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: wire-nothing-list-element
+schemaApi:
+  sources:
+    - "schema :S as { v: :List(:Number integer between 0 and 4) max 2 }\n"
+  root: "S"
+  encode:
+    type: ":S"
+    entries:
+      - key: "v"
+        value:
+          type: ":List"
+          items:
+            - type: ":Number.int64"
+              value: "1"
+            - type: ":Nothing"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    error:
+      code: "wire.nothingValue"
+      path: "v[]"
+```
+
+
+---
+
+## Test: nothing in a union without a Nothing alternative is no value for the wire
+
+nothing in a union without a Nothing alternative is no value for the wire.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: wire-nothing-union
+schemaApi:
+  sources:
+    - "schema :S as { v: :Text max 2 | :Boolean }\n"
+  root: "S"
+  encode:
+    type: ":S"
+    entries:
+      - key: "v"
+        value:
+          type: ":Nothing"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    error:
+      code: "wire.nothingValue"
+      path: "v"
+```
+
+
+---
+
+## Test: a union field without a Nothing alternative needs its key
+
+a union field without a Nothing alternative needs its key.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: wire-missing-union
+schemaApi:
+  sources:
+    - "schema :S as { v: :Text max 2 | :Boolean }\n"
+  root: "S"
+  encode:
+    type: ":S"
+    entries: []
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    error:
+      code: "wire.missingField"
+      path: "v"
+```
+
+
+---
+
+## Test: nothing in a required message argument is no value for the wire
+
+nothing in a required message argument is no value for the wire.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: wire-nothing-argument
+schemaApi:
+  sources:
+    - "message S(a: :Boolean)\n"
+  root: "S"
+  encode:
+    type: ":Message"
+    message:
+      name: "S"
+      args:
+        - name: "a"
+          value:
+            type: ":Nothing"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    error:
+      code: "wire.nothingValue"
+      path: "a"
+```
+
+
+---
+
+## Test: nothing in a required document field is no value
+
+nothing in a required document field is no value.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: document-nothing-required
+schemaApi:
+  sources:
+    - "schema :S as { v: :Number integer between 0 and 4 }\n"
+  document: ":Schema(:S)\nv: nothing\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  document:
+    error:
+      code: "document.fieldType"
+      line: 2
+      column: 4
+```

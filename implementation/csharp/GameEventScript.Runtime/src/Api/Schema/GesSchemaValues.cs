@@ -144,11 +144,27 @@ public static class GesSchemaValues
         for (var index = start; index < end; index = schema.Nodes[index].Next)
         {
             GesValue value = default;
+            var found = false;
             var name = schema.Nodes[index].Name;
             for (var key = 0; key < fields.Length; key++)
-                if (fields.KeyAt(key) == name) value = fields.ValueAt(key);
+                if (fields.KeyAt(key) == name)
+                {
+                    value = fields.ValueAt(key);
+                    found = true;
+                }
+            if (!found && !AcceptsNothing(schema, index)) throw new GesWireException(GesWireException.MissingField, schema.Nodes[index].Path);
             EncodeNode(ref writer, schema, index, value, strict);
         }
+    }
+
+    private static bool AcceptsNothing(GesBoundSchema schema, int index)
+    {
+        ref readonly var node = ref schema.Nodes[index];
+        if (node.Optional) return true;
+        if (node.Kind != GesSchemaNodeKind.Union) return false;
+        for (var alternative = index + 1; alternative < node.Next; alternative = schema.Nodes[alternative].Next)
+            if (schema.Nodes[alternative].Kind == GesSchemaNodeKind.Nothing) return true;
+        return false;
     }
 
     // Strict encoding is the trial of a Map against a union alternative: a key without a field means that the alternative does not hold.
@@ -158,7 +174,7 @@ public static class GesSchemaValues
         var field = new GesSchemaField(schema, index);
         if (value.IsNothing && (node.Optional || node.Kind != GesSchemaNodeKind.Union))
         {
-            if (!node.Optional) throw new GesWireException(GesWireException.MissingField, node.Path);
+            if (!node.Optional) throw new GesWireException(GesWireException.NothingValue, node.Path);
             writer.WriteAbsent(field);
             return;
         }
@@ -237,7 +253,7 @@ public static class GesSchemaValues
             }
         }
 
-        throw failure ?? new GesWireException(value.IsNothing ? GesWireException.MissingField : GesWireException.TypeMismatch, node.Path);
+        throw failure ?? new GesWireException(value.IsNothing ? GesWireException.NothingValue : GesWireException.TypeMismatch, node.Path);
     }
 
     private static bool Selects(in GesSchemaNode candidate, GesValue value)

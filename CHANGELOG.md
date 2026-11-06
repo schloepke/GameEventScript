@@ -11,6 +11,29 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 ## Unreleased
 
 ### Breaking
+- `:Vector(value)` and `:Point(value)` with one positional argument are now the cast,
+  so `:Vector([1, 2])` is 1, 2, 0 instead of `nothing` and `:Vector(:Dice[6, 3])` is
+  6, 3, 0 instead of 9, 0, 0.
+- `:Message` rejects the labels `value` and `tags` in source; use `with`.
+- Encoding a schema value reports `nothing` in a required field, argument or list element
+  as the new `wire.nothingValue`; `wire.missingField` stays for absent keys and arguments
+  and for fields a typed writer leaves unwritten.
+- The literal `nothing` and a constant with that value are no tags: this is the new
+  `validate.invalidTag`, and a tag value that is `nothing` at runtime makes the tag
+  clause invalid instead of adding `#nothing`.
+- A send with an invalid tag clause sends nothing and continues; a result-bearing send
+  is false. A statement send used to end the handler, in C# always and in Swift for a
+  Message value.
+- Message names start uppercase: `initialization` and `undeliverable` are entry points
+  only the host uses. `parse` and documents no longer recognize
+  `:Message(initialization())` and `:Handler(undeliverable())`, and in source a lowercase
+  name is a variable or a call of a function or predicate. `GameEventScriptMessage.Create`
+  and `FromJson` reject those names, `CreateMessage` returns nothing for them, and
+  loading a Program with such an outbound binding or message shape fails.
+- A labeled `:Range` needs `from` and `to`, so `:Range(from: 1)` is an error.
+- `value as :Record` is `validate.invalidTypeConstructor` instead of a compiler failure
+  with `decode.invalidOperand`.
+- Handlers print a space after each comma: `:Handler(Done(value, _))`.
 - Labeled Vector and Point components must be a run without gaps:
   `:Vector(x: 1, z: 2)` is `validate.invalidTypeConstructor` in source, stays Text
   for `parse` and is `document.invalidLiteral` in documents. The literals `true`
@@ -325,6 +348,13 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   `:Vector(x: v, y: 3)` with a Vector `v` is `nothing` instead of writing 3 into `z`.
 - The Swift compiler accepts the source short form `:Message(Done)`, like the C#
   compiler.
+- `:Series(kind: fibonacci)` compiles without quotes, and `parse` and documents read
+  `:Series(offset: 2, kind: fibonacci)`.
+- In Swift, a statement `emit` or `publish` of a Handler value no longer sends a message,
+  like in C#.
+- A line break may stand before the comma of a further tag inside `:Message(...)`.
+- `:Quantity(km)(1)` reports `validate.invalidTypeConstructor` in Swift like in C#, and
+  a `:Quantity(m)` without a value reports at its start in C# like in Swift.
 - `:Message(...)`, `:Handler(...)` and `:Series(...)` can span lines like other
   type constructors. Depending on the form, a line break made the value `nothing`
   in C# or was a syntax error in one or both compilers.

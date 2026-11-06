@@ -152,9 +152,7 @@ internal struct GesLiteralParser
         // `:Dice [...]` with whitespace is the Dice result literal, read after this form fails.
         if (!Consume('(')) return null;
         SkipWhitespace();
-        if (builtin is "handler" or "message" && _position < _text.Length && (char.IsUpper(_text[_position])
-                || _text.AsSpan(_position).StartsWith("initialization".AsSpan(), StringComparison.Ordinal)
-                || _text.AsSpan(_position).StartsWith("undeliverable".AsSpan(), StringComparison.Ordinal)))
+        if (builtin is "handler" or "message" && _position < _text.Length && GesText.IsAsciiUpper(_text[_position]))
             return ReadMessageForm(depth + 1, builtin == "handler", formStart);
         var labels = new List<string>();
         var values = new List<GesValue>();
@@ -171,7 +169,7 @@ internal struct GesLiteralParser
                 else if (labels.Contains(label)) return null;
                 SkipWhitespace();
                 GesValue? value;
-                if (builtin == "series" && values.Count == 0 && _position < _text.Length && _text[_position] is >= 'a' and <= 'z')
+                if (builtin == "series" && (label == "kind" || label == "_" && values.Count == 0) && _position < _text.Length && _text[_position] is >= 'a' and <= 'z')
                 {
                     var valueStart = _position;
                     var kind = ReadName();

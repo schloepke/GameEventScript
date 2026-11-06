@@ -589,7 +589,8 @@ internal sealed partial class GesSyntaxParser
     private Expression ParsePublishMessageExpression() => Current.Kind == Message ? ParseMessageLiteralExpressionCore() : ParseExpression();
 
     // The greatest depth of the tag expressions after `with`, or zero without them.
-    private int ParseOptionalTagExpressions(bool resultSend = false)
+    // Only inside parentheses may a line break stand before the comma of a further tag.
+    private int ParseOptionalTagExpressions(bool resultSend = false, bool lineBreaks = false)
     {
         if (!Is(With)) return 0;
 
@@ -600,17 +601,20 @@ internal sealed partial class GesSyntaxParser
         {
             SkipNewLines();
             depth = Deepest(depth, (resultSend ? ParseUnaryExpression() : ParseExpression()).Depth);
+            if (lineBreaks) SkipNewLines();
         }
         while (Match(Comma));
 
         return FinishNode(depth);
     }
 
-    private int ParseArgument()
+    private int ParseArgument(bool seriesArgument = false)
     {
         _tree.StartNode(GesSyntaxNodeKind.Argument);
+        var label = "";
         if (IsArgumentLabelStart())
         {
+            label = Current.Text;
             ExpectArgumentLabel();
             Role(GesSyntaxRole.ArgumentLabel);
             SkipNewLines();
@@ -618,21 +622,28 @@ internal sealed partial class GesSyntaxParser
             SkipNewLines();
         }
 
+        // Only the `kind` argument of `:Series` names a series without quotes.
+        if (seriesArgument && label == "kind" && Current.Kind is Fibonacci or Factorial)
+        {
+            Advance();
+            return FinishNode(0);
+        }
+
         return FinishNode(ParseExpression().Depth);
     }
 
     // The greatest argument depth of a list after its opening parenthesis.
-    private int ParseArgumentListAfterLeftParen()
+    private int ParseArgumentListAfterLeftParen(bool seriesArguments = false)
     {
         SkipNewLines();
         if (Match(RightParen)) return 0;
 
-        var depth = ParseArgumentListAfterFirstArgument(ParseArgument(), RightParen);
+        var depth = ParseArgumentListAfterFirstArgument(ParseArgument(seriesArguments), RightParen, seriesArguments);
         Expect(RightParen);
         return depth;
     }
 
-    private int ParseArgumentListAfterFirstArgument(int depth, GesTokenKind closingKind)
+    private int ParseArgumentListAfterFirstArgument(int depth, GesTokenKind closingKind, bool seriesArguments = false)
     {
         while (true)
         {
@@ -640,13 +651,13 @@ internal sealed partial class GesSyntaxParser
             if (Match(Comma))
             {
                 SkipNewLines();
-                depth = Deepest(depth, ParseArgument());
+                depth = Deepest(depth, ParseArgument(seriesArguments));
                 continue;
             }
 
             if (!Is(closingKind) && IsArgumentLabelStart())
             {
-                depth = Deepest(depth, ParseArgument());
+                depth = Deepest(depth, ParseArgument(seriesArguments));
                 continue;
             }
 

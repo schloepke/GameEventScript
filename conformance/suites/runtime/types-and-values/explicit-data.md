@@ -2185,7 +2185,7 @@ steps:
           - name: handler
             value:
               type: ":Text"
-              value: ":Handler(Foo(x,_))"
+              value: ":Handler(Foo(x, _))"
           - name: plainSeries
             value:
               type: ":Text"
@@ -2206,6 +2206,411 @@ steps:
             value:
               type: ":Text"
               value: ":Vector(x: 0, y: 1, z: 2)"
+    runtimeLimits:
+      exclude:
+        - any: true
+```
+
+---
+
+## Test: range-and-number-forms
+
+Number and Range take their parameters by position or label, in any label order; a labeled Range needs `from` and `to`.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: range-and-number-forms
+compile:
+  binaryRoundTrip: true
+```
+
+### Source code under test
+
+```ges
+on Start {
+  emit Done(numberPositional: :Number(1, "m") as :Text, numberLabeled: :Number(unit: "m", value: 1) as :Text, numberBlank: :Number(1, "") as :Text, rangePositional: :Range(1, 3) as :Text, rangeStep: :Range(1, 3, 2) as :Text, rangeLabeled: :Range(to: 3, from: 1) as :Text, rangeMixed: :Range(1, 3, step: 2) as :Text, prefixedUnit: :Number(1, "km"), rangeUnit: :Range(1m, 3m))
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args: []
+    local:
+      - name: Done
+        args:
+          - name: numberPositional
+            value:
+              type: ":Text"
+              value: "1m"
+          - name: numberLabeled
+            value:
+              type: ":Text"
+              value: "1m"
+          - name: numberBlank
+            value:
+              type: ":Text"
+              value: "1"
+          - name: rangePositional
+            value:
+              type: ":Text"
+              value: ":Range(from: 1, to: 3, step: 1)"
+          - name: rangeStep
+            value:
+              type: ":Text"
+              value: ":Range(from: 1, to: 3, step: 2)"
+          - name: rangeLabeled
+            value:
+              type: ":Text"
+              value: ":Range(from: 1, to: 3, step: 1)"
+          - name: rangeMixed
+            value:
+              type: ":Text"
+              value: ":Range(from: 1, to: 3, step: 2)"
+          - name: prefixedUnit
+            value:
+              type: ":Nothing"
+          - name: rangeUnit
+            value:
+              type: ":Nothing"
+    runtimeLimits:
+      exclude:
+        - any: true
+```
+
+---
+
+## Test: series-kind-forms
+
+A series kind may be bare or quoted, also with the label `kind`, and `parse` reads the same forms in any label order.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: series-kind-forms
+compile:
+  binaryRoundTrip: true
+```
+
+### Source code under test
+
+```ges
+on Start {
+  emit Done(bare: :Series(fibonacci) as :Text, quoted: :Series("factorial", 2) as :Text, labeled: :Series(kind: fibonacci, offset: 2) as :Text, labeledLast: :Series(offset: 2, kind: factorial) as :Text, parsed: parse ':Series(kind: fibonacci)' as :Text, parsedLast: parse ':Series(offset: 2, kind: factorial)' as :Text, unknown: :Series("other"), badOffset: :Series(fibonacci, -1))
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args: []
+    local:
+      - name: Done
+        args:
+          - name: bare
+            value:
+              type: ":Text"
+              value: ":Series(fibonacci, offset: 0)"
+          - name: quoted
+            value:
+              type: ":Text"
+              value: ":Series(factorial, offset: 2)"
+          - name: labeled
+            value:
+              type: ":Text"
+              value: ":Series(fibonacci, offset: 2)"
+          - name: labeledLast
+            value:
+              type: ":Text"
+              value: ":Series(factorial, offset: 2)"
+          - name: parsed
+            value:
+              type: ":Text"
+              value: ":Series(fibonacci, offset: 0)"
+          - name: parsedLast
+            value:
+              type: ":Text"
+              value: ":Series(factorial, offset: 2)"
+          - name: unknown
+            value:
+              type: ":Nothing"
+          - name: badOffset
+            value:
+              type: ":Nothing"
+    runtimeLimits:
+      exclude:
+        - any: true
+```
+
+---
+
+## Test: message-and-handler-forms
+
+A message form names a message with an uppercase name, and a lowercase name is a function call, also for a system endpoint. Tags given with a Message value are added to its tags. Handlers print a space after each comma, and a line break may stand before the comma of a further tag.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: message-and-handler-forms
+compile:
+  binaryRoundTrip: true
+```
+
+### Source code under test
+
+```ges
+function initialization() be :Message(FromFunction())
+
+on Start {
+  let existing be :Message(Foo() with #b)
+  emit Done(handler: :Handler(Foo(x, _)) as :Text, fromFunction: :Message(initialization()) as :Text, added: :Message(existing, #a) as :Text, tagged: :Message(
+    Foo()
+    with #a
+    , #b
+  ) as :Text, parsedMessage: parse ':Message(initialization())', parsedHandler: parse ':Handler(undeliverable())')
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args: []
+    local:
+      - name: Done
+        args:
+          - name: handler
+            value:
+              type: ":Text"
+              value: ":Handler(Foo(x, _))"
+          - name: fromFunction
+            value:
+              type: ":Text"
+              value: ":Message(FromFunction())"
+          - name: added
+            value:
+              type: ":Text"
+              value: ":Message(Foo() with #b, #a)"
+          - name: tagged
+            value:
+              type: ":Text"
+              value: ":Message(Foo() with #a, #b)"
+          - name: parsedMessage
+            value:
+              type: ":Text"
+              value: ":Message(initialization())"
+          - name: parsedHandler
+            value:
+              type: ":Text"
+              value: ":Handler(undeliverable())"
+    runtimeLimits:
+      exclude:
+        - any: true
+```
+
+---
+
+## Test: tag-value-nothing
+
+A tag value that is `nothing` at runtime makes the tag clause invalid, so a Message form yields Nothing and a result-bearing send is false.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: tag-value-nothing
+compile:
+  binaryRoundTrip: true
+```
+
+### Source code under test
+
+```ges
+on Start {
+  let t be nothing
+  let sent be emit Foo with t
+  emit Done(form: :Message(Foo() with t), parsed: parse ':Message(Foo() with nothing)', sent: sent)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args: []
+    local:
+      - name: Done
+        args:
+          - name: form
+            value:
+              type: ":Nothing"
+          - name: parsed
+            value:
+              type: ":Nothing"
+          - name: sent
+            value:
+              type: ":Boolean"
+              value: false
+    runtimeLimits:
+      exclude:
+        - any: true
+```
+
+---
+
+## Test: statement-send-invalid-tag
+
+A statement send with an invalid tag clause sends nothing, and execution continues.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: statement-send-invalid-tag
+compile:
+  binaryRoundTrip: true
+```
+
+### Source code under test
+
+```ges
+on Start {
+  let t be nothing
+  let m be :Message(Foo())
+  emit Foo with t
+  publish Foo with t
+  emit m with t
+  publish m with t
+  emit Foo with "a b"
+  emit m with [#a, 5]
+  emit Done(reached: true)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args: []
+    local:
+      - name: Done
+        args:
+          - name: reached
+            value:
+              type: ":Boolean"
+              value: true
+    runtimeLimits:
+      exclude:
+        - any: true
+```
+
+---
+
+## Test: send-needs-message
+
+Only a Message value can be sent: a Handler or any other value sends nothing.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: send-needs-message
+compile:
+  binaryRoundTrip: true
+```
+
+### Source code under test
+
+```ges
+on Start {
+  let handler be :Handler(Foo())
+  let number be 5
+  let first be emit handler
+  let second be publish number
+  emit handler
+  publish handler
+  emit handler with #a
+  emit number
+  emit Done(first: first, second: second)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args: []
+    local:
+      - name: Done
+        args:
+          - name: first
+            value:
+              type: ":Boolean"
+              value: false
+          - name: second
+            value:
+              type: ":Boolean"
+              value: false
     runtimeLimits:
       exclude:
         - any: true

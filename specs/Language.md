@@ -462,6 +462,11 @@ grammar, empty tags are omitted, and later duplicates are omitted while retainin
 first occurrence order. Applying `with` to an existing message replaces that
 message's tags with the normalized clause result.
 
+> **Since: Unreleased** — statement sends with an invalid tag clause
+
+A clause with an invalid tag
+sends nothing and execution continues, as for every other send that cannot be made.
+
 #### Result-Bearing and Delayed Sends
 
 > **Since: 0.2.0**
@@ -493,7 +498,7 @@ the message is not delayed and has the same result, acceptance, ordering,
 queue-limit behavior and observations. Timing, rounding, delivery snapshots and
 initialization staging are defined in HostRuntime. Emit/publish do not become
 synchronous handler calls. A result-bearing send also returns false when its
-message operand is not a Message or its tag clause cannot be normalized.
+message operand cannot be sent or its tag clause cannot be normalized.
 
 ```ges
 emit after 0.2s Fire(power: 100%) with #cannon
@@ -1180,12 +1185,26 @@ from [Quantities](#quantities), such as `none`, `m`, `second`, `m/s` or
 `deg/s`; prefixed spellings and unknown names yield `nothing`, as does a
 conflicting existing unit. Percentage construction uses the numeric ratio.
 `:Range(from, to, step)` defaults its step to 1. `:Series(kind, offset)` accepts
-`fibonacci`/`factorial` (bare or quoted), defaulting offset to zero; it must be a
-nonnegative unitless integer. Range and Series remain lazy.
+`fibonacci`/`factorial` (bare or quoted, also with the label `kind`), defaulting
+offset to zero; it must be a nonnegative unitless integer. A labeled `:Range` needs
+both `from` and `to`. Range and Series remain lazy.
+
+> **Since: Unreleased** — message names, positional tags and tag checks of these forms
+
 `:Message(...)` explicitly distinguishes a message instance, including an
-argumentless one, from `:Handler(Name(labels))`. In source, `:Message(Done)` is
-short for `:Message(Done())`, as `emit Done` is for `emit Done()`; Text and
-documents write the argument list. Handler labels describe data,
+argumentless one, from `:Handler(Name(labels))`. Both name a message with its
+uppercase message name. A lowercase name is a variable or, with an argument list, a
+call of a function or predicate. This also applies to `initialization` and
+`undeliverable`, which only the host uses as entry points and which can never be
+called, so `:Message(initialization())` calls a function and `parse` and documents do
+not recognize it. In source, `:Message(Done)` is short for `:Message(Done())`, as `emit Done` is for `emit Done()`;
+Text and documents write the argument list. Tags of a message name follow `with`.
+`:Message(value, tags)` returns a new Message with the tags added to those of the
+Message `value`, unlike `with` on a send, which replaces them. The labels `value` and
+`tags` are `validate.invalidTypeConstructor`. The literal `nothing`, also inside a list literal, and a constant with that value are
+no tags (`validate.invalidTag`), and a tag value that is `nothing` at runtime makes the tag
+clause invalid like any other invalid tag. `:Record` is no cast target:
+`value as :Record` is `validate.invalidTypeConstructor`. Handler labels describe data,
 not local variable bindings; repeated `_` labels are allowed.
 
 `:Record(type, fields)` requires a Text name of the
@@ -1618,12 +1637,16 @@ let x be p.x
 gaps in `x`, `y`, `z` order, such as `:Point(y: 1m, z: 2m)`; `:Vector(x: 1, z: 2)`
 is `validate.invalidTypeConstructor`. Labels cannot be mixed with positional
 components, as in `:Vector(v, z: 2)`. Every omitted component is zero with the
-unit of the others. Positional components fill `x`, `y` and `z` in order, except
-that a Vector or Point as first of one or two positional components supplies its
-components, and a second one replaces `z`: `:Vector(v, 7)` adds height to a 2D
-value. Labeled components never lift, so `:Vector(x: v, y: 3)` is `nothing`. Different units, `NaN` and non-numeric components yield `nothing`.
-The literals `true` and `false` are no components
-(`validate.invalidTypeConstructor`); every other Boolean value, such as a variable,
+unit of the others.
+
+> **Since: Unreleased** — one positional argument as the cast
+
+One positional argument is the cast, so `:Vector([1, 2])` means
+`[1, 2] as :Vector`. Two or three positional components fill `x`, `y` and `z` in
+order, except that a Vector or Point as first of two supplies its components and
+the second one replaces `z`: `:Vector(v, 7)` adds height to a 2D value. Labeled components never lift, so `:Vector(x: v, y: 3)` is `nothing`. Different units, `NaN` and non-numeric components yield `nothing`.
+The literals `true` and `false` are rejected in these forms, also as the one
+argument (`validate.invalidTypeConstructor`), although `true as :Vector` converts; every other Boolean value, such as a variable,
 a constant or a comparison, counts as 0 or 1.
 
 Vectors describe deltas and may be scaled by scalar numeric values. Points

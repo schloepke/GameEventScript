@@ -710,7 +710,7 @@ public struct GesValue: Hashable, CustomStringConvertible {
             return ":Message(" + value.name + "(" + arguments + ")" + tags + ")"
         case .handler:
             let value = signatureValue!
-            return ":Handler(" + value.signatureId + ")"
+            return ":Handler(" + value.signatureId.split(separator: ",", omittingEmptySubsequences: false).joined(separator: ", ") + ")"
         case .series:
             let value = seriesValue!
             return ":Series(\(value.signatureID), offset: \(value.offset))"

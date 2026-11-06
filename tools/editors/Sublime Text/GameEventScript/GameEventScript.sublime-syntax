@@ -274,6 +274,17 @@
         1: "keyword.operator.word.gameeventscript"
         3: "keyword.operator.word.gameeventscript"
     -
+      "match": "(:Series)([ \\t]*)(\\()([ \\t]*)(fibonacci|factorial)\\b"
+      "captures":
+        1: "support.type.primitive.gameeventscript"
+        3: "punctuation.bracket.gameeventscript"
+        5: "keyword.operator.word.gameeventscript"
+    -
+      "match": "\\b(kind)[ \\t]*:[ \\t]*(fibonacci|factorial)\\b"
+      "captures":
+        1: "variable.parameter.label.gameeventscript"
+        2: "keyword.operator.word.gameeventscript"
+    -
       "match": "(:Dice)([ \\t\\r\\n]*)(\\[)"
       "scope": "meta.literal.dice.gameeventscript"
       "captures":

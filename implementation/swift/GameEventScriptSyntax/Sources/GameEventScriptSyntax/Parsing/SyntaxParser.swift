@@ -545,7 +545,7 @@
     func handlerDeclaration() throws {
         try expect(.on)
         newlines()
-        guard currentKind == .message || currentKind == .identifier && ["initialization", "undeliverable"].contains(current.text) else { throw failure("Expected message name.") }
+        guard currentKind == .message || currentKind == .identifier && GesNames.systemEndpoint(current.text) else { throw failure("Expected message name.") }
         advance()
         role(.messageName)
         if currentKind == .`as` {

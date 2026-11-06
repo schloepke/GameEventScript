@@ -16,7 +16,8 @@ public struct GesDocument: Hashable {
     /// Wraps a Map or Record root. A Record's type name becomes the record type schema; a Map takes an optional file
     /// schema. Throws `GesApiError.invalidArgument` for any other root, a Record type name that is not a valid,
     /// non-built-in type name, a Record root key that is not a field name, a schema that does not match the root, or a value inside the root without readable
-    /// literal text: an External value, a Dice roll below 1 or a nested Record whose type name is not a type name.
+    /// literal text: an External value, a Dice roll below 1, a nested Record whose type name is not a type name or a
+    /// Handler of a system endpoint.
     public init(_ value: GesValue, schema: GesDocumentSchema? = nil) throws {
         switch value.kind {
         case .map:
@@ -32,7 +33,7 @@ public struct GesDocument: Hashable {
         default:
             throw GesApiError.invalidArgument("A document root must be a Map or a Record.")
         }
-        guard GesDocumentFormatter.isPrintable(value) else { throw GesApiError.invalidArgument("A document cannot contain External values, Dice rolls below 1 or Records without a type name.") }
+        guard GesDocumentFormatter.isPrintable(value) else { throw GesApiError.invalidArgument("A document cannot contain External values, Dice rolls below 1, Handlers of a system endpoint or Records without a type name.") }
         self.value = value
     }
 

@@ -124,6 +124,11 @@ public static class GesDiagnosticCodes
     /// Defines the validate invalid type constructor value.
     /// </summary>
     public const string ValidateInvalidTypeConstructor = "validate.invalidTypeConstructor";
+
+    /// <summary>
+    /// A tag clause contains the literal <c>nothing</c>.
+    /// </summary>
+    public const string ValidateInvalidTag = "validate.invalidTag";
     /// <summary>
     /// Defines the compile unsupported construct value.
     /// </summary>

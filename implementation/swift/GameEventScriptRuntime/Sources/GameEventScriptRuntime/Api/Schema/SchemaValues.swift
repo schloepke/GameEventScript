@@ -29,15 +29,15 @@ public enum GesSchemaValues {
             var writer = GesSchemaWriter(schema, into: bytes)
             var current = schema
             if schema.kind == .messages {
-                guard let message = value.messageValue, let member = schema.memberIndex(message.name) else { throw GesWireError(code: "wire.typeMismatch") }
+                guard let message = value.messageValue, let member = schema.memberIndex(message.name) else { throw GesWireError(code: GesWireError.typeMismatch) }
                 try writer.selectMember(member)
                 current = schema.members[member]
             }
             if current.kind == .message {
                 try encodeMessage(&writer, current, value)
             } else {
-                if let name = value.customTypeName, name != current.name { throw GesWireError(code: "wire.typeMismatch") }
-                guard let fields = value.asMap else { throw GesWireError(code: "wire.typeMismatch") }
+                if let name = value.customTypeName, name != current.name { throw GesWireError(code: GesWireError.typeMismatch) }
+                guard let fields = value.asMap else { throw GesWireError(code: GesWireError.typeMismatch) }
                 try encodeFields(&writer, current, 0, current.nodes.count, fields, strict: false)
             }
             return try writer.finish()
@@ -73,9 +73,9 @@ public enum GesSchemaValues {
     }
 
     private static func encodeMessage(_ writer: inout GesSchemaWriter, _ schema: GesBoundSchema, _ value: GesValue) throws {
-        guard let message = value.messageValue, message.name == schema.name else { throw GesWireError(code: "wire.typeMismatch") }
+        guard let message = value.messageValue, message.name == schema.name else { throw GesWireError(code: GesWireError.typeMismatch) }
         for tag in message.tags where !schema.infos.enumerated().contains(where: { schema.nodes[$0.offset].isTagBit && $0.element.name == tag }) {
-            throw GesWireError(code: "wire.unknownTag")
+            throw GesWireError(code: GesWireError.unknownTag)
         }
         let arguments = Array(message.arguments)
         var argument = 0
@@ -84,14 +84,14 @@ public enum GesSchemaValues {
             if schema.nodes[index].isTagBit {
                 try writer.writeBoolean(GesSchemaField(owner: schema, index: index), message.tags.contains(schema.infos[index].name))
             } else {
-                if argument >= arguments.count { throw GesWireError(code: "wire.missingField", path: schema.infos[index].path) }
-                if arguments[argument].name != schema.labels[argument] { throw GesWireError(code: "wire.typeMismatch", path: schema.infos[index].path) }
+                if argument >= arguments.count { throw GesWireError(code: GesWireError.missingField, path: schema.infos[index].path) }
+                if arguments[argument].name != schema.labels[argument] { throw GesWireError(code: GesWireError.typeMismatch, path: schema.infos[index].path) }
                 try encodeNode(&writer, schema, index, arguments[argument].value, strict: false)
                 argument += 1
             }
             index = schema.nodes[index].next
         }
-        if argument != arguments.count { throw GesWireError(code: "wire.typeMismatch") }
+        if argument != arguments.count { throw GesWireError(code: GesWireError.typeMismatch) }
     }
 
     private static func decodeMessage(_ reader: inout GesSchemaReader, _ schema: GesBoundSchema) throws -> GesValue {
@@ -113,14 +113,31 @@ public enum GesSchemaValues {
         var index = start
         while index < end {
             var value = GesValue.nothing
+            var found = false
             var key = 0
             while key < fields.length {
-                if fields.key(at: key).unicodeScalars.elementsEqual(schema.infos[index].name.unicodeScalars) { value = fields.value(at: key) }
+                if fields.key(at: key).unicodeScalars.elementsEqual(schema.infos[index].name.unicodeScalars) {
+                    value = fields.value(at: key)
+                    found = true
+                }
                 key += 1
             }
+            if !found && !acceptsNothing(schema, index) { throw GesWireError(code: GesWireError.missingField, path: schema.infos[index].path) }
             try encodeNode(&writer, schema, index, value, strict: strict)
             index = schema.nodes[index].next
         }
+    }
+
+    private static func acceptsNothing(_ schema: GesBoundSchema, _ index: Int) -> Bool {
+        let node = schema.nodes[index]
+        if node.optional { return true }
+        if node.kind != .union { return false }
+        var alternative = index + 1
+        while alternative < node.next {
+            if schema.nodes[alternative].kind == .nothing { return true }
+            alternative = schema.nodes[alternative].next
+        }
+        return false
     }
 
     // Strict encoding is the trial of a Map against a union alternative: a key without a field means that the alternative does not hold.
@@ -129,29 +146,29 @@ public enum GesSchemaValues {
         let info = schema.infos[index]
         let field = GesSchemaField(owner: schema, index: index)
         if value.isNothing && (node.optional || node.kind != .union) {
-            if !node.optional { throw GesWireError(code: "wire.missingField", path: info.path) }
+            if !node.optional { throw GesWireError(code: GesWireError.nothingValue, path: info.path) }
             try writer.writeAbsent(field)
             return
         }
         switch node.kind {
         case .boolean:
-            if value.valueKind != .boolean { throw GesWireError(code: "wire.typeMismatch", path: info.path) }
+            if value.valueKind != .boolean { throw GesWireError(code: GesWireError.typeMismatch, path: info.path) }
             try writer.writeBoolean(field, value.asBoolean)
         case .tag:
-            if value.valueKind != .tag { throw GesWireError(code: "wire.typeMismatch", path: info.path) }
-            guard let tag = info.tags.firstIndex(of: value.asText) else { throw GesWireError(code: "wire.unknownTag", path: info.path) }
+            if value.valueKind != .tag { throw GesWireError(code: GesWireError.typeMismatch, path: info.path) }
+            guard let tag = info.tags.firstIndex(of: value.asText) else { throw GesWireError(code: GesWireError.unknownTag, path: info.path) }
             try writer.writeTag(field, tag)
         case .text:
-            if value.valueKind != (node.isTagText ? .tag : .text) { throw GesWireError(code: "wire.typeMismatch", path: info.path) }
+            if value.valueKind != (node.isTagText ? .tag : .text) { throw GesWireError(code: GesWireError.typeMismatch, path: info.path) }
             let bytes = Array(value.asText.utf8)
             try bytes.withUnsafeBytes { try writer.writeText(field, $0) }
         case .list where info.valueKind == .dice:
-            guard value.valueKind == .dice else { throw GesWireError(code: "wire.typeMismatch", path: info.path) }
+            guard value.valueKind == .dice else { throw GesWireError(code: GesWireError.typeMismatch, path: info.path) }
             let rolls = value.asDice
             try writer.beginList(field, count: rolls.count)
             for roll in rolls { try writer.writeInteger(GesSchemaField(owner: schema, index: index + 1), Int64(roll)) }
         case .list:
-            guard value.valueKind == .list else { throw GesWireError(code: "wire.typeMismatch", path: info.path) }
+            guard value.valueKind == .list else { throw GesWireError(code: GesWireError.typeMismatch, path: info.path) }
             let items = value.asList
             try writer.beginList(field, count: items.count)
             for item in items { try encodeNode(&writer, schema, index + 1, item, strict: strict) }
@@ -162,7 +179,7 @@ public enum GesSchemaValues {
         default:
             // Boolean and Dice are numeric in the language, but a field takes them only after an explicit conversion.
             let percent = value.valueKind == .percentage
-            if !(value.valueKind == .integer || value.valueKind == .float || percent) || percent != (info.valueKind == .percentage) || value.unit != info.unit { throw GesWireError(code: "wire.typeMismatch", path: info.path) }
+            if !(value.valueKind == .integer || value.valueKind == .float || percent) || percent != (info.valueKind == .percentage) || value.unit != info.unit { throw GesWireError(code: GesWireError.typeMismatch, path: info.path) }
             if let integer = value.integerValue {
                 try writer.writeInteger(field, integer)
             } else {
@@ -200,7 +217,7 @@ public enum GesSchemaValues {
             alternative = candidate.next
             position += 1
         }
-        throw failure ?? GesWireError(code: value.isNothing ? "wire.missingField" : "wire.typeMismatch", path: schema.infos[index].path)
+        throw failure ?? GesWireError(code: value.isNothing ? GesWireError.nothingValue : GesWireError.typeMismatch, path: schema.infos[index].path)
     }
 
     private static func selects(_ candidate: GesSchemaNodeInfo, _ value: GesValue) -> Bool {
@@ -225,7 +242,7 @@ public enum GesSchemaValues {
         let field = GesSchemaField(owner: schema, index: index)
         if info.valueKind == .point || info.valueKind == .vector {
             let kind: GesBytecodeTypeKind = info.valueKind == .point ? .point : .vector
-            if value.valueKind != kind || value.unit != info.unit { throw GesWireError(code: "wire.typeMismatch", path: info.path) }
+            if value.valueKind != kind || value.unit != info.unit { throw GesWireError(code: GesWireError.typeMismatch, path: info.path) }
             var seen: Set<String> = []
             try writer.beginNested(field)
             var axis = index + 1
@@ -236,13 +253,13 @@ public enum GesSchemaValues {
                 axis += 1
             }
             if (!seen.contains("x") && value.x != 0) || (!seen.contains("y") && value.y != 0) || (!seen.contains("z") && value.z != 0) {
-                throw GesWireError(code: "wire.typeMismatch", path: info.path)
+                throw GesWireError(code: GesWireError.typeMismatch, path: info.path)
             }
             return
         }
-        if let name = value.customTypeName, name != info.schemaName { throw GesWireError(code: "wire.typeMismatch", path: info.path) }
-        guard let fields = value.asMap else { throw GesWireError(code: "wire.typeMismatch", path: info.path) }
-        if strict && value.customTypeName == nil && !hasEveryKey(schema, index, fields) { throw GesWireError(code: "wire.typeMismatch", path: info.path) }
+        if let name = value.customTypeName, name != info.schemaName { throw GesWireError(code: GesWireError.typeMismatch, path: info.path) }
+        guard let fields = value.asMap else { throw GesWireError(code: GesWireError.typeMismatch, path: info.path) }
+        if strict && value.customTypeName == nil && !hasEveryKey(schema, index, fields) { throw GesWireError(code: GesWireError.typeMismatch, path: info.path) }
         try writer.beginNested(field)
         try encodeFields(&writer, schema, index + 1, node.next, fields, strict: strict)
     }

@@ -139,6 +139,15 @@ final class GesAstValidator {
     // A repeated parameter name, already reported, keeps its last declared type, as in C#.
     private func parameterTypes(_ d: GesDefinition) -> [String: String] { Dictionary(d.parameters.compactMap { p in p.type.map { (p.name, $0) } }, uniquingKeysWith: { _, last in last }) }
 
+    func tagLiteral(_ tag: GesExpression) {
+        var value = tag.kind
+        if case .list(let items) = value { return items.forEach(tagLiteral) }
+        if case .constant(let name) = value, let constant = constants[name] { value = constant.kind }
+        if case .literal(let literal) = value, literal.valueKind == .nothing {
+            report("validate.invalidTag", tag.location, symbol: "nothing", kind: .type, message: "The value nothing is no tag.")
+        }
+    }
+
     func knownType(_ type: String) -> Bool {
         ["record", "number", "numeric", "nothing", "boolean", "percentage", "vector", "point", "series", "tag", "text", "list", "range", "message", "handler", "map", "dice", "unit", "integer", "fractional"].contains(type)
             || type.hasPrefix("quantity:")
@@ -164,7 +173,10 @@ final class GesAstValidator {
         switch s.kind {
         case .publish(_, let message, let tags):
             expression(message, scope.types)
-            for tag in tags { expression(tag, scope.types) }
+            for tag in tags {
+                tagLiteral(tag)
+                expression(tag, scope.types)
+            }
         case .assembly(let block):
             for line in block.lines { for operand in line.operands { expression(operand, scope.types) } }
             for declaration in block.declarations where declaration.export { bind(declaration.name, nil, s.location, &scope) }
@@ -279,7 +291,10 @@ final class GesAstValidator {
                 expression(delay, types)
                 sendDelay(delay, types)
             }
-            for tag in tags { expression(tag, types) }
+            for tag in tags {
+                tagLiteral(tag)
+                expression(tag, types)
+            }
         // Geometric intrinsics are not visited, as in C#; clamp, min and max visit their operands.
         case .intrinsic(let name, let args): if Self.visitedIntrinsics.contains(name) { for arg in args { expression(arg, types) } }
         case .seeded(let seed, let body):
@@ -287,7 +302,10 @@ final class GesAstValidator {
             validateSeed(seed, types)
             expression(body, types)
         // A cast or check may name a custom type that is bound only later, such as a record value a message delivers.
-        case .check(let value, _), .cast(let value, _): expression(value, types)
+        case .check(let value, _): expression(value, types)
+        case .cast(let value, let type):
+            if type == "record" { report("validate.invalidTypeConstructor", e.location, symbol: "record", kind: .type, message: "':Record' is no cast target; use ':Record(type, fields)' to build a Record.") }
+            expression(value, types)
         default: preconditionFailure()
         }
     }
@@ -348,6 +366,12 @@ final class GesAstValidator {
 
         if ["__split", "__splitWhitespace"].contains(type) { return }
         if ["record", "range", "series", "number", "message", "nothing", "percentage", "boolean", "text", "tag", "list", "map", "dice", "handler"].contains(type) {
+            if type == "message" {
+                var isLiteral = false
+                if case .message = args.first?.value.kind { isLiteral = true }
+                if args.contains(where: { $0.label == "value" || ($0.label == "tags" && !isLiteral) }) { return invalid() }
+                if args.count == 2 { tagLiteral(args[1].value) }
+            }
             if !GesCompilerSupport.dataArguments(type, args.map(\.label)) { invalid() }
             return
         }
@@ -370,6 +394,7 @@ final class GesAstValidator {
             return
         }
         if ["numeric", "integer", "fractional", "unit"].contains(type) || type.hasPrefix("quantity:") {
+            if type.hasPrefix("quantity:") && GesCompilerSupport.quantityUnit(String(type.dropFirst(9))) == nil { return invalid() }
             if args.count != 1 || args[0].label != "_" { invalid() }
             return
         }

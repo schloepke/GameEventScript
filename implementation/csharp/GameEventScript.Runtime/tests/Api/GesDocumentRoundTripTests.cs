@@ -42,7 +42,7 @@ public sealed class GesDocumentRoundTripTests
     [TestMethod]
     public void ValuesWithoutReadableLiteralTextAreRejected()
     {
-        foreach (var unreadable in new[] { GesValue.GesDice([0]), GesValue.GesRecord("lower", ["damage"], [GesValue.GesInteger(5)]) })
+        foreach (var unreadable in new[] { GesValue.GesDice([0]), GesValue.GesRecord("lower", ["damage"], [GesValue.GesInteger(5)]), GesValue.GesHandler(GesMessageSignature.Create("undeliverable", ["message"])) })
         {
             var root = GesValue.GesMap(["v"], [unreadable]);
             Assert.ThrowsExactly<ArgumentException>(() => new GesDocument(root));

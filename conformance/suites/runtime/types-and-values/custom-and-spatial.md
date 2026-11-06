@@ -1530,3 +1530,69 @@ steps:
       exclude:
         - any: true
 ```
+
+---
+
+## Test: spatial-one-argument-casts
+
+One positional argument is the cast, whatever its kind.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: spatial-one-argument-casts
+kind: scriptApi
+level: atomic
+compile:
+  binaryRoundTrip: true
+```
+
+### Source code under test
+
+```ges
+on Start {
+  emit Done(fromList: :Vector([1, 2]) as :Text, fromDice: :Point(:Dice[6, 3]) as :Text, fromRange: :Vector(:Range(1, 3)) as :Text, fromMap: :Point([a: 1]) as :Text, fromText: :Vector("a"))
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args: []
+    local:
+      - name: Done
+        args:
+          - name: fromList
+            value:
+              type: ":Text"
+              value: ":Vector(x: 1, y: 2, z: 0)"
+          - name: fromDice
+            value:
+              type: ":Text"
+              value: ":Point(x: 6, y: 3, z: 0)"
+          - name: fromRange
+            value:
+              type: ":Text"
+              value: ":Vector(x: 1, y: 2, z: 3)"
+          - name: fromMap
+            value:
+              type: ":Text"
+              value: ":Point(x: 0, y: 0, z: 0)"
+          - name: fromText
+            value:
+              type: ":Nothing"
+    runtimeLimits:
+      exclude:
+        - any: true
+```

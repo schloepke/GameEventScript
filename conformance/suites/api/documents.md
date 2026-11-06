@@ -3499,3 +3499,31 @@ document:
     line: 1
     column: 12
 ```
+
+---
+
+## Test: lowercase message names are unquoted text
+
+This case checks the following contract: A message or handler form names a message with an uppercase name, so a system endpoint is a bare word, `document.unquotedText`.
+
+### Case description
+
+```yaml
+gesBlock: "case"
+id: "lowercase-message-form"
+kind: "documentApi"
+level: "atomic"
+documentApi:
+  text: "value: :Message(initialization())"
+```
+
+### Expectation
+
+```yaml
+gesBlock: "expect"
+document:
+  error:
+    code: "unquotedText"
+    line: 1
+    column: 17
+```

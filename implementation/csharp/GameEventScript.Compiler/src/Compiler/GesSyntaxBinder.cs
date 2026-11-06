@@ -569,6 +569,7 @@ internal sealed partial class GesSyntaxBinder
         {
             t.SkipNewLines();
             tags.Add(Expression(ref t));
+            t.SkipNewLines();
         }
         while (t.Match(Comma));
 

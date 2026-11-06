@@ -24,7 +24,8 @@ enum GesProgramValidator {
             let name = p.stringConstants[Int(binding.name)]
             let valid: Bool
             switch binding.kind {
-            case .messageHandler, .messageNameHandler, .outboundMessage: valid = GesNames.message(name)
+            case .messageHandler, .messageNameHandler: valid = GesNames.message(name)
+            case .outboundMessage: valid = GesNames.type(name)
             case .function, .predicate: valid = GesNames.plain(name)
             case .record, .externalType: valid = GesNames.type(name)
             case .extensionCall: valid = GesNames.extensionName(name)
@@ -110,7 +111,7 @@ enum GesProgramValidator {
                     if Int(value) >= p.stringConstants.count { throw failure(.invalidStringIndex, 16, index) }
                     let text = p.stringConstants[Int(value)]
                     if operand == .messageShapeList && element == 0 {
-                        if !GesNames.message(text) { throw failure(.invalidOperand, 16, index) }
+                        if !GesNames.type(text) { throw failure(.invalidOperand, 16, index) }
                         continue
                     }
                     if text != "_" && !GesNames.plain(text) { throw failure(.invalidOperand, 16, index) }

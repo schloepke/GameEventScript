@@ -381,6 +381,12 @@ order and labels define the signature. Core has no tuple or dictionary factory;
 C# conveniences live in `CSharpBridge`, and dictionary binding requires a known
 signature.
 
+`initialization` and `undeliverable` are entry points only the host uses: handlers and
+signatures may name them, but no Message can be constructed with those names and the
+Program validator rejects outbound bindings and message shapes with them, so sending
+needs no check.
+Lowercase names in source are variables or calls of functions and predicates.
+
 Portable native handlers implement `IGesNativeMessageHandler`.
 Extensions receive the host's `GesContext`. External types use a
 declarative compiler catalog, a separate host runtime registry, and portable
@@ -540,7 +546,10 @@ start positions for rejected programs, checks that checked-in `examples/**/*.ges
 fresh C# compilation without debug information, and ratchets the remaining differences
 against `scripts/compiler-output-baseline.txt` (`--update-baseline` after a deliberate
 change); its controls are `python3 scripts/test-compiler-output-controls.py`. The full
-Swift test script runs both.
+Swift test script runs both. `python3 scripts/test-constructor-forms.py` runs a matrix of
+type-constructor forms through both CLIs as source, `parse`, `parse strict` and document
+and requires equal values, codes and first positions; the corpus owns the expected
+results (`--self-test` qualifies the comparison).
 
 `scripts/test-swift.sh` requires every supported shared Markdown case to pass with
 native Swift compilation, checks the performance scenarios for correctness without

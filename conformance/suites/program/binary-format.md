@@ -3499,3 +3499,94 @@ steps:
           - name: d
             value: { type: ":Point", x: "0", y: "0", z: "1" }
 ```
+
+---
+
+## Test: An outbound binding cannot name a system endpoint
+
+Only handler entries may name a system endpoint, so a Program cannot send one.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: invalid-outbound-endpoint
+compile:
+  debugInfo: []
+binaryFixture:
+  id: gesb-v1-invalid-outbound-endpoint
+  resourceId: gesb-v1.invalid-outbound-endpoint
+  relativePath: GesbV1/invalid-outbound-endpoint.gesb
+  sha256: BF23115488D297B2C40096F51A7D1712477351F58E979A50A7DC3873DB04D8A1
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 42
+  derivation: "compile with ProgramVersion 42 and replace the string constant Undeliverable with undeliverable"
+```
+
+### Source code under test
+
+```ges
+module binaryfixture
+
+on Start {
+  emit Undeliverable()
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+binary:
+  outcome: validationError
+  errorCode: InvalidProgram
+  sectionType: 4
+  entryIndex: 1
+```
+
+
+---
+
+## Test: A message shape cannot name a system endpoint
+
+Only handler entries may name a system endpoint, so a Program cannot build a Message with that name.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: invalid-shape-endpoint
+compile:
+  debugInfo: []
+binaryFixture:
+  id: gesb-v1-invalid-shape-endpoint
+  resourceId: gesb-v1.invalid-shape-endpoint
+  relativePath: GesbV1/invalid-shape-endpoint.gesb
+  sha256: 7D9E516FD2D69A061D8238702046A04F7494354D58B183B6E50F3A4DBEAB46D5
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 42
+  derivation: "compile with ProgramVersion 42 and replace the string constant Undeliverable with undeliverable"
+```
+
+### Source code under test
+
+```ges
+module binaryfixture
+
+on Start {
+  emit Done(value: :Message(Undeliverable()))
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+binary:
+  outcome: validationError
+  errorCode: InvalidOperand
+  sectionType: 16
+  entryIndex: 1
+```

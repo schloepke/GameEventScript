@@ -497,6 +497,7 @@ static class GameEventScript.Api.GesDiagnosticCodes
   field static System.String ValidateInvalidIdentifierCase
   field static System.String ValidateInvalidMessageCase
   field static System.String ValidateInvalidPredicate
+  field static System.String ValidateInvalidTag
   field static System.String ValidateInvalidTypeConstructor
   field static System.String ValidateMissingCallable
   field static System.String ValidatePredicateFunctionConflict

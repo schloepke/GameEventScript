@@ -72,7 +72,7 @@
           "name": "keyword.other.declaration.schema.gameeventscript.document"
         },
         {
-          "match": "(:(?:Message|Handler))\\s*(\\()\\s*([A-Z][A-Za-z0-9]*(?:_[A-Z][A-Za-z0-9]*)*|initialization|undeliverable)\\b",
+          "match": "(:(?:Message|Handler))\\s*(\\()\\s*([A-Z][A-Za-z0-9]*(?:_[A-Z][A-Za-z0-9]*)*)\\b",
           "captures": {
             "1": {
               "name": "support.type.primitive.gameeventscript.document"
@@ -98,6 +98,10 @@
               "name": "support.function.series.gameeventscript.document"
             }
           }
+        },
+        {
+          "match": "\\b(fibonacci|factorial)\\b(?!\\s*:)",
+          "name": "support.function.series.gameeventscript.document"
         },
         {
           "match": ":(?:Nothing|Number|Percentage|Boolean|Text|Tag|List|Map|Dice|Vector|Point|Range|Series|Message|Handler|Record)\\b",

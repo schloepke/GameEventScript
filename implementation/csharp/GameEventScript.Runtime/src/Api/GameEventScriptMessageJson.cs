@@ -31,7 +31,7 @@ public sealed partial class GameEventScriptMessage
     /// <summary>Reads a complete V1 message envelope without invoking constructors or host callbacks.</summary>
     /// <param name="json">The complete JSON document.</param>
     /// <returns>The reconstructed immutable message.</returns>
-    /// <exception cref="GesMessageFormatException">The envelope is invalid, unsupported or over-limit.</exception>
+    /// <exception cref="GesMessageFormatException">The envelope is invalid, unsupported or over-limit, or names a system endpoint.</exception>
     public static GameEventScriptMessage FromJson(string json)
         => new GesMessageJsonCodec().DecodeMessage(GesMessageJsonCodec.Envelope(GesJson.Read(json), "message"), 0);
 }

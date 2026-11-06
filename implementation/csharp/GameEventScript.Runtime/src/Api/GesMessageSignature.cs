@@ -159,6 +159,7 @@ public sealed class GesMessageSignature : IEquatable<GesMessageSignature>
     /// <returns>A message with this signature's name and parameter names.</returns>
     public GameEventScriptMessage WithArguments(params GesValue[] arguments)
     {
+        if (_isSystemEndpoint) throw new ArgumentException($"A message cannot name the system endpoint '{Name}', which only the host uses.", nameof(arguments));
         var message = CreateMessage(arguments);
         return message ?? throw new ArgumentException($"Message signature '{SignatureId}' expects {Parameters.Count} argument(s) but received {arguments.Length}.", nameof(arguments));
     }
@@ -168,10 +169,10 @@ public sealed class GesMessageSignature : IEquatable<GesMessageSignature>
     /// Copies the values so later changes to the supplied collection cannot modify the message.
     /// </summary>
     /// <param name="arguments">The ordered argument values to bind to the signature parameters.</param>
-    /// <returns>The created message when the argument count matches; otherwise <c>null</c>.</returns>
+    /// <returns>The created message when the argument count matches; otherwise <c>null</c>, also for a system endpoint.</returns>
     public GameEventScriptMessage? CreateMessage(IReadOnlyList<GesValue> arguments)
     {
-        if (Name.Length == 0) return null;
+        if (Name.Length == 0 || _isSystemEndpoint) return null;
         if (arguments.Count != Parameters.Count) return null;
         if (arguments.Count == 0)
         {
@@ -188,7 +189,7 @@ public sealed class GesMessageSignature : IEquatable<GesMessageSignature>
 
     internal GameEventScriptMessage? CreateMessageFromOwnedValues(GesValue[] arguments)
     {
-        if (Name.Length == 0) return null;
+        if (Name.Length == 0 || _isSystemEndpoint) return null;
         if (arguments.Length != Parameters.Count) return null;
         if (arguments.Length == 0)
         {
@@ -198,9 +199,13 @@ public sealed class GesMessageSignature : IEquatable<GesMessageSignature>
         return GameEventScriptMessage.CreatePrecomputed(Name, GesMessageArguments.CreatePrecomputed(Parameters, arguments), SignatureId);
     }
 
+    // Computed once, as binding a handler value creates messages at run time.
+    private readonly bool _isSystemEndpoint;
+
     private GesMessageSignature(string name, IEnumerable<string>? parameters)
     {
         Name = NormalizeMessageName(name);
+        _isSystemEndpoint = GesSystemEndpoints.IsSystemEndpointName(Name);
         Parameters = GesReadOnlyArray<string>.FromOwnedArray(NormalizeParameterNames(parameters));
         SignatureId = CreateSignatureId(Name, Parameters);
     }

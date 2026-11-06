@@ -453,6 +453,31 @@
           }
         },
         {
+          "match": "(:Series)([ \\t]*)(\\()([ \\t]*)(fibonacci|factorial)\\b",
+          "captures": {
+            "1": {
+              "name": "support.type.primitive.gameeventscript"
+            },
+            "3": {
+              "name": "punctuation.bracket.gameeventscript"
+            },
+            "5": {
+              "name": "keyword.operator.word.gameeventscript"
+            }
+          }
+        },
+        {
+          "match": "\\b(kind)[ \\t]*:[ \\t]*(fibonacci|factorial)\\b",
+          "captures": {
+            "1": {
+              "name": "variable.parameter.label.gameeventscript"
+            },
+            "2": {
+              "name": "keyword.operator.word.gameeventscript"
+            }
+          }
+        },
+        {
           "match": "(:Dice)([ \\t\\r\\n]*)(\\[)",
           "name": "meta.literal.dice.gameeventscript",
           "captures": {

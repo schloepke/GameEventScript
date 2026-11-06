@@ -27,7 +27,10 @@
         return position
     }
 
-    @_spi(Syntax) public static func message(_ text: String) -> Bool { type(text) || text == "initialization" || text == "undeliverable" }
+    @_spi(Syntax) public static func message(_ text: String) -> Bool { type(text) || systemEndpoint(text) }
+
+    /// The system endpoints `initialization` and `undeliverable`, which only the host delivers.
+    @_spi(Syntax) public static func systemEndpoint(_ text: String) -> Bool { text == "initialization" || text == "undeliverable" }
 
     @_spi(Syntax) public static func identifier(_ text: String) -> Bool {
         let parts = text.split(separator: "_", omittingEmptySubsequences: false)

@@ -1873,7 +1873,7 @@ internal static partial class GesCompiler
                     y: GesOperand.RegisterList(inputs), a: GesOperand.TextList(ReadArgumentNames(constructor.Arguments)));
                 return;
             }
-            if (constructor.TypeName is "vector" or "point" && EmitSpatialConstructor(constructor, destination, context, state)) return;
+            if (constructor.TypeName is "vector" or "point" && (constructor.Arguments.Count != 1 || constructor.Arguments[0].Label is not null) && EmitSpatialConstructor(constructor, destination, context, state)) return;
 
             if (constructor.Arguments.Count == 1 && constructor.Arguments[0].Label is null && IsBuiltInCastType(constructor.TypeName))
             {

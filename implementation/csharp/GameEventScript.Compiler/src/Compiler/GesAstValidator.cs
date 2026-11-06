@@ -24,7 +24,7 @@ internal static class GesAstValidator
             _constants = constants;
             foreach (var constant in constants)
             {
-                var inferredType = InferImmutableBindingType(constant.Value, constants);
+                var inferredType = constant.Value is GesNothingLiteralExpressionNode ? "nothing" : InferImmutableBindingType(constant.Value, constants);
                 if (inferredType is not null) _declaredTypes["$" + constant.Key] = inferredType;
             }
         }
@@ -82,11 +82,11 @@ internal static class GesAstValidator
                 if (!IsKnownType(field.TypeName, typeDefinitions))
                     errors.Add(parsedScript, $"Field '{field.Name}' uses unknown type ':{field.TypeName}'", field.TypeName, GesDiagnosticSymbolKind.Type, GesDiagnosticCodes.ValidateInvalidTypeConstructor, field);
 
-                if (field.MinimumExpression is not null) ValidateExpressionReferences(parsedScript, field.MinimumExpression, callables, typeDefinitions, errors);
+                if (field.MinimumExpression is not null) ValidateExpressionReferences(parsedScript, field.MinimumExpression, callables, typeDefinitions, errors, BuildDeclaredTypeMap([], constants));
 
-                if (field.MaximumExpression is not null) ValidateExpressionReferences(parsedScript, field.MaximumExpression, callables, typeDefinitions, errors);
+                if (field.MaximumExpression is not null) ValidateExpressionReferences(parsedScript, field.MaximumExpression, callables, typeDefinitions, errors, BuildDeclaredTypeMap([], constants));
 
-                if (field.ComputedExpression is not null) ValidateExpressionReferences(parsedScript, field.ComputedExpression, callables, typeDefinitions, errors);
+                if (field.ComputedExpression is not null) ValidateExpressionReferences(parsedScript, field.ComputedExpression, callables, typeDefinitions, errors, BuildDeclaredTypeMap([], constants));
             }
         }
 
@@ -94,7 +94,7 @@ internal static class GesAstValidator
         {
             var predicateDefinition = parsedScript.PredicateDefinitions[predicateIndex];
             ValidateParameterTypeHints(parsedScript, "Predicate", predicateDefinition.Name, predicateDefinition.ParameterList, typeDefinitions, errors);
-            ValidateExpressionReferences(parsedScript, predicateDefinition.Expression, callables, typeDefinitions, errors, BuildDeclaredTypeMap(predicateDefinition.ParameterList));
+            ValidateExpressionReferences(parsedScript, predicateDefinition.Expression, callables, typeDefinitions, errors, BuildDeclaredTypeMap(predicateDefinition.ParameterList, constants));
             ValidatePredicateResultExpression(parsedScript, predicateDefinition, callables, typeDefinitions, errors);
         }
 
@@ -102,7 +102,7 @@ internal static class GesAstValidator
         {
             var functionDefinition = parsedScript.FunctionDefinitions[functionIndex];
             ValidateParameterTypeHints(parsedScript, "Function", functionDefinition.Name, functionDefinition.ParameterList, typeDefinitions, errors);
-            ValidateExpressionReferences(parsedScript, functionDefinition.Expression, callables, typeDefinitions, errors, BuildDeclaredTypeMap(functionDefinition.ParameterList));
+            ValidateExpressionReferences(parsedScript, functionDefinition.Expression, callables, typeDefinitions, errors, BuildDeclaredTypeMap(functionDefinition.ParameterList, constants));
         }
 
         for (var handlerIndex = 0; handlerIndex < parsedScript.Handlers.Count; handlerIndex++)
@@ -133,6 +133,7 @@ internal static class GesAstValidator
                 for (var tagIndex = 0; tagIndex < publish.TagExpressions.Count; tagIndex++)
                 {
                     var tagExpression = publish.TagExpressions[tagIndex];
+                    ValidateTagLiteral(parsedScriptContext, tagExpression, errors, scope.DeclaredTypes);
                     ValidateExpressionReferences(parsedScriptContext, tagExpression, callables, typeDefinitions, errors, scope.DeclaredTypes);
                 }
 
@@ -290,7 +291,8 @@ internal static class GesAstValidator
             predicateDefinition.Expression);
     }
 
-    private static IReadOnlyDictionary<string, string> BuildDeclaredTypeMap(IReadOnlyList<GesParameterNode> parameters)
+    // Constants with the value `nothing` are recorded for the tag check, as callable bodies have no validation scope.
+    private static IReadOnlyDictionary<string, string> BuildDeclaredTypeMap(IReadOnlyList<GesParameterNode> parameters, IReadOnlyDictionary<string, GesExpressionNode>? constants = null)
     {
         var types = new Dictionary<string, string>(StringComparer.Ordinal);
         for (var index = 0; index < parameters.Count; index++)
@@ -298,6 +300,10 @@ internal static class GesAstValidator
             var parameter = parameters[index];
             if (!string.IsNullOrWhiteSpace(parameter.DeclaredType)) types[parameter.LocalName] = parameter.DeclaredType!;
         }
+
+        if (constants is not null)
+            foreach (var constant in constants)
+                if (constant.Value is GesNothingLiteralExpressionNode) types["$" + constant.Key] = "nothing";
 
         return types;
     }
@@ -674,7 +680,11 @@ internal static class GesAstValidator
                         if (delayType.TypeName is not null && delayType.Kind is not (StaticExpressionKind.Unknown or StaticExpressionKind.Nothing) && delayType.TypeName is not ("s" or "second" or "quantity:s" or "quantity:second"))
                             errors.Add(parsedScriptContext, "Send delay requires a time quantity", "Quantity(s)", GesDiagnosticSymbolKind.Type, GesDiagnosticCodes.ValidateInvalidTypeConstructor, send.Delay);
                     }
-                    foreach (var tag in send.Tags) ValidateExpressionReferences(parsedScriptContext, tag, callables, typeDefinitions, errors, declaredTypes);
+                    foreach (var tag in send.Tags)
+                    {
+                        ValidateTagLiteral(parsedScriptContext, tag, errors, declaredTypes);
+                        ValidateExpressionReferences(parsedScriptContext, tag, callables, typeDefinitions, errors, declaredTypes);
+                    }
                     return;
                 case GesUnaryExpressionNode unary: expression = unary.Operand; continue;
 
@@ -752,6 +762,8 @@ internal static class GesAstValidator
                 case GesNothingCheckExpressionNode nothingCheck: expression = nothingCheck.Value; continue;
 
                 case GesTypeCastExpressionNode typeCast:
+                    if (typeCast.TypeName == "record")
+                        errors.Add(parsedScriptContext, "':Record' is no cast target; use ':Record(type, fields)' to build a Record.", "record", GesDiagnosticSymbolKind.Type, GesDiagnosticCodes.ValidateInvalidTypeConstructor, typeCast);
                     expression = typeCast.Value;
                     continue;
 
@@ -973,6 +985,16 @@ internal static class GesAstValidator
         {
             var labels = new string[constructor.Arguments.Count];
             for (var i = 0; i < labels.Length; i++) labels[i] = constructor.Arguments[i].Name;
+            if (constructor.TypeName == "message")
+            {
+                foreach (var argument in constructor.Arguments)
+                    if (argument.Label == "value" || argument.Label == "tags" && constructor.Arguments[0].Expression is not GesMessageLiteralExpressionNode)
+                    {
+                        AddTypeConstructorError(parsedScriptContext, constructor, "A message form takes no 'value' or 'tags' label; use ':Message(Name(...) with #tag)'.", errors);
+                        return;
+                    }
+                if (constructor.Arguments.Count == 2) ValidateTagLiteral(parsedScriptContext, constructor.Arguments[1].Expression, errors, declaredTypes);
+            }
             if (GesDataConstruction.Positions(constructor.TypeName, labels) is null)
                 AddTypeConstructorError(parsedScriptContext, constructor, "Invalid data constructor arguments", errors);
             return;
@@ -1094,6 +1116,14 @@ internal static class GesAstValidator
 
     private static bool IsKnownType(string typeName, IReadOnlyDictionary<string, GesTypeDefinitionNode> typeDefinitions)
         => IsBuiltinConstructorType(typeName) || typeName.StartsWith("quantity:", StringComparison.Ordinal) || typeName is "record" or "numeric:integer" or "numeric:fractional" || typeDefinitions.ContainsKey(typeName);
+
+    private static void ValidateTagLiteral(GesParsedScript parsedScriptContext, GesExpressionNode tag, GesValidationErrors errors, IReadOnlyDictionary<string, string>? declaredTypes)
+    {
+        if (tag is GesListLiteralExpressionNode list)
+            foreach (var item in list.Items) ValidateTagLiteral(parsedScriptContext, item, errors, declaredTypes);
+        else if (tag is GesNothingLiteralExpressionNode || tag is GesConstantReferenceExpressionNode constant && declaredTypes is not null && declaredTypes.TryGetValue("$" + constant.Name, out var type) && type == "nothing")
+            errors.Add(parsedScriptContext, "The value nothing is no tag.", "nothing", GesDiagnosticSymbolKind.Type, GesDiagnosticCodes.ValidateInvalidTag, tag);
+    }
 
     private static void AddTypeConstructorError(GesParsedScript parsedScriptContext, GesTypeConstructorExpressionNode constructor, string message, GesValidationErrors errors)
         => errors.Add(parsedScriptContext, message, constructor.TypeName, GesDiagnosticSymbolKind.Type, GesDiagnosticCodes.ValidateInvalidTypeConstructor, constructor);

@@ -14,6 +14,7 @@ enum GesDocumentHighlighting {
         // The form a `:Type` names until its `(` opens, and whether the next token is the first inside a context.
         var pending: Context?
         var first = false
+        var afterSeriesKind = false
         var position = 0
         if bytes.starts(with: [0xEF, 0xBB, 0xBF]) {
             spans.add(0, 3, .plain)
@@ -35,6 +36,8 @@ enum GesDocumentHighlighting {
 
             let opening = pending
             let firstInContext = first
+            let seriesKindFollows = afterSeriesKind
+            if c != 58 { afterSeriesKind = false }
             pending = nil
             first = false
             var kind = GesSyntaxKind.plain
@@ -73,16 +76,17 @@ enum GesDocumentHighlighting {
                 position = nameEnd(bytes, position)
                 let word = String(decoding: bytes[start..<position], as: UTF8.self)
                 let context = contexts.last ?? .container
-                if (context == .messageForm || context == .handlerForm) && firstInContext && ((65...90).contains(c) || word == "initialization" || word == "undeliverable") {
+                if (context == .messageForm || context == .handlerForm) && firstInContext && (65...90).contains(c) {
                     kind = .message
                     pending = context == .handlerForm ? .handler : .message
                 } else if followedByColon(bytes, position) || context == .handler {
                     kind = .identifier
+                    afterSeriesKind = word == "kind" && context == .seriesForm
                 } else if word == "true" || word == "false" || word == "nothing" {
                     kind = .keyword
                 } else if word == "with" && context == .messageForm {
                     kind = .keyword
-                } else if (word == "fibonacci" || word == "factorial") && context == .seriesForm && firstInContext {
+                } else if (word == "fibonacci" || word == "factorial") && context == .seriesForm && (firstInContext || seriesKindFollows) {
                     kind = .builtin
                 } else if word == "Infinity" || word == "NaN" {
                     kind = .number

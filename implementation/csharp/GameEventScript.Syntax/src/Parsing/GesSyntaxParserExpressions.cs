@@ -1450,9 +1450,11 @@ internal sealed partial class GesSyntaxParser
     private Expression ParseTypeConstructorExpressionCore()
     {
         var startToken = CurrentIndex;
+        var typeToken = Current;
         var typeName = GesText.CanonicalTypeName(ParseTypeName());
         SkipNewLines();
-        Expect(LeftParen);
+        // A type name that starts no constructor is itself the unexpected token, also after a quantity unit.
+        if (!Match(LeftParen)) throw new ParseException($"Unexpected token '{typeToken.Text}'", typeToken);
         if (typeName == "handler" && _reader.PeekSignificant(0).Kind == Message)
         {
             // The handler literal of this data form adds no level of its own.
@@ -1487,7 +1489,7 @@ internal sealed partial class GesSyntaxParser
             // Its tag list adds no level, as the message is its only measured argument.
             var message = ParseMessageLiteralExpressionCore();
             SkipNewLines();
-            ParseOptionalTagExpressions();
+            ParseOptionalTagExpressions(lineBreaks: true);
             SkipNewLines();
             Expect(RightParen);
             return Node(message.Depth, startToken);
@@ -1504,7 +1506,7 @@ internal sealed partial class GesSyntaxParser
             return Node(depth, startToken);
         }
 
-        return Node(ParseArgumentListAfterLeftParen(), startToken);
+        return Node(ParseArgumentListAfterLeftParen(typeName == "series"), startToken);
     }
 
     private Expression ParseClampExpression()

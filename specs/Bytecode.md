@@ -520,7 +520,9 @@ synthetic message parameter signature such as `Damage(message)`, but it is
 metadata and not the dispatch key.
 
 System endpoint entries use reserved lowercase names outside normal message
-casing. The defined endpoints are:
+casing. Only handler entries may use them: an `OutboundMessage` entry and the
+message shape of `LoadHandler` and `LoadMessage` with such a name are invalid
+(**Since: Unreleased**). The defined endpoints are:
 
 ```text
 initialization

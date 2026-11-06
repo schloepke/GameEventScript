@@ -375,6 +375,11 @@ extension GesSyntaxBinder {
             label = try c.advance().text
             try c.newlines()
             try c.expect(.colon)
+            try c.newlines()
+        }
+        if label == "kind" && (c.is(.fibonacci) || c.is(.factorial)) {
+            let kind = try c.advance()
+            return .init(label: label, value: unranged(.literal(.text(kind.text)), kind, c.previous), location: location(start, c.previous))
         }
         let value = try expression(&c)
         return .init(label: label, value: value, location: location(start, c.previous))
@@ -448,7 +453,12 @@ extension GesSyntaxBinder {
                 var t = cursor(try c.takeNode())
                 try t.expect(.with)
                 var tags = [try expression(&t)]
-                while try t.match(.comma) { tags.append(try expression(&t)) }
+                try t.newlines()
+                while try t.match(.comma) {
+                    try t.newlines()
+                    tags.append(try expression(&t))
+                    try t.newlines()
+                }
                 args.append(.init(label: "tags", value: unranged(.list(tags), start, c.previous)))
             }
             try c.newlines()

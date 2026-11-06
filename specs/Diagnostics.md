@@ -46,7 +46,8 @@ Validation uses the following semantic codes:
   `validate.shadowedVariable`, `validate.unresolvedVariable` (a bare name without
   a visible binding, see [Syntax](Syntax.md#validation));
 - `validate.invalidIdentifierCase`, `validate.invalidMessageCase`,
-  `validate.invalidTypeConstructor`.
+  `validate.invalidTypeConstructor`, `validate.invalidTag` (the literal `nothing` or a
+  constant with that value in a tag clause; **Since: Unreleased**).
 
 Compiler lowering/resource analysis uses `compile.unsupportedConstruct`,
 `compile.invalidArity`, `compile.unresolvedSymbol`,

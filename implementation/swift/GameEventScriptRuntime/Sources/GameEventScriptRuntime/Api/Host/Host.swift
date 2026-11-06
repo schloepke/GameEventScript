@@ -145,7 +145,7 @@ public final class GameEventScriptHost {
         }
         instances[instance.registrationID] = instance
         if !initialization.isEmpty {
-            let message = try GameEventScriptMessage(name: "initialization")
+            let message = GameEventScriptMessage(normalizedName: "initialization", arguments: .empty, signatureId: "initialization()", normalizedTags: [])
             lastSendID += 1
             let pending = GesPendingMessage(message: message, exact: initialization.sorted(by: GesSubscriptionEntry.precedes), names: [], id: lastSendID, initialization: instance)
             idleSinceMicroseconds = nil

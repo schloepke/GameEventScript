@@ -35,6 +35,7 @@ public struct GesWireError: Error, Sendable, Equatable {
     static let outOfRange = "wire.outOfRange"
     static let notRepresentable = "wire.notRepresentable"
     static let missingField = "wire.missingField"
+    static let nothingValue = "wire.nothingValue"
     static let typeMismatch = "wire.typeMismatch"
     static let unknownTag = "wire.unknownTag"
     static let tooLong = "wire.tooLong"

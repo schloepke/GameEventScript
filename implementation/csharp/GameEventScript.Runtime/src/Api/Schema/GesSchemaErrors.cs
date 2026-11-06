@@ -49,6 +49,7 @@ public sealed class GesWireException : Exception
     internal const string OutOfRange = "wire.outOfRange";
     internal const string NotRepresentable = "wire.notRepresentable";
     internal const string MissingField = "wire.missingField";
+    internal const string NothingValue = "wire.nothingValue";
     internal const string TypeMismatch = "wire.typeMismatch";
     internal const string UnknownTag = "wire.unknownTag";
     internal const string TooLong = "wire.tooLong";

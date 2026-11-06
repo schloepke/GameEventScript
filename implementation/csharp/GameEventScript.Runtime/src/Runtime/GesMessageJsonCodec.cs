@@ -67,7 +67,7 @@ internal sealed class GesMessageJsonCodec
     private static string MessageName(GesValue value)
     {
         var name = String(value);
-        if (!GesText.IsMessageName(name) && name is not ("initialization" or "undeliverable"))
+        if (!GesText.IsMessageName(name))
             throw Error();
         return name;
     }

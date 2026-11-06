@@ -67,6 +67,9 @@ public enum GesDiagnosticCodes {
     /// Defines the validate invalid type constructor value.
     public static let validateInvalidTypeConstructor = "validate.invalidTypeConstructor"
 
+    /// A tag clause contains the literal `nothing`.
+    public static let validateInvalidTag = "validate.invalidTag"
+
     /// Defines the compile unsupported construct value.
     public static let compileUnsupportedConstruct = "compile.unsupportedConstruct"
 

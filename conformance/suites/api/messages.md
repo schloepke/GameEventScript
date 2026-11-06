@@ -940,3 +940,64 @@ gesBlock: expect
 message:
   error: invalidMessage
 ```
+
+---
+
+## Test: message-named-initialization
+
+Only the host uses the system endpoint `initialization`, so no message can name it.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: message-named-initialization
+kind: messageApi
+level: atomic
+messageApi:
+  signature:
+    name: "Ping"
+    parameters: []
+  message:
+    name: initialization
+    args: []
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+message:
+  error: invalidMessage
+```
+
+
+---
+
+## Test: message-named-undeliverable
+
+Only the host uses the system endpoint `undeliverable`, so no message can name it.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: message-named-undeliverable
+kind: messageApi
+level: atomic
+messageApi:
+  signature:
+    name: "Ping"
+    parameters: []
+  message:
+    name: undeliverable
+    args: []
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+message:
+  error: invalidMessage
+```

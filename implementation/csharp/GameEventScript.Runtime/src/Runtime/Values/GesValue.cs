@@ -1085,7 +1085,7 @@ public partial struct GesValue : IEquatable<GesValue>
         GesBytecodeTypeKind.Range when ObjectValue is GesIntegerRange range => FormatRange(range.From, range.To, range.Step),
         GesBytecodeTypeKind.Range when ObjectValue is GesFloatRange range => FormatRange(range.From, range.To, range.Step),
         Series when ObjectValue is GesSeriesValue series => $":Series({series.SignatureId}, offset: {series.Offset.ToString(CultureInfo.InvariantCulture)})",
-        GesBytecodeTypeKind.Handler when ObjectValue is GesMessageSignature signature => $":Handler({signature.SignatureId})",
+        GesBytecodeTypeKind.Handler when ObjectValue is GesMessageSignature signature => $":Handler({signature.SignatureId.Replace(",", ", ")})",
         GesBytecodeTypeKind.Message when ObjectValue is GameEventScriptMessage message => FormatMessage(message),
         _ => Kind.ToString()
     };

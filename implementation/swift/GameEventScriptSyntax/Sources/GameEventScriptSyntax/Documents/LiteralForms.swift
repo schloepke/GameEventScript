@@ -21,7 +21,7 @@
             guard let position = label == "_" ? i : parameters.firstIndex(of: label), !positions.contains(position) else { return nil }
             positions.append(position)
         }
-        if (type == "record" || type == "range" && labels.count > 1) && (!positions.contains(0) || !positions.contains(1)) { return nil }
+        if (type == "record" || type == "range" && (labels.count > 1 || labels[0] != "_")) && (!positions.contains(0) || !positions.contains(1)) { return nil }
         if type != "nothing" && !positions.contains(0) { return nil }
         return positions
     }

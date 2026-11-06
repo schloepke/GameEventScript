@@ -268,6 +268,11 @@ implementation and therefore does not depend on C# reflection.
   signature's declared order.
 - `Receive(message)` captures current subscription snapshots and queues the
   message locally. It never invokes the outbound sink.
+- **Since: Unreleased:** Only the host uses the system endpoints `initialization` and
+  `undeliverable`. No Message can be constructed with those names and no Program can
+  create one, as [Program validation](Bytecode.md) rejects them outside handler entries. An observer
+  still sees the host's initialization message, and `Receive` rejects it. Signatures
+  and handlers keep the names to subscribe.
 - `Emit(message)` does the same from a running handler.
 - `Publish(message)` first attempts the same local enqueue and then calls the
   host's single synchronous `IGesPublishSink`, if configured.

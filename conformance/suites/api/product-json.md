@@ -1509,3 +1509,34 @@ gesBlock: expect
 message:
   error: "message.invalidValue"
 ```
+
+---
+
+## Test: system endpoint names are invalid
+
+Only the host uses the system endpoints, so a JSON message cannot name one.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: "system-endpoint-name"
+kind: messageApi
+level: atomic
+messageApi:
+  signature:
+    name: "Done"
+    parameters: []
+  message:
+    name: "Done"
+    args: []
+  json: "{\"message\":{\"args\":[],\"name\":\"undeliverable\",\"tags\":[]},\"version\":1}"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+message:
+  error: "message.invalidValue"
+```

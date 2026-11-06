@@ -1174,6 +1174,7 @@ symbol {"access":"public","declaration":"static let validateDuplicateVariable: S
 symbol {"access":"public","declaration":"static let validateInvalidIdentifierCase: String","kind":"swift.type.property","path":"GameEventScriptRuntime.GesDiagnosticCodes.validateInvalidIdentifierCase"}
 symbol {"access":"public","declaration":"static let validateInvalidMessageCase: String","kind":"swift.type.property","path":"GameEventScriptRuntime.GesDiagnosticCodes.validateInvalidMessageCase"}
 symbol {"access":"public","declaration":"static let validateInvalidPredicate: String","kind":"swift.type.property","path":"GameEventScriptRuntime.GesDiagnosticCodes.validateInvalidPredicate"}
+symbol {"access":"public","declaration":"static let validateInvalidTag: String","kind":"swift.type.property","path":"GameEventScriptRuntime.GesDiagnosticCodes.validateInvalidTag"}
 symbol {"access":"public","declaration":"static let validateInvalidTypeConstructor: String","kind":"swift.type.property","path":"GameEventScriptRuntime.GesDiagnosticCodes.validateInvalidTypeConstructor"}
 symbol {"access":"public","declaration":"static let validateMissingCallable: String","kind":"swift.type.property","path":"GameEventScriptRuntime.GesDiagnosticCodes.validateMissingCallable"}
 symbol {"access":"public","declaration":"static let validatePredicateFunctionConflict: String","kind":"swift.type.property","path":"GameEventScriptRuntime.GesDiagnosticCodes.validatePredicateFunctionConflict"}

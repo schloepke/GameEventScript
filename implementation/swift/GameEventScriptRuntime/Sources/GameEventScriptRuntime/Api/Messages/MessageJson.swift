@@ -79,7 +79,7 @@ private final class GesMessageJsonCodec {
 
     static func messageName(_ value: GesValue) throws -> String {
         let name = try string(value)
-        guard GesNames.message(name) || name == "initialization" || name == "undeliverable" else { throw GesJson.error() }
+        guard GesNames.type(name) else { throw GesJson.error() }
         return name
     }
 

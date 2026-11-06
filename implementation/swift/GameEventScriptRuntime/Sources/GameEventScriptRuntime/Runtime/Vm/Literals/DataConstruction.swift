@@ -67,7 +67,7 @@ enum GesDataConstruction {
             var tags: [String] = []
 
             func add(_ value: GesValue) {
-                if let list = value.listValue { for item in list { add(item) } } else { tags.append(value.asText) }
+                if let list = value.listValue { for item in list { add(item) } } else { tags.append(value.isNothing ? "_" : value.asText) }
             }
 
             add(slots.1)

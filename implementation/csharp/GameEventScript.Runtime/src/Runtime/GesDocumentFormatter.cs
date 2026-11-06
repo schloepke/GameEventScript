@@ -45,8 +45,8 @@ internal static class GesDocumentFormatter
         return builder.ToString();
     }
 
-    // Values whose literal text reads back: no External values, positive Dice rolls and Record type names that
-    // follow the TypeName grammar, at every level.
+    // Values whose literal text reads back: no External values or Handlers of a system endpoint, positive Dice rolls
+    // and Record type names that follow the TypeName grammar, at every level.
     internal static bool IsPrintable(in GesValue value)
     {
         switch (value.Kind)
@@ -69,8 +69,10 @@ internal static class GesDocumentFormatter
                     if (!IsPrintable(message.Arguments[i])) return false;
                 return true;
             case Nothing or GesBytecodeTypeKind.Boolean or Integer or Float or Percentage or Tag or Text or Vector or Point
-                or GesBytecodeTypeKind.Range or Series or Handler:
+                or GesBytecodeTypeKind.Range or Series:
                 return true;
+            case Handler:
+                return value.ObjectValue is GesMessageSignature signature && !GesSystemEndpoints.IsSystemEndpointName(signature.Name);
             default:
                 return false;
         }

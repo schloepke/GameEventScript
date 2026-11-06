@@ -70,10 +70,10 @@ BOM are Plain and `//` comments are Comment. The `:Schema` of a header is
 Keyword; every other `:Name` of a typed form is Type. A word or quoted Text
 followed by `:` on its line is a key or label: a word is Identifier, quoted
 Text stays String. The first word inside `:Message(` or `:Handler(` that starts
-with an uppercase letter, or is `initialization` or `undeliverable`, is Message;
+with an uppercase letter is Message;
 the parameter names of a handler are Identifier, and `with` after a message's
 arguments is Keyword. `fibonacci` and `factorial` as the first argument of
-`:Series(` are Builtin. `true`, `false` and `nothing` are Keyword; `#name` is
+`:Series(` or after its label `kind` are Builtin. `true`, `false` and `nothing` are Keyword; `#name` is
 Tag; quoted Text, also when unterminated, is String. An unquoted token that
 starts with a digit, or with a sign or `.` before a digit, and `Infinity` and
 `NaN` are Number, also with an unknown unit. Brackets, parentheses, commas and

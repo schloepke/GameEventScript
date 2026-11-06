@@ -27,8 +27,8 @@ enum GesDocumentFormatter {
         return output
     }
 
-    // Values whose literal text reads back: no External values, positive Dice rolls and Record type names that
-    // follow the TypeName grammar, at every level.
+    // Values whose literal text reads back: no External values or Handlers of a system endpoint, positive Dice rolls
+    // and Record type names that follow the TypeName grammar, at every level.
     static func isPrintable(_ value: GesValue) -> Bool {
         switch value.kind {
         case .list: return value.listValue!.allSatisfy(isPrintable)
@@ -38,6 +38,7 @@ enum GesDocumentFormatter {
         case .message:
             let message = value.messageValue!
             return (0..<message.arguments.count).allSatisfy { isPrintable(message.arguments[$0]) }
+        case .handler: return !GesNames.systemEndpoint(value.signatureValue!.name)
         case .external: return false
         default: return true
         }

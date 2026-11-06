@@ -122,7 +122,8 @@ internal static class GesDataConstruction
             foreach (var item in list)
                 AddTags(item, tags);
         else
-            tags.Add(value.AsText());
+            // `_` is no tag name, so `nothing` makes the tag clause invalid.
+            tags.Add(value.IsNothing ? "_" : value.AsText());
     }
 
     internal static GesValue Split(in GesValue input, in GesValue delimiter, bool whitespace)

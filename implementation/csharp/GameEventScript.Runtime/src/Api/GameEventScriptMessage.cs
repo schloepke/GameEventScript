@@ -27,7 +27,7 @@ public sealed partial class GameEventScriptMessage : IEquatable<GameEventScriptM
     /// This method facilitates the construction of a message containing the provided name and its associated
     /// arguments, allowing events to be parameterized and passed within the Game Event Script system.
     /// </summary>
-    /// <param name="name">The name of the message. This is used to identify the message within the system.</param>
+    /// <param name="name">The name of the message. This is used to identify the message within the system. A system endpoint throws <see cref="ArgumentException"/>, as only the host uses those names.</param>
     /// <param name="arguments">The ordered argument pairs. Their order is part of the message signature.</param>
     /// <returns>Returns a <see cref="GameEventScriptMessage"/> object encapsulating the specified name and arguments.</returns>
     public static GameEventScriptMessage Create(string name, IReadOnlyList<GesMessageArgument>? arguments) => new(name, GesMessageArguments.Create(arguments));
@@ -35,12 +35,14 @@ public sealed partial class GameEventScriptMessage : IEquatable<GameEventScriptM
     /// <summary>
     /// Creates a message without arguments.
     /// </summary>
+    /// <param name="name">The message name. A system endpoint throws <see cref="ArgumentException"/>, as only the host uses those names.</param>
+    /// <returns>A new message instance.</returns>
     public static GameEventScriptMessage Create(string name) => new(name, GesMessageArguments.Empty);
 
     /// <summary>
     /// Creates a new message with the provided arguments and delivery tags. Tags are metadata and are not part of the message signature.
     /// </summary>
-    /// <param name="name">The message name.</param>
+    /// <param name="name">The message name. A system endpoint throws <see cref="ArgumentException"/>, as only the host uses those names.</param>
     /// <param name="arguments">The ordered message arguments.</param>
     /// <param name="tags">Delivery tags associated with the message.</param>
     /// <returns>A new message instance.</returns>
@@ -205,6 +207,11 @@ public sealed partial class GameEventScriptMessage : IEquatable<GameEventScriptM
         if (Name.Length == 0)
         {
             throw new ArgumentException("Message name must not be null, empty, or whitespace.", nameof(name));
+        }
+        // Normalization leaves uppercase names and the lowercase system endpoints.
+        if (!GesText.IsAsciiUpper(Name[0]))
+        {
+            throw new ArgumentException("A message cannot name the system endpoint '" + Name + "', which only the host uses.", nameof(name));
         }
 
         Arguments = arguments ?? GesMessageArguments.Empty;

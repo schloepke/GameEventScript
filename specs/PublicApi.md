@@ -407,6 +407,12 @@ Dump allocation is outside the runtime hot path.
 `MessageSignature` is immutable content identified by normalized message name
 plus ordered parameter labels. Tags and values are not part of a signature.
 
+> **Since: Unreleased** — system endpoint names
+
+A signature may name a system endpoint to subscribe, but creates no Message from it:
+message creation and JSON decoding reject `initialization` and `undeliverable`, as
+defined by [Host runtime](HostRuntime.md).
+
 | Operation | Contract |
 | --- | --- |
 | `Create(name, parameters)` | Normalizes and copies the name and ordered labels. An absent parameter sequence means empty. Repeated labels remain part of the signature; constructing actual MessageArguments later rejects duplicate named labels while repeated `_` labels remain permitted. |
@@ -414,8 +420,8 @@ plus ordered parameter labels. Tags and values are not part of a signature.
 | `NormalizeParameterName(name)` | Trims portable ASCII edge whitespace; absent/empty becomes `_`; otherwise validates a portable identifier. |
 | `CreateSignatureId(name, parameters)` | Returns canonical `Name(label,...)` from normalized content. |
 | `Matches(message)` | True exactly when normalized name and complete signature ID are equal ordinally. Message tags and values are ignored. |
-| `CreateMessage(values)` | Binds values in parameter order. Returns absence when arity does not match or the signature is Empty. |
-| `WithArguments(values...)` | Same binding, but invalid arity is a synchronous argument error. |
+| `CreateMessage(values)` | Binds values in parameter order. Returns absence when arity does not match, the signature is Empty or it names a system endpoint. |
+| `WithArguments(values...)` | Same binding, but invalid arity or a system endpoint is a synchronous argument error. |
 
 Signature equality and hashing use canonical signature content. `Empty` is a
 read-only sentinel and cannot create a message.

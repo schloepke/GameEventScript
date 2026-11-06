@@ -508,6 +508,7 @@ extension GesCompiler {
     }
 
     func spatial(_ type: String, _ arguments: [GesArgument], _ d: Int, _ r: GesRoutine, _ scope: GesScope) throws {
+        if arguments.count == 1 && arguments[0].label == "_" { return try cast(d, expression(arguments[0].value, r, scope), type, r) }
         let first = arguments.first?.label ?? "_"
         // Start 0 may lift a spatial first component, which a labeled `x` must not do.
         let start = first == "x" ? 3 : ["x", "y", "z"].firstIndex(of: first) ?? 0

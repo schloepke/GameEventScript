@@ -577,6 +577,8 @@ internal sealed partial class GesSyntaxBinder
             c.SkipNewLines();
         }
 
+        if (label == "kind" && (c.Is(Fibonacci) || c.Is(Factorial)))
+            return Set(new GesArgumentNode(label, new GesTextLiteralExpressionNode(c.Advance().Text)), start, c.Previous);
         return Set(new GesArgumentNode(label, Expression(ref c)), start, c.Previous);
     }
 

@@ -27,6 +27,7 @@ internal static class GesDocumentHighlighting
         // The form a `:Type` names until its `(` opens, and whether the next token is the first inside a context.
         Context? pending = null;
         var first = false;
+        var afterSeriesKind = false;
         var position = 0;
         if (text.Length > 0 && text[0] == '\uFEFF') spans.Add(position++, 1, GesSyntaxKind.Plain);
         while (position < text.Length)
@@ -48,6 +49,8 @@ internal static class GesDocumentHighlighting
 
             var opening = pending;
             var firstInContext = first;
+            var seriesKindFollows = afterSeriesKind;
+            if (c != ':') afterSeriesKind = false;
             pending = null;
             first = false;
             var kind = GesSyntaxKind.Plain;
@@ -102,15 +105,19 @@ internal static class GesDocumentHighlighting
                 position = NameEnd(text, position);
                 var word = text.Substring(start, position - start);
                 var context = contexts.Count > 0 ? contexts[^1] : Context.Container;
-                if (context is Context.MessageForm or Context.HandlerForm && firstInContext && (GesText.IsAsciiUpper(c) || GesText.IsSystemEndpointName(word)))
+                if (context is Context.MessageForm or Context.HandlerForm && firstInContext && GesText.IsAsciiUpper(c))
                 {
                     kind = GesSyntaxKind.Message;
                     pending = context == Context.HandlerForm ? Context.Handler : Context.Message;
                 }
-                else if (FollowedByColon(text, position) || context == Context.Handler) kind = GesSyntaxKind.Identifier;
+                else if (FollowedByColon(text, position) || context == Context.Handler)
+                {
+                    kind = GesSyntaxKind.Identifier;
+                    afterSeriesKind = word == "kind" && context == Context.SeriesForm;
+                }
                 else if (word is "true" or "false" or "nothing") kind = GesSyntaxKind.Keyword;
                 else if (word == "with" && context == Context.MessageForm) kind = GesSyntaxKind.Keyword;
-                else if (word is "fibonacci" or "factorial" && context == Context.SeriesForm && firstInContext) kind = GesSyntaxKind.Builtin;
+                else if (word is "fibonacci" or "factorial" && context == Context.SeriesForm && (firstInContext || seriesKindFollows)) kind = GesSyntaxKind.Builtin;
                 else if (word is "Infinity" or "NaN") kind = GesSyntaxKind.Number;
             }
             else position += GesText.ScalarUtf16LengthAt(text, position);

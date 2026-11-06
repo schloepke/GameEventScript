@@ -705,7 +705,11 @@ extension GesSyntaxParser {
                 startNode(.tagClause)
                 advance()
                 _ = try expression()
-                while match(.comma) { _ = try expression() }
+                newlines()
+                while match(.comma) {
+                    _ = try expression()
+                    newlines()
+                }
                 finishNode()
             }
             newlines()
@@ -714,7 +718,7 @@ extension GesSyntaxParser {
         }
         // A type name that starts no data form or constructor is itself the unexpected token.
         guard currentKind == .leftParen else { throw unexpectedToken(tokens[start]) }
-        try arguments()
+        try arguments(series: type == "series")
         return node(start)
     }
 
@@ -809,25 +813,35 @@ extension GesSyntaxParser {
 
     func argumentLabel() -> Bool { (currentKind == .identifier || Self.labelKeywords.contains(currentKind)) && peekKind() == .colon }
 
-    func argument() throws {
+    func argument(series: Bool = false) throws {
         startNode(.argument)
         defer { finishNode() }
+        var label = ""
         if argumentLabel() {
+            label = current.text
             advance()
             role(.argumentLabel)
             newlines()
             try expect(.colon)
         }
+        // Only the `kind` argument of `:Series` names a series without quotes.
+        if series && label == "kind" {
+            newlines()
+            if currentKind == .fibonacci || currentKind == .factorial {
+                advance()
+                return
+            }
+        }
         _ = try expression()
     }
 
     // Arguments in parentheses; positional intrinsic operands have no argument nodes.
-    func arguments(nodes: Bool = true) throws {
+    func arguments(nodes: Bool = true, series: Bool = false) throws {
         try expect(.leftParen)
         newlines()
         if match(.rightParen) { return }
         while true {
-            if nodes { try argument() } else { _ = try expression() }
+            if nodes { try argument(series: series) } else { _ = try expression() }
             newlines()
             if match(.comma) {
                 newlines()

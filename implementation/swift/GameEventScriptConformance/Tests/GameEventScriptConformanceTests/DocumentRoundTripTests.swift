@@ -33,8 +33,8 @@ final class DocumentRoundTripTests: XCTestCase {
         )
     }
 
-    func testValuesWithoutReadableLiteralTextAreRejected() {
-        for unreadable in [GesValue.dice([0]), .record(typeName: "lower", keys: ["damage"], values: [.integer(5)])] {
+    func testValuesWithoutReadableLiteralTextAreRejected() throws {
+        for unreadable in [GesValue.dice([0]), .record(typeName: "lower", keys: ["damage"], values: [.integer(5)]), .handler(try GesMessageSignature(name: "undeliverable", parameters: ["message"]))] {
             let root = GesValue.map(keys: ["v"], values: [unreadable])
             XCTAssertThrowsError(try GesDocument(root))
             XCTAssertThrowsError(try root.formatted())

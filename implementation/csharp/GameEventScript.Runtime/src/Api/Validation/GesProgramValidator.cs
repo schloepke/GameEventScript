@@ -370,7 +370,7 @@ internal static class GesProgramValidator
             if (!textIndexes) continue;
             if (role == GesOpcodePrinter.OperandPart.MessageShapeList && index == 0)
             {
-                if (!IsPortableMessageName(program.StringConstants, list[index])) InvalidOperand("Message shape names must be segments of ASCII letters or digits that start uppercase, joined by single underscores.", instructionIndex);
+                if (!IsPortableTypeName(program.StringConstants, list[index])) InvalidOperand("Message shape names must be segments of ASCII letters or digits that start uppercase, joined by single underscores.", instructionIndex);
             }
             else if (!IsPortableUnlabeled(program.StringConstants, list[index]) && !IsPortablePlainName(program.StringConstants, list[index]))
             {
@@ -389,7 +389,8 @@ internal static class GesProgramValidator
     {
         var validName = bind.Kind switch
         {
-            MessageHandler or MessageNameHandler or OutboundMessage => IsPortableMessageName(program.StringConstants, bind.Name),
+            MessageHandler or MessageNameHandler => IsPortableMessageName(program.StringConstants, bind.Name),
+            OutboundMessage => IsPortableTypeName(program.StringConstants, bind.Name),
             Function or Predicate => IsPortablePlainName(program.StringConstants, bind.Name),
             Record or ExternalType => IsPortableTypeName(program.StringConstants, bind.Name),
             ExtensionCall => IsPortableExtensionName(program.StringConstants, bind.Name),

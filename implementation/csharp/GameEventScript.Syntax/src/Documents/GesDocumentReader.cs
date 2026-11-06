@@ -209,9 +209,7 @@ internal sealed class GesDocumentReader
         // `:Dice [...]` with whitespace is the Dice result literal, read after this form fails.
         if (!Consume('(')) return builtin == "dice" ? null : Fail(Code.InvalidLiteral, formStart);
         SkipWhitespace();
-        if (builtin is "handler" or "message" && _position < _text.Length && (char.IsUpper(_text[_position])
-                || _text.AsSpan(_position).StartsWith("initialization".AsSpan(), StringComparison.Ordinal)
-                || _text.AsSpan(_position).StartsWith("undeliverable".AsSpan(), StringComparison.Ordinal)))
+        if (builtin is "handler" or "message" && _position < _text.Length && GesText.IsAsciiUpper(_text[_position]))
             return ReadMessageForm(depth + 1, builtin == "handler", formStart, open);
         var labels = new List<string>();
         var values = new List<GesDocumentNode>();
@@ -230,7 +228,7 @@ internal sealed class GesDocumentReader
                 SkipWhitespace();
                 if (_position == _text.Length) return Fail(Code.UnclosedBracket, open);
                 GesDocumentNode? value;
-                if (builtin == "series" && values.Count == 0 && _text[_position] is >= 'a' and <= 'z')
+                if (builtin == "series" && (label == "kind" || label == "_" && values.Count == 0) && _text[_position] is >= 'a' and <= 'z')
                 {
                     var valueStart = _position;
                     var kind = ReadName();
@@ -254,7 +252,7 @@ internal sealed class GesDocumentReader
     private GesDocumentNode? ReadMessageForm(int depth, bool handler, int formStart, int outerOpen)
     {
         var name = ReadName();
-        if (name is null || !GesText.IsMessageName(name) && !GesText.IsSystemEndpointName(name)) return Fail(Code.InvalidLiteral, formStart);
+        if (name is null || !GesText.IsMessageName(name)) return Fail(Code.InvalidLiteral, formStart);
         SkipWhitespace();
         var open = _position;
         if (!Consume('(')) return Fail(Code.InvalidLiteral, formStart);

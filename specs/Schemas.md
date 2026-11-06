@@ -645,7 +645,8 @@ complete:
 | --- | --- |
 | `wire.outOfRange` | a value is outside its range, not finite in a quantized field, or more than `2^50` steps from zero, also for a wrapping field |
 | `wire.notRepresentable` | an integer field receives a fractional value, or a value does not fit its stored form |
-| `wire.missingField` | a field that is neither `optional` nor has a `:Nothing` alternative has no value, or a Message lacks trailing arguments of its signature |
+| `wire.missingField` | a Record or Map has no key for a field that is neither `optional` nor has a `:Nothing` alternative, a Message lacks trailing arguments of its signature, or a typed writer leaves such a field unwritten or absent |
+| `wire.nothingValue` | a field, argument or list element is `nothing` without being `optional` or having a `:Nothing` alternative |
 | `wire.typeMismatch` | a value has another kind or unit than its field, a nonzero omitted axis, a Message whose labels differ from its signature, or a Map with a key that a union alternative does not have |
 | `wire.unknownTag` | a tag is not in its set |
 | `wire.invalidTag` | a typed writer gives a `:Tag max n` no valid tag name |

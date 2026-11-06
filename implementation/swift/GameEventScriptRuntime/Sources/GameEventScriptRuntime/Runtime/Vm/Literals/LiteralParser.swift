@@ -167,7 +167,7 @@ struct GesLiteralParser {
         guard consume(40) else { return nil }
         whitespace()
         var form = TypedHead.Form.data
-        if ["handler", "message"].contains(type), position < bytes.count, (65...90).contains(bytes[position]) || starts("initialization") || starts("undeliverable") {
+        if ["handler", "message"].contains(type), position < bytes.count, (65...90).contains(bytes[position]) {
             form = type == "handler" ? .handler : .message
         }
         return TypedHead(type: type, constructor: constructor, form: form)
@@ -181,7 +181,7 @@ struct GesLiteralParser {
                 if !item() { return nil }
                 guard let label = argumentLabel(labels) else { return nil }
                 let argument: GesValue
-                if let kind = seriesKind(head.type, first: args.isEmpty) {
+                if let kind = seriesKind(head.type, first: label == "kind" || (label == "_" && args.isEmpty)) {
                     argument = kind
                 } else {
                     guard let parsed = value(depth: depth) else { return nil }
@@ -236,7 +236,7 @@ struct GesLiteralParser {
 
     // The message name and opening parenthesis inside `:Handler(` or `:Message(`.
     private mutating func messageHead() -> String? {
-        guard let name = name(), GesNames.message(name) else { return nil }
+        guard let name = name(), GesNames.type(name) else { return nil }
         whitespace()
         guard consume(40) else { return nil }
         whitespace()

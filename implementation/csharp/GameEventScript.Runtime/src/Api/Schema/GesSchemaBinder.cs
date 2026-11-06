@@ -109,6 +109,9 @@ internal struct GesSchemaNode
     internal int Width;
     internal int Next;
     internal int After;
+
+    // The direct children of a group, which its delta has one change bit each for.
+    internal int ChildCount;
     internal string Name;
     internal string Path;
     internal string[]? Tags;
@@ -116,6 +119,10 @@ internal struct GesSchemaNode
     // Integer: its lower bound. Quantized: lowerN. The largest valid index; for a wrapping field the period is one more.
     internal long Lower;
     internal ulong MaxIndex;
+
+    // The largest difference in indices of a `delta within` and the width of its range form; zero without one.
+    internal ulong DeltaRange;
+    internal int DeltaWidth;
     internal long P;
     internal double PBinary;
     internal double SBinary;
@@ -154,7 +161,7 @@ public sealed class GesBoundSchema
     /// <summary>Gets the declaration's name.</summary>
     public string Name { get; }
 
-    /// <summary>Gets the size of the largest encoding in bytes.</summary>
+    /// <summary>Gets the size of the largest encoding in bytes, of a full record or of a delta.</summary>
     public long MaxByteCount { get; }
 
     /// <summary>Gets the schema hash, independent of parameter values.</summary>
@@ -176,6 +183,9 @@ public sealed class GesBoundSchema
     internal string[] Labels { get; init; } = [];
 
     internal int MemberWidth { get; }
+
+    // The top-level fields with a change bit in a delta: all but the key.
+    internal int DeltaFieldCount { get; init; }
 
     // The largest encoding of a schema or message in bits, which a message set adds its index to.
     internal long MaxBitCount { get; init; }
@@ -451,15 +461,28 @@ internal static class GesSchemaBinder
         var nodes = inner.Nodes.ToArray();
         Seal(nodes);
         var bits = Cost(nodes, 0, nodes.Length);
+        if (declaration.Kind == GesSchemaKind.Schema) bits = Math.Max(bits, DeltaCost(nodes));
         if (bits > MaximumByteCount * 8) throw declaration.Scope.Error(Code.TooLarge, declaration.Offset, $"The largest encoding of '{declaration.Name}' exceeds {MaximumByteCount} bytes.");
         var labels = new string[declaration.Fields.Length];
         for (var index = 0; index < labels.Length; index++) labels[index] = declaration.Fields[index].Unlabeled ? "_" : declaration.Fields[index].Name;
-        return new GesBoundSchema(declaration.Public, declaration.Name, declaration.Kind, nodes, [], 0, (bits + 7) / 8, hash, bindingHash) { Labels = labels, MaxBitCount = bits };
+        return new GesBoundSchema(declaration.Public, declaration.Name, declaration.Kind, nodes, [], 0, (bits + 7) / 8, hash, bindingHash) { Labels = labels, DeltaFieldCount = CountFields(nodes, nodes.Length > 0 && nodes[0].Key ? nodes[0].Next : 0, nodes.Length), MaxBitCount = bits };
+    }
+
+    private static int CountFields(GesSchemaNode[] nodes, int start, int end)
+    {
+        var count = 0;
+        for (var index = start; index < end; index = nodes[index].Next) count++;
+        return count;
     }
 
     private static void Seal(GesSchemaNode[] nodes)
     {
-        for (var index = 0; index < nodes.Length; index++) nodes[index].After = nodes[index].Next;
+        for (var index = 0; index < nodes.Length; index++)
+        {
+            nodes[index].After = nodes[index].Next;
+            if (nodes[index].Kind == GesSchemaNodeKind.Group) nodes[index].ChildCount = CountFields(nodes, index + 1, nodes[index].Next);
+        }
+
         for (var union = 0; union < nodes.Length; union++)
         {
             if (nodes[union].Kind != GesSchemaNodeKind.Union) continue;
@@ -471,6 +494,49 @@ internal static class GesSchemaBinder
             }
         }
     }
+
+    // The largest delta in bits: the key, then a change bit and the largest payload of each field.
+    private static long DeltaCost(GesSchemaNode[] nodes)
+    {
+        var start = nodes.Length > 0 && nodes[0].Key ? nodes[0].Next : 0;
+        return Math.Min(MaximumByteCount * 8 + 1, (start == 0 ? 0 : nodes[0].Width) + DeltaCost(nodes, start, nodes.Length));
+    }
+
+    private static long DeltaCost(GesSchemaNode[] nodes, int start, int end)
+    {
+        var limit = MaximumByteCount * 8 + 1;
+        long total = 0;
+        for (var index = start; index < end; index = nodes[index].Next)
+        {
+            var payload = PayloadCost(nodes, index);
+            if (nodes[index].Optional) payload = 1 + Math.Max(payload, FullCost(nodes, index));
+            total = Math.Min(limit, total + 1 + payload);
+        }
+
+        return total;
+    }
+
+    private static long PayloadCost(GesSchemaNode[] nodes, int index)
+    {
+        ref readonly var node = ref nodes[index];
+        switch (node.Kind)
+        {
+            case GesSchemaNodeKind.Boolean or GesSchemaNodeKind.Nothing:
+                return 0;
+            case GesSchemaNodeKind.Group:
+                return DeltaCost(nodes, index + 1, node.Next);
+            case GesSchemaNodeKind.Union:
+                long largest = 0;
+                for (var alternative = index + 1; alternative < node.Next; alternative = nodes[alternative].Next)
+                    largest = Math.Max(largest, Math.Max(FullCost(nodes, alternative), PayloadCost(nodes, alternative)));
+                return node.Width + largest;
+            default:
+                return node.DeltaRange > 0 ? 1 + Math.Max(node.DeltaWidth, node.Width) : FullCost(nodes, index);
+        }
+    }
+
+    // The full encoding of a value, without its presence bit.
+    private static long FullCost(GesSchemaNode[] nodes, int index) => Cost(nodes, index, nodes[index].Next) - (nodes[index].Optional ? 1 : 0);
 
     // The largest encoding in bits. Sums stop growing beyond the limit, so nothing overflows.
     private static long Cost(GesSchemaNode[] nodes, int start, int end)
@@ -735,7 +801,9 @@ internal static class GesSchemaBinder
 
         if (constraints.Delta is not null)
         {
-            if (BitLength(numeric.DeltaRange * 2) >= node.Width) throw scope.Error(Code.InvalidConstraint, constraints.Delta.Offset, "A delta range is narrower than its field.");
+            node.DeltaRange = numeric.DeltaRange;
+            node.DeltaWidth = BitLength(numeric.DeltaRange * 2);
+            if (node.DeltaWidth >= node.Width) throw scope.Error(Code.InvalidConstraint, constraints.Delta.Offset, "A delta range is narrower than its field.");
         }
     }
 

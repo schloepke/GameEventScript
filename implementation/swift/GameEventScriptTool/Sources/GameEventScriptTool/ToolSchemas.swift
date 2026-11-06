@@ -12,7 +12,7 @@ extension ToolHelp {
           ges schema format <schema.gess> [-o <output.gess>]
           ges schema hash <schema.gess> [more.gess ...] --root <Name> [--param <name>=<literal> ...]
           ges schema canonical <schema.gess> [more.gess ...] --root <Name>
-          ges schema dump <schema.gess> [more.gess ...] --root <Name> [--param <name>=<literal> ...] --data <data.bin>
+          ges schema dump <schema.gess> [more.gess ...] --root <Name> [--param <name>=<literal> ...] --data <data.bin> [--baseline <record.bin>]
 
         Commands:
           check      Read schemas and report the first error with its line and column.
@@ -25,6 +25,7 @@ extension ToolHelp {
           --root <Name>             The schema, message or message set.
           --param <name>=<literal>  A parameter value such as worldWidth=5000m; repeat for each one.
           --data <path>             The binary data of dump.
+          --baseline <path>         The full record that makes dump read the data as a delta.
           -o, --output <path>       Write the formatted source to a UTF-8 file instead of stdout.
           -q, --quiet               Hide the success report of check.
           -h, --help                Show this help.
@@ -42,6 +43,7 @@ extension Tool {
         var paths: [String] = []
         var root: String?
         var data: String?
+        var baseline: String?
         var output: String?
         var quiet = false
         var parameters: [(String, String)] = []
@@ -54,12 +56,12 @@ extension Tool {
             }
             if (argument == "-q" || argument == "--quiet") && command == "check" {
                 quiet = true
-            } else if ["--root", "--data", "--param", "-o", "--output"].contains(argument) {
+            } else if ["--root", "--data", "--baseline", "--param", "-o", "--output"].contains(argument) {
                 let applies: Bool
                 switch argument {
                 case "--root": applies = ["hash", "canonical", "dump"].contains(command)
                 case "--param": applies = ["hash", "dump"].contains(command)
-                case "--data": applies = command == "dump"
+                case "--data", "--baseline": applies = command == "dump"
                 default: applies = command == "format"
                 }
                 guard applies else { throw ToolError.usage("Unknown schema \(command) option '\(argument)'.") }
@@ -69,6 +71,7 @@ extension Tool {
                 switch argument {
                 case "--root": root = next
                 case "--data": data = next
+                case "--baseline": baseline = next
                 case "-o", "--output": output = next
                 default:
                     guard let separator = next.firstIndex(of: "="), separator != next.startIndex else { throw ToolError.usage("A parameter is written name=literal.") }
@@ -132,7 +135,8 @@ extension Tool {
                 io.line(hex(bound.bindingHash))
                 return 0
             }
-            let dump = GesSchemaDump.read(bound, data: Array(try Data(contentsOf: URL(fileURLWithPath: data!))))
+            let bytes = Array(try Data(contentsOf: URL(fileURLWithPath: data!)))
+            let dump = try baseline.map { GesSchemaDump.read(bound, data: bytes, baseline: Array(try Data(contentsOf: URL(fileURLWithPath: $0)))) } ?? GesSchemaDump.read(bound, data: bytes)
             io.write(dump.text)
             return dump.isValid ? 0 : 1
         } catch let error as GesSchemaError {

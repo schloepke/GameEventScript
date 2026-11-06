@@ -925,8 +925,15 @@ struct GameEventScript.Api.GesSchemaBound
 struct GameEventScript.Api.GesSchemaDecoded
   property GameEventScript.Runtime.Values.GesValue Value { get }
   property System.Int32 ByteCount { get }
+static class GameEventScript.Api.GesSchemaDelta
+  method static GameEventScript.Api.GesSchemaDeltaDecoded Decode(GameEventScript.Api.GesBoundSchema schema, System.ReadOnlySpan<System.Byte> delta, System.ReadOnlySpan<System.Byte> baseline, System.Span<System.Byte> buffer, System.Int64 byteLimit)
+  method static System.Int32 Encode(GameEventScript.Api.GesBoundSchema schema, System.ReadOnlySpan<System.Byte> record, System.ReadOnlySpan<System.Byte> baseline, System.Span<System.Byte> buffer)
+struct GameEventScript.Api.GesSchemaDeltaDecoded
+  property System.Int32 ByteCount { get }
+  property System.Int32 DeltaByteCount { get }
 static class GameEventScript.Api.GesSchemaDump
   method static GameEventScript.Api.GesSchemaDumpResult Read(GameEventScript.Api.GesBoundSchema schema, System.ReadOnlySpan<System.Byte> data)
+  method static GameEventScript.Api.GesSchemaDumpResult Read(GameEventScript.Api.GesBoundSchema schema, System.ReadOnlySpan<System.Byte> data, System.ReadOnlySpan<System.Byte> baseline)
 struct GameEventScript.Api.GesSchemaDumpResult
   property System.Boolean IsValid { get }
   property System.String Text { get }
@@ -1014,7 +1021,9 @@ enum GameEventScript.Api.GesSchemaTypeKind
   enum-field Handler = 15
   enum-field Nothing = 16
 static class GameEventScript.Api.GesSchemaValues
+  method static GameEventScript.Api.GesSchemaDecoded Decode(GameEventScript.Api.GesBoundSchema schema, System.ReadOnlySpan<System.Byte> data, GameEventScript.Runtime.Values.GesValue baseline, System.Int64 byteLimit)
   method static GameEventScript.Api.GesSchemaDecoded Decode(GameEventScript.Api.GesBoundSchema schema, System.ReadOnlySpan<System.Byte> data, System.Int64 byteLimit)
+  method static System.Int32 Encode(GameEventScript.Api.GesBoundSchema schema, GameEventScript.Runtime.Values.GesValue value, GameEventScript.Runtime.Values.GesValue baseline, System.Span<System.Byte> buffer)
   method static System.Int32 Encode(GameEventScript.Api.GesBoundSchema schema, GameEventScript.Runtime.Values.GesValue value, System.Span<System.Byte> buffer)
   method static System.Int64 ReadKey(GameEventScript.Api.GesBoundSchema schema, System.ReadOnlySpan<System.Byte> data)
 struct GameEventScript.Api.GesSchemaWriter

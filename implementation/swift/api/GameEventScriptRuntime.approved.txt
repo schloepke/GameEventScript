@@ -147,6 +147,7 @@ relationship {"kind":"conformsTo","source":"GameEventScriptRuntime.GesRuntimeLim
 relationship {"kind":"conformsTo","source":"GameEventScriptRuntime.GesSchema :: final class GesSchema","target":"Swift.Sendable"}
 relationship {"kind":"conformsTo","source":"GameEventScriptRuntime.GesSchemaAxisInfo :: struct GesSchemaAxisInfo","target":"Swift.Sendable"}
 relationship {"kind":"conformsTo","source":"GameEventScriptRuntime.GesSchemaBound :: struct GesSchemaBound","target":"Swift.Sendable"}
+relationship {"kind":"conformsTo","source":"GameEventScriptRuntime.GesSchemaDeltaDecoded :: struct GesSchemaDeltaDecoded","target":"Swift.Sendable"}
 relationship {"kind":"conformsTo","source":"GameEventScriptRuntime.GesSchemaDumpResult :: struct GesSchemaDumpResult","target":"Swift.Sendable"}
 relationship {"kind":"conformsTo","source":"GameEventScriptRuntime.GesSchemaError :: struct GesSchemaError","target":"Swift.Equatable"}
 relationship {"kind":"conformsTo","source":"GameEventScriptRuntime.GesSchemaError :: struct GesSchemaError","target":"Swift.Error"}
@@ -634,6 +635,7 @@ symbol {"access":"public","declaration":"enum GesMessageError","kind":"swift.enu
 symbol {"access":"public","declaration":"enum GesProfilePhase","kind":"swift.enum","path":"GameEventScriptRuntime.GesProfilePhase"}
 symbol {"access":"public","declaration":"enum GesProgramFormatErrorCode","kind":"swift.enum","path":"GameEventScriptRuntime.GesProgramFormatErrorCode"}
 symbol {"access":"public","declaration":"enum GesProgramRetention","kind":"swift.enum","path":"GameEventScriptRuntime.GesProgramRetention"}
+symbol {"access":"public","declaration":"enum GesSchemaDelta","kind":"swift.enum","path":"GameEventScriptRuntime.GesSchemaDelta"}
 symbol {"access":"public","declaration":"enum GesSchemaDump","kind":"swift.enum","path":"GameEventScriptRuntime.GesSchemaDump"}
 symbol {"access":"public","declaration":"enum GesSchemaKind","kind":"swift.enum","path":"GameEventScriptRuntime.GesSchemaKind"}
 symbol {"access":"public","declaration":"enum GesSchemaValues","kind":"swift.enum","path":"GameEventScriptRuntime.GesSchemaValues"}
@@ -842,6 +844,7 @@ symbol {"access":"public","declaration":"let bindingHash: UInt64","kind":"swift.
 symbol {"access":"public","declaration":"let bindings: GesBindingSegment","kind":"swift.property","path":"GameEventScriptRuntime.GameEventScriptProgram.bindings"}
 symbol {"access":"public","declaration":"let buildMetadata: GesBuildMetadataSegment?","kind":"swift.property","path":"GameEventScriptRuntime.GameEventScriptProgram.buildMetadata"}
 symbol {"access":"public","declaration":"let byteCount: Int","kind":"swift.property","path":"GameEventScriptRuntime.GesSchemaDecoded.byteCount"}
+symbol {"access":"public","declaration":"let byteCount: Int","kind":"swift.property","path":"GameEventScriptRuntime.GesSchemaDeltaDecoded.byteCount"}
 symbol {"access":"public","declaration":"let byteOffset: Int?","kind":"swift.property","path":"GameEventScriptRuntime.GesProgramFormatError.byteOffset"}
 symbol {"access":"public","declaration":"let code: GesCodeSegment","kind":"swift.property","path":"GameEventScriptRuntime.GameEventScriptProgram.code"}
 symbol {"access":"public","declaration":"let code: GesProgramFormatErrorCode","kind":"swift.property","path":"GameEventScriptRuntime.GesProgramFormatError.code"}
@@ -863,6 +866,7 @@ symbol {"access":"public","declaration":"let constructors: [GesExternalTypeConst
 symbol {"access":"public","declaration":"let debugSymbols: GesDebugSymbolsSegment?","kind":"swift.property","path":"GameEventScriptRuntime.GameEventScriptProgram.debugSymbols"}
 symbol {"access":"public","declaration":"let delta: GesSchemaBound?","kind":"swift.property","path":"GameEventScriptRuntime.GesSchemaAxisInfo.delta"}
 symbol {"access":"public","declaration":"let delta: GesSchemaBound?","kind":"swift.property","path":"GameEventScriptRuntime.GesSchemaType.delta"}
+symbol {"access":"public","declaration":"let deltaByteCount: Int","kind":"swift.property","path":"GameEventScriptRuntime.GesSchemaDeltaDecoded.deltaByteCount"}
 symbol {"access":"public","declaration":"let diagnostic: GesDiagnostic","kind":"swift.property","path":"GameEventScriptRuntime.GesExtensionFaultError.diagnostic"}
 symbol {"access":"public","declaration":"let diagnostic: GesDiagnostic?","kind":"swift.property","path":"GameEventScriptRuntime.GesExecutionResult.diagnostic"}
 symbol {"access":"public","declaration":"let diagnostics: [GesDiagnostic]","kind":"swift.property","path":"GameEventScriptRuntime.GesDynamicLinkError.diagnostics"}
@@ -1082,9 +1086,13 @@ symbol {"access":"public","declaration":"static func == (lhs: GesMessageArgument
 symbol {"access":"public","declaration":"static func == (lhs: GesMessageArguments, rhs: GesMessageArguments) -> Bool","kind":"swift.func.op","path":"GameEventScriptRuntime.GesMessageArguments.==(_:_:)"}
 symbol {"access":"public","declaration":"static func == (lhs: GesMessageSignature, rhs: GesMessageSignature) -> Bool","kind":"swift.func.op","path":"GameEventScriptRuntime.GesMessageSignature.==(_:_:)"}
 symbol {"access":"public","declaration":"static func boolean(_ value: Bool) -> GesValue","kind":"swift.type.method","path":"GameEventScriptRuntime.GesValue.boolean(_:)"}
+symbol {"access":"public","declaration":"static func decode(_ schema: GesBoundSchema, _ data: [UInt8], baseline: GesValue, byteLimit: Int = .max) throws -> GesSchemaDecoded","kind":"swift.type.method","path":"GameEventScriptRuntime.GesSchemaValues.decode(_:_:baseline:byteLimit:)"}
 symbol {"access":"public","declaration":"static func decode(_ schema: GesBoundSchema, _ data: [UInt8], byteLimit: Int = .max) throws -> GesSchemaDecoded","kind":"swift.type.method","path":"GameEventScriptRuntime.GesSchemaValues.decode(_:_:byteLimit:)"}
+symbol {"access":"public","declaration":"static func decode(_ schema: GesBoundSchema, delta: UnsafeRawBufferPointer, baseline: UnsafeRawBufferPointer, into buffer: UnsafeMutableRawBufferPointer, byteLimit: Int = .max) throws(GesWireError) -> GesSchemaDeltaDecoded","kind":"swift.type.method","path":"GameEventScriptRuntime.GesSchemaDelta.decode(_:delta:baseline:into:byteLimit:)"}
 symbol {"access":"public","declaration":"static func dice(_ rolls: [Int32]) -> GesValue","kind":"swift.type.method","path":"GameEventScriptRuntime.GesValue.dice(_:)"}
+symbol {"access":"public","declaration":"static func encode(_ schema: GesBoundSchema, _ value: GesValue, baseline: GesValue) throws -> [UInt8]","kind":"swift.type.method","path":"GameEventScriptRuntime.GesSchemaValues.encode(_:_:baseline:)"}
 symbol {"access":"public","declaration":"static func encode(_ schema: GesBoundSchema, _ value: GesValue, bufferSize: Int? = nil) throws -> [UInt8]","kind":"swift.type.method","path":"GameEventScriptRuntime.GesSchemaValues.encode(_:_:bufferSize:)"}
+symbol {"access":"public","declaration":"static func encode(_ schema: GesBoundSchema, record: UnsafeRawBufferPointer, baseline: UnsafeRawBufferPointer, into buffer: UnsafeMutableRawBufferPointer) throws(GesWireError) -> Int","kind":"swift.type.method","path":"GameEventScriptRuntime.GesSchemaDelta.encode(_:record:baseline:into:)"}
 symbol {"access":"public","declaration":"static func external(_ value: any GesExternalValue) -> GesValue","kind":"swift.type.method","path":"GameEventScriptRuntime.GesValue.external(_:)"}
 symbol {"access":"public","declaration":"static func file(_ path: String) throws -> GesDocumentSchema","kind":"swift.type.method","path":"GameEventScriptRuntime.GesDocumentSchema.file(_:)"}
 symbol {"access":"public","declaration":"static func float(_ value: Double, unit: GesQuantityUnit = .none) -> GesValue","kind":"swift.type.method","path":"GameEventScriptRuntime.GesValue.float(_:unit:)"}
@@ -1103,6 +1111,7 @@ symbol {"access":"public","declaration":"static func percentage(_ ratio: Double)
 symbol {"access":"public","declaration":"static func point(x: Double, y: Double = 0, z: Double = 0, unit: GesQuantityUnit = .none) -> GesValue","kind":"swift.type.method","path":"GameEventScriptRuntime.GesValue.point(x:y:z:unit:)"}
 symbol {"access":"public","declaration":"static func read(_ bytes: [UInt8], options: GesProgramReadOptions = .init()) throws -> GameEventScriptProgram","kind":"swift.type.method","path":"GameEventScriptRuntime.GameEventScriptProgram.read(_:options:)","swiftExtension":{"extendedModule":"GameEventScriptRuntime","typeKind":"swift.class"}}
 symbol {"access":"public","declaration":"static func read(_ schema: GesBoundSchema, data: [UInt8]) -> GesSchemaDumpResult","kind":"swift.type.method","path":"GameEventScriptRuntime.GesSchemaDump.read(_:data:)"}
+symbol {"access":"public","declaration":"static func read(_ schema: GesBoundSchema, data: [UInt8], baseline: [UInt8]) -> GesSchemaDumpResult","kind":"swift.type.method","path":"GameEventScriptRuntime.GesSchemaDump.read(_:data:baseline:)"}
 symbol {"access":"public","declaration":"static func readKey(_ schema: GesBoundSchema, _ data: [UInt8]) throws -> Int64","kind":"swift.type.method","path":"GameEventScriptRuntime.GesSchemaValues.readKey(_:_:)"}
 symbol {"access":"public","declaration":"static func record(typeName: String, keys: [String], values: [GesValue]) -> GesValue","kind":"swift.type.method","path":"GameEventScriptRuntime.GesValue.record(typeName:keys:values:)"}
 symbol {"access":"public","declaration":"static func seedFromEntropy(_ entropy: [UInt8]) throws -> Int64","kind":"swift.type.method","path":"GameEventScriptRuntime.GesRandomGenerator.seedFromEntropy(_:)"}
@@ -1226,6 +1235,7 @@ symbol {"access":"public","declaration":"struct GesRuntimeLimits","kind":"swift.
 symbol {"access":"public","declaration":"struct GesSchemaAxisInfo","kind":"swift.struct","path":"GameEventScriptRuntime.GesSchemaAxisInfo"}
 symbol {"access":"public","declaration":"struct GesSchemaBound","kind":"swift.struct","path":"GameEventScriptRuntime.GesSchemaBound"}
 symbol {"access":"public","declaration":"struct GesSchemaDecoded","kind":"swift.struct","path":"GameEventScriptRuntime.GesSchemaDecoded"}
+symbol {"access":"public","declaration":"struct GesSchemaDeltaDecoded","kind":"swift.struct","path":"GameEventScriptRuntime.GesSchemaDeltaDecoded"}
 symbol {"access":"public","declaration":"struct GesSchemaDumpResult","kind":"swift.struct","path":"GameEventScriptRuntime.GesSchemaDumpResult"}
 symbol {"access":"public","declaration":"struct GesSchemaError","kind":"swift.struct","path":"GameEventScriptRuntime.GesSchemaError"}
 symbol {"access":"public","declaration":"struct GesSchemaField","kind":"swift.struct","path":"GameEventScriptRuntime.GesSchemaField"}

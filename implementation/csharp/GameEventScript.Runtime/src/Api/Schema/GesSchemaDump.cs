@@ -58,6 +58,30 @@ public static class GesSchemaDump
         }
     }
 
+    /// <summary>Lists the fields of the record that a delta produces against a baseline, after a line with the delta's size.</summary>
+    /// <param name="schema">The bound schema.</param>
+    /// <param name="data">The delta.</param>
+    /// <param name="baseline">The full record the delta was encoded against.</param>
+    /// <returns>The text and whether the delta was valid.</returns>
+    public static GesSchemaDumpResult Read(GesBoundSchema schema, ReadOnlySpan<byte> data, ReadOnlySpan<byte> baseline)
+    {
+        if (schema is null) throw new ArgumentNullException(nameof(schema));
+        var held = Read(schema, baseline);
+        if (!held.IsValid) return new GesSchemaDumpResult("baseline " + held.Text.Substring(held.Text.LastIndexOf('\n', held.Text.Length - 2) + 1), false);
+        var record = new byte[schema.MaxByteCount];
+        long bit = 0;
+        try
+        {
+            var decoded = GesSchemaDelta.Decode(schema, data, baseline, record, long.MaxValue, ref bit);
+            var full = Read(schema, record.AsSpan(0, decoded.ByteCount));
+            return new GesSchemaDumpResult("delta bytes " + decoded.DeltaByteCount.ToString(CultureInfo.InvariantCulture) + "\n" + full.Text, full.IsValid);
+        }
+        catch (GesWireException exception)
+        {
+            return new GesSchemaDumpResult("error " + exception.Code + " path=" + exception.Path + " bit=" + bit.ToString(CultureInfo.InvariantCulture) + "\n", false);
+        }
+    }
+
     private static void Walk(ref GesSchemaReader reader, GesBoundSchema schema, int start, int end, StringBuilder builder)
     {
         for (var index = start; index < end; index = schema.Nodes[index].Next) Field(ref reader, schema, index, builder);

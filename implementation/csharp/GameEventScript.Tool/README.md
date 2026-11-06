@@ -688,10 +688,12 @@ dotnet ges schema format bot.gess
 dotnet ges schema hash bot.gess --root Bot --param worldWidth=5000m --param worldHeight=5km
 dotnet ges schema canonical bot.gess --root Bot
 dotnet ges schema dump bot.gess --root Bot --param worldWidth=5000m --param worldHeight=5km --data data.bin
+dotnet ges schema dump bot.gess --root Bot --param worldWidth=5000m --param worldHeight=5km --data delta.bin --baseline record.bin
 ```
 
 `hash` prints the schema hash and, with parameters, the binding hash. `dump` lists each field of
-binary data with its bit offset, width and value, and ends with the first error. Formatting drops
+binary data with its bit offset, width and value, and ends with the first error; with `--baseline`
+the data is a delta against that full record. Formatting drops
 comments, so input and output must differ. See [GES schemas](../../../specs/Schemas.md).
 
 ## Run from the repository

@@ -314,6 +314,46 @@ bytes 4
 Also useful are `ges schema format`, which prints the recommended layout, and `ges schema canonical`,
 which prints exactly what the hash covers.
 
+## 12. Send only what changed
+
+A record that mostly repeats is cheaper as a delta. `delta within` declares the largest change you
+expect between two updates, in the units of the field, and a change within it takes only a few bits:
+
+```gess
+schema :Drone as {
+  id: :Number integer between 0 and 255 key
+  x: :Quantity(m) between -200m and 200m step 5cm delta within 1.55m
+  y: :Quantity(m) between -200m and 200m step 5cm delta within 1.55m
+}
+```
+
+A full record takes 8 + 13 + 13 = 34 bits, 5 bytes. A delta has the key and one change bit per field,
+and a small move takes 7 bits per axis: 8 + 2 + 7 + 7 = 24 bits, 3 bytes. A larger move still works and
+takes 14 bits for that axis.
+
+A delta is made from two full records. The baseline is simply the record the other side holds:
+
+```csharp
+var length = GesSchemaDelta.Encode(drone, record, baseline, buffer);
+var decoded = GesSchemaDelta.Decode(drone, received.AsSpan(0, length), baseline, recordBuffer);
+```
+
+In Swift, the same calls take raw buffers:
+
+```swift
+let length = try record.withUnsafeBytes { current in
+    try baseline.withUnsafeBytes { held in
+        try GesSchemaDelta.encode(drone, record: current, baseline: held, into: buffer)
+    }
+}
+```
+
+`Decode` writes the full record again, so a receiver keeps it as its next baseline. A key comes first in
+a delta as well, so a receiver can find the object's baseline with `ReadKey` before it decodes the rest.
+Which record counts as confirmed is up to your game, since nothing on the wire marks a delta. For rare
+data, `GesSchemaValues` takes a baseline value instead. `ges schema dump --baseline` makes a delta
+readable. See [Deltas](../../specs/Schemas.md#deltas) for the exact form.
+
 ## What schemas leave to you
 
 Transport, channels, deciding which objects a client receives and splitting large data all belong

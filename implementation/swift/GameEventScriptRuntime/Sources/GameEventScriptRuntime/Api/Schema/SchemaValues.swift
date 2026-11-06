@@ -45,6 +45,49 @@ public enum GesSchemaValues {
         return Array(buffer[0..<length])
     }
 
+    /// Encodes a Record or Map as a delta against a baseline value of the same schema.
+    /// - Parameters:
+    ///   - schema: The bound schema.
+    ///   - value: The value.
+    ///   - baseline: The value that the receiver holds.
+    /// - Returns: The encoded delta.
+    /// - Throws: `GesWireError` when a value does not fit the schema or their keys differ.
+    public static func encode(_ schema: GesBoundSchema, _ value: GesValue, baseline: GesValue) throws -> [UInt8] {
+        let record = try encode(schema, value)
+        let previous = try encode(schema, baseline)
+        var buffer = [UInt8](repeating: 0, count: schema.maxByteCount)
+        let length = try buffer.withUnsafeMutableBytes { target in
+            try record.withUnsafeBytes { first in
+                try previous.withUnsafeBytes { second in
+                    try GesSchemaDelta.encode(schema, record: first, baseline: second, into: target)
+                }
+            }
+        }
+        return Array(buffer[0..<length])
+    }
+
+    /// Decodes a delta against the baseline value it was encoded with.
+    /// - Parameters:
+    ///   - schema: The bound schema.
+    ///   - data: The delta; it may continue after it.
+    ///   - baseline: The value that this side holds.
+    ///   - byteLimit: An optional limit on the bytes of this delta.
+    /// - Returns: The value and the bytes the delta occupied.
+    /// - Throws: `GesWireError` when the data is not a valid delta for this baseline.
+    public static func decode(_ schema: GesBoundSchema, _ data: [UInt8], baseline: GesValue, byteLimit: Int = .max) throws -> GesSchemaDecoded {
+        let previous = try encode(schema, baseline)
+        var buffer = [UInt8](repeating: 0, count: schema.maxByteCount)
+        let decoded = try buffer.withUnsafeMutableBytes { target in
+            try data.withUnsafeBytes { first in
+                try previous.withUnsafeBytes { second in
+                    try GesSchemaDelta.decode(schema, delta: first, baseline: second, into: target, byteLimit: byteLimit)
+                }
+            }
+        }
+        let value = try decode(schema, Array(buffer[0..<decoded.byteCount])).value
+        return GesSchemaDecoded(value: value, byteCount: decoded.deltaByteCount)
+    }
+
     /// Decodes a Record or Message.
     /// - Parameters:
     ///   - schema: The bound schema.

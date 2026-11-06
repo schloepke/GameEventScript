@@ -875,12 +875,13 @@ literal:
 Requires `schema-api` and no GES source. `schemaApi.sources` lists schema source texts, named
 `schema0.gess` and so on; `root` names a declaration and `parameters` maps parameter names to
 literals or to Int64 or Binary64 Number or Quantity values in the `valueApi.value` transport. `encode` holds a value with the `valueApi.value` transport, `encodeBuffer` an optional
-buffer size, `decode` lowercase hexadecimal bytes, `decodeLimit` an optional byte limit, `key`
-bytes whose key is read, `dump` bytes to dump, `describe: true` to observe the root's description, and `document` a document text to check. `bind` overrides whether the
+buffer size, `baseline` a value with the same transport that makes `encode` and `decode` work on
+deltas against it, `decode` lowercase hexadecimal bytes, `decodeLimit` an optional byte limit, `key`
+bytes whose key is read, `dump` bytes to dump, `dumpBaseline` the full record that makes `dump` read a delta, `deltaEncode` the bytes of `record` and `baseline` and `deltaDecode` those of `delta` and `baseline` for `GesSchemaDelta`, `describe: true` to observe the root's description, and `document` a document text to check. `bind` overrides whether the
 root is bound, which by default holds for a root without a document. The expectation `schema`
 contains any of `error` (`code` with optional `line` and `column`; it stands alone), `canonical`,
 `hash`, `bindingHash`, `maxByteCount`, `encoded` (`bytes` or `error` with `code` and optional
-`path`), `decoded` (`value` and `byteCount`, or `error`), `key`, `dump` (`text` and `valid`), `description` and `document` (`ok: true` or
+`path`), `decoded` (`value` and `byteCount`, or `error`), `deltaEncoded` (`bytes` or `error`), `deltaDecoded` (`record` and `deltaByteCount`, or `error`), `key`, `dump` (`text` and `valid`), `description` and `document` (`ok: true` or
 `error`). The contract is [GES schemas](../Schemas.md).
 
 ### `documentApi`

@@ -97,7 +97,7 @@ schema:
   canonical: "gess1\nparameter worldHeight Quantity(meter)\nparameter worldWidth Quantity(meter)\nschema Bot\nfield id Number integer between 0e0 65535e0 key\nfield x Quantity(meter) between 0e0 worldWidth step 1e-2 delta 127e-2\nfield y Quantity(meter) between 0e0 worldHeight step 1e-2 delta 127e-2\nfield heading Quantity(degree) wrapping between 0e0 36e1 step 1e-1 delta 8e0\nfield turretBearing Quantity(degree) wrapping between 0e0 36e1 step 1e-1 delta 8e0\nfield radarBearing Quantity(degree) wrapping between 0e0 36e1 step 1e-1 delta 8e0\nfield health Number integer between 0e0 135e0\nfield firing Boolean\nfield shielded Boolean\nfield overheated Boolean\n"
   hash: "baecf12abb34e7c1"
   bindingHash: "551dd726cf2392d4"
-  maxByteCount: 13
+  maxByteCount: 14
   encoded:
     bytes: "2a0040e201093da30200191c16"
   decoded:
@@ -6757,7 +6757,7 @@ schemaApi:
 ```yaml
 gesBlock: expect
 schema:
-  maxByteCount: 16
+  maxByteCount: 17
 ```
 
 ---
@@ -8372,4 +8372,5996 @@ schema:
       code: "document.fieldType"
       line: 2
       column: 4
+```
+
+---
+
+## Test: an unchanged record writes its key and zero change bits
+
+Delta: an unchanged record writes its key and zero change bits.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delta-unchanged
+schemaApi:
+  sources:
+    - "schema :Drone as {\n  id: :Number integer between 0 and 255 key\n  x: :Quantity(m) between -200m and 200m step 5cm delta within 1.55m\n  y: :Quantity(m) between -200m and 200m step 5cm delta within 1.55m\n  heading: :Quantity(°) wrapping between 0° and 360° step 0.5° delta within 15.5°\n}\n"
+  root: "Drone"
+  encode:
+    type: ":Drone"
+    entries:
+      - key: "id"
+        value:
+          type: ":Number.int64"
+          value: "7"
+      - key: "x"
+        value:
+          type: ":Quantity.int64"
+          value: "0"
+          unit: ":meter"
+      - key: "y"
+        value:
+          type: ":Quantity.int64"
+          value: "0"
+          unit: ":meter"
+      - key: "heading"
+        value:
+          type: ":Quantity.int64"
+          value: "0"
+          unit: ":degree"
+  baseline:
+    type: ":Drone"
+    entries:
+      - key: "id"
+        value:
+          type: ":Number.int64"
+          value: "7"
+      - key: "x"
+        value:
+          type: ":Quantity.int64"
+          value: "0"
+          unit: ":meter"
+      - key: "y"
+        value:
+          type: ":Quantity.int64"
+          value: "0"
+          unit: ":meter"
+      - key: "heading"
+        value:
+          type: ":Quantity.int64"
+          value: "0"
+          unit: ":degree"
+  decode: "0700"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "0700"
+  decoded:
+    value:
+      type: ":Drone"
+      entries:
+        - key: "id"
+          value:
+            type: ":Number.int64"
+            value: "7"
+        - key: "x"
+          value:
+            type: ":Quantity.int64"
+            value: "0"
+            unit: ":meter"
+        - key: "y"
+          value:
+            type: ":Quantity.int64"
+            value: "0"
+            unit: ":meter"
+        - key: "heading"
+          value:
+            type: ":Quantity.int64"
+            value: "0"
+            unit: ":degree"
+    byteCount: 2
+  maxByteCount: 7
+```
+
+
+---
+
+## Test: a small move uses the range form
+
+Delta: a small move uses the range form.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delta-range-both
+schemaApi:
+  sources:
+    - "schema :Drone as {\n  id: :Number integer between 0 and 255 key\n  x: :Quantity(m) between -200m and 200m step 5cm delta within 1.55m\n  y: :Quantity(m) between -200m and 200m step 5cm delta within 1.55m\n  heading: :Quantity(°) wrapping between 0° and 360° step 0.5° delta within 15.5°\n}\n"
+  root: "Drone"
+  encode:
+    type: ":Drone"
+    entries:
+      - key: "id"
+        value:
+          type: ":Number.int64"
+          value: "7"
+      - key: "x"
+        value:
+          type: ":Quantity.int64"
+          value: "1"
+          unit: ":meter"
+      - key: "y"
+        value:
+          type: ":Quantity.binary64"
+          value: "-0.5"
+          unit: ":meter"
+      - key: "heading"
+        value:
+          type: ":Quantity.int64"
+          value: "0"
+          unit: ":degree"
+  baseline:
+    type: ":Drone"
+    entries:
+      - key: "id"
+        value:
+          type: ":Number.int64"
+          value: "7"
+      - key: "x"
+        value:
+          type: ":Quantity.int64"
+          value: "0"
+          unit: ":meter"
+      - key: "y"
+        value:
+          type: ":Quantity.int64"
+          value: "0"
+          unit: ":meter"
+      - key: "heading"
+        value:
+          type: ":Quantity.int64"
+          value: "0"
+          unit: ":degree"
+  decode: "0733ab00"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "0733ab00"
+  decoded:
+    value:
+      type: ":Drone"
+      entries:
+        - key: "id"
+          value:
+            type: ":Number.int64"
+            value: "7"
+        - key: "x"
+          value:
+            type: ":Quantity.int64"
+            value: "1"
+            unit: ":meter"
+        - key: "y"
+          value:
+            type: ":Quantity.binary64"
+            value: "-0.5"
+            unit: ":meter"
+        - key: "heading"
+          value:
+            type: ":Quantity.int64"
+            value: "0"
+            unit: ":degree"
+    byteCount: 4
+```
+
+
+---
+
+## Test: a wrapping field takes the shorter way forward
+
+Delta: a wrapping field takes the shorter way forward.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delta-wrap-forward
+schemaApi:
+  sources:
+    - "schema :Drone as {\n  id: :Number integer between 0 and 255 key\n  x: :Quantity(m) between -200m and 200m step 5cm delta within 1.55m\n  y: :Quantity(m) between -200m and 200m step 5cm delta within 1.55m\n  heading: :Quantity(°) wrapping between 0° and 360° step 0.5° delta within 15.5°\n}\n"
+  root: "Drone"
+  encode:
+    type: ":Drone"
+    entries:
+      - key: "id"
+        value:
+          type: ":Number.int64"
+          value: "7"
+      - key: "x"
+        value:
+          type: ":Quantity.int64"
+          value: "0"
+          unit: ":meter"
+      - key: "y"
+        value:
+          type: ":Quantity.int64"
+          value: "0"
+          unit: ":meter"
+      - key: "heading"
+        value:
+          type: ":Quantity.int64"
+          value: "0"
+          unit: ":degree"
+  baseline:
+    type: ":Drone"
+    entries:
+      - key: "id"
+        value:
+          type: ":Number.int64"
+          value: "7"
+      - key: "x"
+        value:
+          type: ":Quantity.int64"
+          value: "0"
+          unit: ":meter"
+      - key: "y"
+        value:
+          type: ":Quantity.int64"
+          value: "0"
+          unit: ":meter"
+      - key: "heading"
+        value:
+          type: ":Quantity.binary64"
+          value: "359.5"
+          unit: ":degree"
+  decode: "070402"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "070402"
+  decoded:
+    value:
+      type: ":Drone"
+      entries:
+        - key: "id"
+          value:
+            type: ":Number.int64"
+            value: "7"
+        - key: "x"
+          value:
+            type: ":Quantity.int64"
+            value: "0"
+            unit: ":meter"
+        - key: "y"
+          value:
+            type: ":Quantity.int64"
+            value: "0"
+            unit: ":meter"
+        - key: "heading"
+          value:
+            type: ":Quantity.int64"
+            value: "0"
+            unit: ":degree"
+    byteCount: 3
+```
+
+
+---
+
+## Test: a wrapping field takes the shorter way backward
+
+Delta: a wrapping field takes the shorter way backward.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delta-wrap-backward
+schemaApi:
+  sources:
+    - "schema :Drone as {\n  id: :Number integer between 0 and 255 key\n  x: :Quantity(m) between -200m and 200m step 5cm delta within 1.55m\n  y: :Quantity(m) between -200m and 200m step 5cm delta within 1.55m\n  heading: :Quantity(°) wrapping between 0° and 360° step 0.5° delta within 15.5°\n}\n"
+  root: "Drone"
+  encode:
+    type: ":Drone"
+    entries:
+      - key: "id"
+        value:
+          type: ":Number.int64"
+          value: "7"
+      - key: "x"
+        value:
+          type: ":Quantity.int64"
+          value: "0"
+          unit: ":meter"
+      - key: "y"
+        value:
+          type: ":Quantity.int64"
+          value: "0"
+          unit: ":meter"
+      - key: "heading"
+        value:
+          type: ":Quantity.binary64"
+          value: "359.5"
+          unit: ":degree"
+  baseline:
+    type: ":Drone"
+    entries:
+      - key: "id"
+        value:
+          type: ":Number.int64"
+          value: "7"
+      - key: "x"
+        value:
+          type: ":Quantity.int64"
+          value: "0"
+          unit: ":meter"
+      - key: "y"
+        value:
+          type: ":Quantity.int64"
+          value: "0"
+          unit: ":meter"
+      - key: "heading"
+        value:
+          type: ":Quantity.int64"
+          value: "0"
+          unit: ":degree"
+  decode: "07e401"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "07e401"
+  decoded:
+    value:
+      type: ":Drone"
+      entries:
+        - key: "id"
+          value:
+            type: ":Number.int64"
+            value: "7"
+        - key: "x"
+          value:
+            type: ":Quantity.int64"
+            value: "0"
+            unit: ":meter"
+        - key: "y"
+          value:
+            type: ":Quantity.int64"
+            value: "0"
+            unit: ":meter"
+        - key: "heading"
+          value:
+            type: ":Quantity.binary64"
+            value: "359.5"
+            unit: ":degree"
+    byteCount: 3
+```
+
+
+---
+
+## Test: a move beyond the range uses the full index
+
+Delta: a move beyond the range uses the full index.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delta-fallback
+schemaApi:
+  sources:
+    - "schema :Drone as {\n  id: :Number integer between 0 and 255 key\n  x: :Quantity(m) between -200m and 200m step 5cm delta within 1.55m\n  y: :Quantity(m) between -200m and 200m step 5cm delta within 1.55m\n  heading: :Quantity(°) wrapping between 0° and 360° step 0.5° delta within 15.5°\n}\n"
+  root: "Drone"
+  encode:
+    type: ":Drone"
+    entries:
+      - key: "id"
+        value:
+          type: ":Number.int64"
+          value: "7"
+      - key: "x"
+        value:
+          type: ":Quantity.int64"
+          value: "10"
+          unit: ":meter"
+      - key: "y"
+        value:
+          type: ":Quantity.int64"
+          value: "0"
+          unit: ":meter"
+      - key: "heading"
+        value:
+          type: ":Quantity.int64"
+          value: "0"
+          unit: ":degree"
+  baseline:
+    type: ":Drone"
+    entries:
+      - key: "id"
+        value:
+          type: ":Number.int64"
+          value: "7"
+      - key: "x"
+        value:
+          type: ":Quantity.int64"
+          value: "0"
+          unit: ":meter"
+      - key: "y"
+        value:
+          type: ":Quantity.int64"
+          value: "0"
+          unit: ":meter"
+      - key: "heading"
+        value:
+          type: ":Quantity.int64"
+          value: "0"
+          unit: ":degree"
+  decode: "07890601"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "07890601"
+  decoded:
+    value:
+      type: ":Drone"
+      entries:
+        - key: "id"
+          value:
+            type: ":Number.int64"
+            value: "7"
+        - key: "x"
+          value:
+            type: ":Quantity.int64"
+            value: "10"
+            unit: ":meter"
+        - key: "y"
+          value:
+            type: ":Quantity.int64"
+            value: "0"
+            unit: ":meter"
+        - key: "heading"
+          value:
+            type: ":Quantity.int64"
+            value: "0"
+            unit: ":degree"
+    byteCount: 4
+```
+
+
+---
+
+## Test: a move below a step is no change
+
+Delta: a move below a step is no change.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delta-below-step
+schemaApi:
+  sources:
+    - "schema :Drone as {\n  id: :Number integer between 0 and 255 key\n  x: :Quantity(m) between -200m and 200m step 5cm delta within 1.55m\n  y: :Quantity(m) between -200m and 200m step 5cm delta within 1.55m\n  heading: :Quantity(°) wrapping between 0° and 360° step 0.5° delta within 15.5°\n}\n"
+  root: "Drone"
+  encode:
+    type: ":Drone"
+    entries:
+      - key: "id"
+        value:
+          type: ":Number.int64"
+          value: "7"
+      - key: "x"
+        value:
+          type: ":Quantity.binary64"
+          value: "0.01"
+          unit: ":meter"
+      - key: "y"
+        value:
+          type: ":Quantity.int64"
+          value: "0"
+          unit: ":meter"
+      - key: "heading"
+        value:
+          type: ":Quantity.int64"
+          value: "0"
+          unit: ":degree"
+  baseline:
+    type: ":Drone"
+    entries:
+      - key: "id"
+        value:
+          type: ":Number.int64"
+          value: "7"
+      - key: "x"
+        value:
+          type: ":Quantity.int64"
+          value: "0"
+          unit: ":meter"
+      - key: "y"
+        value:
+          type: ":Quantity.int64"
+          value: "0"
+          unit: ":meter"
+      - key: "heading"
+        value:
+          type: ":Quantity.int64"
+          value: "0"
+          unit: ":degree"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "0700"
+```
+
+
+---
+
+## Test: a baseline with another key is no valid baseline for encoding
+
+Delta: a baseline with another key is no valid baseline for encoding.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delta-key-mismatch
+schemaApi:
+  sources:
+    - "schema :Drone as {\n  id: :Number integer between 0 and 255 key\n  x: :Quantity(m) between -200m and 200m step 5cm delta within 1.55m\n  y: :Quantity(m) between -200m and 200m step 5cm delta within 1.55m\n  heading: :Quantity(°) wrapping between 0° and 360° step 0.5° delta within 15.5°\n}\n"
+  root: "Drone"
+  encode:
+    type: ":Drone"
+    entries:
+      - key: "id"
+        value:
+          type: ":Number.int64"
+          value: "8"
+      - key: "x"
+        value:
+          type: ":Quantity.int64"
+          value: "0"
+          unit: ":meter"
+      - key: "y"
+        value:
+          type: ":Quantity.int64"
+          value: "0"
+          unit: ":meter"
+      - key: "heading"
+        value:
+          type: ":Quantity.int64"
+          value: "0"
+          unit: ":degree"
+  baseline:
+    type: ":Drone"
+    entries:
+      - key: "id"
+        value:
+          type: ":Number.int64"
+          value: "7"
+      - key: "x"
+        value:
+          type: ":Quantity.int64"
+          value: "0"
+          unit: ":meter"
+      - key: "y"
+        value:
+          type: ":Quantity.int64"
+          value: "0"
+          unit: ":meter"
+      - key: "heading"
+        value:
+          type: ":Quantity.int64"
+          value: "0"
+          unit: ":degree"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    error:
+      code: "wire.keyMismatch"
+      path: "id"
+```
+
+
+---
+
+## Test: a delta with another key is invalid
+
+Delta: a delta with another key is invalid.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delta-reject-key
+schemaApi:
+  sources:
+    - "schema :Drone as {\n  id: :Number integer between 0 and 255 key\n  x: :Quantity(m) between -200m and 200m step 5cm delta within 1.55m\n  y: :Quantity(m) between -200m and 200m step 5cm delta within 1.55m\n  heading: :Quantity(°) wrapping between 0° and 360° step 0.5° delta within 15.5°\n}\n"
+  root: "Drone"
+  baseline:
+    type: ":Drone"
+    entries:
+      - key: "id"
+        value:
+          type: ":Number.int64"
+          value: "7"
+      - key: "x"
+        value:
+          type: ":Quantity.int64"
+          value: "0"
+          unit: ":meter"
+      - key: "y"
+        value:
+          type: ":Quantity.int64"
+          value: "0"
+          unit: ":meter"
+      - key: "heading"
+        value:
+          type: ":Quantity.int64"
+          value: "0"
+          unit: ":degree"
+  decode: "0800"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  decoded:
+    error:
+      code: "wire.invalidDelta"
+      path: "id"
+```
+
+
+---
+
+## Test: a range form without a difference is invalid
+
+Delta: a range form without a difference is invalid.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delta-reject-zero-range
+schemaApi:
+  sources:
+    - "schema :Drone as {\n  id: :Number integer between 0 and 255 key\n  x: :Quantity(m) between -200m and 200m step 5cm delta within 1.55m\n  y: :Quantity(m) between -200m and 200m step 5cm delta within 1.55m\n  heading: :Quantity(°) wrapping between 0° and 360° step 0.5° delta within 15.5°\n}\n"
+  root: "Drone"
+  baseline:
+    type: ":Drone"
+    entries:
+      - key: "id"
+        value:
+          type: ":Number.int64"
+          value: "7"
+      - key: "x"
+        value:
+          type: ":Quantity.int64"
+          value: "0"
+          unit: ":meter"
+      - key: "y"
+        value:
+          type: ":Quantity.int64"
+          value: "0"
+          unit: ":meter"
+      - key: "heading"
+        value:
+          type: ":Quantity.int64"
+          value: "0"
+          unit: ":degree"
+  decode: "07f101"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  decoded:
+    error:
+      code: "wire.invalidDelta"
+      path: "x"
+```
+
+
+---
+
+## Test: a range form above its range is invalid
+
+Delta: a range form above its range is invalid.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delta-reject-range-width
+schemaApi:
+  sources:
+    - "schema :Drone as {\n  id: :Number integer between 0 and 255 key\n  x: :Quantity(m) between -200m and 200m step 5cm delta within 1.55m\n  y: :Quantity(m) between -200m and 200m step 5cm delta within 1.55m\n  heading: :Quantity(°) wrapping between 0° and 360° step 0.5° delta within 15.5°\n}\n"
+  root: "Drone"
+  baseline:
+    type: ":Drone"
+    entries:
+      - key: "id"
+        value:
+          type: ":Number.int64"
+          value: "7"
+      - key: "x"
+        value:
+          type: ":Quantity.int64"
+          value: "0"
+          unit: ":meter"
+      - key: "y"
+        value:
+          type: ":Quantity.int64"
+          value: "0"
+          unit: ":meter"
+      - key: "heading"
+        value:
+          type: ":Quantity.int64"
+          value: "0"
+          unit: ":degree"
+  decode: "07f103"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  decoded:
+    error:
+      code: "wire.invalidDelta"
+      path: "x"
+```
+
+
+---
+
+## Test: a full index within the range is invalid
+
+Delta: a full index within the range is invalid.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delta-reject-fallback-near
+schemaApi:
+  sources:
+    - "schema :Drone as {\n  id: :Number integer between 0 and 255 key\n  x: :Quantity(m) between -200m and 200m step 5cm delta within 1.55m\n  y: :Quantity(m) between -200m and 200m step 5cm delta within 1.55m\n  heading: :Quantity(°) wrapping between 0° and 360° step 0.5° delta within 15.5°\n}\n"
+  root: "Drone"
+  baseline:
+    type: ":Drone"
+    entries:
+      - key: "id"
+        value:
+          type: ":Number.int64"
+          value: "7"
+      - key: "x"
+        value:
+          type: ":Quantity.int64"
+          value: "0"
+          unit: ":meter"
+      - key: "y"
+        value:
+          type: ":Quantity.int64"
+          value: "0"
+          unit: ":meter"
+      - key: "heading"
+        value:
+          type: ":Quantity.int64"
+          value: "0"
+          unit: ":degree"
+  decode: "0719fa00"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  decoded:
+    error:
+      code: "wire.invalidDelta"
+      path: "x"
+```
+
+
+---
+
+## Test: a full index without a difference is invalid
+
+Delta: a full index without a difference is invalid.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delta-reject-fallback-same
+schemaApi:
+  sources:
+    - "schema :Drone as {\n  id: :Number integer between 0 and 255 key\n  x: :Quantity(m) between -200m and 200m step 5cm delta within 1.55m\n  y: :Quantity(m) between -200m and 200m step 5cm delta within 1.55m\n  heading: :Quantity(°) wrapping between 0° and 360° step 0.5° delta within 15.5°\n}\n"
+  root: "Drone"
+  baseline:
+    type: ":Drone"
+    entries:
+      - key: "id"
+        value:
+          type: ":Number.int64"
+          value: "7"
+      - key: "x"
+        value:
+          type: ":Quantity.int64"
+          value: "0"
+          unit: ":meter"
+      - key: "y"
+        value:
+          type: ":Quantity.int64"
+          value: "0"
+          unit: ":meter"
+      - key: "heading"
+        value:
+          type: ":Quantity.int64"
+          value: "0"
+          unit: ":degree"
+  decode: "0709fa00"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  decoded:
+    error:
+      code: "wire.invalidDelta"
+      path: "x"
+```
+
+
+---
+
+## Test: a difference that leaves a range is invalid
+
+Delta: a difference that leaves a range is invalid.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delta-reject-outside
+schemaApi:
+  sources:
+    - "schema :Drone as {\n  id: :Number integer between 0 and 255 key\n  x: :Quantity(m) between -200m and 200m step 5cm delta within 1.55m\n  y: :Quantity(m) between -200m and 200m step 5cm delta within 1.55m\n  heading: :Quantity(°) wrapping between 0° and 360° step 0.5° delta within 15.5°\n}\n"
+  root: "Drone"
+  baseline:
+    type: ":Drone"
+    entries:
+      - key: "id"
+        value:
+          type: ":Number.int64"
+          value: "7"
+      - key: "x"
+        value:
+          type: ":Quantity.int64"
+          value: "200"
+          unit: ":meter"
+      - key: "y"
+        value:
+          type: ":Quantity.int64"
+          value: "0"
+          unit: ":meter"
+      - key: "heading"
+        value:
+          type: ":Quantity.int64"
+          value: "0"
+          unit: ":degree"
+  decode: "070102"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  decoded:
+    error:
+      code: "wire.invalidDelta"
+      path: "x"
+```
+
+
+---
+
+## Test: padding of a delta is checked
+
+Delta: padding of a delta is checked.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delta-reject-padding
+schemaApi:
+  sources:
+    - "schema :Drone as {\n  id: :Number integer between 0 and 255 key\n  x: :Quantity(m) between -200m and 200m step 5cm delta within 1.55m\n  y: :Quantity(m) between -200m and 200m step 5cm delta within 1.55m\n  heading: :Quantity(°) wrapping between 0° and 360° step 0.5° delta within 15.5°\n}\n"
+  root: "Drone"
+  baseline:
+    type: ":Drone"
+    entries:
+      - key: "id"
+        value:
+          type: ":Number.int64"
+          value: "7"
+      - key: "x"
+        value:
+          type: ":Quantity.int64"
+          value: "0"
+          unit: ":meter"
+      - key: "y"
+        value:
+          type: ":Quantity.int64"
+          value: "0"
+          unit: ":meter"
+      - key: "heading"
+        value:
+          type: ":Quantity.int64"
+          value: "0"
+          unit: ":degree"
+  decode: "0708"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  decoded:
+    error:
+      code: "wire.invalidPadding"
+      path: ""
+```
+
+
+---
+
+## Test: a delta that ends early is truncated
+
+Delta: a delta that ends early is truncated.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delta-reject-truncated
+schemaApi:
+  sources:
+    - "schema :Drone as {\n  id: :Number integer between 0 and 255 key\n  x: :Quantity(m) between -200m and 200m step 5cm delta within 1.55m\n  y: :Quantity(m) between -200m and 200m step 5cm delta within 1.55m\n  heading: :Quantity(°) wrapping between 0° and 360° step 0.5° delta within 15.5°\n}\n"
+  root: "Drone"
+  baseline:
+    type: ":Drone"
+    entries:
+      - key: "id"
+        value:
+          type: ":Number.int64"
+          value: "7"
+      - key: "x"
+        value:
+          type: ":Quantity.int64"
+          value: "0"
+          unit: ":meter"
+      - key: "y"
+        value:
+          type: ":Quantity.int64"
+          value: "0"
+          unit: ":meter"
+      - key: "heading"
+        value:
+          type: ":Quantity.int64"
+          value: "0"
+          unit: ":degree"
+  decode: "07"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  decoded:
+    error:
+      code: "wire.truncated"
+```
+
+
+---
+
+## Test: a delta over the caller limit is reported
+
+Delta: a delta over the caller limit is reported.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delta-reject-limit
+schemaApi:
+  sources:
+    - "schema :Drone as {\n  id: :Number integer between 0 and 255 key\n  x: :Quantity(m) between -200m and 200m step 5cm delta within 1.55m\n  y: :Quantity(m) between -200m and 200m step 5cm delta within 1.55m\n  heading: :Quantity(°) wrapping between 0° and 360° step 0.5° delta within 15.5°\n}\n"
+  root: "Drone"
+  baseline:
+    type: ":Drone"
+    entries:
+      - key: "id"
+        value:
+          type: ":Number.int64"
+          value: "7"
+      - key: "x"
+        value:
+          type: ":Quantity.int64"
+          value: "0"
+          unit: ":meter"
+      - key: "y"
+        value:
+          type: ":Quantity.int64"
+          value: "0"
+          unit: ":meter"
+      - key: "heading"
+        value:
+          type: ":Quantity.int64"
+          value: "0"
+          unit: ":degree"
+  decode: "07890601"
+  decodeLimit: 2
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  decoded:
+    error:
+      code: "wire.limitExceeded"
+```
+
+
+---
+
+## Test: a Boolean has no payload and a Tag is written in full
+
+Delta: a Boolean has no payload and a Tag is written in full.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delta-boolean-and-tag
+schemaApi:
+  sources:
+    - "schema :Inner as {\n  v: :Number integer between 0 and 3\n  f: :Boolean\n}\n\nschema :M as {\n  flag: :Boolean\n  state: :Tag(#a, #b, #c)\n  label: :Text max 3 optional\n  items: :List(:Number integer between 0 and 7) max 2\n  inner: :Inner\n  at: :Point(m) {\n    x between 0m and 100m step 1m delta within 3m\n    y between 0m and 100m step 1m\n  }\n  free: :Vector\n  pick: :Number integer between 0 and 7 | :Inner | :Nothing\n  raw: :Number optional\n}\n"
+  root: "M"
+  encode:
+    type: ":M"
+    entries:
+      - key: "flag"
+        value:
+          type: ":Boolean"
+          value: true
+      - key: "state"
+        value:
+          type: ":Tag"
+          value: "b"
+      - key: "label"
+        value:
+          type: ":Nothing"
+      - key: "items"
+        value:
+          type: ":List"
+          items: []
+      - key: "inner"
+        value:
+          type: ":Inner"
+          entries:
+            - key: "v"
+              value:
+                type: ":Number.int64"
+                value: "0"
+            - key: "f"
+              value:
+                type: ":Boolean"
+                value: false
+      - key: "at"
+        value:
+          type: ":Point"
+          x: "0"
+          y: "0"
+          z: "0"
+          unit: ":meter"
+      - key: "free"
+        value:
+          type: ":Vector"
+          x: "0"
+          y: "0"
+          z: "0"
+      - key: "pick"
+        value:
+          type: ":Nothing"
+      - key: "raw"
+        value:
+          type: ":Nothing"
+  baseline:
+    type: ":M"
+    entries:
+      - key: "flag"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "state"
+        value:
+          type: ":Tag"
+          value: "a"
+      - key: "label"
+        value:
+          type: ":Nothing"
+      - key: "items"
+        value:
+          type: ":List"
+          items: []
+      - key: "inner"
+        value:
+          type: ":Inner"
+          entries:
+            - key: "v"
+              value:
+                type: ":Number.int64"
+                value: "0"
+            - key: "f"
+              value:
+                type: ":Boolean"
+                value: false
+      - key: "at"
+        value:
+          type: ":Point"
+          x: "0"
+          y: "0"
+          z: "0"
+          unit: ":meter"
+      - key: "free"
+        value:
+          type: ":Vector"
+          x: "0"
+          y: "0"
+          z: "0"
+      - key: "pick"
+        value:
+          type: ":Nothing"
+      - key: "raw"
+        value:
+          type: ":Nothing"
+  decode: "0302"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "0302"
+  decoded:
+    value:
+      type: ":M"
+      entries:
+        - key: "flag"
+          value:
+            type: ":Boolean"
+            value: true
+        - key: "state"
+          value:
+            type: ":Tag"
+            value: "b"
+        - key: "label"
+          value:
+            type: ":Nothing"
+        - key: "items"
+          value:
+            type: ":List"
+            items: []
+        - key: "inner"
+          value:
+            type: ":Inner"
+            entries:
+              - key: "v"
+                value:
+                  type: ":Number.int64"
+                  value: "0"
+              - key: "f"
+                value:
+                  type: ":Boolean"
+                  value: false
+        - key: "at"
+          value:
+            type: ":Point"
+            x: "0"
+            y: "0"
+            z: "0"
+            unit: ":meter"
+        - key: "free"
+          value:
+            type: ":Vector"
+            x: "0"
+            y: "0"
+            z: "0"
+        - key: "pick"
+          value:
+            type: ":Nothing"
+        - key: "raw"
+          value:
+            type: ":Nothing"
+    byteCount: 2
+```
+
+
+---
+
+## Test: a value that appears is written in full
+
+Delta: a value that appears is written in full.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delta-optional-appears
+schemaApi:
+  sources:
+    - "schema :Inner as {\n  v: :Number integer between 0 and 3\n  f: :Boolean\n}\n\nschema :M as {\n  flag: :Boolean\n  state: :Tag(#a, #b, #c)\n  label: :Text max 3 optional\n  items: :List(:Number integer between 0 and 7) max 2\n  inner: :Inner\n  at: :Point(m) {\n    x between 0m and 100m step 1m delta within 3m\n    y between 0m and 100m step 1m\n  }\n  free: :Vector\n  pick: :Number integer between 0 and 7 | :Inner | :Nothing\n  raw: :Number optional\n}\n"
+  root: "M"
+  encode:
+    type: ":M"
+    entries:
+      - key: "flag"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "state"
+        value:
+          type: ":Tag"
+          value: "a"
+      - key: "label"
+        value:
+          type: ":Text"
+          value: "a"
+      - key: "items"
+        value:
+          type: ":List"
+          items: []
+      - key: "inner"
+        value:
+          type: ":Inner"
+          entries:
+            - key: "v"
+              value:
+                type: ":Number.int64"
+                value: "0"
+            - key: "f"
+              value:
+                type: ":Boolean"
+                value: false
+      - key: "at"
+        value:
+          type: ":Point"
+          x: "0"
+          y: "0"
+          z: "0"
+          unit: ":meter"
+      - key: "free"
+        value:
+          type: ":Vector"
+          x: "0"
+          y: "0"
+          z: "0"
+      - key: "pick"
+        value:
+          type: ":Nothing"
+      - key: "raw"
+        value:
+          type: ":Nothing"
+  baseline:
+    type: ":M"
+    entries:
+      - key: "flag"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "state"
+        value:
+          type: ":Tag"
+          value: "a"
+      - key: "label"
+        value:
+          type: ":Nothing"
+      - key: "items"
+        value:
+          type: ":List"
+          items: []
+      - key: "inner"
+        value:
+          type: ":Inner"
+          entries:
+            - key: "v"
+              value:
+                type: ":Number.int64"
+                value: "0"
+            - key: "f"
+              value:
+                type: ":Boolean"
+                value: false
+      - key: "at"
+        value:
+          type: ":Point"
+          x: "0"
+          y: "0"
+          z: "0"
+          unit: ":meter"
+      - key: "free"
+        value:
+          type: ":Vector"
+          x: "0"
+          y: "0"
+          z: "0"
+      - key: "pick"
+        value:
+          type: ":Nothing"
+      - key: "raw"
+        value:
+          type: ":Nothing"
+  decode: "041606"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "041606"
+  decoded:
+    value:
+      type: ":M"
+      entries:
+        - key: "flag"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "state"
+          value:
+            type: ":Tag"
+            value: "a"
+        - key: "label"
+          value:
+            type: ":Text"
+            value: "a"
+        - key: "items"
+          value:
+            type: ":List"
+            items: []
+        - key: "inner"
+          value:
+            type: ":Inner"
+            entries:
+              - key: "v"
+                value:
+                  type: ":Number.int64"
+                  value: "0"
+              - key: "f"
+                value:
+                  type: ":Boolean"
+                  value: false
+        - key: "at"
+          value:
+            type: ":Point"
+            x: "0"
+            y: "0"
+            z: "0"
+            unit: ":meter"
+        - key: "free"
+          value:
+            type: ":Vector"
+            x: "0"
+            y: "0"
+            z: "0"
+        - key: "pick"
+          value:
+            type: ":Nothing"
+        - key: "raw"
+          value:
+            type: ":Nothing"
+    byteCount: 3
+```
+
+
+---
+
+## Test: a value that vanishes writes its presence bit
+
+Delta: a value that vanishes writes its presence bit.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delta-optional-vanishes
+schemaApi:
+  sources:
+    - "schema :Inner as {\n  v: :Number integer between 0 and 3\n  f: :Boolean\n}\n\nschema :M as {\n  flag: :Boolean\n  state: :Tag(#a, #b, #c)\n  label: :Text max 3 optional\n  items: :List(:Number integer between 0 and 7) max 2\n  inner: :Inner\n  at: :Point(m) {\n    x between 0m and 100m step 1m delta within 3m\n    y between 0m and 100m step 1m\n  }\n  free: :Vector\n  pick: :Number integer between 0 and 7 | :Inner | :Nothing\n  raw: :Number optional\n}\n"
+  root: "M"
+  encode:
+    type: ":M"
+    entries:
+      - key: "flag"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "state"
+        value:
+          type: ":Tag"
+          value: "a"
+      - key: "label"
+        value:
+          type: ":Nothing"
+      - key: "items"
+        value:
+          type: ":List"
+          items: []
+      - key: "inner"
+        value:
+          type: ":Inner"
+          entries:
+            - key: "v"
+              value:
+                type: ":Number.int64"
+                value: "0"
+            - key: "f"
+              value:
+                type: ":Boolean"
+                value: false
+      - key: "at"
+        value:
+          type: ":Point"
+          x: "0"
+          y: "0"
+          z: "0"
+          unit: ":meter"
+      - key: "free"
+        value:
+          type: ":Vector"
+          x: "0"
+          y: "0"
+          z: "0"
+      - key: "pick"
+        value:
+          type: ":Nothing"
+      - key: "raw"
+        value:
+          type: ":Nothing"
+  baseline:
+    type: ":M"
+    entries:
+      - key: "flag"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "state"
+        value:
+          type: ":Tag"
+          value: "a"
+      - key: "label"
+        value:
+          type: ":Text"
+          value: "a"
+      - key: "items"
+        value:
+          type: ":List"
+          items: []
+      - key: "inner"
+        value:
+          type: ":Inner"
+          entries:
+            - key: "v"
+              value:
+                type: ":Number.int64"
+                value: "0"
+            - key: "f"
+              value:
+                type: ":Boolean"
+                value: false
+      - key: "at"
+        value:
+          type: ":Point"
+          x: "0"
+          y: "0"
+          z: "0"
+          unit: ":meter"
+      - key: "free"
+        value:
+          type: ":Vector"
+          x: "0"
+          y: "0"
+          z: "0"
+      - key: "pick"
+        value:
+          type: ":Nothing"
+      - key: "raw"
+        value:
+          type: ":Nothing"
+  decode: "0400"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "0400"
+  decoded:
+    value:
+      type: ":M"
+      entries:
+        - key: "flag"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "state"
+          value:
+            type: ":Tag"
+            value: "a"
+        - key: "label"
+          value:
+            type: ":Nothing"
+        - key: "items"
+          value:
+            type: ":List"
+            items: []
+        - key: "inner"
+          value:
+            type: ":Inner"
+            entries:
+              - key: "v"
+                value:
+                  type: ":Number.int64"
+                  value: "0"
+              - key: "f"
+                value:
+                  type: ":Boolean"
+                  value: false
+        - key: "at"
+          value:
+            type: ":Point"
+            x: "0"
+            y: "0"
+            z: "0"
+            unit: ":meter"
+        - key: "free"
+          value:
+            type: ":Vector"
+            x: "0"
+            y: "0"
+            z: "0"
+        - key: "pick"
+          value:
+            type: ":Nothing"
+        - key: "raw"
+          value:
+            type: ":Nothing"
+    byteCount: 2
+```
+
+
+---
+
+## Test: a present value that changes writes its payload
+
+Delta: a present value that changes writes its payload.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delta-optional-changes
+schemaApi:
+  sources:
+    - "schema :Inner as {\n  v: :Number integer between 0 and 3\n  f: :Boolean\n}\n\nschema :M as {\n  flag: :Boolean\n  state: :Tag(#a, #b, #c)\n  label: :Text max 3 optional\n  items: :List(:Number integer between 0 and 7) max 2\n  inner: :Inner\n  at: :Point(m) {\n    x between 0m and 100m step 1m delta within 3m\n    y between 0m and 100m step 1m\n  }\n  free: :Vector\n  pick: :Number integer between 0 and 7 | :Inner | :Nothing\n  raw: :Number optional\n}\n"
+  root: "M"
+  encode:
+    type: ":M"
+    entries:
+      - key: "flag"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "state"
+        value:
+          type: ":Tag"
+          value: "a"
+      - key: "label"
+        value:
+          type: ":Text"
+          value: "b"
+      - key: "items"
+        value:
+          type: ":List"
+          items: []
+      - key: "inner"
+        value:
+          type: ":Inner"
+          entries:
+            - key: "v"
+              value:
+                type: ":Number.int64"
+                value: "0"
+            - key: "f"
+              value:
+                type: ":Boolean"
+                value: false
+      - key: "at"
+        value:
+          type: ":Point"
+          x: "0"
+          y: "0"
+          z: "0"
+          unit: ":meter"
+      - key: "free"
+        value:
+          type: ":Vector"
+          x: "0"
+          y: "0"
+          z: "0"
+      - key: "pick"
+        value:
+          type: ":Nothing"
+      - key: "raw"
+        value:
+          type: ":Nothing"
+  baseline:
+    type: ":M"
+    entries:
+      - key: "flag"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "state"
+        value:
+          type: ":Tag"
+          value: "a"
+      - key: "label"
+        value:
+          type: ":Text"
+          value: "a"
+      - key: "items"
+        value:
+          type: ":List"
+          items: []
+      - key: "inner"
+        value:
+          type: ":Inner"
+          entries:
+            - key: "v"
+              value:
+                type: ":Number.int64"
+                value: "0"
+            - key: "f"
+              value:
+                type: ":Boolean"
+                value: false
+      - key: "at"
+        value:
+          type: ":Point"
+          x: "0"
+          y: "0"
+          z: "0"
+          unit: ":meter"
+      - key: "free"
+        value:
+          type: ":Vector"
+          x: "0"
+          y: "0"
+          z: "0"
+      - key: "pick"
+        value:
+          type: ":Nothing"
+      - key: "raw"
+        value:
+          type: ":Nothing"
+  decode: "042606"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "042606"
+  decoded:
+    value:
+      type: ":M"
+      entries:
+        - key: "flag"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "state"
+          value:
+            type: ":Tag"
+            value: "a"
+        - key: "label"
+          value:
+            type: ":Text"
+            value: "b"
+        - key: "items"
+          value:
+            type: ":List"
+            items: []
+        - key: "inner"
+          value:
+            type: ":Inner"
+            entries:
+              - key: "v"
+                value:
+                  type: ":Number.int64"
+                  value: "0"
+              - key: "f"
+                value:
+                  type: ":Boolean"
+                  value: false
+        - key: "at"
+          value:
+            type: ":Point"
+            x: "0"
+            y: "0"
+            z: "0"
+            unit: ":meter"
+        - key: "free"
+          value:
+            type: ":Vector"
+            x: "0"
+            y: "0"
+            z: "0"
+        - key: "pick"
+          value:
+            type: ":Nothing"
+        - key: "raw"
+          value:
+            type: ":Nothing"
+    byteCount: 3
+```
+
+
+---
+
+## Test: a list is replaced as a whole
+
+Delta: a list is replaced as a whole.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delta-list
+schemaApi:
+  sources:
+    - "schema :Inner as {\n  v: :Number integer between 0 and 3\n  f: :Boolean\n}\n\nschema :M as {\n  flag: :Boolean\n  state: :Tag(#a, #b, #c)\n  label: :Text max 3 optional\n  items: :List(:Number integer between 0 and 7) max 2\n  inner: :Inner\n  at: :Point(m) {\n    x between 0m and 100m step 1m delta within 3m\n    y between 0m and 100m step 1m\n  }\n  free: :Vector\n  pick: :Number integer between 0 and 7 | :Inner | :Nothing\n  raw: :Number optional\n}\n"
+  root: "M"
+  encode:
+    type: ":M"
+    entries:
+      - key: "flag"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "state"
+        value:
+          type: ":Tag"
+          value: "a"
+      - key: "label"
+        value:
+          type: ":Nothing"
+      - key: "items"
+        value:
+          type: ":List"
+          items:
+            - type: ":Number.int64"
+              value: "1"
+            - type: ":Number.int64"
+              value: "2"
+      - key: "inner"
+        value:
+          type: ":Inner"
+          entries:
+            - key: "v"
+              value:
+                type: ":Number.int64"
+                value: "0"
+            - key: "f"
+              value:
+                type: ":Boolean"
+                value: false
+      - key: "at"
+        value:
+          type: ":Point"
+          x: "0"
+          y: "0"
+          z: "0"
+          unit: ":meter"
+      - key: "free"
+        value:
+          type: ":Vector"
+          x: "0"
+          y: "0"
+          z: "0"
+      - key: "pick"
+        value:
+          type: ":Nothing"
+      - key: "raw"
+        value:
+          type: ":Nothing"
+  baseline:
+    type: ":M"
+    entries:
+      - key: "flag"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "state"
+        value:
+          type: ":Tag"
+          value: "a"
+      - key: "label"
+        value:
+          type: ":Nothing"
+      - key: "items"
+        value:
+          type: ":List"
+          items:
+            - type: ":Number.int64"
+              value: "1"
+      - key: "inner"
+        value:
+          type: ":Inner"
+          entries:
+            - key: "v"
+              value:
+                type: ":Number.int64"
+                value: "0"
+            - key: "f"
+              value:
+                type: ":Boolean"
+                value: false
+      - key: "at"
+        value:
+          type: ":Point"
+          x: "0"
+          y: "0"
+          z: "0"
+          unit: ":meter"
+      - key: "free"
+        value:
+          type: ":Vector"
+          x: "0"
+          y: "0"
+          z: "0"
+      - key: "pick"
+        value:
+          type: ":Nothing"
+      - key: "raw"
+        value:
+          type: ":Nothing"
+  decode: "088c00"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "088c00"
+  decoded:
+    value:
+      type: ":M"
+      entries:
+        - key: "flag"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "state"
+          value:
+            type: ":Tag"
+            value: "a"
+        - key: "label"
+          value:
+            type: ":Nothing"
+        - key: "items"
+          value:
+            type: ":List"
+            items:
+              - type: ":Number.int64"
+                value: "1"
+              - type: ":Number.int64"
+                value: "2"
+        - key: "inner"
+          value:
+            type: ":Inner"
+            entries:
+              - key: "v"
+                value:
+                  type: ":Number.int64"
+                  value: "0"
+              - key: "f"
+                value:
+                  type: ":Boolean"
+                  value: false
+        - key: "at"
+          value:
+            type: ":Point"
+            x: "0"
+            y: "0"
+            z: "0"
+            unit: ":meter"
+        - key: "free"
+          value:
+            type: ":Vector"
+            x: "0"
+            y: "0"
+            z: "0"
+        - key: "pick"
+          value:
+            type: ":Nothing"
+        - key: "raw"
+          value:
+            type: ":Nothing"
+    byteCount: 3
+```
+
+
+---
+
+## Test: a nested schema writes its own change bits
+
+Delta: a nested schema writes its own change bits.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delta-nested
+schemaApi:
+  sources:
+    - "schema :Inner as {\n  v: :Number integer between 0 and 3\n  f: :Boolean\n}\n\nschema :M as {\n  flag: :Boolean\n  state: :Tag(#a, #b, #c)\n  label: :Text max 3 optional\n  items: :List(:Number integer between 0 and 7) max 2\n  inner: :Inner\n  at: :Point(m) {\n    x between 0m and 100m step 1m delta within 3m\n    y between 0m and 100m step 1m\n  }\n  free: :Vector\n  pick: :Number integer between 0 and 7 | :Inner | :Nothing\n  raw: :Number optional\n}\n"
+  root: "M"
+  encode:
+    type: ":M"
+    entries:
+      - key: "flag"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "state"
+        value:
+          type: ":Tag"
+          value: "a"
+      - key: "label"
+        value:
+          type: ":Nothing"
+      - key: "items"
+        value:
+          type: ":List"
+          items: []
+      - key: "inner"
+        value:
+          type: ":Inner"
+          entries:
+            - key: "v"
+              value:
+                type: ":Number.int64"
+                value: "0"
+            - key: "f"
+              value:
+                type: ":Boolean"
+                value: true
+      - key: "at"
+        value:
+          type: ":Point"
+          x: "0"
+          y: "0"
+          z: "0"
+          unit: ":meter"
+      - key: "free"
+        value:
+          type: ":Vector"
+          x: "0"
+          y: "0"
+          z: "0"
+      - key: "pick"
+        value:
+          type: ":Nothing"
+      - key: "raw"
+        value:
+          type: ":Nothing"
+  baseline:
+    type: ":M"
+    entries:
+      - key: "flag"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "state"
+        value:
+          type: ":Tag"
+          value: "a"
+      - key: "label"
+        value:
+          type: ":Nothing"
+      - key: "items"
+        value:
+          type: ":List"
+          items: []
+      - key: "inner"
+        value:
+          type: ":Inner"
+          entries:
+            - key: "v"
+              value:
+                type: ":Number.int64"
+                value: "0"
+            - key: "f"
+              value:
+                type: ":Boolean"
+                value: false
+      - key: "at"
+        value:
+          type: ":Point"
+          x: "0"
+          y: "0"
+          z: "0"
+          unit: ":meter"
+      - key: "free"
+        value:
+          type: ":Vector"
+          x: "0"
+          y: "0"
+          z: "0"
+      - key: "pick"
+        value:
+          type: ":Nothing"
+      - key: "raw"
+        value:
+          type: ":Nothing"
+  decode: "1004"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "1004"
+  decoded:
+    value:
+      type: ":M"
+      entries:
+        - key: "flag"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "state"
+          value:
+            type: ":Tag"
+            value: "a"
+        - key: "label"
+          value:
+            type: ":Nothing"
+        - key: "items"
+          value:
+            type: ":List"
+            items: []
+        - key: "inner"
+          value:
+            type: ":Inner"
+            entries:
+              - key: "v"
+                value:
+                  type: ":Number.int64"
+                  value: "0"
+              - key: "f"
+                value:
+                  type: ":Boolean"
+                  value: true
+        - key: "at"
+          value:
+            type: ":Point"
+            x: "0"
+            y: "0"
+            z: "0"
+            unit: ":meter"
+        - key: "free"
+          value:
+            type: ":Vector"
+            x: "0"
+            y: "0"
+            z: "0"
+        - key: "pick"
+          value:
+            type: ":Nothing"
+        - key: "raw"
+          value:
+            type: ":Nothing"
+    byteCount: 2
+```
+
+
+---
+
+## Test: an axis with a block uses its own range
+
+Delta: an axis with a block uses its own range.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delta-axis-range
+schemaApi:
+  sources:
+    - "schema :Inner as {\n  v: :Number integer between 0 and 3\n  f: :Boolean\n}\n\nschema :M as {\n  flag: :Boolean\n  state: :Tag(#a, #b, #c)\n  label: :Text max 3 optional\n  items: :List(:Number integer between 0 and 7) max 2\n  inner: :Inner\n  at: :Point(m) {\n    x between 0m and 100m step 1m delta within 3m\n    y between 0m and 100m step 1m\n  }\n  free: :Vector\n  pick: :Number integer between 0 and 7 | :Inner | :Nothing\n  raw: :Number optional\n}\n"
+  root: "M"
+  encode:
+    type: ":M"
+    entries:
+      - key: "flag"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "state"
+        value:
+          type: ":Tag"
+          value: "a"
+      - key: "label"
+        value:
+          type: ":Nothing"
+      - key: "items"
+        value:
+          type: ":List"
+          items: []
+      - key: "inner"
+        value:
+          type: ":Inner"
+          entries:
+            - key: "v"
+              value:
+                type: ":Number.int64"
+                value: "0"
+            - key: "f"
+              value:
+                type: ":Boolean"
+                value: false
+      - key: "at"
+        value:
+          type: ":Point"
+          x: "2"
+          y: "0"
+          z: "0"
+          unit: ":meter"
+      - key: "free"
+        value:
+          type: ":Vector"
+          x: "0"
+          y: "0"
+          z: "0"
+      - key: "pick"
+        value:
+          type: ":Nothing"
+      - key: "raw"
+        value:
+          type: ":Nothing"
+  baseline:
+    type: ":M"
+    entries:
+      - key: "flag"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "state"
+        value:
+          type: ":Tag"
+          value: "a"
+      - key: "label"
+        value:
+          type: ":Nothing"
+      - key: "items"
+        value:
+          type: ":List"
+          items: []
+      - key: "inner"
+        value:
+          type: ":Inner"
+          entries:
+            - key: "v"
+              value:
+                type: ":Number.int64"
+                value: "0"
+            - key: "f"
+              value:
+                type: ":Boolean"
+                value: false
+      - key: "at"
+        value:
+          type: ":Point"
+          x: "0"
+          y: "0"
+          z: "0"
+          unit: ":meter"
+      - key: "free"
+        value:
+          type: ":Vector"
+          x: "0"
+          y: "0"
+          z: "0"
+      - key: "pick"
+        value:
+          type: ":Nothing"
+      - key: "raw"
+        value:
+          type: ":Nothing"
+  decode: "2052"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "2052"
+  decoded:
+    value:
+      type: ":M"
+      entries:
+        - key: "flag"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "state"
+          value:
+            type: ":Tag"
+            value: "a"
+        - key: "label"
+          value:
+            type: ":Nothing"
+        - key: "items"
+          value:
+            type: ":List"
+            items: []
+        - key: "inner"
+          value:
+            type: ":Inner"
+            entries:
+              - key: "v"
+                value:
+                  type: ":Number.int64"
+                  value: "0"
+              - key: "f"
+                value:
+                  type: ":Boolean"
+                  value: false
+        - key: "at"
+          value:
+            type: ":Point"
+            x: "2"
+            y: "0"
+            z: "0"
+            unit: ":meter"
+        - key: "free"
+          value:
+            type: ":Vector"
+            x: "0"
+            y: "0"
+            z: "0"
+        - key: "pick"
+          value:
+            type: ":Nothing"
+        - key: "raw"
+          value:
+            type: ":Nothing"
+    byteCount: 2
+```
+
+
+---
+
+## Test: an axis without a range is written in full
+
+Delta: an axis without a range is written in full.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delta-axis-full
+schemaApi:
+  sources:
+    - "schema :Inner as {\n  v: :Number integer between 0 and 3\n  f: :Boolean\n}\n\nschema :M as {\n  flag: :Boolean\n  state: :Tag(#a, #b, #c)\n  label: :Text max 3 optional\n  items: :List(:Number integer between 0 and 7) max 2\n  inner: :Inner\n  at: :Point(m) {\n    x between 0m and 100m step 1m delta within 3m\n    y between 0m and 100m step 1m\n  }\n  free: :Vector\n  pick: :Number integer between 0 and 7 | :Inner | :Nothing\n  raw: :Number optional\n}\n"
+  root: "M"
+  encode:
+    type: ":M"
+    entries:
+      - key: "flag"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "state"
+        value:
+          type: ":Tag"
+          value: "a"
+      - key: "label"
+        value:
+          type: ":Nothing"
+      - key: "items"
+        value:
+          type: ":List"
+          items: []
+      - key: "inner"
+        value:
+          type: ":Inner"
+          entries:
+            - key: "v"
+              value:
+                type: ":Number.int64"
+                value: "0"
+            - key: "f"
+              value:
+                type: ":Boolean"
+                value: false
+      - key: "at"
+        value:
+          type: ":Point"
+          x: "0"
+          y: "7"
+          z: "0"
+          unit: ":meter"
+      - key: "free"
+        value:
+          type: ":Vector"
+          x: "0"
+          y: "0"
+          z: "0"
+      - key: "pick"
+        value:
+          type: ":Nothing"
+      - key: "raw"
+        value:
+          type: ":Nothing"
+  baseline:
+    type: ":M"
+    entries:
+      - key: "flag"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "state"
+        value:
+          type: ":Tag"
+          value: "a"
+      - key: "label"
+        value:
+          type: ":Nothing"
+      - key: "items"
+        value:
+          type: ":List"
+          items: []
+      - key: "inner"
+        value:
+          type: ":Inner"
+          entries:
+            - key: "v"
+              value:
+                type: ":Number.int64"
+                value: "0"
+            - key: "f"
+              value:
+                type: ":Boolean"
+                value: false
+      - key: "at"
+        value:
+          type: ":Point"
+          x: "0"
+          y: "0"
+          z: "0"
+          unit: ":meter"
+      - key: "free"
+        value:
+          type: ":Vector"
+          x: "0"
+          y: "0"
+          z: "0"
+      - key: "pick"
+        value:
+          type: ":Nothing"
+      - key: "raw"
+        value:
+          type: ":Nothing"
+  decode: "203c00"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "203c00"
+  decoded:
+    value:
+      type: ":M"
+      entries:
+        - key: "flag"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "state"
+          value:
+            type: ":Tag"
+            value: "a"
+        - key: "label"
+          value:
+            type: ":Nothing"
+        - key: "items"
+          value:
+            type: ":List"
+            items: []
+        - key: "inner"
+          value:
+            type: ":Inner"
+            entries:
+              - key: "v"
+                value:
+                  type: ":Number.int64"
+                  value: "0"
+              - key: "f"
+                value:
+                  type: ":Boolean"
+                  value: false
+        - key: "at"
+          value:
+            type: ":Point"
+            x: "0"
+            y: "7"
+            z: "0"
+            unit: ":meter"
+        - key: "free"
+          value:
+            type: ":Vector"
+            x: "0"
+            y: "0"
+            z: "0"
+        - key: "pick"
+          value:
+            type: ":Nothing"
+        - key: "raw"
+          value:
+            type: ":Nothing"
+    byteCount: 3
+```
+
+
+---
+
+## Test: an axis without a block writes its raw bits
+
+Delta: an axis without a block writes its raw bits.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delta-vector-raw
+schemaApi:
+  sources:
+    - "schema :Inner as {\n  v: :Number integer between 0 and 3\n  f: :Boolean\n}\n\nschema :M as {\n  flag: :Boolean\n  state: :Tag(#a, #b, #c)\n  label: :Text max 3 optional\n  items: :List(:Number integer between 0 and 7) max 2\n  inner: :Inner\n  at: :Point(m) {\n    x between 0m and 100m step 1m delta within 3m\n    y between 0m and 100m step 1m\n  }\n  free: :Vector\n  pick: :Number integer between 0 and 7 | :Inner | :Nothing\n  raw: :Number optional\n}\n"
+  root: "M"
+  encode:
+    type: ":M"
+    entries:
+      - key: "flag"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "state"
+        value:
+          type: ":Tag"
+          value: "a"
+      - key: "label"
+        value:
+          type: ":Nothing"
+      - key: "items"
+        value:
+          type: ":List"
+          items: []
+      - key: "inner"
+        value:
+          type: ":Inner"
+          entries:
+            - key: "v"
+              value:
+                type: ":Number.int64"
+                value: "0"
+            - key: "f"
+              value:
+                type: ":Boolean"
+                value: false
+      - key: "at"
+        value:
+          type: ":Point"
+          x: "0"
+          y: "0"
+          z: "0"
+          unit: ":meter"
+      - key: "free"
+        value:
+          type: ":Vector"
+          x: "0"
+          y: "0"
+          z: "1.5"
+      - key: "pick"
+        value:
+          type: ":Nothing"
+      - key: "raw"
+        value:
+          type: ":Nothing"
+  baseline:
+    type: ":M"
+    entries:
+      - key: "flag"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "state"
+        value:
+          type: ":Tag"
+          value: "a"
+      - key: "label"
+        value:
+          type: ":Nothing"
+      - key: "items"
+        value:
+          type: ":List"
+          items: []
+      - key: "inner"
+        value:
+          type: ":Inner"
+          entries:
+            - key: "v"
+              value:
+                type: ":Number.int64"
+                value: "0"
+            - key: "f"
+              value:
+                type: ":Boolean"
+                value: false
+      - key: "at"
+        value:
+          type: ":Point"
+          x: "0"
+          y: "0"
+          z: "0"
+          unit: ":meter"
+      - key: "free"
+        value:
+          type: ":Vector"
+          x: "0"
+          y: "0"
+          z: "0"
+      - key: "pick"
+        value:
+          type: ":Nothing"
+      - key: "raw"
+        value:
+          type: ":Nothing"
+  decode: "4008000000000080ff03"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "4008000000000080ff03"
+  decoded:
+    value:
+      type: ":M"
+      entries:
+        - key: "flag"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "state"
+          value:
+            type: ":Tag"
+            value: "a"
+        - key: "label"
+          value:
+            type: ":Nothing"
+        - key: "items"
+          value:
+            type: ":List"
+            items: []
+        - key: "inner"
+          value:
+            type: ":Inner"
+            entries:
+              - key: "v"
+                value:
+                  type: ":Number.int64"
+                  value: "0"
+              - key: "f"
+                value:
+                  type: ":Boolean"
+                  value: false
+        - key: "at"
+          value:
+            type: ":Point"
+            x: "0"
+            y: "0"
+            z: "0"
+            unit: ":meter"
+        - key: "free"
+          value:
+            type: ":Vector"
+            x: "0"
+            y: "0"
+            z: "1.5"
+        - key: "pick"
+          value:
+            type: ":Nothing"
+        - key: "raw"
+          value:
+            type: ":Nothing"
+    byteCount: 10
+```
+
+
+---
+
+## Test: another alternative is written in full
+
+Delta: another alternative is written in full.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delta-union-other
+schemaApi:
+  sources:
+    - "schema :Inner as {\n  v: :Number integer between 0 and 3\n  f: :Boolean\n}\n\nschema :M as {\n  flag: :Boolean\n  state: :Tag(#a, #b, #c)\n  label: :Text max 3 optional\n  items: :List(:Number integer between 0 and 7) max 2\n  inner: :Inner\n  at: :Point(m) {\n    x between 0m and 100m step 1m delta within 3m\n    y between 0m and 100m step 1m\n  }\n  free: :Vector\n  pick: :Number integer between 0 and 7 | :Inner | :Nothing\n  raw: :Number optional\n}\n"
+  root: "M"
+  encode:
+    type: ":M"
+    entries:
+      - key: "flag"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "state"
+        value:
+          type: ":Tag"
+          value: "a"
+      - key: "label"
+        value:
+          type: ":Nothing"
+      - key: "items"
+        value:
+          type: ":List"
+          items: []
+      - key: "inner"
+        value:
+          type: ":Inner"
+          entries:
+            - key: "v"
+              value:
+                type: ":Number.int64"
+                value: "0"
+            - key: "f"
+              value:
+                type: ":Boolean"
+                value: false
+      - key: "at"
+        value:
+          type: ":Point"
+          x: "0"
+          y: "0"
+          z: "0"
+          unit: ":meter"
+      - key: "free"
+        value:
+          type: ":Vector"
+          x: "0"
+          y: "0"
+          z: "0"
+      - key: "pick"
+        value:
+          type: ":Number.int64"
+          value: "5"
+      - key: "raw"
+        value:
+          type: ":Nothing"
+  baseline:
+    type: ":M"
+    entries:
+      - key: "flag"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "state"
+        value:
+          type: ":Tag"
+          value: "a"
+      - key: "label"
+        value:
+          type: ":Nothing"
+      - key: "items"
+        value:
+          type: ":List"
+          items: []
+      - key: "inner"
+        value:
+          type: ":Inner"
+          entries:
+            - key: "v"
+              value:
+                type: ":Number.int64"
+                value: "0"
+            - key: "f"
+              value:
+                type: ":Boolean"
+                value: false
+      - key: "at"
+        value:
+          type: ":Point"
+          x: "0"
+          y: "0"
+          z: "0"
+          unit: ":meter"
+      - key: "free"
+        value:
+          type: ":Vector"
+          x: "0"
+          y: "0"
+          z: "0"
+      - key: "pick"
+        value:
+          type: ":Nothing"
+      - key: "raw"
+        value:
+          type: ":Nothing"
+  decode: "8028"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "8028"
+  decoded:
+    value:
+      type: ":M"
+      entries:
+        - key: "flag"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "state"
+          value:
+            type: ":Tag"
+            value: "a"
+        - key: "label"
+          value:
+            type: ":Nothing"
+        - key: "items"
+          value:
+            type: ":List"
+            items: []
+        - key: "inner"
+          value:
+            type: ":Inner"
+            entries:
+              - key: "v"
+                value:
+                  type: ":Number.int64"
+                  value: "0"
+              - key: "f"
+                value:
+                  type: ":Boolean"
+                  value: false
+        - key: "at"
+          value:
+            type: ":Point"
+            x: "0"
+            y: "0"
+            z: "0"
+            unit: ":meter"
+        - key: "free"
+          value:
+            type: ":Vector"
+            x: "0"
+            y: "0"
+            z: "0"
+        - key: "pick"
+          value:
+            type: ":Number.int64"
+            value: "5"
+        - key: "raw"
+          value:
+            type: ":Nothing"
+    byteCount: 2
+```
+
+
+---
+
+## Test: the same alternative writes its payload
+
+Delta: the same alternative writes its payload.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delta-union-same
+schemaApi:
+  sources:
+    - "schema :Inner as {\n  v: :Number integer between 0 and 3\n  f: :Boolean\n}\n\nschema :M as {\n  flag: :Boolean\n  state: :Tag(#a, #b, #c)\n  label: :Text max 3 optional\n  items: :List(:Number integer between 0 and 7) max 2\n  inner: :Inner\n  at: :Point(m) {\n    x between 0m and 100m step 1m delta within 3m\n    y between 0m and 100m step 1m\n  }\n  free: :Vector\n  pick: :Number integer between 0 and 7 | :Inner | :Nothing\n  raw: :Number optional\n}\n"
+  root: "M"
+  encode:
+    type: ":M"
+    entries:
+      - key: "flag"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "state"
+        value:
+          type: ":Tag"
+          value: "a"
+      - key: "label"
+        value:
+          type: ":Nothing"
+      - key: "items"
+        value:
+          type: ":List"
+          items: []
+      - key: "inner"
+        value:
+          type: ":Inner"
+          entries:
+            - key: "v"
+              value:
+                type: ":Number.int64"
+                value: "0"
+            - key: "f"
+              value:
+                type: ":Boolean"
+                value: false
+      - key: "at"
+        value:
+          type: ":Point"
+          x: "0"
+          y: "0"
+          z: "0"
+          unit: ":meter"
+      - key: "free"
+        value:
+          type: ":Vector"
+          x: "0"
+          y: "0"
+          z: "0"
+      - key: "pick"
+        value:
+          type: ":Number.int64"
+          value: "6"
+      - key: "raw"
+        value:
+          type: ":Nothing"
+  baseline:
+    type: ":M"
+    entries:
+      - key: "flag"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "state"
+        value:
+          type: ":Tag"
+          value: "a"
+      - key: "label"
+        value:
+          type: ":Nothing"
+      - key: "items"
+        value:
+          type: ":List"
+          items: []
+      - key: "inner"
+        value:
+          type: ":Inner"
+          entries:
+            - key: "v"
+              value:
+                type: ":Number.int64"
+                value: "0"
+            - key: "f"
+              value:
+                type: ":Boolean"
+                value: false
+      - key: "at"
+        value:
+          type: ":Point"
+          x: "0"
+          y: "0"
+          z: "0"
+          unit: ":meter"
+      - key: "free"
+        value:
+          type: ":Vector"
+          x: "0"
+          y: "0"
+          z: "0"
+      - key: "pick"
+        value:
+          type: ":Number.int64"
+          value: "5"
+      - key: "raw"
+        value:
+          type: ":Nothing"
+  decode: "8030"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "8030"
+  decoded:
+    value:
+      type: ":M"
+      entries:
+        - key: "flag"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "state"
+          value:
+            type: ":Tag"
+            value: "a"
+        - key: "label"
+          value:
+            type: ":Nothing"
+        - key: "items"
+          value:
+            type: ":List"
+            items: []
+        - key: "inner"
+          value:
+            type: ":Inner"
+            entries:
+              - key: "v"
+                value:
+                  type: ":Number.int64"
+                  value: "0"
+              - key: "f"
+                value:
+                  type: ":Boolean"
+                  value: false
+        - key: "at"
+          value:
+            type: ":Point"
+            x: "0"
+            y: "0"
+            z: "0"
+            unit: ":meter"
+        - key: "free"
+          value:
+            type: ":Vector"
+            x: "0"
+            y: "0"
+            z: "0"
+        - key: "pick"
+          value:
+            type: ":Number.int64"
+            value: "6"
+        - key: "raw"
+          value:
+            type: ":Nothing"
+    byteCount: 2
+```
+
+
+---
+
+## Test: the same schema alternative writes a nested delta
+
+Delta: the same schema alternative writes a nested delta.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delta-union-nested
+schemaApi:
+  sources:
+    - "schema :Inner as {\n  v: :Number integer between 0 and 3\n  f: :Boolean\n}\n\nschema :M as {\n  flag: :Boolean\n  state: :Tag(#a, #b, #c)\n  label: :Text max 3 optional\n  items: :List(:Number integer between 0 and 7) max 2\n  inner: :Inner\n  at: :Point(m) {\n    x between 0m and 100m step 1m delta within 3m\n    y between 0m and 100m step 1m\n  }\n  free: :Vector\n  pick: :Number integer between 0 and 7 | :Inner | :Nothing\n  raw: :Number optional\n}\n"
+  root: "M"
+  encode:
+    type: ":M"
+    entries:
+      - key: "flag"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "state"
+        value:
+          type: ":Tag"
+          value: "a"
+      - key: "label"
+        value:
+          type: ":Nothing"
+      - key: "items"
+        value:
+          type: ":List"
+          items: []
+      - key: "inner"
+        value:
+          type: ":Inner"
+          entries:
+            - key: "v"
+              value:
+                type: ":Number.int64"
+                value: "0"
+            - key: "f"
+              value:
+                type: ":Boolean"
+                value: false
+      - key: "at"
+        value:
+          type: ":Point"
+          x: "0"
+          y: "0"
+          z: "0"
+          unit: ":meter"
+      - key: "free"
+        value:
+          type: ":Vector"
+          x: "0"
+          y: "0"
+          z: "0"
+      - key: "pick"
+        value:
+          type: ":Inner"
+          entries:
+            - key: "v"
+              value:
+                type: ":Number.int64"
+                value: "2"
+            - key: "f"
+              value:
+                type: ":Boolean"
+                value: false
+      - key: "raw"
+        value:
+          type: ":Nothing"
+  baseline:
+    type: ":M"
+    entries:
+      - key: "flag"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "state"
+        value:
+          type: ":Tag"
+          value: "a"
+      - key: "label"
+        value:
+          type: ":Nothing"
+      - key: "items"
+        value:
+          type: ":List"
+          items: []
+      - key: "inner"
+        value:
+          type: ":Inner"
+          entries:
+            - key: "v"
+              value:
+                type: ":Number.int64"
+                value: "0"
+            - key: "f"
+              value:
+                type: ":Boolean"
+                value: false
+      - key: "at"
+        value:
+          type: ":Point"
+          x: "0"
+          y: "0"
+          z: "0"
+          unit: ":meter"
+      - key: "free"
+        value:
+          type: ":Vector"
+          x: "0"
+          y: "0"
+          z: "0"
+      - key: "pick"
+        value:
+          type: ":Inner"
+          entries:
+            - key: "v"
+              value:
+                type: ":Number.int64"
+                value: "0"
+            - key: "f"
+              value:
+                type: ":Boolean"
+                value: false
+      - key: "raw"
+        value:
+          type: ":Nothing"
+  decode: "804a"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "804a"
+  decoded:
+    value:
+      type: ":M"
+      entries:
+        - key: "flag"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "state"
+          value:
+            type: ":Tag"
+            value: "a"
+        - key: "label"
+          value:
+            type: ":Nothing"
+        - key: "items"
+          value:
+            type: ":List"
+            items: []
+        - key: "inner"
+          value:
+            type: ":Inner"
+            entries:
+              - key: "v"
+                value:
+                  type: ":Number.int64"
+                  value: "0"
+              - key: "f"
+                value:
+                  type: ":Boolean"
+                  value: false
+        - key: "at"
+          value:
+            type: ":Point"
+            x: "0"
+            y: "0"
+            z: "0"
+            unit: ":meter"
+        - key: "free"
+          value:
+            type: ":Vector"
+            x: "0"
+            y: "0"
+            z: "0"
+        - key: "pick"
+          value:
+            type: ":Inner"
+            entries:
+              - key: "v"
+                value:
+                  type: ":Number.int64"
+                  value: "2"
+              - key: "f"
+                value:
+                  type: ":Boolean"
+                  value: false
+        - key: "raw"
+          value:
+            type: ":Nothing"
+    byteCount: 2
+```
+
+
+---
+
+## Test: a Nothing alternative has no payload
+
+Delta: a Nothing alternative has no payload.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delta-union-nothing
+schemaApi:
+  sources:
+    - "schema :Inner as {\n  v: :Number integer between 0 and 3\n  f: :Boolean\n}\n\nschema :M as {\n  flag: :Boolean\n  state: :Tag(#a, #b, #c)\n  label: :Text max 3 optional\n  items: :List(:Number integer between 0 and 7) max 2\n  inner: :Inner\n  at: :Point(m) {\n    x between 0m and 100m step 1m delta within 3m\n    y between 0m and 100m step 1m\n  }\n  free: :Vector\n  pick: :Number integer between 0 and 7 | :Inner | :Nothing\n  raw: :Number optional\n}\n"
+  root: "M"
+  encode:
+    type: ":M"
+    entries:
+      - key: "flag"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "state"
+        value:
+          type: ":Tag"
+          value: "a"
+      - key: "label"
+        value:
+          type: ":Nothing"
+      - key: "items"
+        value:
+          type: ":List"
+          items: []
+      - key: "inner"
+        value:
+          type: ":Inner"
+          entries:
+            - key: "v"
+              value:
+                type: ":Number.int64"
+                value: "0"
+            - key: "f"
+              value:
+                type: ":Boolean"
+                value: false
+      - key: "at"
+        value:
+          type: ":Point"
+          x: "0"
+          y: "0"
+          z: "0"
+          unit: ":meter"
+      - key: "free"
+        value:
+          type: ":Vector"
+          x: "0"
+          y: "0"
+          z: "0"
+      - key: "pick"
+        value:
+          type: ":Nothing"
+      - key: "raw"
+        value:
+          type: ":Nothing"
+  baseline:
+    type: ":M"
+    entries:
+      - key: "flag"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "state"
+        value:
+          type: ":Tag"
+          value: "a"
+      - key: "label"
+        value:
+          type: ":Nothing"
+      - key: "items"
+        value:
+          type: ":List"
+          items: []
+      - key: "inner"
+        value:
+          type: ":Inner"
+          entries:
+            - key: "v"
+              value:
+                type: ":Number.int64"
+                value: "0"
+            - key: "f"
+              value:
+                type: ":Boolean"
+                value: false
+      - key: "at"
+        value:
+          type: ":Point"
+          x: "0"
+          y: "0"
+          z: "0"
+          unit: ":meter"
+      - key: "free"
+        value:
+          type: ":Vector"
+          x: "0"
+          y: "0"
+          z: "0"
+      - key: "pick"
+        value:
+          type: ":Number.int64"
+          value: "5"
+      - key: "raw"
+        value:
+          type: ":Nothing"
+  decode: "8004"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "8004"
+  decoded:
+    value:
+      type: ":M"
+      entries:
+        - key: "flag"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "state"
+          value:
+            type: ":Tag"
+            value: "a"
+        - key: "label"
+          value:
+            type: ":Nothing"
+        - key: "items"
+          value:
+            type: ":List"
+            items: []
+        - key: "inner"
+          value:
+            type: ":Inner"
+            entries:
+              - key: "v"
+                value:
+                  type: ":Number.int64"
+                  value: "0"
+              - key: "f"
+                value:
+                  type: ":Boolean"
+                  value: false
+        - key: "at"
+          value:
+            type: ":Point"
+            x: "0"
+            y: "0"
+            z: "0"
+            unit: ":meter"
+        - key: "free"
+          value:
+            type: ":Vector"
+            x: "0"
+            y: "0"
+            z: "0"
+        - key: "pick"
+          value:
+            type: ":Nothing"
+        - key: "raw"
+          value:
+            type: ":Nothing"
+    byteCount: 2
+```
+
+
+---
+
+## Test: an optional number writes its presence and bits
+
+Delta: an optional number writes its presence and bits.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delta-number-optional
+schemaApi:
+  sources:
+    - "schema :Inner as {\n  v: :Number integer between 0 and 3\n  f: :Boolean\n}\n\nschema :M as {\n  flag: :Boolean\n  state: :Tag(#a, #b, #c)\n  label: :Text max 3 optional\n  items: :List(:Number integer between 0 and 7) max 2\n  inner: :Inner\n  at: :Point(m) {\n    x between 0m and 100m step 1m delta within 3m\n    y between 0m and 100m step 1m\n  }\n  free: :Vector\n  pick: :Number integer between 0 and 7 | :Inner | :Nothing\n  raw: :Number optional\n}\n"
+  root: "M"
+  encode:
+    type: ":M"
+    entries:
+      - key: "flag"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "state"
+        value:
+          type: ":Tag"
+          value: "a"
+      - key: "label"
+        value:
+          type: ":Nothing"
+      - key: "items"
+        value:
+          type: ":List"
+          items: []
+      - key: "inner"
+        value:
+          type: ":Inner"
+          entries:
+            - key: "v"
+              value:
+                type: ":Number.int64"
+                value: "0"
+            - key: "f"
+              value:
+                type: ":Boolean"
+                value: false
+      - key: "at"
+        value:
+          type: ":Point"
+          x: "0"
+          y: "0"
+          z: "0"
+          unit: ":meter"
+      - key: "free"
+        value:
+          type: ":Vector"
+          x: "0"
+          y: "0"
+          z: "0"
+      - key: "pick"
+        value:
+          type: ":Nothing"
+      - key: "raw"
+        value:
+          type: ":Number.binary64"
+          value: "2.5"
+  baseline:
+    type: ":M"
+    entries:
+      - key: "flag"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "state"
+        value:
+          type: ":Tag"
+          value: "a"
+      - key: "label"
+        value:
+          type: ":Nothing"
+      - key: "items"
+        value:
+          type: ":List"
+          items: []
+      - key: "inner"
+        value:
+          type: ":Inner"
+          entries:
+            - key: "v"
+              value:
+                type: ":Number.int64"
+                value: "0"
+            - key: "f"
+              value:
+                type: ":Boolean"
+                value: false
+      - key: "at"
+        value:
+          type: ":Point"
+          x: "0"
+          y: "0"
+          z: "0"
+          unit: ":meter"
+      - key: "free"
+        value:
+          type: ":Vector"
+          x: "0"
+          y: "0"
+          z: "0"
+      - key: "pick"
+        value:
+          type: ":Nothing"
+      - key: "raw"
+        value:
+          type: ":Number.binary64"
+          value: "1.5"
+  decode: "00030000000000100001"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "00030000000000100001"
+  decoded:
+    value:
+      type: ":M"
+      entries:
+        - key: "flag"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "state"
+          value:
+            type: ":Tag"
+            value: "a"
+        - key: "label"
+          value:
+            type: ":Nothing"
+        - key: "items"
+          value:
+            type: ":List"
+            items: []
+        - key: "inner"
+          value:
+            type: ":Inner"
+            entries:
+              - key: "v"
+                value:
+                  type: ":Number.int64"
+                  value: "0"
+              - key: "f"
+                value:
+                  type: ":Boolean"
+                  value: false
+        - key: "at"
+          value:
+            type: ":Point"
+            x: "0"
+            y: "0"
+            z: "0"
+            unit: ":meter"
+        - key: "free"
+          value:
+            type: ":Vector"
+            x: "0"
+            y: "0"
+            z: "0"
+        - key: "pick"
+          value:
+            type: ":Nothing"
+        - key: "raw"
+          value:
+            type: ":Number.binary64"
+            value: "2.5"
+    byteCount: 10
+```
+
+
+---
+
+## Test: a nested delta without a change is invalid
+
+Delta: a nested delta without a change is invalid.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delta-reject-nested-empty
+schemaApi:
+  sources:
+    - "schema :Inner as {\n  v: :Number integer between 0 and 3\n  f: :Boolean\n}\n\nschema :M as {\n  flag: :Boolean\n  state: :Tag(#a, #b, #c)\n  label: :Text max 3 optional\n  items: :List(:Number integer between 0 and 7) max 2\n  inner: :Inner\n  at: :Point(m) {\n    x between 0m and 100m step 1m delta within 3m\n    y between 0m and 100m step 1m\n  }\n  free: :Vector\n  pick: :Number integer between 0 and 7 | :Inner | :Nothing\n  raw: :Number optional\n}\n"
+  root: "M"
+  baseline:
+    type: ":M"
+    entries:
+      - key: "flag"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "state"
+        value:
+          type: ":Tag"
+          value: "a"
+      - key: "label"
+        value:
+          type: ":Nothing"
+      - key: "items"
+        value:
+          type: ":List"
+          items: []
+      - key: "inner"
+        value:
+          type: ":Inner"
+          entries:
+            - key: "v"
+              value:
+                type: ":Number.int64"
+                value: "0"
+            - key: "f"
+              value:
+                type: ":Boolean"
+                value: false
+      - key: "at"
+        value:
+          type: ":Point"
+          x: "0"
+          y: "0"
+          z: "0"
+          unit: ":meter"
+      - key: "free"
+        value:
+          type: ":Vector"
+          x: "0"
+          y: "0"
+          z: "0"
+      - key: "pick"
+        value:
+          type: ":Nothing"
+      - key: "raw"
+        value:
+          type: ":Nothing"
+  decode: "1000"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  decoded:
+    error:
+      code: "wire.invalidDelta"
+      path: "inner"
+```
+
+
+---
+
+## Test: an axis group without a change is invalid
+
+Delta: an axis group without a change is invalid.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delta-reject-axes-empty
+schemaApi:
+  sources:
+    - "schema :Inner as {\n  v: :Number integer between 0 and 3\n  f: :Boolean\n}\n\nschema :M as {\n  flag: :Boolean\n  state: :Tag(#a, #b, #c)\n  label: :Text max 3 optional\n  items: :List(:Number integer between 0 and 7) max 2\n  inner: :Inner\n  at: :Point(m) {\n    x between 0m and 100m step 1m delta within 3m\n    y between 0m and 100m step 1m\n  }\n  free: :Vector\n  pick: :Number integer between 0 and 7 | :Inner | :Nothing\n  raw: :Number optional\n}\n"
+  root: "M"
+  baseline:
+    type: ":M"
+    entries:
+      - key: "flag"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "state"
+        value:
+          type: ":Tag"
+          value: "a"
+      - key: "label"
+        value:
+          type: ":Nothing"
+      - key: "items"
+        value:
+          type: ":List"
+          items: []
+      - key: "inner"
+        value:
+          type: ":Inner"
+          entries:
+            - key: "v"
+              value:
+                type: ":Number.int64"
+                value: "0"
+            - key: "f"
+              value:
+                type: ":Boolean"
+                value: false
+      - key: "at"
+        value:
+          type: ":Point"
+          x: "0"
+          y: "0"
+          z: "0"
+          unit: ":meter"
+      - key: "free"
+        value:
+          type: ":Vector"
+          x: "0"
+          y: "0"
+          z: "0"
+      - key: "pick"
+        value:
+          type: ":Nothing"
+      - key: "raw"
+        value:
+          type: ":Nothing"
+  decode: "2000"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  decoded:
+    error:
+      code: "wire.invalidDelta"
+      path: "at"
+```
+
+
+---
+
+## Test: a change bit between two absent values is invalid
+
+Delta: a change bit between two absent values is invalid.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delta-reject-optional-absent
+schemaApi:
+  sources:
+    - "schema :Inner as {\n  v: :Number integer between 0 and 3\n  f: :Boolean\n}\n\nschema :M as {\n  flag: :Boolean\n  state: :Tag(#a, #b, #c)\n  label: :Text max 3 optional\n  items: :List(:Number integer between 0 and 7) max 2\n  inner: :Inner\n  at: :Point(m) {\n    x between 0m and 100m step 1m delta within 3m\n    y between 0m and 100m step 1m\n  }\n  free: :Vector\n  pick: :Number integer between 0 and 7 | :Inner | :Nothing\n  raw: :Number optional\n}\n"
+  root: "M"
+  baseline:
+    type: ":M"
+    entries:
+      - key: "flag"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "state"
+        value:
+          type: ":Tag"
+          value: "a"
+      - key: "label"
+        value:
+          type: ":Nothing"
+      - key: "items"
+        value:
+          type: ":List"
+          items: []
+      - key: "inner"
+        value:
+          type: ":Inner"
+          entries:
+            - key: "v"
+              value:
+                type: ":Number.int64"
+                value: "0"
+            - key: "f"
+              value:
+                type: ":Boolean"
+                value: false
+      - key: "at"
+        value:
+          type: ":Point"
+          x: "0"
+          y: "0"
+          z: "0"
+          unit: ":meter"
+      - key: "free"
+        value:
+          type: ":Vector"
+          x: "0"
+          y: "0"
+          z: "0"
+      - key: "pick"
+        value:
+          type: ":Nothing"
+      - key: "raw"
+        value:
+          type: ":Nothing"
+  decode: "0400"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  decoded:
+    error:
+      code: "wire.invalidDelta"
+      path: "label"
+```
+
+
+---
+
+## Test: a Text without a difference is invalid
+
+Delta: a Text without a difference is invalid.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delta-reject-text-same
+schemaApi:
+  sources:
+    - "schema :Inner as {\n  v: :Number integer between 0 and 3\n  f: :Boolean\n}\n\nschema :M as {\n  flag: :Boolean\n  state: :Tag(#a, #b, #c)\n  label: :Text max 3 optional\n  items: :List(:Number integer between 0 and 7) max 2\n  inner: :Inner\n  at: :Point(m) {\n    x between 0m and 100m step 1m delta within 3m\n    y between 0m and 100m step 1m\n  }\n  free: :Vector\n  pick: :Number integer between 0 and 7 | :Inner | :Nothing\n  raw: :Number optional\n}\n"
+  root: "M"
+  baseline:
+    type: ":M"
+    entries:
+      - key: "flag"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "state"
+        value:
+          type: ":Tag"
+          value: "a"
+      - key: "label"
+        value:
+          type: ":Text"
+          value: "a"
+      - key: "items"
+        value:
+          type: ":List"
+          items: []
+      - key: "inner"
+        value:
+          type: ":Inner"
+          entries:
+            - key: "v"
+              value:
+                type: ":Number.int64"
+                value: "0"
+            - key: "f"
+              value:
+                type: ":Boolean"
+                value: false
+      - key: "at"
+        value:
+          type: ":Point"
+          x: "0"
+          y: "0"
+          z: "0"
+          unit: ":meter"
+      - key: "free"
+        value:
+          type: ":Vector"
+          x: "0"
+          y: "0"
+          z: "0"
+      - key: "pick"
+        value:
+          type: ":Nothing"
+      - key: "raw"
+        value:
+          type: ":Nothing"
+  decode: "041606"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  decoded:
+    error:
+      code: "wire.invalidDelta"
+      path: "label"
+```
+
+
+---
+
+## Test: a List without a difference is invalid
+
+Delta: a List without a difference is invalid.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delta-reject-list-same
+schemaApi:
+  sources:
+    - "schema :Inner as {\n  v: :Number integer between 0 and 3\n  f: :Boolean\n}\n\nschema :M as {\n  flag: :Boolean\n  state: :Tag(#a, #b, #c)\n  label: :Text max 3 optional\n  items: :List(:Number integer between 0 and 7) max 2\n  inner: :Inner\n  at: :Point(m) {\n    x between 0m and 100m step 1m delta within 3m\n    y between 0m and 100m step 1m\n  }\n  free: :Vector\n  pick: :Number integer between 0 and 7 | :Inner | :Nothing\n  raw: :Number optional\n}\n"
+  root: "M"
+  baseline:
+    type: ":M"
+    entries:
+      - key: "flag"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "state"
+        value:
+          type: ":Tag"
+          value: "a"
+      - key: "label"
+        value:
+          type: ":Nothing"
+      - key: "items"
+        value:
+          type: ":List"
+          items:
+            - type: ":Number.int64"
+              value: "1"
+      - key: "inner"
+        value:
+          type: ":Inner"
+          entries:
+            - key: "v"
+              value:
+                type: ":Number.int64"
+                value: "0"
+            - key: "f"
+              value:
+                type: ":Boolean"
+                value: false
+      - key: "at"
+        value:
+          type: ":Point"
+          x: "0"
+          y: "0"
+          z: "0"
+          unit: ":meter"
+      - key: "free"
+        value:
+          type: ":Vector"
+          x: "0"
+          y: "0"
+          z: "0"
+      - key: "pick"
+        value:
+          type: ":Nothing"
+      - key: "raw"
+        value:
+          type: ":Nothing"
+  decode: "080a"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  decoded:
+    error:
+      code: "wire.invalidDelta"
+      path: "items"
+```
+
+
+---
+
+## Test: a change between two Nothing alternatives is invalid
+
+Delta: a change between two Nothing alternatives is invalid.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delta-reject-union-nothing
+schemaApi:
+  sources:
+    - "schema :Inner as {\n  v: :Number integer between 0 and 3\n  f: :Boolean\n}\n\nschema :M as {\n  flag: :Boolean\n  state: :Tag(#a, #b, #c)\n  label: :Text max 3 optional\n  items: :List(:Number integer between 0 and 7) max 2\n  inner: :Inner\n  at: :Point(m) {\n    x between 0m and 100m step 1m delta within 3m\n    y between 0m and 100m step 1m\n  }\n  free: :Vector\n  pick: :Number integer between 0 and 7 | :Inner | :Nothing\n  raw: :Number optional\n}\n"
+  root: "M"
+  baseline:
+    type: ":M"
+    entries:
+      - key: "flag"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "state"
+        value:
+          type: ":Tag"
+          value: "a"
+      - key: "label"
+        value:
+          type: ":Nothing"
+      - key: "items"
+        value:
+          type: ":List"
+          items: []
+      - key: "inner"
+        value:
+          type: ":Inner"
+          entries:
+            - key: "v"
+              value:
+                type: ":Number.int64"
+                value: "0"
+            - key: "f"
+              value:
+                type: ":Boolean"
+                value: false
+      - key: "at"
+        value:
+          type: ":Point"
+          x: "0"
+          y: "0"
+          z: "0"
+          unit: ":meter"
+      - key: "free"
+        value:
+          type: ":Vector"
+          x: "0"
+          y: "0"
+          z: "0"
+      - key: "pick"
+        value:
+          type: ":Nothing"
+      - key: "raw"
+        value:
+          type: ":Nothing"
+  decode: "8004"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  decoded:
+    error:
+      code: "wire.invalidDelta"
+      path: "pick:Nothing"
+```
+
+
+---
+
+## Test: a Text in a delta is validated
+
+Delta: a Text in a delta is validated.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delta-reject-text-utf8
+schemaApi:
+  sources:
+    - "schema :Inner as {\n  v: :Number integer between 0 and 3\n  f: :Boolean\n}\n\nschema :M as {\n  flag: :Boolean\n  state: :Tag(#a, #b, #c)\n  label: :Text max 3 optional\n  items: :List(:Number integer between 0 and 7) max 2\n  inner: :Inner\n  at: :Point(m) {\n    x between 0m and 100m step 1m delta within 3m\n    y between 0m and 100m step 1m\n  }\n  free: :Vector\n  pick: :Number integer between 0 and 7 | :Inner | :Nothing\n  raw: :Number optional\n}\n"
+  root: "M"
+  baseline:
+    type: ":M"
+    entries:
+      - key: "flag"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "state"
+        value:
+          type: ":Tag"
+          value: "a"
+      - key: "label"
+        value:
+          type: ":Nothing"
+      - key: "items"
+        value:
+          type: ":List"
+          items: []
+      - key: "inner"
+        value:
+          type: ":Inner"
+          entries:
+            - key: "v"
+              value:
+                type: ":Number.int64"
+                value: "0"
+            - key: "f"
+              value:
+                type: ":Boolean"
+                value: false
+      - key: "at"
+        value:
+          type: ":Point"
+          x: "0"
+          y: "0"
+          z: "0"
+          unit: ":meter"
+      - key: "free"
+        value:
+          type: ":Vector"
+          x: "0"
+          y: "0"
+          z: "0"
+      - key: "pick"
+        value:
+          type: ":Nothing"
+      - key: "raw"
+        value:
+          type: ":Nothing"
+  decode: "04f60f"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  decoded:
+    error:
+      code: "wire.invalidText"
+      path: "label"
+```
+
+
+---
+
+## Test: a key that is reached as a nested field has a change bit
+
+Delta: a key that is reached as a nested field has a change bit.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delta-nested-key
+schemaApi:
+  sources:
+    - "schema :Keyed as {\n  id: :Number integer between 0 and 255 key\n  v: :Boolean\n}\n\nschema :Outer as {\n  k: :Keyed\n}\n"
+  root: "Outer"
+  encode:
+    type: ":Outer"
+    entries:
+      - key: "k"
+        value:
+          type: ":Keyed"
+          entries:
+            - key: "id"
+              value:
+                type: ":Number.int64"
+                value: "8"
+            - key: "v"
+              value:
+                type: ":Boolean"
+                value: false
+  baseline:
+    type: ":Outer"
+    entries:
+      - key: "k"
+        value:
+          type: ":Keyed"
+          entries:
+            - key: "id"
+              value:
+                type: ":Number.int64"
+                value: "7"
+            - key: "v"
+              value:
+                type: ":Boolean"
+                value: false
+  decode: "4300"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "4300"
+  decoded:
+    value:
+      type: ":Outer"
+      entries:
+        - key: "k"
+          value:
+            type: ":Keyed"
+            entries:
+              - key: "id"
+                value:
+                  type: ":Number.int64"
+                  value: "8"
+              - key: "v"
+                value:
+                  type: ":Boolean"
+                  value: false
+    byteCount: 2
+```
+
+
+---
+
+## Test: a message has no delta
+
+Delta: a message has no delta.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delta-message
+schemaApi:
+  sources:
+    - "message Hit(a: :Boolean)\n"
+  root: "Hit"
+  encode:
+    type: ":Message"
+    message:
+      name: "Hit"
+      args:
+        - name: "a"
+          value:
+            type: ":Boolean"
+            value: true
+  baseline:
+    type: ":Message"
+    message:
+      name: "Hit"
+      args:
+        - name: "a"
+          value:
+            type: ":Boolean"
+            value: false
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    error:
+      code: "wire.typeMismatch"
+```
+
+
+---
+
+## Test: a dump with a baseline lists the resulting record
+
+Delta: a dump with a baseline lists the resulting record.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delta-dump
+schemaApi:
+  sources:
+    - "schema :Drone as {\n  id: :Number integer between 0 and 255 key\n  x: :Quantity(m) between -200m and 200m step 5cm delta within 1.55m\n  y: :Quantity(m) between -200m and 200m step 5cm delta within 1.55m\n  heading: :Quantity(°) wrapping between 0° and 360° step 0.5° delta within 15.5°\n}\n"
+  root: "Drone"
+  dump: "0733ab00"
+  dumpBaseline: "07a00ff40100"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  dump:
+    text: "delta bytes 4\nid bit=0 width=8 value=7\nx bit=8 width=13 value=1\ny bit=21 width=13 value=-0.5\nheading bit=34 width=10 value=0\nbytes 6\n"
+    valid: true
+```
+
+
+---
+
+## Test: a dump with a baseline names the error in the delta
+
+Delta: a dump with a baseline names the error in the delta.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delta-dump-error
+schemaApi:
+  sources:
+    - "schema :Drone as {\n  id: :Number integer between 0 and 255 key\n  x: :Quantity(m) between -200m and 200m step 5cm delta within 1.55m\n  y: :Quantity(m) between -200m and 200m step 5cm delta within 1.55m\n  heading: :Quantity(°) wrapping between 0° and 360° step 0.5° delta within 15.5°\n}\n"
+  root: "Drone"
+  dump: "0800"
+  dumpBaseline: "07a00ff40100"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  dump:
+    text: "error wire.invalidDelta path=id bit=8\n"
+    valid: false
+```
+
+---
+
+## Test: more change bits than one word
+
+More change bits than one word.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delta-many-fields
+schemaApi:
+  sources:
+    - "schema :Many as {\n  f0: :Boolean\n  f1: :Boolean\n  f2: :Boolean\n  f3: :Boolean\n  f4: :Boolean\n  f5: :Boolean\n  f6: :Boolean\n  f7: :Boolean\n  f8: :Boolean\n  f9: :Boolean\n  f10: :Boolean\n  f11: :Boolean\n  f12: :Boolean\n  f13: :Boolean\n  f14: :Boolean\n  f15: :Boolean\n  f16: :Boolean\n  f17: :Boolean\n  f18: :Boolean\n  f19: :Boolean\n  f20: :Boolean\n  f21: :Boolean\n  f22: :Boolean\n  f23: :Boolean\n  f24: :Boolean\n  f25: :Boolean\n  f26: :Boolean\n  f27: :Boolean\n  f28: :Boolean\n  f29: :Boolean\n  f30: :Boolean\n  f31: :Boolean\n  f32: :Boolean\n  f33: :Boolean\n  f34: :Boolean\n  f35: :Boolean\n  f36: :Boolean\n  f37: :Boolean\n  f38: :Boolean\n  f39: :Boolean\n  f40: :Boolean\n  f41: :Boolean\n  f42: :Boolean\n  f43: :Boolean\n  f44: :Boolean\n  f45: :Boolean\n  f46: :Boolean\n  f47: :Boolean\n  f48: :Boolean\n  f49: :Boolean\n  f50: :Boolean\n  f51: :Boolean\n  f52: :Boolean\n  f53: :Boolean\n  f54: :Boolean\n  f55: :Boolean\n  f56: :Boolean\n  f57: :Boolean\n  f58: :Boolean\n  f59: :Boolean\n  f60: :Boolean\n  f61: :Boolean\n  f62: :Boolean\n  f63: :Boolean\n  f64: :Boolean\n  f65: :Boolean\n  f66: :Boolean\n  f67: :Boolean\n  f68: :Boolean\n  f69: :Boolean\n}\n"
+  root: "Many"
+  encode:
+    type: ":Many"
+    entries:
+      - key: "f0"
+        value:
+          type: ":Boolean"
+          value: true
+      - key: "f1"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f2"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f3"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f4"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f5"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f6"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f7"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f8"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f9"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f10"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f11"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f12"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f13"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f14"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f15"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f16"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f17"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f18"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f19"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f20"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f21"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f22"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f23"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f24"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f25"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f26"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f27"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f28"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f29"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f30"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f31"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f32"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f33"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f34"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f35"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f36"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f37"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f38"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f39"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f40"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f41"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f42"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f43"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f44"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f45"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f46"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f47"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f48"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f49"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f50"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f51"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f52"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f53"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f54"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f55"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f56"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f57"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f58"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f59"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f60"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f61"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f62"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f63"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f64"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f65"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f66"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f67"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f68"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f69"
+        value:
+          type: ":Boolean"
+          value: true
+  baseline:
+    type: ":Many"
+    entries:
+      - key: "f0"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f1"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f2"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f3"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f4"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f5"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f6"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f7"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f8"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f9"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f10"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f11"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f12"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f13"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f14"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f15"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f16"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f17"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f18"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f19"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f20"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f21"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f22"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f23"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f24"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f25"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f26"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f27"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f28"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f29"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f30"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f31"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f32"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f33"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f34"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f35"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f36"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f37"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f38"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f39"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f40"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f41"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f42"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f43"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f44"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f45"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f46"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f47"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f48"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f49"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f50"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f51"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f52"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f53"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f54"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f55"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f56"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f57"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f58"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f59"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f60"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f61"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f62"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f63"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f64"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f65"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f66"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f67"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f68"
+        value:
+          type: ":Boolean"
+          value: false
+      - key: "f69"
+        value:
+          type: ":Boolean"
+          value: false
+  decode: "010000000000000020"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "010000000000000020"
+  decoded:
+    value:
+      type: ":Many"
+      entries:
+        - key: "f0"
+          value:
+            type: ":Boolean"
+            value: true
+        - key: "f1"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "f2"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "f3"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "f4"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "f5"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "f6"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "f7"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "f8"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "f9"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "f10"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "f11"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "f12"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "f13"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "f14"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "f15"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "f16"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "f17"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "f18"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "f19"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "f20"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "f21"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "f22"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "f23"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "f24"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "f25"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "f26"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "f27"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "f28"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "f29"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "f30"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "f31"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "f32"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "f33"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "f34"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "f35"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "f36"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "f37"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "f38"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "f39"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "f40"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "f41"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "f42"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "f43"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "f44"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "f45"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "f46"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "f47"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "f48"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "f49"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "f50"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "f51"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "f52"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "f53"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "f54"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "f55"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "f56"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "f57"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "f58"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "f59"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "f60"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "f61"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "f62"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "f63"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "f64"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "f65"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "f66"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "f67"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "f68"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "f69"
+          value:
+            type: ":Boolean"
+            value: true
+    byteCount: 9
+```
+
+---
+
+## Test: a delta is written from two full records
+
+Delta: a delta is written from two full records.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delta-bytes
+schemaApi:
+  sources:
+    - "schema :V as {\n  id: :Number integer between 0 and 255 key\n  n: :Number integer between 0 and 4\n  t: :Text max 1\n  g: :Tag max 1\n  f: :Number between 0 and 1\n  l: :List(:Boolean) max 2\n  u: :Boolean | :Text max 1 | :Nothing\n}\n"
+  root: "V"
+  deltaEncode:
+    record: "07310c000000000000000001"
+    baseline: "07300c000000000000000001"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  deltaEncoded:
+    bytes: "074100"
+```
+
+
+---
+
+## Test: a delta gives the full record back
+
+Delta: a delta gives the full record back.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delta-bytes-decoded
+schemaApi:
+  sources:
+    - "schema :V as {\n  id: :Number integer between 0 and 255 key\n  n: :Number integer between 0 and 4\n  t: :Text max 1\n  g: :Tag max 1\n  f: :Number between 0 and 1\n  l: :List(:Boolean) max 2\n  u: :Boolean | :Text max 1 | :Nothing\n}\n"
+  root: "V"
+  deltaDecode:
+    delta: "074100"
+    baseline: "07300c000000000000000001"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  deltaDecoded:
+    record: "07310c000000000000000001"
+    deltaByteCount: 3
+```
+
+
+---
+
+## Test: two records with different keys have no delta
+
+Delta: two records with different keys have no delta.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delta-bytes-key
+schemaApi:
+  sources:
+    - "schema :V as {\n  id: :Number integer between 0 and 255 key\n  n: :Number integer between 0 and 4\n  t: :Text max 1\n  g: :Tag max 1\n  f: :Number between 0 and 1\n  l: :List(:Boolean) max 2\n  u: :Boolean | :Text max 1 | :Nothing\n}\n"
+  root: "V"
+  deltaEncode:
+    record: "08300c000000000000000001"
+    baseline: "07300c000000000000000001"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  deltaEncoded:
+    error:
+      code: "wire.keyMismatch"
+      path: "id"
+```
+
+
+---
+
+## Test: a truncated record is rejected
+
+Delta: a truncated record is rejected.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delta-record-truncated
+schemaApi:
+  sources:
+    - "schema :V as {\n  id: :Number integer between 0 and 255 key\n  n: :Number integer between 0 and 4\n  t: :Text max 1\n  g: :Tag max 1\n  f: :Number between 0 and 1\n  l: :List(:Boolean) max 2\n  u: :Boolean | :Text max 1 | :Nothing\n}\n"
+  root: "V"
+  deltaEncode:
+    record: "07"
+    baseline: "07300c000000000000000001"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  deltaEncoded:
+    error:
+      code: "wire.truncated"
+      path: "n"
+```
+
+
+---
+
+## Test: a truncated baseline is rejected
+
+Delta: a truncated baseline is rejected.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delta-baseline-truncated
+schemaApi:
+  sources:
+    - "schema :V as {\n  id: :Number integer between 0 and 255 key\n  n: :Number integer between 0 and 4\n  t: :Text max 1\n  g: :Tag max 1\n  f: :Number between 0 and 1\n  l: :List(:Boolean) max 2\n  u: :Boolean | :Text max 1 | :Nothing\n}\n"
+  root: "V"
+  deltaEncode:
+    record: "07300c000000000000000001"
+    baseline: "07"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  deltaEncoded:
+    error:
+      code: "wire.truncated"
+      path: "n"
+```
+
+
+---
+
+## Test: an index above a range is rejected in a record
+
+Delta: an index above a range is rejected in a record.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delta-record-index
+schemaApi:
+  sources:
+    - "schema :V as {\n  id: :Number integer between 0 and 255 key\n  n: :Number integer between 0 and 4\n  t: :Text max 1\n  g: :Tag max 1\n  f: :Number between 0 and 1\n  l: :List(:Boolean) max 2\n  u: :Boolean | :Text max 1 | :Nothing\n}\n"
+  root: "V"
+  deltaEncode:
+    record: "07350c000000000000000001"
+    baseline: "07300c000000000000000001"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  deltaEncoded:
+    error:
+      code: "wire.invalidIndex"
+      path: "n"
+```
+
+
+---
+
+## Test: an index above a range is rejected in a baseline
+
+Delta: an index above a range is rejected in a baseline.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delta-baseline-index
+schemaApi:
+  sources:
+    - "schema :V as {\n  id: :Number integer between 0 and 255 key\n  n: :Number integer between 0 and 4\n  t: :Text max 1\n  g: :Tag max 1\n  f: :Number between 0 and 1\n  l: :List(:Boolean) max 2\n  u: :Boolean | :Text max 1 | :Nothing\n}\n"
+  root: "V"
+  deltaEncode:
+    record: "07300c000000000000000001"
+    baseline: "07350c000000000000000001"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  deltaEncoded:
+    error:
+      code: "wire.invalidIndex"
+      path: "n"
+```
+
+
+---
+
+## Test: invalid text is rejected in a record
+
+Delta: invalid text is rejected in a record.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delta-record-text
+schemaApi:
+  sources:
+    - "schema :V as {\n  id: :Number integer between 0 and 255 key\n  n: :Number integer between 0 and 4\n  t: :Text max 1\n  g: :Tag max 1\n  f: :Number between 0 and 1\n  l: :List(:Boolean) max 2\n  u: :Boolean | :Text max 1 | :Nothing\n}\n"
+  root: "V"
+  deltaEncode:
+    record: "07f83f0c000000000000000001"
+    baseline: "07300c000000000000000001"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  deltaEncoded:
+    error:
+      code: "wire.invalidText"
+      path: "t"
+```
+
+
+---
+
+## Test: invalid text is rejected in a baseline
+
+Delta: invalid text is rejected in a baseline.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delta-baseline-text
+schemaApi:
+  sources:
+    - "schema :V as {\n  id: :Number integer between 0 and 255 key\n  n: :Number integer between 0 and 4\n  t: :Text max 1\n  g: :Tag max 1\n  f: :Number between 0 and 1\n  l: :List(:Boolean) max 2\n  u: :Boolean | :Text max 1 | :Nothing\n}\n"
+  root: "V"
+  deltaEncode:
+    record: "07300c000000000000000001"
+    baseline: "07f83f0c000000000000000001"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  deltaEncoded:
+    error:
+      code: "wire.invalidText"
+      path: "t"
+```
+
+
+---
+
+## Test: an invalid tag name is rejected
+
+Delta: an invalid tag name is rejected.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delta-record-tag
+schemaApi:
+  sources:
+    - "schema :V as {\n  id: :Number integer between 0 and 255 key\n  n: :Number integer between 0 and 4\n  t: :Text max 1\n  g: :Tag max 1\n  f: :Number between 0 and 1\n  l: :List(:Boolean) max 2\n  u: :Boolean | :Text max 1 | :Nothing\n}\n"
+  root: "V"
+  deltaEncode:
+    record: "073008000000000000000001"
+    baseline: "07300c000000000000000001"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  deltaEncoded:
+    error:
+      code: "wire.invalidTag"
+      path: "g"
+```
+
+
+---
+
+## Test: an empty tag name is rejected
+
+Delta: an empty tag name is rejected.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delta-record-tag-empty
+schemaApi:
+  sources:
+    - "schema :V as {\n  id: :Number integer between 0 and 255 key\n  n: :Number integer between 0 and 4\n  t: :Text max 1\n  g: :Tag max 1\n  f: :Number between 0 and 1\n  l: :List(:Boolean) max 2\n  u: :Boolean | :Text max 1 | :Nothing\n}\n"
+  root: "V"
+  deltaEncode:
+    record: "0700000000000000000001"
+    baseline: "07300c000000000000000001"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  deltaEncoded:
+    error:
+      code: "wire.invalidTag"
+      path: "g"
+```
+
+
+---
+
+## Test: NaN is rejected
+
+Delta: NaN is rejected.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delta-record-nan
+schemaApi:
+  sources:
+    - "schema :V as {\n  id: :Number integer between 0 and 255 key\n  n: :Number integer between 0 and 4\n  t: :Text max 1\n  g: :Tag max 1\n  f: :Number between 0 and 1\n  l: :List(:Boolean) max 2\n  u: :Boolean | :Text max 1 | :Nothing\n}\n"
+  root: "V"
+  deltaEncode:
+    record: "07300c000000000000ff0f01"
+    baseline: "07300c000000000000000001"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  deltaEncoded:
+    error:
+      code: "wire.invalidNumber"
+      path: "f"
+```
+
+
+---
+
+## Test: negative zero is rejected
+
+Delta: negative zero is rejected.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delta-record-negative-zero
+schemaApi:
+  sources:
+    - "schema :V as {\n  id: :Number integer between 0 and 255 key\n  n: :Number integer between 0 and 4\n  t: :Text max 1\n  g: :Tag max 1\n  f: :Number between 0 and 1\n  l: :List(:Boolean) max 2\n  u: :Boolean | :Text max 1 | :Nothing\n}\n"
+  root: "V"
+  deltaEncode:
+    record: "07300c000000000000001001"
+    baseline: "07300c000000000000000001"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  deltaEncoded:
+    error:
+      code: "wire.invalidNumber"
+      path: "f"
+```
+
+
+---
+
+## Test: a number outside its range is rejected
+
+Delta: a number outside its range is rejected.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delta-record-outside
+schemaApi:
+  sources:
+    - "schema :V as {\n  id: :Number integer between 0 and 255 key\n  n: :Number integer between 0 and 4\n  t: :Text max 1\n  g: :Tag max 1\n  f: :Number between 0 and 1\n  l: :List(:Boolean) max 2\n  u: :Boolean | :Text max 1 | :Nothing\n}\n"
+  root: "V"
+  deltaEncode:
+    record: "07300c000000000000000801"
+    baseline: "07300c000000000000000001"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  deltaEncoded:
+    error:
+      code: "wire.outOfRange"
+      path: "f"
+```
+
+
+---
+
+## Test: a count above its max is rejected
+
+Delta: a count above its max is rejected.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delta-record-count
+schemaApi:
+  sources:
+    - "schema :V as {\n  id: :Number integer between 0 and 255 key\n  n: :Number integer between 0 and 4\n  t: :Text max 1\n  g: :Tag max 1\n  f: :Number between 0 and 1\n  l: :List(:Boolean) max 2\n  u: :Boolean | :Text max 1 | :Nothing\n}\n"
+  root: "V"
+  deltaEncode:
+    record: "07300c000000000000006001"
+    baseline: "07300c000000000000000001"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  deltaEncoded:
+    error:
+      code: "wire.invalidCount"
+      path: "l"
+```
+
+
+---
+
+## Test: an alternative above the union is rejected
+
+Delta: an alternative above the union is rejected.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delta-record-union
+schemaApi:
+  sources:
+    - "schema :V as {\n  id: :Number integer between 0 and 255 key\n  n: :Number integer between 0 and 4\n  t: :Text max 1\n  g: :Tag max 1\n  f: :Number between 0 and 1\n  l: :List(:Boolean) max 2\n  u: :Boolean | :Text max 1 | :Nothing\n}\n"
+  root: "V"
+  deltaEncode:
+    record: "07300c000000000000008001"
+    baseline: "07300c000000000000000001"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  deltaEncoded:
+    error:
+      code: "wire.invalidIndex"
+      path: "u"
+```
+
+
+---
+
+## Test: an alternative above the union is rejected in a baseline
+
+Delta: an alternative above the union is rejected in a baseline.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delta-baseline-union
+schemaApi:
+  sources:
+    - "schema :V as {\n  id: :Number integer between 0 and 255 key\n  n: :Number integer between 0 and 4\n  t: :Text max 1\n  g: :Tag max 1\n  f: :Number between 0 and 1\n  l: :List(:Boolean) max 2\n  u: :Boolean | :Text max 1 | :Nothing\n}\n"
+  root: "V"
+  deltaEncode:
+    record: "07300c000000000000000001"
+    baseline: "07300c000000000000008001"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  deltaEncoded:
+    error:
+      code: "wire.invalidIndex"
+      path: "u"
+```
+
+
+---
+
+## Test: padding of a record is checked
+
+Delta: padding of a record is checked.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delta-record-padding
+schemaApi:
+  sources:
+    - "schema :V as {\n  id: :Number integer between 0 and 255 key\n  n: :Number integer between 0 and 4\n  t: :Text max 1\n  g: :Tag max 1\n  f: :Number between 0 and 1\n  l: :List(:Boolean) max 2\n  u: :Boolean | :Text max 1 | :Nothing\n}\n"
+  root: "V"
+  deltaEncode:
+    record: "07300c000000000000000003"
+    baseline: "07300c000000000000000001"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  deltaEncoded:
+    error:
+      code: "wire.invalidPadding"
+      path: ""
+```
+
+
+---
+
+## Test: padding of a baseline is checked
+
+Delta: padding of a baseline is checked.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delta-baseline-padding
+schemaApi:
+  sources:
+    - "schema :V as {\n  id: :Number integer between 0 and 255 key\n  n: :Number integer between 0 and 4\n  t: :Text max 1\n  g: :Tag max 1\n  f: :Number between 0 and 1\n  l: :List(:Boolean) max 2\n  u: :Boolean | :Text max 1 | :Nothing\n}\n"
+  root: "V"
+  deltaEncode:
+    record: "07300c000000000000000001"
+    baseline: "07300c000000000000000003"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  deltaEncoded:
+    error:
+      code: "wire.invalidPadding"
+      path: ""
+```
+
+
+---
+
+## Test: decoding rejects a truncated baseline
+
+Delta: decoding rejects a truncated baseline.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delta-decode-baseline-truncated
+schemaApi:
+  sources:
+    - "schema :V as {\n  id: :Number integer between 0 and 255 key\n  n: :Number integer between 0 and 4\n  t: :Text max 1\n  g: :Tag max 1\n  f: :Number between 0 and 1\n  l: :List(:Boolean) max 2\n  u: :Boolean | :Text max 1 | :Nothing\n}\n"
+  root: "V"
+  deltaDecode:
+    delta: "0700"
+    baseline: "07"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  deltaDecoded:
+    error:
+      code: "wire.truncated"
+      path: "n"
+```
+
+
+---
+
+## Test: decoding copies only a valid baseline
+
+Delta: decoding copies only a valid baseline.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delta-decode-baseline-text
+schemaApi:
+  sources:
+    - "schema :V as {\n  id: :Number integer between 0 and 255 key\n  n: :Number integer between 0 and 4\n  t: :Text max 1\n  g: :Tag max 1\n  f: :Number between 0 and 1\n  l: :List(:Boolean) max 2\n  u: :Boolean | :Text max 1 | :Nothing\n}\n"
+  root: "V"
+  deltaDecode:
+    delta: "0700"
+    baseline: "07f83f0c000000000000000001"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  deltaDecoded:
+    error:
+      code: "wire.invalidText"
+      path: "t"
+```
+
+
+---
+
+## Test: a message has no delta
+
+Delta: a message has no delta.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delta-bytes-message
+schemaApi:
+  sources:
+    - "message Hit(a: :Boolean)\n"
+  root: "Hit"
+  deltaDecode:
+    delta: "00"
+    baseline: "00"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  deltaDecoded:
+    error:
+      code: "wire.typeMismatch"
+```
+
+
+---
+
+## Test: the key of a delta can be read before the rest
+
+Delta: the key of a delta can be read before the rest.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delta-key
+schemaApi:
+  sources:
+    - "schema :Drone as {\n  id: :Number integer between 0 and 255 key\n  x: :Quantity(m) between -200m and 200m step 5cm delta within 1.55m\n  y: :Quantity(m) between -200m and 200m step 5cm delta within 1.55m\n  heading: :Quantity(°) wrapping between 0° and 360° step 0.5° delta within 15.5°\n}\n"
+  root: "Drone"
+  key: "0700"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  key: 7
+```
+
+
+---
+
+## Test: a dump names a broken baseline
+
+Delta: a dump names a broken baseline.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delta-dump-baseline
+schemaApi:
+  sources:
+    - "schema :Drone as {\n  id: :Number integer between 0 and 255 key\n  x: :Quantity(m) between -200m and 200m step 5cm delta within 1.55m\n  y: :Quantity(m) between -200m and 200m step 5cm delta within 1.55m\n  heading: :Quantity(°) wrapping between 0° and 360° step 0.5° delta within 15.5°\n}\n"
+  root: "Drone"
+  dump: "0700"
+  dumpBaseline: "07"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  dump:
+    text: "baseline error wire.truncated path=x bit=8\n"
+    valid: false
 ```

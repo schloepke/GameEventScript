@@ -77,7 +77,7 @@ enum Validation {
                     try self.fields(api, ["typeNames"])
                     _ = try strings(api.required("typeNames"))
                 case "schemaApi":
-                    try self.fields(api, ["sources", "root", "parameters", "bind", "encode", "encodeBuffer", "decode", "decodeLimit", "key", "dump", "describe", "document"])
+                    try self.fields(api, ["sources", "root", "parameters", "bind", "encode", "encodeBuffer", "baseline", "decode", "decodeLimit", "key", "dump", "dumpBaseline", "deltaEncode", "deltaDecode", "describe", "document"])
                 case "documentApi":
                     if api["text"] != nil {
                         try self.fields(api, ["text", "print"])

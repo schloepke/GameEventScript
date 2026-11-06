@@ -64,6 +64,40 @@ public static class GesSchemaValues
         return writer.Finish();
     }
 
+    /// <summary>Encodes a Record or Map as a delta against a baseline value of the same schema.</summary>
+    /// <param name="schema">The bound schema.</param>
+    /// <param name="value">The value.</param>
+    /// <param name="baseline">The value that the receiver holds.</param>
+    /// <param name="buffer">The buffer that receives the delta.</param>
+    /// <returns>The number of bytes written.</returns>
+    /// <exception cref="GesWireException">A value does not fit the schema, or their keys differ.</exception>
+    public static int Encode(GesBoundSchema schema, GesValue value, GesValue baseline, Span<byte> buffer)
+    {
+        if (schema is null) throw new ArgumentNullException(nameof(schema));
+        var record = new byte[schema.MaxByteCount];
+        var previous = new byte[schema.MaxByteCount];
+        var recordLength = Encode(schema, value, record);
+        var previousLength = Encode(schema, baseline, previous);
+        return GesSchemaDelta.Encode(schema, record.AsSpan(0, recordLength), previous.AsSpan(0, previousLength), buffer);
+    }
+
+    /// <summary>Decodes a delta against the baseline value it was encoded with.</summary>
+    /// <param name="schema">The bound schema.</param>
+    /// <param name="data">The delta; it may continue after it.</param>
+    /// <param name="baseline">The value that this side holds.</param>
+    /// <param name="byteLimit">An optional limit on the bytes of this delta.</param>
+    /// <returns>The value and the bytes the delta occupied.</returns>
+    /// <exception cref="GesWireException">The data is not a valid delta for this baseline.</exception>
+    public static GesSchemaDecoded Decode(GesBoundSchema schema, ReadOnlySpan<byte> data, GesValue baseline, long byteLimit = long.MaxValue)
+    {
+        if (schema is null) throw new ArgumentNullException(nameof(schema));
+        var previous = new byte[schema.MaxByteCount];
+        var previousLength = Encode(schema, baseline, previous);
+        var record = new byte[schema.MaxByteCount];
+        var decoded = GesSchemaDelta.Decode(schema, data, previous.AsSpan(0, previousLength), record, byteLimit);
+        return new GesSchemaDecoded(Decode(schema, record.AsSpan(0, decoded.ByteCount)).Value, decoded.DeltaByteCount);
+    }
+
     /// <summary>Decodes a Record or Message.</summary>
     /// <param name="schema">The bound schema.</param>
     /// <param name="data">The data; it may continue after the record.</param>

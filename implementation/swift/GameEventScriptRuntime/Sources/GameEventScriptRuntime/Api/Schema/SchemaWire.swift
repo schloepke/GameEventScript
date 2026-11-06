@@ -340,6 +340,33 @@ public struct GesSchemaWriter {
     public mutating func finish() throws(GesWireError) -> Int {
         if schema.kind == .messages { throw GesWireError(GesWireError.missingField) }
         if cursor != schema.nodes.count { throw GesWireError(GesWireError.missingField, schema.infos[cursor].path) }
+        return try finishBits()
+    }
+
+    var bitPosition: Int { position * 8 + pendingBits }
+
+    mutating func putBits(_ value: UInt64, _ width: Int) throws(GesWireError) { try put(value, width) }
+
+    // Sets a bit that was already written as zero, in the buffer or still pending.
+    mutating func setBit(_ bit: Int) {
+        let flushed = position * 8
+        if bit >= flushed {
+            pending |= 1 << UInt64(bit - flushed)
+        } else {
+            buffer[bit >> 3] |= UInt8(1) << UInt8(bit & 7)
+        }
+    }
+
+    // Goes back to an earlier bit. Whole words are flushed, so the word that holds it can be read back.
+    mutating func rewind(_ bit: Int) {
+        let word = (bit >> 6) << 3
+        if word < position { pending = UInt64(littleEndian: buffer.loadUnaligned(fromByteOffset: word, as: UInt64.self)) }
+        position = word
+        pendingBits = bit & 63
+        pending = pendingBits == 0 ? 0 : pending & ((UInt64(1) << UInt64(pendingBits)) - 1)
+    }
+
+    mutating func finishBits() throws(GesWireError) -> Int {
         let bytes = (pendingBits + 7) / 8
         if position + bytes > buffer.count { throw GesWireError(GesWireError.bufferTooSmall) }
         var index = 0
@@ -612,6 +639,19 @@ public struct GesSchemaReader {
     public mutating func finish() throws(GesWireError) -> Int {
         if schema.kind == .messages { throw GesWireError(GesWireError.fieldOrder) }
         if cursor != schema.nodes.count { throw GesWireError(GesWireError.fieldOrder, schema.infos[cursor].path) }
+        return try finishBits()
+    }
+
+    mutating func getBits(_ width: Int, _ nodeIndex: Int) throws(GesWireError) -> UInt64 { try get(width, nodeIndex) }
+
+    // Fails like reading when the data ends before these bits do.
+    func require(_ bits: Int, _ nodeIndex: Int) throws(GesWireError) {
+        if bitPosition + bits > bitCount { throw GesWireError(end, nodeIndex >= 0 ? schema.infos[nodeIndex].path : "") }
+    }
+
+    mutating func seek(_ bit: Int) { bitPosition = bit }
+
+    mutating func finishBits() throws(GesWireError) -> Int {
         let rest = (8 - bitPosition % 8) % 8
         if rest > 0 {
             if try get(rest, -1) != 0 { throw GesWireError(GesWireError.invalidPadding) }

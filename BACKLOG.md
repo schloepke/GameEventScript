@@ -55,13 +55,13 @@ here.
   registry and extensions. Decide whether `WithExternalTypeCatalog` remains as a
   convenience, and whether the Bridges generate declaration modules. Schedule
   after the Syntax module rework, on its source-neutral declaration set.
-- Implement schema deltas soon, as designed in [the plan](docs/plans/SchemaDeltas.md):
-  `encode(value, baseline)`, change bits, delta ranges, `wire.keyMismatch` and
-  `wire.invalidDelta`, with corpus cases and the dump tool's `--baseline`. `key` and
-  `delta within` are already in place; then describe them in specs/Schemas.md.
 - Add `ges schema generate`: typed structs per schema (C# language version 9 for Unity, Swift,
   and any later port) with inlined constants, built on the bit primitives of the writer and
-  reader, verified by their byte comparison and kept in step by the schema hash.
+  reader, verified by their byte comparison and kept in step by the schema hash. It can write
+  deltas directly, where `GesSchemaDelta` compares two full records.
+- Provide a base for publish/subscribe transport of messages and data, outside Runtime, in a
+  `GesNetwork` module or in `GesBridge`; decide which. It frames records, maps channels to message
+  sets or schemas and carries the hash at connection setup (specs/Schemas.md#extension-points).
 - Add schema elapsed-time references to the performance corpus: writer, reader and value path
   on Bot-sized records, with budgets per measured profile.
 - Run the schema byte and vector suites and an allocation measurement in a real Unity

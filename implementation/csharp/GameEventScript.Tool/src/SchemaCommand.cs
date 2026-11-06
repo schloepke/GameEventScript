@@ -17,7 +17,7 @@ Usage:
   dotnet ges schema format <schema.gess> [-o <output.gess>]
   dotnet ges schema hash <schema.gess> [more.gess ...] --root <Name> [--param <name>=<literal> ...]
   dotnet ges schema canonical <schema.gess> [more.gess ...] --root <Name>
-  dotnet ges schema dump <schema.gess> [more.gess ...] --root <Name> [--param <name>=<literal> ...] --data <data.bin>
+  dotnet ges schema dump <schema.gess> [more.gess ...] --root <Name> [--param <name>=<literal> ...] --data <data.bin> [--baseline <record.bin>]
 
 Commands:
   check      Read schemas and report the first error with its line and column.
@@ -30,6 +30,7 @@ Options:
   --root <Name>             The schema, message or message set.
   --param <name>=<literal>  A parameter value such as worldWidth=5000m; repeat for each one.
   --data <path>             The binary data of dump.
+  --baseline <path>         The full record that makes dump read the data as a delta.
   -o, --output <path>       Write the formatted source to a UTF-8 file instead of stdout.
   -q, --quiet               Hide the success report of check.
   -h, --help                Show this help.
@@ -48,6 +49,7 @@ Options:
         var paths = new List<string>();
         string? root = null;
         string? data = null;
+        string? baseline = null;
         string? output = null;
         var quiet = false;
         var parameters = new List<(string Name, string Literal)>();
@@ -61,13 +63,13 @@ Options:
             }
 
             if (argument is "-q" or "--quiet" && command == "check") quiet = true;
-            else if (argument is "--root" or "--data" or "--param" or "-o" or "--output")
+            else if (argument is "--root" or "--data" or "--baseline" or "--param" or "-o" or "--output")
             {
                 var applies = argument switch
                 {
                     "--root" => command is "hash" or "canonical" or "dump",
                     "--param" => command is "hash" or "dump",
-                    "--data" => command == "dump",
+                    "--data" or "--baseline" => command == "dump",
                     _ => command == "format"
                 };
                 if (!applies) return UsageError($"Unknown schema {command} option '{argument}'.");
@@ -75,6 +77,7 @@ Options:
                 var next = arguments[++index];
                 if (argument == "--root") root = next;
                 else if (argument == "--data") data = next;
+                else if (argument == "--baseline") baseline = next;
                 else if (argument is "-o" or "--output") output = next;
                 else
                 {
@@ -159,7 +162,7 @@ Options:
                 return 0;
             }
 
-            var dump = GesSchemaDump.Read(bound, File.ReadAllBytes(data!));
+            var dump = baseline is null ? GesSchemaDump.Read(bound, File.ReadAllBytes(data!)) : GesSchemaDump.Read(bound, File.ReadAllBytes(data!), File.ReadAllBytes(baseline));
             Console.Write(dump.Text);
             return dump.IsValid ? 0 : 1;
         }

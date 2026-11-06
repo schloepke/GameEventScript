@@ -9,8 +9,9 @@ internal static class SchemaApiObservations
 {
     internal static void Validate(JsonElement input)
     {
-        RuntimeValues.Fields(input, "sources", "root", "parameters", "bind", "encode", "encodeBuffer", "decode", "decodeLimit", "key", "dump", "describe", "document");
+        RuntimeValues.Fields(input, "sources", "root", "parameters", "bind", "encode", "encodeBuffer", "baseline", "decode", "decodeLimit", "key", "dump", "dumpBaseline", "deltaEncode", "deltaDecode", "describe", "document");
         if (input.GetProperty("encode").ValueKind != JsonValueKind.Null) _ = ValueApiObservations.Construct(input.GetProperty("encode"));
+        if (input.GetProperty("baseline").ValueKind != JsonValueKind.Null) _ = ValueApiObservations.Construct(input.GetProperty("baseline"));
     }
 
     internal static object Run(JsonElement input)
@@ -52,9 +53,13 @@ internal static class SchemaApiObservations
                 if (input.GetProperty("encode").ValueKind != JsonValueKind.Null) result["encoded"] = Encode(bound, input);
                 if (input.GetProperty("decode").GetString() is { } decode) result["decoded"] = Decode(bound, decode, input);
                 if (input.GetProperty("key").GetString() is { } key) result["key"] = GesSchemaValues.ReadKey(bound, Convert.FromHexString(key));
+                if (input.GetProperty("deltaEncode").ValueKind != JsonValueKind.Null) result["deltaEncoded"] = DeltaEncode(bound, input.GetProperty("deltaEncode"));
+                if (input.GetProperty("deltaDecode").ValueKind != JsonValueKind.Null) result["deltaDecoded"] = DeltaDecode(bound, input.GetProperty("deltaDecode"));
                 if (input.GetProperty("dump").GetString() is { } dump)
                 {
-                    var read = GesSchemaDump.Read(bound, Convert.FromHexString(dump));
+                    var read = input.GetProperty("dumpBaseline").GetString() is { } baseline
+                        ? GesSchemaDump.Read(bound, Convert.FromHexString(dump), Convert.FromHexString(baseline))
+                        : GesSchemaDump.Read(bound, Convert.FromHexString(dump));
                     result["dump"] = new { text = read.Text, valid = read.IsValid };
                 }
             }
@@ -140,8 +145,39 @@ internal static class SchemaApiObservations
         var buffer = new byte[size];
         try
         {
-            var length = GesSchemaValues.Encode(bound, ValueApiObservations.Construct(input.GetProperty("encode")), buffer);
+            var value = ValueApiObservations.Construct(input.GetProperty("encode"));
+            var length = input.GetProperty("baseline").ValueKind == JsonValueKind.Null
+                ? GesSchemaValues.Encode(bound, value, buffer)
+                : GesSchemaValues.Encode(bound, value, ValueApiObservations.Construct(input.GetProperty("baseline")), buffer);
             return new { bytes = Convert.ToHexString(buffer, 0, length).ToLowerInvariant() };
+        }
+        catch (GesWireException exception)
+        {
+            return new { error = new { code = exception.Code, path = exception.Path } };
+        }
+    }
+
+    private static object DeltaEncode(GesBoundSchema bound, JsonElement input)
+    {
+        var buffer = new byte[bound.MaxByteCount];
+        try
+        {
+            var length = GesSchemaDelta.Encode(bound, Convert.FromHexString(input.GetProperty("record").GetString()!), Convert.FromHexString(input.GetProperty("baseline").GetString()!), buffer);
+            return new { bytes = Convert.ToHexString(buffer, 0, length).ToLowerInvariant() };
+        }
+        catch (GesWireException exception)
+        {
+            return new { error = new { code = exception.Code, path = exception.Path } };
+        }
+    }
+
+    private static object DeltaDecode(GesBoundSchema bound, JsonElement input)
+    {
+        var buffer = new byte[bound.MaxByteCount];
+        try
+        {
+            var decoded = GesSchemaDelta.Decode(bound, Convert.FromHexString(input.GetProperty("delta").GetString()!), Convert.FromHexString(input.GetProperty("baseline").GetString()!), buffer);
+            return new { record = Convert.ToHexString(buffer, 0, decoded.ByteCount).ToLowerInvariant(), deltaByteCount = decoded.DeltaByteCount };
         }
         catch (GesWireException exception)
         {
@@ -154,7 +190,9 @@ internal static class SchemaApiObservations
         var limit = input.GetProperty("decodeLimit").ValueKind == JsonValueKind.Null ? long.MaxValue : input.GetProperty("decodeLimit").GetInt64();
         try
         {
-            var decoded = GesSchemaValues.Decode(bound, Convert.FromHexString(hex), limit);
+            var decoded = input.GetProperty("baseline").ValueKind == JsonValueKind.Null
+                ? GesSchemaValues.Decode(bound, Convert.FromHexString(hex), limit)
+                : GesSchemaValues.Decode(bound, Convert.FromHexString(hex), ValueApiObservations.Construct(input.GetProperty("baseline")), limit);
             return new { value = RuntimeValues.Encode(decoded.Value), byteCount = decoded.ByteCount };
         }
         catch (GesWireException exception)

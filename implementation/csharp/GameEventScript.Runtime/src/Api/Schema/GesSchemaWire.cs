@@ -358,6 +358,33 @@ public ref struct GesSchemaWriter
     {
         if (_schema.Kind == GesSchemaKind.Messages) throw new GesWireException(GesWireException.MissingField, "");
         if (_cursor != _nodes.Length) throw new GesWireException(GesWireException.MissingField, _nodes[_cursor].Path);
+        return FinishBits();
+    }
+
+    internal readonly long BitPosition => (_position * 8L) + _pendingBits;
+
+    internal void PutBits(ulong value, int width) => Put(value, width);
+
+    // Sets a bit that was already written as zero, in the buffer or still pending.
+    internal void SetBit(long bit)
+    {
+        var flushed = _position * 8L;
+        if (bit >= flushed) _pending |= 1UL << (int)(bit - flushed);
+        else _buffer[(int)(bit >> 3)] |= (byte)(1 << (int)(bit & 7));
+    }
+
+    // Goes back to an earlier bit. Whole words are flushed, so the word that holds it can be read back.
+    internal void Rewind(long bit)
+    {
+        var position = (int)((bit >> 6) << 3);
+        if (position < _position) _pending = BinaryPrimitives.ReadUInt64LittleEndian(_buffer.Slice(position));
+        _position = position;
+        _pendingBits = (int)(bit & 63);
+        _pending = _pendingBits == 0 ? 0 : _pending & ((1UL << _pendingBits) - 1);
+    }
+
+    internal int FinishBits()
+    {
         var bytes = (_pendingBits + 7) / 8;
         if (_position + bytes > _buffer.Length) throw new GesWireException(GesWireException.BufferTooSmall, "");
         for (var index = 0; index < bytes; index++)
@@ -642,14 +669,29 @@ public ref struct GesSchemaReader
     {
         if (_schema.Kind == GesSchemaKind.Messages) throw new GesWireException(GesWireException.FieldOrder, "");
         if (_cursor != _nodes.Length) throw new GesWireException(GesWireException.FieldOrder, _nodes[_cursor].Path);
+        return FinishBits();
+    }
+
+    internal readonly long BitPosition => _bit;
+
+    internal ulong GetBits(int width, string path) => Get(width, path);
+
+    // Fails like reading when the data ends before these bits do.
+    internal readonly void Require(long bits, string path)
+    {
+        if (_bit + bits > _bitCount) throw new GesWireException(End, path);
+    }
+
+    internal void Seek(long bit) => _bit = bit;
+
+    internal int FinishBits()
+    {
         var rest = (int)(-_bit & 7);
         if (rest > 0 && Get(rest, "") != 0) throw new GesWireException(GesWireException.InvalidPadding, "");
         return (int)(_bit / 8);
     }
 
-    internal long BitPosition => _bit;
-
-    private string End => _limited ? GesWireException.LimitExceeded : GesWireException.Truncated;
+    private readonly string End => _limited ? GesWireException.LimitExceeded : GesWireException.Truncated;
 
     private ulong EnteredIndex(in GesSchemaNode node)
     {

@@ -80,6 +80,7 @@ ges document check data/drive.gesd
 ges document format data/drive.gesd --color
 ges schema check bot.gess
 ges schema dump bot.gess --root Bot --param worldWidth=5000m --param worldHeight=5km --data data.bin
+ges schema dump bot.gess --root Bot --param worldWidth=5000m --param worldHeight=5km --data delta.bin --baseline record.bin
 ges run game.ges --args 12 Hello 34
 ges run first.gesb second.gesb -- 12 Hello --color
 ges run game.ges --scenario scenario.ges --seed 42

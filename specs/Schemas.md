@@ -198,8 +198,8 @@ Together, the type and the constraints decide a field's [encoding](#field-encodi
 - `delta within D` declares the largest change expected between two updates of a value:
   `d = D / step` indices, or `D` for an `integer` field. It requires a range and, unless
   `integer`, a step. `D` is positive and a multiple of the step, and `width(2d + 1)` is below
-  the [width](#field-encodings) of the field. It belongs to the description and the hash and
-  does not change the encoding of a record.
+  the [width](#field-encodings) of the field. It belongs to the description and the hash,
+  sets the [range form of a delta](#delta-range) and does not change the encoding of a record.
 - Omitted axes of a spatial block are not transmitted and must be zero.
 - `key` marks the [key](#keys) of a schema. It is the first field, at most one per schema,
   and an `integer` numeric or a `:Tag` with a set; it excludes `optional` and `delta within`
@@ -317,7 +317,9 @@ GES sets no world size; only the limits apply.
 ### Largest encoding
 
 A bound schema has `MaxByteCount`, the size of its largest top-level encoding. It is computed at binding with checked arithmetic, counting every optional as
-present, every Text, List and Dice at its `max`, and every union as its index and its largest alternative. It may be at most 1 048 576 bytes (1 MiB).
+present, every Text, List and Dice at its `max`, and every union as its index and its largest alternative. A schema counts the larger of its largest
+full record and its largest [delta](#deltas), so one buffer serves both: a Boolean's delta costs its change bit, and a field with a delta range its change bit, the
+fallback bit and the larger of both widths. It may be at most 1 048 576 bytes (1 MiB).
 Exceeding this, or an overflow while computing it, fails binding with `schema.tooLarge`.
 A message set adds its index to the bits of its largest member, before rounding up to bytes.
 A bound layout has at most 1 048 576 fields, counting each use of a referenced schema and each
@@ -466,7 +468,7 @@ is the first field, so it starts at bit 0 of a top-level record, in its ordinary
 Only the width of the key is needed to read it. The marker takes effect at the top level: a
 schema with a key that is reached as a nested field or a list element writes the same bits,
 and no key can be read from there. The caller owns the mapping from keys to objects. Message
-arguments have no key.
+arguments have no key. A [delta](#keys-in-a-delta) starts with the same key.
 
 ### Field encodings
 
@@ -621,6 +623,114 @@ with `N = value`, for every Int64. A decoder rejects `i >= n` and returns `lower
   patterns and negative zero, because neither is a canonical value. Infinities are
   valid only without a range.
 
+## Deltas
+
+A delta writes what differs from a baseline, the full record the receiver already holds. The
+full encoding does not change, and a delta is an operation on two full records: the caller
+chooses and confirms baselines, and the format assumes nothing about the transport. A delta and
+a full record are not marked on the wire, so a caller that mixes them marks them in its own
+framing. Only a `schema` has deltas; a message or message set is `wire.typeMismatch`.
+
+### Form
+
+A delta of a schema is one change bit per field in declaration order, followed by the
+payload of each changed field in that order. Padding follows at the top level as in
+[records](#records). Comparison uses wire values: indices, not the original numbers, so a
+movement smaller than a step is no change and costs nothing.
+
+| Type | Payload of a changed field |
+| --- | --- |
+| `:Boolean` | none; the change bit toggles the baseline |
+| numeric with `delta within` | [range form](#delta-range) |
+| other numeric, `:Tag`, `:Text`, `:List`, `:Dice` | the full encoding |
+| `:Point`, `:Vector` with a block | one change bit per declared axis, then the payloads of the changed axes |
+| `:Point`, `:Vector` without a block | three change bits, then a raw 64-bit binary64 for each changed axis; bits are compared |
+| `:TypeName` | a nested delta: its own change bits and payloads |
+| union | index; when the baseline has the same alternative, its payload, otherwise its full encoding |
+| `optional` | presence bit; when present and the baseline also has a value, the field's payload, otherwise its full encoding |
+
+A list is replaced as a whole. Tracking list elements requires identities that the caller owns.
+
+With `worldWidth = worldHeight = 5000m`:
+
+```gess
+schema :Beacon as {
+  position: :Point(m) {
+    x between 0m and worldWidth step 1cm delta within 1.27m
+    y between 0m and worldHeight step 1cm delta within 1.27m
+  }
+  active: :Boolean
+}
+```
+
+A full record takes 19 + 19 + 1 = 39 bits, 5 bytes. A delta has 2 change bits for the fields
+and, when `position` changed, 2 for its axes:
+
+| Situation | Bits | Bytes |
+| --- | --- | --- |
+| Only `active` toggled | 2 | 1 |
+| Moved along `x` | 2 + 2 + 9 = 13 | 2 |
+| Moved along both axes | 2 + 2 + 9 + 9 = 22 | 3 |
+| `x` through the fallback, `y` in range | 2 + 2 + 20 + 9 = 33 | 5 |
+
+### Keys in a delta
+
+A top-level [key](#keys) comes first, in its full encoding with the same width, so a reader can
+take it without knowing whether a full record or a delta follows. It has no change bit and is
+written also when nothing else changed. A key identifies the object, so it is not compared like
+other fields but required to be equal: encoding against a baseline with another key is
+`wire.keyMismatch`, and decoding against one is `wire.invalidDelta`. A schema with a key that is
+reached as a nested field or a list element writes it as its ordinary first field, with a change
+bit in a nested delta.
+
+### Delta range
+
+`delta within D` declares `d = D / step` indices, or `D` for an `integer`. The payload is:
+
+- bit `0`, then `delta + d` in `width(2d + 1)` bits, when `|delta| <= d`;
+- bit `1`, then the full index otherwise.
+
+`delta` is the signed difference of the indices. For a wrapping field with period `n` it takes
+the shorter way: `delta = ((index - base + floor(n / 2)) mod n) - floor(n / 2)` with a nonnegative
+remainder, and the decoder computes `(base + delta) mod n`. Differences of `integer` fields are
+computed without overflow, also across the whole Int64 range.
+
+### Canonical delta form
+
+A delta has one valid encoding, so ports stay byte-identical. A decoder rejects with
+`wire.invalidDelta` a set change bit for an unchanged value (except a Boolean, where it is the
+change), a nested delta or axis group whose change bits are all zero, a range form with a
+difference of zero or above `d`, a full index for a difference within `d`, a non-wrapping result
+outside the range, and a key that differs from the baseline's. All other values are validated as
+in a [full record](#decoding-untrusted-data).
+
+### Zones
+
+Very large worlds are split by the game into zones, which needs no feature here:
+
+```gess
+parameter zoneSize: :Quantity(m)
+
+schema :LocalPosition as {
+  x: :Quantity(m) between 0m and zoneSize step 1cm delta within 1.27m
+  y: :Quantity(m) between 0m and zoneSize step 1cm delta within 1.27m
+}
+
+schema :ZonedPosition as {
+  zone: :Number integer between 0 and 65535
+  local: :LocalPosition
+}
+```
+
+With `zoneSize = 1000m`, `x` and `y` take 17 bits each, and a full `ZonedPosition` takes 50 bits,
+7 bytes. A move inside a zone takes 2 change bits, 2 nested change bits and two 9-bit range forms:
+22 bits, 3 bytes. A zone change needs nothing special: `zone` is written in full, and the local
+coordinates are compared with the baseline as usual and leave their delta range through the
+fallback bit, 1 + 17 bits each: 2 + 2 + 16 + 18 + 18 = 56 bits, 7 bytes.
+
+Zones of different size use [one binding each](#binding). A baseline belongs to its binding, so an
+object that moves to a zone of another size is sent as a full record of the new binding.
+
 ## Decoding untrusted data
 
 A bound schema knows its largest encoding, so a caller can size buffers and a decoder
@@ -637,6 +747,7 @@ one record. Decoding fails without partial results for:
 | `wire.invalidNumber` | NaN or negative zero, or an infinity with a range |
 | `wire.invalidPadding` | a padding bit is not zero |
 | `wire.limitExceeded` | the record exceeds the caller's limit |
+| `wire.invalidDelta` | a delta is not [canonical](#canonical-delta-form), leaves its range, or its key differs from the baseline's |
 
 Encoding reports to the caller, and writes no partial record that is reported as
 complete:
@@ -653,6 +764,8 @@ complete:
 | `wire.tooLong` | a Text, Tag, List or Dice exceeds its `max` |
 | `wire.bufferTooSmall` | the caller's buffer is too small |
 | `wire.fieldOrder` | a typed writer or reader uses a field out of order |
+| `wire.keyMismatch` | a record and its baseline have different keys |
+| `wire.overlappingBuffers` | the target buffer of `GesSchemaDelta` overlaps an input, in either direction |
 
 Errors carry the field path but no value from the data, so they can be logged safely.
 
@@ -780,6 +893,24 @@ var positionX = reader.ReadNumber(x);                             // double, wit
 - Success allocates nothing and boxes nothing. A failure is reported through the normal
   error mechanism of the port and may allocate.
 
+### Deltas between records
+
+`GesSchemaDelta` converts between full records and [deltas](#deltas), on bytes:
+
+```csharp
+var length = GesSchemaDelta.Encode(bot, record, baseline, buffer);        // what differs
+var decoded = GesSchemaDelta.Decode(bot, received, baseline, recordBuffer); // the full record again
+```
+
+The baseline is simply the full record that the other side holds, so a sender keeps the last
+record a receiver confirmed, and a receiver keeps what `Decode` returned. `bot.MaxByteCount`
+sizes both buffers, and a target buffer must be separate from the inputs, because it is written while they are read:
+overlapping is `wire.overlappingBuffers`, also for records too short to be damaged. `Decode` returns the bytes of the record and those the delta occupied, and
+takes an optional limit on the latter. Writer and reader are unchanged and produce and consume
+the full records, and `ReadKey` also reads the key of a delta. Encoding reads both records
+and rejects an invalid one with the errors of a [full record](#decoding-untrusted-data). Success
+allocates nothing.
+
 ### Description
 
 `GesSchemaSet.Schemas` lists every declaration in source order and `Schema(name)` finds one;
@@ -806,7 +937,8 @@ with a conversion to the closest binary64. `GesBoundSchema.Schema` leads back to
 For rare data, Runtime offers `GesSchemaValues`: `Encode(bot, value, buffer)` encodes a
 [Record, Map or Message](#record-values), `Decode(bot, bytes)` returns the value and the
 bytes it occupied, and `ReadKey(bot, bytes)` returns a [key](#keys) without decoding the
-rest. Swift uses the idiomatic spelling of the same concepts. Kinds do not convert implicitly:
+rest. `Encode(bot, value, baseline, buffer)` and `Decode(bot, bytes, baseline)` do the same for a
+[delta](#deltas) against a baseline value. Swift uses the idiomatic spelling of the same concepts. Kinds do not convert implicitly:
 the language computes with Boolean and Dice as numbers, but a Number, Quantity or Percentage
 field rejects them with `wire.typeMismatch`, because decoding could not return them. A script
 converts them explicitly with `as :Number`.
@@ -821,6 +953,7 @@ ges schema format bot.gess
 ges schema hash bot.gess --root Bot --param worldWidth=5000m --param worldHeight=5000m
 ges schema canonical bot.gess --root Bot
 ges schema dump bot.gess --root Bot --param worldWidth=5000m --param worldHeight=5000m --data data.bin
+ges schema dump bot.gess --root Bot --param worldWidth=5000m --param worldHeight=5000m --data delta.bin --baseline record.bin
 ```
 
 `format` prints the recommended layout and, like document formatting, drops comments; input
@@ -836,7 +969,10 @@ is `true` or `false`, a number, a quoted Text, `#<tag> index=<i>`, `#<tag>` for 
 `<alternative> index=<i>` for a union, with the type name of the alternative, or `absent`. A nested
 schema, Point or Vector has no line of its own, only its fields. A message set starts with
 `message <name> index=<i>`. A valid record ends with `bytes <n>`, an invalid one with
-`error <code> path=<path> bit=<offset>`. A Text is quoted with `'` on one line:
+`error <code> path=<path> bit=<offset>`. With `--baseline` the data is a [delta](#deltas): a first
+line `delta bytes <n>` is followed by the lines of the resulting record, or the error ends the text
+with its bit offset in the delta. An invalid baseline is the single line `baseline error <code> path=<path> bit=<offset>`
+with its offset in the baseline. A Text is quoted with `'` on one line:
 `\\`, `\'`, `\n`, `\r` and `\t` are escaped, and other controls are written `\u{hex}`. A
 decoded number uses its shortest digits. It is positional, without a trailing `.0`, when it
 has at most 21 digits before the decimal point or at most 3 zeros directly after `0.`,
@@ -927,7 +1063,21 @@ Schema [above](#source-language), with `worldWidth = worldHeight = 5000m`.
 | `firing`, `shielded`, `overheated` | | 3 |
 
 16 + 19 + 19 + 12 + 12 + 12 + 8 + 3 = **101 bits, 13 bytes**. 100 visible bots at 20 updates
-per second take 26 000 bytes/s, without framing.
+per second take 26 000 bytes/s, without framing. Its `MaxByteCount` is 14, for the largest delta.
+
+At 20 updates per second, a delta range of `8°` covers turning up to 160°/s, above the 150°/s of
+the fastest units. With the 16-bit key and 9 change bits, a [delta](#deltas) takes 25 bits before
+any payload. A range form takes 1 + 8 bits, the fallback of `x` and `y` 1 + 19, and `health` 8:
+
+| Situation | Bits | Bytes |
+| --- | --- | --- |
+| Unchanged; the caller may send nothing | 16 + 9 = 25 | 4 |
+| Standing, radar turning | 25 + 9 = 34 | 5 |
+| Moving, all angles turning | 25 + 9 + 9 + 9 + 9 + 9 = 70 | 9 |
+| Same, hit and starting to fire | 70 + 8 + 0 = 78 | 10 |
+| Teleport: `x` and `y` through the fallback | 25 + 20 + 20 = 65 | 9 |
+
+100 visible bots at 20 updates per second take 18 000 bytes/s as moving deltas.
 
 ### Drone
 
@@ -952,7 +1102,17 @@ schema :Drone as {
 
 8 + 13 + 13 + 10 = **44 bits, 6 bytes**. The relative position is a schema of its own, with
 bounds that fit the carrier, not the world. A carrier with `drones: :List(:Drone) max 15` packs
-them inline: 4 + 15 × 44 = 664 bits, 83 bytes instead of 90.
+them inline: 4 + 15 × 44 = 664 bits, 83 bytes instead of 90. As a list it is replaced in full by a
+delta, so drones that change often are better sent as separate records.
+
+With the 8-bit key and 3 change bits, a delta takes 11 bits before any payload:
+
+| Situation | Bits | Bytes |
+| --- | --- | --- |
+| At rest relative to the carrier; the caller may send nothing | 8 + 3 = 11 | 2 |
+| Flying straight | 11 + 7 + 7 = 25 | 4 |
+| Flying and turning | 11 + 7 + 7 + 7 = 32 | 4 |
+| `x` through the fallback | 11 + 14 = 25 | 4 |
 
 ## Verification
 
@@ -964,8 +1124,11 @@ Parity is verified like every GES feature.
   - every `schema.*` error, including `schema.invalidKey`, `schema.invalidUnion`,
     `schema.invalidBound`, `schema.tooLarge` and a parameter with a fractional value as an
     `integer` bound;
-  - every `wire.*` error;
+  - every `wire.*` error, except `wire.fieldOrder` and `wire.overlappingBuffers`, which need calls
+    that the corpus cannot express and are covered by native tests in both ports;
   - `key`: its position, a key read before the rest, and its place in the canonical form;
+  - deltas: each payload form, the shorter way of a wrapping field, a key, every rejection of the
+    [canonical form](#canonical-delta-form) and more change bits than fit one word;
   - unions: first-match order, `:Quantity(m) | :Quantity(s)` rejected, the index, `:Nothing`,
     lists of unions, a field after a union, and rejection of a document-only alternative with
     `schema.notEncodable`;
@@ -979,6 +1142,7 @@ Parity is verified like every GES feature.
   corpus, byte for byte between the ports, against the [hash vectors](#hash-vectors) and against
   respelled sources that must not change them: comments, layout, `50kN` and `50000N`.
 - A fuzz run feeds random and mutated bytes to the decoders of both ports, which must
-  agree on accept or reject.
-- Allocation tests prove that the writer and reader allocate nothing on success in both
-  ports, as for the existing hot paths.
+  agree on accept or reject, for full records and for deltas. Random deltas also match an
+  independent oracle.
+- Allocation tests prove that the writer, the reader and `GesSchemaDelta` allocate nothing on
+  success in both ports, as for the existing hot paths.

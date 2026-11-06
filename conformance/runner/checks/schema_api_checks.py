@@ -27,6 +27,13 @@ def hexadecimal(raw):
     return raw
 
 
+def delta_input(raw, name):
+    closed(raw, {name, 'baseline'}, 'delta input')
+    if set(raw) != {name, 'baseline'}:
+        raise InvalidDocument('A delta input requires its bytes and a baseline')
+    return {name: hexadecimal(raw[name]), 'baseline': hexadecimal(raw['baseline'])}
+
+
 def positive(raw):
     if type(raw) is not int or raw < 0 or raw >= 2**31:
         raise InvalidDocument('Expected a small nonnegative integer')
@@ -57,7 +64,7 @@ def prepare(case):
         raise InvalidDocument('Schema API requires no GES source, Steps or assembler')
     numeric_checks.options(case)
     raw = case.metadata.get('schemaApi')
-    closed(raw, {'sources', 'root', 'parameters', 'bind', 'encode', 'encodeBuffer', 'decode', 'decodeLimit', 'key', 'dump', 'describe', 'document'}, 'schema API input')
+    closed(raw, {'sources', 'root', 'parameters', 'bind', 'encode', 'encodeBuffer', 'baseline', 'decode', 'decodeLimit', 'key', 'dump', 'dumpBaseline', 'deltaEncode', 'deltaDecode', 'describe', 'document'}, 'schema API input')
     sources = raw.get('sources')
     if not isinstance(sources, list) or not sources or any(not isinstance(s, str) for s in sources):
         raise InvalidDocument('Schema API requires source texts')
@@ -69,8 +76,12 @@ def prepare(case):
         raise InvalidDocument('Invalid bind flag')
     if 'describe' in raw and (raw['describe'] is not True or 'root' not in raw):
         raise InvalidDocument('A description requires a root')
-    if ('encode' in raw or 'decode' in raw or 'key' in raw or 'dump' in raw) and 'root' not in raw:
+    if ('encode' in raw or 'decode' in raw or 'key' in raw or 'dump' in raw or 'deltaEncode' in raw or 'deltaDecode' in raw) and 'root' not in raw:
         raise InvalidDocument('Encoding requires a root')
+    if 'baseline' in raw and 'encode' not in raw and 'decode' not in raw:
+        raise InvalidDocument('A baseline requires encoding or decoding')
+    if 'dumpBaseline' in raw and 'dump' not in raw:
+        raise InvalidDocument('A dump baseline requires a dump')
     request = {
         'sources': sources,
         'root': text(raw['root'], 'root') if 'root' in raw else None,
@@ -78,16 +89,20 @@ def prepare(case):
         'bind': raw.get('bind', 'document' not in raw and 'root' in raw),
         'encode': input_value(raw['encode']) if 'encode' in raw else None,
         'encodeBuffer': positive(raw['encodeBuffer']) if 'encodeBuffer' in raw else None,
+        'baseline': input_value(raw['baseline']) if 'baseline' in raw else None,
         'decode': hexadecimal(raw['decode']) if 'decode' in raw else None,
         'decodeLimit': positive(raw['decodeLimit']) if 'decodeLimit' in raw else None,
         'key': hexadecimal(raw['key']) if 'key' in raw else None,
         'dump': hexadecimal(raw['dump']) if 'dump' in raw else None,
+        'dumpBaseline': hexadecimal(raw['dumpBaseline']) if 'dumpBaseline' in raw else None,
+        'deltaEncode': delta_input(raw['deltaEncode'], 'record') if 'deltaEncode' in raw else None,
+        'deltaDecode': delta_input(raw['deltaDecode'], 'delta') if 'deltaDecode' in raw else None,
         'describe': raw.get('describe', False),
         'document': text(raw['document'], 'document') if 'document' in raw else None,
     }
     closed(case.expected, {'gesBlock', 'schema'}, 'schema expectation')
     expected = case.expected.get('schema')
-    closed(expected, {'error', 'canonical', 'hash', 'bindingHash', 'maxByteCount', 'encoded', 'decoded', 'key', 'dump', 'description', 'document'}, 'schema result')
+    closed(expected, {'error', 'canonical', 'hash', 'bindingHash', 'maxByteCount', 'encoded', 'decoded', 'deltaEncoded', 'deltaDecoded', 'key', 'dump', 'description', 'document'}, 'schema result')
     if not expected:
         raise InvalidDocument('Schema expectation requires a result')
     if 'error' in expected:
@@ -111,6 +126,28 @@ def prepare(case):
             hexadecimal(expected['encoded']['bytes'])
         else:
             wire_error(expected['encoded']['error'])
+    if 'deltaEncoded' in expected:
+        if request['deltaEncode'] is None:
+            raise InvalidDocument('A delta expectation requires deltaEncode')
+        closed(expected['deltaEncoded'], {'bytes', 'error'}, 'delta result')
+        if len(expected['deltaEncoded']) != 1:
+            raise InvalidDocument('A delta has bytes or an error')
+        if 'bytes' in expected['deltaEncoded']:
+            hexadecimal(expected['deltaEncoded']['bytes'])
+        else:
+            wire_error(expected['deltaEncoded']['error'])
+    if 'deltaDecoded' in expected:
+        if request['deltaDecode'] is None:
+            raise InvalidDocument('A delta expectation requires deltaDecode')
+        closed(expected['deltaDecoded'], {'record', 'deltaByteCount', 'error'}, 'delta result')
+        if 'error' in expected['deltaDecoded']:
+            if len(expected['deltaDecoded']) != 1:
+                raise InvalidDocument('A delta result has a record or an error')
+            wire_error(expected['deltaDecoded']['error'])
+        elif set(expected['deltaDecoded']) != {'record', 'deltaByteCount'}:
+            raise InvalidDocument('A delta result has a record and its size')
+        else:
+            hexadecimal(expected['deltaDecoded']['record'])
     if 'decoded' in expected:
         if request['decode'] is None:
             raise InvalidDocument('A decoding expectation requires decode')
@@ -156,7 +193,7 @@ def compare(case, observed):
     if set(observed) != {'status', 'schema'} or observed['status'] != 'ok':
         raise InvalidDocument('Invalid schema API outcome')
     actual = observed['schema']
-    closed(actual, {'error', 'canonical', 'hash', 'bindingHash', 'maxByteCount', 'encoded', 'decoded', 'key', 'dump', 'description', 'document'}, 'schema observation')
+    closed(actual, {'error', 'canonical', 'hash', 'bindingHash', 'maxByteCount', 'encoded', 'decoded', 'deltaEncoded', 'deltaDecoded', 'key', 'dump', 'description', 'document'}, 'schema observation')
     expected = case.expected['schema']
     differences = []
     def differ(path, wanted, seen):
@@ -171,14 +208,16 @@ def compare(case, observed):
     for key in ('canonical', 'hash', 'bindingHash', 'maxByteCount', 'key', 'dump', 'description'):
         if key in expected and actual.get(key) != expected[key]:
             differ(key, expected[key], actual.get(key))
-    if 'encoded' in expected:
-        seen = actual.get('encoded')
-        wanted = expected['encoded']
+    for key in ('encoded', 'deltaEncoded', 'deltaDecoded'):
+        if key not in expected:
+            continue
+        seen = actual.get(key)
+        wanted = expected[key]
         if 'error' in wanted:
             if not isinstance(seen, dict) or not contains(wanted['error'], seen.get('error')):
-                differ('encoded', wanted, seen)
+                differ(key, wanted, seen)
         elif seen != wanted:
-            differ('encoded', wanted, seen)
+            differ(key, wanted, seen)
     if 'decoded' in expected:
         seen = actual.get('decoded')
         wanted = expected['decoded']

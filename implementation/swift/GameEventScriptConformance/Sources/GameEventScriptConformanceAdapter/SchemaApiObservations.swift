@@ -40,8 +40,10 @@ enum SchemaApiObservations {
                 if let encode = input["encode"], encode != .null { result["encoded"] = try self.encode(bound, encode, input) }
                 if let decode = input["decode"]?.stringValue { result["decoded"] = self.decode(bound, decode, input) }
                 if let key = input["key"]?.stringValue { result["key"] = try GesSchemaValues.readKey(bound, bytes(key)) }
+                if let delta = input["deltaEncode"], delta != .null { result["deltaEncoded"] = deltaEncode(bound, delta) }
+                if let delta = input["deltaDecode"], delta != .null { result["deltaDecoded"] = deltaDecode(bound, delta) }
                 if let dump = input["dump"]?.stringValue {
-                    let read = GesSchemaDump.read(bound, data: bytes(dump))
+                    let read = input["dumpBaseline"]?.stringValue.map { GesSchemaDump.read(bound, data: bytes(dump), baseline: bytes($0)) } ?? GesSchemaDump.read(bound, data: bytes(dump))
                     result["dump"] = ["text": read.text, "valid": read.isValid]
                 }
             }
@@ -127,16 +129,64 @@ enum SchemaApiObservations {
     private static func encode(_ bound: GesBoundSchema, _ value: Input, _ input: Input) throws -> [String: Any] {
         do {
             let size = integer(input["encodeBuffer"])
+            if let baseline = input["baseline"], baseline != .null {
+                return ["bytes": hexadecimal(try GesSchemaValues.encode(bound, try RuntimeValues.decode(value), baseline: try RuntimeValues.decode(baseline)))]
+            }
             return ["bytes": hexadecimal(try GesSchemaValues.encode(bound, try RuntimeValues.decode(value), bufferSize: size))]
         } catch let error as GesWireError {
             return ["error": ["code": error.code, "path": error.path]]
         }
     }
 
+    private static func deltaEncode(_ bound: GesBoundSchema, _ input: Input) -> [String: Any] {
+        let record = bytes(input["record"]!.stringValue!)
+        let baseline = bytes(input["baseline"]!.stringValue!)
+        var buffer = [UInt8](repeating: 0, count: bound.maxByteCount)
+        do {
+            let length = try buffer.withUnsafeMutableBytes { target in
+                try record.withUnsafeBytes { first in
+                    try baseline.withUnsafeBytes { second in
+                        try GesSchemaDelta.encode(bound, record: first, baseline: second, into: target)
+                    }
+                }
+            }
+            return ["bytes": hexadecimal(Array(buffer[0..<length]))]
+        } catch let error as GesWireError {
+            return ["error": ["code": error.code, "path": error.path]]
+        } catch {
+            return ["error": ["code": "\(error)", "path": ""]]
+        }
+    }
+
+    private static func deltaDecode(_ bound: GesBoundSchema, _ input: Input) -> [String: Any] {
+        let delta = bytes(input["delta"]!.stringValue!)
+        let baseline = bytes(input["baseline"]!.stringValue!)
+        var buffer = [UInt8](repeating: 0, count: bound.maxByteCount)
+        do {
+            let decoded = try buffer.withUnsafeMutableBytes { target in
+                try delta.withUnsafeBytes { first in
+                    try baseline.withUnsafeBytes { second in
+                        try GesSchemaDelta.decode(bound, delta: first, baseline: second, into: target)
+                    }
+                }
+            }
+            return ["record": hexadecimal(Array(buffer[0..<decoded.byteCount])), "deltaByteCount": decoded.deltaByteCount]
+        } catch let error as GesWireError {
+            return ["error": ["code": error.code, "path": error.path]]
+        } catch {
+            return ["error": ["code": "\(error)", "path": ""]]
+        }
+    }
+
     private static func decode(_ bound: GesBoundSchema, _ hex: String, _ input: Input) -> [String: Any] {
         do {
             let limit = integer(input["decodeLimit"]) ?? .max
-            let decoded = try GesSchemaValues.decode(bound, bytes(hex), byteLimit: limit)
+            let decoded: GesSchemaDecoded
+            if let baseline = input["baseline"], baseline != .null {
+                decoded = try GesSchemaValues.decode(bound, bytes(hex), baseline: try RuntimeValues.decode(baseline), byteLimit: limit)
+            } else {
+                decoded = try GesSchemaValues.decode(bound, bytes(hex), byteLimit: limit)
+            }
             return ["value": try RuntimeValues.encode(decoded.value), "byteCount": decoded.byteCount]
         } catch let error as GesWireError {
             return ["error": ["code": error.code, "path": error.path]]

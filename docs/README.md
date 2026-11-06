@@ -71,7 +71,6 @@ Guides explain usage and may simplify presentation. The linked normative specifi
 | [C# embedding](guide/CSharp.md) | Embed GES in a C# application. |
 | [Swift embedding](guide/Swift.md) | Embed GES in a Swift application. |
 | [Schemas](guide/Schemas.md) | Describe data formats step by step, encode them compactly and check documents. |
-| [Schema deltas plan](plans/SchemaDeltas.md) | Design of the planned deltas; not implemented and not normative. |
 | [Standalone CLI downloads](guide/distribution/Tools.md) | C# and Swift archives, installation, checksums and manual release workflow. |
 | [Editor packages and syntax highlighting](../tools/editors/README.md) | Editor integrations and downloadable JSON and classic XML grammars for `.ges` and `.gesa`. |
 | [C# implementation](../implementation/csharp/README.md) | Library boundaries, solution, toolchain, build/test commands and Compiler/Runtime integration. |

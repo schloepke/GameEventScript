@@ -55,6 +55,9 @@ public sealed class GesWireException : Exception
     internal const string TooLong = "wire.tooLong";
     internal const string BufferTooSmall = "wire.bufferTooSmall";
     internal const string FieldOrder = "wire.fieldOrder";
+    internal const string KeyMismatch = "wire.keyMismatch";
+    internal const string InvalidDelta = "wire.invalidDelta";
+    internal const string OverlappingBuffers = "wire.overlappingBuffers";
 
     internal GesWireException(string code, string path) : base($"{code} at '{path}'")
     {

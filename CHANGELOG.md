@@ -15,6 +15,8 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   so `:Vector([1, 2])` is 1, 2, 0 instead of `nothing` and `:Vector(:Dice[6, 3])` is
   6, 3, 0 instead of 9, 0, 0.
 - `:Message` rejects the labels `value` and `tags` in source; use `with`.
+- `MaxByteCount` of a schema is the larger of its largest full record and its largest delta,
+  which can raise it by a few bytes.
 - Encoding a schema value reports `nothing` in a required field, argument or list element
   as the new `wire.nothingValue`; `wire.missingField` stays for absent keys and arguments
   and for fields a typed writer leaves unwritten.
@@ -212,6 +214,11 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   `Length` instead.
 
 ### Added
+- Schema deltas: `GesSchemaDelta` converts between full records and deltas against a baseline
+  record without allocating, `GesSchemaValues` does so for values, and `ges schema dump --baseline`
+  makes a delta readable. A decoder accepts only the canonical form (`wire.invalidDelta`), a
+  record with another key is `wire.keyMismatch`, and a target buffer that overlaps an input is
+  `wire.overlappingBuffers`.
 - Type, message and handler names can join segments with single underscores, such
   as `:Unit_Weapon` and `Unit_Fire`. Each segment starts with an uppercase letter,
   so `:Unit_1` and `Unit__Fire` stay invalid; use `:Unit_Type1`. The underscore

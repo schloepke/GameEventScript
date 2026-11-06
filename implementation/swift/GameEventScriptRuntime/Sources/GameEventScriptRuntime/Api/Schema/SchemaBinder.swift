@@ -76,9 +76,14 @@ struct GesSchemaNode: Sendable {
     var width = 0
     var next = 0
     var after = 0
+    // The direct children of a group, which its delta has one change bit each for.
+    var childCount = 0
     // Integer: its lower bound. Quantized: lowerN. The largest valid index; for a wrapping field the period is one more.
     var lower: Int64 = 0
     var maxIndex: UInt64 = 0
+    // The largest difference in indices of a `delta within` and the width of its range form; zero without one.
+    var deltaRange: UInt64 = 0
+    var deltaWidth = 0
     var p: Int64 = 0
     var tenPower: Int64 = 1
     var pBinary = 1.0
@@ -104,7 +109,7 @@ public final class GesBoundSchema: Sendable {
     public let schema: GesSchema
     /// The declaration's name.
     public let name: String
-    /// The size of the largest encoding in bytes.
+    /// The size of the largest encoding in bytes, of a full record or of a delta.
     public let maxByteCount: Int
     /// The schema hash, independent of parameter values.
     public let hash: UInt64
@@ -117,6 +122,8 @@ public final class GesBoundSchema: Sendable {
     let memberWidth: Int
     // The largest encoding of a schema or message in bits, which a message set adds its index to.
     let maxBitCount: Int64
+    // The top-level fields with a change bit in a delta: all but the key.
+    let deltaFieldCount: Int
     // The labels of a message's arguments, `_` for an unlabeled one.
     let labels: [String]
     private let fields: [String: Int]
@@ -131,6 +138,7 @@ public final class GesBoundSchema: Sendable {
         memberWidth: Int,
         maxByteCount: Int,
         maxBitCount: Int64,
+        deltaFieldCount: Int = 0,
         hash: UInt64,
         bindingHash: UInt64,
         labels: [String]
@@ -144,6 +152,7 @@ public final class GesBoundSchema: Sendable {
         self.memberWidth = memberWidth
         self.maxByteCount = maxByteCount
         self.maxBitCount = maxBitCount
+        self.deltaFieldCount = deltaFieldCount
         self.hash = hash
         self.bindingHash = bindingHash
         self.labels = labels
@@ -391,7 +400,8 @@ enum GesSchemaBinder {
             build.infos.append(info)
         }
         seal(&build.nodes)
-        let bits = cost(build.nodes, 0, build.nodes.count)
+        var bits = cost(build.nodes, 0, build.nodes.count)
+        if declaration.kind == .schema { bits = max(bits, deltaCost(build.nodes)) }
         if bits > maximumByteCount * 8 { throw declaration.scope.error(Code.tooLarge, declaration.offset, "The largest encoding of '\(declaration.name)' exceeds \(maximumByteCount) bytes.") }
         return GesBoundSchema(
             schema: declaration.schema!,
@@ -403,14 +413,28 @@ enum GesSchemaBinder {
             memberWidth: 0,
             maxByteCount: Int((bits + 7) / 8),
             maxBitCount: bits,
+            deltaFieldCount: countFields(build.nodes, build.nodes.first?.key == true ? build.nodes[0].next : 0, build.nodes.count),
             hash: hash,
             bindingHash: bindingHash,
             labels: declaration.fields.map { $0.unlabeled ? "_" : $0.name }
         )
     }
 
+    private static func countFields(_ nodes: [GesSchemaNode], _ start: Int, _ end: Int) -> Int {
+        var count = 0
+        var index = start
+        while index < end {
+            count += 1
+            index = nodes[index].next
+        }
+        return count
+    }
+
     private static func seal(_ nodes: inout [GesSchemaNode]) {
-        for index in nodes.indices { nodes[index].after = nodes[index].next }
+        for index in nodes.indices {
+            nodes[index].after = nodes[index].next
+            if nodes[index].kind == .group { nodes[index].childCount = countFields(nodes, index + 1, nodes[index].next) }
+        }
         for union in nodes.indices where nodes[union].kind == .union {
             var alternative = union + 1
             while alternative < nodes[union].next {
@@ -420,6 +444,48 @@ enum GesSchemaBinder {
             }
         }
     }
+
+    // The largest delta in bits: the key, then a change bit and the largest payload of each field.
+    private static func deltaCost(_ nodes: [GesSchemaNode]) -> Int64 {
+        let start = nodes.first?.key == true ? nodes[0].next : 0
+        return min(maximumByteCount * 8 + 1, (start == 0 ? 0 : Int64(nodes[0].width)) + deltaCost(nodes, start, nodes.count))
+    }
+
+    private static func deltaCost(_ nodes: [GesSchemaNode], _ start: Int, _ end: Int) -> Int64 {
+        let limit = maximumByteCount * 8 + 1
+        var total: Int64 = 0
+        var index = start
+        while index < end {
+            var payload = payloadCost(nodes, index)
+            if nodes[index].optional { payload = 1 + max(payload, fullCost(nodes, index)) }
+            total = min(limit, total + 1 + payload)
+            index = nodes[index].next
+        }
+        return total
+    }
+
+    private static func payloadCost(_ nodes: [GesSchemaNode], _ index: Int) -> Int64 {
+        let node = nodes[index]
+        switch node.kind {
+        case .boolean, .nothing:
+            return 0
+        case .group:
+            return deltaCost(nodes, index + 1, node.next)
+        case .union:
+            var largest: Int64 = 0
+            var alternative = index + 1
+            while alternative < node.next {
+                largest = max(largest, max(fullCost(nodes, alternative), payloadCost(nodes, alternative)))
+                alternative = nodes[alternative].next
+            }
+            return Int64(node.width) + largest
+        default:
+            return node.deltaRange > 0 ? 1 + Int64(max(node.deltaWidth, node.width)) : fullCost(nodes, index)
+        }
+    }
+
+    // The full encoding of a value, without its presence bit.
+    private static func fullCost(_ nodes: [GesSchemaNode], _ index: Int) -> Int64 { cost(nodes, index, nodes[index].next) - (nodes[index].optional ? 1 : 0) }
 
     // The largest encoding in bits. Sums stop growing beyond the limit, so nothing overflows.
     private static func cost(_ nodes: [GesSchemaNode], _ start: Int, _ end: Int) -> Int64 {
@@ -650,7 +716,9 @@ enum GesSchemaBinder {
             }
         }
         if let delta = constraints.delta {
-            if bitLength(numeric.deltaRange * 2) >= node.width { throw scope.error(Code.invalidConstraint, delta.offset, "A delta range is narrower than its field.") }
+            node.deltaRange = numeric.deltaRange
+            node.deltaWidth = bitLength(numeric.deltaRange * 2)
+            if node.deltaWidth >= node.width { throw scope.error(Code.invalidConstraint, delta.offset, "A delta range is narrower than its field.") }
         }
     }
 

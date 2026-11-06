@@ -5,7 +5,8 @@
 
 Random values, values at each bound and half-step ties encode to the bytes of an independent oracle in both ports. Random
 and mutated bytes decode to the same result in both ports, and every schema of the corpus has the same canonical form and
-hash. Negative controls qualify the comparison.
+hash. Deltas between random records match the oracle too, and random and mutated deltas decode alike. Negative controls qualify
+the comparison.
 """
 import argparse
 import json
@@ -228,6 +229,198 @@ def sample(rng):
     return {'type': ':Sample', 'entries': entries}, bits.hex()
 
 
+DELTA_SCHEMA = """schema :Part as {
+  v: :Number integer between 0 and 3
+  on: :Boolean
+}
+
+schema :Moving as {
+  id: :Number integer between 0 and 255 key
+  x: :Quantity(m) between -100m and 100m step 1cm delta within 1.27m
+  bearing: :Quantity(°) wrapping between 0° and 360° step 1° delta within 15°
+  count: :Number integer between -1000 and 1000 delta within 7
+  wide: :Number integer
+  raw: :Number
+  flag: :Boolean
+  state: :Tag(#a, #b, #c)
+  label: :Text max 3 optional
+  items: :List(:Number integer between 0 and 7) max 2
+  part: :Part
+  at: :Point(m) {
+    x between 0m and 100m step 1m delta within 3m
+    y between 0m and 100m step 1m
+  }
+  pick: :Number integer between 0 and 7 | :Part | :Nothing
+}
+"""
+
+
+def moving(rng, base=None):
+    """Wire values of a record: unchanged, near or far from its base."""
+    def near(name, low, high, reach):
+        if base is None or rng.random() < 0.2:
+            return rng.randrange(low, high + 1)
+        if rng.random() < 0.4:
+            return base[name]
+        return min(high, max(low, base[name] + rng.randrange(-reach, reach + 1)))
+
+    def pick():
+        kind = rng.randrange(3)
+        return None if kind == 2 else rng.randrange(8) if kind == 0 else (rng.randrange(4), rng.random() < 0.5)
+
+    def chosen(name, make):
+        return base[name] if base is not None and rng.random() < 0.5 else make()
+
+    bearing = (base['bearing'] + rng.randrange(-20, 21)) % 360 if base is not None and rng.random() < 0.7 else rng.randrange(360)
+    return {
+        'id': base['id'] if base is not None else rng.randrange(256),
+        'x': near('x', 0, 20000, 200), 'bearing': bearing, 'count': near('count', 0, 2000, 12),
+        'wide': chosen('wide', lambda: rng.choice((-(2**63), 2**63 - 1, rng.randrange(-(2**40), 2**40)))),
+        'raw': chosen('raw', lambda: rng.choice((1.5, -2.25, rng.uniform(-1e6, 1e6)))),
+        'flag': chosen('flag', lambda: rng.random() < 0.5), 'state': chosen('state', lambda: rng.randrange(3)),
+        'label': chosen('label', lambda: rng.choice((None, '', 'äb', 'abc'))),
+        'items': chosen('items', lambda: [rng.randrange(8) for _ in range(rng.randrange(3))]),
+        'part': chosen('part', lambda: (rng.randrange(4), rng.random() < 0.5)),
+        'at': chosen('at', lambda: (rng.randrange(101), rng.randrange(101))), 'pick': chosen('pick', pick),
+    }
+
+
+def part_value(part):
+    return {'type': ':Part', 'entries': [{'key': 'on', 'value': {'type': ':Boolean', 'value': part[1]}}, {'key': 'v', 'value': number(part[0])}]}
+
+
+def moving_value(record):
+    """A record in the value transport, from its wire values."""
+    fields = {
+        'id': number(record['id']), 'x': quantity((record['x'] - 10000) / 100, 'meter'), 'bearing': quantity(record['bearing'], 'degree'),
+        'count': number(record['count'] - 1000), 'wide': number(record['wide']), 'raw': number(record['raw']),
+        'flag': {'type': ':Boolean', 'value': record['flag']}, 'state': {'type': ':Tag', 'value': 'abc'[record['state']]},
+        'label': {'type': ':Nothing'} if record['label'] is None else {'type': ':Text', 'value': record['label']},
+        'items': {'type': ':List', 'items': [number(item) for item in record['items']]}, 'part': part_value(record['part']),
+        'at': {'type': ':Point', 'x': str(record['at'][0]), 'y': str(record['at'][1]), 'z': '0', 'unit': ':meter'},
+        'pick': {'type': ':Nothing'} if record['pick'] is None else number(record['pick']) if isinstance(record['pick'], int) else part_value(record['pick']),
+    }
+    return {'type': ':Moving', 'entries': [{'key': key, 'value': fields[key]} for key in sorted(fields)]}
+
+
+def raw_bits(value):
+    return struct.unpack('<Q', struct.pack('<d', value))[0]
+
+
+def moving_full(record):
+    """The full encoding of a record."""
+    bits = Bits()
+    bits.put(record['id'], 8)
+    bits.put(record['x'], 15)
+    bits.put(record['bearing'], 9)
+    bits.put(record['count'], 11)
+    bits.put(record['wide'] & (2**64 - 1), 64)
+    bits.put(raw_bits(record['raw']), 64)
+    bits.put(1 if record['flag'] else 0, 1)
+    bits.put(record['state'], 2)
+    bits.put(0 if record['label'] is None else 1, 1)
+    if record['label'] is not None:
+        put_label(bits, record['label'])
+    put_items(bits, record['items'])
+    bits.put(record['part'][0], 2)
+    bits.put(1 if record['part'][1] else 0, 1)
+    bits.put(record['at'][0], 7)
+    bits.put(record['at'][1], 7)
+    put_pick(bits, record['pick'])
+    return bits.hex()
+
+
+def put_label(bits, label):
+    encoded = label.encode()
+    bits.put(len(encoded), 2)
+    for byte in encoded:
+        bits.put(byte, 8)
+
+
+def put_items(bits, items):
+    bits.put(len(items), 2)
+    for item in items:
+        bits.put(item, 3)
+
+
+def put_pick(bits, pick):
+    if pick is None:
+        bits.put(2, 2)
+    elif isinstance(pick, int):
+        bits.put(0, 2)
+        bits.put(pick, 3)
+    else:
+        bits.put(1, 2)
+        bits.put(pick[0], 2)
+        bits.put(1 if pick[1] else 0, 1)
+
+
+def put_range(bits, value, base, reach, width, full_width, period=None):
+    """The range form of an index, or the full index outside the range."""
+    difference = value - base
+    if period is not None:
+        difference = (value - base + period // 2) % period - period // 2
+    if abs(difference) <= reach:
+        bits.put(0, 1)
+        bits.put(difference + reach, width)
+    else:
+        bits.put(1, 1)
+        bits.put(value, full_width)
+
+
+def moving_delta(record, base):
+    """The delta of a record against its base, written from the rules of the specification."""
+    bits = Bits()
+
+    def changes(pairs):
+        for changed, _ in pairs:
+            bits.put(1 if changed else 0, 1)
+        for changed, payload in pairs:
+            if changed:
+                payload()
+
+    def part_payload(part, held):
+        changes(((part[0] != held[0], lambda: bits.put(part[0], 2)), (part[1] != held[1], lambda: None)))
+
+    def label_payload():
+        if record['label'] is None:
+            bits.put(0, 1)
+        else:
+            bits.put(1, 1)
+            put_label(bits, record['label'])
+
+    def pick_payload():
+        pick, held = record['pick'], base['pick']
+        if isinstance(pick, tuple) and isinstance(held, tuple):
+            bits.put(1, 2)
+            part_payload(pick, held)
+        else:
+            put_pick(bits, pick)
+
+    def at_payload():
+        changes((
+            (record['at'][0] != base['at'][0], lambda: put_range(bits, record['at'][0], base['at'][0], 3, 3, 7)),
+            (record['at'][1] != base['at'][1], lambda: bits.put(record['at'][1], 7)),
+        ))
+
+    bits.put(record['id'], 8)
+    changes((
+        (record['x'] != base['x'], lambda: put_range(bits, record['x'], base['x'], 127, 8, 15)),
+        (record['bearing'] != base['bearing'], lambda: put_range(bits, record['bearing'], base['bearing'], 15, 5, 9, 360)),
+        (record['count'] != base['count'], lambda: put_range(bits, record['count'], base['count'], 7, 4, 11)),
+        (record['wide'] != base['wide'], lambda: bits.put(record['wide'] & (2**64 - 1), 64)),
+        (raw_bits(record['raw']) != raw_bits(base['raw']), lambda: bits.put(raw_bits(record['raw']), 64)),
+        (record['flag'] != base['flag'], lambda: None),
+        (record['state'] != base['state'], lambda: bits.put(record['state'], 2)),
+        (record['label'] != base['label'], label_payload),
+        (record['items'] != base['items'], lambda: put_items(bits, record['items'])),
+        (record['part'] != base['part'], lambda: part_payload(record['part'], base['part'])),
+        (record['at'] != base['at'], at_payload),
+        (record['pick'] != base['pick'], pick_payload),
+    ))
+    return bits.hex()
+
+
 def block(value, indent):
     pad = ' ' * indent
     if isinstance(value, dict):
@@ -324,6 +517,31 @@ def main():
                 mutated[rng.randrange(len(mutated))] ^= 1 << rng.randrange(8)
             data = bytes(mutated[:rng.randrange(len(mutated) + 1)] if rng.random() < 0.3 else mutated)
         cases.append((f'fuzz-{index}', {'sources': [SCHEMA], 'root': 'Sample', 'decode': data.hex()}))
+    deltas = {}
+    bases = []
+    for index in range(options.count):
+        base = moving(rng)
+        record = moving(rng, base)
+        data = moving_delta(record, base)
+        identifier = f'delta-{index}'
+        full, held = moving_full(record), moving_full(base)
+        deltas[identifier] = (data, full)
+        bases.append((data, base))
+        cases.append((identifier, {
+            'sources': [DELTA_SCHEMA], 'root': 'Moving', 'encode': moving_value(record), 'baseline': moving_value(base), 'decode': data,
+            'deltaEncode': {'record': full, 'baseline': held}, 'deltaDecode': {'delta': data, 'baseline': held},
+        }))
+        cases.append((f'{identifier}-full', {'sources': [DELTA_SCHEMA], 'root': 'Moving', 'encode': moving_value(record)}))
+    # A delta from untrusted data must produce the same record or the same error in both ports.
+    for index in range(options.count):
+        data, base = rng.choice(bases)
+        mutated = bytearray.fromhex(data)
+        if index % 4 == 0:
+            mutated = bytearray(rng.randrange(256) for _ in range(rng.randrange(40)))
+        else:
+            for _ in range(rng.randrange(1, 4)):
+                mutated[rng.randrange(len(mutated))] ^= 1 << rng.randrange(8)
+        cases.append((f'delta-fuzz-{index}', {'sources': [DELTA_SCHEMA], 'root': 'Moving', 'baseline': moving_value(base), 'decode': bytes(mutated).hex()}))
     respelled = ('schema :Force as { force: :Quantity(N) between 0kN and 50kN step 0.01kN }\n', '// other\n\nschema :Force as {\n  force: :Quantity(N) between 0N and 50000N step 10N // comment\n}\n')
     for index, source in enumerate(respelled):
         cases.append((f'respelled-{index}', {'sources': [source], 'root': 'Force', 'bind': False}))
@@ -358,17 +576,33 @@ def main():
             if 'error' in decoded or decoded.get('byteCount') != len(data) // 2:
                 failures.append(f'{port} {identifier}: decoding failed: {decoded}')
                 break
+        for identifier, (data, full) in deltas.items():
+            observed = schema_of(port, identifier)
+            if observed.get('encoded') != {'bytes': data} or observed.get('deltaEncoded') != {'bytes': data}:
+                failures.append(f'{port} {identifier}: expected {data}, got {observed.get("encoded")} and {observed.get("deltaEncoded")}')
+                break
+            decoded = observed.get('decoded', {})
+            if 'error' in decoded or decoded.get('byteCount') != len(data) // 2:
+                failures.append(f'{port} {identifier}: decoding failed: {decoded}')
+                break
+            if observed.get('deltaDecoded') != {'record': full, 'deltaByteCount': len(data) // 2}:
+                failures.append(f'{port} {identifier}: expected the record {full}, got {observed.get("deltaDecoded")}')
+                break
+            if schema_of(port, f'{identifier}-full').get('encoded') != {'bytes': full}:
+                failures.append(f'{port} {identifier}: the oracle and the full encoding differ')
+                break
         first, second = schema_of(port, 'respelled-0'), schema_of(port, 'respelled-1')
         if first != second:
             failures.append(f'{port}: respelling changed the canonical form or hash')
     accepted = sum('value' in schema_of('csharp', f'fuzz-{index}').get('decoded', {}) for index in range(options.count))
+    accepted_deltas = sum('value' in schema_of('csharp', f'delta-fuzz-{index}').get('decoded', {}) for index in range(options.count))
     # Negative controls: the comparison notices a changed byte, and a mutated value would not pass as equal.
     if not compare({'a': {'bytes': '00'}}, {'a': {'bytes': '01'}}) or not compare({'a': 1}, {}):
         failures.append('The comparison misses differences.')
     if failures:
         print('\n'.join(failures[:20]), file=sys.stderr)
         return 1
-    print(f'Schema bytes verified: {options.count} encodings in both ports, {options.count} fuzzed inputs with equal results ({accepted} accepted), {len(observations[("csharp", "corpus")])} corpus cases.')
+    print(f'Schema bytes verified: {options.count} encodings in both ports, {options.count} fuzzed inputs with equal results ({accepted} accepted), {options.count} deltas, {options.count} fuzzed deltas ({accepted_deltas} accepted), {len(observations[("csharp", "corpus")])} corpus cases.')
     return 0
 
 

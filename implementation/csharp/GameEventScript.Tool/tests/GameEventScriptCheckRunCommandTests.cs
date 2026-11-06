@@ -292,6 +292,10 @@ public sealed class GameEventScriptCheckRunCommandTests
         File.WriteAllBytes(Path.Combine(_directory, "data.bin"), [7, 0xE8, 3, 0]);
         var dump = Run("schema", "dump", "drone.gess", "--root", "Drone", "--data", "data.bin");
         StringAssert.Contains(dump.StandardOutput, "id bit=0 width=8 value=7");
+        File.WriteAllBytes(Path.Combine(_directory, "delta.bin"), [7, 0]);
+        var delta = Run("schema", "dump", "drone.gess", "--root", "Drone", "--data", "delta.bin", "--baseline", "data.bin");
+        StringAssert.StartsWith(delta.StandardOutput, "delta bytes 2\nid bit=0 width=8 value=7");
+        Assert.AreEqual(2, Run("schema", "hash", "drone.gess", "--root", "Drone", "--baseline", "data.bin").ExitCode);
         var same = Run("schema", "format", "drone.gess", "-o", "drone.gess");
         Assert.AreEqual(2, same.ExitCode);
         Assert.AreEqual(2, Run("schema", "format", "drone.gess", "-o", "").ExitCode);

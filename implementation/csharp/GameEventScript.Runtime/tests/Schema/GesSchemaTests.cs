@@ -49,7 +49,7 @@ public sealed class GesSchemaTests
     public void WriterAndReaderMatchTheWorkedExample()
     {
         var bot = Bot();
-        Assert.AreEqual(13, bot.MaxByteCount);
+        Assert.AreEqual(14, bot.MaxByteCount);
         Span<byte> buffer = stackalloc byte[32];
         var writer = new GesSchemaWriter(bot, buffer);
         writer.WriteInteger(bot.Field("id"), 42);
@@ -167,6 +167,88 @@ public sealed class GesSchemaTests
         var before = GC.GetAllocatedBytesForCurrentThread();
         for (var round = 0; round < 1000; round++) Round();
         Assert.AreEqual(before, GC.GetAllocatedBytesForCurrentThread());
+    }
+
+    [TestMethod]
+    public void DeltasAllocateNothing()
+    {
+        var source = "schema :Part as {\n  v: :Number integer between 0 and 3\n  on: :Boolean\n}\n\nschema :S as {\n  id: :Number integer between 0 and 255 key\n"
+            + "  x: :Quantity(m) between 0m and 100m step 1cm delta within 1m\n  name: :Text max 4 optional\n  items: :List(:Text max 2) max 2\n  part: :Part\n  pick: :Boolean | :Part\n}\n";
+        var schema = GesSchemaSet.Parse([new GesSchemaSource("s.gess", source)]).Schema("S").Bind(new GesSchemaParameters());
+        var first = new byte[GesSchemaValues.Encode(schema, Sample(1, "ab"), new byte[64])];
+        GesSchemaValues.Encode(schema, Sample(1, "ab"), first);
+        var second = new byte[GesSchemaValues.Encode(schema, Sample(2, "aä"), new byte[64])];
+        GesSchemaValues.Encode(schema, Sample(2, "aä"), second);
+        var delta = new byte[schema.MaxByteCount];
+        var record = new byte[schema.MaxByteCount];
+
+        void Round()
+        {
+            var length = GesSchemaDelta.Encode(schema, second, first, delta);
+            var decoded = GesSchemaDelta.Decode(schema, delta.AsSpan(0, length), first, record);
+            if (decoded.ByteCount != second.Length) throw new InvalidOperationException();
+        }
+
+        Round();
+        CollectionAssert.AreEqual(second, record.AsSpan(0, second.Length).ToArray());
+        var before = GC.GetAllocatedBytesForCurrentThread();
+        for (var round = 0; round < 1000; round++) Round();
+        Assert.AreEqual(before, GC.GetAllocatedBytesForCurrentThread());
+    }
+
+    [TestMethod]
+    public void FieldsAreUsedInDeclarationOrder()
+    {
+        var schema = GesSchemaSet.Parse([new GesSchemaSource("s.gess", "schema :S as {\n  a: :Boolean\n  b: :Boolean optional\n}\n\nschema :T as {\n  c: :Boolean\n}\n")]);
+        var first = schema.Schema("S").Bind(new GesSchemaParameters());
+        var other = schema.Schema("T").Bind(new GesSchemaParameters());
+        var (a, b, c) = (first.Field("a"), first.Field("b"), other.Field("c"));
+
+        void Fails(string path, Action call)
+        {
+            var exception = Assert.ThrowsExactly<GesWireException>(call);
+            Assert.AreEqual("wire.fieldOrder", exception.Code);
+            Assert.AreEqual(path, exception.Path);
+        }
+
+        Fails("b", () => new GesSchemaWriter(first, new byte[8]).WriteBoolean(b, true));
+        Fails("c", () => new GesSchemaWriter(first, new byte[8]).WriteBoolean(c, true));
+        Fails("a", () => new GesSchemaReader(first, new byte[8]).Finish());
+        Fails("b", () => new GesSchemaReader(first, new byte[8]).ReadBoolean(b));
+        Fails("c", () => new GesSchemaReader(first, new byte[8]).ReadBoolean(c));
+        Fails("", () => new GesSchemaReader(first, new byte[8]).ReadKey());
+        Fails("b", () =>
+        {
+            var reader = new GesSchemaReader(first, new byte[8]);
+            reader.ReadBoolean(a);
+            reader.ReadBoolean(b);
+        });
+    }
+
+    [TestMethod]
+    public void DeltaTargetsMustNotOverlapTheirInputs()
+    {
+        var schema = GesSchemaSet.Parse([new GesSchemaSource("s.gess", "schema :S as {\n  a: :Boolean\n  b: :Boolean\n}\n")]).Schema("S").Bind(new GesSchemaParameters());
+        var memory = new byte[8];
+        byte[] other = [0];
+
+        void Fails(Action call) => Assert.AreEqual("wire.overlappingBuffers", Assert.ThrowsExactly<GesWireException>(call).Code);
+
+        Fails(() => GesSchemaDelta.Encode(schema, memory.AsSpan(0, 1), other, memory));
+        Fails(() => GesSchemaDelta.Encode(schema, other, memory.AsSpan(7, 1), memory.AsSpan(4)));
+        Fails(() => GesSchemaDelta.Decode(schema, memory.AsSpan(0, 1), other, memory.AsSpan(0, 4)));
+        Fails(() => GesSchemaDelta.Decode(schema, other, memory, memory));
+        Assert.AreEqual(1, GesSchemaDelta.Encode(schema, memory.AsSpan(0, 1), memory.AsSpan(0, 1), memory.AsSpan(1)));
+        Assert.AreEqual(1, GesSchemaDelta.Decode(schema, memory.AsSpan(0, 1), memory.AsSpan(1, 1), memory.AsSpan(2)).ByteCount);
+    }
+
+    private static GesValue Sample(int x, string name)
+    {
+        var part = GesValue.GesRecord("Part", ["v", "on"], [GesValue.GesInteger(x), GesValue.GesBoolean(x == 1)]);
+        return GesValue.GesRecord(
+            "S",
+            ["id", "x", "name", "items", "part", "pick"],
+            [GesValue.GesInteger(7), GesValue.GesNumber(x * 40, GesQuantityUnit.UnitMeter), GesValue.GesText(name), GesValue.GesList([GesValue.GesText("a"), GesValue.GesText(name[..1])]), part, part]);
     }
 
     [TestMethod]

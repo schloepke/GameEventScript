@@ -575,7 +575,9 @@ GES schemas ([Schemas](Schemas.md)) live in Runtime. Apart from the value path, 
 | dump | `static GesSchemaDump.Read(schema, data)` returning `GesSchemaDumpResult` with `Text`, `IsValid` | `GesSchemaDump.read(_:data:)` returning `GesSchemaDumpResult` with `text`, `isValid` |
 | source and binding error | `GesSchemaException` with `Code`, `SourceName`, `Line`, `Column` | `GesSchemaError` with `code`, `sourceName`, `line`, `column`, `message` |
 | wire error | `GesWireException` with `Code`, `Path` | `GesWireError` with `code`, `path` |
-| value path (Runtime) | `static GesSchemaValues.Encode`, `Decode` returning `GesSchemaDecoded`, `ReadKey` | `GesSchemaValues.encode`, `decode` returning `GesSchemaDecoded`, `readKey` |
+| deltas | `static GesSchemaDelta.Encode(schema, record, baseline, buffer)`, `Decode(schema, delta, baseline, buffer, byteLimit)` returning `GesSchemaDeltaDecoded` with `ByteCount`, `DeltaByteCount` | `GesSchemaDelta.encode(_:record:baseline:into:)`, `decode(_:delta:baseline:into:byteLimit:)` returning `GesSchemaDeltaDecoded` with `byteCount`, `deltaByteCount` |
+| value path (Runtime) | `static GesSchemaValues.Encode`, `Decode` returning `GesSchemaDecoded`, `ReadKey`, each `Encode` and `Decode` also with a baseline value | `GesSchemaValues.encode`, `decode` returning `GesSchemaDecoded`, `readKey`, each `encode` and `decode` also with `baseline:` |
+| dump | `static GesSchemaDump.Read(schema, data)`, also with a baseline record | `GesSchemaDump.read(_:data:)`, also with `baseline:` |
 
 `GesSyntaxLanguage` adds `Gess` (Swift `.gess`) for highlighting schema sources.
 

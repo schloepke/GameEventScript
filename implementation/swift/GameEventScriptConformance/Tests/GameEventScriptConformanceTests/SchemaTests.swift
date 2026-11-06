@@ -44,7 +44,7 @@ final class SchemaTests: XCTestCase {
 
     func testWriterAndReaderMatchTheWorkedExample() throws {
         let schema = try bot()
-        XCTAssertEqual(schema.maxByteCount, 13)
+        XCTAssertEqual(schema.maxByteCount, 14)
         let (id, x, y, heading) = (schema.field("id")!, schema.field("x")!, schema.field("y")!, schema.field("heading")!)
         let (turret, radar, health) = (schema.field("turretBearing")!, schema.field("radarBearing")!, schema.field("health")!)
         let (firing, shielded, overheated) = (schema.field("firing")!, schema.field("shielded")!, schema.field("overheated")!)
@@ -212,5 +212,78 @@ final class SchemaTests: XCTestCase {
             XCTAssertEqual(try writer.finish(), 1)
         }
         XCTAssertEqual(buffer[0], 0b101)
+    }
+
+    func testFieldsAreUsedInDeclarationOrder() throws {
+        let set = try GesSchemaSet(parsing: "schema :S as {\n  a: :Boolean\n  b: :Boolean optional\n}\n\nschema :T as {\n  c: :Boolean\n}\n")
+        let first = try set.schema("S").bind()
+        let other = try set.schema("T").bind()
+        let (a, b, c) = (first.field("a")!, first.field("b")!, other.field("c")!)
+        let memory = UnsafeMutableRawBufferPointer.allocate(byteCount: 8, alignment: 8)
+        defer { memory.deallocate() }
+        memory.initializeMemory(as: UInt8.self, repeating: 0)
+        let data = UnsafeRawBufferPointer(memory)
+
+        func fails(_ path: String, _ call: () throws -> Void) {
+            XCTAssertThrowsError(try call()) {
+                XCTAssertEqual(($0 as? GesWireError)?.code, "wire.fieldOrder")
+                XCTAssertEqual(($0 as? GesWireError)?.path, path)
+            }
+        }
+
+        fails("b") {
+            var writer = GesSchemaWriter(first, into: memory)
+            try writer.writeBoolean(b, true)
+        }
+        fails("c") {
+            var writer = GesSchemaWriter(first, into: memory)
+            try writer.writeBoolean(c, true)
+        }
+        fails("a") {
+            var reader = GesSchemaReader(first, data: data)
+            _ = try reader.finish()
+        }
+        fails("b") {
+            var reader = GesSchemaReader(first, data: data)
+            _ = try reader.readBoolean(b)
+        }
+        fails("c") {
+            var reader = GesSchemaReader(first, data: data)
+            _ = try reader.readBoolean(c)
+        }
+        fails("") {
+            var reader = GesSchemaReader(first, data: data)
+            _ = try reader.readKey()
+        }
+        fails("b") {
+            var reader = GesSchemaReader(first, data: data)
+            _ = try reader.readBoolean(a)
+            _ = try reader.readBoolean(b)
+        }
+    }
+
+    func testDeltaTargetsMustNotOverlapTheirInputs() throws {
+        let schema = try GesSchemaSet(parsing: "schema :S as {\n  a: :Boolean\n  b: :Boolean\n}\n").schema("S").bind()
+        let memory = UnsafeMutableRawBufferPointer.allocate(byteCount: 8, alignment: 8)
+        let other = UnsafeMutableRawBufferPointer.allocate(byteCount: 1, alignment: 8)
+        defer {
+            memory.deallocate()
+            other.deallocate()
+        }
+        memory.initializeMemory(as: UInt8.self, repeating: 0)
+        other.initializeMemory(as: UInt8.self, repeating: 0)
+        let input = UnsafeRawBufferPointer(other)
+
+        func fails(_ call: () throws -> Void) {
+            XCTAssertThrowsError(try call()) { XCTAssertEqual(($0 as? GesWireError)?.code, "wire.overlappingBuffers") }
+        }
+
+        fails { _ = try GesSchemaDelta.encode(schema, record: UnsafeRawBufferPointer(rebasing: memory[0..<1]), baseline: input, into: memory) }
+        fails { _ = try GesSchemaDelta.encode(schema, record: input, baseline: UnsafeRawBufferPointer(rebasing: memory[7..<8]), into: UnsafeMutableRawBufferPointer(rebasing: memory[4...])) }
+        fails { _ = try GesSchemaDelta.decode(schema, delta: UnsafeRawBufferPointer(rebasing: memory[0..<1]), baseline: input, into: UnsafeMutableRawBufferPointer(rebasing: memory[0..<4])) }
+        fails { _ = try GesSchemaDelta.decode(schema, delta: input, baseline: UnsafeRawBufferPointer(memory), into: memory) }
+        let first = UnsafeRawBufferPointer(rebasing: memory[0..<1])
+        XCTAssertEqual(try GesSchemaDelta.encode(schema, record: first, baseline: first, into: UnsafeMutableRawBufferPointer(rebasing: memory[1...])), 1)
+        XCTAssertEqual(try GesSchemaDelta.decode(schema, delta: first, baseline: UnsafeRawBufferPointer(rebasing: memory[1..<2]), into: UnsafeMutableRawBufferPointer(rebasing: memory[2...])).byteCount, 1)
     }
 }

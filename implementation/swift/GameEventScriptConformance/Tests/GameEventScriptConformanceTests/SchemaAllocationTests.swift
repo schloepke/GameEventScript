@@ -53,6 +53,67 @@ final class SchemaAllocationTests: XCTestCase {
         #endif
     }
 
+    func testDeltasAllocateNothing() throws {
+        #if !canImport(Darwin)
+            throw XCTSkip("The allocation counter uses libmalloc.")
+        #else
+            guard ges_allocation_install(), ges_allocation_controls() else { throw XCTSkip("The allocation counter is not available.") }
+            let schema = try GesSchemaSet(
+                parsing: """
+                    schema :Part as {
+                      v: :Number integer between 0 and 3
+                      on: :Boolean
+                    }
+
+                    schema :S as {
+                      id: :Number integer between 0 and 255 key
+                      x: :Quantity(m) between 0m and 100m step 1cm delta within 1m
+                      name: :Text max 4 optional
+                      items: :List(:Text max 2) max 2
+                      part: :Part
+                      pick: :Boolean | :Part
+                    }
+                    """
+            ).schema("S").bind()
+
+            func sample(_ x: Int64, _ name: String) -> GesValue {
+                let part = GesValue.record(typeName: "Part", keys: ["v", "on"], values: [.integer(x), .boolean(x == 1)])
+                return GesValue.record(
+                    typeName: "S",
+                    keys: ["id", "x", "name", "items", "part", "pick"],
+                    values: [.integer(7), .float(Double(x) * 40, unit: .meter), .text(name), .list([.text("a"), .text(String(name.prefix(1)))]), part, part]
+                )
+            }
+
+            let first = try GesSchemaValues.encode(schema, sample(1, "ab"))
+            let second = try GesSchemaValues.encode(schema, sample(2, "aä"))
+            let delta = UnsafeMutableRawBufferPointer.allocate(byteCount: schema.maxByteCount, alignment: 8)
+            let record = UnsafeMutableRawBufferPointer.allocate(byteCount: schema.maxByteCount, alignment: 8)
+            defer {
+                delta.deallocate()
+                record.deallocate()
+            }
+            try first.withUnsafeBytes { baseline in
+                try second.withUnsafeBytes { current in
+                    func round() throws {
+                        let length = try GesSchemaDelta.encode(schema, record: current, baseline: baseline, into: delta)
+                        let decoded = try GesSchemaDelta.decode(schema, delta: UnsafeRawBufferPointer(rebasing: delta[0..<length]), baseline: baseline, into: record)
+                        if decoded.byteCount != current.count { throw Mismatch() }
+                    }
+
+                    try round()
+                    XCTAssertEqual(Array(record[0..<current.count]), second)
+                    XCTAssertTrue(ges_allocation_begin())
+                    for _ in 0..<1000 { try round() }
+                    let sample = ges_allocation_end()
+                    XCTAssertTrue(sample.valid)
+                    XCTAssertEqual(sample.allocations, 0)
+                    XCTAssertEqual(sample.bytes, 0)
+                }
+            }
+        #endif
+    }
+
     func testUnionsAndDiceAllocateNothing() throws {
         #if !canImport(Darwin)
             throw XCTSkip("The allocation counter uses libmalloc.")

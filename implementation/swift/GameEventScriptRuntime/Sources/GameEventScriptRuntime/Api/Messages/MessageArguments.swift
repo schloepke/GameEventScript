@@ -1,6 +1,8 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
+@_spi(Syntax) import GameEventScriptSyntax
+
 /// One immutable value and its normalized external message argument label.
 public struct GesMessageArgument: Hashable {
     /// The external label, or `_` for a positional argument.

@@ -1776,6 +1776,122 @@ binary:
 
 ---
 
+## Test: valid-parse-literal-strict
+
+This case checks the ParseLiteral binary contract. Canonical strict ParseLiteral sets only the Strict flag `0x40` in the unit/flag byte and writes `nothing` for unrecognized Text.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: valid-parse-literal-strict
+compile:
+  debugInfo: []
+binaryFixture:
+  id: gesb-v1-valid-parse-literal-strict
+  resourceId: gesb-v1.valid-parse-literal-strict
+  relativePath: GesbV1/valid-parse-literal-strict.gesb
+  sha256: B8D347079C0A95E256134A1B6E411F7FD9D51F9235CF12A8AF20CDB59AFFB2E6
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 0
+  derivation: "Canonical strict ParseLiteral with a separate input and output register."
+  compareCompiledRuntime: true
+```
+
+### Source code under test
+
+```ges
+module parsefixture
+on Start(value) { emit Done(value: parse strict value) }
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| recognized | Start | completion | |
+| unrecognized | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+binary:
+  outcome: valid
+  rewriteByteExact: true
+  rewriteSha256: B8D347079C0A95E256134A1B6E411F7FD9D51F9235CF12A8AF20CDB59AFFB2E6
+  moduleName: parsefixture
+  requiredRegisterCount: 2
+  requiredCallStackDepth: 0
+  opaqueSectionCount: 0
+steps:
+  recognized:
+    input:
+      args:
+        - name: value
+          value: { type: ":Text", value: "'standard'" }
+    local:
+      - name: Done
+        args:
+          - name: value
+            value: { type: ":Text", value: "standard" }
+  unrecognized:
+    input:
+      args:
+        - name: value
+          value: { type: ":Text", value: "standard" }
+    local:
+      - name: Done
+        args:
+          - name: value
+            value: { type: ":Nothing" }
+```
+
+---
+
+## Test: invalid-parse-strict-flags
+
+This case checks the ParseLiteral binary contract. Replace byte(s) at strict ParseLiteral instruction 1, operand offset 1, with 60, adding a reserved flag to Strict.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: invalid-parse-strict-flags
+compile:
+  debugInfo: []
+binaryFixture:
+  id: gesb-v1-invalid-parse-strict-flags
+  resourceId: gesb-v1.invalid-parse-strict-flags
+  relativePath: GesbV1/invalid-parse-strict-flags.gesb
+  sha256: 561E1EBBB3EA80705C749BE6CBC64AA476B1059EFDC509C155A3004FDADBB918
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 0
+  derivation: "Replace byte(s) at strict ParseLiteral instruction 1, operand offset 1, with 60."
+```
+
+### Source code under test
+
+```ges
+module parsefixture
+on Start(value) { emit Done(value: parse strict value) }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+binary:
+  outcome: validationError
+  errorCode: InvalidOperand
+  sectionType: 16
+  entryIndex: 1
+```
+
+---
+
 ## Test: invalid-reserved-opcode-e1
 
 This case checks the ParseLiteral binary contract. Replace byte(s) at ParseLiteral instruction 1, operand offset 0, with e1.
@@ -2927,4 +3043,550 @@ binary:
   errorCode: InvalidOperand
   sectionType: 16
   entryIndex: 3
+```
+
+---
+
+## Test: The message name Unit__ire is a semantic validation error
+
+A `_` in a message name joins two segments that each start uppercase.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: invalid-message-name-doubled-underscore
+compile:
+  debugInfo: []
+binaryFixture:
+  id: gesb-v1-invalid-message-name-doubled-underscore
+  resourceId: gesb-v1.invalid-message-name-doubled-underscore
+  relativePath: GesbV1/invalid-message-name-doubled-underscore.gesb
+  sha256: 6BADDAC29DE82529C87ACC90016036B92793458129DD9329E6473123B3A5B3B8
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 0
+  derivation: "replace the string constant Unit_Fire with Unit__ire"
+```
+
+### Source code under test
+
+```ges
+module binaryfixture
+
+record :Unit_Mount as {
+  slot: :Number
+}
+
+on Unit_Fire {
+  emit Done(value: :Unit_Mount(slot: 1))
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+binary:
+  outcome: validationError
+  errorCode: InvalidProgram
+  sectionType: 4
+  entryIndex: 0
+```
+
+---
+
+## Test: The message name Unit_1ire is a semantic validation error
+
+A `_` in a message name joins two segments that each start uppercase.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: invalid-message-name-digit-segment
+compile:
+  debugInfo: []
+binaryFixture:
+  id: gesb-v1-invalid-message-name-digit-segment
+  resourceId: gesb-v1.invalid-message-name-digit-segment
+  relativePath: GesbV1/invalid-message-name-digit-segment.gesb
+  sha256: AB2CD85E84ED051164310FA230F0744E6EAA0FBF2C9D861B135F8DA06C453517
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 0
+  derivation: "replace the string constant Unit_Fire with Unit_1ire"
+```
+
+### Source code under test
+
+```ges
+module binaryfixture
+
+record :Unit_Mount as {
+  slot: :Number
+}
+
+on Unit_Fire {
+  emit Done(value: :Unit_Mount(slot: 1))
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+binary:
+  outcome: validationError
+  errorCode: InvalidProgram
+  sectionType: 4
+  entryIndex: 0
+```
+
+---
+
+## Test: The message name Unit_fire is a semantic validation error
+
+A `_` in a message name joins two segments that each start uppercase.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: invalid-message-name-lowercase-segment
+compile:
+  debugInfo: []
+binaryFixture:
+  id: gesb-v1-invalid-message-name-lowercase-segment
+  resourceId: gesb-v1.invalid-message-name-lowercase-segment
+  relativePath: GesbV1/invalid-message-name-lowercase-segment.gesb
+  sha256: 593C0B06A77F58B7B76B3B384CA1162D87EEC89B632C582F2406099FD1234970
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 0
+  derivation: "replace the string constant Unit_Fire with Unit_fire"
+```
+
+### Source code under test
+
+```ges
+module binaryfixture
+
+record :Unit_Mount as {
+  slot: :Number
+}
+
+on Unit_Fire {
+  emit Done(value: :Unit_Mount(slot: 1))
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+binary:
+  outcome: validationError
+  errorCode: InvalidProgram
+  sectionType: 4
+  entryIndex: 0
+```
+
+---
+
+## Test: The message name Unit_Fir_ is a semantic validation error
+
+A `_` in a message name joins two segments that each start uppercase.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: invalid-message-name-trailing-underscore
+compile:
+  debugInfo: []
+binaryFixture:
+  id: gesb-v1-invalid-message-name-trailing-underscore
+  resourceId: gesb-v1.invalid-message-name-trailing-underscore
+  relativePath: GesbV1/invalid-message-name-trailing-underscore.gesb
+  sha256: F037502185838C9C1957AE1BA2F2E312FDC6183CE2DECC370A9F65CB96D3FD08
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 0
+  derivation: "replace the string constant Unit_Fire with Unit_Fir_"
+```
+
+### Source code under test
+
+```ges
+module binaryfixture
+
+record :Unit_Mount as {
+  slot: :Number
+}
+
+on Unit_Fire {
+  emit Done(value: :Unit_Mount(slot: 1))
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+binary:
+  outcome: validationError
+  errorCode: InvalidProgram
+  sectionType: 4
+  entryIndex: 0
+```
+
+---
+
+## Test: The type name Unit__ount is a semantic validation error
+
+A `_` in a type name joins two segments that each start uppercase.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: invalid-type-name-doubled-underscore
+compile:
+  debugInfo: []
+binaryFixture:
+  id: gesb-v1-invalid-type-name-doubled-underscore
+  resourceId: gesb-v1.invalid-type-name-doubled-underscore
+  relativePath: GesbV1/invalid-type-name-doubled-underscore.gesb
+  sha256: D5485B2C61954D4AD4AA6E1432A5C99419B417879559C641E294E70C88A3D711
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 0
+  derivation: "replace the string constant Unit_Mount with Unit__ount"
+```
+
+### Source code under test
+
+```ges
+module binaryfixture
+
+record :Unit_Mount as {
+  slot: :Number
+}
+
+on Unit_Fire {
+  emit Done(value: :Unit_Mount(slot: 1))
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+binary:
+  outcome: validationError
+  errorCode: InvalidProgram
+  sectionType: 4
+  entryIndex: 1
+```
+
+---
+
+## Test: The type name Unit_1ount is a semantic validation error
+
+A `_` in a type name joins two segments that each start uppercase.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: invalid-type-name-digit-segment
+compile:
+  debugInfo: []
+binaryFixture:
+  id: gesb-v1-invalid-type-name-digit-segment
+  resourceId: gesb-v1.invalid-type-name-digit-segment
+  relativePath: GesbV1/invalid-type-name-digit-segment.gesb
+  sha256: A64D4F96371BB27AC95C87EC681DF560B603605AE9EB73DA092E02EF1666F21E
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 0
+  derivation: "replace the string constant Unit_Mount with Unit_1ount"
+```
+
+### Source code under test
+
+```ges
+module binaryfixture
+
+record :Unit_Mount as {
+  slot: :Number
+}
+
+on Unit_Fire {
+  emit Done(value: :Unit_Mount(slot: 1))
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+binary:
+  outcome: validationError
+  errorCode: InvalidProgram
+  sectionType: 4
+  entryIndex: 1
+```
+
+---
+
+## Test: A CreateVector immediate above 3 is a semantic validation error
+
+`ImmediateX` is 0 for the positional form, 1 or 2 for labeled y or z, and 3 for labeled x.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: invalid-create-vector-immediate
+compile:
+  debugInfo: []
+binaryFixture:
+  id: gesb-v1-invalid-create-vector-immediate
+  resourceId: gesb-v1.invalid-create-vector-immediate
+  relativePath: GesbV1/invalid-create-vector-immediate.gesb
+  sha256: 493FBC1612B6FBABE5BFC8F871F52FA312C4851ADADC0E49D1DCD2E3B72AD0A0
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 0
+  derivation: "set ImmediateX of instruction 3 from 0 to 4"
+```
+
+### Source code under test
+
+```ges
+module binaryfixture
+
+on Start(value) {
+  emit Done(value: :Vector(value, 2))
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+binary:
+  outcome: validationError
+  errorCode: InvalidOperand
+  sectionType: 16
+  entryIndex: 3
+```
+
+---
+
+## Test: ConstructData with a spatial type is a semantic validation error
+
+Vectors and Points have their own opcodes, so `ConstructData` does not build them.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: invalid-construct-data-spatial
+compile:
+  debugInfo: []
+binaryFixture:
+  id: gesb-v1-invalid-construct-data-spatial
+  resourceId: gesb-v1.invalid-construct-data-spatial
+  relativePath: GesbV1/invalid-construct-data-spatial.gesb
+  sha256: 4404BAF5FEE9BE9C022FD5783DAE77A37D33BA4FBF341825BDE7418D27FD0393
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 0
+  derivation: "replace the string constant range with point"
+```
+
+### Source code under test
+
+```ges
+module binaryfixture
+
+on Start(value) {
+  emit Done(value: :Range(value, 2))
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+binary:
+  outcome: validationError
+  errorCode: InvalidOperand
+  sectionType: 16
+  entryIndex: 2
+```
+
+---
+
+## Test: Canonical spatial program keeps every start form
+
+This canonical fixture pins the `ImmediateX` values of positional and labeled spatial forms, and it must read, rewrite and run like a fresh compilation.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: valid-spatial-start-forms
+compile:
+  debugInfo: []
+binaryFixture:
+  id: gesb-v1-valid-spatial-start-forms
+  resourceId: gesb-v1.valid-spatial-start-forms
+  relativePath: GesbV1/valid-spatial-start-forms.gesb
+  sha256: E7D440C687B762465D0650E6C9BCAE3288FC2332DEF8D8DF42A42B7A03A29501
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 0
+  compareCompiledRuntime: true
+```
+
+### Source code under test
+
+```ges
+module binaryfixture
+
+on Start(value) {
+  emit Done(a: :Vector(value, 2), b: :Vector(x: value, y: 2), c: :Point(y: value), d: :Point(z: value))
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| execute | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+binary:
+  outcome: valid
+  rewriteByteExact: true
+  rewriteSha256: E7D440C687B762465D0650E6C9BCAE3288FC2332DEF8D8DF42A42B7A03A29501
+  moduleName: binaryfixture
+  requiredRegisterCount: 7
+  requiredCallStackDepth: 0
+  opaqueSectionCount: 0
+steps:
+  execute:
+    input:
+      args:
+        - name: value
+          value: { type: ":Number.int64", value: "1" }
+    local:
+      - name: Done
+        args:
+          - name: a
+            value: { type: ":Vector", x: "1", y: "2", z: "0" }
+          - name: b
+            value: { type: ":Vector", x: "1", y: "2", z: "0" }
+          - name: c
+            value: { type: ":Point", x: "0", y: "1", z: "0" }
+          - name: d
+            value: { type: ":Point", x: "0", y: "0", z: "1" }
+```
+
+---
+
+## Test: An outbound binding cannot name a system endpoint
+
+Only handler entries may name a system endpoint, so a Program cannot send one.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: invalid-outbound-endpoint
+compile:
+  debugInfo: []
+binaryFixture:
+  id: gesb-v1-invalid-outbound-endpoint
+  resourceId: gesb-v1.invalid-outbound-endpoint
+  relativePath: GesbV1/invalid-outbound-endpoint.gesb
+  sha256: BF23115488D297B2C40096F51A7D1712477351F58E979A50A7DC3873DB04D8A1
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 42
+  derivation: "compile with ProgramVersion 42 and replace the string constant Undeliverable with undeliverable"
+```
+
+### Source code under test
+
+```ges
+module binaryfixture
+
+on Start {
+  emit Undeliverable()
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+binary:
+  outcome: validationError
+  errorCode: InvalidProgram
+  sectionType: 4
+  entryIndex: 1
+```
+
+
+---
+
+## Test: A message shape cannot name a system endpoint
+
+Only handler entries may name a system endpoint, so a Program cannot build a Message with that name.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: invalid-shape-endpoint
+compile:
+  debugInfo: []
+binaryFixture:
+  id: gesb-v1-invalid-shape-endpoint
+  resourceId: gesb-v1.invalid-shape-endpoint
+  relativePath: GesbV1/invalid-shape-endpoint.gesb
+  sha256: 7D9E516FD2D69A061D8238702046A04F7494354D58B183B6E50F3A4DBEAB46D5
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 42
+  derivation: "compile with ProgramVersion 42 and replace the string constant Undeliverable with undeliverable"
+```
+
+### Source code under test
+
+```ges
+module binaryfixture
+
+on Start {
+  emit Done(value: :Message(Undeliverable()))
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+binary:
+  outcome: validationError
+  errorCode: InvalidOperand
+  sectionType: 16
+  entryIndex: 1
 ```

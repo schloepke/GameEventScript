@@ -1,6 +1,8 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
+@_spi(Syntax) import GameEventScriptSyntax
+
 /// Invalid, unsupported or over-limit portable message/value JSON.
 public struct GesMessageFormatError: Error, Equatable {
     /// Stable language-neutral message.* failure code.
@@ -20,8 +22,8 @@ extension GameEventScriptMessage {
         self = try GesMessageJsonCodec().decodeMessage(GesMessageJsonCodec.envelope(GesJson.read(json), "message"), 0)
     }
 
-    /// Serializes the complete message graph as a canonical V1 envelope. Throws for unsupported or over-limit data and
-    /// failed external getters.
+    /// Serializes the complete message graph as a canonical V1 envelope. Throws for unsupported or over-limit data, and
+    /// `GesFatalRuntimeError` for a failed external getter.
     public func json() throws -> String {
         try GesJson.write(GesJson.object([("version", .integer(1)), ("message", try GesMessageJsonCodec().encodeMessage(self, 0))]))
     }
@@ -34,7 +36,8 @@ extension GesValue {
         self = try GesMessageJsonCodec().decode(GesMessageJsonCodec.envelope(GesJson.read(json), "value"), 0)
     }
 
-    /// Serializes a value envelope, exporting external objects as Records. Throws for unsupported or over-limit data.
+    /// Serializes a value envelope, exporting external objects as Records. Throws for unsupported or over-limit data, and
+    /// `GesFatalRuntimeError` for a failed external getter.
     public func json() throws -> String {
         try GesJson.write(GesJson.object([("version", .integer(1)), ("value", try GesMessageJsonCodec().encode(self, 0))]))
     }
@@ -77,7 +80,7 @@ private final class GesMessageJsonCodec {
 
     static func messageName(_ value: GesValue) throws -> String {
         let name = try string(value)
-        guard GesNames.message(name) || name == "initialization" || name == "undeliverable" else { throw GesJson.error() }
+        guard GesNames.type(name) else { throw GesJson.error() }
         return name
     }
 

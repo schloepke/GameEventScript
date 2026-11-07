@@ -38,7 +38,7 @@ extension GesValue {
     }
 
     func member<Output: GesValueOutput>(_ key: String, sink: Output) throws -> Output.Result {
-        if kind == .external { return try sink.copy(externalField(key) ?? .nothing) }
+        if kind == .external { return try sink.copy(readField(key) ?? .nothing) }
         if let map = asMap { return sink.copy(map.get(key) ?? .nothing) }
         if spatialValue != nil {
             switch key {

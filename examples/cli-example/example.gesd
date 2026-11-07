@@ -1,0 +1,19 @@
+// Copyright 2026 Stephan Schlöpke
+// SPDX-License-Identifier: Apache-2.0
+:Schema(:DriveUnit)
+// Engine and gearbox of a light tracked drone.
+id: 'drive.tracked.basic'
+kind: #drive
+tier: 1
+name: 'Basic Track Drive'
+cost: [buildCost: 80, weight: 550kg, slotSize: 1]
+heatModel: [
+  heatCapacity: 100
+  passiveCoolingPerSecond: 2   // per second
+  shutdownHeat: 90
+  criticalHeat: 100
+]
+maxSpeed: 10m/s
+maxForce: 21.4kN
+efficiency: 90%
+mount: :Vector(x: 0m, y: -0.8m)

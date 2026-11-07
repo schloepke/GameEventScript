@@ -1669,3 +1669,674 @@ error:
   phase: parse
   code: parse.syntax
 ```
+
+---
+
+## Test: parse strict requires an operand
+
+This negative compiler case verifies that `strict` directly after `parse` is always the mode word, so a variable named `strict` cannot be the bare operand of `parse`.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: parse-strict-without-operand
+kind: compileError
+level: scenario
+sources:
+  - name: "parse strict requires an operand.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start(strict) {
+  emit Done(value: parse strict)
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "parse"
+  code: "parse.syntax"
+```
+
+---
+
+## Test: keyword message argument label is rejected
+
+This negative compiler case verifies that a reserved keyword such as `empty` cannot be a message argument label.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: keyword-message-argument-label
+kind: compileError
+level: scenario
+sources:
+  - name: "keyword message argument label is rejected.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start {
+  emit Done(empty: 1)
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "parse"
+  code: "parse.syntax"
+```
+
+---
+
+## Test: keyword call argument label is rejected
+
+This negative compiler case verifies that a reserved keyword such as `record` cannot be a call argument label.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: keyword-call-argument-label
+kind: compileError
+level: scenario
+sources:
+  - name: "keyword call argument label is rejected.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+function pick(_ value) be value
+
+on Start {
+  emit Done(value: pick(record: 1))
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "parse"
+  code: "parse.syntax"
+```
+
+---
+
+## Test: keyword later argument label is rejected
+
+This negative compiler case verifies that a reserved keyword cannot be a later argument label after an accepted one.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: keyword-later-argument-label
+kind: compileError
+level: scenario
+sources:
+  - name: "keyword later argument label is rejected.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start {
+  emit Done(value: 1, if: 2)
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "parse"
+  code: "parse.syntax"
+```
+
+---
+
+## Test: keyword message value label is rejected
+
+This negative compiler case verifies that a reserved keyword cannot label an argument of a Message value expression.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: keyword-message-literal-label
+kind: compileError
+level: scenario
+sources:
+  - name: "keyword message value label is rejected.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start {
+  let message be Done(empty: 1)
+  emit Sent(value: message)
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "parse"
+  code: "parse.syntax"
+```
+
+---
+
+## Test: keyword map literal key is rejected
+
+This negative compiler case verifies that a map literal key is a plain name: even `to`, which is accepted as an argument label, cannot start a map entry.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: keyword-map-literal-key
+kind: compileError
+level: scenario
+sources:
+  - name: "keyword map literal key is rejected.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start {
+  emit Done(value: [to: 1])
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "parse"
+  code: "parse.syntax"
+```
+
+---
+
+## Test: keyword extension function name is rejected
+
+This negative compiler case verifies that a reserved keyword such as `empty` cannot be an extension function name; `:ns.empty(1)` does not start an extension call.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: keyword-extension-function-name
+kind: compileError
+level: scenario
+sources:
+  - name: "keyword extension function name is rejected.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start {
+  emit Done(value: :ns.empty(1))
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "parse"
+  code: "parse.syntax"
+```
+
+---
+
+## Test: keyword extension predicate name is rejected
+
+This negative compiler case verifies that a reserved keyword cannot name an extension predicate after `is`.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: keyword-extension-predicate-name
+kind: compileError
+level: scenario
+sources:
+  - name: "keyword extension predicate name is rejected.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+predicate ready(value) be value is :ns.empty
+
+on Start {
+  emit Done(value: 1)
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "parse"
+  code: "parse.syntax"
+```
+
+---
+
+## Test: vertical tab is not whitespace
+
+This negative compiler case checks that a vertical tab (U+000B) is not source whitespace: only space, tab and the line breaks LF, CRLF and CR separate tokens.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: vertical-tab-is-not-whitespace
+kind: compileError
+level: atomic
+sources:
+  - name: "vertical-tab-is-not-whitespace.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start {
+  emit Done(value: 1)
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "parse"
+  code: "parse.syntax"
+```
+
+---
+
+## Test: form feed is not whitespace
+
+This negative compiler case checks that a form feed (U+000C) is not source whitespace: only space, tab and the line breaks LF, CRLF and CR separate tokens.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: form-feed-is-not-whitespace
+kind: compileError
+level: atomic
+sources:
+  - name: "form-feed-is-not-whitespace.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start {
+  emit Done(value: 1)
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "parse"
+  code: "parse.syntax"
+```
+
+---
+
+## Test: a type segment that starts with a digit
+
+A `_` in a type or message name joins two segments that each start uppercase.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: underscore-name-1
+kind: compileError
+level: atomic
+sources:
+  - name: "a type segment that starts with a digit.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start {
+  let a be 1 is :Unit_1
+  emit Done(a: a)
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "parse"
+  code: "parse.syntax"
+```
+
+---
+
+## Test: a type segment that starts lowercase
+
+A `_` in a type or message name joins two segments that each start uppercase.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: underscore-name-2
+kind: compileError
+level: atomic
+sources:
+  - name: "a type segment that starts lowercase.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+record :Unit_weapon as {
+  value: :Number
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "parse"
+  code: "parse.syntax"
+```
+
+---
+
+## Test: a doubled underscore in a type name
+
+A `_` in a type or message name joins two segments that each start uppercase.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: underscore-name-3
+kind: compileError
+level: atomic
+sources:
+  - name: "a doubled underscore in a type name.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+record :Unit__Weapon as {
+  value: :Number
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "parse"
+  code: "parse.syntax"
+```
+
+---
+
+## Test: a trailing underscore in a type name
+
+A `_` in a type or message name joins two segments that each start uppercase.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: underscore-name-4
+kind: compileError
+level: atomic
+sources:
+  - name: "a trailing underscore in a type name.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+record :Unit_ as {
+  value: :Number
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "parse"
+  code: "parse.syntax"
+```
+
+---
+
+## Test: a message segment that starts with a digit
+
+A `_` in a type or message name joins two segments that each start uppercase.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: underscore-name-5
+kind: compileError
+level: atomic
+sources:
+  - name: "a message segment that starts with a digit.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Unit_1 {
+  emit Done
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "parse"
+  code: "parse.syntax"
+```
+
+---
+
+## Test: a message segment that starts lowercase
+
+A `_` in a type or message name joins two segments that each start uppercase.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: underscore-name-6
+kind: compileError
+level: atomic
+sources:
+  - name: "a message segment that starts lowercase.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Unit_fire {
+  emit Done
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "parse"
+  code: "parse.syntax"
+```
+
+---
+
+## Test: a doubled underscore in a message name
+
+A `_` in a type or message name joins two segments that each start uppercase.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: underscore-name-7
+kind: compileError
+level: atomic
+sources:
+  - name: "a doubled underscore in a message name.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Unit__Fire {
+  emit Done
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "parse"
+  code: "parse.syntax"
+```
+
+---
+
+## Test: a trailing underscore in a message name
+
+A `_` in a type or message name joins two segments that each start uppercase.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: underscore-name-8
+kind: compileError
+level: atomic
+sources:
+  - name: "a trailing underscore in a message name.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start {
+  emit Unit_
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "parse"
+  code: "parse.syntax"
+```
+
+---
+
+## Test: a leading underscore in a message name
+
+A `_` in a type or message name joins two segments that each start uppercase.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: underscore-name-9
+kind: compileError
+level: atomic
+sources:
+  - name: "a leading underscore in a message name.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on _Unit {
+  emit Done
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "parse"
+  code: "parse.syntax"
+```

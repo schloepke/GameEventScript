@@ -552,8 +552,9 @@ steps:
               unit: ":meter"
           - name: "meter"
             value:
-              type: ":Number.binary64"
-              value: "NaN"
+              type: ":Quantity.int64"
+              value: "100"
+              unit: ":squareMeter"
           - name: "boolean"
             value:
               type: ":Quantity.int64"

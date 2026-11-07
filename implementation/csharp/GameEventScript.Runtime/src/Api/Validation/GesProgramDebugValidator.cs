@@ -7,6 +7,7 @@ using System.Security.Cryptography;
 using System.Text;
 using GameEventScript.Runtime;
 using GameEventScript.Runtime.Vm;
+using GameEventScript.Syntax;
 using static GameEventScript.Api.GesBinaryBindKind;
 
 namespace GameEventScript.Api;

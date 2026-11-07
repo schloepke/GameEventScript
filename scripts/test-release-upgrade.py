@@ -18,7 +18,13 @@ ROOT = Path(__file__).resolve().parents[1]
 BASELINE = '0.3.0'
 BASELINE_COMMIT = '4ed9d44ded085ddccebff943365fb924bd0a3ce5'
 CANDIDATE = '0.4.0-upgrade-test'
-MODULES = ('Runtime', 'Compiler', 'SwiftBridge', 'SyntaxHighlighter')
+# The optional highlighter package became the Syntax package after the baseline release.
+MODULES = {BASELINE: ('Runtime', 'Compiler', 'SwiftBridge', 'SyntaxHighlighter')}
+CANDIDATE_MODULES = ('Runtime', 'Compiler', 'SwiftBridge', 'Syntax')
+
+
+def modules(version):
+    return MODULES.get(version, CANDIDATE_MODULES)
 
 
 def run(args, cwd, log, timeout=1800):
@@ -103,7 +109,7 @@ def csharp(workspace, candidate):
             versions = {key.split('/')[0]: key.split('/')[1] for key in assets['libraries']}
             names = ['GameEventScript.Runtime', 'GameEventScript.CSharpBridge']
             if name == 'PackageConsumer':
-                names += ['GameEventScript.Compiler', 'GameEventScript.SyntaxHighlighter']
+                names += ['GameEventScript.Compiler', 'GameEventScript.' + modules(version)[3]]
             require_versions(versions, version, names)
             fixture = baseline if version == BASELINE else workspace / 'candidate.gesb'
             if name == 'RuntimeConsumer':
@@ -143,8 +149,8 @@ def swift(workspace, candidate):
             sources = directory / 'Sources' / name
             sources.mkdir(parents=True, exist_ok=True)
             (sources / 'main.swift').write_bytes(consumer_source(revision, 'swift', name))
-            modules = MODULES if name == 'SwiftPMConsumer' else ('Runtime',)
-            products = ', '.join(f'.product(name: "GameEventScript{module}", package: "GameEventScript")' for module in modules)
+            products = ', '.join(f'.product(name: "GameEventScript{module}", package: "GameEventScript")'
+                                 for module in (modules(version) if name == 'SwiftPMConsumer' else ('Runtime',)))
             (directory / 'Package.swift').write_text(f'''// swift-tools-version: 6.0
 import PackageDescription
 let package = Package(name: "{name}", platforms: [.macOS("10.15.4")],

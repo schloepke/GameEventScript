@@ -14,6 +14,7 @@ ROOT = Path(__file__).resolve().parent.parent
 OUTPUT = ROOT / "artifacts/website/examples"
 CHECK = object()
 FRAGMENTS = object()
+SCHEMA_OUTPUT = "4 bytes: target 7, damage 25, critical True"
 
 
 def blocks(name, language):
@@ -58,7 +59,7 @@ def csharp():
     run(["dotnet", "build", str(tool), "--configuration", "Release", "--nologo"])
     # A string is the expected Main output. CHECK compiles definitions without Main.
     # FRAGMENTS evaluates each `expression // result` line against its comment.
-    expectations = ["Damage: 42", "42\n42", "Damage: 120", "Hello, player", "No player supplied",
+    expectations = ["Damage: 42", "42\n42", "Damage: 120", "Hello, player", "Energy: 100000W", "No player supplied",
                     "[20, 60, 40]\nTotal: 60", "160, 60", CHECK, "clubs 7\nclubs A\nhearts 7\nhearts A", CHECK,
                     "Ready", FRAGMENTS]
     examples = blocks("Language.md", "ges")
@@ -79,7 +80,16 @@ def csharp():
         actual = run(ges + ["run", str(source), "--quiet"])
         if actual != expected:
             raise RuntimeError(f"Language example {index + 1}: expected {expected!r}, got {actual!r}")
-    print(f"C# embedding, bridge annotations and {len(examples)} language examples passed.")
+    schema_example = blocks("Schemas.md", "csharp")[0]
+    (directory / "Program.cs").write_text(schema_example)
+    run(["dotnet", "build", str(directory / "GuideExample.csproj"), "--configuration", "Release", "--nologo"])
+    if run(["dotnet", str(directory / "bin/Release/net8.0/GuideExample.dll")]) != SCHEMA_OUTPUT:
+        raise RuntimeError("C# schema guide did not produce the documented output.")
+    for index, example in enumerate(blocks("Schemas.md", "gess")):
+        source = OUTPUT / f"schema-{index + 1}.gess"
+        source.write_text(example)
+        run(ges + ["schema", "check", str(source)])
+    print(f"C# embedding, bridge annotations, {len(examples)} language examples and the schema guide passed.")
 
 
 def swift():
@@ -99,7 +109,12 @@ def swift():
          "--disable-build-manifest-caching", "--configuration", "release"])
     if run([str(scratch / "release/GesExample")]) != "42":
         raise RuntimeError("Swift guide did not print 42.")
-    print("Swift embedding and annotation examples passed.")
+    (source / "main.swift").write_text(blocks("Schemas.md", "swift")[0])
+    run(["swift", "build", "--package-path", str(directory), "--scratch-path", str(scratch),
+         "--disable-build-manifest-caching", "--configuration", "release"])
+    if run([str(scratch / "release/GesExample")]) != SCHEMA_OUTPUT.replace("True", "true"):
+        raise RuntimeError("Swift schema guide did not produce the documented output.")
+    print("Swift embedding, annotation and schema guide examples passed.")
 
 
 if __name__ == "__main__":

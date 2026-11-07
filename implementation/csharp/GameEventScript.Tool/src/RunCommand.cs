@@ -57,6 +57,7 @@ Event console:
   :handler              List registered script and native handlers.
   :dump <module|ID>     Show a loaded program as GESA. Use :help dump for details.
   :source <module|ID>   Show current draft or embedded sources. --color highlights source and dumps.
+  :show <file>          Show a .ges, .gesa, .gesd or .gess file and mark its errors, without loading it.
   :quit                 End the session (or use EOF).
 
 ConsoleOut(...) writes to stdout; ConsoleErr(...) writes to stderr.
@@ -254,7 +255,7 @@ external types are registered. Runtime errors/limits exit with 1; usage errors w
         }
         catch (GesDynamicLinkException exception)
         {
-            RunObserver.WriteDiagnostic(exception.Diagnostic, "link");
+            foreach (var diagnostic in exception.Diagnostics) RunObserver.WriteDiagnostic(diagnostic, "link");
             return 1;
         }
         catch (DecoderFallbackException exception)

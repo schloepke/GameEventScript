@@ -37,7 +37,7 @@ def validate(language, expected):
         f'reference/api/{symbol}.html' for symbol in [
             'GameEventScript.Api.GameEventScriptHost', 'GameEventScript.Api.GesProgramBuilder',
             'GameEventScript.CSharpBridge.GesBridgeHostRunner',
-            'GameEventScript.SyntaxHighlighter.GesSyntaxHighlighter']]] if language == 'csharp' else [
+            'GameEventScript.Syntax.GesSyntaxHighlighter']]] if language == 'csharp' else [
         f'{module.lower()}/documentation/{module.lower()}/index.html' for module in build.SWIFT] + SWIFT_EXTENSION_PAGES
     for relative in required:
         if not (source / relative).is_file():

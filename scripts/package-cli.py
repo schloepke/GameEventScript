@@ -51,7 +51,7 @@ def csharp(work, output, release, target):
 def swift(work, output, release, target, sdks):
     # Inject version only in a disposable source tree. Never rewrite the checkout
     # or mix generated production-version constants with development builds.
-    for name in ("GameEventScriptRuntime", "GameEventScriptCompiler", "GameEventScriptSyntaxHighlighter", "GameEventScriptTool"):
+    for name in ("GameEventScriptRuntime", "GameEventScriptCompiler", "GameEventScriptSyntax", "GameEventScriptTool"):
         relative = Path("implementation/swift") / name
         shutil.copytree(ROOT / relative, work / "source" / relative,
                         ignore=shutil.ignore_patterns(".build", ".swiftpm", ".DS_Store", "Package.resolved"))

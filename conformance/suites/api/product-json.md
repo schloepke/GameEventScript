@@ -1388,3 +1388,155 @@ gesBlock: expect
 message:
   error: "message.invalidValue"
 ```
+
+---
+
+## Test: underscore-names
+
+This case verifies that message and Record type names with underscores round-trip.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: "underscore-names"
+messageApi:
+  signature:
+    name: "Unit_Fire"
+    parameters:
+      - "value"
+  message:
+    name: "Unit_Fire"
+    args: []
+  json: "{\"message\":{\"args\":[{\"name\":\"value\",\"value\":{\"entries\":[{\"key\":\"amount\",\"value\":{\"type\":\"Number\",\"unit\":\"\",\"value\":\"100\"}}],\"name\":\"Unit_Weapon\",\"type\":\"Record\"}}],\"name\":\"Unit_Fire\",\"tags\":[]},\"version\":1}"
+  roundTripJson: true
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+message:
+  json: "{\"message\":{\"args\":[{\"name\":\"value\",\"value\":{\"entries\":[{\"key\":\"amount\",\"value\":{\"type\":\"Number\",\"unit\":\"\",\"value\":\"100\"}}],\"name\":\"Unit_Weapon\",\"type\":\"Record\"}}],\"name\":\"Unit_Fire\",\"tags\":[]},\"version\":1}"
+  messageSignatureId: "Unit_Fire(value)"
+```
+
+---
+
+## Test: invalid-underscore-record-name-1
+
+This case verifies that a Record type name follows the segment rule in JSON.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: "invalid-underscore-record-name-1"
+messageApi:
+  signature:
+    name: "Done"
+    parameters:
+      - "value"
+  message:
+    name: "Done"
+    args: []
+  json: "{\"message\":{\"args\":[{\"name\":\"value\",\"value\":{\"entries\":[{\"key\":\"amount\",\"value\":{\"type\":\"Number\",\"unit\":\"\",\"value\":\"100\"}}],\"name\":\"Unit__Weapon\",\"type\":\"Record\"}}],\"name\":\"Done\",\"tags\":[]},\"version\":1}"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+message:
+  error: "message.invalidValue"
+```
+
+---
+
+## Test: invalid-underscore-record-name-2
+
+This case verifies that a Record type name follows the segment rule in JSON.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: "invalid-underscore-record-name-2"
+messageApi:
+  signature:
+    name: "Done"
+    parameters:
+      - "value"
+  message:
+    name: "Done"
+    args: []
+  json: "{\"message\":{\"args\":[{\"name\":\"value\",\"value\":{\"entries\":[{\"key\":\"amount\",\"value\":{\"type\":\"Number\",\"unit\":\"\",\"value\":\"100\"}}],\"name\":\"Unit_1\",\"type\":\"Record\"}}],\"name\":\"Done\",\"tags\":[]},\"version\":1}"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+message:
+  error: "message.invalidValue"
+```
+
+---
+
+## Test: invalid-underscore-message-name
+
+This case verifies that a message name follows the segment rule in JSON.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: "invalid-underscore-message-name"
+messageApi:
+  signature:
+    name: "Done"
+    parameters: []
+  message:
+    name: "Done"
+    args: []
+  json: "{\"message\":{\"args\":[],\"name\":\"Unit__Fire\",\"tags\":[]},\"version\":1}"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+message:
+  error: "message.invalidValue"
+```
+
+---
+
+## Test: system endpoint names are invalid
+
+Only the host uses the system endpoints, so a JSON message cannot name one.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: "system-endpoint-name"
+kind: messageApi
+level: atomic
+messageApi:
+  signature:
+    name: "Done"
+    parameters: []
+  message:
+    name: "Done"
+    args: []
+  json: "{\"message\":{\"args\":[],\"name\":\"undeliverable\",\"tags\":[]},\"version\":1}"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+message:
+  error: "message.invalidValue"
+```

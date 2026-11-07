@@ -107,7 +107,7 @@ enum GesJson {
                 var entries: [GesMapEntry] = []
                 var names = Set<GesValue>()
                 space()
-                if take(125) { return .map([]) }
+                if take(125) { return .map([] as [GesMapEntry]) }
                 repeat {
                     space()
                     let name = try string()

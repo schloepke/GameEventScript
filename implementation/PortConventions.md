@@ -34,7 +34,7 @@ primary concepts: every port works with the same edge types and roles.
   mark user types and are not Bridge objects.
 - Abbreviations are written as words: `Ges`, `Vm`, `Api`; never `GES`, `VM`, `API`.
 - No type may share its name with a Swift module (for example
-  `GameEventScriptCompiler`, `GameEventScriptSyntaxHighlighter`); such a type
+  `GameEventScriptCompiler`, `GameEventScriptSyntax`); such a type
   breaks module qualification.
 
 ## Identical names, idiomatic spelling
@@ -46,6 +46,7 @@ class files append an aspect (`GesBinaryBuilderOpcodes.cs`). Swift file names ar
 | Concept | C# | Swift | Later Java/Kotlin |
 |---|---|---|---|
 | Error type | `GesXException` | `GesXError` | `GesXException` |
+| Common base of error types | abstract class | protocol | abstract class or interface |
 | Platform argument/state errors | BCL `ArgumentException`, `InvalidOperationException` | `GesApiError` | platform exceptions |
 | Interface | `IGesX` | `GesX` (protocol) | `GesX` |
 | Direct creation of data types | constructor or `Create(...)` | throwing or plain `init` | constructor |
@@ -57,6 +58,9 @@ class files append an aspect (`GesBinaryBuilderOpcodes.cs`). Swift file names ar
 | Immutable list exposure | `GesReadOnlyArray<T>` / read-only spans | `[T]` | read-only list |
 | Cross-package internals | `internal` + `InternalsVisibleTo` | `@_spi(Compiler)` / `@_spi(Bridge)` public | module-internal |
 | Type-erased wrapper | object or interface | `GesAnyX` | interface |
+| Map/Record from entries | `GesMap(params (string, GesValue)[])` | `.map([(String, GesValue)])` | pair or entry class |
+| Member lookup | `value["name"]` | `value["name"]` | — |
+| Map traversal | `IEnumerable<KeyValuePair<string, GesValue>>` | `Sequence` | — |
 
 An error type may be absent from a port that cannot produce that error.
 
@@ -73,6 +77,14 @@ the static import, so they omit the redundant prefix.
 - `GameEventScriptMessage` uses the idiomatic constructor/initializer and JSON
   members (C# `GameEventScriptMessage.FromJson(...)`/`message.ToJson()`, Swift
   `GameEventScriptMessage(json:)`/`message.json()`).
+- Value literal parsing follows the same pattern: C# `GesValue.ParseLiteral(...)`
+  and `GesValue.ParseLiteralStrict(...)`, Swift `GesValue(literal:)` and the
+  failable `GesValue(strictLiteral:)`.
+- GES documents read and print the same way: C# `GesDocument.Parse(...)`,
+  `document.Print(...)` and `value.Format(...)`, Swift `GesDocument(parsing:)`,
+  `document.text(format:)` and `value.formatted(_:)`. Swift additionally offers
+  the `GesDocumentSchema.type(_:)`/`.file(_:)` factories for the C# constructor
+  `new GesDocumentSchema(kind, name)`.
 - Builders are directly creatable. A builder accessor on the target type is only
   a convenience.
 - `GameEventScriptProgram.CreateBuilder()` is a C# 14 static extension member in
@@ -87,8 +99,9 @@ the static import, so they omit the redundant prefix.
 - Message arguments, signatures, options and limits use the idiomatic
   constructor/initializer.
 - No central value factory and no `Host.createMessage`: factories stay on their
-  type, and platform conveniences (C# tuples, Swift literals) belong in the
-  Bridge or in idiomatic Swift literal conformances.
+  type. Spellings that only use language features (tuples, literals, collection
+  protocols) may live in the Core; conveniences that need platform services belong
+  in the Bridge.
 
 ## Layers
 
@@ -98,8 +111,10 @@ the static import, so they omit the redundant prefix.
 - Bridge adapts the Core to the platform (threads, locks, dispatchers,
   Reflection versus KeyPath/macros, delegates versus closures). The same role
   has the same name; platform-only types are allowed.
-- SyntaxHighlighter is a separate module with the entry type
-  `GesSyntaxHighlighter`.
+- Syntax is the base module below Runtime. It owns the lexical rules, such as
+  the quantity unit table, and the highlighter entry type `GesSyntaxHighlighter`.
+  C# reaches its internals through `InternalsVisibleTo`, Swift through
+  `@_spi(Syntax)`.
 
 ## Tools and adapters
 

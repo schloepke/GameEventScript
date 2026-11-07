@@ -769,7 +769,8 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, GesExpressionN
 
         if (left.Kind == GesBytecodeTypeKind.Percentage && right.Kind == GesBytecodeTypeKind.Percentage) return GesValue.GesPercentage(leftNumber + rightNumber);
 
-        if (right.Kind == GesBytecodeTypeKind.Percentage && left.Unit.IsNumericUnit()) return CreateNumber(leftNumber + leftNumber * rightNumber, left.Unit, false);
+        // A decibel level takes no percentage; the VM produces the invalid result.
+        if (right.Kind == GesBytecodeTypeKind.Percentage && left.Unit.IsNumericUnit() && left.Unit.AcceptsPercentage()) return CreateNumber(leftNumber + leftNumber * rightNumber, left.Unit, false);
 
         return null;
     }
@@ -794,7 +795,7 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, GesExpressionN
 
         if (left.Kind == GesBytecodeTypeKind.Percentage && right.Kind == GesBytecodeTypeKind.Percentage) return GesValue.GesPercentage(leftNumber - rightNumber);
 
-        if (right.Kind == GesBytecodeTypeKind.Percentage && left.Unit.IsNumericUnit()) return CreateNumber(leftNumber - leftNumber * rightNumber, left.Unit, false);
+        if (right.Kind == GesBytecodeTypeKind.Percentage && left.Unit.IsNumericUnit() && left.Unit.AcceptsPercentage()) return CreateNumber(leftNumber - leftNumber * rightNumber, left.Unit, false);
 
         return null;
     }
@@ -812,9 +813,9 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, GesExpressionN
 
         if (left.Kind == GesBytecodeTypeKind.Percentage && right.Kind == GesBytecodeTypeKind.Percentage) return GesValue.GesPercentage(leftNumber * rightNumber);
 
-        if (left.Kind == GesBytecodeTypeKind.Percentage) return CreateNumber(leftNumber * rightNumber, right.Unit, false);
+        if (left.Kind == GesBytecodeTypeKind.Percentage) return right.Unit.AcceptsPercentage() ? CreateNumber(leftNumber * rightNumber, right.Unit, false) : null;
 
-        if (right.Kind == GesBytecodeTypeKind.Percentage) return CreateNumber(leftNumber * rightNumber, left.Unit, false);
+        if (right.Kind == GesBytecodeTypeKind.Percentage) return left.Unit.AcceptsPercentage() ? CreateNumber(leftNumber * rightNumber, left.Unit, false) : null;
 
         if (ProductUnit(left.Unit, right.Unit) is { } unit) return CreateNumber(leftNumber * rightNumber, unit, false);
 

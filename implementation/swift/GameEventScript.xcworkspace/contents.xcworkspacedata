@@ -12,7 +12,7 @@
    </FileRef>
    <FileRef location="group:GameEventScriptTool">
    </FileRef>
-   <FileRef location="group:GameEventScriptSyntaxHighlighter">
+   <FileRef location="group:GameEventScriptSyntax">
    </FileRef>
    <FileRef location="group:README.md">
    </FileRef>

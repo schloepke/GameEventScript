@@ -22,7 +22,7 @@ def identity():
     for directory in ['examples/card-game', 'tools/distribution/licenses']:
         files += [p for p in (ROOT / directory).rglob('*') if p.is_file()
                   and not is_metadata(p) and not any(x in p.parts for x in ['__pycache__', '.build', '.swiftpm'])]
-    for module in ['GameEventScriptRuntime', 'GameEventScriptCompiler', 'GameEventScriptSyntaxHighlighter']:
+    for module in ['GameEventScriptRuntime', 'GameEventScriptCompiler', 'GameEventScriptSyntax']:
         base = ROOT / 'implementation/swift' / module
         files.append(base / 'Package.swift')
         files += [p for p in (base / 'Sources').rglob('*') if p.is_file() and not is_metadata(p)]

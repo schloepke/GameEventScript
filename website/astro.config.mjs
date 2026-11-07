@@ -8,6 +8,8 @@ import bnf from './syntax/bnf.mjs';
 
 const grammar = JSON.parse(readFileSync(new URL('../tools/editors/TextMate/GameEventScript.tmbundle/Syntaxes/GameEventScript.tmLanguage.json', import.meta.url)));
 const assembler = JSON.parse(readFileSync(new URL('../tools/editors/TextMate/GameEventScriptAssembler.tmbundle/Syntaxes/GameEventScriptAssembler.tmLanguage.json', import.meta.url)));
+const document = JSON.parse(readFileSync(new URL('../tools/editors/TextMate/GameEventScriptDocument.tmbundle/Syntaxes/GameEventScriptDocument.tmLanguage.json', import.meta.url)));
+const schema = JSON.parse(readFileSync(new URL('../tools/editors/TextMate/GameEventScriptSchema.tmbundle/Syntaxes/GameEventScriptSchema.tmLanguage.json', import.meta.url)));
 
 export default defineConfig({
   site: 'https://gameeventscript.org',
@@ -32,7 +34,7 @@ export default defineConfig({
     customCss: ['./src/styles/docs.css'],
     expressiveCode: {
       shiki: {
-        langs: [{ ...grammar, name: 'ges' }, { ...assembler, name: 'gesa' }, bnf],
+        langs: [{ ...grammar, name: 'ges' }, { ...assembler, name: 'gesa' }, { ...document, name: 'gesd' }, { ...schema, name: 'gess' }, bnf],
         langAlias: { eventscript: 'ges' },
       },
     },
@@ -43,10 +45,11 @@ export default defineConfig({
         { label: 'Learn the language', slug: 'docs/learn/language' },
         { label: 'Embed in C#', slug: 'docs/learn/csharp' },
         { label: 'Embed in Swift', slug: 'docs/learn/swift' },
+        { label: 'Schemas', slug: 'docs/learn/schemas' },
       ] },
       { label: 'Tools', items: [
         'docs/tools/downloads', 'docs/tools/csharp-cli', 'docs/tools/swift-cli',
-        'docs/tools/csharp-highlighter', 'docs/tools/swift-highlighter',
+        'docs/tools/csharp-syntax', 'docs/tools/swift-syntax',
         'docs/tools/editor-bundles',
       ] },
       { label: 'Native integration', items: [
@@ -56,11 +59,15 @@ export default defineConfig({
         'api/swift',
       ] },
       { label: 'Language and host reference', collapsed: true, items: [
-        'docs/reference/language', 'docs/reference/semantics/text',
+        'docs/reference/language', 'docs/reference/syntax', 'docs/reference/inline-assembly',
+        'docs/reference/semantics/text',
         'docs/reference/semantics/numbers', 'docs/reference/semantics/determinism',
         'docs/reference/host-runtime', 'docs/reference/public-api',
         'docs/reference/diagnostics', 'docs/reference/message-format',
         'docs/reference/syntax-highlighting',
+      ] },
+      { label: 'Data formats', collapsed: true, items: [
+        'docs/reference/documents', 'docs/reference/schemas',
       ] },
       { label: 'Program formats', collapsed: true, items: [
         'docs/reference/program-model', 'docs/reference/bytecode',
@@ -68,6 +75,7 @@ export default defineConfig({
       ] },
       { label: 'Conformance', collapsed: true, items: [
         'docs/reference/conformance/markdown-format', 'docs/reference/conformance/runner',
+        'docs/reference/conformance/python-runner',
         'docs/reference/conformance/environment', 'docs/reference/conformance/coverage',
         'docs/reference/conformance/cross-language-acceptance',
       ] },

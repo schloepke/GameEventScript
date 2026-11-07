@@ -24,14 +24,15 @@ versions retain their original package contents; icons are included starting wit
 
 | Distribution | Public products |
 | --- | --- |
-| NuGet | `GameEventScript.Runtime`, `GameEventScript.Compiler`, `GameEventScript.CSharpBridge`, `GameEventScript.SyntaxHighlighter` |
+| NuGet | `GameEventScript.Runtime`, `GameEventScript.Compiler`, `GameEventScript.CSharpBridge`, `GameEventScript.Syntax` |
 | NuGet tools (since 0.3.0) | `GameEventScript.Tool`, `GameEventScript.Tool.Aot` (plus RID implementation packages) |
-| SwiftPM libraries | `GameEventScriptRuntime`, `GameEventScriptCompiler`, `GameEventScriptSwiftBridge`, `GameEventScriptSyntaxHighlighter` |
+| SwiftPM libraries | `GameEventScriptRuntime`, `GameEventScriptCompiler`, `GameEventScriptSwiftBridge`, `GameEventScriptSyntax` |
 
 The root SwiftPM package exposes only libraries. The CLI uses its separate development package.
 
-Compiler and each native Bridge depend on their Runtime. An application can use
-Runtime alone. SyntaxHighlighter is optional and depends on no other GES module. Conformance stays in the repository for development and CI. CLI and terminal targets are not part of the root package.
+Runtime depends on Syntax, which holds the shared lexical rules such as the
+quantity unit table and depends on no other GES module. Compiler and each native Bridge depend on their Runtime. An application can use
+Runtime with Syntax alone, also for documents, schemas and binary data. Conformance stays in the repository for development and CI. CLI and terminal targets are not part of the root package.
 Homebrew and local installers remain available. See [standalone CLI downloads](Tools.md) for
 installation and release verification. Deferred distribution work is tracked in
 [BACKLOG.md](../../../BACKLOG.md).
@@ -217,7 +218,7 @@ the sibling development packages or expose Conformance or the CLI.
 > **Since: 0.2.0 — root-package native tests**
 
 The root package also declares three test targets that reuse the existing
-SwiftBridge, bridge-macro and SyntaxHighlighter test sources. They are not
+SwiftBridge, bridge-macro and Syntax test sources. They are not
 library products and are not compiled when an application consumes the libraries.
 Run them from a repository checkout with:
 
@@ -225,7 +226,7 @@ Run them from a repository checkout with:
 swift test --scratch-path artifacts/swift/root-tests --disable-build-manifest-caching --configuration release
 ```
 
-The highlighter tests read the shared Markdown fixture under
+The Syntax tests read the shared Markdown fixture under
 `conformance/highlighting`; no Conformance library dependency is added.
 
 In Xcode, select **File → Add Package Dependencies**, enter
@@ -297,7 +298,7 @@ isolated Git repository under `artifacts/swift-package`, creates a local test
 tag, and resolves that version from two independent consumers. It checks all
 four products, the dependency graph and the explicit macOS minimum in both macro
 manifests, compiles/serializes/executes a Program,
-and runs that Program with Runtime alone. It also rejects builds of Compiler or
+and runs that Program with Runtime and Syntax alone. It also rejects builds of Compiler or
 Bridge in the Runtime-only consumer and compilation of test targets/support in
 either consuming application. It executes the three root test targets in the
 isolated checkout. No tag or commit is added to the working repository and

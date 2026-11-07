@@ -18,10 +18,7 @@ extension GesVirtualMachine {
             if error == nil { if fault == .boundaryUnderflow { raiseError("runtime.randomStackUnderflow") } else if fault == .unbalanced { raiseError("runtime.randomScopeImbalance") } }
             call.end()
         }
-        do { try function.invoke(call) } catch let fault as GesExtensionFaultError {
-            raiseError(fault.diagnostic)
-            throw fault
-        } catch let fault as GesRuntimeError {
+        do { try function.invoke(call) } catch let fault as any GesFatalRuntimeError {
             raiseError(fault.diagnostic)
             throw fault
         } catch {

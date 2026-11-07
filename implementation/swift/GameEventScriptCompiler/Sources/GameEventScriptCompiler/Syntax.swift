@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import GameEventScriptRuntime
+@_spi(Syntax) import GameEventScriptSyntax
 
 struct GesSource {
     let text: String
@@ -9,189 +10,10 @@ struct GesSource {
     let id: UInt32
 }
 
-// Token kinds of the C# lexer, named like its GesTokenKind cases. Keywords, punctuation and operators have
-// their own kinds; contextual words such as `from` or `where` stay identifiers, as in C#. A `:word` that is not
-// a selector keyword is a `selector`, which the C# lexer folds into Tag.
-enum GesTokenKind {
-    case endOfFile
-    case illegal
-    case newLine
-    case message
-    case identifier
-    case typeName
-    case constantReference
-    case tag
-    case selector
-    case float
-    case percentage
-    case unitNumber
-    case text
-    case `true`
-    case `false`
-    case nothing
-    case mathConstantPi
-    case mathConstantE
-    case mathConstantTau
-    case mathConstantInfinity
-    case intrinsicAbs
-    case intrinsicLn
-    case intrinsicExp
-    case intrinsicSqrt
-    case intrinsicCbrt
-    case intrinsicChance
-    case intrinsicFloor
-    case intrinsicCeil
-    case intrinsicTruncate
-    case intrinsicRad
-    case intrinsicDeg
-    case intrinsicWrap
-    case intrinsicRound
-    case intrinsicSin
-    case intrinsicCos
-    case intrinsicTan
-    case intrinsicAsin
-    case intrinsicAcos
-    case intrinsicAtan
-    case intrinsicAtan2
-    case intrinsicHypot
-    case intrinsicDistance
-    case intrinsicSquared
-    case intrinsicLength
-    case intrinsicNormalize
-    case intrinsicDot
-    case intrinsicCross
-    case intrinsicAngle
-    case keywordRandom
-    case keywordParse
-    case series
-    case fibonacci
-    case factorial
-    case clamp
-    case min
-    case max
-    case zip
-    case roll
-    case `default`
-    case module
-    case constant
-    case record
-    case predicate
-    case function
-    case on
-    case emit
-    case publish
-    case matching
-    case without
-    case `let`
-    case `as`
-    case be
-    case when
-    case otherwise
-    case has
-    case empty
-    case `if`
-    case `else`
-    case `for`
-    case `in`
-    case of
-    case notIn
-    case starts
-    case ends
-    case with
-    case `is`
-    case numeric
-    case to
-    case selectorAny
-    case selectorAll
-    case selectorFilter
-    case selectorHas
-    case selectorTake
-    case selectorDrop
-    case selectorCount
-    case selectorChoose
-    case selectorDraw
-    case selectorShuffle
-    case selectorReverse
-    case selectorSum
-    case selectorAverage
-    case selectorSelect
-    case selectorContains
-    case selectorSort
-    case dot
-    case comma
-    case semicolon
-    case leftParen
-    case rightParen
-    case leftBrace
-    case rightBrace
-    case leftBracket
-    case rightBracket
-    case colon
-    case underscore
-    case operatorImplication
-    case projectionArrow
-    case operatorOr
-    case operatorXor
-    case operatorAnd
-    case operatorCollectionUnion
-    case operatorCollectionIntersect
-    case operatorEqual
-    case operatorNotEqual
-    case operatorLess
-    case operatorGreater
-    case operatorLessOrEqual
-    case operatorGreaterOrEqual
-    case operatorPlus
-    case operatorMinus
-    case operatorMultiply
-    case operatorDivide
-    case operatorIntegerDivide
-    case operatorModulo
-    case operatorRemainder
-    case operatorPower
-    case superscriptInteger
-    case operatorNot
-}
-
-struct GesToken {
-    let kind: GesTokenKind
-    let text: String
-    // A lowercase source word: an identifier or a keyword. Some positions, such as argument labels and extension
-    // function names, accept keywords as names.
-    let isWord: Bool
-    let line: Int
-    let column: Int
-    let endLine: Int
-    let endColumn: Int
-    let start: Int
-    let end: Int
-}
-
-extension GesToken {
-    // A contextual word: an identifier with this spelling, as C# MatchWord compares it.
-    func isIdentifier(_ word: String) -> Bool { kind == .identifier && text == word }
-
-    var isNumber: Bool { kind == .float || kind == .percentage || kind == .unitNumber }
-
-    // A plain identifier spelled as a source word; keywords and the degree sign are not names.
-    var isName: Bool { kind == .identifier && isWord }
-}
-
-extension GesTokenKind {
-    // A `:word`: a selector keyword or any other selector name.
-    var isSelector: Bool {
-        switch self {
-        case .selector, .selectorAny, .selectorAll, .selectorFilter, .selectorHas, .selectorTake, .selectorDrop, .selectorCount, .selectorChoose, .selectorDraw, .selectorShuffle,
-            .selectorReverse, .selectorSum, .selectorAverage, .selectorSelect, .selectorContains, .selectorSort:
-            true
-        default: false
-        }
-    }
-}
-
 // Unary operators of the source language; `predicate` wraps an extension predicate call.
 enum GesUnaryOperator {
     case parse
+    case parseStrict
     case negate
     case not
     case hasValue
@@ -326,8 +148,10 @@ struct GesArgument {
 }
 
 final class GesExpression {
+    // The assembly and selector payloads are boxed: inline they would size every Kind value, and unoptimized builds
+    // reserve stack for each one that the recursive parser and compiler passes create.
     enum Kind {
-        case assembly(GesAssembly)
+        indirect case assembly(GesAssembly)
         case literal(GesValue)
         case name(String)
         case constant(String)
@@ -343,7 +167,7 @@ final class GesExpression {
         case list([GesExpression])
         case map([(String, GesExpression)])
         case member(GesExpression, String)
-        case selector(GesExpression, GesSelector)
+        indirect case selector(GesExpression, GesSelector)
         case combined(String, [GesExpression])
         case cast(GesExpression, String)
         case check(GesExpression, String)
@@ -360,13 +184,11 @@ final class GesExpression {
 
     let kind: Kind
     let location: GesSourceLocation
-    var depth: Int
     var decimalLiteral = false
 
-    init(_ kind: Kind, _ location: GesSourceLocation, depth: Int = 1) {
+    init(_ kind: Kind, _ location: GesSourceLocation) {
         self.kind = kind
         self.location = location
-        self.depth = depth
     }
 }
 

@@ -361,6 +361,94 @@ Start:				 // handler Start(value)
 
 ---
 
+## Test: parse-literal-strict
+
+This snapshot checks that `parse strict` lowers to the same literal-reading instruction with the Strict mode annotation.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: parse-literal-strict
+compile:
+  debugInfo: []
+```
+
+### Source code under test
+
+```ges
+module parsefixture
+on Start(value) { emit Done(value: parse strict value) }
+```
+
+### Expected Game Event Script Assembler
+
+```gesa
+// -------------------------------------------------------------------------------
+//  Module: parsefixture
+//  Type: Game Event Script Assembler
+//  Format version: 1.0
+// -------------------------------------------------------------------------------
+
+.gesb 1
+.module "parsefixture"
+.program-version 0
+
+// -------------------------------------------------------------------------------
+.region "Text"
+
+.segment text
+
+T_value:			.text "value"
+T_Start:			.text "Start"
+T_Done:				.text "Done"
+T_parsefixture:		.text "parsefixture"
+
+.region-end "Text"
+// -------------------------------------------------------------------------------
+
+// -------------------------------------------------------------------------------
+.region "Lists"
+
+.segment lists
+
+U16_0:				.u16 [0]
+U16_1:				.u16 []
+Args_2:				.registers [r1]
+
+.region-end "Lists"
+// -------------------------------------------------------------------------------
+
+// -------------------------------------------------------------------------------
+.region "Bindings"
+
+.segment bind
+
+Handler_Start:		.bind MessageHandler id=0 name=T_Start args=[T_value] entry=Start // "Start(value)"
+Outbound_Done:		.bind OutboundMessage id=0 name=T_Done args=[T_value] // "Done(value)"
+
+.region-end "Bindings"
+// -------------------------------------------------------------------------------
+
+// -------------------------------------------------------------------------------
+.region "Code"
+
+.segment code
+
+// compiler-generated
+Start:				 // handler Start(value)
+					RegisterLocals #1
+					ParseLiteral r1, r0 mode=Strict
+					EmitMessage Outbound_Done, Args_2 // "Done(value)"
+					ReturnVoid
+
+.region-end "Code"
+// -------------------------------------------------------------------------------
+
+```
+
+---
+
 ## Test: floating immediates use portable exponent spelling
 
 This snapshot covers positive and negative scientific exponents in Number operands.
@@ -1578,6 +1666,262 @@ Main:				 // handler Main(value)
 					EmitMessage Outbound_Done, Args_3 // "Done(_, _)"
 
 .source-line "compile.program-dumps.named-scalar-multiply.ges" 3 | on Main(value) {
+					ReturnVoid
+
+.region-end "Code"
+// -------------------------------------------------------------------------------
+
+```
+
+---
+
+## Test: underscore names keep their labels in the dump
+
+This snapshot checks the labels of a Record, handler and outbound message whose names contain underscores.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: underscore-names
+```
+
+### Source code under test
+
+```ges
+module underscorenames
+
+record :Unit_Mount as {
+  slot: :Number
+}
+
+on Unit_Fire(x) {
+  emit Hit_Now(y: :Unit_Mount(slot: x))
+}
+```
+
+### Expected Game Event Script Assembler
+
+```gesa
+// -------------------------------------------------------------------------------
+//  Module: underscorenames
+//  Type: Game Event Script Assembler
+//  Format version: 1.0
+// -------------------------------------------------------------------------------
+
+.gesb 1
+.module "underscorenames"
+.program-version 0
+
+// -------------------------------------------------------------------------------
+.region "Source: compile.program-dumps.underscore-names.ges"
+
+.segment source "compile.program-dumps.underscore-names.ges"
+
+module underscorenames
+
+record :Unit_Mount as {
+  slot: :Number
+}
+
+on Unit_Fire(x) {
+  emit Hit_Now(y: :Unit_Mount(slot: x))
+}
+
+.region-end "Source: compile.program-dumps.underscore-names.ges"
+// -------------------------------------------------------------------------------
+
+// -------------------------------------------------------------------------------
+.region "Text"
+
+.segment text
+
+T_x:				.text "x"
+T_Unit_Fire:		.text "Unit_Fire"
+T_slot:				.text "slot"
+T_Unit_Mount:		.text "Unit_Mount"
+T_y:				.text "y"
+T_Hit_Now:			.text "Hit_Now"
+T_underscorenames:	.text "underscorenames"
+
+.region-end "Text"
+// -------------------------------------------------------------------------------
+
+// -------------------------------------------------------------------------------
+.region "Lists"
+
+.segment lists
+
+U16_0:				.u16 [0]
+U16_1:				.u16 []
+Keys_2:				.texts [T_slot] // "slot"
+U16_3:				.u16 [4]
+Args_4:				.registers [r1]
+
+.region-end "Lists"
+// -------------------------------------------------------------------------------
+
+// -------------------------------------------------------------------------------
+.region "Bindings"
+
+.segment bind
+
+Handler_Unit_Fire:	.bind MessageHandler id=0 name=T_Unit_Fire args=[T_x] entry=Unit_Fire // "Unit_Fire(x)"
+Record_Unit_Mount:	.bind Record id=0 name=T_Unit_Mount args=[T_slot] entry=record_Unit_Mount // "Unit_Mount(slot)"
+Outbound_Hit_Now:	.bind OutboundMessage id=0 name=T_Hit_Now args=[T_y] // "Hit_Now(y)"
+
+.region-end "Bindings"
+// -------------------------------------------------------------------------------
+
+// -------------------------------------------------------------------------------
+.region "Code"
+
+.segment code
+
+.source-line "compile.program-dumps.underscore-names.ges" 7 | on Unit_Fire(x) {
+Unit_Fire:			 // handler Unit_Fire(x)
+					RegisterLocals #1
+
+.source-line "compile.program-dumps.underscore-names.ges" 8 |   emit Hit_Now(y: :Unit_Mount(slot: x))
+					StageRegister r0(x)
+					CreateRecord r1, Record_Unit_Mount // "Unit_Mount(slot)"
+					EmitMessage Outbound_Hit_Now, Args_4 // "Hit_Now(y)"
+
+.source-line "compile.program-dumps.underscore-names.ges" 7 | on Unit_Fire(x) {
+					ReturnVoid
+
+.source-line "compile.program-dumps.underscore-names.ges" 3 | record :Unit_Mount as {
+record_Unit_Mount:	 // record Unit_Mount(slot)
+					RegisterLocals #2
+
+.source-line "compile.program-dumps.underscore-names.ges" 4 |   slot: :Number
+					CastNumeric r0(slot), r0(slot)
+
+.source-line "compile.program-dumps.underscore-names.ges" 3 | record :Unit_Mount as {
+					StageRegister r0(slot)
+					CreateMap r1, Keys_2 // "slot"
+					CreateRecordValue r2, r1, T_Unit_Mount // "Unit_Mount"
+					ReturnValue r2
+
+.region-end "Code"
+// -------------------------------------------------------------------------------
+
+```
+
+---
+
+## Test: spatial creation start forms
+
+This snapshot checks the `ImmediateX` value of each positional and labeled spatial form.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: spatial-start-forms
+```
+
+### Source code under test
+
+```ges
+module spatialforms
+
+on Start(value) {
+  emit Done(a: :Vector(value, 1), b: :Vector(x: value, y: 1), c: :Point(y: value), d: :Point(z: value))
+}
+```
+
+### Expected Game Event Script Assembler
+
+```gesa
+// -------------------------------------------------------------------------------
+//  Module: spatialforms
+//  Type: Game Event Script Assembler
+//  Format version: 1.0
+// -------------------------------------------------------------------------------
+
+.gesb 1
+.module "spatialforms"
+.program-version 0
+
+// -------------------------------------------------------------------------------
+.region "Source: compile.program-dumps.spatial-start-forms.ges"
+
+.segment source "compile.program-dumps.spatial-start-forms.ges"
+
+module spatialforms
+
+on Start(value) {
+  emit Done(a: :Vector(value, 1), b: :Vector(x: value, y: 1), c: :Point(y: value), d: :Point(z: value))
+}
+
+.region-end "Source: compile.program-dumps.spatial-start-forms.ges"
+// -------------------------------------------------------------------------------
+
+// -------------------------------------------------------------------------------
+.region "Text"
+
+.segment text
+
+T_value:			.text "value"
+T_Start:			.text "Start"
+T_a:				.text "a"
+T_b:				.text "b"
+T_c:				.text "c"
+T_d:				.text "d"
+T_Done:				.text "Done"
+T_spatialforms:		.text "spatialforms"
+
+.region-end "Text"
+// -------------------------------------------------------------------------------
+
+// -------------------------------------------------------------------------------
+.region "Lists"
+
+.segment lists
+
+U16_0:				.u16 [0]
+U16_1:				.u16 []
+U16_2:				.u16 [2, 3, 4, 5]
+Args_3:				.registers [r1, r2, r3, r4]
+
+.region-end "Lists"
+// -------------------------------------------------------------------------------
+
+// -------------------------------------------------------------------------------
+.region "Bindings"
+
+.segment bind
+
+Handler_Start:		.bind MessageHandler id=0 name=T_Start args=[T_value] entry=Start // "Start(value)"
+Outbound_Done:		.bind OutboundMessage id=0 name=T_Done args=[T_a, T_b, T_c, T_d] // "Done(a, b, c, d)"
+
+.region-end "Bindings"
+// -------------------------------------------------------------------------------
+
+// -------------------------------------------------------------------------------
+.region "Code"
+
+.segment code
+
+.source-line "compile.program-dumps.spatial-start-forms.ges" 3 | on Start(value) {
+Start:				 // handler Start(value)
+					RegisterLocals #4
+
+.source-line "compile.program-dumps.spatial-start-forms.ges" 4 |   emit Done(a: :Vector(value, 1), b: :Vector(x: value, y: 1), c: :Point(y: value), d: :Point(z: value))
+					StageRegister r0(value)
+					StageInteger #1
+					CreateVector r1, #0
+					StageRegister r0(value)
+					StageInteger #1
+					CreateVector r2, #3
+					StageRegister r0(value)
+					CreatePoint r3, #1
+					StageRegister r0(value)
+					CreatePoint r4, #2
+					EmitMessage Outbound_Done, Args_3 // "Done(a, b, c, d)"
+
+.source-line "compile.program-dumps.spatial-start-forms.ges" 3 | on Start(value) {
 					ReturnVoid
 
 .region-end "Code"

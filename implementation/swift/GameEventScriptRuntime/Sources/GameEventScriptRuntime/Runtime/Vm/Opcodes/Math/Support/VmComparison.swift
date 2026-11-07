@@ -1,6 +1,8 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
+@_spi(Syntax) import GameEventScriptSyntax
+
 enum GesComparison {
     static func near(_ a: Double, _ b: Double) -> Bool {
         if a.isNaN || b.isNaN { return false }

@@ -19,6 +19,16 @@ Guides optimize for understanding and may omit edge cases. Exact behavior is def
 These guides track the development checkout. Unreleased features are marked;
 consult the [changelog](../../CHANGELOG.md) when targeting a published release.
 
+## Data files and schemas
+
+> **Since: Unreleased**
+
+- [GES documents](../../specs/Documents.md) (`.gesd`) hold configuration and content
+  written like GES literals. The [C#](CSharp.md#read-data-documents) and
+  [Swift](Swift.md#read-data-documents) guides show how to read them.
+- [Describe data with schemas](Schemas.md) (`.gess`) builds a data format step by step: ranges and
+  steps, messages and message sets, binding, the hash and document checks.
+
 ## Instruction-level experiments
 
 - [Inline assembly](InlineAssembly.md): explicit instructions, register scopes,

@@ -156,9 +156,12 @@ on Start {
 
 ```yaml
 gesBlock: expect
-error:
-  phase: "compile"
-  code: "compile.unresolvedSymbol"
+errors:
+  - phase: "validate"
+    code: "validate.unresolvedVariable"
+    symbol: "missing"
+    line: 2
+    column: 12
 ```
 
 ---
@@ -206,9 +209,22 @@ on Start(items, seed as :Number) {
 
 ```yaml
 gesBlock: expect
-error:
-  phase: "compile"
-  code: "compile.unresolvedSymbol"
+errors:
+  - phase: "validate"
+    code: "validate.unresolvedVariable"
+    symbol: "fromIf"
+    line: 15
+    column: 6
+  - phase: "validate"
+    code: "validate.unresolvedVariable"
+    symbol: "fromLoop"
+    line: 16
+    column: 6
+  - phase: "validate"
+    code: "validate.unresolvedVariable"
+    symbol: "fromRandom"
+    line: 17
+    column: 6
 ```
 
 ---
@@ -2343,7 +2359,12 @@ on Start {
 
 ```yaml
 gesBlock: expect
-error: { phase: compile, code: compile.unresolvedSymbol, symbol: weight }
+errors:
+  - phase: "validate"
+    code: "validate.unresolvedVariable"
+    symbol: "weight"
+    line: 2
+    column: 48
 ```
 
 ---
@@ -2376,7 +2397,12 @@ on Start {
 
 ```yaml
 gesBlock: expect
-error: { phase: compile, code: compile.unresolvedSymbol, symbol: item }
+errors:
+  - phase: "validate"
+    code: "validate.unresolvedVariable"
+    symbol: "item"
+    line: 2
+    column: 79
 ```
 
 ---
@@ -2826,4 +2852,760 @@ errors:
   - phase: "validate"
     code: "validate.invalidTypeConstructor"
     symbol: "Integer"
+```
+
+---
+
+## Test: vector constructor rejects labels with a gap
+
+Labeled components are a run without gaps, so `x` and `z` need `y` between them.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: vector-labels-with-gap
+kind: compileError
+level: atomic
+sources:
+  - name: "vector constructor rejects labels with a gap.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start {
+  let position be :Vector(x: 1, z: 2)
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "validate"
+  code: "validate.invalidTypeConstructor"
+  symbol: "vector"
+  symbolKind: "type"
+```
+
+---
+
+## Test: point constructor rejects labels with a gap
+
+Labeled components are a run without gaps, so `x` and `z` need `y` between them.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: point-labels-with-gap
+kind: compileError
+level: atomic
+sources:
+  - name: "point constructor rejects labels with a gap.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start {
+  let position be :Point(x: 1m, z: 2m)
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "validate"
+  code: "validate.invalidTypeConstructor"
+  symbol: "point"
+  symbolKind: "type"
+```
+
+---
+
+## Test: vector-boolean-literals
+
+A component cannot be the literal `true` or `false`; only a Boolean value in a variable counts as 0 or 1.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: vector-boolean-literals
+kind: compileError
+level: atomic
+sources:
+  - name: "vector-boolean-literals.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start {
+  let position be :Vector(true, false, true)
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "validate"
+  code: "validate.invalidTypeConstructor"
+  symbol: "vector"
+  symbolKind: "type"
+```
+
+---
+
+## Test: point-labeled-boolean-literal
+
+A component cannot be the literal `true` or `false`; only a Boolean value in a variable counts as 0 or 1.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: point-labeled-boolean-literal
+kind: compileError
+level: atomic
+sources:
+  - name: "point-labeled-boolean-literal.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start {
+  let position be :Point(x: true, y: 1)
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "validate"
+  code: "validate.invalidTypeConstructor"
+  symbol: "point"
+  symbolKind: "type"
+```
+
+---
+
+## Test: vector-single-boolean-literal
+
+A component cannot be the literal `true` or `false`; only a Boolean value in a variable counts as 0 or 1.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: vector-single-boolean-literal
+kind: compileError
+level: atomic
+sources:
+  - name: "vector-single-boolean-literal.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start {
+  let position be :Vector(false)
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "validate"
+  code: "validate.invalidTypeConstructor"
+  symbol: "vector"
+  symbolKind: "type"
+```
+
+---
+
+## Test: message-value-label
+
+A constructor form outside the language contract is a validation error.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: message-value-label
+kind: compileError
+level: atomic
+sources:
+  - name: "message-value-label.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start(m) {
+  let value be :Message(value: Foo())
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "validate"
+  code: "validate.invalidTypeConstructor"
+```
+
+---
+
+## Test: message-tags-label
+
+A constructor form outside the language contract is a validation error.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: message-tags-label
+kind: compileError
+level: atomic
+sources:
+  - name: "message-tags-label.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start(m) {
+  let value be [:Message(m, tags: #a)]
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "validate"
+  code: "validate.invalidTypeConstructor"
+```
+
+---
+
+## Test: record-cast
+
+A constructor form outside the language contract is a validation error.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: record-cast
+kind: compileError
+level: atomic
+sources:
+  - name: "record-cast.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start(m) {
+  let value be 1 as :Record
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "validate"
+  code: "validate.invalidTypeConstructor"
+```
+
+---
+
+## Test: range-from-only
+
+A constructor form outside the language contract is a validation error.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: range-from-only
+kind: compileError
+level: atomic
+sources:
+  - name: "range-from-only.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start(m) {
+  let value be :Range(from: 1)
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "validate"
+  code: "validate.invalidTypeConstructor"
+```
+
+---
+
+## Test: range-to-only
+
+A constructor form outside the language contract is a validation error.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: range-to-only
+kind: compileError
+level: atomic
+sources:
+  - name: "range-to-only.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start(m) {
+  let value be :Range(to: 3)
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "validate"
+  code: "validate.invalidTypeConstructor"
+```
+
+---
+
+## Test: quantity-prefixed-constructor
+
+A constructor form outside the language contract is a validation error.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: quantity-prefixed-constructor
+kind: compileError
+level: atomic
+sources:
+  - name: "quantity-prefixed-constructor.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start(m) {
+  let value be :Quantity(km)(1)
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "validate"
+  code: "validate.invalidTypeConstructor"
+```
+
+---
+
+## Test: tag-literal-nothing-form
+
+A constructor form outside the language contract is a validation error.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: tag-literal-nothing-form
+kind: compileError
+level: atomic
+sources:
+  - name: "tag-literal-nothing-form.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start(m) {
+  let value be :Message(Foo() with nothing)
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "validate"
+  code: "validate.invalidTag"
+```
+
+---
+
+## Test: tag-literal-nothing-send
+
+The literal `nothing` is no tag in a send either.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: tag-literal-nothing-send
+kind: compileError
+level: atomic
+sources:
+  - name: "tag-literal-nothing-send.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start {
+  emit Done with nothing
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "validate"
+  code: "validate.invalidTag"
+```
+
+---
+
+## Test: quantity-type-without-value
+
+A `:Quantity(m)` that starts no constructor is itself the unexpected token.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: quantity-type-without-value
+kind: compileError
+level: atomic
+sources:
+  - name: "quantity-type-without-value.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start {
+  let value be :Quantity(m)
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "parse"
+  code: "parse.syntax"
+  line: 2
+  column: 16
+```
+
+---
+
+## Test: message-form-lowercase
+
+A lowercase name in a message or handler form is a function call, also for a system endpoint.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: message-form-lowercase
+kind: compileError
+level: atomic
+sources:
+  - name: "message-form-lowercase.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start {
+  let value be :Message(initialization())
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "validate"
+  code: "validate.missingCallable"
+```
+
+
+---
+
+## Test: handler-form-lowercase
+
+A lowercase name in a message or handler form is a function call, also for a system endpoint.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: handler-form-lowercase
+kind: compileError
+level: atomic
+sources:
+  - name: "handler-form-lowercase.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start {
+  let value be :Handler(undeliverable())
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "validate"
+  code: "validate.missingCallable"
+```
+
+---
+
+## Test: tag-literal-nothing-list
+
+The literal `nothing` is no tag inside a list literal or as the tag argument either.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: tag-literal-nothing-list
+kind: compileError
+level: atomic
+sources:
+  - name: "tag-literal-nothing-list.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start(m) {
+  let value be :Message(m, [#a, nothing])
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "validate"
+  code: "validate.invalidTag"
+```
+
+---
+
+## Test: tag-literal-nothing-argument
+
+The literal `nothing` is no tag as the tag argument of a Message value either.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: tag-literal-nothing-argument
+kind: compileError
+level: atomic
+sources:
+  - name: "tag-literal-nothing-argument.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start(m) {
+  let value be :Message(m, nothing)
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "validate"
+  code: "validate.invalidTag"
+```
+
+---
+
+## Test: series-kind-after-parse-error
+
+A bare series kind stays limited to `:Series` after a syntax error in its arguments.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: series-kind-after-parse-error
+kind: compileError
+level: atomic
+sources:
+  - name: "series-kind-after-parse-error.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on First {
+  let value be :Series(1 2)
+}
+
+on Second {
+  emit Foo(kind: fibonacci)
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+errors:
+  - phase: "parse"
+    code: "parse.syntax"
+  - phase: "parse"
+    code: "parse.syntax"
+```
+
+---
+
+## Test: tag-constant-nothing
+
+A constant with the value `nothing` is no tag.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: tag-constant-nothing
+kind: compileError
+level: atomic
+sources:
+  - name: "tag-constant-nothing.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+constant $none be nothing
+
+on Start {
+  emit Done with $none
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "validate"
+  code: "validate.invalidTag"
+```
+
+---
+
+## Test: tag-constant-nothing-function
+
+A constant with the value `nothing` is no tag in a function body either.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: tag-constant-nothing-function
+kind: compileError
+level: atomic
+sources:
+  - name: "tag-constant-nothing-function.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+constant $none be nothing
+
+function sendDone() be emit Done with $none
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "validate"
+  code: "validate.invalidTag"
 ```

@@ -311,6 +311,8 @@ history with Up/Down, and Ctrl+N to insert a newline; Enter submits the entire i
 These editing features also work without colors. `--color` additionally enables
 live syntax highlighting; `NO_COLOR` disables colors without disabling editing.
 The editor uses a tab width of four columns.
+Its cursor follows PrettyPrompt's character widths, which may misplace it after
+characters outside the Basic Multilingual Plane, such as mathematical letters.
 Shift+Enter and Alt/Option+Enter also insert a newline if the terminal reports
 the modifier. Ghostty's default Shift+Enter encoding is recognized without a
 custom keybinding. The editor decodes both the extended xterm and CSI-u forms
@@ -322,7 +324,7 @@ rendered input use stderr. Redirected streams fall back to the normal line reade
 script output can still be colored with `--color`.
 
 The CLI-only editor uses [PrettyPrompt](https://github.com/waf/PrettyPrompt/tree/v4.1.1).
-Highlighting uses the bundled GES and GESA TextMate grammars and tolerates incomplete input;
+Highlighting uses the Syntax module's GES and GESA highlighter and tolerates incomplete input;
 compilation remains the authority for valid GES. Runtime and Compiler acquire no
 terminal dependencies. Dependency licenses and source links are included in
 [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
@@ -438,6 +440,7 @@ Interactive commands are:
 | `:dump <module>` | Show the GESA dump of the loaded Program with that exact module name |
 | `:dump @<ID>` | Select a Program by session ID, including anonymous or duplicate modules |
 | `:source <module\|ID>` | Show only embedded source documents, each with a filename heading |
+| `:show <file>` | Show a `.ges`, `.gesa`, `.gesd` or `.gess` file highlighted and mark its errors, without loading it |
 | `:quit` | End the session; EOF also exits |
 
 Help, prompts, and load/unload/reload reports go to stderr. Prompts and the introductory message
@@ -649,6 +652,49 @@ Malformed or unsupported binaries return exit code `1` and report a stable
 `decode.*` code on stderr, with byte offset, section type, and entry index when
 provided by the Reader. File errors use `cli.io`, and invalid arguments use
 `cli.usage` with exit code `2`. Failed decoding produces no dump text.
+
+## Check and format GES documents
+
+```sh
+dotnet ges document check data/drive.gesd data/weapons.gesd
+dotnet ges document format data/drive.gesd
+dotnet ges document format data/drive.gesd --color
+dotnet ges document format data/drive.gesd -o data/drive.gesd.new
+dotnet ges document --help
+```
+
+`document check` reads each [GES document](../../../specs/Documents.md) with the
+strict document rules and reports the first error of each invalid file as
+`path(line,column): error document.code: message` on stderr, continuing with the
+next file. It prints a short success report on stdout unless `-q` is given and
+returns `1` if any document is invalid. `document format` prints one document in
+the recommended layout; comments and layout are not kept, and the output reads
+back to an equal document. `--color` highlights terminal output unless `NO_COLOR`
+is set. `-o` writes a UTF-8 file instead, replacing an existing one only after
+successful reading; input and output must differ. Schema references are kept,
+but schema files are not read. Invalid arguments use `cli.usage` with exit code `2`.
+
+In the event console, `:show <file>` displays a `.ges`, `.gesa`, `.gesd` or `.gess` file
+on stderr, highlighted with `--color`, and lists each error below the text with
+its line, column and code, followed by the line and a caret marker. It neither
+loads the file nor fails the session.
+
+
+## Check GES schemas and read binary data
+
+```sh
+dotnet ges schema check bot.gess
+dotnet ges schema format bot.gess
+dotnet ges schema hash bot.gess --root Bot --param worldWidth=5000m --param worldHeight=5km
+dotnet ges schema canonical bot.gess --root Bot
+dotnet ges schema dump bot.gess --root Bot --param worldWidth=5000m --param worldHeight=5km --data data.bin
+dotnet ges schema dump bot.gess --root Bot --param worldWidth=5000m --param worldHeight=5km --data delta.bin --baseline record.bin
+```
+
+`hash` prints the schema hash and, with parameters, the binding hash. `dump` lists each field of
+binary data with its bit offset, width and value, and ends with the first error; with `--baseline`
+the data is a delta against that full record. Formatting drops
+comments, so input and output must differ. See [GES schemas](../../../specs/Schemas.md).
 
 ## Run from the repository
 

@@ -19,6 +19,11 @@ contains exactly `version: 1` and `value`. A message object contains exactly
 are part of the signature. Named labels must be unique; `_` may repeat.
 Tags use bare lowercase tag names, normalized by the ordinary message API.
 
+> **Since: Unreleased** — system endpoint names
+
+The `name` of a message or Handler starts uppercase: writing or reading the system
+endpoints `initialization` and `undeliverable` is `message.invalidValue`.
+
 ```json
 {"message":{"args":[{"name":"value","value":{"type":"Number","unit":"","value":"100.25"}}],"name":"Done","tags":["ready"]},"version":1}
 ```
@@ -49,7 +54,7 @@ There are no public Integer/Binary64 value tags.
 | `Tag` | `value`: bare valid tag name |
 | `List` | `items`: ordered value objects |
 | `Map` | `entries`: ordered `{key: Text, value: value-object}` objects |
-| `Record` | `name`: PascalCase type name; `entries`: Map-style entries |
+| `Record` | `name`: type name; `entries`: Map-style entries |
 | `Vector`, `Point` | `x`, `y`, `z`: numeric Text; `unit`: the Number unit strings |
 | `Dice` | `rolls`: positive Int32 decimal numeric strings, descending on output |
 | `Range` | `from`, `to`, `step`: unitless numeric Text |

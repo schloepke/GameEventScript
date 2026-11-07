@@ -20,11 +20,11 @@ from verification_workspace import verification_workspace
 
 ROOT = Path(__file__).resolve().parent.parent
 MACROS = "GameEventScriptSwiftBridgeMacros"
-MODULES = ("GameEventScriptRuntime", "GameEventScriptCompiler", "GameEventScriptSwiftBridge", "GameEventScriptSyntaxHighlighter")
+MODULES = ("GameEventScriptRuntime", "GameEventScriptCompiler", "GameEventScriptSwiftBridge", "GameEventScriptSyntax")
 TESTS = {
-    "GameEventScriptSwiftBridgeTests": ("GameEventScriptSwiftBridge", ["GameEventScriptSwiftBridge", "GameEventScriptRuntime"], []),
+    "GameEventScriptSwiftBridgeTests": ("GameEventScriptSwiftBridge", ["GameEventScriptSwiftBridge", "GameEventScriptRuntime", "GameEventScriptSyntax"], []),
     "GameEventScriptSwiftBridgeMacrosTests": ("GameEventScriptSwiftBridge", [MACROS], ["SwiftSyntaxMacros", "SwiftSyntaxMacrosTestSupport"]),
-    "GameEventScriptSyntaxHighlighterTests": ("GameEventScriptSyntaxHighlighter", ["GameEventScriptSyntaxHighlighter"], []),
+    "GameEventScriptSyntaxTests": ("GameEventScriptSyntax", ["GameEventScriptSyntax"], []),
 }
 
 
@@ -58,7 +58,7 @@ def verify(workspace):
     for name, (owner, _, _) in TESTS.items():
         relative = Path("implementation/swift") / owner / "Tests" / name
         shutil.copytree(ROOT / relative, repository / relative)
-    # The highlighter's native test reads the canonical Markdown oracle. It does
+    # The Syntax module's native test reads the canonical Markdown oracle. It does
     # not depend on the Conformance library or a separate copy of expectations.
     corpus = Path("conformance/highlighting/SyntaxHighlighting.md")
     (repository / corpus).parent.mkdir(parents=True)
@@ -98,7 +98,9 @@ def verify(workspace):
     for module in MODULES:
         if products[module]["type"] != {"library": ["automatic"]} or products[module]["targets"] != [module]:
             raise RuntimeError(f"Unexpected product definition for {module}")
-        expected = [] if module in ("GameEventScriptRuntime", "GameEventScriptSyntaxHighlighter") else ["GameEventScriptRuntime"]
+        # Runtime builds on the Syntax module's lexical tables; Syntax depends on nothing.
+        expected = {"GameEventScriptSyntax": [], "GameEventScriptRuntime": ["GameEventScriptSyntax"],
+                    "GameEventScriptCompiler": ["GameEventScriptRuntime", "GameEventScriptSyntax"]}.get(module, ["GameEventScriptRuntime"])
         if module == "GameEventScriptSwiftBridge":
             expected.append(MACROS)
         if targets[module].get("target_dependencies", []) != expected:
@@ -118,7 +120,7 @@ def verify(workspace):
 
     fixture = workspace / "program.gesb"
     # Runtime is built first in its own clean scratch directory. Resolution may
-    # fetch the whole repository; compiling Runtime must not compile other GES modules.
+    # fetch the whole repository; compiling Runtime must compile no GES module besides Syntax.
     binaries = {}
     for consumer, modules in (("RuntimeConsumer", MODULES[:1]), ("SwiftPMConsumer", MODULES)):
         directory = workspace / consumer
@@ -142,7 +144,7 @@ let package = Package(name: "{consumer}",
             if list(scratch.rglob(module + ".swiftmodule")) or objects:
                 raise RuntimeError(f"Library consumption compiled test-only module {module}")
         if consumer == "RuntimeConsumer":
-            for module in (*MODULES[1:], MACROS, "SwiftSyntax"):
+            for module in ("GameEventScriptCompiler", "GameEventScriptSwiftBridge", MACROS, "SwiftSyntax"):
                 # SwiftPM creates planning directories even for unused products;
                 # only emitted modules or compiled objects indicate a build.
                 objects = [path for directory in scratch.rglob(module + ".build") for path in directory.rglob("*.o")]

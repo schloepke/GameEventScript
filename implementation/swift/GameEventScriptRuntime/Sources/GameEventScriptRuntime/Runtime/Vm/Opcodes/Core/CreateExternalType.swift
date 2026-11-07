@@ -30,7 +30,7 @@ extension GesVirtualMachine {
         let call = constructorCall
         call.begin(arguments: .init(arguments), typeName: constructor.definition.typeName)
         defer { call.end() }
-        do { try constructor.invoke(call) } catch let fault as GesExtensionFaultError { throw fault } catch let fault as GesRuntimeError { throw fault } catch {
+        do { try constructor.invoke(call) } catch let fault as any GesFatalRuntimeError { throw fault } catch {
             setNothing(destination)
             raiseError("runtime.externalConstructorFailed", symbol: constructor.definition.typeName, error: error)
             return

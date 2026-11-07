@@ -14,6 +14,13 @@ exercise real value construction, normalization, flags, length, equality, hash
 equality and defensive copies. Input entry order and duplicate keys are preserved
 across transport; only the implementation normalizes them. Copy checks mutate the
 original source array after construction and observe the resulting value.
+Literal-input `valueApi` cases call the public lenient or strict literal parsing
+API; adapters report the recognized value, absence or the literal limit.
+`schemaApi` cases read and bind schemas, encode, decode and check documents; adapter
+observations hold exact bytes and hashes, and Python compares them.
+`documentApi` cases read GES documents or build them from values; adapters report
+the read document or its error, and for printing cases the printed text and the
+reread document. Python compares only read documents, never the printed layout.
 Expected results remain exclusively in Python. The initial 21 `messageApi` cases
 cover ordered signatures and arguments, construction failures, equality/hash
 equality and signature-based creation. Another 48 cases qualify the independent conformance-message comparison against

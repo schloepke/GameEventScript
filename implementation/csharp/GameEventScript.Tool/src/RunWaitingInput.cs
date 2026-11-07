@@ -1,8 +1,6 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
-using System.Text;
-using PrettyPrompt.Rendering;
 
 namespace GameEventScript.Tool;
 
@@ -28,7 +26,7 @@ internal static class RunWaitingInput
     private static string? ReadTerminal(RunSession session, bool color, RunHistory history)
     {
         history.Begin();
-        var text = new StringBuilder();
+        var text = "";
         var cursor = 0;
         var previousRow = 0;
         var keys = new RunKeyReader(() => Console.KeyAvailable, Console.ReadKey);
@@ -37,30 +35,19 @@ internal static class RunWaitingInput
             Console.Error.Write("\r" + (previousRow > 0 ? $"\u001b[{previousRow}A" : "") + "\u001b[J");
             previousRow = 0;
         }
-        (int Row, int Column) Position(string value)
+        // Re-segment after insertion so combining marks and emoji stay one editable cluster, like the Swift CLI.
+        void Insert(string value)
         {
-            var row = 0;
-            var column = 5;
-            var lineColumn = 0;
-            var width = Math.Max(10, Console.WindowWidth);
-            foreach (var rune in value.EnumerateRunes())
-            {
-                if (rune.Value == '\n') { row++; column = 5; lineColumn = 0; continue; }
-                var size = rune.Value == '\t' ? 4 - lineColumn % 4 : Math.Max(0, UnicodeWidth.GetWidth(rune.ToString()));
-                if (column + size > width) { row++; column = 0; }
-                column += size;
-                lineColumn += size;
-            }
-            return column >= width ? (row + 1, 0) : (row, column);
+            var prefix = text[..cursor] + value;
+            text = prefix + text[cursor..];
+            cursor = ToolTextDisplay.ClusterIndex(text, ToolTextDisplay.ClusterCount(prefix));
         }
         void Draw()
         {
             Clear();
-            var value = text.ToString();
-            var visible = ToolTextDisplay.ExpandTabs(value);
+            var visible = ToolTextDisplay.ExpandTabs(text);
             Console.Error.Write("ges> " + (color ? RunHighlighting.Render(visible) : visible).Replace("\n", "\n ... "));
-            var end = Position(value);
-            var caret = Position(value[..cursor]);
+            var (end, caret) = Position(text, cursor, Math.Max(10, Console.WindowWidth));
             if (end.Column == 0) Console.Error.Write(" \r");
             if (end.Row > caret.Row) Console.Error.Write($"\u001b[{end.Row - caret.Row}A");
             Console.Error.Write("\r" + (caret.Column > 0 ? $"\u001b[{caret.Column}C" : ""));
@@ -79,34 +66,68 @@ internal static class RunWaitingInput
             var key = keys.ReadKey(true);
             var control = (key.Modifiers & ConsoleModifiers.Control) != 0;
             if (control && key.Key == ConsoleKey.D && text.Length == 0) { Console.Error.WriteLine(); return null; }
-            if (control && key.Key == ConsoleKey.C) { text.Clear(); cursor = 0; history.Begin(); Draw(); continue; }
+            if (control && key.Key == ConsoleKey.C) { text = ""; cursor = 0; history.Begin(); Draw(); continue; }
             if (key.Key == ConsoleKey.Enter && key.Modifiers == 0)
             {
                 cursor = text.Length;
                 Draw();
                 Console.Error.WriteLine();
-                return text.ToString();
+                return text;
             }
-            if (key.Key == ConsoleKey.Enter || control && key.Key == ConsoleKey.N) { text.Insert(cursor++, '\n'); }
-            else if (key.Key == ConsoleKey.LeftArrow && cursor > 0) { cursor--; if (cursor > 0 && char.IsLowSurrogate(text[cursor])) cursor--; }
-            else if (key.Key == ConsoleKey.RightArrow && cursor < text.Length) { if (char.IsHighSurrogate(text[cursor])) cursor++; cursor++; }
+            if (key.Key == ConsoleKey.Enter || control && key.Key == ConsoleKey.N) Insert("\n");
+            else if (key.Key == ConsoleKey.LeftArrow && cursor > 0) cursor = ToolTextDisplay.PreviousCluster(text, cursor);
+            else if (key.Key == ConsoleKey.RightArrow && cursor < text.Length) cursor = ToolTextDisplay.NextCluster(text, cursor);
             else if (key.Key is ConsoleKey.UpArrow or ConsoleKey.DownArrow && key.Modifiers == 0)
             {
-                var recalled = history.Move(text.ToString(), key.Key == ConsoleKey.UpArrow);
-                text.Clear().Append(recalled);
+                text = history.Move(text, key.Key == ConsoleKey.UpArrow);
                 cursor = text.Length;
             }
             else if (key.Key == ConsoleKey.Home) cursor = 0;
             else if (key.Key == ConsoleKey.End) cursor = text.Length;
             else if (key.Key == ConsoleKey.Backspace && cursor > 0)
             {
-                var count = cursor > 1 && char.IsLowSurrogate(text[cursor - 1]) ? 2 : 1;
-                cursor -= count;
-                text.Remove(cursor, count);
+                var start = ToolTextDisplay.PreviousCluster(text, cursor);
+                text = text.Remove(start, cursor - start);
+                cursor = start;
             }
-            else if (key.Key == ConsoleKey.Delete && cursor < text.Length) text.Remove(cursor, char.IsHighSurrogate(text[cursor]) ? 2 : 1);
-            else if (!control && (key.KeyChar >= ' ' || key.KeyChar == '\t')) text.Insert(cursor++, key.KeyChar);
+            else if (key.Key == ConsoleKey.Delete && cursor < text.Length) text = text.Remove(cursor, ToolTextDisplay.NextCluster(text, cursor) - cursor);
+            else if (!control && (key.KeyChar >= ' ' || key.KeyChar == '\t')) Insert(key.KeyChar.ToString());
             Draw();
         }
+    }
+
+    // The end and caret positions of value after the five-column prompt, in one pass over its clusters, measured
+    // like the expanded text Draw writes. Wide clusters move whole to the next row; a tab's spaces wrap individually.
+    internal static ((int Row, int Column) End, (int Row, int Column) Caret) Position(string value, int cursor, int width)
+    {
+        var row = 0;
+        var column = 5;
+        var lineColumn = 0;
+        var caret = (Row: 0, Column: 5);
+        var index = 0;
+        while (index < value.Length)
+        {
+            var length = ToolTextDisplay.ClusterLength(value.AsSpan(index));
+            var element = value.AsSpan(index, length);
+            index += length;
+            if (element is "\n" or "\r\n") { row++; column = 5; lineColumn = 0; }
+            else if (element is "\t")
+            {
+                var size = ToolTextDisplay.TabSize - lineColumn % ToolTextDisplay.TabSize;
+                column += size;
+                lineColumn += size;
+                if (column > width) { row++; column -= width; }
+            }
+            else
+            {
+                var size = ToolTextDisplay.Width(element);
+                if (size > 0 && column + size > width) { row++; column = 0; }
+                column += size;
+                lineColumn += size;
+            }
+            if (index <= cursor) caret = (row, column);
+        }
+        static (int, int) Wrap(int row, int column, int width) => column >= width ? (row + 1, 0) : (row, column);
+        return (Wrap(row, column, width), Wrap(caret.Row, caret.Column, width));
     }
 }

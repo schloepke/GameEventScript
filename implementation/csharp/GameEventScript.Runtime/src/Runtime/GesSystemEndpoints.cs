@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using GameEventScript.Api;
-using GameEventScript.Runtime.Values;
 
 namespace GameEventScript.Runtime;
 
@@ -26,12 +25,6 @@ internal static class GesSystemEndpoints
         => IsInitializationName(name) || IsUndeliverableName(name);
 
     public static GameEventScriptMessage CreateInitializationMessage()
-        => GameEventScriptMessage.Create(InitializationName);
-
-    public static GameEventScriptMessage CreateMessageDispatchMessage(GameEventScriptMessage original)
-        => GameEventScriptMessage.Create(
-            original.Name,
-            [new GesMessageArgument(MessageArgumentName, GesValue.GesMessage(original))],
-            original.Tags);
+        => GameEventScriptMessage.CreatePrecomputed(InitializationName, GesMessageArguments.Empty, InitializationSignatureId);
 
 }

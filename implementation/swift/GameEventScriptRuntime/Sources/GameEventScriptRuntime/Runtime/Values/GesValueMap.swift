@@ -1,6 +1,8 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
+@_spi(Syntax) import GameEventScriptSyntax
+
 // One canonical map entry; keys compare by exact Unicode scalar sequence. Storage only; the public map API
 // exposes keys and values separately, as in C#.
 struct GesMapEntry: Hashable {
@@ -143,4 +145,27 @@ public struct GesValueMap: Hashable {
         }
         return .init(canonicalKeys: keys, values: values)
     }
+}
+
+extension GesValueMap: Sequence {
+    /// Iterates the entries of a map in ascending Unicode scalar key order.
+    public struct Iterator: IteratorProtocol {
+        private let map: GesValueMap
+        private var index = 0
+
+        init(_ map: GesValueMap) { self.map = map }
+
+        /// The next entry, or nil after the last one.
+        public mutating func next() -> (key: String, value: GesValue)? {
+            guard index < map.keyStorage.count else { return nil }
+            defer { index += 1 }
+            return (map.keyStorage[index], map.valueStorage[index])
+        }
+    }
+
+    /// Returns an iterator over the entries in ascending Unicode scalar key order.
+    public func makeIterator() -> Iterator { Iterator(self) }
+
+    /// The exact number of entries.
+    public var underestimatedCount: Int { length }
 }

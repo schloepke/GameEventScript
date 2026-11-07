@@ -1,6 +1,8 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
+@_spi(Syntax) import GameEventScriptSyntax
+
 extension GesVirtualMachine {
     // Integer operands are the hot case and run inline in dispatch; every other
     // combination, including overflow, takes the general body.
@@ -52,7 +54,7 @@ extension GesVirtualMachine {
             return registers[target].setFloat(result, unit: unit)
         default: break
         }
-        guard let unit = GesQuantityUnit.product(registers[x].unit, registers[y].unit) else { return registers[target].setNothing() }
+        guard !percentageMismatch(x, y), let unit = GesQuantityUnit.product(registers[x].unit, registers[y].unit) else { return registers[target].setNothing() }
         if registers[x].spatialValue != nil || registers[y].spatialValue != nil {
             if registers[x].kind == .vector && registers[y].asNumber.isFinite {
                 return registers[target].setVector(x: registers[x].x * registers[y].asNumber, y: registers[x].y * registers[y].asNumber, z: registers[x].z * registers[y].asNumber, unit: unit)
@@ -82,7 +84,7 @@ extension GesVirtualMachine {
             registers[target].setInteger(result, unit: unit)
             return
         }
-        guard let unit = GesQuantityUnit.product(registers[x].unit, registers[y].unit) else { return registers[target].setNothing() }
+        guard !percentageMismatch(x, y), let unit = GesQuantityUnit.product(registers[x].unit, registers[y].unit) else { return registers[target].setNothing() }
         let left = registers[x].asNumber
         let right = registers[y].asNumber
         return registers[x].kind == .percentage && registers[y].kind == .percentage ? registers[target].setPercentage(left * right) : registers[target].setFloat(left * right, unit: unit)

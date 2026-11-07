@@ -43,7 +43,7 @@ class StagingTests(unittest.TestCase):
         for name in ['index', 'api/GameEventScript.Api.GameEventScriptHost',
                      'api/GameEventScript.Api.GesProgramBuilder',
                      'api/GameEventScript.CSharpBridge.GesBridgeHostRunner',
-                     'api/GameEventScript.SyntaxHighlighter.GesSyntaxHighlighter']:
+                     'api/GameEventScript.Syntax.GesSyntaxHighlighter']:
             path = self.root / f'api/csharp/reference/{name}.html'
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text('<html>Generated API</html>')
@@ -83,7 +83,7 @@ class StagingTests(unittest.TestCase):
 
     def test_missing_module_is_rejected(self):
         for language, path in [
-            ('swift', 'gameeventscriptsyntaxhighlighter/documentation/gameeventscriptsyntaxhighlighter/index.html'),
+            ('swift', 'gameeventscriptsyntax/documentation/gameeventscriptsyntax/index.html'),
             ('csharp', 'reference/api/GameEventScript.Api.GesProgramBuilder.html')]:
             (self.root / 'api' / language / path).unlink()
             with self.subTest(language=language), self.assertRaisesRegex(RuntimeError, 'Incomplete'):

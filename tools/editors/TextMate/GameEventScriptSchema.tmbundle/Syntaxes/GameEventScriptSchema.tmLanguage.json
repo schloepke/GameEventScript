@@ -1,0 +1,104 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "GameEventScript Schema",
+  "scopeName": "source.gameeventscript.schema",
+  "fileTypes": [
+    "gess"
+  ],
+  "patterns": [
+    {
+      "include": "#comments"
+    },
+    {
+      "include": "#types"
+    },
+    {
+      "include": "#tags"
+    },
+    {
+      "include": "#constants"
+    },
+    {
+      "include": "#numbers"
+    },
+    {
+      "include": "#keywords"
+    },
+    {
+      "include": "#messages"
+    },
+    {
+      "include": "#punctuation"
+    }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        {
+          "match": "//.*$",
+          "name": "comment.line.double-slash.gameeventscript.schema"
+        }
+      ]
+    },
+    "types": {
+      "patterns": [
+        {
+          "match": ":[A-Z][A-Za-z0-9]*(?:_[A-Z][A-Za-z0-9]*)*",
+          "name": "support.type.gameeventscript.schema"
+        }
+      ]
+    },
+    "tags": {
+      "patterns": [
+        {
+          "match": "#[A-Za-z][A-Za-z0-9]*",
+          "name": "constant.other.symbol.tag.gameeventscript.schema"
+        }
+      ]
+    },
+    "constants": {
+      "patterns": [
+        {
+          "match": "\\$[A-Za-z][A-Za-z0-9]*",
+          "name": "variable.other.constant.gameeventscript.schema"
+        }
+      ]
+    },
+    "numbers": {
+      "patterns": [
+        {
+          "match": "-?\\b\\d[\\d_]*(?:\\.\\d[\\d_]*)?(?:[eE][+-]?\\d+)?[^\\s,(){}|#]*",
+          "name": "constant.numeric.gameeventscript.schema"
+        }
+      ]
+    },
+    "keywords": {
+      "patterns": [
+        {
+          "match": "\\b(?:schema|messages|message|constant|parameter|as|be|between|and|wrapping|step|delta|within|integer|optional|key|max|tags)\\b",
+          "name": "keyword.other.gameeventscript.schema"
+        }
+      ]
+    },
+    "messages": {
+      "patterns": [
+        {
+          "match": "\\b[A-Z][A-Za-z0-9]*(?:_[A-Z][A-Za-z0-9]*)*\\b",
+          "name": "entity.name.type.message.gameeventscript.schema"
+        }
+      ]
+    },
+    "punctuation": {
+      "patterns": [
+        {
+          "match": "[|]",
+          "name": "keyword.operator.union.gameeventscript.schema"
+        },
+        {
+          "match": "[,:{}()]",
+          "name": "punctuation.separator.gameeventscript.schema"
+        }
+      ]
+    }
+  }
+}

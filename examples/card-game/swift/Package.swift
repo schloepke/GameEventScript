@@ -14,7 +14,7 @@ let package = Package(
     dependencies: [
         .package(path: "../../../implementation/swift/GameEventScriptRuntime"),
         .package(path: "../../../implementation/swift/GameEventScriptCompiler"),
-        .package(path: "../../../implementation/swift/GameEventScriptSyntaxHighlighter"),
+        .package(path: "../../../implementation/swift/GameEventScriptSyntax"),
     ],
     targets: [
         .target(
@@ -28,7 +28,7 @@ let package = Package(
             name: "CardGameWasm",
             dependencies: [
                 "CardGameEnvironment", .product(name: "GameEventScriptRuntime", package: "GameEventScriptRuntime"), .product(name: "GameEventScriptCompiler", package: "GameEventScriptCompiler"),
-                .product(name: "GameEventScriptSyntaxHighlighter", package: "GameEventScriptSyntaxHighlighter"),
+                .product(name: "GameEventScriptSyntax", package: "GameEventScriptSyntax"),
             ]
         ),
         .testTarget(name: "CardGameEnvironmentTests", dependencies: ["CardGameEnvironment"]),

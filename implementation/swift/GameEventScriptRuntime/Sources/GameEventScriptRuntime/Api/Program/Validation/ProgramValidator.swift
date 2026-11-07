@@ -1,6 +1,8 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
+@_spi(Syntax) import GameEventScriptSyntax
+
 /// Complete, host-independent validation shared by reading, writing, and loading.
 enum GesProgramValidator {
     /// Checks complete Program structure, references, debug data and resource metadata without resolving host imports.
@@ -22,7 +24,8 @@ enum GesProgramValidator {
             let name = p.stringConstants[Int(binding.name)]
             let valid: Bool
             switch binding.kind {
-            case .messageHandler, .messageNameHandler, .outboundMessage: valid = GesNames.message(name)
+            case .messageHandler, .messageNameHandler: valid = GesNames.message(name)
+            case .outboundMessage: valid = GesNames.type(name)
             case .function, .predicate: valid = GesNames.plain(name)
             case .record, .externalType: valid = GesNames.type(name)
             case .extensionCall: valid = GesNames.extensionName(name)
@@ -76,11 +79,13 @@ enum GesProgramValidator {
             if i.unitAndFlags & ~UInt8(32) != 0 || i.payload != 0 { throw failure(.invalidOperand, 16, index) }
         } else if [.move, .add, .subtract, .multiply, .divide, .power, .integerDivide, .modulo, .remainder, .min, .max, .negate, .abs, .clamp].contains(i.opcode) {
             if i.unitAndFlags & ~UInt8(64) != 0 || (i.opcode == .clamp ? i.payload & ~UInt64(0xffff) != 0 : i.payload != 0) { throw failure(.invalidOperand, 16, index) }
+        } else if i.opcode == .parseLiteral {
+            if i.unitAndFlags & ~UInt8(64) != 0 || i.word2 != 0 || i.payload != 0 { throw failure(.invalidOperand, 16, index) }
         } else if GesQuantityUnit(unitID: i.unitAndFlags & 0x1f) == nil || i.unitAndFlags & 0xc0 != 0 {
             throw failure(.invalidOperand, 16, index)
         }
         if i.opcode == .cartesian && (i.unitAndFlags != 0 || i.payload != 0) { throw failure(.invalidOperand, 16, index) }
-        if i.opcode == .parseLiteral && (i.unitAndFlags != 0 || i.word2 != 0 || i.payload != 0) { throw failure(.invalidOperand, 16, index) }
+        if [.createVector, .createPoint].contains(i.opcode) && !(0...3).contains(i.signedWord1) { throw failure(.invalidOperand, 16, index) }
         if [.constructData, .splitText].contains(i.opcode) && (i.unitAndFlags != 0 || i.b != 0 || i.c != 0 || i.d != 0 || i.opcode == .splitText && (i.a > 1 || i.a == 1 && i.word2 != 0)) { throw failure(.invalidOperand, 16, index) }
         for (position, operand) in i.operands.enumerated() {
             if operand.isRegister {
@@ -106,7 +111,7 @@ enum GesProgramValidator {
                     if Int(value) >= p.stringConstants.count { throw failure(.invalidStringIndex, 16, index) }
                     let text = p.stringConstants[Int(value)]
                     if operand == .messageShapeList && element == 0 {
-                        if !GesNames.message(text) { throw failure(.invalidOperand, 16, index) }
+                        if !GesNames.type(text) { throw failure(.invalidOperand, 16, index) }
                         continue
                     }
                     if text != "_" && !GesNames.plain(text) { throw failure(.invalidOperand, 16, index) }
@@ -128,7 +133,7 @@ enum GesProgramValidator {
         if i.opcode == .constructData {
             let type = p.stringConstants[Int(i.word1)]
             let labels = p.uint16IndexLists[Int(i.a)].map { p.stringConstants[Int($0)] }
-            if !GesDataConstructionShape.types.contains(type) || GesDataConstructionShape.positions(type, labels) == nil || labels.count != p.uint16IndexLists[Int(i.word2)].count { throw failure(.invalidOperand, 16, index) }
+            if type == "vector" || type == "point" || !GesLiteralForms.types.contains(type) || GesLiteralForms.positions(type, labels) == nil || labels.count != p.uint16IndexLists[Int(i.word2)].count { throw failure(.invalidOperand, 16, index) }
         }
     }
 

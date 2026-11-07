@@ -45,7 +45,7 @@ def value(raw):
         if set(raw) != {'type', 'message'}:
             raise InvalidDocument('Invalid message value fields')
         return {'type': kind, 'message': message(raw['message'])}
-    custom = isinstance(kind, str) and re.fullmatch(r':[A-Z][A-Za-z0-9]*', kind) and 'entries' in raw and kind != ':Map'
+    custom = isinstance(kind, str) and re.fullmatch(r':[A-Z][A-Za-z0-9]*(?:_[A-Z][A-Za-z0-9]*)*', kind) and 'entries' in raw and kind != ':Map'
     if custom:
         if set(raw) != {'type', 'entries'}:
             raise InvalidDocument('Invalid record fields')

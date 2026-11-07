@@ -57,7 +57,7 @@ final class ToolIO {
     func report(_ failure: any Error, fallback: String = "compile", argumentCode: String = "cli.usage") {
         switch failure {
         case let error as GesCompileError: for value in error.diagnostics { diagnostic(value, fallback: fallback) }
-        case let error as GesDynamicLinkError: diagnostic(error.diagnostic, fallback: "link")
+        case let error as GesDynamicLinkError: for value in error.diagnostics { diagnostic(value, fallback: "link") }
         case let error as GesProgramFormatError:
             line("\(fallback): error decode.\(error.code): \(error.message)", toError: true)
             if let offset = error.byteOffset { line("  byteOffset=\(offset)", toError: true) }

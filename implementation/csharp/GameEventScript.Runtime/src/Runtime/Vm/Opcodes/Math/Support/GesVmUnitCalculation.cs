@@ -34,6 +34,9 @@ internal class GesVmUnitCalculation
     internal static GesQuantityUnit? QuotientUnit(in GesValue a, in GesValue b)
         => b.Unit == UnitNone ? a.Unit : a.Unit == b.Unit ? UnitNone : GesQuantityUnits.Quotient(a.Unit, b.Unit);
 
+    // A percentage scales a quantity by its own magnitude, which a logarithmic decibel level does not support.
+    internal static GesQuantityUnit? PercentageUnit(in GesValue quantity) => quantity.Unit.AcceptsPercentage() ? quantity.Unit : null;
+
     // Integer division keeps the derivation-free rules: a unitless divisor keeps the unit and equal units cancel.
     internal static GesQuantityUnit? IntegerQuotientUnit(in GesValue a, in GesValue b)
     {

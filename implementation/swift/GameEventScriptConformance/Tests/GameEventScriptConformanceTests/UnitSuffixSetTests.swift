@@ -1,6 +1,7 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
+@_spi(Syntax) import GameEventScriptSyntax
 import XCTest
 
 @testable import GameEventScriptRuntime
@@ -9,7 +10,32 @@ import XCTest
 final class UnitSuffixSetTests: XCTestCase {
     func testTextDecoderPrecheckAcceptsTheEndOfEverySuffix() {
         for suffix in GesQuantityUnit.suffixes {
-            XCTAssertTrue(GesTextNumberCast.possibleSuffixEnd("1" + suffix.text), suffix.text)
+            XCTAssertTrue(GesNumberLiteral.possibleSuffixEnd("1" + suffix.text), suffix.text)
+        }
+    }
+
+    // The five UnitId bits accept the defined ids 0 to 20 and reject the reserved rest.
+    func testUnitIdsZeroToTwentyAreDefinedAndTheRestReserved() {
+        for raw in UInt8(0)..<32 {
+            XCTAssertEqual(GesQuantityUnit(unitID: raw) != nil, raw <= 20, "\(raw)")
+            guard let unit = GesQuantityUnit(unitID: raw) else { continue }
+            XCTAssertEqual(unit.unitID, raw)
+            // The root search relies on every unit having its symbol in the spelling table.
+            guard unit != .none else { continue }
+            XCTAssertTrue(GesQuantityUnit.suffixes.contains { $0.unit == unit && $0.exponent == 0 && $0.text == unit.suffix }, unit.rawValue)
+            XCTAssertEqual(GesQuantityUnit(typeName: unit.rawValue), unit)
+        }
+    }
+
+    func testEverySpellingPrecedesTheShorterSpellingsItStartsOrEndsWith() {
+        let suffixes = GesQuantityUnit.suffixes
+        for later in suffixes.indices {
+            for earlier in suffixes.indices where earlier < later {
+                let longer = suffixes[later].scalars
+                let shorter = suffixes[earlier].scalars
+                let contains = longer.starts(with: shorter) || longer.reversed().starts(with: shorter.reversed())
+                XCTAssertFalse(longer.count > shorter.count && contains, "\(suffixes[later].text) after \(suffixes[earlier].text)")
+            }
         }
     }
 }

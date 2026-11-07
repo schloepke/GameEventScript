@@ -1,60 +1,7 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
-/// Portable quantity units. The names do not depend on the embedding platform.
-public enum GesQuantityUnit: String, Hashable, Sendable {
-    /// A unitless value.
-    case none
-    /// Distance measured in meters.
-    case meter
-    /// Duration measured in seconds.
-    case second
-    /// Angle measured in degrees.
-    case degree
-    /// Speed measured in meters per second.
-    case meterPerSecond
-    /// Acceleration measured in meters per second squared.
-    case meterPerSecondSquared
-    /// Mass measured in kilograms.
-    case kilogram
-    /// Force measured in newtons.
-    case newton
-    /// Energy measured in joules.
-    case joule
-    /// Power measured in watts.
-    case watt
-    /// Voltage measured in volts.
-    case volt
-    /// Current measured in amperes.
-    case ampere
-    /// Frequency measured in hertz.
-    case hertz
-    /// Temperature measured in kelvins.
-    case kelvin
-    /// Angular speed measured in degrees per second.
-    case degreePerSecond
-
-    /// Canonical text suffix that formatting appends, such as `m`, `m/s` or `°/s`; empty for unitless values.
-    public var suffix: String {
-        switch self {
-        case .none: ""
-        case .meter: "m"
-        case .second: "s"
-        case .degree: "°"
-        case .meterPerSecond: "m/s"
-        case .meterPerSecondSquared: "m/s²"
-        case .kilogram: "kg"
-        case .newton: "N"
-        case .joule: "J"
-        case .watt: "W"
-        case .volt: "V"
-        case .ampere: "A"
-        case .hertz: "Hz"
-        case .kelvin: "K"
-        case .degreePerSecond: "°/s"
-        }
-    }
-}
+@_spi(Syntax) import GameEventScriptSyntax
 
 /// Exact storage discriminants; integer and binary64 range payloads remain distinct.
 enum GesValueKind: Hashable {
@@ -480,6 +427,9 @@ public struct GesValue: Hashable, CustomStringConvertible {
     /// Extra keys or values beyond the shorter array are ignored, as in C# `GesValue.GesMap`.
     public static func map(keys: [String], values: [GesValue]) -> Self { map(zip(keys, values).map { GesMapEntry(key: $0, value: $1) }) }
 
+    /// Creates a map from ordered entries in scalar key order, keeping the last value for duplicate keys.
+    public static func map(_ entries: [(key: String, value: GesValue)]) -> Self { map(entries.map { GesMapEntry(key: $0.key, value: $0.value) }) }
+
     static func map(_ entries: [GesMapEntry]) -> Self {
         var result = Self()
         result.setMap(entries)
@@ -496,6 +446,11 @@ public struct GesValue: Hashable, CustomStringConvertible {
     /// names. Extra names or values beyond the shorter array are ignored, as in C# `GesValue.GesRecord`.
     public static func record(typeName: String, keys: [String], values: [GesValue]) -> Self {
         record(typeName: typeName, entries: zip(keys, values).map { GesMapEntry(key: $0, value: $1) })
+    }
+
+    /// Creates a Record from ordered fields in scalar key order, keeping the last value for duplicate names.
+    public static func record(typeName: String, _ fields: [(key: String, value: GesValue)]) -> Self {
+        record(typeName: typeName, entries: fields.map { GesMapEntry(key: $0.key, value: $0.value) })
     }
 
     static func record(typeName: String, entries: [GesMapEntry]) -> Self {
@@ -554,15 +509,17 @@ public struct GesValue: Hashable, CustomStringConvertible {
         return result
     }
 
-    /// Underlying host value for external storage, otherwise nil.
+    /// Host object of an external value, otherwise nil; the fastest way to its data.
     public var externalValue: (any GesExternalValue)? { externalStorage?.value }
 
     private var externalStorage: GesExternalStorage? { kind == .external ? unsafeDowncast(object!, to: GesExternalStorage.self) : nil }
 
-    func externalField(_ name: String) throws -> GesValue? { try externalStorage?.field(name) }
+    /// Reads one declared field of an external value by running only its getter, and applies the declared type.
+    /// Undeclared names, absent fields and values that are not external give nil. Getter failures propagate as `GesFatalRuntimeError`.
+    public func readField(_ name: String) throws -> GesValue? { try externalStorage?.field(name) }
 
-    /// Returns map data, materializing declared external fields when necessary.
-    /// External field failures propagate to the caller.
+    /// Returns stored Map or Record data, or reads every declared field of an external value. Each call runs the
+    /// getters again and keeps nothing, so an external value can change between handlers. Getter failures propagate as `GesFatalRuntimeError`.
     public func materializedMap() throws -> GesValueMap? { try asMap ?? externalMap() }
 
     func externalMap() throws -> GesValueMap? { try externalStorage?.map() }
@@ -590,6 +547,7 @@ public struct GesValue: Hashable, CustomStringConvertible {
     /// Preserves exact integer storage; otherwise saturates the numeric projection to Int64, with NaN becoming zero.
     public var asInteger: Int64 { numericIntegerValue ?? GesNumber.saturatedInteger(asNumber) }
     /// Number of Unicode scalars or collection entries; range lengths saturate at Int32.max like the API. Numeric payload bits never define a length.
+    /// An external value counts its declared fields without running a getter, also those a materialized map leaves out.
     public var length: Int {
         switch kind {
         case .text, .tag: payload(GesTextPayload.self).count
@@ -631,6 +589,21 @@ public struct GesValue: Hashable, CustomStringConvertible {
         default: nil
         }
     }
+
+    /// Reads a member by name: the field of a Record, the entry of a Map, or the coordinate `x`, `y` or `z` of a Vector
+    /// or Point. A missing name and every other value, including an external value, give Nothing; external field
+    /// getters are not invoked, and a stored Nothing reads like a missing name.
+    public subscript(name: String) -> GesValue {
+        if let map = asMap { return map.get(name) ?? .nothing }
+        guard let spatial = spatialValue else { return .nothing }
+        switch name {
+        case "x": return .float(spatial.x, unit: unit)
+        case "y": return .float(spatial.y, unit: unit)
+        case "z": return .float(spatial.z, unit: unit)
+        default: return .nothing
+        }
+    }
+
     /// Stored List elements, or an empty array for other kinds.
     public var asList: [GesValue] { listValue ?? [] }
     /// Stored Dice rolls, or an empty array for other kinds.
@@ -763,7 +736,7 @@ public struct GesValue: Hashable, CustomStringConvertible {
             return ":Message(" + value.name + "(" + arguments + ")" + tags + ")"
         case .handler:
             let value = signatureValue!
-            return ":Handler(" + value.signatureId + ")"
+            return ":Handler(" + value.signatureId.split(separator: ",", omittingEmptySubsequences: false).joined(separator: ", ") + ")"
         case .series:
             let value = seriesValue!
             return ":Series(\(value.signatureID), offset: \(value.offset))"

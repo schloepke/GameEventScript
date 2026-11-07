@@ -1376,8 +1376,9 @@ steps:
               value: "38"
           - name: "unitPower"
             value:
-              type: ":Number.binary64"
-              value: "NaN"
+              type: ":Quantity.int64"
+              value: "4"
+              unit: ":squareMeter"
 ```
 
 ---

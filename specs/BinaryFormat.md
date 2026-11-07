@@ -193,8 +193,9 @@ Each instruction is exactly 16 encoded bytes. These fields, not CLR layout, defi
 the file representation. Payload preserves integer bits, IEEE-754 binary64 bits, or
 four overlaid `u16` words. V1 permits at most 65,535 instructions.
 Opcode assignments and operand constraints are owned by [Bytecode](Bytecode.md).
-The canonical `valid-parse-literal.gesb` fixture and its invalid operand/opcode
-variants exercise literal parsing in this same V1 instruction encoding; no
+The canonical `valid-parse-literal.gesb` and `valid-parse-literal-strict.gesb`
+fixtures and their invalid operand/flag/opcode variants exercise literal parsing
+in this same V1 instruction encoding; no
 additional section or executable parser state is serialized. The canonical
 `data-forms.gesb` fixture pins ConstructData and both SplitText modes; invalid
 variants verify flags, units, indexes, reserved words and mode validation.

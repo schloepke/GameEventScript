@@ -1817,3 +1817,801 @@ steps:
       - name: Alive
     diagnostics: []
 ```
+
+---
+
+## Test: underscore-names
+
+Type and message names join segments with single underscores in every source form. The underscore forms no
+hierarchy, so a `:Unit_Weapon_Sniper` is no `:Unit`.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: underscore-names
+compile:
+  binaryRoundTrip: true
+```
+
+### Source code under test
+
+```ges
+record :Unit_Weapon_Sniper as {
+  range: :Number
+}
+
+on Unit_Fire(value) {
+  emit Fired(isSniper: value is :Unit_Weapon_Sniper, isUnit: value is :Unit, range: value.range)
+}
+
+on Start {
+  emit Unit_Fire(value: :Unit_Weapon_Sniper(range: 3))
+  emit Done(text: :Unit_Weapon_Sniper(range: 3) as :Text, parsed: parse ':Unit_Weapon_Sniper(range: 4)', data: :Record("Unit_Weapon_Sniper", [range: 5]), handler: :Handler(Unit_Fire(value)) as :Text, message: :Message(Unit_Fire(value: 1)) as :Text)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args: []
+    local:
+      - name: Unit_Fire
+        args:
+          - name: value
+            value:
+              type: ":Unit_Weapon_Sniper"
+              entries:
+                - key: "range"
+                  value:
+                    type: ":Number.int64"
+                    value: "3"
+      - name: Done
+        args:
+          - name: text
+            value:
+              type: ":Text"
+              value: ":Record(\"Unit_Weapon_Sniper\", [range: 3])"
+          - name: parsed
+            value:
+              type: ":Unit_Weapon_Sniper"
+              entries:
+                - key: "range"
+                  value:
+                    type: ":Number.int64"
+                    value: "4"
+          - name: data
+            value:
+              type: ":Unit_Weapon_Sniper"
+              entries:
+                - key: "range"
+                  value:
+                    type: ":Number.int64"
+                    value: "5"
+          - name: handler
+            value:
+              type: ":Text"
+              value: ":Handler(Unit_Fire(value))"
+          - name: message
+            value:
+              type: ":Text"
+              value: ":Message(Unit_Fire(value: 1))"
+      - name: Fired
+        args:
+          - name: isSniper
+            value:
+              type: ":Boolean"
+              value: true
+          - name: isUnit
+            value:
+              type: ":Boolean"
+              value: false
+          - name: range
+            value:
+              type: ":Number.int64"
+              value: "3"
+    runtimeLimits:
+      exclude:
+        - any: true
+```
+
+---
+
+## Test: invalid-underscore-names-in-data
+
+A name that breaks the segment rule constructs nothing. A `:Record` name is a value, so the form yields Nothing; a message
+or handler name is syntax, so `parse` keeps the original Text and `parse strict` yields Nothing.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: invalid-underscore-names-in-data
+compile:
+  binaryRoundTrip: true
+```
+
+### Source code under test
+
+```ges
+on Start {
+  emit Done(doubled: :Record("Unit__Weapon", [a: 1]), digit: :Record("Unit_1", [a: 1]), parsedHandler: parse ':Handler(Unit__Fire(value))', parsedMessage: parse ':Message(Unit_1())', strictHandler: parse strict ':Handler(Unit__Fire(value))', strictMessage: parse strict ':Message(Unit_1())', strictRecord: parse strict ':Record("Unit__Weapon", [a: 1])', parsedRecord: parse ':Record("Unit__Weapon", [a: 1])')
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args: []
+    local:
+      - name: Done
+        args:
+          - name: doubled
+            value:
+              type: ":Nothing"
+          - name: digit
+            value:
+              type: ":Nothing"
+          - name: parsedHandler
+            value:
+              type: ":Text"
+              value: ":Handler(Unit__Fire(value))"
+          - name: parsedMessage
+            value:
+              type: ":Text"
+              value: ":Message(Unit_1())"
+          - name: strictHandler
+            value:
+              type: ":Nothing"
+          - name: strictMessage
+            value:
+              type: ":Nothing"
+          - name: strictRecord
+            value:
+              type: ":Nothing"
+          - name: parsedRecord
+            value:
+              type: ":Nothing"
+    runtimeLimits:
+      exclude:
+        - any: true
+```
+
+---
+
+## Test: message-short-form
+
+In source, `:Message(Done)` is short for `:Message(Done())`; Text writes the argument list and does not read the short form.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: message-short-form
+compile:
+  binaryRoundTrip: true
+```
+
+### Source code under test
+
+```ges
+on Start {
+  emit Done(plain: :Message(Ping) as :Text, tagged: :Message(Unit_Ping with #ready) as :Text, same: :Message(Ping) = :Message(Ping()), parsed: parse ':Message(Ping)', strict: parse strict ':Message(Ping)')
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args: []
+    local:
+      - name: Done
+        args:
+          - name: plain
+            value:
+              type: ":Text"
+              value: ":Message(Ping())"
+          - name: tagged
+            value:
+              type: ":Text"
+              value: ":Message(Unit_Ping() with #ready)"
+          - name: same
+            value:
+              type: ":Boolean"
+              value: true
+          - name: parsed
+            value:
+              type: ":Text"
+              value: ":Message(Ping)"
+          - name: strict
+            value:
+              type: ":Nothing"
+    runtimeLimits:
+      exclude:
+        - any: true
+```
+
+---
+
+## Test: message-across-lines
+
+Line breaks may stand around the message, its tags and the closing parenthesis, as in other type constructors.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: message-across-lines
+compile:
+  binaryRoundTrip: true
+```
+
+### Source code under test
+
+```ges
+on Start {
+  emit Done(full: :Message(
+    Ping()
+  ) as :Text, short: :Message(
+    Ping
+  ) as :Text, tagged: :Message(
+    Ping(v: 1)
+    with #ready
+  ) as :Text)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args: []
+    local:
+      - name: Done
+        args:
+          - name: full
+            value:
+              type: ":Text"
+              value: ":Message(Ping())"
+          - name: short
+            value:
+              type: ":Text"
+              value: ":Message(Ping())"
+          - name: tagged
+            value:
+              type: ":Text"
+              value: ":Message(Ping(v: 1) with #ready)"
+    runtimeLimits:
+      exclude:
+        - any: true
+```
+
+---
+
+## Test: constructors-across-lines
+
+Line breaks may stand around each argument and before the closing parenthesis of every type constructor.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: constructors-across-lines
+compile:
+  binaryRoundTrip: true
+```
+
+### Source code under test
+
+```ges
+on Start {
+  emit Done(handler: :Handler(
+    Foo(x, _)
+  ) as :Text, plainSeries: :Series(
+    fibonacci
+  ) as :Text, offset: :Series(
+    factorial
+    ,
+    offset: 2
+  ) as :Text, range: :Range(
+    1,
+    3
+  ) as :Text, data: :Record(
+    "Hit",
+    [a: 1]
+  ) as :Text, spatial: :Vector(
+    y: 1,
+    z: 2
+  ) as :Text)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args: []
+    local:
+      - name: Done
+        args:
+          - name: handler
+            value:
+              type: ":Text"
+              value: ":Handler(Foo(x, _))"
+          - name: plainSeries
+            value:
+              type: ":Text"
+              value: ":Series(fibonacci, offset: 0)"
+          - name: offset
+            value:
+              type: ":Text"
+              value: ":Series(factorial, offset: 2)"
+          - name: range
+            value:
+              type: ":Text"
+              value: ":Range(from: 1, to: 3, step: 1)"
+          - name: data
+            value:
+              type: ":Text"
+              value: ":Record(\"Hit\", [a: 1])"
+          - name: spatial
+            value:
+              type: ":Text"
+              value: ":Vector(x: 0, y: 1, z: 2)"
+    runtimeLimits:
+      exclude:
+        - any: true
+```
+
+---
+
+## Test: range-and-number-forms
+
+Number and Range take their parameters by position or label, in any label order; a labeled Range needs `from` and `to`.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: range-and-number-forms
+compile:
+  binaryRoundTrip: true
+```
+
+### Source code under test
+
+```ges
+on Start {
+  emit Done(numberPositional: :Number(1, "m") as :Text, numberLabeled: :Number(unit: "m", value: 1) as :Text, numberBlank: :Number(1, "") as :Text, rangePositional: :Range(1, 3) as :Text, rangeStep: :Range(1, 3, 2) as :Text, rangeLabeled: :Range(to: 3, from: 1) as :Text, rangeMixed: :Range(1, 3, step: 2) as :Text, prefixedUnit: :Number(1, "km"), rangeUnit: :Range(1m, 3m))
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args: []
+    local:
+      - name: Done
+        args:
+          - name: numberPositional
+            value:
+              type: ":Text"
+              value: "1m"
+          - name: numberLabeled
+            value:
+              type: ":Text"
+              value: "1m"
+          - name: numberBlank
+            value:
+              type: ":Text"
+              value: "1"
+          - name: rangePositional
+            value:
+              type: ":Text"
+              value: ":Range(from: 1, to: 3, step: 1)"
+          - name: rangeStep
+            value:
+              type: ":Text"
+              value: ":Range(from: 1, to: 3, step: 2)"
+          - name: rangeLabeled
+            value:
+              type: ":Text"
+              value: ":Range(from: 1, to: 3, step: 1)"
+          - name: rangeMixed
+            value:
+              type: ":Text"
+              value: ":Range(from: 1, to: 3, step: 2)"
+          - name: prefixedUnit
+            value:
+              type: ":Nothing"
+          - name: rangeUnit
+            value:
+              type: ":Nothing"
+    runtimeLimits:
+      exclude:
+        - any: true
+```
+
+---
+
+## Test: series-kind-forms
+
+A series kind may be bare or quoted, also with the label `kind`, and `parse` reads the same forms in any label order.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: series-kind-forms
+compile:
+  binaryRoundTrip: true
+```
+
+### Source code under test
+
+```ges
+on Start {
+  emit Done(bare: :Series(fibonacci) as :Text, quoted: :Series("factorial", 2) as :Text, labeled: :Series(kind: fibonacci, offset: 2) as :Text, labeledLast: :Series(offset: 2, kind: factorial) as :Text, parsed: parse ':Series(kind: fibonacci)' as :Text, parsedLast: parse ':Series(offset: 2, kind: factorial)' as :Text, unknown: :Series("other"), badOffset: :Series(fibonacci, -1))
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args: []
+    local:
+      - name: Done
+        args:
+          - name: bare
+            value:
+              type: ":Text"
+              value: ":Series(fibonacci, offset: 0)"
+          - name: quoted
+            value:
+              type: ":Text"
+              value: ":Series(factorial, offset: 2)"
+          - name: labeled
+            value:
+              type: ":Text"
+              value: ":Series(fibonacci, offset: 2)"
+          - name: labeledLast
+            value:
+              type: ":Text"
+              value: ":Series(factorial, offset: 2)"
+          - name: parsed
+            value:
+              type: ":Text"
+              value: ":Series(fibonacci, offset: 0)"
+          - name: parsedLast
+            value:
+              type: ":Text"
+              value: ":Series(factorial, offset: 2)"
+          - name: unknown
+            value:
+              type: ":Nothing"
+          - name: badOffset
+            value:
+              type: ":Nothing"
+    runtimeLimits:
+      exclude:
+        - any: true
+```
+
+---
+
+## Test: message-and-handler-forms
+
+A message form names a message with an uppercase name, and a lowercase name is a function call, also for a system endpoint. Tags given with a Message value are added to its tags. Handlers print a space after each comma, and a line break may stand before the comma of a further tag.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: message-and-handler-forms
+compile:
+  binaryRoundTrip: true
+```
+
+### Source code under test
+
+```ges
+function initialization() be :Message(FromFunction())
+
+on Start {
+  let existing be :Message(Foo() with #b)
+  emit Done(handler: :Handler(Foo(x, _)) as :Text, fromFunction: :Message(initialization()) as :Text, added: :Message(existing, #a) as :Text, tagged: :Message(
+    Foo()
+    with #a
+    , #b
+  ) as :Text, parsedMessage: parse ':Message(initialization())', parsedHandler: parse ':Handler(undeliverable())')
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args: []
+    local:
+      - name: Done
+        args:
+          - name: handler
+            value:
+              type: ":Text"
+              value: ":Handler(Foo(x, _))"
+          - name: fromFunction
+            value:
+              type: ":Text"
+              value: ":Message(FromFunction())"
+          - name: added
+            value:
+              type: ":Text"
+              value: ":Message(Foo() with #b, #a)"
+          - name: tagged
+            value:
+              type: ":Text"
+              value: ":Message(Foo() with #a, #b)"
+          - name: parsedMessage
+            value:
+              type: ":Text"
+              value: ":Message(initialization())"
+          - name: parsedHandler
+            value:
+              type: ":Text"
+              value: ":Handler(undeliverable())"
+    runtimeLimits:
+      exclude:
+        - any: true
+```
+
+---
+
+## Test: tag-value-nothing
+
+A tag value that is `nothing` at runtime makes the tag clause invalid, so a Message form yields Nothing and a result-bearing send is false.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: tag-value-nothing
+compile:
+  binaryRoundTrip: true
+```
+
+### Source code under test
+
+```ges
+on Start {
+  let t be nothing
+  let sent be emit Foo with t
+  emit Done(form: :Message(Foo() with t), parsed: parse ':Message(Foo() with nothing)', sent: sent)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args: []
+    local:
+      - name: Done
+        args:
+          - name: form
+            value:
+              type: ":Nothing"
+          - name: parsed
+            value:
+              type: ":Nothing"
+          - name: sent
+            value:
+              type: ":Boolean"
+              value: false
+    runtimeLimits:
+      exclude:
+        - any: true
+```
+
+---
+
+## Test: statement-send-invalid-tag
+
+A statement send with an invalid tag clause sends nothing, and execution continues.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: statement-send-invalid-tag
+compile:
+  binaryRoundTrip: true
+```
+
+### Source code under test
+
+```ges
+on Start {
+  let t be nothing
+  let m be :Message(Foo())
+  emit Foo with t
+  publish Foo with t
+  emit m with t
+  publish m with t
+  emit Foo with "a b"
+  emit m with [#a, 5]
+  emit Done(reached: true)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args: []
+    local:
+      - name: Done
+        args:
+          - name: reached
+            value:
+              type: ":Boolean"
+              value: true
+    runtimeLimits:
+      exclude:
+        - any: true
+```
+
+---
+
+## Test: send-needs-message
+
+Only a Message value can be sent: a Handler or any other value sends nothing.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: send-needs-message
+compile:
+  binaryRoundTrip: true
+```
+
+### Source code under test
+
+```ges
+on Start {
+  let handler be :Handler(Foo())
+  let number be 5
+  let first be emit handler
+  let second be publish number
+  emit handler
+  publish handler
+  emit handler with #a
+  emit number
+  emit Done(first: first, second: second)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args: []
+    local:
+      - name: Done
+        args:
+          - name: first
+            value:
+              type: ":Boolean"
+              value: false
+          - name: second
+            value:
+              type: ":Boolean"
+              value: false
+    runtimeLimits:
+      exclude:
+        - any: true
+```

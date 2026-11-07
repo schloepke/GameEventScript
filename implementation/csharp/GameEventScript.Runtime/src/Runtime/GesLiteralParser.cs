@@ -3,9 +3,11 @@
 
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using GameEventScript.Api;
 using GameEventScript.Runtime.Values;
 using GameEventScript.Runtime.Vm;
+using GameEventScript.Syntax;
 using static GameEventScript.Api.GesBindingSegment;
 
 namespace GameEventScript.Runtime;
@@ -17,12 +19,13 @@ internal struct GesLiteralParser
     internal const int MaximumItems = 65536;
 
     private readonly string _text;
-    private readonly GesVirtualMachine _state;
+    // Absent outside a running Program: Program Record constructors are then unknown types.
+    private readonly GesVirtualMachine? _state;
     private int _position;
     private int _items;
     private string? _limit;
 
-    private GesLiteralParser(string text, GesVirtualMachine state)
+    private GesLiteralParser(string text, GesVirtualMachine? state)
     {
         _text = text;
         _state = state;
@@ -31,7 +34,7 @@ internal struct GesLiteralParser
         _limit = null;
     }
 
-    internal static GesValue Parse(in GesValue input, GesContext context, GesVirtualMachine state)
+    internal static GesValue Parse(in GesValue input, bool strict, GesContext context, GesVirtualMachine state)
     {
         if (input.Kind != GesBytecodeTypeKind.Text) return GesValue.GesNothing();
         if (input.Length > MaximumInputScalars)
@@ -40,14 +43,41 @@ internal struct GesLiteralParser
             return GesValue.GesNothing();
         }
         var parser = new GesLiteralParser(input.TextValue, state);
-        var result = parser.ReadValue(0);
-        parser.SkipWhitespace();
+        var result = parser.Recognize();
         if (parser._limit is { } limit)
         {
-            context.RuntimeBudget.Exhaust(limit, "Literal parsing exceeds the resource limit.", limit == "MaxLiteralDepth" ? MaximumDepth : MaximumItems);
+            context.RuntimeBudget.Exhaust(limit, "Literal parsing exceeds the resource limit.", LimitValue(limit));
             return GesValue.GesNothing();
         }
-        return result is { } value && parser._position == parser._text.Length ? value : input;
+        return result ?? (strict ? GesValue.GesNothing() : input);
+    }
+
+    /// <summary>Recognizes data literals outside a running Program, for the public GesValue API.</summary>
+    /// <returns>The evaluated value, or <see langword="null"/> when the input is not a complete data literal.</returns>
+    /// <exception cref="GesLiteralLimitException">A fixed literal parsing bound is exceeded.</exception>
+    internal static GesValue? ParseData(in GesValue input)
+    {
+        if (input.Length > MaximumInputScalars) throw new GesLiteralLimitException("MaxLiteralInputScalars", MaximumInputScalars);
+        var parser = new GesLiteralParser(input.TextValue, null);
+        var result = parser.Recognize();
+        if (parser._limit is { } limit) throw new GesLiteralLimitException(limit, LimitValue(limit));
+        return result is { } value ? GesLiteralEvaluation.Evaluate(value) : null;
+    }
+
+    private static int LimitValue(string limit) => limit == "MaxLiteralDepth" ? MaximumDepth : MaximumItems;
+
+    private GesValue? Recognize()
+    {
+        var result = ReadValue(0);
+        SkipWhitespace();
+        return _limit is null && _position == _text.Length ? result : null;
+    }
+
+    // The value after a Map key: key-only entries are true.
+    private GesValue? ReadEntryValue(int depth)
+    {
+        SkipWhitespace();
+        return _position < _text.Length && _text[_position] is ',' or ']' ? GesValue.GesBoolean(true) : ReadValue(depth);
     }
 
     private GesValue? ReadValue(int depth)
@@ -69,6 +99,7 @@ internal struct GesLiteralParser
             var saved = _position;
             var typed = ReadTyped(depth);
             if (typed is not null) return typed;
+            if (_limit is not null) return null;
             _position = saved;
         }
         var dice = _text[_position] == ':' && _text.AsSpan(_position).StartsWith(":Dice".AsSpan(), StringComparison.Ordinal);
@@ -80,11 +111,7 @@ internal struct GesLiteralParser
         }
         if (_text[_position] == '[')
         {
-            if (depth >= MaximumDepth)
-            {
-                _limit = "MaxLiteralDepth";
-                return null;
-            }
+            if (depth >= MaximumDepth) return Limit("MaxLiteralDepth");
             return dice ? ReadDice() : ReadCollection(depth + 1);
         }
 
@@ -105,42 +132,44 @@ internal struct GesLiteralParser
 
     private GesValue? ReadTyped(int depth)
     {
-        if (depth >= MaximumDepth) { _limit = "MaxLiteralDepth"; return null; }
+        var formStart = _position;
+        if (depth >= MaximumDepth) return Limit("MaxLiteralDepth");
         _position++;
         var name = ReadName();
         if (name is null || !GesText.IsTypeName(name)) return null;
         var builtin = name.ToLowerInvariant();
         // Built-in names are case-sensitive; user Record definitions retain their declared spelling.
-        var isBuiltin = GesDataConstruction.IsType(builtin) && name == char.ToUpperInvariant(builtin[0]) + builtin.Substring(1);
+        var isBuiltin = GesLiteralForms.IsBuiltinName(name);
         GesBindingSegment.Entry? constructor = null;
         if (!isBuiltin)
         {
+            if (_state is null) return null;
             foreach (var binding in _state.Program.Bindings.Entries)
                 if (binding.Kind == GesBinaryBindKind.Record && _state.FetchStringByPointer(binding.Name) == name) { constructor = binding; break; }
             if (constructor is null) return null;
         }
         SkipWhitespace();
+        // `:Dice [...]` with whitespace is the Dice result literal, read after this form fails.
         if (!Consume('(')) return null;
         SkipWhitespace();
-        if (builtin is "handler" or "message" && _position < _text.Length && (char.IsUpper(_text[_position])
-                || _text.AsSpan(_position).StartsWith("initialization".AsSpan(), StringComparison.Ordinal)
-                || _text.AsSpan(_position).StartsWith("undeliverable".AsSpan(), StringComparison.Ordinal)))
-            return ReadMessageForm(depth + 1, builtin == "handler");
+        if (builtin is "handler" or "message" && _position < _text.Length && GesText.IsAsciiUpper(_text[_position]))
+            return ReadMessageForm(depth + 1, builtin == "handler", formStart);
         var labels = new List<string>();
         var values = new List<GesValue>();
         if (!Consume(')'))
         {
             while (_position < _text.Length)
             {
-                if (_items++ >= MaximumItems) { _limit = "MaxLiteralItems"; return null; }
+                if (_items++ >= MaximumItems) return Limit("MaxLiteralItems");
                 var saved = _position;
                 var label = ReadKey();
                 SkipWhitespace();
                 if (label is null || !Consume(':')) { label = "_"; _position = saved; }
-                else if (!GesText.IsFieldName(label) || labels.Contains(label)) return null;
+                else if (!GesText.IsFieldName(label)) return null;
+                else if (labels.Contains(label)) return null;
                 SkipWhitespace();
                 GesValue? value;
-                if (builtin == "series" && values.Count == 0 && _position < _text.Length && _text[_position] is >= 'a' and <= 'z')
+                if (builtin == "series" && (label == "kind" || label == "_" && values.Count == 0) && _position < _text.Length && _text[_position] is >= 'a' and <= 'z')
                 {
                     var valueStart = _position;
                     var kind = ReadName();
@@ -151,11 +180,9 @@ internal struct GesLiteralParser
                 if (value is not { } item) return null;
                 labels.Add(label);
                 values.Add(item);
-                SkipWhitespace();
-                if (Consume(')')) break;
-                if (!Consume(',')) return null;
-                SkipWhitespace();
-                if (_position == _text.Length || _text[_position] == ')') return null;
+                var separator = Separator(')');
+                if (separator < 0) return null;
+                if (separator > 0) break;
             }
             if (_position == 0 || _text[_position - 1] != ')') return null;
         }
@@ -163,7 +190,7 @@ internal struct GesLiteralParser
         if (constructor is { } record)
         {
             var allowed = new List<string>();
-            foreach (var parameter in record.ArgumentNames) allowed.Add(_state.FetchStringByPointer(parameter));
+            foreach (var parameter in record.ArgumentNames) allowed.Add(_state!.FetchStringByPointer(parameter));
             var count = 0;
             foreach (var label in labels)
             {
@@ -172,10 +199,10 @@ internal struct GesLiteralParser
             }
             if (count > allowed.FindAll(label => label == "_").Count) return null;
         }
-        return new GesLiteralNode(builtin, labels.ToArray(), values.ToArray(), constructor).Value;
+        return new GesLiteralNode(builtin, labels.ToArray(), values.ToArray(), constructor, formStart).Value;
     }
 
-    private GesValue? ReadMessageForm(int depth, bool handler)
+    private GesValue? ReadMessageForm(int depth, bool handler, int formStart)
     {
         var name = ReadName();
         if (name is null) return null;
@@ -190,11 +217,13 @@ internal struct GesLiteralParser
         {
             while (_position < _text.Length)
             {
-                if (_items++ >= MaximumItems) { _limit = "MaxLiteralItems"; return null; }
+                if (_items++ >= MaximumItems) return Limit("MaxLiteralItems");
                 if (handler)
                 {
                     var label = ReadName();
-                    if (label is null || label != "_" && (!GesText.IsFieldName(label) || labels.Contains(label))) return null;
+                    if (label is null) return null;
+                    if (label != "_" && !GesText.IsFieldName(label)) return null;
+                    if (label != "_" && labels.Contains(label)) return null;
                     labels.Add(label);
                 }
                 else
@@ -203,21 +232,20 @@ internal struct GesLiteralParser
                     var label = ReadKey();
                     SkipWhitespace();
                     if (label is null || !Consume(':')) { label = "_"; _position = saved; }
-                    else if (!GesText.IsFieldName(label) || labels.Contains(label)) return null;
+                    else if (!GesText.IsFieldName(label)) return null;
+                    else if (labels.Contains(label)) return null;
                     var value = ReadValue(depth);
                     if (value is not { } item) return null;
                     labels.Add(label);
                     values.Add(item);
                 }
-                SkipWhitespace();
-                if (Consume(')')) break;
-                if (!Consume(',')) return null;
-                SkipWhitespace();
-                if (_position == _text.Length || _text[_position] == ')') return null;
+                var separator = Separator(')');
+                if (separator < 0) return null;
+                if (separator > 0) break;
             }
         }
         SkipWhitespace();
-        GesValue result = handler ? GesValue.GesHandler(GesMessageSignature.Create(name, labels)) : new GesLiteralNode("@message:" + name, labels.ToArray(), values.ToArray()).Value;
+        GesValue result = handler ? GesValue.GesHandler(GesMessageSignature.Create(name, labels)) : new GesLiteralNode("@message:" + name, labels.ToArray(), values.ToArray(), null, formStart).Value;
         if (!handler && _text.AsSpan(_position).StartsWith("with".AsSpan(), StringComparison.Ordinal))
         {
             _position += 4;
@@ -229,31 +257,35 @@ internal struct GesLiteralParser
                 tags.Add(tag);
                 SkipWhitespace();
             } while (Consume(','));
-            var list = new GesValue();
-            list.SetList(tags.ToArray());
-            result = new GesLiteralNode("message", ["_", "tags"], [result, list]).Value;
+            result = Tagged(result, tags, formStart);
         }
-        return Consume(')') ? result : null;
+        if (Consume(')')) return result;
+        return null;
     }
 
+    private static GesValue Tagged(GesValue message, List<GesValue> tags, int formStart)
+    {
+        var list = new GesValue();
+        list.SetList(tags.ToArray());
+        return new GesLiteralNode("message", ["_", "tags"], [message, list], null, formStart).Value;
+    }
+
+    // Callers skip any permitted whitespace first; a type name follows its `:` directly, like the source type token.
     private string? ReadName()
     {
-        SkipWhitespace();
         var start = _position;
-        while (_position < _text.Length && _text[_position] is >= 'a' and <= 'z' or >= 'A' and <= 'Z' or >= '0' and <= '9' or '_') _position++;
+        while (_position < _text.Length && IsNameCharacter(_text[_position])) _position++;
         return _position == start ? null : _text.Substring(start, _position - start);
     }
+
+    private static bool IsNameCharacter(char value) => value is >= 'a' and <= 'z' or >= 'A' and <= 'Z' or >= '0' and <= '9' or '_';
 
     private GesValue? ReadSpatial(int depth, bool point)
     {
         _position += point ? 6 : 7;
         SkipWhitespace();
         if (!Consume('(')) return null;
-        if (depth >= MaximumDepth)
-        {
-            _limit = "MaxLiteralDepth";
-            return null;
-        }
+        if (depth >= MaximumDepth) return Limit("MaxLiteralDepth");
         var x = 0d;
         var y = 0d;
         var z = 0d;
@@ -265,11 +297,7 @@ internal struct GesLiteralParser
         {
             while (_position < _text.Length)
             {
-                if (_items >= MaximumItems)
-                {
-                    _limit = "MaxLiteralItems";
-                    return null;
-                }
+                if (_items >= MaximumItems) return Limit("MaxLiteralItems");
                 _items++;
                 var hasLabel = _text[_position] is 'x' or 'y' or 'z';
                 if (labeled.HasValue && labeled != hasLabel) return null;
@@ -282,13 +310,15 @@ internal struct GesLiteralParser
                     if (!Consume(':')) return null;
                     SkipWhitespace();
                 }
-                if (index > 2 || index <= previousIndex) return null;
+                if (hasLabel && index == previousIndex) return null;
+                if (index > 2 || index <= previousIndex || previousIndex >= 0 && index != previousIndex + 1) return null;
                 previousIndex = index;
                 var start = _position;
                 while (_position < _text.Length && !IsWhitespace(_text[_position]) && _text[_position] is not (',' or ')')) _position++;
                 if (_position == start) return null;
                 var value = GesTextNumberCast.Read(_text, start, _position - start, percentage: _text[_position - 1] == '%', allowGrouping: false);
-                if (value is not { } component || component.Kind is not (GesBytecodeTypeKind.Integer or GesBytecodeTypeKind.Float or GesBytecodeTypeKind.Percentage))
+                if (value is not { } component) return null;
+                if (component.Kind is not (GesBytecodeTypeKind.Integer or GesBytecodeTypeKind.Float or GesBytecodeTypeKind.Percentage))
                     return null;
                 if (unit.HasValue && unit != component.Unit) return null;
                 unit = component.Unit;
@@ -300,11 +330,9 @@ internal struct GesLiteralParser
                     case 1: y = number; break;
                     case 2: z = number; break;
                 }
-                SkipWhitespace();
-                if (Consume(')')) return CreateSpatial(point, x, y, z, unit.Value);
-                if (!Consume(',')) return null;
-                SkipWhitespace();
-                if (_position == _text.Length || _text[_position] == ')') return null;
+                var separator = Separator(')');
+                if (separator < 0) return null;
+                if (separator > 0) return CreateSpatial(point, x, y, z, unit.Value);
             }
             return null;
         }
@@ -322,22 +350,17 @@ internal struct GesLiteralParser
         var rolls = new List<int>();
         while (_position < _text.Length)
         {
-            if (_items >= MaximumItems)
-            {
-                _limit = "MaxLiteralItems";
-                return null;
-            }
+            if (_items >= MaximumItems) return Limit("MaxLiteralItems");
             _items++;
             if (_text[_position] is < '0' or > '9') return null;
             var value = ReadValue(0);
-            if (value is not { } roll || roll.Kind != GesBytecodeTypeKind.Integer || roll.Unit != GesQuantityUnit.UnitNone || roll.IntegerValue is <= 0 or > int.MaxValue)
+            if (value is not { } roll) return null;
+            if (roll.Kind != GesBytecodeTypeKind.Integer || roll.Unit != GesQuantityUnit.UnitNone || roll.IntegerValue is <= 0 or > int.MaxValue)
                 return null;
             rolls.Add((int)roll.IntegerValue);
-            SkipWhitespace();
-            if (Consume(']')) return CreateDice(rolls.ToArray());
-            if (!Consume(',')) return null;
-            SkipWhitespace();
-            if (_position == _text.Length || _text[_position] == ']') return null;
+            var separator = Separator(']');
+            if (separator < 0) return null;
+            if (separator > 0) return CreateDice(rolls.ToArray());
         }
         return null;
     }
@@ -372,22 +395,17 @@ internal struct GesLiteralParser
         var map = isMap ? new List<KeyValuePair<string, GesValue>>() : null;
         while (_position < _text.Length)
         {
-            if (_items >= MaximumItems)
-            {
-                _limit = "MaxLiteralItems";
-                return null;
-            }
+            if (_items >= MaximumItems) return Limit("MaxLiteralItems");
             _items++;
             GesValue? value;
             if (isMap)
             {
+                SkipWhitespace();
                 key = ReadKey();
+                if (key is null) return null;
                 SkipWhitespace();
-                if (key is null || !Consume(':')) return null;
-                SkipWhitespace();
-                value = _position < _text.Length && _text[_position] is ',' or ']'
-                    ? GesValue.GesBoolean(true)
-                    : ReadValue(depth);
+                if (!Consume(':')) return null;
+                value = ReadEntryValue(depth);
                 if (value is not { } entry) return null;
                 map!.Add(new(key, entry));
             }
@@ -397,8 +415,9 @@ internal struct GesLiteralParser
                 if (value is not { } item) return null;
                 list!.Add(item);
             }
-            SkipWhitespace();
-            if (Consume(']'))
+            var separator = Separator(']');
+            if (separator < 0) return null;
+            if (separator > 0)
             {
                 if (isMap)
                 {
@@ -410,9 +429,6 @@ internal struct GesLiteralParser
                 result.SetList(list!.ToArray());
                 return result;
             }
-            if (!Consume(',')) return null;
-            SkipWhitespace();
-            if (_position == _text.Length || _text[_position] == ']') return null;
         }
         return null;
     }
@@ -448,6 +464,25 @@ internal struct GesLiteralParser
         var value = new GesValue();
         value.SetMap(new GesValueMap(keys, values, keys.Length));
         return value;
+    }
+
+    // Ends one container entry: 1 when the container closes, 0 when another entry follows, -1 on failure.
+    // Inlining keeps `parse` collection loops as fast as the former inline separator code (measured on
+    // Vector, List and Map literals).
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private int Separator(char close)
+    {
+        SkipWhitespace();
+        if (Consume(close)) return 1;
+        if (!Consume(',')) return -1;
+        SkipWhitespace();
+        return _position == _text.Length || _text[_position] == close ? -1 : 0;
+    }
+
+    private GesValue? Limit(string name)
+    {
+        _limit ??= name;
+        return null;
     }
 
     private bool Consume(char value)

@@ -5,83 +5,25 @@ using System.Collections.Generic;
 using GameEventScript.Api;
 using GameEventScript.Runtime.Values;
 using GameEventScript.Runtime.Vm;
+using GameEventScript.Syntax;
 using static GameEventScript.Api.GesBytecodeTypeKind;
 
 namespace GameEventScript.Runtime;
 
 internal static class GesDataConstruction
 {
-    internal static bool IsType(string name) => name is "nothing" or "number" or "percentage" or "boolean" or "text" or "tag" or "list" or "map" or "dice" or "vector" or "point" or "range" or "series" or "message" or "handler" or "record";
-    // Returns parameter positions in evaluation order, without reordering evaluation of source arguments.
-    internal static int[]? Positions(string type, IReadOnlyList<string> labels)
-    {
-        var parameters = type switch
-        {
-            "number" => new[]
-            {
-                "value",
-                "unit"
-            },
-            "range" => new[]
-            {
-                "from",
-                "to",
-                "step"
-            },
-            "series" => new[]
-            {
-                "kind",
-                "offset"
-            },
-            "record" => new[]
-            {
-                "type",
-                "fields"
-            },
-            "message" => new[]
-            {
-                "value",
-                "tags"
-            },
-            "vector" or "point" => new[]
-            {
-                "x",
-                "y",
-                "z"
-            },
-            _ => new[]
-            {
-                "value"
-            }
-        };
-        if (labels.Count > parameters.Length || labels.Count == 0 && type is not ("nothing" or "vector" or "point"))
-            return null;
-        var result = new int[labels.Count];
-        var used = new bool[parameters.Length];
-        for (var i = 0; i < labels.Count; i++)
-        {
-            var position = labels[i] == "_" ? i : Array.IndexOf(parameters, labels[i]);
-            if (position < 0 || used[position])
-                return null;
-            used[position] = true;
-            result[i] = position;
-        }
+    internal static bool IsType(string name) => GesLiteralForms.IsType(name);
 
-        if (type == "record" && (!used[0] || !used[1]) || type == "range" && labels.Count > 1 && (!used[0] || !used[1]))
-            return null;
-        if (type is not ("nothing" or "vector" or "point") && !used[0])
-            return null;
-        return result;
-    }
+    internal static int[]? Positions(string type, IReadOnlyList<string> labels) => GesLiteralForms.Positions(type, labels);
 
-    internal static GesValue Create(string type, string[] labels, GesValue[] arguments, GesVirtualMachine state, GesContext context)
+    internal static GesValue Create(string type, string[] labels, GesValue[] arguments, GesVirtualMachine? state, GesContext? context)
     {
         var positions = Positions(type, labels);
         return positions is null ? default : Create(type, positions, arguments, state, context);
     }
 
     // Positions come from Positions(type, labels), resolved once per constant type and label list.
-    internal static GesValue Create(string type, int[] positions, GesValue[] arguments, GesVirtualMachine state, GesContext context)
+    internal static GesValue Create(string type, int[] positions, GesValue[] arguments, GesVirtualMachine? state, GesContext? context)
     {
         if (arguments.Length != positions.Length)
             return default;
@@ -91,17 +33,6 @@ internal static class GesDataConstruction
         var first = values[0];
         if (type == "nothing")
             return default;
-        if (type is "vector" or "point")
-        {
-            var unit = arguments.Length == 0 ? GesQuantityUnit.UnitNone : arguments[0].Unit;
-            foreach (var argument in arguments)
-                if (argument.Kind is not (Integer or Float) || argument.Unit != unit)
-                    return default;
-            return type == "vector"
-                ? GesValue.GesVector(values[0].AsNumeric, values[1].IsNothing ? 0 : values[1].AsNumeric, values[2].IsNothing ? 0 : values[2].AsNumeric, unit)
-                : GesValue.GesPoint(values[0].IsNothing ? 0 : values[0].AsNumeric, values[1].IsNothing ? 0 : values[1].AsNumeric, values[2].IsNothing ? 0 : values[2].AsNumeric, unit);
-        }
-
         if (type == "number")
         {
             var number = GesNumber.Cast(first);
@@ -176,8 +107,6 @@ internal static class GesDataConstruction
             "list" => List,
             "map" => Map,
             "dice" => Dice,
-            "vector" => Vector,
-            "point" => Point,
             "range" => GesBytecodeTypeKind.Range,
             "series" => Series,
             "message" => Message,
@@ -193,7 +122,8 @@ internal static class GesDataConstruction
             foreach (var item in list)
                 AddTags(item, tags);
         else
-            tags.Add(value.AsText());
+            // `_` is no tag name, so `nothing` makes the tag clause invalid.
+            tags.Add(value.IsNothing ? "_" : value.AsText());
     }
 
     internal static GesValue Split(in GesValue input, in GesValue delimiter, bool whitespace)

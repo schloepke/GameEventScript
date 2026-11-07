@@ -17,6 +17,12 @@ internal static class GesExternalTypeValueConverter
 
     private static GesValue CoerceToDeclaredType(in GesValue value, GesBytecodeTypeKind? kind, GesQuantityUnit? unit, string typeName)
     {
+        // Nothing marks an absent value and is never converted into a value of the declared type.
+        if (value.Kind == GesBytecodeTypeKind.Nothing)
+        {
+            return value;
+        }
+
         if (kind == GesBytecodeTypeKind.Vector &&
             unit is not null && unit != GesQuantityUnit.UnitNone &&
             value.ObjectValue is GesSpatialValue vector)
@@ -79,6 +85,12 @@ internal static class GesExternalTypeValueConverter
 
     private static GesValue CoerceToTag(in GesValue value)
     {
+        // A Tag keeps its name; its text form carries the leading '#', which is not a tag name.
+        if (value.Kind == GesBytecodeTypeKind.Tag)
+        {
+            return value;
+        }
+
         var result = new GesValue();
         if (value.Kind == GesBytecodeTypeKind.Boolean)
         {

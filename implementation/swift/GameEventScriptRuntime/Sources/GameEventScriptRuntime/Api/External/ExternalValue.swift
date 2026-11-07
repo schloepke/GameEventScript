@@ -3,7 +3,8 @@
 
 /// An embedding-provided value. Field access is synchronous and may report an explicit application fault.
 public protocol GesExternalValue: AnyObject {
-    /// Immutable field and constructor declaration associated with this value.
+    /// Immutable field and constructor declaration associated with this value. All values of a type should share
+    /// one definition, because creating one validates and sorts its fields.
     var definition: GesExternalTypeDefinition { get }
 
     /// Reads a named field synchronously, returning nil for absence. Thrown application faults retain their

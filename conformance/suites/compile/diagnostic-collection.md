@@ -456,7 +456,8 @@ errors:
 
 ## Test: validate collects declaration and body errors
 
-A predicate/function conflict, a non-boolean predicate result and a repeated binding are all reported.
+A predicate/function conflict, a non-boolean predicate result and a repeated binding are all reported; the
+repeated binding is a rule of its source and comes first.
 
 ### Case description
 
@@ -488,11 +489,11 @@ function p(_ v) be v
 gesBlock: expect
 errors:
   - phase: "validate"
+    code: "validate.duplicateVariable"
+  - phase: "validate"
     code: "validate.predicateFunctionConflict"
   - phase: "validate"
     code: "validate.invalidPredicate"
-  - phase: "validate"
-    code: "validate.duplicateVariable"
 ```
 
 ---
@@ -1041,7 +1042,8 @@ errors:
 
 ## Test: validate collects repeated parameters and types
 
-Each repeated parameter name is reported once per declaration, together with unknown parameter types.
+Each repeated parameter name is reported once per declaration, in source order, before the unknown parameter types,
+which depend on the program's records.
 
 ### Case description
 
@@ -1070,10 +1072,6 @@ on H(d, d, d) {}
 gesBlock: expect
 errors:
   - phase: "validate"
-    code: "validate.invalidTypeConstructor"
-  - phase: "validate"
-    code: "validate.invalidTypeConstructor"
-  - phase: "validate"
     code: "validate.duplicateDefinitionParameter"
   - phase: "validate"
     code: "validate.duplicateDefinitionParameter"
@@ -1081,13 +1079,17 @@ errors:
     code: "validate.duplicateDefinitionParameter"
   - phase: "validate"
     code: "validate.duplicateHandlerParameter"
+  - phase: "validate"
+    code: "validate.invalidTypeConstructor"
+  - phase: "validate"
+    code: "validate.invalidTypeConstructor"
 ```
 
 ---
 
 ## Test: validate collects across sources
 
-Program-wide duplicates of every source and the body errors of each module are reported in one list.
+The rules of each source come first, then the program-wide duplicates of every source, in one list.
 
 ### Case description
 
@@ -1126,9 +1128,243 @@ on A { let x be 1; let x be 2 }
 gesBlock: expect
 errors:
   - phase: "validate"
+    code: "validate.duplicateVariable"
+  - phase: "validate"
     code: "validate.duplicateConstant"
   - phase: "validate"
     code: "validate.duplicateFunction"
+```
+
+---
+
+## Test: validate scopes an unbraced loop body
+
+A single-statement loop body has its own scope, as a braced one does, so a binding there shadows the loop binding.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: validate-scopes-unbraced-loop-body
+kind: compileError
+level: scenario
+sources:
+  - name: "validate-scopes-unbraced-loop-body.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+module m
+on Start(items) {
+  for x in items
+    let x be 1
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+errors:
+  - phase: "validate"
+    code: "validate.shadowedVariable"
+    line: 4
+    column: 5
+```
+
+---
+
+## Test: validate keeps unbraced random bindings local
+
+A binding in a single-statement `random with` body stays in that body; only the repeated binding of the handler is reported.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: validate-keeps-unbraced-random-bindings-local
+kind: compileError
+level: scenario
+sources:
+  - name: "validate-keeps-unbraced-random-bindings-local.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+module m
+on Start {
+  random with 1
+    let y be 1
+  let y be 2
+  let z be 1
+  let z be 2
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+errors:
   - phase: "validate"
     code: "validate.duplicateVariable"
+    line: 7
+    column: 3
+```
+
+---
+
+## Test: validate binds nothing for selectors without a binding
+
+`:sum` and `:average` without a binding name no binding, so an enclosing `value` is not shadowed.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: validate-binds-nothing-for-selectors-without-binding
+kind: compileError
+level: scenario
+sources:
+  - name: "validate-binds-nothing-for-selectors-without-binding.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+module m
+on Start(value, items) {
+  let s be items[:sum]
+  let s be items[:average]
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+errors:
+  - phase: "validate"
+    code: "validate.duplicateVariable"
+    line: 4
+    column: 3
+```
+
+---
+
+## Test: validate reports a repeated handler data form parameter at the parameter
+
+A repeated parameter of a `:Handler` data form is reported at its second occurrence.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: validate-reports-handler-data-form-parameter
+kind: compileError
+level: scenario
+sources:
+  - name: "validate-reports-handler-data-form-parameter.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+module m
+on Start {
+  let h be :Handler(Msg(x, x))
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+errors:
+  - phase: "validate"
+    code: "validate.duplicateHandlerParameter"
+    line: 3
+    column: 28
+```
+
+---
+
+## Test: parse rejects a kind after pair
+
+Only the counts from three take `of a kind`; `pair of` takes a face, so `a kind` is no face.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: parse-rejects-kind-after-pair
+kind: compileError
+level: scenario
+sources:
+  - name: "parse-rejects-kind-after-pair.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+module m
+on Start {
+  let v be [1][:has pair of a kind]
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+errors:
+  - phase: "parse"
+    code: "parse.syntax"
+    line: 3
+    column: 31
+```
+
+---
+
+## Test: validate checks a pair face
+
+The face after `pair of` is an expression, also when it starts with a name such as `a`.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: validate-checks-pair-face
+kind: compileError
+level: scenario
+sources:
+  - name: "validate-checks-pair-face.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+module m
+on Start(a) {
+  let v be [1][:has pair of a[:filter a where true]]
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+errors:
+  - phase: "validate"
+    code: "validate.shadowedVariable"
+    line: 3
+    column: 31
 ```

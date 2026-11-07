@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Copyright 2026 Stephan Schlöpke -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleIdentifier</key>
+	<string>com.steph.gameeventscript-document.textmate-classic</string>
+	<key>CFBundleName</key>
+	<string>GameEventScript Document TextMate Classic</string>
+	<key>CFBundlePackageType</key>
+	<string>BNDL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>0.1.0</string>
+	<key>CFBundleVersion</key>
+	<string>1</string>
+	<key>name</key>
+	<string>GameEventScript Document TextMate Classic</string>
+	<key>uuid</key>
+	<string>8F2B5D19-1A6C-4E7B-B3D4-5C9A0E2F6B48</string>
+</dict>
+</plist>

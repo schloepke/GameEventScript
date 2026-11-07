@@ -18,8 +18,9 @@ final class ToolTests: XCTestCase {
 
     func testCompilerErrorsExplainTheirCause() throws {
         let cases = [
-            ("on Main(args) { let x be 1; let x be 2 }", "validate.duplicateVariable", "declared more than once"),
-            ("on Main(args) { emit ConsoleOut(missing) }", "compile.unresolvedSymbol", "Unknown symbol"),
+            ("on Main(args) { let x be 1; let x be 2 }", "validate.duplicateVariable", "already declared in the current scope"),
+            ("on Main(args) { emit ConsoleOut(missing) }", "validate.unresolvedVariable", "Unknown variable"),
+            ("on Main(args) { emit ConsoleOut($missing) }", "compile.unresolvedSymbol", "Unknown symbol"),
             ("on Main(args) { emit after 10 Tick() }", "validate.invalidTypeConstructor", "requires a time quantity"),
             ("record :Data as { input: :List }\non Main(args) { let y be :Data(wrong: []) }", "validate.invalidTypeConstructor", "argument count and labels"),
         ]
@@ -95,10 +96,60 @@ final class ToolTests: XCTestCase {
         return Result(code: Tool(io: io).run(arguments), output: stdout, error: stderr)
     }
 
+    func testRunReportsEveryMissingExtensionCallSite() throws {
+        let source = try file("game.ges", "on initialization {\n    publish First(value: :probe.missing(1))\n    publish Second(value: :probe.missing(2))\n}\n")
+        let result = run(["run", source])
+        XCTAssertEqual(result.code, 1)
+        XCTAssertTrue(result.error.contains("game.ges(2,26): error link.missingExtension: Unknown extension :probe.missing(_)"), result.error)
+        XCTAssertTrue(result.error.contains("game.ges(3,27): error link.missingExtension: Unknown extension :probe.missing(_)"), result.error)
+        XCTAssertEqual(result.output, "")
+    }
+
+    func testSchemaCommandsCheckHashFormatAndDump() throws {
+        let source = try file("drone.gess", "// note\nschema :Drone as {\n  id: :Number integer between 0 and 255 key\n  x: :Quantity(m) between 0m and 2km step 1cm\n}\n")
+        XCTAssertEqual(run(["schema", "check", source, "--quiet"]).code, 0)
+        XCTAssertTrue(run(["schema", "canonical", source, "--root", "Drone"]).output.contains("field x Quantity(meter) between 0e0 2e3 step 1e-2"))
+        XCTAssertEqual(run(["schema", "hash", source, "--root", "Drone"]).output.count, 17)
+        let dice = try file("dice.gess", "schema :S as { d: :Dice max 2 between 1 and 6, e: :Dice, t: :Tag max 3, u: :Text max 1 | :Nothing }\n")
+        XCTAssertEqual(run(["schema", "format", dice]).output, "schema :S as {\n  d: :Dice max 2 between 1 and 6\n  e: :Dice\n  t: :Tag max 3\n  u: :Text max 1 | :Nothing\n}\n")
+        let format = run(["schema", "format", source])
+        XCTAssertTrue(format.output.contains("x: :Quantity(m) between 0m and 2km step 1cm"))
+        XCTAssertFalse(format.output.contains("// note"))
+        let data = directory.appendingPathComponent("data.bin")
+        try Data([7, 0xE8, 3, 0]).write(to: data)
+        XCTAssertTrue(run(["schema", "dump", source, "--root", "Drone", "--data", data.path]).output.contains("id bit=0 width=8 value=7"))
+        let delta = directory.appendingPathComponent("delta.bin")
+        try Data([7, 0]).write(to: delta)
+        XCTAssertTrue(run(["schema", "dump", source, "--root", "Drone", "--data", delta.path, "--baseline", data.path]).output.hasPrefix("delta bytes 2\nid bit=0 width=8 value=7"))
+        XCTAssertEqual(run(["schema", "hash", source, "--root", "Drone", "--baseline", data.path]).code, 2)
+        XCTAssertEqual(run(["schema", "format", source, "-o", source]).code, 2)
+        XCTAssertEqual(run(["schema", "format", source, "-o", ""]).code, 2)
+        XCTAssertEqual(run(["schema", "format", "", "-o", source + ".out"]).code, 2)
+        XCTAssertEqual(run(["schema", "check", ""]).code, 2)
+        XCTAssertTrue(try String(contentsOfFile: source, encoding: .utf8).contains("// note"))
+        XCTAssertEqual(run(["schema", "check", source, "--root", "Drone"]).code, 2)
+        XCTAssertEqual(run(["schema", "canonical", source, "--root", "Drone", "--param", "a=1"]).code, 2)
+        XCTAssertEqual(run(["schema", "hash", source, "--root", "Drone", "--data", data.path]).code, 2)
+        XCTAssertEqual(run(["schema", "format", source, "--root", "Drone"]).code, 2)
+        let unknown = run(["schema", "hash", source, "--root", "Drone", "--param", "wrong=1"])
+        XCTAssertEqual(unknown.code, 1)
+        XCTAssertTrue(unknown.error.contains("error schema.unknownName: The root 'Drone' has no parameter 'wrong'."))
+        let nested = try file("nested.gess", "parameter width: :Quantity(m)\nschema :Inner as {\n  x: :Quantity(m) between 0m and width step 1m\n}\nschema :Outer as {\n  inner: :Inner\n}\n")
+        XCTAssertEqual(run(["schema", "hash", nested, "--root", "Outer", "--param", "width=8m"]).code, 0)
+        let twice = run(["schema", "hash", nested, "--root", "Outer", "--param", "width=8m", "--param", "width=9m"])
+        XCTAssertEqual(twice.code, 2)
+        XCTAssertTrue(twice.error.contains("The parameter 'width' is given twice."))
+        XCTAssertEqual(run(["schema", "dump", nested, "--root", "Outer", "--param", "width=8m", "--param", "widht=9m", "--data", data.path]).code, 1)
+        let broken = try file("broken.gess", "schema :A as {\n  a: :Quantity(kN)\n}\n")
+        let failed = run(["schema", "check", broken])
+        XCTAssertEqual(failed.code, 1)
+        XCTAssertTrue(failed.error.contains("(2,16): error schema.syntax"), failed.error)
+    }
+
     func testHelpVersionAndUsage() {
         XCTAssertEqual(run([]).code, 0)
         XCTAssertTrue(run(["--version"]).output.contains("(Swift)"))
-        for command in ["compile", "check", "run", "dump"] {
+        for command in ["compile", "check", "run", "dump", "document"] {
             let help = run([command, "--help"])
             XCTAssertEqual(help.code, 0)
             XCTAssertTrue(help.output.contains("ges " + command))

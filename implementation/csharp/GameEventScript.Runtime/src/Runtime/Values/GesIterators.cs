@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using System;
+using GameEventScript.Syntax;
 
 namespace GameEventScript.Runtime.Values;
 

@@ -1,6 +1,8 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
+@_spi(Syntax) import GameEventScriptSyntax
+
 /// Host-specific resolution; this object is never retained by the portable Program.
 final class GesLinkedProgram {
     struct Handler {
@@ -30,7 +32,7 @@ final class GesLinkedProgram {
     func dataConstructionPositions(type: UInt16, labels: UInt16) -> [Int]? {
         let key = UInt32(type) << 16 | UInt32(labels)
         if let positions = dataPositions[key] { return positions }
-        let positions = GesDataConstructionShape.positions(program.stringConstants[Int(type)], program.uint16IndexLists[Int(labels)].map { program.stringConstants[Int($0)] })
+        let positions = GesLiteralForms.positions(program.stringConstants[Int(type)], program.uint16IndexLists[Int(labels)].map { program.stringConstants[Int($0)] })
         dataPositions[key] = .some(positions)
         return positions
     }
@@ -68,14 +70,38 @@ final class GesLinkedProgram {
                 if binding.id == .max { continue }
                 let parts = name.split(separator: ".")
                 let reference = try GesExtensionReference(extensionName: String(parts[0]), functionName: String(parts[1]), argumentLabels: labels)
-                guard let function = try extensions?.resolve(reference) else { throw GesDynamicLinkError(code: "link.missingExtension", program: program.moduleName, symbol: reference.signatureID) }
+                guard let function = try extensions?.resolve(reference) else {
+                    throw GesDynamicLinkError(
+                        code: "link.missingExtension",
+                        program: program,
+                        message: "Unknown extension :\(reference.signatureID)",
+                        symbol: reference.signatureID,
+                        calls: (.callExternal, binding.id)
+                    )
+                }
                 self.extensions[binding.id] = function
                 extensionBindings[binding.id] = binding
             case .externalType:
                 if binding.id == .max { continue }
                 let reference = try GesExternalTypeConstructorReference(typeName: name, argumentLabels: labels)
-                guard let constructor = try types?.resolve(reference) else { throw GesDynamicLinkError(code: "link.missingExternalTypeConstructor", program: program.moduleName, symbol: reference.signatureID) }
-                if constructor.definition.signatureID != reference.signatureID { throw GesDynamicLinkError(code: "link.mismatchedExternalTypeConstructor", program: program.moduleName, symbol: reference.signatureID) }
+                guard let constructor = try types?.resolve(reference) else {
+                    throw GesDynamicLinkError(
+                        code: "link.missingExternalTypeConstructor",
+                        program: program,
+                        message: "Unknown external type constructor :\(reference.signatureID)",
+                        symbol: reference.signatureID,
+                        calls: (.createExternalType, binding.id)
+                    )
+                }
+                if constructor.definition.signatureID != reference.signatureID {
+                    throw GesDynamicLinkError(
+                        code: "link.mismatchedExternalTypeConstructor",
+                        program: program,
+                        message: "External type constructor registry returned :\(constructor.definition.signatureID) for :\(reference.signatureID)",
+                        symbol: reference.signatureID,
+                        calls: (.createExternalType, binding.id)
+                    )
+                }
                 constructors[binding.id] = constructor
                 constructorBindings[binding.id] = binding
             default: break

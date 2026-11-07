@@ -30,4 +30,8 @@
         <None Include="../../../../website/brand/pixel-duo/nuget-icon.png" Link="icon.png" Pack="true" PackagePath="/icon.png" />
         <None Include="../../../../README.md" Link="README.md" Pack="true" PackagePath="/" />
     </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../../GameEventScript.Syntax/src/GameEventScript.Syntax.csproj" />
+    </ItemGroup>
 </Project>

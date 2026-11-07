@@ -50,6 +50,7 @@ class EditorTests(unittest.TestCase):
     @unittest.skipUnless(shutil.which('node'), 'Node.js required for VS Code execution checks')
     def test_vscode_commands_and_packaged_markdown_highlighting(self):
         subprocess.run(['node', '--test', str(ROOT / 'scripts/test-vscode-extension.cjs')], check=True, capture_output=True)
+        subprocess.run(['node', '--test', str(ROOT / 'scripts/test-vscode-gesb.cjs')], check=True, capture_output=True)
         with tempfile.TemporaryDirectory() as directory:
             with zipfile.ZipFile(ROOT / 'tools/editors/VS Code/GameEventScript-VSCode.vsix') as archive:
                 archive.extractall(directory)
@@ -65,6 +66,9 @@ class EditorTests(unittest.TestCase):
             'extension.js': 'extension.js',
             'markdown-preview.js': 'markdown-preview.js',
             'markdown-preview.css': 'markdown-preview.css',
+            'gesb-reader.js': 'gesb-reader.js',
+            'gesb-viewer.js': 'gesb-viewer.js',
+            'gesb-viewer.css': 'gesb-viewer.css',
             'readme.md': 'README.md',
             'LICENSE.txt': 'LICENSE',
         }
@@ -99,6 +103,8 @@ class EditorTests(unittest.TestCase):
         languages = {item['id']: item for item in contributions['languages']}
         self.assertEqual({'.ges'}, set(languages['ges']['extensions']))
         self.assertEqual({'.gesa'}, set(languages['gesa']['extensions']))
+        self.assertEqual({'.gesd'}, set(languages['gesd']['extensions']))
+        self.assertEqual({'.gess'}, set(languages['gess']['extensions']))
         scopes = {}
         for grammar in contributions['grammars']:
             data = json.loads((root / grammar['path']).read_text())
@@ -201,7 +207,7 @@ class EditorTests(unittest.TestCase):
         self.assertIn('&lt;bad&gt;', result)
 
     @unittest.skipUnless(shutil.which('bat') or shutil.which('batcat'), 'bat not installed; adapter checks still run')
-    def test_bat_loads_both_grammars_and_highlights_embedded_source(self):
+    def test_bat_loads_all_grammars_and_highlights_embedded_source(self):
         bat = shutil.which('bat') or shutil.which('batcat')
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -214,9 +220,11 @@ class EditorTests(unittest.TestCase):
             languages = subprocess.check_output([bat, '--list-languages', '--color=never'], env=env, text=True)
             self.assertIn('GameEventScript', languages)
             self.assertIn('gesa', languages)
+            self.assertIn('gesd', languages)
             examples = {
                 'ges': 'module test.bot\n// comment\non Main(args) { emit ConsoleOut("Hello ""pilot""", 20%) with #ready }\n',
                 'gesa': '.segment source "bot.ges"\non Main(args) { emit ConsoleOut("hello", 20%) }\n.segment code\n.source-line "bot.ges" 1 | let x be 2\n',
+                'gesd': ":Schema(:DriveUnit)\n// comment\nid: 'drive', kind: #drive\nspeed: 10m/s\ndone: :Message(Done(v: 1) with #a)\n",
             }
             for extension, source in examples.items():
                 path = root / ('sample.' + extension)

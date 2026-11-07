@@ -61,8 +61,8 @@ Select a published version and add the products your target needs:
 `GameEventScriptSwiftBridge`. See the [Swift guide](https://gameeventscript.org/docs/learn/swift/)
 for a complete example and SwiftPM manifest configuration.
 
-Optional editor highlighting is available as `GameEventScript.SyntaxHighlighter`
-on NuGet and `GameEventScriptSyntaxHighlighter` through SwiftPM. Neither depends
+Optional editor highlighting is available as `GameEventScript.Syntax`
+on NuGet and `GameEventScriptSyntax` through SwiftPM. Neither depends
 on the Runtime or Compiler.
 
 All libraries share one release version. **During 0.x, patches contain compatible

@@ -82,7 +82,8 @@ struct GesTypeMacro: MemberMacro {
     // so this table mirrors the enum.
     static let unitSymbols: [String: String] = [
         "degree": "°", "meter": "m", "second": "s", "meterPerSecond": "m/s", "meterPerSecondSquared": "m/s²", "kilogram": "kg", "newton": "N",
-        "joule": "J", "watt": "W", "volt": "V", "ampere": "A", "hertz": "Hz", "kelvin": "K", "degreePerSecond": "°/s",
+        "joule": "J", "watt": "W", "volt": "V", "ampere": "A", "hertz": "Hz", "squareMeter": "m²", "cubicMeter": "m³", "wattPerSquareMeter": "W/m²",
+        "kelvin": "K", "degreePerSecond": "°/s", "decibel": "dB", "wattPerKelvin": "W/K", "joulePerKelvin": "J/K",
     ]
 
     static func expansion(of node: AttributeSyntax, providingMembersOf declaration: some DeclGroupSyntax, in context: some MacroExpansionContext) throws -> [DeclSyntax] {

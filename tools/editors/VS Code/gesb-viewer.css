@@ -1,0 +1,62 @@
+/* Copyright 2026 Stephan Schlöpke */
+/* SPDX-License-Identifier: Apache-2.0 */
+
+body {
+    background: var(--vscode-editor-background);
+    color: var(--vscode-foreground);
+    font-family: var(--vscode-font-family);
+    font-size: var(--vscode-font-size);
+    line-height: 1.45;
+    margin: 0 auto;
+    max-width: 72rem;
+    padding: 1rem 1.5rem 3rem;
+}
+
+h1 { font-size: 1.5em; font-weight: 600; margin: 0.5rem 0; overflow-wrap: anywhere; }
+h2 { display: inline-block; font-size: 1.1em; font-weight: 600; margin: 1.75rem 0 0.5rem; }
+section > details > summary h2 { margin: 0; }
+section > details { margin-top: 1.75rem; }
+
+code, .code, .source {
+    font-family: var(--vscode-editor-font-family, monospace);
+    font-size: var(--vscode-editor-font-size, 0.95em);
+}
+
+.count, .note, dt { color: var(--vscode-descriptionForeground); font-weight: 400; }
+.count { font-size: 0.9em; }
+
+dl { display: flex; flex-wrap: wrap; gap: 0.25rem 2rem; margin: 0; }
+dt { font-size: 0.85em; }
+dd { margin: 0; }
+
+.table { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; }
+th { color: var(--vscode-descriptionForeground); font-weight: 400; text-align: left; white-space: nowrap; }
+th, td { border-bottom: 1px solid var(--vscode-panel-border, rgba(128, 128, 128, 0.35)); padding: 0.25rem 1rem 0.25rem 0; vertical-align: top; }
+td.code { overflow-wrap: anywhere; }
+.number { font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+
+summary { cursor: pointer; }
+details + details, details + .note, .note + details { margin-top: 0.5rem; }
+
+.problems { color: var(--vscode-errorForeground); }
+.problems ul { margin: 0; padding-left: 1.25rem; }
+
+.source {
+    background: var(--vscode-textCodeBlock-background, rgba(128, 128, 128, 0.1));
+    counter-reset: line;
+    margin: 0.5rem 0 0;
+    overflow-x: auto;
+    padding: 0.5rem 1rem 0.5rem 0;
+    tab-size: 4;
+}
+.line { counter-increment: line; display: block; min-height: 1.45em; padding-left: 4rem; position: relative; }
+.line::before {
+    color: var(--vscode-editorLineNumber-foreground, var(--vscode-descriptionForeground));
+    content: counter(line);
+    left: 0;
+    position: absolute;
+    text-align: right;
+    user-select: none;
+    width: 3rem;
+}

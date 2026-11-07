@@ -1,13 +1,15 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
+@_spi(Syntax) import GameEventScriptSyntax
+
 /// Shared implementation boundary for the separately packaged compiler.
 @_spi(Compiler) public enum GesCompilerSupport {
     /// Recognizes a source numeric literal using the runtime's numeric rules; returns nil for invalid input.
     public static func number(_ text: String, percentage: Bool = false) -> GesValue? { GesTextNumberCast.read(text, percentage: percentage, allowGrouping: false) }
 
     /// Validates labels for an explicit built-in data constructor without evaluating its arguments.
-    public static func dataArguments(_ type: String, _ labels: [String]) -> Bool { GesDataConstructionShape.positions(type, labels) != nil }
+    public static func dataArguments(_ type: String, _ labels: [String]) -> Bool { GesLiteralForms.positions(type, labels) != nil }
 
     /// Applies the source Number cast, including text parsing and invalid-input-to-Nothing conversion.
     public static func castNumber(_ value: GesValue) -> GesValue { GesCasts.number(value) }
@@ -28,19 +30,6 @@
     /// Unit of a quotient of two quantities by the closed derivation table, or nil when unsupported.
     public static func quotientUnit(_ dividend: GesQuantityUnit, _ divisor: GesQuantityUnit) -> GesQuantityUnit? { GesQuantityUnit.quotient(dividend, divisor) }
 
-    /// The first scalars of every unit suffix spelling, so a lexer can skip the suffix table for unitless numbers.
-    public static let unitSuffixStarts = Set(GesQuantityUnit.suffixes.compactMap(\.scalars.first))
-
-    /// The longest unit suffix spelling at `start` that ends at a token boundary, as its scalar count; 0 when none matches.
-    public static func unitSuffixLength(_ scalars: [Unicode.Scalar], at start: Int, boundary: (Unicode.Scalar) -> Bool) -> Int {
-        for suffix in GesQuantityUnit.suffixes {
-            let end = start + suffix.scalars.count
-            guard end <= scalars.count, scalars[start..<end].elementsEqual(suffix.scalars) else { continue }
-            if end == scalars.count || boundary(scalars[end]) { return suffix.scalars.count }
-        }
-        return 0
-    }
-
     /// Parses a `:Quantity(...)` unit name, such as `m/s`, `°/s` or `none`.
     public static func quantityUnit(_ name: String) -> GesQuantityUnit? { GesQuantityUnit(quantityName: name) }
 
@@ -49,9 +38,6 @@
 
     /// The stable bytecode UnitId of a unit.
     public static func unitID(_ unit: GesQuantityUnit) -> UInt8 { unit.unitID }
-
-    /// Decodes a complete quoted source Text literal, or returns nil for invalid syntax or escapes.
-    public static func quotedText(_ text: String) -> String? { GesLiteralParser.sourceText(text) }
 
     /// Computes the portable SHA-256 digest used by compiler source metadata.
     public static func sha256(_ bytes: [UInt8]) -> [UInt8] { GesSha256.digest(bytes) }

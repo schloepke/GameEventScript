@@ -159,6 +159,8 @@ private final class GesProgramDump {
                 output += " mode=" + ["Normal", "Union", "Intersect", "Difference", "Lockstep", "Cartesian", "Entries"][Int(i.unitAndFlags >> 5)]
             } else if [.move, .add, .subtract, .multiply, .divide, .power, .integerDivide, .modulo, .remainder, .min, .max, .negate, .abs, .clamp].contains(i.opcode), i.unitAndFlags & 64 != 0 {
                 output += " mode=Numeric"
+            } else if i.opcode == .parseLiteral {
+                if i.unitAndFlags & 64 != 0 { output += " mode=Strict" }
             } else if i.opcode == .iteratorNext && i.unitAndFlags & 32 != 0 {
                 output += " output=Components"
             } else {
@@ -187,7 +189,7 @@ private final class GesProgramDump {
         if part.isString { return textLabels[Int(part == .customTypeName ? i.word2 : i.word1)] }
         switch part {
         case .outboundMessage, .recordReference, .externalReference: return binding(i, part).map { bindLabels[$0] } ?? "Bind_none"
-        case .localRegisterDelta, .diceCount, .componentCount, .fromImmediate: return "#" + String(i.signedWord1)
+        case .localRegisterDelta, .diceCount, .spatialStart, .fromImmediate: return "#" + String(i.signedWord1)
         case .countImmediate where i.opcode == .splitText: return "#" + String(i.a)
         case .diceSideCount, .countImmediate, .toImmediate: return "#" + String(i.signedWord2)
         case .indexImmediate: return "#" + String(i.word1)

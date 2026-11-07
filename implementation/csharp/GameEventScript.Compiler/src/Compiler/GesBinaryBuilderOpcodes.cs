@@ -61,7 +61,8 @@ internal sealed partial class GesBinaryBuilder
 
     public GesBinaryBuilder CastUnit(GesRegisterRef destination, GesRegisterRef source, GesQuantityUnit unit) => AddOpcode(GesBytecodeOpCode.CastUnit, unit, dst: GesOperand.Register(destination), x: GesOperand.Register(source));
 
-    public GesBinaryBuilder ParseLiteral(GesRegisterRef destination, GesRegisterRef source) => AddOpcode(GesBytecodeOpCode.ParseLiteral, dst: GesOperand.Register(destination), x: GesOperand.Register(source));
+    public GesBinaryBuilder ParseLiteral(GesRegisterRef destination, GesRegisterRef source, bool strict = false)
+        => AddOpcode(GesBytecodeOpCode.ParseLiteral, flags: strict ? GesInstructionFlag.Strict : GesInstructionFlag.None, dst: GesOperand.Register(destination), x: GesOperand.Register(source));
 
     public GesBinaryBuilder CastNumeric(GesRegisterRef destination, GesRegisterRef source) => AddOpcode(GesBytecodeOpCode.CastNumeric, dst: GesOperand.Register(destination), x: GesOperand.Register(source));
 
@@ -129,9 +130,9 @@ internal sealed partial class GesBinaryBuilder
 
     public GesBinaryBuilder CreateDice(GesRegisterRef destination, short count, short sideCount) => AddOpcode(GesBytecodeOpCode.CreateDice, dst: GesOperand.Register(destination), y: GesOperand.I16(sideCount), count: count);
 
-    public GesBinaryBuilder CreateVector(GesRegisterRef destination, short componentCount) => AddOpcode(GesBytecodeOpCode.CreateVector, dst: GesOperand.Register(destination), x: GesOperand.I16(componentCount));
+    public GesBinaryBuilder CreateVector(GesRegisterRef destination, short spatialStart) => AddOpcode(GesBytecodeOpCode.CreateVector, dst: GesOperand.Register(destination), x: GesOperand.I16(spatialStart));
 
-    public GesBinaryBuilder CreatePoint(GesRegisterRef destination, short componentCount) => AddOpcode(GesBytecodeOpCode.CreatePoint, dst: GesOperand.Register(destination), x: GesOperand.I16(componentCount));
+    public GesBinaryBuilder CreatePoint(GesRegisterRef destination, short spatialStart) => AddOpcode(GesBytecodeOpCode.CreatePoint, dst: GesOperand.Register(destination), x: GesOperand.I16(spatialStart));
 
     public GesBinaryBuilder CreateList(GesRegisterRef destination) => AddOpcode(GesBytecodeOpCode.CreateList, dst: GesOperand.Register(destination));
 

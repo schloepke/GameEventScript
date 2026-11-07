@@ -8,6 +8,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using GameEventScript.Api;
 using GameEventScript.Runtime;
+using GameEventScript.Syntax;
 using static GameEventScript.Api.GesBytecodeTypeKind;
 using static GameEventScript.Api.GesQuantityUnit;
 using static GameEventScript.Runtime.Values.GesValue.GesValueFlags;
@@ -118,7 +119,7 @@ public partial struct GesValue : IEquatable<GesValue>
     public static GesValue GesText(string text)
     {
         text ??= string.Empty;
-        Runtime.GesText.RequireValidUnicode(text, nameof(text));
+        GameEventScript.Syntax.GesText.RequireValidUnicode(text, nameof(text));
         var value = new GesValue();
         value.SetText(text);
         return value;
@@ -132,7 +133,7 @@ public partial struct GesValue : IEquatable<GesValue>
     public static GesValue GesTag(string tag)
     {
         tag ??= string.Empty;
-        if (!Runtime.GesText.IsTagValue(tag))
+        if (!GameEventScript.Syntax.GesText.IsTagValue(tag))
             throw new ArgumentException("Tag values must use the portable ASCII name grammar.", nameof(tag));
         var value = new GesValue();
         value.SetTag(tag);
@@ -188,56 +189,129 @@ public partial struct GesValue : IEquatable<GesValue>
     }
 
     /// <summary>
-    /// Performs the ges map operation.
+    /// Wraps a host-provided external value.
+    /// </summary>
+    /// <param name="value">The host object.</param>
+    /// <returns>The result of the operation.</returns>
+    public static GesValue GesExternal(IGesExternalValue value)
+    {
+        var result = new GesValue();
+        result.SetExternal(value);
+        return result;
+    }
+
+    /// <summary>
+    /// Creates a Map from parallel keys and values in canonical key order, keeping the last value of a duplicate key.
+    /// Extra keys or values beyond the shorter array are ignored.
     /// </summary>
     /// <param name="keys">The keys value.</param>
     /// <param name="values">The values value.</param>
     /// <returns>The result of the operation.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when an array or a key is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">Thrown when a key is not valid Unicode.</exception>
     public static GesValue GesMap(string[] keys, GesValue[] values)
     {
-        var count = keys.Length < values.Length ? keys.Length : values.Length;
-        var uniqueKeys = new string[count];
-        var uniqueValues = new GesValue[count];
-        var uniqueCount = 0;
-        for (var sourceIndex = 0; sourceIndex < count; sourceIndex++)
-        {
-            var key = keys[sourceIndex];
-            var existingIndex = -1;
-            for (var index = 0; index < uniqueCount; index++)
-            {
-                if (!string.Equals(uniqueKeys[index], key, StringComparison.Ordinal)) continue;
-                existingIndex = index;
-                break;
-            }
-
-            if (existingIndex >= 0)
-            {
-                uniqueValues[existingIndex] = values[sourceIndex];
-                continue;
-            }
-
-            uniqueKeys[uniqueCount] = key;
-            uniqueValues[uniqueCount] = values[sourceIndex];
-            uniqueCount++;
-        }
-
         var value = new GesValue();
-        value.SetMap(new GesValueMap(uniqueKeys, uniqueValues, uniqueCount));
+        value.SetMap(UniqueEntries(keys ?? throw new ArgumentNullException(nameof(keys)), values ?? throw new ArgumentNullException(nameof(values)), nameof(keys)));
         return value;
     }
 
     /// <summary>
-    /// Performs the ges record operation.
+    /// Creates a Map from ordered entries in canonical key order, keeping the last value of a duplicate key.
+    /// </summary>
+    /// <param name="entries">The ordered key-value entries.</param>
+    /// <returns>The result of the operation.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when the array or a key is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">Thrown when a key is not valid Unicode.</exception>
+    public static GesValue GesMap(params (string, GesValue)[] entries)
+    {
+        SplitEntries(entries ?? throw new ArgumentNullException(nameof(entries)), out var keys, out var values);
+        var value = new GesValue();
+        value.SetMap(UniqueEntries(keys, values, nameof(entries)));
+        return value;
+    }
+
+    /// <summary>
+    /// Creates a Record from parallel field names and values in canonical key order, keeping the last value of a
+    /// duplicate name. Extra names or values beyond the shorter array are ignored.
     /// </summary>
     /// <param name="typeName">The type name value.</param>
     /// <param name="keys">The keys value.</param>
     /// <param name="values">The values value.</param>
     /// <returns>The result of the operation.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when an array or a name is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">Thrown when a name is not valid Unicode.</exception>
     public static GesValue GesRecord(string typeName, string[] keys, GesValue[] values)
     {
         var value = new GesValue();
-        value.SetRecord(typeName ?? string.Empty, new GesValueMap(keys, values, keys.Length < values.Length ? keys.Length : values.Length));
+        value.SetRecord(typeName ?? string.Empty, UniqueEntries(keys ?? throw new ArgumentNullException(nameof(keys)), values ?? throw new ArgumentNullException(nameof(values)), nameof(keys)));
         return value;
+    }
+
+    /// <summary>
+    /// Creates a Record from ordered fields in canonical key order, keeping the last value of a duplicate name.
+    /// </summary>
+    /// <param name="typeName">The type name value.</param>
+    /// <param name="fields">The ordered field name and value entries.</param>
+    /// <returns>The result of the operation.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when the array or a name is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">Thrown when a name is not valid Unicode.</exception>
+    public static GesValue GesRecord(string typeName, params (string, GesValue)[] fields)
+    {
+        SplitEntries(fields ?? throw new ArgumentNullException(nameof(fields)), out var keys, out var values);
+        var value = new GesValue();
+        value.SetRecord(typeName ?? string.Empty, UniqueEntries(keys, values, nameof(fields)));
+        return value;
+    }
+
+    private static void SplitEntries((string, GesValue)[] entries, out string[] keys, out GesValue[] values)
+    {
+        keys = new string[entries.Length];
+        values = new GesValue[entries.Length];
+        for (var index = 0; index < entries.Length; index++)
+            (keys[index], values[index]) = entries[index];
+    }
+
+    // Sorts once and keeps the highest input position of each run of equal keys, because Array.Sort is not stable.
+    private static GesValueMap UniqueEntries(string[] keys, GesValue[] values, string parameterName)
+    {
+        var count = keys.Length < values.Length ? keys.Length : values.Length;
+        var sortedKeys = new string[count];
+        var positions = new int[count];
+        for (var index = 0; index < count; index++)
+        {
+            GameEventScript.Syntax.GesText.RequireValidUnicode(keys[index] ?? throw new ArgumentNullException(parameterName), parameterName);
+            sortedKeys[index] = keys[index];
+            positions[index] = index;
+        }
+
+        Array.Sort(sortedKeys, positions, GameEventScript.Syntax.GesText.ScalarComparer);
+        var sortedValues = new GesValue[count];
+        var uniqueCount = 0;
+        var lastPosition = -1;
+        for (var index = 0; index < count; index++)
+        {
+            var position = positions[index];
+            if (uniqueCount > 0 && string.Equals(sortedKeys[uniqueCount - 1], sortedKeys[index], StringComparison.Ordinal))
+            {
+                if (position < lastPosition) continue;
+            }
+            else
+            {
+                sortedKeys[uniqueCount++] = sortedKeys[index];
+            }
+
+            lastPosition = position;
+            sortedValues[uniqueCount - 1] = values[position];
+        }
+
+        if (uniqueCount < count)
+        {
+            Array.Resize(ref sortedKeys, uniqueCount);
+            Array.Resize(ref sortedValues, uniqueCount);
+        }
+
+        return new GesValueMap(sortedKeys, sortedValues);
     }
 
     /// <summary>
@@ -418,7 +492,8 @@ public partial struct GesValue : IEquatable<GesValue>
     public readonly double Z => ObjectValue is GesSpatialValue vector ? vector.Z : 0d;
 
     /// <summary>
-    /// Gets the Unicode scalar or collection count, saturated at Int32.MaxValue; scalar values have length zero.
+    /// Gets the Unicode scalar or collection count, saturated at Int32.MaxValue; an external value counts its declared
+    /// fields without running a getter, also those a materialized map leaves out; scalar values have length zero.
     /// </summary>
     public readonly int Length => (int)Math.Min(CollectionCount, int.MaxValue);
 
@@ -464,16 +539,65 @@ public partial struct GesValue : IEquatable<GesValue>
         => ObjectValue is GesValue[] source ? new GesValueSlice(source) : GesValueSlice.Empty;
 
     /// <summary>
-    /// Performs the as map operation.
+    /// Returns the stored entries of a Map or the stored fields of a Record, otherwise <see langword="null"/>.
+    /// External field getters are not invoked; <see cref="MaterializedMap"/> reads them.
     /// </summary>
-    /// <returns>The result of the operation.</returns>
+    /// <returns>The stored entries or fields.</returns>
     public readonly GesValueMap? AsMap() => ObjectValue switch
     {
         GesValueMap map => map,
         GesCustomObject customObject => customObject.Map,
-        GesExternalStorage externalValue => externalValue.ToMap(),
         _ => null
     };
+
+    /// <summary>
+    /// Returns the stored entries or fields, or reads every declared field of an external value. Each call runs the
+    /// getters again and keeps nothing, so an external value can change between handlers.
+    /// </summary>
+    /// <returns>The entries or fields, or <see langword="null"/> for every other value.</returns>
+    /// <exception cref="GesFatalRuntimeException">Thrown when an external field getter fails.</exception>
+    public readonly GesValueMap? MaterializedMap() => (ObjectValue as GesExternalStorage)?.ToMap() ?? AsMap();
+
+    /// <summary>
+    /// Reads one declared field of an external value by running only its getter, and applies the declared type.
+    /// </summary>
+    /// <param name="name">The field name.</param>
+    /// <returns>The field, or <see langword="null"/> for an undeclared name, an absent field or a value that is not external.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="name"/> is <see langword="null"/>.</exception>
+    /// <exception cref="GesFatalRuntimeException">Thrown when the external field getter fails.</exception>
+    public readonly GesValue? ReadField(string name)
+    {
+        _ = name ?? throw new ArgumentNullException(nameof(name));
+        return (ObjectValue as GesExternalStorage)?.ReadField(name);
+    }
+
+    /// <summary>
+    /// Gets the host object of an external value, otherwise <see langword="null"/>; the fastest way to its data.
+    /// </summary>
+    public readonly IGesExternalValue? ExternalValue => (ObjectValue as GesExternalStorage)?.Value;
+
+    /// <summary>
+    /// Reads a member by name: the field of a Record, the entry of a Map, or the coordinate <c>x</c>, <c>y</c> or
+    /// <c>z</c> of a Vector or Point. A missing name and every other value, including an external value, give
+    /// Nothing; external field getters are not invoked, and a stored Nothing reads like a missing name.
+    /// </summary>
+    /// <param name="name">The member name.</param>
+    /// <returns>The member value, or Nothing.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="name"/> is <see langword="null"/>.</exception>
+    public readonly GesValue this[string name]
+    {
+        get
+        {
+            _ = name ?? throw new ArgumentNullException(nameof(name));
+            return ObjectValue switch
+            {
+                GesValueMap map => map.Get(name) ?? default,
+                GesCustomObject customObject => customObject.Map.Get(name) ?? default,
+                GesSpatialValue spatial when spatial.GetComponent(name) is { } component => GesFloat(component, Unit),
+                _ => default
+            };
+        }
+    }
 
     /// <summary>
     /// Performs the as dice operation.
@@ -606,14 +730,14 @@ public partial struct GesValue : IEquatable<GesValue>
     }
 
     internal void SetText(string text)
-        => SetText(text, Runtime.GesText.CountScalars(text));
+        => SetText(text, GameEventScript.Syntax.GesText.CountScalars(text));
 
     internal void SetText(string text, int scalarCount)
     {
         Kind = Text;
         Flags = StorageObjectFlag |
                 (text.Length == 0 ? None : HasValueFlag) |
-                (Runtime.GesText.EqualsAsciiIgnoreCase(text, "true") || text == "1" ? IsTrueFlag : IsFalseFlag);
+                (GameEventScript.Syntax.GesText.EqualsAsciiIgnoreCase(text, "true") || text == "1" ? IsTrueFlag : IsFalseFlag);
         Unit = UnitNone;
         IntegerValue = 0;
         ObjectValue = scalarCount == text.Length ? text : new GesTextPayload(text, scalarCount);
@@ -1084,7 +1208,7 @@ public partial struct GesValue : IEquatable<GesValue>
         GesBytecodeTypeKind.Range when ObjectValue is GesIntegerRange range => FormatRange(range.From, range.To, range.Step),
         GesBytecodeTypeKind.Range when ObjectValue is GesFloatRange range => FormatRange(range.From, range.To, range.Step),
         Series when ObjectValue is GesSeriesValue series => $":Series({series.SignatureId}, offset: {series.Offset.ToString(CultureInfo.InvariantCulture)})",
-        GesBytecodeTypeKind.Handler when ObjectValue is GesMessageSignature signature => $":Handler({signature.SignatureId})",
+        GesBytecodeTypeKind.Handler when ObjectValue is GesMessageSignature signature => $":Handler({signature.SignatureId.Replace(",", ", ")})",
         GesBytecodeTypeKind.Message when ObjectValue is GameEventScriptMessage message => FormatMessage(message),
         _ => Kind.ToString()
     };
@@ -1133,7 +1257,7 @@ public partial struct GesValue : IEquatable<GesValue>
             if (!first) builder.Append(", ");
             first = false;
             var key = valueMap.KeyAt(i);
-            if (Runtime.GesText.IsFieldName(key)) builder.Append(key);
+            if (GameEventScript.Syntax.GesText.IsFieldName(key)) builder.Append(key);
             else GesTextLiteralReader.AppendQuoted(builder, key);
             builder.Append(": ");
             GesValue tempQualifier = valueMap.ValueAt(i);

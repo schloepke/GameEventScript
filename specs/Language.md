@@ -195,19 +195,33 @@ not as an additional source-compilation limit.
 ## Lexical Rules
 
 ASCII space and tab separate tokens. `LF`, `CRLF`, `CR`, and semicolons separate
-statements where the grammar permits a separator. Line comments start with `//`
-and continue up to, but do not consume, the next logical newline.
+statements where the grammar permits a separator. Inside the parentheses of an
+argument list or type constructor, line breaks separate nothing: they may stand
+before and after each argument and before the closing parenthesis. Line comments
+start with `//` and continue up to, but do not consume, the next logical newline.
 
 ```ges
 let x be 10
 let y be 20; let z be x + y // same statement separator model
 ```
 
+> **Since: Unreleased** — underscores in message and type names
+
 Names are intentionally narrow:
 
 - Callable names, argument labels, fields, map keys, tags, constant names, and
   extension namespace/function components start with a lowercase ASCII letter
   and continue with ASCII letters or digits. They never contain `_`.
+- An argument label is such a name or one of the keyword-like words `to`,
+  `nothing`, `pi`, `e`, `tau`, `infinity` and the prefix intrinsic names (`abs`,
+  `ln`, `exp`, `sqrt`, `cbrt`, `chance`, `floor`, `ceil`, `truncate`, `rad`,
+  `deg`, `wrap`, `round`, `sin`, `cos`, `tan`, `asin`, `acos`, `atan`, `atan2`,
+  `hypot`, `distance`, `squared`, `length`, `normalize`, `dot`, `cross`,
+  `angle`). Any other keyword, such as `empty`, `record` or `if`, followed by `:`
+  is a `parse.syntax` error. A map literal key is always a plain name; even
+  `to:` does not start a map entry. An extension function name after
+  `:namespace.` is a plain name or a prefix intrinsic name, so `:ns.empty(1)`
+  is not an extension call.
 - Local binding names use that same lower-name form and may additionally end in
   one canonical derivation suffix `_0`, `_1`, and so on. Leading zeroes are
   forbidden except for `_0`; `_01` is invalid. This suffix is available only to
@@ -216,20 +230,21 @@ Names are intentionally narrow:
 - Local names must resolve to a local, parameter, or capture visible at compile
   time. Callable names resolve in the program-wide callable namespace. Unknown
   names are compile errors; they do not evaluate to `nothing`.
-- Message names start with an uppercase ASCII letter and continue with ASCII
-  letters or digits.
+- Message names are one or more segments joined by single `_`. Every segment
+  starts with an uppercase ASCII letter and continues with ASCII letters or
+  digits, for example `Fire` or `Unit_Fire`.
 - Tags start with `#` and use a lower name without `_`. `#true`, `#false`,
   `#pi`, and `#infinity` are ordinary tag values.
 - Constants start with `$` and use a lower name without `_`.
-- Built-in and custom type names start with an uppercase ASCII letter and
-  continue with ASCII letters or digits. Type references, generated collection
-  forms, and type constructors use `:` followed by that PascalCase name.
+- Built-in and custom type names follow the same rule as message names, for
+  example `:Unit` or `:Unit_Weapon`. Type references, generated collection
+  forms, and type constructors use `:` followed by that name.
 - Extension references use lowercase `:namespace.function` components.
 - A module name is one or more dot-separated components. Every component starts
   with a lowercase ASCII letter and continues with lowercase ASCII letters or
   digits. Uppercase letters, `_`, and `-` are forbidden.
 
-All of these name grammars use ASCII letters and digits; they do not depend on
+All of these name grammars use only ASCII characters; they do not depend on
 platform Unicode classification. Source is strict UTF-8, an optional initial BOM
 is removed, and only ASCII space/tab plus `LF`, `CRLF`, or `CR` are portable
 whitespace/newlines. The complete normative contract is in
@@ -270,16 +285,20 @@ let duration be 2s             // second quantity
 let angle be 90°               // degree quantity
 let speed be 3m/s              // meter-per-second quantity
 let delay be 250ms             // prefixed spelling of 0.25s
+let area be 2m²                // square-meter quantity, not (2m)²
+let rate be 4/s                // spelling of 4Hz
 ```
 
 > **Since: Unreleased** — physical unit literals
 
 The lexer takes the longest unit spelling that is followed by whitespace, a
 structural character or the end of input, so `10m/s` is one quantity literal
-while `10m / s` divides `10m` by the binding `s`. This changes the meaning of
-attached spellings such as `10m/s` or `6m/s²`, which earlier versions read as
-a division. Without a matching spelling the number ends before the letters, as
-before.
+while `10m / s` divides `10m` by the binding `s`. Likewise `2/s` is the rate
+`2Hz` while `2 / s`, `2/ s` and `2 /s` divide by `s`, and `2m²` or `2m^2` is
+two square meters while `(2m)²` squares `2m` to `4m²`. This changes the meaning
+of attached spellings such as `10m/s`, `6m/s²`, `2/s` or `2m²`, which earlier
+versions read as a division or a power. Without a matching spelling the number
+ends before the letters, as before.
 
 Literal value decoding shares the numeric conversion rules with text casts as
 defined in [Number semantics](Semantics/Numbers.md#shared-conversion-and-source-token-boundaries).
@@ -443,6 +462,11 @@ grammar, empty tags are omitted, and later duplicates are omitted while retainin
 first occurrence order. Applying `with` to an existing message replaces that
 message's tags with the normalized clause result.
 
+> **Since: Unreleased** — statement sends with an invalid tag clause
+
+A clause with an invalid tag
+sends nothing and execution continues, as for every other send that cannot be made.
+
 #### Result-Bearing and Delayed Sends
 
 > **Since: 0.2.0**
@@ -474,7 +498,7 @@ the message is not delayed and has the same result, acceptance, ordering,
 queue-limit behavior and observations. Timing, rounding, delivery snapshots and
 initialization staging are defined in HostRuntime. Emit/publish do not become
 synchronous handler calls. A result-bearing send also returns false when its
-message operand is not a Message or its tag clause cannot be normalized.
+message operand cannot be sent or its tag clause cannot be normalized.
 
 ```ges
 emit after 0.2s Fire(power: 100%) with #cannon
@@ -520,7 +544,8 @@ expressions, but not to its source collection. Separate selector expressions
 are sibling scopes, including a `choose` predicate and its weight expression.
 Each expression can resolve its own binding and visible ancestor bindings,
 but not the other expression's binding. An otherwise unbound reference to that
-sibling binding is `compile.unresolvedSymbol`.
+sibling binding, like every bare name without a visible binding, is
+`validate.unresolvedVariable`.
 An enclosing collection binding retains its current value throughout every
 nested iteration. This also applies when the binding holds the result of an
 earlier projection in a selector pipeline.
@@ -693,7 +718,7 @@ From high to low precedence:
 
 1. Postfix: member access `x.y`, lookup/selector `x[...]`
 2. Power: `^`, `²`, `³`
-3. Unary: `-`, `not`, `!`, `~`, `¬`, `empty`, `parse`, prefix intrinsics
+3. Unary: `-`, `not`, `!`, `~`, `¬`, `empty`, `parse`, `parse strict`, prefix intrinsics
 4. Multiplicative: `*`, `×`, `·`, `⋅`, `/`, `÷`, `div`, `mod`, `rem`
 5. Additive: `+`, `-`, `−`
 6. Relational: `<`, `>`, `<=`, `>=`, `≤`, `≥`
@@ -1113,6 +1138,26 @@ For example, `parse input as :Number` means `(parse input) as :Number`.
 Literal recognition, quoted Text decoding, and the exact original-Text fallback
 are owned by [Text semantics](Semantics/Text.md#literal-recognition-from-text).
 
+> **Since: Unreleased** — strict literal parsing
+
+`parse strict` recognizes the same literals but produces `nothing` instead of the
+original Text when its operand is not a complete data literal:
+
+```ges
+let energy be parse strict input
+let level be parse strict input default #standard
+```
+
+`strict` directly after `parse` on the same line is always the mode word, never
+the operand. To parse a binding named `strict`, write `parse (strict)` or
+`parse strict strict`; `parse strict` without a further operand is a syntax error.
+
+> **Since: Unreleased** — GES documents
+
+Hosts read configuration and content files written with the same data literals
+from [GES documents](Documents.md) (`.gesd`). Documents are not scripts; `parse`
+itself is unchanged.
+
 ### Explicit data constructors
 
 > **Since: 0.2.0**
@@ -1140,13 +1185,30 @@ from [Quantities](#quantities), such as `none`, `m`, `second`, `m/s` or
 `deg/s`; prefixed spellings and unknown names yield `nothing`, as does a
 conflicting existing unit. Percentage construction uses the numeric ratio.
 `:Range(from, to, step)` defaults its step to 1. `:Series(kind, offset)` accepts
-`fibonacci`/`factorial` (bare or quoted), defaulting offset to zero; it must be a
-nonnegative unitless integer. Range and Series remain lazy.
+`fibonacci`/`factorial` (bare or quoted, also with the label `kind`), defaulting
+offset to zero; it must be a nonnegative unitless integer. A labeled `:Range` needs
+both `from` and `to`. Range and Series remain lazy.
+
+> **Since: Unreleased** — message names, positional tags and tag checks of these forms
+
 `:Message(...)` explicitly distinguishes a message instance, including an
-argumentless one, from `:Handler(Name(labels))`. Handler labels describe data,
+argumentless one, from `:Handler(Name(labels))`. Both name a message with its
+uppercase message name. A lowercase name is a variable or, with an argument list, a
+call of a function or predicate. This also applies to `initialization` and
+`undeliverable`, which only the host uses as entry points and which can never be
+called, so `:Message(initialization())` calls a function and `parse` and documents do
+not recognize it. In source, `:Message(Done)` is short for `:Message(Done())`, as `emit Done` is for `emit Done()`;
+Text and documents write the argument list. Tags of a message name follow `with`.
+`:Message(value, tags)` returns a new Message with the tags added to those of the
+Message `value`, unlike `with` on a send, which replaces them. The labels `value` and
+`tags` are `validate.invalidTypeConstructor`. The literal `nothing`, also inside a list literal, and a constant with that value are
+no tags (`validate.invalidTag`), and a tag value that is `nothing` at runtime makes the tag
+clause invalid like any other invalid tag. `:Record` is no cast target:
+`value as :Record` is `validate.invalidTypeConstructor`. Handler labels describe data,
 not local variable bindings; repeated `_` labels are allowed.
 
-`:Record(type, fields)` requires a PascalCase Text name and a Map. It creates
+`:Record(type, fields)` requires a Text name of the
+[`TypeName`](Semantics/Text.md#portable-name-grammars) grammar and a Map. It creates
 immutable typed data directly. It does not require a Record definition or invoke
 its constructor. `:Hit(...)` retains the ordinary declared constructor behavior.
 Arguments in a source expression evaluate in source order. Invalid constructor
@@ -1229,14 +1291,21 @@ valid mathematics: `point * scalar`, `scalar * point`, `point / scalar`,
 Unary negation follows the same model: `-vector` negates each component, while
 `-point` is invalid mathematics and produces numeric `NaN`.
 
-Power with quantity units is intentionally narrow because compound units such
-as `m²` are not represented. A quantity may be raised only to a unitless
-numeric exponent of `0` or `1`; booleans participate in the normal lenient
-numeric coercion, so `10m ^ true` is `10m` and `10m ^ false` is unitless `1`.
-An exponent carrying a quantity unit is invalid for every base, including
-exponents `0m` and `1m` and units matching the base. Other quantity powers
-produce numeric `NaN` unless an operand is `nothing`. These rules apply equally
-to literal operands, program constants, and values supplied at runtime;
+> **Since: Unreleased** — quantity squares, cubes and roots
+
+Power with quantity units follows the closed unit set. A quantity may be raised
+only to a unitless numeric exponent: `0` gives a unitless value and `1` keeps the
+unit; booleans participate in the normal lenient numeric coercion, so
+`10m ^ true` is `10m` and `10m ^ false` is unitless `1`. Exponents `2` and `3`
+take the unit of the corresponding product in the
+[derivation table](#quantities), so `(3m)²` is `9m²` and `(2m)³` is `8m³`. The
+exponents `0.5` and binary64 `1/3`, which `sqrt`/`√` and `cbrt`/`∛` produce,
+invert those products, so `sqrt(16m²)` is `4m` and `∛(27m³)` is `3m`. A power
+whose unit has no such derivation, for example `(2s)²` or `sqrt(4m)`, is
+invalid. An exponent carrying a quantity unit is invalid for every base,
+including exponents `0m` and `1m` and units matching the base. Invalid quantity
+powers produce numeric `NaN` unless an operand is `nothing`. These rules apply
+equally to literal operands, program constants, and values supplied at runtime;
 constant folding must preserve the same value and unit semantics.
 
 Numeric checks are keyword constructs, not `:` type references:
@@ -1366,8 +1435,21 @@ portable name used by bytecode, assembler text and host APIs:
 | volt | `V` | | `volt` |
 | ampere | `A` | | `ampere` |
 | hertz | `Hz` | | `hertz` |
+| square meter | `m²` | `m^2` | `squareMeter` |
+| cubic meter | `m³` | `m^3` | `cubicMeter` |
+| watt per square meter | `W/m²` | `W/m^2` | `wattPerSquareMeter` |
 | kelvin | `K` | | `kelvin` |
 | degree per second | `°/s` | `deg/s` | `degreePerSecond` |
+| decibel | `dB` | | `decibel` |
+| watt per kelvin | `W/K` | | `wattPerKelvin` |
+| joule per kelvin | `J/K` | | `joulePerKelvin` |
+
+Each quantity has exactly one unit: temperature is kelvin only, mass kilogram
+only, and display scales such as Celsius are the host's business. The square
+and cube meter carry areas and volumes, the watt per square meter carries flux
+or intensity at a receiver, the decibel carries a level on a logarithmic
+scale, the watt per kelvin carries thermal conductance and the joule per kelvin
+heat capacity.
 
 Literals additionally accept prefixed spellings as sugar. They scale the value
 exactly to the base unit at compile time; the value keeps the base unit and
@@ -1375,19 +1457,30 @@ formats with the base symbol:
 
 | Spelling | Value |
 | --- | --- |
-| `km`, `mm` | 1000 m, 0.001 m |
+| `km`, `cm`, `mm` | 1000 m, 0.01 m, 0.001 m |
 | `ms` | 0.001 s |
+| `t` | 1000 kg |
 | `kN`, `kJ`, `kW`, `kV`, `kHz` | 1000 N, J, W, V, Hz |
 | `MJ`, `MW` | 1 000 000 J, W |
+| `mW` | 0.001 W |
 | `Wh`, `kWh` | 3600 J, 3 600 000 J |
+| `cm²`/`cm^2`, `km²`/`km^2` | 0.0001 m², 1 000 000 m² |
+| `mW/m²`/`mW/m^2`, `kW/m²`/`kW/m^2` | 0.001 W/m², 1000 W/m² |
+| `mW/K`, `kW/K`, `MW/K` | 0.001 W/K, 1000 W/K, 1 000 000 W/K |
+| `kJ/K`, `MJ/K` | 1000 J/K, 1 000 000 J/K |
+| `/s` | 1 Hz |
 
-For example `1.5kWh` is `5400000J` and `250ms` is `0.25s`. Celsius,
-Fahrenheit, bits, bytes and bit rates are not units.
+For example `1.5kWh` is `5400000J`, `250ms` is `0.25s`, `14mW/m²` is
+`0.014W/m²` and `2t` is `2000kg`. `/s` directly after the number reads a rate
+that is not periodic, such as messages per second: `4/s` is `4Hz`. Gram,
+Celsius, Fahrenheit, bits, bytes and bit rates are not units; rates of
+information are frequencies.
 
 `:Quantity(unit)` accepts `none`, every symbol and ASCII spelling, and the long
 names `meter`, `second` and `degree`; `degree/s` is accepted for `°/s` because
 `°` reads as `degree`. Whitespace between the parts of a unit name is ignored and
-`÷` reads as `/`, so `:Quantity(m / s)` and `:Quantity(m÷s)` are `:Quantity(m/s)`.
+`÷` reads as `/`, so `:Quantity(m / s)` and `:Quantity(m÷s)` are `:Quantity(m/s)`
+and `:Quantity(W / m ^ 2)` is `:Quantity(W/m²)`.
 Prefixed spellings are not type names. `:Percentage` is
 not a quantity unit; it is a separate value kind. The names `meter`, `second`,
 `degree`, and `seconds` are not quantity types of their own. `:Quantity(none)`
@@ -1402,9 +1495,10 @@ same-unit rules. Multiplying or dividing a quantity by a unitless number keeps
 its unit, and dividing two quantities of the same unit gives a unitless number,
 so `10m / 2m` is `5`. `abs` and `hypot` keep the unit, rounding follows
 [Number semantics](Semantics/Numbers.md#conversion-and-rounding); trigonometry
-and powers are unchanged. Any other product or quotient of two units follows
-this derivation table, where multiplication is commutative; every other
-combination, such as `2m * 3m`, `2N + 3J` or `6kg / 2s`, gives `nothing`:
+is unchanged, and powers follow [Numbers](#numbers) with this table. Any
+other product or quotient of two units follows this derivation table, where
+multiplication is commutative; every other combination, such as `2N + 3J`,
+`6kg / 2s` or `2K * 3K`, gives `nothing`:
 
 | Operation | Result |
 | --- | --- |
@@ -1444,11 +1538,41 @@ combination, such as `2m * 3m`, `2N + 3J` or `6kg / 2s`, gives `nothing`:
 | `°/s / °` | `Hz` |
 | `m/s² / Hz` | `m/s` |
 | `m/s² / (m/s)` | `Hz` |
+| `m × m` | `m²` |
+| `m² / m` | `m` |
+| `m² × m` | `m³` |
+| `m³ / m` | `m²` |
+| `m³ / m²` | `m` |
+| `W / m²` | `W/m²` |
+| `W/m² × m²` | `W` |
+| `W / (W/m²)` | `m²` |
+| `W / K` | `W/K` |
+| `W/K × K` | `W` |
+| `W / (W/K)` | `K` |
+| `J / K` | `J/K` |
+| `J/K × K` | `J` |
+| `J / (J/K)` | `K` |
+| `W/K × s` | `J/K` |
+| `J/K / s` | `W/K` |
+| `J/K / (W/K)` | `s` |
+| `J/K × Hz` | `W/K` |
+| `W/K / Hz` | `J/K` |
+| `W/K / (J/K)` | `Hz` |
 
 So `1 / 2s` is `0.5Hz`; use `as :Quantity(none)` when a plain number is
 needed. The derivations apply to numbers and to a vector multiplied or divided
 by a number. Integer division (`div`), `mod`, `rem`, points and percentages
 keep their derivation-free rules, so `10m div 2s` and `50% / 2s` are `nothing`.
+
+The decibel has no derivations: a level never converts to or from watts, so
+`3dB * 2W` is `nothing`. Same-unit rules apply as for every unit, so levels add
+(`3dB + 3dB` is `6dB`), compare and pass through `min`, `max`, `clamp` and
+`abs`; multiplying or dividing by a unitless number keeps `dB`, so `6dB * 0.5`
+is `3dB`, and `6dB / 2dB` is `3`. A percentage scales and offsets a quantity by
+its own magnitude, which has no meaning for a logarithmic level: every
+arithmetic combination of a `dB` operand with a percentage, such as
+`6dB + 50%`, `6dB * 50%` or `50% * 6dB`, gives `nothing`. The mapping of a
+control position to a level belongs to the host or the script.
 
 ### Percentages
 
@@ -1508,6 +1632,22 @@ let p be :Point(x: 10m, y: 20m, z: 0m)
 
 let x be p.x
 ```
+
+`:Vector()` is the unitless zero vector. Labeled components are a run without
+gaps in `x`, `y`, `z` order, such as `:Point(y: 1m, z: 2m)`; `:Vector(x: 1, z: 2)`
+is `validate.invalidTypeConstructor`. Labels cannot be mixed with positional
+components, as in `:Vector(v, z: 2)`. Every omitted component is zero with the
+unit of the others.
+
+> **Since: Unreleased** — one positional argument as the cast
+
+One positional argument is the cast, so `:Vector([1, 2])` means
+`[1, 2] as :Vector`. Two or three positional components fill `x`, `y` and `z` in
+order, except that a Vector or Point as first of two supplies its components and
+the second one replaces `z`: `:Vector(v, 7)` adds height to a 2D value. Labeled components never lift, so `:Vector(x: v, y: 3)` is `nothing`. Different units, `NaN` and non-numeric components yield `nothing`.
+The literals `true` and `false` are rejected in these forms, also as the one
+argument (`validate.invalidTypeConstructor`), although `true as :Vector` converts; every other Boolean value, such as a variable,
+a constant or a comparison, counts as 0 or 1.
 
 Vectors describe deltas and may be scaled by scalar numeric values. Points
 describe positions and may only be translated by vectors or subtracted from
@@ -2279,7 +2419,8 @@ IntelliJ-based editors. A rule uses `::=`; adjacent expressions form a sequence;
 zero-or-more / one-or-more repetitions. Quoted text is a terminal. Uppercase
 bare names such as `LOWER_NAME`, `VARIABLE_NAME`, `TYPE_TAG`, `MODULE_NAME`,
 `CONSTANT_REFERENCE`, `MESSAGE_NAME`, `NUMBER`, and `NL` are lexical token
-categories governed by the lexical rules above.
+categories governed by the lexical rules above; `UNIT_SYMBOL` is a unit symbol
+or ASCII spelling from [Quantities](#quantities).
 
 This is only a notation contract. The specification does not adopt Grammar-Kit
 rule attributes, parser generation, recovery, pinning, or PEG conflict
@@ -2355,7 +2496,7 @@ type_operation ::= 'as' type_reference |
 relational_expression ::= additive_expression (('<' | '>' | '<=' | '>=' | '≤' | '≥') additive_expression)*
 additive_expression ::= multiplicative_expression (('+' | '-' | '−') multiplicative_expression)*
 multiplicative_expression ::= unary_expression (('*' | '×' | '·' | '⋅' | '/' | '÷' | 'div' | 'mod' | 'rem') unary_expression)*
-unary_expression ::= ('-' | '−' | not_operator | 'empty' | 'parse') unary_expression | unary_intrinsic_expression | power_expression
+unary_expression ::= ('-' | '−' | not_operator | 'empty' | 'parse' ['strict']) unary_expression | unary_intrinsic_expression | power_expression
 not_operator ::= 'not' | '!' | '~' | '¬'
 power_expression ::= power_base_expression [('^' unary_expression) | '²' | '³']
 power_base_expression ::= series_expression | extension_call_expression | intrinsic_call_expression | clamp_expression | variadic_expression | postfix_expression
@@ -2459,7 +2600,7 @@ built_in_type_tag ::= ':Boolean' | ':Number' | ':Percentage' |
                       ':Series' | ':Range' | ':Message' | ':Handler' | ':Tag' |
                       ':Text' | ':List' | ':Map' | ':Dice' | ':Nothing'
 custom_type_tag ::= TYPE_TAG
-unit_name ::= 'none' | 'm' | 'meter' | 's' | 'second' | 'degree' | '°'
+unit_name ::= 'none' | 'meter' | 'second' | 'degree' | 'degree/s' | UNIT_SYMBOL
 numeric_check ::= 'numeric' | 'integer' | 'fractional'
 ```
 

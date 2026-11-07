@@ -97,6 +97,38 @@ final class SwiftBridgeIntegrationTests: XCTestCase {
         }
     }
 
+    func testAHostsOwnFatalErrorKeepsItsDiagnosticAtEveryBoundary() throws {
+        struct OwnError: GesFatalRuntimeError {
+            let diagnostic: GesDiagnostic
+        }
+
+        let own = OwnError(diagnostic: try GesExtensionFaultError(code: "app.own", message: "Own").diagnostic)
+        let extensions = try GesBridgeExtensionRegistry([.init(namespace: "app", name: "fail") { _ in throw own }])
+        let reader = try GesBridgeTypeBinding<Player>(
+            "Reader",
+            fields: [try .init("value", kind: .float) { _ in throw own }],
+            constructors: [.init { _ in Player(score: 0, name: "") }]
+        )
+        let builder = try GesBridgeTypeBinding<Player>("Builder", fields: [], constructors: [.init { _ in throw own }])
+        let types = try GesBridgeExternalTypeRegistry([reader.binding, builder.binding])
+        let sources = [
+            "on Start() { emit Done(:app.fail()) }",
+            "on Start() { emit Done(:Builder()) }",
+            "on Start() { let reader be :Reader()\n emit Done(reader.value) }",
+            "on Start() { emit Native() }",
+        ]
+        for source in sources {
+            let program = try GesProgramBuilder().withExternalTypeCatalog(types).addScript(source).compile()
+            let host = try GameEventScriptHost.makeBuilder().withRandomSeed(1).withRegistry(extensions).withExternalTypeRegistry(types).build().startForTest()
+            _ = try host.subscribe(.init(name: "Native")) { _, _ in throw own }
+            _ = try host.load(program)
+            host.receive(try .init(name: "Start"))
+            let result = try host.runToCompletion()
+            XCTAssertEqual(result.state, .runtimeError, source)
+            XCTAssertEqual(result.diagnostic?.code, "app.own", source)
+        }
+    }
+
     func testRunnerSchedulesInitializationAndDetachesProgram() throws {
         let program = try GesProgramBuilder().addScript("on initialization { emit Ready() }\non Start() { emit Done() }").compile()
         let runner = try GesBridgeHostRunner(GameEventScriptHost.makeBuilder().withRandomSeed(1).build().startForTest())

@@ -1,6 +1,8 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
+@_spi(Syntax) import GameEventScriptSyntax
+
 /// An immutable portable message with ordered arguments and delivery-tag metadata.
 public struct GameEventScriptMessage: Hashable, CustomStringConvertible {
     let storage: GesMessageStorage
@@ -19,10 +21,13 @@ public struct GameEventScriptMessage: Hashable, CustomStringConvertible {
     /// The normalized name and ordered labels, excluding delivery tags.
     public var signatureId: String { storage.signatureId }
 
-    /// Creates a concrete message, normalizing names and tags and validating argument labels.
+    /// Creates a concrete message, normalizing names and tags and validating argument labels. A system endpoint
+    /// throws, as only the host uses those names.
     public init(name: String, arguments: [GesMessageArgument] = [], tags: [String] = []) throws {
         let normalizedName = try GesMessageSignature.normalizeMessageName(name)
         guard !normalizedName.isEmpty else { throw GesMessageError.emptyMessageName }
+        // Normalization leaves uppercase names and the lowercase system endpoints.
+        guard normalizedName.utf8.first! < 97 else { throw GesMessageError.invalidName }
         let orderedArguments = try GesMessageArguments(arguments)
         let signatureId = normalizedName + "(" + orderedArguments.signatureLabels.joined(separator: ",") + ")"
         self.init(normalizedName: normalizedName, arguments: orderedArguments, signatureId: signatureId, normalizedTags: try Self.normalizeTags(tags))

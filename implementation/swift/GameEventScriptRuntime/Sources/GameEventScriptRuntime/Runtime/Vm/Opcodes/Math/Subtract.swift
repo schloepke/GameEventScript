@@ -1,6 +1,8 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
+@_spi(Syntax) import GameEventScriptSyntax
+
 extension GesVirtualMachine {
     func executeSubtract(_ target: Int, _ x: Int, _ y: Int) {
         switch registers[x].kind {
@@ -86,7 +88,10 @@ extension GesVirtualMachine {
             let left = registers[x].asNumber
             let right = registers[y].asNumber
             let unit = registers[x].unit
-            if registers[y].kind == .percentage { return registers[target].setFloat(left - left * right, unit: unit) }
+            if registers[y].kind == .percentage {
+                guard unit.acceptsPercentage else { return registers[target].setNothing() }
+                return registers[target].setFloat(left - left * right, unit: unit)
+            }
             guard unit == registers[y].unit else { return registers[target].setNothing() }
             return registers[target].setFloat(left - right, unit: unit)
         }
@@ -107,7 +112,10 @@ extension GesVirtualMachine {
             guard registers[y].kind == .percentage else { return registers[target].setNothing() }
             return registers[target].setPercentage(left - right)
         }
-        if registers[y].kind == .percentage { return registers[target].setFloat(left - left * right, unit: registers[x].unit) }
+        if registers[y].kind == .percentage {
+            guard registers[x].unit.acceptsPercentage else { return registers[target].setNothing() }
+            return registers[target].setFloat(left - left * right, unit: registers[x].unit)
+        }
         guard registers[x].unit == registers[y].unit else { return registers[target].setNothing() }
         return registers[target].setFloat(left - right, unit: registers[x].unit)
     }

@@ -22,6 +22,7 @@ const documents = new Map([
   ['docs/guide/Language.md', 'docs/learn/language'],
   ['docs/guide/CSharp.md', 'docs/learn/csharp'],
   ['docs/guide/Swift.md', 'docs/learn/swift'],
+  ['docs/guide/Schemas.md', 'docs/learn/schemas'],
   ['docs/guide/api/CSharp.md', 'api/csharp'],
   ['docs/guide/api/Swift.md', 'api/swift'],
   ['docs/guide/distribution/Packages.md', 'docs/distribution/packages'],
@@ -35,8 +36,8 @@ const documents = new Map([
   ['implementation/swift/GameEventScriptTool/README.md', 'docs/tools/swift-cli'],
   ['implementation/csharp/GameEventScript.CSharpBridge/README.md', 'docs/integration/csharp-bridge'],
   ['implementation/swift/GameEventScriptSwiftBridge/README.md', 'docs/integration/swift-bridge'],
-  ['implementation/csharp/GameEventScript.SyntaxHighlighter/README.md', 'docs/tools/csharp-highlighter'],
-  ['implementation/swift/GameEventScriptSyntaxHighlighter/README.md', 'docs/tools/swift-highlighter'],
+  ['implementation/csharp/GameEventScript.Syntax/README.md', 'docs/tools/csharp-syntax'],
+  ['implementation/swift/GameEventScriptSyntax/README.md', 'docs/tools/swift-syntax'],
   ['CHANGELOG.md', 'docs/changelog'],
   ['tools/editors/README.md', 'docs/tools/editor-bundles'],
 ]);

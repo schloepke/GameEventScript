@@ -1,8 +1,8 @@
 {
   "name": "gameeventscript",
   "displayName": "Game Event Script",
-  "description": "GES and GESA syntax highlighting, snippets, and CLI commands.",
-  "version": "0.4.2",
+  "description": "GES, GESA and GES document syntax highlighting, a .gesb viewer, snippets, and CLI commands.",
+  "version": "0.5.0",
   "publisher": "schloepke",
   "license": "Apache-2.0",
   "engines": {
@@ -15,6 +15,7 @@
   "keywords": [
     "GES",
     "GESA",
+    "GESD",
     "GameEventScript"
   ],
   "repository": {
@@ -45,6 +46,28 @@
           ".gesa"
         ],
         "configuration": "./gesa-language-configuration.json"
+      },
+      {
+        "id": "gesd",
+        "aliases": [
+          "Game Event Script Document",
+          "GESD"
+        ],
+        "extensions": [
+          ".gesd"
+        ],
+        "configuration": "./gesd-language-configuration.json"
+      },
+      {
+        "id": "gess",
+        "aliases": [
+          "Game Event Script Schema",
+          "GESS"
+        ],
+        "extensions": [
+          ".gess"
+        ],
+        "configuration": "./gess-language-configuration.json"
       }
     ],
     "grammars": [
@@ -63,6 +86,16 @@
         }
       },
       {
+        "language": "gesd",
+        "scopeName": "source.gameeventscript.document",
+        "path": "./syntaxes/GameEventScriptDocument.tmLanguage.json"
+      },
+      {
+        "language": "gess",
+        "scopeName": "source.gameeventscript.schema",
+        "path": "./syntaxes/GameEventScriptSchema.tmLanguage.json"
+      },
+      {
         "scopeName": "markdown.ges.codeblock",
         "path": "./syntaxes/Markdown.tmLanguage.json",
         "injectTo": [
@@ -71,6 +104,8 @@
         "embeddedLanguages": {
           "meta.embedded.block.ges.markdown": "ges",
           "meta.embedded.block.gesa.markdown": "gesa",
+          "meta.embedded.block.gesd.markdown": "gesd",
+          "meta.embedded.block.gess.markdown": "gess",
           "meta.embedded.block.gameeventscript.assembler": "ges",
           "meta.embedded.line.gameeventscript.assembler": "ges"
         }
@@ -102,6 +137,12 @@
         "enablement": "isWorkspaceTrusted && editorLangId == ges && resourceScheme == file"
       },
       {
+        "command": "ges.dumpBinary",
+        "title": "GES: Show Assembler Dump",
+        "icon": "$(file-code)",
+        "enablement": "isWorkspaceTrusted && activeCustomEditorId == gameeventscript.gesbViewer"
+      },
+      {
         "command": "ges.compile",
         "title": "GES: Compile",
         "icon": "$(gear)",
@@ -109,7 +150,7 @@
       },
       {
         "command": "ges.runWithArguments",
-        "title": "GES: Run with Arguments\u2026",
+        "title": "GES: Run with Arguments…",
         "enablement": "isWorkspaceTrusted && editorLangId == ges && resourceScheme == file",
         "icon": "$(run-all)"
       },
@@ -126,8 +167,25 @@
         "icon": "$(debug-restart)"
       }
     ],
+    "customEditors": [
+      {
+        "viewType": "gameeventscript.gesbViewer",
+        "displayName": "GES Binary Viewer",
+        "selector": [
+          {
+            "filenamePattern": "*.gesb"
+          }
+        ],
+        "priority": "default"
+      }
+    ],
     "menus": {
       "editor/title": [
+        {
+          "command": "ges.dumpBinary",
+          "when": "activeCustomEditorId == gameeventscript.gesbViewer && resourceScheme == file",
+          "group": "navigation@1"
+        },
         {
           "command": "ges.check",
           "when": "editorLangId == ges && resourceScheme == file",
@@ -183,7 +241,7 @@
   "capabilities": {
     "untrustedWorkspaces": {
       "supported": "limited",
-      "description": "Highlighting is available; CLI commands require workspace trust."
+      "description": "Highlighting and the .gesb viewer are available; CLI commands require workspace trust."
     },
     "virtualWorkspaces": {
       "supported": false

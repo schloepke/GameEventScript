@@ -68,6 +68,13 @@ functions and tags start with lowercase letters: `amount`, `damage`, `#critical`
 A `module` name such as `tutorial.damage` identifies the program; it does not
 create a namespace.
 
+> **Since: Unreleased** — underscores in message and type names
+
+Message and type names can group related names with single underscores:
+`Unit_Fire`, `:Unit_Weapon_Sniper`. Each part starts with an uppercase letter, so
+write `:Unit_Type1` instead of `:Unit_1`. The underscore belongs to the name and
+forms no hierarchy: a `:Unit_Weapon` is no `:Unit`.
+
 Argument labels are part of a message or function's signature:
 
 ```ges
@@ -101,10 +108,13 @@ on Main(args) {
 
 Common data values include Number, Boolean, Text, Tag, List, Map and `nothing`.
 Numbers may carry a unit, such as seconds (`0.2s`), meters (`10m`), degrees
-(`90°`), speeds (`3m/s`), forces (`21400N`) or frequencies (`20Hz`). Prefixed
-spellings like `250ms` or `2km` are converted to the base unit. Units follow
-physics where it is defined: `10m / 2s` is `5m/s`, `2kg * 3m/s²` is `6N`, and
-`1 / 2s` is `0.5Hz`; unsupported combinations such as `2m * 3m` give `nothing`.
+(`90°`), speeds (`3m/s`), forces (`21400N`), frequencies (`20Hz` or `20/s`),
+areas (`2m²`), volumes (`0.5m³`), intensities (`0.014W/m²`), levels (`6dB`),
+thermal conductance (`3kW/K`) or heat capacity (`2kJ/K`).
+Prefixed spellings like `250ms`, `2km` or `2t` are converted to the base unit.
+Units follow physics where it is defined: `10m / 2s` is `5m/s`, `2kg * 3m/s²`
+is `6N`, `2m * 3m` is `6m²`, `(3m)²` is `9m²` and `1 / 2s` is `0.5Hz`;
+unsupported combinations such as `2N + 3J` give `nothing`.
 The complete unit list and derivation table are in the
 [language specification](../../specs/Language.md#quantities). A percentage
 such as `20%` represents the ratio `0.2`, so `100 * 20%` gives `20`.
@@ -143,6 +153,19 @@ after saving this example as `greeting.ges`. All CLI arguments are Text, includi
 arguments that look like numbers. Convert deliberately with `as :Number`, or use
 `parse` when you want literal recognition. Failed Number conversions yield
 `nothing`; see [Number semantics](../../specs/Semantics/Numbers.md) for exact rules.
+
+> **Since: Unreleased** — `parse strict`
+
+`parse` returns unrecognized input unchanged as Text, so `parse "standard"` and
+`parse "[1, 2"` are both Text. Use `parse strict` when only complete literals are
+acceptable: it yields `nothing` instead, and Text must then be quoted:
+
+```ges
+on Main(args) {
+    let energy be parse strict args[0] default 100kW
+    emit ConsoleOut("Energy: ", energy)
+}
+```
 
 > **Since: 0.2.0**
 
@@ -316,6 +339,13 @@ Use `dotnet ges` instead of `ges` with the C# tool. In the interactive console,
 sends its starting message. `:handler` lists registered handlers; `:source` and
 `:dump` inspect a selected module. Ctrl+N inserts a newline; Enter submits input.
 Temporary input bindings do not persist between submissions.
+
+> **Since: Unreleased** — GES documents and schemas
+
+Data can live outside scripts. [GES documents](../../specs/Documents.md)
+(`.gesd`) use the same literal syntax for configuration and content, and
+[GES schemas](../../specs/Schemas.md) (`.gess`) describe their structure and a compact binary
+encoding. `ges document check` and `ges schema check` verify these files.
 
 For exact syntax, read the [language reference](../../specs/Language.md).
 For message ordering, initialization, limits and timing, read the

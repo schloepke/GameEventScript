@@ -12,17 +12,18 @@ separate libraries; the CLI and internal Conformance adapter are executables.
 
 | Project / package | Responsibility | Dependencies |
 | --- | --- | --- |
-| [`GameEventScript.Runtime`](GameEventScript.Runtime) | Immutable values and Programs, `.gesb` codecs/validation, GESA dumping, Host, VM, random streams, extensions and external types | .NET Standard library |
-| [`GameEventScript.Compiler`](GameEventScript.Compiler) | Source lexer/parser, validation, lowering, optimization, register allocation, immutable Programs and debug sections | Runtime |
+| [`GameEventScript.Runtime`](GameEventScript.Runtime) | Immutable values and Programs, `.gesb` codecs/validation, GESA dumping, Host, VM, random streams, extensions and external types, GES documents and schemas | Syntax |
+| [`GameEventScript.Compiler`](GameEventScript.Compiler) | Binding of the Syntax tree, validation across sources, lowering, optimization, register allocation, immutable Programs and debug sections | Runtime and Syntax |
 | [`GameEventScript.CSharpBridge`](GameEventScript.CSharpBridge) | Delegate adapters, Reflection/attribute bindings, CLR value conversion and optional automatic host pumping | Runtime |
-| [`GameEventScript.SyntaxHighlighter`](GameEventScript.SyntaxHighlighter/README.md) | GES/GESA UTF-16 spans, TextMate scopes, incremental states and ANSI rendering | .NET Standard library |
+| [`GameEventScript.Syntax`](GameEventScript.Syntax/README.md) | GES lexer, parser and single-source validator, document and schema readers, highlighting with UTF-16 spans, TextMate scopes, incremental states and ANSI rendering | .NET Standard library |
 | [`GameEventScript.Conformance`](GameEventScript.Conformance/README.md) | Internal observation adapter for the independent Python runner | Runtime and Compiler |
-| [`GameEventScript.Tool`](GameEventScript.Tool/README.md) / `dotnet ges` | Compile/check/run/dump, interactive console, filesystem and terminal adapters | Runtime, Compiler, CSharpBridge, SyntaxHighlighter and PrettyPrompt |
+| [`GameEventScript.Tool`](GameEventScript.Tool/README.md) / `dotnet ges` | Compile/check/run/dump, `document` and `schema` commands, interactive console, filesystem and terminal adapters | Runtime, Compiler, CSharpBridge, Syntax and PrettyPrompt |
 
-All four libraries target **.NET Standard 2.1** and use **C# 12**. Runtime,
-and Compiler are synchronous, fileless and independent of a test
-framework. CLR-specific adapters belong to CSharpBridge. Compiler and
-CSharpBridge each depend only on Runtime, so a product executing precompiled
+All four libraries target **.NET Standard 2.1**. Runtime and CSharpBridge use
+**C# 12**, Syntax and Compiler **C# 14**. Runtime and Compiler are synchronous,
+fileless and independent of a test framework. CLR-specific adapters belong to
+CSharpBridge. Runtime depends only on Syntax, and neither Runtime nor CSharpBridge
+depends on Compiler, so a product executing precompiled
 `.gesb` files can ship Runtime with optional C# adapters without shipping the
 compiler or test infrastructure.
 
@@ -258,13 +259,13 @@ ordering, execution limits and diagnostic behavior.
 
 ## Distribution
 
-Runtime, Compiler, CSharpBridge and SyntaxHighlighter are packaged independently with a shared
+Runtime, Compiler, CSharpBridge and Syntax are packaged independently with a shared
 release version. Conformance stays internal. NuGet CLI tools (since 0.3.0) are
 packaged separately as `GameEventScript.Tool` and `GameEventScript.Tool.Aot`;
 see [CLI installation](../../docs/guide/distribution/Tools.md).
 Local packages are written to
 `artifacts/csharp/packages/<version>`; the release dry run also stages versioned DLL sets
-below `artifacts/csharp/dll/<version>` for Runtime, Compiler and Unity adapters.
+below `artifacts/csharp/dll/<version>` for Syntax, Runtime, Compiler and Unity adapters.
 XML documentation and portable symbols accompany the
 assemblies. CLI packaging is handled separately by its installer.
 

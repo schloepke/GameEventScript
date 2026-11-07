@@ -112,6 +112,10 @@ internal struct GesSchemaNode
 
     // The direct children of a group, which its delta has one change bit each for.
     internal int ChildCount;
+    // A list whose single element type is a schema with a key has deltas by element, with positions of this width. Its
+    // element is the next node and the element's key the one after that.
+    internal bool KeyedElements;
+    internal int PositionWidth;
     internal string Name;
     internal string Path;
     internal string[]? Tags;
@@ -240,7 +244,7 @@ public readonly struct GesSchemaField
 /// <summary>Builds the layout of a declaration for fixed parameter values.</summary>
 internal static class GesSchemaBinder
 {
-    internal const long MaximumByteCount = 1048576;
+    internal const long MaximumByteCount = 10485760;
     private const long LargestSteps = 1L << 50;
     private const long LargestMultiple = 1L << 53;
     private const int MaximumFractionDigits = 15;
@@ -525,6 +529,8 @@ internal static class GesSchemaBinder
                 return 0;
             case GesSchemaNodeKind.Group:
                 return DeltaCost(nodes, index + 1, node.Next);
+            case GesSchemaNodeKind.List when node.KeyedElements:
+                return KeyedListCost(nodes, index);
             case GesSchemaNodeKind.Union:
                 long largest = 0;
                 for (var alternative = index + 1; alternative < node.Next; alternative = nodes[alternative].Next)
@@ -533,6 +539,17 @@ internal static class GesSchemaBinder
             default:
                 return node.DeltaRange > 0 ? 1 + Math.Max(node.DeltaWidth, node.Width) : FullCost(nodes, index);
         }
+    }
+
+    // The form bit and the larger form: three counts, and a position and the larger of an element and its delta for each.
+    private static long KeyedListCost(GesSchemaNode[] nodes, int index)
+    {
+        var limit = MaximumByteCount * 8 + 1;
+        ref readonly var node = ref nodes[index];
+        var delta = DeltaCost(nodes, nodes[index + 2].Next, nodes[index + 1].Next);
+        var each = node.PositionWidth + Math.Max(Cost(nodes, index + 1, node.Next), delta);
+        var byElement = (3L * node.Width) + (Math.Min(node.MaxCount, (limit / Math.Max(each, 1)) + 1) * each);
+        return Math.Min(limit, 1 + Math.Max(FullCost(nodes, index), byElement));
     }
 
     // The full encoding of a value, without its presence bit.
@@ -658,6 +675,8 @@ internal static class GesSchemaBinder
                 node.Kind = GesSchemaNodeKind.List;
                 node.MaxCount = listMax;
                 node.Width = BitLength((ulong)listMax);
+                node.KeyedElements = element.Length == 1 && element[0].Kind == GesSchemaTypeKind.Reference && element[0].Reference!.Fields.Length > 0 && element[0].Reference!.Fields[0].Marker == GesSchemaFieldMarker.Key;
+                node.PositionWidth = BitLength((ulong)listMax - 1);
                 build.Nodes.Add(node);
                 AddUnion(build, scope, element, "[]", path + "[]", false, false, lists + 1);
                 if (!HasBits(build.Nodes, index + 1)) throw scope.Error(Code.NotEncodable, type.Offset, "A List element without bits has a count that no data limits.");

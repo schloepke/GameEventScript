@@ -319,8 +319,12 @@ GES sets no world size; only the limits apply.
 A bound schema has `MaxByteCount`, the size of its largest top-level encoding. It is computed at binding with checked arithmetic, counting every optional as
 present, every Text, List and Dice at its `max`, and every union as its index and its largest alternative. A schema counts the larger of its largest
 full record and its largest [delta](#deltas), so one buffer serves both: a Boolean's delta costs its change bit, and a field with a delta range its change bit, the
-fallback bit and the larger of both widths. It may be at most 1 048 576 bytes (1 MiB).
+fallback bit and the larger of both widths. It may be at most 10 485 760 bytes (10 MiB).
 Exceeding this, or an overflow while computing it, fails binding with `schema.tooLarge`.
+A [keyed list](#keyed-lists) counts its form bit and the larger of the whole list and its
+element form: three counts and `max · (position + the larger of the largest element and its largest
+delta without the key)`. That is the worst case for `removed + changed <= max` and
+`changed + added <= max`, because the size is linear in `changed`, so one of both ends gives the largest.
 A message set adds its index to the bits of its largest member, before rounding up to bytes.
 A bound layout has at most 1 048 576 fields, counting each use of a referenced schema and each
 List element type once; more also fails with `schema.tooLarge`.
@@ -465,10 +469,11 @@ The decoder reports the bytes it consumed.
 
 A `key` lets a receiver find the object a record belongs to before it reads the rest. A key
 is the first field, so it starts at bit 0 of a top-level record, in its ordinary encoding.
-Only the width of the key is needed to read it. The marker takes effect at the top level: a
-schema with a key that is reached as a nested field or a list element writes the same bits,
-and no key can be read from there. The caller owns the mapping from keys to objects. Message
-arguments have no key. A [delta](#keys-in-a-delta) starts with the same key.
+Only the width of the key is needed to read it. The marker takes effect at the top level and for
+the elements of a [keyed list](#keyed-lists): a schema with a key that is reached as a nested field
+or a list element writes the same bits in a full record, and no key can be read from there. The
+caller owns the mapping from keys to objects. Message arguments have no key. A
+[delta](#keys-in-a-delta) starts with the same key.
 
 ### Field encodings
 
@@ -642,14 +647,15 @@ movement smaller than a step is no change and costs nothing.
 | --- | --- |
 | `:Boolean` | none; the change bit toggles the baseline |
 | numeric with `delta within` | [range form](#delta-range) |
-| other numeric, `:Tag`, `:Text`, `:List`, `:Dice` | the full encoding |
+| other numeric, `:Tag`, `:Text`, `:List` of other elements, `:Dice` | the full encoding |
+| `:List` of a schema with a key | a [keyed list](#keyed-lists) |
 | `:Point`, `:Vector` with a block | one change bit per declared axis, then the payloads of the changed axes |
 | `:Point`, `:Vector` without a block | three change bits, then a raw 64-bit binary64 for each changed axis; bits are compared |
 | `:TypeName` | a nested delta: its own change bits and payloads |
 | union | index; when the baseline has the same alternative, its payload, otherwise its full encoding |
 | `optional` | presence bit; when present and the baseline also has a value, the field's payload, otherwise its full encoding |
 
-A list is replaced as a whole. Tracking list elements requires identities that the caller owns.
+A list is replaced as a whole, unless its elements have a key, which is what identifies them.
 
 With `worldWidth = worldHeight = 5000m`:
 
@@ -680,8 +686,69 @@ take it without knowing whether a full record or a delta follows. It has no chan
 written also when nothing else changed. A key identifies the object, so it is not compared like
 other fields but required to be equal: encoding against a baseline with another key is
 `wire.keyMismatch`, and decoding against one is `wire.invalidDelta`. A schema with a key that is
-reached as a nested field or a list element writes it as its ordinary first field, with a change
-bit in a nested delta.
+reached as a nested field writes it as its ordinary first field, with a change bit in a nested
+delta. In a [keyed list](#keyed-lists), an element's key has neither.
+
+### Keyed lists
+
+> **Since: Unreleased**
+
+A list is keyed when its element type is a single `:TypeName` whose schema has a `key`, at any depth.
+This needs no syntax, and the full encoding does not change. Lists of other elements, including
+unions, are replaced as a whole.
+
+The payload of a changed keyed list starts with a form bit:
+
+- **`1`, whole list:** its full encoding.
+- **`0`, by element:** in this order, with counts in `width(max + 1)` bits and positions in the
+  baseline in `width(max)` bits:
+  1. `removedCount`, then the positions of the removed elements, ascending;
+  2. `addedCount`, then the added elements in their full encoding, key included, ascending by key;
+  3. `changedCount`, then for each changed element its position, ascending, and its nested delta, in
+     which the key is neither written nor has a change bit.
+
+Keys compare by value: an `integer` numerically, and a `:Tag` in declared order, so a sender gets the
+by-element form by keeping its lists sorted by key. Elements with the same key in baseline and
+record are kept, which makes them changed or unchanged. A key only in the baseline is removed, and a
+key only in the record is added. The result is the merge of kept and added elements by key. A key
+that the game reuses, such as a wrapped id, counts as a change of the same object.
+
+By-element form requires the keys of **both baseline and record to be strictly ascending**, and
+whole-list form is used if and only if one of them is not. Duplicate keys need no error of their
+own: they are simply not ascending. There is no size comparison between the forms; a caller who wants
+the smaller of a delta and a full record compares those at the top level. A field whose baseline
+holds no value for it, in an `optional` or another union alternative, takes its full encoding, as
+every field does, without a form bit.
+
+With this schema, a full `World` takes 8 + 3 bits and 13 bits per element:
+
+```gess
+schema :Item as {
+  id: :Number integer between 0 and 255 key
+  hp: :Number integer between 0 and 15
+  on: :Boolean
+}
+
+schema :World as {
+  tick: :Number integer between 0 and 255
+  items: :List(:Item) max 5
+}
+```
+
+Against a baseline with the `(id, hp, on)` elements `(1, 5, off)`, `(2, 6, off)`, `(3, 7, off)`,
+`(5, 8, off)` and `(7, 9, off)`, take a record with the same `tick` that removes key 2, adds
+`(4, 3, on)` and sets `hp` of key 5 to 1:
+
+| Part | Bits |
+| --- | --- |
+| Change bits `0`, `1` of `World` | 2 |
+| Form bit `0` | 1 |
+| `removedCount` 1, position 1 | 3 + 3 |
+| `addedCount` 1, the element `(4, 3, on)` | 3 + 13 |
+| `changedCount` 1, position 3 | 3 + 3 |
+| Nested change bits `1`, `0` and `hp` 1 | 2 + 4 |
+
+That is 37 bits, 5 bytes: `4a 42 30 b3 02`. The full record with its five elements takes 76 bits, 10 bytes.
 
 ### Delta range
 
@@ -703,6 +770,19 @@ change), a nested delta or axis group whose change bits are all zero, a range fo
 difference of zero or above `d`, a full index for a difference within `d`, a non-wrapping result
 outside the range, and a key that differs from the baseline's. All other values are validated as
 in a [full record](#decoding-untrusted-data).
+
+In a [keyed list](#keyed-lists) it also rejects:
+
+- whole-list form when both lists are strictly ascending;
+- by-element form against a baseline that is not strictly ascending;
+- positions that do not ascend strictly or lie outside the baseline, or the same position both
+  removed and changed;
+- added keys that do not ascend strictly, or that equal the key of a baseline element, removed or
+  kept, since an element that stays is a change, not a removal and an addition;
+- all three counts zero, since the field's change bit would then be set for an unchanged value;
+- a result longer than the list's `max`.
+
+A count above `max` is `wire.invalidCount`, as in a full record. A decoder checks in wire order.
 
 ### Zones
 
@@ -1129,6 +1209,8 @@ Parity is verified like every GES feature.
   - `key`: its position, a key read before the rest, and its place in the canonical form;
   - deltas: each payload form, the shorter way of a wrapping field, a key, every rejection of the
     [canonical form](#canonical-delta-form) and more change bits than fit one word;
+  - [keyed lists](#keyed-lists): each section, positions and key order, whole-list fallback, nested,
+    optional and union places, and the largest encoding of each form;
   - unions: first-match order, `:Quantity(m) | :Quantity(s)` rejected, the index, `:Nothing`,
     lists of unions, a field after a union, and rejection of a document-only alternative with
     `schema.notEncodable`;

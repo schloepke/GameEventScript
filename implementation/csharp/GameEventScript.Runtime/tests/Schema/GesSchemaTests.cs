@@ -197,6 +197,41 @@ public sealed class GesSchemaTests
     }
 
     [TestMethod]
+    public void KeyedListDeltasAllocateNothing()
+    {
+        var source = "schema :Leaf as {\n  id: :Number integer key\n  v: :Number integer between 0 and 7\n}\n\nschema :Item as {\n  id: :Number integer between 0 and 255 key\n  hp: :Number integer between 0 and 15\n  leaves: :List(:Leaf) max 2\n}\n\n"
+            + "schema :S as {\n  items: :List(:Item) max 4\n}\n";
+        var schema = GesSchemaSet.Parse([new GesSchemaSource("s.gess", source)]).Schema("S").Bind(new GesSchemaParameters());
+
+        GesValue Leaf(long id, long v) => GesValue.GesRecord("Leaf", ("id", GesValue.GesInteger(id)), ("v", GesValue.GesInteger(v)));
+        GesValue Item(long id, long hp, params GesValue[] leaves) => GesValue.GesRecord("Item", ("id", GesValue.GesInteger(id)), ("hp", GesValue.GesInteger(hp)), ("leaves", GesValue.GesList(leaves)));
+        byte[] Encoded(params GesValue[] items)
+        {
+            var value = GesValue.GesRecord("S", ("items", GesValue.GesList(items)));
+            var bytes = new byte[schema.MaxByteCount];
+            return bytes.AsSpan(0, GesSchemaValues.Encode(schema, value, bytes)).ToArray();
+        }
+
+        var first = Encoded(Item(1, 2, Leaf(-1, 1), Leaf(4, 2)), Item(2, 3), Item(5, 4));
+        var second = Encoded(Item(1, 2, Leaf(-1, 3), Leaf(4, 2)), Item(3, 7, Leaf(1, 1)), Item(5, 9));
+        var delta = new byte[schema.MaxByteCount];
+        var record = new byte[schema.MaxByteCount];
+
+        void Round()
+        {
+            var length = GesSchemaDelta.Encode(schema, second, first, delta);
+            var decoded = GesSchemaDelta.Decode(schema, delta.AsSpan(0, length), first, record);
+            if (decoded.ByteCount != second.Length) throw new InvalidOperationException();
+        }
+
+        Round();
+        CollectionAssert.AreEqual(second, record.AsSpan(0, second.Length).ToArray());
+        var before = GC.GetAllocatedBytesForCurrentThread();
+        for (var round = 0; round < 1000; round++) Round();
+        Assert.AreEqual(before, GC.GetAllocatedBytesForCurrentThread());
+    }
+
+    [TestMethod]
     public void FieldsAreUsedInDeclarationOrder()
     {
         var schema = GesSchemaSet.Parse([new GesSchemaSource("s.gess", "schema :S as {\n  a: :Boolean\n  b: :Boolean optional\n}\n\nschema :T as {\n  c: :Boolean\n}\n")]);

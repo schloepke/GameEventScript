@@ -78,6 +78,10 @@ struct GesSchemaNode: Sendable {
     var after = 0
     // The direct children of a group, which its delta has one change bit each for.
     var childCount = 0
+    // A list whose single element type is a schema with a key has deltas by element, with positions of this width. Its
+    // element is the next node and the element's key the one after that.
+    var keyedElements = false
+    var positionWidth = 0
     // Integer: its lower bound. Quantized: lowerN. The largest valid index; for a wrapping field the period is one more.
     var lower: Int64 = 0
     var maxIndex: UInt64 = 0
@@ -192,7 +196,7 @@ public struct GesSchemaField: Sendable {
 
 /// Builds the layout of a declaration for fixed parameter values.
 enum GesSchemaBinder {
-    static let maximumByteCount: Int64 = 1_048_576
+    static let maximumByteCount: Int64 = 10_485_760
     private static let maximumNodeCount = 1_048_576
     private static let largestSteps: Int64 = 1 << 50
     private static let largestMultiple: Int64 = 1 << 53
@@ -471,6 +475,8 @@ enum GesSchemaBinder {
             return 0
         case .group:
             return deltaCost(nodes, index + 1, node.next)
+        case .list where node.keyedElements:
+            return keyedListCost(nodes, index)
         case .union:
             var largest: Int64 = 0
             var alternative = index + 1
@@ -482,6 +488,16 @@ enum GesSchemaBinder {
         default:
             return node.deltaRange > 0 ? 1 + Int64(max(node.deltaWidth, node.width)) : fullCost(nodes, index)
         }
+    }
+
+    // The form bit and the larger form: three counts, and a position and the larger of an element and its delta for each.
+    private static func keyedListCost(_ nodes: [GesSchemaNode], _ index: Int) -> Int64 {
+        let limit = maximumByteCount * 8 + 1
+        let node = nodes[index]
+        let delta = deltaCost(nodes, nodes[index + 2].next, nodes[index + 1].next)
+        let each = Int64(node.positionWidth) + max(cost(nodes, index + 1, node.next), delta)
+        let byElement = 3 * Int64(node.width) + min(node.maxCount, limit / max(each, 1) + 1) * each
+        return min(limit, 1 + max(fullCost(nodes, index), byElement))
     }
 
     // The full encoding of a value, without its presence bit.
@@ -606,6 +622,8 @@ enum GesSchemaBinder {
             node.kind = .list
             node.maxCount = max
             node.width = bitLength(UInt64(max))
+            node.keyedElements = element.count == 1 && element[0].kind == .reference && element[0].reference?.fields.first?.marker == .key
+            node.positionWidth = bitLength(UInt64(max - 1))
             try addUnion(&build, scope, element, "[]", path + "[]", optional: false, key: false, lists + 1)
             if !build.nodes[(index + 1)...].contains(where: { $0.width > 0 || $0.optional }) { throw scope.error(Code.notEncodable, type.offset, "A List element without bits has a count that no data limits.") }
         case .dice:

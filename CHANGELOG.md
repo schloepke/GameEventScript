@@ -229,6 +229,9 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   external field getters.
 - `GesValueMap` can be traversed in canonical key order: `foreach` in C#, without
   allocating, and `for (key, value) in map` in Swift.
+- Schema deltas work element by element for a list whose elements have a `key`, when the keys of
+  baseline and record ascend strictly; otherwise the list is replaced as a whole. The limit of
+  `MaxByteCount` rises from 1 MiB to 10 MiB.
 - Schema deltas: `GesSchemaDelta` converts between full records and deltas against a baseline
   record without allocating, `GesSchemaValues` does so for values, and `ges schema dump --baseline`
   makes a delta readable. A decoder accepts only the canonical form (`wire.invalidDelta`), a

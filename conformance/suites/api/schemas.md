@@ -2239,7 +2239,7 @@ gesBlock: case
 id: error-too-large
 schemaApi:
   sources:
-    - "schema :A as {\n  a: :Text max 2000000\n}\n"
+    - "schema :A as {\n  a: :Text max 20000000\n}\n"
   root: "A"
 ```
 
@@ -6571,7 +6571,7 @@ schema:
 
 ## Test: a message at the limit
 
-Its largest encoding has exactly 1 MiB.
+Its largest encoding has exactly 10 MiB.
 
 ### Case description
 
@@ -6580,7 +6580,7 @@ gesBlock: case
 id: message-at-limit
 schemaApi:
   sources:
-    - "message A(t: :Text max 1048573, a: :Boolean, b: :Boolean, c: :Boolean)\nmessage B()\nmessages :S as (A, B)\n"
+    - "message A(t: :Text max 10485756, a: :Boolean, b: :Boolean, c: :Boolean, d: :Boolean, e: :Boolean, f: :Boolean, g: :Boolean, h: :Boolean)\nmessage B()\nmessages :S as (A, B)\n"
   root: "A"
 ```
 
@@ -6589,14 +6589,14 @@ schemaApi:
 ```yaml
 gesBlock: expect
 schema:
-  maxByteCount: 1048576
+  maxByteCount: 10485760
 ```
 
 ---
 
 ## Test: a message set beyond the limit
 
-The index takes the encoding past 1 MiB, which is an error and not clamped.
+The index takes the encoding past 10 MiB, which is an error and not clamped.
 
 ### Case description
 
@@ -6605,7 +6605,7 @@ gesBlock: case
 id: error-set-too-large
 schemaApi:
   sources:
-    - "message A(t: :Text max 1048573, a: :Boolean, b: :Boolean, c: :Boolean, d: :Boolean)\nmessage B()\nmessages :S as (A, B)\n"
+    - "message A(t: :Text max 10485756, a: :Boolean, b: :Boolean, c: :Boolean, d: :Boolean, e: :Boolean, f: :Boolean, g: :Boolean, h: :Boolean)\nmessage B()\nmessages :S as (A, B)\n"
   root: "S"
 ```
 
@@ -14960,4 +14960,1518 @@ schema:
     failure: probe.fault
   decoded:
     failure: probe.fault
+```
+
+---
+
+## Test: a keyed list that did not change costs its change bit
+
+Keyed list delta: both change bits are zero.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: keyed-unchanged
+kind: schemaApi
+level: atomic
+schemaApi:
+  sources: ["schema :Item as {\n  id: :Number integer between 0 and 255 key\n  hp: :Number integer between 0 and 15\n  on: :Boolean\n}\n\nschema :World as {\n  tick: :Number integer between 0 and 255\n  items: :List(:Item) max 5\n}\n"]
+  root: "World"
+  deltaEncode: {"record": "090a280206", "baseline": "090a280206"}
+  deltaDecode: {"delta": "00", "baseline": "090a280206"}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  deltaEncoded: {"bytes": "00"}
+  deltaDecoded: {"record": "090a280206", "deltaByteCount": 1}
+```
+
+---
+
+## Test: a keyed list removes an element
+
+Keyed list delta: only a removal.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: keyed-removed
+kind: schemaApi
+level: atomic
+schemaApi:
+  sources: ["schema :Item as {\n  id: :Number integer between 0 and 255 key\n  hp: :Number integer between 0 and 15\n  on: :Boolean\n}\n\nschema :World as {\n  tick: :Number integer between 0 and 255\n  items: :List(:Item) max 5\n}\n"]
+  root: "World"
+  deltaEncode: {"record": "090a280307", "baseline": "090b280266e000"}
+  deltaDecode: {"delta": "4a00", "baseline": "090b280266e000"}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  deltaEncoded: {"bytes": "4a00"}
+  deltaDecoded: {"record": "090a280307", "deltaByteCount": 2}
+```
+
+---
+
+## Test: a keyed list adds an element at the end
+
+Keyed list delta: only an addition.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: keyed-added
+kind: schemaApi
+level: atomic
+schemaApi:
+  sources: ["schema :Item as {\n  id: :Number integer between 0 and 255 key\n  hp: :Number integer between 0 and 15\n  on: :Boolean\n}\n\nschema :World as {\n  tick: :Number integer between 0 and 255\n  items: :List(:Item) max 5\n}\n"]
+  root: "World"
+  deltaEncode: {"record": "090b280266e000", "baseline": "090a280206"}
+  deltaDecode: {"delta": "42060e00", "baseline": "090a280206"}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  deltaEncoded: {"bytes": "42060e00"}
+  deltaDecoded: {"record": "090b280266e000", "deltaByteCount": 4}
+```
+
+---
+
+## Test: a keyed list adds an element in the middle
+
+Keyed list delta: the merge places the addition by key.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: keyed-added-middle
+kind: schemaApi
+level: atomic
+schemaApi:
+  sources: ["schema :Item as {\n  id: :Number integer between 0 and 255 key\n  hp: :Number integer between 0 and 15\n  on: :Boolean\n}\n\nschema :World as {\n  tick: :Number integer between 0 and 255\n  items: :List(:Item) max 5\n}\n"]
+  root: "World"
+  deltaEncode: {"record": "090b280266e000", "baseline": "090a280307"}
+  deltaDecode: {"delta": "42040c00", "baseline": "090a280307"}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  deltaEncoded: {"bytes": "42040c00"}
+  deltaDecoded: {"record": "090b280266e000", "deltaByteCount": 4}
+```
+
+---
+
+## Test: a keyed list adds an element at the front
+
+Keyed list delta: the merge places the addition by key.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: keyed-added-front
+kind: schemaApi
+level: atomic
+schemaApi:
+  sources: ["schema :Item as {\n  id: :Number integer between 0 and 255 key\n  hp: :Number integer between 0 and 15\n  on: :Boolean\n}\n\nschema :World as {\n  tick: :Number integer between 0 and 255\n  items: :List(:Item) max 5\n}\n"]
+  root: "World"
+  deltaEncode: {"record": "090b280266e000", "baseline": "0912300307"}
+  deltaDecode: {"delta": "42020a00", "baseline": "0912300307"}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  deltaEncoded: {"bytes": "42020a00"}
+  deltaDecoded: {"record": "090b280266e000", "deltaByteCount": 4}
+```
+
+---
+
+## Test: a keyed list changes one field of an element
+
+Keyed list delta: the nested delta has no key.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: keyed-changed
+kind: schemaApi
+level: atomic
+schemaApi:
+  sources: ["schema :Item as {\n  id: :Number integer between 0 and 255 key\n  hp: :Number integer between 0 and 15\n  on: :Boolean\n}\n\nschema :World as {\n  tick: :Number integer between 0 and 255\n  items: :List(:Item) max 5\n}\n"]
+  root: "World"
+  deltaEncode: {"record": "090a280201", "baseline": "090a280206"}
+  deltaDecode: {"delta": "029202", "baseline": "090a280206"}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  deltaEncoded: {"bytes": "029202"}
+  deltaDecoded: {"record": "090a280201", "deltaByteCount": 3}
+```
+
+---
+
+## Test: a keyed list toggles a Boolean of an element
+
+Keyed list delta: a Boolean costs its change bit.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: keyed-changed-flag
+kind: schemaApi
+level: atomic
+schemaApi:
+  sources: ["schema :Item as {\n  id: :Number integer between 0 and 255 key\n  hp: :Number integer between 0 and 15\n  on: :Boolean\n}\n\nschema :World as {\n  tick: :Number integer between 0 and 255\n  items: :List(:Item) max 5\n}\n"]
+  root: "World"
+  deltaEncode: {"record": "090a280216", "baseline": "090a280206"}
+  deltaDecode: {"delta": "021201", "baseline": "090a280206"}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  deltaEncoded: {"bytes": "021201"}
+  deltaDecoded: {"record": "090a280216", "deltaByteCount": 3}
+```
+
+---
+
+## Test: a keyed list removes, adds and changes
+
+The worked example of the specification.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: keyed-all-three
+kind: schemaApi
+level: atomic
+schemaApi:
+  sources: ["schema :Item as {\n  id: :Number integer between 0 and 255 key\n  hp: :Number integer between 0 and 15\n  on: :Boolean\n}\n\nschema :World as {\n  tick: :Number integer between 0 and 255\n  items: :List(:Item) max 5\n}\n"]
+  root: "World"
+  deltaEncode: {"record": "090d2803876016848304", "baseline": "090d280266e014a08304"}
+  deltaDecode: {"delta": "4a4230b302", "baseline": "090d280266e014a08304"}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  deltaEncoded: {"bytes": "4a4230b302"}
+  deltaDecoded: {"record": "090d2803876016848304", "deltaByteCount": 5}
+```
+
+---
+
+## Test: a keyed list removes everything
+
+Keyed list delta: the result is empty.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: keyed-all-removed
+kind: schemaApi
+level: atomic
+schemaApi:
+  sources: ["schema :Item as {\n  id: :Number integer between 0 and 255 key\n  hp: :Number integer between 0 and 15\n  on: :Boolean\n}\n\nschema :World as {\n  tick: :Number integer between 0 and 255\n  items: :List(:Item) max 5\n}\n"]
+  root: "World"
+  deltaEncode: {"record": "0900", "baseline": "090a280206"}
+  deltaDecode: {"delta": "120200", "baseline": "090a280206"}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  deltaEncoded: {"bytes": "120200"}
+  deltaDecoded: {"record": "0900", "deltaByteCount": 3}
+```
+
+---
+
+## Test: a keyed list fills an empty baseline
+
+Keyed list delta: everything is added, by element.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: keyed-from-empty
+kind: schemaApi
+level: atomic
+schemaApi:
+  sources: ["schema :Item as {\n  id: :Number integer between 0 and 255 key\n  hp: :Number integer between 0 and 15\n  on: :Boolean\n}\n\nschema :World as {\n  tick: :Number integer between 0 and 255\n  items: :List(:Item) max 5\n}\n"]
+  root: "World"
+  deltaEncode: {"record": "090a280206", "baseline": "0900"}
+  deltaDecode: {"delta": "82028a8001", "baseline": "0900"}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  deltaEncoded: {"bytes": "82028a8001"}
+  deltaDecoded: {"record": "090a280206", "deltaByteCount": 5}
+```
+
+---
+
+## Test: a key leaves a keyed list
+
+First half of a key that goes away and comes back.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: keyed-removed-then
+kind: schemaApi
+level: atomic
+schemaApi:
+  sources: ["schema :Item as {\n  id: :Number integer between 0 and 255 key\n  hp: :Number integer between 0 and 15\n  on: :Boolean\n}\n\nschema :World as {\n  tick: :Number integer between 0 and 255\n  items: :List(:Item) max 5\n}\n"]
+  root: "World"
+  deltaEncode: {"record": "090928", "baseline": "090a280206"}
+  deltaDecode: {"delta": "4a00", "baseline": "090a280206"}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  deltaEncoded: {"bytes": "4a00"}
+  deltaDecoded: {"record": "090928", "deltaByteCount": 2}
+```
+
+---
+
+## Test: a key comes back to a keyed list
+
+Second half: the same key is an addition against the new baseline.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: keyed-back
+kind: schemaApi
+level: atomic
+schemaApi:
+  sources: ["schema :Item as {\n  id: :Number integer between 0 and 255 key\n  hp: :Number integer between 0 and 15\n  on: :Boolean\n}\n\nschema :World as {\n  tick: :Number integer between 0 and 255\n  items: :List(:Item) max 5\n}\n"]
+  root: "World"
+  deltaEncode: {"record": "090a280206", "baseline": "090928"}
+  deltaDecode: {"delta": "42040c00", "baseline": "090928"}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  deltaEncoded: {"bytes": "42040c00"}
+  deltaDecoded: {"record": "090a280206", "deltaByteCount": 4}
+```
+
+---
+
+## Test: an unsorted baseline takes the whole list
+
+Keyed list delta: the baseline does not ascend.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: keyed-unsorted-baseline
+kind: schemaApi
+level: atomic
+schemaApi:
+  sources: ["schema :Item as {\n  id: :Number integer between 0 and 255 key\n  hp: :Number integer between 0 and 15\n  on: :Boolean\n}\n\nschema :World as {\n  tick: :Number integer between 0 and 255\n  items: :List(:Item) max 5\n}\n"]
+  root: "World"
+  deltaEncode: {"record": "090a280206", "baseline": "0912300105"}
+  deltaDecode: {"delta": "56401130", "baseline": "0912300105"}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  deltaEncoded: {"bytes": "56401130"}
+  deltaDecoded: {"record": "090a280206", "deltaByteCount": 4}
+```
+
+---
+
+## Test: an unsorted record takes the whole list
+
+Keyed list delta: the record does not ascend.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: keyed-unsorted-record
+kind: schemaApi
+level: atomic
+schemaApi:
+  sources: ["schema :Item as {\n  id: :Number integer between 0 and 255 key\n  hp: :Number integer between 0 and 15\n  on: :Boolean\n}\n\nschema :World as {\n  tick: :Number integer between 0 and 255\n  items: :List(:Item) max 5\n}\n"]
+  root: "World"
+  deltaEncode: {"record": "0912300105", "baseline": "090a280206"}
+  deltaDecode: {"delta": "96800928", "baseline": "090a280206"}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  deltaEncoded: {"bytes": "96800928"}
+  deltaDecoded: {"record": "0912300105", "deltaByteCount": 4}
+```
+
+---
+
+## Test: duplicate keys in a baseline take the whole list
+
+Duplicates are simply not ascending.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: keyed-duplicate-baseline
+kind: schemaApi
+level: atomic
+schemaApi:
+  sources: ["schema :Item as {\n  id: :Number integer between 0 and 255 key\n  hp: :Number integer between 0 and 15\n  on: :Boolean\n}\n\nschema :World as {\n  tick: :Number integer between 0 and 255\n  items: :List(:Item) max 5\n}\n"]
+  root: "World"
+  deltaEncode: {"record": "090928", "baseline": "090a280106"}
+  deltaDecode: {"delta": "4e4001", "baseline": "090a280106"}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  deltaEncoded: {"bytes": "4e4001"}
+  deltaDecoded: {"record": "090928", "deltaByteCount": 3}
+```
+
+---
+
+## Test: duplicate keys in a record take the whole list
+
+Duplicates are simply not ascending.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: keyed-duplicate-record
+kind: schemaApi
+level: atomic
+schemaApi:
+  sources: ["schema :Item as {\n  id: :Number integer between 0 and 255 key\n  hp: :Number integer between 0 and 15\n  on: :Boolean\n}\n\nschema :World as {\n  tick: :Number integer between 0 and 255\n  items: :List(:Item) max 5\n}\n"]
+  root: "World"
+  deltaEncode: {"record": "090a280106", "baseline": "090928"}
+  deltaDecode: {"delta": "56400930", "baseline": "090928"}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  deltaEncoded: {"bytes": "56400930"}
+  deltaDecoded: {"record": "090a280106", "deltaByteCount": 4}
+```
+
+---
+
+## Test: an unchanged unsorted list has no payload
+
+Equal lists are no change in any order.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: keyed-unsorted-unchanged
+kind: schemaApi
+level: atomic
+schemaApi:
+  sources: ["schema :Item as {\n  id: :Number integer between 0 and 255 key\n  hp: :Number integer between 0 and 15\n  on: :Boolean\n}\n\nschema :World as {\n  tick: :Number integer between 0 and 255\n  items: :List(:Item) max 5\n}\n"]
+  root: "World"
+  deltaEncode: {"record": "0912300105", "baseline": "0912300105"}
+  deltaDecode: {"delta": "00", "baseline": "0912300105"}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  deltaEncoded: {"bytes": "00"}
+  deltaDecoded: {"record": "0912300105", "deltaByteCount": 1}
+```
+
+---
+
+## Test: a reused key is a change of the same object
+
+The caller owns what a key means.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: keyed-reused-key
+kind: schemaApi
+level: atomic
+schemaApi:
+  sources: ["schema :Item as {\n  id: :Number integer between 0 and 255 key\n  hp: :Number integer between 0 and 15\n  on: :Boolean\n}\n\nschema :World as {\n  tick: :Number integer between 0 and 255\n  items: :List(:Item) max 5\n}\n"]
+  root: "World"
+  deltaEncode: {"record": "0909c8", "baseline": "090928"}
+  deltaDecode: {"delta": "028213", "baseline": "090928"}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  deltaEncoded: {"bytes": "028213"}
+  deltaDecoded: {"record": "0909c8", "deltaByteCount": 3}
+```
+
+---
+
+## Test: a keyed list follows other changed fields
+
+Keyed list delta: tick and list both change.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: keyed-tick-and-list
+kind: schemaApi
+level: atomic
+schemaApi:
+  sources: ["schema :Item as {\n  id: :Number integer between 0 and 255 key\n  hp: :Number integer between 0 and 15\n  on: :Boolean\n}\n\nschema :World as {\n  tick: :Number integer between 0 and 255\n  items: :List(:Item) max 5\n}\n"]
+  root: "World"
+  deltaEncode: {"record": "0a0930", "baseline": "090928"}
+  deltaDecode: {"delta": "2b00820c", "baseline": "090928"}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  deltaEncoded: {"bytes": "2b00820c"}
+  deltaDecoded: {"record": "0a0930", "deltaByteCount": 4}
+```
+
+---
+
+## Test: the largest delta replaces every element
+
+Keyed list delta at its bound, 13 bytes.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: keyed-largest-replaced
+kind: schemaApi
+level: atomic
+schemaApi:
+  sources: ["schema :Item as {\n  id: :Number integer between 0 and 255 key\n  hp: :Number integer between 0 and 15\n  on: :Boolean\n}\n\nschema :World as {\n  tick: :Number integer between 0 and 255\n  items: :List(:Item) max 5\n}\n"]
+  root: "World"
+  deltaEncode: {"record": "0a358807112126448508", "baseline": "090d0002600010800200"}
+  deltaDecode: {"delta": "2b28a2b106f12022c484a81001", "baseline": "090d0002600010800200"}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  deltaEncoded: {"bytes": "2b28a2b106f12022c484a81001"}
+  deltaDecoded: {"record": "0a358807112126448508", "deltaByteCount": 13}
+```
+
+---
+
+## Test: the largest encoding counts the element form
+
+1 + 8 + 1 + 1 + 3 * 3 + 5 * (3 + 13) = 100 bits.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: keyed-largest-size
+kind: schemaApi
+level: atomic
+schemaApi:
+  sources: ["schema :Item as {\n  id: :Number integer between 0 and 255 key\n  hp: :Number integer between 0 and 15\n  on: :Boolean\n}\n\nschema :World as {\n  tick: :Number integer between 0 and 255\n  items: :List(:Item) max 5\n}\n"]
+  root: "World"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  maxByteCount: 13
+```
+
+---
+
+## Test: the largest delta can change every element
+
+The element delta exceeds the element: 1 + 1 + 3 * 2 + 2 * (1 + 5) = 20 bits.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: keyed-largest-changed
+kind: schemaApi
+level: atomic
+schemaApi:
+  sources: ["schema :E as {\n  id: :Number integer between 0 and 1 key\n  v: :Number integer between 0 and 7 delta within 1\n}\n\nschema :L as {\n  l: :List(:E) max 2\n}\n"]
+  root: "L"
+  deltaEncode: {"record": "fa03", "baseline": "4200"}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  maxByteCount: 3
+  deltaEncoded: {"bytes": "81fe0f"}
+```
+
+---
+
+## Test: a keyed list works inside a nested field
+
+Keyed list delta below a nested delta.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: keyed-nested-field
+kind: schemaApi
+level: atomic
+schemaApi:
+  sources: ["schema :Item as {\n  id: :Number integer between 0 and 255 key\n  hp: :Number integer between 0 and 15\n  on: :Boolean\n}\n\nschema :Box as {\n  items: :List(:Item) max 5\n}\n\nschema :Top as {\n  box: :Box\n}\n"]
+  root: "Top"
+  deltaEncode: {"record": "0a280206", "baseline": "0928"}
+  deltaDecode: {"delta": "43040c00", "baseline": "0928"}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  deltaEncoded: {"bytes": "43040c00"}
+  deltaDecoded: {"record": "0a280206", "deltaByteCount": 4}
+```
+
+---
+
+## Test: a present optional keyed list takes the element form
+
+Presence bit, then the keyed payload.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: keyed-optional-both
+kind: schemaApi
+level: atomic
+schemaApi:
+  sources: ["schema :Item as {\n  id: :Number integer between 0 and 255 key\n  hp: :Number integer between 0 and 15\n  on: :Boolean\n}\n\nschema :O as {\n  items: :List(:Item) max 5 optional\n}\n"]
+  root: "O"
+  deltaEncode: {"record": "1550040c", "baseline": "135000"}
+  deltaDecode: {"delta": "43040c00", "baseline": "135000"}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  deltaEncoded: {"bytes": "43040c00"}
+  deltaDecoded: {"record": "1550040c", "deltaByteCount": 4}
+```
+
+---
+
+## Test: a new optional keyed list has no form bit
+
+Without a value in the baseline a field takes its full encoding.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: keyed-optional-new
+kind: schemaApi
+level: atomic
+schemaApi:
+  sources: ["schema :Item as {\n  id: :Number integer between 0 and 255 key\n  hp: :Number integer between 0 and 15\n  on: :Boolean\n}\n\nschema :O as {\n  items: :List(:Item) max 5 optional\n}\n"]
+  root: "O"
+  deltaEncode: {"record": "135000", "baseline": "00"}
+  deltaDecode: {"delta": "27a000", "baseline": "00"}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  deltaEncoded: {"bytes": "27a000"}
+  deltaDecoded: {"record": "135000", "deltaByteCount": 3}
+```
+
+---
+
+## Test: a removed optional keyed list has only its presence bit
+
+Nothing follows an absent value.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: keyed-optional-gone
+kind: schemaApi
+level: atomic
+schemaApi:
+  sources: ["schema :Item as {\n  id: :Number integer between 0 and 255 key\n  hp: :Number integer between 0 and 15\n  on: :Boolean\n}\n\nschema :O as {\n  items: :List(:Item) max 5 optional\n}\n"]
+  root: "O"
+  deltaEncode: {"record": "00", "baseline": "135000"}
+  deltaDecode: {"delta": "01", "baseline": "135000"}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  deltaEncoded: {"bytes": "01"}
+  deltaDecoded: {"record": "00", "deltaByteCount": 1}
+```
+
+---
+
+## Test: a keyed list works as a union alternative
+
+The same alternative takes its payload.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: keyed-union-alternative
+kind: schemaApi
+level: atomic
+schemaApi:
+  sources: ["schema :Item as {\n  id: :Number integer between 0 and 255 key\n  hp: :Number integer between 0 and 15\n  on: :Boolean\n}\n\nschema :U as {\n  pick: :List(:Item) max 5 | :Boolean\n}\n"]
+  root: "U"
+  deltaEncode: {"record": "1450040c", "baseline": "125000"}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  deltaEncoded: {"bytes": "41040c00"}
+```
+
+---
+
+## Test: a keyed list works inside a keyed element
+
+Each level compares by its own key.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: keyed-inside-keyed
+kind: schemaApi
+level: atomic
+schemaApi:
+  sources: ["schema :Leaf as {\n  id: :Number integer between 0 and 7 key\n  v: :Number integer between 0 and 3\n}\n\nschema :Node as {\n  id: :Number integer between 0 and 7 key\n  leaves: :List(:Leaf) max 2\n}\n\nschema :Tree as {\n  nodes: :List(:Node) max 2\n}\n"]
+  root: "Tree"
+  deltaEncode: {"record": "250d", "baseline": "2501"}
+  deltaDecode: {"delta": "41821c", "baseline": "2501"}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  deltaEncoded: {"bytes": "41821c"}
+  deltaDecoded: {"record": "250d", "deltaByteCount": 3}
+```
+
+---
+
+## Test: an integer key without a range compares numerically
+
+-1 sorts before 1, so this list takes the element form.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: keyed-signed-order
+kind: schemaApi
+level: atomic
+schemaApi:
+  sources: ["schema :K as {\n  id: :Number integer key\n}\n\nschema :L as {\n  l: :List(:K) max 2\n}\n"]
+  root: "L"
+  deltaEncode: {"record": "feffffffffffffff070000000000000000", "baseline": "050000000000000000"}
+  deltaDecode: {"delta": "d1ffffffffffffff3f", "baseline": "050000000000000000"}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  deltaEncoded: {"bytes": "d1ffffffffffffff3f"}
+  deltaDecoded: {"record": "feffffffffffffff070000000000000000", "deltaByteCount": 9}
+```
+
+---
+
+## Test: a negative key after a positive one does not ascend
+
+Numeric order makes 1, -1 a whole list.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: keyed-signed-unsorted
+kind: schemaApi
+level: atomic
+schemaApi:
+  sources: ["schema :K as {\n  id: :Number integer key\n}\n\nschema :L as {\n  l: :List(:K) max 2\n}\n"]
+  root: "L"
+  deltaEncode: {"record": "0600000000000000fcffffffffffffff03", "baseline": "050000000000000000"}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  deltaEncoded: {"bytes": "1b00000000000000f0ffffffffffffff0f"}
+```
+
+---
+
+## Test: a Tag key compares in declared order
+
+#z comes before #a.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: keyed-tag-order
+kind: schemaApi
+level: atomic
+schemaApi:
+  sources: ["schema :K as {\n  t: :Tag(#z, #a) key\n  v: :Boolean\n}\n\nschema :L as {\n  l: :List(:K) max 2\n}\n"]
+  root: "L"
+  deltaEncode: {"record": "12", "baseline": "01"}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  deltaEncoded: {"bytes": "5100"}
+```
+
+---
+
+## Test: an element with only a key is added or removed
+
+It cannot change.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: keyed-key-only
+kind: schemaApi
+level: atomic
+schemaApi:
+  sources: ["schema :K as {\n  id: :Number integer between 0 and 3 key\n}\n\nschema :L as {\n  l: :List(:K) max 2\n}\n"]
+  root: "L"
+  deltaEncode: {"record": "09", "baseline": "05"}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  deltaEncoded: {"bytes": "2501"}
+```
+
+---
+
+## Test: the value path encodes a keyed list by element
+
+The caller sends values; their list order decides the form.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: keyed-value-path
+kind: schemaApi
+level: atomic
+schemaApi:
+  sources: ["schema :Item as {\n  id: :Number integer between 0 and 255 key\n  hp: :Number integer between 0 and 15\n  on: :Boolean\n}\n\nschema :World as {\n  tick: :Number integer between 0 and 255\n  items: :List(:Item) max 5\n}\n"]
+  root: "World"
+  encode: {"type": ":World", "entries": [{"key": "items", "value": {"type": ":List", "items": [{"type": ":Item", "entries": [{"key": "hp", "value": {"type": ":Number.int64", "value": "5"}}, {"key": "id", "value": {"type": ":Number.int64", "value": "1"}}, {"key": "on", "value": {"type": ":Boolean", "value": false}}]}, {"type": ":Item", "entries": [{"key": "hp", "value": {"type": ":Number.int64", "value": "7"}}, {"key": "id", "value": {"type": ":Number.int64", "value": "3"}}, {"key": "on", "value": {"type": ":Boolean", "value": false}}]}, {"type": ":Item", "entries": [{"key": "hp", "value": {"type": ":Number.int64", "value": "3"}}, {"key": "id", "value": {"type": ":Number.int64", "value": "4"}}, {"key": "on", "value": {"type": ":Boolean", "value": true}}]}, {"type": ":Item", "entries": [{"key": "hp", "value": {"type": ":Number.int64", "value": "1"}}, {"key": "id", "value": {"type": ":Number.int64", "value": "5"}}, {"key": "on", "value": {"type": ":Boolean", "value": false}}]}, {"type": ":Item", "entries": [{"key": "hp", "value": {"type": ":Number.int64", "value": "9"}}, {"key": "id", "value": {"type": ":Number.int64", "value": "7"}}, {"key": "on", "value": {"type": ":Boolean", "value": false}}]}]}}, {"key": "tick", "value": {"type": ":Number.int64", "value": "9"}}]}
+  baseline: {"type": ":World", "entries": [{"key": "items", "value": {"type": ":List", "items": [{"type": ":Item", "entries": [{"key": "hp", "value": {"type": ":Number.int64", "value": "5"}}, {"key": "id", "value": {"type": ":Number.int64", "value": "1"}}, {"key": "on", "value": {"type": ":Boolean", "value": false}}]}, {"type": ":Item", "entries": [{"key": "hp", "value": {"type": ":Number.int64", "value": "6"}}, {"key": "id", "value": {"type": ":Number.int64", "value": "2"}}, {"key": "on", "value": {"type": ":Boolean", "value": false}}]}, {"type": ":Item", "entries": [{"key": "hp", "value": {"type": ":Number.int64", "value": "7"}}, {"key": "id", "value": {"type": ":Number.int64", "value": "3"}}, {"key": "on", "value": {"type": ":Boolean", "value": false}}]}, {"type": ":Item", "entries": [{"key": "hp", "value": {"type": ":Number.int64", "value": "8"}}, {"key": "id", "value": {"type": ":Number.int64", "value": "5"}}, {"key": "on", "value": {"type": ":Boolean", "value": false}}]}, {"type": ":Item", "entries": [{"key": "hp", "value": {"type": ":Number.int64", "value": "9"}}, {"key": "id", "value": {"type": ":Number.int64", "value": "7"}}, {"key": "on", "value": {"type": ":Boolean", "value": false}}]}]}}, {"key": "tick", "value": {"type": ":Number.int64", "value": "9"}}]}
+  decode: "4a4230b302"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded: {"bytes": "4a4230b302"}
+  decoded: {"value": {"type": ":World", "entries": [{"key": "items", "value": {"type": ":List", "items": [{"type": ":Item", "entries": [{"key": "hp", "value": {"type": ":Number.int64", "value": "5"}}, {"key": "id", "value": {"type": ":Number.int64", "value": "1"}}, {"key": "on", "value": {"type": ":Boolean", "value": false}}]}, {"type": ":Item", "entries": [{"key": "hp", "value": {"type": ":Number.int64", "value": "7"}}, {"key": "id", "value": {"type": ":Number.int64", "value": "3"}}, {"key": "on", "value": {"type": ":Boolean", "value": false}}]}, {"type": ":Item", "entries": [{"key": "hp", "value": {"type": ":Number.int64", "value": "3"}}, {"key": "id", "value": {"type": ":Number.int64", "value": "4"}}, {"key": "on", "value": {"type": ":Boolean", "value": true}}]}, {"type": ":Item", "entries": [{"key": "hp", "value": {"type": ":Number.int64", "value": "1"}}, {"key": "id", "value": {"type": ":Number.int64", "value": "5"}}, {"key": "on", "value": {"type": ":Boolean", "value": false}}]}, {"type": ":Item", "entries": [{"key": "hp", "value": {"type": ":Number.int64", "value": "9"}}, {"key": "id", "value": {"type": ":Number.int64", "value": "7"}}, {"key": "on", "value": {"type": ":Boolean", "value": false}}]}]}}, {"key": "tick", "value": {"type": ":Number.int64", "value": "9"}}]}, "byteCount": 5}
+```
+
+---
+
+## Test: whole-list form is rejected when both lists ascend
+
+A delta has one valid encoding.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: keyed-reject-whole-ascending
+kind: schemaApi
+level: atomic
+schemaApi:
+  sources: ["schema :Item as {\n  id: :Number integer between 0 and 255 key\n  hp: :Number integer between 0 and 15\n  on: :Boolean\n}\n\nschema :World as {\n  tick: :Number integer between 0 and 255\n  items: :List(:Item) max 5\n}\n"]
+  root: "World"
+  deltaDecode: {"delta": "56401130", "baseline": "090928"}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  deltaDecoded: {"error": {"code": "wire.invalidDelta", "path": "items"}}
+```
+
+---
+
+## Test: a whole list equal to its baseline is rejected
+
+The change bit is set for an unchanged value.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: keyed-reject-whole-equal
+kind: schemaApi
+level: atomic
+schemaApi:
+  sources: ["schema :Item as {\n  id: :Number integer between 0 and 255 key\n  hp: :Number integer between 0 and 15\n  on: :Boolean\n}\n\nschema :World as {\n  tick: :Number integer between 0 and 255\n  items: :List(:Item) max 5\n}\n"]
+  root: "World"
+  deltaDecode: {"delta": "96800928", "baseline": "0912300105"}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  deltaDecoded: {"error": {"code": "wire.invalidDelta", "path": "items"}}
+```
+
+---
+
+## Test: element form is rejected against an unsorted baseline
+
+The merge needs ascending keys.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: keyed-reject-unsorted-baseline
+kind: schemaApi
+level: atomic
+schemaApi:
+  sources: ["schema :Item as {\n  id: :Number integer between 0 and 255 key\n  hp: :Number integer between 0 and 15\n  on: :Boolean\n}\n\nschema :World as {\n  tick: :Number integer between 0 and 255\n  items: :List(:Item) max 5\n}\n"]
+  root: "World"
+  deltaDecode: {"delta": "4a00", "baseline": "0912300105"}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  deltaDecoded: {"error": {"code": "wire.invalidDelta", "path": "items"}}
+```
+
+---
+
+## Test: removed positions must ascend
+
+Keyed list rejection.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: keyed-reject-removed-order
+kind: schemaApi
+level: atomic
+schemaApi:
+  sources: ["schema :Item as {\n  id: :Number integer between 0 and 255 key\n  hp: :Number integer between 0 and 15\n  on: :Boolean\n}\n\nschema :World as {\n  tick: :Number integer between 0 and 255\n  items: :List(:Item) max 5\n}\n"]
+  root: "World"
+  deltaDecode: {"delta": "520000", "baseline": "090b280266e000"}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  deltaDecoded: {"error": {"code": "wire.invalidDelta", "path": "items"}}
+```
+
+---
+
+## Test: a removed position must not repeat
+
+Keyed list rejection.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: keyed-reject-removed-repeat
+kind: schemaApi
+level: atomic
+schemaApi:
+  sources: ["schema :Item as {\n  id: :Number integer between 0 and 255 key\n  hp: :Number integer between 0 and 15\n  on: :Boolean\n}\n\nschema :World as {\n  tick: :Number integer between 0 and 255\n  items: :List(:Item) max 5\n}\n"]
+  root: "World"
+  deltaDecode: {"delta": "520200", "baseline": "090b280266e000"}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  deltaDecoded: {"error": {"code": "wire.invalidDelta", "path": "items"}}
+```
+
+---
+
+## Test: a removed position must lie inside the baseline
+
+Keyed list rejection.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: keyed-reject-removed-outside
+kind: schemaApi
+level: atomic
+schemaApi:
+  sources: ["schema :Item as {\n  id: :Number integer between 0 and 255 key\n  hp: :Number integer between 0 and 15\n  on: :Boolean\n}\n\nschema :World as {\n  tick: :Number integer between 0 and 255\n  items: :List(:Item) max 5\n}\n"]
+  root: "World"
+  deltaDecode: {"delta": "4a00", "baseline": "090928"}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  deltaDecoded: {"error": {"code": "wire.invalidDelta", "path": "items"}}
+```
+
+---
+
+## Test: changed positions must ascend
+
+Keyed list rejection.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: keyed-reject-changed-order
+kind: schemaApi
+level: atomic
+schemaApi:
+  sources: ["schema :Item as {\n  id: :Number integer between 0 and 255 key\n  hp: :Number integer between 0 and 15\n  on: :Boolean\n}\n\nschema :World as {\n  tick: :Number integer between 0 and 255\n  items: :List(:Item) max 5\n}\n"]
+  root: "World"
+  deltaDecode: {"delta": "02940205", "baseline": "090b280266e000"}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  deltaDecoded: {"error": {"code": "wire.invalidDelta", "path": "items"}}
+```
+
+---
+
+## Test: a changed position must lie inside the baseline
+
+Keyed list rejection.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: keyed-reject-changed-outside
+kind: schemaApi
+level: atomic
+schemaApi:
+  sources: ["schema :Item as {\n  id: :Number integer between 0 and 255 key\n  hp: :Number integer between 0 and 15\n  on: :Boolean\n}\n\nschema :World as {\n  tick: :Number integer between 0 and 255\n  items: :List(:Item) max 5\n}\n"]
+  root: "World"
+  deltaDecode: {"delta": "029202", "baseline": "090928"}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  deltaDecoded: {"error": {"code": "wire.invalidDelta", "path": "items"}}
+```
+
+---
+
+## Test: one position cannot be removed and changed
+
+Keyed list rejection.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: keyed-reject-removed-changed
+kind: schemaApi
+level: atomic
+schemaApi:
+  sources: ["schema :Item as {\n  id: :Number integer between 0 and 255 key\n  hp: :Number integer between 0 and 15\n  on: :Boolean\n}\n\nschema :World as {\n  tick: :Number integer between 0 and 255\n  items: :List(:Item) max 5\n}\n"]
+  root: "World"
+  deltaDecode: {"delta": "4a9014", "baseline": "090a280206"}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  deltaDecoded: {"error": {"code": "wire.invalidDelta", "path": "items"}}
+```
+
+---
+
+## Test: added keys must ascend
+
+Keyed list rejection.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: keyed-reject-added-order
+kind: schemaApi
+level: atomic
+schemaApi:
+  sources: ["schema :Item as {\n  id: :Number integer between 0 and 255 key\n  hp: :Number integer between 0 and 15\n  on: :Boolean\n}\n\nschema :World as {\n  tick: :Number integer between 0 and 255\n  items: :List(:Item) max 5\n}\n"]
+  root: "World"
+  deltaDecode: {"delta": "8208c00000", "baseline": "090928"}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  deltaDecoded: {"error": {"code": "wire.invalidDelta", "path": "items"}}
+```
+
+---
+
+## Test: added keys must not repeat
+
+Keyed list rejection.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: keyed-reject-added-repeat
+kind: schemaApi
+level: atomic
+schemaApi:
+  sources: ["schema :Item as {\n  id: :Number integer between 0 and 255 key\n  hp: :Number integer between 0 and 15\n  on: :Boolean\n}\n\nschema :World as {\n  tick: :Number integer between 0 and 255\n  items: :List(:Item) max 5\n}\n"]
+  root: "World"
+  deltaDecode: {"delta": "8206c04000", "baseline": "090928"}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  deltaDecoded: {"error": {"code": "wire.invalidDelta", "path": "items"}}
+```
+
+---
+
+## Test: an added key must not equal a kept key
+
+An element that stays is a change.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: keyed-reject-added-kept
+kind: schemaApi
+level: atomic
+schemaApi:
+  sources: ["schema :Item as {\n  id: :Number integer between 0 and 255 key\n  hp: :Number integer between 0 and 15\n  on: :Boolean\n}\n\nschema :World as {\n  tick: :Number integer between 0 and 255\n  items: :List(:Item) max 5\n}\n"]
+  root: "World"
+  deltaDecode: {"delta": "42040000", "baseline": "090a280206"}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  deltaDecoded: {"error": {"code": "wire.invalidDelta", "path": "items"}}
+```
+
+---
+
+## Test: an added key must not equal a removed key
+
+An element that stays is a change.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: keyed-reject-added-removed
+kind: schemaApi
+level: atomic
+schemaApi:
+  sources: ["schema :Item as {\n  id: :Number integer between 0 and 255 key\n  hp: :Number integer between 0 and 15\n  on: :Boolean\n}\n\nschema :World as {\n  tick: :Number integer between 0 and 255\n  items: :List(:Item) max 5\n}\n"]
+  root: "World"
+  deltaDecode: {"delta": "4a220000", "baseline": "090a280206"}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  deltaDecoded: {"error": {"code": "wire.invalidDelta", "path": "items"}}
+```
+
+---
+
+## Test: all three counts zero are rejected
+
+The change bit is set for an unchanged value.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: keyed-reject-no-section
+kind: schemaApi
+level: atomic
+schemaApi:
+  sources: ["schema :Item as {\n  id: :Number integer between 0 and 255 key\n  hp: :Number integer between 0 and 15\n  on: :Boolean\n}\n\nschema :World as {\n  tick: :Number integer between 0 and 255\n  items: :List(:Item) max 5\n}\n"]
+  root: "World"
+  deltaDecode: {"delta": "0200", "baseline": "090928"}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  deltaDecoded: {"error": {"code": "wire.invalidDelta", "path": "items"}}
+```
+
+---
+
+## Test: a result longer than the list is rejected
+
+Keyed list rejection.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: keyed-reject-too-long
+kind: schemaApi
+level: atomic
+schemaApi:
+  sources: ["schema :Item as {\n  id: :Number integer between 0 and 255 key\n  hp: :Number integer between 0 and 15\n  on: :Boolean\n}\n\nschema :World as {\n  tick: :Number integer between 0 and 255\n  items: :List(:Item) max 5\n}\n"]
+  root: "World"
+  deltaDecode: {"delta": "42120000", "baseline": "090d280266e014a08304"}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  deltaDecoded: {"error": {"code": "wire.invalidDelta", "path": "items"}}
+```
+
+---
+
+## Test: a removed count above max is an invalid count
+
+As in a full record.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: keyed-reject-removed-count
+kind: schemaApi
+level: atomic
+schemaApi:
+  sources: ["schema :Item as {\n  id: :Number integer between 0 and 255 key\n  hp: :Number integer between 0 and 15\n  on: :Boolean\n}\n\nschema :World as {\n  tick: :Number integer between 0 and 255\n  items: :List(:Item) max 5\n}\n"]
+  root: "World"
+  deltaDecode: {"delta": "3200", "baseline": "090928"}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  deltaDecoded: {"error": {"code": "wire.invalidCount", "path": "items"}}
+```
+
+---
+
+## Test: an added count above max is an invalid count
+
+As in a full record.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: keyed-reject-added-count
+kind: schemaApi
+level: atomic
+schemaApi:
+  sources: ["schema :Item as {\n  id: :Number integer between 0 and 255 key\n  hp: :Number integer between 0 and 15\n  on: :Boolean\n}\n\nschema :World as {\n  tick: :Number integer between 0 and 255\n  items: :List(:Item) max 5\n}\n"]
+  root: "World"
+  deltaDecode: {"delta": "8201", "baseline": "090928"}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  deltaDecoded: {"error": {"code": "wire.invalidCount", "path": "items"}}
+```
+
+---
+
+## Test: a changed count above max is an invalid count
+
+As in a full record.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: keyed-reject-changed-count
+kind: schemaApi
+level: atomic
+schemaApi:
+  sources: ["schema :Item as {\n  id: :Number integer between 0 and 255 key\n  hp: :Number integer between 0 and 15\n  on: :Boolean\n}\n\nschema :World as {\n  tick: :Number integer between 0 and 255\n  items: :List(:Item) max 5\n}\n"]
+  root: "World"
+  deltaDecode: {"delta": "020c", "baseline": "090928"}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  deltaDecoded: {"error": {"code": "wire.invalidCount", "path": "items"}}
+```
+
+---
+
+## Test: a changed element with no change bit is rejected
+
+The existing rule for nested deltas.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: keyed-reject-changed-zero
+kind: schemaApi
+level: atomic
+schemaApi:
+  sources: ["schema :Item as {\n  id: :Number integer between 0 and 255 key\n  hp: :Number integer between 0 and 15\n  on: :Boolean\n}\n\nschema :World as {\n  tick: :Number integer between 0 and 255\n  items: :List(:Item) max 5\n}\n"]
+  root: "World"
+  deltaDecode: {"delta": "020200", "baseline": "090928"}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  deltaDecoded: {"error": {"code": "wire.invalidDelta", "path": "items[]"}}
+```
+
+---
+
+## Test: an element with only a key cannot change
+
+It has no bits for a change.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: keyed-reject-key-only-changed
+kind: schemaApi
+level: atomic
+schemaApi:
+  sources: ["schema :K as {\n  id: :Number integer between 0 and 3 key\n}\n\nschema :L as {\n  l: :List(:K) max 2\n}\n"]
+  root: "L"
+  deltaDecode: {"delta": "4100", "baseline": "05"}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  deltaDecoded: {"error": {"code": "wire.invalidDelta", "path": "l[]"}}
+```
+
+---
+
+## Test: the largest whole list stays below the bound
+
+An unsorted record of five elements takes the whole-list form within the same buffer: 79 of 100 bits.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: keyed-largest-whole
+kind: schemaApi
+level: atomic
+schemaApi:
+  sources: ["schema :Item as {\n  id: :Number integer between 0 and 255 key\n  hp: :Number integer between 0 and 15\n  on: :Boolean\n}\n\nschema :World as {\n  tick: :Number integer between 0 and 255\n  items: :List(:Item) max 5\n}\n"]
+  root: "World"
+  deltaEncode: {"record": "0a4d8808f1201ac48208", "baseline": "090900"}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  maxByteCount: 13
+  deltaEncoded: {"bytes": "2b6c42448807d1201644"}
 ```

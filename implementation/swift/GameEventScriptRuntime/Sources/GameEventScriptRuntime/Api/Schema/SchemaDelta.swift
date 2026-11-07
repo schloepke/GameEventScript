@@ -170,6 +170,43 @@ private struct GesSchemaFullCopy {
         if !node.isTagText && !text.isComplete { throw GesWireError(GesWireError.invalidText, path(index)) }
     }
 
+    // The sort value of a key: an integer without a range compares with its sign, every other key by its index.
+    func keyOrder(_ index: Int, _ value: UInt64) -> UInt64 {
+        let key = nodes[index]
+        return key.kind == .integer && !key.hasRange ? value ^ (UInt64(1) << 63) : value
+    }
+
+    // A keyed list in its full encoding, validated and written only when asked for; returns whether its keys ascend strictly.
+    func ascending(_ source: inout GesSchemaReader, _ index: Int, _ target: inout GesSchemaWriter, write: Bool) throws(GesWireError) -> Bool {
+        let node = nodes[index]
+        let count = try source.getBits(node.width, index)
+        if count > UInt64(node.maxCount) { throw GesWireError(GesWireError.invalidCount, path(index)) }
+        if write { try target.putBits(count, node.width) }
+        var ascending = true
+        var previous: UInt64 = 0
+        var item: UInt64 = 0
+        while item < count {
+            let value = try wire(&source, index + 2)
+            if write { try target.putBits(value, nodes[index + 2].width) }
+            let order = keyOrder(index + 2, value)
+            if item > 0 && order <= previous { ascending = false }
+            previous = order
+            try rest(&source, index, &target, write: write)
+            item += 1
+        }
+        return ascending
+    }
+
+    // The fields of a keyed list's element after its key.
+    func rest(_ source: inout GesSchemaReader, _ index: Int, _ target: inout GesSchemaWriter, write: Bool) throws(GesWireError) {
+        let end = nodes[index + 1].next
+        var child = nodes[index + 2].next
+        while child < end {
+            try fullField(&source, child, &target, write: write)
+            child = nodes[child].next
+        }
+    }
+
     static func equal(_ first: inout GesSchemaReader, _ firstStart: Int, _ firstEnd: Int, _ second: inout GesSchemaReader, _ secondStart: Int, _ secondEnd: Int) throws(GesWireError) -> Bool {
         if firstEnd - firstStart != secondEnd - secondStart { return false }
         var equal = true
@@ -216,6 +253,8 @@ private struct GesSchemaUtf8Scanner {
 }
 
 private struct GesSchemaDeltaEncoder {
+    private enum Section { case removed, added, changed }
+
     private let full: GesSchemaFullCopy
     private let fieldCount: Int
     private var record: GesSchemaReader
@@ -295,6 +334,8 @@ private struct GesSchemaDeltaEncoder {
             return false
         case .boolean:
             return try record.getBits(1, index) != baseline.getBits(1, index)
+        case .list where node.keyedElements:
+            return try keyedList(index)
         case .text, .list:
             return try whole(index)
         case .group:
@@ -340,6 +381,93 @@ private struct GesSchemaDeltaEncoder {
         record.seek(recordStart)
         try full.fullValue(&record, index, &writer, write: true)
         return true
+    }
+
+    // Unchanged, whole when one side's keys do not ascend strictly, and otherwise by element.
+    private mutating func keyedList(_ index: Int) throws(GesWireError) -> Bool {
+        let recordStart = record.bitPosition
+        let recordAscending = try full.ascending(&record, index, &writer, write: false)
+        let recordEnd = record.bitPosition
+        let baselineStart = baseline.bitPosition
+        let baselineAscending = try full.ascending(&baseline, index, &writer, write: false)
+        let baselineEnd = baseline.bitPosition
+        if try GesSchemaFullCopy.equal(&record, recordStart, recordEnd, &baseline, baselineStart, baselineEnd) { return false }
+        if !recordAscending || !baselineAscending {
+            try writer.putBits(1, 1)
+            record.seek(recordStart)
+            try full.fullValue(&record, index, &writer, write: true)
+            return true
+        }
+        try writer.putBits(0, 1)
+        try section(index, recordStart, baselineStart, .removed)
+        try section(index, recordStart, baselineStart, .added)
+        try section(index, recordStart, baselineStart, .changed)
+        record.seek(recordEnd)
+        baseline.seek(baselineEnd)
+        return true
+    }
+
+    // One merge pass over both sorted lists writes one section; its count is set afterwards, since only the nested deltas
+    // tell whether a kept element changed.
+    private mutating func section(_ index: Int, _ recordStart: Int, _ baselineStart: Int, _ section: Section) throws(GesWireError) {
+        let node = full.nodes[index]
+        let key = index + 2
+        let keyWidth = full.nodes[key].width
+        record.seek(recordStart)
+        baseline.seek(baselineStart)
+        var recordLeft = try record.getBits(node.width, index)
+        let baselineCount = try baseline.getBits(node.width, index)
+        let countBit = writer.bitPosition
+        try writer.putBits(0, node.width)
+        var count: UInt64 = 0
+        var position: UInt64 = 0
+        var recordKey = recordLeft > 0 ? try full.wire(&record, key) : 0
+        var baselineKey = baselineCount > 0 ? try full.wire(&baseline, key) : 0
+        while recordLeft > 0 || position < baselineCount {
+            let holdsRecord = recordLeft > 0
+            let holdsBaseline = position < baselineCount
+            let useRecord = holdsRecord && (!holdsBaseline || full.keyOrder(key, recordKey) <= full.keyOrder(key, baselineKey))
+            let useBaseline = holdsBaseline && (!holdsRecord || full.keyOrder(key, baselineKey) <= full.keyOrder(key, recordKey))
+            if useRecord && useBaseline {
+                if section == .changed {
+                    let entry = writer.bitPosition
+                    try writer.putBits(position, node.positionWidth)
+                    if try group(full.nodes[key].next, full.nodes[index + 1].next, full.nodes[index + 1].childCount - 1) {
+                        count += 1
+                    } else {
+                        writer.rewind(entry)
+                    }
+                } else {
+                    try full.rest(&record, index, &writer, write: false)
+                    try full.rest(&baseline, index, &writer, write: false)
+                }
+            } else if useRecord {
+                if section == .added {
+                    try writer.putBits(recordKey, keyWidth)
+                    count += 1
+                }
+                try full.rest(&record, index, &writer, write: section == .added)
+            } else {
+                if section == .removed {
+                    try writer.putBits(position, node.positionWidth)
+                    count += 1
+                }
+                try full.rest(&baseline, index, &writer, write: false)
+            }
+            if useRecord {
+                recordLeft -= 1
+                if recordLeft > 0 { recordKey = try full.wire(&record, key) }
+            }
+            if useBaseline {
+                position += 1
+                if position < baselineCount { baselineKey = try full.wire(&baseline, key) }
+            }
+        }
+        var bit = 0
+        while bit < node.width {
+            if (count >> UInt64(bit)) & 1 != 0 { writer.setBit(countBit + bit) }
+            bit += 1
+        }
     }
 
     private mutating func union(_ index: Int) throws(GesWireError) -> Bool {
@@ -441,6 +569,12 @@ private struct GesSchemaDeltaDecoder {
             throw GesWireError(GesWireError.invalidDelta, full.path(index))
         case .boolean:
             try writer.putBits(try baseline.getBits(1, index) ^ 1, 1)
+        case .list where node.keyedElements:
+            if try delta.getBits(1, index) == 1 {
+                try wholeKeyedList(index)
+            } else {
+                try elementKeyedList(index)
+            }
         case .text, .list:
             let deltaStart = delta.bitPosition
             try full.fullValue(&delta, index, &writer, write: true)
@@ -455,6 +589,131 @@ private struct GesSchemaDeltaDecoder {
         default:
             try writer.putBits(try number(index), node.width)
         }
+    }
+
+    private mutating func wholeKeyedList(_ index: Int) throws(GesWireError) {
+        let deltaStart = delta.bitPosition
+        let deltaAscending = try full.ascending(&delta, index, &writer, write: true)
+        let deltaEnd = delta.bitPosition
+        let baselineStart = baseline.bitPosition
+        let baselineAscending = try full.ascending(&baseline, index, &writer, write: false)
+        if deltaAscending && baselineAscending { throw GesWireError(GesWireError.invalidDelta, full.path(index)) }
+        if try GesSchemaFullCopy.equal(&delta, deltaStart, deltaEnd, &baseline, baselineStart, baseline.bitPosition) { throw GesWireError(GesWireError.invalidDelta, full.path(index)) }
+    }
+
+    private mutating func sectionCount(_ index: Int) throws(GesWireError) -> UInt64 {
+        let node = full.nodes[index]
+        let count = try delta.getBits(node.width, index)
+        if count > UInt64(node.maxCount) { throw GesWireError(GesWireError.invalidCount, full.path(index)) }
+        return count
+    }
+
+    // The removed positions ascending inside the baseline.
+    private mutating func positions(_ index: Int, _ count: UInt64, _ baselineCount: UInt64) throws(GesWireError) {
+        var previous: UInt64 = 0
+        var item: UInt64 = 0
+        while item < count {
+            let position = try delta.getBits(full.nodes[index].positionWidth, index)
+            if position >= baselineCount || (item > 0 && position <= previous) { throw GesWireError(GesWireError.invalidDelta, full.path(index)) }
+            previous = position
+            item += 1
+        }
+    }
+
+    // The sections are read side by side through their own cursors while the baseline is walked once.
+    private mutating func elementKeyedList(_ index: Int) throws(GesWireError) {
+        let node = full.nodes[index]
+        let key = index + 2
+        let keyWidth = full.nodes[key].width
+        let invalid = GesWireError(GesWireError.invalidDelta, full.path(index))
+        let baselineCount = try baseline.getBits(node.width, index)
+        if baselineCount > UInt64(node.maxCount) { throw GesWireError(GesWireError.invalidCount, full.path(index)) }
+
+        var removedLeft = try sectionCount(index)
+        var removedCursor = delta.bitPosition
+        try positions(index, removedLeft, baselineCount)
+        var addedLeft = try sectionCount(index)
+        var addedCursor = delta.bitPosition
+        var previous: UInt64 = 0
+        var item: UInt64 = 0
+        while item < addedLeft {
+            let order = full.keyOrder(key, try full.wire(&delta, key))
+            if item > 0 && order <= previous { throw invalid }
+            previous = order
+            try full.rest(&delta, index, &writer, write: false)
+            item += 1
+        }
+
+        var changedLeft = try sectionCount(index)
+        var changedCursor = delta.bitPosition
+        if removedLeft == 0 && addedLeft == 0 && changedLeft == 0 { throw invalid }
+        let resultCount = baselineCount - removedLeft + addedLeft
+        if resultCount > UInt64(node.maxCount) { throw invalid }
+        try writer.putBits(resultCount, node.width)
+
+        var nextRemoved = try nextPosition(index, &removedCursor, &removedLeft)
+        var nextChanged = try nextPosition(index, &changedCursor, &changedLeft)
+        var addedKey: UInt64 = addedLeft > 0 ? try self.addedKey(key, &addedCursor) : 0
+        var previousHeld: UInt64 = 0
+        var position: UInt64 = 0
+        while position < baselineCount {
+            let held = try full.wire(&baseline, key)
+            let order = full.keyOrder(key, held)
+            if position > 0 && order <= previousHeld { throw invalid }
+            previousHeld = order
+            while addedLeft > 0 && full.keyOrder(key, addedKey) < order { try writeAdded(index, &addedCursor, &addedLeft, &addedKey) }
+            if addedLeft > 0 && addedKey == held { throw invalid }
+            if position == nextRemoved {
+                if position == nextChanged { throw invalid }
+                try full.rest(&baseline, index, &writer, write: false)
+                nextRemoved = try nextPosition(index, &removedCursor, &removedLeft)
+            } else if position == nextChanged {
+                try writer.putBits(held, keyWidth)
+                delta.seek(changedCursor)
+                if !(try group(full.nodes[key].next, full.nodes[index + 1].next, full.nodes[index + 1].childCount - 1, index + 1)) {
+                    throw GesWireError(GesWireError.invalidDelta, full.path(index + 1))
+                }
+                changedCursor = delta.bitPosition
+                let before = nextChanged
+                nextChanged = try nextPosition(index, &changedCursor, &changedLeft)
+                if nextChanged <= before { throw invalid }
+            } else {
+                try writer.putBits(held, keyWidth)
+                try full.rest(&baseline, index, &writer, write: true)
+            }
+            position += 1
+        }
+
+        // A changed position beyond the baseline was never reached.
+        if nextChanged != .max { throw invalid }
+        while addedLeft > 0 { try writeAdded(index, &addedCursor, &addedLeft, &addedKey) }
+        delta.seek(changedCursor)
+    }
+
+    // The next position of a section, or the largest number when it has ended.
+    private mutating func nextPosition(_ index: Int, _ cursor: inout Int, _ left: inout UInt64) throws(GesWireError) -> UInt64 {
+        if left == 0 { return .max }
+        left -= 1
+        delta.seek(cursor)
+        let position = try delta.getBits(full.nodes[index].positionWidth, index)
+        cursor = delta.bitPosition
+        return position
+    }
+
+    private mutating func addedKey(_ key: Int, _ cursor: inout Int) throws(GesWireError) -> UInt64 {
+        delta.seek(cursor)
+        let value = try full.wire(&delta, key)
+        cursor = delta.bitPosition
+        return value
+    }
+
+    private mutating func writeAdded(_ index: Int, _ cursor: inout Int, _ left: inout UInt64, _ key: inout UInt64) throws(GesWireError) {
+        try writer.putBits(key, full.nodes[index + 2].width)
+        delta.seek(cursor)
+        try full.rest(&delta, index, &writer, write: true)
+        cursor = delta.bitPosition
+        left -= 1
+        if left > 0 { key = try addedKey(index + 2, &cursor) }
     }
 
     private mutating func number(_ index: Int) throws(GesWireError) -> UInt64 {

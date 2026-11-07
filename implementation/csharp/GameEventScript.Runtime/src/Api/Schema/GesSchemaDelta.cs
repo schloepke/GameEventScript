@@ -190,6 +190,39 @@ public static class GesSchemaDelta
         if (!node.IsTagText && !text.IsComplete) throw new GesWireException(GesWireException.InvalidText, node.Path);
     }
 
+    // The sort value of a key: an integer without a range compares with its sign, every other key by its index.
+    private static ulong KeyOrder(in GesSchemaNode key, ulong value) => key.Kind == GesSchemaNodeKind.Integer && !key.HasRange ? value ^ (1UL << 63) : value;
+
+    // A keyed list in its full encoding, validated and written only when asked for; returns whether its keys ascend strictly.
+    private static bool Ascending(ref GesSchemaReader source, GesSchemaNode[] nodes, int index, ref GesSchemaWriter target, bool write)
+    {
+        ref readonly var node = ref nodes[index];
+        ref readonly var key = ref nodes[index + 2];
+        var count = source.GetBits(node.Width, node.Path);
+        if (count > (ulong)node.MaxCount) throw new GesWireException(GesWireException.InvalidCount, node.Path);
+        if (write) target.PutBits(count, node.Width);
+        var ascending = true;
+        ulong previous = 0;
+        for (var item = 0UL; item < count; item++)
+        {
+            var value = Wire(ref source, in key);
+            if (write) target.PutBits(value, key.Width);
+            var order = KeyOrder(in key, value);
+            if (item > 0 && order <= previous) ascending = false;
+            previous = order;
+            Rest(ref source, nodes, index, ref target, write);
+        }
+
+        return ascending;
+    }
+
+    // The fields of a keyed list's element after its key.
+    private static void Rest(ref GesSchemaReader source, GesSchemaNode[] nodes, int index, ref GesSchemaWriter target, bool write)
+    {
+        var end = nodes[index + 1].Next;
+        for (var child = nodes[index + 2].Next; child < end; child = nodes[child].Next) FullField(ref source, nodes, child, ref target, write);
+    }
+
     private static bool Equal(ref GesSchemaReader first, long firstStart, long firstEnd, ref GesSchemaReader second, long secondStart, long secondEnd)
     {
         if (firstEnd - firstStart != secondEnd - secondStart) return false;
@@ -236,6 +269,10 @@ public static class GesSchemaDelta
 
     private ref struct Encoder
     {
+        private const int Removed = 0;
+        private const int Added = 1;
+        private const int Changed = 2;
+
         private readonly GesSchemaNode[] _nodes;
         private readonly int _fieldCount;
         private GesSchemaReader _record;
@@ -318,6 +355,8 @@ public static class GesSchemaDelta
                     return false;
                 case GesSchemaNodeKind.Boolean:
                     return _record.GetBits(1, node.Path) != _baseline.GetBits(1, node.Path);
+                case GesSchemaNodeKind.List when node.KeyedElements:
+                    return KeyedList(index);
                 case GesSchemaNodeKind.Text or GesSchemaNodeKind.List:
                     return Whole(index);
                 case GesSchemaNodeKind.Group:
@@ -368,6 +407,99 @@ public static class GesSchemaDelta
             _record.Seek(recordStart);
             FullValue(ref _record, _nodes, index, ref _writer, true);
             return true;
+        }
+
+        // Unchanged, whole when one side's keys do not ascend strictly, and otherwise by element.
+        private bool KeyedList(int index)
+        {
+            var recordStart = _record.BitPosition;
+            var recordAscending = Ascending(ref _record, _nodes, index, ref _writer, false);
+            var recordEnd = _record.BitPosition;
+            var baselineStart = _baseline.BitPosition;
+            var baselineAscending = Ascending(ref _baseline, _nodes, index, ref _writer, false);
+            var baselineEnd = _baseline.BitPosition;
+            if (Equal(ref _record, recordStart, recordEnd, ref _baseline, baselineStart, baselineEnd)) return false;
+            if (!recordAscending || !baselineAscending)
+            {
+                _writer.PutBits(1, 1);
+                _record.Seek(recordStart);
+                FullValue(ref _record, _nodes, index, ref _writer, true);
+                return true;
+            }
+
+            _writer.PutBits(0, 1);
+            Section(index, recordStart, baselineStart, Removed);
+            Section(index, recordStart, baselineStart, Added);
+            Section(index, recordStart, baselineStart, Changed);
+            _record.Seek(recordEnd);
+            _baseline.Seek(baselineEnd);
+            return true;
+        }
+
+        // One merge pass over both sorted lists writes one section; its count is set afterwards, since only the nested deltas
+        // tell whether a kept element changed.
+        private void Section(int index, long recordStart, long baselineStart, int section)
+        {
+            ref readonly var node = ref _nodes[index];
+            ref readonly var key = ref _nodes[index + 2];
+            _record.Seek(recordStart);
+            _baseline.Seek(baselineStart);
+            var recordLeft = _record.GetBits(node.Width, node.Path);
+            var baselineCount = _baseline.GetBits(node.Width, node.Path);
+            var countBit = _writer.BitPosition;
+            _writer.PutBits(0, node.Width);
+            var count = 0UL;
+            var position = 0UL;
+            var recordKey = recordLeft > 0 ? Wire(ref _record, in key) : 0;
+            var baselineKey = baselineCount > 0 ? Wire(ref _baseline, in key) : 0;
+            while (recordLeft > 0 || position < baselineCount)
+            {
+                var holdsRecord = recordLeft > 0;
+                var holdsBaseline = position < baselineCount;
+                var useRecord = holdsRecord && (!holdsBaseline || KeyOrder(in key, recordKey) <= KeyOrder(in key, baselineKey));
+                var useBaseline = holdsBaseline && (!holdsRecord || KeyOrder(in key, baselineKey) <= KeyOrder(in key, recordKey));
+                if (useRecord && useBaseline)
+                {
+                    if (section == Changed)
+                    {
+                        var entry = _writer.BitPosition;
+                        _writer.PutBits(position, node.PositionWidth);
+                        if (Group(key.Next, _nodes[index + 1].Next, _nodes[index + 1].ChildCount - 1)) count++;
+                        else _writer.Rewind(entry);
+                    }
+                    else
+                    {
+                        Rest(ref _record, _nodes, index, ref _writer, false);
+                        Rest(ref _baseline, _nodes, index, ref _writer, false);
+                    }
+                }
+                else if (useRecord)
+                {
+                    if (section == Added)
+                    {
+                        _writer.PutBits(recordKey, key.Width);
+                        count++;
+                    }
+
+                    Rest(ref _record, _nodes, index, ref _writer, section == Added);
+                }
+                else
+                {
+                    if (section == Removed)
+                    {
+                        _writer.PutBits(position, node.PositionWidth);
+                        count++;
+                    }
+
+                    Rest(ref _baseline, _nodes, index, ref _writer, false);
+                }
+
+                if (useRecord && --recordLeft > 0) recordKey = Wire(ref _record, in key);
+                if (useBaseline && ++position < baselineCount) baselineKey = Wire(ref _baseline, in key);
+            }
+
+            for (var bit = 0; bit < node.Width; bit++)
+                if (((count >> bit) & 1) != 0) _writer.SetBit(countBit + bit);
         }
 
         private bool Union(int index)
@@ -484,6 +616,9 @@ public static class GesSchemaDelta
                 case GesSchemaNodeKind.Boolean:
                     _writer.PutBits(_baseline.GetBits(1, node.Path) ^ 1, 1);
                     break;
+                case GesSchemaNodeKind.List when node.KeyedElements:
+                    KeyedList(index);
+                    break;
                 case GesSchemaNodeKind.Text or GesSchemaNodeKind.List:
                     var deltaStart = _delta.BitPosition;
                     FullValue(ref _delta, _nodes, index, ref _writer, true);
@@ -502,6 +637,144 @@ public static class GesSchemaDelta
                     _writer.PutBits(Number(in node), node.Width);
                     break;
             }
+        }
+
+        private void KeyedList(int index)
+        {
+            ref readonly var node = ref _nodes[index];
+            if (_delta.GetBits(1, node.Path) == 1) WholeKeyedList(index);
+            else ElementKeyedList(index);
+        }
+
+        private void WholeKeyedList(int index)
+        {
+            ref readonly var node = ref _nodes[index];
+            var deltaStart = _delta.BitPosition;
+            var deltaAscending = Ascending(ref _delta, _nodes, index, ref _writer, true);
+            var deltaEnd = _delta.BitPosition;
+            var baselineStart = _baseline.BitPosition;
+            var baselineAscending = Ascending(ref _baseline, _nodes, index, ref _writer, false);
+            if ((deltaAscending && baselineAscending) || Equal(ref _delta, deltaStart, deltaEnd, ref _baseline, baselineStart, _baseline.BitPosition))
+                throw new GesWireException(GesWireException.InvalidDelta, node.Path);
+        }
+
+        private ulong Count(in GesSchemaNode node)
+        {
+            var count = _delta.GetBits(node.Width, node.Path);
+            if (count > (ulong)node.MaxCount) throw new GesWireException(GesWireException.InvalidCount, node.Path);
+            return count;
+        }
+
+        // The removed positions ascending inside the baseline.
+        private void Positions(in GesSchemaNode node, ulong count, ulong baselineCount)
+        {
+            var previous = 0UL;
+            for (var item = 0UL; item < count; item++)
+            {
+                var position = _delta.GetBits(node.PositionWidth, node.Path);
+                if (position >= baselineCount || (item > 0 && position <= previous)) throw new GesWireException(GesWireException.InvalidDelta, node.Path);
+                previous = position;
+            }
+        }
+
+        // The sections are read side by side through their own cursors while the baseline is walked once.
+        private void ElementKeyedList(int index)
+        {
+            ref readonly var node = ref _nodes[index];
+            ref readonly var key = ref _nodes[index + 2];
+            var baselineCount = _baseline.GetBits(node.Width, node.Path);
+            if (baselineCount > (ulong)node.MaxCount) throw new GesWireException(GesWireException.InvalidCount, node.Path);
+
+            var removedLeft = Count(in node);
+            var removedCursor = _delta.BitPosition;
+            Positions(in node, removedLeft, baselineCount);
+            var addedLeft = Count(in node);
+            var addedCursor = _delta.BitPosition;
+            var previous = 0UL;
+            for (var item = 0UL; item < addedLeft; item++)
+            {
+                var order = KeyOrder(in key, Wire(ref _delta, in key));
+                if (item > 0 && order <= previous) throw new GesWireException(GesWireException.InvalidDelta, node.Path);
+                previous = order;
+                Rest(ref _delta, _nodes, index, ref _writer, false);
+            }
+
+            var changedLeft = Count(in node);
+            var changedCursor = _delta.BitPosition;
+            if (removedLeft == 0 && addedLeft == 0 && changedLeft == 0) throw new GesWireException(GesWireException.InvalidDelta, node.Path);
+            var resultCount = baselineCount - removedLeft + addedLeft;
+            if (resultCount > (ulong)node.MaxCount) throw new GesWireException(GesWireException.InvalidDelta, node.Path);
+            _writer.PutBits(resultCount, node.Width);
+
+            var nextRemoved = NextPosition(in node, ref removedCursor, ref removedLeft);
+            var nextChanged = NextPosition(in node, ref changedCursor, ref changedLeft);
+            var addedKey = addedLeft > 0 ? AddedKey(in key, ref addedCursor) : 0;
+            var previousHeld = 0UL;
+            for (var position = 0UL; position < baselineCount; position++)
+            {
+                var held = Wire(ref _baseline, in key);
+                var order = KeyOrder(in key, held);
+                if (position > 0 && order <= previousHeld) throw new GesWireException(GesWireException.InvalidDelta, node.Path);
+                previousHeld = order;
+                while (addedLeft > 0 && KeyOrder(in key, addedKey) < order) WriteAdded(index, ref addedCursor, ref addedLeft, ref addedKey);
+                if (addedLeft > 0 && addedKey == held) throw new GesWireException(GesWireException.InvalidDelta, node.Path);
+                if (position == nextRemoved)
+                {
+                    if (position == nextChanged) throw new GesWireException(GesWireException.InvalidDelta, node.Path);
+                    Rest(ref _baseline, _nodes, index, ref _writer, false);
+                    nextRemoved = NextPosition(in node, ref removedCursor, ref removedLeft);
+                }
+                else if (position == nextChanged)
+                {
+                    _writer.PutBits(held, key.Width);
+                    _delta.Seek(changedCursor);
+                    if (!Group(key.Next, _nodes[index + 1].Next, _nodes[index + 1].ChildCount - 1, _nodes[index + 1].Path))
+                        throw new GesWireException(GesWireException.InvalidDelta, _nodes[index + 1].Path);
+                    changedCursor = _delta.BitPosition;
+                    var before = nextChanged;
+                    nextChanged = NextPosition(in node, ref changedCursor, ref changedLeft);
+                    if (nextChanged <= before) throw new GesWireException(GesWireException.InvalidDelta, node.Path);
+                }
+                else
+                {
+                    _writer.PutBits(held, key.Width);
+                    Rest(ref _baseline, _nodes, index, ref _writer, true);
+                }
+            }
+
+            // A changed position beyond the baseline was never reached.
+            if (nextChanged != ulong.MaxValue) throw new GesWireException(GesWireException.InvalidDelta, node.Path);
+            while (addedLeft > 0) WriteAdded(index, ref addedCursor, ref addedLeft, ref addedKey);
+            _delta.Seek(changedCursor);
+        }
+
+        // The next position of a section, or the largest number when it has ended.
+        private ulong NextPosition(in GesSchemaNode node, ref long cursor, ref ulong left)
+        {
+            if (left == 0) return ulong.MaxValue;
+            left--;
+            _delta.Seek(cursor);
+            var position = _delta.GetBits(node.PositionWidth, node.Path);
+            cursor = _delta.BitPosition;
+            return position;
+        }
+
+        private ulong AddedKey(in GesSchemaNode key, ref long cursor)
+        {
+            _delta.Seek(cursor);
+            var value = Wire(ref _delta, in key);
+            cursor = _delta.BitPosition;
+            return value;
+        }
+
+        private void WriteAdded(int index, ref long cursor, ref ulong left, ref ulong addedKey)
+        {
+            ref readonly var key = ref _nodes[index + 2];
+            _writer.PutBits(addedKey, key.Width);
+            _delta.Seek(cursor);
+            Rest(ref _delta, _nodes, index, ref _writer, true);
+            cursor = _delta.BitPosition;
+            if (--left > 0) addedKey = AddedKey(in key, ref cursor);
         }
 
         private ulong Number(in GesSchemaNode node)

@@ -5,7 +5,8 @@
 
 Random values, values at each bound and half-step ties encode to the bytes of an independent oracle in both ports. Random
 and mutated bytes decode to the same result in both ports, and every schema of the corpus has the same canonical form and
-hash. Deltas between random records match the oracle too, and random and mutated deltas decode alike. Negative controls qualify
+hash. Deltas between random records match the oracle too, also element by element in keyed lists, and random and mutated deltas
+decode alike. Negative controls qualify
 the comparison.
 """
 import argparse
@@ -253,6 +254,169 @@ schema :Moving as {
   pick: :Number integer between 0 and 7 | :Part | :Nothing
 }
 """
+
+
+KEYED_SCHEMA = """schema :Leaf as {
+  id: :Number integer key
+  v: :Number integer between 0 and 3
+}
+
+schema :Unit as {
+  id: :Number integer between 0 and 255 key
+  hp: :Number integer between 0 and 15
+  on: :Boolean
+  leaves: :List(:Leaf) max 2
+}
+
+schema :Fleet as {
+  tick: :Number integer between 0 and 255
+  units: :List(:Unit) max 5
+  spare: :List(:Unit) max 1 optional
+}
+"""
+
+
+def unit(rng, key, base=None):
+    """A Unit by wire values; a base makes it often stay or change a little."""
+    if base is not None and rng.random() < 0.4:
+        return base
+    leaves = sorted(rng.sample((-(2**63), -3, -1, 0, 2, 2**63 - 1), rng.randrange(3)))
+    if rng.random() < 0.1:
+        leaves.reverse()
+    return (key, rng.randrange(16), rng.random() < 0.5, [(leaf, rng.randrange(4)) for leaf in leaves])
+
+
+def fleet_units(rng, base=None):
+    """Sorted by key most of the time, with some keys of the base and some new ones."""
+    held = {item[0]: item for item in base or []}
+    keys = rng.sample(range(12), rng.randrange(6))
+    keys.sort()
+    if rng.random() < 0.15:
+        rng.shuffle(keys)
+    if len(keys) > 1 and rng.random() < 0.05:
+        keys[1] = keys[0]
+    return [unit(rng, key, held.get(key)) for key in keys]
+
+
+def fleet(rng, base=None):
+    spare = None
+    if rng.random() < 0.7:
+        spare = fleet_units(rng, base['spare'] if base else None)[:1]
+    return {'tick': base['tick'] if base and rng.random() < 0.5 else rng.randrange(256), 'units': fleet_units(rng, base['units'] if base else None), 'spare': spare}
+
+
+def unit_value(item):
+    leaves = [{'type': ':Leaf', 'entries': [{'key': 'id', 'value': number(leaf)}, {'key': 'v', 'value': number(v)}]} for leaf, v in item[3]]
+    return {'type': ':Unit', 'entries': [
+        {'key': 'hp', 'value': number(item[1])}, {'key': 'id', 'value': number(item[0])},
+        {'key': 'leaves', 'value': {'type': ':List', 'items': leaves}}, {'key': 'on', 'value': {'type': ':Boolean', 'value': item[2]}},
+    ]}
+
+
+def fleet_value(record):
+    spare = {'type': ':Nothing'} if record['spare'] is None else {'type': ':List', 'items': [unit_value(item) for item in record['spare']]}
+    return {'type': ':Fleet', 'entries': [
+        {'key': 'spare', 'value': spare}, {'key': 'tick', 'value': number(record['tick'])},
+        {'key': 'units', 'value': {'type': ':List', 'items': [unit_value(item) for item in record['units']]}},
+    ]}
+
+
+def put_leaf(bits, leaf):
+    bits.put(leaf[0] & (2**64 - 1), 64)
+    bits.put(leaf[1], 2)
+
+
+def put_unit(bits, item):
+    bits.put(item[0], 8)
+    bits.put(item[1], 4)
+    bits.put(1 if item[2] else 0, 1)
+    bits.put(len(item[3]), 2)
+    for leaf in item[3]:
+        put_leaf(bits, leaf)
+
+
+def put_units(bits, items, count_width):
+    bits.put(len(items), count_width)
+    for item in items:
+        put_unit(bits, item)
+
+
+def fleet_full(record):
+    bits = Bits()
+    bits.put(record['tick'], 8)
+    put_units(bits, record['units'], 3)
+    if record['spare'] is None:
+        bits.put(0, 1)
+    else:
+        bits.put(1, 1)
+        put_units(bits, record['spare'], 1)
+    return bits.hex()
+
+
+def strictly_ascending(keys):
+    return all(first < second for first, second in zip(keys, keys[1:]))
+
+
+def put_keyed(bits, items, held, count_width, position_width, put_full, key_of, put_changed):
+    """A changed keyed list, written from the rules of the specification."""
+    if not strictly_ascending([key_of(item) for item in items]) or not strictly_ascending([key_of(item) for item in held]):
+        bits.put(1, 1)
+        bits.put(len(items), count_width)
+        for item in items:
+            put_full(bits, item)
+        return
+    bits.put(0, 1)
+    positions = {key_of(item): position for position, item in enumerate(held)}
+    kept = {key_of(item) for item in items}
+    removed = [position for position, item in enumerate(held) if key_of(item) not in kept]
+    bits.put(len(removed), count_width)
+    for position in removed:
+        bits.put(position, position_width)
+    added = [item for item in items if key_of(item) not in positions]
+    bits.put(len(added), count_width)
+    for item in added:
+        put_full(bits, item)
+    changed = [item for item in items if key_of(item) in positions and held[positions[key_of(item)]] != item]
+    bits.put(len(changed), count_width)
+    for item in changed:
+        bits.put(positions[key_of(item)], position_width)
+        put_changed(bits, item, held[positions[key_of(item)]])
+
+
+def put_changed_leaf(bits, leaf, held):
+    bits.put(1, 1)
+    bits.put(leaf[1], 2)
+
+
+def put_changed_unit(bits, item, held):
+    bits.put(1 if item[1] != held[1] else 0, 1)
+    bits.put(1 if item[2] != held[2] else 0, 1)
+    bits.put(1 if item[3] != held[3] else 0, 1)
+    if item[1] != held[1]:
+        bits.put(item[1], 4)
+    if item[3] != held[3]:
+        put_keyed(bits, item[3], held[3], 2, 1, put_leaf, lambda leaf: leaf[0], put_changed_leaf)
+
+
+def fleet_delta(record, base):
+    bits = Bits()
+    bits.put(1 if record['tick'] != base['tick'] else 0, 1)
+    bits.put(1 if record['units'] != base['units'] else 0, 1)
+    bits.put(1 if record['spare'] != base['spare'] else 0, 1)
+    if record['tick'] != base['tick']:
+        bits.put(record['tick'], 8)
+    if record['units'] != base['units']:
+        put_keyed(bits, record['units'], base['units'], 3, 3, put_unit, lambda item: item[0], put_changed_unit)
+    if record['spare'] != base['spare']:
+        if record['spare'] is None:
+            bits.put(0, 1)
+        else:
+            bits.put(1, 1)
+            if base['spare'] is None:
+                put_units(bits, record['spare'], 1)
+            else:
+                put_keyed(bits, record['spare'], base['spare'], 1, 0, put_unit, lambda item: item[0], put_changed_unit)
+    return bits.hex()
 
 
 def moving(rng, base=None):
@@ -542,6 +706,30 @@ def main():
             for _ in range(rng.randrange(1, 4)):
                 mutated[rng.randrange(len(mutated))] ^= 1 << rng.randrange(8)
         cases.append((f'delta-fuzz-{index}', {'sources': [DELTA_SCHEMA], 'root': 'Moving', 'baseline': moving_value(base), 'decode': bytes(mutated).hex()}))
+    # Keyed lists: bytes from the rules, and untrusted deltas that must end alike in both ports.
+    keyed = {}
+    keyed_bases = []
+    keyed_cases = []
+    for index in range(options.count):
+        base = fleet(rng)
+        record = fleet(rng, base)
+        data = fleet_delta(record, base)
+        identifier = f'keyed-{index}'
+        full, held = fleet_full(record), fleet_full(base)
+        keyed[identifier] = (data, full)
+        keyed_bases.append((data, base))
+        keyed_cases.append((identifier, {
+            'sources': [KEYED_SCHEMA], 'root': 'Fleet', 'encode': fleet_value(record), 'baseline': fleet_value(base), 'decode': data,
+            'deltaEncode': {'record': full, 'baseline': held}, 'deltaDecode': {'delta': data, 'baseline': held},
+        }))
+    for index in range(options.count):
+        data, base = rng.choice(keyed_bases)
+        mutated = bytearray.fromhex(data)
+        if not mutated:
+            mutated = bytearray(1)
+        for _ in range(rng.randrange(1, 4)):
+            mutated[rng.randrange(len(mutated))] ^= 1 << rng.randrange(8)
+        keyed_cases.append((f'keyed-fuzz-{index}', {'sources': [KEYED_SCHEMA], 'root': 'Fleet', 'baseline': fleet_value(base), 'decode': bytes(mutated).hex()}))
     respelled = ('schema :Force as { force: :Quantity(N) between 0kN and 50kN step 0.01kN }\n', '// other\n\nschema :Force as {\n  force: :Quantity(N) between 0N and 50000N step 10N // comment\n}\n')
     for index, source in enumerate(respelled):
         cases.append((f'respelled-{index}', {'sources': [source], 'root': 'Force', 'bind': False}))
@@ -549,19 +737,21 @@ def main():
         temporary = Path(directory)
         corpus = temporary / 'exchange.md'
         corpus.write_text(suite(cases))
+        keyed_corpus = temporary / 'keyed.md'
+        keyed_corpus.write_text(suite(keyed_cases))
         observations = {}
-        for source, name in ((corpus, 'exchange'), (ROOT / 'conformance/suites/api/schemas.md', 'corpus')):
+        for source, name in ((corpus, 'exchange'), (keyed_corpus, 'keyed'), (ROOT / 'conformance/suites/api/schemas.md', 'corpus')):
             requests = temporary / f'{name}-requests.json'
             subprocess.run([sys.executable, 'conformance/runner/main.py', 'requests', '--corpus', str(source), '--output', str(requests)], cwd=ROOT, check=True, stdout=subprocess.DEVNULL)
             for port, adapter in adapters.items():
                 observations[(port, name)] = observe(adapter, requests, temporary / f'{port}-{name}.json')
     failures = []
-    for name in ('exchange', 'corpus'):
+    for name in ('exchange', 'keyed', 'corpus'):
         different = compare(observations[('csharp', name)], observations[('swift', name)])
         if different:
             failures.append(f'{name}: {len(different)} observations differ, first {different[0]}: ' + difference(normalized(observations[("csharp", name)][different[0]]), normalized(observations[("swift", name)][different[0]])))
     def schema_of(port, identifier):
-        for key, value in observations[(port, 'exchange')].items():
+        for key, value in observations[(port, 'keyed' if identifier.startswith('keyed-') else 'exchange')].items():
             if key.endswith('/' + identifier):
                 return value['schema']
         raise KeyError(identifier)
@@ -591,10 +781,19 @@ def main():
             if schema_of(port, f'{identifier}-full').get('encoded') != {'bytes': full}:
                 failures.append(f'{port} {identifier}: the oracle and the full encoding differ')
                 break
+        for identifier, (data, full) in keyed.items():
+            observed = schema_of(port, identifier)
+            if observed.get('encoded') != {'bytes': data} or observed.get('deltaEncoded') != {'bytes': data}:
+                failures.append(f'{port} {identifier}: expected {data}, got {observed.get("encoded")} and {observed.get("deltaEncoded")}')
+                break
+            if observed.get('deltaDecoded') != {'record': full, 'deltaByteCount': len(data) // 2} or 'error' in observed.get('decoded', {}):
+                failures.append(f'{port} {identifier}: expected the record {full}, got {observed.get("deltaDecoded")}')
+                break
         first, second = schema_of(port, 'respelled-0'), schema_of(port, 'respelled-1')
         if first != second:
             failures.append(f'{port}: respelling changed the canonical form or hash')
     accepted = sum('value' in schema_of('csharp', f'fuzz-{index}').get('decoded', {}) for index in range(options.count))
+    accepted_keyed = sum('value' in schema_of('csharp', f'keyed-fuzz-{index}').get('decoded', {}) for index in range(options.count))
     accepted_deltas = sum('value' in schema_of('csharp', f'delta-fuzz-{index}').get('decoded', {}) for index in range(options.count))
     # Negative controls: the comparison notices a changed byte, and a mutated value would not pass as equal.
     if not compare({'a': {'bytes': '00'}}, {'a': {'bytes': '01'}}) or not compare({'a': 1}, {}):
@@ -603,6 +802,7 @@ def main():
         print('\n'.join(failures[:20]), file=sys.stderr)
         return 1
     print(f'Schema bytes verified: {options.count} encodings in both ports, {options.count} fuzzed inputs with equal results ({accepted} accepted), {options.count} deltas, {options.count} fuzzed deltas ({accepted_deltas} accepted), {len(observations[("csharp", "corpus")])} corpus cases.')
+    print(f'Keyed lists verified: {options.count} deltas in both ports, {options.count} fuzzed deltas with equal results ({accepted_keyed} accepted).')
     return 0
 
 

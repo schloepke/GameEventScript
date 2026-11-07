@@ -782,7 +782,10 @@ In a [keyed list](#keyed-lists) it also rejects:
 - all three counts zero, since the field's change bit would then be set for an unchanged value;
 - a result longer than the list's `max`.
 
-A count above `max` is `wire.invalidCount`, as in a full record. A decoder checks in wire order.
+A count above `max` is `wire.invalidCount`, as in a full record. A decoder checks in wire order. A
+check that needs the baseline belongs to the item that triggers it: a baseline that is not strictly
+ascending to the form bit, so it fails before any section, an added key that the baseline holds to
+that added element, and a position both removed and changed to the changed position.
 
 ### Zones
 

@@ -46,10 +46,9 @@ public enum GesSchemaDump {
     public static func read(_ schema: GesBoundSchema, data: [UInt8], baseline: [UInt8]) -> GesSchemaDumpResult {
         let held = read(schema, data: baseline)
         if !held.isValid { return GesSchemaDumpResult(text: "baseline \(held.text.split(separator: "\n").last!)\n", isValid: false) }
-        var buffer = [UInt8](repeating: 0, count: schema.maxByteCount)
         var bit = 0
-        let result: Result<GesSchemaDeltaDecoded, GesWireError> = buffer.withUnsafeMutableBytes { target in
-            data.withUnsafeBytes { first in
+        return GesSchemaValues.withScratch(schema.maxByteCount) { target in
+            let result: Result<GesSchemaDeltaDecoded, GesWireError> = data.withUnsafeBytes { first in
                 baseline.withUnsafeBytes { second in
                     do throws(GesWireError) {
                         return .success(try GesSchemaDelta.decode(schema, delta: first, baseline: second, into: target, byteLimit: .max, bit: &bit))
@@ -58,13 +57,13 @@ public enum GesSchemaDump {
                     }
                 }
             }
-        }
-        switch result {
-        case .success(let decoded):
-            let full = read(schema, data: Array(buffer[0..<decoded.byteCount]))
-            return GesSchemaDumpResult(text: "delta bytes \(decoded.deltaByteCount)\n" + full.text, isValid: full.isValid)
-        case .failure(let error):
-            return GesSchemaDumpResult(text: "error \(error.code) path=\(error.path) bit=\(bit)\n", isValid: false)
+            switch result {
+            case .success(let decoded):
+                let full = read(schema, data: Array(UnsafeRawBufferPointer(rebasing: target[0..<decoded.byteCount])))
+                return GesSchemaDumpResult(text: "delta bytes \(decoded.deltaByteCount)\n" + full.text, isValid: full.isValid)
+            case .failure(let error):
+                return GesSchemaDumpResult(text: "error \(error.code) path=\(error.path) bit=\(bit)\n", isValid: false)
+            }
         }
     }
 

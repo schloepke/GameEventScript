@@ -24,8 +24,7 @@ public enum GesSchemaValues {
     /// - Returns: The encoded bytes.
     /// - Throws: `GesWireError` when the value does not fit the schema; `GesFatalRuntimeError` when an external field getter fails.
     public static func encode(_ schema: GesBoundSchema, _ value: GesValue, bufferSize: Int? = nil) throws -> [UInt8] {
-        var buffer = [UInt8](repeating: 0, count: bufferSize ?? schema.maxByteCount)
-        let length = try buffer.withUnsafeMutableBytes { bytes -> Int in
+        try withScratch(bufferSize ?? schema.maxByteCount) { bytes in
             var writer = GesSchemaWriter(schema, into: bytes)
             var current = schema
             if schema.kind == .messages {
@@ -40,9 +39,8 @@ public enum GesSchemaValues {
                 guard let fields = try value.materializedMap() else { throw GesWireError(code: GesWireError.typeMismatch) }
                 try encodeFields(&writer, current, 0, current.nodes.count, fields, strict: false)
             }
-            return try writer.finish()
+            return Array(UnsafeRawBufferPointer(rebasing: bytes[0..<(try writer.finish())]))
         }
-        return Array(buffer[0..<length])
     }
 
     /// Encodes a Record or Map as a delta against a baseline value of the same schema.
@@ -55,15 +53,14 @@ public enum GesSchemaValues {
     public static func encode(_ schema: GesBoundSchema, _ value: GesValue, baseline: GesValue) throws -> [UInt8] {
         let record = try encode(schema, value)
         let previous = try encode(schema, baseline)
-        var buffer = [UInt8](repeating: 0, count: schema.maxByteCount)
-        let length = try buffer.withUnsafeMutableBytes { target in
-            try record.withUnsafeBytes { first in
+        return try withScratch(schema.maxByteCount) { target in
+            let length = try record.withUnsafeBytes { first in
                 try previous.withUnsafeBytes { second in
                     try GesSchemaDelta.encode(schema, record: first, baseline: second, into: target)
                 }
             }
+            return Array(UnsafeRawBufferPointer(rebasing: target[0..<length]))
         }
-        return Array(buffer[0..<length])
     }
 
     /// Decodes a delta against the baseline value it was encoded with.
@@ -76,16 +73,23 @@ public enum GesSchemaValues {
     /// - Throws: `GesWireError` when the data is not a valid delta for this baseline; `GesFatalRuntimeError` when an external field getter of the baseline fails.
     public static func decode(_ schema: GesBoundSchema, _ data: [UInt8], baseline: GesValue, byteLimit: Int = .max) throws -> GesSchemaDecoded {
         let previous = try encode(schema, baseline)
-        var buffer = [UInt8](repeating: 0, count: schema.maxByteCount)
-        let decoded = try buffer.withUnsafeMutableBytes { target in
-            try data.withUnsafeBytes { first in
+        return try withScratch(schema.maxByteCount) { target in
+            let decoded = try data.withUnsafeBytes { first in
                 try previous.withUnsafeBytes { second in
                     try GesSchemaDelta.decode(schema, delta: first, baseline: second, into: target, byteLimit: byteLimit)
                 }
             }
+            let value = try decode(schema, Array(UnsafeRawBufferPointer(rebasing: target[0..<decoded.byteCount]))).value
+            return GesSchemaDecoded(value: value, byteCount: decoded.deltaByteCount)
         }
-        let value = try decode(schema, Array(buffer[0..<decoded.byteCount])).value
-        return GesSchemaDecoded(value: value, byteCount: decoded.deltaByteCount)
+    }
+
+    // Scratch space for one record, released on return. The largest encoding may reach 10 MiB, so it is neither cleared
+    // nor kept; the writer writes whole words before it reads any back.
+    static func withScratch<Result>(_ count: Int, _ body: (UnsafeMutableRawBufferPointer) throws -> Result) rethrows -> Result {
+        let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: count, alignment: 8)
+        defer { buffer.deallocate() }
+        return try body(buffer)
     }
 
     /// Decodes a Record or Message.

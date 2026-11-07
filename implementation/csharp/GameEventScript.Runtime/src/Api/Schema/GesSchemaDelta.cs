@@ -409,26 +409,33 @@ public static class GesSchemaDelta
             return true;
         }
 
-        // Unchanged, whole when one side's keys do not ascend strictly, and otherwise by element.
+        // Unchanged, whole when one side's keys do not ascend strictly, and otherwise by element. The first pass validates both
+        // lists, finds whether they ascend and already writes the removed section, which is dropped again when the list is
+        // unchanged or goes whole.
         private bool KeyedList(int index)
         {
+            var entry = _writer.BitPosition;
             var recordStart = _record.BitPosition;
-            var recordAscending = Ascending(ref _record, _nodes, index, ref _writer, false);
-            var recordEnd = _record.BitPosition;
             var baselineStart = _baseline.BitPosition;
-            var baselineAscending = Ascending(ref _baseline, _nodes, index, ref _writer, false);
+            _writer.PutBits(0, 1);
+            var ascending = Section(index, recordStart, baselineStart, Removed);
+            var recordEnd = _record.BitPosition;
             var baselineEnd = _baseline.BitPosition;
-            if (Equal(ref _record, recordStart, recordEnd, ref _baseline, baselineStart, baselineEnd)) return false;
-            if (!recordAscending || !baselineAscending)
+            if (Equal(ref _record, recordStart, recordEnd, ref _baseline, baselineStart, baselineEnd))
             {
+                _writer.Rewind(entry);
+                return false;
+            }
+
+            if (!ascending)
+            {
+                _writer.Rewind(entry);
                 _writer.PutBits(1, 1);
                 _record.Seek(recordStart);
                 FullValue(ref _record, _nodes, index, ref _writer, true);
                 return true;
             }
 
-            _writer.PutBits(0, 1);
-            Section(index, recordStart, baselineStart, Removed);
             Section(index, recordStart, baselineStart, Added);
             Section(index, recordStart, baselineStart, Changed);
             _record.Seek(recordEnd);
@@ -436,28 +443,32 @@ public static class GesSchemaDelta
             return true;
         }
 
-        // One merge pass over both sorted lists writes one section; its count is set afterwards, since only the nested deltas
-        // tell whether a kept element changed.
-        private void Section(int index, long recordStart, long baselineStart, int section)
+        // One merge pass over both lists writes one section; its count is set afterwards, since only the nested deltas tell
+        // whether a kept element changed. Returns whether the keys of both lists ascend strictly; the merge still ends when
+        // they do not, and the result is then discarded.
+        private bool Section(int index, long recordStart, long baselineStart, int section)
         {
             ref readonly var node = ref _nodes[index];
             ref readonly var key = ref _nodes[index + 2];
             _record.Seek(recordStart);
             _baseline.Seek(baselineStart);
             var recordLeft = _record.GetBits(node.Width, node.Path);
+            if (recordLeft > (ulong)node.MaxCount) throw new GesWireException(GesWireException.InvalidCount, node.Path);
             var baselineCount = _baseline.GetBits(node.Width, node.Path);
+            if (baselineCount > (ulong)node.MaxCount) throw new GesWireException(GesWireException.InvalidCount, node.Path);
             var countBit = _writer.BitPosition;
             _writer.PutBits(0, node.Width);
             var count = 0UL;
             var position = 0UL;
-            var recordKey = recordLeft > 0 ? Wire(ref _record, in key) : 0;
-            var baselineKey = baselineCount > 0 ? Wire(ref _baseline, in key) : 0;
+            var ascending = true;
+            var recordOrder = recordLeft > 0 ? KeyOrder(in key, Wire(ref _record, in key)) : 0;
+            var baselineOrder = baselineCount > 0 ? KeyOrder(in key, Wire(ref _baseline, in key)) : 0;
             while (recordLeft > 0 || position < baselineCount)
             {
                 var holdsRecord = recordLeft > 0;
                 var holdsBaseline = position < baselineCount;
-                var useRecord = holdsRecord && (!holdsBaseline || KeyOrder(in key, recordKey) <= KeyOrder(in key, baselineKey));
-                var useBaseline = holdsBaseline && (!holdsRecord || KeyOrder(in key, baselineKey) <= KeyOrder(in key, recordKey));
+                var useRecord = holdsRecord && (!holdsBaseline || recordOrder <= baselineOrder);
+                var useBaseline = holdsBaseline && (!holdsRecord || baselineOrder <= recordOrder);
                 if (useRecord && useBaseline)
                 {
                     if (section == Changed)
@@ -477,7 +488,7 @@ public static class GesSchemaDelta
                 {
                     if (section == Added)
                     {
-                        _writer.PutBits(recordKey, key.Width);
+                        _writer.PutBits(KeyOrder(in key, recordOrder), key.Width);
                         count++;
                     }
 
@@ -494,12 +505,22 @@ public static class GesSchemaDelta
                     Rest(ref _baseline, _nodes, index, ref _writer, false);
                 }
 
-                if (useRecord && --recordLeft > 0) recordKey = Wire(ref _record, in key);
-                if (useBaseline && ++position < baselineCount) baselineKey = Wire(ref _baseline, in key);
+                if (useRecord && --recordLeft > 0) ascending &= Advance(ref _record, in key, ref recordOrder);
+                if (useBaseline && ++position < baselineCount) ascending &= Advance(ref _baseline, in key, ref baselineOrder);
             }
 
             for (var bit = 0; bit < node.Width; bit++)
                 if (((count >> bit) & 1) != 0) _writer.SetBit(countBit + bit);
+            return ascending;
+        }
+
+        // Reads the next key of one list; returns whether it follows the previous one strictly.
+        private static bool Advance(ref GesSchemaReader source, in GesSchemaNode key, ref ulong order)
+        {
+            var next = KeyOrder(in key, Wire(ref source, in key));
+            var follows = next > order;
+            order = next;
+            return follows;
         }
 
         private bool Union(int index)
@@ -677,13 +698,18 @@ public static class GesSchemaDelta
             }
         }
 
-        // The sections are read side by side through their own cursors while the baseline is walked once.
+        // Checks run in wire order; one that needs the baseline belongs to the item that triggers it. The baseline's order
+        // belongs to the form bit, so it is checked first, and an added key that the baseline holds to that added element.
+        // The sections are then read side by side through their own cursors while the baseline is walked once more.
         private void ElementKeyedList(int index)
         {
             ref readonly var node = ref _nodes[index];
             ref readonly var key = ref _nodes[index + 2];
+            var baselineStart = _baseline.BitPosition;
+            if (!Ascending(ref _baseline, _nodes, index, ref _writer, false)) throw new GesWireException(GesWireException.InvalidDelta, node.Path);
+            _baseline.Seek(baselineStart);
             var baselineCount = _baseline.GetBits(node.Width, node.Path);
-            if (baselineCount > (ulong)node.MaxCount) throw new GesWireException(GesWireException.InvalidCount, node.Path);
+            var elementsStart = _baseline.BitPosition;
 
             var removedLeft = Count(in node);
             var removedCursor = _delta.BitPosition;
@@ -691,14 +717,34 @@ public static class GesSchemaDelta
             var addedLeft = Count(in node);
             var addedCursor = _delta.BitPosition;
             var previous = 0UL;
+            var heldLeft = baselineCount;
+            var heldOrder = 0UL;
+            var holds = false;
             for (var item = 0UL; item < addedLeft; item++)
             {
                 var order = KeyOrder(in key, Wire(ref _delta, in key));
                 if (item > 0 && order <= previous) throw new GesWireException(GesWireException.InvalidDelta, node.Path);
                 previous = order;
+                while (true)
+                {
+                    if (!holds)
+                    {
+                        if (heldLeft == 0) break;
+                        heldOrder = KeyOrder(in key, Wire(ref _baseline, in key));
+                        Rest(ref _baseline, _nodes, index, ref _writer, false);
+                        heldLeft--;
+                        holds = true;
+                    }
+
+                    if (heldOrder == order) throw new GesWireException(GesWireException.InvalidDelta, node.Path);
+                    if (heldOrder > order) break;
+                    holds = false;
+                }
+
                 Rest(ref _delta, _nodes, index, ref _writer, false);
             }
 
+            _baseline.Seek(elementsStart);
             var changedLeft = Count(in node);
             var changedCursor = _delta.BitPosition;
             if (removedLeft == 0 && addedLeft == 0 && changedLeft == 0) throw new GesWireException(GesWireException.InvalidDelta, node.Path);
@@ -709,15 +755,11 @@ public static class GesSchemaDelta
             var nextRemoved = NextPosition(in node, ref removedCursor, ref removedLeft);
             var nextChanged = NextPosition(in node, ref changedCursor, ref changedLeft);
             var addedKey = addedLeft > 0 ? AddedKey(in key, ref addedCursor) : 0;
-            var previousHeld = 0UL;
             for (var position = 0UL; position < baselineCount; position++)
             {
                 var held = Wire(ref _baseline, in key);
                 var order = KeyOrder(in key, held);
-                if (position > 0 && order <= previousHeld) throw new GesWireException(GesWireException.InvalidDelta, node.Path);
-                previousHeld = order;
                 while (addedLeft > 0 && KeyOrder(in key, addedKey) < order) WriteAdded(index, ref addedCursor, ref addedLeft, ref addedKey);
-                if (addedLeft > 0 && addedKey == held) throw new GesWireException(GesWireException.InvalidDelta, node.Path);
                 if (position == nextRemoved)
                 {
                     if (position == nextChanged) throw new GesWireException(GesWireException.InvalidDelta, node.Path);

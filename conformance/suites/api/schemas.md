@@ -16423,6 +16423,60 @@ schema:
 
 ---
 
+## Test: an added key equal to a baseline key fails before a later changed element
+
+The added section precedes the changed one on the wire, so its baseline check comes first.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: keyed-reject-order-added
+kind: schemaApi
+level: atomic
+schemaApi:
+  sources: ["schema :Item as {\n  id: :Number integer between 0 and 255 key\n  hp: :Number integer between 0 and 15\n  on: :Boolean\n}\n\nschema :World as {\n  tick: :Number integer between 0 and 255\n  items: :List(:Item) max 5\n}\n"]
+  root: "World"
+  deltaDecode: {"delta": "420a4000", "baseline": "090a100513"}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  deltaDecoded: {"error": {"code": "wire.invalidDelta", "path": "items"}}
+```
+
+---
+
+## Test: an unsorted baseline fails before any changed element
+
+The check belongs to the form bit, which comes first on the wire.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: keyed-reject-order-baseline
+kind: schemaApi
+level: atomic
+schemaApi:
+  sources: ["schema :Item as {\n  id: :Number integer between 0 and 255 key\n  hp: :Number integer between 0 and 15\n  on: :Boolean\n}\n\nschema :World as {\n  tick: :Number integer between 0 and 255\n  items: :List(:Item) max 5\n}\n"]
+  root: "World"
+  deltaDecode: {"delta": "020200", "baseline": "092a980102"}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  deltaDecoded: {"error": {"code": "wire.invalidDelta", "path": "items"}}
+```
+
+---
+
 ## Test: an element with only a key cannot change
 
 It has no bits for a change.

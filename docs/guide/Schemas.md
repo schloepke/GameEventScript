@@ -226,6 +226,10 @@ if (reader.ReadMember() == combat.MemberIndex("Hit"))
 }
 ```
 
+`stackalloc` suits a small schema like this one, whose largest encoding takes a few bytes. `MaxByteCount`
+can reach 10 MiB, more than a thread's stack holds, so for large schemas keep one buffer per connection
+or take it from a pool.
+
 And the same in Swift, which follows the same steps with its own spelling:
 
 ```swift
@@ -353,6 +357,27 @@ a delta as well, so a receiver can find the object's baseline with `ReadKey` bef
 Which record counts as confirmed is up to your game, since nothing on the wire marks a delta. For rare
 data, `GesSchemaValues` takes a baseline value instead. `ges schema dump --baseline` makes a delta
 readable. See [Deltas](../../specs/Schemas.md#deltas) for the exact form.
+
+A list usually goes whole, since nothing tells its elements apart. A list of a schema with a key is
+different: its delta names the removed positions, the added elements and a nested delta for each
+changed one, so moving one drone in a list of fifty costs a few bytes rather than the whole list:
+
+```gess
+schema :Drone as {
+  id: :Number integer between 0 and 255 key
+  x: :Quantity(m) between -200m and 200m step 5cm delta within 1.55m
+  y: :Quantity(m) between -200m and 200m step 5cm delta within 1.55m
+}
+
+schema :Fleet as {
+  tick: :Number integer between 0 and 255
+  drones: :List(:Drone) max 50
+}
+```
+
+This needs no extra syntax, but it needs your help: keep such lists sorted by key in every record. If
+the keys of the baseline or the new record do not strictly ascend, the delta falls back to the whole
+list, which stays correct but saves nothing. See [Keyed lists](../../specs/Schemas.md#keyed-lists).
 
 ## What schemas leave to you
 

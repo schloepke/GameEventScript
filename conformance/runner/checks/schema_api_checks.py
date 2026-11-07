@@ -59,12 +59,39 @@ def wire_error(raw):
     return raw
 
 
+def is_record(raw):
+    return isinstance(raw, dict) and isinstance(raw.get('type'), str) and raw['type'].startswith(':') and raw['type'] != ':Map' and isinstance(raw.get('entries'), list) \
+        and all(isinstance(entry, dict) and isinstance(entry.get('key'), str) and 'value' in entry for entry in raw['entries'])
+
+
+def external_inputs(raw):
+    """Only Records can be exposed as adapter-owned external values, because they carry the type name and the fields."""
+    if 'encodeExternal' in raw and (raw['encodeExternal'] is not True or not is_record(raw.get('encode'))):
+        raise InvalidDocument('An external encoding wraps a Record')
+    if 'baselineExternal' in raw and (raw['baselineExternal'] is not True or not is_record(raw.get('baseline'))):
+        raise InvalidDocument('An external baseline wraps a Record')
+    if 'externalFields' in raw or 'failingField' in raw:
+        if not is_record(raw.get('encode')):
+            raise InvalidDocument('External fields belong to a Record')
+        entries = {entry['key']: entry['value'] for entry in raw['encode']['entries']}
+    if 'externalFields' in raw:
+        names = raw['externalFields']
+        if not isinstance(names, list) or not names or not all(isinstance(name, str) and is_record(entries.get(name)) for name in names):
+            raise InvalidDocument('External fields name Record fields')
+    if 'failingField' in raw and ('encodeExternal' not in raw or not isinstance(raw['failingField'], str) or raw['failingField'] not in entries):
+        raise InvalidDocument('A failing field belongs to an external encoding')
+    if 'baselineFailingField' in raw and ('baselineExternal' not in raw or raw['baselineFailingField'] not in [entry['key'] for entry in raw['baseline']['entries']]):
+        raise InvalidDocument('A failing baseline field belongs to an external baseline')
+    if 'failingCode' in raw and ('failingField' not in raw and 'baselineFailingField' not in raw or not isinstance(raw['failingCode'], str) or not raw['failingCode'].strip() or raw['failingCode'].startswith('runtime.')):
+        raise InvalidDocument('A failing code is the code of a deliberate fault on a failing field')
+
+
 def prepare(case):
     if case.sources or case.steps or case.assembler is not None:
         raise InvalidDocument('Schema API requires no GES source, Steps or assembler')
     numeric_checks.options(case)
     raw = case.metadata.get('schemaApi')
-    closed(raw, {'sources', 'root', 'parameters', 'bind', 'encode', 'encodeBuffer', 'baseline', 'decode', 'decodeLimit', 'key', 'dump', 'dumpBaseline', 'deltaEncode', 'deltaDecode', 'describe', 'document'}, 'schema API input')
+    closed(raw, {'sources', 'root', 'parameters', 'bind', 'encode', 'encodeExternal', 'baselineExternal', 'externalFields', 'failingField', 'baselineFailingField', 'failingCode', 'encodeBuffer', 'baseline', 'decode', 'decodeLimit', 'key', 'dump', 'dumpBaseline', 'deltaEncode', 'deltaDecode', 'describe', 'document'}, 'schema API input')
     sources = raw.get('sources')
     if not isinstance(sources, list) or not sources or any(not isinstance(s, str) for s in sources):
         raise InvalidDocument('Schema API requires source texts')
@@ -78,6 +105,9 @@ def prepare(case):
         raise InvalidDocument('A description requires a root')
     if ('encode' in raw or 'decode' in raw or 'key' in raw or 'dump' in raw or 'deltaEncode' in raw or 'deltaDecode' in raw) and 'root' not in raw:
         raise InvalidDocument('Encoding requires a root')
+    external_inputs(raw)
+    if 'encodeBuffer' in raw and 'baseline' in raw:
+        raise InvalidDocument('A buffer size belongs to a full encoding, because the Swift delta API takes none')
     if 'baseline' in raw and 'encode' not in raw and 'decode' not in raw:
         raise InvalidDocument('A baseline requires encoding or decoding')
     if 'dumpBaseline' in raw and 'dump' not in raw:
@@ -88,6 +118,12 @@ def prepare(case):
         'parameters': [{'name': k, 'literal': parameters[k]} if isinstance(parameters[k], str) else {'name': k, 'value': input_value(parameters[k])} for k in sorted(parameters)],
         'bind': raw.get('bind', 'document' not in raw and 'root' in raw),
         'encode': input_value(raw['encode']) if 'encode' in raw else None,
+        'encodeExternal': raw.get('encodeExternal', False),
+        'baselineExternal': raw.get('baselineExternal', False),
+        'externalFields': raw.get('externalFields', []),
+        'failingField': raw.get('failingField'),
+        'baselineFailingField': raw.get('baselineFailingField'),
+        'failingCode': raw.get('failingCode'),
         'encodeBuffer': positive(raw['encodeBuffer']) if 'encodeBuffer' in raw else None,
         'baseline': input_value(raw['baseline']) if 'baseline' in raw else None,
         'decode': hexadecimal(raw['decode']) if 'decode' in raw else None,
@@ -119,11 +155,14 @@ def prepare(case):
     if 'encoded' in expected:
         if request['encode'] is None:
             raise InvalidDocument('An encoding expectation requires encode')
-        closed(expected['encoded'], {'bytes', 'error'}, 'encoding result')
+        closed(expected['encoded'], {'bytes', 'error', 'failure'}, 'encoding result')
         if len(expected['encoded']) != 1:
-            raise InvalidDocument('An encoding has bytes or an error')
+            raise InvalidDocument('An encoding has bytes, an error or a failure')
         if 'bytes' in expected['encoded']:
             hexadecimal(expected['encoded']['bytes'])
+        elif 'failure' in expected['encoded']:
+            if not isinstance(expected['encoded']['failure'], str) or 'failingField' not in raw and 'baselineFailingField' not in raw:
+                raise InvalidDocument('A getter failure requires a failing field')
         else:
             wire_error(expected['encoded']['error'])
     if 'deltaEncoded' in expected:
@@ -151,8 +190,11 @@ def prepare(case):
     if 'decoded' in expected:
         if request['decode'] is None:
             raise InvalidDocument('A decoding expectation requires decode')
-        closed(expected['decoded'], {'value', 'byteCount', 'error'}, 'decoding result')
-        if 'error' in expected['decoded']:
+        closed(expected['decoded'], {'value', 'byteCount', 'error', 'failure'}, 'decoding result')
+        if 'failure' in expected['decoded']:
+            if len(expected['decoded']) != 1 or not isinstance(expected['decoded']['failure'], str) or 'baselineFailingField' not in raw:
+                raise InvalidDocument('A decoding failure stands alone and requires a failing baseline field')
+        elif 'error' in expected['decoded']:
             if len(expected['decoded']) != 1:
                 raise InvalidDocument('A decoding error stands alone')
             wire_error(expected['decoded']['error'])
@@ -223,6 +265,9 @@ def compare(case, observed):
         wanted = expected['decoded']
         if 'error' in wanted:
             if not isinstance(seen, dict) or not contains(wanted['error'], seen.get('error')):
+                differ('decoded', wanted, seen)
+        elif 'failure' in wanted:
+            if seen != wanted:
                 differ('decoded', wanted, seen)
         elif not isinstance(seen, dict) or 'value' not in seen or seen.get('byteCount') != wanted['byteCount'] \
                 or not numeric_checks.equal(value(wanted['value']), input_value(seen['value']), numeric_checks.options(case)):

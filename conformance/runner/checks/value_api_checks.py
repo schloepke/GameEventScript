@@ -1,7 +1,7 @@
 # Copyright 2026 Stephan Schlöpke
 # SPDX-License-Identifier: Apache-2.0
 """Public value API inputs preserve collection construction order and duplicates; literal inputs use the data
-literal parsing API."""
+literal parsing API; access inputs read members and traverse maps."""
 from core.corpus import InvalidDocument, closed
 from checks.runtime_checks import value
 from checks import numeric_checks
@@ -69,6 +69,93 @@ def prepare_literal(case, raw):
     return {'literal': {'text': text, 'mode': literal['mode']}}
 
 
+EXTERNAL_PROBES = ('counting', 'typed', 'failing', 'faulting', 'ordered', 'sparse')
+ACCESS_RESULTS = {'length', 'json', 'messageJson', 'normalized', 'members', 'traversal', 'asMapPresent', 'hostObject', 'readFields', 'materialized', 'externalFieldReads'}
+
+
+def traversal(raw):
+    if not isinstance(raw, list):
+        raise InvalidDocument('Traversal requires a list of entries')
+    for entry in raw:
+        closed(entry, {'key', 'value'}, 'traversal entry')
+        if entry.keys() != {'key', 'value'} or not isinstance(entry['key'], str):
+            raise InvalidDocument('Traversal entry requires key and value')
+    return [{'key': entry['key'], 'value': input_value(entry['value'])} for entry in raw]
+
+
+def outcome(raw, convert):
+    """A read yields nothing, the value of `convert` or the code of a getter failure."""
+    if raw is None:
+        return None
+    if isinstance(raw, dict) and set(raw) == {'failure'}:
+        if not isinstance(raw['failure'], str):
+            raise InvalidDocument('A failure requires a code')
+        return raw
+    return convert(raw)
+
+
+def json_text(raw):
+    if not isinstance(raw, str):
+        raise InvalidDocument('A JSON result requires text')
+    return raw
+
+
+def prepare_access(case, raw):
+    closed(raw, {'access'}, 'value API input')
+    access = raw['access']
+    closed(access, {'value', 'external', 'fromEntries', 'members', 'readFields', 'materialize', 'toJson', 'toMessageJson'}, 'access input')
+    external, from_entries = access.get('external'), access.get('fromEntries', False)
+    if external is not None and external not in EXTERNAL_PROBES:
+        raise InvalidDocument('Unknown external probe')
+    to_json, to_message_json = access.get('toJson', False), access.get('toMessageJson', False)
+    if any(flag is not True and flag is not False for flag in (from_entries, to_json, to_message_json)):
+        raise InvalidDocument('Access flags must be Boolean')
+    if (external is None) != ('value' in access):
+        raise InvalidDocument('Access requires exactly one of value and external')
+    if from_entries and (external or 'entries' not in access['value'] or access['value']['type'] == ':List'):
+        raise InvalidDocument('fromEntries requires Map or Record entries')
+    members = access.get('members', [])
+    if not isinstance(members, list) or not all(isinstance(path, list) and path and all(isinstance(name, str) for name in path) for path in members):
+        raise InvalidDocument('Members require non-empty name paths')
+    read_fields, materialize = access.get('readFields', []), access.get('materialize', 0)
+    if not isinstance(read_fields, list) or not all(isinstance(name, str) for name in read_fields) or type(materialize) is not int or materialize < 0:
+        raise InvalidDocument('Invalid field reads or materialization count')
+    closed(case.expected, {'gesBlock', 'access'}, 'access expectation')
+    expected = case.expected.get('access')
+    closed(expected, ACCESS_RESULTS, 'access result')
+    if not expected:
+        raise InvalidDocument('Access expectation requires a result')
+    if 'normalized' in expected:
+        value(expected['normalized'])
+    if len(expected.get('members', [])) != len(members) or ('members' in expected) != bool(members):
+        raise InvalidDocument('Member results must match the member paths')
+    for item in expected.get('members', []):
+        value(item)
+    if 'traversal' in expected and expected['traversal'] is not None:
+        traversal(expected['traversal'])
+    if 'externalFieldReads' in expected and type(expected['externalFieldReads']) is not int:
+        raise InvalidDocument('Invalid external field read count')
+    if 'length' in expected and type(expected['length']) is not int:
+        raise InvalidDocument('Invalid length')
+    if ('json' in expected) != to_json or ('messageJson' in expected) != to_message_json:
+        raise InvalidDocument('A JSON result belongs to its request')
+    for key in ('json', 'messageJson'):
+        if key in expected:
+            outcome(expected[key], json_text)
+    for key in ('asMapPresent', 'hostObject'):
+        if key in expected and type(expected[key]) is not bool:
+            raise InvalidDocument('Expected Boolean access result')
+    if ('readFields' in expected or read_fields) and len(expected.get('readFields', [])) != len(read_fields):
+        raise InvalidDocument('Field results must match the field reads')
+    for item in expected.get('readFields', []):
+        outcome(item, value)
+    if ('materialized' in expected or materialize) and len(expected.get('materialized', [])) != materialize:
+        raise InvalidDocument('Materialization results must match their count')
+    for item in expected.get('materialized', []):
+        outcome(item, traversal)
+    return {'access': {'value': input_value(access['value']) if 'value' in access else None, 'external': external, 'fromEntries': from_entries, 'members': members, 'readFields': read_fields, 'materialize': materialize, 'toJson': to_json, 'toMessageJson': to_message_json}}
+
+
 def prepare(case):
     if case.sources or case.steps or case.assembler is not None:
         raise InvalidDocument('Value API requires no source, Steps or assembler')
@@ -76,6 +163,8 @@ def prepare(case):
     raw = case.metadata.get('valueApi')
     if isinstance(raw, dict) and 'literal' in raw:
         return prepare_literal(case, raw)
+    if isinstance(raw, dict) and 'access' in raw:
+        return prepare_access(case, raw)
     closed(raw, {'value', 'equalTo', 'notEqualTo', 'mutateSourceAfterCreate'}, 'value API input')
     result = {'value': input_value(raw.get('value')), 'mutateSourceAfterCreate': raw.get('mutateSourceAfterCreate', False)}
     if type(result['mutateSourceAfterCreate']) is not bool:
@@ -123,14 +212,54 @@ def compare_literal(case, observed):
     return ('passed', []) if ok else ('failed', [difference])
 
 
+def compare_access(case, observed):
+    if set(observed) != {'status', 'access'} or observed['status'] != 'ok':
+        raise InvalidDocument('Invalid access outcome')
+    actual = observed['access']
+    closed(actual, ACCESS_RESULTS, 'access observation')
+    if actual.keys() != ACCESS_RESULTS or not isinstance(actual['members'], list) or not isinstance(actual['readFields'], list) or not isinstance(actual['materialized'], list) or type(actual['externalFieldReads']) is not int or type(actual['length']) is not int:
+        raise InvalidDocument('Incomplete access observation')
+    actual = {
+        'length': actual['length'],
+        'json': outcome(actual['json'], json_text),
+        'messageJson': outcome(actual['messageJson'], json_text),
+        'normalized': input_value(actual['normalized']) if actual['normalized'] is not None else None,
+        'members': [input_value(item) for item in actual['members']],
+        'traversal': traversal(actual['traversal']) if actual['traversal'] is not None else None,
+        'asMapPresent': actual['asMapPresent'],
+        'hostObject': actual['hostObject'],
+        'readFields': [outcome(item, input_value) for item in actual['readFields']],
+        'materialized': [outcome(item, traversal) for item in actual['materialized']],
+        'externalFieldReads': actual['externalFieldReads'],
+    }
+    differences = []
+    for key, expected in case.expected['access'].items():
+        if key == 'normalized':
+            expected = value(expected)
+        elif key == 'members':
+            expected = [value(item) for item in expected]
+        elif key == 'traversal' and expected is not None:
+            expected = traversal(expected)
+        elif key == 'readFields':
+            expected = [outcome(item, value) for item in expected]
+        elif key == 'materialized':
+            expected = [outcome(item, traversal) for item in expected]
+        same = expected == actual[key] if expected is None or actual[key] is None else numeric_checks.equal(expected, actual[key], numeric_checks.options(case))
+        if not same:
+            differences.append({'path': '/access/' + key, 'expected': expected, 'actual': actual[key]})
+    return ('failed' if differences else 'passed'), differences
+
+
 def compare(case, observed):
-    closed(observed, {'status', 'detail', 'value', 'literal'}, 'value API observation')
+    closed(observed, {'status', 'detail', 'value', 'literal', 'access'}, 'value API observation')
     if observed.get('status') == 'error':
         if set(observed) - {'status', 'detail'} or not isinstance(observed.get('detail', ''), str):
             raise InvalidDocument('Invalid value API error')
         return 'error', []
     if 'literal' in case.metadata['valueApi']:
         return compare_literal(case, observed)
+    if 'access' in case.metadata['valueApi']:
+        return compare_access(case, observed)
     if set(observed) != {'status', 'value'} or observed['status'] != 'ok':
         raise InvalidDocument('Invalid value API outcome')
     actual = observed['value']

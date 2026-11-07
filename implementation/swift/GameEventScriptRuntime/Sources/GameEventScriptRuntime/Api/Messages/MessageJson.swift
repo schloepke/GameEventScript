@@ -22,8 +22,8 @@ extension GameEventScriptMessage {
         self = try GesMessageJsonCodec().decodeMessage(GesMessageJsonCodec.envelope(GesJson.read(json), "message"), 0)
     }
 
-    /// Serializes the complete message graph as a canonical V1 envelope. Throws for unsupported or over-limit data and
-    /// failed external getters.
+    /// Serializes the complete message graph as a canonical V1 envelope. Throws for unsupported or over-limit data, and
+    /// `GesFatalRuntimeError` for a failed external getter.
     public func json() throws -> String {
         try GesJson.write(GesJson.object([("version", .integer(1)), ("message", try GesMessageJsonCodec().encodeMessage(self, 0))]))
     }
@@ -36,7 +36,8 @@ extension GesValue {
         self = try GesMessageJsonCodec().decode(GesMessageJsonCodec.envelope(GesJson.read(json), "value"), 0)
     }
 
-    /// Serializes a value envelope, exporting external objects as Records. Throws for unsupported or over-limit data.
+    /// Serializes a value envelope, exporting external objects as Records. Throws for unsupported or over-limit data, and
+    /// `GesFatalRuntimeError` for a failed external getter.
     public func json() throws -> String {
         try GesJson.write(GesJson.object([("version", .integer(1)), ("value", try GesMessageJsonCodec().encode(self, 0))]))
     }

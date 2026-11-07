@@ -298,6 +298,11 @@ normalized values, flags, length, custom type name, equality and hash equality.
 Python checks the authored expectations; it does not implement GES equality.
 Input Map/Record entries retain their original order and duplicate keys, including
 nested collections, so normalization is exercised by the implementation.
+`api: {access: {value, external, fromEntries, members, readFields, materialize, toJson, toMessageJson}}` instead
+reports member reads, map traversal, field reads, materializations and the external field
+reads of an adapter-owned probe. A `schemaApi` case with `encodeExternal` wraps its `encode`
+Record in an adapter-owned external value of the same type name; `baselineExternal` does so for
+`baseline`, `baselineFailingField` makes a getter of it fail, `externalFields` for Record fields of `encode`, and `failingField` makes one getter fail, with `failingCode` as a deliberate fault.
 Defensive-copy cases mutate the source array after constructing a List, Dice,
 Map or Record and then observe the constructed value. Negative controls verify
 that reordered Map observations and incorrect hash results are rejected.

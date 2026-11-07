@@ -11,6 +11,8 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 ## Unreleased
 
 ### Breaking
+- C# `GesValue.AsMap()` returns only stored Map and Record data, as in Swift; an external
+  value gives `null`. `MaterializedMap()` reads its fields.
 - `:Vector(value)` and `:Point(value)` with one positional argument are now the cast,
   so `:Vector([1, 2])` is 1, 2, 0 instead of `nothing` and `:Vector(:Dice[6, 3])` is
   6, 3, 0 instead of 9, 0, 0.
@@ -214,6 +216,19 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   `Length` instead.
 
 ### Added
+- External values have three explicit read paths in both ports: `ExternalValue` returns the
+  host object, `ReadField(name)` runs one getter and `MaterializedMap()` runs all of them.
+  C# adds these and `GesValue.GesExternal(value)`; Swift adds `readField(_:)` and the protocol
+  `GesFatalRuntimeError`, the counterpart of `GesFatalRuntimeException`, so a host can read
+  the diagnostic of a failing getter, and a host's own conforming error keeps its diagnostic.
+- Hosts build Maps and Records from ordered entries in the Runtime: C#
+  `GesValue.GesMap(("a", x), ("b", y))` and `GesValue.GesRecord("Hit", ("a", x))`, Swift
+  `.map([("a", x)])` and `.record(typeName: "Hit", [("a", x)])`.
+- `value["name"]` reads the field of a Record, the entry of a Map or the coordinate of a
+  Point or Vector and can be chained; everything else gives Nothing, without calling
+  external field getters.
+- `GesValueMap` can be traversed in canonical key order: `foreach` in C#, without
+  allocating, and `for (key, value) in map` in Swift.
 - Schema deltas: `GesSchemaDelta` converts between full records and deltas against a baseline
   record without allocating, `GesSchemaValues` does so for values, and `ges schema dump --baseline`
   makes a delta readable. A decoder accepts only the canonical form (`wire.invalidDelta`), a
@@ -351,6 +366,14 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   of every port. Runtime behavior does not depend on it.
 
 ### Fixed
+- External field values are no longer cached, so they can change between handlers. In C#,
+  a script's field read runs only that field's getter instead of all of them, so a failing
+  getter affects only its own field.
+- Swift `GesSchemaValues.encode` accepts an external value of the schema's type name, as C#
+  does, instead of reporting `wire.typeMismatch`.
+- Swift matches external field names by Unicode scalars, not by canonical equivalence.
+- C# `GesValue.GesRecord(typeName, keys, values)` keeps the last value of a duplicate name,
+  like `GesMap` and Swift; it used to keep both entries.
 - `:Vector(x: 1)` and `:Point(x: 1m)` compile in C# like in Swift, and
   `:Vector(x: v, y: 3)` with a Vector `v` is `nothing` instead of writing 3 into `z`.
 - The Swift compiler accepts the source short form `:Message(Done)`, like the C#

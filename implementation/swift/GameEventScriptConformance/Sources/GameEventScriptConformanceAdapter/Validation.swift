@@ -77,7 +77,15 @@ enum Validation {
                     try self.fields(api, ["typeNames"])
                     _ = try strings(api.required("typeNames"))
                 case "schemaApi":
-                    try self.fields(api, ["sources", "root", "parameters", "bind", "encode", "encodeBuffer", "baseline", "decode", "decodeLimit", "key", "dump", "dumpBaseline", "deltaEncode", "deltaDecode", "describe", "document"])
+                    try self.fields(
+                        api,
+                        [
+                            "sources", "root", "parameters", "bind", "encode", "encodeExternal", "baselineExternal", "externalFields", "failingField", "baselineFailingField", "failingCode", "encodeBuffer", "baseline", "decode", "decodeLimit", "key",
+                            "dump", "dumpBaseline",
+                            "deltaEncode",
+                            "deltaDecode", "describe", "document",
+                        ]
+                    )
                 case "documentApi":
                     if api["text"] != nil {
                         try self.fields(api, ["text", "print"])
@@ -95,6 +103,14 @@ enum Validation {
                     try self.fields(literal, ["text", "mode"])
                     _ = try literal.text("text")
                     try require(["lenient", "strict"].contains(try literal.text("mode")))
+                case "valueApi" where api["access"] != nil:
+                    try self.fields(api, ["access"])
+                    let access = try api.required("access")
+                    try self.fields(access, ["value", "external", "fromEntries", "members", "readFields", "materialize", "toJson", "toMessageJson"])
+                    try require(access["fromEntries"]?.boolValue != nil && access["toJson"]?.boolValue != nil && access["toMessageJson"]?.boolValue != nil && (access["external"] == .null) != (access["value"] == .null))
+                    if let probe = access["external"], probe != .null { try require(["counting", "typed", "failing", "faulting", "ordered", "sparse"].contains(try probe.stringValue ?? "")) }
+                    if access["value"] != .null { try value(access.required("value")) }
+                    for path in access.values("members") { try require(path.arrayValue?.allSatisfy { $0.stringValue != nil } == true) }
                 case "valueApi":
                     try self.fields(api, ["value", "equalTo", "notEqualTo", "mutateSourceAfterCreate"])
                     try require(api["mutateSourceAfterCreate"]?.boolValue != nil)

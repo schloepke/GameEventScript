@@ -378,7 +378,7 @@ consumption cannot advance the restored parent stream.
 ## Messages, extensions, and external types
 
 Message arguments are ordered `GesMessageArgument` values. Argument
-order and labels define the signature. Core has no tuple or dictionary factory;
+order and labels define the signature. Core has no tuple or dictionary message factory;
 C# conveniences live in `CSharpBridge`, and dictionary binding requires a known
 signature.
 
@@ -393,6 +393,8 @@ Extensions receive the host's `GesContext`. External types use a
 declarative compiler catalog, a separate host runtime registry, and portable
 `IGesExternalValue` instances. CLR objects and Reflection-backed
 implementations remain in `CSharpBridge`.
+The runtime keeps no external field values, because they may change between handlers: a
+field read runs one getter, materializing runs all of them, and `AsMap` runs none.
 
 ## Conformance and verification
 

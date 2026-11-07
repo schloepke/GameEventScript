@@ -3,13 +3,14 @@
 
 using System.Text.Json;
 using GameEventScript.Api;
+using GameEventScript.Runtime.Values;
 
 // Reads schema sources and binds them, then encodes, decodes and checks documents as a case requests.
 internal static class SchemaApiObservations
 {
     internal static void Validate(JsonElement input)
     {
-        RuntimeValues.Fields(input, "sources", "root", "parameters", "bind", "encode", "encodeBuffer", "baseline", "decode", "decodeLimit", "key", "dump", "dumpBaseline", "deltaEncode", "deltaDecode", "describe", "document");
+        RuntimeValues.Fields(input, "sources", "root", "parameters", "bind", "encode", "encodeExternal", "baselineExternal", "externalFields", "failingField", "baselineFailingField", "failingCode", "encodeBuffer", "baseline", "decode", "decodeLimit", "key", "dump", "dumpBaseline", "deltaEncode", "deltaDecode", "describe", "document");
         if (input.GetProperty("encode").ValueKind != JsonValueKind.Null) _ = ValueApiObservations.Construct(input.GetProperty("encode"));
         if (input.GetProperty("baseline").ValueKind != JsonValueKind.Null) _ = ValueApiObservations.Construct(input.GetProperty("baseline"));
     }
@@ -146,15 +147,32 @@ internal static class SchemaApiObservations
         try
         {
             var value = ValueApiObservations.Construct(input.GetProperty("encode"));
+            var externalFields = input.GetProperty("externalFields").EnumerateArray().Select(name => name.GetString()!).ToArray();
+            if (externalFields.Length > 0)
+            {
+                value = GesValue.GesRecord(value.CustomTypeName!, value.AsMap()!.Select(entry => (entry.Key, externalFields.Contains(entry.Key) ? GesValue.GesExternal(new ValueApiObservations.ExternalRecord(entry.Value)) : entry.Value)).ToArray());
+            }
+
+            if (input.GetProperty("encodeExternal").GetBoolean()) value = GesValue.GesExternal(new ValueApiObservations.ExternalRecord(value, input.GetProperty("failingField").GetString(), input.GetProperty("failingCode").GetString()));
             var length = input.GetProperty("baseline").ValueKind == JsonValueKind.Null
                 ? GesSchemaValues.Encode(bound, value, buffer)
-                : GesSchemaValues.Encode(bound, value, ValueApiObservations.Construct(input.GetProperty("baseline")), buffer);
+                : GesSchemaValues.Encode(bound, value, Baseline(input), buffer);
             return new { bytes = Convert.ToHexString(buffer, 0, length).ToLowerInvariant() };
         }
         catch (GesWireException exception)
         {
             return new { error = new { code = exception.Code, path = exception.Path } };
         }
+        catch (GesFatalRuntimeException exception)
+        {
+            return new { failure = exception.Diagnostic.Code };
+        }
+    }
+
+    private static GesValue Baseline(JsonElement input)
+    {
+        var baseline = ValueApiObservations.Construct(input.GetProperty("baseline"));
+        return input.GetProperty("baselineExternal").GetBoolean() ? GesValue.GesExternal(new ValueApiObservations.ExternalRecord(baseline, input.GetProperty("baselineFailingField").GetString(), input.GetProperty("failingCode").GetString())) : baseline;
     }
 
     private static object DeltaEncode(GesBoundSchema bound, JsonElement input)
@@ -192,12 +210,16 @@ internal static class SchemaApiObservations
         {
             var decoded = input.GetProperty("baseline").ValueKind == JsonValueKind.Null
                 ? GesSchemaValues.Decode(bound, Convert.FromHexString(hex), limit)
-                : GesSchemaValues.Decode(bound, Convert.FromHexString(hex), ValueApiObservations.Construct(input.GetProperty("baseline")), limit);
+                : GesSchemaValues.Decode(bound, Convert.FromHexString(hex), Baseline(input), limit);
             return new { value = RuntimeValues.Encode(decoded.Value), byteCount = decoded.ByteCount };
         }
         catch (GesWireException exception)
         {
             return new { error = new { code = exception.Code, path = exception.Path } };
+        }
+        catch (GesFatalRuntimeException exception)
+        {
+            return new { failure = exception.Diagnostic.Code };
         }
     }
 }

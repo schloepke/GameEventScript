@@ -152,7 +152,7 @@ internal static class RuntimeValues
             case GesBytecodeTypeKind.Message: return new { type = ":Message", message = EncodeMessage(value.Message!) };
             case GesBytecodeTypeKind.Custom:
             case GesBytecodeTypeKind.Map:
-                var map = value.AsMap()!;
+                var map = value.MaterializedMap()!;
                 return new
                 {
                     type = value.ValueKind == GesBytecodeTypeKind.Map ? ":Map" : ":" + value.CustomTypeName,

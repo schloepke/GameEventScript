@@ -271,7 +271,7 @@ public final class GameEventScriptHost {
             randomBoundary = context.beginHandler()
             observer?.dispatchStarted(active!.message, id: active!.id, signatureID: next.dispatchSignature)
             if let handler = next.native {
-                do { try handler.handle(active!.message, context: context) } catch let fault as GesExtensionFaultError { record(fault.diagnostic) } catch let fault as GesRuntimeError { record(fault.diagnostic) } catch {
+                do { try handler.handle(active!.message, context: context) } catch let fault as any GesFatalRuntimeError { record(fault.diagnostic) } catch {
                     record(runtimeDiagnostic("runtime.nativeHandlerFailure", error: error))
                 }
                 completeHandler()
@@ -285,7 +285,7 @@ public final class GameEventScriptHost {
                 do {
                     try vm!.begin(linked: next.instance!.linked, message: active!.message, matchArguments: next.matchArguments, entry: next.address, signature: next.dispatchSignature)
                     scriptActive = true
-                } catch let fault as GesRuntimeError {
+                } catch let fault as any GesFatalRuntimeError {
                     record(fault.diagnostic)
                     vm!.reset()
                     completeHandler()

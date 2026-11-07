@@ -470,6 +470,34 @@ iteration. C# dictionary factories belong to CSharpBridge and delegate to the
 portable ordered factories; their canonical ordering is governed by
 [Determinism](Semantics/Determinism.md).
 
+> **Since: Unreleased** — ordered entries, member reads, map traversal
+
+A Map or Record value can be created from ordered key-value entries. The last value
+of a duplicate key wins, and the result has canonical key order. The parallel key and
+value factories follow the same rule.
+
+`Value` reads a member by name: the field of a Record, the entry of a Map, the
+coordinate `x`, `y` or `z` of a Point or Vector, which keeps its unit. Anything else,
+and a missing name, gives Nothing, without an error. An external value gives Nothing
+and runs no field getter. A missing name and a stored Nothing read the same;
+`AsMap` with `ContainsKey` tells them apart. Lists have no such read, because the API
+counts from 0 and the language from 1.
+
+`Length` of an external value is the number of its declared fields. It runs no getter, so
+it also counts a field that a materialized map leaves out.
+
+`AsMap` returns only stored Map entries and Record fields. An external value is read
+in three ways, from the fastest: `ExternalValue` returns the host object itself,
+`ReadField(name)` runs one getter and applies the declared type, and `MaterializedMap`
+runs every getter into a Map. The last two propagate getter failures as a
+[runtime failure](#diagnostics-and-failure-transport) with a stable diagnostic; `AsMap` and
+the member read never run host code.
+
+A `ValueMap` can be traversed in canonical key order; `Length`, `Key(index)` and
+`Value(index)` are its minimal form.
+
+Each port spells these with the language's own means, without another library.
+
 `ValueKind`, `ValueUnit`, `HasValue`, `IsNothing`, `IsNumeric`, `HasUnit`,
 `Length`, `CustomTypeName`, coordinate/range/message/handler views, and typed
 read operations expose the active value. A typed `As...` operation on an
@@ -960,10 +988,15 @@ type; mismatch becomes a runtime diagnostic and Nothing. `SetNothing()` rejects
 construction without throwing a script exception. Omitting a result also yields
 Nothing. The call object and arguments must not be retained.
 
-`ExternalValue.Definition` identifies the declarative type. `GetField(name)`
+`ExternalValue.Definition` identifies the declarative type; it is immutable, and all values
+of a type should share one. `GetField(name)`
 returns a Value or absence. It must be synchronous and deterministic for an
-immutable logical external value during one handler. Platform object identity,
-reflection, and lifetime management are adapter responsibilities.
+immutable logical external value during one handler; between handlers its fields may
+change. The runtime keeps no field value: a script's field read runs that field's
+getter and no other, and each conversion to Map, JSON or schema encoding runs all of
+them again, in declaration order. The first failing declared field therefore decides the
+failure, and a field without a value is left out. Platform object identity, reflection, and lifetime management are adapter
+responsibilities.
 
 ## Diagnostics and failure transport
 
@@ -979,7 +1012,9 @@ variable, and global definition. `DiagnosticCodes` exposes stable named constant
 `Decode(formatErrorCode)` maps a `.gesb` format failure to its stable decode code.
 
 `CompileException`, `DynamicLinkException`, `ProgramFormatException`, and the
-abstract fatal-runtime base are C# failure transports carrying diagnostics.
+abstract fatal-runtime base are C# failure transports carrying diagnostics. A failing
+external field getter read directly through a Value or a schema encoding surfaces through
+that base, and a host's own subclass keeps its diagnostic at every runtime boundary.
 `DynamicLinkException` carries the ordered `Diagnostics` of a link failure, one
 per call site of a failed import, and `Diagnostic` as their first one; see
 [Diagnostics](Diagnostics.md#link-call-sites). A
@@ -1140,14 +1175,14 @@ creation returns an optional for mismatched arity. Decode failures use
 `diagnostics` lists every link diagnostic and `diagnostic` their first;
 execution results carry `GesDiagnostic`. Explicit callback faults use
 `GesExtensionFaultError`; unexpected errors receive the owning runtime
-boundary's stable classification. Call objects and borrowed argument views must
+boundary's stable classification. Every failure that ends a handler conforms to
+`GesFatalRuntimeError`, the counterpart of the C# fatal-runtime base, under the same rules. Call objects and borrowed argument views must
 not outlive their synchronous callback.
 
 Strict value equality and hashing preserve kind, unit, and Unicode-scalar
-identity. `materializedMap()` reads immutable Map/Record contents or lazily
-materializes declared external fields, propagating field failures. It does not
-perform a source-language cast. The random generator has seed, sequence, and
-entropy initializers; each Host constructs its own generator.
+identity. `materializedMap()` does not perform a source-language cast. The random
+generator has seed, sequence, and entropy initializers; each Host constructs its own
+generator.
 
 Swift Conformance uses the independent Python runner and an internal executable
 adapter. The adapter returns raw compiler/runtime observations and optional

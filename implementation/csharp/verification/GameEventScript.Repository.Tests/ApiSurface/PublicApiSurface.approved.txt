@@ -1271,7 +1271,9 @@ sealed class GameEventScript.CSharpBridge.GesTypeAttribute
   ctor GesTypeAttribute(System.String typeName)
   property System.String TypeName { get }
 struct GameEventScript.Runtime.Values.GesValue
+  method GameEventScript.Runtime.Values.GesValue? ReadField(System.String name)
   method GameEventScript.Runtime.Values.GesValueMap AsMap()
+  method GameEventScript.Runtime.Values.GesValueMap MaterializedMap()
   method GameEventScript.Runtime.Values.GesValueSlice AsList()
   method System.Boolean AsBoolean()
   method System.Boolean Equals(GameEventScript.Runtime.Values.GesValue other)
@@ -1287,11 +1289,13 @@ struct GameEventScript.Runtime.Values.GesValue
   method static GameEventScript.Runtime.Values.GesValue FromJson(System.String json)
   method static GameEventScript.Runtime.Values.GesValue GesBoolean(System.Boolean boolean)
   method static GameEventScript.Runtime.Values.GesValue GesDice(System.Int32[] rolls)
+  method static GameEventScript.Runtime.Values.GesValue GesExternal(GameEventScript.Api.IGesExternalValue value)
   method static GameEventScript.Runtime.Values.GesValue GesFloat(System.Double number, GameEventScript.Api.GesQuantityUnit unit)
   method static GameEventScript.Runtime.Values.GesValue GesHandler(GameEventScript.Api.GesMessageSignature signature)
   method static GameEventScript.Runtime.Values.GesValue GesInteger(System.Int64 integer, GameEventScript.Api.GesQuantityUnit unit)
   method static GameEventScript.Runtime.Values.GesValue GesList(GameEventScript.Runtime.Values.GesValue[] items)
   method static GameEventScript.Runtime.Values.GesValue GesMap(System.String[] keys, GameEventScript.Runtime.Values.GesValue[] values)
+  method static GameEventScript.Runtime.Values.GesValue GesMap(System.ValueTuple<System.String, GameEventScript.Runtime.Values.GesValue>[] entries)
   method static GameEventScript.Runtime.Values.GesValue GesMessage(GameEventScript.Api.GameEventScriptMessage message)
   method static GameEventScript.Runtime.Values.GesValue GesNothing()
   method static GameEventScript.Runtime.Values.GesValue GesNumber(System.Double number, GameEventScript.Api.GesQuantityUnit unit)
@@ -1300,6 +1304,7 @@ struct GameEventScript.Runtime.Values.GesValue
   method static GameEventScript.Runtime.Values.GesValue GesRange(System.Double from, System.Double to, System.Double step)
   method static GameEventScript.Runtime.Values.GesValue GesRange(System.Int64 from, System.Int64 to, System.Int64 step)
   method static GameEventScript.Runtime.Values.GesValue GesRecord(System.String typeName, System.String[] keys, GameEventScript.Runtime.Values.GesValue[] values)
+  method static GameEventScript.Runtime.Values.GesValue GesRecord(System.String typeName, System.ValueTuple<System.String, GameEventScript.Runtime.Values.GesValue>[] fields)
   method static GameEventScript.Runtime.Values.GesValue GesTag(System.String tag)
   method static GameEventScript.Runtime.Values.GesValue GesText(System.String text)
   method static GameEventScript.Runtime.Values.GesValue GesVector(System.Double x, System.Double y, System.Double z, GameEventScript.Api.GesQuantityUnit unit)
@@ -1311,6 +1316,8 @@ struct GameEventScript.Runtime.Values.GesValue
   property GameEventScript.Api.GesIntegerRange IntegerRange { get }
   property GameEventScript.Api.GesMessageSignature Handler { get }
   property GameEventScript.Api.GesQuantityUnit ValueUnit { get }
+  property GameEventScript.Api.IGesExternalValue ExternalValue { get }
+  property GameEventScript.Runtime.Values.GesValue Item { get }
   property System.Boolean HasUnit { get }
   property System.Boolean HasValue { get }
   property System.Boolean IsNothing { get }
@@ -1342,9 +1349,15 @@ struct GameEventScript.Runtime.Values.GesValueArguments
 sealed class GameEventScript.Runtime.Values.GesValueMap
   method GameEventScript.Runtime.Values.GesValue ValueAt(System.Int32 index)
   method GameEventScript.Runtime.Values.GesValue? Get(System.String key)
+  method GameEventScript.Runtime.Values.GesValueMap.Enumerator GetEnumerator()
   method System.Boolean ContainsKey(System.String key)
   method System.String KeyAt(System.Int32 index)
   property System.Int32 Length { get }
+struct GameEventScript.Runtime.Values.GesValueMap.Enumerator
+  method System.Boolean MoveNext()
+  method System.Void Dispose()
+  method System.Void Reset()
+  property System.Collections.Generic.KeyValuePair<System.String, GameEventScript.Runtime.Values.GesValue> Current { get }
 struct GameEventScript.Runtime.Values.GesValueSlice
   ctor GesValueSlice(GameEventScript.Runtime.Values.GesValue[] values)
   field static GameEventScript.Runtime.Values.GesValueSlice Empty

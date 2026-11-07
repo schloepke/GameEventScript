@@ -22,7 +22,7 @@ public enum GesSchemaValues {
     ///   - value: The value.
     ///   - bufferSize: The size of the buffer that receives the encoding; by default the largest encoding.
     /// - Returns: The encoded bytes.
-    /// - Throws: `GesWireError` when the value does not fit the schema.
+    /// - Throws: `GesWireError` when the value does not fit the schema; `GesFatalRuntimeError` when an external field getter fails.
     public static func encode(_ schema: GesBoundSchema, _ value: GesValue, bufferSize: Int? = nil) throws -> [UInt8] {
         var buffer = [UInt8](repeating: 0, count: bufferSize ?? schema.maxByteCount)
         let length = try buffer.withUnsafeMutableBytes { bytes -> Int in
@@ -37,7 +37,7 @@ public enum GesSchemaValues {
                 try encodeMessage(&writer, current, value)
             } else {
                 if let name = value.customTypeName, name != current.name { throw GesWireError(code: GesWireError.typeMismatch) }
-                guard let fields = value.asMap else { throw GesWireError(code: GesWireError.typeMismatch) }
+                guard let fields = try value.materializedMap() else { throw GesWireError(code: GesWireError.typeMismatch) }
                 try encodeFields(&writer, current, 0, current.nodes.count, fields, strict: false)
             }
             return try writer.finish()
@@ -51,7 +51,7 @@ public enum GesSchemaValues {
     ///   - value: The value.
     ///   - baseline: The value that the receiver holds.
     /// - Returns: The encoded delta.
-    /// - Throws: `GesWireError` when a value does not fit the schema or their keys differ.
+    /// - Throws: `GesWireError` when a value does not fit the schema or their keys differ; `GesFatalRuntimeError` when an external field getter fails.
     public static func encode(_ schema: GesBoundSchema, _ value: GesValue, baseline: GesValue) throws -> [UInt8] {
         let record = try encode(schema, value)
         let previous = try encode(schema, baseline)
@@ -73,7 +73,7 @@ public enum GesSchemaValues {
     ///   - baseline: The value that this side holds.
     ///   - byteLimit: An optional limit on the bytes of this delta.
     /// - Returns: The value and the bytes the delta occupied.
-    /// - Throws: `GesWireError` when the data is not a valid delta for this baseline.
+    /// - Throws: `GesWireError` when the data is not a valid delta for this baseline; `GesFatalRuntimeError` when an external field getter of the baseline fails.
     public static func decode(_ schema: GesBoundSchema, _ data: [UInt8], baseline: GesValue, byteLimit: Int = .max) throws -> GesSchemaDecoded {
         let previous = try encode(schema, baseline)
         var buffer = [UInt8](repeating: 0, count: schema.maxByteCount)
@@ -301,7 +301,7 @@ public enum GesSchemaValues {
             return
         }
         if let name = value.customTypeName, name != info.schemaName { throw GesWireError(code: GesWireError.typeMismatch, path: info.path) }
-        guard let fields = value.asMap else { throw GesWireError(code: GesWireError.typeMismatch, path: info.path) }
+        guard let fields = try value.materializedMap() else { throw GesWireError(code: GesWireError.typeMismatch, path: info.path) }
         if strict && value.customTypeName == nil && !hasEveryKey(schema, index, fields) { throw GesWireError(code: GesWireError.typeMismatch, path: info.path) }
         try writer.beginNested(field)
         try encodeFields(&writer, schema, index + 1, node.next, fields, strict: strict)

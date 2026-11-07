@@ -255,8 +255,10 @@ internal static class GesText
             var leftScalar = ScalarValueAt(left, leftOffset);
             var rightScalar = ScalarValueAt(right, rightOffset);
             if (leftScalar != rightScalar) return leftScalar < rightScalar ? -1 : 1;
-            leftOffset += ScalarUtf16LengthAt(left, leftOffset);
-            rightOffset += ScalarUtf16LengthAt(right, rightOffset);
+            // Equal scalars have equal lengths; a lone surrogate counts as one unit, like in ScalarValueAt.
+            var length = leftScalar > 0xFFFF ? 2 : 1;
+            leftOffset += length;
+            rightOffset += length;
         }
 
         if (leftOffset == left.Length) return rightOffset == right.Length ? 0 : -1;
@@ -267,6 +269,8 @@ internal static class GesText
     {
         var high = value[utf16Offset];
         if (!char.IsHighSurrogate(high)) return high;
+        // A lookup key may be invalid UTF-16; a lone surrogate compares as itself and equals no valid key.
+        if (utf16Offset + 1 == value.Length || !char.IsLowSurrogate(value[utf16Offset + 1])) return high;
         var low = value[utf16Offset + 1];
         return 0x10000 + ((high - 0xD800) << 10) + low - 0xDC00;
     }

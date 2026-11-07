@@ -19,7 +19,7 @@ internal partial class GesVirtualMachine
             case Custom when obj.ObjectValue is GesCustomObject customObject && customObject.Map.Get(key) is { } value:
                 SetValue(destinationRegister, in value);
                 return;
-            case Custom when obj.ObjectValue is GesExternalStorage externalValue && externalValue.ToMap().Get(key) is { } value:
+            case Custom when obj.ObjectValue is GesExternalStorage externalValue && externalValue.ReadField(key) is { } value:
                 SetValue(destinationRegister, in value);
                 return;
             case Vector or Point when obj.ObjectValue is GesSpatialValue vp && vp.GetComponent(key) is { } value:

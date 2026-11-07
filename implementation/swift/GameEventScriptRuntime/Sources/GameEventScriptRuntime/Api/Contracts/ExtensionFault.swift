@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /// An explicit application fault retains its stable code across callback boundaries.
-public struct GesExtensionFaultError: Error, Sendable {
+public struct GesExtensionFaultError: GesFatalRuntimeError, Sendable {
     /// Application-provided runtime diagnostic preserved across callback boundaries.
     public let diagnostic: GesDiagnostic
 

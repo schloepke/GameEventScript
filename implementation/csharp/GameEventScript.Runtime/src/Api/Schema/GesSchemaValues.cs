@@ -39,6 +39,7 @@ public static class GesSchemaValues
     /// <param name="buffer">The buffer that receives the encoding.</param>
     /// <returns>The number of bytes written.</returns>
     /// <exception cref="GesWireException">The value does not fit the schema.</exception>
+    /// <exception cref="GesFatalRuntimeException">An external field getter of the value failed.</exception>
     public static int Encode(GesBoundSchema schema, GesValue value, Span<byte> buffer)
     {
         if (schema is null) throw new ArgumentNullException(nameof(schema));
@@ -57,7 +58,7 @@ public static class GesSchemaValues
         else
         {
             if (value.CustomTypeName is { } name && name != current.Name) throw new GesWireException(GesWireException.TypeMismatch, "");
-            var fields = value.AsMap() ?? throw new GesWireException(GesWireException.TypeMismatch, "");
+            var fields = value.MaterializedMap() ?? throw new GesWireException(GesWireException.TypeMismatch, "");
             EncodeFields(ref writer, current, 0, current.Nodes.Length, fields, false);
         }
 
@@ -71,6 +72,7 @@ public static class GesSchemaValues
     /// <param name="buffer">The buffer that receives the delta.</param>
     /// <returns>The number of bytes written.</returns>
     /// <exception cref="GesWireException">A value does not fit the schema, or their keys differ.</exception>
+    /// <exception cref="GesFatalRuntimeException">An external field getter of a value failed.</exception>
     public static int Encode(GesBoundSchema schema, GesValue value, GesValue baseline, Span<byte> buffer)
     {
         if (schema is null) throw new ArgumentNullException(nameof(schema));
@@ -88,6 +90,7 @@ public static class GesSchemaValues
     /// <param name="byteLimit">An optional limit on the bytes of this delta.</param>
     /// <returns>The value and the bytes the delta occupied.</returns>
     /// <exception cref="GesWireException">The data is not a valid delta for this baseline.</exception>
+    /// <exception cref="GesFatalRuntimeException">An external field getter of the baseline failed.</exception>
     public static GesSchemaDecoded Decode(GesBoundSchema schema, ReadOnlySpan<byte> data, GesValue baseline, long byteLimit = long.MaxValue)
     {
         if (schema is null) throw new ArgumentNullException(nameof(schema));
@@ -334,7 +337,7 @@ public static class GesSchemaValues
         }
 
         if (value.CustomTypeName is { } name2 && name2 != node.SchemaName) throw new GesWireException(GesWireException.TypeMismatch, node.Path);
-        var fields = value.AsMap() ?? throw new GesWireException(GesWireException.TypeMismatch, node.Path);
+        var fields = value.MaterializedMap() ?? throw new GesWireException(GesWireException.TypeMismatch, node.Path);
         if (strict && value.CustomTypeName is null && !HasEveryKey(schema, index, fields)) throw new GesWireException(GesWireException.TypeMismatch, node.Path);
         writer.BeginNested(field);
         EncodeFields(ref writer, schema, index + 1, node.Next, fields, strict);

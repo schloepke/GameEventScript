@@ -380,7 +380,7 @@ struct GesLiteralParser {
     private mutating func collection(depth: Int) -> GesValue? {
         switch collectionStart() {
         case 0: return .list([])
-        case 1: return .map([])
+        case 1: return .map([] as [GesMapEntry])
         case 2: return list(depth: depth)
         case 3: return map(depth: depth)
         default: return nil

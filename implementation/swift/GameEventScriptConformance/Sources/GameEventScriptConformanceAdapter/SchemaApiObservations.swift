@@ -129,13 +129,29 @@ enum SchemaApiObservations {
     private static func encode(_ bound: GesBoundSchema, _ value: Input, _ input: Input) throws -> [String: Any] {
         do {
             let size = integer(input["encodeBuffer"])
-            if let baseline = input["baseline"], baseline != .null {
-                return ["bytes": hexadecimal(try GesSchemaValues.encode(bound, try RuntimeValues.decode(value), baseline: try RuntimeValues.decode(baseline)))]
+            var subject = try RuntimeValues.decode(value)
+            let externalFields = input.values("externalFields").compactMap(\.stringValue)
+            if !externalFields.isEmpty {
+                let fields: [(key: String, value: GesValue)] = try subject.asMap!.map { entry in
+                    (key: entry.key, value: externalFields.contains(entry.key) ? .external(try ApiObservations.ExternalRecord(entry.value)) : entry.value)
+                }
+                subject = .record(typeName: subject.customTypeName!, fields)
             }
-            return ["bytes": hexadecimal(try GesSchemaValues.encode(bound, try RuntimeValues.decode(value), bufferSize: size))]
+            if input["encodeExternal"]?.boolValue == true { subject = .external(try ApiObservations.ExternalRecord(subject, failingField: input["failingField"]?.stringValue, failingCode: input["failingCode"]?.stringValue)) }
+            if let baseline = input["baseline"], baseline != .null {
+                return ["bytes": hexadecimal(try GesSchemaValues.encode(bound, subject, baseline: try self.baseline(baseline, input)))]
+            }
+            return ["bytes": hexadecimal(try GesSchemaValues.encode(bound, subject, bufferSize: size))]
         } catch let error as GesWireError {
             return ["error": ["code": error.code, "path": error.path]]
+        } catch let error as any GesFatalRuntimeError {
+            return ["failure": error.diagnostic.code]
         }
+    }
+
+    private static func baseline(_ baseline: Input, _ input: Input) throws -> GesValue {
+        let value = try RuntimeValues.decode(baseline)
+        return input["baselineExternal"]?.boolValue == true ? .external(try ApiObservations.ExternalRecord(value, failingField: input["baselineFailingField"]?.stringValue, failingCode: input["failingCode"]?.stringValue)) : value
     }
 
     private static func deltaEncode(_ bound: GesBoundSchema, _ input: Input) -> [String: Any] {
@@ -183,13 +199,15 @@ enum SchemaApiObservations {
             let limit = integer(input["decodeLimit"]) ?? .max
             let decoded: GesSchemaDecoded
             if let baseline = input["baseline"], baseline != .null {
-                decoded = try GesSchemaValues.decode(bound, bytes(hex), baseline: try RuntimeValues.decode(baseline), byteLimit: limit)
+                decoded = try GesSchemaValues.decode(bound, bytes(hex), baseline: try self.baseline(baseline, input), byteLimit: limit)
             } else {
                 decoded = try GesSchemaValues.decode(bound, bytes(hex), byteLimit: limit)
             }
             return ["value": try RuntimeValues.encode(decoded.value), "byteCount": decoded.byteCount]
         } catch let error as GesWireError {
             return ["error": ["code": error.code, "path": error.path]]
+        } catch let error as any GesFatalRuntimeError {
+            return ["failure": error.diagnostic.code]
         } catch {
             return ["error": ["code": "\(error)", "path": ""]]
         }

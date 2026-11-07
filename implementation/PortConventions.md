@@ -46,6 +46,7 @@ class files append an aspect (`GesBinaryBuilderOpcodes.cs`). Swift file names ar
 | Concept | C# | Swift | Later Java/Kotlin |
 |---|---|---|---|
 | Error type | `GesXException` | `GesXError` | `GesXException` |
+| Common base of error types | abstract class | protocol | abstract class or interface |
 | Platform argument/state errors | BCL `ArgumentException`, `InvalidOperationException` | `GesApiError` | platform exceptions |
 | Interface | `IGesX` | `GesX` (protocol) | `GesX` |
 | Direct creation of data types | constructor or `Create(...)` | throwing or plain `init` | constructor |
@@ -57,6 +58,9 @@ class files append an aspect (`GesBinaryBuilderOpcodes.cs`). Swift file names ar
 | Immutable list exposure | `GesReadOnlyArray<T>` / read-only spans | `[T]` | read-only list |
 | Cross-package internals | `internal` + `InternalsVisibleTo` | `@_spi(Compiler)` / `@_spi(Bridge)` public | module-internal |
 | Type-erased wrapper | object or interface | `GesAnyX` | interface |
+| Map/Record from entries | `GesMap(params (string, GesValue)[])` | `.map([(String, GesValue)])` | pair or entry class |
+| Member lookup | `value["name"]` | `value["name"]` | — |
+| Map traversal | `IEnumerable<KeyValuePair<string, GesValue>>` | `Sequence` | — |
 
 An error type may be absent from a port that cannot produce that error.
 
@@ -95,8 +99,9 @@ the static import, so they omit the redundant prefix.
 - Message arguments, signatures, options and limits use the idiomatic
   constructor/initializer.
 - No central value factory and no `Host.createMessage`: factories stay on their
-  type, and platform conveniences (C# tuples, Swift literals) belong in the
-  Bridge or in idiomatic Swift literal conformances.
+  type. Spellings that only use language features (tuples, literals, collection
+  protocols) may live in the Core; conveniences that need platform services belong
+  in the Bridge.
 
 ## Layers
 

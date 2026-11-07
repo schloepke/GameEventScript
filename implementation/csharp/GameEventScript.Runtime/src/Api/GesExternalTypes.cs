@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using GameEventScript.Runtime.Values;
+using GameEventScript.Syntax;
 
 namespace GameEventScript.Api;
 
@@ -45,7 +46,7 @@ public interface IGesExternalTypeCatalog
 public interface IGesExternalValue
 {
     /// <summary>
-    /// Gets the definition.
+    /// Gets the definition. All values of a type should share one, because creating one validates and sorts its fields.
     /// </summary>
     GesExternalTypeDefinition Definition { get; }
 
@@ -233,6 +234,17 @@ public sealed class GesExternalTypeDefinition
         var copiedConstructors = CopyConstructors(constructors ?? throw new ArgumentNullException(nameof(constructors)));
         ValidateFields(copiedFields);
         Fields = GesReadOnlyArray<GesExternalTypeFieldDefinition>.FromOwnedArray(copiedFields);
+        CanonicalKeys = new string[copiedFields.Length];
+        var order = new int[copiedFields.Length];
+        for (var index = 0; index < order.Length; index++)
+        {
+            CanonicalKeys[index] = copiedFields[index].Name;
+            order[index] = index;
+        }
+
+        Array.Sort(CanonicalKeys, order, GesText.ScalarComparer);
+        CanonicalPositions = new int[order.Length];
+        for (var position = 0; position < order.Length; position++) CanonicalPositions[order[position]] = position;
         ValidateConstructors(copiedConstructors);
         Constructors = GesReadOnlyArray<GesExternalTypeConstructorDefinition>.FromOwnedArray(copiedConstructors);
     }
@@ -251,6 +263,11 @@ public sealed class GesExternalTypeDefinition
     /// Gets the immutable ordered constructors without exposing writable collection storage.
     /// </summary>
     public IReadOnlyList<GesExternalTypeConstructorDefinition> Constructors { get; }
+
+    // The field names in scalar order, which every materialized map shares, and the place of each declared field in it.
+    internal string[] CanonicalKeys { get; }
+
+    internal int[] CanonicalPositions { get; }
 
     internal bool HasConstructor(IReadOnlyCollection<string> argumentLabels)
     {

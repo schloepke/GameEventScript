@@ -146,7 +146,7 @@ internal sealed class GesMessageJsonCodec
                 return Typed("List", ("items", Array(values)));
             case Map:
             case Custom:
-                var map = value.AsMap() ?? throw Error();
+                var map = value.MaterializedMap() ?? throw Error();
                 var entries = new GesValue[map.Length];
                 for (var i = 0; i < entries.Length; i++)
                     entries[i] = Object(("key", Text(map.KeyAt(i))), ("value", Encode(map.ValueAt(i), depth + 1)));

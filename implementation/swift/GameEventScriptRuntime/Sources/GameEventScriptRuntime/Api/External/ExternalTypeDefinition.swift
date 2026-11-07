@@ -1,6 +1,8 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
+@_spi(Syntax) import GameEventScriptSyntax
+
 /// Declarative fields and constructors for a host-defined type; contains no native objects or callbacks.
 public struct GesExternalTypeDefinition {
     /// Normalized external type name.
@@ -9,6 +11,9 @@ public struct GesExternalTypeDefinition {
     public let fields: [GesExternalTypeFieldDefinition]
     /// Available constructor signatures.
     public let constructors: [GesExternalTypeConstructorDefinition]
+    // The field names in scalar order, which every materialized map shares, and the place of each declared field in it.
+    let canonicalKeys: [String]
+    let canonicalPositions: [Int]
 
     /// Validates field uniqueness and constructor consistency.
     ///
@@ -18,6 +23,11 @@ public struct GesExternalTypeDefinition {
         self.name = try GesExternalTypeNames.type(name)
         self.fields = fields
         self.constructors = constructors
+        let order = fields.indices.sorted { GesText.scalarLess(fields[$0].name, fields[$1].name) }
+        canonicalKeys = order.map { fields[$0].name }
+        var positions = [Int](repeating: 0, count: fields.count)
+        for (position, index) in order.enumerated() { positions[index] = position }
+        canonicalPositions = positions
         let fieldNames = Set(fields.map(\.name))
         if fieldNames.count != fields.count || Set(constructors.map(\.signatureID)).count != constructors.count { throw GesApiError.invalidArgument("Duplicate external definition") }
         for constructor in constructors {

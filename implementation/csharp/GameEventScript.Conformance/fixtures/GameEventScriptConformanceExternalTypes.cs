@@ -19,6 +19,15 @@ internal static class GameEventScriptConformanceExternalTypes
         ],
         [new GesExternalTypeConstructorDefinition("SpatialProbe", [new GesExternalTypeParameterDefinition("vector", "Vector"), new GesExternalTypeParameterDefinition("point", "Point")])]);
 
+    private static readonly GesExternalTypeDefinition ReadProbeDefinition = new(
+        "ReadProbe",
+        [
+            new GesExternalTypeFieldDefinition("failOther", GesBytecodeTypeKind.Boolean),
+            new GesExternalTypeFieldDefinition("count", GesBytecodeTypeKind.Float),
+            new GesExternalTypeFieldDefinition("other", GesBytecodeTypeKind.Float)
+        ],
+        [new GesExternalTypeConstructorDefinition("ReadProbe", [new GesExternalTypeParameterDefinition("failOther", GesBytecodeTypeKind.Boolean)])]);
+
     private static readonly GesExternalTypeDefinition OptionalDefinition = new(
         "OptionalProbe",
         [
@@ -55,7 +64,7 @@ internal static class GameEventScriptConformanceExternalTypes
         [new GesExternalTypeConstructorDefinition("DeclaredProbe", [new GesExternalTypeParameterDefinition("name", GesBytecodeTypeKind.Text)])]);
 
     internal static readonly IGesExternalTypeCatalog Catalog =
-        new GesDeclaredExternalTypeCatalog([AimDefinition, GameEventScriptConformanceCallbackProbe.Definition, SpatialDefinition, OptionalDefinition, DeclaredDefinition]);
+        new GesDeclaredExternalTypeCatalog([AimDefinition, GameEventScriptConformanceCallbackProbe.Definition, SpatialDefinition, OptionalDefinition, DeclaredDefinition, ReadProbeDefinition]);
 
     internal static readonly IGesExternalTypeRegistry Registry =
         new TestRuntimeRegistry();
@@ -84,12 +93,37 @@ internal static class GameEventScriptConformanceExternalTypes
             ]);
     }
 
+    private sealed class ReadProbeConstructor : IGesExternalTypeConstructor
+    {
+        public GesExternalTypeConstructorDefinition Definition { get; } = ReadProbeDefinition.Constructors[0];
+
+        public void Invoke(GesExternalTypeConstructorCall call) => call.SetExternalValue(new ReadProbeValue(call.Arguments[0].AsBoolean()));
+    }
+
+    private sealed class ReadProbeValue(bool failOther) : IGesExternalValue
+    {
+        private long _reads;
+
+        public GesExternalTypeDefinition Definition { get; } = ReadProbeDefinition;
+
+        public GesValue? GetField(string fieldName)
+            => fieldName switch
+            {
+                "failOther" => GesValue.GesBoolean(failOther),
+                "count" => GesValue.GesInteger(++_reads),
+                "other" when failOther => throw new InvalidOperationException("Configured field failure."),
+                "other" => GesValue.GesInteger(0),
+                _ => null
+            };
+    }
+
     private sealed class TestRuntimeRegistry : IGesExternalTypeRegistry
     {
         private readonly AimConstructor _constructor = new(AimDefinition.Constructors[0]);
         private readonly SpatialConstructor _spatialConstructor = new();
         private readonly OptionalConstructor _optionalConstructor = new();
         private readonly DeclaredConstructor _declaredConstructor = new();
+        private readonly ReadProbeConstructor _readConstructor = new();
 
         public IGesExternalTypeConstructor? Resolve(GesExternalTypeConstructorReference reference)
             => string.Equals(reference.SignatureId, _constructor.Definition.SignatureId, StringComparison.Ordinal)
@@ -102,7 +136,9 @@ internal static class GameEventScriptConformanceExternalTypes
                             ? _optionalConstructor
                             : string.Equals(reference.SignatureId, _declaredConstructor.Definition.SignatureId, StringComparison.Ordinal)
                                 ? _declaredConstructor
-                                : null;
+                                : string.Equals(reference.SignatureId, _readConstructor.Definition.SignatureId, StringComparison.Ordinal)
+                                    ? _readConstructor
+                                    : null;
     }
 
     private sealed class SpatialConstructor : IGesExternalTypeConstructor

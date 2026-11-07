@@ -18,6 +18,21 @@ internal static class ValueApiObservations
             if (literal.GetProperty("mode").GetString() is not ("lenient" or "strict")) throw new ArgumentException("Invalid literal mode.");
             return;
         }
+        if (input.TryGetProperty("access", out var access))
+        {
+            RuntimeValues.Fields(input, "access");
+            RuntimeValues.Fields(access, "value", "external", "fromEntries", "members", "readFields", "materialize", "toJson", "toMessageJson");
+            var probe = access.GetProperty("external").GetString();
+            if (probe is not (null or "counting" or "typed" or "failing" or "faulting" or "ordered" or "sparse")) throw new ArgumentException("Unknown external probe.");
+            if (probe is null == (access.GetProperty("value").ValueKind == JsonValueKind.Null)) throw new ArgumentException("Access requires one of value and external.");
+            _ = access.GetProperty("fromEntries").GetBoolean();
+            _ = access.GetProperty("toJson").GetBoolean();
+            _ = access.GetProperty("toMessageJson").GetBoolean();
+            if (probe is null) _ = Construct(access.GetProperty("value"));
+            foreach (var path in access.GetProperty("members").EnumerateArray())
+                foreach (var name in path.EnumerateArray()) _ = name.GetString() ?? throw new ArgumentException("Member name required.");
+            return;
+        }
         RuntimeValues.Fields(input, "value", "equalTo", "notEqualTo", "mutateSourceAfterCreate");
         _ = input.GetProperty("mutateSourceAfterCreate").GetBoolean();
         foreach (var key in new[] { "value", "equalTo", "notEqualTo" })
@@ -27,6 +42,7 @@ internal static class ValueApiObservations
     internal static object Run(JsonElement input)
     {
         if (input.TryGetProperty("literal", out var literal)) return RunLiteral(literal);
+        if (input.TryGetProperty("access", out var access)) return RunAccess(access);
         var value = Construct(input.GetProperty("value"), input.GetProperty("mutateSourceAfterCreate").GetBoolean());
         var equalInput = input.GetProperty("equalTo");
         var other = equalInput.ValueKind == JsonValueKind.Null ? (GesValue?)null : Construct(equalInput);
@@ -49,6 +65,124 @@ internal static class ValueApiObservations
                 notEqual = differentInput.ValueKind == JsonValueKind.Null ? (bool?)null : !value.Equals(Construct(differentInput))
             }
         };
+    }
+
+    // Member reads and map traversal; `normalized` and `traversal` stay null for an external value, whose fields only
+    // its getters could produce.
+    private static object RunAccess(JsonElement access)
+    {
+        var external = access.GetProperty("external").GetString();
+        var probe = new ExternalProbe(external ?? "counting");
+        var value = external is not null ? GesValue.GesExternal(probe)
+            : access.GetProperty("fromEntries").GetBoolean() ? FromEntries(access.GetProperty("value"))
+            : Construct(access.GetProperty("value"));
+        var length = value.Length;
+        var members = new List<object?>();
+        foreach (var path in access.GetProperty("members").EnumerateArray())
+        {
+            var member = value;
+            foreach (var name in path.EnumerateArray()) member = member[name.GetString()!];
+            members.Add(RuntimeValues.Encode(member));
+        }
+        var asMapPresent = value.AsMap() is not null;
+        var traversal = Entries(value.AsMap());
+        var readFields = new List<object?>();
+        foreach (var name in access.GetProperty("readFields").EnumerateArray())
+            readFields.Add(Observed(() => value.ReadField(name.GetString()!) is { } field ? RuntimeValues.Encode(field) : null));
+        var materialized = new List<object?>();
+        for (var round = 0; round < access.GetProperty("materialize").GetInt32(); round++) materialized.Add(Observed(() => Entries(value.MaterializedMap())));
+        var json = access.GetProperty("toJson").GetBoolean() ? Observed(() => value.ToJson()) : null;
+        var messageJson = access.GetProperty("toMessageJson").GetBoolean()
+            ? Observed(() => GameEventScriptMessage.Create("Done", [new GesMessageArgument("value", value)]).ToJson())
+            : null;
+        return new
+        {
+            status = "ok",
+            access = new
+            {
+                length,
+                json,
+                messageJson,
+                normalized = external is not null ? null : RuntimeValues.Encode(value),
+                members,
+                traversal,
+                asMapPresent,
+                hostObject = ReferenceEquals(value.ExternalValue, probe),
+                readFields,
+                materialized,
+                externalFieldReads = probe.Reads
+            }
+        };
+    }
+
+    private static object? Observed(Func<object?> read)
+    {
+        try
+        {
+            return read();
+        }
+        catch (GesFatalRuntimeException exception)
+        {
+            return new { failure = exception.Diagnostic.Code };
+        }
+    }
+
+    private static GesValue FromEntries(JsonElement input)
+    {
+        var type = input.GetProperty("type").GetString()!;
+        var entries = input.GetProperty("entries").EnumerateArray().Select(e => (e.GetProperty("key").GetString()!, Construct(e.GetProperty("value")))).ToArray();
+        return type == ":Map" ? GesValue.GesMap(entries) : GesValue.GesRecord(type[1..], entries);
+    }
+
+    private static List<object>? Entries(GesValueMap? map)
+    {
+        if (map is null) return null;
+        var entries = new List<object>();
+        foreach (var (key, entry) in map) entries.Add(new { key, value = RuntimeValues.Encode(entry) });
+        return entries;
+    }
+
+    // Exposes the fields of a Record as an external value of the same type name; a custom field type keeps each value,
+    // and one getter can raise a platform failure or, with a code, a deliberate fault.
+    internal sealed class ExternalRecord(GesValue record, string? failingField = null, string? failingCode = null) : IGesExternalValue
+    {
+        public GesExternalTypeDefinition Definition { get; } = new(record.CustomTypeName!, record.AsMap()!.Select(entry => new GesExternalTypeFieldDefinition(entry.Key, "Field")), []);
+
+        public GesValue? GetField(string fieldName)
+        {
+            if (fieldName != failingField) return record.AsMap()!.Get(fieldName);
+            throw failingCode is null ? new InvalidOperationException("Configured field failure.") : new GesExtensionFaultException(failingCode, "Configured field fault.");
+        }
+    }
+
+    // `counting` returns the number of reads, `typed` an integer that its Float<Watt> declaration turns into watts,
+    // `failing` raises an unanticipated platform failure, `faulting` a deliberate fault, `ordered` a deliberate fault
+    // per field and `sparse` leaves one field without a value.
+    private sealed class ExternalProbe(string mode) : IGesExternalValue
+    {
+        public int Reads { get; private set; }
+
+        public GesExternalTypeDefinition Definition { get; } = new("AccessProbe", mode switch
+        {
+            "typed" => [new GesExternalTypeFieldDefinition("power", GesBytecodeTypeKind.Float, GesQuantityUnit.UnitWatt)],
+            "ordered" => [new GesExternalTypeFieldDefinition("z", "Number"), new GesExternalTypeFieldDefinition("a", "Number")],
+            "sparse" => [new GesExternalTypeFieldDefinition("c", "Number"), new GesExternalTypeFieldDefinition("b", "Number"), new GesExternalTypeFieldDefinition("a", "Number")],
+            _ => [new GesExternalTypeFieldDefinition("x", "Number")]
+        }, []);
+
+        public GesValue? GetField(string fieldName)
+        {
+            Reads++;
+            return mode switch
+            {
+                "failing" => throw new InvalidOperationException("Configured field failure."),
+                "faulting" => throw new GesExtensionFaultException("probe.fault", "Configured field fault."),
+                "typed" => GesValue.GesInteger(3),
+                "ordered" => throw new GesExtensionFaultException("probe." + fieldName, "Configured field fault."),
+                "sparse" => fieldName == "b" ? null : GesValue.GesInteger(fieldName == "c" ? 1 : 3),
+                _ => GesValue.GesInteger(Reads)
+            };
+        }
     }
 
     private static object RunLiteral(JsonElement literal)

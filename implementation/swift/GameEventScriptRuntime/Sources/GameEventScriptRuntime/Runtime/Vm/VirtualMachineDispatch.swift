@@ -429,7 +429,7 @@ extension GesVirtualMachine {
                 instrumentation.phaseStarting(.advance)
                 executed += 1
             }
-        } catch let fault as GesExtensionFaultError { raiseError(fault.diagnostic) } catch let fault as GesRuntimeError { raiseError(fault.diagnostic) } catch { raiseError("runtime.unhandledFailure", error: error) }
+        } catch let fault as any GesFatalRuntimeError { raiseError(fault.diagnostic) } catch { raiseError("runtime.unhandledFailure", error: error) }
         instrumentation.finishSlice()
         runtimeBudget.complete(executed: executed, reserved: reserved, processing: processing)
         return executed

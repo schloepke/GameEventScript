@@ -65,6 +65,15 @@ The runtime constructor retains the four converted arguments and sets
 The runtime value exposes only `IGesExternalValue`; the portable
 case must not depend on a language-specific backing object.
 
+## External type `ReadProbe`
+
+The fixed V1 external-type catalog also declares `ReadProbe(failOther: Boolean)` with
+fields `failOther: Boolean`, `count: Float<UnitNone>` and `other: Float<UnitNone>` in
+that order, so a case can observe which getters run. `failOther` retains the
+constructor input. Every read of `count` returns one more than the read before it,
+starting at 1. Reading `other` raises an unanticipated platform failure when
+`failOther` is true and otherwise returns 0.
+
 ## External type `CallbackProbe`
 
 The fixed V1 external-type catalog also declares

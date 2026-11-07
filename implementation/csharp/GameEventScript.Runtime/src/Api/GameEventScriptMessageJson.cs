@@ -25,6 +25,7 @@ public sealed partial class GameEventScriptMessage
     /// <summary>Serializes this message and its complete portable data graph as a canonical V1 JSON envelope.</summary>
     /// <returns>The canonical V1 JSON envelope.</returns>
     /// <exception cref="GesMessageFormatException">The graph is unsupported or exceeds limits.</exception>
+    /// <exception cref="GesFatalRuntimeException">An external field getter failed.</exception>
     public string ToJson()
         => GesJson.Write(GesJson.Object(("version", GesValue.GesInteger(1)), ("message", new GesMessageJsonCodec().EncodeMessage(this, 0))));
 

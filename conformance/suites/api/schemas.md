@@ -14365,3 +14365,599 @@ schema:
     text: "baseline error wire.truncated path=x bit=8\n"
     valid: false
 ```
+
+---
+
+## Test: a Record encodes its fields
+
+This public API case encodes a Record; the next case gives its external form the same bytes.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: record-next-to-external
+kind: schemaApi
+level: atomic
+schemaApi:
+  sources:
+    - "schema :Hit as {\n  a: :Number integer between 0 and 255\n}\n"
+  root: Hit
+  encode:
+    type: ":Hit"
+    entries:
+      - { key: a, value: { type: ":Number.int64", value: "7" } }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "07"
+```
+
+---
+
+## Test: an external value encodes through its declared fields
+
+This public API case encodes an external value whose type name matches the schema; its fields are materialized, as JSON does.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: external-value
+kind: schemaApi
+level: atomic
+schemaApi:
+  sources:
+    - "schema :Hit as {\n  a: :Number integer between 0 and 255\n}\n"
+  root: Hit
+  encode:
+    type: ":Hit"
+    entries:
+      - { key: a, value: { type: ":Number.int64", value: "7" } }
+  encodeExternal: true
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "07"
+```
+
+---
+
+## Test: an external value of another type is rejected
+
+This public API case encodes an external value whose type name differs from the schema.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: external-value-other-type
+kind: schemaApi
+level: atomic
+schemaApi:
+  sources:
+    - "schema :Hit as {\n  a: :Number integer between 0 and 255\n}\n"
+  root: Hit
+  encode:
+    type: ":Other"
+    entries:
+      - { key: a, value: { type: ":Number.int64", value: "7" } }
+  encodeExternal: true
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    error: { code: "wire.typeMismatch", path: "" }
+```
+
+---
+
+## Test: a nested Record encodes its fields
+
+This public API case encodes a nested Record; the next case gives its external form the same bytes.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: nested-record-next-to-external
+kind: schemaApi
+level: atomic
+schemaApi:
+  sources:
+    - "schema :Pos as {\n  x: :Number integer between 0 and 255\n}\n\nschema :Hit as {\n  pos: :Pos\n}\n"
+  root: Hit
+  encode:
+    type: ":Hit"
+    entries:
+      - key: pos
+        value:
+          type: ":Pos"
+          entries:
+            - { key: x, value: { type: ":Number.int64", value: "7" } }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "07"
+```
+
+---
+
+## Test: a nested external value encodes through its declared fields
+
+This public API case encodes a Record with an external value as a field.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: external-value-nested
+kind: schemaApi
+level: atomic
+schemaApi:
+  sources:
+    - "schema :Pos as {\n  x: :Number integer between 0 and 255\n}\n\nschema :Hit as {\n  pos: :Pos\n}\n"
+  root: Hit
+  encode:
+    type: ":Hit"
+    entries:
+      - key: pos
+        value:
+          type: ":Pos"
+          entries:
+            - { key: x, value: { type: ":Number.int64", value: "7" } }
+  externalFields: [pos]
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "07"
+```
+
+---
+
+## Test: a nested external value of another type is rejected at its path
+
+This public API case encodes a Record with an external value of another type as a field.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: external-value-nested-other-type
+kind: schemaApi
+level: atomic
+schemaApi:
+  sources:
+    - "schema :Pos as {\n  x: :Number integer between 0 and 255\n}\n\nschema :Hit as {\n  pos: :Pos\n}\n"
+  root: Hit
+  encode:
+    type: ":Hit"
+    entries:
+      - key: pos
+        value:
+          type: ":Other"
+          entries:
+            - { key: x, value: { type: ":Number.int64", value: "7" } }
+  externalFields: [pos]
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    error: { code: "wire.typeMismatch", path: "pos" }
+```
+
+---
+
+## Test: an external value encodes as a delta
+
+This public API case encodes an external value against a Record baseline; the bytes equal those of the Record itself.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: external-value-delta
+schemaApi:
+  sources:
+    - "schema :Drone as {\n  id: :Number integer between 0 and 255 key\n  x: :Quantity(m) between -200m and 200m step 5cm delta within 1.55m\n  y: :Quantity(m) between -200m and 200m step 5cm delta within 1.55m\n  heading: :Quantity(°) wrapping between 0° and 360° step 0.5° delta within 15.5°\n}\n"
+  root: "Drone"
+  encode:
+    type: ":Drone"
+    entries:
+      - key: "id"
+        value:
+          type: ":Number.int64"
+          value: "7"
+      - key: "x"
+        value:
+          type: ":Quantity.int64"
+          value: "0"
+          unit: ":meter"
+      - key: "y"
+        value:
+          type: ":Quantity.int64"
+          value: "0"
+          unit: ":meter"
+      - key: "heading"
+        value:
+          type: ":Quantity.int64"
+          value: "0"
+          unit: ":degree"
+  baseline:
+    type: ":Drone"
+    entries:
+      - key: "id"
+        value:
+          type: ":Number.int64"
+          value: "7"
+      - key: "x"
+        value:
+          type: ":Quantity.int64"
+          value: "0"
+          unit: ":meter"
+      - key: "y"
+        value:
+          type: ":Quantity.int64"
+          value: "0"
+          unit: ":meter"
+      - key: "heading"
+        value:
+          type: ":Quantity.int64"
+          value: "0"
+          unit: ":degree"
+  encodeExternal: true
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "0700"
+```
+
+---
+
+## Test: an external baseline encodes and decodes a delta
+
+This public API case uses an external value as the baseline of an encoding and a decoding.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: external-baseline-delta
+schemaApi:
+  sources:
+    - "schema :Drone as {\n  id: :Number integer between 0 and 255 key\n  x: :Quantity(m) between -200m and 200m step 5cm delta within 1.55m\n  y: :Quantity(m) between -200m and 200m step 5cm delta within 1.55m\n  heading: :Quantity(°) wrapping between 0° and 360° step 0.5° delta within 15.5°\n}\n"
+  root: "Drone"
+  encode:
+    type: ":Drone"
+    entries:
+      - key: "id"
+        value:
+          type: ":Number.int64"
+          value: "7"
+      - key: "x"
+        value:
+          type: ":Quantity.int64"
+          value: "0"
+          unit: ":meter"
+      - key: "y"
+        value:
+          type: ":Quantity.int64"
+          value: "0"
+          unit: ":meter"
+      - key: "heading"
+        value:
+          type: ":Quantity.int64"
+          value: "0"
+          unit: ":degree"
+  baseline:
+    type: ":Drone"
+    entries:
+      - key: "id"
+        value:
+          type: ":Number.int64"
+          value: "7"
+      - key: "x"
+        value:
+          type: ":Quantity.int64"
+          value: "0"
+          unit: ":meter"
+      - key: "y"
+        value:
+          type: ":Quantity.int64"
+          value: "0"
+          unit: ":meter"
+      - key: "heading"
+        value:
+          type: ":Quantity.int64"
+          value: "0"
+          unit: ":degree"
+  decode: "0700"
+  baselineExternal: true
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "0700"
+  decoded:
+    value:
+      type: ":Drone"
+      entries:
+        - key: "id"
+          value:
+            type: ":Number.int64"
+            value: "7"
+        - key: "x"
+          value:
+            type: ":Quantity.int64"
+            value: "0"
+            unit: ":meter"
+        - key: "y"
+          value:
+            type: ":Quantity.int64"
+            value: "0"
+            unit: ":meter"
+        - key: "heading"
+          value:
+            type: ":Quantity.int64"
+            value: "0"
+            unit: ":degree"
+    byteCount: 2
+  maxByteCount: 7
+```
+
+---
+
+## Test: a failing getter is no wire error
+
+This public API case encodes an external value whose getter fails; the encoding reports the runtime failure of the field read.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: external-value-getter-failure
+kind: schemaApi
+level: atomic
+schemaApi:
+  sources:
+    - "schema :Hit as {\n  a: :Number integer between 0 and 255\n}\n"
+  root: Hit
+  encode:
+    type: ":Hit"
+    entries:
+      - { key: a, value: { type: ":Number.int64", value: "7" } }
+  encodeExternal: true
+  failingField: a
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    failure: runtime.externalFieldAccessFailed
+```
+
+---
+
+## Test: a deliberate fault of a getter keeps its code through the encoding
+
+This public API case encodes an external value whose getter raises a deliberate fault; the encoding reports the fault's own code.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: external-value-getter-fault
+kind: schemaApi
+level: atomic
+schemaApi:
+  sources:
+    - "schema :Hit as {\n  a: :Number integer between 0 and 255\n}\n"
+  root: Hit
+  encode:
+    type: ":Hit"
+    entries:
+      - { key: a, value: { type: ":Number.int64", value: "7" } }
+  encodeExternal: true
+  failingField: a
+  failingCode: probe.fault
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    failure: probe.fault
+```
+
+---
+
+## Test: a failing getter of a baseline is no wire error
+
+This public API case encodes and decodes a delta against an external baseline whose getter fails; both report the runtime failure of the field read.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: external-baseline-getter-failure
+schemaApi:
+  sources:
+    - "schema :Drone as {\n  id: :Number integer between 0 and 255 key\n  x: :Quantity(m) between -200m and 200m step 5cm delta within 1.55m\n  y: :Quantity(m) between -200m and 200m step 5cm delta within 1.55m\n  heading: :Quantity(°) wrapping between 0° and 360° step 0.5° delta within 15.5°\n}\n"
+  root: "Drone"
+  encode:
+    type: ":Drone"
+    entries:
+      - key: "id"
+        value:
+          type: ":Number.int64"
+          value: "7"
+      - key: "x"
+        value:
+          type: ":Quantity.int64"
+          value: "0"
+          unit: ":meter"
+      - key: "y"
+        value:
+          type: ":Quantity.int64"
+          value: "0"
+          unit: ":meter"
+      - key: "heading"
+        value:
+          type: ":Quantity.int64"
+          value: "0"
+          unit: ":degree"
+  baseline:
+    type: ":Drone"
+    entries:
+      - key: "id"
+        value:
+          type: ":Number.int64"
+          value: "7"
+      - key: "x"
+        value:
+          type: ":Quantity.int64"
+          value: "0"
+          unit: ":meter"
+      - key: "y"
+        value:
+          type: ":Quantity.int64"
+          value: "0"
+          unit: ":meter"
+      - key: "heading"
+        value:
+          type: ":Quantity.int64"
+          value: "0"
+          unit: ":degree"
+  decode: "0700"
+  baselineExternal: true
+  baselineFailingField: x
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    failure: runtime.externalFieldAccessFailed
+  decoded:
+    failure: runtime.externalFieldAccessFailed
+```
+
+---
+
+## Test: a deliberate fault of a baseline getter keeps its code
+
+This public API case encodes and decodes a delta against an external baseline whose getter raises a deliberate fault; both report its own code.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: external-baseline-getter-fault
+schemaApi:
+  sources:
+    - "schema :Drone as {\n  id: :Number integer between 0 and 255 key\n  x: :Quantity(m) between -200m and 200m step 5cm delta within 1.55m\n  y: :Quantity(m) between -200m and 200m step 5cm delta within 1.55m\n  heading: :Quantity(°) wrapping between 0° and 360° step 0.5° delta within 15.5°\n}\n"
+  root: "Drone"
+  encode:
+    type: ":Drone"
+    entries:
+      - key: "id"
+        value:
+          type: ":Number.int64"
+          value: "7"
+      - key: "x"
+        value:
+          type: ":Quantity.int64"
+          value: "0"
+          unit: ":meter"
+      - key: "y"
+        value:
+          type: ":Quantity.int64"
+          value: "0"
+          unit: ":meter"
+      - key: "heading"
+        value:
+          type: ":Quantity.int64"
+          value: "0"
+          unit: ":degree"
+  baseline:
+    type: ":Drone"
+    entries:
+      - key: "id"
+        value:
+          type: ":Number.int64"
+          value: "7"
+      - key: "x"
+        value:
+          type: ":Quantity.int64"
+          value: "0"
+          unit: ":meter"
+      - key: "y"
+        value:
+          type: ":Quantity.int64"
+          value: "0"
+          unit: ":meter"
+      - key: "heading"
+        value:
+          type: ":Quantity.int64"
+          value: "0"
+          unit: ":degree"
+  decode: "0700"
+  baselineExternal: true
+  baselineFailingField: x
+  failingCode: probe.fault
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    failure: probe.fault
+  decoded:
+    failure: probe.fault
+```

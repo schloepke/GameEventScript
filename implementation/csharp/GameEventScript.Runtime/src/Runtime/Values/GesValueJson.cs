@@ -12,6 +12,7 @@ public partial struct GesValue
     /// <summary>Serializes this value in a versioned value envelope, exporting external objects as Records.</summary>
     /// <returns>The canonical V1 JSON value envelope.</returns>
     /// <exception cref="GesMessageFormatException">The graph is unsupported or exceeds limits.</exception>
+    /// <exception cref="GesFatalRuntimeException">An external field getter failed.</exception>
     public readonly string ToJson()
         => GesJson.Write(GesJson.Object(("version", GesInteger(1)), ("value", new GesMessageJsonCodec().Encode(this, 0))));
 

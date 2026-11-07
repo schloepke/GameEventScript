@@ -359,3 +359,134 @@ steps:
     local:
       - name: Done
 ```
+
+---
+
+## Test: a field read runs only that getter and keeps nothing
+
+Each read of `count` runs its getter again, and the failing getter of the other field stays unread.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: field-read-runs-one-getter
+```
+
+### Source code under test
+
+```ges
+module readprobe
+on Start() {
+  let probe be :ReadProbe(failOther: true)
+  emit Done(first: probe.count, second: probe.count)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    local:
+      - name: Done
+        args:
+          - name: first
+            value: { type: ":Number.int64", value: "1" }
+          - name: second
+            value: { type: ":Number.int64", value: "2" }
+```
+
+---
+
+## Test: materializing runs every getter
+
+A conversion to Map reads every declared field, so the failing getter aborts the handler.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: materializing-runs-every-getter
+```
+
+### Source code under test
+
+```ges
+module readprobe
+on Start() {
+  let probe be :ReadProbe(failOther: true)
+  emit MustNotRun(value: probe as :Map)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    diagnostics:
+      - phase: runtime
+        code: runtime.externalFieldAccessFailed
+        symbol: ReadProbe.other
+```
+
+---
+
+## Test: every materialization reads the fields again
+
+Two conversions to Map see two different counts.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: materializing-keeps-nothing
+```
+
+### Source code under test
+
+```ges
+module readprobe
+on Start() {
+  let probe be :ReadProbe(failOther: false)
+  let first be probe as :Map
+  let second be probe as :Map
+  emit Done(first: first.count, second: second.count)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    local:
+      - name: Done
+        args:
+          - name: first
+            value: { type: ":Number.int64", value: "1" }
+          - name: second
+            value: { type: ":Number.int64", value: "2" }
+```

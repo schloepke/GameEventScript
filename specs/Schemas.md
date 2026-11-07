@@ -937,7 +937,7 @@ with a conversion to the closest binary64. `GesBoundSchema.Schema` leads back to
 For rare data, Runtime offers `GesSchemaValues`: `Encode(bot, value, buffer)` encodes a
 [Record, Map or Message](#record-values), `Decode(bot, bytes)` returns the value and the
 bytes it occupied, and `ReadKey(bot, bytes)` returns a [key](#keys) without decoding the
-rest. `Encode(bot, value, baseline, buffer)` and `Decode(bot, bytes, baseline)` do the same for a
+rest. An external value of the schema's type name encodes through its materialized fields, also as a nested Record or a baseline, and a failing getter propagates as the [runtime failure of a field read](PublicApi.md), not as a wire error. `Encode(bot, value, baseline, buffer)` and `Decode(bot, bytes, baseline)` do the same for a
 [delta](#deltas) against a baseline value. Swift uses the idiomatic spelling of the same concepts. Kinds do not convert implicitly:
 the language computes with Boolean and Dice as numbers, but a Number, Quantity or Percentage
 field rejects them with `wire.typeMismatch`, because decoding could not return them. A script

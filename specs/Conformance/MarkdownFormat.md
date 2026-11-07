@@ -844,6 +844,48 @@ value:
   equalHash: true
 ```
 
+> **Since: Unreleased** — member access input
+
+Alternatively, `valueApi.access` reads members and traverses a Map or Record, and
+allows no other `valueApi` field. It holds either `value` or `external`, an
+adapter-owned external value that counts its field reads: `counting` declares the field `x`
+and returns the number of reads, `typed` declares `power: Float<Watt>` and returns the
+integer 3, `failing` declares `x`, whose getter raises an unanticipated platform failure, `faulting`
+declares `x`, whose getter raises a deliberate fault with the code `probe.fault`, `ordered`
+declares `z` and then `a`, whose getters raise deliberate faults with the codes `probe.z` and
+`probe.a`, and `sparse` declares `c`, `b` and `a`, of which `c` returns 1, `b` no value and `a` 3.
+`fromEntries: true` builds the outer `value` through the ordered-entries factory
+instead of the parallel one. `members` lists name paths, each read link by link.
+The expectation `access` may constrain `normalized`, `members` (one value per path),
+`traversal` (the entries in order, `null` when the value is no Map or Record) and
+`externalFieldReads`, and also `asMapPresent` and `hostObject` (whether `AsMap` and
+`ExternalValue` return something). `readFields` lists names read with `ReadField`,
+`materialize` counts `MaterializedMap` calls, `toJson: true` calls the value's JSON
+serialization once and `toMessageJson: true` that of a message with the value as its argument;
+the expectations `readFields` (one value or `null` each), `materialized` (one entry list or
+`null` each), `json` and `messageJson` (the text) report them, or `{ failure: code }` for a
+getter failure. The expectation `length` reports the value's `Length`, read first.
+
+```yaml
+valueApi:
+  access:
+    fromEntries: true
+    value:
+      type: ":Map"
+      entries:
+        - { key: a, value: { type: ":Number.int64", value: "1" } }
+    members: [[a], [missing]]
+```
+
+```yaml
+access:
+  members:
+    - { type: ":Number.int64", value: "1" }
+    - { type: ":Nothing" }
+  traversal:
+    - { key: a, value: { type: ":Number.int64", value: "1" } }
+```
+
 > **Since: Unreleased** — literal parsing input
 
 Alternatively, `valueApi.literal` parses `text` through the public literal
@@ -874,8 +916,8 @@ literal:
 
 Requires `schema-api` and no GES source. `schemaApi.sources` lists schema source texts, named
 `schema0.gess` and so on; `root` names a declaration and `parameters` maps parameter names to
-literals or to Int64 or Binary64 Number or Quantity values in the `valueApi.value` transport. `encode` holds a value with the `valueApi.value` transport, `encodeBuffer` an optional
-buffer size, `baseline` a value with the same transport that makes `encode` and `decode` work on
+literals or to Int64 or Binary64 Number or Quantity values in the `valueApi.value` transport. `encode` holds a value with the `valueApi.value` transport, which `encodeExternal: true` wraps as an adapter-owned external value when it is a Record, with the getter of `failingField` raising an unanticipated platform failure or, with `failingCode`, a deliberate fault with that code, which `encoded` reports as `{ failure: code }`, and of which `externalFields` lists the Record fields to wrap in the same way, `baselineExternal: true` to wrap the Record in `baseline` as well, with the getter of `baselineFailingField` failing in the same way, which `encoded` and `decoded` report, `encodeBuffer` an optional
+buffer size without a `baseline`, `baseline` a value with the same transport that makes `encode` and `decode` work on
 deltas against it, `decode` lowercase hexadecimal bytes, `decodeLimit` an optional byte limit, `key`
 bytes whose key is read, `dump` bytes to dump, `dumpBaseline` the full record that makes `dump` read a delta, `deltaEncode` the bytes of `record` and `baseline` and `deltaDecode` those of `delta` and `baseline` for `GesSchemaDelta`, `describe: true` to observe the root's description, and `document` a document text to check. `bind` overrides whether the
 root is bound, which by default holds for a root without a document. The expectation `schema`

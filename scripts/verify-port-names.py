@@ -55,7 +55,6 @@ PLATFORM_ONLY = {
     ("csharp", "Compiler", "GesProgramBuilderEntry"): "C# 14 static extension container; Swift extends GameEventScriptProgram directly",
     ("csharp", "Syntax", "GesQuantityUnits"): "C# extension container: C# enums cannot declare the members Swift GesQuantityUnit has",
     ("csharp", "Compiler", "GesTokenValues"): "C# extension container for token numbers; Swift reads them through GesCompilerSupport",
-    ("csharp", "Runtime", "GesFatalRuntimeError"): "C# exception base class; Swift error structs have no inheritance",
     ("swift", "Runtime", "GesValueError"): "idiomatic mapping: C# throws BCL argument exceptions for invalid values",
     ("swift", "Runtime", "GesApiError"): "idiomatic mapping: C# throws BCL ArgumentException/InvalidOperationException",
     ("swift", "Runtime", "GesMessageError"): "idiomatic mapping: C# throws BCL argument exceptions for invalid message input",

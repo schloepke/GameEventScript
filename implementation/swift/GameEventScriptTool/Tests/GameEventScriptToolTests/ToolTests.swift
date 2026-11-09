@@ -130,6 +130,32 @@ final class ToolTests: XCTestCase {
         XCTAssertTrue(missing.error.contains("error schema.unknownName"))
     }
 
+    func testSchemaGenerateWritesAndChecksCode() throws {
+        let drone = try file("drone.gess", "schema :Drone as {\n  id: :Number integer between 0 and 255 key\n  on: :Boolean\n}\n")
+        let csharp = run(["schema", "generate", drone, "--root", "Drone", "--language", "csharp", "--namespace", "Game.Net"])
+        XCTAssertEqual(csharp.code, 0, csharp.error)
+        XCTAssertTrue(csharp.output.contains("public partial struct Drone"))
+        let swift = run(["schema", "generate", drone, "--all-roots", "--language", "swift", "--access", "internal"])
+        XCTAssertTrue(swift.output.contains("struct Drone: Sendable {"))
+        XCTAssertFalse(swift.output.contains("public "))
+        let output = directory.appendingPathComponent("Drone.g.cs").path
+        XCTAssertEqual(run(["schema", "generate", drone, "--root", "Drone", "--language", "csharp", "-o", output, "--check"]).code, 1)
+        XCTAssertEqual(run(["schema", "generate", drone, "--root", "Drone", "--language", "csharp", "-o", output]).code, 0)
+        XCTAssertEqual(run(["schema", "generate", drone, "--root", "Drone", "--language", "csharp", "-o", output, "--check"]).code, 0)
+        try (try String(contentsOfFile: output, encoding: .utf8) + "// edited\n").write(toFile: output, atomically: true, encoding: .utf8)
+        let outdated = run(["schema", "generate", drone, "--root", "Drone", "--language", "csharp", "-o", output, "--check"])
+        XCTAssertEqual(outdated.code, 1)
+        XCTAssertTrue(outdated.error.contains("error cli.outdated: \(output) differs from the generated code."))
+        XCTAssertEqual(run(["schema", "generate", drone, "--root", "Drone"]).code, 2)
+        XCTAssertEqual(run(["schema", "generate", drone, "--root", "Drone", "--language", "java"]).code, 2)
+        XCTAssertEqual(run(["schema", "generate", drone, "--root", "Drone", "--language", "swift", "--check"]).code, 2)
+        XCTAssertEqual(run(["schema", "generate", drone, "--root", "Drone", "--language", "swift", "--access", "private"]).code, 2)
+        XCTAssertEqual(run(["schema", "layout", drone, "--root", "Drone", "--language", "swift"]).code, 2)
+        let invalid = run(["schema", "generate", drone, "--root", "Drone", "--language", "swift", "--namespace", "1x"])
+        XCTAssertEqual(invalid.code, 1)
+        XCTAssertTrue(invalid.error.contains("error generate.invalidNamespace"))
+    }
+
     func testSchemaCommandsCheckHashFormatAndDump() throws {
         let source = try file("drone.gess", "// note\nschema :Drone as {\n  id: :Number integer between 0 and 255 key\n  x: :Quantity(m) between 0m and 2km step 1cm\n}\n")
         XCTAssertEqual(run(["schema", "check", source, "--quiet"]).code, 0)

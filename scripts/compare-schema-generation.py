@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 # Copyright 2026 Stephan Schlöpke
 # SPDX-License-Identifier: Apache-2.0
-"""Require identical schema generation layouts from the C# and Swift CLIs.
+"""Require identical schema generation layouts and code from the C# and Swift CLIs.
 
 Every distinct combination of sources, root and parameters in the schemaApi cases of the corpus runs `schema layout` in
-both CLIs, once with its root and once with --all-roots. Both must print the same JSON, or both must fail with the same
-error code. --self-test qualifies the comparison with negative controls.
+both CLIs, once with its root and once with --all-roots, and `schema generate` for C# and for Swift with its root. Both
+must print the same text, or both must fail with the same error code. --self-test qualifies the comparison with negative
+controls.
 """
 import argparse
 from concurrent.futures import ThreadPoolExecutor
@@ -77,12 +78,13 @@ def compare(index, item, csharp, swift, work):
         files.append(path.name)
     options = [argument for name, value in parameters for argument in ("--param", f"{name}={value}")]
     differences = []
-    for selection in (["--root", root], ["--all-roots"]):
-        arguments = ["schema", "layout", *files, *selection, *options]
+    for selection in (["layout", "--root", root], ["layout", "--all-roots"], ["generate", "--root", root, "--language", "csharp", "--namespace", "Game.Wire"],
+                      ["generate", "--root", root, "--language", "swift", "--namespace", "Wire", "--access", "internal"]):
+        arguments = ["schema", selection[0], *files, *selection[1:], *options]
         runs = [subprocess.run([*command, *arguments], cwd=directory, capture_output=True, check=False, timeout=TIMEOUT_SECONDS) for command in (csharp, swift)]
         found = difference(outcome(runs[0]), outcome(runs[1]))
         if found:
-            differences.append(f"{root} {' '.join(selection)}: {found}")
+            differences.append(f"{' '.join(selection)}: {found}")
     return differences
 
 
@@ -100,7 +102,7 @@ def self_test():
     assert difference(outcome(ok), outcome(longer))
     sample = inputs([ROOT / "conformance/suites/api/schemas.md"])
     assert sample and all(len(item) == 3 for item in sample)
-    print("Schema layout comparison controls passed.")
+    print("Schema generation comparison controls passed.")
 
 
 def main():
@@ -120,7 +122,7 @@ def main():
     differences = [line for result in results for line in result]
     for line in differences:
         print(line)
-    print(f"{len(items)} schema inputs, {2 * len(items)} layouts: {len(differences)} port differences")
+    print(f"{len(items)} schema inputs, {2 * len(items)} layouts and {2 * len(items)} generated sources: {len(differences)} port differences")
     return 1 if differences else 0
 
 

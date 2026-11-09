@@ -58,6 +58,8 @@ python3 "$ges_root/scripts/test-binary-roundtrip-properties.py" --skip-build
 dotnet build "$ges_root/implementation/csharp/GameEventScript.Tool/src/GameEventScript.Tool.csproj" --configuration Release
 python3 "$ges_root/scripts/test-compiler-output-controls.py"
 python3 "$ges_root/scripts/compare-compiler-output.py"
-python3 "$ges_root/scripts/compare-schema-layout.py" --self-test
-python3 "$ges_root/scripts/compare-schema-layout.py"
+python3 "$ges_root/scripts/compare-schema-generation.py" --self-test
+python3 "$ges_root/scripts/compare-schema-generation.py"
+python3 "$ges_root/scripts/test-generated-schemas.py" --self-test
+python3 "$ges_root/scripts/test-generated-schemas.py"
 python3 "$ges_root/scripts/test-constructor-forms.py"

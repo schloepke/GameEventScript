@@ -20,6 +20,8 @@ Usage:
   dotnet ges schema canonical <schema.gess> [more.gess ...] --root <Name>
   dotnet ges schema dump <schema.gess> [more.gess ...] --root <Name> [--param <name>=<literal> ...] --data <data.bin> [--baseline <record.bin>]
   dotnet ges schema layout <schema.gess> [more.gess ...] (--root <Name> ... | --all-roots) [--param <name>=<literal> ...] [-o <layout.json>]
+  dotnet ges schema generate <schema.gess> [more.gess ...] (--root <Name> ... | --all-roots) [--param <name>=<literal> ...]
+                             --language csharp|swift [--namespace <A.B>] [--access public|internal] [-o <file> [--check]]
 
 Commands:
   check      Read schemas and report the first error with its line and column.
@@ -28,14 +30,19 @@ Commands:
   canonical  Print the canonical form that the schema hash runs over.
   dump       List each field of binary data with its bit offset, width and value.
   layout     Print the language-neutral generation layout of the roots and every type they reach as JSON.
+  generate   Generate C# or Swift code that writes and reads the records of the roots and every type they reach.
 
 Options:
   --root <Name>             The schema, message or message set; layout accepts several.
-  --all-roots               Make every declaration of the files a root of layout.
+  --all-roots               Make every declaration of the files a root of layout or generate.
+  --language <name>         The language that generate writes: csharp or swift.
+  --namespace <A.B>         The namespace of the generated types; Swift declares it as nested enums.
+  --access <level>          The visibility of the generated types: public (default) or internal.
+  --check                   Compare the generated code with the output file instead of writing it; differences fail.
   --param <name>=<literal>  A parameter value such as worldWidth=5000m; repeat for each one.
   --data <path>             The binary data of dump.
   --baseline <path>         The full record that makes dump read the data as a delta.
-  -o, --output <path>       Write the formatted source or the layout to a UTF-8 file instead of stdout.
+  -o, --output <path>       Write the formatted source, the layout or the code to a UTF-8 file instead of stdout.
   -q, --quiet               Hide the success report of check.
   -h, --help                Show this help.
 """;
@@ -49,11 +56,15 @@ Options:
         }
 
         var command = arguments[0];
-        if (command is not ("check" or "format" or "hash" or "canonical" or "dump" or "layout")) return UsageError($"Unknown schema command '{command}'.");
+        if (command is not ("check" or "format" or "hash" or "canonical" or "dump" or "layout" or "generate")) return UsageError($"Unknown schema command '{command}'.");
         var paths = new List<string>();
         string? root = null;
         var roots = new List<string>();
         var allRoots = false;
+        var check = false;
+        string? language = null;
+        string? space = null;
+        string? access = null;
         string? data = null;
         string? baseline = null;
         string? output = null;
@@ -69,20 +80,25 @@ Options:
             }
 
             if (argument is "-q" or "--quiet" && command == "check") quiet = true;
-            else if (argument == "--all-roots" && command == "layout") allRoots = true;
-            else if (argument is "--root" or "--data" or "--baseline" or "--param" or "-o" or "--output")
+            else if (argument == "--all-roots" && command is "layout" or "generate") allRoots = true;
+            else if (argument == "--check" && command == "generate") check = true;
+            else if (argument is "--root" or "--data" or "--baseline" or "--param" or "-o" or "--output" or "--language" or "--namespace" or "--access")
             {
                 var applies = argument switch
                 {
-                    "--root" => command is "hash" or "canonical" or "dump" or "layout",
-                    "--param" => command is "hash" or "dump" or "layout",
+                    "--root" => command is "hash" or "canonical" or "dump" or "layout" or "generate",
+                    "--param" => command is "hash" or "dump" or "layout" or "generate",
                     "--data" or "--baseline" => command == "dump",
-                    _ => command is "format" or "layout"
+                    "--language" or "--namespace" or "--access" => command == "generate",
+                    _ => command is "format" or "layout" or "generate"
                 };
                 if (!applies) return UsageError($"Unknown schema {command} option '{argument}'.");
                 if (index + 1 == arguments.Length) return UsageError($"Specify a value after {argument}.");
                 var next = arguments[++index];
-                if (argument == "--root" && command == "layout")
+                if (argument == "--language") language = next;
+                else if (argument == "--namespace") space = next;
+                else if (argument == "--access") access = next;
+                else if (argument == "--root" && command is "layout" or "generate")
                 {
                     if (roots.Contains(next)) return UsageError($"The root '{next}' is given twice.");
                     roots.Add(next);
@@ -109,7 +125,10 @@ Options:
         if (command == "format" && paths.Count > 1) return UsageError("Format accepts exactly one schema file.");
         if (command is "hash" or "canonical" or "dump" && root is null) return UsageError($"{command} requires --root.");
         if (command == "dump" && data is null) return UsageError("dump requires --data.");
-        if (command == "layout" && (roots.Count > 0) == allRoots) return UsageError("layout requires either --root or --all-roots.");
+        if (command is "layout" or "generate" && (roots.Count > 0) == allRoots) return UsageError($"{command} requires either --root or --all-roots.");
+        if (command == "generate" && language is not ("csharp" or "swift")) return UsageError("generate requires --language csharp or --language swift.");
+        if (access is not (null or "public" or "internal")) return UsageError("--access is public or internal.");
+        if (check && output is null) return UsageError("--check requires -o with the file to compare.");
         if (output is not null)
         {
             if (string.IsNullOrWhiteSpace(output)) return UsageError("The output path must not be empty.");
@@ -146,8 +165,14 @@ Options:
                 case "canonical":
                     Console.Write(set.Schema(root!).CanonicalForm);
                     return 0;
-                case "layout":
-                    return Layout(set, allRoots ? set.Schemas.Select(schema => schema.Name).ToList() : roots, parameters, output);
+                case "layout" or "generate":
+                    var options = command == "layout" ? null : new GesSchemaGenerateOptions
+                    {
+                        Language = language == "swift" ? GesSchemaLanguage.Swift : GesSchemaLanguage.CSharp,
+                        Namespace = space ?? "",
+                        Access = access == "internal" ? GesSchemaAccess.Internal : GesSchemaAccess.Public
+                    };
+                    return Layout(set, allRoots ? set.Schemas.Select(schema => schema.Name).ToList() : roots, parameters, output, options, check);
             }
 
             var schema = set.Schema(root!);
@@ -203,7 +228,8 @@ Options:
         }
     }
 
-    private static int Layout(GesSchemaSet set, List<string> roots, List<(string Name, string Literal)> parameters, string? output)
+    // Prints the layout, or with options the generated code; with check it compares the code with the output file.
+    private static int Layout(GesSchemaSet set, List<string> roots, List<(string Name, string Literal)> parameters, string? output, GesSchemaGenerateOptions? options, bool check)
     {
         var values = new GesSchemaParameters();
         foreach (var (name, literal) in parameters)
@@ -217,7 +243,25 @@ Options:
             values.With(name, literal);
         }
 
-        var text = GesSchemaGenerator.Layout(set, roots, values);
+        string text;
+        try
+        {
+            text = options is null ? GesSchemaGenerator.Layout(set, roots, values) : GesSchemaGenerator.Generate(set, roots, values, options);
+        }
+        catch (GesGeneratorException exception)
+        {
+            Console.Error.WriteLine($"schema: error {exception.Code}: {exception.Message}");
+            return 1;
+        }
+
+        if (check)
+        {
+            var path = Path.GetFullPath(output!);
+            if (File.Exists(path) && File.ReadAllBytes(path).AsSpan().SequenceEqual(StrictUtf8.GetBytes(text))) return 0;
+            Console.Error.WriteLine(File.Exists(path) ? $"error cli.outdated: {output} differs from the generated code." : $"error cli.outdated: {output} does not exist.");
+            return 1;
+        }
+
         if (output is null) Console.Write(text);
         else ToolFileOutput.Write(Path.GetFullPath(output), StrictUtf8.GetBytes(text));
         return 0;

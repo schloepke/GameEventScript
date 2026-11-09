@@ -98,7 +98,7 @@ final class GesLayoutEncoding {
 // as a reference, since parameters belong to files and a schema binds the same wherever it is reached.
 enum GesSchemaLayoutBuilder {
     static func build(_ set: GesSchemaSet, roots: [String], parameters: GesSchemaParameters) throws -> GesSchemaLayout {
-        guard !roots.isEmpty else { throw GesGeneratorError.usage("Specify at least one root.") }
+        guard !roots.isEmpty else { throw GesGeneratorError(GesGeneratorError.usage, "Specify at least one root.") }
         var reached: [String: GesSchema] = [:]
         var rootNames: [String] = []
         var parameterInfos: [String: GesSchemaParameterInfo] = [:]

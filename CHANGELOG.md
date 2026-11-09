@@ -229,6 +229,11 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   external field getters.
 - `GesValueMap` can be traversed in canonical key order: `foreach` in C#, without
   allocating, and `for (key, value) in map` in Swift.
+- `ges schema generate` (and `dotnet ges schema generate`) writes C# 9 or Swift 6 code for schema
+  roots: a type per schema that writes and reads its records with the same bytes, error codes and
+  paths as `GesSchemaWriter` and `GesSchemaReader`, without allocating, with parameters as constants.
+  `--namespace`, `--access internal` and `--check` for checked-in output are supported. Text, List,
+  Dice, messages and deltas follow.
 - `ges schema layout` (and `dotnet ges schema layout`) prints the language-neutral generation
   layout of one or more roots, or of every declaration with `--all-roots`: every reached type with
   its bound encodings, hashes and the parameters its constants depend on. A type that several roots

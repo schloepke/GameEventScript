@@ -124,7 +124,7 @@ internal static class GesSchemaLayoutBuilder
 {
     internal static GesSchemaLayout Build(GesSchemaSet set, IReadOnlyList<string> roots, GesSchemaParameters parameters)
     {
-        if (roots.Count == 0) throw new ArgumentException("Specify at least one root.", nameof(roots));
+        if (roots.Count == 0) throw new GesGeneratorException(GesGeneratorException.Usage, "Specify at least one root.");
         var reached = new SortedDictionary<string, GesSchema>(StringComparer.Ordinal);
         var rootNames = new List<string>();
         var parameterInfos = new SortedDictionary<string, GesSchemaParameterInfo>(StringComparer.Ordinal);

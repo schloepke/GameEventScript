@@ -15,6 +15,8 @@ extension ToolHelp {
           ges schema canonical <schema.gess> [more.gess ...] --root <Name>
           ges schema dump <schema.gess> [more.gess ...] --root <Name> [--param <name>=<literal> ...] --data <data.bin> [--baseline <record.bin>]
           ges schema layout <schema.gess> [more.gess ...] (--root <Name> ... | --all-roots) [--param <name>=<literal> ...] [-o <layout.json>]
+          ges schema generate <schema.gess> [more.gess ...] (--root <Name> ... | --all-roots) [--param <name>=<literal> ...]
+                              --language csharp|swift [--namespace <A.B>] [--access public|internal] [-o <file> [--check]]
 
         Commands:
           check      Read schemas and report the first error with its line and column.
@@ -23,14 +25,19 @@ extension ToolHelp {
           canonical  Print the canonical form that the schema hash runs over.
           dump       List each field of binary data with its bit offset, width and value.
           layout     Print the language-neutral generation layout of the roots and every type they reach as JSON.
+          generate   Generate C# or Swift code that writes and reads the records of the roots and every type they reach.
 
         Options:
           --root <Name>             The schema, message or message set; layout accepts several.
-          --all-roots               Make every declaration of the files a root of layout.
+          --all-roots               Make every declaration of the files a root of layout or generate.
+          --language <name>         The language that generate writes: csharp or swift.
+          --namespace <A.B>         The namespace of the generated types; Swift declares it as nested enums.
+          --access <level>          The visibility of the generated types: public (default) or internal.
+          --check                   Compare the generated code with the output file instead of writing it; differences fail.
           --param <name>=<literal>  A parameter value such as worldWidth=5000m; repeat for each one.
           --data <path>             The binary data of dump.
           --baseline <path>         The full record that makes dump read the data as a delta.
-          -o, --output <path>       Write the formatted source or the layout to a UTF-8 file instead of stdout.
+          -o, --output <path>       Write the formatted source, the layout or the code to a UTF-8 file instead of stdout.
           -q, --quiet               Hide the success report of check.
           -h, --help                Show this help.
         """
@@ -43,11 +50,15 @@ extension Tool {
             return arguments.isEmpty ? 2 : 0
         }
         let command = arguments[0]
-        guard ["check", "format", "hash", "canonical", "dump", "layout"].contains(command) else { throw ToolError.usage("Unknown schema command '\(command)'.") }
+        guard ["check", "format", "hash", "canonical", "dump", "layout", "generate"].contains(command) else { throw ToolError.usage("Unknown schema command '\(command)'.") }
         var paths: [String] = []
         var root: String?
         var roots: [String] = []
         var allRoots = false
+        var check = false
+        var language: String?
+        var space: String?
+        var access: String?
         var data: String?
         var baseline: String?
         var output: String?
@@ -62,22 +73,28 @@ extension Tool {
             }
             if (argument == "-q" || argument == "--quiet") && command == "check" {
                 quiet = true
-            } else if argument == "--all-roots" && command == "layout" {
+            } else if argument == "--all-roots" && (command == "layout" || command == "generate") {
                 allRoots = true
-            } else if ["--root", "--data", "--baseline", "--param", "-o", "--output"].contains(argument) {
+            } else if argument == "--check" && command == "generate" {
+                check = true
+            } else if ["--root", "--data", "--baseline", "--param", "-o", "--output", "--language", "--namespace", "--access"].contains(argument) {
                 let applies: Bool
                 switch argument {
-                case "--root": applies = ["hash", "canonical", "dump", "layout"].contains(command)
-                case "--param": applies = ["hash", "dump", "layout"].contains(command)
+                case "--root": applies = ["hash", "canonical", "dump", "layout", "generate"].contains(command)
+                case "--param": applies = ["hash", "dump", "layout", "generate"].contains(command)
                 case "--data", "--baseline": applies = command == "dump"
-                default: applies = command == "format" || command == "layout"
+                case "--language", "--namespace", "--access": applies = command == "generate"
+                default: applies = ["format", "layout", "generate"].contains(command)
                 }
                 guard applies else { throw ToolError.usage("Unknown schema \(command) option '\(argument)'.") }
                 guard index + 1 < arguments.count else { throw ToolError.usage("Specify a value after \(argument).") }
                 index += 1
                 let next = arguments[index]
                 switch argument {
-                case "--root" where command == "layout":
+                case "--language": language = next
+                case "--namespace": space = next
+                case "--access": access = next
+                case "--root" where command == "layout" || command == "generate":
                     if roots.contains(next) { throw ToolError.usage("The root '\(next)' is given twice.") }
                     roots.append(next)
                 case "--root": root = next
@@ -102,7 +119,10 @@ extension Tool {
         if command == "format" && paths.count > 1 { throw ToolError.usage("Format accepts exactly one schema file.") }
         if ["hash", "canonical", "dump"].contains(command) && root == nil { throw ToolError.usage("\(command) requires --root.") }
         if command == "dump" && data == nil { throw ToolError.usage("dump requires --data.") }
-        if command == "layout" && !roots.isEmpty == allRoots { throw ToolError.usage("layout requires either --root or --all-roots.") }
+        if (command == "layout" || command == "generate") && !roots.isEmpty == allRoots { throw ToolError.usage("\(command) requires either --root or --all-roots.") }
+        if command == "generate" && language != "csharp" && language != "swift" { throw ToolError.usage("generate requires --language csharp or --language swift.") }
+        if let access, access != "public" && access != "internal" { throw ToolError.usage("--access is public or internal.") }
+        if check && output == nil { throw ToolError.usage("--check requires -o with the file to compare.") }
         if let output {
             guard !output.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { throw ToolError.usage("The output path must not be empty.") }
             try ToolFiles.ensureDistinct(output, from: [paths[0]])
@@ -126,8 +146,11 @@ extension Tool {
             case "canonical":
                 io.write(try set.schema(root!).canonicalForm)
                 return 0
-            case "layout":
-                return try layout(set, allRoots ? set.schemas.map(\.name) : roots, parameters, output)
+            case "layout", "generate":
+                let options =
+                    command == "layout"
+                    ? nil : GesSchemaGenerateOptions(language: language == "swift" ? .swift : .csharp, namespace: space ?? "", access: access == "internal" ? .internal : .public)
+                return try layout(set, allRoots ? set.schemas.map(\.name) : roots, parameters, output, options, check)
             default: break
             }
             let schema = try set.schema(root!)
@@ -160,7 +183,8 @@ extension Tool {
         }
     }
 
-    private func layout(_ set: GesSchemaSet, _ roots: [String], _ parameters: [(String, String)], _ output: String?) throws -> Int {
+    // Prints the layout, or with options the generated code; with check it compares the code with the output file.
+    private func layout(_ set: GesSchemaSet, _ roots: [String], _ parameters: [(String, String)], _ output: String?, _ options: GesSchemaGenerateOptions?, _ check: Bool) throws -> Int {
         let values = GesSchemaParameters()
         for (name, literal) in parameters {
             if !(try roots.contains { try set.schema($0).parameters.contains { $0.name == name } }) {
@@ -169,7 +193,23 @@ extension Tool {
             }
             try values.with(name, literal: literal)
         }
-        let text = try GesSchemaGenerator.layout(set, roots: roots, parameters: values)
+        let text: String
+        do {
+            text = try options.map { try GesSchemaGenerator.generate(set, roots: roots, parameters: values, options: $0) } ?? GesSchemaGenerator.layout(set, roots: roots, parameters: values)
+        } catch let error as GesGeneratorError {
+            io.line("schema: error \(error.code): \(error.message)", toError: true)
+            return 1
+        }
+        if check, let output {
+            let path = try ToolFiles.fullPath(output)
+            guard FileManager.default.fileExists(atPath: path) else {
+                io.line("error cli.outdated: \(output) does not exist.", toError: true)
+                return 1
+            }
+            if Array(try Data(contentsOf: URL(fileURLWithPath: path))) == Array(text.utf8) { return 0 }
+            io.line("error cli.outdated: \(output) differs from the generated code.", toError: true)
+            return 1
+        }
         if let output { try ToolFiles.write(Data(text.utf8), to: try ToolFiles.fullPath(output)) } else { io.write(text) }
         return 0
     }

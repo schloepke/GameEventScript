@@ -3,7 +3,7 @@
 
 # Plan: generated schema code (`ges schema generate`)
 
-Status: accepted; phase 1 and the layout half of phase 2 are implemented, the emitters are next. This plan is removed when the feature lands; the normative
+Status: accepted; phases 1 and 2 are implemented, phase 3 is next. This plan is removed when the feature lands; the normative
 rules then live in `specs/Schemas.md`.
 
 Variant B of the schema API: typed code per schema with inlined constants, next to the
@@ -231,14 +231,16 @@ Each phase is one reviewable change and keeps all gates green.
    moved onto them; a Bot write and read and a delta of 48 keyed Bots measured 5 % faster in C#
    and 2 to 4 % faster in Swift than before.
 2. Generator package in both ports, layout format and `ges schema layout` with the parity
-   script (done: `GesSchemaGenerator.Layout`, `ges schema layout`, `compare-schema-layout.py`,
+   script (done: `GesSchemaGenerator.Layout`, `ges schema layout`, `compare-schema-generation.py`,
    format in `specs/Schemas.md#generation-layout`), then the C# and Swift emitters in both ports
    for full records of fixed-width
    schemas (Boolean, numbers, tags, key, nesting, Point, Vector, union, optional), multiple
-   roots and namespaces, name conversion, `Sendable`, `Quantize()`, byte-array conveniences,
-   `generate --check`, and the corpus harness.
+   roots and namespaces, name conversion, `Sendable`, byte-array conveniences,
+   `generate --check`, and the corpus harness (done: `GesSchemaGenerator.Generate`,
+   `ges schema generate`, `test-generated-schemas.py`).
 3. Text, `:Tag max n`, List and Dice with on-demand storage and convenience members; message sets.
-4. Deltas without keyed lists: change bits, delta ranges, wrapping, unions, optional fields.
+4. Deltas without keyed lists: change bits, delta ranges, wrapping, unions, optional fields;
+   wire-value equality and `Quantize()`, which deltas compare by.
 5. Keyed lists in deltas.
 6. `--values`, roundtrip and fuzzing parties, allocation gates, measurement, `specs/Schemas.md`,
    guide, CHANGELOG, PublicApi, Generator package distribution (NuGet, SwiftPM product,

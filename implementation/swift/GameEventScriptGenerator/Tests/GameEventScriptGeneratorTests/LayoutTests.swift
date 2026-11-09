@@ -30,7 +30,7 @@ final class LayoutTests: XCTestCase {
         let text = try GesSchemaGenerator.layout(set, roots: ["A", "B"], parameters: parameters)
         XCTAssertEqual(text.components(separatedBy: "\"name\": \"Cell\",\n      \"kind\"").count, 2)
         XCTAssertTrue(text.contains("\"maxByteCountDepends\": [\n        \"size\"\n      ]"))
-        XCTAssertThrowsError(try GesSchemaGenerator.layout(set, roots: [], parameters: parameters))
+        XCTAssertThrowsError(try GesSchemaGenerator.layout(set, roots: [], parameters: parameters)) { XCTAssertEqual(($0 as? GesGeneratorError)?.code, "generate.usage") }
     }
 
     func testTheLayoutIsCanonicalJson() throws {

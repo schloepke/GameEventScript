@@ -300,6 +300,34 @@ public sealed class GameEventScriptCheckRunCommandTests
         StringAssert.Contains(missing.StandardError, "error schema.unknownName");
     }
 
+    /// <summary>Verifies the schema generate command: both languages, output files, the check mode and errors.</summary>
+    [TestMethod]
+    public void SchemaGenerateWritesAndChecksCode()
+    {
+        Write("drone.gess", "schema :Drone as {\n  id: :Number integer between 0 and 255 key\n  on: :Boolean\n}\n");
+        var csharp = Run("schema", "generate", "drone.gess", "--root", "Drone", "--language", "csharp", "--namespace", "Game.Net");
+        Assert.AreEqual(0, csharp.ExitCode, csharp.StandardError);
+        StringAssert.Contains(csharp.StandardOutput, "public partial struct Drone");
+        var swift = Run("schema", "generate", "drone.gess", "--all-roots", "--language", "swift", "--access", "internal");
+        StringAssert.Contains(swift.StandardOutput, "struct Drone: Sendable {");
+        Assert.IsFalse(swift.StandardOutput.Contains("public ", StringComparison.Ordinal));
+        Assert.AreEqual(1, Run("schema", "generate", "drone.gess", "--root", "Drone", "--language", "csharp", "-o", "Drone.g.cs", "--check").ExitCode);
+        Assert.AreEqual(0, Run("schema", "generate", "drone.gess", "--root", "Drone", "--language", "csharp", "-o", "Drone.g.cs").ExitCode);
+        Assert.AreEqual(0, Run("schema", "generate", "drone.gess", "--root", "Drone", "--language", "csharp", "-o", "Drone.g.cs", "--check").ExitCode);
+        File.AppendAllText(Path.Combine(_directory, "Drone.g.cs"), "// edited\n");
+        var outdated = Run("schema", "generate", "drone.gess", "--root", "Drone", "--language", "csharp", "-o", "Drone.g.cs", "--check");
+        Assert.AreEqual(1, outdated.ExitCode);
+        StringAssert.Contains(outdated.StandardError, "error cli.outdated: Drone.g.cs differs from the generated code.");
+        Assert.AreEqual(2, Run("schema", "generate", "drone.gess", "--root", "Drone").ExitCode);
+        Assert.AreEqual(2, Run("schema", "generate", "drone.gess", "--root", "Drone", "--language", "java").ExitCode);
+        Assert.AreEqual(2, Run("schema", "generate", "drone.gess", "--root", "Drone", "--language", "swift", "--check").ExitCode);
+        Assert.AreEqual(2, Run("schema", "generate", "drone.gess", "--root", "Drone", "--language", "swift", "--access", "private").ExitCode);
+        Assert.AreEqual(2, Run("schema", "layout", "drone.gess", "--root", "Drone", "--language", "swift").ExitCode);
+        var invalid = Run("schema", "generate", "drone.gess", "--root", "Drone", "--language", "swift", "--namespace", "1x");
+        Assert.AreEqual(1, invalid.ExitCode);
+        StringAssert.Contains(invalid.StandardError, "error generate.invalidNamespace");
+    }
+
     /// <summary>Verifies the schema commands: check, canonical form, hash, formatting, dump and error reports.</summary>
     [TestMethod]
     public void SchemaCommandsCheckHashFormatAndDump()

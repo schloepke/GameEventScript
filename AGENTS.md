@@ -303,9 +303,12 @@ Writer and reader build on the public `GesBitWriter`, `GesBitReader` and `GesWir
 schema code calls with constants. The separate Generator package (C# `GameEventScript.Generator`, Swift
 `GameEventScriptGenerator`) depends only on Syntax and Runtime, which it reads through `InternalsVisibleTo`
 and `@_spi(Generator)`; Runtime and Compiler never depend on it, so games never ship it. It computes the
-language-neutral generation layout (specs/Schemas.md#generation-layout) behind `ges schema layout`;
-`python3 scripts/compare-schema-layout.py` requires identical layouts from both CLIs for every corpus schema
-(`--self-test` qualifies it), and `test-swift.sh` runs both. `docs/plans/SchemaCodeGeneration.md` holds the
+language-neutral generation layout (specs/Schemas.md#generation-layout) behind `ges schema layout`, and both
+ports hold the C# and the Swift emitter behind `ges schema generate`, so every CLI writes every language.
+`python3 scripts/compare-schema-generation.py` requires identical layouts and generated code from both CLIs for
+every corpus schema, and `python3 scripts/test-generated-schemas.py` compiles the generated code of the corpus
+schemas as C# 9 and Swift 6 with warnings as errors and checks the corpus bytes, codes and paths; `--self-test`
+qualifies each, and `test-swift.sh` runs them. `docs/plans/SchemaCodeGeneration.md` holds the
 plan for the emitters until they land.
 
 ## Host and runtime

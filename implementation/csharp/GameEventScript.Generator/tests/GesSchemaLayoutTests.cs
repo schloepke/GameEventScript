@@ -32,7 +32,7 @@ public sealed class GesSchemaLayoutTests
         var text = GesSchemaGenerator.Layout(set, ["A", "B"], parameters);
         Assert.HasCount(2, text.Split("\"name\": \"Cell\",\n      \"kind\""));
         Assert.Contains("\"maxByteCountDepends\": [\n        \"size\"\n      ]", text);
-        Assert.ThrowsExactly<ArgumentException>(() => GesSchemaGenerator.Layout(set, [], parameters));
+        Assert.AreEqual("generate.usage", Assert.ThrowsExactly<GesGeneratorException>(() => GesSchemaGenerator.Layout(set, [], parameters)).Code);
     }
 
     [TestMethod]

@@ -55,17 +55,20 @@ here.
   registry and extensions. Decide whether `WithExternalTypeCatalog` remains as a
   convenience, and whether the Bridges generate declaration modules. Schedule
   after the Syntax module rework, on its source-neutral declaration set.
-- Add `ges schema generate`: typed structs per schema (C# language version 9 for Unity, Swift,
-  and any later port) with inlined constants, built on the bit primitives of the writer and
-  reader, verified by their byte comparison and kept in step by the schema hash. It can write
-  deltas directly, where `GesSchemaDelta` compares two full records.
+- Bind selected schema parameters of generated code at run time: `ges schema generate
+  --dynamic-param name` would turn only the constants that depend on the named parameters into
+  fields of a generated binding value, created from `GesSchemaParameters` and checked against the
+  layout; every other constant stays a literal. The `depends` lists of the generation layout
+  (specs/Schemas.md#generation-layout) already name those constants. Measure the price against
+  the interpreted writer and reader before adopting it; build it only on real demand.
 - Provide a base for publish/subscribe transport of messages and data, outside Runtime, in a
   `GesNetwork` module or in `GesBridge`; decide which. It frames records, maps channels to message
   sets or schemas and carries the hash at connection setup (specs/Schemas.md#extension-points).
 - Add schema elapsed-time references to the performance corpus: writer, reader and value path
   on Bot-sized records, with budgets per measured profile.
-- Run the schema byte and vector suites and an allocation measurement in a real Unity
-  project: an IL2CPP player on arm64 and x64 and Mono in the editor.
+- Run the schema byte and vector suites, generated schema code (`ges schema generate --language csharp`)
+  and an allocation measurement in a real Unity project: an IL2CPP player on arm64 and x64 and Mono
+  in the editor, with the Generator DLL set in an `Editor` folder.
 - Explore computed handler bindings, for example `on Main(value computed by
   parseArguments(input: args), context) { ... }`. The message signature remains
   `Main(args, context)`, while only `value` and `context` are visible in the body.

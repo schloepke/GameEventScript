@@ -34,7 +34,8 @@ public sealed class GameEventScriptLicensePolicyTests
             (TestRepositoryPaths.SyntaxProjectDirectory, "GameEventScript.Syntax", "GES lexer, parser and single-source validator, plus GES and GESA syntax highlighting for editors and terminals. Independent of Runtime and Compiler."),
             (TestRepositoryPaths.LibraryProjectDirectory, "GameEventScript.Runtime", "Portable, deterministic Game Event Script runtime, serial message host, and Program binary codec. No source compiler dependency."),
             (TestRepositoryPaths.CompilerProjectDirectory, "GameEventScript.Compiler", "Portable Game Event Script source compiler. Depends on the separately consumable runtime."),
-            (TestRepositoryPaths.CSharpBridgeProjectDirectory, "GameEventScript.CSharpBridge", "C# adapters for Game Event Script reflection, delegates, dictionaries, and automatic host execution.")
+            (TestRepositoryPaths.CSharpBridgeProjectDirectory, "GameEventScript.CSharpBridge", "C# adapters for Game Event Script reflection, delegates, dictionaries, and automatic host execution."),
+            (TestRepositoryPaths.GeneratorProjectDirectory, "GameEventScript.Generator", "Game Event Script schema code generator: computes the generation layout of .gess schemas and writes typed C# and Swift record code. A build-time library that games never ship.")
         };
 
         foreach (var (projectDirectory, packageId, description) in projects)

@@ -21,7 +21,8 @@ internal static class Program
         new(SyntaxPackage, []),
         new(RuntimePackage, [SyntaxPackage]),
         new("GameEventScript.Compiler", [RuntimePackage, SyntaxPackage]),
-        new("GameEventScript.CSharpBridge", [RuntimePackage, SyntaxPackage])
+        new("GameEventScript.CSharpBridge", [RuntimePackage, SyntaxPackage]),
+        new("GameEventScript.Generator", [RuntimePackage, SyntaxPackage])
     ];
 
     private static int Main(string[] arguments)

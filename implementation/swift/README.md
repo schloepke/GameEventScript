@@ -12,8 +12,9 @@
 | `GameEventScriptCompiler` | Binding of the Syntax tree, validation across sources, lowering, optimization, register allocation, immutable Programs and debug sections | Runtime and Syntax |
 | [`GameEventScriptSwiftBridge`](GameEventScriptSwiftBridge/README.md) | Native closure adapters, typed value conversion, KeyPath/external-type bindings and an optional synchronized Host runner | Runtime; Foundation for the runner |
 | [`GameEventScriptSyntax`](GameEventScriptSyntax/README.md) | GES lexer, parser and single-source validator, document and schema readers, highlighting with UTF-16 spans, TextMate scopes, incremental states and ANSI rendering | Swift standard library |
+| [`GameEventScriptGenerator`](GameEventScriptGenerator/README.md) | Generation layout and typed C# and Swift code for `.gess` schemas, used at build time | Runtime, Syntax and Swift standard library |
 | `GameEventScriptConformance` | Internal observation adapter, codec probes and native implementation tests | Runtime and Compiler |
-| `GameEventScriptTool` / `ges` executable | Compile/check/run/dump, `document` and `schema` commands, interactive console, filesystem and terminal adapters | Runtime, Compiler, Syntax, Foundation and POSIX |
+| `GameEventScriptTool` / `ges` executable | Compile/check/run/dump, `document` and `schema` commands, interactive console, filesystem and terminal adapters | Runtime, Compiler, Syntax, Generator, Foundation and POSIX |
 
 Runtime and Compiler APIs are synchronous, fileless, and independent of a test framework.
 The optional SwiftBridge macro target uses the official swift-syntax build dependency.
@@ -27,7 +28,7 @@ is the user-facing tool.
 ## Build and verify
 
 For application dependencies, use the repository-root SwiftPM package. It exposes
-Runtime, Compiler, SwiftBridge and Syntax as four selectable library products with one
+Runtime, Compiler, SwiftBridge, Syntax and Generator as five selectable library products with one
 shared version. The packages below this directory remain local development entry
 points; CLI and Conformance are internal to the repository distribution.
 See the [package release guide](../../docs/guide/distribution/Packages.md) for

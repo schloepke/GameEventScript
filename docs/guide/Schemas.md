@@ -182,8 +182,9 @@ decode it as the root of a record.
 
 ## 8. How it runs
 
-A schema is data your program reads at run time. GES does not generate code and needs neither a
-compiler nor a VM for it:
+A schema is data your program reads at run time, and needs neither a compiler nor a VM for it.
+If you prefer typed code, you can [generate it](#13-generate-typed-code) instead; the bytes are the
+same:
 
 | Step | C# | Result |
 | --- | --- | --- |
@@ -378,6 +379,52 @@ schema :Fleet as {
 This needs no extra syntax, but it needs your help: keep such lists sorted by key in every record. If
 the keys of the baseline or the new record do not strictly ascend, the delta falls back to the whole
 list, which stays correct but saves nothing. See [Keyed lists](../../specs/Schemas.md#keyed-lists).
+
+## 13. Generate typed code
+
+> **Since: Unreleased**
+
+The writer and reader look fields up through handles. When your schemas are fixed at build time,
+`ges schema generate` writes a type per schema instead, with fields you assign directly and the
+parameters as constants:
+
+```bash
+ges schema generate game.gess --root Fleet --language csharp --namespace Game.Net -o Fleet.g.cs
+ges schema generate game.gess --root Fleet --language swift --namespace Wire -o Fleet.swift
+```
+
+For the `:Fleet` of the previous section, `Drone` becomes a struct and `Fleet` a class, because its
+list needs storage. The code writes and reads the same bytes, with the same errors, as the writer and
+reader, deltas included:
+
+```csharp
+var buffer = new byte[Fleet.MaxByteCount];
+var fleet = new Fleet { Tick = 1 };
+fleet.Drones.Add(new Drone { Id = 7, X = 12.5, Y = -3.05 });
+var length = fleet.Write(buffer);
+
+var received = new Fleet();
+received.Read(buffer.AsSpan(0, length));
+
+var baseline = new Fleet();
+baseline.CopyFrom(fleet); // what the other side holds
+var drone = fleet.Drones[0];
+drone.X += 0.4;
+fleet.Drones[0] = drone;
+var deltaLength = fleet.WriteDelta(baseline, buffer);
+
+var next = new Fleet();
+next.ReadDelta(buffer.AsSpan(0, deltaLength), received);
+```
+
+A class keeps its storage, so once it has held its largest data, writing and reading allocate
+nothing. Records compare by what goes on the wire with `WireEquals`, and `Quantize` rounds a record
+to the values a receiver reads. `--values` adds the conversion to GES values and messages for data
+from scripts. Generated C# is C# 9 and runs in Unity; generated Swift needs no Foundation. Check the
+files in and add `--check` to your build, so that a schema change cannot leave stale code behind.
+The generated code needs Runtime only. To generate from your own build tool rather than the CLI, use
+the Generator package (`GameEventScript.Generator`, Swift `GameEventScriptGenerator`), which your game
+does not ship. See [Tools](../../specs/Schemas.md#tools) for the exact shape.
 
 ## What schemas leave to you
 

@@ -14,11 +14,13 @@ the latest SwiftPM release; check the [changelog](../../../CHANGELOG.md) and
 | Compiler | [GameEventScriptCompiler](https://gameeventscript.org/api/swift/gameeventscriptcompiler/documentation/gameeventscriptcompiler/) |
 | Swift bridge | [GameEventScriptSwiftBridge](https://gameeventscript.org/api/swift/gameeventscriptswiftbridge/documentation/gameeventscriptswiftbridge/) |
 | Syntax | [GameEventScriptSyntax](https://gameeventscript.org/api/swift/gameeventscriptsyntax/documentation/gameeventscriptsyntax/) |
+| Generator | [GameEventScriptGenerator](https://gameeventscript.org/api/swift/gameeventscriptgenerator/documentation/gameeventscriptgenerator/) |
 
 DocC builds these pages from public Swift symbol graphs and their documentation
 comments. The internal macro implementation, CLI and Conformance are excluded;
 the bridge reference includes its public annotation API. GES documents and schemas
-(`GesDocument`, `GesSchemaSet`, `GesSchema`) belong to Runtime.
+(`GesDocument`, `GesSchemaSet`, `GesSchema`) belong to Runtime; the
+[Generator](../../../implementation/swift/GameEventScriptGenerator/README.md) writes typed schema code.
 
 Start with the [Swift embedding guide](../Swift.md) or the
 [Swift bridge guide](../../../implementation/swift/GameEventScriptSwiftBridge/README.md).

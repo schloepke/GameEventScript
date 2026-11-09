@@ -1316,6 +1316,24 @@ sealed class GameEventScript.CSharpBridge.GesParamAttribute
 sealed class GameEventScript.CSharpBridge.GesTypeAttribute
   ctor GesTypeAttribute(System.String typeName)
   property System.String TypeName { get }
+sealed class GameEventScript.Generator.GesGeneratorException
+  property System.String Code { get }
+enum GameEventScript.Generator.GesSchemaAccess
+  enum-field Public = 0
+  enum-field Internal = 1
+sealed class GameEventScript.Generator.GesSchemaGenerateOptions
+  ctor GesSchemaGenerateOptions()
+  property GameEventScript.Generator.GesSchemaAccess Access { get set }
+  property GameEventScript.Generator.GesSchemaLanguage Language { get set }
+  property System.Boolean CheckedExclusivity { get set }
+  property System.Boolean Values { get set }
+  property System.String Namespace { get set }
+static class GameEventScript.Generator.GesSchemaGenerator
+  method static System.String Generate(GameEventScript.Api.GesSchemaSet set, System.Collections.Generic.IReadOnlyList<System.String> roots, GameEventScript.Api.GesSchemaParameters parameters, GameEventScript.Generator.GesSchemaGenerateOptions options)
+  method static System.String Layout(GameEventScript.Api.GesSchemaSet set, System.Collections.Generic.IReadOnlyList<System.String> roots, GameEventScript.Api.GesSchemaParameters parameters)
+enum GameEventScript.Generator.GesSchemaLanguage
+  enum-field CSharp = 0
+  enum-field Swift = 1
 struct GameEventScript.Runtime.Values.GesValue
   method GameEventScript.Runtime.Values.GesValue? ReadField(System.String name)
   method GameEventScript.Runtime.Values.GesValueMap AsMap()

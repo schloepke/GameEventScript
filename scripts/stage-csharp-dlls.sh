@@ -13,6 +13,7 @@ runtime_output="$repository_root/implementation/csharp/GameEventScript.Runtime/s
 compiler_output="$repository_root/implementation/csharp/GameEventScript.Compiler/src/bin/Release/netstandard2.1"
 syntax_output="$repository_root/implementation/csharp/GameEventScript.Syntax/src/bin/Release/netstandard2.1"
 bridge_output="$repository_root/implementation/csharp/GameEventScript.CSharpBridge/src/bin/Release/netstandard2.1"
+generator_output="$repository_root/implementation/csharp/GameEventScript.Generator/src/bin/Release/netstandard2.1"
 
 case "$release_version" in
     ''|.*|*[!0-9A-Za-z.-]*)
@@ -26,25 +27,29 @@ if [ "$build_mode" = "build" ]; then
     dotnet build implementation/csharp/GameEventScript.Syntax/src/GameEventScript.Syntax.csproj --configuration Release -p:Version="$release_version"
     dotnet restore implementation/csharp/GameEventScript.CSharpBridge/src/GameEventScript.CSharpBridge.csproj -p:NuGetAudit=false
     dotnet restore implementation/csharp/GameEventScript.Compiler/src/GameEventScript.Compiler.csproj -p:NuGetAudit=false
+    dotnet restore implementation/csharp/GameEventScript.Generator/src/GameEventScript.Generator.csproj -p:NuGetAudit=false
     dotnet build implementation/csharp/GameEventScript.CSharpBridge/src/GameEventScript.CSharpBridge.csproj --configuration Release --no-restore -p:Version="$release_version"
     dotnet build implementation/csharp/GameEventScript.Compiler/src/GameEventScript.Compiler.csproj --configuration Release --no-restore -p:Version="$release_version"
+    dotnet build implementation/csharp/GameEventScript.Generator/src/GameEventScript.Generator.csproj --configuration Release --no-restore -p:Version="$release_version"
 elif [ "$build_mode" != "--no-build" ]; then
     echo "Unknown staging mode: $build_mode" >&2
     exit 1
 fi
 
 rm -rf "$staging_root"
-mkdir -p "$staging_root/runtime" "$staging_root/compiler" "$staging_root/unity" "$staging_root/syntax"
+mkdir -p "$staging_root/runtime" "$staging_root/compiler" "$staging_root/unity" "$staging_root/syntax" "$staging_root/generator"
 
 for extension in dll pdb xml; do
     cp "$syntax_output/GameEventScript.Syntax.$extension" "$staging_root/syntax/"
     # Runtime depends on Syntax, so every Runtime set carries the Syntax assembly.
-    for set in runtime compiler unity; do
+    for set in runtime compiler unity generator; do
         cp "$syntax_output/GameEventScript.Syntax.$extension" "$staging_root/$set/"
         cp "$runtime_output/GameEventScript.Runtime.$extension" "$staging_root/$set/"
     done
     cp "$compiler_output/GameEventScript.Compiler.$extension" "$staging_root/compiler/"
     cp "$bridge_output/GameEventScript.CSharpBridge.$extension" "$staging_root/unity/"
+    # Build-time only: a Unity project keeps this set in an Editor folder so that players never ship it.
+    cp "$generator_output/GameEventScript.Generator.$extension" "$staging_root/generator/"
 done
 
 rm -rf "$artifact_root"

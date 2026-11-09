@@ -24,15 +24,18 @@ versions retain their original package contents; icons are included starting wit
 
 | Distribution | Public products |
 | --- | --- |
-| NuGet | `GameEventScript.Runtime`, `GameEventScript.Compiler`, `GameEventScript.CSharpBridge`, `GameEventScript.Syntax` |
+| NuGet | `GameEventScript.Runtime`, `GameEventScript.Compiler`, `GameEventScript.CSharpBridge`, `GameEventScript.Syntax`, `GameEventScript.Generator` (since Unreleased) |
 | NuGet tools (since 0.3.0) | `GameEventScript.Tool`, `GameEventScript.Tool.Aot` (plus RID implementation packages) |
-| SwiftPM libraries | `GameEventScriptRuntime`, `GameEventScriptCompiler`, `GameEventScriptSwiftBridge`, `GameEventScriptSyntax` |
+| SwiftPM libraries | `GameEventScriptRuntime`, `GameEventScriptCompiler`, `GameEventScriptSwiftBridge`, `GameEventScriptSyntax`, `GameEventScriptGenerator` (since Unreleased) |
 
 The root SwiftPM package exposes only libraries. The CLI uses its separate development package.
 
 Runtime depends on Syntax, which holds the shared lexical rules such as the
 quantity unit table and depends on no other GES module. Compiler and each native Bridge depend on their Runtime. An application can use
-Runtime with Syntax alone, also for documents, schemas and binary data. Conformance stays in the repository for development and CI. CLI and terminal targets are not part of the root package.
+Runtime with Syntax alone, also for documents, schemas and binary data. The Generator
+depends on Runtime and Syntax and writes typed schema code at build time, for build integrations
+such as an editor menu, an MSBuild target or a SwiftPM plugin; a game never ships it, and the code
+it generates needs Runtime only. Conformance stays in the repository for development and CI. CLI and terminal targets are not part of the root package.
 Homebrew and local installers remain available. See [standalone CLI downloads](Tools.md) for
 installation and release verification. Deferred distribution work is tracked in
 [BACKLOG.md](../../../BACKLOG.md).

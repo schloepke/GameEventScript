@@ -35,6 +35,7 @@ checkout instead; see the [implementation guide](../../implementation/csharp/REA
 | Compiler | When your application compiles source text |
 | CSharpBridge | Delegate callbacks, native bindings and optional background pumping |
 | Syntax | Optional editor or terminal highlighting |
+| Generator | Build tools that generate typed schema code; not shipped with a game (since Unreleased) |
 
 ## Compile and execute a rule
 

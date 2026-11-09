@@ -302,14 +302,18 @@ values; a baseline is the last full record the other side holds, and writer and 
 Writer and reader build on the public `GesBitWriter`, `GesBitReader` and `GesWireRules`, which generated
 schema code calls with constants. The separate Generator package (C# `GameEventScript.Generator`, Swift
 `GameEventScriptGenerator`) depends only on Syntax and Runtime, which it reads through `InternalsVisibleTo`
-and `@_spi(Generator)`; Runtime and Compiler never depend on it, so games never ship it. It computes the
+and `@_spi(Generator)`; Runtime and Compiler never depend on it, so games never ship it. It is a public
+NuGet package and SwiftPM product for build integrations (specs/PublicApi.md#schema-code-generation). It computes the
 language-neutral generation layout (specs/Schemas.md#generation-layout) behind `ges schema layout`, and both
 ports hold the C# and the Swift emitter behind `ges schema generate`, so every CLI writes every language.
 `python3 scripts/compare-schema-generation.py` requires identical layouts and generated code from both CLIs for
 every corpus schema, and `python3 scripts/test-generated-schemas.py` compiles the generated code of the corpus
 schemas as C# 9 and Swift 6 with warnings as errors and checks the corpus bytes, codes and paths; `--self-test`
-qualifies each, and `test-swift.sh` runs them. `docs/plans/SchemaCodeGeneration.md` holds the
-plan for the emitters until they land.
+qualifies each, and `test-swift.sh` runs them. Checked-in goldens of
+`conformance/fixtures/SchemaGeneration/fleet.gess` (C# `Generator/tests/Generated`, Swift Conformance tests) feed
+both allocation gates; the C# test and `compare-schema-generation.py` require them current. Generated Swift classes
+mark stored properties `@exclusivity(unchecked)` unless `--checked-exclusivity`; `scripts/schema_generated_parties.py`
+generates with the checks for the roundtrip, so overlapping accesses in generated code trap there.
 
 ## Host and runtime
 
@@ -444,7 +448,7 @@ case counts, so adding a case updates them in the same change.
 
 ## Package distribution
 
-Public NuGet distribution consists of Runtime, Compiler, CSharpBridge and Syntax,
+Public NuGet distribution consists of Runtime, Compiler, CSharpBridge, Syntax and Generator,
 with one release version and canonical packages below
 `artifacts/csharp/packages/<version>`. Conformance is not packable. CLI NuGet
 packages are `GameEventScript.Tool` and `GameEventScript.Tool.Aot` plus six RID
@@ -452,12 +456,13 @@ implementation packages. `pack-csharp-tool.py` builds and consumes them locally;
 `csharp_tool_packages.py` owns the release allowlist. The C# Release Candidate
 workflow requires all native package checks before publication; upload native
 dependencies before the AOT pointer. Never publish from preparation/PR jobs. DLL distribution also excludes
-Conformance. Keep the explicit upload allowlist in
+Conformance; its `generator` set (Syntax, Runtime, Generator) is for build tools such as a
+Unity `Editor` folder. Keep the explicit upload allowlist in
 `scripts/publish-csharp-packages.sh`; its fake-client tests never publish.
 
-The root `Package.swift` is the public SwiftPM entry point with four library
+The root `Package.swift` is the public SwiftPM entry point with five library
 products: GameEventScriptRuntime, GameEventScriptCompiler,
-GameEventScriptSwiftBridge and GameEventScriptSyntax. They use existing sources and share a Git tag/version;
+GameEventScriptSwiftBridge, GameEventScriptSyntax and GameEventScriptGenerator. They use existing sources and share a Git tag/version;
 local development packages remain separate. CLI and TerminalSupport belong only to the
 separate GameEventScriptTool package; Conformance remains internal.
 The root package requires macOS 10.15 for the SwiftSyntax macro dependency. Three root test targets reuse the existing SwiftBridge,
@@ -751,7 +756,7 @@ Generate public C#/Swift API references first with
 `python3 scripts/build-api-docs.py --language csharp` and `--language swift`.
 Website preparation rejects missing/stale references using source revision and
 input hashes; its failure controls are `python3 scripts/test-api-docs.py`.
-Only Runtime, Compiler, Bridge and Syntax appear in DocFX/DocC output.
+Only Runtime, Compiler, Bridge, Syntax and Generator appear in DocFX/DocC output.
 Transport Swift API output and the final website between CI jobs as tar archives;
 DocC filenames contain colons rejected by GitHub's individual-file artifact upload.
 Swift symbol extraction includes extension blocks; staging also checks public

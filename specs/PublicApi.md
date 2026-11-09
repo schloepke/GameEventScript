@@ -18,6 +18,8 @@ regression tool for the C# binding and is not the portable API definition.
 The optional standalone presentation API for GES, GESA and GES documents is
 specified in [Syntax highlighting](SyntaxHighlighting.md). Its C# and Swift packages have no
 Runtime, Compiler, Bridge or Conformance dependency and are not part of VM execution.
+The optional build-time Generator package writes typed schema code; see
+[Schema code generation](#schema-code-generation).
 
 ## Scope and dependency direction
 
@@ -612,6 +614,31 @@ GES schemas ([Schemas](Schemas.md)) live in Runtime. Apart from the value path, 
 
 `GesSyntaxLanguage` adds `Gess` (Swift `.gess`) for highlighting schema sources.
 
+### Schema code generation
+
+> **Since: Unreleased**
+
+The Generator package (C# `GameEventScript.Generator`, namespace `GameEventScript.Generator`; Swift product
+`GameEventScriptGenerator`) computes the [generation layout](Schemas.md#generation-layout) and writes the
+[generated code](Schemas.md#tools) that `ges schema layout` and `ges schema generate` print, so that build
+integrations generate without the CLI. It depends on Syntax and Runtime only; neither Runtime nor Compiler
+depends on it, so a game never ships it. It is synchronous, reads no files and returns the text.
+
+| Concept | C# | Swift |
+| --- | --- | --- |
+| generator | `static class GesSchemaGenerator` with `Layout(set, roots, parameters)` and `Generate(set, roots, parameters, options)`, returning the text | `enum GesSchemaGenerator` with `layout(_:roots:parameters:)` and `generate(_:roots:parameters:options:)`, throwing and returning the text |
+| options | `sealed class GesSchemaGenerateOptions` with `Language`, `Namespace`, `Access`, `Values`, `CheckedExclusivity` | `struct GesSchemaGenerateOptions` with `init(language:namespace:access:values:checkedExclusivity:)` and the same properties |
+| target language | `enum GesSchemaLanguage` with `CSharp`, `Swift` | `enum GesSchemaLanguage` with `csharp`, `swift` |
+| access | `enum GesSchemaAccess` with `Public`, `Internal` | `enum GesSchemaAccess` with `public`, `internal` |
+| generation error | `GesGeneratorException` with `Code` | `GesGeneratorError` with `code`, `message` |
+
+The roots are schema, message or message set names of the set; a repeated root counts once, and an empty
+list fails with `generate.usage`. Errors of the sources, of binding and of parameters keep their `schema.*`
+codes and types (`GesSchemaException`, `GesSchemaError`), so a root that names no declaration fails with
+`schema.unknownName`; a request that cannot be generated fails with a `generate.*` code. The options default to C#, no namespace, public access, no value conversion and
+unchecked exclusivity in Swift classes, as the CLI's defaults do. Equal inputs give identical text in every
+port.
+
 ## Host construction and lifecycle API
 
 ### HostBuilder
@@ -1082,8 +1109,8 @@ contracts remain in [Runner.md](Conformance/Runner.md).
 the Reader.
 
 Package and assembly identities use `GameEventScript.Runtime`,
-`GameEventScript.Compiler`, `GameEventScript.CSharpBridge`, and
-`GameEventScript.Syntax`. Their shared C# namespace root is
+`GameEventScript.Compiler`, `GameEventScript.CSharpBridge`,
+`GameEventScript.Syntax`, and `GameEventScript.Generator`. Their shared C# namespace root is
 `GameEventScript`; the module name does not add another namespace layer to
 the public `GameEventScript.Api` contracts.
 

@@ -21,6 +21,7 @@
         <PackageReference Include="GameEventScript.Runtime" Version="$(GesPackageVersion)" />
         <PackageReference Include="GameEventScript.Compiler" Version="$(GesPackageVersion)" />
         <PackageReference Include="GameEventScript.CSharpBridge" Version="$(GesPackageVersion)" />
+        <PackageReference Include="GameEventScript.Generator" Version="$(GesPackageVersion)" />
     </ItemGroup>
 
     <ItemGroup Condition="'$(GesUseUnityDlls)' == 'true'">
@@ -28,6 +29,7 @@
         <Reference Include="GameEventScript.Runtime" HintPath="$(GesUnityDllDirectory)/GameEventScript.Runtime.dll" Private="true" />
         <Reference Include="GameEventScript.CSharpBridge" HintPath="$(GesUnityDllDirectory)/GameEventScript.CSharpBridge.dll" Private="true" />
         <Reference Include="GameEventScript.Compiler" HintPath="$(GesCompilerDllDirectory)/GameEventScript.Compiler.dll" Private="true" />
+        <Reference Include="GameEventScript.Generator" HintPath="$(GesGeneratorDllDirectory)/GameEventScript.Generator.dll" Private="true" />
     </ItemGroup>
 
 </Project>

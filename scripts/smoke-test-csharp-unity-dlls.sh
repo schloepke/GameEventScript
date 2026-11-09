@@ -14,6 +14,7 @@ echo "Consumer workspace (retained on failure): $consumer_workspace"
 consumer_project="$repository_root/implementation/csharp/verification/GameEventScript.PackageConsumer/GameEventScript.PackageConsumer.csproj"
 unity_dlls="$repository_root/artifacts/csharp/dll/$release_version/unity"
 compiler_dlls="$repository_root/artifacts/csharp/dll/$release_version/compiler"
+generator_dlls="$repository_root/artifacts/csharp/dll/$release_version/generator"
 runtime_project="$repository_root/implementation/csharp/verification/GameEventScript.RuntimeConsumer/GameEventScript.RuntimeConsumer.csproj"
 fixture="$consumer_workspace/program.gesb"
 
@@ -24,7 +25,8 @@ dotnet run --project "$consumer_project" \
     --configuration Release \
     -p:GesUseUnityDlls=true \
     -p:GesUnityDllDirectory="$unity_dlls" \
-    -p:GesCompilerDllDirectory="$compiler_dlls" -- "$fixture"
+    -p:GesCompilerDllDirectory="$compiler_dlls" \
+    -p:GesGeneratorDllDirectory="$generator_dlls" -- "$fixture"
 dotnet run --project "$runtime_project" \
     -p:BaseOutputPath="$consumer_workspace/runtime/bin/" \
     -p:BaseIntermediateOutputPath="$consumer_workspace/runtime/obj/" \

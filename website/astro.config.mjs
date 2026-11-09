@@ -50,6 +50,7 @@ export default defineConfig({
       { label: 'Tools', items: [
         'docs/tools/downloads', 'docs/tools/csharp-cli', 'docs/tools/swift-cli',
         'docs/tools/csharp-syntax', 'docs/tools/swift-syntax',
+        'docs/tools/csharp-generator', 'docs/tools/swift-generator',
         'docs/tools/editor-bundles',
       ] },
       { label: 'Native integration', items: [

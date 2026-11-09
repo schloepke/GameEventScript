@@ -19,6 +19,7 @@ trap cleanup EXIT HUP INT TERM
 mkdir -p "$first" "$second"
 
 clean_product_outputs() {
+    dotnet clean "$repository_root/implementation/csharp/GameEventScript.Generator/src/GameEventScript.Generator.csproj" --configuration Release >/dev/null
     dotnet clean "$repository_root/implementation/csharp/GameEventScript.Syntax/src/GameEventScript.Syntax.csproj" --configuration Release >/dev/null
     dotnet clean "$repository_root/implementation/csharp/GameEventScript.CSharpBridge/src/GameEventScript.CSharpBridge.csproj" --configuration Release >/dev/null
     dotnet clean "$repository_root/implementation/csharp/GameEventScript.Compiler/src/GameEventScript.Compiler.csproj" --configuration Release >/dev/null
@@ -30,7 +31,7 @@ clean_product_outputs
 clean_product_outputs
 "$repository_root/scripts/pack-csharp.sh" "$release_version" "$second"
 
-for package_id in GameEventScript.Runtime GameEventScript.Compiler GameEventScript.CSharpBridge GameEventScript.Syntax; do
+for package_id in GameEventScript.Runtime GameEventScript.Compiler GameEventScript.CSharpBridge GameEventScript.Syntax GameEventScript.Generator; do
     cmp "$first/$package_id.$release_version.nupkg" "$second/$package_id.$release_version.nupkg"
     cmp "$first/$package_id.$release_version.snupkg" "$second/$package_id.$release_version.snupkg"
 done

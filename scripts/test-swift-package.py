@@ -20,7 +20,8 @@ from verification_workspace import verification_workspace
 
 ROOT = Path(__file__).resolve().parent.parent
 MACROS = "GameEventScriptSwiftBridgeMacros"
-MODULES = ("GameEventScriptRuntime", "GameEventScriptCompiler", "GameEventScriptSwiftBridge", "GameEventScriptSyntax")
+MODULES = ("GameEventScriptRuntime", "GameEventScriptCompiler", "GameEventScriptSwiftBridge", "GameEventScriptSyntax",
+           "GameEventScriptGenerator")
 TESTS = {
     "GameEventScriptSwiftBridgeTests": ("GameEventScriptSwiftBridge", ["GameEventScriptSwiftBridge", "GameEventScriptRuntime", "GameEventScriptSyntax"], []),
     "GameEventScriptSwiftBridgeMacrosTests": ("GameEventScriptSwiftBridge", [MACROS], ["SwiftSyntaxMacros", "SwiftSyntaxMacrosTestSupport"]),
@@ -100,7 +101,8 @@ def verify(workspace):
             raise RuntimeError(f"Unexpected product definition for {module}")
         # Runtime builds on the Syntax module's lexical tables; Syntax depends on nothing.
         expected = {"GameEventScriptSyntax": [], "GameEventScriptRuntime": ["GameEventScriptSyntax"],
-                    "GameEventScriptCompiler": ["GameEventScriptRuntime", "GameEventScriptSyntax"]}.get(module, ["GameEventScriptRuntime"])
+                    "GameEventScriptCompiler": ["GameEventScriptRuntime", "GameEventScriptSyntax"],
+                    "GameEventScriptGenerator": ["GameEventScriptRuntime", "GameEventScriptSyntax"]}.get(module, ["GameEventScriptRuntime"])
         if module == "GameEventScriptSwiftBridge":
             expected.append(MACROS)
         if targets[module].get("target_dependencies", []) != expected:
@@ -144,7 +146,7 @@ let package = Package(name: "{consumer}",
             if list(scratch.rglob(module + ".swiftmodule")) or objects:
                 raise RuntimeError(f"Library consumption compiled test-only module {module}")
         if consumer == "RuntimeConsumer":
-            for module in ("GameEventScriptCompiler", "GameEventScriptSwiftBridge", MACROS, "SwiftSyntax"):
+            for module in ("GameEventScriptCompiler", "GameEventScriptSwiftBridge", "GameEventScriptGenerator", MACROS, "SwiftSyntax"):
                 # SwiftPM creates planning directories even for unused products;
                 # only emitted modules or compiled objects indicate a build.
                 objects = [path for directory in scratch.rglob(module + ".build") for path in directory.rglob("*.o")]

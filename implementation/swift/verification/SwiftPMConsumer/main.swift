@@ -3,6 +3,7 @@
 
 import Foundation
 import GameEventScriptCompiler
+import GameEventScriptGenerator
 import GameEventScriptRuntime
 import GameEventScriptSwiftBridge
 import GameEventScriptSyntax
@@ -41,4 +42,6 @@ precondition(host.receive(macroMessage))
 let macroExecution = try host.runToCompletion()
 precondition(macroExecution.state == .completed)
 precondition(result == .integer(17))
-print("SwiftPM Compiler/Runtime/SwiftBridge consumer passed")
+let generated = try GesSchemaGenerator.generate(GesSchemaSet(parsing: "schema :Ping as {\n  ready: :Boolean\n}\n"), roots: ["Ping"], parameters: GesSchemaParameters(), options: GesSchemaGenerateOptions(language: .swift, namespace: "Consumer"))
+precondition(generated.contains("public struct Ping"))
+print("SwiftPM Compiler/Runtime/SwiftBridge/Generator consumer passed")

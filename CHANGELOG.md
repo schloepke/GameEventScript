@@ -242,8 +242,13 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 - `ges schema layout` (and `dotnet ges schema layout`) prints the language-neutral generation
   layout of one or more roots, or of every declaration with `--all-roots`: every reached type with
   its bound encodings, hashes and the parameters its constants depend on. A type that several roots
-  share appears once, and both CLIs print identical JSON. It comes from the new Generator package
-  (C# `GameEventScript.Generator`, Swift `GameEventScriptGenerator`), which games never ship.
+  share appears once, and both CLIs print identical JSON.
+- New Generator package: the NuGet package `GameEventScript.Generator` and the SwiftPM product
+  `GameEventScriptGenerator` expose `GesSchemaGenerator.Layout` and `Generate` (Swift `layout` and
+  `generate`) with `GesSchemaGenerateOptions`, so build integrations such as a Unity editor menu,
+  an MSBuild target or a SwiftPM plugin generate schema code without the CLI. It depends on Runtime
+  and Syntax only and games never ship it; the DLL distribution adds a `generator` set for a Unity
+  `Editor` folder.
 - Schema bit primitives: `GesBitWriter` and `GesBitReader` write and read values of 0 to 64
   bits in the wire format's bit order, and `GesWireRules` holds its Text, tag, quantization and
   wrapping rules and the delta range over plain operands. `GesWireException` (Swift `GesWireError`) can be created

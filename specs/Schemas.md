@@ -1139,7 +1139,8 @@ namespace or nested Swift enums, and `--access internal` hides them from other m
 differs or is missing. The text starts with a header that names the roots, parameters and hashes,
 without a date or version. A generation request that cannot be carried out fails with a
 `generate.*` code: `generate.nameCollision` when two generated names of one type are equal,
-and `generate.invalidNamespace`.
+`generate.invalidNamespace`, and `generate.usage` when the [Generator API](PublicApi.md#schema-code-generation)
+receives no root.
 
 ### Generation layout
 
@@ -1195,8 +1196,11 @@ binding of parameters at run time would turn into values.
   document checking and the value path. Everything except the value path uses neither
   `GesValue` nor the VM, so a client that only encodes pays nothing for them at run time, and
   a linker can remove them. Compiler is not needed.
-- **Generator** computes the [generation layout](#generation-layout) and depends on Syntax and
-  Runtime only. Neither Runtime nor Compiler depends on it, so a game never ships it.
+- **Generator** computes the [generation layout](#generation-layout) and writes the generated code
+  for both CLIs and for build integrations through its [API](PublicApi.md#schema-code-generation). It
+  depends on Syntax and Runtime only. Neither Runtime nor Compiler depends on it, so a game never
+  ships it; it is published as the NuGet package `GameEventScript.Generator` and the SwiftPM product
+  `GameEventScriptGenerator`. Generated code needs Runtime only.
 
 Schemas add no filesystem, thread or async dependency and import no Foundation.
 
@@ -1239,6 +1243,12 @@ IL2CPP: field handles are structs, Text moves between caller's buffers, and no e
 or closure takes part. A caller can pass `stackalloc` memory, a pooled array or a
 `NativeArray<byte>` through `AsSpan()`. Schema code is not Burst-compatible: a bound schema
 is a managed object. Managed worker threads can share it.
+
+**Generated code.** Code from `ges schema generate --language csharp` is C# 9 and holds to the same
+rules: no `unsafe`, Reflection or runtime code generation, and nothing allocated by writing, reading or
+deltas once a class has held its largest data. The Generator itself is a build-time assembly: a Unity
+project keeps it, with the Syntax and Runtime assemblies it needs, in an `Editor` folder, so that a player
+build never includes it.
 
 ## Extension points
 

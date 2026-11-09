@@ -18,9 +18,9 @@ ROOT = Path(__file__).resolve().parents[1]
 BASELINE = '0.3.0'
 BASELINE_COMMIT = '4ed9d44ded085ddccebff943365fb924bd0a3ce5'
 CANDIDATE = '0.4.0-upgrade-test'
-# The optional highlighter package became the Syntax package after the baseline release.
+# The optional highlighter package became the Syntax package after the baseline release; the Generator is new.
 MODULES = {BASELINE: ('Runtime', 'Compiler', 'SwiftBridge', 'SyntaxHighlighter')}
-CANDIDATE_MODULES = ('Runtime', 'Compiler', 'SwiftBridge', 'Syntax')
+CANDIDATE_MODULES = ('Runtime', 'Compiler', 'SwiftBridge', 'Syntax', 'Generator')
 
 
 def modules(version):
@@ -109,7 +109,7 @@ def csharp(workspace, candidate):
             versions = {key.split('/')[0]: key.split('/')[1] for key in assets['libraries']}
             names = ['GameEventScript.Runtime', 'GameEventScript.CSharpBridge']
             if name == 'PackageConsumer':
-                names += ['GameEventScript.Compiler', 'GameEventScript.' + modules(version)[3]]
+                names += ['GameEventScript.Compiler', *('GameEventScript.' + module for module in modules(version)[3:])]
             require_versions(versions, version, names)
             fixture = baseline if version == BASELINE else workspace / 'candidate.gesb'
             if name == 'RuntimeConsumer':

@@ -16,10 +16,11 @@ separate libraries; the CLI and internal Conformance adapter are executables.
 | [`GameEventScript.Compiler`](GameEventScript.Compiler) | Binding of the Syntax tree, validation across sources, lowering, optimization, register allocation, immutable Programs and debug sections | Runtime and Syntax |
 | [`GameEventScript.CSharpBridge`](GameEventScript.CSharpBridge) | Delegate adapters, Reflection/attribute bindings, CLR value conversion and optional automatic host pumping | Runtime |
 | [`GameEventScript.Syntax`](GameEventScript.Syntax/README.md) | GES lexer, parser and single-source validator, document and schema readers, highlighting with UTF-16 spans, TextMate scopes, incremental states and ANSI rendering | .NET Standard library |
+| [`GameEventScript.Generator`](GameEventScript.Generator/README.md) | Generation layout and typed C# and Swift code for `.gess` schemas, used at build time | Runtime and Syntax |
 | [`GameEventScript.Conformance`](GameEventScript.Conformance/README.md) | Internal observation adapter for the independent Python runner | Runtime and Compiler |
-| [`GameEventScript.Tool`](GameEventScript.Tool/README.md) / `dotnet ges` | Compile/check/run/dump, `document` and `schema` commands, interactive console, filesystem and terminal adapters | Runtime, Compiler, CSharpBridge, Syntax and PrettyPrompt |
+| [`GameEventScript.Tool`](GameEventScript.Tool/README.md) / `dotnet ges` | Compile/check/run/dump, `document` and `schema` commands, interactive console, filesystem and terminal adapters | Runtime, Compiler, CSharpBridge, Syntax, Generator and PrettyPrompt |
 
-All four libraries target **.NET Standard 2.1**. Runtime and CSharpBridge use
+All five libraries target **.NET Standard 2.1**. Runtime, CSharpBridge and Generator use
 **C# 12**, Syntax and Compiler **C# 14**. Runtime and Compiler are synchronous,
 fileless and independent of a test framework. CLR-specific adapters belong to
 CSharpBridge. Runtime depends only on Syntax, and neither Runtime nor CSharpBridge
@@ -29,7 +30,7 @@ compiler or test infrastructure.
 
 The public entry points use `GameEventScript.Api`; values use
 `GameEventScript.Runtime.Values`. The compiler's builder also lives in
-`GameEventScript.Api`, even though its assembly is separate. C# adapters use `GameEventScript.CSharpBridge`. The internal Conformance adapter
+`GameEventScript.Api`, even though its assembly is separate. C# adapters use `GameEventScript.CSharpBridge` and the schema code generator `GameEventScript.Generator`. The internal Conformance adapter
 is not a public library API.
 
 ## Module layout

@@ -38,6 +38,8 @@ const documents = new Map([
   ['implementation/swift/GameEventScriptSwiftBridge/README.md', 'docs/integration/swift-bridge'],
   ['implementation/csharp/GameEventScript.Syntax/README.md', 'docs/tools/csharp-syntax'],
   ['implementation/swift/GameEventScriptSyntax/README.md', 'docs/tools/swift-syntax'],
+  ['implementation/csharp/GameEventScript.Generator/README.md', 'docs/tools/csharp-generator'],
+  ['implementation/swift/GameEventScriptGenerator/README.md', 'docs/tools/swift-generator'],
   ['CHANGELOG.md', 'docs/changelog'],
   ['tools/editors/README.md', 'docs/tools/editor-bundles'],
 ]);

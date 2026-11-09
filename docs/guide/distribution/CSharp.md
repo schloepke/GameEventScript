@@ -3,7 +3,7 @@
 
 # C# distribution
 
-The C# reference implementation publishes four independently consumable
+The C# reference implementation publishes five independently consumable
 packages under the `GameEventScript` product name:
 
 - `GameEventScript.Runtime` contains the portable Runtime, Program codec and
@@ -15,6 +15,9 @@ packages under the `GameEventScript` product name:
 
 - `GameEventScript.Syntax` contains optional GES/GESA editor ranges,
   TextMate scopes, incremental states and ANSI rendering, with no GES dependency.
+- `GameEventScript.Generator` (since Unreleased) writes typed C# and Swift code
+  for `.gess` schemas at build time and depends on Runtime and Syntax. Games
+  never ship it; the code it generates needs Runtime only.
 
 Conformance remains an internal project for repository verification. CLI NuGet
 tools (since 0.3.0) are separate from these library packages; see [CLI installation](Tools.md).
@@ -26,14 +29,15 @@ Source compilation additionally requires Compiler. The direct entry points are
 File reading belongs to the CLI or embedding, which supplies text through
 `AddScript(text, sourceName)`; the previous Bridge `AddFile` helper is removed.
 
-All four public libraries target `netstandard2.1`. Their NuGet packages contain the
+All five public libraries target `netstandard2.1`. Their NuGet packages contain the
 Apache-2.0 license, repository README, XML API documentation, deterministic
 assemblies, and separate portable-PDB symbol packages.
 
 Package and assembly names identify the module; the shared namespace root is
 `GameEventScript`. Public APIs use `GameEventScript.Api`, values use
 `GameEventScript.Runtime.Values`, and the optional libraries use
-`GameEventScript.CSharpBridge`.
+`GameEventScript.CSharpBridge`, `GameEventScript.Syntax` and
+`GameEventScript.Generator`.
 The public type names retain their existing `GameEventScript` or `Ges` prefixes.
 
 ## Local release dry run
@@ -82,15 +86,19 @@ artifacts/csharp/
     GameEventScript.CSharpBridge.<version>.snupkg
     GameEventScript.Syntax.<version>.nupkg
     GameEventScript.Syntax.<version>.snupkg
+    GameEventScript.Generator.<version>.nupkg
+    GameEventScript.Generator.<version>.snupkg
   dll/<version>/
     syntax/ # Standalone Syntax DLL, PDB and XML
     runtime/
     compiler/
     unity/
+    generator/
 ```
 
 The `runtime` set contains Syntax and Runtime; `compiler` contains Syntax,
-Runtime and Compiler; `unity` contains Syntax, Runtime and CSharpBridge. Runtime
+Runtime and Compiler; `unity` contains Syntax, Runtime and CSharpBridge;
+`generator` contains Syntax, Runtime and Generator for build tools. Runtime
 depends on Syntax for the shared lexical rules. All sets include matching XML
 and PDB files.
 
@@ -102,7 +110,9 @@ the runtime inputs, while matching XML and portable PDB files improve editor and
 debugger behavior. A consuming Unity project must support `netstandard2.1` and
 must import both assemblies together when using the Bridge. Precompiled
 execution needs no Compiler DLL; source compilation additionally uses the
-Compiler DLL from the `compiler` set.
+Compiler DLL from the `compiler` set. A Unity editor tool that generates schema
+code imports the `generator` set into an `Editor` folder, so that player builds
+never include the Generator.
 
 The repository verifies the exact staged pair through an external project with
 ordinary assembly references. This proves that the staged dependency set loads

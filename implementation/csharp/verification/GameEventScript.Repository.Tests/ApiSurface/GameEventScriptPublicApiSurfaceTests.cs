@@ -6,6 +6,7 @@ using System.Text;
 using System.Xml.Linq;
 using GameEventScript.Api;
 using GameEventScript.CSharpBridge;
+using GameEventScript.Generator;
 using GameEventScript.Syntax;
 
 namespace GameEventScript.Tests.Native.ApiSurface;
@@ -99,6 +100,8 @@ public sealed class GameEventScriptPublicApiSurfaceTests
         AssertProductReferences(runtime, "GameEventScript.Syntax");
         AssertProductReferences(compiler, "GameEventScript.Runtime", "GameEventScript.Syntax");
         AssertProductReferences(bridge, "GameEventScript.Runtime", "GameEventScript.Syntax");
+        AssertProductReferences(typeof(GesSchemaGenerator).Assembly, "GameEventScript.Runtime", "GameEventScript.Syntax");
+        Assert.IsTrue(typeof(GesSchemaGenerator).Assembly.GetExportedTypes().All(type => IsNamespace(type, "GameEventScript.Generator")));
     }
 
     /// <summary>
@@ -313,5 +316,5 @@ public sealed class GameEventScriptPublicApiSurfaceTests
         assembly.GetExportedTypes().Where(type => !type.Name.Contains('<'));
 
     private static Assembly[] PublicAssemblies()
-        => [typeof(GameEventScriptProgram).Assembly, typeof(GesProgramBuilder).Assembly, typeof(GesBridgeHostRunner).Assembly, typeof(GesSyntaxHighlighter).Assembly];
+        => [typeof(GameEventScriptProgram).Assembly, typeof(GesProgramBuilder).Assembly, typeof(GesBridgeHostRunner).Assembly, typeof(GesSyntaxHighlighter).Assembly, typeof(GesSchemaGenerator).Assembly];
 }

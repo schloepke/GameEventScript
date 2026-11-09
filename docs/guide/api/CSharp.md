@@ -12,8 +12,9 @@ in the latest NuGet release; check the [changelog](../../../CHANGELOG.md) and
 
 DocFX generates the reference from the public assemblies and their XML
 comments, including signatures, parameters, return values and exceptions.
-It includes Runtime, Compiler, CSharpBridge and Syntax. GES documents and schemas
-(`GesDocument`, `GesSchemaSet`, `GesSchema`) belong to Runtime.
+It includes Runtime, Compiler, CSharpBridge, Syntax and Generator. GES documents and schemas
+(`GesDocument`, `GesSchemaSet`, `GesSchema`) belong to Runtime; the
+[Generator](../../../implementation/csharp/GameEventScript.Generator/README.md) writes typed schema code.
 CLI, Conformance and implementation internals are not published here.
 
 Start with the [C# embedding guide](../CSharp.md) for a working application,

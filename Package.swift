@@ -14,6 +14,7 @@ let package = Package(
         .library(name: "GameEventScriptRuntime", targets: ["GameEventScriptRuntime"]),
         .library(name: "GameEventScriptCompiler", targets: ["GameEventScriptCompiler"]),
         .library(name: "GameEventScriptSwiftBridge", targets: ["GameEventScriptSwiftBridge"]),
+        .library(name: "GameEventScriptGenerator", targets: ["GameEventScriptGenerator"]),
     ],
     dependencies: [.package(url: "https://github.com/swiftlang/swift-syntax.git", exact: "600.0.1")],
     targets: [
@@ -31,6 +32,7 @@ let package = Package(
         .target(name: "GameEventScriptRuntime", dependencies: ["GameEventScriptSyntax"], path: "implementation/swift/GameEventScriptRuntime/Sources/GameEventScriptRuntime"),
         .target(name: "GameEventScriptCompiler", dependencies: ["GameEventScriptRuntime", "GameEventScriptSyntax"], path: "implementation/swift/GameEventScriptCompiler/Sources/GameEventScriptCompiler"),
         .target(name: "GameEventScriptSwiftBridge", dependencies: ["GameEventScriptRuntime", "GameEventScriptSwiftBridgeMacros"], path: "implementation/swift/GameEventScriptSwiftBridge/Sources/GameEventScriptSwiftBridge"),
+        .target(name: "GameEventScriptGenerator", dependencies: ["GameEventScriptRuntime", "GameEventScriptSyntax"], path: "implementation/swift/GameEventScriptGenerator/Sources/GameEventScriptGenerator"),
         .testTarget(
             name: "GameEventScriptSwiftBridgeTests",
             dependencies: ["GameEventScriptSwiftBridge", "GameEventScriptRuntime", "GameEventScriptSyntax"],

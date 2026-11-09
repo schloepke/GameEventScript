@@ -59,7 +59,8 @@ jobs:
     needs: changes
     if: needs.changes.outputs.swift == 'true'
     runs-on: macos-15
-    timeout-minutes: 45
+    # A run without a restored build cache takes about 45 minutes, most of it compiling and the two-port comparisons.
+    timeout-minutes: 60
     steps:
       - if: needs.changes.outputs.swift == 'true'
         name: Check out repository

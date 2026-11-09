@@ -175,15 +175,34 @@ def wrapped(form):
     return form[: start + 1] + "\n" + ",\n".join(part.strip() for part in parts) + "\n)"
 
 
+PARSE = {"parse": "parse", "strict": "parse strict"}
+# `parse` reads its form at run time, so one program can hold many of them; a batch that does not end cleanly in both
+# ports runs its forms one by one instead. A form that can fail to compile needs its own program. The CLI processes at
+# most 64 messages per run, Main and one emit per form.
+BATCH = 60
+
+
+def single(form, mode):
+    if mode in PARSE:
+        return form, mode, HEAD + f"  emit ConsoleOut([{PARSE[mode]} '{form}'])\n}}\n", ".ges"
+    if mode == "source":
+        return form, mode, HEAD + f"  emit ConsoleOut([{form}])\n}}\n", ".ges"
+    if mode == "lines":
+        return form, mode, HEAD + f"  emit ConsoleOut([{wrapped(form)}])\n}}\n", ".ges"
+    return form, mode, f"a: {form}\n", ".gesd"
+
+
 def jobs(forms):
+    forms = list(forms)
+    # The longer batches go first, so that the single runs fill the workers behind them.
+    for mode in PARSE:
+        for start in range(0, len(forms), BATCH):
+            yield "batch", (mode, forms[start:start + BATCH])
     for form in forms:
-        yield form, "source", HEAD + f"  emit ConsoleOut([{form}])\n}}\n", ".ges"
-        yield form, "parse", HEAD + f"  emit ConsoleOut([parse '{form}'])\n}}\n", ".ges"
-        yield form, "strict", HEAD + f"  emit ConsoleOut([parse strict '{form}'])\n}}\n", ".ges"
-        yield form, "document", f"a: {form}\n", ".gesd"
-        lines = wrapped(form)
-        if lines:
-            yield form, "lines", HEAD + f"  emit ConsoleOut([{lines}])\n}}\n", ".ges"
+        yield "single", single(form, "source")
+        yield "single", single(form, "document")
+        if wrapped(form):
+            yield "single", single(form, "lines")
 
 
 def observe(command, path, suffix):
@@ -198,12 +217,45 @@ def observe(command, path, suffix):
     return {"value": process.stdout.rstrip("\n")}
 
 
-def run(job):
+def run_single(job):
     form, mode, text, suffix = job
     with tempfile.TemporaryDirectory() as directory:
         path = os.path.join(directory, "form" + suffix)
         Path(path).write_text(text, encoding="utf-8")
         return form, mode, observe(SWIFT, path, suffix), observe(CSHARP, path, suffix)
+
+
+def batch_values(stdout, count):
+    """The value of each form of a batch, or None unless every form printed exactly one line under its index."""
+    lines = stdout.rstrip("\n").split("\n")
+    if len(lines) != count:
+        return None
+    values = []
+    for index, line in enumerate(lines):
+        prefix = f"{index}:"
+        if not line.startswith(prefix):
+            return None
+        values.append({"value": line[len(prefix):]})
+    return values
+
+
+def run_batch(mode, forms):
+    text = HEAD + "".join(f"  emit ConsoleOut(\"{index}:\", [{PARSE[mode]} '{form}'])\n" for index, form in enumerate(forms)) + "}\n"
+    with tempfile.TemporaryDirectory() as directory:
+        path = os.path.join(directory, "forms.ges")
+        Path(path).write_text(text, encoding="utf-8")
+        observed = []
+        for command in (SWIFT, CSHARP):
+            process = subprocess.run([*command, "run", path], capture_output=True, text=True, timeout=120, cwd=directory)
+            observed.append(batch_values(process.stdout, len(forms)) if process.returncode == 0 else None)
+    if None in observed:
+        return [run_single(single(form, mode)) for form in forms]
+    return [(form, mode, swift, csharp) for form, swift, csharp in zip(forms, *observed)]
+
+
+def run(job):
+    kind, payload = job
+    return [run_single(payload)] if kind == "single" else run_batch(*payload)
 
 
 def differences(results):
@@ -219,6 +271,10 @@ def self_test():
     assert differences([("a", "source", same, {"exit": 1, "error": []})])
     assert wrapped(':Range(1, [2, 3])') == ':Range(\n1,\n[2, 3]\n)'
     assert wrapped(':Dice[6]') is None
+    assert batch_values("0:[1]\n1:[nothing]\n", 2) == [{"value": "[1]"}, {"value": "[nothing]"}]
+    assert batch_values("0:[1]\n", 2) is None
+    assert batch_values("0:[1]\n2:[2]\n", 2) is None
+    assert batch_values("0:[1]\n1:[a\nb]\n", 2) is None
 
 
 def main():
@@ -232,12 +288,13 @@ def main():
     forms = matrix()
     work = list(jobs(forms))
     with concurrent.futures.ThreadPoolExecutor(os.cpu_count() or 4) as pool:
-        found = differences(pool.map(run, work))
+        results = [result for results in pool.map(run, work) for result in results]
+    found = differences(results)
     REPORT.parent.mkdir(parents=True, exist_ok=True)
     REPORT.write_text(json.dumps(found, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     for item in found[:20]:
         print(json.dumps(item, ensure_ascii=False))
-    print(f"{len(forms)} forms in {len(work)} runs: {len(found)} port differences")
+    print(f"{len(forms)} forms in {len(results)} observations: {len(found)} port differences")
     return 1 if found else 0
 
 

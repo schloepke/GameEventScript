@@ -79,7 +79,7 @@ final class GenerateTests: XCTestCase {
         XCTAssertEqual(code { try generate("message M(critical: :Boolean) tags (#critical)\n", "M", .swift) }, "generate.nameCollision")
     }
 
-    func testSchemasGetDeltasUntilKeyedListsArrive() throws {
+    func testSchemasGetDeltasWithKeyedLists() throws {
         let source =
             "schema :Item as {\n  id: :Number integer between 0 and 9 key\n}\nschema :S as {\n  x: :Number integer between 0 and 9 delta within 2\n  name: :Text max 4\n}\n"
             + "schema :K as {\n  items: :List(:Item) max 2\n}\nmessage M(a: :Boolean)\n"
@@ -89,13 +89,19 @@ final class GenerateTests: XCTestCase {
         XCTAssertTrue(csharp.contains("public void CopyFrom(S other)"))
         XCTAssertTrue(csharp.contains("public bool WireEquals(S other)"))
         XCTAssertTrue(csharp.contains("GesWireRules.WriteDeltaRange(ref writer"))
-        XCTAssertFalse(csharp.contains("WriteDelta(K baseline"))
+        XCTAssertTrue(csharp.contains("public int WriteDelta(K baseline, Span<byte> buffer)"))
+        XCTAssertTrue(csharp.contains("private bool __WriteKeyed0(K baseline, ref GesBitWriter writer, string[] paths, int at)"))
+        XCTAssertTrue(csharp.contains("internal readonly ulong __KeyOrder(string[] paths, int at) => __Wire0(Id, paths, at);"))
+        XCTAssertTrue(csharp.contains("var order = global::Item.__ReadKeyOrder(ref reader, paths, at + 2);"))
         XCTAssertFalse(csharp.contains("WriteDelta(in M baseline"))
+        let spaced = try GesSchemaGenerator.generate(set, roots: ["K"], parameters: GesSchemaParameters(), options: GesSchemaGenerateOptions(namespace: "Game.Net"))
+        XCTAssertTrue(spaced.contains("global::Game.Net.Item.__ReadKeyOrder("))
         let swift = try GesSchemaGenerator.generate(set, roots: ["S", "K", "M"], parameters: GesSchemaParameters(), options: GesSchemaGenerateOptions(language: .swift))
         XCTAssertTrue(swift.contains("public func writeDelta(against baseline: S, into buffer: UnsafeMutableRawBufferPointer) throws(GesWireError) -> Int {"))
         XCTAssertTrue(swift.contains("public func copy(from other: S) {"))
         XCTAssertTrue(swift.contains("public func quantize() throws(GesWireError) {"))
-        XCTAssertFalse(swift.contains("against baseline: K"))
+        XCTAssertTrue(swift.contains("public func writeDelta(against baseline: K, into buffer: UnsafeMutableRawBufferPointer) throws(GesWireError) -> Int {"))
+        XCTAssertTrue(swift.contains("let order = try Item.__readKeyOrder(&reader, paths, at + 2)"))
     }
 
     func testSharedTypesAreGeneratedOnce() throws {

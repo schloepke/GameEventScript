@@ -49,35 +49,29 @@ internal static partial class GesCSharpEmitter
             code.Open("{");
         }
 
-        var keyed = Keyed(types);
+        var context = new Context(GesSchemaPlanner.KeyedElements(types), "global::" + string.Concat(space.ConvertAll(part => part + ".")));
         for (var index = 0; index < types.Count; index++)
         {
             if (index > 0) code.Blank();
             if (types[index].Kind == GesSchemaKind.Messages) MessageSet(code, types[index], access);
-            else Record(code, types[index], access, keyed);
+            else Record(code, types[index], access, context);
         }
 
         if (space.Count > 0) code.Close();
         return code.ToString();
     }
 
-    private static string Kind(GesPlanType type) => type.Kind == GesSchemaKind.Message ? "message" : "schema";
-
-    // The types whose deltas meet a keyed list, which have no delta methods until keyed lists are generated.
-    private static HashSet<string> Keyed(List<GesPlanType> types)
+    // The keyed-list elements and the qualifier of the top-level types, which a member of the same name cannot hide.
+    private sealed class Context(HashSet<string> elements, string global)
     {
-        var keyed = new HashSet<string>(StringComparer.Ordinal);
-        for (var grown = true; grown;)
-        {
-            grown = false;
-            foreach (var type in types)
-                if (!keyed.Contains(type.Name) && type.Fields.Exists(field => KeyedDelta(field.Value, keyed))) grown = keyed.Add(type.Name);
-        }
+        internal HashSet<string> Elements { get; } = elements;
 
-        return keyed;
+        internal string Global { get; } = global;
     }
 
-    private static void Record(GesSchemaPlanner.Code code, GesPlanType type, string access, HashSet<string> keyed)
+    private static string Kind(GesPlanType type) => type.Kind == GesSchemaKind.Message ? "message" : "schema";
+
+    private static void Record(GesSchemaPlanner.Code code, GesPlanType type, string access, Context context)
     {
         var names = new List<(string, string)> { (type.Name, "the type itself") };
         if (!type.IsItem)
@@ -122,10 +116,10 @@ internal static partial class GesCSharpEmitter
         }
 
         Methods(code, type);
-        var deltas = type.Kind == GesSchemaKind.Schema && !type.IsItem && !keyed.Contains(type.Name);
-        if (deltas) SameHelpers(code, type);
-        Extras(code, type, deltas);
-        foreach (var field in type.Fields) Declarations(code, field.Value, access, keyed);
+        var deltas = type.Kind == GesSchemaKind.Schema && !type.IsItem;
+        if (deltas) SameHelpers(code, type, context.Global);
+        Extras(code, type, deltas, context.Elements.Contains(type.Name));
+        foreach (var field in type.Fields) Declarations(code, field.Value, access, context);
         code.Close();
     }
 
@@ -624,7 +618,7 @@ internal static partial class GesCSharpEmitter
         }
     }
 
-    private static void Declarations(GesSchemaPlanner.Code code, GesPlanValue value, string access, HashSet<string> keyed)
+    private static void Declarations(GesSchemaPlanner.Code code, GesPlanValue value, string access, Context context)
     {
         var name = NestedName(value);
         switch (value.Encoding.Kind)
@@ -668,7 +662,7 @@ internal static partial class GesCSharpEmitter
                 }
 
                 code.Close();
-                foreach (var alternative in value.Alternatives) Declarations(code, alternative, access, keyed);
+                foreach (var alternative in value.Alternatives) Declarations(code, alternative, access, context);
                 break;
             case GesLayoutKind.List:
                 if (value.Element!.IsClass)
@@ -680,9 +674,9 @@ internal static partial class GesCSharpEmitter
                 if (value.Item is not null)
                 {
                     code.Blank();
-                    Record(code, value.Item, access, keyed);
+                    Record(code, value.Item, access, context);
                 }
-                else Declarations(code, value.Element!, access, keyed);
+                else Declarations(code, value.Element!, access, context);
                 break;
         }
     }

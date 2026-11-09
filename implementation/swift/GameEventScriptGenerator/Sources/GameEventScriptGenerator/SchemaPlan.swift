@@ -63,6 +63,29 @@ extension GesSchemaLayout {
 }
 
 enum GesSchemaPlanner {
+    // The schemas that are elements of a keyed list, which compare and read their keys for the list's delta.
+    static func keyedElements(_ types: [GesPlanType]) -> Set<String> {
+        var elements = Set<String>()
+        for type in types {
+            for field in type.fields { keyedElements(field.value, &elements) }
+        }
+        return elements
+    }
+
+    private static func keyedElements(_ value: GesPlanValue, _ elements: inout Set<String>) {
+        if keyed(value) { elements.insert(value.element!.encoding.schema) }
+        for alternative in value.alternatives { keyedElements(alternative, &elements) }
+        if let item = value.item {
+            for field in item.fields { keyedElements(field.value, &elements) }
+        } else if let element = value.element {
+            keyedElements(element, &elements)
+        }
+    }
+
+    static func keyed(_ value: GesPlanValue) -> Bool { value.encoding.kind == .list && value.encoding.keyed }
+
+    static func hasKeyed(_ value: GesPlanValue) -> Bool { keyed(value) || value.alternatives.contains(where: hasKeyed) }
+
     static func plan(_ layout: GesSchemaLayout) throws(GesGeneratorError) -> [GesPlanType] {
         let context = Context(layout)
         return layout.types.map { type(context, $0) }

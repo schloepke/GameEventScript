@@ -1121,7 +1121,7 @@ decodes to, and a class copies another record into its storage with `CopyFrom` (
 `copy(from:)`). A schema writes a delta against a baseline with `WriteDelta` and reads one with
 `ReadDelta`, with the bytes, codes and paths of [`GesSchemaDelta`](#deltas-between-records); the
 baseline must be another instance and is never changed, and a target whose read failed must not
-serve as a baseline. A schema whose delta meets a list of keyed elements has no delta methods yet. `--namespace` puts the types into a C#
+serve as a baseline. Lists of keyed elements take the [keyed-list](#keyed-lists) form, like every delta. `--namespace` puts the types into a C#
 namespace or nested Swift enums, and `--access internal` hides them from other modules. With
 `--check`, `generate` compares its text with the file of `-o` and fails with `cli.outdated` when it
 differs or is missing. The text starts with a header that names the roots, parameters and hashes,

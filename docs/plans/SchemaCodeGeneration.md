@@ -3,7 +3,7 @@
 
 # Plan: generated schema code (`ges schema generate`)
 
-Status: accepted; phases 1 to 4 are implemented, phase 5 is next. This plan is removed when the feature lands; the normative
+Status: accepted; phases 1 to 5 are implemented, phase 6 is next. This plan is removed when the feature lands; the normative
 rules then live in `specs/Schemas.md`.
 
 Variant B of the schema API: typed code per schema with inlined constants, next to the
@@ -248,9 +248,12 @@ Each phase is one reviewable change and keeps all gates green.
    (plus `ToDeltaBytes`, Swift `deltaEncoded(against:)`), `WireEquals` instead of overriding
    `Equals`/`==` (equality that can throw and has no hash does not fit those contracts),
    `CopyFrom`/`copy(from:)`, `Quantize`, and `GesWireRules.WriteDeltaRange`/`ReadDeltaRange` in the
-   runtime; a field named like its type gets the suffix `Value`. Types whose deltas meet a keyed list
-   have no delta methods until phase 5.
-5. Keyed lists in deltas.
+   runtime; a field named like its type gets the suffix `Value`.
+5. Keyed lists in deltas. Done: each keyed list gets a writer and a reader that merge both lists by
+   key, with the checks of `GesSchemaDelta` in its wire order; added elements are validated in a first
+   pass and read again where the merge places them. Elements report their key order (`__KeyOrder`,
+   with the sign bit of an integer without range flipped), and a nested element delta copies the key
+   from the baseline. C# calls element types through `global::`, since a field may carry their name.
 6. `--values`, roundtrip and fuzzing parties, allocation gates, measurement, `specs/Schemas.md`,
    guide, CHANGELOG, PublicApi, Generator package distribution (NuGet, SwiftPM product,
    `docs/guide/distribution/Packages.md`, AGENTS.md), removal of this plan and of the backlog entry.

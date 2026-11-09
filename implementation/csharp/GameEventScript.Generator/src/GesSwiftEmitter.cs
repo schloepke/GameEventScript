@@ -42,12 +42,12 @@ internal static partial class GesSwiftEmitter
             code.Open($"{access}enum {part} {{");
         }
 
-        var keyed = Keyed(types);
+        var elements = GesSchemaPlanner.KeyedElements(types);
         for (var index = 0; index < types.Count; index++)
         {
             if (index > 0) code.Blank();
             if (types[index].Kind == GesSchemaKind.Messages) MessageSet(code, types[index], access);
-            else Record(code, types[index], access, keyed);
+            else Record(code, types[index], access, elements);
         }
 
         foreach (var _ in space) code.Close();
@@ -60,7 +60,7 @@ internal static partial class GesSwiftEmitter
 
     private static string Kind(GesPlanType type) => type.Kind == GesSchemaKind.Message ? "message" : "schema";
 
-    private static void Record(GesSchemaPlanner.Code code, GesPlanType type, string access, HashSet<string> keyed)
+    private static void Record(GesSchemaPlanner.Code code, GesPlanType type, string access, HashSet<string> elements)
     {
         var names = new List<(string, string)>();
         if (!type.IsItem)
@@ -104,10 +104,10 @@ internal static partial class GesSwiftEmitter
         code.Line(type.IsItem ? "/// Creates an element with every field at its zero value." : "/// Creates a record with every field at its zero value.");
         code.Line($"{access}init() {{}}");
         Methods(code, type, access);
-        var deltas = type.Kind == GesSchemaKind.Schema && !type.IsItem && !keyed.Contains(type.Name);
+        var deltas = type.Kind == GesSchemaKind.Schema && !type.IsItem;
         if (deltas) SameHelpers(code, type);
-        Extras(code, type, access, deltas);
-        foreach (var field in type.Fields) Declarations(code, field.Value, access, keyed);
+        Extras(code, type, access, deltas, elements.Contains(type.Name));
+        foreach (var field in type.Fields) Declarations(code, field.Value, access, elements);
         code.Close();
     }
 
@@ -596,7 +596,7 @@ internal static partial class GesSwiftEmitter
         }
     }
 
-    private static void Declarations(GesSchemaPlanner.Code code, GesPlanValue value, string access, HashSet<string> keyed)
+    private static void Declarations(GesSchemaPlanner.Code code, GesPlanValue value, string access, HashSet<string> elements)
     {
         var name = NestedName(value);
         switch (value.Encoding.Kind)
@@ -639,15 +639,15 @@ internal static partial class GesSwiftEmitter
                 }
 
                 code.Close();
-                foreach (var alternative in value.Alternatives) Declarations(code, alternative, access, keyed);
+                foreach (var alternative in value.Alternatives) Declarations(code, alternative, access, elements);
                 break;
             case GesLayoutKind.List:
                 if (value.Item is not null)
                 {
                     code.Blank();
-                    Record(code, value.Item, access, keyed);
+                    Record(code, value.Item, access, elements);
                 }
-                else Declarations(code, value.Element!, access, keyed);
+                else Declarations(code, value.Element!, access, elements);
                 break;
         }
     }

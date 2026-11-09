@@ -26,17 +26,8 @@ internal static partial class GesCSharpEmitter
             foreach (var nested in Scalars(value.Element)) yield return nested;
     }
 
-    // Whether a delta of the value meets a keyed list, which phase 5 adds.
-    private static bool KeyedDelta(GesPlanValue value, HashSet<string> keyed) => value.Encoding.Kind switch
-    {
-        GesLayoutKind.List => value.Encoding.Keyed,
-        GesLayoutKind.Schema => keyed.Contains(value.Encoding.Schema),
-        GesLayoutKind.Union => value.Alternatives.Exists(alternative => KeyedDelta(alternative, keyed)),
-        _ => false
-    };
-
     // The helpers, comparison, copy, quantization and deltas of a record type.
-    private static void Extras(GesSchemaPlanner.Code code, GesPlanType type, bool deltas)
+    private static void Extras(GesSchemaPlanner.Code code, GesPlanType type, bool deltas, bool element)
     {
         var self = type.IsClass ? "" : "readonly ";
         var parameter = type.IsClass ? type.Name : "in " + type.Name;
@@ -108,6 +99,7 @@ internal static partial class GesCSharpEmitter
         code.Line("/// <summary>Replaces every quantized value by the value its index decodes to, which a receiver reads.</summary>");
         code.Line("/// <exception cref=\"GesWireException\">A quantized value lies outside its range.</exception>");
         code.Line("public void Quantize() => __Quantize(__paths, 0);");
+        if (element) KeyOrder(code, type, self);
         if (deltas) Deltas(code, type, self, parameter);
     }
 
@@ -393,7 +385,6 @@ internal static partial class GesCSharpEmitter
             code.Line("const int at = 0;");
             code.Line("var key = __Read0(ref reader, paths, at);");
             code.Line($"if (key != __Wire0(baseline.{key.Base}, paths, at)) throw new GesWireException(GesWireException.InvalidDelta, paths[0]);");
-            code.Line($"{key.Base} = __Value0(key);");
         }
 
         code.Line("__ReadDelta(baseline, ref reader, __paths, 0, true);");
@@ -441,7 +432,7 @@ internal static partial class GesCSharpEmitter
         code.Line($"internal bool __ReadDelta({parameter} baseline, ref GesBitReader reader, string[] paths, int at, bool top)");
         code.Open("{");
         code.Line($"var fieldCount = {counted};");
-        code.Line("reader.Require(fieldCount, top ? \"\" : paths[at - 1]);");
+        code.Line("reader.Require(fieldCount, at == 0 ? \"\" : paths[at - 1]);");
         code.Line("var changeBits = reader.BitPosition;");
         code.Line("reader.Seek(changeBits + fieldCount);");
         code.Line("var changed = false;");
@@ -467,6 +458,9 @@ internal static partial class GesCSharpEmitter
             code.Close();
             code.Line("ordinal++;");
             code.Close();
+
+            // Without a change bit the key equals the baseline's: the caller has compared it, or it identifies a list element.
+            if (field.Key) code.Line($"else {field.Base} = __Value0(__Wire0(baseline.{field.Base}, paths, at));");
         }
 
         code.Line("return changed;");
@@ -523,6 +517,9 @@ internal static partial class GesCSharpEmitter
                 code.Line($"{set} = true;");
                 code.Close();
                 code.Close();
+                break;
+            case GesLayoutKind.List when encoding.Keyed:
+                code.Line($"if (__WriteKeyed{node}(baseline, ref writer, paths, at)) {set} = true;");
                 break;
             case GesLayoutKind.Text or GesLayoutKind.List:
                 code.Line($"if (!__Same{node}(baseline, paths, at))");
@@ -636,6 +633,9 @@ internal static partial class GesCSharpEmitter
             case GesLayoutKind.Integer or GesLayoutKind.Quantized:
                 code.Line($"{a} = __Value{node}(GesWireRules.ReadDeltaRange(ref reader, __Wire{node}({b}, paths, at), {Unsigned(encoding.MaxIndex)}, {(encoding.Wrapping ? "true" : "false")}, {Unsigned(encoding.DeltaRange)}, {encoding.DeltaWidth.ToString(CultureInfo.InvariantCulture)}, {width}, {Path(value)}));");
                 break;
+            case GesLayoutKind.List when encoding.Keyed:
+                code.Line($"__ReadKeyed{node}(baseline, ref reader, paths, at);");
+                break;
             case GesLayoutKind.Text or GesLayoutKind.List:
                 Read(code, value, a);
                 code.Line($"if (__Same{node}(baseline, paths, at)) {Throw("InvalidDelta", value)}");
@@ -707,10 +707,12 @@ internal static partial class GesCSharpEmitter
     }
 
     // A comparison of one Text or List field with the baseline's, for the whole-value payloads.
-    private static void SameHelpers(GesSchemaPlanner.Code code, GesPlanType type)
+    private static void SameHelpers(GesSchemaPlanner.Code code, GesPlanType type, string global)
     {
         var parameter = type.IsClass ? type.Name : "in " + type.Name;
         foreach (var field in type.Fields) SameHelper(code, field.Value, parameter, type.IsClass);
+        foreach (var field in type.Fields) KeyedHelpers(code, field.Value, type.Name, global);
+        if (type.Fields.Exists(field => GesSchemaPlanner.HasKeyed(field.Value))) KeyedStatics(code);
     }
 
     private static void SameHelper(GesSchemaPlanner.Code code, GesPlanValue value, string parameter, bool isClass)

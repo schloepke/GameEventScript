@@ -80,7 +80,7 @@ public sealed class GesSchemaGenerateTests
     }
 
     [TestMethod]
-    public void SchemasGetDeltasUntilKeyedListsArrive()
+    public void SchemasGetDeltasWithKeyedLists()
     {
         const string source = "schema :Item as {\n  id: :Number integer between 0 and 9 key\n}\nschema :S as {\n  x: :Number integer between 0 and 9 delta within 2\n  name: :Text max 4\n}\n"
             + "schema :K as {\n  items: :List(:Item) max 2\n}\nmessage M(a: :Boolean)\n";
@@ -90,13 +90,19 @@ public sealed class GesSchemaGenerateTests
         StringAssert.Contains(csharp, "public void CopyFrom(S other)");
         StringAssert.Contains(csharp, "public bool WireEquals(S other)");
         StringAssert.Contains(csharp, "GesWireRules.WriteDeltaRange(ref writer");
-        Assert.IsFalse(csharp.Contains("WriteDelta(K baseline", StringComparison.Ordinal));
+        StringAssert.Contains(csharp, "public int WriteDelta(K baseline, Span<byte> buffer)");
+        StringAssert.Contains(csharp, "private bool __WriteKeyed0(K baseline, ref GesBitWriter writer, string[] paths, int at)");
+        StringAssert.Contains(csharp, "internal readonly ulong __KeyOrder(string[] paths, int at) => __Wire0(Id, paths, at);");
+        StringAssert.Contains(csharp, "var order = global::Item.__ReadKeyOrder(ref reader, paths, at + 2);");
         Assert.IsFalse(csharp.Contains("WriteDelta(in M baseline", StringComparison.Ordinal));
+        var spaced = GesSchemaGenerator.Generate(set, ["K"], new GesSchemaParameters(), new GesSchemaGenerateOptions { Namespace = "Game.Net" });
+        StringAssert.Contains(spaced, "global::Game.Net.Item.__ReadKeyOrder(");
         var swift = GesSchemaGenerator.Generate(set, ["S", "K", "M"], new GesSchemaParameters(), new GesSchemaGenerateOptions { Language = GesSchemaLanguage.Swift });
         StringAssert.Contains(swift, "public func writeDelta(against baseline: S, into buffer: UnsafeMutableRawBufferPointer) throws(GesWireError) -> Int {");
         StringAssert.Contains(swift, "public func copy(from other: S) {");
         StringAssert.Contains(swift, "public func quantize() throws(GesWireError) {");
-        Assert.IsFalse(swift.Contains("against baseline: K", StringComparison.Ordinal));
+        StringAssert.Contains(swift, "public func writeDelta(against baseline: K, into buffer: UnsafeMutableRawBufferPointer) throws(GesWireError) -> Int {");
+        StringAssert.Contains(swift, "let order = try Item.__readKeyOrder(&reader, paths, at + 2)");
     }
 
     [TestMethod]

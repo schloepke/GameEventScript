@@ -20,32 +20,8 @@ extension GesCSharpEmitter {
         return result
     }
 
-    // Whether a delta of the value meets a keyed list, which phase 5 adds.
-    static func keyedDelta(_ value: GesPlanValue, _ keyed: Set<String>) -> Bool {
-        switch value.encoding.kind {
-        case .list: value.encoding.keyed
-        case .schema: keyed.contains(value.encoding.schema)
-        case .union: value.alternatives.contains { keyedDelta($0, keyed) }
-        default: false
-        }
-    }
-
-    // The types whose deltas meet a keyed list, which have no delta methods until keyed lists are generated.
-    static func keyed(_ types: [GesPlanType]) -> Set<String> {
-        var keyed = Set<String>()
-        var grown = true
-        while grown {
-            grown = false
-            for type in types where !keyed.contains(type.name) && type.fields.contains(where: { keyedDelta($0.value, keyed) }) {
-                keyed.insert(type.name)
-                grown = true
-            }
-        }
-        return keyed
-    }
-
     // The helpers, comparison, copy, quantization and deltas of a record type.
-    static func extras(_ code: inout Code, _ type: GesPlanType, _ deltas: Bool) {
+    static func extras(_ code: inout Code, _ type: GesPlanType, _ deltas: Bool, _ element: Bool) {
         let selfModifier = type.isClass ? "" : "readonly "
         let parameter = type.isClass ? type.name : "in " + type.name
         for field in type.fields {
@@ -106,6 +82,7 @@ extension GesCSharpEmitter {
         code.line("/// <summary>Replaces every quantized value by the value its index decodes to, which a receiver reads.</summary>")
         code.line("/// <exception cref=\"GesWireException\">A quantized value lies outside its range.</exception>")
         code.line("public void Quantize() => __Quantize(__paths, 0);")
+        if element { keyOrder(&code, type, selfModifier) }
         if deltas { self.deltas(&code, type, selfModifier, parameter) }
     }
 
@@ -354,7 +331,6 @@ extension GesCSharpEmitter {
             code.line("const int at = 0;")
             code.line("var key = __Read0(ref reader, paths, at);")
             code.line("if (key != __Wire0(baseline.\(key.base), paths, at)) throw new GesWireException(GesWireException.InvalidDelta, paths[0]);")
-            code.line("\(key.base) = __Value0(key);")
         }
         code.line("__ReadDelta(baseline, ref reader, __paths, 0, true);")
         code.line("return reader.Finish();")
@@ -396,7 +372,7 @@ extension GesCSharpEmitter {
         code.line("internal bool __ReadDelta(\(parameter) baseline, ref GesBitReader reader, string[] paths, int at, bool top)")
         code.open("{")
         code.line("var fieldCount = \(counted);")
-        code.line("reader.Require(fieldCount, top ? \"\" : paths[at - 1]);")
+        code.line("reader.Require(fieldCount, at == 0 ? \"\" : paths[at - 1]);")
         code.line("var changeBits = reader.BitPosition;")
         code.line("reader.Seek(changeBits + fieldCount);")
         code.line("var changed = false;")
@@ -421,6 +397,8 @@ extension GesCSharpEmitter {
             code.close()
             code.line("ordinal++;")
             code.close()
+            // Without a change bit the key equals the baseline's: the caller has compared it, or it identifies a list element.
+            if field.key { code.line("else \(field.base) = __Value0(__Wire0(baseline.\(field.base), paths, at));") }
         }
         code.line("return changed;")
         code.close()
@@ -472,6 +450,8 @@ extension GesCSharpEmitter {
             code.line("\(set) = true;")
             code.close()
             code.close()
+        case .list where encoding.keyed:
+            code.line("if (__WriteKeyed\(node)(baseline, ref writer, paths, at)) \(set) = true;")
         case .text, .list:
             code.line("if (!__Same\(node)(baseline, paths, at))")
             code.open("{")
@@ -570,6 +550,8 @@ extension GesCSharpEmitter {
             code.line(
                 "\(a) = __Value\(node)(GesWireRules.ReadDeltaRange(ref reader, __Wire\(node)(\(b), paths, at), \(unsigned(encoding.maxIndex)), \(encoding.wrapping ? "true" : "false"), \(unsigned(encoding.deltaRange)), \(encoding.deltaWidth), \(width), \(path(value))));"
             )
+        case .list where encoding.keyed:
+            code.line("__ReadKeyed\(node)(baseline, ref reader, paths, at);")
         case .text, .list:
             read(&code, value, a)
             code.line("if (__Same\(node)(baseline, paths, at)) \(fail("InvalidDelta", value))")
@@ -633,9 +615,11 @@ extension GesCSharpEmitter {
     }
 
     // A comparison of one Text or List field with the baseline's, for the whole-value payloads.
-    static func sameHelpers(_ code: inout Code, _ type: GesPlanType) {
+    static func sameHelpers(_ code: inout Code, _ type: GesPlanType, _ global: String) {
         let parameter = type.isClass ? type.name : "in " + type.name
         for field in type.fields { sameHelper(&code, field.value, parameter, type.isClass) }
+        for field in type.fields { keyedHelpers(&code, field.value, type.name, global) }
+        if type.fields.contains(where: { GesSchemaPlanner.hasKeyed($0.value) }) { keyedStatics(&code) }
     }
 
     private static func sameHelper(_ code: inout Code, _ value: GesPlanValue, _ parameter: String, _ isClass: Bool) {

@@ -234,9 +234,9 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   paths as `GesSchemaWriter` and `GesSchemaReader`, without allocating, with parameters as constants.
   Schemas with Text, List or Dice become classes whose storage grows on demand and is reused;
   messages and message sets are supported too. Schemas write and read deltas with the bytes of
-  `GesSchemaDelta`, and records compare by wire values (`WireEquals`), quantize and copy into
-  existing storage. `--namespace`, `--access internal` and `--check` for checked-in output are
-  supported. Deltas of lists with keyed elements follow.
+  `GesSchemaDelta`, lists with keyed elements included, and records compare by wire values
+  (`WireEquals`), quantize and copy into existing storage. `--namespace`, `--access internal` and
+  `--check` for checked-in output are supported.
 - `ges schema layout` (and `dotnet ges schema layout`) prints the language-neutral generation
   layout of one or more roots, or of every declaration with `--all-roots`: every reached type with
   its bound encodings, hashes and the parameters its constants depend on. A type that several roots

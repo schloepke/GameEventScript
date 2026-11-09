@@ -60,6 +60,28 @@ internal sealed class GesPlanValue
 
 internal static class GesSchemaPlanner
 {
+    // The schemas that are elements of a keyed list, which compare and read their keys for the list's delta.
+    internal static HashSet<string> KeyedElements(List<GesPlanType> types)
+    {
+        var elements = new HashSet<string>(System.StringComparer.Ordinal);
+        foreach (var type in types)
+            foreach (var field in type.Fields) KeyedElements(field.Value, elements);
+        return elements;
+    }
+
+    private static void KeyedElements(GesPlanValue value, HashSet<string> elements)
+    {
+        if (value.Encoding.Kind == GesLayoutKind.List && value.Encoding.Keyed) elements.Add(value.Element!.Encoding.Schema);
+        foreach (var alternative in value.Alternatives) KeyedElements(alternative, elements);
+        if (value.Item is not null)
+            foreach (var field in value.Item.Fields) KeyedElements(field.Value, elements);
+        else if (value.Element is not null) KeyedElements(value.Element, elements);
+    }
+
+    internal static bool Keyed(GesPlanValue value) => value.Encoding.Kind == GesLayoutKind.List && value.Encoding.Keyed;
+
+    internal static bool HasKeyed(GesPlanValue value) => Keyed(value) || value.Alternatives.Exists(HasKeyed);
+
     internal static List<GesPlanType> Plan(GesSchemaLayout layout)
     {
         var context = new Context(layout);

@@ -39,18 +39,24 @@ enum GesCSharpEmitter {
             code.line("namespace " + space.joined(separator: "."))
             code.open("{")
         }
-        let keyed = self.keyed(types)
+        let context = Context(elements: GesSchemaPlanner.keyedElements(types), global: "global::" + space.map { $0 + "." }.joined())
         for (index, type) in types.enumerated() {
             if index > 0 { code.blank() }
-            if type.kind == .messages { try messageSet(&code, type, access) } else { try record(&code, type, access, keyed) }
+            if type.kind == .messages { try messageSet(&code, type, access) } else { try record(&code, type, access, context) }
         }
         if !space.isEmpty { code.close() }
         return code.text
     }
 
+    // The keyed-list elements and the qualifier of the top-level types, which a member of the same name cannot hide.
+    struct Context {
+        let elements: Set<String>
+        let global: String
+    }
+
     static func kind(_ type: GesPlanType) -> String { type.kind == .message ? "message" : "schema" }
 
-    static func record(_ code: inout Code, _ type: GesPlanType, _ access: String, _ keyed: Set<String>) throws(GesGeneratorError) {
+    static func record(_ code: inout Code, _ type: GesPlanType, _ access: String, _ context: Context) throws(GesGeneratorError) {
         var names: Names = [(type.name, "the type itself")]
         if !type.isItem {
             for name in reserved { names.append((name, "the generated member " + name)) }
@@ -91,10 +97,10 @@ enum GesCSharpEmitter {
             code.line("public bool \(tag.base);")
         }
         methods(&code, type)
-        let deltas = type.kind == .schema && !type.isItem && !keyed.contains(type.name)
-        if deltas { sameHelpers(&code, type) }
-        extras(&code, type, deltas)
-        for field in type.fields { try declarations(&code, field.value, access, keyed) }
+        let deltas = type.kind == .schema && !type.isItem
+        if deltas { sameHelpers(&code, type, context.global) }
+        extras(&code, type, deltas, context.elements.contains(type.name))
+        for field in type.fields { try declarations(&code, field.value, access, context) }
         code.close()
     }
 
@@ -546,7 +552,7 @@ enum GesCSharpEmitter {
         }
     }
 
-    static func declarations(_ code: inout Code, _ value: GesPlanValue, _ access: String, _ keyed: Set<String>) throws(GesGeneratorError) {
+    static func declarations(_ code: inout Code, _ value: GesPlanValue, _ access: String, _ context: Context) throws(GesGeneratorError) {
         let name = nestedName(value)
         switch value.encoding.kind {
         case .tag:
@@ -580,7 +586,7 @@ enum GesCSharpEmitter {
                 code.line(alternative.label + ",")
             }
             code.close()
-            for alternative in value.alternatives { try declarations(&code, alternative, access, keyed) }
+            for alternative in value.alternatives { try declarations(&code, alternative, access, context) }
         case .list:
             if value.element!.isClass {
                 code.blank()
@@ -588,9 +594,9 @@ enum GesCSharpEmitter {
             }
             if let item = value.item {
                 code.blank()
-                try record(&code, item, access, keyed)
+                try record(&code, item, access, context)
             } else {
-                try declarations(&code, value.element!, access, keyed)
+                try declarations(&code, value.element!, access, context)
             }
         default:
             break

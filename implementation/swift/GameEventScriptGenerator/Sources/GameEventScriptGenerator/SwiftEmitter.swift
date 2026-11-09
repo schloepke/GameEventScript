@@ -32,10 +32,10 @@ enum GesSwiftEmitter {
             code.line("/// The namespace `\(part)` of generated schema types.")
             code.open("\(access)enum \(part) {")
         }
-        let keyed = self.keyed(types)
+        let elements = GesSchemaPlanner.keyedElements(types)
         for (index, type) in types.enumerated() {
             if index > 0 { code.blank() }
-            if type.kind == .messages { try messageSet(&code, type, access) } else { try record(&code, type, access, keyed) }
+            if type.kind == .messages { try messageSet(&code, type, access) } else { try record(&code, type, access, elements) }
         }
         for _ in space { code.close() }
         return code.text
@@ -47,7 +47,7 @@ enum GesSwiftEmitter {
 
     static func kind(_ type: GesPlanType) -> String { type.kind == .message ? "message" : "schema" }
 
-    static func record(_ code: inout Code, _ type: GesPlanType, _ access: String, _ keyed: Set<String>) throws(GesGeneratorError) {
+    static func record(_ code: inout Code, _ type: GesPlanType, _ access: String, _ elements: Set<String>) throws(GesGeneratorError) {
         var names: Names = []
         if !type.isItem {
             for name in reserved { names.append((name, "the generated member " + name)) }
@@ -83,10 +83,10 @@ enum GesSwiftEmitter {
         code.line(type.isItem ? "/// Creates an element with every field at its zero value." : "/// Creates a record with every field at its zero value.")
         code.line("\(access)init() {}")
         methods(&code, type, access)
-        let deltas = type.kind == .schema && !type.isItem && !keyed.contains(type.name)
+        let deltas = type.kind == .schema && !type.isItem
         if deltas { sameHelpers(&code, type) }
-        extras(&code, type, access, deltas)
-        for field in type.fields { try declarations(&code, field.value, access, keyed) }
+        extras(&code, type, access, deltas, elements.contains(type.name))
+        for field in type.fields { try declarations(&code, field.value, access, elements) }
         code.close()
     }
 
@@ -528,7 +528,7 @@ enum GesSwiftEmitter {
         }
     }
 
-    static func declarations(_ code: inout Code, _ value: GesPlanValue, _ access: String, _ keyed: Set<String>) throws(GesGeneratorError) {
+    static func declarations(_ code: inout Code, _ value: GesPlanValue, _ access: String, _ elements: Set<String>) throws(GesGeneratorError) {
         let name = nestedName(value)
         switch value.encoding.kind {
         case .tag:
@@ -561,13 +561,13 @@ enum GesSwiftEmitter {
                 code.line("case \(member(alternative.label))")
             }
             code.close()
-            for alternative in value.alternatives { try declarations(&code, alternative, access, keyed) }
+            for alternative in value.alternatives { try declarations(&code, alternative, access, elements) }
         case .list:
             if let item = value.item {
                 code.blank()
-                try record(&code, item, access, keyed)
+                try record(&code, item, access, elements)
             } else {
-                try declarations(&code, value.element!, access, keyed)
+                try declarations(&code, value.element!, access, elements)
             }
         default:
             break

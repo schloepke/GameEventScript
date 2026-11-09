@@ -19,33 +19,11 @@ extension GesSwiftEmitter {
         return result
     }
 
-    static func keyedDelta(_ value: GesPlanValue, _ keyed: Set<String>) -> Bool {
-        switch value.encoding.kind {
-        case .list: value.encoding.keyed
-        case .schema: keyed.contains(value.encoding.schema)
-        case .union: value.alternatives.contains { keyedDelta($0, keyed) }
-        default: false
-        }
-    }
-
-    static func keyed(_ types: [GesPlanType]) -> Set<String> {
-        var keyed = Set<String>()
-        var grown = true
-        while grown {
-            grown = false
-            for type in types where !keyed.contains(type.name) && type.fields.contains(where: { keyedDelta($0.value, keyed) }) {
-                keyed.insert(type.name)
-                grown = true
-            }
-        }
-        return keyed
-    }
-
     static func target(_ field: String) -> String { "self." + member(field) }
 
     static func other(_ owner: String, _ field: String) -> String { owner + "." + member(field) }
 
-    static func extras(_ code: inout Code, _ type: GesPlanType, _ access: String, _ deltas: Bool) {
+    static func extras(_ code: inout Code, _ type: GesPlanType, _ access: String, _ deltas: Bool, _ element: Bool) {
         let mutating = type.isClass ? "" : "mutating "
         for field in type.fields {
             for value in scalars(field.value) { helpers(&code, value) }
@@ -101,6 +79,7 @@ extension GesSwiftEmitter {
         code.open("\(access)\(mutating)func quantize() throws(GesWireError) {")
         code.line("try __quantize(Self.__paths, 0)")
         code.close()
+        if element { keyOrder(&code, type) }
         if deltas { self.deltas(&code, type, access, mutating) }
     }
 
@@ -334,7 +313,6 @@ extension GesSwiftEmitter {
             code.line("let paths = Self.__paths")
             code.line("let key = try Self.__read0(&reader, paths, 0)")
             code.line("if try key != Self.__wire0(\(other("baseline", key.base)), paths, 0) { throw GesWireError(code: GesWireError.invalidDelta, path: paths[0]) }")
-            code.line("\(target(key.base)) = Self.__value0(key)")
         }
         code.line("_ = try __readDelta(baseline, &reader, Self.__paths, 0, true)")
         code.line("return try reader.finish()")
@@ -389,7 +367,7 @@ extension GesSwiftEmitter {
         code.blank()
         code.open("\(mutating)func __readDelta(_ baseline: \(type.name), _ reader: inout GesBitReader, _ paths: [String], _ at: Int, _ top: Bool) throws(GesWireError) -> Bool {")
         code.line("let fieldCount = \(counted)")
-        code.line("try reader.require(fieldCount, path: top ? \"\" : paths[at - 1])")
+        code.line("try reader.require(fieldCount, path: at == 0 ? \"\" : paths[at - 1])")
         code.line("let changeBits = reader.bitPosition")
         code.line("reader.seek(to: changeBits + fieldCount)")
         code.line("var changed = false")
@@ -410,7 +388,14 @@ extension GesSwiftEmitter {
             copy(&code, field.value, target(field.base), other("baseline", field.base), "baseline")
             code.close("}")
             code.line("ordinal += 1")
-            code.close()
+            if !field.key {
+                code.close()
+                continue
+            }
+            // Without a change bit the key equals the baseline's: the caller has compared it, or it identifies a list element.
+            code.close("} else {")
+            code.line("    \(target(field.base)) = Self.__value0(try Self.__wire0(\(other("baseline", field.base)), paths, at))")
+            code.line("}")
         }
         code.line("return changed")
         code.close()
@@ -457,6 +442,8 @@ extension GesSwiftEmitter {
             code.line("\(set) = true")
             code.close()
             code.close()
+        case .list where encoding.keyed:
+            code.line("if try __writeKeyed\(node)(baseline, &writer, paths, at) { \(set) = true }")
         case .text, .list:
             code.open("if !(try __same\(node)(baseline, paths, at)) {")
             write(&code, value, a)
@@ -559,6 +546,8 @@ extension GesSwiftEmitter {
             code.line("        deltaWidth: \(encoding.deltaWidth), width: \(width), path: \(path(value))")
             code.line("    )")
             code.line(")")
+        case .list where encoding.keyed:
+            code.line("try __readKeyed\(node)(baseline, &reader, paths, at)")
         case .text, .list:
             read(&code, value, a)
             code.line("if try __same\(node)(baseline, paths, at) { \(fail("invalidDelta", value)) }")
@@ -618,6 +607,8 @@ extension GesSwiftEmitter {
 
     static func sameHelpers(_ code: inout Code, _ type: GesPlanType) {
         for field in type.fields { sameHelper(&code, field.value, type.name) }
+        for field in type.fields { keyedHelpers(&code, field.value, type.name) }
+        if type.fields.contains(where: { GesSchemaPlanner.hasKeyed($0.value) }) { keyedStatics(&code) }
     }
 
     private static func sameHelper(_ code: inout Code, _ value: GesPlanValue, _ type: String) {

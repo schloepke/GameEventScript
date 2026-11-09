@@ -25,32 +25,11 @@ internal static partial class GesSwiftEmitter
             foreach (var nested in Scalars(value.Element)) yield return nested;
     }
 
-    private static bool KeyedDelta(GesPlanValue value, HashSet<string> keyed) => value.Encoding.Kind switch
-    {
-        GesLayoutKind.List => value.Encoding.Keyed,
-        GesLayoutKind.Schema => keyed.Contains(value.Encoding.Schema),
-        GesLayoutKind.Union => value.Alternatives.Exists(alternative => KeyedDelta(alternative, keyed)),
-        _ => false
-    };
-
-    private static HashSet<string> Keyed(List<GesPlanType> types)
-    {
-        var keyed = new HashSet<string>(System.StringComparer.Ordinal);
-        for (var grown = true; grown;)
-        {
-            grown = false;
-            foreach (var type in types)
-                if (!keyed.Contains(type.Name) && type.Fields.Exists(field => KeyedDelta(field.Value, keyed))) grown = keyed.Add(type.Name);
-        }
-
-        return keyed;
-    }
-
     private static string Target(string field) => "self." + Member(field);
 
     private static string Other(string owner, string field) => owner + "." + Member(field);
 
-    private static void Extras(GesSchemaPlanner.Code code, GesPlanType type, string access, bool deltas)
+    private static void Extras(GesSchemaPlanner.Code code, GesPlanType type, string access, bool deltas, bool element)
     {
         var mutating = type.IsClass ? "" : "mutating ";
         foreach (var field in type.Fields)
@@ -117,6 +96,7 @@ internal static partial class GesSwiftEmitter
         code.Open($"{access}{mutating}func quantize() throws(GesWireError) {{");
         code.Line("try __quantize(Self.__paths, 0)");
         code.Close();
+        if (element) KeyOrder(code, type);
         if (deltas) Deltas(code, type, access, mutating);
     }
 
@@ -376,7 +356,6 @@ internal static partial class GesSwiftEmitter
             code.Line("let paths = Self.__paths");
             code.Line("let key = try Self.__read0(&reader, paths, 0)");
             code.Line($"if try key != Self.__wire0({Other("baseline", key.Base)}, paths, 0) {{ throw GesWireError(code: GesWireError.invalidDelta, path: paths[0]) }}");
-            code.Line($"{Target(key.Base)} = Self.__value0(key)");
         }
 
         code.Line("_ = try __readDelta(baseline, &reader, Self.__paths, 0, true)");
@@ -437,7 +416,7 @@ internal static partial class GesSwiftEmitter
         code.Blank();
         code.Open($"{mutating}func __readDelta(_ baseline: {type.Name}, _ reader: inout GesBitReader, _ paths: [String], _ at: Int, _ top: Bool) throws(GesWireError) -> Bool {{");
         code.Line($"let fieldCount = {counted}");
-        code.Line("try reader.require(fieldCount, path: top ? \"\" : paths[at - 1])");
+        code.Line("try reader.require(fieldCount, path: at == 0 ? \"\" : paths[at - 1])");
         code.Line("let changeBits = reader.bitPosition");
         code.Line("reader.seek(to: changeBits + fieldCount)");
         code.Line("var changed = false");
@@ -459,7 +438,16 @@ internal static partial class GesSwiftEmitter
             Copy(code, field.Value, Target(field.Base), Other("baseline", field.Base), "baseline");
             code.Close("}");
             code.Line("ordinal += 1");
-            code.Close();
+            if (!field.Key)
+            {
+                code.Close();
+                continue;
+            }
+
+            // Without a change bit the key equals the baseline's: the caller has compared it, or it identifies a list element.
+            code.Close("} else {");
+            code.Line($"    {Target(field.Base)} = Self.__value0(try Self.__wire0({Other("baseline", field.Base)}, paths, at))");
+            code.Line("}");
         }
 
         code.Line("return changed");
@@ -511,6 +499,9 @@ internal static partial class GesSwiftEmitter
                 code.Line($"{set} = true");
                 code.Close();
                 code.Close();
+                break;
+            case GesLayoutKind.List when encoding.Keyed:
+                code.Line($"if try __writeKeyed{node}(baseline, &writer, paths, at) {{ {set} = true }}");
                 break;
             case GesLayoutKind.Text or GesLayoutKind.List:
                 code.Open($"if !(try __same{node}(baseline, paths, at)) {{");
@@ -624,6 +615,9 @@ internal static partial class GesSwiftEmitter
                 code.Line("    )");
                 code.Line(")");
                 break;
+            case GesLayoutKind.List when encoding.Keyed:
+                code.Line($"try __readKeyed{node}(baseline, &reader, paths, at)");
+                break;
             case GesLayoutKind.Text or GesLayoutKind.List:
                 Read(code, value, a);
                 code.Line($"if try __same{node}(baseline, paths, at) {{ {Throw("invalidDelta", value)} }}");
@@ -691,6 +685,8 @@ internal static partial class GesSwiftEmitter
     private static void SameHelpers(GesSchemaPlanner.Code code, GesPlanType type)
     {
         foreach (var field in type.Fields) SameHelper(code, field.Value, type.Name);
+        foreach (var field in type.Fields) KeyedHelpers(code, field.Value, type.Name);
+        if (type.Fields.Exists(field => GesSchemaPlanner.HasKeyed(field.Value))) KeyedStatics(code);
     }
 
     private static void SameHelper(GesSchemaPlanner.Code code, GesPlanValue value, string type)

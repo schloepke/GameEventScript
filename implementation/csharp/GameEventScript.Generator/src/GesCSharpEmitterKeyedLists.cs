@@ -156,7 +156,7 @@ internal static partial class GesCSharpEmitter
         code.Line("reader.Seek(start);");
         if (element.IsClass)
         {
-            code.Line($"if ({pool}.Count == 0) {pool}.Add(new {name}());");
+            code.Line($"if ({pool}.Count == 0) {pool}.Add(new {name} {{ __Owner = this }});");
             code.Line($"{pool}[0].__ReadFields(ref reader, paths, {at});");
         }
         else
@@ -256,7 +256,7 @@ internal static partial class GesCSharpEmitter
             return;
         }
 
-        code.Line($"if (list.Count == {pool}.Count) {pool}.Add(new {name}());");
+        code.Line($"if (list.Count == {pool}.Count) {pool}.Add(new {name} {{ __Owner = this }});");
         code.Line($"var item = {pool}[list.Count];");
     }
 

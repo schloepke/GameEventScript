@@ -58,6 +58,10 @@ enum Generated {
         /// Creates a record with every field at its zero value.
         init() {}
 
+        deinit {
+            for item in self.__shipsPool { item.__owner = nil }
+        }
+
         /// Writes this record into a buffer; `maxByteCount` bytes always suffice.
         /// - Returns: The number of bytes written.
         /// - Throws: `GesWireError` when a value does not fit its field or the buffer is too small.
@@ -133,7 +137,7 @@ enum Generated {
                 if count > 48 { throw GesWireError(code: GesWireError.invalidCount, path: paths[at + 1]) }
                 self.ships.removeAll(keepingCapacity: true)
                 for position in 0..<count {
-                    if position == self.__shipsPool.count { self.__shipsPool.append(Ship()) }
+                    if position == self.__shipsPool.count { self.__shipsPool.append(Ship(__owner: ObjectIdentifier(self))) }
                     let item = self.__shipsPool[position]
                     try item.__readFields(&reader, paths, at + 3)
                     self.ships.append(item)
@@ -285,7 +289,7 @@ enum Generated {
                     if count > 48 { throw GesWireError(code: GesWireError.invalidCount, path: paths[at + 1]) }
                     self.ships.removeAll(keepingCapacity: true)
                     for position in 0..<count {
-                        if position == self.__shipsPool.count { self.__shipsPool.append(Ship()) }
+                        if position == self.__shipsPool.count { self.__shipsPool.append(Ship(__owner: ObjectIdentifier(self))) }
                         let item = self.__shipsPool[position]
                         try item.__readFields(&reader, paths, at + 3)
                         self.ships.append(item)
@@ -328,7 +332,7 @@ enum Generated {
                         other += 1
                     }
                     reader.seek(to: start)
-                    if self.__shipsPool.isEmpty { self.__shipsPool.append(Ship()) }
+                    if self.__shipsPool.isEmpty { self.__shipsPool.append(Ship(__owner: ObjectIdentifier(self))) }
                     try self.__shipsPool[0].__readFields(&reader, paths, at + 3)
                 }
             }
@@ -349,7 +353,7 @@ enum Generated {
                 let element = held[Int(position)]
                 let order = try element.__keyOrder(paths, at + 3)
                 while addedLeft > 0 && addedOrder < order {
-                    if self.ships.count == self.__shipsPool.count { self.__shipsPool.append(Ship()) }
+                    if self.ships.count == self.__shipsPool.count { self.__shipsPool.append(Ship(__owner: ObjectIdentifier(self))) }
                     let item = self.__shipsPool[self.ships.count]
                     reader.seek(to: addedCursor)
                     try item.__readFields(&reader, paths, at + 3)
@@ -362,7 +366,7 @@ enum Generated {
                     if position == nextChanged { throw GesWireError(code: GesWireError.invalidDelta, path: paths[at + 1]) }
                     nextRemoved = try Self.__nextPosition(&reader, &removedCursor, &removedLeft, 6, paths[at + 1])
                 } else if position == nextChanged {
-                    if self.ships.count == self.__shipsPool.count { self.__shipsPool.append(Ship()) }
+                    if self.ships.count == self.__shipsPool.count { self.__shipsPool.append(Ship(__owner: ObjectIdentifier(self))) }
                     let item = self.__shipsPool[self.ships.count]
                     reader.seek(to: changedCursor)
                     if !(try item.__readDelta(element, &reader, paths, at + 3, true)) { throw GesWireError(code: GesWireError.invalidDelta, path: paths[at + 2]) }
@@ -372,7 +376,7 @@ enum Generated {
                     nextChanged = try Self.__nextPosition(&reader, &changedCursor, &changedLeft, 6, paths[at + 1])
                     if nextChanged <= before { throw GesWireError(code: GesWireError.invalidDelta, path: paths[at + 1]) }
                 } else {
-                    if self.ships.count == self.__shipsPool.count { self.__shipsPool.append(Ship()) }
+                    if self.ships.count == self.__shipsPool.count { self.__shipsPool.append(Ship(__owner: ObjectIdentifier(self))) }
                     let item = self.__shipsPool[self.ships.count]
                     item.copy(from: element)
                     self.ships.append(item)
@@ -381,7 +385,7 @@ enum Generated {
             // A changed position beyond the baseline was never reached.
             if nextChanged != UInt64.max { throw GesWireError(code: GesWireError.invalidDelta, path: paths[at + 1]) }
             while addedLeft > 0 {
-                if self.ships.count == self.__shipsPool.count { self.__shipsPool.append(Ship()) }
+                if self.ships.count == self.__shipsPool.count { self.__shipsPool.append(Ship(__owner: ObjectIdentifier(self))) }
                 let item = self.__shipsPool[self.ships.count]
                 reader.seek(to: addedCursor)
                 try item.__readFields(&reader, paths, at + 3)
@@ -451,10 +455,11 @@ enum Generated {
 
         /// Copies the values of another record into the storage of this one, without allocating once it has grown.
         func copy(from other: Fleet) {
+            if self === other { return }
             self.tick = other.tick
             self.ships.removeAll(keepingCapacity: true)
             for index1 in 0..<other.ships.count {
-                if index1 == self.__shipsPool.count { self.__shipsPool.append(Ship()) }
+                if index1 == self.__shipsPool.count { self.__shipsPool.append(Ship(__owner: ObjectIdentifier(self))) }
                 let item1 = self.__shipsPool[index1]
                 item1.copy(from: other.ships[index1])
                 self.ships.append(item1)
@@ -516,7 +521,6 @@ enum Generated {
         /// - Throws: `GesWireError` when the data is no valid delta for this baseline.
         @discardableResult
         func readDelta(from data: UnsafeRawBufferPointer, against baseline: Fleet, byteLimit: Int = .max) throws(GesWireError) -> Int {
-            if self === baseline { throw GesWireError(code: GesWireError.overlappingBuffers, path: "") }
             var reader = GesBitReader(data: data, byteLimit: byteLimit)
             _ = try __readDelta(baseline, &reader, Self.__paths, 0, true)
             return try reader.finish()
@@ -620,6 +624,10 @@ enum Generated {
         }
 
         func __readDelta(_ baseline: Fleet, _ reader: inout GesBitReader, _ paths: [String], _ at: Int, _ top: Bool) throws(GesWireError) -> Bool {
+            if self === baseline { throw GesWireError(code: GesWireError.overlappingBuffers, path: "") }
+            for element in baseline.ships where element.__owner == ObjectIdentifier(self) {
+                throw GesWireError(code: GesWireError.overlappingBuffers, path: paths[at + 1])
+            }
             let fieldCount = 3
             try reader.require(fieldCount, path: at == 0 ? "" : paths[at - 1])
             let changeBits = reader.bitPosition
@@ -655,7 +663,7 @@ enum Generated {
                 } else {
                     self.ships.removeAll(keepingCapacity: true)
                     for index1 in 0..<baseline.ships.count {
-                        if index1 == self.__shipsPool.count { self.__shipsPool.append(Ship()) }
+                        if index1 == self.__shipsPool.count { self.__shipsPool.append(Ship(__owner: ObjectIdentifier(self))) }
                         let item1 = self.__shipsPool[index1]
                         item1.copy(from: baseline.ships[index1])
                         self.ships.append(item1)
@@ -1133,9 +1141,13 @@ enum Generated {
             get { String(decoding: self.nameUTF8, as: UTF8.self) }
             set { self.nameUTF8 = Array(newValue.utf8) }
         }
+        // The record whose list pools this instance; a read rejects a baseline that holds it.
+        @exclusivity(unchecked) var __owner: ObjectIdentifier?
 
         /// Creates a record with every field at its zero value.
         init() {}
+
+        init(__owner owner: ObjectIdentifier) { self.__owner = owner }
 
         /// Writes this record into a buffer; `maxByteCount` bytes always suffice.
         /// - Returns: The number of bytes written.
@@ -1312,6 +1324,7 @@ enum Generated {
 
         /// Copies the values of another record into the storage of this one, without allocating once it has grown.
         func copy(from other: Ship) {
+            if self === other { return }
             self.id = other.id
             self.pose = other.pose
             self.health = other.health
@@ -1379,7 +1392,6 @@ enum Generated {
         /// - Throws: `GesWireError` when the data is no valid delta for this baseline.
         @discardableResult
         func readDelta(from data: UnsafeRawBufferPointer, against baseline: Ship, byteLimit: Int = .max) throws(GesWireError) -> Int {
-            if self === baseline { throw GesWireError(code: GesWireError.overlappingBuffers, path: "") }
             var reader = GesBitReader(data: data, byteLimit: byteLimit)
             let paths = Self.__paths
             let key = try Self.__read0(&reader, paths, 0)
@@ -1512,6 +1524,7 @@ enum Generated {
         }
 
         func __readDelta(_ baseline: Ship, _ reader: inout GesBitReader, _ paths: [String], _ at: Int, _ top: Bool) throws(GesWireError) -> Bool {
+            if self === baseline { throw GesWireError(code: GesWireError.overlappingBuffers, path: "") }
             let fieldCount = top ? 5 : 6
             try reader.require(fieldCount, path: at == 0 ? "" : paths[at - 1])
             let changeBits = reader.bitPosition

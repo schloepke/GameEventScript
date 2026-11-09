@@ -50,6 +50,7 @@ extension GesCSharpEmitter {
             code.line("/// <param name=\"other\">The record to copy.</param>")
             code.line("public void CopyFrom(\(type.name) other)")
             code.open("{")
+            code.line("if (ReferenceEquals(this, other)) return;")
             for field in type.fields {
                 if field.optional { code.line("Has\(field.base) = other.Has\(field.base);") }
                 copy(&code, field.value, field.base, "other." + field.base)
@@ -199,6 +200,22 @@ extension GesCSharpEmitter {
         }
     }
 
+    // Rejects a baseline that shares a list or a pooled element with this record, which the read would overwrite while reading it.
+    private static func overlaps(_ code: inout Code, _ value: GesPlanValue, _ member: String) {
+        switch value.encoding.kind {
+        case .list:
+            code.line("if (ReferenceEquals(\(member), baseline.\(member))) \(fail("OverlappingBuffers", value))")
+            if !value.element!.isClass { break }
+            let node = String(value.node)
+            code.line("for (var owned\(node) = 0; owned\(node) < baseline.\(member).Count; owned\(node)++)")
+            code.line("    if (ReferenceEquals(baseline.\(member)[owned\(node)].__Owner, this)) \(fail("OverlappingBuffers", value))")
+        case .union:
+            for alternative in value.alternatives { overlaps(&code, alternative, prefix(member) + alternative.base) }
+        default:
+            break
+        }
+    }
+
     // Copies b into a without allocating once a's storage has grown.
     private static func copy(_ code: inout Code, _ value: GesPlanValue, _ a: String, _ b: String) {
         let node = String(value.node)
@@ -208,17 +225,24 @@ extension GesCSharpEmitter {
         case .schema where value.isClass:
             code.line("\(a).CopyFrom(\(b));")
         case .list where value.element!.isClass:
+            // The same list already holds the values; clearing it first would lose them.
+            code.line("if (!ReferenceEquals(\(a), \(b)))")
+            code.open("{")
             code.line("\(a).Clear();")
             code.line("for (var index\(node) = 0; index\(node) < \(b).Count; index\(node)++)")
             code.open("{")
-            code.line("if (index\(node) == __\(value.base)Pool.Count) __\(value.base)Pool.Add(new \(elementName(value))());")
+            code.line("if (index\(node) == __\(value.base)Pool.Count) __\(value.base)Pool.Add(new \(elementName(value)) { __Owner = this });")
             code.line("var item\(node) = __\(value.base)Pool[index\(node)];")
             code.line("item\(node).CopyFrom(\(b)[index\(node)]);")
             code.line("\(a).Add(item\(node));")
             code.close()
+            code.close()
         case .list:
+            code.line("if (!ReferenceEquals(\(a), \(b)))")
+            code.open("{")
             code.line("\(a).Clear();")
             code.line("\(a).AddRange(\(b));")
+            code.close()
         case .union:
             code.line("\(a) = \(b);")
             code.line("switch (\(a))")
@@ -324,7 +348,6 @@ extension GesCSharpEmitter {
         code.line("/// <exception cref=\"GesWireException\">The data is no valid delta for this baseline.</exception>")
         code.line("public int ReadDelta(ReadOnlySpan<byte> data, \(parameter) baseline, long byteLimit = long.MaxValue)")
         code.open("{")
-        if type.isClass { code.line("if (ReferenceEquals(this, baseline)) throw new GesWireException(GesWireException.OverlappingBuffers, \"\");") }
         code.line("var reader = new GesBitReader(data, byteLimit);")
         if let key {
             code.line("var paths = __paths;")
@@ -371,6 +394,10 @@ extension GesCSharpEmitter {
         code.blank()
         code.line("internal bool __ReadDelta(\(parameter) baseline, ref GesBitReader reader, string[] paths, int at, bool top)")
         code.open("{")
+        if type.isClass {
+            code.line("if (ReferenceEquals(this, baseline)) throw new GesWireException(GesWireException.OverlappingBuffers, \"\");")
+            for field in type.fields { overlaps(&code, field.value, field.base) }
+        }
         code.line("var fieldCount = \(counted);")
         code.line("reader.Require(fieldCount, at == 0 ? \"\" : paths[at - 1]);")
         code.line("var changeBits = reader.BitPosition;")

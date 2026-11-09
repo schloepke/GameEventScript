@@ -29,7 +29,7 @@ extension ToolHelp {
           generate   Generate C# or Swift code that writes and reads the records of the roots and every type they reach.
 
         Options:
-          --root <Name>             The schema, message or message set; layout accepts several.
+          --root <Name>             The schema, message or message set; layout and generate accept several.
           --all-roots               Make every declaration of the files a root of layout or generate.
           --language <name>         The language that generate writes: csharp or swift.
           --namespace <A.B>         The namespace of the generated types; Swift declares it as nested enums.
@@ -134,7 +134,7 @@ extension Tool {
         if check && output == nil { throw ToolError.usage("--check requires -o with the file to compare.") }
         if let output {
             guard !output.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { throw ToolError.usage("The output path must not be empty.") }
-            try ToolFiles.ensureDistinct(output, from: [paths[0]])
+            try ToolFiles.ensureDistinct(output, from: paths)
         }
         do {
             if command == "format" {

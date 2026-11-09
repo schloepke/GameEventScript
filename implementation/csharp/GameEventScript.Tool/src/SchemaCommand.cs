@@ -34,7 +34,7 @@ Commands:
   generate   Generate C# or Swift code that writes and reads the records of the roots and every type they reach.
 
 Options:
-  --root <Name>             The schema, message or message set; layout accepts several.
+  --root <Name>             The schema, message or message set; layout and generate accept several.
   --all-roots               Make every declaration of the files a root of layout or generate.
   --language <name>         The language that generate writes: csharp or swift.
   --namespace <A.B>         The namespace of the generated types; Swift declares it as nested enums.
@@ -140,7 +140,8 @@ Options:
         {
             if (string.IsNullOrWhiteSpace(output)) return UsageError("The output path must not be empty.");
             var comparison = OperatingSystem.IsWindows() || OperatingSystem.IsMacOS() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
-            if (string.Equals(Path.GetFullPath(paths[0]), Path.GetFullPath(output), comparison)) return UsageError("Input and output must be different files.");
+            var outputPath = Path.GetFullPath(output);
+            if (paths.Any(path => string.Equals(Path.GetFullPath(path), outputPath, comparison))) return UsageError("Input and output must be different files.");
         }
 
         try

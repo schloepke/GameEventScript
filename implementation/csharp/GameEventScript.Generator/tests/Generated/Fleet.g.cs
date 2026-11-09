@@ -160,7 +160,7 @@ namespace GameEventScript.Tests.Generator.Generated
                 Ships.Clear();
                 for (var position = 0; position < count; position++)
                 {
-                    if (position == __ShipsPool.Count) __ShipsPool.Add(new Ship());
+                    if (position == __ShipsPool.Count) __ShipsPool.Add(new Ship { __Owner = this });
                     var item = __ShipsPool[position];
                     item.__ReadFields(ref reader, paths, at + 3);
                     Ships.Add(item);
@@ -328,7 +328,7 @@ namespace GameEventScript.Tests.Generator.Generated
                     Ships.Clear();
                     for (var position = 0; position < count; position++)
                     {
-                        if (position == __ShipsPool.Count) __ShipsPool.Add(new Ship());
+                        if (position == __ShipsPool.Count) __ShipsPool.Add(new Ship { __Owner = this });
                         var item = __ShipsPool[position];
                         item.__ReadFields(ref reader, paths, at + 3);
                         Ships.Add(item);
@@ -369,7 +369,7 @@ namespace GameEventScript.Tests.Generator.Generated
                     if (next > order) break;
                 }
                 reader.Seek(start);
-                if (__ShipsPool.Count == 0) __ShipsPool.Add(new Ship());
+                if (__ShipsPool.Count == 0) __ShipsPool.Add(new Ship { __Owner = this });
                 __ShipsPool[0].__ReadFields(ref reader, paths, at + 3);
             }
             var changedLeft = reader.Read(6, paths[at + 1]);
@@ -394,7 +394,7 @@ namespace GameEventScript.Tests.Generator.Generated
                 var order = element.__KeyOrder(paths, at + 3);
                 while (addedLeft > 0 && addedOrder < order)
                 {
-                    if (list.Count == __ShipsPool.Count) __ShipsPool.Add(new Ship());
+                    if (list.Count == __ShipsPool.Count) __ShipsPool.Add(new Ship { __Owner = this });
                     var item = __ShipsPool[list.Count];
                     reader.Seek(addedCursor);
                     item.__ReadFields(ref reader, paths, at + 3);
@@ -409,7 +409,7 @@ namespace GameEventScript.Tests.Generator.Generated
                 }
                 else if (position == nextChanged)
                 {
-                    if (list.Count == __ShipsPool.Count) __ShipsPool.Add(new Ship());
+                    if (list.Count == __ShipsPool.Count) __ShipsPool.Add(new Ship { __Owner = this });
                     var item = __ShipsPool[list.Count];
                     reader.Seek(changedCursor);
                     if (!item.__ReadDelta(element, ref reader, paths, at + 3, true)) throw new GesWireException(GesWireException.InvalidDelta, paths[at + 2]);
@@ -421,7 +421,7 @@ namespace GameEventScript.Tests.Generator.Generated
                 }
                 else
                 {
-                    if (list.Count == __ShipsPool.Count) __ShipsPool.Add(new Ship());
+                    if (list.Count == __ShipsPool.Count) __ShipsPool.Add(new Ship { __Owner = this });
                     var item = __ShipsPool[list.Count];
                     item.CopyFrom(element);
                     list.Add(item);
@@ -432,7 +432,7 @@ namespace GameEventScript.Tests.Generator.Generated
             if (nextChanged != ulong.MaxValue) throw new GesWireException(GesWireException.InvalidDelta, paths[at + 1]);
             while (addedLeft > 0)
             {
-                if (list.Count == __ShipsPool.Count) __ShipsPool.Add(new Ship());
+                if (list.Count == __ShipsPool.Count) __ShipsPool.Add(new Ship { __Owner = this });
                 var item = __ShipsPool[list.Count];
                 reader.Seek(addedCursor);
                 item.__ReadFields(ref reader, paths, at + 3);
@@ -518,14 +518,18 @@ namespace GameEventScript.Tests.Generator.Generated
         /// <param name="other">The record to copy.</param>
         public void CopyFrom(Fleet other)
         {
+            if (ReferenceEquals(this, other)) return;
             Tick = other.Tick;
-            Ships.Clear();
-            for (var index1 = 0; index1 < other.Ships.Count; index1++)
+            if (!ReferenceEquals(Ships, other.Ships))
             {
-                if (index1 == __ShipsPool.Count) __ShipsPool.Add(new Ship());
-                var item1 = __ShipsPool[index1];
-                item1.CopyFrom(other.Ships[index1]);
-                Ships.Add(item1);
+                Ships.Clear();
+                for (var index1 = 0; index1 < other.Ships.Count; index1++)
+                {
+                    if (index1 == __ShipsPool.Count) __ShipsPool.Add(new Ship { __Owner = this });
+                    var item1 = __ShipsPool[index1];
+                    item1.CopyFrom(other.Ships[index1]);
+                    Ships.Add(item1);
+                }
             }
             Mode = other.Mode;
             switch (Mode)
@@ -591,7 +595,6 @@ namespace GameEventScript.Tests.Generator.Generated
         /// <exception cref="GesWireException">The data is no valid delta for this baseline.</exception>
         public int ReadDelta(ReadOnlySpan<byte> data, Fleet baseline, long byteLimit = long.MaxValue)
         {
-            if (ReferenceEquals(this, baseline)) throw new GesWireException(GesWireException.OverlappingBuffers, "");
             var reader = new GesBitReader(data, byteLimit);
             __ReadDelta(baseline, ref reader, __paths, 0, true);
             return reader.Finish();
@@ -715,6 +718,10 @@ namespace GameEventScript.Tests.Generator.Generated
 
         internal bool __ReadDelta(Fleet baseline, ref GesBitReader reader, string[] paths, int at, bool top)
         {
+            if (ReferenceEquals(this, baseline)) throw new GesWireException(GesWireException.OverlappingBuffers, "");
+            if (ReferenceEquals(Ships, baseline.Ships)) throw new GesWireException(GesWireException.OverlappingBuffers, paths[at + 1]);
+            for (var owned1 = 0; owned1 < baseline.Ships.Count; owned1++)
+                if (ReferenceEquals(baseline.Ships[owned1].__Owner, this)) throw new GesWireException(GesWireException.OverlappingBuffers, paths[at + 1]);
             var fieldCount = 3;
             reader.Require(fieldCount, at == 0 ? "" : paths[at - 1]);
             var changeBits = reader.BitPosition;
@@ -749,13 +756,16 @@ namespace GameEventScript.Tests.Generator.Generated
                 }
                 else
                 {
-                    Ships.Clear();
-                    for (var index1 = 0; index1 < baseline.Ships.Count; index1++)
+                    if (!ReferenceEquals(Ships, baseline.Ships))
                     {
-                        if (index1 == __ShipsPool.Count) __ShipsPool.Add(new Ship());
-                        var item1 = __ShipsPool[index1];
-                        item1.CopyFrom(baseline.Ships[index1]);
-                        Ships.Add(item1);
+                        Ships.Clear();
+                        for (var index1 = 0; index1 < baseline.Ships.Count; index1++)
+                        {
+                            if (index1 == __ShipsPool.Count) __ShipsPool.Add(new Ship { __Owner = this });
+                            var item1 = __ShipsPool[index1];
+                            item1.CopyFrom(baseline.Ships[index1]);
+                            Ships.Add(item1);
+                        }
                     }
                 }
                 ordinal++;
@@ -1261,6 +1271,9 @@ namespace GameEventScript.Tests.Generator.Generated
             set => SetNameUtf8(System.Text.Encoding.UTF8.GetBytes(value));
         }
 
+        // The record whose list pools this instance; a read rejects a baseline that holds it.
+        internal object? __Owner;
+
         /// <summary>Writes this record into a buffer; <see cref="MaxByteCount"/> bytes always suffice.</summary>
         /// <param name="buffer">The buffer.</param>
         /// <returns>The number of bytes written.</returns>
@@ -1449,6 +1462,7 @@ namespace GameEventScript.Tests.Generator.Generated
         /// <param name="other">The record to copy.</param>
         public void CopyFrom(Ship other)
         {
+            if (ReferenceEquals(this, other)) return;
             Id = other.Id;
             Pose = other.Pose;
             Health = other.Health;
@@ -1515,7 +1529,6 @@ namespace GameEventScript.Tests.Generator.Generated
         /// <exception cref="GesWireException">The data is no valid delta for this baseline.</exception>
         public int ReadDelta(ReadOnlySpan<byte> data, Ship baseline, long byteLimit = long.MaxValue)
         {
-            if (ReferenceEquals(this, baseline)) throw new GesWireException(GesWireException.OverlappingBuffers, "");
             var reader = new GesBitReader(data, byteLimit);
             var paths = __paths;
             const int at = 0;
@@ -1651,6 +1664,7 @@ namespace GameEventScript.Tests.Generator.Generated
 
         internal bool __ReadDelta(Ship baseline, ref GesBitReader reader, string[] paths, int at, bool top)
         {
+            if (ReferenceEquals(this, baseline)) throw new GesWireException(GesWireException.OverlappingBuffers, "");
             var fieldCount = top ? 5 : 6;
             reader.Require(fieldCount, at == 0 ? "" : paths[at - 1]);
             var changeBits = reader.BitPosition;

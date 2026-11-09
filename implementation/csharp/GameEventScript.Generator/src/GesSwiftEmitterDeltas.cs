@@ -58,6 +58,7 @@ internal static partial class GesSwiftEmitter
             code.Blank();
             code.Line("/// Copies the values of another record into the storage of this one, without allocating once it has grown.");
             code.Open($"{access}func copy(from other: {type.Name}) {{");
+            code.Line("if self === other { return }");
             foreach (var field in type.Fields)
             {
                 if (field.Optional) code.Line($"self.has{field.Base} = other.has{field.Base}");
@@ -218,6 +219,22 @@ internal static partial class GesSwiftEmitter
         }
     }
 
+    // Rejects a baseline that holds an element pooled by this record, which the read would overwrite while reading it.
+    private static void Overlaps(GesSchemaPlanner.Code code, GesPlanValue value, string b)
+    {
+        switch (value.Encoding.Kind)
+        {
+            case GesLayoutKind.List when value.Element!.IsClass:
+                code.Open($"for element in {b} where element.__owner == ObjectIdentifier(self) {{");
+                code.Line(Throw("overlappingBuffers", value));
+                code.Close();
+                break;
+            case GesLayoutKind.Union:
+                foreach (var alternative in value.Alternatives) Overlaps(code, alternative, Other("baseline", alternative.Base));
+                break;
+        }
+    }
+
     // Copies b into a without allocating once a's storage has grown.
     private static void Copy(GesSchemaPlanner.Code code, GesPlanValue value, string a, string b, string ownerB)
     {
@@ -235,7 +252,7 @@ internal static partial class GesSwiftEmitter
                 var pool = $"self.__{GesSchemaPlanner.Camel(value.Base)}Pool";
                 code.Line($"{a}.removeAll(keepingCapacity: true)");
                 code.Open($"for index{node} in 0..<{b}.count {{");
-                code.Line($"if index{node} == {pool}.count {{ {pool}.append({ElementName(value)}()) }}");
+                code.Line($"if index{node} == {pool}.count {{ {pool}.append({ElementName(value)}(__owner: ObjectIdentifier(self))) }}");
                 code.Line($"let item{node} = {pool}[index{node}]");
                 code.Line($"item{node}.copy(from: {b}[index{node}])");
                 code.Line($"{a}.append(item{node})");
@@ -349,7 +366,6 @@ internal static partial class GesSwiftEmitter
         code.Line("/// - Throws: `GesWireError` when the data is no valid delta for this baseline.");
         code.Line("@discardableResult");
         code.Open($"{access}{mutating}func readDelta(from data: UnsafeRawBufferPointer, against baseline: {type.Name}, byteLimit: Int = .max) throws(GesWireError) -> Int {{");
-        if (type.IsClass) code.Line("if self === baseline { throw GesWireError(code: GesWireError.overlappingBuffers, path: \"\") }");
         code.Line("var reader = GesBitReader(data: data, byteLimit: byteLimit)");
         if (key is not null)
         {
@@ -415,6 +431,12 @@ internal static partial class GesSwiftEmitter
         code.Close();
         code.Blank();
         code.Open($"{mutating}func __readDelta(_ baseline: {type.Name}, _ reader: inout GesBitReader, _ paths: [String], _ at: Int, _ top: Bool) throws(GesWireError) -> Bool {{");
+        if (type.IsClass)
+        {
+            code.Line("if self === baseline { throw GesWireError(code: GesWireError.overlappingBuffers, path: \"\") }");
+            foreach (var field in type.Fields) Overlaps(code, field.Value, Other("baseline", field.Base));
+        }
+
         code.Line($"let fieldCount = {counted}");
         code.Line("try reader.require(fieldCount, path: at == 0 ? \"\" : paths[at - 1])");
         code.Line("let changeBits = reader.bitPosition");

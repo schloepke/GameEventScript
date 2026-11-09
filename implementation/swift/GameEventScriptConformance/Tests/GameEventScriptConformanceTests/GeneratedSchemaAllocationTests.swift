@@ -6,7 +6,7 @@ import GameEventScriptRuntime
 import XCTest
 
 /// Code generated from conformance/fixtures/SchemaGeneration/fleet.gess writes and reads records and deltas without
-/// allocating once its storage has grown.
+/// allocating once its storage has grown, and rejects a baseline that shares its storage.
 final class GeneratedSchemaAllocationTests: XCTestCase {
     func testGeneratedRecordsAllocateNothing() throws {
         #if !canImport(Darwin)
@@ -64,5 +64,47 @@ final class GeneratedSchemaAllocationTests: XCTestCase {
             XCTAssertTrue(try received.wireEquals(fleet))
             XCTAssertNotEqual(sink, 0)
         #endif
+    }
+
+    func testBaselinesSharingStorageAreRejected() throws {
+        let source = Generated.Fleet()
+        source.tick = 3
+        for index in 0..<3 {
+            let ship = Generated.Ship()
+            ship.id = Int64(index)
+            ship.health = 10
+            source.ships.append(ship)
+        }
+        let fleet = Generated.Fleet()
+        try fleet.read(from: try source.encoded())
+        let delta = [UInt8](repeating: 0, count: Generated.Fleet.maxByteCount)
+
+        // The read would overwrite the pooled ships of fleet while it reads them as the baseline.
+        func rejected(_ baseline: Generated.Fleet, _ path: String) {
+            XCTAssertThrowsError(try fleet.readDelta(from: delta, against: baseline)) { error in
+                XCTAssertEqual((error as? GesWireError)?.code, GesWireError.overlappingBuffers)
+                XCTAssertEqual((error as? GesWireError)?.path, path)
+            }
+        }
+
+        rejected(fleet, "")
+        let sharing = Generated.Fleet()
+        sharing.ships = fleet.ships
+        rejected(sharing, "ships")
+        let mixed = Generated.Fleet()
+        mixed.ships = [Generated.Ship(), fleet.ships[2]]
+        rejected(mixed, "ships")
+
+        // Copying a record into itself keeps its values.
+        fleet.copy(from: fleet)
+        XCTAssertTrue(try fleet.wireEquals(source))
+        fleet.ships[0].copy(from: fleet.ships[0])
+        XCTAssertTrue(try fleet.wireEquals(source))
+
+        let baseline = Generated.Fleet()
+        baseline.copy(from: fleet)
+        source.ships[1].health = 11
+        try fleet.readDelta(from: try source.deltaEncoded(against: baseline), against: baseline)
+        XCTAssertTrue(try fleet.wireEquals(source))
     }
 }

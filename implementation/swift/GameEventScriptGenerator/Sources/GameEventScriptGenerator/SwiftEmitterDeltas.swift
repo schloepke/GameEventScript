@@ -47,6 +47,7 @@ extension GesSwiftEmitter {
             code.blank()
             code.line("/// Copies the values of another record into the storage of this one, without allocating once it has grown.")
             code.open("\(access)func copy(from other: \(type.name)) {")
+            code.line("if self === other { return }")
             for field in type.fields {
                 if field.optional { code.line("self.has\(field.base) = other.has\(field.base)") }
                 copy(&code, field.value, target(field.base), other("other", field.base), "other")
@@ -189,6 +190,20 @@ extension GesSwiftEmitter {
         }
     }
 
+    // Rejects a baseline that holds an element pooled by this record, which the read would overwrite while reading it.
+    private static func overlaps(_ code: inout Code, _ value: GesPlanValue, _ b: String) {
+        switch value.encoding.kind {
+        case .list where value.element!.isClass:
+            code.open("for element in \(b) where element.__owner == ObjectIdentifier(self) {")
+            code.line(fail("overlappingBuffers", value))
+            code.close()
+        case .union:
+            for alternative in value.alternatives { overlaps(&code, alternative, other("baseline", alternative.base)) }
+        default:
+            break
+        }
+    }
+
     // Copies b into a without allocating once a's storage has grown.
     private static func copy(_ code: inout Code, _ value: GesPlanValue, _ a: String, _ b: String, _ ownerB: String) {
         let node = String(value.node)
@@ -202,7 +217,7 @@ extension GesSwiftEmitter {
             let pool = "self.__\(GesSchemaPlanner.camel(value.base))Pool"
             code.line("\(a).removeAll(keepingCapacity: true)")
             code.open("for index\(node) in 0..<\(b).count {")
-            code.line("if index\(node) == \(pool).count { \(pool).append(\(elementName(value))()) }")
+            code.line("if index\(node) == \(pool).count { \(pool).append(\(elementName(value))(__owner: ObjectIdentifier(self))) }")
             code.line("let item\(node) = \(pool)[index\(node)]")
             code.line("item\(node).copy(from: \(b)[index\(node)])")
             code.line("\(a).append(item\(node))")
@@ -307,7 +322,6 @@ extension GesSwiftEmitter {
         code.line("/// - Throws: `GesWireError` when the data is no valid delta for this baseline.")
         code.line("@discardableResult")
         code.open("\(access)\(mutating)func readDelta(from data: UnsafeRawBufferPointer, against baseline: \(type.name), byteLimit: Int = .max) throws(GesWireError) -> Int {")
-        if type.isClass { code.line("if self === baseline { throw GesWireError(code: GesWireError.overlappingBuffers, path: \"\") }") }
         code.line("var reader = GesBitReader(data: data, byteLimit: byteLimit)")
         if let key {
             code.line("let paths = Self.__paths")
@@ -366,6 +380,10 @@ extension GesSwiftEmitter {
         code.close()
         code.blank()
         code.open("\(mutating)func __readDelta(_ baseline: \(type.name), _ reader: inout GesBitReader, _ paths: [String], _ at: Int, _ top: Bool) throws(GesWireError) -> Bool {")
+        if type.isClass {
+            code.line("if self === baseline { throw GesWireError(code: GesWireError.overlappingBuffers, path: \"\") }")
+            for field in type.fields { overlaps(&code, field.value, other("baseline", field.base)) }
+        }
         code.line("let fieldCount = \(counted)")
         code.line("try reader.require(fieldCount, path: at == 0 ? \"\" : paths[at - 1])")
         code.line("let changeBits = reader.bitPosition")

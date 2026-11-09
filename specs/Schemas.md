@@ -850,7 +850,7 @@ complete:
 | `wire.bufferTooSmall` | the caller's buffer is too small |
 | `wire.fieldOrder` | a typed writer or reader uses a field out of order |
 | `wire.keyMismatch` | a record and its baseline have different keys |
-| `wire.overlappingBuffers` | the target buffer of `GesSchemaDelta` overlaps an input, in either direction |
+| `wire.overlappingBuffers` | the target buffer of `GesSchemaDelta` overlaps an input, in either direction, or a generated record's baseline shares its storage |
 
 Errors carry the field path but no value from the data, so they can be logged safely.
 
@@ -1120,8 +1120,12 @@ that it writes, never raw numbers; `Quantize` replaces each quantized number by 
 decodes to, and a class copies another record into its storage with `CopyFrom` (Swift
 `copy(from:)`). A schema writes a delta against a baseline with `WriteDelta` and reads one with
 `ReadDelta`, with the bytes, codes and paths of [`GesSchemaDelta`](#deltas-between-records); the
-baseline must be another instance and is never changed, and a target whose read failed must not
-serve as a baseline. Lists of keyed elements take the [keyed-list](#keyed-lists) form, like every delta.
+baseline is never changed, and a target whose read failed must not serve as a baseline. Since a read
+overwrites the target's storage, the baseline must share none of it: on each record it reads,
+`ReadDelta` rejects with `wire.overlappingBuffers` a baseline that is that record (path empty), that
+holds a list element this record's storage reuses, or, in C#, that holds the same list (both at the
+list's path). `CopyFrom` from the record itself, or in C# from a record with the same list, keeps its
+values. Lists of keyed elements take the [keyed-list](#keyed-lists) form, like every delta.
 With `--values`, a schema also converts to and from a GES value with `ToValue` and `ReadValue` (Swift
 `toValue()` and `read(value:)`), and a message or message set to and from a message with `ToMessage`
 and `ReadMessage` (Swift `toMessage()` and `read(message:)`). The conversion goes through the record's

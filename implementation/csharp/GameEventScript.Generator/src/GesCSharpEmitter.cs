@@ -53,7 +53,7 @@ internal static partial class GesCSharpEmitter
         }
 
         var holder = "__GesSchemas" + GesSchemaPlanner.Hash(GesSchemaPlanner.Header(layout));
-        var context = new Context(GesSchemaPlanner.KeyedElements(types), "global::" + string.Concat(space.ConvertAll(part => part + ".")), options.Values, holder);
+        var context = new Context(GesSchemaPlanner.KeyedElements(types), GesSchemaPlanner.PooledElements(types), "global::" + string.Concat(space.ConvertAll(part => part + ".")), options.Values, holder);
         for (var index = 0; index < types.Count; index++)
         {
             if (index > 0) code.Blank();
@@ -68,9 +68,12 @@ internal static partial class GesCSharpEmitter
     }
 
     // The keyed-list elements and the qualifier of the top-level types, which a member of the same name cannot hide.
-    private sealed class Context(HashSet<string> elements, string global, bool values, string holder)
+    private sealed class Context(HashSet<string> elements, HashSet<string> pooled, string global, bool values, string holder)
     {
         internal HashSet<string> Elements { get; } = elements;
+
+        // Whether instances of a type live in a list's pool and remember the record that owns it.
+        internal bool Owned(GesPlanType type) => type.IsClass && (type.IsItem || pooled.Contains(type.Name));
 
         internal string Global { get; } = global;
 
@@ -126,6 +129,13 @@ internal static partial class GesCSharpEmitter
             code.Blank();
             code.Line($"/// <summary>Whether the tag <c>#{tag}</c> is set.</summary>");
             code.Line($"public bool {name};");
+        }
+
+        if (context.Owned(type))
+        {
+            code.Blank();
+            code.Line("// The record whose list pools this instance; a read rejects a baseline that holds it.");
+            code.Line("internal object? __Owner;");
         }
 
         Methods(code, type);
@@ -594,7 +604,7 @@ internal static partial class GesCSharpEmitter
                 code.Open("{");
                 if (element.IsClass)
                 {
-                    code.Line($"if (position == __{value.Base}Pool.Count) __{value.Base}Pool.Add(new {name}());");
+                    code.Line($"if (position == __{value.Base}Pool.Count) __{value.Base}Pool.Add(new {name} {{ __Owner = this }});");
                     code.Line($"var item = __{value.Base}Pool[position];");
                 }
                 else if (value.Item is not null || element.Encoding.Kind is GesLayoutKind.Point or GesLayoutKind.Vector or GesLayoutKind.Schema) code.Line($"var item = new {name}();");

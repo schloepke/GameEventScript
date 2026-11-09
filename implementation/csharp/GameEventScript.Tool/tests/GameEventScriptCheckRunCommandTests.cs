@@ -327,6 +327,9 @@ public sealed class GameEventScriptCheckRunCommandTests
         Assert.AreEqual(2, Run("schema", "layout", "drone.gess", "--root", "Drone", "--values").ExitCode);
         Assert.AreEqual(0, Run("schema", "generate", "drone.gess", "--root", "Drone", "--language", "swift", "--checked-exclusivity").ExitCode);
         Assert.AreEqual(2, Run("schema", "layout", "drone.gess", "--root", "Drone", "--checked-exclusivity").ExitCode);
+        Write("extra.gess", "schema :Extra as {\n  on: :Boolean\n}\n");
+        Assert.AreEqual(2, Run("schema", "generate", "drone.gess", "extra.gess", "--all-roots", "--language", "csharp", "-o", "extra.gess").ExitCode);
+        Assert.AreEqual("schema :Extra as {\n  on: :Boolean\n}\n", File.ReadAllText(Path.Combine(_directory, "extra.gess")));
         var invalid = Run("schema", "generate", "drone.gess", "--root", "Drone", "--language", "swift", "--namespace", "1x");
         Assert.AreEqual(1, invalid.ExitCode);
         StringAssert.Contains(invalid.StandardError, "error generate.invalidNamespace");

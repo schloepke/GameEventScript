@@ -30,6 +30,43 @@ public sealed class GesGeneratedCodeTests
     }
 
     [TestMethod]
+    public void BaselinesSharingStorageAreRejected()
+    {
+        var source = new Fleet { Tick = 3 };
+        for (var index = 0; index < 3; index++) source.Ships.Add(new Ship { Id = index, Health = 10 });
+        var fleet = new Fleet();
+        fleet.Read(source.ToBytes());
+        var delta = new byte[Fleet.MaxByteCount];
+
+        // The read would overwrite the pooled ships of fleet while it reads them as the baseline.
+        void Rejected(Fleet baseline, string path)
+        {
+            var error = Assert.ThrowsExactly<GesWireException>(() => fleet.ReadDelta(delta, baseline));
+            Assert.AreEqual(GesWireException.OverlappingBuffers, error.Code);
+            Assert.AreEqual(path, error.Path);
+        }
+
+        Rejected(fleet, "");
+        Rejected(new Fleet { Ships = fleet.Ships }, "ships");
+        Rejected(new Fleet { Ships = new List<Ship>(fleet.Ships) }, "ships");
+        Rejected(new Fleet { Ships = { new Ship { Id = 7 }, fleet.Ships[2] } }, "ships");
+
+        // Copying a record into itself, or from a record that holds the same list, keeps its values.
+        fleet.CopyFrom(fleet);
+        fleet.CopyFrom(new Fleet { Tick = 3, Ships = fleet.Ships });
+        Assert.IsTrue(fleet.WireEquals(source));
+        fleet.Ships[0].CopyFrom(fleet.Ships[0]);
+        Assert.IsTrue(fleet.WireEquals(source));
+
+        var baseline = new Fleet();
+        baseline.CopyFrom(fleet);
+        source.Ships[1].Health = 11;
+        var length = source.WriteDelta(baseline, delta);
+        fleet.ReadDelta(delta.AsSpan(0, length), baseline);
+        Assert.IsTrue(fleet.WireEquals(source));
+    }
+
+    [TestMethod]
     [TestCategory("Allocation")]
     public void GeneratedRecordsAllocateNothing()
     {

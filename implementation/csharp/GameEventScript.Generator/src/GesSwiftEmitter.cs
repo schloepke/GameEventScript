@@ -49,7 +49,7 @@ internal static partial class GesSwiftEmitter
         }
 
         var holder = "__GesSchemas" + GesSchemaPlanner.Hash(GesSchemaPlanner.Header(layout));
-        var context = new Context(GesSchemaPlanner.KeyedElements(types), options.Values, holder, options.CheckedExclusivity);
+        var context = new Context(GesSchemaPlanner.KeyedElements(types), GesSchemaPlanner.PooledElements(types), options.Values, holder, options.CheckedExclusivity);
         for (var index = 0; index < types.Count; index++)
         {
             if (index > 0) code.Blank();
@@ -63,9 +63,12 @@ internal static partial class GesSwiftEmitter
     }
 
     // The keyed-list elements, and whether records convert to and from GES values through the helper type of the file.
-    private sealed class Context(HashSet<string> elements, bool values, string holder, bool checkedExclusivity)
+    private sealed class Context(HashSet<string> elements, HashSet<string> pooled, bool values, string holder, bool checkedExclusivity)
     {
         internal HashSet<string> Elements { get; } = elements;
+
+        // Whether instances of a type live in a list's pool and remember the record that owns it.
+        internal bool Owned(GesPlanType type) => type.IsClass && (type.IsItem || pooled.Contains(type.Name));
 
         internal bool Values { get; } = values;
 
@@ -124,9 +127,32 @@ internal static partial class GesSwiftEmitter
         }
 
         foreach (var field in type.Fields) Pools(code, field.Value, stored);
+        if (context.Owned(type))
+        {
+            code.Line("// The record whose list pools this instance; a read rejects a baseline that holds it.");
+            code.Line($"{stored}var __owner: ObjectIdentifier?");
+        }
+
         code.Blank();
         code.Line(type.IsItem ? "/// Creates an element with every field at its zero value." : "/// Creates a record with every field at its zero value.");
         code.Line($"{access}init() {{}}");
+        if (context.Owned(type))
+        {
+            code.Blank();
+            code.Line("init(__owner owner: ObjectIdentifier) { self.__owner = owner }");
+        }
+
+        var pools = new List<string>();
+        foreach (var field in type.Fields) PoolNames(field.Value, pools);
+        if (pools.Count > 0)
+        {
+            // An instance that outlives this record must not match a later record at the same address.
+            code.Blank();
+            code.Open("deinit {");
+            foreach (var pool in pools) code.Line($"for item in self.{pool} {{ item.__owner = nil }}");
+            code.Close();
+        }
+
         Methods(code, type, access);
         var deltas = type.Kind == GesSchemaKind.Schema && !type.IsItem;
         if (deltas) SameHelpers(code, type);
@@ -261,6 +287,13 @@ internal static partial class GesSwiftEmitter
         if (value.Encoding.Kind == GesLayoutKind.Union)
             foreach (var alternative in value.Alternatives) Pools(code, alternative, stored);
         if (value.Encoding.Kind == GesLayoutKind.List && value.Element!.IsClass) code.Line($"{stored}private var __{GesSchemaPlanner.Camel(value.Base)}Pool: [{ElementName(value)}] = []");
+    }
+
+    private static void PoolNames(GesPlanValue value, List<string> pools)
+    {
+        if (value.Encoding.Kind == GesLayoutKind.Union)
+            foreach (var alternative in value.Alternatives) PoolNames(alternative, pools);
+        if (value.Encoding.Kind == GesLayoutKind.List && value.Element!.IsClass) pools.Add($"__{GesSchemaPlanner.Camel(value.Base)}Pool");
     }
 
     private static string Description(GesPlanValue value)
@@ -585,7 +618,7 @@ internal static partial class GesSwiftEmitter
                 if (element.IsClass)
                 {
                     var pool = $"self.__{GesSchemaPlanner.Camel(value.Base)}Pool";
-                    code.Line($"if position == {pool}.count {{ {pool}.append({name}()) }}");
+                    code.Line($"if position == {pool}.count {{ {pool}.append({name}(__owner: ObjectIdentifier(self))) }}");
                     code.Line($"let item = {pool}[position]");
                 }
                 else if (value.Item is not null || element.Encoding.Kind is GesLayoutKind.Point or GesLayoutKind.Vector or GesLayoutKind.Schema) code.Line($"var item = {name}()");

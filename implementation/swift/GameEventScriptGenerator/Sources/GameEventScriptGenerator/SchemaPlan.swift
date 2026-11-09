@@ -82,6 +82,25 @@ enum GesSchemaPlanner {
         }
     }
 
+    // The schemas that a list of classes pools, and whose instances therefore remember their owner.
+    static func pooledElements(_ types: [GesPlanType]) -> Set<String> {
+        var elements = Set<String>()
+        for type in types {
+            for field in type.fields { pooledElements(field.value, &elements) }
+        }
+        return elements
+    }
+
+    private static func pooledElements(_ value: GesPlanValue, _ elements: inout Set<String>) {
+        if value.encoding.kind == .list && value.item == nil && value.element!.isClass { elements.insert(value.element!.encoding.schema) }
+        for alternative in value.alternatives { pooledElements(alternative, &elements) }
+        if let item = value.item {
+            for field in item.fields { pooledElements(field.value, &elements) }
+        } else if let element = value.element {
+            pooledElements(element, &elements)
+        }
+    }
+
     static func keyed(_ value: GesPlanValue) -> Bool { value.encoding.kind == .list && value.encoding.keyed }
 
     static func hasKeyed(_ value: GesPlanValue) -> Bool { keyed(value) || value.alternatives.contains(where: hasKeyed) }

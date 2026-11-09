@@ -6,7 +6,8 @@
 Random values, values at each bound and half-step ties encode to the bytes of an independent oracle in both ports. Random
 and mutated bytes decode to the same result in both ports, and every schema of the corpus has the same canonical form and
 hash. Deltas between random records match the oracle too, also element by element in keyed lists, and random and mutated deltas
-decode alike. Negative controls qualify
+decode alike. Code that both CLIs generate for these schemas joins as a third and fourth party: in each port it gives the
+oracle's bytes and the results of the interpreted path, values included. Negative controls qualify
 the comparison.
 """
 import argparse
@@ -22,6 +23,7 @@ import tempfile
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'conformance/runner'))
 from checks.numeric_checks import canonical_text, number as parsed_number  # noqa: E402
+import schema_generated_parties  # noqa: E402
 
 REPORTS = ROOT / 'artifacts/swift/schema-roundtrip'
 SEED = 20261104
@@ -703,12 +705,16 @@ def main():
     expected = {}
     cases = []
     encoded = []
+    # Requests to the generated code: (root, operation, first, second, limit) and the expected line, or None for any result
+    # on which the generated and the interpreted path agree in both ports.
+    generated = []
     for index in range(options.count):
         value, data = sample(rng)
         encoded.append(bytes.fromhex(data))
         identifier = f'encode-{index}'
         expected[identifier] = data
         cases.append((identifier, {'sources': [SCHEMA], 'root': 'Sample', 'encode': value, 'decode': data}))
+        generated.append((('Sample', 'decode', data, '', None), f'ok {len(data) // 2} {data}'))
     # Random and mutated bytes must decode to the same result or the same error in both ports.
     for index in range(options.count):
         if index % 2:
@@ -719,6 +725,7 @@ def main():
                 mutated[rng.randrange(len(mutated))] ^= 1 << rng.randrange(8)
             data = bytes(mutated[:rng.randrange(len(mutated) + 1)] if rng.random() < 0.3 else mutated)
         cases.append((f'fuzz-{index}', {'sources': [SCHEMA], 'root': 'Sample', 'decode': data.hex()}))
+        generated.append((('Sample', 'decode', data.hex(), '', None), None))
     deltas = {}
     bases = []
     for index in range(options.count):
@@ -734,6 +741,8 @@ def main():
             'deltaEncode': {'record': full, 'baseline': held}, 'deltaDecode': {'delta': data, 'baseline': held},
         }))
         cases.append((f'{identifier}-full', {'sources': [DELTA_SCHEMA], 'root': 'Moving', 'encode': moving_value(record)}))
+        generated.append((('Moving', 'deltaEncode', full, held, None), f'ok {data}'))
+        generated.append((('Moving', 'delta', data, held, None), f'ok {len(data) // 2} {full}'))
     # A delta from untrusted data must produce the same record or the same error in both ports.
     for index in range(options.count):
         data, base = rng.choice(bases)
@@ -744,6 +753,7 @@ def main():
             for _ in range(rng.randrange(1, 4)):
                 mutated[rng.randrange(len(mutated))] ^= 1 << rng.randrange(8)
         cases.append((f'delta-fuzz-{index}', {'sources': [DELTA_SCHEMA], 'root': 'Moving', 'baseline': moving_value(base), 'decode': bytes(mutated).hex()}))
+        generated.append((('Moving', 'delta', bytes(mutated).hex(), moving_full(base), None), None))
     # Keyed lists: bytes from the rules, and untrusted deltas that must end alike in both ports.
     keyed = {}
     keyed_bases = []
@@ -760,6 +770,8 @@ def main():
             'sources': [KEYED_SCHEMA], 'root': 'Fleet', 'encode': fleet_value(record), 'baseline': fleet_value(base), 'decode': data,
             'deltaEncode': {'record': full, 'baseline': held}, 'deltaDecode': {'delta': data, 'baseline': held},
         }))
+        generated.append((('Fleet', 'deltaEncode', full, held, None), f'ok {data}'))
+        generated.append((('Fleet', 'delta', data, held, None), f'ok {len(data) // 2} {full}'))
     for index in range(options.count):
         data, base = rng.choice(keyed_bases)
         mutated = bytearray.fromhex(data)
@@ -768,6 +780,7 @@ def main():
         for _ in range(rng.randrange(1, 4)):
             mutated[rng.randrange(len(mutated))] ^= 1 << rng.randrange(8)
         keyed_cases.append((f'keyed-fuzz-{index}', {'sources': [KEYED_SCHEMA], 'root': 'Fleet', 'baseline': fleet_value(base), 'decode': bytes(mutated).hex()}))
+        generated.append((('Fleet', 'delta', bytes(mutated).hex(), fleet_full(base), None), None))
     respelled = ('schema :Force as { force: :Quantity(N) between 0kN and 50kN step 0.01kN }\n', '// other\n\nschema :Force as {\n  force: :Quantity(N) between 0N and 50000N step 10N // comment\n}\n')
     for index, source in enumerate(respelled):
         cases.append((f'respelled-{index}', {'sources': [source], 'root': 'Force', 'bind': False}))
@@ -784,6 +797,16 @@ def main():
             for port, adapter in adapters.items():
                 observations[(port, name)] = observe(adapter, requests, temporary / f'{port}-{name}.json')
     failures = []
+    commands = schema_generated_parties.build(REPORTS / 'generated', [('Sample', SCHEMA), ('Moving', DELTA_SCHEMA), ('Fleet', KEYED_SCHEMA)])
+    lines = schema_generated_parties.run(commands, [request for request, _ in generated])
+    for position, (request, wanted) in enumerate(generated):
+        for port, output in lines.items():
+            line = output[position]
+            if line.startswith('mismatch') or (wanted is not None and line != wanted):
+                failures.append(f'generated {port} {request[0]} {request[1]} {request[2]}: expected {wanted or "agreement"}, got {line}')
+        if lines['C#'][position] != lines['Swift'][position]:
+            failures.append(f'generated {request[0]} {request[1]} {request[2]}: C# {lines["C#"][position]}, Swift {lines["Swift"][position]}')
+    generated_accepted = sum(line.startswith('ok') for (_, wanted), line in zip(generated, lines['C#']) if wanted is None)
     for name in ('exchange', 'keyed', 'corpus'):
         different = compare(observations[('csharp', name)], observations[('swift', name)])
         if different:
@@ -841,6 +864,7 @@ def main():
         return 1
     print(f'Schema bytes verified: {options.count} encodings in both ports, {options.count} fuzzed inputs with equal results ({accepted} accepted), {options.count} deltas, {options.count} fuzzed deltas ({accepted_deltas} accepted), {len(observations[("csharp", "corpus")])} corpus cases.')
     print(f'Keyed lists verified: {options.count} deltas in both ports, {options.count} fuzzed deltas with equal results ({accepted_keyed} accepted).')
+    print(f'Generated code verified: {len(generated)} requests in C# and Swift, {sum(wanted is None for _, wanted in generated)} of them untrusted ({generated_accepted} accepted).')
     return 0
 
 

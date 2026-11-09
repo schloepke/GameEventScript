@@ -68,14 +68,34 @@ def cases(paths):
     return result
 
 
-def generate(directory, sources, root, parameters, language, space):
+# Keyword names in both languages, a tag set beyond 256 tags and a type that two roots share.
+GATE_SCHEMA = """schema :Shared as {
+  class: :Boolean
+  default: :Number integer between 0 and 3
+}
+
+schema :First as {
+  struct: :Shared
+  self: :Boolean
+  init: :Text max 2
+  operator: :Tag(""" + ", ".join(f"#t{index}" for index in range(300)) + """)
+}
+
+schema :Second as {
+  in: :Shared
+  internal: :Number optional
+  var: :List(:Shared) max 2
+}
+"""
+
+def generate(directory, sources, root, parameters, language, space, more=()):
     files = []
     for number, text in enumerate(sources):
         path = directory / f"s{number}.gess"
         path.write_text(text, encoding="utf-8")
         files.append(path.name)
     options = [argument for name, value in parameters for argument in ("--param", f"{name}={value}")]
-    run = subprocess.run(["dotnet", str(CSHARP_CLI), "schema", "generate", *files, "--root", root, *options, "--language", language, "--namespace", space],
+    run = subprocess.run(["dotnet", str(CSHARP_CLI), "schema", "generate", *files, "--root", root, *more, *options, "--language", language, "--namespace", space, "--values"],
                          cwd=directory, capture_output=True, check=False)
     if run.returncode != 0:
         match = CODE.search(run.stderr.decode("utf-8", "replace"))
@@ -98,7 +118,7 @@ def csharp_program(entries):
     lines = ["using System;", "", "internal static class Harness", "{",
              "    private static string Hex(ReadOnlySpan<byte> bytes) { var text = new System.Text.StringBuilder(); foreach (var b in bytes) text.Append(b.ToString(\"x2\")); return text.ToString(); }",
              "    private static string Run(int schema, string operation, byte[] data, byte[] second, long limit)", "    {", "        switch (schema)", "        {"]
-    for index, root, key, _, delta in entries:
+    for index, root, key, _, delta, conversion in entries:
         name = f"Gen.Case{index}.{root}"
         lines += [f"            case {index}:", "            {"]
         lines += [f"                if (operation == \"key\") return \"ok \" + ((long){name}.ReadKey(data)).ToString();" if key else "                if (operation == \"key\") return \"none\";"]
@@ -110,7 +130,12 @@ def csharp_program(entries):
                       "                    return \"ok \" + Hex(record.ToDeltaBytes(baseline));", "                }"]
         else:
             lines += ["                if (operation != \"decode\") return \"none\";"]
-        lines += ["                var count = record.Read(data, limit);", "                return \"ok \" + count + \" \" + Hex(record.ToBytes());", "            }"]
+        # A decoded record converts into a GES value, through the embedded schema sources, and that value back into an equal one;
+        # equal, not the same bytes, since a Dice value orders its rolls.
+        wrap = "" if conversion == "Value" else "GameEventScript.Runtime.Values.GesValue.GesMessage"
+        lines += ["                var count = record.Read(data, limit);", f"                var copy = new {name}();", f"                var value = record.To{conversion}();",
+                  f"                copy.Read{conversion}(value);", f"                if (!{wrap}(copy.To{conversion}()).Equals({wrap}(value))) return \"value mismatch\";",
+                  "                return \"ok \" + count + \" \" + Hex(record.ToBytes());", "            }"]
     lines += ["            default: return \"none\";", "        }", "    }", "",
               "    private static byte[] Bytes(string text) => Convert.FromHexString(text == \".\" ? \"\" : text);", "",
               "    private static void Main()", "    {", "        string? line;", "        while ((line = Console.ReadLine()) != null)", "        {",
@@ -127,7 +152,7 @@ def swift_program(entries):
              "    while index < text.endIndex {", "        let next = text.index(index, offsetBy: 2)", "        result.append(UInt8(text[index..<next], radix: 16)!)",
              "        index = next", "    }", "    return result", "}", "",
              "func run(_ schema: Int, _ operation: Substring, _ data: [UInt8], _ second: [UInt8], _ limit: Int) throws(GesWireError) -> String {", "    switch schema {"]
-    for index, root, key, is_class, delta in entries:
+    for index, root, key, is_class, delta, conversion in entries:
         binding = "let" if is_class else "var"
         lines += [f"    case {index}:"]
         if key:
@@ -144,7 +169,11 @@ def swift_program(entries):
                       "            return \"ok \" + hex(try record.deltaEncoded(against: baseline))", "        }"]
         else:
             lines += ["        if operation != \"decode\" { return \"none\" }"]
-        lines += ["        let count = try record.read(from: data, byteLimit: limit)", "        return \"ok \\(count) \" + hex(try record.encoded())"]
+        label = conversion.lower()
+        lines += ["        let count = try record.read(from: data, byteLimit: limit)", "        do {", f"            {binding} copy = Case{index}.{root}()",
+                  f"            let value = try record.to{conversion}()", f"            try copy.read({label}: value)",
+                  f"            if try copy.to{conversion}() != value {{ return \"value mismatch\" }}",
+                  "        } catch {", "            return \"value error \\(error)\"", "        }", "        return \"ok \\(count) \" + hex(try record.encoded())"]
     lines += ["    default:", "        return \"none\"", "    }", "}", "",
               "while let line = readLine() {", "    let parts = line.split(separator: \" \", omittingEmptySubsequences: false)",
               "    let limit = parts[4] == \"-\" ? Int.max : Int(parts[4])!", "    do {",
@@ -219,12 +248,21 @@ def main():
         (csharp / f"Case{index}.g.cs").write_text(code, encoding="utf-8")
         (swift / f"Case{index}.swift").write_text(swift_code, encoding="utf-8")
         delta = has_delta(code, root)
-        entries.append((index, root, declares(code, root, " ReadKey("), f"final class {root} {{" in swift_code, delta))
+        conversion = "Value" if declares(code, root, " ToValue(") else "Message"
+        entries.append((index, root, declares(code, root, " ReadKey("), f"final class {root} {{" in swift_code, delta, conversion))
         for case_id, operation, data, second, limit, expected in operations:
             if operation.startswith("delta") and not delta:
                 skipped["no delta methods"] = skipped.get("no delta methods", 0) + 1
                 continue
             requests.append((case_id, index, operation, data.lower(), second.lower(), limit, expected))
+    # The compilation gate: keyword names, a tag set beyond 256 tags and two roots sharing a type, in a namespace.
+    gate = WORK / "schemas/gate"
+    gate.mkdir(parents=True)
+    for language, target, space in (("csharp", csharp / "Gate.g.cs", "Gen.Gate"), ("swift", swift / "Gate.swift", "Gate")):
+        code, error = generate(gate, [GATE_SCHEMA], "First", [], language, space, ["--root", "Second"])
+        if code is None:
+            raise SystemExit(f"The gate schema does not generate: {error}")
+        target.write_text(code, encoding="utf-8")
     (csharp / "Harness.cs").write_text(csharp_program(entries), encoding="utf-8")
     (csharp / "Harness.csproj").write_text(f"""<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
@@ -256,7 +294,26 @@ let package = Package(
     ]
 )
 """, encoding="utf-8")
-    for command in (["dotnet", "build", str(csharp), "-c", "Release", "-o", str(WORK / "csharp-bin"), "-nologo"],
+    # Unity compiles C# 9 against .NET Standard 2.1, without unsafe code.
+    unity = WORK / "csharp-unity"
+    unity.mkdir()
+    (unity / "Unity.csproj").write_text(f"""<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <LangVersion>9</LangVersion>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="{csharp}/*.g.cs" />
+    <ProjectReference Include="{ROOT / 'implementation/csharp/GameEventScript.Runtime/src/GameEventScript.Runtime.csproj'}" />
+  </ItemGroup>
+</Project>
+""", encoding="utf-8")
+    for command in (["dotnet", "build", str(unity), "-c", "Release", "-o", str(WORK / "csharp-unity-bin"), "-nologo"],
+                    ["dotnet", "build", str(csharp), "-c", "Release", "-o", str(WORK / "csharp-bin"), "-nologo"],
                     ["swift", "build", "-c", "release", "--package-path", str(WORK / "swift"), "--disable-build-manifest-caching"]):
         build = subprocess.run(command, capture_output=True, check=False)
         if build.returncode != 0:

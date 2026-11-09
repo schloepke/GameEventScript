@@ -30,9 +30,13 @@ public final class GesSchemaSet: @unchecked Sendable {
     private var declarations: [String: GesResolvedDeclaration] = [:]
     private var ordered: [GesResolvedDeclaration] = []
 
+    /// The sources as given, which generated code embeds to convert to and from GES values.
+    @_spi(Generator) public let sources: [GesSchemaSource]
+
     /// Reads and validates one or several sources. References resolve across all of them.
     /// - Throws: `GesSchemaError` for the first rule a source breaks.
     public init(sources: [GesSchemaSource]) throws {
+        self.sources = sources
         var files: [GesFileScope] = []
         for source in sources {
             let syntax = GesSchemaSourceReader.read(source.text)

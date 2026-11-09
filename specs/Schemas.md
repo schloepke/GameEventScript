@@ -1121,7 +1121,19 @@ decodes to, and a class copies another record into its storage with `CopyFrom` (
 `copy(from:)`). A schema writes a delta against a baseline with `WriteDelta` and reads one with
 `ReadDelta`, with the bytes, codes and paths of [`GesSchemaDelta`](#deltas-between-records); the
 baseline must be another instance and is never changed, and a target whose read failed must not
-serve as a baseline. Lists of keyed elements take the [keyed-list](#keyed-lists) form, like every delta. `--namespace` puts the types into a C#
+serve as a baseline. Lists of keyed elements take the [keyed-list](#keyed-lists) form, like every delta.
+With `--values`, a schema also converts to and from a GES value with `ToValue` and `ReadValue` (Swift
+`toValue()` and `read(value:)`), and a message or message set to and from a message with `ToMessage`
+and `ReadMessage` (Swift `toMessage()` and `read(message:)`). The conversion goes through the record's
+bytes and the [value path](#value-path), so it gives exactly its values, codes and paths; for that the
+code embeds the schema sources under their file names and binds them once per type with the
+generation's parameters, and a binding hash that differs from the generated one fails the conversion. It
+allocates and serves values from scripts, not the hot path. A Swift class marks its stored properties
+`@exclusivity(unchecked)`, since the dynamic exclusivity checks would take about half the time of
+reading and writing; a caller must therefore not access one record while another access to it is
+under way, such as passing a list of it `inout` while the record reads into it, which is undefined
+instead of a trap. `--checked-exclusivity` keeps the checks. Bounds and the end of buffers and data stay
+checked either way, and classes are not `Sendable`, so Swift 6 does not let threads share them. `--namespace` puts the types into a C#
 namespace or nested Swift enums, and `--access internal` hides them from other modules. With
 `--check`, `generate` compares its text with the file of `-o` and fails with `cli.outdated` when it
 differs or is missing. The text starts with a header that names the roots, parameters and hashes,

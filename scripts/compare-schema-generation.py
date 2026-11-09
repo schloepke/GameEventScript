@@ -78,8 +78,8 @@ def compare(index, item, csharp, swift, work):
         files.append(path.name)
     options = [argument for name, value in parameters for argument in ("--param", f"{name}={value}")]
     differences = []
-    for selection in (["layout", "--root", root], ["layout", "--all-roots"], ["generate", "--root", root, "--language", "csharp", "--namespace", "Game.Wire"],
-                      ["generate", "--root", root, "--language", "swift", "--namespace", "Wire", "--access", "internal"]):
+    for selection in (["layout", "--root", root], ["layout", "--all-roots"], ["generate", "--root", root, "--language", "csharp", "--namespace", "Game.Wire", "--values"],
+                      ["generate", "--root", root, "--language", "swift", "--namespace", "Wire", "--access", "internal", "--values"]):
         arguments = ["schema", selection[0], *files, *selection[1:], *options]
         runs = [subprocess.run([*command, *arguments], cwd=directory, capture_output=True, check=False, timeout=TIMEOUT_SECONDS) for command in (csharp, swift)]
         found = difference(outcome(runs[0]), outcome(runs[1]))
@@ -105,6 +105,26 @@ def self_test():
     print("Schema generation comparison controls passed.")
 
 
+# The checked-in generated code: (language, namespace, file). Both CLIs must find it current with --check.
+GOLDEN_FIXTURE = ROOT / "conformance/fixtures/SchemaGeneration/fleet.gess"
+GOLDENS = (
+    ("csharp", "GameEventScript.Tests.Generator.Generated", ROOT / "implementation/csharp/GameEventScript.Generator/tests/Generated/Fleet.g.cs"),
+    ("swift", "Generated", ROOT / "implementation/swift/GameEventScriptConformance/Tests/GameEventScriptConformanceTests/Generated/Fleet.swift"),
+)
+
+
+def stale_goldens(csharp, swift):
+    """The checked-in files that a CLI does not find current."""
+    stale = []
+    for language, space, path in GOLDENS:
+        for name, command in (("C#", csharp), ("Swift", swift)):
+            run = subprocess.run([*command, "schema", "generate", GOLDEN_FIXTURE.name, "--root", "Fleet", "--param", "worldSize=2km", "--language", language,
+                                  "--namespace", space, "--access", "internal", "-o", str(path), "--check"], cwd=GOLDEN_FIXTURE.parent, capture_output=True, check=False, timeout=TIMEOUT_SECONDS)
+            if run.returncode != 0:
+                stale.append(f"{name} CLI: {path.relative_to(ROOT)} is not current: {run.stderr.decode('utf-8', 'replace').strip()}")
+    return stale
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--csharp", type=Path, default=CSHARP_CLI, help="C# GameEventScript.Tool.dll")
@@ -119,10 +139,10 @@ def main():
     with tempfile.TemporaryDirectory() as temporary, ThreadPoolExecutor(max_workers=os.cpu_count() or 4) as pool:
         work = Path(temporary)
         results = list(pool.map(lambda pair: compare(pair[0], pair[1], ["dotnet", str(args.csharp)], [str(args.swift)], work), enumerate(items)))
-    differences = [line for result in results for line in result]
+    differences = [line for result in results for line in result] + stale_goldens(["dotnet", str(args.csharp)], [str(args.swift)])
     for line in differences:
         print(line)
-    print(f"{len(items)} schema inputs, {2 * len(items)} layouts and {2 * len(items)} generated sources: {len(differences)} port differences")
+    print(f"{len(items)} schema inputs, {2 * len(items)} layouts and {2 * len(items)} generated sources, {len(GOLDENS)} checked-in files: {len(differences)} port differences")
     return 1 if differences else 0
 
 

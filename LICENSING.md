@@ -67,6 +67,8 @@ by the top-level license but intentionally have no inserted header:
 - strict JSON (including `global.json`), TSV, plist-independent JSON TextMate grammars, and other formats
   that do not admit comments without changing their schema;
 - standalone `.ges` test inputs whose exact source is part of the test;
+- checked-in output of `ges schema generate` (`*.g.cs` and the Swift files under `Generated`
+  test directories), because tests require its text to equal the generator's;
 - operating-system metadata such as `.DS_Store`.
 
 The nearest bundle README carries the license header for headerless JSON editor

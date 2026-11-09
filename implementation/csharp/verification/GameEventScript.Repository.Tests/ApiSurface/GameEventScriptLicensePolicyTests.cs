@@ -65,7 +65,8 @@ public sealed class GameEventScriptLicensePolicyTests
         var csharp = Path.Combine(workspace, "implementation", "csharp");
         var failures = new List<string>();
 
-        foreach (var path in EnumerateSourceFiles(csharp, "*.cs"))
+        // Checked-in output of ges schema generate must equal the generated text, so it carries no header.
+        foreach (var path in EnumerateSourceFiles(csharp, "*.cs").Where(path => !path.EndsWith(".g.cs", StringComparison.Ordinal)))
             RequirePrefix(path, $"// {CopyrightText}\n// {SpdxText}\n", failures);
 
         foreach (var path in EnumerateSourceFiles(csharp, "*.md")

@@ -26,16 +26,28 @@ public struct GesSchemaGenerateOptions: Sendable {
     public var namespace: String
     /// The visibility of the generated types.
     public var access: GesSchemaAccess
+    /// Whether records also convert to and from GES values and messages, through the schema sources the code embeds and
+    /// binds once per type. The conversion allocates and is meant for values from scripts, not the hot path.
+    public var values: Bool
+    /// Whether generated Swift classes keep the dynamic exclusivity checks of their stored properties. By default they mark
+    /// them `@exclusivity(unchecked)`, which halves the time of reading and writing; overlapping accesses to one record, such
+    /// as passing a list `inout` while the record reads into it, are then undefined instead of a trap. C# has no such checks,
+    /// so this does not change C# output.
+    public var checkedExclusivity: Bool
 
     /// Creates options.
     /// - Parameters:
     ///   - language: The target language.
     ///   - namespace: The namespace, or empty for none.
     ///   - access: The visibility of the generated types.
-    public init(language: GesSchemaLanguage = .csharp, namespace: String = "", access: GesSchemaAccess = .public) {
+    ///   - values: Whether records also convert to and from GES values and messages.
+    ///   - checkedExclusivity: Whether generated Swift classes keep dynamic exclusivity checks.
+    public init(language: GesSchemaLanguage = .csharp, namespace: String = "", access: GesSchemaAccess = .public, values: Bool = false, checkedExclusivity: Bool = false) {
         self.language = language
         self.namespace = namespace
         self.access = access
+        self.values = values
+        self.checkedExclusivity = checkedExclusivity
     }
 }
 

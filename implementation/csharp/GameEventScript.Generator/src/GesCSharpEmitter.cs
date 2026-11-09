@@ -23,6 +23,9 @@ internal static partial class GesCSharpEmitter
         "volatile", "while"
     };
 
+    // Members that converting to and from GES values adds.
+    private static readonly string[] ValueReserved = ["ToValue", "ReadValue", "ToMessage", "ReadMessage"];
+
     // Members every generated type declares, and those every C# object inherits.
     private static readonly string[] Reserved =
     [
@@ -49,24 +52,32 @@ internal static partial class GesCSharpEmitter
             code.Open("{");
         }
 
-        var context = new Context(GesSchemaPlanner.KeyedElements(types), "global::" + string.Concat(space.ConvertAll(part => part + ".")));
+        var holder = "__GesSchemas" + GesSchemaPlanner.Hash(GesSchemaPlanner.Header(layout));
+        var context = new Context(GesSchemaPlanner.KeyedElements(types), "global::" + string.Concat(space.ConvertAll(part => part + ".")), options.Values, holder);
         for (var index = 0; index < types.Count; index++)
         {
             if (index > 0) code.Blank();
-            if (types[index].Kind == GesSchemaKind.Messages) MessageSet(code, types[index], access);
+            if (types[index].Kind == GesSchemaKind.Messages) MessageSet(code, types[index], access, context);
             else Record(code, types[index], access, context);
         }
+
+        if (options.Values) ValuesHolder(code, layout, holder);
 
         if (space.Count > 0) code.Close();
         return code.ToString();
     }
 
     // The keyed-list elements and the qualifier of the top-level types, which a member of the same name cannot hide.
-    private sealed class Context(HashSet<string> elements, string global)
+    private sealed class Context(HashSet<string> elements, string global, bool values, string holder)
     {
         internal HashSet<string> Elements { get; } = elements;
 
         internal string Global { get; } = global;
+
+        // Whether records convert to and from GES values through the helper type that holds the embedded sources.
+        internal bool Values { get; } = values;
+
+        internal string Holder { get; } = holder;
     }
 
     private static string Kind(GesPlanType type) => type.Kind == GesSchemaKind.Message ? "message" : "schema";
@@ -76,6 +87,8 @@ internal static partial class GesCSharpEmitter
         var names = new List<(string, string)> { (type.Name, "the type itself") };
         if (!type.IsItem)
             foreach (var reserved in Reserved) names.Add((reserved, "the generated member " + reserved));
+        if (!type.IsItem && context.Values)
+            foreach (var reserved in ValueReserved) names.Add((reserved, "the generated member " + reserved));
         foreach (var field in type.Fields)
         {
             names.Add((field.Base, "the field " + field.Layout.Name));
@@ -119,6 +132,7 @@ internal static partial class GesCSharpEmitter
         var deltas = type.Kind == GesSchemaKind.Schema && !type.IsItem;
         if (deltas) SameHelpers(code, type, context.Global);
         Extras(code, type, deltas, context.Elements.Contains(type.Name));
+        if (context.Values && !type.IsItem) ValueMembers(code, type, context.Holder);
         foreach (var field in type.Fields) Declarations(code, field.Value, access, context);
         code.Close();
     }
@@ -380,10 +394,12 @@ internal static partial class GesCSharpEmitter
         code.Close();
     }
 
-    private static void MessageSet(GesSchemaPlanner.Code code, GesPlanType type, string access)
+    private static void MessageSet(GesSchemaPlanner.Code code, GesPlanType type, string access, Context context)
     {
         var names = new List<(string, string)> { (type.Name, "the type itself"), ("Selected", "the selected member"), ("Member", "the member type") };
         foreach (var reserved in Reserved) names.Add((reserved, "the generated member " + reserved));
+        if (context.Values)
+            foreach (var reserved in ValueReserved) names.Add((reserved, "the generated member " + reserved));
         foreach (var member in type.Members) names.Add((member, "the member " + member));
         GesSchemaPlanner.Unique(type.Name, names);
         var width = type.Layout.MemberWidth.ToString(CultureInfo.InvariantCulture);
@@ -416,6 +432,7 @@ internal static partial class GesCSharpEmitter
         read.Add("}");
         code.Blank();
         PublicMethods(code, type.MembersAreClasses ? "" : "readonly ", write, read, "message");
+        if (context.Values) ValueMembers(code, type, context.Holder);
         code.Blank();
         code.Line("/// <summary>The messages of the set, in declared order.</summary>");
         code.Line($"public enum Member : {Underlying(type.Members.Count)}");

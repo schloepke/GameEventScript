@@ -39,6 +39,20 @@ public sealed class GesSchemaGenerateOptions
 
     /// <summary>Gets or sets the visibility of the generated types.</summary>
     public GesSchemaAccess Access { get; set; } = GesSchemaAccess.Public;
+
+    /// <summary>
+    /// Gets or sets whether records also convert to and from GES values and messages, through the schema sources the code
+    /// embeds and binds once per type. The conversion allocates and is meant for values from scripts, not the hot path.
+    /// </summary>
+    public bool Values { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether generated Swift classes keep the dynamic exclusivity checks of their stored properties. By
+    /// default they mark them <c>@exclusivity(unchecked)</c>, which halves the time of reading and writing; overlapping
+    /// accesses to one record, such as passing a list <c>inout</c> while the record reads into it, are then undefined
+    /// instead of a trap. C# has no such checks, so this does not change C# output.
+    /// </summary>
+    public bool CheckedExclusivity { get; set; }
 }
 
 /// <summary>

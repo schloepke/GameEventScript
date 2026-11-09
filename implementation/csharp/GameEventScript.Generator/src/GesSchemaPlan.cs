@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Text;
 using GameEventScript.Api;
 
@@ -283,6 +284,41 @@ internal static class GesSchemaPlanner
         }
     }
 
+    // A string literal that stays within printable ASCII: other characters become escapes, \uXXXX or \UXXXXXXXX in C#
+    // and \u{X} in Swift, so that both ports write identical text whatever a source holds.
+    internal static string Literal(string text, bool swift)
+    {
+        var result = new StringBuilder("\"");
+        for (var index = 0; index < text.Length; index++)
+        {
+            int scalar = text[index];
+            if (char.IsHighSurrogate(text[index]) && index + 1 < text.Length && char.IsLowSurrogate(text[index + 1])) scalar = char.ConvertToUtf32(text[index], text[++index]);
+            switch (scalar)
+            {
+                case '\\': result.Append("\\\\"); break;
+                case '"': result.Append("\\\""); break;
+                case '\t': result.Append("\\t"); break;
+                case '\r': result.Append("\\r"); break;
+                case '\n': result.Append("\\n"); break;
+                case >= 0x20 and < 0x7F: result.Append((char)scalar); break;
+                default:
+                    var hex = scalar.ToString("X", CultureInfo.InvariantCulture);
+                    result.Append(swift ? "\\u{" + hex + "}" : scalar > 0xFFFF ? "\\U" + hex.PadLeft(8, '0') : "\\u" + hex.PadLeft(4, '0'));
+                    break;
+            }
+        }
+
+        return result.Append('"').ToString();
+    }
+
+    // The FNV-1a 64 hash of a text's UTF-8 bytes in lowercase hex, which names a helper type uniquely per generated file.
+    internal static string Hash(string text)
+    {
+        var hash = 14695981039346656037UL;
+        foreach (var value in Encoding.UTF8.GetBytes(text)) hash = unchecked((hash ^ value) * 1099511628211UL);
+        return GesSchemaLayoutJson.Hex(hash);
+    }
+
     internal static string Header(GesSchemaLayout layout)
     {
         var text = new StringBuilder();
@@ -323,6 +359,9 @@ internal static class GesSchemaPlanner
 
         // Indents the following lines, after a line that Close wrote, such as `} else {`.
         internal void Indent() => _depth++;
+
+        // Ends an indentation that Indent began, without writing a line.
+        internal void Dedent() => _depth--;
 
         internal void Close(string line = "}")
         {

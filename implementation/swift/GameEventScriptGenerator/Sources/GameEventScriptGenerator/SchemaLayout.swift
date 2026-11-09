@@ -11,6 +11,8 @@ struct GesSchemaLayout {
     var roots: [String]
     var parameters: [GesLayoutParameter]
     var types: [GesLayoutType]
+    // The sources the schemas come from, under their file names, which code that converts GES values embeds. Not part of the JSON.
+    var sources: [GesSchemaSource]
 }
 
 struct GesLayoutParameter {
@@ -19,6 +21,8 @@ struct GesLayoutParameter {
     var unit: String
     // The exact decimal in base units, as the binding hash spells it.
     var value: String
+    // The value as a literal that binds to the same hash, which generated code passes when it binds its schemas.
+    var literal: String
 }
 
 struct GesLayoutType {
@@ -112,11 +116,18 @@ enum GesSchemaLayoutBuilder {
         for name in parameterInfos.keys.sorted(by: ordinal) {
             let parameter = parameterInfos[name]!
             let value = parameters.value(name)?.number.canonical ?? ""
-            layoutParameters.append(GesLayoutParameter(name: name, type: parameter.kind.rawValue, unit: unitName(parameter.kind, parameter.unit), value: value))
+            layoutParameters.append(
+                GesLayoutParameter(name: name, type: parameter.kind.rawValue, unit: unitName(parameter.kind, parameter.unit), value: value, literal: literal(parameter.kind, parameter.unit, value))
+            )
         }
         var types: [GesLayoutType] = []
         for name in reached.keys.sorted(by: ordinal) { types.append(try type(reached[name]!, parameters)) }
-        return GesSchemaLayout(roots: rootNames, parameters: layoutParameters, types: types)
+        let sources = set.sources.map { source in
+            let scalars = source.name.unicodeScalars
+            let start = scalars.lastIndex { $0 == "/" || $0 == "\\" }.map { scalars.index(after: $0) } ?? scalars.startIndex
+            return GesSchemaSource(name: String(scalars[start...]), text: source.text)
+        }
+        return GesSchemaLayout(roots: rootNames, parameters: layoutParameters, types: types, sources: sources)
     }
 
     // Names order by their UTF-16 code units, as the C# port's ordinal comparison does.
@@ -305,6 +316,16 @@ enum GesSchemaLayoutBuilder {
         if let lower, lower.isParameter { depends.insert(lower.parameter) }
         if let upper, upper.isParameter { depends.insert(upper.parameter) }
         encoding.depends = depends.sorted(by: ordinal)
+    }
+
+    // A Percentage holds a fraction, so its literal moves the exponent by two; a Quantity takes the symbol of its unit.
+    private static func literal(_ kind: GesSchemaTypeKind, _ unit: GesQuantityUnit, _ value: String) -> String {
+        if value.isEmpty { return "" }
+        if kind == .percentage {
+            let exponent = value.firstIndex(of: "e")!
+            return String(value[...exponent]) + String(Int64(value[value.index(after: exponent)...])! + 2) + "%"
+        }
+        return kind == .quantity && unit != .none ? value + unit.suffix : value
     }
 
     private static func unitName(_ kind: GesSchemaTypeKind, _ unit: GesQuantityUnit) -> String {

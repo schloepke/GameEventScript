@@ -237,6 +237,40 @@ enum GesSchemaPlanner {
         return result + "\""
     }
 
+    // A string literal that stays within printable ASCII: other characters become escapes, \uXXXX or \UXXXXXXXX in C#
+    // and \u{X} in Swift, so that both ports write identical text whatever a source holds.
+    static func literal(_ text: String, swift: Bool) -> String {
+        var result = "\""
+        for scalar in text.unicodeScalars {
+            switch scalar.value {
+            case 0x5C: result += "\\\\"
+            case 0x22: result += "\\\""
+            case 0x09: result += "\\t"
+            case 0x0D: result += "\\r"
+            case 0x0A: result += "\\n"
+            case 0x20..<0x7F: result.unicodeScalars.append(scalar)
+            default:
+                let hex = String(scalar.value, radix: 16, uppercase: true)
+                result += swift ? "\\u{" + hex + "}" : scalar.value > 0xFFFF ? "\\U" + pad(hex, 8) : "\\u" + pad(hex, 4)
+            }
+        }
+        return result + "\""
+    }
+
+    // The lines of a text split at each line feed, by Unicode scalars as in C#, where `\r\n` is no single character.
+    static func lines(_ text: String) -> [String] {
+        text.unicodeScalars.split(separator: "\n", omittingEmptySubsequences: false).map { String(String.UnicodeScalarView($0)) }
+    }
+
+    private static func pad(_ text: String, _ count: Int) -> String { String(repeating: "0", count: max(0, count - text.count)) + text }
+
+    // The FNV-1a 64 hash of a text's UTF-8 bytes in lowercase hex, which names a helper type uniquely per generated file.
+    static func hash(_ text: String) -> String {
+        var hash: UInt64 = 14_695_981_039_346_656_037
+        for value in text.utf8 { hash = (hash ^ UInt64(value)) &* 1_099_511_628_211 }
+        return GesSchemaLayoutJson.hex(hash)
+    }
+
     // A member that would carry its type's name gets a suffix, since C# forbids such a member.
     private static func member(_ name: String, _ type: String) -> String { pascal(name) == type ? pascal(name) + "Value" : pascal(name) }
 
@@ -304,6 +338,9 @@ enum GesSchemaPlanner {
 
         // Indents the following lines, after a line that close wrote, such as `} else {`.
         mutating func indent() { depth += 1 }
+
+        // Ends an indentation that indent began, without writing a line.
+        mutating func dedent() { depth -= 1 }
 
         mutating func close(_ line: String = "}") {
             depth -= 1

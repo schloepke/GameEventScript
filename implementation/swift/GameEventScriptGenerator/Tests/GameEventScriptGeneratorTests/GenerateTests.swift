@@ -104,6 +104,35 @@ final class GenerateTests: XCTestCase {
         XCTAssertTrue(swift.contains("let order = try Item.__readKeyOrder(&reader, paths, at + 2)"))
     }
 
+    func testValuesEmbedTheSourcesAndParameters() throws {
+        let source = "parameter p: :Percentage\nparameter w: :Quantity(°)\nschema :S as {\n  a: :Percentage between 0% and p step 1%\n  b: :Quantity(°) between 0° and w\n}\nmessage M(a: :Boolean)\n"
+        let set = try GesSchemaSet(sources: [GesSchemaSource(name: "dir/s.gess", text: source)])
+        let parameters = GesSchemaParameters()
+        try parameters.with("p", literal: "50%")
+        try parameters.with("w", literal: "90°")
+        let csharp = try GesSchemaGenerator.generate(set, roots: ["S", "M"], parameters: parameters, options: GesSchemaGenerateOptions(values: true))
+        XCTAssertTrue(csharp.contains("public readonly global::GameEventScript.Runtime.Values.GesValue ToValue()"))
+        XCTAssertTrue(csharp.contains("public void ReadMessage(GameEventScriptMessage message)"))
+        XCTAssertTrue(csharp.contains("new GesSchemaSource(\"s.gess\", string.Join(\"\\n\", new[]"))
+        XCTAssertTrue(csharp.contains("\"parameter w: :Quantity(\\u00B0)\","))
+        XCTAssertTrue(csharp.contains(".With(\"p\", \"5e1%\").With(\"w\", \"9e1\\u00B0\")"))
+        XCTAssertFalse(try GesSchemaGenerator.generate(set, roots: ["S"], parameters: parameters, options: GesSchemaGenerateOptions()).contains("ToValue"))
+        let swift = try GesSchemaGenerator.generate(set, roots: ["S", "M"], parameters: parameters, options: GesSchemaGenerateOptions(language: .swift, values: true))
+        XCTAssertTrue(swift.contains("public func toValue() throws -> GesValue {"))
+        XCTAssertTrue(swift.contains("public mutating func read(message: GameEventScriptMessage) throws {"))
+        XCTAssertTrue(swift.contains("try parameters.with(\"w\", literal: \"9e1\\u{B0}\")"))
+        let storage = try GesSchemaSet(parsing: "schema :T as {\n  name: :Text max 4\n  flag: :Boolean\n}\n")
+        let unchecked = try GesSchemaGenerator.generate(storage, roots: ["T"], parameters: GesSchemaParameters(), options: GesSchemaGenerateOptions(language: .swift))
+        XCTAssertTrue(unchecked.contains("@exclusivity(unchecked) public var flag: Bool = false"))
+        XCTAssertTrue(unchecked.contains("@exclusivity(unchecked) public var nameUTF8: [UInt8] = []"))
+        let checked = try GesSchemaGenerator.generate(storage, roots: ["T"], parameters: GesSchemaParameters(), options: GesSchemaGenerateOptions(language: .swift, checkedExclusivity: true))
+        XCTAssertFalse(checked.contains("@exclusivity"))
+        XCTAssertFalse(try GesSchemaGenerator.generate(set, roots: ["S"], parameters: parameters, options: GesSchemaGenerateOptions(language: .swift)).contains("@exclusivity"))
+        let collision = try GesSchemaSet(parsing: "schema :S as {\n  toValue: :Boolean\n}\n")
+        XCTAssertEqual(code { try GesSchemaGenerator.generate(collision, roots: ["S"], parameters: GesSchemaParameters(), options: GesSchemaGenerateOptions(values: true)) }, "generate.nameCollision")
+        XCTAssertEqual(code { try GesSchemaGenerator.generate(collision, roots: ["S"], parameters: GesSchemaParameters(), options: GesSchemaGenerateOptions(language: .swift, values: true)) }, "generate.nameCollision")
+    }
+
     func testSharedTypesAreGeneratedOnce() throws {
         let source = "schema :Inner as {\n  a: :Boolean\n}\nschema :A as {\n  i: :Inner\n}\nschema :B as {\n  i: :Inner\n}\n"
         let text = try GesSchemaGenerator.generate(try GesSchemaSet(parsing: source), roots: ["A", "B"], parameters: GesSchemaParameters(), options: GesSchemaGenerateOptions())

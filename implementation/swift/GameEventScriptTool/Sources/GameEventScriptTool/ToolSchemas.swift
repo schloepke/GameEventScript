@@ -16,7 +16,8 @@ extension ToolHelp {
           ges schema dump <schema.gess> [more.gess ...] --root <Name> [--param <name>=<literal> ...] --data <data.bin> [--baseline <record.bin>]
           ges schema layout <schema.gess> [more.gess ...] (--root <Name> ... | --all-roots) [--param <name>=<literal> ...] [-o <layout.json>]
           ges schema generate <schema.gess> [more.gess ...] (--root <Name> ... | --all-roots) [--param <name>=<literal> ...]
-                              --language csharp|swift [--namespace <A.B>] [--access public|internal] [-o <file> [--check]]
+                              --language csharp|swift [--namespace <A.B>] [--access public|internal] [--values]
+                              [--checked-exclusivity] [-o <file> [--check]]
 
         Commands:
           check      Read schemas and report the first error with its line and column.
@@ -33,6 +34,8 @@ extension ToolHelp {
           --language <name>         The language that generate writes: csharp or swift.
           --namespace <A.B>         The namespace of the generated types; Swift declares it as nested enums.
           --access <level>          The visibility of the generated types: public (default) or internal.
+          --values                  Also convert generated records to and from GES values and messages.
+          --checked-exclusivity     Keep the dynamic exclusivity checks of generated Swift classes.
           --check                   Compare the generated code with the output file instead of writing it; differences fail.
           --param <name>=<literal>  A parameter value such as worldWidth=5000m; repeat for each one.
           --data <path>             The binary data of dump.
@@ -56,6 +59,8 @@ extension Tool {
         var roots: [String] = []
         var allRoots = false
         var check = false
+        var withValues = false
+        var checkedExclusivity = false
         var language: String?
         var space: String?
         var access: String?
@@ -77,6 +82,10 @@ extension Tool {
                 allRoots = true
             } else if argument == "--check" && command == "generate" {
                 check = true
+            } else if argument == "--values" && command == "generate" {
+                withValues = true
+            } else if argument == "--checked-exclusivity" && command == "generate" {
+                checkedExclusivity = true
             } else if ["--root", "--data", "--baseline", "--param", "-o", "--output", "--language", "--namespace", "--access"].contains(argument) {
                 let applies: Bool
                 switch argument {
@@ -149,7 +158,7 @@ extension Tool {
             case "layout", "generate":
                 let options =
                     command == "layout"
-                    ? nil : GesSchemaGenerateOptions(language: language == "swift" ? .swift : .csharp, namespace: space ?? "", access: access == "internal" ? .internal : .public)
+                    ? nil : GesSchemaGenerateOptions(language: language == "swift" ? .swift : .csharp, namespace: space ?? "", access: access == "internal" ? .internal : .public, values: withValues, checkedExclusivity: checkedExclusivity)
                 return try layout(set, allRoots ? set.schemas.map(\.name) : roots, parameters, output, options, check)
             default: break
             }

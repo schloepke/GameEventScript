@@ -21,7 +21,8 @@ Usage:
   dotnet ges schema dump <schema.gess> [more.gess ...] --root <Name> [--param <name>=<literal> ...] --data <data.bin> [--baseline <record.bin>]
   dotnet ges schema layout <schema.gess> [more.gess ...] (--root <Name> ... | --all-roots) [--param <name>=<literal> ...] [-o <layout.json>]
   dotnet ges schema generate <schema.gess> [more.gess ...] (--root <Name> ... | --all-roots) [--param <name>=<literal> ...]
-                             --language csharp|swift [--namespace <A.B>] [--access public|internal] [-o <file> [--check]]
+                             --language csharp|swift [--namespace <A.B>] [--access public|internal] [--values]
+                             [--checked-exclusivity] [-o <file> [--check]]
 
 Commands:
   check      Read schemas and report the first error with its line and column.
@@ -38,6 +39,8 @@ Options:
   --language <name>         The language that generate writes: csharp or swift.
   --namespace <A.B>         The namespace of the generated types; Swift declares it as nested enums.
   --access <level>          The visibility of the generated types: public (default) or internal.
+  --values                  Also convert generated records to and from GES values and messages.
+  --checked-exclusivity     Keep the dynamic exclusivity checks of generated Swift classes.
   --check                   Compare the generated code with the output file instead of writing it; differences fail.
   --param <name>=<literal>  A parameter value such as worldWidth=5000m; repeat for each one.
   --data <path>             The binary data of dump.
@@ -62,6 +65,8 @@ Options:
         var roots = new List<string>();
         var allRoots = false;
         var check = false;
+        var withValues = false;
+        var checkedExclusivity = false;
         string? language = null;
         string? space = null;
         string? access = null;
@@ -82,6 +87,8 @@ Options:
             if (argument is "-q" or "--quiet" && command == "check") quiet = true;
             else if (argument == "--all-roots" && command is "layout" or "generate") allRoots = true;
             else if (argument == "--check" && command == "generate") check = true;
+            else if (argument == "--values" && command == "generate") withValues = true;
+            else if (argument == "--checked-exclusivity" && command == "generate") checkedExclusivity = true;
             else if (argument is "--root" or "--data" or "--baseline" or "--param" or "-o" or "--output" or "--language" or "--namespace" or "--access")
             {
                 var applies = argument switch
@@ -170,7 +177,9 @@ Options:
                     {
                         Language = language == "swift" ? GesSchemaLanguage.Swift : GesSchemaLanguage.CSharp,
                         Namespace = space ?? "",
-                        Access = access == "internal" ? GesSchemaAccess.Internal : GesSchemaAccess.Public
+                        Access = access == "internal" ? GesSchemaAccess.Internal : GesSchemaAccess.Public,
+                        Values = withValues,
+                        CheckedExclusivity = checkedExclusivity
                     };
                     return Layout(set, allRoots ? set.Schemas.Select(schema => schema.Name).ToList() : roots, parameters, output, options, check);
             }

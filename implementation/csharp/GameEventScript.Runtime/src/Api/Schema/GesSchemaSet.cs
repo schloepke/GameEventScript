@@ -43,6 +43,9 @@ public sealed class GesSchemaSet
 
     private GesSchemaSet(List<GesSchemaSource> sources) => _sources = sources;
 
+    // The sources as given, which generated code embeds to convert to and from GES values.
+    internal IReadOnlyList<GesSchemaSource> Sources => _sources;
+
     /// <summary>Reads and validates one or several sources. References resolve across all of them.</summary>
     /// <param name="sources">The sources.</param>
     /// <returns>The validated set.</returns>

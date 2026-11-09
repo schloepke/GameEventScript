@@ -14,6 +14,9 @@ enum GesCSharpEmitter {
         "volatile", "while",
     ]
 
+    // Members that converting to and from GES values adds.
+    static let valueReserved = ["ToValue", "ReadValue", "ToMessage", "ReadMessage"]
+
     // Members every generated type declares, and those every C# object inherits.
     static let reserved = [
         "SchemaHash", "BindingHash", "MaxByteCount", "Write", "Read", "ReadKey", "ToBytes", "WriteDelta", "ToDeltaBytes", "ReadDelta", "WireEquals", "CopyFrom", "Quantize", "Equals",
@@ -39,11 +42,13 @@ enum GesCSharpEmitter {
             code.line("namespace " + space.joined(separator: "."))
             code.open("{")
         }
-        let context = Context(elements: GesSchemaPlanner.keyedElements(types), global: "global::" + space.map { $0 + "." }.joined())
+        let holder = "__GesSchemas" + GesSchemaPlanner.hash(GesSchemaPlanner.header(layout))
+        let context = Context(elements: GesSchemaPlanner.keyedElements(types), global: "global::" + space.map { $0 + "." }.joined(), values: options.values, holder: holder)
         for (index, type) in types.enumerated() {
             if index > 0 { code.blank() }
-            if type.kind == .messages { try messageSet(&code, type, access) } else { try record(&code, type, access, context) }
+            if type.kind == .messages { try messageSet(&code, type, access, context) } else { try record(&code, type, access, context) }
         }
+        if options.values { valuesHolder(&code, layout, holder) }
         if !space.isEmpty { code.close() }
         return code.text
     }
@@ -52,6 +57,9 @@ enum GesCSharpEmitter {
     struct Context {
         let elements: Set<String>
         let global: String
+        // Whether records convert to and from GES values through the helper type that holds the embedded sources.
+        let values: Bool
+        let holder: String
     }
 
     static func kind(_ type: GesPlanType) -> String { type.kind == .message ? "message" : "schema" }
@@ -60,6 +68,9 @@ enum GesCSharpEmitter {
         var names: Names = [(type.name, "the type itself")]
         if !type.isItem {
             for name in reserved { names.append((name, "the generated member " + name)) }
+        }
+        if !type.isItem && context.values {
+            for name in valueReserved { names.append((name, "the generated member " + name)) }
         }
         for field in type.fields {
             names.append((field.base, "the field " + field.layout.name))
@@ -100,6 +111,7 @@ enum GesCSharpEmitter {
         let deltas = type.kind == .schema && !type.isItem
         if deltas { sameHelpers(&code, type, context.global) }
         extras(&code, type, deltas, context.elements.contains(type.name))
+        if context.values && !type.isItem { valueMembers(&code, type, context.holder) }
         for field in type.fields { try declarations(&code, field.value, access, context) }
         code.close()
     }
@@ -334,9 +346,12 @@ enum GesCSharpEmitter {
         code.close()
     }
 
-    static func messageSet(_ code: inout Code, _ type: GesPlanType, _ access: String) throws(GesGeneratorError) {
+    static func messageSet(_ code: inout Code, _ type: GesPlanType, _ access: String, _ context: Context) throws(GesGeneratorError) {
         var names: Names = [(type.name, "the type itself"), ("Selected", "the selected member"), ("Member", "the member type")]
         for name in reserved { names.append((name, "the generated member " + name)) }
+        if context.values {
+            for name in valueReserved { names.append((name, "the generated member " + name)) }
+        }
         for member in type.members { names.append((member, "the member " + member)) }
         try GesSchemaPlanner.unique(type.name, names)
         let width = String(type.layout.memberWidth)
@@ -369,6 +384,7 @@ enum GesCSharpEmitter {
         read.append("}")
         code.blank()
         publicMethods(&code, type.membersAreClasses ? "" : "readonly ", write, read, "message")
+        if context.values { valueMembers(&code, type, context.holder) }
         code.blank()
         code.line("/// <summary>The messages of the set, in declared order.</summary>")
         code.line("public enum Member : \(underlying(type.members.count))")

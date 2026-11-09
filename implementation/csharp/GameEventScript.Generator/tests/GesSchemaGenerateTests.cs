@@ -106,6 +106,35 @@ public sealed class GesSchemaGenerateTests
     }
 
     [TestMethod]
+    public void ValuesEmbedTheSourcesAndParameters()
+    {
+        const string source = "parameter p: :Percentage\nparameter w: :Quantity(°)\nschema :S as {\n  a: :Percentage between 0% and p step 1%\n  b: :Quantity(°) between 0° and w\n}\nmessage M(a: :Boolean)\n";
+        var set = GesSchemaSet.Parse(new GesSchemaSource("dir/s.gess", source));
+        var parameters = new GesSchemaParameters().With("p", "50%").With("w", "90°");
+        var csharp = GesSchemaGenerator.Generate(set, ["S", "M"], parameters, new GesSchemaGenerateOptions { Values = true });
+        StringAssert.Contains(csharp, "public readonly global::GameEventScript.Runtime.Values.GesValue ToValue()");
+        StringAssert.Contains(csharp, "public void ReadMessage(GameEventScriptMessage message)");
+        StringAssert.Contains(csharp, "new GesSchemaSource(\"s.gess\", string.Join(\"\\n\", new[]");
+        StringAssert.Contains(csharp, "\"parameter w: :Quantity(\\u00B0)\",");
+        StringAssert.Contains(csharp, ".With(\"p\", \"5e1%\").With(\"w\", \"9e1\\u00B0\")");
+        Assert.IsFalse(GesSchemaGenerator.Generate(set, ["S"], parameters, new GesSchemaGenerateOptions()).Contains("ToValue", StringComparison.Ordinal));
+        var swift = GesSchemaGenerator.Generate(set, ["S", "M"], parameters, new GesSchemaGenerateOptions { Language = GesSchemaLanguage.Swift, Values = true });
+        StringAssert.Contains(swift, "public func toValue() throws -> GesValue {");
+        StringAssert.Contains(swift, "public mutating func read(message: GameEventScriptMessage) throws {");
+        StringAssert.Contains(swift, "try parameters.with(\"w\", literal: \"9e1\\u{B0}\")");
+        const string storage = "schema :T as {\n  name: :Text max 4\n  flag: :Boolean\n}\n";
+        var uncheckedCode = GesSchemaGenerator.Generate(GesSchemaSet.Parse(storage), ["T"], new GesSchemaParameters(), new GesSchemaGenerateOptions { Language = GesSchemaLanguage.Swift });
+        StringAssert.Contains(uncheckedCode, "@exclusivity(unchecked) public var flag: Bool = false");
+        StringAssert.Contains(uncheckedCode, "@exclusivity(unchecked) public var nameUTF8: [UInt8] = []");
+        var checkedCode = GesSchemaGenerator.Generate(GesSchemaSet.Parse(storage), ["T"], new GesSchemaParameters(), new GesSchemaGenerateOptions { Language = GesSchemaLanguage.Swift, CheckedExclusivity = true });
+        Assert.IsFalse(checkedCode.Contains("@exclusivity", StringComparison.Ordinal));
+        Assert.IsFalse(GesSchemaGenerator.Generate(set, ["S"], parameters, new GesSchemaGenerateOptions { Language = GesSchemaLanguage.Swift }).Contains("@exclusivity", StringComparison.Ordinal));
+        const string collision = "schema :S as {\n  toValue: :Boolean\n}\n";
+        Assert.AreEqual("generate.nameCollision", Code(() => GesSchemaGenerator.Generate(GesSchemaSet.Parse(collision), ["S"], new GesSchemaParameters(), new GesSchemaGenerateOptions { Values = true })));
+        Assert.AreEqual("generate.nameCollision", Code(() => GesSchemaGenerator.Generate(GesSchemaSet.Parse(collision), ["S"], new GesSchemaParameters(), new GesSchemaGenerateOptions { Language = GesSchemaLanguage.Swift, Values = true })));
+    }
+
+    [TestMethod]
     public void SharedTypesAreGeneratedOnce()
     {
         const string source = "schema :Inner as {\n  a: :Boolean\n}\nschema :A as {\n  i: :Inner\n}\nschema :B as {\n  i: :Inner\n}\n";

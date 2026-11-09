@@ -694,7 +694,9 @@ dotnet ges schema generate world.gess --root Bot --param worldWidth=2000m --lang
 ```
 
 `generate` writes C# or Swift types that write and read the records of the roots without allocating;
-`--check` fails when the file of `-o` differs from the generated code.
+`--values` adds the conversion to and from GES values and messages, `--checked-exclusivity` keeps the
+dynamic exclusivity checks of generated Swift classes, and `--check` fails when the file of `-o` differs
+from the generated code.
 
 `layout` prints the language-neutral generation layout of one or more roots, or of every
 declaration with `--all-roots`, as JSON; a type that several roots share appears once. `hash` prints the schema hash and, with parameters, the binding hash. `dump` lists each field of

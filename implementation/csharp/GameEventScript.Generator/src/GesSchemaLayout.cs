@@ -14,11 +14,12 @@ internal sealed class GesSchemaLayout
 {
     internal const int Version = 1;
 
-    internal GesSchemaLayout(List<string> roots, List<GesLayoutParameter> parameters, List<GesLayoutType> types)
+    internal GesSchemaLayout(List<string> roots, List<GesLayoutParameter> parameters, List<GesLayoutType> types, List<GesSchemaSource> sources)
     {
         Roots = roots;
         Parameters = parameters;
         Types = types;
+        Sources = sources;
     }
 
     internal List<string> Roots { get; }
@@ -27,10 +28,13 @@ internal sealed class GesSchemaLayout
 
     internal List<GesLayoutType> Types { get; }
 
+    // The sources the schemas come from, under their file names, which code that converts GES values embeds. Not part of the JSON.
+    internal List<GesSchemaSource> Sources { get; }
+
     internal GesLayoutType Type(string name) => Types.Find(type => type.Name == name) ?? throw new InvalidOperationException($"Type '{name}' is not in the layout.");
 }
 
-internal sealed class GesLayoutParameter(string name, string type, string unit, string value)
+internal sealed class GesLayoutParameter(string name, string type, string unit, string value, string literal)
 {
     internal string Name { get; } = name;
 
@@ -40,6 +44,9 @@ internal sealed class GesLayoutParameter(string name, string type, string unit, 
 
     // The exact decimal in base units, as the binding hash spells it.
     internal string Value { get; } = value;
+
+    // The value as a literal that binds to the same hash, which generated code passes when it binds its schemas.
+    internal string Literal { get; } = literal;
 }
 
 internal sealed class GesLayoutType
@@ -141,12 +148,14 @@ internal static class GesSchemaLayoutBuilder
         foreach (var parameter in parameterInfos.Values)
         {
             var value = parameters.TryGet(parameter.Name, out var bound) ? bound.Number.Canonical : "";
-            layoutParameters.Add(new GesLayoutParameter(parameter.Name, TypeName(parameter.Kind), UnitName(parameter.Kind, parameter.Unit), value));
+            layoutParameters.Add(new GesLayoutParameter(parameter.Name, TypeName(parameter.Kind), UnitName(parameter.Kind, parameter.Unit), value, Literal(parameter.Kind, parameter.Unit, value)));
         }
 
         var types = new List<GesLayoutType>();
         foreach (var schema in reached.Values) types.Add(Type(schema, parameters));
-        return new GesSchemaLayout(rootNames, layoutParameters, types);
+        var sources = new List<GesSchemaSource>();
+        foreach (var source in set.Sources) sources.Add(new GesSchemaSource(source.Name.Substring(source.Name.LastIndexOfAny(['/', '\\']) + 1), source.Text));
+        return new GesSchemaLayout(rootNames, layoutParameters, types, sources);
     }
 
     private static void Reach(GesSchema schema, SortedDictionary<string, GesSchema> reached)
@@ -376,6 +385,19 @@ internal static class GesSchemaLayoutBuilder
         GesSchemaTypeKind.Vector => "Vector",
         _ => kind.ToString()
     };
+
+    // A Percentage holds a fraction, so its literal moves the exponent by two; a Quantity takes the symbol of its unit.
+    private static string Literal(GesSchemaTypeKind kind, GesQuantityUnit unit, string value)
+    {
+        if (value.Length == 0) return "";
+        if (kind == GesSchemaTypeKind.Percentage)
+        {
+            var exponent = value.IndexOf('e');
+            return value.Substring(0, exponent + 1) + (long.Parse(value.Substring(exponent + 1), System.Globalization.CultureInfo.InvariantCulture) + 2).ToString(System.Globalization.CultureInfo.InvariantCulture) + "%";
+        }
+
+        return kind == GesSchemaTypeKind.Quantity && unit != GesQuantityUnit.UnitNone ? value + unit.ToSuffix() : value;
+    }
 
     private static string UnitName(GesSchemaTypeKind kind, GesQuantityUnit unit)
         => kind is GesSchemaTypeKind.Quantity or GesSchemaTypeKind.Point or GesSchemaTypeKind.Vector && unit != GesQuantityUnit.UnitNone ? unit.ToTypeName() : "none";

@@ -48,7 +48,6 @@ public struct GesGeneratorError: Error, Sendable, Equatable {
     public let message: String
 
     static let usage = "generate.usage"
-    static let unsupported = "generate.unsupported"
     static let nameCollision = "generate.nameCollision"
     static let invalidNamespace = "generate.invalidNamespace"
 

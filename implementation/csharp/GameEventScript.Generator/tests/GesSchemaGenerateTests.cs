@@ -6,7 +6,7 @@ using GameEventScript.Generator;
 
 namespace GameEventScript.Tests.Generator;
 
-/// <summary>Checks the generation rules that the corpus harness cannot reach: names, namespaces and unsupported types.</summary>
+/// <summary>Checks the generation rules that the corpus harness cannot reach: names, namespaces and the shape of types.</summary>
 [TestClass]
 public sealed class GesSchemaGenerateTests
 {
@@ -43,13 +43,38 @@ public sealed class GesSchemaGenerateTests
     }
 
     [TestMethod]
-    public void InvalidNamespacesAndUnsupportedTypesAreRejected()
+    public void InvalidNamespacesAreRejected()
     {
         Assert.AreEqual("generate.invalidNamespace", Code(() => Generate("schema :S as {\n  a: :Boolean\n}\n", "S", GesSchemaLanguage.CSharp, "Game..Net")));
         Assert.AreEqual("generate.invalidNamespace", Code(() => Generate("schema :S as {\n  a: :Boolean\n}\n", "S", GesSchemaLanguage.CSharp, "class")));
         Assert.AreEqual("generate.invalidNamespace", Code(() => Generate("schema :S as {\n  a: :Boolean\n}\n", "S", GesSchemaLanguage.Swift, "1Wire")));
-        Assert.AreEqual("generate.unsupported", Code(() => Generate("schema :S as {\n  a: :Text max 4\n}\n", "S", GesSchemaLanguage.CSharp)));
-        Assert.AreEqual("generate.unsupported", Code(() => Generate("message M(a: :Boolean)\n", "M", GesSchemaLanguage.Swift)));
+    }
+
+    [TestMethod]
+    public void StorageMakesClassesAndMessagesGetTagsAndSets()
+    {
+        const string source = "schema :Cell as {\n  x: :Boolean\n}\nschema :S as {\n  name: :Text max 4\n  cells: :List(:Cell) max 2\n  words: :List(:Text max 2) max 2\n  heat: :Number optional\n}\n"
+            + "message Hit(target: :Number integer between 0 and 9) tags (#critical)\nmessage Miss()\nmessages :Events as (Hit, Miss)\n";
+        var set = GesSchemaSet.Parse(source);
+        var csharp = GesSchemaGenerator.Generate(set, ["S", "Events"], new GesSchemaParameters(), new GesSchemaGenerateOptions());
+        StringAssert.Contains(csharp, "public sealed partial class S");
+        StringAssert.Contains(csharp, "public partial struct Cell");
+        StringAssert.Contains(csharp, "public List<Cell> Cells = new List<Cell>();");
+        StringAssert.Contains(csharp, "public sealed partial class WordsItem");
+        StringAssert.Contains(csharp, "public ReadOnlySpan<byte> NameUtf8");
+        StringAssert.Contains(csharp, "public double? HeatOptional");
+        StringAssert.Contains(csharp, "public bool Critical;");
+        StringAssert.Contains(csharp, "public partial struct Events");
+        StringAssert.Contains(csharp, "public Member Selected;");
+        var swift = GesSchemaGenerator.Generate(set, ["S", "Events"], new GesSchemaParameters(), new GesSchemaGenerateOptions { Language = GesSchemaLanguage.Swift });
+        StringAssert.Contains(swift, "public final class S {");
+        StringAssert.Contains(swift, "public var cells: [Cell] = []");
+        StringAssert.Contains(swift, "public var nameUTF8: [UInt8] = []");
+        StringAssert.Contains(swift, "public var heatOptional: Double? {");
+        StringAssert.Contains(swift, "public var critical = false");
+        StringAssert.Contains(swift, "public var selected: Member = .hit");
+        Assert.AreEqual("generate.nameCollision", Code(() => Generate("schema :S as {\n  name: :Text max 4\n  nameUtf8: :Boolean\n}\n", "S", GesSchemaLanguage.CSharp)));
+        Assert.AreEqual("generate.nameCollision", Code(() => Generate("message M(critical: :Boolean) tags (#critical)\n", "M", GesSchemaLanguage.Swift)));
     }
 
     [TestMethod]

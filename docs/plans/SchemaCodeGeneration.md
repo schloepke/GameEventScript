@@ -3,7 +3,7 @@
 
 # Plan: generated schema code (`ges schema generate`)
 
-Status: accepted; phases 1 and 2 are implemented, phase 3 is next. This plan is removed when the feature lands; the normative
+Status: accepted; phases 1 to 3 are implemented, phase 4 is next. This plan is removed when the feature lands; the normative
 rules then live in `specs/Schemas.md`.
 
 Variant B of the schema API: typed code per schema with inlined constants, next to the
@@ -239,6 +239,10 @@ Each phase is one reviewable change and keeps all gates green.
    `generate --check`, and the corpus harness (done: `GesSchemaGenerator.Generate`,
    `ges schema generate`, `test-generated-schemas.py`).
 3. Text, `:Tag max n`, List and Dice with on-demand storage and convenience members; message sets.
+   Done: lists are C# `List<T>` and Swift arrays that keep their capacity, list elements of
+   classes come from a pool, union, Text and List elements get item types, messages get a Boolean
+   per tag, and message sets hold `Selected` and one record per message. `Reserve(...)` is not
+   needed: a caller fills a record once with its largest data. `CopyFrom` moves to phase 4.
 4. Deltas without keyed lists: change bits, delta ranges, wrapping, unions, optional fields;
    wire-value equality and `Quantize()`, which deltas compare by.
 5. Keyed lists in deltas.

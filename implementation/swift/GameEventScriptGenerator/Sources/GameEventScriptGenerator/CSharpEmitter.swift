@@ -1,8 +1,8 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
-// Writes C# 9 for Unity and .NET: a struct per fixed-width schema with fields in wire order, Write and Read over the bit
-// primitives, and constants inlined as literals or bit patterns.
+// Writes C# 9 for Unity and .NET: a struct per fixed-width schema and a class per schema with Text or List storage, with
+// fields in wire order, Write and Read over the bit primitives, and constants inlined as literals or bit patterns.
 enum GesCSharpEmitter {
     private static let keywords: Set<String> = [
         "abstract", "as", "base", "bool", "break", "byte", "case", "catch", "char", "checked", "class", "const", "continue",
@@ -14,10 +14,11 @@ enum GesCSharpEmitter {
         "volatile", "while",
     ]
 
-    // Members every generated type declares, and those every C# struct inherits.
+    // Members every generated type declares, and those every C# object inherits.
     private static let reserved = ["SchemaHash", "BindingHash", "MaxByteCount", "Write", "Read", "ReadKey", "ToBytes", "Equals", "GetHashCode", "ToString", "GetType"]
 
     typealias Code = GesSchemaPlanner.Code
+    typealias Names = [(name: String, origin: String)]
 
     static func emit(_ layout: GesSchemaLayout, _ types: [GesPlanType], _ options: GesSchemaGenerateOptions) throws(GesGeneratorError) -> String {
         let access = options.access == .public ? "public" : "internal"
@@ -28,6 +29,7 @@ enum GesCSharpEmitter {
         code.line("#nullable enable")
         code.blank()
         code.line("using System;")
+        code.line("using System.Collections.Generic;")
         code.line("using GameEventScript.Api;")
         code.blank()
         if !space.isEmpty {
@@ -36,54 +38,90 @@ enum GesCSharpEmitter {
         }
         for (index, type) in types.enumerated() {
             if index > 0 { code.blank() }
-            try self.type(&code, type, access)
+            if type.kind == .messages { try messageSet(&code, type, access) } else { try record(&code, type, access) }
         }
         if !space.isEmpty { code.close() }
         return code.text
     }
 
-    private static func type(_ code: inout Code, _ type: GesPlanType, _ access: String) throws(GesGeneratorError) {
-        var names: [(name: String, origin: String)] = [(type.name, "the type itself")]
-        for name in reserved { names.append((name, "the generated member " + name)) }
+    private static func kind(_ type: GesPlanType) -> String { type.kind == .message ? "message" : "schema" }
+
+    private static func record(_ code: inout Code, _ type: GesPlanType, _ access: String) throws(GesGeneratorError) {
+        var names: Names = [(type.name, "the type itself")]
+        if !type.isItem {
+            for name in reserved { names.append((name, "the generated member " + name)) }
+        }
         for field in type.fields {
             names.append((field.base, "the field " + field.layout.name))
             if field.optional { names.append(("Has" + field.base, "the presence of " + field.layout.name)) }
+            if field.optional && plain(field.value) { names.append((field.base + "Optional", "the optional value of " + field.layout.name)) }
             nested(field.value, &names, field.layout.name)
         }
+        for tag in type.tags { names.append((tag.base, "the tag #" + tag.tag)) }
         try GesSchemaPlanner.unique(type.name, names)
 
-        code.line("/// <summary>The schema <c>:\(type.name)</c>, read and written without allocation.</summary>")
-        code.line("\(access) partial struct \(type.name)")
+        let visibility = type.isItem ? "public" : access
+        code.line(
+            type.isItem
+                ? "/// <summary>An element of the list.</summary>"
+                : "/// <summary>The \(kind(type)) <c>:\(type.name)</c>, read and written without allocation\(type.isClass ? " once its storage has grown" : "").</summary>"
+        )
+        code.line(type.isClass ? "\(visibility) sealed partial class \(type.name)" : "\(visibility) partial struct \(type.name)")
         code.open("{")
-        code.line("/// <summary>The schema hash, independent of parameter values.</summary>")
-        code.line("public const ulong SchemaHash = 0x\(GesSchemaLayoutJson.hex(type.layout.hash))UL;")
-        code.blank()
-        code.line("/// <summary>The hash over the schema hash and the parameter values this code was generated with.</summary>")
-        code.line("public const ulong BindingHash = 0x\(GesSchemaLayoutJson.hex(type.layout.bindingHash))UL;")
-        code.blank()
-        code.line("/// <summary>The size of the largest encoding in bytes.</summary>")
-        code.line("public const int MaxByteCount = \(type.layout.maxByteCount);")
-        code.blank()
-        code.line("internal static readonly string[] __paths =")
-        code.open("{")
-        for path in type.paths { code.line(quote(path) + ",") }
-        code.close("};")
-        for field in type.fields { members(&code, field) }
-        code.blank()
+        if !type.isItem {
+            constants(&code, type.layout)
+            code.blank()
+            code.line("internal static readonly string[] __paths =")
+            code.open("{")
+            for path in type.paths { code.line(GesSchemaPlanner.quote(path) + ",") }
+            code.close("};")
+        }
+        var first = type.isItem
+        for field in type.fields {
+            members(&code, field, first)
+            first = false
+        }
+        for tag in type.tags {
+            code.blank()
+            code.line("/// <summary>Whether the tag <c>#\(tag.tag)</c> is set.</summary>")
+            code.line("public bool \(tag.base);")
+        }
         methods(&code, type)
-        for field in type.fields { declarations(&code, field.value, access) }
+        for field in type.fields { try declarations(&code, field.value, access) }
         code.close()
     }
 
-    // The nested types a value declares, for the collision check.
-    private static func nested(_ value: GesPlanValue, _ names: inout [(name: String, origin: String)], _ field: String) {
+    private static func constants(_ code: inout Code, _ layout: GesLayoutType) {
+        code.line("/// <summary>The schema hash, independent of parameter values.</summary>")
+        code.line("public const ulong SchemaHash = 0x\(GesSchemaLayoutJson.hex(layout.hash))UL;")
+        code.blank()
+        code.line("/// <summary>The hash over the schema hash and the parameter values this code was generated with.</summary>")
+        code.line("public const ulong BindingHash = 0x\(GesSchemaLayoutJson.hex(layout.bindingHash))UL;")
+        code.blank()
+        code.line("/// <summary>The size of the largest encoding in bytes.</summary>")
+        code.line("public const int MaxByteCount = \(layout.maxByteCount);")
+    }
+
+    // Whether an optional value also has a nullable view: a value type without storage.
+    private static func plain(_ value: GesPlanValue) -> Bool { !value.isClass && value.encoding.kind != .union && value.encoding.kind != .text && value.encoding.kind != .list }
+
+    // The nested types and members a value declares, for the collision check.
+    private static func nested(_ value: GesPlanValue, _ names: inout Names, _ field: String) {
         let name = nestedName(value)
         if !name.isEmpty { names.append((name, "the type of " + field)) }
-        if value.encoding.kind == .union {
+        switch value.encoding.kind {
+        case .text:
+            names.append((value.base + "Utf8", "the UTF-8 bytes of " + field))
+            names.append(("Set" + value.base + "Utf8", "the UTF-8 setter of " + field))
+        case .list:
+            if let item = value.item { names.append((item.name, "the element type of " + field)) } else { nested(value.element!, &names, field) }
+        case .union:
             for alternative in value.alternatives {
-                names.append((alternative.base, "the alternative \(alternative.label) of \(field)"))
+                if alternative.encoding.kind != .nothing { names.append((alternative.base, "the alternative \(alternative.label) of \(field)")) }
                 nested(alternative, &names, field)
             }
+        default:
+            break
         }
     }
 
@@ -103,25 +141,82 @@ enum GesCSharpEmitter {
         case .integer: "long"
         case .quantized, .float: "double"
         case .schema: value.encoding.schema
+        case .text: "string"
+        case .list: "List<\(elementName(value))>"
         default: nestedName(value)
         }
     }
 
-    private static func members(_ code: inout Code, _ field: GesPlanField) {
-        code.blank()
+    private static func elementName(_ list: GesPlanValue) -> String { list.item?.name ?? typeName(list.element!) }
+
+    // A class reference starts as an instance, so that a record can be filled without allocating later.
+    private static func initializer(_ value: GesPlanValue) -> String {
+        switch value.encoding.kind {
+        case .schema where value.isClass: " = new " + value.encoding.schema + "();"
+        case .list: " = new List<\(elementName(value))>();"
+        default: ";"
+        }
+    }
+
+    private static func members(_ code: inout Code, _ field: GesPlanField, _ first: Bool) {
+        if !first { code.blank() }
         if field.optional {
             code.line("/// <summary>Whether <c>\(field.layout.name)</c> is present.</summary>")
             code.line("public bool Has\(field.base);")
             code.blank()
         }
-        code.line("/// <summary>The field <c>\(field.layout.name)</c>\(description(field.value)).</summary>")
-        code.line("public \(typeName(field.value)) \(field.base);")
+        member(&code, field.value, "The field <c>\(field.layout.name)</c>")
+        if field.optional && plain(field.value) {
+            let type = typeName(field.value)
+            code.blank()
+            code.line("/// <summary>The field <c>\(field.layout.name)</c> as a nullable value, null when absent.</summary>")
+            code.line("public \(type)? \(field.base)Optional")
+            code.open("{")
+            code.line("get => Has\(field.base) ? \(field.base) : (\(type)?)null;")
+            code.line("set")
+            code.open("{")
+            code.line("Has\(field.base) = value.HasValue;")
+            code.line("\(field.base) = value.GetValueOrDefault();")
+            code.close()
+            code.close()
+        }
         if field.value.encoding.kind != .union { return }
         for alternative in field.value.alternatives where alternative.encoding.kind != .nothing {
             code.blank()
-            code.line("/// <summary>The value of <c>\(field.layout.name)</c> when its alternative is <c>\(alternative.label)</c>\(description(alternative)).</summary>")
-            code.line("public \(typeName(alternative)) \(alternative.base);")
+            member(&code, alternative, "The value of <c>\(field.layout.name)</c> when its alternative is <c>\(alternative.label)</c>")
         }
+    }
+
+    // Declares the member that stores a value, with its storage and conveniences.
+    private static func member(_ code: inout Code, _ value: GesPlanValue, _ summary: String) {
+        if value.encoding.kind != .text {
+            code.line("/// <summary>\(summary)\(description(value)).</summary>")
+            code.line("public \(typeName(value)) \(value.base)\(initializer(value))")
+            return
+        }
+        let storage = "__" + value.base
+        let max = String(value.encoding.maxCount)
+        code.line("private byte[] \(storage) = Array.Empty<byte>();")
+        code.line("private int \(storage)Length;")
+        code.blank()
+        code.line("/// <summary>\(summary) as UTF-8 bytes\(value.encoding.tagName ? ", a tag name without #" : "").</summary>")
+        code.line("public ReadOnlySpan<byte> \(value.base)Utf8 => new ReadOnlySpan<byte>(\(storage), 0, \(storage)Length);")
+        code.blank()
+        code.line("/// <summary>Sets \(summary.prefix(1).lowercased() + summary.dropFirst()) from UTF-8 bytes, which are checked when the record is written.</summary>")
+        code.line("/// <param name=\"utf8\">The bytes.</param>")
+        code.line("public void Set\(value.base)Utf8(ReadOnlySpan<byte> utf8)")
+        code.open("{")
+        code.line("if (\(storage).Length < utf8.Length) Array.Resize(ref \(storage), Math.Max(utf8.Length, Math.Min(\(max), \(storage).Length * 2)));")
+        code.line("utf8.CopyTo(\(storage));")
+        code.line("\(storage)Length = utf8.Length;")
+        code.close()
+        code.blank()
+        code.line("/// <summary>\(summary) as a string; reading and setting it allocate.</summary>")
+        code.line("public string \(value.base)")
+        code.open("{")
+        code.line("get => System.Text.Encoding.UTF8.GetString(\(storage), 0, \(storage)Length);")
+        code.line("set => Set\(value.base)Utf8(System.Text.Encoding.UTF8.GetBytes(value));")
+        code.close()
     }
 
     private static func description(_ value: GesPlanValue) -> String {
@@ -129,60 +224,35 @@ enum GesCSharpEmitter {
         switch encoding.kind {
         case .quantized, .float, .integer, .point, .vector: return encoding.unit != "none" ? ", in \(encoding.unit)" : ""
         case .union: return ", the selected alternative"
+        case .list: return ", at most \(encoding.maxCount) elements"
         default: return ""
         }
     }
 
     private static func methods(_ code: inout Code, _ type: GesPlanType) {
-        code.line("/// <summary>Writes this record into a buffer; <see cref=\"MaxByteCount\"/> bytes always suffice.</summary>")
-        code.line("/// <param name=\"buffer\">The buffer.</param>")
-        code.line("/// <returns>The number of bytes written.</returns>")
-        code.line("/// <exception cref=\"GesWireException\">A value does not fit its field, or the buffer is too small.</exception>")
-        code.line("public readonly int Write(Span<byte> buffer)")
-        code.open("{")
-        code.line("var writer = new GesBitWriter(buffer);")
-        code.line("__WriteFields(ref writer, __paths, 0);")
-        code.line("return writer.Finish();")
-        code.close()
-        code.blank()
-        code.line("/// <summary>Writes this record into a new array of its exact size.</summary>")
-        code.line("/// <returns>The bytes.</returns>")
-        code.line("/// <exception cref=\"GesWireException\">A value does not fit its field.</exception>")
-        code.line("public readonly byte[] ToBytes()")
-        code.open("{")
-        code.line("var buffer = new byte[MaxByteCount];")
-        code.line("return buffer.AsSpan(0, Write(buffer)).ToArray();")
-        code.close()
-        code.blank()
-        code.line("/// <summary>Reads a record from untrusted data into this instance. After an error its values are unspecified.</summary>")
-        code.line("/// <param name=\"data\">The data; it may continue after the record.</param>")
-        code.line("/// <param name=\"byteLimit\">An optional limit on the bytes of this record.</param>")
-        code.line("/// <returns>The number of bytes the record occupies.</returns>")
-        code.line("/// <exception cref=\"GesWireException\">The data is no valid record.</exception>")
-        code.line("public int Read(ReadOnlySpan<byte> data, long byteLimit = long.MaxValue)")
-        code.open("{")
-        code.line("var reader = new GesBitReader(data, byteLimit);")
-        code.line("__ReadFields(ref reader, __paths, 0);")
-        code.line("return reader.Finish();")
-        code.close()
-        if let key = type.fields.first, key.key {
+        let selfModifier = type.isClass ? "" : "readonly "
+        if !type.isItem {
             code.blank()
-            code.line("/// <summary>Reads the key, which comes first, before a caller chooses a baseline.</summary>")
-            code.line("/// <param name=\"data\">The data.</param>")
-            code.line("/// <returns>The key.</returns>")
-            code.line("/// <exception cref=\"GesWireException\">The data ends before the key does or holds an invalid key.</exception>")
-            code.line("public static \(typeName(key.value)) ReadKey(ReadOnlySpan<byte> data)")
-            code.open("{")
-            code.line("var reader = new GesBitReader(data);")
-            code.line("var paths = __paths;")
-            code.line("const int at = 0;")
-            code.line("\(typeName(key.value)) key;")
-            read(&code, key.value, "key")
-            code.line("return key;")
-            code.close()
+            publicMethods(&code, selfModifier, ["__WriteFields(ref writer, __paths, 0);"], ["__ReadFields(ref reader, __paths, 0);"], "record")
+            if let key = type.fields.first, key.key {
+                code.blank()
+                code.line("/// <summary>Reads the key, which comes first, before a caller chooses a baseline.</summary>")
+                code.line("/// <param name=\"data\">The data.</param>")
+                code.line("/// <returns>The key.</returns>")
+                code.line("/// <exception cref=\"GesWireException\">The data ends before the key does or holds an invalid key.</exception>")
+                code.line("public static \(typeName(key.value)) ReadKey(ReadOnlySpan<byte> data)")
+                code.open("{")
+                code.line("var reader = new GesBitReader(data);")
+                code.line("var paths = __paths;")
+                code.line("const int at = 0;")
+                code.line("\(typeName(key.value)) key;")
+                read(&code, key.value, "key")
+                code.line("return key;")
+                code.close()
+            }
         }
         code.blank()
-        code.line("internal readonly void __WriteFields(ref GesBitWriter writer, string[] paths, int at)")
+        code.line("internal \(selfModifier)void __WriteFields(ref GesBitWriter writer, string[] paths, int at)")
         code.open("{")
         for field in type.fields {
             if field.optional {
@@ -196,6 +266,7 @@ enum GesCSharpEmitter {
                 write(&code, field.value, field.base)
             }
         }
+        for tag in type.tags { code.line("writer.Write(\(tag.base) ? 1UL : 0UL, 1);") }
         code.close()
         code.blank()
         code.line("internal void __ReadFields(ref GesBitReader reader, string[] paths, int at)")
@@ -203,15 +274,97 @@ enum GesCSharpEmitter {
         for field in type.fields {
             if field.optional {
                 code.line("Has\(field.base) = reader.Read(1, \(path(field.value))) != 0;")
-                code.line("if (!Has\(field.base)) \(field.base) = default;")
-                code.line("else")
+                code.line("if (Has\(field.base))")
                 code.open("{")
                 read(&code, field.value, field.base)
                 code.close()
+                if plain(field.value) { code.line("else \(field.base) = default;") }
             } else {
                 read(&code, field.value, field.base)
             }
         }
+        for tag in type.tags { code.line("\(tag.base) = reader.Read(1, paths[at + \(tag.node)]) != 0;") }
+        code.close()
+    }
+
+    private static func publicMethods(_ code: inout Code, _ selfModifier: String, _ write: [String], _ read: [String], _ what: String) {
+        code.line("/// <summary>Writes this \(what) into a buffer; <see cref=\"MaxByteCount\"/> bytes always suffice.</summary>")
+        code.line("/// <param name=\"buffer\">The buffer.</param>")
+        code.line("/// <returns>The number of bytes written.</returns>")
+        code.line("/// <exception cref=\"GesWireException\">A value does not fit its field, or the buffer is too small.</exception>")
+        code.line("public \(selfModifier)int Write(Span<byte> buffer)")
+        code.open("{")
+        code.line("var writer = new GesBitWriter(buffer);")
+        for line in write { code.line(line) }
+        code.line("return writer.Finish();")
+        code.close()
+        code.blank()
+        code.line("/// <summary>Writes this \(what) into a new array of its exact size.</summary>")
+        code.line("/// <returns>The bytes.</returns>")
+        code.line("/// <exception cref=\"GesWireException\">A value does not fit its field.</exception>")
+        code.line("public \(selfModifier)byte[] ToBytes()")
+        code.open("{")
+        code.line("var buffer = new byte[MaxByteCount];")
+        code.line("return buffer.AsSpan(0, Write(buffer)).ToArray();")
+        code.close()
+        code.blank()
+        code.line("/// <summary>Reads a \(what) from untrusted data into this instance. After an error its values are unspecified.</summary>")
+        code.line("/// <param name=\"data\">The data; it may continue after the record.</param>")
+        code.line("/// <param name=\"byteLimit\">An optional limit on the bytes of this record.</param>")
+        code.line("/// <returns>The number of bytes the record occupies.</returns>")
+        code.line("/// <exception cref=\"GesWireException\">The data is no valid \(what).</exception>")
+        code.line("public int Read(ReadOnlySpan<byte> data, long byteLimit = long.MaxValue)")
+        code.open("{")
+        code.line("var reader = new GesBitReader(data, byteLimit);")
+        for line in read { code.line(line) }
+        code.line("return reader.Finish();")
+        code.close()
+    }
+
+    private static func messageSet(_ code: inout Code, _ type: GesPlanType, _ access: String) throws(GesGeneratorError) {
+        var names: Names = [(type.name, "the type itself"), ("Selected", "the selected member"), ("Member", "the member type")]
+        for name in reserved { names.append((name, "the generated member " + name)) }
+        for member in type.members { names.append((member, "the member " + member)) }
+        try GesSchemaPlanner.unique(type.name, names)
+        let width = String(type.layout.memberWidth)
+        let last = unsigned(UInt64(type.members.count) - 1)
+        code.line(
+            "/// <summary>The message set <c>:\(type.name)</c>: one of its messages, read and written without allocation\(type.membersAreClasses ? " once its storage has grown" : "").</summary>"
+        )
+        code.line(type.membersAreClasses ? "\(access) sealed partial class \(type.name)" : "\(access) partial struct \(type.name)")
+        code.open("{")
+        constants(&code, type.layout)
+        code.blank()
+        code.line("/// <summary>The message this record holds.</summary>")
+        code.line("public Member Selected;")
+        for member in type.members {
+            code.blank()
+            code.line("/// <summary>The message when <see cref=\"Selected\"/> is <c>\(member)</c>.</summary>")
+            code.line("public \(member) \(member)\(type.membersAreClasses ? " = new \(member)();" : ";")")
+        }
+        var write = [
+            "if ((ulong)Selected > \(last)) throw new GesWireException(GesWireException.OutOfRange, \"\");", "writer.Write((ulong)Selected, \(width));", "switch (Selected)", "{",
+        ]
+        var read = ["var index = reader.Read(\(width), \"\");"]
+        if UInt64(type.members.count) - 1 < full(type.layout.memberWidth) { read.append("if (index > \(last)) throw new GesWireException(GesWireException.InvalidIndex, \"\");") }
+        read += ["Selected = (Member)index;", "switch (Selected)", "{"]
+        for member in type.members {
+            write += ["    case Member.\(member):", "        \(member).__WriteFields(ref writer, \(member).__paths, 0);", "        break;"]
+            read += ["    case Member.\(member):", "        \(member).__ReadFields(ref reader, \(member).__paths, 0);", "        break;"]
+        }
+        write.append("}")
+        read.append("}")
+        code.blank()
+        publicMethods(&code, type.membersAreClasses ? "" : "readonly ", write, read, "message")
+        code.blank()
+        code.line("/// <summary>The messages of the set, in declared order.</summary>")
+        code.line("public enum Member : \(underlying(type.members.count))")
+        code.open("{")
+        for member in type.members {
+            code.line("/// <summary>The message <c>\(member)</c>.</summary>")
+            code.line(member + ",")
+        }
+        code.close()
         code.close()
     }
 
@@ -223,6 +376,7 @@ enum GesCSharpEmitter {
     private static func write(_ code: inout Code, _ value: GesPlanValue, _ target: String) {
         let encoding = value.encoding
         let width = String(encoding.width)
+        let max = String(encoding.maxCount)
         switch encoding.kind {
         case .boolean:
             code.line("writer.Write(\(target) ? 1UL : 0UL, 1);")
@@ -249,6 +403,25 @@ enum GesCSharpEmitter {
         case .tag:
             code.line("if ((ulong)\(target) > \(unsigned(UInt64(encoding.tags.count) - 1))) \(fail("UnknownTag", value))")
             code.line("writer.Write((ulong)\(target), \(width));")
+        case .text:
+            code.open("{")
+            code.line("var text = new ReadOnlySpan<byte>(__\(value.base), 0, __\(value.base)Length);")
+            code.line("if (text.Length > \(max)) \(fail("TooLong", value))")
+            code.line(encoding.tagName ? "if (!GesWireRules.IsTagName(text)) \(fail("InvalidTag", value))" : "if (!GesWireRules.IsValidUtf8(text)) \(fail("InvalidText", value))")
+            code.line("writer.Write((ulong)text.Length, \(width));")
+            code.line("writer.WriteBytes(text);")
+            code.close()
+        case .list:
+            code.line("if (\(target).Count > \(max)) \(fail("TooLong", value))")
+            code.line("writer.Write((ulong)\(target).Count, \(width));")
+            code.line("foreach (var item in \(target))")
+            code.open("{")
+            if value.item != nil {
+                code.line("item.__WriteFields(ref writer, paths, at + \(value.element!.node));")
+            } else {
+                write(&code, value.element!, "item")
+            }
+            code.close()
         case .point, .vector:
             for axis in value.axes { write(&code, axis, target + "." + axis.base) }
         case .schema:
@@ -269,7 +442,7 @@ enum GesCSharpEmitter {
             code.line(fail("OutOfRange", value))
             code.close()
             code.close()
-        default:
+        case .nothing:
             break
         }
     }
@@ -278,6 +451,7 @@ enum GesCSharpEmitter {
     private static func read(_ code: inout Code, _ value: GesPlanValue, _ target: String) {
         let encoding = value.encoding
         let width = String(encoding.width)
+        let max = String(encoding.maxCount)
         switch encoding.kind {
         case .boolean:
             code.line("\(target) = reader.Read(1, \(path(value))) != 0;")
@@ -302,6 +476,43 @@ enum GesCSharpEmitter {
             if encoding.range { code.line("if (value < \(bits(encoding.lowerValue)) || value > \(bits(encoding.upperValue))) \(fail("OutOfRange", value))") }
             code.line("\(target) = value;")
             code.close()
+        case .text:
+            let storage = "__" + value.base
+            code.open("{")
+            code.line("var count = (int)reader.Read(\(width), \(path(value)));")
+            code.line("if (count > \(max)) \(fail("InvalidCount", value))")
+            code.line("reader.Require(count * 8L, \(path(value)));")
+            code.line("if (\(storage).Length < count) Array.Resize(ref \(storage), Math.Max(count, Math.Min(\(max), \(storage).Length * 2)));")
+            code.line("var text = new Span<byte>(\(storage), 0, count);")
+            code.line("reader.ReadBytes(text, \(path(value)));")
+            code.line(encoding.tagName ? "if (!GesWireRules.IsTagName(text)) \(fail("InvalidTag", value))" : "if (!GesWireRules.IsValidUtf8(text)) \(fail("InvalidText", value))")
+            code.line("\(storage)Length = count;")
+            code.close()
+        case .list:
+            let element = value.element!
+            let name = elementName(value)
+            code.open("{")
+            code.line("var count = (int)reader.Read(\(width), \(path(value)));")
+            code.line("if (count > \(max)) \(fail("InvalidCount", value))")
+            code.line("\(target).Clear();")
+            code.line("for (var position = 0; position < count; position++)")
+            code.open("{")
+            if element.isClass {
+                code.line("if (position == __\(value.base)Pool.Count) __\(value.base)Pool.Add(new \(name)());")
+                code.line("var item = __\(value.base)Pool[position];")
+            } else if value.item != nil || element.encoding.kind == .point || element.encoding.kind == .vector || element.encoding.kind == .schema {
+                code.line("var item = new \(name)();")
+            } else {
+                code.line("\(name) item;")
+            }
+            if value.item != nil {
+                code.line("item.__ReadFields(ref reader, paths, at + \(element.node));")
+            } else {
+                read(&code, element, "item")
+            }
+            code.line("\(target).Add(item);")
+            code.close()
+            code.close()
         case .point, .vector:
             for axis in value.axes { read(&code, axis, target + "." + axis.base) }
         case .schema:
@@ -323,12 +534,12 @@ enum GesCSharpEmitter {
             }
             code.close()
             code.close()
-        default:
+        case .nothing:
             break
         }
     }
 
-    private static func declarations(_ code: inout Code, _ value: GesPlanValue, _ access: String) {
+    private static func declarations(_ code: inout Code, _ value: GesPlanValue, _ access: String) throws(GesGeneratorError) {
         let name = nestedName(value)
         switch value.encoding.kind {
         case .tag:
@@ -362,7 +573,18 @@ enum GesCSharpEmitter {
                 code.line(alternative.label + ",")
             }
             code.close()
-            for alternative in value.alternatives { declarations(&code, alternative, access) }
+            for alternative in value.alternatives { try declarations(&code, alternative, access) }
+        case .list:
+            if value.element!.isClass {
+                code.blank()
+                code.line("private readonly List<\(elementName(value))> __\(value.base)Pool = new List<\(elementName(value))>();")
+            }
+            if let item = value.item {
+                code.blank()
+                try record(&code, item, access)
+            } else {
+                try declarations(&code, value.element!, access)
+            }
         default:
             break
         }
@@ -380,6 +602,4 @@ enum GesCSharpEmitter {
     private static func double(_ value: Int64) -> String { "\(value)d" }
 
     private static func bits(_ value: Double) -> String { "BitConverter.Int64BitsToDouble(unchecked((long)0x\(GesSchemaLayoutJson.hex(value.bitPattern))UL))" }
-
-    private static func quote(_ text: String) -> String { GesSchemaPlanner.quote(text) }
 }

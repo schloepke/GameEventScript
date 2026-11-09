@@ -48,7 +48,6 @@ public sealed class GesSchemaGenerateOptions
 public sealed class GesGeneratorException : Exception
 {
     internal const string Usage = "generate.usage";
-    internal const string Unsupported = "generate.unsupported";
     internal const string NameCollision = "generate.nameCollision";
     internal const string InvalidNamespace = "generate.invalidNamespace";
 

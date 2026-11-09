@@ -5,12 +5,25 @@ import GameEventScriptRuntime
 
 // What every emitter generates, independent of the language: per type its members in wire order with their node offsets,
 // the field paths in node order for errors, and the nested types it declares. Names are bases in PascalCase that each
-// emitter spells for its language.
-struct GesPlanType {
+// emitter spells for its language. A type that holds a Text or List, directly or through a nested type, is a class, whose
+// storage grows on demand; other types are structs.
+final class GesPlanType {
     var layout = GesLayoutType()
     var name = ""
+    var kind = GesSchemaKind.schema
+    var isClass = false
+
+    // A synthesized list element type, which shares the paths of its owner.
+    var isItem = false
     var paths: [String] = []
     var fields: [GesPlanField] = []
+
+    // A message's tags, each a Boolean member at its node.
+    var tags: [(tag: String, base: String, node: Int)] = []
+
+    // A message set's members, named after their messages.
+    var members: [String] = []
+    var membersAreClasses = false
 }
 
 struct GesPlanField {
@@ -21,14 +34,28 @@ struct GesPlanField {
     var value = GesPlanValue()
 }
 
-// One encoding at a node, stored in the member named by base. A union holds its alternatives, a Point or Vector its axes.
-struct GesPlanValue {
+// One encoding at a node, stored in the member named by base. A union holds its alternatives, a Point or Vector its axes,
+// and a List its element: a value of the element encoding, or a synthesized item type for a union, Text or List.
+final class GesPlanValue {
     var base = ""
     var label = ""
     var node = 0
     var encoding = GesLayoutEncoding()
     var axes: [GesPlanValue] = []
     var alternatives: [GesPlanValue] = []
+    var element: GesPlanValue?
+    var item: GesPlanType?
+
+    // Whether the value refers to a type that is a class.
+    var isClass = false
+
+    init(base: String = "", label: String = "", node: Int = 0, encoding: GesLayoutEncoding = GesLayoutEncoding(), isClass: Bool = false) {
+        self.base = base
+        self.label = label
+        self.node = node
+        self.encoding = encoding
+        self.isClass = isClass
+    }
 }
 
 extension GesSchemaLayout {
@@ -37,44 +64,48 @@ extension GesSchemaLayout {
 
 enum GesSchemaPlanner {
     static func plan(_ layout: GesSchemaLayout) throws(GesGeneratorError) -> [GesPlanType] {
-        var counts: [String: Int] = [:]
-        var paths: [String: [String]] = [:]
-        var result: [GesPlanType] = []
-        for type in layout.types {
-            if type.kind != .schema {
-                throw GesGeneratorError(GesGeneratorError.unsupported, "The \(type.kind == .message ? "message" : "message set") '\(type.name)' cannot be generated yet.")
-            }
-            result.append(try self.type(layout, type, &counts, &paths))
-        }
-        return result
+        let context = Context(layout)
+        return layout.types.map { type(context, $0) }
     }
 
-    private static func type(_ layout: GesSchemaLayout, _ type: GesLayoutType, _ counts: inout [String: Int], _ paths: inout [String: [String]]) throws(GesGeneratorError) -> GesPlanType {
-        var plan = GesPlanType(layout: type, name: type.name, paths: self.paths(layout, type, &paths))
+    private final class Context {
+        let layout: GesSchemaLayout
+        var counts: [String: Int] = [:]
+        var paths: [String: [String]] = [:]
+        var classes: [String: Bool] = [:]
+
+        init(_ layout: GesSchemaLayout) { self.layout = layout }
+    }
+
+    private static func type(_ context: Context, _ type: GesLayoutType) -> GesPlanType {
+        let plan = GesPlanType()
+        plan.layout = type
+        plan.name = type.name
+        plan.kind = type.kind
+        plan.isClass = isClass(context, type.name)
+        if type.kind == .messages {
+            plan.members = type.members
+            for member in type.members where isClass(context, member) { plan.membersAreClasses = true }
+            return plan
+        }
+        plan.paths = paths(context.layout, type, &context.paths)
         var node = 0
         for field in type.fields {
             var planned = GesPlanField(layout: field, base: pascal(field.name), optional: field.optional, key: field.key)
-            planned.value = try value(layout, type, field.encoding, planned.base, "", node, &counts)
-            node += count(layout, field.encoding, &counts)
+            planned.value = value(context, field.encoding, planned.base, "", node)
+            node += count(context.layout, field.encoding, &context.counts)
             plan.fields.append(planned)
+        }
+        for tag in type.tags {
+            plan.tags.append((tag, pascal(tag), node))
+            node += 1
         }
         return plan
     }
 
-    private static func value(
-        _ layout: GesSchemaLayout,
-        _ owner: GesLayoutType,
-        _ encoding: GesLayoutEncoding,
-        _ name: String,
-        _ label: String,
-        _ node: Int,
-        _ counts: inout [String: Int]
-    ) throws(GesGeneratorError) -> GesPlanValue {
-        var value = GesPlanValue(base: name, label: label, node: node, encoding: encoding)
+    private static func value(_ context: Context, _ encoding: GesLayoutEncoding, _ name: String, _ label: String, _ node: Int) -> GesPlanValue {
+        let value = GesPlanValue(base: name, label: label, node: node, encoding: encoding, isClass: holdsStorage(context, encoding))
         switch encoding.kind {
-        case .text, .list:
-            let kind = encoding.kind == .text ? (encoding.tagName ? "Tag with max" : "Text") : (encoding.dice ? "Dice" : "List")
-            throw GesGeneratorError(GesGeneratorError.unsupported, "The field '\(name)' of '\(owner.name)' holds a \(kind), which cannot be generated yet.")
         case .point, .vector:
             var axisNode = node + 1
             for axis in encoding.axes {
@@ -84,13 +115,45 @@ enum GesSchemaPlanner {
         case .union:
             var alternativeNode = node + 1
             for alternative in encoding.alternatives {
-                value.alternatives.append(try self.value(layout, owner, alternative.encoding, name + pascal(alternative.name), alternative.name, alternativeNode, &counts))
-                alternativeNode += count(layout, alternative.encoding, &counts)
+                value.alternatives.append(self.value(context, alternative.encoding, name + pascal(alternative.name), alternative.name, alternativeNode))
+                alternativeNode += count(context.layout, alternative.encoding, &context.counts)
+            }
+        case .list:
+            let element = encoding.element!.encoding
+            if element.kind == .union || element.kind == .text || element.kind == .list {
+                // The item's single field sits at node 0 of the paths its owner passes on.
+                let item = GesPlanType()
+                item.name = name + "Item"
+                item.isItem = true
+                item.isClass = holdsStorage(context, element)
+                item.fields.append(GesPlanField(layout: encoding.element!, base: "Value", value: self.value(context, element, "Value", "", 0)))
+                value.item = item
+                value.element = GesPlanValue(base: name + "Item", node: node + 1, encoding: element, isClass: item.isClass)
+            } else {
+                value.element = self.value(context, element, name + "Item", "", node + 1)
             }
         default:
             break
         }
         return value
+    }
+
+    // Whether values of an encoding need storage that grows, so that their type is a class.
+    private static func holdsStorage(_ context: Context, _ encoding: GesLayoutEncoding) -> Bool {
+        switch encoding.kind {
+        case .text, .list: true
+        case .schema: isClass(context, encoding.schema)
+        case .union: encoding.alternatives.contains { holdsStorage(context, $0.encoding) }
+        default: false
+        }
+    }
+
+    private static func isClass(_ context: Context, _ name: String) -> Bool {
+        if let known = context.classes[name] { return known }
+        let type = context.layout.type(name)
+        let result = type.kind == .messages ? type.members.contains { isClass(context, $0) } : type.fields.contains { holdsStorage(context, $0.encoding) }
+        context.classes[name] = result
+        return result
     }
 
     // The number of nodes an encoding occupies in a bound layout.
@@ -115,11 +178,12 @@ enum GesSchemaPlanner {
         }
     }
 
-    // The paths of a type's nodes in order; a nested schema's paths follow its field's path.
+    // The paths of a type's nodes in order; a nested schema's paths follow its field's path, and a message's tags its fields.
     private static func paths(_ layout: GesSchemaLayout, _ type: GesLayoutType, _ cache: inout [String: [String]]) -> [String] {
         if let known = cache[type.name] { return known }
         var paths: [String] = []
         for field in type.fields { self.paths(layout, field.path, field.encoding, &paths, &cache) }
+        for tag in type.tags { paths.append("#" + tag) }
         cache[type.name] = paths
         return paths
     }

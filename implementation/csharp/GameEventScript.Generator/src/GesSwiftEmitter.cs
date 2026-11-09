@@ -4,11 +4,13 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using GameEventScript.Api;
 
 namespace GameEventScript.Generator;
 
-// Writes Swift 6 without Foundation: a Sendable struct per fixed-width schema with properties in wire order, write and read
-// over the bit primitives, and constants inlined as literals or bit patterns.
+// Writes Swift 6 without Foundation: a Sendable struct per fixed-width schema and a final class per schema with Text or
+// List storage, with properties in wire order, write and read over the bit primitives, and constants inlined as literals or
+// bit patterns.
 internal static class GesSwiftEmitter
 {
     private static readonly HashSet<string> Keywords = new(StringComparer.Ordinal)
@@ -40,7 +42,8 @@ internal static class GesSwiftEmitter
         for (var index = 0; index < types.Count; index++)
         {
             if (index > 0) code.Blank();
-            Type(code, types[index], access);
+            if (types[index].Kind == GesSchemaKind.Messages) MessageSet(code, types[index], access);
+            else Record(code, types[index], access);
         }
 
         foreach (var _ in space) code.Close();
@@ -51,49 +54,89 @@ internal static class GesSwiftEmitter
 
     private static string Member(string pascal) => Name(GesSchemaPlanner.Camel(pascal));
 
-    private static void Type(GesSchemaPlanner.Code code, GesPlanType type, string access)
+    private static string Kind(GesPlanType type) => type.Kind == GesSchemaKind.Message ? "message" : "schema";
+
+    private static void Record(GesSchemaPlanner.Code code, GesPlanType type, string access)
     {
         var names = new List<(string, string)>();
-        foreach (var reserved in Reserved) names.Add((reserved, "the generated member " + reserved));
+        if (!type.IsItem)
+            foreach (var reserved in Reserved) names.Add((reserved, "the generated member " + reserved));
         foreach (var field in type.Fields)
         {
             names.Add((GesSchemaPlanner.Camel(field.Base), "the field " + field.Layout.Name));
             if (field.Optional) names.Add(("has" + field.Base, "the presence of " + field.Layout.Name));
+            if (field.Optional && Plain(field.Value)) names.Add((GesSchemaPlanner.Camel(field.Base) + "Optional", "the optional value of " + field.Layout.Name));
             Nested(field.Value, names, field.Layout.Name);
         }
 
+        foreach (var (tag, name, _) in type.Tags) names.Add((GesSchemaPlanner.Camel(name), "the tag #" + tag));
         GesSchemaPlanner.Unique(type.Name, names);
 
-        code.Line($"/// The schema `:{type.Name}`, read and written without allocation.");
-        code.Open($"{access}struct {type.Name}: Sendable {{");
-        code.Line("/// The schema hash, independent of parameter values.");
-        code.Line($"{access}static let schemaHash: UInt64 = 0x{GesSchemaLayoutJson.Hex(type.Layout.Hash)}");
-        code.Line("/// The hash over the schema hash and the parameter values this code was generated with.");
-        code.Line($"{access}static let bindingHash: UInt64 = 0x{GesSchemaLayoutJson.Hex(type.Layout.BindingHash)}");
-        code.Line("/// The size of the largest encoding in bytes.");
-        code.Line($"{access}static let maxByteCount = {type.Layout.MaxByteCount.ToString(CultureInfo.InvariantCulture)}");
-        code.Line("static let __paths: [String] = [");
-        foreach (var path in type.Paths) code.Line("    " + Quote(path) + ",");
-        code.Line("]");
-        foreach (var field in type.Fields) Members(code, field, access);
+        code.Line(type.IsItem ? "/// An element of the list." : $"/// The {Kind(type)} `:{type.Name}`, read and written without allocation{(type.IsClass ? " once its storage has grown" : "")}.");
+        code.Open(type.IsClass ? $"{access}final class {type.Name} {{" : $"{access}struct {type.Name}: Sendable {{");
+        if (!type.IsItem)
+        {
+            Constants(code, type.Layout, access);
+            code.Line("static let __paths: [String] = [");
+            foreach (var path in type.Paths) code.Line("    " + Quote(path) + ",");
+            code.Line("]");
+        }
+
+        var first = type.IsItem;
+        foreach (var field in type.Fields)
+        {
+            Members(code, field, access, first);
+            first = false;
+        }
+
+        foreach (var (tag, name, _) in type.Tags)
+        {
+            code.Line($"/// Whether the tag `#{tag}` is set.");
+            code.Line($"{access}var {Member(name)} = false");
+        }
+
+        foreach (var field in type.Fields) Pools(code, field.Value);
         code.Blank();
-        code.Line("/// Creates a record with every field at its zero value.");
+        code.Line(type.IsItem ? "/// Creates an element with every field at its zero value." : "/// Creates a record with every field at its zero value.");
         code.Line($"{access}init() {{}}");
-        code.Blank();
         Methods(code, type, access);
         foreach (var field in type.Fields) Declarations(code, field.Value, access);
         code.Close();
     }
 
+    private static void Constants(GesSchemaPlanner.Code code, GesLayoutType layout, string access)
+    {
+        code.Line("/// The schema hash, independent of parameter values.");
+        code.Line($"{access}static let schemaHash: UInt64 = 0x{GesSchemaLayoutJson.Hex(layout.Hash)}");
+        code.Line("/// The hash over the schema hash and the parameter values this code was generated with.");
+        code.Line($"{access}static let bindingHash: UInt64 = 0x{GesSchemaLayoutJson.Hex(layout.BindingHash)}");
+        code.Line("/// The size of the largest encoding in bytes.");
+        code.Line($"{access}static let maxByteCount = {layout.MaxByteCount.ToString(CultureInfo.InvariantCulture)}");
+    }
+
+    private static bool Plain(GesPlanValue value) => !value.IsClass && value.Encoding.Kind is not (GesLayoutKind.Union or GesLayoutKind.Text or GesLayoutKind.List);
+
     private static void Nested(GesPlanValue value, List<(string, string)> names, string field)
     {
         var name = NestedName(value);
         if (name.Length > 0) names.Add((name, "the type of " + field));
-        if (value.Encoding.Kind != GesLayoutKind.Union) return;
-        foreach (var alternative in value.Alternatives)
+        switch (value.Encoding.Kind)
         {
-            names.Add((GesSchemaPlanner.Camel(alternative.Base), $"the alternative {alternative.Label} of {field}"));
-            Nested(alternative, names, field);
+            case GesLayoutKind.Text:
+                names.Add((GesSchemaPlanner.Camel(value.Base) + "UTF8", "the UTF-8 bytes of " + field));
+                break;
+            case GesLayoutKind.List:
+                if (value.Item is not null) names.Add((value.Item.Name, "the element type of " + field));
+                else Nested(value.Element!, names, field);
+                break;
+            case GesLayoutKind.Union:
+                foreach (var alternative in value.Alternatives)
+                {
+                    if (alternative.Encoding.Kind != GesLayoutKind.Nothing) names.Add((GesSchemaPlanner.Camel(alternative.Base), $"the alternative {alternative.Label} of {field}"));
+                    Nested(alternative, names, field);
+                }
+
+                break;
         }
     }
 
@@ -112,8 +155,12 @@ internal static class GesSwiftEmitter
         GesLayoutKind.Integer => "Int64",
         GesLayoutKind.Quantized or GesLayoutKind.Float => "Double",
         GesLayoutKind.Schema => value.Encoding.Schema,
+        GesLayoutKind.Text => "String",
+        GesLayoutKind.List => $"[{ElementName(value)}]",
         _ => NestedName(value)
     };
+
+    private static string ElementName(GesPlanValue list) => list.Item is not null ? list.Item.Name : TypeName(list.Element!);
 
     private static string Zero(GesPlanValue value) => value.Encoding.Kind switch
     {
@@ -122,27 +169,66 @@ internal static class GesSwiftEmitter
         GesLayoutKind.Quantized or GesLayoutKind.Float => "0.0",
         GesLayoutKind.Tag => "." + Name(value.Encoding.Tags[0]),
         GesLayoutKind.Union => "." + Member(value.Alternatives[0].Label),
+        GesLayoutKind.List => "[]",
         _ => TypeName(value) + "()"
     };
 
-    private static void Members(GesSchemaPlanner.Code code, GesPlanField field, string access)
+    private static void Members(GesSchemaPlanner.Code code, GesPlanField field, string access, bool first)
     {
-        code.Blank();
+        if (!first) code.Blank();
         if (field.Optional)
         {
             code.Line($"/// Whether `{field.Layout.Name}` is present.");
             code.Line($"{access}var has{field.Base} = false");
         }
 
-        code.Line($"/// The field `{field.Layout.Name}`{Description(field.Value)}.");
-        code.Line($"{access}var {Member(field.Base)}: {TypeName(field.Value)} = {Zero(field.Value)}");
+        Member(code, field.Value, $"The field `{field.Layout.Name}`", access);
+        if (field.Optional && Plain(field.Value))
+        {
+            var name = Member(field.Base);
+            code.Line($"/// The field `{field.Layout.Name}` as an optional value, nil when absent.");
+            code.Open($"{access}var {GesSchemaPlanner.Camel(field.Base)}Optional: {TypeName(field.Value)}? {{");
+            code.Line($"get {{ self.has{field.Base} ? self.{name} : nil }}");
+            code.Open("set {");
+            code.Line($"self.has{field.Base} = newValue != nil");
+            code.Line($"if let newValue {{ self.{name} = newValue }}");
+            code.Close();
+            code.Close();
+        }
+
         if (field.Value.Encoding.Kind != GesLayoutKind.Union) return;
         foreach (var alternative in field.Value.Alternatives)
         {
             if (alternative.Encoding.Kind == GesLayoutKind.Nothing) continue;
-            code.Line($"/// The value of `{field.Layout.Name}` when its alternative is `{alternative.Label}`{Description(alternative)}.");
-            code.Line($"{access}var {Member(alternative.Base)}: {TypeName(alternative)} = {Zero(alternative)}");
+            Member(code, alternative, $"The value of `{field.Layout.Name}` when its alternative is `{alternative.Label}`", access);
         }
+    }
+
+    private static void Member(GesSchemaPlanner.Code code, GesPlanValue value, string summary, string access)
+    {
+        if (value.Encoding.Kind != GesLayoutKind.Text)
+        {
+            code.Line($"/// {summary}{Description(value)}.");
+            code.Line($"{access}var {Member(value.Base)}: {TypeName(value)} = {Zero(value)}");
+            return;
+        }
+
+        var bytes = GesSchemaPlanner.Camel(value.Base) + "UTF8";
+        code.Line($"/// {summary} as UTF-8 bytes{(value.Encoding.TagName ? ", a tag name without #" : "")}, which are checked when the record is written.");
+        code.Line($"{access}var {bytes}: [UInt8] = []");
+        code.Line($"/// {summary} as a string; reading and setting it allocate.");
+        code.Open($"{access}var {Member(value.Base)}: String {{");
+        code.Line($"get {{ String(decoding: self.{bytes}, as: UTF8.self) }}");
+        code.Line($"set {{ self.{bytes} = Array(newValue.utf8) }}");
+        code.Close();
+    }
+
+    // The instances a list of classes reuses when it is read again.
+    private static void Pools(GesSchemaPlanner.Code code, GesPlanValue value)
+    {
+        if (value.Encoding.Kind == GesLayoutKind.Union)
+            foreach (var alternative in value.Alternatives) Pools(code, alternative);
+        if (value.Encoding.Kind == GesLayoutKind.List && value.Element!.IsClass) code.Line($"private var __{GesSchemaPlanner.Camel(value.Base)}Pool: [{ElementName(value)}] = []");
     }
 
     private static string Description(GesPlanValue value)
@@ -153,67 +239,33 @@ internal static class GesSwiftEmitter
             GesLayoutKind.Quantized or GesLayoutKind.Float or GesLayoutKind.Integer when encoding.Unit != "none" => $", in {encoding.Unit}",
             GesLayoutKind.Point or GesLayoutKind.Vector when encoding.Unit != "none" => $", in {encoding.Unit}",
             GesLayoutKind.Union => ", the selected alternative",
+            GesLayoutKind.List => $", at most {encoding.MaxCount.ToString(CultureInfo.InvariantCulture)} elements",
             _ => ""
         };
     }
 
     private static void Methods(GesSchemaPlanner.Code code, GesPlanType type, string access)
     {
-        code.Line("/// Writes this record into a buffer; `maxByteCount` bytes always suffice.");
-        code.Line("/// - Returns: The number of bytes written.");
-        code.Line("/// - Throws: `GesWireError` when a value does not fit its field or the buffer is too small.");
-        code.Open($"{access}func write(into buffer: UnsafeMutableRawBufferPointer) throws(GesWireError) -> Int {{");
-        code.Line("var writer = GesBitWriter(into: buffer)");
-        code.Line("try __writeFields(&writer, Self.__paths, 0)");
-        code.Line("return try writer.finish()");
-        code.Close();
-        code.Blank();
-        code.Line("/// Writes this record into a new array of its exact size.");
-        code.Line("/// - Throws: `GesWireError` when a value does not fit its field.");
-        code.Open($"{access}func encoded() throws(GesWireError) -> [UInt8] {{");
-        code.Line("let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: Swift.max(Self.maxByteCount, 1), alignment: 8)");
-        code.Line("defer { buffer.deallocate() }");
-        code.Line("let count = try write(into: buffer)");
-        code.Line("return Array(buffer[0..<count])");
-        code.Close();
-        code.Blank();
-        code.Line("/// Reads a record from untrusted data into this instance. After an error its values are unspecified.");
-        code.Line("/// - Parameters:");
-        code.Line("///   - data: The data; it may continue after the record.");
-        code.Line("///   - byteLimit: An optional limit on the bytes of this record.");
-        code.Line("/// - Returns: The number of bytes the record occupies.");
-        code.Line("/// - Throws: `GesWireError` when the data is no valid record.");
-        code.Line("@discardableResult");
-        code.Open($"{access}mutating func read(from data: UnsafeRawBufferPointer, byteLimit: Int = .max) throws(GesWireError) -> Int {{");
-        code.Line("var reader = GesBitReader(data: data, byteLimit: byteLimit)");
-        code.Line("try __readFields(&reader, Self.__paths, 0)");
-        code.Line("return try reader.finish()");
-        code.Close();
-        code.Blank();
-        code.Line("/// Reads a record from bytes into this instance. After an error its values are unspecified.");
-        code.Line("/// - Returns: The number of bytes the record occupies.");
-        code.Line("/// - Throws: `GesWireError` when the bytes are no valid record.");
-        code.Line("@discardableResult");
-        code.Open($"{access}mutating func read(from bytes: [UInt8], byteLimit: Int = .max) throws(GesWireError) -> Int {{");
-        code.Line("let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: Swift.max(bytes.count, 1), alignment: 8)");
-        code.Line("defer { buffer.deallocate() }");
-        code.Line("buffer.copyBytes(from: bytes)");
-        code.Line("return try read(from: UnsafeRawBufferPointer(rebasing: buffer[0..<bytes.count]), byteLimit: byteLimit)");
-        code.Close();
-        var key = type.Fields.Count > 0 && type.Fields[0].Key ? type.Fields[0] : null;
-        if (key is not null)
+        var mutating = type.IsClass ? "" : "mutating ";
+        if (!type.IsItem)
         {
             code.Blank();
-            code.Line("/// Reads the key, which comes first, before a caller chooses a baseline.");
-            code.Line("/// - Throws: `GesWireError` when the data ends before the key does or holds an invalid key.");
-            code.Open($"{access}static func readKey(from data: UnsafeRawBufferPointer) throws(GesWireError) -> {TypeName(key.Value)} {{");
-            code.Line("var reader = GesBitReader(data: data)");
-            code.Line("let paths = Self.__paths");
-            code.Line("let at = 0");
-            code.Line($"var key: {TypeName(key.Value)} = {Zero(key.Value)}");
-            Read(code, key.Value, "key");
-            code.Line("return key");
-            code.Close();
+            PublicMethods(code, access, mutating, ["try __writeFields(&writer, Self.__paths, 0)"], ["try __readFields(&reader, Self.__paths, 0)"], "record");
+            var key = type.Fields.Count > 0 && type.Fields[0].Key ? type.Fields[0] : null;
+            if (key is not null)
+            {
+                code.Blank();
+                code.Line("/// Reads the key, which comes first, before a caller chooses a baseline.");
+                code.Line("/// - Throws: `GesWireError` when the data ends before the key does or holds an invalid key.");
+                code.Open($"{access}static func readKey(from data: UnsafeRawBufferPointer) throws(GesWireError) -> {TypeName(key.Value)} {{");
+                code.Line("var reader = GesBitReader(data: data)");
+                code.Line("let paths = Self.__paths");
+                code.Line("let at = 0");
+                code.Line($"var key: {TypeName(key.Value)} = {Zero(key.Value)}");
+                Read(code, key.Value, "key");
+                code.Line("return key");
+                code.Close();
+            }
         }
 
         code.Blank();
@@ -233,9 +285,10 @@ internal static class GesSwiftEmitter
             else Write(code, field.Value, target);
         }
 
+        foreach (var (_, name, _) in type.Tags) code.Line($"try writer.write(self.{Member(name)} ? 1 : 0, width: 1)");
         code.Close();
         code.Blank();
-        code.Open("mutating func __readFields(_ reader: inout GesBitReader, _ paths: [String], _ at: Int) throws(GesWireError) {");
+        code.Open($"{mutating}func __readFields(_ reader: inout GesBitReader, _ paths: [String], _ at: Int) throws(GesWireError) {{");
         foreach (var field in type.Fields)
         {
             var target = "self." + Member(field.Base);
@@ -244,13 +297,112 @@ internal static class GesSwiftEmitter
                 code.Line($"self.has{field.Base} = try reader.read(1, path: {Path(field.Value)}) != 0");
                 code.Open($"if self.has{field.Base} {{");
                 Read(code, field.Value, target);
-                code.Close("} else {");
-                code.Line($"    {target} = {Zero(field.Value)}");
-                code.Line("}");
+                if (Plain(field.Value))
+                {
+                    code.Close("} else {");
+                    code.Line($"    {target} = {Zero(field.Value)}");
+                    code.Line("}");
+                }
+                else code.Close();
             }
             else Read(code, field.Value, target);
         }
 
+        foreach (var (_, name, node) in type.Tags) code.Line($"self.{Member(name)} = try reader.read(1, path: paths[at + {node.ToString(CultureInfo.InvariantCulture)}]) != 0");
+        code.Close();
+    }
+
+    private static void PublicMethods(GesSchemaPlanner.Code code, string access, string mutating, List<string> write, List<string> read, string what)
+    {
+        code.Line($"/// Writes this {what} into a buffer; `maxByteCount` bytes always suffice.");
+        code.Line("/// - Returns: The number of bytes written.");
+        code.Line("/// - Throws: `GesWireError` when a value does not fit its field or the buffer is too small.");
+        code.Open($"{access}func write(into buffer: UnsafeMutableRawBufferPointer) throws(GesWireError) -> Int {{");
+        code.Line("var writer = GesBitWriter(into: buffer)");
+        foreach (var line in write) code.Line(line);
+        code.Line("return try writer.finish()");
+        code.Close();
+        code.Blank();
+        code.Line($"/// Writes this {what} into a new array of its exact size.");
+        code.Line("/// - Throws: `GesWireError` when a value does not fit its field.");
+        code.Open($"{access}func encoded() throws(GesWireError) -> [UInt8] {{");
+        code.Line("let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: Swift.max(Self.maxByteCount, 1), alignment: 8)");
+        code.Line("defer { buffer.deallocate() }");
+        code.Line("let count = try write(into: buffer)");
+        code.Line("return Array(buffer[0..<count])");
+        code.Close();
+        code.Blank();
+        code.Line($"/// Reads a {what} from untrusted data into this instance. After an error its values are unspecified.");
+        code.Line("/// - Parameters:");
+        code.Line("///   - data: The data; it may continue after the record.");
+        code.Line("///   - byteLimit: An optional limit on the bytes of this record.");
+        code.Line("/// - Returns: The number of bytes the record occupies.");
+        code.Line($"/// - Throws: `GesWireError` when the data is no valid {what}.");
+        code.Line("@discardableResult");
+        code.Open($"{access}{mutating}func read(from data: UnsafeRawBufferPointer, byteLimit: Int = .max) throws(GesWireError) -> Int {{");
+        code.Line("var reader = GesBitReader(data: data, byteLimit: byteLimit)");
+        foreach (var line in read) code.Line(line);
+        code.Line("return try reader.finish()");
+        code.Close();
+        code.Blank();
+        code.Line($"/// Reads a {what} from bytes into this instance. After an error its values are unspecified.");
+        code.Line("/// - Returns: The number of bytes the record occupies.");
+        code.Line($"/// - Throws: `GesWireError` when the bytes are no valid {what}.");
+        code.Line("@discardableResult");
+        code.Open($"{access}{mutating}func read(from bytes: [UInt8], byteLimit: Int = .max) throws(GesWireError) -> Int {{");
+        code.Line("let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: Swift.max(bytes.count, 1), alignment: 8)");
+        code.Line("defer { buffer.deallocate() }");
+        code.Line("buffer.copyBytes(from: bytes)");
+        code.Line("return try read(from: UnsafeRawBufferPointer(rebasing: buffer[0..<bytes.count]), byteLimit: byteLimit)");
+        code.Close();
+    }
+
+    private static void MessageSet(GesSchemaPlanner.Code code, GesPlanType type, string access)
+    {
+        var names = new List<(string, string)> { ("selected", "the selected member"), ("Member", "the member type") };
+        foreach (var reserved in Reserved) names.Add((reserved, "the generated member " + reserved));
+        foreach (var member in type.Members) names.Add((GesSchemaPlanner.Camel(member), "the member " + member));
+        GesSchemaPlanner.Unique(type.Name, names);
+        var width = type.Layout.MemberWidth.ToString(CultureInfo.InvariantCulture);
+        var last = ((ulong)type.Members.Count - 1).ToString(CultureInfo.InvariantCulture);
+        code.Line($"/// The message set `:{type.Name}`: one of its messages, read and written without allocation{(type.MembersAreClasses ? " once its storage has grown" : "")}.");
+        code.Open(type.MembersAreClasses ? $"{access}final class {type.Name} {{" : $"{access}struct {type.Name}: Sendable {{");
+        Constants(code, type.Layout, access);
+        code.Line("/// The message this record holds.");
+        code.Line($"{access}var selected: Member = .{Member(type.Members[0])}");
+        foreach (var member in type.Members)
+        {
+            code.Line($"/// The message when `selected` is `{GesSchemaPlanner.Camel(member)}`.");
+            code.Line($"{access}var {Member(member)} = {member}()");
+        }
+
+        code.Blank();
+        code.Line("/// Creates a record that holds the first message, with every field at its zero value.");
+        code.Line($"{access}init() {{}}");
+        var write = new List<string> { $"try writer.write(UInt64(self.selected.rawValue), width: {width})", "switch self.selected {" };
+        var read = new List<string> { $"let index = try reader.read({width}, path: \"\")" };
+        if ((ulong)type.Members.Count - 1 < Full(type.Layout.MemberWidth)) read.Add($"if index > {last} {{ throw GesWireError(code: GesWireError.invalidIndex, path: \"\") }}");
+        read.AddRange([$"self.selected = Member(rawValue: {Underlying(type.Members.Count)}(index))!", "switch self.selected {"]);
+        foreach (var member in type.Members)
+        {
+            write.AddRange([$"case .{Member(member)}:", $"    try self.{Member(member)}.__writeFields(&writer, {member}.__paths, 0)"]);
+            read.AddRange([$"case .{Member(member)}:", $"    try self.{Member(member)}.__readFields(&reader, {member}.__paths, 0)"]);
+        }
+
+        write.Add("}");
+        read.Add("}");
+        code.Blank();
+        PublicMethods(code, access, type.MembersAreClasses ? "" : "mutating ", write, read, "message");
+        code.Blank();
+        code.Line("/// The messages of the set, in declared order.");
+        code.Open($"{access}enum Member: {Underlying(type.Members.Count)}, Sendable {{");
+        foreach (var member in type.Members)
+        {
+            code.Line($"/// The message `{member}`.");
+            code.Line($"case {Member(member)}");
+        }
+
+        code.Close();
         code.Close();
     }
 
@@ -262,6 +414,7 @@ internal static class GesSwiftEmitter
     {
         var encoding = value.Encoding;
         var width = encoding.Width.ToString(CultureInfo.InvariantCulture);
+        var max = encoding.MaxCount.ToString(CultureInfo.InvariantCulture);
         switch (encoding.Kind)
         {
             case GesLayoutKind.Boolean:
@@ -279,13 +432,13 @@ internal static class GesSwiftEmitter
                 code.Line($"try writer.write(UInt64(bitPattern: {target}) &- {lower}, width: {width})");
                 break;
             case GesLayoutKind.Quantized when encoding.Wrapping:
-                code.Line($"try writer.write(");
+                code.Line("try writer.write(");
                 code.Line($"    try GesWireRules.wrappedQuantizedIndex({target}, tenPower: {Double(encoding.TenPower)}, numerator: {Double(encoding.Numerator)}, lower: {Long(encoding.Lower)}, period: {Unsigned(encoding.MaxIndex + 1)}, path: {Path(value)}),");
                 code.Line($"    width: {width}");
                 code.Line(")");
                 break;
             case GesLayoutKind.Quantized:
-                code.Line($"try writer.write(");
+                code.Line("try writer.write(");
                 code.Line($"    try GesWireRules.quantizedIndex({target}, lowerValue: {Bits(encoding.LowerValue)}, upperValue: {Bits(encoding.UpperValue)}, tenPower: {Double(encoding.TenPower)}, numerator: {Double(encoding.Numerator)}, lower: {Long(encoding.Lower)}, path: {Path(value)}),");
                 code.Line($"    width: {width}");
                 code.Line(")");
@@ -297,6 +450,23 @@ internal static class GesSwiftEmitter
                 break;
             case GesLayoutKind.Tag:
                 code.Line($"try writer.write(UInt64({target}.rawValue), width: {width})");
+                break;
+            case GesLayoutKind.Text:
+                var bytes = $"self.{GesSchemaPlanner.Camel(value.Base)}UTF8";
+                code.Line($"if {bytes}.count > {max} {{ {Throw("tooLong", value)} }}");
+                code.Line(encoding.TagName
+                    ? $"if !{bytes}.withUnsafeBytes({{ GesWireRules.isTagName($0) }}) {{ {Throw("invalidTag", value)} }}"
+                    : $"if !{bytes}.withUnsafeBytes({{ GesWireRules.isValidUTF8($0) }}) {{ {Throw("invalidText", value)} }}");
+                code.Line($"try writer.write(UInt64({bytes}.count), width: {width})");
+                code.Line($"for byte in {bytes} {{ try writer.write(UInt64(byte), width: 8) }}");
+                break;
+            case GesLayoutKind.List:
+                code.Line($"if {target}.count > {max} {{ {Throw("tooLong", value)} }}");
+                code.Line($"try writer.write(UInt64({target}.count), width: {width})");
+                code.Open($"for item in {target} {{");
+                if (value.Item is not null) code.Line($"try item.__writeFields(&writer, paths, at + {value.Element!.Node.ToString(CultureInfo.InvariantCulture)})");
+                else Write(code, value.Element!, "item");
+                code.Close();
                 break;
             case GesLayoutKind.Point or GesLayoutKind.Vector:
                 foreach (var axis in value.Axes) Write(code, axis, target + "." + Member(axis.Base));
@@ -324,6 +494,7 @@ internal static class GesSwiftEmitter
     {
         var encoding = value.Encoding;
         var width = encoding.Width.ToString(CultureInfo.InvariantCulture);
+        var max = encoding.MaxCount.ToString(CultureInfo.InvariantCulture);
         switch (encoding.Kind)
         {
             case GesLayoutKind.Boolean:
@@ -352,6 +523,41 @@ internal static class GesSwiftEmitter
                 code.Line($"if value.isNaN || bits == 0x8000_0000_0000_0000{(encoding.Range ? " || value.isInfinite" : "")} {{ {Throw("invalidNumber", value)} }}");
                 if (encoding.Range) code.Line($"if value < {Bits(encoding.LowerValue)} || value > {Bits(encoding.UpperValue)} {{ {Throw("outOfRange", value)} }}");
                 code.Line($"{target} = value");
+                code.Close();
+                break;
+            case GesLayoutKind.Text:
+                var bytes = $"self.{GesSchemaPlanner.Camel(value.Base)}UTF8";
+                code.Open("do {");
+                code.Line($"let count = Int(try reader.read({width}, path: {Path(value)}))");
+                code.Line($"if count > {max} {{ {Throw("invalidCount", value)} }}");
+                code.Line($"try reader.require(count * 8, path: {Path(value)})");
+                code.Line($"{bytes}.removeAll(keepingCapacity: true)");
+                code.Line($"for _ in 0..<count {{ {bytes}.append(UInt8(truncatingIfNeeded: try reader.read(8, path: {Path(value)}))) }}");
+                code.Line(encoding.TagName
+                    ? $"if !{bytes}.withUnsafeBytes({{ GesWireRules.isTagName($0) }}) {{ {Throw("invalidTag", value)} }}"
+                    : $"if !{bytes}.withUnsafeBytes({{ GesWireRules.isValidUTF8($0) }}) {{ {Throw("invalidText", value)} }}");
+                code.Close();
+                break;
+            case GesLayoutKind.List:
+                var element = value.Element!;
+                var name = ElementName(value);
+                code.Open("do {");
+                code.Line($"let count = Int(try reader.read({width}, path: {Path(value)}))");
+                code.Line($"if count > {max} {{ {Throw("invalidCount", value)} }}");
+                code.Line($"{target}.removeAll(keepingCapacity: true)");
+                code.Open(element.IsClass ? "for position in 0..<count {" : "for _ in 0..<count {");
+                if (element.IsClass)
+                {
+                    var pool = $"self.__{GesSchemaPlanner.Camel(value.Base)}Pool";
+                    code.Line($"if position == {pool}.count {{ {pool}.append({name}()) }}");
+                    code.Line($"let item = {pool}[position]");
+                }
+                else if (value.Item is not null || element.Encoding.Kind is GesLayoutKind.Point or GesLayoutKind.Vector or GesLayoutKind.Schema) code.Line($"var item = {name}()");
+                else code.Line($"var item: {name} = {Zero(element)}");
+                if (value.Item is not null) code.Line($"try item.__readFields(&reader, paths, at + {element.Node.ToString(CultureInfo.InvariantCulture)})");
+                else Read(code, element, "item");
+                code.Line($"{target}.append(item)");
+                code.Close();
                 code.Close();
                 break;
             case GesLayoutKind.Point or GesLayoutKind.Vector:
@@ -427,6 +633,14 @@ internal static class GesSwiftEmitter
 
                 code.Close();
                 foreach (var alternative in value.Alternatives) Declarations(code, alternative, access);
+                break;
+            case GesLayoutKind.List:
+                if (value.Item is not null)
+                {
+                    code.Blank();
+                    Record(code, value.Item, access);
+                }
+                else Declarations(code, value.Element!, access);
                 break;
         }
     }

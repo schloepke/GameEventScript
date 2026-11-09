@@ -10,13 +10,26 @@ namespace GameEventScript.Generator;
 
 // What every emitter generates, independent of the language: per type its members in wire order with their node offsets,
 // the field paths in node order for errors, and the nested types it declares. Names are bases in PascalCase that each
-// emitter spells for its language.
+// emitter spells for its language. A type that holds a Text or List, directly or through a nested type, is a class, whose
+// storage grows on demand; other types are structs.
 internal sealed class GesPlanType
 {
     internal GesLayoutType Layout = new();
     internal string Name = "";
+    internal GesSchemaKind Kind;
+    internal bool IsClass;
+
+    // A synthesized list element type, which shares the paths of its owner.
+    internal bool IsItem;
     internal List<string> Paths = [];
     internal List<GesPlanField> Fields = [];
+
+    // A message's tags, each a Boolean member at its node.
+    internal List<(string Tag, string Base, int Node)> Tags = [];
+
+    // A message set's members, named after their messages.
+    internal List<string> Members = [];
+    internal bool MembersAreClasses;
 }
 
 internal sealed class GesPlanField
@@ -28,7 +41,8 @@ internal sealed class GesPlanField
     internal GesPlanValue Value = new();
 }
 
-// One encoding at a node, stored in the member named by Base. A union holds its alternatives, a Point or Vector its axes.
+// One encoding at a node, stored in the member named by Base. A union holds its alternatives, a Point or Vector its axes,
+// and a List its element: a value of the element encoding, or a synthesized item type for a union, Text or List.
 internal sealed class GesPlanValue
 {
     internal string Base = "";
@@ -37,47 +51,63 @@ internal sealed class GesPlanValue
     internal GesLayoutEncoding Encoding = new();
     internal List<GesPlanValue> Axes = [];
     internal List<GesPlanValue> Alternatives = [];
+    internal GesPlanValue? Element;
+    internal GesPlanType? Item;
+
+    // Whether the value refers to a type that is a class.
+    internal bool IsClass;
 }
 
 internal static class GesSchemaPlanner
 {
     internal static List<GesPlanType> Plan(GesSchemaLayout layout)
     {
-        var counts = new Dictionary<string, int>(StringComparer.Ordinal);
-        var paths = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+        var context = new Context(layout);
         var result = new List<GesPlanType>();
-        foreach (var type in layout.Types)
-        {
-            if (type.Kind != GesSchemaKind.Schema)
-                throw new GesGeneratorException(GesGeneratorException.Unsupported, $"The {(type.Kind == GesSchemaKind.Message ? "message" : "message set")} '{type.Name}' cannot be generated yet.");
-            result.Add(Type(layout, type, counts, paths));
-        }
-
+        foreach (var type in layout.Types) result.Add(Type(context, type));
         return result;
     }
 
-    private static GesPlanType Type(GesSchemaLayout layout, GesLayoutType type, Dictionary<string, int> counts, Dictionary<string, List<string>> paths)
+    private sealed class Context(GesSchemaLayout layout)
     {
-        var plan = new GesPlanType { Layout = type, Name = type.Name, Paths = Paths(layout, type, paths) };
+        internal GesSchemaLayout Layout { get; } = layout;
+
+        internal Dictionary<string, int> Counts { get; } = new(StringComparer.Ordinal);
+
+        internal Dictionary<string, List<string>> Paths { get; } = new(StringComparer.Ordinal);
+
+        internal Dictionary<string, bool> Classes { get; } = new(StringComparer.Ordinal);
+    }
+
+    private static GesPlanType Type(Context context, GesLayoutType type)
+    {
+        var plan = new GesPlanType { Layout = type, Name = type.Name, Kind = type.Kind, IsClass = IsClass(context, type.Name) };
+        if (type.Kind == GesSchemaKind.Messages)
+        {
+            plan.Members.AddRange(type.Members);
+            foreach (var member in type.Members) plan.MembersAreClasses |= IsClass(context, member);
+            return plan;
+        }
+
+        plan.Paths = Paths(context, type);
         var node = 0;
         foreach (var field in type.Fields)
         {
             var planned = new GesPlanField { Layout = field, Base = Pascal(field.Name), Optional = field.Optional, Key = field.Key };
-            planned.Value = Value(layout, type, field.Encoding, planned.Base, "", node, counts);
-            node += Count(layout, field.Encoding, counts);
+            planned.Value = Value(context, field.Encoding, planned.Base, "", node);
+            node += Count(context.Layout, field.Encoding, context.Counts);
             plan.Fields.Add(planned);
         }
 
+        foreach (var tag in type.Tags) plan.Tags.Add((tag, Pascal(tag), node++));
         return plan;
     }
 
-    private static GesPlanValue Value(GesSchemaLayout layout, GesLayoutType owner, GesLayoutEncoding encoding, string name, string label, int node, Dictionary<string, int> counts)
+    private static GesPlanValue Value(Context context, GesLayoutEncoding encoding, string name, string label, int node)
     {
-        var value = new GesPlanValue { Base = name, Label = label, Node = node, Encoding = encoding };
+        var value = new GesPlanValue { Base = name, Label = label, Node = node, Encoding = encoding, IsClass = HoldsStorage(context, encoding) };
         switch (encoding.Kind)
         {
-            case GesLayoutKind.Text or GesLayoutKind.List:
-                throw new GesGeneratorException(GesGeneratorException.Unsupported, $"The field '{name}' of '{owner.Name}' holds a {(encoding.Kind == GesLayoutKind.Text ? encoding.TagName ? "Tag with max" : "Text" : encoding.Dice ? "Dice" : "List")}, which cannot be generated yet.");
             case GesLayoutKind.Point or GesLayoutKind.Vector:
                 var axisNode = node + 1;
                 foreach (var axis in encoding.Axes)
@@ -91,14 +121,47 @@ internal static class GesSchemaPlanner
                 var alternativeNode = node + 1;
                 foreach (var alternative in encoding.Alternatives)
                 {
-                    value.Alternatives.Add(Value(layout, owner, alternative.Encoding, name + Pascal(alternative.Name), alternative.Name, alternativeNode, counts));
-                    alternativeNode += Count(layout, alternative.Encoding, counts);
+                    value.Alternatives.Add(Value(context, alternative.Encoding, name + Pascal(alternative.Name), alternative.Name, alternativeNode));
+                    alternativeNode += Count(context.Layout, alternative.Encoding, context.Counts);
                 }
+
+                break;
+            case GesLayoutKind.List:
+                var element = encoding.Element!.Encoding;
+                if (element.Kind is GesLayoutKind.Union or GesLayoutKind.Text or GesLayoutKind.List)
+                {
+                    // The item's single field sits at node 0 of the paths its owner passes on.
+                    var item = new GesPlanType { Name = name + "Item", Kind = GesSchemaKind.Schema, IsItem = true, IsClass = HoldsStorage(context, element) };
+                    item.Fields.Add(new GesPlanField { Layout = encoding.Element, Base = "Value", Value = Value(context, element, "Value", "", 0) });
+                    value.Item = item;
+                    value.Element = new GesPlanValue { Base = name + "Item", Node = node + 1, Encoding = element, IsClass = item.IsClass };
+                }
+                else value.Element = Value(context, element, name + "Item", "", node + 1);
 
                 break;
         }
 
         return value;
+    }
+
+    // Whether values of an encoding need storage that grows, so that their type is a class.
+    private static bool HoldsStorage(Context context, GesLayoutEncoding encoding) => encoding.Kind switch
+    {
+        GesLayoutKind.Text or GesLayoutKind.List => true,
+        GesLayoutKind.Schema => IsClass(context, encoding.Schema),
+        GesLayoutKind.Union => encoding.Alternatives.Exists(alternative => HoldsStorage(context, alternative.Encoding)),
+        _ => false
+    };
+
+    private static bool IsClass(Context context, string name)
+    {
+        if (context.Classes.TryGetValue(name, out var known)) return known;
+        var type = context.Layout.Type(name);
+        var result = type.Kind == GesSchemaKind.Messages
+            ? type.Members.Exists(member => IsClass(context, member))
+            : type.Fields.Exists(field => HoldsStorage(context, field.Encoding));
+        context.Classes[name] = result;
+        return result;
     }
 
     // The number of nodes an encoding occupies in a bound layout.
@@ -128,12 +191,15 @@ internal static class GesSchemaPlanner
         }
     }
 
-    // The paths of a type's nodes in order; a nested schema's paths follow its field's path.
+    // The paths of a type's nodes in order; a nested schema's paths follow its field's path, and a message's tags its fields.
+    private static List<string> Paths(Context context, GesLayoutType type) => Paths(context.Layout, type, context.Paths);
+
     private static List<string> Paths(GesSchemaLayout layout, GesLayoutType type, Dictionary<string, List<string>> cache)
     {
         if (cache.TryGetValue(type.Name, out var known)) return known;
         var paths = new List<string>();
         foreach (var field in type.Fields) Paths(layout, field.Path, field.Encoding, paths, cache);
+        foreach (var tag in type.Tags) paths.Add("#" + tag);
         cache[type.Name] = paths;
         return paths;
     }

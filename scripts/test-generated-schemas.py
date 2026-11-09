@@ -75,7 +75,7 @@ def csharp_program(entries):
     lines = ["using System;", "using System.Collections.Generic;", "", "internal static class Harness", "{",
              "    private static string Hex(ReadOnlySpan<byte> bytes) { var text = new System.Text.StringBuilder(); foreach (var b in bytes) text.Append(b.ToString(\"x2\")); return text.ToString(); }",
              "    private static string Run(int schema, string operation, byte[] data, long limit)", "    {", "        switch (schema)", "        {"]
-    for index, root, has_key in entries:
+    for index, root, has_key, _ in entries:
         lines += [f"            case {index}:", "            {", f"                if (operation == \"key\") return {('\"ok \" + ((long)Gen.Case' + str(index) + '.' + root + '.ReadKey(data)).ToString()') if has_key else '\"none\"'};",
                   f"                var record = new Gen.Case{index}.{root}();", "                var count = record.Read(data, limit);",
                   "                return \"ok \" + count + \" \" + Hex(record.ToBytes());", "            }"]
@@ -95,7 +95,7 @@ def swift_program(entries):
              "    while index < text.endIndex {", "        let next = text.index(index, offsetBy: 2)", "        result.append(UInt8(text[index..<next], radix: 16)!)",
              "        index = next", "    }", "    return result", "}", "",
              "func run(_ schema: Int, _ operation: Substring, _ data: [UInt8], _ limit: Int) throws(GesWireError) -> String {", "    switch schema {"]
-    for index, root, has_key in entries:
+    for index, root, has_key, is_class in entries:
         lines += [f"    case {index}:"]
         if has_key:
             lines += ["        if operation == \"key\" {", "            let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: max(data.count, 1), alignment: 8)",
@@ -103,7 +103,7 @@ def swift_program(entries):
                       f"            return \"ok \" + String(Int64(try Case{index}.{root}.readKey(from: UnsafeRawBufferPointer(rebasing: buffer[0..<data.count]))))", "        }"]
         else:
             lines += ["        if operation == \"key\" { return \"none\" }"]
-        lines += [f"        var record = Case{index}.{root}()", "        let count = try record.read(from: data, byteLimit: limit)",
+        lines += [f"        {'let' if is_class else 'var'} record = Case{index}.{root}()", "        let count = try record.read(from: data, byteLimit: limit)",
                   "        return \"ok \\(count) \" + hex(try record.encoded())"]
     lines += ["    default:", "        return \"none\"", "    }", "}", "",
               "while let line = readLine() {", "    let parts = line.split(separator: \" \", omittingEmptySubsequences: false)",
@@ -167,7 +167,7 @@ def main():
         swift_code, _ = generate(directory, sources, root, parameters, "swift", f"Case{index}")
         (csharp / f"Case{index}.g.cs").write_text(code, encoding="utf-8")
         (swift / f"Case{index}.swift").write_text(swift_code, encoding="utf-8")
-        entries.append((index, root, f"ReadKey(" in code))
+        entries.append((index, root, "ReadKey(" in code, f"final class {root} {{" in swift_code))
         for case_id, operation, data, limit, expected in operations:
             requests.append((case_id, index, operation, data.lower(), limit, expected))
     (csharp / "Harness.cs").write_text(csharp_program(entries), encoding="utf-8")
@@ -201,8 +201,12 @@ let package = Package(
     ]
 )
 """, encoding="utf-8")
-    subprocess.run(["dotnet", "build", str(csharp), "-c", "Release", "-o", str(WORK / "csharp-bin"), "-v", "quiet", "-nologo"], check=True)
-    subprocess.run(["swift", "build", "-c", "release", "--package-path", str(WORK / "swift"), "--disable-build-manifest-caching"], check=True)
+    for command in (["dotnet", "build", str(csharp), "-c", "Release", "-o", str(WORK / "csharp-bin"), "-nologo"],
+                    ["swift", "build", "-c", "release", "--package-path", str(WORK / "swift"), "--disable-build-manifest-caching"]):
+        build = subprocess.run(command, capture_output=True, check=False)
+        if build.returncode != 0:
+            errors = [line for line in build.stdout.decode("utf-8", "replace").splitlines() + build.stderr.decode("utf-8", "replace").splitlines() if "error" in line]
+            raise SystemExit("\n".join(dict.fromkeys(errors[:40])) or f"{command[0]} build failed")
     lines = "".join(f"{index} {operation} {data} {'-' if limit is None else limit}\n" for _, index, operation, data, limit, _ in requests)
     runs = {"C#": ["dotnet", str(WORK / "csharp-bin/Harness.dll")], "Swift": [str(WORK / "swift/.build/release/Harness")]}
     failures = 0

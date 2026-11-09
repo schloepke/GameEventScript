@@ -1104,13 +1104,20 @@ a root, in declaration order, and excludes `--root`. A `--param` that no root re
 `csharp` (C# 9, for Unity) or `swift` (Swift 6, without Foundation); every CLI writes every language,
 and both CLIs write identical text. Each reached schema becomes one type that writes and reads its
 records over the [bit primitives](#bit-primitives) with the bytes, `wire.*` codes and field paths of
-the writer and reader, with parameters as constants. `--namespace` puts the types into a C#
+the writer and reader, with parameters as constants. A type without Text, List or Dice, directly or
+in a type it holds, is a value type (C# `struct`, Swift `Sendable` struct); otherwise it is a class
+whose storage grows when a read or a caller needs more room and is then reused, so that reading and
+writing allocate nothing once it has held its largest data. A Text is held as UTF-8 bytes with a
+string view, a List or Dice as a C# `List<T>` or Swift array, and a list element that is a union,
+Text or List as a generated item type. An `optional` field adds a presence flag and, for a value
+type, a nullable view. A message adds a Boolean per tag, and a message set holds the selected
+member and one record per message. After a failed read the values of the target are unspecified. `--namespace` puts the types into a C#
 namespace or nested Swift enums, and `--access internal` hides them from other modules. With
 `--check`, `generate` compares its text with the file of `-o` and fails with `cli.outdated` when it
 differs or is missing. The text starts with a header that names the roots, parameters and hashes,
 without a date or version. A generation request that cannot be carried out fails with a
 `generate.*` code: `generate.nameCollision` when two generated names of one type are equal,
-`generate.invalidNamespace`, and `generate.unsupported` for a type the generator does not cover yet.
+and `generate.invalidNamespace`.
 
 ### Generation layout
 

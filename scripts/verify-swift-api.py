@@ -170,6 +170,12 @@ def snapshot(package, graphs):
             if (kind == "conformsTo" and relation.get("targetFallback") == "Swift.SendableMetatype"
                     and relation["source"] in sendable_sources):
                 continue
+            # Every type is implicitly Copyable and Escapable unless it declares ~Copyable or
+            # ~Escapable. Which of these implicit edges a toolchain emits varies (Swift 6.4 adds
+            # Escapable where 6.1 does not), so they carry no contract and are left out.
+            if (kind == "conformsTo" and relation.get("targetFallback") in ("Swift.Copyable", "Swift.Escapable")
+                    and "~" not in source["declaration"]):
+                continue
             target_symbol = symbols.get(relation["target"])
             if target_symbol is not None:
                 target = target_symbol["path"] + " :: " + target_symbol["declaration"]

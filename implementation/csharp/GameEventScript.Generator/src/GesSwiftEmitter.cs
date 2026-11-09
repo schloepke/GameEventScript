@@ -11,7 +11,7 @@ namespace GameEventScript.Generator;
 // Writes Swift 6 without Foundation: a Sendable struct per fixed-width schema and a final class per schema with Text or
 // List storage, with properties in wire order, write and read over the bit primitives, and constants inlined as literals or
 // bit patterns.
-internal static class GesSwiftEmitter
+internal static partial class GesSwiftEmitter
 {
     private static readonly HashSet<string> Keywords = new(StringComparer.Ordinal)
     {
@@ -22,7 +22,10 @@ internal static class GesSwiftEmitter
         "throw", "throws", "true", "try", "typealias", "var", "where", "while"
     };
 
-    private static readonly string[] Reserved = ["schemaHash", "bindingHash", "maxByteCount", "write", "read", "readKey", "encoded"];
+    private static readonly string[] Reserved =
+    [
+        "schemaHash", "bindingHash", "maxByteCount", "write", "read", "readKey", "encoded", "writeDelta", "deltaEncoded", "readDelta", "wireEquals", "copy", "quantize"
+    ];
 
     internal static string Emit(GesSchemaLayout layout, List<GesPlanType> types, GesSchemaGenerateOptions options)
     {
@@ -39,11 +42,12 @@ internal static class GesSwiftEmitter
             code.Open($"{access}enum {part} {{");
         }
 
+        var keyed = Keyed(types);
         for (var index = 0; index < types.Count; index++)
         {
             if (index > 0) code.Blank();
             if (types[index].Kind == GesSchemaKind.Messages) MessageSet(code, types[index], access);
-            else Record(code, types[index], access);
+            else Record(code, types[index], access, keyed);
         }
 
         foreach (var _ in space) code.Close();
@@ -56,7 +60,7 @@ internal static class GesSwiftEmitter
 
     private static string Kind(GesPlanType type) => type.Kind == GesSchemaKind.Message ? "message" : "schema";
 
-    private static void Record(GesSchemaPlanner.Code code, GesPlanType type, string access)
+    private static void Record(GesSchemaPlanner.Code code, GesPlanType type, string access, HashSet<string> keyed)
     {
         var names = new List<(string, string)>();
         if (!type.IsItem)
@@ -100,7 +104,10 @@ internal static class GesSwiftEmitter
         code.Line(type.IsItem ? "/// Creates an element with every field at its zero value." : "/// Creates a record with every field at its zero value.");
         code.Line($"{access}init() {{}}");
         Methods(code, type, access);
-        foreach (var field in type.Fields) Declarations(code, field.Value, access);
+        var deltas = type.Kind == GesSchemaKind.Schema && !type.IsItem && !keyed.Contains(type.Name);
+        if (deltas) SameHelpers(code, type);
+        Extras(code, type, access, deltas);
+        foreach (var field in type.Fields) Declarations(code, field.Value, access, keyed);
         code.Close();
     }
 
@@ -589,7 +596,7 @@ internal static class GesSwiftEmitter
         }
     }
 
-    private static void Declarations(GesSchemaPlanner.Code code, GesPlanValue value, string access)
+    private static void Declarations(GesSchemaPlanner.Code code, GesPlanValue value, string access, HashSet<string> keyed)
     {
         var name = NestedName(value);
         switch (value.Encoding.Kind)
@@ -632,15 +639,15 @@ internal static class GesSwiftEmitter
                 }
 
                 code.Close();
-                foreach (var alternative in value.Alternatives) Declarations(code, alternative, access);
+                foreach (var alternative in value.Alternatives) Declarations(code, alternative, access, keyed);
                 break;
             case GesLayoutKind.List:
                 if (value.Item is not null)
                 {
                     code.Blank();
-                    Record(code, value.Item, access);
+                    Record(code, value.Item, access, keyed);
                 }
-                else Declarations(code, value.Element!, access);
+                else Declarations(code, value.Element!, access, keyed);
                 break;
         }
     }

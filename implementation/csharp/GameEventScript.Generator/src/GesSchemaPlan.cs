@@ -93,13 +93,13 @@ internal static class GesSchemaPlanner
         var node = 0;
         foreach (var field in type.Fields)
         {
-            var planned = new GesPlanField { Layout = field, Base = Pascal(field.Name), Optional = field.Optional, Key = field.Key };
+            var planned = new GesPlanField { Layout = field, Base = Member(field.Name, type.Name), Optional = field.Optional, Key = field.Key };
             planned.Value = Value(context, field.Encoding, planned.Base, "", node);
             node += Count(context.Layout, field.Encoding, context.Counts);
             plan.Fields.Add(planned);
         }
 
-        foreach (var tag in type.Tags) plan.Tags.Add((tag, Pascal(tag), node++));
+        foreach (var tag in type.Tags) plan.Tags.Add((tag, Member(tag, type.Name), node++));
         return plan;
     }
 
@@ -224,6 +224,9 @@ internal static class GesSchemaPlanner
         }
     }
 
+    // A member that would carry its type's name gets a suffix, since C# forbids such a member.
+    private static string Member(string name, string type) => Pascal(name) == type ? Pascal(name) + "Value" : Pascal(name);
+
     internal static string Pascal(string name) => name.Length == 0 ? name : char.ToUpperInvariant(name[0]) + name.Substring(1);
 
     internal static string Camel(string name) => name.Length == 0 ? name : char.ToLowerInvariant(name[0]) + name.Substring(1);
@@ -295,6 +298,9 @@ internal static class GesSchemaPlanner
             Line(line);
             _depth++;
         }
+
+        // Indents the following lines, after a line that Close wrote, such as `} else {`.
+        internal void Indent() => _depth++;
 
         internal void Close(string line = "}")
         {

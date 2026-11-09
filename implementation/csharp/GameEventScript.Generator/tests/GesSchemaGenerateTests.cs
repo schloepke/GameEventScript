@@ -36,10 +36,12 @@ public sealed class GesSchemaGenerateTests
     {
         Assert.AreEqual("generate.nameCollision", Code(() => Generate("schema :S as {\n  write: :Boolean\n}\n", "S", GesSchemaLanguage.CSharp)));
         Assert.AreEqual("generate.nameCollision", Code(() => Generate("schema :S as {\n  write: :Boolean\n}\n", "S", GesSchemaLanguage.Swift)));
-        Assert.AreEqual("generate.nameCollision", Code(() => Generate("schema :S as {\n  s: :Boolean\n}\n", "S", GesSchemaLanguage.CSharp)));
+        StringAssert.Contains(Generate("schema :S as {\n  s: :Boolean\n}\n", "S", GesSchemaLanguage.CSharp), "public bool SValue;");
+        Assert.AreEqual("generate.nameCollision", Code(() => Generate("schema :S as {\n  s: :Boolean\n  sValue: :Boolean\n}\n", "S", GesSchemaLanguage.CSharp)));
+        Assert.AreEqual("generate.nameCollision", Code(() => Generate("schema :S as {\n  quantize: :Boolean\n}\n", "S", GesSchemaLanguage.Swift)));
         Assert.AreEqual("generate.nameCollision", Code(() => Generate("schema :S as {\n  state: :Tag(#a)\n  stateTag: :Boolean\n}\n", "S", GesSchemaLanguage.CSharp)));
         Assert.AreEqual("generate.nameCollision", Code(() => Generate("schema :S as {\n  heat: :Boolean optional\n  hasHeat: :Boolean\n}\n", "S", GesSchemaLanguage.Swift)));
-        StringAssert.Contains(Generate("schema :S as {\n  s: :Boolean\n}\n", "S", GesSchemaLanguage.Swift), "public var s: Bool = false");
+        StringAssert.Contains(Generate("schema :S as {\n  s: :Boolean\n}\n", "S", GesSchemaLanguage.Swift), "public var sValue: Bool = false");
     }
 
     [TestMethod]
@@ -75,6 +77,26 @@ public sealed class GesSchemaGenerateTests
         StringAssert.Contains(swift, "public var selected: Member = .hit");
         Assert.AreEqual("generate.nameCollision", Code(() => Generate("schema :S as {\n  name: :Text max 4\n  nameUtf8: :Boolean\n}\n", "S", GesSchemaLanguage.CSharp)));
         Assert.AreEqual("generate.nameCollision", Code(() => Generate("message M(critical: :Boolean) tags (#critical)\n", "M", GesSchemaLanguage.Swift)));
+    }
+
+    [TestMethod]
+    public void SchemasGetDeltasUntilKeyedListsArrive()
+    {
+        const string source = "schema :Item as {\n  id: :Number integer between 0 and 9 key\n}\nschema :S as {\n  x: :Number integer between 0 and 9 delta within 2\n  name: :Text max 4\n}\n"
+            + "schema :K as {\n  items: :List(:Item) max 2\n}\nmessage M(a: :Boolean)\n";
+        var set = GesSchemaSet.Parse(source);
+        var csharp = GesSchemaGenerator.Generate(set, ["S", "K", "M"], new GesSchemaParameters(), new GesSchemaGenerateOptions());
+        StringAssert.Contains(csharp, "public int WriteDelta(S baseline, Span<byte> buffer)");
+        StringAssert.Contains(csharp, "public void CopyFrom(S other)");
+        StringAssert.Contains(csharp, "public bool WireEquals(S other)");
+        StringAssert.Contains(csharp, "GesWireRules.WriteDeltaRange(ref writer");
+        Assert.IsFalse(csharp.Contains("WriteDelta(K baseline", StringComparison.Ordinal));
+        Assert.IsFalse(csharp.Contains("WriteDelta(in M baseline", StringComparison.Ordinal));
+        var swift = GesSchemaGenerator.Generate(set, ["S", "K", "M"], new GesSchemaParameters(), new GesSchemaGenerateOptions { Language = GesSchemaLanguage.Swift });
+        StringAssert.Contains(swift, "public func writeDelta(against baseline: S, into buffer: UnsafeMutableRawBufferPointer) throws(GesWireError) -> Int {");
+        StringAssert.Contains(swift, "public func copy(from other: S) {");
+        StringAssert.Contains(swift, "public func quantize() throws(GesWireError) {");
+        Assert.IsFalse(swift.Contains("against baseline: K", StringComparison.Ordinal));
     }
 
     [TestMethod]

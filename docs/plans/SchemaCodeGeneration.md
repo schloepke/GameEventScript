@@ -3,7 +3,7 @@
 
 # Plan: generated schema code (`ges schema generate`)
 
-Status: accepted; phases 1 to 3 are implemented, phase 4 is next. This plan is removed when the feature lands; the normative
+Status: accepted; phases 1 to 4 are implemented, phase 5 is next. This plan is removed when the feature lands; the normative
 rules then live in `specs/Schemas.md`.
 
 Variant B of the schema API: typed code per schema with inlined constants, next to the
@@ -244,7 +244,12 @@ Each phase is one reviewable change and keeps all gates green.
    per tag, and message sets hold `Selected` and one record per message. `Reserve(...)` is not
    needed: a caller fills a record once with its largest data. `CopyFrom` moves to phase 4.
 4. Deltas without keyed lists: change bits, delta ranges, wrapping, unions, optional fields;
-   wire-value equality and `Quantize()`, which deltas compare by.
+   wire-value equality and `Quantize()`, which deltas compare by. Done: `WriteDelta`/`ReadDelta`
+   (plus `ToDeltaBytes`, Swift `deltaEncoded(against:)`), `WireEquals` instead of overriding
+   `Equals`/`==` (equality that can throw and has no hash does not fit those contracts),
+   `CopyFrom`/`copy(from:)`, `Quantize`, and `GesWireRules.WriteDeltaRange`/`ReadDeltaRange` in the
+   runtime; a field named like its type gets the suffix `Value`. Types whose deltas meet a keyed list
+   have no delta methods until phase 5.
 5. Keyed lists in deltas.
 6. `--values`, roundtrip and fuzzing parties, allocation gates, measurement, `specs/Schemas.md`,
    guide, CHANGELOG, PublicApi, Generator package distribution (NuGet, SwiftPM product,

@@ -1188,8 +1188,10 @@ static class GameEventScript.Api.GesWireRules
   method static System.Boolean IsValidUtf8(System.ReadOnlySpan<System.Byte> bytes)
   method static System.Double QuantizedValue(System.UInt64 index, System.Int64 lower, System.Int64 numerator, System.Double tenPower)
   method static System.UInt64 QuantizedIndex(System.Double value, System.Double lowerValue, System.Double upperValue, System.Double tenPower, System.Double numerator, System.Int64 lower, System.String path)
+  method static System.UInt64 ReadDeltaRange(GameEventScript.Api.GesBitReader& reader, System.UInt64 held, System.UInt64 maxIndex, System.Boolean wrapping, System.UInt64 deltaRange, System.Int32 deltaWidth, System.Int32 width, System.String path)
   method static System.UInt64 WrappedIndex(System.Int64 value, System.Int64 lower, System.UInt64 period)
   method static System.UInt64 WrappedQuantizedIndex(System.Double value, System.Double tenPower, System.Double numerator, System.Int64 lower, System.UInt64 period, System.String path)
+  method static System.Void WriteDeltaRange(GameEventScript.Api.GesBitWriter& writer, System.UInt64 index, System.UInt64 held, System.UInt64 maxIndex, System.Boolean wrapping, System.UInt64 deltaRange, System.Int32 deltaWidth, System.Int32 width)
 interface GameEventScript.Api.IGesClock
   property System.Int64 ElapsedMicroseconds { get }
 interface GameEventScript.Api.IGesExtensionFunction

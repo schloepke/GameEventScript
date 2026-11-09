@@ -4,7 +4,7 @@
 // Writes C# 9 for Unity and .NET: a struct per fixed-width schema and a class per schema with Text or List storage, with
 // fields in wire order, Write and Read over the bit primitives, and constants inlined as literals or bit patterns.
 enum GesCSharpEmitter {
-    private static let keywords: Set<String> = [
+    static let keywords: Set<String> = [
         "abstract", "as", "base", "bool", "break", "byte", "case", "catch", "char", "checked", "class", "const", "continue",
         "decimal", "default", "delegate", "do", "double", "else", "enum", "event", "explicit", "extern", "false", "finally",
         "fixed", "float", "for", "foreach", "goto", "if", "implicit", "in", "int", "interface", "internal", "is", "lock", "long",
@@ -15,7 +15,10 @@ enum GesCSharpEmitter {
     ]
 
     // Members every generated type declares, and those every C# object inherits.
-    private static let reserved = ["SchemaHash", "BindingHash", "MaxByteCount", "Write", "Read", "ReadKey", "ToBytes", "Equals", "GetHashCode", "ToString", "GetType"]
+    static let reserved = [
+        "SchemaHash", "BindingHash", "MaxByteCount", "Write", "Read", "ReadKey", "ToBytes", "WriteDelta", "ToDeltaBytes", "ReadDelta", "WireEquals", "CopyFrom", "Quantize", "Equals",
+        "GetHashCode", "ToString", "GetType",
+    ]
 
     typealias Code = GesSchemaPlanner.Code
     typealias Names = [(name: String, origin: String)]
@@ -36,17 +39,18 @@ enum GesCSharpEmitter {
             code.line("namespace " + space.joined(separator: "."))
             code.open("{")
         }
+        let keyed = self.keyed(types)
         for (index, type) in types.enumerated() {
             if index > 0 { code.blank() }
-            if type.kind == .messages { try messageSet(&code, type, access) } else { try record(&code, type, access) }
+            if type.kind == .messages { try messageSet(&code, type, access) } else { try record(&code, type, access, keyed) }
         }
         if !space.isEmpty { code.close() }
         return code.text
     }
 
-    private static func kind(_ type: GesPlanType) -> String { type.kind == .message ? "message" : "schema" }
+    static func kind(_ type: GesPlanType) -> String { type.kind == .message ? "message" : "schema" }
 
-    private static func record(_ code: inout Code, _ type: GesPlanType, _ access: String) throws(GesGeneratorError) {
+    static func record(_ code: inout Code, _ type: GesPlanType, _ access: String, _ keyed: Set<String>) throws(GesGeneratorError) {
         var names: Names = [(type.name, "the type itself")]
         if !type.isItem {
             for name in reserved { names.append((name, "the generated member " + name)) }
@@ -87,11 +91,14 @@ enum GesCSharpEmitter {
             code.line("public bool \(tag.base);")
         }
         methods(&code, type)
-        for field in type.fields { try declarations(&code, field.value, access) }
+        let deltas = type.kind == .schema && !type.isItem && !keyed.contains(type.name)
+        if deltas { sameHelpers(&code, type) }
+        extras(&code, type, deltas)
+        for field in type.fields { try declarations(&code, field.value, access, keyed) }
         code.close()
     }
 
-    private static func constants(_ code: inout Code, _ layout: GesLayoutType) {
+    static func constants(_ code: inout Code, _ layout: GesLayoutType) {
         code.line("/// <summary>The schema hash, independent of parameter values.</summary>")
         code.line("public const ulong SchemaHash = 0x\(GesSchemaLayoutJson.hex(layout.hash))UL;")
         code.blank()
@@ -103,10 +110,10 @@ enum GesCSharpEmitter {
     }
 
     // Whether an optional value also has a nullable view: a value type without storage.
-    private static func plain(_ value: GesPlanValue) -> Bool { !value.isClass && value.encoding.kind != .union && value.encoding.kind != .text && value.encoding.kind != .list }
+    static func plain(_ value: GesPlanValue) -> Bool { !value.isClass && value.encoding.kind != .union && value.encoding.kind != .text && value.encoding.kind != .list }
 
     // The nested types and members a value declares, for the collision check.
-    private static func nested(_ value: GesPlanValue, _ names: inout Names, _ field: String) {
+    static func nested(_ value: GesPlanValue, _ names: inout Names, _ field: String) {
         let name = nestedName(value)
         if !name.isEmpty { names.append((name, "the type of " + field)) }
         switch value.encoding.kind {
@@ -125,7 +132,7 @@ enum GesCSharpEmitter {
         }
     }
 
-    private static func nestedName(_ value: GesPlanValue) -> String {
+    static func nestedName(_ value: GesPlanValue) -> String {
         switch value.encoding.kind {
         case .tag: value.base + "Tag"
         case .point: value.base + "Point"
@@ -135,7 +142,7 @@ enum GesCSharpEmitter {
         }
     }
 
-    private static func typeName(_ value: GesPlanValue) -> String {
+    static func typeName(_ value: GesPlanValue) -> String {
         switch value.encoding.kind {
         case .boolean: "bool"
         case .integer: "long"
@@ -147,10 +154,10 @@ enum GesCSharpEmitter {
         }
     }
 
-    private static func elementName(_ list: GesPlanValue) -> String { list.item?.name ?? typeName(list.element!) }
+    static func elementName(_ list: GesPlanValue) -> String { list.item?.name ?? typeName(list.element!) }
 
     // A class reference starts as an instance, so that a record can be filled without allocating later.
-    private static func initializer(_ value: GesPlanValue) -> String {
+    static func initializer(_ value: GesPlanValue) -> String {
         switch value.encoding.kind {
         case .schema where value.isClass: " = new " + value.encoding.schema + "();"
         case .list: " = new List<\(elementName(value))>();"
@@ -158,7 +165,7 @@ enum GesCSharpEmitter {
         }
     }
 
-    private static func members(_ code: inout Code, _ field: GesPlanField, _ first: Bool) {
+    static func members(_ code: inout Code, _ field: GesPlanField, _ first: Bool) {
         if !first { code.blank() }
         if field.optional {
             code.line("/// <summary>Whether <c>\(field.layout.name)</c> is present.</summary>")
@@ -188,7 +195,7 @@ enum GesCSharpEmitter {
     }
 
     // Declares the member that stores a value, with its storage and conveniences.
-    private static func member(_ code: inout Code, _ value: GesPlanValue, _ summary: String) {
+    static func member(_ code: inout Code, _ value: GesPlanValue, _ summary: String) {
         if value.encoding.kind != .text {
             code.line("/// <summary>\(summary)\(description(value)).</summary>")
             code.line("public \(typeName(value)) \(value.base)\(initializer(value))")
@@ -219,7 +226,7 @@ enum GesCSharpEmitter {
         code.close()
     }
 
-    private static func description(_ value: GesPlanValue) -> String {
+    static func description(_ value: GesPlanValue) -> String {
         let encoding = value.encoding
         switch encoding.kind {
         case .quantized, .float, .integer, .point, .vector: return encoding.unit != "none" ? ", in \(encoding.unit)" : ""
@@ -229,7 +236,7 @@ enum GesCSharpEmitter {
         }
     }
 
-    private static func methods(_ code: inout Code, _ type: GesPlanType) {
+    static func methods(_ code: inout Code, _ type: GesPlanType) {
         let selfModifier = type.isClass ? "" : "readonly "
         if !type.isItem {
             code.blank()
@@ -287,7 +294,7 @@ enum GesCSharpEmitter {
         code.close()
     }
 
-    private static func publicMethods(_ code: inout Code, _ selfModifier: String, _ write: [String], _ read: [String], _ what: String) {
+    static func publicMethods(_ code: inout Code, _ selfModifier: String, _ write: [String], _ read: [String], _ what: String) {
         code.line("/// <summary>Writes this \(what) into a buffer; <see cref=\"MaxByteCount\"/> bytes always suffice.</summary>")
         code.line("/// <param name=\"buffer\">The buffer.</param>")
         code.line("/// <returns>The number of bytes written.</returns>")
@@ -321,7 +328,7 @@ enum GesCSharpEmitter {
         code.close()
     }
 
-    private static func messageSet(_ code: inout Code, _ type: GesPlanType, _ access: String) throws(GesGeneratorError) {
+    static func messageSet(_ code: inout Code, _ type: GesPlanType, _ access: String) throws(GesGeneratorError) {
         var names: Names = [(type.name, "the type itself"), ("Selected", "the selected member"), ("Member", "the member type")]
         for name in reserved { names.append((name, "the generated member " + name)) }
         for member in type.members { names.append((member, "the member " + member)) }
@@ -368,12 +375,12 @@ enum GesCSharpEmitter {
         code.close()
     }
 
-    private static func path(_ value: GesPlanValue) -> String { "paths[at + \(value.node)]" }
+    static func path(_ value: GesPlanValue) -> String { "paths[at + \(value.node)]" }
 
-    private static func fail(_ code: String, _ value: GesPlanValue) -> String { "throw new GesWireException(GesWireException.\(code), \(path(value)));" }
+    static func fail(_ code: String, _ value: GesPlanValue) -> String { "throw new GesWireException(GesWireException.\(code), \(path(value)));" }
 
     // Writes the value in `target`, which the caller has validated as present.
-    private static func write(_ code: inout Code, _ value: GesPlanValue, _ target: String) {
+    static func write(_ code: inout Code, _ value: GesPlanValue, _ target: String) {
         let encoding = value.encoding
         let width = String(encoding.width)
         let max = String(encoding.maxCount)
@@ -448,7 +455,7 @@ enum GesCSharpEmitter {
     }
 
     // Reads into `target`, after the caller has read a presence bit.
-    private static func read(_ code: inout Code, _ value: GesPlanValue, _ target: String) {
+    static func read(_ code: inout Code, _ value: GesPlanValue, _ target: String) {
         let encoding = value.encoding
         let width = String(encoding.width)
         let max = String(encoding.maxCount)
@@ -539,7 +546,7 @@ enum GesCSharpEmitter {
         }
     }
 
-    private static func declarations(_ code: inout Code, _ value: GesPlanValue, _ access: String) throws(GesGeneratorError) {
+    static func declarations(_ code: inout Code, _ value: GesPlanValue, _ access: String, _ keyed: Set<String>) throws(GesGeneratorError) {
         let name = nestedName(value)
         switch value.encoding.kind {
         case .tag:
@@ -573,7 +580,7 @@ enum GesCSharpEmitter {
                 code.line(alternative.label + ",")
             }
             code.close()
-            for alternative in value.alternatives { try declarations(&code, alternative, access) }
+            for alternative in value.alternatives { try declarations(&code, alternative, access, keyed) }
         case .list:
             if value.element!.isClass {
                 code.blank()
@@ -581,25 +588,25 @@ enum GesCSharpEmitter {
             }
             if let item = value.item {
                 code.blank()
-                try record(&code, item, access)
+                try record(&code, item, access, keyed)
             } else {
-                try declarations(&code, value.element!, access)
+                try declarations(&code, value.element!, access, keyed)
             }
         default:
             break
         }
     }
 
-    private static func underlying(_ count: Int) -> String { count <= 256 ? "byte" : count <= 65536 ? "ushort" : "uint" }
+    static func underlying(_ count: Int) -> String { count <= 256 ? "byte" : count <= 65536 ? "ushort" : "uint" }
 
-    private static func full(_ width: Int) -> UInt64 { width >= 64 ? .max : (1 << UInt64(width)) - 1 }
+    static func full(_ width: Int) -> UInt64 { width >= 64 ? .max : (1 << UInt64(width)) - 1 }
 
-    private static func long(_ value: Int64) -> String { value == .min ? "long.MinValue" : "\(value)L" }
+    static func long(_ value: Int64) -> String { value == .min ? "long.MinValue" : "\(value)L" }
 
-    private static func unsigned(_ value: UInt64) -> String { "\(value)UL" }
+    static func unsigned(_ value: UInt64) -> String { "\(value)UL" }
 
     // An integral binary64 such as 10^k or p, exact as a literal.
-    private static func double(_ value: Int64) -> String { "\(value)d" }
+    static func double(_ value: Int64) -> String { "\(value)d" }
 
-    private static func bits(_ value: Double) -> String { "BitConverter.Int64BitsToDouble(unchecked((long)0x\(GesSchemaLayoutJson.hex(value.bitPattern))UL))" }
+    static func bits(_ value: Double) -> String { "BitConverter.Int64BitsToDouble(unchecked((long)0x\(GesSchemaLayoutJson.hex(value.bitPattern))UL))" }
 }

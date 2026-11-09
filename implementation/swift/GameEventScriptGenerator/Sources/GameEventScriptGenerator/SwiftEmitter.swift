@@ -5,7 +5,7 @@
 // List storage, with properties in wire order, write and read over the bit primitives, and constants inlined as literals or
 // bit patterns.
 enum GesSwiftEmitter {
-    private static let keywords: Set<String> = [
+    static let keywords: Set<String> = [
         "Any", "Protocol", "Self", "Type", "as", "associatedtype", "break", "case", "catch", "class", "continue", "default",
         "defer", "deinit", "do", "else", "enum", "extension", "fallthrough", "false", "fileprivate", "for", "func", "guard",
         "if", "import", "in", "init", "inout", "internal", "is", "let", "nil", "open", "operator", "private", "precedencegroup",
@@ -13,7 +13,9 @@ enum GesSwiftEmitter {
         "throw", "throws", "true", "try", "typealias", "var", "where", "while",
     ]
 
-    private static let reserved = ["schemaHash", "bindingHash", "maxByteCount", "write", "read", "readKey", "encoded"]
+    static let reserved = [
+        "schemaHash", "bindingHash", "maxByteCount", "write", "read", "readKey", "encoded", "writeDelta", "deltaEncoded", "readDelta", "wireEquals", "copy", "quantize",
+    ]
 
     typealias Code = GesSchemaPlanner.Code
     typealias Names = [(name: String, origin: String)]
@@ -30,21 +32,22 @@ enum GesSwiftEmitter {
             code.line("/// The namespace `\(part)` of generated schema types.")
             code.open("\(access)enum \(part) {")
         }
+        let keyed = self.keyed(types)
         for (index, type) in types.enumerated() {
             if index > 0 { code.blank() }
-            if type.kind == .messages { try messageSet(&code, type, access) } else { try record(&code, type, access) }
+            if type.kind == .messages { try messageSet(&code, type, access) } else { try record(&code, type, access, keyed) }
         }
         for _ in space { code.close() }
         return code.text
     }
 
-    private static func name(_ name: String) -> String { keywords.contains(name) ? "`" + name + "`" : name }
+    static func name(_ name: String) -> String { keywords.contains(name) ? "`" + name + "`" : name }
 
-    private static func member(_ pascal: String) -> String { name(GesSchemaPlanner.camel(pascal)) }
+    static func member(_ pascal: String) -> String { name(GesSchemaPlanner.camel(pascal)) }
 
-    private static func kind(_ type: GesPlanType) -> String { type.kind == .message ? "message" : "schema" }
+    static func kind(_ type: GesPlanType) -> String { type.kind == .message ? "message" : "schema" }
 
-    private static func record(_ code: inout Code, _ type: GesPlanType, _ access: String) throws(GesGeneratorError) {
+    static func record(_ code: inout Code, _ type: GesPlanType, _ access: String, _ keyed: Set<String>) throws(GesGeneratorError) {
         var names: Names = []
         if !type.isItem {
             for name in reserved { names.append((name, "the generated member " + name)) }
@@ -80,11 +83,14 @@ enum GesSwiftEmitter {
         code.line(type.isItem ? "/// Creates an element with every field at its zero value." : "/// Creates a record with every field at its zero value.")
         code.line("\(access)init() {}")
         methods(&code, type, access)
-        for field in type.fields { try declarations(&code, field.value, access) }
+        let deltas = type.kind == .schema && !type.isItem && !keyed.contains(type.name)
+        if deltas { sameHelpers(&code, type) }
+        extras(&code, type, access, deltas)
+        for field in type.fields { try declarations(&code, field.value, access, keyed) }
         code.close()
     }
 
-    private static func constants(_ code: inout Code, _ layout: GesLayoutType, _ access: String) {
+    static func constants(_ code: inout Code, _ layout: GesLayoutType, _ access: String) {
         code.line("/// The schema hash, independent of parameter values.")
         code.line("\(access)static let schemaHash: UInt64 = 0x\(GesSchemaLayoutJson.hex(layout.hash))")
         code.line("/// The hash over the schema hash and the parameter values this code was generated with.")
@@ -93,9 +99,9 @@ enum GesSwiftEmitter {
         code.line("\(access)static let maxByteCount = \(layout.maxByteCount)")
     }
 
-    private static func plain(_ value: GesPlanValue) -> Bool { !value.isClass && value.encoding.kind != .union && value.encoding.kind != .text && value.encoding.kind != .list }
+    static func plain(_ value: GesPlanValue) -> Bool { !value.isClass && value.encoding.kind != .union && value.encoding.kind != .text && value.encoding.kind != .list }
 
-    private static func nested(_ value: GesPlanValue, _ names: inout Names, _ field: String) {
+    static func nested(_ value: GesPlanValue, _ names: inout Names, _ field: String) {
         let name = nestedName(value)
         if !name.isEmpty { names.append((name, "the type of " + field)) }
         switch value.encoding.kind {
@@ -113,7 +119,7 @@ enum GesSwiftEmitter {
         }
     }
 
-    private static func nestedName(_ value: GesPlanValue) -> String {
+    static func nestedName(_ value: GesPlanValue) -> String {
         switch value.encoding.kind {
         case .tag: value.base + "Tag"
         case .point: value.base + "Point"
@@ -123,7 +129,7 @@ enum GesSwiftEmitter {
         }
     }
 
-    private static func typeName(_ value: GesPlanValue) -> String {
+    static func typeName(_ value: GesPlanValue) -> String {
         switch value.encoding.kind {
         case .boolean: "Bool"
         case .integer: "Int64"
@@ -135,9 +141,9 @@ enum GesSwiftEmitter {
         }
     }
 
-    private static func elementName(_ list: GesPlanValue) -> String { list.item?.name ?? typeName(list.element!) }
+    static func elementName(_ list: GesPlanValue) -> String { list.item?.name ?? typeName(list.element!) }
 
-    private static func zero(_ value: GesPlanValue) -> String {
+    static func zero(_ value: GesPlanValue) -> String {
         switch value.encoding.kind {
         case .boolean: "false"
         case .integer: "0"
@@ -149,7 +155,7 @@ enum GesSwiftEmitter {
         }
     }
 
-    private static func members(_ code: inout Code, _ field: GesPlanField, _ access: String, _ first: Bool) {
+    static func members(_ code: inout Code, _ field: GesPlanField, _ access: String, _ first: Bool) {
         if !first { code.blank() }
         if field.optional {
             code.line("/// Whether `\(field.layout.name)` is present.")
@@ -173,7 +179,7 @@ enum GesSwiftEmitter {
         }
     }
 
-    private static func member(_ code: inout Code, _ value: GesPlanValue, _ summary: String, _ access: String) {
+    static func member(_ code: inout Code, _ value: GesPlanValue, _ summary: String, _ access: String) {
         if value.encoding.kind != .text {
             code.line("/// \(summary)\(description(value)).")
             code.line("\(access)var \(member(value.base)): \(typeName(value)) = \(zero(value))")
@@ -190,14 +196,14 @@ enum GesSwiftEmitter {
     }
 
     // The instances a list of classes reuses when it is read again.
-    private static func pools(_ code: inout Code, _ value: GesPlanValue) {
+    static func pools(_ code: inout Code, _ value: GesPlanValue) {
         if value.encoding.kind == .union {
             for alternative in value.alternatives { pools(&code, alternative) }
         }
         if value.encoding.kind == .list && value.element!.isClass { code.line("private var __\(GesSchemaPlanner.camel(value.base))Pool: [\(elementName(value))] = []") }
     }
 
-    private static func description(_ value: GesPlanValue) -> String {
+    static func description(_ value: GesPlanValue) -> String {
         let encoding = value.encoding
         switch encoding.kind {
         case .quantized, .float, .integer, .point, .vector: return encoding.unit != "none" ? ", in \(encoding.unit)" : ""
@@ -207,7 +213,7 @@ enum GesSwiftEmitter {
         }
     }
 
-    private static func methods(_ code: inout Code, _ type: GesPlanType, _ access: String) {
+    static func methods(_ code: inout Code, _ type: GesPlanType, _ access: String) {
         let mutating = type.isClass ? "" : "mutating "
         if !type.isItem {
             code.blank()
@@ -266,7 +272,7 @@ enum GesSwiftEmitter {
         code.close()
     }
 
-    private static func publicMethods(_ code: inout Code, _ access: String, _ mutating: String, _ write: [String], _ read: [String], _ what: String) {
+    static func publicMethods(_ code: inout Code, _ access: String, _ mutating: String, _ write: [String], _ read: [String], _ what: String) {
         code.line("/// Writes this \(what) into a buffer; `maxByteCount` bytes always suffice.")
         code.line("/// - Returns: The number of bytes written.")
         code.line("/// - Throws: `GesWireError` when a value does not fit its field or the buffer is too small.")
@@ -310,7 +316,7 @@ enum GesSwiftEmitter {
         code.close()
     }
 
-    private static func messageSet(_ code: inout Code, _ type: GesPlanType, _ access: String) throws(GesGeneratorError) {
+    static func messageSet(_ code: inout Code, _ type: GesPlanType, _ access: String) throws(GesGeneratorError) {
         var names: Names = [("selected", "the selected member"), ("Member", "the member type")]
         for name in reserved { names.append((name, "the generated member " + name)) }
         for member in type.members { names.append((GesSchemaPlanner.camel(member), "the member " + member)) }
@@ -352,11 +358,11 @@ enum GesSwiftEmitter {
         code.close()
     }
 
-    private static func path(_ value: GesPlanValue) -> String { "paths[at + \(value.node)]" }
+    static func path(_ value: GesPlanValue) -> String { "paths[at + \(value.node)]" }
 
-    private static func fail(_ code: String, _ value: GesPlanValue) -> String { "throw GesWireError(code: GesWireError.\(code), path: \(path(value)))" }
+    static func fail(_ code: String, _ value: GesPlanValue) -> String { "throw GesWireError(code: GesWireError.\(code), path: \(path(value)))" }
 
-    private static func write(_ code: inout Code, _ value: GesPlanValue, _ target: String) {
+    static func write(_ code: inout Code, _ value: GesPlanValue, _ target: String) {
         let encoding = value.encoding
         let width = String(encoding.width)
         let max = String(encoding.maxCount)
@@ -429,7 +435,7 @@ enum GesSwiftEmitter {
         }
     }
 
-    private static func read(_ code: inout Code, _ value: GesPlanValue, _ target: String) {
+    static func read(_ code: inout Code, _ value: GesPlanValue, _ target: String) {
         let encoding = value.encoding
         let width = String(encoding.width)
         let max = String(encoding.maxCount)
@@ -522,7 +528,7 @@ enum GesSwiftEmitter {
         }
     }
 
-    private static func declarations(_ code: inout Code, _ value: GesPlanValue, _ access: String) throws(GesGeneratorError) {
+    static func declarations(_ code: inout Code, _ value: GesPlanValue, _ access: String, _ keyed: Set<String>) throws(GesGeneratorError) {
         let name = nestedName(value)
         switch value.encoding.kind {
         case .tag:
@@ -555,26 +561,26 @@ enum GesSwiftEmitter {
                 code.line("case \(member(alternative.label))")
             }
             code.close()
-            for alternative in value.alternatives { try declarations(&code, alternative, access) }
+            for alternative in value.alternatives { try declarations(&code, alternative, access, keyed) }
         case .list:
             if let item = value.item {
                 code.blank()
-                try record(&code, item, access)
+                try record(&code, item, access, keyed)
             } else {
-                try declarations(&code, value.element!, access)
+                try declarations(&code, value.element!, access, keyed)
             }
         default:
             break
         }
     }
 
-    private static func underlying(_ count: Int) -> String { count <= 256 ? "UInt8" : count <= 65536 ? "UInt16" : "UInt32" }
+    static func underlying(_ count: Int) -> String { count <= 256 ? "UInt8" : count <= 65536 ? "UInt16" : "UInt32" }
 
-    private static func full(_ width: Int) -> UInt64 { width >= 64 ? .max : (1 << UInt64(width)) - 1 }
+    static func full(_ width: Int) -> UInt64 { width >= 64 ? .max : (1 << UInt64(width)) - 1 }
 
-    private static func long(_ value: Int64) -> String { value == .min ? "Int64.min" : String(value) }
+    static func long(_ value: Int64) -> String { value == .min ? "Int64.min" : String(value) }
 
-    private static func double(_ value: Int64) -> String { "\(value).0" }
+    static func double(_ value: Int64) -> String { "\(value).0" }
 
-    private static func bits(_ value: Double) -> String { "Double(bitPattern: 0x\(GesSchemaLayoutJson.hex(value.bitPattern)))" }
+    static func bits(_ value: Double) -> String { "Double(bitPattern: 0x\(GesSchemaLayoutJson.hex(value.bitPattern)))" }
 }

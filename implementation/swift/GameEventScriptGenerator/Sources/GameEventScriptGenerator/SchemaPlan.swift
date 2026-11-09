@@ -91,13 +91,13 @@ enum GesSchemaPlanner {
         plan.paths = paths(context.layout, type, &context.paths)
         var node = 0
         for field in type.fields {
-            var planned = GesPlanField(layout: field, base: pascal(field.name), optional: field.optional, key: field.key)
+            var planned = GesPlanField(layout: field, base: member(field.name, type.name), optional: field.optional, key: field.key)
             planned.value = value(context, field.encoding, planned.base, "", node)
             node += count(context.layout, field.encoding, &context.counts)
             plan.fields.append(planned)
         }
         for tag in type.tags {
-            plan.tags.append((tag, pascal(tag), node))
+            plan.tags.append((tag, member(tag, type.name), node))
             node += 1
         }
         return plan
@@ -214,6 +214,9 @@ enum GesSchemaPlanner {
         return result + "\""
     }
 
+    // A member that would carry its type's name gets a suffix, since C# forbids such a member.
+    private static func member(_ name: String, _ type: String) -> String { pascal(name) == type ? pascal(name) + "Value" : pascal(name) }
+
     static func pascal(_ name: String) -> String { name.isEmpty ? name : name.prefix(1).uppercased() + name.dropFirst() }
 
     static func camel(_ name: String) -> String { name.isEmpty ? name : name.prefix(1).lowercased() + name.dropFirst() }
@@ -275,6 +278,9 @@ enum GesSchemaPlanner {
             self.line(line)
             depth += 1
         }
+
+        // Indents the following lines, after a line that close wrote, such as `} else {`.
+        mutating func indent() { depth += 1 }
 
         mutating func close(_ line: String = "}") {
             depth -= 1

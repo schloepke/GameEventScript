@@ -39,10 +39,12 @@ final class GenerateTests: XCTestCase {
     func testCollidingNamesAreRejected() throws {
         XCTAssertEqual(code { try generate("schema :S as {\n  write: :Boolean\n}\n", "S", .csharp) }, "generate.nameCollision")
         XCTAssertEqual(code { try generate("schema :S as {\n  write: :Boolean\n}\n", "S", .swift) }, "generate.nameCollision")
-        XCTAssertEqual(code { try generate("schema :S as {\n  s: :Boolean\n}\n", "S", .csharp) }, "generate.nameCollision")
+        XCTAssertTrue(try generate("schema :S as {\n  s: :Boolean\n}\n", "S", .csharp).contains("public bool SValue;"))
+        XCTAssertEqual(code { try generate("schema :S as {\n  s: :Boolean\n  sValue: :Boolean\n}\n", "S", .csharp) }, "generate.nameCollision")
+        XCTAssertEqual(code { try generate("schema :S as {\n  quantize: :Boolean\n}\n", "S", .swift) }, "generate.nameCollision")
         XCTAssertEqual(code { try generate("schema :S as {\n  state: :Tag(#a)\n  stateTag: :Boolean\n}\n", "S", .csharp) }, "generate.nameCollision")
         XCTAssertEqual(code { try generate("schema :S as {\n  heat: :Boolean optional\n  hasHeat: :Boolean\n}\n", "S", .swift) }, "generate.nameCollision")
-        XCTAssertTrue(try generate("schema :S as {\n  s: :Boolean\n}\n", "S", .swift).contains("public var s: Bool = false"))
+        XCTAssertTrue(try generate("schema :S as {\n  s: :Boolean\n}\n", "S", .swift).contains("public var sValue: Bool = false"))
     }
 
     func testInvalidNamespacesAreRejected() {
@@ -75,6 +77,25 @@ final class GenerateTests: XCTestCase {
         XCTAssertTrue(swift.contains("public var selected: Member = .hit"))
         XCTAssertEqual(code { try generate("schema :S as {\n  name: :Text max 4\n  nameUtf8: :Boolean\n}\n", "S", .csharp) }, "generate.nameCollision")
         XCTAssertEqual(code { try generate("message M(critical: :Boolean) tags (#critical)\n", "M", .swift) }, "generate.nameCollision")
+    }
+
+    func testSchemasGetDeltasUntilKeyedListsArrive() throws {
+        let source =
+            "schema :Item as {\n  id: :Number integer between 0 and 9 key\n}\nschema :S as {\n  x: :Number integer between 0 and 9 delta within 2\n  name: :Text max 4\n}\n"
+            + "schema :K as {\n  items: :List(:Item) max 2\n}\nmessage M(a: :Boolean)\n"
+        let set = try GesSchemaSet(parsing: source)
+        let csharp = try GesSchemaGenerator.generate(set, roots: ["S", "K", "M"], parameters: GesSchemaParameters(), options: GesSchemaGenerateOptions())
+        XCTAssertTrue(csharp.contains("public int WriteDelta(S baseline, Span<byte> buffer)"))
+        XCTAssertTrue(csharp.contains("public void CopyFrom(S other)"))
+        XCTAssertTrue(csharp.contains("public bool WireEquals(S other)"))
+        XCTAssertTrue(csharp.contains("GesWireRules.WriteDeltaRange(ref writer"))
+        XCTAssertFalse(csharp.contains("WriteDelta(K baseline"))
+        XCTAssertFalse(csharp.contains("WriteDelta(in M baseline"))
+        let swift = try GesSchemaGenerator.generate(set, roots: ["S", "K", "M"], parameters: GesSchemaParameters(), options: GesSchemaGenerateOptions(language: .swift))
+        XCTAssertTrue(swift.contains("public func writeDelta(against baseline: S, into buffer: UnsafeMutableRawBufferPointer) throws(GesWireError) -> Int {"))
+        XCTAssertTrue(swift.contains("public func copy(from other: S) {"))
+        XCTAssertTrue(swift.contains("public func quantize() throws(GesWireError) {"))
+        XCTAssertFalse(swift.contains("against baseline: K"))
     }
 
     func testSharedTypesAreGeneratedOnce() throws {

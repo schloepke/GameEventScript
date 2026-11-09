@@ -122,6 +122,91 @@ public enum GesWireRules {
         return remainder == 0 ? 0 : period - remainder
     }
 
+    /// Writes a changed index of a field with `delta within`: its difference from the baseline's index in the range form when
+    /// that is at most `deltaRange`, otherwise the full index after a fallback bit. A wrapping field takes the shorter way
+    /// around its period.
+    /// - Parameters:
+    ///   - writer: The writer.
+    ///   - index: The record's index, different from `held`.
+    ///   - held: The baseline's index.
+    ///   - maxIndex: The largest index; a wrapping field's period is one more.
+    ///   - wrapping: Whether the field wraps.
+    ///   - deltaRange: The largest difference of the range form.
+    ///   - deltaWidth: The width of the range form.
+    ///   - width: The width of a full index.
+    /// - Throws: `GesWireError` with `wire.bufferTooSmall` when the buffer is full.
+    public static func writeDeltaRange(
+        _ writer: inout GesBitWriter,
+        index: UInt64,
+        held: UInt64,
+        maxIndex: UInt64,
+        wrapping: Bool,
+        deltaRange: UInt64,
+        deltaWidth: Int,
+        width: Int
+    ) throws(GesWireError) {
+        let (difference, negative) = self.difference(index, held, maxIndex, wrapping)
+        if difference > deltaRange {
+            try writer.write(1, width: 1)
+            try writer.write(index, width: width)
+            return
+        }
+        try writer.write(0, width: 1)
+        try writer.write(negative ? deltaRange - difference : deltaRange + difference, width: deltaWidth)
+    }
+
+    /// Reads a changed index of a field with `delta within` against the baseline's index, and rejects every form that is not
+    /// the canonical one.
+    /// - Parameters:
+    ///   - reader: The reader.
+    ///   - held: The baseline's index.
+    ///   - maxIndex: The largest index; a wrapping field's period is one more.
+    ///   - wrapping: Whether the field wraps.
+    ///   - deltaRange: The largest difference of the range form.
+    ///   - deltaWidth: The width of the range form.
+    ///   - width: The width of a full index.
+    ///   - path: The field path for an error, evaluated only then.
+    /// - Returns: The record's index.
+    /// - Throws: `GesWireError` when the data ends early, a full index is invalid (`wire.invalidIndex`), or the form is not
+    ///   canonical or leaves the range (`wire.invalidDelta`).
+    public static func readDeltaRange(
+        _ reader: inout GesBitReader,
+        held: UInt64,
+        maxIndex: UInt64,
+        wrapping: Bool,
+        deltaRange: UInt64,
+        deltaWidth: Int,
+        width: Int,
+        path: @autoclosure () -> String
+    ) throws(GesWireError) -> UInt64 {
+        if try reader.read(1, path: path()) == 1 {
+            let value = try reader.read(width, path: path())
+            if value > maxIndex { throw GesWireError(GesWireError.invalidIndex, path()) }
+            if value == held || difference(value, held, maxIndex, wrapping).magnitude <= deltaRange { throw GesWireError(GesWireError.invalidDelta, path()) }
+            return value
+        }
+        let range = try reader.read(deltaWidth, path: path())
+        if range > deltaRange * 2 || range == deltaRange { throw GesWireError(GesWireError.invalidDelta, path()) }
+        if range > deltaRange {
+            let forward = range - deltaRange
+            if wrapping { return forward >= maxIndex + 1 - held ? held - (maxIndex + 1 - forward) : held + forward }
+            if forward > maxIndex - held { throw GesWireError(GesWireError.invalidDelta, path()) }
+            return held + forward
+        }
+        let backward = deltaRange - range
+        if backward <= held { return held - backward }
+        if !wrapping { throw GesWireError(GesWireError.invalidDelta, path()) }
+        return maxIndex + 1 - (backward - held)
+    }
+
+    // The difference of two indices without overflow; a wrapping field takes the shorter way, and an exact half period is negative.
+    static func difference(_ index: UInt64, _ baseline: UInt64, _ maxIndex: UInt64, _ wrapping: Bool) -> (magnitude: UInt64, negative: Bool) {
+        if !wrapping { return index < baseline ? (baseline - index, true) : (index - baseline, false) }
+        let period = maxIndex + 1
+        let forward = index >= baseline ? index - baseline : period - (baseline - index)
+        return forward >= period - period / 2 ? (period - forward, true) : (forward, false)
+    }
+
     private static func steps(_ value: Double, _ tenPower: Double, _ numerator: Double, _ path: @autoclosure () -> String) throws(GesWireError) -> Int64 {
         let quotient = value * tenPower / numerator
         if quotient > largestSteps || quotient < -largestSteps { throw GesWireError(GesWireError.outOfRange, path()) }

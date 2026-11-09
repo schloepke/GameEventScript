@@ -10,7 +10,7 @@ namespace GameEventScript.Generator;
 
 // Writes C# 9 for Unity and .NET: a struct per fixed-width schema and a class per schema with Text or List storage, with
 // fields in wire order, Write and Read over the bit primitives, and constants inlined as literals or bit patterns.
-internal static class GesCSharpEmitter
+internal static partial class GesCSharpEmitter
 {
     private static readonly HashSet<string> Keywords = new(StringComparer.Ordinal)
     {
@@ -24,7 +24,11 @@ internal static class GesCSharpEmitter
     };
 
     // Members every generated type declares, and those every C# object inherits.
-    private static readonly string[] Reserved = ["SchemaHash", "BindingHash", "MaxByteCount", "Write", "Read", "ReadKey", "ToBytes", "Equals", "GetHashCode", "ToString", "GetType"];
+    private static readonly string[] Reserved =
+    [
+        "SchemaHash", "BindingHash", "MaxByteCount", "Write", "Read", "ReadKey", "ToBytes", "WriteDelta", "ToDeltaBytes", "ReadDelta", "WireEquals", "CopyFrom", "Quantize", "Equals", "GetHashCode",
+        "ToString", "GetType"
+    ];
 
     internal static string Emit(GesSchemaLayout layout, List<GesPlanType> types, GesSchemaGenerateOptions options)
     {
@@ -45,11 +49,12 @@ internal static class GesCSharpEmitter
             code.Open("{");
         }
 
+        var keyed = Keyed(types);
         for (var index = 0; index < types.Count; index++)
         {
             if (index > 0) code.Blank();
             if (types[index].Kind == GesSchemaKind.Messages) MessageSet(code, types[index], access);
-            else Record(code, types[index], access);
+            else Record(code, types[index], access, keyed);
         }
 
         if (space.Count > 0) code.Close();
@@ -58,7 +63,21 @@ internal static class GesCSharpEmitter
 
     private static string Kind(GesPlanType type) => type.Kind == GesSchemaKind.Message ? "message" : "schema";
 
-    private static void Record(GesSchemaPlanner.Code code, GesPlanType type, string access)
+    // The types whose deltas meet a keyed list, which have no delta methods until keyed lists are generated.
+    private static HashSet<string> Keyed(List<GesPlanType> types)
+    {
+        var keyed = new HashSet<string>(StringComparer.Ordinal);
+        for (var grown = true; grown;)
+        {
+            grown = false;
+            foreach (var type in types)
+                if (!keyed.Contains(type.Name) && type.Fields.Exists(field => KeyedDelta(field.Value, keyed))) grown = keyed.Add(type.Name);
+        }
+
+        return keyed;
+    }
+
+    private static void Record(GesSchemaPlanner.Code code, GesPlanType type, string access, HashSet<string> keyed)
     {
         var names = new List<(string, string)> { (type.Name, "the type itself") };
         if (!type.IsItem)
@@ -103,7 +122,10 @@ internal static class GesCSharpEmitter
         }
 
         Methods(code, type);
-        foreach (var field in type.Fields) Declarations(code, field.Value, access);
+        var deltas = type.Kind == GesSchemaKind.Schema && !type.IsItem && !keyed.Contains(type.Name);
+        if (deltas) SameHelpers(code, type);
+        Extras(code, type, deltas);
+        foreach (var field in type.Fields) Declarations(code, field.Value, access, keyed);
         code.Close();
     }
 
@@ -602,7 +624,7 @@ internal static class GesCSharpEmitter
         }
     }
 
-    private static void Declarations(GesSchemaPlanner.Code code, GesPlanValue value, string access)
+    private static void Declarations(GesSchemaPlanner.Code code, GesPlanValue value, string access, HashSet<string> keyed)
     {
         var name = NestedName(value);
         switch (value.Encoding.Kind)
@@ -646,7 +668,7 @@ internal static class GesCSharpEmitter
                 }
 
                 code.Close();
-                foreach (var alternative in value.Alternatives) Declarations(code, alternative, access);
+                foreach (var alternative in value.Alternatives) Declarations(code, alternative, access, keyed);
                 break;
             case GesLayoutKind.List:
                 if (value.Element!.IsClass)
@@ -658,9 +680,9 @@ internal static class GesCSharpEmitter
                 if (value.Item is not null)
                 {
                     code.Blank();
-                    Record(code, value.Item, access);
+                    Record(code, value.Item, access, keyed);
                 }
-                else Declarations(code, value.Element!, access);
+                else Declarations(code, value.Element!, access, keyed);
                 break;
         }
     }

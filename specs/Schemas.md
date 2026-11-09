@@ -1016,8 +1016,9 @@ calls them with constant widths and operands, so they are part of the contract:
   padding (`wire.invalidPadding`) and returns the bytes consumed.
 - `GesWireRules` holds the value rules over plain operands: `IsValidUtf8`, `IsTagName`,
   `QuantizedIndex` and `WrappedQuantizedIndex` with the [quantization](#quantization) operands
-  `10^k` and `p`, `QuantizedValue` and `WrappedIndex`. Their errors and paths are those of the
-  writer.
+  `10^k` and `p`, `QuantizedValue` and `WrappedIndex`, and `WriteDeltaRange` and `ReadDeltaRange` for
+  the [delta range](#delta-range) of a changed index, including the canonical checks of a decoder.
+  Their errors and paths are those of the writer, the reader and `GesSchemaDelta`.
 - `GesWireException` and Swift `GesWireError` are created from a code and a path; every
   `wire.*` code is a public constant.
 
@@ -1111,7 +1112,16 @@ writing allocate nothing once it has held its largest data. A Text is held as UT
 string view, a List or Dice as a C# `List<T>` or Swift array, and a list element that is a union,
 Text or List as a generated item type. An `optional` field adds a presence flag and, for a value
 type, a nullable view. A message adds a Boolean per tag, and a message set holds the selected
-member and one record per message. After a failed read the values of the target are unspecified. `--namespace` puts the types into a C#
+member and one record per message. After a failed read the values of the target are unspecified.
+A field named like its type, which C# does not allow, gets the suffix `Value` in every language.
+
+Every generated record compares by wire values with `WireEquals`, the indices and stored bits
+that it writes, never raw numbers; `Quantize` replaces each quantized number by the value its index
+decodes to, and a class copies another record into its storage with `CopyFrom` (Swift
+`copy(from:)`). A schema writes a delta against a baseline with `WriteDelta` and reads one with
+`ReadDelta`, with the bytes, codes and paths of [`GesSchemaDelta`](#deltas-between-records); the
+baseline must be another instance and is never changed, and a target whose read failed must not
+serve as a baseline. A schema whose delta meets a list of keyed elements has no delta methods yet. `--namespace` puts the types into a C#
 namespace or nested Swift enums, and `--access internal` hides them from other modules. With
 `--check`, `generate` compares its text with the file of `-o` and fails with `cli.outdated` when it
 differs or is missing. The text starts with a header that names the roots, parameters and hashes,

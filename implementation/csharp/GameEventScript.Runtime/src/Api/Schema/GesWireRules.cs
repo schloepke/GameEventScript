@@ -114,6 +114,90 @@ public static class GesWireRules
         return remainder == 0 ? 0 : period - remainder;
     }
 
+    /// <summary>
+    /// Writes a changed index of a field with <c>delta within</c>: its difference from the baseline's index in the range form
+    /// when that is at most <paramref name="deltaRange"/>, otherwise the full index after a fallback bit. A wrapping field
+    /// takes the shorter way around its period.
+    /// </summary>
+    /// <param name="writer">The writer.</param>
+    /// <param name="index">The record's index, different from <paramref name="held"/>.</param>
+    /// <param name="held">The baseline's index.</param>
+    /// <param name="maxIndex">The largest index; a wrapping field's period is one more.</param>
+    /// <param name="wrapping">Whether the field wraps.</param>
+    /// <param name="deltaRange">The largest difference of the range form.</param>
+    /// <param name="deltaWidth">The width of the range form.</param>
+    /// <param name="width">The width of a full index.</param>
+    /// <exception cref="GesWireException"><c>wire.bufferTooSmall</c> when the buffer is full.</exception>
+    public static void WriteDeltaRange(ref GesBitWriter writer, ulong index, ulong held, ulong maxIndex, bool wrapping, ulong deltaRange, int deltaWidth, int width)
+    {
+        var difference = Difference(index, held, maxIndex, wrapping, out var negative);
+        if (difference > deltaRange)
+        {
+            writer.Write(1, 1);
+            writer.Write(index, width);
+            return;
+        }
+
+        writer.Write(0, 1);
+        writer.Write(negative ? deltaRange - difference : deltaRange + difference, deltaWidth);
+    }
+
+    /// <summary>
+    /// Reads a changed index of a field with <c>delta within</c> against the baseline's index, and rejects every form that is
+    /// not the canonical one.
+    /// </summary>
+    /// <param name="reader">The reader.</param>
+    /// <param name="held">The baseline's index.</param>
+    /// <param name="maxIndex">The largest index; a wrapping field's period is one more.</param>
+    /// <param name="wrapping">Whether the field wraps.</param>
+    /// <param name="deltaRange">The largest difference of the range form.</param>
+    /// <param name="deltaWidth">The width of the range form.</param>
+    /// <param name="width">The width of a full index.</param>
+    /// <param name="path">The field path for an error.</param>
+    /// <returns>The record's index.</returns>
+    /// <exception cref="GesWireException">The data ends early, a full index is invalid (<c>wire.invalidIndex</c>), or the form
+    /// is not canonical or leaves the range (<c>wire.invalidDelta</c>).</exception>
+    public static ulong ReadDeltaRange(ref GesBitReader reader, ulong held, ulong maxIndex, bool wrapping, ulong deltaRange, int deltaWidth, int width, string path)
+    {
+        if (reader.Read(1, path) == 1)
+        {
+            var value = reader.Read(width, path);
+            if (value > maxIndex) throw new GesWireException(GesWireException.InvalidIndex, path);
+            if (value == held || Difference(value, held, maxIndex, wrapping, out _) <= deltaRange) throw new GesWireException(GesWireException.InvalidDelta, path);
+            return value;
+        }
+
+        var range = reader.Read(deltaWidth, path);
+        if (range > deltaRange * 2 || range == deltaRange) throw new GesWireException(GesWireException.InvalidDelta, path);
+        if (range > deltaRange)
+        {
+            var forward = range - deltaRange;
+            if (wrapping) return forward >= maxIndex + 1 - held ? held - (maxIndex + 1 - forward) : held + forward;
+            if (forward > maxIndex - held) throw new GesWireException(GesWireException.InvalidDelta, path);
+            return held + forward;
+        }
+
+        var backward = deltaRange - range;
+        if (backward <= held) return held - backward;
+        if (!wrapping) throw new GesWireException(GesWireException.InvalidDelta, path);
+        return maxIndex + 1 - (backward - held);
+    }
+
+    // The difference of two indices without overflow; a wrapping field takes the shorter way, and an exact half period is negative.
+    internal static ulong Difference(ulong index, ulong baseline, ulong maxIndex, bool wrapping, out bool negative)
+    {
+        if (!wrapping)
+        {
+            negative = index < baseline;
+            return negative ? baseline - index : index - baseline;
+        }
+
+        var period = maxIndex + 1;
+        var forward = index >= baseline ? index - baseline : period - (baseline - index);
+        negative = forward >= period - (period / 2);
+        return negative ? period - forward : forward;
+    }
+
     private static long Steps(double value, double tenPower, double numerator, string path)
     {
         var quotient = value * tenPower / numerator;

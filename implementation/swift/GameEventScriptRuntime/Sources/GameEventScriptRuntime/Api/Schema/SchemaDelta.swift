@@ -72,10 +72,7 @@ public enum GesSchemaDelta {
 
     // The difference of two indices without overflow; a wrapping field takes the shorter way, and an exact half period is negative.
     static func difference(_ node: GesSchemaNode, _ index: UInt64, _ baseline: UInt64) -> (magnitude: UInt64, negative: Bool) {
-        if !node.wrapping { return index < baseline ? (baseline - index, true) : (index - baseline, false) }
-        let period = node.maxIndex + 1
-        let forward = index >= baseline ? index - baseline : period - (baseline - index)
-        return forward >= period - period / 2 ? (period - forward, true) : (forward, false)
+        GesWireRules.difference(index, baseline, node.maxIndex, node.wrapping)
     }
 }
 

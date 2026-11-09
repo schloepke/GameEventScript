@@ -87,20 +87,8 @@ public static class GesSchemaDelta
         if (buffer.Overlaps(first) || buffer.Overlaps(second)) throw new GesWireException(GesWireException.OverlappingBuffers, "");
     }
 
-    // The difference of two indices without overflow; a wrapping field takes the shorter way, and an exact half period is negative.
     private static ulong Difference(in GesSchemaNode node, ulong index, ulong baseline, out bool negative)
-    {
-        if (!node.Wrapping)
-        {
-            negative = index < baseline;
-            return negative ? baseline - index : index - baseline;
-        }
-
-        var period = node.MaxIndex + 1;
-        var forward = index >= baseline ? index - baseline : period - (baseline - index);
-        negative = forward >= period - (period / 2);
-        return negative ? period - forward : forward;
-    }
+        => GesWireRules.Difference(index, baseline, node.MaxIndex, node.Wrapping, out negative);
 
     // One validated value of a fixed width, or the bits of a number.
     private static ulong Wire(ref GesSchemaReader source, in GesSchemaNode node)

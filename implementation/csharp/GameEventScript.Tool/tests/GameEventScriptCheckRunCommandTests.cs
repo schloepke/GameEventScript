@@ -275,6 +275,31 @@ public sealed class GameEventScriptCheckRunCommandTests
         Assert.AreEqual(string.Empty, run.StandardOutput);
     }
 
+    /// <summary>Verifies the schema layout command: several roots, all roots, parameters, output files and usage errors.</summary>
+    [TestMethod]
+    public void SchemaLayoutCoversSeveralRoots()
+    {
+        Write("nested.gess", "parameter width: :Quantity(m)\nschema :Inner as {\n  x: :Quantity(m) between 0m and width step 1m\n}\nschema :Outer as {\n  inner: :Inner\n}\nschema :Other as {\n  inner: :Inner\n}\n");
+        var layout = Run("schema", "layout", "nested.gess", "--root", "Outer", "--root", "Other", "--param", "width=8m");
+        Assert.AreEqual(0, layout.ExitCode, layout.StandardError);
+        StringAssert.StartsWith(layout.StandardOutput, "{\n  \"layout\": 1,\n  \"roots\": [\n    \"Outer\",\n    \"Other\"\n  ],");
+        Assert.HasCount(2, layout.StandardOutput.Split("\"name\": \"Inner\",\n      \"kind\""));
+        Assert.AreEqual(layout.StandardOutput.Replace("\"Outer\",\n    \"Other\"", "\"Inner\",\n    \"Outer\",\n    \"Other\"", StringComparison.Ordinal),
+            Run("schema", "layout", "nested.gess", "--all-roots", "--param", "width=8m").StandardOutput);
+        Assert.AreEqual(0, Run("schema", "layout", "nested.gess", "--root", "Outer", "--param", "width=8m", "-o", "layout.json").ExitCode);
+        Assert.IsTrue(File.Exists(Path.Combine(_directory, "layout.json")));
+        Assert.AreEqual(2, Run("schema", "layout", "nested.gess", "--param", "width=8m").ExitCode);
+        Assert.AreEqual(2, Run("schema", "layout", "nested.gess", "--root", "Outer", "--all-roots", "--param", "width=8m").ExitCode);
+        Assert.AreEqual(2, Run("schema", "layout", "nested.gess", "--root", "Outer", "--root", "Outer", "--param", "width=8m").ExitCode);
+        Assert.AreEqual(2, Run("schema", "hash", "nested.gess", "--all-roots").ExitCode);
+        var unknown = Run("schema", "layout", "nested.gess", "--root", "Outer", "--param", "width=8m", "--param", "height=1m");
+        Assert.AreEqual(1, unknown.ExitCode);
+        StringAssert.Contains(unknown.StandardError, "error schema.unknownName: No root reaches the parameter 'height'.");
+        var missing = Run("schema", "layout", "nested.gess", "--root", "Outer");
+        Assert.AreEqual(1, missing.ExitCode);
+        StringAssert.Contains(missing.StandardError, "error schema.unknownName");
+    }
+
     /// <summary>Verifies the schema commands: check, canonical form, hash, formatting, dump and error reports.</summary>
     [TestMethod]
     public void SchemaCommandsCheckHashFormatAndDump()

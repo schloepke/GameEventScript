@@ -38,6 +38,7 @@ MODULES = (
     ("Runtime", "implementation/csharp/GameEventScript.Runtime/src", "implementation/swift/GameEventScriptRuntime/Sources"),
     ("Compiler", "implementation/csharp/GameEventScript.Compiler/src", "implementation/swift/GameEventScriptCompiler/Sources"),
     ("Bridge", "implementation/csharp/GameEventScript.CSharpBridge/src", "implementation/swift/GameEventScriptSwiftBridge/Sources"),
+    ("Generator", "implementation/csharp/GameEventScript.Generator/src", "implementation/swift/GameEventScriptGenerator/Sources"),
     ("Syntax", "implementation/csharp/GameEventScript.Syntax/src", "implementation/swift/GameEventScriptSyntax/Sources"),
 )
 
@@ -47,6 +48,7 @@ PLATFORM_ONLY = {
     ("csharp", "Runtime", "IsExternalInit"): "C# compiler support type for init accessors on netstandard2.1",
     ("csharp", "Compiler", "IsExternalInit"): "C# compiler support type for init accessors on netstandard2.1",
     ("csharp", "Schema", "IsExternalInit"): "C# compiler support type for init accessors on netstandard2.1",
+    ("swift", "Generator", "GesGeneratorError"): "Swift's error for an invalid generator request, where C# throws ArgumentException",
     ("swift", "Schema", "GesSchemaNodeInfo"): "Swift keeps the reference-free GesSchemaNode apart from its names, so the hot path counts no references",
     ("csharp", "Bridge", "IsExternalInit"): "C# compiler support type for init accessors on netstandard2.1",
     ("csharp", "Syntax", "IsExternalInit"): "C# compiler support type for init accessors on netstandard2.1",

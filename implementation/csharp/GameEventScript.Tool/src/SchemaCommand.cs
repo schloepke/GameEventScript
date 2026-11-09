@@ -3,6 +3,7 @@
 
 using System.Text;
 using GameEventScript.Api;
+using GameEventScript.Generator;
 using GameEventScript.Syntax;
 
 namespace GameEventScript.Tool;
@@ -18,6 +19,7 @@ Usage:
   dotnet ges schema hash <schema.gess> [more.gess ...] --root <Name> [--param <name>=<literal> ...]
   dotnet ges schema canonical <schema.gess> [more.gess ...] --root <Name>
   dotnet ges schema dump <schema.gess> [more.gess ...] --root <Name> [--param <name>=<literal> ...] --data <data.bin> [--baseline <record.bin>]
+  dotnet ges schema layout <schema.gess> [more.gess ...] (--root <Name> ... | --all-roots) [--param <name>=<literal> ...] [-o <layout.json>]
 
 Commands:
   check      Read schemas and report the first error with its line and column.
@@ -25,13 +27,15 @@ Commands:
   hash       Print the schema hash and, with parameters, the binding hash.
   canonical  Print the canonical form that the schema hash runs over.
   dump       List each field of binary data with its bit offset, width and value.
+  layout     Print the language-neutral generation layout of the roots and every type they reach as JSON.
 
 Options:
-  --root <Name>             The schema, message or message set.
+  --root <Name>             The schema, message or message set; layout accepts several.
+  --all-roots               Make every declaration of the files a root of layout.
   --param <name>=<literal>  A parameter value such as worldWidth=5000m; repeat for each one.
   --data <path>             The binary data of dump.
   --baseline <path>         The full record that makes dump read the data as a delta.
-  -o, --output <path>       Write the formatted source to a UTF-8 file instead of stdout.
+  -o, --output <path>       Write the formatted source or the layout to a UTF-8 file instead of stdout.
   -q, --quiet               Hide the success report of check.
   -h, --help                Show this help.
 """;
@@ -45,9 +49,11 @@ Options:
         }
 
         var command = arguments[0];
-        if (command is not ("check" or "format" or "hash" or "canonical" or "dump")) return UsageError($"Unknown schema command '{command}'.");
+        if (command is not ("check" or "format" or "hash" or "canonical" or "dump" or "layout")) return UsageError($"Unknown schema command '{command}'.");
         var paths = new List<string>();
         string? root = null;
+        var roots = new List<string>();
+        var allRoots = false;
         string? data = null;
         string? baseline = null;
         string? output = null;
@@ -63,19 +69,25 @@ Options:
             }
 
             if (argument is "-q" or "--quiet" && command == "check") quiet = true;
+            else if (argument == "--all-roots" && command == "layout") allRoots = true;
             else if (argument is "--root" or "--data" or "--baseline" or "--param" or "-o" or "--output")
             {
                 var applies = argument switch
                 {
-                    "--root" => command is "hash" or "canonical" or "dump",
-                    "--param" => command is "hash" or "dump",
+                    "--root" => command is "hash" or "canonical" or "dump" or "layout",
+                    "--param" => command is "hash" or "dump" or "layout",
                     "--data" or "--baseline" => command == "dump",
-                    _ => command == "format"
+                    _ => command is "format" or "layout"
                 };
                 if (!applies) return UsageError($"Unknown schema {command} option '{argument}'.");
                 if (index + 1 == arguments.Length) return UsageError($"Specify a value after {argument}.");
                 var next = arguments[++index];
-                if (argument == "--root") root = next;
+                if (argument == "--root" && command == "layout")
+                {
+                    if (roots.Contains(next)) return UsageError($"The root '{next}' is given twice.");
+                    roots.Add(next);
+                }
+                else if (argument == "--root") root = next;
                 else if (argument == "--data") data = next;
                 else if (argument == "--baseline") baseline = next;
                 else if (argument is "-o" or "--output") output = next;
@@ -97,6 +109,7 @@ Options:
         if (command == "format" && paths.Count > 1) return UsageError("Format accepts exactly one schema file.");
         if (command is "hash" or "canonical" or "dump" && root is null) return UsageError($"{command} requires --root.");
         if (command == "dump" && data is null) return UsageError("dump requires --data.");
+        if (command == "layout" && (roots.Count > 0) == allRoots) return UsageError("layout requires either --root or --all-roots.");
         if (output is not null)
         {
             if (string.IsNullOrWhiteSpace(output)) return UsageError("The output path must not be empty.");
@@ -133,6 +146,8 @@ Options:
                 case "canonical":
                     Console.Write(set.Schema(root!).CanonicalForm);
                     return 0;
+                case "layout":
+                    return Layout(set, allRoots ? set.Schemas.Select(schema => schema.Name).ToList() : roots, parameters, output);
             }
 
             var schema = set.Schema(root!);
@@ -186,6 +201,26 @@ Options:
             Console.Error.WriteLine($"error cli.io: {exception.Message}");
             return 1;
         }
+    }
+
+    private static int Layout(GesSchemaSet set, List<string> roots, List<(string Name, string Literal)> parameters, string? output)
+    {
+        var values = new GesSchemaParameters();
+        foreach (var (name, literal) in parameters)
+        {
+            if (!roots.Any(root => set.Schema(root).Parameters.Any(parameter => parameter.Name == name)))
+            {
+                Console.Error.WriteLine($"schema: error schema.unknownName: No root reaches the parameter '{name}'.");
+                return 1;
+            }
+
+            values.With(name, literal);
+        }
+
+        var text = GesSchemaGenerator.Layout(set, roots, values);
+        if (output is null) Console.Write(text);
+        else ToolFileOutput.Write(Path.GetFullPath(output), StrictUtf8.GetBytes(text));
+        return 0;
     }
 
     private static int UsageError(string message)

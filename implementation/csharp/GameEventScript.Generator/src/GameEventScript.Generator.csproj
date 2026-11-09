@@ -1,0 +1,25 @@
+<!-- Copyright 2026 Stephan Schlöpke -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>netstandard2.1</TargetFramework>
+        <AssemblyName>GameEventScript.Generator</AssemblyName>
+        <RootNamespace>GameEventScript</RootNamespace>
+        <IsPackable>false</IsPackable>
+        <Version>0.1.0</Version>
+        <Authors>Stephan Schlöpke</Authors>
+        <Copyright>Copyright 2026 Stephan Schlöpke</Copyright>
+        <Description>Game Event Script schema code generator. A build-time tool that games never ship.</Description>
+        <LangVersion>12</LangVersion>
+        <Nullable>enable</Nullable>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <WarningsAsErrors>$(WarningsAsErrors);CS0419;CS1570;CS1572;CS1573;CS1574;CS1580;CS1581;CS1584;CS1587;CS1591;CS1658;CS1711;CS1712</WarningsAsErrors>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../../GameEventScript.Runtime/src/GameEventScript.Runtime.csproj" />
+        <ProjectReference Include="../../GameEventScript.Syntax/src/GameEventScript.Syntax.csproj" />
+    </ItemGroup>
+</Project>

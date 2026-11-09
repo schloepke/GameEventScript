@@ -3,7 +3,7 @@
 
 # Plan: generated schema code (`ges schema generate`)
 
-Status: accepted; phase 1 is implemented, phase 2 is next. This plan is removed when the feature lands; the normative
+Status: accepted; phase 1 and the layout half of phase 2 are implemented, the emitters are next. This plan is removed when the feature lands; the normative
 rules then live in `specs/Schemas.md`.
 
 Variant B of the schema API: typed code per schema with inlined constants, next to the
@@ -62,7 +62,8 @@ Generation is split into two steps, so that the target languages share everythin
 the final text:
 
 1. **Layout.** Both CLIs compute a language-neutral generation layout from the bound schemas:
-   the deduplicated types in a stable order, their generated names, every field with its
+   the deduplicated types in a stable order, their declared names (each emitter converts them
+   to its language), every field with its
    encoding, width, bounds, quantization constants (exact integers and binary64 bit patterns),
    key, optional and change-bit structure, delta ranges and keyed-list sections, plus the
    hashes and `MaxByteCount` per type. `ges schema layout` writes it as canonical JSON. Its
@@ -230,7 +231,9 @@ Each phase is one reviewable change and keeps all gates green.
    moved onto them; a Bot write and read and a delta of 48 keyed Bots measured 5 % faster in C#
    and 2 to 4 % faster in Swift than before.
 2. Generator package in both ports, layout format and `ges schema layout` with the parity
-   script, then the C# and Swift emitters in both ports for full records of fixed-width
+   script (done: `GesSchemaGenerator.Layout`, `ges schema layout`, `compare-schema-layout.py`,
+   format in `specs/Schemas.md#generation-layout`), then the C# and Swift emitters in both ports
+   for full records of fixed-width
    schemas (Boolean, numbers, tags, key, nesting, Point, Vector, union, optional), multiple
    roots and namespaces, name conversion, `Sendable`, `Quantize()`, byte-array conveniences,
    `generate --check`, and the corpus harness.

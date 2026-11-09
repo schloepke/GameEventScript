@@ -1066,6 +1066,8 @@ ges schema hash bot.gess --root Bot --param worldWidth=5000m --param worldHeight
 ges schema canonical bot.gess --root Bot
 ges schema dump bot.gess --root Bot --param worldWidth=5000m --param worldHeight=5000m --data data.bin
 ges schema dump bot.gess --root Bot --param worldWidth=5000m --param worldHeight=5000m --data delta.bin --baseline record.bin
+ges schema layout world.gess panel.gess --root Bot --root GameAnswers --param worldWidth=2000m
+ges schema layout world.gess panel.gess --all-roots --param worldWidth=2000m -o wire.layout.json
 ```
 
 `format` prints the recommended layout and, like document formatting, drops comments; input
@@ -1091,6 +1093,57 @@ has at most 21 digits before the decimal point or at most 3 zeros directly after
 otherwise `d.ddde+x` or `d.ddde-x`. `:show` in the
 console and the highlighter know `.gess`, and the editor bundles have a grammar for it.
 
+`layout` prints the [generation layout](#generation-layout) of one or more roots. `--root` may be
+repeated; naming a root twice is a usage error. `--all-roots` makes every declaration of the files
+a root, in declaration order, and excludes `--root`. A `--param` that no root reaches fails with
+`schema.unknownName`, and so does a reached parameter without a value.
+
+### Generation layout
+
+The generation layout describes everything that code generation needs, independent of any
+target language. Every port writes identical bytes for identical schemas and parameters.
+
+Every schema, message and message set reached from a root is a type: through fields, union
+alternatives, list elements and the members of a message set. Each type is bound on its own
+with the given parameters, which is sound because parameters belong to files: a type binds the
+same wherever it is reached, so it appears exactly once even when several roots share it.
+
+The JSON text has two spaces of indentation per level, one member or element per line, a
+closing bracket on its own line, `[]` for an empty array, members in the order below and a
+final line break. Strings escape only `"`, `\` and control characters (`\u00xx`). Integers are
+exact decimals. Hashes are 16 lowercase hexadecimal digits, and a binary64 value is written as
+`0x` and the 16 hexadecimal digits of its bit pattern.
+
+- The document has `layout` (the format version, 1), `roots` (the root names in the order
+  given, without repetition), `parameters` and `types`.
+- A parameter has `name`, `type` (`Number`, `Quantity` or `Percentage`), `unit` (the portable
+  unit name, or `none`) and `value`, the exact decimal of its value in base units as the binding
+  hash spells it. Parameters are reached by any root and ordered by name.
+- Types are ordered by name, comparing UTF-16 code units. A type has `name`, `kind` (`schema`,
+  `message` or `messages`), `hash`, `bindingHash`, `bindingHashDepends` (the parameters the type
+  reaches), `maxByteCount` and `maxByteCountDepends` (the parameters named in the bounds of its
+  fields and of the types it reaches). A message set adds `members` and `memberWidth`; a schema
+  or message adds `fields`, and a message also `tags`.
+- A field has `name`, `path`, `optional`, `key`, `unlabeled` and `encoding`. List elements,
+  axes and union alternatives are written with `name`, `path` and `encoding` only; an element is
+  named `[]` and an alternative by its type, as in its path.
+- An encoding has `kind` and the members of its kind:
+  - `boolean`: none.
+  - `integer`, `quantized` and `float`: `type`, `unit`, `range`; `integer` and `quantized` add
+    `wrapping`, `lower` and `maxIndex`; then `width`; `quantized` adds `numerator` and `tenPower`,
+    the `p` and `10^k` of its step, and with `float` with a range both add `lowerValue` and
+    `upperValue`; then `deltaRange`, `deltaWidth` and `depends`, the parameters named in its bounds.
+  - `tag`: `tags`, without `#`, and `width`.
+  - `text`: `tagName` for a `:Tag max n`, `maxCount` and `width`.
+  - `list`: `dice`, `maxCount`, `width`, `keyed`, `positionWidth` and `element`.
+  - `point` and `vector`: `unit` and `axes`, the transmitted axes in order x, y, z.
+  - `schema`: `name`, the type it refers to.
+  - `union`: `width` and `alternatives`, in declared order.
+  - `nothing`: none.
+
+The `depends` lists are not used for generation today; they name the constants that a later
+binding of parameters at run time would turn into values.
+
 ## Modules
 
 - **Syntax** reads `.gess` into its declarations and reports syntax errors. It has no
@@ -1099,6 +1152,8 @@ console and the highlighter know `.gess`, and the editor bundles have a grammar 
   document checking and the value path. Everything except the value path uses neither
   `GesValue` nor the VM, so a client that only encodes pays nothing for them at run time, and
   a linker can remove them. Compiler is not needed.
+- **Generator** computes the [generation layout](#generation-layout) and depends on Syntax and
+  Runtime only. Neither Runtime nor Compiler depends on it, so a game never ships it.
 
 Schemas add no filesystem, thread or async dependency and import no Foundation.
 

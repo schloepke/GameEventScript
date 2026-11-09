@@ -9,6 +9,7 @@
 - Portable C# Runtime: `implementation/csharp/GameEventScript.Runtime/src`.
 - Portable C# Compiler: `implementation/csharp/GameEventScript.Compiler/src`.
 - C# adapters: `implementation/csharp/GameEventScript.CSharpBridge/src`.
+- C# schema code Generator: `implementation/csharp/GameEventScript.Generator/src`.
 - Independent Python Conformance runner: `conformance/runner`.
 - Internal C# Conformance adapter: `implementation/csharp/GameEventScript.Conformance/adapter`.
 - C# Syntax module (lexer, parser, validator, highlighter): `implementation/csharp/GameEventScript.Syntax`.
@@ -18,6 +19,7 @@
   repository/distribution gates: `implementation/csharp/verification`.
 - Swift Runtime package: `implementation/swift/GameEventScriptRuntime`.
 - Swift Compiler package: `implementation/swift/GameEventScriptCompiler`.
+- Swift schema code Generator package: `implementation/swift/GameEventScriptGenerator`.
 - Swift native adapters: `implementation/swift/GameEventScriptSwiftBridge`.
 - Swift CLI package and `ges` executable: `implementation/swift/GameEventScriptTool`.
 - Swift Conformance package and adapter: `implementation/swift/GameEventScriptConformance`.
@@ -297,6 +299,14 @@ multiplication, so that no compiler can fuse them. Bytes stay byte-identical bet
 `python3 scripts/test-schema-roundtrip.py` compares real bytes, hashes and fuzzed decoding
 against an independent oracle, and `test-swift.sh` runs it. `GesSchemaDelta` converts between full records and deltas on bytes, comparing wire
 values; a baseline is the last full record the other side holds, and writer and reader only lend it their bit access.
+Writer and reader build on the public `GesBitWriter`, `GesBitReader` and `GesWireRules`, which generated
+schema code calls with constants. The separate Generator package (C# `GameEventScript.Generator`, Swift
+`GameEventScriptGenerator`) depends only on Syntax and Runtime, which it reads through `InternalsVisibleTo`
+and `@_spi(Generator)`; Runtime and Compiler never depend on it, so games never ship it. It computes the
+language-neutral generation layout (specs/Schemas.md#generation-layout) behind `ges schema layout`;
+`python3 scripts/compare-schema-layout.py` requires identical layouts from both CLIs for every corpus schema
+(`--self-test` qualifies it), and `test-swift.sh` runs both. `docs/plans/SchemaCodeGeneration.md` holds the
+plan for the emitters until they land.
 
 ## Host and runtime
 
@@ -592,8 +602,8 @@ ignored `artifacts`. Public Swift API changes update `specs/PublicApi.md` and
 `implementation/swift/api`. The separate `GameEventScriptTool` package implements
 the native Swift `ges` CLI; it depends on Runtime and Compiler, never Conformance.
 Filesystem/console I/O and POSIX terminal editing remain in that
-executable package. Syntax has no Runtime/Compiler dependency. Syntax, Runtime and
-Compiler import no Foundation: `python3 scripts/verify-swift-portable-imports.py`
+executable package. Syntax has no Runtime/Compiler dependency. Syntax, Runtime,
+Compiler and Generator import no Foundation: `python3 scripts/verify-swift-portable-imports.py`
 allows only these modules and the platform C library (controls:
 `python3 scripts/test-swift-portable-imports.py`); Swift CI runs both. Both CLIs delegate highlighting to the Syntax module, which classifies GES
 from the syntax tree (token kinds, parser roles, owning nodes) and GESA with a small

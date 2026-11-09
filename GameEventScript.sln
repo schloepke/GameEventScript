@@ -25,6 +25,12 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GameEventScript.CSharpBridg
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GameEventScript.CSharpBridge.Tests", "implementation\csharp\GameEventScript.CSharpBridge\tests\GameEventScript.CSharpBridge.Tests.csproj", "{F8EB0F8C-D84E-565F-87EF-BE9D494E69D5}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "GameEventScript.Generator", "GameEventScript.Generator", "{6C1E2A4B-2F5D-5E2B-9A4C-3B7D1E0F8A21}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GameEventScript.Generator", "implementation\csharp\GameEventScript.Generator\src\GameEventScript.Generator.csproj", "{9B2F4E61-7C3A-4D85-A1E2-5F6B7C8D9E0A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GameEventScript.Generator.Tests", "implementation\csharp\GameEventScript.Generator\tests\GameEventScript.Generator.Tests.csproj", "{D4E5F6A7-B8C9-5DAE-8F01-23456789ABCD}"
+EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "GameEventScript.Conformance", "GameEventScript.Conformance", "{B0389257-135A-589B-9B19-09740DCE95DE}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GameEventScript.Compiler.Worker", "implementation\csharp\GameEventScript.Compiler\worker\GameEventScript.Compiler.Worker.csproj", "{1729A9EB-DE64-414E-886F-3B0B47115067}"
@@ -241,6 +247,30 @@ Global
 		{2581371B-A2A8-439F-94DE-EDE72D11C435}.Release|x64.Build.0 = Release|Any CPU
 		{2581371B-A2A8-439F-94DE-EDE72D11C435}.Release|x86.ActiveCfg = Release|Any CPU
 		{2581371B-A2A8-439F-94DE-EDE72D11C435}.Release|x86.Build.0 = Release|Any CPU
+		{9B2F4E61-7C3A-4D85-A1E2-5F6B7C8D9E0A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9B2F4E61-7C3A-4D85-A1E2-5F6B7C8D9E0A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9B2F4E61-7C3A-4D85-A1E2-5F6B7C8D9E0A}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{9B2F4E61-7C3A-4D85-A1E2-5F6B7C8D9E0A}.Debug|x64.Build.0 = Debug|Any CPU
+		{9B2F4E61-7C3A-4D85-A1E2-5F6B7C8D9E0A}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{9B2F4E61-7C3A-4D85-A1E2-5F6B7C8D9E0A}.Debug|x86.Build.0 = Debug|Any CPU
+		{9B2F4E61-7C3A-4D85-A1E2-5F6B7C8D9E0A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9B2F4E61-7C3A-4D85-A1E2-5F6B7C8D9E0A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9B2F4E61-7C3A-4D85-A1E2-5F6B7C8D9E0A}.Release|x64.ActiveCfg = Release|Any CPU
+		{9B2F4E61-7C3A-4D85-A1E2-5F6B7C8D9E0A}.Release|x64.Build.0 = Release|Any CPU
+		{9B2F4E61-7C3A-4D85-A1E2-5F6B7C8D9E0A}.Release|x86.ActiveCfg = Release|Any CPU
+		{9B2F4E61-7C3A-4D85-A1E2-5F6B7C8D9E0A}.Release|x86.Build.0 = Release|Any CPU
+		{D4E5F6A7-B8C9-5DAE-8F01-23456789ABCD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D4E5F6A7-B8C9-5DAE-8F01-23456789ABCD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D4E5F6A7-B8C9-5DAE-8F01-23456789ABCD}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{D4E5F6A7-B8C9-5DAE-8F01-23456789ABCD}.Debug|x64.Build.0 = Debug|Any CPU
+		{D4E5F6A7-B8C9-5DAE-8F01-23456789ABCD}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{D4E5F6A7-B8C9-5DAE-8F01-23456789ABCD}.Debug|x86.Build.0 = Debug|Any CPU
+		{D4E5F6A7-B8C9-5DAE-8F01-23456789ABCD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D4E5F6A7-B8C9-5DAE-8F01-23456789ABCD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D4E5F6A7-B8C9-5DAE-8F01-23456789ABCD}.Release|x64.ActiveCfg = Release|Any CPU
+		{D4E5F6A7-B8C9-5DAE-8F01-23456789ABCD}.Release|x64.Build.0 = Release|Any CPU
+		{D4E5F6A7-B8C9-5DAE-8F01-23456789ABCD}.Release|x86.ActiveCfg = Release|Any CPU
+		{D4E5F6A7-B8C9-5DAE-8F01-23456789ABCD}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -269,5 +299,8 @@ Global
 		{3A71803E-BA04-0518-E510-AB0F48CCEF4A} = {0D6FB8FF-B66B-5DBB-9E25-1C48D414F1C9}
 		{807BF48B-FADC-4032-8B24-82030DBC1EB8} = {3A71803E-BA04-0518-E510-AB0F48CCEF4A}
 		{2581371B-A2A8-439F-94DE-EDE72D11C435} = {3A71803E-BA04-0518-E510-AB0F48CCEF4A}
+		{6C1E2A4B-2F5D-5E2B-9A4C-3B7D1E0F8A21} = {0D6FB8FF-B66B-5DBB-9E25-1C48D414F1C9}
+		{9B2F4E61-7C3A-4D85-A1E2-5F6B7C8D9E0A} = {6C1E2A4B-2F5D-5E2B-9A4C-3B7D1E0F8A21}
+		{D4E5F6A7-B8C9-5DAE-8F01-23456789ABCD} = {6C1E2A4B-2F5D-5E2B-9A4C-3B7D1E0F8A21}
 	EndGlobalSection
 EndGlobal

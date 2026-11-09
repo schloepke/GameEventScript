@@ -105,6 +105,31 @@ final class ToolTests: XCTestCase {
         XCTAssertEqual(result.output, "")
     }
 
+    func testSchemaLayoutCoversSeveralRoots() throws {
+        let nested = try file("nested.gess", "parameter width: :Quantity(m)\nschema :Inner as {\n  x: :Quantity(m) between 0m and width step 1m\n}\nschema :Outer as {\n  inner: :Inner\n}\nschema :Other as {\n  inner: :Inner\n}\n")
+        let layout = run(["schema", "layout", nested, "--root", "Outer", "--root", "Other", "--param", "width=8m"])
+        XCTAssertEqual(layout.code, 0, layout.error)
+        XCTAssertTrue(layout.output.hasPrefix("{\n  \"layout\": 1,\n  \"roots\": [\n    \"Outer\",\n    \"Other\"\n  ],"))
+        XCTAssertEqual(layout.output.components(separatedBy: "\"name\": \"Inner\",\n      \"kind\"").count, 2)
+        XCTAssertEqual(
+            layout.output.replacingOccurrences(of: "\"Outer\",\n    \"Other\"", with: "\"Inner\",\n    \"Outer\",\n    \"Other\""),
+            run(["schema", "layout", nested, "--all-roots", "--param", "width=8m"]).output
+        )
+        let output = directory.appendingPathComponent("layout.json").path
+        XCTAssertEqual(run(["schema", "layout", nested, "--root", "Outer", "--param", "width=8m", "-o", output]).code, 0)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: output))
+        XCTAssertEqual(run(["schema", "layout", nested, "--param", "width=8m"]).code, 2)
+        XCTAssertEqual(run(["schema", "layout", nested, "--root", "Outer", "--all-roots", "--param", "width=8m"]).code, 2)
+        XCTAssertEqual(run(["schema", "layout", nested, "--root", "Outer", "--root", "Outer", "--param", "width=8m"]).code, 2)
+        XCTAssertEqual(run(["schema", "hash", nested, "--all-roots"]).code, 2)
+        let unknown = run(["schema", "layout", nested, "--root", "Outer", "--param", "width=8m", "--param", "height=1m"])
+        XCTAssertEqual(unknown.code, 1)
+        XCTAssertTrue(unknown.error.contains("error schema.unknownName: No root reaches the parameter 'height'."))
+        let missing = run(["schema", "layout", nested, "--root", "Outer"])
+        XCTAssertEqual(missing.code, 1)
+        XCTAssertTrue(missing.error.contains("error schema.unknownName"))
+    }
+
     func testSchemaCommandsCheckHashFormatAndDump() throws {
         let source = try file("drone.gess", "// note\nschema :Drone as {\n  id: :Number integer between 0 and 255 key\n  x: :Quantity(m) between 0m and 2km step 1cm\n}\n")
         XCTAssertEqual(run(["schema", "check", source, "--quiet"]).code, 0)

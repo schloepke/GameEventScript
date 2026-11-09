@@ -15,7 +15,7 @@ import re
 import sys
 
 ROOT = Path(__file__).resolve().parent.parent
-PACKAGES = ("GameEventScriptSyntax", "GameEventScriptRuntime", "GameEventScriptCompiler")
+PACKAGES = ("GameEventScriptSyntax", "GameEventScriptRuntime", "GameEventScriptCompiler", "GameEventScriptGenerator")
 LIBC = {"Darwin", "Glibc", "Musl", "WASILibc", "ucrt", "Android", "Bionic"}
 IMPORT = re.compile(
     r"^[ \t]*(?:@\w+(?:\([^\n)]*\))?[ \t]+)*"

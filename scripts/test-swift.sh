@@ -13,6 +13,9 @@ swift test --package-path "$ges_root/implementation/swift/GameEventScriptSyntax"
 
 swift test --package-path "$ges_root/implementation/swift/GameEventScriptSwiftBridge" \
     --scratch-path "$ges_root/artifacts/swift/swiftbridge" --disable-build-manifest-caching --configuration release
+
+swift test --package-path "$ges_root/implementation/swift/GameEventScriptGenerator" \
+    --scratch-path "$ges_root/artifacts/swift/generator" --disable-build-manifest-caching --configuration release
 "$ges_root/scripts/test-swift-tool.sh"
 python3 "$ges_root/scripts/verify-swift-bytecode.py"
 python3 "$ges_root/scripts/verify-swift-parser-tokens.py"
@@ -55,4 +58,6 @@ python3 "$ges_root/scripts/test-binary-roundtrip-properties.py" --skip-build
 dotnet build "$ges_root/implementation/csharp/GameEventScript.Tool/src/GameEventScript.Tool.csproj" --configuration Release
 python3 "$ges_root/scripts/test-compiler-output-controls.py"
 python3 "$ges_root/scripts/compare-compiler-output.py"
+python3 "$ges_root/scripts/compare-schema-layout.py" --self-test
+python3 "$ges_root/scripts/compare-schema-layout.py"
 python3 "$ges_root/scripts/test-constructor-forms.py"

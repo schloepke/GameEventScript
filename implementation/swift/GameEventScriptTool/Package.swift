@@ -8,14 +8,17 @@ let package = Package(
     name: "GameEventScriptTool",
     platforms: [.macOS("10.15.4")],
     products: [.executable(name: "ges", targets: ["GameEventScriptTool"])],
-    dependencies: [.package(path: "../GameEventScriptRuntime"), .package(path: "../GameEventScriptCompiler"), .package(path: "../GameEventScriptSyntax")],
+    dependencies: [
+        .package(path: "../GameEventScriptRuntime"), .package(path: "../GameEventScriptCompiler"), .package(path: "../GameEventScriptSyntax"), .package(path: "../GameEventScriptGenerator"),
+    ],
     targets: [
         .target(name: "TerminalSupport"),
         .executableTarget(
             name: "GameEventScriptTool",
             dependencies: [
                 .product(name: "GameEventScriptSyntax", package: "GameEventScriptSyntax"), .product(name: "GameEventScriptRuntime", package: "GameEventScriptRuntime"),
-                .product(name: "GameEventScriptCompiler", package: "GameEventScriptCompiler"), "TerminalSupport",
+                .product(name: "GameEventScriptCompiler", package: "GameEventScriptCompiler"), .product(name: "GameEventScriptGenerator", package: "GameEventScriptGenerator"),
+                "TerminalSupport",
             ]
         ),
         .testTarget(

@@ -7,8 +7,8 @@ private typealias Code = GesSchemaDiagnostic
 
 /// The parameter values of one binding.
 public final class GesSchemaParameters {
-    struct Value {
-        let number: GesSchemaDecimal
+    @_spi(Generator) public struct Value {
+        @_spi(Generator) public let number: GesSchemaDecimal
         let unit: GesQuantityUnit
         let isPercent: Bool
         // A literal says whether it is a percentage; a plain number is the ratio of either kind.
@@ -45,10 +45,10 @@ public final class GesSchemaParameters {
         return self
     }
 
-    func value(_ name: String) -> Value? { values[name] }
+    @_spi(Generator) public func value(_ name: String) -> Value? { values[name] }
 }
 
-enum GesSchemaNodeKind: UInt8, Sendable {
+@_spi(Generator) public enum GesSchemaNodeKind: UInt8, Sendable {
     case boolean
     case integer
     case quantized
@@ -65,46 +65,46 @@ enum GesSchemaNodeKind: UInt8, Sendable {
 // consecutive nodes, and `next` is the first node after it. `after` is where writing goes on: the same, except that the
 // end of a union alternative continues behind the union. `isTagText` marks a Text on the wire that holds a tag name, for a
 // Tag with a max instead of a set.
-struct GesSchemaNode: Sendable {
-    var kind = GesSchemaNodeKind.boolean
-    var optional = false
-    var key = false
-    var wrapping = false
-    var hasRange = false
-    var isTagBit = false
-    var isTagText = false
-    var width = 0
-    var next = 0
-    var after = 0
+@_spi(Generator) public struct GesSchemaNode: Sendable {
+    @_spi(Generator) public var kind = GesSchemaNodeKind.boolean
+    @_spi(Generator) public var optional = false
+    @_spi(Generator) public var key = false
+    @_spi(Generator) public var wrapping = false
+    @_spi(Generator) public var hasRange = false
+    @_spi(Generator) public var isTagBit = false
+    @_spi(Generator) public var isTagText = false
+    @_spi(Generator) public var width = 0
+    @_spi(Generator) public var next = 0
+    @_spi(Generator) public var after = 0
     // The direct children of a group, which its delta has one change bit each for.
-    var childCount = 0
+    @_spi(Generator) public var childCount = 0
     // A list whose single element type is a schema with a key has deltas by element, with positions of this width. Its
     // element is the next node and the element's key the one after that.
-    var keyedElements = false
-    var positionWidth = 0
+    @_spi(Generator) public var keyedElements = false
+    @_spi(Generator) public var positionWidth = 0
     // Integer: its lower bound. Quantized: lowerN. The largest valid index; for a wrapping field the period is one more.
-    var lower: Int64 = 0
-    var maxIndex: UInt64 = 0
+    @_spi(Generator) public var lower: Int64 = 0
+    @_spi(Generator) public var maxIndex: UInt64 = 0
     // The largest difference in indices of a `delta within` and the width of its range form; zero without one.
-    var deltaRange: UInt64 = 0
-    var deltaWidth = 0
-    var p: Int64 = 0
-    var tenPower: Int64 = 1
-    var pBinary = 1.0
-    var sBinary = 1.0
-    var lowerValue = 0.0
-    var upperValue = 0.0
-    var maxCount: Int64 = 0
+    @_spi(Generator) public var deltaRange: UInt64 = 0
+    @_spi(Generator) public var deltaWidth = 0
+    @_spi(Generator) public var p: Int64 = 0
+    @_spi(Generator) public var tenPower: Int64 = 1
+    @_spi(Generator) public var pBinary = 1.0
+    @_spi(Generator) public var sBinary = 1.0
+    @_spi(Generator) public var lowerValue = 0.0
+    @_spi(Generator) public var upperValue = 0.0
+    @_spi(Generator) public var maxCount: Int64 = 0
 }
 
 // What a node is called and what its values are, for error paths and the value path.
-struct GesSchemaNodeInfo: Sendable {
-    var name = ""
-    var path = ""
-    var tags: [String] = []
-    var valueKind = GesSchemaTypeKind.nothing
-    var unit = GesQuantityUnit.none
-    var schemaName = ""
+@_spi(Generator) public struct GesSchemaNodeInfo: Sendable {
+    @_spi(Generator) public var name = ""
+    @_spi(Generator) public var path = ""
+    @_spi(Generator) public var tags: [String] = []
+    @_spi(Generator) public var valueKind = GesSchemaTypeKind.nothing
+    @_spi(Generator) public var unit = GesQuantityUnit.none
+    @_spi(Generator) public var schemaName = ""
 }
 
 /// A schema, message or message set bound to parameter values. Immutable; it can be shared between threads.
@@ -119,11 +119,11 @@ public final class GesBoundSchema: Sendable {
     public let hash: UInt64
     /// The hash over the schema hash and the parameter values.
     public let bindingHash: UInt64
-    let kind: GesSchemaKind
-    let nodes: [GesSchemaNode]
-    let infos: [GesSchemaNodeInfo]
-    let members: [GesBoundSchema]
-    let memberWidth: Int
+    @_spi(Generator) public let kind: GesSchemaKind
+    @_spi(Generator) public let nodes: [GesSchemaNode]
+    @_spi(Generator) public let infos: [GesSchemaNodeInfo]
+    @_spi(Generator) public let members: [GesBoundSchema]
+    @_spi(Generator) public let memberWidth: Int
     // The largest encoding of a schema or message in bits, which a message set adds its index to.
     let maxBitCount: Int64
     // The top-level fields with a change bit in a delta: all but the key.

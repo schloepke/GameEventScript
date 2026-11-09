@@ -44,7 +44,7 @@ class PortableImportTests(unittest.TestCase):
         self.assertEqual([], IMPORTS.check(IMPORTS.ROOT)[0])
 
     def test_portable_imports_pass(self):
-        self.assertEqual(([], 3), IMPORTS.check(self.root))
+        self.assertEqual(([], len(IMPORTS.PACKAGES)), IMPORTS.check(self.root))
 
     def test_foundation_fails(self):
         path = self.source("GameEventScriptSyntax")

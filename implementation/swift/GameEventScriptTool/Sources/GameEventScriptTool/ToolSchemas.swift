@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import Foundation
+import GameEventScriptGenerator
 import GameEventScriptRuntime
 @_spi(Syntax) import GameEventScriptSyntax
 
@@ -13,6 +14,7 @@ extension ToolHelp {
           ges schema hash <schema.gess> [more.gess ...] --root <Name> [--param <name>=<literal> ...]
           ges schema canonical <schema.gess> [more.gess ...] --root <Name>
           ges schema dump <schema.gess> [more.gess ...] --root <Name> [--param <name>=<literal> ...] --data <data.bin> [--baseline <record.bin>]
+          ges schema layout <schema.gess> [more.gess ...] (--root <Name> ... | --all-roots) [--param <name>=<literal> ...] [-o <layout.json>]
 
         Commands:
           check      Read schemas and report the first error with its line and column.
@@ -20,13 +22,15 @@ extension ToolHelp {
           hash       Print the schema hash and, with parameters, the binding hash.
           canonical  Print the canonical form that the schema hash runs over.
           dump       List each field of binary data with its bit offset, width and value.
+          layout     Print the language-neutral generation layout of the roots and every type they reach as JSON.
 
         Options:
-          --root <Name>             The schema, message or message set.
+          --root <Name>             The schema, message or message set; layout accepts several.
+          --all-roots               Make every declaration of the files a root of layout.
           --param <name>=<literal>  A parameter value such as worldWidth=5000m; repeat for each one.
           --data <path>             The binary data of dump.
           --baseline <path>         The full record that makes dump read the data as a delta.
-          -o, --output <path>       Write the formatted source to a UTF-8 file instead of stdout.
+          -o, --output <path>       Write the formatted source or the layout to a UTF-8 file instead of stdout.
           -q, --quiet               Hide the success report of check.
           -h, --help                Show this help.
         """
@@ -39,9 +43,11 @@ extension Tool {
             return arguments.isEmpty ? 2 : 0
         }
         let command = arguments[0]
-        guard ["check", "format", "hash", "canonical", "dump"].contains(command) else { throw ToolError.usage("Unknown schema command '\(command)'.") }
+        guard ["check", "format", "hash", "canonical", "dump", "layout"].contains(command) else { throw ToolError.usage("Unknown schema command '\(command)'.") }
         var paths: [String] = []
         var root: String?
+        var roots: [String] = []
+        var allRoots = false
         var data: String?
         var baseline: String?
         var output: String?
@@ -56,19 +62,24 @@ extension Tool {
             }
             if (argument == "-q" || argument == "--quiet") && command == "check" {
                 quiet = true
+            } else if argument == "--all-roots" && command == "layout" {
+                allRoots = true
             } else if ["--root", "--data", "--baseline", "--param", "-o", "--output"].contains(argument) {
                 let applies: Bool
                 switch argument {
-                case "--root": applies = ["hash", "canonical", "dump"].contains(command)
-                case "--param": applies = ["hash", "dump"].contains(command)
+                case "--root": applies = ["hash", "canonical", "dump", "layout"].contains(command)
+                case "--param": applies = ["hash", "dump", "layout"].contains(command)
                 case "--data", "--baseline": applies = command == "dump"
-                default: applies = command == "format"
+                default: applies = command == "format" || command == "layout"
                 }
                 guard applies else { throw ToolError.usage("Unknown schema \(command) option '\(argument)'.") }
                 guard index + 1 < arguments.count else { throw ToolError.usage("Specify a value after \(argument).") }
                 index += 1
                 let next = arguments[index]
                 switch argument {
+                case "--root" where command == "layout":
+                    if roots.contains(next) { throw ToolError.usage("The root '\(next)' is given twice.") }
+                    roots.append(next)
                 case "--root": root = next
                 case "--data": data = next
                 case "--baseline": baseline = next
@@ -91,6 +102,7 @@ extension Tool {
         if command == "format" && paths.count > 1 { throw ToolError.usage("Format accepts exactly one schema file.") }
         if ["hash", "canonical", "dump"].contains(command) && root == nil { throw ToolError.usage("\(command) requires --root.") }
         if command == "dump" && data == nil { throw ToolError.usage("dump requires --data.") }
+        if command == "layout" && !roots.isEmpty == allRoots { throw ToolError.usage("layout requires either --root or --all-roots.") }
         if let output {
             guard !output.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { throw ToolError.usage("The output path must not be empty.") }
             try ToolFiles.ensureDistinct(output, from: [paths[0]])
@@ -114,6 +126,8 @@ extension Tool {
             case "canonical":
                 io.write(try set.schema(root!).canonicalForm)
                 return 0
+            case "layout":
+                return try layout(set, allRoots ? set.schemas.map(\.name) : roots, parameters, output)
             default: break
             }
             let schema = try set.schema(root!)
@@ -144,6 +158,20 @@ extension Tool {
             io.line("\(place): error \(error.code): \(error.message)", toError: true)
             return 1
         }
+    }
+
+    private func layout(_ set: GesSchemaSet, _ roots: [String], _ parameters: [(String, String)], _ output: String?) throws -> Int {
+        let values = GesSchemaParameters()
+        for (name, literal) in parameters {
+            if !(try roots.contains { try set.schema($0).parameters.contains { $0.name == name } }) {
+                io.line("schema: error schema.unknownName: No root reaches the parameter '\(name)'.", toError: true)
+                return 1
+            }
+            try values.with(name, literal: literal)
+        }
+        let text = try GesSchemaGenerator.layout(set, roots: roots, parameters: values)
+        if let output { try ToolFiles.write(Data(text.utf8), to: try ToolFiles.fullPath(output)) } else { io.write(text) }
+        return 0
     }
 
     private func hex(_ value: UInt64) -> String {

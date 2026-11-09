@@ -16423,6 +16423,35 @@ schema:
 
 ---
 
+## Test: elements with Text, a union and a 64-bit number are passed over correctly
+
+Removing, adding and changing elements skips their variable fields in every pass.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: keyed-variable-fields
+kind: schemaApi
+level: atomic
+schemaApi:
+  sources: ["schema :Item as {\n  id: :Number integer between 0 and 255 key\n  name: :Text max 3 optional\n  mark: :Boolean | :Tag(#a, #b)\n  raw: :Number\n}\n\nschema :World as {\n  items: :List(:Item) max 5\n}\n"]
+  root: "World"
+  deltaEncode: {"record": "1b200000000000800030c18749c5040000000000c0fe2d48000000000000f83f", "baseline": "0b6898d8000000000000f83f0304000000000010002e08000000000000c03f"}
+  deltaDecode: {"delta": "0521f830a998000000000000d8bf91030000000000c0ff01", "baseline": "0b6898d8000000000000f83f0304000000000010002e08000000000000c03f"}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  deltaEncoded: {"bytes": "0521f830a998000000000000d8bf91030000000000c0ff01"}
+  deltaDecoded: {"record": "1b200000000000800030c18749c5040000000000c0fe2d48000000000000f83f", "deltaByteCount": 24}
+```
+
+---
+
 ## Test: an added key equal to a baseline key fails before a later changed element
 
 The added section precedes the changed one on the wire, so its baseline check comes first.

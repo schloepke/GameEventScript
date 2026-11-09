@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using System;
-using System.Buffers;
 using System.Globalization;
 using System.Text;
 using GameEventScript.Syntax;
@@ -69,7 +68,7 @@ public static class GesSchemaDump
         if (schema is null) throw new ArgumentNullException(nameof(schema));
         var held = Read(schema, baseline);
         if (!held.IsValid) return new GesSchemaDumpResult("baseline " + held.Text.Substring(held.Text.LastIndexOf('\n', held.Text.Length - 2) + 1), false);
-        var record = GesSchemaValues.Rent(schema);
+        var record = new byte[schema.MaxByteCount];
         long bit = 0;
         try
         {
@@ -80,10 +79,6 @@ public static class GesSchemaDump
         catch (GesWireException exception)
         {
             return new GesSchemaDumpResult("error " + exception.Code + " path=" + exception.Path + " bit=" + bit.ToString(CultureInfo.InvariantCulture) + "\n", false);
-        }
-        finally
-        {
-            ArrayPool<byte>.Shared.Return(record);
         }
     }
 

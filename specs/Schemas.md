@@ -782,10 +782,12 @@ In a [keyed list](#keyed-lists) it also rejects:
 - all three counts zero, since the field's change bit would then be set for an unchanged value;
 - a result longer than the list's `max`.
 
-A count above `max` is `wire.invalidCount`, as in a full record. A decoder checks in wire order. A
-check that needs the baseline belongs to the item that triggers it: a baseline that is not strictly
-ascending to the form bit, so it fails before any section, an added key that the baseline holds to
-that added element, and a position both removed and changed to the changed position.
+A count above `max` is `wire.invalidCount`, as in a full record. A decoder checks in wire order, and a
+check that needs the baseline takes place at the item that triggers it:
+
+- whether the baseline ascends strictly: at the form bit, before any section;
+- whether the baseline holds an added key: at that added element;
+- whether a position is both removed and changed: at the changed position.
 
 ### Zones
 
@@ -987,7 +989,9 @@ var decoded = GesSchemaDelta.Decode(bot, received, baseline, recordBuffer); // t
 
 The baseline is simply the full record that the other side holds, so a sender keeps the last
 record a receiver confirmed, and a receiver keeps what `Decode` returned. `bot.MaxByteCount`
-sizes both buffers, and a target buffer must be separate from the inputs, because it is written while they are read:
+sizes both buffers. Encoding also uses its buffer as scratch space, for change bits it may drop and
+for the [keyed list](#keyed-lists) section it writes before choosing the form, so a smaller buffer can
+fail with `wire.bufferTooSmall` even when the delta would fit. A target buffer must be separate from the inputs, because it is written while they are read:
 overlapping is `wire.overlappingBuffers`, also for records too short to be damaged. `Decode` returns the bytes of the record and those the delta occupied, and
 takes an optional limit on the latter. Writer and reader are unchanged and produce and consume
 the full records, and `ReadKey` also reads the key of a delta. Encoding reads both records

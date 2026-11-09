@@ -266,6 +266,9 @@ schema :Unit as {
   hp: :Number integer between 0 and 15
   on: :Boolean
   leaves: :List(:Leaf) max 2
+  name: :Text max 3 optional
+  mark: :Boolean | :Tag(#a, #b)
+  raw: :Number
 }
 
 schema :Fleet as {
@@ -277,13 +280,23 @@ schema :Fleet as {
 
 
 def unit(rng, key, base=None):
-    """A Unit by wire values; a base makes it often stay or change a little."""
+    """A Unit by wire values; a base makes it often stay or change a little. Its last fields need skipping, which an
+    element only holding fixed widths would never exercise: an optional Text, a union and a 64-bit number."""
     if base is not None and rng.random() < 0.4:
         return base
+
+    def chosen(position, make):
+        return base[position] if base is not None and rng.random() < 0.5 else make()
+
     leaves = sorted(rng.sample((-(2**63), -3, -1, 0, 2, 2**63 - 1), rng.randrange(3)))
     if rng.random() < 0.1:
         leaves.reverse()
-    return (key, rng.randrange(16), rng.random() < 0.5, [(leaf, rng.randrange(4)) for leaf in leaves])
+    return (
+        key, rng.randrange(16), rng.random() < 0.5, [(leaf, rng.randrange(4)) for leaf in leaves],
+        chosen(4, lambda: rng.choice((None, '', 'ab', 'äb'))),
+        chosen(5, lambda: ('flag', rng.random() < 0.5) if rng.random() < 0.5 else ('tag', rng.randrange(2))),
+        chosen(6, lambda: rng.choice((1.5, -2.25, 0.125, -0.375))),
+    )
 
 
 def fleet_units(rng, base=None):
@@ -307,9 +320,12 @@ def fleet(rng, base=None):
 
 def unit_value(item):
     leaves = [{'type': ':Leaf', 'entries': [{'key': 'id', 'value': number(leaf)}, {'key': 'v', 'value': number(v)}]} for leaf, v in item[3]]
+    name = {'type': ':Nothing'} if item[4] is None else {'type': ':Text', 'value': item[4]}
+    mark = {'type': ':Boolean', 'value': item[5][1]} if item[5][0] == 'flag' else {'type': ':Tag', 'value': 'ab'[item[5][1]]}
     return {'type': ':Unit', 'entries': [
         {'key': 'hp', 'value': number(item[1])}, {'key': 'id', 'value': number(item[0])},
-        {'key': 'leaves', 'value': {'type': ':List', 'items': leaves}}, {'key': 'on', 'value': {'type': ':Boolean', 'value': item[2]}},
+        {'key': 'leaves', 'value': {'type': ':List', 'items': leaves}}, {'key': 'mark', 'value': mark}, {'key': 'name', 'value': name},
+        {'key': 'on', 'value': {'type': ':Boolean', 'value': item[2]}}, {'key': 'raw', 'value': number(item[6])},
     ]}
 
 
@@ -333,6 +349,16 @@ def put_unit(bits, item):
     bits.put(len(item[3]), 2)
     for leaf in item[3]:
         put_leaf(bits, leaf)
+    bits.put(0 if item[4] is None else 1, 1)
+    if item[4] is not None:
+        put_label(bits, item[4])
+    put_mark(bits, item[5])
+    bits.put(raw_bits(item[6]), 64)
+
+
+def put_mark(bits, mark):
+    bits.put(0 if mark[0] == 'flag' else 1, 1)
+    bits.put(1 if mark[1] else 0, 1)
 
 
 def put_units(bits, items, count_width):
@@ -389,13 +415,25 @@ def put_changed_leaf(bits, leaf, held):
 
 
 def put_changed_unit(bits, item, held):
-    bits.put(1 if item[1] != held[1] else 0, 1)
-    bits.put(1 if item[2] != held[2] else 0, 1)
-    bits.put(1 if item[3] != held[3] else 0, 1)
+    raw_changed = raw_bits(item[6]) != raw_bits(held[6])
+    for changed in (item[1] != held[1], item[2] != held[2], item[3] != held[3], item[4] != held[4], item[5] != held[5], raw_changed):
+        bits.put(1 if changed else 0, 1)
     if item[1] != held[1]:
         bits.put(item[1], 4)
     if item[3] != held[3]:
         put_keyed(bits, item[3], held[3], 2, 1, put_leaf, lambda leaf: leaf[0], put_changed_leaf)
+    if item[4] != held[4]:
+        # Present: the presence bit, then the Text in full, whether or not the baseline held one.
+        bits.put(0 if item[4] is None else 1, 1)
+        if item[4] is not None:
+            put_label(bits, item[4])
+    if item[5] != held[5]:
+        # The index; the same alternative takes its payload (none for a Boolean), another one its full encoding.
+        bits.put(0 if item[5][0] == 'flag' else 1, 1)
+        if item[5][0] != held[5][0] or item[5][0] == 'tag':
+            bits.put(1 if item[5][1] else 0, 1)
+    if raw_changed:
+        bits.put(raw_bits(item[6]), 64)
 
 
 def fleet_delta(record, base):

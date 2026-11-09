@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using System;
-using System.Buffers;
 using System.Collections.Generic;
 using System.Text;
 using GameEventScript.Runtime.Values;
@@ -70,26 +69,20 @@ public static class GesSchemaValues
     /// <param name="schema">The bound schema.</param>
     /// <param name="value">The value.</param>
     /// <param name="baseline">The value that the receiver holds.</param>
-    /// <param name="buffer">The buffer that receives the delta.</param>
+    /// <param name="buffer">The buffer that receives the delta; <see cref="GesBoundSchema.MaxByteCount"/> always suffices. Encoding also uses it as scratch space, so a smaller buffer can fail with <c>wire.bufferTooSmall</c> even when the delta would fit.</param>
     /// <returns>The number of bytes written.</returns>
     /// <exception cref="GesWireException">A value does not fit the schema, or their keys differ.</exception>
     /// <exception cref="GesFatalRuntimeException">An external field getter of a value failed.</exception>
     public static int Encode(GesBoundSchema schema, GesValue value, GesValue baseline, Span<byte> buffer)
     {
         if (schema is null) throw new ArgumentNullException(nameof(schema));
-        var record = Rent(schema);
-        var previous = Rent(schema);
-        try
-        {
-            var recordLength = Encode(schema, value, record);
-            var previousLength = Encode(schema, baseline, previous);
-            return GesSchemaDelta.Encode(schema, record.AsSpan(0, recordLength), previous.AsSpan(0, previousLength), buffer);
-        }
-        finally
-        {
-            ArrayPool<byte>.Shared.Return(record);
-            ArrayPool<byte>.Shared.Return(previous);
-        }
+        // This path is for rare data, so it allocates its scratch space: a pool would put shared, synchronized state into the
+        // Runtime. Time-critical code passes its own buffers to GesSchemaDelta.
+        var record = new byte[schema.MaxByteCount];
+        var previous = new byte[schema.MaxByteCount];
+        var recordLength = Encode(schema, value, record);
+        var previousLength = Encode(schema, baseline, previous);
+        return GesSchemaDelta.Encode(schema, record.AsSpan(0, recordLength), previous.AsSpan(0, previousLength), buffer);
     }
 
     /// <summary>Decodes a delta against the baseline value it was encoded with.</summary>
@@ -103,24 +96,12 @@ public static class GesSchemaValues
     public static GesSchemaDecoded Decode(GesBoundSchema schema, ReadOnlySpan<byte> data, GesValue baseline, long byteLimit = long.MaxValue)
     {
         if (schema is null) throw new ArgumentNullException(nameof(schema));
-        var previous = Rent(schema);
-        var record = Rent(schema);
-        try
-        {
-            var previousLength = Encode(schema, baseline, previous);
-            var decoded = GesSchemaDelta.Decode(schema, data, previous.AsSpan(0, previousLength), record, byteLimit);
-            return new GesSchemaDecoded(Decode(schema, record.AsSpan(0, decoded.ByteCount)).Value, decoded.DeltaByteCount);
-        }
-        finally
-        {
-            ArrayPool<byte>.Shared.Return(previous);
-            ArrayPool<byte>.Shared.Return(record);
-        }
+        var previous = new byte[schema.MaxByteCount];
+        var previousLength = Encode(schema, baseline, previous);
+        var record = new byte[schema.MaxByteCount];
+        var decoded = GesSchemaDelta.Decode(schema, data, previous.AsSpan(0, previousLength), record, byteLimit);
+        return new GesSchemaDecoded(Decode(schema, record.AsSpan(0, decoded.ByteCount)).Value, decoded.DeltaByteCount);
     }
-
-    // A scratch buffer for one record. The largest encoding may reach 10 MiB, so scratch space is pooled instead of
-    // allocated per call; the writer overwrites whole words and needs no cleared buffer.
-    internal static byte[] Rent(GesBoundSchema schema) => ArrayPool<byte>.Shared.Rent((int)Math.Max(schema.MaxByteCount, 1));
 
     /// <summary>Decodes a Record or Message.</summary>
     /// <param name="schema">The bound schema.</param>

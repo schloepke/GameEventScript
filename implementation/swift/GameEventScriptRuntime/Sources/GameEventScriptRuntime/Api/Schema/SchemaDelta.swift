@@ -19,6 +19,7 @@ public enum GesSchemaDelta {
     ///   - record: The full record to send.
     ///   - baseline: The full record the receiver holds.
     ///   - buffer: The buffer that receives the delta, separate from both records; `maxByteCount` of the schema always suffices.
+    ///     Encoding also uses it as scratch space, so a smaller buffer can fail with `wire.bufferTooSmall` even when the delta would fit.
     /// - Returns: The number of bytes written.
     /// - Throws: `GesWireError` when a record is invalid, their keys differ, the buffer overlaps a record or the schema is no `schema`.
     public static func encode(_ schema: GesBoundSchema, record: UnsafeRawBufferPointer, baseline: UnsafeRawBufferPointer, into buffer: UnsafeMutableRawBufferPointer) throws(GesWireError) -> Int {
@@ -212,6 +213,70 @@ private struct GesSchemaFullCopy {
         while child < end {
             try fullField(&source, child, &target, write: write)
             child = nodes[child].next
+        }
+    }
+
+    // The first pass over a keyed list validates the rest of an element it does not write; later passes only skip it.
+    func pass(_ source: inout GesSchemaReader, _ index: Int, _ target: inout GesSchemaWriter, validate: Bool) throws(GesWireError) {
+        if validate {
+            try rest(&source, index, &target, write: false)
+        } else {
+            try skipRest(&source, index)
+        }
+    }
+
+    // Passes the fields of a keyed list's element after its key, which an earlier pass validated, without checking them again.
+    func skipRest(_ source: inout GesSchemaReader, _ index: Int) throws(GesWireError) {
+        let end = nodes[index + 1].next
+        var child = nodes[index + 2].next
+        while child < end {
+            try skip(&source, child)
+            child = nodes[child].next
+        }
+    }
+
+    // Copies the fields of a keyed list's element after its key, which an earlier pass validated, as raw bits.
+    func copyRest(_ source: inout GesSchemaReader, _ index: Int, _ target: inout GesSchemaWriter) throws(GesWireError) {
+        let start = source.bitPosition
+        try skipRest(&source, index)
+        var left = source.bitPosition - start
+        source.seek(start)
+        while left > 0 {
+            let width = min(left, 64)
+            try target.putBits(source.getBits(width, -1), width)
+            left -= width
+        }
+    }
+
+    func skip(_ source: inout GesSchemaReader, _ index: Int) throws(GesWireError) {
+        if nodes[index].optional, try source.getBits(1, index) == 0 { return }
+        try skipValue(&source, index)
+    }
+
+    func skipValue(_ source: inout GesSchemaReader, _ index: Int) throws(GesWireError) {
+        let node = nodes[index]
+        switch node.kind {
+        case .text:
+            let length = try source.getBits(node.width, index)
+            source.seek(source.bitPosition + Int(length) * 8)
+        case .list:
+            let count = try source.getBits(node.width, index)
+            var item: UInt64 = 0
+            while item < count {
+                try skip(&source, index + 1)
+                item += 1
+            }
+        case .group:
+            var child = index + 1
+            while child < node.next {
+                try skip(&source, child)
+                child = nodes[child].next
+            }
+        case .union:
+            let position = try source.getBits(node.width, index)
+            try skipValue(&source, GesSchemaNumbers.alternative(nodes, index, Int(position)))
+        default:
+            source.seek(source.bitPosition + node.width)
         }
     }
 
@@ -455,21 +520,23 @@ private struct GesSchemaDeltaEncoder {
                         writer.rewind(entry)
                     }
                 } else {
-                    try full.rest(&record, index, &writer, write: false)
-                    try full.rest(&baseline, index, &writer, write: false)
+                    try full.pass(&record, index, &writer, validate: section == .removed)
+                    try full.pass(&baseline, index, &writer, validate: section == .removed)
                 }
             } else if useRecord {
                 if section == .added {
                     try writer.putBits(full.keyOrder(key, recordOrder), keyWidth)
+                    try full.copyRest(&record, index, &writer)
                     count += 1
+                } else {
+                    try full.pass(&record, index, &writer, validate: section == .removed)
                 }
-                try full.rest(&record, index, &writer, write: section == .added)
             } else {
                 if section == .removed {
                     try writer.putBits(position, node.positionWidth)
                     count += 1
                 }
-                try full.rest(&baseline, index, &writer, write: false)
+                try full.pass(&baseline, index, &writer, validate: section == .removed)
             }
             if useRecord {
                 recordLeft -= 1
@@ -640,7 +707,8 @@ private struct GesSchemaDeltaDecoder {
 
     // Checks run in wire order; one that needs the baseline belongs to the item that triggers it. The baseline's order
     // belongs to the form bit, so it is checked first, and an added key that the baseline holds to that added element.
-    // The sections are then read side by side through their own cursors while the baseline is walked once more.
+    // The sections are then read side by side through their own cursors. Later walks of the baseline skip what the first one
+    // validated, and only copy what stays.
     private mutating func elementKeyedList(_ index: Int) throws(GesWireError) {
         let node = full.nodes[index]
         let key = index + 2
@@ -670,7 +738,7 @@ private struct GesSchemaDeltaDecoder {
                 if !holds {
                     if heldLeft == 0 { break }
                     heldOrder = full.keyOrder(key, try full.wire(&baseline, key))
-                    try full.rest(&baseline, index, &writer, write: false)
+                    try full.skipRest(&baseline, index)
                     heldLeft -= 1
                     holds = true
                 }
@@ -701,7 +769,7 @@ private struct GesSchemaDeltaDecoder {
             while addedLeft > 0 && full.keyOrder(key, addedKey) < order { try writeAdded(index, &addedCursor, &addedLeft, &addedKey) }
             if position == nextRemoved {
                 if position == nextChanged { throw invalid }
-                try full.rest(&baseline, index, &writer, write: false)
+                try full.skipRest(&baseline, index)
                 nextRemoved = try nextPosition(index, &removedCursor, &removedLeft)
             } else if position == nextChanged {
                 try writer.putBits(held, keyWidth)
@@ -715,7 +783,7 @@ private struct GesSchemaDeltaDecoder {
                 if nextChanged <= before { throw invalid }
             } else {
                 try writer.putBits(held, keyWidth)
-                try full.rest(&baseline, index, &writer, write: true)
+                try full.copyRest(&baseline, index, &writer)
             }
             position += 1
         }
@@ -746,7 +814,7 @@ private struct GesSchemaDeltaDecoder {
     private mutating func writeAdded(_ index: Int, _ cursor: inout Int, _ left: inout UInt64, _ key: inout UInt64) throws(GesWireError) {
         try writer.putBits(key, full.nodes[index + 2].width)
         delta.seek(cursor)
-        try full.rest(&delta, index, &writer, write: true)
+        try full.copyRest(&delta, index, &writer)
         cursor = delta.bitPosition
         left -= 1
         if left > 0 { key = try addedKey(index + 2, &cursor) }

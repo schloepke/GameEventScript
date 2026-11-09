@@ -33,7 +33,7 @@ public static class GesSchemaDelta
     /// <param name="schema">The bound schema, of the kind <c>schema</c>.</param>
     /// <param name="record">The full record to send.</param>
     /// <param name="baseline">The full record the receiver holds.</param>
-    /// <param name="buffer">The buffer that receives the delta, separate from both records; <see cref="GesBoundSchema.MaxByteCount"/> always suffices.</param>
+    /// <param name="buffer">The buffer that receives the delta, separate from both records; <see cref="GesBoundSchema.MaxByteCount"/> always suffices. Encoding also uses it as scratch space, so a smaller buffer can fail with <c>wire.bufferTooSmall</c> even when the delta would fit.</param>
     /// <returns>The number of bytes written.</returns>
     /// <exception cref="GesWireException">A record is invalid, their keys differ, the buffer overlaps a record, or the schema is no <c>schema</c>.</exception>
     public static int Encode(GesBoundSchema schema, ReadOnlySpan<byte> record, ReadOnlySpan<byte> baseline, Span<byte> buffer)
@@ -221,6 +221,68 @@ public static class GesSchemaDelta
     {
         var end = nodes[index + 1].Next;
         for (var child = nodes[index + 2].Next; child < end; child = nodes[child].Next) FullField(ref source, nodes, child, ref target, write);
+    }
+
+    // The first pass over a keyed list validates the rest of an element it does not write; later passes only skip it.
+    private static void Pass(ref GesSchemaReader source, GesSchemaNode[] nodes, int index, ref GesSchemaWriter target, bool validate)
+    {
+        if (validate) Rest(ref source, nodes, index, ref target, false);
+        else SkipRest(ref source, nodes, index);
+    }
+
+    // Passes the fields of a keyed list's element after its key, which an earlier pass validated, without checking them again.
+    private static void SkipRest(ref GesSchemaReader source, GesSchemaNode[] nodes, int index)
+    {
+        var end = nodes[index + 1].Next;
+        for (var child = nodes[index + 2].Next; child < end; child = nodes[child].Next) Skip(ref source, nodes, child);
+    }
+
+    // Copies the fields of a keyed list's element after its key, which an earlier pass validated, as raw bits.
+    private static void CopyRest(ref GesSchemaReader source, GesSchemaNode[] nodes, int index, ref GesSchemaWriter target)
+    {
+        var start = source.BitPosition;
+        SkipRest(ref source, nodes, index);
+        var end = source.BitPosition;
+        source.Seek(start);
+        for (var left = end - start; left > 0;)
+        {
+            var width = (int)Math.Min(left, 64);
+            target.PutBits(source.GetBits(width, ""), width);
+            left -= width;
+        }
+    }
+
+    private static void Skip(ref GesSchemaReader source, GesSchemaNode[] nodes, int index)
+    {
+        ref readonly var node = ref nodes[index];
+        if (node.Optional && source.GetBits(1, node.Path) == 0) return;
+        SkipValue(ref source, nodes, index);
+    }
+
+    private static void SkipValue(ref GesSchemaReader source, GesSchemaNode[] nodes, int index)
+    {
+        ref readonly var node = ref nodes[index];
+        switch (node.Kind)
+        {
+            case GesSchemaNodeKind.Text:
+                var length = source.GetBits(node.Width, node.Path);
+                source.Seek(source.BitPosition + ((long)length * 8));
+                break;
+            case GesSchemaNodeKind.List:
+                var count = source.GetBits(node.Width, node.Path);
+                for (var item = 0UL; item < count; item++) Skip(ref source, nodes, index + 1);
+                break;
+            case GesSchemaNodeKind.Group:
+                for (var child = index + 1; child < node.Next; child = nodes[child].Next) Skip(ref source, nodes, child);
+                break;
+            case GesSchemaNodeKind.Union:
+                var position = source.GetBits(node.Width, node.Path);
+                SkipValue(ref source, nodes, GesSchemaNumbers.Alternative(nodes, index, (int)position));
+                break;
+            default:
+                source.Seek(source.BitPosition + node.Width);
+                break;
+        }
     }
 
     private static bool Equal(ref GesSchemaReader first, long firstStart, long firstEnd, ref GesSchemaReader second, long secondStart, long secondEnd)
@@ -480,8 +542,8 @@ public static class GesSchemaDelta
                     }
                     else
                     {
-                        Rest(ref _record, _nodes, index, ref _writer, false);
-                        Rest(ref _baseline, _nodes, index, ref _writer, false);
+                        Pass(ref _record, _nodes, index, ref _writer, section == Removed);
+                        Pass(ref _baseline, _nodes, index, ref _writer, section == Removed);
                     }
                 }
                 else if (useRecord)
@@ -489,10 +551,13 @@ public static class GesSchemaDelta
                     if (section == Added)
                     {
                         _writer.PutBits(KeyOrder(in key, recordOrder), key.Width);
+                        CopyRest(ref _record, _nodes, index, ref _writer);
                         count++;
                     }
-
-                    Rest(ref _record, _nodes, index, ref _writer, section == Added);
+                    else
+                    {
+                        Pass(ref _record, _nodes, index, ref _writer, section == Removed);
+                    }
                 }
                 else
                 {
@@ -502,7 +567,7 @@ public static class GesSchemaDelta
                         count++;
                     }
 
-                    Rest(ref _baseline, _nodes, index, ref _writer, false);
+                    Pass(ref _baseline, _nodes, index, ref _writer, section == Removed);
                 }
 
                 if (useRecord && --recordLeft > 0) ascending &= Advance(ref _record, in key, ref recordOrder);
@@ -700,7 +765,8 @@ public static class GesSchemaDelta
 
         // Checks run in wire order; one that needs the baseline belongs to the item that triggers it. The baseline's order
         // belongs to the form bit, so it is checked first, and an added key that the baseline holds to that added element.
-        // The sections are then read side by side through their own cursors while the baseline is walked once more.
+        // The sections are then read side by side through their own cursors. Later walks of the baseline skip what the first one
+        // validated, and only copy what stays.
         private void ElementKeyedList(int index)
         {
             ref readonly var node = ref _nodes[index];
@@ -731,7 +797,7 @@ public static class GesSchemaDelta
                     {
                         if (heldLeft == 0) break;
                         heldOrder = KeyOrder(in key, Wire(ref _baseline, in key));
-                        Rest(ref _baseline, _nodes, index, ref _writer, false);
+                        SkipRest(ref _baseline, _nodes, index);
                         heldLeft--;
                         holds = true;
                     }
@@ -763,7 +829,7 @@ public static class GesSchemaDelta
                 if (position == nextRemoved)
                 {
                     if (position == nextChanged) throw new GesWireException(GesWireException.InvalidDelta, node.Path);
-                    Rest(ref _baseline, _nodes, index, ref _writer, false);
+                    SkipRest(ref _baseline, _nodes, index);
                     nextRemoved = NextPosition(in node, ref removedCursor, ref removedLeft);
                 }
                 else if (position == nextChanged)
@@ -780,7 +846,7 @@ public static class GesSchemaDelta
                 else
                 {
                     _writer.PutBits(held, key.Width);
-                    Rest(ref _baseline, _nodes, index, ref _writer, true);
+                    CopyRest(ref _baseline, _nodes, index, ref _writer);
                 }
             }
 
@@ -814,7 +880,7 @@ public static class GesSchemaDelta
             ref readonly var key = ref _nodes[index + 2];
             _writer.PutBits(addedKey, key.Width);
             _delta.Seek(cursor);
-            Rest(ref _delta, _nodes, index, ref _writer, true);
+            CopyRest(ref _delta, _nodes, index, ref _writer);
             cursor = _delta.BitPosition;
             if (--left > 0) addedKey = AddedKey(in key, ref cursor);
         }

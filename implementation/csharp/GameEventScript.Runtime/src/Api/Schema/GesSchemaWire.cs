@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using System;
-using System.Buffers.Binary;
 using System.Text;
 using GameEventScript.Syntax;
 
@@ -59,79 +58,21 @@ internal struct GesListFrames
     }
 }
 
-// The exact number rules of a quantized field and UTF-8 validation, shared by writer and reader.
+// The node-based forms of the wire rules, shared by writer, reader, deltas and values.
 internal static class GesSchemaNumbers
 {
-    private const double LargestSteps = 1125899906842624d;
-
     // The index of a value; a value without one throws its wire error.
-    internal static ulong Index(in GesSchemaNode node, double value)
-    {
-        if (double.IsNaN(value) || double.IsInfinity(value)) throw new GesWireException(GesWireException.OutOfRange, node.Path);
-        if (!node.Wrapping && (value < node.LowerValue || value > node.UpperValue)) throw new GesWireException(GesWireException.OutOfRange, node.Path);
-        var quotient = value * node.SBinary / node.PBinary;
-        if (quotient > LargestSteps || quotient < -LargestSteps) throw new GesWireException(GesWireException.OutOfRange, node.Path);
-        var steps = (long)Math.Round(quotient, MidpointRounding.ToEven);
-        return node.Wrapping ? Wrap(steps, node.Lower, node.MaxIndex + 1) : (ulong)(steps - node.Lower);
-    }
+    internal static ulong Index(in GesSchemaNode node, double value) => node.Wrapping
+        ? GesWireRules.WrappedQuantizedIndex(value, node.SBinary, node.PBinary, node.Lower, node.MaxIndex + 1, node.Path)
+        : GesWireRules.QuantizedIndex(value, node.LowerValue, node.UpperValue, node.SBinary, node.PBinary, node.Lower, node.Path);
 
-    internal static ulong Wrap(long value, long lower, ulong period)
-    {
-        if (value >= lower) return ((ulong)value - (ulong)lower) % period;
-        var remainder = ((ulong)lower - (ulong)value) % period;
-        return remainder == 0 ? 0 : period - remainder;
-    }
-
-    internal static double Value(in GesSchemaNode node, ulong index) => (((long)index + node.Lower) * node.P) / node.SBinary;
+    internal static double Value(in GesSchemaNode node, ulong index) => GesWireRules.QuantizedValue(index, node.Lower, node.P, node.SBinary);
 
     internal static int Alternative(GesSchemaNode[] nodes, int union, int alternative)
     {
         var index = union + 1;
         for (var skipped = 0; skipped < alternative; skipped++) index = nodes[index].Next;
         return index;
-    }
-
-    // The portable tag grammar on bytes: a lowercase ASCII letter, then ASCII letters and digits.
-    internal static bool IsTagName(ReadOnlySpan<byte> bytes)
-    {
-        if (bytes.Length == 0 || bytes[0] is < 0x61 or > 0x7A) return false;
-        for (var index = 1; index < bytes.Length; index++)
-            if (bytes[index] is not (>= 0x30 and <= 0x39 or >= 0x41 and <= 0x5A or >= 0x61 and <= 0x7A)) return false;
-        return true;
-    }
-
-    internal static bool IsValidUtf8(ReadOnlySpan<byte> bytes)
-    {
-        var index = 0;
-        while (index < bytes.Length)
-        {
-            var first = bytes[index];
-            int more;
-            int least;
-            int value;
-            if (first < 0x80)
-            {
-                index++;
-                continue;
-            }
-
-            if (first is >= 0xC2 and <= 0xDF) (more, least, value) = (1, 0x80, first & 0x1F);
-            else if (first is >= 0xE0 and <= 0xEF) (more, least, value) = (2, 0x800, first & 0x0F);
-            else if (first is >= 0xF0 and <= 0xF4) (more, least, value) = (3, 0x10000, first & 0x07);
-            else return false;
-            if (index + more >= bytes.Length) return false;
-            for (var offset = 1; offset <= more; offset++)
-            {
-                var next = bytes[index + offset];
-                if ((next & 0xC0) != 0x80) return false;
-                value = (value << 6) | (next & 0x3F);
-            }
-
-            if (value < least || value > 0x10FFFF || value is >= 0xD800 and <= 0xDFFF) return false;
-            index += more + 1;
-        }
-
-        return true;
     }
 }
 
@@ -141,14 +82,11 @@ internal static class GesSchemaNumbers
 /// </summary>
 public ref struct GesSchemaWriter
 {
-    private readonly Span<byte> _buffer;
+    private GesBitWriter _bits;
     private GesBoundSchema _schema;
     private GesSchemaNode[] _nodes;
     private GesListFrames _lists;
     private int _cursor;
-    private int _position;
-    private ulong _pending;
-    private int _pendingBits;
 
     /// <summary>Starts a record or message in a buffer.</summary>
     /// <param name="schema">The bound schema; for a message set, select a member first.</param>
@@ -157,12 +95,9 @@ public ref struct GesSchemaWriter
     {
         _schema = schema ?? throw new ArgumentNullException(nameof(schema));
         _nodes = schema.Nodes;
-        _buffer = buffer;
+        _bits = new GesBitWriter(buffer);
         _lists = default;
         _cursor = 0;
-        _position = 0;
-        _pending = 0;
-        _pendingBits = 0;
     }
 
     /// <summary>Selects a member of a message set and writes its index.</summary>
@@ -198,7 +133,7 @@ public ref struct GesSchemaWriter
             case GesSchemaNodeKind.Integer:
                 ulong index;
                 if (!node.HasRange) index = (ulong)value;
-                else if (node.Wrapping) index = GesSchemaNumbers.Wrap(value, node.Lower, node.MaxIndex + 1);
+                else if (node.Wrapping) index = GesWireRules.WrappedIndex(value, node.Lower, node.MaxIndex + 1);
                 else
                 {
                     if (value < node.Lower || (ulong)value - (ulong)node.Lower > node.MaxIndex) throw new GesWireException(GesWireException.OutOfRange, node.Path);
@@ -290,12 +225,12 @@ public ref struct GesSchemaWriter
         if (utf8.Length > node.MaxCount) throw new GesWireException(GesWireException.TooLong, node.Path);
         if (node.IsTagText)
         {
-            if (!GesSchemaNumbers.IsTagName(utf8)) throw new GesWireException(GesWireException.InvalidTag, node.Path);
+            if (!GesWireRules.IsTagName(utf8)) throw new GesWireException(GesWireException.InvalidTag, node.Path);
         }
-        else if (!GesSchemaNumbers.IsValidUtf8(utf8)) throw new GesWireException(GesWireException.InvalidText, node.Path);
+        else if (!GesWireRules.IsValidUtf8(utf8)) throw new GesWireException(GesWireException.InvalidText, node.Path);
         Presence(in node);
         Put((ulong)utf8.Length, node.Width);
-        foreach (var value in utf8) Put(value, 8);
+        _bits.WriteBytes(utf8);
         Leave(node.After);
     }
 
@@ -361,41 +296,15 @@ public ref struct GesSchemaWriter
         return FinishBits();
     }
 
-    internal readonly long BitPosition => (_position * 8L) + _pendingBits;
+    internal readonly long BitPosition => _bits.BitPosition;
 
-    internal void PutBits(ulong value, int width) => Put(value, width);
+    internal void PutBits(ulong value, int width) => _bits.Write(value, width);
 
-    // Sets a bit that was already written as zero, in the buffer or still pending.
-    internal void SetBit(long bit)
-    {
-        var flushed = _position * 8L;
-        if (bit >= flushed) _pending |= 1UL << (int)(bit - flushed);
-        else _buffer[(int)(bit >> 3)] |= (byte)(1 << (int)(bit & 7));
-    }
+    internal void SetBit(long bit) => _bits.SetBit(bit);
 
-    // Goes back to an earlier bit. Whole words are flushed, so the word that holds it can be read back.
-    internal void Rewind(long bit)
-    {
-        var position = (int)((bit >> 6) << 3);
-        if (position < _position) _pending = BinaryPrimitives.ReadUInt64LittleEndian(_buffer.Slice(position));
-        _position = position;
-        _pendingBits = (int)(bit & 63);
-        _pending = _pendingBits == 0 ? 0 : _pending & ((1UL << _pendingBits) - 1);
-    }
+    internal void Rewind(long bit) => _bits.Rewind(bit);
 
-    internal int FinishBits()
-    {
-        var bytes = (_pendingBits + 7) / 8;
-        if (_position + bytes > _buffer.Length) throw new GesWireException(GesWireException.BufferTooSmall, "");
-        for (var index = 0; index < bytes; index++)
-        {
-            _buffer[_position++] = (byte)_pending;
-            _pending >>= 8;
-        }
-
-        _pendingBits = 0;
-        return _position;
-    }
+    internal int FinishBits() => _bits.Finish();
 
     private ref readonly GesSchemaNode Current(GesSchemaField field)
     {
@@ -419,23 +328,7 @@ public ref struct GesSchemaWriter
 
     private void Leave(int next) => _cursor = _lists.Advance(next);
 
-    private void Put(ulong value, int width)
-    {
-        if (width == 0) return;
-        _pending |= value << _pendingBits;
-        var total = _pendingBits + width;
-        if (total < 64)
-        {
-            _pendingBits = total;
-            return;
-        }
-
-        if (_position + 8 > _buffer.Length) throw new GesWireException(GesWireException.BufferTooSmall, "");
-        BinaryPrimitives.WriteUInt64LittleEndian(_buffer.Slice(_position), _pending);
-        _position += 8;
-        _pendingBits = total - 64;
-        _pending = _pendingBits == 0 ? 0 : value >> (width - _pendingBits);
-    }
+    private void Put(ulong value, int width) => _bits.Write(value, width);
 }
 
 /// <summary>
@@ -444,15 +337,12 @@ public ref struct GesSchemaWriter
 /// </summary>
 public ref struct GesSchemaReader
 {
-    private readonly ReadOnlySpan<byte> _data;
-    private readonly long _bitCount;
+    private GesBitReader _bits;
     private GesBoundSchema _schema;
     private GesSchemaNode[] _nodes;
     private GesListFrames _lists;
     private int _cursor;
-    private long _bit;
     private bool _present;
-    private readonly bool _limited;
 
     /// <summary>Starts reading a record or message.</summary>
     /// <param name="schema">The bound schema; for a message set, read the member first.</param>
@@ -462,12 +352,9 @@ public ref struct GesSchemaReader
     {
         _schema = schema ?? throw new ArgumentNullException(nameof(schema));
         _nodes = schema.Nodes;
-        _data = data;
-        _bitCount = Math.Min(data.Length, byteLimit) * 8L;
-        _limited = data.Length > byteLimit;
+        _bits = new GesBitReader(data, byteLimit);
         _lists = default;
         _cursor = 0;
-        _bit = 0;
         _present = false;
     }
 
@@ -594,7 +481,7 @@ public ref struct GesSchemaReader
         var count = Get(node.Width, node.Path);
         if (count > (ulong)node.MaxCount) throw new GesWireException(GesWireException.InvalidCount, node.Path);
         if ((long)count > destination.Length) throw new GesWireException(GesWireException.BufferTooSmall, node.Path);
-        if (_bit + ((long)count * 8) > _bitCount) throw new GesWireException(End, node.Path);
+        _bits.Require((long)count * 8, node.Path);
         ReadTextBytes(in node, destination.Slice(0, (int)count));
         return (int)count;
     }
@@ -605,7 +492,7 @@ public ref struct GesSchemaReader
         ref readonly var node = ref Enter(field, GesSchemaNodeKind.Text);
         var count = Get(node.Width, node.Path);
         if (count > (ulong)node.MaxCount) throw new GesWireException(GesWireException.InvalidCount, node.Path);
-        if (_bit + ((long)count * 8) > _bitCount) throw new GesWireException(End, node.Path);
+        _bits.Require((long)count * 8, node.Path);
         var bytes = new byte[(int)count];
         ReadTextBytes(in node, bytes);
         return Encoding.UTF8.GetString(bytes);
@@ -613,12 +500,12 @@ public ref struct GesSchemaReader
 
     private void ReadTextBytes(in GesSchemaNode node, Span<byte> destination)
     {
-        for (var index = 0; index < destination.Length; index++) destination[index] = (byte)Get(8, node.Path);
+        _bits.ReadBytes(destination, node.Path);
         if (node.IsTagText)
         {
-            if (!GesSchemaNumbers.IsTagName(destination)) throw new GesWireException(GesWireException.InvalidTag, node.Path);
+            if (!GesWireRules.IsTagName(destination)) throw new GesWireException(GesWireException.InvalidTag, node.Path);
         }
-        else if (!GesSchemaNumbers.IsValidUtf8(destination)) throw new GesWireException(GesWireException.InvalidText, node.Path);
+        else if (!GesWireRules.IsValidUtf8(destination)) throw new GesWireException(GesWireException.InvalidText, node.Path);
         Leave(node.After);
     }
 
@@ -672,26 +559,16 @@ public ref struct GesSchemaReader
         return FinishBits();
     }
 
-    internal readonly long BitPosition => _bit;
+    internal readonly long BitPosition => _bits.BitPosition;
 
-    internal ulong GetBits(int width, string path) => Get(width, path);
+    internal ulong GetBits(int width, string path) => _bits.Read(width, path);
 
     // Fails like reading when the data ends before these bits do.
-    internal readonly void Require(long bits, string path)
-    {
-        if (_bit + bits > _bitCount) throw new GesWireException(End, path);
-    }
+    internal readonly void Require(long bits, string path) => _bits.Require(bits, path);
 
-    internal void Seek(long bit) => _bit = bit;
+    internal void Seek(long bit) => _bits.Seek(bit);
 
-    internal int FinishBits()
-    {
-        var rest = (int)(-_bit & 7);
-        if (rest > 0 && Get(rest, "") != 0) throw new GesWireException(GesWireException.InvalidPadding, "");
-        return (int)(_bit / 8);
-    }
-
-    private readonly string End => _limited ? GesWireException.LimitExceeded : GesWireException.Truncated;
+    internal int FinishBits() => _bits.Finish();
 
     private ulong EnteredIndex(in GesSchemaNode node)
     {
@@ -725,28 +602,5 @@ public ref struct GesSchemaReader
 
     private void Leave(int next) => _cursor = _lists.Advance(next);
 
-    private ulong Get(int width, string path)
-    {
-        if (width == 0) return 0;
-        if (_bit + width > _bitCount) throw new GesWireException(End, path);
-        var start = (int)(_bit >> 3);
-        var shift = (int)(_bit & 7);
-        _bit += width;
-        ulong value;
-        if (start + 8 <= _data.Length)
-        {
-            value = BinaryPrimitives.ReadUInt64LittleEndian(_data.Slice(start)) >> shift;
-            if (shift + width > 64) value |= (ulong)_data[start + 8] << (64 - shift);
-        }
-        else
-        {
-            value = 0;
-            var bytes = (shift + width + 7) / 8;
-            for (var index = 0; index < bytes && index < 8; index++) value |= (ulong)_data[start + index] << (8 * index);
-            value >>= shift;
-            if (bytes > 8) value |= (ulong)_data[start + 8] << (64 - shift);
-        }
-
-        return width == 64 ? value : value & ((1UL << width) - 1);
-    }
+    private ulong Get(int width, string path) => _bits.Read(width, path);
 }

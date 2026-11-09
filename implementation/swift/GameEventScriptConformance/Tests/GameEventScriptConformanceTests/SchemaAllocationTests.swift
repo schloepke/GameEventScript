@@ -53,6 +53,49 @@ final class SchemaAllocationTests: XCTestCase {
         #endif
     }
 
+    func testBitPrimitivesAllocateNothing() throws {
+        #if !canImport(Darwin)
+            throw XCTSkip("The allocation counter uses libmalloc.")
+        #else
+            guard ges_allocation_install(), ges_allocation_controls() else { throw XCTSkip("The allocation counter is not available.") }
+            let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: 64, alignment: 8)
+            let text = UnsafeMutableRawBufferPointer.allocate(byteCount: 2, alignment: 8)
+            let destination = UnsafeMutableRawBufferPointer.allocate(byteCount: 2, alignment: 8)
+            defer {
+                buffer.deallocate()
+                text.deallocate()
+                destination.deallocate()
+            }
+            text.copyBytes(from: [0x61, 0x62])
+            var sink: UInt64 = 0
+
+            func round() throws {
+                var writer = GesBitWriter(into: buffer)
+                try writer.write(5, width: 3)
+                try writer.write(.max, width: 64)
+                try writer.writeBytes(UnsafeRawBufferPointer(text))
+                writer.setBit(1)
+                let length = try writer.finish()
+                var reader = GesBitReader(data: UnsafeRawBufferPointer(rebasing: buffer[0..<length]))
+                sink &+= try reader.read(3, path: "a")
+                sink &+= try reader.read(64, path: "b")
+                try reader.readBytes(into: destination, path: "c")
+                sink &+= UInt64(try reader.finish())
+                sink &+= try GesWireRules.quantizedIndex(12.34, lowerValue: 0, upperValue: 50, tenPower: 100, numerator: 1, lower: 0, path: "x")
+                sink &+= GesWireRules.isValidUTF8(UnsafeRawBufferPointer(text)) ? 1 : 0
+            }
+
+            try round()
+            XCTAssertTrue(ges_allocation_begin())
+            for _ in 0..<1000 { try round() }
+            let sample = ges_allocation_end()
+            XCTAssertTrue(sample.valid)
+            XCTAssertEqual(sample.allocations, 0)
+            XCTAssertEqual(sample.bytes, 0)
+            XCTAssertNotEqual(sink, 0)
+        #endif
+    }
+
     func testKeyedListDeltasAllocateNothing() throws {
         #if !canImport(Darwin)
             throw XCTSkip("The allocation counter uses libmalloc.")

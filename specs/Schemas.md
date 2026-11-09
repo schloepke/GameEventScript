@@ -998,6 +998,31 @@ the full records, and `ReadKey` also reads the key of a delta. Encoding reads bo
 and rejects an invalid one with the errors of a [full record](#decoding-untrusted-data). Success
 allocates nothing.
 
+### Bit primitives
+
+The writer and reader rest on public primitives that know no schema. Generated schema code
+calls them with constant widths and operands, so they are part of the contract:
+
+- `GesBitWriter` writes values of 0 to 64 bits in the [bit order](#bit-order) into a caller's
+  buffer, `WriteBytes` writes the bytes of a Text, and `Finish` pads to a byte boundary and
+  returns the byte count. A value has no bits above its width. `BitPosition`, `SetBit` for a
+  bit already written as zero and `Rewind` to an earlier position serve encoders that learn a
+  flag or count only later. A full buffer is `wire.bufferTooSmall`; a buffer of the record's
+  byte count suffices.
+- `GesBitReader` reads such values from untrusted data with an optional byte limit. Reading
+  past the end is `wire.truncated`, or `wire.limitExceeded` when the limit ends first, with
+  the path the caller names; `ReadBytes` reads nothing when the bytes do not fit. `Require`
+  checks remaining bits without reading, `Seek` moves to a position, and `Finish` checks the
+  padding (`wire.invalidPadding`) and returns the bytes consumed.
+- `GesWireRules` holds the value rules over plain operands: `IsValidUtf8`, `IsTagName`,
+  `QuantizedIndex` and `WrappedQuantizedIndex` with the [quantization](#quantization) operands
+  `10^k` and `p`, `QuantizedValue` and `WrappedIndex`. Their errors and paths are those of the
+  writer.
+- `GesWireException` and Swift `GesWireError` are created from a code and a path; every
+  `wire.*` code is a public constant.
+
+Success allocates nothing.
+
 ### Description
 
 `GesSchemaSet.Schemas` lists every declaration in source order and `Schema(name)` finds one;

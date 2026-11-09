@@ -229,6 +229,11 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   external field getters.
 - `GesValueMap` can be traversed in canonical key order: `foreach` in C#, without
   allocating, and `for (key, value) in map` in Swift.
+- Schema bit primitives: `GesBitWriter` and `GesBitReader` write and read values of 0 to 64
+  bits in the wire format's bit order, and `GesWireRules` holds its Text, tag, quantization and
+  wrapping rules over plain operands. `GesWireException` (Swift `GesWireError`) can be created
+  from a code and a path, and every `wire.*` code is a public constant. The schema writer and
+  reader now build on these primitives, without loss in speed.
 - Schema deltas work element by element for a list whose elements have a `key`, when the keys of
   baseline and record ascend strictly; otherwise the list is replaced as a whole. The limit of
   `MaxByteCount` rises from 1 MiB to 10 MiB. `GesSchemaDelta.Encode` uses its buffer as scratch

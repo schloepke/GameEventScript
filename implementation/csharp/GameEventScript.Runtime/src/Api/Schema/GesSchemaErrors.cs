@@ -38,28 +38,70 @@ public sealed class GesSchemaException : Exception
 /// </summary>
 public sealed class GesWireException : Exception
 {
-    internal const string Truncated = "wire.truncated";
-    internal const string InvalidIndex = "wire.invalidIndex";
-    internal const string InvalidCount = "wire.invalidCount";
-    internal const string InvalidText = "wire.invalidText";
-    internal const string InvalidTag = "wire.invalidTag";
-    internal const string InvalidNumber = "wire.invalidNumber";
-    internal const string InvalidPadding = "wire.invalidPadding";
-    internal const string LimitExceeded = "wire.limitExceeded";
-    internal const string OutOfRange = "wire.outOfRange";
-    internal const string NotRepresentable = "wire.notRepresentable";
-    internal const string MissingField = "wire.missingField";
-    internal const string NothingValue = "wire.nothingValue";
-    internal const string TypeMismatch = "wire.typeMismatch";
-    internal const string UnknownTag = "wire.unknownTag";
-    internal const string TooLong = "wire.tooLong";
-    internal const string BufferTooSmall = "wire.bufferTooSmall";
-    internal const string FieldOrder = "wire.fieldOrder";
-    internal const string KeyMismatch = "wire.keyMismatch";
-    internal const string InvalidDelta = "wire.invalidDelta";
-    internal const string OverlappingBuffers = "wire.overlappingBuffers";
+    /// <summary>The code <c>wire.truncated</c>: the data ends before the record does.</summary>
+    public const string Truncated = "wire.truncated";
 
-    internal GesWireException(string code, string path) : base($"{code} at '{path}'")
+    /// <summary>The code <c>wire.invalidIndex</c>: an index is at least the size of its range, tag set, union or message set.</summary>
+    public const string InvalidIndex = "wire.invalidIndex";
+
+    /// <summary>The code <c>wire.invalidCount</c>: a Text, Tag, List or Dice count exceeds its <c>max</c>.</summary>
+    public const string InvalidCount = "wire.invalidCount";
+
+    /// <summary>The code <c>wire.invalidText</c>: Text is not valid UTF-8.</summary>
+    public const string InvalidText = "wire.invalidText";
+
+    /// <summary>The code <c>wire.invalidTag</c>: a <c>:Tag max n</c> holds or receives no valid tag name.</summary>
+    public const string InvalidTag = "wire.invalidTag";
+
+    /// <summary>The code <c>wire.invalidNumber</c>: data holds NaN or negative zero, or an infinity with a range.</summary>
+    public const string InvalidNumber = "wire.invalidNumber";
+
+    /// <summary>The code <c>wire.invalidPadding</c>: a padding bit is not zero.</summary>
+    public const string InvalidPadding = "wire.invalidPadding";
+
+    /// <summary>The code <c>wire.limitExceeded</c>: the record exceeds the caller's byte limit.</summary>
+    public const string LimitExceeded = "wire.limitExceeded";
+
+    /// <summary>The code <c>wire.outOfRange</c>: a value is outside its range, not finite in a quantized field, or more than 2^50 steps from zero.</summary>
+    public const string OutOfRange = "wire.outOfRange";
+
+    /// <summary>The code <c>wire.notRepresentable</c>: an integer field receives a fractional value, or a value does not fit its stored form.</summary>
+    public const string NotRepresentable = "wire.notRepresentable";
+
+    /// <summary>The code <c>wire.missingField</c>: a field that is neither <c>optional</c> nor has a <c>:Nothing</c> alternative has no value.</summary>
+    public const string MissingField = "wire.missingField";
+
+    /// <summary>The code <c>wire.nothingValue</c>: a field, argument or list element is <c>nothing</c> without allowing it.</summary>
+    public const string NothingValue = "wire.nothingValue";
+
+    /// <summary>The code <c>wire.typeMismatch</c>: a value has another kind or unit than its field.</summary>
+    public const string TypeMismatch = "wire.typeMismatch";
+
+    /// <summary>The code <c>wire.unknownTag</c>: a tag is not in its set.</summary>
+    public const string UnknownTag = "wire.unknownTag";
+
+    /// <summary>The code <c>wire.tooLong</c>: a Text, Tag, List or Dice exceeds its <c>max</c>.</summary>
+    public const string TooLong = "wire.tooLong";
+
+    /// <summary>The code <c>wire.bufferTooSmall</c>: the caller's buffer is too small.</summary>
+    public const string BufferTooSmall = "wire.bufferTooSmall";
+
+    /// <summary>The code <c>wire.fieldOrder</c>: a typed writer or reader uses a field out of order.</summary>
+    public const string FieldOrder = "wire.fieldOrder";
+
+    /// <summary>The code <c>wire.keyMismatch</c>: a record and its baseline have different keys.</summary>
+    public const string KeyMismatch = "wire.keyMismatch";
+
+    /// <summary>The code <c>wire.invalidDelta</c>: a delta is not canonical, leaves its range, or its key differs from the baseline's.</summary>
+    public const string InvalidDelta = "wire.invalidDelta";
+
+    /// <summary>The code <c>wire.overlappingBuffers</c>: the target buffer of a delta overlaps an input.</summary>
+    public const string OverlappingBuffers = "wire.overlappingBuffers";
+
+    /// <summary>Creates an error with a stable code and a field path.</summary>
+    /// <param name="code">The stable <c>wire.*</c> code, one of the constants of this type.</param>
+    /// <param name="path">The path of the field; empty for the record as a whole.</param>
+    public GesWireException(string code, string path) : base($"{code} at '{path}'")
     {
         Code = code;
         Path = path;

@@ -399,9 +399,3 @@ public enum GesSchemaValues {
         }
     }
 }
-
-extension GesWireError {
-    fileprivate init(code: String, path: String = "") {
-        self = GesWireError.make(code, path)
-    }
-}

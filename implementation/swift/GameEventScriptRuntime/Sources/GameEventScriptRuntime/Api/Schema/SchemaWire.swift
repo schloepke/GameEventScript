@@ -59,23 +59,13 @@ struct GesListFrames {
     }
 }
 
-// The exact number rules of a quantized field and UTF-8 validation, shared by writer and reader.
+// The node-based forms of the wire rules, shared by writer, reader, deltas and values.
 enum GesSchemaNumbers {
-    private static let largestSteps = 1_125_899_906_842_624.0
-
     static func index(_ node: GesSchemaNode, _ value: Double, _ path: @autoclosure () -> String) throws(GesWireError) -> UInt64 {
-        if !value.isFinite { throw GesWireError(GesWireError.outOfRange, path()) }
-        if !node.wrapping && (value < node.lowerValue || value > node.upperValue) { throw GesWireError(GesWireError.outOfRange, path()) }
-        let quotient = value * node.sBinary / node.pBinary
-        if quotient > largestSteps || quotient < -largestSteps { throw GesWireError(GesWireError.outOfRange, path()) }
-        let steps = Int64(quotient.rounded(.toNearestOrEven))
-        return node.wrapping ? wrap(steps, node.lower, node.maxIndex &+ 1) : UInt64(steps - node.lower)
-    }
-
-    static func wrap(_ value: Int64, _ lower: Int64, _ period: UInt64) -> UInt64 {
-        if value >= lower { return (UInt64(bitPattern: value) &- UInt64(bitPattern: lower)) % period }
-        let remainder = (UInt64(bitPattern: lower) &- UInt64(bitPattern: value)) % period
-        return remainder == 0 ? 0 : period - remainder
+        if node.wrapping {
+            return try GesWireRules.wrappedQuantizedIndex(value, tenPower: node.sBinary, numerator: node.pBinary, lower: node.lower, period: node.maxIndex &+ 1, path: path())
+        }
+        return try GesWireRules.quantizedIndex(value, lowerValue: node.lowerValue, upperValue: node.upperValue, tenPower: node.sBinary, numerator: node.pBinary, lower: node.lower, path: path())
     }
 
     static func value(_ node: GesSchemaNode, _ index: UInt64) -> (value: Double, multiple: Int64) {
@@ -93,56 +83,10 @@ enum GesSchemaNumbers {
         return index
     }
 
-    // The portable tag grammar on bytes: a lowercase ASCII letter, then ASCII letters and digits.
-    static func isTagName(_ bytes: UnsafeRawBufferPointer) -> Bool {
-        if bytes.isEmpty || !(0x61...0x7A).contains(bytes[0]) { return false }
-        var index = 1
-        while index < bytes.count {
-            let byte = bytes[index]
-            if !((0x30...0x39).contains(byte) || (0x41...0x5A).contains(byte) || (0x61...0x7A).contains(byte)) { return false }
-            index += 1
-        }
-        return true
-    }
-
     // The error of Text bytes on the wire, if any.
     static func textError(_ node: GesSchemaNode, _ bytes: UnsafeRawBufferPointer) -> String? {
-        if node.isTagText { return isTagName(bytes) ? nil : GesWireError.invalidTag }
-        return isValidUTF8(bytes) ? nil : GesWireError.invalidText
-    }
-
-    static func isValidUTF8(_ bytes: UnsafeRawBufferPointer) -> Bool {
-        var index = 0
-        while index < bytes.count {
-            let first = bytes[index]
-            if first < 0x80 {
-                index += 1
-                continue
-            }
-            var more = 0
-            var least = 0
-            var value = 0
-            if first >= 0xC2 && first <= 0xDF {
-                (more, least, value) = (1, 0x80, Int(first & 0x1F))
-            } else if first >= 0xE0 && first <= 0xEF {
-                (more, least, value) = (2, 0x800, Int(first & 0x0F))
-            } else if first >= 0xF0 && first <= 0xF4 {
-                (more, least, value) = (3, 0x10000, Int(first & 0x07))
-            } else {
-                return false
-            }
-            if index + more >= bytes.count { return false }
-            var offset = 1
-            while offset <= more {
-                let next = bytes[index + offset]
-                if next & 0xC0 != 0x80 { return false }
-                value = (value << 6) | Int(next & 0x3F)
-                offset += 1
-            }
-            if value < least || value > 0x10FFFF || (value >= 0xD800 && value <= 0xDFFF) { return false }
-            index += more + 1
-        }
-        return true
+        if node.isTagText { return GesWireRules.isTagName(bytes) ? nil : GesWireError.invalidTag }
+        return GesWireRules.isValidUTF8(bytes) ? nil : GesWireError.invalidText
     }
 }
 
@@ -150,13 +94,10 @@ enum GesSchemaNumbers {
 /// declaration order; a nested schema, Point or Vector is entered with `beginNested`. The buffer must stay valid while the
 /// writer is used.
 public struct GesSchemaWriter {
-    private let buffer: UnsafeMutableRawBufferPointer
+    private var bits: GesBitWriter
     private var schema: GesBoundSchema
     private var lists = GesListFrames()
     private var cursor = 0
-    private var position = 0
-    private var pending: UInt64 = 0
-    private var pendingBits = 0
 
     /// Starts a record or message in a buffer.
     /// - Parameters:
@@ -164,7 +105,7 @@ public struct GesSchemaWriter {
     ///   - buffer: The buffer that receives the encoding.
     public init(_ schema: GesBoundSchema, into buffer: UnsafeMutableRawBufferPointer) {
         self.schema = schema
-        self.buffer = buffer
+        bits = GesBitWriter(into: buffer)
     }
 
     /// Selects a member of a message set and writes its index.
@@ -195,7 +136,7 @@ public struct GesSchemaWriter {
             if !node.hasRange {
                 index = UInt64(bitPattern: value)
             } else if node.wrapping {
-                index = GesSchemaNumbers.wrap(value, node.lower, node.maxIndex &+ 1)
+                index = GesWireRules.wrappedIndex(value, lower: node.lower, period: node.maxIndex &+ 1)
             } else {
                 if value < node.lower || UInt64(bitPattern: value) &- UInt64(bitPattern: node.lower) > node.maxIndex { throw GesWireError(GesWireError.outOfRange, field.path) }
                 index = UInt64(bitPattern: value) &- UInt64(bitPattern: node.lower)
@@ -274,11 +215,7 @@ public struct GesSchemaWriter {
         if let code = GesSchemaNumbers.textError(node, utf8) { throw GesWireError(code, field.path) }
         try presence(node)
         try put(UInt64(utf8.count), node.width)
-        var index = 0
-        while index < utf8.count {
-            try put(UInt64(utf8[index]), 8)
-            index += 1
-        }
+        try bits.writeBytes(utf8)
         leave(node.after)
     }
 
@@ -343,42 +280,15 @@ public struct GesSchemaWriter {
         return try finishBits()
     }
 
-    var bitPosition: Int { position * 8 + pendingBits }
+    var bitPosition: Int { bits.bitPosition }
 
-    mutating func putBits(_ value: UInt64, _ width: Int) throws(GesWireError) { try put(value, width) }
+    mutating func putBits(_ value: UInt64, _ width: Int) throws(GesWireError) { try bits.write(value, width: width) }
 
-    // Sets a bit that was already written as zero, in the buffer or still pending.
-    mutating func setBit(_ bit: Int) {
-        let flushed = position * 8
-        if bit >= flushed {
-            pending |= 1 << UInt64(bit - flushed)
-        } else {
-            buffer[bit >> 3] |= UInt8(1) << UInt8(bit & 7)
-        }
-    }
+    mutating func setBit(_ bit: Int) { bits.setBit(bit) }
 
-    // Goes back to an earlier bit. Whole words are flushed, so the word that holds it can be read back.
-    mutating func rewind(_ bit: Int) {
-        let word = (bit >> 6) << 3
-        if word < position { pending = UInt64(littleEndian: buffer.loadUnaligned(fromByteOffset: word, as: UInt64.self)) }
-        position = word
-        pendingBits = bit & 63
-        pending = pendingBits == 0 ? 0 : pending & ((UInt64(1) << UInt64(pendingBits)) - 1)
-    }
+    mutating func rewind(_ bit: Int) { bits.rewind(to: bit) }
 
-    mutating func finishBits() throws(GesWireError) -> Int {
-        let bytes = (pendingBits + 7) / 8
-        if position + bytes > buffer.count { throw GesWireError(GesWireError.bufferTooSmall) }
-        var index = 0
-        while index < bytes {
-            buffer[position] = UInt8(truncatingIfNeeded: pending)
-            position += 1
-            pending >>= 8
-            index += 1
-        }
-        pendingBits = 0
-        return position
-    }
+    mutating func finishBits() throws(GesWireError) -> Int { try bits.finish() }
 
     private func current(_ field: GesSchemaField) throws(GesWireError) {
         if field.owner !== schema || field.index != cursor || cursor >= schema.nodes.count { throw GesWireError(GesWireError.fieldOrder, field.path) }
@@ -396,36 +306,18 @@ public struct GesSchemaWriter {
 
     private mutating func leave(_ next: Int) { cursor = lists.advance(next) }
 
-    private mutating func put(_ value: UInt64, _ width: Int) throws(GesWireError) {
-        if width == 0 { return }
-        pending |= value << UInt64(pendingBits)
-        let total = pendingBits + width
-        if total < 64 {
-            pendingBits = total
-            return
-        }
-        if position + 8 > buffer.count { throw GesWireError(GesWireError.bufferTooSmall) }
-        buffer.storeBytes(of: pending.littleEndian, toByteOffset: position, as: UInt64.self)
-        position += 8
-        pendingBits = total - 64
-        pending = pendingBits == 0 ? 0 : value >> UInt64(width - pendingBits)
-    }
+    private mutating func put(_ value: UInt64, _ width: Int) throws(GesWireError) { try bits.write(value, width: width) }
 }
 
 /// Decodes one top-level record or message without allocating on success. Data is untrusted: every limit is checked, and
 /// invalid data fails with a `GesWireError`. Fields are read in declaration order. The data must stay valid while the
 /// reader is used.
 public struct GesSchemaReader {
-    private let data: UnsafeRawBufferPointer
-    private let bitCount: Int
-    private let limited: Bool
+    private var bits: GesBitReader
     private var schema: GesBoundSchema
     private var lists = GesListFrames()
     private var cursor = 0
     private var present = false
-
-    /// The bit position of the next value, for diagnostics.
-    private(set) var bitPosition = 0
 
     /// Starts reading a record or message.
     /// - Parameters:
@@ -434,9 +326,7 @@ public struct GesSchemaReader {
     ///   - byteLimit: An optional limit on the bytes of this record.
     public init(_ schema: GesBoundSchema, data: UnsafeRawBufferPointer, byteLimit: Int = .max) {
         self.schema = schema
-        self.data = data
-        bitCount = min(data.count, byteLimit) * 8
-        limited = data.count > byteLimit
+        bits = GesBitReader(data: data, byteLimit: byteLimit)
     }
 
     /// Reads which member of a message set follows, and selects it.
@@ -562,12 +452,8 @@ public struct GesSchemaReader {
         let count = try get(node.width, field.index)
         if count > UInt64(node.maxCount) { throw GesWireError(GesWireError.invalidCount, field.path) }
         if count > UInt64(destination.count) { throw GesWireError(GesWireError.bufferTooSmall, field.path) }
-        if bitPosition + Int(count) * 8 > bitCount { throw GesWireError(end, field.path) }
-        var index = 0
-        while index < Int(count) {
-            destination[index] = UInt8(truncatingIfNeeded: try get(8, field.index))
-            index += 1
-        }
+        let bytes = UnsafeMutableRawBufferPointer(rebasing: destination[0..<Int(count)])
+        try bits.readBytes(into: bytes, path: field.path)
         if let code = GesSchemaNumbers.textError(node, UnsafeRawBufferPointer(rebasing: destination[0..<Int(count)])) { throw GesWireError(code, field.path) }
         leave(node.after)
         return Int(count)
@@ -579,7 +465,7 @@ public struct GesSchemaReader {
         let node = schema.nodes[field.index]
         let count = try get(node.width, field.index)
         if count > UInt64(node.maxCount) { throw GesWireError(GesWireError.invalidCount, field.path) }
-        if bitPosition + Int(count) * 8 > bitCount { throw GesWireError(end, field.path) }
+        try bits.require(Int(count) * 8, path: field.path)
         var bytes = [UInt8](repeating: 0, count: Int(count))
         var index = 0
         while index < bytes.count {
@@ -642,24 +528,19 @@ public struct GesSchemaReader {
         return try finishBits()
     }
 
+    /// The bit position of the next value, for diagnostics.
+    var bitPosition: Int { bits.bitPosition }
+
     mutating func getBits(_ width: Int, _ nodeIndex: Int) throws(GesWireError) -> UInt64 { try get(width, nodeIndex) }
 
     // Fails like reading when the data ends before these bits do.
     func require(_ bits: Int, _ nodeIndex: Int) throws(GesWireError) {
-        if bitPosition + bits > bitCount { throw GesWireError(end, nodeIndex >= 0 ? schema.infos[nodeIndex].path : "") }
+        try self.bits.require(bits, path: nodeIndex >= 0 ? schema.infos[nodeIndex].path : "")
     }
 
-    mutating func seek(_ bit: Int) { bitPosition = bit }
+    mutating func seek(_ bit: Int) { bits.seek(to: bit) }
 
-    mutating func finishBits() throws(GesWireError) -> Int {
-        let rest = (8 - bitPosition % 8) % 8
-        if rest > 0 {
-            if try get(rest, -1) != 0 { throw GesWireError(GesWireError.invalidPadding) }
-        }
-        return bitPosition / 8
-    }
-
-    private var end: String { limited ? GesWireError.limitExceeded : GesWireError.truncated }
+    mutating func finishBits() throws(GesWireError) -> Int { try bits.finish() }
 
     private mutating func enteredIndex(_ field: GesSchemaField) throws(GesWireError) -> UInt64 {
         try requirePresence(field)
@@ -687,27 +568,10 @@ public struct GesSchemaReader {
 
     private mutating func leave(_ next: Int) { cursor = lists.advance(next) }
 
+    // The path is looked up only for an error. A local reference to the schema avoids an overlapping access to `self`
+    // while `bits` is mutated; a `do`/`catch` that adds the path instead measured 40 % slower on deltas.
     private mutating func get(_ width: Int, _ nodeIndex: Int) throws(GesWireError) -> UInt64 {
-        if width == 0 { return 0 }
-        if bitPosition + width > bitCount { throw GesWireError(end, nodeIndex >= 0 ? schema.infos[nodeIndex].path : "") }
-        let start = bitPosition >> 3
-        let shift = bitPosition & 7
-        bitPosition += width
-        var value: UInt64
-        if start + 8 <= data.count {
-            value = UInt64(littleEndian: data.loadUnaligned(fromByteOffset: start, as: UInt64.self)) >> UInt64(shift)
-            if shift + width > 64 { value |= UInt64(data[start + 8]) << UInt64(64 - shift) }
-        } else {
-            value = 0
-            let bytes = (shift + width + 7) / 8
-            var index = 0
-            while index < bytes && index < 8 {
-                value |= UInt64(data[start + index]) << UInt64(8 * index)
-                index += 1
-            }
-            value >>= UInt64(shift)
-            if bytes > 8 { value |= UInt64(data[start + 8]) << UInt64(64 - shift) }
-        }
-        return width == 64 ? value : value & ((1 << UInt64(width)) - 1)
+        let schema = self.schema
+        return try bits.read(width, path: nodeIndex >= 0 ? schema.infos[nodeIndex].path : "")
     }
 }

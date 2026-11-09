@@ -86,6 +86,22 @@ struct GameEventScript.Api.GesBindingSegment.Entry
   property System.UInt16 Name { get }
   property System.UInt16 RequiredCallStackDepth { get }
   property System.UInt16 RequiredRegisterCount { get }
+struct GameEventScript.Api.GesBitReader
+  ctor GesBitReader(System.ReadOnlySpan<System.Byte> data, System.Int64 byteLimit)
+  method System.Int32 Finish()
+  method System.UInt64 Read(System.Int32 width, System.String path)
+  method System.Void ReadBytes(System.Span<System.Byte> destination, System.String path)
+  method System.Void Require(System.Int64 bits, System.String path)
+  method System.Void Seek(System.Int64 bit)
+  property System.Int64 BitPosition { get }
+struct GameEventScript.Api.GesBitWriter
+  ctor GesBitWriter(System.Span<System.Byte> buffer)
+  method System.Int32 Finish()
+  method System.Void Rewind(System.Int64 bit)
+  method System.Void SetBit(System.Int64 bit)
+  method System.Void Write(System.UInt64 value, System.Int32 width)
+  method System.Void WriteBytes(System.ReadOnlySpan<System.Byte> bytes)
+  property System.Int64 BitPosition { get }
 sealed class GameEventScript.Api.GesBoundSchema
   method GameEventScript.Api.GesBoundSchema Member(System.String name)
   method GameEventScript.Api.GesSchemaField Field(System.String path)
@@ -1144,8 +1160,36 @@ struct GameEventScript.Api.GesUInt16IndexListSegment.SliceEntry
   property System.Int32 Length { get set }
   property System.Int32 Start { get set }
 sealed class GameEventScript.Api.GesWireException
+  ctor GesWireException(System.String code, System.String path)
+  field static System.String BufferTooSmall
+  field static System.String FieldOrder
+  field static System.String InvalidCount
+  field static System.String InvalidDelta
+  field static System.String InvalidIndex
+  field static System.String InvalidNumber
+  field static System.String InvalidPadding
+  field static System.String InvalidTag
+  field static System.String InvalidText
+  field static System.String KeyMismatch
+  field static System.String LimitExceeded
+  field static System.String MissingField
+  field static System.String NotRepresentable
+  field static System.String NothingValue
+  field static System.String OutOfRange
+  field static System.String OverlappingBuffers
+  field static System.String TooLong
+  field static System.String Truncated
+  field static System.String TypeMismatch
+  field static System.String UnknownTag
   property System.String Code { get }
   property System.String Path { get }
+static class GameEventScript.Api.GesWireRules
+  method static System.Boolean IsTagName(System.ReadOnlySpan<System.Byte> bytes)
+  method static System.Boolean IsValidUtf8(System.ReadOnlySpan<System.Byte> bytes)
+  method static System.Double QuantizedValue(System.UInt64 index, System.Int64 lower, System.Int64 numerator, System.Double tenPower)
+  method static System.UInt64 QuantizedIndex(System.Double value, System.Double lowerValue, System.Double upperValue, System.Double tenPower, System.Double numerator, System.Int64 lower, System.String path)
+  method static System.UInt64 WrappedIndex(System.Int64 value, System.Int64 lower, System.UInt64 period)
+  method static System.UInt64 WrappedQuantizedIndex(System.Double value, System.Double tenPower, System.Double numerator, System.Int64 lower, System.UInt64 period, System.String path)
 interface GameEventScript.Api.IGesClock
   property System.Int64 ElapsedMicroseconds { get }
 interface GameEventScript.Api.IGesExtensionFunction

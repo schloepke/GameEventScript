@@ -71,7 +71,9 @@ messages :Combat as (Hit, Died)
 ### Grammar
 
 ```text
-source      = { constant | parameter | schema | message | messages }
+source      = { constant | parameter | [ roles ] ( schema | message | messages ) }
+roles       = role [ role ]
+role        = ( "wire" | "model" ) [ "(" LowerName ")" ]
 constant    = "constant" "$" ConstantName "be" literal
 parameter   = "parameter" LowerName ":" ( ":Number" | ":Percentage" | quantity )
 schema      = "schema" ":" TypeName "as" "{" { field } "}"
@@ -114,7 +116,8 @@ and repeated or trailing separators are allowed. Arguments, members and tags are
 exactly one comma. A line break is allowed only in these places: between declarations, after
 `as`, inside the parentheses of an argument list, a member list, a tag set or a `:List`, inside
 the braces of a schema or an axis block, and after `|`. Each field, with its type and marker,
-otherwise stays on one line.
+otherwise stays on one line. A role is written without spaces, as in `wire(world)`, and stands on the line of its
+declaration.
 
 ### Declarations
 
@@ -140,6 +143,41 @@ A source is a sequence of declarations in any order; a reference may come before
   can be a root and nothing else: it is not a type, and a message may belong to several sets.
 
 Schemas, messages and message sets share one namespace across all sources.
+
+### Roles
+
+> **Since: Unreleased**
+
+A role marks a declaration as a root of a kind of [code generation](#tools), optionally in a named group:
+
+```gess
+wire(world) schema :World as { tick: :Number integer between 0 and 1000000, bots: :List(:World_Bot) max 64 }
+wire(protocol) messages :GameEvents as (Hit, Died)
+model(view) schema :WorldView as { tick: :Number integer, bots: :List(:BotView) }
+wire schema :Arena as { size: :Number integer between 1 and 64 }
+schema :World_Bot as { id: :Number integer between 0 and 255 key }
+```
+
+- **`wire(group)`** makes a schema, message or message set a wire root of the group: code that writes, reads,
+  compares, quantizes and deltas its records. **`model(group)`** makes a schema a model root of the group: a plain value
+  type that is never encoded. A role without a group belongs to the group `default`. A group is a `LowerName`.
+- **Roles belong to roots.** A declaration without a role is a part: it is generated when a root reaches it, through
+  fields, union alternatives, list elements or the members of a message set, and takes its form from that root. A part that
+  a wire root and a model root both reach is generated in both forms, each in the output of its own generation.
+- **A marked declaration can also be a part.** A root of one group that another group's root reaches is generated as a part
+  there and is no root of that group, so generating the group pulls in nothing else of the root's own group.
+- A declaration takes at most one `wire` and one `model` role, so `wire(world) model(view) schema :Arena` is both. A model
+  root is a schema; messages and message sets carry no data model of their own. A role on a constant or a parameter, `model`
+  on a message or message set, a word in the place of a role that is neither `wire` nor `model`, and a group that is no
+  `LowerName` are `schema.invalidRole`; a second `wire` or `model` role is `schema.duplicateRole`.
+- **A wire root must be encodable.** Reading the sources reports `schema.notEncodable` for a wire root that reaches a
+  document-only type, as far as it is decided without parameter values: the conditions and the order of
+  [binding](#binding) without the bounds, so a `:List` without `max`, a `:Text` without a length or a `:Map` fail at
+  `ges schema check`. A bound that depends on a parameter stays a binding error.
+- **A model root may use every type** that has a [model type](#model-types), document-only ones included, and needs no
+  ranges, steps or parameter values. Its constraints document the values and still serve document checking.
+- **Roles are generation metadata.** They are not part of the [canonical form](#canonical-form), so adding, changing or
+  removing a role changes neither the schema hash nor the binding hash, and no wire format changes with them.
 
 A field or argument has one of these markers at most:
 
@@ -265,12 +303,14 @@ Source errors use the phase `schema` with line and column, in the manner of
 | `schema.invalidRange` | a lower bound is not below its upper bound |
 | `schema.invalidStep` | a step is not positive, not exact, or a bound or delta range is no multiple of it |
 | `schema.invalidConstraint` | `integer` with `step` or on a Percentage, a Dice constraint other than a range, a `max` that is not positive, `step` or `delta within` without a range, `delta within` without a step or not narrower than the field |
-| `schema.notEncodable` | encoding reaches a document-only type |
+| `schema.notEncodable` | encoding reaches a document-only type, also when the sources are read for a [wire root](#roles) |
 | `schema.invalidKey` | a `key` breaks the [key rules](#rules) |
 | `schema.invalidUnion` | a union alternative repeats a type name or has `delta within`, or a union with `:Nothing` is `optional` |
 | `schema.invalidBound` | an `integer` bound is fractional or outside Int64, or a Dice bound is outside `1` to `2^31 - 1` |
 | `schema.tooWide` | a quantized field exceeds the [limits](#quantization), or a bound of a fractional field becomes infinite or zero in binary64 |
 | `schema.tooLarge` | the [largest encoding](#largest-encoding) exceeds its limit or overflows |
+| `schema.invalidRole` | a role stands on a declaration that cannot take it, is no role word, or names an invalid group |
+| `schema.duplicateRole` | a declaration has a second `wire` or a second `model` role |
 
 `schema.notEncodable`, `schema.invalidRange`, `schema.invalidStep`, `schema.invalidBound`,
 `schema.invalidConstraint`, `schema.tooWide` and `schema.tooLarge` can also arise at binding,
@@ -340,8 +380,8 @@ its own header, and there is no compatibility between different hashes. It is no
 security measure.
 
 The hash runs over a [canonical form](#canonical-form), never over source text.
-Comments, layout, file boundaries, declaration order outside the reached declarations
-and the spelling of literals do not change it, so `50kN` and `50000N` hash alike. Field
+Comments, layout, file boundaries, declaration order outside the reached declarations,
+[roles](#roles) and the spelling of literals do not change it, so `50kN` and `50000N` hash alike. Field
 order, types, bounds, steps and delta ranges do.
 
 The hash is FNV-1a 64 (offset basis `14695981039346656037`, prime
@@ -1071,6 +1111,8 @@ ges schema layout world.gess panel.gess --root Bot --root GameAnswers --param wo
 ges schema layout world.gess panel.gess --all-roots --param worldWidth=2000m -o wire.layout.json
 ges schema generate world.gess --root Bot --param worldWidth=2000m --language csharp --namespace Game.Net -o Bot.g.cs
 ges schema generate world.gess --root Bot --param worldWidth=2000m --language swift --namespace Wire -o Bot.swift --check
+ges schema generate world.gess panels.gess --wire world --param worldWidth=2000m --language swift --namespace Wire -o Wire.swift
+ges schema generate world.gess panels.gess --model view --language csharp --namespace Game.Model -o Model.g.cs
 ```
 
 `format` prints the recommended layout and, like document formatting, drops comments; input
@@ -1098,8 +1140,13 @@ console and the highlighter know `.gess`, and the editor bundles have a grammar 
 
 `layout` prints the [generation layout](#generation-layout) of one or more roots. `--root` may be
 repeated; naming a root twice is a usage error. `--all-roots` makes every declaration of the files
-a root, in declaration order, and excludes `--root`. A `--param` that no root reaches fails with
-`schema.unknownName`, and so does a reached parameter without a value.
+a root, in declaration order. `--wire <group>` makes the [wire roots](#roles) of the group in the given files the roots,
+in declaration order, and `--model <group>` the model roots, which `layout` then prints as the [model layout](#model-layout)
+and `generate` writes as [model types](#model-types). Exactly one of `--root`, `--all-roots`, `--wire` and `--model` is
+given, a run names one group, and a group without a root in the files fails with `generate.usage`; wire and model code go to
+separate files. A `--param` that no root reaches fails with `schema.unknownName`, and so does a reached parameter without a
+value; models reach no parameter, so every `--param` of a `--model` run fails, and `--values` and `--checked-exclusivity`
+are usage errors there.
 
 `generate` takes the same roots and parameters and writes code in the language of `--language`,
 `csharp` (C# 9, for Unity) or `swift` (Swift 6, without Foundation); every CLI writes every language,
@@ -1110,7 +1157,10 @@ in a type it holds, is a value type (C# `struct`, Swift `Sendable` struct); othe
 whose storage grows when a read or a caller needs more room and is then reused, so that reading and
 writing allocate nothing once it has held its largest data. A Text is held as UTF-8 bytes with a
 string view, a List or Dice as a C# `List<T>` or Swift array, and a list element that is a union,
-Text or List as a generated item type. An `optional` field adds a presence flag and, for a value
+Text or List as a generated item type. A `:Point` or `:Vector` is the runtime's
+[`GesPoint` or `GesVector`](PublicApi.md#spatial-values), in every field, list element and alternative; quantization stays per
+field. An axis that a block leaves out is not transmitted: writing a record or a delta whose omitted axis is not zero fails
+with `wire.typeMismatch` at the field's path, as the [value path](#value-path) does, and reading sets it to zero. An `optional` field adds a presence flag and, for a value
 type, a nullable view. A message adds a Boolean per tag, and a message set holds the selected
 member and one record per message. After a failed read the values of the target are unspecified.
 A field named like its type, which C# does not allow, gets the suffix `Value` in every language.
@@ -1150,6 +1200,60 @@ without a date or version. A generation request that cannot be carried out fails
 `generate.*` code: `generate.nameCollision` when two generated names of one type are equal,
 `generate.invalidNamespace`, and `generate.usage` when the [Generator API](PublicApi.md#schema-code-generation)
 receives no root.
+
+### Model types
+
+> **Since: Unreleased**
+
+`generate --model` writes model types: plain values that a program builds, keeps and compares, such as a client's view of
+the world, and that never travel. They have no reading, writing, deltas, quantization or storage reuse, so a model schema
+needs no ranges, steps or parameters, and every reached schema becomes one type, in name order.
+
+| Schema | Swift | C# |
+| --- | --- | --- |
+| schema | `struct`, `Hashable`, `Sendable`, `Codable` | `sealed class` with value equality, `IEquatable<T>`, `==` |
+| `:Boolean` | `Bool` | `bool` |
+| `:Number`, `:Quantity(unit)` | `Double` | `double` |
+| `integer` | `Int` | `long` |
+| `:Percentage` | `Double`, the ratio as in wire code | `double` |
+| `:Text`, `:Tag` without a set | `String` | `string` |
+| `:Tag(#a, #b)` | an enum `<Field>Tag` with `String` raw values, `CaseIterable` | an enum `<Field>Tag` |
+| `:List(T)` | `[T]` | `List<T>` |
+| `:Dice` | `[Int]`, the rolls | `List<int>` |
+| `:Point`, `:Vector` | `GesPoint`, `GesVector` | `GesPoint`, `GesVector` |
+| `:Name` | the model type `Name` | the model type `Name` |
+| union | an enum `<Field>Alternative` with one case and value per alternative | an abstract class `<Field>Alternative` with one sealed subclass per alternative, named after it, holding `Value` |
+| `optional`, `:Nothing` alternative | `Optional`; `nil` is absent or `nothing` | nullable; `null` is absent or `nothing` |
+
+A union with a `:Nothing` alternative becomes a nullable value without it, and when one alternative remains, that
+alternative's type. A list element type is named `<Field>Item`, so a closed Tag in a list is `<Field>ItemTag`. `:Map`,
+`:Range`, `:Series`, `:Message`, `:Handler` and a `:List` without an element type have no model type yet:
+`generate.unsupported`. Each property is documented with its declaration, so its unit and documented range stay visible.
+
+- **Swift** stores `var` properties in declared order and has a memberwise `init` whose absent values default to `nil` and
+  lists to `[]`. A schema with a `key` is `Identifiable`; the key is `id`, or a computed `id` returns it. `Codable` is part
+  of the standard library, so models still import no Foundation; `GesPoint` and `GesVector` are `Codable` with `x`, `y`,
+  `z`.
+- **C#** has settable properties in declared order, a constructor with every field and a parameterless one that leaves every
+  field at its zero value (empty text and lists, new records, the first alternative with its zero value). It uses C# 9 with
+  neither `record`, `init` accessors nor Reflection, so Unity and IL2CPP need no shim. Classes keep a copy from sharing a
+  list with its original; value equality compares lists element by element, and 0 and -0 hash alike. A file holds one
+  internal helper class named after its header.
+- Model and wire types of one schema are separate types in separate files; no conversion between both forms is generated,
+  since a client's model rarely has the shape of its wire roots. A program converts in its own code.
+
+A generated name that collides, such as a field named `id` beside a key named otherwise, fails with
+`generate.nameCollision`, as in wire code.
+
+### Model layout
+
+`layout --model` prints the language-neutral model layout in the JSON form of the [generation layout](#generation-layout):
+`model` (the format version, 1), `roots` and `types`, ordered by name. A type has `name`, `hash` and `fields`; a field has
+`name`, `path`, `optional`, `key` and `type`. A type has `kind` and the members of its kind: `number` adds `type`, `unit`,
+`integer`, `wrapping`, `lower`, `upper` and `step`, a bound as its canonical decimal or parameter name or `null`; `tag` adds
+`tags` and `max`, `text` adds `max`, `list` adds `max` and `element`, `dice` adds `max`, `lower` and `upper`, `point` and
+`vector` add `unit` and `axes` (the names of an axis block), `schema` adds `name`, and `union` adds `alternatives`;
+`boolean` and `nothing` have none. A missing `max` is `null`.
 
 ### Generation layout
 

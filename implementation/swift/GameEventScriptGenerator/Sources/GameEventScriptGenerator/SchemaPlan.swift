@@ -93,6 +93,11 @@ enum GesSchemaPlanner {
         }
     }
 
+    // The axes of a Point or Vector that its block leaves out: they are not transmitted, are written only when zero and read as zero.
+    static func omitted(_ value: GesPlanValue) -> [String] {
+        ["X", "Y", "Z"].filter { axis in !value.axes.contains { $0.base == axis } }
+    }
+
     static func keyed(_ value: GesPlanValue) -> Bool { value.encoding.kind == .list && value.encoding.keyed }
 
     static func hasKeyed(_ value: GesPlanValue) -> Bool { keyed(value) || value.alternatives.contains(where: hasKeyed) }

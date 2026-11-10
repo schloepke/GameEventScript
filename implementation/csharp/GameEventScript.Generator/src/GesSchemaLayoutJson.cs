@@ -175,7 +175,7 @@ internal static class GesSchemaLayoutJson
     private static string Bits(double value) => "0x" + Hex((ulong)BitConverter.DoubleToInt64Bits(value));
 
     // Writes members in call order: every member or element on its own line, a container closing on its own line.
-    private sealed class Writer
+    internal sealed class Writer
     {
         private readonly StringBuilder _text = new();
         private readonly List<bool> _filled = [];
@@ -224,6 +224,12 @@ internal static class GesSchemaLayoutJson
         {
             Key(key);
             _text.Append(value.ToString(CultureInfo.InvariantCulture));
+        }
+
+        internal void Null(string key)
+        {
+            Key(key);
+            _text.Append("null");
         }
 
         internal void Boolean(string key, bool value)

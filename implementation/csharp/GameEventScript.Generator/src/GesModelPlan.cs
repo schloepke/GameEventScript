@@ -1,0 +1,179 @@
+// Copyright 2026 Stephan Schlöpke
+// SPDX-License-Identifier: Apache-2.0
+
+using System.Collections.Generic;
+using System.Text;
+
+namespace GameEventScript.Generator;
+
+// What both model emitters generate: per field its value in language-neutral terms with the names of the nested types it
+// declares. A union with a :Nothing alternative becomes a nullable value without it, and a union that then holds one
+// alternative becomes that alternative, so that absence reads as null or nil like an optional field.
+internal sealed class GesModelPlanField
+{
+    internal GesModelField Field = new();
+    internal string Base = "";
+    internal GesModelPlanValue Value = new();
+}
+
+internal sealed class GesModelPlanValue
+{
+    internal GesModelKind Kind;
+    internal GesModelValue Model = new();
+
+    // The value may be absent: an optional field or a union with a :Nothing alternative.
+    internal bool Nullable;
+
+    // The nested type of a closed Tag (its enum) or a union; empty for other kinds.
+    internal string Nested = "";
+
+    // The label of a union alternative, its case or subclass.
+    internal string Label = "";
+    internal GesModelPlanValue? Element;
+    internal List<GesModelPlanValue> Alternatives = [];
+
+    internal bool ClosedTag => Kind == GesModelKind.Tag && Model.Tags.Count > 0;
+}
+
+internal static class GesModelPlanner
+{
+    internal static List<GesModelPlanField> Fields(GesModelType type)
+    {
+        var fields = new List<GesModelPlanField>();
+        foreach (var field in type.Fields)
+        {
+            var pascal = GesSchemaPlanner.Pascal(field.Name);
+            var member = pascal == type.Name ? pascal + "Value" : pascal;
+            var value = Value(field.Value, member, "");
+            value.Nullable |= field.Optional;
+            fields.Add(new GesModelPlanField { Field = field, Base = member, Value = value });
+        }
+
+        return fields;
+    }
+
+    private static GesModelPlanValue Value(GesModelValue model, string name, string label)
+    {
+        if (model.Kind == GesModelKind.Union)
+        {
+            var present = model.Alternatives.FindAll(alternative => alternative.Value.Kind != GesModelKind.Nothing);
+            var nullable = present.Count < model.Alternatives.Count;
+            if (present.Count == 1)
+            {
+                var single = Value(present[0].Value, name, label);
+                single.Nullable = true;
+                return single;
+            }
+
+            var union = new GesModelPlanValue { Kind = GesModelKind.Union, Model = model, Nullable = nullable, Nested = name + "Alternative", Label = label };
+            foreach (var alternative in present) union.Alternatives.Add(Value(alternative.Value, name + GesSchemaPlanner.Pascal(alternative.Name), alternative.Name));
+            return union;
+        }
+
+        var value = new GesModelPlanValue { Kind = model.Kind, Model = model, Label = label };
+        if (value.ClosedTag) value.Nested = name + "Tag";
+        if (model.Kind == GesModelKind.List) value.Element = Value(model.Element!.Value, name + "Item", "");
+        return value;
+    }
+
+    // The declaration as a reader would write it, for documentation: `:Quantity(meter) between 0 and worldWidth step 0.01`.
+    internal static string Describe(GesModelField field)
+    {
+        var text = new StringBuilder();
+        Describe(field.Value, text);
+        if (field.Optional) text.Append(" optional");
+        if (field.Key) text.Append(" key");
+        return text.ToString();
+    }
+
+    private static void Describe(GesModelValue value, StringBuilder text)
+    {
+        switch (value.Kind)
+        {
+            case GesModelKind.Boolean:
+                text.Append(":Boolean");
+                break;
+            case GesModelKind.Number:
+                text.Append(':').Append(value.Type);
+                if (value.Type == "Quantity") text.Append('(').Append(value.Unit).Append(')');
+                if (value.Integer) text.Append(" integer");
+                var shift = value.Type == "Percentage" ? 2 : 0;
+                if (value.Lower is not null) text.Append(value.Wrapping ? " wrapping" : "").Append(" between ").Append(Decimal(value.Lower, shift)).Append(" and ").Append(Decimal(value.Upper!, shift));
+                if (value.Step is not null) text.Append(" step ").Append(Decimal(value.Step, shift));
+                break;
+            case GesModelKind.Tag:
+                text.Append(":Tag");
+                if (value.Tags.Count > 0) text.Append("(#").Append(string.Join(", #", value.Tags)).Append(')');
+                else if (value.Max is { } tagMax) text.Append(" max ").Append(tagMax);
+                break;
+            case GesModelKind.Text:
+                text.Append(":Text");
+                if (value.Max is { } textMax) text.Append(" max ").Append(textMax);
+                break;
+            case GesModelKind.List:
+                text.Append(":List(");
+                Describe(value.Element!.Value, text);
+                text.Append(')');
+                if (value.Max is { } listMax) text.Append(" max ").Append(listMax);
+                break;
+            case GesModelKind.Dice:
+                text.Append(":Dice");
+                if (value.Max is { } diceMax) text.Append(" max ").Append(diceMax);
+                if (value.Lower is not null) text.Append(" between ").Append(Decimal(value.Lower)).Append(" and ").Append(Decimal(value.Upper!));
+                break;
+            case GesModelKind.Point or GesModelKind.Vector:
+                text.Append(value.Kind == GesModelKind.Point ? ":Point" : ":Vector");
+                if (value.Unit != "none") text.Append('(').Append(value.Unit).Append(')');
+                if (value.Axes.Count > 0) text.Append(" { ").Append(string.Join(", ", value.Axes)).Append(" }");
+                break;
+            case GesModelKind.Schema:
+                text.Append(':').Append(value.Schema);
+                break;
+            case GesModelKind.Union:
+                for (var index = 0; index < value.Alternatives.Count; index++)
+                {
+                    if (index > 0) text.Append(" | ");
+                    Describe(value.Alternatives[index].Value, text);
+                }
+
+                break;
+            default:
+                text.Append(":Nothing");
+                break;
+        }
+    }
+
+    // A canonical decimal `<significand>e<exponent>` as plain digits; a parameter name stays as it is.
+    // A Percentage's limits are fractions, written with a shift of two and a percent sign.
+    internal static string Decimal(string canonical, int shift = 0)
+    {
+        var e = canonical.IndexOf('e');
+        if (e < 0) return canonical;
+        var digits = canonical.Substring(0, e);
+        var exponent = int.Parse(canonical.Substring(e + 1), System.Globalization.CultureInfo.InvariantCulture) + shift;
+        var percent = shift == 2 ? "%" : "";
+        var negative = digits.StartsWith("-", System.StringComparison.Ordinal);
+        if (negative) digits = digits.Substring(1);
+        if (exponent >= 0) digits = digits == "0" ? "0" : digits + new string('0', exponent);
+        else
+        {
+            var point = digits.Length + exponent;
+            digits = point > 0 ? digits.Substring(0, point) + "." + digits.Substring(point) : "0." + new string('0', -point) + digits;
+        }
+
+        return (negative ? "-" + digits : digits) + percent;
+    }
+
+    // The header of a model file: the roots and their schema hashes, without parameters, which models never use.
+    internal static string Header(GesModelLayout layout)
+    {
+        var text = new StringBuilder();
+        text.Append("// <auto-generated>\n");
+        text.Append("//     Generated by `ges schema generate` as models of ").Append(layout.Roots.Count == 1 ? "the root " : "the roots ").Append(string.Join(", ", layout.Roots)).Append(".\n");
+        text.Append("//     Do not edit it; generate it again when a schema changes.\n");
+        foreach (var root in layout.Roots)
+            text.Append("//     ").Append(root).Append(": schema hash ").Append(GesSchemaLayoutJson.Hex(layout.Type(root).Hash)).Append(".\n");
+        text.Append("// </auto-generated>\n");
+        return text.ToString();
+    }
+}

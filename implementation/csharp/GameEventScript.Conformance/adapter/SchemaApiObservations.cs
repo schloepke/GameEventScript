@@ -77,6 +77,8 @@ internal static class SchemaApiObservations
     private static Dictionary<string, object?> Describe(GesSchema schema)
     {
         var result = new Dictionary<string, object?> { ["name"] = schema.Name, ["kind"] = schema.Kind.ToString() };
+        if (schema.WireGroup is { } wire) result["wireGroup"] = wire;
+        if (schema.ModelGroup is { } model) result["modelGroup"] = model;
         if (schema.Parameters.Count > 0) result["parameters"] = schema.Parameters.Select(parameter => Unit(new Dictionary<string, object?> { ["name"] = parameter.Name, ["kind"] = parameter.Kind.ToString() }, parameter.Unit)).ToArray();
         if (schema.Fields.Count > 0) result["fields"] = schema.Fields.Select(field =>
         {

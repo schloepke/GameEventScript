@@ -528,6 +528,34 @@ operation that supplied its backing storage.
 not enumerate by themselves. Range termination and overflow behavior belong to
 the deterministic language semantics.
 
+#### Spatial values
+
+> **Since: Unreleased**
+
+`GesPoint` and `GesVector` are the native counterparts of the language's [Point and Vector](Language.md#vector-and-point):
+plain values with three Binary64 components `x`, `y` and `z`, where a 2D value has `z` 0, and with no unit. Generated
+schema code uses them for every spatial field, so hosts in both ports compute with one pair of types.
+
+- A point moves by a vector (`point + vector`, `point - vector`) and two points give the vector between them
+  (`end - start`); a vector adds, subtracts, negates, scales and divides by a scalar; a point does not scale.
+- `length` and `distance(to:)` (C# `Length`, `DistanceTo`) compute the square root of the summed squares, as the
+  language's `length` and `distance` do, so hosts and scripts agree bit for bit; `lengthSquared`, `dot`, `cross` (three
+  dimensions) and `isFinite` follow. `normalized` is absent for a zero or non-finite vector, as `normalize` gives `nothing`.
+  `zero` is the origin.
+- Equality compares components with Binary64 equality, so 0 and -0 are equal and hash alike. C# values are mutable structs
+  with settable components, like Unity's `Vector3`; Swift values are `Hashable`, `Sendable` and `Codable` with `var`
+  components.
+- **Units.** The schema or host fixes the unit, so the types carry none. Converting to a `GesValue` takes the unit
+  (`ToValue(unit)`, Swift `value(unit:)`) and yields `nothing` when a component is NaN, as the language does. Converting
+  back takes the expected unit (`FromValue(value, unit)`, Swift `init?(_:unit:)`) and gives absence for a value of another
+  kind or another unit: units never convert.
+
+| Concept | C# | Swift |
+| --- | --- | --- |
+| types | `struct GesPoint`, `struct GesVector` with `X`, `Y`, `Z` | `struct GesPoint`, `struct GesVector` with `x`, `y`, `z` |
+| operations | `Zero`, `IsFinite`, `Length`, `LengthSquared`, `Normalized`, `Dot`, `Cross`, `DistanceTo`, operators | `zero`, `init()`, `isFinite`, `length`, `lengthSquared`, `normalized`, `dot(_:)`, `cross(_:)`, `distance(to:)`, operators |
+| conversion | `ToValue(unit)`, `static FromValue(value, unit)` returning a nullable value | `value(unit:)`, `init?(_:unit:)` |
+
 #### Literal parsing
 
 > **Since: Unreleased**
@@ -595,7 +623,7 @@ GES schemas ([Schemas](Schemas.md)) live in Runtime. Apart from the value path, 
 | schema set | `sealed class GesSchemaSet` with `static Parse(params GesSchemaSource[])`, `static Parse(string)` | `final class GesSchemaSet` with `init(sources:) throws`, `init(parsing:) throws` |
 | declarations | `Schemas`, `Schema(name)` | `schemas`, `schema(_:)` |
 | document check by header | `CheckDocument(text, parameters)` | `checkDocument(_:parameters:)` |
-| description | `sealed class GesSchema` with `Name`, `Kind`, `Hash`, `CanonicalForm`, `Parameters`, `Fields`, `Tags`, `Members`, `Bind(parameters)`, `CheckDocument(text, parameters)` | `final class GesSchema` with `name`, `kind`, `hash`, `canonicalForm`, `parameters`, `fields`, `tags`, `members`, `bind(parameters:)`, `checkDocument(_:parameters:)` |
+| description | `sealed class GesSchema` with `Name`, `Kind`, `WireGroup`, `ModelGroup`, `Hash`, `CanonicalForm`, `Parameters`, `Fields`, `Tags`, `Members`, `Bind(parameters)`, `CheckDocument(text, parameters)` | `final class GesSchema` with `name`, `kind`, `wireGroup`, `modelGroup`, `hash`, `canonicalForm`, `parameters`, `fields`, `tags`, `members`, `bind(parameters:)`, `checkDocument(_:parameters:)` |
 | description parts | `enum GesSchemaKind`, `GesSchemaTypeKind`; `sealed class GesSchemaParameterInfo`, `GesSchemaFieldInfo`, `GesSchemaType`, `GesSchemaAxisInfo`; `readonly struct GesSchemaBound` with `ToDouble()` | `enum GesSchemaKind`, `GesSchemaTypeKind`; `struct GesSchemaParameterInfo`, `GesSchemaFieldInfo`, `GesSchemaType`, `GesSchemaAxisInfo`, `GesSchemaBound` with `doubleValue` |
 | parameters | `sealed class GesSchemaParameters` with `With(name, literal)`, `With(name, long, unit)`, `With(name, double, unit)` | `final class GesSchemaParameters` with `with(_:literal:)`, `with(_:_:unit:)` |
 | bound schema | `sealed class GesBoundSchema` with `Schema`, `Name`, `MaxByteCount`, `Hash`, `BindingHash`, `HasKey`, `Field(path)`, `Member(name)`, `MemberIndex(name)` | `final class GesBoundSchema` with `schema`, `name`, `maxByteCount`, `hash`, `bindingHash`, `hasKey`, `field(_:)`, `member(_:)`, `memberIndex(_:)` |
@@ -627,6 +655,8 @@ depends on it, so a game never ships it. It is synchronous, reads no files and r
 | Concept | C# | Swift |
 | --- | --- | --- |
 | generator | `static class GesSchemaGenerator` with `Layout(set, roots, parameters)` and `Generate(set, roots, parameters, options)`, returning the text | `enum GesSchemaGenerator` with `layout(_:roots:parameters:)` and `generate(_:roots:parameters:options:)`, throwing and returning the text |
+| roles | `WireRoots(set, group)`, `ModelRoots(set, group)` | `wireRoots(_:group:)`, `modelRoots(_:group:)` |
+| models | `ModelLayout(set, roots)`, `GenerateModels(set, roots, options)` | `modelLayout(_:roots:)`, `generateModels(_:roots:options:)` |
 | options | `sealed class GesSchemaGenerateOptions` with `Language`, `Namespace`, `Access`, `Values`, `CheckedExclusivity` | `struct GesSchemaGenerateOptions` with `init(language:namespace:access:values:checkedExclusivity:)` and the same properties |
 | target language | `enum GesSchemaLanguage` with `CSharp`, `Swift` | `enum GesSchemaLanguage` with `csharp`, `swift` |
 | access | `enum GesSchemaAccess` with `Public`, `Internal` | `enum GesSchemaAccess` with `public`, `internal` |
@@ -638,6 +668,14 @@ codes and types (`GesSchemaException`, `GesSchemaError`), so a root that names n
 `schema.unknownName`; a request that cannot be generated fails with a `generate.*` code. The options default to C#, no namespace, public access, no value conversion and
 unchecked exclusivity in Swift classes, as the CLI's defaults do. Equal inputs give identical text in every
 port.
+
+> **Since: Unreleased** — roles and models
+
+`WireRoots` and `ModelRoots` list the [roots of a group](Schemas.md#roles) in declaration order, empty when it has none.
+`ModelLayout` and `GenerateModels` write the [model layout](Schemas.md#model-layout) and the
+[model types](Schemas.md#model-types) of schema roots; a root that is no schema fails with `generate.usage`, and so do the
+wire-only options `Values` and `CheckedExclusivity`. A reached type without a model type fails with
+`generate.unsupported`.
 
 ## Host construction and lifecycle API
 

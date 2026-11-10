@@ -146,8 +146,6 @@ enum GesSwiftEmitter {
     static func nestedName(_ value: GesPlanValue) -> String {
         switch value.encoding.kind {
         case .tag: value.base + "Tag"
-        case .point: value.base + "Point"
-        case .vector: value.base + "Vector"
         case .union: value.base + "Alternative"
         default: ""
         }
@@ -160,6 +158,8 @@ enum GesSwiftEmitter {
         case .quantized, .float: "Double"
         case .schema: value.encoding.schema
         case .text: "String"
+        case .point: "GesPoint"
+        case .vector: "GesVector"
         case .list: "[\(elementName(value))]"
         default: nestedName(value)
         }
@@ -448,6 +448,7 @@ enum GesSwiftEmitter {
             code.close()
         case .point, .vector:
             for axis in value.axes { write(&code, axis, target + "." + member(axis.base)) }
+            for axis in GesSchemaPlanner.omitted(value) { code.line("if \(target).\(member(axis)) != 0 { \(fail("typeMismatch", value)) }") }
         case .schema:
             code.line("try \(target).__writeFields(&writer, paths, at + \(value.node + 1))")
         case .union:
@@ -534,6 +535,7 @@ enum GesSwiftEmitter {
             code.close()
         case .point, .vector:
             for axis in value.axes { read(&code, axis, target + "." + member(axis.base)) }
+            for axis in GesSchemaPlanner.omitted(value) { code.line("\(target).\(member(axis)) = 0") }
         case .schema:
             code.line("try \(target).__readFields(&reader, paths, at + \(value.node + 1))")
         case .union:
@@ -568,18 +570,6 @@ enum GesSwiftEmitter {
                 code.line("/// The tag `#\(tag)`.")
                 code.line("case \(self.name(tag))")
             }
-            code.close()
-        case .point, .vector:
-            code.blank()
-            code.line("/// The transmitted axes of the \(value.encoding.kind == .point ? "Point" : "Vector").")
-            code.open("\(access)struct \(name): Sendable {")
-            for axis in value.axes {
-                code.line("/// The \(axis.label) axis.")
-                code.line("\(access)var \(member(axis.base)) = 0.0")
-            }
-            code.blank()
-            code.line("/// Creates a value with every axis at zero.")
-            code.line("\(access)init() {}")
             code.close()
         case .union:
             code.blank()

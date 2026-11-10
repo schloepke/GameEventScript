@@ -430,6 +430,39 @@ The generated code needs Runtime only. To generate from your own build tool rath
 the Generator package (`GameEventScript.Generator`, Swift `GameEventScriptGenerator`), which your game
 does not ship. See [Tools](../../specs/Schemas.md#tools) for the exact shape.
 
+## 14. Mark roots and generate models
+
+> **Since: Unreleased**
+
+Instead of repeating `--root` in a build script, mark the roots in the schemas. A role belongs to a group, so one set of
+files can feed several generations:
+
+```gess
+wire(world) schema :World as { tick: :Number integer between 0 and 1000000, bots: :List(:World_Bot) max 64 }
+schema :World_Bot as { id: :Number integer between 0 and 255 key, position: :Point(m) { x between 0m and 2km step 1cm, y between 0m and 2km step 1cm } }
+
+model(view) schema :WorldView as { tick: :Number integer, bots: :List(:BotView) }
+schema :BotView as { bot: :Number integer key, name: :Text, position: :Point(m) }
+```
+
+```bash
+ges schema generate *.gess --wire world --language swift --namespace Wire -o Wire.swift
+ges schema generate *.gess --model view --language swift --namespace Model -o Model.swift
+```
+
+A schema without a role is generated when a root reaches it. `ges schema check` already rejects a wire root that cannot be
+encoded, such as a `:Text` without `max`; roles change no hash. A model is the data your program keeps rather than sends,
+such as a client's view of the world: a Swift struct that is `Hashable`, `Sendable` and `Codable`, or a C# class that compares
+by value, with no ranges or steps needed. Spatial fields in wire and model code alike are the runtime's `GesPoint` and
+`GesVector`, which add, subtract and measure like Points and Vectors in scripts:
+
+```swift
+let bot = Model.BotView(bot: 1, name: "Ada", position: GesPoint(x: 10, y: 20))
+let heading = (target - bot.position).normalized
+```
+
+See [Roles](../../specs/Schemas.md#roles) and [Model types](../../specs/Schemas.md#model-types).
+
 ## What schemas leave to you
 
 Transport, channels, deciding which objects a client receives and splitting large data all belong

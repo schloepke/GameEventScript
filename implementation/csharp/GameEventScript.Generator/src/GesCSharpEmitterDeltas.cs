@@ -652,6 +652,7 @@ internal static partial class GesCSharpEmitter
                     code.Close();
                 }
 
+                foreach (var axis in GesSchemaPlanner.Omitted(value)) code.Line($"if ({a}.{axis} != 0) {Throw("TypeMismatch", value)}");
                 code.Line($"if (!{set}) writer.Rewind(first{node});");
                 code.Close();
                 break;
@@ -770,6 +771,7 @@ internal static partial class GesCSharpEmitter
                     code.Close();
                 }
 
+                foreach (var axis in GesSchemaPlanner.Omitted(value)) code.Line($"{a}.{axis} = 0;");
                 code.Line($"if (!changed{node}) {Throw("InvalidDelta", value)}");
                 code.Close();
                 break;

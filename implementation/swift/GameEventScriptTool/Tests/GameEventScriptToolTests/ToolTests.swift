@@ -130,6 +130,37 @@ final class ToolTests: XCTestCase {
         XCTAssertTrue(missing.error.contains("error schema.unknownName"))
     }
 
+    func testSchemaRolesSelectTheRootsOfAGroup() throws {
+        let world = try file("world.gess", "parameter w: :Quantity(m)\nwire(world) schema :World as {\n  at: :Point(m) { x between 0m and w step 1m }\n  badge: :Badge optional\n}\n")
+        let panels = try file("panels.gess", "wire(panels) schema :Badge as { on: :Boolean }\nwire(panels) schema :Panel as { badge: :Badge }\n")
+        let view = try file("view.gess", "model(view) schema :View as {\n  name: :Text\n  at: :Point(m)\n}\n")
+        let wire = run(["schema", "layout", world, panels, view, "--wire", "world", "--param", "w=10m"])
+        XCTAssertEqual(wire.code, 0, wire.error)
+        XCTAssertTrue(wire.output.hasPrefix("{\n  \"layout\": 1,\n  \"roots\": [\n    \"World\"\n  ],"))
+        XCTAssertTrue(wire.output.contains("\"name\": \"Badge\""))
+        XCTAssertFalse(wire.output.contains("\"Panel\""))
+        let model = run(["schema", "layout", world, panels, view, "--model", "view"])
+        XCTAssertEqual(model.code, 0, model.error)
+        XCTAssertTrue(model.output.hasPrefix("{\n  \"model\": 1,\n  \"roots\": [\n    \"View\"\n  ],"))
+        let swift = run(["schema", "generate", world, panels, view, "--model", "view", "--language", "swift"])
+        XCTAssertTrue(swift.output.contains("public struct View: Hashable, Sendable, Codable {"))
+        XCTAssertTrue(swift.output.contains("public var at: GesPoint"))
+        let csharp = run(["schema", "generate", world, panels, view, "--wire", "world", "--param", "w=10m", "--language", "csharp"])
+        XCTAssertTrue(csharp.output.contains("public GesPoint At;"))
+        let empty = run(["schema", "generate", world, panels, "--wire", "nothing", "--param", "w=10m", "--language", "csharp"])
+        XCTAssertEqual(empty.code, 1)
+        XCTAssertTrue(empty.error.contains("error generate.usage: The files have no wire root in the group 'nothing'."), empty.error)
+        XCTAssertEqual(run(["schema", "layout", view, "--model", "view", "--param", "w=10m"]).code, 1)
+        XCTAssertEqual(run(["schema", "layout", view, "--model", "view", "--wire", "world"]).code, 2)
+        XCTAssertEqual(run(["schema", "layout", view, "--model", "view", "--root", "View"]).code, 2)
+        XCTAssertEqual(run(["schema", "generate", view, "--model", "view", "--language", "swift", "--values"]).code, 2)
+        XCTAssertEqual(run(["schema", "hash", view, "--model", "view"]).code, 2)
+        let bad = try file("bad.gess", "wire schema :Bad as { name: :Text }\n")
+        let check = run(["schema", "check", bad])
+        XCTAssertEqual(check.code, 1)
+        XCTAssertTrue(check.error.contains("(1,29): error schema.notEncodable"), check.error)
+    }
+
     func testSchemaGenerateWritesAndChecksCode() throws {
         let drone = try file("drone.gess", "schema :Drone as {\n  id: :Number integer between 0 and 255 key\n  on: :Boolean\n}\n")
         let csharp = run(["schema", "generate", drone, "--root", "Drone", "--language", "csharp", "--namespace", "Game.Net"])

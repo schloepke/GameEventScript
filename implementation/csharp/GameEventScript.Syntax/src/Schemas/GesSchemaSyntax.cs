@@ -153,6 +153,11 @@ internal sealed class GesSchemaDeclarationSyntax
     internal string[] Members { get; init; } = [];
 
     internal int[] MemberOffsets { get; init; } = [];
+
+    // The group of a wire or model root, or null when the declaration has no such role.
+    internal string? WireGroup { get; set; }
+
+    internal string? ModelGroup { get; set; }
 }
 
 internal sealed class GesSchemaDiagnostic
@@ -171,6 +176,8 @@ internal sealed class GesSchemaDiagnostic
     internal const string InvalidBound = "schema.invalidBound";
     internal const string TooWide = "schema.tooWide";
     internal const string TooLarge = "schema.tooLarge";
+    internal const string InvalidRole = "schema.invalidRole";
+    internal const string DuplicateRole = "schema.duplicateRole";
 
     internal GesSchemaDiagnostic(string code, string text, int offset, string message)
     {

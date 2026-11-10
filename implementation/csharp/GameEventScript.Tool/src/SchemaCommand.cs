@@ -19,8 +19,10 @@ Usage:
   dotnet ges schema hash <schema.gess> [more.gess ...] --root <Name> [--param <name>=<literal> ...]
   dotnet ges schema canonical <schema.gess> [more.gess ...] --root <Name>
   dotnet ges schema dump <schema.gess> [more.gess ...] --root <Name> [--param <name>=<literal> ...] --data <data.bin> [--baseline <record.bin>]
-  dotnet ges schema layout <schema.gess> [more.gess ...] (--root <Name> ... | --all-roots) [--param <name>=<literal> ...] [-o <layout.json>]
-  dotnet ges schema generate <schema.gess> [more.gess ...] (--root <Name> ... | --all-roots) [--param <name>=<literal> ...]
+  dotnet ges schema layout <schema.gess> [more.gess ...] (--root <Name> ... | --all-roots | --wire <group> | --model <group>)
+                           [--param <name>=<literal> ...] [-o <layout.json>]
+  dotnet ges schema generate <schema.gess> [more.gess ...] (--root <Name> ... | --all-roots | --wire <group> | --model <group>)
+                             [--param <name>=<literal> ...]
                              --language csharp|swift [--namespace <A.B>] [--access public|internal] [--values]
                              [--checked-exclusivity] [-o <file> [--check]]
 
@@ -36,6 +38,8 @@ Commands:
 Options:
   --root <Name>             The schema, message or message set; layout and generate accept several.
   --all-roots               Make every declaration of the files a root of layout or generate.
+  --wire <group>            Make the wire roots of the group the roots, in declaration order; wire alone is the group default.
+  --model <group>           Generate plain model types of the model roots of the group instead of wire code.
   --language <name>         The language that generate writes: csharp or swift.
   --namespace <A.B>         The namespace of the generated types; Swift declares it as nested enums.
   --access <level>          The visibility of the generated types: public (default) or internal.
@@ -64,6 +68,8 @@ Options:
         string? root = null;
         var roots = new List<string>();
         var allRoots = false;
+        string? wireGroup = null;
+        string? modelGroup = null;
         var check = false;
         var withValues = false;
         var checkedExclusivity = false;
@@ -89,11 +95,12 @@ Options:
             else if (argument == "--check" && command == "generate") check = true;
             else if (argument == "--values" && command == "generate") withValues = true;
             else if (argument == "--checked-exclusivity" && command == "generate") checkedExclusivity = true;
-            else if (argument is "--root" or "--data" or "--baseline" or "--param" or "-o" or "--output" or "--language" or "--namespace" or "--access")
+            else if (argument is "--root" or "--data" or "--baseline" or "--param" or "-o" or "--output" or "--language" or "--namespace" or "--access" or "--wire" or "--model")
             {
                 var applies = argument switch
                 {
                     "--root" => command is "hash" or "canonical" or "dump" or "layout" or "generate",
+                    "--wire" or "--model" => command is "layout" or "generate",
                     "--param" => command is "hash" or "dump" or "layout" or "generate",
                     "--data" or "--baseline" => command == "dump",
                     "--language" or "--namespace" or "--access" => command == "generate",
@@ -102,7 +109,13 @@ Options:
                 if (!applies) return UsageError($"Unknown schema {command} option '{argument}'.");
                 if (index + 1 == arguments.Length) return UsageError($"Specify a value after {argument}.");
                 var next = arguments[++index];
-                if (argument == "--language") language = next;
+                if (argument is "--wire" or "--model")
+                {
+                    if (wireGroup is not null || modelGroup is not null) return UsageError("Specify one --wire or --model group.");
+                    if (argument == "--wire") wireGroup = next;
+                    else modelGroup = next;
+                }
+                else if (argument == "--language") language = next;
                 else if (argument == "--namespace") space = next;
                 else if (argument == "--access") access = next;
                 else if (argument == "--root" && command is "layout" or "generate")
@@ -132,7 +145,9 @@ Options:
         if (command == "format" && paths.Count > 1) return UsageError("Format accepts exactly one schema file.");
         if (command is "hash" or "canonical" or "dump" && root is null) return UsageError($"{command} requires --root.");
         if (command == "dump" && data is null) return UsageError("dump requires --data.");
-        if (command is "layout" or "generate" && (roots.Count > 0) == allRoots) return UsageError($"{command} requires either --root or --all-roots.");
+        if (command is "layout" or "generate" && (roots.Count > 0 ? 1 : 0) + (allRoots ? 1 : 0) + (wireGroup is null && modelGroup is null ? 0 : 1) != 1)
+            return UsageError($"{command} requires one of --root, --all-roots, --wire and --model.");
+        if (modelGroup is not null && (withValues || checkedExclusivity)) return UsageError("--values and --checked-exclusivity concern wire code, not --model.");
         if (command == "generate" && language is not ("csharp" or "swift")) return UsageError("generate requires --language csharp or --language swift.");
         if (access is not (null or "public" or "internal")) return UsageError("--access is public or internal.");
         if (check && output is null) return UsageError("--check requires -o with the file to compare.");
@@ -182,7 +197,18 @@ Options:
                         Values = withValues,
                         CheckedExclusivity = checkedExclusivity
                     };
-                    return Layout(set, allRoots ? set.Schemas.Select(schema => schema.Name).ToList() : roots, parameters, output, options, check);
+                    if (wireGroup is not null || modelGroup is not null)
+                    {
+                        var group = wireGroup ?? modelGroup!;
+                        roots = [.. wireGroup is not null ? GesSchemaGenerator.WireRoots(set, group) : GesSchemaGenerator.ModelRoots(set, group)];
+                        if (roots.Count == 0)
+                        {
+                            Console.Error.WriteLine($"schema: error generate.usage: The files have no {(wireGroup is not null ? "wire" : "model")} root in the group '{group}'.");
+                            return 1;
+                        }
+                    }
+
+                    return Layout(set, allRoots ? set.Schemas.Select(schema => schema.Name).ToList() : roots, parameters, output, options, check, modelGroup is not null);
             }
 
             var schema = set.Schema(root!);
@@ -239,12 +265,12 @@ Options:
     }
 
     // Prints the layout, or with options the generated code; with check it compares the code with the output file.
-    private static int Layout(GesSchemaSet set, List<string> roots, List<(string Name, string Literal)> parameters, string? output, GesSchemaGenerateOptions? options, bool check)
+    private static int Layout(GesSchemaSet set, List<string> roots, List<(string Name, string Literal)> parameters, string? output, GesSchemaGenerateOptions? options, bool check, bool model)
     {
         var values = new GesSchemaParameters();
         foreach (var (name, literal) in parameters)
         {
-            if (!roots.Any(root => set.Schema(root).Parameters.Any(parameter => parameter.Name == name)))
+            if (model || !roots.Any(root => set.Schema(root).Parameters.Any(parameter => parameter.Name == name)))
             {
                 Console.Error.WriteLine($"schema: error schema.unknownName: No root reaches the parameter '{name}'.");
                 return 1;
@@ -256,7 +282,9 @@ Options:
         string text;
         try
         {
-            text = options is null ? GesSchemaGenerator.Layout(set, roots, values) : GesSchemaGenerator.Generate(set, roots, values, options);
+            text = model
+                ? options is null ? GesSchemaGenerator.ModelLayout(set, roots) : GesSchemaGenerator.GenerateModels(set, roots, options)
+                : options is null ? GesSchemaGenerator.Layout(set, roots, values) : GesSchemaGenerator.Generate(set, roots, values, options);
         }
         catch (GesGeneratorException exception)
         {

@@ -25,7 +25,11 @@ symbol {"access":"public","declaration":"init(language: GesSchemaLanguage = .csh
 symbol {"access":"public","declaration":"let code: String","kind":"swift.property","path":"GameEventScriptGenerator.GesGeneratorError.code"}
 symbol {"access":"public","declaration":"let message: String","kind":"swift.property","path":"GameEventScriptGenerator.GesGeneratorError.message"}
 symbol {"access":"public","declaration":"static func generate(_ set: GesSchemaSet, roots: [String], parameters: GesSchemaParameters, options: GesSchemaGenerateOptions) throws -> String","kind":"swift.type.method","path":"GameEventScriptGenerator.GesSchemaGenerator.generate(_:roots:parameters:options:)"}
+symbol {"access":"public","declaration":"static func generateModels(_ set: GesSchemaSet, roots: [String], options: GesSchemaGenerateOptions) throws -> String","kind":"swift.type.method","path":"GameEventScriptGenerator.GesSchemaGenerator.generateModels(_:roots:options:)"}
 symbol {"access":"public","declaration":"static func layout(_ set: GesSchemaSet, roots: [String], parameters: GesSchemaParameters) throws -> String","kind":"swift.type.method","path":"GameEventScriptGenerator.GesSchemaGenerator.layout(_:roots:parameters:)"}
+symbol {"access":"public","declaration":"static func modelLayout(_ set: GesSchemaSet, roots: [String]) throws -> String","kind":"swift.type.method","path":"GameEventScriptGenerator.GesSchemaGenerator.modelLayout(_:roots:)"}
+symbol {"access":"public","declaration":"static func modelRoots(_ set: GesSchemaSet, group: String) -> [String]","kind":"swift.type.method","path":"GameEventScriptGenerator.GesSchemaGenerator.modelRoots(_:group:)"}
+symbol {"access":"public","declaration":"static func wireRoots(_ set: GesSchemaSet, group: String) -> [String]","kind":"swift.type.method","path":"GameEventScriptGenerator.GesSchemaGenerator.wireRoots(_:group:)"}
 symbol {"access":"public","declaration":"struct GesGeneratorError","kind":"swift.struct","path":"GameEventScriptGenerator.GesGeneratorError"}
 symbol {"access":"public","declaration":"struct GesSchemaGenerateOptions","kind":"swift.struct","path":"GameEventScriptGenerator.GesSchemaGenerateOptions"}
 symbol {"access":"public","declaration":"var access: GesSchemaAccess","kind":"swift.property","path":"GameEventScriptGenerator.GesSchemaGenerateOptions.access"}

@@ -57,7 +57,56 @@ internal sealed class GesSchemaSourceReader
     private GesSchemaDeclarationSyntax ReadDeclaration()
     {
         var offset = _position;
+        string? wire = null;
+        string? model = null;
+        var wordOffset = _position;
         var word = ReadWord();
+        while (word is "wire" or "model")
+        {
+            var group = "default";
+            if (Consume('('))
+            {
+                var groupOffset = _position;
+                group = ReadWord();
+                if (!GesText.IsFieldName(group)) throw new SyntaxFailure(groupOffset, "A role group is a lowercase name.", Code.InvalidRole);
+                Expect(')');
+            }
+
+            if ((word == "wire" ? wire : model) is not null) throw new SyntaxFailure(wordOffset, $"The declaration is already a {word} root.", Code.DuplicateRole);
+            if (word == "wire") wire = group;
+            else model = group;
+            SkipSpaces();
+            wordOffset = _position;
+            word = ReadWord();
+        }
+
+        if (wire is not null || model is not null)
+        {
+            if (word is "constant" or "parameter") throw new SyntaxFailure(offset, "Only a schema, message or message set can be a root.", Code.InvalidRole);
+            if (model is not null && word is "message" or "messages") throw new SyntaxFailure(offset, "A model root is a schema.", Code.InvalidRole);
+        }
+        else if (word.Length > 0 && word is not ("constant" or "parameter" or "schema" or "message" or "messages") && AtRoleEnd())
+            throw new SyntaxFailure(offset, $"'{word}' is no role; a root is marked wire or model.", Code.InvalidRole);
+
+        var declaration = ReadDeclaration(offset, wordOffset, word);
+        declaration.WireGroup = wire;
+        declaration.ModelGroup = model;
+        return declaration;
+    }
+
+    // Whether an unknown word stands where a role does: before a group or a declaration keyword.
+    private bool AtRoleEnd()
+    {
+        if (_position < _text.Length && _text[_position] == '(') return true;
+        var start = _position;
+        SkipSpaces();
+        var role = _position > start && (AtWord("schema") || AtWord("message") || AtWord("messages"));
+        _position = start;
+        return role;
+    }
+
+    private GesSchemaDeclarationSyntax ReadDeclaration(int offset, int wordOffset, string word)
+    {
         switch (word)
         {
             case "constant":
@@ -156,7 +205,7 @@ internal sealed class GesSchemaSourceReader
                 return new GesSchemaDeclarationSyntax { Kind = GesSchemaDeclarationKind.Messages, Name = name, Offset = offset, Members = members.ToArray(), MemberOffsets = offsets.ToArray() };
             }
             default:
-                throw new SyntaxFailure(offset, "Expected constant, parameter, schema, message or messages.");
+                throw new SyntaxFailure(wordOffset, "Expected constant, parameter, schema, message or messages.");
         }
     }
 

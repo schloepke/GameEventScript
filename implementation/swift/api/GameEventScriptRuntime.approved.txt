@@ -127,6 +127,12 @@ relationship {"kind":"conformsTo","source":"GameEventScriptRuntime.GesMessageSig
 relationship {"kind":"conformsTo","source":"GameEventScriptRuntime.GesMessageSignature :: struct GesMessageSignature","target":"Swift.Hashable"}
 relationship {"kind":"conformsTo","source":"GameEventScriptRuntime.GesMessageSignature :: struct GesMessageSignature","target":"Swift.Sendable"}
 relationship {"kind":"conformsTo","source":"GameEventScriptRuntime.GesOpaqueSection :: struct GesOpaqueSection","target":"Swift.Sendable"}
+relationship {"kind":"conformsTo","source":"GameEventScriptRuntime.GesPoint :: struct GesPoint","target":"Swift.CustomStringConvertible"}
+relationship {"kind":"conformsTo","source":"GameEventScriptRuntime.GesPoint :: struct GesPoint","target":"Swift.Decodable"}
+relationship {"kind":"conformsTo","source":"GameEventScriptRuntime.GesPoint :: struct GesPoint","target":"Swift.Encodable"}
+relationship {"kind":"conformsTo","source":"GameEventScriptRuntime.GesPoint :: struct GesPoint","target":"Swift.Equatable"}
+relationship {"kind":"conformsTo","source":"GameEventScriptRuntime.GesPoint :: struct GesPoint","target":"Swift.Hashable"}
+relationship {"kind":"conformsTo","source":"GameEventScriptRuntime.GesPoint :: struct GesPoint","target":"Swift.Sendable"}
 relationship {"kind":"conformsTo","source":"GameEventScriptRuntime.GesProfilePhase :: enum GesProfilePhase","target":"Swift.CaseIterable"}
 relationship {"kind":"conformsTo","source":"GameEventScriptRuntime.GesProfilePhase :: enum GesProfilePhase","target":"Swift.Equatable"}
 relationship {"kind":"conformsTo","source":"GameEventScriptRuntime.GesProfilePhase :: enum GesProfilePhase","target":"Swift.Hashable"}
@@ -219,6 +225,12 @@ relationship {"kind":"conformsTo","source":"GameEventScriptRuntime.GesValueMap :
 relationship {"kind":"conformsTo","source":"GameEventScriptRuntime.GesValueMap :: struct GesValueMap","target":"Swift.Hashable"}
 relationship {"kind":"conformsTo","source":"GameEventScriptRuntime.GesValueMap :: struct GesValueMap","target":"Swift.Sequence"}
 relationship {"kind":"conformsTo","source":"GameEventScriptRuntime.GesValueMap.Iterator :: struct Iterator","target":"Swift.IteratorProtocol"}
+relationship {"kind":"conformsTo","source":"GameEventScriptRuntime.GesVector :: struct GesVector","target":"Swift.CustomStringConvertible"}
+relationship {"kind":"conformsTo","source":"GameEventScriptRuntime.GesVector :: struct GesVector","target":"Swift.Decodable"}
+relationship {"kind":"conformsTo","source":"GameEventScriptRuntime.GesVector :: struct GesVector","target":"Swift.Encodable"}
+relationship {"kind":"conformsTo","source":"GameEventScriptRuntime.GesVector :: struct GesVector","target":"Swift.Equatable"}
+relationship {"kind":"conformsTo","source":"GameEventScriptRuntime.GesVector :: struct GesVector","target":"Swift.Hashable"}
+relationship {"kind":"conformsTo","source":"GameEventScriptRuntime.GesVector :: struct GesVector","target":"Swift.Sendable"}
 relationship {"kind":"conformsTo","source":"GameEventScriptRuntime.GesWireError :: struct GesWireError","target":"Swift.Equatable"}
 relationship {"kind":"conformsTo","source":"GameEventScriptRuntime.GesWireError :: struct GesWireError","target":"Swift.Error"}
 relationship {"kind":"conformsTo","source":"GameEventScriptRuntime.GesWireError :: struct GesWireError","target":"Swift.Sendable"}
@@ -671,10 +683,13 @@ symbol {"access":"public","declaration":"func contains(_ value: Int64) -> Bool",
 symbol {"access":"public","declaration":"func containsKey(_ key: String) -> Bool","kind":"swift.method","path":"GameEventScriptRuntime.GesValueMap.containsKey(_:)"}
 symbol {"access":"public","declaration":"func containsKey(_ name: String?) throws -> Bool","kind":"swift.method","path":"GameEventScriptRuntime.GesMessageArguments.containsKey(_:)"}
 symbol {"access":"public","declaration":"func createProgramProfiler(_ program: GameEventScriptProgram) -> any GesProgramProfiler","kind":"swift.method","path":"GameEventScriptRuntime.GesProfiler.createProgramProfiler(_:)"}
+symbol {"access":"public","declaration":"func cross(_ other: GesVector) -> GesVector","kind":"swift.method","path":"GameEventScriptRuntime.GesVector.cross(_:)"}
 symbol {"access":"public","declaration":"func dispatchCompleted(_ message: GameEventScriptMessage, id: Int64, signatureID: String)","kind":"swift.method","path":"GameEventScriptRuntime.GesRuntimeObserver.dispatchCompleted(_:id:signatureID:)","swiftExtension":{"extendedModule":"GameEventScriptRuntime","typeKind":"swift.protocol"}}
 symbol {"access":"public","declaration":"func dispatchCompleted(_ message: GameEventScriptMessage, id: Int64, signatureID: String)","kind":"swift.method","path":"GameEventScriptRuntime.GesRuntimeObserver.dispatchCompleted(_:id:signatureID:)"}
 symbol {"access":"public","declaration":"func dispatchStarted(_ message: GameEventScriptMessage, id: Int64, signatureID: String)","kind":"swift.method","path":"GameEventScriptRuntime.GesRuntimeObserver.dispatchStarted(_:id:signatureID:)","swiftExtension":{"extendedModule":"GameEventScriptRuntime","typeKind":"swift.protocol"}}
 symbol {"access":"public","declaration":"func dispatchStarted(_ message: GameEventScriptMessage, id: Int64, signatureID: String)","kind":"swift.method","path":"GameEventScriptRuntime.GesRuntimeObserver.dispatchStarted(_:id:signatureID:)"}
+symbol {"access":"public","declaration":"func distance(to other: GesPoint) -> Double","kind":"swift.method","path":"GameEventScriptRuntime.GesPoint.distance(to:)"}
+symbol {"access":"public","declaration":"func dot(_ other: GesVector) -> Double","kind":"swift.method","path":"GameEventScriptRuntime.GesVector.dot(_:)"}
 symbol {"access":"public","declaration":"func dump(includeInstructionAddresses: Bool = false) -> String","kind":"swift.method","path":"GameEventScriptRuntime.GameEventScriptProgram.dump(includeInstructionAddresses:)","swiftExtension":{"extendedModule":"GameEventScriptRuntime","typeKind":"swift.class"}}
 symbol {"access":"public","declaration":"func encode() throws -> [UInt8]","kind":"swift.method","path":"GameEventScriptRuntime.GameEventScriptProgram.encode()","swiftExtension":{"extendedModule":"GameEventScriptRuntime","typeKind":"swift.class"}}
 symbol {"access":"public","declaration":"func encodedSize() throws -> Int","kind":"swift.method","path":"GameEventScriptRuntime.GameEventScriptProgram.encodedSize()","swiftExtension":{"extendedModule":"GameEventScriptRuntime","typeKind":"swift.class"}}
@@ -768,14 +783,18 @@ symbol {"access":"public","declaration":"func unitAt(_ index: Int) -> GesQuantit
 symbol {"access":"public","declaration":"func validate() throws","kind":"swift.method","path":"GameEventScriptRuntime.GameEventScriptProgram.validate()","swiftExtension":{"extendedModule":"GameEventScriptRuntime","typeKind":"swift.class"}}
 symbol {"access":"public","declaration":"func value(at index: Int) -> GesValue","kind":"swift.method","path":"GameEventScriptRuntime.GesValueMap.value(at:)"}
 symbol {"access":"public","declaration":"func value(named name: String) throws -> GesValue","kind":"swift.method","path":"GameEventScriptRuntime.GesMessageArguments.value(named:)"}
+symbol {"access":"public","declaration":"func value(unit: GesQuantityUnit = .none) -> GesValue","kind":"swift.method","path":"GameEventScriptRuntime.GesPoint.value(unit:)"}
+symbol {"access":"public","declaration":"func value(unit: GesQuantityUnit = .none) -> GesValue","kind":"swift.method","path":"GameEventScriptRuntime.GesVector.value(unit:)"}
 symbol {"access":"public","declaration":"func valueAt(_ index: Int) -> GesValue","kind":"swift.method","path":"GameEventScriptRuntime.GesMessageArguments.valueAt(_:)"}
 symbol {"access":"public","declaration":"func withArguments(_ arguments: [GesValue]) throws -> GameEventScriptMessage","kind":"swift.method","path":"GameEventScriptRuntime.GesMessageSignature.withArguments(_:)"}
 symbol {"access":"public","declaration":"func withTags(_ tags: [String]) throws -> GameEventScriptMessage","kind":"swift.method","path":"GameEventScriptRuntime.GameEventScriptMessage.withTags(_:)"}
 symbol {"access":"public","declaration":"init()","kind":"swift.init","path":"GameEventScriptRuntime.GesExtensionCall.init()"}
 symbol {"access":"public","declaration":"init()","kind":"swift.init","path":"GameEventScriptRuntime.GesHostBuilder.init()"}
+symbol {"access":"public","declaration":"init()","kind":"swift.init","path":"GameEventScriptRuntime.GesPoint.init()"}
 symbol {"access":"public","declaration":"init()","kind":"swift.init","path":"GameEventScriptRuntime.GesProgramReadLimits.init()"}
 symbol {"access":"public","declaration":"init()","kind":"swift.init","path":"GameEventScriptRuntime.GesRuntimeLimits.init()"}
 symbol {"access":"public","declaration":"init()","kind":"swift.init","path":"GameEventScriptRuntime.GesSchemaParameters.init()"}
+symbol {"access":"public","declaration":"init()","kind":"swift.init","path":"GameEventScriptRuntime.GesVector.init()"}
 symbol {"access":"public","declaration":"init(_ arguments: [GesMessageArgument] = []) throws","kind":"swift.init","path":"GameEventScriptRuntime.GesMessageArguments.init(_:)"}
 symbol {"access":"public","declaration":"init(_ code: GesProgramFormatErrorCode, message: String = \"Invalid GES program\", byteOffset: Int? = nil, sectionType: UInt16? = nil, entryIndex: Int? = nil)","kind":"swift.init","path":"GameEventScriptRuntime.GesProgramFormatError.init(_:message:byteOffset:sectionType:entryIndex:)"}
 symbol {"access":"public","declaration":"init(_ schema: GesBoundSchema, data: UnsafeRawBufferPointer, byteLimit: Int = .max)","kind":"swift.init","path":"GameEventScriptRuntime.GesSchemaReader.init(_:data:byteLimit:)"}
@@ -793,6 +812,8 @@ symbol {"access":"public","declaration":"init(compilerID: String, compilerVersio
 symbol {"access":"public","declaration":"init(data: UnsafeRawBufferPointer, byteLimit: Int = .max)","kind":"swift.init","path":"GameEventScriptRuntime.GesBitReader.init(data:byteLimit:)"}
 symbol {"access":"public","declaration":"init(entries: [GesBindingSegment.Entry])","kind":"swift.init","path":"GameEventScriptRuntime.GesBindingSegment.init(entries:)"}
 symbol {"access":"public","declaration":"init(extensionName: String, functionName: String, argumentLabels: [String] = []) throws","kind":"swift.init","path":"GameEventScriptRuntime.GesExtensionReference.init(extensionName:functionName:argumentLabels:)"}
+symbol {"access":"public","declaration":"init(from decoder: any Decoder) throws","kind":"swift.init","path":"GameEventScriptRuntime.GesPoint.init(from:)"}
+symbol {"access":"public","declaration":"init(from decoder: any Decoder) throws","kind":"swift.init","path":"GameEventScriptRuntime.GesVector.init(from:)"}
 symbol {"access":"public","declaration":"init(from: Double, to: Double, step: Double = 1)","kind":"swift.init","path":"GameEventScriptRuntime.GesFloatRange.init(from:to:step:)"}
 symbol {"access":"public","declaration":"init(from: Int64, to: Int64, step: Int64 = 1)","kind":"swift.init","path":"GameEventScriptRuntime.GesIntegerRange.init(from:to:step:)"}
 symbol {"access":"public","declaration":"init(indentation: Int = 2, lineWidth: Int = 100, prefixedUnits: Bool = true)","kind":"swift.init","path":"GameEventScriptRuntime.GesDocumentFormat.init(indentation:lineWidth:prefixedUnits:)"}
@@ -837,6 +858,10 @@ symbol {"access":"public","declaration":"init(state: GesStartState, diagnostic: 
 symbol {"access":"public","declaration":"init(symbols: [GesDebugSymbol])","kind":"swift.init","path":"GameEventScriptRuntime.GesDebugSymbolsSegment.init(symbols:)"}
 symbol {"access":"public","declaration":"init(typeName: String, argumentLabels: [String] = []) throws","kind":"swift.init","path":"GameEventScriptRuntime.GesExternalTypeConstructorReference.init(typeName:argumentLabels:)"}
 symbol {"access":"public","declaration":"init(typeName: String, parameters: [GesExternalTypeParameterDefinition] = []) throws","kind":"swift.init","path":"GameEventScriptRuntime.GesExternalTypeConstructorDefinition.init(typeName:parameters:)"}
+symbol {"access":"public","declaration":"init(x: Double, y: Double, z: Double = 0)","kind":"swift.init","path":"GameEventScriptRuntime.GesPoint.init(x:y:z:)"}
+symbol {"access":"public","declaration":"init(x: Double, y: Double, z: Double = 0)","kind":"swift.init","path":"GameEventScriptRuntime.GesVector.init(x:y:z:)"}
+symbol {"access":"public","declaration":"init?(_ value: GesValue, unit: GesQuantityUnit = .none)","kind":"swift.init","path":"GameEventScriptRuntime.GesPoint.init(_:unit:)"}
+symbol {"access":"public","declaration":"init?(_ value: GesValue, unit: GesQuantityUnit = .none)","kind":"swift.init","path":"GameEventScriptRuntime.GesVector.init(_:unit:)"}
 symbol {"access":"public","declaration":"init?(rawValue: Int)","kind":"swift.init","path":"GameEventScriptRuntime.GesDiagnosticPhase.init(rawValue:)"}
 symbol {"access":"public","declaration":"init?(rawValue: Int)","kind":"swift.init","path":"GameEventScriptRuntime.GesProfilePhase.init(rawValue:)"}
 symbol {"access":"public","declaration":"init?(rawValue: Int)","kind":"swift.init","path":"GameEventScriptRuntime.GesProgramFormatErrorCode.init(rawValue:)"}
@@ -942,6 +967,7 @@ symbol {"access":"public","declaration":"let message: String","kind":"swift.prop
 symbol {"access":"public","declaration":"let message: String","kind":"swift.property","path":"GameEventScriptRuntime.GesProgramFormatError.message"}
 symbol {"access":"public","declaration":"let message: String","kind":"swift.property","path":"GameEventScriptRuntime.GesSchemaError.message"}
 symbol {"access":"public","declaration":"let metadata: GesProgramMetadataSegment","kind":"swift.property","path":"GameEventScriptRuntime.GameEventScriptProgram.metadata"}
+symbol {"access":"public","declaration":"let modelGroup: String?","kind":"swift.property","path":"GameEventScriptRuntime.GesSchema.modelGroup"}
 symbol {"access":"public","declaration":"let moduleName: String","kind":"swift.property","path":"GameEventScriptRuntime.GesProgramMetadataSegment.moduleName"}
 symbol {"access":"public","declaration":"let moduleName: String","kind":"swift.property","path":"GameEventScriptRuntime.GesSourceLocation.moduleName"}
 symbol {"access":"public","declaration":"let name: String","kind":"swift.property","path":"GameEventScriptRuntime.GesBoundSchema.name"}
@@ -1049,6 +1075,7 @@ symbol {"access":"public","declaration":"let utf8Content: [UInt8]","kind":"swift
 symbol {"access":"public","declaration":"let value: GesValue","kind":"swift.property","path":"GameEventScriptRuntime.GesDocument.value"}
 symbol {"access":"public","declaration":"let value: GesValue","kind":"swift.property","path":"GameEventScriptRuntime.GesMessageArgument.value"}
 symbol {"access":"public","declaration":"let value: GesValue","kind":"swift.property","path":"GameEventScriptRuntime.GesSchemaDecoded.value"}
+symbol {"access":"public","declaration":"let wireGroup: String?","kind":"swift.property","path":"GameEventScriptRuntime.GesSchema.wireGroup"}
 symbol {"access":"public","declaration":"let word0: UInt16","kind":"swift.property","path":"GameEventScriptRuntime.GesBytecodeInstruction.word0"}
 symbol {"access":"public","declaration":"let word1: UInt16","kind":"swift.property","path":"GameEventScriptRuntime.GesBytecodeInstruction.word1"}
 symbol {"access":"public","declaration":"let word2: UInt16","kind":"swift.property","path":"GameEventScriptRuntime.GesBytecodeInstruction.word2"}
@@ -1101,6 +1128,15 @@ symbol {"access":"public","declaration":"protocol GesProfiler : AnyObject","kind
 symbol {"access":"public","declaration":"protocol GesProgramProfiler : AnyObject","kind":"swift.protocol","path":"GameEventScriptRuntime.GesProgramProfiler"}
 symbol {"access":"public","declaration":"protocol GesPublishSink","kind":"swift.protocol","path":"GameEventScriptRuntime.GesPublishSink"}
 symbol {"access":"public","declaration":"protocol GesRuntimeObserver","kind":"swift.protocol","path":"GameEventScriptRuntime.GesRuntimeObserver"}
+symbol {"access":"public","declaration":"static func * (scale: Double, vector: GesVector) -> GesVector","kind":"swift.func.op","path":"GameEventScriptRuntime.GesVector.*(_:_:)"}
+symbol {"access":"public","declaration":"static func * (vector: GesVector, scale: Double) -> GesVector","kind":"swift.func.op","path":"GameEventScriptRuntime.GesVector.*(_:_:)"}
+symbol {"access":"public","declaration":"static func + (left: GesVector, right: GesVector) -> GesVector","kind":"swift.func.op","path":"GameEventScriptRuntime.GesVector.+(_:_:)"}
+symbol {"access":"public","declaration":"static func + (point: GesPoint, vector: GesVector) -> GesPoint","kind":"swift.func.op","path":"GameEventScriptRuntime.GesPoint.+(_:_:)"}
+symbol {"access":"public","declaration":"static func - (end: GesPoint, start: GesPoint) -> GesVector","kind":"swift.func.op","path":"GameEventScriptRuntime.GesPoint.-(_:_:)"}
+symbol {"access":"public","declaration":"static func - (left: GesVector, right: GesVector) -> GesVector","kind":"swift.func.op","path":"GameEventScriptRuntime.GesVector.-(_:_:)"}
+symbol {"access":"public","declaration":"static func - (point: GesPoint, vector: GesVector) -> GesPoint","kind":"swift.func.op","path":"GameEventScriptRuntime.GesPoint.-(_:_:)"}
+symbol {"access":"public","declaration":"static func - (vector: GesVector) -> GesVector","kind":"swift.func.op","path":"GameEventScriptRuntime.GesVector.-(_:)"}
+symbol {"access":"public","declaration":"static func / (vector: GesVector, divisor: Double) -> GesVector","kind":"swift.func.op","path":"GameEventScriptRuntime.GesVector./(_:_:)"}
 symbol {"access":"public","declaration":"static func == (a: GesValue, b: GesValue) -> Bool","kind":"swift.func.op","path":"GameEventScriptRuntime.GesValue.==(_:_:)"}
 symbol {"access":"public","declaration":"static func == (left: GesDocumentSchema, right: GesDocumentSchema) -> Bool","kind":"swift.func.op","path":"GameEventScriptRuntime.GesDocumentSchema.==(_:_:)"}
 symbol {"access":"public","declaration":"static func == (left: GesLiteralLimitError, right: GesLiteralLimitError) -> Bool","kind":"swift.func.op","path":"GameEventScriptRuntime.GesLiteralLimitError.==(_:_:)"}
@@ -1248,6 +1284,8 @@ symbol {"access":"public","declaration":"static let validateWrongPredicateArity:
 symbol {"access":"public","declaration":"static let version: UInt16","kind":"swift.type.property","path":"GameEventScriptRuntime.GesBinaryFormat.version"}
 symbol {"access":"public","declaration":"static var empty: GesMessageArguments { get }","kind":"swift.type.property","path":"GameEventScriptRuntime.GesMessageArguments.empty"}
 symbol {"access":"public","declaration":"static var nothing: GesValue { get }","kind":"swift.type.property","path":"GameEventScriptRuntime.GesValue.nothing"}
+symbol {"access":"public","declaration":"static var zero: GesPoint { get }","kind":"swift.type.property","path":"GameEventScriptRuntime.GesPoint.zero"}
+symbol {"access":"public","declaration":"static var zero: GesVector { get }","kind":"swift.type.property","path":"GameEventScriptRuntime.GesVector.zero"}
 symbol {"access":"public","declaration":"struct Entry","kind":"swift.struct","path":"GameEventScriptRuntime.GesBindingSegment.Entry"}
 symbol {"access":"public","declaration":"struct GameEventScriptMessage","kind":"swift.struct","path":"GameEventScriptRuntime.GameEventScriptMessage"}
 symbol {"access":"public","declaration":"struct GesBindingSegment","kind":"swift.struct","path":"GameEventScriptRuntime.GesBindingSegment"}
@@ -1282,6 +1320,7 @@ symbol {"access":"public","declaration":"struct GesMessageArguments","kind":"swi
 symbol {"access":"public","declaration":"struct GesMessageFormatError","kind":"swift.struct","path":"GameEventScriptRuntime.GesMessageFormatError"}
 symbol {"access":"public","declaration":"struct GesMessageSignature","kind":"swift.struct","path":"GameEventScriptRuntime.GesMessageSignature"}
 symbol {"access":"public","declaration":"struct GesOpaqueSection","kind":"swift.struct","path":"GameEventScriptRuntime.GesOpaqueSection"}
+symbol {"access":"public","declaration":"struct GesPoint","kind":"swift.struct","path":"GameEventScriptRuntime.GesPoint"}
 symbol {"access":"public","declaration":"struct GesProgramFormatError","kind":"swift.struct","path":"GameEventScriptRuntime.GesProgramFormatError"}
 symbol {"access":"public","declaration":"struct GesProgramMetadataSegment","kind":"swift.struct","path":"GameEventScriptRuntime.GesProgramMetadataSegment"}
 symbol {"access":"public","declaration":"struct GesProgramReadLimits","kind":"swift.struct","path":"GameEventScriptRuntime.GesProgramReadLimits"}
@@ -1315,6 +1354,7 @@ symbol {"access":"public","declaration":"struct GesUInt16IndexListSegment","kind
 symbol {"access":"public","declaration":"struct GesValue","kind":"swift.struct","path":"GameEventScriptRuntime.GesValue"}
 symbol {"access":"public","declaration":"struct GesValueArguments","kind":"swift.struct","path":"GameEventScriptRuntime.GesValueArguments"}
 symbol {"access":"public","declaration":"struct GesValueMap","kind":"swift.struct","path":"GameEventScriptRuntime.GesValueMap"}
+symbol {"access":"public","declaration":"struct GesVector","kind":"swift.struct","path":"GameEventScriptRuntime.GesVector"}
 symbol {"access":"public","declaration":"struct GesWireError","kind":"swift.struct","path":"GameEventScriptRuntime.GesWireError"}
 symbol {"access":"public","declaration":"struct Iterator","kind":"swift.struct","path":"GameEventScriptRuntime.GesMessageArguments.Iterator"}
 symbol {"access":"public","declaration":"struct Iterator","kind":"swift.struct","path":"GameEventScriptRuntime.GesValueMap.Iterator","swiftExtension":{"extendedModule":"GameEventScriptRuntime","typeKind":"swift.struct"}}
@@ -1361,7 +1401,9 @@ symbol {"access":"public","declaration":"var definition: GesExternalTypeDefiniti
 symbol {"access":"public","declaration":"var description: String { get }","kind":"swift.property","path":"GameEventScriptRuntime.GameEventScriptMessage.description"}
 symbol {"access":"public","declaration":"var description: String { get }","kind":"swift.property","path":"GameEventScriptRuntime.GesMessageArguments.description"}
 symbol {"access":"public","declaration":"var description: String { get }","kind":"swift.property","path":"GameEventScriptRuntime.GesMessageSignature.description"}
+symbol {"access":"public","declaration":"var description: String { get }","kind":"swift.property","path":"GameEventScriptRuntime.GesPoint.description"}
 symbol {"access":"public","declaration":"var description: String { get }","kind":"swift.property","path":"GameEventScriptRuntime.GesValue.description"}
+symbol {"access":"public","declaration":"var description: String { get }","kind":"swift.property","path":"GameEventScriptRuntime.GesVector.description"}
 symbol {"access":"public","declaration":"var diagnostic: GesDiagnostic { get }","kind":"swift.property","path":"GameEventScriptRuntime.GesDynamicLinkError.diagnostic"}
 symbol {"access":"public","declaration":"var diagnostic: GesDiagnostic { get }","kind":"swift.property","path":"GameEventScriptRuntime.GesFatalRuntimeError.diagnostic"}
 symbol {"access":"public","declaration":"var diagnostic: GesDiagnostic? { get }","kind":"swift.property","path":"GameEventScriptRuntime.GesStartResult.diagnostic"}
@@ -1394,6 +1436,8 @@ symbol {"access":"public","declaration":"var integerRangeValue: GesIntegerRange?
 symbol {"access":"public","declaration":"var integerValue: Int64? { get }","kind":"swift.property","path":"GameEventScriptRuntime.GesValue.integerValue"}
 symbol {"access":"public","declaration":"var isAttached: Bool { get }","kind":"swift.property","path":"GameEventScriptRuntime.GesProgramInstance.isAttached"}
 symbol {"access":"public","declaration":"var isEmpty: Bool { get }","kind":"swift.property","path":"GameEventScriptRuntime.GesMessageArguments.isEmpty"}
+symbol {"access":"public","declaration":"var isFinite: Bool { get }","kind":"swift.property","path":"GameEventScriptRuntime.GesPoint.isFinite"}
+symbol {"access":"public","declaration":"var isFinite: Bool { get }","kind":"swift.property","path":"GameEventScriptRuntime.GesVector.isFinite"}
 symbol {"access":"public","declaration":"var isIdle: Bool { get }","kind":"swift.property","path":"GameEventScriptRuntime.GameEventScriptHost.isIdle"}
 symbol {"access":"public","declaration":"var isIdle: Bool { get }","kind":"swift.property","path":"GameEventScriptRuntime.GesContext.isIdle"}
 symbol {"access":"public","declaration":"var isNothing: Bool { get }","kind":"swift.property","path":"GameEventScriptRuntime.GesValue.isNothing"}
@@ -1402,10 +1446,12 @@ symbol {"access":"public","declaration":"var isParameter: Bool { get }","kind":"
 symbol {"access":"public","declaration":"var isReady: Bool { get }","kind":"swift.property","path":"GameEventScriptRuntime.GameEventScriptHost.isReady"}
 symbol {"access":"public","declaration":"var isSubscribed: Bool { get }","kind":"swift.property","path":"GameEventScriptRuntime.GesSubscription.isSubscribed"}
 symbol {"access":"public","declaration":"var keys: [String] { get }","kind":"swift.property","path":"GameEventScriptRuntime.GesMessageArguments.keys"}
+symbol {"access":"public","declaration":"var length: Double { get }","kind":"swift.property","path":"GameEventScriptRuntime.GesVector.length"}
 symbol {"access":"public","declaration":"var length: Int { get }","kind":"swift.property","path":"GameEventScriptRuntime.GesCodeSegment.length"}
 symbol {"access":"public","declaration":"var length: Int { get }","kind":"swift.property","path":"GameEventScriptRuntime.GesUInt16IndexList.length"}
 symbol {"access":"public","declaration":"var length: Int { get }","kind":"swift.property","path":"GameEventScriptRuntime.GesValue.length"}
 symbol {"access":"public","declaration":"var length: Int { get }","kind":"swift.property","path":"GameEventScriptRuntime.GesValueMap.length"}
+symbol {"access":"public","declaration":"var lengthSquared: Double { get }","kind":"swift.property","path":"GameEventScriptRuntime.GesVector.lengthSquared"}
 symbol {"access":"public","declaration":"var limits: GesProgramReadLimits","kind":"swift.property","path":"GameEventScriptRuntime.GesProgramReadOptions.limits"}
 symbol {"access":"public","declaration":"var lineWidth: Int","kind":"swift.property","path":"GameEventScriptRuntime.GesDocumentFormat.lineWidth"}
 symbol {"access":"public","declaration":"var listValue: [GesValue]? { get }","kind":"swift.property","path":"GameEventScriptRuntime.GesValue.listValue"}
@@ -1436,6 +1482,7 @@ symbol {"access":"public","declaration":"var name: String { get }","kind":"swift
 symbol {"access":"public","declaration":"var name: String { get }","kind":"swift.property","path":"GameEventScriptRuntime.GesMessageSignature.name"}
 symbol {"access":"public","declaration":"var nextMessageDelay: Int64? { get }","kind":"swift.property","path":"GameEventScriptRuntime.GameEventScriptHost.nextMessageDelay"}
 symbol {"access":"public","declaration":"var normalizeResultAsPredicate: Bool { get }","kind":"swift.property","path":"GameEventScriptRuntime.GesBytecodeInstruction.normalizeResultAsPredicate"}
+symbol {"access":"public","declaration":"var normalized: GesVector? { get }","kind":"swift.property","path":"GameEventScriptRuntime.GesVector.normalized"}
 symbol {"access":"public","declaration":"var parameters: [GesSchemaParameterInfo] { get }","kind":"swift.property","path":"GameEventScriptRuntime.GesSchema.parameters"}
 symbol {"access":"public","declaration":"var parameters: [String] { get }","kind":"swift.property","path":"GameEventScriptRuntime.GesMessageSignature.parameters"}
 symbol {"access":"public","declaration":"var path: String { get }","kind":"swift.property","path":"GameEventScriptRuntime.GesSchemaField.path"}
@@ -1481,5 +1528,11 @@ symbol {"access":"public","declaration":"var unit: GesQuantityUnit { get }","kin
 symbol {"access":"public","declaration":"var valueKind: GesBytecodeTypeKind { get }","kind":"swift.property","path":"GameEventScriptRuntime.GesValue.valueKind"}
 symbol {"access":"public","declaration":"var values: [GesValue] { get }","kind":"swift.property","path":"GameEventScriptRuntime.GesMessageArguments.values"}
 symbol {"access":"public","declaration":"var x: Double { get }","kind":"swift.property","path":"GameEventScriptRuntime.GesValue.x"}
+symbol {"access":"public","declaration":"var x: Double","kind":"swift.property","path":"GameEventScriptRuntime.GesPoint.x"}
+symbol {"access":"public","declaration":"var x: Double","kind":"swift.property","path":"GameEventScriptRuntime.GesVector.x"}
 symbol {"access":"public","declaration":"var y: Double { get }","kind":"swift.property","path":"GameEventScriptRuntime.GesValue.y"}
+symbol {"access":"public","declaration":"var y: Double","kind":"swift.property","path":"GameEventScriptRuntime.GesPoint.y"}
+symbol {"access":"public","declaration":"var y: Double","kind":"swift.property","path":"GameEventScriptRuntime.GesVector.y"}
 symbol {"access":"public","declaration":"var z: Double { get }","kind":"swift.property","path":"GameEventScriptRuntime.GesValue.z"}
+symbol {"access":"public","declaration":"var z: Double","kind":"swift.property","path":"GameEventScriptRuntime.GesPoint.z"}
+symbol {"access":"public","declaration":"var z: Double","kind":"swift.property","path":"GameEventScriptRuntime.GesVector.z"}

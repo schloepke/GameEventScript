@@ -5,7 +5,7 @@
 // comments. The diagnostic is the reader's.
 enum GesSchemaHighlighting {
     private static let keywords: Set<String> = [
-        "schema", "message", "messages", "constant", "parameter", "as", "be", "between", "and", "wrapping", "step", "delta", "within", "integer", "optional", "key", "max", "tags",
+        "schema", "message", "messages", "constant", "parameter", "as", "be", "between", "and", "wrapping", "step", "delta", "within", "integer", "optional", "key", "max", "tags", "wire", "model",
     ]
 
     static func highlight(_ text: String, _ spans: inout GesSpanBuilder) -> [GesSpanBuilder.Diagnostic] {

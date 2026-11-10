@@ -50,6 +50,7 @@ public final class GesSchemaSet: @unchecked Sendable {
             var path: [GesResolvedDeclaration] = []
             try Self.checkNesting(declaration, &path, &visited)
         }
+        for declaration in ordered where declaration.syntax.wireGroup != nil { try GesSchemaBinder.checkEncodable(declaration) }
         schemas = ordered.map { declaration in
             let schema = GesSchema(declaration)
             declaration.schema = schema

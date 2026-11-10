@@ -158,6 +158,14 @@ and ANSI text preservation.
 ```
 
 ```highlight
+{"name":"schema roles","language":"gess","source":"wire(world) model(view) schema :Arena as { size: :Number integer between 1 and 64 }\nwire messages :Events as (Hit)\nmessage Hit()\n","expect":[{"text":"wire","occurrence":0,"kind":"keyword"},{"text":"model","kind":"keyword"},{"text":"schema","kind":"keyword"},{"text":"wire","occurrence":1,"kind":"keyword"},{"text":"messages","kind":"keyword"}],"diagnostics":[]}
+```
+
+```highlight
+{"name":"schema role on a constant","language":"gess","source":"wire constant $a be 1\n","expect":[{"text":"wire","kind":"keyword"}],"diagnostics":[{"code":"schema.invalidRole","text":"w"}]}
+```
+
+```highlight
 {"name":"schema source first syntax error","language":"gess","source":"schema :A as { a }\n","expect":[{"text":"schema","kind":"keyword"}],"diagnostics":[{"code":"schema.syntax","text":"}"}]}
 ```
 

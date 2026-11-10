@@ -1,0 +1,35 @@
+// The model of the group view: every model field type, built by a client and never sent.
+model(view) schema :WorldView as {
+  tick: :Number integer
+  time: :Quantity(s)
+  arena: :Vector(m)
+  bots: :List(:BotView)
+  badge: :Panel_Badge optional
+}
+
+schema :BotView as {
+  bot: :Number integer key
+  name: :Text
+  alive: :Boolean
+  health: :Percentage between 0% and 100%
+  speed: :Number
+  heading: :Quantity(°) wrapping between 0° and 360°
+  mood: :Tag(#calm, #angry)
+  team: :Tag
+  position: :Point(m)
+  velocity: :Vector(m)
+  body: :World_Body
+  radar: :RadarView optional
+  facing: :Quantity(°) | :Tag(#north, #south) | :Nothing
+  note: :Text | :Nothing
+  marks: :List(:Point(m))
+  units: :List(:Text | :World_Body)
+  grid: :List(:List(:Number integer))
+  rolls: :Dice
+  hints: :List(:Tag(#left, #right))
+}
+
+schema :RadarView as {
+  range: :Quantity(m)
+  contacts: :List(:Number integer)
+}

@@ -28,6 +28,8 @@ CSHARP_CLI = ROOT / "artifacts/csharp/tool/bin/Release/net8.0/GameEventScript.To
 WORK = ROOT / "artifacts/generated-schemas"
 CODE = re.compile(r"error ([a-z]+\.[A-Za-z]+)")
 FLEET_FIXTURE = ROOT / "conformance/fixtures/SchemaGeneration/fleet.gess"
+GENERATED_CSHARP = ROOT / "implementation/csharp/GameEventScript.Generator/tests/Generated"
+GENERATED_SWIFT = ROOT / "implementation/swift/GameEventScriptConformance/Tests/GameEventScriptConformanceTests/Generated"
 UNCHECKED_PROGRAM = """using System;
 using Unchecked;
 
@@ -288,6 +290,11 @@ def main():
         if code is None:
             raise SystemExit(f"The gate schema does not generate: {error}")
         target.write_text(code, encoding="utf-8")
+    # The checked-in wire and model code of the role fixture, which compare-schema-generation.py keeps current, compiles
+    # under the same rules: models of every field type and spatial wire fields in 2D and 3D.
+    for name in ("RolesWire", "RolesModel"):
+        shutil.copy(GENERATED_CSHARP / f"{name}.g.cs", csharp / f"{name}.g.cs")
+        shutil.copy(GENERATED_SWIFT / f"{name}.swift", swift / f"{name}.swift")
     (csharp / "Harness.cs").write_text(csharp_program(entries), encoding="utf-8")
     (csharp / "Harness.csproj").write_text(f"""<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>

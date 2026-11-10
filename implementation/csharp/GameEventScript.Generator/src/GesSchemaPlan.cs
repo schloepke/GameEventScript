@@ -89,6 +89,14 @@ internal static class GesSchemaPlanner
         _ => false,
     };
 
+    // The axes of a Point or Vector that its block leaves out: they are not transmitted, are written only when zero and read as zero.
+    internal static List<string> Omitted(GesPlanValue value)
+    {
+        var omitted = new List<string> { "X", "Y", "Z" };
+        foreach (var axis in value.Axes) omitted.Remove(axis.Base);
+        return omitted;
+    }
+
     internal static bool Keyed(GesPlanValue value) => value.Encoding.Kind == GesLayoutKind.List && value.Encoding.Keyed;
 
     internal static bool HasKeyed(GesPlanValue value) => Keyed(value) || value.Alternatives.Exists(HasKeyed);

@@ -752,6 +752,25 @@ sealed class GameEventScript.Api.GesOpaqueSection
   property System.Int32 OriginalOrdinal { get }
   property System.UInt16 SectionType { get }
   property System.UInt16 SectionVersion { get }
+struct GameEventScript.Api.GesPoint
+  ctor GesPoint(System.Double x, System.Double y, System.Double z)
+  method GameEventScript.Runtime.Values.GesValue ToValue(GameEventScript.Api.GesQuantityUnit unit)
+  method System.Boolean Equals(GameEventScript.Api.GesPoint other)
+  method System.Boolean Equals(System.Object obj)
+  method System.Double DistanceTo(GameEventScript.Api.GesPoint other)
+  method System.Int32 GetHashCode()
+  method System.String ToString()
+  method static GameEventScript.Api.GesPoint op_Addition(GameEventScript.Api.GesPoint point, GameEventScript.Api.GesVector vector)
+  method static GameEventScript.Api.GesPoint op_Subtraction(GameEventScript.Api.GesPoint point, GameEventScript.Api.GesVector vector)
+  method static GameEventScript.Api.GesPoint? FromValue(GameEventScript.Runtime.Values.GesValue& value, GameEventScript.Api.GesQuantityUnit unit)
+  method static GameEventScript.Api.GesVector op_Subtraction(GameEventScript.Api.GesPoint end, GameEventScript.Api.GesPoint start)
+  method static System.Boolean op_Equality(GameEventScript.Api.GesPoint left, GameEventScript.Api.GesPoint right)
+  method static System.Boolean op_Inequality(GameEventScript.Api.GesPoint left, GameEventScript.Api.GesPoint right)
+  property GameEventScript.Api.GesPoint Zero { get }
+  property System.Boolean IsFinite { get }
+  property System.Double X { get set }
+  property System.Double Y { get set }
+  property System.Double Z { get set }
 enum GameEventScript.Api.GesProfilePhase
   enum-field StateCheck = 0
   enum-field BudgetCheck = 1
@@ -922,7 +941,9 @@ sealed class GameEventScript.Api.GesSchema
   property GameEventScript.Api.GesReadOnlyArray<System.String> Tags { get }
   property GameEventScript.Api.GesSchemaKind Kind { get }
   property System.String CanonicalForm { get }
+  property System.String ModelGroup { get }
   property System.String Name { get }
+  property System.String WireGroup { get }
   property System.UInt64 Hash { get }
 sealed class GameEventScript.Api.GesSchemaAxisInfo
   property GameEventScript.Api.GesSchemaBound? Delta { get }
@@ -1159,6 +1180,32 @@ struct GameEventScript.Api.GesUInt16IndexListSegment
 struct GameEventScript.Api.GesUInt16IndexListSegment.SliceEntry
   property System.Int32 Length { get set }
   property System.Int32 Start { get set }
+struct GameEventScript.Api.GesVector
+  ctor GesVector(System.Double x, System.Double y, System.Double z)
+  method GameEventScript.Api.GesVector Cross(GameEventScript.Api.GesVector other)
+  method GameEventScript.Runtime.Values.GesValue ToValue(GameEventScript.Api.GesQuantityUnit unit)
+  method System.Boolean Equals(GameEventScript.Api.GesVector other)
+  method System.Boolean Equals(System.Object obj)
+  method System.Double Dot(GameEventScript.Api.GesVector other)
+  method System.Int32 GetHashCode()
+  method System.String ToString()
+  method static GameEventScript.Api.GesVector op_Addition(GameEventScript.Api.GesVector left, GameEventScript.Api.GesVector right)
+  method static GameEventScript.Api.GesVector op_Division(GameEventScript.Api.GesVector vector, System.Double divisor)
+  method static GameEventScript.Api.GesVector op_Multiply(GameEventScript.Api.GesVector vector, System.Double scale)
+  method static GameEventScript.Api.GesVector op_Multiply(System.Double scale, GameEventScript.Api.GesVector vector)
+  method static GameEventScript.Api.GesVector op_Subtraction(GameEventScript.Api.GesVector left, GameEventScript.Api.GesVector right)
+  method static GameEventScript.Api.GesVector op_UnaryNegation(GameEventScript.Api.GesVector vector)
+  method static GameEventScript.Api.GesVector? FromValue(GameEventScript.Runtime.Values.GesValue& value, GameEventScript.Api.GesQuantityUnit unit)
+  method static System.Boolean op_Equality(GameEventScript.Api.GesVector left, GameEventScript.Api.GesVector right)
+  method static System.Boolean op_Inequality(GameEventScript.Api.GesVector left, GameEventScript.Api.GesVector right)
+  property GameEventScript.Api.GesVector Zero { get }
+  property GameEventScript.Api.GesVector? Normalized { get }
+  property System.Boolean IsFinite { get }
+  property System.Double Length { get }
+  property System.Double LengthSquared { get }
+  property System.Double X { get set }
+  property System.Double Y { get set }
+  property System.Double Z { get set }
 sealed class GameEventScript.Api.GesWireException
   ctor GesWireException(System.String code, System.String path)
   field static System.String BufferTooSmall
@@ -1329,8 +1376,12 @@ sealed class GameEventScript.Generator.GesSchemaGenerateOptions
   property System.Boolean Values { get set }
   property System.String Namespace { get set }
 static class GameEventScript.Generator.GesSchemaGenerator
+  method static System.Collections.Generic.IReadOnlyList<System.String> ModelRoots(GameEventScript.Api.GesSchemaSet set, System.String group)
+  method static System.Collections.Generic.IReadOnlyList<System.String> WireRoots(GameEventScript.Api.GesSchemaSet set, System.String group)
   method static System.String Generate(GameEventScript.Api.GesSchemaSet set, System.Collections.Generic.IReadOnlyList<System.String> roots, GameEventScript.Api.GesSchemaParameters parameters, GameEventScript.Generator.GesSchemaGenerateOptions options)
+  method static System.String GenerateModels(GameEventScript.Api.GesSchemaSet set, System.Collections.Generic.IReadOnlyList<System.String> roots, GameEventScript.Generator.GesSchemaGenerateOptions options)
   method static System.String Layout(GameEventScript.Api.GesSchemaSet set, System.Collections.Generic.IReadOnlyList<System.String> roots, GameEventScript.Api.GesSchemaParameters parameters)
+  method static System.String ModelLayout(GameEventScript.Api.GesSchemaSet set, System.Collections.Generic.IReadOnlyList<System.String> roots)
 enum GameEventScript.Generator.GesSchemaLanguage
   enum-field CSharp = 0
   enum-field Swift = 1

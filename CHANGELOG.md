@@ -214,8 +214,25 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   `GesValue.mapEntries` are no longer public.
 - C# `GesValueMap.StorageLength` is removed; it always equaled `Length`. Use
   `Length` instead.
+- Generated schema code holds `:Point` and `:Vector` fields as the runtime's `GesPoint` and
+  `GesVector` instead of a nested struct per field, such as `PositionPoint`. Writing a record
+  or a delta whose axis outside the field's axis block is not zero fails with
+  `wire.typeMismatch`, as the value path does, and reading sets that axis to zero.
 
 ### Added
+- Schema roles: `wire(group)` marks a schema, message or message set as a wire root and
+  `model(group)` a schema as a model root, optionally in a group (`default` without one).
+  `ges schema layout` and `generate` take `--wire <group>` and `--model <group>`, and the
+  Generator adds `WireRoots`, `ModelRoots`, `ModelLayout` and `GenerateModels`. A wire root that
+  reaches a document-only type fails reading with `schema.notEncodable`, so `ges schema check`
+  reports it; `schema.invalidRole` and `schema.duplicateRole` report misplaced roles. Roles change
+  no hash.
+- `ges schema generate --model` writes plain model types: Swift `Hashable`, `Sendable`, `Codable`
+  structs with a memberwise `init` (`Identifiable` with a key), C# 9 classes with value equality,
+  with enums for closed tags and unions, and no ranges, steps or parameters needed.
+- `GesPoint` and `GesVector` in both runtimes: unitless spatial values with the language's
+  affine arithmetic, `length`, `distance`, `normalized`, `dot` and `cross`, and conversions to
+  and from `GesValue` with an explicit unit.
 - External values have three explicit read paths in both ports: `ExternalValue` returns the
   host object, `ReadField(name)` runs one getter and `MaterializedMap()` runs all of them.
   C# adds these and `GesValue.GesExternal(value)`; Swift adds `readField(_:)` and the protocol

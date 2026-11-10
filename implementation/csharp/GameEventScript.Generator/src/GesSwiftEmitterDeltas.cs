@@ -605,6 +605,7 @@ internal static partial class GesSwiftEmitter
                     code.Close();
                 }
 
+                foreach (var axis in GesSchemaPlanner.Omitted(value)) code.Line($"if {a}.{Member(axis)} != 0 {{ {Throw("typeMismatch", value)} }}");
                 code.Line($"if !{set} {{ writer.rewind(to: first{node}) }}");
                 code.Close();
                 break;
@@ -725,6 +726,7 @@ internal static partial class GesSwiftEmitter
                     code.Close();
                 }
 
+                foreach (var axis in GesSchemaPlanner.Omitted(value)) code.Line($"{a}.{Member(axis)} = 0");
                 code.Line($"if !changed{node} {{ {Throw("invalidDelta", value)} }}");
                 code.Close();
                 break;

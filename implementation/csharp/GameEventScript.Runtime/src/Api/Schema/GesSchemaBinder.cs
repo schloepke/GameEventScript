@@ -726,6 +726,99 @@ internal static class GesSchemaBinder
         build.Nodes[index] = added;
     }
 
+    // The encodability of a wire root as far as it is known without parameter values: the same conditions as binding, in
+    // the same depth-first order, so that `check` reports what binding would. Bounds that a parameter decides stay binding
+    // errors.
+    internal static void CheckEncodable(GesResolvedDeclaration root)
+    {
+        var known = new HashSet<(GesResolvedDeclaration, int)>();
+        if (root.Kind == GesSchemaKind.Messages)
+        {
+            foreach (var member in root.Members) CheckEncodable(member, 0, known);
+            return;
+        }
+
+        CheckEncodable(root, 0, known);
+    }
+
+    private static void CheckEncodable(GesResolvedDeclaration declaration, int lists, HashSet<(GesResolvedDeclaration, int)> known)
+    {
+        if (!known.Add((declaration, lists))) return;
+        foreach (var field in declaration.Fields)
+        {
+            if (field.Alternatives.Length == 1) CheckEncodable(declaration.Scope, field.Alternatives[0], lists, known);
+            else
+                foreach (var alternative in field.Alternatives)
+                    if (alternative.Kind != GesSchemaTypeKind.Nothing) CheckEncodable(declaration.Scope, alternative, lists, known);
+        }
+    }
+
+    private static void CheckEncodable(GesFileScope scope, GesResolvedType type, int lists, HashSet<(GesResolvedDeclaration, int)> known)
+    {
+        switch (type.Kind)
+        {
+            case GesSchemaTypeKind.Boolean or GesSchemaTypeKind.Point or GesSchemaTypeKind.Vector:
+                if (type.Axes is { } axes)
+                    foreach (var axis in axes) CheckWrapping(scope, axis.Constraints, type.Offset);
+                break;
+            case GesSchemaTypeKind.Number or GesSchemaTypeKind.Percentage or GesSchemaTypeKind.Quantity:
+                CheckWrapping(scope, type.Constraints, type.Offset);
+                break;
+            case GesSchemaTypeKind.Tag:
+                if (type.Tags is null && type.Max is null) throw scope.Error(Code.NotEncodable, type.Offset, "A Tag without a set or max has no hard limit.");
+                break;
+            case GesSchemaTypeKind.Text:
+                if (type.Max is null) throw scope.Error(Code.NotEncodable, type.Offset, "A Text without max has no hard limit.");
+                break;
+            case GesSchemaTypeKind.List:
+                if (type.Element is not { } element || type.Max is null) throw scope.Error(Code.NotEncodable, type.Offset, "A List without element type and max has no hard limit.");
+                if (lists >= MaximumListNesting) throw scope.Error(Code.NotEncodable, type.Offset, $"Lists nest at most {MaximumListNesting} levels for encoding.");
+                if (element.Length == 1) CheckEncodable(scope, element[0], lists + 1, known);
+                else
+                    foreach (var alternative in element)
+                        if (alternative.Kind != GesSchemaTypeKind.Nothing) CheckEncodable(scope, alternative, lists + 1, known);
+                if (!HasBits(element)) throw scope.Error(Code.NotEncodable, type.Offset, "A List element without bits has a count that no data limits.");
+                break;
+            case GesSchemaTypeKind.Dice:
+                if (type.Max is null) throw scope.Error(Code.NotEncodable, type.Offset, "A Dice without max has no hard limit.");
+                if (lists >= MaximumListNesting) throw scope.Error(Code.NotEncodable, type.Offset, $"Lists nest at most {MaximumListNesting} levels for encoding.");
+                break;
+            case GesSchemaTypeKind.Reference:
+                CheckEncodable(type.Reference!, lists, known);
+                break;
+            default:
+                throw scope.Error(Code.NotEncodable, type.Offset, $"A {type.Kind} has no width and is only for documents.");
+        }
+    }
+
+    private static void CheckWrapping(GesFileScope scope, GesResolvedConstraints constraints, int offset)
+    {
+        if (constraints.Wrapping && constraints.Step is null && !constraints.Integer)
+            throw scope.Error(Code.NotEncodable, offset, "A wrapping field without a step or integer has no index and is only for documents.");
+    }
+
+    // Whether an element takes bits whatever the parameters: only a Tag of one tag, a Nothing and a schema of such fields have none.
+    private static bool HasBits(GesResolvedType[] alternatives) => alternatives.Length > 1 || HasBits(alternatives[0]);
+
+    private static bool HasBits(GesResolvedType type)
+    {
+        switch (type.Kind)
+        {
+            case GesSchemaTypeKind.Tag:
+                return type.Tags is not { Length: 1 };
+            case GesSchemaTypeKind.Nothing:
+                return false;
+            case GesSchemaTypeKind.Point or GesSchemaTypeKind.Vector:
+                return type.Axes is not { Length: 0 };
+            case GesSchemaTypeKind.Reference:
+                foreach (var field in type.Reference!.Fields)
+                    if (field.Marker == GesSchemaFieldMarker.Optional || HasBits(field.Alternatives)) return true;
+                return false;
+            default:
+                return true;
+        }
+    }
+
     // References expand into nodes, so a small source can ask for more than any encoding holds.
     private static void CheckNodeCount(Build build, GesFileScope scope, int offset)
     {

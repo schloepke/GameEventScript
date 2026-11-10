@@ -146,7 +146,7 @@ enum GesSchemaLayoutJson {
     private static func bits(_ value: Double) -> String { "0x" + hex(value.bitPattern) }
 
     // Writes members in call order: every member or element on its own line, a container closing on its own line.
-    private struct Writer {
+    struct Writer {
         var text = ""
         private var filled: [Bool] = []
 
@@ -188,6 +188,11 @@ enum GesSchemaLayoutJson {
         mutating func unsigned(_ key: String, _ value: UInt64) {
             self.key(key)
             text += String(value)
+        }
+
+        mutating func null(_ key: String) {
+            self.key(key)
+            text += "null"
         }
 
         mutating func boolean(_ key: String, _ value: Bool) {

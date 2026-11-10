@@ -1,0 +1,13 @@
+// The wire roots of the group panels.
+wire(panels) schema :Panel_Badge as {
+  label: :Text max 8
+}
+
+wire(panels) schema :Panel as {
+  badges: :List(:Panel_Badge) max 4
+  log: :Panel_Log
+}
+
+schema :Panel_Log as {
+  lines: :List(:Text max 32) max 8
+}

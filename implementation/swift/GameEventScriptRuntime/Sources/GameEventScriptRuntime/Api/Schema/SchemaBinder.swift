@@ -664,6 +664,82 @@ enum GesSchemaBinder {
     }
 
     // References expand into nodes, so a small source can ask for more than any encoding holds.
+    // The encodability of a wire root as far as it is known without parameter values: the same conditions as binding, in
+    // the same depth-first order, so that `check` reports what binding would. Bounds that a parameter decides stay binding
+    // errors.
+    static func checkEncodable(_ root: GesResolvedDeclaration) throws {
+        var known: Set<EncodableVisit> = []
+        if root.kind == .messages {
+            for member in root.members { try checkEncodable(member, 0, &known) }
+            return
+        }
+        try checkEncodable(root, 0, &known)
+    }
+
+    private struct EncodableVisit: Hashable {
+        let declaration: ObjectIdentifier
+        let lists: Int
+    }
+
+    private static func checkEncodable(_ declaration: GesResolvedDeclaration, _ lists: Int, _ known: inout Set<EncodableVisit>) throws {
+        guard known.insert(EncodableVisit(declaration: ObjectIdentifier(declaration), lists: lists)).inserted else { return }
+        for field in declaration.fields {
+            if field.alternatives.count == 1 {
+                try checkEncodable(declaration.scope, field.alternatives[0], lists, &known)
+            } else {
+                for alternative in field.alternatives where alternative.kind != .nothing { try checkEncodable(declaration.scope, alternative, lists, &known) }
+            }
+        }
+    }
+
+    private static func checkEncodable(_ scope: GesFileScope, _ type: GesResolvedType, _ lists: Int, _ known: inout Set<EncodableVisit>) throws {
+        switch type.kind {
+        case .boolean, .point, .vector:
+            for axis in type.axes ?? [] { try checkWrapping(scope, axis.constraints, type.offset) }
+        case .number, .percentage, .quantity:
+            try checkWrapping(scope, type.constraints, type.offset)
+        case .tag:
+            if type.tags == nil && type.max == nil { throw scope.error(Code.notEncodable, type.offset, "A Tag without a set or max has no hard limit.") }
+        case .text:
+            if type.max == nil { throw scope.error(Code.notEncodable, type.offset, "A Text without max has no hard limit.") }
+        case .list:
+            guard let element = type.element, type.max != nil else { throw scope.error(Code.notEncodable, type.offset, "A List without element type and max has no hard limit.") }
+            if lists >= maximumListNesting { throw scope.error(Code.notEncodable, type.offset, "Lists nest at most \(maximumListNesting) levels for encoding.") }
+            if element.count == 1 {
+                try checkEncodable(scope, element[0], lists + 1, &known)
+            } else {
+                for alternative in element where alternative.kind != .nothing { try checkEncodable(scope, alternative, lists + 1, &known) }
+            }
+            if !hasBits(element) { throw scope.error(Code.notEncodable, type.offset, "A List element without bits has a count that no data limits.") }
+        case .dice:
+            if type.max == nil { throw scope.error(Code.notEncodable, type.offset, "A Dice without max has no hard limit.") }
+            if lists >= maximumListNesting { throw scope.error(Code.notEncodable, type.offset, "Lists nest at most \(maximumListNesting) levels for encoding.") }
+        case .reference:
+            try checkEncodable(type.reference!, lists, &known)
+        default:
+            throw scope.error(Code.notEncodable, type.offset, "A \(type.kind.rawValue) has no width and is only for documents.")
+        }
+    }
+
+    private static func checkWrapping(_ scope: GesFileScope, _ constraints: GesResolvedConstraints, _ offset: Int) throws {
+        if constraints.wrapping && constraints.step == nil && !constraints.integer {
+            throw scope.error(Code.notEncodable, offset, "A wrapping field without a step or integer has no index and is only for documents.")
+        }
+    }
+
+    // Whether an element takes bits whatever the parameters: only a Tag of one tag, a Nothing and a schema of such fields have none.
+    private static func hasBits(_ alternatives: [GesResolvedType]) -> Bool { alternatives.count > 1 || hasBits(alternatives[0]) }
+
+    private static func hasBits(_ type: GesResolvedType) -> Bool {
+        switch type.kind {
+        case .tag: return type.tags?.count != 1
+        case .nothing: return false
+        case .point, .vector: return type.axes.map { !$0.isEmpty } ?? true
+        case .reference: return type.reference!.fields.contains { $0.marker == .optional || hasBits($0.alternatives) }
+        default: return true
+        }
+    }
+
     private static func checkNodeCount(_ build: Build, _ scope: GesFileScope, _ offset: Int) throws {
         if build.nodes.count >= maximumNodeCount { throw scope.error(Code.tooLarge, offset, "A bound layout has at most \(maximumNodeCount) fields.") }
     }

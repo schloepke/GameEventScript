@@ -213,6 +213,8 @@ public sealed class GesSchema
         Name = declaration.Name;
         Kind = declaration.Kind;
         Tags = new GesReadOnlyArray<string>(declaration.Tags);
+        WireGroup = declaration.Syntax.WireGroup;
+        ModelGroup = declaration.Syntax.ModelGroup;
     }
 
     /// <summary>Gets the name.</summary>
@@ -220,6 +222,16 @@ public sealed class GesSchema
 
     /// <summary>Gets the kind of declaration.</summary>
     public GesSchemaKind Kind { get; }
+
+    /// <summary>
+    /// Gets the group in which the declaration is a wire root, <c>default</c> for <c>wire</c> without a group, or null when
+    /// it is no wire root. Roles are generation metadata: they are not part of the canonical form or any hash.
+    /// </summary>
+    public string? WireGroup { get; }
+
+    /// <summary>Gets the group in which the schema is a model root, <c>default</c> for <c>model</c> without a group, or
+    /// null when it is no model root. Roles are not part of the canonical form or any hash.</summary>
+    public string? ModelGroup { get; }
 
     /// <summary>Gets the schema hash: FNV-1a 64 over the canonical form.</summary>
     public ulong Hash { get; private set; }

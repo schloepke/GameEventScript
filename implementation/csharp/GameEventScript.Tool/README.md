@@ -691,6 +691,8 @@ dotnet ges schema dump bot.gess --root Bot --param worldWidth=5000m --param worl
 dotnet ges schema dump bot.gess --root Bot --param worldWidth=5000m --param worldHeight=5km --data delta.bin --baseline record.bin
 dotnet ges schema layout world.gess --root Bot --root Fleet --param worldWidth=2000m -o wire.layout.json
 dotnet ges schema generate world.gess --root Bot --param worldWidth=2000m --language csharp --namespace Game.Net -o Bot.g.cs
+dotnet ges schema generate world.gess panels.gess --wire world --param worldWidth=2000m --language csharp -o Wire.g.cs
+dotnet ges schema generate world.gess view.gess --model view --language csharp --namespace Game.Model -o Model.g.cs
 ```
 
 `generate` writes C# or Swift types that write and read the records of the roots without allocating;
@@ -698,8 +700,11 @@ dotnet ges schema generate world.gess --root Bot --param worldWidth=2000m --lang
 dynamic exclusivity checks of generated Swift classes, and `--check` fails when the file of `-o` differs
 from the generated code.
 
+`--wire <group>` takes the roots that the schemas mark `wire(group)`, and `--model <group>` generates plain
+model types of the schemas marked `model(group)`, which are never encoded.
+
 `layout` prints the language-neutral generation layout of one or more roots, or of every
-declaration with `--all-roots`, as JSON; a type that several roots share appears once. `hash` prints the schema hash and, with parameters, the binding hash. `dump` lists each field of
+declaration with `--all-roots`, as JSON, and with `--model` the model layout; a type that several roots share appears once. `hash` prints the schema hash and, with parameters, the binding hash. `dump` lists each field of
 binary data with its bit offset, width and value, and ends with the first error; with `--baseline`
 the data is a delta against that full record. Formatting drops
 comments, so input and output must differ. See [GES schemas](../../../specs/Schemas.md).

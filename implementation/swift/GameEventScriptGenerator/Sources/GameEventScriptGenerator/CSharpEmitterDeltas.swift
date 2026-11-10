@@ -568,6 +568,7 @@ extension GesCSharpEmitter {
                 code.close()
                 code.close()
             }
+            for axis in GesSchemaPlanner.omitted(value) { code.line("if (\(a).\(axis) != 0) \(fail("TypeMismatch", value))") }
             code.line("if (!\(set)) writer.Rewind(first\(node));")
             code.close()
         case .schema:
@@ -671,6 +672,7 @@ extension GesCSharpEmitter {
                 code.line("else \(a).\(axis.base) = \(b).\(axis.base);")
                 code.close()
             }
+            for axis in GesSchemaPlanner.omitted(value) { code.line("\(a).\(axis) = 0;") }
             code.line("if (!changed\(node)) \(fail("InvalidDelta", value))")
             code.close()
         case .schema:

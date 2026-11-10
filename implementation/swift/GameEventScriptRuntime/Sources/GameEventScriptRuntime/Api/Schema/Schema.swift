@@ -153,6 +153,12 @@ public final class GesSchema: @unchecked Sendable {
     public let kind: GesSchemaKind
     /// The tags of a message, in declared order.
     public let tags: [String]
+    /// The group in which the declaration is a wire root, `default` for `wire` without a group, or nil when it is no wire
+    /// root. Roles are generation metadata: they are not part of the canonical form or any hash.
+    public let wireGroup: String?
+    /// The group in which the schema is a model root, `default` for `model` without a group, or nil when it is no model
+    /// root. Roles are not part of the canonical form or any hash.
+    public let modelGroup: String?
     /// The schema hash: FNV-1a 64 over the canonical form.
     public private(set) var hash: UInt64 = 0
     /// The parameters it reaches, in ascending name order.
@@ -167,6 +173,8 @@ public final class GesSchema: @unchecked Sendable {
         name = declaration.name
         kind = declaration.kind
         tags = declaration.tags
+        wireGroup = declaration.syntax.wireGroup
+        modelGroup = declaration.syntax.modelGroup
     }
 
     /// The canonical form, which the hash runs over. It is computed on each call.

@@ -44,9 +44,56 @@
 
     private mutating func declaration() throws -> GesSchemaDeclarationSyntax {
         let offset = position
+        var wire: String?
+        var model: String?
+        var wordOffset = position
+        var written = word()
+        while written == "wire" || written == "model" {
+            var group = "default"
+            if consume(40) {
+                let groupOffset = position
+                group = word()
+                if !GesNames.plain(group) { throw Failure(offset: groupOffset, message: "A role group is a lowercase name.", code: Code.invalidRole) }
+                try expect(41)
+            }
+            if (written == "wire" ? wire : model) != nil {
+                throw Failure(offset: wordOffset, message: "The declaration is already a \(written) root.", code: Code.duplicateRole)
+            }
+            if written == "wire" { wire = group } else { model = group }
+            skipSpaces()
+            wordOffset = position
+            written = word()
+        }
+        if wire != nil || model != nil {
+            if written == "constant" || written == "parameter" {
+                throw Failure(offset: offset, message: "Only a schema, message or message set can be a root.", code: Code.invalidRole)
+            }
+            if model != nil && (written == "message" || written == "messages") {
+                throw Failure(offset: offset, message: "A model root is a schema.", code: Code.invalidRole)
+            }
+        } else if !written.isEmpty && !["constant", "parameter", "schema", "message", "messages"].contains(written) && atRoleEnd() {
+            throw Failure(offset: offset, message: "'\(written)' is no role; a root is marked wire or model.", code: Code.invalidRole)
+        }
+        var result = try declaration(offset: offset, wordOffset: wordOffset, word: written)
+        result.wireGroup = wire
+        result.modelGroup = model
+        return result
+    }
+
+    /// Whether an unknown word stands where a role does: before a group or a declaration keyword.
+    private mutating func atRoleEnd() -> Bool {
+        if position < bytes.count && bytes[position] == 40 { return true }
+        let start = position
+        skipSpaces()
+        let role = position > start && (atWord("schema") || atWord("message") || atWord("messages"))
+        position = start
+        return role
+    }
+
+    private mutating func declaration(offset: Int, wordOffset: Int, word written: String) throws -> GesSchemaDeclarationSyntax {
         var result = GesSchemaDeclarationSyntax()
         result.offset = offset
-        switch word() {
+        switch written {
         case "constant":
             skipSpaces()
             if !consume(36) { throw failure("Expected a constant name.") }
@@ -122,7 +169,7 @@
             } while consume(44)
             try expect(41)
         default:
-            throw Failure(offset: offset, message: "Expected constant, parameter, schema, message or messages.")
+            throw Failure(offset: wordOffset, message: "Expected constant, parameter, schema, message or messages.")
         }
         return result
     }

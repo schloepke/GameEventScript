@@ -165,6 +165,9 @@ public enum GesSchemaTypeKind: String, Sendable, Equatable {
     @_spi(Syntax) public var tags: [String] = []
     @_spi(Syntax) public var members: [String] = []
     @_spi(Syntax) public var memberOffsets: [Int] = []
+    /// The group of a wire or model root, or nil when the declaration has no such role.
+    @_spi(Syntax) public var wireGroup: String?
+    @_spi(Syntax) public var modelGroup: String?
 }
 
 @_spi(Syntax) public struct GesSchemaDiagnostic: Sendable, Equatable {
@@ -182,6 +185,8 @@ public enum GesSchemaTypeKind: String, Sendable, Equatable {
     @_spi(Syntax) public static let invalidBound = "schema.invalidBound"
     @_spi(Syntax) public static let tooWide = "schema.tooWide"
     @_spi(Syntax) public static let tooLarge = "schema.tooLarge"
+    @_spi(Syntax) public static let invalidRole = "schema.invalidRole"
+    @_spi(Syntax) public static let duplicateRole = "schema.duplicateRole"
 
     @_spi(Syntax) public let code: String
     /// The UTF-8 offset of the error.

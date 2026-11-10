@@ -13,7 +13,7 @@ namespace GameEventScript.Generator;
 // bit patterns.
 internal static partial class GesSwiftEmitter
 {
-    private static readonly HashSet<string> Keywords = new(StringComparer.Ordinal)
+    internal static readonly HashSet<string> Keywords = new(StringComparer.Ordinal)
     {
         "Any", "Protocol", "Self", "Type", "as", "associatedtype", "break", "case", "catch", "class", "continue", "default",
         "defer", "deinit", "do", "else", "enum", "extension", "fallthrough", "false", "fileprivate", "for", "func", "guard",
@@ -176,8 +176,6 @@ internal static partial class GesSwiftEmitter
     private static string NestedName(GesPlanValue value) => value.Encoding.Kind switch
     {
         GesLayoutKind.Tag => value.Base + "Tag",
-        GesLayoutKind.Point => value.Base + "Point",
-        GesLayoutKind.Vector => value.Base + "Vector",
         GesLayoutKind.Union => value.Base + "Alternative",
         _ => ""
     };
@@ -189,6 +187,8 @@ internal static partial class GesSwiftEmitter
         GesLayoutKind.Quantized or GesLayoutKind.Float => "Double",
         GesLayoutKind.Schema => value.Encoding.Schema,
         GesLayoutKind.Text => "String",
+        GesLayoutKind.Point => "GesPoint",
+        GesLayoutKind.Vector => "GesVector",
         GesLayoutKind.List => $"[{ElementName(value)}]",
         _ => NestedName(value)
     };
@@ -507,6 +507,7 @@ internal static partial class GesSwiftEmitter
                 break;
             case GesLayoutKind.Point or GesLayoutKind.Vector:
                 foreach (var axis in value.Axes) Write(code, axis, target + "." + Member(axis.Base));
+                foreach (var axis in GesSchemaPlanner.Omitted(value)) code.Line($"if {target}.{Member(axis)} != 0 {{ {Throw("typeMismatch", value)} }}");
                 break;
             case GesLayoutKind.Schema:
                 code.Line($"try {target}.__writeFields(&writer, paths, at + {(value.Node + 1).ToString(CultureInfo.InvariantCulture)})");
@@ -599,6 +600,7 @@ internal static partial class GesSwiftEmitter
                 break;
             case GesLayoutKind.Point or GesLayoutKind.Vector:
                 foreach (var axis in value.Axes) Read(code, axis, target + "." + Member(axis.Base));
+                foreach (var axis in GesSchemaPlanner.Omitted(value)) code.Line($"{target}.{Member(axis)} = 0");
                 break;
             case GesLayoutKind.Schema:
                 code.Line($"try {target}.__readFields(&reader, paths, at + {(value.Node + 1).ToString(CultureInfo.InvariantCulture)})");
@@ -641,21 +643,6 @@ internal static partial class GesSwiftEmitter
                     code.Line($"case {Name(tag)}");
                 }
 
-                code.Close();
-                break;
-            case GesLayoutKind.Point or GesLayoutKind.Vector:
-                code.Blank();
-                code.Line($"/// The transmitted axes of the {(value.Encoding.Kind == GesLayoutKind.Point ? "Point" : "Vector")}.");
-                code.Open($"{access}struct {name}: Sendable {{");
-                foreach (var axis in value.Axes)
-                {
-                    code.Line($"/// The {axis.Label} axis.");
-                    code.Line($"{access}var {Member(axis.Base)} = 0.0");
-                }
-
-                code.Blank();
-                code.Line("/// Creates a value with every axis at zero.");
-                code.Line($"{access}init() {{}}");
                 code.Close();
                 break;
             case GesLayoutKind.Union:

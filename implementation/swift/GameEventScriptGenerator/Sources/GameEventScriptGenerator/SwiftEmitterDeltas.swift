@@ -529,6 +529,7 @@ extension GesSwiftEmitter {
                 code.close()
                 code.close()
             }
+            for axis in GesSchemaPlanner.omitted(value) { code.line("if \(a).\(member(axis)) != 0 { \(fail("typeMismatch", value)) }") }
             code.line("if !\(set) { writer.rewind(to: first\(node)) }")
             code.close()
         case .schema:
@@ -638,6 +639,7 @@ extension GesSwiftEmitter {
                 code.line("}")
                 code.close()
             }
+            for axis in GesSchemaPlanner.omitted(value) { code.line("\(a).\(member(axis)) = 0") }
             code.line("if !changed\(node) { \(fail("invalidDelta", value)) }")
             code.close()
         case .schema:

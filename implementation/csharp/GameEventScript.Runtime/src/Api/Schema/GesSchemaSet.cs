@@ -165,6 +165,8 @@ public sealed class GesSchemaSet
         foreach (var file in files) file.Resolve(_declarations);
         var visited = new Dictionary<GesResolvedDeclaration, int>();
         foreach (var declaration in _ordered) CheckNesting(declaration, [], visited);
+        foreach (var declaration in _ordered)
+            if (declaration.Syntax.WireGroup is not null) GesSchemaBinder.CheckEncodable(declaration);
         var schemas = new List<GesSchema>();
         foreach (var declaration in _ordered)
         {

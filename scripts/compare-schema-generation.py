@@ -105,24 +105,46 @@ def self_test():
     print("Schema generation comparison controls passed.")
 
 
-# The checked-in generated code: (language, namespace, file). Both CLIs must find it current with --check.
+# The checked-in generated code: (fixture directory, files, selection, language, namespace, file). Both CLIs must find it
+# current with --check.
 GOLDEN_FIXTURE = ROOT / "conformance/fixtures/SchemaGeneration/fleet.gess"
+ROLES = ROOT / "conformance/fixtures/SchemaGeneration/roles"
+ROLE_FILES = ["World.gess", "Panels.gess", "View.gess"]
+CSHARP_GENERATED = ROOT / "implementation/csharp/GameEventScript.Generator/tests/Generated"
+SWIFT_GENERATED = ROOT / "implementation/swift/GameEventScriptConformance/Tests/GameEventScriptConformanceTests/Generated"
 GOLDENS = (
-    ("csharp", "GameEventScript.Tests.Generator.Generated", ROOT / "implementation/csharp/GameEventScript.Generator/tests/Generated/Fleet.g.cs"),
-    ("swift", "Generated", ROOT / "implementation/swift/GameEventScriptConformance/Tests/GameEventScriptConformanceTests/Generated/Fleet.swift"),
+    (GOLDEN_FIXTURE.parent, [GOLDEN_FIXTURE.name], ["--root", "Fleet", "--param", "worldSize=2km"], "csharp", "GameEventScript.Tests.Generator.Generated", CSHARP_GENERATED / "Fleet.g.cs"),
+    (GOLDEN_FIXTURE.parent, [GOLDEN_FIXTURE.name], ["--root", "Fleet", "--param", "worldSize=2km"], "swift", "Generated", SWIFT_GENERATED / "Fleet.swift"),
+    (ROLES, ROLE_FILES, ["--wire", "world", "--param", "worldWidth=2000m"], "csharp", "GameEventScript.Tests.Generator.Roles.Wire", CSHARP_GENERATED / "RolesWire.g.cs"),
+    (ROLES, ROLE_FILES, ["--model", "view"], "csharp", "GameEventScript.Tests.Generator.Roles.Model", CSHARP_GENERATED / "RolesModel.g.cs"),
+    (ROLES, ROLE_FILES, ["--wire", "world", "--param", "worldWidth=2000m"], "swift", "RolesWire", SWIFT_GENERATED / "RolesWire.swift"),
+    (ROLES, ROLE_FILES, ["--model", "view"], "swift", "RolesModel", SWIFT_GENERATED / "RolesModel.swift"),
 )
+# The layouts of the role fixture, which both CLIs must print identically.
+ROLE_LAYOUTS = (["--wire", "world", "--param", "worldWidth=2000m"], ["--wire", "panels"], ["--model", "view"])
 
 
 def stale_goldens(csharp, swift):
     """The checked-in files that a CLI does not find current."""
     stale = []
-    for language, space, path in GOLDENS:
+    for directory, files, selection, language, space, path in GOLDENS:
         for name, command in (("C#", csharp), ("Swift", swift)):
-            run = subprocess.run([*command, "schema", "generate", GOLDEN_FIXTURE.name, "--root", "Fleet", "--param", "worldSize=2km", "--language", language,
-                                  "--namespace", space, "--access", "internal", "-o", str(path), "--check"], cwd=GOLDEN_FIXTURE.parent, capture_output=True, check=False, timeout=TIMEOUT_SECONDS)
+            run = subprocess.run([*command, "schema", "generate", *files, *selection, "--language", language, "--namespace", space, "--access", "internal", "-o", str(path), "--check"],
+                                 cwd=directory, capture_output=True, check=False, timeout=TIMEOUT_SECONDS)
             if run.returncode != 0:
                 stale.append(f"{name} CLI: {path.relative_to(ROOT)} is not current: {run.stderr.decode('utf-8', 'replace').strip()}")
     return stale
+
+
+def role_layouts(csharp, swift):
+    """The role fixture's layouts by group, compared between the CLIs."""
+    differences = []
+    for selection in ROLE_LAYOUTS:
+        runs = [subprocess.run([*command, "schema", "layout", *ROLE_FILES, *selection], cwd=ROLES, capture_output=True, check=False, timeout=TIMEOUT_SECONDS) for command in (csharp, swift)]
+        found = difference(outcome(runs[0]), outcome(runs[1])) or (None if runs[0].returncode == 0 else f"C# failed: {runs[0].stderr.decode('utf-8', 'replace').strip()}")
+        if found:
+            differences.append(f"layout {' '.join(selection)}: {found}")
+    return differences
 
 
 def main():
@@ -139,10 +161,11 @@ def main():
     with tempfile.TemporaryDirectory() as temporary, ThreadPoolExecutor(max_workers=os.cpu_count() or 4) as pool:
         work = Path(temporary)
         results = list(pool.map(lambda pair: compare(pair[0], pair[1], ["dotnet", str(args.csharp)], [str(args.swift)], work), enumerate(items)))
-    differences = [line for result in results for line in result] + stale_goldens(["dotnet", str(args.csharp)], [str(args.swift)])
+    differences = [line for result in results for line in result] + stale_goldens(["dotnet", str(args.csharp)], [str(args.swift)]) \
+        + role_layouts(["dotnet", str(args.csharp)], [str(args.swift)])
     for line in differences:
         print(line)
-    print(f"{len(items)} schema inputs, {2 * len(items)} layouts and {2 * len(items)} generated sources, {len(GOLDENS)} checked-in files: {len(differences)} port differences")
+    print(f"{len(items)} schema inputs, {2 * len(items)} layouts and {2 * len(items)} generated sources, {len(ROLE_LAYOUTS)} role layouts, {len(GOLDENS)} checked-in files: {len(differences)} port differences")
     return 1 if differences else 0
 
 

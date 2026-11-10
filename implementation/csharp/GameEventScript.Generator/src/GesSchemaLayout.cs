@@ -399,6 +399,6 @@ internal static class GesSchemaLayoutBuilder
         return kind == GesSchemaTypeKind.Quantity && unit != GesQuantityUnit.UnitNone ? value + unit.ToSuffix() : value;
     }
 
-    private static string UnitName(GesSchemaTypeKind kind, GesQuantityUnit unit)
+    internal static string UnitName(GesSchemaTypeKind kind, GesQuantityUnit unit)
         => kind is GesSchemaTypeKind.Quantity or GesSchemaTypeKind.Point or GesSchemaTypeKind.Vector && unit != GesQuantityUnit.UnitNone ? unit.ToTypeName() : "none";
 }

@@ -64,6 +64,7 @@ public sealed class GesGeneratorException : Exception
     internal const string Usage = "generate.usage";
     internal const string NameCollision = "generate.nameCollision";
     internal const string InvalidNamespace = "generate.invalidNamespace";
+    internal const string Unsupported = "generate.unsupported";
 
     internal GesGeneratorException(string code, string message) : base(message) => Code = code;
 

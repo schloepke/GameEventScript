@@ -61,6 +61,8 @@ enum SchemaApiObservations {
         case .message: result["kind"] = "Message"
         case .messages: result["kind"] = "Messages"
         }
+        if let wire = schema.wireGroup { result["wireGroup"] = wire }
+        if let model = schema.modelGroup { result["modelGroup"] = model }
         if !schema.parameters.isEmpty {
             result["parameters"] = schema.parameters.map { parameter -> [String: Any] in
                 var entry: [String: Any] = ["name": parameter.name, "kind": parameter.kind.rawValue]

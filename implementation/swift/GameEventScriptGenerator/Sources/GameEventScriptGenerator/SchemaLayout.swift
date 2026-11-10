@@ -328,7 +328,7 @@ enum GesSchemaLayoutBuilder {
         return kind == .quantity && unit != .none ? value + unit.suffix : value
     }
 
-    private static func unitName(_ kind: GesSchemaTypeKind, _ unit: GesQuantityUnit) -> String {
+    static func unitName(_ kind: GesSchemaTypeKind, _ unit: GesQuantityUnit) -> String {
         (kind == .quantity || kind == .point || kind == .vector) && unit != .none ? unit.rawValue : "none"
     }
 }

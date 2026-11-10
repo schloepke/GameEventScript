@@ -10,6 +10,8 @@
             let simple = declaration.kind == .constant || declaration.kind == .parameter
             if let last = previous, !(simple && last == declaration.kind) { output += "\n" }
             previous = declaration.kind
+            role("wire", declaration.wireGroup, &output)
+            role("model", declaration.modelGroup, &output)
             switch declaration.kind {
             case .constant: output += "constant $\(declaration.name) be \(declaration.value!.text)\n"
             case .parameter:
@@ -41,6 +43,12 @@
             }
         }
         return output
+    }
+
+    /// The group `default` is the one a role without a group names.
+    private static func role(_ role: String, _ group: String?, _ output: inout String) {
+        guard let group else { return }
+        output += group == "default" ? "\(role) " : "\(role)(\(group)) "
     }
 
     private static func field(_ field: GesSchemaFieldSyntax, _ output: inout String, _ indent: String) {

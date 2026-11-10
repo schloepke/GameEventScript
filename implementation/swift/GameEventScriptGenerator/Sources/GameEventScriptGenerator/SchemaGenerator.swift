@@ -36,4 +36,47 @@ public enum GesSchemaGenerator {
         let types = try GesSchemaPlanner.plan(layout)
         return options.language == .csharp ? try GesCSharpEmitter.emit(layout, types, options) : try GesSwiftEmitter.emit(layout, types, options)
     }
+
+    /// Lists the wire roots of a group: the declarations marked `wire(group)`, or `wire` for the group `default`, in
+    /// declaration order; empty when the group has no root.
+    public static func wireRoots(_ set: GesSchemaSet, group: String) -> [String] {
+        set.schemas.filter { $0.wireGroup == group }.map(\.name)
+    }
+
+    /// Lists the model roots of a group: the schemas marked `model(group)`, or `model` for the group `default`, in
+    /// declaration order; empty when the group has no root.
+    public static func modelRoots(_ set: GesSchemaSet, group: String) -> [String] {
+        set.schemas.filter { $0.modelGroup == group }.map(\.name)
+    }
+
+    /// Writes the language-neutral model layout of the roots as canonical JSON: every schema they reach, described without
+    /// binding, since models are never encoded. Every port writes identical text.
+    /// - Parameters:
+    ///   - set: The schemas.
+    ///   - roots: The schemas to generate as models, in the order the output names them.
+    /// - Returns: The JSON text, ending with a line break.
+    /// - Throws: `GesSchemaError` when a root is not declared, and `GesGeneratorError` when no root is given, a root is no
+    ///   schema, or a reached type has no model type.
+    public static func modelLayout(_ set: GesSchemaSet, roots: [String]) throws -> String {
+        GesModelLayoutJson.write(try GesModelLayoutBuilder.build(set, roots: roots))
+    }
+
+    /// Generates model types for the roots and every schema they reach: plain values with value equality that are never
+    /// encoded, so they need no ranges, steps or parameter values and may use document-only types. Every port writes
+    /// identical text for identical schemas and options.
+    /// - Parameters:
+    ///   - set: The schemas.
+    ///   - roots: The schemas to generate as models, in the order the header names them.
+    ///   - options: The language, namespace and visibility; `values` and `checkedExclusivity` concern wire code and must stay off.
+    /// - Returns: The source text, ending with a line break.
+    /// - Throws: `GesSchemaError` when a root is not declared, and `GesGeneratorError` when no root is given, a root is no
+    ///   schema, an option concerns wire code, the namespace is invalid, two generated names collide, or a reached type has
+    ///   no model type.
+    public static func generateModels(_ set: GesSchemaSet, roots: [String], options: GesSchemaGenerateOptions) throws -> String {
+        if options.values || options.checkedExclusivity {
+            throw GesGeneratorError(GesGeneratorError.usage, "Values and checked exclusivity concern wire code, not models.")
+        }
+        let layout = try GesModelLayoutBuilder.build(set, roots: roots)
+        return options.language == .csharp ? try GesCSharpModelEmitter.emit(layout, options) : try GesSwiftModelEmitter.emit(layout, options)
+    }
 }

@@ -18,6 +18,8 @@ internal static class GesSchemaFormatter
             var simple = declaration.Kind is GesSchemaDeclarationKind.Constant or GesSchemaDeclarationKind.Parameter;
             if (previous is { } last && !(simple && last == declaration.Kind)) builder.Append('\n');
             previous = declaration.Kind;
+            Role("wire", declaration.WireGroup, builder);
+            Role("model", declaration.ModelGroup, builder);
             switch (declaration.Kind)
             {
                 case GesSchemaDeclarationKind.Constant:
@@ -63,6 +65,15 @@ internal static class GesSchemaFormatter
         }
 
         return builder.ToString();
+    }
+
+    // The group `default` is the one a role without a group names.
+    private static void Role(string role, string? group, StringBuilder builder)
+    {
+        if (group is null) return;
+        builder.Append(role);
+        if (group != "default") builder.Append('(').Append(group).Append(')');
+        builder.Append(' ');
     }
 
     private static void Field(GesSchemaFieldSyntax field, StringBuilder builder, string indent)

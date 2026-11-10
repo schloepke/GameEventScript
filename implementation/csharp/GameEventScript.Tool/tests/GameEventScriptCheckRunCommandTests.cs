@@ -335,6 +335,40 @@ public sealed class GameEventScriptCheckRunCommandTests
         StringAssert.Contains(invalid.StandardError, "error generate.invalidNamespace");
     }
 
+    /// <summary>Verifies the wire and model groups of schema layout and generate, and their usage errors.</summary>
+    [TestMethod]
+    public void SchemaRolesSelectTheRootsOfAGroup()
+    {
+        Write("world.gess", "parameter w: :Quantity(m)\nwire(world) schema :World as {\n  at: :Point(m) { x between 0m and w step 1m }\n  badge: :Badge optional\n}\n");
+        Write("panels.gess", "wire(panels) schema :Badge as { on: :Boolean }\nwire(panels) schema :Panel as { badge: :Badge }\n");
+        Write("view.gess", "model(view) schema :View as {\n  name: :Text\n  at: :Point(m)\n}\n");
+        var wire = Run("schema", "layout", "world.gess", "panels.gess", "view.gess", "--wire", "world", "--param", "w=10m");
+        Assert.AreEqual(0, wire.ExitCode, wire.StandardError);
+        StringAssert.StartsWith(wire.StandardOutput, "{\n  \"layout\": 1,\n  \"roots\": [\n    \"World\"\n  ],");
+        StringAssert.Contains(wire.StandardOutput, "\"name\": \"Badge\"");
+        Assert.IsFalse(wire.StandardOutput.Contains("\"Panel\"", StringComparison.Ordinal));
+        var model = Run("schema", "layout", "world.gess", "panels.gess", "view.gess", "--model", "view");
+        Assert.AreEqual(0, model.ExitCode, model.StandardError);
+        StringAssert.StartsWith(model.StandardOutput, "{\n  \"model\": 1,\n  \"roots\": [\n    \"View\"\n  ],");
+        var swift = Run("schema", "generate", "world.gess", "panels.gess", "view.gess", "--model", "view", "--language", "swift");
+        StringAssert.Contains(swift.StandardOutput, "public struct View: Hashable, Sendable, Codable {");
+        StringAssert.Contains(swift.StandardOutput, "public var at: GesPoint");
+        var csharp = Run("schema", "generate", "world.gess", "panels.gess", "view.gess", "--wire", "world", "--param", "w=10m", "--language", "csharp");
+        StringAssert.Contains(csharp.StandardOutput, "public GesPoint At;");
+        var empty = Run("schema", "generate", "world.gess", "panels.gess", "--wire", "nothing", "--param", "w=10m", "--language", "csharp");
+        Assert.AreEqual(1, empty.ExitCode);
+        StringAssert.Contains(empty.StandardError, "error generate.usage: The files have no wire root in the group 'nothing'.");
+        Assert.AreEqual(1, Run("schema", "layout", "view.gess", "--model", "view", "--param", "w=10m").ExitCode);
+        Assert.AreEqual(2, Run("schema", "layout", "view.gess", "--model", "view", "--wire", "world").ExitCode);
+        Assert.AreEqual(2, Run("schema", "layout", "view.gess", "--model", "view", "--root", "View").ExitCode);
+        Assert.AreEqual(2, Run("schema", "generate", "view.gess", "--model", "view", "--language", "swift", "--values").ExitCode);
+        Assert.AreEqual(2, Run("schema", "hash", "view.gess", "--model", "view").ExitCode);
+        Write("bad.gess", "wire schema :Bad as { name: :Text }\n");
+        var check = Run("schema", "check", "bad.gess");
+        Assert.AreEqual(1, check.ExitCode);
+        StringAssert.Contains(check.StandardError, "bad.gess(1,29): error schema.notEncodable");
+    }
+
     /// <summary>Verifies the schema commands: check, canonical form, hash, formatting, dump and error reports.</summary>
     [TestMethod]
     public void SchemaCommandsCheckHashFormatAndDump()

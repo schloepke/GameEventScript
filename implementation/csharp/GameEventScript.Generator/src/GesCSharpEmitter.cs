@@ -12,7 +12,7 @@ namespace GameEventScript.Generator;
 // fields in wire order, Write and Read over the bit primitives, and constants inlined as literals or bit patterns.
 internal static partial class GesCSharpEmitter
 {
-    private static readonly HashSet<string> Keywords = new(StringComparer.Ordinal)
+    internal static readonly HashSet<string> Keywords = new(StringComparer.Ordinal)
     {
         "abstract", "as", "base", "bool", "break", "byte", "case", "catch", "char", "checked", "class", "const", "continue",
         "decimal", "default", "delegate", "do", "double", "else", "enum", "event", "explicit", "extern", "false", "finally",
@@ -182,8 +182,6 @@ internal static partial class GesCSharpEmitter
     private static string NestedName(GesPlanValue value) => value.Encoding.Kind switch
     {
         GesLayoutKind.Tag => value.Base + "Tag",
-        GesLayoutKind.Point => value.Base + "Point",
-        GesLayoutKind.Vector => value.Base + "Vector",
         GesLayoutKind.Union => value.Base + "Alternative",
         _ => ""
     };
@@ -195,6 +193,8 @@ internal static partial class GesCSharpEmitter
         GesLayoutKind.Quantized or GesLayoutKind.Float => "double",
         GesLayoutKind.Schema => value.Encoding.Schema,
         GesLayoutKind.Text => "string",
+        GesLayoutKind.Point => "GesPoint",
+        GesLayoutKind.Vector => "GesVector",
         GesLayoutKind.List => $"List<{ElementName(value)}>",
         _ => NestedName(value)
     };
@@ -508,6 +508,7 @@ internal static partial class GesCSharpEmitter
                 break;
             case GesLayoutKind.Point or GesLayoutKind.Vector:
                 foreach (var axis in value.Axes) Write(code, axis, target + "." + axis.Base);
+                foreach (var axis in GesSchemaPlanner.Omitted(value)) code.Line($"if ({target}.{axis} != 0) {Throw("TypeMismatch", value)}");
                 break;
             case GesLayoutKind.Schema:
                 code.Line($"{target}.__WriteFields(ref writer, paths, at + {(value.Node + 1).ToString(CultureInfo.InvariantCulture)});");
@@ -608,6 +609,7 @@ internal static partial class GesCSharpEmitter
                 break;
             case GesLayoutKind.Point or GesLayoutKind.Vector:
                 foreach (var axis in value.Axes) Read(code, axis, target + "." + axis.Base);
+                foreach (var axis in GesSchemaPlanner.Omitted(value)) code.Line($"{target}.{axis} = 0;");
                 break;
             case GesLayoutKind.Schema:
                 code.Line($"{target}.__ReadFields(ref reader, paths, at + {(value.Node + 1).ToString(CultureInfo.InvariantCulture)});");
@@ -650,20 +652,6 @@ internal static partial class GesCSharpEmitter
                 {
                     code.Line($"/// <summary>The tag <c>#{tag}</c>.</summary>");
                     code.Line(GesSchemaPlanner.Pascal(tag) + ",");
-                }
-
-                code.Close();
-                break;
-            case GesLayoutKind.Point or GesLayoutKind.Vector:
-                code.Blank();
-                code.Line($"/// <summary>The transmitted axes of the {(value.Encoding.Kind == GesLayoutKind.Point ? "Point" : "Vector")}.</summary>");
-                code.Line($"public struct {name}");
-                code.Open("{");
-                for (var index = 0; index < value.Axes.Count; index++)
-                {
-                    if (index > 0) code.Blank();
-                    code.Line($"/// <summary>The {value.Axes[index].Label} axis.</summary>");
-                    code.Line($"public double {value.Axes[index].Base};");
                 }
 
                 code.Close();

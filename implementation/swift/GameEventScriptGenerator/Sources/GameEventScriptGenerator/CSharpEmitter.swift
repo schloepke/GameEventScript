@@ -154,8 +154,6 @@ enum GesCSharpEmitter {
     static func nestedName(_ value: GesPlanValue) -> String {
         switch value.encoding.kind {
         case .tag: value.base + "Tag"
-        case .point: value.base + "Point"
-        case .vector: value.base + "Vector"
         case .union: value.base + "Alternative"
         default: ""
         }
@@ -168,6 +166,8 @@ enum GesCSharpEmitter {
         case .quantized, .float: "double"
         case .schema: value.encoding.schema
         case .text: "string"
+        case .point: "GesPoint"
+        case .vector: "GesVector"
         case .list: "List<\(elementName(value))>"
         default: nestedName(value)
         }
@@ -454,6 +454,7 @@ enum GesCSharpEmitter {
             code.close()
         case .point, .vector:
             for axis in value.axes { write(&code, axis, target + "." + axis.base) }
+            for axis in GesSchemaPlanner.omitted(value) { code.line("if (\(target).\(axis) != 0) \(fail("TypeMismatch", value))") }
         case .schema:
             code.line("\(target).__WriteFields(ref writer, paths, at + \(value.node + 1));")
         case .union:
@@ -545,6 +546,7 @@ enum GesCSharpEmitter {
             code.close()
         case .point, .vector:
             for axis in value.axes { read(&code, axis, target + "." + axis.base) }
+            for axis in GesSchemaPlanner.omitted(value) { code.line("\(target).\(axis) = 0;") }
         case .schema:
             code.line("\(target).__ReadFields(ref reader, paths, at + \(value.node + 1));")
         case .union:
@@ -580,17 +582,6 @@ enum GesCSharpEmitter {
             for tag in value.encoding.tags {
                 code.line("/// <summary>The tag <c>#\(tag)</c>.</summary>")
                 code.line(GesSchemaPlanner.pascal(tag) + ",")
-            }
-            code.close()
-        case .point, .vector:
-            code.blank()
-            code.line("/// <summary>The transmitted axes of the \(value.encoding.kind == .point ? "Point" : "Vector").</summary>")
-            code.line("public struct \(name)")
-            code.open("{")
-            for (index, axis) in value.axes.enumerated() {
-                if index > 0 { code.blank() }
-                code.line("/// <summary>The \(axis.label) axis.</summary>")
-                code.line("public double \(axis.base);")
             }
             code.close()
         case .union:

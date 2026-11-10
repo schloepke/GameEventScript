@@ -194,7 +194,9 @@ namespace GameEventScript.Tests.Generator.Generated
             finally
             {
                 __Mark(false, null);
-                lists.Clear();
+                // A set that grew beyond common records is dropped, so that no thread keeps its capacity for good.
+                if (lists.Count > 1024) __SharingLists = null;
+                else lists.Clear();
             }
             if (shared) throw new GesWireException(GesWireException.OverlappingBuffers, "");
             #endif
@@ -899,7 +901,9 @@ namespace GameEventScript.Tests.Generator.Generated
             finally
             {
                 __Mark(false, null);
-                lists.Clear();
+                // A set that grew beyond common records is dropped, so that no thread keeps its capacity for good.
+                if (lists.Count > 1024) __SharingLists = null;
+                else lists.Clear();
             }
             if (shared) throw new GesWireException(GesWireException.OverlappingBuffers, "");
             #endif
@@ -1950,7 +1954,9 @@ namespace GameEventScript.Tests.Generator.Generated
             finally
             {
                 __Mark(false, null);
-                lists.Clear();
+                // A set that grew beyond common records is dropped, so that no thread keeps its capacity for good.
+                if (lists.Count > 1024) __SharingLists = null;
+                else lists.Clear();
             }
             if (shared) throw new GesWireException(GesWireException.OverlappingBuffers, "");
             #endif

@@ -476,7 +476,9 @@ internal static partial class GesCSharpEmitter
             code.Line("finally");
             code.Open("{");
             code.Line("__Mark(false, null);");
-            code.Line("lists.Clear();");
+            code.Line("// A set that grew beyond common records is dropped, so that no thread keeps its capacity for good.");
+            code.Line("if (lists.Count > 1024) __SharingLists = null;");
+            code.Line("else lists.Clear();");
             code.Close();
             code.Line("if (shared) throw new GesWireException(GesWireException.OverlappingBuffers, \"\");");
             code.Line("#endif");

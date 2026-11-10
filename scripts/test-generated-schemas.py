@@ -9,7 +9,9 @@ delta to encode or decode. For every such schema the C# CLI generates C# and Swi
 given bytes with the generated type and writes the record again: an expected error must have the same code and path, a
 valid record the same byte count and the same bytes. A delta is encoded from the decoded record and baseline, and decoded
 against the baseline into the expected record. Operations on types without delta methods are counted as skipped.
---self-test qualifies the comparison.
+The programs check shared baselines (GES_CHECK_SHARING); the unchecked form of release builds also compiles in both
+languages, and a small C# program holds its remaining guarantee on the fleet fixture. --self-test qualifies the
+comparison.
 """
 import argparse
 from pathlib import Path
@@ -25,6 +27,29 @@ from core.corpus import read_corpus  # noqa: E402
 CSHARP_CLI = ROOT / "artifacts/csharp/tool/bin/Release/net8.0/GameEventScript.Tool.dll"
 WORK = ROOT / "artifacts/generated-schemas"
 CODE = re.compile(r"error ([a-z]+\.[A-Za-z]+)")
+FLEET_FIXTURE = ROOT / "conformance/fixtures/SchemaGeneration/fleet.gess"
+UNCHECKED_PROGRAM = """using System;
+using Unchecked;
+
+var source = new Fleet { Tick = 3 };
+for (var index = 0; index < 3; index++) source.Ships.Add(new Ship { Id = index, Health = 10 });
+var fleet = new Fleet();
+fleet.Read(source.ToBytes());
+
+// Without the check, a baseline that shares an unchanged list in the same place still keeps its values.
+var shared = new Fleet { Tick = fleet.Tick, Ships = fleet.Ships };
+var next = new Fleet();
+next.CopyFrom(fleet);
+next.Tick = 4;
+fleet.ReadDelta(next.ToDeltaBytes(shared), shared);
+if (fleet.Ships.Count != 3 || !fleet.WireEquals(next))
+{
+    Console.WriteLine("A shared unchanged list lost its values.");
+    return 1;
+}
+
+return 0;
+"""
 
 
 def failure(error):
@@ -291,7 +316,7 @@ let package = Package(
         .executableTarget(
             name: "Harness",
             dependencies: [.product(name: "GameEventScriptRuntime", package: "GameEventScriptRuntime")],
-            swiftSettings: [.unsafeFlags(["-warnings-as-errors"]), .define("GES_CHECK_SHARING")]
+            swiftSettings: [.unsafeFlags(["-warnings-as-errors"])]
         )
     ]
 )
@@ -314,9 +339,34 @@ let package = Package(
   </ItemGroup>
 </Project>
 """, encoding="utf-8")
+    # Release builds of users skip the check of shared baselines; this program holds the guarantee that remains there.
+    unchecked = WORK / "csharp-unchecked"
+    unchecked.mkdir()
+    fleet, error = generate(WORK / "schemas/gate", [FLEET_FIXTURE.read_text(encoding="utf-8")], "Fleet", [("worldSize", "2km")], "csharp", "Unchecked")
+    if fleet is None:
+        raise SystemExit(f"The fleet fixture does not generate: {error}")
+    (unchecked / "Fleet.g.cs").write_text(fleet, encoding="utf-8")
+    (unchecked / "Program.cs").write_text(UNCHECKED_PROGRAM, encoding="utf-8")
+    (unchecked / "Unchecked.csproj").write_text(f"""<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <LangVersion>9</LangVersion>
+    <Nullable>enable</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="{ROOT / 'implementation/csharp/GameEventScript.Runtime/src/GameEventScript.Runtime.csproj'}" />
+  </ItemGroup>
+</Project>
+""", encoding="utf-8")
+    # The Swift harness runs with the check; a second build compiles the form of release builds, warnings as errors.
     for command in (["dotnet", "build", str(unity), "-c", "Release", "-o", str(WORK / "csharp-unity-bin"), "-nologo"],
                     ["dotnet", "build", str(csharp), "-c", "Release", "-o", str(WORK / "csharp-bin"), "-nologo"],
-                    ["swift", "build", "-c", "release", "--package-path", str(WORK / "swift"), "--disable-build-manifest-caching"]):
+                    ["dotnet", "build", str(unchecked), "-c", "Release", "-o", str(WORK / "csharp-unchecked-bin"), "-nologo"],
+                    ["swift", "build", "-c", "release", "--package-path", str(WORK / "swift"), "--disable-build-manifest-caching", "-Xswiftc", "-DGES_CHECK_SHARING"],
+                    ["swift", "build", "-c", "release", "--package-path", str(WORK / "swift"), "--disable-build-manifest-caching",
+                     "--scratch-path", str(WORK / "swift-unchecked-build")]):
         build = subprocess.run(command, capture_output=True, check=False)
         if build.returncode != 0:
             errors = [line for line in build.stdout.decode("utf-8", "replace").splitlines() + build.stderr.decode("utf-8", "replace").splitlines() if "error" in line]
@@ -324,6 +374,10 @@ let package = Package(
     lines = "".join(f"{index} {operation} {data or '.'} {second or '.'} {'-' if limit is None else limit}\n" for _, index, operation, data, second, limit, _ in requests)
     runs = {"C#": ["dotnet", str(WORK / "csharp-bin/Harness.dll")], "Swift": [str(WORK / "swift/.build/release/Harness")]}
     failures = 0
+    guarantee = subprocess.run(["dotnet", str(WORK / "csharp-unchecked-bin/Unchecked.dll")], capture_output=True, check=False)
+    if guarantee.returncode != 0:
+        failures += 1
+        print("C# unchecked:", (guarantee.stdout + guarantee.stderr).decode("utf-8", "replace").strip())
     for port, command in runs.items():
         output = subprocess.run(command, input=lines.encode(), capture_output=True, check=True).stdout.decode().splitlines()
         if len(output) != len(requests):

@@ -12,12 +12,6 @@ namespace GameEventScript.Tests.Generator;
 [TestClass]
 public sealed class GesGeneratedCodeTests
 {
-#if DEBUG
-    private static readonly bool DebugBuild = true;
-#else
-    private static readonly bool DebugBuild = false;
-#endif
-
     private static string Generated(GesSchemaLanguage language, string space)
     {
         var fixture = Path.Combine(TestRepositoryPaths.ConformanceDirectory, "fixtures", "SchemaGeneration", "fleet.gess");
@@ -55,8 +49,7 @@ public sealed class GesGeneratedCodeTests
         Rejected(() => fleet.ReadDelta(delta, fleet));
         // A keyed record is rejected before its key is read.
         Rejected(() => fleet.Ships[0].ReadDelta(ReadOnlySpan<byte>.Empty, fleet.Ships[0]));
-#if DEBUG
-        // Only debug builds walk the storage for shared records and lists.
+        // The test project defines GES_CHECK_SHARING, so the walk for shared records and lists runs in every configuration.
         Rejected(() => fleet.ReadDelta(delta, new Fleet { Ships = fleet.Ships }));
         Rejected(() => fleet.ReadDelta(delta, new Fleet { Ships = new List<Ship>(fleet.Ships) }));
         Rejected(() => fleet.ReadDelta(delta, new Fleet { Ships = { new Ship { Id = 7 }, fleet.Ships[2] } }));
@@ -71,15 +64,6 @@ public sealed class GesGeneratedCodeTests
         flag.CopyFrom(fleet);
         flag.Flag = fleet.Flag;
         Rejected(() => fleet.ReadDelta(delta, flag));
-#else
-        // Release builds skip the walk, but an unchanged list that the baseline shares keeps its values.
-        var shared = new Fleet { Tick = fleet.Tick, Ships = fleet.Ships };
-        var next = new Fleet();
-        next.CopyFrom(fleet);
-        next.Tick = 4;
-        fleet.ReadDelta(next.ToDeltaBytes(shared), shared);
-        Assert.IsTrue(fleet.WireEquals(next));
-#endif
 
         // Copying a record into itself, or from a record that holds the same list, keeps its values.
         fleet.CopyFrom(fleet);
@@ -108,7 +92,6 @@ public sealed class GesGeneratedCodeTests
     [TestCategory("Allocation")]
     public void GeneratedRecordsAllocateNothing()
     {
-        if (DebugBuild) Assert.Inconclusive("Debug builds check shared baselines, which allocates; the gate holds for release builds.");
         var name = "frigate"u8.ToArray();
         var fleet = new Fleet { Tick = 1 };
         for (var index = 0; index < 48; index++)

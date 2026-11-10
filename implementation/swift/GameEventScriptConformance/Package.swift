@@ -28,7 +28,9 @@ let package = Package(
                 "ConformanceInstrumentation",
                 .product(name: "GameEventScriptRuntime", package: "GameEventScriptRuntime"), .product(name: "GameEventScriptCompiler", package: "GameEventScriptCompiler"),
                 .product(name: "GameEventScriptSwiftBridge", package: "GameEventScriptSwiftBridge"), .product(name: "GameEventScriptSyntax", package: "GameEventScriptSyntax"),
-            ]
+            ],
+            // The checked-in generated code checks shared baselines in every configuration, so release runs cover it.
+            swiftSettings: [.define("GES_CHECK_SHARING")]
         ),
     ]
 )

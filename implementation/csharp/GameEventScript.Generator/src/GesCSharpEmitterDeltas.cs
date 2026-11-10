@@ -236,10 +236,11 @@ internal static partial class GesCSharpEmitter
     private static void Sharing(GesSchemaPlanner.Code code, GesPlanType type)
     {
         code.Blank();
-        code.Line("#if DEBUG");
+        code.Line(CheckSharing);
+        if (type.Kind == GesSchemaKind.Schema && !type.IsItem) code.Line("[ThreadStatic] private static HashSet<object>? __SharingLists;");
         code.Line("internal bool __Busy;");
         code.Blank();
-        if (!type.Fields.Exists(field => Touches(field.Value)))
+        if (!type.Fields.Exists(field => GesSchemaPlanner.HoldsStorage(field.Value, true)))
         {
             code.Line("internal void __Mark(bool busy, HashSet<object>? lists) => __Busy = busy;");
             code.Blank();
@@ -264,14 +265,8 @@ internal static partial class GesCSharpEmitter
         code.Line("#endif");
     }
 
-    // Whether a value holds storage that a read writes into besides the record's own fields: a class record or a list.
-    private static bool Touches(GesPlanValue value) => value.Encoding.Kind switch
-    {
-        GesLayoutKind.Schema => value.IsClass,
-        GesLayoutKind.List => true,
-        GesLayoutKind.Union => value.Alternatives.Exists(Touches),
-        _ => false,
-    };
+    // The builds that check shared baselines: debug builds, Unity's editor and development players, and any build that asks.
+    private const string CheckSharing = "#if DEBUG || DEVELOPMENT_BUILD || UNITY_EDITOR || GES_CHECK_SHARING";
 
     private static void Mark(GesSchemaPlanner.Code code, GesPlanValue value, string member)
     {
@@ -470,8 +465,8 @@ internal static partial class GesCSharpEmitter
         {
             // Sharing other storage is a programming error, which only debug builds pay to detect.
             code.Line("if (ReferenceEquals(this, baseline)) throw new GesWireException(GesWireException.OverlappingBuffers, \"\");");
-            code.Line("#if DEBUG");
-            code.Line("var lists = new HashSet<object>();");
+            code.Line(CheckSharing);
+            code.Line("var lists = __SharingLists ??= new HashSet<object>();");
             code.Line("__Mark(true, lists);");
             code.Line("bool shared;");
             code.Line("try");
@@ -481,6 +476,7 @@ internal static partial class GesCSharpEmitter
             code.Line("finally");
             code.Open("{");
             code.Line("__Mark(false, null);");
+            code.Line("lists.Clear();");
             code.Close();
             code.Line("if (shared) throw new GesWireException(GesWireException.OverlappingBuffers, \"\");");
             code.Line("#endif");

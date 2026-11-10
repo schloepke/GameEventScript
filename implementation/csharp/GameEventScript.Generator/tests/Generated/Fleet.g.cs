@@ -109,7 +109,8 @@ namespace GameEventScript.Tests.Generator.Generated
             }
         }
 
-        #if DEBUG
+        #if DEBUG || DEVELOPMENT_BUILD || UNITY_EDITOR || GES_CHECK_SHARING
+        [ThreadStatic] private static HashSet<object>? __SharingLists;
         internal bool __Busy;
 
         internal void __Mark(bool busy, HashSet<object>? lists) => __Busy = busy;
@@ -182,8 +183,8 @@ namespace GameEventScript.Tests.Generator.Generated
         public int ReadDelta(ReadOnlySpan<byte> data, Banner baseline, long byteLimit = long.MaxValue)
         {
             if (ReferenceEquals(this, baseline)) throw new GesWireException(GesWireException.OverlappingBuffers, "");
-            #if DEBUG
-            var lists = new HashSet<object>();
+            #if DEBUG || DEVELOPMENT_BUILD || UNITY_EDITOR || GES_CHECK_SHARING
+            var lists = __SharingLists ??= new HashSet<object>();
             __Mark(true, lists);
             bool shared;
             try
@@ -193,6 +194,7 @@ namespace GameEventScript.Tests.Generator.Generated
             finally
             {
                 __Mark(false, null);
+                lists.Clear();
             }
             if (shared) throw new GesWireException(GesWireException.OverlappingBuffers, "");
             #endif
@@ -462,7 +464,8 @@ namespace GameEventScript.Tests.Generator.Generated
             Flag.__ReadFields(ref reader, paths, at + 18);
         }
 
-        #if DEBUG
+        #if DEBUG || DEVELOPMENT_BUILD || UNITY_EDITOR || GES_CHECK_SHARING
+        [ThreadStatic] private static HashSet<object>? __SharingLists;
         internal bool __Busy;
 
         internal void __Mark(bool busy, HashSet<object>? lists)
@@ -885,8 +888,8 @@ namespace GameEventScript.Tests.Generator.Generated
         public int ReadDelta(ReadOnlySpan<byte> data, Fleet baseline, long byteLimit = long.MaxValue)
         {
             if (ReferenceEquals(this, baseline)) throw new GesWireException(GesWireException.OverlappingBuffers, "");
-            #if DEBUG
-            var lists = new HashSet<object>();
+            #if DEBUG || DEVELOPMENT_BUILD || UNITY_EDITOR || GES_CHECK_SHARING
+            var lists = __SharingLists ??= new HashSet<object>();
             __Mark(true, lists);
             bool shared;
             try
@@ -896,6 +899,7 @@ namespace GameEventScript.Tests.Generator.Generated
             finally
             {
                 __Mark(false, null);
+                lists.Clear();
             }
             if (shared) throw new GesWireException(GesWireException.OverlappingBuffers, "");
             #endif
@@ -1734,7 +1738,8 @@ namespace GameEventScript.Tests.Generator.Generated
             }
         }
 
-        #if DEBUG
+        #if DEBUG || DEVELOPMENT_BUILD || UNITY_EDITOR || GES_CHECK_SHARING
+        [ThreadStatic] private static HashSet<object>? __SharingLists;
         internal bool __Busy;
 
         internal void __Mark(bool busy, HashSet<object>? lists)
@@ -1934,8 +1939,8 @@ namespace GameEventScript.Tests.Generator.Generated
         public int ReadDelta(ReadOnlySpan<byte> data, Ship baseline, long byteLimit = long.MaxValue)
         {
             if (ReferenceEquals(this, baseline)) throw new GesWireException(GesWireException.OverlappingBuffers, "");
-            #if DEBUG
-            var lists = new HashSet<object>();
+            #if DEBUG || DEVELOPMENT_BUILD || UNITY_EDITOR || GES_CHECK_SHARING
+            var lists = __SharingLists ??= new HashSet<object>();
             __Mark(true, lists);
             bool shared;
             try
@@ -1945,6 +1950,7 @@ namespace GameEventScript.Tests.Generator.Generated
             finally
             {
                 __Mark(false, null);
+                lists.Clear();
             }
             if (shared) throw new GesWireException(GesWireException.OverlappingBuffers, "");
             #endif

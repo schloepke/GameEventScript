@@ -1123,12 +1123,13 @@ decodes to, and a class copies another record into its storage with `CopyFrom` (
 baseline is never changed, and a target whose read failed must not serve as a baseline. A read
 overwrites the target's storage: the record, the class records it holds and the elements its lists
 reuse. The baseline must share none of it. Before it reads, `ReadDelta` rejects with
-`wire.overlappingBuffers` and an empty path a baseline that is the target and, in builds that define
-`DEBUG`, one that holds any record of that storage or, in C#, any list of it; other builds skip that
-walk for speed, and a shared baseline gives unspecified values. A list that the source holds in the
-same place stays intact in every build, in `ReadDelta` as in `CopyFrom`, and `CopyFrom` from the
-record itself keeps its values; `CopyFrom` checks nothing else, so the source must not hold another
-record of the target's storage. Lists of keyed elements take the [keyed-list](#keyed-lists) form, like
+`wire.overlappingBuffers` and an empty path a baseline that is the target and, in checking builds,
+one that holds any record of that storage or, in C#, any list of it. Checking builds define `DEBUG`
+or `GES_CHECK_SHARING`, and in C# also Unity's `DEVELOPMENT_BUILD` or `UNITY_EDITOR`; other builds
+skip that walk for speed, and a shared baseline gives unspecified values there. `CopyFrom` from the
+record itself, or in C# from a record with the same list in the same place, keeps its values, and so
+does an unchanged list of that kind in `ReadDelta`; `CopyFrom` checks nothing else, so the source
+must not hold another record of the target's storage. Lists of keyed elements take the [keyed-list](#keyed-lists) form, like
 every delta.
 With `--values`, a schema also converts to and from a GES value with `ToValue` and `ReadValue` (Swift
 `toValue()` and `read(value:)`), and a message or message set to and from a message with `ToMessage`

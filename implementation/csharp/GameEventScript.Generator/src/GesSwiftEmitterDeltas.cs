@@ -225,10 +225,10 @@ internal static partial class GesSwiftEmitter
     private static void Sharing(GesSchemaPlanner.Code code, GesPlanType type, string stored)
     {
         code.Blank();
-        code.Line("#if DEBUG");
+        code.Line(CheckSharing);
         code.Line($"{stored}var __busy = false");
         code.Blank();
-        if (!type.Fields.Exists(field => GesSchemaPlanner.HoldsRecords(field.Value)))
+        if (!type.Fields.Exists(field => GesSchemaPlanner.HoldsStorage(field.Value, false)))
         {
             code.Line("func __mark(_ busy: Bool) { self.__busy = busy }");
             code.Blank();
@@ -250,6 +250,9 @@ internal static partial class GesSwiftEmitter
 
         code.Line("#endif");
     }
+
+    // The builds that check shared baselines: debug builds and any build that asks.
+    private const string CheckSharing = "#if DEBUG || GES_CHECK_SHARING";
 
     private static void Mark(GesSchemaPlanner.Code code, GesPlanValue value)
     {
@@ -418,7 +421,7 @@ internal static partial class GesSwiftEmitter
         {
             // Sharing other storage is a programming error, which only debug builds pay to detect.
             code.Line("if self === baseline { throw GesWireError(code: GesWireError.overlappingBuffers, path: \"\") }");
-            code.Line("#if DEBUG");
+            code.Line(CheckSharing);
             code.Line("self.__mark(true)");
             code.Line("let shared = baseline.__holds()");
             code.Line("self.__mark(false)");

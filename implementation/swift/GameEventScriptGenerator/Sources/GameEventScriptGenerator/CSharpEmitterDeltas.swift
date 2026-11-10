@@ -205,10 +205,11 @@ extension GesCSharpEmitter {
     // it holds; release builds generate none of it.
     static func sharing(_ code: inout Code, _ type: GesPlanType) {
         code.blank()
-        code.line("#if DEBUG")
+        code.line(checkSharing)
+        if type.kind == .schema && !type.isItem { code.line("[ThreadStatic] private static HashSet<object>? __SharingLists;") }
         code.line("internal bool __Busy;")
         code.blank()
-        if !type.fields.contains(where: { touches($0.value) }) {
+        if !type.fields.contains(where: { GesSchemaPlanner.holdsStorage($0.value, lists: true) }) {
             code.line("internal void __Mark(bool busy, HashSet<object>? lists) => __Busy = busy;")
             code.blank()
             code.line("internal bool __Holds(HashSet<object> lists) => __Busy;")
@@ -229,15 +230,8 @@ extension GesCSharpEmitter {
         code.line("#endif")
     }
 
-    // Whether a value holds storage that a read writes into besides the record's own fields: a class record or a list.
-    private static func touches(_ value: GesPlanValue) -> Bool {
-        switch value.encoding.kind {
-        case .schema: value.isClass
-        case .list: true
-        case .union: value.alternatives.contains(where: touches)
-        default: false
-        }
-    }
+    // The builds that check shared baselines: debug builds, Unity's editor and development players, and any build that asks.
+    private static let checkSharing = "#if DEBUG || DEVELOPMENT_BUILD || UNITY_EDITOR || GES_CHECK_SHARING"
 
     private static func mark(_ code: inout Code, _ value: GesPlanValue, _ member: String) {
         let node = String(value.node)
@@ -408,8 +402,8 @@ extension GesCSharpEmitter {
         if type.isClass {
             // Sharing other storage is a programming error, which only debug builds pay to detect.
             code.line("if (ReferenceEquals(this, baseline)) throw new GesWireException(GesWireException.OverlappingBuffers, \"\");")
-            code.line("#if DEBUG")
-            code.line("var lists = new HashSet<object>();")
+            code.line(checkSharing)
+            code.line("var lists = __SharingLists ??= new HashSet<object>();")
             code.line("__Mark(true, lists);")
             code.line("bool shared;")
             code.line("try")
@@ -419,6 +413,7 @@ extension GesCSharpEmitter {
             code.line("finally")
             code.open("{")
             code.line("__Mark(false, null);")
+            code.line("lists.Clear();")
             code.close()
             code.line("if (shared) throw new GesWireException(GesWireException.OverlappingBuffers, \"\");")
             code.line("#endif")

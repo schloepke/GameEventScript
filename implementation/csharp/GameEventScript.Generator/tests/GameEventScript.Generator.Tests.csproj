@@ -3,6 +3,10 @@
 
 <Project Sdk="Microsoft.NET.Sdk">
     <Import Project="../../verification/Tests.props" />
+    <PropertyGroup>
+        <!-- The checked-in generated code checks shared baselines in every configuration, so release CI covers it. -->
+        <DefineConstants>$(DefineConstants);GES_CHECK_SHARING</DefineConstants>
+    </PropertyGroup>
     <ItemGroup>
         <ProjectReference Include="../../GameEventScript.Runtime/src/GameEventScript.Runtime.csproj" />
         <ProjectReference Include="../src/GameEventScript.Generator.csproj" />

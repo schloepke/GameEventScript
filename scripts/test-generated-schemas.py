@@ -271,6 +271,8 @@ def main():
     <LangVersion>9</LangVersion>
     <Nullable>enable</Nullable>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!-- The harness checks shared baselines, so the conditional code of every schema compiles and runs; Unity below compiles without it. -->
+    <DefineConstants>$(DefineConstants);GES_CHECK_SHARING</DefineConstants>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="{ROOT / 'implementation/csharp/GameEventScript.Runtime/src/GameEventScript.Runtime.csproj'}" />
@@ -289,7 +291,7 @@ let package = Package(
         .executableTarget(
             name: "Harness",
             dependencies: [.product(name: "GameEventScriptRuntime", package: "GameEventScriptRuntime")],
-            swiftSettings: [.unsafeFlags(["-warnings-as-errors"])]
+            swiftSettings: [.unsafeFlags(["-warnings-as-errors"]), .define("GES_CHECK_SHARING")]
         )
     ]
 )

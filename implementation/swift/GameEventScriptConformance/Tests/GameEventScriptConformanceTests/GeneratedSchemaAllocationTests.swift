@@ -12,7 +12,7 @@ final class GeneratedSchemaAllocationTests: XCTestCase {
         #if !canImport(Darwin)
             throw XCTSkip("The allocation counter uses libmalloc.")
         #elseif DEBUG
-            throw XCTSkip("Debug builds check shared baselines and are not optimized; the gate holds for release builds.")
+            throw XCTSkip("Debug builds are not optimized; the gate holds for release builds.")
         #else
             guard ges_allocation_install(), ges_allocation_controls() else { throw XCTSkip("The allocation counter is not available.") }
             let name = Array("frigate".utf8)
@@ -92,20 +92,18 @@ final class GeneratedSchemaAllocationTests: XCTestCase {
         rejected { try fleet.readDelta(from: delta, against: fleet) }
         // A keyed record is rejected before its key is read.
         rejected { try fleet.ships[0].readDelta(from: [], against: fleet.ships[0]) }
-        #if DEBUG
-            // Only debug builds walk the storage for shared records.
-            let sharing = Generated.Fleet()
-            sharing.ships = fleet.ships
-            rejected { try fleet.readDelta(from: delta, against: sharing) }
-            let mixed = Generated.Fleet()
-            mixed.ships = [Generated.Ship(), fleet.ships[2]]
-            rejected { try fleet.readDelta(from: delta, against: mixed) }
-            // A nested class record is storage of the target too.
-            let flag = Generated.Fleet()
-            flag.copy(from: fleet)
-            flag.flag = fleet.flag
-            rejected { try fleet.readDelta(from: delta, against: flag) }
-        #endif
+        // The test target defines GES_CHECK_SHARING, so the walk for shared records runs in every configuration.
+        let sharing = Generated.Fleet()
+        sharing.ships = fleet.ships
+        rejected { try fleet.readDelta(from: delta, against: sharing) }
+        let mixed = Generated.Fleet()
+        mixed.ships = [Generated.Ship(), fleet.ships[2]]
+        rejected { try fleet.readDelta(from: delta, against: mixed) }
+        // A nested class record is storage of the target too.
+        let flag = Generated.Fleet()
+        flag.copy(from: fleet)
+        flag.flag = fleet.flag
+        rejected { try fleet.readDelta(from: delta, against: flag) }
 
         // Copying a record into itself keeps its values.
         fleet.copy(from: fleet)

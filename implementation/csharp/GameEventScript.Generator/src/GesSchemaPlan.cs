@@ -79,12 +79,13 @@ internal static class GesSchemaPlanner
         else if (value.Element is not null) KeyedElements(value.Element, elements);
     }
 
-    // Whether a value holds class records that a read writes into: a class schema, or a list of classes with its pool.
-    internal static bool HoldsRecords(GesPlanValue value) => value.Encoding.Kind switch
+    // Whether a value holds storage that a read writes into besides the record's own fields: a class schema, a list of classes
+    // with its pool or, when lists count as storage, any list.
+    internal static bool HoldsStorage(GesPlanValue value, bool lists) => value.Encoding.Kind switch
     {
         GesLayoutKind.Schema => value.IsClass,
-        GesLayoutKind.List => value.Element!.IsClass,
-        GesLayoutKind.Union => value.Alternatives.Exists(HoldsRecords),
+        GesLayoutKind.List => lists || value.Element!.IsClass,
+        GesLayoutKind.Union => value.Alternatives.Exists(alternative => HoldsStorage(alternative, lists)),
         _ => false,
     };
 

@@ -82,12 +82,13 @@ enum GesSchemaPlanner {
         }
     }
 
-    // Whether a value holds class records that a read writes into: a class schema, or a list of classes with its pool.
-    static func holdsRecords(_ value: GesPlanValue) -> Bool {
+    // Whether a value holds storage that a read writes into besides the record's own fields: a class schema, a list of classes
+    // with its pool or, when lists count as storage, any list.
+    static func holdsStorage(_ value: GesPlanValue, lists: Bool) -> Bool {
         switch value.encoding.kind {
         case .schema: value.isClass
-        case .list: value.element!.isClass
-        case .union: value.alternatives.contains(where: holdsRecords)
+        case .list: lists || value.element!.isClass
+        case .union: value.alternatives.contains { holdsStorage($0, lists: lists) }
         default: false
         }
     }

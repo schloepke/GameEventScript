@@ -93,7 +93,7 @@ enum Generated {
             }
         }
 
-        #if DEBUG
+        #if DEBUG || GES_CHECK_SHARING
         @exclusivity(unchecked) var __busy = false
 
         func __mark(_ busy: Bool) { self.__busy = busy }
@@ -161,7 +161,7 @@ enum Generated {
         @discardableResult
         func readDelta(from data: UnsafeRawBufferPointer, against baseline: Banner, byteLimit: Int = .max) throws(GesWireError) -> Int {
             if self === baseline { throw GesWireError(code: GesWireError.overlappingBuffers, path: "") }
-            #if DEBUG
+            #if DEBUG || GES_CHECK_SHARING
             self.__mark(true)
             let shared = baseline.__holds()
             self.__mark(false)
@@ -408,7 +408,7 @@ enum Generated {
             try self.flag.__readFields(&reader, paths, at + 18)
         }
 
-        #if DEBUG
+        #if DEBUG || GES_CHECK_SHARING
         @exclusivity(unchecked) var __busy = false
 
         func __mark(_ busy: Bool) {
@@ -780,7 +780,7 @@ enum Generated {
         @discardableResult
         func readDelta(from data: UnsafeRawBufferPointer, against baseline: Fleet, byteLimit: Int = .max) throws(GesWireError) -> Int {
             if self === baseline { throw GesWireError(code: GesWireError.overlappingBuffers, path: "") }
-            #if DEBUG
+            #if DEBUG || GES_CHECK_SHARING
             self.__mark(true)
             let shared = baseline.__holds()
             self.__mark(false)
@@ -1566,7 +1566,7 @@ enum Generated {
             }
         }
 
-        #if DEBUG
+        #if DEBUG || GES_CHECK_SHARING
         @exclusivity(unchecked) var __busy = false
 
         func __mark(_ busy: Bool) { self.__busy = busy }
@@ -1737,7 +1737,7 @@ enum Generated {
         @discardableResult
         func readDelta(from data: UnsafeRawBufferPointer, against baseline: Ship, byteLimit: Int = .max) throws(GesWireError) -> Int {
             if self === baseline { throw GesWireError(code: GesWireError.overlappingBuffers, path: "") }
-            #if DEBUG
+            #if DEBUG || GES_CHECK_SHARING
             self.__mark(true)
             let shared = baseline.__holds()
             self.__mark(false)

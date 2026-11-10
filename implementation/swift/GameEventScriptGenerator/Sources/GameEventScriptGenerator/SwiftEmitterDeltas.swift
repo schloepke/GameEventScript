@@ -195,10 +195,10 @@ extension GesSwiftEmitter {
     // holds; release builds generate none of it. Swift arrays are values, so only records can be shared.
     static func sharingMembers(_ code: inout Code, _ type: GesPlanType, _ stored: String) {
         code.blank()
-        code.line("#if DEBUG")
+        code.line(checkSharing)
         code.line("\(stored)var __busy = false")
         code.blank()
-        if !type.fields.contains(where: { GesSchemaPlanner.holdsRecords($0.value) }) {
+        if !type.fields.contains(where: { GesSchemaPlanner.holdsStorage($0.value, lists: false) }) {
             code.line("func __mark(_ busy: Bool) { self.__busy = busy }")
             code.blank()
             code.line("func __holds() -> Bool { self.__busy }")
@@ -216,6 +216,9 @@ extension GesSwiftEmitter {
         }
         code.line("#endif")
     }
+
+    // The builds that check shared baselines: debug builds and any build that asks.
+    private static let checkSharing = "#if DEBUG || GES_CHECK_SHARING"
 
     private static func mark(_ code: inout Code, _ value: GesPlanValue) {
         switch value.encoding.kind {
@@ -364,7 +367,7 @@ extension GesSwiftEmitter {
         if type.isClass {
             // Sharing other storage is a programming error, which only debug builds pay to detect.
             code.line("if self === baseline { throw GesWireError(code: GesWireError.overlappingBuffers, path: \"\") }")
-            code.line("#if DEBUG")
+            code.line(checkSharing)
             code.line("self.__mark(true)")
             code.line("let shared = baseline.__holds()")
             code.line("self.__mark(false)")

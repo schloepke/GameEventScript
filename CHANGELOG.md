@@ -430,6 +430,8 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 - The C# CLI builds with .NET SDK 10.0.404, so the Windows archives and the AOT tool packages
   contain .NET 8.0.34 instead of 8.0.25, which had known vulnerabilities such as CVE-2026-111497.
   The libraries keep their .NET Standard 2.1 target.
+- The CLI overview lists `ges schema layout` and `generate`, and `ges run --help` lists the
+  console commands `:edit`, `:save` and `:quit!`.
 - External field values are no longer cached, so they can change between handlers. In C#,
   a script's field read runs only that field's getter instead of all of them, so a failing
   getter affects only its own field.

@@ -21,7 +21,7 @@ Usage:
   dotnet ges dump <program.gesb> [-o <output.gesa>] [--addresses]
   dotnet ges document check <data.gesd> [more.gesd ...] [-q]
   dotnet ges document format <data.gesd> [-o <output.gesd>] [--color]
-  dotnet ges schema <check|format|hash|canonical|dump> <schema.gess> ...
+  dotnet ges schema <check|format|hash|canonical|dump|layout|generate> <schema.gess> ...
 
 Commands:
   compile     Compile UTF-8 source files together to .gesb. Use 'dotnet ges compile --help' for options.
@@ -29,7 +29,7 @@ Commands:
   run         Run Main(args), an event scenario, or the event console. Use 'dotnet ges run --help' for options.
   dump        Dump a .gesb file as GESA text. Use 'dotnet ges dump --help' for options.
   document    Check or format GES documents (.gesd). Use 'dotnet ges document --help' for options.
-  schema      Check, format or hash GES schemas (.gess) and dump binary data. Use 'dotnet ges schema --help' for options.
+  schema      Check, format or hash GES schemas (.gess), dump binary data, and generate code. Use 'dotnet ges schema --help' for options.
 
 Options:
   -h, --help  Show this help.

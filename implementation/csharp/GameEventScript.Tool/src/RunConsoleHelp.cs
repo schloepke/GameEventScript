@@ -139,7 +139,7 @@ Commands:
   :help load            Show load behavior and path examples.
   :help dump            Show program/handler inspection and source/dump details.
   :load <file>          Add one .ges or .gesb program; run its initialization.
-  :unload <module|ID>  Detach one loaded program.
+  :unload <module|ID>   Detach one loaded program.
   :unloadAll            Detach all programs; keep native console handlers.
   :reload               Re-read active programs on a fresh host. Use :help reload for details.
   :list                 List loaded programs/modules and their IDs.

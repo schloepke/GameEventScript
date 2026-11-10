@@ -1828,6 +1828,93 @@ steps:
 
 ---
 
+## Test: hexadecimal integer literals are exact integers
+
+Hexadecimal literals denote exact Int64 values with case-insensitive digits and underscore separators; unary minus negates them, and they work wherever an integer literal is required.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: hexadecimal-integer-literals
+kind: scriptApi
+level: scenario
+sources:
+  - name: "hexadecimal integer literals are exact integers.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start {
+  emit Done(lower: 0xff, grouped: 0xFF_00, negative: -0x10, maximum: 0x7fff_ffff_ffff_ffff, days: 0x1d, bytes: 0x1B, power: 2 ^ 0x10, dice: :Dice[0x6, 0xA], first: [1, 2, 3][:take first 0x2])
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| step-0001 | Start | completion |  |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  step-0001:
+    input:
+      args: []
+    local:
+      - name: "Done"
+        args:
+          - name: "lower"
+            value:
+              type: ":Number.int64"
+              value: "255"
+          - name: "grouped"
+            value:
+              type: ":Number.int64"
+              value: "65280"
+          - name: "negative"
+            value:
+              type: ":Number.int64"
+              value: "-16"
+          - name: "maximum"
+            value:
+              type: ":Number.int64"
+              value: "9223372036854775807"
+          - name: "days"
+            value:
+              type: ":Number.int64"
+              value: "29"
+          - name: "bytes"
+            value:
+              type: ":Number.int64"
+              value: "27"
+          - name: "power"
+            value:
+              type: ":Number.int64"
+              value: "65536"
+          - name: "dice"
+            value:
+              type: ":Dice"
+              rolls:
+                - 10
+                - 6
+          - name: "first"
+            value:
+              type: ":List"
+              items:
+                - type: ":Number.int64"
+                  value: "1"
+                - type: ":Number.int64"
+                  value: "2"
+```
+
+---
+
 ## Test: explicit numeric identifier suffixes and compact math remain valid
 
 This runtime case exercises “explicit numeric identifier suffixes and compact math remain valid” and verifies the declared messages, values, and execution result.

@@ -122,7 +122,9 @@ No whitespace is allowed inside it. The grammar is:
 ```text
 NumericText = Padding NumberToken Padding
 Padding     = { " " | "\t" }
-NumberToken = (Finite | Infinity | "NaN") [Suffix]
+NumberToken = (Finite | Infinity | "NaN") [Suffix] | Hexadecimal
+Hexadecimal = [Sign] "0x" HexDigit {["_"] HexDigit}
+HexDigit    = "0".."9" | "a".."f" | "A".."F"
 Finite      = [Sign] (Digits | GroupedDigits) ["." Digits] [Exponent]
 Infinity    = [Sign] "Infinity"
 Exponent    = ("e" | "E") [Sign] Digits
@@ -145,6 +147,17 @@ Leading zeroes are allowed in the integer part and exponent. Both `e` and `E`,
 an explicit positive exponent sign, and exponent leading zeroes are accepted.
 Thus `1000`, `100.2`, `1.02e20`, `1e03`, and `1E+003` are valid inputs.
 
+> **Since: Unreleased** — hexadecimal numeric text
+
+A `Hexadecimal` token is an exact Int64 integer, matching hexadecimal source
+literals: its magnitude may be at most `0x7fff_ffff_ffff_ffff`, also with a
+minus sign, and a larger magnitude is invalid rather than rounded. The `0x`
+prefix is lowercase, while digits accept both cases. It has no suffix, so
+`0x10m` and `0x10%` are invalid and `0x1B` is 27, never a byte count. Like any
+token without a suffix, `as :Percentage` reads it as the ratio itself. Thus `0xff`, `-0x10`, `+0xFF_FF` and `0x7fff_ffff_ffff_ffff` are
+valid; `0x`, `0X10`, `0x_1`, `0x1__2`, `0x1g`, `0x1.8`, `0x10m` and
+`0x8000_0000_0000_0000` are invalid.
+
 Single underscores may separate adjacent digits, matching numeric source
 literals. They may occur in the integer part, fractional part, or text
 exponent, without imposing a group size. They may not lead, trail, repeat, or
@@ -158,7 +171,7 @@ Thus `1,003.24` and `1,234,567.89` are valid, and `1,003` means `1003`, never
 Commas are not allowed in the fractional part or exponent. Separator validation
 precedes removal; a parser must not simply discard all commas or underscores.
 
-Decimal commas, malformed grouping, hexadecimal notation, non-ASCII digits,
+Decimal commas, malformed grouping, non-ASCII digits,
 trailing signs, multiple suffixes, unknown suffixes, and unconsumed characters
 are invalid. A decimal point requires digits on both sides. An exponent
 requires at least one digit. Examples of invalid input are `12,34`, `100,2`,
@@ -185,7 +198,8 @@ In particular, source commas separate arguments and list items: `[1,003]`
 contains two items, `1` and `3`, whereas `'1,003' as :Number` yields `1003`.
 Source underscores follow the common digit-separator rule. Text-only padding,
 signs, exponent notation, special-value spellings, and comma grouping do not
-implicitly become source-token syntax. Source signs and mathematical constants
+implicitly become source-token syntax; source hexadecimal literals have no
+sign and are owned by [Language](../Language.md). Source signs and mathematical constants
 retain their expression-level meaning.
 
 A Percentage literal constructs a Percentage value; `as :Number` reads the

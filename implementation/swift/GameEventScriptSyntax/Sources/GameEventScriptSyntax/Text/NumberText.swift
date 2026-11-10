@@ -1,7 +1,7 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
-// Values of decimal number tokens, such as `1_000.5`, for the syntax rules that test a literal's value. Number tokens
+// Values of number tokens, such as `1_000.5` or `0xff`, for the syntax rules that test a literal's value. Number tokens
 // have no sign and no exponent; digit separators carry no value.
 enum GesNumberText {
     // Whether a percentage token, such as `5%`, stays within the binary64 range as a ratio.
@@ -13,6 +13,11 @@ enum GesNumberText {
 
     // The integer of a token that is exactly an integer from 1 to Int32.max, such as `6` or `6.0`.
     static func positiveInt32(_ text: String) -> Int? {
+        // The lexer only forms valid hexadecimal tokens, which start with `0x`.
+        if text.utf8.dropFirst().first == UInt8(ascii: "x") {
+            let value = GesNumberLiteral.read(text).integerValue
+            return value > 0 && value <= Int64(Int32.max) ? Int(value) : nil
+        }
         var digits = Substring(digitsOnly(text))
         if let point = digits.firstIndex(of: ".") {
             guard digits[digits.index(after: point)...].allSatisfy({ $0 == "0" }) else { return nil }

@@ -11,6 +11,8 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 ## Unreleased
 
 ### Breaking
+- Text such as `"0x10"` is now a hexadecimal number for `parse`, `as :Number`, `as :Percentage`,
+  documents and Message JSON instead of Text or `nothing`.
 - C# `GesValue.AsMap()` returns only stored Map and Record data, as in Swift; an external
   value gives `null`. `MaterializedMap()` reads its fields.
 - `:Vector(value)` and `:Point(value)` with one positional argument are now the cast,
@@ -222,6 +224,8 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   `wire.typeMismatch`, as the value path does, and reading sets that axis to zero.
 
 ### Added
+- Hexadecimal integer literals such as `0xff_88_00` in source, `parse`, numeric text casts and
+  documents: exact Int64 values with `_` between digits, without unit or percentage suffix.
 - Schema roles: `wire(group)` marks a schema, message or message set as a wire root and
   `model(group)` a schema as a model root, optionally in a group (`default` without one).
   `ges schema layout` and `generate` take `--wire <group>` and `--model <group>`, and the

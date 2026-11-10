@@ -509,6 +509,8 @@ internal sealed class GesDocumentReader
     {
         var index = start;
         if (index < end && _text[index] is '+' or '-') index++;
+        // An invalid hexadecimal number has no unit suffix.
+        if (end - index >= 2 && _text[index] == '0' && _text[index + 1] == 'x') return false;
         var digits = SkipDigits(ref index, end);
         if (index < end && _text[index] == '.')
         {

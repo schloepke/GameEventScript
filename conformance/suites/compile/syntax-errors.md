@@ -2340,3 +2340,188 @@ error:
   phase: "parse"
   code: "parse.syntax"
 ```
+
+---
+
+## Test: a hexadecimal literal without digits
+
+A `0x` prefix requires at least one hexadecimal digit.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: hex-literal-1
+kind: compileError
+level: atomic
+sources:
+  - name: "a hexadecimal literal without digits.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start {
+  emit Done(value: 0x)
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "parse"
+  code: "parse.syntax"
+  line: 2
+  column: 20
+```
+
+---
+
+## Test: a hexadecimal literal above the Int64 range
+
+A hexadecimal literal denotes an exact integer of at most `0x7fff_ffff_ffff_ffff`.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: hex-literal-2
+kind: compileError
+level: atomic
+sources:
+  - name: "a hexadecimal literal above the Int64 range.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start {
+  emit Done(value: 0x8000_0000_0000_0000)
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "parse"
+  code: "parse.syntax"
+  line: 2
+  column: 20
+```
+
+---
+
+## Test: a hexadecimal literal with a unit suffix
+
+A hexadecimal literal has no unit suffix.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: hex-literal-3
+kind: compileError
+level: atomic
+sources:
+  - name: "a hexadecimal literal with a unit suffix.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start {
+  emit Done(value: 0x10m)
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "parse"
+  code: "parse.syntax"
+  line: 2
+  column: 20
+```
+
+---
+
+## Test: a hexadecimal literal with a leading separator
+
+An underscore may only separate adjacent hexadecimal digits.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: hex-literal-4
+kind: compileError
+level: atomic
+sources:
+  - name: "a hexadecimal literal with a leading separator.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start {
+  emit Done(value: 0x_1)
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "parse"
+  code: "parse.syntax"
+  line: 2
+  column: 20
+```
+
+---
+
+## Test: a hexadecimal literal with a non-hexadecimal letter
+
+A letter after hexadecimal digits makes the whole word illegal.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: hex-literal-5
+kind: compileError
+level: atomic
+sources:
+  - name: "a hexadecimal literal with a non-hexadecimal letter.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start {
+  emit Done(value: 0x1g)
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "parse"
+  code: "parse.syntax"
+  line: 2
+  column: 20
+```

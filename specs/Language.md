@@ -287,7 +287,20 @@ let speed be 3m/s              // meter-per-second quantity
 let delay be 250ms             // prefixed spelling of 0.25s
 let area be 2m²                // square-meter quantity, not (2m)²
 let rate be 4/s                // spelling of 4Hz
+let color be 0xff_88_00        // hexadecimal integer 16746496
 ```
+
+> **Since: Unreleased** — hexadecimal integer literals
+
+A hexadecimal literal is `0x` followed by hexadecimal digits `0`–`9`, `a`–`f`
+or `A`–`F`; single underscores may separate adjacent digits as in decimal
+literals. The prefix is lowercase. It denotes an exact integer of at most
+`0x7fff_ffff_ffff_ffff`; unary minus supplies a negative sign, so the smallest
+hexadecimal operand is `-0x7fff_ffff_ffff_ffff`. It has no fractional part,
+percentage or unit suffix: `0x1d` is 29, never a day count. A `0x` without
+digits, a larger value or any directly attached letter, digit or other
+non-structural character makes the whole word an illegal token. Values print
+in decimal; nothing records the spelling.
 
 > **Since: Unreleased** — physical unit literals
 

@@ -1192,6 +1192,12 @@
 			<array>
 				<dict>
 					<key>match</key>
+					<string>\b0x[0-9A-Fa-f](?:[0-9A-Fa-f_]*[0-9A-Fa-f])?\b</string>
+					<key>name</key>
+					<string>constant.numeric.hex.gameeventscript</string>
+				</dict>
+				<dict>
+					<key>match</key>
 					<string>\b\d(?:[\d_]*\d)?d\d(?:[\d_]*\d)?\b</string>
 					<key>name</key>
 					<string>constant.numeric.dice.gameeventscript</string>

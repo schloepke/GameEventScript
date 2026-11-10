@@ -518,6 +518,7 @@ internal sealed class GesLexer
     private GesToken ReadNumberLikeToken(int line, int column)
     {
         var start = _index;
+        if (Current == '0' && Peek() == 'x') return ReadHexadecimalToken(start, line, column);
         ReadNumberDigits();
         if (!IsAtEnd && Current == '.' && GesText.IsAsciiDigit(Peek()))
         {
@@ -560,6 +561,19 @@ internal sealed class GesLexer
         if (IsAtEnd || IsValidNumberBoundary(Current)) return CreateToken(GesTokenKind.Float, text, line, column);
         while (!IsAtEnd && !GesText.IsTokenWhitespace(Current)) Advance();
 
+        return CreateToken(GesTokenKind.Illegal, _input[start.._index], line, column);
+    }
+
+    // A hexadecimal integer such as `0xff_88_00` is a number token without unit or percentage; missing digits, other
+    // attached characters and values above Int64.MaxValue make the whole word illegal.
+    private GesToken ReadHexadecimalToken(int start, int line, int column)
+    {
+        Advance();
+        Advance();
+        while (!IsAtEnd && (GesNumberLiteral.HexDigit(Current) >= 0 || Current == '_' && GesNumberLiteral.HexDigit(Peek()) >= 0)) Advance();
+        if ((IsAtEnd || GesText.IsTokenWhitespace(Current) || IsStructuralBoundary(Current)) && GesNumberLiteral.Read(_input, start, _index - start).IsValid)
+            return CreateToken(GesTokenKind.Float, _input[start.._index], line, column);
+        while (!IsAtEnd && !GesText.IsTokenWhitespace(Current)) Advance();
         return CreateToken(GesTokenKind.Illegal, _input[start.._index], line, column);
     }
 

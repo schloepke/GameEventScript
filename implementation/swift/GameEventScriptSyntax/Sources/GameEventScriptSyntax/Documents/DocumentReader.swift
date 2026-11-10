@@ -632,6 +632,8 @@
     private func hasUnknownUnit(_ start: Int, _ end: Int) -> Bool {
         var index = start
         if index < end && (bytes[index] == 43 || bytes[index] == 45) { index += 1 }
+        // An invalid hexadecimal number has no unit suffix.
+        if end - index >= 2 && bytes[index] == 48 && bytes[index + 1] == 120 { return false }
         var digits = skipDigits(&index, end)
         if index < end && bytes[index] == 46 {
             index += 1

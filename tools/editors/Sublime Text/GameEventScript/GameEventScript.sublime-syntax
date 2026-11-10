@@ -136,6 +136,9 @@
         2: "variable.other.constant.gameeventscript"
   "numbers":
     -
+      "match": "\\b0x[0-9A-Fa-f](?:[0-9A-Fa-f_]*[0-9A-Fa-f])?\\b"
+      "scope": "constant.numeric.hex.gameeventscript"
+    -
       "match": "\\b\\d(?:[\\d_]*\\d)?d\\d(?:[\\d_]*\\d)?\\b"
       "scope": "constant.numeric.dice.gameeventscript"
     -

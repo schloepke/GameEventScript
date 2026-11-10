@@ -85,6 +85,10 @@ on Start(value) { emit Done(number: value as :Number, percentage: value as :Perc
 | input-36 | Start | completion | |
 | input-37 | Start | completion | |
 | input-38 | Start | completion | |
+| input-39 | Start | completion | |
+| input-40 | Start | completion | |
+| input-41 | Start | completion | |
+| input-42 | Start | completion | |
 
 ### Expectation
 
@@ -1037,6 +1041,106 @@ steps:
     runtimeLimits:
       exclude:
         - any: true
+  input-39:
+    input:
+      args:
+        - name: "value"
+          value:
+            type: ":Text"
+            value: "0xff"
+    local:
+      - name: "Done"
+        args:
+          - name: "number"
+            value:
+              type: ":Number.int64"
+              value: "255"
+          - name: "percentage"
+            value:
+              type: ":Percentage"
+              value: "255"
+          - name: "parsed"
+            value:
+              type: ":Number.int64"
+              value: "255"
+    runtimeLimits:
+      exclude:
+        - any: true
+  input-40:
+    input:
+      args:
+        - name: "value"
+          value:
+            type: ":Text"
+            value: "-0x10"
+    local:
+      - name: "Done"
+        args:
+          - name: "number"
+            value:
+              type: ":Number.int64"
+              value: "-16"
+          - name: "percentage"
+            value:
+              type: ":Percentage"
+              value: "-16"
+          - name: "parsed"
+            value:
+              type: ":Number.int64"
+              value: "-16"
+    runtimeLimits:
+      exclude:
+        - any: true
+  input-41:
+    input:
+      args:
+        - name: "value"
+          value:
+            type: ":Text"
+            value: "+0xFF_FF"
+    local:
+      - name: "Done"
+        args:
+          - name: "number"
+            value:
+              type: ":Number.int64"
+              value: "65535"
+          - name: "percentage"
+            value:
+              type: ":Percentage"
+              value: "65535"
+          - name: "parsed"
+            value:
+              type: ":Number.int64"
+              value: "65535"
+    runtimeLimits:
+      exclude:
+        - any: true
+  input-42:
+    input:
+      args:
+        - name: "value"
+          value:
+            type: ":Text"
+            value: "0x7fff_ffff_ffff_ffff"
+    local:
+      - name: "Done"
+        args:
+          - name: "number"
+            value:
+              type: ":Number.int64"
+              value: "9223372036854775807"
+          - name: "percentage"
+            value:
+              type: ":Percentage"
+              value: "9.223372036854776e18"
+          - name: "parsed"
+            value:
+              type: ":Number.int64"
+              value: "9223372036854775807"
+    runtimeLimits:
+      exclude:
+        - any: true
 ```
 
 ---
@@ -1104,6 +1208,15 @@ on Start(value) { emit Done(number: value as :Number, percentage: value as :Perc
 | input-34 | Start | completion | |
 | input-35 | Start | completion | |
 | input-36 | Start | completion | |
+| input-37 | Start | completion | |
+| input-38 | Start | completion | |
+| input-39 | Start | completion | |
+| input-40 | Start | completion | |
+| input-41 | Start | completion | |
+| input-42 | Start | completion | |
+| input-43 | Start | completion | |
+| input-44 | Start | completion | |
+| input-45 | Start | completion | |
 
 ### Expectation
 
@@ -1760,7 +1873,7 @@ steps:
         - name: "value"
           value:
             type: ":Text"
-            value: "0x10"
+            value: "0x1g"
     local:
       - name: "Done"
         args:
@@ -1773,7 +1886,7 @@ steps:
           - name: "parsed"
             value:
               type: ":Text"
-              value: "0x10"
+              value: "0x1g"
     runtimeLimits:
       exclude:
         - any: true
@@ -1935,6 +2048,213 @@ steps:
             value:
               type: ":Text"
               value: "1e_2"
+    runtimeLimits:
+      exclude:
+        - any: true
+  input-37:
+    input:
+      args:
+        - name: "value"
+          value:
+            type: ":Text"
+            value: "0x"
+    local:
+      - name: "Done"
+        args:
+          - name: "number"
+            value:
+              type: ":Nothing"
+          - name: "percentage"
+            value:
+              type: ":Nothing"
+          - name: "parsed"
+            value:
+              type: ":Text"
+              value: "0x"
+    runtimeLimits:
+      exclude:
+        - any: true
+  input-38:
+    input:
+      args:
+        - name: "value"
+          value:
+            type: ":Text"
+            value: "0x8000_0000_0000_0000"
+    local:
+      - name: "Done"
+        args:
+          - name: "number"
+            value:
+              type: ":Nothing"
+          - name: "percentage"
+            value:
+              type: ":Nothing"
+          - name: "parsed"
+            value:
+              type: ":Text"
+              value: "0x8000_0000_0000_0000"
+    runtimeLimits:
+      exclude:
+        - any: true
+  input-39:
+    input:
+      args:
+        - name: "value"
+          value:
+            type: ":Text"
+            value: "-0x8000_0000_0000_0000"
+    local:
+      - name: "Done"
+        args:
+          - name: "number"
+            value:
+              type: ":Nothing"
+          - name: "percentage"
+            value:
+              type: ":Nothing"
+          - name: "parsed"
+            value:
+              type: ":Text"
+              value: "-0x8000_0000_0000_0000"
+    runtimeLimits:
+      exclude:
+        - any: true
+  input-40:
+    input:
+      args:
+        - name: "value"
+          value:
+            type: ":Text"
+            value: "0x10m"
+    local:
+      - name: "Done"
+        args:
+          - name: "number"
+            value:
+              type: ":Nothing"
+          - name: "percentage"
+            value:
+              type: ":Nothing"
+          - name: "parsed"
+            value:
+              type: ":Text"
+              value: "0x10m"
+    runtimeLimits:
+      exclude:
+        - any: true
+  input-41:
+    input:
+      args:
+        - name: "value"
+          value:
+            type: ":Text"
+            value: "0x10%"
+    local:
+      - name: "Done"
+        args:
+          - name: "number"
+            value:
+              type: ":Nothing"
+          - name: "percentage"
+            value:
+              type: ":Nothing"
+          - name: "parsed"
+            value:
+              type: ":Text"
+              value: "0x10%"
+    runtimeLimits:
+      exclude:
+        - any: true
+  input-42:
+    input:
+      args:
+        - name: "value"
+          value:
+            type: ":Text"
+            value: "0x_1"
+    local:
+      - name: "Done"
+        args:
+          - name: "number"
+            value:
+              type: ":Nothing"
+          - name: "percentage"
+            value:
+              type: ":Nothing"
+          - name: "parsed"
+            value:
+              type: ":Text"
+              value: "0x_1"
+    runtimeLimits:
+      exclude:
+        - any: true
+  input-43:
+    input:
+      args:
+        - name: "value"
+          value:
+            type: ":Text"
+            value: "0x1__2"
+    local:
+      - name: "Done"
+        args:
+          - name: "number"
+            value:
+              type: ":Nothing"
+          - name: "percentage"
+            value:
+              type: ":Nothing"
+          - name: "parsed"
+            value:
+              type: ":Text"
+              value: "0x1__2"
+    runtimeLimits:
+      exclude:
+        - any: true
+  input-44:
+    input:
+      args:
+        - name: "value"
+          value:
+            type: ":Text"
+            value: "0X10"
+    local:
+      - name: "Done"
+        args:
+          - name: "number"
+            value:
+              type: ":Nothing"
+          - name: "percentage"
+            value:
+              type: ":Nothing"
+          - name: "parsed"
+            value:
+              type: ":Text"
+              value: "0X10"
+    runtimeLimits:
+      exclude:
+        - any: true
+  input-45:
+    input:
+      args:
+        - name: "value"
+          value:
+            type: ":Text"
+            value: "0x1.8"
+    local:
+      - name: "Done"
+        args:
+          - name: "number"
+            value:
+              type: ":Nothing"
+          - name: "percentage"
+            value:
+              type: ":Nothing"
+          - name: "parsed"
+            value:
+              type: ":Text"
+              value: "0x1.8"
     runtimeLimits:
       exclude:
         - any: true

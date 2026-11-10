@@ -248,6 +248,17 @@
             if Self.upper(first) { return token(.message, text) }
             return token(Self.keywords[text] ?? .identifier, text, word: true)
         }
+        // A hexadecimal integer such as `0xff_88_00` is a number token without unit or percentage; missing digits, other
+        // attached characters and values above Int64.max make the whole word illegal.
+        if first == "0" && peek() == "x" {
+            advance()
+            advance()
+            while GesNumberLiteral.hexDigit(current) != nil || current == "_" && GesNumberLiteral.hexDigit(peek()) != nil { advance() }
+            let text = slice(start)
+            if index == scalars.count || Self.space(current) || Self.boundaries.contains(current), GesNumberLiteral.read(text).isValid { return token(.float, text) }
+            while index < scalars.count && !Self.space(current) { advance() }
+            return token(.illegal, slice(start))
+        }
         if Self.digit(first) {
             while Self.digit(current) || current == "_" && Self.digit(peek()) { advance() }
             if current == "." && Self.digit(peek()) {

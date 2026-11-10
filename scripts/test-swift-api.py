@@ -96,10 +96,11 @@ class SwiftDocumentationTests(unittest.TestCase):
                     (export / (package + "@Old.symbols.json")).write_text('{"stale": true}')
                     self.assertEqual([{"fresh": True}], API.dump_graphs("swift", package, True, builds))
                 build_commands = [c for c in commands if "build" in c]
-                self.assertEqual(3, len(build_commands))
+                # One build each for Syntax, SwiftBridge and Generator, and one conformance build for Runtime and Compiler.
+                self.assertEqual(4, len(build_commands))
                 self.assertTrue(all("--build-tests" not in c for c in build_commands))
                 self.assertTrue(all("release" in c and "--disable-build-manifest-caching" in c for c in build_commands))
-                self.assertEqual(4, sum("-output-dir" in c for c in commands))
+                self.assertEqual(len(API.PACKAGES), sum("-output-dir" in c for c in commands))
                 self.assertNotIn("GameEventScriptConformance", API.PACKAGES)
 
     def test_extractor_failure_exposes_tool_diagnostic(self):

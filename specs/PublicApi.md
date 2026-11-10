@@ -1375,6 +1375,37 @@ portable descriptor name/signature validation still occurs when the throwing
 factory executes. Manual descriptors remain available for foreign/generic types
 and throwing getters. Macro expansion adds no GES syntax or portable behavior.
 
+> **Since: Unreleased** — extensions declared with macros and attributes
+
+`@GesExtension(namespace)` on an enum, struct or final class generates `gesExtensions()`, the `GesBridgeExtension` list of
+its methods marked `@GesFunction(name, unit:, units:)` or `@GesPredicate(name, units:)`, for a `GesBridgeExtensionRegistry`.
+The C# Bridge reads the same declarations from `[GesExtension]`, `[GesFunction]`, `[GesPredicate]` and `[GesParam]` through
+Reflection, and both follow one set of rules:
+
+- **Signature.** The namespace comes from the type's annotation and the name from the function's, by default the Swift
+  method name. Swift takes the argument labels from the Swift labels, `_` for an unlabeled argument; C# from each
+  `[GesParam(name, ...)]`. A predicate has one parameter, a `Bool`/`bool` or optional Boolean result, and is registered with
+  one unlabeled argument, as `value is :namespace.name` calls it. The generated or reflected signatures and the code cannot
+  drift apart.
+- **Conversion.** An argument converts strictly to the parameter's type: numbers, Booleans, Text, `GesPoint`, `GesVector`,
+  `GesBox` and `GesPoly`, Optionals (C# nullable value types), and in Swift every `GesBridgeValueConvertible`; a `GesValue`
+  parameter receives the raw argument. A declared parameter unit (Swift `units: ["distance": .meter]`, since Swift has no
+  attributes on parameters; C# `[GesParam(name, kind, unit)]`) must match exactly and is removed; without one the argument
+  must be unitless. The result converts back; a declared result unit (`unit:`, C# `[GesFunction(name, kind, unit)]` or
+  `[GesFunction(name, unit)]`) is attached to a numeric, spatial or shape result, and an absent Optional or null result is
+  `nothing`.
+- **Failures.** An argument that does not convert, or another argument count, gives `nothing`, as GES operations do for a
+  domain failure; an error the method throws stays an extension fault (`runtime.extensionCallFailed`, or the declared fault).
+- **Instances.** Instance methods need an instance: Swift generates an instance `gesExtensions()` that also lists the static
+  ones, and C# registers them with `GesBridgeExtensionRegistryBuilder.AddInstance(instance)`. The registry retains the
+  instance (Swift copies a struct and references a class) and calls the methods on it, so a host can expose game state.
+- **Purity.** GES has no purity contract for host calls, so these functions are effectful like every extension; no
+  annotation claims otherwise.
+
+The macros need approval in Xcode like the type macros; command-line builds pass `-skipMacroValidation`. Hosts that write
+closures keep working unchanged. C# registration uses Reflection, so IL2CPP code stripping must preserve the annotated
+types (a `link.xml` entry or `[Preserve]`).
+
 `GesBridgeHostRunner` is an optional synchronized embedding adapter.
 It takes exclusive ownership through Swift 6 sending parameters and serializes
 Host access and lifecycle operations with one recursive lock. Transferred Host,

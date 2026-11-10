@@ -214,6 +214,8 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   `GesValue.mapEntries` are no longer public.
 - C# `GesValueMap.StorageLength` is removed; it always equaled `Length`. Use
   `Length` instead.
+- Attributed C# extension parameters check units: a `[GesParam]` with a unit requires exactly
+  that unit, and one without a unit a unitless argument; another unit gives `nothing`.
 - Generated schema code holds `:Point` and `:Vector` fields as the runtime's `GesPoint` and
   `GesVector` instead of a nested struct per field, such as `PositionPoint`. Writing a record
   or a delta whose axis outside the field's axis block is not zero fails with
@@ -230,6 +232,11 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 - `ges schema generate --model` writes plain model types: Swift `Hashable`, `Sendable`, `Codable`
   structs with a memberwise `init` (`Identifiable` with a key), C# 9 classes with value equality,
   with enums for closed tags and unions, and no ranges, steps or parameters needed.
+- Swift extensions declared with macros: `@GesExtension`, `@GesFunction` and `@GesPredicate`
+  generate `gesExtensions()` with signatures from the declarations, strict conversions, declared
+  units and `nothing` for an argument that does not convert; instance methods yield an instance
+  `gesExtensions()`. The C# attributes gain `[GesPredicate]`, nullable, Text, spatial and shape
+  parameters and results, `[GesFunction(name, unit)]` and `AddInstance(instance)`.
 - `ges schema generate --model --bindings` offers generated models to scripts as external types:
   a generated `GesTypes` catalog and registry, `ToGesValue`/`FromGesValue` (Swift `gesValue()`/
   `init?(gesValue:)`) and a `:Name(fields: map)` constructor, without the Bridge, macros or Reflection.

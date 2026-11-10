@@ -1336,6 +1336,7 @@ sealed class GameEventScript.CSharpBridge.GesBridgeExtensionRegistryBuilder
   method GameEventScript.Api.IGesExtensionRegistry Build()
   method GameEventScript.CSharpBridge.GesBridgeExtensionRegistryBuilder Add(System.Type extensionType)
   method GameEventScript.CSharpBridge.GesBridgeExtensionRegistryBuilder Add<T>()
+  method GameEventScript.CSharpBridge.GesBridgeExtensionRegistryBuilder AddInstance(System.Object instance)
   method GameEventScript.CSharpBridge.GesBridgeExtensionRegistryBuilder AddRange(System.Collections.Generic.IEnumerable<System.Type> extensionTypes)
 sealed class GameEventScript.CSharpBridge.GesBridgeExternalTypeRegistry
   method GameEventScript.Api.GesExternalTypeDefinition Resolve(System.String typeName)
@@ -1394,6 +1395,7 @@ sealed class GameEventScript.CSharpBridge.GesFunctionAttribute
   ctor GesFunctionAttribute(System.String name)
   ctor GesFunctionAttribute(System.String name, GameEventScript.Api.GesBytecodeTypeKind returnKind)
   ctor GesFunctionAttribute(System.String name, GameEventScript.Api.GesBytecodeTypeKind returnKind, GameEventScript.Api.GesQuantityUnit unit)
+  ctor GesFunctionAttribute(System.String name, GameEventScript.Api.GesQuantityUnit unit)
   property GameEventScript.Api.GesBytecodeTypeKind? ReturnKind { get }
   property GameEventScript.Api.GesQuantityUnit ReturnUnit { get }
   property System.String Name { get }
@@ -1406,6 +1408,9 @@ sealed class GameEventScript.CSharpBridge.GesParamAttribute
   property GameEventScript.Api.GesQuantityUnit Unit { get }
   property System.String Name { get }
   property System.String TypeName { get }
+sealed class GameEventScript.CSharpBridge.GesPredicateAttribute
+  ctor GesPredicateAttribute(System.String name)
+  property System.String Name { get }
 sealed class GameEventScript.CSharpBridge.GesTypeAttribute
   ctor GesTypeAttribute(System.String typeName)
   property System.String TypeName { get }

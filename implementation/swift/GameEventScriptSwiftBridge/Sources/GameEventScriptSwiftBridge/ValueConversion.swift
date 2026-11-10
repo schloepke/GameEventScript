@@ -28,22 +28,35 @@ public enum GesBridgeValueConversion {
     /// Invokes the native value's strict GES conversion, propagating conversion errors.
     public static func encode<T: GesBridgeValueConvertible>(_ value: T) throws -> GesValue { try value.toGesValue() }
 
-    /// Encodes a native numeric magnitude with an explicitly declared quantity unit.
+    /// Encodes a native numeric magnitude, a spatial value or a shape with an explicitly declared unit.
     /// Nothing passes through for optional/NaN values. Existing units and nonnumeric values are rejected;
     /// `.none` delegates to normal conversion. No unit scaling or numeric truncation is performed.
     public static func encode<T: GesBridgeValueConvertible>(_ value: T, unit: GesQuantityUnit) throws -> GesValue {
         let encoded = try value.toGesValue()
         if unit == .none || encoded.isNothing { return encoded }
+        // Spatial values and shapes take the unit as a whole; their native forms carry none.
+        if encoded.valueKind == .point || encoded.valueKind == .vector {
+            try requireKind(encoded, encoded.valueKind)
+            return encoded.valueKind == .point ? .point(x: encoded.x, y: encoded.y, z: encoded.z, unit: unit) : .vector(x: encoded.x, y: encoded.y, z: encoded.z, unit: unit)
+        }
+        if let box = GesBox(encoded) { return box.value(unit: unit) }
+        if let poly = GesPoly(encoded) { return poly.value(unit: unit) }
         try requireKind(encoded, .integer, .float)
         if let integer = encoded.integerValue { return .integer(integer, unit: unit) }
         return .float(encoded.floatValue!, unit: unit)
     }
 
-    /// Decodes a numeric magnitude only when its unit exactly matches the declared binding unit.
+    /// Decodes a numeric magnitude, a spatial value or a shape only when its unit exactly matches the declared binding unit.
     /// Nothing delegates to the native decoder for Optional support. `.none` uses normal strict conversion.
     /// The unit is removed only after validation; the native decoder still rejects precision loss and overflow.
     public static func decode<T: GesBridgeValueConvertible>(_ value: GesValue, as type: T.Type = T.self, unit: GesQuantityUnit) throws -> T {
         if unit == .none || value.isNothing { return try T.fromGesValue(value) }
+        if value.valueKind == .point || value.valueKind == .vector {
+            guard value.unit == unit else { throw GesBridgeConversionError.typeMismatch(expected: String(describing: value.valueKind) + unit.suffix, actual: String(describing: value.valueKind) + value.unit.suffix) }
+            return try T.fromGesValue(value.valueKind == .point ? .point(x: value.x, y: value.y, z: value.z) : .vector(x: value.x, y: value.y, z: value.z))
+        }
+        if let box = GesBox(value, unit: unit) { return try T.fromGesValue(box.value()) }
+        if let poly = GesPoly(value, unit: unit) { return try T.fromGesValue(poly.value()) }
         guard value.unit == unit, value.valueKind == .integer || value.valueKind == .float else {
             throw GesBridgeConversionError.typeMismatch(expected: "Quantity(" + unit.suffix + ")", actual: String(describing: value.valueKind) + value.unit.suffix)
         }
@@ -165,6 +178,58 @@ extension Dictionary: GesBridgeValueConvertible where Key == String, Value: GesB
             result.updateValue(try Value.fromGesValue(map.value(at: index)), forKey: key)
         }
         return result
+    }
+}
+
+extension GesPoint: GesBridgeValueConvertible {
+    /// Encodes this point as a unitless GES Point; NaN components give Nothing. Use `encode(_:unit:)` for a unit.
+    public func toGesValue() -> GesValue { value() }
+
+    /// Decodes a unitless Point; use `decode(_:as:unit:)` for a Point with a unit.
+    ///
+    /// - Throws: A conversion type mismatch for other kinds or units.
+    public static func fromGesValue(_ value: GesValue) throws -> Self {
+        guard let point = GesPoint(value) else { throw GesBridgeConversionError.typeMismatch(expected: "Point", actual: String(describing: value.valueKind) + value.unit.suffix) }
+        return point
+    }
+}
+
+extension GesVector: GesBridgeValueConvertible {
+    /// Encodes this vector as a unitless GES Vector; NaN components give Nothing. Use `encode(_:unit:)` for a unit.
+    public func toGesValue() -> GesValue { value() }
+
+    /// Decodes a unitless Vector; use `decode(_:as:unit:)` for a Vector with a unit.
+    ///
+    /// - Throws: A conversion type mismatch for other kinds or units.
+    public static func fromGesValue(_ value: GesValue) throws -> Self {
+        guard let vector = GesVector(value) else { throw GesBridgeConversionError.typeMismatch(expected: "Vector", actual: String(describing: value.valueKind) + value.unit.suffix) }
+        return vector
+    }
+}
+
+extension GesBox: GesBridgeValueConvertible {
+    /// Encodes this box as the unitless external value `:Box` of `GesGeometryLibrary`.
+    public func toGesValue() -> GesValue { value() }
+
+    /// Decodes a unitless `:Box` of `GesGeometryLibrary`.
+    ///
+    /// - Throws: A conversion type mismatch for other values or units.
+    public static func fromGesValue(_ value: GesValue) throws -> Self {
+        guard let box = GesBox(value) else { throw GesBridgeConversionError.typeMismatch(expected: "Box", actual: String(describing: value.valueKind) + value.unit.suffix) }
+        return box
+    }
+}
+
+extension GesPoly: GesBridgeValueConvertible {
+    /// Encodes this polygon as the unitless external value `:Poly` of `GesGeometryLibrary`.
+    public func toGesValue() -> GesValue { value() }
+
+    /// Decodes a unitless `:Poly` of `GesGeometryLibrary`.
+    ///
+    /// - Throws: A conversion type mismatch for other values or units.
+    public static func fromGesValue(_ value: GesValue) throws -> Self {
+        guard let poly = GesPoly(value) else { throw GesBridgeConversionError.typeMismatch(expected: "Poly", actual: String(describing: value.valueKind) + value.unit.suffix) }
+        return poly
     }
 }
 

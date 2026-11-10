@@ -55,6 +55,9 @@ here.
   registry and extensions. Decide whether `WithExternalTypeCatalog` remains as a
   convenience, and whether the Bridges generate declaration modules. Schedule
   after the Syntax module rework, on its source-neutral declaration set.
+- Offer a C# incremental source generator for `[GesExtension]` and `[GesType]` declarations, so that
+  Unity IL2CPP builds need neither Reflection nor `link.xml` entries for annotated types, with the
+  same rules as the Reflection registries and the Swift macros.
 - Add `:Box(unit) { ... }` and `:Poly(unit) max n { ... }` to the schema language, with per-axis
   ranges like `:Point`, so that generated wire and model code holds `GesBox` and `GesPoly` fields.
   Until then a schema writes a Box as two `:Point` fields and a Poly as `:List(:Point) max n`, and

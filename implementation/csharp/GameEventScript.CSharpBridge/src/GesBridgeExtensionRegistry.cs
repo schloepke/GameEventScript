@@ -55,6 +55,16 @@ public sealed class GesFunctionAttribute(string name) : Attribute
     }
 
     /// <summary>
+    /// Declares the unit of a numeric, spatial or shape result without restricting its kind.
+    /// </summary>
+    /// <param name="name">The function name.</param>
+    /// <param name="unit">The unit attached to the result.</param>
+    public GesFunctionAttribute(string name, GesQuantityUnit unit) : this(name)
+    {
+        ReturnUnit = unit.ToStoredUnit();
+    }
+
+    /// <summary>
     /// Gets the name.
     /// </summary>
     public string Name { get; } = GesExternalTypeNames.NormalizeIdentifier(name, nameof(name));
@@ -76,12 +86,27 @@ public sealed class GesFunctionAttribute(string name) : Attribute
 }
 
 /// <summary>
+/// Exposes a method with one parameter and a <see cref="bool"/> or nullable Boolean result as the predicate of
+/// <c>value is :extension.name</c>. It is registered with one unlabeled argument, whatever its parameter declares; null gives
+/// <c>nothing</c>.
+/// </summary>
+[AttributeUsage(AttributeTargets.Method)]
+public sealed class GesPredicateAttribute(string name) : Attribute
+{
+    /// <summary>
+    /// Gets the predicate name.
+    /// </summary>
+    public string Name { get; } = GesExternalTypeNames.NormalizeIdentifier(name, nameof(name));
+}
+
+/// <summary>
 /// Collects attributed extension types and optionally falls back to a base registry for unknown signatures.
 /// </summary>
 public sealed class GesBridgeExtensionRegistryBuilder
 {
     private readonly IGesExtensionRegistry? _baseRegistry;
     private readonly List<Type> _extensionTypes = [];
+    private readonly List<object> _instances = [];
 
     private GesBridgeExtensionRegistryBuilder(IGesExtensionRegistry? baseRegistry)
     {
@@ -110,6 +135,18 @@ public sealed class GesBridgeExtensionRegistryBuilder
     public GesBridgeExtensionRegistryBuilder Add<T>() => Add(typeof(T));
 
     /// <summary>
+    /// Adds the attributed instance and static methods of an instance's type; the registry retains the instance and calls its
+    /// methods on it.
+    /// </summary>
+    /// <param name="instance">An instance of a type that declares <see cref="GesExtensionAttribute"/>.</param>
+    /// <returns>This builder.</returns>
+    public GesBridgeExtensionRegistryBuilder AddInstance(object instance)
+    {
+        _instances.Add(instance ?? throw new ArgumentNullException(nameof(instance)));
+        return this;
+    }
+
+    /// <summary>
     /// Adds the range.
     /// </summary>
     /// <param name="extensionTypes">The extension types value.</param>
@@ -131,7 +168,7 @@ public sealed class GesBridgeExtensionRegistryBuilder
     /// <returns>The result of the operation.</returns>
     public IGesExtensionRegistry Build()
     {
-        var localRegistry = GesBridgeExtensionRegistry.Create(_extensionTypes);
+        var localRegistry = GesBridgeExtensionRegistry.Create(_extensionTypes, _instances);
         return _baseRegistry is null
             ? localRegistry
             : new GesBridgeOverlayExtensionRegistry(localRegistry, _baseRegistry);
@@ -171,15 +208,18 @@ public sealed class GesBridgeExtensionRegistry : IGesExtensionRegistry
     /// <param name="extensionTypes">Types annotated with <see cref="GesExtensionAttribute"/>.</param>
     /// <returns>The validated registry.</returns>
     /// <exception cref="ArgumentException">An extension declaration is invalid or a signature is duplicated.</exception>
-    public static GesBridgeExtensionRegistry Create(IEnumerable<Type> extensionTypes)
+    public static GesBridgeExtensionRegistry Create(IEnumerable<Type> extensionTypes) => Create(extensionTypes, []);
+
+    internal static GesBridgeExtensionRegistry Create(IEnumerable<Type> extensionTypes, IEnumerable<object> instances)
     {
         _ = extensionTypes ?? throw new ArgumentNullException(nameof(extensionTypes));
         var functions = new Dictionary<string, IGesExtensionFunction>(StringComparer.Ordinal);
         foreach (var extensionType in extensionTypes)
         {
-            RegisterExtensionType(extensionType ?? throw new ArgumentException("Extension type list contains null.", nameof(extensionTypes)), functions);
+            RegisterExtensionType(extensionType ?? throw new ArgumentException("Extension type list contains null.", nameof(extensionTypes)), null, functions);
         }
 
+        foreach (var instance in instances) RegisterExtensionType(instance.GetType(), instance, functions);
         return new GesBridgeExtensionRegistry(functions);
     }
 
@@ -209,25 +249,31 @@ public sealed class GesBridgeExtensionRegistry : IGesExtensionRegistry
         return _functions.GetValueOrDefault(reference.SignatureId);
     }
 
-    private static void RegisterExtensionType(Type extensionType, IDictionary<string, IGesExtensionFunction> functions)
+    // Static methods, and with an instance also its instance methods, bound to it.
+    private static void RegisterExtensionType(Type extensionType, object? instance, IDictionary<string, IGesExtensionFunction> functions)
     {
         var extensionAttribute = extensionType.GetCustomAttribute<GesExtensionAttribute>() ??
                                  throw new ArgumentException($"CLR extension type '{extensionType.FullName}' must declare GesExtensionAttribute.", nameof(extensionType));
 
-        foreach (var method in extensionType.GetMethods(BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic))
+        var flags = BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic | (instance is null ? 0 : BindingFlags.Instance);
+        foreach (var method in extensionType.GetMethods(flags))
         {
             var functionAttribute = method.GetCustomAttribute<GesFunctionAttribute>();
-            if (functionAttribute is null) continue;
-            var function = CreateFunction(extensionAttribute.Name, functionAttribute, method, out var signatureId);
+            var predicateAttribute = method.GetCustomAttribute<GesPredicateAttribute>();
+            if (functionAttribute is null && predicateAttribute is null) continue;
+            if (predicateAttribute is not null && functionAttribute is not null)
+                throw new ArgumentException($"GameEventScript extension function '{extensionType.FullName}.{method.Name}' declares both GesFunction and GesPredicate.");
+            if (method.DeclaringType == typeof(object)) continue;
+            var function = CreateFunction(extensionAttribute.Name, functionAttribute ?? new GesFunctionAttribute(predicateAttribute!.Name), predicateAttribute is not null, method, method.IsStatic ? null : instance, out var signatureId);
             if (!functions.TryAdd(signatureId, function)) throw new ArgumentException($"GameEventScript extension function '{signatureId}' is registered more than once.", nameof(extensionType));
         }
     }
 
-    private static IGesExtensionFunction CreateFunction(string extensionName, GesFunctionAttribute attribute, MethodInfo method, out string signatureId)
+    private static IGesExtensionFunction CreateFunction(string extensionName, GesFunctionAttribute attribute, bool predicate, MethodInfo method, object? instance, out string signatureId)
     {
-        if (!method.IsStatic)
+        if (!method.IsStatic && instance is null)
         {
-            throw new ArgumentException($"GameEventScript extension function '{method.DeclaringType?.FullName}.{method.Name}' must be static.");
+            throw new ArgumentException($"GameEventScript extension function '{method.DeclaringType?.FullName}.{method.Name}' must be static, or registered with AddInstance.");
         }
 
         if (method.ReturnType == typeof(void))
@@ -241,13 +287,16 @@ public sealed class GesBridgeExtensionRegistry : IGesExtensionRegistry
         var definitions = scriptParameters
             .Select(parameter => CreateParameterDefinition(method, parameter))
             .ToArray();
-        signatureId = new GesExtensionReference(extensionName, attribute.Name, definitions.Select(definition => definition.Name)).SignatureId;
+        if (predicate && (definitions.Length != 1 || method.ReturnType != typeof(bool) && method.ReturnType != typeof(bool?)))
+            throw new ArgumentException($"GameEventScript predicate '{method.DeclaringType?.FullName}.{method.Name}' requires one parameter and a bool or bool? result.");
+        var labels = predicate ? [GesMessageSignature.UnlabeledParameterName] : definitions.Select(definition => definition.Name).ToArray();
+        signatureId = new GesExtensionReference(extensionName, attribute.Name, labels).SignatureId;
         var readers = scriptParameters
             .Select((parameter, index) => CreateArgumentReader(method, parameter.ParameterType, definitions[index]))
             .ToArray();
         var returnConverter = CreateReturnConverter(method, attribute);
 
-        return CreateAdapter(method, hasContext, readers, returnConverter);
+        return CreateAdapter(method, instance, hasContext, readers, returnConverter);
     }
 
     private static ExtensionParameterDefinition CreateParameterDefinition(MethodInfo method, ParameterInfo parameter)
@@ -267,22 +316,28 @@ public sealed class GesBridgeExtensionRegistry : IGesExtensionRegistry
             return GesValueArgumentReader.Instance;
         }
 
+        if (Nullable.GetUnderlyingType(parameterType) is { } underlying)
+        {
+            var inner = CreateArgumentReader(method, underlying, definition);
+            return Activator.CreateInstance(typeof(NullableArgumentReader<>).MakeGenericType(underlying), inner)!;
+        }
+
         if (parameterType == typeof(double))
         {
             RequireParameterKind(method, definition, GesBytecodeTypeKind.Float, allowUnitTypes: true);
-            return FloatArgumentReader.Instance;
+            return new FloatArgumentReader(definition.Unit);
         }
 
         if (parameterType == typeof(long))
         {
             RequireParameterKind(method, definition, GesBytecodeTypeKind.Float, allowUnitTypes: false);
-            return LongArgumentReader.Instance;
+            return new LongArgumentReader(definition.Unit);
         }
 
         if (parameterType == typeof(int))
         {
             RequireParameterKind(method, definition, GesBytecodeTypeKind.Float, allowUnitTypes: false);
-            return IntArgumentReader.Instance;
+            return new IntArgumentReader(definition.Unit);
         }
 
         if (parameterType == typeof(bool))
@@ -290,6 +345,12 @@ public sealed class GesBridgeExtensionRegistry : IGesExtensionRegistry
             RequireParameterKind(method, definition, GesBytecodeTypeKind.Boolean, allowUnitTypes: false);
             return BoolArgumentReader.Instance;
         }
+
+        if (parameterType == typeof(string)) return TextArgumentReader.Instance;
+        if (parameterType == typeof(GesPoint)) return new SpatialArgumentReader<GesPoint>(value => GesPoint.FromValue(value, definition.Unit));
+        if (parameterType == typeof(GesVector)) return new SpatialArgumentReader<GesVector>(value => GesVector.FromValue(value, definition.Unit));
+        if (parameterType == typeof(GesBox)) return new SpatialArgumentReader<GesBox>(value => GesBox.FromValue(value, definition.Unit));
+        if (parameterType == typeof(GesPoly)) return new PolyArgumentReader(definition.Unit);
 
         if (parameterType.IsValueType)
         {
@@ -327,9 +388,10 @@ public sealed class GesBridgeExtensionRegistry : IGesExtensionRegistry
             $"GameEventScript extension function '{method.DeclaringType?.FullName}.{method.Name}' parameter '{definition.Name}' declares ':{definition.TypeName}' but CLR parameter requires '{kind}'.");
     }
 
-    private static object CreateReturnConverter(MethodInfo method, GesFunctionAttribute attribute)
+    private static object CreateReturnConverter(MethodInfo method, GesFunctionAttribute attribute) => CreateReturnConverter(method, attribute, method.ReturnType);
+
+    private static object CreateReturnConverter(MethodInfo method, GesFunctionAttribute attribute, Type returnType)
     {
-        var returnType = method.ReturnType;
         if (returnType == typeof(GesValue))
         {
             return GesValueReturnConverter.Instance;
@@ -359,6 +421,19 @@ public sealed class GesBridgeExtensionRegistry : IGesExtensionRegistry
             return BoolReturnConverter.Instance;
         }
 
+        if (Nullable.GetUnderlyingType(returnType) is { } underlying && underlying != typeof(ValueTuple<double, GesQuantityUnit>) && underlying != typeof(ValueTuple<double, GesQuantityUnit?>))
+        {
+            var inner = CreateReturnConverter(method, attribute, underlying);
+            return Activator.CreateInstance(typeof(NullableReturnConverter<>).MakeGenericType(underlying), inner)!;
+        }
+
+        var unit = attribute.ReturnUnit;
+        if (returnType == typeof(string)) return new SpatialReturnConverter<string>(value => value is null ? GesValue.GesNothing() : GesValue.GesText(value));
+        if (returnType == typeof(GesPoint)) return new SpatialReturnConverter<GesPoint>(value => value.ToValue(unit));
+        if (returnType == typeof(GesVector)) return new SpatialReturnConverter<GesVector>(value => value.ToValue(unit));
+        if (returnType == typeof(GesBox)) return new SpatialReturnConverter<GesBox>(value => value.ToValue(unit));
+        if (returnType == typeof(GesPoly)) return new SpatialReturnConverter<GesPoly>(value => value is null ? GesValue.GesNothing() : value.ToValue(unit));
+
         if (returnType == typeof(ValueTuple<double, GesQuantityUnit>))
         {
             return FloatNumericUnitTupleReturnConverter.Instance;
@@ -381,7 +456,7 @@ public sealed class GesBridgeExtensionRegistry : IGesExtensionRegistry
         }
     }
 
-    private static IGesExtensionFunction CreateAdapter(MethodInfo method, bool hasContext, object[] readers, object returnConverter)
+    private static IGesExtensionFunction CreateAdapter(MethodInfo method, object? instance, bool hasContext, object[] readers, object returnConverter)
     {
         if (readers.Length > 4)
         {
@@ -398,7 +473,7 @@ public sealed class GesBridgeExtensionRegistry : IGesExtensionRegistry
             ? new[] { typeof(GesExtensionCall) }.Concat(scriptParameterTypes).Append(returnType).ToArray()
             : scriptParameterTypes.Append(returnType).ToArray();
         var delegateType = GetFuncType(delegateTypes);
-        var functionDelegate = method.CreateDelegate(delegateType);
+        var functionDelegate = instance is null ? method.CreateDelegate(delegateType) : method.CreateDelegate(delegateType, instance);
         var adapterType = GetAdapterType(readers.Length, hasContext).MakeGenericType(scriptParameterTypes.Append(returnType).ToArray());
         var args = new object[2 + readers.Length];
         args[0] = functionDelegate;
@@ -489,13 +564,12 @@ public sealed class GesBridgeExtensionRegistry : IGesExtensionRegistry
                 : GesExternalTypeNames.NormalizeIdentifier(name, nameof(name));
     }
 
-    private sealed class FloatArgumentReader : IExtensionArgumentReader<double>
+    // A numeric argument must have the declared unit, or none; the unit is removed.
+    private sealed class FloatArgumentReader(GesQuantityUnit unit) : IExtensionArgumentReader<double>
     {
-        public static readonly FloatArgumentReader Instance = new();
-
         public bool Read(GesValueArguments arguments, int index, out double value)
         {
-            if (arguments.KindAt(index) is GesBytecodeTypeKind.Integer or GesBytecodeTypeKind.Float or GesBytecodeTypeKind.Percentage)
+            if (arguments.KindAt(index) is GesBytecodeTypeKind.Integer or GesBytecodeTypeKind.Float or GesBytecodeTypeKind.Percentage && arguments.UnitAt(index) == unit)
             {
                 value = arguments.GetAsNumber(index);
                 return true;
@@ -506,13 +580,11 @@ public sealed class GesBridgeExtensionRegistry : IGesExtensionRegistry
         }
     }
 
-    private sealed class LongArgumentReader : IExtensionArgumentReader<long>
+    private sealed class LongArgumentReader(GesQuantityUnit unit) : IExtensionArgumentReader<long>
     {
-        public static readonly LongArgumentReader Instance = new();
-
         public bool Read(GesValueArguments arguments, int index, out long value)
         {
-            if (arguments.KindAt(index) is GesBytecodeTypeKind.Integer or GesBytecodeTypeKind.Float or GesBytecodeTypeKind.Percentage or GesBytecodeTypeKind.Boolean)
+            if (arguments.KindAt(index) is GesBytecodeTypeKind.Integer or GesBytecodeTypeKind.Float or GesBytecodeTypeKind.Percentage or GesBytecodeTypeKind.Boolean && arguments.UnitAt(index) == unit)
             {
                 value = arguments.GetAsInteger(index);
                 return true;
@@ -523,13 +595,13 @@ public sealed class GesBridgeExtensionRegistry : IGesExtensionRegistry
         }
     }
 
-    private sealed class IntArgumentReader : IExtensionArgumentReader<int>
+    private sealed class IntArgumentReader(GesQuantityUnit unit) : IExtensionArgumentReader<int>
     {
-        public static readonly IntArgumentReader Instance = new();
+        private readonly LongArgumentReader _long = new(unit);
 
         public bool Read(GesValueArguments arguments, int index, out int value)
         {
-            if (LongArgumentReader.Instance.Read(arguments, index, out var integer) &&
+            if (_long.Read(arguments, index, out var integer) &&
                 integer is >= int.MinValue and <= int.MaxValue)
             {
                 value = (int)integer;
@@ -557,6 +629,60 @@ public sealed class GesBridgeExtensionRegistry : IGesExtensionRegistry
             value = false;
             return false;
         }
+    }
+
+    private sealed class NullableArgumentReader<T>(IExtensionArgumentReader<T> inner) : IExtensionArgumentReader<T?> where T : struct
+    {
+        public bool Read(GesValueArguments arguments, int index, out T? value)
+        {
+            value = null;
+            if (arguments.IsNothingAt(index)) return true;
+            if (!inner.Read(arguments, index, out var present)) return false;
+            value = present;
+            return true;
+        }
+    }
+
+    // Spatial values and boxes with the declared unit, which they leave behind.
+    private sealed class SpatialArgumentReader<T>(Func<GesValue, T?> read) : IExtensionArgumentReader<T> where T : struct
+    {
+        public bool Read(GesValueArguments arguments, int index, out T value)
+        {
+            var result = read(arguments[index]);
+            value = result.GetValueOrDefault();
+            return result.HasValue;
+        }
+    }
+
+    private sealed class TextArgumentReader : IExtensionArgumentReader<string>
+    {
+        public static readonly TextArgumentReader Instance = new();
+
+        public bool Read(GesValueArguments arguments, int index, out string value)
+        {
+            var valid = arguments.KindAt(index) == GesBytecodeTypeKind.Text;
+            value = valid ? arguments[index].AsText() : "";
+            return valid;
+        }
+    }
+
+    private sealed class PolyArgumentReader(GesQuantityUnit unit) : IExtensionArgumentReader<GesPoly>
+    {
+        public bool Read(GesValueArguments arguments, int index, out GesPoly value)
+        {
+            value = GesPoly.FromValue(arguments[index], unit)!;
+            return value is not null;
+        }
+    }
+
+    private sealed class NullableReturnConverter<T>(IExtensionReturnConverter<T> inner) : IExtensionReturnConverter<T?> where T : struct
+    {
+        public GesValue Convert(T? value) => value is { } present ? inner.Convert(present) : GesValue.GesNothing();
+    }
+
+    private sealed class SpatialReturnConverter<T>(Func<T, GesValue> convert) : IExtensionReturnConverter<T>
+    {
+        public GesValue Convert(T value) => convert(value);
     }
 
     private sealed class ExternalObjectArgumentReader<T> : IExtensionArgumentReader<T>

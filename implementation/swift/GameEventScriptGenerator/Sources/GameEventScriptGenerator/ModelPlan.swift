@@ -40,7 +40,7 @@ enum GesModelPlanner {
         if model.kind == .union {
             let present = model.alternatives.filter { $0.value.kind != .nothing }
             if present.count == 1 {
-                let single = value(present[0].value, name, label)
+                let single = self.value(present[0].value, name, label)
                 single.nullable = true
                 return single
             }
@@ -50,7 +50,7 @@ enum GesModelPlanner {
             union.nullable = present.count < model.alternatives.count
             union.nested = name + "Alternative"
             union.label = label
-            union.alternatives = present.map { value($0.value, name + GesSchemaPlanner.pascal($0.name), $0.name) }
+            union.alternatives = present.map { self.value($0.value, name + GesSchemaPlanner.pascal($0.name), $0.name) }
             return union
         }
         let value = GesModelPlanValue()

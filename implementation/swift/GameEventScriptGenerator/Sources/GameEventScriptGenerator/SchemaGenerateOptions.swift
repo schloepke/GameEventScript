@@ -34,6 +34,10 @@ public struct GesSchemaGenerateOptions: Sendable {
     /// as passing a list `inout` while the record reads into it, are then undefined instead of a trap. C# has no such checks,
     /// so this does not change C# output.
     public var checkedExclusivity: Bool
+    /// Whether generated model types also offer themselves to scripts as external types: a value conversion per type and a
+    /// generated `GesTypes` catalog and constructor registry that implement the Runtime's external-type contracts, without
+    /// the Bridge, macros or Reflection. Only model generation takes it.
+    public var bindings: Bool
 
     /// Creates options.
     /// - Parameters:
@@ -42,12 +46,14 @@ public struct GesSchemaGenerateOptions: Sendable {
     ///   - access: The visibility of the generated types.
     ///   - values: Whether records also convert to and from GES values and messages.
     ///   - checkedExclusivity: Whether generated Swift classes keep dynamic exclusivity checks.
-    public init(language: GesSchemaLanguage = .csharp, namespace: String = "", access: GesSchemaAccess = .public, values: Bool = false, checkedExclusivity: Bool = false) {
+    ///   - bindings: Whether generated model types also offer themselves to scripts as external types.
+    public init(language: GesSchemaLanguage = .csharp, namespace: String = "", access: GesSchemaAccess = .public, values: Bool = false, checkedExclusivity: Bool = false, bindings: Bool = false) {
         self.language = language
         self.namespace = namespace
         self.access = access
         self.values = values
         self.checkedExclusivity = checkedExclusivity
+        self.bindings = bindings
     }
 }
 

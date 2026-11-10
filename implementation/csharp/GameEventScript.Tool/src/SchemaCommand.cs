@@ -24,7 +24,7 @@ Usage:
   dotnet ges schema generate <schema.gess> [more.gess ...] (--root <Name> ... | --all-roots | --wire <group> | --model <group>)
                              [--param <name>=<literal> ...]
                              --language csharp|swift [--namespace <A.B>] [--access public|internal] [--values]
-                             [--checked-exclusivity] [-o <file> [--check]]
+                             [--checked-exclusivity] [--bindings] [-o <file> [--check]]
 
 Commands:
   check      Read schemas and report the first error with its line and column.
@@ -45,6 +45,7 @@ Options:
   --access <level>          The visibility of the generated types: public (default) or internal.
   --values                  Also convert generated records to and from GES values and messages.
   --checked-exclusivity     Keep the dynamic exclusivity checks of generated Swift classes.
+  --bindings                Also offer generated model types to scripts as external types; only with --model.
   --check                   Compare the generated code with the output file instead of writing it; differences fail.
   --param <name>=<literal>  A parameter value such as worldWidth=5000m; repeat for each one.
   --data <path>             The binary data of dump.
@@ -73,6 +74,7 @@ Options:
         var check = false;
         var withValues = false;
         var checkedExclusivity = false;
+        var bindings = false;
         string? language = null;
         string? space = null;
         string? access = null;
@@ -95,6 +97,7 @@ Options:
             else if (argument == "--check" && command == "generate") check = true;
             else if (argument == "--values" && command == "generate") withValues = true;
             else if (argument == "--checked-exclusivity" && command == "generate") checkedExclusivity = true;
+            else if (argument == "--bindings" && command == "generate") bindings = true;
             else if (argument is "--root" or "--data" or "--baseline" or "--param" or "-o" or "--output" or "--language" or "--namespace" or "--access" or "--wire" or "--model")
             {
                 var applies = argument switch
@@ -148,6 +151,7 @@ Options:
         if (command is "layout" or "generate" && (roots.Count > 0 ? 1 : 0) + (allRoots ? 1 : 0) + (wireGroup is null && modelGroup is null ? 0 : 1) != 1)
             return UsageError($"{command} requires one of --root, --all-roots, --wire and --model.");
         if (modelGroup is not null && (withValues || checkedExclusivity)) return UsageError("--values and --checked-exclusivity concern wire code, not --model.");
+        if (bindings && modelGroup is null) return UsageError("--bindings concerns model code and requires --model.");
         if (command == "generate" && language is not ("csharp" or "swift")) return UsageError("generate requires --language csharp or --language swift.");
         if (access is not (null or "public" or "internal")) return UsageError("--access is public or internal.");
         if (check && output is null) return UsageError("--check requires -o with the file to compare.");
@@ -195,7 +199,8 @@ Options:
                         Namespace = space ?? "",
                         Access = access == "internal" ? GesSchemaAccess.Internal : GesSchemaAccess.Public,
                         Values = withValues,
-                        CheckedExclusivity = checkedExclusivity
+                        CheckedExclusivity = checkedExclusivity,
+                        Bindings = bindings
                     };
                     if (wireGroup is not null || modelGroup is not null)
                     {

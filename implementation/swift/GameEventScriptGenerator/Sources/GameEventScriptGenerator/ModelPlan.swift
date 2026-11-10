@@ -62,6 +62,43 @@ enum GesModelPlanner {
         return value
     }
 
+    // The types in an order where each comes after the types it holds, for registration: by name, depth first.
+    static func dependencyOrder(_ layout: GesModelLayout) -> [GesModelType] {
+        var ordered: [GesModelType] = []
+        var seen: Set<String> = []
+        for type in layout.types { visit(layout, type, &seen, &ordered) }
+        return ordered
+    }
+
+    private static func visit(_ layout: GesModelLayout, _ type: GesModelType, _ seen: inout Set<String>, _ ordered: inout [GesModelType]) {
+        guard seen.insert(type.name).inserted else { return }
+        for field in type.fields { references(layout, field.value, &seen, &ordered) }
+        ordered.append(type)
+    }
+
+    private static func references(_ layout: GesModelLayout, _ value: GesModelValue, _ seen: inout Set<String>, _ ordered: inout [GesModelType]) {
+        if value.kind == .schema { visit(layout, layout.type(value.schema), &seen, &ordered) }
+        if let element = value.element { references(layout, element.value, &seen, &ordered) }
+        for alternative in value.alternatives { references(layout, alternative.value, &seen, &ordered) }
+    }
+
+    // The type a script sees for a field: a built-in kind with its unit, or a type name; a union keeps its value as `Value`.
+    static func declared(_ value: GesModelPlanValue) -> (kind: String?, unit: String, typeName: String?) {
+        switch value.kind {
+        case .boolean: ("Boolean", "none", nil)
+        case .number where value.model.type == "Percentage": ("Percentage", "none", nil)
+        case .number: ("Float", value.model.unit, nil)
+        case .text: ("Text", "none", nil)
+        case .tag: ("Tag", "none", nil)
+        case .list: ("List", "none", nil)
+        case .dice: ("Dice", "none", nil)
+        case .point: ("Point", value.model.unit, nil)
+        case .vector: ("Vector", value.model.unit, nil)
+        case .schema: (nil, "none", value.model.schema)
+        case .union, .nothing: (nil, "none", "Value")
+        }
+    }
+
     // The declaration as a reader would write it, for documentation: `:Quantity(meter) between 0 and worldWidth step 0.01`.
     static func describe(_ field: GesModelField) -> String {
         var text = ""

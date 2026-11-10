@@ -3,6 +3,8 @@
 
 using GameEventScript.Api;
 using GameEventScript.Generator;
+using GameEventScript.Runtime.Values;
+using Bound = GameEventScript.Tests.Generator.Roles.Bound;
 using Model = GameEventScript.Tests.Generator.Roles.Model;
 using Wire = GameEventScript.Tests.Generator.Roles.Wire;
 
@@ -38,6 +40,13 @@ public sealed class GesRolesGeneratedCodeTests
         Assert.AreEqual(File.ReadAllText(Path.Combine(csharp, "RolesModel.g.cs")), GesSchemaGenerator.GenerateModels(set, model, Options(GesSchemaLanguage.CSharp, "GameEventScript.Tests.Generator.Roles.Model")));
         Assert.AreEqual(File.ReadAllText(Path.Combine(swift, "RolesWire.swift")), GesSchemaGenerator.Generate(set, wire, parameters, Options(GesSchemaLanguage.Swift, "RolesWire")));
         Assert.AreEqual(File.ReadAllText(Path.Combine(swift, "RolesModel.swift")), GesSchemaGenerator.GenerateModels(set, model, Options(GesSchemaLanguage.Swift, "RolesModel")));
+        var bound = Options(GesSchemaLanguage.CSharp, "GameEventScript.Tests.Generator.Roles.Bound");
+        bound.Bindings = true;
+        Assert.AreEqual(File.ReadAllText(Path.Combine(csharp, "RolesBound.g.cs")), GesSchemaGenerator.GenerateModels(set, model, bound));
+        bound = Options(GesSchemaLanguage.Swift, "RolesBound");
+        bound.Bindings = true;
+        Assert.AreEqual(File.ReadAllText(Path.Combine(swift, "RolesBound.swift")), GesSchemaGenerator.GenerateModels(set, model, bound));
+        Assert.AreEqual("generate.usage", Assert.ThrowsExactly<GesGeneratorException>(() => GesSchemaGenerator.Generate(set, wire, parameters, bound)).Code);
     }
 
     [TestMethod]
@@ -138,5 +147,87 @@ public sealed class GesRolesGeneratedCodeTests
         Assert.AreEqual("generate.usage", error.Code);
         error = Assert.ThrowsExactly<GesGeneratorException>(() => GesSchemaGenerator.ModelLayout(GesSchemaSet.Parse("schema :A as { m: :Map }\n"), ["A"]));
         Assert.AreEqual("generate.unsupported", error.Code);
+    }
+}
+
+// Generated models with --bindings: scripts read and construct them as external types.
+[TestClass]
+public sealed class GesRolesBindingTests
+{
+    private const string Script = """
+        on Start(view) {
+          let bot be view.bots[1]
+          let made be :World_Body(fields: [mass: 90kg, hull: #light])
+          let radar be :RadarView(fields: [range: 300m, contacts: [1, 2]])
+          let built be :BotView(fields: [bot: 7, name: 'Bo', alive: true, health: 50%, speed: 2.5, heading: 90°, mood: #angry, team: 'blue', position: :Point(3m, 4m), velocity: :Vector(1m, 0m), body: made, radar: radar, facing: #north, marks: [:Point(1m, 1m)], units: ['x', made], grid: [[1, 2]], rolls: :Dice[6, 3], hints: [#left, #right]])
+          emit Seen(name: bot.name, x: bot.position.x, mass: bot.body.mass, radar: bot.radar, facing: bot.facing, units: bot.units[:count], hint: bot.hints[1], built: built, bad: :World_Body(fields: [mass: 90m, hull: #light]), unknown: :World_Body(fields: [mass: 1kg, hull: #light, extra: 1]), copied: :World_Body(fields: made.fields))
+        }
+        """;
+
+    private sealed class Seen : IGesNativeMessageHandler
+    {
+        public GameEventScriptMessage? Message { get; private set; }
+
+        public void Handle(GameEventScriptMessage message, GesContext context) => Message = message;
+    }
+
+    [TestMethod]
+    public void ScriptsReadAndConstructGeneratedRecords()
+    {
+        var types = new Bound.GesTypes();
+        var program = new GesProgramBuilder().WithExternalTypeCatalog(types).AddScript(Script, "bound.ges").Compile();
+        var host = GameEventScriptHost.CreateBuilder().WithExternalTypeRegistry(types).Build();
+        host.Load(program);
+        var seen = new Seen();
+        host.Subscribe(GesMessageSignature.Create("Seen", ["name", "x", "mass", "radar", "facing", "units", "hint", "built", "bad", "unknown", "copied"]), seen);
+        Assert.AreEqual(GesStartState.Ready, host.Start().State);
+        var view = new Bound.WorldView { Tick = 1 };
+        view.Bots.Add(new Bound.BotView
+        {
+            Bot = 4,
+            Name = "Ada",
+            Position = new GesPoint(2, 5),
+            Body = new Bound.World_Body(120, Bound.World_Body.HullTag.Heavy),
+            Facing = new Bound.BotView.FacingAlternative.Quantity(45),
+            Units = { new Bound.BotView.UnitsItemAlternative.Text("a") },
+            Hints = { Bound.BotView.HintsItemTag.Right }
+        });
+        Assert.IsTrue(host.Receive(GameEventScriptMessage.Create("Start", [new("view", view.ToGesValue())])));
+        Assert.AreEqual(GesExecutionState.Completed, host.RunToCompletion().State);
+        var arguments = seen.Message!.Arguments;
+        Assert.AreEqual("Ada", arguments[0].AsText());
+        Assert.AreEqual(2d, arguments[1].AsNumber());
+        Assert.AreEqual(GesQuantityUnit.UnitMeter, arguments[1].ValueUnit);
+        Assert.AreEqual(120d, arguments[2].AsNumber());
+        Assert.IsTrue(arguments[3].IsNothing, "An absent optional record reads as nothing.");
+        Assert.AreEqual(45d, arguments[4].AsNumber());
+        Assert.AreEqual(1L, arguments[5].AsInteger());
+        Assert.AreEqual("right", arguments[6].AsText());
+        var built = Bound.BotView.FromGesValue(arguments[7]);
+        Assert.IsNotNull(built);
+        Assert.AreEqual(7L, built.Bot);
+        Assert.AreEqual(0.5, built.Health);
+        Assert.AreEqual(Bound.BotView.MoodTag.Angry, built.Mood);
+        Assert.AreEqual(new GesPoint(3, 4), built.Position);
+        Assert.AreEqual(new Bound.World_Body(90, Bound.World_Body.HullTag.Light), built.Body);
+        Assert.AreEqual(new Bound.RadarView(300, [1, 2]), built.Radar);
+        Assert.AreEqual(new Bound.BotView.FacingAlternative.Tag(Bound.BotView.FacingTagTag.North), built.Facing);
+        Assert.IsNull(built.Note);
+        Assert.HasCount(2, built.Units);
+        Assert.AreEqual(new Bound.BotView.UnitsItemAlternative.World_Body(new Bound.World_Body(90, Bound.World_Body.HullTag.Light)), built.Units[1]);
+        CollectionAssert.AreEqual(new List<long> { 1, 2 }, built.Grid[0]);
+        CollectionAssert.AreEqual(new List<int> { 6, 3 }, built.Rolls);
+        CollectionAssert.AreEqual(new[] { Bound.BotView.HintsItemTag.Left, Bound.BotView.HintsItemTag.Right }, built.Hints);
+        Assert.IsTrue(arguments[8].IsNothing, "A value of another unit constructs nothing.");
+        Assert.IsTrue(arguments[9].IsNothing, "A field that the type does not declare constructs nothing.");
+        Assert.AreEqual(new Bound.World_Body(90, Bound.World_Body.HullTag.Light), Bound.World_Body.FromGesValue(arguments[10]), "The fields of a record construct an equal record.");
+    }
+
+    [TestMethod]
+    public void ASetRefusesATypeThatTheNextCatalogDeclares()
+    {
+        var first = new Bound.GesTypes();
+        Assert.ThrowsExactly<ArgumentException>(() => new Bound.GesTypes(first));
+        CollectionAssert.AreEqual(new[] { "World_Body", "RadarView", "BotView", "Panel_Badge", "WorldView" }, new Bound.GesTypes().Types.Select(type => type.Name).ToArray());
     }
 }

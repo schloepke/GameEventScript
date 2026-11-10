@@ -1245,6 +1245,37 @@ alternative's type. A list element type is named `<Field>Item`, so a closed Tag 
 A generated name that collides, such as a field named `id` beside a key named otherwise, fails with
 `generate.nameCollision`, as in wire code.
 
+### Script bindings
+
+> **Since: Unreleased**
+
+`generate --model --bindings` also offers the model types to scripts as
+[external types](HostRuntime.md#external-type-boundary). The generated code implements the Runtime's portable
+external-type contracts itself: it imports neither the Bridge nor its macros, needs no macro approval in Xcode and uses no
+Reflection, so managed code stripping under IL2CPP removes nothing it needs. Without `--bindings` the code is unchanged.
+
+- A generated `GesTypes` class is the compiler's catalog and the host's external-type registry at once: pass one instance
+  to `WithExternalTypeCatalog` and `WithExternalTypeRegistry` (Swift `withExternalTypeCatalog`, `withExternalTypeRegistry`).
+  It declares every reached model type under its schema name, each after the types it holds, and resolves other types and
+  constructors through an optional next catalog and registry. A next catalog that already declares one of its type names
+  is rejected when the set is created (C# `ArgumentException`, Swift `GesApiError.invalidArgument`), so two declarations of
+  one name never compete.
+- Each type gets `ToGesValue()` and `FromGesValue(value)` (Swift `gesValue()` and `init?(gesValue:)`). A script reads its
+  fields with their declared kinds and units: a Quantity with its unit, a Percentage, a Text, a Tag (also for a closed tag),
+  a Point or Vector with its unit, a List, Dice, the nested record as its external value, a union as its alternative's value,
+  and `nothing` for an absent value. Integers read as Numbers. A Swift value is the copy that was wrapped; a C# record is read
+  when a script reads a field.
+- Each type has one constructor, `:Name(fields: map)`, and a field `fields` that returns the record as such a Map, so
+  `:World_Body(fields: body.fields)` copies one. External constructors receive every argument present and of a built-in
+  type, so a Map carries optional fields, which may be left out or `nothing`, and nested records. Values convert strictly:
+  a number needs the field's unit, an integer an integral value, a Tag field also takes a Text, a closed tag one of its
+  tags, a list and its elements convert element by element, and a record field takes that record's external value. A value
+  that does not convert, a missing required field or a key the type does not declare constructs `nothing`, like other domain
+  failures. A schema field named `fields` collides with it: `generate.nameCollision`.
+- Wire types get no bindings: a wire record reuses its storage, so a script holding one would see it change with the next
+  read. `--values` converts wire records to and from GES values through their exact bytes, and both options apply to their
+  own code; `--bindings` without `--model` is a usage error, and the Generator rejects it with `generate.usage`.
+
 ### Model layout
 
 `layout --model` prints the language-neutral model layout in the JSON form of the [generation layout](#generation-layout):

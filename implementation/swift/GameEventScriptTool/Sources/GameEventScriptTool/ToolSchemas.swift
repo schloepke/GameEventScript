@@ -19,7 +19,7 @@ extension ToolHelp {
           ges schema generate <schema.gess> [more.gess ...] (--root <Name> ... | --all-roots | --wire <group> | --model <group>)
                               [--param <name>=<literal> ...]
                               --language csharp|swift [--namespace <A.B>] [--access public|internal] [--values]
-                              [--checked-exclusivity] [-o <file> [--check]]
+                              [--checked-exclusivity] [--bindings] [-o <file> [--check]]
 
         Commands:
           check      Read schemas and report the first error with its line and column.
@@ -40,6 +40,7 @@ extension ToolHelp {
           --access <level>          The visibility of the generated types: public (default) or internal.
           --values                  Also convert generated records to and from GES values and messages.
           --checked-exclusivity     Keep the dynamic exclusivity checks of generated Swift classes.
+          --bindings                Also offer generated model types to scripts as external types; only with --model.
           --check                   Compare the generated code with the output file instead of writing it; differences fail.
           --param <name>=<literal>  A parameter value such as worldWidth=5000m; repeat for each one.
           --data <path>             The binary data of dump.
@@ -67,6 +68,7 @@ extension Tool {
         var check = false
         var withValues = false
         var checkedExclusivity = false
+        var bindings = false
         var language: String?
         var space: String?
         var access: String?
@@ -92,6 +94,8 @@ extension Tool {
                 withValues = true
             } else if argument == "--checked-exclusivity" && command == "generate" {
                 checkedExclusivity = true
+            } else if argument == "--bindings" && command == "generate" {
+                bindings = true
             } else if ["--root", "--data", "--baseline", "--param", "-o", "--output", "--language", "--namespace", "--access", "--wire", "--model"].contains(argument) {
                 let applies: Bool
                 switch argument {
@@ -142,6 +146,7 @@ extension Tool {
             throw ToolError.usage("\(command) requires one of --root, --all-roots, --wire and --model.")
         }
         if modelGroup != nil && (withValues || checkedExclusivity) { throw ToolError.usage("--values and --checked-exclusivity concern wire code, not --model.") }
+        if bindings && modelGroup == nil { throw ToolError.usage("--bindings concerns model code and requires --model.") }
         if command == "generate" && language != "csharp" && language != "swift" { throw ToolError.usage("generate requires --language csharp or --language swift.") }
         if let access, access != "public" && access != "internal" { throw ToolError.usage("--access is public or internal.") }
         if check && output == nil { throw ToolError.usage("--check requires -o with the file to compare.") }
@@ -171,7 +176,15 @@ extension Tool {
             case "layout", "generate":
                 let options =
                     command == "layout"
-                    ? nil : GesSchemaGenerateOptions(language: language == "swift" ? .swift : .csharp, namespace: space ?? "", access: access == "internal" ? .internal : .public, values: withValues, checkedExclusivity: checkedExclusivity)
+                    ? nil
+                    : GesSchemaGenerateOptions(
+                        language: language == "swift" ? .swift : .csharp,
+                        namespace: space ?? "",
+                        access: access == "internal" ? .internal : .public,
+                        values: withValues,
+                        checkedExclusivity: checkedExclusivity,
+                        bindings: bindings
+                    )
                 if let group = wireGroup ?? modelGroup {
                     roots = wireGroup != nil ? GesSchemaGenerator.wireRoots(set, group: group) : GesSchemaGenerator.modelRoots(set, group: group)
                     if roots.isEmpty {

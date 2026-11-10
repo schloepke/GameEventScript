@@ -23,6 +23,7 @@ enum GesCSharpModelEmitter {
         code.line("using System;")
         code.line("using System.Collections.Generic;")
         code.line("using GameEventScript.Api;")
+        if options.bindings { code.line("using GameEventScript.Runtime.Values;") }
         code.blank()
         if !space.isEmpty {
             code.line("namespace " + space.joined(separator: "."))
@@ -31,7 +32,11 @@ enum GesCSharpModelEmitter {
         let support = "__GesModels" + GesSchemaPlanner.hash(GesModelPlanner.header(layout))
         let qualifier = "global::" + space.map { $0 + "." }.joined()
         for type in layout.types {
-            try record(&code, type, access, support, qualifier)
+            try record(&code, type, access, support, qualifier, bindings: options.bindings)
+            code.blank()
+        }
+        if options.bindings {
+            bindings(&code, layout, access, qualifier)
             code.blank()
         }
         supportType(&code, support)
@@ -44,9 +49,13 @@ enum GesCSharpModelEmitter {
         return GesCSharpEmitter.keywords.contains(name) ? "@" + name : name
     }
 
-    private static func record(_ code: inout Code, _ type: GesModelType, _ access: String, _ support: String, _ qualifier: String) throws(GesGeneratorError) {
+    private static func record(_ code: inout Code, _ type: GesModelType, _ access: String, _ support: String, _ qualifier: String, bindings: Bool) throws(GesGeneratorError) {
         let fields = GesModelPlanner.fields(type)
         var names: Names = reserved.map { ($0, "the inherited member " + $0) }
+        if bindings { names += ["ToGesValue", "FromGesValue"].map { ($0, "the generated member " + $0) } }
+        if bindings && fields.contains(where: { $0.field.name == "fields" }) {
+            throw GesGeneratorError(GesGeneratorError.nameCollision, "In '\(type.name)', the field fields and the generated field fields of its bindings share a name.")
+        }
         for field in fields {
             names.append((field.base, "the field " + field.field.name))
             nested(field.value, &names, field.field.name)
@@ -106,6 +115,17 @@ enum GesCSharpModelEmitter {
         code.close()
         code.blank()
         operators(&code, type.name, "record")
+        if bindings {
+            code.blank()
+            code.line("/// <summary>Wraps the record as the external value <c>:\(type.name)</c> of <see cref=\"GesTypes\"/>; scripts read its fields when they read them.</summary>")
+            code.line("/// <returns>The GES value.</returns>")
+            code.line("public GesValue ToGesValue() => GesValue.GesExternal(new GesTypes.\(type.name)Value(this));")
+            code.blank()
+            code.line("/// <summary>Reads a <c>:\(type.name)</c> that a script holds.</summary>")
+            code.line("/// <param name=\"value\">The value.</param>")
+            code.line("/// <returns>The record, or null for another value.</returns>")
+            code.line("public static \(type.name)? FromGesValue(in GesValue value) => value.ExternalValue is GesTypes.\(type.name)Value held ? held.Record : null;")
+        }
         for field in fields { try declarations(&code, field.value, support, qualifier) }
         code.close()
     }
@@ -144,20 +164,23 @@ enum GesCSharpModelEmitter {
     }
 
     // A union subclass named after a schema hides that schema's type, so its members name schema types with `global::`.
-    static func type(_ value: GesModelPlanValue, _ qualifier: String = "") -> String { plain(value, qualifier) + (value.nullable ? "?" : "") }
+    // Outside its owner, as in the generated type set, a nested type also names the owner.
+    static func type(_ value: GesModelPlanValue, _ qualifier: String = "", _ owner: String? = nil) -> String { plain(value, qualifier, owner) + (value.nullable ? "?" : "") }
 
-    private static func plain(_ value: GesModelPlanValue, _ qualifier: String = "") -> String {
+    private static func nested(_ value: GesModelPlanValue, _ qualifier: String, _ owner: String?) -> String { owner.map { qualifier + $0 + "." + value.nested } ?? value.nested }
+
+    private static func plain(_ value: GesModelPlanValue, _ qualifier: String = "", _ owner: String? = nil) -> String {
         switch value.kind {
         case .boolean: "bool"
         case .number: value.model.integer ? "long" : "double"
-        case .tag: value.closedTag ? value.nested : "string"
+        case .tag: value.closedTag ? nested(value, qualifier, owner) : "string"
         case .text: "string"
-        case .list: "List<\(type(value.element!, qualifier))>"
+        case .list: "List<\(type(value.element!, qualifier, owner))>"
         case .dice: "List<int>"
         case .point: "GesPoint"
         case .vector: "GesVector"
         case .schema: qualifier + value.model.schema
-        case .union, .nothing: value.nested
+        case .union, .nothing: nested(value, qualifier, owner)
         }
     }
 
@@ -320,6 +343,368 @@ enum GesCSharpModelEmitter {
         code.line("return result;")
         code.close()
         code.close()
+        code.close()
+    }
+
+    private static func unitName(_ unit: String) -> String { "GesQuantityUnit.Unit" + GesSchemaPlanner.pascal(unit) }
+
+    private static func isValueType(_ value: GesModelPlanValue) -> Bool {
+        switch value.kind {
+        case .boolean, .number, .point, .vector: true
+        default: value.closedTag
+        }
+    }
+
+    private static func literal(_ text: String) -> String { GesSchemaPlanner.literal(text, swift: false) }
+
+    // Converts a native value to a GES value; nullable values pattern-match a numbered variable.
+    private static func encode(_ value: GesModelPlanValue, _ owner: String, _ expression: String, _ qualifier: String, _ depth: Int = 0, nullable: Bool = true) -> String {
+        if nullable && value.nullable { return "\(expression) is { } v\(depth) ? \(encode(value, owner, "v\(depth)", qualifier, depth + 1, nullable: false)) : GesValue.GesNothing()" }
+        switch value.kind {
+        case .boolean: return "GesValue.GesBoolean(\(expression))"
+        case .number where value.model.type == "Percentage": return "GesValue.GesPercentage(\(expression))"
+        case .number where value.model.integer: return "GesValue.GesInteger(\(expression), \(unitName(value.model.unit)))"
+        case .number: return "GesValue.GesFloat(\(expression), \(unitName(value.model.unit)))"
+        case .text: return "GesValue.GesText(\(expression))"
+        case .tag where value.closedTag: return "Tag(Name(\(expression)))"
+        case .tag: return "Tag(\(expression))"
+        case .list: return "List(\(expression), x\(depth) => \(encode(value.element!, owner, "x\(depth)", qualifier, depth + 1)))"
+        case .dice: return "Dice(\(expression))"
+        case .point, .vector: return "\(expression).ToValue(\(unitName(value.model.unit)))"
+        case .schema: return "\(expression).ToGesValue()"
+        case .union, .nothing: return "Value(\(expression))"
+        }
+    }
+
+    // A condition that converts a GES value into the `out` target, false when it does not convert.
+    private static func decode(_ value: GesModelPlanValue, _ owner: String, _ expression: String, _ target: String, _ qualifier: String, _ depth: Int = 0, nullable: Bool = true) -> String {
+        if nullable && value.nullable {
+            let inner = "(in GesValue x\(depth), out \(plain(value, qualifier, owner)) y\(depth)) => \(decode(value, owner, "x\(depth)", "out y\(depth)", qualifier, depth + 1, nullable: false))"
+            return "\(isValueType(value) ? "OptionalValue" : "OptionalObject")(\(expression), \(inner), \(target))"
+        }
+        switch value.kind {
+        case .boolean: return "Boolean(\(expression), \(target))"
+        case .number where value.model.type == "Percentage": return "Percentage(\(expression), \(target))"
+        case .number where value.model.integer: return "Integer(\(expression), \(unitName(value.model.unit)), \(target))"
+        case .number: return "Number(\(expression), \(unitName(value.model.unit)), \(target))"
+        case .text: return "Text(\(expression), \(target))"
+        case .tag where value.closedTag: return "Decode\(owner)\(value.nested)(\(expression), \(target))"
+        case .tag: return "Tag(\(expression), \(target))"
+        case .list:
+            let element = value.element!
+            return "List(\(expression), (in GesValue x\(depth), out \(type(element, qualifier, owner)) y\(depth)) => \(decode(element, owner, "x\(depth)", "out y\(depth)", qualifier, depth + 1)), \(target))"
+        case .dice: return "Dice(\(expression), \(target))"
+        case .point: return "Point(\(expression), \(unitName(value.model.unit)), \(target))"
+        case .vector: return "Vector(\(expression), \(unitName(value.model.unit)), \(target))"
+        case .schema: return "Decode\(value.model.schema)(\(expression), \(target))"
+        case .union, .nothing: return "Decode\(owner)\(value.nested)(\(expression), \(target))"
+        }
+    }
+
+    private static func definition(_ name: String, _ value: GesModelPlanValue, _ kind: String) -> String {
+        let declared = GesModelPlanner.declared(value)
+        guard let declaredKind = declared.kind else { return "new GesExternalType\(kind)Definition(\(literal(name)), \(literal(declared.typeName!)))" }
+        let kindName = "GesBytecodeTypeKind." + declaredKind
+        return declared.unit == "none"
+            ? "new GesExternalType\(kind)Definition(\(literal(name)), \(kindName))" : "new GesExternalType\(kind)Definition(\(literal(name)), \(kindName), \(unitName(declared.unit)))"
+    }
+
+    private static func conversions(_ value: GesModelPlanValue, _ found: inout [GesModelPlanValue]) {
+        if value.kind == .union || value.closedTag { found.append(value) }
+        if let element = value.element { conversions(element, &found) }
+        for alternative in value.alternatives { conversions(alternative, &found) }
+    }
+
+    // The catalog and constructor registry of the models, with an external value and a constructor per type.
+    private static func bindings(_ code: inout Code, _ layout: GesModelLayout, _ access: String, _ qualifier: String) {
+        let ordered = GesModelPlanner.dependencyOrder(layout)
+        code.line("/// <summary>")
+        code.line("/// The model types for scripts as external types: pass one instance to the compiler as its catalog and to the host as its")
+        code.line("/// external-type registry. Each type has its fields and one constructor that takes every field by name; a value that does not")
+        code.line("/// convert, such as another unit or kind, constructs <c>nothing</c>. Types and constructors that this set does not declare")
+        code.line("/// resolve through the next catalog and registry.")
+        code.line("/// </summary>")
+        code.line("\(access) sealed class GesTypes : IGesExternalTypeCatalog, IGesExternalTypeRegistry")
+        code.open("{")
+        code.line("private static readonly GesExternalTypeDefinition[] Own = { \(ordered.map { $0.name + "Value.Declaration" }.joined(separator: ", ")) };")
+        code.line("private readonly IGesExternalTypeCatalog? _nextCatalog;")
+        code.line("private readonly IGesExternalTypeRegistry? _nextRegistry;")
+        code.line("private readonly List<GesExternalTypeDefinition> _types;")
+        code.blank()
+        code.line("/// <summary>Creates the set in front of another catalog and registry.</summary>")
+        code.line("/// <param name=\"nextCatalog\">The catalog that declares every other type, or null.</param>")
+        code.line("/// <param name=\"nextRegistry\">The registry that resolves every other constructor, or null.</param>")
+        code.line("/// <exception cref=\"ArgumentException\">The next catalog already declares a type of this set.</exception>")
+        code.line("public GesTypes(IGesExternalTypeCatalog? nextCatalog = null, IGesExternalTypeRegistry? nextRegistry = null)")
+        code.open("{")
+        code.line("_types = new List<GesExternalTypeDefinition>(Own);")
+        code.line("if (nextCatalog is not null)")
+        code.open("{")
+        code.line("foreach (var type in nextCatalog.Types)")
+        code.open("{")
+        code.line("foreach (var own in Own)")
+        code.line("    if (own.Name == type.Name) throw new ArgumentException(\"The type :\" + type.Name + \" is already declared.\", nameof(nextCatalog));")
+        code.line("_types.Add(type);")
+        code.close()
+        code.close()
+        code.blank()
+        code.line("_nextCatalog = nextCatalog;")
+        code.line("_nextRegistry = nextRegistry;")
+        code.close()
+        code.blank()
+        code.line("/// <summary>Gets the declarations of the generated types, each after the types it holds, then those of the next catalog.</summary>")
+        code.line("public IReadOnlyList<GesExternalTypeDefinition> Types => _types;")
+        code.blank()
+        code.line("/// <summary>Resolves a generated type, or asks the next catalog.</summary>")
+        code.line("/// <param name=\"typeName\">The type name.</param>")
+        code.line("/// <returns>The declaration, or null.</returns>")
+        code.line("public GesExternalTypeDefinition? Resolve(string typeName)")
+        code.open("{")
+        code.line("foreach (var own in Own)")
+        code.line("    if (own.Name == typeName) return own;")
+        code.line("return _nextCatalog?.Resolve(typeName);")
+        code.close()
+        code.blank()
+        code.line("/// <summary>Resolves the constructor of a generated type, or asks the next registry.</summary>")
+        code.line("/// <param name=\"reference\">The constructor reference.</param>")
+        code.line("/// <returns>The constructor, or null.</returns>")
+        code.line("public IGesExternalTypeConstructor? Resolve(GesExternalTypeConstructorReference reference)")
+        code.open("{")
+        code.line("if (reference is null) throw new ArgumentNullException(nameof(reference));")
+        for type in ordered { code.line("if (reference.SignatureId == \(type.name)Value.Declaration.Constructors[0].SignatureId) return new \(type.name)Constructor();") }
+        code.line("return _nextRegistry?.Resolve(reference);")
+        code.close()
+        for type in ordered {
+            let fields = GesModelPlanner.fields(type)
+            let name = qualifier + type.name
+            code.blank()
+            code.line("/// <summary>A <c>:\(type.name)</c> held by a script.</summary>")
+            code.line("internal sealed class \(type.name)Value : IGesExternalValue")
+            code.open("{")
+            code.line("/// <summary>The declaration that every value of the type shares.</summary>")
+            code.line("internal static readonly GesExternalTypeDefinition Declaration = new GesExternalTypeDefinition(")
+            code.line("    \(literal(type.name)),")
+            code.line("    new[] { \(fields.map { definition($0.field.name, $0.value, "Field") }.joined(separator: ", "))\(fields.isEmpty ? "" : ", ")new GesExternalTypeFieldDefinition(\"fields\", GesBytecodeTypeKind.Map) },")
+            code.line("    new[] { new GesExternalTypeConstructorDefinition(\(literal(type.name)), new[] { new GesExternalTypeParameterDefinition(\"fields\", GesBytecodeTypeKind.Map) }) });")
+            code.blank()
+            code.line("internal static readonly string[] Names = { \(fields.map { literal($0.field.name) }.joined(separator: ", ")) };")
+            code.blank()
+            code.line("internal \(type.name)Value(\(name) record) => Record = record;")
+            code.blank()
+            code.line("internal \(name) Record { get; }")
+            code.blank()
+            code.line("/// <inheritdoc />")
+            code.line("public GesExternalTypeDefinition Definition => Declaration;")
+            code.blank()
+            code.line("/// <inheritdoc />")
+            code.line("public GesValue? GetField(string fieldName) => fieldName switch")
+            code.open("{")
+            for field in fields { code.line("\(literal(field.field.name)) => \(encode(field.value, type.name, "Record." + field.base, qualifier)),") }
+            code.line("\"fields\" => Fields(Names, this),")
+            code.line("_ => null")
+            code.close("};")
+            code.close()
+            code.blank()
+            code.line("/// <summary>Constructs a <c>:\(type.name)</c> from a Map or Record of its fields; an absent optional field may be left out.</summary>")
+            code.line("private sealed class \(type.name)Constructor : IGesExternalTypeConstructor")
+            code.open("{")
+            code.line("/// <inheritdoc />")
+            code.line("public GesExternalTypeConstructorDefinition Definition => \(type.name)Value.Declaration.Constructors[0];")
+            code.blank()
+            code.line("/// <inheritdoc />")
+            code.line("public void Invoke(GesExternalTypeConstructorCall call)")
+            code.open("{")
+            code.line("var fields = call.Arguments[0].AsMap();")
+            var conditions = ["fields is null", "!Known(fields, \(type.name)Value.Names)"]
+            for field in fields { conditions.append("!" + decode(field.value, type.name, "Field(fields, \(literal(field.field.name)))", "out var " + parameter(field.base), qualifier)) }
+            for (index, condition) in conditions.enumerated() { code.line((index == 0 ? "if (" : "    || ") + condition + (index == conditions.count - 1 ? ")" : "")) }
+            code.open("{")
+            code.line("call.SetNothing();")
+            code.line("return;")
+            code.close()
+            code.blank()
+            code.line("call.SetExternalValue(new \(type.name)Value(new \(name)(\(fields.map { parameter($0.base) }.joined(separator: ", ")))));")
+            code.close()
+            code.close()
+            code.blank()
+            code.line("private static bool Decode\(type.name)(in GesValue value, out \(name) result)")
+            code.open("{")
+            code.line("result = \(name).FromGesValue(value)!;")
+            code.line("return result is not null;")
+            code.close()
+            var found: [GesModelPlanValue] = []
+            for field in fields { conversions(field.value, &found) }
+            for conversion in found { self.conversion(&code, type.name, qualifier, conversion) }
+        }
+        helpers(&code)
+        code.close()
+    }
+
+    private static func conversion(_ code: inout Code, _ owner: String, _ qualifier: String, _ value: GesModelPlanValue) {
+        let name = qualifier + owner + "." + value.nested
+        code.blank()
+        if value.closedTag {
+            code.line("private static string Name(\(name) value) => value switch")
+            code.open("{")
+            for tag in value.model.tags { code.line("\(name).\(GesSchemaPlanner.pascal(tag)) => \(literal(tag)),") }
+            code.line("_ => \"\"")
+            code.close("};")
+            code.blank()
+            code.line("private static bool Decode\(owner)\(value.nested)(in GesValue value, out \(name) result)")
+            code.open("{")
+            code.line("result = default;")
+            code.line("if (!Tag(value, out var text)) return false;")
+            code.line("switch (text)")
+            code.open("{")
+            for tag in value.model.tags { code.line("case \(literal(tag)): result = \(name).\(GesSchemaPlanner.pascal(tag)); return true;") }
+            code.line("default: return false;")
+            code.close()
+            code.close()
+            return
+        }
+        code.line("private static GesValue Value(\(name) value) => value switch")
+        code.open("{")
+        for alternative in value.alternatives { code.line("\(name).\(alternative.label) alternative => \(encode(alternative, owner, "alternative.Value", qualifier)),") }
+        code.line("_ => GesValue.GesNothing()")
+        code.close("};")
+        code.blank()
+        code.line("private static bool Decode\(owner)\(value.nested)(in GesValue value, out \(name) result)")
+        code.open("{")
+        for (index, alternative) in value.alternatives.enumerated() {
+            code.line("if (\(decode(alternative, owner, "value", "out var alternative\(index)", qualifier)))")
+            code.open("{")
+            code.line("result = new \(name).\(alternative.label)(alternative\(index));")
+            code.line("return true;")
+            code.close()
+            code.blank()
+        }
+        code.line("result = null!;")
+        code.line("return false;")
+        code.close()
+    }
+
+    private static func helpers(_ code: inout Code) {
+        code.blank()
+        code.line("private delegate bool Decoder<T>(in GesValue value, out T result);")
+        code.blank()
+        code.line("private static GesValue Field(GesValueMap fields, string name) => fields.Get(name) ?? GesValue.GesNothing();")
+        code.blank()
+        code.line("private static bool Known(GesValueMap fields, string[] names)")
+        code.open("{")
+        code.line("for (var index = 0; index < fields.Length; index++)")
+        code.line("    if (Array.IndexOf(names, fields.KeyAt(index)) < 0) return false;")
+        code.line("return true;")
+        code.close()
+        code.blank()
+        code.line("private static GesValue Fields(string[] names, IGesExternalValue value)")
+        code.open("{")
+        code.line("var values = new GesValue[names.Length];")
+        code.line("for (var index = 0; index < names.Length; index++) values[index] = value.GetField(names[index]) ?? GesValue.GesNothing();")
+        code.line("return GesValue.GesMap(names, values);")
+        code.close()
+        code.blank()
+        code.line("private static GesValue Tag(string name)")
+        code.open("{")
+        code.line("try")
+        code.open("{")
+        code.line("return GesValue.GesTag(name);")
+        code.close()
+        code.line("catch (ArgumentException)")
+        code.open("{")
+        code.line("return GesValue.GesNothing();")
+        code.close()
+        code.close()
+        code.blank()
+        code.line("private static bool Tag(in GesValue value, out string result) => Read(value.ValueKind is GesBytecodeTypeKind.Tag or GesBytecodeTypeKind.Text, value.AsText(), out result);")
+        code.blank()
+        code.line("private static bool Text(in GesValue value, out string result) => Read(value.ValueKind == GesBytecodeTypeKind.Text, value.AsText(), out result);")
+        code.blank()
+        code.line("private static bool Boolean(in GesValue value, out bool result) => Read(value.ValueKind == GesBytecodeTypeKind.Boolean, value.AsBoolean(), out result);")
+        code.blank()
+        code.line("private static bool Percentage(in GesValue value, out double result) => Read(value.ValueKind == GesBytecodeTypeKind.Percentage, value.AsNumber(), out result);")
+        code.blank()
+        code.line("private static bool Number(in GesValue value, GesQuantityUnit unit, out double result) => Read(value.ValueKind is GesBytecodeTypeKind.Integer or GesBytecodeTypeKind.Float && value.ValueUnit == unit, value.AsNumber(), out result);")
+        code.blank()
+        code.line("private static bool Point(in GesValue value, GesQuantityUnit unit, out GesPoint result) => Read(GesPoint.FromValue(value, unit), out result);")
+        code.blank()
+        code.line("private static bool Vector(in GesValue value, GesQuantityUnit unit, out GesVector result) => Read(GesVector.FromValue(value, unit), out result);")
+        code.blank()
+        code.line("private static bool Integer(in GesValue value, GesQuantityUnit unit, out long result)")
+        code.open("{")
+        code.line("result = 0;")
+        code.line("if (value.ValueUnit != unit) return false;")
+        code.line("if (value.ValueKind == GesBytecodeTypeKind.Integer) result = value.AsInteger();")
+        code.line("else if (value.ValueKind == GesBytecodeTypeKind.Float && value.AsNumber() is var number && number >= -9.2233720368547758E18 && number < 9.2233720368547758E18 && Math.Floor(number) == number) result = (long)number;")
+        code.line("else return false;")
+        code.line("return true;")
+        code.close()
+        code.blank()
+        code.line("private static bool Read<T>(bool valid, T value, out T result)")
+        code.open("{")
+        code.line("result = valid ? value : default!;")
+        code.line("return valid;")
+        code.close()
+        code.blank()
+        code.line("private static bool Read<T>(T? value, out T result) where T : struct")
+        code.open("{")
+        code.line("result = value.GetValueOrDefault();")
+        code.line("return value.HasValue;")
+        code.close()
+        code.blank()
+        code.line("private static bool OptionalValue<T>(in GesValue value, Decoder<T> decode, out T? result) where T : struct")
+        code.open("{")
+        code.line("result = null;")
+        code.line("if (value.IsNothing) return true;")
+        code.line("if (!decode(value, out var decoded)) return false;")
+        code.line("result = decoded;")
+        code.line("return true;")
+        code.close()
+        code.blank()
+        code.line("private static bool OptionalObject<T>(in GesValue value, Decoder<T> decode, out T? result) where T : class")
+        code.open("{")
+        code.line("result = null;")
+        code.line("if (value.IsNothing) return true;")
+        code.line("if (!decode(value, out var decoded)) return false;")
+        code.line("result = decoded;")
+        code.line("return true;")
+        code.close()
+        code.blank()
+        code.line("private static bool List<T>(in GesValue value, Decoder<T> element, out List<T> result)")
+        code.open("{")
+        code.line("result = null!;")
+        code.line("if (value.ValueKind != GesBytecodeTypeKind.List) return false;")
+        code.line("var items = value.AsList();")
+        code.line("var list = new List<T>(items.Length);")
+        code.line("for (var index = 0; index < items.Length; index++)")
+        code.open("{")
+        code.line("if (!element(items[index], out var item)) return false;")
+        code.line("list.Add(item);")
+        code.close()
+        code.blank()
+        code.line("result = list;")
+        code.line("return true;")
+        code.close()
+        code.blank()
+        code.line("private static GesValue List<T>(List<T> list, Func<T, GesValue> element)")
+        code.open("{")
+        code.line("var items = new GesValue[list.Count];")
+        code.line("for (var index = 0; index < items.Length; index++) items[index] = element(list[index]);")
+        code.line("return GesValue.GesList(items);")
+        code.close()
+        code.blank()
+        code.line("private static bool Dice(in GesValue value, out List<int> result)")
+        code.open("{")
+        code.line("result = null!;")
+        code.line("if (value.ValueKind != GesBytecodeTypeKind.Dice) return false;")
+        code.line("result = new List<int>(value.AsDice());")
+        code.line("return true;")
+        code.close()
+        code.blank()
+        code.line("private static GesValue Dice(List<int> rolls)")
+        code.open("{")
+        code.line("foreach (var roll in rolls)")
+        code.line("    if (roll <= 0) return GesValue.GesNothing();")
+        code.line("return GesValue.GesDice(rolls.ToArray());")
         code.close()
     }
 }

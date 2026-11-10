@@ -47,6 +47,13 @@ public sealed class GesSchemaGenerateOptions
     public bool Values { get; set; }
 
     /// <summary>
+    /// Gets or sets whether generated model types also offer themselves to scripts as external types: a value conversion per
+    /// type and a generated <c>GesTypes</c> catalog and constructor registry that implement the Runtime's external-type
+    /// contracts, without the Bridge, macros or Reflection. Only model generation takes it.
+    /// </summary>
+    public bool Bindings { get; set; }
+
+    /// <summary>
     /// Gets or sets whether generated Swift classes keep the dynamic exclusivity checks of their stored properties. By
     /// default they mark them <c>@exclusivity(unchecked)</c>, which halves the time of reading and writing; overlapping
     /// accesses to one record, such as passing a list <c>inout</c> while the record reads into it, are then undefined

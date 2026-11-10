@@ -699,7 +699,7 @@ depends on it, so a game never ships it. It is synchronous, reads no files and r
 | generator | `static class GesSchemaGenerator` with `Layout(set, roots, parameters)` and `Generate(set, roots, parameters, options)`, returning the text | `enum GesSchemaGenerator` with `layout(_:roots:parameters:)` and `generate(_:roots:parameters:options:)`, throwing and returning the text |
 | roles | `WireRoots(set, group)`, `ModelRoots(set, group)` | `wireRoots(_:group:)`, `modelRoots(_:group:)` |
 | models | `ModelLayout(set, roots)`, `GenerateModels(set, roots, options)` | `modelLayout(_:roots:)`, `generateModels(_:roots:options:)` |
-| options | `sealed class GesSchemaGenerateOptions` with `Language`, `Namespace`, `Access`, `Values`, `CheckedExclusivity` | `struct GesSchemaGenerateOptions` with `init(language:namespace:access:values:checkedExclusivity:)` and the same properties |
+| options | `sealed class GesSchemaGenerateOptions` with `Language`, `Namespace`, `Access`, `Values`, `CheckedExclusivity`, `Bindings` | `struct GesSchemaGenerateOptions` with `init(language:namespace:access:values:checkedExclusivity:bindings:)` and the same properties |
 | target language | `enum GesSchemaLanguage` with `CSharp`, `Swift` | `enum GesSchemaLanguage` with `csharp`, `swift` |
 | access | `enum GesSchemaAccess` with `Public`, `Internal` | `enum GesSchemaAccess` with `public`, `internal` |
 | generation error | `GesGeneratorException` with `Code` | `GesGeneratorError` with `code`, `message` |
@@ -716,8 +716,8 @@ port.
 `WireRoots` and `ModelRoots` list the [roots of a group](Schemas.md#roles) in declaration order, empty when it has none.
 `ModelLayout` and `GenerateModels` write the [model layout](Schemas.md#model-layout) and the
 [model types](Schemas.md#model-types) of schema roots; a root that is no schema fails with `generate.usage`, and so do the
-wire-only options `Values` and `CheckedExclusivity`. A reached type without a model type fails with
-`generate.unsupported`.
+wire-only options `Values` and `CheckedExclusivity`; `Generate` rejects the model-only option `Bindings` with
+`generate.usage`. A reached type without a model type fails with `generate.unsupported`.
 
 ## Host construction and lifecycle API
 

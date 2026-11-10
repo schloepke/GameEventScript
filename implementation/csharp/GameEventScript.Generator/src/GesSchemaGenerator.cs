@@ -53,6 +53,7 @@ public static class GesSchemaGenerator
         if (roots is null) throw new ArgumentNullException(nameof(roots));
         if (parameters is null) throw new ArgumentNullException(nameof(parameters));
         if (options is null) throw new ArgumentNullException(nameof(options));
+        if (options.Bindings) throw new GesGeneratorException(GesGeneratorException.Usage, "Bindings concern model code; wire code converts through Values.");
         var layout = GesSchemaLayoutBuilder.Build(set, roots, parameters);
         var types = GesSchemaPlanner.Plan(layout);
         return options.Language == GesSchemaLanguage.CSharp ? GesCSharpEmitter.Emit(layout, types, options) : GesSwiftEmitter.Emit(layout, types, options);

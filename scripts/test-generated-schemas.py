@@ -292,7 +292,7 @@ def main():
         target.write_text(code, encoding="utf-8")
     # The checked-in wire and model code of the role fixture, which compare-schema-generation.py keeps current, compiles
     # under the same rules: models of every field type and spatial wire fields in 2D and 3D.
-    for name in ("RolesWire", "RolesModel"):
+    for name in ("RolesWire", "RolesModel", "RolesBound"):
         shutil.copy(GENERATED_CSHARP / f"{name}.g.cs", csharp / f"{name}.g.cs")
         shutil.copy(GENERATED_SWIFT / f"{name}.swift", swift / f"{name}.swift")
     (csharp / "Harness.cs").write_text(csharp_program(entries), encoding="utf-8")

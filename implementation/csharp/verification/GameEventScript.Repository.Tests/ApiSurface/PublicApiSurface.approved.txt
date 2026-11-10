@@ -1418,6 +1418,7 @@ sealed class GameEventScript.Generator.GesSchemaGenerateOptions
   ctor GesSchemaGenerateOptions()
   property GameEventScript.Generator.GesSchemaAccess Access { get set }
   property GameEventScript.Generator.GesSchemaLanguage Language { get set }
+  property System.Boolean Bindings { get set }
   property System.Boolean CheckedExclusivity { get set }
   property System.Boolean Values { get set }
   property System.String Namespace { get set }

@@ -32,6 +32,7 @@ public enum GesSchemaGenerator {
     /// - Throws: `GesSchemaError` when a root is not declared or cannot be bound, and `GesGeneratorError` when no root is
     ///   given, the namespace is invalid, two generated names collide, or a reached type cannot be generated yet.
     public static func generate(_ set: GesSchemaSet, roots: [String], parameters: GesSchemaParameters, options: GesSchemaGenerateOptions) throws -> String {
+        if options.bindings { throw GesGeneratorError(GesGeneratorError.usage, "Bindings concern model code; wire code converts through Values.") }
         let layout = try GesSchemaLayoutBuilder.build(set, roots: roots, parameters: parameters)
         let types = try GesSchemaPlanner.plan(layout)
         return options.language == .csharp ? try GesCSharpEmitter.emit(layout, types, options) : try GesSwiftEmitter.emit(layout, types, options)

@@ -76,6 +76,45 @@ internal static class GesModelPlanner
         return value;
     }
 
+    // The types in an order where each comes after the types it holds, for registration: by name, depth first.
+    internal static List<GesModelType> DependencyOrder(GesModelLayout layout)
+    {
+        var ordered = new List<GesModelType>();
+        var seen = new HashSet<string>(System.StringComparer.Ordinal);
+        foreach (var type in layout.Types) Visit(layout, type, seen, ordered);
+        return ordered;
+    }
+
+    private static void Visit(GesModelLayout layout, GesModelType type, HashSet<string> seen, List<GesModelType> ordered)
+    {
+        if (!seen.Add(type.Name)) return;
+        foreach (var field in type.Fields) References(layout, field.Value, seen, ordered);
+        ordered.Add(type);
+    }
+
+    private static void References(GesModelLayout layout, GesModelValue value, HashSet<string> seen, List<GesModelType> ordered)
+    {
+        if (value.Kind == GesModelKind.Schema) Visit(layout, layout.Type(value.Schema), seen, ordered);
+        if (value.Element is not null) References(layout, value.Element.Value, seen, ordered);
+        foreach (var alternative in value.Alternatives) References(layout, alternative.Value, seen, ordered);
+    }
+
+    // The type a script sees for a field: a built-in kind with its unit, or a type name; a union keeps its value as `Value`.
+    internal static (string? Kind, string Unit, string? TypeName) Declared(GesModelPlanValue value) => value.Kind switch
+    {
+        GesModelKind.Boolean => ("Boolean", "none", null),
+        GesModelKind.Number when value.Model.Type == "Percentage" => ("Percentage", "none", null),
+        GesModelKind.Number => ("Float", value.Model.Unit, null),
+        GesModelKind.Text => ("Text", "none", null),
+        GesModelKind.Tag => ("Tag", "none", null),
+        GesModelKind.List => ("List", "none", null),
+        GesModelKind.Dice => ("Dice", "none", null),
+        GesModelKind.Point => ("Point", value.Model.Unit, null),
+        GesModelKind.Vector => ("Vector", value.Model.Unit, null),
+        GesModelKind.Schema => (null, "none", value.Model.Schema),
+        _ => (null, "none", "Value")
+    };
+
     // The declaration as a reader would write it, for documentation: `:Quantity(meter) between 0 and worldWidth step 0.01`.
     internal static string Describe(GesModelField field)
     {

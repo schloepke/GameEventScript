@@ -10,8 +10,8 @@ given bytes with the generated type and writes the record again: an expected err
 valid record the same byte count and the same bytes. A delta is encoded from the decoded record and baseline, and decoded
 against the baseline into the expected record. Operations on types without delta methods are counted as skipped.
 The programs check shared baselines (GES_CHECK_SHARING); the unchecked form of release builds also compiles in both
-languages, and a small C# program holds its remaining guarantee on the fleet fixture. --self-test qualifies the
-comparison.
+languages, and a small C# program holds its remaining guarantee on the fleet fixture, qualified by a control without the
+guard that must fail. --self-test qualifies the comparison.
 """
 import argparse
 from pathlib import Path
@@ -316,8 +316,14 @@ let package = Package(
         .executableTarget(
             name: "Harness",
             dependencies: [.product(name: "GameEventScriptRuntime", package: "GameEventScriptRuntime")],
+            swiftSettings: [.unsafeFlags(["-warnings-as-errors"]), .define("GES_CHECK_SHARING")]
+        ),
+        // The same sources without the check, as release builds of users compile them; one build shares the Runtime.
+        .executableTarget(
+            name: "Unchecked",
+            dependencies: [.product(name: "GameEventScriptRuntime", package: "GameEventScriptRuntime")],
             swiftSettings: [.unsafeFlags(["-warnings-as-errors"])]
-        )
+        ),
     ]
 )
 """, encoding="utf-8")
@@ -339,15 +345,27 @@ let package = Package(
   </ItemGroup>
 </Project>
 """, encoding="utf-8")
-    # Release builds of users skip the check of shared baselines; this program holds the guarantee that remains there.
-    unchecked = WORK / "csharp-unchecked"
-    unchecked.mkdir()
-    fleet, error = generate(WORK / "schemas/gate", [FLEET_FIXTURE.read_text(encoding="utf-8")], "Fleet", [("worldSize", "2km")], "csharp", "Unchecked")
+    # The unchecked Swift target compiles copies of the harness sources.
+    unchecked_swift = WORK / "swift/Sources/Unchecked"
+    shutil.copytree(swift, unchecked_swift)
+    # Release builds of users skip the check of shared baselines; this program holds the guarantee that remains there. Its
+    # control removes the guard of the unchanged list from the same code and must fail, so the program cannot pass vacuously.
+    fleet_directory = WORK / "schemas/fleet"
+    fleet_directory.mkdir(parents=True)
+    fleet, error = generate(fleet_directory, [FLEET_FIXTURE.read_text(encoding="utf-8")], "Fleet", [("worldSize", "2km")], "csharp", "Unchecked")
     if fleet is None:
         raise SystemExit(f"The fleet fixture does not generate: {error}")
-    (unchecked / "Fleet.g.cs").write_text(fleet, encoding="utf-8")
-    (unchecked / "Program.cs").write_text(UNCHECKED_PROGRAM, encoding="utf-8")
-    (unchecked / "Unchecked.csproj").write_text(f"""<Project Sdk="Microsoft.NET.Sdk">
+    reading = fleet.index("internal bool __ReadDelta(Fleet baseline")
+    guard = fleet.find("if (!ReferenceEquals(Ships, baseline.Ships))", reading)
+    if guard < 0:
+        raise SystemExit("The fleet code has no guard for a shared list in its delta reader.")
+    unguarded = fleet[:guard] + "if (true)" + fleet[guard + len("if (!ReferenceEquals(Ships, baseline.Ships))"):]
+    for name, code in (("csharp-unchecked", fleet), ("csharp-unchecked-control", unguarded)):
+        project = WORK / name
+        project.mkdir()
+        (project / "Fleet.g.cs").write_text(code, encoding="utf-8")
+        (project / "Program.cs").write_text(UNCHECKED_PROGRAM, encoding="utf-8")
+        (project / "Unchecked.csproj").write_text(f"""<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net8.0</TargetFramework>
@@ -360,13 +378,11 @@ let package = Package(
   </ItemGroup>
 </Project>
 """, encoding="utf-8")
-    # The Swift harness runs with the check; a second build compiles the form of release builds, warnings as errors.
     for command in (["dotnet", "build", str(unity), "-c", "Release", "-o", str(WORK / "csharp-unity-bin"), "-nologo"],
                     ["dotnet", "build", str(csharp), "-c", "Release", "-o", str(WORK / "csharp-bin"), "-nologo"],
-                    ["dotnet", "build", str(unchecked), "-c", "Release", "-o", str(WORK / "csharp-unchecked-bin"), "-nologo"],
-                    ["swift", "build", "-c", "release", "--package-path", str(WORK / "swift"), "--disable-build-manifest-caching", "-Xswiftc", "-DGES_CHECK_SHARING"],
-                    ["swift", "build", "-c", "release", "--package-path", str(WORK / "swift"), "--disable-build-manifest-caching",
-                     "--scratch-path", str(WORK / "swift-unchecked-build")]):
+                    ["dotnet", "build", str(WORK / "csharp-unchecked"), "-c", "Release", "-o", str(WORK / "csharp-unchecked-bin"), "-nologo"],
+                    ["dotnet", "build", str(WORK / "csharp-unchecked-control"), "-c", "Release", "-o", str(WORK / "csharp-unchecked-control-bin"), "-nologo"],
+                    ["swift", "build", "-c", "release", "--package-path", str(WORK / "swift"), "--disable-build-manifest-caching"]):
         build = subprocess.run(command, capture_output=True, check=False)
         if build.returncode != 0:
             errors = [line for line in build.stdout.decode("utf-8", "replace").splitlines() + build.stderr.decode("utf-8", "replace").splitlines() if "error" in line]
@@ -378,6 +394,10 @@ let package = Package(
     if guarantee.returncode != 0:
         failures += 1
         print("C# unchecked:", (guarantee.stdout + guarantee.stderr).decode("utf-8", "replace").strip())
+    control = subprocess.run(["dotnet", str(WORK / "csharp-unchecked-control-bin/Unchecked.dll")], capture_output=True, check=False)
+    if control.returncode == 0:
+        failures += 1
+        print("C# unchecked control: the program passes without the guard of a shared list.")
     for port, command in runs.items():
         output = subprocess.run(command, input=lines.encode(), capture_output=True, check=True).stdout.decode().splitlines()
         if len(output) != len(requests):

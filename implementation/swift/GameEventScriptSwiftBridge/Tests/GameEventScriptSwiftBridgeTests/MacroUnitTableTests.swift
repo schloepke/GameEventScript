@@ -1,11 +1,11 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
+import GameEventScriptRuntime
 import GameEventScriptSwiftBridge
+// Enumerating every runtime unit needs the UnitId initializer of the Syntax unit table.
+@_spi(Syntax) import GameEventScriptSyntax
 import XCTest
-
-// Enumerating every runtime unit needs the internal UnitId initializer.
-@testable import GameEventScriptRuntime
 
 // One field per unit, named after its case, so the macro's mirrored unit table is checked against the runtime.
 @GesType
@@ -34,10 +34,22 @@ private struct EveryUnit {
     var ampere: Double = 1
     @GesField(unit: .hertz)
     var hertz: Double = 1
+    @GesField(unit: .squareMeter)
+    var squareMeter: Double = 1
+    @GesField(unit: .cubicMeter)
+    var cubicMeter: Double = 1
+    @GesField(unit: .wattPerSquareMeter)
+    var wattPerSquareMeter: Double = 1
     @GesField(unit: .kelvin)
     var kelvin: Double = 1
     @GesField(unit: .degreePerSecond)
     var degreePerSecond: Double = 1
+    @GesField(unit: .decibel)
+    var decibel: Double = 1
+    @GesField(unit: .wattPerKelvin)
+    var wattPerKelvin: Double = 1
+    @GesField(unit: .joulePerKelvin)
+    var joulePerKelvin: Double = 1
 }
 
 final class MacroUnitTableTests: XCTestCase {

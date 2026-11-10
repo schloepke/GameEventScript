@@ -7,6 +7,11 @@ import PackageDescription
 let package = Package(
     name: "GameEventScriptCompiler",
     products: [.library(name: "GameEventScriptCompiler", targets: ["GameEventScriptCompiler"])],
-    dependencies: [.package(path: "../GameEventScriptRuntime")],
-    targets: [.target(name: "GameEventScriptCompiler", dependencies: [.product(name: "GameEventScriptRuntime", package: "GameEventScriptRuntime")])]
+    dependencies: [.package(path: "../GameEventScriptRuntime"), .package(path: "../GameEventScriptSyntax")],
+    targets: [
+        .target(
+            name: "GameEventScriptCompiler",
+            dependencies: [.product(name: "GameEventScriptRuntime", package: "GameEventScriptRuntime"), .product(name: "GameEventScriptSyntax", package: "GameEventScriptSyntax")]
+        )
+    ]
 )

@@ -5,9 +5,31 @@ import Foundation
 import TerminalSupport
 
 enum ToolTextDisplay {
+    static let tabSize = 4
+
+    // The terminal width of a grapheme cluster, measured like the C# CLI: a cluster joined by ZWJ, with an emoji
+    // variation selector or with a wide scalar occupies two columns, any other the sum of its scalars.
     static func width(_ character: Character) -> Int {
-        if character.unicodeScalars.contains(where: { $0.value == 0x200d || $0.value == 0xfe0f || $0.properties.isEmojiPresentation }) { return 2 }
-        return character.unicodeScalars.reduce(0) { $0 + max(0, Int(ges_scalar_width($1.value))) }
+        var total = 0
+        for scalar in character.unicodeScalars {
+            let width = scalarWidth(scalar.value)
+            if width == 2 || scalar.value == 0x200d || scalar.value == 0xfe0f { return 2 }
+            total += width
+        }
+        return total
+    }
+
+    // The columns of one scalar from the generated table both CLIs share.
+    static func scalarWidth(_ scalar: UInt32) -> Int {
+        if scalar >= 0x20 && scalar < 0x7f { return 1 }
+        let starts = ToolTextWidths.starts
+        var low = 0
+        var high = starts.count - 1
+        while low < high {
+            let middle = (low + high + 1) / 2
+            if starts[middle] <= scalar { low = middle } else { high = middle - 1 }
+        }
+        return Int(ToolTextWidths.widths[low])
     }
 
     static func expandTabs(_ text: String) -> String {
@@ -15,7 +37,7 @@ enum ToolTextDisplay {
         var column = 0
         for character in text {
             if character == "\t" {
-                let count = 4 - column % 4
+                let count = tabSize - column % tabSize
                 result += String(repeating: " ", count: count)
                 column += count
             } else {
@@ -24,6 +46,13 @@ enum ToolTextDisplay {
             }
         }
         return result
+    }
+
+    // The display width of one line after expandTabs, without building the expanded text.
+    static func columns(_ line: String) -> Int {
+        var column = 0
+        for character in line { column += character == "\t" ? tabSize - column % tabSize : width(character) }
+        return column
     }
 }
 
@@ -126,6 +155,40 @@ final class RunPrompt {
         self.color = color
     }
 
+    // The end row and column of input after the five-column prompt, measured like the expanded text draw writes.
+    static func position(_ input: ArraySlice<Character>, columns: Int) -> (Int, Int) {
+        var row = 0
+        var column = 5
+        var lineColumn = 0
+        for character in input {
+            if character == "\n" {
+                row += 1
+                column = 5
+                lineColumn = 0
+                continue
+            }
+            if character == "\t" {
+                // A tab's spaces wrap individually; wide characters move whole to the next row.
+                let width = ToolTextDisplay.tabSize - lineColumn % ToolTextDisplay.tabSize
+                column += width
+                lineColumn += width
+                if column > columns {
+                    row += 1
+                    column -= columns
+                }
+                continue
+            }
+            let width = ToolTextDisplay.width(character)
+            if width > 0 && column + width > columns {
+                row += 1
+                column = 0
+            }
+            column += width
+            lineColumn += width
+        }
+        return column >= columns ? (row + 1, 0) : (row, column)
+    }
+
     func readLine(session: RunSession? = nil) throws -> String? {
         guard ges_terminal_begin() != 0 else { throw ToolError.io("Could not enable terminal editing.") }
         defer {
@@ -139,36 +202,14 @@ final class RunPrompt {
         var draft = ""
         var previousRow = 0
 
-        func position(_ input: ArraySlice<Character>, columns: Int) -> (Int, Int) {
-            var row = 0
-            var column = 5
-            var lineColumn = 0
-            for character in input {
-                if character == "\n" {
-                    row += 1
-                    column = 5
-                    lineColumn = 0
-                    continue
-                }
-                let width = character == "\t" ? 4 - lineColumn % 4 : ToolTextDisplay.width(character)
-                if width > 0 && column + width > columns {
-                    row += 1
-                    column = 0
-                }
-                column += width
-                lineColumn += width
-            }
-            return column >= columns ? (row + 1, 0) : (row, column)
-        }
-
         func draw() {
             let columns = max(10, Int(ges_terminal_columns()))
             io.write("\r" + (previousRow > 0 ? "\u{1b}[\(previousRow)A" : "") + "\u{1b}[J", toError: true)
             let visible = ToolTextDisplay.expandTabs(String(text))
             let colored = (color ? highlighting.render(visible) : visible).replacingOccurrences(of: "\n", with: "\n     ")
             io.write("ges> " + colored, toError: true)
-            let end = position(text[...], columns: columns)
-            let caret = position(text[..<cursor], columns: columns)
+            let end = Self.position(text[...], columns: columns)
+            let caret = Self.position(text[..<cursor], columns: columns)
             // Realize the terminal's pending wrap before positioning the cursor.
             if end.1 == 0 { io.write(" \r", toError: true) }
             if end.0 > caret.0 { io.write("\u{1b}[\(end.0 - caret.0)A", toError: true) }

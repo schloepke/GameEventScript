@@ -23,6 +23,7 @@
         <PackageReference Include="GameEventScript.CSharpBridge" Version="$(GesPackageVersion)" />
     </ItemGroup>
     <ItemGroup Condition="'$(GesUseUnityDlls)' == 'true'">
+        <Reference Include="GameEventScript.Syntax" HintPath="$(GesUnityDllDirectory)/GameEventScript.Syntax.dll" Private="true" />
         <Reference Include="GameEventScript.Runtime" HintPath="$(GesUnityDllDirectory)/GameEventScript.Runtime.dll" Private="true" />
         <Reference Include="GameEventScript.CSharpBridge" HintPath="$(GesUnityDllDirectory)/GameEventScript.CSharpBridge.dll" Private="true" />
     </ItemGroup>

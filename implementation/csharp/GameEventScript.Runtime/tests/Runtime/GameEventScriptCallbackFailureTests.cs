@@ -67,6 +67,41 @@ public sealed class GameEventScriptCallbackFailureTests
     }
 
     [TestMethod]
+    public void AHostsOwnFatalExceptionKeepsItsDiagnosticAtConstructorAndFieldBoundaries()
+    {
+        var own = new GesExtensionFaultException("app.own", "Own.").Diagnostic;
+        var definition = FaultyDefinition();
+        var failingConstructor = new DelegateExternalTypeConstructor(definition.Constructors[0], _ => throw new ReportedRuntimeException(own));
+        var failingField = new DelegateExternalTypeConstructor(definition.Constructors[0],
+            call => call.SetExternalValue(new DelegateExternalValue(definition, _ => throw new ReportedRuntimeException(own))));
+        foreach (var constructor in new[] { failingConstructor, failingField })
+        {
+            var host = BuildHost(definition, constructor, "on Start { let sample be :Faulty(); let x be sample.value; emit Done(x: x) }", out var diagnostics);
+            Assert.IsTrue(host.Receive(Create("Start")));
+            host.RunToCompletion();
+            Assert.HasCount(1, diagnostics);
+            Assert.AreEqual("app.own", diagnostics[0].Code);
+        }
+    }
+
+    [TestMethod]
+    public void AHostsOwnFatalExceptionKeepsItsDiagnosticAtTheExtensionBoundary()
+    {
+        var own = new GesExtensionFaultException("app.own", "Own.").Diagnostic;
+        var program = new GesProgramBuilder().AddScript("on Start { let value be :app.fail; emit Done(value: value) }").Compile();
+        var diagnostics = new List<GesDiagnostic>();
+        var host = GameEventScriptHost.CreateBuilder()
+            .WithRegistry(new FailingExtensionRegistry(own))
+            .WithRuntimeObserver(TestRuntimeObserver.ObserveMessages(runtimeError: diagnostics.Add))
+            .Build().StartForTest();
+        host.Load(program);
+        Assert.IsTrue(host.Receive(Create("Start")));
+        host.RunToCompletion();
+        Assert.HasCount(1, diagnostics);
+        Assert.AreEqual("app.own", diagnostics[0].Code);
+    }
+
+    [TestMethod]
     public void ExtensionFaultExceptionRejectsTheReservedRuntimePrefix()
         => Assert.ThrowsExactly<ArgumentException>(() => new GesExtensionFaultException("runtime.custom", "boom"));
 
@@ -217,6 +252,13 @@ public sealed class GameEventScriptCallbackFailureTests
     {
         public IGesExternalTypeConstructor? Resolve(GesExternalTypeConstructorReference reference)
             => string.Equals(reference.SignatureId, constructor.Definition.SignatureId, StringComparison.Ordinal) ? constructor : null;
+    }
+
+    private sealed class FailingExtensionRegistry(GesDiagnostic diagnostic) : IGesExtensionRegistry, IGesExtensionFunction
+    {
+        public IGesExtensionFunction? Resolve(GesExtensionReference reference) => this;
+
+        public void Invoke(GesExtensionCall call) => throw new ReportedRuntimeException(diagnostic);
     }
 
     private sealed class ReportedRuntimeException(GesDiagnostic diagnostic) : GesFatalRuntimeException(diagnostic);

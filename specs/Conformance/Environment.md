@@ -65,6 +65,15 @@ The runtime constructor retains the four converted arguments and sets
 The runtime value exposes only `IGesExternalValue`; the portable
 case must not depend on a language-specific backing object.
 
+## External type `ReadProbe`
+
+The fixed V1 external-type catalog also declares `ReadProbe(failOther: Boolean)` with
+fields `failOther: Boolean`, `count: Float<UnitNone>` and `other: Float<UnitNone>` in
+that order, so a case can observe which getters run. `failOther` retains the
+constructor input. Every read of `count` returns one more than the read before it,
+starting at 1. Reading `other` raises an unanticipated platform failure when
+`failOther` is true and otherwise returns 0.
+
 ## External type `CallbackProbe`
 
 The fixed V1 external-type catalog also declares
@@ -107,6 +116,27 @@ as `vector` and `point`. Independently of those arguments, `storedVector` return
 `:Vector(1m, 2m, 3m)` and `storedPoint` returns `:Point(4s, 5s, 6s)`.
 Unknown field names return no value. Direct field access and Map materialization
 must preserve the units as required by the external-type API contract.
+
+## External type `OptionalProbe`
+
+The fixed catalog declares
+`OptionalProbe(mount: Tag, label: Text, armed: Boolean, share: Percentage, power: Float<Watt>)`
+with six fields, in order: the five constructor parameters with the same
+declarations, followed by `stall: Tag`. The constructor retains the converted
+arguments as the first five fields. Independently of those arguments, `stall`
+returns the value Nothing rather than no value. Unknown field names return no
+value. The fixture covers how declared types treat Nothing and Tag values.
+
+## External type `DeclaredProbe`
+
+The fixed catalog declares `DeclaredProbe(name: Text)` with seven fields, in
+order: `name: Text`, `power: Float<Watt>`, `heading: Vector<Meter>`,
+`ratio: Percentage`, `label: Text`, `kind: Tag` and `ready: Boolean`. The
+constructor retains the converted argument as `name`. The other fields return
+values that differ from their declarations: the integer `3`, `:Vector(1s, 2s, 3s)`,
+the Number `0.5`, the Tag `#gun`, the Text `'turret'` and the integer `1`.
+Unknown field names return no value. The fixture covers how field reads follow
+their declared types.
 
 ## Declarative Host environment
 

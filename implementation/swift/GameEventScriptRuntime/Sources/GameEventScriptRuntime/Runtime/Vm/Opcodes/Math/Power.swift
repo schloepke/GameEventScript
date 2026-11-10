@@ -1,6 +1,8 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
+@_spi(Syntax) import GameEventScriptSyntax
+
 #if canImport(Darwin)
     import Darwin
 #elseif canImport(Glibc)
@@ -14,15 +16,17 @@ extension GesVirtualMachine {
         if registers[x].isNothing || registers[y].isNothing { return registers[target].setNothing() }
         let left = registers[x].asNumber
         let right = registers[y].asNumber
-        if registers[y].hasUnit || left.isNaN || right.isNaN || (registers[x].hasUnit && right != 0 && right != 1) { return registers[target].setNothing() }
-        return registers[target].setFloat(pow(left, right), unit: right == 1 ? registers[x].unit : .none)
+        // Quantity powers follow the unit derivations, for example `m` squared is `m²`; others are invalid.
+        guard !registers[y].hasUnit, !left.isNaN, !right.isNaN, let unit = GesQuantityUnit.power(registers[x].unit, right) else { return registers[target].setNothing() }
+        return registers[target].setFloat(pow(left, right), unit: unit)
     }
 
     func executePowerNumeric(_ target: Int, _ x: Int, _ y: Int) {
         guard registers[x].isNumeric, registers[y].isNumeric else { return registers[target].setNothing() }
         let left = registers[x].asNumber
         let right = registers[y].asNumber
-        if registers[y].hasUnit || left.isNaN || right.isNaN || (registers[x].hasUnit && right != 0 && right != 1) { return registers[target].setNothing() }
-        return registers[target].setFloat(pow(left, right), unit: right == 1 ? registers[x].unit : .none)
+        // Quantity powers follow the unit derivations, for example `m` squared is `m²`; others are invalid.
+        guard !registers[y].hasUnit, !left.isNaN, !right.isNaN, let unit = GesQuantityUnit.power(registers[x].unit, right) else { return registers[target].setNothing() }
+        return registers[target].setFloat(pow(left, right), unit: unit)
     }
 }

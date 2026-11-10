@@ -32,10 +32,11 @@
     <ItemGroup>
         <InternalsVisibleTo Include="GameEventScript.Tool.Tests" />
         <PackageReference Include="PrettyPrompt" Version="4.1.1" />
-        <ProjectReference Include="../../GameEventScript.SyntaxHighlighter/src/GameEventScript.SyntaxHighlighter.csproj" />
+        <ProjectReference Include="../../GameEventScript.Syntax/src/GameEventScript.Syntax.csproj" />
         <ProjectReference Include="../../GameEventScript.Runtime/src/GameEventScript.Runtime.csproj" />
         <ProjectReference Include="../../GameEventScript.Compiler/src/GameEventScript.Compiler.csproj" />
         <ProjectReference Include="../../GameEventScript.CSharpBridge/src/GameEventScript.CSharpBridge.csproj" />
+        <ProjectReference Include="../../GameEventScript.Generator/src/GameEventScript.Generator.csproj" />
         <None Include="../../../../LICENSE" Link="LICENSE" Pack="true" PackagePath="/" />
         <None Include="../../../../website/brand/pixel-duo/nuget-icon.png" Link="icon.png" Pack="true" PackagePath="/icon.png" />
         <None Include="../README.md" Pack="true" PackagePath="/" />

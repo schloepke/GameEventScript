@@ -55,14 +55,18 @@ NonZeroDigit       = "1".."9"
 NumericSuffix      = "_" ("0" | NonZeroDigit { "0".."9" })
 LowerName          = LowerLetter { AsciiLetter | Digit }
 VariableName       = LowerName [ NumericSuffix ]
-MessageName        = UpperLetter { AsciiLetter | Digit }
+UpperSegment       = UpperLetter { AsciiLetter | Digit }
+UpperName          = UpperSegment { "_" UpperSegment }
+MessageName        = UpperName
 TagName            = LowerName
 ConstantName       = LowerName
-TypeName           = UpperLetter { AsciiLetter | Digit }
+TypeName           = UpperName
 ModuleSegment      = LowerLetter { LowerLetter | Digit }
 ModuleName         = ModuleSegment { "." ModuleSegment }
 UnlabeledArgument  = "_"
 ```
+
+> **Since: Unreleased** — underscores in message and type names
 
 Consequences:
 
@@ -71,6 +75,11 @@ Consequences:
 - Local variables, loop/selector variables, message-name bindings, and the local
   name of an unlabeled parameter use `VariableName`. `_` is reserved for an
   unlabeled argument and `_number` is permitted nowhere except a variable name.
+- A `_` in a `MessageName` or `TypeName` joins two segments, and each segment
+  starts with an uppercase letter: `Unit_Weapon`, `Unit_Weapon_Sniper` and
+  `Unit_Type1` are names; `Unit_1`, `Unit_weapon`, `Unit__Weapon`, `_Unit` and
+  `Unit_` are not. The `_` is an ordinary part of the name and forms no hierarchy:
+  `:Unit_Weapon` has no relation to `:Unit`, and neither needs the other.
 - Regular message names use `MessageName`. The lowercase system endpoint names
   `initialization` and `undeliverable` are reserved grammar tokens rather than
   ordinary message names.
@@ -221,7 +230,7 @@ commas are invalid. Arbitrary source expressions are not recognized. A non-Text 
 Vector and Point recognition uses case-sensitive `:Vector(...)` and
 `:Point(...)` with the runtime whitespace rules below. These data forms have
 zero through three numeric components, either positional in `x`, `y`, `z`
-order or labeled with an ordered subset of `x:`, `y:`, `z:`. Labels cannot be
+order or labeled with a run without gaps of `x:`, `y:`, `z:`. Labels cannot be
 mixed with positional components, repeated, reordered, or replaced with other
 names. Omitted components are zero; an empty form constructs the unitless zero
 value. Supplied components must share one unit (or all be unitless); omitted
@@ -232,11 +241,11 @@ Components use [numeric text](Numbers.md#text-and-number-conversion), including
 signs, exponents, underscores, supported quantity suffixes, and signed
 infinities. Percentage components contribute their unitless ratios. Components
 are stored as binary64 using the existing spatial value representation; zero
-is canonicalized to positive zero. `NaN`, `nothing`, non-numeric values, mixed
+is canonicalized to positive zero. `NaN`, `nothing`, `true`, `false`, other non-numeric values, mixed
 units, trailing commas, and malformed forms fail recognition of the complete
 input. Commas separate components, never digit groups. Variables, constants,
 arithmetic, nested constructors, and calls are not evaluated. The source
-compiler's general component constructors retain their existing behavior.
+constructors are owned by [Language](../Language.md#vector-and-point).
 
 Within the parse resource bounds, `parse (value as :Text)` reconstructs the
 same Vector/Point kind, exact binary64 components, and unit, including spatial
@@ -293,7 +302,8 @@ The following examples show the actual input Text contents:
 | `:Dice[1, 3, 6, 3]` | Dice containing rolls `6`, `3`, `3`, `1` |
 | `[rolls: :Dice[]]` | Map containing empty Dice |
 | `:Vector(10, 20)` | Vector with components `10`, `20`, `0` |
-| `:Point(x: 1m, z: 3m)` | Point with components `1m`, `0m`, `3m` |
+| `:Point(y: 1m, z: 3m)` | Point with components `0m`, `1m`, `3m` |
+| `:Point(x: 1m, z: 3m)` | unchanged Text because `y` is skipped |
 | `:Point(1m, 0)` | unchanged Text because the supplied units differ |
 | `[1, broken]` | unchanged Text `[1, broken]` |
 | `"Hello` | unchanged Text including the opening double quote |
@@ -307,6 +317,49 @@ of `nothing`; the Text fallback belongs to `parse`. Resource-limit handling is
 separate from literal-recognition failure and follows the fixed
 [Host runtime parse limits](../HostRuntime.md#literal-parsing-limits).
 
+### Strict recognition
+
+> **Since: Unreleased**
+
+`parse strict` applies exactly the same recognition, evaluation and limits as
+`parse`. The only difference is the recognition-failure result: where `parse`
+returns the original Text, `parse strict` produces `nothing`. Text values must
+therefore be quoted; a bare word such as `standard`, empty or whitespace-only
+input, malformed syntax, trailing input and unknown type constructors all
+produce `nothing`. A recognized `nothing` literal also produces `nothing`, so a
+script that must distinguish both cases inspects the input Text. A non-Text
+operand produces `nothing` in both modes.
+
+| Input contents | `parse` | `parse strict` |
+| --- | --- | --- |
+| `150kW` | Quantity `150000 W` | Quantity `150000 W` |
+| `#standard` | Tag `standard` | Tag `standard` |
+| `'standard'` | Text `standard` | Text `standard` |
+| `standard` | Text `standard` | `nothing` |
+| `[1, 2` | Text `[1, 2` | `nothing` |
+| empty | empty Text | `nothing` |
+
+### Recognition outside a Program
+
+> **Since: Unreleased**
+
+The public value API exposes the same recognition without a Host as
+`ParseLiteral` and `ParseLiteralStrict` (see [Public API](../PublicApi.md)). It
+follows the rules of `parse` and `parse strict` with these differences:
+
+- No Program is available, so a Program Record constructor such as `:Hit(5)` is
+  an unknown type constructor. `:Record("Hit", [...])` still reconstructs Record
+  data. No constructor or host callback is ever executed.
+- Strict recognition failure is reported as absence (`null`/`nil`) rather than
+  `nothing`, so it is distinguishable from a recognized `nothing` literal.
+- [GES documents](../Documents.md) build on this recognition for whole
+  `.gesd` files with a bracket-free root, comments and strict error positions.
+- The [literal parsing limits](../HostRuntime.md#literal-parsing-limits) apply
+  unchanged, including the Range item total, which uses the default
+  `MaxRangeItems` of 10,000. Exceeding a bound fails
+  with a literal limit error naming the limit and its value instead of producing
+  a value.
+
 ### Explicit data forms
 
 > **Since: 0.2.0**
@@ -317,6 +370,8 @@ inside Text. This includes Number with an optional unit, Percentage, Boolean,
 Text, Tag, Nothing, List, Map, Dice, Range, built-in Series, Handler, Message and
 Record data. Existing literals remain accepted, and guessing/fallback behavior is
 unchanged. Explicit forms allow disambiguation such as `:Text("123")`.
+As in source, the type name follows its `:` directly: `: Number(5)` and
+`[: Text("a")]` are not typed forms and fail recognition of the complete input.
 
 `as :Text` writes Range as `:Range(from: ..., to: ..., step: ...)`, Series as
 `:Series(fibonacci, offset: ...)` or `:Series(factorial, offset: ...)`, Handler as
@@ -331,7 +386,13 @@ In a running Program, `parse ':Hit(100)'` may resolve that Program's own declare
 Record constructor. Recognition first checks the complete input, including nested
 syntax and argument labels. A malformed suffix or nested value returns the original
 Text without executing any constructor. Unknown type constructors also preserve
-Text. No native/external constructor registry is consulted.
+Text, and so does a Message form without its argument list, such as
+`:Message(Done)`. No native/external constructor registry is consulted.
+
+A complete built-in form whose values are invalid is recognized and yields
+`nothing` in both `parse` and `parse strict`: `:Record("hit", [a: 1])`, whose Text
+is no `TypeName`, `:Record("Hit", 1)` or `:Range(1, "x")`. A message or handler
+name is syntax rather than a value, so an invalid one is a malformed form.
 
 After successful recognition, nested arguments are evaluated left to right,
 children before parents; map entries evaluate in authored order even when later

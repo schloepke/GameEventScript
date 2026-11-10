@@ -1,6 +1,8 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
+@_spi(Syntax) import GameEventScriptSyntax
+
 enum GesSelectionOrder {
     static func compare(_ a: GesValue, _ b: GesValue) -> Int {
         func unit(_ value: GesQuantityUnit) -> Int { Int(value.unitID) }

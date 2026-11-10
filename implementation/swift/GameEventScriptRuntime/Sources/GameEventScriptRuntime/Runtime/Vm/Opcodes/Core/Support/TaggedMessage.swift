@@ -6,7 +6,12 @@ extension GesVirtualMachine {
         var tags: [String] = []
 
         func append(_ value: GesValue) {
-            if let list = value.listValue { for item in list { append(item) } } else { tags.append(value.asText) }
+            if let list = value.listValue {
+                for item in list { append(item) }
+            } else {
+                // `_` is no tag name, so `nothing` makes the tag clause invalid.
+                tags.append(value.isNothing ? "_" : value.asText)
+            }
         }
 
         for value in values { append(value) }

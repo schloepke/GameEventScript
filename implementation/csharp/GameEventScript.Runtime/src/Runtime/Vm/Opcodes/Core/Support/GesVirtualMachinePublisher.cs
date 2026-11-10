@@ -89,14 +89,14 @@ internal partial class GesVirtualMachine
         var signature = OutboundMessageSignatures[outboundMessageSignatureIndex];
         if (!signature.IsValid || argumentRegisters.Length != signature.ArgumentNames.Count) return false;
 
-        var tags = new GesTagBuffer(tagRegisters.Length);
-        for (var index = 0; index < tagRegisters.Length; index++)
-        {
-            AddTagsToBuffer(tags, in Register(tagRegisters[index]));
-        }
-
         try
         {
+            var tags = new GesTagBuffer(tagRegisters.Length);
+            for (var index = 0; index < tagRegisters.Length; index++)
+            {
+                AddTagsToBuffer(tags, in Register(tagRegisters[index]));
+            }
+
             GesMessageArguments arguments;
             if (argumentRegisters.Length == 0)
             {
@@ -134,13 +134,20 @@ internal partial class GesVirtualMachine
     private bool EmitOrPublishMessageValueWithTags(in GesValue messageValue, GesUInt16IndexList tagRegisters, bool publish, GesContext context, long? delay = null)
     {
         if (messageValue.Kind is not Message || messageValue.ObjectValue is not GameEventScriptMessage msg) return false;
-        var tags = new GesTagBuffer(tagRegisters.Length);
-        for (var index = 0; index < tagRegisters.Length; index++)
+        try
         {
-            AddTagsToBuffer(tags, in Register(tagRegisters[index]));
+            var tags = new GesTagBuffer(tagRegisters.Length);
+            for (var index = 0; index < tagRegisters.Length; index++)
+            {
+                AddTagsToBuffer(tags, in Register(tagRegisters[index]));
+            }
+            var message = msg.WithNormalizedTags(tags.ToArrayOrEmpty());
+            return delay is { } microseconds ? context.Send(message, publish, microseconds) : publish ? context.Publish(message).AnyAccepted : context.Emit(message);
         }
-        var message = msg.WithNormalizedTags(tags.ToArrayOrEmpty());
-        return delay is { } microseconds ? context.Send(message, publish, microseconds) : publish ? context.Publish(message).AnyAccepted : context.Emit(message);
+        catch (ArgumentException)
+        {
+            return false;
+        }
     }
 
     private static void AddTagsToBuffer(GesTagBuffer tags, in GesValue value)
@@ -154,7 +161,8 @@ internal partial class GesVirtualMachine
         }
         else
         {
-            tags.Add(value.TextValue.Length > 0 || value.Kind is Text or Tag ? value.TextValue : value.ToText);
+            // `_` is no tag name, so `nothing` makes the tag clause invalid.
+            tags.Add(value.IsNothing ? "_" : value.TextValue.Length > 0 || value.Kind is Text or Tag ? value.TextValue : value.ToText);
         }
     }
 }

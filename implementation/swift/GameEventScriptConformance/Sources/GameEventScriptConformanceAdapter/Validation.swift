@@ -39,7 +39,7 @@ enum Validation {
             let kind = try test.text("kind")
             try require(kinds.contains(kind) && (!measuring || kind == "scriptApi"))
             var fields = ["id", "kind", "sources", "compile", "requires"]
-            if ["loadError", "messageApi", "valueApi", "externalTypeApi"].contains(kind) { fields.append("api") }
+            if ["loadError", "messageApi", "valueApi", "externalTypeApi", "documentApi", "schemaApi"].contains(kind) { fields.append("api") }
             if kind == "scriptApi" { fields.append("runtime") }
             if kind == "programBinary" { fields.append("binary") }
             if measuring { fields.append("measurement") }
@@ -76,6 +76,41 @@ enum Validation {
                 case "externalTypeApi":
                     try self.fields(api, ["typeNames"])
                     _ = try strings(api.required("typeNames"))
+                case "schemaApi":
+                    try self.fields(
+                        api,
+                        [
+                            "sources", "root", "parameters", "bind", "encode", "encodeExternal", "baselineExternal", "externalFields", "failingField", "baselineFailingField", "failingCode", "encodeBuffer", "baseline", "decode", "decodeLimit", "key",
+                            "dump", "dumpBaseline",
+                            "deltaEncode",
+                            "deltaDecode", "describe", "document",
+                        ]
+                    )
+                case "documentApi":
+                    if api["text"] != nil {
+                        try self.fields(api, ["text", "print"])
+                        _ = try api.text("text")
+                    } else {
+                        try self.fields(api, ["value", "schema", "print"])
+                        try value(api.required("value"))
+                        if api["schema"] != .null { _ = try DocumentApiObservations.schema(api.required("schema")) }
+                        try require(api["print"] != .null)
+                    }
+                    if let print = api["print"], print != .null { _ = try DocumentApiObservations.format(print) }
+                case "valueApi" where api["literal"] != nil:
+                    try self.fields(api, ["literal"])
+                    let literal = try api.required("literal")
+                    try self.fields(literal, ["text", "mode"])
+                    _ = try literal.text("text")
+                    try require(["lenient", "strict"].contains(try literal.text("mode")))
+                case "valueApi" where api["access"] != nil:
+                    try self.fields(api, ["access"])
+                    let access = try api.required("access")
+                    try self.fields(access, ["value", "external", "fromEntries", "members", "readFields", "materialize", "toJson", "toMessageJson"])
+                    try require(access["fromEntries"]?.boolValue != nil && access["toJson"]?.boolValue != nil && access["toMessageJson"]?.boolValue != nil && (access["external"] == .null) != (access["value"] == .null))
+                    if let probe = access["external"], probe != .null { try require(["counting", "typed", "failing", "faulting", "ordered", "sparse"].contains(try probe.stringValue ?? "")) }
+                    if access["value"] != .null { try value(access.required("value")) }
+                    for path in access.values("members") { try require(path.arrayValue?.allSatisfy { $0.stringValue != nil } == true) }
                 case "valueApi":
                     try self.fields(api, ["value", "equalTo", "notEqualTo", "mutateSourceAfterCreate"])
                     try require(api["mutateSourceAfterCreate"]?.boolValue != nil)

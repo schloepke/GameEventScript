@@ -25,7 +25,7 @@ This suite verifies that portable external-type declarations are compiled indepe
 
 ## Test: Missing runtime constructor is rejected
 
-This negative loading case exercises “Missing runtime constructor is rejected” and verifies the required portable diagnostic.
+This negative loading case exercises “Missing runtime constructor is rejected” and verifies one located diagnostic per constructor call site.
 
 ### Case description
 
@@ -40,6 +40,7 @@ externalTypeRegistry: absent
 ```ges
 on Start() {
   let value be :Aim(range: 12m, bearing: 90°, steps: 4m, direction: :Vector(1m, 2m, 3m))
+  emit Done(aim: :Aim(range: 1m, bearing: 0°, steps: 1m, direction: :Vector(0m, 0m, 1m)))
 }
 ```
 
@@ -47,16 +48,30 @@ on Start() {
 
 ```yaml
 gesBlock: expect
-error:
-  phase: link
-  code: link.missingExternalTypeConstructor
+errors:
+  - phase: link
+    code: link.missingExternalTypeConstructor
+    symbol: 'Aim(bearing,direction,range,steps)'
+    sourceName: compile.external-type-linking.missing-runtime-constructor.ges
+    line: 2
+    column: 16
+    endLine: 2
+    endColumn: 89
+  - phase: link
+    code: link.missingExternalTypeConstructor
+    symbol: 'Aim(bearing,direction,range,steps)'
+    sourceName: compile.external-type-linking.missing-runtime-constructor.ges
+    line: 3
+    column: 18
+    endLine: 3
+    endColumn: 89
 ```
 
 ---
 
 ## Test: Mismatched runtime constructor is rejected
 
-This negative loading case exercises “Mismatched runtime constructor is rejected” and verifies the required portable diagnostic.
+This negative loading case exercises “Mismatched runtime constructor is rejected” and verifies one located diagnostic per constructor call site.
 
 ### Case description
 
@@ -71,6 +86,7 @@ externalTypeRegistry: mismatch
 ```ges
 on Start() {
   let value be :Aim(range: 12m, bearing: 90°, steps: 4m, direction: :Vector(1m, 2m, 3m))
+  emit Done(aim: :Aim(range: 1m, bearing: 0°, steps: 1m, direction: :Vector(0m, 0m, 1m)))
 }
 ```
 
@@ -78,7 +94,21 @@ on Start() {
 
 ```yaml
 gesBlock: expect
-error:
-  phase: link
-  code: link.mismatchedExternalTypeConstructor
+errors:
+  - phase: link
+    code: link.mismatchedExternalTypeConstructor
+    symbol: 'Aim(bearing,direction,range,steps)'
+    sourceName: compile.external-type-linking.mismatched-runtime-constructor.ges
+    line: 2
+    column: 16
+    endLine: 2
+    endColumn: 89
+  - phase: link
+    code: link.mismatchedExternalTypeConstructor
+    symbol: 'Aim(bearing,direction,range,steps)'
+    sourceName: compile.external-type-linking.mismatched-runtime-constructor.ges
+    line: 3
+    column: 18
+    endLine: 3
+    endColumn: 89
 ```

@@ -5,6 +5,8 @@ using System.Runtime.CompilerServices;
 
 [assembly: InternalsVisibleTo("GameEventScript.Compiler")]
 [assembly: InternalsVisibleTo("GameEventScript.CSharpBridge")]
+[assembly: InternalsVisibleTo("GameEventScript.Generator")]
 [assembly: InternalsVisibleTo("GameEventScript.Runtime.Tests")]
 [assembly: InternalsVisibleTo("GameEventScript.Compiler.Tests")]
 [assembly: InternalsVisibleTo("GameEventScript.CSharpBridge.Tests")]
+[assembly: InternalsVisibleTo("GameEventScript.Generator.Tests")]

@@ -7,7 +7,7 @@ import GameEventScriptRuntime
 struct RuntimeFixtures: GesExtensionRegistry, GesExternalTypeRegistry {
     // This fixed catalog contains only deeply immutable descriptor values, no callbacks or host state.
     // Reuse it like the C# fixture catalog instead of rebuilding test infrastructure for each compilation.
-    nonisolated(unsafe) static let catalog = try! GesDeclaredExternalTypeCatalog([aim(), probe(), spatialProbe()])
+    nonisolated(unsafe) static let catalog = try! GesDeclaredExternalTypeCatalog([aim(), probe(), spatialProbe(), optionalProbe(), declaredProbe(), readProbe()])
     var mismatch = false
 
     func resolve(_ reference: GesExtensionReference) -> (any GesExtensionFunction)? {
@@ -53,6 +53,33 @@ struct RuntimeFixtures: GesExtensionRegistry, GesExternalTypeRegistry {
             name: "SpatialProbe",
             fields: [.init(name: "vector", kind: .vector), .init(name: "point", kind: .point), .init(name: "storedVector", typeName: "Vector"), .init(name: "storedPoint", typeName: "Point")],
             constructors: [.init(typeName: "SpatialProbe", parameters: [.init(name: "vector", typeName: "Vector"), .init(name: "point", typeName: "Point")])]
+        )
+    }
+
+    static func readProbe() throws -> GesExternalTypeDefinition {
+        try .init(
+            name: "ReadProbe",
+            fields: [.init(name: "failOther", kind: .boolean), .init(name: "count", kind: .float), .init(name: "other", kind: .float)],
+            constructors: [.init(typeName: "ReadProbe", parameters: [.init(name: "failOther", kind: .boolean)])]
+        )
+    }
+
+    static func optionalProbe() throws -> GesExternalTypeDefinition {
+        let fields: [GesExternalTypeFieldDefinition] = try [
+            .init(name: "mount", kind: .tag), .init(name: "label", kind: .text), .init(name: "armed", kind: .boolean), .init(name: "share", kind: .percentage), .init(name: "power", kind: .float, unit: .watt),
+            .init(name: "stall", kind: .tag),
+        ]
+        return try .init(name: "OptionalProbe", fields: fields, constructors: [.init(typeName: "OptionalProbe", parameters: fields.prefix(5).map { try .init(name: $0.name, kind: $0.kind!, unit: $0.unit) })])
+    }
+
+    static func declaredProbe() throws -> GesExternalTypeDefinition {
+        try .init(
+            name: "DeclaredProbe",
+            fields: [
+                .init(name: "name", kind: .text), .init(name: "power", kind: .float, unit: .watt), .init(name: "heading", kind: .vector, unit: .meter), .init(name: "ratio", kind: .percentage), .init(name: "label", kind: .text),
+                .init(name: "kind", kind: .tag), .init(name: "ready", kind: .boolean),
+            ],
+            constructors: [.init(typeName: "DeclaredProbe", parameters: [.init(name: "name", kind: .text)])]
         )
     }
 
@@ -119,6 +146,15 @@ private struct FixtureConstructor: GesExternalTypeConstructor {
             try call.setExternalValue(FixtureValue(definition: RuntimeFixtures.aim(), fields: [args[0], args[1], args[2], args[3], .float(checksum)]))
         } else if definition.typeName == "SpatialProbe" {
             try call.setExternalValue(FixtureValue(definition: RuntimeFixtures.spatialProbe(), fields: [call.arguments[0], call.arguments[1], .vector(x: 1, y: 2, z: 3, unit: .meter), .point(x: 4, y: 5, z: 6, unit: .second)]))
+        } else if definition.typeName == "OptionalProbe" {
+            let args = call.arguments
+            try call.setExternalValue(FixtureValue(definition: RuntimeFixtures.optionalProbe(), fields: [args[0], args[1], args[2], args[3], args[4], .nothing]))
+        } else if definition.typeName == "DeclaredProbe" {
+            // Every field except name returns a value that differs from its declaration.
+            let fields: [GesValue] = [call.arguments[0], .integer(3), .vector(x: 1, y: 2, z: 3, unit: .second), .float(0.5), try .tag("gun"), .text("turret"), .integer(1)]
+            try call.setExternalValue(FixtureValue(definition: RuntimeFixtures.declaredProbe(), fields: fields))
+        } else if definition.typeName == "ReadProbe" {
+            try call.setExternalValue(ReadProbeValue(definition: RuntimeFixtures.readProbe(), failOther: call.arguments[0].asBoolean))
         } else if definition.typeName == "CallbackProbe" {
             let failure = call.arguments[0].asText
             let context = call.arguments[1].asText
@@ -126,6 +162,30 @@ private struct FixtureConstructor: GesExternalTypeConstructor {
             if failure == "constructorUnexpected" { throw ConformanceExecutionError.invalidInput("Configured constructor failure") }
             if failure == "constructorDeclared" { throw try RuntimeFixtures.fault(symbol: "CallbackProbe", context: context) }
             if ["fieldUnexpected", "fieldDeclared"].contains(failure) { try call.setExternalValue(FixtureValue(definition: RuntimeFixtures.probe(), fields: [.text(failure), .text(context)])) }
+        }
+    }
+}
+
+private final class ReadProbeValue: GesExternalValue {
+    let definition: GesExternalTypeDefinition
+    private let failOther: Bool
+    private var reads: Int64 = 0
+
+    init(definition: GesExternalTypeDefinition, failOther: Bool) {
+        self.definition = definition
+        self.failOther = failOther
+    }
+
+    func field(_ name: String) throws -> GesValue? {
+        switch name {
+        case "failOther": return .boolean(failOther)
+        case "count":
+            reads += 1
+            return .integer(reads)
+        case "other":
+            if failOther { throw ConformanceExecutionError.invalidInput("Configured field failure") }
+            return .integer(0)
+        default: return nil
         }
     }
 }

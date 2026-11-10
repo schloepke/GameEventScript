@@ -29,6 +29,21 @@ class ApiChecksTests(unittest.TestCase):
         case.expected['error']['code'] = 'link.different'
         self.assertEqual(before, requests([case]))
 
+    def test_load_errors_list_every_diagnostic_in_order(self):
+        case = copy.deepcopy(next(c for c in self.cases if c.id == 'compile.extension-linking/missing-extension-call-sites'))
+        expected = case.expected['errors']
+        self.assertEqual(('passed', []), compare(case, {'status': 'loadError', 'diagnostics': [dict(e) for e in expected]}))
+        self.assertEqual('failed', compare(case, {'status': 'loadError', 'diagnostics': [dict(expected[0])]})[0])
+        self.assertEqual('failed', compare(case, {'status': 'loadError', 'diagnostics': [dict(e) for e in reversed(expected)]})[0])
+        lines_only = copy.deepcopy(next(c for c in self.cases if c.id == 'compile.extension-linking/missing-extension-lines-only'))
+        located = dict(lines_only.expected['errors'][0], column=24, endColumn=48)
+        self.assertEqual('failed', compare(lines_only, {'status': 'loadError', 'diagnostics': [located]})[0])
+        for broken in ({'gesBlock': 'expect'}, {'gesBlock': 'expect', 'errors': []},
+                       {'gesBlock': 'expect', 'error': expected[0], 'errors': expected}):
+            case.expected = broken
+            with self.assertRaises(InvalidDocument):
+                prepare(case)
+
     def test_closed_api_schemas(self):
         catalog = copy.deepcopy(next(c for c in self.cases if c.kind == 'externalTypeApi'))
         for expected in ({}, {'typeCount': True}, {'error': 'unknown'}, {'typeCount': 1, 'error': 'duplicateTypeName'}):

@@ -38,11 +38,11 @@ internal sealed class HostScenario(GameEventScriptHost host, IReadOnlyDictionary
                     "unsubscribeHandler" => _subscriptions.TryGetValue(target, out var subscription) && subscription.Unsubscribe(),
                     _ => throw new ArgumentException("Unknown host action.")
                 };
-                results.Add(new { result = (bool?)result, error = (object?)null });
+                results.Add(new { result = (bool?)result, errors = Array.Empty<object>() });
             }
             catch (GesDynamicLinkException exception)
             {
-                results.Add(new { result = (bool?)null, error = CompilerObservations.Diagnostic(exception.Diagnostic) });
+                results.Add(new { result = (bool?)null, errors = exception.Diagnostics.Select(CompilerObservations.Diagnostic).ToArray<object>() });
             }
         }
     }

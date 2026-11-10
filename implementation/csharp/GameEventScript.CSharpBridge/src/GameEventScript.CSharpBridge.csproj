@@ -27,6 +27,7 @@
 
     <ItemGroup>
         <ProjectReference Include="../../GameEventScript.Runtime/src/GameEventScript.Runtime.csproj" />
+        <ProjectReference Include="../../GameEventScript.Syntax/src/GameEventScript.Syntax.csproj" />
     </ItemGroup>
 
     <ItemGroup>

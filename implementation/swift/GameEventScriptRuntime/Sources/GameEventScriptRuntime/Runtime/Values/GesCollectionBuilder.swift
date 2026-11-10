@@ -1,6 +1,8 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
+@_spi(Syntax) import GameEventScriptSyntax
+
 final class GesCollectionBuilder {
     enum Kind { case list, map, distinct, group, order }
 

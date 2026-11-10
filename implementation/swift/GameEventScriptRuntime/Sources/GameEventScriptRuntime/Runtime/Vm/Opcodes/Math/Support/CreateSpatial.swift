@@ -16,11 +16,12 @@ extension GesVirtualMachine {
                 xyz[2] = value.asNumber
             }
         } else {
-            for index in 0..<min(stageLength, max(0, 3 - start)) {
+            let first = start == 3 ? 0 : start
+            for index in 0..<min(stageLength, max(0, 3 - first)) {
                 let value = staged(index)
                 if let unit, value.unit != unit { return setNothing(destination) }
                 unit = value.unit
-                xyz[start + index] = value.asNumber
+                xyz[first + index] = value.asNumber
             }
         }
         return point ? setPoint(destination, x: xyz[0], y: xyz[1], z: xyz[2], unit: unit ?? .none) : setVector(destination, x: xyz[0], y: xyz[1], z: xyz[2], unit: unit ?? .none)

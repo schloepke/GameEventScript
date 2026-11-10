@@ -237,6 +237,13 @@ Reference-resolving comments may follow an instruction. They show string content
 with optional source metadata omitted. Like other instructions, its symbolic
 name and ordered operand roles follow the Bytecode registry.
 
+> **Since: Unreleased** — strict literal parsing
+
+GESA renders ParseLiteral with the Strict flag `0x40` as `mode=Strict`, covered by
+`compile.program-dumps/parse-literal-strict`. Inline source assembly accepts an
+optional final operand `#strict`, for example `ParseLiteral result, text, #strict`;
+other mode names are invalid and the form without a mode remains lenient.
+
 ### Compound iterator operands
 
 > **Since: Unreleased** — compound iterator transport

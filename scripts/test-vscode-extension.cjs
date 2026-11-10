@@ -8,8 +8,8 @@ const path = require('node:path');
 const vm = require('node:vm');
 const source = fs.readFileSync(path.join(__dirname, '../tools/editors/VS Code/extension.js'), 'utf8');
 
-function harness({ trusted = true, save = true, failure = null, input = undefined } = {}) {
-    const calls = [], tasks = [], errors = [], shown = [], commands = new Map();
+function harness({ trusted = true, save = true, failure = null, input = undefined, highlighter = async () => null } = {}) {
+    const calls = [], tasks = [], errors = [], shown = [], shownOptions = [], viewers = [], outputLines = [], commands = new Map();
     const terminals = [], terminalListeners = new Set();
     const disposable = { dispose() {} };
     let provider, close;
@@ -18,6 +18,7 @@ function harness({ trusted = true, save = true, failure = null, input = undefine
         uri: { scheme: 'file', fsPath: path.resolve('a directory', "cards ' $(touch injected).ges") },
         async save() { calls.push('save'); return save; },
     };
+    const binary = { scheme: 'file', fsPath: path.resolve('a directory', 'cards.gesb') };
     const vscode = {
         workspace: {
             isTrusted: trusted,
@@ -39,11 +40,12 @@ function harness({ trusted = true, save = true, failure = null, input = undefine
             },
             async showInputBox() { return input; },
             activeTextEditor: { document },
-            createOutputChannel() { return { append() {}, appendLine() {}, show() {}, dispose() {} }; },
+            tabGroups: { activeTabGroup: { activeTab: { input: { uri: binary } } } },
+            createOutputChannel() { return { append() {}, appendLine(line) { outputLines.push(line); }, show() {}, dispose() {} }; },
             async withProgress(_options, callback) {
                 return callback({}, { isCancellationRequested: false, onCancellationRequested() { return disposable; } });
             },
-            async showTextDocument(doc) { shown.push(doc); },
+            async showTextDocument(doc, options) { shown.push(doc); shownOptions.push(options); },
             async showErrorMessage(message) { errors.push(message); },
         },
         languages: { async setTextDocumentLanguage(doc, language) { doc.languageId = language; } },
@@ -51,7 +53,7 @@ function harness({ trusted = true, save = true, failure = null, input = undefine
         Task: class { constructor(...args) { this.args = args; } },
         ProcessExecution: class { constructor(...args) { this.args = args; } },
         TaskScope: { Global: 1 }, TaskRevealKind: { Always: 1 }, TaskPanelKind: { Dedicated: 1 },
-        ProgressLocation: { Notification: 1 },
+        ProgressLocation: { Notification: 1 }, ViewColumn: { Beside: -2 },
         tasks: { async executeTask(task) { tasks.push(task); } },
         Uri: { from(value) { return { ...value, toString() { return `${this.scheme}:${this.path}?${this.query}`; } }; } },
     };
@@ -63,13 +65,14 @@ function harness({ trusted = true, save = true, failure = null, input = undefine
     } };
     const module = { exports: {} };
     vm.runInNewContext(source, { module, process, require(name) {
-        if (name === './markdown-preview') return { async createMarkdownExtension() { return md => md; } };
+        if (name === './markdown-preview') return { createHighlighter: highlighter, createMarkdownExtension() { return md => md; } };
+        if (name === './gesb-viewer') return { registerGesbViewer(_vscode, _context, value) { viewers.push(value); return disposable; } };
         return name === 'vscode' ? vscode : name === 'node:child_process' ? child : require(name);
     } });
     const ready = module.exports.activate({ subscriptions: [] });
-    return { calls, tasks, errors, shown, document, terminals, parseArguments: module.exports.parseArguments,
+    return { ready, calls, tasks, errors, shown, shownOptions, viewers, outputLines, document, terminals, parseArguments: module.exports.parseArguments,
         provider: () => provider, close: doc => close(doc),
-        run: async action => { await ready; return commands.get('ges.' + action)(); } };
+        run: async (action, ...args) => { await ready; return commands.get('ges.' + action)(...args); } };
 }
 
 test('check, run and compile save first and pass literal paths to process tasks', async () => {
@@ -157,5 +160,52 @@ test('interactive commands do not run after failed save or without trust', async
         await h.run('startInteractive');
         await h.run('restartInteractive');
         assert.equal(h.terminals.length, 0);
+    }
+});
+
+test('the binary dump reads the given or active file and never compiles', async () => {
+    const given = { scheme: 'file', fsPath: path.resolve('elsewhere', 'other.gesb') };
+    for (const [args, file] of [[[given], given.fsPath], [[], path.resolve('a directory', 'cards.gesb')]]) {
+        const h = harness();
+        await h.run('dumpBinary', ...args);
+        assert.deepEqual(h.calls.map(call => Array.from(call.args)), [['dump', file]]);
+        assert.equal(h.calls[0].options.cwd, path.dirname(file));
+        assert.equal(h.shown[0].languageId, 'gesa');
+        assert.equal(h.shown[0].uri.path, '/' + path.basename(file, '.gesb') + '.gesa');
+    }
+});
+
+test('the binary dump opens beside the viewer, the source dump in place', async () => {
+    const h = harness();
+    await h.run('dumpBinary');
+    assert.equal(h.shownOptions[0].viewColumn, -2);
+    await h.run('dump');
+    assert.equal(h.shownOptions[1].viewColumn, undefined);
+});
+
+test('a failed highlighter leaves activation, the viewer and the commands working', async () => {
+    const h = harness({ highlighter: async () => { throw new Error('wasm failed'); } });
+    const exports = await h.ready;
+    assert.equal(exports.extendMarkdownIt, undefined);
+    assert.equal(await h.viewers[0], null);
+    assert.match(h.outputLines[0], /wasm failed/);
+    await h.run('dumpBinary');
+    assert.equal(h.shown.length, 1);
+});
+
+test('a working highlighter reaches the viewer and the Markdown preview', async () => {
+    const highlight = () => null;
+    const h = harness({ highlighter: async () => highlight });
+    const exports = await h.ready;
+    assert.equal(await h.viewers[0], highlight);
+    assert.equal(typeof exports.extendMarkdownIt, 'function');
+});
+
+test('the binary dump requires workspace trust and a local file', async () => {
+    for (const [options, args] of [[{ trusted: false }, []], [{}, [{ scheme: 'untitled' }]]]) {
+        const h = harness(options);
+        await h.run('dumpBinary', ...args);
+        assert.equal(h.calls.length, 0);
+        assert.equal(h.errors.length, 1);
     }
 });

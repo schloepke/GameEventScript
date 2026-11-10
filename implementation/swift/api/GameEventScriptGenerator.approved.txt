@@ -1,0 +1,35 @@
+# Copyright 2026 Stephan Schlöpke
+# SPDX-License-Identifier: Apache-2.0
+# Swift declared public API snapshot v1
+# Module: GameEventScriptGenerator
+# Update explicitly with: python3 scripts/verify-swift-api.py --update
+
+relationship {"kind":"conformsTo","source":"GameEventScriptGenerator.GesGeneratorError :: struct GesGeneratorError","target":"Swift.Equatable"}
+relationship {"kind":"conformsTo","source":"GameEventScriptGenerator.GesGeneratorError :: struct GesGeneratorError","target":"Swift.Error"}
+relationship {"kind":"conformsTo","source":"GameEventScriptGenerator.GesGeneratorError :: struct GesGeneratorError","target":"Swift.Sendable"}
+relationship {"kind":"conformsTo","source":"GameEventScriptGenerator.GesSchemaAccess :: enum GesSchemaAccess","target":"Swift.Equatable"}
+relationship {"kind":"conformsTo","source":"GameEventScriptGenerator.GesSchemaAccess :: enum GesSchemaAccess","target":"Swift.Hashable"}
+relationship {"kind":"conformsTo","source":"GameEventScriptGenerator.GesSchemaAccess :: enum GesSchemaAccess","target":"Swift.Sendable"}
+relationship {"kind":"conformsTo","source":"GameEventScriptGenerator.GesSchemaGenerateOptions :: struct GesSchemaGenerateOptions","target":"Swift.Sendable"}
+relationship {"kind":"conformsTo","source":"GameEventScriptGenerator.GesSchemaLanguage :: enum GesSchemaLanguage","target":"Swift.Equatable"}
+relationship {"kind":"conformsTo","source":"GameEventScriptGenerator.GesSchemaLanguage :: enum GesSchemaLanguage","target":"Swift.Hashable"}
+relationship {"kind":"conformsTo","source":"GameEventScriptGenerator.GesSchemaLanguage :: enum GesSchemaLanguage","target":"Swift.Sendable"}
+symbol {"access":"public","declaration":"case `internal`","kind":"swift.enum.case","path":"GameEventScriptGenerator.GesSchemaAccess.internal"}
+symbol {"access":"public","declaration":"case `public`","kind":"swift.enum.case","path":"GameEventScriptGenerator.GesSchemaAccess.public"}
+symbol {"access":"public","declaration":"case csharp","kind":"swift.enum.case","path":"GameEventScriptGenerator.GesSchemaLanguage.csharp"}
+symbol {"access":"public","declaration":"case swift","kind":"swift.enum.case","path":"GameEventScriptGenerator.GesSchemaLanguage.swift"}
+symbol {"access":"public","declaration":"enum GesSchemaAccess","kind":"swift.enum","path":"GameEventScriptGenerator.GesSchemaAccess"}
+symbol {"access":"public","declaration":"enum GesSchemaGenerator","kind":"swift.enum","path":"GameEventScriptGenerator.GesSchemaGenerator"}
+symbol {"access":"public","declaration":"enum GesSchemaLanguage","kind":"swift.enum","path":"GameEventScriptGenerator.GesSchemaLanguage"}
+symbol {"access":"public","declaration":"init(language: GesSchemaLanguage = .csharp, namespace: String = \"\", access: GesSchemaAccess = .public, values: Bool = false, checkedExclusivity: Bool = false)","kind":"swift.init","path":"GameEventScriptGenerator.GesSchemaGenerateOptions.init(language:namespace:access:values:checkedExclusivity:)"}
+symbol {"access":"public","declaration":"let code: String","kind":"swift.property","path":"GameEventScriptGenerator.GesGeneratorError.code"}
+symbol {"access":"public","declaration":"let message: String","kind":"swift.property","path":"GameEventScriptGenerator.GesGeneratorError.message"}
+symbol {"access":"public","declaration":"static func generate(_ set: GesSchemaSet, roots: [String], parameters: GesSchemaParameters, options: GesSchemaGenerateOptions) throws -> String","kind":"swift.type.method","path":"GameEventScriptGenerator.GesSchemaGenerator.generate(_:roots:parameters:options:)"}
+symbol {"access":"public","declaration":"static func layout(_ set: GesSchemaSet, roots: [String], parameters: GesSchemaParameters) throws -> String","kind":"swift.type.method","path":"GameEventScriptGenerator.GesSchemaGenerator.layout(_:roots:parameters:)"}
+symbol {"access":"public","declaration":"struct GesGeneratorError","kind":"swift.struct","path":"GameEventScriptGenerator.GesGeneratorError"}
+symbol {"access":"public","declaration":"struct GesSchemaGenerateOptions","kind":"swift.struct","path":"GameEventScriptGenerator.GesSchemaGenerateOptions"}
+symbol {"access":"public","declaration":"var access: GesSchemaAccess","kind":"swift.property","path":"GameEventScriptGenerator.GesSchemaGenerateOptions.access"}
+symbol {"access":"public","declaration":"var checkedExclusivity: Bool","kind":"swift.property","path":"GameEventScriptGenerator.GesSchemaGenerateOptions.checkedExclusivity"}
+symbol {"access":"public","declaration":"var language: GesSchemaLanguage","kind":"swift.property","path":"GameEventScriptGenerator.GesSchemaGenerateOptions.language"}
+symbol {"access":"public","declaration":"var namespace: String","kind":"swift.property","path":"GameEventScriptGenerator.GesSchemaGenerateOptions.namespace"}
+symbol {"access":"public","declaration":"var values: Bool","kind":"swift.property","path":"GameEventScriptGenerator.GesSchemaGenerateOptions.values"}

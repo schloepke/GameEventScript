@@ -11,9 +11,9 @@ const { createRequire } = require('node:module');
 const load = createRequire(path.join(root, 'package.json'));
 const tm = load('vscode-textmate');
 const onig = load('vscode-oniguruma');
-const { createMarkdownExtension } = load('./markdown-preview');
+const { createHighlighter, createMarkdownExtension } = load('./markdown-preview');
 const escapeHtml = text => text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-const ready = createMarkdownExtension();
+const ready = createHighlighter().then(createMarkdownExtension);
 
 test('preview highlights both grammars, preserves text, escapes HTML, delegates other languages', async () => {
     const extend = await ready;
@@ -22,6 +22,8 @@ test('preview highlights both grammars, preserves text, escapes HTML, delegates 
     for (const [lang, text] of [
         ['ges', 'on Main() { emit ConsoleOut("<script>&hello</script>") }\n'],
         ['GESA', '.region "Code"\nLoadInteger r0, #42\n.source-line "test.ges" 1 | emit ConsoleOut("hello")\n'],
+        ['gesd', "name: '<script>'\nmaxForce: 21.4kN\n"],
+        ['GESS', 'schema :Drone as {\n  id: :Number integer between 0 and 255 key\n}\n'],
     ]) {
         const html = md.options.highlight(text, lang);
         assert.match(html, /class="ges-token-/);
@@ -53,7 +55,7 @@ test('editor injection highlights fences and stops at matching closers', async (
         loadGrammar: async scope => {
             if (scope === markdown.scopeName) return markdown;
             if (scope === injection.scopeName) return injection;
-            const name = { 'source.gameeventscript': 'GameEventScript', 'source.gameeventscript.assembler': 'GameEventScriptAssembler' }[scope];
+            const name = { 'source.gameeventscript': 'GameEventScript', 'source.gameeventscript.assembler': 'GameEventScriptAssembler', 'source.gameeventscript.document': 'GameEventScriptDocument', 'source.gameeventscript.schema': 'GameEventScriptSchema' }[scope];
             return name ? JSON.parse(fs.readFileSync(path.join(root, 'syntaxes', name + '.tmLanguage.json'))) : null;
         },
     });
@@ -62,6 +64,10 @@ test('editor injection highlights fences and stops at matching closers', async (
         ['```ges', 'emit ConsoleOut(42)', '```', 'keyword'],
         ['~~~GESA', 'LoadInteger r0, #42', '~~~~', 'keyword'],
         ['````ges metadata', 'emit ConsoleOut(42)', '`````', 'keyword'],
+        ['```gesd', 'maxForce: 21.4kN', '```', 'constant.numeric'],
+        ['~~~GESD', "name: 'Track'", '~~~', 'string'],
+        ['```gess', 'schema :Drone as {', '```', 'keyword'],
+        ['~~~GESS', 'id: :Number integer', '~~~', 'support.type'],
     ]) {
         let result = grammar.tokenizeLine(open, tm.INITIAL);
         result = grammar.tokenizeLine(code, result.ruleStack);

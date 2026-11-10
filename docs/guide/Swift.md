@@ -19,7 +19,9 @@ dependency URL, not a package collection URL.
 
 Select a published tag and add `GameEventScriptRuntime`,
 `GameEventScriptCompiler` and `GameEventScriptSwiftBridge` to your target.
-`GameEventScriptSyntaxHighlighter` is optional for editors and terminal displays.
+`GameEventScriptSyntax` is optional for editors and terminal displays, and
+`GameEventScriptGenerator` (since Unreleased) for build tools that generate typed
+schema code; a game does not ship it.
 
 For a command-line SwiftPM project, create this `Package.swift` and replace
 `<release-version>` with a real [release](https://github.com/schloepke/GameEventScript/releases)
@@ -170,6 +172,72 @@ generated descriptors do not require SwiftSyntax at runtime. Manual KeyPath and
 getter bindings remain available for foreign or unsupported native types.
 See the [SwiftBridge guide](../../implementation/swift/GameEventScriptSwiftBridge/README.md)
 for complete binding examples and conversion guarantees.
+
+## Read data documents
+
+> **Since: Unreleased**
+
+Configuration and content files can use [GES documents](../../specs/Documents.md)
+(`.gesd`), whose values are written like GES literals. GES does not touch the
+file system; read the text yourself and pass it to `GesDocument(parsing:)`:
+
+```swift
+let document = try GesDocument(parsing: """
+    :Schema(:DriveUnit)
+    name: 'Basic Track Drive'
+    maxForce: 21.4kN   // newton
+    """)
+print(document.schema?.name ?? "")                  // DriveUnit
+print(document.entries.get("maxForce")!)            // 21400N
+print(document.text(), terminator: "")              // maxForce: 21.4kN ...
+```
+
+Invalid text throws `GesDocumentError` with a stable `code` such as
+`document.unquotedText` and the `line` and `column` of the error. The schema
+header is a reference for your application; GES does not validate it.
+
+
+## Send data compactly with a schema
+
+> **Since: Unreleased**
+
+A [schema](../../specs/Schemas.md) (`.gess`) describes a data format with ranges and steps and
+yields a very compact binary encoding. The writer and reader allocate nothing on success and need no VM.
+
+```swift
+let schemas = try GesSchemaSet(parsing: """
+    schema :Drone as {
+      id: :Number integer between 0 and 255 key
+      x: :Quantity(m) between -200m and 200m step 5cm
+      heading: :Quantity(°) wrapping between 0° and 360° step 0.5°
+    }
+    """)
+let drone = try schemas.schema("Drone").bind()
+let (id, x, heading) = (drone.field("id")!, drone.field("x")!, drone.field("heading")!)
+
+var buffer = [UInt8](repeating: 0, count: drone.maxByteCount)
+try buffer.withUnsafeMutableBytes { bytes in
+    var writer = GesSchemaWriter(drone, into: bytes)
+    try writer.writeInteger(id, 7)
+    try writer.writeNumber(x, 12.34)
+    try writer.writeNumber(heading, 90)
+    let length = try writer.finish()                      // 4 bytes
+
+    var reader = GesSchemaReader(drone, data: UnsafeRawBufferPointer(rebasing: bytes[0..<length]))
+    print(try reader.readKey())                           // 7
+    print(try reader.readNumber(x))                       // 12.35
+}
+
+for field in try schemas.schema("Drone").fields {         // id: Number, x: Quantity, heading: Quantity
+    print("\(field.name): \(field.alternatives[0].kind.rawValue)")
+}
+```
+
+`GesSchema` is the read-only description of a declaration: its fields with their types, limits and
+markers, its parameters and its hash. Binding turns it into the layout that writer and reader use.
+
+A value outside its range is an error, never clamped. `CheckDocument` checks GES documents against
+the same schemas.
 
 ## Integrate with your event loop
 

@@ -52,13 +52,13 @@
       "scope": "comment.line.double-slash.gameeventscript"
   "messages":
     -
-      "match": "\\b(emit|publish)\\s+([A-Z][A-Za-z0-9]*)\\b"
+      "match": "\\b(emit|publish)\\s+([A-Z][A-Za-z0-9]*(?:_[A-Z][A-Za-z0-9]*)*)\\b"
       "scope": "meta.message.dispatch.gameeventscript"
       "captures":
         1: "keyword.control.emit.gameeventscript"
         2: "entity.name.type.class.message.gameeventscript"
     -
-      "match": "\\b[A-Z][A-Za-z0-9]*\\b"
+      "match": "\\b[A-Z][A-Za-z0-9]*(?:_[A-Z][A-Za-z0-9]*)*\\b"
       "scope": "entity.name.type.class.message.gameeventscript"
   "keywords":
     -
@@ -80,6 +80,12 @@
       "match": "\\b(?:or|xor|and|not|is|empty|div|mod|rem|of)\\b"
       "scope": "keyword.operator.word.gameeventscript"
     -
+      "match": "\\b(parse)([ \\t]+)(strict)\\b"
+      "scope": "meta.keyword-phrase.gameeventscript"
+      "captures":
+        1: "keyword.operator.word.gameeventscript"
+        3: "keyword.operator.word.gameeventscript"
+    -
       "match": "\\b(?:parse|random|clamp|min|max|zip|default)\\b"
       "scope": "keyword.operator.word.gameeventscript"
     -
@@ -93,7 +99,7 @@
         1: "keyword.control.module.gameeventscript"
         2: "entity.name.namespace.gameeventscript"
     -
-      "match": "\\b(record)\\s+(:[A-Z][A-Za-z0-9]*)\\b"
+      "match": "\\b(record)\\s+(:[A-Z][A-Za-z0-9]*(?:_[A-Z][A-Za-z0-9]*)*)\\b"
       "scope": "meta.record.gameeventscript"
       "captures":
         1: "keyword.other.definition.gameeventscript"
@@ -111,7 +117,7 @@
         1: "keyword.other.definition.gameeventscript"
         2: "entity.name.function.predicate.gameeventscript"
     -
-      "match": "\\b(on)\\s+([A-Z][A-Za-z0-9]*|initialization|undeliverable)\\b"
+      "match": "\\b(on)\\s+([A-Z][A-Za-z0-9]*(?:_[A-Z][A-Za-z0-9]*)*|initialization|undeliverable)\\b"
       "scope": "meta.handler.gameeventscript"
       "captures":
         1: "keyword.control.handler.gameeventscript"
@@ -136,7 +142,7 @@
       "match": "\\b\\d(?:[\\d_]*\\d)?(?:\\.\\d(?:[\\d_]*\\d)?)?%"
       "scope": "constant.numeric.percentage.gameeventscript"
     -
-      "match": "\\b\\d(?:[\\d_]*\\d)?(?:\\.\\d(?:[\\d_]*\\d)?)?(?:m/s²|m/s\\^2|deg/s|°/s|m/s|kWh|kHz|deg|Wh|Hz|km|mm|ms|kg|kN|kJ|MJ|kW|MW|kV|°|m|s|N|J|W|V|A|K)(?=$|[^A-Za-z0-9_])"
+      "match": "\\b\\d(?:[\\d_]*\\d)?(?:\\.\\d(?:[\\d_]*\\d)?)?(?:mW/K|kW/K|MW/K|W/K|kJ/K|MJ/K|J/K|mW/m²|mW/m\\^2|kW/m²|kW/m\\^2|W/m²|W/m\\^2|m/s²|m/s\\^2|deg/s|cm²|cm\\^2|km²|km\\^2|°/s|m/s|m²|m\\^2|m³|m\\^3|kWh|kHz|deg|Wh|Hz|/s|dB|km|mm|cm|ms|kg|kN|kJ|MJ|mW|kW|MW|kV|°|m|s|t|N|J|W|V|A|K)(?=$|[^A-Za-z0-9_])"
       "scope": "constant.numeric.unit.gameeventscript"
     -
       "match": "\\b\\d(?:[\\d_]*\\d)?(?:\\.\\d(?:[\\d_]*\\d)?)?\\b"
@@ -223,7 +229,7 @@
       "scope": "support.function.selector.pipeline.gameeventscript"
   "extensions-and-types":
     -
-      "match": ":(Quantity)(\\()((?:none|m/s²|m/s\\^2|deg/s|degree/s|°/s|m/s|degree|meter|second|deg|kg|Hz|°|m|s|N|J|W|V|A|K))(\\))(?=$|[^A-Za-z0-9_])"
+      "match": ":(Quantity)(\\()((?:none|W/K|J/K|W/m²|W/m\\^2|m/s²|m/s\\^2|deg/s|degree/s|°/s|m/s|m²|m\\^2|m³|m\\^3|degree|meter|second|deg|kg|Hz|dB|°|m|s|N|J|W|V|A|K))(\\))(?=$|[^A-Za-z0-9_])"
       "scope": "support.type.primitive.quantity.gameeventscript"
       "captures":
         1: "support.type.primitive.gameeventscript"
@@ -268,6 +274,17 @@
         1: "keyword.operator.word.gameeventscript"
         3: "keyword.operator.word.gameeventscript"
     -
+      "match": "(:Series)([ \\t]*)(\\()([ \\t]*)(fibonacci|factorial)\\b"
+      "captures":
+        1: "support.type.primitive.gameeventscript"
+        3: "punctuation.bracket.gameeventscript"
+        5: "keyword.operator.word.gameeventscript"
+    -
+      "match": "\\b(kind)[ \\t]*:[ \\t]*(fibonacci|factorial)\\b"
+      "captures":
+        1: "variable.parameter.label.gameeventscript"
+        2: "keyword.operator.word.gameeventscript"
+    -
       "match": "(:Dice)([ \\t\\r\\n]*)(\\[)"
       "scope": "meta.literal.dice.gameeventscript"
       "captures":
@@ -277,7 +294,7 @@
       "match": ":(?:Nothing|Text|Boolean|Number|Percentage|Vector|Point|Series|Range|Message|Handler|Tag|List|Map|Dice|Record)(?=$|[^A-Za-z0-9_])"
       "scope": "support.type.primitive.gameeventscript"
     -
-      "match": ":[A-Z][A-Za-z0-9]*(?=$|[^A-Za-z0-9_])"
+      "match": ":[A-Z][A-Za-z0-9]*(?:_[A-Z][A-Za-z0-9]*)*(?=$|[^A-Za-z0-9_])"
       "scope": "entity.name.type.custom.gameeventscript"
   "strings":
     -

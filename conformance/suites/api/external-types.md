@@ -41,3 +41,28 @@ gesBlock: expect
 externalType:
   error: duplicateTypeName
 ```
+
+---
+
+## Test: external type names can join segments with underscores
+
+This public API case verifies that an external type name follows the portable type-name grammar.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: underscore-type-names
+kind: externalTypeApi
+level: atomic
+externalTypeApi:
+  typeNames: [Unit_Weapon, Unit_Weapon_Sniper, Unit_Type1]
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+externalType:
+  typeCount: 3
+```

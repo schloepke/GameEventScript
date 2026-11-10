@@ -59,10 +59,12 @@ internal partial class GesVirtualMachine
                 else SetFloat(destinationRegister, double.NaN);
                 return;
             case Integer when b.NumericKind is Percentage:
-                SetFloat(destinationRegister, a.IntegerValue + a.IntegerValue * b.FloatValue, a.Unit);
+                if (PercentageUnit(in a) is { } integerPercentUnit) SetFloat(destinationRegister, a.IntegerValue + a.IntegerValue * b.FloatValue, integerPercentUnit);
+                else SetFloat(destinationRegister, double.NaN);
                 return;
             case Float when b.NumericKind is Percentage:
-                SetFloat(destinationRegister, a.FloatValue + a.FloatValue * b.FloatValue, a.Unit);
+                if (PercentageUnit(in a) is { } floatPercentUnit) SetFloat(destinationRegister, a.FloatValue + a.FloatValue * b.FloatValue, floatPercentUnit);
+                else SetFloat(destinationRegister, double.NaN);
                 return;
             case Percentage when b.NumericKind is Percentage:
                 SetPercentage(destinationRegister, a.FloatValue + b.FloatValue);
@@ -95,10 +97,12 @@ internal partial class GesVirtualMachine
                 else dst.SetFloat(double.NaN);
                 break;
             case Integer when b.Kind is Percentage:
-                dst.SetFloat(a.IntegerValue + a.IntegerValue * b.FloatValue, a.Unit);
+                if (PercentageUnit(in a) is { } integerPercentUnit) dst.SetFloat(a.IntegerValue + a.IntegerValue * b.FloatValue, integerPercentUnit);
+                else dst.SetFloat(double.NaN);
                 break;
             case Float when b.Kind is Percentage:
-                dst.SetFloat(a.FloatValue + a.FloatValue * b.FloatValue, a.Unit);
+                if (PercentageUnit(in a) is { } floatPercentUnit) dst.SetFloat(a.FloatValue + a.FloatValue * b.FloatValue, floatPercentUnit);
+                else dst.SetFloat(double.NaN);
                 break;
             case Percentage when b.Kind is Percentage:
                 dst.SetPercentage(a.FloatValue + b.FloatValue);

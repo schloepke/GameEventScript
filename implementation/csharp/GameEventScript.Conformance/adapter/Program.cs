@@ -6,13 +6,13 @@ using System.Text.Json;
 using GameEventScript.Api;
 
 const int maxBytes = 32 * 1024 * 1024;
-var capabilities = new[] { "compiler", "program-binary", "bytecode-snapshot", "host", "vm", "observer", "publish-sink", "external-types", "native-handlers", "value-api", "message-api" };
+var capabilities = new[] { "compiler", "program-binary", "bytecode-snapshot", "host", "vm", "observer", "publish-sink", "external-types", "native-handlers", "value-api", "message-api", "document-api", "schema-api" };
 var implementation = new { id = "csharp", version = typeof(GesProgramBuilder).Assembly.GetName().Version!.ToString() };
 try
 {
     if (args.SequenceEqual(new[] { "--describe" }))
     {
-        var supportedKinds = new[] { "bytecodeSnapshot", "compileError", "bytecode", "compileMetadata", "programBinary", "scriptApi", "loadError", "externalTypeApi", "valueApi", "messageApi" };
+        var supportedKinds = new[] { "bytecodeSnapshot", "compileError", "bytecode", "compileMetadata", "programBinary", "scriptApi", "loadError", "externalTypeApi", "valueApi", "messageApi", "documentApi", "schemaApi" };
         var performanceProfiles = new List<string>();
 #if !DEBUG
         performanceProfiles.Add(AllocationObservations.Profile);
@@ -22,7 +22,11 @@ try
         return 0;
     }
     var allocation = args.SequenceEqual(new[] { "--measure" });
-    if (args.Length != 0 && !allocation) throw new ArgumentException("Use no arguments for a JSON batch on stdin, or --describe.");
+    var benchmarkRounds = args.Length == 2 && args[0] == "--benchmark-compile" && int.TryParse(args[1], out var rounds) && rounds is > 0 and <= 1000 ? rounds : 0;
+    var syntaxTokens = args.SequenceEqual(new[] { "--syntax-tokens" });
+    var syntaxTrees = args.SequenceEqual(new[] { "--syntax-trees" });
+    if (args.Length != 0 && !allocation && benchmarkRounds == 0 && !syntaxTokens && !syntaxTrees)
+        throw new ArgumentException("Use no arguments for a JSON batch on stdin, --measure, --benchmark-compile <rounds>, --syntax-tokens, --syntax-trees, or --describe.");
     using var input = Console.OpenStandardInput();
     using var buffer = new MemoryStream();
     var chunk = new byte[8192];
@@ -48,6 +52,17 @@ try
         ValidateCase(test, capabilities, allocation);
         if (!observations.TryAdd(Text(test, "id"), null!)) throw new ArgumentException("Duplicate case ID.");
     }
+    if (syntaxTokens || syntaxTrees)
+    {
+        using var tokenOutput = Console.OpenStandardOutput();
+        JsonSerializer.Serialize(tokenOutput, new { formatVersion = 1, implementation, sources = syntaxTrees ? SyntaxTokens.RunTrees(cases) : SyntaxTokens.Run(cases) });
+        return 0;
+    }
+    if (benchmarkRounds > 0)
+    {
+        Console.WriteLine(JsonSerializer.Serialize(new { formatVersion = 1, implementation, benchmark = CompileBenchmark.Run(cases, benchmarkRounds) }));
+        return 0;
+    }
     foreach (var test in cases.EnumerateArray())
     {
         var id = Text(test, "id");
@@ -59,7 +74,7 @@ try
                     ? TimingObservations.Run(test) : AllocationObservations.Run(test);
                 continue;
             }
-            if (Text(test, "kind") is "loadError" or "externalTypeApi" or "valueApi" or "messageApi")
+            if (Text(test, "kind") is "loadError" or "externalTypeApi" or "valueApi" or "messageApi" or "documentApi" or "schemaApi")
             {
                 observations[id] = ApiObservations.Run(test);
                 continue;
@@ -131,7 +146,7 @@ static void ValidateCase(JsonElement test, IReadOnlyCollection<string> capabilit
 {
     if (allocation && Text(test, "kind") != "scriptApi") throw new ArgumentException("Allocation mode requires script input.");
     var binary = Text(test, "kind") == "programBinary";
-    if (Text(test, "kind") is "loadError" or "externalTypeApi" or "valueApi" or "messageApi") Fields(test, "id", "kind", "sources", "compile", "requires", "api");
+    if (Text(test, "kind") is "loadError" or "externalTypeApi" or "valueApi" or "messageApi" or "documentApi" or "schemaApi") Fields(test, "id", "kind", "sources", "compile", "requires", "api");
     else if (binary) Fields(test, "id", "kind", "sources", "compile", "requires", "binary");
     else if (Text(test, "kind") == "scriptApi")
     {
@@ -140,10 +155,10 @@ static void ValidateCase(JsonElement test, IReadOnlyCollection<string> capabilit
     }
     else Fields(test, "id", "kind", "sources", "compile", "requires");
     _ = Text(test, "id");
-    if (Text(test, "kind") is not ("bytecodeSnapshot" or "compileError" or "bytecode" or "compileMetadata" or "programBinary" or "scriptApi" or "loadError" or "externalTypeApi" or "valueApi" or "messageApi"))
+    if (Text(test, "kind") is not ("bytecodeSnapshot" or "compileError" or "bytecode" or "compileMetadata" or "programBinary" or "scriptApi" or "loadError" or "externalTypeApi" or "valueApi" or "messageApi" or "documentApi" or "schemaApi"))
         throw new ArgumentException("Unsupported test kind.");
     var sources = test.GetProperty("sources");
-    if (sources.ValueKind != JsonValueKind.Array || (!binary && Text(test, "kind") is not ("scriptApi" or "externalTypeApi" or "valueApi" or "messageApi") && sources.GetArrayLength() == 0)) throw new ArgumentException("Sources required.");
+    if (sources.ValueKind != JsonValueKind.Array || (!binary && Text(test, "kind") is not ("scriptApi" or "externalTypeApi" or "valueApi" or "messageApi" or "documentApi" or "schemaApi") && sources.GetArrayLength() == 0)) throw new ArgumentException("Sources required.");
     string? program = null;
     foreach (var source in sources.EnumerateArray())
     {
@@ -201,6 +216,16 @@ static void ValidateCase(JsonElement test, IReadOnlyCollection<string> capabilit
     {
         if (sources.GetArrayLength() != 0) throw new ArgumentException("Value API cannot contain source.");
         ValueApiObservations.Validate(test.GetProperty("api"));
+    }
+    if (Text(test, "kind") == "documentApi")
+    {
+        if (sources.GetArrayLength() != 0) throw new ArgumentException("Document API cannot contain source.");
+        DocumentApiObservations.Validate(test.GetProperty("api"));
+    }
+    if (Text(test, "kind") == "schemaApi")
+    {
+        if (sources.GetArrayLength() != 0) throw new ArgumentException("Schema API cannot contain source.");
+        SchemaApiObservations.Validate(test.GetProperty("api"));
     }
     if (allocation && Text(test.GetProperty("measurement"), "profile") == TimingObservations.Profile) TimingObservations.Validate(test);
     else if (allocation) AllocationObservations.Validate(test);

@@ -76,6 +76,13 @@ ges compile game.ges
 ges compile handlers.ges definitions.ges -o build/game.gesb --verbose
 ges check "scripts/*.ges"
 ges dump build/game.gesb --addresses
+ges document check data/drive.gesd
+ges document format data/drive.gesd --color
+ges schema check bot.gess
+ges schema dump bot.gess --root Bot --param worldWidth=5000m --param worldHeight=5km --data data.bin
+ges schema dump bot.gess --root Bot --param worldWidth=5000m --param worldHeight=5km --data delta.bin --baseline record.bin
+ges schema layout world.gess --root Bot --root Fleet --param worldWidth=2000m -o wire.layout.json
+ges schema generate world.gess --root Bot --param worldWidth=2000m --language swift --namespace Wire -o Bot.swift
 ges run game.ges --args 12 Hello 34
 ges run first.gesb second.gesb -- 12 Hello --color
 ges run game.ges --scenario scenario.ges --seed 42
@@ -105,10 +112,16 @@ stopping execution. Runtime/CLI failures override it with 1; invalid command-lin
 usage returns 2. Diagnostics, event traces and run summaries go to stderr.
 Compilation/check reports and ordinary dumps go to stdout.
 
+`document check` reads GES documents and reports the first error of each as
+`path(line,column): error document.code: message`; `document format` prints a
+document in the recommended layout or writes it with `-o`. Both behave like the
+C# commands documented in the C# CLI README.
+
 ## Event console
 
 Use `:help`, `:help load`, `:help reload` and `:help dump` for details. The console supports
-`:load <file>`, `:list`, `:handler`, `:dump <module|ID>`, `:source <module|ID>`
+`:load <file>`, `:list`, `:handler`, `:dump <module|ID>`, `:source <module|ID>`,
+`:show <file>` (highlight a `.ges`, `.gesa`, `.gesd` or `.gess` file and mark its errors without loading it)
 as well as `:unload <module|ID>`, `:unloadAll`, `:reload` and `:quit`. Successful loads retain their handlers and receive stable session
 IDs. Each ordinary input executes in a temporary initialization handler and is
 then detached; local variables/functions do not persist. Use `:load` for
@@ -161,9 +174,6 @@ python3 scripts/test-swift-tool.py artifacts/swift/tool/release/ges \
   --reference artifacts/csharp/tool/bin/Release/net8.0/GameEventScript.Tool.dll
 ```
 
-The TextMate grammar source remains under `tools/editors/TextMate`. After editing
-it, refresh the embedded Swift constants explicitly with
-`python3 scripts/sync-highlighter-grammars.py`; normal Swift builds need no generator.
 The Xcode workspace includes this executable package and a shared
 `GameEventScriptTool` scheme. Select **My Mac** and use **Cmd+B** to build,
 **Cmd+R** to launch `ges`, or **Cmd+U** to run the native CLI tests. Run defaults

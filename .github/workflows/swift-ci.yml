@@ -33,7 +33,7 @@ jobs:
         id: scope
         run: python3 scripts/ci-swift-scope.py
 
-  highlighter-linux:
+  syntax-linux:
     needs: changes
     if: needs.changes.outputs.swift == 'true'
     runs-on: ubuntu-latest
@@ -41,8 +41,8 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Verify standalone Foundation highlighting on Linux
-        run: swift test --package-path implementation/swift/GameEventScriptSyntaxHighlighter --scratch-path artifacts/swift/syntaxhighlighter --disable-build-manifest-caching --configuration release
+      - name: Verify the standalone Syntax module on Linux
+        run: swift test --package-path implementation/swift/GameEventScriptSyntax --scratch-path artifacts/swift/syntax --disable-build-manifest-caching --configuration release
 
   distribution:
     needs: changes
@@ -59,7 +59,8 @@ jobs:
     needs: changes
     if: needs.changes.outputs.swift == 'true'
     runs-on: macos-15
-    timeout-minutes: 45
+    # A run without a restored build cache takes about 45 minutes, most of it compiling and the two-port comparisons.
+    timeout-minutes: 60
     steps:
       - if: needs.changes.outputs.swift == 'true'
         name: Check out repository
@@ -93,7 +94,7 @@ jobs:
             artifacts/swift/swiftbridge
             artifacts/swift/conformance
             artifacts/swift/tool
-            artifacts/swift/syntaxhighlighter
+            artifacts/swift/syntax
           key: swift-build-v3-default-${{ runner.os }}-${{ runner.arch }}-${{ steps.toolchain.outputs.identity }}-${{ hashFiles('Package.swift', 'implementation/swift/**/Package.swift', 'implementation/swift/**/Package.resolved', 'scripts/test-swift*.sh', 'scripts/verify-swift-api.py') }}-${{ github.sha }}
           restore-keys: |
             swift-build-v3-default-${{ runner.os }}-${{ runner.arch }}-${{ steps.toolchain.outputs.identity }}-${{ hashFiles('Package.swift', 'implementation/swift/**/Package.swift', 'implementation/swift/**/Package.resolved', 'scripts/test-swift*.sh', 'scripts/verify-swift-api.py') }}-
@@ -109,6 +110,12 @@ jobs:
       - if: needs.changes.outputs.swift == 'true'
         name: Verify direct Swift target dependencies
         run: python3 scripts/verify-swift-dependencies.py
+
+      - if: needs.changes.outputs.swift == 'true'
+        name: Verify Foundation-free portable Swift libraries
+        run: |
+          python3 scripts/test-swift-portable-imports.py
+          python3 scripts/verify-swift-portable-imports.py
 
       - if: needs.changes.outputs.swift == 'true'
         name: Verify temporary workspace cleanup
@@ -132,7 +139,7 @@ jobs:
         run: python3 scripts/verify-swift-api.py --reuse-local-builds
 
       - name: Upload conformance and runtime interoperability results
-        if: ${{ always() && needs.changes.outputs.swift == 'true' && (steps.conformance.outcome == 'success' || hashFiles('artifacts/swift/conformance-results/**', 'artifacts/swift/number-text-roundtrip/**', 'artifacts/swift/message-json-roundtrip/**', 'artifacts/swift/binary-reader-fuzz/**', 'artifacts/swift/binary-roundtrip-properties/**') != '') }}
+        if: ${{ always() && needs.changes.outputs.swift == 'true' && (steps.conformance.outcome == 'success' || hashFiles('artifacts/swift/conformance-results/**', 'artifacts/swift/number-text-roundtrip/**', 'artifacts/swift/message-json-roundtrip/**', 'artifacts/swift/document-roundtrip/**', 'artifacts/swift/binary-reader-fuzz/**', 'artifacts/swift/binary-roundtrip-properties/**') != '') }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: swift-conformance
@@ -140,13 +147,14 @@ jobs:
             artifacts/swift/conformance-results/
             artifacts/swift/number-text-roundtrip/
             artifacts/swift/message-json-roundtrip/
+            artifacts/swift/document-roundtrip/
             artifacts/swift/binary-reader-fuzz/
             artifacts/swift/binary-roundtrip-properties/
           if-no-files-found: error
           retention-days: 14
 
   verify:
-    needs: [changes, native, distribution, highlighter-linux]
+    needs: [changes, native, distribution, syntax-linux]
     if: ${{ always() }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -160,5 +168,5 @@ jobs:
           RUN_SWIFT: ${{ needs.changes.outputs.swift }}
           NATIVE_RESULT: ${{ needs.native.result }}
           DISTRIBUTION_RESULT: ${{ needs.distribution.result }}
-          HIGHLIGHTER_RESULT: ${{ needs.highlighter-linux.result }}
+          SYNTAX_RESULT: ${{ needs.syntax-linux.result }}
         run: python3 scripts/ci-swift-result.py

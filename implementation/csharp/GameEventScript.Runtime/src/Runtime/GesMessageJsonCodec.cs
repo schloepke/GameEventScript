@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using GameEventScript.Api;
 using GameEventScript.Runtime.Values;
+using GameEventScript.Syntax;
 using static GameEventScript.Api.GesBytecodeTypeKind;
 using static GameEventScript.Runtime.GesJson;
 
@@ -66,7 +67,7 @@ internal sealed class GesMessageJsonCodec
     private static string MessageName(GesValue value)
     {
         var name = String(value);
-        if (!GesText.IsMessageName(name) && name is not ("initialization" or "undeliverable"))
+        if (!GesText.IsMessageName(name))
             throw Error();
         return name;
     }
@@ -145,7 +146,7 @@ internal sealed class GesMessageJsonCodec
                 return Typed("List", ("items", Array(values)));
             case Map:
             case Custom:
-                var map = value.AsMap() ?? throw Error();
+                var map = value.MaterializedMap() ?? throw Error();
                 var entries = new GesValue[map.Length];
                 for (var i = 0; i < entries.Length; i++)
                     entries[i] = Object(("key", Text(map.KeyAt(i))), ("value", Encode(map.ValueAt(i), depth + 1)));

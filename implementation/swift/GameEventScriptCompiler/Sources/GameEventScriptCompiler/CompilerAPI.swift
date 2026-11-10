@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import GameEventScriptRuntime
+@_spi(Syntax) import GameEventScriptSyntax
 
 /// Compiler output configuration; no host state or file-system paths are required.
 public struct GesCompileOptions: Sendable {
@@ -71,8 +72,10 @@ public final class GesProgramBuilder {
     public func compile(options: GesCompileOptions? = nil) throws -> GameEventScriptProgram {
         let configuration = options ?? self.options
         guard configuration.debugInfo.rawValue & ~GesDebugInfoOptions.all.rawValue == 0 else { throw GesApiError.invalidArgument("Unknown debug information option") }
-        let modules = try sources.map { try GesParser(source: $0).parse() }
-        let validator = GesAstValidator(modules: modules, catalog: catalog)
+        // Each source's own rules report first, in source order; the program-wide rules follow.
+        var sourceDiagnostics: [GesDiagnostic] = []
+        let modules = try sources.map { try GesSyntaxBinder.parse($0, validation: &sourceDiagnostics) }
+        let validator = GesAstValidator(modules: modules, catalog: catalog, diagnostics: sourceDiagnostics)
         try validator.validate()
         return try GesCompiler(validator, sources: sources, options: configuration).compile()
     }
@@ -82,4 +85,11 @@ extension GameEventScriptProgram {
     /// Creates an empty source builder with default compile options; equivalent to `GesProgramBuilder()`. Available
     /// when the Compiler module is imported.
     public static func makeBuilder() -> GesProgramBuilder { .init() }
+}
+
+extension GesProgramBuilder {
+    /// The lossless syntax tree of one source, also when the source has syntax errors.
+    @_spi(Syntax) public static func syntaxTree(_ text: String) -> GesSyntaxTree {
+        GesSyntaxParser.parse(text)
+    }
 }

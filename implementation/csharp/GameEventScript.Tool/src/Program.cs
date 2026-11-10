@@ -19,12 +19,17 @@ Usage:
   dotnet ges run <program files ...> [--color] -- <text> ...
   dotnet ges run --interactive [--color] [program files ...]
   dotnet ges dump <program.gesb> [-o <output.gesa>] [--addresses]
+  dotnet ges document check <data.gesd> [more.gesd ...] [-q]
+  dotnet ges document format <data.gesd> [-o <output.gesd>] [--color]
+  dotnet ges schema <check|format|hash|canonical|dump> <schema.gess> ...
 
 Commands:
   compile     Compile UTF-8 source files together to .gesb. Use 'dotnet ges compile --help' for options.
   check       Validate source files without writing a binary. Use 'dotnet ges check --help' for options.
   run         Run Main(args), an event scenario, or the event console. Use 'dotnet ges run --help' for options.
   dump        Dump a .gesb file as GESA text. Use 'dotnet ges dump --help' for options.
+  document    Check or format GES documents (.gesd). Use 'dotnet ges document --help' for options.
+  schema      Check, format or hash GES schemas (.gess) and dump binary data. Use 'dotnet ges schema --help' for options.
 
 Options:
   -h, --help  Show this help.
@@ -37,6 +42,8 @@ Options:
         if (arguments is ["check", ..]) return CompileCommand.Run(arguments[1..], checkOnly: true);
         if (arguments is ["run", ..]) return RunCommand.Run(arguments[1..]);
         if (arguments is ["dump", ..]) return DumpCommand.Run(arguments[1..]);
+        if (arguments is ["document", ..]) return DocumentCommand.Run(arguments[1..]);
+        if (arguments is ["schema", ..]) return SchemaCommand.Run(arguments[1..]);
 
         if (arguments.Length == 0 || arguments is ["--help"] or ["-h"])
         {

@@ -109,6 +109,10 @@ public static class GesDiagnosticCodes
     /// </summary>
     public const string ValidateShadowedVariable = "validate.shadowedVariable";
     /// <summary>
+    /// Defines the validate unresolved variable value: a bare name without a visible binding of its own source.
+    /// </summary>
+    public const string ValidateUnresolvedVariable = "validate.unresolvedVariable";
+    /// <summary>
     /// Defines the validate invalid identifier case value.
     /// </summary>
     public const string ValidateInvalidIdentifierCase = "validate.invalidIdentifierCase";
@@ -120,6 +124,11 @@ public static class GesDiagnosticCodes
     /// Defines the validate invalid type constructor value.
     /// </summary>
     public const string ValidateInvalidTypeConstructor = "validate.invalidTypeConstructor";
+
+    /// <summary>
+    /// A tag clause contains the literal <c>nothing</c>.
+    /// </summary>
+    public const string ValidateInvalidTag = "validate.invalidTag";
     /// <summary>
     /// Defines the compile unsupported construct value.
     /// </summary>
@@ -547,21 +556,70 @@ internal sealed class GesCallbackFailureException : GesFatalRuntimeException
 /// </remarks>
 public sealed class GesDynamicLinkException : Exception
 {
+    // The message stays short for a Program with many call sites; Diagnostics holds them all.
+    private const int MaxMessageLocations = 8;
+
     /// <summary>
     /// Initializes a new instance of Game Event Script Dynamic Link Exception.
     /// </summary>
     /// <param name="diagnostic">The diagnostic value.</param>
-    public GesDynamicLinkException(GesDiagnostic diagnostic) : base(RequireDiagnostic(diagnostic).Message)
+    public GesDynamicLinkException(GesDiagnostic diagnostic) : base(BuildMessage([RequireDiagnostic(diagnostic)]))
     {
         if (diagnostic.Phase != GesDiagnosticPhase.Link)
             throw new ArgumentException("A dynamic-link exception requires a link diagnostic.", nameof(diagnostic));
         Diagnostic = diagnostic;
+        Diagnostics = [diagnostic];
     }
 
     /// <summary>
-    /// Gets the diagnostic.
+    /// Initializes a new instance for a failure with several diagnostics, such as one per call site of a missing
+    /// extension. The exception message names the first locations; it is informative text, not a portable comparison value.
+    /// </summary>
+    /// <param name="diagnostics">The link diagnostics in source order; at least one.</param>
+    public GesDynamicLinkException(IReadOnlyList<GesDiagnostic> diagnostics) : base(BuildMessage(diagnostics))
+    {
+        var copy = new GesDiagnostic[diagnostics.Count];
+        for (var index = 0; index < copy.Length; index++)
+        {
+            var diagnostic = diagnostics[index] ?? throw new ArgumentException("Diagnostic list contains null.", nameof(diagnostics));
+            if (diagnostic.Phase != GesDiagnosticPhase.Link)
+                throw new ArgumentException("A dynamic-link exception requires link diagnostics.", nameof(diagnostics));
+            copy[index] = diagnostic;
+        }
+
+        Diagnostic = copy[0];
+        Diagnostics = copy;
+    }
+
+    /// <summary>
+    /// Gets the first diagnostic of <see cref="Diagnostics"/>.
     /// </summary>
     public GesDiagnostic Diagnostic { get; }
+
+    /// <summary>
+    /// Gets every diagnostic of the failure. A failure of an import that the source calls, such as a missing extension,
+    /// has one diagnostic per call site with its source location, in source order, when the Program has a SourceMap.
+    /// </summary>
+    public IReadOnlyList<GesDiagnostic> Diagnostics { get; }
+
+    private static string BuildMessage(IReadOnlyList<GesDiagnostic>? diagnostics)
+    {
+        if (diagnostics is null) throw new ArgumentNullException(nameof(diagnostics));
+        if (diagnostics.Count == 0) throw new ArgumentException("A dynamic-link exception requires at least one diagnostic.", nameof(diagnostics));
+        var message = (diagnostics[0] ?? throw new ArgumentException("Diagnostic list contains null.", nameof(diagnostics))).Message;
+        var locations = new List<string>();
+        var others = 0;
+        foreach (var diagnostic in diagnostics)
+        {
+            if (diagnostic?.SourceLocation is not { } location) continue;
+            if (locations.Count < MaxMessageLocations) locations.Add(location.ToString());
+            else others++;
+        }
+
+        if (locations.Count == 0) return message;
+        var located = $"{message} at {string.Join(", ", locations)}";
+        return others == 0 ? located : $"{located} and {others} more";
+    }
 
     private static GesDiagnostic RequireDiagnostic(GesDiagnostic? diagnostic)
         => diagnostic ?? throw new ArgumentNullException(nameof(diagnostic));

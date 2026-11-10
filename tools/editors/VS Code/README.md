@@ -8,11 +8,27 @@ embedded GES source in dumps. Includes line comments, GES bracket pairing and
 automatic bracket indentation, GESA `.region` folding, and GES snippets:
 `ges-on`, `ges-iflet`, `ges-fold`, `ges-reduce`, and `ges-after`.
 
-Markdown fenced blocks tagged `ges` or `gesa` are highlighted both in the source
+Markdown fenced blocks tagged `ges`, `gesa`, `gesd` or `gess` are highlighted both in the source
 editor and in VS Code's built-in Markdown preview. Backtick and tilde fences are
 supported, including uppercase language names. The editor uses the selected
 theme; the preview uses a light/dark palette and preserves high-contrast text.
 Both use the same GES/GESA TextMate grammars, including GES embedded in dumps.
+
+## Binary viewer
+
+Opening a `.gesb` file shows the structure of the program instead of its bytes: the
+module with its resource requirements and compiler, every segment with its offset and
+size, inbound and outbound messages, functions, predicates, records, extensions and
+external types, each with its entry address and source line where the file records
+them, the embedded sources and the text constants. It updates when the file changes.
+
+The viewer needs neither the CLI nor workspace trust. It reads the structure for
+display and does not validate the Program, so it can show a file that a runtime
+rejects; it lists what it could not read under Problems. It applies the format's
+default reader limits and shows at most 4 MB of source text, of which it highlights
+1 MB. The title bar's
+**GES: Show Assembler Dump** opens the instructions through `ges dump`, which requires
+the CLI and workspace trust. Use **Reopen Editor With…** for another editor.
 
 Highlighting needs no CLI or account. Optional commands use the installed GES
 CLI; no compiler or runtime is bundled. Semantic completion and debugging are
@@ -105,6 +121,8 @@ The manifest and language configurations are maintained here. Verify with
 `python3 scripts/test-editor-bundles.py`. Strict JSON files inherit the copyright
 and Apache-2.0 license notice above, as specified by the repository licensing policy.
 Run `node --test scripts/test-vscode-extension.cjs` for CLI command regression checks.
+`node --test scripts/test-vscode-gesb.cjs` checks the `.gesb` viewer. Its reader follows
+`specs/BinaryFormat.md`; a change of the binary format updates it too.
 After packaging, `node --test scripts/test-vscode-markdown.cjs` checks preview
 HTML escaping, grammar reuse and Markdown fence injection. The Python editor
 checks also run these tests against the extracted VSIX when Node.js is available.

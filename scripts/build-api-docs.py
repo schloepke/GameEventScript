@@ -16,8 +16,10 @@ import subprocess
 
 ROOT = Path(__file__).resolve().parents[1]
 ARTIFACTS = ROOT / 'artifacts/website'
-CSHARP = ['GameEventScript.Runtime', 'GameEventScript.Compiler', 'GameEventScript.CSharpBridge', 'GameEventScript.SyntaxHighlighter']
-SWIFT = ['GameEventScriptRuntime', 'GameEventScriptCompiler', 'GameEventScriptSwiftBridge', 'GameEventScriptSyntaxHighlighter']
+CSHARP = ['GameEventScript.Runtime', 'GameEventScript.Compiler', 'GameEventScript.CSharpBridge', 'GameEventScript.Syntax',
+          'GameEventScript.Generator']
+SWIFT = ['GameEventScriptRuntime', 'GameEventScriptCompiler', 'GameEventScriptSwiftBridge', 'GameEventScriptSyntax',
+         'GameEventScriptGenerator']
 DOCFX_VERSION = '2.78.5'
 
 

@@ -33,6 +33,30 @@ private struct AnnotatedThruster {
 }
 
 @GesType
+private final class AnnotatedSignature {
+    @GesField(unit: .squareMeter)
+    var aperture: Double
+    @GesField(unit: .cubicMeter)
+    var volume: Double
+    @GesField(unit: .wattPerSquareMeter)
+    var sensitivity: Double
+    @GesField(unit: .decibel)
+    var gain: Double
+
+    init(aperture: Double, volume: Double, sensitivity: Double, gain: Double) {
+        self.aperture = aperture
+        self.volume = volume
+        self.sensitivity = sensitivity
+        self.gain = gain
+    }
+
+    @GesConstruct
+    static func make(aperture: Double, volume: Double, sensitivity: Double, gain: Double) -> AnnotatedSignature {
+        AnnotatedSignature(aperture: aperture, volume: volume, sensitivity: sensitivity, gain: gain)
+    }
+}
+
+@GesType
 private final class AnnotatedSensor {
     @GesField(unit: .meter)
     var distance: Double
@@ -135,6 +159,26 @@ final class AnnotationTests: XCTestCase {
         for value in [GesValue.float(1.5), .float(1.5, unit: .second), .text("1.5m"), .float(-1, unit: .meter)] {
             XCTAssertThrowsError(try constructor.invoke(GesExternalTypeConstructorCall(arguments: .init([value]))))
         }
+    }
+
+    func testAreaVolumeIntensityAndLevelFieldsReadAndWriteTheirUnits() throws {
+        let type = try AnnotatedSignature.createGesType()
+        let registry = try GesBridgeExternalTypeRegistry([type.binding])
+        let constructor = try XCTUnwrap(registry.resolve(.init(typeName: "AnnotatedSignature", argumentLabels: ["aperture", "volume", "sensitivity", "gain"])))
+        XCTAssertEqual(constructor.definition.parameters.map(\.unit), [.squareMeter, .cubicMeter, .wattPerSquareMeter, .decibel])
+        let arguments: [GesValue] = [.float(2.5, unit: .squareMeter), .integer(12, unit: .cubicMeter), .float(0.014, unit: .wattPerSquareMeter), .integer(6, unit: .decibel)]
+        let call = GesExternalTypeConstructorCall(arguments: .init(arguments))
+        try constructor.invoke(call)
+        let signature = try type.unwrap(call.result)
+        XCTAssertEqual([signature.aperture, signature.volume, signature.sensitivity, signature.gain], [2.5, 12, 0.014, 6])
+        signature.gain = -3
+        XCTAssertEqual(try call.result.externalValue?.field("aperture"), .float(2.5, unit: .squareMeter))
+        XCTAssertEqual(try call.result.externalValue?.field("volume"), .integer(12, unit: .cubicMeter))
+        XCTAssertEqual(try call.result.externalValue?.field("sensitivity"), .float(0.014, unit: .wattPerSquareMeter))
+        XCTAssertEqual(try call.result.externalValue?.field("gain"), .integer(-3, unit: .decibel))
+        var wrong = arguments
+        wrong[0] = .float(2.5, unit: .meter)
+        XCTAssertThrowsError(try constructor.invoke(GesExternalTypeConstructorCall(arguments: .init(wrong))))
     }
 
     func testQuantityConversionNeverDiscardsUnexpectedUnitsOrKinds() throws {

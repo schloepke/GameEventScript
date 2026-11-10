@@ -2,13 +2,16 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using System;
+using System.Collections;
+using System.Collections.Generic;
+using GameEventScript.Syntax;
 
 namespace GameEventScript.Runtime.Values;
 
 /// <summary>
-/// Represents a ges value map.
+/// Represents a ges value map, traversed in canonical key order.
 /// </summary>
-public sealed class GesValueMap
+public sealed class GesValueMap : IEnumerable<KeyValuePair<string, GesValue>>
 {
     private static readonly string[] EntryKeys = ["key", "value"];
 
@@ -29,8 +32,8 @@ public sealed class GesValueMap
         Array.Sort(_keys, _values, GesText.ScalarComparer);
     }
 
-    // Trusted canonical keys from a GesMapLayout: validated, scalar-sorted and unique. The layout
-    // shares one immutable key array between every map built from the same constant key list.
+    // Trusted canonical keys: validated, scalar-sorted and unique, and never written to afterwards. A GesMapLayout and
+    // an external type definition share one key array between all their maps; the value factories own theirs.
     internal GesValueMap(string[] canonicalKeys, GesValue[] values)
     {
         _keys = canonicalKeys;
@@ -81,6 +84,56 @@ public sealed class GesValueMap
     /// <param name="index">The index value.</param>
     /// <returns>The result of the operation.</returns>
     public GesValue ValueAt(int index) => _values[index];
+
+    /// <summary>
+    /// Returns an allocation-free enumerator over the entries in canonical key order.
+    /// </summary>
+    /// <returns>The enumerator.</returns>
+    public Enumerator GetEnumerator() => new(this);
+
+    IEnumerator<KeyValuePair<string, GesValue>> IEnumerable<KeyValuePair<string, GesValue>>.GetEnumerator() => GetEnumerator();
+
+    IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+
+    /// <summary>
+    /// Enumerates the entries of a <see cref="GesValueMap"/> in canonical key order.
+    /// </summary>
+    public struct Enumerator : IEnumerator<KeyValuePair<string, GesValue>>
+    {
+        private readonly GesValueMap _map;
+        private int _index;
+
+        internal Enumerator(GesValueMap map)
+        {
+            _map = map;
+            _index = -1;
+        }
+
+        /// <summary>
+        /// Gets the entry at the current position.
+        /// </summary>
+        public readonly KeyValuePair<string, GesValue> Current => new(_map._keys[_index], _map._values[_index]);
+
+        readonly object IEnumerator.Current => Current;
+
+        /// <summary>
+        /// Advances to the next entry.
+        /// </summary>
+        /// <returns><see langword="true"/> when another entry exists.</returns>
+        public bool MoveNext() => ++_index < _map._keys.Length;
+
+        /// <summary>
+        /// Returns to the position before the first entry.
+        /// </summary>
+        public void Reset() => _index = -1;
+
+        /// <summary>
+        /// Releases nothing; the enumerator owns no resources.
+        /// </summary>
+        public readonly void Dispose()
+        {
+        }
+    }
 
     private int FindKeyIndex(string key)
     {

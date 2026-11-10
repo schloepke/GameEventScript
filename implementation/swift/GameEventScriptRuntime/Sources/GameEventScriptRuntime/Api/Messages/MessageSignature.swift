@@ -1,6 +1,8 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
+@_spi(Syntax) import GameEventScriptSyntax
+
 /// An immutable message identity: its name and ordered external argument labels.
 public struct GesMessageSignature: Hashable, CustomStringConvertible, Sendable {
     let storage: GesSignatureStorage
@@ -65,14 +67,15 @@ public struct GesMessageSignature: Hashable, CustomStringConvertible, Sendable {
     /// Whether the concrete message has this name and ordered label identity.
     public func matches(_ message: GameEventScriptMessage) -> Bool { GesText.scalarEqual(signatureId, message.signatureId) }
 
-    /// Binds ordered values to this signature, or returns nil for an empty name or wrong arity.
+    /// Binds ordered values to this signature, or returns nil for an empty name, a system endpoint or wrong arity.
     public func makeMessage(_ arguments: [GesValue]) -> GameEventScriptMessage? {
-        guard !name.isEmpty, arguments.count == parameters.count else { return nil }
+        guard !name.isEmpty, !storage.isSystemEndpoint, arguments.count == parameters.count else { return nil }
         return GameEventScriptMessage(normalizedName: name, arguments: GesMessageArguments(normalizedNames: parameters, values: arguments), signatureId: signatureId, normalizedTags: [])
     }
 
     /// Binds ordered values to this signature, throwing when a concrete message cannot be created.
     public func withArguments(_ arguments: [GesValue]) throws -> GameEventScriptMessage {
+        guard !storage.isSystemEndpoint else { throw GesMessageError.invalidName }
         guard let message = makeMessage(arguments) else { throw GesMessageError.argumentCountMismatch }
         return message
     }

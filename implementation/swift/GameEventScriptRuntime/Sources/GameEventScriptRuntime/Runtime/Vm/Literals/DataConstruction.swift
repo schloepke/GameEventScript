@@ -1,18 +1,20 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
+@_spi(Syntax) import GameEventScriptSyntax
+
 enum GesDataConstruction {
-    static func create(_ type: String, _ labels: [String], _ arguments: [GesValue], _ context: GesContext) throws -> GesValue {
+    static func create(_ type: String, _ labels: [String], _ arguments: [GesValue], _ context: GesContext?) throws -> GesValue {
         try create(type, labels, arguments, context, sink: GesValueFactory())
     }
 
-    static func create<Output: GesValueOutput>(_ type: String, _ labels: [String], _ arguments: [GesValue], _ context: GesContext, sink: Output) throws -> Output.Result {
-        guard let positions = GesDataConstructionShape.positions(type, labels) else { return sink.nothing }
+    static func create<Output: GesValueOutput>(_ type: String, _ labels: [String], _ arguments: [GesValue], _ context: GesContext?, sink: Output) throws -> Output.Result {
+        guard let positions = GesLiteralForms.positions(type, labels) else { return sink.nothing }
         return try create(type, positions: positions, arguments, context, sink: sink)
     }
 
-    // Positions come from GesDataConstructionShape, resolved once per constant type/label list.
-    static func create<Output: GesValueOutput>(_ type: String, positions: [Int], _ arguments: [GesValue], _ context: GesContext, sink: Output) throws -> Output.Result {
+    // Positions come from GesLiteralForms, resolved once per constant type/label list.
+    static func create<Output: GesValueOutput>(_ type: String, positions: [Int], _ arguments: [GesValue], _ context: GesContext?, sink: Output) throws -> Output.Result {
         guard arguments.count == positions.count else { return sink.nothing }
         var slots = (GesValue.nothing, GesValue.nothing, GesValue.nothing)
         for (index, position) in positions.enumerated() { place(arguments[index], at: position, in: &slots) }
@@ -37,7 +39,7 @@ enum GesDataConstruction {
         }
     }
 
-    private static func create<Output: GesValueOutput>(_ type: String, count: Int, _ slots: (GesValue, GesValue, GesValue), _ context: GesContext, sink: Output) throws -> Output.Result {
+    private static func create<Output: GesValueOutput>(_ type: String, count: Int, _ slots: (GesValue, GesValue, GesValue), _ context: GesContext?, sink: Output) throws -> Output.Result {
         let first = slots.0
         switch type {
         case "nothing": return sink.nothing
@@ -65,7 +67,7 @@ enum GesDataConstruction {
             var tags: [String] = []
 
             func add(_ value: GesValue) {
-                if let list = value.listValue { for item in list { add(item) } } else { tags.append(value.asText) }
+                if let list = value.listValue { for item in list { add(item) } } else { tags.append(value.isNothing ? "_" : value.asText) }
             }
 
             add(slots.1)
@@ -91,8 +93,6 @@ enum GesDataConstruction {
         case "list": .list
         case "map": .map
         case "dice": .dice
-        case "vector": .vector
-        case "point": .point
         case "range": .range
         case "series": .series
         case "message": .message

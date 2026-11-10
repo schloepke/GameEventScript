@@ -11,11 +11,100 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 ## Unreleased
 
 ### Breaking
+- C# `GesValue.AsMap()` returns only stored Map and Record data, as in Swift; an external
+  value gives `null`. `MaterializedMap()` reads its fields.
+- `:Vector(value)` and `:Point(value)` with one positional argument are now the cast,
+  so `:Vector([1, 2])` is 1, 2, 0 instead of `nothing` and `:Vector(:Dice[6, 3])` is
+  6, 3, 0 instead of 9, 0, 0.
+- `:Message` rejects the labels `value` and `tags` in source; use `with`.
+- `MaxByteCount` of a schema is the larger of its largest full record and its largest delta,
+  which can raise it by a few bytes.
+- Encoding a schema value reports `nothing` in a required field, argument or list element
+  as the new `wire.nothingValue`; `wire.missingField` stays for absent keys and arguments
+  and for fields a typed writer leaves unwritten.
+- The literal `nothing` and a constant with that value are no tags: this is the new
+  `validate.invalidTag`, and a tag value that is `nothing` at runtime makes the tag
+  clause invalid instead of adding `#nothing`.
+- A send with an invalid tag clause sends nothing and continues; a result-bearing send
+  is false. A statement send used to end the handler, in C# always and in Swift for a
+  Message value.
+- Message names start uppercase: `initialization` and `undeliverable` are entry points
+  only the host uses. `parse` and documents no longer recognize
+  `:Message(initialization())` and `:Handler(undeliverable())`, and in source a lowercase
+  name is a variable or a call of a function or predicate. `GameEventScriptMessage.Create`
+  and `FromJson` reject those names, `CreateMessage` returns nothing for them, and
+  loading a Program with such an outbound binding or message shape fails.
+- A labeled `:Range` needs `from` and `to`, so `:Range(from: 1)` is an error.
+- `value as :Record` is `validate.invalidTypeConstructor` instead of a compiler failure
+  with `decode.invalidOperand`.
+- Handlers print a space after each comma: `:Handler(Done(value, _))`.
+- Labeled Vector and Point components must be a run without gaps:
+  `:Vector(x: 1, z: 2)` is `validate.invalidTypeConstructor` in source, stays Text
+  for `parse` and is `document.invalidLiteral` in documents. The literals `true`
+  and `false` are no components either, though a Boolean variable counts as 0 or 1.
+  `ConstructData` no longer accepts `vector` and `point`. `CreateVector` and
+  `CreatePoint` use `ImmediateX` 3 for labeled `x`, which never lifts; values above
+  3 fail validation. Recompile `.gesb` files to get the `:Vector(x: v, y: 3)` fix.
+- A bare name without a visible binding of its own source is now the
+  validation diagnostic `validate.unresolvedVariable` at the name, reported for
+  every such name, instead of the first `compile.unresolvedSymbol` of lowering.
+  The Syntax module reports it too, so editors see it while typing.
+  `$constants`, calls, extension calls and inline-assembly operands are not
+  affected; an unknown `$constant` remains `compile.unresolvedSymbol`.
+- Validation reports the rules of each source on its own first, source by source
+  and in source order of their positions: spelling of names and labels,
+  repeated parameters, arguments, fields and bindings, shadowing, system
+  endpoint forms and removed type names. The program-wide rules follow. A
+  program with errors of both kinds therefore lists its diagnostics in a new
+  order; their codes and positions are unchanged.
 
+- The optional highlighter packages are renamed to the Syntax module, which
+  will hold the shared lexer, parser and syntax tree: NuGet
+  `GameEventScript.SyntaxHighlighter` becomes `GameEventScript.Syntax` (namespace
+  `GameEventScript.Syntax`), and the SwiftPM product and module
+  `GameEventScriptSyntaxHighlighter` become `GameEventScriptSyntax`. Type names
+  such as `GesSyntaxHighlighter` are unchanged. Migrate by replacing the package
+  reference and the `using`/`import`.
+- Highlighting is derived from the lossless syntax tree instead of the bundled
+  TextMate grammars, in both ports. Spans carry a category and the diagnostics
+  overlapping them, and `GesHighlightResult.Diagnostics`/`diagnostics` lists the
+  document's syntax errors or, without those, its violated single-source rules
+  as new `GesHighlightDiagnostic` values with UTF-16 ranges. The line API
+  (`HighlightLine`/`highlightLine`), `GesHighlightState`, `NextState`/`nextState`,
+  `CreateState`/`makeState` and the TextMate `Scopes`/`scopes` are removed;
+  highlight the whole document after an edit and theme by `Kind`/`kind`. Swift
+  `GesHighlightingError` loses `expectedSingleLine` and `incompatibleState`. Some
+  categories become more precise: function and predicate names are Function,
+  contextual keywords such as `between`, `from` or `ascending` are Keyword,
+  brackets and braces are Symbol, extension names are Builtin, and GESA label
+  definitions are Label. Input with statements outside a handler, as console
+  input has, keeps its statement categories. The Swift module no longer imports
+  Foundation, and `scripts/sync-highlighter-grammars.py` is removed; the TextMate
+  grammars remain for the editor bundles.
+- Runtime now depends on the Syntax module, which owns the quantity unit table
+  and the text and name rules. `GesQuantityUnit` and `GesQuantityUnits` move to
+  the Syntax assembly in C# with the unchanged namespace `GameEventScript.Api`;
+  Swift Runtime re-exports `GesQuantityUnit`, so source code is unchanged. The
+  NuGet Runtime, Compiler and CSharpBridge packages declare the Syntax
+  dependency, and the `runtime`, `compiler` and `unity` DLL sets now include
+  `GameEventScript.Syntax.dll`, which manual DLL installations must copy too.
+- `parse` materializes at most `MaxRangeItems` Range items into Lists per
+  invocation in total, so many `:List(:Range(...))` forms in one Text cannot
+  multiply the per-Range limit. Exceeding the total stops the handler with the
+  `MaxRangeItems` runtime limit. This includes a single Range longer than the
+  limit, such as `parse ":List(:Range(1, 10001))"` with the default limit, which
+  previously produced an empty List and let the handler continue. Migrate by
+  raising `MaxRangeItems` or keeping such Ranges lazy, for example
+  `:Range(1, 10001)` without `:List(...)`.
+- `strict` directly after `parse` is now the strict mode word. To parse a
+  binding named `strict`, write `parse (strict)`; `parse strict` alone is a
+  syntax error.
 - A number directly followed by a unit spelling is now one quantity literal, so
   `10m/s`, `6m/s²` or `120°/s` are a speed, an acceleration and an angular speed
-  rather than divisions by a binding `s`. Write `10m / s` with whitespace to
-  divide. Text such as `'250ms'` now parses as `0.25s` instead of failing.
+  rather than divisions by a binding `s`, `2/s` is the rate `2Hz`, and `2m²` or
+  `2m^2` is an area rather than the square of `2m`. Write `10m / s` or `2 / s`
+  with whitespace to divide and `(2m)²` to square. Text such as `'250ms'` now
+  parses as `0.25s` instead of failing.
 - `floor`, `ceil`, `truncate` and the three `round` forms keep the unit of a
   quantity, at runtime and in constant folding: `floor 2.5m` is now `2m` instead
   of the unitless `2`, and `round half even 2.5m/s` is `2m/s`. Percentages still
@@ -24,7 +113,9 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   plain number is needed.
 - Swift `GesQuantityUnit` has new cases for the added physical units, so an
   exhaustive `switch` over it must handle `kilogram`, `newton`, `joule`, `watt`,
-  `volt`, `ampere`, `hertz`, `kelvin` and `degreePerSecond` (or add a `default`).
+  `volt`, `ampere`, `hertz`, `squareMeter`, `cubicMeter`, `wattPerSquareMeter`,
+  `kelvin`, `degreePerSecond`, `decibel`, `wattPerKelvin` and `joulePerKelvin`
+  (or add a `default`).
   C# `GesQuantityUnit` gains the same members; existing values keep their numbers.
 - Runtime observer callbacks report the host-local send ID of the message they
   describe: C# `MessageEmitted(message, id, accepted)`,
@@ -60,8 +151,7 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   removed); hosts via `GesHostBuilder()` or `GameEventScriptHost.makeBuilder()`
   (formerly `createBuilder()`). The Swift `GameEventScriptHost` initializer is no
   longer public; configure hosts through the builder. Swift factory methods use
-  `make`: `GesMessageSignature.makeMessage(_:)`, `makeSignatureId(name:parameterNames:)`
-  and `GesSyntaxHighlighter.makeState()`.
+  `make`: `GesMessageSignature.makeMessage(_:)` and `makeSignatureId(name:parameterNames:)`.
 - Reading, encoding, validating and dumping Programs are members of
   `GameEventScriptProgram`; the separate reader, writer, validator and dumper
   types are no longer public. C#: `GameEventScriptProgram.Read(bytes, options)`,
@@ -126,20 +216,138 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   `Length` instead.
 
 ### Added
+- External values have three explicit read paths in both ports: `ExternalValue` returns the
+  host object, `ReadField(name)` runs one getter and `MaterializedMap()` runs all of them.
+  C# adds these and `GesValue.GesExternal(value)`; Swift adds `readField(_:)` and the protocol
+  `GesFatalRuntimeError`, the counterpart of `GesFatalRuntimeException`, so a host can read
+  the diagnostic of a failing getter, and a host's own conforming error keeps its diagnostic.
+- Hosts build Maps and Records from ordered entries in the Runtime: C#
+  `GesValue.GesMap(("a", x), ("b", y))` and `GesValue.GesRecord("Hit", ("a", x))`, Swift
+  `.map([("a", x)])` and `.record(typeName: "Hit", [("a", x)])`.
+- `value["name"]` reads the field of a Record, the entry of a Map or the coordinate of a
+  Point or Vector and can be chained; everything else gives Nothing, without calling
+  external field getters.
+- `GesValueMap` can be traversed in canonical key order: `foreach` in C#, without
+  allocating, and `for (key, value) in map` in Swift.
+- `ges schema generate` (and `dotnet ges schema generate`) writes C# 9 or Swift 6 code for schema
+  roots: a type per schema that writes and reads its records with the same bytes, error codes and
+  paths as `GesSchemaWriter` and `GesSchemaReader`, without allocating, with parameters as constants.
+  Schemas with Text, List or Dice become classes whose storage grows on demand and is reused;
+  messages and message sets are supported too. Schemas write and read deltas with the bytes of
+  `GesSchemaDelta`, lists with keyed elements included, and records compare by wire values
+  (`WireEquals`), quantize and copy into existing storage. `--values` adds the conversion to and
+  from GES values and messages through the value path. Generated Swift classes skip dynamic
+  exclusivity checks, which halves their time; `--checked-exclusivity` keeps them. `--namespace`,
+  `--access internal` and `--check` for checked-in output are supported.
+- `ges schema layout` (and `dotnet ges schema layout`) prints the language-neutral generation
+  layout of one or more roots, or of every declaration with `--all-roots`: every reached type with
+  its bound encodings, hashes and the parameters its constants depend on. A type that several roots
+  share appears once, and both CLIs print identical JSON.
+- New Generator package: the NuGet package `GameEventScript.Generator` and the SwiftPM product
+  `GameEventScriptGenerator` expose `GesSchemaGenerator.Layout` and `Generate` (Swift `layout` and
+  `generate`) with `GesSchemaGenerateOptions`, so build integrations such as a Unity editor menu,
+  an MSBuild target or a SwiftPM plugin generate schema code without the CLI. It depends on Runtime
+  and Syntax only and games never ship it; the DLL distribution adds a `generator` set for a Unity
+  `Editor` folder.
+- Schema bit primitives: `GesBitWriter` and `GesBitReader` write and read values of 0 to 64
+  bits in the wire format's bit order, and `GesWireRules` holds its Text, tag, quantization and
+  wrapping rules and the delta range over plain operands. `GesWireException` (Swift `GesWireError`) can be created
+  from a code and a path, and every `wire.*` code is a public constant. The schema writer and
+  reader now build on these primitives, without loss in speed.
+- Schema deltas work element by element for a list whose elements have a `key`, when the keys of
+  baseline and record ascend strictly; otherwise the list is replaced as a whole. The limit of
+  `MaxByteCount` rises from 1 MiB to 10 MiB. `GesSchemaDelta.Encode` uses its buffer as scratch
+  space, so size it with `MaxByteCount`: a smaller buffer can fail with `wire.bufferTooSmall`
+  even when the delta would fit.
+- Schema deltas: `GesSchemaDelta` converts between full records and deltas against a baseline
+  record without allocating, `GesSchemaValues` does so for values, and `ges schema dump --baseline`
+  makes a delta readable. A decoder accepts only the canonical form (`wire.invalidDelta`), a
+  record with another key is `wire.keyMismatch`, and a target buffer that overlaps an input is
+  `wire.overlappingBuffers`.
+- Type, message and handler names can join segments with single underscores, such
+  as `:Unit_Weapon` and `Unit_Fire`. Each segment starts with an uppercase letter,
+  so `:Unit_1` and `Unit__Fire` stay invalid; use `:Unit_Type1`. The underscore
+  forms no hierarchy: `is :Unit` is false for a `:Unit_Weapon`.
 
+- GES schemas (`.gess`) describe data formats and yield a very compact binary encoding for
+  server-driven multiplayer games: ranges, steps and wrapping values with exact quantization,
+  closed tag sets, tags, lists, Dice and text with hard limits, optional fields, unions, nested schemas, keys,
+  messages and message sets, parameters bound per session, and a canonical FNV-1a 64 hash. In
+  Runtime, `GesSchemaSet`, `GesSchema` (a read-only description with its fields), `GesBoundSchema`, `GesSchemaWriter`, `GesSchemaReader` and
+  `GesSchemaDump` use no VM, and the writer and reader allocate nothing on success; `GesSchemaValues`
+  converts Records and Messages. Schemas also check documents, including union types, through
+  `CheckDocument`. The CLIs add `schema check`, `format`, `hash`, `canonical` and `dump`.
+- `cm` is a prefixed literal spelling of the meter, like `km` and `mm`: `150cm` is
+  `1.5m`. It adds no unit, `:Quantity(cm)` remains invalid, and printing documents
+  does not choose it.
+- Link failures of an import that the source calls carry one diagnostic per
+  call site with its source location, in source order:
+  `GesDynamicLinkException.Diagnostics` and Swift
+  `GesDynamicLinkError.diagnostics`, whose first entry remains
+  `Diagnostic`/`diagnostic`. The message names the import, for example
+  `Unknown extension :navigation.nope(x)`. Columns need the SourceArchive;
+  without a SourceMap the single diagnostic keeps only the symbol. Both CLIs
+  print every call site.
+- GES document highlighting: `GesSyntaxLanguage.Gesd` (Swift `.gesd`) categorizes
+  `.gesd` text and reports its first document error as a diagnostic with a UTF-16
+  range, in both Syntax packages. The CLIs add `document check` and `document
+  format` for `.gesd` files and the console command `:show <file>`, which
+  highlights a `.ges`, `.gesa` or `.gesd` file and marks its errors. TextMate,
+  Sublime Text, bat and VS Code grammars cover `.gesd` files.
+- The VS Code extension opens `.gesb` files in a read-only viewer: segments with
+  offsets and sizes, inbound and outbound messages, functions, predicates, records,
+  extensions, external types, embedded sources and texts. The viewer needs neither
+  the CLI nor workspace trust; **GES: Show Assembler Dump** opens the `ges dump` output.
+- `parse strict input` recognizes the same literals as `parse`, but produces
+  `nothing` instead of the original Text when the input is not a complete data
+  literal: `parse strict "standard"` and `parse strict "[1, 2"` are `nothing`,
+  while `parse strict "'standard'"` is the Text `standard`. The bytecode encodes
+  it as `ParseLiteral` with the Strict flag (`mode=Strict` in GESA, `#strict` in
+  inline assembly).
+- GES documents (`.gesd`): human-editable data files whose values are written
+  like GES literals, such as `maxForce: 21.4kN` or `mount: :Vector(x: 0m, y: -0.8m)`.
+  C# `GesDocument.Parse(text)`/`document.Print()` and Swift
+  `GesDocument(parsing:)`/`document.text()` read and print them. The root is a
+  Map or, with a `:Schema(:TypeName)` header, a Record; `:Schema('file.gess')`
+  references a schema file. Entries are separated by commas or line breaks,
+  `//` comments are allowed, and reading is strict: unquoted Text, duplicate
+  keys and explicit forms or number tokens that construct nothing, such as
+  `:Range(1)` or `NaN`, fail with
+  a `GesDocumentException`/`GesDocumentError` carrying a stable `document.*`
+  code, line and column. Printing writes exact prefixed units such
+  as `1kW` or `250ms` and reads back bit-identically in every implementation;
+  `GesValue.Format()`/`formatted()` print a single value. Schemas are only
+  referenced, not validated.
+- Literal parsing without a Host for extensions, configuration and other
+  embedding code: C# `GesValue.ParseLiteral(text)` and
+  `GesValue.ParseLiteralStrict(text)`, Swift `GesValue(literal:)` and
+  `GesValue(strictLiteral:)`. They follow `parse` and `parse strict`, return
+  `null`/`nil` for unrecognized strict input, never run constructors, and throw
+  `GesLiteralLimitException`/`GesLiteralLimitError` when a parsing limit is
+  exceeded, including more than 10,000 items materialized from Ranges in total.
 - Physical units in C# and Swift: meter per second (`m/s`), meter per second
   squared (`m/s²`, ASCII `m/s^2`), kilogram (`kg`), newton (`N`), joule (`J`),
-  watt (`W`), volt (`V`), ampere (`A`), hertz (`Hz`), kelvin (`K`) and degree
-  per second (`°/s`, ASCII `deg/s`), next to meters, seconds and degrees (ASCII
-  `deg`). Literals accept the prefixed spellings `km`, `mm`, `ms`, `kN`, `kJ`, `MJ`,
-  `kW`, `MW`, `kV`, `kHz`, `Wh` and `kWh`, which normalize exactly to the base
-  unit. Products and quotients follow a closed derivation table, for example
-  `10m / 2s` is `5m/s`, `2kg * 3m/s²` is `6N` and `1 / 2s` is `0.5Hz` (formerly
-  `nothing`); other combinations of two units remain `nothing`. Every unit works
-  in `:Quantity(...)`, text formatting and parsing, message JSON, vectors and
-  points, inline assembly (`#meterPerSecond`) and host APIs, including Swift
-  `@GesField(unit: .meterPerSecond)`. The new UnitIds are 4 to 12, 16 and 17;
-  Swift `GesQuantityUnit` is now `Sendable`.
+  watt (`W`), volt (`V`), ampere (`A`), hertz (`Hz`), square meter (`m²`, ASCII
+  `m^2`), cubic meter (`m³`, ASCII `m^3`), watt per square meter (`W/m²`, ASCII
+  `W/m^2`), kelvin (`K`), degree per second (`°/s`, ASCII `deg/s`), decibel
+  (`dB`), watt per kelvin (`W/K`) and joule per kelvin (`J/K`), next to meters, seconds and degrees (ASCII `deg`). Literals accept the
+  prefixed spellings `km`, `mm`, `cm²`, `km²`, `ms`, `t`, `kN`, `kJ`, `MJ`, `mW`,
+  `kW`, `MW`, `mW/m²`, `kW/m²`, `mW/K`, `kW/K`, `MW/K`, `kJ/K`, `MJ/K`, `kV`,
+  `kHz`, `Wh` and `kWh`, which normalize
+  exactly to the base unit, and `/s` after a number for a rate such as `4/s`.
+  Products and quotients follow a closed derivation table, for example
+  `10m / 2s` is `5m/s`, `2kg * 3m/s²` is `6N`, `2m * 3m` is `6m²`, `10W / 2m²`
+  is `5W/m²`, `10W / 2K` is `5W/K` and `1 / 2s` is `0.5Hz` (formerly `nothing`); other combinations of
+  two units remain `nothing`. Squares and cubes follow the same table and roots
+  invert them, so `(3m)²` is `9m²` and `sqrt 16m²` is `4m` (formerly `NaN`).
+  Decibel levels add and scale by numbers but derive with no other unit and
+  give `nothing` with a percentage. Every unit works in `:Quantity(...)`, text
+  formatting and parsing, message JSON, vectors and points, inline assembly
+  (`#meterPerSecond`) and host APIs, including Swift
+  `@GesField(unit: .meterPerSecond)`. The UnitIds are 0 to 18; the formerly
+  reserved bit, byte and bit-per-second ids 13 to 15 now hold the square meter,
+  cubic meter and watt per square meter. Swift `GesQuantityUnit` is now
+  `Sendable`.
 - Runtime observers can follow delayed messages. C# `MessageScheduled(message, id,
   deadline, publish)` / Swift `messageScheduled(_:id:deadline:publish:)` reports
   each accepted `emit … after` or `publish … after` once, with its send ID and its
@@ -155,6 +363,9 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 
 ### Changed
 
+- Swift Syntax, Runtime and Compiler no longer use Foundation. The Card Lab
+  WebAssembly module shrinks from about 71 MB to about 19 MB. Highlighting the
+  shared corpus is about 20 times faster in Swift and 3.5 times faster in C#.
 - A delayed `emit after …` without recipients now behaves like the same emit
   without `after`: it is not scheduled and is observed as not queued, so it no
   longer keeps the host waiting, counts towards the queue limit or appears in
@@ -185,7 +396,74 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   of every port. Runtime behavior does not depend on it.
 
 ### Fixed
+- External field values are no longer cached, so they can change between handlers. In C#,
+  a script's field read runs only that field's getter instead of all of them, so a failing
+  getter affects only its own field.
+- Swift `GesSchemaValues.encode` accepts an external value of the schema's type name, as C#
+  does, instead of reporting `wire.typeMismatch`.
+- Swift matches external field names by Unicode scalars, not by canonical equivalence.
+- C# `GesValue.GesRecord(typeName, keys, values)` keeps the last value of a duplicate name,
+  like `GesMap` and Swift; it used to keep both entries.
+- `:Vector(x: 1)` and `:Point(x: 1m)` compile in C# like in Swift, and
+  `:Vector(x: v, y: 3)` with a Vector `v` is `nothing` instead of writing 3 into `z`.
+- The Swift compiler accepts the source short form `:Message(Done)`, like the C#
+  compiler.
+- `:Series(kind: fibonacci)` compiles without quotes, and `parse` and documents read
+  `:Series(offset: 2, kind: fibonacci)`.
+- In Swift, a statement `emit` or `publish` of a Handler value no longer sends a message,
+  like in C#.
+- A line break may stand before the comma of a further tag inside `:Message(...)`.
+- `:Quantity(km)(1)` reports `validate.invalidTypeConstructor` in Swift like in C#, and
+  a `:Quantity(m)` without a value reports at its start in C# like in Swift.
+- `:Message(...)`, `:Handler(...)` and `:Series(...)` can span lines like other
+  type constructors. Depending on the form, a line break made the value `nothing`
+  in C# or was a syntax error in one or both compilers.
+- Swift link diagnostics for exceeded register and call-stack limits and a full
+  initialization queue now carry a message, as in C#, instead of an empty one.
+- C# syntax errors that name an unexpected token, such as `Unexpected token '}'`,
+  now range over that token, as in Swift, instead of having no length; their
+  start positions are unchanged.
+- Unbraced `for` and `random with` bodies open a scope of their own during
+  validation, as braced bodies do: a binding there no longer escapes into the
+  enclosing scope or repeats the loop binding, and shadows it instead.
+- `:sum` and `:average` without a binding no longer report that they shadow an
+  enclosing binding named `value`.
+- A repeated parameter of a `:Handler(Msg(...))` data form is reported at the
+  parameter instead of the start of the source.
+- Swift no longer accepts `pair of a kind`, which only the counts from `three`
+  take, and reads the face after `pair of` as an expression also when it starts
+  with a binding named `a`.
 
+- The Swift compiler treats a backslash in a source Text literal as ordinary
+  text, as the language specifies and C# does, so `'C:\'` and `"path\"` compile.
+  Before, the backslash escaped the closing quote and the literal failed with
+  `parse.syntax`.
+- The Swift compiler rejects a vertical tab or form feed between tokens with
+  `parse.syntax`, like C#; only space, tab and the line breaks LF, CRLF and CR
+  are source whitespace.
+- C# `parse` and `GesValue.ParseLiteral` no longer accept whitespace between `:`
+  and a type name, such as `: Number(5)`, matching Swift and the source type
+  syntax; such input now fails recognition like any other malformed literal.
+
+- C# external field reads now follow the field's declared type, as in Swift:
+  a field declared `Float<Watt>` that returns the integer `3` reads as `3W`,
+  and the same applies to Map conversion, keys, values, entries and iteration.
+  Before, C# returned the raw field value.
+- External type fields and constructor parameters declared as Tag keep a Tag
+  value unchanged; before, C# turned it into `nothing` and Swift into the Tag
+  `#nothing`. `nothing` stays `nothing` under every declared type, so a missing
+  optional Tag field in Swift no longer reads as `#nothing`, and a Boolean
+  constructor parameter no longer turns `nothing` into `false`.
+- The Swift compiler no longer exhausts small thread stacks on deeply nested
+  sources. Its parser and compiler passes need far less stack per nesting level,
+  so sources at the expression and statement nesting limits compile on a 512 KB
+  thread, the stack of Swift concurrency tasks, also in Debug builds. Before,
+  about 25 nested calls could crash an unoptimized build there.
+- The Swift compiler rejects reserved keywords such as `empty`, `record` or `if`
+  as argument labels, map literal keys and extension function names with
+  `parse.syntax`, like the C# compiler; `to`, `nothing`, the math constants and
+  prefix intrinsic names stay valid labels. It also accepts `°` (`degree`)
+  wherever an identifier is expected, such as a map key.
 - The Swift compiler reports every diagnostic of a failing phase, as C# does,
   instead of only the first: the parser resumes after a syntax error at the next
   declaration or statement, and validation reports all semantic errors in the

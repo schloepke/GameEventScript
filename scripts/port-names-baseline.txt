@@ -114,7 +114,6 @@ only	csharp	Compiler	GesSeriesTermSelectorNode
 only	csharp	Compiler	GesShuffleSelectorNode
 only	csharp	Compiler	GesSortSelectorNode
 only	csharp	Compiler	GesSourceDocument
-only	csharp	Compiler	GesSourceNesting
 only	csharp	Compiler	GesStatementBodyNode
 only	csharp	Compiler	GesStatementNode
 only	csharp	Compiler	GesSumSelectorNode
@@ -123,7 +122,6 @@ only	csharp	Compiler	GesSyntaxTreeNodeLists
 only	csharp	Compiler	GesTagLiteralExpressionNode
 only	csharp	Compiler	GesTakePatternSelectorNode
 only	csharp	Compiler	GesTextLiteralExpressionNode
-only	csharp	Compiler	GesTokenReader
 only	csharp	Compiler	GesTypeCastExpressionNode
 only	csharp	Compiler	GesTypeCheckExpressionNode
 only	csharp	Compiler	GesTypeConstructorExpressionNode
@@ -157,7 +155,6 @@ only	csharp	Runtime	GesSeriesStep
 only	csharp	Runtime	GesSystemEndpoints
 only	csharp	Runtime	GesTagBuffer
 only	csharp	Runtime	GesTagRules
-only	csharp	Runtime	GesTextLiteralReader
 only	csharp	Runtime	GesTextPayload
 only	csharp	Runtime	GesVirtualMachineDumper
 only	csharp	Runtime	GesVmDistinctBuilder
@@ -167,6 +164,8 @@ only	csharp	Runtime	GesVmListBuilder
 only	csharp	Runtime	GesVmMapBuilder
 only	csharp	Runtime	GesVmOrderBuilder
 only	csharp	Runtime	GesVmUnitCalculation
+only	csharp	Syntax	GesDocumentNodeKind
+only	csharp	Syntax	GesTokenReader
 only	swift	Compiler	GesArgument
 only	swift	Compiler	GesAssembly
 only	swift	Compiler	GesComponentRow
@@ -188,17 +187,16 @@ only	swift	Runtime	GesClockSource
 only	swift	Runtime	GesCollectionBuilder
 only	swift	Runtime	GesCollectionOperators
 only	swift	Runtime	GesComparison
-only	swift	Runtime	GesDataConstructionShape
 only	swift	Runtime	GesMapEntry
 only	swift	Runtime	GesMapValueIterator
 only	swift	Runtime	GesMath
 only	swift	Runtime	GesMessageNames
 only	swift	Runtime	GesMessageStorage
-only	swift	Runtime	GesNames
 only	swift	Runtime	GesOperand
 only	swift	Runtime	GesRegisterFile
 only	swift	Runtime	GesRegisterOutput
 only	swift	Runtime	GesRuntimeError
+only	swift	Runtime	GesSchemaNodeInfo
 only	swift	Runtime	GesSelectionOrder
 only	swift	Runtime	GesSha256
 only	swift	Runtime	GesSignatureStorage
@@ -209,4 +207,4 @@ only	swift	Runtime	GesValueFactory
 only	swift	Runtime	GesValueKind
 only	swift	Runtime	GesValueObject
 only	swift	Runtime	GesValueOutput
-only	swift	SyntaxHighlighter	GesGrammar
+only	swift	Syntax	GesNames

@@ -1,6 +1,8 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
+@_spi(Syntax) import GameEventScriptSyntax
+
 /// The host's reusable, private register virtual machine. It owns the resumable execution state,
 /// executes Programs through `begin` and `runSlice`, and is the only writer of its registers.
 final class GesVirtualMachine {

@@ -34,7 +34,7 @@ def main():
             command[0] = str(installed[0])
         # Temporary compatibility experiment: never alter the main branch's Runtime.
         stage = ARTIFACTS / 'wasm-source'
-        for source in [package, ROOT / 'implementation/swift/GameEventScriptRuntime', ROOT / 'implementation/swift/GameEventScriptCompiler', ROOT / 'implementation/swift/GameEventScriptSyntaxHighlighter']:
+        for source in [package, ROOT / 'implementation/swift/GameEventScriptRuntime', ROOT / 'implementation/swift/GameEventScriptCompiler', ROOT / 'implementation/swift/GameEventScriptSyntax']:
             target = stage / source.relative_to(ROOT)
             target.mkdir(parents=True, exist_ok=True)
             shutil.copy2(source / 'Package.swift', target / 'Package.swift')
@@ -59,10 +59,10 @@ def main():
         (shim / 'clock.c').write_text(notice + '#include "CardGameWasiClock.h"\n#include <time.h>\nint64_t card_game_monotonic_microseconds(void) { struct timespec t; if (clock_gettime(CLOCK_MONOTONIC, &t) != 0) return -1; return (int64_t)t.tv_sec * 1000000 + t.tv_nsec / 1000; }\n')
         manifest = runtime / 'Package.swift'
         runtime_manifest = manifest.read_text()
-        target_anchor = 'targets: [.target(name: "GameEventScriptRuntime")]'
+        target_anchor = 'targets: [.target(name: "GameEventScriptRuntime", dependencies: ['
         if target_anchor not in runtime_manifest:
             raise RuntimeError('Runtime manifest changed; review the isolated Wasm patch')
-        manifest.write_text(runtime_manifest.replace(target_anchor, 'targets: [.target(name: "CardGameWasiClock"), .target(name: "GameEventScriptRuntime", dependencies: ["CardGameWasiClock"])]'))
+        manifest.write_text(runtime_manifest.replace(target_anchor, 'targets: [.target(name: "CardGameWasiClock"), .target(name: "GameEventScriptRuntime", dependencies: ["CardGameWasiClock", '))
         clock = runtime / 'Sources/GameEventScriptRuntime/Api/Clock.swift'
         clock_text = clock.read_text().replace('    import WASILibc', '    import WASILibc\n    import CardGameWasiClock')
         body = '        var value = timespec()\n        clock_gettime(CLOCK_MONOTONIC, &value)\n        return Int64(value.tv_sec) * 1_000_000 + Int64(value.tv_nsec) / 1_000'

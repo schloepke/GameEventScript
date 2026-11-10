@@ -271,7 +271,9 @@ discriminator is `gesBlock: case`. It supports:
 | `nativeHandlers` | sequence | no | declarative portable native handlers |
 | `stepActions` | mapping | no | ordered host actions performed immediately before a named step's Receive |
 | `messageApi` | mapping | `messageApi` only | signature and message input |
-| `valueApi` | mapping | `valueApi` only | portable value construction, comparison and copy input |
+| `valueApi` | mapping | `valueApi` only | portable value construction, comparison, copy or literal parsing input |
+| `schemaApi` | mapping | `schemaApi` only | Schema sources, a root, parameters and what to encode, decode or check |
+| `documentApi` | mapping | `documentApi` only | GES document text or root value, with optional printing |
 | `externalTypeApi` | mapping | `externalTypeApi` only | portable external-type catalog input |
 | `binaryFixture` | mapping | `programBinary` only | immutable `.gesb` fixture manifest entry |
 | `performance` | mapping | `performance` only | workload configuration |
@@ -438,15 +440,15 @@ is invalid. This is portable diagnostic input, not an exception-class selector.
 
 Each action mapping contains exactly one of `loadProgram`, `detachProgram`,
 `subscribeHandler`, or `unsubscribeHandler`, plus an optional boolean
-`expectResult` or diagnostic `expectError`. Its operation value is an existing program
-or native-handler ID of the appropriate kind. Only a program listed in
+`expectResult` or diagnostic `expectError` or `expectErrors`. Its operation value
+is an existing program or native-handler ID of the appropriate kind. Only a program listed in
 `deferredPrograms` may be a `loadProgram` target. Actions execute in metadata
 order before emits. `expectResult` compares the portable boolean operation
 result. Repeated detach/unsubscribe operations return false after the first
 state change; load/subscribe ensure the target is active and return true.
 
-Only `loadProgram` accepts `expectError`, which is mutually exclusive with
-`expectResult`. It uses the structured diagnostic fields described below,
+Only `loadProgram` accepts `expectError` and `expectErrors`, which are mutually
+exclusive with `expectResult`. It uses the structured diagnostic fields described below,
 requires `phase: link` and a `code`, and may constrain context such as
 `programName`:
 
@@ -460,6 +462,8 @@ stepActions:
         programName: rules
 ```
 
+`expectError` constrains the first diagnostic of the failure; `expectErrors`,
+exclusive with it, is a non-empty list that matches every diagnostic in order.
 The runner requires the load to fail with that diagnostic, handles the expected
 failure, and continues subsequent actions and steps. Successful loading or a
 different diagnostic fails the assertion. The diagnostic is an action result,
@@ -692,8 +696,8 @@ last-entry-wins semantics before scalar-ordinal key sorting.
 ## Expectation fields by test kind
 
 Supported V1 kinds are `scriptApi`, `compileError`, `loadError`, `messageApi`,
-`valueApi`, `externalTypeApi`, `compileMetadata`, `bytecode`, `performance`, and
-`bytecodeSnapshot`, and `programBinary`. A kind's
+`valueApi`, `documentApi`, `schemaApi`, `externalTypeApi`, `compileMetadata`, `bytecode`,
+`performance`, and `bytecodeSnapshot`, and `programBinary`. A kind's
 required core capabilities are additive to explicit `requires.core`.
 
 The presence of `nativeHandlers` implicitly requires `native-handlers`.
@@ -735,13 +739,16 @@ error:
 ```
 
 `phase` and `code` are required. Other fields are optional exact constraints.
-For `programName` and `handlerName`, an explicit YAML null requires that the
-observed context field be absent; omitting the key leaves that field unconstrained.
+For `programName` and `handlerName`, and in a link expectation also for
+`sourceName`, `line`, `column`, `endLine` and `endColumn`, an explicit YAML null
+requires that the observed field be absent; omitting the key leaves that field
+unconstrained.
 Human-readable messages and technical details cannot be expectations. The
 diagnostic contract is [Diagnostics](../Diagnostics.md).
 
-A `compileError` expectation may instead contain `errors`, a non-empty ordered
-list of the same constraint objects. It describes the complete diagnostic list:
+A `compileError` or `loadError` expectation may instead contain `errors`, a
+non-empty ordered list of the same constraint objects. It describes the complete
+diagnostic list:
 the observed diagnostics must have the same count and order, and each must match
 its constraint. `error` and `errors` cannot be combined.
 
@@ -835,6 +842,119 @@ value:
   length: 1
   equal: true
   equalHash: true
+```
+
+> **Since: Unreleased** — member access input
+
+Alternatively, `valueApi.access` reads members and traverses a Map or Record, and
+allows no other `valueApi` field. It holds either `value` or `external`, an
+adapter-owned external value that counts its field reads: `counting` declares the field `x`
+and returns the number of reads, `typed` declares `power: Float<Watt>` and returns the
+integer 3, `failing` declares `x`, whose getter raises an unanticipated platform failure, `faulting`
+declares `x`, whose getter raises a deliberate fault with the code `probe.fault`, `ordered`
+declares `z` and then `a`, whose getters raise deliberate faults with the codes `probe.z` and
+`probe.a`, and `sparse` declares `c`, `b` and `a`, of which `c` returns 1, `b` no value and `a` 3.
+`fromEntries: true` builds the outer `value` through the ordered-entries factory
+instead of the parallel one. `members` lists name paths, each read link by link.
+The expectation `access` may constrain `normalized`, `members` (one value per path),
+`traversal` (the entries in order, `null` when the value is no Map or Record) and
+`externalFieldReads`, and also `asMapPresent` and `hostObject` (whether `AsMap` and
+`ExternalValue` return something). `readFields` lists names read with `ReadField`,
+`materialize` counts `MaterializedMap` calls, `toJson: true` calls the value's JSON
+serialization once and `toMessageJson: true` that of a message with the value as its argument;
+the expectations `readFields` (one value or `null` each), `materialized` (one entry list or
+`null` each), `json` and `messageJson` (the text) report them, or `{ failure: code }` for a
+getter failure. The expectation `length` reports the value's `Length`, read first.
+
+```yaml
+valueApi:
+  access:
+    fromEntries: true
+    value:
+      type: ":Map"
+      entries:
+        - { key: a, value: { type: ":Number.int64", value: "1" } }
+    members: [[a], [missing]]
+```
+
+```yaml
+access:
+  members:
+    - { type: ":Number.int64", value: "1" }
+    - { type: ":Nothing" }
+  traversal:
+    - { key: a, value: { type: ":Number.int64", value: "1" } }
+```
+
+> **Since: Unreleased** — literal parsing input
+
+Alternatively, `valueApi.literal` parses `text` through the public literal
+parsing API, with `mode` `lenient` or `strict`, and allows no other `valueApi`
+field. Its expectation is a `literal` mapping with exactly one outcome: the
+recognized `value`, `unrecognized: true` (strict mode only), or the reported
+`limit` with its stable `name` and numeric `limit`. For limit-sized inputs,
+`text` may instead be a mapping with a non-empty `repeat` Text, a positive
+`count`, and optional `prefix` and `suffix` Text; the runner sends `prefix`,
+`count` copies of `repeat` and `suffix` as one Text of at most 2,097,152
+Unicode scalars, so adapters always receive plain Text.
+
+```yaml
+valueApi:
+  literal:
+    text: "[1, 2"
+    mode: strict
+```
+
+```yaml
+literal:
+  unrecognized: true
+```
+
+### `schemaApi`
+
+> **Since: Unreleased**
+
+Requires `schema-api` and no GES source. `schemaApi.sources` lists schema source texts, named
+`schema0.gess` and so on; `root` names a declaration and `parameters` maps parameter names to
+literals or to Int64 or Binary64 Number or Quantity values in the `valueApi.value` transport. `encode` holds a value with the `valueApi.value` transport, which `encodeExternal: true` wraps as an adapter-owned external value when it is a Record, with the getter of `failingField` raising an unanticipated platform failure or, with `failingCode`, a deliberate fault with that code, which `encoded` reports as `{ failure: code }`, and of which `externalFields` lists the Record fields to wrap in the same way, `baselineExternal: true` to wrap the Record in `baseline` as well, with the getter of `baselineFailingField` failing in the same way, which `encoded` and `decoded` report, `encodeBuffer` an optional
+buffer size without a `baseline`, `baseline` a value with the same transport that makes `encode` and `decode` work on
+deltas against it, `decode` lowercase hexadecimal bytes, `decodeLimit` an optional byte limit, `key`
+bytes whose key is read, `dump` bytes to dump, `dumpBaseline` the full record that makes `dump` read a delta, `deltaEncode` the bytes of `record` and `baseline` and `deltaDecode` those of `delta` and `baseline` for `GesSchemaDelta`, `describe: true` to observe the root's description, and `document` a document text to check. `bind` overrides whether the
+root is bound, which by default holds for a root without a document. The expectation `schema`
+contains any of `error` (`code` with optional `line` and `column`; it stands alone), `canonical`,
+`hash`, `bindingHash`, `maxByteCount`, `encoded` (`bytes` or `error` with `code` and optional
+`path`), `decoded` (`value` and `byteCount`, or `error`), `deltaEncoded` (`bytes` or `error`), `deltaDecoded` (`record` and `deltaByteCount`, or `error`), `key`, `dump` (`text` and `valid`), `description` and `document` (`ok: true` or
+`error`). The contract is [GES schemas](../Schemas.md).
+
+### `documentApi`
+
+> **Since: Unreleased**
+
+Requires `document-api` and no GES source. `documentApi.text` reads
+[GES document](../Documents.md) text through the public document API; it may use
+the same repeated-text mapping as `valueApi.literal.text`. Alternatively,
+`documentApi.value` builds a document from a value with the `valueApi.value`
+encoding and an optional `schema` mapping with `kind` (`type` or `file`) and
+`name`. An optional `print` is `true` or a mapping of `indentation`, `lineWidth`
+and `prefixedUnits`; a document built from a value requires it. Printing reads
+the printed text back with the same implementation.
+
+The expectation is a `document` mapping with exactly one outcome: the expected
+root `value` with an optional `schema`, an `error` with `code` (without the
+`document.` prefix), `line`, `column` and, for `limitExceeded` only, `limitName`
+and `limit`, or `rejected: true` for a value that cannot be a document. An error
+expectation reads text without printing. A value expectation must hold for the
+read document and for the printed-and-reread document; printed text itself is
+never compared, because document layout is not normative.
+
+```yaml
+documentApi:
+  text: "a: 1\na: 2"
+```
+
+```yaml
+document:
+  error: { code: duplicateKey, line: 2, column: 1 }
 ```
 
 ### `externalTypeApi`

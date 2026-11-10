@@ -136,8 +136,8 @@ Suffix      = UnitSpelling | "%"
 ```
 
 `UnitSpelling` is any unit symbol, ASCII spelling or prefixed spelling listed in
-[Language quantities](../Language.md#quantities), such as `m/s`, `deg/s`, `ms`
-or `kWh`. The suffix is the longest spelling that ends the token; it must
+[Language quantities](../Language.md#quantities), such as `m/s`, `deg/s`, `ms`,
+`kWh` or `/s`. The suffix is the longest spelling that ends the token; it must
 directly follow a digit, `Infinity` or `NaN`, so `NaN` itself has no newton
 suffix. All digits and signs are ASCII. Special tokens and suffixes are
 case-sensitive.
@@ -252,6 +252,10 @@ unitless. `NaN` produces `nothing` with or without a suffix.
 | `2km` | Int64 Quantity `2000m` |
 | `3ms` | nearest Binary64 to decimal `0.003`, with unit `s` |
 | `1.5kWh` | Int64 Quantity `5400000J` |
+| `2m^2` or `2m²` | Int64 Quantity `2m²` |
+| `14mW/m²` | nearest Binary64 to decimal `0.014`, with unit `W/m²` |
+| `2t` | Int64 Quantity `2000kg` |
+| `4/s` | Int64 Quantity `4Hz` |
 | `10%` or `1e1%` | unitless Number with the same numeric value as `0.1` |
 | `100%` | unitless Int64 `1` |
 

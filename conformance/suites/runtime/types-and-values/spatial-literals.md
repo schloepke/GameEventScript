@@ -296,7 +296,7 @@ steps:
         - name: "value"
           value:
             type: ":Text"
-            value: ":Vector(x: 1m, z: 3m)"
+            value: ":Vector(x: 1m, y: 3m)"
     local:
       - name: "Done"
         args:
@@ -304,8 +304,8 @@ steps:
             value:
               type: ":Vector"
               x: "1"
-              y: "0"
-              z: "3"
+              y: "3"
+              z: "0"
               unit: ":meter"
     runtimeLimits:
       exclude:
@@ -516,6 +516,7 @@ on Start(value) { emit Done(parsed: parse value) }
 | input-02 | Start | completion | |
 | input-03 | Start | completion | |
 | input-04 | Start | completion | |
+| input-04-gap | Start | completion | |
 | input-05 | Start | completion | |
 | input-06 | Start | completion | |
 | input-07 | Start | completion | |
@@ -627,6 +628,23 @@ steps:
             value:
               type: ":Text"
               value: ":Vector(z: 1, y: 2)"
+    runtimeLimits:
+      exclude:
+        - any: true
+  input-04-gap:
+    input:
+      args:
+        - name: "value"
+          value:
+            type: ":Text"
+            value: ":Vector(x: 1, z: 2)"
+    local:
+      - name: "Done"
+        args:
+          - name: "parsed"
+            value:
+              type: ":Text"
+              value: ":Vector(x: 1, z: 2)"
     runtimeLimits:
       exclude:
         - any: true
@@ -2279,7 +2297,7 @@ steps:
         - name: "value"
           value:
             type: ":Text"
-            value: ":Point(x: 1m, z: 3m)"
+            value: ":Point(x: 1m, y: 3m)"
     local:
       - name: "Done"
         args:
@@ -2287,8 +2305,8 @@ steps:
             value:
               type: ":Point"
               x: "1"
-              y: "0"
-              z: "3"
+              y: "3"
+              z: "0"
               unit: ":meter"
     runtimeLimits:
       exclude:
@@ -2499,6 +2517,7 @@ on Start(value) { emit Done(parsed: parse value) }
 | input-02 | Start | completion | |
 | input-03 | Start | completion | |
 | input-04 | Start | completion | |
+| input-04-gap | Start | completion | |
 | input-05 | Start | completion | |
 | input-06 | Start | completion | |
 | input-07 | Start | completion | |
@@ -2610,6 +2629,23 @@ steps:
             value:
               type: ":Text"
               value: ":Point(z: 1, y: 2)"
+    runtimeLimits:
+      exclude:
+        - any: true
+  input-04-gap:
+    input:
+      args:
+        - name: "value"
+          value:
+            type: ":Text"
+            value: ":Point(x: 1, z: 2)"
+    local:
+      - name: "Done"
+        args:
+          - name: "parsed"
+            value:
+              type: ":Text"
+              value: ":Point(x: 1, z: 2)"
     runtimeLimits:
       exclude:
         - any: true

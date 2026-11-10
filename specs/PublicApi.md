@@ -15,9 +15,11 @@ callback forms, but it must preserve the responsibilities, state transitions,
 ordering, errors, and data described here. The public C# API snapshot is a
 regression tool for the C# binding and is not the portable API definition.
 
-The optional standalone presentation API is specified in
-[Syntax highlighting](SyntaxHighlighting.md). Its C# and Swift packages have no
+The optional standalone presentation API for GES, GESA and GES documents is
+specified in [Syntax highlighting](SyntaxHighlighting.md). Its C# and Swift packages have no
 Runtime, Compiler, Bridge or Conformance dependency and are not part of VM execution.
+The optional build-time Generator package writes typed schema code; see
+[Schema code generation](#schema-code-generation).
 
 ## Scope and dependency direction
 
@@ -75,8 +77,8 @@ require them.
 ## Embedding API baseline and compatibility
 
 The reviewed application API baseline consists of Runtime, the optional Compiler
-and the native Bridge in each implementation. SyntaxHighlighter is a separate
-optional product with its own [contract](SyntaxHighlighting.md). CLI and
+and the native Bridge in each implementation. Syntax is a separate product
+that Runtime builds on; its highlighting has its own [contract](SyntaxHighlighting.md). CLI and
 Conformance are not application library products. Public implementation details
 must not be inferred from private types, compiler SPI or the shape of generated
 code.
@@ -305,8 +307,9 @@ binary specifications and must reject undefined values at validation boundaries:
 - `BinaryBindKind`, `SectionType`, `SectionFlags`, and
   `DebugSymbolKind`.
 
-`BytecodeOpCode.ParseLiteral` exposes the portable `parse` operation at opcode
-`0xD9`, with operand and limit semantics owned by [Bytecode](Bytecode.md).
+`BytecodeOpCode.ParseLiteral` exposes the portable `parse` and `parse strict`
+operations at opcode `0xD9`, with operand, Strict flag and limit semantics owned
+by [Bytecode](Bytecode.md).
 
 `BytecodeInstructionUnits` supplies pure conversions between type names, units,
 and suffixes. Parse operations return absence for an unknown valid string;
@@ -317,7 +320,9 @@ predicate operations never use locale; formatting returns canonical GES text.
 `QuantityUnit` has one member per defined UnitId: C# `UnitNone`, `UnitDegree`,
 `UnitMeter`, `UnitSecond`, `UnitMeterPerSecond`, `UnitMeterPerSecondSquared`,
 `UnitKilogram`, `UnitNewton`, `UnitJoule`, `UnitWatt`, `UnitVolt`, `UnitAmpere`,
-`UnitHertz`, `UnitKelvin` and `UnitDegreePerSecond`, plus the invalid sentinel
+`UnitHertz`, `UnitSquareMeter`, `UnitCubicMeter`, `UnitWattPerSquareMeter`,
+`UnitKelvin`, `UnitDegreePerSecond`, `UnitDecibel`, `UnitWattPerKelvin` and
+`UnitJoulePerKelvin`, plus the invalid sentinel
 `UnitInvalid`; Swift uses the same cases in lower camel case (`.none`,
 `.meterPerSecond`, …), whose raw values are the portable unit names. C#
 `GesQuantityUnits.ToTypeName`/`ParseTypeName` convert portable names and
@@ -404,6 +409,12 @@ Dump allocation is outside the runtime hot path.
 `MessageSignature` is immutable content identified by normalized message name
 plus ordered parameter labels. Tags and values are not part of a signature.
 
+> **Since: Unreleased** — system endpoint names
+
+A signature may name a system endpoint to subscribe, but creates no Message from it:
+message creation and JSON decoding reject `initialization` and `undeliverable`, as
+defined by [Host runtime](HostRuntime.md).
+
 | Operation | Contract |
 | --- | --- |
 | `Create(name, parameters)` | Normalizes and copies the name and ordered labels. An absent parameter sequence means empty. Repeated labels remain part of the signature; constructing actual MessageArguments later rejects duplicate named labels while repeated `_` labels remain permitted. |
@@ -411,8 +422,8 @@ plus ordered parameter labels. Tags and values are not part of a signature.
 | `NormalizeParameterName(name)` | Trims portable ASCII edge whitespace; absent/empty becomes `_`; otherwise validates a portable identifier. |
 | `CreateSignatureId(name, parameters)` | Returns canonical `Name(label,...)` from normalized content. |
 | `Matches(message)` | True exactly when normalized name and complete signature ID are equal ordinally. Message tags and values are ignored. |
-| `CreateMessage(values)` | Binds values in parameter order. Returns absence when arity does not match or the signature is Empty. |
-| `WithArguments(values...)` | Same binding, but invalid arity is a synchronous argument error. |
+| `CreateMessage(values)` | Binds values in parameter order. Returns absence when arity does not match, the signature is Empty or it names a system endpoint. |
+| `WithArguments(values...)` | Same binding, but invalid arity or a system endpoint is a synchronous argument error. |
 
 Signature equality and hashing use canonical signature content. `Empty` is a
 read-only sentinel and cannot create a message.
@@ -461,6 +472,34 @@ iteration. C# dictionary factories belong to CSharpBridge and delegate to the
 portable ordered factories; their canonical ordering is governed by
 [Determinism](Semantics/Determinism.md).
 
+> **Since: Unreleased** — ordered entries, member reads, map traversal
+
+A Map or Record value can be created from ordered key-value entries. The last value
+of a duplicate key wins, and the result has canonical key order. The parallel key and
+value factories follow the same rule.
+
+`Value` reads a member by name: the field of a Record, the entry of a Map, the
+coordinate `x`, `y` or `z` of a Point or Vector, which keeps its unit. Anything else,
+and a missing name, gives Nothing, without an error. An external value gives Nothing
+and runs no field getter. A missing name and a stored Nothing read the same;
+`AsMap` with `ContainsKey` tells them apart. Lists have no such read, because the API
+counts from 0 and the language from 1.
+
+`Length` of an external value is the number of its declared fields. It runs no getter, so
+it also counts a field that a materialized map leaves out.
+
+`AsMap` returns only stored Map entries and Record fields. An external value is read
+in three ways, from the fastest: `ExternalValue` returns the host object itself,
+`ReadField(name)` runs one getter and applies the declared type, and `MaterializedMap`
+runs every getter into a Map. The last two propagate getter failures as a
+[runtime failure](#diagnostics-and-failure-transport) with a stable diagnostic; `AsMap` and
+the member read never run host code.
+
+A `ValueMap` can be traversed in canonical key order; `Length`, `Key(index)` and
+`Value(index)` are its minimal form.
+
+Each port spells these with the language's own means, without another library.
+
 `ValueKind`, `ValueUnit`, `HasValue`, `IsNothing`, `IsNumeric`, `HasUnit`,
 `Length`, `CustomTypeName`, coordinate/range/message/handler views, and typed
 read operations expose the active value. A typed `As...` operation on an
@@ -488,6 +527,117 @@ operation that supplied its backing storage.
 `IntegerRange` and `FloatRange` are immutable triples `(from, to, step)`; they do
 not enumerate by themselves. Range termination and overflow behavior belong to
 the deterministic language semantics.
+
+#### Literal parsing
+
+> **Since: Unreleased**
+
+`Value` recognizes one complete data literal from Text without a Host, with the
+rules of `parse` and `parse strict` as owned by
+[Text semantics](Semantics/Text.md#recognition-outside-a-program):
+
+| Operation | C# | Swift |
+| --- | --- | --- |
+| lenient | `GesValue GesValue.ParseLiteral(string input)` | `GesValue(literal:) throws` |
+| strict | `GesValue? GesValue.ParseLiteralStrict(string input)` | `GesValue(strictLiteral:) throws`, failable |
+
+Lenient parsing returns unrecognized input as unchanged Text. Strict parsing
+returns absence for unrecognized input and Nothing for the `nothing` literal.
+Both are synchronous and data-only: they never execute constructors or callbacks.
+Exceeding a fixed parsing limit fails with `GesLiteralLimitException` (C#) or
+`GesLiteralLimitError` (Swift), exposing the stable `LimitName`/`limitName`
+and the numeric `Limit`/`limit`. C# rejects a null input with
+`ArgumentNullException` and unpaired surrogates with `ArgumentException`.
+
+#### Documents
+
+> **Since: Unreleased**
+
+`Document` is an immutable [GES document](Documents.md): a Map or Record root
+with an optional schema reference, read from and printed to `.gesd` text.
+
+| Concept | C# | Swift |
+| --- | --- | --- |
+| document | `sealed class GesDocument : IEquatable<GesDocument>` | `struct GesDocument: Hashable` |
+| from a root value | `new GesDocument(GesValue value, GesDocumentSchema? schema = null)` | `GesDocument(_ value:, schema:) throws` |
+| read | `static GesDocument GesDocument.Parse(string text)` | `GesDocument(parsing:) throws` |
+| print | `string Print(GesDocumentFormat? format = null)` | `text(format:) -> String` |
+| root, schema, entries | `Value`, `Schema`, `Entries` | `value`, `schema`, `entries` |
+| schema reference | `sealed record GesDocumentSchema(GesDocumentSchemaKind Kind, string Name)` | `struct GesDocumentSchema` with `kind`, `name`, `.type(_:)`, `.file(_:)` |
+| schema kind | `enum GesDocumentSchemaKind { Type, File }` | `enum GesDocumentSchemaKind { case type, file }` |
+| layout options | `sealed record GesDocumentFormat` with `Indentation`, `LineWidth`, `PrefixedUnits` | `struct GesDocumentFormat` with `indentation`, `lineWidth`, `prefixedUnits` |
+| reading error | `GesDocumentException` with `Code`, `Line`, `Column`, `LimitName`, `Limit` | `GesDocumentError` with `code`, `line`, `column`, `limitName`, `limit`, `message` |
+| single-value printer | `string GesValue.Format(GesDocumentFormat? format = null)` | `GesValue.formatted(_:) throws -> String` |
+
+Building a document validates the root and schema as owned by the document
+specification; C# throws `ArgumentException` and Swift `GesApiError.invalidArgument`.
+A schema reference validates its name the same way. Reading throws only the
+document error, whose `Code` is one of the stable `document.*` codes; C# also
+rejects a null text and unpaired surrogates like `ParseLiteral`. Printing never
+fails: documents cannot contain values without literal text. The single-value
+printer rejects the same values as the document constructor: External values,
+Dice rolls below 1 and Records whose type name is not a `TypeName`. Indentation is
+limited to `MaximumIndentation`/`maximumIndentation` (100). C# layout options reject
+an indentation outside 0 to 100 and a line width below 1; Swift prints such values
+clamped to that range. Equality compares the root values and schema references.
+
+
+### Schemas
+
+> **Since: Unreleased**
+
+GES schemas ([Schemas](Schemas.md)) live in Runtime. Apart from the value path, they use neither
+`GesValue` nor the VM, and report their own error types.
+
+| Concept | C# | Swift |
+| --- | --- | --- |
+| source | `readonly struct GesSchemaSource(string name, string text)` | `struct GesSchemaSource` with `init(name:text:)` |
+| schema set | `sealed class GesSchemaSet` with `static Parse(params GesSchemaSource[])`, `static Parse(string)` | `final class GesSchemaSet` with `init(sources:) throws`, `init(parsing:) throws` |
+| declarations | `Schemas`, `Schema(name)` | `schemas`, `schema(_:)` |
+| document check by header | `CheckDocument(text, parameters)` | `checkDocument(_:parameters:)` |
+| description | `sealed class GesSchema` with `Name`, `Kind`, `Hash`, `CanonicalForm`, `Parameters`, `Fields`, `Tags`, `Members`, `Bind(parameters)`, `CheckDocument(text, parameters)` | `final class GesSchema` with `name`, `kind`, `hash`, `canonicalForm`, `parameters`, `fields`, `tags`, `members`, `bind(parameters:)`, `checkDocument(_:parameters:)` |
+| description parts | `enum GesSchemaKind`, `GesSchemaTypeKind`; `sealed class GesSchemaParameterInfo`, `GesSchemaFieldInfo`, `GesSchemaType`, `GesSchemaAxisInfo`; `readonly struct GesSchemaBound` with `ToDouble()` | `enum GesSchemaKind`, `GesSchemaTypeKind`; `struct GesSchemaParameterInfo`, `GesSchemaFieldInfo`, `GesSchemaType`, `GesSchemaAxisInfo`, `GesSchemaBound` with `doubleValue` |
+| parameters | `sealed class GesSchemaParameters` with `With(name, literal)`, `With(name, long, unit)`, `With(name, double, unit)` | `final class GesSchemaParameters` with `with(_:literal:)`, `with(_:_:unit:)` |
+| bound schema | `sealed class GesBoundSchema` with `Schema`, `Name`, `MaxByteCount`, `Hash`, `BindingHash`, `HasKey`, `Field(path)`, `Member(name)`, `MemberIndex(name)` | `final class GesBoundSchema` with `schema`, `name`, `maxByteCount`, `hash`, `bindingHash`, `hasKey`, `field(_:)`, `member(_:)`, `memberIndex(_:)` |
+| field handle | `readonly struct GesSchemaField` with `Path` | `struct GesSchemaField` with `path` |
+| writer | `ref struct GesSchemaWriter(schema, Span<byte>)`: `SelectMember`, `SelectAlternative`, `WriteBoolean`, `WriteInteger`, `WriteNumber`, `WriteIndex`, `WriteTag`, `WriteText`, `BeginList`, `BeginNested`, `WriteAbsent`, `Finish` | `struct GesSchemaWriter(_:into:)` over an `UnsafeMutableRawBufferPointer`, with the same operations |
+| reader | `ref struct GesSchemaReader(schema, ReadOnlySpan<byte>, byteLimit)`: `ReadMember`, `ReadAlternative`, `ReadKey`, `ReadPresence`, `ReadBoolean`, `ReadInteger`, `ReadNumber`, `ReadIndex`, `ReadTag`, `ReadText`, `BeginList`, `BeginNested`, `Finish` | `struct GesSchemaReader(_:data:byteLimit:)` over an `UnsafeRawBufferPointer`, with the same operations |
+| dump | `static GesSchemaDump.Read(schema, data)` returning `GesSchemaDumpResult` with `Text`, `IsValid` | `GesSchemaDump.read(_:data:)` returning `GesSchemaDumpResult` with `text`, `isValid` |
+| source and binding error | `GesSchemaException` with `Code`, `SourceName`, `Line`, `Column` | `GesSchemaError` with `code`, `sourceName`, `line`, `column`, `message` |
+| wire error | `GesWireException(code, path)` with `Code`, `Path` and a public constant per `wire.*` code | `GesWireError(code:path:)` with `code`, `path` and a static constant per code |
+| bit writer | `ref struct GesBitWriter(Span<byte>)`: `BitPosition`, `Write(value, width)`, `WriteBytes`, `SetBit`, `Rewind`, `Finish` | `struct GesBitWriter(into:)`: `bitPosition`, `write(_:width:)`, `writeBytes(_:)`, `setBit(_:)`, `rewind(to:)`, `finish()` |
+| bit reader | `ref struct GesBitReader(ReadOnlySpan<byte>, byteLimit)`: `BitPosition`, `Read(width, path)`, `ReadBytes`, `Require`, `Seek`, `Finish` | `struct GesBitReader(data:byteLimit:)`: `bitPosition`, `read(_:path:)`, `readBytes(into:path:)`, `require(_:path:)`, `seek(to:)`, `finish()` |
+| wire rules | `static class GesWireRules`: `IsValidUtf8`, `IsTagName`, `QuantizedIndex`, `WrappedQuantizedIndex`, `QuantizedValue`, `WrappedIndex`, `WriteDeltaRange`, `ReadDeltaRange` | `enum GesWireRules`: `isValidUTF8(_:)`, `isTagName(_:)`, `quantizedIndex(_:lowerValue:upperValue:tenPower:numerator:lower:path:)`, `wrappedQuantizedIndex(_:tenPower:numerator:lower:period:path:)`, `quantizedValue(_:lower:numerator:tenPower:)`, `wrappedIndex(_:lower:period:)`, `writeDeltaRange(_:index:held:maxIndex:wrapping:deltaRange:deltaWidth:width:)`, `readDeltaRange(_:held:maxIndex:wrapping:deltaRange:deltaWidth:width:path:)` |
+| deltas | `static GesSchemaDelta.Encode(schema, record, baseline, buffer)`, `Decode(schema, delta, baseline, buffer, byteLimit)` returning `GesSchemaDeltaDecoded` with `ByteCount`, `DeltaByteCount` | `GesSchemaDelta.encode(_:record:baseline:into:)`, `decode(_:delta:baseline:into:byteLimit:)` returning `GesSchemaDeltaDecoded` with `byteCount`, `deltaByteCount` |
+| value path (Runtime) | `static GesSchemaValues.Encode`, `Decode` returning `GesSchemaDecoded`, `ReadKey`, each `Encode` and `Decode` also with a baseline value | `GesSchemaValues.encode`, `decode` returning `GesSchemaDecoded`, `readKey`, each `encode` and `decode` also with `baseline:` |
+| dump | `static GesSchemaDump.Read(schema, data)`, also with a baseline record | `GesSchemaDump.read(_:data:)`, also with `baseline:` |
+
+`GesSyntaxLanguage` adds `Gess` (Swift `.gess`) for highlighting schema sources.
+
+### Schema code generation
+
+> **Since: Unreleased**
+
+The Generator package (C# `GameEventScript.Generator`, namespace `GameEventScript.Generator`; Swift product
+`GameEventScriptGenerator`) computes the [generation layout](Schemas.md#generation-layout) and writes the
+[generated code](Schemas.md#tools) that `ges schema layout` and `ges schema generate` print, so that build
+integrations generate without the CLI. It depends on Syntax and Runtime only; neither Runtime nor Compiler
+depends on it, so a game never ships it. It is synchronous, reads no files and returns the text.
+
+| Concept | C# | Swift |
+| --- | --- | --- |
+| generator | `static class GesSchemaGenerator` with `Layout(set, roots, parameters)` and `Generate(set, roots, parameters, options)`, returning the text | `enum GesSchemaGenerator` with `layout(_:roots:parameters:)` and `generate(_:roots:parameters:options:)`, throwing and returning the text |
+| options | `sealed class GesSchemaGenerateOptions` with `Language`, `Namespace`, `Access`, `Values`, `CheckedExclusivity` | `struct GesSchemaGenerateOptions` with `init(language:namespace:access:values:checkedExclusivity:)` and the same properties |
+| target language | `enum GesSchemaLanguage` with `CSharp`, `Swift` | `enum GesSchemaLanguage` with `csharp`, `swift` |
+| access | `enum GesSchemaAccess` with `Public`, `Internal` | `enum GesSchemaAccess` with `public`, `internal` |
+| generation error | `GesGeneratorException` with `Code` | `GesGeneratorError` with `code`, `message` |
+
+The roots are schema, message or message set names of the set; a repeated root counts once, and an empty
+list fails with `generate.usage`. Errors of the sources, of binding and of parameters keep their `schema.*`
+codes and types (`GesSchemaException`, `GesSchemaError`), so a root that names no declaration fails with
+`schema.unknownName`; a request that cannot be generated fails with a `generate.*` code. The options default to C#, no namespace, public access, no value conversion and
+unchecked exclusivity in Swift classes, as the CLI's defaults do. Equal inputs give identical text in every
+port.
 
 ## Host construction and lifecycle API
 
@@ -827,6 +977,16 @@ rescaling components. This applies equally to constructor arguments, direct
 field reads, and fields materialized by conversion to Map. A missing spatial
 unit constraint must never silently strip an existing unit.
 
+Constructor arguments and field values follow their declared builtin type before
+a constructor or script sees them. This applies equally to direct field reads
+and fields materialized by conversion to Map, so a field declared
+`Float<Watt>` reads an integer `3` as `3W` and a Tag field reads Text `'turret'`
+as `#turret`. A field declared with a custom type name keeps its value.
+Nothing stays Nothing under every declared type, for constructor arguments and
+field values alike; it is never converted into a value of that type, such as
+the Tag `#nothing`, Text `nothing` or Boolean `false`. A Tag value keeps its name
+under a Tag declaration.
+
 Construction copies sequences and rejects null entries, duplicate fields,
 duplicate constructor signatures, duplicate parameter labels, constructors for
 another type, and constructor parameters that are not declared fields.
@@ -858,10 +1018,15 @@ type; mismatch becomes a runtime diagnostic and Nothing. `SetNothing()` rejects
 construction without throwing a script exception. Omitting a result also yields
 Nothing. The call object and arguments must not be retained.
 
-`ExternalValue.Definition` identifies the declarative type. `GetField(name)`
+`ExternalValue.Definition` identifies the declarative type; it is immutable, and all values
+of a type should share one. `GetField(name)`
 returns a Value or absence. It must be synchronous and deterministic for an
-immutable logical external value during one handler. Platform object identity,
-reflection, and lifetime management are adapter responsibilities.
+immutable logical external value during one handler; between handlers its fields may
+change. The runtime keeps no field value: a script's field read runs that field's
+getter and no other, and each conversion to Map, JSON or schema encoding runs all of
+them again, in declaration order. The first failing declared field therefore decides the
+failure, and a field without a value is left out. Platform object identity, reflection, and lifetime management are adapter
+responsibilities.
 
 ## Diagnostics and failure transport
 
@@ -877,7 +1042,12 @@ variable, and global definition. `DiagnosticCodes` exposes stable named constant
 `Decode(formatErrorCode)` maps a `.gesb` format failure to its stable decode code.
 
 `CompileException`, `DynamicLinkException`, `ProgramFormatException`, and the
-abstract fatal-runtime base are C# failure transports carrying diagnostics. A
+abstract fatal-runtime base are C# failure transports carrying diagnostics. A failing
+external field getter read directly through a Value or a schema encoding surfaces through
+that base, and a host's own subclass keeps its diagnostic at every runtime boundary.
+`DynamicLinkException` carries the ordered `Diagnostics` of a link failure, one
+per call site of a failed import, and `Diagnostic` as their first one; see
+[Diagnostics](Diagnostics.md#link-call-sites). A
 language may use thrown errors or result unions. Callers must be able to inspect
 the same structured portable fields without parsing text. Runtime diagnostics
 normally flow through Observer and ExecutionResult rather than escaping callbacks;
@@ -939,8 +1109,8 @@ contracts remain in [Runner.md](Conformance/Runner.md).
 the Reader.
 
 Package and assembly identities use `GameEventScript.Runtime`,
-`GameEventScript.Compiler`, `GameEventScript.CSharpBridge`, and
-`GameEventScript.SyntaxHighlighter`. Their shared C# namespace root is
+`GameEventScript.Compiler`, `GameEventScript.CSharpBridge`,
+`GameEventScript.Syntax`, and `GameEventScript.Generator`. Their shared C# namespace root is
 `GameEventScript`; the module name does not add another namespace layer to
 the public `GameEventScript.Api` contracts.
 
@@ -1031,17 +1201,18 @@ Reader options retain the three portable retention modes and bounded read limits
 
 Invalid public construction uses structured `throws` errors. Signature message
 creation returns an optional for mismatched arity. Decode failures use
-`GesProgramFormatError`; linking uses `GesDynamicLinkError`;
+`GesProgramFormatError`; linking uses `GesDynamicLinkError`, whose
+`diagnostics` lists every link diagnostic and `diagnostic` their first;
 execution results carry `GesDiagnostic`. Explicit callback faults use
 `GesExtensionFaultError`; unexpected errors receive the owning runtime
-boundary's stable classification. Call objects and borrowed argument views must
+boundary's stable classification. Every failure that ends a handler conforms to
+`GesFatalRuntimeError`, the counterpart of the C# fatal-runtime base, under the same rules. Call objects and borrowed argument views must
 not outlive their synchronous callback.
 
 Strict value equality and hashing preserve kind, unit, and Unicode-scalar
-identity. `materializedMap()` reads immutable Map/Record contents or lazily
-materializes declared external fields, propagating field failures. It does not
-perform a source-language cast. The random generator has seed, sequence, and
-entropy initializers; each Host constructs its own generator.
+identity. `materializedMap()` does not perform a source-language cast. The random
+generator has seed, sequence, and entropy initializers; each Host constructs its own
+generator.
 
 Swift Conformance uses the independent Python runner and an internal executable
 adapter. The adapter returns raw compiler/runtime observations and optional

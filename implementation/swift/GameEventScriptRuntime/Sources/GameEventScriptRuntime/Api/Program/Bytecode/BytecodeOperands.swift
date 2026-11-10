@@ -41,7 +41,7 @@ enum GesOperand: Int, Sendable {
     case localRegisterDelta
     case diceCount
     case diceSideCount
-    case componentCount
+    case spatialStart
     case countImmediate
     case indexImmediate
     case fromImmediate
@@ -147,8 +147,8 @@ extension GesBytecodeOpCode {
         case .`stageTag`: [.tag]
         case .`stagePercentage`: [.floatImmediate]
         case .`createDice`: [.targetRegister, .diceCount, .diceSideCount]
-        case .`createVector`: [.targetRegister, .componentCount]
-        case .`createPoint`: [.targetRegister, .componentCount]
+        case .`createVector`: [.targetRegister, .spatialStart]
+        case .`createPoint`: [.targetRegister, .spatialStart]
         case .`createList`: [.targetRegister]
         case .`createMap`: [.targetRegister, .keyNameList]
         case .`createRange`: [.targetRegister, .fromRegister, .toRegister]

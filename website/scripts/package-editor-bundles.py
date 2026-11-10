@@ -26,7 +26,7 @@ def package_bundles():
     for variant, filename in VARIANTS:
         source = ROOT / "tools/editors" / variant
         files = [("LICENSE", ROOT / "LICENSE")]
-        directories = ("GameEventScript",) if variant == "Sublime Text" else ("GameEventScript.tmbundle", "GameEventScriptAssembler.tmbundle")
+        directories = ("GameEventScript",) if variant == "Sublime Text" else ("GameEventScript.tmbundle", "GameEventScriptAssembler.tmbundle", "GameEventScriptDocument.tmbundle")
         for bundle in directories:
             for file in sorted((source / bundle).rglob("*")):
                 if is_metadata(file.relative_to(source)):

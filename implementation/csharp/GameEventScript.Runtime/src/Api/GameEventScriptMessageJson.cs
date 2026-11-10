@@ -25,13 +25,14 @@ public sealed partial class GameEventScriptMessage
     /// <summary>Serializes this message and its complete portable data graph as a canonical V1 JSON envelope.</summary>
     /// <returns>The canonical V1 JSON envelope.</returns>
     /// <exception cref="GesMessageFormatException">The graph is unsupported or exceeds limits.</exception>
+    /// <exception cref="GesFatalRuntimeException">An external field getter failed.</exception>
     public string ToJson()
         => GesJson.Write(GesJson.Object(("version", GesValue.GesInteger(1)), ("message", new GesMessageJsonCodec().EncodeMessage(this, 0))));
 
     /// <summary>Reads a complete V1 message envelope without invoking constructors or host callbacks.</summary>
     /// <param name="json">The complete JSON document.</param>
     /// <returns>The reconstructed immutable message.</returns>
-    /// <exception cref="GesMessageFormatException">The envelope is invalid, unsupported or over-limit.</exception>
+    /// <exception cref="GesMessageFormatException">The envelope is invalid, unsupported or over-limit, or names a system endpoint.</exception>
     public static GameEventScriptMessage FromJson(string json)
         => new GesMessageJsonCodec().DecodeMessage(GesMessageJsonCodec.Envelope(GesJson.Read(json), "message"), 0);
 }

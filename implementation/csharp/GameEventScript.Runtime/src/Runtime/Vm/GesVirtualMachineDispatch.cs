@@ -143,7 +143,7 @@ internal partial class GesVirtualMachine
                     }
                     case ParseLiteral:
                     {
-                        var parsed = GesLiteralParser.Parse(in Register(instruction.XRegister), context, this);
+                        var parsed = GesLiteralParser.Parse(in Register(instruction.XRegister), (instruction.UnitAndFlags & 0x40) != 0, context, this);
                         GesLiteralEvaluation.Start(parsed, this, context, instruction.DestinationRegister);
                         break;
                     }

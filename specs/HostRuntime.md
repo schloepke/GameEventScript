@@ -268,6 +268,11 @@ implementation and therefore does not depend on C# reflection.
   signature's declared order.
 - `Receive(message)` captures current subscription snapshots and queues the
   message locally. It never invokes the outbound sink.
+- **Since: Unreleased:** Only the host uses the system endpoints `initialization` and
+  `undeliverable`. No Message can be constructed with those names and no Program can
+  create one, as [Program validation](Bytecode.md) rejects them outside handler entries. An observer
+  still sees the host's initialization message, and `Receive` rejects it. Signatures
+  and handlers keep the names to subscribe.
 - `Emit(message)` does the same from a running handler.
 - `Publish(message)` first attempts the same local enqueue and then calls the
   host's single synchronous `IGesPublishSink`, if configured.
@@ -357,8 +362,8 @@ handlers during the pump.
 
 ### Literal parsing limits
 
-Each `parse` invocation has fixed portable bounds, applied only while executing
-`ParseLiteral`: at most 1,048,576 input Unicode scalars (`MaxLiteralInputScalars`),
+Each `parse` and `parse strict` invocation has fixed portable bounds, applied only while executing
+`ParseLiteral` or the public literal parsing API: at most 1,048,576 input Unicode scalars (`MaxLiteralInputScalars`),
 64 nested List/Map/Dice/Vector/Point containers (`MaxLiteralDepth`), and 65,536
 total List items, Map entries, Dice rolls, and explicitly supplied Vector/Point
 components across the whole input (`MaxLiteralItems`). A Dice, Vector, or Point
@@ -371,12 +376,22 @@ exceeds it. Input length is checked before recognition. Nesting and item bounds
 are checked incrementally before creating the next container or reading the
 next item; trailing syntax errors do not undo a limit already encountered.
 
+One invocation also materializes at most `MaxRangeItems` Range items into Lists
+in total, as in `:List(:Range(...))` forms; each materialization adds its full
+Range length before the List is created. The total uses the Host's configured
+`MaxRangeItems` and replaces the per-cast Range check inside `parse`: a single
+Range longer than the limit already exceeds the total, so it exhausts the
+handler like any other literal bound instead of producing an empty List.
+
 Exceeding a bound exhausts the current handler with the existing runtime-limit
 mechanism and the corresponding stable limit name and numeric bound. It does
 not return original Text as a recognition fallback or emit a partial value.
 Previously completed effects remain observable and subsequent queued messages
 can run normally. The counters are local to one parse invocation; programs
-without `parse` maintain no parsing state or counters.
+without `parse` maintain no parsing state or counters. The public literal
+parsing API has no handler to exhaust and instead fails with a literal limit
+error, as owned by [Text semantics](Semantics/Text.md#recognition-outside-a-program).
+[GES documents](Documents.md#limits) apply the same bounds per document.
 
 ### Iterator and Generated-Collection Limits
 

@@ -38,7 +38,8 @@ MODULES = (
     ("Runtime", "implementation/csharp/GameEventScript.Runtime/src", "implementation/swift/GameEventScriptRuntime/Sources"),
     ("Compiler", "implementation/csharp/GameEventScript.Compiler/src", "implementation/swift/GameEventScriptCompiler/Sources"),
     ("Bridge", "implementation/csharp/GameEventScript.CSharpBridge/src", "implementation/swift/GameEventScriptSwiftBridge/Sources"),
-    ("SyntaxHighlighter", "implementation/csharp/GameEventScript.SyntaxHighlighter/src", "implementation/swift/GameEventScriptSyntaxHighlighter/Sources"),
+    ("Generator", "implementation/csharp/GameEventScript.Generator/src", "implementation/swift/GameEventScriptGenerator/Sources"),
+    ("Syntax", "implementation/csharp/GameEventScript.Syntax/src", "implementation/swift/GameEventScriptSyntax/Sources"),
 )
 
 # Permanent, deliberate single-port types (normalized names). Temporary
@@ -46,16 +47,19 @@ MODULES = (
 PLATFORM_ONLY = {
     ("csharp", "Runtime", "IsExternalInit"): "C# compiler support type for init accessors on netstandard2.1",
     ("csharp", "Compiler", "IsExternalInit"): "C# compiler support type for init accessors on netstandard2.1",
+    ("csharp", "Schema", "IsExternalInit"): "C# compiler support type for init accessors on netstandard2.1",
+    ("swift", "Schema", "GesSchemaNodeInfo"): "Swift keeps the reference-free GesSchemaNode apart from its names, so the hot path counts no references",
     ("csharp", "Bridge", "IsExternalInit"): "C# compiler support type for init accessors on netstandard2.1",
+    ("csharp", "Syntax", "IsExternalInit"): "C# compiler support type for init accessors on netstandard2.1",
     ("csharp", "Runtime", "GesReadOnlyArray"): "idiomatic mapping: Swift exposes [T]",
     ("csharp", "Runtime", "GesValueSlice"): "idiomatic mapping: zero-copy C# list view; Swift exposes [GesValue]",
     ("csharp", "Compiler", "GesProgramBuilderEntry"): "C# 14 static extension container; Swift extends GameEventScriptProgram directly",
-    ("csharp", "Runtime", "GesQuantityUnits"): "C# extension container: C# enums cannot declare the members Swift GesQuantityUnit has",
-    ("csharp", "Runtime", "GesFatalRuntimeError"): "C# exception base class; Swift error structs have no inheritance",
+    ("csharp", "Syntax", "GesQuantityUnits"): "C# extension container: C# enums cannot declare the members Swift GesQuantityUnit has",
+    ("csharp", "Compiler", "GesTokenValues"): "C# extension container for token numbers; Swift reads them through GesCompilerSupport",
     ("swift", "Runtime", "GesValueError"): "idiomatic mapping: C# throws BCL argument exceptions for invalid values",
     ("swift", "Runtime", "GesApiError"): "idiomatic mapping: C# throws BCL ArgumentException/InvalidOperationException",
     ("swift", "Runtime", "GesMessageError"): "idiomatic mapping: C# throws BCL argument exceptions for invalid message input",
-    ("swift", "SyntaxHighlighter", "GesHighlightingError"): "idiomatic mapping: C# throws BCL argument exceptions for invalid input",
+    ("swift", "Syntax", "GesHighlightingError"): "idiomatic mapping: C# throws BCL argument exceptions for invalid input",
     ("swift", "Runtime", "GesCompilerSupport"): "idiomatic mapping: @_spi(Compiler) surface; C# uses InternalsVisibleTo",
     ("csharp", "Bridge", "GesBridgeContextExtensions"): "C# extension-method container; Swift extends GesContext directly",
     ("csharp", "Bridge", "GesBridgeHostExtensions"): "C# extension-method container; Swift extends GameEventScriptHost directly",

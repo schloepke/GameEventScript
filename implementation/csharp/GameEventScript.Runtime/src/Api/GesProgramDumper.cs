@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
 using GameEventScript.Runtime;
+using GameEventScript.Syntax;
 using static GameEventScript.Api.GesOpcodePrinter.OperandPart;
 
 namespace GameEventScript.Api;
@@ -414,7 +415,7 @@ internal static class GesProgramDumper
             LocalRegisterDelta => Immediate(instruction.Count),
             DiceCount => Immediate(instruction.Count),
             DiceSideCount => Immediate(instruction.ImmediateY),
-            ComponentCount => Immediate(instruction.ImmediateX),
+            SpatialStart => Immediate(instruction.ImmediateX),
             CountImmediate => Immediate(instruction.OpCode == GesBytecodeOpCode.SplitText ? instruction.AU : instruction.ImmediateY),
             IndexImmediate => Immediate(instruction.Index),
             FromImmediate => Immediate(instruction.ImmediateX),
@@ -496,6 +497,11 @@ internal static class GesProgramDumper
             or GesBytecodeOpCode.Clamp)
         {
             if ((instruction.UnitAndFlags & 0x40) != 0) builder.Append(" mode=Numeric");
+            return;
+        }
+        if (instruction.OpCode == GesBytecodeOpCode.ParseLiteral)
+        {
+            if ((instruction.UnitAndFlags & 0x40) != 0) builder.Append(" mode=Strict");
             return;
         }
         if (GesOpcodePrinter.IsResultSend(instruction.OpCode))

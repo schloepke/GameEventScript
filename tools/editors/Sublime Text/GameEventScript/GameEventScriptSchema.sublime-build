@@ -1,0 +1,28 @@
+// Copyright 2026 Stephan Schlöpke
+// SPDX-License-Identifier: Apache-2.0
+{
+  "cmd": [
+    "ges",
+    "schema",
+    "check",
+    "$file"
+  ],
+  "selector": "source.gameeventscript.schema",
+  "working_dir": "$file_path",
+  "env": {
+    "NO_COLOR": "1"
+  },
+  "encoding": "utf-8",
+  "file_regex": "^(.*)\\(([0-9]+),([0-9]+)\\): (.*)$",
+  "variants": [
+    {
+      "name": "Format",
+      "cmd": [
+        "ges",
+        "schema",
+        "format",
+        "$file"
+      ]
+    }
+  ]
+}

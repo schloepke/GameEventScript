@@ -39,7 +39,7 @@ extension GesVirtualMachine {
             return registers[target].setFloat(result, unit: unit)
         default: break
         }
-        guard !registers[y].hasUnit || registers[x].unit == registers[y].unit else { return registers[target].setNothing() }
+        guard !registers[y].hasUnit || registers[x].unit == registers[y].unit, !percentageMismatch(x, y) else { return registers[target].setNothing() }
         let unit: GesQuantityUnit = registers[y].hasUnit ? .none : registers[x].unit
         if registers[x].spatialValue != nil || registers[y].spatialValue != nil { return registers[target].setNothing() }
         let left = registers[x].asNumber
@@ -59,7 +59,7 @@ extension GesVirtualMachine {
             }
             return registers[target].setFloat((Double(av) / Double(bv)).rounded(.down), unit: unit)
         }
-        guard !registers[y].hasUnit || registers[x].unit == registers[y].unit else { return registers[target].setNothing() }
+        guard !registers[y].hasUnit || registers[x].unit == registers[y].unit, !percentageMismatch(x, y) else { return registers[target].setNothing() }
         let unit: GesQuantityUnit = registers[y].hasUnit ? .none : registers[x].unit
         let left = registers[x].asNumber
         let right = registers[y].asNumber

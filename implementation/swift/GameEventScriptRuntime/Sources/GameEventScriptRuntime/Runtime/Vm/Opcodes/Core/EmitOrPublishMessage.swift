@@ -6,8 +6,7 @@ extension GesVirtualMachine {
         let valueMessage = [.emitMessageValue, .emitMessageValueWithTags, .publishMessageValue, .publishMessageValueWithTags].contains(i.opcode)
         var message: GameEventScriptMessage?
         if valueMessage {
-            let value = self.value(Int(i.word1))
-            message = value.messageValue ?? value.signatureValue?.makeMessage([])
+            message = value(Int(i.word1)).messageValue
         } else {
             guard let signature = linked!.outbound[i.word0] else {
                 raiseError("runtime.invalidMessageBinding")
@@ -17,10 +16,8 @@ extension GesVirtualMachine {
         }
         guard var message else { return }
         if [.emitMessageWithTags, .emitMessageValueWithTags, .publishMessageWithTags, .publishMessageValueWithTags].contains(i.opcode) {
-            do { message = try Self.tagged(message, values(valueMessage ? i.word2 : i.word1)) } catch {
-                if valueMessage { throw error }
-                return
-            }
+            guard let taggedMessage = try? Self.tagged(message, values(valueMessage ? i.word2 : i.word1)) else { return }
+            message = taggedMessage
         }
         if [.publishMessage, .publishMessageWithTags, .publishMessageValue, .publishMessageValueWithTags].contains(i.opcode) { c.publish(message) } else { c.emit(message) }
     }

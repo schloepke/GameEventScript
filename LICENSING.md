@@ -47,7 +47,8 @@ SwiftPM manifests place the required `swift-tools-version` directive first,
 followed by the two license-comment lines. Python uses equivalent `#` comments.
 
 The header applies to handwritten production and test C/C#/Swift, Python tooling, product documentation,
-specifications, guides, README files, C# project files, the scoped EditorConfig,
+specifications, guides, README files, C# project files, GES example programs, documents
+and schemas (`.ges`, `.gesd`, `.gess`), the scoped EditorConfig,
 the root Git ignore file, MSBuild configuration, GitHub Actions workflows,
 solution and shell entry-point files, and XML-based TextMate bundle files.
 
@@ -66,6 +67,8 @@ by the top-level license but intentionally have no inserted header:
 - strict JSON (including `global.json`), TSV, plist-independent JSON TextMate grammars, and other formats
   that do not admit comments without changing their schema;
 - standalone `.ges` test inputs whose exact source is part of the test;
+- checked-in output of `ges schema generate` (`*.g.cs` and the Swift files under `Generated`
+  test directories), because tests require its text to equal the generator's;
 - operating-system metadata such as `.DS_Store`.
 
 The nearest bundle README carries the license header for headerless JSON editor

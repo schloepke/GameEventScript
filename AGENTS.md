@@ -9,15 +9,17 @@
 - Portable C# Runtime: `implementation/csharp/GameEventScript.Runtime/src`.
 - Portable C# Compiler: `implementation/csharp/GameEventScript.Compiler/src`.
 - C# adapters: `implementation/csharp/GameEventScript.CSharpBridge/src`.
+- C# schema code Generator: `implementation/csharp/GameEventScript.Generator/src`.
 - Independent Python Conformance runner: `conformance/runner`.
 - Internal C# Conformance adapter: `implementation/csharp/GameEventScript.Conformance/adapter`.
-- Optional C# highlighter: `implementation/csharp/GameEventScript.SyntaxHighlighter`.
-- Optional Swift highlighter: `implementation/swift/GameEventScriptSyntaxHighlighter`.
+- C# Syntax module (lexer, parser, validator, highlighter): `implementation/csharp/GameEventScript.Syntax`.
+- Swift Syntax module: `implementation/swift/GameEventScriptSyntax`.
 - C# CLI tool: `implementation/csharp/GameEventScript.Tool/src`.
 - C# native tests: each module’s `tests` directory; shared test support and
   repository/distribution gates: `implementation/csharp/verification`.
 - Swift Runtime package: `implementation/swift/GameEventScriptRuntime`.
 - Swift Compiler package: `implementation/swift/GameEventScriptCompiler`.
+- Swift schema code Generator package: `implementation/swift/GameEventScriptGenerator`.
 - Swift native adapters: `implementation/swift/GameEventScriptSwiftBridge`.
 - Swift CLI package and `ges` executable: `implementation/swift/GameEventScriptTool`.
 - Swift Conformance package and adapter: `implementation/swift/GameEventScriptConformance`.
@@ -136,8 +138,8 @@ publish.
 - Public API changes additionally update XML documentation,
   `specs/PublicApi.md`, and the approved API snapshot.
 - Bytecode or `.gesb` changes additionally update the owning specification,
-  validators, canonical and invalid fixtures, Golden bytes, and affected GESA
-  snapshots.
+  validators, canonical and invalid fixtures, Golden bytes, affected GESA
+  snapshots, and the VS Code viewer's `gesb-reader.js`.
 - New portable behavior belongs in Markdown Conformance. Native C# tests are
   reserved for implementation details, adapters, repository gates, bootstrap
   behavior, and performance/allocation properties that cannot use the portable
@@ -169,20 +171,47 @@ The normative owners are `specs/ProgramModel.md`, `specs/Bytecode.md`,
 
 ## Language and compiler
 
-The separate Compiler package depends only on Runtime. Runtime and CSharpBridge
+The separate Compiler package depends only on Runtime and Syntax; Runtime depends
+only on Syntax, which depends on no GES module. Runtime and CSharpBridge
 must never depend on Compiler or Conformance. Shared value semantics, runtime
 literal parsing, Program data and codecs remain in Runtime. Source-file I/O
 belongs to the CLI or embedding; the portable compiler accepts source text.
 
-- Source types use PascalCase, for example `:Number`, `:Quantity(m)`, and
-  `:Unit`. Extension namespaces and functions remain lowercase, for example
+- Source types use PascalCase, optionally as `_`-joined segments, for example
+  `:Number`, `:Quantity(m)`, `:Unit` and `:Unit_Weapon`. Extension namespaces and functions remain lowercase, for example
   `:math.distance`.
 - Quantity units form a closed set with stable UnitIds (specs/Bytecode.md) and
-  one central table per runtime (C# `GesQuantityUnits`, Swift `QuantityUnits.swift`)
-  for symbols, prefixed literal spellings and the product/quotient derivation
-  table. Lexer, `parse`, constant folding and the VM all read that table; the
+  one central table per port in the Syntax module (C# `GesQuantityUnits`, Swift
+  `QuantityUnits.swift`) for symbols, prefixed literal spellings and the
+  product/quotient derivation table. Runtime depends on Syntax for this table and
+  the text and name rules; Swift Runtime re-exports `GesQuantityUnit` and other
+  modules reach Syntax internals through `@_spi(Syntax)`. Lexer, `parse`, constant folding and the VM all read that table; the
   Swift `@GesField` macro mirrors the unit names because it cannot import the
   runtime. Integer division, percentages and points keep derivation-free rules.
+- The lexer lives in the Syntax module of both ports and is lossless: each token
+  carries `FullStart`/`Start`/`End` offsets, and its leading trivia holds inline
+  whitespace, `//` comments and a leading BOM, so the tokens reproduce the source
+  exactly. Numeric token values stay in the Compiler. `python3
+  scripts/test-syntax-roundtrip.py` checks coverage on every corpus source and
+  equal token streams of both ports; `test-swift.sh` runs it, C# CI with
+  `--port csharp`.
+- The parser (`GesSyntaxParser`) also lives in Syntax. It builds the lossless
+  syntax tree with error nodes and reports `parse.syntax` and
+  `parse.sourceNestingExceeded` diagnostics; of each expression it keeps only
+  its nesting depth, range and literal shape. The Compiler's `GesSyntaxBinder`
+  builds the semantic tree from a tree without errors by reading each node's
+  tokens in parser order. A declaration or statement with a syntax error
+  becomes one error node from its start through the recovery point; a
+  nesting-limit stop turns the innermost open statement and the rest of the
+  source into one. The parser also records each name token's role and each
+  expression node's diagnostic range. `GesSyntaxValidator` checks the rules of
+  one source on that tree (spelling, repeated parameters, arguments, fields and
+  bindings, shadowing, bare names without a visible binding or module
+  declaration as `validate.unresolvedVariable`, system endpoints, removed
+  types); the Compiler validator keeps the rules that need other sources, the
+  catalog or the runtime.
+  `--trees` checks token coverage, nesting and identical trees, roles and
+  ranges, error nodes included, for every source in both ports.
 - Module identifiers are dot-separated lowercase components with optional
   digits.
 - `constant $name be LITERAL` declares a program-wide compile-time scalar.
@@ -198,8 +227,10 @@ belongs to the CLI or embedding; the portable compiler accepts source text.
   relocation identical; `compile.loop-invariants` snapshots both outputs.
 - Local declarations use only `let name be expression`. Conversions belong to
   the expression, for example `let value be input as :Number`.
-- Only variable bindings may use a canonical `_number` suffix. Other names may
-  contain digits without underscores according to their owning grammar.
+- Only variable bindings may use a canonical `_number` suffix. Type and message
+  names join uppercase-starting segments with single `_`, such as `:Unit_Weapon`
+  and `Unit_Fire`; the `_` forms no hierarchy. Other names may contain digits
+  without underscores according to their owning grammar.
 - Calls are acyclic. Callable overload identity is name plus ordered external
   argument labels, never declared types. Functions and predicates cannot share
   a base name.
@@ -222,16 +253,67 @@ belongs to the CLI or embedding; the portable compiler accepts source text.
 - `:Record("Type", fields)` reconstructs immutable data without a constructor.
   Message/value JSON (`ToJson`/`FromJson`, Swift `json()`/`init(json:)`) is an explicit Runtime-only V1 codec; external
   exports become Record snapshots. Local Publish retains direct value delivery.
+- `parse strict` shares recognition and limits with `parse` but yields Nothing
+  instead of the original Text (ParseLiteral Strict flag `0x40`). The data-only
+  API `GesValue.ParseLiteral`/`ParseLiteralStrict` (Swift `init(literal:)`/
+  `init?(strictLiteral:)`) never resolves Program Record constructors and throws
+  `GesLiteralLimit...` on limits instead of exhausting a handler.
+- GES documents (`.gesd`, specs/Documents.md) use the literal syntax of `parse`
+  with comments, line-break separators, duplicate-key errors and `document.*` error
+  codes with line/column. The Syntax module's `GesDocumentReader` reads them into
+  a node tree and reports reading errors; Runtime builds the values and keeps
+  construction errors and the Range total (specs/Syntax.md#documents). The number
+  grammar (`GesNumberLiteral`) and form parameters (`GesLiteralForms`) live in
+  Syntax and serve `parse` too, whose parser has no document mode. `GesDocument` holds a Map or Record root and an
+  optional schema reference; schemas are references only. Reading is normative
+  per port; printed layout is not, only the print/read roundtrip.
+  `python3 scripts/test-document-roundtrip.py` exchanges printed documents
+  between C# and Swift; `test-swift.sh` runs it.
 - `[:split on separator]` returns Nothing for empty pieces; whitespace mode
   collapses the specified Unicode White_Space set. No CSV interpretation.
 - Integral Int64-representable Range components normalize to exact integer
   ranges, including floating API inputs. Ranges and built-in Series remain lazy.
 - Vector/Point text uses `:Vector(x: ..., y: ..., z: ...)` and `:Point(...)`.
-  `parse` recognizes numeric positional or ordered labeled components with
-  matching units and preserves kind, binary64 components, and unit on roundtrip.
+  `parse` recognizes numeric positional components or a labeled run without gaps
+  with matching units and preserves kind, binary64 components, and unit on
+  roundtrip. Source uses the same run rule, rejects the literals `true` and `false`
+  as components and alone may lift a Vector or Point in positional form.
 
-The complete language contract is `specs/Language.md`; text and number details
+The Syntax module's tokens, tree, roles, fragments and validation split are
+owned by `specs/Syntax.md`. The complete language contract is `specs/Language.md`; text and number details
 are owned by `specs/Semantics/Text.md` and `specs/Semantics/Numbers.md`.
+
+## Schemas
+
+`.gess` files (specs/Schemas.md) describe data formats. The Syntax module reads their
+declarations and highlights them; the `Api/Schema` folder of Runtime checks their rules, binds parameters,
+computes the canonical form and FNV-1a 64 hash, and holds the allocation-free
+`GesSchemaWriter` and `GesSchemaReader`, the dump and the document check. `GesSchema` is the
+immutable description of one declaration with its fields; binding turns it into the flat layout of `GesBoundSchema`. Apart from `GesSchemaValues`, which converts
+Records and Messages, that folder uses neither `GesValue` nor the VM, which a repository test enforces;
+the document check leaves the construction of explicit forms to Runtime's document reading.
+Unity receives it as a precompiled assembly, so it stays within the `netstandard2.1` API: no
+`BitOperations`, `Unsafe`, `UInt128` or runtime code generation, and the hot path has no
+`init` setters, Reflection or `unsafe` in its API. Quantization formulas use no addition next to a
+multiplication, so that no compiler can fuse them. Bytes stay byte-identical between the ports;
+`python3 scripts/test-schema-roundtrip.py` compares real bytes, hashes and fuzzed decoding
+against an independent oracle, and `test-swift.sh` runs it. `GesSchemaDelta` converts between full records and deltas on bytes, comparing wire
+values; a baseline is the last full record the other side holds, and writer and reader only lend it their bit access.
+Writer and reader build on the public `GesBitWriter`, `GesBitReader` and `GesWireRules`, which generated
+schema code calls with constants. The separate Generator package (C# `GameEventScript.Generator`, Swift
+`GameEventScriptGenerator`) depends only on Syntax and Runtime, which it reads through `InternalsVisibleTo`
+and `@_spi(Generator)`; Runtime and Compiler never depend on it, so games never ship it. It is a public
+NuGet package and SwiftPM product for build integrations (specs/PublicApi.md#schema-code-generation). It computes the
+language-neutral generation layout (specs/Schemas.md#generation-layout) behind `ges schema layout`, and both
+ports hold the C# and the Swift emitter behind `ges schema generate`, so every CLI writes every language.
+`python3 scripts/compare-schema-generation.py` requires identical layouts and generated code from both CLIs for
+every corpus schema, and `python3 scripts/test-generated-schemas.py` compiles the generated code of the corpus
+schemas as C# 9 and Swift 6 with warnings as errors and checks the corpus bytes, codes and paths; `--self-test`
+qualifies each, and `test-swift.sh` runs them. Checked-in goldens of
+`conformance/fixtures/SchemaGeneration/fleet.gess` (C# `Generator/tests/Generated`, Swift Conformance tests) feed
+both allocation gates; the C# test and `compare-schema-generation.py` require them current. Generated Swift classes
+mark stored properties `@exclusivity(unchecked)` unless `--checked-exclusivity`; `scripts/schema_generated_parties.py`
+generates with the checks for the roundtrip, so overlapping accesses in generated code trap there.
 
 ## Host and runtime
 
@@ -248,6 +330,12 @@ only native handlers or any number of additively loaded Programs.
 - Init emits retain enqueue order and wait for success; outbound publication waits for initial-group
   or later-instance success. PublishResult.OutboundDeferred reports staging.
   Ordinary Detach keeps its captured-snapshot semantics. See specs/HostRuntime.md.
+- Call-based link errors (a missing extension, a missing or mismatched external
+  type constructor) name the call and yield one diagnostic per call site,
+  located through the SourceMap and SourceArchive
+  (`GesDynamicLinkException.Diagnostics`, Swift
+  `GesDynamicLinkError.diagnostics`); without a SourceMap one unlocated
+  diagnostic remains. See specs/Diagnostics.md#link-call-sites.
 - Native `Subscribe` returns an idempotently detachable
   `GesSubscription`.
 - Instance and subscription handles use stable host-local registration IDs and
@@ -307,15 +395,23 @@ consumption cannot advance the restored parent stream.
 ## Messages, extensions, and external types
 
 Message arguments are ordered `GesMessageArgument` values. Argument
-order and labels define the signature. Core has no tuple or dictionary factory;
+order and labels define the signature. Core has no tuple or dictionary message factory;
 C# conveniences live in `CSharpBridge`, and dictionary binding requires a known
 signature.
+
+`initialization` and `undeliverable` are entry points only the host uses: handlers and
+signatures may name them, but no Message can be constructed with those names and the
+Program validator rejects outbound bindings and message shapes with them, so sending
+needs no check.
+Lowercase names in source are variables or calls of functions and predicates.
 
 Portable native handlers implement `IGesNativeMessageHandler`.
 Extensions receive the host's `GesContext`. External types use a
 declarative compiler catalog, a separate host runtime registry, and portable
 `IGesExternalValue` instances. CLR objects and Reflection-backed
 implementations remain in `CSharpBridge`.
+The runtime keeps no external field values, because they may change between handlers: a
+field read runs one getter, materializing runs all of them, and `AsMap` runs none.
 
 ## Conformance and verification
 
@@ -352,7 +448,7 @@ case counts, so adding a case updates them in the same change.
 
 ## Package distribution
 
-Public NuGet distribution consists of Runtime, Compiler, CSharpBridge and SyntaxHighlighter,
+Public NuGet distribution consists of Runtime, Compiler, CSharpBridge, Syntax and Generator,
 with one release version and canonical packages below
 `artifacts/csharp/packages/<version>`. Conformance is not packable. CLI NuGet
 packages are `GameEventScript.Tool` and `GameEventScript.Tool.Aot` plus six RID
@@ -360,16 +456,17 @@ implementation packages. `pack-csharp-tool.py` builds and consumes them locally;
 `csharp_tool_packages.py` owns the release allowlist. The C# Release Candidate
 workflow requires all native package checks before publication; upload native
 dependencies before the AOT pointer. Never publish from preparation/PR jobs. DLL distribution also excludes
-Conformance. Keep the explicit upload allowlist in
+Conformance; its `generator` set (Syntax, Runtime, Generator) is for build tools such as a
+Unity `Editor` folder. Keep the explicit upload allowlist in
 `scripts/publish-csharp-packages.sh`; its fake-client tests never publish.
 
-The root `Package.swift` is the public SwiftPM entry point with four library
+The root `Package.swift` is the public SwiftPM entry point with five library
 products: GameEventScriptRuntime, GameEventScriptCompiler,
-GameEventScriptSwiftBridge and GameEventScriptSyntaxHighlighter. They use existing sources and share a Git tag/version;
+GameEventScriptSwiftBridge, GameEventScriptSyntax and GameEventScriptGenerator. They use existing sources and share a Git tag/version;
 local development packages remain separate. CLI and TerminalSupport belong only to the
 separate GameEventScriptTool package; Conformance remains internal.
 The root package requires macOS 10.15 for the SwiftSyntax macro dependency. Three root test targets reuse the existing SwiftBridge,
-bridge-macro and SyntaxHighlighter test directories; never duplicate their sources
+bridge-macro and Syntax test directories; never duplicate their sources
 or add test products. `python3 scripts/test-swift-package.py` checks tagged Git
 consumption, the product/dependency graph, the root tests and Runtime-only builds in disposable
 repositories under artifacts, without changing this repository's tags.
@@ -388,8 +485,8 @@ Reader/Writer, GESA dumping, serial host lifecycle, the register VM, private
 random streams/scopes, extensions/external types, and runtime literal parsing.
 Runtime remains independent of Conformance and Compiler. The separate
 `implementation/swift/GameEventScriptCompiler` package depends only on Runtime
-and implements source parsing, validation, lowering, optimization, register
-allocation and Program generation. Conformance depends on both packages.
+and implements binding of the Syntax parser's tree, validation, lowering,
+optimization, register allocation and Program generation. Conformance depends on both packages.
 There is no extra Core package. File I/O belongs to the executable adapter/tests.
 
 Every Swift target, including executable and test targets, declares a direct
@@ -418,6 +515,12 @@ Immutable Message and Handler payloads are shared by reference behind read-only
 Swift value APIs. VM entry borrows arguments by index rather than allocating an
 argument array. Mutable callback arguments are borrowed only
 for the synchronous invocation.
+
+The recursive Swift parser and compiler passes keep payload-free dispatchers and
+one function per form: Debug builds reserve stack for every local and case
+binding of a function on each call. Their few `@inline(never)` attributes carry
+measured rationales. `CompilerStackDepthTests` compiles sources at the nesting
+limits on a 512 KB thread, the stack of Swift concurrency tasks.
 
 `./scripts/build-swift.sh` builds all SwiftPM packages independently in Release
 without .NET; `--configuration debug` selects Debug. `./scripts/format-swift.sh`
@@ -455,6 +558,8 @@ original Markdown expectations. The manifest binds each input to its binary
 and complete source-document SHA-256. No expected result is exported from C#.
 `verify-swift-bytecode.py` checks the explicit enum and operand registry against
 C#; ordinary package builds do not generate source.
+`verify-swift-parser-tokens.py` checks the keyword tokens Swift accepts as argument
+labels and extension names against C#; its controls are `test-swift-parser-tokens.py`.
 Both compilers must emit byte-identical Programs, including debug sections; only
 BuildMetadata names the producing implementation. `python3 scripts/compare-compiler-output.py`
 compiles every corpus program with both CLIs, requires equal ordered diagnostic codes and
@@ -462,7 +567,10 @@ start positions for rejected programs, checks that checked-in `examples/**/*.ges
 fresh C# compilation without debug information, and ratchets the remaining differences
 against `scripts/compiler-output-baseline.txt` (`--update-baseline` after a deliberate
 change); its controls are `python3 scripts/test-compiler-output-controls.py`. The full
-Swift test script runs both.
+Swift test script runs both. `python3 scripts/test-constructor-forms.py` runs a matrix of
+type-constructor forms through both CLIs as source, `parse`, `parse strict` and document
+and requires equal values, codes and first positions; the corpus owns the expected
+results (`--self-test` qualifies the comparison).
 
 `scripts/test-swift.sh` requires every supported shared Markdown case to pass with
 native Swift compilation, checks the performance scenarios for correctness without
@@ -502,14 +610,19 @@ ignored `artifacts`. Public Swift API changes update `specs/PublicApi.md` and
 `implementation/swift/api`. The separate `GameEventScriptTool` package implements
 the native Swift `ges` CLI; it depends on Runtime and Compiler, never Conformance.
 Filesystem/console I/O and POSIX terminal editing remain in that
-executable package. The optional standalone SyntaxHighlighter uses Foundation
-Regex and has no Runtime/Compiler dependency. Both CLIs delegate highlighting
-to their platform highlighter package. UTF-16 spans, TextMate scopes and incremental
-states are specified in specs/SyntaxHighlighting.md and share Markdown cases under
-conformance/highlighting. `scripts/test-swift-tool.sh` verifies CLI adapters and real
-process/PTY behavior without .NET; the full Swift test script includes it.
-The GES/GESA grammars are embedded from the canonical TextMate files; refresh
-them with `scripts/sync-highlighter-grammars.py` and verify with `--check`.
+executable package. Syntax has no Runtime/Compiler dependency. Syntax, Runtime,
+Compiler and Generator import no Foundation: `python3 scripts/verify-swift-portable-imports.py`
+allows only these modules and the platform C library (controls:
+`python3 scripts/test-swift-portable-imports.py`); Swift CI runs both. Both CLIs delegate highlighting to the Syntax module, which classifies GES
+from the syntax tree (token kinds, parser roles, owning nodes) and GESA with a small
+line lexer, and GES documents token by token with the document reader's first
+error; it parses editor fragments with top-level statements, while its
+diagnostics are those of a source. UTF-16 spans with categories and diagnostics are
+specified in specs/SyntaxHighlighting.md and share Markdown cases under
+conformance/highlighting; `test-syntax-roundtrip.py --trees` also requires equal
+fragment trees and highlighting in both ports. `scripts/test-swift-tool.sh` verifies
+CLI adapters and real process/PTY behavior without .NET; the full Swift test script
+includes it. TextMate grammars serve only the editor bundles.
 `install-swift-tool.sh` builds and installs/updates `ges` in `$HOME/.local/bin`
 or a selected `--tool-path`; the matching uninstall script removes only its
 owned binary. The C# `dotnet ges` and Swift `ges` commands can coexist.
@@ -559,7 +672,9 @@ The C# `dotnet ges` and Swift `ges` tools provide `compile`, `check`, `run`, and
 `dump`. The C# NuGet package remains `GameEventScript.Tool`; the installed command is
 `dotnet-ges`, resolved by `dotnet ges` when the tool directory is on `PATH`.
 `check` uses the complete compiler pipeline without writing a binary or executing
-handlers.
+handlers. `document check` reads `.gesd` files and reports the first error of each
+as `path(line,column): error document.code: message`; `document format` prints the
+recommended layout (`--color`, `-o`).
 `run` accepts jointly compiled sources or multiple `.gesb` files loaded in input
 order. All Programs are loaded into one host before execution. By default it
 drains initialization and then sends one `Main(args)` message, with a List of Text
@@ -583,7 +698,7 @@ disables it. Interactive verbose event traces are yellow when color is enabled.
 Live editing and Up/Down history work with or without `--color`.
 Live editing requires terminal input/output streams; redirected input
 uses the plain line reader. Terminal editing and its dependencies belong only to
-the CLI. Highlighting reuses the embedded GES and GESA TextMate grammars. The editor uses Ctrl+N
+the CLI. Highlighting uses the Syntax highlighter for GES and GESA. The editor uses Ctrl+N
 for a newline and Enter to submit; Shift/Alt+Enter depend on terminal modifier reporting.
 The CLI decodes Ghostty's extended xterm and CSI-u Shift/Alt+Enter sequences before
 the editor reads them; unrecognized or incomplete input remains unchanged at that boundary.
@@ -598,6 +713,18 @@ lists registered script and native handlers, excluding completed initialization
 and detached temporary inputs. `:dump <module|ID>` uses the loaded Program's GESA
 dump; `:source <module|ID>` shows only embedded source documents, with a successful
 notice if no source archive is present. Both support syntax colors via `--color`.
+`:show <file>` highlights a `.ges`, `.gesa`, `.gesd` or `.gess` file by extension and lists
+its errors with a caret line, without loading it or failing the session.
+Both CLIs measure terminal columns per grapheme cluster with one table generated by
+`python3 scripts/generate-terminal-widths.py` (C# `ToolTextWidths.cs`, Swift
+`ToolTextWidths.swift`), not libc `wcwidth`. C# clusters follow Swift Characters: they add
+the Indic conjunct rule GB9c that .NET lacks and join attaching and prepended scalars newer
+than .NET's Unicode data, from attacher, prepend, control, linker, consonant and extender
+data the generator takes from Swift's segmentation (so generation needs Swift) and the
+Swift tests verify from their own generated `ToolTextClusters.swift` when the running Swift
+runtime has the same Unicode version (on macOS it belongs to the OS); others skip visibly. `--check` requires identical tables and, with a
+matching Python Unicode version, current widths. Only the C# PrettyPrompt line editor keeps
+PrettyPrompt's own widths, which count each UTF-16 unit outside the BMP as a column.
 The editor and terminal source/dump displays use four-column tab stops. Tab
 expansion is presentation-only; redirected output and saved GESA retain tabs.
 Duplicate/anonymous modules can be selected by ID. These inspection commands
@@ -629,7 +756,7 @@ Generate public C#/Swift API references first with
 `python3 scripts/build-api-docs.py --language csharp` and `--language swift`.
 Website preparation rejects missing/stale references using source revision and
 input hashes; its failure controls are `python3 scripts/test-api-docs.py`.
-Only Runtime, Compiler, Bridge and SyntaxHighlighter appear in DocFX/DocC output.
+Only Runtime, Compiler, Bridge, Syntax and Generator appear in DocFX/DocC output.
 Transport Swift API output and the final website between CI jobs as tar archives;
 DocC filenames contain colons rejected by GitHub's individual-file artifact upload.
 Swift symbol extraction includes extension blocks; staging also checks public
@@ -681,13 +808,16 @@ the current task, and remove the entry in the completing change.
 
 ## Editor package generation
 
-`python3 scripts/sync-editor-bundles.py` derives Sublime GES/GESA grammars from
+`python3 scripts/sync-editor-bundles.py` derives Sublime GES/GESA/GESD/GESS grammars from
 canonical TextMate JSON and generates TextMate commands and both editors’ snippets.
 `tools/editors/support` owns completion data and adapter sources. Use `--check`
 and `python3 scripts/test-editor-bundles.py` to verify generated assets and adapters;
 installed bat/batcat adds isolated syntax-engine smoke tests. CLI actions require
 `ges` on the editor PATH. Completion is syntax-only, with no symbol inference or
 Language Server. Website downloads include the Sublime package for editors and bat.
+The VS Code extension opens `.gesb` files in a scriptless read-only viewer (`gesb-reader.js`,
+`gesb-viewer.js`) that shows structure without validating or decoding instructions;
+`scripts/test-vscode-gesb.cjs` covers it.
 
 
 CLI editor drafts live in `RunWorkspace`, outside the portable Host. `:edit`

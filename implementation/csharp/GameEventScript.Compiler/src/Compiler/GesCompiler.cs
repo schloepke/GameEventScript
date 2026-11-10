@@ -1873,7 +1873,7 @@ internal static partial class GesCompiler
                     y: GesOperand.RegisterList(inputs), a: GesOperand.TextList(ReadArgumentNames(constructor.Arguments)));
                 return;
             }
-            if (constructor.TypeName is "vector" or "point" && EmitSpatialConstructor(constructor, destination, context, state)) return;
+            if (constructor.TypeName is "vector" or "point" && (constructor.Arguments.Count != 1 || constructor.Arguments[0].Label is not null) && EmitSpatialConstructor(constructor, destination, context, state)) return;
 
             if (constructor.Arguments.Count == 1 && constructor.Arguments[0].Label is null && IsBuiltInCastType(constructor.TypeName))
             {
@@ -1968,6 +1968,7 @@ internal static partial class GesCompiler
             switch (operation)
             {
                 case GesUnaryOperator.Parse: _builder.ParseLiteral(destination, operand); break;
+                case GesUnaryOperator.ParseStrict: _builder.ParseLiteral(destination, operand, strict: true); break;
                 case GesUnaryOperator.Negate: _builder.Negate(destination, operand); return;
                 case GesUnaryOperator.Not: _builder.Not(destination, operand); return;
                 case GesUnaryOperator.HasValue: _builder.HasValue(destination, operand); return;
@@ -2158,13 +2159,13 @@ internal static partial class GesCompiler
             var lastComponent = GetSpatialComponentIndex(sourceArguments[^1].Label);
             if (firstComponent < 0 || lastComponent < 0) return null;
             if (lastComponent - firstComponent + 1 != sourceArguments.Count) return null;
-            if (firstComponent == 0 && sourceArguments.Count == 1) return null;
             for (var index = 0; index < sourceArguments.Count; index++)
             {
                 if (GetSpatialComponentIndex(sourceArguments[index].Label) != firstComponent + index) return null;
             }
 
-            return (firstComponent, sourceArguments);
+            // Start 0 may lift a spatial first component, which a labeled `x` must not do.
+            return (firstComponent == 0 ? 3 : firstComponent, sourceArguments);
         }
 
         private static int GetSpatialComponentIndex(string? label)

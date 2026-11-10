@@ -42,7 +42,7 @@ extension Tool {
                 session.inventory.writeHandlers()
                 continue
             }
-            if ![":edit", ":save", ":load", ":dump", ":source", ":unload", ":unloadAll", ":reload"].contains(command), command.hasPrefix(":"), command.dropFirst().allSatisfy({ $0 >= "a" && $0 <= "z" }) {
+            if ![":edit", ":save", ":load", ":show", ":dump", ":source", ":unload", ":unloadAll", ":reload"].contains(command), command.hasPrefix(":"), command.dropFirst().allSatisfy({ $0 >= "a" && $0 <= "z" }) {
                 io.line("error cli.consoleCommand: Unknown command or arguments '\(trimmed)'. Use :help.", toError: true)
                 success = false
                 continue
@@ -85,6 +85,11 @@ extension Tool {
                     try session.inventory.writeSource(argument, color: options.color)
                     continue
                 }
+                if command == ":show" {
+                    path = try Self.loadPath(argument)
+                    try writeShow(path, color: options.color)
+                    continue
+                }
                 if command == ":load" {
                     path = try Self.loadPath(argument)
                     try session.inventory.load(ToolFiles.read(path), paths: [path])
@@ -116,7 +121,7 @@ extension Tool {
         case "load", ":load": text = ToolHelp.load
         case "edit", ":edit", "save", ":save", "quit", ":quit": text = ToolHelp.editing
         case "unload", ":unload", "unloadAll", ":unloadAll", "reload", ":reload": text = ToolHelp.lifecycle
-        case "list", ":list", "handler", ":handler", "dump", ":dump", "source", ":source": text = ToolHelp.inspection
+        case "list", ":list", "handler", ":handler", "dump", ":dump", "source", ":source", "show", ":show": text = ToolHelp.inspection
         default:
             io.line("error cli.consoleCommand: Unknown help topic '\(topic)'. Use :help, :help load, or :help dump.", toError: true)
             return false

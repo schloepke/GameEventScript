@@ -1,9 +1,10 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
-using GameEventScript.SyntaxHighlighter;
+using GameEventScript.Syntax;
 using GameEventScript.Api;
 using GameEventScript.CSharpBridge;
+using GameEventScript.Generator;
 using GameEventScript.Runtime.Values;
 
 namespace GameEventScript.PackageConsumer;
@@ -28,6 +29,8 @@ internal static class Program
         if (!host.Receive(GesBridgeMessage.Create("Start", ("value", GesValue.GesText("41"))))) return Fail("The host rejected the input message.");
         var execution = host.RunToCompletion();
         if (execution.State != GesExecutionState.Completed || result != 42) return Fail("The packaged compiler/runtime/bridge pipeline did not produce 42.");
+        var generated = GesSchemaGenerator.Generate(GesSchemaSet.Parse("schema :Ping as {\n  ready: :Boolean\n}\n"), ["Ping"], new GesSchemaParameters(), new GesSchemaGenerateOptions { Namespace = "Consumer" });
+        if (!generated.Contains("public partial struct Ping", StringComparison.Ordinal)) return Fail("The packaged generator did not write the schema type.");
 
         Console.WriteLine("C# distribution consumer smoke test passed.");
         return 0;

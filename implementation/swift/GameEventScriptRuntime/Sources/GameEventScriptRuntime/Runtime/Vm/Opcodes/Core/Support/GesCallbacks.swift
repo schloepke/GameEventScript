@@ -1,6 +1,8 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
+@_spi(Syntax) import GameEventScriptSyntax
+
 enum GesCallbacks {
     static func convert(_ value: GesValue, to name: String, _ c: GesContext) throws -> GesValue {
         if name == "numeric" { return GesCasts.number(value) }

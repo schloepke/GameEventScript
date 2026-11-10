@@ -49,78 +49,6 @@ public enum GesBinaryBindKind : byte
 }
 
 /// <summary>
-/// Defines the supported game event script bytecode instruction unit values.
-/// </summary>
-public enum GesQuantityUnit : byte
-{
-    /// <summary>
-    /// Identifies the unit none value.
-    /// </summary>
-    UnitNone = 0,
-    /// <summary>
-    /// Identifies the unit degree value.
-    /// </summary>
-    UnitDegree = 1,
-    /// <summary>
-    /// Identifies the unit meter value.
-    /// </summary>
-    UnitMeter = 2,
-    /// <summary>
-    /// Identifies the unit second value.
-    /// </summary>
-    UnitSecond = 3,
-    /// <summary>
-    /// Identifies the meter per second (m/s), for speed.
-    /// </summary>
-    UnitMeterPerSecond = 4,
-    /// <summary>
-    /// Identifies the meter per second squared (m/s²), for acceleration.
-    /// </summary>
-    UnitMeterPerSecondSquared = 5,
-    /// <summary>
-    /// Identifies the kilogram (kg), for mass.
-    /// </summary>
-    UnitKilogram = 6,
-    /// <summary>
-    /// Identifies the newton (N), for force.
-    /// </summary>
-    UnitNewton = 7,
-    /// <summary>
-    /// Identifies the joule (J), for energy.
-    /// </summary>
-    UnitJoule = 8,
-    /// <summary>
-    /// Identifies the watt (W), for power.
-    /// </summary>
-    UnitWatt = 9,
-    /// <summary>
-    /// Identifies the volt (V), for voltage.
-    /// </summary>
-    UnitVolt = 10,
-    /// <summary>
-    /// Identifies the ampere (A), for current.
-    /// </summary>
-    UnitAmpere = 11,
-    /// <summary>
-    /// Identifies the hertz (Hz), for frequency.
-    /// </summary>
-    UnitHertz = 12,
-    /// <summary>
-    /// Identifies the kelvin (K), for temperature.
-    /// </summary>
-    UnitKelvin = 16,
-    /// <summary>
-    /// Identifies the degree per second (°/s), for angular speed.
-    /// </summary>
-    UnitDegreePerSecond = 17,
-
-    /// <summary>
-    /// Identifies the unit invalid value.
-    /// </summary>
-    UnitInvalid = 255 // Sentinel for invalid or unsupported unit input.
-}
-
-/// <summary>
 /// Defines the supported game event script instruction flag values.
 /// </summary>
 [Flags]
@@ -136,6 +64,8 @@ internal enum GesInstructionFlag : byte
     NormalizeResultAsPredicate = 0x20,
     /// <summary>Selects the strict numeric view for Move and scalar arithmetic for binary arithmetic, Min, Max, Negate, Abs and Clamp.</summary>
     Numeric = 0x40,
+    /// <summary>Makes ParseLiteral write Nothing instead of the original Text when recognition fails.</summary>
+    Strict = 0x40,
     /// <summary>Supplies an additional tag register list to a result-bearing send instruction.</summary>
     WithTags = 0x40,
     /// <summary>Reads a Message value rather than an outbound binding in a result-bearing send instruction.</summary>
@@ -699,11 +629,13 @@ public enum GesBytecodeOpCode : byte
     /// </summary>
     CreateDice = 0x36,
     /// <summary>
-    /// Identifies the create vector value.
+    /// Creates a vector from the staged components. ImmediateX is 0 for the positional form starting at x, whose first
+    /// component may lift a Vector or Point, 1 for labeled y, 2 for labeled z, or 3 for labeled x, which never lifts.
     /// </summary>
     CreateVector = 0x37,
     /// <summary>
-    /// Identifies the create point value.
+    /// Creates a point from the staged components. ImmediateX is 0 for the positional form starting at x, whose first
+    /// component may lift a Vector or Point, 1 for labeled y, 2 for labeled z, or 3 for labeled x, which never lifts.
     /// </summary>
     CreatePoint = 0x38,
     /// <summary>

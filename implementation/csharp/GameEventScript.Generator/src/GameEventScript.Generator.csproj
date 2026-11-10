@@ -1,0 +1,38 @@
+<!-- Copyright 2026 Stephan Schlöpke -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>netstandard2.1</TargetFramework>
+        <AssemblyName>GameEventScript.Generator</AssemblyName>
+        <RootNamespace>GameEventScript</RootNamespace>
+        <PackageId>GameEventScript.Generator</PackageId>
+        <Version>0.1.0</Version>
+        <Authors>Stephan Schlöpke</Authors>
+        <Copyright>Copyright 2026 Stephan Schlöpke</Copyright>
+        <Description>Game Event Script schema code generator: computes the generation layout of .gess schemas and writes typed C# and Swift record code. A build-time library that games never ship.</Description>
+        <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+        <PackageIcon>icon.png</PackageIcon>
+        <RepositoryUrl>https://github.com/schloepke/GameEventScript</RepositoryUrl>
+        <RepositoryType>git</RepositoryType>
+        <LangVersion>12</LangVersion>
+        <Nullable>enable</Nullable>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <IncludeSymbols>true</IncludeSymbols>
+        <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+        <WarningsAsErrors>$(WarningsAsErrors);CS0419;CS1570;CS1572;CS1573;CS1574;CS1580;CS1581;CS1584;CS1587;CS1591;CS1658;CS1711;CS1712</WarningsAsErrors>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <None Include="../../../../LICENSE" Link="LICENSE" Pack="true" PackagePath="/" />
+        <None Include="../../../../website/brand/pixel-duo/nuget-icon.png" Link="icon.png" Pack="true" PackagePath="/icon.png" />
+        <None Include="../../../../README.md" Link="README.md" Pack="true" PackagePath="/" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../../GameEventScript.Runtime/src/GameEventScript.Runtime.csproj" />
+        <ProjectReference Include="../../GameEventScript.Syntax/src/GameEventScript.Syntax.csproj" />
+    </ItemGroup>
+</Project>

@@ -1,6 +1,8 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
+@_spi(Syntax) import GameEventScriptSyntax
+
 #if canImport(Darwin)
     import Darwin
 #elseif canImport(Glibc)
@@ -68,6 +70,7 @@ enum GesMath {
             return sink.percentage(subtract ? a.asNumber - b.asNumber : a.asNumber + b.asNumber)
         }
         if b.kind == .percentage {
+            guard a.unit.acceptsPercentage else { return sink.nothing }
             let delta = a.asNumber * b.asNumber
             return sink.float(subtract ? a.asNumber - delta : a.asNumber + delta, unit: a.unit)
         }
@@ -142,8 +145,8 @@ enum GesMath {
         if op != .power, let av = a.integerValue, let bv = b.integerValue { return integerArithmetic(op, av, bv, a.unit, b.unit, sink: sink) }
         if a.isNothing || b.isNothing { return sink.nothing }
         if op == .power {
-            if b.hasUnit || a.asNumber.isNaN || b.asNumber.isNaN || (a.hasUnit && b.asNumber != 0 && b.asNumber != 1) { return sink.nothing }
-            return sink.float(pow(a.asNumber, b.asNumber), unit: b.asNumber == 1 ? a.unit : .none)
+            guard !b.hasUnit, !a.asNumber.isNaN, !b.asNumber.isNaN, let unit = GesQuantityUnit.power(a.unit, b.asNumber) else { return sink.nothing }
+            return sink.float(pow(a.asNumber, b.asNumber), unit: unit)
         }
         let unit: GesQuantityUnit?
         if op == .multiply {
@@ -155,7 +158,7 @@ enum GesMath {
         } else {
             unit = a.unit == b.unit ? a.unit : nil
         }
-        guard let unit else { return sink.nothing }
+        guard let unit, op == .modulo || op == .remainder || !percentageMismatch(a, b) else { return sink.nothing }
         if a.spatialValue != nil || b.spatialValue != nil {
             if op == .multiply {
                 let vector = a.kind == .vector ? a : b

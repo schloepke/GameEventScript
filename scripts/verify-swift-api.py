@@ -22,7 +22,8 @@ import sys
 
 
 ROOT = Path(__file__).resolve().parent.parent
-PACKAGES = ("GameEventScriptRuntime", "GameEventScriptCompiler", "GameEventScriptSwiftBridge", "GameEventScriptSyntaxHighlighter")
+PACKAGES = ("GameEventScriptRuntime", "GameEventScriptCompiler", "GameEventScriptSwiftBridge", "GameEventScriptSyntax",
+            "GameEventScriptGenerator")
 SNAPSHOTS = ROOT / "implementation" / "swift" / "api"
 ARTIFACTS = ROOT / "artifacts" / "swift-api"
 RELATIONSHIPS = {
@@ -66,7 +67,8 @@ def build_options(package, reuse_local_builds):
     if reuse_local_builds:
         owner, directory = {
             "GameEventScriptSwiftBridge": ("GameEventScriptSwiftBridge", "swiftbridge"),
-            "GameEventScriptSyntaxHighlighter": ("GameEventScriptSyntaxHighlighter", "syntaxhighlighter"),
+            "GameEventScriptSyntax": ("GameEventScriptSyntax", "syntax"),
+            "GameEventScriptGenerator": ("GameEventScriptGenerator", "generator"),
         }.get(package, ("GameEventScriptConformance", "conformance"))
         scratch = ROOT / "artifacts/swift" / directory
     else:
@@ -169,6 +171,12 @@ def snapshot(package, graphs):
             # would otherwise create toolchain-only drift against Swift 6.0.
             if (kind == "conformsTo" and relation.get("targetFallback") == "Swift.SendableMetatype"
                     and relation["source"] in sendable_sources):
+                continue
+            # Every type is implicitly Copyable and Escapable unless it declares ~Copyable or
+            # ~Escapable. Which of these implicit edges a toolchain emits varies (Swift 6.4 adds
+            # Escapable where 6.1 does not), so they carry no contract and are left out.
+            if (kind == "conformsTo" and relation.get("targetFallback") in ("Swift.Copyable", "Swift.Escapable")
+                    and "~" not in source["declaration"]):
                 continue
             target_symbol = symbols.get(relation["target"])
             if target_symbol is not None:

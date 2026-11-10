@@ -73,7 +73,7 @@ internal partial class GesVirtualMachine
 
                 return dst;
             case Integer or Float when b.Kind is Percentage:
-                if (IntegerQuotientUnit(in a, in b) is { } percentageRightUnit)
+                if (PercentageUnit(in a) is { } percentageRightUnit)
                 {
                     var result = Math.Floor(a.AsNumeric / b.FloatValue);
                     dst.SetFloat(result, percentageRightUnit);

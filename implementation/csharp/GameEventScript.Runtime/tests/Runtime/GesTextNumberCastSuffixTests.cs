@@ -18,7 +18,7 @@ public sealed class GesTextNumberCastSuffixTests
         foreach (var suffix in GesQuantityUnits.Suffixes)
         {
             var text = "1" + suffix.Text;
-            Assert.IsTrue(GesTextNumberCast.MayEndWithSuffix(text, 0, text.Length), suffix.Text);
+            Assert.IsTrue(GameEventScript.Syntax.GesNumberLiteral.MayEndWithSuffix(text, 0, text.Length), suffix.Text);
         }
     }
 }

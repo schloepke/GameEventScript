@@ -6,13 +6,37 @@ using System.Text;
 using System.Xml.Linq;
 using GameEventScript.Api;
 using GameEventScript.CSharpBridge;
-using GameEventScript.SyntaxHighlighter;
+using GameEventScript.Generator;
+using GameEventScript.Syntax;
 
 namespace GameEventScript.Tests.Native.ApiSurface;
 
 [TestClass]
 public sealed class GameEventScriptPublicApiSurfaceTests
 {
+    [TestMethod]
+    public void SchemaCodeUsesNeitherValuesNorTheVirtualMachine()
+    {
+        var pattern = new System.Text.RegularExpressions.Regex(@"\b(GesValue\w*|GesVirtualMachine|GesContext|GameEventScriptHost|GameEventScriptProgram|GameEventScriptMessage)\b");
+        string[] directories =
+        [
+            Path.Combine(TestRepositoryPaths.LibraryProjectDirectory, "Api", "Schema"),
+            Path.Combine(TestRepositoryPaths.Root, "implementation", "swift", "GameEventScriptRuntime", "Sources", "GameEventScriptRuntime", "Api", "Schema")
+        ];
+        foreach (var directory in directories)
+        {
+            var files = Directory.GetFiles(directory);
+            Assert.AreNotEqual(0, files.Length, directory);
+            foreach (var file in files)
+            {
+                // The value path converts between both worlds and is the one exception.
+                if (Path.GetFileNameWithoutExtension(file) is "GesSchemaValues" or "SchemaValues") continue;
+                var match = pattern.Match(File.ReadAllText(file));
+                Assert.IsFalse(match.Success, $"{file} uses {match.Value}.");
+            }
+        }
+    }
+
     [TestMethod]
     public void PublicApiSurfaceMatchesApprovedSnapshot()
     {
@@ -73,9 +97,11 @@ public sealed class GameEventScriptPublicApiSurfaceTests
         Assert.IsTrue(bridge.GetExportedTypes().All(type => IsNamespace(type, "GameEventScript.CSharpBridge")));
 
         AssertProductReferences(typeof(GesSyntaxHighlighter).Assembly);
-        AssertProductReferences(runtime);
-        AssertProductReferences(compiler, "GameEventScript.Runtime");
-        AssertProductReferences(bridge, "GameEventScript.Runtime");
+        AssertProductReferences(runtime, "GameEventScript.Syntax");
+        AssertProductReferences(compiler, "GameEventScript.Runtime", "GameEventScript.Syntax");
+        AssertProductReferences(bridge, "GameEventScript.Runtime", "GameEventScript.Syntax");
+        AssertProductReferences(typeof(GesSchemaGenerator).Assembly, "GameEventScript.Runtime", "GameEventScript.Syntax");
+        Assert.IsTrue(typeof(GesSchemaGenerator).Assembly.GetExportedTypes().All(type => IsNamespace(type, "GameEventScript.Generator")));
     }
 
     /// <summary>
@@ -290,5 +316,5 @@ public sealed class GameEventScriptPublicApiSurfaceTests
         assembly.GetExportedTypes().Where(type => !type.Name.Contains('<'));
 
     private static Assembly[] PublicAssemblies()
-        => [typeof(GameEventScriptProgram).Assembly, typeof(GesProgramBuilder).Assembly, typeof(GesBridgeHostRunner).Assembly, typeof(GesSyntaxHighlighter).Assembly];
+        => [typeof(GameEventScriptProgram).Assembly, typeof(GesProgramBuilder).Assembly, typeof(GesBridgeHostRunner).Assembly, typeof(GesSyntaxHighlighter).Assembly, typeof(GesSchemaGenerator).Assembly];
 }

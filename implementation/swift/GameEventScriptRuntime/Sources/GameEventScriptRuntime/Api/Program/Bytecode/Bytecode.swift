@@ -171,11 +171,13 @@ public enum GesBytecodeOpCode: UInt8, Sendable, CaseIterable {
     case `stagePercentage` = 0x35
     /// Creates a dice value; `X` and `Y` are not registers.
     case `createDice` = 0x36
-    /// Creates a vector from the staged component sequence. `ImmediateX` is `0` for x, `1` for y, or `2` for z; missing
-    /// components become `0`.
+    /// Creates a vector from the staged component sequence. `ImmediateX` is `0` for the positional form starting at x, whose
+    /// first component may lift a Vector or Point, `1` for labeled y, `2` for labeled z, or `3` for labeled x, which never
+    /// lifts; missing components become `0`. Other values fail validation.
     case `createVector` = 0x37
-    /// Creates a point from the staged component sequence. `ImmediateX` is `0` for x, `1` for y, or `2` for z; missing
-    /// components become `0`.
+    /// Creates a point from the staged component sequence. `ImmediateX` is `0` for the positional form starting at x, whose
+    /// first component may lift a Vector or Point, `1` for labeled y, `2` for labeled z, or `3` for labeled x, which never
+    /// lifts; missing components become `0`. Other values fail validation.
     case `createPoint` = 0x38
     /// Creates a list from the contiguous staged value sequence immediately before the opcode.
     case `createList` = 0x39

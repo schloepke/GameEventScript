@@ -20,6 +20,14 @@ public sealed class GesProgramEnumValidationTests
         Verify<GesDebugSymbolKind>(byte.MaxValue, GesProgramEnumValidation.IsDefined);
     }
 
+    /// <summary>Verifies that the five UnitId bits accept the defined ids 0 to 20 and reject the reserved rest.</summary>
+    [TestMethod]
+    public void UnitIdsZeroToTwentyAreDefinedAndTheRestReserved()
+    {
+        for (var raw = 0; raw < 32; raw++)
+            Assert.AreEqual(raw <= 20, GesProgramEnumValidation.IsDefined((GesQuantityUnit)raw), raw.ToString(System.Globalization.CultureInfo.InvariantCulture));
+    }
+
     [TestMethod]
     [TestCategory("Performance")]
     [TestCategory("Allocation")]

@@ -206,7 +206,7 @@ component output. Iterator instructions require zero UnitId. Undefined flag comb
 The UnitId map keeps the defined ids stable and reserves
 room for likely game-domain units:
 
-> **Since: Unreleased** — UnitIds 4 to 12, 16 and 17
+> **Since: Unreleased** — UnitIds 4 to 18
 
 | UnitId | Unit | Portable name | Intended use |
 | --- | --- | --- | --- |
@@ -223,15 +223,18 @@ room for likely game-domain units:
 | `10` | volt | `volt` | Voltage for electrotechnical systems. |
 | `11` | ampere | `ampere` | Current, charge flow, overload/thermal balancing. |
 | `12` | hertz | `hertz` | Frequency, fire rate, polling, radio cadence. |
-| `13` | reserved: bit | | Information amount; not implemented. |
-| `14` | reserved: byte | | Storage amount; not implemented. |
-| `15` | reserved: bit per second | | Bandwidth; not implemented. |
+| `13` | square meter | `squareMeter` | Areas: hull surfaces, apertures, cross sections. |
+| `14` | cubic meter | `cubicMeter` | Volumes: tanks, hulls, cargo. |
+| `15` | watt per square meter | `wattPerSquareMeter` | Flux or intensity at a sensor, sensor sensitivity, background noise. |
 | `16` | kelvin | `kelvin` | Temperature. |
 | `17` | degree per second | `degreePerSecond` | Angular speed, turn rate. |
-| `18..31` | reserved | | Additional built-in or domain units. |
+| `18` | decibel | `decibel` | Levels on a logarithmic scale: gains, attenuation, signal-to-noise. |
+| `19` | watt per kelvin | `wattPerKelvin` | Thermal conductance: radiators, hull coupling, cooling. |
+| `20` | joule per kelvin | `joulePerKelvin` | Heat capacity: hulls, tanks, heat sinks. |
+| `21..31` | reserved | | Additional built-in or domain units. |
 
-Programs may encode only the defined UnitIds 0 to 12, 16 and 17; validation
-rejects reserved ids. Unit arithmetic, symbols and literal spellings are
+Programs may encode only the defined UnitIds 0 to 20; validation rejects
+reserved ids. Unit arithmetic, symbols and literal spellings are
 defined in [Language quantities](Language.md#quantities). The extended map keeps
 additional unit IDs representable without reshaping the instruction word.
 
@@ -517,7 +520,9 @@ synthetic message parameter signature such as `Damage(message)`, but it is
 metadata and not the dispatch key.
 
 System endpoint entries use reserved lowercase names outside normal message
-casing. The defined endpoints are:
+casing. Only handler entries may use them: an `OutboundMessage` entry and the
+message shape of `LoadHandler` and `LoadMessage` with such a name are invalid
+(**Since: Unreleased**). The defined endpoints are:
 
 ```text
 initialization
@@ -1092,8 +1097,8 @@ constructors reference `Record` bind ids; external type, list, map, vector, and
 point constructors consume staged values instead of argument register lists.
 Vector and point constructors are fixed built-ins. Their source arguments are
 lowered into staged component values in canonical `x, y, z` order; `immediateX`
-stores the first staged component index (`0`, `1`, or `2`) so leading missing
-components do not need explicit zero stages.
+stores the start form listed in the opcode table, so leading missing components
+do not need explicit zero stages.
 Seeded random uses no side table or helper expression opcode. The lowerer emits
 `RandomPush*`, the inline body instructions, and `RandomPop`.
 Constant seeds are unitless signed `Int64`, so negative seeds such as `-145`
@@ -1467,8 +1472,8 @@ nibble is a format convention, not a second runtime dispatch step.
 | 0x34 | `StageTag` | - | - | `StringIndex` | - | - | Stages a tag literal from `StringPool`. |
 | 0x35 | `StagePercentage` | - | - | - | - | `F64`=ratio | Stages an inline percentage ratio value. |
 | 0x36 | `CreateDice` | - | result register | `Count`=dice count | `ImmediateY`=side count | - | Creates a dice value; `X` and `Y` are not registers. |
-| 0x37 | `CreateVector` | - | result register | `ImmediateX`=first staged component index | - | - | Creates a vector from the staged component sequence. `ImmediateX` is `0` for x, `1` for y, or `2` for z; missing components become `0`. |
-| 0x38 | `CreatePoint` | - | result register | `ImmediateX`=first staged component index | - | - | Creates a point from the staged component sequence. `ImmediateX` is `0` for x, `1` for y, or `2` for z; missing components become `0`. |
+| 0x37 | `CreateVector` | - | result register | `ImmediateX`=start form | - | - | Creates a vector from the staged component sequence. `ImmediateX` is `0` for the positional form starting at x, whose first component may be a Vector or Point to lift, `1` for labeled y, `2` for labeled z, or `3` for labeled x, which never lifts; missing components become `0`. Other values are `InvalidOperand`. |
+| 0x38 | `CreatePoint` | - | result register | `ImmediateX`=start form | - | - | Creates a point from the staged component sequence. `ImmediateX` is `0` for the positional form starting at x, whose first component may be a Vector or Point to lift, `1` for labeled y, `2` for labeled z, or `3` for labeled x, which never lifts; missing components become `0`. Other values are `InvalidOperand`. |
 | 0x39 | `CreateList` | - | result register | - | - | - | Creates a list from the contiguous staged value sequence immediately before the opcode. |
 | 0x3A | `CreateMap` | - | result register | `SecondaryListIndex`=key names | - | - | Creates a map from key names and the contiguous staged value sequence immediately before the opcode. |
 | 0x3B | `CreateRange` | - | result register | `XRegister`=from | `YRegister`=to | - | Creates a range value with implicit step `1`. |
@@ -1600,7 +1605,13 @@ separate approximate-equality opcode.
 `ParseLiteral dst src` implements the `parse` expression described by
 [Text semantics](Semantics/Text.md#literal-recognition-from-text). Non-Text input
 writes `nothing`. It reads `XRegister` before writing the destination; source
-and destination may alias. `YRegister`, payload words, and flags are zero.
+and destination may alias. `YRegister`, payload words, and the unit bits are zero.
+
+> **Since: Unreleased** — strict literal parsing
+
+The only permitted flag is Strict (`0x40`), which implements `parse strict`:
+recognition failure writes `nothing` instead of the original Text. Every other
+unit or flag bit is invalid.
 
 > **Since: 0.2.0 — Record construction through ParseLiteral**
 
@@ -1667,7 +1678,7 @@ remain protection limits, not additional optimizer-observable effects.
 | 0xD6 | `OrderBuilderFinishDescending` | - | result register | `XRegister`=builder | - | - | Sorts by stored keys descending and materializes the ordered values as a list. |
 | 0xD7 | `HasPattern` | - | result register | `XRegister`=source/iterator | `ImmediateY`=count for count patterns | `AU`=pattern kind, `BU`=face register for `CountFace` | Tests a dice/card pattern and returns boolean. |
 | 0xD8 | `TakePattern` | - | result register | `XRegister`=source/iterator | `ImmediateY`=count for count patterns | `AU`=pattern kind, `BU`=face register for `CountFace` | Takes items matching a dice/card pattern. Dice sources produce dice; list sources produce lists. |
-| 0xD9 | `ParseLiteral` | - | result register | `XRegister`=Text input | - | - | Recognizes one complete data literal, preserving original Text on recognition failure. |
+| 0xD9 | `ParseLiteral` | Strict | result register | `XRegister`=Text input | - | - | Recognizes one complete data literal, preserving original Text on recognition failure or writing `nothing` when Strict. |
 | 0xDA | `EmitInstant` | WithTags / Indirect | Boolean result | binding ID or Message register | argument-register list, or zero if indirect | `AU`=tags if flagged | Accepts immediate dispatch; see result-bearing sends below. |
 | 0xDB | `EmitAfter` | WithTags / Indirect | Boolean result | binding ID or Message register | argument-register list, or zero if indirect | `AU`=tags if flagged, `BU`=duration register | Accepts delayed dispatch; see result-bearing sends below. |
 | 0xDC | `PublishInstant` | WithTags / Indirect | Boolean result | binding ID or Message register | argument-register list, or zero if indirect | `AU`=tags if flagged | Accepts immediate dispatch; see result-bearing sends below. |
@@ -1724,8 +1735,8 @@ No fold/reduce opcode or implicit per-element budget surcharge is introduced.
 
 `ConstructData` uses a lowercase built-in type name, ordered argument registers,
 and a same-length label list (`_` for positional arguments). Type/arity/label
-validation follows the explicit constructor contract; unknown names or invalid
-shapes are InvalidOperand. Label lists may not duplicate named labels. Flags,
+validation follows the explicit constructor contract; unknown names, `vector`,
+`point` (see `CreateVector` and `CreatePoint`) or invalid shapes are InvalidOperand. Label lists may not duplicate named labels. Flags,
 unit, BU, CU and DU must be zero. Arguments are copied before assigning the
 result, so destination/source aliasing is valid. It never invokes a user Record
 constructor; `ParseLiteral` manages those calls after full recognition.

@@ -31,10 +31,11 @@ public sealed class GameEventScriptLicensePolicyTests
     {
         var projects = new[]
         {
-            (TestRepositoryPaths.SyntaxHighlighterProjectDirectory, "GameEventScript.SyntaxHighlighter", "TextMate-based GES and GESA syntax highlighting for editors and terminals. Independent of Runtime and Compiler."),
+            (TestRepositoryPaths.SyntaxProjectDirectory, "GameEventScript.Syntax", "GES lexer, parser and single-source validator, plus GES and GESA syntax highlighting for editors and terminals. Independent of Runtime and Compiler."),
             (TestRepositoryPaths.LibraryProjectDirectory, "GameEventScript.Runtime", "Portable, deterministic Game Event Script runtime, serial message host, and Program binary codec. No source compiler dependency."),
             (TestRepositoryPaths.CompilerProjectDirectory, "GameEventScript.Compiler", "Portable Game Event Script source compiler. Depends on the separately consumable runtime."),
-            (TestRepositoryPaths.CSharpBridgeProjectDirectory, "GameEventScript.CSharpBridge", "C# adapters for Game Event Script reflection, delegates, dictionaries, and automatic host execution.")
+            (TestRepositoryPaths.CSharpBridgeProjectDirectory, "GameEventScript.CSharpBridge", "C# adapters for Game Event Script reflection, delegates, dictionaries, and automatic host execution."),
+            (TestRepositoryPaths.GeneratorProjectDirectory, "GameEventScript.Generator", "Game Event Script schema code generator: computes the generation layout of .gess schemas and writes typed C# and Swift record code. A build-time library that games never ship.")
         };
 
         foreach (var (projectDirectory, packageId, description) in projects)
@@ -65,7 +66,8 @@ public sealed class GameEventScriptLicensePolicyTests
         var csharp = Path.Combine(workspace, "implementation", "csharp");
         var failures = new List<string>();
 
-        foreach (var path in EnumerateSourceFiles(csharp, "*.cs"))
+        // Checked-in output of ges schema generate must equal the generated text, so it carries no header.
+        foreach (var path in EnumerateSourceFiles(csharp, "*.cs").Where(path => !path.EndsWith(".g.cs", StringComparison.Ordinal)))
             RequirePrefix(path, $"// {CopyrightText}\n// {SpdxText}\n", failures);
 
         foreach (var path in EnumerateSourceFiles(csharp, "*.md")

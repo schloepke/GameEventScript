@@ -83,7 +83,8 @@ Ordinary verification selects all correctness cases; measured performance remain
 a separate profile-specific gate. See [Swift performance](../../implementation/swift/Performance.md).
 
 The [native Swift CLI](../../implementation/swift/GameEventScriptTool/README.md)
-provides `ges compile/check/run/dump` and the interactive event console. CLI
+provides `ges compile/check/run/dump`, the `document` and `schema` commands and the
+interactive event console. CLI
 argument/file/terminal adapters are verified separately by
 `scripts/test-swift-tool.sh`; they do not introduce additional Core capabilities
 or change the shared corpus counts above. C# and Swift CLI binaries can execute

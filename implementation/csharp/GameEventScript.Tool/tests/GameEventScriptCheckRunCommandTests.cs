@@ -263,6 +263,124 @@ public sealed class GameEventScriptCheckRunCommandTests
         Assert.AreEqual(string.Empty, run.StandardOutput);
     }
 
+    /// <summary>Verifies run reports a missing extension once per call site, naming the extension at each location.</summary>
+    [TestMethod]
+    public void RunReportsEveryMissingExtensionCallSite()
+    {
+        Write("game.ges", "on initialization {\n    publish First(value: :probe.missing(1))\n    publish Second(value: :probe.missing(2))\n}\n");
+        var run = Run("run", "game.ges");
+        Assert.AreEqual(1, run.ExitCode);
+        StringAssert.Contains(run.StandardError, "game.ges(2,26): error link.missingExtension: Unknown extension :probe.missing(_)");
+        StringAssert.Contains(run.StandardError, "game.ges(3,27): error link.missingExtension: Unknown extension :probe.missing(_)");
+        Assert.AreEqual(string.Empty, run.StandardOutput);
+    }
+
+    /// <summary>Verifies the schema layout command: several roots, all roots, parameters, output files and usage errors.</summary>
+    [TestMethod]
+    public void SchemaLayoutCoversSeveralRoots()
+    {
+        Write("nested.gess", "parameter width: :Quantity(m)\nschema :Inner as {\n  x: :Quantity(m) between 0m and width step 1m\n}\nschema :Outer as {\n  inner: :Inner\n}\nschema :Other as {\n  inner: :Inner\n}\n");
+        var layout = Run("schema", "layout", "nested.gess", "--root", "Outer", "--root", "Other", "--param", "width=8m");
+        Assert.AreEqual(0, layout.ExitCode, layout.StandardError);
+        StringAssert.StartsWith(layout.StandardOutput, "{\n  \"layout\": 1,\n  \"roots\": [\n    \"Outer\",\n    \"Other\"\n  ],");
+        Assert.HasCount(2, layout.StandardOutput.Split("\"name\": \"Inner\",\n      \"kind\""));
+        Assert.AreEqual(layout.StandardOutput.Replace("\"Outer\",\n    \"Other\"", "\"Inner\",\n    \"Outer\",\n    \"Other\"", StringComparison.Ordinal),
+            Run("schema", "layout", "nested.gess", "--all-roots", "--param", "width=8m").StandardOutput);
+        Assert.AreEqual(0, Run("schema", "layout", "nested.gess", "--root", "Outer", "--param", "width=8m", "-o", "layout.json").ExitCode);
+        Assert.IsTrue(File.Exists(Path.Combine(_directory, "layout.json")));
+        Assert.AreEqual(2, Run("schema", "layout", "nested.gess", "--param", "width=8m").ExitCode);
+        Assert.AreEqual(2, Run("schema", "layout", "nested.gess", "--root", "Outer", "--all-roots", "--param", "width=8m").ExitCode);
+        Assert.AreEqual(2, Run("schema", "layout", "nested.gess", "--root", "Outer", "--root", "Outer", "--param", "width=8m").ExitCode);
+        Assert.AreEqual(2, Run("schema", "hash", "nested.gess", "--all-roots").ExitCode);
+        var unknown = Run("schema", "layout", "nested.gess", "--root", "Outer", "--param", "width=8m", "--param", "height=1m");
+        Assert.AreEqual(1, unknown.ExitCode);
+        StringAssert.Contains(unknown.StandardError, "error schema.unknownName: No root reaches the parameter 'height'.");
+        var missing = Run("schema", "layout", "nested.gess", "--root", "Outer");
+        Assert.AreEqual(1, missing.ExitCode);
+        StringAssert.Contains(missing.StandardError, "error schema.unknownName");
+    }
+
+    /// <summary>Verifies the schema generate command: both languages, output files, the check mode and errors.</summary>
+    [TestMethod]
+    public void SchemaGenerateWritesAndChecksCode()
+    {
+        Write("drone.gess", "schema :Drone as {\n  id: :Number integer between 0 and 255 key\n  on: :Boolean\n}\n");
+        var csharp = Run("schema", "generate", "drone.gess", "--root", "Drone", "--language", "csharp", "--namespace", "Game.Net");
+        Assert.AreEqual(0, csharp.ExitCode, csharp.StandardError);
+        StringAssert.Contains(csharp.StandardOutput, "public partial struct Drone");
+        var swift = Run("schema", "generate", "drone.gess", "--all-roots", "--language", "swift", "--access", "internal");
+        StringAssert.Contains(swift.StandardOutput, "struct Drone: Sendable {");
+        Assert.IsFalse(swift.StandardOutput.Contains("public ", StringComparison.Ordinal));
+        Assert.AreEqual(1, Run("schema", "generate", "drone.gess", "--root", "Drone", "--language", "csharp", "-o", "Drone.g.cs", "--check").ExitCode);
+        Assert.AreEqual(0, Run("schema", "generate", "drone.gess", "--root", "Drone", "--language", "csharp", "-o", "Drone.g.cs").ExitCode);
+        Assert.AreEqual(0, Run("schema", "generate", "drone.gess", "--root", "Drone", "--language", "csharp", "-o", "Drone.g.cs", "--check").ExitCode);
+        File.AppendAllText(Path.Combine(_directory, "Drone.g.cs"), "// edited\n");
+        var outdated = Run("schema", "generate", "drone.gess", "--root", "Drone", "--language", "csharp", "-o", "Drone.g.cs", "--check");
+        Assert.AreEqual(1, outdated.ExitCode);
+        StringAssert.Contains(outdated.StandardError, "error cli.outdated: Drone.g.cs differs from the generated code.");
+        Assert.AreEqual(2, Run("schema", "generate", "drone.gess", "--root", "Drone").ExitCode);
+        Assert.AreEqual(2, Run("schema", "generate", "drone.gess", "--root", "Drone", "--language", "java").ExitCode);
+        Assert.AreEqual(2, Run("schema", "generate", "drone.gess", "--root", "Drone", "--language", "swift", "--check").ExitCode);
+        Assert.AreEqual(2, Run("schema", "generate", "drone.gess", "--root", "Drone", "--language", "swift", "--access", "private").ExitCode);
+        Assert.AreEqual(2, Run("schema", "layout", "drone.gess", "--root", "Drone", "--language", "swift").ExitCode);
+        StringAssert.Contains(Run("schema", "generate", "drone.gess", "--root", "Drone", "--language", "csharp", "--values").StandardOutput, "ToValue()");
+        Assert.AreEqual(2, Run("schema", "layout", "drone.gess", "--root", "Drone", "--values").ExitCode);
+        Assert.AreEqual(0, Run("schema", "generate", "drone.gess", "--root", "Drone", "--language", "swift", "--checked-exclusivity").ExitCode);
+        Assert.AreEqual(2, Run("schema", "layout", "drone.gess", "--root", "Drone", "--checked-exclusivity").ExitCode);
+        Write("extra.gess", "schema :Extra as {\n  on: :Boolean\n}\n");
+        Assert.AreEqual(2, Run("schema", "generate", "drone.gess", "extra.gess", "--all-roots", "--language", "csharp", "-o", "extra.gess").ExitCode);
+        Assert.AreEqual("schema :Extra as {\n  on: :Boolean\n}\n", File.ReadAllText(Path.Combine(_directory, "extra.gess")));
+        var invalid = Run("schema", "generate", "drone.gess", "--root", "Drone", "--language", "swift", "--namespace", "1x");
+        Assert.AreEqual(1, invalid.ExitCode);
+        StringAssert.Contains(invalid.StandardError, "error generate.invalidNamespace");
+    }
+
+    /// <summary>Verifies the schema commands: check, canonical form, hash, formatting, dump and error reports.</summary>
+    [TestMethod]
+    public void SchemaCommandsCheckHashFormatAndDump()
+    {
+        Write("drone.gess", "// note\nschema :Drone as {\n  id: :Number integer between 0 and 255 key\n  x: :Quantity(m) between 0m and 2km step 1cm\n}\n");
+        Assert.AreEqual(0, Run("schema", "check", "drone.gess", "--quiet").ExitCode);
+        var canonical = Run("schema", "canonical", "drone.gess", "--root", "Drone");
+        StringAssert.Contains(canonical.StandardOutput, "field x Quantity(meter) between 0e0 2e3 step 1e-2");
+        Assert.AreEqual(16, Run("schema", "hash", "drone.gess", "--root", "Drone").StandardOutput.Trim().Length);
+        Write("dice.gess", "schema :S as { d: :Dice max 2 between 1 and 6, e: :Dice, t: :Tag max 3, u: :Text max 1 | :Nothing }\n");
+        Assert.AreEqual("schema :S as {\n  d: :Dice max 2 between 1 and 6\n  e: :Dice\n  t: :Tag max 3\n  u: :Text max 1 | :Nothing\n}\n", Run("schema", "format", "dice.gess").StandardOutput);
+        var format = Run("schema", "format", "drone.gess");
+        StringAssert.Contains(format.StandardOutput, "x: :Quantity(m) between 0m and 2km step 1cm");
+        Assert.IsFalse(format.StandardOutput.Contains("// note", StringComparison.Ordinal));
+        File.WriteAllBytes(Path.Combine(_directory, "data.bin"), [7, 0xE8, 3, 0]);
+        var dump = Run("schema", "dump", "drone.gess", "--root", "Drone", "--data", "data.bin");
+        StringAssert.Contains(dump.StandardOutput, "id bit=0 width=8 value=7");
+        File.WriteAllBytes(Path.Combine(_directory, "delta.bin"), [7, 0]);
+        var delta = Run("schema", "dump", "drone.gess", "--root", "Drone", "--data", "delta.bin", "--baseline", "data.bin");
+        StringAssert.StartsWith(delta.StandardOutput, "delta bytes 2\nid bit=0 width=8 value=7");
+        Assert.AreEqual(2, Run("schema", "hash", "drone.gess", "--root", "Drone", "--baseline", "data.bin").ExitCode);
+        var same = Run("schema", "format", "drone.gess", "-o", "drone.gess");
+        Assert.AreEqual(2, same.ExitCode);
+        Assert.AreEqual(2, Run("schema", "format", "drone.gess", "-o", "").ExitCode);
+        Assert.AreEqual(2, Run("schema", "format", "", "-o", "out.gess").ExitCode);
+        Assert.AreEqual(2, Run("schema", "check", "").ExitCode);
+        StringAssert.Contains(File.ReadAllText(Path.Combine(_directory, "drone.gess")), "// note");
+        Assert.AreEqual(2, Run("schema", "check", "drone.gess", "--root", "Drone").ExitCode);
+        Assert.AreEqual(2, Run("schema", "canonical", "drone.gess", "--root", "Drone", "--param", "a=1").ExitCode);
+        Assert.AreEqual(2, Run("schema", "hash", "drone.gess", "--root", "Drone", "--data", "data.bin").ExitCode);
+        Assert.AreEqual(2, Run("schema", "format", "drone.gess", "--root", "Drone").ExitCode);
+        var unknown = Run("schema", "hash", "drone.gess", "--root", "Drone", "--param", "wrong=1");
+        Assert.AreEqual(1, unknown.ExitCode);
+        StringAssert.Contains(unknown.StandardError, "error schema.unknownName: The root 'Drone' has no parameter 'wrong'.");
+        Write("nested.gess", "parameter width: :Quantity(m)\nschema :Inner as {\n  x: :Quantity(m) between 0m and width step 1m\n}\nschema :Outer as {\n  inner: :Inner\n}\n");
+        Assert.AreEqual(0, Run("schema", "hash", "nested.gess", "--root", "Outer", "--param", "width=8m").ExitCode);
+        var twice = Run("schema", "hash", "nested.gess", "--root", "Outer", "--param", "width=8m", "--param", "width=9m");
+        Assert.AreEqual(2, twice.ExitCode);
+        StringAssert.Contains(twice.StandardError, "The parameter 'width' is given twice.");
+        Assert.AreEqual(1, Run("schema", "dump", "nested.gess", "--root", "Outer", "--param", "width=8m", "--param", "widht=9m", "--data", "data.bin").ExitCode);
+        Write("broken.gess", "schema :A as {\n  a: :Quantity(kN)\n}\n");
+        var broken = Run("schema", "check", "broken.gess");
+        Assert.AreEqual(1, broken.ExitCode);
+        StringAssert.Contains(broken.StandardError, "broken.gess(2,16): error schema.syntax");
+    }
+
     /// <summary>Verifies existing malformed-binary fixtures are rejected before execution.</summary>
     [TestMethod]
     public void RunReportsBinaryDecodeFailure()

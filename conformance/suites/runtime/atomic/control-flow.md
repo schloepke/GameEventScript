@@ -1964,9 +1964,12 @@ on Start { if let x be 0 { } else { emit Done(value: x) } }
 
 ```yaml
 gesBlock: expect
-error:
-  phase: "compile"
-  code: "compile.unresolvedSymbol"
+errors:
+  - phase: "validate"
+    code: "validate.unresolvedVariable"
+    symbol: "x"
+    line: 1
+    column: 54
 ```
 
 ---
@@ -3216,7 +3219,12 @@ on Start { if true let x be 1
 
 ```yaml
 gesBlock: expect
-error: {"phase": "compile", "code": "compile.unresolvedSymbol"}
+errors:
+  - phase: "validate"
+    code: "validate.unresolvedVariable"
+    symbol: "x"
+    line: 2
+    column: 19
 ```
 
 ---
@@ -3248,7 +3256,12 @@ on Start { if false emit Other() else let x be 1
 
 ```yaml
 gesBlock: expect
-error: {"phase": "compile", "code": "compile.unresolvedSymbol"}
+errors:
+  - phase: "validate"
+    code: "validate.unresolvedVariable"
+    symbol: "x"
+    line: 2
+    column: 19
 ```
 
 ---
@@ -3280,7 +3293,12 @@ on Start { if let x be 2 let y be x * 20
 
 ```yaml
 gesBlock: expect
-error: {"phase": "compile", "code": "compile.unresolvedSymbol"}
+errors:
+  - phase: "validate"
+    code: "validate.unresolvedVariable"
+    symbol: "y"
+    line: 2
+    column: 19
 ```
 
 ---
@@ -3311,7 +3329,12 @@ on Start { if false let x be 2 else emit Done(value: x) }
 
 ```yaml
 gesBlock: expect
-error: {"phase": "compile", "code": "compile.unresolvedSymbol"}
+errors:
+  - phase: "validate"
+    code: "validate.unresolvedVariable"
+    symbol: "x"
+    line: 1
+    column: 54
 ```
 
 ---

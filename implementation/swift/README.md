@@ -8,12 +8,13 @@
 
 | SwiftPM package / import | Responsibility | Dependencies |
 | --- | --- | --- |
-| `GameEventScriptRuntime` | Immutable values and Programs, `.gesb` codecs/validation, GESA dumping, Host, VM, random streams, extensions and external types | Swift standard library and platform math library |
-| `GameEventScriptCompiler` | Source lexer/parser, validation, lowering, optimization, register allocation, immutable Programs and debug sections | Runtime |
+| `GameEventScriptRuntime` | Immutable values and Programs, `.gesb` codecs/validation, GESA dumping, Host, VM, random streams, extensions and external types, GES documents and schemas | Syntax, Swift standard library and platform math library |
+| `GameEventScriptCompiler` | Binding of the Syntax tree, validation across sources, lowering, optimization, register allocation, immutable Programs and debug sections | Runtime and Syntax |
 | [`GameEventScriptSwiftBridge`](GameEventScriptSwiftBridge/README.md) | Native closure adapters, typed value conversion, KeyPath/external-type bindings and an optional synchronized Host runner | Runtime; Foundation for the runner |
-| [`GameEventScriptSyntaxHighlighter`](GameEventScriptSyntaxHighlighter/README.md) | GES/GESA UTF-16 spans, TextMate scopes, incremental states and ANSI rendering | Foundation |
+| [`GameEventScriptSyntax`](GameEventScriptSyntax/README.md) | GES lexer, parser and single-source validator, document and schema readers, highlighting with UTF-16 spans, TextMate scopes, incremental states and ANSI rendering | Swift standard library |
+| [`GameEventScriptGenerator`](GameEventScriptGenerator/README.md) | Generation layout and typed C# and Swift code for `.gess` schemas, used at build time | Runtime, Syntax and Swift standard library |
 | `GameEventScriptConformance` | Internal observation adapter, codec probes and native implementation tests | Runtime and Compiler |
-| `GameEventScriptTool` / `ges` executable | Compile/check/run/dump, interactive console, filesystem and terminal adapters | Runtime, Compiler, SyntaxHighlighter, Foundation and POSIX |
+| `GameEventScriptTool` / `ges` executable | Compile/check/run/dump, `document` and `schema` commands, interactive console, filesystem and terminal adapters | Runtime, Compiler, Syntax, Generator, Foundation and POSIX |
 
 Runtime and Compiler APIs are synchronous, fileless, and independent of a test framework.
 The optional SwiftBridge macro target uses the official swift-syntax build dependency.
@@ -21,19 +22,19 @@ The independent [Python runner](../../conformance/runner/README.md) owns Markdow
 assertions and reports. `ges-conformance-adapter` executes requests against Swift
 and returns raw observations; `ges-conformance-probe` supports codec interoperability.
 Both executables are internal tooling. There is no Swift Conformance library product.
-Compiler depends only on Runtime. The [native Swift `ges` CLI](GameEventScriptTool/README.md)
+Compiler depends only on Runtime and Syntax. The [native Swift `ges` CLI](GameEventScriptTool/README.md)
 is the user-facing tool.
 
 ## Build and verify
 
 For application dependencies, use the repository-root SwiftPM package. It exposes
-Runtime, Compiler, SwiftBridge and SyntaxHighlighter as four selectable library products with one
+Runtime, Compiler, SwiftBridge, Syntax and Generator as five selectable library products with one
 shared version. The packages below this directory remain local development entry
 points; CLI and Conformance are internal to the repository distribution.
 See the [package release guide](../../docs/guide/distribution/Packages.md) for
 Xcode installation, tagged consumer verification and release preparation.
 
-The root package also reuses the native SwiftBridge, bridge-macro and highlighter
+The root package also reuses the native SwiftBridge, bridge-macro and Syntax
 test targets. From the repository root, run
 `swift test --scratch-path artifacts/swift/root-tests --disable-build-manifest-caching --configuration release`.
 These tests are visible to SwiftPM and Swift Package Index without becoming
@@ -42,7 +43,7 @@ library products. Full language/host Conformance runs through Python and the int
 ### Xcode workspace
 
 [`GameEventScript.xcworkspace`](GameEventScript.xcworkspace) opens Runtime,
-Compiler, SwiftBridge, SyntaxHighlighter, Conformance and the CLI together. The workspace references the local
+Compiler, SwiftBridge, Syntax, Conformance and the CLI together. The workspace references the local
 SwiftPM packages directly; their `Package.swift` manifests remain the build configuration.
 There are no duplicate `.xcodeproj` targets or source lists to maintain.
 
@@ -59,7 +60,7 @@ are ignored by Git; the workspace and shared test scheme are tracked. After the
 first setup, the workspace can also be opened directly in Finder.
 
 Select **My Mac** and one of the `GameEventScriptRuntime`,
-`GameEventScriptCompiler`, `GameEventScriptSwiftBridge`, `GameEventScriptSyntaxHighlighter`, `GameEventScriptConformance` or `GameEventScriptTool`
+`GameEventScriptCompiler`, `GameEventScriptSwiftBridge`, `GameEventScriptSyntax`, `GameEventScriptConformance` or `GameEventScriptTool`
 schemes to build with **Cmd+B**. The shared `GameEventScriptTool` scheme builds the
 `ges` executable: **Cmd+R** launches it with `--help`, **Cmd+U** runs its native CLI
 tests, and Profile uses the Release executable. Change CLI arguments under
@@ -90,7 +91,7 @@ xcodebuild -workspace implementation/swift/GameEventScript.xcworkspace \
 The root distribution and local SwiftBridge package explicitly require macOS 10.15 for SwiftSyntax.
 The separate CLI and Conformance packages
 require macOS 10.15.4 or newer for the executable adapters' throwing Foundation
-file-handle I/O. The standalone Runtime, Compiler and SyntaxHighlighter packages
+file-handle I/O. The standalone Runtime, Compiler and Syntax packages
 do not inherit these package requirements.
 
 All entry points are in the repository's `scripts` directory and can also be
@@ -374,13 +375,13 @@ The [message format](../../specs/MessageFormat.md) defines the envelope and erro
 
 The CI API gate uses `python3 scripts/verify-swift-api.py --reuse-local-builds`
 after `test-swift.sh`. SwiftPM refreshes the existing Release conformance, Bridge and
-highlighter builds before fresh symbol extraction; approved snapshots and
+Syntax builds before fresh symbol extraction; approved snapshots and
 documentation checks are unchanged. Without this option, the API gate retains
 its independent per-package Debug builds.
 
 Swift CI runs isolated tagged-package consumers in parallel with native tests,
 Conformance and API verification. The required `verify` job aggregates native,
-distribution and Linux-highlighter results and rejects failed scope selection or
+distribution and Linux Syntax results and rejects failed scope selection or
 unexpected skipped jobs. Clean consumer build directories remain uncached.
 
 Known Card Lab browser assets can skip native Swift CI because the Website

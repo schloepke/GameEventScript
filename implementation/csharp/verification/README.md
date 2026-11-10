@@ -9,7 +9,7 @@ The test sources are covered by the Game Event Script
 
 Tests live beside their owning modules in `../GameEventScript.*/tests`:
 Runtime (API, values, Host/VM and binary codecs), Compiler (including optimizer),
-CSharpBridge, Tool and SyntaxHighlighter each have a separate MSTest project.
+CSharpBridge, Tool and Syntax each have a separate MSTest project.
 `GameEventScript.Repository.Tests` here owns cross-module API, licensing,
 documentation and distribution checks. `TestSupport` contains linked helpers
 and `Tests.props` shares only test configuration; neither owns test cases.

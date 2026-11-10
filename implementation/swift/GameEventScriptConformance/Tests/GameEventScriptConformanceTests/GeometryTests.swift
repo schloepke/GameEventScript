@@ -28,6 +28,41 @@ final class GeometryTests: XCTestCase {
         XCTAssertFalse(GesVector(x: .nan, y: 0).isFinite)
     }
 
+    func testCompoundAssignmentsEqualTheirBinaryForms() {
+        let start = GesPoint(x: 1, y: 2, z: 3)
+        let step = GesVector(x: 4, y: -6, z: 0.5)
+        var point = start
+        point += step
+        XCTAssertEqual(point, start + step)
+        point -= step
+        XCTAssertEqual(point, start + step - step)
+        var vector = step
+        vector += GesVector(x: 1, y: 1, z: 1)
+        XCTAssertEqual(vector, step + GesVector(x: 1, y: 1, z: 1))
+        vector -= GesVector(x: 1, y: 1, z: 1)
+        XCTAssertEqual(vector, step + GesVector(x: 1, y: 1, z: 1) - GesVector(x: 1, y: 1, z: 1))
+        vector *= 2
+        XCTAssertEqual(vector, step * 2)
+        vector /= 2
+        XCTAssertEqual(vector, step * 2 / 2)
+    }
+
+    func testBoxesExposeComponentBoundsAndASize() {
+        let box = GesBox(GesPoint(x: 10, y: -2, z: 3), GesPoint(x: 0, y: 4, z: -1))
+        XCTAssertEqual(box.minX, 0)
+        XCTAssertEqual(box.maxX, 10)
+        XCTAssertEqual(box.minY, -2)
+        XCTAssertEqual(box.maxY, 4)
+        XCTAssertEqual(box.minZ, -1)
+        XCTAssertEqual(box.maxZ, 3)
+        let arena = GesBox(size: GesVector(x: 70, y: 50))
+        XCTAssertEqual(arena, GesBox(.zero, GesPoint(x: 70, y: 50)))
+        XCTAssertEqual(arena.size, GesVector(x: 70, y: 50))
+        let negative = GesBox(size: GesVector(x: -3, y: 2))
+        XCTAssertEqual(negative.min, GesPoint(x: -3, y: 0))
+        XCTAssertEqual(negative.max, GesPoint(x: 0, y: 2))
+    }
+
     func testValuesCarryAnExplicitUnit() {
         let value = GesPoint(x: 1, y: 2, z: 3).value(unit: .meter)
         XCTAssertEqual(value.valueKind, .point)

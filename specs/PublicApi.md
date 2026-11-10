@@ -553,7 +553,7 @@ schema code uses them for every spatial field, so hosts in both ports compute wi
 | Concept | C# | Swift |
 | --- | --- | --- |
 | types | `struct GesPoint`, `struct GesVector` with `X`, `Y`, `Z` | `struct GesPoint`, `struct GesVector` with `x`, `y`, `z` |
-| operations | `Zero`, `IsFinite`, `Length`, `LengthSquared`, `Normalized`, `Dot`, `Cross`, `DistanceTo`, operators | `zero`, `init()`, `isFinite`, `length`, `lengthSquared`, `normalized`, `dot(_:)`, `cross(_:)`, `distance(to:)`, operators |
+| operations | `Zero`, `IsFinite`, `Length`, `LengthSquared`, `Normalized`, `Dot`, `Cross`, `DistanceTo`, operators and the compound assignments C# derives from them | `zero`, `init()`, `isFinite`, `length`, `lengthSquared`, `normalized`, `dot(_:)`, `cross(_:)`, `distance(to:)`, operators, `+=`, `-=`, `*=`, `/=` |
 | conversion | `ToValue(unit)`, `static FromValue(value, unit)` returning a nullable value | `value(unit:)`, `init?(_:unit:)` |
 
 #### Geometry library
@@ -565,8 +565,10 @@ offers them to scripts as external types with a standard extension library, so t
 Game logic, such as rounded hulls, bearings or sensor sectors, stays in hosts.
 
 - **`GesBox`** is an axis-aligned box. It is created from two corners in any order (C# `new GesBox(a, b)`, Swift
-  `GesBox(_:_:)`) or from a centre and a size (`FromCenter`, `init(center:size:)`), whose negative components count as
-  their magnitude, so `min` is never above `max`. It is 2D when `z` is 0 on both corners. `size`, `center`,
+  `GesBox(_:_:)`), from a centre and a size (`FromCenter`, `init(center:size:)`), whose negative components count as
+  their magnitude, or from the origin to a size (`FromSize`, `init(size:)`), where a negative component spans the negative
+  side, so `min` is never above `max`. `MinX` through `MaxZ` (Swift `minX` through `maxZ`) read the corners' components for
+  host code; they are no script fields. It is 2D when `z` is 0 on both corners. `size`, `center`,
   `contains(point)` and `intersects(box)` include the boundary; `union` encloses both; `inset(by:)` moves the sides of x and
   y, and in 3D also of z, inward or outward for a negative distance, and is absent when the sides would cross or the
   distance is not finite; `clamp` returns the nearest point of the box. Equality compares the corners.

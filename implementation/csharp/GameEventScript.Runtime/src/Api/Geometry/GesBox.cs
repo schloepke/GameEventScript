@@ -32,11 +32,34 @@ public readonly struct GesBox : IEquatable<GesBox>
         return new GesBox(center - half, center + half);
     }
 
+    /// <summary>Creates the box from the origin to a size; a negative component spans the negative side of its axis.</summary>
+    /// <param name="size">The opposite corner's offset from the origin.</param>
+    /// <returns>The box.</returns>
+    public static GesBox FromSize(GesVector size) => new(GesPoint.Zero, GesPoint.Zero + size);
+
     /// <summary>Gets the corner with the smallest components.</summary>
     public GesPoint Min { get; }
 
     /// <summary>Gets the corner with the largest components.</summary>
     public GesPoint Max { get; }
+
+    /// <summary>Gets the smallest x component, <c>Min.X</c>.</summary>
+    public double MinX => Min.X;
+
+    /// <summary>Gets the largest x component, <c>Max.X</c>.</summary>
+    public double MaxX => Max.X;
+
+    /// <summary>Gets the smallest y component, <c>Min.Y</c>.</summary>
+    public double MinY => Min.Y;
+
+    /// <summary>Gets the largest y component, <c>Max.Y</c>.</summary>
+    public double MaxY => Max.Y;
+
+    /// <summary>Gets the smallest z component, <c>Min.Z</c>.</summary>
+    public double MinZ => Min.Z;
+
+    /// <summary>Gets the largest z component, <c>Max.Z</c>.</summary>
+    public double MaxZ => Max.Z;
 
     /// <summary>Gets whether both corners lie in the plane z = 0.</summary>
     public bool Is2D => Min.Z == 0 && Max.Z == 0;

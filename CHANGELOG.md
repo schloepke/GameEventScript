@@ -247,6 +247,9 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 - `GesPoint` and `GesVector` in both runtimes: unitless spatial values with the language's
   affine arithmetic, `length`, `distance`, `normalized`, `dot` and `cross`, and conversions to
   and from `GesValue` with an explicit unit.
+- Host conveniences on the spatial values: Swift `+=`, `-=`, `*=` and `/=` on `GesPoint` and `GesVector`
+  (C# derives them from the operators), the component bounds `MinX` through `MaxZ` (Swift `minX` through `maxZ`) of
+  `GesBox`, and `GesBox.FromSize` (Swift `init(size:)`), the box from the origin to a size. Scripts are unchanged.
 - External values have three explicit read paths in both ports: `ExternalValue` returns the
   host object, `ReadField(name)` runs one getter and `MaterializedMap()` runs all of them.
   C# adds these and `GesValue.GesExternal(value)`; Swift adds `readField(_:)` and the protocol

@@ -77,6 +77,18 @@ public struct GesVector: Hashable, Sendable, Codable, CustomStringConvertible {
     /// Divides every component by a scalar, following IEEE division.
     public static func / (vector: GesVector, divisor: Double) -> GesVector { GesVector(x: vector.x / divisor, y: vector.y / divisor, z: vector.z / divisor) }
 
+    /// Adds a vector in place, as `left = left + right`.
+    public static func += (left: inout GesVector, right: GesVector) { left = left + right }
+
+    /// Subtracts a vector in place, as `left = left - right`.
+    public static func -= (left: inout GesVector, right: GesVector) { left = left - right }
+
+    /// Scales a vector in place, as `vector = vector * scale`.
+    public static func *= (vector: inout GesVector, scale: Double) { vector = vector * scale }
+
+    /// Divides every component in place, as `vector = vector / divisor`.
+    public static func /= (vector: inout GesVector, divisor: Double) { vector = vector / divisor }
+
     /// The vector as a unitless GES literal, such as `:Vector(x: 1, y: 2, z: 0)`; informative only.
     public var description: String { value().toText }
 }
@@ -127,6 +139,12 @@ public struct GesPoint: Hashable, Sendable, Codable, CustomStringConvertible {
 
     /// Moves a point back by a vector.
     public static func - (point: GesPoint, vector: GesVector) -> GesPoint { GesPoint(x: point.x - vector.x, y: point.y - vector.y, z: point.z - vector.z) }
+
+    /// Moves a point by a vector in place, as `point = point + vector`.
+    public static func += (point: inout GesPoint, vector: GesVector) { point = point + vector }
+
+    /// Moves a point back by a vector in place, as `point = point - vector`.
+    public static func -= (point: inout GesPoint, vector: GesVector) { point = point - vector }
 
     /// The vector from `start` to `end`.
     public static func - (end: GesPoint, start: GesPoint) -> GesVector { GesVector(x: end.x - start.x, y: end.y - start.y, z: end.z - start.z) }

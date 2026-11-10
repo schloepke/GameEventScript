@@ -23,6 +23,27 @@ public struct GesBox: Hashable, Sendable, Codable, CustomStringConvertible {
         self.init(center - half, center + half)
     }
 
+    /// Creates the box from the origin to `size`; a negative component spans the negative side of its axis.
+    public init(size: GesVector) { self.init(.zero, .zero + size) }
+
+    /// The smallest x component, `min.x`.
+    public var minX: Double { min.x }
+
+    /// The largest x component, `max.x`.
+    public var maxX: Double { max.x }
+
+    /// The smallest y component, `min.y`.
+    public var minY: Double { min.y }
+
+    /// The largest y component, `max.y`.
+    public var maxY: Double { max.y }
+
+    /// The smallest z component, `min.z`.
+    public var minZ: Double { min.z }
+
+    /// The largest z component, `max.z`.
+    public var maxZ: Double { max.z }
+
     /// Whether both corners lie in the plane z = 0.
     public var is2D: Bool { min.z == 0 && max.z == 0 }
 

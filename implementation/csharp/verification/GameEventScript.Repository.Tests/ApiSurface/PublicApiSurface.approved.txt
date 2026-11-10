@@ -125,6 +125,7 @@ struct GameEventScript.Api.GesBox
   method System.Int32 GetHashCode()
   method System.String ToString()
   method static GameEventScript.Api.GesBox FromCenter(GameEventScript.Api.GesPoint center, GameEventScript.Api.GesVector size)
+  method static GameEventScript.Api.GesBox FromSize(GameEventScript.Api.GesVector size)
   method static GameEventScript.Api.GesBox? FromValue(GameEventScript.Runtime.Values.GesValue& value, GameEventScript.Api.GesQuantityUnit unit)
   method static System.Boolean op_Equality(GameEventScript.Api.GesBox left, GameEventScript.Api.GesBox right)
   method static System.Boolean op_Inequality(GameEventScript.Api.GesBox left, GameEventScript.Api.GesBox right)
@@ -134,6 +135,12 @@ struct GameEventScript.Api.GesBox
   property GameEventScript.Api.GesVector Size { get }
   property System.Boolean Is2D { get }
   property System.Boolean IsFinite { get }
+  property System.Double MaxX { get }
+  property System.Double MaxY { get }
+  property System.Double MaxZ { get }
+  property System.Double MinX { get }
+  property System.Double MinY { get }
+  property System.Double MinZ { get }
 sealed class GameEventScript.Api.GesBuildMetadataSegment
   ctor GesBuildMetadataSegment(System.String compilerId, System.String compilerVersion)
   property System.String CompilerId { get }

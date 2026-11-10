@@ -81,6 +81,45 @@ public sealed class GesGeometryTests
     }
 
     [TestMethod]
+    public void CompoundAssignmentsEqualTheirBinaryForms()
+    {
+        var start = new GesPoint(1, 2, 3);
+        var step = new GesVector(4, -6, 0.5);
+        var point = start;
+        point += step;
+        Assert.AreEqual(start + step, point);
+        point -= step;
+        Assert.AreEqual(start + step - step, point);
+        var vector = step;
+        vector += new GesVector(1, 1, 1);
+        Assert.AreEqual(step + new GesVector(1, 1, 1), vector);
+        vector -= new GesVector(1, 1, 1);
+        Assert.AreEqual(step + new GesVector(1, 1, 1) - new GesVector(1, 1, 1), vector);
+        vector *= 2.0;
+        Assert.AreEqual(step * 2.0, vector);
+        vector /= 2.0;
+        Assert.AreEqual(step * 2.0 / 2.0, vector);
+    }
+
+    [TestMethod]
+    public void BoxesExposeComponentBoundsAndASize()
+    {
+        var box = new GesBox(new GesPoint(10, -2, 3), new GesPoint(0, 4, -1));
+        Assert.AreEqual(0, box.MinX);
+        Assert.AreEqual(10, box.MaxX);
+        Assert.AreEqual(-2, box.MinY);
+        Assert.AreEqual(4, box.MaxY);
+        Assert.AreEqual(-1, box.MinZ);
+        Assert.AreEqual(3, box.MaxZ);
+        var arena = GesBox.FromSize(new GesVector(70, 50));
+        Assert.AreEqual(new GesBox(GesPoint.Zero, new GesPoint(70, 50)), arena);
+        Assert.AreEqual(new GesVector(70, 50), arena.Size);
+        var negative = GesBox.FromSize(new GesVector(-3, 2));
+        Assert.AreEqual(new GesPoint(-3, 0), negative.Min);
+        Assert.AreEqual(new GesPoint(0, 2), negative.Max);
+    }
+
+    [TestMethod]
     public void PolygonsMeasureTheirArea()
     {
         var square = new GesPoly([new GesPoint(0, 0), new GesPoint(4, 0), new GesPoint(4, 4), new GesPoint(0, 4)]);

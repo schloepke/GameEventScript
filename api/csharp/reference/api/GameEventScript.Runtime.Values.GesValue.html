@@ -2,9 +2,9 @@
 <html>
   <head>
     <meta charset="utf-8">
-      <title>Struct GesValue | Game Event Script C# API — Unreleased (f9cc9ca82d74) </title>
+      <title>Struct GesValue | Game Event Script C# API — Unreleased (0e88e862dda6) </title>
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <meta name="title" content="Struct GesValue | Game Event Script C# API — Unreleased (f9cc9ca82d74) ">
+      <meta name="title" content="Struct GesValue | Game Event Script C# API — Unreleased (0e88e862dda6) ">
       
       <meta name="description" content="Represents a ges value.">
       <link rel="icon" href="../assets/logo.svg">
@@ -184,6 +184,38 @@ constructors.</p>
   <h4 class="section">Property Value</h4>
   <dl class="parameters">
     <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Runtime_Values_GesValue_ExternalValue_" data-uid="GameEventScript.Runtime.Values.GesValue.ExternalValue*"></a>
+
+  <h3 id="GameEventScript_Runtime_Values_GesValue_ExternalValue" data-uid="GameEventScript.Runtime.Values.GesValue.ExternalValue">
+  ExternalValue
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets the host object of an external value, otherwise <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/keywords/null">null</a>; the fastest way to its data.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public readonly IGesExternalValue? ExternalValue { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Api.IGesExternalValue.html">IGesExternalValue</a></dt>
     <dd></dd>
   </dl>
 
@@ -418,6 +450,53 @@ constructors.</p>
 
 
 
+  <a id="GameEventScript_Runtime_Values_GesValue_Item_" data-uid="GameEventScript.Runtime.Values.GesValue.Item*"></a>
+
+  <h3 id="GameEventScript_Runtime_Values_GesValue_Item_System_String_" data-uid="GameEventScript.Runtime.Values.GesValue.Item(System.String)">
+  this[string]
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Reads a member by name: the field of a Record, the entry of a Map, or the coordinate <code>x</code>, <code>y</code> or
+<code>z</code> of a Vector or Point. A missing name and every other value, including an external value, give
+Nothing; external field getters are not invoked, and a stored Nothing reads like a missing name.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public readonly GesValue this[string name] { get; }</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>name</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
+    <dd><p>The member name.</p>
+</dd>
+  </dl>
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Runtime.Values.GesValue.html">GesValue</a></dt>
+    <dd><p>The member value, or Nothing.</p>
+</dd>
+  </dl>
+
+
+
+
+
+  <h4 class="section">Exceptions</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.argumentnullexception">ArgumentNullException</a></dt>
+    <dd><p>Thrown when <code class="paramref">name</code> is <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/keywords/null">null</a>.</p>
+</dd>
+  </dl>
+
+
+
   <a id="GameEventScript_Runtime_Values_GesValue_Length_" data-uid="GameEventScript.Runtime.Values.GesValue.Length*"></a>
 
   <h3 id="GameEventScript_Runtime_Values_GesValue_Length" data-uid="GameEventScript.Runtime.Values.GesValue.Length">
@@ -425,7 +504,8 @@ constructors.</p>
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the Unicode scalar or collection count, saturated at Int32.MaxValue; scalar values have length zero.</p>
+  <div class="markdown level1 summary"><p>Gets the Unicode scalar or collection count, saturated at Int32.MaxValue; an external value counts its declared
+fields without running a getter, also those a materialized map leaves out; scalar values have length zero.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -785,7 +865,8 @@ constructors.</p>
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Performs the as map operation.</p>
+  <div class="markdown level1 summary"><p>Returns the stored entries of a Map or the stored fields of a Record, otherwise <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/keywords/null">null</a>.
+External field getters are not invoked; <a class="xref" href="GameEventScript.Runtime.Values.GesValue.html#GameEventScript_Runtime_Values_GesValue_MaterializedMap">MaterializedMap()</a> reads them.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -797,7 +878,7 @@ constructors.</p>
   <h4 class="section">Returns</h4>
   <dl class="parameters">
     <dt><a class="xref" href="GameEventScript.Runtime.Values.GesValueMap.html">GesValueMap</a></dt>
-    <dd><p>The result of the operation.</p>
+    <dd><p>The stored entries or fields.</p>
 </dd>
   </dl>
 
@@ -955,6 +1036,53 @@ constructors.</p>
 
 
 
+  <a id="GameEventScript_Runtime_Values_GesValue_Format_" data-uid="GameEventScript.Runtime.Values.GesValue.Format*"></a>
+
+  <h3 id="GameEventScript_Runtime_Values_GesValue_Format_GameEventScript_Api_GesDocumentFormat_" data-uid="GameEventScript.Runtime.Values.GesValue.Format(GameEventScript.Api.GesDocumentFormat)">
+  Format(GesDocumentFormat?)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Formats this value with the GES document printer: literal text that <a class="xref" href="GameEventScript.Runtime.Values.GesValue.html#GameEventScript_Runtime_Values_GesValue_ParseLiteral_System_String_">ParseLiteral(string)</a> reads back to an
+equal value within the literal parsing limits, with Text quoted and large containers in indented block form.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public readonly string Format(GesDocumentFormat? format = null)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>format</code> <a class="xref" href="GameEventScript.Api.GesDocumentFormat.html">GesDocumentFormat</a></dt>
+    <dd><p>Layout options, or <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/keywords/null">null</a> for the defaults.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
+    <dd><p>The formatted literal text without a trailing line break.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <h4 class="section">Exceptions</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.argumentexception">ArgumentException</a></dt>
+    <dd><p>The value is or contains an External value, a Dice roll below 1 or a Record
+whose type name is not a type name.</p>
+</dd>
+  </dl>
+
+
+
   <a id="GameEventScript_Runtime_Values_GesValue_FromJson_" data-uid="GameEventScript.Runtime.Values.GesValue.FromJson*"></a>
 
   <h3 id="GameEventScript_Runtime_Values_GesValue_FromJson_System_String_" data-uid="GameEventScript.Runtime.Values.GesValue.FromJson(System.String)">
@@ -1058,6 +1186,45 @@ constructors.</p>
   <dl class="parameters">
     <dt><code>rolls</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a>[]</dt>
     <dd><p>The rolls value.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Runtime.Values.GesValue.html">GesValue</a></dt>
+    <dd><p>The result of the operation.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Runtime_Values_GesValue_GesExternal_" data-uid="GameEventScript.Runtime.Values.GesValue.GesExternal*"></a>
+
+  <h3 id="GameEventScript_Runtime_Values_GesValue_GesExternal_GameEventScript_Api_IGesExternalValue_" data-uid="GameEventScript.Runtime.Values.GesValue.GesExternal(GameEventScript.Api.IGesExternalValue)">
+  GesExternal(IGesExternalValue)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Wraps a host-provided external value.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static GesValue GesExternal(IGesExternalValue value)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>value</code> <a class="xref" href="GameEventScript.Api.IGesExternalValue.html">IGesExternalValue</a></dt>
+    <dd><p>The host object.</p>
 </dd>
   </dl>
 
@@ -1247,7 +1414,8 @@ constructors.</p>
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Performs the ges map operation.</p>
+  <div class="markdown level1 summary"><p>Creates a Map from parallel keys and values in canonical key order, keeping the last value of a duplicate key.
+Extra keys or values beyond the shorter array are ignored.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -1279,6 +1447,63 @@ constructors.</p>
 
 
 
+  <h4 class="section">Exceptions</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.argumentnullexception">ArgumentNullException</a></dt>
+    <dd><p>Thrown when an array or a key is <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/keywords/null">null</a>.</p>
+</dd>
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.argumentexception">ArgumentException</a></dt>
+    <dd><p>Thrown when a key is not valid Unicode.</p>
+</dd>
+  </dl>
+
+
+
+  <a id="GameEventScript_Runtime_Values_GesValue_GesMap_" data-uid="GameEventScript.Runtime.Values.GesValue.GesMap*"></a>
+
+  <h3 id="GameEventScript_Runtime_Values_GesValue_GesMap_System_ValueTuple_System_String_GameEventScript_Runtime_Values_GesValue____" data-uid="GameEventScript.Runtime.Values.GesValue.GesMap(System.ValueTuple{System.String,GameEventScript.Runtime.Values.GesValue}[])">
+  GesMap(params (string, GesValue)[])
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Creates a Map from ordered entries in canonical key order, keeping the last value of a duplicate key.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static GesValue GesMap(params (string, GesValue)[] entries)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>entries</code> (<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.valuetuple-system.string,gameeventscript.runtime.values.gesvalue-.name">name</a>, <a class="xref" href="GameEventScript.Runtime.Values.GesValue.html">GesValue</a> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.valuetuple-system.string,gameeventscript.runtime.values.gesvalue-.value">value</a>)[]</dt>
+    <dd><p>The ordered key-value entries.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Runtime.Values.GesValue.html">GesValue</a></dt>
+    <dd><p>The result of the operation.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <h4 class="section">Exceptions</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.argumentnullexception">ArgumentNullException</a></dt>
+    <dd><p>Thrown when the array or a key is <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/keywords/null">null</a>.</p>
+</dd>
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.argumentexception">ArgumentException</a></dt>
+    <dd><p>Thrown when a key is not valid Unicode.</p>
+</dd>
+  </dl>
 
 
 
@@ -1580,7 +1805,8 @@ constructors.</p>
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Performs the ges record operation.</p>
+  <div class="markdown level1 summary"><p>Creates a Record from parallel field names and values in canonical key order, keeping the last value of a
+duplicate name. Extra names or values beyond the shorter array are ignored.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -1615,6 +1841,66 @@ constructors.</p>
 
 
 
+  <h4 class="section">Exceptions</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.argumentnullexception">ArgumentNullException</a></dt>
+    <dd><p>Thrown when an array or a name is <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/keywords/null">null</a>.</p>
+</dd>
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.argumentexception">ArgumentException</a></dt>
+    <dd><p>Thrown when a name is not valid Unicode.</p>
+</dd>
+  </dl>
+
+
+
+  <a id="GameEventScript_Runtime_Values_GesValue_GesRecord_" data-uid="GameEventScript.Runtime.Values.GesValue.GesRecord*"></a>
+
+  <h3 id="GameEventScript_Runtime_Values_GesValue_GesRecord_System_String_System_ValueTuple_System_String_GameEventScript_Runtime_Values_GesValue____" data-uid="GameEventScript.Runtime.Values.GesValue.GesRecord(System.String,System.ValueTuple{System.String,GameEventScript.Runtime.Values.GesValue}[])">
+  GesRecord(string, params (string, GesValue)[])
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Creates a Record from ordered fields in canonical key order, keeping the last value of a duplicate name.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static GesValue GesRecord(string typeName, params (string, GesValue)[] fields)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>typeName</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
+    <dd><p>The type name value.</p>
+</dd>
+    <dt><code>fields</code> (<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.valuetuple-system.string,gameeventscript.runtime.values.gesvalue-.name">name</a>, <a class="xref" href="GameEventScript.Runtime.Values.GesValue.html">GesValue</a> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.valuetuple-system.string,gameeventscript.runtime.values.gesvalue-.value">value</a>)[]</dt>
+    <dd><p>The ordered field name and value entries.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Runtime.Values.GesValue.html">GesValue</a></dt>
+    <dd><p>The result of the operation.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <h4 class="section">Exceptions</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.argumentnullexception">ArgumentNullException</a></dt>
+    <dd><p>Thrown when the array or a name is <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/keywords/null">null</a>.</p>
+</dd>
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.argumentexception">ArgumentException</a></dt>
+    <dd><p>Thrown when a name is not valid Unicode.</p>
+</dd>
+  </dl>
 
 
 
@@ -1777,6 +2063,198 @@ constructors.</p>
 
 
 
+  <a id="GameEventScript_Runtime_Values_GesValue_MaterializedMap_" data-uid="GameEventScript.Runtime.Values.GesValue.MaterializedMap*"></a>
+
+  <h3 id="GameEventScript_Runtime_Values_GesValue_MaterializedMap" data-uid="GameEventScript.Runtime.Values.GesValue.MaterializedMap">
+  MaterializedMap()
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Returns the stored entries or fields, or reads every declared field of an external value. Each call runs the
+getters again and keeps nothing, so an external value can change between handlers.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public readonly GesValueMap? MaterializedMap()</code></pre>
+  </div>
+
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Runtime.Values.GesValueMap.html">GesValueMap</a></dt>
+    <dd><p>The entries or fields, or <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/keywords/null">null</a> for every other value.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <h4 class="section">Exceptions</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Api.GesFatalRuntimeException.html">GesFatalRuntimeException</a></dt>
+    <dd><p>Thrown when an external field getter fails.</p>
+</dd>
+  </dl>
+
+
+
+  <a id="GameEventScript_Runtime_Values_GesValue_ParseLiteral_" data-uid="GameEventScript.Runtime.Values.GesValue.ParseLiteral*"></a>
+
+  <h3 id="GameEventScript_Runtime_Values_GesValue_ParseLiteral_System_String_" data-uid="GameEventScript.Runtime.Values.GesValue.ParseLiteral(System.String)">
+  ParseLiteral(string)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Recognizes one complete data literal, like the GES <code>parse</code> expression.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static GesValue ParseLiteral(string input)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>input</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
+    <dd><p>The literal text, for example <code>150kW</code>, <code>#standard</code> or <code>[energy: 150kW]</code>.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Runtime.Values.GesValue.html">GesValue</a></dt>
+    <dd><p>The recognized value, or <code class="paramref">input</code> as unchanged Text when it is not a complete data
+literal.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <h4 class="section">Exceptions</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.argumentnullexception">ArgumentNullException</a></dt>
+    <dd><p><code class="paramref">input</code> is <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/keywords/null">null</a>.</p>
+</dd>
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.argumentexception">ArgumentException</a></dt>
+    <dd><p><code class="paramref">input</code> contains an unpaired surrogate.</p>
+</dd>
+    <dt><a class="xref" href="GameEventScript.Api.GesLiteralLimitException.html">GesLiteralLimitException</a></dt>
+    <dd><p>The input exceeds a fixed literal parsing limit.</p>
+</dd>
+  </dl>
+
+
+
+  <a id="GameEventScript_Runtime_Values_GesValue_ParseLiteralStrict_" data-uid="GameEventScript.Runtime.Values.GesValue.ParseLiteralStrict*"></a>
+
+  <h3 id="GameEventScript_Runtime_Values_GesValue_ParseLiteralStrict_System_String_" data-uid="GameEventScript.Runtime.Values.GesValue.ParseLiteralStrict(System.String)">
+  ParseLiteralStrict(string)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Recognizes one complete data literal, like the GES <code>parse strict</code> expression.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static GesValue? ParseLiteralStrict(string input)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>input</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
+    <dd><p>The literal text. Text values must be quoted, for example <code>'standard'</code>.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Runtime.Values.GesValue.html">GesValue</a>?</dt>
+    <dd><p>The recognized value, which may be Nothing for the literal <code>nothing</code>, or <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/keywords/null">null</a>
+when <code class="paramref">input</code> is not a complete data literal.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <h4 class="section">Exceptions</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.argumentnullexception">ArgumentNullException</a></dt>
+    <dd><p><code class="paramref">input</code> is <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/keywords/null">null</a>.</p>
+</dd>
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.argumentexception">ArgumentException</a></dt>
+    <dd><p><code class="paramref">input</code> contains an unpaired surrogate.</p>
+</dd>
+    <dt><a class="xref" href="GameEventScript.Api.GesLiteralLimitException.html">GesLiteralLimitException</a></dt>
+    <dd><p>The input exceeds a fixed literal parsing limit.</p>
+</dd>
+  </dl>
+
+
+
+  <a id="GameEventScript_Runtime_Values_GesValue_ReadField_" data-uid="GameEventScript.Runtime.Values.GesValue.ReadField*"></a>
+
+  <h3 id="GameEventScript_Runtime_Values_GesValue_ReadField_System_String_" data-uid="GameEventScript.Runtime.Values.GesValue.ReadField(System.String)">
+  ReadField(string)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Reads one declared field of an external value by running only its getter, and applies the declared type.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public readonly GesValue? ReadField(string name)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>name</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
+    <dd><p>The field name.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Runtime.Values.GesValue.html">GesValue</a>?</dt>
+    <dd><p>The field, or <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/keywords/null">null</a> for an undeclared name, an absent field or a value that is not external.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <h4 class="section">Exceptions</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.argumentnullexception">ArgumentNullException</a></dt>
+    <dd><p>Thrown when <code class="paramref">name</code> is <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/keywords/null">null</a>.</p>
+</dd>
+    <dt><a class="xref" href="GameEventScript.Api.GesFatalRuntimeException.html">GesFatalRuntimeException</a></dt>
+    <dd><p>Thrown when the external field getter fails.</p>
+</dd>
+  </dl>
+
+
+
   <a id="GameEventScript_Runtime_Values_GesValue_ToJson_" data-uid="GameEventScript.Runtime.Values.GesValue.ToJson*"></a>
 
   <h3 id="GameEventScript_Runtime_Values_GesValue_ToJson" data-uid="GameEventScript.Runtime.Values.GesValue.ToJson">
@@ -1811,6 +2289,9 @@ constructors.</p>
   <dl class="parameters">
     <dt><a class="xref" href="GameEventScript.Api.GesMessageFormatException.html">GesMessageFormatException</a></dt>
     <dd><p>The graph is unsupported or exceeds limits.</p>
+</dd>
+    <dt><a class="xref" href="GameEventScript.Api.GesFatalRuntimeException.html">GesFatalRuntimeException</a></dt>
+    <dd><p>An external field getter failed.</p>
 </dd>
   </dl>
 
@@ -1866,7 +2347,7 @@ constructors.</p>
     <footer class="border-top text-secondary">
       <div class="container-xxl">
         <div class="flex-fill">
-          Game Event Script C# API — Unreleased (f9cc9ca82d74)
+          Game Event Script C# API — Unreleased (0e88e862dda6)
         </div>
       </div>
     </footer>

@@ -2,9 +2,9 @@
 <html>
   <head>
     <meta charset="utf-8">
-      <title>Namespace GameEventScript.Api | Game Event Script C# API — Unreleased (f9cc9ca82d74) </title>
+      <title>Namespace GameEventScript.Api | Game Event Script C# API — Unreleased (0e88e862dda6) </title>
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <meta name="title" content="Namespace GameEventScript.Api | Game Event Script C# API — Unreleased (f9cc9ca82d74) ">
+      <meta name="title" content="Namespace GameEventScript.Api | Game Event Script C# API — Unreleased (0e88e862dda6) ">
       
       
       <link rel="icon" href="../assets/logo.svg">
@@ -104,6 +104,11 @@ event-driven execution between components, scripts, and handlers.</p>
 </dd>
     </dl>
     <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GesBoundSchema.html">GesBoundSchema</a></dt>
+      <dd><p>A schema, message or message set bound to parameter values. Immutable; it can be shared between threads.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
       <dt><a class="xref" href="GameEventScript.Api.GesBuildMetadataSegment.html">GesBuildMetadataSegment</a></dt>
       <dd><p>Represents a game event script build metadata segment.</p>
 </dd>
@@ -143,6 +148,29 @@ validation phase of script compilation.</p>
     <dl class="jumplist">
       <dt><a class="xref" href="GameEventScript.Api.GesDiagnosticCodes.html">GesDiagnosticCodes</a></dt>
       <dd><p>Represents a game event script diagnostic codes.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GesDocument.html">GesDocument</a></dt>
+      <dd><p>An immutable GES document: a Map or Record root with an optional schema reference, read from and printed to
+human-editable <code>.gesd</code> text. Comments and layout are not part of a document.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GesDocumentException.html">GesDocumentException</a></dt>
+      <dd><p>GES document text is invalid or exceeds a fixed literal parsing limit.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GesDocumentFormat.html">GesDocumentFormat</a></dt>
+      <dd><p>Layout options for printing GES documents and values. Layout is a recommendation: every printed document reads
+back to an equal document, while indentation, line breaks and numeric spelling may differ between implementations.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GesDocumentSchema.html">GesDocumentSchema</a></dt>
+      <dd><p>The schema reference of a GES document. It is a reference only: GES neither loads schema files nor validates
+documents against record definitions.</p>
 </dd>
     </dl>
     <dl class="jumplist">
@@ -225,6 +253,11 @@ cannot be recovered from within the execution of a script's runtime logic.</p>
 </dd>
     </dl>
     <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GesLiteralLimitException.html">GesLiteralLimitException</a></dt>
+      <dd><p>Literal recognition outside a Host exceeded one of its fixed protection limits.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
       <dt><a class="xref" href="GameEventScript.Api.GesMessageArguments.html">GesMessageArguments</a></dt>
       <dd><p>Ordered message arguments. Argument names are part of the message signature
 and therefore preserve source order.</p>
@@ -299,6 +332,69 @@ or infinite execution.</p>
 </dd>
     </dl>
     <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GesSchema.html">GesSchema</a></dt>
+      <dd><p>The immutable description of one schema, message or message set of a <a class="xref" href="GameEventScript.Api.GesSchemaSet.html">GesSchemaSet</a>. It can be shared
+between threads and bound any number of times.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GesSchemaAxisInfo.html">GesSchemaAxisInfo</a></dt>
+      <dd><p>The limits of a numeric axis of a Point or Vector.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GesSchemaDelta.html">GesSchemaDelta</a></dt>
+      <dd><p>Converts between full records of a schema and deltas against a baseline, the full record the receiver already holds.
+Both directions compare wire values and allocate nothing on success. Data is untrusted: every limit is checked, and invalid
+data fails with a <a class="xref" href="GameEventScript.Api.GesWireException.html">GesWireException</a>.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GesSchemaDump.html">GesSchemaDump</a></dt>
+      <dd><p>Makes binary data readable through a bound schema.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GesSchemaException.html">GesSchemaException</a></dt>
+      <dd><p>A schema source or a binding that breaks a rule. Callers branch on <a class="xref" href="GameEventScript.Api.GesSchemaException.html#GameEventScript_Api_GesSchemaException_Code">Code</a>, a stable <code>schema.*</code> code;
+the message is informative text.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GesSchemaFieldInfo.html">GesSchemaFieldInfo</a></dt>
+      <dd><p>A field of a schema or an argument of a message.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GesSchemaParameterInfo.html">GesSchemaParameterInfo</a></dt>
+      <dd><p>A parameter that a declaration reaches and every binding must supply.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GesSchemaParameters.html">GesSchemaParameters</a></dt>
+      <dd><p>The parameter values of one binding.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GesSchemaSet.html">GesSchemaSet</a></dt>
+      <dd><p>Validated schema sources. A set is immutable and can be bound any number of times, also with different parameter
+values within one session.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GesSchemaType.html">GesSchemaType</a></dt>
+      <dd><p>The type of a field, or one alternative of a union.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GesSchemaValues.html">GesSchemaValues</a></dt>
+      <dd><p>The convenient path between GES values and the wire, for rare data. A Record or Map encodes by field name, and fields
+without a schema entry, such as computed fields, are not transmitted. Only a Map that selects a union alternative must
+have a field for each of its keys. Time-critical code uses
+<a class="xref" href="GameEventScript.Api.GesSchemaWriter.html">GesSchemaWriter</a> and <a class="xref" href="GameEventScript.Api.GesSchemaReader.html">GesSchemaReader</a>.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
       <dt><a class="xref" href="GameEventScript.Api.GesSourceArchiveEntry.html">GesSourceArchiveEntry</a></dt>
       <dd><p>Represents a game event script source archive entry.</p>
 </dd>
@@ -329,6 +425,19 @@ This class is used to pinpoint the origin of a particular piece of code or error
       <dd><p>Represents one host-local native message subscription.</p>
 </dd>
     </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GesWireException.html">GesWireException</a></dt>
+      <dd><p>A value that cannot be encoded, or data that is not a valid encoding. The error names the field path and holds no value
+from the data, so it can be logged safely.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GesWireRules.html">GesWireRules</a></dt>
+      <dd><p>The value rules of the schema wire format over plain operands: Text and tag validity, the exact quantization of a step
+<code>p / 10^k</code> and wrapping. Generated schema code calls them with constant operands, and the interpreted writer and
+reader use the same rules, so both encode identical bytes.</p>
+</dd>
+    </dl>
     <h3 id="structs">
 Structs
 </h3>
@@ -340,6 +449,20 @@ Structs
     <dl class="jumplist">
       <dt><a class="xref" href="GameEventScript.Api.GesBindingSegment.Entry.html">GesBindingSegment.Entry</a></dt>
       <dd><p>Represents a game event script binary bind entry.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GesBitReader.html">GesBitReader</a></dt>
+      <dd><p>Reads values of 0 to 64 bits from untrusted data in the bit order of the schema wire format: least significant bit
+first, bytes in Little Endian order. It knows no schema; generated schema code and <a class="xref" href="GameEventScript.Api.GesSchemaReader.html">GesSchemaReader</a> build
+on it. Reading allocates nothing.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GesBitWriter.html">GesBitWriter</a></dt>
+      <dd><p>Writes values of 0 to 64 bits into a caller's buffer in the bit order of the schema wire format: least significant bit
+first, bytes in Little Endian order. It knows no schema; generated schema code and <a class="xref" href="GameEventScript.Api.GesSchemaWriter.html">GesSchemaWriter</a> build
+on it. Writing allocates nothing.</p>
 </dd>
     </dl>
     <dl class="jumplist">
@@ -380,6 +503,48 @@ Structs
     <dl class="jumplist">
       <dt><a class="xref" href="GameEventScript.Api.GesReadOnlyArray-1.html">GesReadOnlyArray&lt;T&gt;</a></dt>
       <dd><p>Immutable array view used by portable programs and other immutable API models.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GesSchemaBound.html">GesSchemaBound</a></dt>
+      <dd><p>A bound, step or delta range: a parameter or an exact decimal.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GesSchemaDecoded.html">GesSchemaDecoded</a></dt>
+      <dd><p>A decoded top-level value and the bytes it occupied.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GesSchemaDeltaDecoded.html">GesSchemaDeltaDecoded</a></dt>
+      <dd><p>The sizes of a decoded delta.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GesSchemaDumpResult.html">GesSchemaDumpResult</a></dt>
+      <dd><p>The readable form of encoded data.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GesSchemaField.html">GesSchemaField</a></dt>
+      <dd><p>The handle of a field in a bound schema. Resolving it once makes further uses free of lookups.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GesSchemaReader.html">GesSchemaReader</a></dt>
+      <dd><p>Decodes one top-level record or message without allocating on success. Data is untrusted: every limit is checked, and
+invalid data fails with a <a class="xref" href="GameEventScript.Api.GesWireException.html">GesWireException</a>. Fields are read in declaration order.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GesSchemaSource.html">GesSchemaSource</a></dt>
+      <dd><p>A named schema source text.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GesSchemaWriter.html">GesSchemaWriter</a></dt>
+      <dd><p>Encodes one top-level record or message into a caller's buffer without allocating on success. Fields are written in
+declaration order; a nested schema, Point or Vector is entered with <a class="xref" href="GameEventScript.Api.GesSchemaWriter.html#GameEventScript_Api_GesSchemaWriter_BeginNested_GameEventScript_Api_GesSchemaField_">BeginNested(GesSchemaField)</a>.</p>
 </dd>
     </dl>
     <dl class="jumplist">
@@ -539,6 +704,11 @@ to process and verify them appropriately.</p>
 </dd>
     </dl>
     <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GesDocumentSchemaKind.html">GesDocumentSchemaKind</a></dt>
+      <dd><p>The kind of schema a GES document references.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
       <dt><a class="xref" href="GameEventScript.Api.GesExecutionState.html">GesExecutionState</a></dt>
       <dd><p>Identifies why a synchronous host pump returned.</p>
 </dd>
@@ -561,6 +731,16 @@ to process and verify them appropriately.</p>
     <dl class="jumplist">
       <dt><a class="xref" href="GameEventScript.Api.GesQuantityUnit.html">GesQuantityUnit</a></dt>
       <dd><p>Defines the supported game event script bytecode instruction unit values.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GesSchemaKind.html">GesSchemaKind</a></dt>
+      <dd><p>The kinds of declarations that have a hash and can be bound.</p>
+</dd>
+    </dl>
+    <dl class="jumplist">
+      <dt><a class="xref" href="GameEventScript.Api.GesSchemaTypeKind.html">GesSchemaTypeKind</a></dt>
+      <dd><p>The kinds of types a schema field can have.</p>
 </dd>
     </dl>
     <dl class="jumplist">
@@ -596,7 +776,7 @@ to process and verify them appropriately.</p>
     <footer class="border-top text-secondary">
       <div class="container-xxl">
         <div class="flex-fill">
-          Game Event Script C# API — Unreleased (f9cc9ca82d74)
+          Game Event Script C# API — Unreleased (0e88e862dda6)
         </div>
       </div>
     </footer>

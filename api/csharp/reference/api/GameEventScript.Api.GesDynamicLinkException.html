@@ -2,9 +2,9 @@
 <html>
   <head>
     <meta charset="utf-8">
-      <title>Class GesDynamicLinkException | Game Event Script C# API — Unreleased (f9cc9ca82d74) </title>
+      <title>Class GesDynamicLinkException | Game Event Script C# API — Unreleased (0e88e862dda6) </title>
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <meta name="title" content="Class GesDynamicLinkException | Game Event Script C# API — Unreleased (f9cc9ca82d74) ">
+      <meta name="title" content="Class GesDynamicLinkException | Game Event Script C# API — Unreleased (0e88e862dda6) ">
       
       <meta name="description" content="Represents an exception thrown when a dynamic linking error occurs during the execution of a Game Event Script. This exception specifically indicates issues related to the binding or resolution of external references required for script execution.">
       <link rel="icon" href="../assets/logo.svg">
@@ -212,6 +212,40 @@ issues during the linking process.</p>
 
 
 
+  <a id="GameEventScript_Api_GesDynamicLinkException__ctor_" data-uid="GameEventScript.Api.GesDynamicLinkException.#ctor*"></a>
+
+  <h3 id="GameEventScript_Api_GesDynamicLinkException__ctor_System_Collections_Generic_IReadOnlyList_GameEventScript_Api_GesDiagnostic__" data-uid="GameEventScript.Api.GesDynamicLinkException.#ctor(System.Collections.Generic.IReadOnlyList{GameEventScript.Api.GesDiagnostic})">
+  GesDynamicLinkException(IReadOnlyList&lt;GesDiagnostic&gt;)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Initializes a new instance for a failure with several diagnostics, such as one per call site of a missing
+extension. The exception message names the first locations; it is informative text, not a portable comparison value.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public GesDynamicLinkException(IReadOnlyList&lt;GesDiagnostic&gt; diagnostics)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>diagnostics</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.collections.generic.ireadonlylist-1">IReadOnlyList</a>&lt;<a class="xref" href="GameEventScript.Api.GesDiagnostic.html">GesDiagnostic</a>&gt;</dt>
+    <dd><p>The link diagnostics in source order; at least one.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
   <h2 class="section" id="properties">Properties
 </h2>
 
@@ -223,7 +257,7 @@ issues during the linking process.</p>
   
   </h3>
 
-  <div class="markdown level1 summary"><p>Gets the diagnostic.</p>
+  <div class="markdown level1 summary"><p>Gets the first diagnostic of <a class="xref" href="GameEventScript.Api.GesDynamicLinkException.html#GameEventScript_Api_GesDynamicLinkException_Diagnostics">Diagnostics</a>.</p>
 </div>
   <div class="markdown level1 conceptual"></div>
 
@@ -238,6 +272,39 @@ issues during the linking process.</p>
   <h4 class="section">Property Value</h4>
   <dl class="parameters">
     <dt><a class="xref" href="GameEventScript.Api.GesDiagnostic.html">GesDiagnostic</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GesDynamicLinkException_Diagnostics_" data-uid="GameEventScript.Api.GesDynamicLinkException.Diagnostics*"></a>
+
+  <h3 id="GameEventScript_Api_GesDynamicLinkException_Diagnostics" data-uid="GameEventScript.Api.GesDynamicLinkException.Diagnostics">
+  Diagnostics
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets every diagnostic of the failure. A failure of an import that the source calls, such as a missing extension,
+has one diagnostic per call site with its source location, in source order, when the Program has a SourceMap.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public IReadOnlyList&lt;GesDiagnostic&gt; Diagnostics { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.collections.generic.ireadonlylist-1">IReadOnlyList</a>&lt;<a class="xref" href="GameEventScript.Api.GesDiagnostic.html">GesDiagnostic</a>&gt;</dt>
     <dd></dd>
   </dl>
 
@@ -265,7 +332,7 @@ issues during the linking process.</p>
     <footer class="border-top text-secondary">
       <div class="container-xxl">
         <div class="flex-fill">
-          Game Event Script C# API — Unreleased (f9cc9ca82d74)
+          Game Event Script C# API — Unreleased (0e88e862dda6)
         </div>
       </div>
     </footer>

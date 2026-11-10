@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Class GesSchemaValues | Game Event Script C# API — Unreleased (0e88e862dda6) </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Class GesSchemaValues | Game Event Script C# API — Unreleased (0e88e862dda6) ">
+      
+      <meta name="description" content="The convenient path between GES values and the wire, for rare data. A Record or Map encodes by field name, and fields without a schema entry, such as computed fields, are not transmitted. Only a Map that selects a union alternative must have a field for each of its keys. Time-critical code uses  and .">
+      <link rel="icon" href="../assets/logo.svg">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="../toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="ManagedReference">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../assets/logo.svg" alt="Game Event Script">
+            Game Event Script
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="GameEventScript.Api.GesSchemaValues">
+
+
+
+  <h1 id="GameEventScript_Api_GesSchemaValues" data-uid="GameEventScript.Api.GesSchemaValues" class="text-break">
+Class GesSchemaValues  
+  </h1>
+
+  <div class="facts text-secondary">
+    <dl><dt>Namespace</dt><dd><a class="xref" href="GameEventScript.html">GameEventScript</a>.<a class="xref" href="GameEventScript.Api.html">Api</a></dd></dl>
+  <dl><dt>Assembly</dt><dd>GameEventScript.Runtime.dll</dd></dl>
+  </div>
+
+  <div class="markdown summary"><p>The convenient path between GES values and the wire, for rare data. A Record or Map encodes by field name, and fields
+without a schema entry, such as computed fields, are not transmitted. Only a Map that selects a union alternative must
+have a field for each of its keys. Time-critical code uses
+<a class="xref" href="GameEventScript.Api.GesSchemaWriter.html">GesSchemaWriter</a> and <a class="xref" href="GameEventScript.Api.GesSchemaReader.html">GesSchemaReader</a>.</p>
+</div>
+  <div class="markdown conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static class GesSchemaValues</code></pre>
+  </div>
+
+
+
+
+  <dl class="typelist inheritance">
+    <dt>Inheritance</dt>
+    <dd>
+      <div><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object">object</a></div>
+      <div><span class="xref">GesSchemaValues</span></div>
+    </dd>
+  </dl>
+
+
+
+  <dl class="typelist inheritedMembers">
+    <dt>Inherited Members</dt>
+    <dd>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.gettype">object.GetType()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.memberwiseclone">object.MemberwiseClone()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.tostring">object.ToString()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object)">object.Equals(object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object-system-object)">object.Equals(object, object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.referenceequals">object.ReferenceEquals(object, object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.gethashcode">object.GetHashCode()</a>
+    </div>
+  </dd></dl>
+
+
+
+
+
+
+  <h2 class="section" id="methods">Methods
+</h2>
+
+
+  <a id="GameEventScript_Api_GesSchemaValues_Decode_" data-uid="GameEventScript.Api.GesSchemaValues.Decode*"></a>
+
+  <h3 id="GameEventScript_Api_GesSchemaValues_Decode_GameEventScript_Api_GesBoundSchema_System_ReadOnlySpan_System_Byte__GameEventScript_Runtime_Values_GesValue_System_Int64_" data-uid="GameEventScript.Api.GesSchemaValues.Decode(GameEventScript.Api.GesBoundSchema,System.ReadOnlySpan{System.Byte},GameEventScript.Runtime.Values.GesValue,System.Int64)">
+  Decode(GesBoundSchema, ReadOnlySpan&lt;byte&gt;, GesValue, long)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Decodes a delta against the baseline value it was encoded with.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static GesSchemaDecoded Decode(GesBoundSchema schema, ReadOnlySpan&lt;byte&gt; data, GesValue baseline, long byteLimit = 9223372036854775807)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>schema</code> <a class="xref" href="GameEventScript.Api.GesBoundSchema.html">GesBoundSchema</a></dt>
+    <dd><p>The bound schema.</p>
+</dd>
+    <dt><code>data</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.readonlyspan-1">ReadOnlySpan</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.byte">byte</a>&gt;</dt>
+    <dd><p>The delta; it may continue after it.</p>
+</dd>
+    <dt><code>baseline</code> <a class="xref" href="GameEventScript.Runtime.Values.GesValue.html">GesValue</a></dt>
+    <dd><p>The value that this side holds.</p>
+</dd>
+    <dt><code>byteLimit</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int64">long</a></dt>
+    <dd><p>An optional limit on the bytes of this delta.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Api.GesSchemaDecoded.html">GesSchemaDecoded</a></dt>
+    <dd><p>The value and the bytes the delta occupied.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <h4 class="section">Exceptions</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Api.GesWireException.html">GesWireException</a></dt>
+    <dd><p>The data is not a valid delta for this baseline.</p>
+</dd>
+    <dt><a class="xref" href="GameEventScript.Api.GesFatalRuntimeException.html">GesFatalRuntimeException</a></dt>
+    <dd><p>An external field getter of the baseline failed.</p>
+</dd>
+  </dl>
+
+
+
+  <a id="GameEventScript_Api_GesSchemaValues_Decode_" data-uid="GameEventScript.Api.GesSchemaValues.Decode*"></a>
+
+  <h3 id="GameEventScript_Api_GesSchemaValues_Decode_GameEventScript_Api_GesBoundSchema_System_ReadOnlySpan_System_Byte__System_Int64_" data-uid="GameEventScript.Api.GesSchemaValues.Decode(GameEventScript.Api.GesBoundSchema,System.ReadOnlySpan{System.Byte},System.Int64)">
+  Decode(GesBoundSchema, ReadOnlySpan&lt;byte&gt;, long)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Decodes a Record or Message.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static GesSchemaDecoded Decode(GesBoundSchema schema, ReadOnlySpan&lt;byte&gt; data, long byteLimit = 9223372036854775807)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>schema</code> <a class="xref" href="GameEventScript.Api.GesBoundSchema.html">GesBoundSchema</a></dt>
+    <dd><p>The bound schema.</p>
+</dd>
+    <dt><code>data</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.readonlyspan-1">ReadOnlySpan</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.byte">byte</a>&gt;</dt>
+    <dd><p>The data; it may continue after the record.</p>
+</dd>
+    <dt><code>byteLimit</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int64">long</a></dt>
+    <dd><p>An optional limit on the bytes of this record.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Api.GesSchemaDecoded.html">GesSchemaDecoded</a></dt>
+    <dd><p>The value and the bytes it occupied.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <h4 class="section">Exceptions</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Api.GesWireException.html">GesWireException</a></dt>
+    <dd><p>The data is not a valid encoding.</p>
+</dd>
+  </dl>
+
+
+
+  <a id="GameEventScript_Api_GesSchemaValues_Encode_" data-uid="GameEventScript.Api.GesSchemaValues.Encode*"></a>
+
+  <h3 id="GameEventScript_Api_GesSchemaValues_Encode_GameEventScript_Api_GesBoundSchema_GameEventScript_Runtime_Values_GesValue_GameEventScript_Runtime_Values_GesValue_System_Span_System_Byte__" data-uid="GameEventScript.Api.GesSchemaValues.Encode(GameEventScript.Api.GesBoundSchema,GameEventScript.Runtime.Values.GesValue,GameEventScript.Runtime.Values.GesValue,System.Span{System.Byte})">
+  Encode(GesBoundSchema, GesValue, GesValue, Span&lt;byte&gt;)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Encodes a Record or Map as a delta against a baseline value of the same schema.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static int Encode(GesBoundSchema schema, GesValue value, GesValue baseline, Span&lt;byte&gt; buffer)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>schema</code> <a class="xref" href="GameEventScript.Api.GesBoundSchema.html">GesBoundSchema</a></dt>
+    <dd><p>The bound schema.</p>
+</dd>
+    <dt><code>value</code> <a class="xref" href="GameEventScript.Runtime.Values.GesValue.html">GesValue</a></dt>
+    <dd><p>The value.</p>
+</dd>
+    <dt><code>baseline</code> <a class="xref" href="GameEventScript.Runtime.Values.GesValue.html">GesValue</a></dt>
+    <dd><p>The value that the receiver holds.</p>
+</dd>
+    <dt><code>buffer</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.span-1">Span</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.byte">byte</a>&gt;</dt>
+    <dd><p>The buffer that receives the delta; <a class="xref" href="GameEventScript.Api.GesBoundSchema.html#GameEventScript_Api_GesBoundSchema_MaxByteCount">MaxByteCount</a> always suffices. Encoding also uses it as scratch space, so a smaller buffer can fail with <code>wire.bufferTooSmall</code> even when the delta would fit.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>The number of bytes written.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <h4 class="section">Exceptions</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Api.GesWireException.html">GesWireException</a></dt>
+    <dd><p>A value does not fit the schema, or their keys differ.</p>
+</dd>
+    <dt><a class="xref" href="GameEventScript.Api.GesFatalRuntimeException.html">GesFatalRuntimeException</a></dt>
+    <dd><p>An external field getter of a value failed.</p>
+</dd>
+  </dl>
+
+
+
+  <a id="GameEventScript_Api_GesSchemaValues_Encode_" data-uid="GameEventScript.Api.GesSchemaValues.Encode*"></a>
+
+  <h3 id="GameEventScript_Api_GesSchemaValues_Encode_GameEventScript_Api_GesBoundSchema_GameEventScript_Runtime_Values_GesValue_System_Span_System_Byte__" data-uid="GameEventScript.Api.GesSchemaValues.Encode(GameEventScript.Api.GesBoundSchema,GameEventScript.Runtime.Values.GesValue,System.Span{System.Byte})">
+  Encode(GesBoundSchema, GesValue, Span&lt;byte&gt;)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Encodes a Record or Map through a schema, or a Message through a message.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static int Encode(GesBoundSchema schema, GesValue value, Span&lt;byte&gt; buffer)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>schema</code> <a class="xref" href="GameEventScript.Api.GesBoundSchema.html">GesBoundSchema</a></dt>
+    <dd><p>The bound schema.</p>
+</dd>
+    <dt><code>value</code> <a class="xref" href="GameEventScript.Runtime.Values.GesValue.html">GesValue</a></dt>
+    <dd><p>The value.</p>
+</dd>
+    <dt><code>buffer</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.span-1">Span</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.byte">byte</a>&gt;</dt>
+    <dd><p>The buffer that receives the encoding.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>The number of bytes written.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <h4 class="section">Exceptions</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Api.GesWireException.html">GesWireException</a></dt>
+    <dd><p>The value does not fit the schema.</p>
+</dd>
+    <dt><a class="xref" href="GameEventScript.Api.GesFatalRuntimeException.html">GesFatalRuntimeException</a></dt>
+    <dd><p>An external field getter of the value failed.</p>
+</dd>
+  </dl>
+
+
+
+  <a id="GameEventScript_Api_GesSchemaValues_ReadKey_" data-uid="GameEventScript.Api.GesSchemaValues.ReadKey*"></a>
+
+  <h3 id="GameEventScript_Api_GesSchemaValues_ReadKey_GameEventScript_Api_GesBoundSchema_System_ReadOnlySpan_System_Byte__" data-uid="GameEventScript.Api.GesSchemaValues.ReadKey(GameEventScript.Api.GesBoundSchema,System.ReadOnlySpan{System.Byte})">
+  ReadKey(GesBoundSchema, ReadOnlySpan&lt;byte&gt;)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Reads the key of an encoded record without decoding the rest.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static long ReadKey(GesBoundSchema schema, ReadOnlySpan&lt;byte&gt; data)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>schema</code> <a class="xref" href="GameEventScript.Api.GesBoundSchema.html">GesBoundSchema</a></dt>
+    <dd><p>The bound schema, which has a key.</p>
+</dd>
+    <dt><code>data</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.readonlyspan-1">ReadOnlySpan</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.byte">byte</a>&gt;</dt>
+    <dd><p>The data.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int64">long</a></dt>
+    <dd><p>The key as an Int64, or the tag index of a Tag key.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+</article>
+
+
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          Game Event Script C# API — Unreleased (0e88e862dda6)
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

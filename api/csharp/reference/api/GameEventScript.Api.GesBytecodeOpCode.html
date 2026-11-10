@@ -2,9 +2,9 @@
 <html>
   <head>
     <meta charset="utf-8">
-      <title>Enum GesBytecodeOpCode | Game Event Script C# API — Unreleased (f9cc9ca82d74) </title>
+      <title>Enum GesBytecodeOpCode | Game Event Script C# API — Unreleased (0e88e862dda6) </title>
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <meta name="title" content="Enum GesBytecodeOpCode | Game Event Script C# API — Unreleased (f9cc9ca82d74) ">
+      <meta name="title" content="Enum GesBytecodeOpCode | Game Event Script C# API — Unreleased (0e88e862dda6) ">
       
       <meta name="description" content="Defines the supported game event script bytecode op code values.">
       <link rel="icon" href="../assets/logo.svg">
@@ -257,7 +257,8 @@ Enum GesBytecodeOpCode
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_CreatePoint"><code>CreatePoint = 56</code></dt>
   
-  <dd><p>Identifies the create point value.</p>
+  <dd><p>Creates a point from the staged components. ImmediateX is 0 for the positional form starting at x, whose first
+component may lift a Vector or Point, 1 for labeled y, 2 for labeled z, or 3 for labeled x, which never lifts.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_CreateRange"><code>CreateRange = 59</code></dt>
   
@@ -293,7 +294,8 @@ Enum GesBytecodeOpCode
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_CreateVector"><code>CreateVector = 55</code></dt>
   
-  <dd><p>Identifies the create vector value.</p>
+  <dd><p>Creates a vector from the staged components. ImmediateX is 0 for the positional form starting at x, whose first
+component may lift a Vector or Point, 1 for labeled y, 2 for labeled z, or 3 for labeled x, which never lifts.</p>
 </dd>
     <dt id="GameEventScript_Api_GesBytecodeOpCode_Cross"><code>Cross = 146</code></dt>
   
@@ -951,7 +953,7 @@ Enum GesBytecodeOpCode
     <footer class="border-top text-secondary">
       <div class="container-xxl">
         <div class="flex-fill">
-          Game Event Script C# API — Unreleased (f9cc9ca82d74)
+          Game Event Script C# API — Unreleased (0e88e862dda6)
         </div>
       </div>
     </footer>

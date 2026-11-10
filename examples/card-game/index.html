@@ -6,15 +6,15 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>GES Card Lab</title>
-  <link rel="stylesheet" href="vendor/codemirror/lib/codemirror.css?v=d66c3db5f1b2a923af6b7380b7b6c8a7f52c4561fd4f3a19f9cb12b6dc4313ca">
-  <link rel="stylesheet" href="vendor/codemirror/addon/fold/foldgutter.css?v=d66c3db5f1b2a923af6b7380b7b6c8a7f52c4561fd4f3a19f9cb12b6dc4313ca">
-  <link rel="stylesheet" href="style.css?v=d66c3db5f1b2a923af6b7380b7b6c8a7f52c4561fd4f3a19f9cb12b6dc4313ca">
+  <link rel="stylesheet" href="vendor/codemirror/lib/codemirror.css?v=318af741e63aaad507fb75800b89e683cf17ce33c694b95e676f993d0703b549">
+  <link rel="stylesheet" href="vendor/codemirror/addon/fold/foldgutter.css?v=318af741e63aaad507fb75800b89e683cf17ce33c694b95e676f993d0703b549">
+  <link rel="stylesheet" href="style.css?v=318af741e63aaad507fb75800b89e683cf17ce33c694b95e676f993d0703b549">
 </head>
 <body>
   <main>
     <header><a href="https://gameeventscript.org/">← Game Event Script</a><p class="eyebrow">GES CARD LAB · PLAYABLE EXAMPLES</p><h1>Card games. Your rules.</h1>
       <p>Choose a game to play. Open the editor to change its rules. Edits are autosaved to Draft; Save keeps a separate copy in Saved. Read and change the GES rules, then try your own variations.</p>
-    <p>First load: about 67 MB. Runs locally; your code is saved in this browser. <a href="https://github.com/schloepke/GameEventScript/tree/main/examples/card-game">View the source</a>.</p></header>
+    <p>First load: about 19 MB. Runs locally; your code is saved in this browser. <a href="https://github.com/schloepke/GameEventScript/tree/main/examples/card-game">View the source</a>.</p></header>
     <section class="toolbar" aria-label="Game controls">
       <label>Game <select id="example" disabled></select></label>
       <button id="open-editor" class="secondary" type="button" aria-haspopup="dialog" disabled>Editor</button>
@@ -218,9 +218,9 @@ on ShowRules(action) {
     <section><h3>Execution rules</h3><p>After accepting an action, its consumption counter advances. You may activate further actions or update card choices. <code>finishTurn</code> ends the turn upon consumption; <code>EndGame()</code> requests game completion. Turn offers expire at turn end; completed queued groups and all their alternatives are removed, while unfinished queued offers retain their counters. The environment advances turns automatically. NextPlayersTurn variants control that advancement; they do not recursively emit on EndTurn(player).</p>
     <p>Emits are queued: a query in the same handler cannot see their effects yet. Extensions can inspect all players; visibility filters the browser view only. Runtime errors stop the game. “Check code” checks compilation, not native message signatures.</p></section>
   </dialog>
-  <script src="vendor/codemirror/lib/codemirror.js?v=d66c3db5f1b2a923af6b7380b7b6c8a7f52c4561fd4f3a19f9cb12b6dc4313ca"></script>
-  <script src="vendor/codemirror/addon/fold/foldcode.js?v=d66c3db5f1b2a923af6b7380b7b6c8a7f52c4561fd4f3a19f9cb12b6dc4313ca"></script>
-  <script src="vendor/codemirror/addon/fold/foldgutter.js?v=d66c3db5f1b2a923af6b7380b7b6c8a7f52c4561fd4f3a19f9cb12b6dc4313ca"></script>
-  <script type="module" src="app.mjs?v=d66c3db5f1b2a923af6b7380b7b6c8a7f52c4561fd4f3a19f9cb12b6dc4313ca"></script>
+  <script src="vendor/codemirror/lib/codemirror.js?v=318af741e63aaad507fb75800b89e683cf17ce33c694b95e676f993d0703b549"></script>
+  <script src="vendor/codemirror/addon/fold/foldcode.js?v=318af741e63aaad507fb75800b89e683cf17ce33c694b95e676f993d0703b549"></script>
+  <script src="vendor/codemirror/addon/fold/foldgutter.js?v=318af741e63aaad507fb75800b89e683cf17ce33c694b95e676f993d0703b549"></script>
+  <script type="module" src="app.mjs?v=318af741e63aaad507fb75800b89e683cf17ce33c694b95e676f993d0703b549"></script>
 </body>
 </html>

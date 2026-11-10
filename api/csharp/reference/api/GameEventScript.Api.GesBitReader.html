@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Struct GesBitReader | Game Event Script C# API — Unreleased (0e88e862dda6) </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Struct GesBitReader | Game Event Script C# API — Unreleased (0e88e862dda6) ">
+      
+      <meta name="description" content="Reads values of 0 to 64 bits from untrusted data in the bit order of the schema wire format: least significant bit first, bytes in Little Endian order. It knows no schema; generated schema code and  build on it. Reading allocates nothing.">
+      <link rel="icon" href="../assets/logo.svg">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="../toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="ManagedReference">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../assets/logo.svg" alt="Game Event Script">
+            Game Event Script
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="GameEventScript.Api.GesBitReader">
+
+
+
+  <h1 id="GameEventScript_Api_GesBitReader" data-uid="GameEventScript.Api.GesBitReader" class="text-break">
+Struct GesBitReader  
+  </h1>
+
+  <div class="facts text-secondary">
+    <dl><dt>Namespace</dt><dd><a class="xref" href="GameEventScript.html">GameEventScript</a>.<a class="xref" href="GameEventScript.Api.html">Api</a></dd></dl>
+  <dl><dt>Assembly</dt><dd>GameEventScript.Runtime.dll</dd></dl>
+  </div>
+
+  <div class="markdown summary"><p>Reads values of 0 to 64 bits from untrusted data in the bit order of the schema wire format: least significant bit
+first, bytes in Little Endian order. It knows no schema; generated schema code and <a class="xref" href="GameEventScript.Api.GesSchemaReader.html">GesSchemaReader</a> build
+on it. Reading allocates nothing.</p>
+</div>
+  <div class="markdown conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public ref struct GesBitReader</code></pre>
+  </div>
+
+
+
+
+
+
+
+  <dl class="typelist inheritedMembers">
+    <dt>Inherited Members</dt>
+    <dd>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.valuetype.equals">ValueType.Equals(object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.valuetype.gethashcode">ValueType.GetHashCode()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.valuetype.tostring">ValueType.ToString()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.gettype">object.GetType()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object-system-object)">object.Equals(object, object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.referenceequals">object.ReferenceEquals(object, object)</a>
+    </div>
+  </dd></dl>
+
+
+
+
+  <h2 id="GameEventScript_Api_GesBitReader_remarks">Remarks</h2>
+  <div class="markdown level0 remarks"><p>Every read checks the end of the data. Reading past it fails with <code>wire.truncated</code>, or with
+<code>wire.limitExceeded</code> when the byte limit ends before the data does. The path passed to a read names the field
+in that error.</p>
+</div>
+
+
+  <h2 class="section" id="constructors">Constructors
+</h2>
+
+
+  <a id="GameEventScript_Api_GesBitReader__ctor_" data-uid="GameEventScript.Api.GesBitReader.#ctor*"></a>
+
+  <h3 id="GameEventScript_Api_GesBitReader__ctor_System_ReadOnlySpan_System_Byte__System_Int64_" data-uid="GameEventScript.Api.GesBitReader.#ctor(System.ReadOnlySpan{System.Byte},System.Int64)">
+  GesBitReader(ReadOnlySpan&lt;byte&gt;, long)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Starts reading at the beginning of the data.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public GesBitReader(ReadOnlySpan&lt;byte&gt; data, long byteLimit = 9223372036854775807)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>data</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.readonlyspan-1">ReadOnlySpan</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.byte">byte</a>&gt;</dt>
+    <dd><p>The data; it may continue after the record.</p>
+</dd>
+    <dt><code>byteLimit</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int64">long</a></dt>
+    <dd><p>An optional limit on the bytes that may be read.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+  <h2 class="section" id="properties">Properties
+</h2>
+
+
+  <a id="GameEventScript_Api_GesBitReader_BitPosition_" data-uid="GameEventScript.Api.GesBitReader.BitPosition*"></a>
+
+  <h3 id="GameEventScript_Api_GesBitReader_BitPosition" data-uid="GameEventScript.Api.GesBitReader.BitPosition">
+  BitPosition
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets the position of the next bit.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public readonly long BitPosition { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int64">long</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <h2 class="section" id="methods">Methods
+</h2>
+
+
+  <a id="GameEventScript_Api_GesBitReader_Finish_" data-uid="GameEventScript.Api.GesBitReader.Finish*"></a>
+
+  <h3 id="GameEventScript_Api_GesBitReader_Finish" data-uid="GameEventScript.Api.GesBitReader.Finish">
+  Finish()
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Reads the padding to the next byte boundary, which must be zero.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public int Finish()</code></pre>
+  </div>
+
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>The number of bytes read; further records may follow them.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <h4 class="section">Exceptions</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Api.GesWireException.html">GesWireException</a></dt>
+    <dd><p><code>wire.invalidPadding</code> when a padding bit is set.</p>
+</dd>
+  </dl>
+
+
+
+  <a id="GameEventScript_Api_GesBitReader_Read_" data-uid="GameEventScript.Api.GesBitReader.Read*"></a>
+
+  <h3 id="GameEventScript_Api_GesBitReader_Read_System_Int32_System_String_" data-uid="GameEventScript.Api.GesBitReader.Read(System.Int32,System.String)">
+  Read(int, string)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Reads a value of <code class="paramref">width</code> bits.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public ulong Read(int width, string path)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>width</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>The number of bits, from 0 to 64.</p>
+</dd>
+    <dt><code>path</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
+    <dd><p>The field path for an error, such as <code>position.x</code>; empty for the record as a whole.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.uint64">ulong</a></dt>
+    <dd><p>The value, with all bits above <code class="paramref">width</code> zero.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <h4 class="section">Exceptions</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Api.GesWireException.html">GesWireException</a></dt>
+    <dd><p>The data ends before the value does.</p>
+</dd>
+  </dl>
+
+
+
+  <a id="GameEventScript_Api_GesBitReader_ReadBytes_" data-uid="GameEventScript.Api.GesBitReader.ReadBytes*"></a>
+
+  <h3 id="GameEventScript_Api_GesBitReader_ReadBytes_System_Span_System_Byte__System_String_" data-uid="GameEventScript.Api.GesBitReader.ReadBytes(System.Span{System.Byte},System.String)">
+  ReadBytes(Span&lt;byte&gt;, string)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Reads bytes of eight bits each, as the bytes of a Text are read.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void ReadBytes(Span&lt;byte&gt; destination, string path)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>destination</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.span-1">Span</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.byte">byte</a>&gt;</dt>
+    <dd><p>The buffer that receives exactly its length in bytes.</p>
+</dd>
+    <dt><code>path</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
+    <dd><p>The field path for an error.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+  <h4 class="section">Exceptions</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Api.GesWireException.html">GesWireException</a></dt>
+    <dd><p>The data ends before the bytes do; nothing is read then.</p>
+</dd>
+  </dl>
+
+
+
+  <a id="GameEventScript_Api_GesBitReader_Require_" data-uid="GameEventScript.Api.GesBitReader.Require*"></a>
+
+  <h3 id="GameEventScript_Api_GesBitReader_Require_System_Int64_System_String_" data-uid="GameEventScript.Api.GesBitReader.Require(System.Int64,System.String)">
+  Require(long, string)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Fails like a read when fewer than <code class="paramref">bits</code> bits remain, without reading them.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public readonly void Require(long bits, string path)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>bits</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int64">long</a></dt>
+    <dd><p>The number of bits that must remain.</p>
+</dd>
+    <dt><code>path</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
+    <dd><p>The field path for an error.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+  <h4 class="section">Exceptions</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Api.GesWireException.html">GesWireException</a></dt>
+    <dd><p>The data ends before these bits do.</p>
+</dd>
+  </dl>
+
+
+
+  <a id="GameEventScript_Api_GesBitReader_Seek_" data-uid="GameEventScript.Api.GesBitReader.Seek*"></a>
+
+  <h3 id="GameEventScript_Api_GesBitReader_Seek_System_Int64_" data-uid="GameEventScript.Api.GesBitReader.Seek(System.Int64)">
+  Seek(long)
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Moves to a position, for example back to a value that was read before.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public void Seek(long bit)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>bit</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int64">long</a></dt>
+    <dd><p>The position, from 0 to the end of the data.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+
+</article>
+
+
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          Game Event Script C# API — Unreleased (0e88e862dda6)
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

@@ -110,6 +110,48 @@
     },
     {
       "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GesBitReader.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GesBitReader.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GesBitReader",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GesBitReader.yml\" sourcestartlinenumber=\"1\">Reads values of 0 to 64 bits from untrusted data in the bit order of the schema wire format: least significant bit\nfirst, bytes in Little Endian order. It knows no schema; generated schema code and <xref href=\"GameEventScript.Api.GesSchemaReader\" data-throw-if-not-resolved=\"false\"></xref> build\non it. Reading allocates nothing.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GesBitWriter.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GesBitWriter.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GesBitWriter",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GesBitWriter.yml\" sourcestartlinenumber=\"1\">Writes values of 0 to 64 bits into a caller's buffer in the bit order of the schema wire format: least significant bit\nfirst, bytes in Little Endian order. It knows no schema; generated schema code and <xref href=\"GameEventScript.Api.GesSchemaWriter\" data-throw-if-not-resolved=\"false\"></xref> build\non it. Writing allocates nothing.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GesBoundSchema.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GesBoundSchema.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GesBoundSchema",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GesBoundSchema.yml\" sourcestartlinenumber=\"1\">A schema, message or message set bound to parameter values. Immutable; it can be shared between threads.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
       "source_relative_path": "api/GameEventScript.Api.GesBuildMetadataSegment.yml",
       "output": {
         ".html": {
@@ -376,6 +418,76 @@
     },
     {
       "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GesDocument.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GesDocument.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GesDocument",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GesDocument.yml\" sourcestartlinenumber=\"1\">An immutable GES document: a Map or Record root with an optional schema reference, read from and printed to\nhuman-editable <code>.gesd</code> text. Comments and layout are not part of a document.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GesDocumentException.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GesDocumentException.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GesDocumentException",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GesDocumentException.yml\" sourcestartlinenumber=\"1\">GES document text is invalid or exceeds a fixed literal parsing limit.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GesDocumentFormat.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GesDocumentFormat.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GesDocumentFormat",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GesDocumentFormat.yml\" sourcestartlinenumber=\"1\">Layout options for printing GES documents and values. Layout is a recommendation: every printed document reads\nback to an equal document, while indentation, line breaks and numeric spelling may differ between implementations.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GesDocumentSchema.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GesDocumentSchema.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GesDocumentSchema",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GesDocumentSchema.yml\" sourcestartlinenumber=\"1\">The schema reference of a GES document. It is a reference only: GES neither loads schema files nor validates\ndocuments against record definitions.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GesDocumentSchemaKind.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GesDocumentSchemaKind.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GesDocumentSchemaKind",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GesDocumentSchemaKind.yml\" sourcestartlinenumber=\"1\">The kind of schema a GES document references.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
       "source_relative_path": "api/GameEventScript.Api.GesDynamicLinkException.yml",
       "output": {
         ".html": {
@@ -597,6 +709,20 @@
       "IsMRef": true,
       "Title": "GameEventScript.Api.GesIntegerRange",
       "Summary": "<p sourcefile=\"api/GameEventScript.Api.GesIntegerRange.yml\" sourcestartlinenumber=\"1\">An immutable signed-64 range descriptor. Terms are computed lazily without binary64 conversion.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GesLiteralLimitException.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GesLiteralLimitException.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GesLiteralLimitException",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GesLiteralLimitException.yml\" sourcestartlinenumber=\"1\">Literal recognition outside a Host exceeded one of its fixed protection limits.</p>\n"
     },
     {
       "type": "ManagedReference",
@@ -894,6 +1020,300 @@
     },
     {
       "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GesSchema.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GesSchema.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GesSchema",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GesSchema.yml\" sourcestartlinenumber=\"1\">The immutable description of one schema, message or message set of a <xref href=\"GameEventScript.Api.GesSchemaSet\" data-throw-if-not-resolved=\"false\"></xref>. It can be shared\nbetween threads and bound any number of times.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GesSchemaAxisInfo.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GesSchemaAxisInfo.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GesSchemaAxisInfo",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GesSchemaAxisInfo.yml\" sourcestartlinenumber=\"1\">The limits of a numeric axis of a Point or Vector.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GesSchemaBound.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GesSchemaBound.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GesSchemaBound",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GesSchemaBound.yml\" sourcestartlinenumber=\"1\">A bound, step or delta range: a parameter or an exact decimal.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GesSchemaDecoded.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GesSchemaDecoded.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GesSchemaDecoded",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GesSchemaDecoded.yml\" sourcestartlinenumber=\"1\">A decoded top-level value and the bytes it occupied.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GesSchemaDelta.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GesSchemaDelta.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GesSchemaDelta",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GesSchemaDelta.yml\" sourcestartlinenumber=\"1\">Converts between full records of a schema and deltas against a baseline, the full record the receiver already holds.\nBoth directions compare wire values and allocate nothing on success. Data is untrusted: every limit is checked, and invalid\ndata fails with a <xref href=\"GameEventScript.Api.GesWireException\" data-throw-if-not-resolved=\"false\"></xref>.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GesSchemaDeltaDecoded.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GesSchemaDeltaDecoded.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GesSchemaDeltaDecoded",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GesSchemaDeltaDecoded.yml\" sourcestartlinenumber=\"1\">The sizes of a decoded delta.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GesSchemaDump.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GesSchemaDump.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GesSchemaDump",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GesSchemaDump.yml\" sourcestartlinenumber=\"1\">Makes binary data readable through a bound schema.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GesSchemaDumpResult.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GesSchemaDumpResult.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GesSchemaDumpResult",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GesSchemaDumpResult.yml\" sourcestartlinenumber=\"1\">The readable form of encoded data.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GesSchemaException.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GesSchemaException.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GesSchemaException",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GesSchemaException.yml\" sourcestartlinenumber=\"1\">A schema source or a binding that breaks a rule. Callers branch on <xref href=\"GameEventScript.Api.GesSchemaException.Code\" data-throw-if-not-resolved=\"false\"></xref>, a stable <code>schema.*</code> code;\nthe message is informative text.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GesSchemaField.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GesSchemaField.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GesSchemaField",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GesSchemaField.yml\" sourcestartlinenumber=\"1\">The handle of a field in a bound schema. Resolving it once makes further uses free of lookups.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GesSchemaFieldInfo.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GesSchemaFieldInfo.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GesSchemaFieldInfo",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GesSchemaFieldInfo.yml\" sourcestartlinenumber=\"1\">A field of a schema or an argument of a message.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GesSchemaKind.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GesSchemaKind.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GesSchemaKind",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GesSchemaKind.yml\" sourcestartlinenumber=\"1\">The kinds of declarations that have a hash and can be bound.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GesSchemaParameterInfo.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GesSchemaParameterInfo.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GesSchemaParameterInfo",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GesSchemaParameterInfo.yml\" sourcestartlinenumber=\"1\">A parameter that a declaration reaches and every binding must supply.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GesSchemaParameters.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GesSchemaParameters.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GesSchemaParameters",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GesSchemaParameters.yml\" sourcestartlinenumber=\"1\">The parameter values of one binding.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GesSchemaReader.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GesSchemaReader.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GesSchemaReader",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GesSchemaReader.yml\" sourcestartlinenumber=\"1\">Decodes one top-level record or message without allocating on success. Data is untrusted: every limit is checked, and\ninvalid data fails with a <xref href=\"GameEventScript.Api.GesWireException\" data-throw-if-not-resolved=\"false\"></xref>. Fields are read in declaration order.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GesSchemaSet.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GesSchemaSet.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GesSchemaSet",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GesSchemaSet.yml\" sourcestartlinenumber=\"1\">Validated schema sources. A set is immutable and can be bound any number of times, also with different parameter\nvalues within one session.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GesSchemaSource.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GesSchemaSource.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GesSchemaSource",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GesSchemaSource.yml\" sourcestartlinenumber=\"1\">A named schema source text.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GesSchemaType.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GesSchemaType.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GesSchemaType",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GesSchemaType.yml\" sourcestartlinenumber=\"1\">The type of a field, or one alternative of a union.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GesSchemaTypeKind.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GesSchemaTypeKind.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GesSchemaTypeKind",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GesSchemaTypeKind.yml\" sourcestartlinenumber=\"1\">The kinds of types a schema field can have.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GesSchemaValues.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GesSchemaValues.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GesSchemaValues",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GesSchemaValues.yml\" sourcestartlinenumber=\"1\">The convenient path between GES values and the wire, for rare data. A Record or Map encodes by field name, and fields\nwithout a schema entry, such as computed fields, are not transmitted. Only a Map that selects a union alternative must\nhave a field for each of its keys. Time-critical code uses\n<xref href=\"GameEventScript.Api.GesSchemaWriter\" data-throw-if-not-resolved=\"false\"></xref> and <xref href=\"GameEventScript.Api.GesSchemaReader\" data-throw-if-not-resolved=\"false\"></xref>.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GesSchemaWriter.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GesSchemaWriter.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GesSchemaWriter",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GesSchemaWriter.yml\" sourcestartlinenumber=\"1\">Encodes one top-level record or message into a caller's buffer without allocating on success. Fields are written in\ndeclaration order; a nested schema, Point or Vector is entered with <xref href=\"GameEventScript.Api.GesSchemaWriter.BeginNested(GameEventScript.Api.GesSchemaField)\" data-throw-if-not-resolved=\"false\"></xref>.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
       "source_relative_path": "api/GameEventScript.Api.GesSectionFlags.yml",
       "output": {
         ".html": {
@@ -1115,6 +1535,34 @@
       "IsMRef": true,
       "Title": "GameEventScript.Api.GesUInt16IndexListSegment",
       "Summary": "<p sourcefile=\"api/GameEventScript.Api.GesUInt16IndexListSegment.yml\" sourcestartlinenumber=\"1\">Represents a game event script u int16 index list segment.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GesWireException.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GesWireException.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GesWireException",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GesWireException.yml\" sourcestartlinenumber=\"1\">A value that cannot be encoded, or data that is not a valid encoding. The error names the field path and holds no value\nfrom the data, so it can be logged safely.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Api.GesWireRules.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Api.GesWireRules.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Api.GesWireRules",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Api.GesWireRules.yml\" sourcestartlinenumber=\"1\">The value rules of the schema wire format over plain operands: Text and tag validity, the exact quantization of a step\n<code>p / 10^k</code> and wrapping. Generated schema code calls them with constant operands, and the interpreted writer and\nreader use the same rules, so both encode identical bytes.</p>\n"
     },
     {
       "type": "ManagedReference",
@@ -1538,6 +1986,90 @@
     },
     {
       "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Generator.GesGeneratorException.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Generator.GesGeneratorException.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Generator.GesGeneratorException",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Generator.GesGeneratorException.yml\" sourcestartlinenumber=\"1\">A generation request that cannot be carried out, such as a name that two generated members share. Callers branch on\n<xref href=\"GameEventScript.Generator.GesGeneratorException.Code\" data-throw-if-not-resolved=\"false\"></xref>, a stable <code>generate.*</code> code; the message is informative text.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Generator.GesSchemaAccess.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Generator.GesSchemaAccess.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Generator.GesSchemaAccess",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Generator.GesSchemaAccess.yml\" sourcestartlinenumber=\"1\">The visibility of generated types.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Generator.GesSchemaGenerateOptions.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Generator.GesSchemaGenerateOptions.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Generator.GesSchemaGenerateOptions",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Generator.GesSchemaGenerateOptions.yml\" sourcestartlinenumber=\"1\">How schema code is generated.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Generator.GesSchemaGenerator.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Generator.GesSchemaGenerator.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Generator.GesSchemaGenerator",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Generator.GesSchemaGenerator.yml\" sourcestartlinenumber=\"1\">Generates code and layouts from schemas at build time. Every type reached from the roots is bound once with the given\nparameters, so a type that several roots share appears once. The generator belongs to build tools and is never part of\na game.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Generator.GesSchemaLanguage.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Generator.GesSchemaLanguage.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Generator.GesSchemaLanguage",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Generator.GesSchemaLanguage.yml\" sourcestartlinenumber=\"1\">A target language of generated schema code.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Generator.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Generator.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Generator",
+      "Summary": null
+    },
+    {
+      "type": "ManagedReference",
       "source_relative_path": "api/GameEventScript.Runtime.Values.GesValue.yml",
       "output": {
         ".html": {
@@ -1566,6 +2098,20 @@
     },
     {
       "type": "ManagedReference",
+      "source_relative_path": "api/GameEventScript.Runtime.Values.GesValueMap.Enumerator.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/GameEventScript.Runtime.Values.GesValueMap.Enumerator.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "GameEventScript.Runtime.Values.GesValueMap.Enumerator",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Runtime.Values.GesValueMap.Enumerator.yml\" sourcestartlinenumber=\"1\">Enumerates the entries of a <xref href=\"GameEventScript.Runtime.Values.GesValueMap\" data-throw-if-not-resolved=\"false\"></xref> in canonical key order.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
       "source_relative_path": "api/GameEventScript.Runtime.Values.GesValueMap.yml",
       "output": {
         ".html": {
@@ -1576,7 +2122,7 @@
       "Uid": null,
       "IsMRef": true,
       "Title": "GameEventScript.Runtime.Values.GesValueMap",
-      "Summary": "<p sourcefile=\"api/GameEventScript.Runtime.Values.GesValueMap.yml\" sourcestartlinenumber=\"1\">Represents a ges value map.</p>\n"
+      "Summary": "<p sourcefile=\"api/GameEventScript.Runtime.Values.GesValueMap.yml\" sourcestartlinenumber=\"1\">Represents a ges value map, traversed in canonical key order.</p>\n"
     },
     {
       "type": "ManagedReference",
@@ -1622,114 +2168,114 @@
     },
     {
       "type": "ManagedReference",
-      "source_relative_path": "api/GameEventScript.SyntaxHighlighter.GesAnsiRenderer.yml",
+      "source_relative_path": "api/GameEventScript.Syntax.GesAnsiRenderer.yml",
       "output": {
         ".html": {
-          "relative_path": "api/GameEventScript.SyntaxHighlighter.GesAnsiRenderer.html"
+          "relative_path": "api/GameEventScript.Syntax.GesAnsiRenderer.html"
         }
       },
       "version": "",
       "Uid": null,
       "IsMRef": true,
-      "Title": "GameEventScript.SyntaxHighlighter.GesAnsiRenderer",
-      "Summary": "<p sourcefile=\"api/GameEventScript.SyntaxHighlighter.GesAnsiRenderer.yml\" sourcestartlinenumber=\"1\">Optional pure string renderer. Terminal detection, NO_COLOR, console output and diagnostics belong to the embedding.</p>\n"
+      "Title": "GameEventScript.Syntax.GesAnsiRenderer",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Syntax.GesAnsiRenderer.yml\" sourcestartlinenumber=\"1\">Optional pure string renderer. Terminal detection, NO_COLOR, console output and diagnostics belong to the embedding.</p>\n"
     },
     {
       "type": "ManagedReference",
-      "source_relative_path": "api/GameEventScript.SyntaxHighlighter.GesHighlightResult.yml",
+      "source_relative_path": "api/GameEventScript.Syntax.GesHighlightDiagnostic.yml",
       "output": {
         ".html": {
-          "relative_path": "api/GameEventScript.SyntaxHighlighter.GesHighlightResult.html"
+          "relative_path": "api/GameEventScript.Syntax.GesHighlightDiagnostic.html"
         }
       },
       "version": "",
       "Uid": null,
       "IsMRef": true,
-      "Title": "GameEventScript.SyntaxHighlighter.GesHighlightResult",
-      "Summary": "<p sourcefile=\"api/GameEventScript.SyntaxHighlighter.GesHighlightResult.yml\" sourcestartlinenumber=\"1\">A highlighting result. Failed resource bounds return no spans or usable continuation state.</p>\n"
+      "Title": "GameEventScript.Syntax.GesHighlightDiagnostic",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Syntax.GesHighlightDiagnostic.yml\" sourcestartlinenumber=\"1\">A diagnostic of the highlighted source: a syntax error or a violated single-source rule.</p>\n"
     },
     {
       "type": "ManagedReference",
-      "source_relative_path": "api/GameEventScript.SyntaxHighlighter.GesHighlightSpan.yml",
+      "source_relative_path": "api/GameEventScript.Syntax.GesHighlightResult.yml",
       "output": {
         ".html": {
-          "relative_path": "api/GameEventScript.SyntaxHighlighter.GesHighlightSpan.html"
+          "relative_path": "api/GameEventScript.Syntax.GesHighlightResult.html"
         }
       },
       "version": "",
       "Uid": null,
       "IsMRef": true,
-      "Title": "GameEventScript.SyntaxHighlighter.GesHighlightSpan",
-      "Summary": "<p sourcefile=\"api/GameEventScript.SyntaxHighlighter.GesHighlightSpan.yml\" sourcestartlinenumber=\"1\">An immutable UTF-16 range with its category and outer-to-inner TextMate scope stack.</p>\n"
+      "Title": "GameEventScript.Syntax.GesHighlightResult",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Syntax.GesHighlightResult.yml\" sourcestartlinenumber=\"1\">A highlighting result. An input above the length bound returns an incomplete result without spans or diagnostics.</p>\n"
     },
     {
       "type": "ManagedReference",
-      "source_relative_path": "api/GameEventScript.SyntaxHighlighter.GesHighlightState.yml",
+      "source_relative_path": "api/GameEventScript.Syntax.GesHighlightSpan.yml",
       "output": {
         ".html": {
-          "relative_path": "api/GameEventScript.SyntaxHighlighter.GesHighlightState.html"
+          "relative_path": "api/GameEventScript.Syntax.GesHighlightSpan.html"
         }
       },
       "version": "",
       "Uid": null,
       "IsMRef": true,
-      "Title": "GameEventScript.SyntaxHighlighter.GesHighlightState",
-      "Summary": "<p sourcefile=\"api/GameEventScript.SyntaxHighlighter.GesHighlightState.yml\" sourcestartlinenumber=\"1\">An immutable, equatable line-boundary state. It is not a serializable editor document or compiler state.</p>\n"
+      "Title": "GameEventScript.Syntax.GesHighlightSpan",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Syntax.GesHighlightSpan.yml\" sourcestartlinenumber=\"1\">An immutable UTF-16 range with its category and the diagnostics that cover it.</p>\n"
     },
     {
       "type": "ManagedReference",
-      "source_relative_path": "api/GameEventScript.SyntaxHighlighter.GesSyntaxHighlighter.yml",
+      "source_relative_path": "api/GameEventScript.Syntax.GesSyntaxHighlighter.yml",
       "output": {
         ".html": {
-          "relative_path": "api/GameEventScript.SyntaxHighlighter.GesSyntaxHighlighter.html"
+          "relative_path": "api/GameEventScript.Syntax.GesSyntaxHighlighter.html"
         }
       },
       "version": "",
       "Uid": null,
       "IsMRef": true,
-      "Title": "GameEventScript.SyntaxHighlighter.GesSyntaxHighlighter",
-      "Summary": "<p sourcefile=\"api/GameEventScript.SyntaxHighlighter.GesSyntaxHighlighter.yml\" sourcestartlinenumber=\"1\">Reusable GES/GESA TextMate highlighting without a Compiler, Runtime, UI or terminal dependency.</p>\n"
+      "Title": "GameEventScript.Syntax.GesSyntaxHighlighter",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Syntax.GesSyntaxHighlighter.yml\" sourcestartlinenumber=\"1\">Reusable GES, GESA and GES document highlighting, without a Compiler, Runtime, UI or terminal dependency.</p>\n"
     },
     {
       "type": "ManagedReference",
-      "source_relative_path": "api/GameEventScript.SyntaxHighlighter.GesSyntaxKind.yml",
+      "source_relative_path": "api/GameEventScript.Syntax.GesSyntaxKind.yml",
       "output": {
         ".html": {
-          "relative_path": "api/GameEventScript.SyntaxHighlighter.GesSyntaxKind.html"
+          "relative_path": "api/GameEventScript.Syntax.GesSyntaxKind.html"
         }
       },
       "version": "",
       "Uid": null,
       "IsMRef": true,
-      "Title": "GameEventScript.SyntaxHighlighter.GesSyntaxKind",
-      "Summary": "<p sourcefile=\"api/GameEventScript.SyntaxHighlighter.GesSyntaxKind.yml\" sourcestartlinenumber=\"1\">Theme-independent categories derived from TextMate scopes; these are not compiler tokens.</p>\n"
+      "Title": "GameEventScript.Syntax.GesSyntaxKind",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Syntax.GesSyntaxKind.yml\" sourcestartlinenumber=\"1\">Theme-independent categories the highlighter derives from the syntax tree; these are not compiler tokens.</p>\n"
     },
     {
       "type": "ManagedReference",
-      "source_relative_path": "api/GameEventScript.SyntaxHighlighter.GesSyntaxLanguage.yml",
+      "source_relative_path": "api/GameEventScript.Syntax.GesSyntaxLanguage.yml",
       "output": {
         ".html": {
-          "relative_path": "api/GameEventScript.SyntaxHighlighter.GesSyntaxLanguage.html"
+          "relative_path": "api/GameEventScript.Syntax.GesSyntaxLanguage.html"
         }
       },
       "version": "",
       "Uid": null,
       "IsMRef": true,
-      "Title": "GameEventScript.SyntaxHighlighter.GesSyntaxLanguage",
-      "Summary": "<p sourcefile=\"api/GameEventScript.SyntaxHighlighter.GesSyntaxLanguage.yml\" sourcestartlinenumber=\"1\">The bundled source or assembler grammar used for presentation.</p>\n"
+      "Title": "GameEventScript.Syntax.GesSyntaxLanguage",
+      "Summary": "<p sourcefile=\"api/GameEventScript.Syntax.GesSyntaxLanguage.yml\" sourcestartlinenumber=\"1\">The language a highlighter reads.</p>\n"
     },
     {
       "type": "ManagedReference",
-      "source_relative_path": "api/GameEventScript.SyntaxHighlighter.yml",
+      "source_relative_path": "api/GameEventScript.Syntax.yml",
       "output": {
         ".html": {
-          "relative_path": "api/GameEventScript.SyntaxHighlighter.html"
+          "relative_path": "api/GameEventScript.Syntax.html"
         }
       },
       "version": "",
       "Uid": null,
       "IsMRef": true,
-      "Title": "GameEventScript.SyntaxHighlighter",
+      "Title": "GameEventScript.Syntax",
       "Summary": null
     },
     {

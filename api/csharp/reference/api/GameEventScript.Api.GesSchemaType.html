@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Class GesSchemaType | Game Event Script C# API — Unreleased (0e88e862dda6) </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Class GesSchemaType | Game Event Script C# API — Unreleased (0e88e862dda6) ">
+      
+      <meta name="description" content="The type of a field, or one alternative of a union.">
+      <link rel="icon" href="../assets/logo.svg">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="../toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="ManagedReference">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../assets/logo.svg" alt="Game Event Script">
+            Game Event Script
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="GameEventScript.Api.GesSchemaType">
+
+
+
+  <h1 id="GameEventScript_Api_GesSchemaType" data-uid="GameEventScript.Api.GesSchemaType" class="text-break">
+Class GesSchemaType  
+  </h1>
+
+  <div class="facts text-secondary">
+    <dl><dt>Namespace</dt><dd><a class="xref" href="GameEventScript.html">GameEventScript</a>.<a class="xref" href="GameEventScript.Api.html">Api</a></dd></dl>
+  <dl><dt>Assembly</dt><dd>GameEventScript.Runtime.dll</dd></dl>
+  </div>
+
+  <div class="markdown summary"><p>The type of a field, or one alternative of a union.</p>
+</div>
+  <div class="markdown conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public sealed class GesSchemaType</code></pre>
+  </div>
+
+
+
+
+  <dl class="typelist inheritance">
+    <dt>Inheritance</dt>
+    <dd>
+      <div><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object">object</a></div>
+      <div><span class="xref">GesSchemaType</span></div>
+    </dd>
+  </dl>
+
+
+
+  <dl class="typelist inheritedMembers">
+    <dt>Inherited Members</dt>
+    <dd>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.gettype">object.GetType()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.tostring">object.ToString()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object)">object.Equals(object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object-system-object)">object.Equals(object, object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.referenceequals">object.ReferenceEquals(object, object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.gethashcode">object.GetHashCode()</a>
+    </div>
+  </dd></dl>
+
+
+
+
+
+
+  <h2 class="section" id="properties">Properties
+</h2>
+
+
+  <a id="GameEventScript_Api_GesSchemaType_Axes_" data-uid="GameEventScript.Api.GesSchemaType.Axes*"></a>
+
+  <h3 id="GameEventScript_Api_GesSchemaType_Axes" data-uid="GameEventScript.Api.GesSchemaType.Axes">
+  Axes
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets the axes of an axis block in x, y, z order; empty without a block, when all three are stored in full.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public GesReadOnlyArray&lt;GesSchemaAxisInfo&gt; Axes { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Api.GesReadOnlyArray-1.html">GesReadOnlyArray</a>&lt;<a class="xref" href="GameEventScript.Api.GesSchemaAxisInfo.html">GesSchemaAxisInfo</a>&gt;</dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GesSchemaType_Delta_" data-uid="GameEventScript.Api.GesSchemaType.Delta*"></a>
+
+  <h3 id="GameEventScript_Api_GesSchemaType_Delta" data-uid="GameEventScript.Api.GesSchemaType.Delta">
+  Delta
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets the range of a delta, if there is one.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public GesSchemaBound? Delta { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Api.GesSchemaBound.html">GesSchemaBound</a>?</dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GesSchemaType_Element_" data-uid="GameEventScript.Api.GesSchemaType.Element*"></a>
+
+  <h3 id="GameEventScript_Api_GesSchemaType_Element" data-uid="GameEventScript.Api.GesSchemaType.Element">
+  Element
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets the alternatives of a List's element; empty when any element is allowed.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public GesReadOnlyArray&lt;GesSchemaType&gt; Element { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Api.GesReadOnlyArray-1.html">GesReadOnlyArray</a>&lt;<a class="xref" href="GameEventScript.Api.GesSchemaType.html">GesSchemaType</a>&gt;</dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GesSchemaType_IsInteger_" data-uid="GameEventScript.Api.GesSchemaType.IsInteger*"></a>
+
+  <h3 id="GameEventScript_Api_GesSchemaType_IsInteger" data-uid="GameEventScript.Api.GesSchemaType.IsInteger">
+  IsInteger
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets whether a number holds whole numbers.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public bool IsInteger { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GesSchemaType_IsWrapping_" data-uid="GameEventScript.Api.GesSchemaType.IsWrapping*"></a>
+
+  <h3 id="GameEventScript_Api_GesSchemaType_IsWrapping" data-uid="GameEventScript.Api.GesSchemaType.IsWrapping">
+  IsWrapping
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets whether the range wraps around.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public bool IsWrapping { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GesSchemaType_Kind_" data-uid="GameEventScript.Api.GesSchemaType.Kind*"></a>
+
+  <h3 id="GameEventScript_Api_GesSchemaType_Kind" data-uid="GameEventScript.Api.GesSchemaType.Kind">
+  Kind
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets the kind of type.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public GesSchemaTypeKind Kind { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Api.GesSchemaTypeKind.html">GesSchemaTypeKind</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GesSchemaType_Lower_" data-uid="GameEventScript.Api.GesSchemaType.Lower*"></a>
+
+  <h3 id="GameEventScript_Api_GesSchemaType_Lower" data-uid="GameEventScript.Api.GesSchemaType.Lower">
+  Lower
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets the lower bound, if there is a range.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public GesSchemaBound? Lower { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Api.GesSchemaBound.html">GesSchemaBound</a>?</dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GesSchemaType_Max_" data-uid="GameEventScript.Api.GesSchemaType.Max*"></a>
+
+  <h3 id="GameEventScript_Api_GesSchemaType_Max" data-uid="GameEventScript.Api.GesSchemaType.Max">
+  Max
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets the maximum of a Text in UTF-8 bytes or of a List in elements, if there is one.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public long? Max { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int64">long</a>?</dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GesSchemaType_Schema_" data-uid="GameEventScript.Api.GesSchemaType.Schema*"></a>
+
+  <h3 id="GameEventScript_Api_GesSchemaType_Schema" data-uid="GameEventScript.Api.GesSchemaType.Schema">
+  Schema
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets the schema a <a class="xref" href="GameEventScript.Api.GesSchemaTypeKind.html#GameEventScript_Api_GesSchemaTypeKind_Reference">Reference</a> refers to.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public GesSchema? Schema { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Api.GesSchema.html">GesSchema</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GesSchemaType_Step_" data-uid="GameEventScript.Api.GesSchemaType.Step*"></a>
+
+  <h3 id="GameEventScript_Api_GesSchemaType_Step" data-uid="GameEventScript.Api.GesSchemaType.Step">
+  Step
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets the step, if the number is quantized.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public GesSchemaBound? Step { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Api.GesSchemaBound.html">GesSchemaBound</a>?</dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GesSchemaType_Tags_" data-uid="GameEventScript.Api.GesSchemaType.Tags*"></a>
+
+  <h3 id="GameEventScript_Api_GesSchemaType_Tags" data-uid="GameEventScript.Api.GesSchemaType.Tags">
+  Tags
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets the closed set of a Tag; empty when any tag is allowed.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public GesReadOnlyArray&lt;string&gt; Tags { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Api.GesReadOnlyArray-1.html">GesReadOnlyArray</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a>&gt;</dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GesSchemaType_Unit_" data-uid="GameEventScript.Api.GesSchemaType.Unit*"></a>
+
+  <h3 id="GameEventScript_Api_GesSchemaType_Unit" data-uid="GameEventScript.Api.GesSchemaType.Unit">
+  Unit
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets the unit of a Quantity, Point or Vector.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public GesQuantityUnit Unit { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Api.GesQuantityUnit.html">GesQuantityUnit</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <a id="GameEventScript_Api_GesSchemaType_Upper_" data-uid="GameEventScript.Api.GesSchemaType.Upper*"></a>
+
+  <h3 id="GameEventScript_Api_GesSchemaType_Upper" data-uid="GameEventScript.Api.GesSchemaType.Upper">
+  Upper
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Gets the upper bound, if there is a range.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public GesSchemaBound? Upper { get; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Api.GesSchemaBound.html">GesSchemaBound</a>?</dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+</article>
+
+
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          Game Event Script C# API — Unreleased (0e88e862dda6)
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

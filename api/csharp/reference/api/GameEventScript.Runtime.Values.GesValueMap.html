@@ -2,11 +2,11 @@
 <html>
   <head>
     <meta charset="utf-8">
-      <title>Class GesValueMap | Game Event Script C# API — Unreleased (f9cc9ca82d74) </title>
+      <title>Class GesValueMap | Game Event Script C# API — Unreleased (0e88e862dda6) </title>
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <meta name="title" content="Class GesValueMap | Game Event Script C# API — Unreleased (f9cc9ca82d74) ">
+      <meta name="title" content="Class GesValueMap | Game Event Script C# API — Unreleased (0e88e862dda6) ">
       
-      <meta name="description" content="Represents a ges value map.">
+      <meta name="description" content="Represents a ges value map, traversed in canonical key order.">
       <link rel="icon" href="../assets/logo.svg">
       <link rel="stylesheet" href="../public/docfx.min.css">
       <link rel="stylesheet" href="../public/main.css">
@@ -83,12 +83,12 @@ Class GesValueMap
   <dl><dt>Assembly</dt><dd>GameEventScript.Runtime.dll</dd></dl>
   </div>
 
-  <div class="markdown summary"><p>Represents a ges value map.</p>
+  <div class="markdown summary"><p>Represents a ges value map, traversed in canonical key order.</p>
 </div>
   <div class="markdown conceptual"></div>
 
   <div class="codewrapper">
-    <pre><code class="lang-csharp hljs">public sealed class GesValueMap</code></pre>
+    <pre><code class="lang-csharp hljs">public sealed class GesValueMap : IEnumerable&lt;KeyValuePair&lt;string, GesValue&gt;&gt;, IEnumerable</code></pre>
   </div>
 
 
@@ -102,6 +102,13 @@ Class GesValueMap
     </dd>
   </dl>
 
+  <dl class="typelist implements">
+    <dt>Implements</dt>
+    <dd>
+      <div><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.collections.generic.ienumerable-1">IEnumerable</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.collections.generic.keyvaluepair-2">KeyValuePair</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a>, <a class="xref" href="GameEventScript.Runtime.Values.GesValue.html">GesValue</a>&gt;&gt;</div>
+      <div><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.collections.ienumerable">IEnumerable</a></div>
+    </dd>
+  </dl>
 
 
   <dl class="typelist inheritedMembers">
@@ -250,6 +257,39 @@ Class GesValueMap
 
 
 
+  <a id="GameEventScript_Runtime_Values_GesValueMap_GetEnumerator_" data-uid="GameEventScript.Runtime.Values.GesValueMap.GetEnumerator*"></a>
+
+  <h3 id="GameEventScript_Runtime_Values_GesValueMap_GetEnumerator" data-uid="GameEventScript.Runtime.Values.GesValueMap.GetEnumerator">
+  GetEnumerator()
+  
+  </h3>
+
+  <div class="markdown level1 summary"><p>Returns an allocation-free enumerator over the entries in canonical key order.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public GesValueMap.Enumerator GetEnumerator()</code></pre>
+  </div>
+
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="GameEventScript.Runtime.Values.GesValueMap.html">GesValueMap</a>.<a class="xref" href="GameEventScript.Runtime.Values.GesValueMap.Enumerator.html">Enumerator</a></dt>
+    <dd><p>The enumerator.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
   <a id="GameEventScript_Runtime_Values_GesValueMap_KeyAt_" data-uid="GameEventScript.Runtime.Values.GesValueMap.KeyAt*"></a>
 
   <h3 id="GameEventScript_Runtime_Values_GesValueMap_KeyAt_System_Int32_" data-uid="GameEventScript.Runtime.Values.GesValueMap.KeyAt(System.Int32)">
@@ -345,7 +385,7 @@ Class GesValueMap
     <footer class="border-top text-secondary">
       <div class="container-xxl">
         <div class="flex-fill">
-          Game Event Script C# API — Unreleased (f9cc9ca82d74)
+          Game Event Script C# API — Unreleased (0e88e862dda6)
         </div>
       </div>
     </footer>

@@ -4,7 +4,7 @@
 /** Download progress measures decoded bytes; compressed Content-Length is not comparable. */
 export async function loadWasm(report) {
   report({ phase: 'download', loaded: 0, total: null });
-  const response = await fetch('./card-game.wasm?v=d66c3db5f1b2a923af6b7380b7b6c8a7f52c4561fd4f3a19f9cb12b6dc4313ca', { cache: 'no-cache' });
+  const response = await fetch('./card-game.wasm?v=318af741e63aaad507fb75800b89e683cf17ce33c694b95e676f993d0703b549', { cache: 'no-cache' });
   if (!response.ok) throw new Error(`Wasm download failed: ${response.status}`);
 
   const length = Number(response.headers.get('Content-Length'));

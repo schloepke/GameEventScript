@@ -138,6 +138,15 @@ the Number `0.5`, the Tag `#gun`, the Text `'turret'` and the integer `1`.
 Unknown field names return no value. The fixture covers how field reads follow
 their declared types.
 
+## Geometry library
+
+> **Since: Unreleased**
+
+The environment includes the standard [geometry library](../PublicApi.md#geometry-library): its catalog resolves `:Box`
+and `:Poly` in front of the fixture types above, and its constructor and extension registries resolve `:geometry.*` in front
+of the fixture registries. The names `Box` and `Poly` are therefore taken in script cases, as they are for every host that
+registers the library.
+
 ## Declarative Host environment
 
 Native handlers, publish sinks and Host lifecycle actions use the closed forms

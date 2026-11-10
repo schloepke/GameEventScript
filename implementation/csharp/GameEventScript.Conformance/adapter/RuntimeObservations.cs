@@ -28,7 +28,7 @@ internal sealed class RuntimeObservations(string publishSink) : IGesRuntimeObser
         var clock = new VirtualClock();
         var builder = GameEventScriptHost.CreateBuilder().WithClock(clock).WithRuntimeObserver(observer)
             .WithExternalTypeRegistry(GameEventScript.Tests.Conformance.GameEventScriptConformanceExternalTypes.Registry)
-            .WithRegistry(new RuntimeFixtures()).WithRuntimeLimits(CreateLimits(request.GetProperty("limits")));
+            .WithRegistry(GesGeometryLibrary.Extensions(new RuntimeFixtures())).WithRuntimeLimits(CreateLimits(request.GetProperty("limits")));
         if (request.GetProperty("publishSink").GetString() != "absent") builder.WithPublishSink(observer);
         RuntimeRandom.Configure(builder, request.GetProperty("random"));
         var host = builder.Build();

@@ -63,11 +63,11 @@ internal static class GameEventScriptConformanceExternalTypes
         ],
         [new GesExternalTypeConstructorDefinition("DeclaredProbe", [new GesExternalTypeParameterDefinition("name", GesBytecodeTypeKind.Text)])]);
 
-    internal static readonly IGesExternalTypeCatalog Catalog =
-        new GesDeclaredExternalTypeCatalog([AimDefinition, GameEventScriptConformanceCallbackProbe.Definition, SpatialDefinition, OptionalDefinition, DeclaredDefinition, ReadProbeDefinition]);
+    // The fixtures follow the standard geometry library, which resolves :Box and :Poly in front of them.
+    internal static readonly IGesExternalTypeCatalog Catalog = GesGeometryLibrary.Catalog(
+        new GesDeclaredExternalTypeCatalog([AimDefinition, GameEventScriptConformanceCallbackProbe.Definition, SpatialDefinition, OptionalDefinition, DeclaredDefinition, ReadProbeDefinition]));
 
-    internal static readonly IGesExternalTypeRegistry Registry =
-        new TestRuntimeRegistry();
+    internal static readonly IGesExternalTypeRegistry Registry = GesGeometryLibrary.ExternalTypes(new TestRuntimeRegistry());
 
     private static GesExternalTypeDefinition CreateAimDefinition()
     {

@@ -7,7 +7,9 @@ import GameEventScriptRuntime
 struct RuntimeFixtures: GesExtensionRegistry, GesExternalTypeRegistry {
     // This fixed catalog contains only deeply immutable descriptor values, no callbacks or host state.
     // Reuse it like the C# fixture catalog instead of rebuilding test infrastructure for each compilation.
-    nonisolated(unsafe) static let catalog = try! GesDeclaredExternalTypeCatalog([aim(), probe(), spatialProbe(), optionalProbe(), declaredProbe(), readProbe()])
+    // The fixtures follow the standard geometry library, which resolves :Box and :Poly in front of them.
+    nonisolated(unsafe) static let fixtures = try! GesDeclaredExternalTypeCatalog([aim(), probe(), spatialProbe(), optionalProbe(), declaredProbe(), readProbe()])
+    nonisolated(unsafe) static let catalog = GesGeometryLibrary.catalog(next: fixtures)
     var mismatch = false
 
     func resolve(_ reference: GesExtensionReference) -> (any GesExtensionFunction)? {
@@ -28,7 +30,7 @@ struct RuntimeFixtures: GesExtensionRegistry, GesExternalTypeRegistry {
 
     func resolve(_ reference: GesExternalTypeConstructorReference) throws -> (any GesExternalTypeConstructor)? {
         if mismatch { return FixtureConstructor(definition: try .init(typeName: "Mismatch", parameters: [.init(name: "value", kind: .float)])) }
-        for definition in Self.catalog.types { for constructor in definition.constructors where constructor.signatureID == reference.signatureID { return FixtureConstructor(definition: constructor) } }
+        for definition in Self.fixtures.types { for constructor in definition.constructors where constructor.signatureID == reference.signatureID { return FixtureConstructor(definition: constructor) } }
         return nil
     }
 

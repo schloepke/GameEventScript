@@ -55,9 +55,13 @@ final class HostScenario {
         let builder = GameEventScriptHost.makeBuilder()
             .withRandomSequence(sequence, fallbackSeed: seed ?? 0)
             .withRuntimeLimits(limits)
-            .withRegistry(RuntimeFixtures())
+            .withRegistry(GesGeometryLibrary.extensions(next: RuntimeFixtures()))
         if let observer { builder.withRuntimeObserver(observer) }
-        if test["externalTypeRegistry"]?.stringValue != "absent" { builder.withExternalTypeRegistry(RuntimeFixtures(mismatch: test["externalTypeRegistry"]?.stringValue == "mismatch")) }
+        switch test["externalTypeRegistry"]?.stringValue {
+        case "absent": break
+        case "mismatch": builder.withExternalTypeRegistry(RuntimeFixtures(mismatch: true))
+        default: builder.withExternalTypeRegistry(GesGeometryLibrary.externalTypes(next: RuntimeFixtures()))
+        }
         if let publishSink { builder.withPublishSink(publishSink) }
         if let clock { builder.withClock(clock) }
         return try builder.build()

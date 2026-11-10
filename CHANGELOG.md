@@ -230,6 +230,10 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 - `ges schema generate --model` writes plain model types: Swift `Hashable`, `Sendable`, `Codable`
   structs with a memberwise `init` (`Identifiable` with a key), C# 9 classes with value equality,
   with enums for closed tags and unions, and no ranges, steps or parameters needed.
+- `GesBox` and `GesPoly` in both runtimes, and `GesGeometryLibrary`, which offers them to
+  scripts as the external types `:Box` and `:Poly` with the functions `:geometry.size`, `center`,
+  `union`, `inset`, `nearest`, `bounds`, `area`, `distance`, `centroid`, `contains` and
+  `intersects`; an invalid polygon gives `nothing`.
 - `GesPoint` and `GesVector` in both runtimes: unitless spatial values with the language's
   affine arithmetic, `length`, `distance`, `normalized`, `dot` and `cross`, and conversions to
   and from `GesValue` with an explicit unit.

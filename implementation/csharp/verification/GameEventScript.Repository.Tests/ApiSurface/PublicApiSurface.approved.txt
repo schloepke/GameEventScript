@@ -112,6 +112,28 @@ sealed class GameEventScript.Api.GesBoundSchema
   property System.String Name { get }
   property System.UInt64 BindingHash { get }
   property System.UInt64 Hash { get }
+struct GameEventScript.Api.GesBox
+  ctor GesBox(GameEventScript.Api.GesPoint corner, GameEventScript.Api.GesPoint opposite)
+  method GameEventScript.Api.GesBox Union(GameEventScript.Api.GesBox other)
+  method GameEventScript.Api.GesBox? Inset(System.Double by)
+  method GameEventScript.Api.GesPoint Clamp(GameEventScript.Api.GesPoint point)
+  method GameEventScript.Runtime.Values.GesValue ToValue(GameEventScript.Api.GesQuantityUnit unit)
+  method System.Boolean Contains(GameEventScript.Api.GesPoint point)
+  method System.Boolean Equals(GameEventScript.Api.GesBox other)
+  method System.Boolean Equals(System.Object obj)
+  method System.Boolean Intersects(GameEventScript.Api.GesBox other)
+  method System.Int32 GetHashCode()
+  method System.String ToString()
+  method static GameEventScript.Api.GesBox FromCenter(GameEventScript.Api.GesPoint center, GameEventScript.Api.GesVector size)
+  method static GameEventScript.Api.GesBox? FromValue(GameEventScript.Runtime.Values.GesValue& value, GameEventScript.Api.GesQuantityUnit unit)
+  method static System.Boolean op_Equality(GameEventScript.Api.GesBox left, GameEventScript.Api.GesBox right)
+  method static System.Boolean op_Inequality(GameEventScript.Api.GesBox left, GameEventScript.Api.GesBox right)
+  property GameEventScript.Api.GesPoint Center { get }
+  property GameEventScript.Api.GesPoint Max { get }
+  property GameEventScript.Api.GesPoint Min { get }
+  property GameEventScript.Api.GesVector Size { get }
+  property System.Boolean Is2D { get }
+  property System.Boolean IsFinite { get }
 sealed class GameEventScript.Api.GesBuildMetadataSegment
   ctor GesBuildMetadataSegment(System.String compilerId, System.String compilerVersion)
   property System.String CompilerId { get }
@@ -671,6 +693,12 @@ sealed class GameEventScript.Api.GesFloatRange
   property System.Double From { get }
   property System.Double Step { get }
   property System.Double To { get }
+static class GameEventScript.Api.GesGeometryLibrary
+  field static System.String Namespace
+  method static GameEventScript.Api.IGesExtensionRegistry Extensions(GameEventScript.Api.IGesExtensionRegistry next)
+  method static GameEventScript.Api.IGesExternalTypeCatalog Catalog(GameEventScript.Api.IGesExternalTypeCatalog next)
+  method static GameEventScript.Api.IGesExternalTypeRegistry ExternalTypes(GameEventScript.Api.IGesExternalTypeRegistry next)
+  property System.Collections.Generic.IReadOnlyList<GameEventScript.Api.GesExternalTypeDefinition> Types { get }
 sealed class GameEventScript.Api.GesHostBuilder
   ctor GesHostBuilder()
   method GameEventScript.Api.GameEventScriptHost Build()
@@ -771,6 +799,24 @@ struct GameEventScript.Api.GesPoint
   property System.Double X { get set }
   property System.Double Y { get set }
   property System.Double Z { get set }
+sealed class GameEventScript.Api.GesPoly
+  ctor GesPoly(System.Collections.Generic.IEnumerable<GameEventScript.Api.GesPoint> points)
+  method GameEventScript.Runtime.Values.GesValue ToValue(GameEventScript.Api.GesQuantityUnit unit)
+  method System.Boolean Equals(GameEventScript.Api.GesPoly other)
+  method System.Boolean Equals(System.Object obj)
+  method System.Boolean? Contains(GameEventScript.Api.GesPoint point)
+  method System.Boolean? Intersects(GameEventScript.Api.GesPoly other)
+  method System.Double? DistanceTo(GameEventScript.Api.GesPoint point)
+  method System.Int32 GetHashCode()
+  method System.String ToString()
+  method static GameEventScript.Api.GesPoly FromValue(GameEventScript.Runtime.Values.GesValue& value, GameEventScript.Api.GesQuantityUnit unit)
+  method static System.Boolean op_Equality(GameEventScript.Api.GesPoly left, GameEventScript.Api.GesPoly right)
+  method static System.Boolean op_Inequality(GameEventScript.Api.GesPoly left, GameEventScript.Api.GesPoly right)
+  property GameEventScript.Api.GesBox? Bounds { get }
+  property GameEventScript.Api.GesPoint? Centroid { get }
+  property GameEventScript.Api.GesReadOnlyArray<GameEventScript.Api.GesPoint> Points { get }
+  property System.Boolean IsValid { get }
+  property System.Double? Area { get }
 enum GameEventScript.Api.GesProfilePhase
   enum-field StateCheck = 0
   enum-field BudgetCheck = 1

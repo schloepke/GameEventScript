@@ -556,6 +556,48 @@ schema code uses them for every spatial field, so hosts in both ports compute wi
 | operations | `Zero`, `IsFinite`, `Length`, `LengthSquared`, `Normalized`, `Dot`, `Cross`, `DistanceTo`, operators | `zero`, `init()`, `isFinite`, `length`, `lengthSquared`, `normalized`, `dot(_:)`, `cross(_:)`, `distance(to:)`, operators |
 | conversion | `ToValue(unit)`, `static FromValue(value, unit)` returning a nullable value | `value(unit:)`, `init?(_:unit:)` |
 
+#### Geometry library
+
+> **Since: Unreleased**
+
+`GesBox` and `GesPoly` are unitless shapes built on the spatial values, the same in both ports, and `GesGeometryLibrary`
+offers them to scripts as external types with a standard extension library, so that a host and its scripts compute alike.
+Game logic, such as rounded hulls, bearings or sensor sectors, stays in hosts.
+
+- **`GesBox`** is an axis-aligned box. It is created from two corners in any order (C# `new GesBox(a, b)`, Swift
+  `GesBox(_:_:)`) or from a centre and a size (`FromCenter`, `init(center:size:)`), whose negative components count as
+  their magnitude, so `min` is never above `max`. It is 2D when `z` is 0 on both corners. `size`, `center`,
+  `contains(point)` and `intersects(box)` include the boundary; `union` encloses both; `inset(by:)` moves the sides of x and
+  y, and in 3D also of z, inward or outward for a negative distance, and is absent when the sides would cross or the
+  distance is not finite; `clamp` returns the nearest point of the box. Equality compares the corners.
+- **`GesPoly`** is a closed polygon in the plane z = 0: its points in order, the last connecting to the first (C# a sealed
+  class with `Points`, Swift a `Hashable`, `Sendable`, `Codable` struct with `points`). It is valid with at least three
+  finite points with `z` 0, no edge of zero length, no two edges that cross, touch or fold back over each other, and an area
+  other than 0. An invalid polygon exists, but `area` (signed: positive counterclockwise), `bounds`, `centroid`,
+  `contains(point)` (the outline counts as inside), `distance(to:)` (to the outline, for points inside and outside) and
+  `intersects(poly)` (crossing or touching outlines, or one inside the other) are absent, as GES operations give `nothing`
+  for a domain failure. Equality compares the points in order.
+- Both convert to and from a `GesValue` like the spatial values, with an explicit unit, as the external values `:Box` and
+  `:Poly` of the library; another value or unit converts to absence.
+- **`GesGeometryLibrary`** provides `Catalog(next)` for the compiler and `ExternalTypes(next)` and `Extensions(next)` for
+  the host (Swift `catalog(next:)`, `externalTypes(next:)`, `extensions(next:)`), each resolving the library first and
+  everything else through `next`. Registering it takes the type names `Box` and `Poly`.
+  - `:Box(lower: p, upper: q)` takes two corners and `:Box(center: p, size: v)` a centre and a size, all of one unit, which
+    the value keeps; its fields are `lower`, `upper`, `center` and `size`. `:Poly(points: [...])` takes a list of Points of
+    one unit and has the field `points`. Another kind or a mixed unit constructs `nothing`. `min` and `max` are GES keywords,
+    so the corner fields are `lower` and `upper`.
+  - The functions are `:geometry.size`, `center`, `union(_, _)`, `inset(_, by:)` and `nearest(_, point)` of boxes
+    (`clamp` is a GES keyword); `bounds`, `area`, `distance(_, point)` and `centroid` of polygons, where `bounds` of a box is
+    the box; and `contains(_, point)` and `intersects(_, _)` of both, where a 2D box meets a polygon as the polygon of its
+    outline. `area` is unitless, like `dot`; `distance` has the unit. Another kind, another unit or an invalid polygon gives
+    `nothing`. The functions have no purity contract, so the compiler treats them as effectful like every host call.
+
+| Concept | C# | Swift |
+| --- | --- | --- |
+| box | `readonly struct GesBox` with `Min`, `Max`, `Is2D`, `IsFinite`, `Size`, `Center`, `Contains`, `Intersects`, `Union`, `Inset`, `Clamp`, `ToValue`, `FromValue` | `struct GesBox` with `min`, `max`, `is2D`, `isFinite`, `size`, `center`, `contains(_:)`, `intersects(_:)`, `union(_:)`, `inset(by:)`, `clamp(_:)`, `value(unit:)`, `init?(_:unit:)` |
+| polygon | `sealed class GesPoly` with `Points`, `IsValid`, `Area`, `Bounds`, `Centroid`, `Contains`, `DistanceTo`, `Intersects`, `ToValue`, `FromValue` | `struct GesPoly` with `points`, `isValid`, `area`, `bounds`, `centroid`, `contains(_:)`, `distance(to:)`, `intersects(_:)`, `value(unit:)`, `init?(_:unit:)` |
+| library | `static class GesGeometryLibrary` with `Namespace`, `Types`, `Catalog`, `ExternalTypes`, `Extensions` | `enum GesGeometryLibrary` with `namespace`, `types`, `catalog(next:)`, `externalTypes(next:)`, `extensions(next:)` |
+
 #### Literal parsing
 
 > **Since: Unreleased**

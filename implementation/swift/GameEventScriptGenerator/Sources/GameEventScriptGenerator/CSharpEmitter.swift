@@ -43,7 +43,7 @@ enum GesCSharpEmitter {
             code.open("{")
         }
         let holder = "__GesSchemas" + GesSchemaPlanner.hash(GesSchemaPlanner.header(layout))
-        let context = Context(elements: GesSchemaPlanner.keyedElements(types), pooled: GesSchemaPlanner.pooledElements(types), global: "global::" + space.map { $0 + "." }.joined(), values: options.values, holder: holder)
+        let context = Context(elements: GesSchemaPlanner.keyedElements(types), global: "global::" + space.map { $0 + "." }.joined(), values: options.values, holder: holder)
         for (index, type) in types.enumerated() {
             if index > 0 { code.blank() }
             if type.kind == .messages { try messageSet(&code, type, access, context) } else { try record(&code, type, access, context) }
@@ -56,14 +56,10 @@ enum GesCSharpEmitter {
     // The keyed-list elements and the qualifier of the top-level types, which a member of the same name cannot hide.
     struct Context {
         let elements: Set<String>
-        let pooled: Set<String>
         let global: String
         // Whether records convert to and from GES values through the helper type that holds the embedded sources.
         let values: Bool
         let holder: String
-
-        // Whether instances of a type live in a list's pool and remember the record that owns it.
-        func owned(_ type: GesPlanType) -> Bool { type.isClass && (type.isItem || pooled.contains(type.name)) }
     }
 
     static func kind(_ type: GesPlanType) -> String { type.kind == .message ? "message" : "schema" }
@@ -111,12 +107,8 @@ enum GesCSharpEmitter {
             code.line("/// <summary>Whether the tag <c>#\(tag.tag)</c> is set.</summary>")
             code.line("public bool \(tag.base);")
         }
-        if context.owned(type) {
-            code.blank()
-            code.line("// The record whose list pools this instance; a read rejects a baseline that holds it.")
-            code.line("internal object? __Owner;")
-        }
         methods(&code, type)
+        if type.isClass && (type.kind == .schema || type.isItem) { sharing(&code, type) }
         let deltas = type.kind == .schema && !type.isItem
         if deltas { sameHelpers(&code, type, context.global) }
         extras(&code, type, deltas, context.elements.contains(type.name))
@@ -536,7 +528,7 @@ enum GesCSharpEmitter {
             code.line("for (var position = 0; position < count; position++)")
             code.open("{")
             if element.isClass {
-                code.line("if (position == __\(value.base)Pool.Count) __\(value.base)Pool.Add(new \(name) { __Owner = this });")
+                code.line("if (position == __\(value.base)Pool.Count) __\(value.base)Pool.Add(new \(name)());")
                 code.line("var item = __\(value.base)Pool[position];")
             } else if value.item != nil || element.encoding.kind == .point || element.encoding.kind == .vector || element.encoding.kind == .schema {
                 code.line("var item = new \(name)();")

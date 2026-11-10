@@ -38,18 +38,25 @@ public sealed class GesGeneratedCodeTests
         fleet.Read(source.ToBytes());
         var delta = new byte[Fleet.MaxByteCount];
 
-        // The read would overwrite the pooled ships of fleet while it reads them as the baseline.
-        void Rejected(Fleet baseline, string path)
+        // The read would overwrite what the baseline holds: the record itself, its pooled ships or its list.
+        void Rejected<T>(Func<T> read)
         {
-            var error = Assert.ThrowsExactly<GesWireException>(() => fleet.ReadDelta(delta, baseline));
+            var error = Assert.ThrowsExactly<GesWireException>(() => read());
             Assert.AreEqual(GesWireException.OverlappingBuffers, error.Code);
-            Assert.AreEqual(path, error.Path);
+            Assert.AreEqual("", error.Path);
         }
 
-        Rejected(fleet, "");
-        Rejected(new Fleet { Ships = fleet.Ships }, "ships");
-        Rejected(new Fleet { Ships = new List<Ship>(fleet.Ships) }, "ships");
-        Rejected(new Fleet { Ships = { new Ship { Id = 7 }, fleet.Ships[2] } }, "ships");
+        Rejected(() => fleet.ReadDelta(delta, fleet));
+        // A keyed record is rejected before its key is read.
+        Rejected(() => fleet.Ships[0].ReadDelta(ReadOnlySpan<byte>.Empty, fleet.Ships[0]));
+#if DEBUG
+        // Only debug builds walk the storage for shared records and lists.
+        Rejected(() => fleet.ReadDelta(delta, new Fleet { Ships = fleet.Ships }));
+        Rejected(() => fleet.ReadDelta(delta, new Fleet { Ships = new List<Ship>(fleet.Ships) }));
+        Rejected(() => fleet.ReadDelta(delta, new Fleet { Ships = { new Ship { Id = 7 }, fleet.Ships[2] } }));
+        var own = new Fleet { Ships = { new Ship { Id = 7 } } };
+        Rejected(() => own.ReadDelta(delta, new Fleet { Ships = own.Ships }));
+#endif
 
         // Copying a record into itself, or from a record that holds the same list, keeps its values.
         fleet.CopyFrom(fleet);
@@ -57,6 +64,14 @@ public sealed class GesGeneratedCodeTests
         Assert.IsTrue(fleet.WireEquals(source));
         fleet.Ships[0].CopyFrom(fleet.Ships[0]);
         Assert.IsTrue(fleet.WireEquals(source));
+
+        // Another pooled ship of the same fleet is a valid baseline, since the read writes only into the target ship.
+        var changed = new Ship { Id = 1, Health = 11 };
+        var shipDelta = changed.ToDeltaBytes(fleet.Ships[1]);
+        var spare = new Fleet();
+        spare.CopyFrom(fleet);
+        spare.Ships[0].ReadDelta(shipDelta, spare.Ships[1]);
+        Assert.IsTrue(spare.Ships[0].WireEquals(changed));
 
         var baseline = new Fleet();
         baseline.CopyFrom(fleet);

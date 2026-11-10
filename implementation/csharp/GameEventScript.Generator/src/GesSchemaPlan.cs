@@ -79,23 +79,14 @@ internal static class GesSchemaPlanner
         else if (value.Element is not null) KeyedElements(value.Element, elements);
     }
 
-    // The schemas that a list of classes pools, and whose instances therefore remember their owner.
-    internal static HashSet<string> PooledElements(List<GesPlanType> types)
+    // Whether a value holds class records that a read writes into: a class schema, or a list of classes with its pool.
+    internal static bool HoldsRecords(GesPlanValue value) => value.Encoding.Kind switch
     {
-        var elements = new HashSet<string>(System.StringComparer.Ordinal);
-        foreach (var type in types)
-            foreach (var field in type.Fields) PooledElements(field.Value, elements);
-        return elements;
-    }
-
-    private static void PooledElements(GesPlanValue value, HashSet<string> elements)
-    {
-        if (value.Encoding.Kind == GesLayoutKind.List && value.Item is null && value.Element!.IsClass) elements.Add(value.Element.Encoding.Schema);
-        foreach (var alternative in value.Alternatives) PooledElements(alternative, elements);
-        if (value.Item is not null)
-            foreach (var field in value.Item.Fields) PooledElements(field.Value, elements);
-        else if (value.Element is not null) PooledElements(value.Element, elements);
-    }
+        GesLayoutKind.Schema => value.IsClass,
+        GesLayoutKind.List => value.Element!.IsClass,
+        GesLayoutKind.Union => value.Alternatives.Exists(HoldsRecords),
+        _ => false,
+    };
 
     internal static bool Keyed(GesPlanValue value) => value.Encoding.Kind == GesLayoutKind.List && value.Encoding.Keyed;
 

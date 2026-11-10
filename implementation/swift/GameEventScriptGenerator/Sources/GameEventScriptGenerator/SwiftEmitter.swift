@@ -38,7 +38,7 @@ enum GesSwiftEmitter {
             code.open("\(access)enum \(part) {")
         }
         let holder = "__GesSchemas" + GesSchemaPlanner.hash(GesSchemaPlanner.header(layout))
-        let context = Context(elements: GesSchemaPlanner.keyedElements(types), pooled: GesSchemaPlanner.pooledElements(types), values: options.values, holder: holder, checkedExclusivity: options.checkedExclusivity)
+        let context = Context(elements: GesSchemaPlanner.keyedElements(types), values: options.values, holder: holder, checkedExclusivity: options.checkedExclusivity)
         for (index, type) in types.enumerated() {
             if index > 0 { code.blank() }
             if type.kind == .messages { try messageSet(&code, type, access, context) } else { try record(&code, type, access, context) }
@@ -51,13 +51,9 @@ enum GesSwiftEmitter {
     // The keyed-list elements, and whether records convert to and from GES values through the helper type of the file.
     struct Context {
         let elements: Set<String>
-        let pooled: Set<String>
         let values: Bool
         let holder: String
         let checkedExclusivity: Bool
-
-        // Whether instances of a type live in a list's pool and remember the record that owns it.
-        func owned(_ type: GesPlanType) -> Bool { type.isClass && (type.isItem || pooled.contains(type.name)) }
 
         // The attribute of a class's stored properties: without exclusivity checks unless they are asked for.
         func stored(_ isClass: Bool) -> String { isClass && !checkedExclusivity ? "@exclusivity(unchecked) " : "" }
@@ -105,27 +101,13 @@ enum GesSwiftEmitter {
             code.line("\(stored)\(access)var \(member(tag.base)) = false")
         }
         for field in type.fields { pools(&code, field.value, stored) }
-        if context.owned(type) {
-            code.line("// The record whose list pools this instance; a read rejects a baseline that holds it.")
-            code.line("\(stored)var __owner: ObjectIdentifier?")
-        }
+        let sharing = type.isClass && (type.kind == .schema || type.isItem)
+        if sharing { code.line("\(stored)var __busy = false") }
         code.blank()
         code.line(type.isItem ? "/// Creates an element with every field at its zero value." : "/// Creates a record with every field at its zero value.")
         code.line("\(access)init() {}")
-        if context.owned(type) {
-            code.blank()
-            code.line("init(__owner owner: ObjectIdentifier) { self.__owner = owner }")
-        }
-        var pools: [String] = []
-        for field in type.fields { poolNames(field.value, &pools) }
-        if !pools.isEmpty {
-            // An instance that outlives this record must not match a later record at the same address.
-            code.blank()
-            code.open("deinit {")
-            for pool in pools { code.line("for item in self.\(pool) { item.__owner = nil }") }
-            code.close()
-        }
         methods(&code, type, access)
+        if sharing { sharingMembers(&code, type) }
         let deltas = type.kind == .schema && !type.isItem
         if deltas { sameHelpers(&code, type) }
         extras(&code, type, access, deltas, context.elements.contains(type.name))
@@ -237,13 +219,6 @@ enum GesSwiftEmitter {
         code.line("get { String(decoding: self.\(bytes), as: UTF8.self) }")
         code.line("set { self.\(bytes) = Array(newValue.utf8) }")
         code.close()
-    }
-
-    static func poolNames(_ value: GesPlanValue, _ names: inout [String]) {
-        if value.encoding.kind == .union {
-            for alternative in value.alternatives { poolNames(alternative, &names) }
-        }
-        if value.encoding.kind == .list && value.element!.isClass { names.append("__\(GesSchemaPlanner.camel(value.base))Pool") }
     }
 
     // The instances a list of classes reuses when it is read again.
@@ -544,7 +519,7 @@ enum GesSwiftEmitter {
             code.open(element.isClass ? "for position in 0..<count {" : "for _ in 0..<count {")
             if element.isClass {
                 let pool = "self.__\(GesSchemaPlanner.camel(value.base))Pool"
-                code.line("if position == \(pool).count { \(pool).append(\(name)(__owner: ObjectIdentifier(self))) }")
+                code.line("if position == \(pool).count { \(pool).append(\(name)()) }")
                 code.line("let item = \(pool)[position]")
             } else if value.item != nil || element.encoding.kind == .point || element.encoding.kind == .vector || element.encoding.kind == .schema {
                 code.line("var item = \(name)()")

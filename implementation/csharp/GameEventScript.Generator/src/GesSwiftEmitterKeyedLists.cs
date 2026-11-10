@@ -150,7 +150,7 @@ internal static partial class GesSwiftEmitter
         code.Line("reader.seek(to: start)");
         if (element.IsClass)
         {
-            code.Line($"if {pool}.isEmpty {{ {pool}.append({name}(__owner: ObjectIdentifier(self))) }}");
+            code.Line($"if {pool}.isEmpty {{ {pool}.append({name}()) }}");
             code.Line($"try {pool}[0].__readFields(&reader, paths, {at})");
         }
         else
@@ -240,7 +240,7 @@ internal static partial class GesSwiftEmitter
             return;
         }
 
-        code.Line($"if {target}.count == {pool}.count {{ {pool}.append({name}(__owner: ObjectIdentifier(self))) }}");
+        code.Line($"if {target}.count == {pool}.count {{ {pool}.append({name}()) }}");
         code.Line($"let item = {pool}[{target}.count]");
     }
 

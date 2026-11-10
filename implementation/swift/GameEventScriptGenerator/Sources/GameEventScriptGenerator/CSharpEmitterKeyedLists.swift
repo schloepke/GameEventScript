@@ -148,7 +148,7 @@ extension GesCSharpEmitter {
         code.close()
         code.line("reader.Seek(start);")
         if element.isClass {
-            code.line("if (\(pool).Count == 0) \(pool).Add(new \(name) { __Owner = this });")
+            code.line("if (\(pool).Count == 0) \(pool).Add(new \(name)());")
             code.line("\(pool)[0].__ReadFields(ref reader, paths, \(at));")
         } else {
             code.line("var scratch = new \(name)();")
@@ -241,7 +241,7 @@ extension GesCSharpEmitter {
             code.line("var item = new \(name)();")
             return
         }
-        code.line("if (list.Count == \(pool).Count) \(pool).Add(new \(name) { __Owner = this });")
+        code.line("if (list.Count == \(pool).Count) \(pool).Add(new \(name)());")
         code.line("var item = \(pool)[list.Count];")
     }
 

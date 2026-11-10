@@ -419,7 +419,8 @@ next.ReadDelta(buffer.AsSpan(0, deltaLength), received);
 
 A class keeps its storage, so once it has held its largest data, writing and reading allocate
 nothing. A baseline therefore needs its own storage: fill it with `CopyFrom` rather than assigning
-the list of the record that reads, which `ReadDelta` rejects with `wire.overlappingBuffers`. Records
+the list of the record that reads, which `ReadDelta` rejects with `wire.overlappingBuffers` in debug
+builds. Records
 compare by what goes on the wire with `WireEquals`, and `Quantize` rounds a record
 to the values a receiver reads. `--values` adds the conversion to GES values and messages for data
 from scripts. Generated C# is C# 9 and runs in Unity; generated Swift needs no Foundation. Check the

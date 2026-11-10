@@ -53,7 +53,7 @@ extension GesCSharpEmitter {
             code.line("if (ReferenceEquals(this, other)) return;")
             for field in type.fields {
                 if field.optional { code.line("Has\(field.base) = other.Has\(field.base);") }
-                copy(&code, field.value, field.base, "other." + field.base)
+                copy(&code, field.value, field.base, "other." + field.base, true)
             }
             for tag in type.tags { code.line("\(tag.base) = other.\(tag.base);") }
             code.close()
@@ -200,24 +200,85 @@ extension GesCSharpEmitter {
         }
     }
 
-    // Rejects a baseline that shares a list or a pooled element with this record, which the read would overwrite while reading it.
-    private static func overlaps(_ code: inout Code, _ value: GesPlanValue, _ member: String) {
+    // The storage that a read into this record writes: the record, the class records it holds and every pooled element. While a
+    // delta reads, it is marked, so that a baseline holding any of it is rejected before the read overwrites what it holds.
+    static func sharing(_ code: inout Code, _ type: GesPlanType) {
+        code.blank()
+        code.line("internal bool __Busy;")
+        code.blank()
+        if !type.fields.contains(where: { GesSchemaPlanner.holdsRecords($0.value) }) {
+            code.line("internal void __Mark(bool busy) => __Busy = busy;")
+            code.blank()
+            code.line("internal bool __Holds() => __Busy;")
+        } else {
+            code.line("internal void __Mark(bool busy)")
+            code.open("{")
+            code.line("__Busy = busy;")
+            for field in type.fields { mark(&code, field.value, field.base) }
+            code.close()
+            code.blank()
+            code.line("internal bool __Holds()")
+            code.open("{")
+            code.line("if (__Busy) return true;")
+            for field in type.fields { holds(&code, field.value, field.base) }
+            code.line("return false;")
+            code.close()
+        }
+        if type.kind != .schema || type.isItem { return }
+        code.blank()
+        code.line("internal bool __SharesList(\(type.name) baseline)")
+        code.open("{")
+        for field in type.fields { sharesList(&code, field.value, field.base) }
+        code.line("return false;")
+        code.close()
+    }
+
+    private static func mark(_ code: inout Code, _ value: GesPlanValue, _ member: String) {
+        let node = String(value.node)
         switch value.encoding.kind {
-        case .list:
-            code.line("if (ReferenceEquals(\(member), baseline.\(member))) \(fail("OverlappingBuffers", value))")
-            if !value.element!.isClass { break }
-            let node = String(value.node)
-            code.line("for (var owned\(node) = 0; owned\(node) < baseline.\(member).Count; owned\(node)++)")
-            code.line("    if (ReferenceEquals(baseline.\(member)[owned\(node)].__Owner, this)) \(fail("OverlappingBuffers", value))")
+        case .schema where value.isClass:
+            code.line("\(member).__Mark(busy);")
+        case .list where value.element!.isClass:
+            code.line("for (var index\(node) = 0; index\(node) < __\(value.base)Pool.Count; index\(node)++) __\(value.base)Pool[index\(node)].__Mark(busy);")
         case .union:
-            for alternative in value.alternatives { overlaps(&code, alternative, prefix(member) + alternative.base) }
+            for alternative in value.alternatives { mark(&code, alternative, prefix(member) + alternative.base) }
         default:
             break
         }
     }
 
-    // Copies b into a without allocating once a's storage has grown.
-    private static func copy(_ code: inout Code, _ value: GesPlanValue, _ a: String, _ b: String) {
+    private static func holds(_ code: inout Code, _ value: GesPlanValue, _ member: String) {
+        let node = String(value.node)
+        switch value.encoding.kind {
+        case .schema where value.isClass:
+            code.line("if (\(member).__Holds()) return true;")
+        case .list where value.element!.isClass:
+            code.line("for (var index\(node) = 0; index\(node) < \(member).Count; index\(node)++)")
+            code.line("    if (\(member)[index\(node)].__Holds()) return true;")
+        case .union:
+            for alternative in value.alternatives { holds(&code, alternative, prefix(member) + alternative.base) }
+        default:
+            break
+        }
+    }
+
+    // Whether the baseline holds a list of this record or of a record it holds in the same place, which a read would clear.
+    private static func sharesList(_ code: inout Code, _ value: GesPlanValue, _ member: String) {
+        switch value.encoding.kind {
+        case .schema where value.isClass:
+            code.line("if (\(member).__SharesList(baseline.\(member))) return true;")
+        case .list:
+            code.line("if (ReferenceEquals(\(member), baseline.\(member))) return true;")
+        case .union:
+            for alternative in value.alternatives { sharesList(&code, alternative, prefix(member) + alternative.base) }
+        default:
+            break
+        }
+    }
+
+    // Copies b into a without allocating once a's storage has grown. A guarded copy skips a list that b shares with a; a delta
+    // has rejected that case before it copies.
+    private static func copy(_ code: inout Code, _ value: GesPlanValue, _ a: String, _ b: String, _ guarded: Bool) {
         let node = String(value.node)
         switch value.encoding.kind {
         case .text:
@@ -226,23 +287,27 @@ extension GesCSharpEmitter {
             code.line("\(a).CopyFrom(\(b));")
         case .list where value.element!.isClass:
             // The same list already holds the values; clearing it first would lose them.
-            code.line("if (!ReferenceEquals(\(a), \(b)))")
-            code.open("{")
+            if guarded {
+                code.line("if (!ReferenceEquals(\(a), \(b)))")
+                code.open("{")
+            }
             code.line("\(a).Clear();")
             code.line("for (var index\(node) = 0; index\(node) < \(b).Count; index\(node)++)")
             code.open("{")
-            code.line("if (index\(node) == __\(value.base)Pool.Count) __\(value.base)Pool.Add(new \(elementName(value)) { __Owner = this });")
+            code.line("if (index\(node) == __\(value.base)Pool.Count) __\(value.base)Pool.Add(new \(elementName(value))());")
             code.line("var item\(node) = __\(value.base)Pool[index\(node)];")
             code.line("item\(node).CopyFrom(\(b)[index\(node)]);")
             code.line("\(a).Add(item\(node));")
             code.close()
-            code.close()
+            if guarded { code.close() }
         case .list:
-            code.line("if (!ReferenceEquals(\(a), \(b)))")
-            code.open("{")
+            if guarded {
+                code.line("if (!ReferenceEquals(\(a), \(b)))")
+                code.open("{")
+            }
             code.line("\(a).Clear();")
             code.line("\(a).AddRange(\(b));")
-            code.close()
+            if guarded { code.close() }
         case .union:
             code.line("\(a) = \(b);")
             code.line("switch (\(a))")
@@ -250,7 +315,7 @@ extension GesCSharpEmitter {
             for alternative in value.alternatives where alternative.encoding.kind != .nothing {
                 code.line("case \(nestedName(value)).\(alternative.label):")
                 code.open("{")
-                copy(&code, alternative, prefix(a) + alternative.base, prefix(b) + alternative.base)
+                copy(&code, alternative, prefix(a) + alternative.base, prefix(b) + alternative.base, guarded)
                 code.line("break;")
                 code.close()
             }
@@ -348,6 +413,16 @@ extension GesCSharpEmitter {
         code.line("/// <exception cref=\"GesWireException\">The data is no valid delta for this baseline.</exception>")
         code.line("public int ReadDelta(ReadOnlySpan<byte> data, \(parameter) baseline, long byteLimit = long.MaxValue)")
         code.open("{")
+        if type.isClass {
+            // Sharing other storage is a programming error, which only debug builds pay to detect.
+            code.line("if (ReferenceEquals(this, baseline)) throw new GesWireException(GesWireException.OverlappingBuffers, \"\");")
+            code.line("#if DEBUG")
+            code.line("__Mark(true);")
+            code.line("var shared = baseline.__Holds();")
+            code.line("__Mark(false);")
+            code.line("if (shared || __SharesList(baseline)) throw new GesWireException(GesWireException.OverlappingBuffers, \"\");")
+            code.line("#endif")
+        }
         code.line("var reader = new GesBitReader(data, byteLimit);")
         if let key {
             code.line("var paths = __paths;")
@@ -394,10 +469,6 @@ extension GesCSharpEmitter {
         code.blank()
         code.line("internal bool __ReadDelta(\(parameter) baseline, ref GesBitReader reader, string[] paths, int at, bool top)")
         code.open("{")
-        if type.isClass {
-            code.line("if (ReferenceEquals(this, baseline)) throw new GesWireException(GesWireException.OverlappingBuffers, \"\");")
-            for field in type.fields { overlaps(&code, field.value, field.base) }
-        }
         code.line("var fieldCount = \(counted);")
         code.line("reader.Require(fieldCount, at == 0 ? \"\" : paths[at - 1]);")
         code.line("var changeBits = reader.BitPosition;")
@@ -420,7 +491,7 @@ extension GesCSharpEmitter {
             code.line("else")
             code.open("{")
             if field.optional { code.line("Has\(field.base) = baseline.Has\(field.base);") }
-            copy(&code, field.value, field.base, "baseline." + field.base)
+            copy(&code, field.value, field.base, "baseline." + field.base, false)
             code.close()
             code.line("ordinal++;")
             code.close()

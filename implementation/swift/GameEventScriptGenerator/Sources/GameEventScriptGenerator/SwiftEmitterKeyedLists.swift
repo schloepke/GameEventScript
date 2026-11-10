@@ -139,7 +139,7 @@ extension GesSwiftEmitter {
         code.close()
         code.line("reader.seek(to: start)")
         if element.isClass {
-            code.line("if \(pool).isEmpty { \(pool).append(\(name)(__owner: ObjectIdentifier(self))) }")
+            code.line("if \(pool).isEmpty { \(pool).append(\(name)()) }")
             code.line("try \(pool)[0].__readFields(&reader, paths, \(at))")
         } else {
             code.line("var scratch = \(name)()")
@@ -221,7 +221,7 @@ extension GesSwiftEmitter {
             code.line("var item = \(name)()")
             return
         }
-        code.line("if \(target).count == \(pool).count { \(pool).append(\(name)(__owner: ObjectIdentifier(self))) }")
+        code.line("if \(target).count == \(pool).count { \(pool).append(\(name)()) }")
         code.line("let item = \(pool)[\(target).count]")
     }
 

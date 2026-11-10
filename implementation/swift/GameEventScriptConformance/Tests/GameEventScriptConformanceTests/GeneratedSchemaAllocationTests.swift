@@ -79,27 +79,41 @@ final class GeneratedSchemaAllocationTests: XCTestCase {
         try fleet.read(from: try source.encoded())
         let delta = [UInt8](repeating: 0, count: Generated.Fleet.maxByteCount)
 
-        // The read would overwrite the pooled ships of fleet while it reads them as the baseline.
-        func rejected(_ baseline: Generated.Fleet, _ path: String) {
-            XCTAssertThrowsError(try fleet.readDelta(from: delta, against: baseline)) { error in
+        // The read would overwrite what the baseline holds: the record itself or its pooled ships.
+        func rejected(_ read: () throws -> Int) {
+            XCTAssertThrowsError(try read()) { error in
                 XCTAssertEqual((error as? GesWireError)?.code, GesWireError.overlappingBuffers)
-                XCTAssertEqual((error as? GesWireError)?.path, path)
+                XCTAssertEqual((error as? GesWireError)?.path, "")
             }
         }
 
-        rejected(fleet, "")
-        let sharing = Generated.Fleet()
-        sharing.ships = fleet.ships
-        rejected(sharing, "ships")
-        let mixed = Generated.Fleet()
-        mixed.ships = [Generated.Ship(), fleet.ships[2]]
-        rejected(mixed, "ships")
+        rejected { try fleet.readDelta(from: delta, against: fleet) }
+        // A keyed record is rejected before its key is read.
+        rejected { try fleet.ships[0].readDelta(from: [], against: fleet.ships[0]) }
+        #if DEBUG
+            // Only debug builds walk the storage for shared records.
+            let sharing = Generated.Fleet()
+            sharing.ships = fleet.ships
+            rejected { try fleet.readDelta(from: delta, against: sharing) }
+            let mixed = Generated.Fleet()
+            mixed.ships = [Generated.Ship(), fleet.ships[2]]
+            rejected { try fleet.readDelta(from: delta, against: mixed) }
+        #endif
 
         // Copying a record into itself keeps its values.
         fleet.copy(from: fleet)
         XCTAssertTrue(try fleet.wireEquals(source))
         fleet.ships[0].copy(from: fleet.ships[0])
         XCTAssertTrue(try fleet.wireEquals(source))
+
+        // Another pooled ship of the same fleet is a valid baseline, since the read writes only into the target ship.
+        let changed = Generated.Ship()
+        changed.id = 1
+        changed.health = 11
+        let spare = Generated.Fleet()
+        spare.copy(from: fleet)
+        try spare.ships[0].readDelta(from: try changed.deltaEncoded(against: fleet.ships[1]), against: spare.ships[1])
+        XCTAssertTrue(try spare.ships[0].wireEquals(changed))
 
         let baseline = Generated.Fleet()
         baseline.copy(from: fleet)

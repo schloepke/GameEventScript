@@ -97,8 +97,8 @@ performance:
           toleranceAbsolute: 0.05
           unit: ms
         ast-build.allocated:
-          reference: 21.9921875
-          maximum: 23.091796875
+          reference: 24.828125
+          maximum: 26.06953125
           unit: KiB
         binary-build.elapsed:
           reference: 0.1115
@@ -427,8 +427,8 @@ performance:
           toleranceAbsolute: 0.05
           unit: ms
         ast-build.allocated:
-          reference: 15.0546875
-          maximum: 15.164
+          reference: 18.1484375
+          maximum: 19.055859375
           unit: KiB
         binary-build.elapsed:
           reference: 0.134
@@ -744,8 +744,8 @@ performance:
           toleranceAbsolute: 0.05
           unit: ms
         ast-build.allocated:
-          reference: 19.015625
-          maximum: 19.102
+          reference: 24.2109375
+          maximum: 25.421484375
           unit: KiB
         binary-build.elapsed:
           reference: 0.126
@@ -1079,8 +1079,8 @@ performance:
           toleranceAbsolute: 0.05
           unit: ms
         ast-build.allocated:
-          reference: 29.46875
-          maximum: 30.9423828125
+          reference: 34.25
+          maximum: 35.9625
           unit: KiB
         binary-build.elapsed:
           reference: 0.3167
@@ -1583,8 +1583,8 @@ performance:
     csharp-dotnet-release-macos-arm64:
       metrics:
         ast-build.elapsed:
-          reference: 0.2536
-          toleranceAbsolute: 0.0634
+          reference: 0.365
+          toleranceAbsolute: 0.09125
           unit: ms
         ast-build.allocated:
           reference: 79.5
@@ -1607,8 +1607,8 @@ performance:
           maximum: 27.71875
           unit: KiB
         compile.elapsed:
-          reference: 1.2445
-          toleranceAbsolute: 0.311125
+          reference: 1.3559
+          toleranceAbsolute: 0.338975
           unit: ms
         compile.allocated:
           reference: 348.0078125

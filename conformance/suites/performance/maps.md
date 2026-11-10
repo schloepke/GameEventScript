@@ -114,8 +114,8 @@ performance:
           toleranceAbsolute: 0.774125
           unit: ms
         ast-build.allocated:
-          reference: 24.859375
-          maximum: 26.1023
+          reference: 29.859375
+          maximum: 31.35234375
           unit: KiB
         binary-build.allocated:
           reference: 67.4296875

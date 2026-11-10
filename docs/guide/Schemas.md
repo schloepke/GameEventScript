@@ -458,7 +458,8 @@ by value, with no ranges or steps needed. Spatial fields in wire and model code 
 
 ```swift
 let bot = Model.BotView(bot: 1, name: "Ada", position: GesPoint(x: 10, y: 20))
-let heading = (target - bot.position).normalized
+let target = GesPoint(x: 40, y: 60)
+let heading = (target - bot.position).normalized // GesVector(x: 0.6, y: 0.8)
 ```
 
 See [Roles](../../specs/Schemas.md#roles) and [Model types](../../specs/Schemas.md#model-types).

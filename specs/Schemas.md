@@ -1512,3 +1512,9 @@ Parity is verified like every GES feature.
   independent oracle.
 - Allocation tests prove that the writer, the reader and `GesSchemaDelta` allocate nothing on
   success in both ports, as for the existing hot paths.
+- The role suite covers reading and describing roles, every role error, the encodability check of wire roots at reading
+  and that roles change neither hash. The role fixture (`conformance/fixtures/SchemaGeneration/roles`) holds wire and model
+  groups that reference each other, a part reached from both roles and a marked declaration used as a part; its layouts by
+  group and its wire, model and binding code are checked in for both languages, both CLIs must write them identically, and
+  the generated-code gate compiles them as C# 9 for Unity and as Swift 6 with warnings as errors. Native tests in both ports
+  run spatial wire fields in 2D and 3D, model equality, and scripts that read and construct bound models.

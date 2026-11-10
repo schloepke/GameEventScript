@@ -31,18 +31,24 @@ internal static class GesSyntaxValidator
     // A scope of the binding rules: a let binding repeats only within its own scope, and a binding shadows any visible one.
     private sealed class Scope(Scope? parent = null)
     {
-        private readonly HashSet<string> _names = new(StringComparer.Ordinal);
+        // Most block scopes declare nothing and most binder scopes one name, so the set exists only from the second name on.
+        private string? _first;
+        private HashSet<string>? _names;
 
         internal Scope? Parent { get; } = parent;
 
-        internal void Declare(string name) => _names.Add(name);
+        internal void Declare(string name)
+        {
+            if (_first is null) _first = name;
+            else if (_first != name) (_names ??= new HashSet<string>(StringComparer.Ordinal)).Add(name);
+        }
 
-        internal bool ContainsCurrent(string name) => _names.Contains(name);
+        internal bool ContainsCurrent(string name) => _first == name || _names?.Contains(name) == true;
 
         internal bool ContainsVisible(string name)
         {
             for (var scope = this; scope is not null; scope = scope.Parent)
-                if (scope._names.Contains(name)) return true;
+                if (scope.ContainsCurrent(name)) return true;
             return false;
         }
 
@@ -100,26 +106,6 @@ internal static class GesSyntaxValidator
             var end = _tokens[anchor.End];
             var diagnostic = new GesSyntaxDiagnostic(code, message, start.Line, start.Column, end.EndLine, end.EndColumn, _module, string.IsNullOrEmpty(symbol) ? null : symbol, kind);
             _found.Add((diagnostic, start.Line, start.Column, shadowing, _found.Count));
-        }
-
-        private void IdentifierCase(string name, string message, string symbol, GesSyntaxSymbolKind kind, (int, int) anchor)
-        {
-            if (!GesText.IsIdentifier(name)) Report(InvalidIdentifierCase, message, symbol, kind, anchor);
-        }
-
-        private void CallableCase(string name, string message, string symbol, GesSyntaxSymbolKind kind, (int, int) anchor)
-        {
-            if (!GesText.IsCallableName(name)) Report(InvalidIdentifierCase, message, symbol, kind, anchor);
-        }
-
-        private void LabelCase(string name, string message, string symbol, GesSyntaxSymbolKind kind, (int, int) anchor)
-        {
-            if (!GesText.IsArgumentLabel(name)) Report(InvalidIdentifierCase, message, symbol, kind, anchor);
-        }
-
-        private void MessageCase(string name, string message, string symbol, GesSyntaxSymbolKind kind, (int, int) anchor)
-        {
-            if (!GesText.IsMessageName(name)) Report(InvalidMessageCase, message, symbol, kind, anchor);
         }
 
         private void Shadow(string name, (int, int) anchor)
@@ -208,7 +194,7 @@ internal static class GesSyntaxValidator
             for (var index = 0; index < fields.Count; index++)
             {
                 var (field, name) = fields[index];
-                LabelCase(name, "Field names must start with a lowercase ASCII letter and contain only ASCII letters or digits", name, GesSyntaxSymbolKind.Variable, Span(field));
+                if (!GesText.IsArgumentLabel(name)) Report(InvalidIdentifierCase, "Field names must start with a lowercase ASCII letter and contain only ASCII letters or digits", name, GesSyntaxSymbolKind.Variable, Span(field));
                 for (var earlier = 0; earlier < index; earlier++)
                 {
                     if (fields[earlier].Name != name) continue;
@@ -241,10 +227,12 @@ internal static class GesSyntaxValidator
             {
                 var local = Text(nameToken);
                 var anchor = messageName ? (nameToken, parameter.EndToken - 1) : Span(parameter);
-                IdentifierCase(local, $"{kind} '{name}' declares an invalid parameter name '{local}'", name, symbolKind, anchor);
-                if (labeled) LabelCase(local, $"{kind} '{name}' declares an invalid external parameter label '{local}'", name, symbolKind, anchor);
+                if (!GesText.IsIdentifier(local)) Report(InvalidIdentifierCase, $"{kind} '{name}' declares an invalid parameter name '{local}'", name, symbolKind, anchor);
+                if (labeled && !GesText.IsArgumentLabel(local)) Report(InvalidIdentifierCase, $"{kind} '{name}' declares an invalid external parameter label '{local}'", name, symbolKind, anchor);
             }
 
+            // Only two or more parameters can repeat a name.
+            if (parameters.Count < 2) return;
             var seen = new HashSet<string>(StringComparer.Ordinal);
             var reported = new HashSet<string>(StringComparer.Ordinal);
             foreach (var (parameter, nameToken, _, messageName) in parameters)
@@ -258,7 +246,7 @@ internal static class GesSyntaxValidator
         private void Callable(GesSyntaxNode node, string kind, GesSyntaxSymbolKind symbolKind)
         {
             var name = Text(OwnToken(node, GesSyntaxRole.Callable));
-            CallableCase(name, $"{kind} names must start with a lowercase ASCII letter and contain only ASCII letters or digits", name, symbolKind, Span(node));
+            if (!GesText.IsCallableName(name)) Report(InvalidIdentifierCase, $"{kind} names must start with a lowercase ASCII letter and contain only ASCII letters or digits", name, symbolKind, Span(node));
             var parameters = Parameters(Child(node, NodeKind.ParameterList));
             CheckParameters(parameters, kind, name, symbolKind, DuplicateDefinitionParameter);
             var scope = new Scope();
@@ -285,7 +273,7 @@ internal static class GesSyntaxValidator
             }
             else
             {
-                MessageCase(message, "Handler message names must be segments of ASCII letters or digits that start uppercase, joined by single underscores", message, GesSyntaxSymbolKind.Handler, Span(node));
+                if (!GesText.IsMessageName(message)) Report(InvalidMessageCase, "Handler message names must be segments of ASCII letters or digits that start uppercase, joined by single underscores", message, GesSyntaxSymbolKind.Handler, Span(node));
             }
 
             CheckParameters(parameters, "Handler", message, GesSyntaxSymbolKind.Handler, DuplicateHandlerParameter);
@@ -364,7 +352,7 @@ internal static class GesSyntaxValidator
         // A let binding: its name, a repetition within its scope and the shadowing of an enclosing binding.
         private void Binding(string name, (int, int) anchor, Scope validation, Scope shadow)
         {
-            IdentifierCase(name, $"Variable '{name}' must start lowercase, contain ASCII letters or digits, and may use one canonical final _index suffix", name, GesSyntaxSymbolKind.Variable, anchor);
+            if (!GesText.IsIdentifier(name)) Report(InvalidIdentifierCase, $"Variable '{name}' must start lowercase, contain ASCII letters or digits, and may use one canonical final _index suffix", name, GesSyntaxSymbolKind.Variable, anchor);
             if (validation.ContainsCurrent(name))
                 Report(DuplicateVariable, $"Variable '{name}' is already declared in the current scope", name, GesSyntaxSymbolKind.Variable, anchor);
             else validation.Declare(name);
@@ -385,7 +373,7 @@ internal static class GesSyntaxValidator
                 if (shadow.ContainsVisible(name)) Shadow(name, anchor);
                 if (_tokens[line].Kind != Let) continue;
                 shadow.Declare(name);
-                IdentifierCase(name, $"Variable '{name}' must start lowercase, contain ASCII letters or digits, and may use one canonical final _index suffix", name, GesSyntaxSymbolKind.Variable, anchor);
+                if (!GesText.IsIdentifier(name)) Report(InvalidIdentifierCase, $"Variable '{name}' must start lowercase, contain ASCII letters or digits, and may use one canonical final _index suffix", name, GesSyntaxSymbolKind.Variable, anchor);
                 if (validation.ContainsCurrent(name))
                     Report(DuplicateVariable, $"Variable '{name}' is already declared in the current scope", name, GesSyntaxSymbolKind.Variable, anchor);
                 else validation.Declare(name);
@@ -465,7 +453,7 @@ internal static class GesSyntaxValidator
             }
 
             var identifier = Text(names[0]);
-            IdentifierCase(identifier, $"Loop variable '{identifier}' must start lowercase, contain ASCII letters or digits, and may use one canonical final _index suffix", identifier, GesSyntaxSymbolKind.Variable, anchor);
+            if (!GesText.IsIdentifier(identifier)) Report(InvalidIdentifierCase, $"Loop variable '{identifier}' must start lowercase, contain ASCII letters or digits, and may use one canonical final _index suffix", identifier, GesSyntaxSymbolKind.Variable, anchor);
             var loopValidation = new Scope(validation);
             loopValidation.Declare(identifier);
             var loopShadow = BinderScope(shadow, names, anchor);
@@ -518,7 +506,7 @@ internal static class GesSyntaxValidator
         {
             if (_roles[token] != GesSyntaxRole.Variable) return;
             var name = Text(token);
-            IdentifierCase(name, $"Identifier '{name}' must start lowercase, contain ASCII letters or digits, and may use one canonical final _index suffix", name, GesSyntaxSymbolKind.Variable, (token, token));
+            if (!GesText.IsIdentifier(name)) Report(InvalidIdentifierCase, $"Identifier '{name}' must start lowercase, contain ASCII letters or digits, and may use one canonical final _index suffix", name, GesSyntaxSymbolKind.Variable, (token, token));
             if (scope is not null && !scope.ContainsVisible(name))
                 Report(UnresolvedVariable, $"Unknown variable '{name}'. Declare it with let, a parameter or a binding before using it in this scope.", name, GesSyntaxSymbolKind.Variable, (token, token));
         }
@@ -553,8 +541,8 @@ internal static class GesSyntaxValidator
                     if (validate)
                     {
                         var name = Text(OwnToken(node, GesSyntaxRole.CallTarget));
-                        CallableCase(name, $"Call target '{name}' must use identifier casing (predicate/function names start lowercase)", name, GesSyntaxSymbolKind.GlobalDefinition, Range(node));
-                        Arguments(node, name, GesSyntaxSymbolKind.GlobalDefinition, label => $"Call argument label '{label}' must use identifier casing", scope, shadow);
+                        if (!GesText.IsCallableName(name)) Report(InvalidIdentifierCase, $"Call target '{name}' must use identifier casing (predicate/function names start lowercase)", name, GesSyntaxSymbolKind.GlobalDefinition, Range(node));
+                        Arguments(node, name, GesSyntaxSymbolKind.GlobalDefinition, ArgumentOwner.Call, scope, shadow);
                     }
                     else Elements(node, scope, false, shadow);
 
@@ -563,8 +551,8 @@ internal static class GesSyntaxValidator
                     if (validate)
                     {
                         var message = Text(OwnToken(node, GesSyntaxRole.MessageName));
-                        MessageCase(message, $"Message literal '{message}' must be segments of ASCII letters or digits that start uppercase, joined by single underscores", message, GesSyntaxSymbolKind.Message, Range(node));
-                        Arguments(node, message, GesSyntaxSymbolKind.Message, label => $"Message literal '{message}' declares invalid argument name '{label}'", scope, shadow);
+                        if (!GesText.IsMessageName(message)) Report(InvalidMessageCase, $"Message literal '{message}' must be segments of ASCII letters or digits that start uppercase, joined by single underscores", message, GesSyntaxSymbolKind.Message, Range(node));
+                        Arguments(node, message, GesSyntaxSymbolKind.Message, ArgumentOwner.Message, scope, shadow);
                     }
                     else Elements(node, scope, false, shadow);
 
@@ -582,7 +570,7 @@ internal static class GesSyntaxValidator
                     if (validate)
                     {
                         var member = Text(OwnToken(node, GesSyntaxRole.Member));
-                        LabelCase(member, $"Member name '{member}' must start with a lowercase ASCII letter and contain only ASCII letters or digits", member, GesSyntaxSymbolKind.Variable, Range(node));
+                        if (!GesText.IsArgumentLabel(member)) Report(InvalidIdentifierCase, $"Member name '{member}' must start with a lowercase ASCII letter and contain only ASCII letters or digits", member, GesSyntaxSymbolKind.Variable, Range(node));
                     }
 
                     Elements(node, scope, validate, shadow);
@@ -597,7 +585,7 @@ internal static class GesSyntaxValidator
                         if (validate)
                         {
                             var key = Text(OwnToken(entry, GesSyntaxRole.MapKey));
-                            LabelCase(key, $"Map key '{key}' must start with a lowercase ASCII letter and contain only ASCII letters or digits", key, GesSyntaxSymbolKind.Variable, Range(node));
+                            if (!GesText.IsArgumentLabel(key)) Report(InvalidIdentifierCase, $"Map key '{key}' must start with a lowercase ASCII letter and contain only ASCII letters or digits", key, GesSyntaxSymbolKind.Variable, Range(node));
                         }
 
                         Elements(entry, scope, validate, shadow);
@@ -635,7 +623,7 @@ internal static class GesSyntaxValidator
         }
 
         // Call and message arguments: repeated labels, label spellings and the argument values.
-        private void Arguments(GesSyntaxNode node, string symbol, GesSyntaxSymbolKind labelKind, Func<string, string> labelMessage, Scope scope, bool shadow)
+        private void Arguments(GesSyntaxNode node, string symbol, GesSyntaxSymbolKind labelKind, ArgumentOwner owner, Scope scope, bool shadow)
         {
             var arguments = new List<(GesSyntaxNode Node, int Label)>();
             foreach (var child in node.Children)
@@ -652,7 +640,7 @@ internal static class GesSyntaxValidator
                     if (element.Kind == NodeKind.Argument)
                     {
                         var label = arguments[argument++].Label;
-                        if (label >= 0) LabelCase(Text(label), labelMessage(Text(label)), symbol, labelKind, Span(element));
+                        if (label >= 0 && !GesText.IsArgumentLabel(Text(label))) Report(InvalidIdentifierCase, LabelMessage(owner, symbol, Text(label)), symbol, labelKind, Span(element));
                         Elements(element, scope, validate: true, shadow);
                     }
                     else if (element.Kind == NodeKind.TagClause) Elements(element, scope, validate: true, shadow);
@@ -664,8 +652,23 @@ internal static class GesSyntaxValidator
             }
         }
 
+        private enum ArgumentOwner : byte
+        {
+            Call,
+            Message,
+            TypeConstructor
+        }
+
+        private static string LabelMessage(ArgumentOwner owner, string symbol, string label) => owner switch
+        {
+            ArgumentOwner.Call => $"Call argument label '{label}' must use identifier casing",
+            ArgumentOwner.Message => $"Message literal '{symbol}' declares invalid argument name '{label}'",
+            _ => $"Type constructor ':{symbol}' declares invalid argument label '{label}'"
+        };
+
         private void DuplicateArguments(List<(GesSyntaxNode Node, int Label)> arguments, string symbol)
         {
+            if (arguments.Count < 2) return;
             var seen = new HashSet<string>(StringComparer.Ordinal);
             var reported = new HashSet<string>(StringComparer.Ordinal);
             foreach (var (argument, label) in arguments)
@@ -678,13 +681,14 @@ internal static class GesSyntaxValidator
         // A handler literal of the `:Handler` data form has no parameter nodes; its diagnostics point at the names.
         private void HandlerLiteral(string message, (int, int) anchor, List<(GesSyntaxNode Node, int Name, bool Labeled, bool MessageName)> parameters, bool ranged)
         {
-            MessageCase(message, $"Handler literal '{message}' must be segments of ASCII letters or digits that start uppercase, joined by single underscores", message, GesSyntaxSymbolKind.Handler, anchor);
+            if (!GesText.IsMessageName(message)) Report(InvalidMessageCase, $"Handler literal '{message}' must be segments of ASCII letters or digits that start uppercase, joined by single underscores", message, GesSyntaxSymbolKind.Handler, anchor);
             foreach (var parameter in parameters)
             {
                 var name = Text(parameter.Name);
-                LabelCase(name, $"Handler literal '{message}' declares invalid parameter '{name}'", message, GesSyntaxSymbolKind.Handler, ranged ? anchor : (parameter.Name, parameter.Name));
+                if (!GesText.IsArgumentLabel(name)) Report(InvalidIdentifierCase, $"Handler literal '{message}' declares invalid parameter '{name}'", message, GesSyntaxSymbolKind.Handler, ranged ? anchor : (parameter.Name, parameter.Name));
             }
 
+            if (parameters.Count < 2) return;
             var seen = new HashSet<string>(StringComparer.Ordinal);
             var reported = new HashSet<string>(StringComparer.Ordinal);
             foreach (var parameter in parameters)
@@ -714,7 +718,7 @@ internal static class GesSyntaxValidator
                 return;
             }
 
-            Arguments(node, typeName, GesSyntaxSymbolKind.Type, label => $"Type constructor ':{typeName}' declares invalid argument label '{label}'", scope, shadow);
+            Arguments(node, typeName, GesSyntaxSymbolKind.Type, ArgumentOwner.TypeConstructor, scope, shadow);
         }
 
         private void TypeOperation(GesSyntaxNode node, Scope scope, bool validate, bool shadow)
@@ -725,7 +729,7 @@ internal static class GesSyntaxValidator
                 if (target >= 0)
                 {
                     var name = Text(target);
-                    CallableCase(name, $"Predicate test target '{name}' must use identifier casing (start lowercase)", name, GesSyntaxSymbolKind.Predicate, Range(node));
+                    if (!GesText.IsCallableName(name)) Report(InvalidIdentifierCase, $"Predicate test target '{name}' must use identifier casing (start lowercase)", name, GesSyntaxSymbolKind.Predicate, Range(node));
                 }
                 else if (Child(node, NodeKind.TypeReference) is { } type)
                 {
@@ -740,7 +744,7 @@ internal static class GesSyntaxValidator
         {
             var binding = OwnToken(node, GesSyntaxRole.GeneratedBinding);
             var name = Text(binding);
-            if (validate) IdentifierCase(name, $"Generated collection identifier '{name}' must use identifier casing (start lowercase)", name, GesSyntaxSymbolKind.Variable, Range(node));
+            if (validate && !GesText.IsIdentifier(name)) Report(InvalidIdentifierCase, $"Generated collection identifier '{name}' must use identifier casing (start lowercase)", name, GesSyntaxSymbolKind.Variable, Range(node));
             // The source, the range or the first element after `in`, comes before `where` or the projection; the binding
             // scopes the rest.
             var child = 0;
@@ -813,8 +817,8 @@ internal static class GesSyntaxValidator
                 var elementName = Text(bindings[0]);
                 if (validate)
                 {
-                    IdentifierCase(accumulatorName, "Accumulator must use identifier casing", accumulatorName, GesSyntaxSymbolKind.Variable, anchor);
-                    IdentifierCase(elementName, "Element must use identifier casing", elementName, GesSyntaxSymbolKind.Variable, anchor);
+                    if (!GesText.IsIdentifier(accumulatorName)) Report(InvalidIdentifierCase, "Accumulator must use identifier casing", accumulatorName, GesSyntaxSymbolKind.Variable, anchor);
+                    if (!GesText.IsIdentifier(elementName)) Report(InvalidIdentifierCase, "Element must use identifier casing", elementName, GesSyntaxSymbolKind.Variable, anchor);
                 }
 
                 // The seed comes before the bindings; the projection is in their scope.
@@ -859,7 +863,7 @@ internal static class GesSyntaxValidator
             {
                 var first = Text(bindings[0]);
                 if (validate && operation != ":foreach")
-                    IdentifierCase(first, $"Selector identifier '{first}' must use identifier casing (start lowercase)", first, GesSyntaxSymbolKind.Variable, anchor);
+                    if (!GesText.IsIdentifier(first)) Report(InvalidIdentifierCase, $"Selector identifier '{first}' must use identifier casing (start lowercase)", first, GesSyntaxSymbolKind.Variable, anchor);
                 var inner = shadow ? BinderScope(scope, bindings, anchor) : new Scope(scope);
                 ElementsBetween(node, bindings[bindings.Count - 1], weightStart, inner, validate, shadow);
             }
@@ -868,7 +872,7 @@ internal static class GesSyntaxValidator
 
             // A weighted choice: the weight in a binding scope of its own.
             var weightName = Text(weights[0]);
-            if (validate) IdentifierCase(weightName, $"Selector weight identifier '{weightName}' must use identifier casing (start lowercase)", weightName, GesSyntaxSymbolKind.Variable, anchor);
+            if (validate && !GesText.IsIdentifier(weightName)) Report(InvalidIdentifierCase, $"Selector weight identifier '{weightName}' must use identifier casing (start lowercase)", weightName, GesSyntaxSymbolKind.Variable, anchor);
             var weightScope = shadow ? BinderScope(scope, weights, anchor) : new Scope(scope);
             ElementsAfter(node, weights[weights.Count - 1], weightScope, validate, shadow);
         }

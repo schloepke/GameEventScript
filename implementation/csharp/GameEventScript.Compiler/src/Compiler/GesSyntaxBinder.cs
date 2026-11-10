@@ -79,7 +79,7 @@ internal sealed partial class GesSyntaxBinder
     private struct Cursor
     {
         private readonly IReadOnlyList<GesToken> _tokens;
-        private readonly IReadOnlyList<GesSyntaxNode> _children;
+        private readonly GesSyntaxNode.ChildList _children;
         private readonly int _end;
         private int _position;
         private int _child;

@@ -107,20 +107,21 @@
             found.append((diagnostic, start.line, start.column, shadowing, found.count))
         }
 
-        func identifierCase(_ name: String, _ message: String, _ symbol: String, _ kind: GesSyntaxSymbolKind, _ anchor: Anchor) {
-            if !GesNames.identifier(name) { report(invalidIdentifierCase, message, symbol, kind, anchor) }
+        // The messages are autoclosures, so a valid name builds none.
+        func identifierCase(_ name: String, _ message: @autoclosure () -> String, _ symbol: String, _ kind: GesSyntaxSymbolKind, _ anchor: Anchor) {
+            if !GesNames.identifier(name) { report(invalidIdentifierCase, message(), symbol, kind, anchor) }
         }
 
-        func callableCase(_ name: String, _ message: String, _ symbol: String, _ kind: GesSyntaxSymbolKind, _ anchor: Anchor) {
-            if !GesNames.plain(name) { report(invalidIdentifierCase, message, symbol, kind, anchor) }
+        func callableCase(_ name: String, _ message: @autoclosure () -> String, _ symbol: String, _ kind: GesSyntaxSymbolKind, _ anchor: Anchor) {
+            if !GesNames.plain(name) { report(invalidIdentifierCase, message(), symbol, kind, anchor) }
         }
 
-        func labelCase(_ name: String, _ message: String, _ symbol: String, _ kind: GesSyntaxSymbolKind, _ anchor: Anchor) {
-            if !GesNames.plain(name) { report(invalidIdentifierCase, message, symbol, kind, anchor) }
+        func labelCase(_ name: String, _ message: @autoclosure () -> String, _ symbol: String, _ kind: GesSyntaxSymbolKind, _ anchor: Anchor) {
+            if !GesNames.plain(name) { report(invalidIdentifierCase, message(), symbol, kind, anchor) }
         }
 
-        func messageCase(_ name: String, _ message: String, _ symbol: String, _ kind: GesSyntaxSymbolKind, _ anchor: Anchor) {
-            if !GesNames.type(name) { report(invalidMessageCase, message, symbol, kind, anchor) }
+        func messageCase(_ name: String, _ message: @autoclosure () -> String, _ symbol: String, _ kind: GesSyntaxSymbolKind, _ anchor: Anchor) {
+            if !GesNames.type(name) { report(invalidMessageCase, message(), symbol, kind, anchor) }
         }
 
         func shadow(_ name: String, _ anchor: Anchor) {

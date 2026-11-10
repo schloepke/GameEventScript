@@ -18,6 +18,9 @@ internal static class GesTokenValues
         private GesValue NumericValue => GesTextNumberCast.Read(token.Text, percentage: token.Kind == GesTokenKind.Percentage,
             allowGrouping: false, percentageMagnitude: token.Kind == GesTokenKind.Percentage) ?? GesValue.GesNothing();
 
+        // The unit type name of a UnitNumber, from the unit spelling that ends it, as the lexer matched it.
+        public string UnitName => GesQuantityUnits.TryMatchTrailingSuffix(token.Text, 0, token.Text.Length, out var suffix) ? suffix.Unit.ToTypeName() : string.Empty;
+
         public long? GetIntegerValue()
         {
             var value = token.NumericValue;

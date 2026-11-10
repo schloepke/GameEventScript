@@ -152,8 +152,9 @@ internal enum GesTokenKind
 
 // Text is the token's normalized value, such as a decoded Text literal or `*` for `×`. Offsets index the lexed source:
 // [FullStart, Start) is the leading trivia (inline whitespace, comments and a leading BOM) and [Start, End) the token's
-// own spelling, so the tokens of a source, ending with EndOfFile, cover it without gaps.
-internal readonly record struct GesToken(GesTokenKind Kind, string Text, int Line, int Column, int EndLine, int EndColumn, string UnitName = "", int FullStart = 0, int Start = 0, int End = 0)
+// own spelling, so the tokens of a source, ending with EndOfFile, cover it without gaps. A tree keeps every token, so the
+// token stays small: the unit of a UnitNumber follows from its spelling.
+internal readonly record struct GesToken(GesTokenKind Kind, string Text, int Line, int Column, int EndLine, int EndColumn, int FullStart = 0, int Start = 0, int End = 0)
 {
     public override string ToString() => $"{Kind}('{Text}', {Line}:{Column}-{EndLine}:{EndColumn})";
 }
@@ -297,8 +298,6 @@ internal sealed class GesLexer
     }
 
     private GesToken CreateToken(GesTokenKind kind, string text, int startLine, int startColumn) => Finish(new(kind, text, startLine, startColumn, _line, _column));
-
-    private GesToken CreateUnitNumberToken(string text, string unitName, int startLine, int startColumn) => Finish(new(GesTokenKind.UnitNumber, text, startLine, startColumn, _line, _column, unitName));
 
     // Attaches the source offsets; the next token's leading trivia starts where this token ends.
     private GesToken Finish(GesToken token)
@@ -546,7 +545,7 @@ internal sealed class GesLexer
                 var next = _index + length;
                 if (next > _length || string.CompareOrdinal(_input, _index, suffix.Text, 0, length) != 0 || next < _length && !IsValidUnitBoundary(_input[next])) continue;
                 for (var i = 0; i < length; i++) Advance();
-                return CreateUnitNumberToken(_input[start.._index], suffix.Unit.ToTypeName(), line, column);
+                return CreateToken(GesTokenKind.UnitNumber, _input[start.._index], line, column);
             }
 
         if (!IsAtEnd && Current == '\u00B0')
@@ -599,7 +598,7 @@ internal sealed class GesLexer
     {
         var ch = Current;
         var next = Peek();
-        var text = GesText.ScalarAtUtf16Offset(_input, _index);
+        var start = _index;
         Advance();
         switch (ch)
         {
@@ -664,7 +663,8 @@ internal sealed class GesLexer
                     '%' => CreateToken(GesTokenKind.Illegal, "%", line, column),
                     '!' => CreateToken(GesTokenKind.OperatorNot, "!", line, column),
                     '~' => CreateToken(GesTokenKind.OperatorNot, "~", line, column),
-                    _ => CreateToken(GesTokenKind.Illegal, text, line, column)
+                    // Only an unknown scalar allocates its spelling.
+                    _ => CreateToken(GesTokenKind.Illegal, _input[start.._index], line, column)
                 };
         }
     }

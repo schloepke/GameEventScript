@@ -87,7 +87,7 @@ internal sealed class GesSyntaxNode(GesSyntaxNodeKind kind, int firstToken, int 
 
     internal int EndToken { get; } = endToken;
 
-    internal IReadOnlyList<GesSyntaxNode> Children { get; } = children;
+    internal ChildList Children { get; } = new(children);
 
     // The tokens an expression node's diagnostics range over, which can differ from its own tokens: a parenthesized
     // expression ranges over its content and a member access over its target. -1 without such a range.
@@ -99,6 +99,28 @@ internal sealed class GesSyntaxNode(GesSyntaxNodeKind kind, int firstToken, int 
     {
         RangeStart = start;
         RangeEnd = end;
+    }
+
+    /// <summary>
+    /// The read-only children of a node. A struct with its own enumerator, so walking a tree neither boxes an enumerator per
+    /// node nor calls through an interface.
+    /// </summary>
+    internal readonly struct ChildList(GesSyntaxNode[] nodes)
+    {
+        internal int Count => nodes.Length;
+
+        internal GesSyntaxNode this[int index] => nodes[index];
+
+        public Enumerator GetEnumerator() => new(nodes);
+
+        public struct Enumerator(GesSyntaxNode[] nodes)
+        {
+            private int _index = -1;
+
+            public readonly GesSyntaxNode Current => nodes[_index];
+
+            public bool MoveNext() => ++_index < nodes.Length;
+        }
     }
 }
 
@@ -162,6 +184,50 @@ internal sealed class GesSyntaxTree(string text, IReadOnlyList<GesToken> tokens,
     internal GesSyntaxNode Root { get; } = root;
 
     internal IReadOnlyList<GesSyntaxDiagnostic> Diagnostics { get; } = diagnostics ?? [];
+
+    /// <summary>
+    /// The tokens of a tree, stored in blocks of fixed size. Growing adds a block and copies nothing, because sources vary
+    /// too much in tokens per character for one up-front capacity: a growing list would copy its large tokens and keep the
+    /// abandoned arrays as garbage.
+    /// </summary>
+    internal sealed class TokenList : IReadOnlyList<GesToken>
+    {
+        private const int BlockShift = 5;
+        private const int BlockSize = 1 << BlockShift;
+        private const int BlockMask = BlockSize - 1;
+        private GesToken[][] _blocks = new GesToken[4][];
+
+        public int Count { get; private set; }
+
+        public GesToken this[int index]
+        {
+            get
+            {
+                if ((uint)index >= (uint)Count) throw new ArgumentOutOfRangeException(nameof(index));
+                return _blocks[index >> BlockShift][index & BlockMask];
+            }
+        }
+
+        internal void Add(GesToken token)
+        {
+            var block = Count >> BlockShift;
+            if ((Count & BlockMask) == 0)
+            {
+                if (block == _blocks.Length) Array.Resize(ref _blocks, _blocks.Length * 2);
+                _blocks[block] = new GesToken[BlockSize];
+            }
+
+            _blocks[block][Count & BlockMask] = token;
+            Count++;
+        }
+
+        public IEnumerator<GesToken> GetEnumerator()
+        {
+            for (var index = 0; index < Count; index++) yield return _blocks[index >> BlockShift][index & BlockMask];
+        }
+
+        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
+    }
 }
 
 /// <summary>
@@ -181,15 +247,11 @@ internal sealed record GesSyntaxDiagnostic(string Code, string Message, int Line
 /// </summary>
 internal sealed class GesSyntaxTreeBuilder
 {
-    private readonly List<GesToken> _tokens;
+    private readonly GesSyntaxTree.TokenList _tokens = new();
     private readonly List<GesSyntaxRole> _roles;
 
-    // A source has roughly one token per four characters; sizing for that avoids most regrowth.
-    internal GesSyntaxTreeBuilder(int sourceLength = 0)
-    {
-        _tokens = new List<GesToken>(sourceLength / 4 + 8);
-        _roles = new List<GesSyntaxRole>(sourceLength / 4 + 8);
-    }
+    // A source has roughly one token per two to four characters; the one-byte roles may overestimate.
+    internal GesSyntaxTreeBuilder(int sourceLength = 0) => _roles = new List<GesSyntaxRole>(sourceLength / 2 + 8);
     private readonly List<GesSyntaxNode> _children = [];
     private readonly List<(GesSyntaxNodeKind Kind, int FirstToken, int FirstChild)> _open = [];
 

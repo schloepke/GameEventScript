@@ -53,7 +53,7 @@ jobs:
         with:
           dotnet-version: |
             8.0.x
-            10.0.201
+            10.0.404
       - name: Install Linux native compiler prerequisites
         if: startsWith(matrix.target, 'linux-')
         run: sudo apt-get update -qq && sudo apt-get install -y clang zlib1g-dev

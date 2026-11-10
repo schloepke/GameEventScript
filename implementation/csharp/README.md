@@ -65,7 +65,7 @@ Open [`GameEventScript.sln`](../../GameEventScript.sln) from the repository root
 in an IDE supporting the repository's .NET SDK. The solution includes the
 libraries, CLI, native tests and supporting verification projects.
 
-Development uses the exact **.NET SDK 10.0.201** pinned in
+Development uses the exact **.NET SDK 10.0.404** pinned in
 [`global.json`](../../global.json). The tests and CLI target **.NET 8** and also
 need its runtime installed. The SDK version does not change the libraries'
 `.NET Standard 2.1` target.

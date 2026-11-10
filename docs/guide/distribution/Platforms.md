@@ -17,7 +17,7 @@ successful library build is not full Conformance on that platform.
 
 | Product | Declared package contract | CI host and toolchain | Verification |
 | --- | --- | --- | --- |
-| C# Runtime, Compiler, CSharpBridge, Syntax | .NET Standard 2.1 | Linux x64, `ubuntu-latest`; SDK **10.0.201**, .NET **8.0.x** runtime | Full C# Conformance and native tests, allocation gate, .NET 8 package consumers, reproducibility: [C# CI](../../../.github/workflows/csharp-ci.yml), job `verify` |
+| C# Runtime, Compiler, CSharpBridge, Syntax | .NET Standard 2.1 | Linux x64, `ubuntu-latest`; SDK **10.0.404**, .NET **8.0.x** runtime | Full C# Conformance and native tests, allocation gate, .NET 8 package consumers, reproducibility: [C# CI](../../../.github/workflows/csharp-ci.yml), job `verify` |
 | Swift Runtime, Compiler, SwiftBridge, Syntax | Swift tools **6.0**; root package declares macOS **10.15.4** | macOS ARM64, `macos-15`; runner-provided Swift/Xcode, exact Swift identity recorded in the job log | Native Swift Conformance, C# binary interoperability, native tests and API checks: [Swift CI](../../../.github/workflows/swift-ci.yml), job `native`; fresh tagged package consumers and root tests: job `distribution` |
 | Standalone Swift Syntax | Swift tools **6.0** | Linux x64, `swift:6.0` container | Syntax package tests only: Swift CI job `syntax-linux` |
 
@@ -46,8 +46,8 @@ accepts the complete set.
 
 | Implementation / target | Native verification host | Build toolchain |
 | --- | --- | --- |
-| C# `win-x64` | `windows-2022` | .NET SDK 10.0.201 |
-| C# `win-arm64` | `windows-11-arm` | .NET SDK 10.0.201 |
+| C# `win-x64` | `windows-2022` | .NET SDK 10.0.404 |
+| C# `win-arm64` | `windows-11-arm` | .NET SDK 10.0.404 |
 | Swift `osx-x64` | `macos-15-intel` | Runner-provided Swift/Xcode |
 | Swift `osx-arm64` | `macos-15` | Runner-provided Swift/Xcode |
 | Swift `linux-x64` | Plain Ubuntu 22.04 x64 container on `ubuntu-22.04` | Swift **6.4.0**, matching Static Linux SDK |
@@ -78,7 +78,7 @@ checks are separate from the standalone downloads above.
 | `osx-arm64` | `macos-15` |
 
 [C# Tool Packages](../../../.github/workflows/csharp-tool-packages.yml) uses
-SDK 10.0.201 and .NET 8.0.x, builds and consumes each target in job `package`,
+SDK 10.0.404 and .NET 8.0.x, builds and consumes each target in job `package`,
 and validates the complete release set in `verify`. Linux AOT targets are glibc
 targets, not musl/Alpine targets. Native package consumption is not a full corpus
 run on every RID.

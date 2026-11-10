@@ -11,6 +11,8 @@ final class GeneratedSchemaAllocationTests: XCTestCase {
     func testGeneratedRecordsAllocateNothing() throws {
         #if !canImport(Darwin)
             throw XCTSkip("The allocation counter uses libmalloc.")
+        #elseif DEBUG
+            throw XCTSkip("Debug builds check shared baselines and are not optimized; the gate holds for release builds.")
         #else
             guard ges_allocation_install(), ges_allocation_controls() else { throw XCTSkip("The allocation counter is not available.") }
             let name = Array("frigate".utf8)
@@ -98,6 +100,11 @@ final class GeneratedSchemaAllocationTests: XCTestCase {
             let mixed = Generated.Fleet()
             mixed.ships = [Generated.Ship(), fleet.ships[2]]
             rejected { try fleet.readDelta(from: delta, against: mixed) }
+            // A nested class record is storage of the target too.
+            let flag = Generated.Fleet()
+            flag.copy(from: fleet)
+            flag.flag = fleet.flag
+            rejected { try fleet.readDelta(from: delta, against: flag) }
         #endif
 
         // Copying a record into itself keeps its values.

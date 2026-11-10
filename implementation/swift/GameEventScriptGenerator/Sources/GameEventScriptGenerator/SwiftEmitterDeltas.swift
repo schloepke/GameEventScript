@@ -190,26 +190,31 @@ extension GesSwiftEmitter {
         }
     }
 
-    // The storage that a read into this record writes: the record, the class records it holds and every pooled element. While a
-    // delta reads, it is marked, so that a baseline holding any of it is rejected before the read overwrites what it holds.
-    static func sharingMembers(_ code: inout Code, _ type: GesPlanType) {
+    // The storage that a read into this record writes: the record, the class records it holds and every pooled element. Debug
+    // builds mark it while a delta reads, so that a baseline holding any of it is rejected before the read overwrites what it
+    // holds; release builds generate none of it. Swift arrays are values, so only records can be shared.
+    static func sharingMembers(_ code: inout Code, _ type: GesPlanType, _ stored: String) {
+        code.blank()
+        code.line("#if DEBUG")
+        code.line("\(stored)var __busy = false")
         code.blank()
         if !type.fields.contains(where: { GesSchemaPlanner.holdsRecords($0.value) }) {
             code.line("func __mark(_ busy: Bool) { self.__busy = busy }")
             code.blank()
             code.line("func __holds() -> Bool { self.__busy }")
-            return
+        } else {
+            code.open("func __mark(_ busy: Bool) {")
+            code.line("self.__busy = busy")
+            for field in type.fields { mark(&code, field.value) }
+            code.close()
+            code.blank()
+            code.open("func __holds() -> Bool {")
+            code.line("if self.__busy { return true }")
+            for field in type.fields { holds(&code, field.value) }
+            code.line("return false")
+            code.close()
         }
-        code.open("func __mark(_ busy: Bool) {")
-        code.line("self.__busy = busy")
-        for field in type.fields { mark(&code, field.value) }
-        code.close()
-        code.blank()
-        code.open("func __holds() -> Bool {")
-        code.line("if self.__busy { return true }")
-        for field in type.fields { holds(&code, field.value) }
-        code.line("return false")
-        code.close()
+        code.line("#endif")
     }
 
     private static func mark(_ code: inout Code, _ value: GesPlanValue) {

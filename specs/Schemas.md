@@ -1124,9 +1124,12 @@ baseline is never changed, and a target whose read failed must not serve as a ba
 overwrites the target's storage: the record, the class records it holds and the elements its lists
 reuse. The baseline must share none of it. Before it reads, `ReadDelta` rejects with
 `wire.overlappingBuffers` and an empty path a baseline that is the target and, in builds that define
-`DEBUG`, one that holds any record of that storage or, in C#, one of the target's lists in the same
-place; other builds skip that walk for speed, and a shared baseline gives unspecified values. `CopyFrom` from the record itself, or in C# from a record with the same list, keeps its values;
-it checks nothing else, so the source must not hold another record of the target's storage. Lists of keyed elements take the [keyed-list](#keyed-lists) form, like every delta.
+`DEBUG`, one that holds any record of that storage or, in C#, any list of it; other builds skip that
+walk for speed, and a shared baseline gives unspecified values. A list that the source holds in the
+same place stays intact in every build, in `ReadDelta` as in `CopyFrom`, and `CopyFrom` from the
+record itself keeps its values; `CopyFrom` checks nothing else, so the source must not hold another
+record of the target's storage. Lists of keyed elements take the [keyed-list](#keyed-lists) form, like
+every delta.
 With `--values`, a schema also converts to and from a GES value with `ToValue` and `ReadValue` (Swift
 `toValue()` and `read(value:)`), and a message or message set to and from a message with `ToMessage`
 and `ReadMessage` (Swift `toMessage()` and `read(message:)`). The conversion goes through the record's

@@ -124,13 +124,11 @@ internal static partial class GesSwiftEmitter
         }
 
         foreach (var field in type.Fields) Pools(code, field.Value, stored);
-        var sharing = type.IsClass && (type.Kind == GesSchemaKind.Schema || type.IsItem);
-        if (sharing) code.Line($"{stored}var __busy = false");
         code.Blank();
         code.Line(type.IsItem ? "/// Creates an element with every field at its zero value." : "/// Creates a record with every field at its zero value.");
         code.Line($"{access}init() {{}}");
         Methods(code, type, access);
-        if (sharing) Sharing(code, type);
+        if (type.IsClass && (type.Kind == GesSchemaKind.Schema || type.IsItem)) Sharing(code, type, stored);
         var deltas = type.Kind == GesSchemaKind.Schema && !type.IsItem;
         if (deltas) SameHelpers(code, type);
         Extras(code, type, access, deltas, context.Elements.Contains(type.Name));

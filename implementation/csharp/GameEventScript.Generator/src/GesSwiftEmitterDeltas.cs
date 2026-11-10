@@ -219,29 +219,36 @@ internal static partial class GesSwiftEmitter
         }
     }
 
-    // The storage that a read into this record writes: the record, the class records it holds and every pooled element. While a
-    // delta reads, it is marked, so that a baseline holding any of it is rejected before the read overwrites what it holds.
-    private static void Sharing(GesSchemaPlanner.Code code, GesPlanType type)
+    // The storage that a read into this record writes: the record, the class records it holds and every pooled element. Debug
+    // builds mark it while a delta reads, so that a baseline holding any of it is rejected before the read overwrites what it
+    // holds; release builds generate none of it. Swift arrays are values, so only records can be shared.
+    private static void Sharing(GesSchemaPlanner.Code code, GesPlanType type, string stored)
     {
+        code.Blank();
+        code.Line("#if DEBUG");
+        code.Line($"{stored}var __busy = false");
         code.Blank();
         if (!type.Fields.Exists(field => GesSchemaPlanner.HoldsRecords(field.Value)))
         {
             code.Line("func __mark(_ busy: Bool) { self.__busy = busy }");
             code.Blank();
             code.Line("func __holds() -> Bool { self.__busy }");
-            return;
+        }
+        else
+        {
+            code.Open("func __mark(_ busy: Bool) {");
+            code.Line("self.__busy = busy");
+            foreach (var field in type.Fields) Mark(code, field.Value);
+            code.Close();
+            code.Blank();
+            code.Open("func __holds() -> Bool {");
+            code.Line("if self.__busy { return true }");
+            foreach (var field in type.Fields) Holds(code, field.Value);
+            code.Line("return false");
+            code.Close();
         }
 
-        code.Open("func __mark(_ busy: Bool) {");
-        code.Line("self.__busy = busy");
-        foreach (var field in type.Fields) Mark(code, field.Value);
-        code.Close();
-        code.Blank();
-        code.Open("func __holds() -> Bool {");
-        code.Line("if self.__busy { return true }");
-        foreach (var field in type.Fields) Holds(code, field.Value);
-        code.Line("return false");
-        code.Close();
+        code.Line("#endif");
     }
 
     private static void Mark(GesSchemaPlanner.Code code, GesPlanValue value)

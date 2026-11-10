@@ -1,7 +1,7 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
-// The fixture of the checked-in generated code: a value type, classes, Text, a keyed list, a union, an optional field and
-// delta ranges, sized like a fleet of 48 ships.
+// The fixture of the checked-in generated code: a value type, classes, Text, a keyed list, a list inside its elements, a
+// nested class, a union, an optional field and delta ranges, sized like a fleet of 48 ships.
 parameter worldSize: :Quantity(m)
 
 schema :Pose as {
@@ -17,10 +17,16 @@ schema :Ship as {
   firing: :Boolean
   target: :Number integer between 0 and 65535 optional
   name: :Text max 12
+  cargo: :List(:Number integer between 0 and 255) max 4
+}
+
+schema :Banner as {
+  motto: :Text max 16
 }
 
 schema :Fleet as {
   tick: :Number integer wrapping between 0 and 65535 delta within 8
   ships: :List(:Ship) max 48
   mode: :Tag(#idle, #attack, #retreat) | :Text max 8
+  flag: :Banner
 }

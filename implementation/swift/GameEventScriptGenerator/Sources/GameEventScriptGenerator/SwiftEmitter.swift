@@ -101,13 +101,11 @@ enum GesSwiftEmitter {
             code.line("\(stored)\(access)var \(member(tag.base)) = false")
         }
         for field in type.fields { pools(&code, field.value, stored) }
-        let sharing = type.isClass && (type.kind == .schema || type.isItem)
-        if sharing { code.line("\(stored)var __busy = false") }
         code.blank()
         code.line(type.isItem ? "/// Creates an element with every field at its zero value." : "/// Creates a record with every field at its zero value.")
         code.line("\(access)init() {}")
         methods(&code, type, access)
-        if sharing { sharingMembers(&code, type) }
+        if type.isClass && (type.kind == .schema || type.isItem) { sharingMembers(&code, type, stored) }
         let deltas = type.kind == .schema && !type.isItem
         if deltas { sameHelpers(&code, type) }
         extras(&code, type, access, deltas, context.elements.contains(type.name))

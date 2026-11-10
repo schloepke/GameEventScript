@@ -12,6 +12,12 @@ namespace GameEventScript.Tests.Generator;
 [TestClass]
 public sealed class GesGeneratedCodeTests
 {
+#if DEBUG
+    private static readonly bool DebugBuild = true;
+#else
+    private static readonly bool DebugBuild = false;
+#endif
+
     private static string Generated(GesSchemaLanguage language, string space)
     {
         var fixture = Path.Combine(TestRepositoryPaths.ConformanceDirectory, "fixtures", "SchemaGeneration", "fleet.gess");
@@ -56,6 +62,23 @@ public sealed class GesGeneratedCodeTests
         Rejected(() => fleet.ReadDelta(delta, new Fleet { Ships = { new Ship { Id = 7 }, fleet.Ships[2] } }));
         var own = new Fleet { Ships = { new Ship { Id = 7 } } };
         Rejected(() => own.ReadDelta(delta, new Fleet { Ships = own.Ships }));
+        // A list inside a pooled ship and a nested class record are storage of the target too.
+        var cargo = new Fleet();
+        cargo.CopyFrom(fleet);
+        cargo.Ships[1].Cargo = fleet.Ships[1].Cargo;
+        Rejected(() => fleet.ReadDelta(delta, cargo));
+        var flag = new Fleet();
+        flag.CopyFrom(fleet);
+        flag.Flag = fleet.Flag;
+        Rejected(() => fleet.ReadDelta(delta, flag));
+#else
+        // Release builds skip the walk, but an unchanged list that the baseline shares keeps its values.
+        var shared = new Fleet { Tick = fleet.Tick, Ships = fleet.Ships };
+        var next = new Fleet();
+        next.CopyFrom(fleet);
+        next.Tick = 4;
+        fleet.ReadDelta(next.ToDeltaBytes(shared), shared);
+        Assert.IsTrue(fleet.WireEquals(next));
 #endif
 
         // Copying a record into itself, or from a record that holds the same list, keeps its values.
@@ -85,6 +108,7 @@ public sealed class GesGeneratedCodeTests
     [TestCategory("Allocation")]
     public void GeneratedRecordsAllocateNothing()
     {
+        if (DebugBuild) Assert.Inconclusive("Debug builds check shared baselines, which allocates; the gate holds for release builds.");
         var name = "frigate"u8.ToArray();
         var fleet = new Fleet { Tick = 1 };
         for (var index = 0; index < 48; index++)

@@ -53,7 +53,7 @@ extension GesCSharpEmitter {
             code.line("if (ReferenceEquals(this, other)) return;")
             for field in type.fields {
                 if field.optional { code.line("Has\(field.base) = other.Has\(field.base);") }
-                copy(&code, field.value, field.base, "other." + field.base, true)
+                copy(&code, field.value, field.base, "other." + field.base)
             }
             for tag in type.tags { code.line("\(tag.base) = other.\(tag.base);") }
             code.close()
@@ -200,46 +200,55 @@ extension GesCSharpEmitter {
         }
     }
 
-    // The storage that a read into this record writes: the record, the class records it holds and every pooled element. While a
-    // delta reads, it is marked, so that a baseline holding any of it is rejected before the read overwrites what it holds.
+    // The storage that a read into this record writes: the record, the class records and lists it holds and every pooled element.
+    // Debug builds mark it while a delta reads, so that a baseline holding any of it is rejected before the read overwrites what
+    // it holds; release builds generate none of it.
     static func sharing(_ code: inout Code, _ type: GesPlanType) {
         code.blank()
+        code.line("#if DEBUG")
         code.line("internal bool __Busy;")
         code.blank()
-        if !type.fields.contains(where: { GesSchemaPlanner.holdsRecords($0.value) }) {
-            code.line("internal void __Mark(bool busy) => __Busy = busy;")
+        if !type.fields.contains(where: { touches($0.value) }) {
+            code.line("internal void __Mark(bool busy, HashSet<object>? lists) => __Busy = busy;")
             code.blank()
-            code.line("internal bool __Holds() => __Busy;")
+            code.line("internal bool __Holds(HashSet<object> lists) => __Busy;")
         } else {
-            code.line("internal void __Mark(bool busy)")
+            code.line("internal void __Mark(bool busy, HashSet<object>? lists)")
             code.open("{")
             code.line("__Busy = busy;")
             for field in type.fields { mark(&code, field.value, field.base) }
             code.close()
             code.blank()
-            code.line("internal bool __Holds()")
+            code.line("internal bool __Holds(HashSet<object> lists)")
             code.open("{")
             code.line("if (__Busy) return true;")
             for field in type.fields { holds(&code, field.value, field.base) }
             code.line("return false;")
             code.close()
         }
-        if type.kind != .schema || type.isItem { return }
-        code.blank()
-        code.line("internal bool __SharesList(\(type.name) baseline)")
-        code.open("{")
-        for field in type.fields { sharesList(&code, field.value, field.base) }
-        code.line("return false;")
-        code.close()
+        code.line("#endif")
+    }
+
+    // Whether a value holds storage that a read writes into besides the record's own fields: a class record or a list.
+    private static func touches(_ value: GesPlanValue) -> Bool {
+        switch value.encoding.kind {
+        case .schema: value.isClass
+        case .list: true
+        case .union: value.alternatives.contains(where: touches)
+        default: false
+        }
     }
 
     private static func mark(_ code: inout Code, _ value: GesPlanValue, _ member: String) {
         let node = String(value.node)
         switch value.encoding.kind {
         case .schema where value.isClass:
-            code.line("\(member).__Mark(busy);")
-        case .list where value.element!.isClass:
-            code.line("for (var index\(node) = 0; index\(node) < __\(value.base)Pool.Count; index\(node)++) __\(value.base)Pool[index\(node)].__Mark(busy);")
+            code.line("\(member).__Mark(busy, lists);")
+        case .list:
+            code.line("lists?.Add(\(member));")
+            if value.element!.isClass {
+                code.line("for (var index\(node) = 0; index\(node) < __\(value.base)Pool.Count; index\(node)++) __\(value.base)Pool[index\(node)].__Mark(busy, lists);")
+            }
         case .union:
             for alternative in value.alternatives { mark(&code, alternative, prefix(member) + alternative.base) }
         default:
@@ -251,10 +260,12 @@ extension GesCSharpEmitter {
         let node = String(value.node)
         switch value.encoding.kind {
         case .schema where value.isClass:
-            code.line("if (\(member).__Holds()) return true;")
-        case .list where value.element!.isClass:
+            code.line("if (\(member).__Holds(lists)) return true;")
+        case .list:
+            code.line("if (lists.Contains(\(member))) return true;")
+            if !value.element!.isClass { break }
             code.line("for (var index\(node) = 0; index\(node) < \(member).Count; index\(node)++)")
-            code.line("    if (\(member)[index\(node)].__Holds()) return true;")
+            code.line("    if (\(member)[index\(node)].__Holds(lists)) return true;")
         case .union:
             for alternative in value.alternatives { holds(&code, alternative, prefix(member) + alternative.base) }
         default:
@@ -262,23 +273,8 @@ extension GesCSharpEmitter {
         }
     }
 
-    // Whether the baseline holds a list of this record or of a record it holds in the same place, which a read would clear.
-    private static func sharesList(_ code: inout Code, _ value: GesPlanValue, _ member: String) {
-        switch value.encoding.kind {
-        case .schema where value.isClass:
-            code.line("if (\(member).__SharesList(baseline.\(member))) return true;")
-        case .list:
-            code.line("if (ReferenceEquals(\(member), baseline.\(member))) return true;")
-        case .union:
-            for alternative in value.alternatives { sharesList(&code, alternative, prefix(member) + alternative.base) }
-        default:
-            break
-        }
-    }
-
-    // Copies b into a without allocating once a's storage has grown. A guarded copy skips a list that b shares with a; a delta
-    // has rejected that case before it copies.
-    private static func copy(_ code: inout Code, _ value: GesPlanValue, _ a: String, _ b: String, _ guarded: Bool) {
+    // Copies b into a without allocating once a's storage has grown; a list that b shares with a already holds the values.
+    private static func copy(_ code: inout Code, _ value: GesPlanValue, _ a: String, _ b: String) {
         let node = String(value.node)
         switch value.encoding.kind {
         case .text:
@@ -287,10 +283,8 @@ extension GesCSharpEmitter {
             code.line("\(a).CopyFrom(\(b));")
         case .list where value.element!.isClass:
             // The same list already holds the values; clearing it first would lose them.
-            if guarded {
-                code.line("if (!ReferenceEquals(\(a), \(b)))")
-                code.open("{")
-            }
+            code.line("if (!ReferenceEquals(\(a), \(b)))")
+            code.open("{")
             code.line("\(a).Clear();")
             code.line("for (var index\(node) = 0; index\(node) < \(b).Count; index\(node)++)")
             code.open("{")
@@ -299,15 +293,13 @@ extension GesCSharpEmitter {
             code.line("item\(node).CopyFrom(\(b)[index\(node)]);")
             code.line("\(a).Add(item\(node));")
             code.close()
-            if guarded { code.close() }
+            code.close()
         case .list:
-            if guarded {
-                code.line("if (!ReferenceEquals(\(a), \(b)))")
-                code.open("{")
-            }
+            code.line("if (!ReferenceEquals(\(a), \(b)))")
+            code.open("{")
             code.line("\(a).Clear();")
             code.line("\(a).AddRange(\(b));")
-            if guarded { code.close() }
+            code.close()
         case .union:
             code.line("\(a) = \(b);")
             code.line("switch (\(a))")
@@ -315,7 +307,7 @@ extension GesCSharpEmitter {
             for alternative in value.alternatives where alternative.encoding.kind != .nothing {
                 code.line("case \(nestedName(value)).\(alternative.label):")
                 code.open("{")
-                copy(&code, alternative, prefix(a) + alternative.base, prefix(b) + alternative.base, guarded)
+                copy(&code, alternative, prefix(a) + alternative.base, prefix(b) + alternative.base)
                 code.line("break;")
                 code.close()
             }
@@ -417,10 +409,18 @@ extension GesCSharpEmitter {
             // Sharing other storage is a programming error, which only debug builds pay to detect.
             code.line("if (ReferenceEquals(this, baseline)) throw new GesWireException(GesWireException.OverlappingBuffers, \"\");")
             code.line("#if DEBUG")
-            code.line("__Mark(true);")
-            code.line("var shared = baseline.__Holds();")
-            code.line("__Mark(false);")
-            code.line("if (shared || __SharesList(baseline)) throw new GesWireException(GesWireException.OverlappingBuffers, \"\");")
+            code.line("var lists = new HashSet<object>();")
+            code.line("__Mark(true, lists);")
+            code.line("bool shared;")
+            code.line("try")
+            code.open("{")
+            code.line("shared = baseline.__Holds(lists);")
+            code.close()
+            code.line("finally")
+            code.open("{")
+            code.line("__Mark(false, null);")
+            code.close()
+            code.line("if (shared) throw new GesWireException(GesWireException.OverlappingBuffers, \"\");")
             code.line("#endif")
         }
         code.line("var reader = new GesBitReader(data, byteLimit);")
@@ -491,7 +491,7 @@ extension GesCSharpEmitter {
             code.line("else")
             code.open("{")
             if field.optional { code.line("Has\(field.base) = baseline.Has\(field.base);") }
-            copy(&code, field.value, field.base, "baseline." + field.base, false)
+            copy(&code, field.value, field.base, "baseline." + field.base)
             code.close()
             code.line("ordinal++;")
             code.close()

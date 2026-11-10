@@ -65,7 +65,7 @@ internal static partial class GesCSharpEmitter
             foreach (var field in type.Fields)
             {
                 if (field.Optional) code.Line($"Has{field.Base} = other.Has{field.Base};");
-                Copy(code, field.Value, field.Base, "other." + field.Base, true);
+                Copy(code, field.Value, field.Base, "other." + field.Base);
             }
 
             foreach (var (_, name, _) in type.Tags) code.Line($"{name} = other.{name};");
@@ -230,28 +230,30 @@ internal static partial class GesCSharpEmitter
         }
     }
 
-    // The storage that a read into this record writes: the record, the class records it holds and every pooled element. While a
-    // delta reads, it is marked, so that a baseline holding any of it is rejected before the read overwrites what it holds.
+    // The storage that a read into this record writes: the record, the class records and lists it holds and every pooled element.
+    // Debug builds mark it while a delta reads, so that a baseline holding any of it is rejected before the read overwrites what
+    // it holds; release builds generate none of it.
     private static void Sharing(GesSchemaPlanner.Code code, GesPlanType type)
     {
         code.Blank();
+        code.Line("#if DEBUG");
         code.Line("internal bool __Busy;");
         code.Blank();
-        if (!type.Fields.Exists(field => GesSchemaPlanner.HoldsRecords(field.Value)))
+        if (!type.Fields.Exists(field => Touches(field.Value)))
         {
-            code.Line("internal void __Mark(bool busy) => __Busy = busy;");
+            code.Line("internal void __Mark(bool busy, HashSet<object>? lists) => __Busy = busy;");
             code.Blank();
-            code.Line("internal bool __Holds() => __Busy;");
+            code.Line("internal bool __Holds(HashSet<object> lists) => __Busy;");
         }
         else
         {
-            code.Line("internal void __Mark(bool busy)");
+            code.Line("internal void __Mark(bool busy, HashSet<object>? lists)");
             code.Open("{");
             code.Line("__Busy = busy;");
             foreach (var field in type.Fields) Mark(code, field.Value, field.Base);
             code.Close();
             code.Blank();
-            code.Line("internal bool __Holds()");
+            code.Line("internal bool __Holds(HashSet<object> lists)");
             code.Open("{");
             code.Line("if (__Busy) return true;");
             foreach (var field in type.Fields) Holds(code, field.Value, field.Base);
@@ -259,14 +261,17 @@ internal static partial class GesCSharpEmitter
             code.Close();
         }
 
-        if (type.Kind != GesSchemaKind.Schema || type.IsItem) return;
-        code.Blank();
-        code.Line($"internal bool __SharesList({type.Name} baseline)");
-        code.Open("{");
-        foreach (var field in type.Fields) SharesList(code, field.Value, field.Base);
-        code.Line("return false;");
-        code.Close();
+        code.Line("#endif");
     }
+
+    // Whether a value holds storage that a read writes into besides the record's own fields: a class record or a list.
+    private static bool Touches(GesPlanValue value) => value.Encoding.Kind switch
+    {
+        GesLayoutKind.Schema => value.IsClass,
+        GesLayoutKind.List => true,
+        GesLayoutKind.Union => value.Alternatives.Exists(Touches),
+        _ => false,
+    };
 
     private static void Mark(GesSchemaPlanner.Code code, GesPlanValue value, string member)
     {
@@ -274,10 +279,11 @@ internal static partial class GesCSharpEmitter
         switch (value.Encoding.Kind)
         {
             case GesLayoutKind.Schema when value.IsClass:
-                code.Line($"{member}.__Mark(busy);");
+                code.Line($"{member}.__Mark(busy, lists);");
                 break;
-            case GesLayoutKind.List when value.Element!.IsClass:
-                code.Line($"for (var index{node} = 0; index{node} < __{value.Base}Pool.Count; index{node}++) __{value.Base}Pool[index{node}].__Mark(busy);");
+            case GesLayoutKind.List:
+                code.Line($"lists?.Add({member});");
+                if (value.Element!.IsClass) code.Line($"for (var index{node} = 0; index{node} < __{value.Base}Pool.Count; index{node}++) __{value.Base}Pool[index{node}].__Mark(busy, lists);");
                 break;
             case GesLayoutKind.Union:
                 foreach (var alternative in value.Alternatives) Mark(code, alternative, Prefix(member) + alternative.Base);
@@ -291,11 +297,13 @@ internal static partial class GesCSharpEmitter
         switch (value.Encoding.Kind)
         {
             case GesLayoutKind.Schema when value.IsClass:
-                code.Line($"if ({member}.__Holds()) return true;");
+                code.Line($"if ({member}.__Holds(lists)) return true;");
                 break;
-            case GesLayoutKind.List when value.Element!.IsClass:
+            case GesLayoutKind.List:
+                code.Line($"if (lists.Contains({member})) return true;");
+                if (!value.Element!.IsClass) break;
                 code.Line($"for (var index{node} = 0; index{node} < {member}.Count; index{node}++)");
-                code.Line($"    if ({member}[index{node}].__Holds()) return true;");
+                code.Line($"    if ({member}[index{node}].__Holds(lists)) return true;");
                 break;
             case GesLayoutKind.Union:
                 foreach (var alternative in value.Alternatives) Holds(code, alternative, Prefix(member) + alternative.Base);
@@ -303,26 +311,8 @@ internal static partial class GesCSharpEmitter
         }
     }
 
-    // Whether the baseline holds a list of this record or of a record it holds in the same place, which a read would clear.
-    private static void SharesList(GesSchemaPlanner.Code code, GesPlanValue value, string member)
-    {
-        switch (value.Encoding.Kind)
-        {
-            case GesLayoutKind.Schema when value.IsClass:
-                code.Line($"if ({member}.__SharesList(baseline.{member})) return true;");
-                break;
-            case GesLayoutKind.List:
-                code.Line($"if (ReferenceEquals({member}, baseline.{member})) return true;");
-                break;
-            case GesLayoutKind.Union:
-                foreach (var alternative in value.Alternatives) SharesList(code, alternative, Prefix(member) + alternative.Base);
-                break;
-        }
-    }
-
-    // Copies b into a without allocating once a's storage has grown. A guarded copy skips a list that b shares with a; a delta
-    // has rejected that case before it copies.
-    private static void Copy(GesSchemaPlanner.Code code, GesPlanValue value, string a, string b, bool guarded)
+    // Copies b into a without allocating once a's storage has grown; a list that b shares with a already holds the values.
+    private static void Copy(GesSchemaPlanner.Code code, GesPlanValue value, string a, string b)
     {
         var node = N(value.Node);
         switch (value.Encoding.Kind)
@@ -335,12 +325,8 @@ internal static partial class GesCSharpEmitter
                 break;
             case GesLayoutKind.List when value.Element!.IsClass:
                 // The same list already holds the values; clearing it first would lose them.
-                if (guarded)
-                {
-                    code.Line($"if (!ReferenceEquals({a}, {b}))");
-                    code.Open("{");
-                }
-
+                code.Line($"if (!ReferenceEquals({a}, {b}))");
+                code.Open("{");
                 code.Line($"{a}.Clear();");
                 code.Line($"for (var index{node} = 0; index{node} < {b}.Count; index{node}++)");
                 code.Open("{");
@@ -349,18 +335,14 @@ internal static partial class GesCSharpEmitter
                 code.Line($"item{node}.CopyFrom({b}[index{node}]);");
                 code.Line($"{a}.Add(item{node});");
                 code.Close();
-                if (guarded) code.Close();
+                code.Close();
                 break;
             case GesLayoutKind.List:
-                if (guarded)
-                {
-                    code.Line($"if (!ReferenceEquals({a}, {b}))");
-                    code.Open("{");
-                }
-
+                code.Line($"if (!ReferenceEquals({a}, {b}))");
+                code.Open("{");
                 code.Line($"{a}.Clear();");
                 code.Line($"{a}.AddRange({b});");
-                if (guarded) code.Close();
+                code.Close();
                 break;
             case GesLayoutKind.Union:
                 code.Line($"{a} = {b};");
@@ -371,7 +353,7 @@ internal static partial class GesCSharpEmitter
                     if (alternative.Encoding.Kind == GesLayoutKind.Nothing) continue;
                     code.Line($"case {NestedName(value)}.{alternative.Label}:");
                     code.Open("{");
-                    Copy(code, alternative, Prefix(a) + alternative.Base, Prefix(b) + alternative.Base, guarded);
+                    Copy(code, alternative, Prefix(a) + alternative.Base, Prefix(b) + alternative.Base);
                     code.Line("break;");
                     code.Close();
                 }
@@ -489,10 +471,18 @@ internal static partial class GesCSharpEmitter
             // Sharing other storage is a programming error, which only debug builds pay to detect.
             code.Line("if (ReferenceEquals(this, baseline)) throw new GesWireException(GesWireException.OverlappingBuffers, \"\");");
             code.Line("#if DEBUG");
-            code.Line("__Mark(true);");
-            code.Line("var shared = baseline.__Holds();");
-            code.Line("__Mark(false);");
-            code.Line("if (shared || __SharesList(baseline)) throw new GesWireException(GesWireException.OverlappingBuffers, \"\");");
+            code.Line("var lists = new HashSet<object>();");
+            code.Line("__Mark(true, lists);");
+            code.Line("bool shared;");
+            code.Line("try");
+            code.Open("{");
+            code.Line("shared = baseline.__Holds(lists);");
+            code.Close();
+            code.Line("finally");
+            code.Open("{");
+            code.Line("__Mark(false, null);");
+            code.Close();
+            code.Line("if (shared) throw new GesWireException(GesWireException.OverlappingBuffers, \"\");");
             code.Line("#endif");
         }
 
@@ -572,7 +562,7 @@ internal static partial class GesCSharpEmitter
             code.Line("else");
             code.Open("{");
             if (field.Optional) code.Line($"Has{field.Base} = baseline.Has{field.Base};");
-            Copy(code, field.Value, field.Base, "baseline." + field.Base, false);
+            Copy(code, field.Value, field.Base, "baseline." + field.Base);
             code.Close();
             code.Line("ordinal++;");
             code.Close();

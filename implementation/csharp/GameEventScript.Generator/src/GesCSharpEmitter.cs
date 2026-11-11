@@ -29,7 +29,7 @@ internal static partial class GesCSharpEmitter
     // Members every generated type declares, and those every C# object inherits.
     private static readonly string[] Reserved =
     [
-        "SchemaHash", "BindingHash", "MaxByteCount", "Write", "Read", "ReadKey", "ToBytes", "WriteDelta", "ToDeltaBytes", "ReadDelta", "WireEquals", "CopyFrom", "Quantize", "Equals", "GetHashCode",
+        "SchemaHash", "BindingHash", "MaxByteCount", "Write", "Read", "ReadKey", "ToBytes", "ByteCount", "WriteDelta", "ToDeltaBytes", "DeltaByteCount", "ReadDelta", "WireEquals", "CopyFrom", "Quantize", "Equals", "GetHashCode",
         "ToString", "GetType"
     ];
 
@@ -95,6 +95,8 @@ internal static partial class GesCSharpEmitter
             if (field.Optional) names.Add(("Has" + field.Base, "the presence of " + field.Layout.Name));
             if (field.Optional && Plain(field.Value)) names.Add((field.Base + "Optional", "the optional value of " + field.Layout.Name));
             Nested(field.Value, names, field.Layout.Name);
+            if (IsPooledList(field)) names.Add(("Set" + field.Base + "Count", "the element count of " + field.Layout.Name));
+            if (IsTextList(field)) names.Add((field.Base + "Values", "the texts of " + field.Layout.Name));
         }
 
         foreach (var (tag, name, _) in type.Tags) names.Add((name, "the tag #" + tag));
@@ -128,6 +130,7 @@ internal static partial class GesCSharpEmitter
             code.Line($"public bool {name};");
         }
 
+        foreach (var field in type.Fields) ListAccess(code, field);
         Methods(code, type);
         if (type.IsClass && (type.Kind == GesSchemaKind.Schema || type.IsItem)) Sharing(code, type);
         var deltas = type.Kind == GesSchemaKind.Schema && !type.IsItem;
@@ -405,13 +408,24 @@ internal static partial class GesCSharpEmitter
         code.Line("return writer.Finish();");
         code.Close();
         code.Blank();
-        code.Line($"/// <summary>Writes this {what} into a new array of its exact size.</summary>");
+        code.Line($"/// <summary>Counts the bytes that <see cref=\"Write\"/> writes for this {what}, without writing them.</summary>");
+        code.Line("/// <returns>The exact byte count.</returns>");
+        code.Line("/// <exception cref=\"GesWireException\">A value does not fit its field.</exception>");
+        code.Line($"public {self}int ByteCount()");
+        code.Open("{");
+        code.Line("var writer = GesBitWriter.Counting();");
+        foreach (var line in write) code.Line(line);
+        code.Line("return writer.Finish();");
+        code.Close();
+        code.Blank();
+        code.Line($"/// <summary>Writes this {what} into a new array of its exact size, which <see cref=\"ByteCount\"/> counts first.</summary>");
         code.Line("/// <returns>The bytes.</returns>");
         code.Line("/// <exception cref=\"GesWireException\">A value does not fit its field.</exception>");
         code.Line($"public {self}byte[] ToBytes()");
         code.Open("{");
-        code.Line("var buffer = new byte[MaxByteCount];");
-        code.Line("return buffer.AsSpan(0, Write(buffer)).ToArray();");
+        code.Line("var buffer = new byte[ByteCount()];");
+        code.Line("Write(buffer);");
+        code.Line("return buffer;");
         code.Close();
         code.Blank();
         code.Line($"/// <summary>Reads a {what} from untrusted data into this instance. After an error its values are unspecified.</summary>");
@@ -732,6 +746,52 @@ internal static partial class GesCSharpEmitter
     }
 
     private static string Underlying(int count) => count <= 256 ? "byte" : count <= 65536 ? "ushort" : "uint";
+
+    // A required list whose elements are classes the record reuses.
+    internal static bool IsPooledList(GesPlanField field) => !field.Optional && field.Value.Encoding.Kind == GesLayoutKind.List && field.Value.Element!.IsClass;
+
+    // A pooled list of Text or open Tag elements, whose element type holds one text.
+    internal static bool IsTextList(GesPlanField field) => IsPooledList(field) && field.Value.Item is not null && field.Value.Element!.Encoding.Kind == GesLayoutKind.Text;
+
+    // Sets a pooled list to a count of reused elements, as a read does, and for texts offers them as strings.
+    private static void ListAccess(GesSchemaPlanner.Code code, GesPlanField field)
+    {
+        if (!IsPooledList(field)) return;
+        var value = field.Value;
+        code.Blank();
+        code.Line($"/// <summary>Sets <c>{field.Layout.Name}</c> to <paramref name=\"count\"/> elements that the record reuses, as a read does; their fields keep earlier values until they are set.</summary>");
+        code.Line("/// <param name=\"count\">The element count.</param>");
+        code.Line($"public void Set{value.Base}Count(int count)");
+        code.Open("{");
+        code.Line("if (count < 0) throw new ArgumentOutOfRangeException(nameof(count));");
+        code.Line($"{value.Base}.Clear();");
+        code.Line("for (var position = 0; position < count; position++)");
+        code.Open("{");
+        code.Line($"if (position == __{value.Base}Pool.Count) __{value.Base}Pool.Add(new {ElementName(value)}());");
+        code.Line($"{value.Base}.Add(__{value.Base}Pool[position]);");
+        code.Close();
+        code.Close();
+        if (!IsTextList(field)) return;
+        var text = value.Item!.Fields[0].Base;
+        code.Blank();
+        code.Line($"/// <summary>The elements of <c>{field.Layout.Name}</c> as strings; reading and setting allocate, and setting reuses the elements.</summary>");
+        code.Line($"public string[] {value.Base}Values");
+        code.Open("{");
+        code.Line("get");
+        code.Open("{");
+        code.Line($"var values = new string[{value.Base}.Count];");
+        code.Line($"for (var index = 0; index < values.Length; index++) values[index] = {value.Base}[index].{text};");
+        code.Line("return values;");
+        code.Close();
+        code.Blank();
+        code.Line("set");
+        code.Open("{");
+        code.Line("if (value is null) throw new ArgumentNullException(nameof(value));");
+        code.Line($"Set{value.Base}Count(value.Length);");
+        code.Line($"for (var index = 0; index < value.Length; index++) {value.Base}[index].{text} = value[index];");
+        code.Close();
+        code.Close();
+    }
 
     // One bit per member in declared order, so the enum value is the wire mask; the empty value needs no name.
     internal static void FlagsDeclaration(GesSchemaPlanner.Code code, string name, List<string> members)

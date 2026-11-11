@@ -63,13 +63,24 @@ namespace GameEventScript.Tests.Generator.Generated
             return writer.Finish();
         }
 
-        /// <summary>Writes this record into a new array of its exact size.</summary>
+        /// <summary>Counts the bytes that <see cref="Write"/> writes for this record, without writing them.</summary>
+        /// <returns>The exact byte count.</returns>
+        /// <exception cref="GesWireException">A value does not fit its field.</exception>
+        public int ByteCount()
+        {
+            var writer = GesBitWriter.Counting();
+            __WriteFields(ref writer, __paths, 0);
+            return writer.Finish();
+        }
+
+        /// <summary>Writes this record into a new array of its exact size, which <see cref="ByteCount"/> counts first.</summary>
         /// <returns>The bytes.</returns>
         /// <exception cref="GesWireException">A value does not fit its field.</exception>
         public byte[] ToBytes()
         {
-            var buffer = new byte[MaxByteCount];
-            return buffer.AsSpan(0, Write(buffer)).ToArray();
+            var buffer = new byte[ByteCount()];
+            Write(buffer);
+            return buffer;
         }
 
         /// <summary>Reads a record from untrusted data into this instance. After an error its values are unspecified.</summary>
@@ -164,14 +175,30 @@ namespace GameEventScript.Tests.Generator.Generated
             return writer.Finish();
         }
 
-        /// <summary>Writes what differs from a baseline into a new array of its exact size.</summary>
+        /// <summary>Counts the bytes that <see cref="WriteDelta"/> writes against a baseline, without writing them.</summary>
+        /// <param name="baseline">The baseline, another instance.</param>
+        /// <returns>The exact byte count.</returns>
+        /// <exception cref="GesWireException">A value does not fit its field, or the keys differ.</exception>
+        public int DeltaByteCount(Banner baseline)
+        {
+            var writer = GesBitWriter.Counting();
+            __WriteDelta(baseline, ref writer, __paths, 0, true);
+            return writer.Finish();
+        }
+
+        /// <summary>Writes what differs from a baseline into a new array of its exact size. A count comes first: it sizes the
+        /// buffer for the elements that the writer tries and takes back, so that the largest delta is not allocated.</summary>
         /// <param name="baseline">The baseline, another instance.</param>
         /// <returns>The bytes.</returns>
         /// <exception cref="GesWireException">A value does not fit its field, or the keys differ.</exception>
         public byte[] ToDeltaBytes(Banner baseline)
         {
-            var buffer = new byte[MaxByteCount];
-            return buffer.AsSpan(0, WriteDelta(baseline, buffer)).ToArray();
+            var writer = GesBitWriter.Counting();
+            __WriteDelta(baseline, ref writer, __paths, 0, true);
+            writer.Finish();
+            var buffer = new byte[writer.RequiredByteCount];
+            var count = WriteDelta(baseline, buffer);
+            return count == buffer.Length ? buffer : buffer.AsSpan(0, count).ToArray();
         }
 
         /// <summary>Reads a delta against a baseline into this instance. After an error its values are unspecified.</summary>
@@ -344,6 +371,19 @@ namespace GameEventScript.Tests.Generator.Generated
         /// <summary>The field <c>flag</c>.</summary>
         public Banner Flag = new Banner();
 
+        /// <summary>Sets <c>ships</c> to <paramref name="count"/> elements that the record reuses, as a read does; their fields keep earlier values until they are set.</summary>
+        /// <param name="count">The element count.</param>
+        public void SetShipsCount(int count)
+        {
+            if (count < 0) throw new ArgumentOutOfRangeException(nameof(count));
+            Ships.Clear();
+            for (var position = 0; position < count; position++)
+            {
+                if (position == __ShipsPool.Count) __ShipsPool.Add(new Ship());
+                Ships.Add(__ShipsPool[position]);
+            }
+        }
+
         /// <summary>Writes this record into a buffer; <see cref="MaxByteCount"/> bytes always suffice.</summary>
         /// <param name="buffer">The buffer.</param>
         /// <returns>The number of bytes written.</returns>
@@ -355,13 +395,24 @@ namespace GameEventScript.Tests.Generator.Generated
             return writer.Finish();
         }
 
-        /// <summary>Writes this record into a new array of its exact size.</summary>
+        /// <summary>Counts the bytes that <see cref="Write"/> writes for this record, without writing them.</summary>
+        /// <returns>The exact byte count.</returns>
+        /// <exception cref="GesWireException">A value does not fit its field.</exception>
+        public int ByteCount()
+        {
+            var writer = GesBitWriter.Counting();
+            __WriteFields(ref writer, __paths, 0);
+            return writer.Finish();
+        }
+
+        /// <summary>Writes this record into a new array of its exact size, which <see cref="ByteCount"/> counts first.</summary>
         /// <returns>The bytes.</returns>
         /// <exception cref="GesWireException">A value does not fit its field.</exception>
         public byte[] ToBytes()
         {
-            var buffer = new byte[MaxByteCount];
-            return buffer.AsSpan(0, Write(buffer)).ToArray();
+            var buffer = new byte[ByteCount()];
+            Write(buffer);
+            return buffer;
         }
 
         /// <summary>Reads a record from untrusted data into this instance. After an error its values are unspecified.</summary>
@@ -871,14 +922,30 @@ namespace GameEventScript.Tests.Generator.Generated
             return writer.Finish();
         }
 
-        /// <summary>Writes what differs from a baseline into a new array of its exact size.</summary>
+        /// <summary>Counts the bytes that <see cref="WriteDelta"/> writes against a baseline, without writing them.</summary>
+        /// <param name="baseline">The baseline, another instance.</param>
+        /// <returns>The exact byte count.</returns>
+        /// <exception cref="GesWireException">A value does not fit its field, or the keys differ.</exception>
+        public int DeltaByteCount(Fleet baseline)
+        {
+            var writer = GesBitWriter.Counting();
+            __WriteDelta(baseline, ref writer, __paths, 0, true);
+            return writer.Finish();
+        }
+
+        /// <summary>Writes what differs from a baseline into a new array of its exact size. A count comes first: it sizes the
+        /// buffer for the elements that the writer tries and takes back, so that the largest delta is not allocated.</summary>
         /// <param name="baseline">The baseline, another instance.</param>
         /// <returns>The bytes.</returns>
         /// <exception cref="GesWireException">A value does not fit its field, or the keys differ.</exception>
         public byte[] ToDeltaBytes(Fleet baseline)
         {
-            var buffer = new byte[MaxByteCount];
-            return buffer.AsSpan(0, WriteDelta(baseline, buffer)).ToArray();
+            var writer = GesBitWriter.Counting();
+            __WriteDelta(baseline, ref writer, __paths, 0, true);
+            writer.Finish();
+            var buffer = new byte[writer.RequiredByteCount];
+            var count = WriteDelta(baseline, buffer);
+            return count == buffer.Length ? buffer : buffer.AsSpan(0, count).ToArray();
         }
 
         /// <summary>Reads a delta against a baseline into this instance. After an error its values are unspecified.</summary>
@@ -1261,13 +1328,24 @@ namespace GameEventScript.Tests.Generator.Generated
             return writer.Finish();
         }
 
-        /// <summary>Writes this record into a new array of its exact size.</summary>
+        /// <summary>Counts the bytes that <see cref="Write"/> writes for this record, without writing them.</summary>
+        /// <returns>The exact byte count.</returns>
+        /// <exception cref="GesWireException">A value does not fit its field.</exception>
+        public readonly int ByteCount()
+        {
+            var writer = GesBitWriter.Counting();
+            __WriteFields(ref writer, __paths, 0);
+            return writer.Finish();
+        }
+
+        /// <summary>Writes this record into a new array of its exact size, which <see cref="ByteCount"/> counts first.</summary>
         /// <returns>The bytes.</returns>
         /// <exception cref="GesWireException">A value does not fit its field.</exception>
         public readonly byte[] ToBytes()
         {
-            var buffer = new byte[MaxByteCount];
-            return buffer.AsSpan(0, Write(buffer)).ToArray();
+            var buffer = new byte[ByteCount()];
+            Write(buffer);
+            return buffer;
         }
 
         /// <summary>Reads a record from untrusted data into this instance. After an error its values are unspecified.</summary>
@@ -1387,14 +1465,30 @@ namespace GameEventScript.Tests.Generator.Generated
             return writer.Finish();
         }
 
-        /// <summary>Writes what differs from a baseline into a new array of its exact size.</summary>
+        /// <summary>Counts the bytes that <see cref="WriteDelta"/> writes against a baseline, without writing them.</summary>
+        /// <param name="baseline">The baseline, another instance.</param>
+        /// <returns>The exact byte count.</returns>
+        /// <exception cref="GesWireException">A value does not fit its field, or the keys differ.</exception>
+        public readonly int DeltaByteCount(in Pose baseline)
+        {
+            var writer = GesBitWriter.Counting();
+            __WriteDelta(baseline, ref writer, __paths, 0, true);
+            return writer.Finish();
+        }
+
+        /// <summary>Writes what differs from a baseline into a new array of its exact size. A count comes first: it sizes the
+        /// buffer for the elements that the writer tries and takes back, so that the largest delta is not allocated.</summary>
         /// <param name="baseline">The baseline, another instance.</param>
         /// <returns>The bytes.</returns>
         /// <exception cref="GesWireException">A value does not fit its field, or the keys differ.</exception>
         public readonly byte[] ToDeltaBytes(in Pose baseline)
         {
-            var buffer = new byte[MaxByteCount];
-            return buffer.AsSpan(0, WriteDelta(baseline, buffer)).ToArray();
+            var writer = GesBitWriter.Counting();
+            __WriteDelta(baseline, ref writer, __paths, 0, true);
+            writer.Finish();
+            var buffer = new byte[writer.RequiredByteCount];
+            var count = WriteDelta(baseline, buffer);
+            return count == buffer.Length ? buffer : buffer.AsSpan(0, count).ToArray();
         }
 
         /// <summary>Reads a delta against a baseline into this instance. After an error its values are unspecified.</summary>
@@ -1625,13 +1719,24 @@ namespace GameEventScript.Tests.Generator.Generated
             return writer.Finish();
         }
 
-        /// <summary>Writes this record into a new array of its exact size.</summary>
+        /// <summary>Counts the bytes that <see cref="Write"/> writes for this record, without writing them.</summary>
+        /// <returns>The exact byte count.</returns>
+        /// <exception cref="GesWireException">A value does not fit its field.</exception>
+        public int ByteCount()
+        {
+            var writer = GesBitWriter.Counting();
+            __WriteFields(ref writer, __paths, 0);
+            return writer.Finish();
+        }
+
+        /// <summary>Writes this record into a new array of its exact size, which <see cref="ByteCount"/> counts first.</summary>
         /// <returns>The bytes.</returns>
         /// <exception cref="GesWireException">A value does not fit its field.</exception>
         public byte[] ToBytes()
         {
-            var buffer = new byte[MaxByteCount];
-            return buffer.AsSpan(0, Write(buffer)).ToArray();
+            var buffer = new byte[ByteCount()];
+            Write(buffer);
+            return buffer;
         }
 
         /// <summary>Reads a record from untrusted data into this instance. After an error its values are unspecified.</summary>
@@ -1924,14 +2029,40 @@ namespace GameEventScript.Tests.Generator.Generated
             return writer.Finish();
         }
 
-        /// <summary>Writes what differs from a baseline into a new array of its exact size.</summary>
+        /// <summary>Counts the bytes that <see cref="WriteDelta"/> writes against a baseline, without writing them.</summary>
+        /// <param name="baseline">The baseline, another instance.</param>
+        /// <returns>The exact byte count.</returns>
+        /// <exception cref="GesWireException">A value does not fit its field, or the keys differ.</exception>
+        public int DeltaByteCount(Ship baseline)
+        {
+            var writer = GesBitWriter.Counting();
+            var paths = __paths;
+            const int at = 0;
+            var key = __Wire0(Id, paths, at);
+            if (key != __Wire0(baseline.Id, paths, at)) throw new GesWireException(GesWireException.KeyMismatch, paths[0]);
+            writer.Write(key, 16);
+            __WriteDelta(baseline, ref writer, __paths, 0, true);
+            return writer.Finish();
+        }
+
+        /// <summary>Writes what differs from a baseline into a new array of its exact size. A count comes first: it sizes the
+        /// buffer for the elements that the writer tries and takes back, so that the largest delta is not allocated.</summary>
         /// <param name="baseline">The baseline, another instance.</param>
         /// <returns>The bytes.</returns>
         /// <exception cref="GesWireException">A value does not fit its field, or the keys differ.</exception>
         public byte[] ToDeltaBytes(Ship baseline)
         {
-            var buffer = new byte[MaxByteCount];
-            return buffer.AsSpan(0, WriteDelta(baseline, buffer)).ToArray();
+            var writer = GesBitWriter.Counting();
+            var paths = __paths;
+            const int at = 0;
+            var key = __Wire0(Id, paths, at);
+            if (key != __Wire0(baseline.Id, paths, at)) throw new GesWireException(GesWireException.KeyMismatch, paths[0]);
+            writer.Write(key, 16);
+            __WriteDelta(baseline, ref writer, __paths, 0, true);
+            writer.Finish();
+            var buffer = new byte[writer.RequiredByteCount];
+            var count = WriteDelta(baseline, buffer);
+            return count == buffer.Length ? buffer : buffer.AsSpan(0, count).ToArray();
         }
 
         /// <summary>Reads a delta against a baseline into this instance. After an error its values are unspecified.</summary>

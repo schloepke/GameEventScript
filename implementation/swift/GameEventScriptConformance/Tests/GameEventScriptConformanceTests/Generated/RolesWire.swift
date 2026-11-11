@@ -3,7 +3,7 @@
 //     Do not edit it; generate it again when a schema or a parameter changes.
 //     Parameter worldWidth = 2e3 meter.
 //     World: schema hash 27948924216a58ec, binding hash 67f1ce53774c124d.
-//     World_Cards: schema hash 29222cf2bb6c499d, binding hash 9702fc517d7e987c.
+//     World_Cards: schema hash 50b813cda1e6871a, binding hash 875e24e8849b0e5b.
 //     Panel_Report: schema hash 4885f554a711dde1, binding hash df8ddbb308347288.
 // </auto-generated>
 // swift-format-ignore-file
@@ -44,10 +44,18 @@ enum RolesWire {
             return try writer.finish()
         }
 
-        /// Writes this record into a new array of its exact size.
+        /// Counts the bytes that `write(into:)` writes for this record, without writing them.
+        /// - Throws: `GesWireError` when a value does not fit its field.
+        func encodedByteCount() throws(GesWireError) -> Int {
+            var writer = GesBitWriter.counting()
+            try __writeFields(&writer, Self.__paths, 0)
+            return try writer.finish()
+        }
+
+        /// Writes this record into a new array of its exact size, which `encodedByteCount()` counts first.
         /// - Throws: `GesWireError` when a value does not fit its field.
         func encoded() throws(GesWireError) -> [UInt8] {
-            let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: Swift.max(Self.maxByteCount, 1), alignment: 8)
+            let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: Swift.max(try encodedByteCount(), 1), alignment: 8)
             defer { buffer.deallocate() }
             let count = try write(into: buffer)
             return Array(buffer[0..<count])
@@ -144,10 +152,22 @@ enum RolesWire {
             return try writer.finish()
         }
 
-        /// Writes what differs from a baseline into a new array of its exact size.
+        /// Counts the bytes that `writeDelta(against:into:)` writes against a baseline, without writing them.
+        /// - Throws: `GesWireError` when a value does not fit its field or the keys differ.
+        func deltaEncodedByteCount(against baseline: Panel_Badge) throws(GesWireError) -> Int {
+            var writer = GesBitWriter.counting()
+            _ = try __writeDelta(baseline, &writer, Self.__paths, 0, true)
+            return try writer.finish()
+        }
+
+        /// Writes what differs from a baseline into a new array of its exact size. A count comes first: it sizes the buffer for
+        /// the elements that the writer tries and takes back, so that the largest delta is not allocated.
         /// - Throws: `GesWireError` when a value does not fit its field or the keys differ.
         func deltaEncoded(against baseline: Panel_Badge) throws(GesWireError) -> [UInt8] {
-            let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: Swift.max(Self.maxByteCount, 1), alignment: 8)
+            var writer = GesBitWriter.counting()
+            _ = try __writeDelta(baseline, &writer, Self.__paths, 0, true)
+            _ = try writer.finish()
+            let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: Swift.max(writer.requiredByteCount, 1), alignment: 8)
             defer { buffer.deallocate() }
             let count = try writeDelta(against: baseline, into: buffer)
             return Array(buffer[0..<count])
@@ -244,7 +264,7 @@ enum RolesWire {
             return changed
         }
 
-        private static let __valueSchema = __GesSchemasdc1a0056836fa47e.bind("Panel_Badge", bindingHash)
+        private static let __valueSchema = __GesSchemasd1ed2bb08f30749f.bind("Panel_Badge", bindingHash)
 
         /// Converts this record into a GES Record value, as `GesSchemaValues` decodes its bytes; this allocates.
         /// - Throws: `GesWireError` when a value does not fit its field, or the error of binding the embedded sources.
@@ -295,10 +315,18 @@ enum RolesWire {
             return try writer.finish()
         }
 
-        /// Writes this record into a new array of its exact size.
+        /// Counts the bytes that `write(into:)` writes for this record, without writing them.
+        /// - Throws: `GesWireError` when a value does not fit its field.
+        func encodedByteCount() throws(GesWireError) -> Int {
+            var writer = GesBitWriter.counting()
+            try __writeFields(&writer, Self.__paths, 0)
+            return try writer.finish()
+        }
+
+        /// Writes this record into a new array of its exact size, which `encodedByteCount()` counts first.
         /// - Throws: `GesWireError` when a value does not fit its field.
         func encoded() throws(GesWireError) -> [UInt8] {
-            let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: Swift.max(Self.maxByteCount, 1), alignment: 8)
+            let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: Swift.max(try encodedByteCount(), 1), alignment: 8)
             defer { buffer.deallocate() }
             let count = try write(into: buffer)
             return Array(buffer[0..<count])
@@ -419,10 +447,22 @@ enum RolesWire {
             return try writer.finish()
         }
 
-        /// Writes what differs from a baseline into a new array of its exact size.
+        /// Counts the bytes that `writeDelta(against:into:)` writes against a baseline, without writing them.
+        /// - Throws: `GesWireError` when a value does not fit its field or the keys differ.
+        func deltaEncodedByteCount(against baseline: Panel_Entry) throws(GesWireError) -> Int {
+            var writer = GesBitWriter.counting()
+            _ = try __writeDelta(baseline, &writer, Self.__paths, 0, true)
+            return try writer.finish()
+        }
+
+        /// Writes what differs from a baseline into a new array of its exact size. A count comes first: it sizes the buffer for
+        /// the elements that the writer tries and takes back, so that the largest delta is not allocated.
         /// - Throws: `GesWireError` when a value does not fit its field or the keys differ.
         func deltaEncoded(against baseline: Panel_Entry) throws(GesWireError) -> [UInt8] {
-            let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: Swift.max(Self.maxByteCount, 1), alignment: 8)
+            var writer = GesBitWriter.counting()
+            _ = try __writeDelta(baseline, &writer, Self.__paths, 0, true)
+            _ = try writer.finish()
+            let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: Swift.max(writer.requiredByteCount, 1), alignment: 8)
             defer { buffer.deallocate() }
             let count = try writeDelta(against: baseline, into: buffer)
             return Array(buffer[0..<count])
@@ -553,7 +593,7 @@ enum RolesWire {
             return changed
         }
 
-        private static let __valueSchema = __GesSchemasdc1a0056836fa47e.bind("Panel_Entry", bindingHash)
+        private static let __valueSchema = __GesSchemasd1ed2bb08f30749f.bind("Panel_Entry", bindingHash)
 
         /// Converts this record into a GES Record value, as `GesSchemaValues` decodes its bytes; this allocates.
         /// - Throws: `GesWireError` when a value does not fit its field, or the error of binding the embedded sources.
@@ -641,6 +681,16 @@ enum RolesWire {
         @exclusivity(unchecked) var alarms: AlarmsFlags = []
         @exclusivity(unchecked) private var __entriesPool: [Panel_Entry] = []
 
+        /// Sets `entries` to `count` elements that the record reuses, as a read does; their fields keep earlier values until they are set.
+        func setEntriesCount(_ count: Int) {
+            precondition(count >= 0, "A count is not negative.")
+            self.entries.removeAll(keepingCapacity: true)
+            for position in 0..<count {
+                if position == self.__entriesPool.count { self.__entriesPool.append(Panel_Entry()) }
+                self.entries.append(self.__entriesPool[position])
+            }
+        }
+
         /// Creates a record with every field at its zero value.
         init() {}
 
@@ -653,10 +703,18 @@ enum RolesWire {
             return try writer.finish()
         }
 
-        /// Writes this record into a new array of its exact size.
+        /// Counts the bytes that `write(into:)` writes for this record, without writing them.
+        /// - Throws: `GesWireError` when a value does not fit its field.
+        func encodedByteCount() throws(GesWireError) -> Int {
+            var writer = GesBitWriter.counting()
+            try __writeFields(&writer, Self.__paths, 0)
+            return try writer.finish()
+        }
+
+        /// Writes this record into a new array of its exact size, which `encodedByteCount()` counts first.
         /// - Throws: `GesWireError` when a value does not fit its field.
         func encoded() throws(GesWireError) -> [UInt8] {
-            let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: Swift.max(Self.maxByteCount, 1), alignment: 8)
+            let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: Swift.max(try encodedByteCount(), 1), alignment: 8)
             defer { buffer.deallocate() }
             let count = try write(into: buffer)
             return Array(buffer[0..<count])
@@ -1028,10 +1086,22 @@ enum RolesWire {
             return try writer.finish()
         }
 
-        /// Writes what differs from a baseline into a new array of its exact size.
+        /// Counts the bytes that `writeDelta(against:into:)` writes against a baseline, without writing them.
+        /// - Throws: `GesWireError` when a value does not fit its field or the keys differ.
+        func deltaEncodedByteCount(against baseline: Panel_Report) throws(GesWireError) -> Int {
+            var writer = GesBitWriter.counting()
+            _ = try __writeDelta(baseline, &writer, Self.__paths, 0, true)
+            return try writer.finish()
+        }
+
+        /// Writes what differs from a baseline into a new array of its exact size. A count comes first: it sizes the buffer for
+        /// the elements that the writer tries and takes back, so that the largest delta is not allocated.
         /// - Throws: `GesWireError` when a value does not fit its field or the keys differ.
         func deltaEncoded(against baseline: Panel_Report) throws(GesWireError) -> [UInt8] {
-            let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: Swift.max(Self.maxByteCount, 1), alignment: 8)
+            var writer = GesBitWriter.counting()
+            _ = try __writeDelta(baseline, &writer, Self.__paths, 0, true)
+            _ = try writer.finish()
+            let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: Swift.max(writer.requiredByteCount, 1), alignment: 8)
             defer { buffer.deallocate() }
             let count = try writeDelta(against: baseline, into: buffer)
             return Array(buffer[0..<count])
@@ -1569,7 +1639,7 @@ enum RolesWire {
             return changed
         }
 
-        private static let __valueSchema = __GesSchemasdc1a0056836fa47e.bind("Panel_Report", bindingHash)
+        private static let __valueSchema = __GesSchemasd1ed2bb08f30749f.bind("Panel_Report", bindingHash)
 
         /// Converts this record into a GES Record value, as `GesSchemaValues` decodes its bytes; this allocates.
         /// - Throws: `GesWireError` when a value does not fit its field, or the error of binding the embedded sources.
@@ -1666,6 +1736,16 @@ enum RolesWire {
         @exclusivity(unchecked) var badge: Panel_Badge = Panel_Badge()
         @exclusivity(unchecked) private var __botsPool: [World_Bot] = []
 
+        /// Sets `bots` to `count` elements that the record reuses, as a read does; their fields keep earlier values until they are set.
+        func setBotsCount(_ count: Int) {
+            precondition(count >= 0, "A count is not negative.")
+            self.bots.removeAll(keepingCapacity: true)
+            for position in 0..<count {
+                if position == self.__botsPool.count { self.__botsPool.append(World_Bot()) }
+                self.bots.append(self.__botsPool[position])
+            }
+        }
+
         /// Creates a record with every field at its zero value.
         init() {}
 
@@ -1678,10 +1758,18 @@ enum RolesWire {
             return try writer.finish()
         }
 
-        /// Writes this record into a new array of its exact size.
+        /// Counts the bytes that `write(into:)` writes for this record, without writing them.
+        /// - Throws: `GesWireError` when a value does not fit its field.
+        func encodedByteCount() throws(GesWireError) -> Int {
+            var writer = GesBitWriter.counting()
+            try __writeFields(&writer, Self.__paths, 0)
+            return try writer.finish()
+        }
+
+        /// Writes this record into a new array of its exact size, which `encodedByteCount()` counts first.
         /// - Throws: `GesWireError` when a value does not fit its field.
         func encoded() throws(GesWireError) -> [UInt8] {
-            let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: Swift.max(Self.maxByteCount, 1), alignment: 8)
+            let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: Swift.max(try encodedByteCount(), 1), alignment: 8)
             defer { buffer.deallocate() }
             let count = try write(into: buffer)
             return Array(buffer[0..<count])
@@ -2123,10 +2211,22 @@ enum RolesWire {
             return try writer.finish()
         }
 
-        /// Writes what differs from a baseline into a new array of its exact size.
+        /// Counts the bytes that `writeDelta(against:into:)` writes against a baseline, without writing them.
+        /// - Throws: `GesWireError` when a value does not fit its field or the keys differ.
+        func deltaEncodedByteCount(against baseline: World) throws(GesWireError) -> Int {
+            var writer = GesBitWriter.counting()
+            _ = try __writeDelta(baseline, &writer, Self.__paths, 0, true)
+            return try writer.finish()
+        }
+
+        /// Writes what differs from a baseline into a new array of its exact size. A count comes first: it sizes the buffer for
+        /// the elements that the writer tries and takes back, so that the largest delta is not allocated.
         /// - Throws: `GesWireError` when a value does not fit its field or the keys differ.
         func deltaEncoded(against baseline: World) throws(GesWireError) -> [UInt8] {
-            let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: Swift.max(Self.maxByteCount, 1), alignment: 8)
+            var writer = GesBitWriter.counting()
+            _ = try __writeDelta(baseline, &writer, Self.__paths, 0, true)
+            _ = try writer.finish()
+            let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: Swift.max(writer.requiredByteCount, 1), alignment: 8)
             defer { buffer.deallocate() }
             let count = try writeDelta(against: baseline, into: buffer)
             return Array(buffer[0..<count])
@@ -2394,7 +2494,7 @@ enum RolesWire {
             return changed
         }
 
-        private static let __valueSchema = __GesSchemasdc1a0056836fa47e.bind("World", bindingHash)
+        private static let __valueSchema = __GesSchemasd1ed2bb08f30749f.bind("World", bindingHash)
 
         /// Converts this record into a GES Record value, as `GesSchemaValues` decodes its bytes; this allocates.
         /// - Throws: `GesWireError` when a value does not fit its field, or the error of binding the embedded sources.
@@ -2440,10 +2540,18 @@ enum RolesWire {
             return try writer.finish()
         }
 
-        /// Writes this record into a new array of its exact size.
+        /// Counts the bytes that `write(into:)` writes for this record, without writing them.
+        /// - Throws: `GesWireError` when a value does not fit its field.
+        func encodedByteCount() throws(GesWireError) -> Int {
+            var writer = GesBitWriter.counting()
+            try __writeFields(&writer, Self.__paths, 0)
+            return try writer.finish()
+        }
+
+        /// Writes this record into a new array of its exact size, which `encodedByteCount()` counts first.
         /// - Throws: `GesWireError` when a value does not fit its field.
         func encoded() throws(GesWireError) -> [UInt8] {
-            let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: Swift.max(Self.maxByteCount, 1), alignment: 8)
+            let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: Swift.max(try encodedByteCount(), 1), alignment: 8)
             defer { buffer.deallocate() }
             let count = try write(into: buffer)
             return Array(buffer[0..<count])
@@ -2547,10 +2655,22 @@ enum RolesWire {
             return try writer.finish()
         }
 
-        /// Writes what differs from a baseline into a new array of its exact size.
+        /// Counts the bytes that `writeDelta(against:into:)` writes against a baseline, without writing them.
+        /// - Throws: `GesWireError` when a value does not fit its field or the keys differ.
+        func deltaEncodedByteCount(against baseline: World_Body) throws(GesWireError) -> Int {
+            var writer = GesBitWriter.counting()
+            _ = try __writeDelta(baseline, &writer, Self.__paths, 0, true)
+            return try writer.finish()
+        }
+
+        /// Writes what differs from a baseline into a new array of its exact size. A count comes first: it sizes the buffer for
+        /// the elements that the writer tries and takes back, so that the largest delta is not allocated.
         /// - Throws: `GesWireError` when a value does not fit its field or the keys differ.
         func deltaEncoded(against baseline: World_Body) throws(GesWireError) -> [UInt8] {
-            let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: Swift.max(Self.maxByteCount, 1), alignment: 8)
+            var writer = GesBitWriter.counting()
+            _ = try __writeDelta(baseline, &writer, Self.__paths, 0, true)
+            _ = try writer.finish()
+            let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: Swift.max(writer.requiredByteCount, 1), alignment: 8)
             defer { buffer.deallocate() }
             let count = try writeDelta(against: baseline, into: buffer)
             return Array(buffer[0..<count])
@@ -2671,7 +2791,7 @@ enum RolesWire {
             return changed
         }
 
-        private static let __valueSchema = __GesSchemasdc1a0056836fa47e.bind("World_Body", bindingHash)
+        private static let __valueSchema = __GesSchemasd1ed2bb08f30749f.bind("World_Body", bindingHash)
 
         /// Converts this record into a GES Record value, as `GesSchemaValues` decodes its bytes; this allocates.
         /// - Throws: `GesWireError` when a value does not fit its field, or the error of binding the embedded sources.
@@ -2748,10 +2868,18 @@ enum RolesWire {
             return try writer.finish()
         }
 
-        /// Writes this record into a new array of its exact size.
+        /// Counts the bytes that `write(into:)` writes for this record, without writing them.
+        /// - Throws: `GesWireError` when a value does not fit its field.
+        func encodedByteCount() throws(GesWireError) -> Int {
+            var writer = GesBitWriter.counting()
+            try __writeFields(&writer, Self.__paths, 0)
+            return try writer.finish()
+        }
+
+        /// Writes this record into a new array of its exact size, which `encodedByteCount()` counts first.
         /// - Throws: `GesWireError` when a value does not fit its field.
         func encoded() throws(GesWireError) -> [UInt8] {
-            let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: Swift.max(Self.maxByteCount, 1), alignment: 8)
+            let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: Swift.max(try encodedByteCount(), 1), alignment: 8)
             defer { buffer.deallocate() }
             let count = try write(into: buffer)
             return Array(buffer[0..<count])
@@ -3033,10 +3161,30 @@ enum RolesWire {
             return try writer.finish()
         }
 
-        /// Writes what differs from a baseline into a new array of its exact size.
+        /// Counts the bytes that `writeDelta(against:into:)` writes against a baseline, without writing them.
+        /// - Throws: `GesWireError` when a value does not fit its field or the keys differ.
+        func deltaEncodedByteCount(against baseline: World_Bot) throws(GesWireError) -> Int {
+            var writer = GesBitWriter.counting()
+            let paths = Self.__paths
+            let key = try Self.__wire0(self.id, paths, 0)
+            if try key != Self.__wire0(baseline.id, paths, 0) { throw GesWireError(code: GesWireError.keyMismatch, path: paths[0]) }
+            try writer.write(key, width: 8)
+            _ = try __writeDelta(baseline, &writer, Self.__paths, 0, true)
+            return try writer.finish()
+        }
+
+        /// Writes what differs from a baseline into a new array of its exact size. A count comes first: it sizes the buffer for
+        /// the elements that the writer tries and takes back, so that the largest delta is not allocated.
         /// - Throws: `GesWireError` when a value does not fit its field or the keys differ.
         func deltaEncoded(against baseline: World_Bot) throws(GesWireError) -> [UInt8] {
-            let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: Swift.max(Self.maxByteCount, 1), alignment: 8)
+            var writer = GesBitWriter.counting()
+            let paths = Self.__paths
+            let key = try Self.__wire0(self.id, paths, 0)
+            if try key != Self.__wire0(baseline.id, paths, 0) { throw GesWireError(code: GesWireError.keyMismatch, path: paths[0]) }
+            try writer.write(key, width: 8)
+            _ = try __writeDelta(baseline, &writer, Self.__paths, 0, true)
+            _ = try writer.finish()
+            let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: Swift.max(writer.requiredByteCount, 1), alignment: 8)
             defer { buffer.deallocate() }
             let count = try writeDelta(against: baseline, into: buffer)
             return Array(buffer[0..<count])
@@ -3459,7 +3607,7 @@ enum RolesWire {
             return changed
         }
 
-        private static let __valueSchema = __GesSchemasdc1a0056836fa47e.bind("World_Bot", bindingHash)
+        private static let __valueSchema = __GesSchemasd1ed2bb08f30749f.bind("World_Bot", bindingHash)
 
         /// Converts this record into a GES Record value, as `GesSchemaValues` decodes its bytes; this allocates.
         /// - Throws: `GesWireError` when a value does not fit its field, or the error of binding the embedded sources.
@@ -3495,20 +3643,55 @@ enum RolesWire {
     /// The schema `:World_Cards`, read and written without allocation once its storage has grown.
     final class World_Cards {
         /// The schema hash, independent of parameter values.
-        static let schemaHash: UInt64 = 0x29222cf2bb6c499d
+        static let schemaHash: UInt64 = 0x50b813cda1e6871a
         /// The hash over the schema hash and the parameter values this code was generated with.
-        static let bindingHash: UInt64 = 0x9702fc517d7e987c
+        static let bindingHash: UInt64 = 0x875e24e8849b0e5b
         /// The size of the largest encoding in bytes.
-        static let maxByteCount = 35
+        static let maxByteCount = 85
         static let __paths: [String] = [
             "cards",
             "cards[]",
             "cards[].label",
+            "labels",
+            "labels[]",
         ]
 
         /// The field `cards`, at most 4 elements.
         @exclusivity(unchecked) var cards: [Panel_Badge] = []
+
+        /// The field `labels`, at most 4 elements.
+        @exclusivity(unchecked) var labels: [LabelsItem] = []
         @exclusivity(unchecked) private var __cardsPool: [Panel_Badge] = []
+        @exclusivity(unchecked) private var __labelsPool: [LabelsItem] = []
+
+        /// Sets `cards` to `count` elements that the record reuses, as a read does; their fields keep earlier values until they are set.
+        func setCardsCount(_ count: Int) {
+            precondition(count >= 0, "A count is not negative.")
+            self.cards.removeAll(keepingCapacity: true)
+            for position in 0..<count {
+                if position == self.__cardsPool.count { self.__cardsPool.append(Panel_Badge()) }
+                self.cards.append(self.__cardsPool[position])
+            }
+        }
+
+        /// Sets `labels` to `count` elements that the record reuses, as a read does; their fields keep earlier values until they are set.
+        func setLabelsCount(_ count: Int) {
+            precondition(count >= 0, "A count is not negative.")
+            self.labels.removeAll(keepingCapacity: true)
+            for position in 0..<count {
+                if position == self.__labelsPool.count { self.__labelsPool.append(LabelsItem()) }
+                self.labels.append(self.__labelsPool[position])
+            }
+        }
+
+        /// The elements of `labels` as strings; reading and setting allocate, and setting reuses the elements.
+        var labelsValues: [String] {
+            get { self.labels.map { $0.value } }
+            set {
+                setLabelsCount(newValue.count)
+                for (index, text) in newValue.enumerated() { self.labels[index].value = text }
+            }
+        }
 
         /// Creates a record with every field at its zero value.
         init() {}
@@ -3522,10 +3705,18 @@ enum RolesWire {
             return try writer.finish()
         }
 
-        /// Writes this record into a new array of its exact size.
+        /// Counts the bytes that `write(into:)` writes for this record, without writing them.
+        /// - Throws: `GesWireError` when a value does not fit its field.
+        func encodedByteCount() throws(GesWireError) -> Int {
+            var writer = GesBitWriter.counting()
+            try __writeFields(&writer, Self.__paths, 0)
+            return try writer.finish()
+        }
+
+        /// Writes this record into a new array of its exact size, which `encodedByteCount()` counts first.
         /// - Throws: `GesWireError` when a value does not fit its field.
         func encoded() throws(GesWireError) -> [UInt8] {
-            let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: Swift.max(Self.maxByteCount, 1), alignment: 8)
+            let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: Swift.max(try encodedByteCount(), 1), alignment: 8)
             defer { buffer.deallocate() }
             let count = try write(into: buffer)
             return Array(buffer[0..<count])
@@ -3561,6 +3752,11 @@ enum RolesWire {
             for item in self.cards {
                 try item.__writeFields(&writer, paths, at + 2)
             }
+            if self.labels.count > 4 { throw GesWireError(code: GesWireError.tooLong, path: paths[at + 3]) }
+            try writer.write(UInt64(self.labels.count), width: 3)
+            for item in self.labels {
+                try item.__writeFields(&writer, paths, at + 4)
+            }
         }
 
         func __readFields(_ reader: inout GesBitReader, _ paths: [String], _ at: Int) throws(GesWireError) {
@@ -3575,6 +3771,17 @@ enum RolesWire {
                     self.cards.append(item)
                 }
             }
+            do {
+                let count = Int(try reader.read(3, path: paths[at + 3]))
+                if count > 4 { throw GesWireError(code: GesWireError.invalidCount, path: paths[at + 3]) }
+                self.labels.removeAll(keepingCapacity: true)
+                for position in 0..<count {
+                    if position == self.__labelsPool.count { self.__labelsPool.append(LabelsItem()) }
+                    let item = self.__labelsPool[position]
+                    try item.__readFields(&reader, paths, at + 4)
+                    self.labels.append(item)
+                }
+            }
         }
 
         #if DEBUG || GES_CHECK_SHARING
@@ -3583,11 +3790,13 @@ enum RolesWire {
         func __mark(_ busy: Bool) {
             self.__busy = busy
             for item in self.__cardsPool { item.__mark(busy) }
+            for item in self.__labelsPool { item.__mark(busy) }
         }
 
         func __holds() -> Bool {
             if self.__busy { return true }
             for item in self.cards where item.__holds() { return true }
+            for item in self.labels where item.__holds() { return true }
             return false
         }
         #endif
@@ -3600,10 +3809,22 @@ enum RolesWire {
             return true
         }
 
+        private func __same3(_ baseline: World_Cards, _ paths: [String], _ at: Int) throws(GesWireError) -> Bool {
+            if self.labels.count != baseline.labels.count { return false }
+            for index3 in 0..<self.labels.count {
+                if !(try self.labels[index3].__same(baseline.labels[index3], paths, at + 4)) { return false }
+            }
+            return true
+        }
+
         func __same(_ other: World_Cards, _ paths: [String], _ at: Int) throws(GesWireError) -> Bool {
             if self.cards.count != other.cards.count { return false }
             for index0 in 0..<self.cards.count {
                 if !(try self.cards[index0].__same(other.cards[index0], paths, at + 2)) { return false }
+            }
+            if self.labels.count != other.labels.count { return false }
+            for index3 in 0..<self.labels.count {
+                if !(try self.labels[index3].__same(other.labels[index3], paths, at + 4)) { return false }
             }
             return true
         }
@@ -3617,6 +3838,13 @@ enum RolesWire {
                 let item0 = self.__cardsPool[index0]
                 item0.copy(from: other.cards[index0])
                 self.cards.append(item0)
+            }
+            self.labels.removeAll(keepingCapacity: true)
+            for index3 in 0..<other.labels.count {
+                if index3 == self.__labelsPool.count { self.__labelsPool.append(LabelsItem()) }
+                let item3 = self.__labelsPool[index3]
+                item3.copy(from: other.labels[index3])
+                self.labels.append(item3)
             }
         }
 
@@ -3647,10 +3875,22 @@ enum RolesWire {
             return try writer.finish()
         }
 
-        /// Writes what differs from a baseline into a new array of its exact size.
+        /// Counts the bytes that `writeDelta(against:into:)` writes against a baseline, without writing them.
+        /// - Throws: `GesWireError` when a value does not fit its field or the keys differ.
+        func deltaEncodedByteCount(against baseline: World_Cards) throws(GesWireError) -> Int {
+            var writer = GesBitWriter.counting()
+            _ = try __writeDelta(baseline, &writer, Self.__paths, 0, true)
+            return try writer.finish()
+        }
+
+        /// Writes what differs from a baseline into a new array of its exact size. A count comes first: it sizes the buffer for
+        /// the elements that the writer tries and takes back, so that the largest delta is not allocated.
         /// - Throws: `GesWireError` when a value does not fit its field or the keys differ.
         func deltaEncoded(against baseline: World_Cards) throws(GesWireError) -> [UInt8] {
-            let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: Swift.max(Self.maxByteCount, 1), alignment: 8)
+            var writer = GesBitWriter.counting()
+            _ = try __writeDelta(baseline, &writer, Self.__paths, 0, true)
+            _ = try writer.finish()
+            let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: Swift.max(writer.requiredByteCount, 1), alignment: 8)
             defer { buffer.deallocate() }
             let count = try writeDelta(against: baseline, into: buffer)
             return Array(buffer[0..<count])
@@ -3690,7 +3930,7 @@ enum RolesWire {
 
         func __writeDelta(_ baseline: World_Cards, _ writer: inout GesBitWriter, _ paths: [String], _ at: Int, _ top: Bool) throws(GesWireError) -> Bool {
             let first = writer.bitPosition
-            var left = 1
+            var left = 2
             while left > 0 {
                 try writer.write(0, width: Swift.min(left, 64))
                 left -= 64
@@ -3713,11 +3953,27 @@ enum RolesWire {
                 }
                 ordinal += 1
             }
+            do {
+                var set3 = false
+                if !(try __same3(baseline, paths, at)) {
+                    if self.labels.count > 4 { throw GesWireError(code: GesWireError.tooLong, path: paths[at + 3]) }
+                    try writer.write(UInt64(self.labels.count), width: 3)
+                    for item in self.labels {
+                        try item.__writeFields(&writer, paths, at + 4)
+                    }
+                    set3 = true
+                }
+                if set3 {
+                    writer.setBit(first + ordinal)
+                    changed = true
+                }
+                ordinal += 1
+            }
             return changed
         }
 
         func __readDelta(_ baseline: World_Cards, _ reader: inout GesBitReader, _ paths: [String], _ at: Int, _ top: Bool) throws(GesWireError) -> Bool {
-            let fieldCount = 1
+            let fieldCount = 2
             try reader.require(fieldCount, path: at == 0 ? "" : paths[at - 1])
             let changeBits = reader.bitPosition
             reader.seek(to: changeBits + fieldCount)
@@ -3753,10 +4009,40 @@ enum RolesWire {
                 }
                 ordinal += 1
             }
+            do {
+                let payload3 = reader.bitPosition
+                reader.seek(to: changeBits + ordinal)
+                let set3 = try reader.read(1, path: paths[at + 3]) == 1
+                reader.seek(to: payload3)
+                if set3 {
+                    do {
+                        let count = Int(try reader.read(3, path: paths[at + 3]))
+                        if count > 4 { throw GesWireError(code: GesWireError.invalidCount, path: paths[at + 3]) }
+                        self.labels.removeAll(keepingCapacity: true)
+                        for position in 0..<count {
+                            if position == self.__labelsPool.count { self.__labelsPool.append(LabelsItem()) }
+                            let item = self.__labelsPool[position]
+                            try item.__readFields(&reader, paths, at + 4)
+                            self.labels.append(item)
+                        }
+                    }
+                    if try __same3(baseline, paths, at) { throw GesWireError(code: GesWireError.invalidDelta, path: paths[at + 3]) }
+                    changed = true
+                } else {
+                    self.labels.removeAll(keepingCapacity: true)
+                    for index3 in 0..<baseline.labels.count {
+                        if index3 == self.__labelsPool.count { self.__labelsPool.append(LabelsItem()) }
+                        let item3 = self.__labelsPool[index3]
+                        item3.copy(from: baseline.labels[index3])
+                        self.labels.append(item3)
+                    }
+                }
+                ordinal += 1
+            }
             return changed
         }
 
-        private static let __valueSchema = __GesSchemasdc1a0056836fa47e.bind("World_Cards", bindingHash)
+        private static let __valueSchema = __GesSchemasd1ed2bb08f30749f.bind("World_Cards", bindingHash)
 
         /// Converts this record into a GES Record value, as `GesSchemaValues` decodes its bytes; this allocates.
         /// - Throws: `GesWireError` when a value does not fit its field, or the error of binding the embedded sources.
@@ -3769,11 +4055,66 @@ enum RolesWire {
         func read(value: GesValue) throws {
             _ = try read(from: GesSchemaValues.encode(Self.__valueSchema.get(), value))
         }
+
+        /// An element of the list.
+        final class LabelsItem {
+            /// The field `[]` as UTF-8 bytes, a tag name without #, which are checked when the record is written.
+            @exclusivity(unchecked) var valueUTF8: [UInt8] = []
+            /// The field `[]` as a string; reading and setting it allocate.
+            var value: String {
+                get { String(decoding: self.valueUTF8, as: UTF8.self) }
+                set { self.valueUTF8 = Array(newValue.utf8) }
+            }
+
+            /// Creates an element with every field at its zero value.
+            init() {}
+
+            func __writeFields(_ writer: inout GesBitWriter, _ paths: [String], _ at: Int) throws(GesWireError) {
+                if self.valueUTF8.count > 12 { throw GesWireError(code: GesWireError.tooLong, path: paths[at + 0]) }
+                if !self.valueUTF8.withUnsafeBytes({ GesWireRules.isTagName($0) }) { throw GesWireError(code: GesWireError.invalidTag, path: paths[at + 0]) }
+                try writer.write(UInt64(self.valueUTF8.count), width: 4)
+                for byte in self.valueUTF8 { try writer.write(UInt64(byte), width: 8) }
+            }
+
+            func __readFields(_ reader: inout GesBitReader, _ paths: [String], _ at: Int) throws(GesWireError) {
+                do {
+                    let count = Int(try reader.read(4, path: paths[at + 0]))
+                    if count > 12 { throw GesWireError(code: GesWireError.invalidCount, path: paths[at + 0]) }
+                    try reader.require(count * 8, path: paths[at + 0])
+                    self.valueUTF8.removeAll(keepingCapacity: true)
+                    for _ in 0..<count { self.valueUTF8.append(UInt8(truncatingIfNeeded: try reader.read(8, path: paths[at + 0]))) }
+                    if !self.valueUTF8.withUnsafeBytes({ GesWireRules.isTagName($0) }) { throw GesWireError(code: GesWireError.invalidTag, path: paths[at + 0]) }
+                }
+            }
+
+            #if DEBUG || GES_CHECK_SHARING
+            @exclusivity(unchecked) var __busy = false
+
+            func __mark(_ busy: Bool) { self.__busy = busy }
+
+            func __holds() -> Bool { self.__busy }
+            #endif
+
+            func __same(_ other: LabelsItem, _ paths: [String], _ at: Int) throws(GesWireError) -> Bool {
+                if self.valueUTF8 != other.valueUTF8 { return false }
+                return true
+            }
+
+            /// Copies the values of another record into the storage of this one, without allocating once it has grown.
+            func copy(from other: LabelsItem) {
+                if self === other { return }
+                self.valueUTF8.removeAll(keepingCapacity: true)
+                self.valueUTF8.append(contentsOf: other.valueUTF8)
+            }
+
+            func __quantize(_ paths: [String], _ at: Int) throws(GesWireError) {
+            }
+        }
     }
 }
 
 /// The schema sources of this file, which the conversion to and from GES values binds once per type.
-private enum __GesSchemasdc1a0056836fa47e {
+private enum __GesSchemasd1ed2bb08f30749f {
     /// The embedded sources no longer bind like the generated code.
     struct Mismatch: Error {}
 
@@ -3792,6 +4133,7 @@ private enum __GesSchemasdc1a0056836fa47e {
                 "",
                 "wire(world) schema :World_Cards as {",
                 "  cards: :List(:Panel_Badge) max 4",
+                "  labels: :List(:Tag max 12) max 4",
                 "}",
                 "",
                 "schema :World_Bot as {",

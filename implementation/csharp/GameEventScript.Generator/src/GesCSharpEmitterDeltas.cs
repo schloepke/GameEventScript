@@ -439,27 +439,44 @@ internal static partial class GesCSharpEmitter
         code.Line($"public {self}int WriteDelta({parameter} baseline, Span<byte> buffer)");
         code.Open("{");
         code.Line("var writer = new GesBitWriter(buffer);");
+        var body = new List<string>();
         if (key is not null)
         {
-            code.Line("var paths = __paths;");
-            code.Line("const int at = 0;");
-            code.Line($"var key = __Wire0({key.Base}, paths, at);");
-            code.Line($"if (key != __Wire0(baseline.{key.Base}, paths, at)) throw new GesWireException(GesWireException.KeyMismatch, paths[0]);");
-            code.Line($"writer.Write(key, {key.Value.Encoding.Width.ToString(CultureInfo.InvariantCulture)});");
+            body.Add("var paths = __paths;");
+            body.Add("const int at = 0;");
+            body.Add($"var key = __Wire0({key.Base}, paths, at);");
+            body.Add($"if (key != __Wire0(baseline.{key.Base}, paths, at)) throw new GesWireException(GesWireException.KeyMismatch, paths[0]);");
+            body.Add($"writer.Write(key, {key.Value.Encoding.Width.ToString(CultureInfo.InvariantCulture)});");
         }
 
-        code.Line("__WriteDelta(baseline, ref writer, __paths, 0, true);");
-        code.Line("return writer.Finish();");
+        body.Add("__WriteDelta(baseline, ref writer, __paths, 0, true);");
+        body.Add("return writer.Finish();");
+        foreach (var line in body) code.Line(line);
         code.Close();
         code.Blank();
-        code.Line("/// <summary>Writes what differs from a baseline into a new array of its exact size.</summary>");
+        code.Line("/// <summary>Counts the bytes that <see cref=\"WriteDelta\"/> writes against a baseline, without writing them.</summary>");
+        code.Line("/// <param name=\"baseline\">The baseline, another instance.</param>");
+        code.Line("/// <returns>The exact byte count.</returns>");
+        code.Line("/// <exception cref=\"GesWireException\">A value does not fit its field, or the keys differ.</exception>");
+        code.Line($"public {self}int DeltaByteCount({parameter} baseline)");
+        code.Open("{");
+        code.Line("var writer = GesBitWriter.Counting();");
+        foreach (var line in body) code.Line(line);
+        code.Close();
+        code.Blank();
+        code.Line("/// <summary>Writes what differs from a baseline into a new array of its exact size. A count comes first: it sizes the");
+        code.Line("/// buffer for the elements that the writer tries and takes back, so that the largest delta is not allocated.</summary>");
         code.Line("/// <param name=\"baseline\">The baseline, another instance.</param>");
         code.Line("/// <returns>The bytes.</returns>");
         code.Line("/// <exception cref=\"GesWireException\">A value does not fit its field, or the keys differ.</exception>");
         code.Line($"public {self}byte[] ToDeltaBytes({parameter} baseline)");
         code.Open("{");
-        code.Line("var buffer = new byte[MaxByteCount];");
-        code.Line("return buffer.AsSpan(0, WriteDelta(baseline, buffer)).ToArray();");
+        code.Line("var writer = GesBitWriter.Counting();");
+        for (var index = 0; index < body.Count - 1; index++) code.Line(body[index]);
+        code.Line("writer.Finish();");
+        code.Line("var buffer = new byte[writer.RequiredByteCount];");
+        code.Line("var count = WriteDelta(baseline, buffer);");
+        code.Line("return count == buffer.Length ? buffer : buffer.AsSpan(0, count).ToArray();");
         code.Close();
         code.Blank();
         code.Line("/// <summary>Reads a delta against a baseline into this instance. After an error its values are unspecified.</summary>");

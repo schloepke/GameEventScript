@@ -397,22 +397,35 @@ internal static partial class GesSwiftEmitter
         code.Line("/// - Throws: `GesWireError` when a value does not fit its field, the keys differ, or the buffer is too small.");
         code.Open($"{access}func writeDelta(against baseline: {type.Name}, into buffer: UnsafeMutableRawBufferPointer) throws(GesWireError) -> Int {{");
         code.Line("var writer = GesBitWriter(into: buffer)");
+        var body = new List<string>();
         if (key is not null)
         {
-            code.Line("let paths = Self.__paths");
-            code.Line($"let key = try Self.__wire0({Target(key.Base)}, paths, 0)");
-            code.Line($"if try key != Self.__wire0({Other("baseline", key.Base)}, paths, 0) {{ throw GesWireError(code: GesWireError.keyMismatch, path: paths[0]) }}");
-            code.Line($"try writer.write(key, width: {key.Value.Encoding.Width.ToString(CultureInfo.InvariantCulture)})");
+            body.Add("let paths = Self.__paths");
+            body.Add($"let key = try Self.__wire0({Target(key.Base)}, paths, 0)");
+            body.Add($"if try key != Self.__wire0({Other("baseline", key.Base)}, paths, 0) {{ throw GesWireError(code: GesWireError.keyMismatch, path: paths[0]) }}");
+            body.Add($"try writer.write(key, width: {key.Value.Encoding.Width.ToString(CultureInfo.InvariantCulture)})");
         }
 
-        code.Line("_ = try __writeDelta(baseline, &writer, Self.__paths, 0, true)");
-        code.Line("return try writer.finish()");
+        body.Add("_ = try __writeDelta(baseline, &writer, Self.__paths, 0, true)");
+        body.Add("return try writer.finish()");
+        foreach (var line in body) code.Line(line);
         code.Close();
         code.Blank();
-        code.Line("/// Writes what differs from a baseline into a new array of its exact size.");
+        code.Line("/// Counts the bytes that `writeDelta(against:into:)` writes against a baseline, without writing them.");
+        code.Line("/// - Throws: `GesWireError` when a value does not fit its field or the keys differ.");
+        code.Open($"{access}func deltaEncodedByteCount(against baseline: {type.Name}) throws(GesWireError) -> Int {{");
+        code.Line("var writer = GesBitWriter.counting()");
+        foreach (var line in body) code.Line(line);
+        code.Close();
+        code.Blank();
+        code.Line("/// Writes what differs from a baseline into a new array of its exact size. A count comes first: it sizes the buffer for");
+        code.Line("/// the elements that the writer tries and takes back, so that the largest delta is not allocated.");
         code.Line("/// - Throws: `GesWireError` when a value does not fit its field or the keys differ.");
         code.Open($"{access}func deltaEncoded(against baseline: {type.Name}) throws(GesWireError) -> [UInt8] {{");
-        code.Line("let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: Swift.max(Self.maxByteCount, 1), alignment: 8)");
+        code.Line("var writer = GesBitWriter.counting()");
+        for (var index = 0; index < body.Count - 1; index++) code.Line(body[index]);
+        code.Line("_ = try writer.finish()");
+        code.Line("let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: Swift.max(writer.requiredByteCount, 1), alignment: 8)");
         code.Line("defer { buffer.deallocate() }");
         code.Line("let count = try writeDelta(against: baseline, into: buffer)");
         code.Line("return Array(buffer[0..<count])");

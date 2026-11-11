@@ -45,6 +45,13 @@ internal static class GesSwiftModelEmitter
 
     private static string Member(string pascal) => Name(GesSchemaPlanner.Camel(pascal));
 
+    // The argument label of a declaration: Swift needs backticks there only for inout, var and let; a call needs none.
+    private static string Label(string pascal)
+    {
+        var name = GesSchemaPlanner.Camel(pascal);
+        return name is "inout" or "var" or "let" ? "`" + name + "`" : name;
+    }
+
     private static void Record(GesSchemaPlanner.Code code, GesModelType type, string access, bool bindings, string? values)
     {
         var fields = GesModelPlanner.Fields(type);
@@ -57,6 +64,7 @@ internal static class GesSwiftModelEmitter
         }
 
         if (key is not null && GesSchemaPlanner.Camel(key.Base) != "id") names.Add(("id", "the identity of the key " + key.Field.Name));
+        names.Add(("schemaHash", "the generated member schemaHash"));
         if (bindings) names.Add(("gesValue", "the generated member gesValue"));
         if (values is not null) names.Add(("toValue", "the generated member toValue"));
         if (bindings && fields.Exists(field => field.Field.Name == "fields"))
@@ -65,6 +73,9 @@ internal static class GesSwiftModelEmitter
 
         code.Line($"/// The model of the schema `:{type.Name}`: a plain value that is never encoded.");
         code.Open($"{access}struct {type.Name}: Hashable, Sendable, Codable{(key is null ? "" : ", Identifiable")} {{");
+        code.Line($"/// The hash of the schema `:{type.Name}`, which wire records of it carry too; a test that compares it notices stale generated code.");
+        code.Line($"{access}static let schemaHash: UInt64 = 0x{GesSchemaLayoutJson.Hex(type.Hash)}");
+        if (fields.Count > 0) code.Blank();
         var first = true;
         foreach (var field in fields)
         {
@@ -84,7 +95,7 @@ internal static class GesSwiftModelEmitter
         code.Blank();
         code.Line("/// Creates a record from its fields; an absent value defaults to nil and a list to empty.");
         var parameters = new List<string>();
-        foreach (var field in fields) parameters.Add($"{Member(field.Base)}: {Type(field.Value)}{Default(field.Value)}");
+        foreach (var field in fields) parameters.Add($"{Label(field.Base)}: {Type(field.Value)}{Default(field.Value)}");
         code.Open($"{access}init({string.Join(", ", parameters)}) {{");
         foreach (var field in fields) code.Line($"self.{Member(field.Base)} = {Member(field.Base)}");
         code.Close();
@@ -242,7 +253,7 @@ internal static class GesSwiftModelEmitter
         if (value.Kind == GesModelKind.Schema) return $"try read{value.Model.Schema}({expression}, {path})";
         var element = Descends(value.Element!)
             ? Read(value.Element!, owner, x, p, helper, support, depth + 1)
-            : $"try require({Decode(value.Element!, owner, x, helper, support, plain: true)}, {p})";
+            : $"try require({Decode(value.Element!, owner, x, helper, support, plain: true)}, {x}, {p})";
         return $"try readList({expression}, {path}) {{ ({x}: GesValue, {p}: String) throws(GesWireError) in {element} }}";
     }
 
@@ -347,7 +358,7 @@ internal static class GesSwiftModelEmitter
                 code.Close();
             }
 
-            code.Line($"try call.setExternalValue({type.Name}Value({type.Name}({string.Join(", ", fields.ConvertAll(field => $"{Member(field.Base)}: {Member(field.Base)}"))})))");
+            code.Line($"try call.setExternalValue({type.Name}Value({type.Name}({string.Join(", ", fields.ConvertAll(field => $"{GesSchemaPlanner.Camel(field.Base)}: {Member(field.Base)}"))})))");
             code.Close();
             code.Close();
             Conversions(code, type.Name, fields, "GesTypes", support, false);
@@ -403,7 +414,7 @@ internal static class GesSwiftModelEmitter
             var names = type.Name + "Fields";
             var typeLiteral = GesSchemaPlanner.Literal(type.Name, true);
             var arguments = new List<string>();
-            for (var index = 0; index < fields.Count; index++) arguments.Add($"{Member(fields[index].Base)}: field{index}");
+            for (var index = 0; index < fields.Count; index++) arguments.Add($"{GesSchemaPlanner.Camel(fields[index].Base)}: field{index}");
             if (!first) code.Blank();
             first = false;
             code.Line($"static let {names} = [{string.Join(", ", fields.ConvertAll(field => GesSchemaPlanner.Literal(field.Field.Name, true)))}]");
@@ -417,18 +428,19 @@ internal static class GesSwiftModelEmitter
             code.Open($"static func read{type.Name}(_ value: GesValue, _ path: String) throws(GesWireError) -> {type.Name} {{");
             if (fields.Count == 0)
             {
-                code.Line($"guard recordFields(value, {typeLiteral}, {names}) != nil else {{ throw mismatch(path) }}");
+                code.Line($"guard recordFields(value, {typeLiteral}, {names}) != nil else {{ throw failure(value, path) }}");
                 code.Line($"return {type.Name}()");
             }
             else
             {
-                code.Line($"guard let fields = recordFields(value, {typeLiteral}, {names}) else {{ throw mismatch(path) }}");
+                code.Line($"guard let fields = recordFields(value, {typeLiteral}, {names}) else {{ throw failure(value, path) }}");
                 for (var index = 0; index < fields.Count; index++)
                 {
                     var fieldLiteral = GesSchemaPlanner.Literal(fields[index].Field.Name, true);
-                    var field = $"fields.get({fieldLiteral}) ?? .nothing";
-                    if (Descends(fields[index].Value)) code.Line($"let field{index} = {Read(fields[index].Value, type.Name, field, $"fieldPath(path, {fieldLiteral})", name, support)}");
-                    else code.Line($"guard let field{index} = {Decode(fields[index].Value, type.Name, field, name, support, plain: true)} else {{ throw mismatch(fieldPath(path, {fieldLiteral})) }}");
+                    var held = "value" + index.ToString(CultureInfo.InvariantCulture);
+                    code.Line($"let {held} = {(fields[index].Value.Nullable ? $"fields.get({fieldLiteral}) ?? .nothing" : $"try required(fields, {fieldLiteral}, path)")}");
+                    if (Descends(fields[index].Value)) code.Line($"let field{index} = {Read(fields[index].Value, type.Name, held, $"fieldPath(path, {fieldLiteral})", name, support)}");
+                    else code.Line($"guard let field{index} = {Decode(fields[index].Value, type.Name, held, name, support, plain: true)} else {{ throw failure({held}, fieldPath(path, {fieldLiteral})) }}");
                 }
 
                 code.Line($"return {type.Name}({string.Join(", ", arguments)})");
@@ -463,16 +475,24 @@ internal static class GesSwiftModelEmitter
         code.Blank();
         code.Line("static func fieldPath(_ path: String, _ field: String) -> String { path.isEmpty ? field : path + \".\" + field }");
         code.Blank();
-        code.Line("static func mismatch(_ path: String) -> GesWireError { GesWireError(code: GesWireError.typeMismatch, path: path) }");
+        code.Line("// A value that does not convert: nothing where a value is required, or a value of another type.");
+        code.Open("static func failure(_ value: GesValue, _ path: String) -> GesWireError {");
+        code.Line("GesWireError(code: value.isNothing ? GesWireError.nothingValue : GesWireError.typeMismatch, path: path)");
+        code.Close();
         code.Blank();
-        code.Open("static func require<T>(_ value: T?, _ path: String) throws(GesWireError) -> T {");
-        code.Line("guard let value else { throw mismatch(path) }");
+        code.Open("static func required(_ fields: GesValueMap, _ name: String, _ path: String) throws(GesWireError) -> GesValue {");
+        code.Line("guard let value = fields.get(name) else { throw GesWireError(code: GesWireError.missingField, path: fieldPath(path, name)) }");
         code.Line("return value");
+        code.Close();
+        code.Blank();
+        code.Open("static func require<T>(_ converted: T?, _ value: GesValue, _ path: String) throws(GesWireError) -> T {");
+        code.Line("guard let converted else { throw failure(value, path) }");
+        code.Line("return converted");
         code.Close();
         code.Blank();
         code.Line("// The elements of a List, each read at the list's path with `[]`.");
         code.Open("static func readList<T>(_ value: GesValue, _ path: String, _ element: (GesValue, String) throws(GesWireError) -> T) throws(GesWireError) -> [T] {");
-        code.Line("guard let items = value.listValue else { throw mismatch(path) }");
+        code.Line("guard let items = value.listValue else { throw failure(value, path) }");
         code.Line("let item = path + \"[]\"");
         code.Line("var result: [T] = []");
         code.Line("result.reserveCapacity(items.count)");

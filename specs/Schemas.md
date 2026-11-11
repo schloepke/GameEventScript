@@ -1067,7 +1067,10 @@ calls them with constant widths and operands, so they are part of the contract:
   returns the byte count. A value has no bits above its width. `BitPosition`, `SetBit` for a
   bit already written as zero and `Rewind` to an earlier position serve encoders that learn a
   flag or count only later. A full buffer is `wire.bufferTooSmall`; a buffer of the record's
-  byte count suffices.
+  byte count suffices. `GesBitWriter.Counting()` (Swift `GesBitWriter.counting()`) creates a writer without a buffer that
+  accepts every write, stores nothing and returns from `Finish` the byte count the same writes need; its
+  `RequiredByteCount` (Swift `requiredByteCount`) is the room a buffer needs on the way, which exceeds that count when a
+  `Rewind` took bits back, as a delta does for an element that turned out unchanged.
 - `GesBitReader` reads such values from untrusted data with an optional byte limit. Reading
   past the end is `wire.truncated`, or `wire.limitExceeded` when the limit ends first, with
   the path the caller names; `ReadBytes` reads nothing when the bytes do not fit. `Require`
@@ -1186,6 +1189,22 @@ type, a nullable view. A message adds a Boolean per tag, and a message set holds
 member and one record per message. After a failed read the values of the target are unspecified.
 A field named like its type, which C# does not allow, gets the suffix `Value` in every language.
 
+A required list of class elements gets `Set<Field>Count(count)` (Swift `set<Field>Count(_:)`), which sets the list to
+`count` elements the record reuses, as a read does, so a caller fills it without allocating once it has grown; the
+elements keep earlier values until their fields are set. A list of Text or `:Tag max n` elements also gets
+`<Field>Values` (Swift `<field>Values`), its elements as C# `string[]` or Swift `[String]`; reading and setting it
+allocate, and setting reuses the elements. A field whose name collides with either fails with `generate.nameCollision`.
+
+A record writes into a caller's buffer with `Write` (Swift `write(into:)`), for which `MaxByteCount` always suffices, and
+into a new array of its exact size with `ToBytes` (Swift `encoded()`). `ByteCount` (Swift `encodedByteCount()`) returns
+that exact size without writing, with the same `wire.*` failures; `ToBytes` uses it, so it never allocates the largest
+encoding. A record of `:Bytes max 4194304` that holds a kilobyte allocates a kilobyte. Deltas offer the same with
+`DeltaByteCount` and `ToDeltaBytes` (Swift `deltaEncodedByteCount(against:)` and `deltaEncoded(against:)`). Counting
+runs the write over a counting [`GesBitWriter`](#bit-primitives) and skips the bytes of a Text or Bytes at once, so a full
+write costs about one and a half writes and a sparse large record a fraction of the old allocation. A delta writer tries
+elements and takes unchanged ones back, so `ToDeltaBytes` sizes its buffer by the counting writer's `RequiredByteCount`
+and returns the exact bytes.
+
 Every generated record compares by wire values with `WireEquals`, the indices and stored bits
 that it writes, never raw numbers; `Quantize` replaces each quantized number by the value its index
 decodes to, and a class copies another record into its storage with `CopyFrom` (Swift
@@ -1265,6 +1284,9 @@ alternative's type. A list element type is named `<Field>Item`, so a closed Tag 
   list with its original; value equality compares lists element by element, and 0 and -0 hash alike. A file holds one
   internal helper class named after its header; it also holds the value conversions that `--bindings` and `--values`
   share, so a file with both options holds them once.
+- Every model type carries `SchemaHash` (Swift `static let schemaHash`), the [schema hash](#schema-hash) of its schema,
+  which a wire record of the same schema carries too, so a test notices generated code that a schema change left stale.
+  A field that would take its name fails with `generate.nameCollision`.
 - Model and wire types of one schema are separate types in separate files; no conversion between both forms is generated,
   since a client's model rarely has the shape of its wire roots. A program converts in its own code.
 
@@ -1278,8 +1300,10 @@ for a record of its schema, so that wire records and models meet there; no code 
   Percentages, Tags for closed and open tags, Flags as the Map of their set members, Points and Vectors with their unit,
   a union as its alternative's value and an absent optional or `:Nothing` alternative as `nothing`.
 - Reading takes a Record of the schema's name, whose other fields are ignored, or a Map whose keys are all fields of it,
-  and converts strictly as the [script bindings](#script-bindings) do. A field that does not convert fails with
-  `wire.typeMismatch` at its path, a value that is no such Record or Map at the empty path. A nested record reports the
+  and converts strictly as the [script bindings](#script-bindings) do. It fails with the codes of the
+  [value path](#value-path): a required field without a key is `wire.missingField`, `nothing` where a value is required
+  is `wire.nothingValue`, and a value of another type is `wire.typeMismatch`, each at the field's path; a value that is no
+  such Record or Map fails at the empty path. A nested record reports the
   path of its own field and a list element its list's path with `[]`, as the value path names them, such as
   `entries[].level`; a union that holds none of its alternatives reports itself.
 - So a wire record reads a model with `read(value:)` (C# `ReadValue`), failing as a write would for a value out of range

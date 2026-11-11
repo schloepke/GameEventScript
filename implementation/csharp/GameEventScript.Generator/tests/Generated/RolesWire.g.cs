@@ -3,7 +3,7 @@
 //     Do not edit it; generate it again when a schema or a parameter changes.
 //     Parameter worldWidth = 2e3 meter.
 //     World: schema hash 27948924216a58ec, binding hash 67f1ce53774c124d.
-//     World_Cards: schema hash 29222cf2bb6c499d, binding hash 9702fc517d7e987c.
+//     World_Cards: schema hash 50b813cda1e6871a, binding hash 875e24e8849b0e5b.
 //     Panel_Report: schema hash 4885f554a711dde1, binding hash df8ddbb308347288.
 // </auto-generated>
 
@@ -65,13 +65,24 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
             return writer.Finish();
         }
 
-        /// <summary>Writes this record into a new array of its exact size.</summary>
+        /// <summary>Counts the bytes that <see cref="Write"/> writes for this record, without writing them.</summary>
+        /// <returns>The exact byte count.</returns>
+        /// <exception cref="GesWireException">A value does not fit its field.</exception>
+        public int ByteCount()
+        {
+            var writer = GesBitWriter.Counting();
+            __WriteFields(ref writer, __paths, 0);
+            return writer.Finish();
+        }
+
+        /// <summary>Writes this record into a new array of its exact size, which <see cref="ByteCount"/> counts first.</summary>
         /// <returns>The bytes.</returns>
         /// <exception cref="GesWireException">A value does not fit its field.</exception>
         public byte[] ToBytes()
         {
-            var buffer = new byte[MaxByteCount];
-            return buffer.AsSpan(0, Write(buffer)).ToArray();
+            var buffer = new byte[ByteCount()];
+            Write(buffer);
+            return buffer;
         }
 
         /// <summary>Reads a record from untrusted data into this instance. After an error its values are unspecified.</summary>
@@ -166,14 +177,30 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
             return writer.Finish();
         }
 
-        /// <summary>Writes what differs from a baseline into a new array of its exact size.</summary>
+        /// <summary>Counts the bytes that <see cref="WriteDelta"/> writes against a baseline, without writing them.</summary>
+        /// <param name="baseline">The baseline, another instance.</param>
+        /// <returns>The exact byte count.</returns>
+        /// <exception cref="GesWireException">A value does not fit its field, or the keys differ.</exception>
+        public int DeltaByteCount(Panel_Badge baseline)
+        {
+            var writer = GesBitWriter.Counting();
+            __WriteDelta(baseline, ref writer, __paths, 0, true);
+            return writer.Finish();
+        }
+
+        /// <summary>Writes what differs from a baseline into a new array of its exact size. A count comes first: it sizes the
+        /// buffer for the elements that the writer tries and takes back, so that the largest delta is not allocated.</summary>
         /// <param name="baseline">The baseline, another instance.</param>
         /// <returns>The bytes.</returns>
         /// <exception cref="GesWireException">A value does not fit its field, or the keys differ.</exception>
         public byte[] ToDeltaBytes(Panel_Badge baseline)
         {
-            var buffer = new byte[MaxByteCount];
-            return buffer.AsSpan(0, WriteDelta(baseline, buffer)).ToArray();
+            var writer = GesBitWriter.Counting();
+            __WriteDelta(baseline, ref writer, __paths, 0, true);
+            writer.Finish();
+            var buffer = new byte[writer.RequiredByteCount];
+            var count = WriteDelta(baseline, buffer);
+            return count == buffer.Length ? buffer : buffer.AsSpan(0, count).ToArray();
         }
 
         /// <summary>Reads a delta against a baseline into this instance. After an error its values are unspecified.</summary>
@@ -278,14 +305,14 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
         /// <summary>Converts this record into a GES Record value, as <see cref="GesSchemaValues"/> decodes its bytes; this allocates.</summary>
         /// <returns>The Record.</returns>
         /// <exception cref="GesWireException">A value does not fit its field.</exception>
-        public global::GameEventScript.Runtime.Values.GesValue ToValue() => GesSchemaValues.Decode(__valueSchema ??= __GesSchemasdc1a0056836fa47e.Bind("Panel_Badge", BindingHash), ToBytes()).Value;
+        public global::GameEventScript.Runtime.Values.GesValue ToValue() => GesSchemaValues.Decode(__valueSchema ??= __GesSchemasd1ed2bb08f30749f.Bind("Panel_Badge", BindingHash), ToBytes()).Value;
 
         /// <summary>Reads a Record or Map into this instance, as <see cref="GesSchemaValues"/> encodes it; this allocates.</summary>
         /// <param name="value">The value.</param>
         /// <exception cref="GesWireException">The value does not fit the schema.</exception>
         public void ReadValue(global::GameEventScript.Runtime.Values.GesValue value)
         {
-            var schema = __valueSchema ??= __GesSchemasdc1a0056836fa47e.Bind("Panel_Badge", BindingHash);
+            var schema = __valueSchema ??= __GesSchemasd1ed2bb08f30749f.Bind("Panel_Badge", BindingHash);
             var buffer = new byte[MaxByteCount];
             Read(new ReadOnlySpan<byte>(buffer, 0, GesSchemaValues.Encode(schema, value, buffer)));
         }
@@ -345,13 +372,24 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
             return writer.Finish();
         }
 
-        /// <summary>Writes this record into a new array of its exact size.</summary>
+        /// <summary>Counts the bytes that <see cref="Write"/> writes for this record, without writing them.</summary>
+        /// <returns>The exact byte count.</returns>
+        /// <exception cref="GesWireException">A value does not fit its field.</exception>
+        public int ByteCount()
+        {
+            var writer = GesBitWriter.Counting();
+            __WriteFields(ref writer, __paths, 0);
+            return writer.Finish();
+        }
+
+        /// <summary>Writes this record into a new array of its exact size, which <see cref="ByteCount"/> counts first.</summary>
         /// <returns>The bytes.</returns>
         /// <exception cref="GesWireException">A value does not fit its field.</exception>
         public byte[] ToBytes()
         {
-            var buffer = new byte[MaxByteCount];
-            return buffer.AsSpan(0, Write(buffer)).ToArray();
+            var buffer = new byte[ByteCount()];
+            Write(buffer);
+            return buffer;
         }
 
         /// <summary>Reads a record from untrusted data into this instance. After an error its values are unspecified.</summary>
@@ -469,14 +507,30 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
             return writer.Finish();
         }
 
-        /// <summary>Writes what differs from a baseline into a new array of its exact size.</summary>
+        /// <summary>Counts the bytes that <see cref="WriteDelta"/> writes against a baseline, without writing them.</summary>
+        /// <param name="baseline">The baseline, another instance.</param>
+        /// <returns>The exact byte count.</returns>
+        /// <exception cref="GesWireException">A value does not fit its field, or the keys differ.</exception>
+        public int DeltaByteCount(Panel_Entry baseline)
+        {
+            var writer = GesBitWriter.Counting();
+            __WriteDelta(baseline, ref writer, __paths, 0, true);
+            return writer.Finish();
+        }
+
+        /// <summary>Writes what differs from a baseline into a new array of its exact size. A count comes first: it sizes the
+        /// buffer for the elements that the writer tries and takes back, so that the largest delta is not allocated.</summary>
         /// <param name="baseline">The baseline, another instance.</param>
         /// <returns>The bytes.</returns>
         /// <exception cref="GesWireException">A value does not fit its field, or the keys differ.</exception>
         public byte[] ToDeltaBytes(Panel_Entry baseline)
         {
-            var buffer = new byte[MaxByteCount];
-            return buffer.AsSpan(0, WriteDelta(baseline, buffer)).ToArray();
+            var writer = GesBitWriter.Counting();
+            __WriteDelta(baseline, ref writer, __paths, 0, true);
+            writer.Finish();
+            var buffer = new byte[writer.RequiredByteCount];
+            var count = WriteDelta(baseline, buffer);
+            return count == buffer.Length ? buffer : buffer.AsSpan(0, count).ToArray();
         }
 
         /// <summary>Reads a delta against a baseline into this instance. After an error its values are unspecified.</summary>
@@ -620,14 +674,14 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
         /// <summary>Converts this record into a GES Record value, as <see cref="GesSchemaValues"/> decodes its bytes; this allocates.</summary>
         /// <returns>The Record.</returns>
         /// <exception cref="GesWireException">A value does not fit its field.</exception>
-        public global::GameEventScript.Runtime.Values.GesValue ToValue() => GesSchemaValues.Decode(__valueSchema ??= __GesSchemasdc1a0056836fa47e.Bind("Panel_Entry", BindingHash), ToBytes()).Value;
+        public global::GameEventScript.Runtime.Values.GesValue ToValue() => GesSchemaValues.Decode(__valueSchema ??= __GesSchemasd1ed2bb08f30749f.Bind("Panel_Entry", BindingHash), ToBytes()).Value;
 
         /// <summary>Reads a Record or Map into this instance, as <see cref="GesSchemaValues"/> encodes it; this allocates.</summary>
         /// <param name="value">The value.</param>
         /// <exception cref="GesWireException">The value does not fit the schema.</exception>
         public void ReadValue(global::GameEventScript.Runtime.Values.GesValue value)
         {
-            var schema = __valueSchema ??= __GesSchemasdc1a0056836fa47e.Bind("Panel_Entry", BindingHash);
+            var schema = __valueSchema ??= __GesSchemasd1ed2bb08f30749f.Bind("Panel_Entry", BindingHash);
             var buffer = new byte[MaxByteCount];
             Read(new ReadOnlySpan<byte>(buffer, 0, GesSchemaValues.Encode(schema, value, buffer)));
         }
@@ -755,6 +809,19 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
         /// <summary>The field <c>alarms</c>.</summary>
         public AlarmsFlags Alarms;
 
+        /// <summary>Sets <c>entries</c> to <paramref name="count"/> elements that the record reuses, as a read does; their fields keep earlier values until they are set.</summary>
+        /// <param name="count">The element count.</param>
+        public void SetEntriesCount(int count)
+        {
+            if (count < 0) throw new ArgumentOutOfRangeException(nameof(count));
+            Entries.Clear();
+            for (var position = 0; position < count; position++)
+            {
+                if (position == __EntriesPool.Count) __EntriesPool.Add(new Panel_Entry());
+                Entries.Add(__EntriesPool[position]);
+            }
+        }
+
         /// <summary>Writes this record into a buffer; <see cref="MaxByteCount"/> bytes always suffice.</summary>
         /// <param name="buffer">The buffer.</param>
         /// <returns>The number of bytes written.</returns>
@@ -766,13 +833,24 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
             return writer.Finish();
         }
 
-        /// <summary>Writes this record into a new array of its exact size.</summary>
+        /// <summary>Counts the bytes that <see cref="Write"/> writes for this record, without writing them.</summary>
+        /// <returns>The exact byte count.</returns>
+        /// <exception cref="GesWireException">A value does not fit its field.</exception>
+        public int ByteCount()
+        {
+            var writer = GesBitWriter.Counting();
+            __WriteFields(ref writer, __paths, 0);
+            return writer.Finish();
+        }
+
+        /// <summary>Writes this record into a new array of its exact size, which <see cref="ByteCount"/> counts first.</summary>
         /// <returns>The bytes.</returns>
         /// <exception cref="GesWireException">A value does not fit its field.</exception>
         public byte[] ToBytes()
         {
-            var buffer = new byte[MaxByteCount];
-            return buffer.AsSpan(0, Write(buffer)).ToArray();
+            var buffer = new byte[ByteCount()];
+            Write(buffer);
+            return buffer;
         }
 
         /// <summary>Reads a record from untrusted data into this instance. After an error its values are unspecified.</summary>
@@ -1193,14 +1271,30 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
             return writer.Finish();
         }
 
-        /// <summary>Writes what differs from a baseline into a new array of its exact size.</summary>
+        /// <summary>Counts the bytes that <see cref="WriteDelta"/> writes against a baseline, without writing them.</summary>
+        /// <param name="baseline">The baseline, another instance.</param>
+        /// <returns>The exact byte count.</returns>
+        /// <exception cref="GesWireException">A value does not fit its field, or the keys differ.</exception>
+        public int DeltaByteCount(Panel_Report baseline)
+        {
+            var writer = GesBitWriter.Counting();
+            __WriteDelta(baseline, ref writer, __paths, 0, true);
+            return writer.Finish();
+        }
+
+        /// <summary>Writes what differs from a baseline into a new array of its exact size. A count comes first: it sizes the
+        /// buffer for the elements that the writer tries and takes back, so that the largest delta is not allocated.</summary>
         /// <param name="baseline">The baseline, another instance.</param>
         /// <returns>The bytes.</returns>
         /// <exception cref="GesWireException">A value does not fit its field, or the keys differ.</exception>
         public byte[] ToDeltaBytes(Panel_Report baseline)
         {
-            var buffer = new byte[MaxByteCount];
-            return buffer.AsSpan(0, WriteDelta(baseline, buffer)).ToArray();
+            var writer = GesBitWriter.Counting();
+            __WriteDelta(baseline, ref writer, __paths, 0, true);
+            writer.Finish();
+            var buffer = new byte[writer.RequiredByteCount];
+            var count = WriteDelta(baseline, buffer);
+            return count == buffer.Length ? buffer : buffer.AsSpan(0, count).ToArray();
         }
 
         /// <summary>Reads a delta against a baseline into this instance. After an error its values are unspecified.</summary>
@@ -1850,14 +1944,14 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
         /// <summary>Converts this record into a GES Record value, as <see cref="GesSchemaValues"/> decodes its bytes; this allocates.</summary>
         /// <returns>The Record.</returns>
         /// <exception cref="GesWireException">A value does not fit its field.</exception>
-        public global::GameEventScript.Runtime.Values.GesValue ToValue() => GesSchemaValues.Decode(__valueSchema ??= __GesSchemasdc1a0056836fa47e.Bind("Panel_Report", BindingHash), ToBytes()).Value;
+        public global::GameEventScript.Runtime.Values.GesValue ToValue() => GesSchemaValues.Decode(__valueSchema ??= __GesSchemasd1ed2bb08f30749f.Bind("Panel_Report", BindingHash), ToBytes()).Value;
 
         /// <summary>Reads a Record or Map into this instance, as <see cref="GesSchemaValues"/> encodes it; this allocates.</summary>
         /// <param name="value">The value.</param>
         /// <exception cref="GesWireException">The value does not fit the schema.</exception>
         public void ReadValue(global::GameEventScript.Runtime.Values.GesValue value)
         {
-            var schema = __valueSchema ??= __GesSchemasdc1a0056836fa47e.Bind("Panel_Report", BindingHash);
+            var schema = __valueSchema ??= __GesSchemasd1ed2bb08f30749f.Bind("Panel_Report", BindingHash);
             var buffer = new byte[MaxByteCount];
             Read(new ReadOnlySpan<byte>(buffer, 0, GesSchemaValues.Encode(schema, value, buffer)));
         }
@@ -1949,6 +2043,19 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
         /// <summary>The field <c>badge</c>.</summary>
         public Panel_Badge Badge = new Panel_Badge();
 
+        /// <summary>Sets <c>bots</c> to <paramref name="count"/> elements that the record reuses, as a read does; their fields keep earlier values until they are set.</summary>
+        /// <param name="count">The element count.</param>
+        public void SetBotsCount(int count)
+        {
+            if (count < 0) throw new ArgumentOutOfRangeException(nameof(count));
+            Bots.Clear();
+            for (var position = 0; position < count; position++)
+            {
+                if (position == __BotsPool.Count) __BotsPool.Add(new World_Bot());
+                Bots.Add(__BotsPool[position]);
+            }
+        }
+
         /// <summary>Writes this record into a buffer; <see cref="MaxByteCount"/> bytes always suffice.</summary>
         /// <param name="buffer">The buffer.</param>
         /// <returns>The number of bytes written.</returns>
@@ -1960,13 +2067,24 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
             return writer.Finish();
         }
 
-        /// <summary>Writes this record into a new array of its exact size.</summary>
+        /// <summary>Counts the bytes that <see cref="Write"/> writes for this record, without writing them.</summary>
+        /// <returns>The exact byte count.</returns>
+        /// <exception cref="GesWireException">A value does not fit its field.</exception>
+        public int ByteCount()
+        {
+            var writer = GesBitWriter.Counting();
+            __WriteFields(ref writer, __paths, 0);
+            return writer.Finish();
+        }
+
+        /// <summary>Writes this record into a new array of its exact size, which <see cref="ByteCount"/> counts first.</summary>
         /// <returns>The bytes.</returns>
         /// <exception cref="GesWireException">A value does not fit its field.</exception>
         public byte[] ToBytes()
         {
-            var buffer = new byte[MaxByteCount];
-            return buffer.AsSpan(0, Write(buffer)).ToArray();
+            var buffer = new byte[ByteCount()];
+            Write(buffer);
+            return buffer;
         }
 
         /// <summary>Reads a record from untrusted data into this instance. After an error its values are unspecified.</summary>
@@ -2437,14 +2555,30 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
             return writer.Finish();
         }
 
-        /// <summary>Writes what differs from a baseline into a new array of its exact size.</summary>
+        /// <summary>Counts the bytes that <see cref="WriteDelta"/> writes against a baseline, without writing them.</summary>
+        /// <param name="baseline">The baseline, another instance.</param>
+        /// <returns>The exact byte count.</returns>
+        /// <exception cref="GesWireException">A value does not fit its field, or the keys differ.</exception>
+        public int DeltaByteCount(World baseline)
+        {
+            var writer = GesBitWriter.Counting();
+            __WriteDelta(baseline, ref writer, __paths, 0, true);
+            return writer.Finish();
+        }
+
+        /// <summary>Writes what differs from a baseline into a new array of its exact size. A count comes first: it sizes the
+        /// buffer for the elements that the writer tries and takes back, so that the largest delta is not allocated.</summary>
         /// <param name="baseline">The baseline, another instance.</param>
         /// <returns>The bytes.</returns>
         /// <exception cref="GesWireException">A value does not fit its field, or the keys differ.</exception>
         public byte[] ToDeltaBytes(World baseline)
         {
-            var buffer = new byte[MaxByteCount];
-            return buffer.AsSpan(0, WriteDelta(baseline, buffer)).ToArray();
+            var writer = GesBitWriter.Counting();
+            __WriteDelta(baseline, ref writer, __paths, 0, true);
+            writer.Finish();
+            var buffer = new byte[writer.RequiredByteCount];
+            var count = WriteDelta(baseline, buffer);
+            return count == buffer.Length ? buffer : buffer.AsSpan(0, count).ToArray();
         }
 
         /// <summary>Reads a delta against a baseline into this instance. After an error its values are unspecified.</summary>
@@ -2740,14 +2874,14 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
         /// <summary>Converts this record into a GES Record value, as <see cref="GesSchemaValues"/> decodes its bytes; this allocates.</summary>
         /// <returns>The Record.</returns>
         /// <exception cref="GesWireException">A value does not fit its field.</exception>
-        public global::GameEventScript.Runtime.Values.GesValue ToValue() => GesSchemaValues.Decode(__valueSchema ??= __GesSchemasdc1a0056836fa47e.Bind("World", BindingHash), ToBytes()).Value;
+        public global::GameEventScript.Runtime.Values.GesValue ToValue() => GesSchemaValues.Decode(__valueSchema ??= __GesSchemasd1ed2bb08f30749f.Bind("World", BindingHash), ToBytes()).Value;
 
         /// <summary>Reads a Record or Map into this instance, as <see cref="GesSchemaValues"/> encodes it; this allocates.</summary>
         /// <param name="value">The value.</param>
         /// <exception cref="GesWireException">The value does not fit the schema.</exception>
         public void ReadValue(global::GameEventScript.Runtime.Values.GesValue value)
         {
-            var schema = __valueSchema ??= __GesSchemasdc1a0056836fa47e.Bind("World", BindingHash);
+            var schema = __valueSchema ??= __GesSchemasd1ed2bb08f30749f.Bind("World", BindingHash);
             var buffer = new byte[MaxByteCount];
             Read(new ReadOnlySpan<byte>(buffer, 0, GesSchemaValues.Encode(schema, value, buffer)));
         }
@@ -2790,13 +2924,24 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
             return writer.Finish();
         }
 
-        /// <summary>Writes this record into a new array of its exact size.</summary>
+        /// <summary>Counts the bytes that <see cref="Write"/> writes for this record, without writing them.</summary>
+        /// <returns>The exact byte count.</returns>
+        /// <exception cref="GesWireException">A value does not fit its field.</exception>
+        public readonly int ByteCount()
+        {
+            var writer = GesBitWriter.Counting();
+            __WriteFields(ref writer, __paths, 0);
+            return writer.Finish();
+        }
+
+        /// <summary>Writes this record into a new array of its exact size, which <see cref="ByteCount"/> counts first.</summary>
         /// <returns>The bytes.</returns>
         /// <exception cref="GesWireException">A value does not fit its field.</exception>
         public readonly byte[] ToBytes()
         {
-            var buffer = new byte[MaxByteCount];
-            return buffer.AsSpan(0, Write(buffer)).ToArray();
+            var buffer = new byte[ByteCount()];
+            Write(buffer);
+            return buffer;
         }
 
         /// <summary>Reads a record from untrusted data into this instance. After an error its values are unspecified.</summary>
@@ -2893,14 +3038,30 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
             return writer.Finish();
         }
 
-        /// <summary>Writes what differs from a baseline into a new array of its exact size.</summary>
+        /// <summary>Counts the bytes that <see cref="WriteDelta"/> writes against a baseline, without writing them.</summary>
+        /// <param name="baseline">The baseline, another instance.</param>
+        /// <returns>The exact byte count.</returns>
+        /// <exception cref="GesWireException">A value does not fit its field, or the keys differ.</exception>
+        public readonly int DeltaByteCount(in World_Body baseline)
+        {
+            var writer = GesBitWriter.Counting();
+            __WriteDelta(baseline, ref writer, __paths, 0, true);
+            return writer.Finish();
+        }
+
+        /// <summary>Writes what differs from a baseline into a new array of its exact size. A count comes first: it sizes the
+        /// buffer for the elements that the writer tries and takes back, so that the largest delta is not allocated.</summary>
         /// <param name="baseline">The baseline, another instance.</param>
         /// <returns>The bytes.</returns>
         /// <exception cref="GesWireException">A value does not fit its field, or the keys differ.</exception>
         public readonly byte[] ToDeltaBytes(in World_Body baseline)
         {
-            var buffer = new byte[MaxByteCount];
-            return buffer.AsSpan(0, WriteDelta(baseline, buffer)).ToArray();
+            var writer = GesBitWriter.Counting();
+            __WriteDelta(baseline, ref writer, __paths, 0, true);
+            writer.Finish();
+            var buffer = new byte[writer.RequiredByteCount];
+            var count = WriteDelta(baseline, buffer);
+            return count == buffer.Length ? buffer : buffer.AsSpan(0, count).ToArray();
         }
 
         /// <summary>Reads a delta against a baseline into this instance. After an error its values are unspecified.</summary>
@@ -3019,14 +3180,14 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
         /// <summary>Converts this record into a GES Record value, as <see cref="GesSchemaValues"/> decodes its bytes; this allocates.</summary>
         /// <returns>The Record.</returns>
         /// <exception cref="GesWireException">A value does not fit its field.</exception>
-        public readonly global::GameEventScript.Runtime.Values.GesValue ToValue() => GesSchemaValues.Decode(__valueSchema ??= __GesSchemasdc1a0056836fa47e.Bind("World_Body", BindingHash), ToBytes()).Value;
+        public readonly global::GameEventScript.Runtime.Values.GesValue ToValue() => GesSchemaValues.Decode(__valueSchema ??= __GesSchemasd1ed2bb08f30749f.Bind("World_Body", BindingHash), ToBytes()).Value;
 
         /// <summary>Reads a Record or Map into this instance, as <see cref="GesSchemaValues"/> encodes it; this allocates.</summary>
         /// <param name="value">The value.</param>
         /// <exception cref="GesWireException">The value does not fit the schema.</exception>
         public void ReadValue(global::GameEventScript.Runtime.Values.GesValue value)
         {
-            var schema = __valueSchema ??= __GesSchemasdc1a0056836fa47e.Bind("World_Body", BindingHash);
+            var schema = __valueSchema ??= __GesSchemasd1ed2bb08f30749f.Bind("World_Body", BindingHash);
             var buffer = new byte[MaxByteCount];
             Read(new ReadOnlySpan<byte>(buffer, 0, GesSchemaValues.Encode(schema, value, buffer)));
         }
@@ -3111,13 +3272,24 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
             return writer.Finish();
         }
 
-        /// <summary>Writes this record into a new array of its exact size.</summary>
+        /// <summary>Counts the bytes that <see cref="Write"/> writes for this record, without writing them.</summary>
+        /// <returns>The exact byte count.</returns>
+        /// <exception cref="GesWireException">A value does not fit its field.</exception>
+        public int ByteCount()
+        {
+            var writer = GesBitWriter.Counting();
+            __WriteFields(ref writer, __paths, 0);
+            return writer.Finish();
+        }
+
+        /// <summary>Writes this record into a new array of its exact size, which <see cref="ByteCount"/> counts first.</summary>
         /// <returns>The bytes.</returns>
         /// <exception cref="GesWireException">A value does not fit its field.</exception>
         public byte[] ToBytes()
         {
-            var buffer = new byte[MaxByteCount];
-            return buffer.AsSpan(0, Write(buffer)).ToArray();
+            var buffer = new byte[ByteCount()];
+            Write(buffer);
+            return buffer;
         }
 
         /// <summary>Reads a record from untrusted data into this instance. After an error its values are unspecified.</summary>
@@ -3396,14 +3568,40 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
             return writer.Finish();
         }
 
-        /// <summary>Writes what differs from a baseline into a new array of its exact size.</summary>
+        /// <summary>Counts the bytes that <see cref="WriteDelta"/> writes against a baseline, without writing them.</summary>
+        /// <param name="baseline">The baseline, another instance.</param>
+        /// <returns>The exact byte count.</returns>
+        /// <exception cref="GesWireException">A value does not fit its field, or the keys differ.</exception>
+        public int DeltaByteCount(World_Bot baseline)
+        {
+            var writer = GesBitWriter.Counting();
+            var paths = __paths;
+            const int at = 0;
+            var key = __Wire0(Id, paths, at);
+            if (key != __Wire0(baseline.Id, paths, at)) throw new GesWireException(GesWireException.KeyMismatch, paths[0]);
+            writer.Write(key, 8);
+            __WriteDelta(baseline, ref writer, __paths, 0, true);
+            return writer.Finish();
+        }
+
+        /// <summary>Writes what differs from a baseline into a new array of its exact size. A count comes first: it sizes the
+        /// buffer for the elements that the writer tries and takes back, so that the largest delta is not allocated.</summary>
         /// <param name="baseline">The baseline, another instance.</param>
         /// <returns>The bytes.</returns>
         /// <exception cref="GesWireException">A value does not fit its field, or the keys differ.</exception>
         public byte[] ToDeltaBytes(World_Bot baseline)
         {
-            var buffer = new byte[MaxByteCount];
-            return buffer.AsSpan(0, WriteDelta(baseline, buffer)).ToArray();
+            var writer = GesBitWriter.Counting();
+            var paths = __paths;
+            const int at = 0;
+            var key = __Wire0(Id, paths, at);
+            if (key != __Wire0(baseline.Id, paths, at)) throw new GesWireException(GesWireException.KeyMismatch, paths[0]);
+            writer.Write(key, 8);
+            __WriteDelta(baseline, ref writer, __paths, 0, true);
+            writer.Finish();
+            var buffer = new byte[writer.RequiredByteCount];
+            var count = WriteDelta(baseline, buffer);
+            return count == buffer.Length ? buffer : buffer.AsSpan(0, count).ToArray();
         }
 
         /// <summary>Reads a delta against a baseline into this instance. After an error its values are unspecified.</summary>
@@ -3865,14 +4063,14 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
         /// <summary>Converts this record into a GES Record value, as <see cref="GesSchemaValues"/> decodes its bytes; this allocates.</summary>
         /// <returns>The Record.</returns>
         /// <exception cref="GesWireException">A value does not fit its field.</exception>
-        public global::GameEventScript.Runtime.Values.GesValue ToValue() => GesSchemaValues.Decode(__valueSchema ??= __GesSchemasdc1a0056836fa47e.Bind("World_Bot", BindingHash), ToBytes()).Value;
+        public global::GameEventScript.Runtime.Values.GesValue ToValue() => GesSchemaValues.Decode(__valueSchema ??= __GesSchemasd1ed2bb08f30749f.Bind("World_Bot", BindingHash), ToBytes()).Value;
 
         /// <summary>Reads a Record or Map into this instance, as <see cref="GesSchemaValues"/> encodes it; this allocates.</summary>
         /// <param name="value">The value.</param>
         /// <exception cref="GesWireException">The value does not fit the schema.</exception>
         public void ReadValue(global::GameEventScript.Runtime.Values.GesValue value)
         {
-            var schema = __valueSchema ??= __GesSchemasdc1a0056836fa47e.Bind("World_Bot", BindingHash);
+            var schema = __valueSchema ??= __GesSchemasd1ed2bb08f30749f.Bind("World_Bot", BindingHash);
             var buffer = new byte[MaxByteCount];
             Read(new ReadOnlySpan<byte>(buffer, 0, GesSchemaValues.Encode(schema, value, buffer)));
         }
@@ -3894,23 +4092,72 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
     internal sealed partial class World_Cards
     {
         /// <summary>The schema hash, independent of parameter values.</summary>
-        public const ulong SchemaHash = 0x29222cf2bb6c499dUL;
+        public const ulong SchemaHash = 0x50b813cda1e6871aUL;
 
         /// <summary>The hash over the schema hash and the parameter values this code was generated with.</summary>
-        public const ulong BindingHash = 0x9702fc517d7e987cUL;
+        public const ulong BindingHash = 0x875e24e8849b0e5bUL;
 
         /// <summary>The size of the largest encoding in bytes.</summary>
-        public const int MaxByteCount = 35;
+        public const int MaxByteCount = 85;
 
         internal static readonly string[] __paths =
         {
             "cards",
             "cards[]",
             "cards[].label",
+            "labels",
+            "labels[]",
         };
 
         /// <summary>The field <c>cards</c>, at most 4 elements.</summary>
         public List<Panel_Badge> Cards = new List<Panel_Badge>();
+
+        /// <summary>The field <c>labels</c>, at most 4 elements.</summary>
+        public List<LabelsItem> Labels = new List<LabelsItem>();
+
+        /// <summary>Sets <c>cards</c> to <paramref name="count"/> elements that the record reuses, as a read does; their fields keep earlier values until they are set.</summary>
+        /// <param name="count">The element count.</param>
+        public void SetCardsCount(int count)
+        {
+            if (count < 0) throw new ArgumentOutOfRangeException(nameof(count));
+            Cards.Clear();
+            for (var position = 0; position < count; position++)
+            {
+                if (position == __CardsPool.Count) __CardsPool.Add(new Panel_Badge());
+                Cards.Add(__CardsPool[position]);
+            }
+        }
+
+        /// <summary>Sets <c>labels</c> to <paramref name="count"/> elements that the record reuses, as a read does; their fields keep earlier values until they are set.</summary>
+        /// <param name="count">The element count.</param>
+        public void SetLabelsCount(int count)
+        {
+            if (count < 0) throw new ArgumentOutOfRangeException(nameof(count));
+            Labels.Clear();
+            for (var position = 0; position < count; position++)
+            {
+                if (position == __LabelsPool.Count) __LabelsPool.Add(new LabelsItem());
+                Labels.Add(__LabelsPool[position]);
+            }
+        }
+
+        /// <summary>The elements of <c>labels</c> as strings; reading and setting allocate, and setting reuses the elements.</summary>
+        public string[] LabelsValues
+        {
+            get
+            {
+                var values = new string[Labels.Count];
+                for (var index = 0; index < values.Length; index++) values[index] = Labels[index].Value;
+                return values;
+            }
+
+            set
+            {
+                if (value is null) throw new ArgumentNullException(nameof(value));
+                SetLabelsCount(value.Length);
+                for (var index = 0; index < value.Length; index++) Labels[index].Value = value[index];
+            }
+        }
 
         /// <summary>Writes this record into a buffer; <see cref="MaxByteCount"/> bytes always suffice.</summary>
         /// <param name="buffer">The buffer.</param>
@@ -3923,13 +4170,24 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
             return writer.Finish();
         }
 
-        /// <summary>Writes this record into a new array of its exact size.</summary>
+        /// <summary>Counts the bytes that <see cref="Write"/> writes for this record, without writing them.</summary>
+        /// <returns>The exact byte count.</returns>
+        /// <exception cref="GesWireException">A value does not fit its field.</exception>
+        public int ByteCount()
+        {
+            var writer = GesBitWriter.Counting();
+            __WriteFields(ref writer, __paths, 0);
+            return writer.Finish();
+        }
+
+        /// <summary>Writes this record into a new array of its exact size, which <see cref="ByteCount"/> counts first.</summary>
         /// <returns>The bytes.</returns>
         /// <exception cref="GesWireException">A value does not fit its field.</exception>
         public byte[] ToBytes()
         {
-            var buffer = new byte[MaxByteCount];
-            return buffer.AsSpan(0, Write(buffer)).ToArray();
+            var buffer = new byte[ByteCount()];
+            Write(buffer);
+            return buffer;
         }
 
         /// <summary>Reads a record from untrusted data into this instance. After an error its values are unspecified.</summary>
@@ -3952,6 +4210,12 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
             {
                 item.__WriteFields(ref writer, paths, at + 2);
             }
+            if (Labels.Count > 4) throw new GesWireException(GesWireException.TooLong, paths[at + 3]);
+            writer.Write((ulong)Labels.Count, 3);
+            foreach (var item in Labels)
+            {
+                item.__WriteFields(ref writer, paths, at + 4);
+            }
         }
 
         internal void __ReadFields(ref GesBitReader reader, string[] paths, int at)
@@ -3968,6 +4232,18 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
                     Cards.Add(item);
                 }
             }
+            {
+                var count = (int)reader.Read(3, paths[at + 3]);
+                if (count > 4) throw new GesWireException(GesWireException.InvalidCount, paths[at + 3]);
+                Labels.Clear();
+                for (var position = 0; position < count; position++)
+                {
+                    if (position == __LabelsPool.Count) __LabelsPool.Add(new LabelsItem());
+                    var item = __LabelsPool[position];
+                    item.__ReadFields(ref reader, paths, at + 4);
+                    Labels.Add(item);
+                }
+            }
         }
 
         #if DEBUG || DEVELOPMENT_BUILD || UNITY_EDITOR || GES_CHECK_SHARING
@@ -3979,6 +4255,8 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
             __Busy = busy;
             lists?.Add(Cards);
             for (var index0 = 0; index0 < __CardsPool.Count; index0++) __CardsPool[index0].__Mark(busy, lists);
+            lists?.Add(Labels);
+            for (var index3 = 0; index3 < __LabelsPool.Count; index3++) __LabelsPool[index3].__Mark(busy, lists);
         }
 
         internal bool __Holds(HashSet<object> lists)
@@ -3987,6 +4265,9 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
             if (lists.Contains(Cards)) return true;
             for (var index0 = 0; index0 < Cards.Count; index0++)
                 if (Cards[index0].__Holds(lists)) return true;
+            if (lists.Contains(Labels)) return true;
+            for (var index3 = 0; index3 < Labels.Count; index3++)
+                if (Labels[index3].__Holds(lists)) return true;
             return false;
         }
         #endif
@@ -4001,12 +4282,27 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
             return true;
         }
 
+        private bool __Same3(World_Cards baseline, string[] paths, int at)
+        {
+            if (Labels.Count != baseline.Labels.Count) return false;
+            for (var index3 = 0; index3 < Labels.Count; index3++)
+            {
+                if (!Labels[index3].__Same(baseline.Labels[index3], paths, at + 4)) return false;
+            }
+            return true;
+        }
+
         internal bool __Same(World_Cards other, string[] paths, int at)
         {
             if (Cards.Count != other.Cards.Count) return false;
             for (var index0 = 0; index0 < Cards.Count; index0++)
             {
                 if (!Cards[index0].__Same(other.Cards[index0], paths, at + 2)) return false;
+            }
+            if (Labels.Count != other.Labels.Count) return false;
+            for (var index3 = 0; index3 < Labels.Count; index3++)
+            {
+                if (!Labels[index3].__Same(other.Labels[index3], paths, at + 4)) return false;
             }
             return true;
         }
@@ -4025,6 +4321,17 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
                     var item0 = __CardsPool[index0];
                     item0.CopyFrom(other.Cards[index0]);
                     Cards.Add(item0);
+                }
+            }
+            if (!ReferenceEquals(Labels, other.Labels))
+            {
+                Labels.Clear();
+                for (var index3 = 0; index3 < other.Labels.Count; index3++)
+                {
+                    if (index3 == __LabelsPool.Count) __LabelsPool.Add(new LabelsItem());
+                    var item3 = __LabelsPool[index3];
+                    item3.CopyFrom(other.Labels[index3]);
+                    Labels.Add(item3);
                 }
             }
         }
@@ -4059,14 +4366,30 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
             return writer.Finish();
         }
 
-        /// <summary>Writes what differs from a baseline into a new array of its exact size.</summary>
+        /// <summary>Counts the bytes that <see cref="WriteDelta"/> writes against a baseline, without writing them.</summary>
+        /// <param name="baseline">The baseline, another instance.</param>
+        /// <returns>The exact byte count.</returns>
+        /// <exception cref="GesWireException">A value does not fit its field, or the keys differ.</exception>
+        public int DeltaByteCount(World_Cards baseline)
+        {
+            var writer = GesBitWriter.Counting();
+            __WriteDelta(baseline, ref writer, __paths, 0, true);
+            return writer.Finish();
+        }
+
+        /// <summary>Writes what differs from a baseline into a new array of its exact size. A count comes first: it sizes the
+        /// buffer for the elements that the writer tries and takes back, so that the largest delta is not allocated.</summary>
         /// <param name="baseline">The baseline, another instance.</param>
         /// <returns>The bytes.</returns>
         /// <exception cref="GesWireException">A value does not fit its field, or the keys differ.</exception>
         public byte[] ToDeltaBytes(World_Cards baseline)
         {
-            var buffer = new byte[MaxByteCount];
-            return buffer.AsSpan(0, WriteDelta(baseline, buffer)).ToArray();
+            var writer = GesBitWriter.Counting();
+            __WriteDelta(baseline, ref writer, __paths, 0, true);
+            writer.Finish();
+            var buffer = new byte[writer.RequiredByteCount];
+            var count = WriteDelta(baseline, buffer);
+            return count == buffer.Length ? buffer : buffer.AsSpan(0, count).ToArray();
         }
 
         /// <summary>Reads a delta against a baseline into this instance. After an error its values are unspecified.</summary>
@@ -4103,7 +4426,7 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
         internal bool __WriteDelta(World_Cards baseline, ref GesBitWriter writer, string[] paths, int at, bool top)
         {
             var first = writer.BitPosition;
-            for (var left = 1; left > 0; left -= 64) writer.Write(0, Math.Min(left, 64));
+            for (var left = 2; left > 0; left -= 64) writer.Write(0, Math.Min(left, 64));
             var changed = false;
             var ordinal = 0;
             {
@@ -4125,12 +4448,31 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
                 }
                 ordinal++;
             }
+            {
+                var set3 = false;
+                if (!__Same3(baseline, paths, at))
+                {
+                    if (Labels.Count > 4) throw new GesWireException(GesWireException.TooLong, paths[at + 3]);
+                    writer.Write((ulong)Labels.Count, 3);
+                    foreach (var item in Labels)
+                    {
+                        item.__WriteFields(ref writer, paths, at + 4);
+                    }
+                    set3 = true;
+                }
+                if (set3)
+                {
+                    writer.SetBit(first + ordinal);
+                    changed = true;
+                }
+                ordinal++;
+            }
             return changed;
         }
 
         internal bool __ReadDelta(World_Cards baseline, ref GesBitReader reader, string[] paths, int at, bool top)
         {
-            var fieldCount = 1;
+            var fieldCount = 2;
             reader.Require(fieldCount, at == 0 ? "" : paths[at - 1]);
             var changeBits = reader.BitPosition;
             reader.Seek(changeBits + fieldCount);
@@ -4174,6 +4516,44 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
                 }
                 ordinal++;
             }
+            {
+                var payload3 = reader.BitPosition;
+                reader.Seek(changeBits + ordinal);
+                var set3 = reader.Read(1, paths[at + 3]) == 1;
+                reader.Seek(payload3);
+                if (set3)
+                {
+                    {
+                        var count = (int)reader.Read(3, paths[at + 3]);
+                        if (count > 4) throw new GesWireException(GesWireException.InvalidCount, paths[at + 3]);
+                        Labels.Clear();
+                        for (var position = 0; position < count; position++)
+                        {
+                            if (position == __LabelsPool.Count) __LabelsPool.Add(new LabelsItem());
+                            var item = __LabelsPool[position];
+                            item.__ReadFields(ref reader, paths, at + 4);
+                            Labels.Add(item);
+                        }
+                    }
+                    if (__Same3(baseline, paths, at)) throw new GesWireException(GesWireException.InvalidDelta, paths[at + 3]);
+                    changed = true;
+                }
+                else
+                {
+                    if (!ReferenceEquals(Labels, baseline.Labels))
+                    {
+                        Labels.Clear();
+                        for (var index3 = 0; index3 < baseline.Labels.Count; index3++)
+                        {
+                            if (index3 == __LabelsPool.Count) __LabelsPool.Add(new LabelsItem());
+                            var item3 = __LabelsPool[index3];
+                            item3.CopyFrom(baseline.Labels[index3]);
+                            Labels.Add(item3);
+                        }
+                    }
+                }
+                ordinal++;
+            }
             return changed;
         }
 
@@ -4182,23 +4562,102 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
         /// <summary>Converts this record into a GES Record value, as <see cref="GesSchemaValues"/> decodes its bytes; this allocates.</summary>
         /// <returns>The Record.</returns>
         /// <exception cref="GesWireException">A value does not fit its field.</exception>
-        public global::GameEventScript.Runtime.Values.GesValue ToValue() => GesSchemaValues.Decode(__valueSchema ??= __GesSchemasdc1a0056836fa47e.Bind("World_Cards", BindingHash), ToBytes()).Value;
+        public global::GameEventScript.Runtime.Values.GesValue ToValue() => GesSchemaValues.Decode(__valueSchema ??= __GesSchemasd1ed2bb08f30749f.Bind("World_Cards", BindingHash), ToBytes()).Value;
 
         /// <summary>Reads a Record or Map into this instance, as <see cref="GesSchemaValues"/> encodes it; this allocates.</summary>
         /// <param name="value">The value.</param>
         /// <exception cref="GesWireException">The value does not fit the schema.</exception>
         public void ReadValue(global::GameEventScript.Runtime.Values.GesValue value)
         {
-            var schema = __valueSchema ??= __GesSchemasdc1a0056836fa47e.Bind("World_Cards", BindingHash);
+            var schema = __valueSchema ??= __GesSchemasd1ed2bb08f30749f.Bind("World_Cards", BindingHash);
             var buffer = new byte[MaxByteCount];
             Read(new ReadOnlySpan<byte>(buffer, 0, GesSchemaValues.Encode(schema, value, buffer)));
         }
 
         private readonly List<Panel_Badge> __CardsPool = new List<Panel_Badge>();
+
+        private readonly List<LabelsItem> __LabelsPool = new List<LabelsItem>();
+
+        /// <summary>An element of the list.</summary>
+        public sealed partial class LabelsItem
+        {
+            private byte[] __Value = Array.Empty<byte>();
+            private int __ValueLength;
+
+            /// <summary>The field <c>[]</c> as UTF-8 bytes, a tag name without #.</summary>
+            public ReadOnlySpan<byte> ValueUtf8 => new ReadOnlySpan<byte>(__Value, 0, __ValueLength);
+
+            /// <summary>Sets the field <c>[]</c> from UTF-8 bytes, which are checked when the record is written.</summary>
+            /// <param name="utf8">The bytes.</param>
+            public void SetValueUtf8(ReadOnlySpan<byte> utf8)
+            {
+                if (__Value.Length < utf8.Length) Array.Resize(ref __Value, Math.Max(utf8.Length, Math.Min(12, __Value.Length * 2)));
+                utf8.CopyTo(__Value);
+                __ValueLength = utf8.Length;
+            }
+
+            /// <summary>The field <c>[]</c> as a string; reading and setting it allocate.</summary>
+            public string Value
+            {
+                get => System.Text.Encoding.UTF8.GetString(__Value, 0, __ValueLength);
+                set => SetValueUtf8(System.Text.Encoding.UTF8.GetBytes(value));
+            }
+
+            internal void __WriteFields(ref GesBitWriter writer, string[] paths, int at)
+            {
+                {
+                    var text = new ReadOnlySpan<byte>(__Value, 0, __ValueLength);
+                    if (text.Length > 12) throw new GesWireException(GesWireException.TooLong, paths[at + 0]);
+                    if (!GesWireRules.IsTagName(text)) throw new GesWireException(GesWireException.InvalidTag, paths[at + 0]);
+                    writer.Write((ulong)text.Length, 4);
+                    writer.WriteBytes(text);
+                }
+            }
+
+            internal void __ReadFields(ref GesBitReader reader, string[] paths, int at)
+            {
+                {
+                    var count = (int)reader.Read(4, paths[at + 0]);
+                    if (count > 12) throw new GesWireException(GesWireException.InvalidCount, paths[at + 0]);
+                    reader.Require(count * 8L, paths[at + 0]);
+                    if (__Value.Length < count) Array.Resize(ref __Value, Math.Max(count, Math.Min(12, __Value.Length * 2)));
+                    var text = new Span<byte>(__Value, 0, count);
+                    reader.ReadBytes(text, paths[at + 0]);
+                    if (!GesWireRules.IsTagName(text)) throw new GesWireException(GesWireException.InvalidTag, paths[at + 0]);
+                    __ValueLength = count;
+                }
+            }
+
+            #if DEBUG || DEVELOPMENT_BUILD || UNITY_EDITOR || GES_CHECK_SHARING
+            internal bool __Busy;
+
+            internal void __Mark(bool busy, HashSet<object>? lists) => __Busy = busy;
+
+            internal bool __Holds(HashSet<object> lists) => __Busy;
+            #endif
+
+            internal bool __Same(LabelsItem other, string[] paths, int at)
+            {
+                if (!new ReadOnlySpan<byte>(__Value, 0, __ValueLength).SequenceEqual(new ReadOnlySpan<byte>(other.__Value, 0, other.__ValueLength))) return false;
+                return true;
+            }
+
+            /// <summary>Copies the values of another record into the storage of this one, without allocating once it has grown.</summary>
+            /// <param name="other">The record to copy.</param>
+            public void CopyFrom(LabelsItem other)
+            {
+                if (ReferenceEquals(this, other)) return;
+                SetValueUtf8(new ReadOnlySpan<byte>(other.__Value, 0, other.__ValueLength));
+            }
+
+            internal void __Quantize(string[] paths, int at)
+            {
+            }
+        }
     }
 
     /// <summary>The schema sources of this file, which the conversion to and from GES values binds once per type.</summary>
-    internal static class __GesSchemasdc1a0056836fa47e
+    internal static class __GesSchemasd1ed2bb08f30749f
     {
         private static GesSchemaSet? __set;
 
@@ -4219,6 +4678,7 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
                     "",
                     "wire(world) schema :World_Cards as {",
                     "  cards: :List(:Panel_Badge) max 4",
+                    "  labels: :List(:Tag max 12) max 4",
                     "}",
                     "",
                     "schema :World_Bot as {",

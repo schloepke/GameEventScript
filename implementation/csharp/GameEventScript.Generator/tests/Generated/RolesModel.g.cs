@@ -17,6 +17,9 @@ namespace GameEventScript.Tests.Generator.Roles.Model
     /// <summary>The model of the schema <c>:BotView</c>: a plain value that is never encoded and compares by value.</summary>
     internal sealed class BotView : IEquatable<BotView>
     {
+        /// <summary>The hash of the schema <c>:BotView</c>, which wire records of it carry too; a test that compares it notices stale generated code.</summary>
+        public const ulong SchemaHash = 0xd96f1616c2b5836dUL;
+
         /// <summary>Creates a record with every field at its zero value: absent, empty or the first alternative.</summary>
         public BotView()
         {
@@ -425,6 +428,9 @@ namespace GameEventScript.Tests.Generator.Roles.Model
     /// <summary>The model of the schema <c>:Panel_Badge</c>: a plain value that is never encoded and compares by value.</summary>
     internal sealed class Panel_Badge : IEquatable<Panel_Badge>
     {
+        /// <summary>The hash of the schema <c>:Panel_Badge</c>, which wire records of it carry too; a test that compares it notices stale generated code.</summary>
+        public const ulong SchemaHash = 0x0854980b8fe23b88UL;
+
         /// <summary>Creates a record with every field at its zero value: absent, empty or the first alternative.</summary>
         public Panel_Badge()
         {
@@ -490,6 +496,9 @@ namespace GameEventScript.Tests.Generator.Roles.Model
     /// <summary>The model of the schema <c>:Panel_Entry</c>: a plain value that is never encoded and compares by value.</summary>
     internal sealed class Panel_Entry : IEquatable<Panel_Entry>
     {
+        /// <summary>The hash of the schema <c>:Panel_Entry</c>, which wire records of it carry too; a test that compares it notices stale generated code.</summary>
+        public const ulong SchemaHash = 0xa6b523d53f83f21eUL;
+
         /// <summary>Creates a record with every field at its zero value: absent, empty or the first alternative.</summary>
         public Panel_Entry()
         {
@@ -562,6 +571,9 @@ namespace GameEventScript.Tests.Generator.Roles.Model
     /// <summary>The model of the schema <c>:Panel_Report</c>: a plain value that is never encoded and compares by value.</summary>
     internal sealed class Panel_Report : IEquatable<Panel_Report>
     {
+        /// <summary>The hash of the schema <c>:Panel_Report</c>, which wire records of it carry too; a test that compares it notices stale generated code.</summary>
+        public const ulong SchemaHash = 0x4885f554a711dde1UL;
+
         /// <summary>Creates a record with every field at its zero value: absent, empty or the first alternative.</summary>
         public Panel_Report()
         {
@@ -768,6 +780,9 @@ namespace GameEventScript.Tests.Generator.Roles.Model
     /// <summary>The model of the schema <c>:RadarView</c>: a plain value that is never encoded and compares by value.</summary>
     internal sealed class RadarView : IEquatable<RadarView>
     {
+        /// <summary>The hash of the schema <c>:RadarView</c>, which wire records of it carry too; a test that compares it notices stale generated code.</summary>
+        public const ulong SchemaHash = 0xf2c0cf13e2948dedUL;
+
         /// <summary>Creates a record with every field at its zero value: absent, empty or the first alternative.</summary>
         public RadarView()
         {
@@ -840,6 +855,9 @@ namespace GameEventScript.Tests.Generator.Roles.Model
     /// <summary>The model of the schema <c>:WorldView</c>: a plain value that is never encoded and compares by value.</summary>
     internal sealed class WorldView : IEquatable<WorldView>
     {
+        /// <summary>The hash of the schema <c>:WorldView</c>, which wire records of it carry too; a test that compares it notices stale generated code.</summary>
+        public const ulong SchemaHash = 0x1ad7e1c268f811e2UL;
+
         /// <summary>Creates a record with every field at its zero value: absent, empty or the first alternative.</summary>
         public WorldView()
         {
@@ -933,6 +951,9 @@ namespace GameEventScript.Tests.Generator.Roles.Model
     /// <summary>The model of the schema <c>:World_Body</c>: a plain value that is never encoded and compares by value.</summary>
     internal sealed class World_Body : IEquatable<World_Body>
     {
+        /// <summary>The hash of the schema <c>:World_Body</c>, which wire records of it carry too; a test that compares it notices stale generated code.</summary>
+        public const ulong SchemaHash = 0x3068484dfbaf015fUL;
+
         /// <summary>Creates a record with every field at its zero value: absent, empty or the first alternative.</summary>
         public World_Body()
         {
@@ -1047,30 +1068,53 @@ namespace GameEventScript.Tests.Generator.Roles.Model
 
         internal static global::GameEventScript.Tests.Generator.Roles.Model.BotView ReadBotView(in GesValue value, string path)
         {
-            var fields = RecordFields(value, "BotView", BotViewFields) ?? throw Mismatch(path);
-            if (!__GesModelsae4351b20b848505.Integer(__GesModelsae4351b20b848505.Field(fields, "bot"), GesQuantityUnit.UnitNone, out var field0)) throw Mismatch(Path(path, "bot"));
-            if (!__GesModelsae4351b20b848505.Text(__GesModelsae4351b20b848505.Field(fields, "name"), out var field1)) throw Mismatch(Path(path, "name"));
-            if (!__GesModelsae4351b20b848505.Boolean(__GesModelsae4351b20b848505.Field(fields, "alive"), out var field2)) throw Mismatch(Path(path, "alive"));
-            if (!__GesModelsae4351b20b848505.Percentage(__GesModelsae4351b20b848505.Field(fields, "health"), out var field3)) throw Mismatch(Path(path, "health"));
-            if (!__GesModelsae4351b20b848505.Number(__GesModelsae4351b20b848505.Field(fields, "speed"), GesQuantityUnit.UnitNone, out var field4)) throw Mismatch(Path(path, "speed"));
-            if (!__GesModelsae4351b20b848505.Number(__GesModelsae4351b20b848505.Field(fields, "heading"), GesQuantityUnit.UnitDegree, out var field5)) throw Mismatch(Path(path, "heading"));
-            if (!DecodeBotViewMoodTag(__GesModelsae4351b20b848505.Field(fields, "mood"), out var field6)) throw Mismatch(Path(path, "mood"));
-            if (!__GesModelsae4351b20b848505.Tag(__GesModelsae4351b20b848505.Field(fields, "team"), out var field7)) throw Mismatch(Path(path, "team"));
-            if (!__GesModelsae4351b20b848505.Point(__GesModelsae4351b20b848505.Field(fields, "position"), GesQuantityUnit.UnitMeter, out var field8)) throw Mismatch(Path(path, "position"));
-            if (!__GesModelsae4351b20b848505.Vector(__GesModelsae4351b20b848505.Field(fields, "velocity"), GesQuantityUnit.UnitMeter, out var field9)) throw Mismatch(Path(path, "velocity"));
-            var field10 = ReadWorld_Body(__GesModelsae4351b20b848505.Field(fields, "body"), Path(path, "body"));
-            var field11 = ReadOptional(__GesModelsae4351b20b848505.Field(fields, "radar"), Path(path, "radar"), (in GesValue x0, string p0) => ReadRadarView(x0, p0));
-            if (!__GesModelsae4351b20b848505.OptionalObject(__GesModelsae4351b20b848505.Field(fields, "facing"), (in GesValue x0, out global::GameEventScript.Tests.Generator.Roles.Model.BotView.FacingAlternative y0) => DecodeBotViewFacingAlternative(x0, out y0), out var field12)) throw Mismatch(Path(path, "facing"));
-            if (!__GesModelsae4351b20b848505.OptionalObject(__GesModelsae4351b20b848505.Field(fields, "note"), (in GesValue x0, out string y0) => __GesModelsae4351b20b848505.Text(x0, out y0), out var field13)) throw Mismatch(Path(path, "note"));
-            var field14 = ReadList(__GesModelsae4351b20b848505.Field(fields, "marks"), Path(path, "marks"), (in GesValue x0, string p0) => __GesModelsae4351b20b848505.Point(x0, GesQuantityUnit.UnitMeter, out var y0) ? y0 : throw Mismatch(p0));
-            var field15 = ReadList(__GesModelsae4351b20b848505.Field(fields, "units"), Path(path, "units"), (in GesValue x0, string p0) => DecodeBotViewUnitsItemAlternative(x0, out var y0) ? y0 : throw Mismatch(p0));
-            var field16 = ReadList(__GesModelsae4351b20b848505.Field(fields, "grid"), Path(path, "grid"), (in GesValue x0, string p0) => ReadList(x0, p0, (in GesValue x1, string p1) => __GesModelsae4351b20b848505.Integer(x1, GesQuantityUnit.UnitNone, out var y1) ? y1 : throw Mismatch(p1)));
-            if (!__GesModelsae4351b20b848505.Dice(__GesModelsae4351b20b848505.Field(fields, "rolls"), out var field17)) throw Mismatch(Path(path, "rolls"));
-            if (!__GesModelsae4351b20b848505.Bytes(__GesModelsae4351b20b848505.Field(fields, "seal"), out var field18)) throw Mismatch(Path(path, "seal"));
-            var field19 = ReadList(__GesModelsae4351b20b848505.Field(fields, "chunks"), Path(path, "chunks"), (in GesValue x0, string p0) => __GesModelsae4351b20b848505.Bytes(x0, out var y0) ? y0 : throw Mismatch(p0));
-            if (!DecodeBotViewStatusFlags(__GesModelsae4351b20b848505.Field(fields, "status"), out var field20)) throw Mismatch(Path(path, "status"));
-            var field21 = ReadList(__GesModelsae4351b20b848505.Field(fields, "ranks"), Path(path, "ranks"), (in GesValue x0, string p0) => DecodeBotViewRanksItemFlags(x0, out var y0) ? y0 : throw Mismatch(p0));
-            var field22 = ReadList(__GesModelsae4351b20b848505.Field(fields, "hints"), Path(path, "hints"), (in GesValue x0, string p0) => DecodeBotViewHintsItemTag(x0, out var y0) ? y0 : throw Mismatch(p0));
+            var fields = RecordFields(value, "BotView", BotViewFields) ?? throw Failure(value, path);
+            var value0 = Required(fields, "bot", path);
+            if (!__GesModelsae4351b20b848505.Integer(value0, GesQuantityUnit.UnitNone, out var field0)) throw Failure(value0, Path(path, "bot"));
+            var value1 = Required(fields, "name", path);
+            if (!__GesModelsae4351b20b848505.Text(value1, out var field1)) throw Failure(value1, Path(path, "name"));
+            var value2 = Required(fields, "alive", path);
+            if (!__GesModelsae4351b20b848505.Boolean(value2, out var field2)) throw Failure(value2, Path(path, "alive"));
+            var value3 = Required(fields, "health", path);
+            if (!__GesModelsae4351b20b848505.Percentage(value3, out var field3)) throw Failure(value3, Path(path, "health"));
+            var value4 = Required(fields, "speed", path);
+            if (!__GesModelsae4351b20b848505.Number(value4, GesQuantityUnit.UnitNone, out var field4)) throw Failure(value4, Path(path, "speed"));
+            var value5 = Required(fields, "heading", path);
+            if (!__GesModelsae4351b20b848505.Number(value5, GesQuantityUnit.UnitDegree, out var field5)) throw Failure(value5, Path(path, "heading"));
+            var value6 = Required(fields, "mood", path);
+            if (!DecodeBotViewMoodTag(value6, out var field6)) throw Failure(value6, Path(path, "mood"));
+            var value7 = Required(fields, "team", path);
+            if (!__GesModelsae4351b20b848505.Tag(value7, out var field7)) throw Failure(value7, Path(path, "team"));
+            var value8 = Required(fields, "position", path);
+            if (!__GesModelsae4351b20b848505.Point(value8, GesQuantityUnit.UnitMeter, out var field8)) throw Failure(value8, Path(path, "position"));
+            var value9 = Required(fields, "velocity", path);
+            if (!__GesModelsae4351b20b848505.Vector(value9, GesQuantityUnit.UnitMeter, out var field9)) throw Failure(value9, Path(path, "velocity"));
+            var value10 = Required(fields, "body", path);
+            var field10 = ReadWorld_Body(value10, Path(path, "body"));
+            var value11 = __GesModelsae4351b20b848505.Field(fields, "radar");
+            var field11 = ReadOptional(value11, Path(path, "radar"), (in GesValue x0, string p0) => ReadRadarView(x0, p0));
+            var value12 = __GesModelsae4351b20b848505.Field(fields, "facing");
+            if (!__GesModelsae4351b20b848505.OptionalObject(value12, (in GesValue x0, out global::GameEventScript.Tests.Generator.Roles.Model.BotView.FacingAlternative y0) => DecodeBotViewFacingAlternative(x0, out y0), out var field12)) throw Failure(value12, Path(path, "facing"));
+            var value13 = __GesModelsae4351b20b848505.Field(fields, "note");
+            if (!__GesModelsae4351b20b848505.OptionalObject(value13, (in GesValue x0, out string y0) => __GesModelsae4351b20b848505.Text(x0, out y0), out var field13)) throw Failure(value13, Path(path, "note"));
+            var value14 = Required(fields, "marks", path);
+            var field14 = ReadList(value14, Path(path, "marks"), (in GesValue x0, string p0) => __GesModelsae4351b20b848505.Point(x0, GesQuantityUnit.UnitMeter, out var y0) ? y0 : throw Failure(x0, p0));
+            var value15 = Required(fields, "units", path);
+            var field15 = ReadList(value15, Path(path, "units"), (in GesValue x0, string p0) => DecodeBotViewUnitsItemAlternative(x0, out var y0) ? y0 : throw Failure(x0, p0));
+            var value16 = Required(fields, "grid", path);
+            var field16 = ReadList(value16, Path(path, "grid"), (in GesValue x0, string p0) => ReadList(x0, p0, (in GesValue x1, string p1) => __GesModelsae4351b20b848505.Integer(x1, GesQuantityUnit.UnitNone, out var y1) ? y1 : throw Failure(x1, p1)));
+            var value17 = Required(fields, "rolls", path);
+            if (!__GesModelsae4351b20b848505.Dice(value17, out var field17)) throw Failure(value17, Path(path, "rolls"));
+            var value18 = Required(fields, "seal", path);
+            if (!__GesModelsae4351b20b848505.Bytes(value18, out var field18)) throw Failure(value18, Path(path, "seal"));
+            var value19 = Required(fields, "chunks", path);
+            var field19 = ReadList(value19, Path(path, "chunks"), (in GesValue x0, string p0) => __GesModelsae4351b20b848505.Bytes(x0, out var y0) ? y0 : throw Failure(x0, p0));
+            var value20 = Required(fields, "status", path);
+            if (!DecodeBotViewStatusFlags(value20, out var field20)) throw Failure(value20, Path(path, "status"));
+            var value21 = Required(fields, "ranks", path);
+            var field21 = ReadList(value21, Path(path, "ranks"), (in GesValue x0, string p0) => DecodeBotViewRanksItemFlags(x0, out var y0) ? y0 : throw Failure(x0, p0));
+            var value22 = Required(fields, "hints", path);
+            var field22 = ReadList(value22, Path(path, "hints"), (in GesValue x0, string p0) => DecodeBotViewHintsItemTag(x0, out var y0) ? y0 : throw Failure(x0, p0));
             return new global::GameEventScript.Tests.Generator.Roles.Model.BotView(field0, field1, field2, field3, field4, field5, field6, field7, field8, field9, field10, field11, field12, field13, field14, field15, field16, field17, field18, field19, field20, field21, field22);
         }
 
@@ -1246,8 +1290,9 @@ namespace GameEventScript.Tests.Generator.Roles.Model
 
         internal static global::GameEventScript.Tests.Generator.Roles.Model.Panel_Badge ReadPanel_Badge(in GesValue value, string path)
         {
-            var fields = RecordFields(value, "Panel_Badge", Panel_BadgeFields) ?? throw Mismatch(path);
-            if (!__GesModelsae4351b20b848505.Text(__GesModelsae4351b20b848505.Field(fields, "label"), out var field0)) throw Mismatch(Path(path, "label"));
+            var fields = RecordFields(value, "Panel_Badge", Panel_BadgeFields) ?? throw Failure(value, path);
+            var value0 = Required(fields, "label", path);
+            if (!__GesModelsae4351b20b848505.Text(value0, out var field0)) throw Failure(value0, Path(path, "label"));
             return new global::GameEventScript.Tests.Generator.Roles.Model.Panel_Badge(field0);
         }
 
@@ -1273,9 +1318,11 @@ namespace GameEventScript.Tests.Generator.Roles.Model
 
         internal static global::GameEventScript.Tests.Generator.Roles.Model.Panel_Entry ReadPanel_Entry(in GesValue value, string path)
         {
-            var fields = RecordFields(value, "Panel_Entry", Panel_EntryFields) ?? throw Mismatch(path);
-            if (!__GesModelsae4351b20b848505.Text(__GesModelsae4351b20b848505.Field(fields, "name"), out var field0)) throw Mismatch(Path(path, "name"));
-            if (!__GesModelsae4351b20b848505.Percentage(__GesModelsae4351b20b848505.Field(fields, "level"), out var field1)) throw Mismatch(Path(path, "level"));
+            var fields = RecordFields(value, "Panel_Entry", Panel_EntryFields) ?? throw Failure(value, path);
+            var value0 = Required(fields, "name", path);
+            if (!__GesModelsae4351b20b848505.Text(value0, out var field0)) throw Failure(value0, Path(path, "name"));
+            var value1 = Required(fields, "level", path);
+            if (!__GesModelsae4351b20b848505.Percentage(value1, out var field1)) throw Failure(value1, Path(path, "level"));
             return new global::GameEventScript.Tests.Generator.Roles.Model.Panel_Entry(field0, field1);
         }
 
@@ -1308,15 +1355,23 @@ namespace GameEventScript.Tests.Generator.Roles.Model
 
         internal static global::GameEventScript.Tests.Generator.Roles.Model.Panel_Report ReadPanel_Report(in GesValue value, string path)
         {
-            var fields = RecordFields(value, "Panel_Report", Panel_ReportFields) ?? throw Mismatch(path);
-            if (!__GesModelsae4351b20b848505.Text(__GesModelsae4351b20b848505.Field(fields, "title"), out var field0)) throw Mismatch(Path(path, "title"));
-            if (!DecodePanel_ReportStatusTag(__GesModelsae4351b20b848505.Field(fields, "status"), out var field1)) throw Mismatch(Path(path, "status"));
-            if (!__GesModelsae4351b20b848505.Number(__GesModelsae4351b20b848505.Field(fields, "load"), GesQuantityUnit.UnitWatt, out var field2)) throw Mismatch(Path(path, "load"));
-            if (!__GesModelsae4351b20b848505.Point(__GesModelsae4351b20b848505.Field(fields, "spot"), GesQuantityUnit.UnitMeter, out var field3)) throw Mismatch(Path(path, "spot"));
-            if (!__GesModelsae4351b20b848505.OptionalObject(__GesModelsae4351b20b848505.Field(fields, "note"), (in GesValue x0, out string y0) => __GesModelsae4351b20b848505.Text(x0, out y0), out var field4)) throw Mismatch(Path(path, "note"));
-            var field5 = ReadList(__GesModelsae4351b20b848505.Field(fields, "entries"), Path(path, "entries"), (in GesValue x0, string p0) => ReadPanel_Entry(x0, p0));
-            if (!__GesModelsae4351b20b848505.OptionalObject(__GesModelsae4351b20b848505.Field(fields, "reading"), (in GesValue x0, out global::GameEventScript.Tests.Generator.Roles.Model.Panel_Report.ReadingAlternative y0) => DecodePanel_ReportReadingAlternative(x0, out y0), out var field6)) throw Mismatch(Path(path, "reading"));
-            if (!DecodePanel_ReportAlarmsFlags(__GesModelsae4351b20b848505.Field(fields, "alarms"), out var field7)) throw Mismatch(Path(path, "alarms"));
+            var fields = RecordFields(value, "Panel_Report", Panel_ReportFields) ?? throw Failure(value, path);
+            var value0 = Required(fields, "title", path);
+            if (!__GesModelsae4351b20b848505.Text(value0, out var field0)) throw Failure(value0, Path(path, "title"));
+            var value1 = Required(fields, "status", path);
+            if (!DecodePanel_ReportStatusTag(value1, out var field1)) throw Failure(value1, Path(path, "status"));
+            var value2 = Required(fields, "load", path);
+            if (!__GesModelsae4351b20b848505.Number(value2, GesQuantityUnit.UnitWatt, out var field2)) throw Failure(value2, Path(path, "load"));
+            var value3 = Required(fields, "spot", path);
+            if (!__GesModelsae4351b20b848505.Point(value3, GesQuantityUnit.UnitMeter, out var field3)) throw Failure(value3, Path(path, "spot"));
+            var value4 = __GesModelsae4351b20b848505.Field(fields, "note");
+            if (!__GesModelsae4351b20b848505.OptionalObject(value4, (in GesValue x0, out string y0) => __GesModelsae4351b20b848505.Text(x0, out y0), out var field4)) throw Failure(value4, Path(path, "note"));
+            var value5 = Required(fields, "entries", path);
+            var field5 = ReadList(value5, Path(path, "entries"), (in GesValue x0, string p0) => ReadPanel_Entry(x0, p0));
+            var value6 = __GesModelsae4351b20b848505.Field(fields, "reading");
+            if (!__GesModelsae4351b20b848505.OptionalObject(value6, (in GesValue x0, out global::GameEventScript.Tests.Generator.Roles.Model.Panel_Report.ReadingAlternative y0) => DecodePanel_ReportReadingAlternative(x0, out y0), out var field6)) throw Failure(value6, Path(path, "reading"));
+            var value7 = Required(fields, "alarms", path);
+            if (!DecodePanel_ReportAlarmsFlags(value7, out var field7)) throw Failure(value7, Path(path, "alarms"));
             return new global::GameEventScript.Tests.Generator.Roles.Model.Panel_Report(field0, field1, field2, field3, field4, field5, field6, field7);
         }
 
@@ -1406,9 +1461,11 @@ namespace GameEventScript.Tests.Generator.Roles.Model
 
         internal static global::GameEventScript.Tests.Generator.Roles.Model.RadarView ReadRadarView(in GesValue value, string path)
         {
-            var fields = RecordFields(value, "RadarView", RadarViewFields) ?? throw Mismatch(path);
-            if (!__GesModelsae4351b20b848505.Number(__GesModelsae4351b20b848505.Field(fields, "range"), GesQuantityUnit.UnitMeter, out var field0)) throw Mismatch(Path(path, "range"));
-            var field1 = ReadList(__GesModelsae4351b20b848505.Field(fields, "contacts"), Path(path, "contacts"), (in GesValue x0, string p0) => __GesModelsae4351b20b848505.Integer(x0, GesQuantityUnit.UnitNone, out var y0) ? y0 : throw Mismatch(p0));
+            var fields = RecordFields(value, "RadarView", RadarViewFields) ?? throw Failure(value, path);
+            var value0 = Required(fields, "range", path);
+            if (!__GesModelsae4351b20b848505.Number(value0, GesQuantityUnit.UnitMeter, out var field0)) throw Failure(value0, Path(path, "range"));
+            var value1 = Required(fields, "contacts", path);
+            var field1 = ReadList(value1, Path(path, "contacts"), (in GesValue x0, string p0) => __GesModelsae4351b20b848505.Integer(x0, GesQuantityUnit.UnitNone, out var y0) ? y0 : throw Failure(x0, p0));
             return new global::GameEventScript.Tests.Generator.Roles.Model.RadarView(field0, field1);
         }
 
@@ -1438,12 +1495,17 @@ namespace GameEventScript.Tests.Generator.Roles.Model
 
         internal static global::GameEventScript.Tests.Generator.Roles.Model.WorldView ReadWorldView(in GesValue value, string path)
         {
-            var fields = RecordFields(value, "WorldView", WorldViewFields) ?? throw Mismatch(path);
-            if (!__GesModelsae4351b20b848505.Integer(__GesModelsae4351b20b848505.Field(fields, "tick"), GesQuantityUnit.UnitNone, out var field0)) throw Mismatch(Path(path, "tick"));
-            if (!__GesModelsae4351b20b848505.Number(__GesModelsae4351b20b848505.Field(fields, "time"), GesQuantityUnit.UnitSecond, out var field1)) throw Mismatch(Path(path, "time"));
-            if (!__GesModelsae4351b20b848505.Vector(__GesModelsae4351b20b848505.Field(fields, "arena"), GesQuantityUnit.UnitMeter, out var field2)) throw Mismatch(Path(path, "arena"));
-            var field3 = ReadList(__GesModelsae4351b20b848505.Field(fields, "bots"), Path(path, "bots"), (in GesValue x0, string p0) => ReadBotView(x0, p0));
-            var field4 = ReadOptional(__GesModelsae4351b20b848505.Field(fields, "badge"), Path(path, "badge"), (in GesValue x0, string p0) => ReadPanel_Badge(x0, p0));
+            var fields = RecordFields(value, "WorldView", WorldViewFields) ?? throw Failure(value, path);
+            var value0 = Required(fields, "tick", path);
+            if (!__GesModelsae4351b20b848505.Integer(value0, GesQuantityUnit.UnitNone, out var field0)) throw Failure(value0, Path(path, "tick"));
+            var value1 = Required(fields, "time", path);
+            if (!__GesModelsae4351b20b848505.Number(value1, GesQuantityUnit.UnitSecond, out var field1)) throw Failure(value1, Path(path, "time"));
+            var value2 = Required(fields, "arena", path);
+            if (!__GesModelsae4351b20b848505.Vector(value2, GesQuantityUnit.UnitMeter, out var field2)) throw Failure(value2, Path(path, "arena"));
+            var value3 = Required(fields, "bots", path);
+            var field3 = ReadList(value3, Path(path, "bots"), (in GesValue x0, string p0) => ReadBotView(x0, p0));
+            var value4 = __GesModelsae4351b20b848505.Field(fields, "badge");
+            var field4 = ReadOptional(value4, Path(path, "badge"), (in GesValue x0, string p0) => ReadPanel_Badge(x0, p0));
             return new global::GameEventScript.Tests.Generator.Roles.Model.WorldView(field0, field1, field2, field3, field4);
         }
 
@@ -1473,9 +1535,11 @@ namespace GameEventScript.Tests.Generator.Roles.Model
 
         internal static global::GameEventScript.Tests.Generator.Roles.Model.World_Body ReadWorld_Body(in GesValue value, string path)
         {
-            var fields = RecordFields(value, "World_Body", World_BodyFields) ?? throw Mismatch(path);
-            if (!__GesModelsae4351b20b848505.Number(__GesModelsae4351b20b848505.Field(fields, "mass"), GesQuantityUnit.UnitKilogram, out var field0)) throw Mismatch(Path(path, "mass"));
-            if (!DecodeWorld_BodyHullTag(__GesModelsae4351b20b848505.Field(fields, "hull"), out var field1)) throw Mismatch(Path(path, "hull"));
+            var fields = RecordFields(value, "World_Body", World_BodyFields) ?? throw Failure(value, path);
+            var value0 = Required(fields, "mass", path);
+            if (!__GesModelsae4351b20b848505.Number(value0, GesQuantityUnit.UnitKilogram, out var field0)) throw Failure(value0, Path(path, "mass"));
+            var value1 = Required(fields, "hull", path);
+            if (!DecodeWorld_BodyHullTag(value1, out var field1)) throw Failure(value1, Path(path, "hull"));
             return new global::GameEventScript.Tests.Generator.Roles.Model.World_Body(field0, field1);
         }
 
@@ -1520,14 +1584,17 @@ namespace GameEventScript.Tests.Generator.Roles.Model
 
         private static string Path(string path, string field) => path.Length == 0 ? field : path + "." + field;
 
-        private static GesWireException Mismatch(string path) => new GesWireException(GesWireException.TypeMismatch, path);
+        // A value that does not convert: nothing where a value is required, or a value of another type.
+        private static GesWireException Failure(in GesValue value, string path) => new GesWireException(value.IsNothing ? GesWireException.NothingValue : GesWireException.TypeMismatch, path);
+
+        private static GesValue Required(GesValueMap fields, string name, string path) => fields.Get(name) ?? throw new GesWireException(GesWireException.MissingField, Path(path, name));
 
         private delegate T Reader<T>(in GesValue value, string path);
 
         // The elements of a List, each read at the list's path with `[]`.
         private static List<T> ReadList<T>(in GesValue value, string path, Reader<T> element)
         {
-            if (value.ValueKind != GesBytecodeTypeKind.List) throw Mismatch(path);
+            if (value.ValueKind != GesBytecodeTypeKind.List) throw Failure(value, path);
             var items = value.AsList();
             var list = new List<T>(items.Length);
             var item = path + "[]";

@@ -129,6 +129,34 @@ final class GeneratedRoleCodeTests: XCTestCase {
         XCTAssertEqual(try RolesModel.Panel_Report(value: back.toValue()), model)
     }
 
+    func testListsOfTextsSetTheirElementsFromStrings() throws {
+        let cards = RolesWire.World_Cards()
+        cards.labelsValues = ["red", "blue"]
+        XCTAssertEqual(cards.labelsValues, ["red", "blue"])
+        let first = cards.labels[0]
+        cards.setLabelsCount(1)
+        XCTAssertTrue(cards.labels[0] === first, "The record reuses its elements.")
+        cards.labels[0].valueUTF8 = Array("green".utf8)
+        let back = RolesWire.World_Cards()
+        _ = try back.read(from: try cards.encoded())
+        XCTAssertEqual(back.labelsValues, ["green"])
+    }
+
+    func testByteCountsAreExactBeforeWriting() throws {
+        let wire = RolesWire.Panel_Report()
+        try wire.read(value: report().toValue())
+        let baseline = RolesWire.Panel_Report()
+        let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: RolesWire.Panel_Report.maxByteCount, alignment: 8)
+        defer { buffer.deallocate() }
+        XCTAssertEqual(try wire.encodedByteCount(), try wire.write(into: buffer))
+        XCTAssertEqual(try wire.encoded().count, try wire.encodedByteCount())
+        let count = try wire.writeDelta(against: baseline, into: buffer)
+        XCTAssertEqual(try wire.deltaEncodedByteCount(against: baseline), count)
+        XCTAssertEqual(try wire.deltaEncoded(against: baseline), Array(buffer[0..<count]))
+        wire.title = "a title that is far too long"
+        XCTAssertThrowsError(try wire.encodedByteCount()) { XCTAssertEqual(($0 as? GesWireError)?.code, GesWireError.tooLong) }
+    }
+
     func testAModelValueThatDoesNotFitFailsOnTheWireSide() throws {
         let model = report(title: "a title that is far too long")
         let value = model.toValue()
@@ -168,6 +196,37 @@ final class GeneratedRoleCodeTests: XCTestCase {
                 XCTAssertEqual((error as? GesWireError)?.path, path)
             }
         }
+    }
+
+    func testMissingAndNothingValuesHaveTheCodesOfTheWireSide() throws {
+        let fields = try XCTUnwrap(report().toValue().asMap)
+        let keys = (0..<fields.length).map { fields.key(at: $0) }
+        let without = { (name: String) -> GesValue in
+            let kept = keys.filter { $0 != name }
+            return .map(keys: kept, values: kept.map { fields.get($0)! })
+        }
+        let with = { (name: String, held: GesValue) -> GesValue in .map(keys: keys, values: keys.map { $0 == name ? held : fields.get($0)! }) }
+        let cases: [(GesValue, String, String)] = [
+            (without("title"), GesWireError.missingField, "title"),
+            (with("title", .nothing), GesWireError.nothingValue, "title"),
+            (with("entries", .list([.nothing])), GesWireError.nothingValue, "entries[]"),
+        ]
+        for (value, code, path) in cases {
+            XCTAssertThrowsError(try RolesModel.Panel_Report(value: value)) { error in
+                XCTAssertEqual((error as? GesWireError)?.code, code)
+                XCTAssertEqual((error as? GesWireError)?.path, path)
+            }
+            XCTAssertThrowsError(try RolesWire.Panel_Report().read(value: value)) { error in
+                XCTAssertEqual((error as? GesWireError)?.code, code)
+                XCTAssertEqual((error as? GesWireError)?.path, path)
+            }
+        }
+        XCTAssertEqual(try RolesModel.Panel_Report(value: without("note")), report(), "An optional field may be left out.")
+    }
+
+    func testModelsCarryTheSchemaHashOfTheirWireRecords() {
+        XCTAssertEqual(RolesModel.Panel_Report.schemaHash, RolesWire.Panel_Report.schemaHash)
+        XCTAssertEqual(RolesBound.Panel_Report.schemaHash, RolesModel.Panel_Report.schemaHash)
     }
 
     func testBoundModelsAlsoConvertToPlainValues() throws {

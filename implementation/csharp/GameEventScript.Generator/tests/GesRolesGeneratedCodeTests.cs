@@ -93,6 +93,36 @@ public sealed class GesRolesGeneratedCodeTests
     }
 
     [TestMethod]
+    public void ListsOfTextsSetTheirElementsFromStrings()
+    {
+        var cards = new Wire.World_Cards();
+        cards.LabelsValues = ["red", "blue"];
+        CollectionAssert.AreEqual(new[] { "red", "blue" }, cards.LabelsValues);
+        var first = cards.Labels[0];
+        cards.SetLabelsCount(1);
+        Assert.AreSame(first, cards.Labels[0], "The record reuses its elements.");
+        cards.Labels[0].SetValueUtf8("green"u8);
+        var back = new Wire.World_Cards();
+        back.Read(cards.ToBytes());
+        CollectionAssert.AreEqual(new[] { "green" }, back.LabelsValues);
+    }
+
+    [TestMethod]
+    public void ByteCountsAreExactBeforeWriting()
+    {
+        var wire = new Wire.Panel_Report();
+        wire.ReadValue(Report().ToValue());
+        var buffer = new byte[Wire.Panel_Report.MaxByteCount];
+        Assert.AreEqual(wire.Write(buffer), wire.ByteCount());
+        Assert.HasCount(wire.ByteCount(), wire.ToBytes());
+        var baseline = new Wire.Panel_Report();
+        Assert.AreEqual(wire.WriteDelta(baseline, buffer), wire.DeltaByteCount(baseline));
+        CollectionAssert.AreEqual(buffer.AsSpan(0, wire.DeltaByteCount(baseline)).ToArray(), wire.ToDeltaBytes(baseline));
+        wire.Title = "a title that is far too long";
+        Assert.AreEqual(GesWireException.TooLong, Assert.ThrowsExactly<GesWireException>(() => wire.ByteCount()).Code);
+    }
+
+    [TestMethod]
     public void AModelValueThatDoesNotFitFailsOnTheWireSide()
     {
         var report = Report("a title that is far too long");
@@ -137,6 +167,38 @@ public sealed class GesRolesGeneratedCodeTests
             Assert.AreEqual(path, failure.Path);
             Assert.AreEqual(path, Assert.ThrowsExactly<GesWireException>(() => new Wire.Panel_Report().ReadValue(value)).Path);
         }
+    }
+
+    [TestMethod]
+    public void MissingAndNothingValuesHaveTheCodesOfTheWireSide()
+    {
+        var fields = Report().ToValue().AsMap()!;
+        var keys = Enumerable.Range(0, fields.Length).Select(fields.KeyAt).ToArray();
+        GesValue Without(string name) => GesValue.GesMap(keys.Where(key => key != name).ToArray(), keys.Where(key => key != name).Select(key => fields.Get(key)!.Value).ToArray());
+        GesValue With(string name, GesValue held) => GesValue.GesMap(keys, keys.Select(key => key == name ? held : fields.Get(key)!.Value).ToArray());
+        foreach (var (value, code, path) in new[]
+        {
+            (Without("title"), GesWireException.MissingField, "title"),
+            (With("title", GesValue.GesNothing()), GesWireException.NothingValue, "title"),
+            (With("entries", GesValue.GesList([GesValue.GesNothing()])), GesWireException.NothingValue, "entries[]"),
+        })
+        {
+            var failure = Assert.ThrowsExactly<GesWireException>(() => Model.Panel_Report.FromValue(value));
+            Assert.AreEqual(code, failure.Code);
+            Assert.AreEqual(path, failure.Path);
+            var wire = Assert.ThrowsExactly<GesWireException>(() => new Wire.Panel_Report().ReadValue(value));
+            Assert.AreEqual(code, wire.Code);
+            Assert.AreEqual(path, wire.Path);
+        }
+
+        Assert.AreEqual(Report(), Model.Panel_Report.FromValue(Without("note")), "An optional field may be left out.");
+    }
+
+    [TestMethod]
+    public void ModelsCarryTheSchemaHashOfTheirWireRecords()
+    {
+        var hashes = new[] { Wire.Panel_Report.SchemaHash, Model.Panel_Report.SchemaHash, Bound.Panel_Report.SchemaHash };
+        Assert.HasCount(1, hashes.Distinct());
     }
 
     [TestMethod]

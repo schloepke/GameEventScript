@@ -101,6 +101,8 @@ struct GameEventScript.Api.GesBitWriter
   method System.Void SetBit(System.Int64 bit)
   method System.Void Write(System.UInt64 value, System.Int32 width)
   method System.Void WriteBytes(System.ReadOnlySpan<System.Byte> bytes)
+  method static GameEventScript.Api.GesBitWriter Counting()
+  property System.Int32 RequiredByteCount { get }
   property System.Int64 BitPosition { get }
 sealed class GameEventScript.Api.GesBoundSchema
   method GameEventScript.Api.GesBoundSchema Member(System.String name)

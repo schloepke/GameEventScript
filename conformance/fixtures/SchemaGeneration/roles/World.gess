@@ -10,6 +10,7 @@ wire(world) schema :World as {
 
 wire(world) schema :World_Cards as {
   cards: :List(:Panel_Badge) max 4
+  labels: :List(:Tag max 12) max 4
 }
 
 schema :World_Bot as {

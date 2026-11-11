@@ -37,6 +37,12 @@ enum GesSwiftModelEmitter {
 
     private static func member(_ pascal: String) -> String { GesSwiftEmitter.member(pascal) }
 
+    // The argument label of a declaration: Swift needs backticks there only for inout, var and let; a call needs none.
+    private static func label(_ pascal: String) -> String {
+        let name = GesSchemaPlanner.camel(pascal)
+        return name == "inout" || name == "var" || name == "let" ? "`" + name + "`" : name
+    }
+
     private static func record(_ code: inout Code, _ type: GesModelType, _ access: String, bindings: Bool, values: String?) throws(GesGeneratorError) {
         let fields = GesModelPlanner.fields(type)
         let key = fields.first { $0.field.key }
@@ -47,6 +53,7 @@ enum GesSwiftModelEmitter {
             nested(field.value, &names, field.field.name)
         }
         if let key, identity { names.append(("id", "the identity of the key " + key.field.name)) }
+        names.append(("schemaHash", "the generated member schemaHash"))
         if bindings { names.append(("gesValue", "the generated member gesValue")) }
         if values != nil { names.append(("toValue", "the generated member toValue")) }
         if bindings && fields.contains(where: { $0.field.name == "fields" }) {
@@ -56,6 +63,9 @@ enum GesSwiftModelEmitter {
 
         code.line("/// The model of the schema `:\(type.name)`: a plain value that is never encoded.")
         code.open("\(access)struct \(type.name): Hashable, Sendable, Codable\(key == nil ? "" : ", Identifiable") {")
+        code.line("/// The hash of the schema `:\(type.name)`, which wire records of it carry too; a test that compares it notices stale generated code.")
+        code.line("\(access)static let schemaHash: UInt64 = 0x\(GesSchemaLayoutJson.hex(type.hash))")
+        if !fields.isEmpty { code.blank() }
         for (index, field) in fields.enumerated() {
             if index > 0 { code.blank() }
             code.line("/// `\(field.field.name): \(GesModelPlanner.describe(field.field))`.")
@@ -68,7 +78,7 @@ enum GesSwiftModelEmitter {
         }
         code.blank()
         code.line("/// Creates a record from its fields; an absent value defaults to nil and a list to empty.")
-        let parameters = fields.map { "\(member($0.base)): \(self.type($0.value))\(defaultValue($0.value))" }
+        let parameters = fields.map { "\(label($0.base)): \(self.type($0.value))\(defaultValue($0.value))" }
         code.open("\(access)init(\(parameters.joined(separator: ", "))) {")
         for field in fields { code.line("self.\(member(field.base)) = \(member(field.base))") }
         code.close()
@@ -222,7 +232,7 @@ enum GesSwiftModelEmitter {
         let element =
             descends(value.element!)
             ? read(value.element!, owner, x, p, helper, support, depth + 1)
-            : "try require(\(decode(value.element!, owner, x, helper, support, plain: true)), \(p))"
+            : "try require(\(decode(value.element!, owner, x, helper, support, plain: true)), \(x), \(p))"
         return "try readList(\(expression), \(path)) { (\(x): GesValue, \(p): String) throws(GesWireError) in \(element) }"
     }
 
@@ -323,7 +333,7 @@ enum GesSwiftModelEmitter {
             code.line("call.setNothing()")
             code.line("return")
             code.close()
-            code.line("try call.setExternalValue(\(type.name)Value(\(type.name)(\(fields.map { "\(member($0.base)): \(member($0.base))" }.joined(separator: ", ")))))")
+            code.line("try call.setExternalValue(\(type.name)Value(\(type.name)(\(fields.map { "\(GesSchemaPlanner.camel($0.base)): \(member($0.base))" }.joined(separator: ", ")))))")
             code.close()
             code.close()
             conversions(&code, type.name, fields, helper: "GesTypes", support: support, plain: false)
@@ -374,7 +384,7 @@ enum GesSwiftModelEmitter {
             let fields = GesModelPlanner.fields(type)
             let names = type.name + "Fields"
             let typeLiteral = literal(type.name)
-            let arguments = fields.enumerated().map { "\(member($0.element.base)): field\($0.offset)" }.joined(separator: ", ")
+            let arguments = fields.enumerated().map { "\(GesSchemaPlanner.camel($0.element.base)): field\($0.offset)" }.joined(separator: ", ")
             if typeIndex > 0 { code.blank() }
             code.line("static let \(names) = [\(fields.map { literal($0.field.name) }.joined(separator: ", "))]")
             code.blank()
@@ -386,17 +396,18 @@ enum GesSwiftModelEmitter {
             code.blank()
             code.open("static func read\(type.name)(_ value: GesValue, _ path: String) throws(GesWireError) -> \(type.name) {")
             if fields.isEmpty {
-                code.line("guard recordFields(value, \(typeLiteral), \(names)) != nil else { throw mismatch(path) }")
+                code.line("guard recordFields(value, \(typeLiteral), \(names)) != nil else { throw failure(value, path) }")
                 code.line("return \(type.name)()")
             } else {
-                code.line("guard let fields = recordFields(value, \(typeLiteral), \(names)) else { throw mismatch(path) }")
+                code.line("guard let fields = recordFields(value, \(typeLiteral), \(names)) else { throw failure(value, path) }")
                 for (index, field) in fields.enumerated() {
                     let fieldLiteral = literal(field.field.name)
-                    let value = "fields.get(\(fieldLiteral)) ?? .nothing"
+                    let held = "value\(index)"
+                    code.line("let \(held) = \(field.value.nullable ? "fields.get(\(fieldLiteral)) ?? .nothing" : "try required(fields, \(fieldLiteral), path)")")
                     if descends(field.value) {
-                        code.line("let field\(index) = \(read(field.value, type.name, value, "fieldPath(path, \(fieldLiteral))", name, support))")
+                        code.line("let field\(index) = \(read(field.value, type.name, held, "fieldPath(path, \(fieldLiteral))", name, support))")
                     } else {
-                        code.line("guard let field\(index) = \(decode(field.value, type.name, value, name, support, plain: true)) else { throw mismatch(fieldPath(path, \(fieldLiteral))) }")
+                        code.line("guard let field\(index) = \(decode(field.value, type.name, held, name, support, plain: true)) else { throw failure(\(held), fieldPath(path, \(fieldLiteral))) }")
                     }
                 }
                 code.line("return \(type.name)(\(arguments))")
@@ -429,16 +440,24 @@ enum GesSwiftModelEmitter {
         code.blank()
         code.line("static func fieldPath(_ path: String, _ field: String) -> String { path.isEmpty ? field : path + \".\" + field }")
         code.blank()
-        code.line("static func mismatch(_ path: String) -> GesWireError { GesWireError(code: GesWireError.typeMismatch, path: path) }")
+        code.line("// A value that does not convert: nothing where a value is required, or a value of another type.")
+        code.open("static func failure(_ value: GesValue, _ path: String) -> GesWireError {")
+        code.line("GesWireError(code: value.isNothing ? GesWireError.nothingValue : GesWireError.typeMismatch, path: path)")
+        code.close()
         code.blank()
-        code.open("static func require<T>(_ value: T?, _ path: String) throws(GesWireError) -> T {")
-        code.line("guard let value else { throw mismatch(path) }")
+        code.open("static func required(_ fields: GesValueMap, _ name: String, _ path: String) throws(GesWireError) -> GesValue {")
+        code.line("guard let value = fields.get(name) else { throw GesWireError(code: GesWireError.missingField, path: fieldPath(path, name)) }")
         code.line("return value")
+        code.close()
+        code.blank()
+        code.open("static func require<T>(_ converted: T?, _ value: GesValue, _ path: String) throws(GesWireError) -> T {")
+        code.line("guard let converted else { throw failure(value, path) }")
+        code.line("return converted")
         code.close()
         code.blank()
         code.line("// The elements of a List, each read at the list's path with `[]`.")
         code.open("static func readList<T>(_ value: GesValue, _ path: String, _ element: (GesValue, String) throws(GesWireError) -> T) throws(GesWireError) -> [T] {")
-        code.line("guard let items = value.listValue else { throw mismatch(path) }")
+        code.line("guard let items = value.listValue else { throw failure(value, path) }")
         code.line("let item = path + \"[]\"")
         code.line("var result: [T] = []")
         code.line("result.reserveCapacity(items.count)")

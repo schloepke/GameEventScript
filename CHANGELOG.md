@@ -234,6 +234,15 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   `FromValue(value)`) with the plain Record that wire `--values` reads and writes, so models and wire records convert
   through one value instead of hand-written copies. A nested field that does not convert reports its path, such as
   `entries[].level`, as the wire value path does.
+- Generated model types carry their `SchemaHash` (Swift `schemaHash`), as wire records do.
+- Generated model reading reports a required field without a key as `wire.missingField` and `nothing` where a value is
+  required as `wire.nothingValue`, as the wire value path does, instead of `wire.typeMismatch`.
+- Generated wire records fill a list of reused elements with `Set<Field>Count(count)` (Swift `set<Field>Count(_:)`), and
+  a list of Text or open Tag elements also reads and sets as strings with `<Field>Values` (Swift `<field>Values`).
+- Generated wire records count their exact size with `ByteCount()` and `DeltaByteCount(baseline)` (Swift
+  `encodedByteCount()` and `deltaEncodedByteCount(against:)`), and `ToBytes`/`encoded()` and the delta forms allocate only
+  that size instead of `MaxByteCount`: a record with a 4 MiB `:Bytes` limit that holds 1 KB allocates 1 KB. They build on
+  the new counting `GesBitWriter.Counting()` (Swift `counting()`).
 - Schema maximums accept digit separators, such as `:List(:Text max 1_024) max 10_000`.
 - Schema `:Flags(#a, #b)` with up to 64 members: one bit per member on the wire, a script flag Map such as
   `[armed:]` in the value path and documents, `WriteFlags`/`ReadFlags` (Swift `writeFlags`/`readFlags`) masks, and
@@ -448,6 +457,8 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   of every port. Runtime behavior does not depend on it.
 
 ### Fixed
+- Generated Swift models write keyword argument labels such as `default` without backticks, which Swift warned about;
+  only a declared `var`, `let` or `inout` label keeps them.
 - The C# CLI builds with .NET SDK 10.0.404, so the Windows archives and the AOT tool packages
   contain .NET 8.0.34 instead of 8.0.25, which had known vulnerabilities such as CVE-2026-111497.
   The libraries keep their .NET Standard 2.1 target.

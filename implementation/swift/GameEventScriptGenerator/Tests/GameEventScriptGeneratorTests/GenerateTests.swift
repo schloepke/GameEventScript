@@ -45,6 +45,14 @@ final class GenerateTests: XCTestCase {
         XCTAssertEqual(code { try generate("schema :S as {\n  state: :Tag(#a)\n  stateTag: :Boolean\n}\n", "S", .csharp) }, "generate.nameCollision")
         XCTAssertEqual(code { try generate("schema :S as {\n  heat: :Boolean optional\n  hasHeat: :Boolean\n}\n", "S", .swift) }, "generate.nameCollision")
         XCTAssertEqual(code { try generate("schema :S as {\n  mode: :Flags(#rawValue, #other)\n}\n", "S", .swift) }, "generate.nameCollision")
+        let keywords = try GesSchemaSet(parsing: "model schema :S as {\n  default: :Text\n  in: :Boolean\n  var: :Boolean\n}\n")
+        let model = try GesSchemaGenerator.generateModels(
+            keywords,
+            roots: GesSchemaGenerator.modelRoots(keywords, group: "default"),
+            options: GesSchemaGenerateOptions(language: .swift, values: true, bindings: true)
+        )
+        XCTAssertTrue(model.contains("init(default: String, in: Bool, `var`: Bool)"))
+        XCTAssertTrue(model.contains("S(default: field0, in: field1, var: field2)"))
         XCTAssertTrue(try generate("schema :S as {\n  mode: :Flags(#rawValue, #other)\n}\n", "S", .csharp).contains("RawValue = 1UL << 0,"))
         XCTAssertTrue(try generate("schema :S as {\n  s: :Boolean\n}\n", "S", .swift).contains("public var sValue: Bool = false"))
     }

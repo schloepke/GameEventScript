@@ -6,10 +6,13 @@
 /// Writing allocates nothing.
 ///
 /// Bits are collected in a 64-bit word that is stored once it is full, so a buffer of the record's byte count suffices; a
-/// full buffer fails with `wire.bufferTooSmall`. The buffer must stay valid while the writer is used, and a copy of the
-/// writer holds its own pending bits, so only one copy may continue writing.
+/// full buffer fails with `wire.bufferTooSmall`. A ``counting()`` writer stores nothing and only counts, so that a caller
+/// learns the exact byte count of a record before it writes it. The buffer must stay valid while the writer is used, and a
+/// copy of the writer holds its own pending bits, so only one copy may continue writing.
 public struct GesBitWriter {
     private let buffer: UnsafeMutableRawBufferPointer
+    private let isCounting: Bool
+    private var required = 0
     private var position = 0
     private var pending: UInt64 = 0
     private var pendingBits = 0
@@ -18,7 +21,21 @@ public struct GesBitWriter {
     /// - Parameter buffer: The buffer that receives the bits.
     public init(into buffer: UnsafeMutableRawBufferPointer) {
         self.buffer = buffer
+        isCounting = false
     }
+
+    private init(counting: Bool) {
+        buffer = UnsafeMutableRawBufferPointer(start: nil, count: 0)
+        isCounting = counting
+    }
+
+    /// Creates a writer that stores nothing: it accepts every write, and ``finish()`` returns the byte count that a buffer
+    /// needs for the same writes.
+    public static func counting() -> GesBitWriter { GesBitWriter(counting: true) }
+
+    /// For a ``counting()`` writer, the bytes a buffer needs for the writes so far, including bits that ``rewind(to:)`` took
+    /// back; it is at least the count ``finish()`` returns. A writer over a buffer reports 0.
+    public var requiredByteCount: Int { required }
 
     /// The number of bits written so far.
     public var bitPosition: Int { position * 8 + pendingBits }
@@ -36,8 +53,14 @@ public struct GesBitWriter {
             pendingBits = total
             return
         }
-        if position + 8 > buffer.count { throw GesWireError(GesWireError.bufferTooSmall) }
-        buffer.storeBytes(of: pending.littleEndian, toByteOffset: position, as: UInt64.self)
+        // A counting writer has no buffer, so only this branch, which a full buffer takes anyway, asks for it.
+        if position + 8 <= buffer.count {
+            buffer.storeBytes(of: pending.littleEndian, toByteOffset: position, as: UInt64.self)
+        } else if !isCounting {
+            throw GesWireError(GesWireError.bufferTooSmall)
+        } else if position + 8 > required {
+            required = position + 8
+        }
         position += 8
         pendingBits = total - 64
         pending = pendingBits == 0 ? 0 : value >> UInt64(width - pendingBits)
@@ -47,6 +70,15 @@ public struct GesBitWriter {
     /// - Parameter bytes: The bytes.
     /// - Throws: `GesWireError` with `wire.bufferTooSmall` when the buffer is full.
     public mutating func writeBytes(_ bytes: UnsafeRawBufferPointer) throws(GesWireError) {
+        if isCounting {
+            // Only the count matters, so a counting writer skips the bytes at once.
+            let total = pendingBits + bytes.count * 8
+            position += (total >> 6) * 8
+            if position > required { required = position }
+            pendingBits = total & 63
+            pending = 0
+            return
+        }
         var index = 0
         while index < bytes.count {
             try write(UInt64(bytes[index]), width: 8)
@@ -60,7 +92,7 @@ public struct GesBitWriter {
         let flushed = position * 8
         if bit >= flushed {
             pending |= 1 << UInt64(bit - flushed)
-        } else {
+        } else if !isCounting {
             buffer[bit >> 3] |= UInt8(1) << UInt8(bit & 7)
         }
     }
@@ -70,7 +102,7 @@ public struct GesBitWriter {
     public mutating func rewind(to bit: Int) {
         // Whole words are flushed, so the word that holds the position can be read back.
         let word = (bit >> 6) << 3
-        if word < position { pending = UInt64(littleEndian: buffer.loadUnaligned(fromByteOffset: word, as: UInt64.self)) }
+        if word < position { pending = isCounting ? 0 : UInt64(littleEndian: buffer.loadUnaligned(fromByteOffset: word, as: UInt64.self)) }
         position = word
         pendingBits = bit & 63
         pending = pendingBits == 0 ? 0 : pending & ((UInt64(1) << UInt64(pendingBits)) - 1)
@@ -81,6 +113,12 @@ public struct GesBitWriter {
     /// - Throws: `GesWireError` with `wire.bufferTooSmall` when the buffer is full.
     public mutating func finish() throws(GesWireError) -> Int {
         let bytes = (pendingBits + 7) / 8
+        if isCounting {
+            position += bytes
+            if position > required { required = position }
+            pendingBits = 0
+            return position
+        }
         if position + bytes > buffer.count { throw GesWireError(GesWireError.bufferTooSmall) }
         var index = 0
         while index < bytes {

@@ -27,7 +27,7 @@ internal static partial class GesSwiftEmitter
 
     private static readonly string[] Reserved =
     [
-        "schemaHash", "bindingHash", "maxByteCount", "write", "read", "readKey", "encoded", "writeDelta", "deltaEncoded", "readDelta", "wireEquals", "copy", "quantize"
+        "schemaHash", "bindingHash", "maxByteCount", "write", "read", "readKey", "encoded", "encodedByteCount", "writeDelta", "deltaEncoded", "deltaEncodedByteCount", "readDelta", "wireEquals", "copy", "quantize"
     ];
 
     internal static string Emit(GesSchemaLayout layout, List<GesPlanType> types, GesSchemaGenerateOptions options)
@@ -98,6 +98,8 @@ internal static partial class GesSwiftEmitter
             if (field.Optional) names.Add(("has" + field.Base, "the presence of " + field.Layout.Name));
             if (field.Optional && Plain(field.Value)) names.Add((GesSchemaPlanner.Camel(field.Base) + "Optional", "the optional value of " + field.Layout.Name));
             Nested(field.Value, names, field.Layout.Name);
+            if (GesCSharpEmitter.IsPooledList(field)) names.Add(("set" + field.Base + "Count", "the element count of " + field.Layout.Name));
+            if (GesCSharpEmitter.IsTextList(field)) names.Add((GesSchemaPlanner.Camel(field.Base) + "Values", "the texts of " + field.Layout.Name));
         }
 
         foreach (var (tag, name, _) in type.Tags) names.Add((GesSchemaPlanner.Camel(name), "the tag #" + tag));
@@ -128,6 +130,7 @@ internal static partial class GesSwiftEmitter
         }
 
         foreach (var field in type.Fields) Pools(code, field.Value, stored);
+        foreach (var field in type.Fields) ListAccess(code, field, access);
         code.Blank();
         code.Line(type.IsItem ? "/// Creates an element with every field at its zero value." : "/// Creates a record with every field at its zero value.");
         code.Line($"{access}init() {{}}");
@@ -262,6 +265,36 @@ internal static partial class GesSwiftEmitter
         code.Close();
     }
 
+    // Sets a pooled list to a count of reused elements, as a read does, and for texts offers them as strings.
+    private static void ListAccess(GesSchemaPlanner.Code code, GesPlanField field, string access)
+    {
+        if (!GesCSharpEmitter.IsPooledList(field)) return;
+        var value = field.Value;
+        var list = "self." + Member(value.Base);
+        var pool = $"self.__{GesSchemaPlanner.Camel(value.Base)}Pool";
+        code.Blank();
+        code.Line($"/// Sets `{field.Layout.Name}` to `count` elements that the record reuses, as a read does; their fields keep earlier values until they are set.");
+        code.Open($"{access}func set{value.Base}Count(_ count: Int) {{");
+        code.Line("precondition(count >= 0, \"A count is not negative.\")");
+        code.Line($"{list}.removeAll(keepingCapacity: true)");
+        code.Open("for position in 0..<count {");
+        code.Line($"if position == {pool}.count {{ {pool}.append({ElementName(value)}()) }}");
+        code.Line($"{list}.append({pool}[position])");
+        code.Close();
+        code.Close();
+        if (!GesCSharpEmitter.IsTextList(field)) return;
+        var text = Member(value.Item!.Fields[0].Base);
+        code.Blank();
+        code.Line($"/// The elements of `{field.Layout.Name}` as strings; reading and setting allocate, and setting reuses the elements.");
+        code.Open($"{access}var {GesSchemaPlanner.Camel(value.Base)}Values: [String] {{");
+        code.Line($"get {{ {list}.map {{ $0.{text} }} }}");
+        code.Open("set {");
+        code.Line($"set{value.Base}Count(newValue.count)");
+        code.Line($"for (index, text) in newValue.enumerated() {{ {list}[index].{text} = text }}");
+        code.Close();
+        code.Close();
+    }
+
     // The instances a list of classes reuses when it is read again.
     private static void Pools(GesSchemaPlanner.Code code, GesPlanValue value, string stored)
     {
@@ -362,10 +395,18 @@ internal static partial class GesSwiftEmitter
         code.Line("return try writer.finish()");
         code.Close();
         code.Blank();
-        code.Line($"/// Writes this {what} into a new array of its exact size.");
+        code.Line($"/// Counts the bytes that `write(into:)` writes for this {what}, without writing them.");
+        code.Line("/// - Throws: `GesWireError` when a value does not fit its field.");
+        code.Open($"{access}func encodedByteCount() throws(GesWireError) -> Int {{");
+        code.Line("var writer = GesBitWriter.counting()");
+        foreach (var line in write) code.Line(line);
+        code.Line("return try writer.finish()");
+        code.Close();
+        code.Blank();
+        code.Line($"/// Writes this {what} into a new array of its exact size, which `encodedByteCount()` counts first.");
         code.Line("/// - Throws: `GesWireError` when a value does not fit its field.");
         code.Open($"{access}func encoded() throws(GesWireError) -> [UInt8] {{");
-        code.Line("let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: Swift.max(Self.maxByteCount, 1), alignment: 8)");
+        code.Line("let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: Swift.max(try encodedByteCount(), 1), alignment: 8)");
         code.Line("defer { buffer.deallocate() }");
         code.Line("let count = try write(into: buffer)");
         code.Line("return Array(buffer[0..<count])");

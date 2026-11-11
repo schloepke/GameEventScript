@@ -15,7 +15,7 @@ schema :Bot as {
   health: :Number integer between 0 and $maxHealth
   firing: :Boolean
   shielded: :Boolean
-  overheated: :Boolean
+  overheated: :Poly
 }
 
 message Hit(target: :Number integer between 0 and 65535, _ damage: :Number integer between 0 and 1000) tags (#critical, #splash)

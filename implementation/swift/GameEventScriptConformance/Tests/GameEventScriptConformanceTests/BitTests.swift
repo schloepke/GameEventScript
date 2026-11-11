@@ -6,6 +6,32 @@ import XCTest
 
 /// Checks the public bit primitives and wire rules that generated schema code builds on.
 final class BitTests: XCTestCase {
+    func testACountingWriterCountsTheBytesOfTheSameWrites() throws {
+        try withBuffer(96) { buffer in
+            var writer = GesBitWriter(into: buffer)
+            var counting = GesBitWriter.counting()
+            for index in 0..<40 {
+                try writer.write(UInt64(index), width: 11)
+                try counting.write(UInt64(index), width: 11)
+            }
+            writer.setBit(3)
+            counting.setBit(3)
+            writer.rewind(to: 10)
+            counting.rewind(to: 10)
+            try writer.write(5, width: 3)
+            try counting.write(5, width: 3)
+            let bytes = UnsafeMutableRawBufferPointer.allocate(byteCount: 13, alignment: 1)
+            defer { bytes.deallocate() }
+            bytes.initializeMemory(as: UInt8.self, repeating: 7)
+            try writer.writeBytes(UnsafeRawBufferPointer(bytes))
+            try counting.writeBytes(UnsafeRawBufferPointer(bytes))
+            XCTAssertEqual(writer.bitPosition, counting.bitPosition)
+            XCTAssertEqual(try writer.finish(), try counting.finish())
+            XCTAssertEqual(writer.requiredByteCount, 0)
+            XCTAssertEqual(counting.requiredByteCount, 48, "Bits that a rewind took back still needed room.")
+        }
+    }
+
     func testEveryWidthRoundTripsAcrossWordBoundaries() throws {
         var generator = SystemRandomNumberGenerator()
         let widths = (0..<400).map { $0 % 65 }

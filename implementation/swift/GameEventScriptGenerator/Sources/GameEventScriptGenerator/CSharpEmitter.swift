@@ -19,7 +19,7 @@ enum GesCSharpEmitter {
 
     // Members every generated type declares, and those every C# object inherits.
     static let reserved = [
-        "SchemaHash", "BindingHash", "MaxByteCount", "Write", "Read", "ReadKey", "ToBytes", "WriteDelta", "ToDeltaBytes", "ReadDelta", "WireEquals", "CopyFrom", "Quantize", "Equals",
+        "SchemaHash", "BindingHash", "MaxByteCount", "Write", "Read", "ReadKey", "ToBytes", "ByteCount", "WriteDelta", "ToDeltaBytes", "DeltaByteCount", "ReadDelta", "WireEquals", "CopyFrom", "Quantize", "Equals",
         "GetHashCode", "ToString", "GetType",
     ]
 
@@ -78,6 +78,10 @@ enum GesCSharpEmitter {
             if field.optional && plain(field.value) { names.append((field.base + "Optional", "the optional value of " + field.layout.name)) }
             nested(field.value, &names, field.layout.name)
         }
+        for field in type.fields {
+            if isPooledList(field) { names.append(("Set" + field.base + "Count", "the element count of " + field.layout.name)) }
+            if isTextList(field) { names.append((field.base + "Values", "the texts of " + field.layout.name)) }
+        }
         for tag in type.tags { names.append((tag.base, "the tag #" + tag.tag)) }
         try GesSchemaPlanner.unique(type.name, names)
 
@@ -107,6 +111,7 @@ enum GesCSharpEmitter {
             code.line("/// <summary>Whether the tag <c>#\(tag.tag)</c> is set.</summary>")
             code.line("public bool \(tag.base);")
         }
+        for field in type.fields { listAccess(&code, field) }
         methods(&code, type)
         if type.isClass && (type.kind == .schema || type.isItem) { sharing(&code, type) }
         let deltas = type.kind == .schema && !type.isItem
@@ -178,6 +183,52 @@ enum GesCSharpEmitter {
     }
 
     static func elementName(_ list: GesPlanValue) -> String { list.item?.name ?? typeName(list.element!) }
+
+    // A required list whose elements are classes the record reuses.
+    static func isPooledList(_ field: GesPlanField) -> Bool { !field.optional && field.value.encoding.kind == .list && field.value.element!.isClass }
+
+    // A pooled list of Text or open Tag elements, whose element type holds one text.
+    static func isTextList(_ field: GesPlanField) -> Bool { isPooledList(field) && field.value.item != nil && field.value.element!.encoding.kind == .text }
+
+    // Sets a pooled list to a count of reused elements, as a read does, and for texts offers them as strings.
+    static func listAccess(_ code: inout Code, _ field: GesPlanField) {
+        if !isPooledList(field) { return }
+        let value = field.value
+        let base = value.base
+        code.blank()
+        code.line("/// <summary>Sets <c>\(field.layout.name)</c> to <paramref name=\"count\"/> elements that the record reuses, as a read does; their fields keep earlier values until they are set.</summary>")
+        code.line("/// <param name=\"count\">The element count.</param>")
+        code.line("public void Set\(base)Count(int count)")
+        code.open("{")
+        code.line("if (count < 0) throw new ArgumentOutOfRangeException(nameof(count));")
+        code.line("\(base).Clear();")
+        code.line("for (var position = 0; position < count; position++)")
+        code.open("{")
+        code.line("if (position == __\(base)Pool.Count) __\(base)Pool.Add(new \(elementName(value))());")
+        code.line("\(base).Add(__\(base)Pool[position]);")
+        code.close()
+        code.close()
+        if !isTextList(field) { return }
+        let text = value.item!.fields[0].base
+        code.blank()
+        code.line("/// <summary>The elements of <c>\(field.layout.name)</c> as strings; reading and setting allocate, and setting reuses the elements.</summary>")
+        code.line("public string[] \(base)Values")
+        code.open("{")
+        code.line("get")
+        code.open("{")
+        code.line("var values = new string[\(base).Count];")
+        code.line("for (var index = 0; index < values.Length; index++) values[index] = \(base)[index].\(text);")
+        code.line("return values;")
+        code.close()
+        code.blank()
+        code.line("set")
+        code.open("{")
+        code.line("if (value is null) throw new ArgumentNullException(nameof(value));")
+        code.line("Set\(base)Count(value.Length);")
+        code.line("for (var index = 0; index < value.Length; index++) \(base)[index].\(text) = value[index];")
+        code.close()
+        code.close()
+    }
 
     // A class reference starts as an instance, so that a record can be filled without allocating later.
     static func initializer(_ value: GesPlanValue) -> String {
@@ -350,13 +401,24 @@ enum GesCSharpEmitter {
         code.line("return writer.Finish();")
         code.close()
         code.blank()
-        code.line("/// <summary>Writes this \(what) into a new array of its exact size.</summary>")
+        code.line("/// <summary>Counts the bytes that <see cref=\"Write\"/> writes for this \(what), without writing them.</summary>")
+        code.line("/// <returns>The exact byte count.</returns>")
+        code.line("/// <exception cref=\"GesWireException\">A value does not fit its field.</exception>")
+        code.line("public \(selfModifier)int ByteCount()")
+        code.open("{")
+        code.line("var writer = GesBitWriter.Counting();")
+        for line in write { code.line(line) }
+        code.line("return writer.Finish();")
+        code.close()
+        code.blank()
+        code.line("/// <summary>Writes this \(what) into a new array of its exact size, which <see cref=\"ByteCount\"/> counts first.</summary>")
         code.line("/// <returns>The bytes.</returns>")
         code.line("/// <exception cref=\"GesWireException\">A value does not fit its field.</exception>")
         code.line("public \(selfModifier)byte[] ToBytes()")
         code.open("{")
-        code.line("var buffer = new byte[MaxByteCount];")
-        code.line("return buffer.AsSpan(0, Write(buffer)).ToArray();")
+        code.line("var buffer = new byte[ByteCount()];")
+        code.line("Write(buffer);")
+        code.line("return buffer;")
         code.close()
         code.blank()
         code.line("/// <summary>Reads a \(what) from untrusted data into this instance. After an error its values are unspecified.</summary>")

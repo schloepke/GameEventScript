@@ -12,6 +12,9 @@ import GameEventScriptRuntime
 enum RolesBound {
     /// The model of the schema `:BotView`: a plain value that is never encoded.
     struct BotView: Hashable, Sendable, Codable, Identifiable {
+        /// The hash of the schema `:BotView`, which wire records of it carry too; a test that compares it notices stale generated code.
+        static let schemaHash: UInt64 = 0xd96f1616c2b5836d
+
         /// `bot: :Number integer key`.
         var bot: Int
 
@@ -200,6 +203,9 @@ enum RolesBound {
 
     /// The model of the schema `:Panel_Badge`: a plain value that is never encoded.
     struct Panel_Badge: Hashable, Sendable, Codable {
+        /// The hash of the schema `:Panel_Badge`, which wire records of it carry too; a test that compares it notices stale generated code.
+        static let schemaHash: UInt64 = 0x0854980b8fe23b88
+
         /// `label: :Text max 8`.
         var label: String
 
@@ -227,6 +233,9 @@ enum RolesBound {
 
     /// The model of the schema `:Panel_Entry`: a plain value that is never encoded.
     struct Panel_Entry: Hashable, Sendable, Codable {
+        /// The hash of the schema `:Panel_Entry`, which wire records of it carry too; a test that compares it notices stale generated code.
+        static let schemaHash: UInt64 = 0xa6b523d53f83f21e
+
         /// `name: :Text max 8`.
         var name: String
 
@@ -258,6 +267,9 @@ enum RolesBound {
 
     /// The model of the schema `:Panel_Report`: a plain value that is never encoded.
     struct Panel_Report: Hashable, Sendable, Codable {
+        /// The hash of the schema `:Panel_Report`, which wire records of it carry too; a test that compares it notices stale generated code.
+        static let schemaHash: UInt64 = 0x4885f554a711dde1
+
         /// `title: :Text max 16`.
         var title: String
 
@@ -346,6 +358,9 @@ enum RolesBound {
 
     /// The model of the schema `:RadarView`: a plain value that is never encoded.
     struct RadarView: Hashable, Sendable, Codable {
+        /// The hash of the schema `:RadarView`, which wire records of it carry too; a test that compares it notices stale generated code.
+        static let schemaHash: UInt64 = 0xf2c0cf13e2948ded
+
         /// `range: :Quantity(meter)`.
         var range: Double
 
@@ -377,6 +392,9 @@ enum RolesBound {
 
     /// The model of the schema `:WorldView`: a plain value that is never encoded.
     struct WorldView: Hashable, Sendable, Codable {
+        /// The hash of the schema `:WorldView`, which wire records of it carry too; a test that compares it notices stale generated code.
+        static let schemaHash: UInt64 = 0x1ad7e1c268f811e2
+
         /// `tick: :Number integer`.
         var tick: Int
 
@@ -420,6 +438,9 @@ enum RolesBound {
 
     /// The model of the schema `:World_Body`: a plain value that is never encoded.
     struct World_Body: Hashable, Sendable, Codable {
+        /// The hash of the schema `:World_Body`, which wire records of it carry too; a test that compares it notices stale generated code.
+        static let schemaHash: UInt64 = 0x3068484dfbaf015f
+
         /// `mass: :Quantity(kilogram) between 0 and 1000 step 1`.
         var mass: Double
 
@@ -936,30 +957,53 @@ enum RolesBound {
         }
 
         static func readBotView(_ value: GesValue, _ path: String) throws(GesWireError) -> BotView {
-            guard let fields = recordFields(value, "BotView", BotViewFields) else { throw mismatch(path) }
-            guard let field0 = __GesModelsae4351b20b848505.integer(fields.get("bot") ?? .nothing, .none) else { throw mismatch(fieldPath(path, "bot")) }
-            guard let field1 = __GesModelsae4351b20b848505.text(fields.get("name") ?? .nothing) else { throw mismatch(fieldPath(path, "name")) }
-            guard let field2 = __GesModelsae4351b20b848505.boolean(fields.get("alive") ?? .nothing) else { throw mismatch(fieldPath(path, "alive")) }
-            guard let field3 = __GesModelsae4351b20b848505.percentage(fields.get("health") ?? .nothing) else { throw mismatch(fieldPath(path, "health")) }
-            guard let field4 = __GesModelsae4351b20b848505.number(fields.get("speed") ?? .nothing, .none) else { throw mismatch(fieldPath(path, "speed")) }
-            guard let field5 = __GesModelsae4351b20b848505.number(fields.get("heading") ?? .nothing, .degree) else { throw mismatch(fieldPath(path, "heading")) }
-            guard let field6 = __GesModelsae4351b20b848505.tag(fields.get("mood") ?? .nothing).flatMap(BotView.MoodTag.init(rawValue:)) else { throw mismatch(fieldPath(path, "mood")) }
-            guard let field7 = __GesModelsae4351b20b848505.tag(fields.get("team") ?? .nothing) else { throw mismatch(fieldPath(path, "team")) }
-            guard let field8 = GesPoint(fields.get("position") ?? .nothing, unit: .meter) else { throw mismatch(fieldPath(path, "position")) }
-            guard let field9 = GesVector(fields.get("velocity") ?? .nothing, unit: .meter) else { throw mismatch(fieldPath(path, "velocity")) }
-            let field10 = try readWorld_Body(fields.get("body") ?? .nothing, fieldPath(path, "body"))
-            let field11 = try readOptional(fields.get("radar") ?? .nothing, fieldPath(path, "radar")) { (x0: GesValue, p0: String) throws(GesWireError) in try readRadarView(x0, p0) }
-            guard let field12 = __GesModelsae4351b20b848505.optional(fields.get("facing") ?? .nothing, { __GesModelValuesae4351b20b848505.decodeBotViewFacingAlternative($0) }) else { throw mismatch(fieldPath(path, "facing")) }
-            guard let field13 = __GesModelsae4351b20b848505.optional(fields.get("note") ?? .nothing, { __GesModelsae4351b20b848505.text($0) }) else { throw mismatch(fieldPath(path, "note")) }
-            let field14 = try readList(fields.get("marks") ?? .nothing, fieldPath(path, "marks")) { (x0: GesValue, p0: String) throws(GesWireError) in try require(GesPoint(x0, unit: .meter), p0) }
-            let field15 = try readList(fields.get("units") ?? .nothing, fieldPath(path, "units")) { (x0: GesValue, p0: String) throws(GesWireError) in try require(__GesModelValuesae4351b20b848505.decodeBotViewUnitsItemAlternative(x0), p0) }
-            let field16 = try readList(fields.get("grid") ?? .nothing, fieldPath(path, "grid")) { (x0: GesValue, p0: String) throws(GesWireError) in try readList(x0, p0) { (x1: GesValue, p1: String) throws(GesWireError) in try require(__GesModelsae4351b20b848505.integer(x1, .none), p1) } }
-            guard let field17 = __GesModelsae4351b20b848505.dice(fields.get("rolls") ?? .nothing) else { throw mismatch(fieldPath(path, "rolls")) }
-            guard let field18 = __GesModelsae4351b20b848505.bytes(fields.get("seal") ?? .nothing) else { throw mismatch(fieldPath(path, "seal")) }
-            let field19 = try readList(fields.get("chunks") ?? .nothing, fieldPath(path, "chunks")) { (x0: GesValue, p0: String) throws(GesWireError) in try require(__GesModelsae4351b20b848505.bytes(x0), p0) }
-            guard let field20 = __GesModelValuesae4351b20b848505.decodeBotViewStatusFlags(fields.get("status") ?? .nothing) else { throw mismatch(fieldPath(path, "status")) }
-            let field21 = try readList(fields.get("ranks") ?? .nothing, fieldPath(path, "ranks")) { (x0: GesValue, p0: String) throws(GesWireError) in try require(__GesModelValuesae4351b20b848505.decodeBotViewRanksItemFlags(x0), p0) }
-            let field22 = try readList(fields.get("hints") ?? .nothing, fieldPath(path, "hints")) { (x0: GesValue, p0: String) throws(GesWireError) in try require(__GesModelsae4351b20b848505.tag(x0).flatMap(BotView.HintsItemTag.init(rawValue:)), p0) }
+            guard let fields = recordFields(value, "BotView", BotViewFields) else { throw failure(value, path) }
+            let value0 = try required(fields, "bot", path)
+            guard let field0 = __GesModelsae4351b20b848505.integer(value0, .none) else { throw failure(value0, fieldPath(path, "bot")) }
+            let value1 = try required(fields, "name", path)
+            guard let field1 = __GesModelsae4351b20b848505.text(value1) else { throw failure(value1, fieldPath(path, "name")) }
+            let value2 = try required(fields, "alive", path)
+            guard let field2 = __GesModelsae4351b20b848505.boolean(value2) else { throw failure(value2, fieldPath(path, "alive")) }
+            let value3 = try required(fields, "health", path)
+            guard let field3 = __GesModelsae4351b20b848505.percentage(value3) else { throw failure(value3, fieldPath(path, "health")) }
+            let value4 = try required(fields, "speed", path)
+            guard let field4 = __GesModelsae4351b20b848505.number(value4, .none) else { throw failure(value4, fieldPath(path, "speed")) }
+            let value5 = try required(fields, "heading", path)
+            guard let field5 = __GesModelsae4351b20b848505.number(value5, .degree) else { throw failure(value5, fieldPath(path, "heading")) }
+            let value6 = try required(fields, "mood", path)
+            guard let field6 = __GesModelsae4351b20b848505.tag(value6).flatMap(BotView.MoodTag.init(rawValue:)) else { throw failure(value6, fieldPath(path, "mood")) }
+            let value7 = try required(fields, "team", path)
+            guard let field7 = __GesModelsae4351b20b848505.tag(value7) else { throw failure(value7, fieldPath(path, "team")) }
+            let value8 = try required(fields, "position", path)
+            guard let field8 = GesPoint(value8, unit: .meter) else { throw failure(value8, fieldPath(path, "position")) }
+            let value9 = try required(fields, "velocity", path)
+            guard let field9 = GesVector(value9, unit: .meter) else { throw failure(value9, fieldPath(path, "velocity")) }
+            let value10 = try required(fields, "body", path)
+            let field10 = try readWorld_Body(value10, fieldPath(path, "body"))
+            let value11 = fields.get("radar") ?? .nothing
+            let field11 = try readOptional(value11, fieldPath(path, "radar")) { (x0: GesValue, p0: String) throws(GesWireError) in try readRadarView(x0, p0) }
+            let value12 = fields.get("facing") ?? .nothing
+            guard let field12 = __GesModelsae4351b20b848505.optional(value12, { __GesModelValuesae4351b20b848505.decodeBotViewFacingAlternative($0) }) else { throw failure(value12, fieldPath(path, "facing")) }
+            let value13 = fields.get("note") ?? .nothing
+            guard let field13 = __GesModelsae4351b20b848505.optional(value13, { __GesModelsae4351b20b848505.text($0) }) else { throw failure(value13, fieldPath(path, "note")) }
+            let value14 = try required(fields, "marks", path)
+            let field14 = try readList(value14, fieldPath(path, "marks")) { (x0: GesValue, p0: String) throws(GesWireError) in try require(GesPoint(x0, unit: .meter), x0, p0) }
+            let value15 = try required(fields, "units", path)
+            let field15 = try readList(value15, fieldPath(path, "units")) { (x0: GesValue, p0: String) throws(GesWireError) in try require(__GesModelValuesae4351b20b848505.decodeBotViewUnitsItemAlternative(x0), x0, p0) }
+            let value16 = try required(fields, "grid", path)
+            let field16 = try readList(value16, fieldPath(path, "grid")) { (x0: GesValue, p0: String) throws(GesWireError) in try readList(x0, p0) { (x1: GesValue, p1: String) throws(GesWireError) in try require(__GesModelsae4351b20b848505.integer(x1, .none), x1, p1) } }
+            let value17 = try required(fields, "rolls", path)
+            guard let field17 = __GesModelsae4351b20b848505.dice(value17) else { throw failure(value17, fieldPath(path, "rolls")) }
+            let value18 = try required(fields, "seal", path)
+            guard let field18 = __GesModelsae4351b20b848505.bytes(value18) else { throw failure(value18, fieldPath(path, "seal")) }
+            let value19 = try required(fields, "chunks", path)
+            let field19 = try readList(value19, fieldPath(path, "chunks")) { (x0: GesValue, p0: String) throws(GesWireError) in try require(__GesModelsae4351b20b848505.bytes(x0), x0, p0) }
+            let value20 = try required(fields, "status", path)
+            guard let field20 = __GesModelValuesae4351b20b848505.decodeBotViewStatusFlags(value20) else { throw failure(value20, fieldPath(path, "status")) }
+            let value21 = try required(fields, "ranks", path)
+            let field21 = try readList(value21, fieldPath(path, "ranks")) { (x0: GesValue, p0: String) throws(GesWireError) in try require(__GesModelValuesae4351b20b848505.decodeBotViewRanksItemFlags(x0), x0, p0) }
+            let value22 = try required(fields, "hints", path)
+            let field22 = try readList(value22, fieldPath(path, "hints")) { (x0: GesValue, p0: String) throws(GesWireError) in try require(__GesModelsae4351b20b848505.tag(x0).flatMap(BotView.HintsItemTag.init(rawValue:)), x0, p0) }
             return BotView(bot: field0, name: field1, alive: field2, health: field3, speed: field4, heading: field5, mood: field6, team: field7, position: field8, velocity: field9, body: field10, radar: field11, facing: field12, note: field13, marks: field14, units: field15, grid: field16, rolls: field17, seal: field18, chunks: field19, status: field20, ranks: field21, hints: field22)
         }
 
@@ -1040,8 +1084,9 @@ enum RolesBound {
         }
 
         static func readPanel_Badge(_ value: GesValue, _ path: String) throws(GesWireError) -> Panel_Badge {
-            guard let fields = recordFields(value, "Panel_Badge", Panel_BadgeFields) else { throw mismatch(path) }
-            guard let field0 = __GesModelsae4351b20b848505.text(fields.get("label") ?? .nothing) else { throw mismatch(fieldPath(path, "label")) }
+            guard let fields = recordFields(value, "Panel_Badge", Panel_BadgeFields) else { throw failure(value, path) }
+            let value0 = try required(fields, "label", path)
+            guard let field0 = __GesModelsae4351b20b848505.text(value0) else { throw failure(value0, fieldPath(path, "label")) }
             return Panel_Badge(label: field0)
         }
 
@@ -1063,9 +1108,11 @@ enum RolesBound {
         }
 
         static func readPanel_Entry(_ value: GesValue, _ path: String) throws(GesWireError) -> Panel_Entry {
-            guard let fields = recordFields(value, "Panel_Entry", Panel_EntryFields) else { throw mismatch(path) }
-            guard let field0 = __GesModelsae4351b20b848505.text(fields.get("name") ?? .nothing) else { throw mismatch(fieldPath(path, "name")) }
-            guard let field1 = __GesModelsae4351b20b848505.percentage(fields.get("level") ?? .nothing) else { throw mismatch(fieldPath(path, "level")) }
+            guard let fields = recordFields(value, "Panel_Entry", Panel_EntryFields) else { throw failure(value, path) }
+            let value0 = try required(fields, "name", path)
+            guard let field0 = __GesModelsae4351b20b848505.text(value0) else { throw failure(value0, fieldPath(path, "name")) }
+            let value1 = try required(fields, "level", path)
+            guard let field1 = __GesModelsae4351b20b848505.percentage(value1) else { throw failure(value1, fieldPath(path, "level")) }
             return Panel_Entry(name: field0, level: field1)
         }
 
@@ -1094,15 +1141,23 @@ enum RolesBound {
         }
 
         static func readPanel_Report(_ value: GesValue, _ path: String) throws(GesWireError) -> Panel_Report {
-            guard let fields = recordFields(value, "Panel_Report", Panel_ReportFields) else { throw mismatch(path) }
-            guard let field0 = __GesModelsae4351b20b848505.text(fields.get("title") ?? .nothing) else { throw mismatch(fieldPath(path, "title")) }
-            guard let field1 = __GesModelsae4351b20b848505.tag(fields.get("status") ?? .nothing).flatMap(Panel_Report.StatusTag.init(rawValue:)) else { throw mismatch(fieldPath(path, "status")) }
-            guard let field2 = __GesModelsae4351b20b848505.number(fields.get("load") ?? .nothing, .watt) else { throw mismatch(fieldPath(path, "load")) }
-            guard let field3 = GesPoint(fields.get("spot") ?? .nothing, unit: .meter) else { throw mismatch(fieldPath(path, "spot")) }
-            guard let field4 = __GesModelsae4351b20b848505.optional(fields.get("note") ?? .nothing, { __GesModelsae4351b20b848505.text($0) }) else { throw mismatch(fieldPath(path, "note")) }
-            let field5 = try readList(fields.get("entries") ?? .nothing, fieldPath(path, "entries")) { (x0: GesValue, p0: String) throws(GesWireError) in try readPanel_Entry(x0, p0) }
-            guard let field6 = __GesModelsae4351b20b848505.optional(fields.get("reading") ?? .nothing, { __GesModelValuesae4351b20b848505.decodePanel_ReportReadingAlternative($0) }) else { throw mismatch(fieldPath(path, "reading")) }
-            guard let field7 = __GesModelValuesae4351b20b848505.decodePanel_ReportAlarmsFlags(fields.get("alarms") ?? .nothing) else { throw mismatch(fieldPath(path, "alarms")) }
+            guard let fields = recordFields(value, "Panel_Report", Panel_ReportFields) else { throw failure(value, path) }
+            let value0 = try required(fields, "title", path)
+            guard let field0 = __GesModelsae4351b20b848505.text(value0) else { throw failure(value0, fieldPath(path, "title")) }
+            let value1 = try required(fields, "status", path)
+            guard let field1 = __GesModelsae4351b20b848505.tag(value1).flatMap(Panel_Report.StatusTag.init(rawValue:)) else { throw failure(value1, fieldPath(path, "status")) }
+            let value2 = try required(fields, "load", path)
+            guard let field2 = __GesModelsae4351b20b848505.number(value2, .watt) else { throw failure(value2, fieldPath(path, "load")) }
+            let value3 = try required(fields, "spot", path)
+            guard let field3 = GesPoint(value3, unit: .meter) else { throw failure(value3, fieldPath(path, "spot")) }
+            let value4 = fields.get("note") ?? .nothing
+            guard let field4 = __GesModelsae4351b20b848505.optional(value4, { __GesModelsae4351b20b848505.text($0) }) else { throw failure(value4, fieldPath(path, "note")) }
+            let value5 = try required(fields, "entries", path)
+            let field5 = try readList(value5, fieldPath(path, "entries")) { (x0: GesValue, p0: String) throws(GesWireError) in try readPanel_Entry(x0, p0) }
+            let value6 = fields.get("reading") ?? .nothing
+            guard let field6 = __GesModelsae4351b20b848505.optional(value6, { __GesModelValuesae4351b20b848505.decodePanel_ReportReadingAlternative($0) }) else { throw failure(value6, fieldPath(path, "reading")) }
+            let value7 = try required(fields, "alarms", path)
+            guard let field7 = __GesModelValuesae4351b20b848505.decodePanel_ReportAlarmsFlags(value7) else { throw failure(value7, fieldPath(path, "alarms")) }
             return Panel_Report(title: field0, status: field1, load: field2, spot: field3, note: field4, entries: field5, reading: field6, alarms: field7)
         }
 
@@ -1150,9 +1205,11 @@ enum RolesBound {
         }
 
         static func readRadarView(_ value: GesValue, _ path: String) throws(GesWireError) -> RadarView {
-            guard let fields = recordFields(value, "RadarView", RadarViewFields) else { throw mismatch(path) }
-            guard let field0 = __GesModelsae4351b20b848505.number(fields.get("range") ?? .nothing, .meter) else { throw mismatch(fieldPath(path, "range")) }
-            let field1 = try readList(fields.get("contacts") ?? .nothing, fieldPath(path, "contacts")) { (x0: GesValue, p0: String) throws(GesWireError) in try require(__GesModelsae4351b20b848505.integer(x0, .none), p0) }
+            guard let fields = recordFields(value, "RadarView", RadarViewFields) else { throw failure(value, path) }
+            let value0 = try required(fields, "range", path)
+            guard let field0 = __GesModelsae4351b20b848505.number(value0, .meter) else { throw failure(value0, fieldPath(path, "range")) }
+            let value1 = try required(fields, "contacts", path)
+            let field1 = try readList(value1, fieldPath(path, "contacts")) { (x0: GesValue, p0: String) throws(GesWireError) in try require(__GesModelsae4351b20b848505.integer(x0, .none), x0, p0) }
             return RadarView(range: field0, contacts: field1)
         }
 
@@ -1178,12 +1235,17 @@ enum RolesBound {
         }
 
         static func readWorldView(_ value: GesValue, _ path: String) throws(GesWireError) -> WorldView {
-            guard let fields = recordFields(value, "WorldView", WorldViewFields) else { throw mismatch(path) }
-            guard let field0 = __GesModelsae4351b20b848505.integer(fields.get("tick") ?? .nothing, .none) else { throw mismatch(fieldPath(path, "tick")) }
-            guard let field1 = __GesModelsae4351b20b848505.number(fields.get("time") ?? .nothing, .second) else { throw mismatch(fieldPath(path, "time")) }
-            guard let field2 = GesVector(fields.get("arena") ?? .nothing, unit: .meter) else { throw mismatch(fieldPath(path, "arena")) }
-            let field3 = try readList(fields.get("bots") ?? .nothing, fieldPath(path, "bots")) { (x0: GesValue, p0: String) throws(GesWireError) in try readBotView(x0, p0) }
-            let field4 = try readOptional(fields.get("badge") ?? .nothing, fieldPath(path, "badge")) { (x0: GesValue, p0: String) throws(GesWireError) in try readPanel_Badge(x0, p0) }
+            guard let fields = recordFields(value, "WorldView", WorldViewFields) else { throw failure(value, path) }
+            let value0 = try required(fields, "tick", path)
+            guard let field0 = __GesModelsae4351b20b848505.integer(value0, .none) else { throw failure(value0, fieldPath(path, "tick")) }
+            let value1 = try required(fields, "time", path)
+            guard let field1 = __GesModelsae4351b20b848505.number(value1, .second) else { throw failure(value1, fieldPath(path, "time")) }
+            let value2 = try required(fields, "arena", path)
+            guard let field2 = GesVector(value2, unit: .meter) else { throw failure(value2, fieldPath(path, "arena")) }
+            let value3 = try required(fields, "bots", path)
+            let field3 = try readList(value3, fieldPath(path, "bots")) { (x0: GesValue, p0: String) throws(GesWireError) in try readBotView(x0, p0) }
+            let value4 = fields.get("badge") ?? .nothing
+            let field4 = try readOptional(value4, fieldPath(path, "badge")) { (x0: GesValue, p0: String) throws(GesWireError) in try readPanel_Badge(x0, p0) }
             return WorldView(tick: field0, time: field1, arena: field2, bots: field3, badge: field4)
         }
 
@@ -1209,9 +1271,11 @@ enum RolesBound {
         }
 
         static func readWorld_Body(_ value: GesValue, _ path: String) throws(GesWireError) -> World_Body {
-            guard let fields = recordFields(value, "World_Body", World_BodyFields) else { throw mismatch(path) }
-            guard let field0 = __GesModelsae4351b20b848505.number(fields.get("mass") ?? .nothing, .kilogram) else { throw mismatch(fieldPath(path, "mass")) }
-            guard let field1 = __GesModelsae4351b20b848505.tag(fields.get("hull") ?? .nothing).flatMap(World_Body.HullTag.init(rawValue:)) else { throw mismatch(fieldPath(path, "hull")) }
+            guard let fields = recordFields(value, "World_Body", World_BodyFields) else { throw failure(value, path) }
+            let value0 = try required(fields, "mass", path)
+            guard let field0 = __GesModelsae4351b20b848505.number(value0, .kilogram) else { throw failure(value0, fieldPath(path, "mass")) }
+            let value1 = try required(fields, "hull", path)
+            guard let field1 = __GesModelsae4351b20b848505.tag(value1).flatMap(World_Body.HullTag.init(rawValue:)) else { throw failure(value1, fieldPath(path, "hull")) }
             return World_Body(mass: field0, hull: field1)
         }
 
@@ -1233,16 +1297,24 @@ enum RolesBound {
 
         static func fieldPath(_ path: String, _ field: String) -> String { path.isEmpty ? field : path + "." + field }
 
-        static func mismatch(_ path: String) -> GesWireError { GesWireError(code: GesWireError.typeMismatch, path: path) }
+        // A value that does not convert: nothing where a value is required, or a value of another type.
+        static func failure(_ value: GesValue, _ path: String) -> GesWireError {
+            GesWireError(code: value.isNothing ? GesWireError.nothingValue : GesWireError.typeMismatch, path: path)
+        }
 
-        static func require<T>(_ value: T?, _ path: String) throws(GesWireError) -> T {
-            guard let value else { throw mismatch(path) }
+        static func required(_ fields: GesValueMap, _ name: String, _ path: String) throws(GesWireError) -> GesValue {
+            guard let value = fields.get(name) else { throw GesWireError(code: GesWireError.missingField, path: fieldPath(path, name)) }
             return value
+        }
+
+        static func require<T>(_ converted: T?, _ value: GesValue, _ path: String) throws(GesWireError) -> T {
+            guard let converted else { throw failure(value, path) }
+            return converted
         }
 
         // The elements of a List, each read at the list's path with `[]`.
         static func readList<T>(_ value: GesValue, _ path: String, _ element: (GesValue, String) throws(GesWireError) -> T) throws(GesWireError) -> [T] {
-            guard let items = value.listValue else { throw mismatch(path) }
+            guard let items = value.listValue else { throw failure(value, path) }
             let item = path + "[]"
             var result: [T] = []
             result.reserveCapacity(items.count)

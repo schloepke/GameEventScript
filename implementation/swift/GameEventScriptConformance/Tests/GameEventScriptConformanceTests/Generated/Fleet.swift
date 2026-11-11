@@ -42,10 +42,18 @@ enum Generated {
             return try writer.finish()
         }
 
-        /// Writes this record into a new array of its exact size.
+        /// Counts the bytes that `write(into:)` writes for this record, without writing them.
+        /// - Throws: `GesWireError` when a value does not fit its field.
+        func encodedByteCount() throws(GesWireError) -> Int {
+            var writer = GesBitWriter.counting()
+            try __writeFields(&writer, Self.__paths, 0)
+            return try writer.finish()
+        }
+
+        /// Writes this record into a new array of its exact size, which `encodedByteCount()` counts first.
         /// - Throws: `GesWireError` when a value does not fit its field.
         func encoded() throws(GesWireError) -> [UInt8] {
-            let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: Swift.max(Self.maxByteCount, 1), alignment: 8)
+            let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: Swift.max(try encodedByteCount(), 1), alignment: 8)
             defer { buffer.deallocate() }
             let count = try write(into: buffer)
             return Array(buffer[0..<count])
@@ -142,10 +150,22 @@ enum Generated {
             return try writer.finish()
         }
 
-        /// Writes what differs from a baseline into a new array of its exact size.
+        /// Counts the bytes that `writeDelta(against:into:)` writes against a baseline, without writing them.
+        /// - Throws: `GesWireError` when a value does not fit its field or the keys differ.
+        func deltaEncodedByteCount(against baseline: Banner) throws(GesWireError) -> Int {
+            var writer = GesBitWriter.counting()
+            _ = try __writeDelta(baseline, &writer, Self.__paths, 0, true)
+            return try writer.finish()
+        }
+
+        /// Writes what differs from a baseline into a new array of its exact size. A count comes first: it sizes the buffer for
+        /// the elements that the writer tries and takes back, so that the largest delta is not allocated.
         /// - Throws: `GesWireError` when a value does not fit its field or the keys differ.
         func deltaEncoded(against baseline: Banner) throws(GesWireError) -> [UInt8] {
-            let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: Swift.max(Self.maxByteCount, 1), alignment: 8)
+            var writer = GesBitWriter.counting()
+            _ = try __writeDelta(baseline, &writer, Self.__paths, 0, true)
+            _ = try writer.finish()
+            let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: Swift.max(writer.requiredByteCount, 1), alignment: 8)
             defer { buffer.deallocate() }
             let count = try writeDelta(against: baseline, into: buffer)
             return Array(buffer[0..<count])
@@ -295,6 +315,16 @@ enum Generated {
         @exclusivity(unchecked) var flag: Banner = Banner()
         @exclusivity(unchecked) private var __shipsPool: [Ship] = []
 
+        /// Sets `ships` to `count` elements that the record reuses, as a read does; their fields keep earlier values until they are set.
+        func setShipsCount(_ count: Int) {
+            precondition(count >= 0, "A count is not negative.")
+            self.ships.removeAll(keepingCapacity: true)
+            for position in 0..<count {
+                if position == self.__shipsPool.count { self.__shipsPool.append(Ship()) }
+                self.ships.append(self.__shipsPool[position])
+            }
+        }
+
         /// Creates a record with every field at its zero value.
         init() {}
 
@@ -307,10 +337,18 @@ enum Generated {
             return try writer.finish()
         }
 
-        /// Writes this record into a new array of its exact size.
+        /// Counts the bytes that `write(into:)` writes for this record, without writing them.
+        /// - Throws: `GesWireError` when a value does not fit its field.
+        func encodedByteCount() throws(GesWireError) -> Int {
+            var writer = GesBitWriter.counting()
+            try __writeFields(&writer, Self.__paths, 0)
+            return try writer.finish()
+        }
+
+        /// Writes this record into a new array of its exact size, which `encodedByteCount()` counts first.
         /// - Throws: `GesWireError` when a value does not fit its field.
         func encoded() throws(GesWireError) -> [UInt8] {
-            let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: Swift.max(Self.maxByteCount, 1), alignment: 8)
+            let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: Swift.max(try encodedByteCount(), 1), alignment: 8)
             defer { buffer.deallocate() }
             let count = try write(into: buffer)
             return Array(buffer[0..<count])
@@ -761,10 +799,22 @@ enum Generated {
             return try writer.finish()
         }
 
-        /// Writes what differs from a baseline into a new array of its exact size.
+        /// Counts the bytes that `writeDelta(against:into:)` writes against a baseline, without writing them.
+        /// - Throws: `GesWireError` when a value does not fit its field or the keys differ.
+        func deltaEncodedByteCount(against baseline: Fleet) throws(GesWireError) -> Int {
+            var writer = GesBitWriter.counting()
+            _ = try __writeDelta(baseline, &writer, Self.__paths, 0, true)
+            return try writer.finish()
+        }
+
+        /// Writes what differs from a baseline into a new array of its exact size. A count comes first: it sizes the buffer for
+        /// the elements that the writer tries and takes back, so that the largest delta is not allocated.
         /// - Throws: `GesWireError` when a value does not fit its field or the keys differ.
         func deltaEncoded(against baseline: Fleet) throws(GesWireError) -> [UInt8] {
-            let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: Swift.max(Self.maxByteCount, 1), alignment: 8)
+            var writer = GesBitWriter.counting()
+            _ = try __writeDelta(baseline, &writer, Self.__paths, 0, true)
+            _ = try writer.finish()
+            let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: Swift.max(writer.requiredByteCount, 1), alignment: 8)
             defer { buffer.deallocate() }
             let count = try writeDelta(against: baseline, into: buffer)
             return Array(buffer[0..<count])
@@ -1084,10 +1134,18 @@ enum Generated {
             return try writer.finish()
         }
 
-        /// Writes this record into a new array of its exact size.
+        /// Counts the bytes that `write(into:)` writes for this record, without writing them.
+        /// - Throws: `GesWireError` when a value does not fit its field.
+        func encodedByteCount() throws(GesWireError) -> Int {
+            var writer = GesBitWriter.counting()
+            try __writeFields(&writer, Self.__paths, 0)
+            return try writer.finish()
+        }
+
+        /// Writes this record into a new array of its exact size, which `encodedByteCount()` counts first.
         /// - Throws: `GesWireError` when a value does not fit its field.
         func encoded() throws(GesWireError) -> [UInt8] {
-            let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: Swift.max(Self.maxByteCount, 1), alignment: 8)
+            let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: Swift.max(try encodedByteCount(), 1), alignment: 8)
             defer { buffer.deallocate() }
             let count = try write(into: buffer)
             return Array(buffer[0..<count])
@@ -1220,10 +1278,22 @@ enum Generated {
             return try writer.finish()
         }
 
-        /// Writes what differs from a baseline into a new array of its exact size.
+        /// Counts the bytes that `writeDelta(against:into:)` writes against a baseline, without writing them.
+        /// - Throws: `GesWireError` when a value does not fit its field or the keys differ.
+        func deltaEncodedByteCount(against baseline: Pose) throws(GesWireError) -> Int {
+            var writer = GesBitWriter.counting()
+            _ = try __writeDelta(baseline, &writer, Self.__paths, 0, true)
+            return try writer.finish()
+        }
+
+        /// Writes what differs from a baseline into a new array of its exact size. A count comes first: it sizes the buffer for
+        /// the elements that the writer tries and takes back, so that the largest delta is not allocated.
         /// - Throws: `GesWireError` when a value does not fit its field or the keys differ.
         func deltaEncoded(against baseline: Pose) throws(GesWireError) -> [UInt8] {
-            let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: Swift.max(Self.maxByteCount, 1), alignment: 8)
+            var writer = GesBitWriter.counting()
+            _ = try __writeDelta(baseline, &writer, Self.__paths, 0, true)
+            _ = try writer.finish()
+            let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: Swift.max(writer.requiredByteCount, 1), alignment: 8)
             defer { buffer.deallocate() }
             let count = try writeDelta(against: baseline, into: buffer)
             return Array(buffer[0..<count])
@@ -1449,10 +1519,18 @@ enum Generated {
             return try writer.finish()
         }
 
-        /// Writes this record into a new array of its exact size.
+        /// Counts the bytes that `write(into:)` writes for this record, without writing them.
+        /// - Throws: `GesWireError` when a value does not fit its field.
+        func encodedByteCount() throws(GesWireError) -> Int {
+            var writer = GesBitWriter.counting()
+            try __writeFields(&writer, Self.__paths, 0)
+            return try writer.finish()
+        }
+
+        /// Writes this record into a new array of its exact size, which `encodedByteCount()` counts first.
         /// - Throws: `GesWireError` when a value does not fit its field.
         func encoded() throws(GesWireError) -> [UInt8] {
-            let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: Swift.max(Self.maxByteCount, 1), alignment: 8)
+            let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: Swift.max(try encodedByteCount(), 1), alignment: 8)
             defer { buffer.deallocate() }
             let count = try write(into: buffer)
             return Array(buffer[0..<count])
@@ -1718,10 +1796,30 @@ enum Generated {
             return try writer.finish()
         }
 
-        /// Writes what differs from a baseline into a new array of its exact size.
+        /// Counts the bytes that `writeDelta(against:into:)` writes against a baseline, without writing them.
+        /// - Throws: `GesWireError` when a value does not fit its field or the keys differ.
+        func deltaEncodedByteCount(against baseline: Ship) throws(GesWireError) -> Int {
+            var writer = GesBitWriter.counting()
+            let paths = Self.__paths
+            let key = try Self.__wire0(self.id, paths, 0)
+            if try key != Self.__wire0(baseline.id, paths, 0) { throw GesWireError(code: GesWireError.keyMismatch, path: paths[0]) }
+            try writer.write(key, width: 16)
+            _ = try __writeDelta(baseline, &writer, Self.__paths, 0, true)
+            return try writer.finish()
+        }
+
+        /// Writes what differs from a baseline into a new array of its exact size. A count comes first: it sizes the buffer for
+        /// the elements that the writer tries and takes back, so that the largest delta is not allocated.
         /// - Throws: `GesWireError` when a value does not fit its field or the keys differ.
         func deltaEncoded(against baseline: Ship) throws(GesWireError) -> [UInt8] {
-            let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: Swift.max(Self.maxByteCount, 1), alignment: 8)
+            var writer = GesBitWriter.counting()
+            let paths = Self.__paths
+            let key = try Self.__wire0(self.id, paths, 0)
+            if try key != Self.__wire0(baseline.id, paths, 0) { throw GesWireError(code: GesWireError.keyMismatch, path: paths[0]) }
+            try writer.write(key, width: 16)
+            _ = try __writeDelta(baseline, &writer, Self.__paths, 0, true)
+            _ = try writer.finish()
+            let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: Swift.max(writer.requiredByteCount, 1), alignment: 8)
             defer { buffer.deallocate() }
             let count = try writeDelta(against: baseline, into: buffer)
             return Array(buffer[0..<count])

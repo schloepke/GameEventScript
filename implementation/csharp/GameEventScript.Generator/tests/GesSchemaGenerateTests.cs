@@ -47,6 +47,18 @@ public sealed class GesSchemaGenerateTests
     }
 
     [TestMethod]
+    public void SwiftModelsEscapeKeywordsOnlyWhereSwiftNeedsIt()
+    {
+        var set = GesSchemaSet.Parse("model schema :S as {\n  default: :Text\n  in: :Boolean\n  var: :Boolean\n}\n");
+        var options = new GesSchemaGenerateOptions { Language = GesSchemaLanguage.Swift, Values = true, Bindings = true };
+        var swift = GesSchemaGenerator.GenerateModels(set, GesSchemaGenerator.ModelRoots(set, "default"), options);
+        StringAssert.Contains(swift, "var `default`: String");
+        StringAssert.Contains(swift, "init(default: String, in: Bool, `var`: Bool)");
+        StringAssert.Contains(swift, "self.`default` = `default`");
+        StringAssert.Contains(swift, "S(default: field0, in: field1, var: field2)");
+    }
+
+    [TestMethod]
     public void InvalidNamespacesAreRejected()
     {
         Assert.AreEqual("generate.invalidNamespace", Code(() => Generate("schema :S as {\n  a: :Boolean\n}\n", "S", GesSchemaLanguage.CSharp, "Game..Net")));

@@ -17,7 +17,7 @@ enum GesSwiftEmitter {
     static let valueReserved = ["toValue", "toMessage"]
 
     static let reserved = [
-        "schemaHash", "bindingHash", "maxByteCount", "write", "read", "readKey", "encoded", "writeDelta", "deltaEncoded", "readDelta", "wireEquals", "copy", "quantize",
+        "schemaHash", "bindingHash", "maxByteCount", "write", "read", "readKey", "encoded", "encodedByteCount", "writeDelta", "deltaEncoded", "deltaEncodedByteCount", "readDelta", "wireEquals", "copy", "quantize",
     ]
 
     typealias Code = GesSchemaPlanner.Code
@@ -79,6 +79,10 @@ enum GesSwiftEmitter {
             if field.optional && plain(field.value) { names.append((GesSchemaPlanner.camel(field.base) + "Optional", "the optional value of " + field.layout.name)) }
             nested(field.value, &names, field.layout.name)
         }
+        for field in type.fields {
+            if GesCSharpEmitter.isPooledList(field) { names.append(("set" + field.base + "Count", "the element count of " + field.layout.name)) }
+            if GesCSharpEmitter.isTextList(field) { names.append((GesSchemaPlanner.camel(field.base) + "Values", "the texts of " + field.layout.name)) }
+        }
         for tag in type.tags { names.append((GesSchemaPlanner.camel(tag.base), "the tag #" + tag.tag)) }
         try GesSchemaPlanner.unique(type.name, names)
 
@@ -101,6 +105,7 @@ enum GesSwiftEmitter {
             code.line("\(stored)\(access)var \(member(tag.base)) = false")
         }
         for field in type.fields { pools(&code, field.value, stored) }
+        for field in type.fields { listAccess(&code, field, access) }
         code.blank()
         code.line(type.isItem ? "/// Creates an element with every field at its zero value." : "/// Creates a record with every field at its zero value.")
         code.line("\(access)init() {}")
@@ -173,6 +178,35 @@ enum GesSwiftEmitter {
     }
 
     static func elementName(_ list: GesPlanValue) -> String { list.item?.name ?? typeName(list.element!) }
+
+    // Sets a pooled list to a count of reused elements, as a read does, and for texts offers them as strings.
+    static func listAccess(_ code: inout Code, _ field: GesPlanField, _ access: String) {
+        if !GesCSharpEmitter.isPooledList(field) { return }
+        let value = field.value
+        let list = "self." + member(value.base)
+        let pool = "self.__\(GesSchemaPlanner.camel(value.base))Pool"
+        code.blank()
+        code.line("/// Sets `\(field.layout.name)` to `count` elements that the record reuses, as a read does; their fields keep earlier values until they are set.")
+        code.open("\(access)func set\(value.base)Count(_ count: Int) {")
+        code.line("precondition(count >= 0, \"A count is not negative.\")")
+        code.line("\(list).removeAll(keepingCapacity: true)")
+        code.open("for position in 0..<count {")
+        code.line("if position == \(pool).count { \(pool).append(\(elementName(value))()) }")
+        code.line("\(list).append(\(pool)[position])")
+        code.close()
+        code.close()
+        if !GesCSharpEmitter.isTextList(field) { return }
+        let text = member(value.item!.fields[0].base)
+        code.blank()
+        code.line("/// The elements of `\(field.layout.name)` as strings; reading and setting allocate, and setting reuses the elements.")
+        code.open("\(access)var \(GesSchemaPlanner.camel(value.base))Values: [String] {")
+        code.line("get { \(list).map { $0.\(text) } }")
+        code.open("set {")
+        code.line("set\(value.base)Count(newValue.count)")
+        code.line("for (index, text) in newValue.enumerated() { \(list)[index].\(text) = text }")
+        code.close()
+        code.close()
+    }
 
     static func zero(_ value: GesPlanValue) -> String {
         switch value.encoding.kind {
@@ -313,10 +347,18 @@ enum GesSwiftEmitter {
         code.line("return try writer.finish()")
         code.close()
         code.blank()
-        code.line("/// Writes this \(what) into a new array of its exact size.")
+        code.line("/// Counts the bytes that `write(into:)` writes for this \(what), without writing them.")
+        code.line("/// - Throws: `GesWireError` when a value does not fit its field.")
+        code.open("\(access)func encodedByteCount() throws(GesWireError) -> Int {")
+        code.line("var writer = GesBitWriter.counting()")
+        for line in write { code.line(line) }
+        code.line("return try writer.finish()")
+        code.close()
+        code.blank()
+        code.line("/// Writes this \(what) into a new array of its exact size, which `encodedByteCount()` counts first.")
         code.line("/// - Throws: `GesWireError` when a value does not fit its field.")
         code.open("\(access)func encoded() throws(GesWireError) -> [UInt8] {")
-        code.line("let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: Swift.max(Self.maxByteCount, 1), alignment: 8)")
+        code.line("let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: Swift.max(try encodedByteCount(), 1), alignment: 8)")
         code.line("defer { buffer.deallocate() }")
         code.line("let count = try write(into: buffer)")
         code.line("return Array(buffer[0..<count])")

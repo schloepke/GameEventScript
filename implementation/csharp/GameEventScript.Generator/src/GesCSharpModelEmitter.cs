@@ -72,6 +72,7 @@ internal static class GesCSharpModelEmitter
         var fields = GesModelPlanner.Fields(type);
         var names = new List<(string, string)>();
         foreach (var reserved in Reserved) names.Add((reserved, "the inherited member " + reserved));
+        names.Add(("SchemaHash", "the generated member SchemaHash"));
         if (bindings)
             foreach (var reserved in new[] { "ToGesValue", "FromGesValue" }) names.Add((reserved, "the generated member " + reserved));
         if (values is not null)
@@ -89,6 +90,9 @@ internal static class GesCSharpModelEmitter
         code.Line($"/// <summary>The model of the schema <c>:{type.Name}</c>: a plain value that is never encoded and compares by value.</summary>");
         code.Line($"{access} sealed class {type.Name} : IEquatable<{type.Name}>");
         code.Open("{");
+        code.Line($"/// <summary>The hash of the schema <c>:{type.Name}</c>, which wire records of it carry too; a test that compares it notices stale generated code.</summary>");
+        code.Line($"public const ulong SchemaHash = 0x{GesSchemaLayoutJson.Hex(type.Hash)}UL;");
+        code.Blank();
         code.Line("/// <summary>Creates a record with every field at its zero value: absent, empty or the first alternative.</summary>");
         code.Line($"public {type.Name}()");
         code.Open("{");
@@ -503,7 +507,7 @@ internal static class GesCSharpModelEmitter
         if (value.Kind == GesModelKind.Schema) return $"Read{value.Model.Schema}({expression}, {path})";
         var element = Descends(value.Element!)
             ? Read(value.Element!, owner, x, p, qualifier, support, depth + 1)
-            : $"{Decode(value.Element!, owner, x, "out var y" + Depth(depth), qualifier, support, depth + 1)} ? y{Depth(depth)} : throw Mismatch({p})";
+            : $"{Decode(value.Element!, owner, x, "out var y" + Depth(depth), qualifier, support, depth + 1)} ? y{Depth(depth)} : throw Failure({x}, {p})";
         return $"ReadList({expression}, {path}, (in GesValue {x}, string {p}) => {element})";
     }
 
@@ -549,13 +553,15 @@ internal static class GesCSharpModelEmitter
             code.Blank();
             code.Line($"internal static {record} Read{type.Name}(in GesValue value, string path)");
             code.Open("{");
-            code.Line($"var fields = RecordFields(value, {GesSchemaPlanner.Literal(type.Name, false)}, {names}) ?? throw Mismatch(path);");
+            code.Line($"var fields = RecordFields(value, {GesSchemaPlanner.Literal(type.Name, false)}, {names}) ?? throw Failure(value, path);");
             for (var index = 0; index < fields.Count; index++)
             {
                 var field = fields[index];
                 var literal = GesSchemaPlanner.Literal(field.Field.Name, false);
-                if (Descends(field.Value)) code.Line($"var field{Depth(index)} = {Read(field.Value, type.Name, $"{support}.Field(fields, {literal})", $"Path(path, {literal})", qualifier, support)};");
-                else code.Line($"if (!{Decode(field.Value, type.Name, $"{support}.Field(fields, {literal})", "out var field" + Depth(index), qualifier, support)}) throw Mismatch(Path(path, {literal}));");
+                var held = "value" + Depth(index);
+                code.Line($"var {held} = {(field.Value.Nullable ? $"{support}.Field(fields, {literal})" : $"Required(fields, {literal}, path)")};");
+                if (Descends(field.Value)) code.Line($"var field{Depth(index)} = {Read(field.Value, type.Name, held, $"Path(path, {literal})", qualifier, support)};");
+                else code.Line($"if (!{Decode(field.Value, type.Name, held, "out var field" + Depth(index), qualifier, support)}) throw Failure({held}, Path(path, {literal}));");
             }
 
             code.Line($"return new {record}({string.Join(", ", fields.ConvertAll(field => "field" + Depth(fields.IndexOf(field))))});");
@@ -590,14 +596,17 @@ internal static class GesCSharpModelEmitter
         code.Blank();
         code.Line("private static string Path(string path, string field) => path.Length == 0 ? field : path + \".\" + field;");
         code.Blank();
-        code.Line("private static GesWireException Mismatch(string path) => new GesWireException(GesWireException.TypeMismatch, path);");
+        code.Line("// A value that does not convert: nothing where a value is required, or a value of another type.");
+        code.Line("private static GesWireException Failure(in GesValue value, string path) => new GesWireException(value.IsNothing ? GesWireException.NothingValue : GesWireException.TypeMismatch, path);");
+        code.Blank();
+        code.Line("private static GesValue Required(GesValueMap fields, string name, string path) => fields.Get(name) ?? throw new GesWireException(GesWireException.MissingField, Path(path, name));");
         code.Blank();
         code.Line("private delegate T Reader<T>(in GesValue value, string path);");
         code.Blank();
         code.Line("// The elements of a List, each read at the list's path with `[]`.");
         code.Line("private static List<T> ReadList<T>(in GesValue value, string path, Reader<T> element)");
         code.Open("{");
-        code.Line("if (value.ValueKind != GesBytecodeTypeKind.List) throw Mismatch(path);");
+        code.Line("if (value.ValueKind != GesBytecodeTypeKind.List) throw Failure(value, path);");
         code.Line("var items = value.AsList();");
         code.Line("var list = new List<T>(items.Length);");
         code.Line("var item = path + \"[]\";");

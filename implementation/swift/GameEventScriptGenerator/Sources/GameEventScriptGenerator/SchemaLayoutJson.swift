@@ -74,6 +74,7 @@ enum GesSchemaLayoutJson {
             json.boolean("optional", field.optional)
             json.boolean("key", field.key)
             json.boolean("unlabeled", field.unlabeled)
+            field.defaultValue?.write(&json)
         }
         json.key("encoding")
         encoding(&json, field.encoding)

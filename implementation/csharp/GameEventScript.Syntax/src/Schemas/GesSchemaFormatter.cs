@@ -89,6 +89,11 @@ internal static class GesSchemaFormatter
         Union(field.Alternatives, builder, indent);
         if (field.Marker == GesSchemaFieldMarker.Optional) builder.Append(" optional");
         else if (field.Marker == GesSchemaFieldMarker.Key) builder.Append(" key");
+        if (field.Default is not { } fallback) return;
+        builder.Append(" default ");
+        if (fallback.Tag is { } tag) builder.Append('#').Append(tag);
+        else if (fallback.Boolean is { } boolean) builder.Append(boolean ? "true" : "false");
+        else builder.Append(Value(fallback.Value!));
     }
 
     private static void Union(GesSchemaTypeSyntax[] alternatives, StringBuilder builder, string indent)

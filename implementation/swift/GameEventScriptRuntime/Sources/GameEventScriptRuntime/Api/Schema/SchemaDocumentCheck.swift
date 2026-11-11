@@ -49,7 +49,7 @@ struct GesSchemaDocumentCheck {
             if field.marker == .optional, case .nothing = value { continue }
             try union(field.alternatives, value, valueOffsets[index])
         }
-        for field in schema.fields where !seen.contains(field.name) && field.marker != .optional && !field.alternatives.contains(where: { $0.kind == .nothing }) {
+        for field in schema.fields where !seen.contains(field.name) && field.defaultValue == nil && field.marker != .optional && !field.alternatives.contains(where: { $0.kind == .nothing }) {
             throw Failure(code: Self.missingField, offset: start)
         }
     }

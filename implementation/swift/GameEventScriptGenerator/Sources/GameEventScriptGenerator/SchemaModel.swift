@@ -26,6 +26,7 @@ final class GesModelField {
     var path = ""
     var optional = false
     var key = false
+    var defaultValue: GesLayoutDefault?
     var value = GesModelValue()
 }
 
@@ -73,6 +74,7 @@ enum GesModelLayoutBuilder {
                 let field = try self.field(info.name, info.name, info.alternatives)
                 field.optional = info.isOptional
                 field.key = info.isKey
+                field.defaultValue = GesLayoutDefault.of(info)
                 type.fields.append(field)
             }
             types.append(type)
@@ -202,6 +204,7 @@ enum GesModelLayoutJson {
         if member {
             json.boolean("optional", field.optional)
             json.boolean("key", field.key)
+            field.defaultValue?.write(&json)
         }
         json.key("type")
         self.value(&json, field.value)

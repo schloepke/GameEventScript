@@ -61,6 +61,16 @@
         output += "\(field.name): "
         union(field.alternatives, &output, indent)
         if field.marker == .optional { output += " optional" } else if field.marker == .key { output += " key" }
+        if let fallback = field.defaultValue {
+            output += " default "
+            if let tag = fallback.tag {
+                output += "#" + tag
+            } else if let boolean = fallback.boolean {
+                output += boolean ? "true" : "false"
+            } else {
+                output += value(fallback.value!)
+            }
+        }
     }
 
     private static func union(_ alternatives: [GesSchemaTypeSyntax], _ output: inout String, _ indent: String) {

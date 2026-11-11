@@ -83,23 +83,43 @@ enum GesCSharpModelEmitter {
         code.line("public const ulong SchemaHash = 0x\(GesSchemaLayoutJson.hex(type.hash))UL;")
         GesCSharpEmitter.lets(&code, type.constants)
         code.blank()
-        code.line("/// <summary>Creates a record with every field at its zero value: absent, empty or the first alternative.</summary>")
+        let order = GesModelPlanner.readOrder(fields)
+        code.line("/// <summary>Creates a record with every field at its default or zero value: absent, empty or the first alternative.</summary>")
         code.line("public \(type.name)()")
         code.open("{")
+        for index in order {
+            if let named = GesModelPlanner.sibling(fields, fields[index]) { code.line("\(fields[index].base) = \(fields[named].base);") }
+        }
         code.close()
         if !fields.isEmpty {
+            // Optional parameters end the list, so a default becomes one only where every later field has a default too.
+            var trailing = fields.count
+            while trailing > 0 && fields[trailing - 1].field.defaultValue != nil { trailing -= 1 }
             code.blank()
             code.line("/// <summary>Creates a record from its fields.</summary>")
-            for field in fields { code.line("/// <param name=\"\(GesSchemaPlanner.camel(field.base))\">The field <c>\(field.field.name)</c>.</param>") }
-            code.line("public \(type.name)(\(fields.map { "\(self.type($0.value)) \(parameter($0.base))" }.joined(separator: ", ")))")
+            for field in fields {
+                let named = GesModelPlanner.sibling(fields, field).map { "; null takes <c>\(fields[$0].field.name)</c>" } ?? ""
+                code.line("/// <param name=\"\(GesSchemaPlanner.camel(field.base))\">The field <c>\(field.field.name)</c>\(named).</param>")
+            }
+            let parameters = fields.enumerated().map { index, field in
+                let optional = index >= trailing
+                if GesModelPlanner.sibling(fields, field) != nil { return "\(plain(field.value))? \(parameter(field.base))\(optional ? " = null" : "")" }
+                return "\(self.type(field.value)) \(parameter(field.base))\(optional ? " = " + native(field.value, field.field.defaultValue!) : "")"
+            }
+            code.line("public \(type.name)(\(parameters.joined(separator: ", ")))")
             code.open("{")
-            for field in fields { code.line("\(field.base) = \(parameter(field.base));") }
+            for index in order {
+                let field = fields[index]
+                let fallback = GesModelPlanner.sibling(fields, field).map { " ?? " + fields[$0].base } ?? ""
+                code.line("\(field.base) = \(parameter(field.base))\(fallback);")
+            }
             code.close()
         }
         for field in fields {
             code.blank()
             code.line("/// <summary><c>\(escape(field.field.name + ": " + GesModelPlanner.describe(field.field)))</c></summary>")
-            let initial = self.initial(field.value)
+            let initial: String
+            if let fallback = field.field.defaultValue, fallback.kind != .field { initial = native(field.value, fallback) } else { initial = self.initial(field.value) }
             code.line("public \(self.type(field.value)) \(field.base) { get; set; }\(initial.isEmpty ? "" : " = " + initial + ";")")
         }
         code.blank()
@@ -224,6 +244,34 @@ enum GesCSharpModelEmitter {
         case .tag: !value.closedTag
         default: false
         }
+    }
+
+    // A literal default as a native constant.
+    private static func native(_ value: GesModelPlanValue, _ fallback: GesLayoutDefault) -> String {
+        switch fallback.kind {
+        case .boolean: fallback.boolean ? "true" : "false"
+        case .tag where value.closedTag: plain(value) + "." + GesSchemaPlanner.pascal(fallback.value)
+        case .tag: literal(fallback.value)
+        default: GesModelPlanner.number(value, fallback)
+        }
+    }
+
+    // The GES value that a field left out of a Record or Map takes: its literal default, the value of the sibling it names,
+    // or else `missing`.
+    private static func held(_ fields: [GesModelPlanField], _ index: Int, _ owner: String, _ qualifier: String, _ support: String, _ sibling: (Int) -> String, _ missing: String) -> String {
+        let field = fields[index]
+        let key = "fields.Get(\(literal(field.field.name)))"
+        guard let fallback = field.field.defaultValue else { return missing }
+        switch fallback.kind {
+        case .field: return "\(key) ?? \(sibling(GesModelPlanner.sibling(fields, field)!))"
+        case .tag: return "\(key) ?? GesValue.GesTag(\(literal(fallback.value)))"
+        default: return "\(key) ?? \(encode(field.value, owner, native(field.value, fallback), qualifier, support, nullable: false, plain: true))"
+        }
+    }
+
+    // A field's GES value inline, following defaults to siblings; nothing when no value or default is left.
+    private static func inline(_ fields: [GesModelPlanField], _ index: Int, _ owner: String, _ qualifier: String, _ support: String) -> String {
+        held(fields, index, owner, qualifier, support, { inline(fields, $0, owner, qualifier, support) }, "\(support).Field(fields, \(literal(fields[index].field.name)))")
     }
 
     // The zero value of a property that the type's default would not give: empty texts and lists, new records, the first
@@ -559,17 +607,27 @@ enum GesCSharpModelEmitter {
             code.line("internal static \(record) Read\(type.name)(in GesValue value, string path)")
             code.open("{")
             code.line("var fields = RecordFields(value, \(typeLiteral), \(names)) ?? throw Failure(value, path);")
-            for (index, field) in fields.enumerated() {
+            for index in GesModelPlanner.readOrder(fields) {
+                let field = fields[index]
                 let fieldLiteral = literal(field.field.name)
                 let held = "value\(index)"
-                code.line("var \(held) = \(field.value.nullable ? "\(support).Field(fields, \(fieldLiteral))" : "Required(fields, \(fieldLiteral), path)");")
+                let missing = field.value.nullable ? "\(support).Field(fields, \(fieldLiteral))" : "Required(fields, \(fieldLiteral), path)"
+                code.line("var \(held) = \(self.held(fields, index, type.name, qualifier, support, { "value\($0)" }, missing));")
                 if descends(field.value) {
                     code.line("var field\(index) = \(read(field.value, type.name, held, "Path(path, \(fieldLiteral))", qualifier, support));")
                 } else {
                     code.line("if (!\(decode(field.value, type.name, held, "out var field\(index)", qualifier, support))) throw Failure(\(held), Path(path, \(fieldLiteral)));")
                 }
             }
-            code.line("return new \(record)(\(fields.indices.map { "field\($0)" }.joined(separator: ", ")));")
+            let kept = GesModelPlanner.kept(fields)
+            if kept.isEmpty {
+                code.line("return new \(record)(\(fields.indices.map { "field\($0)" }.joined(separator: ", ")));")
+            } else {
+                // An optional field read as absent stays absent, though the constructor would take its sibling for null.
+                code.line("var record = new \(record)(\(fields.indices.map { "field\($0)" }.joined(separator: ", ")));")
+                for index in kept { code.line("record.\(fields[index].base) = field\(index);") }
+                code.line("return record;")
+            }
             code.close()
             code.blank()
             code.line("private static bool Decode\(type.name)(in GesValue value, out \(record) result)")
@@ -578,12 +636,13 @@ enum GesCSharpModelEmitter {
             code.line("var fields = RecordFields(value, \(typeLiteral), \(names));")
             var conditions = ["fields is null"]
             for (index, field) in fields.enumerated() {
-                conditions.append("!" + decode(field.value, type.name, "\(support).Field(fields, \(literal(field.field.name)))", "out var field\(index)", qualifier, support))
+                conditions.append("!" + decode(field.value, type.name, inline(fields, index, type.name, qualifier, support), "out var field\(index)", qualifier, support))
             }
             for (index, condition) in conditions.enumerated() {
                 code.line((index == 0 ? "if (" : "    || ") + condition + (index == conditions.count - 1 ? ") return false;" : ""))
             }
             code.line("result = new \(record)(\(fields.indices.map { "field\($0)" }.joined(separator: ", ")));")
+            for index in GesModelPlanner.kept(fields) { code.line("result.\(fields[index].base) = field\(index);") }
             code.line("return true;")
             code.close()
             var found: [GesModelPlanValue] = []
@@ -734,8 +793,8 @@ enum GesCSharpModelEmitter {
             code.open("{")
             code.line("var fields = call.Arguments[0].AsMap();")
             var conditions = ["fields is null", "!\(support).Known(fields, \(type.name)Value.Names)"]
-            for field in fields {
-                conditions.append("!" + decode(field.value, type.name, "\(support).Field(fields, \(literal(field.field.name)))", "out var " + parameter(field.base), qualifier, support))
+            for (index, field) in fields.enumerated() {
+                conditions.append("!" + decode(field.value, type.name, inline(fields, index, type.name, qualifier, support), "out var " + parameter(field.base), qualifier, support))
             }
             for (index, condition) in conditions.enumerated() { code.line((index == 0 ? "if (" : "    || ") + condition + (index == conditions.count - 1 ? ")" : "")) }
             code.open("{")
@@ -743,7 +802,15 @@ enum GesCSharpModelEmitter {
             code.line("return;")
             code.close()
             code.blank()
-            code.line("call.SetExternalValue(new \(type.name)Value(new \(name)(\(fields.map { parameter($0.base) }.joined(separator: ", ")))));")
+            let created = "new \(name)(\(fields.map { parameter($0.base) }.joined(separator: ", ")))"
+            let kept = GesModelPlanner.kept(fields)
+            if kept.isEmpty {
+                code.line("call.SetExternalValue(new \(type.name)Value(\(created)));")
+            } else {
+                code.line("var record = \(created);")
+                for index in kept { code.line("record.\(fields[index].base) = \(parameter(fields[index].base));") }
+                code.line("call.SetExternalValue(new \(type.name)Value(record));")
+            }
             code.close()
             code.close()
             code.blank()

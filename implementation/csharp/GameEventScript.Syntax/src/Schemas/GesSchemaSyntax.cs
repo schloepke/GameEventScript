@@ -140,6 +140,21 @@ internal sealed class GesSchemaFieldSyntax
 
     internal GesSchemaFieldMarker Marker { get; init; }
 
+    internal GesSchemaDefaultSyntax? Default { get; init; }
+
+    internal int Offset { get; init; }
+}
+
+// The value a field takes when a value or document leaves it out: `default` with a number, a constant, a let or a sibling field
+// (both in Value), `true` or `false`, or a tag.
+internal sealed class GesSchemaDefaultSyntax
+{
+    internal GesSchemaValueSyntax? Value { get; init; }
+
+    internal bool? Boolean { get; init; }
+
+    internal string? Tag { get; init; }
+
     internal int Offset { get; init; }
 }
 
@@ -200,6 +215,7 @@ internal sealed class GesSchemaDiagnostic
     internal const string TooLarge = "schema.tooLarge";
     internal const string InvalidRole = "schema.invalidRole";
     internal const string DuplicateRole = "schema.duplicateRole";
+    internal const string InvalidDefault = "schema.invalidDefault";
 
     internal GesSchemaDiagnostic(string code, string text, int offset, string message)
     {

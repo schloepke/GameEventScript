@@ -1,8 +1,10 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
+using System;
 using System.Collections.Generic;
 using System.Globalization;
+using GameEventScript.Api;
 
 namespace GameEventScript.Generator;
 
@@ -101,20 +103,40 @@ internal static class GesCSharpModelEmitter
         code.Line($"public const ulong SchemaHash = 0x{GesSchemaLayoutJson.Hex(type.Hash)}UL;");
         GesCSharpEmitter.Lets(code, type.Constants);
         code.Blank();
-        code.Line("/// <summary>Creates a record with every field at its zero value: absent, empty or the first alternative.</summary>");
+        var order = GesModelPlanner.ReadOrder(fields);
+        code.Line("/// <summary>Creates a record with every field at its default or zero value: absent, empty or the first alternative.</summary>");
         code.Line($"public {type.Name}()");
         code.Open("{");
+        foreach (var index in order)
+            if (GesModelPlanner.Sibling(fields, fields[index]) is { } named) code.Line($"{fields[index].Base} = {fields[named].Base};");
         code.Close();
         if (fields.Count > 0)
         {
+            // Optional parameters end the list, so a default becomes one only where every later field has a default too.
+            var trailing = fields.Count;
+            while (trailing > 0 && fields[trailing - 1].Field.Default is not null) trailing--;
             code.Blank();
             code.Line("/// <summary>Creates a record from its fields.</summary>");
-            foreach (var field in fields) code.Line($"/// <param name=\"{GesSchemaPlanner.Camel(field.Base)}\">The field <c>{field.Field.Name}</c>.</param>");
+            foreach (var field in fields)
+                code.Line($"/// <param name=\"{GesSchemaPlanner.Camel(field.Base)}\">The field <c>{field.Field.Name}</c>{(GesModelPlanner.Sibling(fields, field) is { } named ? $"; null takes <c>{fields[named].Field.Name}</c>" : "")}.</param>");
             var parameters = new List<string>();
-            foreach (var field in fields) parameters.Add($"{Type(field.Value)} {Parameter(field.Base)}");
+            for (var index = 0; index < fields.Count; index++)
+            {
+                var field = fields[index];
+                var optional = index >= trailing;
+                parameters.Add(GesModelPlanner.Sibling(fields, field) is null
+                    ? $"{Type(field.Value)} {Parameter(field.Base)}{(optional ? " = " + Native(field.Value, field.Field.Default!) : "")}"
+                    : $"{Plain(field.Value)}? {Parameter(field.Base)}{(optional ? " = null" : "")}");
+            }
+
             code.Line($"public {type.Name}({string.Join(", ", parameters)})");
             code.Open("{");
-            foreach (var field in fields) code.Line($"{field.Base} = {Parameter(field.Base)};");
+            foreach (var index in order)
+            {
+                var field = fields[index];
+                code.Line($"{field.Base} = {Parameter(field.Base)}{(GesModelPlanner.Sibling(fields, field) is { } named ? " ?? " + fields[named].Base : "")};");
+            }
+
             code.Close();
         }
 
@@ -122,7 +144,7 @@ internal static class GesCSharpModelEmitter
         {
             code.Blank();
             code.Line($"/// <summary><c>{Escape(field.Field.Name + ": " + GesModelPlanner.Describe(field.Field))}</c></summary>");
-            var initial = Initial(field.Value);
+            var initial = field.Field.Default is { Kind: not GesSchemaDefaultKind.Field } fallback ? Native(field.Value, fallback) : Initial(field.Value);
             code.Line($"public {Type(field.Value)} {field.Base} {{ get; set; }}{(initial.Length > 0 ? " = " + initial + ";" : "")}");
         }
 
@@ -244,6 +266,34 @@ internal static class GesCSharpModelEmitter
 
     // The zero value of a property that the type's default would not give: empty texts and lists, new records, the first
     // alternative of a union.
+    // A literal default as a native constant.
+    private static string Native(GesModelPlanValue value, GesLayoutDefault fallback) => fallback.Kind switch
+    {
+        GesSchemaDefaultKind.Boolean => fallback.Boolean ? "true" : "false",
+        GesSchemaDefaultKind.Tag when value.ClosedTag => Plain(value) + "." + GesSchemaPlanner.Pascal(fallback.Value),
+        GesSchemaDefaultKind.Tag => GesSchemaPlanner.Literal(fallback.Value, false),
+        _ => GesModelPlanner.Number(value, fallback)
+    };
+
+    // The GES value that a field left out of a Record or Map takes: its literal default, the value of the sibling it names,
+    // or else `missing`.
+    private static string Held(List<GesModelPlanField> fields, int index, string owner, string qualifier, string support, Func<int, string> sibling, string missing)
+    {
+        var field = fields[index];
+        var key = $"fields.Get({GesSchemaPlanner.Literal(field.Field.Name, false)})";
+        return field.Field.Default switch
+        {
+            null => missing,
+            { Kind: GesSchemaDefaultKind.Field } => $"{key} ?? {sibling(GesModelPlanner.Sibling(fields, field)!.Value)}",
+            { Kind: GesSchemaDefaultKind.Tag } fallback => $"{key} ?? GesValue.GesTag({GesSchemaPlanner.Literal(fallback.Value, false)})",
+            { } fallback => $"{key} ?? {Encode(field.Value, owner, Native(field.Value, fallback), qualifier, support, nullable: false, plain: true)}"
+        };
+    }
+
+    // A field's GES value inline, following defaults to siblings; nothing when no value or default is left.
+    private static string Inline(List<GesModelPlanField> fields, int index, string owner, string qualifier, string support)
+        => Held(fields, index, owner, qualifier, support, sibling => Inline(fields, sibling, owner, qualifier, support), $"{support}.Field(fields, {GesSchemaPlanner.Literal(fields[index].Field.Name, false)})");
+
     private static string Initial(GesModelPlanValue value)
     {
         if (value.Nullable) return "";
@@ -571,17 +621,26 @@ internal static class GesCSharpModelEmitter
             code.Line($"internal static {record} Read{type.Name}(in GesValue value, string path)");
             code.Open("{");
             code.Line($"var fields = RecordFields(value, {GesSchemaPlanner.Literal(type.Name, false)}, {names}) ?? throw Failure(value, path);");
-            for (var index = 0; index < fields.Count; index++)
+            foreach (var index in GesModelPlanner.ReadOrder(fields))
             {
                 var field = fields[index];
                 var literal = GesSchemaPlanner.Literal(field.Field.Name, false);
                 var held = "value" + Depth(index);
-                code.Line($"var {held} = {(field.Value.Nullable ? $"{support}.Field(fields, {literal})" : $"Required(fields, {literal}, path)")};");
+                var missing = field.Value.Nullable ? $"{support}.Field(fields, {literal})" : $"Required(fields, {literal}, path)";
+                code.Line($"var {held} = {Held(fields, index, type.Name, qualifier, support, sibling => "value" + Depth(sibling), missing)};");
                 if (Descends(field.Value)) code.Line($"var field{Depth(index)} = {Read(field.Value, type.Name, held, $"Path(path, {literal})", qualifier, support)};");
                 else code.Line($"if (!{Decode(field.Value, type.Name, held, "out var field" + Depth(index), qualifier, support)}) throw Failure({held}, Path(path, {literal}));");
             }
 
-            code.Line($"return new {record}({string.Join(", ", fields.ConvertAll(field => "field" + Depth(fields.IndexOf(field))))});");
+            var kept = GesModelPlanner.Kept(fields);
+            if (kept.Count == 0) code.Line($"return new {record}({string.Join(", ", fields.ConvertAll(field => "field" + Depth(fields.IndexOf(field))))});");
+            else
+            {
+                // An optional field read as absent stays absent, though the constructor would take its sibling for null.
+                code.Line($"var record = new {record}({string.Join(", ", fields.ConvertAll(field => "field" + Depth(fields.IndexOf(field))))});");
+                foreach (var index in kept) code.Line($"record.{fields[index].Base} = field{Depth(index)};");
+                code.Line("return record;");
+            }
             code.Close();
             code.Blank();
             code.Line($"private static bool Decode{type.Name}(in GesValue value, out {record} result)");
@@ -590,10 +649,11 @@ internal static class GesCSharpModelEmitter
             code.Line($"var fields = RecordFields(value, {GesSchemaPlanner.Literal(type.Name, false)}, {names});");
             var conditions = new List<string> { "fields is null" };
             for (var index = 0; index < fields.Count; index++)
-                conditions.Add("!" + Decode(fields[index].Value, type.Name, $"{support}.Field(fields, {GesSchemaPlanner.Literal(fields[index].Field.Name, false)})", "out var field" + Depth(index), qualifier, support));
+                conditions.Add("!" + Decode(fields[index].Value, type.Name, Inline(fields, index, type.Name, qualifier, support), "out var field" + Depth(index), qualifier, support));
             for (var index = 0; index < conditions.Count; index++)
                 code.Line((index == 0 ? "if (" : "    || ") + conditions[index] + (index == conditions.Count - 1 ? ") return false;" : ""));
             code.Line($"result = new {record}({string.Join(", ", fields.ConvertAll(field => "field" + Depth(fields.IndexOf(field))))});");
+            foreach (var index in GesModelPlanner.Kept(fields)) code.Line($"result.{fields[index].Base} = field{Depth(index)};");
             code.Line("return true;");
             code.Close();
             var conversions = new List<GesModelPlanValue>();
@@ -740,8 +800,8 @@ internal static class GesCSharpModelEmitter
             code.Open("{");
             code.Line("var fields = call.Arguments[0].AsMap();");
             var conditions = new List<string> { "fields is null", $"!{support}.Known(fields, {type.Name}Value.Names)" };
-            foreach (var field in fields)
-                conditions.Add("!" + Decode(field.Value, type.Name, $"{support}.Field(fields, {GesSchemaPlanner.Literal(field.Field.Name, false)})", "out var " + Parameter(field.Base), qualifier, support));
+            for (var index = 0; index < fields.Count; index++)
+                conditions.Add("!" + Decode(fields[index].Value, type.Name, Inline(fields, index, type.Name, qualifier, support), "out var " + Parameter(fields[index].Base), qualifier, support));
             for (var index = 0; index < conditions.Count; index++)
                 code.Line((index == 0 ? "if (" : "    || ") + conditions[index] + (index == conditions.Count - 1 ? ")" : ""));
             code.Open("{");
@@ -750,7 +810,15 @@ internal static class GesCSharpModelEmitter
             code.Close();
             code.Blank();
 
-            code.Line($"call.SetExternalValue(new {type.Name}Value(new {name}({string.Join(", ", fields.ConvertAll(field => Parameter(field.Base)))})));");
+            var created = $"new {name}({string.Join(", ", fields.ConvertAll(field => Parameter(field.Base)))})";
+            var kept = GesModelPlanner.Kept(fields);
+            if (kept.Count == 0) code.Line($"call.SetExternalValue(new {type.Name}Value({created}));");
+            else
+            {
+                code.Line($"var record = {created};");
+                foreach (var index in kept) code.Line($"record.{fields[index].Base} = {Parameter(fields[index].Base)};");
+                code.Line($"call.SetExternalValue(new {type.Name}Value(record));");
+            }
             code.Close();
             code.Close();
             code.Blank();

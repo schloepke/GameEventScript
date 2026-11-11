@@ -163,7 +163,17 @@ public enum GesSchemaTypeKind: String, Sendable, Equatable {
     @_spi(Syntax) public let unlabeled: Bool
     @_spi(Syntax) public let alternatives: [GesSchemaTypeSyntax]
     @_spi(Syntax) public let marker: GesSchemaFieldMarker
+    @_spi(Syntax) public let defaultValue: GesSchemaDefaultSyntax?
     @_spi(Syntax) public let offset: Int
+}
+
+/// The value a field takes when a value or document leaves it out: `default` with a number, a constant, a let or a sibling
+/// field (all in `value`), `true` or `false`, or a tag.
+@_spi(Syntax) public struct GesSchemaDefaultSyntax: Sendable {
+    @_spi(Syntax) public var value: GesSchemaValueSyntax?
+    @_spi(Syntax) public var boolean: Bool?
+    @_spi(Syntax) public var tag: String?
+    @_spi(Syntax) public var offset = 0
 }
 
 /// A constant of a schema, `let name be value`, which its fields can name.
@@ -207,6 +217,7 @@ public enum GesSchemaTypeKind: String, Sendable, Equatable {
     @_spi(Syntax) public static let tooLarge = "schema.tooLarge"
     @_spi(Syntax) public static let invalidRole = "schema.invalidRole"
     @_spi(Syntax) public static let duplicateRole = "schema.duplicateRole"
+    @_spi(Syntax) public static let invalidDefault = "schema.invalidDefault"
 
     @_spi(Syntax) public let code: String
     /// The UTF-8 offset of the error.

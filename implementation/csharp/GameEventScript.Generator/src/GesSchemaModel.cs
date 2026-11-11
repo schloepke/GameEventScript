@@ -41,6 +41,7 @@ internal sealed class GesModelField
     internal string Path = "";
     internal bool Optional;
     internal bool Key;
+    internal GesLayoutDefault? Default;
     internal GesModelValue Value = new();
 }
 
@@ -111,6 +112,7 @@ internal static class GesModelLayoutBuilder
                 var field = Field(info.Name, info.Name, info.Alternatives);
                 field.Optional = info.IsOptional;
                 field.Key = info.IsKey;
+                field.Default = GesLayoutDefault.Of(info);
                 type.Fields.Add(field);
             }
 
@@ -265,6 +267,7 @@ internal static class GesModelLayoutJson
         {
             json.Boolean("optional", field.Optional);
             json.Boolean("key", field.Key);
+            field.Default?.Write(json);
         }
 
         json.Key("type");

@@ -148,7 +148,7 @@ internal sealed class GesSchemaSourceReader
                 while (!Consume('}'))
                 {
                     if (ReadLet() is { } let) lets.Add(let);
-                    else fields.Add(ReadField(allowUnlabeled: false));
+                    else fields.Add(ReadField(allowUnlabeled: false, allowDefault: true));
                     EndEntry('}');
                     SkipSeparators();
                 }
@@ -171,7 +171,7 @@ internal sealed class GesSchemaSourceReader
                         SkipTrivia();
                     }
 
-                    fields.Add(ReadField(allowUnlabeled: true));
+                    fields.Add(ReadField(allowUnlabeled: true, allowDefault: false));
                     SkipTrivia();
                 }
 
@@ -240,7 +240,7 @@ internal sealed class GesSchemaSourceReader
         return new GesSchemaLetSyntax { Name = name, Value = ReadValue(), Offset = offset };
     }
 
-    private GesSchemaFieldSyntax ReadField(bool allowUnlabeled)
+    private GesSchemaFieldSyntax ReadField(bool allowUnlabeled, bool allowDefault)
     {
         var offset = _position;
         var unlabeled = false;
@@ -268,7 +268,31 @@ internal sealed class GesSchemaSourceReader
             marker = GesSchemaFieldMarker.Key;
         }
 
-        return new GesSchemaFieldSyntax { Name = name, Unlabeled = unlabeled, Alternatives = alternatives, Marker = marker, Offset = offset };
+        GesSchemaDefaultSyntax? fallback = null;
+        SkipSpaces();
+        if (allowDefault && AtWord("default"))
+        {
+            var start = _position;
+            ReadWord();
+            SkipSpaces();
+            fallback = ReadDefault(start);
+        }
+
+        return new GesSchemaFieldSyntax { Name = name, Unlabeled = unlabeled, Alternatives = alternatives, Marker = marker, Default = fallback, Offset = offset };
+    }
+
+    // A tag, `true`, `false`, or a value: a number, a constant, or the name of a let or a sibling field.
+    private GesSchemaDefaultSyntax ReadDefault(int offset)
+    {
+        if (Consume('#')) return new GesSchemaDefaultSyntax { Tag = ReadName(GesText.IsTagName, "tag name"), Offset = offset };
+        foreach (var word in new[] { "true", "false" })
+            if (AtWord(word))
+            {
+                ReadWord();
+                return new GesSchemaDefaultSyntax { Boolean = word == "true", Offset = offset };
+            }
+
+        return new GesSchemaDefaultSyntax { Value = ReadValue(), Offset = offset };
     }
 
     private GesSchemaTypeSyntax[] ReadUnion()

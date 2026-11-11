@@ -182,17 +182,48 @@ public static class GesSchemaValues
     {
         for (var index = start; index < end; index = schema.Nodes[index].Next)
         {
-            GesValue value = default;
-            var found = false;
-            var name = schema.Nodes[index].Name;
-            for (var key = 0; key < fields.Length; key++)
-                if (fields.KeyAt(key) == name)
-                {
-                    value = fields.ValueAt(key);
-                    found = true;
-                }
-            if (!found && !AcceptsNothing(schema, index)) throw new GesWireException(GesWireException.MissingField, schema.Nodes[index].Path);
+            var last = Held(schema, start, end, fields, index, out var value);
+            if (last >= 0 && !AcceptsNothing(schema, last)) throw new GesWireException(GesWireException.MissingField, schema.Nodes[last].Path);
             EncodeNode(ref writer, schema, index, value, strict);
+        }
+    }
+
+    // The value of a field, or else of its default: a literal, or the value of the sibling it names, whose own default
+    // applies in turn. Returns -1, or the field at the end of the chain that has no value, which reads as nothing.
+    private static int Held(GesBoundSchema schema, int start, int end, GesValueMap fields, int index, out GesValue value)
+    {
+        ref readonly var node = ref schema.Nodes[index];
+        for (var key = 0; key < fields.Length; key++)
+            if (fields.KeyAt(key) == node.Name)
+            {
+                value = fields.ValueAt(key);
+                return -1;
+            }
+
+        value = default;
+        switch (node.Default)
+        {
+            case null:
+                return index;
+            case { Kind: GesSchemaDefaultKind.Field } fallback:
+                for (var sibling = start; sibling < end; sibling = schema.Nodes[sibling].Next)
+                    if (schema.Nodes[sibling].Name == fallback.Name) return Held(schema, start, end, fields, sibling, out value);
+                return index;
+            case { Kind: GesSchemaDefaultKind.Boolean } fallback:
+                value = GesValue.GesBoolean(fallback.Boolean);
+                return -1;
+            case { Kind: GesSchemaDefaultKind.Tag } fallback:
+                value = GesValue.GesTag(fallback.Name);
+                return -1;
+            case var fallback when node.Kind == GesSchemaNodeKind.Integer:
+                var whole = fallback.Value.Significand;
+                for (var power = 0; power < fallback.Value.Exponent; power++) whole *= 10;
+                value = GesValue.GesInteger(whole, node.Unit);
+                return -1;
+            case var fallback:
+                var number = double.Parse(fallback.Value.Canonical, System.Globalization.CultureInfo.InvariantCulture);
+                value = node.ValueKind == GesSchemaTypeKind.Percentage ? GesValue.GesPercentage(number) : GesValue.GesNumber(number, node.Unit);
+                return -1;
         }
     }
 

@@ -88,6 +88,41 @@ enum GesModelPlanner {
         return value
     }
 
+    // The order in which a record's fields are read: declared order, except that a field defaulting to a sibling follows it.
+    static func readOrder(_ fields: [GesModelPlanField]) -> [Int] {
+        var order: [Int] = []
+        for index in fields.indices { place(fields, index, &order) }
+        return order
+    }
+
+    private static func place(_ fields: [GesModelPlanField], _ index: Int, _ order: inout [Int]) {
+        if order.contains(index) { return }
+        if let named = sibling(fields, fields[index]) { place(fields, named, &order) }
+        order.append(index)
+    }
+
+    // The optional fields that default to a sibling: an initializer takes nil or null for the sibling's value, so reading sets
+    // them afterwards, and a value that leaves them out or gives nothing keeps what it says.
+    static func kept(_ fields: [GesModelPlanField]) -> [Int] {
+        fields.indices.filter { fields[$0].value.nullable && sibling(fields, fields[$0]) != nil }
+    }
+
+    // The sibling a field defaults to, or nil.
+    static func sibling(_ fields: [GesModelPlanField], _ field: GesModelPlanField) -> Int? {
+        guard let fallback = field.field.defaultValue, fallback.kind == .field else { return nil }
+        return fields.firstIndex { $0.field.name == fallback.value }
+    }
+
+    // The number of a numeric default as a literal: whole digits for an integer field, otherwise a floating literal.
+    static func number(_ value: GesModelPlanValue, _ fallback: GesLayoutDefault) -> String {
+        let parts = fallback.value.split(separator: "e")
+        var significand = Int64(parts[0])!
+        let exponent = Int(parts[1])!
+        if !value.model.integer { return GesSchemaPlanner.decimal(significand, exponent) }
+        for _ in 0..<max(exponent, 0) { significand *= 10 }
+        return String(significand)
+    }
+
     // The types in an order where each comes after the types it holds, for registration: by name, depth first.
     static func dependencyOrder(_ layout: GesModelLayout) -> [GesModelType] {
         var ordered: [GesModelType] = []
@@ -133,6 +168,15 @@ enum GesModelPlanner {
         describe(field.value, &text)
         if field.optional { text += " optional" }
         if field.key { text += " key" }
+        if let fallback = field.defaultValue {
+            text += " default "
+            switch fallback.kind {
+            case .number: text += decimal(fallback.value, field.value.type == "Percentage" ? 2 : 0)
+            case .boolean: text += fallback.boolean ? "true" : "false"
+            case .tag: text += "#" + fallback.value
+            case .field: text += fallback.value
+            }
+        }
         return text
     }
 

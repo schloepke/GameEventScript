@@ -3,6 +3,7 @@
 
 using System.Collections.Generic;
 using System.Text;
+using GameEventScript.Api;
 
 namespace GameEventScript.Generator;
 
@@ -106,6 +107,46 @@ internal static class GesModelPlanner
     }
 
     // The types in an order where each comes after the types it holds, for registration: by name, depth first.
+    // The order in which a record's fields are read: declared order, except that a field defaulting to a sibling follows it.
+    internal static List<int> ReadOrder(List<GesModelPlanField> fields)
+    {
+        var order = new List<int>();
+        for (var index = 0; index < fields.Count; index++) Place(fields, index, order);
+        return order;
+    }
+
+    private static void Place(List<GesModelPlanField> fields, int index, List<int> order)
+    {
+        if (order.Contains(index)) return;
+        if (Sibling(fields, fields[index]) is { } sibling) Place(fields, sibling, order);
+        order.Add(index);
+    }
+
+    // The optional fields that default to a sibling: an initializer takes nil or null for the sibling's value, so reading sets
+    // them afterwards, and a value that leaves them out or gives nothing keeps what it says.
+    internal static List<int> Kept(List<GesModelPlanField> fields)
+    {
+        var kept = new List<int>();
+        for (var index = 0; index < fields.Count; index++)
+            if (fields[index].Value.Nullable && Sibling(fields, fields[index]) is not null) kept.Add(index);
+        return kept;
+    }
+
+    // The sibling a field defaults to, or null.
+    internal static int? Sibling(List<GesModelPlanField> fields, GesModelPlanField field)
+        => field.Field.Default is { Kind: GesSchemaDefaultKind.Field } fallback ? fields.FindIndex(candidate => candidate.Field.Name == fallback.Value) : null;
+
+    // The number of a numeric default as a literal: whole digits for an integer field, otherwise a floating literal.
+    internal static string Number(GesModelPlanValue value, GesLayoutDefault fallback)
+    {
+        var e = fallback.Value.IndexOf('e');
+        var significand = long.Parse(fallback.Value.Substring(0, e), System.Globalization.CultureInfo.InvariantCulture);
+        var exponent = int.Parse(fallback.Value.Substring(e + 1), System.Globalization.CultureInfo.InvariantCulture);
+        if (!value.Model.Integer) return GesSchemaPlanner.Decimal(significand, exponent);
+        for (var power = 0; power < exponent; power++) significand *= 10;
+        return significand.ToString(System.Globalization.CultureInfo.InvariantCulture);
+    }
+
     internal static List<GesModelType> DependencyOrder(GesModelLayout layout)
     {
         var ordered = new List<GesModelType>();
@@ -153,6 +194,17 @@ internal static class GesModelPlanner
         Describe(field.Value, text);
         if (field.Optional) text.Append(" optional");
         if (field.Key) text.Append(" key");
+        if (field.Default is { } fallback)
+        {
+            text.Append(" default ").Append(fallback.Kind switch
+            {
+                GesSchemaDefaultKind.Number => Decimal(fallback.Value, field.Value.Type == "Percentage" ? 2 : 0),
+                GesSchemaDefaultKind.Boolean => fallback.Boolean ? "true" : "false",
+                GesSchemaDefaultKind.Tag => "#" + fallback.Value,
+                _ => fallback.Value
+            });
+        }
+
         return text.ToString();
     }
 

@@ -60,7 +60,7 @@ internal sealed class GesSchemaDocumentCheck
         }
 
         foreach (var field in schema.Fields)
-            if (!seen.Contains(field.Name) && field.Marker != GesSchemaFieldMarker.Optional && !Array.Exists(field.Alternatives, alternative => alternative.Kind == GesSchemaTypeKind.Nothing)) throw new Failure(MissingField, start);
+            if (!seen.Contains(field.Name) && field.Default is null && field.Marker != GesSchemaFieldMarker.Optional && !Array.Exists(field.Alternatives, alternative => alternative.Kind == GesSchemaTypeKind.Nothing)) throw new Failure(MissingField, start);
     }
 
     private void Union(GesResolvedField field, GesDocumentNode value)

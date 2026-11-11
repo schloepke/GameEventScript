@@ -86,6 +86,15 @@ internal static class SchemaApiObservations
             if (field.IsUnlabeled) entry["unlabeled"] = true;
             if (field.IsOptional) entry["optional"] = true;
             if (field.IsKey) entry["key"] = true;
+            if (field.Default is { } fallback)
+            {
+                var described = new Dictionary<string, object?> { ["kind"] = fallback.Kind.ToString() };
+                if (fallback.Number is { } number) described["value"] = Text(number);
+                else if (fallback.Kind == GesSchemaDefaultKind.Boolean) described["value"] = fallback.Boolean;
+                else described["name"] = fallback.Name;
+                entry["default"] = described;
+            }
+
             return entry;
         }).ToArray();
         if (schema.Constants.Count > 0) result["constants"] = schema.Constants.Select(constant =>

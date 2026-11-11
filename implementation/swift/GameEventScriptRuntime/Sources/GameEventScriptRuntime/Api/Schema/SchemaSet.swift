@@ -238,6 +238,17 @@ struct GesResolvedField {
     let alternatives: [GesResolvedType]
     let marker: GesSchemaFieldMarker
     let offset: Int
+    var defaultValue: GesResolvedDefault?
+}
+
+/// The default of a field: an exact number in base units, a Boolean, a tag, or the name of a sibling field.
+struct GesResolvedDefault: Sendable {
+    var kind = GesSchemaDefaultKind.number
+    var value = GesSchemaDecimal(0, 0)
+    var boolean = false
+    /// The tag without `#`, or the sibling field.
+    var name = ""
+    var offset = 0
 }
 
 final class GesResolvedDeclaration {
@@ -343,6 +354,7 @@ final class GesFileScope {
                 if !names.insert(field.name).inserted { throw error(Code.duplicateName, field.offset, "'\(field.name)' is declared twice in '\(declaration.name)'.") }
                 declaration.fields.append(try resolveField(field, index, declaration.kind, all))
             }
+            if declaration.kind == .schema { try resolveDefaults(declaration) }
         }
         // A declaration holds its scope, so the scope lets go of them once they are resolved.
         own = []
@@ -372,6 +384,60 @@ final class GesFileScope {
             lets[declared.name] = resolved
         }
         return result
+    }
+
+    /// A default is a number, a Boolean or a tag of the field's single type, or a sibling field of the same type whose value it
+    /// takes; chains resolve in dependency order and must not form a cycle.
+    private func resolveDefaults(_ declaration: GesResolvedDeclaration) throws {
+        for (index, field) in declaration.syntax.fields.enumerated() {
+            guard let written = field.defaultValue else { continue }
+            let resolved = declaration.fields[index]
+            if resolved.marker == .key { throw error(Code.invalidDefault, written.offset, "A key takes no default.") }
+            let name = written.value?.name ?? ""
+            if !name.isEmpty, let sibling = declaration.fields.first(where: { $0.name == name }) {
+                guard let type = GesSchemaCanonical.defaultType(resolved.alternatives) else {
+                    throw error(Code.invalidDefault, written.offset, "The type of '\(resolved.name)' belongs to it alone, as a union, Flags or a closed Tag written in place does; a tag set can be shared.")
+                }
+                if type != GesSchemaCanonical.defaultType(sibling.alternatives) { throw error(Code.invalidDefault, written.offset, "'\(name)' has another type than '\(resolved.name)'.") }
+                if (sibling.marker == .optional) != (resolved.marker == .optional) {
+                    throw error(Code.invalidDefault, written.offset, "A field and the field it defaults to are both optional or both not.")
+                }
+                declaration.fields[index].defaultValue = GesResolvedDefault(kind: .field, name: name, offset: written.offset)
+                continue
+            }
+            if !name.isEmpty && lets[name] == nil { throw error(Code.unknownName, written.value!.offset, "'\(name)' is neither a field nor a let of '\(declaration.name)'.") }
+            if resolved.marker == .optional { throw error(Code.invalidDefault, written.offset, "An optional field takes its default only from another optional field.") }
+            if resolved.alternatives.count != 1 { throw error(Code.invalidDefault, written.offset, "A union takes its default only from another field.") }
+            declaration.fields[index].defaultValue = try resolveDefault(resolved.alternatives[0], written)
+        }
+        for field in declaration.fields {
+            var seen: Set<String> = []
+            var current = field
+            while let fallback = current.defaultValue, fallback.kind == .field {
+                if !seen.insert(current.name).inserted { throw error(Code.cycle, field.defaultValue!.offset, "The defaults of '\(field.name)' form a cycle.") }
+                current = declaration.fields.first { $0.name == fallback.name }!
+            }
+        }
+    }
+
+    private func resolveDefault(_ type: GesResolvedType, _ written: GesSchemaDefaultSyntax) throws -> GesResolvedDefault {
+        switch type.kind {
+        case .boolean where written.boolean != nil:
+            return GesResolvedDefault(kind: .boolean, boolean: written.boolean!, offset: written.offset)
+        case .tag where written.tag != nil:
+            let tag = written.tag!
+            if let tags = type.tags, !tags.contains(tag) { throw error(Code.invalidDefault, written.offset, "'#\(tag)' is no tag of the field.") }
+            if let max = type.max, tag.utf8.count > max { throw error(Code.invalidDefault, written.offset, "'#\(tag)' is longer than \(max) bytes.") }
+            return GesResolvedDefault(kind: .tag, name: tag, offset: written.offset)
+        case .number, .percentage, .quantity:
+            guard let value = written.value else { break }
+            let resolved = try resolveValue(value, type.unit, type.kind == .percentage, bound: false)!
+            try GesSchemaBinder.checkDefault(self, type.constraints, resolved.value, written.offset, nil)
+            return GesResolvedDefault(kind: .number, value: resolved.value, offset: written.offset)
+        default:
+            break
+        }
+        throw error(Code.invalidDefault, written.offset, "A \(type.kind.rawValue) field takes no such default; a sibling field of its type can be one.")
     }
 
     private func resolveField(_ field: GesSchemaFieldSyntax, _ index: Int, _ owner: GesSchemaKind, _ all: [String: GesResolvedDeclaration]) throws -> GesResolvedField {
@@ -624,7 +690,67 @@ enum GesSchemaCanonical {
         output += field.name + " "
         writeUnion(field.alternatives, &output)
         if field.marker == .optional { output += " optional" } else if field.marker == .key { output += " key" }
+        if let fallback = field.defaultValue {
+            output += " default "
+            switch fallback.kind {
+            case .number: output += fallback.value.canonical
+            case .boolean: output += fallback.boolean ? "true" : "false"
+            case .tag: output += "#" + fallback.name
+            case .field: output += "field " + fallback.name
+            }
+        }
         output += "\n"
+    }
+
+    /// The canonical type of a field that a sibling may default to, without delta ranges, which constrain no value, and with
+    /// the tag set a Tag takes its members from, since generated code names the type after it. Nil for a union, Flags, a
+    /// closed Tag written in place and a List of one of them: generated code gives each such field a type of its own.
+    static func defaultType(_ alternatives: [GesResolvedType]) -> String? {
+        var output = ""
+        return defaultType(alternatives, &output) ? output : nil
+    }
+
+    private static func defaultType(_ alternatives: [GesResolvedType], _ output: inout String) -> Bool {
+        guard alternatives.count == 1 else { return false }
+        let type = alternatives[0]
+        switch type.kind {
+        case .flags: return false
+        case .tag where type.tags != nil:
+            if type.tagSet.isEmpty { return false }
+            output += ":" + type.tagSet
+            return true
+        case .list where type.element != nil:
+            output += "List("
+            if !defaultType(type.element!, &output) { return false }
+            output += ")"
+            if let max = type.max { output += " max \(max)" }
+            return true
+        case .number, .percentage, .quantity, .dice, .point, .vector:
+            var constraints = type.constraints
+            constraints.delta = nil
+            let axes = type.axes?.map { axis in
+                var constraints = axis.constraints
+                constraints.delta = nil
+                return GesResolvedAxis(axis: axis.axis, constraints: constraints)
+            }
+            let plain = GesResolvedType(
+                kind: type.kind,
+                unit: type.unit,
+                tags: nil,
+                max: type.max,
+                element: nil,
+                constraints: constraints,
+                axes: axes,
+                reference: nil,
+                referenceName: "",
+                offset: type.offset
+            )
+            writeType(plain, &output)
+            return true
+        default:
+            writeType(type, &output)
+            return true
+        }
     }
 
     private static func writeUnion(_ alternatives: [GesResolvedType], _ output: inout String) {

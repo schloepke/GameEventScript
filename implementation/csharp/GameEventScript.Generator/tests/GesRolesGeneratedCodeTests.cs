@@ -209,6 +209,29 @@ public sealed class GesRolesGeneratedCodeTests
     }
 
     [TestMethod]
+    public void DefaultsFillWhatAModelOrValueLeavesOut()
+    {
+        var empty = new Model.RadarView();
+        Assert.AreEqual(new Model.RadarView(500, 500, [], null, null, true), empty);
+        var radar = new Model.RadarView(300, null, [1], Model.Side.Left);
+        Assert.AreEqual(300.0, radar.Reach);
+        Assert.AreEqual(Model.Side.Left, radar.Lead);
+        Assert.IsTrue(radar.Active);
+        Assert.AreEqual(Model.World_Body.HullTag.Light, new Model.World_Body().Hull);
+
+        var read = Model.RadarView.FromValue(GesValue.GesMap(["contacts", "side"], [GesValue.GesList([]), GesValue.GesTag("right")]));
+        Assert.AreEqual(new Model.RadarView(500, 500, [], Model.Side.Right, Model.Side.Right, true), read);
+        var kept = Model.RadarView.FromValue(GesValue.GesMap(["contacts", "side", "lead"], [GesValue.GesList([]), GesValue.GesTag("right"), GesValue.GesNothing()]));
+        Assert.IsNull(kept.Lead);
+        var bound = Bound.RadarView.FromValue(GesValue.GesMap(["range", "contacts"], [GesValue.GesFloat(7, GesQuantityUnit.UnitMeter), GesValue.GesList([])]));
+        Assert.AreEqual(7.0, bound.Reach);
+
+        var body = new Wire.World_Body();
+        body.ReadValue(GesValue.GesMap(["mass"], [GesValue.GesInteger(3, GesQuantityUnit.UnitKilogram)]));
+        Assert.AreEqual(Wire.World_Body.HullTag.Light, body.Hull);
+    }
+
+    [TestMethod]
     public void BoundModelsAlsoConvertToPlainValues()
     {
         var value = Report().ToValue();
@@ -380,7 +403,7 @@ public sealed class GesRolesBindingTests
         Assert.AreEqual(Bound.BotView.MoodTag.Angry, built.Mood);
         Assert.AreEqual(new GesPoint(3, 4), built.Position);
         Assert.AreEqual(new Bound.World_Body(90, Bound.World_Body.HullTag.Light), built.Body);
-        Assert.AreEqual(new Bound.RadarView(300, [1, 2], null), built.Radar);
+        Assert.AreEqual(new Bound.RadarView(300, null, [1, 2], null), built.Radar);
         Assert.AreEqual(new Bound.BotView.FacingAlternative.Tag(Bound.BotView.FacingTagTag.North), built.Facing);
         Assert.IsNull(built.Note);
         Assert.HasCount(2, built.Units);

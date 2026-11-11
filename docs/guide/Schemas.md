@@ -164,6 +164,22 @@ The fields of the schema can name it, and generated code gets it as a static mem
 `SoundView.retention` is `2.0` seconds in Swift, and `SoundView.MaximumSources` is `16` in C#. A `let`
 is never sent, but it belongs to the hash, so both sides agree on it.
 
+A field with `default` may be left out of a value or document, and then takes a literal, a `let`, or the
+value of another field of the same type:
+
+```gess
+schema :DriveUnit as {
+  power: :Quantity(W) between 0W and 5kW default 0W
+  maxPower: :Quantity(W) between 0W and 5kW default power
+  efficiency: :Percentage between 0% and 100% default 100%
+}
+```
+
+A `.gesd` file can leave out `efficiency` and `maxPower`, and a generated model takes them as default
+arguments: `DriveUnit(power: 2000)` has a `maxPower` of `2000`. The wire still carries every field, so
+defaults cost no bits and no presence flags. Rules that reject data, such as `power <= maxPower`, stay in
+your code; a default only fills in.
+
 ## 5. Find the object with a key
 
 `key` marks the first field of a schema as the identity of the object, like `id` of `Player`. It

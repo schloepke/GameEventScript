@@ -81,7 +81,7 @@ schema      = "schema" ":" TypeName "as" "{" { field | let } "}"
 let         = "let" LowerName "be" ( literal | "$" ConstantName )
 message     = "message" MessageName "(" [ argument { "," argument } ] ")" [ "tags" tagset ]
 messages    = "messages" ":" TypeName "as" "(" MessageName { "," MessageName } ")"
-field       = LowerName ":" union [ "optional" | "key" ]
+field       = LowerName ":" union [ "optional" | "key" ] [ "default" fallback ]
 argument    = [ "_" ] LowerName ":" union [ "optional" ]
 
 union       = alternative { "|" alternative }
@@ -104,6 +104,7 @@ constraints = [ "integer" ] [ range ] [ "step" value ] [ "delta" "within" value 
 range       = [ "wrapping" ] "between" value "and" value
 value       = literal | "$" ConstantName | LowerName
 maximum     = integer | LowerName
+fallback    = "true" | "false" | "#" TagName | value
 tagset      = "(" "#" TagName { "," "#" TagName } ")"
 ```
 
@@ -113,7 +114,8 @@ tagset      = "(" "#" TagName { "," "#" TagName } ")"
 finite number of the [number grammar](Semantics/Numbers.md#text-and-number-conversion), with an
 optional `%` or unit suffix; a Text, a constant or a parameter is no literal. `integer` is
 at most 12 decimal digits without a leading zero; a single `_` may separate two digits, as in `max 10_000`. A
-`LowerName` in a `value` or `maximum` names a `let` of the schema or, only in a range, a parameter of the file.
+`LowerName` in a `value` or `maximum` names a `let` of the schema or, only in a range, a parameter of the file; in a
+`fallback` it names a `let` or a sibling field.
 
 **Layout.** Spaces and tabs may separate any two tokens, and a line comment may end any
 line. A source may start with a BOM. Fields, lets and axes are separated by commas or line breaks,
@@ -237,6 +239,47 @@ Types:
 A schema, message or message set cannot take the name of a built-in type of this table, nor
 `Record`, the language's type of all Records.
 
+### Defaults
+
+> **Since: Unreleased**
+
+A schema field may end with **`default`**, the value it takes when a value or document leaves it out.
+
+```gess
+schema :DriveUnit as {
+  let waypoints be 32
+  power: :Quantity(W) between 0W and 5kW default 0W
+  maxPower: :Quantity(W) between 0W and 5kW default power
+  efficiency: :Percentage between 0% and 100% default 100%
+  maxWaypoints: :Number integer between 1 and 1024 default waypoints
+  armed: :Boolean default true
+  mount: :Tag(#front, #rear) default #front
+}
+```
+
+- **A literal default** is a number, a file constant or a let of the field's schema for a numeric field, `true` or
+  `false` for a `:Boolean`, or a tag for a `:Tag`. It has the field's unit, lies in its range (a wrapping range is
+  half-open), on its step, is whole within Int64 for an `integer` field and keeps its meaning in binary64 otherwise, and a
+  tag belongs to the set or fits `max`. A bound that a parameter decides checks it at binding. Other types and unions take
+  no literal default: their values have no literal in the schema language, and a literal that picks a union alternative by
+  its kind would add a rule for a rare case.
+- **A sibling default** names another field of the same schema, whose value the field takes, after that field's own
+  default; chains resolve in dependency order and must not form a cycle. Both have the same type, constraints included,
+  so every value of one is valid for the other without a check on read; only `delta within` may differ, since it constrains
+  no value. A type that generated code declares per field, a closed Tag written in place, Flags, a union or a List of
+  them, takes no sibling default; a [tag set](#declarations) shares its type, so its fields can. A range that the sibling
+  shares only partly is no default but a rule that rejects data, which stays in host code like other such rules.
+- **`optional`** with a default only names an optional sibling: the field is absent when the sibling is, and a literal
+  would make `optional` meaningless. Both are optional or both are not. A `key` takes no default, since it identifies the
+  record. Message arguments take none, since a message holds every argument of its signature.
+- **Where it applies:** reading a [value](#record-values) or a model's value, [checking a document](#document-checking),
+  and generated model initializers. The wire always carries the field without a presence bit, since the sender holds the
+  resolved value, and decoding gives every field. `nothing` given for a required field stays `wire.nothingValue`: only
+  a field that is left out takes its default.
+- A default belongs to the [canonical form](#canonical-form) and the hash, since both sides read values and documents
+  alike. Only sibling fields, literals and lets serve as defaults; a default computed from an expression waits for an
+  expression language in schemas.
+
 ### Constraints
 
 In this order, all optional:
@@ -284,6 +327,7 @@ Together, the type and the constraints decide a field's [encoding](#field-encodi
   the type name `:Quantity`: a unit does not distinguish alternatives.
 - A Dice has no constraint other than a range, whose bounds lie within `1` to `2^31 - 1`, as a roll is a
   positive Int32. Anything else is `schema.invalidConstraint` or `schema.invalidBound`.
+- A field with a [default](#defaults) may be left out, in a value and in a document, which gives it its default.
 - A field with a `:Nothing` alternative may be left out, in a value and in a document, which
   counts as `nothing`. A Message holds every argument of its signature, with `nothing` where one
   is absent, since its labels and their order are its signature.
@@ -332,9 +376,9 @@ Source errors use the phase `schema` with line and column, in the manner of
 | --- | --- |
 | `schema.syntax` | the source does not match the grammar |
 | `schema.duplicateName` | a name repeats within its kind, or a schema, message or message set takes the name of a built-in type or `Record` |
-| `schema.unknownName` | a type, message, constant, let or parameter is not declared, or a step, delta range or `max` names no let of its schema |
-| `schema.cycle` | schema references form a cycle, or references or `:List` types nest more than 32 levels |
-| `schema.unitMismatch` | a bound, step or delta range has another unit than its field, or a `max` names a let with a unit |
+| `schema.unknownName` | a type, message, constant, let or parameter is not declared, a step, delta range or `max` names no let of its schema, or a default names neither a field nor a let |
+| `schema.cycle` | schema references form a cycle, references or `:List` types nest more than 32 levels, or sibling defaults form a cycle |
+| `schema.unitMismatch` | a bound, step, delta range or default has another unit than its field, or a `max` names a let with a unit |
 | `schema.invalidRange` | a lower bound is not below its upper bound |
 | `schema.invalidStep` | a step is not positive, not exact, or a bound or delta range is no multiple of it |
 | `schema.invalidConstraint` | `integer` with `step` or on a Percentage, a Dice constraint other than a range, a `max` that is not positive, `step` or `delta within` without a range, `delta within` without a step or not narrower than the field, a `max` that names a let other than a positive whole Number of at most 12 digits |
@@ -342,10 +386,11 @@ Source errors use the phase `schema` with line and column, in the manner of
 | `schema.invalidKey` | a `key` breaks the [key rules](#rules) |
 | `schema.invalidUnion` | a union alternative repeats a type name or has `delta within`, or a union with `:Nothing` is `optional` |
 | `schema.invalidBound` | an `integer` bound is fractional or outside Int64, or a Dice bound is outside `1` to `2^31 - 1` |
-| `schema.tooWide` | a quantized field exceeds the [limits](#quantization), a bound of a fractional field or a fractional let becomes infinite or zero in binary64, or Flags have more than 64 members |
+| `schema.tooWide` | a quantized field exceeds the [limits](#quantization), a bound or default of a fractional field or a fractional let becomes infinite or zero in binary64, or Flags have more than 64 members |
 | `schema.tooLarge` | the [largest encoding](#largest-encoding) exceeds its limit or overflows |
 | `schema.invalidRole` | a role stands on a declaration that cannot take it, is no role word, or names an invalid group |
 | `schema.duplicateRole` | a declaration has a second `wire` or a second `model` role |
+| `schema.invalidDefault` | a [default](#defaults) lies outside its field's range or off its step, is fractional for an `integer` field, is no tag of the set or longer than `max`, has another kind than its field, stands on a key, a union or an optional field with a literal, names a sibling of another type or optionality, or names one for a type that generated code declares per field |
 
 `schema.notEncodable`, `schema.invalidRange`, `schema.invalidStep`, `schema.invalidBound`,
 `schema.invalidConstraint`, `schema.tooWide` and `schema.tooLarge` can also arise at binding,
@@ -468,7 +513,8 @@ not matter; `<kind>` is `Number`, `Percentage` or `Quantity(<portable unit name>
 
 A numeric type is followed by its constraints, and any field or argument then by its
 marker, in this order: `integer`, `between <a> <b>` or `wrapping between <a> <b>`,
-`step <s>`, `delta <d>`, then `optional` or `key`. A union writes its alternatives in
+`step <s>`, `delta <d>`, then `optional` or `key`, then `default` and a number, `true`, `false`, `#<tag>`
+or `field <name>` for a sibling. A union writes its alternatives in
 source order with ` | ` between them, also inside `List(...)`; the marker follows the last
 one. Unit names are the
 [portable names](Language.md#quantities). A bound is a number or a parameter name.
@@ -476,7 +522,7 @@ one. Unit names are the
 A number is its exact decimal value in base units, written `<significand>e<exponent>`:
 the significand is an integer without trailing zeros, with a leading `-` when negative,
 and zero is `0e0`. Prefixes and percent signs are applied first, and constants are
-replaced by their values, and so are lets where a field names them. So `1cm`, `0.01m` and `10mm` are all `1e-2`, and `135` is
+replaced by their values, and so are lets where a field names them, also as a default. So `1cm`, `0.01m` and `10mm` are all `1e-2`, and `135` is
 `135e0`, `5km` is `5e3`.
 
 ```text
@@ -944,6 +990,9 @@ The convenient path converts between `GesValue` and the wire.
 
 - A schema `:Bot` corresponds to a Record with the type name `Bot`. Fields are matched
   by name; a Map works too. Encoding does not convert units.
+- A field that a Record or Map leaves out takes its [default](#defaults): its literal, or the value of the sibling it
+  names, after that sibling's own default. A chain that ends at a field without a value or default is
+  `wire.missingField` at that field, and `nothing` for an optional one.
 - Record fields without a schema entry are not transmitted. This covers the computed
   fields of a script record. The same holds for the keys of a Map, except when it selects a union
   alternative.
@@ -1130,7 +1179,8 @@ not use it:
 - `Name`, `Kind` (`Schema`, `Message` or `Messages`), `Hash` and `CanonicalForm`;
 - `Parameters`, the reached parameters in ascending name order, each with `Name`, `Kind` and `Unit`;
 - `Fields`, the fields or arguments in declared order, each with `Name`, `IsUnlabeled`,
-  `IsOptional`, `IsKey` and `Alternatives`;
+  `IsOptional`, `IsKey`, `Alternatives` and `Default`, a `GesSchemaDefaultInfo` with `Kind` (`Number`, `Boolean`, `Tag`
+  or `Field`), the exact `Number`, the `Boolean`, and the `Name` of a tag without `#` or of the sibling, or null;
 - `Tags` of a message and `Members` of a message set, in declared order;
 - `Bind` and `CheckDocument`.
 
@@ -1311,12 +1361,16 @@ alternative's type. A list element type is named `<Field>Item`, so a closed Tag 
 `generate.unsupported`. Each property is documented with its declaration, so its unit and documented range stay visible.
 
 - **Swift** stores `var` properties in declared order and has a memberwise `init` whose absent values default to `nil` and
-  lists to `[]`. A schema with a `key` is `Identifiable`; the key is `id`, or a computed `id` returns it. `Codable` is part
+  lists to `[]`. A field with a literal [default](#defaults) has it as its default argument; one with a sibling default takes
+  an optional argument that defaults to `nil` and resolves `nil` to the sibling's property, since Swift cannot default one
+  argument to another. A schema with a `key` is `Identifiable`; the key is `id`, or a computed `id` returns it. `Codable` is part
   of the standard library, so models still import no Foundation; `GesPoint` and `GesVector` are `Codable` with `x`, `y`,
   `z`. With `--bindings` or `--values`, one internal helper enum named after the header holds the value conversions both
   share.
 - **C#** has settable properties in declared order, a constructor with every field and a parameterless one that leaves every
-  field at its zero value (empty text and lists, new records, the first alternative with its zero value). It uses C# 9 with
+  field at its default or zero value (empty text and lists, new records, the first alternative with its zero value). A
+  sibling default takes a nullable parameter that resolves `null` to the sibling's property. C# optional parameters end
+  the list, so a default becomes one, `= value` or `= null`, only for the fields after the last field without a default. It uses C# 9 with
   neither `record`, `init` accessors nor Reflection, so Unity and IL2CPP need no shim. Classes keep a copy from sharing a
   list with its original; value equality compares lists element by element, and 0 and -0 hash alike. A file holds one
   internal helper class named after its header; it also holds the value conversions that `--bindings` and `--values`
@@ -1328,6 +1382,9 @@ alternative's type. A list element type is named `<Field>Item`, so a closed Tag 
   as its ratio: C# `public const long` for an integer and `public const double` otherwise, named in PascalCase; Swift
   `static let` of type `Int` in models, `Int64` in wire records and `Double` otherwise. A member that would take the name
   of a generated member or another member fails with `generate.nameCollision`. *Since: Unreleased.*
+- A model is a plain value: an optional field that defaults to a sibling holds what it is given, and reading a value that
+  gives `nothing` for it keeps it absent, though its initializer resolves `nil` to the sibling. Swift's synthesized
+  `Codable` stores every property and applies no default; defaults belong to GES values and documents.
 - Model and wire types of one schema are separate types in separate files; no conversion between both forms is generated,
   since a client's model rarely has the shape of its wire roots. A program converts in its own code.
 
@@ -1342,7 +1399,7 @@ for a record of its schema, so that wire records and models meet there; no code 
   a union as its alternative's value and an absent optional or `:Nothing` alternative as `nothing`.
 - Reading takes a Record of the schema's name, whose other fields are ignored, or a Map whose keys are all fields of it,
   and converts strictly as the [script bindings](#script-bindings) do. It fails with the codes of the
-  [value path](#value-path): a required field without a key is `wire.missingField`, `nothing` where a value is required
+  [value path](#value-path), and a field it leaves out takes its [default](#defaults): a required field without a key or default is `wire.missingField`, `nothing` where a value is required
   is `wire.nothingValue`, and a value of another type is `wire.typeMismatch`, each at the field's path; a value that is no
   such Record or Map fails at the empty path. A nested record reports the
   path of its own field and a list element its list's path with `[]`, as the value path names them, such as
@@ -1391,7 +1448,7 @@ Reflection, so managed code stripping under IL2CPP removes nothing it needs. Wit
 `layout --model` prints the language-neutral model layout in the JSON form of the [generation layout](#generation-layout):
 `model` (the format version, 1), `roots` and `types`, ordered by name. A type has `name`, `hash` and `fields`, and a
 schema with lets `constants` as in the generation layout; a field has
-`name`, `path`, `optional`, `key` and `type`. A type has `kind` and the members of its kind: `number` adds `type`, `unit`,
+`name`, `path`, `optional`, `key`, `default` as in the generation layout when it has one, and `type`. A type has `kind` and the members of its kind: `number` adds `type`, `unit`,
 `integer`, `wrapping`, `lower`, `upper` and `step`, a bound as its canonical decimal or parameter name or `null`; `tag` adds
 `tags` and `max`, `flags` adds `tags`, `text` and `bytes` add `max`, `list` adds `max` and `element`, `dice` adds `max`, `lower` and `upper`, `point` and
 `vector` add `unit` and `axes` (the names of an axis block), `schema` adds `name`, and `union` adds `alternatives`;
@@ -1424,7 +1481,9 @@ exact decimals. Hashes are 16 lowercase hexadecimal digits, and a binary64 value
   fields and of the types it reaches). A message set adds `members` and `memberWidth`; a schema
   or message adds `fields`, a schema with [lets](#declarations) `constants`, and a message `tags`. A constant has `name`,
   `type` and `unit` as a parameter, `value`, its exact decimal in base units, and `integer`.
-- A field has `name`, `path`, `optional`, `key`, `unlabeled` and `encoding`. List elements,
+- A field has `name`, `path`, `optional`, `key`, `unlabeled`, with a [default](#defaults) `default` with `kind`
+  (`number`, `boolean`, `tag` or `field`) and `value` (an exact decimal in base units, a Boolean, a tag without `#` or
+  the sibling's name), and `encoding`. List elements,
   axes and union alternatives are written with `name`, `path` and `encoding` only; an element is
   named `[]` and an alternative by its label or else by its type, as in its path.
 - An encoding has `kind` and the members of its kind:

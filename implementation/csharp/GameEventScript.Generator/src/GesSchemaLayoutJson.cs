@@ -95,6 +95,7 @@ internal static class GesSchemaLayoutJson
             json.Boolean("optional", field.Optional);
             json.Boolean("key", field.Key);
             json.Boolean("unlabeled", field.Unlabeled);
+            field.Default?.Write(json);
         }
 
         json.Key("encoding");

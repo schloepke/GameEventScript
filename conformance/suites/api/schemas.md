@@ -923,6 +923,899 @@ schema:
 ---
 
 
+## Test: field defaults in the canonical form
+
+A default follows the marker as an exact number in base units, `true` or `false`, a tag, or `field` and the sibling it names; a let or constant is replaced by its value. A field may still be named `default`.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: canonical-default
+schemaApi:
+  sources:
+    - "constant $full be 100%\nschema :Drive as {\n  let waypoints be 32\n  power: :Quantity(W) between 0W and 5kW step 1W default 1.5kW\n  maxPower: :Quantity(W) between 0W and 5kW step 1W delta within 1kW default power\n  efficiency: :Percentage between 0% and 100% default $full\n  stops: :Number integer between 1 and 1024 default waypoints\n  armed: :Boolean default false\n  mount: :Tag(#front, #rear) default #rear\n  default: :Text max 4\n}\n"
+  root: "Drive"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  canonical: "gess1\nschema Drive\nlet waypoints Number 32e0\nfield power Quantity(watt) between 0e0 5e3 step 1e0 default 15e2\nfield maxPower Quantity(watt) between 0e0 5e3 step 1e0 delta 1e3 default field power\nfield efficiency Percentage between 0e0 1e0 default 1e0\nfield stops Number integer between 1e0 1024e0 default 32e0\nfield armed Boolean default false\nfield mount Tag(#front #rear) default #rear\nfield default Text max 4\n"
+  hash: "987d354c1fb999d2"
+```
+
+---
+
+## Test: the description of field defaults
+
+Each default keeps its kind: a number as its exact value in base units, a Boolean, a tag without `#`, or the sibling field.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: describe-default
+schemaApi:
+  sources:
+    - "tags :Mount as (#front, #rear)\nschema :Drive as {\n  power: :Quantity(W) default 2kW\n  maxPower: :Quantity(W) default power\n  share: :Percentage default 50%\n  on: :Boolean default true\n  mount: :Mount default #rear\n  wet: :Text optional default dry\n  dry: :Text optional\n}\n"
+  root: "Drive"
+  bind: false
+  describe: true
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  description:
+    name: "Drive"
+    kind: "Schema"
+    fields:
+      - name: "power"
+        alternatives:
+          - kind: "Quantity"
+            unit: "watt"
+        default:
+          kind: "Number"
+          value: "2e3"
+      - name: "maxPower"
+        alternatives:
+          - kind: "Quantity"
+            unit: "watt"
+        default:
+          kind: "Field"
+          name: "power"
+      - name: "share"
+        alternatives:
+          - kind: "Percentage"
+        default:
+          kind: "Number"
+          value: "5e-1"
+      - name: "on"
+        alternatives:
+          - kind: "Boolean"
+        default:
+          kind: "Boolean"
+          value: true
+      - name: "mount"
+        alternatives:
+          - kind: "Tag"
+            tags: ["front", "rear"]
+        default:
+          kind: "Tag"
+          name: "rear"
+      - name: "wet"
+        alternatives:
+          - kind: "Text"
+        optional: true
+        default:
+          kind: "Field"
+          name: "dry"
+      - name: "dry"
+        alternatives:
+          - kind: "Text"
+        optional: true
+```
+
+---
+
+## Test: a value takes the defaults of the fields it leaves out
+
+A left-out field takes its literal default, or the value of the sibling it names, after that sibling's own default; the wire carries every field, and decoding gives them all.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: encode-default
+schemaApi:
+  sources:
+    - "schema :S as {\n  max: :Number integer between 0 and 15 default power\n  power: :Number integer between 0 and 15 default 3\n  on: :Boolean default true\n  mode: :Tag(#a, #b) default #b\n}\n"
+  root: "S"
+  encode:
+    type: ":S"
+    entries: []
+  decode: "3303"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "3303"
+  decoded:
+    value:
+      type: ":S"
+      entries:
+        - key: "max"
+          value:
+            type: ":Number.int64"
+            value: "3"
+        - key: "mode"
+          value:
+            type: ":Tag"
+            value: "b"
+        - key: "on"
+          value:
+            type: ":Boolean"
+            value: true
+        - key: "power"
+          value:
+            type: ":Number.int64"
+            value: "3"
+    byteCount: 2
+```
+
+---
+
+## Test: a given sibling is the default
+
+A field that names a sibling takes the value given for it.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: encode-default-sibling
+schemaApi:
+  sources:
+    - "schema :S as {\n  max: :Number integer between 0 and 15 default power\n  power: :Number integer between 0 and 15 default 3\n}\n"
+  root: "S"
+  encode:
+    type: ":S"
+    entries:
+      - key: "power"
+        value:
+          type: ":Number.int64"
+          value: "7"
+  decode: "77"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "77"
+  decoded:
+    value:
+      type: ":S"
+      entries:
+        - key: "max"
+          value:
+            type: ":Number.int64"
+            value: "7"
+        - key: "power"
+          value:
+            type: ":Number.int64"
+            value: "7"
+    byteCount: 1
+```
+
+---
+
+## Test: defaults apply in nested records
+
+A nested record or Map takes the defaults of its own schema.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: encode-default-nested
+schemaApi:
+  sources:
+    - "schema :Inner as { level: :Percentage between 0% and 100% step 1% default 25% }\nschema :S as { inner: :Inner }\n"
+  root: "S"
+  encode:
+    type: ":S"
+    entries:
+      - key: "inner"
+        value:
+          type: ":Map"
+          entries: []
+  decode: "19"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "19"
+  decoded:
+    value:
+      type: ":S"
+      entries:
+        - key: "inner"
+          value:
+            type: ":Inner"
+            entries:
+              - key: "level"
+                value:
+                  type: ":Percentage"
+                  value: "0.25"
+    byteCount: 1
+```
+
+---
+
+## Test: an optional field takes an absent sibling
+
+An optional field may default only to an optional sibling; when that is absent too, both are absent.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: encode-default-optional
+schemaApi:
+  sources:
+    - "schema :S as {\n  wet: :Number integer between 0 and 7 optional default dry\n  dry: :Number integer between 0 and 7 optional\n}\n"
+  root: "S"
+  encode:
+    type: ":S"
+    entries: []
+  decode: "00"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "00"
+  decoded:
+    value:
+      type: ":S"
+      entries:
+        - key: "dry"
+          value:
+            type: ":Nothing"
+        - key: "wet"
+          value:
+            type: ":Nothing"
+    byteCount: 1
+```
+
+---
+
+## Test: a default chain that ends without a value
+
+A required field whose sibling has neither a value nor a default is missing at the sibling's path.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: encode-default-missing
+schemaApi:
+  sources:
+    - "schema :S as {\n  a: :Number integer between 0 and 7 default b\n  b: :Number integer between 0 and 7\n}\n"
+  root: "S"
+  encode:
+    type: ":S"
+    entries: []
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    error:
+      code: "wire.missingField"
+      path: "b"
+```
+
+---
+
+## Test: a default does not replace nothing
+
+Only a left-out field takes its default; `nothing` for a required field stays an error.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: encode-default-nothing
+schemaApi:
+  sources:
+    - "schema :S as { a: :Number integer between 0 and 7 default 1 }\n"
+  root: "S"
+  encode:
+    type: ":S"
+    entries:
+      - key: "a"
+        value:
+          type: ":Nothing"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    error:
+      code: "wire.nothingValue"
+      path: "a"
+```
+
+---
+
+## Test: a document may leave out a field with a default
+
+Document checking accepts a left-out field that has a default.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: document-default-omitted
+schemaApi:
+  sources:
+    - "schema :S as {\n  power: :Quantity(W) default 0W\n  max: :Quantity(W) default power\n  on: :Boolean\n}\n"
+  document: ":Schema(:S)\non: true\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  document:
+    ok: true
+```
+
+---
+
+## Test: a default outside a range from a parameter
+
+A bound that a parameter decides checks the default at binding.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-default-parameter-range
+schemaApi:
+  sources:
+    - "parameter limit: :Quantity(m)\nschema :S as {\n  a: :Quantity(m) between 0m and limit default 5m\n}\n"
+  root: "S"
+  parameters:
+    limit: "3m"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidDefault"
+    line: 3
+    column: 40
+```
+
+---
+
+## Test: a default outside the range
+
+A literal default lies in the field's closed range.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-default-range
+schemaApi:
+  sources:
+    - "schema :S as {\n  a: :Number integer between 0 and 10 default 11\n}\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidDefault"
+    line: 2
+    column: 39
+```
+
+---
+
+## Test: a default at the upper bound of a wrapping range
+
+A wrapping range is half-open, so its upper bound is no value.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-default-wrapping
+schemaApi:
+  sources:
+    - "schema :S as {\n  a: :Quantity(\u00b0) wrapping between 0\u00b0 and 360\u00b0 step 1\u00b0 default 360\u00b0\n}\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidDefault"
+    line: 2
+    column: 56
+```
+
+---
+
+## Test: a default off the step
+
+A default of a quantized field is a multiple of its step.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-default-step
+schemaApi:
+  sources:
+    - "schema :S as {\n  a: :Quantity(m) between 0m and 10m step 1m default 2.5m\n}\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidDefault"
+    line: 2
+    column: 46
+```
+
+---
+
+## Test: a fractional default of an integer field
+
+An integer field takes a whole default.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-default-integer
+schemaApi:
+  sources:
+    - "schema :S as {\n  a: :Number integer default 1.5\n}\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidDefault"
+    line: 2
+    column: 22
+```
+
+---
+
+## Test: a default beyond binary64
+
+A fractional default keeps its meaning in binary64.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-default-binary64
+schemaApi:
+  sources:
+    - "schema :S as {\n  a: :Number default 1e-400\n}\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.tooWide"
+    line: 2
+    column: 14
+```
+
+---
+
+## Test: a default of another unit
+
+A numeric default has its field's unit.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-default-unit
+schemaApi:
+  sources:
+    - "schema :S as {\n  a: :Quantity(m) default 5s\n}\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.unitMismatch"
+    line: 2
+    column: 27
+```
+
+---
+
+## Test: a default that names nothing
+
+A name is a sibling field or a let of the schema.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-default-unknown
+schemaApi:
+  sources:
+    - "schema :S as {\n  a: :Number default b\n}\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.unknownName"
+    line: 2
+    column: 22
+```
+
+---
+
+## Test: defaults that form a cycle
+
+Chains of sibling defaults resolve in dependency order, so they cannot form a cycle.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-default-cycle
+schemaApi:
+  sources:
+    - "schema :S as {\n  a: :Number default b\n  b: :Number default a\n}\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.cycle"
+    line: 2
+    column: 14
+```
+
+---
+
+## Test: a default sibling of another type
+
+A sibling default has the field's type and constraints; only delta ranges may differ.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-default-type
+schemaApi:
+  sources:
+    - "schema :S as {\n  a: :Number integer between 0 and 9 default b\n  b: :Number integer between 0 and 8\n}\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidDefault"
+    line: 2
+    column: 38
+```
+
+---
+
+## Test: a sibling default of a type of its own
+
+A closed Tag written in place, Flags and a union get a generated type per field, so they take no sibling default; a tag set can.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-default-own-type
+schemaApi:
+  sources:
+    - "schema :S as {\n  a: :Tag(#x, #y) default b\n  b: :Tag(#x, #y)\n}\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidDefault"
+    line: 2
+    column: 19
+```
+
+---
+
+## Test: a literal default of an optional field
+
+An optional field takes its default only from an optional sibling.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-default-optional-literal
+schemaApi:
+  sources:
+    - "schema :S as {\n  a: :Number optional default 1\n}\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidDefault"
+    line: 2
+    column: 23
+```
+
+---
+
+## Test: an optional field that defaults to a required one
+
+A field and the sibling it names are both optional or both not.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-default-optional-sibling
+schemaApi:
+  sources:
+    - "schema :S as {\n  a: :Number optional default b\n  b: :Number\n}\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidDefault"
+    line: 2
+    column: 23
+```
+
+---
+
+## Test: a key with a default
+
+A key identifies a record and takes no default.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-default-key
+schemaApi:
+  sources:
+    - "schema :S as {\n  a: :Number integer key default 1\n}\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidDefault"
+    line: 2
+    column: 26
+```
+
+---
+
+## Test: a default tag outside the set
+
+A tag default belongs to the field's set.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-default-tag
+schemaApi:
+  sources:
+    - "schema :S as {\n  a: :Tag(#x, #y) default #z\n}\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidDefault"
+    line: 2
+    column: 19
+```
+
+---
+
+## Test: a default tag above its maximum
+
+A tag default of a `:Tag max n` has at most `n` bytes.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-default-tag-max
+schemaApi:
+  sources:
+    - "schema :S as {\n  a: :Tag max 2 default #abc\n}\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidDefault"
+    line: 2
+    column: 17
+```
+
+---
+
+## Test: a default of another kind
+
+A Boolean field takes `true` or `false`.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-default-kind
+schemaApi:
+  sources:
+    - "schema :S as {\n  a: :Boolean default 1\n}\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidDefault"
+    line: 2
+    column: 15
+```
+
+---
+
+## Test: a literal default of a union
+
+A union takes its default only from a sibling field.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-default-union
+schemaApi:
+  sources:
+    - "schema :S as {\n  a: :Number | :Text default 1\n}\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidDefault"
+    line: 2
+    column: 22
+```
+
+---
+
+## Test: a default of a message argument
+
+Defaults belong to schema fields; message arguments have none.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-default-message
+schemaApi:
+  sources:
+    - "message M(a: :Number default 1)\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.syntax"
+    line: 1
+    column: 22
+```
+
+---
+
 ## Test: field order a is part of the hash
 
 Field order is the wire order.

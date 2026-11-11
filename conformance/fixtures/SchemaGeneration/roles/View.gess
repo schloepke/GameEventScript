@@ -33,8 +33,12 @@ schema :BotView as {
   hints: :List(:Side)
 }
 
+// Defaults fill in what a value leaves out: a literal, or the sibling a field names.
 schema :RadarView as {
-  range: :Quantity(m)
+  range: :Quantity(m) default 500m
+  reach: :Quantity(m) default range
   contacts: :List(:Number integer)
   side: :Side optional
+  lead: :Side optional default side
+  active: :Boolean default true
 }

@@ -296,6 +296,23 @@ internal sealed class GesResolvedField
 
     internal GesSchemaFieldMarker Marker { get; init; }
 
+    internal GesResolvedDefault? Default { get; set; }
+
+    internal int Offset { get; init; }
+}
+
+/// <summary>The default of a field: an exact number in base units, a Boolean, a tag, or the name of a sibling field.</summary>
+internal sealed class GesResolvedDefault
+{
+    internal GesSchemaDefaultKind Kind { get; init; }
+
+    internal GesSchemaDecimal Value { get; init; }
+
+    internal bool Boolean { get; init; }
+
+    // The tag without '#', or the sibling field.
+    internal string Name { get; init; } = "";
+
     internal int Offset { get; init; }
 }
 
@@ -436,6 +453,66 @@ internal sealed class GesFileScope
             }
 
             declaration.Fields = fields;
+            if (declaration.Kind == GesSchemaKind.Schema) ResolveDefaults(declaration);
+        }
+    }
+
+    // A default is a number, a Boolean or a tag of the field's single type, or a sibling field of the same type whose value it
+    // takes; chains resolve in dependency order and must not form a cycle.
+    private void ResolveDefaults(GesResolvedDeclaration declaration)
+    {
+        var syntax = declaration.Syntax.Fields;
+        for (var index = 0; index < syntax.Length; index++)
+        {
+            if (syntax[index].Default is not { } written) continue;
+            var field = declaration.Fields[index];
+            if (field.Marker == GesSchemaFieldMarker.Key) throw Error(Code.InvalidDefault, written.Offset, "A key takes no default.");
+            var name = written.Value?.Name ?? "";
+            var sibling = name.Length > 0 ? Array.Find(declaration.Fields, candidate => candidate.Name == name) : null;
+            if (sibling is not null)
+            {
+                var type = GesSchemaCanonical.DefaultType(field.Alternatives);
+                if (type is null) throw Error(Code.InvalidDefault, written.Offset, $"The type of '{field.Name}' belongs to it alone, as a union, Flags or a closed Tag written in place does; a tag set can be shared.");
+                if (type != GesSchemaCanonical.DefaultType(sibling.Alternatives)) throw Error(Code.InvalidDefault, written.Offset, $"'{name}' has another type than '{field.Name}'.");
+                if ((sibling.Marker == GesSchemaFieldMarker.Optional) != (field.Marker == GesSchemaFieldMarker.Optional))
+                    throw Error(Code.InvalidDefault, written.Offset, "A field and the field it defaults to are both optional or both not.");
+                field.Default = new GesResolvedDefault { Kind = GesSchemaDefaultKind.Field, Name = name, Offset = written.Offset };
+                continue;
+            }
+
+            if (name.Length > 0 && !_lets.ContainsKey(name)) throw Error(Code.UnknownName, written.Value!.Offset, $"'{name}' is neither a field nor a let of '{declaration.Name}'.");
+            if (field.Marker == GesSchemaFieldMarker.Optional) throw Error(Code.InvalidDefault, written.Offset, "An optional field takes its default only from another optional field.");
+            if (field.Alternatives.Length != 1) throw Error(Code.InvalidDefault, written.Offset, "A union takes its default only from another field.");
+            field.Default = ResolveDefault(field.Alternatives[0], written);
+        }
+
+        foreach (var field in declaration.Fields)
+        {
+            var seen = new HashSet<GesResolvedField>();
+            for (var current = field; current.Default is { Kind: GesSchemaDefaultKind.Field } fallback;)
+            {
+                if (!seen.Add(current)) throw Error(Code.Cycle, field.Default!.Offset, $"The defaults of '{field.Name}' form a cycle.");
+                current = Array.Find(declaration.Fields, candidate => candidate.Name == fallback.Name)!;
+            }
+        }
+    }
+
+    private GesResolvedDefault ResolveDefault(GesResolvedType type, GesSchemaDefaultSyntax written)
+    {
+        switch (type.Kind)
+        {
+            case GesSchemaTypeKind.Boolean when written.Boolean is { } boolean:
+                return new GesResolvedDefault { Kind = GesSchemaDefaultKind.Boolean, Boolean = boolean, Offset = written.Offset };
+            case GesSchemaTypeKind.Tag when written.Tag is { } tag:
+                if (type.Tags is { } tags && Array.IndexOf(tags, tag) < 0) throw Error(Code.InvalidDefault, written.Offset, $"'#{tag}' is no tag of the field.");
+                if (type.Max is { } max && System.Text.Encoding.UTF8.GetByteCount(tag) > max) throw Error(Code.InvalidDefault, written.Offset, $"'#{tag}' is longer than {max} bytes.");
+                return new GesResolvedDefault { Kind = GesSchemaDefaultKind.Tag, Name = tag, Offset = written.Offset };
+            case GesSchemaTypeKind.Number or GesSchemaTypeKind.Percentage or GesSchemaTypeKind.Quantity when written.Value is { } value:
+                var resolved = ResolveValue(value, type.Unit, type.Kind == GesSchemaTypeKind.Percentage, bound: false)!;
+                GesSchemaBinder.CheckDefault(this, type.Constraints, resolved.Value, written.Offset, null);
+                return new GesResolvedDefault { Kind = GesSchemaDefaultKind.Number, Value = resolved.Value, Offset = written.Offset };
+            default:
+                throw Error(Code.InvalidDefault, written.Offset, $"A {type.Kind} field takes no such default; a sibling field of its type can be one.");
         }
     }
 
@@ -739,8 +816,63 @@ internal static class GesSchemaCanonical
         WriteUnion(field.Alternatives, builder);
         if (field.Marker == GesSchemaFieldMarker.Optional) builder.Append(" optional");
         else if (field.Marker == GesSchemaFieldMarker.Key) builder.Append(" key");
+        if (field.Default is { } fallback)
+        {
+            builder.Append(" default ");
+            builder.Append(fallback.Kind switch
+            {
+                GesSchemaDefaultKind.Number => fallback.Value.Canonical,
+                GesSchemaDefaultKind.Boolean => fallback.Boolean ? "true" : "false",
+                GesSchemaDefaultKind.Tag => "#" + fallback.Name,
+                _ => "field " + fallback.Name
+            });
+        }
+
         builder.Append('\n');
     }
+
+    // The canonical type of a field that a sibling may default to, without delta ranges, which constrain no value, and with
+    // the tag set a Tag takes its members from, since generated code names the type after it. Null for a union, Flags, a
+    // closed Tag written in place and a List of one of them: generated code gives each such field a type of its own.
+    internal static string? DefaultType(GesResolvedType[] alternatives)
+    {
+        var builder = new StringBuilder();
+        return DefaultType(alternatives, builder) ? builder.ToString() : null;
+    }
+
+    private static bool DefaultType(GesResolvedType[] alternatives, StringBuilder builder)
+    {
+        if (alternatives.Length != 1) return false;
+        var type = alternatives[0];
+        switch (type.Kind)
+        {
+            case GesSchemaTypeKind.Flags:
+            case GesSchemaTypeKind.Tag when type.Tags is not null && type.TagSet.Length == 0:
+                return false;
+            case GesSchemaTypeKind.Tag when type.TagSet.Length > 0:
+                builder.Append(':').Append(type.TagSet);
+                return true;
+            case GesSchemaTypeKind.List when type.Element is { } element:
+                builder.Append("List(");
+                if (!DefaultType(element, builder)) return false;
+                builder.Append(')');
+                if (type.Max is { } max) builder.Append(" max ").Append(max);
+                return true;
+            case GesSchemaTypeKind.Number or GesSchemaTypeKind.Percentage or GesSchemaTypeKind.Quantity or GesSchemaTypeKind.Dice:
+                WriteType(new GesResolvedType { Kind = type.Kind, Unit = type.Unit, Max = type.Max, Constraints = WithoutDelta(type.Constraints) }, builder);
+                return true;
+            case GesSchemaTypeKind.Point or GesSchemaTypeKind.Vector:
+                var axes = type.Axes is { } written ? Array.ConvertAll(written, axis => new GesResolvedAxis { Axis = axis.Axis, Constraints = WithoutDelta(axis.Constraints) }) : null;
+                WriteType(new GesResolvedType { Kind = type.Kind, Unit = type.Unit, Axes = axes }, builder);
+                return true;
+            default:
+                WriteType(type, builder);
+                return true;
+        }
+    }
+
+    private static GesResolvedConstraints WithoutDelta(GesResolvedConstraints constraints)
+        => new() { Integer = constraints.Integer, Wrapping = constraints.Wrapping, Lower = constraints.Lower, Upper = constraints.Upper, Step = constraints.Step };
 
     private static void WriteUnion(GesResolvedType[] alternatives, StringBuilder builder)
     {

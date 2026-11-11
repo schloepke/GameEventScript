@@ -131,6 +131,8 @@ public struct GesSchemaFieldInfo: Sendable {
     public let isKey: Bool
     /// The types of the field: one, or the alternatives of a union in source order.
     public let alternatives: [GesSchemaType]
+    /// The value the field takes when a value or document leaves it out, or nil when it has none.
+    public let defaultValue: GesSchemaDefaultInfo?
 
     init(_ field: GesResolvedField) {
         name = field.name
@@ -138,6 +140,39 @@ public struct GesSchemaFieldInfo: Sendable {
         isOptional = field.marker == .optional
         isKey = field.marker == .key
         alternatives = field.alternatives.map(GesSchemaType.init)
+        defaultValue = field.defaultValue.map(GesSchemaDefaultInfo.init)
+    }
+}
+
+/// The kinds of a field's default.
+public enum GesSchemaDefaultKind: Sendable {
+    /// A number of a numeric field, in base units; a Percentage holds its ratio.
+    case number
+    /// `true` or `false` of a Boolean field.
+    case boolean
+    /// A tag of a Tag field.
+    case tag
+    /// A sibling field of the same type, whose value the field takes.
+    case field
+}
+
+/// The value a field takes when a value or document leaves it out, declared with `default`; the wire always carries the field.
+public struct GesSchemaDefaultInfo: Sendable {
+    /// The kind of default.
+    public let kind: GesSchemaDefaultKind
+    /// The exact number in base units of a ``GesSchemaDefaultKind/number`` default.
+    public let number: GesSchemaBound?
+    /// The value of a ``GesSchemaDefaultKind/boolean`` default.
+    public let boolean: Bool
+    /// The tag without `#` of a ``GesSchemaDefaultKind/tag`` default, the sibling field of a ``GesSchemaDefaultKind/field``
+    /// default, or an empty string.
+    public let name: String
+
+    init(_ fallback: GesResolvedDefault) {
+        kind = fallback.kind
+        number = fallback.kind == .number ? GesSchemaBound(GesResolvedValue(value: fallback.value)) : nil
+        boolean = fallback.boolean
+        name = fallback.name
     }
 }
 

@@ -239,6 +239,11 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 - Schema tag sets `tags :Mount as (#front, #rear)`: a field, list element or alternative of type `:Mount` is that
   `:Tag(...)` in place, with the same bytes and hash, and generated code declares one `Mount` enum for every field of it
   instead of one per field.
+- Schema fields take defaults, as in `efficiency: :Percentage default 100%` or `maxPower: :Quantity(W) default power`:
+  a literal, a constant, a let or a sibling field of the same type fills in what a value, model value or document leaves
+  out, while the wire still carries every field. Generated models take defaults as initializer arguments, describe them
+  and add them to the layouts; `GesSchemaFieldInfo.Default` (Swift `defaultValue`) describes them. Invalid defaults are
+  `schema.invalidDefault`.
 - Schemas declare constants with `let retention be 2s` inside their braces. Its fields can name a let as a bound, step,
   delta range or `max`; generated wire and model types declare it as a static member in base units, and it belongs to
   the hash. `GesSchema.Constants` (Swift `constants`) describes them.

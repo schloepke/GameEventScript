@@ -144,6 +144,9 @@ internal struct GesSchemaNode
     internal GesSchemaTypeKind ValueKind;
     internal GesQuantityUnit Unit;
     internal string SchemaName;
+
+    // The value a value or document that leaves the field out takes, for the field's first node.
+    internal GesResolvedDefault? Default;
 }
 
 /// <summary>A schema, message or message set bound to parameter values. Immutable; it can be shared between threads.</summary>
@@ -326,6 +329,36 @@ internal static class GesSchemaBinder
         if (double.IsInfinity(binary) || (binary == 0 && let.Value.Significand != 0))
             throw scope.Error(Code.TooWide, let.Offset, "A let lies beyond binary64.");
         return false;
+    }
+
+    // A numeric default lies in the range, a wrapping one below its upper bound, on the step and, for an integer field, is whole
+    // within Int64; a fractional one keeps its meaning in binary64. Bounds that a parameter without a value decides stay unchecked.
+    internal static void CheckDefault(GesFileScope scope, GesResolvedConstraints constraints, GesSchemaDecimal value, int offset, Func<GesResolvedValue, GesSchemaDecimal>? parameter)
+    {
+        if (constraints.Integer)
+        {
+            if (value.Exponent < 0 || !TryScale(value.Significand, value.Exponent, out _)) throw scope.Error(Code.InvalidDefault, offset, "The default of an integer field is whole and within Int64.");
+        }
+        else
+        {
+            var binary = double.Parse(value.Canonical, CultureInfo.InvariantCulture);
+            if (double.IsInfinity(binary) || (binary == 0 && value.Significand != 0)) throw scope.Error(Code.TooWide, offset, "A default lies beyond binary64.");
+        }
+
+        GesSchemaDecimal? lower = constraints.Lower is { } l ? (l.IsParameter ? parameter?.Invoke(l) : l.Value) : null;
+        GesSchemaDecimal? upper = constraints.Upper is { } u ? (u.IsParameter ? parameter?.Invoke(u) : u.Value) : null;
+        if (lower is { } from && Compare(value, from) < 0) throw scope.Error(Code.InvalidDefault, offset, "A default lies within the field's range.");
+        if (upper is { } to && Compare(value, to) is var order && (order > 0 || (order == 0 && constraints.Wrapping)))
+            throw scope.Error(Code.InvalidDefault, offset, "A default lies within the field's range.");
+        if (constraints.Step is { } step && step.Value.Significand > 0)
+        {
+            // value / step is whole: value · 10^k is a multiple of p for the step p · 10^-k.
+            var exponent = step.Value.Exponent;
+            var k = exponent < 0 ? -exponent : 0;
+            var shift = value.Exponent + k;
+            if (!TryScale(step.Value.Significand, exponent < 0 ? 0 : exponent, out var p) || shift < 0 || !TryScale(value.Significand, shift, out var scaled) || scaled % p != 0)
+                throw scope.Error(Code.InvalidDefault, offset, "A default lies on the field's step.");
+        }
     }
 
     // A fractional field compares in binary64, so its bounds must keep their meaning there.
@@ -617,7 +650,13 @@ internal static class GesSchemaBinder
     private static void AddField(Build build, GesFileScope scope, GesResolvedField field, string prefix, int lists, bool top)
     {
         var path = prefix.Length == 0 ? field.Name : prefix + "." + field.Name;
+        var index = build.Nodes.Count;
         AddUnion(build, scope, field.Alternatives, field.Name, path, field.Marker == GesSchemaFieldMarker.Optional, top && field.Marker == GesSchemaFieldMarker.Key, lists);
+        if (field.Default is not { } fallback) return;
+        if (fallback.Kind == GesSchemaDefaultKind.Number) CheckDefault(scope, field.Alternatives[0].Constraints, fallback.Value, fallback.Offset, Bound(build));
+        var node = build.Nodes[index];
+        node.Default = fallback;
+        build.Nodes[index] = node;
     }
 
     private static void AddUnion(Build build, GesFileScope scope, GesResolvedType[] alternatives, string name, string path, bool optional, bool key, int lists)

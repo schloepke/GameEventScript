@@ -49,6 +49,44 @@ internal sealed class GesLayoutParameter(string name, string type, string unit, 
     internal string Literal { get; } = literal;
 }
 
+// The default of a field: its kind, `number`, `boolean`, `tag` or `field`, and its value, a canonical decimal in base units,
+// a Boolean, a tag without `#` or a sibling field's name.
+internal sealed class GesLayoutDefault
+{
+    internal GesSchemaDefaultKind Kind;
+    internal string Value = "";
+    internal bool Boolean;
+
+    internal static GesLayoutDefault? Of(GesSchemaFieldInfo field)
+    {
+        if (field.Default is not { } fallback) return null;
+        return new GesLayoutDefault
+        {
+            Kind = fallback.Kind,
+            Boolean = fallback.Boolean,
+            Value = fallback.Number is { } number
+                ? number.Significand.ToString(System.Globalization.CultureInfo.InvariantCulture) + "e" + number.Exponent.ToString(System.Globalization.CultureInfo.InvariantCulture)
+                : fallback.Name
+        };
+    }
+
+    internal void Write(GesSchemaLayoutJson.Writer json)
+    {
+        json.Key("default");
+        json.BeginValueObject();
+        json.String("kind", Kind switch
+        {
+            GesSchemaDefaultKind.Number => "number",
+            GesSchemaDefaultKind.Boolean => "boolean",
+            GesSchemaDefaultKind.Tag => "tag",
+            _ => "field"
+        });
+        if (Kind == GesSchemaDefaultKind.Boolean) json.Boolean("value", Boolean);
+        else json.String("value", Value);
+        json.EndObject();
+    }
+}
+
 // A `let` of a schema: its kind, unit, exact value in base units and whether it is a whole Number within Int64.
 internal sealed class GesLayoutConstant
 {
@@ -105,6 +143,7 @@ internal sealed class GesLayoutField
     internal bool Optional;
     internal bool Key;
     internal bool Unlabeled;
+    internal GesLayoutDefault? Default;
     internal GesLayoutEncoding Encoding = new();
 }
 
@@ -250,6 +289,7 @@ internal static class GesSchemaLayoutBuilder
         {
             var field = Field(bound.Nodes, ref index, info.Name, info.Alternatives);
             field.Unlabeled = info.IsUnlabeled;
+            field.Default = GesLayoutDefault.Of(info);
             fields.Add(field);
         }
 

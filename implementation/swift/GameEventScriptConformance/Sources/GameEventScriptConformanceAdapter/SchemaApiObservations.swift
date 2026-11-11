@@ -76,6 +76,18 @@ enum SchemaApiObservations {
                 if field.isUnlabeled { entry["unlabeled"] = true }
                 if field.isOptional { entry["optional"] = true }
                 if field.isKey { entry["key"] = true }
+                if let fallback = field.defaultValue {
+                    let kinds: [GesSchemaDefaultKind: String] = [.number: "Number", .boolean: "Boolean", .tag: "Tag", .field: "Field"]
+                    var described: [String: Any] = ["kind": kinds[fallback.kind]!]
+                    if let number = fallback.number {
+                        described["value"] = text(number)
+                    } else if fallback.kind == .boolean {
+                        described["value"] = fallback.boolean
+                    } else {
+                        described["name"] = fallback.name
+                    }
+                    entry["default"] = described
+                }
                 return entry
             }
         }

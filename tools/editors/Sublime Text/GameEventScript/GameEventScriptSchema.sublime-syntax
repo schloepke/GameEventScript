@@ -48,7 +48,7 @@
       "scope": "constant.numeric.gameeventscript.schema"
   "keywords":
     -
-      "match": "\\b(?:schema|messages|message|constant|parameter|as|be|between|and|wrapping|step|delta|within|integer|optional|key|max|tags|wire|model|let)\\b"
+      "match": "\\b(?:schema|messages|message|constant|parameter|as|be|between|and|wrapping|step|delta|within|integer|optional|key|max|tags|wire|model|let|default|true|false)\\b"
       "scope": "keyword.other.gameeventscript.schema"
   "messages":
     -

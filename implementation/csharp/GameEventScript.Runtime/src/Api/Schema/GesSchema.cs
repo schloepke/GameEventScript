@@ -20,6 +20,45 @@ public enum GesSchemaKind : byte
     Messages
 }
 
+/// <summary>The kinds of a field's default.</summary>
+public enum GesSchemaDefaultKind : byte
+{
+    /// <summary>A number of a numeric field, in base units; a Percentage holds its ratio.</summary>
+    Number,
+    /// <summary><c>true</c> or <c>false</c> of a Boolean field.</summary>
+    Boolean,
+    /// <summary>A tag of a Tag field.</summary>
+    Tag,
+    /// <summary>A sibling field of the same type, whose value the field takes.</summary>
+    Field
+}
+
+/// <summary>The value a field takes when a value or document leaves it out, declared with <c>default</c>; the wire always
+/// carries the field.</summary>
+public sealed class GesSchemaDefaultInfo
+{
+    internal GesSchemaDefaultInfo(GesResolvedDefault fallback)
+    {
+        Kind = fallback.Kind;
+        if (fallback.Kind == GesSchemaDefaultKind.Number) Number = new GesSchemaBound(new GesResolvedValue { Value = fallback.Value });
+        Boolean = fallback.Boolean;
+        Name = fallback.Name;
+    }
+
+    /// <summary>Gets the kind of default.</summary>
+    public GesSchemaDefaultKind Kind { get; }
+
+    /// <summary>Gets the exact number in base units of a <see cref="GesSchemaDefaultKind.Number"/> default.</summary>
+    public GesSchemaBound? Number { get; }
+
+    /// <summary>Gets the value of a <see cref="GesSchemaDefaultKind.Boolean"/> default.</summary>
+    public bool Boolean { get; }
+
+    /// <summary>Gets the tag without <c>#</c> of a <see cref="GesSchemaDefaultKind.Tag"/> default, the sibling field of a
+    /// <see cref="GesSchemaDefaultKind.Field"/> default, or an empty string.</summary>
+    public string Name { get; }
+}
+
 /// <summary>A bound, step or delta range: a parameter or an exact decimal.</summary>
 public readonly struct GesSchemaBound
 {
@@ -171,6 +210,7 @@ public sealed class GesSchemaFieldInfo
         IsOptional = field.Marker == GesSchemaFieldMarker.Optional;
         IsKey = field.Marker == GesSchemaFieldMarker.Key;
         Alternatives = GesSchema.Types(field.Alternatives);
+        Default = field.Default is { } fallback ? new GesSchemaDefaultInfo(fallback) : null;
     }
 
     /// <summary>Gets the name.</summary>
@@ -187,6 +227,9 @@ public sealed class GesSchemaFieldInfo
 
     /// <summary>Gets the types of the field: one, or the alternatives of a union in source order.</summary>
     public GesReadOnlyArray<GesSchemaType> Alternatives { get; }
+
+    /// <summary>Gets the value the field takes when a value or document leaves it out, or null when it has none.</summary>
+    public GesSchemaDefaultInfo? Default { get; }
 }
 
 /// <summary>A parameter that a declaration reaches and every binding must supply.</summary>

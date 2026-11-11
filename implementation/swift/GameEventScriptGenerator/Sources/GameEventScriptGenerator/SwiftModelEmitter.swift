@@ -83,10 +83,19 @@ enum GesSwiftModelEmitter {
             code.line("\(access)var id: \(self.type(key.value)) { \(member(key.base)) }")
         }
         code.blank()
-        code.line("/// Creates a record from its fields; an absent value defaults to nil and a list to empty.")
-        let parameters = fields.map { "\(label($0.base)): \(self.type($0.value))\(defaultValue($0.value))" }
+        let siblings = fields.contains { GesModelPlanner.sibling(fields, $0) != nil }
+        code.line("/// Creates a record from its fields; an absent value defaults to nil, a list to empty and a field with a default to it\(siblings ? ", where nil takes the field it names" : "").")
+        let parameters = fields.map { field in
+            if GesModelPlanner.sibling(fields, field) != nil { return "\(label(field.base)): \(plain(field.value))? = nil" }
+            if let fallback = field.field.defaultValue { return "\(label(field.base)): \(self.type(field.value)) = \(native(field.value, fallback))" }
+            return "\(label(field.base)): \(self.type(field.value))\(defaultValue(field.value))"
+        }
         code.open("\(access)init(\(parameters.joined(separator: ", "))) {")
-        for field in fields { code.line("self.\(member(field.base)) = \(member(field.base))") }
+        for index in GesModelPlanner.readOrder(fields) {
+            let field = fields[index]
+            let fallback = GesModelPlanner.sibling(fields, field).map { " ?? self." + member(fields[$0].base) } ?? ""
+            code.line("self.\(member(field.base)) = \(member(field.base))\(fallback)")
+        }
         code.close()
         if bindings {
             code.blank()
@@ -116,6 +125,46 @@ enum GesSwiftModelEmitter {
         if !value.nested.isEmpty && value.tagSet.isEmpty { names.append((value.nested, "a type of the field " + field)) }
         if let element = value.element { nested(element, &names, field) }
         for alternative in value.alternatives { nested(alternative, &names, field) }
+    }
+
+    /// Returns the record read from `field<n>`, setting afterwards the optional fields whose initializer would take a sibling.
+    private static func construct(_ code: inout GesSchemaPlanner.Code, _ type: String, _ arguments: String, _ fields: [GesModelPlanField]) {
+        let kept = GesModelPlanner.kept(fields)
+        if kept.isEmpty {
+            code.line("return \(type)(\(arguments))")
+            return
+        }
+        code.line("var record = \(type)(\(arguments))")
+        for index in kept { code.line("record.\(member(fields[index].base)) = field\(index)") }
+        code.line("return record")
+    }
+
+    /// A literal default as a native value.
+    private static func native(_ value: GesModelPlanValue, _ fallback: GesLayoutDefault) -> String {
+        switch fallback.kind {
+        case .boolean: fallback.boolean ? "true" : "false"
+        case .tag where value.closedTag: "." + name(fallback.value)
+        case .tag: literal(fallback.value)
+        default: GesModelPlanner.number(value, fallback)
+        }
+    }
+
+    /// The GES value that a field left out of a Record or Map takes: its literal default, the value read for the sibling it
+    /// names, or else `missing`.
+    private static func held(_ fields: [GesModelPlanField], _ index: Int, _ owner: String, _ support: String, _ sibling: (Int) -> String, _ missing: String) -> String {
+        let field = fields[index]
+        let key = "fields.get(\(literal(field.field.name)))"
+        guard let fallback = field.field.defaultValue else { return missing }
+        switch fallback.kind {
+        case .field: return "\(key) ?? \(sibling(GesModelPlanner.sibling(fields, field)!))"
+        case .tag: return "\(key) ?? \(support).tag(\(literal(fallback.value)))"
+        default: return "\(key) ?? \(encode(field.value, owner, native(field.value, fallback), "", support, nullable: false, plain: true))"
+        }
+    }
+
+    /// A field's GES value inline, following defaults to siblings; `.nothing` when no value or default is left.
+    private static func inline(_ fields: [GesModelPlanField], _ index: Int, _ owner: String, _ support: String) -> String {
+        held(fields, index, owner, support, { inline(fields, $0, owner, support) }, "fields.get(\(literal(fields[index].field.name))) ?? .nothing")
     }
 
     private static func defaultValue(_ value: GesModelPlanValue) -> String {
@@ -339,14 +388,22 @@ enum GesSwiftModelEmitter {
             code.open("guard")
             code.line("let fields = call.arguments[0].asMap, \(support).known(fields, \(type.name)Value.names)\(fields.isEmpty ? "" : ",")")
             for (index, field) in fields.enumerated() {
-                code.line("let \(member(field.base)) = \(decode(field.value, type.name, "fields.get(\(literal(field.field.name))) ?? .nothing", "GesTypes", support))\(index == fields.count - 1 ? "" : ",")")
+                code.line("let \(member(field.base)) = \(decode(field.value, type.name, inline(fields, index, type.name, support), "GesTypes", support))\(index == fields.count - 1 ? "" : ",")")
             }
             code.dedent()
             code.open("else {")
             code.line("call.setNothing()")
             code.line("return")
             code.close()
-            code.line("try call.setExternalValue(\(type.name)Value(\(type.name)(\(fields.map { "\(GesSchemaPlanner.camel($0.base)): \(member($0.base))" }.joined(separator: ", ")))))")
+            let created = "\(type.name)(\(fields.map { "\(GesSchemaPlanner.camel($0.base)): \(member($0.base))" }.joined(separator: ", ")))"
+            let kept = GesModelPlanner.kept(fields)
+            if kept.isEmpty {
+                code.line("try call.setExternalValue(\(type.name)Value(\(created)))")
+            } else {
+                code.line("var record = \(created)")
+                for index in kept { code.line("record.\(member(fields[index].base)) = \(member(fields[index].base))") }
+                code.line("try call.setExternalValue(\(type.name)Value(record))")
+            }
             code.close()
             code.close()
             conversions(&code, type.name, fields, helper: "GesTypes", support: support, plain: false)
@@ -413,17 +470,19 @@ enum GesSwiftModelEmitter {
                 code.line("return \(type.name)()")
             } else {
                 code.line("guard let fields = recordFields(value, \(typeLiteral), \(names)) else { throw failure(value, path) }")
-                for (index, field) in fields.enumerated() {
+                for index in GesModelPlanner.readOrder(fields) {
+                    let field = fields[index]
                     let fieldLiteral = literal(field.field.name)
                     let held = "value\(index)"
-                    code.line("let \(held) = \(field.value.nullable ? "fields.get(\(fieldLiteral)) ?? .nothing" : "try required(fields, \(fieldLiteral), path)")")
+                    let missing = field.value.nullable ? "fields.get(\(fieldLiteral)) ?? .nothing" : "try required(fields, \(fieldLiteral), path)"
+                    code.line("let \(held) = \(self.held(fields, index, type.name, support, { "value\($0)" }, missing))")
                     if descends(field.value) {
                         code.line("let field\(index) = \(read(field.value, type.name, held, "fieldPath(path, \(fieldLiteral))", name, support))")
                     } else {
                         code.line("guard let field\(index) = \(decode(field.value, type.name, held, name, support, plain: true)) else { throw failure(\(held), fieldPath(path, \(fieldLiteral))) }")
                     }
                 }
-                code.line("return \(type.name)(\(arguments))")
+                construct(&code, type.name, arguments, fields)
             }
             code.close()
             code.blank()
@@ -434,12 +493,12 @@ enum GesSwiftModelEmitter {
                 code.open("guard")
                 code.line("let fields = recordFields(value, \(typeLiteral), \(names)),")
                 for (index, field) in fields.enumerated() {
-                    code.line("let field\(index) = \(decode(field.value, type.name, "fields.get(\(literal(field.field.name))) ?? .nothing", name, support, plain: true))\(index == fields.count - 1 ? "" : ",")")
+                    code.line("let field\(index) = \(decode(field.value, type.name, inline(fields, index, type.name, support), name, support, plain: true))\(index == fields.count - 1 ? "" : ",")")
                 }
                 code.dedent()
                 code.line("else { return nil }")
             }
-            code.line("return \(type.name)(\(arguments))")
+            construct(&code, type.name, arguments, fields)
             code.close()
             conversions(&code, type.name, fields, helper: name, support: support, plain: true)
         }

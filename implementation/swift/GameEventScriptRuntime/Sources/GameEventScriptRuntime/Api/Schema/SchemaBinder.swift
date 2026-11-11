@@ -111,6 +111,8 @@ public final class GesSchemaParameters {
     @_spi(Generator) public var valueKind = GesSchemaTypeKind.nothing
     @_spi(Generator) public var unit = GesQuantityUnit.none
     @_spi(Generator) public var schemaName = ""
+    /// The value a value or document that leaves the field out takes, for the field's first node.
+    var defaultValue: GesResolvedDefault?
 }
 
 /// A schema, message or message set bound to parameter values. Immutable; it can be shared between threads.
@@ -272,6 +274,43 @@ enum GesSchemaBinder {
             throw scope.error(Code.tooWide, declared.offset, "A let lies beyond binary64.")
         }
         return false
+    }
+
+    /// A numeric default lies in the range, a wrapping one below its upper bound, on the step and, for an integer field, is
+    /// whole within Int64; a fractional one keeps its meaning in binary64. Bounds that a parameter without a value decides stay
+    /// unchecked.
+    static func checkDefault(_ scope: GesFileScope, _ constraints: GesResolvedConstraints, _ value: GesSchemaDecimal, _ offset: Int, _ parameters: GesSchemaParameters?) throws {
+        if constraints.integer {
+            if value.exponent < 0 || scale(value.significand, value.exponent) == nil {
+                throw scope.error(Code.invalidDefault, offset, "The default of an integer field is whole and within Int64.")
+            }
+        } else {
+            guard let binary = Double(value.canonical), binary.isFinite, binary != 0 || value.significand == 0 else {
+                throw scope.error(Code.tooWide, offset, "A default lies beyond binary64.")
+            }
+        }
+
+        func resolved(_ bound: GesResolvedValue?) -> GesSchemaDecimal? {
+            guard let bound else { return nil }
+            return bound.isParameter ? parameters?.value(bound.parameter)?.number : bound.value
+        }
+
+        if let lower = resolved(constraints.lower), compare(value, lower) < 0 {
+            throw scope.error(Code.invalidDefault, offset, "A default lies within the field's range.")
+        }
+        if let upper = resolved(constraints.upper) {
+            let order = compare(value, upper)
+            if order > 0 || (order == 0 && constraints.wrapping) { throw scope.error(Code.invalidDefault, offset, "A default lies within the field's range.") }
+        }
+        if let step = constraints.step, step.value.significand > 0 {
+            // value / step is whole: value · 10^k is a multiple of p for the step p · 10^-k.
+            let exponent = step.value.exponent
+            let k = exponent < 0 ? -exponent : 0
+            let shift = value.exponent + k
+            guard let p = scale(step.value.significand, exponent < 0 ? 0 : exponent), shift >= 0, let scaled = scale(value.significand, shift), scaled % p == 0 else {
+                throw scope.error(Code.invalidDefault, offset, "A default lies on the field's step.")
+            }
+        }
     }
 
     private static func checkBinary(_ scope: GesFileScope, _ value: GesSchemaDecimal, _ origin: GesResolvedValue) throws {
@@ -557,7 +596,11 @@ enum GesSchemaBinder {
 
     private static func addField(_ build: inout Build, _ scope: GesFileScope, _ field: GesResolvedField, _ prefix: String, _ lists: Int, top: Bool) throws {
         let path = prefix.isEmpty ? field.name : prefix + "." + field.name
+        let index = build.infos.count
         try addUnion(&build, scope, field.alternatives, field.name, path, optional: field.marker == .optional, key: top && field.marker == .key, lists)
+        guard let fallback = field.defaultValue else { return }
+        if fallback.kind == .number { try checkDefault(scope, field.alternatives[0].constraints, fallback.value, fallback.offset, build.parameters) }
+        build.infos[index].defaultValue = fallback
     }
 
     private static func addUnion(_ build: inout Build, _ scope: GesFileScope, _ alternatives: [GesResolvedType], _ name: String, _ path: String, optional: Bool, key: Bool, _ lists: Int) throws {

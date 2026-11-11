@@ -25,6 +25,38 @@ struct GesLayoutParameter {
     var literal: String
 }
 
+/// The default of a field: its kind, `number`, `boolean`, `tag` or `field`, and its value, a canonical decimal in base units,
+/// a Boolean, a tag without `#` or a sibling field's name.
+struct GesLayoutDefault {
+    var kind = GesSchemaDefaultKind.number
+    var value = ""
+    var boolean = false
+
+    static func of(_ field: GesSchemaFieldInfo) -> GesLayoutDefault? {
+        guard let fallback = field.defaultValue else { return nil }
+        return GesLayoutDefault(
+            kind: fallback.kind,
+            value: fallback.number.map { "\($0.significand)e\($0.exponent)" } ?? fallback.name,
+            boolean: fallback.boolean
+        )
+    }
+
+    func write(_ json: inout GesSchemaLayoutJson.Writer) {
+        json.key("default")
+        json.beginValueObject()
+        let kind =
+            switch self.kind {
+            case .number: "number"
+            case .boolean: "boolean"
+            case .tag: "tag"
+            case .field: "field"
+            }
+        json.string("kind", kind)
+        if self.kind == .boolean { json.boolean("value", boolean) } else { json.string("value", value) }
+        json.endObject()
+    }
+}
+
 /// A `let` of a schema: its kind, unit, exact value in base units and whether it is a whole Number within Int64.
 struct GesLayoutConstant {
     var name = ""
@@ -74,6 +106,7 @@ struct GesLayoutField {
     var optional = false
     var key = false
     var unlabeled = false
+    var defaultValue: GesLayoutDefault?
     var encoding = GesLayoutEncoding()
 }
 
@@ -211,6 +244,7 @@ enum GesSchemaLayoutBuilder {
         for info in schema.fields {
             var field = field(bound, &index, info.name, info.alternatives)
             field.unlabeled = info.isUnlabeled
+            field.defaultValue = GesLayoutDefault.of(info)
             fields.append(field)
         }
         return fields

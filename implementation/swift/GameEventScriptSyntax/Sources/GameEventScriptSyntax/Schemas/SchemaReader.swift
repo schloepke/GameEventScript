@@ -132,7 +132,7 @@
                 if let declared = try letDeclaration() {
                     result.lets.append(declared)
                 } else {
-                    result.fields.append(try field(allowUnlabeled: false))
+                    result.fields.append(try field(allowUnlabeled: false, allowDefault: true))
                 }
                 try endEntry(125)
                 skipSeparators()
@@ -149,7 +149,7 @@
                     try expect(44)
                     skipTrivia()
                 }
-                result.fields.append(try field(allowUnlabeled: true))
+                result.fields.append(try field(allowUnlabeled: true, allowDefault: false))
                 skipTrivia()
             }
             skipSpaces()
@@ -203,7 +203,7 @@
         return GesSchemaLetSyntax(name: letName, value: try value(), offset: offset)
     }
 
-    private mutating func field(allowUnlabeled: Bool) throws -> GesSchemaFieldSyntax {
+    private mutating func field(allowUnlabeled: Bool, allowDefault: Bool) throws -> GesSchemaFieldSyntax {
         let offset = position
         var unlabeled = false
         if allowUnlabeled && consume(95) {
@@ -224,7 +224,25 @@
             _ = word()
             marker = .key
         }
-        return GesSchemaFieldSyntax(name: fieldName, unlabeled: unlabeled, alternatives: alternatives, marker: marker, offset: offset)
+        var fallback: GesSchemaDefaultSyntax?
+        skipSpaces()
+        if allowDefault && atWord("default") {
+            let start = position
+            _ = word()
+            skipSpaces()
+            fallback = try defaultValue(start)
+        }
+        return GesSchemaFieldSyntax(name: fieldName, unlabeled: unlabeled, alternatives: alternatives, marker: marker, defaultValue: fallback, offset: offset)
+    }
+
+    /// A tag, `true`, `false`, or a value: a number, a constant, or the name of a let or a sibling field.
+    private mutating func defaultValue(_ offset: Int) throws -> GesSchemaDefaultSyntax {
+        if consume(35) { return GesSchemaDefaultSyntax(tag: try name(GesNames.plain, "tag name"), offset: offset) }
+        for written in ["true", "false"] where atWord(written) {
+            _ = word()
+            return GesSchemaDefaultSyntax(boolean: written == "true", offset: offset)
+        }
+        return GesSchemaDefaultSyntax(value: try value(), offset: offset)
     }
 
     private mutating func union() throws -> [GesSchemaTypeSyntax] {

@@ -237,6 +237,25 @@ final class GeneratedRoleCodeTests: XCTestCase {
         XCTAssertEqual(RolesWire.World_Cards.deck, Int64(4))
     }
 
+    func testDefaultsFillWhatAModelOrValueLeavesOut() throws {
+        XCTAssertEqual(RolesModel.RadarView(contacts: []), RolesModel.RadarView(range: 500, reach: 500, contacts: [], side: nil, lead: nil, active: true))
+        let radar = RolesModel.RadarView(range: 300, contacts: [1], side: .left)
+        XCTAssertEqual(radar.reach, 300)
+        XCTAssertEqual(radar.lead, .left)
+        XCTAssertTrue(radar.active)
+
+        let read = try RolesModel.RadarView(value: .map(keys: ["contacts", "side"], values: [.list([]), try .tag("right")]))
+        XCTAssertEqual(read, RolesModel.RadarView(range: 500, reach: 500, contacts: [], side: .right, lead: .right, active: true))
+        let kept = try RolesModel.RadarView(value: .map(keys: ["contacts", "side", "lead"], values: [.list([]), try .tag("right"), .nothing]))
+        XCTAssertNil(kept.lead)
+        let bound = try RolesBound.RadarView(value: .map(keys: ["range", "contacts"], values: [.float(7, unit: .meter), .list([])]))
+        XCTAssertEqual(bound.reach, 7)
+
+        var body = RolesWire.World_Body()
+        try body.read(value: .map(keys: ["mass"], values: [.integer(3, unit: .kilogram)]))
+        XCTAssertEqual(body.hull, .light)
+    }
+
     func testBoundModelsAlsoConvertToPlainValues() throws {
         let value = report().toValue()
         let bound = try RolesBound.Panel_Report(value: value)

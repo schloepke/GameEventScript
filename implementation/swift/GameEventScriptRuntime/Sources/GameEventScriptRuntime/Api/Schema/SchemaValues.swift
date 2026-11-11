@@ -160,19 +160,48 @@ public enum GesSchemaValues {
         var index = start
         while index < end {
             var value = GesValue.nothing
-            var found = false
-            var key = 0
-            while key < fields.length {
-                if fields.key(at: key).unicodeScalars.elementsEqual(schema.infos[index].name.unicodeScalars) {
-                    value = fields.value(at: key)
-                    found = true
-                }
-                key += 1
+            if let last = try held(schema, start, end, fields, index, &value), !acceptsNothing(schema, last) {
+                throw GesWireError(code: GesWireError.missingField, path: schema.infos[last].path)
             }
-            if !found && !acceptsNothing(schema, index) { throw GesWireError(code: GesWireError.missingField, path: schema.infos[index].path) }
             try encodeNode(&writer, schema, index, value, strict: strict)
             index = schema.nodes[index].next
         }
+    }
+
+    /// The value of a field, or else of its default: a literal, or the value of the sibling it names, whose own default
+    /// applies in turn. Returns nil, or the field at the end of the chain that has no value, which reads as nothing.
+    private static func held(_ schema: GesBoundSchema, _ start: Int, _ end: Int, _ fields: GesValueMap, _ index: Int, _ value: inout GesValue) throws(GesWireError) -> Int? {
+        let info = schema.infos[index]
+        var key = 0
+        while key < fields.length {
+            if fields.key(at: key).unicodeScalars.elementsEqual(info.name.unicodeScalars) {
+                value = fields.value(at: key)
+                return nil
+            }
+            key += 1
+        }
+        guard let fallback = info.defaultValue else { return index }
+        switch fallback.kind {
+        case .field:
+            var sibling = start
+            while sibling < end {
+                if schema.infos[sibling].name == fallback.name { return try held(schema, start, end, fields, sibling, &value) }
+                sibling = schema.nodes[sibling].next
+            }
+            return index
+        case .boolean:
+            value = .boolean(fallback.boolean)
+        case .tag:
+            value = (try? .tag(fallback.name)) ?? .nothing
+        case .number where schema.nodes[index].kind == .integer:
+            var whole = fallback.value.significand
+            for _ in 0..<max(fallback.value.exponent, 0) { whole *= 10 }
+            value = .integer(whole, unit: info.unit)
+        case .number:
+            let number = Double(fallback.value.canonical) ?? 0
+            value = info.valueKind == .percentage ? .percentage(number) : .float(number, unit: info.unit)
+        }
+        return nil
     }
 
     private static func acceptsNothing(_ schema: GesBoundSchema, _ index: Int) -> Bool {

@@ -169,6 +169,10 @@ relationship {"kind":"conformsTo","source":"GameEventScriptRuntime.GesSchema :: 
 relationship {"kind":"conformsTo","source":"GameEventScriptRuntime.GesSchemaAxisInfo :: struct GesSchemaAxisInfo","target":"Swift.Sendable"}
 relationship {"kind":"conformsTo","source":"GameEventScriptRuntime.GesSchemaBound :: struct GesSchemaBound","target":"Swift.Sendable"}
 relationship {"kind":"conformsTo","source":"GameEventScriptRuntime.GesSchemaConstantInfo :: struct GesSchemaConstantInfo","target":"Swift.Sendable"}
+relationship {"kind":"conformsTo","source":"GameEventScriptRuntime.GesSchemaDefaultInfo :: struct GesSchemaDefaultInfo","target":"Swift.Sendable"}
+relationship {"kind":"conformsTo","source":"GameEventScriptRuntime.GesSchemaDefaultKind :: enum GesSchemaDefaultKind","target":"Swift.Equatable"}
+relationship {"kind":"conformsTo","source":"GameEventScriptRuntime.GesSchemaDefaultKind :: enum GesSchemaDefaultKind","target":"Swift.Hashable"}
+relationship {"kind":"conformsTo","source":"GameEventScriptRuntime.GesSchemaDefaultKind :: enum GesSchemaDefaultKind","target":"Swift.Sendable"}
 relationship {"kind":"conformsTo","source":"GameEventScriptRuntime.GesSchemaDeltaDecoded :: struct GesSchemaDeltaDecoded","target":"Swift.Sendable"}
 relationship {"kind":"conformsTo","source":"GameEventScriptRuntime.GesSchemaDumpResult :: struct GesSchemaDumpResult","target":"Swift.Sendable"}
 relationship {"kind":"conformsTo","source":"GameEventScriptRuntime.GesSchemaError :: struct GesSchemaError","target":"Swift.Equatable"}
@@ -319,6 +323,7 @@ symbol {"access":"public","declaration":"case atan2","kind":"swift.enum.case","p
 symbol {"access":"public","declaration":"case bindHandler","kind":"swift.enum.case","path":"GameEventScriptRuntime.GesBytecodeOpCode.bindHandler"}
 symbol {"access":"public","declaration":"case bindings","kind":"swift.enum.case","path":"GameEventScriptRuntime.GesSectionType.bindings"}
 symbol {"access":"public","declaration":"case boolean","kind":"swift.enum.case","path":"GameEventScriptRuntime.GesBytecodeTypeKind.boolean"}
+symbol {"access":"public","declaration":"case boolean","kind":"swift.enum.case","path":"GameEventScriptRuntime.GesSchemaDefaultKind.boolean"}
 symbol {"access":"public","declaration":"case budgetCheck","kind":"swift.enum.case","path":"GameEventScriptRuntime.GesProfilePhase.budgetCheck"}
 symbol {"access":"public","declaration":"case buildMetadata","kind":"swift.enum.case","path":"GameEventScriptRuntime.GesSectionType.buildMetadata"}
 symbol {"access":"public","declaration":"case bytes","kind":"swift.enum.case","path":"GameEventScriptRuntime.GesBytecodeTypeKind.bytes"}
@@ -413,6 +418,7 @@ symbol {"access":"public","declaration":"case externalType","kind":"swift.enum.c
 symbol {"access":"public","declaration":"case factorial","kind":"swift.enum.case","path":"GameEventScriptRuntime.GesBytecodeSeriesKind.factorial"}
 symbol {"access":"public","declaration":"case fetch","kind":"swift.enum.case","path":"GameEventScriptRuntime.GesProfilePhase.fetch"}
 symbol {"access":"public","declaration":"case fibonacci","kind":"swift.enum.case","path":"GameEventScriptRuntime.GesBytecodeSeriesKind.fibonacci"}
+symbol {"access":"public","declaration":"case field","kind":"swift.enum.case","path":"GameEventScriptRuntime.GesSchemaDefaultKind.field"}
 symbol {"access":"public","declaration":"case file","kind":"swift.enum.case","path":"GameEventScriptRuntime.GesDocumentSchemaKind.file"}
 symbol {"access":"public","declaration":"case fileSizeMismatch","kind":"swift.enum.case","path":"GameEventScriptRuntime.GesProgramFormatErrorCode.fileSizeMismatch"}
 symbol {"access":"public","declaration":"case fileTooLarge","kind":"swift.enum.case","path":"GameEventScriptRuntime.GesProgramFormatErrorCode.fileTooLarge"}
@@ -533,6 +539,7 @@ symbol {"access":"public","declaration":"case normalize3D","kind":"swift.enum.ca
 symbol {"access":"public","declaration":"case not","kind":"swift.enum.case","path":"GameEventScriptRuntime.GesBytecodeOpCode.not"}
 symbol {"access":"public","declaration":"case notEqual","kind":"swift.enum.case","path":"GameEventScriptRuntime.GesBytecodeOpCode.notEqual"}
 symbol {"access":"public","declaration":"case nothing","kind":"swift.enum.case","path":"GameEventScriptRuntime.GesBytecodeTypeKind.nothing"}
+symbol {"access":"public","declaration":"case number","kind":"swift.enum.case","path":"GameEventScriptRuntime.GesSchemaDefaultKind.number"}
 symbol {"access":"public","declaration":"case oneRandom","kind":"swift.enum.case","path":"GameEventScriptRuntime.GesBytecodeOpCode.oneRandom"}
 symbol {"access":"public","declaration":"case oneWeighted","kind":"swift.enum.case","path":"GameEventScriptRuntime.GesBytecodeOpCode.oneWeighted"}
 symbol {"access":"public","declaration":"case or","kind":"swift.enum.case","path":"GameEventScriptRuntime.GesBytecodeOpCode.or"}
@@ -613,6 +620,7 @@ symbol {"access":"public","declaration":"case straight","kind":"swift.enum.case"
 symbol {"access":"public","declaration":"case stringConstants","kind":"swift.enum.case","path":"GameEventScriptRuntime.GesSectionType.stringConstants"}
 symbol {"access":"public","declaration":"case subtract","kind":"swift.enum.case","path":"GameEventScriptRuntime.GesBytecodeOpCode.subtract"}
 symbol {"access":"public","declaration":"case tag","kind":"swift.enum.case","path":"GameEventScriptRuntime.GesBytecodeTypeKind.tag"}
+symbol {"access":"public","declaration":"case tag","kind":"swift.enum.case","path":"GameEventScriptRuntime.GesSchemaDefaultKind.tag"}
 symbol {"access":"public","declaration":"case takeFirst","kind":"swift.enum.case","path":"GameEventScriptRuntime.GesBytecodeOpCode.takeFirst"}
 symbol {"access":"public","declaration":"case takeHighest","kind":"swift.enum.case","path":"GameEventScriptRuntime.GesBytecodeOpCode.takeHighest"}
 symbol {"access":"public","declaration":"case takeLast","kind":"swift.enum.case","path":"GameEventScriptRuntime.GesBytecodeOpCode.takeLast"}
@@ -668,6 +676,7 @@ symbol {"access":"public","declaration":"enum GesMessageError","kind":"swift.enu
 symbol {"access":"public","declaration":"enum GesProfilePhase","kind":"swift.enum","path":"GameEventScriptRuntime.GesProfilePhase"}
 symbol {"access":"public","declaration":"enum GesProgramFormatErrorCode","kind":"swift.enum","path":"GameEventScriptRuntime.GesProgramFormatErrorCode"}
 symbol {"access":"public","declaration":"enum GesProgramRetention","kind":"swift.enum","path":"GameEventScriptRuntime.GesProgramRetention"}
+symbol {"access":"public","declaration":"enum GesSchemaDefaultKind","kind":"swift.enum","path":"GameEventScriptRuntime.GesSchemaDefaultKind"}
 symbol {"access":"public","declaration":"enum GesSchemaDelta","kind":"swift.enum","path":"GameEventScriptRuntime.GesSchemaDelta"}
 symbol {"access":"public","declaration":"enum GesSchemaDump","kind":"swift.enum","path":"GameEventScriptRuntime.GesSchemaDump"}
 symbol {"access":"public","declaration":"enum GesSchemaKind","kind":"swift.enum","path":"GameEventScriptRuntime.GesSchemaKind"}
@@ -915,6 +924,7 @@ symbol {"access":"public","declaration":"let argumentNames: [UInt16]","kind":"sw
 symbol {"access":"public","declaration":"let axes: [GesSchemaAxisInfo]","kind":"swift.property","path":"GameEventScriptRuntime.GesSchemaType.axes"}
 symbol {"access":"public","declaration":"let bindingHash: UInt64","kind":"swift.property","path":"GameEventScriptRuntime.GesBoundSchema.bindingHash"}
 symbol {"access":"public","declaration":"let bindings: GesBindingSegment","kind":"swift.property","path":"GameEventScriptRuntime.GameEventScriptProgram.bindings"}
+symbol {"access":"public","declaration":"let boolean: Bool","kind":"swift.property","path":"GameEventScriptRuntime.GesSchemaDefaultInfo.boolean"}
 symbol {"access":"public","declaration":"let buildMetadata: GesBuildMetadataSegment?","kind":"swift.property","path":"GameEventScriptRuntime.GameEventScriptProgram.buildMetadata"}
 symbol {"access":"public","declaration":"let byteCount: Int","kind":"swift.property","path":"GameEventScriptRuntime.GesSchemaDecoded.byteCount"}
 symbol {"access":"public","declaration":"let byteCount: Int","kind":"swift.property","path":"GameEventScriptRuntime.GesSchemaDeltaDecoded.byteCount"}
@@ -937,6 +947,7 @@ symbol {"access":"public","declaration":"let compilerID: String","kind":"swift.p
 symbol {"access":"public","declaration":"let compilerVersion: String","kind":"swift.property","path":"GameEventScriptRuntime.GesBuildMetadataSegment.compilerVersion"}
 symbol {"access":"public","declaration":"let constructors: [GesExternalTypeConstructorDefinition]","kind":"swift.property","path":"GameEventScriptRuntime.GesExternalTypeDefinition.constructors"}
 symbol {"access":"public","declaration":"let debugSymbols: GesDebugSymbolsSegment?","kind":"swift.property","path":"GameEventScriptRuntime.GameEventScriptProgram.debugSymbols"}
+symbol {"access":"public","declaration":"let defaultValue: GesSchemaDefaultInfo?","kind":"swift.property","path":"GameEventScriptRuntime.GesSchemaFieldInfo.defaultValue"}
 symbol {"access":"public","declaration":"let delta: GesSchemaBound?","kind":"swift.property","path":"GameEventScriptRuntime.GesSchemaAxisInfo.delta"}
 symbol {"access":"public","declaration":"let delta: GesSchemaBound?","kind":"swift.property","path":"GameEventScriptRuntime.GesSchemaType.delta"}
 symbol {"access":"public","declaration":"let deltaByteCount: Int","kind":"swift.property","path":"GameEventScriptRuntime.GesSchemaDeltaDecoded.deltaByteCount"}
@@ -982,6 +993,7 @@ symbol {"access":"public","declaration":"let kind: GesBytecodeTypeKind?","kind":
 symbol {"access":"public","declaration":"let kind: GesBytecodeTypeKind?","kind":"swift.property","path":"GameEventScriptRuntime.GesExternalTypeParameterDefinition.kind"}
 symbol {"access":"public","declaration":"let kind: GesDebugSymbolKind","kind":"swift.property","path":"GameEventScriptRuntime.GesDebugSymbol.kind"}
 symbol {"access":"public","declaration":"let kind: GesDocumentSchemaKind","kind":"swift.property","path":"GameEventScriptRuntime.GesDocumentSchema.kind"}
+symbol {"access":"public","declaration":"let kind: GesSchemaDefaultKind","kind":"swift.property","path":"GameEventScriptRuntime.GesSchemaDefaultInfo.kind"}
 symbol {"access":"public","declaration":"let kind: GesSchemaKind","kind":"swift.property","path":"GameEventScriptRuntime.GesSchema.kind"}
 symbol {"access":"public","declaration":"let kind: GesSchemaTypeKind","kind":"swift.property","path":"GameEventScriptRuntime.GesSchemaConstantInfo.kind"}
 symbol {"access":"public","declaration":"let kind: GesSchemaTypeKind","kind":"swift.property","path":"GameEventScriptRuntime.GesSchemaParameterInfo.kind"}
@@ -1021,10 +1033,12 @@ symbol {"access":"public","declaration":"let name: String","kind":"swift.propert
 symbol {"access":"public","declaration":"let name: String","kind":"swift.property","path":"GameEventScriptRuntime.GesSchema.name"}
 symbol {"access":"public","declaration":"let name: String","kind":"swift.property","path":"GameEventScriptRuntime.GesSchemaAxisInfo.name"}
 symbol {"access":"public","declaration":"let name: String","kind":"swift.property","path":"GameEventScriptRuntime.GesSchemaConstantInfo.name"}
+symbol {"access":"public","declaration":"let name: String","kind":"swift.property","path":"GameEventScriptRuntime.GesSchemaDefaultInfo.name"}
 symbol {"access":"public","declaration":"let name: String","kind":"swift.property","path":"GameEventScriptRuntime.GesSchemaFieldInfo.name"}
 symbol {"access":"public","declaration":"let name: String","kind":"swift.property","path":"GameEventScriptRuntime.GesSchemaParameterInfo.name"}
 symbol {"access":"public","declaration":"let name: String","kind":"swift.property","path":"GameEventScriptRuntime.GesSchemaSource.name"}
 symbol {"access":"public","declaration":"let name: UInt16","kind":"swift.property","path":"GameEventScriptRuntime.GesBindingSegment.Entry.name"}
+symbol {"access":"public","declaration":"let number: GesSchemaBound?","kind":"swift.property","path":"GameEventScriptRuntime.GesSchemaDefaultInfo.number"}
 symbol {"access":"public","declaration":"let opaqueSections: [GesOpaqueSection]","kind":"swift.property","path":"GameEventScriptRuntime.GameEventScriptProgram.opaqueSections"}
 symbol {"access":"public","declaration":"let opcode: GesBytecodeOpCode","kind":"swift.property","path":"GameEventScriptRuntime.GesBytecodeInstruction.opcode"}
 symbol {"access":"public","declaration":"let originalOrdinal: Int","kind":"swift.property","path":"GameEventScriptRuntime.GesOpaqueSection.originalOrdinal"}
@@ -1397,6 +1411,7 @@ symbol {"access":"public","declaration":"struct GesSchemaAxisInfo","kind":"swift
 symbol {"access":"public","declaration":"struct GesSchemaBound","kind":"swift.struct","path":"GameEventScriptRuntime.GesSchemaBound"}
 symbol {"access":"public","declaration":"struct GesSchemaConstantInfo","kind":"swift.struct","path":"GameEventScriptRuntime.GesSchemaConstantInfo"}
 symbol {"access":"public","declaration":"struct GesSchemaDecoded","kind":"swift.struct","path":"GameEventScriptRuntime.GesSchemaDecoded"}
+symbol {"access":"public","declaration":"struct GesSchemaDefaultInfo","kind":"swift.struct","path":"GameEventScriptRuntime.GesSchemaDefaultInfo"}
 symbol {"access":"public","declaration":"struct GesSchemaDeltaDecoded","kind":"swift.struct","path":"GameEventScriptRuntime.GesSchemaDeltaDecoded"}
 symbol {"access":"public","declaration":"struct GesSchemaDumpResult","kind":"swift.struct","path":"GameEventScriptRuntime.GesSchemaDumpResult"}
 symbol {"access":"public","declaration":"struct GesSchemaError","kind":"swift.struct","path":"GameEventScriptRuntime.GesSchemaError"}

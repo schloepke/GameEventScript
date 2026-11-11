@@ -88,7 +88,8 @@ internal enum GesLayoutKind
     Vector,
     Schema,
     Union,
-    Nothing
+    Nothing,
+    Flags
 }
 
 internal sealed class GesLayoutEncoding
@@ -275,6 +276,11 @@ internal static class GesSchemaLayoutBuilder
                 break;
             case GesSchemaTypeKind.Tag when node.Kind == GesSchemaNodeKind.Tag:
                 encoding.Kind = GesLayoutKind.Tag;
+                encoding.Tags.AddRange(node.Tags!);
+                encoding.Width = node.Width;
+                break;
+            case GesSchemaTypeKind.Flags:
+                encoding.Kind = GesLayoutKind.Flags;
                 encoding.Tags.AddRange(node.Tags!);
                 encoding.Width = node.Width;
                 break;

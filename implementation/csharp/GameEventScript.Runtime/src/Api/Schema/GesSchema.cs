@@ -135,7 +135,7 @@ public sealed class GesSchemaType
     /// <summary>Gets the range of a delta, if there is one.</summary>
     public GesSchemaBound? Delta { get; }
 
-    /// <summary>Gets the closed set of a Tag; empty when any tag is allowed.</summary>
+    /// <summary>Gets the closed set of a Tag, empty when any tag is allowed, or the members of Flags in declared order.</summary>
     public GesReadOnlyArray<string> Tags { get; }
 
     /// <summary>Gets the maximum of a Text in UTF-8 bytes or of a List in elements, if there is one.</summary>

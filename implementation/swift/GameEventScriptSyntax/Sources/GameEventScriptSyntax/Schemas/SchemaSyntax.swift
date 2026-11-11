@@ -39,6 +39,8 @@ public enum GesSchemaTypeKind: String, Sendable, Equatable {
     case nothing = "Nothing"
     /// A Bytes value.
     case bytes = "Bytes"
+    /// Flags of a closed set, as a Map of the set members.
+    case flags = "Flags"
 }
 
 @_spi(Syntax) public enum GesSchemaTypeNames {
@@ -57,6 +59,7 @@ public enum GesSchemaTypeKind: String, Sendable, Equatable {
         case "Tag": .tag
         case "Text": .text
         case "Bytes": .bytes
+        case "Flags": .flags
         case "List": .list
         case "Map": .map
         case "Range": .range

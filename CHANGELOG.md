@@ -230,6 +230,9 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   iteration, equality and order, `:take`/`:drop` `first`/`last` slices, `+` concatenation and UTF-8
   conversion with `:Bytes(utf8: text)` and `:Text(utf8: bytes)`. Message JSON writes Bytes as Base64, schemas add `:Bytes max n` with
   generated `WriteBytes`/`ReadBytes` code, and the Bridges map C# `byte[]` and Swift `[UInt8]`.
+- Schema `:Flags(#a, #b)` with up to 64 members: one bit per member on the wire, a script flag Map such as
+  `[armed:]` in the value path and documents, `WriteFlags`/`ReadFlags` (Swift `writeFlags`/`readFlags`) masks, and
+  generated C# `[Flags]` enums and Swift `OptionSet` types.
 - Hexadecimal integer literals such as `0xff_88_00` in source, `parse`, numeric text casts and
   documents: exact Int64 values with `_` between digits, without unit or percentage suffix.
 - Schema roles: `wire(group)` marks a schema, message or message set as a wire root and

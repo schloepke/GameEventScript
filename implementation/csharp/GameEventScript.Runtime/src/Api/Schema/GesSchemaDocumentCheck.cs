@@ -135,6 +135,16 @@ internal sealed class GesSchemaDocumentCheck
                 Reference(type, value);
                 break;
             case GesSchemaTypeKind.Map: Require(value, value.Kind == GesDocumentNodeKind.Map); break;
+            case GesSchemaTypeKind.Flags:
+                // Each key names a member and each value is a Boolean.
+                Require(value, value.Kind == GesDocumentNodeKind.Map);
+                for (var index = 0; index < value.Labels.Length; index++)
+                {
+                    if (Array.IndexOf(type.Tags!, value.Labels[index]) < 0) throw new Failure(FieldType, value.KeyOffsets[index]);
+                    Require(value.Children[index], Resolved(value.Children[index]).Kind == GesDocumentNodeKind.Boolean);
+                }
+
+                break;
             case GesSchemaTypeKind.Range: Require(value, IsForm(value, "range")); break;
             case GesSchemaTypeKind.Series: Require(value, IsForm(value, "series")); break;
             case GesSchemaTypeKind.Dice:

@@ -15,7 +15,7 @@ final class GesModelPlanValue {
     var model = GesModelValue()
     // The value may be absent: an optional field or a union with a :Nothing alternative.
     var nullable = false
-    // The nested type of a closed Tag (its enum) or a union; empty for other kinds.
+    // The nested type of a closed Tag (its enum), of Flags or of a union; empty for other kinds.
     var nested = ""
     // The label of a union alternative, its case or subclass.
     var label = ""
@@ -58,6 +58,7 @@ enum GesModelPlanner {
         value.model = model
         value.label = label
         if value.closedTag { value.nested = name + "Tag" }
+        if model.kind == .flags { value.nested = name + "Flags" }
         if model.kind == .list { value.element = self.value(model.element!.value, name + "Item", "") }
         return value
     }
@@ -91,6 +92,7 @@ enum GesModelPlanner {
         case .text: ("Text", "none", nil)
         case .bytes: ("Bytes", "none", nil)
         case .tag: ("Tag", "none", nil)
+        case .flags: ("Map", "none", nil)
         case .list: ("List", "none", nil)
         case .dice: ("Dice", "none", nil)
         case .point: ("Point", value.model.unit, nil)
@@ -129,6 +131,8 @@ enum GesModelPlanner {
             } else if let max = value.max {
                 text += " max \(max)"
             }
+        case .flags:
+            text += ":Flags(#" + value.tags.joined(separator: ", #") + ")"
         case .text:
             text += ":Text"
             if let max = value.max { text += " max \(max)" }

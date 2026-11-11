@@ -156,6 +156,7 @@ enum GesCSharpEmitter {
     static func nestedName(_ value: GesPlanValue) -> String {
         switch value.encoding.kind {
         case .tag: value.base + "Tag"
+        case .flags: value.base + "Flags"
         case .union: value.base + "Alternative"
         default: ""
         }
@@ -457,6 +458,9 @@ enum GesCSharpEmitter {
         case .tag:
             code.line("if ((ulong)\(target) > \(unsigned(UInt64(encoding.tags.count) - 1))) \(fail("UnknownTag", value))")
             code.line("writer.Write((ulong)\(target), \(width));")
+        case .flags:
+            if encoding.width < 64 { code.line("if ((ulong)\(target) > \(unsigned(full(encoding.width)))) \(fail("UnknownTag", value))") }
+            code.line("writer.Write((ulong)\(target), \(width));")
         case .text, .bytes:
             code.open("{")
             code.line("var text = new ReadOnlySpan<byte>(__\(value.base), 0, __\(value.base)Length);")
@@ -514,6 +518,8 @@ enum GesCSharpEmitter {
             code.line("\(target) = reader.Read(1, \(path(value))) != 0;")
         case .integer where !encoding.range:
             code.line("\(target) = unchecked((long)reader.Read(64, \(path(value))));")
+        case .flags:
+            code.line("\(target) = (\(nestedName(value)))reader.Read(\(width), \(path(value)));")
         case .integer, .quantized, .tag:
             code.open("{")
             code.line("var index = reader.Read(\(width), \(path(value)));")
@@ -612,6 +618,8 @@ enum GesCSharpEmitter {
                 code.line(GesSchemaPlanner.pascal(tag) + ",")
             }
             code.close()
+        case .flags:
+            flagsDeclaration(&code, name, value.encoding.tags)
         case .union:
             code.blank()
             code.line("/// <summary>The alternatives of the field, in declared order.</summary>")
@@ -640,6 +648,20 @@ enum GesCSharpEmitter {
     }
 
     static func underlying(_ count: Int) -> String { count <= 256 ? "byte" : count <= 65536 ? "ushort" : "uint" }
+
+    // One bit per member in declared order, so the enum value is the wire mask; the empty value needs no name.
+    static func flagsDeclaration(_ code: inout Code, _ name: String, _ members: [String]) {
+        code.blank()
+        code.line("/// <summary>The members of the field, one bit each in declared order.</summary>")
+        code.line("[Flags]")
+        code.line("public enum \(name) : ulong")
+        code.open("{")
+        for (index, member) in members.enumerated() {
+            code.line("/// <summary>The member <c>#\(member)</c>.</summary>")
+            code.line("\(GesSchemaPlanner.pascal(member)) = 1UL << \(index),")
+        }
+        code.close()
+    }
 
     static func full(_ width: Int) -> UInt64 { width >= 64 ? .max : (1 << UInt64(width)) - 1 }
 

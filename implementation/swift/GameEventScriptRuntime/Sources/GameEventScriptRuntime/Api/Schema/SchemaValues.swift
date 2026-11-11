@@ -205,6 +205,8 @@ public enum GesSchemaValues {
             if value.valueKind != .tag { throw GesWireError(code: GesWireError.typeMismatch, path: info.path) }
             guard let tag = info.tags.firstIndex(of: value.asText) else { throw GesWireError(code: GesWireError.unknownTag, path: info.path) }
             try writer.writeTag(field, tag)
+        case .flags:
+            try writer.writeFlags(field, try flagMask(info, value))
         case .text where node.isBytes:
             guard let bytes = value.bytesValue else { throw GesWireError(code: GesWireError.typeMismatch, path: info.path) }
             try bytes.withUnsafeBytes { try writer.writeBytes(field, $0) }
@@ -270,6 +272,31 @@ public enum GesSchemaValues {
         throw failure ?? GesWireError(code: value.isNothing ? GesWireError.nothingValue : GesWireError.typeMismatch, path: schema.infos[index].path)
     }
 
+    // A flag Map sets a member for true and leaves it unset for false or an absent key.
+    private static func flagMask(_ info: GesSchemaNodeInfo, _ value: GesValue) throws -> UInt64 {
+        guard value.valueKind == .map, let map = value.asMap else { throw GesWireError(code: GesWireError.typeMismatch, path: info.path) }
+        var mask: UInt64 = 0
+        for entry in 0..<map.length {
+            guard let member = info.tags.firstIndex(of: map.key(at: entry)) else { throw GesWireError(code: GesWireError.unknownTag, path: info.path) }
+            let set = map.value(at: entry)
+            if set.valueKind != .boolean { throw GesWireError(code: GesWireError.typeMismatch, path: info.path) }
+            if set.asBoolean { mask |= 1 << UInt64(member) }
+        }
+        return mask
+    }
+
+    // Whether a Map names only members, each with a Boolean, so that a union alternative holds it.
+    private static func holdsFlags(_ info: GesSchemaNodeInfo, _ value: GesValue) -> Bool {
+        guard value.valueKind == .map, let map = value.asMap else { return false }
+        return (0..<map.length).allSatisfy { info.tags.contains(map.key(at: $0)) && map.value(at: $0).valueKind == .boolean }
+    }
+
+    // The Map of the set members, each true.
+    private static func flagMap(_ members: [String], _ mask: UInt64) -> GesValue {
+        let keys = members.indices.filter { mask >> UInt64($0) & 1 != 0 }.map { members[$0] }
+        return .map(keys: keys, values: keys.map { _ in .boolean(true) })
+    }
+
     private static func selects(_ candidate: GesSchemaNodeInfo, _ value: GesValue) -> Bool {
         switch candidate.valueKind {
         case .nothing: value.isNothing
@@ -277,6 +304,7 @@ public enum GesSchemaValues {
         case .tag: value.valueKind == .tag
         case .text: value.valueKind == .text
         case .bytes: value.valueKind == .bytes
+        case .flags: holdsFlags(candidate, value)
         case .list: value.valueKind == .list
         case .dice: value.valueKind == .dice
         case .point: value.valueKind == .point
@@ -350,6 +378,7 @@ public enum GesSchemaValues {
         switch node.kind {
         case .boolean: return .boolean(try reader.readBoolean(field))
         case .tag: return try .tag(info.tags[try reader.readTag(field)])
+        case .flags: return flagMap(info.tags, try reader.readFlags(field))
         case .text where node.isBytes: return .bytes(try reader.readBytesValue(field))
         case .text: return node.isTagText ? try .tag(try reader.readTextValue(field)) : .text(try reader.readTextValue(field))
         case .list where info.valueKind == .dice:

@@ -180,6 +180,7 @@ internal static partial class GesSwiftEmitter
     private static string NestedName(GesPlanValue value) => value.Encoding.Kind switch
     {
         GesLayoutKind.Tag => value.Base + "Tag",
+        GesLayoutKind.Flags => value.Base + "Flags",
         GesLayoutKind.Union => value.Base + "Alternative",
         _ => ""
     };
@@ -207,7 +208,7 @@ internal static partial class GesSwiftEmitter
         GesLayoutKind.Quantized or GesLayoutKind.Float => "0.0",
         GesLayoutKind.Tag => "." + Name(value.Encoding.Tags[0]),
         GesLayoutKind.Union => "." + Member(value.Alternatives[0].Label),
-        GesLayoutKind.List or GesLayoutKind.Bytes => "[]",
+        GesLayoutKind.List or GesLayoutKind.Bytes or GesLayoutKind.Flags => "[]",
         _ => TypeName(value) + "()"
     };
 
@@ -493,6 +494,10 @@ internal static partial class GesSwiftEmitter
             case GesLayoutKind.Tag:
                 code.Line($"try writer.write(UInt64({target}.rawValue), width: {width})");
                 break;
+            case GesLayoutKind.Flags:
+                if (encoding.Width < 64) code.Line($"if {target}.rawValue > {Unsigned(Full(encoding.Width))} {{ {Throw("unknownTag", value)} }}");
+                code.Line($"try writer.write({target}.rawValue, width: {width})");
+                break;
             case GesLayoutKind.Text or GesLayoutKind.Bytes:
                 var bytes = Storage(value, "self");
                 code.Line($"if {bytes}.count > {max} {{ {Throw("tooLong", value)} }}");
@@ -546,6 +551,9 @@ internal static partial class GesSwiftEmitter
                 break;
             case GesLayoutKind.Integer when !encoding.Range:
                 code.Line($"{target} = Int64(bitPattern: try reader.read(64, path: {Path(value)}))");
+                break;
+            case GesLayoutKind.Flags:
+                code.Line($"{target} = {NestedName(value)}(rawValue: try reader.read({width}, path: {Path(value)}))");
                 break;
             case GesLayoutKind.Integer or GesLayoutKind.Quantized or GesLayoutKind.Tag:
                 code.Open("do {");
@@ -652,6 +660,9 @@ internal static partial class GesSwiftEmitter
 
                 code.Close();
                 break;
+            case GesLayoutKind.Flags:
+                FlagsDeclaration(code, name, value.Encoding.Tags, access);
+                break;
             case GesLayoutKind.Union:
                 code.Blank();
                 code.Line("/// The alternatives of the field, in declared order.");
@@ -677,6 +688,27 @@ internal static partial class GesSwiftEmitter
     }
 
     private static string Underlying(int count) => count <= 256 ? "UInt8" : count <= 65536 ? "UInt16" : "UInt32";
+
+    // One bit per member in declared order, so the raw value is the wire mask.
+    internal static void FlagsDeclaration(GesSchemaPlanner.Code code, string name, List<string> members, string access)
+    {
+        code.Blank();
+        code.Line("/// The members of the field, one bit each in declared order.");
+        code.Open($"{access}struct {name}: OptionSet, Hashable, Sendable, Codable {{");
+        code.Line("/// The mask, one bit per member in declared order.");
+        code.Line($"{access}let rawValue: UInt64");
+        code.Blank();
+        code.Line("/// Creates the members of a mask.");
+        code.Line($"{access}init(rawValue: UInt64) {{ self.rawValue = rawValue }}");
+        for (var index = 0; index < members.Count; index++)
+        {
+            code.Blank();
+            code.Line($"/// The member `#{members[index]}`.");
+            code.Line($"{access}static let {Name(members[index])} = {name}(rawValue: 1 << {index.ToString(CultureInfo.InvariantCulture)})");
+        }
+
+        code.Close();
+    }
 
     private static ulong Full(int width) => width >= 64 ? ulong.MaxValue : (1UL << width) - 1;
 

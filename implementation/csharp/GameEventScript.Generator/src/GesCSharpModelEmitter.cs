@@ -230,6 +230,7 @@ internal static class GesCSharpModelEmitter
             GesModelKind.Boolean => "false",
             GesModelKind.Number => value.Model.Integer ? "0L" : "0d",
             GesModelKind.Tag when value.ClosedTag => $"default({value.Nested})",
+            GesModelKind.Flags => $"default({value.Nested})",
             GesModelKind.Point or GesModelKind.Vector => $"default({Plain(value)})",
             _ => Initial(value)
         };
@@ -284,6 +285,13 @@ internal static class GesCSharpModelEmitter
             }
 
             code.Close();
+        }
+        else if (value.Kind == GesModelKind.Flags)
+        {
+            var members = new List<(string, string)>();
+            foreach (var member in value.Model.Tags) members.Add((GesSchemaPlanner.Pascal(member), "the member #" + member));
+            GesSchemaPlanner.Unique(value.Nested, members);
+            GesCSharpEmitter.FlagsDeclaration(code, value.Nested, value.Model.Tags);
         }
         else if (value.Kind == GesModelKind.Union) Union(code, value, support, qualifier);
         else if (value.Element is not null) Declarations(code, value.Element, support, qualifier);
@@ -399,7 +407,7 @@ internal static class GesCSharpModelEmitter
 
     private static string UnitName(string unit) => "GesQuantityUnit.Unit" + GesSchemaPlanner.Pascal(unit);
 
-    private static bool IsValueType(GesModelPlanValue value) => value.Kind is GesModelKind.Boolean or GesModelKind.Number or GesModelKind.Point or GesModelKind.Vector
+    private static bool IsValueType(GesModelPlanValue value) => value.Kind is GesModelKind.Boolean or GesModelKind.Number or GesModelKind.Point or GesModelKind.Vector or GesModelKind.Flags
         || value.ClosedTag;
 
     private static string Depth(int depth) => depth.ToString(CultureInfo.InvariantCulture);
@@ -465,7 +473,7 @@ internal static class GesCSharpModelEmitter
 
     private static void Conversions(GesModelPlanValue value, List<GesModelPlanValue> found)
     {
-        if (value.Kind == GesModelKind.Union || value.ClosedTag) found.Add(value);
+        if (value.Kind is GesModelKind.Union or GesModelKind.Flags || value.ClosedTag) found.Add(value);
         if (value.Element is not null) Conversions(value.Element, found);
         foreach (var alternative in value.Alternatives) Conversions(alternative, found);
     }
@@ -626,6 +634,22 @@ internal static class GesCSharpModelEmitter
             return;
         }
 
+        if (value.Kind == GesModelKind.Flags)
+        {
+            var names = $"{owner}{value.Nested}Names";
+            code.Line($"private static readonly string[] {names} = {{ {string.Join(", ", value.Model.Tags.ConvertAll(member => GesSchemaPlanner.Literal(member, false)))} }};");
+            code.Blank();
+            code.Line($"private static GesValue Value({name} value) => Flags({names}, (ulong)value);");
+            code.Blank();
+            code.Line($"private static bool Decode{owner}{value.Nested}(in GesValue value, out {name} result)");
+            code.Open("{");
+            code.Line($"var valid = Flags(value, {names}, out var mask);");
+            code.Line($"result = ({name})mask;");
+            code.Line("return valid;");
+            code.Close();
+            return;
+        }
+
         code.Line($"private static GesValue Value({name} value) => value switch");
         code.Open("{");
         foreach (var alternative in value.Alternatives)
@@ -670,6 +694,30 @@ internal static class GesCSharpModelEmitter
         code.Line("var values = new GesValue[names.Length];");
         code.Line("for (var index = 0; index < names.Length; index++) values[index] = value.GetField(names[index]) ?? GesValue.GesNothing();");
         code.Line("return GesValue.GesMap(names, values);");
+        code.Close();
+        code.Blank();
+        code.Line("private static GesValue Flags(string[] names, ulong mask)");
+        code.Open("{");
+        code.Line("var keys = new List<string>();");
+        code.Line("for (var index = 0; index < names.Length; index++)");
+        code.Line("    if ((mask >> index & 1) != 0) keys.Add(names[index]);");
+        code.Line("var values = new GesValue[keys.Count];");
+        code.Line("for (var index = 0; index < values.Length; index++) values[index] = GesValue.GesBoolean(true);");
+        code.Line("return GesValue.GesMap(keys.ToArray(), values);");
+        code.Close();
+        code.Blank();
+        code.Line("private static bool Flags(in GesValue value, string[] names, out ulong result)");
+        code.Open("{");
+        code.Line("result = 0;");
+        code.Line("if (value.ValueKind != GesBytecodeTypeKind.Map || value.CustomTypeName is not null || value.MaterializedMap() is not { } map) return false;");
+        code.Line("for (var index = 0; index < map.Length; index++)");
+        code.Open("{");
+        code.Line("var member = Array.IndexOf(names, map.KeyAt(index));");
+        code.Line("var set = map.ValueAt(index);");
+        code.Line("if (member < 0 || set.ValueKind != GesBytecodeTypeKind.Boolean) return false;");
+        code.Line("if (set.AsBoolean()) result |= 1UL << member;");
+        code.Close();
+        code.Line("return true;");
         code.Close();
         code.Blank();
         code.Line("private static GesValue Tag(string name)");

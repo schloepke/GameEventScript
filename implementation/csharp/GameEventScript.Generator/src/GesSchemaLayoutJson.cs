@@ -116,7 +116,7 @@ internal static class GesSchemaLayoutJson
                 json.Number("deltaWidth", encoding.DeltaWidth);
                 json.Strings("depends", encoding.Depends);
                 break;
-            case GesLayoutKind.Tag:
+            case GesLayoutKind.Tag or GesLayoutKind.Flags:
                 json.Strings("tags", encoding.Tags);
                 json.Number("width", encoding.Width);
                 break;
@@ -165,6 +165,7 @@ internal static class GesSchemaLayoutJson
         GesLayoutKind.Quantized => "quantized",
         GesLayoutKind.Float => "float",
         GesLayoutKind.Tag => "tag",
+        GesLayoutKind.Flags => "flags",
         GesLayoutKind.Text => "text",
         GesLayoutKind.Bytes => "bytes",
         GesLayoutKind.List => "list",

@@ -13,7 +13,7 @@ internal static partial class GesCSharpEmitter
 {
     private static string N(int node) => node.ToString(CultureInfo.InvariantCulture);
 
-    private static bool Scalar(GesPlanValue value) => value.Encoding.Kind is GesLayoutKind.Boolean or GesLayoutKind.Integer or GesLayoutKind.Quantized or GesLayoutKind.Float or GesLayoutKind.Tag;
+    private static bool Scalar(GesPlanValue value) => value.Encoding.Kind is GesLayoutKind.Boolean or GesLayoutKind.Integer or GesLayoutKind.Quantized or GesLayoutKind.Float or GesLayoutKind.Tag or GesLayoutKind.Flags;
 
     // Every value of a type with a wire value of its own, for the helpers that convert it.
     private static IEnumerable<GesPlanValue> Scalars(GesPlanValue value)
@@ -139,6 +139,10 @@ internal static partial class GesCSharpEmitter
                 if (encoding.Range) code.Line($"if (value < {Bits(encoding.LowerValue)} || value > {Bits(encoding.UpperValue)}) {Throw("OutOfRange", value)}");
                 code.Line("return unchecked((ulong)BitConverter.DoubleToInt64Bits(value == 0 ? 0d : value));");
                 break;
+            case GesLayoutKind.Flags:
+                if (encoding.Width < 64) code.Line($"if ((ulong)value > {Unsigned(Full(encoding.Width))}) {Throw("UnknownTag", value)}");
+                code.Line("return (ulong)value;");
+                break;
             default:
                 code.Line($"if ((ulong)value > {Unsigned((ulong)encoding.Tags.Count - 1)}) {Throw("UnknownTag", value)}");
                 code.Line("return (ulong)value;");
@@ -158,7 +162,12 @@ internal static partial class GesCSharpEmitter
         }
         else if (encoding.Kind != GesLayoutKind.Boolean)
         {
-            var largest = encoding.Kind == GesLayoutKind.Tag ? (ulong)encoding.Tags.Count - 1 : encoding.MaxIndex;
+            var largest = encoding.Kind switch
+            {
+                GesLayoutKind.Tag => (ulong)encoding.Tags.Count - 1,
+                GesLayoutKind.Flags => Full(encoding.Width),
+                _ => encoding.MaxIndex
+            };
             if (largest < Full(encoding.Width)) code.Line($"if (wire > {Unsigned(largest)}) {Throw("InvalidIndex", value)}");
         }
 
@@ -190,7 +199,7 @@ internal static partial class GesCSharpEmitter
             case GesLayoutKind.Boolean:
                 code.Line($"if ({a} != {b}) return false;");
                 break;
-            case GesLayoutKind.Integer or GesLayoutKind.Quantized or GesLayoutKind.Float or GesLayoutKind.Tag:
+            case GesLayoutKind.Integer or GesLayoutKind.Quantized or GesLayoutKind.Float or GesLayoutKind.Tag or GesLayoutKind.Flags:
                 code.Line($"if (__Wire{node}({a}, paths, at) != __Wire{node}({b}, paths, at)) return false;");
                 break;
             case GesLayoutKind.Text or GesLayoutKind.Bytes:
@@ -611,7 +620,7 @@ internal static partial class GesCSharpEmitter
             case GesLayoutKind.Boolean:
                 code.Line($"if ({a} != {b}) {set} = true;");
                 break;
-            case GesLayoutKind.Integer or GesLayoutKind.Quantized or GesLayoutKind.Float or GesLayoutKind.Tag:
+            case GesLayoutKind.Integer or GesLayoutKind.Quantized or GesLayoutKind.Float or GesLayoutKind.Tag or GesLayoutKind.Flags:
                 code.Open("{");
                 code.Line($"var value{node} = __Wire{node}({a}, paths, at);");
                 code.Line($"var held{node} = __Wire{node}({b}, paths, at);");
@@ -729,7 +738,7 @@ internal static partial class GesCSharpEmitter
             case GesLayoutKind.Boolean:
                 code.Line($"{a} = !{b};");
                 break;
-            case GesLayoutKind.Integer or GesLayoutKind.Quantized or GesLayoutKind.Float or GesLayoutKind.Tag when encoding.DeltaRange == 0:
+            case GesLayoutKind.Integer or GesLayoutKind.Quantized or GesLayoutKind.Float or GesLayoutKind.Tag or GesLayoutKind.Flags when encoding.DeltaRange == 0:
                 code.Open("{");
                 code.Line($"var held{node} = __Wire{node}({b}, paths, at);");
                 code.Line($"var value{node} = __Read{node}(ref reader, paths, at);");

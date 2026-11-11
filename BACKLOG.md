@@ -62,15 +62,6 @@ here.
 - Offer a C# incremental source generator for `[GesExtension]` and `[GesType]` declarations, so that
   Unity IL2CPP builds need neither Reflection nor `link.xml` entries for annotated types, with the
   same rules as the Reflection registries and the Swift macros.
-- Add `:Flags(#a, #b, ...)` with at most 64 members to the schema language only; GES scripts keep
-  using flag Maps such as `[enemy:, armed:]`. A member is set or not set; there is no unknown
-  state. Encoding sets a member for `true`, leaves it unset for `false` or an absent key, and
-  rejects other values and keys outside the set with `wire.` errors. The wire holds one bit per
-  member in declaration order, decoding returns the Map of the set members, deltas compare those
-  bits, and document checking applies the same rule. Generated code holds one 64-bit mask, as a C#
-  `[Flags]` enum and a Swift `OptionSet`; `GesSchemaValues` and the generated value bindings convert
-  between it and the flag Map. Reordering members changes the schema hash. Revisit a dedicated
-  runtime bit-set kind only if measurements show flag Maps on a hot path.
 - Add `:Box(unit) { ... }` and `:Poly(unit) max n { ... }` to the schema language, with per-axis
   ranges like `:Point`, so that generated wire and model code holds `GesBox` and `GesPoly` fields.
   Until then a schema writes a Box as two `:Point` fields and a Poly as `:List(:Point) max n`, and

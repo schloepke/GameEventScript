@@ -24,7 +24,7 @@ internal sealed class GesModelPlanValue
     // The value may be absent: an optional field or a union with a :Nothing alternative.
     internal bool Nullable;
 
-    // The nested type of a closed Tag (its enum) or a union; empty for other kinds.
+    // The nested type of a closed Tag (its enum), of Flags or of a union; empty for other kinds.
     internal string Nested = "";
 
     // The label of a union alternative, its case or subclass.
@@ -72,6 +72,7 @@ internal static class GesModelPlanner
 
         var value = new GesModelPlanValue { Kind = model.Kind, Model = model, Label = label };
         if (value.ClosedTag) value.Nested = name + "Tag";
+        if (model.Kind == GesModelKind.Flags) value.Nested = name + "Flags";
         if (model.Kind == GesModelKind.List) value.Element = Value(model.Element!.Value, name + "Item", "");
         return value;
     }
@@ -108,6 +109,7 @@ internal static class GesModelPlanner
         GesModelKind.Text => ("Text", "none", null),
         GesModelKind.Bytes => ("Bytes", "none", null),
         GesModelKind.Tag => ("Tag", "none", null),
+        GesModelKind.Flags => ("Map", "none", null),
         GesModelKind.List => ("List", "none", null),
         GesModelKind.Dice => ("Dice", "none", null),
         GesModelKind.Point => ("Point", value.Model.Unit, null),
@@ -145,6 +147,9 @@ internal static class GesModelPlanner
                 text.Append(":Tag");
                 if (value.Tags.Count > 0) text.Append("(#").Append(string.Join(", #", value.Tags)).Append(')');
                 else if (value.Max is { } tagMax) text.Append(" max ").Append(tagMax);
+                break;
+            case GesModelKind.Flags:
+                text.Append(":Flags(#").Append(string.Join(", #", value.Tags)).Append(')');
                 break;
             case GesModelKind.Text:
                 text.Append(":Text");

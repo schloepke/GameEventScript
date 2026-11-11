@@ -86,6 +86,10 @@
             if let set = type.tags { tags(set, &output) }
             if let max = type.max { output += " max \(max)" }
             return
+        case .flags:
+            output += ":Flags"
+            tags(type.tags ?? [], &output)
+            return
         case .text, .bytes:
             output += type.kind == .text ? ":Text" : ":Bytes"
             if let max = type.max { output += " max \(max)" }

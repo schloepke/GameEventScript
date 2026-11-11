@@ -1068,6 +1068,7 @@ struct GameEventScript.Api.GesSchemaReader
   method System.Int32 ReadText(GameEventScript.Api.GesSchemaField field, System.Span<System.Byte> destination)
   method System.Int64 ReadInteger(GameEventScript.Api.GesSchemaField field)
   method System.Int64 ReadKey()
+  method System.UInt64 ReadFlags(GameEventScript.Api.GesSchemaField field)
   method System.UInt64 ReadIndex(GameEventScript.Api.GesSchemaField field)
   method System.Void BeginNested(GameEventScript.Api.GesSchemaField field)
 sealed class GameEventScript.Api.GesSchemaSet
@@ -1113,6 +1114,7 @@ enum GameEventScript.Api.GesSchemaTypeKind
   enum-field Handler = 15
   enum-field Nothing = 16
   enum-field Bytes = 17
+  enum-field Flags = 18
 static class GameEventScript.Api.GesSchemaValues
   method static GameEventScript.Api.GesSchemaDecoded Decode(GameEventScript.Api.GesBoundSchema schema, System.ReadOnlySpan<System.Byte> data, GameEventScript.Runtime.Values.GesValue baseline, System.Int64 byteLimit)
   method static GameEventScript.Api.GesSchemaDecoded Decode(GameEventScript.Api.GesBoundSchema schema, System.ReadOnlySpan<System.Byte> data, System.Int64 byteLimit)
@@ -1129,6 +1131,7 @@ struct GameEventScript.Api.GesSchemaWriter
   method System.Void WriteAbsent(GameEventScript.Api.GesSchemaField field)
   method System.Void WriteBoolean(GameEventScript.Api.GesSchemaField field, System.Boolean value)
   method System.Void WriteBytes(GameEventScript.Api.GesSchemaField field, System.ReadOnlySpan<System.Byte> bytes)
+  method System.Void WriteFlags(GameEventScript.Api.GesSchemaField field, System.UInt64 mask)
   method System.Void WriteIndex(GameEventScript.Api.GesSchemaField field, System.UInt64 index)
   method System.Void WriteInteger(GameEventScript.Api.GesSchemaField field, System.Int64 value)
   method System.Void WriteNumber(GameEventScript.Api.GesSchemaField field, System.Double value)

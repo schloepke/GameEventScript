@@ -6,7 +6,7 @@
 extension GesCSharpEmitter {
     static func isScalar(_ value: GesPlanValue) -> Bool {
         switch value.encoding.kind {
-        case .boolean, .integer, .quantized, .float, .tag: true
+        case .boolean, .integer, .quantized, .float, .tag, .flags: true
         default: false
         }
     }
@@ -119,6 +119,9 @@ extension GesCSharpEmitter {
             code.line("if (double.IsNaN(value)) \(fail("NotRepresentable", value))")
             if encoding.range { code.line("if (value < \(bits(encoding.lowerValue)) || value > \(bits(encoding.upperValue))) \(fail("OutOfRange", value))") }
             code.line("return unchecked((ulong)BitConverter.DoubleToInt64Bits(value == 0 ? 0d : value));")
+        case .flags:
+            if encoding.width < 64 { code.line("if ((ulong)value > \(unsigned(full(encoding.width)))) \(fail("UnknownTag", value))") }
+            code.line("return (ulong)value;")
         default:
             code.line("if ((ulong)value > \(unsigned(UInt64(encoding.tags.count) - 1))) \(fail("UnknownTag", value))")
             code.line("return (ulong)value;")
@@ -133,7 +136,12 @@ extension GesCSharpEmitter {
             code.line("if (double.IsNaN(value) || wire == 0x8000000000000000UL\(encoding.range ? " || double.IsInfinity(value)" : "")) \(fail("InvalidNumber", value))")
             if encoding.range { code.line("if (value < \(bits(encoding.lowerValue)) || value > \(bits(encoding.upperValue))) \(fail("OutOfRange", value))") }
         } else if encoding.kind != .boolean {
-            let largest = encoding.kind == .tag ? UInt64(encoding.tags.count) - 1 : encoding.maxIndex
+            let largest =
+                switch encoding.kind {
+                case .tag: UInt64(encoding.tags.count) - 1
+                case .flags: full(encoding.width)
+                default: encoding.maxIndex
+                }
             if largest < full(encoding.width) { code.line("if (wire > \(unsigned(largest))) \(fail("InvalidIndex", value))") }
         }
         code.line("return wire;")
@@ -164,7 +172,7 @@ extension GesCSharpEmitter {
         switch value.encoding.kind {
         case .boolean:
             code.line("if (\(a) != \(b)) return false;")
-        case .integer, .quantized, .float, .tag:
+        case .integer, .quantized, .float, .tag, .flags:
             code.line("if (__Wire\(node)(\(a), paths, at) != __Wire\(node)(\(b), paths, at)) return false;")
         case .text, .bytes:
             code.line("if (!\(text(value, prefix(a))).SequenceEqual(\(text(value, prefix(b))))) return false;")
@@ -531,7 +539,7 @@ extension GesCSharpEmitter {
         switch encoding.kind {
         case .boolean:
             code.line("if (\(a) != \(b)) \(set) = true;")
-        case .integer, .quantized, .float, .tag:
+        case .integer, .quantized, .float, .tag, .flags:
             code.open("{")
             code.line("var value\(node) = __Wire\(node)(\(a), paths, at);")
             code.line("var held\(node) = __Wire\(node)(\(b), paths, at);")
@@ -635,7 +643,7 @@ extension GesCSharpEmitter {
         switch encoding.kind {
         case .boolean:
             code.line("\(a) = !\(b);")
-        case .integer where encoding.deltaRange == 0, .quantized where encoding.deltaRange == 0, .float, .tag:
+        case .integer where encoding.deltaRange == 0, .quantized where encoding.deltaRange == 0, .float, .tag, .flags:
             code.open("{")
             code.line("var held\(node) = __Wire\(node)(\(b), paths, at);")
             code.line("var value\(node) = __Read\(node)(ref reader, paths, at);")

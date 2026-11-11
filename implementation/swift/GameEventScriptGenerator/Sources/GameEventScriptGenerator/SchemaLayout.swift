@@ -62,6 +62,7 @@ enum GesLayoutKind {
     case schema
     case union
     case nothing
+    case flags
 }
 
 // A class, because a list's element and a union's alternatives nest encodings.
@@ -232,6 +233,10 @@ enum GesSchemaLayoutBuilder {
             number(node, type.kind, type.unit, type.lower, type.upper, encoding)
         case .tag where node.kind == .tag:
             encoding.kind = .tag
+            encoding.tags = bound.infos[index].tags
+            encoding.width = node.width
+        case .flags:
+            encoding.kind = .flags
             encoding.tags = bound.infos[index].tags
             encoding.width = node.width
         case .bytes:

@@ -124,6 +124,10 @@ internal static class GesSchemaFormatter
                 if (type.Tags is { } tags) Tags(tags, builder);
                 if (type.Max is { } tagMax) builder.Append(" max ").Append(tagMax);
                 return;
+            case GesSchemaTypeKind.Flags:
+                builder.Append(":Flags");
+                Tags(type.Tags!, builder);
+                return;
             case GesSchemaTypeKind.Text:
                 builder.Append(":Text");
                 if (type.Max is { } textMax) builder.Append(" max ").Append(textMax);

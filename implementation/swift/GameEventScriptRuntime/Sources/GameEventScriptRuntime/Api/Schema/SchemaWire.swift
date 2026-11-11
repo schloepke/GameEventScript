@@ -206,6 +206,18 @@ public struct GesSchemaWriter {
         leave(node.after)
     }
 
+    /// Writes a `:Flags` field as a mask whose bit `i` sets the member at index `i` in declared order.
+    /// - Throws: `GesWireError` when the mask sets a bit beyond the last member.
+    public mutating func writeFlags(_ field: GesSchemaField, _ mask: UInt64) throws(GesWireError) {
+        try current(field)
+        let node = schema.nodes[field.index]
+        if node.kind != .flags { throw GesWireError(GesWireError.typeMismatch, field.path) }
+        if mask > node.maxIndex { throw GesWireError(GesWireError.unknownTag, field.path) }
+        try presence(node)
+        try put(mask, node.width)
+        leave(node.after)
+    }
+
     /// Writes a Text from its UTF-8 bytes, or a `:Tag max n` from its name without `#`.
     /// - Throws: `GesWireError` when the bytes are too long, not valid UTF-8 or no valid tag name.
     public mutating func writeText(_ field: GesSchemaField, _ utf8: UnsafeRawBufferPointer) throws(GesWireError) {
@@ -454,6 +466,16 @@ public struct GesSchemaReader {
         if index > node.maxIndex { throw GesWireError(GesWireError.invalidIndex, field.path) }
         leave(node.after)
         return Int(index)
+    }
+
+    /// Reads a `:Flags` field as a mask whose bit `i` sets the member at index `i` in declared order.
+    /// - Throws: `GesWireError` when the data ends early.
+    public mutating func readFlags(_ field: GesSchemaField) throws(GesWireError) -> UInt64 {
+        try enter(field, .flags)
+        let node = schema.nodes[field.index]
+        let mask = try get(node.width, field.index)
+        leave(node.after)
+        return mask
     }
 
     /// Reads a Text into a caller's buffer as validated UTF-8, or a `:Tag max n` as a validated name without `#`.

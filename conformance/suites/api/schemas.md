@@ -16791,3 +16791,459 @@ schema:
   maxByteCount: 13
   deltaEncoded: {"bytes": "2b6c42448807d1201644"}
 ```
+
+---
+
+## Test: Flags as a mask of their members
+
+A `:Flags` field writes one bit per member in declared order; `false` and absent keys leave a member unset, and decoding gives a Map of the set members.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: flags-roundtrip
+schemaApi:
+  sources:
+    - "schema :S as {\n  state: :Flags(#a, #b, #c)\n  extra: :Flags(#x) | :Nothing\n}\n"
+  root: "S"
+  encode:
+    type: ":S"
+    entries:
+      - key: "state"
+        value:
+          type: ":Map"
+          entries:
+            - key: "a"
+              value:
+                type: ":Boolean"
+                value: "true"
+            - key: "b"
+              value:
+                type: ":Boolean"
+                value: "false"
+            - key: "c"
+              value:
+                type: ":Boolean"
+                value: "true"
+      - key: "extra"
+        value:
+          type: ":Map"
+          entries:
+            - key: "x"
+              value:
+                type: ":Boolean"
+                value: "true"
+  decode: "15"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "15"
+  decoded:
+    value:
+      type: ":S"
+      entries:
+        - key: "state"
+          value:
+            type: ":Map"
+            entries:
+              - key: "a"
+                value:
+                  type: ":Boolean"
+                  value: "true"
+              - key: "c"
+                value:
+                  type: ":Boolean"
+                  value: "true"
+        - key: "extra"
+          value:
+            type: ":Map"
+            entries:
+              - key: "x"
+                value:
+                  type: ":Boolean"
+                  value: "true"
+    byteCount: 1
+```
+
+---
+
+## Test: Flags without set members
+
+An empty Map clears every member; a union picks Nothing for nothing.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: flags-empty
+schemaApi:
+  sources:
+    - "schema :S as {\n  state: :Flags(#a, #b, #c)\n  extra: :Flags(#x) | :Nothing\n}\n"
+  root: "S"
+  encode:
+    type: ":S"
+    entries:
+      - key: "state"
+        value:
+          type: ":Map"
+          entries: []
+      - key: "extra"
+        value:
+          type: ":Nothing"
+  decode: "08"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "08"
+  decoded:
+    value:
+      type: ":S"
+      entries:
+        - key: "state"
+          value:
+            type: ":Map"
+            entries: []
+        - key: "extra"
+          value:
+            type: ":Nothing"
+    byteCount: 1
+```
+
+---
+
+## Test: a key outside the Flags set
+
+Only the declared members can be set.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: flags-unknown-member
+schemaApi:
+  sources:
+    - "schema :S as {\n  state: :Flags(#a, #b, #c)\n  extra: :Flags(#x) | :Nothing\n}\n"
+  root: "S"
+  encode:
+    type: ":S"
+    entries:
+      - key: "state"
+        value:
+          type: ":Map"
+          entries:
+            - key: "d"
+              value:
+                type: ":Boolean"
+                value: "true"
+      - key: "extra"
+        value:
+          type: ":Nothing"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    error:
+      code: "wire.unknownTag"
+      path: "state"
+```
+
+---
+
+## Test: a Flags value that is no Boolean
+
+Each member's value is a Boolean.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: flags-type-mismatch
+schemaApi:
+  sources:
+    - "schema :S as {\n  state: :Flags(#a, #b, #c)\n  extra: :Flags(#x) | :Nothing\n}\n"
+  root: "S"
+  encode:
+    type: ":S"
+    entries:
+      - key: "state"
+        value:
+          type: ":Map"
+          entries:
+            - key: "a"
+              value:
+                type: ":Number.int64"
+                value: "1"
+      - key: "extra"
+        value:
+          type: ":Nothing"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    error:
+      code: "wire.typeMismatch"
+      path: "state"
+```
+
+---
+
+## Test: the canonical form of Flags
+
+Flags list their members in declared order, which is part of the hash.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: flags-canonical
+schemaApi:
+  sources:
+    - "schema :S as { s: :Flags(#a, #b) }\n"
+  root: "S"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  canonical: "gess1\nschema S\nfield s Flags(#a #b)\n"
+  hash: "9795c02de7d571f0"
+```
+
+---
+
+## Test: Flags with more than 64 members
+
+A mask holds at most 64 members.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: flags-too-wide
+schemaApi:
+  sources:
+    - "schema :S as {\n  s: :Flags(#m0, #m1, #m2, #m3, #m4, #m5, #m6, #m7, #m8, #m9, #m10, #m11, #m12, #m13, #m14, #m15, #m16, #m17, #m18, #m19, #m20, #m21, #m22, #m23, #m24, #m25, #m26, #m27, #m28, #m29, #m30, #m31, #m32, #m33, #m34, #m35, #m36, #m37, #m38, #m39, #m40, #m41, #m42, #m43, #m44, #m45, #m46, #m47, #m48, #m49, #m50, #m51, #m52, #m53, #m54, #m55, #m56, #m57, #m58, #m59, #m60, #m61, #m62, #m63, #m64)\n}\n"
+  root: "S"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.tooWide"
+    line: 2
+    column: 6
+```
+
+---
+
+## Test: a Flags member listed twice
+
+Members are unique within their set.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: flags-duplicate
+schemaApi:
+  sources:
+    - "schema :S as {\n  s: :Flags(#a, #a)\n}\n"
+  root: "S"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.duplicateName"
+    line: 2
+    column: 6
+```
+
+---
+
+## Test: Flags without a set
+
+A Flags type lists its members.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: flags-without-set
+schemaApi:
+  sources:
+    - "schema :S as {\n  s: :Flags\n}\n"
+  root: "S"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.syntax"
+    line: 2
+    column: 12
+```
+
+---
+
+## Test: Flags in a dump
+
+A dump lists the set members and the mask.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: dump-flags
+schemaApi:
+  sources:
+    - "schema :S as { s: :Flags(#a, #b, #c) }\n"
+  root: "S"
+  dump: "05"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  dump:
+    text: "s bit=0 width=3 value=#a #c mask=5\nbytes 1\n"
+    valid: true
+```
+
+---
+
+## Test: document Flags
+
+A document writes Flags as a Map of Booleans whose keys are members.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: document-flags
+schemaApi:
+  sources:
+    - "schema :S as { s: :Flags(#a, #b) }\n"
+  document: ":Schema(:S)\ns: [a: true, b: false]\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  document:
+    ok: true
+```
+
+---
+
+## Test: a document Flags key outside the set
+
+The error is positioned at the key.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: document-flags-unknown
+schemaApi:
+  sources:
+    - "schema :S as { s: :Flags(#a, #b) }\n"
+  document: ":Schema(:S)\ns: [a: true, d: true]\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  document:
+    error:
+      code: "document.fieldType"
+      line: 2
+      column: 14
+```
+
+---
+
+## Test: a Map that Flags do not hold selects the next alternative
+
+Flags hold a Map whose keys are all members with Boolean values; any other Map tries the following alternatives.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: flags-union-schema
+schemaApi:
+  sources:
+    - "schema :Pos as { x: :Number integer between 0 and 7 }\nschema :S as { u: :Flags(#a, #b) | :Pos }\n"
+  root: "S"
+  encode:
+    type: ":S"
+    entries:
+      - key: "u"
+        value:
+          type: ":Map"
+          entries:
+            - key: "x"
+              value:
+                type: ":Number.int64"
+                value: "3"
+  decode: "07"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "07"
+  decoded:
+    value:
+      type: ":S"
+      entries:
+        - key: "u"
+          value:
+            type: ":Pos"
+            entries:
+              - key: "x"
+                value:
+                  type: ":Number.int64"
+                  value: "3"
+    byteCount: 1
+```

@@ -151,6 +151,7 @@ enum GesSwiftEmitter {
     static func nestedName(_ value: GesPlanValue) -> String {
         switch value.encoding.kind {
         case .tag: value.base + "Tag"
+        case .flags: value.base + "Flags"
         case .union: value.base + "Alternative"
         default: ""
         }
@@ -180,7 +181,7 @@ enum GesSwiftEmitter {
         case .quantized, .float: "0.0"
         case .tag: "." + name(value.encoding.tags[0])
         case .union: "." + member(value.alternatives[0].label)
-        case .list, .bytes: "[]"
+        case .list, .bytes, .flags: "[]"
         default: typeName(value) + "()"
         }
     }
@@ -432,6 +433,9 @@ enum GesSwiftEmitter {
             code.line("try writer.write((\(target) == 0 ? 0.0 : \(target)).bitPattern, width: 64)")
         case .tag:
             code.line("try writer.write(UInt64(\(target).rawValue), width: \(width))")
+        case .flags:
+            if encoding.width < 64 { code.line("if \(target).rawValue > \(full(encoding.width)) { \(fail("unknownTag", value)) }") }
+            code.line("try writer.write(\(target).rawValue, width: \(width))")
         case .text, .bytes:
             let bytes = storage(value, "self")
             code.line("if \(bytes).count > \(max) { \(fail("tooLong", value)) }")
@@ -482,6 +486,8 @@ enum GesSwiftEmitter {
             code.line("\(target) = try reader.read(1, path: \(path(value))) != 0")
         case .integer where !encoding.range:
             code.line("\(target) = Int64(bitPattern: try reader.read(64, path: \(path(value))))")
+        case .flags:
+            code.line("\(target) = \(nestedName(value))(rawValue: try reader.read(\(width), path: \(path(value))))")
         case .integer, .quantized, .tag:
             code.open("do {")
             code.line("let index = try reader.read(\(width), path: \(path(value)))")
@@ -581,6 +587,8 @@ enum GesSwiftEmitter {
                 code.line("case \(self.name(tag))")
             }
             code.close()
+        case .flags:
+            flagsDeclaration(&code, name, value.encoding.tags, access)
         case .union:
             code.blank()
             code.line("/// The alternatives of the field, in declared order.")
@@ -604,6 +612,24 @@ enum GesSwiftEmitter {
     }
 
     static func underlying(_ count: Int) -> String { count <= 256 ? "UInt8" : count <= 65536 ? "UInt16" : "UInt32" }
+
+    // One bit per member in declared order, so the raw value is the wire mask.
+    static func flagsDeclaration(_ code: inout Code, _ name: String, _ members: [String], _ access: String) {
+        code.blank()
+        code.line("/// The members of the field, one bit each in declared order.")
+        code.open("\(access)struct \(name): OptionSet, Hashable, Sendable, Codable {")
+        code.line("/// The mask, one bit per member in declared order.")
+        code.line("\(access)let rawValue: UInt64")
+        code.blank()
+        code.line("/// Creates the members of a mask.")
+        code.line("\(access)init(rawValue: UInt64) { self.rawValue = rawValue }")
+        for (index, member) in members.enumerated() {
+            code.blank()
+            code.line("/// The member `#\(member)`.")
+            code.line("\(access)static let \(self.name(member)) = \(name)(rawValue: 1 << \(index))")
+        }
+        code.close()
+    }
 
     static func full(_ width: Int) -> UInt64 { width >= 64 ? .max : (1 << UInt64(width)) - 1 }
 

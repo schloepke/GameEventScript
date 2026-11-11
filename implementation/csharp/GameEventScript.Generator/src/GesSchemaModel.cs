@@ -56,7 +56,8 @@ internal enum GesModelKind
     Vector,
     Schema,
     Union,
-    Nothing
+    Nothing,
+    Flags
 }
 
 internal sealed class GesModelValue
@@ -72,7 +73,7 @@ internal sealed class GesModelValue
     internal string? Upper;
     internal string? Step;
 
-    // A closed tag set, empty for any tag; the documented maximum of a Tag, Text, List or Dice.
+    // A closed tag set, empty for any tag, or the members of Flags; the documented maximum of a Tag, Text, List or Dice.
     internal List<string> Tags = [];
     internal long? Max;
     internal GesModelField? Element;
@@ -172,6 +173,10 @@ internal static class GesModelLayoutBuilder
                 value.Kind = GesModelKind.Tag;
                 value.Tags.AddRange(type.Tags);
                 value.Max = type.Max;
+                break;
+            case GesSchemaTypeKind.Flags:
+                value.Kind = GesModelKind.Flags;
+                value.Tags.AddRange(type.Tags);
                 break;
             case GesSchemaTypeKind.Text:
                 value.Kind = GesModelKind.Text;
@@ -281,6 +286,9 @@ internal static class GesModelLayoutJson
                 json.Strings("tags", value.Tags);
                 Optional(json, "max", value.Max);
                 break;
+            case GesModelKind.Flags:
+                json.Strings("tags", value.Tags);
+                break;
             case GesModelKind.Text or GesModelKind.Bytes:
                 Optional(json, "max", value.Max);
                 break;
@@ -328,6 +336,7 @@ internal static class GesModelLayoutJson
         GesModelKind.Boolean => "boolean",
         GesModelKind.Number => "number",
         GesModelKind.Tag => "tag",
+        GesModelKind.Flags => "flags",
         GesModelKind.Text => "text",
         GesModelKind.Bytes => "bytes",
         GesModelKind.List => "list",

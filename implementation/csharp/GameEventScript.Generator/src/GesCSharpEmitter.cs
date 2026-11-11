@@ -185,6 +185,7 @@ internal static partial class GesCSharpEmitter
     private static string NestedName(GesPlanValue value) => value.Encoding.Kind switch
     {
         GesLayoutKind.Tag => value.Base + "Tag",
+        GesLayoutKind.Flags => value.Base + "Flags",
         GesLayoutKind.Union => value.Base + "Alternative",
         _ => ""
     };
@@ -519,6 +520,10 @@ internal static partial class GesCSharpEmitter
                 code.Line($"if ((ulong){target} > {Unsigned((ulong)encoding.Tags.Count - 1)}) {Throw("UnknownTag", value)}");
                 code.Line($"writer.Write((ulong){target}, {width});");
                 break;
+            case GesLayoutKind.Flags:
+                if (encoding.Width < 64) code.Line($"if ((ulong){target} > {Unsigned(Full(encoding.Width))}) {Throw("UnknownTag", value)}");
+                code.Line($"writer.Write((ulong){target}, {width});");
+                break;
             case GesLayoutKind.Text or GesLayoutKind.Bytes:
                 code.Open("{");
                 code.Line($"var text = new ReadOnlySpan<byte>(__{value.Base}, 0, __{value.Base}Length);");
@@ -581,6 +586,9 @@ internal static partial class GesCSharpEmitter
                 break;
             case GesLayoutKind.Integer when !encoding.Range:
                 code.Line($"{target} = unchecked((long)reader.Read(64, {Path(value)}));");
+                break;
+            case GesLayoutKind.Flags:
+                code.Line($"{target} = ({NestedName(value)})reader.Read({width}, {Path(value)});");
                 break;
             case GesLayoutKind.Integer or GesLayoutKind.Quantized or GesLayoutKind.Tag:
                 code.Open("{");
@@ -689,6 +697,9 @@ internal static partial class GesCSharpEmitter
 
                 code.Close();
                 break;
+            case GesLayoutKind.Flags:
+                FlagsDeclaration(code, name, value.Encoding.Tags);
+                break;
             case GesLayoutKind.Union:
                 code.Blank();
                 code.Line("/// <summary>The alternatives of the field, in declared order.</summary>");
@@ -721,6 +732,23 @@ internal static partial class GesCSharpEmitter
     }
 
     private static string Underlying(int count) => count <= 256 ? "byte" : count <= 65536 ? "ushort" : "uint";
+
+    // One bit per member in declared order, so the enum value is the wire mask; the empty value needs no name.
+    internal static void FlagsDeclaration(GesSchemaPlanner.Code code, string name, List<string> members)
+    {
+        code.Blank();
+        code.Line("/// <summary>The members of the field, one bit each in declared order.</summary>");
+        code.Line("[Flags]");
+        code.Line($"public enum {name} : ulong");
+        code.Open("{");
+        for (var index = 0; index < members.Count; index++)
+        {
+            code.Line($"/// <summary>The member <c>#{members[index]}</c>.</summary>");
+            code.Line($"{GesSchemaPlanner.Pascal(members[index])} = 1UL << {index.ToString(CultureInfo.InvariantCulture)},");
+        }
+
+        code.Close();
+    }
 
     private static ulong Full(int width) => width >= 64 ? ulong.MaxValue : (1UL << width) - 1;
 

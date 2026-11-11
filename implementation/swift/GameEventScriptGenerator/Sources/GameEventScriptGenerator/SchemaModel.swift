@@ -29,7 +29,7 @@ final class GesModelField {
 }
 
 enum GesModelKind {
-    case boolean, number, tag, text, bytes, list, dice, point, vector, schema, union, nothing
+    case boolean, number, tag, text, bytes, list, dice, point, vector, schema, union, nothing, flags
 }
 
 final class GesModelValue {
@@ -42,7 +42,7 @@ final class GesModelValue {
     var lower: String?
     var upper: String?
     var step: String?
-    // A closed tag set, empty for any tag; the documented maximum of a Tag, Text, List or Dice.
+    // A closed tag set, empty for any tag, or the members of Flags; the documented maximum of a Tag, Text, List or Dice.
     var tags: [String] = []
     var max: Int64?
     var element: GesModelField?
@@ -129,6 +129,9 @@ enum GesModelLayoutBuilder {
             value.kind = .tag
             value.tags = type.tags
             value.max = type.max
+        case .flags:
+            value.kind = .flags
+            value.tags = type.tags
         case .text:
             value.kind = .text
             value.max = type.max
@@ -216,6 +219,8 @@ enum GesModelLayoutJson {
         case .tag:
             json.strings("tags", value.tags)
             optional(&json, "max", value.max)
+        case .flags:
+            json.strings("tags", value.tags)
         case .text, .bytes:
             optional(&json, "max", value.max)
         case .list:
@@ -254,6 +259,7 @@ enum GesModelLayoutJson {
         case .boolean: "boolean"
         case .number: "number"
         case .tag: "tag"
+        case .flags: "flags"
         case .text: "text"
         case .bytes: "bytes"
         case .list: "list"

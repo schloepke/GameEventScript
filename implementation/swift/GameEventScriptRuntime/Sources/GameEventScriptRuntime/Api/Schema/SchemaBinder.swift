@@ -59,6 +59,8 @@ public final class GesSchemaParameters {
     case group
     case union
     case nothing
+    // One bit per member of a :Flags set, in declared order, as one mask of `width` bits.
+    case flags
 }
 
 // The numbers of one field of a bound layout, free of references so that the hot path never counts them. A subtree occupies
@@ -613,6 +615,12 @@ enum GesSchemaBinder {
             info.tags = tags
             node.maxIndex = UInt64(tags.count) - 1
             node.width = bitLength(node.maxIndex)
+        case .flags:
+            let members = type.tags ?? []
+            node.kind = .flags
+            info.tags = members
+            node.width = members.count
+            node.maxIndex = members.count == 64 ? .max : (1 << UInt64(members.count)) - 1
         case .text, .bytes:
             guard let max = type.max else { throw scope.error(Code.notEncodable, type.offset, "A \(type.kind.rawValue) without max has no hard limit.") }
             node.kind = .text
@@ -703,6 +711,8 @@ enum GesSchemaBinder {
             try checkWrapping(scope, type.constraints, type.offset)
         case .tag:
             if type.tags == nil && type.max == nil { throw scope.error(Code.notEncodable, type.offset, "A Tag without a set or max has no hard limit.") }
+        case .flags:
+            break
         case .text, .bytes:
             if type.max == nil { throw scope.error(Code.notEncodable, type.offset, "A \(type.kind.rawValue) without max has no hard limit.") }
         case .list:

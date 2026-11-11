@@ -88,7 +88,7 @@ enum GesSchemaLayoutJson {
             json.unsigned("deltaRange", encoding.deltaRange)
             json.number("deltaWidth", Int64(encoding.deltaWidth))
             json.strings("depends", encoding.depends)
-        case .tag:
+        case .tag, .flags:
             json.strings("tags", encoding.tags)
             json.number("width", Int64(encoding.width))
         case .text:
@@ -131,6 +131,7 @@ enum GesSchemaLayoutJson {
         case .quantized: "quantized"
         case .float: "float"
         case .tag: "tag"
+        case .flags: "flags"
         case .text: "text"
         case .bytes: "bytes"
         case .list: "list"

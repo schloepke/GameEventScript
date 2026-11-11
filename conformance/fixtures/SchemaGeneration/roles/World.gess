@@ -18,6 +18,7 @@ schema :World_Bot as {
   velocity: :Vector(m) { x between -100m and 100m step 1cm, y between -100m and 100m step 1cm, z between -100m and 100m step 1cm }
   body: :World_Body
   token: :Bytes max 4
+  state: :Flags(#armed, #cloaked, #docked)
 }
 
 // Reached from the wire root World and from the model root WorldView.

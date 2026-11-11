@@ -58,7 +58,10 @@ public enum GesSchemaTypeKind : byte
     Nothing,
 
     /// <summary>A Bytes value.</summary>
-    Bytes
+    Bytes,
+
+    /// <summary>Flags of a closed set, as a Map of the set members.</summary>
+    Flags
 }
 
 internal static class GesSchemaTypeNames
@@ -78,6 +81,7 @@ internal static class GesSchemaTypeNames
         "Tag" => GesSchemaTypeKind.Tag,
         "Text" => GesSchemaTypeKind.Text,
         "Bytes" => GesSchemaTypeKind.Bytes,
+        "Flags" => GesSchemaTypeKind.Flags,
         "List" => GesSchemaTypeKind.List,
         "Map" => GesSchemaTypeKind.Map,
         "Range" => GesSchemaTypeKind.Range,

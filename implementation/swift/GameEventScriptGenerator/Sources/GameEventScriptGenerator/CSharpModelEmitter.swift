@@ -181,7 +181,7 @@ enum GesCSharpModelEmitter {
         case .point: "GesPoint"
         case .vector: "GesVector"
         case .schema: qualifier + value.model.schema
-        case .union, .nothing: nested(value, qualifier, owner)
+        case .union, .nothing, .flags: nested(value, qualifier, owner)
         }
     }
 
@@ -214,6 +214,7 @@ enum GesCSharpModelEmitter {
         case .boolean: return "false"
         case .number: return value.model.integer ? "0L" : "0d"
         case .tag where value.closedTag: return "default(\(value.nested))"
+        case .flags: return "default(\(value.nested))"
         case .point, .vector: return "default(\(plain(value)))"
         default: return initial(value)
         }
@@ -257,6 +258,9 @@ enum GesCSharpModelEmitter {
                 code.line(GesSchemaPlanner.pascal(tag) + ",")
             }
             code.close()
+        } else if value.kind == .flags {
+            try GesSchemaPlanner.unique(value.nested, value.model.tags.map { (GesSchemaPlanner.pascal($0), "the member #" + $0) })
+            GesCSharpEmitter.flagsDeclaration(&code, value.nested, value.model.tags)
         } else if value.kind == .union {
             try union(&code, value, support, qualifier)
         } else if let element = value.element {
@@ -370,7 +374,7 @@ enum GesCSharpModelEmitter {
 
     private static func isValueType(_ value: GesModelPlanValue) -> Bool {
         switch value.kind {
-        case .boolean, .number, .point, .vector: true
+        case .boolean, .number, .point, .vector, .flags: true
         default: value.closedTag
         }
     }
@@ -393,7 +397,7 @@ enum GesCSharpModelEmitter {
         case .dice: return "Dice(\(expression))"
         case .point, .vector: return "\(expression).ToValue(\(unitName(value.model.unit)))"
         case .schema: return "\(expression).ToGesValue()"
-        case .union, .nothing: return "Value(\(expression))"
+        case .union, .nothing, .flags: return "Value(\(expression))"
         }
     }
 
@@ -419,7 +423,7 @@ enum GesCSharpModelEmitter {
         case .point: return "Point(\(expression), \(unitName(value.model.unit)), \(target))"
         case .vector: return "Vector(\(expression), \(unitName(value.model.unit)), \(target))"
         case .schema: return "Decode\(value.model.schema)(\(expression), \(target))"
-        case .union, .nothing: return "Decode\(owner)\(value.nested)(\(expression), \(target))"
+        case .union, .nothing, .flags: return "Decode\(owner)\(value.nested)(\(expression), \(target))"
         }
     }
 
@@ -432,7 +436,7 @@ enum GesCSharpModelEmitter {
     }
 
     private static func conversions(_ value: GesModelPlanValue, _ found: inout [GesModelPlanValue]) {
-        if value.kind == .union || value.closedTag { found.append(value) }
+        if value.kind == .union || value.kind == .flags || value.closedTag { found.append(value) }
         if let element = value.element { conversions(element, &found) }
         for alternative in value.alternatives { conversions(alternative, &found) }
     }
@@ -584,6 +588,20 @@ enum GesCSharpModelEmitter {
             code.close()
             return
         }
+        if value.kind == .flags {
+            let names = "\(owner)\(value.nested)Names"
+            code.line("private static readonly string[] \(names) = { \(value.model.tags.map(literal).joined(separator: ", ")) };")
+            code.blank()
+            code.line("private static GesValue Value(\(name) value) => Flags(\(names), (ulong)value);")
+            code.blank()
+            code.line("private static bool Decode\(owner)\(value.nested)(in GesValue value, out \(name) result)")
+            code.open("{")
+            code.line("var valid = Flags(value, \(names), out var mask);")
+            code.line("result = (\(name))mask;")
+            code.line("return valid;")
+            code.close()
+            return
+        }
         code.line("private static GesValue Value(\(name) value) => value switch")
         code.open("{")
         for alternative in value.alternatives { code.line("\(name).\(alternative.label) alternative => \(encode(alternative, owner, "alternative.Value", qualifier)),") }
@@ -623,6 +641,30 @@ enum GesCSharpModelEmitter {
         code.line("var values = new GesValue[names.Length];")
         code.line("for (var index = 0; index < names.Length; index++) values[index] = value.GetField(names[index]) ?? GesValue.GesNothing();")
         code.line("return GesValue.GesMap(names, values);")
+        code.close()
+        code.blank()
+        code.line("private static GesValue Flags(string[] names, ulong mask)")
+        code.open("{")
+        code.line("var keys = new List<string>();")
+        code.line("for (var index = 0; index < names.Length; index++)")
+        code.line("    if ((mask >> index & 1) != 0) keys.Add(names[index]);")
+        code.line("var values = new GesValue[keys.Count];")
+        code.line("for (var index = 0; index < values.Length; index++) values[index] = GesValue.GesBoolean(true);")
+        code.line("return GesValue.GesMap(keys.ToArray(), values);")
+        code.close()
+        code.blank()
+        code.line("private static bool Flags(in GesValue value, string[] names, out ulong result)")
+        code.open("{")
+        code.line("result = 0;")
+        code.line("if (value.ValueKind != GesBytecodeTypeKind.Map || value.CustomTypeName is not null || value.MaterializedMap() is not { } map) return false;")
+        code.line("for (var index = 0; index < map.Length; index++)")
+        code.open("{")
+        code.line("var member = Array.IndexOf(names, map.KeyAt(index));")
+        code.line("var set = map.ValueAt(index);")
+        code.line("if (member < 0 || set.ValueKind != GesBytecodeTypeKind.Boolean) return false;")
+        code.line("if (set.AsBoolean()) result |= 1UL << member;")
+        code.close()
+        code.line("return true;")
         code.close()
         code.blank()
         code.line("private static GesValue Tag(string name)")

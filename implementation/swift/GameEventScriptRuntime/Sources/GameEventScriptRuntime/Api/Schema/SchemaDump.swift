@@ -91,6 +91,9 @@ public enum GesSchemaDump {
         case .tag:
             let tag = try reader.readTag(field)
             line("#\(info.tags[tag]) index=\(tag)")
+        case .flags:
+            let mask = try reader.readFlags(field)
+            line("\(flagMembers(info.tags, mask)) mask=\(mask)")
         case .text where node.isBytes:
             line(GesBytesText.format(try reader.readBytesValue(field)))
         case .text:
@@ -123,6 +126,12 @@ public enum GesSchemaDump {
     }
 
     // A Text stays on its line, whatever the data holds.
+    // The set members of a mask in declared order, or `none`.
+    private static func flagMembers(_ members: [String], _ mask: UInt64) -> String {
+        let set = members.indices.filter { mask >> UInt64($0) & 1 != 0 }.map { "#" + members[$0] }
+        return set.isEmpty ? "none" : set.joined(separator: " ")
+    }
+
     private static func quoted(_ text: String) -> String {
         var output = "'"
         for scalar in text.unicodeScalars {

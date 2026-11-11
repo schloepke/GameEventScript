@@ -215,6 +215,19 @@ public ref struct GesSchemaWriter
         Leave(node.After);
     }
 
+    /// <summary>Writes a <c>:Flags</c> field as a mask whose bit <c>i</c> sets the member at index <c>i</c> in declared order.</summary>
+    /// <param name="field">The field's handle.</param>
+    /// <param name="mask">The mask; a bit beyond the last member is an unknown tag.</param>
+    public void WriteFlags(GesSchemaField field, ulong mask)
+    {
+        ref readonly var node = ref Current(field);
+        if (node.Kind != GesSchemaNodeKind.Flags) throw new GesWireException(GesWireException.TypeMismatch, node.Path);
+        if (mask > node.MaxIndex) throw new GesWireException(GesWireException.UnknownTag, node.Path);
+        Presence(in node);
+        Put(mask, node.Width);
+        Leave(node.After);
+    }
+
     /// <summary>Writes a Text from its UTF-8 bytes, or a <c>:Tag max n</c> from its name.</summary>
     /// <param name="field">The field's handle.</param>
     /// <param name="utf8">The bytes, which must be valid UTF-8, or a tag name for a <c>:Tag max n</c>, without its <c>#</c>.</param>
@@ -483,6 +496,17 @@ public ref struct GesSchemaReader
         if (index > node.MaxIndex) throw new GesWireException(GesWireException.InvalidIndex, node.Path);
         Leave(node.After);
         return (int)index;
+    }
+
+    /// <summary>Reads a <c>:Flags</c> field as a mask whose bit <c>i</c> sets the member at index <c>i</c> in declared order.</summary>
+    /// <param name="field">The field's handle.</param>
+    /// <returns>The mask.</returns>
+    public ulong ReadFlags(GesSchemaField field)
+    {
+        ref readonly var node = ref Enter(field, GesSchemaNodeKind.Flags);
+        var mask = Get(node.Width, node.Path);
+        Leave(node.After);
+        return mask;
     }
 
     /// <summary>Reads a Text into a caller's buffer as validated UTF-8, or the name of a <c>:Tag max n</c>.</summary>

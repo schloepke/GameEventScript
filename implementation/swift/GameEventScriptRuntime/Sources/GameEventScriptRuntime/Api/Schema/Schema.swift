@@ -82,7 +82,7 @@ public struct GesSchemaType: Sendable {
     public let step: GesSchemaBound?
     /// The range of a delta, if there is one.
     public let delta: GesSchemaBound?
-    /// The closed set of a Tag; empty when any tag is allowed.
+    /// The closed set of a Tag, empty when any tag is allowed, or the members of Flags in declared order.
     public let tags: [String]
     /// The maximum of a Text in UTF-8 bytes or of a List in elements, if there is one.
     public let max: Int64?

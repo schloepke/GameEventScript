@@ -89,7 +89,7 @@ enum GesSwiftModelEmitter {
     }
 
     private static func defaultValue(_ value: GesModelPlanValue) -> String {
-        value.nullable ? " = nil" : value.kind == .list || value.kind == .dice || value.kind == .bytes ? " = []" : ""
+        value.nullable ? " = nil" : value.kind == .list || value.kind == .dice || value.kind == .bytes || value.kind == .flags ? " = []" : ""
     }
 
     static func type(_ value: GesModelPlanValue) -> String { plain(value) + (value.nullable ? "?" : "") }
@@ -106,7 +106,7 @@ enum GesSwiftModelEmitter {
         case .point: "GesPoint"
         case .vector: "GesVector"
         case .schema: value.model.schema
-        case .union, .nothing: value.nested
+        case .union, .nothing, .flags: value.nested
         }
     }
 
@@ -120,6 +120,9 @@ enum GesSwiftModelEmitter {
                 code.line("case \(name(tag))")
             }
             code.close()
+        } else if value.kind == .flags {
+            try GesSchemaPlanner.unique(value.nested, value.model.tags.map { ($0, "the member #" + $0) })
+            GesSwiftEmitter.flagsDeclaration(&code, value.nested, value.model.tags, access)
         } else if value.kind == .union {
             try GesSchemaPlanner.unique(value.nested, value.alternatives.map { (GesSchemaPlanner.camel($0.label), "the alternative " + $0.label) })
             code.blank()
@@ -156,7 +159,7 @@ enum GesSwiftModelEmitter {
         case .dice: return "GesTypes.dice(\(expression))"
         case .point, .vector: return "\(expression).value(unit: \(unit(value.model.unit)))"
         case .schema: return "\(expression).gesValue()"
-        case .union, .nothing: return "GesTypes.value(\(expression))"
+        case .union, .nothing, .flags: return "GesTypes.value(\(expression))"
         }
     }
 
@@ -177,7 +180,7 @@ enum GesSwiftModelEmitter {
         case .point: return "GesPoint(\(expression), unit: \(unit(value.model.unit)))"
         case .vector: return "GesVector(\(expression), unit: \(unit(value.model.unit)))"
         case .schema: return "\(value.model.schema)(gesValue: \(expression))"
-        case .union, .nothing: return "GesTypes.decode\(owner)\(value.nested)(\(expression))"
+        case .union, .nothing, .flags: return "GesTypes.decode\(owner)\(value.nested)(\(expression))"
         }
     }
 
@@ -191,7 +194,7 @@ enum GesSwiftModelEmitter {
 
     // The unions of a type, including those in lists and alternatives, for their conversion functions.
     private static func unions(_ value: GesModelPlanValue, _ found: inout [GesModelPlanValue]) {
-        if value.kind == .union { found.append(value) }
+        if value.kind == .union || value.kind == .flags { found.append(value) }
         if let element = value.element { unions(element, &found) }
         for alternative in value.alternatives { unions(alternative, &found) }
     }
@@ -285,6 +288,15 @@ enum GesSwiftModelEmitter {
             for union in found {
                 let name = type.name + "." + union.nested
                 code.blank()
+                if union.kind == .flags {
+                    let names = "\(type.name)\(union.nested)Names"
+                    code.line("static let \(names) = [\(union.model.tags.map(literal).joined(separator: ", "))]")
+                    code.blank()
+                    code.line("static func value(_ value: \(name)) -> GesValue { flags(\(names), value.rawValue) }")
+                    code.blank()
+                    code.line("static func decode\(type.name)\(union.nested)(_ value: GesValue) -> \(name)? { flags(value, \(names)).map(\(name).init(rawValue:)) }")
+                    continue
+                }
                 code.line("static func value(_ value: \(name)) -> GesValue {")
                 code.line("    switch value {")
                 for alternative in union.alternatives { code.line("    case .\(member(alternative.label))(let alternative): \(encode(alternative, type.name, "alternative"))") }
@@ -310,6 +322,22 @@ enum GesSwiftModelEmitter {
         code.line("static func present<T>(_ value: T?, _ encode: (T) -> GesValue) -> GesValue { value.map(encode) ?? .nothing }")
         code.blank()
         code.line("static func optional<T>(_ value: GesValue, _ decode: (GesValue) -> T?) -> T?? { value.isNothing ? .some(nil) : decode(value).map { .some($0) } }")
+        code.blank()
+        code.open("static func flags(_ names: [String], _ mask: UInt64) -> GesValue {")
+        code.line("let keys = names.indices.filter { mask >> UInt64($0) & 1 != 0 }.map { names[$0] }")
+        code.line("return .map(keys: keys, values: keys.map { _ in .boolean(true) })")
+        code.close()
+        code.blank()
+        code.open("static func flags(_ value: GesValue, _ names: [String]) -> UInt64? {")
+        code.line("guard value.valueKind == .map, let fields = value.asMap else { return nil }")
+        code.line("var mask: UInt64 = 0")
+        code.open("for index in 0..<fields.length {")
+        code.line("let set = fields.value(at: index)")
+        code.line("guard let member = names.firstIndex(of: fields.key(at: index)), set.valueKind == .boolean else { return nil }")
+        code.line("if set.asBoolean { mask |= 1 << UInt64(member) }")
+        code.close()
+        code.line("return mask")
+        code.close()
         code.blank()
         code.line("static func tag(_ name: String) -> GesValue { (try? GesValue.tag(name)) ?? .nothing }")
         code.blank()

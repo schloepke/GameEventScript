@@ -194,6 +194,7 @@ Types:
 | `:Number`, `:Percentage`, `:Quantity(unit)` | a number, a percentage, or a number with that unit; `:Quantity(none)` is `:Number`. Limited by [constraints](#constraints) |
 | `:Point`, `:Vector`, with an optional unit | three components with one unit. A block lists the axes that are transmitted, in any order, each with its own constraints |
 | `:Tag(#a, #b)`, `:Tag max n`, `:Tag` | one tag of the closed set, a tag of at most `n` characters, or any tag |
+| `:Flags(#a, #b)` | any subset of 1 to 64 members, as a Map of the members with Boolean values; see [record values](#record-values) |
 | `:Text max n`, `:Text` | a text of at most `n` UTF-8 bytes, or any text |
 | `:Bytes max n`, `:Bytes` | at most `n` bytes, or any [Bytes](Language.md#bytes) |
 | `:List(T) max n`, `:List(T)`, `:List` | at most `n` elements of `T`, any number of them, or any elements |
@@ -269,7 +270,7 @@ Together, the type and the constraints decide a field's [encoding](#field-encodi
   with its own bounds.
 - Names are unique: declarations of schemas, messages and sets together, constants and
   parameters per file, fields within a schema, arguments within a
-  message, axes within a block, tags within a set, members within a message set. A Message's labels and their order are part of its
+  message, axes within a block, tags within a set or Flags, members within a message set. A Message's labels and their order are part of its
   signature, as everywhere in GES.
 
 ### Encodable and document-only types
@@ -282,6 +283,7 @@ be encoded; binding a schema that reaches another type for encoding fails with
 | --- | --- | --- |
 | `:Boolean`, numeric, `:Point`, `:Vector` | yes | yes |
 | `:Tag(#a, #b)`, `:Tag max n` | yes | yes |
+| `:Flags(#a, #b)` | yes | yes |
 | `:Text max n` | yes | yes |
 | `:Bytes max n` | yes | yes |
 | `:List(T) max n` with an encodable `T` | yes | yes |
@@ -310,7 +312,7 @@ Source errors use the phase `schema` with line and column, in the manner of
 | `schema.invalidKey` | a `key` breaks the [key rules](#rules) |
 | `schema.invalidUnion` | a union alternative repeats a type name or has `delta within`, or a union with `:Nothing` is `optional` |
 | `schema.invalidBound` | an `integer` bound is fractional or outside Int64, or a Dice bound is outside `1` to `2^31 - 1` |
-| `schema.tooWide` | a quantized field exceeds the [limits](#quantization), or a bound of a fractional field becomes infinite or zero in binary64 |
+| `schema.tooWide` | a quantized field exceeds the [limits](#quantization), a bound of a fractional field becomes infinite or zero in binary64, or Flags have more than 64 members |
 | `schema.tooLarge` | the [largest encoding](#largest-encoding) exceeds its limit or overflows |
 | `schema.invalidRole` | a role stands on a declaration that cannot take it, is no role word, or names an invalid group |
 | `schema.duplicateRole` | a declaration has a second `wire` or a second `model` role |
@@ -423,6 +425,7 @@ member <MessageName>
 | `:Point(unit)`, `:Vector(unit)` | `Point(<portable unit name>)`, `Vector(...)`; no unit or `none` is `Point(none)` |
 | axis block | after the type, `{ <axis> <constraints> ; ... }` in order x, y, z |
 | `:Tag(#a, #b)`, `:Tag max n`, `:Tag` | `Tag(#a #b)`, `Tag max <n>`, `Tag` |
+| `:Flags(#a, #b)` | `Flags(#a #b)` |
 | `:Text max n`, `:Text` | `Text max <n>`, `Text` |
 | `:Bytes max n`, `:Bytes` | `Bytes max <n>`, `Bytes` |
 | `:Dice max n between a and b`, `:Dice` | `Dice max <n> between <a> <b>`, each part only when written; `Dice` |
@@ -534,6 +537,7 @@ caller owns the mapping from keys to objects. Message arguments have no key. A
 | fractional without a step | IEEE 754 bits of the binary64, 64 bits; a range is checked but does not narrow it |
 | `:Point`, `:Vector` | declared axes in order x, y, z, each as a numeric; without a block x, y, z as 64-bit binary64 |
 | `:Tag(...)` with `n` tags | index in declared order, `width(n)` bits |
+| `:Flags(...)` with `n` members | a mask of `n` bits; bit `i`, counted from the first bit written, is set for the member at index `i` in declared order |
 | `:Tag max n` | as `:Text max n`: the tag name without `#`, its byte count, then its bytes |
 | `:Text max n` | UTF-8 byte count, `width(n + 1)` bits, then the bytes |
 | `:Bytes max n` | as `:Text max n`: the byte count, then the bytes, which need not be UTF-8 |
@@ -548,7 +552,8 @@ rolls for a Dice. A range's index never
 exceeds `n - 1`; a decoder rejects a larger bit pattern. Units come from the schema.
 
 A fractional field without a step stays at 64 bits, which is a deliberate choice in the
-schema; there is no 32-bit form. Flags are one `:Boolean` per flag.
+schema; there is no 32-bit form. Independent switches are one `:Flags` field, whose members
+cost one bit each, and member order belongs to the hash.
 
 ### Messages
 
@@ -912,11 +917,16 @@ The convenient path converts between `GesValue` and the wire.
   [product JSON](MessageFormat.md). A host with a Program may pass the fields to the
   record's constructor, which derives its computed fields on the normal VM.
 - A Message converts in the same way, with its signature and tags.
+- `:Flags` take a Map whose keys are members: `true` sets a member, `false` or an absent key
+  leaves it unset. Another key is `wire.unknownTag`, a value that is no Boolean or a value that
+  is no Map `wire.typeMismatch`. Decoding gives a Map of the set members, each `true`, in key
+  order, so `[armed:]` from a script's [flag Map](Language.md#maps) round-trips.
 - A value selects a union alternative by its kind, with unit, or for a Record by its type name; no
   other kind converts. Since alternatives repeat no type name, a union value has exactly one encoding. A Map
-  has no type name: the first schema alternative that holds it decides. An alternative holds a Map
+  has no type name: the first schema or Flags alternative that holds it decides. A schema holds a Map
   when all its fields fit and every key is one of its fields, also in the Maps nested in it, as in
-  a [document check](#document-checking). When none holds, the error of the last one is reported.
+  a [document check](#document-checking); Flags hold it when every key is a member with a Boolean.
+  When none holds, the error of the last schema is reported.
 
 ## Document checking
 
@@ -957,6 +967,8 @@ units: ['scout', [name: 'tank', count: 2]]
 facing: #north
 ```
 
+- `:Flags` accept a Map whose keys are members with Boolean values; another key is
+  `document.fieldType` at the key, a value that is no Boolean at the value.
 - A value outside a closed range is an error. A wrapping field accepts any finite
   value. `max` and `integer` are checked; `step` and `delta within` are not.
 - A bound that uses an unbound parameter is not checked. A value that is given must have the
@@ -1003,7 +1015,8 @@ var positionX = reader.ReadNumber(x);                             // double, wit
   `units[]:Unit.name` inside one. Reusing a handle costs no lookup.
 - Typed operations: `Boolean`, `Integer` (Int64), `Number` (binary64), `Index` (the raw
   wire index, for game code that stores quantized values and skips the conversion), `Tag`
-  (index), `Text` (validated UTF-8, or for a `:Tag max n` a validated tag name without `#`) and `Bytes`
+  (index), `Flags` (a 64-bit mask whose bit `i` is the member at index `i`; a writer rejects a bit
+  beyond the last member with `wire.unknownTag`), `Text` (validated UTF-8, or for a `:Tag max n` a validated tag name without `#`) and `Bytes`
   (any bytes of a `:Bytes max n`). A reader copies Text and Bytes into a caller's buffer of the
   field's `max`, since a value need not start at a byte boundary.
 - `BeginList` writes or reads the element count of a List or Dice, and the elements follow, each entered at
@@ -1130,7 +1143,8 @@ data readable through the schema: it lists each field with path, bit offset, wid
 decoded value, and ends with the first error, its field path and bit offset; invalid data
 gives exit code 1. Its text is the same in every port. Each field is one line,
 `<path> bit=<offset> width=<bits> value=<value>`, whose width includes a presence bit. The value
-is `true` or `false`, a number, a quoted Text, the [Bytes literal](Language.md#bytes) `:Bytes("…")`, `#<tag> index=<i>`, `#<tag>` for a `:Tag max n`, `count=<n>` for a List or Dice,
+is `true` or `false`, a number, a quoted Text, the [Bytes literal](Language.md#bytes) `:Bytes("…")`, `#<tag> index=<i>`, `#<tag>` for a `:Tag max n`, the set members as `#<member>` separated by spaces, or `none`, then
+` mask=<mask>` for Flags, `count=<n>` for a List or Dice,
 `<alternative> index=<i>` for a union, with the type name of the alternative, or `absent`. A nested
 schema, Point or Vector has no line of its own, only its fields. A message set starts with
 `message <name> index=<i>`. A valid record ends with `bytes <n>`, an invalid one with
@@ -1163,7 +1177,8 @@ in a type it holds, is a value type (C# `struct`, Swift `Sendable` struct); othe
 whose storage grows when a read or a caller needs more room and is then reused, so that reading and
 writing allocate nothing once it has held its largest data. A Text is held as UTF-8 bytes with a
 string view, Bytes as bytes (C# a span with a `Set<Field>` method, Swift `[UInt8]`), a List or Dice as a C# `List<T>` or Swift array, and a list element that is a union,
-Text, Bytes or List as a generated item type. A `:Point` or `:Vector` is the runtime's
+Text, Bytes or List as a generated item type. Flags are a `<Field>Flags` type as in [model types](#model-types), whose
+raw value is the wire mask. A `:Point` or `:Vector` is the runtime's
 [`GesPoint` or `GesVector`](PublicApi.md#spatial-values), in every field, list element and alternative; quantization stays per
 field. An axis that a block leaves out is not transmitted: writing a record or a delta whose omitted axis is not zero fails
 with `wire.typeMismatch` at the field's path, as the [value path](#value-path) does, and reading sets it to zero. An `optional` field adds a presence flag and, for a value
@@ -1225,6 +1240,7 @@ needs no ranges, steps or parameters, and every reached schema becomes one type,
 | `:Text`, `:Tag` without a set | `String` | `string` |
 | `:Bytes` | `[UInt8]` | `byte[]` |
 | `:Tag(#a, #b)` | an enum `<Field>Tag` with `String` raw values, `CaseIterable` | an enum `<Field>Tag` |
+| `:Flags(#a, #b)` | an `OptionSet` `<Field>Flags` over `UInt64`, one static member per member | a `[Flags]` enum `<Field>Flags` over `ulong`, one value per member |
 | `:List(T)` | `[T]` | `List<T>` |
 | `:Dice` | `[Int]`, the rolls | `List<int>` |
 | `:Point`, `:Vector` | `GesPoint`, `GesVector` | `GesPoint`, `GesVector` |
@@ -1269,14 +1285,14 @@ Reflection, so managed code stripping under IL2CPP removes nothing it needs. Wit
   one name never compete.
 - Each type gets `ToGesValue()` and `FromGesValue(value)` (Swift `gesValue()` and `init?(gesValue:)`). A script reads its
   fields with their declared kinds and units: a Quantity with its unit, a Percentage, a Text, a Tag (also for a closed tag),
-  a Point or Vector with its unit, a List, Dice, the nested record as its external value, a union as its alternative's value,
+  a Point or Vector with its unit, Flags as the Map of their set members, a List, Dice, the nested record as its external value, a union as its alternative's value,
   and `nothing` for an absent value. Integers read as Numbers. A Swift value is the copy that was wrapped; a C# record is read
   when a script reads a field.
 - Each type has one constructor, `:Name(fields: map)`, and a field `fields` that returns the record as such a Map, so
   `:World_Body(fields: body.fields)` copies one. External constructors receive every argument present and of a built-in
   type, so a Map carries optional fields, which may be left out or `nothing`, and nested records. Values convert strictly:
   a number needs the field's unit, an integer an integral value, a Tag field also takes a Text, a closed tag one of its
-  tags, a list and its elements convert element by element, and a record field takes that record's external value. A value
+  tags, Flags a Map of members with Boolean values, a list and its elements convert element by element, and a record field takes that record's external value. A value
   that does not convert, a missing required field or a key the type does not declare constructs `nothing`, like other domain
   failures. A schema field named `fields` collides with it: `generate.nameCollision`.
 - Wire types get no bindings: a wire record reuses its storage, so a script holding one would see it change with the next
@@ -1289,7 +1305,7 @@ Reflection, so managed code stripping under IL2CPP removes nothing it needs. Wit
 `model` (the format version, 1), `roots` and `types`, ordered by name. A type has `name`, `hash` and `fields`; a field has
 `name`, `path`, `optional`, `key` and `type`. A type has `kind` and the members of its kind: `number` adds `type`, `unit`,
 `integer`, `wrapping`, `lower`, `upper` and `step`, a bound as its canonical decimal or parameter name or `null`; `tag` adds
-`tags` and `max`, `text` and `bytes` add `max`, `list` adds `max` and `element`, `dice` adds `max`, `lower` and `upper`, `point` and
+`tags` and `max`, `flags` adds `tags`, `text` and `bytes` add `max`, `list` adds `max` and `element`, `dice` adds `max`, `lower` and `upper`, `point` and
 `vector` add `unit` and `axes` (the names of an axis block), `schema` adds `name`, and `union` adds `alternatives`;
 `boolean` and `nothing` have none. A missing `max` is `null`.
 
@@ -1329,6 +1345,7 @@ exact decimals. Hashes are 16 lowercase hexadecimal digits, and a binary64 value
     the `p` and `10^k` of its step, and with `float` with a range both add `lowerValue` and
     `upperValue`; then `deltaRange`, `deltaWidth` and `depends`, the parameters named in its bounds.
   - `tag`: `tags`, without `#`, and `width`.
+  - `flags`: `tags`, the members without `#`, and `width`, their count.
   - `text`: `tagName` for a `:Tag max n`, `maxCount` and `width`.
   - `bytes`: `maxCount` and `width`.
   - `list`: `dice`, `maxCount`, `width`, `keyed`, `positionWidth` and `element`.

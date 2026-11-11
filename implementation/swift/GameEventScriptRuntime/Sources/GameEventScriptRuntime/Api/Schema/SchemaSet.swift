@@ -26,6 +26,8 @@ public struct GesSchemaSource: Sendable {
 /// values within one session.
 public final class GesSchemaSet: @unchecked Sendable {
     private static let maximumNesting = 32
+    // A Flags field holds its members in one 64-bit mask.
+    static let maximumFlagCount = 64
 
     private var declarations: [String: GesResolvedDeclaration] = [:]
     private var ordered: [GesResolvedDeclaration] = []
@@ -336,6 +338,7 @@ final class GesFileScope {
         if let tags = type.tags {
             var seen: Set<String> = []
             for tag in tags where !seen.insert(tag).inserted { throw error(Code.duplicateName, type.offset, "Tag '#\(tag)' is listed twice.") }
+            if type.kind == .flags && tags.count > GesSchemaSet.maximumFlagCount { throw error(Code.tooWide, type.offset, "Flags have at most \(GesSchemaSet.maximumFlagCount) members.") }
         }
         if let max = type.max, max <= 0 { throw error(Code.invalidConstraint, type.offset, "A maximum is positive.") }
         if type.kind == .dice && (type.constraints.integer || type.constraints.wrapping || type.constraints.step != nil || type.constraints.delta != nil) {
@@ -520,6 +523,8 @@ enum GesSchemaCanonical {
             output += "Tag"
             if let tags = type.tags { output += "(" + tags.map { "#" + $0 }.joined(separator: " ") + ")" }
             if let max = type.max { output += " max \(max)" }
+        case .flags:
+            output += "Flags(" + (type.tags ?? []).map { "#" + $0 }.joined(separator: " ") + ")"
         case .text, .bytes:
             output += type.kind.rawValue
             if let max = type.max { output += " max \(max)" }

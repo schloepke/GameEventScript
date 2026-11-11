@@ -28,6 +28,8 @@ schema :BotView as {
   rolls: :Dice
   seal: :Bytes
   chunks: :List(:Bytes)
+  status: :Flags(#armed, #cloaked)
+  ranks: :List(:Flags(#gold, #silver))
   hints: :List(:Tag(#left, #right))
 }
 

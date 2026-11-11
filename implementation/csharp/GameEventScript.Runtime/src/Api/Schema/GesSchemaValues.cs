@@ -196,6 +196,44 @@ public static class GesSchemaValues
         }
     }
 
+    // A flag Map sets a member for true and leaves it unset for false or an absent key.
+    private static ulong FlagMask(in GesSchemaNode node, GesValue value)
+    {
+        if (value.ValueKind != GesBytecodeTypeKind.Map || value.CustomTypeName is not null || value.MaterializedMap() is not { } map)
+            throw new GesWireException(GesWireException.TypeMismatch, node.Path);
+        var mask = 0UL;
+        for (var entry = 0; entry < map.Length; entry++)
+        {
+            var member = Array.IndexOf(node.Tags!, map.KeyAt(entry));
+            if (member < 0) throw new GesWireException(GesWireException.UnknownTag, node.Path);
+            var set = map.ValueAt(entry);
+            if (set.ValueKind != GesBytecodeTypeKind.Boolean) throw new GesWireException(GesWireException.TypeMismatch, node.Path);
+            if (set.AsBoolean()) mask |= 1UL << member;
+        }
+
+        return mask;
+    }
+
+    // Whether a Map names only members, each with a Boolean, so that a union alternative holds it.
+    private static bool HoldsFlags(in GesSchemaNode node, GesValue value)
+    {
+        if (value.ValueKind != GesBytecodeTypeKind.Map || value.CustomTypeName is not null || value.MaterializedMap() is not { } map) return false;
+        for (var entry = 0; entry < map.Length; entry++)
+            if (Array.IndexOf(node.Tags!, map.KeyAt(entry)) < 0 || map.ValueAt(entry).ValueKind != GesBytecodeTypeKind.Boolean) return false;
+        return true;
+    }
+
+    // The Map of the set members, each true.
+    private static GesValue FlagMap(string[] members, ulong mask)
+    {
+        var keys = new List<string>();
+        for (var member = 0; member < members.Length; member++)
+            if ((mask >> member & 1) == 1) keys.Add(members[member]);
+        var values = new GesValue[keys.Count];
+        for (var index = 0; index < values.Length; index++) values[index] = GesValue.GesBoolean(true);
+        return GesValue.GesMap(keys.ToArray(), values);
+    }
+
     private static bool AcceptsNothing(GesBoundSchema schema, int index)
     {
         ref readonly var node = ref schema.Nodes[index];
@@ -229,6 +267,9 @@ public static class GesSchemaValues
                 var tag = Array.IndexOf(node.Tags!, value.AsText());
                 if (tag < 0) throw new GesWireException(GesWireException.UnknownTag, node.Path);
                 writer.WriteTag(field, tag);
+                break;
+            case GesSchemaNodeKind.Flags:
+                writer.WriteFlags(field, FlagMask(in node, value));
                 break;
             case GesSchemaNodeKind.Text when node.IsBytes:
                 if (value.ValueKind != GesBytecodeTypeKind.Bytes) throw new GesWireException(GesWireException.TypeMismatch, node.Path);
@@ -308,6 +349,7 @@ public static class GesSchemaValues
             case GesSchemaTypeKind.Tag: return value.ValueKind == GesBytecodeTypeKind.Tag;
             case GesSchemaTypeKind.Text: return value.ValueKind == GesBytecodeTypeKind.Text;
             case GesSchemaTypeKind.Bytes: return value.ValueKind == GesBytecodeTypeKind.Bytes;
+            case GesSchemaTypeKind.Flags: return HoldsFlags(in candidate, value);
             case GesSchemaTypeKind.List: return value.ValueKind == GesBytecodeTypeKind.List;
             case GesSchemaTypeKind.Dice: return value.ValueKind == GesBytecodeTypeKind.Dice;
             case GesSchemaTypeKind.Point: return value.ValueKind == GesBytecodeTypeKind.Point;
@@ -394,6 +436,7 @@ public static class GesSchemaValues
         {
             case GesSchemaNodeKind.Boolean: return GesValue.GesBoolean(reader.ReadBoolean(field));
             case GesSchemaNodeKind.Tag: return GesValue.GesTag(node.Tags![reader.ReadTag(field)]);
+            case GesSchemaNodeKind.Flags: return FlagMap(node.Tags!, reader.ReadFlags(field));
             case GesSchemaNodeKind.Text when node.IsBytes: return BytesValue(reader.ReadBytesValue(field));
             case GesSchemaNodeKind.Text: return node.IsTagText ? GesValue.GesTag(reader.ReadTextValue(field)) : GesValue.GesText(reader.ReadTextValue(field));
             case GesSchemaNodeKind.List when node.ValueKind == GesSchemaTypeKind.Dice:

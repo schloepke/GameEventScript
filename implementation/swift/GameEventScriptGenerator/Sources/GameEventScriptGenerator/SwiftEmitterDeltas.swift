@@ -6,7 +6,7 @@
 extension GesSwiftEmitter {
     static func isScalar(_ value: GesPlanValue) -> Bool {
         switch value.encoding.kind {
-        case .boolean, .integer, .quantized, .float, .tag: true
+        case .boolean, .integer, .quantized, .float, .tag, .flags: true
         default: false
         }
     }
@@ -114,6 +114,9 @@ extension GesSwiftEmitter {
             code.line("if value.isNaN { \(fail("notRepresentable", value)) }")
             if encoding.range { code.line("if value < \(bits(encoding.lowerValue)) || value > \(bits(encoding.upperValue)) { \(fail("outOfRange", value)) }") }
             code.line("return (value == 0 ? 0.0 : value).bitPattern")
+        case .flags:
+            if encoding.width < 64 { code.line("if value.rawValue > \(full(encoding.width)) { \(fail("unknownTag", value)) }") }
+            code.line("return value.rawValue")
         default:
             code.line("UInt64(value.rawValue)")
         }
@@ -126,7 +129,12 @@ extension GesSwiftEmitter {
             code.line("if value.isNaN || wire == 0x8000_0000_0000_0000\(encoding.range ? " || value.isInfinite" : "") { \(fail("invalidNumber", value)) }")
             if encoding.range { code.line("if value < \(bits(encoding.lowerValue)) || value > \(bits(encoding.upperValue)) { \(fail("outOfRange", value)) }") }
         } else if encoding.kind != .boolean {
-            let largest = encoding.kind == .tag ? UInt64(encoding.tags.count) - 1 : encoding.maxIndex
+            let largest =
+                switch encoding.kind {
+                case .tag: UInt64(encoding.tags.count) - 1
+                case .flags: full(encoding.width)
+                default: encoding.maxIndex
+                }
             if largest < full(encoding.width) { code.line("if wire > \(largest) { \(fail("invalidIndex", value)) }") }
         }
         code.line("return wire")
@@ -141,6 +149,7 @@ extension GesSwiftEmitter {
                 "private static func __value\(node)(_ wire: UInt64) -> Double { GesWireRules.quantizedValue(wire, lower: \(long(encoding.lower)), numerator: \(long(encoding.numerator)), tenPower: \(double(encoding.tenPower))) }"
             )
         case .float: code.line("private static func __value\(node)(_ wire: UInt64) -> Double { Double(bitPattern: wire) }")
+        case .flags: code.line("private static func __value\(node)(_ wire: UInt64) -> \(type) { \(type)(rawValue: wire) }")
         default: code.line("private static func __value\(node)(_ wire: UInt64) -> \(type) { \(type)(rawValue: \(underlying(encoding.tags.count))(wire))! }")
         }
     }
@@ -154,7 +163,7 @@ extension GesSwiftEmitter {
         switch value.encoding.kind {
         case .boolean:
             code.line("if \(a) != \(b) { return false }")
-        case .integer, .quantized, .float, .tag:
+        case .integer, .quantized, .float, .tag, .flags:
             code.line("if try Self.__wire\(node)(\(a), paths, at) != Self.__wire\(node)(\(b), paths, at) { return false }")
         case .text, .bytes:
             code.line("if \(bytes(value, ownerA)) != \(bytes(value, ownerB)) { return false }")
@@ -495,7 +504,7 @@ extension GesSwiftEmitter {
         switch encoding.kind {
         case .boolean:
             code.line("if \(a) != \(b) { \(set) = true }")
-        case .integer, .quantized, .float, .tag:
+        case .integer, .quantized, .float, .tag, .flags:
             code.open("do {")
             code.line("let value\(node) = try Self.__wire\(node)(\(a), paths, at)")
             code.line("let held\(node) = try Self.__wire\(node)(\(b), paths, at)")
@@ -597,7 +606,7 @@ extension GesSwiftEmitter {
         switch encoding.kind {
         case .boolean:
             code.line("\(a) = !\(b)")
-        case .integer where encoding.deltaRange == 0, .quantized where encoding.deltaRange == 0, .float, .tag:
+        case .integer where encoding.deltaRange == 0, .quantized where encoding.deltaRange == 0, .float, .tag, .flags:
             code.open("do {")
             code.line("let held\(node) = try Self.__wire\(node)(\(b), paths, at)")
             code.line("let value\(node) = try Self.__read\(node)(&reader, paths, at)")

@@ -106,7 +106,7 @@ internal static class GesSwiftModelEmitter
         foreach (var alternative in value.Alternatives) Nested(alternative, names, field);
     }
 
-    private static string Default(GesModelPlanValue value) => value.Nullable ? " = nil" : value.Kind is GesModelKind.List or GesModelKind.Dice or GesModelKind.Bytes ? " = []" : "";
+    private static string Default(GesModelPlanValue value) => value.Nullable ? " = nil" : value.Kind is GesModelKind.List or GesModelKind.Dice or GesModelKind.Bytes or GesModelKind.Flags ? " = []" : "";
 
     internal static string Type(GesModelPlanValue value) => Plain(value) + (value.Nullable ? "?" : "");
 
@@ -139,6 +139,13 @@ internal static class GesSwiftModelEmitter
             }
 
             code.Close();
+        }
+        else if (value.Kind == GesModelKind.Flags)
+        {
+            var members = new List<(string, string)>();
+            foreach (var member in value.Model.Tags) members.Add((member, "the member #" + member));
+            GesSchemaPlanner.Unique(value.Nested, members);
+            GesSwiftEmitter.FlagsDeclaration(code, value.Nested, value.Model.Tags, access);
         }
         else if (value.Kind == GesModelKind.Union)
         {
@@ -218,7 +225,7 @@ internal static class GesSwiftModelEmitter
     // The unions of a type, including those in lists and alternatives, for their conversion functions.
     private static void Unions(GesModelPlanValue value, List<GesModelPlanValue> unions)
     {
-        if (value.Kind == GesModelKind.Union) unions.Add(value);
+        if (value.Kind is GesModelKind.Union or GesModelKind.Flags) unions.Add(value);
         if (value.Element is not null) Unions(value.Element, unions);
         foreach (var alternative in value.Alternatives) Unions(alternative, unions);
     }
@@ -316,6 +323,17 @@ internal static class GesSwiftModelEmitter
             {
                 var name = type.Name + "." + union.Nested;
                 code.Blank();
+                if (union.Kind == GesModelKind.Flags)
+                {
+                    var names = $"{type.Name}{union.Nested}Names";
+                    code.Line($"static let {names} = [{string.Join(", ", union.Model.Tags.ConvertAll(member => GesSchemaPlanner.Literal(member, true)))}]");
+                    code.Blank();
+                    code.Line($"static func value(_ value: {name}) -> GesValue {{ flags({names}, value.rawValue) }}");
+                    code.Blank();
+                    code.Line($"static func decode{type.Name}{union.Nested}(_ value: GesValue) -> {name}? {{ flags(value, {names}).map({name}.init(rawValue:)) }}");
+                    continue;
+                }
+
                 code.Line($"static func value(_ value: {name}) -> GesValue {{");
                 code.Line("    switch value {");
                 foreach (var alternative in union.Alternatives) code.Line($"    case .{Member(alternative.Label)}(let alternative): {Encode(alternative, type.Name, "alternative")}");
@@ -341,6 +359,22 @@ internal static class GesSwiftModelEmitter
         code.Line("static func present<T>(_ value: T?, _ encode: (T) -> GesValue) -> GesValue { value.map(encode) ?? .nothing }");
         code.Blank();
         code.Line("static func optional<T>(_ value: GesValue, _ decode: (GesValue) -> T?) -> T?? { value.isNothing ? .some(nil) : decode(value).map { .some($0) } }");
+        code.Blank();
+        code.Open("static func flags(_ names: [String], _ mask: UInt64) -> GesValue {");
+        code.Line("let keys = names.indices.filter { mask >> UInt64($0) & 1 != 0 }.map { names[$0] }");
+        code.Line("return .map(keys: keys, values: keys.map { _ in .boolean(true) })");
+        code.Close();
+        code.Blank();
+        code.Open("static func flags(_ value: GesValue, _ names: [String]) -> UInt64? {");
+        code.Line("guard value.valueKind == .map, let fields = value.asMap else { return nil }");
+        code.Line("var mask: UInt64 = 0");
+        code.Open("for index in 0..<fields.length {");
+        code.Line("let set = fields.value(at: index)");
+        code.Line("guard let member = names.firstIndex(of: fields.key(at: index)), set.valueKind == .boolean else { return nil }");
+        code.Line("if set.asBoolean { mask |= 1 << UInt64(member) }");
+        code.Close();
+        code.Line("return mask");
+        code.Close();
         code.Blank();
         code.Line("static func tag(_ name: String) -> GesValue { (try? GesValue.tag(name)) ?? .nothing }");
         code.Blank();

@@ -92,7 +92,10 @@ schema :Tank as {
 - `:Point` and `:Vector` list the axes they transmit. An axis left out is not sent and must be zero.
 - `:Weapon` refers to another schema, whose fields follow inline. References cannot form a cycle.
 
-A boolean flag is simply a `:Boolean` field and takes one bit.
+A single switch is a `:Boolean` field and takes one bit. Several switches fit one field,
+`:Flags(#armed, #cloaked, #docked)`, with one bit per member. Code and scripts write it as a flag Map such as
+`[armed:, docked:]`, and generated code holds it as a C# `[Flags]` enum or a Swift `OptionSet`. `:Bytes max 16`
+stores a count and raw bytes, such as a hash or an identifier.
 
 A field can also hold one of several types. Such a union stores the index of the alternative, then
 its value. The kind of a value selects the alternative, so alternatives must differ in their type name:

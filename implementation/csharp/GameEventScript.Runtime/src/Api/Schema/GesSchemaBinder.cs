@@ -91,7 +91,9 @@ internal enum GesSchemaNodeKind : byte
     List,
     Group,
     Union,
-    Nothing
+    Nothing,
+    // One bit per member of a :Flags set, in declared order, as one mask of Width bits.
+    Flags
 }
 
 // One field of a bound layout. A subtree occupies consecutive nodes, and Next is the first node after it. After is where
@@ -665,6 +667,12 @@ internal static class GesSchemaBinder
                 node.MaxIndex = (ulong)type.Tags.Length - 1;
                 node.Width = BitLength(node.MaxIndex);
                 break;
+            case GesSchemaTypeKind.Flags:
+                node.Kind = GesSchemaNodeKind.Flags;
+                node.Tags = type.Tags;
+                node.Width = type.Tags!.Length;
+                node.MaxIndex = node.Width == 64 ? ulong.MaxValue : (1UL << node.Width) - 1;
+                break;
             case GesSchemaTypeKind.Text or GesSchemaTypeKind.Bytes:
                 if (type.Max is not { } textMax) throw scope.Error(Code.NotEncodable, type.Offset, $"A {type.Kind} without max has no hard limit.");
                 node.Kind = GesSchemaNodeKind.Text;
@@ -769,6 +777,8 @@ internal static class GesSchemaBinder
                 break;
             case GesSchemaTypeKind.Tag:
                 if (type.Tags is null && type.Max is null) throw scope.Error(Code.NotEncodable, type.Offset, "A Tag without a set or max has no hard limit.");
+                break;
+            case GesSchemaTypeKind.Flags:
                 break;
             case GesSchemaTypeKind.Text or GesSchemaTypeKind.Bytes:
                 if (type.Max is null) throw scope.Error(Code.NotEncodable, type.Offset, $"A {type.Kind} without max has no hard limit.");

@@ -105,6 +105,13 @@ struct GesSchemaDocumentCheck {
         case .text:
             guard case .text(let text) = value else { return try require(false) }
             if let max = type.max, text.utf8.count > max { throw Failure(code: Self.outOfRange, offset: start) }
+        case .flags:
+            // Each key names a member and each value is a Boolean.
+            guard case .map(let keys, let values, let keyOffsets, let valueOffsets) = value else { return try require(false) }
+            for (index, key) in keys.enumerated() {
+                if !(type.tags ?? []).contains(key) { throw Failure(code: Self.fieldType, offset: keyOffsets[index]) }
+                guard case .boolean = Self.resolved(values[index], valueOffsets[index]) else { throw Failure(code: Self.fieldType, offset: valueOffsets[index]) }
+            }
         case .bytes:
             guard case .bytes(let bytes) = value else { return try require(false) }
             if let max = type.max, bytes.count > max { throw Failure(code: Self.outOfRange, offset: start) }

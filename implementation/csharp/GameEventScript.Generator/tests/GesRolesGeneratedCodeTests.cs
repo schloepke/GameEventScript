@@ -161,7 +161,7 @@ public sealed class GesRolesBindingTests
           let bot be view.bots[1]
           let made be :World_Body(fields: [mass: 90kg, hull: #light])
           let radar be :RadarView(fields: [range: 300m, contacts: [1, 2]])
-          let built be :BotView(fields: [bot: 7, name: 'Bo', alive: true, health: 50%, speed: 2.5, heading: 90°, mood: #angry, team: 'blue', position: :Point(3m, 4m), velocity: :Vector(1m, 0m), body: made, radar: radar, facing: #north, marks: [:Point(1m, 1m)], units: ['x', made], grid: [[1, 2]], rolls: :Dice[6, 3], seal: :Bytes("a0ff"), chunks: [:Bytes[1], :Bytes[]], hints: [#left, #right]])
+          let built be :BotView(fields: [bot: 7, name: 'Bo', alive: true, health: 50%, speed: 2.5, heading: 90°, mood: #angry, team: 'blue', position: :Point(3m, 4m), velocity: :Vector(1m, 0m), body: made, radar: radar, facing: #north, marks: [:Point(1m, 1m)], units: ['x', made], grid: [[1, 2]], rolls: :Dice[6, 3], seal: :Bytes("a0ff"), chunks: [:Bytes[1], :Bytes[]], status: [armed:, cloaked: false], ranks: [[gold:, silver:], [:]], hints: [#left, #right]])
           emit Seen(name: bot.name, x: bot.position.x, mass: bot.body.mass, radar: bot.radar, facing: bot.facing, units: bot.units[:count], hint: bot.hints[1], built: built, bad: :World_Body(fields: [mass: 90m, hull: #light]), unknown: :World_Body(fields: [mass: 1kg, hull: #light, extra: 1]), copied: :World_Body(fields: made.fields))
         }
         """;
@@ -220,6 +220,8 @@ public sealed class GesRolesBindingTests
         CollectionAssert.AreEqual(new List<long> { 1, 2 }, built.Grid[0]);
         CollectionAssert.AreEqual(new List<int> { 6, 3 }, built.Rolls);
         CollectionAssert.AreEqual(new[] { Bound.BotView.HintsItemTag.Left, Bound.BotView.HintsItemTag.Right }, built.Hints);
+        Assert.AreEqual(Bound.BotView.StatusFlags.Armed, built.Status);
+        CollectionAssert.AreEqual(new[] { Bound.BotView.RanksItemFlags.Gold | Bound.BotView.RanksItemFlags.Silver, default }, built.Ranks);
         Assert.IsTrue(arguments[8].IsNothing, "A value of another unit constructs nothing.");
         Assert.IsTrue(arguments[9].IsNothing, "A field that the type does not declare constructs nothing.");
         Assert.AreEqual(new Bound.World_Body(90, Bound.World_Body.HullTag.Light), Bound.World_Body.FromGesValue(arguments[10]), "The fields of a record construct an equal record.");

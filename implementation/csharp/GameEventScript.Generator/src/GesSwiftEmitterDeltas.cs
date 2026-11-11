@@ -13,7 +13,7 @@ internal static partial class GesSwiftEmitter
 {
     private static string N(int node) => node.ToString(CultureInfo.InvariantCulture);
 
-    private static bool Scalar(GesPlanValue value) => value.Encoding.Kind is GesLayoutKind.Boolean or GesLayoutKind.Integer or GesLayoutKind.Quantized or GesLayoutKind.Float or GesLayoutKind.Tag;
+    private static bool Scalar(GesPlanValue value) => value.Encoding.Kind is GesLayoutKind.Boolean or GesLayoutKind.Integer or GesLayoutKind.Quantized or GesLayoutKind.Float or GesLayoutKind.Tag or GesLayoutKind.Flags;
 
     private static IEnumerable<GesPlanValue> Scalars(GesPlanValue value)
     {
@@ -136,6 +136,10 @@ internal static partial class GesSwiftEmitter
                 if (encoding.Range) code.Line($"if value < {Bits(encoding.LowerValue)} || value > {Bits(encoding.UpperValue)} {{ {Throw("outOfRange", value)} }}");
                 code.Line("return (value == 0 ? 0.0 : value).bitPattern");
                 break;
+            case GesLayoutKind.Flags:
+                if (encoding.Width < 64) code.Line($"if value.rawValue > {Unsigned(Full(encoding.Width))} {{ {Throw("unknownTag", value)} }}");
+                code.Line("return value.rawValue");
+                break;
             default:
                 code.Line("UInt64(value.rawValue)");
                 break;
@@ -153,7 +157,12 @@ internal static partial class GesSwiftEmitter
         }
         else if (encoding.Kind != GesLayoutKind.Boolean)
         {
-            var largest = encoding.Kind == GesLayoutKind.Tag ? (ulong)encoding.Tags.Count - 1 : encoding.MaxIndex;
+            var largest = encoding.Kind switch
+            {
+                GesLayoutKind.Tag => (ulong)encoding.Tags.Count - 1,
+                GesLayoutKind.Flags => Full(encoding.Width),
+                _ => encoding.MaxIndex
+            };
             if (largest < Full(encoding.Width)) code.Line($"if wire > {Unsigned(largest)} {{ {Throw("invalidIndex", value)} }}");
         }
 
@@ -167,6 +176,7 @@ internal static partial class GesSwiftEmitter
             GesLayoutKind.Integer => $"private static func __value{node}(_ wire: UInt64) -> Int64 {{ Int64(bitPattern: {Unsigned(unchecked((ulong)encoding.Lower))} &+ wire) }}",
             GesLayoutKind.Quantized => $"private static func __value{node}(_ wire: UInt64) -> Double {{ GesWireRules.quantizedValue(wire, lower: {Long(encoding.Lower)}, numerator: {Long(encoding.Numerator)}, tenPower: {Double(encoding.TenPower)}) }}",
             GesLayoutKind.Float => $"private static func __value{node}(_ wire: UInt64) -> Double {{ Double(bitPattern: wire) }}",
+            GesLayoutKind.Flags => $"private static func __value{node}(_ wire: UInt64) -> {type} {{ {type}(rawValue: wire) }}",
             _ => $"private static func __value{node}(_ wire: UInt64) -> {type} {{ {type}(rawValue: {Underlying(encoding.Tags.Count)}(wire))! }}"
         });
     }
@@ -183,7 +193,7 @@ internal static partial class GesSwiftEmitter
             case GesLayoutKind.Boolean:
                 code.Line($"if {a} != {b} {{ return false }}");
                 break;
-            case GesLayoutKind.Integer or GesLayoutKind.Quantized or GesLayoutKind.Float or GesLayoutKind.Tag:
+            case GesLayoutKind.Integer or GesLayoutKind.Quantized or GesLayoutKind.Float or GesLayoutKind.Tag or GesLayoutKind.Flags:
                 code.Line($"if try Self.__wire{node}({a}, paths, at) != Self.__wire{node}({b}, paths, at) {{ return false }}");
                 break;
             case GesLayoutKind.Text or GesLayoutKind.Bytes:
@@ -567,7 +577,7 @@ internal static partial class GesSwiftEmitter
             case GesLayoutKind.Boolean:
                 code.Line($"if {a} != {b} {{ {set} = true }}");
                 break;
-            case GesLayoutKind.Integer or GesLayoutKind.Quantized or GesLayoutKind.Float or GesLayoutKind.Tag:
+            case GesLayoutKind.Integer or GesLayoutKind.Quantized or GesLayoutKind.Float or GesLayoutKind.Tag or GesLayoutKind.Flags:
                 code.Open("do {");
                 code.Line($"let value{node} = try Self.__wire{node}({a}, paths, at)");
                 code.Line($"let held{node} = try Self.__wire{node}({b}, paths, at)");
@@ -679,7 +689,7 @@ internal static partial class GesSwiftEmitter
             case GesLayoutKind.Boolean:
                 code.Line($"{a} = !{b}");
                 break;
-            case GesLayoutKind.Integer or GesLayoutKind.Quantized or GesLayoutKind.Float or GesLayoutKind.Tag when encoding.DeltaRange == 0:
+            case GesLayoutKind.Integer or GesLayoutKind.Quantized or GesLayoutKind.Float or GesLayoutKind.Tag or GesLayoutKind.Flags when encoding.DeltaRange == 0:
                 code.Open("do {");
                 code.Line($"let held{node} = try Self.__wire{node}({b}, paths, at)");
                 code.Line($"let value{node} = try Self.__read{node}(&reader, paths, at)");

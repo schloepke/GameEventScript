@@ -251,6 +251,9 @@
         case .tag:
             result.kind = .tag
             if position < bytes.count && bytes[position] == 40 { result.tags = try tagSet() } else { result.max = try maximum() }
+        case .flags:
+            result.kind = .flags
+            result.tags = try tagSet()
         case .text, .bytes:
             result.kind = written == "Text" ? .text : .bytes
             result.max = try maximum()

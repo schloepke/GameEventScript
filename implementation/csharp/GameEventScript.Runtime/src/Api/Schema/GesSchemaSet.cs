@@ -36,6 +36,8 @@ public readonly struct GesSchemaSource
 public sealed class GesSchemaSet
 {
     private const int MaximumNesting = 32;
+    // A Flags field holds its members in one 64-bit mask.
+    internal const int MaximumFlagCount = 64;
 
     private readonly List<GesSchemaSource> _sources;
     private readonly Dictionary<string, GesResolvedDeclaration> _declarations = new(StringComparer.Ordinal);
@@ -437,6 +439,8 @@ internal sealed class GesFileScope
             var seen = new HashSet<string>(StringComparer.Ordinal);
             foreach (var tag in tags)
                 if (!seen.Add(tag)) throw Error(Code.DuplicateName, type.Offset, $"Tag '#{tag}' is listed twice.");
+            if (type.Kind == GesSchemaTypeKind.Flags && tags.Length > GesSchemaSet.MaximumFlagCount)
+                throw Error(Code.TooWide, type.Offset, $"Flags have at most {GesSchemaSet.MaximumFlagCount} members.");
         }
 
         if (type.Max is <= 0) throw Error(Code.InvalidConstraint, type.Offset, "A maximum is positive.");
@@ -673,6 +677,16 @@ internal static class GesSchemaCanonical
 
                 if (type.Max is { } tagMax) builder.Append(" max ").Append(tagMax);
 
+                break;
+            case GesSchemaTypeKind.Flags:
+                builder.Append("Flags(");
+                for (var index = 0; index < type.Tags!.Length; index++)
+                {
+                    if (index > 0) builder.Append(' ');
+                    builder.Append('#').Append(type.Tags[index]);
+                }
+
+                builder.Append(')');
                 break;
             case GesSchemaTypeKind.Text:
                 builder.Append("Text");

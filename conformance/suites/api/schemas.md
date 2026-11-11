@@ -498,6 +498,113 @@ schema:
 
 ---
 
+## Test: a union label is no part of the hash
+
+A label only names an alternative for generated code, so the canonical form and hash leave it out.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: canonical-alternative-label
+schemaApi:
+  sources:
+    - "schema :Bind as { id: :Number integer between 0 and 9 }\nschema :S as { units: :List(:Text max 64 | bind: :Bind) max 4 }\n"
+  root: "S"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  canonical: "gess1\nschema S\nfield units List(Text max 64 | Bind) max 4\nschema Bind\nfield id Number integer between 0e0 9e0\n"
+  hash: "e53e48d424e29431"
+```
+
+---
+
+## Test: a label outside a union
+
+A label names an alternative of a union.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-label-outside-union
+schemaApi:
+  sources:
+    - "schema :S as { a: x: :Text }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidUnion"
+    line: 1
+    column: 19
+```
+
+---
+
+## Test: a label on Nothing
+
+A `:Nothing` alternative holds no value to label.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-label-on-nothing
+schemaApi:
+  sources:
+    - "schema :S as { a: :Text | none: :Nothing }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidUnion"
+    line: 1
+    column: 27
+```
+
+---
+
+## Test: a label that repeats an alternative name
+
+Generated code names alternatives after their labels or types, so they must differ.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-label-repeats-name
+schemaApi:
+  sources:
+    - "schema :S as { a: text: :Boolean | :Text }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.duplicateName"
+    line: 1
+    column: 36
+```
+
+---
+
 ## Test: field order a is part of the hash
 
 Field order is the wire order.

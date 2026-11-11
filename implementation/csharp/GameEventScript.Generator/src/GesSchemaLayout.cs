@@ -247,7 +247,7 @@ internal static class GesSchemaLayoutBuilder
         foreach (var alternative in alternatives)
         {
             var path = nodes[index].Path;
-            var label = path.Substring(path.LastIndexOf(':') + 1);
+            var label = alternative.Label.Length > 0 ? alternative.Label : path.Substring(path.LastIndexOf(':') + 1);
             var encoding = alternative.Kind == GesSchemaTypeKind.Nothing ? Nothing(ref index) : Encoding(nodes, ref index, alternative);
             union.Alternatives.Add(new GesLayoutField { Name = label, Path = path, Encoding = encoding });
         }

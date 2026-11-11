@@ -65,6 +65,7 @@
     private static func union(_ alternatives: [GesSchemaTypeSyntax], _ output: inout String, _ indent: String) {
         for (index, alternative) in alternatives.enumerated() {
             if index > 0 { output += " | " }
+            if !alternative.label.isEmpty { output += alternative.label + ": " }
             type(alternative, &output, indent)
         }
     }

@@ -119,6 +119,11 @@ internal sealed class GesSchemaTypeSyntax
     internal GesSchemaAxisSyntax[]? Axes { get; init; }
 
     internal int Offset { get; init; }
+
+    // The label of a union alternative, such as `bind` in `bind: :Loadout_UnitBind`, or empty, and where it starts.
+    internal string Label { get; set; } = "";
+
+    internal int LabelOffset { get; set; }
 }
 
 internal sealed class GesSchemaFieldSyntax

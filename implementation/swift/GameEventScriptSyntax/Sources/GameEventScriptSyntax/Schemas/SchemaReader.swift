@@ -206,14 +206,28 @@
     }
 
     private mutating func union() throws -> [GesSchemaTypeSyntax] {
-        var alternatives = [try type()]
+        var alternatives = [try alternative()]
         skipSpaces()
         while consume(124) {
             skipTrivia()
-            alternatives.append(try type())
+            alternatives.append(try alternative())
             skipSpaces()
         }
         return alternatives
+    }
+
+    // A type with an optional label in front, as in `bind: :Loadout_UnitBind`; a type itself starts with ':'.
+    private mutating func alternative() throws -> GesSchemaTypeSyntax {
+        guard position < bytes.count, GesNames.lower(bytes[position]) else { return try type() }
+        let offset = position
+        let label = try name(GesNames.plain, "alternative label")
+        skipSpaces()
+        try expect(58)
+        skipSpaces()
+        var result = try type()
+        result.label = label
+        result.labelOffset = offset
+        return result
     }
 
     private mutating func type() throws -> GesSchemaTypeSyntax {

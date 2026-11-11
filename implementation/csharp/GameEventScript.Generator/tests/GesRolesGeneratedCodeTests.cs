@@ -73,7 +73,7 @@ public sealed class GesRolesGeneratedCodeTests
         Assert.AreEqual(report, Model.Panel_Report.FromValue(value));
         var other = Report();
         other.Note = "spare";
-        other.Reading = new Model.Panel_Report.ReadingAlternative.Text("x");
+        other.Reading = new Model.Panel_Report.ReadingAlternative.Code("x");
         other.Alarms = Model.Panel_Report.AlarmsFlags.Heat | Model.Panel_Report.AlarmsFlags.Power;
         Assert.AreEqual(other, Model.Panel_Report.FromValue(other.ToValue()));
     }

@@ -250,16 +250,31 @@ internal sealed class GesSchemaSourceReader
 
     private GesSchemaTypeSyntax[] ReadUnion()
     {
-        var alternatives = new List<GesSchemaTypeSyntax> { ReadType() };
+        var alternatives = new List<GesSchemaTypeSyntax> { ReadAlternative() };
         SkipSpaces();
         while (Consume('|'))
         {
             SkipTrivia();
-            alternatives.Add(ReadType());
+            alternatives.Add(ReadAlternative());
             SkipSpaces();
         }
 
         return alternatives.ToArray();
+    }
+
+    // A type with an optional label in front, as in `bind: :Loadout_UnitBind`; a type itself starts with ':'.
+    private GesSchemaTypeSyntax ReadAlternative()
+    {
+        if (_position >= _text.Length || !GesText.IsAsciiLower(_text[_position])) return ReadType();
+        var offset = _position;
+        var label = ReadName(GesText.IsFieldName, "alternative label");
+        SkipSpaces();
+        Expect(':');
+        SkipSpaces();
+        var type = ReadType();
+        type.Label = label;
+        type.LabelOffset = offset;
+        return type;
     }
 
     private GesSchemaTypeSyntax ReadType()

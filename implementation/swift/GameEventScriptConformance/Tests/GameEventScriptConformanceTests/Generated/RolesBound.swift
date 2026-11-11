@@ -328,8 +328,8 @@ enum RolesBound {
         enum ReadingAlternative: Hashable, Sendable, Codable {
             /// The alternative `:Number`.
             case number(Int)
-            /// The alternative `:Text`.
-            case text(String)
+            /// The alternative `:Code`.
+            case code(String)
         }
 
         /// The members of the field, one bit each in declared order.
@@ -866,13 +866,13 @@ enum RolesBound {
         static func value(_ value: Panel_Report.ReadingAlternative) -> GesValue {
             switch value {
             case .number(let alternative): .integer(Int64(alternative), unit: .none)
-            case .text(let alternative): .text(alternative)
+            case .code(let alternative): .text(alternative)
             }
         }
 
         static func decodePanel_ReportReadingAlternative(_ value: GesValue) -> Panel_Report.ReadingAlternative? {
             if let alternative = __GesModelsc7806b35b2a7200f.integer(value, .none) { return .number(alternative) }
-            if let alternative = __GesModelsc7806b35b2a7200f.text(value) { return .text(alternative) }
+            if let alternative = __GesModelsc7806b35b2a7200f.text(value) { return .code(alternative) }
             return nil
         }
 
@@ -1185,13 +1185,13 @@ enum RolesBound {
         static func value(_ value: Panel_Report.ReadingAlternative) -> GesValue {
             switch value {
             case .number(let alternative): .integer(Int64(alternative), unit: .none)
-            case .text(let alternative): .text(alternative)
+            case .code(let alternative): .text(alternative)
             }
         }
 
         static func decodePanel_ReportReadingAlternative(_ value: GesValue) -> Panel_Report.ReadingAlternative? {
             if let alternative = __GesModelsc7806b35b2a7200f.integer(value, .none) { return .number(alternative) }
-            if let alternative = __GesModelsc7806b35b2a7200f.text(value) { return .text(alternative) }
+            if let alternative = __GesModelsc7806b35b2a7200f.text(value) { return .code(alternative) }
             return nil
         }
 

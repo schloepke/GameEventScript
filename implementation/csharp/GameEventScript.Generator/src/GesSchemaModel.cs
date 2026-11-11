@@ -145,8 +145,9 @@ internal static class GesModelLayoutBuilder
         field.Value = new GesModelValue { Kind = GesModelKind.Union };
         foreach (var alternative in alternatives)
         {
-            var label = alternative.Kind == GesSchemaTypeKind.Reference ? alternative.Schema!.Name : alternative.Kind.ToString();
-            field.Value.Alternatives.Add(new GesModelField { Name = label, Path = path + ":" + label, Value = Value(alternative, path + ":" + label) });
+            var type = alternative.Kind == GesSchemaTypeKind.Reference ? alternative.Schema!.Name : alternative.Kind.ToString();
+            var label = alternative.Label.Length > 0 ? alternative.Label : type;
+            field.Value.Alternatives.Add(new GesModelField { Name = label, Path = path + ":" + type, Value = Value(alternative, path + ":" + type) });
         }
 
         return field;

@@ -89,7 +89,7 @@ internal static class GesModelPlanner
             }
 
             var union = new GesModelPlanValue { Kind = GesModelKind.Union, Model = model, Nullable = nullable, Nested = name + "Alternative", Label = label };
-            foreach (var alternative in present) union.Alternatives.Add(Value(alternative.Value, name + GesSchemaPlanner.Pascal(alternative.Name), alternative.Name));
+            foreach (var alternative in present) union.Alternatives.Add(Value(alternative.Value, name + GesSchemaPlanner.Pascal(alternative.Name), GesSchemaPlanner.Pascal(alternative.Name)));
             return union;
         }
 

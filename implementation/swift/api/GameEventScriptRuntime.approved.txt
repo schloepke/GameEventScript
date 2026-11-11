@@ -983,6 +983,7 @@ symbol {"access":"public","declaration":"let kind: GesDocumentSchemaKind","kind"
 symbol {"access":"public","declaration":"let kind: GesSchemaKind","kind":"swift.property","path":"GameEventScriptRuntime.GesSchema.kind"}
 symbol {"access":"public","declaration":"let kind: GesSchemaTypeKind","kind":"swift.property","path":"GameEventScriptRuntime.GesSchemaParameterInfo.kind"}
 symbol {"access":"public","declaration":"let kind: GesSchemaTypeKind","kind":"swift.property","path":"GameEventScriptRuntime.GesSchemaType.kind"}
+symbol {"access":"public","declaration":"let label: String","kind":"swift.property","path":"GameEventScriptRuntime.GesSchemaType.label"}
 symbol {"access":"public","declaration":"let length: Int","kind":"swift.property","path":"GameEventScriptRuntime.GesStringConstantSegment.SliceEntry.length"}
 symbol {"access":"public","declaration":"let length: Int","kind":"swift.property","path":"GameEventScriptRuntime.GesUInt16IndexListSegment.SliceEntry.length"}
 symbol {"access":"public","declaration":"let limit: Int","kind":"swift.property","path":"GameEventScriptRuntime.GesLiteralLimitError.limit"}

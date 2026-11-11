@@ -151,6 +151,9 @@ public enum GesSchemaTypeKind: String, Sendable, Equatable {
     @_spi(Syntax) public var constraints = GesSchemaConstraintsSyntax()
     @_spi(Syntax) public var axes: [GesSchemaAxisSyntax]?
     @_spi(Syntax) public var offset = 0
+    /// The label of a union alternative, such as `bind` in `bind: :Loadout_UnitBind`, or empty, and where it starts.
+    @_spi(Syntax) public var label = ""
+    @_spi(Syntax) public var labelOffset = 0
 }
 
 @_spi(Syntax) public struct GesSchemaFieldSyntax: Sendable {

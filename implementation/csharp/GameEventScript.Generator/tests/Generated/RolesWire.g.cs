@@ -784,26 +784,26 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
         /// <summary>The value of <c>reading</c> when its alternative is <c>Number</c>.</summary>
         public long ReadingNumber;
 
-        private byte[] __ReadingText = Array.Empty<byte>();
-        private int __ReadingTextLength;
+        private byte[] __ReadingCode = Array.Empty<byte>();
+        private int __ReadingCodeLength;
 
-        /// <summary>The value of <c>reading</c> when its alternative is <c>Text</c> as UTF-8 bytes.</summary>
-        public ReadOnlySpan<byte> ReadingTextUtf8 => new ReadOnlySpan<byte>(__ReadingText, 0, __ReadingTextLength);
+        /// <summary>The value of <c>reading</c> when its alternative is <c>Code</c> as UTF-8 bytes.</summary>
+        public ReadOnlySpan<byte> ReadingCodeUtf8 => new ReadOnlySpan<byte>(__ReadingCode, 0, __ReadingCodeLength);
 
-        /// <summary>Sets the value of <c>reading</c> when its alternative is <c>Text</c> from UTF-8 bytes, which are checked when the record is written.</summary>
+        /// <summary>Sets the value of <c>reading</c> when its alternative is <c>Code</c> from UTF-8 bytes, which are checked when the record is written.</summary>
         /// <param name="utf8">The bytes.</param>
-        public void SetReadingTextUtf8(ReadOnlySpan<byte> utf8)
+        public void SetReadingCodeUtf8(ReadOnlySpan<byte> utf8)
         {
-            if (__ReadingText.Length < utf8.Length) Array.Resize(ref __ReadingText, Math.Max(utf8.Length, Math.Min(4, __ReadingText.Length * 2)));
-            utf8.CopyTo(__ReadingText);
-            __ReadingTextLength = utf8.Length;
+            if (__ReadingCode.Length < utf8.Length) Array.Resize(ref __ReadingCode, Math.Max(utf8.Length, Math.Min(4, __ReadingCode.Length * 2)));
+            utf8.CopyTo(__ReadingCode);
+            __ReadingCodeLength = utf8.Length;
         }
 
-        /// <summary>The value of <c>reading</c> when its alternative is <c>Text</c> as a string; reading and setting it allocate.</summary>
-        public string ReadingText
+        /// <summary>The value of <c>reading</c> when its alternative is <c>Code</c> as a string; reading and setting it allocate.</summary>
+        public string ReadingCode
         {
-            get => System.Text.Encoding.UTF8.GetString(__ReadingText, 0, __ReadingTextLength);
-            set => SetReadingTextUtf8(System.Text.Encoding.UTF8.GetBytes(value));
+            get => System.Text.Encoding.UTF8.GetString(__ReadingCode, 0, __ReadingCodeLength);
+            set => SetReadingCodeUtf8(System.Text.Encoding.UTF8.GetBytes(value));
         }
 
         /// <summary>The field <c>alarms</c>.</summary>
@@ -907,11 +907,11 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
                     writer.Write(unchecked((ulong)ReadingNumber - 0UL), 7);
                     break;
                 }
-                case ReadingAlternative.Text:
+                case ReadingAlternative.Code:
                 {
                     writer.Write(1, 2);
                     {
-                        var text = new ReadOnlySpan<byte>(__ReadingText, 0, __ReadingTextLength);
+                        var text = new ReadOnlySpan<byte>(__ReadingCode, 0, __ReadingCodeLength);
                         if (text.Length > 4) throw new GesWireException(GesWireException.TooLong, paths[at + 13]);
                         if (!GesWireRules.IsValidUtf8(text)) throw new GesWireException(GesWireException.InvalidText, paths[at + 13]);
                         writer.Write((ulong)text.Length, 3);
@@ -1013,11 +1013,11 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
                             var count = (int)reader.Read(3, paths[at + 13]);
                             if (count > 4) throw new GesWireException(GesWireException.InvalidCount, paths[at + 13]);
                             reader.Require(count * 8L, paths[at + 13]);
-                            if (__ReadingText.Length < count) Array.Resize(ref __ReadingText, Math.Max(count, Math.Min(4, __ReadingText.Length * 2)));
-                            var text = new Span<byte>(__ReadingText, 0, count);
+                            if (__ReadingCode.Length < count) Array.Resize(ref __ReadingCode, Math.Max(count, Math.Min(4, __ReadingCode.Length * 2)));
+                            var text = new Span<byte>(__ReadingCode, 0, count);
                             reader.ReadBytes(text, paths[at + 13]);
                             if (!GesWireRules.IsValidUtf8(text)) throw new GesWireException(GesWireException.InvalidText, paths[at + 13]);
-                            __ReadingTextLength = count;
+                            __ReadingCodeLength = count;
                         }
                         break;
                     }
@@ -1071,7 +1071,7 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
 
         private bool __Same13(Panel_Report baseline, string[] paths, int at)
         {
-            if (!new ReadOnlySpan<byte>(__ReadingText, 0, __ReadingTextLength).SequenceEqual(new ReadOnlySpan<byte>(baseline.__ReadingText, 0, baseline.__ReadingTextLength))) return false;
+            if (!new ReadOnlySpan<byte>(__ReadingCode, 0, __ReadingCodeLength).SequenceEqual(new ReadOnlySpan<byte>(baseline.__ReadingCode, 0, baseline.__ReadingCodeLength))) return false;
             return true;
         }
 
@@ -1186,9 +1186,9 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
                     if (__Wire12(ReadingNumber, paths, at) != __Wire12(other.ReadingNumber, paths, at)) return false;
                     break;
                 }
-                case ReadingAlternative.Text:
+                case ReadingAlternative.Code:
                 {
-                    if (!new ReadOnlySpan<byte>(__ReadingText, 0, __ReadingTextLength).SequenceEqual(new ReadOnlySpan<byte>(other.__ReadingText, 0, other.__ReadingTextLength))) return false;
+                    if (!new ReadOnlySpan<byte>(__ReadingCode, 0, __ReadingCodeLength).SequenceEqual(new ReadOnlySpan<byte>(other.__ReadingCode, 0, other.__ReadingCodeLength))) return false;
                     break;
                 }
             }
@@ -1226,9 +1226,9 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
                     ReadingNumber = other.ReadingNumber;
                     break;
                 }
-                case ReadingAlternative.Text:
+                case ReadingAlternative.Code:
                 {
-                    SetReadingTextUtf8(new ReadOnlySpan<byte>(other.__ReadingText, 0, other.__ReadingTextLength));
+                    SetReadingCodeUtf8(new ReadOnlySpan<byte>(other.__ReadingCode, 0, other.__ReadingCodeLength));
                     break;
                 }
             }
@@ -1514,11 +1514,11 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
                                 writer.Write(unchecked((ulong)ReadingNumber - 0UL), 7);
                                 break;
                             }
-                            case ReadingAlternative.Text:
+                            case ReadingAlternative.Code:
                             {
                                 writer.Write(1, 2);
                                 {
-                                    var text = new ReadOnlySpan<byte>(__ReadingText, 0, __ReadingTextLength);
+                                    var text = new ReadOnlySpan<byte>(__ReadingCode, 0, __ReadingCodeLength);
                                     if (text.Length > 4) throw new GesWireException(GesWireException.TooLong, paths[at + 13]);
                                     if (!GesWireRules.IsValidUtf8(text)) throw new GesWireException(GesWireException.InvalidText, paths[at + 13]);
                                     writer.Write((ulong)text.Length, 3);
@@ -1557,12 +1557,12 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
                                 }
                                 break;
                             }
-                            case ReadingAlternative.Text:
+                            case ReadingAlternative.Code:
                             {
                                 if (!__Same13(baseline, paths, at))
                                 {
                                     {
-                                        var text = new ReadOnlySpan<byte>(__ReadingText, 0, __ReadingTextLength);
+                                        var text = new ReadOnlySpan<byte>(__ReadingCode, 0, __ReadingCodeLength);
                                         if (text.Length > 4) throw new GesWireException(GesWireException.TooLong, paths[at + 13]);
                                         if (!GesWireRules.IsValidUtf8(text)) throw new GesWireException(GesWireException.InvalidText, paths[at + 13]);
                                         writer.Write((ulong)text.Length, 3);
@@ -1864,11 +1864,11 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
                                         var count = (int)reader.Read(3, paths[at + 13]);
                                         if (count > 4) throw new GesWireException(GesWireException.InvalidCount, paths[at + 13]);
                                         reader.Require(count * 8L, paths[at + 13]);
-                                        if (__ReadingText.Length < count) Array.Resize(ref __ReadingText, Math.Max(count, Math.Min(4, __ReadingText.Length * 2)));
-                                        var text = new Span<byte>(__ReadingText, 0, count);
+                                        if (__ReadingCode.Length < count) Array.Resize(ref __ReadingCode, Math.Max(count, Math.Min(4, __ReadingCode.Length * 2)));
+                                        var text = new Span<byte>(__ReadingCode, 0, count);
                                         reader.ReadBytes(text, paths[at + 13]);
                                         if (!GesWireRules.IsValidUtf8(text)) throw new GesWireException(GesWireException.InvalidText, paths[at + 13]);
-                                        __ReadingTextLength = count;
+                                        __ReadingCodeLength = count;
                                     }
                                     if (__Same13(baseline, paths, at)) throw new GesWireException(GesWireException.InvalidDelta, paths[at + 13]);
                                 }
@@ -1878,11 +1878,11 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
                                         var count = (int)reader.Read(3, paths[at + 13]);
                                         if (count > 4) throw new GesWireException(GesWireException.InvalidCount, paths[at + 13]);
                                         reader.Require(count * 8L, paths[at + 13]);
-                                        if (__ReadingText.Length < count) Array.Resize(ref __ReadingText, Math.Max(count, Math.Min(4, __ReadingText.Length * 2)));
-                                        var text = new Span<byte>(__ReadingText, 0, count);
+                                        if (__ReadingCode.Length < count) Array.Resize(ref __ReadingCode, Math.Max(count, Math.Min(4, __ReadingCode.Length * 2)));
+                                        var text = new Span<byte>(__ReadingCode, 0, count);
                                         reader.ReadBytes(text, paths[at + 13]);
                                         if (!GesWireRules.IsValidUtf8(text)) throw new GesWireException(GesWireException.InvalidText, paths[at + 13]);
-                                        __ReadingTextLength = count;
+                                        __ReadingCodeLength = count;
                                     }
                                 }
                                 break;
@@ -1906,9 +1906,9 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
                             ReadingNumber = baseline.ReadingNumber;
                             break;
                         }
-                        case ReadingAlternative.Text:
+                        case ReadingAlternative.Code:
                         {
-                            SetReadingTextUtf8(new ReadOnlySpan<byte>(baseline.__ReadingText, 0, baseline.__ReadingTextLength));
+                            SetReadingCodeUtf8(new ReadOnlySpan<byte>(baseline.__ReadingCode, 0, baseline.__ReadingCodeLength));
                             break;
                         }
                     }
@@ -1974,8 +1974,8 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
         {
             /// <summary>The alternative <c>:Number</c>.</summary>
             Number,
-            /// <summary>The alternative <c>:Text</c>.</summary>
-            Text,
+            /// <summary>The alternative <c>:Code</c>.</summary>
+            Code,
             /// <summary>The alternative <c>:Nothing</c>.</summary>
             Nothing,
         }
@@ -4863,7 +4863,7 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
                     "  spot: :Point(m) { x between 0m and 100m step 1cm, y between 0m and 100m step 1cm }",
                     "  note: :Text max 8 optional",
                     "  entries: :List(:Panel_Entry) max 4",
-                    "  reading: :Number integer between 0 and 99 | :Text max 4 | :Nothing",
+                    "  reading: :Number integer between 0 and 99 | code: :Text max 4 | :Nothing",
                     "  alarms: :Flags(#heat, #power)",
                     "}",
                     "",

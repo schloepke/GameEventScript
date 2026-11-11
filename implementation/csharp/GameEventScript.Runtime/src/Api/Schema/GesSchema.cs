@@ -102,6 +102,7 @@ public sealed class GesSchemaType
         Delta = Bound(constraints.Delta);
         Tags = new GesReadOnlyArray<string>(type.Tags);
         TagSet = type.TagSet;
+        Label = type.Label;
         Max = type.Max;
         Element = GesSchema.Types(type.Element ?? []);
         var axes = new List<GesSchemaAxisInfo>();
@@ -142,6 +143,10 @@ public sealed class GesSchemaType
     /// <summary>Gets the name of the declared tag set a Tag takes its members from, or an empty string; the name belongs to no
     /// hash and does not change the encoding.</summary>
     public string TagSet { get; }
+
+    /// <summary>Gets the label of a union alternative, as in <c>bind: :Loadout_UnitBind</c>, or an empty string; generated code
+    /// names the alternative after it, and it belongs to no hash.</summary>
+    public string Label { get; }
 
     /// <summary>Gets the maximum of a Text in UTF-8 bytes or of a List in elements, if there is one.</summary>
     public long? Max { get; }

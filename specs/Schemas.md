@@ -83,7 +83,8 @@ messages    = "messages" ":" TypeName "as" "(" MessageName { "," MessageName } "
 field       = LowerName ":" union [ "optional" | "key" ]
 argument    = [ "_" ] LowerName ":" union [ "optional" ]
 
-union       = type { "|" type }
+union       = alternative { "|" alternative }
+alternative = [ LowerName ":" ] type
 type        = ":Boolean"
             | numeric
             | spatial
@@ -150,6 +151,13 @@ A source is a sequence of declarations in any order; a reference may come before
   that every field of it uses, instead of one per field. *Since: Unreleased.*
 
 Schemas, messages, message sets and tag sets share one namespace across all sources.
+
+A union alternative may carry a label, as in `units: :List(:Text max 64 | bind: :Loadout_UnitBind)`. Generated code
+names the alternative after its label instead of its type (`.bind`, C# `Bind`); the label changes no bytes, values,
+paths, canonical form or hash, as alternatives are told apart by the kind of their value. A label stands only in a union
+of two or more alternatives and not on `:Nothing`, which has no value, or it is `schema.invalidUnion`; labels and the
+type names of unlabeled alternatives, with a label's first letter capitalized, differ within a union, or it is
+`schema.duplicateName`. *Since: Unreleased.*
 
 ### Roles
 
@@ -1392,7 +1400,7 @@ exact decimals. Hashes are 16 lowercase hexadecimal digits, and a binary64 value
   or message adds `fields`, and a message also `tags`.
 - A field has `name`, `path`, `optional`, `key`, `unlabeled` and `encoding`. List elements,
   axes and union alternatives are written with `name`, `path` and `encoding` only; an element is
-  named `[]` and an alternative by its type, as in its path.
+  named `[]` and an alternative by its label or else by its type, as in its path.
 - An encoding has `kind` and the members of its kind:
   - `boolean`: none.
   - `integer`, `quantized` and `float`: `type`, `unit`, `range`; `integer` and `quantized` add

@@ -95,6 +95,7 @@ internal static class GesSchemaFormatter
         for (var index = 0; index < alternatives.Length; index++)
         {
             if (index > 0) builder.Append(" | ");
+            if (alternatives[index].Label.Length > 0) builder.Append(alternatives[index].Label).Append(": ");
             Type(alternatives[index], builder, indent);
         }
     }

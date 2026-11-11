@@ -72,7 +72,7 @@ enum GesModelPlanner {
             union.nullable = present.count < model.alternatives.count
             union.nested = name + "Alternative"
             union.label = label
-            union.alternatives = present.map { self.value($0.value, name + GesSchemaPlanner.pascal($0.name), $0.name) }
+            union.alternatives = present.map { self.value($0.value, name + GesSchemaPlanner.pascal($0.name), GesSchemaPlanner.pascal($0.name)) }
             return union
         }
         let value = GesModelPlanValue()

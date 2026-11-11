@@ -209,7 +209,7 @@ enum GesSchemaLayoutBuilder {
         index += 1
         for alternative in alternatives {
             let path = bound.infos[index].path
-            let label = String(path[path.index(after: path.lastIndex(of: ":")!)...])
+            let label = alternative.label.isEmpty ? String(path[path.index(after: path.lastIndex(of: ":")!)...]) : alternative.label
             let encoding: GesLayoutEncoding
             if alternative.kind == .nothing {
                 index += 1

@@ -234,6 +234,8 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   `FromValue(value)`) with the plain Record that wire `--values` reads and writes, so models and wire records convert
   through one value instead of hand-written copies. A nested field that does not convert reports its path, such as
   `entries[].level`, as the wire value path does.
+- Schema union alternatives take labels, as in `:Text max 64 | bind: :Loadout_UnitBind`: generated code names the
+  alternative `.bind` (C# `Bind`) instead of after its type; the label changes no bytes and no hash.
 - Schema tag sets `tags :Mount as (#front, #rear)`: a field, list element or alternative of type `:Mount` is that
   `:Tag(...)` in place, with the same bytes and hash, and generated code declares one `Mount` enum for every field of it
   instead of one per field.

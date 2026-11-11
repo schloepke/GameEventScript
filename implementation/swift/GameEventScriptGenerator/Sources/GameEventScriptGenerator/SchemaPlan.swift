@@ -183,7 +183,7 @@ enum GesSchemaPlanner {
         case .union:
             var alternativeNode = node + 1
             for alternative in encoding.alternatives {
-                value.alternatives.append(self.value(context, alternative.encoding, name + pascal(alternative.name), alternative.name, alternativeNode))
+                value.alternatives.append(self.value(context, alternative.encoding, name + pascal(alternative.name), pascal(alternative.name), alternativeNode))
                 alternativeNode += count(context.layout, alternative.encoding, &context.counts)
             }
         case .list:

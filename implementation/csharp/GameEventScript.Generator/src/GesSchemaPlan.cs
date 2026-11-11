@@ -195,7 +195,7 @@ internal static class GesSchemaPlanner
                 var alternativeNode = node + 1;
                 foreach (var alternative in encoding.Alternatives)
                 {
-                    value.Alternatives.Add(Value(context, alternative.Encoding, name + Pascal(alternative.Name), alternative.Name, alternativeNode));
+                    value.Alternatives.Add(Value(context, alternative.Encoding, name + Pascal(alternative.Name), Pascal(alternative.Name), alternativeNode));
                     alternativeNode += Count(context.Layout, alternative.Encoding, context.Counts);
                 }
 

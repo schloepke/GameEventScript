@@ -263,6 +263,9 @@ internal sealed class GesResolvedType
     // The named tag set a Tag takes its members from, or empty.
     internal string TagSet { get; init; } = "";
 
+    // The label of a union alternative, or empty.
+    internal string Label { get; set; } = "";
+
     internal int Offset { get; init; }
 }
 
@@ -433,15 +436,27 @@ internal sealed class GesFileScope
     {
         var result = new GesResolvedType[alternatives.Length];
         var seen = new HashSet<string>(StringComparer.Ordinal);
+        var labels = new HashSet<string>(StringComparer.Ordinal);
         for (var index = 0; index < result.Length; index++)
         {
             var alternative = alternatives[index];
             result[index] = ResolveType(alternative, all);
+            if (alternative.Label.Length > 0)
+            {
+                if (alternatives.Length == 1) throw Error(Code.InvalidUnion, alternative.LabelOffset, "A label names an alternative of a union.");
+                if (result[index].Kind == GesSchemaTypeKind.Nothing) throw Error(Code.InvalidUnion, alternative.LabelOffset, "A :Nothing alternative holds no value to label.");
+                result[index].Label = alternative.Label;
+            }
+
             if (alternatives.Length == 1) continue;
             // The type name decides: a unit does not distinguish alternatives, and a named tag set is a Tag.
             var name = result[index].Kind == GesSchemaTypeKind.Reference ? ":" + alternative.Name : result[index].Kind.ToString();
             if (!seen.Add(name)) throw Error(Code.InvalidUnion, alternative.Offset, "A union repeats a type name; a unit does not distinguish alternatives.");
             if (alternative.Constraints.Delta is not null) throw Error(Code.InvalidUnion, alternative.Offset, "A union alternative has no delta within.");
+            // Generated code names an alternative after its label or its type, so both must stay apart.
+            var label = alternative.Label.Length > 0 ? char.ToUpperInvariant(alternative.Label[0]) + alternative.Label.Substring(1)
+                : result[index].Kind == GesSchemaTypeKind.Reference ? alternative.Name : result[index].Kind.ToString();
+            if (!labels.Add(label)) throw Error(Code.DuplicateName, alternative.Label.Length > 0 ? alternative.LabelOffset : alternative.Offset, $"Two alternatives are both named '{label}'.");
         }
 
         return result;

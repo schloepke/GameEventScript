@@ -191,6 +191,8 @@ final class GesResolvedType {
     // The named tag set a Tag takes its members from, or empty.
     let tagSet: String
     let offset: Int
+    // The label of a union alternative, or empty.
+    var label = ""
 
     init(
         kind: GesSchemaTypeKind,
@@ -350,14 +352,26 @@ final class GesFileScope {
     private func resolveUnion(_ alternatives: [GesSchemaTypeSyntax], _ all: [String: GesResolvedDeclaration]) throws -> [GesResolvedType] {
         var result: [GesResolvedType] = []
         var seen: Set<String> = []
+        var labels: Set<String> = []
         for alternative in alternatives {
             let resolved = try resolveType(alternative, all)
             result.append(resolved)
+            if !alternative.label.isEmpty {
+                if alternatives.count == 1 { throw error(Code.invalidUnion, alternative.labelOffset, "A label names an alternative of a union.") }
+                if resolved.kind == .nothing { throw error(Code.invalidUnion, alternative.labelOffset, "A :Nothing alternative holds no value to label.") }
+                resolved.label = alternative.label
+            }
             if alternatives.count == 1 { continue }
             // The type name decides: a unit does not distinguish alternatives, and a named tag set is a Tag.
             let name = resolved.kind == .reference ? ":" + alternative.name : resolved.kind.rawValue
             if !seen.insert(name).inserted { throw error(Code.invalidUnion, alternative.offset, "A union repeats a type name; a unit does not distinguish alternatives.") }
             if alternative.constraints.delta != nil { throw error(Code.invalidUnion, alternative.offset, "A union alternative has no delta within.") }
+            // Generated code names an alternative after its label or its type, so both must stay apart.
+            var label = resolved.kind == .reference ? alternative.name : resolved.kind.rawValue
+            if !alternative.label.isEmpty { label = alternative.label.prefix(1).uppercased() + alternative.label.dropFirst() }
+            if !labels.insert(label).inserted {
+                throw error(Code.duplicateName, alternative.label.isEmpty ? alternative.offset : alternative.labelOffset, "Two alternatives are both named '\(label)'.")
+            }
         }
         return result
     }

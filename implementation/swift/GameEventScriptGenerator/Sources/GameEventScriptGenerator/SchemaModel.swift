@@ -102,10 +102,10 @@ enum GesModelLayoutBuilder {
         }
         field.value.kind = .union
         for alternative in alternatives {
-            let label = alternative.kind == .reference ? alternative.schema!.name : alternative.kind.rawValue
+            let type = alternative.kind == .reference ? alternative.schema!.name : alternative.kind.rawValue
             let item = GesModelField()
-            item.name = label
-            item.path = path + ":" + label
+            item.name = alternative.label.isEmpty ? type : alternative.label
+            item.path = path + ":" + type
             item.value = try value(alternative, item.path)
             field.value.alternatives.append(item)
         }

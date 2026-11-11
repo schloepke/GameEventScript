@@ -112,7 +112,7 @@ final class GeneratedRoleCodeTests: XCTestCase {
         XCTAssertEqual(try RolesModel.Panel_Report(value: value), model)
         var other = report()
         other.note = "spare"
-        other.reading = .text("x")
+        other.reading = .code("x")
         other.alarms = [.heat, .power]
         XCTAssertEqual(try RolesModel.Panel_Report(value: other.toValue()), other)
     }

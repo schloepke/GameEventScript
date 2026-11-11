@@ -736,12 +736,12 @@ namespace GameEventScript.Tests.Generator.Roles.Model
                 public override int GetHashCode() => unchecked((0 * 397) ^ Value.GetHashCode());
             }
 
-            /// <summary>The alternative <c>:Text</c>.</summary>
-            public sealed class Text : ReadingAlternative
+            /// <summary>The alternative <c>:Code</c>.</summary>
+            public sealed class Code : ReadingAlternative
             {
                 /// <summary>Creates the alternative.</summary>
                 /// <param name="value">Its value.</param>
-                public Text(string value)
+                public Code(string value)
                 {
                     Value = value;
                 }
@@ -750,7 +750,7 @@ namespace GameEventScript.Tests.Generator.Roles.Model
                 public string Value { get; set; }
 
                 /// <inheritdoc />
-                public override bool Equals(ReadingAlternative? other) => other is Text alternative && EqualityComparer<string>.Default.Equals(Value, alternative.Value);
+                public override bool Equals(ReadingAlternative? other) => other is Code alternative && EqualityComparer<string>.Default.Equals(Value, alternative.Value);
 
                 /// <inheritdoc />
                 public override int GetHashCode() => unchecked((1 * 397) ^ (Value?.GetHashCode() ?? 0));
@@ -1423,7 +1423,7 @@ namespace GameEventScript.Tests.Generator.Roles.Model
         private static GesValue Value(global::GameEventScript.Tests.Generator.Roles.Model.Panel_Report.ReadingAlternative value) => value switch
         {
             global::GameEventScript.Tests.Generator.Roles.Model.Panel_Report.ReadingAlternative.Number alternative => GesValue.GesInteger(alternative.Value, GesQuantityUnit.UnitNone),
-            global::GameEventScript.Tests.Generator.Roles.Model.Panel_Report.ReadingAlternative.Text alternative => GesValue.GesText(alternative.Value),
+            global::GameEventScript.Tests.Generator.Roles.Model.Panel_Report.ReadingAlternative.Code alternative => GesValue.GesText(alternative.Value),
             _ => GesValue.GesNothing()
         };
 
@@ -1437,7 +1437,7 @@ namespace GameEventScript.Tests.Generator.Roles.Model
 
             if (__GesModelsc7806b35b2a7200f.Text(value, out var alternative1))
             {
-                result = new global::GameEventScript.Tests.Generator.Roles.Model.Panel_Report.ReadingAlternative.Text(alternative1);
+                result = new global::GameEventScript.Tests.Generator.Roles.Model.Panel_Report.ReadingAlternative.Code(alternative1);
                 return true;
             }
 

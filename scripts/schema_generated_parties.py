@@ -14,7 +14,7 @@ import subprocess
 
 ROOT = Path(__file__).resolve().parents[1]
 CSHARP_CLI = ROOT / 'artifacts/csharp/tool/bin/Release/net8.0/GameEventScript.Tool.dll'
-SWIFT_CLI = ROOT / 'artifacts/swift/tool/release/ges'
+SWIFT_CLI = ROOT / 'artifacts/swift/tool/debug/ges'
 
 
 def _generate(command, source, root, language, space):

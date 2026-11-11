@@ -170,7 +170,7 @@ suites. Portable language behavior continues to use that shared corpus.
 Optional direct C#/Swift CLI interoperability verification:
 
 ```sh
-python3 scripts/test-swift-tool.py artifacts/swift/tool/release/ges \
+python3 scripts/test-swift-tool.py artifacts/swift/tool/debug/ges \
   --reference artifacts/csharp/tool/bin/Release/net8.0/GameEventScript.Tool.dll
 ```
 

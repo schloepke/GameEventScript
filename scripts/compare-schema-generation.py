@@ -22,7 +22,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "conformance/runner"))
 from core.corpus import read_corpus  # noqa: E402
 
-SWIFT_CLI = ROOT / "artifacts/swift/tool/release/ges"
+SWIFT_CLI = ROOT / "artifacts/swift/tool/debug/ges"
 CSHARP_CLI = ROOT / "artifacts/csharp/tool/bin/Release/net8.0/GameEventScript.Tool.dll"
 TIMEOUT_SECONDS = 60
 CODE = re.compile(r"error ([a-z]+\.[A-Za-z]+)")

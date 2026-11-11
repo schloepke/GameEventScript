@@ -31,7 +31,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 WORK = ROOT / "artifacts" / "compiler-comparison"
-SWIFT_CLI = ROOT / "artifacts/swift/tool/release/ges"
+SWIFT_CLI = ROOT / "artifacts/swift/tool/debug/ges"
 CSHARP_CLI = ROOT / "artifacts/csharp/tool/bin/Release/net8.0/GameEventScript.Tool.dll"
 BASELINE = ROOT / "scripts" / "compiler-output-baseline.txt"
 SECTION_NAMES = {0: "header", 0x01: "metadata", 0x02: "strings", 0x03: "indexLists", 0x04: "bindings", 0x10: "code",

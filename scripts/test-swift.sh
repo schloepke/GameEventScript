@@ -8,14 +8,17 @@ ges_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ges_package="$ges_root/implementation/swift/GameEventScriptConformance"
 ges_scratch="$ges_root/artifacts/swift/conformance"
 
+# Unit-test packages build in Debug, which compiles several times faster and checks overflow and exclusivity at run time;
+# the Conformance package, whose adapter runs the shared corpus and the cross-port checks, stays in Release.
+
 swift test --package-path "$ges_root/implementation/swift/GameEventScriptSyntax" \
-    --scratch-path "$ges_root/artifacts/swift/syntax" --disable-build-manifest-caching --configuration release
+    --scratch-path "$ges_root/artifacts/swift/syntax" --disable-build-manifest-caching --configuration debug
 
 swift test --package-path "$ges_root/implementation/swift/GameEventScriptSwiftBridge" \
-    --scratch-path "$ges_root/artifacts/swift/swiftbridge" --disable-build-manifest-caching --configuration release
+    --scratch-path "$ges_root/artifacts/swift/swiftbridge" --disable-build-manifest-caching --configuration debug
 
 swift test --package-path "$ges_root/implementation/swift/GameEventScriptGenerator" \
-    --scratch-path "$ges_root/artifacts/swift/generator" --disable-build-manifest-caching --configuration release
+    --scratch-path "$ges_root/artifacts/swift/generator" --disable-build-manifest-caching --configuration debug
 "$ges_root/scripts/test-swift-tool.sh"
 python3 "$ges_root/scripts/verify-swift-bytecode.py"
 python3 "$ges_root/scripts/verify-swift-parser-tokens.py"
@@ -43,8 +46,9 @@ python3 "$ges_root/scripts/test-number-text-roundtrip.py" --skip-build
 
 python3 "$ges_root/scripts/test-message-json-roundtrip.py" --skip-build
 
-# Builds the C# Conformance adapter; the Swift adapter is already current.
-python3 "$ges_root/scripts/test-document-roundtrip.py"
+# Builds the C# Conformance adapter; the Swift adapter is already current, and building it again without testing
+# support would recompile the whole package.
+python3 "$ges_root/scripts/test-document-roundtrip.py" --skip-swift-build
 python3 "$ges_root/scripts/test-syntax-roundtrip.py" --skip-build --trees csharp --trees swift
 
 python3 "$ges_root/scripts/test-binary-reader-fuzz-controls.py"

@@ -574,7 +574,10 @@ results (`--self-test` qualifies the comparison).
 
 `scripts/test-swift.sh` requires every supported shared Markdown case to pass with
 native Swift compilation, checks the performance scenarios for correctness without
-measuring them, and runs the native Conformance, SwiftBridge and CLI tests. Runtime
+measuring them, and runs the native Conformance, SwiftBridge and CLI tests. The
+Syntax, SwiftBridge, Generator and CLI packages build and test in Debug, which
+compiles several times faster; the Conformance package and its adapter stay in
+Release, and the comparison scripts use the Debug `ges`. Runtime
 verification with C#-compiled Programs is a separate report; calibrated performance
 measurement is opt-in.
 

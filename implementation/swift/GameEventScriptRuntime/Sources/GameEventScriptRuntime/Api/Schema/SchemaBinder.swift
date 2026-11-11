@@ -392,6 +392,7 @@ enum GesSchemaBinder {
     }
 
     static func bind(_ root: GesResolvedDeclaration, _ parameters: GesSchemaParameters) throws -> GesBoundSchema {
+        if root.isAbstract { throw root.scope.error(Code.invalidAbstract, root.offset, "'\(root.name)' is abstract; it is never encoded.") }
         var declarations: [GesResolvedDeclaration] = []
         var reached: [String: GesSchemaTypeSyntax] = [:]
         try GesSchemaCanonical.reach(root, &declarations, &reached)
@@ -445,7 +446,7 @@ enum GesSchemaBinder {
 
     private static func bindNodes(_ declaration: GesResolvedDeclaration, _ parameters: GesSchemaParameters, _ hash: UInt64, _ bindingHash: UInt64) throws -> GesBoundSchema {
         var build = Build(parameters: parameters)
-        for field in declaration.fields { try addField(&build, declaration.scope, field, "", 0, top: true) }
+        for field in declaration.fields { try addField(&build, field.scope, field, "", 0, top: true) }
         for tag in declaration.tags {
             var node = GesSchemaNode()
             node.kind = .boolean
@@ -721,7 +722,7 @@ enum GesSchemaBinder {
             node.kind = .group
             info.schemaName = type.referenceName
             let reference = type.reference!
-            for field in reference.fields { try addField(&build, reference.scope, field, path, lists, top: false) }
+            for field in reference.fields { try addField(&build, field.scope, field, path, lists, top: false) }
         default:
             throw scope.error(Code.notEncodable, type.offset, "A \(type.kind.rawValue) has no width and is only for documents.")
         }
@@ -752,9 +753,9 @@ enum GesSchemaBinder {
         guard known.insert(EncodableVisit(declaration: ObjectIdentifier(declaration), lists: lists)).inserted else { return }
         for field in declaration.fields {
             if field.alternatives.count == 1 {
-                try checkEncodable(declaration.scope, field.alternatives[0], lists, &known)
+                try checkEncodable(field.scope, field.alternatives[0], lists, &known)
             } else {
-                for alternative in field.alternatives where alternative.kind != .nothing { try checkEncodable(declaration.scope, alternative, lists, &known) }
+                for alternative in field.alternatives where alternative.kind != .nothing { try checkEncodable(field.scope, alternative, lists, &known) }
             }
         }
     }

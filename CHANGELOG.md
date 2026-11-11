@@ -239,6 +239,10 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 - Schema tag sets `tags :Mount as (#front, #rear)`: a field, list element or alternative of type `:Mount` is that
   `:Tag(...)` in place, with the same bytes and hash, and generated code declares one `Mount` enum for every field of it
   instead of one per field.
+- Schemas take the fields of another schema with `with :Unit_Common`, optionally `all optional` and
+  `without (id)`; an `abstract schema` only lends its fields. The record stays flat and hashes like written fields.
+  Generated models adopt a protocol (C# interface) per schema they take unchanged; `GesSchema.IsAbstract` and `Takes`
+  (Swift `isAbstract`, `takes`) describe it, and misuse of an abstract schema is `schema.invalidAbstract`.
 - Schema fields take defaults, as in `efficiency: :Percentage default 100%` or `maxPower: :Quantity(W) default power`:
   a literal, a constant, a let or a sibling field of the same type fills in what a value, model value or document leaves
   out, while the wire still carries every field. Generated models take defaults as initializer arguments, describe them

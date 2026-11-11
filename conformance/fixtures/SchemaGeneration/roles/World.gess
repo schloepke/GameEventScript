@@ -12,8 +12,14 @@ wire(world) schema :World as {
 tags :Side as (#left, #right)
 
 // A let names a value of its schema; generated code declares it as a static member.
+// The wire record takes the fields of an abstract schema in place; the bytes are those of fields written there.
+abstract schema :World_Named as {
+  name: :Text max 12
+}
+
 wire(world) schema :World_Cards as {
   let deck be 4
+  with :World_Named
   cards: :List(:Panel_Badge) max deck
   labels: :List(:Tag max 12) max deck
   side: :Side optional

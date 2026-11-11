@@ -71,13 +71,14 @@ messages :Combat as (Hit, Died)
 ### Grammar
 
 ```text
-source      = { constant | parameter | tagsdecl | [ roles ] ( schema | message | messages ) }
+source      = { constant | parameter | tagsdecl | "abstract" schema | [ roles ] ( schema | message | messages ) }
 tagsdecl    = "tags" ":" TypeName "as" tagset
 roles       = role [ role ]
 role        = ( "wire" | "model" ) [ "(" LowerName ")" ]
 constant    = "constant" "$" ConstantName "be" literal
 parameter   = "parameter" LowerName ":" ( ":Number" | ":Percentage" | quantity )
-schema      = "schema" ":" TypeName "as" "{" { field | let } "}"
+schema      = "schema" ":" TypeName "as" "{" { field | let | with } "}"
+with        = "with" ":" TypeName [ "all" "optional" ] [ "without" "(" LowerName { "," LowerName } ")" ]
 let         = "let" LowerName "be" ( literal | "$" ConstantName )
 message     = "message" MessageName "(" [ argument { "," argument } ] ")" [ "tags" tagset ]
 messages    = "messages" ":" TypeName "as" "(" MessageName { "," MessageName } ")"
@@ -152,6 +153,27 @@ A source is a sequence of declarations in any order; a reference may come before
   `peakPower * 2s`, would need an expression language for a single convenience; its result is written instead. File
   constants and parameters are not generated, so a bound stays private to its file unless a schema states it as a let.
 
+- **`with :Name`** inside a schema takes the fields of another schema: they are copied where `with` stands, in their
+  declared order, with their types, markers and [defaults](#defaults), as if written there. `all optional` makes each
+  taken field optional and drops its default, except a union with a `:Nothing` alternative, which already holds an absent
+  value; a taken key becomes optional too. `without (a, b)` leaves fields out. Composition is a schema-level thing only:
+  the record stays flat on the wire, in values and in documents, and the [canonical form](#canonical-form) and hash list
+  the fields as written, so `with` leaves no trace there. A field keeps its own file's constants, parameters and lets,
+  and lets are not taken. A taken field named like a field or let of the schema is `schema.duplicateName`, a field
+  `without` names that the taken schema lacks `schema.unknownName`, a taken default whose sibling `without` leaves out
+  `schema.invalidDefault`, a taken key that does not end up first `schema.invalidKey`, and schemas that take each other
+  `schema.cycle`. Only a schema takes fields; a message has no `with`. *Since: Unreleased.*
+- **`abstract schema :Name as { ... }`** declares a schema that only lends its fields with `with`, such as the fields many
+  unit schemas share. It is no field type, list element, union alternative or root, takes no role, is never bound or
+  checked against a document, and is never generated as a type of its own: each of these is `schema.invalidAbstract`, a
+  role `schema.invalidRole`. It may take other schemas, abstract or not. It is described like other schemas, with a hash
+  over its own fields, but has no hash on the wire: its fields belong to the hash of each schema that takes them. The
+  keyword is `abstract` rather than `protocol`, since the ports name what is generated differently and a schema
+  describes fields, not behaviour. *Since: Unreleased.*
+
+  `with` is composition within one schema set; taking a schema from another set, such as a mod building on a game's
+  contract, would need a version or hash both sides bind and will use another keyword.
+
 - **`message Name(...) tags (...)`** declares one message signature: its name, its arguments in
   order, and a closed set of tags, of which any subset may be present. An argument has the
   label of its name, as in `target: 5`, or with `_` none, so `_ damage` is passed by position
@@ -209,6 +231,7 @@ schema :World_Bot as { id: :Number integer between 0 and 255 key }
   `ges schema check`. A bound that depends on a parameter stays a binding error.
 - **A model root may use every type** that has a [model type](#model-types), document-only ones included, and needs no
   ranges, steps or parameter values. Its constraints document the values and still serve document checking.
+- An abstract schema is no root and takes no role: `schema.invalidRole`.
 - **Roles are generation metadata.** They are not part of the [canonical form](#canonical-form), so adding, changing or
   removing a role changes neither the schema hash nor the binding hash, and no wire format changes with them.
 
@@ -390,6 +413,7 @@ Source errors use the phase `schema` with line and column, in the manner of
 | `schema.tooLarge` | the [largest encoding](#largest-encoding) exceeds its limit or overflows |
 | `schema.invalidRole` | a role stands on a declaration that cannot take it, is no role word, or names an invalid group |
 | `schema.duplicateRole` | a declaration has a second `wire` or a second `model` role |
+| `schema.invalidAbstract` | an abstract schema is a field type, list element, union alternative, a bound or checked root, or a model root |
 | `schema.invalidDefault` | a [default](#defaults) lies outside its field's range or off its step, is fractional for an `integer` field, is no tag of the set or longer than `max`, has another kind than its field, stands on a key, a union or an optional field with a literal, names a sibling of another type or optionality, or names one for a type that generated code declares per field |
 
 `schema.notEncodable`, `schema.invalidRange`, `schema.invalidStep`, `schema.invalidBound`,
@@ -1181,6 +1205,8 @@ not use it:
 - `Fields`, the fields or arguments in declared order, each with `Name`, `IsUnlabeled`,
   `IsOptional`, `IsKey`, `Alternatives` and `Default`, a `GesSchemaDefaultInfo` with `Kind` (`Number`, `Boolean`, `Tag`
   or `Field`), the exact `Number`, the `Boolean`, and the `Name` of a tag without `#` or of the sibling, or null;
+- `IsAbstract`, and `Takes`, what a schema takes with `with` in declared order: each a `GesSchemaTakeInfo` with
+  `Schema`, `IsAllOptional`, `Without` and `IsUnchanged`; `Fields` already holds the taken fields in place;
 - `Tags` of a message and `Members` of a message set, in declared order;
 - `Bind` and `CheckDocument`.
 
@@ -1382,6 +1408,16 @@ alternative's type. A list element type is named `<Field>Item`, so a closed Tag 
   as its ratio: C# `public const long` for an integer and `public const double` otherwise, named in PascalCase; Swift
   `static let` of type `Int` in models, `Int64` in wire records and `Double` otherwise. A member that would take the name
   of a generated member or another member fails with `generate.nameCollision`. *Since: Unreleased.*
+- **Composition.** A schema that types take unchanged with `with`, without `all optional` or `without`, becomes a
+  protocol (Swift) or interface (C#) with read-only properties, and every model type that takes it adopts it; a plain
+  schema that is taken also adopts its own. An abstract schema is generated only as this protocol. Swift names it after
+  an abstract schema, since no type takes the name, and `<Name>Fields` for a plain schema beside its struct; C# names it
+  `I<Name>`. It refines the protocols of the schemas it takes unchanged and requires its other fields whose type is shared
+  by name: every type except a union, Flags and a closed Tag written in place, which generated code declares per field; a
+  [tag set](#declarations) shares its type. `all optional` and `without` change the fields' shape, so such a taking adopts
+  nothing. A protocol named like a type or tag set of the file is `generate.nameCollision`. Wire records adopt no
+  protocol: their fields are storage that a read reuses, with presence flags and UTF-8 text, so a shared read-only
+  property would need an allocating view; a program reads shared fields on models. *Since: Unreleased.*
 - A model is a plain value: an optional field that defaults to a sibling holds what it is given, and reading a value that
   gives `nothing` for it keeps it absent, though its initializer resolves `nil` to the sibling. Swift's synthesized
   `Codable` stores every property and applies no default; defaults belong to GES values and documents.
@@ -1446,8 +1482,10 @@ Reflection, so managed code stripping under IL2CPP removes nothing it needs. Wit
 ### Model layout
 
 `layout --model` prints the language-neutral model layout in the JSON form of the [generation layout](#generation-layout):
-`model` (the format version, 1), `roots` and `types`, ordered by name. A type has `name`, `hash` and `fields`, and a
-schema with lets `constants` as in the generation layout; a field has
+`model` (the format version, 1), `roots` and `types`, ordered by name, and when types take schemas unchanged with `with`,
+`protocols`, ordered by name. A type has `name`, `hash` and `fields`, a schema with lets `constants` as in the generation
+layout, and `takes`, the schemas it takes unchanged, when it has any. A protocol has `name`, `abstract`, `takes` (the
+protocols it refines) and `fields` (the shared fields it requires besides those). A field has
 `name`, `path`, `optional`, `key`, `default` as in the generation layout when it has one, and `type`. A type has `kind` and the members of its kind: `number` adds `type`, `unit`,
 `integer`, `wrapping`, `lower`, `upper` and `step`, a bound as its canonical decimal or parameter name or `null`; `tag` adds
 `tags` and `max`, `flags` adds `tags`, `text` and `bytes` add `max`, `list` adds `max` and `element`, `dice` adds `max`, `lower` and `upper`, `point` and

@@ -168,6 +168,23 @@ internal sealed class GesSchemaLetSyntax
     internal int Offset { get; init; }
 }
 
+// `with :Name all optional without (a, b)` inside a schema: the fields of another schema, copied where it stands.
+internal sealed class GesSchemaWithSyntax
+{
+    internal string Name { get; init; } = "";
+
+    internal bool AllOptional { get; init; }
+
+    internal string[] Without { get; init; } = [];
+
+    internal int[] WithoutOffsets { get; init; } = [];
+
+    // The number of the schema's own fields declared before it.
+    internal int Position { get; init; }
+
+    internal int Offset { get; init; }
+}
+
 internal sealed class GesSchemaDeclarationSyntax
 {
     internal GesSchemaDeclarationKind Kind { get; init; }
@@ -184,6 +201,11 @@ internal sealed class GesSchemaDeclarationSyntax
     internal GesSchemaFieldSyntax[] Fields { get; init; } = [];
 
     internal GesSchemaLetSyntax[] Lets { get; init; } = [];
+
+    internal GesSchemaWithSyntax[] Withs { get; init; } = [];
+
+    // An abstract schema only lends its fields with `with`.
+    internal bool Abstract { get; set; }
 
     internal string[] Tags { get; init; } = [];
 
@@ -216,6 +238,7 @@ internal sealed class GesSchemaDiagnostic
     internal const string InvalidRole = "schema.invalidRole";
     internal const string DuplicateRole = "schema.duplicateRole";
     internal const string InvalidDefault = "schema.invalidDefault";
+    internal const string InvalidAbstract = "schema.invalidAbstract";
 
     internal GesSchemaDiagnostic(string code, string text, int offset, string message)
     {

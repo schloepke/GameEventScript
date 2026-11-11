@@ -19,11 +19,19 @@
                 type(declaration.type!, &output, "")
                 output += "\n"
             case .schema:
+                if declaration.isAbstract { output += "abstract " }
                 output += "schema :\(declaration.name) as {\n"
                 for declared in declaration.lets { output += "  let \(declared.name) be \(value(declared.value))\n" }
-                for item in declaration.fields {
+                for index in 0...declaration.fields.count {
+                    for with in declaration.withs where with.position == index {
+                        output += "  with :\(with.name)"
+                        if with.allOptional { output += " all optional" }
+                        if !with.without.isEmpty { output += " without (\(with.without.joined(separator: ", ")))" }
+                        output += "\n"
+                    }
+                    if index == declaration.fields.count { break }
                     output += "  "
-                    field(item, &output, "  ")
+                    field(declaration.fields[index], &output, "  ")
                     output += "\n"
                 }
                 output += "}\n"

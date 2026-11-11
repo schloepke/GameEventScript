@@ -232,6 +232,21 @@ public sealed class GesRolesGeneratedCodeTests
     }
 
     [TestMethod]
+    public void TakenFieldsAdoptTheInterfaceOfTheirSchema()
+    {
+        Model.IGear gear = new Model.GearView(3, "drill", Model.Side.Left, 2, Model.GearView.GradeTag.High);
+        Model.IPart part = gear;
+        Assert.AreEqual("drill", part.Label);
+        Assert.AreEqual(Model.Side.Left, part.Side);
+        Assert.AreEqual(2.0, gear.Weight);
+        Model.IRadarView echo = new Model.RadarEcho(500, null, [], null, null, true, 0.5);
+        Assert.AreEqual(500.0, echo.Reach);
+        Assert.IsInstanceOfType<Model.IRadarView>(new Model.RadarView());
+        Assert.IsNotInstanceOfType<Model.IGear>(new Model.GearPreset());
+        Assert.IsNull(new Model.GearPreset().Weight);
+    }
+
+    [TestMethod]
     public void BoundModelsAlsoConvertToPlainValues()
     {
         var value = Report().ToValue();
@@ -423,6 +438,6 @@ public sealed class GesRolesBindingTests
     {
         var first = new Bound.GesTypes();
         Assert.ThrowsExactly<ArgumentException>(() => new Bound.GesTypes(first));
-        CollectionAssert.AreEqual(new[] { "World_Body", "RadarView", "BotView", "Panel_Badge", "Panel_Entry", "Panel_Report", "WorldView" }, new Bound.GesTypes().Types.Select(type => type.Name).ToArray());
+        CollectionAssert.AreEqual(new[] { "World_Body", "RadarView", "BotView", "GearPreset", "GearView", "Panel_Badge", "Panel_Entry", "Panel_Report", "RadarEcho", "WorldView" }, new Bound.GesTypes().Types.Select(type => type.Name).ToArray());
     }
 }

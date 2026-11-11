@@ -5,6 +5,9 @@ model(view) schema :WorldView as {
   arena: :Vector(m)
   bots: :List(:BotView)
   badge: :Panel_Badge optional
+  gear: :List(:GearView)
+  preset: :GearPreset optional
+  echo: :RadarEcho optional
 }
 
 schema :BotView as {
@@ -42,3 +45,27 @@ schema :RadarView as {
   lead: :Side optional default side
   active: :Boolean default true
 }
+
+// An abstract schema lends its fields with `with`; a model that takes them unchanged adopts its protocol, which requires
+// the fields whose type is shared by name, here all but the closed tag grade.
+abstract schema :Part as {
+  label: :Text
+  side: :Side optional
+}
+
+abstract schema :Gear as {
+  with :Part
+  weight: :Quantity(kg) default 1kg
+  grade: :Tag(#low, #high)
+}
+
+schema :GearView as {
+  slot: :Number integer
+  with :Gear
+}
+
+// `all optional` and `without` change the taken fields, so the preset adopts no protocol.
+schema :GearPreset as { with :GearView all optional without (slot) }
+
+// A plain schema that another takes unchanged adopts its own protocol too.
+schema :RadarEcho as { with :RadarView, strength: :Percentage }

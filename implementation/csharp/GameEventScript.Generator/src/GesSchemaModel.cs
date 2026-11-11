@@ -24,6 +24,9 @@ internal sealed class GesModelLayout
 
     internal List<GesModelType> Types { get; }
 
+    // The schemas whose fields reached types take unchanged with `with`, directly or through each other, by name.
+    internal List<GesModelProtocol> Protocols { get; } = [];
+
     internal GesModelType Type(string name) => Types.Find(type => type.Name == name) ?? throw new InvalidOperationException($"Type '{name}' is not in the model.");
 }
 
@@ -33,6 +36,20 @@ internal sealed class GesModelType
     internal ulong Hash;
     internal List<GesModelField> Fields = [];
     internal List<GesLayoutConstant> Constants = [];
+
+    // The schemas it takes unchanged with `with`, whose protocols or interfaces it adopts, in declared order.
+    internal List<string> Takes = [];
+}
+
+// A schema that types take with `with`: generated as a protocol (Swift) or interface (C#) with read-only properties. It
+// refines the protocols of the schemas it takes unchanged and requires its other fields whose type is shared by name, as
+// every field's type is except a union, Flags and a closed Tag written in place, which generated code declares per field.
+internal sealed class GesModelProtocol
+{
+    internal string Name = "";
+    internal bool Abstract;
+    internal List<string> Takes = [];
+    internal List<GesModelField> Fields = [];
 }
 
 internal sealed class GesModelField
@@ -99,6 +116,7 @@ internal static class GesModelLayoutBuilder
             if (rootNames.Contains(root)) continue;
             var schema = set.Schema(root);
             if (schema.Kind != GesSchemaKind.Schema) throw new GesGeneratorException(GesGeneratorException.Usage, $"The model root '{root}' is no schema.");
+            if (schema.IsAbstract) throw new GesGeneratorException(GesGeneratorException.Usage, $"The model root '{root}' is abstract; only its protocol is generated, where a model takes it.");
             rootNames.Add(root);
             Reach(schema, reached);
         }
@@ -116,10 +134,67 @@ internal static class GesModelLayoutBuilder
                 type.Fields.Add(field);
             }
 
+            foreach (var take in schema.Takes)
+                if (take.IsUnchanged) type.Takes.Add(take.Schema.Name);
             types.Add(type);
         }
 
-        return new GesModelLayout(rootNames, types);
+        var layout = new GesModelLayout(rootNames, types);
+        var protocols = new SortedDictionary<string, GesSchema>(StringComparer.Ordinal);
+        foreach (var schema in reached.Values) Protocols(schema, protocols);
+        foreach (var schema in protocols.Values)
+        {
+            var protocol = new GesModelProtocol { Name = schema.Name, Abstract = schema.IsAbstract };
+            var inherited = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var take in schema.Takes)
+            {
+                if (!take.IsUnchanged) continue;
+                protocol.Takes.Add(take.Schema.Name);
+                foreach (var field in take.Schema.Fields) inherited.Add(field.Name);
+            }
+
+            foreach (var info in schema.Fields)
+            {
+                if (inherited.Contains(info.Name)) continue;
+                var field = Field(info.Name, info.Name, info.Alternatives);
+                field.Optional = info.IsOptional;
+                field.Key = info.IsKey;
+                if (Shared(field.Value)) protocol.Fields.Add(field);
+            }
+
+            layout.Protocols.Add(protocol);
+        }
+
+        return layout;
+    }
+
+    private static void Protocols(GesSchema schema, SortedDictionary<string, GesSchema> protocols)
+    {
+        foreach (var take in schema.Takes)
+            if (take.IsUnchanged && !protocols.ContainsKey(take.Schema.Name))
+            {
+                protocols.Add(take.Schema.Name, take.Schema);
+                Protocols(take.Schema, protocols);
+            }
+    }
+
+    // Whether generated code names the field's type alike in every type: not a union, Flags or a closed Tag written in place.
+    private static bool Shared(GesModelValue value)
+    {
+        switch (value.Kind)
+        {
+            case GesModelKind.Union:
+                var present = value.Alternatives.FindAll(alternative => alternative.Value.Kind != GesModelKind.Nothing);
+                return present.Count == 1 && Shared(present[0].Value);
+            case GesModelKind.Flags:
+                return false;
+            case GesModelKind.Tag:
+                return value.Tags.Count == 0 || value.TagSet.Length > 0;
+            case GesModelKind.List:
+                return value.Element is null || Shared(value.Element.Value);
+            default:
+                return true;
+        }
     }
 
     private static void Reach(GesSchema schema, SortedDictionary<string, GesSchema> reached)
@@ -249,10 +324,29 @@ internal static class GesModelLayoutJson
             foreach (var field in type.Fields) Field(json, field, member: true);
             json.EndArray();
             GesSchemaLayoutJson.Constants(json, type.Constants);
+            if (type.Takes.Count > 0) json.Strings("takes", type.Takes);
             json.EndObject();
         }
 
         json.EndArray();
+        if (layout.Protocols.Count > 0)
+        {
+            json.BeginArray("protocols");
+            foreach (var protocol in layout.Protocols)
+            {
+                json.BeginObject();
+                json.String("name", protocol.Name);
+                json.Boolean("abstract", protocol.Abstract);
+                json.Strings("takes", protocol.Takes);
+                json.BeginArray("fields");
+                foreach (var field in protocol.Fields) Field(json, field, member: true);
+                json.EndArray();
+                json.EndObject();
+            }
+
+            json.EndArray();
+        }
+
         json.EndObject();
         return json.ToString();
     }

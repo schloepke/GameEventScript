@@ -59,6 +59,30 @@ public sealed class GesSchemaDefaultInfo
     public string Name { get; }
 }
 
+/// <summary>The fields a schema takes from another with <c>with</c>.</summary>
+public sealed class GesSchemaTakeInfo
+{
+    internal GesSchemaTakeInfo(GesSchema schema, bool allOptional, string[] without)
+    {
+        Schema = schema;
+        IsAllOptional = allOptional;
+        Without = new GesReadOnlyArray<string>(without);
+    }
+
+    /// <summary>Gets the schema whose fields are taken.</summary>
+    public GesSchema Schema { get; }
+
+    /// <summary>Gets whether <c>all optional</c> makes every taken field optional and drops its default.</summary>
+    public bool IsAllOptional { get; }
+
+    /// <summary>Gets the fields that <c>without</c> leaves out, in written order.</summary>
+    public GesReadOnlyArray<string> Without { get; }
+
+    /// <summary>Gets whether the fields are taken unchanged, so that generated models take the schema's protocol or
+    /// interface.</summary>
+    public bool IsUnchanged => !IsAllOptional && Without.Count == 0;
+}
+
 /// <summary>A bound, step or delta range: a parameter or an exact decimal.</summary>
 public readonly struct GesSchemaBound
 {
@@ -297,6 +321,7 @@ public sealed class GesSchema
         Tags = new GesReadOnlyArray<string>(declaration.Tags);
         WireGroup = declaration.Syntax.WireGroup;
         ModelGroup = declaration.Syntax.ModelGroup;
+        IsAbstract = declaration.Abstract;
     }
 
     /// <summary>Gets the name.</summary>
@@ -314,6 +339,14 @@ public sealed class GesSchema
     /// <summary>Gets the group in which the schema is a model root, <c>default</c> for <c>model</c> without a group, or
     /// null when it is no model root. Roles are not part of the canonical form or any hash.</summary>
     public string? ModelGroup { get; }
+
+    /// <summary>Gets whether the schema is abstract: it only lends its fields with <c>with</c> and is never bound, checked
+    /// against a document or generated as a type.</summary>
+    public bool IsAbstract { get; }
+
+    /// <summary>Gets the schemas whose fields this schema takes with <c>with</c>, in declared order. Their fields are part of
+    /// <see cref="Fields"/>, as if written in place.</summary>
+    public GesReadOnlyArray<GesSchemaTakeInfo> Takes { get; private set; }
 
     /// <summary>Gets the schema hash: FNV-1a 64 over the canonical form.</summary>
     public ulong Hash { get; private set; }
@@ -365,6 +398,9 @@ public sealed class GesSchema
         var constants = new List<GesSchemaConstantInfo>();
         foreach (var let in _declaration.Lets) constants.Add(new GesSchemaConstantInfo(let));
         Constants = new GesReadOnlyArray<GesSchemaConstantInfo>(constants);
+        var takes = new List<GesSchemaTakeInfo>();
+        foreach (var (taken, with) in _declaration.Takes) takes.Add(new GesSchemaTakeInfo(taken.Public, with.AllOptional, with.Without));
+        Takes = new GesReadOnlyArray<GesSchemaTakeInfo>(takes);
         var members = new List<GesSchema>();
         foreach (var member in _declaration.Members) members.Add(member.Public);
         Members = new GesReadOnlyArray<GesSchema>(members);

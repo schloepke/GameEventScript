@@ -3,7 +3,7 @@
 //     Do not edit it; generate it again when a schema or a parameter changes.
 //     Parameter worldWidth = 2e3 meter.
 //     World: schema hash 3a3ea672ea58aedb, binding hash 1a51a04a5ddab25a.
-//     World_Cards: schema hash 6dcf49a86daffd3f, binding hash f427f8b7825d3bd8.
+//     World_Cards: schema hash c407f1b5190f19f2, binding hash b72748a0d240f2c5.
 //     Panel_Report: schema hash 4885f554a711dde1, binding hash df8ddbb308347288.
 // </auto-generated>
 
@@ -305,14 +305,14 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
         /// <summary>Converts this record into a GES Record value, as <see cref="GesSchemaValues"/> decodes its bytes; this allocates.</summary>
         /// <returns>The Record.</returns>
         /// <exception cref="GesWireException">A value does not fit its field.</exception>
-        public global::GameEventScript.Runtime.Values.GesValue ToValue() => GesSchemaValues.Decode(__valueSchema ??= __GesSchemas6fc5d82c8eb59934.Bind("Panel_Badge", BindingHash), ToBytes()).Value;
+        public global::GameEventScript.Runtime.Values.GesValue ToValue() => GesSchemaValues.Decode(__valueSchema ??= __GesSchemasfdebeb2632b76c34.Bind("Panel_Badge", BindingHash), ToBytes()).Value;
 
         /// <summary>Reads a Record or Map into this instance, as <see cref="GesSchemaValues"/> encodes it; this allocates.</summary>
         /// <param name="value">The value.</param>
         /// <exception cref="GesWireException">The value does not fit the schema.</exception>
         public void ReadValue(global::GameEventScript.Runtime.Values.GesValue value)
         {
-            var schema = __valueSchema ??= __GesSchemas6fc5d82c8eb59934.Bind("Panel_Badge", BindingHash);
+            var schema = __valueSchema ??= __GesSchemasfdebeb2632b76c34.Bind("Panel_Badge", BindingHash);
             var buffer = new byte[MaxByteCount];
             Read(new ReadOnlySpan<byte>(buffer, 0, GesSchemaValues.Encode(schema, value, buffer)));
         }
@@ -674,14 +674,14 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
         /// <summary>Converts this record into a GES Record value, as <see cref="GesSchemaValues"/> decodes its bytes; this allocates.</summary>
         /// <returns>The Record.</returns>
         /// <exception cref="GesWireException">A value does not fit its field.</exception>
-        public global::GameEventScript.Runtime.Values.GesValue ToValue() => GesSchemaValues.Decode(__valueSchema ??= __GesSchemas6fc5d82c8eb59934.Bind("Panel_Entry", BindingHash), ToBytes()).Value;
+        public global::GameEventScript.Runtime.Values.GesValue ToValue() => GesSchemaValues.Decode(__valueSchema ??= __GesSchemasfdebeb2632b76c34.Bind("Panel_Entry", BindingHash), ToBytes()).Value;
 
         /// <summary>Reads a Record or Map into this instance, as <see cref="GesSchemaValues"/> encodes it; this allocates.</summary>
         /// <param name="value">The value.</param>
         /// <exception cref="GesWireException">The value does not fit the schema.</exception>
         public void ReadValue(global::GameEventScript.Runtime.Values.GesValue value)
         {
-            var schema = __valueSchema ??= __GesSchemas6fc5d82c8eb59934.Bind("Panel_Entry", BindingHash);
+            var schema = __valueSchema ??= __GesSchemasfdebeb2632b76c34.Bind("Panel_Entry", BindingHash);
             var buffer = new byte[MaxByteCount];
             Read(new ReadOnlySpan<byte>(buffer, 0, GesSchemaValues.Encode(schema, value, buffer)));
         }
@@ -1944,14 +1944,14 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
         /// <summary>Converts this record into a GES Record value, as <see cref="GesSchemaValues"/> decodes its bytes; this allocates.</summary>
         /// <returns>The Record.</returns>
         /// <exception cref="GesWireException">A value does not fit its field.</exception>
-        public global::GameEventScript.Runtime.Values.GesValue ToValue() => GesSchemaValues.Decode(__valueSchema ??= __GesSchemas6fc5d82c8eb59934.Bind("Panel_Report", BindingHash), ToBytes()).Value;
+        public global::GameEventScript.Runtime.Values.GesValue ToValue() => GesSchemaValues.Decode(__valueSchema ??= __GesSchemasfdebeb2632b76c34.Bind("Panel_Report", BindingHash), ToBytes()).Value;
 
         /// <summary>Reads a Record or Map into this instance, as <see cref="GesSchemaValues"/> encodes it; this allocates.</summary>
         /// <param name="value">The value.</param>
         /// <exception cref="GesWireException">The value does not fit the schema.</exception>
         public void ReadValue(global::GameEventScript.Runtime.Values.GesValue value)
         {
-            var schema = __valueSchema ??= __GesSchemas6fc5d82c8eb59934.Bind("Panel_Report", BindingHash);
+            var schema = __valueSchema ??= __GesSchemasfdebeb2632b76c34.Bind("Panel_Report", BindingHash);
             var buffer = new byte[MaxByteCount];
             Read(new ReadOnlySpan<byte>(buffer, 0, GesSchemaValues.Encode(schema, value, buffer)));
         }
@@ -2874,14 +2874,14 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
         /// <summary>Converts this record into a GES Record value, as <see cref="GesSchemaValues"/> decodes its bytes; this allocates.</summary>
         /// <returns>The Record.</returns>
         /// <exception cref="GesWireException">A value does not fit its field.</exception>
-        public global::GameEventScript.Runtime.Values.GesValue ToValue() => GesSchemaValues.Decode(__valueSchema ??= __GesSchemas6fc5d82c8eb59934.Bind("World", BindingHash), ToBytes()).Value;
+        public global::GameEventScript.Runtime.Values.GesValue ToValue() => GesSchemaValues.Decode(__valueSchema ??= __GesSchemasfdebeb2632b76c34.Bind("World", BindingHash), ToBytes()).Value;
 
         /// <summary>Reads a Record or Map into this instance, as <see cref="GesSchemaValues"/> encodes it; this allocates.</summary>
         /// <param name="value">The value.</param>
         /// <exception cref="GesWireException">The value does not fit the schema.</exception>
         public void ReadValue(global::GameEventScript.Runtime.Values.GesValue value)
         {
-            var schema = __valueSchema ??= __GesSchemas6fc5d82c8eb59934.Bind("World", BindingHash);
+            var schema = __valueSchema ??= __GesSchemasfdebeb2632b76c34.Bind("World", BindingHash);
             var buffer = new byte[MaxByteCount];
             Read(new ReadOnlySpan<byte>(buffer, 0, GesSchemaValues.Encode(schema, value, buffer)));
         }
@@ -3186,14 +3186,14 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
         /// <summary>Converts this record into a GES Record value, as <see cref="GesSchemaValues"/> decodes its bytes; this allocates.</summary>
         /// <returns>The Record.</returns>
         /// <exception cref="GesWireException">A value does not fit its field.</exception>
-        public readonly global::GameEventScript.Runtime.Values.GesValue ToValue() => GesSchemaValues.Decode(__valueSchema ??= __GesSchemas6fc5d82c8eb59934.Bind("World_Body", BindingHash), ToBytes()).Value;
+        public readonly global::GameEventScript.Runtime.Values.GesValue ToValue() => GesSchemaValues.Decode(__valueSchema ??= __GesSchemasfdebeb2632b76c34.Bind("World_Body", BindingHash), ToBytes()).Value;
 
         /// <summary>Reads a Record or Map into this instance, as <see cref="GesSchemaValues"/> encodes it; this allocates.</summary>
         /// <param name="value">The value.</param>
         /// <exception cref="GesWireException">The value does not fit the schema.</exception>
         public void ReadValue(global::GameEventScript.Runtime.Values.GesValue value)
         {
-            var schema = __valueSchema ??= __GesSchemas6fc5d82c8eb59934.Bind("World_Body", BindingHash);
+            var schema = __valueSchema ??= __GesSchemasfdebeb2632b76c34.Bind("World_Body", BindingHash);
             var buffer = new byte[MaxByteCount];
             Read(new ReadOnlySpan<byte>(buffer, 0, GesSchemaValues.Encode(schema, value, buffer)));
         }
@@ -4069,14 +4069,14 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
         /// <summary>Converts this record into a GES Record value, as <see cref="GesSchemaValues"/> decodes its bytes; this allocates.</summary>
         /// <returns>The Record.</returns>
         /// <exception cref="GesWireException">A value does not fit its field.</exception>
-        public global::GameEventScript.Runtime.Values.GesValue ToValue() => GesSchemaValues.Decode(__valueSchema ??= __GesSchemas6fc5d82c8eb59934.Bind("World_Bot", BindingHash), ToBytes()).Value;
+        public global::GameEventScript.Runtime.Values.GesValue ToValue() => GesSchemaValues.Decode(__valueSchema ??= __GesSchemasfdebeb2632b76c34.Bind("World_Bot", BindingHash), ToBytes()).Value;
 
         /// <summary>Reads a Record or Map into this instance, as <see cref="GesSchemaValues"/> encodes it; this allocates.</summary>
         /// <param name="value">The value.</param>
         /// <exception cref="GesWireException">The value does not fit the schema.</exception>
         public void ReadValue(global::GameEventScript.Runtime.Values.GesValue value)
         {
-            var schema = __valueSchema ??= __GesSchemas6fc5d82c8eb59934.Bind("World_Bot", BindingHash);
+            var schema = __valueSchema ??= __GesSchemasfdebeb2632b76c34.Bind("World_Bot", BindingHash);
             var buffer = new byte[MaxByteCount];
             Read(new ReadOnlySpan<byte>(buffer, 0, GesSchemaValues.Encode(schema, value, buffer)));
         }
@@ -4098,19 +4098,20 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
     internal sealed partial class World_Cards
     {
         /// <summary>The schema hash, independent of parameter values.</summary>
-        public const ulong SchemaHash = 0x6dcf49a86daffd3fUL;
+        public const ulong SchemaHash = 0xc407f1b5190f19f2UL;
 
         /// <summary>The hash over the schema hash and the parameter values this code was generated with.</summary>
-        public const ulong BindingHash = 0xf427f8b7825d3bd8UL;
+        public const ulong BindingHash = 0xb72748a0d240f2c5UL;
 
         /// <summary>The size of the largest encoding in bytes.</summary>
-        public const int MaxByteCount = 86;
+        public const int MaxByteCount = 98;
 
         /// <summary><c>let deck be 4</c></summary>
         public const long Deck = 4;
 
         internal static readonly string[] __paths =
         {
+            "name",
             "cards",
             "cards[]",
             "cards[].label",
@@ -4118,6 +4119,28 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
             "labels[]",
             "side",
         };
+
+        private byte[] __Name = Array.Empty<byte>();
+        private int __NameLength;
+
+        /// <summary>The field <c>name</c> as UTF-8 bytes.</summary>
+        public ReadOnlySpan<byte> NameUtf8 => new ReadOnlySpan<byte>(__Name, 0, __NameLength);
+
+        /// <summary>Sets the field <c>name</c> from UTF-8 bytes, which are checked when the record is written.</summary>
+        /// <param name="utf8">The bytes.</param>
+        public void SetNameUtf8(ReadOnlySpan<byte> utf8)
+        {
+            if (__Name.Length < utf8.Length) Array.Resize(ref __Name, Math.Max(utf8.Length, Math.Min(12, __Name.Length * 2)));
+            utf8.CopyTo(__Name);
+            __NameLength = utf8.Length;
+        }
+
+        /// <summary>The field <c>name</c> as a string; reading and setting it allocate.</summary>
+        public string Name
+        {
+            get => System.Text.Encoding.UTF8.GetString(__Name, 0, __NameLength);
+            set => SetNameUtf8(System.Text.Encoding.UTF8.GetBytes(value));
+        }
 
         /// <summary>The field <c>cards</c>, at most 4 elements.</summary>
         public List<Panel_Badge> Cards = new List<Panel_Badge>();
@@ -4231,22 +4254,29 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
 
         internal void __WriteFields(ref GesBitWriter writer, string[] paths, int at)
         {
-            if (Cards.Count > 4) throw new GesWireException(GesWireException.TooLong, paths[at + 0]);
+            {
+                var text = new ReadOnlySpan<byte>(__Name, 0, __NameLength);
+                if (text.Length > 12) throw new GesWireException(GesWireException.TooLong, paths[at + 0]);
+                if (!GesWireRules.IsValidUtf8(text)) throw new GesWireException(GesWireException.InvalidText, paths[at + 0]);
+                writer.Write((ulong)text.Length, 4);
+                writer.WriteBytes(text);
+            }
+            if (Cards.Count > 4) throw new GesWireException(GesWireException.TooLong, paths[at + 1]);
             writer.Write((ulong)Cards.Count, 3);
             foreach (var item in Cards)
             {
-                item.__WriteFields(ref writer, paths, at + 2);
+                item.__WriteFields(ref writer, paths, at + 3);
             }
-            if (Labels.Count > 4) throw new GesWireException(GesWireException.TooLong, paths[at + 3]);
+            if (Labels.Count > 4) throw new GesWireException(GesWireException.TooLong, paths[at + 4]);
             writer.Write((ulong)Labels.Count, 3);
             foreach (var item in Labels)
             {
-                item.__WriteFields(ref writer, paths, at + 4);
+                item.__WriteFields(ref writer, paths, at + 5);
             }
             if (HasSide)
             {
                 writer.Write(1, 1);
-                if ((ulong)Side > 1UL) throw new GesWireException(GesWireException.UnknownTag, paths[at + 5]);
+                if ((ulong)Side > 1UL) throw new GesWireException(GesWireException.UnknownTag, paths[at + 6]);
                 writer.Write((ulong)Side, 1);
             }
             else writer.Write(0, 1);
@@ -4255,34 +4285,44 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
         internal void __ReadFields(ref GesBitReader reader, string[] paths, int at)
         {
             {
-                var count = (int)reader.Read(3, paths[at + 0]);
-                if (count > 4) throw new GesWireException(GesWireException.InvalidCount, paths[at + 0]);
+                var count = (int)reader.Read(4, paths[at + 0]);
+                if (count > 12) throw new GesWireException(GesWireException.InvalidCount, paths[at + 0]);
+                reader.Require(count * 8L, paths[at + 0]);
+                if (__Name.Length < count) Array.Resize(ref __Name, Math.Max(count, Math.Min(12, __Name.Length * 2)));
+                var text = new Span<byte>(__Name, 0, count);
+                reader.ReadBytes(text, paths[at + 0]);
+                if (!GesWireRules.IsValidUtf8(text)) throw new GesWireException(GesWireException.InvalidText, paths[at + 0]);
+                __NameLength = count;
+            }
+            {
+                var count = (int)reader.Read(3, paths[at + 1]);
+                if (count > 4) throw new GesWireException(GesWireException.InvalidCount, paths[at + 1]);
                 Cards.Clear();
                 for (var position = 0; position < count; position++)
                 {
                     if (position == __CardsPool.Count) __CardsPool.Add(new Panel_Badge());
                     var item = __CardsPool[position];
-                    item.__ReadFields(ref reader, paths, at + 2);
+                    item.__ReadFields(ref reader, paths, at + 3);
                     Cards.Add(item);
                 }
             }
             {
-                var count = (int)reader.Read(3, paths[at + 3]);
-                if (count > 4) throw new GesWireException(GesWireException.InvalidCount, paths[at + 3]);
+                var count = (int)reader.Read(3, paths[at + 4]);
+                if (count > 4) throw new GesWireException(GesWireException.InvalidCount, paths[at + 4]);
                 Labels.Clear();
                 for (var position = 0; position < count; position++)
                 {
                     if (position == __LabelsPool.Count) __LabelsPool.Add(new LabelsItem());
                     var item = __LabelsPool[position];
-                    item.__ReadFields(ref reader, paths, at + 4);
+                    item.__ReadFields(ref reader, paths, at + 5);
                     Labels.Add(item);
                 }
             }
-            HasSide = reader.Read(1, paths[at + 5]) != 0;
+            HasSide = reader.Read(1, paths[at + 6]) != 0;
             if (HasSide)
             {
                 {
-                    var index = reader.Read(1, paths[at + 5]);
+                    var index = reader.Read(1, paths[at + 6]);
                     Side = (global::GameEventScript.Tests.Generator.Roles.Wire.Side)index;
                 }
             }
@@ -4297,74 +4337,81 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
         {
             __Busy = busy;
             lists?.Add(Cards);
-            for (var index0 = 0; index0 < __CardsPool.Count; index0++) __CardsPool[index0].__Mark(busy, lists);
+            for (var index1 = 0; index1 < __CardsPool.Count; index1++) __CardsPool[index1].__Mark(busy, lists);
             lists?.Add(Labels);
-            for (var index3 = 0; index3 < __LabelsPool.Count; index3++) __LabelsPool[index3].__Mark(busy, lists);
+            for (var index4 = 0; index4 < __LabelsPool.Count; index4++) __LabelsPool[index4].__Mark(busy, lists);
         }
 
         internal bool __Holds(HashSet<object> lists)
         {
             if (__Busy) return true;
             if (lists.Contains(Cards)) return true;
-            for (var index0 = 0; index0 < Cards.Count; index0++)
-                if (Cards[index0].__Holds(lists)) return true;
+            for (var index1 = 0; index1 < Cards.Count; index1++)
+                if (Cards[index1].__Holds(lists)) return true;
             if (lists.Contains(Labels)) return true;
-            for (var index3 = 0; index3 < Labels.Count; index3++)
-                if (Labels[index3].__Holds(lists)) return true;
+            for (var index4 = 0; index4 < Labels.Count; index4++)
+                if (Labels[index4].__Holds(lists)) return true;
             return false;
         }
         #endif
 
         private bool __Same0(World_Cards baseline, string[] paths, int at)
         {
+            if (!new ReadOnlySpan<byte>(__Name, 0, __NameLength).SequenceEqual(new ReadOnlySpan<byte>(baseline.__Name, 0, baseline.__NameLength))) return false;
+            return true;
+        }
+
+        private bool __Same1(World_Cards baseline, string[] paths, int at)
+        {
             if (Cards.Count != baseline.Cards.Count) return false;
-            for (var index0 = 0; index0 < Cards.Count; index0++)
+            for (var index1 = 0; index1 < Cards.Count; index1++)
             {
-                if (!Cards[index0].__Same(baseline.Cards[index0], paths, at + 2)) return false;
+                if (!Cards[index1].__Same(baseline.Cards[index1], paths, at + 3)) return false;
             }
             return true;
         }
 
-        private bool __Same3(World_Cards baseline, string[] paths, int at)
+        private bool __Same4(World_Cards baseline, string[] paths, int at)
         {
             if (Labels.Count != baseline.Labels.Count) return false;
-            for (var index3 = 0; index3 < Labels.Count; index3++)
+            for (var index4 = 0; index4 < Labels.Count; index4++)
             {
-                if (!Labels[index3].__Same(baseline.Labels[index3], paths, at + 4)) return false;
+                if (!Labels[index4].__Same(baseline.Labels[index4], paths, at + 5)) return false;
             }
             return true;
         }
 
-        private static ulong __Wire5(global::GameEventScript.Tests.Generator.Roles.Wire.Side value, string[] paths, int at)
+        private static ulong __Wire6(global::GameEventScript.Tests.Generator.Roles.Wire.Side value, string[] paths, int at)
         {
-            if ((ulong)value > 1UL) throw new GesWireException(GesWireException.UnknownTag, paths[at + 5]);
+            if ((ulong)value > 1UL) throw new GesWireException(GesWireException.UnknownTag, paths[at + 6]);
             return (ulong)value;
         }
 
-        private static ulong __Read5(ref GesBitReader reader, string[] paths, int at)
+        private static ulong __Read6(ref GesBitReader reader, string[] paths, int at)
         {
-            var wire = reader.Read(1, paths[at + 5]);
+            var wire = reader.Read(1, paths[at + 6]);
             return wire;
         }
 
-        private static global::GameEventScript.Tests.Generator.Roles.Wire.Side __Value5(ulong wire) => (global::GameEventScript.Tests.Generator.Roles.Wire.Side)wire;
+        private static global::GameEventScript.Tests.Generator.Roles.Wire.Side __Value6(ulong wire) => (global::GameEventScript.Tests.Generator.Roles.Wire.Side)wire;
 
         internal bool __Same(World_Cards other, string[] paths, int at)
         {
+            if (!new ReadOnlySpan<byte>(__Name, 0, __NameLength).SequenceEqual(new ReadOnlySpan<byte>(other.__Name, 0, other.__NameLength))) return false;
             if (Cards.Count != other.Cards.Count) return false;
-            for (var index0 = 0; index0 < Cards.Count; index0++)
+            for (var index1 = 0; index1 < Cards.Count; index1++)
             {
-                if (!Cards[index0].__Same(other.Cards[index0], paths, at + 2)) return false;
+                if (!Cards[index1].__Same(other.Cards[index1], paths, at + 3)) return false;
             }
             if (Labels.Count != other.Labels.Count) return false;
-            for (var index3 = 0; index3 < Labels.Count; index3++)
+            for (var index4 = 0; index4 < Labels.Count; index4++)
             {
-                if (!Labels[index3].__Same(other.Labels[index3], paths, at + 4)) return false;
+                if (!Labels[index4].__Same(other.Labels[index4], paths, at + 5)) return false;
             }
             if (HasSide != other.HasSide) return false;
             if (HasSide)
             {
-                if (__Wire5(Side, paths, at) != __Wire5(other.Side, paths, at)) return false;
+                if (__Wire6(Side, paths, at) != __Wire6(other.Side, paths, at)) return false;
             }
             return true;
         }
@@ -4374,26 +4421,27 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
         public void CopyFrom(World_Cards other)
         {
             if (ReferenceEquals(this, other)) return;
+            SetNameUtf8(new ReadOnlySpan<byte>(other.__Name, 0, other.__NameLength));
             if (!ReferenceEquals(Cards, other.Cards))
             {
                 Cards.Clear();
-                for (var index0 = 0; index0 < other.Cards.Count; index0++)
+                for (var index1 = 0; index1 < other.Cards.Count; index1++)
                 {
-                    if (index0 == __CardsPool.Count) __CardsPool.Add(new Panel_Badge());
-                    var item0 = __CardsPool[index0];
-                    item0.CopyFrom(other.Cards[index0]);
-                    Cards.Add(item0);
+                    if (index1 == __CardsPool.Count) __CardsPool.Add(new Panel_Badge());
+                    var item1 = __CardsPool[index1];
+                    item1.CopyFrom(other.Cards[index1]);
+                    Cards.Add(item1);
                 }
             }
             if (!ReferenceEquals(Labels, other.Labels))
             {
                 Labels.Clear();
-                for (var index3 = 0; index3 < other.Labels.Count; index3++)
+                for (var index4 = 0; index4 < other.Labels.Count; index4++)
                 {
-                    if (index3 == __LabelsPool.Count) __LabelsPool.Add(new LabelsItem());
-                    var item3 = __LabelsPool[index3];
-                    item3.CopyFrom(other.Labels[index3]);
-                    Labels.Add(item3);
+                    if (index4 == __LabelsPool.Count) __LabelsPool.Add(new LabelsItem());
+                    var item4 = __LabelsPool[index4];
+                    item4.CopyFrom(other.Labels[index4]);
+                    Labels.Add(item4);
                 }
             }
             HasSide = other.HasSide;
@@ -4402,9 +4450,9 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
 
         internal void __Quantize(string[] paths, int at)
         {
-            for (var index0 = 0; index0 < Cards.Count; index0++)
+            for (var index1 = 0; index1 < Cards.Count; index1++)
             {
-                Cards[index0].__Quantize(paths, at + 2);
+                Cards[index1].__Quantize(paths, at + 3);
             }
             if (HasSide)
             {
@@ -4493,18 +4541,19 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
         internal bool __WriteDelta(World_Cards baseline, ref GesBitWriter writer, string[] paths, int at, bool top)
         {
             var first = writer.BitPosition;
-            for (var left = 3; left > 0; left -= 64) writer.Write(0, Math.Min(left, 64));
+            for (var left = 4; left > 0; left -= 64) writer.Write(0, Math.Min(left, 64));
             var changed = false;
             var ordinal = 0;
             {
                 var set0 = false;
                 if (!__Same0(baseline, paths, at))
                 {
-                    if (Cards.Count > 4) throw new GesWireException(GesWireException.TooLong, paths[at + 0]);
-                    writer.Write((ulong)Cards.Count, 3);
-                    foreach (var item in Cards)
                     {
-                        item.__WriteFields(ref writer, paths, at + 2);
+                        var text = new ReadOnlySpan<byte>(__Name, 0, __NameLength);
+                        if (text.Length > 12) throw new GesWireException(GesWireException.TooLong, paths[at + 0]);
+                        if (!GesWireRules.IsValidUtf8(text)) throw new GesWireException(GesWireException.InvalidText, paths[at + 0]);
+                        writer.Write((ulong)text.Length, 4);
+                        writer.WriteBytes(text);
                     }
                     set0 = true;
                 }
@@ -4516,18 +4565,18 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
                 ordinal++;
             }
             {
-                var set3 = false;
-                if (!__Same3(baseline, paths, at))
+                var set1 = false;
+                if (!__Same1(baseline, paths, at))
                 {
-                    if (Labels.Count > 4) throw new GesWireException(GesWireException.TooLong, paths[at + 3]);
-                    writer.Write((ulong)Labels.Count, 3);
-                    foreach (var item in Labels)
+                    if (Cards.Count > 4) throw new GesWireException(GesWireException.TooLong, paths[at + 1]);
+                    writer.Write((ulong)Cards.Count, 3);
+                    foreach (var item in Cards)
                     {
-                        item.__WriteFields(ref writer, paths, at + 4);
+                        item.__WriteFields(ref writer, paths, at + 3);
                     }
-                    set3 = true;
+                    set1 = true;
                 }
-                if (set3)
+                if (set1)
                 {
                     writer.SetBit(first + ordinal);
                     changed = true;
@@ -4535,33 +4584,52 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
                 ordinal++;
             }
             {
-                var set5 = false;
+                var set4 = false;
+                if (!__Same4(baseline, paths, at))
+                {
+                    if (Labels.Count > 4) throw new GesWireException(GesWireException.TooLong, paths[at + 4]);
+                    writer.Write((ulong)Labels.Count, 3);
+                    foreach (var item in Labels)
+                    {
+                        item.__WriteFields(ref writer, paths, at + 5);
+                    }
+                    set4 = true;
+                }
+                if (set4)
+                {
+                    writer.SetBit(first + ordinal);
+                    changed = true;
+                }
+                ordinal++;
+            }
+            {
+                var set6 = false;
                 if (HasSide != baseline.HasSide)
                 {
                     writer.Write(HasSide ? 1UL : 0UL, 1);
                     if (HasSide)
                     {
-                        if ((ulong)Side > 1UL) throw new GesWireException(GesWireException.UnknownTag, paths[at + 5]);
+                        if ((ulong)Side > 1UL) throw new GesWireException(GesWireException.UnknownTag, paths[at + 6]);
                         writer.Write((ulong)Side, 1);
                     }
-                    set5 = true;
+                    set6 = true;
                 }
                 else if (HasSide)
                 {
-                    var presence5 = writer.BitPosition;
+                    var presence6 = writer.BitPosition;
                     writer.Write(1, 1);
                     {
-                        var value5 = __Wire5(Side, paths, at);
-                        var held5 = __Wire5(baseline.Side, paths, at);
-                        if (value5 != held5)
+                        var value6 = __Wire6(Side, paths, at);
+                        var held6 = __Wire6(baseline.Side, paths, at);
+                        if (value6 != held6)
                         {
-                            writer.Write(value5, 1);
-                            set5 = true;
+                            writer.Write(value6, 1);
+                            set6 = true;
                         }
                     }
-                    if (!set5) writer.Rewind(presence5);
+                    if (!set6) writer.Rewind(presence6);
                 }
-                if (set5)
+                if (set6)
                 {
                     writer.SetBit(first + ordinal);
                     changed = true;
@@ -4573,7 +4641,7 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
 
         internal bool __ReadDelta(World_Cards baseline, ref GesBitReader reader, string[] paths, int at, bool top)
         {
-            var fieldCount = 3;
+            var fieldCount = 4;
             reader.Require(fieldCount, at == 0 ? "" : paths[at - 1]);
             var changeBits = reader.BitPosition;
             reader.Seek(changeBits + fieldCount);
@@ -4587,18 +4655,44 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
                 if (set0)
                 {
                     {
-                        var count = (int)reader.Read(3, paths[at + 0]);
-                        if (count > 4) throw new GesWireException(GesWireException.InvalidCount, paths[at + 0]);
+                        var count = (int)reader.Read(4, paths[at + 0]);
+                        if (count > 12) throw new GesWireException(GesWireException.InvalidCount, paths[at + 0]);
+                        reader.Require(count * 8L, paths[at + 0]);
+                        if (__Name.Length < count) Array.Resize(ref __Name, Math.Max(count, Math.Min(12, __Name.Length * 2)));
+                        var text = new Span<byte>(__Name, 0, count);
+                        reader.ReadBytes(text, paths[at + 0]);
+                        if (!GesWireRules.IsValidUtf8(text)) throw new GesWireException(GesWireException.InvalidText, paths[at + 0]);
+                        __NameLength = count;
+                    }
+                    if (__Same0(baseline, paths, at)) throw new GesWireException(GesWireException.InvalidDelta, paths[at + 0]);
+                    changed = true;
+                }
+                else
+                {
+                    SetNameUtf8(new ReadOnlySpan<byte>(baseline.__Name, 0, baseline.__NameLength));
+                }
+                ordinal++;
+            }
+            {
+                var payload1 = reader.BitPosition;
+                reader.Seek(changeBits + ordinal);
+                var set1 = reader.Read(1, paths[at + 1]) == 1;
+                reader.Seek(payload1);
+                if (set1)
+                {
+                    {
+                        var count = (int)reader.Read(3, paths[at + 1]);
+                        if (count > 4) throw new GesWireException(GesWireException.InvalidCount, paths[at + 1]);
                         Cards.Clear();
                         for (var position = 0; position < count; position++)
                         {
                             if (position == __CardsPool.Count) __CardsPool.Add(new Panel_Badge());
                             var item = __CardsPool[position];
-                            item.__ReadFields(ref reader, paths, at + 2);
+                            item.__ReadFields(ref reader, paths, at + 3);
                             Cards.Add(item);
                         }
                     }
-                    if (__Same0(baseline, paths, at)) throw new GesWireException(GesWireException.InvalidDelta, paths[at + 0]);
+                    if (__Same1(baseline, paths, at)) throw new GesWireException(GesWireException.InvalidDelta, paths[at + 1]);
                     changed = true;
                 }
                 else
@@ -4606,37 +4700,37 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
                     if (!ReferenceEquals(Cards, baseline.Cards))
                     {
                         Cards.Clear();
-                        for (var index0 = 0; index0 < baseline.Cards.Count; index0++)
+                        for (var index1 = 0; index1 < baseline.Cards.Count; index1++)
                         {
-                            if (index0 == __CardsPool.Count) __CardsPool.Add(new Panel_Badge());
-                            var item0 = __CardsPool[index0];
-                            item0.CopyFrom(baseline.Cards[index0]);
-                            Cards.Add(item0);
+                            if (index1 == __CardsPool.Count) __CardsPool.Add(new Panel_Badge());
+                            var item1 = __CardsPool[index1];
+                            item1.CopyFrom(baseline.Cards[index1]);
+                            Cards.Add(item1);
                         }
                     }
                 }
                 ordinal++;
             }
             {
-                var payload3 = reader.BitPosition;
+                var payload4 = reader.BitPosition;
                 reader.Seek(changeBits + ordinal);
-                var set3 = reader.Read(1, paths[at + 3]) == 1;
-                reader.Seek(payload3);
-                if (set3)
+                var set4 = reader.Read(1, paths[at + 4]) == 1;
+                reader.Seek(payload4);
+                if (set4)
                 {
                     {
-                        var count = (int)reader.Read(3, paths[at + 3]);
-                        if (count > 4) throw new GesWireException(GesWireException.InvalidCount, paths[at + 3]);
+                        var count = (int)reader.Read(3, paths[at + 4]);
+                        if (count > 4) throw new GesWireException(GesWireException.InvalidCount, paths[at + 4]);
                         Labels.Clear();
                         for (var position = 0; position < count; position++)
                         {
                             if (position == __LabelsPool.Count) __LabelsPool.Add(new LabelsItem());
                             var item = __LabelsPool[position];
-                            item.__ReadFields(ref reader, paths, at + 4);
+                            item.__ReadFields(ref reader, paths, at + 5);
                             Labels.Add(item);
                         }
                     }
-                    if (__Same3(baseline, paths, at)) throw new GesWireException(GesWireException.InvalidDelta, paths[at + 3]);
+                    if (__Same4(baseline, paths, at)) throw new GesWireException(GesWireException.InvalidDelta, paths[at + 4]);
                     changed = true;
                 }
                 else
@@ -4644,40 +4738,40 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
                     if (!ReferenceEquals(Labels, baseline.Labels))
                     {
                         Labels.Clear();
-                        for (var index3 = 0; index3 < baseline.Labels.Count; index3++)
+                        for (var index4 = 0; index4 < baseline.Labels.Count; index4++)
                         {
-                            if (index3 == __LabelsPool.Count) __LabelsPool.Add(new LabelsItem());
-                            var item3 = __LabelsPool[index3];
-                            item3.CopyFrom(baseline.Labels[index3]);
-                            Labels.Add(item3);
+                            if (index4 == __LabelsPool.Count) __LabelsPool.Add(new LabelsItem());
+                            var item4 = __LabelsPool[index4];
+                            item4.CopyFrom(baseline.Labels[index4]);
+                            Labels.Add(item4);
                         }
                     }
                 }
                 ordinal++;
             }
             {
-                var payload5 = reader.BitPosition;
+                var payload6 = reader.BitPosition;
                 reader.Seek(changeBits + ordinal);
-                var set5 = reader.Read(1, paths[at + 5]) == 1;
-                reader.Seek(payload5);
-                if (set5)
+                var set6 = reader.Read(1, paths[at + 6]) == 1;
+                reader.Seek(payload6);
+                if (set6)
                 {
-                    var present5 = reader.Read(1, paths[at + 5]) == 1;
-                    if (!present5 && !baseline.HasSide) throw new GesWireException(GesWireException.InvalidDelta, paths[at + 5]);
-                    HasSide = present5;
-                    if (present5 && baseline.HasSide)
+                    var present6 = reader.Read(1, paths[at + 6]) == 1;
+                    if (!present6 && !baseline.HasSide) throw new GesWireException(GesWireException.InvalidDelta, paths[at + 6]);
+                    HasSide = present6;
+                    if (present6 && baseline.HasSide)
                     {
                         {
-                            var held5 = __Wire5(baseline.Side, paths, at);
-                            var value5 = __Read5(ref reader, paths, at);
-                            if (value5 == held5) throw new GesWireException(GesWireException.InvalidDelta, paths[at + 5]);
-                            Side = __Value5(value5);
+                            var held6 = __Wire6(baseline.Side, paths, at);
+                            var value6 = __Read6(ref reader, paths, at);
+                            if (value6 == held6) throw new GesWireException(GesWireException.InvalidDelta, paths[at + 6]);
+                            Side = __Value6(value6);
                         }
                     }
-                    else if (present5)
+                    else if (present6)
                     {
                         {
-                            var index = reader.Read(1, paths[at + 5]);
+                            var index = reader.Read(1, paths[at + 6]);
                             Side = (global::GameEventScript.Tests.Generator.Roles.Wire.Side)index;
                         }
                     }
@@ -4699,14 +4793,14 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
         /// <summary>Converts this record into a GES Record value, as <see cref="GesSchemaValues"/> decodes its bytes; this allocates.</summary>
         /// <returns>The Record.</returns>
         /// <exception cref="GesWireException">A value does not fit its field.</exception>
-        public global::GameEventScript.Runtime.Values.GesValue ToValue() => GesSchemaValues.Decode(__valueSchema ??= __GesSchemas6fc5d82c8eb59934.Bind("World_Cards", BindingHash), ToBytes()).Value;
+        public global::GameEventScript.Runtime.Values.GesValue ToValue() => GesSchemaValues.Decode(__valueSchema ??= __GesSchemasfdebeb2632b76c34.Bind("World_Cards", BindingHash), ToBytes()).Value;
 
         /// <summary>Reads a Record or Map into this instance, as <see cref="GesSchemaValues"/> encodes it; this allocates.</summary>
         /// <param name="value">The value.</param>
         /// <exception cref="GesWireException">The value does not fit the schema.</exception>
         public void ReadValue(global::GameEventScript.Runtime.Values.GesValue value)
         {
-            var schema = __valueSchema ??= __GesSchemas6fc5d82c8eb59934.Bind("World_Cards", BindingHash);
+            var schema = __valueSchema ??= __GesSchemasfdebeb2632b76c34.Bind("World_Cards", BindingHash);
             var buffer = new byte[MaxByteCount];
             Read(new ReadOnlySpan<byte>(buffer, 0, GesSchemaValues.Encode(schema, value, buffer)));
         }
@@ -4803,7 +4897,7 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
     }
 
     /// <summary>The schema sources of this file, which the conversion to and from GES values binds once per type.</summary>
-    internal static class __GesSchemas6fc5d82c8eb59934
+    internal static class __GesSchemasfdebeb2632b76c34
     {
         private static GesSchemaSet? __set;
 
@@ -4826,8 +4920,14 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
                     "tags :Side as (#left, #right)",
                     "",
                     "// A let names a value of its schema; generated code declares it as a static member.",
+                    "// The wire record takes the fields of an abstract schema in place; the bytes are those of fields written there.",
+                    "abstract schema :World_Named as {",
+                    "  name: :Text max 12",
+                    "}",
+                    "",
                     "wire(world) schema :World_Cards as {",
                     "  let deck be 4",
+                    "  with :World_Named",
                     "  cards: :List(:Panel_Badge) max deck",
                     "  labels: :List(:Tag max 12) max deck",
                     "  side: :Side optional",
@@ -4895,6 +4995,9 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
                     "  arena: :Vector(m)",
                     "  bots: :List(:BotView)",
                     "  badge: :Panel_Badge optional",
+                    "  gear: :List(:GearView)",
+                    "  preset: :GearPreset optional",
+                    "  echo: :RadarEcho optional",
                     "}",
                     "",
                     "schema :BotView as {",
@@ -4932,6 +5035,30 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
                     "  lead: :Side optional default side",
                     "  active: :Boolean default true",
                     "}",
+                    "",
+                    "// An abstract schema lends its fields with `with`; a model that takes them unchanged adopts its protocol, which requires",
+                    "// the fields whose type is shared by name, here all but the closed tag grade.",
+                    "abstract schema :Part as {",
+                    "  label: :Text",
+                    "  side: :Side optional",
+                    "}",
+                    "",
+                    "abstract schema :Gear as {",
+                    "  with :Part",
+                    "  weight: :Quantity(kg) default 1kg",
+                    "  grade: :Tag(#low, #high)",
+                    "}",
+                    "",
+                    "schema :GearView as {",
+                    "  slot: :Number integer",
+                    "  with :Gear",
+                    "}",
+                    "",
+                    "// `all optional` and `without` change the taken fields, so the preset adopts no protocol.",
+                    "schema :GearPreset as { with :GearView all optional without (slot) }",
+                    "",
+                    "// A plain schema that another takes unchanged adopts its own protocol too.",
+                    "schema :RadarEcho as { with :RadarView, strength: :Percentage }",
                     "",
                 })));
             var bound = set.Schema(root).Bind(new GesSchemaParameters().With("worldWidth", "2e3m"));

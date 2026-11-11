@@ -180,6 +180,25 @@ arguments: `DriveUnit(power: 2000)` has a `maxPower` of `2000`. The wire still c
 defaults cost no bits and no presence flags. Rules that reject data, such as `power <= maxPower`, stay in
 your code; a default only fills in.
 
+Fields that many schemas share are declared once in an `abstract` schema and taken with `with`:
+
+```gess
+abstract schema :Unit_Common as {
+  id: :Text max 64
+  weight: :Quantity(kg) between 0kg and 1t
+}
+
+schema :DriveUnit as {
+  with :Unit_Common
+  maxSpeed: :Quantity(m/s) between 0m/s and 100m/s step 1m/s
+}
+```
+
+`DriveUnit` has the fields `id`, `weight` and `maxSpeed`, on the wire and in documents, as if written there.
+Generated models of it adopt the protocol `Unit_Common` (C# `IUnit_Common`), so code that reads the shared
+fields once works for every unit. `with :GameMap all optional without (id)` takes the fields of a plain
+schema as optional ones and leaves `id` out, for files that override some values.
+
 ## 5. Find the object with a key
 
 `key` marks the first field of a schema as the identity of the object, like `id` of `Player`. It

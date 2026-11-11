@@ -70,6 +70,15 @@ enum SchemaApiObservations {
                 return entry
             }
         }
+        if schema.isAbstract { result["abstract"] = true }
+        if !schema.takes.isEmpty {
+            result["takes"] = schema.takes.map { take -> [String: Any] in
+                var entry: [String: Any] = ["schema": take.schema.name]
+                if take.isAllOptional { entry["allOptional"] = true }
+                if !take.without.isEmpty { entry["without"] = take.without }
+                return entry
+            }
+        }
         if !schema.fields.isEmpty {
             result["fields"] = schema.fields.map { field -> [String: Any] in
                 var entry: [String: Any] = ["name": field.name, "alternatives": field.alternatives.map(describe)]

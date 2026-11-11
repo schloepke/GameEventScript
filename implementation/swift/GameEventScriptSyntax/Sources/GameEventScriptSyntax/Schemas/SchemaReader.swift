@@ -64,6 +64,17 @@
             wordOffset = position
             written = word()
         }
+        var isAbstract = false
+        if written == "abstract" && position < bytes.count && (bytes[position] == 32 || bytes[position] == 9) {
+            if wire != nil || model != nil {
+                throw Failure(offset: offset, message: "An abstract schema only lends its fields and takes no role.", code: Code.invalidRole)
+            }
+            isAbstract = true
+            skipSpaces()
+            wordOffset = position
+            written = word()
+            if written != "schema" { throw Failure(offset: wordOffset, message: "Expected 'schema' after 'abstract'.") }
+        }
         if wire != nil || model != nil {
             if written == "constant" || written == "parameter" || written == "tags" {
                 throw Failure(offset: offset, message: "Only a schema, message or message set can be a root.", code: Code.invalidRole)
@@ -75,6 +86,7 @@
             throw Failure(offset: offset, message: "'\(written)' is no role; a root is marked wire or model.", code: Code.invalidRole)
         }
         var result = try declaration(offset: offset, wordOffset: wordOffset, word: written)
+        result.isAbstract = isAbstract
         result.wireGroup = wire
         result.modelGroup = model
         return result
@@ -85,7 +97,7 @@
         if position < bytes.count && bytes[position] == 40 { return true }
         let start = position
         skipSpaces()
-        let role = position > start && (atWord("schema") || atWord("message") || atWord("messages"))
+        let role = position > start && (atWord("schema") || atWord("message") || atWord("messages") || atWord("abstract"))
         position = start
         return role
     }
@@ -131,6 +143,8 @@
             while !consume(125) {
                 if let declared = try letDeclaration() {
                     result.lets.append(declared)
+                } else if let with = try withEntry(result.fields.count) {
+                    result.withs.append(with)
                 } else {
                     result.fields.append(try field(allowUnlabeled: false, allowDefault: true))
                 }
@@ -201,6 +215,43 @@
         skipSpaces()
         if position < bytes.count && GesNames.lower(bytes[position]) { throw failure("A let is a literal or a constant.") }
         return GesSchemaLetSyntax(name: letName, value: try value(), offset: offset)
+    }
+
+    /// `with :Name [all optional] [without (a, b)]`; a field named with is followed by its colon instead of a type name.
+    private mutating func withEntry(_ fieldsBefore: Int) throws -> GesSchemaWithSyntax? {
+        let offset = position
+        if !atWord("with") { return nil }
+        _ = word()
+        skipSpaces()
+        if position == offset + 4 || position + 1 >= bytes.count || bytes[position] != 58 || !GesNames.upper(bytes[position + 1]) {
+            position = offset
+            return nil
+        }
+        var result = GesSchemaWithSyntax()
+        result.offset = offset
+        result.position = fieldsBefore
+        result.name = try typeName()
+        skipSpaces()
+        if atWord("all") {
+            _ = word()
+            skipSpaces()
+            try expectWord("optional")
+            result.allOptional = true
+            skipSpaces()
+        }
+        if atWord("without") {
+            _ = word()
+            skipSpaces()
+            try expect(40)
+            repeat {
+                skipTrivia()
+                result.withoutOffsets.append(position)
+                result.without.append(try name(GesNames.plain, "field name"))
+                skipTrivia()
+            } while consume(44)
+            try expect(41)
+        }
+        return result
     }
 
     private mutating func field(allowUnlabeled: Bool, allowDefault: Bool) throws -> GesSchemaFieldSyntax {

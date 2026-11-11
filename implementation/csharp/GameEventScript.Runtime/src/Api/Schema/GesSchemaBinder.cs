@@ -473,6 +473,7 @@ internal static class GesSchemaBinder
 
     internal static GesBoundSchema Bind(GesResolvedDeclaration root, GesSchemaParameters parameters)
     {
+        if (root.Abstract) throw root.Scope.Error(Code.InvalidAbstract, root.Offset, $"'{root.Name}' is abstract; it is never encoded.");
         var declarations = new List<GesResolvedDeclaration>();
         var reached = new SortedDictionary<string, GesSchemaTypeSyntax>(StringComparer.Ordinal);
         GesSchemaCanonical.Reach(root, declarations, reached);
@@ -509,7 +510,7 @@ internal static class GesSchemaBinder
     private static GesBoundSchema BindNodes(GesResolvedDeclaration declaration, GesSchemaParameters parameters, ulong hash, ulong bindingHash)
     {
         var inner = new Build(parameters);
-        foreach (var field in declaration.Fields) AddField(inner, declaration.Scope, field, "", 0, top: true);
+        foreach (var field in declaration.Fields) AddField(inner, field.Scope, field, "", 0, top: true);
         foreach (var tag in declaration.Tags)
             inner.Nodes.Add(new GesSchemaNode { Kind = GesSchemaNodeKind.Boolean, IsTagBit = true, Width = 1, Name = tag, Path = "#" + tag, Next = inner.Nodes.Count + 1, SchemaName = "" });
         var nodes = inner.Nodes.ToArray();
@@ -778,7 +779,7 @@ internal static class GesSchemaBinder
                 node.SchemaName = type.ReferenceName;
                 build.Nodes.Add(node);
                 var reference = type.Reference!;
-                foreach (var field in reference.Fields) AddField(build, reference.Scope, field, path, lists, top: false);
+                foreach (var field in reference.Fields) AddField(build, field.Scope, field, path, lists, top: false);
                 break;
             default:
                 throw scope.Error(Code.NotEncodable, type.Offset, $"A {type.Kind} has no width and is only for documents.");
@@ -810,10 +811,10 @@ internal static class GesSchemaBinder
         if (!known.Add((declaration, lists))) return;
         foreach (var field in declaration.Fields)
         {
-            if (field.Alternatives.Length == 1) CheckEncodable(declaration.Scope, field.Alternatives[0], lists, known);
+            if (field.Alternatives.Length == 1) CheckEncodable(field.Scope, field.Alternatives[0], lists, known);
             else
                 foreach (var alternative in field.Alternatives)
-                    if (alternative.Kind != GesSchemaTypeKind.Nothing) CheckEncodable(declaration.Scope, alternative, lists, known);
+                    if (alternative.Kind != GesSchemaTypeKind.Nothing) CheckEncodable(field.Scope, alternative, lists, known);
         }
     }
 

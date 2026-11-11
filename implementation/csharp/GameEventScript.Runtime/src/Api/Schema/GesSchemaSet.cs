@@ -111,6 +111,7 @@ public sealed class GesSchemaSet
     internal static void Check(string text, GesDocumentSyntax syntax, GesResolvedDeclaration schema, GesSchemaParameters? parameters)
     {
         if (schema.Kind != GesSchemaKind.Schema) throw new GesSchemaException(Code.UnknownName, "", 0, 0, $"'{schema.Name}' is no schema.");
+        if (schema.Abstract) throw new GesSchemaException(Code.InvalidAbstract, "", 0, 0, $"'{schema.Name}' is abstract and describes no document.");
         GesSchemaDocumentCheck.Check(text, syntax.Root!, schema, parameters);
     }
 
@@ -128,7 +129,7 @@ public sealed class GesSchemaSet
         GesResolvedDeclaration? root = null;
         foreach (var declaration in _ordered)
         {
-            if (declaration.Scope.SourceName != source || declaration.Kind != GesSchemaKind.Schema || referenced.Contains(declaration)) continue;
+            if (declaration.Scope.SourceName != source || declaration.Kind != GesSchemaKind.Schema || declaration.Abstract || referenced.Contains(declaration)) continue;
             if (root is not null) throw new GesSchemaException(Code.UnknownName, "", 0, 0, $"The schema source '{source}' has more than one root schema.");
             root = declaration;
         }
@@ -166,6 +167,9 @@ public sealed class GesSchemaSet
         var tagSets = new Dictionary<string, GesSchemaDeclarationSyntax>(StringComparer.Ordinal);
         foreach (var file in files) file.DeclareNames(_declarations, _ordered, tagSets);
         foreach (var file in files) file.Resolve(_declarations);
+        var composed = new HashSet<GesResolvedDeclaration>();
+        foreach (var declaration in _ordered)
+            if (declaration.Kind == GesSchemaKind.Schema) Compose(declaration, [], composed);
         var visited = new Dictionary<GesResolvedDeclaration, int>();
         foreach (var declaration in _ordered) CheckNesting(declaration, [], visited);
         foreach (var declaration in _ordered)
@@ -179,6 +183,24 @@ public sealed class GesSchemaSet
 
         foreach (var schema in schemas) schema.Complete();
         Schemas = new GesReadOnlyArray<GesSchema>(schemas);
+    }
+
+    // Composes the schemas a schema takes before it, so that it copies their complete fields; `with` must not form a cycle.
+    private void Compose(GesResolvedDeclaration declaration, List<GesResolvedDeclaration> path, HashSet<GesResolvedDeclaration> composed)
+    {
+        if (composed.Contains(declaration)) return;
+        path.Add(declaration);
+        foreach (var with in declaration.Syntax.Withs)
+        {
+            if (!_declarations.TryGetValue(with.Name, out var source) || source.Kind != GesSchemaKind.Schema)
+                throw declaration.Scope.Error(Code.UnknownName, with.Offset, $"Schema '{with.Name}' is not declared.");
+            if (path.Contains(source)) throw declaration.Scope.Error(Code.Cycle, with.Offset, $"'{declaration.Name}' takes the fields of '{with.Name}', which takes its own.");
+            Compose(source, path, composed);
+        }
+
+        path.RemoveAt(path.Count - 1);
+        declaration.Scope.Compose(declaration, _declarations);
+        composed.Add(declaration);
     }
 
     // Reference cycles and too deep nesting. A declaration already finished at this depth or deeper holds no error, so
@@ -299,6 +321,9 @@ internal sealed class GesResolvedField
     internal GesResolvedDefault? Default { get; set; }
 
     internal int Offset { get; init; }
+
+    // The file that declares the field, whose constants, parameters and positions it uses, also where `with` takes it.
+    internal GesFileScope Scope { get; init; } = null!;
 }
 
 /// <summary>The default of a field: an exact number in base units, a Boolean, a tag, or the name of a sibling field.</summary>
@@ -331,6 +356,11 @@ internal sealed class GesResolvedDeclaration
     internal GesResolvedField[] Fields { get; set; } = [];
 
     internal GesResolvedLet[] Lets { get; set; } = [];
+
+    // The schemas it takes with `with`, in declared order, each with its `with`.
+    internal (GesResolvedDeclaration Schema, GesSchemaWithSyntax With)[] Takes { get; set; } = [];
+
+    internal bool Abstract => Syntax.Abstract;
 
     internal string[] Tags { get; init; } = [];
 
@@ -453,8 +483,72 @@ internal sealed class GesFileScope
             }
 
             declaration.Fields = fields;
-            if (declaration.Kind == GesSchemaKind.Schema) ResolveDefaults(declaration);
         }
+    }
+
+    // Copies the fields that `with` takes in place, after every schema it takes is composed, then resolves the defaults,
+    // which may name a taken field. The taken fields keep their file and their defaults, unless `all optional` drops them.
+    internal void Compose(GesResolvedDeclaration declaration, Dictionary<string, GesResolvedDeclaration> all)
+    {
+        var syntax = declaration.Syntax;
+        var own = declaration.Fields;
+        var merged = new List<GesResolvedField>();
+        var origins = new List<int>();
+        var takes = new List<(GesResolvedDeclaration, GesSchemaWithSyntax)>();
+        for (var index = 0; index <= own.Length; index++)
+        {
+            foreach (var with in syntax.Withs)
+            {
+                if (with.Position != index) continue;
+                var source = all[with.Name];
+                takes.Add((source, with));
+                for (var excluded = 0; excluded < with.Without.Length; excluded++)
+                    if (!Array.Exists(source.Fields, field => field.Name == with.Without[excluded]))
+                        throw Error(Code.UnknownName, with.WithoutOffsets[excluded], $"'{with.Without[excluded]}' is no field of '{source.Name}'.");
+                foreach (var field in source.Fields)
+                {
+                    if (Array.IndexOf(with.Without, field.Name) >= 0) continue;
+                    var marker = field.Marker;
+                    if (with.AllOptional)
+                        marker = field.Alternatives.Length > 1 && Array.Exists(field.Alternatives, alternative => alternative.Kind == GesSchemaTypeKind.Nothing) ? GesSchemaFieldMarker.None : GesSchemaFieldMarker.Optional;
+                    merged.Add(new GesResolvedField
+                    {
+                        Name = field.Name,
+                        Unlabeled = field.Unlabeled,
+                        Alternatives = field.Alternatives,
+                        Marker = marker,
+                        Default = with.AllOptional ? null : field.Default,
+                        Offset = field.Offset,
+                        Scope = field.Scope
+                    });
+                    origins.Add(with.Offset);
+                }
+            }
+
+            if (index == own.Length) break;
+            merged.Add(own[index]);
+            origins.Add(-1);
+        }
+
+        var names = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var let in declaration.Lets) names.Add(let.Name);
+        for (var index = 0; index < merged.Count; index++)
+        {
+            var field = merged[index];
+            var offset = origins[index] >= 0 ? origins[index] : field.Offset;
+            if (!names.Add(field.Name)) throw Error(Code.DuplicateName, offset, $"'{field.Name}' is declared twice in '{declaration.Name}'.");
+            if (field.Marker == GesSchemaFieldMarker.Key && index != 0)
+                throw Error(Code.InvalidKey, offset, "A key is the first field of a schema, an integer or a Tag with a set, without delta within or a union.");
+        }
+
+        for (var index = 0; index < merged.Count; index++)
+            if (origins[index] >= 0 && merged[index].Default is { Kind: GesSchemaDefaultKind.Field } fallback && !merged.Exists(field => field.Name == fallback.Name))
+                throw Error(Code.InvalidDefault, origins[index], $"'{merged[index].Name}' defaults to '{fallback.Name}', which 'without' leaves out.");
+        declaration.Fields = merged.ToArray();
+        declaration.Takes = takes.ToArray();
+        _lets.Clear();
+        foreach (var let in declaration.Lets) _lets[let.Name] = let;
+        ResolveDefaults(declaration);
     }
 
     // A default is a number, a Boolean or a tag of the field's single type, or a sibling field of the same type whose value it
@@ -465,7 +559,7 @@ internal sealed class GesFileScope
         for (var index = 0; index < syntax.Length; index++)
         {
             if (syntax[index].Default is not { } written) continue;
-            var field = declaration.Fields[index];
+            var field = Array.Find(declaration.Fields, candidate => candidate.Name == syntax[index].Name && candidate.Scope == this && candidate.Offset == syntax[index].Offset)!;
             if (field.Marker == GesSchemaFieldMarker.Key) throw Error(Code.InvalidDefault, written.Offset, "A key takes no default.");
             var name = written.Value?.Name ?? "";
             var sibling = name.Length > 0 ? Array.Find(declaration.Fields, candidate => candidate.Name == name) : null;
@@ -547,13 +641,13 @@ internal sealed class GesFileScope
         {
             var first = alternatives[0];
             var keyable = first.Constraints.Integer || (first.Kind == GesSchemaTypeKind.Tag && first.Tags is not null);
-            if (owner != GesSchemaKind.Schema || index != 0 || alternatives.Length != 1 || !keyable || first.Constraints.Delta is not null)
+            if (owner != GesSchemaKind.Schema || alternatives.Length != 1 || !keyable || first.Constraints.Delta is not null)
                 throw Error(Code.InvalidKey, field.Offset, "A key is the first field of a schema, an integer or a Tag with a set, without delta within or a union.");
         }
 
         if (field.Marker == GesSchemaFieldMarker.Optional && alternatives.Length > 1 && Array.Exists(alternatives, alternative => alternative.Kind == GesSchemaTypeKind.Nothing))
             throw Error(Code.InvalidUnion, field.Offset, "A union with Nothing already holds an absent value; it is not optional as well.");
-        return new GesResolvedField { Name = field.Name, Unlabeled = field.Unlabeled, Alternatives = alternatives, Marker = field.Marker, Offset = field.Offset };
+        return new GesResolvedField { Name = field.Name, Unlabeled = field.Unlabeled, Alternatives = alternatives, Marker = field.Marker, Offset = field.Offset, Scope = this };
     }
 
     private GesResolvedType[] ResolveUnion(GesSchemaTypeSyntax[] alternatives, Dictionary<string, GesResolvedDeclaration> all)
@@ -594,6 +688,7 @@ internal sealed class GesFileScope
         GesResolvedDeclaration? reference = null;
         if (type.Kind == GesSchemaTypeKind.Reference && (!all.TryGetValue(type.Name, out reference) || reference.Kind != GesSchemaKind.Schema))
             throw Error(Code.UnknownName, type.Offset, $"Schema '{type.Name}' is not declared.");
+        if (reference is { Abstract: true }) throw Error(Code.InvalidAbstract, type.Offset, $"'{type.Name}' is abstract; only 'with' takes its fields.");
         if (type.Tags is { } tags)
         {
             var seen = new HashSet<string>(StringComparer.Ordinal);
@@ -741,7 +836,7 @@ internal static class GesSchemaCanonical
         if (!seen.Add(declaration)) return;
         declarations.Add(declaration);
         foreach (var field in declaration.Fields)
-            foreach (var type in field.Alternatives) Reach(type, declaration.Scope, seen, declarations, parameters);
+            foreach (var type in field.Alternatives) Reach(type, field.Scope, seen, declarations, parameters);
         foreach (var member in declaration.Members) Reach(member, seen, declarations, parameters);
     }
 

@@ -80,6 +80,17 @@ internal sealed class GesSchemaSourceReader
             word = ReadWord();
         }
 
+        var isAbstract = false;
+        if (word == "abstract" && _position < _text.Length && _text[_position] is ' ' or '\t')
+        {
+            if (wire is not null || model is not null) throw new SyntaxFailure(offset, "An abstract schema only lends its fields and takes no role.", Code.InvalidRole);
+            isAbstract = true;
+            SkipSpaces();
+            wordOffset = _position;
+            word = ReadWord();
+            if (word != "schema") throw new SyntaxFailure(wordOffset, "Expected 'schema' after 'abstract'.");
+        }
+
         if (wire is not null || model is not null)
         {
             if (word is "constant" or "parameter" or "tags") throw new SyntaxFailure(offset, "Only a schema, message or message set can be a root.", Code.InvalidRole);
@@ -89,6 +100,7 @@ internal sealed class GesSchemaSourceReader
             throw new SyntaxFailure(offset, $"'{word}' is no role; a root is marked wire or model.", Code.InvalidRole);
 
         var declaration = ReadDeclaration(offset, wordOffset, word);
+        declaration.Abstract = isAbstract;
         declaration.WireGroup = wire;
         declaration.ModelGroup = model;
         return declaration;
@@ -100,7 +112,7 @@ internal sealed class GesSchemaSourceReader
         if (_position < _text.Length && _text[_position] == '(') return true;
         var start = _position;
         SkipSpaces();
-        var role = _position > start && (AtWord("schema") || AtWord("message") || AtWord("messages"));
+        var role = _position > start && (AtWord("schema") || AtWord("message") || AtWord("messages") || AtWord("abstract"));
         _position = start;
         return role;
     }
@@ -144,16 +156,18 @@ internal sealed class GesSchemaSourceReader
                 Expect('{');
                 var fields = new List<GesSchemaFieldSyntax>();
                 var lets = new List<GesSchemaLetSyntax>();
+                var withs = new List<GesSchemaWithSyntax>();
                 SkipSeparators();
                 while (!Consume('}'))
                 {
                     if (ReadLet() is { } let) lets.Add(let);
+                    else if (ReadWith(fields.Count) is { } with) withs.Add(with);
                     else fields.Add(ReadField(allowUnlabeled: false, allowDefault: true));
                     EndEntry('}');
                     SkipSeparators();
                 }
 
-                return new GesSchemaDeclarationSyntax { Kind = GesSchemaDeclarationKind.Schema, Name = name, Offset = offset, Fields = fields.ToArray(), Lets = lets.ToArray() };
+                return new GesSchemaDeclarationSyntax { Kind = GesSchemaDeclarationKind.Schema, Name = name, Offset = offset, Fields = fields.ToArray(), Lets = lets.ToArray(), Withs = withs.ToArray() };
             }
             case "message":
             {
@@ -238,6 +252,52 @@ internal sealed class GesSchemaSourceReader
         SkipSpaces();
         if (_position < _text.Length && GesText.IsAsciiLower(_text[_position])) throw Failure("A let is a literal or a constant.");
         return new GesSchemaLetSyntax { Name = name, Value = ReadValue(), Offset = offset };
+    }
+
+    // `with :Name [all optional] [without (a, b)]`; a field named with is followed by its colon instead of a type name.
+    private GesSchemaWithSyntax? ReadWith(int position)
+    {
+        var offset = _position;
+        if (!AtWord("with")) return null;
+        ReadWord();
+        SkipSpaces();
+        if (_position == offset + 4 || _position + 1 >= _text.Length || _text[_position] != ':' || !GesText.IsAsciiUpper(_text[_position + 1]))
+        {
+            _position = offset;
+            return null;
+        }
+
+        var name = ReadTypeName();
+        SkipSpaces();
+        var allOptional = false;
+        if (AtWord("all"))
+        {
+            ReadWord();
+            SkipSpaces();
+            ExpectWord("optional");
+            allOptional = true;
+            SkipSpaces();
+        }
+
+        var without = new List<string>();
+        var offsets = new List<int>();
+        if (AtWord("without"))
+        {
+            ReadWord();
+            SkipSpaces();
+            Expect('(');
+            do
+            {
+                SkipTrivia();
+                offsets.Add(_position);
+                without.Add(ReadName(GesText.IsFieldName, "field name"));
+                SkipTrivia();
+            }
+            while (Consume(','));
+            Expect(')');
+        }
+
+        return new GesSchemaWithSyntax { Name = name, AllOptional = allOptional, Without = without.ToArray(), WithoutOffsets = offsets.ToArray(), Position = position, Offset = offset };
     }
 
     private GesSchemaFieldSyntax ReadField(bool allowUnlabeled, bool allowDefault)

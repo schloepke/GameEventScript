@@ -144,6 +144,19 @@ public struct GesSchemaFieldInfo: Sendable {
     }
 }
 
+/// The fields a schema takes from another with `with`.
+public struct GesSchemaTakeInfo: Sendable {
+    /// The schema whose fields are taken.
+    public let schema: GesSchema
+    /// Whether `all optional` makes every taken field optional and drops its default.
+    public let isAllOptional: Bool
+    /// The fields that `without` leaves out, in written order.
+    public let without: [String]
+
+    /// Whether the fields are taken unchanged, so that generated models take the schema's protocol or interface.
+    public var isUnchanged: Bool { !isAllOptional && without.isEmpty }
+}
+
 /// The kinds of a field's default.
 public enum GesSchemaDefaultKind: Sendable {
     /// A number of a numeric field, in base units; a Percentage holds its ratio.
@@ -225,6 +238,12 @@ public final class GesSchema: @unchecked Sendable {
     /// The group in which the schema is a model root, `default` for `model` without a group, or nil when it is no model
     /// root. Roles are not part of the canonical form or any hash.
     public let modelGroup: String?
+    /// Whether the schema is abstract: it only lends its fields with `with` and is never bound, checked against a document
+    /// or generated as a type.
+    public let isAbstract: Bool
+    /// The schemas whose fields this schema takes with `with`, in declared order. Their fields are part of ``fields``, as if
+    /// written in place.
+    public private(set) var takes: [GesSchemaTakeInfo] = []
     /// The schema hash: FNV-1a 64 over the canonical form.
     public private(set) var hash: UInt64 = 0
     /// The parameters it reaches, in ascending name order.
@@ -243,6 +262,7 @@ public final class GesSchema: @unchecked Sendable {
         tags = declaration.tags
         wireGroup = declaration.syntax.wireGroup
         modelGroup = declaration.syntax.modelGroup
+        isAbstract = declaration.isAbstract
     }
 
     /// The canonical form, which the hash runs over. It is computed on each call.
@@ -279,5 +299,6 @@ public final class GesSchema: @unchecked Sendable {
         fields = declaration.fields.map(GesSchemaFieldInfo.init)
         constants = declaration.lets.map(GesSchemaConstantInfo.init)
         members = declaration.members.map { $0.schema! }
+        takes = declaration.takes.map { GesSchemaTakeInfo(schema: $0.schema.schema!, isAllOptional: $0.with.allOptional, without: $0.with.without) }
     }
 }

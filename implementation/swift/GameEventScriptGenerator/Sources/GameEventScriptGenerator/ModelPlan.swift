@@ -88,6 +88,28 @@ enum GesModelPlanner {
         return value
     }
 
+    // The protocol (Swift) or interface (C#) of a schema that types take with `with`: an abstract schema's own name in Swift,
+    // since no type takes it, `<Name>Fields` beside a type of that name, and `I<Name>` in C#.
+    static func protocolName(_ layout: GesModelLayout, _ name: String, swift: Bool) -> String {
+        if !swift { return "I" + name }
+        return layout.protocols.first { $0.name == name }!.isAbstract ? name : name + "Fields"
+    }
+
+    // The protocols a type adopts: those of the schemas it takes unchanged and, for a plain schema that others take, its own.
+    static func adopted(_ layout: GesModelLayout, _ type: GesModelType, swift: Bool) -> [String] {
+        var adopted = type.takes.map { protocolName(layout, $0, swift: swift) }
+        if layout.protocols.contains(where: { $0.name == type.name }) { adopted.append(protocolName(layout, type.name, swift: swift)) }
+        return adopted
+    }
+
+    // Protocol names must not meet a type or tag set of the file.
+    static func checkProtocols(_ layout: GesModelLayout, swift: Bool) throws(GesGeneratorError) {
+        var names: [(name: String, origin: String)] = layout.types.map { ($0.name, "the type " + $0.name) }
+        for set in tagSets(layout) { names.append((set.name, "the tag set " + set.name)) }
+        for protocolType in layout.protocols { names.append((protocolName(layout, protocolType.name, swift: swift), "the protocol of " + protocolType.name)) }
+        try GesSchemaPlanner.unique("the generated file", names)
+    }
+
     // The order in which a record's fields are read: declared order, except that a field defaulting to a sibling follows it.
     static func readOrder(_ fields: [GesModelPlanField]) -> [Int] {
         var order: [Int] = []

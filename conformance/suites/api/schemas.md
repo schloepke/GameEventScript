@@ -1816,6 +1816,578 @@ schema:
 
 ---
 
+## Test: taken fields in the canonical form
+
+`with` copies the fields of another schema where it stands, with their defaults; the canonical form lists them as if written there, and an abstract schema leaves no trace.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: canonical-with
+schemaApi:
+  sources:
+    - "abstract schema :Base as {\n  on: :Boolean\n  level: :Number integer between 0 and 7 default 3\n}\nschema :S as {\n  with :Base\n  mode: :Tag(#a, #b)\n  top: :Number integer between 0 and 7 default level\n}\n"
+  root: "S"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  canonical: "gess1\nschema S\nfield on Boolean\nfield level Number integer between 0e0 7e0 default 3e0\nfield mode Tag(#a #b)\nfield top Number integer between 0e0 7e0 default field level\n"
+  hash: "b35af4332f489feb"
+```
+
+---
+
+## Test: written fields hash like taken ones
+
+A schema that writes the fields a `with` would take has the same canonical form and hash.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: canonical-with-written
+schemaApi:
+  sources:
+    - "schema :S as {\n  on: :Boolean\n  level: :Number integer between 0 and 7 default 3\n  mode: :Tag(#a, #b)\n  top: :Number integer between 0 and 7 default level\n}\n"
+  root: "S"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  canonical: "gess1\nschema S\nfield on Boolean\nfield level Number integer between 0e0 7e0 default 3e0\nfield mode Tag(#a #b)\nfield top Number integer between 0e0 7e0 default field level\n"
+  hash: "b35af4332f489feb"
+```
+
+---
+
+## Test: taking fields all optional and without some
+
+`all optional` makes every taken field optional and drops its default, except a union with a Nothing alternative, which already holds an absent value; `without` leaves fields out, also a key.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: canonical-with-all-optional
+schemaApi:
+  sources:
+    - "schema :Area as {\n  id: :Number integer between 0 and 99 key\n  width: :Quantity(m) between 1m and 9m step 1m default 4m\n  name: :Text max 8\n  note: :Text max 4 | :Nothing\n}\nschema :Defaults as { with :Area all optional without (id) }\n"
+  root: "Defaults"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  canonical: "gess1\nschema Defaults\nfield width Quantity(meter) between 1e0 9e0 step 1e0 optional\nfield name Text max 8 optional\nfield note Text max 4 | Nothing\n"
+  hash: "b3ad0d11820fbc1c"
+```
+
+---
+
+## Test: the description of taken fields
+
+A schema lists what it takes with `with` and its fields in their final order; an abstract schema says so.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: describe-with
+schemaApi:
+  sources:
+    - "abstract schema :Base as { on: :Boolean }\nschema :Area as { name: :Text, size: :Boolean }\nschema :S as {\n  with :Base\n  with :Area all optional without (size)\n  mode: :Boolean\n}\n"
+  root: "S"
+  bind: false
+  describe: true
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  description:
+    name: "S"
+    kind: "Schema"
+    takes:
+      - schema: "Base"
+      - schema: "Area"
+        allOptional: true
+        without: ["size"]
+    fields:
+      - name: "on"
+        alternatives:
+          - kind: "Boolean"
+      - name: "name"
+        alternatives:
+          - kind: "Text"
+        optional: true
+      - name: "mode"
+        alternatives:
+          - kind: "Boolean"
+```
+
+---
+
+## Test: the description of an abstract schema
+
+An abstract schema describes its fields, also those it takes, but is never bound.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: describe-abstract
+schemaApi:
+  sources:
+    - "abstract schema :Base as { on: :Boolean }\nabstract schema :Module as { with :Base, off: :Boolean }\n"
+  root: "Module"
+  bind: false
+  describe: true
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  description:
+    name: "Module"
+    kind: "Schema"
+    abstract: true
+    takes:
+      - schema: "Base"
+    fields:
+      - name: "on"
+        alternatives:
+          - kind: "Boolean"
+      - name: "off"
+        alternatives:
+          - kind: "Boolean"
+```
+
+---
+
+## Test: a value with taken fields
+
+Composition is a schema-level thing only: the record stays flat on the wire and in values.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: encode-with
+schemaApi:
+  sources:
+    - "abstract schema :Base as { on: :Boolean, level: :Number integer between 0 and 7 }\nschema :S as { with :Base, mode: :Tag(#a, #b) }\n"
+  root: "S"
+  encode:
+    type: ":S"
+    entries:
+      - key: "on"
+        value:
+          type: ":Boolean"
+          value: true
+      - key: "level"
+        value:
+          type: ":Number.int64"
+          value: "5"
+      - key: "mode"
+        value:
+          type: ":Tag"
+          value: "b"
+  decode: "1b"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "1b"
+  decoded:
+    value:
+      type: ":S"
+      entries:
+        - key: "level"
+          value:
+            type: ":Number.int64"
+            value: "5"
+        - key: "mode"
+          value:
+            type: ":Tag"
+            value: "b"
+        - key: "on"
+          value:
+            type: ":Boolean"
+            value: true
+    byteCount: 1
+```
+
+---
+
+## Test: a document with taken fields
+
+Document checking sees the taken fields like written ones.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: document-with
+schemaApi:
+  sources:
+    - "abstract schema :Base as { on: :Boolean }\nschema :S as { with :Base, size: :Number integer between 0 and 9 }\n"
+  document: ":Schema(:S)\non: true\nsize: 4\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  document:
+    ok: true
+```
+
+---
+
+## Test: a document of an abstract schema
+
+An abstract schema describes no document.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: document-abstract
+schemaApi:
+  sources:
+    - "abstract schema :Base as { on: :Boolean }\n"
+  document: ":Schema(:Base)\non: true\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  document:
+    error:
+      code: "schema.invalidAbstract"
+```
+
+---
+
+## Test: binding an abstract schema
+
+An abstract schema is never encoded, so it cannot be bound.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-abstract-bind
+schemaApi:
+  sources:
+    - "abstract schema :Base as { on: :Boolean }\n"
+  root: "Base"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidAbstract"
+    line: 1
+    column: 1
+```
+
+---
+
+## Test: an abstract schema as a field type
+
+Only `with` takes an abstract schema; it is no field type.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-abstract-field
+schemaApi:
+  sources:
+    - "abstract schema :Base as { on: :Boolean }\nschema :S as { x: :Base }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidAbstract"
+    line: 2
+    column: 19
+```
+
+---
+
+## Test: an abstract schema as a list element
+
+An abstract schema is no list element either.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-abstract-element
+schemaApi:
+  sources:
+    - "abstract schema :Base as { on: :Boolean }\nschema :S as { x: :List(:Base) max 2 }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidAbstract"
+    line: 2
+    column: 25
+```
+
+---
+
+## Test: an abstract schema with a role
+
+An abstract schema is no root, so it takes no role.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-abstract-role
+schemaApi:
+  sources:
+    - "model abstract schema :Base as { on: :Boolean }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidRole"
+    line: 1
+    column: 1
+```
+
+---
+
+## Test: taking an undeclared schema
+
+`with` names a schema.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-with-unknown
+schemaApi:
+  sources:
+    - "message M(a: :Boolean)\nschema :S as { with :M }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.unknownName"
+    line: 2
+    column: 16
+```
+
+---
+
+## Test: schemas that take each other
+
+`with` must not form a cycle.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-with-cycle
+schemaApi:
+  sources:
+    - "schema :A as { with :B }\nschema :B as { with :A }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.cycle"
+    line: 2
+    column: 16
+```
+
+---
+
+## Test: a taken field named like an own one
+
+Taken fields share the names of the schema that takes them.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-with-duplicate
+schemaApi:
+  sources:
+    - "schema :A as { a: :Boolean }\nschema :S as { a: :Text, with :A }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.duplicateName"
+    line: 2
+    column: 26
+```
+
+---
+
+## Test: leaving out a field the schema does not have
+
+`without` names fields of the taken schema.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-with-without
+schemaApi:
+  sources:
+    - "schema :A as { a: :Boolean }\nschema :S as { with :A without (b) }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.unknownName"
+    line: 2
+    column: 33
+```
+
+---
+
+## Test: a taken key that is not first
+
+A key stays the first field, also where `with` puts it.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-with-key
+schemaApi:
+  sources:
+    - "schema :A as { a: :Number integer key }\nschema :S as { b: :Boolean, with :A }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidKey"
+    line: 2
+    column: 29
+```
+
+---
+
+## Test: a taken default whose field is left out
+
+A taken field keeps its default, so `without` cannot leave out the field it names, unless `all optional` drops the default.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-with-default
+schemaApi:
+  sources:
+    - "schema :A as { a: :Boolean, b: :Boolean default a }\nschema :S as { with :A without (a) }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidDefault"
+    line: 2
+    column: 16
+```
+
+---
+
+## Test: with in a message
+
+Only a schema takes fields with `with`.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-with-message
+schemaApi:
+  sources:
+    - "message M(with :A)\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.syntax"
+    line: 1
+    column: 17
+```
+
+---
+
 ## Test: field order a is part of the hash
 
 Field order is the wire order.

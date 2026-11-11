@@ -31,12 +31,16 @@ internal static class GesSchemaFormatter
                     builder.Append('\n');
                     break;
                 case GesSchemaDeclarationKind.Schema:
+                    if (declaration.Abstract) builder.Append("abstract ");
                     builder.Append("schema :").Append(declaration.Name).Append(" as {\n");
                     foreach (var let in declaration.Lets) builder.Append("  let ").Append(let.Name).Append(" be ").Append(Value(let.Value)).Append('\n');
-                    foreach (var field in declaration.Fields)
+                    for (var index = 0; index <= declaration.Fields.Length; index++)
                     {
+                        foreach (var with in declaration.Withs)
+                            if (with.Position == index) With(with, builder);
+                        if (index == declaration.Fields.Length) break;
                         builder.Append("  ");
-                        Field(field, builder, "  ");
+                        Field(declaration.Fields[index], builder, "  ");
                         builder.Append('\n');
                     }
 
@@ -80,6 +84,14 @@ internal static class GesSchemaFormatter
         builder.Append(role);
         if (group != "default") builder.Append('(').Append(group).Append(')');
         builder.Append(' ');
+    }
+
+    private static void With(GesSchemaWithSyntax with, StringBuilder builder)
+    {
+        builder.Append("  with :").Append(with.Name);
+        if (with.AllOptional) builder.Append(" all optional");
+        if (with.Without.Length > 0) builder.Append(" without (").Append(string.Join(", ", with.Without)).Append(')');
+        builder.Append('\n');
     }
 
     private static void Field(GesSchemaFieldSyntax field, StringBuilder builder, string indent)

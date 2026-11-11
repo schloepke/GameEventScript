@@ -32,8 +32,13 @@ enum GesCSharpModelEmitter {
         let support = "__GesModels" + GesSchemaPlanner.hash(GesModelPlanner.header(layout))
         let values = "__GesModelValues" + GesSchemaPlanner.hash(GesModelPlanner.header(layout))
         let qualifier = "global::" + space.map { $0 + "." }.joined()
+        try GesModelPlanner.checkProtocols(layout, swift: false)
         for type in layout.types {
-            try record(&code, type, access, support, qualifier, bindings: options.bindings, values: options.values ? values : nil)
+            try record(&code, layout, type, access, support, qualifier, bindings: options.bindings, values: options.values ? values : nil)
+            code.blank()
+        }
+        for protocolType in layout.protocols {
+            interfaceDeclaration(&code, layout, protocolType, access)
             code.blank()
         }
         for set in GesModelPlanner.tagSets(layout) {
@@ -58,7 +63,21 @@ enum GesCSharpModelEmitter {
         return GesCSharpEmitter.keywords.contains(name) ? "@" + name : name
     }
 
-    private static func record(_ code: inout Code, _ type: GesModelType, _ access: String, _ support: String, _ qualifier: String, bindings: Bool, values: String?)
+    /// The read-only properties of the fields a schema lends with `with`.
+    private static func interfaceDeclaration(_ code: inout Code, _ layout: GesModelLayout, _ protocolType: GesModelProtocol, _ access: String) {
+        let refines = protocolType.takes.map { GesModelPlanner.protocolName(layout, $0, swift: false) }
+        code.line("/// <summary>The fields of the schema <c>:\(protocolType.name)</c>, which every model type that takes them unchanged with <c>with</c> has.</summary>")
+        code.line("\(access) interface \(GesModelPlanner.protocolName(layout, protocolType.name, swift: false))\(refines.isEmpty ? "" : " : " + refines.joined(separator: ", "))")
+        code.open("{")
+        for (index, field) in GesModelPlanner.fields(GesModelType(name: protocolType.name, fields: protocolType.fields)).enumerated() {
+            if index > 0 { code.blank() }
+            code.line("/// <summary><c>\(escape(field.field.name + ": " + GesModelPlanner.describe(field.field)))</c></summary>")
+            code.line("\(self.type(field.value)) \(field.base) { get; }")
+        }
+        code.close()
+    }
+
+    private static func record(_ code: inout Code, _ layout: GesModelLayout, _ type: GesModelType, _ access: String, _ support: String, _ qualifier: String, bindings: Bool, values: String?)
         throws(GesGeneratorError)
     {
         let fields = GesModelPlanner.fields(type)
@@ -77,7 +96,7 @@ enum GesCSharpModelEmitter {
         try GesSchemaPlanner.unique(type.name, names)
 
         code.line("/// <summary>The model of the schema <c>:\(type.name)</c>: a plain value that is never encoded and compares by value.</summary>")
-        code.line("\(access) sealed class \(type.name) : IEquatable<\(type.name)>")
+        code.line("\(access) sealed class \(type.name) : IEquatable<\(type.name)>\(GesModelPlanner.adopted(layout, type, swift: false).map { ", " + $0 }.joined())")
         code.open("{")
         code.line("/// <summary>The hash of the schema <c>:\(type.name)</c>, which wire records of it carry too; a test that compares it notices stale generated code.</summary>")
         code.line("public const ulong SchemaHash = 0x\(GesSchemaLayoutJson.hex(type.hash))UL;")

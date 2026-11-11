@@ -183,6 +183,17 @@ public enum GesSchemaTypeKind: String, Sendable, Equatable {
     @_spi(Syntax) public let offset: Int
 }
 
+/// `with :Name all optional without (a, b)` inside a schema: the fields of another schema, copied where it stands.
+@_spi(Syntax) public struct GesSchemaWithSyntax: Sendable {
+    @_spi(Syntax) public var name = ""
+    @_spi(Syntax) public var allOptional = false
+    @_spi(Syntax) public var without: [String] = []
+    @_spi(Syntax) public var withoutOffsets: [Int] = []
+    /// The number of the schema's own fields declared before it.
+    @_spi(Syntax) public var position = 0
+    @_spi(Syntax) public var offset = 0
+}
+
 @_spi(Syntax) public struct GesSchemaDeclarationSyntax: Sendable {
     @_spi(Syntax) public var kind = GesSchemaDeclarationKind.constant
     @_spi(Syntax) public var name = ""
@@ -192,6 +203,9 @@ public enum GesSchemaTypeKind: String, Sendable, Equatable {
     @_spi(Syntax) public var type: GesSchemaTypeSyntax?
     @_spi(Syntax) public var fields: [GesSchemaFieldSyntax] = []
     @_spi(Syntax) public var lets: [GesSchemaLetSyntax] = []
+    @_spi(Syntax) public var withs: [GesSchemaWithSyntax] = []
+    /// An abstract schema only lends its fields with `with`.
+    @_spi(Syntax) public var isAbstract = false
     @_spi(Syntax) public var tags: [String] = []
     @_spi(Syntax) public var members: [String] = []
     @_spi(Syntax) public var memberOffsets: [Int] = []
@@ -218,6 +232,7 @@ public enum GesSchemaTypeKind: String, Sendable, Equatable {
     @_spi(Syntax) public static let invalidRole = "schema.invalidRole"
     @_spi(Syntax) public static let duplicateRole = "schema.duplicateRole"
     @_spi(Syntax) public static let invalidDefault = "schema.invalidDefault"
+    @_spi(Syntax) public static let invalidAbstract = "schema.invalidAbstract"
 
     @_spi(Syntax) public let code: String
     /// The UTF-8 offset of the error.

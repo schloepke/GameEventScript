@@ -256,6 +256,19 @@ final class GeneratedRoleCodeTests: XCTestCase {
         XCTAssertEqual(body.hull, .light)
     }
 
+    func testTakenFieldsAdoptTheProtocolOfTheirSchema() {
+        let gear: any RolesModel.Gear = RolesModel.GearView(slot: 3, label: "drill", side: .left, grade: .high)
+        let part: any RolesModel.Part = gear
+        XCTAssertEqual(part.label, "drill")
+        XCTAssertEqual(part.side, .left)
+        XCTAssertEqual(gear.weight, 1)
+        let echo: any RolesModel.RadarViewFields = RolesModel.RadarEcho(contacts: [], strength: 0.5)
+        XCTAssertEqual(echo.reach, 500)
+        XCTAssertTrue((RolesModel.RadarView(contacts: []) as Any) is any RolesModel.RadarViewFields)
+        XCTAssertFalse((RolesModel.GearPreset() as Any) is any RolesModel.Gear)
+        XCTAssertNil(RolesModel.GearPreset().weight)
+    }
+
     func testBoundModelsAlsoConvertToPlainValues() throws {
         let value = report().toValue()
         let bound = try RolesBound.Panel_Report(value: value)

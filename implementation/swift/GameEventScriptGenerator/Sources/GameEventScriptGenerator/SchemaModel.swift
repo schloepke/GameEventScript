@@ -10,6 +10,8 @@ struct GesModelLayout {
 
     var roots: [String]
     var types: [GesModelType]
+    /// The schemas whose fields reached types take unchanged with `with`, directly or through each other, by name.
+    var protocols: [GesModelProtocol] = []
 
     func type(_ name: String) -> GesModelType { types.first { $0.name == name }! }
 }
@@ -19,6 +21,18 @@ struct GesModelType {
     var hash: UInt64 = 0
     var fields: [GesModelField] = []
     var constants: [GesLayoutConstant] = []
+    /// The schemas it takes unchanged with `with`, whose protocols or interfaces it adopts, in declared order.
+    var takes: [String] = []
+}
+
+/// A schema that types take with `with`: generated as a protocol (Swift) or interface (C#) with read-only properties. It
+/// refines the protocols of the schemas it takes unchanged and requires its other fields whose type is shared by name, as
+/// every field's type is except a union, Flags and a closed Tag written in place, which generated code declares per field.
+struct GesModelProtocol {
+    var name = ""
+    var isAbstract = false
+    var takes: [String] = []
+    var fields: [GesModelField] = []
 }
 
 final class GesModelField {
@@ -63,6 +77,9 @@ enum GesModelLayoutBuilder {
         for root in roots where !rootNames.contains(root) {
             let schema = try set.schema(root)
             if schema.kind != .schema { throw GesGeneratorError(GesGeneratorError.usage, "The model root '\(root)' is no schema.") }
+            if schema.isAbstract {
+                throw GesGeneratorError(GesGeneratorError.usage, "The model root '\(root)' is abstract; only its protocol is generated, where a model takes it.")
+            }
             rootNames.append(root)
             reach(schema, &reached)
         }
@@ -77,9 +94,49 @@ enum GesModelLayoutBuilder {
                 field.defaultValue = GesLayoutDefault.of(info)
                 type.fields.append(field)
             }
+            type.takes = schema.takes.filter(\.isUnchanged).map(\.schema.name)
             types.append(type)
         }
-        return GesModelLayout(roots: rootNames, types: types)
+        var layout = GesModelLayout(roots: rootNames, types: types)
+        var protocols: [String: GesSchema] = [:]
+        for schema in reached.values { collectProtocols(schema, &protocols) }
+        for name in protocols.keys.sorted(by: GesSchemaLayoutBuilder.ordinal) {
+            let schema = protocols[name]!
+            var protocolType = GesModelProtocol(name: schema.name, isAbstract: schema.isAbstract)
+            var inherited: Set<String> = []
+            for take in schema.takes where take.isUnchanged {
+                protocolType.takes.append(take.schema.name)
+                for field in take.schema.fields { inherited.insert(field.name) }
+            }
+            for info in schema.fields where !inherited.contains(info.name) {
+                let field = try self.field(info.name, info.name, info.alternatives)
+                field.optional = info.isOptional
+                field.key = info.isKey
+                if shared(field.value) { protocolType.fields.append(field) }
+            }
+            layout.protocols.append(protocolType)
+        }
+        return layout
+    }
+
+    private static func collectProtocols(_ schema: GesSchema, _ protocols: inout [String: GesSchema]) {
+        for take in schema.takes where take.isUnchanged && protocols[take.schema.name] == nil {
+            protocols[take.schema.name] = take.schema
+            collectProtocols(take.schema, &protocols)
+        }
+    }
+
+    /// Whether generated code names the field's type alike in every type: not a union, Flags or a closed Tag written in place.
+    private static func shared(_ value: GesModelValue) -> Bool {
+        switch value.kind {
+        case .union:
+            let present = value.alternatives.filter { $0.value.kind != .nothing }
+            return present.count == 1 && shared(present[0].value)
+        case .flags: return false
+        case .tag: return value.tags.isEmpty || !value.tagSet.isEmpty
+        case .list: return value.element.map { shared($0.value) } ?? true
+        default: return true
+        }
     }
 
     private static func reach(_ schema: GesSchema, _ reached: inout [String: GesSchema]) {
@@ -190,9 +247,24 @@ enum GesModelLayoutJson {
             for field in type.fields { self.field(&json, field, member: true) }
             json.endArray()
             GesSchemaLayoutJson.constants(&json, type.constants)
+            if !type.takes.isEmpty { json.strings("takes", type.takes) }
             json.endObject()
         }
         json.endArray()
+        if !layout.protocols.isEmpty {
+            json.beginArray("protocols")
+            for protocolType in layout.protocols {
+                json.beginObject()
+                json.string("name", protocolType.name)
+                json.boolean("abstract", protocolType.isAbstract)
+                json.strings("takes", protocolType.takes)
+                json.beginArray("fields")
+                for field in protocolType.fields { self.field(&json, field, member: true) }
+                json.endArray()
+                json.endObject()
+            }
+            json.endArray()
+        }
         json.endObject()
         return json.text + "\n"
     }

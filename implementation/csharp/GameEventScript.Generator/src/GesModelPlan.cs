@@ -107,6 +107,29 @@ internal static class GesModelPlanner
     }
 
     // The types in an order where each comes after the types it holds, for registration: by name, depth first.
+    // The protocol (Swift) or interface (C#) of a schema that types take with `with`: an abstract schema's own name in Swift,
+    // since no type takes it, `<Name>Fields` beside a type of that name, and `I<Name>` in C#.
+    internal static string ProtocolName(GesModelLayout layout, string name, bool swift)
+        => !swift ? "I" + name : layout.Protocols.Find(protocol => protocol.Name == name)!.Abstract ? name : name + "Fields";
+
+    // The protocols a type adopts: those of the schemas it takes unchanged and, for a plain schema that others take, its own.
+    internal static List<string> Adopted(GesModelLayout layout, GesModelType type, bool swift)
+    {
+        var adopted = type.Takes.ConvertAll(name => ProtocolName(layout, name, swift));
+        if (layout.Protocols.Exists(protocol => protocol.Name == type.Name)) adopted.Add(ProtocolName(layout, type.Name, swift));
+        return adopted;
+    }
+
+    // Protocol names must not meet a type or tag set of the file.
+    internal static void CheckProtocols(GesModelLayout layout, bool swift)
+    {
+        var names = new List<(string, string)>();
+        foreach (var type in layout.Types) names.Add((type.Name, "the type " + type.Name));
+        foreach (var (name, _) in TagSets(layout)) names.Add((name, "the tag set " + name));
+        foreach (var protocol in layout.Protocols) names.Add((ProtocolName(layout, protocol.Name, swift), "the protocol of " + protocol.Name));
+        GesSchemaPlanner.Unique("the generated file", names);
+    }
+
     // The order in which a record's fields are read: declared order, except that a field defaulting to a sibling follows it.
     internal static List<int> ReadOrder(List<GesModelPlanField> fields)
     {

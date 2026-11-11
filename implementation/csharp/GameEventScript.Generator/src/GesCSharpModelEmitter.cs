@@ -40,9 +40,16 @@ internal static class GesCSharpModelEmitter
         var support = "__GesModels" + GesSchemaPlanner.Hash(GesModelPlanner.Header(layout));
         var values = "__GesModelValues" + GesSchemaPlanner.Hash(GesModelPlanner.Header(layout));
         var qualifier = "global::" + string.Concat(space.ConvertAll(part => part + "."));
+        GesModelPlanner.CheckProtocols(layout, swift: false);
         for (var index = 0; index < layout.Types.Count; index++)
         {
-            Record(code, layout.Types[index], access, support, qualifier, options.Bindings, options.Values ? values : null);
+            Record(code, layout, layout.Types[index], access, support, qualifier, options.Bindings, options.Values ? values : null);
+            code.Blank();
+        }
+
+        foreach (var protocol in layout.Protocols)
+        {
+            Interface(code, layout, protocol, access);
             code.Blank();
         }
 
@@ -75,7 +82,26 @@ internal static class GesCSharpModelEmitter
         return GesCSharpEmitter.Keywords.Contains(name) ? "@" + name : name;
     }
 
-    private static void Record(GesSchemaPlanner.Code code, GesModelType type, string access, string support, string qualifier, bool bindings, string? values)
+    // The read-only properties of the fields a schema lends with `with`.
+    private static void Interface(GesSchemaPlanner.Code code, GesModelLayout layout, GesModelProtocol protocol, string access)
+    {
+        var refines = protocol.Takes.ConvertAll(name => GesModelPlanner.ProtocolName(layout, name, swift: false));
+        code.Line($"/// <summary>The fields of the schema <c>:{protocol.Name}</c>, which every model type that takes them unchanged with <c>with</c> has.</summary>");
+        code.Line($"{access} interface {GesModelPlanner.ProtocolName(layout, protocol.Name, swift: false)}{(refines.Count > 0 ? " : " + string.Join(", ", refines) : "")}");
+        code.Open("{");
+        var first = true;
+        foreach (var field in GesModelPlanner.Fields(new GesModelType { Name = protocol.Name, Fields = protocol.Fields }))
+        {
+            if (!first) code.Blank();
+            first = false;
+            code.Line($"/// <summary><c>{Escape(field.Field.Name + ": " + GesModelPlanner.Describe(field.Field))}</c></summary>");
+            code.Line($"{Type(field.Value)} {field.Base} {{ get; }}");
+        }
+
+        code.Close();
+    }
+
+    private static void Record(GesSchemaPlanner.Code code, GesModelLayout layout, GesModelType type, string access, string support, string qualifier, bool bindings, string? values)
     {
         var fields = GesModelPlanner.Fields(type);
         var names = new List<(string, string)>();
@@ -97,7 +123,7 @@ internal static class GesCSharpModelEmitter
         GesSchemaPlanner.Unique(type.Name, names);
 
         code.Line($"/// <summary>The model of the schema <c>:{type.Name}</c>: a plain value that is never encoded and compares by value.</summary>");
-        code.Line($"{access} sealed class {type.Name} : IEquatable<{type.Name}>");
+        code.Line($"{access} sealed class {type.Name} : IEquatable<{type.Name}>{string.Concat(GesModelPlanner.Adopted(layout, type, swift: false).ConvertAll(name => ", " + name))}");
         code.Open("{");
         code.Line($"/// <summary>The hash of the schema <c>:{type.Name}</c>, which wire records of it carry too; a test that compares it notices stale generated code.</summary>");
         code.Line($"public const ulong SchemaHash = 0x{GesSchemaLayoutJson.Hex(type.Hash)}UL;");

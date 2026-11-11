@@ -995,8 +995,10 @@ sealed class GameEventScript.Api.GesSchema
   property GameEventScript.Api.GesReadOnlyArray<GameEventScript.Api.GesSchemaConstantInfo> Constants { get }
   property GameEventScript.Api.GesReadOnlyArray<GameEventScript.Api.GesSchemaFieldInfo> Fields { get }
   property GameEventScript.Api.GesReadOnlyArray<GameEventScript.Api.GesSchemaParameterInfo> Parameters { get }
+  property GameEventScript.Api.GesReadOnlyArray<GameEventScript.Api.GesSchemaTakeInfo> Takes { get }
   property GameEventScript.Api.GesReadOnlyArray<System.String> Tags { get }
   property GameEventScript.Api.GesSchemaKind Kind { get }
+  property System.Boolean IsAbstract { get }
   property System.String CanonicalForm { get }
   property System.String ModelGroup { get }
   property System.String Name { get }
@@ -1101,6 +1103,11 @@ struct GameEventScript.Api.GesSchemaSource
   ctor GesSchemaSource(System.String name, System.String text)
   property System.String Name { get }
   property System.String Text { get }
+sealed class GameEventScript.Api.GesSchemaTakeInfo
+  property GameEventScript.Api.GesReadOnlyArray<System.String> Without { get }
+  property GameEventScript.Api.GesSchema Schema { get }
+  property System.Boolean IsAllOptional { get }
+  property System.Boolean IsUnchanged { get }
 sealed class GameEventScript.Api.GesSchemaType
   property GameEventScript.Api.GesQuantityUnit Unit { get }
   property GameEventScript.Api.GesReadOnlyArray<GameEventScript.Api.GesSchemaAxisInfo> Axes { get }

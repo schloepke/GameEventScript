@@ -30,10 +30,17 @@ internal static class GesSwiftModelEmitter
             code.Open($"{access}enum {part} {{");
         }
 
+        GesModelPlanner.CheckProtocols(layout, swift: true);
         for (var index = 0; index < layout.Types.Count; index++)
         {
             if (index > 0) code.Blank();
-            Record(code, layout.Types[index], access, options.Bindings, options.Values ? values : null);
+            Record(code, layout, layout.Types[index], access, options.Bindings, options.Values ? values : null);
+        }
+
+        foreach (var protocol in layout.Protocols)
+        {
+            code.Blank();
+            Protocol(code, layout, protocol, access);
         }
 
         foreach (var (name, tags) in GesModelPlanner.TagSets(layout))
@@ -60,7 +67,25 @@ internal static class GesSwiftModelEmitter
         return name is "inout" or "var" or "let" ? "`" + name + "`" : name;
     }
 
-    private static void Record(GesSchemaPlanner.Code code, GesModelType type, string access, bool bindings, string? values)
+    // The read-only properties of the fields a schema lends with `with`.
+    private static void Protocol(GesSchemaPlanner.Code code, GesModelLayout layout, GesModelProtocol protocol, string access)
+    {
+        var refines = protocol.Takes.ConvertAll(name => GesModelPlanner.ProtocolName(layout, name, swift: true));
+        code.Line($"/// The fields of the schema `:{protocol.Name}`, which every model type that takes them unchanged with `with` has.");
+        code.Open($"{access}protocol {GesModelPlanner.ProtocolName(layout, protocol.Name, swift: true)}{(refines.Count > 0 ? ": " + string.Join(", ", refines) : "")} {{");
+        var first = true;
+        foreach (var field in GesModelPlanner.Fields(new GesModelType { Name = protocol.Name, Fields = protocol.Fields }))
+        {
+            if (!first) code.Blank();
+            first = false;
+            code.Line($"/// `{field.Field.Name}: {GesModelPlanner.Describe(field.Field)}`.");
+            code.Line($"var {Member(field.Base)}: {Type(field.Value)} {{ get }}");
+        }
+
+        code.Close();
+    }
+
+    private static void Record(GesSchemaPlanner.Code code, GesModelLayout layout, GesModelType type, string access, bool bindings, string? values)
     {
         var fields = GesModelPlanner.Fields(type);
         var key = fields.Find(field => field.Field.Key);
@@ -81,7 +106,8 @@ internal static class GesSwiftModelEmitter
         GesSchemaPlanner.Unique(type.Name, names);
 
         code.Line($"/// The model of the schema `:{type.Name}`: a plain value that is never encoded.");
-        code.Open($"{access}struct {type.Name}: Hashable, Sendable, Codable{(key is null ? "" : ", Identifiable")} {{");
+        var adopted = string.Concat(GesModelPlanner.Adopted(layout, type, swift: true).ConvertAll(name => ", " + name));
+        code.Open($"{access}struct {type.Name}: Hashable, Sendable, Codable{(key is null ? "" : ", Identifiable")}{adopted} {{");
         code.Line($"/// The hash of the schema `:{type.Name}`, which wire records of it carry too; a test that compares it notices stale generated code.");
         code.Line($"{access}static let schemaHash: UInt64 = 0x{GesSchemaLayoutJson.Hex(type.Hash)}");
         GesSwiftEmitter.Lets(code, type.Constants, access, "Int");

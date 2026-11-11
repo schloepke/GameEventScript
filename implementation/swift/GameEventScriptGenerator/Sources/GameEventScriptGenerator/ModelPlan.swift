@@ -17,6 +17,8 @@ final class GesModelPlanValue {
     var nullable = false
     // The nested type of a closed Tag (its enum), of Flags or of a union; empty for other kinds.
     var nested = ""
+    // The named tag set of a closed Tag, whose enum is declared once beside the records, or empty.
+    var tagSet = ""
     // The label of a union alternative, its case or subclass.
     var label = ""
     var element: GesModelPlanValue?
@@ -26,6 +28,26 @@ final class GesModelPlanValue {
 }
 
 enum GesModelPlanner {
+    // The named tag sets the types use, in order of first use, with their members.
+    static func tagSets(_ layout: GesModelLayout) -> [(name: String, tags: [String])] {
+        var sets: [(name: String, tags: [String])] = []
+        var seen: Set<String> = []
+
+        func visit(_ value: GesModelPlanValue) {
+            if !value.tagSet.isEmpty && seen.insert(value.tagSet).inserted { sets.append((value.tagSet, value.model.tags)) }
+            if let element = value.element { visit(element) }
+            for alternative in value.alternatives { visit(alternative) }
+        }
+
+        for type in layout.types {
+            for field in fields(type) { visit(field.value) }
+        }
+        return sets
+    }
+
+    // The name of the conversion functions of a closed Tag, Flags or union: per owner, or once per named tag set.
+    static func conversionName(_ owner: String, _ value: GesModelPlanValue) -> String { value.tagSet.isEmpty ? owner + value.nested : value.tagSet }
+
     static func fields(_ type: GesModelType) -> [GesModelPlanField] {
         type.fields.map { field in
             let pascal = GesSchemaPlanner.pascal(field.name)
@@ -57,7 +79,10 @@ enum GesModelPlanner {
         value.kind = model.kind
         value.model = model
         value.label = label
-        if value.closedTag { value.nested = name + "Tag" }
+        if value.closedTag {
+            value.tagSet = model.tagSet
+            value.nested = model.tagSet.isEmpty ? name + "Tag" : model.tagSet
+        }
         if model.kind == .flags { value.nested = name + "Flags" }
         if model.kind == .list { value.element = self.value(model.element!.value, name + "Item", "") }
         return value

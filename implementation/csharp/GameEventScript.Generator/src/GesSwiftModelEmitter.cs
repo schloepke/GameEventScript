@@ -34,6 +34,12 @@ internal static class GesSwiftModelEmitter
             Record(code, layout.Types[index], access, options.Bindings, options.Values ? values : null);
         }
 
+        foreach (var (name, tags) in GesModelPlanner.TagSets(layout))
+        {
+            code.Blank();
+            TagEnum(code, name, tags, access, $"/// The tag set `:{name}`, in declared order; the raw value is the tag's name.");
+        }
+
         if (options.Bindings) Bindings(code, layout, access, support);
         if (options.Values) Values(code, layout, values, support);
         if (options.Bindings || options.Values) Support(code, support);
@@ -129,7 +135,7 @@ internal static class GesSwiftModelEmitter
 
     private static void Nested(GesModelPlanValue value, List<(string, string)> names, string field)
     {
-        if (value.Nested.Length > 0) names.Add((value.Nested, "a type of the field " + field));
+        if (value.Nested.Length > 0 && value.TagSet.Length == 0) names.Add((value.Nested, "a type of the field " + field));
         if (value.Element is not null) Nested(value.Element, names, field);
         foreach (var alternative in value.Alternatives) Nested(alternative, names, field);
     }
@@ -153,20 +159,27 @@ internal static class GesSwiftModelEmitter
         _ => value.Nested
     };
 
+    // A closed Tag's enum, nested in its record or, for a named tag set, declared once beside the records.
+    private static void TagEnum(GesSchemaPlanner.Code code, string name, List<string> tags, string access, string summary)
+    {
+        code.Line(summary);
+        code.Open($"{access}enum {name}: String, Hashable, Sendable, Codable, CaseIterable {{");
+        foreach (var tag in tags)
+        {
+            code.Line($"/// The tag `#{tag}`.");
+            code.Line($"case {Name(tag)}");
+        }
+
+        code.Close();
+    }
+
     private static void Declarations(GesSchemaPlanner.Code code, GesModelPlanValue value, string access)
     {
         if (value.ClosedTag)
         {
+            if (value.TagSet.Length > 0) return;
             code.Blank();
-            code.Line("/// The tags, in declared order; the raw value is the tag's name.");
-            code.Open($"{access}enum {value.Nested}: String, Hashable, Sendable, Codable, CaseIterable {{");
-            foreach (var tag in value.Model.Tags)
-            {
-                code.Line($"/// The tag `#{tag}`.");
-                code.Line($"case {Name(tag)}");
-            }
-
-            code.Close();
+            TagEnum(code, value.Nested, value.Model.Tags, access, "/// The tags, in declared order; the raw value is the tag's name.");
         }
         else if (value.Kind == GesModelKind.Flags)
         {
@@ -229,7 +242,7 @@ internal static class GesSwiftModelEmitter
             GesModelKind.Number => $"{support}.number({expression}, {Unit(value.Model.Unit)})",
             GesModelKind.Text => $"{support}.text({expression})",
             GesModelKind.Bytes => $"{support}.bytes({expression})",
-            GesModelKind.Tag when value.ClosedTag => $"{support}.tag({expression}).flatMap({owner}.{value.Nested}.init(rawValue:))",
+            GesModelKind.Tag when value.ClosedTag => $"{support}.tag({expression}).flatMap({(value.TagSet.Length > 0 ? value.TagSet : owner + "." + value.Nested)}.init(rawValue:))",
             GesModelKind.Tag => $"{support}.tag({expression})",
             GesModelKind.List => $"{support}.list({expression}, {{ {Decode(value.Element!, owner, "$0", helper, support, plain: plain)} }})",
             GesModelKind.Dice => $"{support}.dice({expression})",

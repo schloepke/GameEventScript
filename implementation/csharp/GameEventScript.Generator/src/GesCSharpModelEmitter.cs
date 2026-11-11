@@ -44,6 +44,12 @@ internal static class GesCSharpModelEmitter
             code.Blank();
         }
 
+        foreach (var (name, tags) in GesModelPlanner.TagSets(layout))
+        {
+            TagEnum(code, name, tags, access, $"/// <summary>The tag set <c>:{name}</c>, in declared order.</summary>");
+            code.Blank();
+        }
+
         if (options.Bindings)
         {
             Bindings(code, layout, access, qualifier, support);
@@ -198,7 +204,7 @@ internal static class GesCSharpModelEmitter
 
     private static void Nested(GesModelPlanValue value, List<(string, string)> names, string field)
     {
-        if (value.Nested.Length > 0) names.Add((value.Nested, "a type of the field " + field));
+        if (value.Nested.Length > 0 && value.TagSet.Length == 0) names.Add((value.Nested, "a type of the field " + field));
         if (value.Element is not null) Nested(value.Element, names, field);
         foreach (var alternative in value.Alternatives) Nested(alternative, names, field);
     }
@@ -228,7 +234,8 @@ internal static class GesCSharpModelEmitter
         _ => Nested(value, qualifier, owner)
     };
 
-    private static string Nested(GesModelPlanValue value, string? qualifier, string? owner) => owner is null ? value.Nested : qualifier + owner + "." + value.Nested;
+    private static string Nested(GesModelPlanValue value, string? qualifier, string? owner)
+        => value.TagSet.Length > 0 ? qualifier + value.TagSet : owner is null ? value.Nested : qualifier + owner + "." + value.Nested;
 
     private static bool IsReference(GesModelPlanValue value) => value.Kind is GesModelKind.Text or GesModelKind.Bytes or GesModelKind.List or GesModelKind.Dice or GesModelKind.Schema or GesModelKind.Union
         || (value.Kind == GesModelKind.Tag && !value.ClosedTag);
@@ -298,20 +305,9 @@ internal static class GesCSharpModelEmitter
     {
         if (value.ClosedTag)
         {
-            var tags = new List<(string, string)>();
-            foreach (var tag in value.Model.Tags) tags.Add((GesSchemaPlanner.Pascal(tag), "the tag #" + tag));
-            GesSchemaPlanner.Unique(value.Nested, tags);
+            if (value.TagSet.Length > 0) return;
             code.Blank();
-            code.Line("/// <summary>The tags, in declared order.</summary>");
-            code.Line($"public enum {value.Nested}");
-            code.Open("{");
-            foreach (var tag in value.Model.Tags)
-            {
-                code.Line($"/// <summary>The tag <c>#{tag}</c>.</summary>");
-                code.Line(GesSchemaPlanner.Pascal(tag) + ",");
-            }
-
-            code.Close();
+            TagEnum(code, value.Nested, value.Model.Tags, "public", "/// <summary>The tags, in declared order.</summary>");
         }
         else if (value.Kind == GesModelKind.Flags)
         {
@@ -322,6 +318,24 @@ internal static class GesCSharpModelEmitter
         }
         else if (value.Kind == GesModelKind.Union) Union(code, value, support, qualifier);
         else if (value.Element is not null) Declarations(code, value.Element, support, qualifier);
+    }
+
+    // A closed Tag's enum, nested in its record or, for a named tag set, declared once beside the records.
+    private static void TagEnum(GesSchemaPlanner.Code code, string name, List<string> tags, string access, string summary)
+    {
+        var members = new List<(string, string)>();
+        foreach (var tag in tags) members.Add((GesSchemaPlanner.Pascal(tag), "the tag #" + tag));
+        GesSchemaPlanner.Unique(name, members);
+        code.Line(summary);
+        code.Line($"{access} enum {name}");
+        code.Open("{");
+        foreach (var tag in tags)
+        {
+            code.Line($"/// <summary>The tag <c>#{tag}</c>.</summary>");
+            code.Line(GesSchemaPlanner.Pascal(tag) + ",");
+        }
+
+        code.Close();
     }
 
     private static void Union(GesSchemaPlanner.Code code, GesModelPlanValue value, string support, string qualifier)
@@ -483,7 +497,7 @@ internal static class GesCSharpModelEmitter
             GesModelKind.Number => $"{support}.Number({expression}, {UnitName(value.Model.Unit)}, {target})",
             GesModelKind.Text => $"{support}.Text({expression}, {target})",
             GesModelKind.Bytes => $"{support}.Bytes({expression}, {target})",
-            GesModelKind.Tag when value.ClosedTag => $"Decode{owner}{value.Nested}({expression}, {target})",
+            GesModelKind.Tag when value.ClosedTag => $"Decode{GesModelPlanner.ConversionName(owner, value)}({expression}, {target})",
             GesModelKind.Tag => $"{support}.Tag({expression}, {target})",
             GesModelKind.List => $"{support}.List({expression}, (in GesValue x{Depth(depth)}, out {Type(value.Element!, qualifier, owner)} y{Depth(depth)}) => {Decode(value.Element!, owner, "x" + Depth(depth), "out y" + Depth(depth), qualifier, support, depth + 1)}, {target})",
             GesModelKind.Dice => $"{support}.Dice({expression}, {target})",
@@ -534,6 +548,7 @@ internal static class GesCSharpModelEmitter
         code.Line($"internal static class {name}");
         code.Open("{");
         var first = true;
+        var emitted = new HashSet<string>(System.StringComparer.Ordinal);
         foreach (var type in layout.Types)
         {
             var fields = GesModelPlanner.Fields(type);
@@ -581,7 +596,8 @@ internal static class GesCSharpModelEmitter
             code.Close();
             var conversions = new List<GesModelPlanValue>();
             foreach (var field in fields) Conversions(field.Value, conversions);
-            foreach (var conversion in conversions) Conversion(code, type.Name, qualifier, support, conversion, plain: true);
+            foreach (var conversion in conversions)
+                if (conversion.TagSet.Length == 0 || emitted.Add(conversion.TagSet)) Conversion(code, type.Name, qualifier, support, conversion, plain: true);
         }
 
         code.Blank();
@@ -630,6 +646,7 @@ internal static class GesCSharpModelEmitter
         code.Line("/// </summary>");
         code.Line($"{access} sealed class GesTypes : IGesExternalTypeCatalog, IGesExternalTypeRegistry");
         code.Open("{");
+        var emitted = new HashSet<string>(System.StringComparer.Ordinal);
         code.Line($"private static readonly GesExternalTypeDefinition[] Own = {{ {string.Join(", ", ordered.ConvertAll(type => type.Name + "Value.Declaration"))} }};");
         code.Line("private readonly IGesExternalTypeCatalog? _nextCatalog;");
         code.Line("private readonly IGesExternalTypeRegistry? _nextRegistry;");
@@ -742,7 +759,8 @@ internal static class GesCSharpModelEmitter
             code.Close();
             var conversions = new List<GesModelPlanValue>();
             foreach (var field in fields) Conversions(field.Value, conversions);
-            foreach (var conversion in conversions) Conversion(code, type.Name, qualifier, support, conversion);
+            foreach (var conversion in conversions)
+                if (conversion.TagSet.Length == 0 || emitted.Add(conversion.TagSet)) Conversion(code, type.Name, qualifier, support, conversion);
         }
 
         code.Close();
@@ -750,7 +768,8 @@ internal static class GesCSharpModelEmitter
 
     private static void Conversion(GesSchemaPlanner.Code code, string owner, string qualifier, string support, GesModelPlanValue value, bool plain = false)
     {
-        var name = qualifier + owner + "." + value.Nested;
+        var name = Nested(value, qualifier, owner);
+        var decoder = "Decode" + GesModelPlanner.ConversionName(owner, value);
         code.Blank();
         if (value.ClosedTag)
         {
@@ -760,7 +779,7 @@ internal static class GesCSharpModelEmitter
             code.Line("_ => \"\"");
             code.Close("};");
             code.Blank();
-            code.Line($"private static bool Decode{owner}{value.Nested}(in GesValue value, out {name} result)");
+            code.Line($"private static bool {decoder}(in GesValue value, out {name} result)");
             code.Open("{");
             code.Line("result = default;");
             code.Line($"if (!{support}.Tag(value, out var text)) return false;");

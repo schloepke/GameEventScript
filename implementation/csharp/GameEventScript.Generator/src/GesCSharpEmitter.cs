@@ -54,12 +54,15 @@ internal static partial class GesCSharpEmitter
 
         var holder = "__GesSchemas" + GesSchemaPlanner.Hash(GesSchemaPlanner.Header(layout));
         var context = new Context(GesSchemaPlanner.KeyedElements(types), "global::" + string.Concat(space.ConvertAll(part => part + ".")), options.Values, holder);
+        var tagSets = GesSchemaPlanner.TagSets(types, context.Global);
         for (var index = 0; index < types.Count; index++)
         {
             if (index > 0) code.Blank();
             if (types[index].Kind == GesSchemaKind.Messages) MessageSet(code, types[index], access, context);
             else Record(code, types[index], access, context);
         }
+
+        foreach (var (name, tags) in tagSets) TagSetDeclaration(code, name, tags, access);
 
         if (options.Values) ValuesHolder(code, layout, holder);
 
@@ -160,7 +163,7 @@ internal static partial class GesCSharpEmitter
     private static void Nested(GesPlanValue value, List<(string, string)> names, string field)
     {
         var name = NestedName(value);
-        if (name.Length > 0) names.Add((name, "the type of " + field));
+        if (name.Length > 0 && value.TagType.Length == 0) names.Add((name, "the type of " + field));
         switch (value.Encoding.Kind)
         {
             case GesLayoutKind.Text:
@@ -187,7 +190,7 @@ internal static partial class GesCSharpEmitter
 
     private static string NestedName(GesPlanValue value) => value.Encoding.Kind switch
     {
-        GesLayoutKind.Tag => value.Base + "Tag",
+        GesLayoutKind.Tag => value.TagType.Length > 0 ? value.TagType : value.Base + "Tag",
         GesLayoutKind.Flags => value.Base + "Flags",
         GesLayoutKind.Union => value.Base + "Alternative",
         _ => ""
@@ -699,6 +702,7 @@ internal static partial class GesCSharpEmitter
         switch (value.Encoding.Kind)
         {
             case GesLayoutKind.Tag:
+                if (value.TagType.Length > 0) break;
                 code.Blank();
                 code.Line("/// <summary>The tags of the field, in declared order.</summary>");
                 code.Line($"public enum {name} : {Underlying(value.Encoding.Tags.Count)}");
@@ -746,6 +750,22 @@ internal static partial class GesCSharpEmitter
     }
 
     private static string Underlying(int count) => count <= 256 ? "byte" : count <= 65536 ? "ushort" : "uint";
+
+    // A named tag set, declared once beside the records that use it.
+    internal static void TagSetDeclaration(GesSchemaPlanner.Code code, string name, List<string> tags, string access)
+    {
+        code.Blank();
+        code.Line($"/// <summary>The tag set <c>:{name}</c>, in declared order.</summary>");
+        code.Line($"{access} enum {name} : {Underlying(tags.Count)}");
+        code.Open("{");
+        foreach (var tag in tags)
+        {
+            code.Line($"/// <summary>The tag <c>#{tag}</c>.</summary>");
+            code.Line(GesSchemaPlanner.Pascal(tag) + ",");
+        }
+
+        code.Close();
+    }
 
     // A required list whose elements are classes the record reuses.
     internal static bool IsPooledList(GesPlanField field) => !field.Optional && field.Value.Encoding.Kind == GesLayoutKind.List && field.Value.Element!.IsClass;

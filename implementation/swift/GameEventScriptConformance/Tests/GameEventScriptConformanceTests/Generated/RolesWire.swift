@@ -3,7 +3,7 @@
 //     Do not edit it; generate it again when a schema or a parameter changes.
 //     Parameter worldWidth = 2e3 meter.
 //     World: schema hash 27948924216a58ec, binding hash 67f1ce53774c124d.
-//     World_Cards: schema hash 50b813cda1e6871a, binding hash 875e24e8849b0e5b.
+//     World_Cards: schema hash 2693a7598ba03f7b, binding hash 3eac208185fef672.
 //     Panel_Report: schema hash 4885f554a711dde1, binding hash df8ddbb308347288.
 // </auto-generated>
 // swift-format-ignore-file
@@ -264,7 +264,7 @@ enum RolesWire {
             return changed
         }
 
-        private static let __valueSchema = __GesSchemasd1ed2bb08f30749f.bind("Panel_Badge", bindingHash)
+        private static let __valueSchema = __GesSchemasaf9ca8970ff66763.bind("Panel_Badge", bindingHash)
 
         /// Converts this record into a GES Record value, as `GesSchemaValues` decodes its bytes; this allocates.
         /// - Throws: `GesWireError` when a value does not fit its field, or the error of binding the embedded sources.
@@ -593,7 +593,7 @@ enum RolesWire {
             return changed
         }
 
-        private static let __valueSchema = __GesSchemasd1ed2bb08f30749f.bind("Panel_Entry", bindingHash)
+        private static let __valueSchema = __GesSchemasaf9ca8970ff66763.bind("Panel_Entry", bindingHash)
 
         /// Converts this record into a GES Record value, as `GesSchemaValues` decodes its bytes; this allocates.
         /// - Throws: `GesWireError` when a value does not fit its field, or the error of binding the embedded sources.
@@ -1639,7 +1639,7 @@ enum RolesWire {
             return changed
         }
 
-        private static let __valueSchema = __GesSchemasd1ed2bb08f30749f.bind("Panel_Report", bindingHash)
+        private static let __valueSchema = __GesSchemasaf9ca8970ff66763.bind("Panel_Report", bindingHash)
 
         /// Converts this record into a GES Record value, as `GesSchemaValues` decodes its bytes; this allocates.
         /// - Throws: `GesWireError` when a value does not fit its field, or the error of binding the embedded sources.
@@ -2494,7 +2494,7 @@ enum RolesWire {
             return changed
         }
 
-        private static let __valueSchema = __GesSchemasd1ed2bb08f30749f.bind("World", bindingHash)
+        private static let __valueSchema = __GesSchemasaf9ca8970ff66763.bind("World", bindingHash)
 
         /// Converts this record into a GES Record value, as `GesSchemaValues` decodes its bytes; this allocates.
         /// - Throws: `GesWireError` when a value does not fit its field, or the error of binding the embedded sources.
@@ -2791,7 +2791,7 @@ enum RolesWire {
             return changed
         }
 
-        private static let __valueSchema = __GesSchemasd1ed2bb08f30749f.bind("World_Body", bindingHash)
+        private static let __valueSchema = __GesSchemasaf9ca8970ff66763.bind("World_Body", bindingHash)
 
         /// Converts this record into a GES Record value, as `GesSchemaValues` decodes its bytes; this allocates.
         /// - Throws: `GesWireError` when a value does not fit its field, or the error of binding the embedded sources.
@@ -3607,7 +3607,7 @@ enum RolesWire {
             return changed
         }
 
-        private static let __valueSchema = __GesSchemasd1ed2bb08f30749f.bind("World_Bot", bindingHash)
+        private static let __valueSchema = __GesSchemasaf9ca8970ff66763.bind("World_Bot", bindingHash)
 
         /// Converts this record into a GES Record value, as `GesSchemaValues` decodes its bytes; this allocates.
         /// - Throws: `GesWireError` when a value does not fit its field, or the error of binding the embedded sources.
@@ -3643,17 +3643,18 @@ enum RolesWire {
     /// The schema `:World_Cards`, read and written without allocation once its storage has grown.
     final class World_Cards {
         /// The schema hash, independent of parameter values.
-        static let schemaHash: UInt64 = 0x50b813cda1e6871a
+        static let schemaHash: UInt64 = 0x2693a7598ba03f7b
         /// The hash over the schema hash and the parameter values this code was generated with.
-        static let bindingHash: UInt64 = 0x875e24e8849b0e5b
+        static let bindingHash: UInt64 = 0x3eac208185fef672
         /// The size of the largest encoding in bytes.
-        static let maxByteCount = 85
+        static let maxByteCount = 86
         static let __paths: [String] = [
             "cards",
             "cards[]",
             "cards[].label",
             "labels",
             "labels[]",
+            "side",
         ]
 
         /// The field `cards`, at most 4 elements.
@@ -3661,6 +3662,19 @@ enum RolesWire {
 
         /// The field `labels`, at most 4 elements.
         @exclusivity(unchecked) var labels: [LabelsItem] = []
+
+        /// Whether `side` is present.
+        @exclusivity(unchecked) var hasSide = false
+        /// The field `side`.
+        @exclusivity(unchecked) var side: Side = .left
+        /// The field `side` as an optional value, nil when absent.
+        var sideOptional: Side? {
+            get { self.hasSide ? self.side : nil }
+            set {
+                self.hasSide = newValue != nil
+                if let newValue { self.side = newValue }
+            }
+        }
         @exclusivity(unchecked) private var __cardsPool: [Panel_Badge] = []
         @exclusivity(unchecked) private var __labelsPool: [LabelsItem] = []
 
@@ -3757,6 +3771,12 @@ enum RolesWire {
             for item in self.labels {
                 try item.__writeFields(&writer, paths, at + 4)
             }
+            if self.hasSide {
+                try writer.write(1, width: 1)
+                try writer.write(UInt64(self.side.rawValue), width: 1)
+            } else {
+                try writer.write(0, width: 1)
+            }
         }
 
         func __readFields(_ reader: inout GesBitReader, _ paths: [String], _ at: Int) throws(GesWireError) {
@@ -3781,6 +3801,15 @@ enum RolesWire {
                     try item.__readFields(&reader, paths, at + 4)
                     self.labels.append(item)
                 }
+            }
+            self.hasSide = try reader.read(1, path: paths[at + 5]) != 0
+            if self.hasSide {
+                do {
+                    let index = try reader.read(1, path: paths[at + 5])
+                    self.side = Side(rawValue: UInt8(index))!
+                }
+            } else {
+                self.side = .left
             }
         }
 
@@ -3817,6 +3846,17 @@ enum RolesWire {
             return true
         }
 
+        private static func __wire5(_ value: Side, _ paths: [String], _ at: Int) throws(GesWireError) -> UInt64 {
+            UInt64(value.rawValue)
+        }
+
+        private static func __read5(_ reader: inout GesBitReader, _ paths: [String], _ at: Int) throws(GesWireError) -> UInt64 {
+            let wire = try reader.read(1, path: paths[at + 5])
+            return wire
+        }
+
+        private static func __value5(_ wire: UInt64) -> Side { Side(rawValue: UInt8(wire))! }
+
         func __same(_ other: World_Cards, _ paths: [String], _ at: Int) throws(GesWireError) -> Bool {
             if self.cards.count != other.cards.count { return false }
             for index0 in 0..<self.cards.count {
@@ -3825,6 +3865,10 @@ enum RolesWire {
             if self.labels.count != other.labels.count { return false }
             for index3 in 0..<self.labels.count {
                 if !(try self.labels[index3].__same(other.labels[index3], paths, at + 4)) { return false }
+            }
+            if self.hasSide != other.hasSide { return false }
+            if self.hasSide {
+                if try Self.__wire5(self.side, paths, at) != Self.__wire5(other.side, paths, at) { return false }
             }
             return true
         }
@@ -3846,11 +3890,15 @@ enum RolesWire {
                 item3.copy(from: other.labels[index3])
                 self.labels.append(item3)
             }
+            self.hasSide = other.hasSide
+            self.side = other.side
         }
 
         func __quantize(_ paths: [String], _ at: Int) throws(GesWireError) {
             for index0 in 0..<self.cards.count {
                 try self.cards[index0].__quantize(paths, at + 2)
+            }
+            if self.hasSide {
             }
         }
 
@@ -3930,7 +3978,7 @@ enum RolesWire {
 
         func __writeDelta(_ baseline: World_Cards, _ writer: inout GesBitWriter, _ paths: [String], _ at: Int, _ top: Bool) throws(GesWireError) -> Bool {
             let first = writer.bitPosition
-            var left = 2
+            var left = 3
             while left > 0 {
                 try writer.write(0, width: Swift.min(left, 64))
                 left -= 64
@@ -3969,11 +4017,38 @@ enum RolesWire {
                 }
                 ordinal += 1
             }
+            do {
+                var set5 = false
+                if self.hasSide != baseline.hasSide {
+                    try writer.write(self.hasSide ? 1 : 0, width: 1)
+                    if self.hasSide {
+                        try writer.write(UInt64(self.side.rawValue), width: 1)
+                    }
+                    set5 = true
+                } else if self.hasSide {
+                    let presence5 = writer.bitPosition
+                    try writer.write(1, width: 1)
+                    do {
+                        let value5 = try Self.__wire5(self.side, paths, at)
+                        let held5 = try Self.__wire5(baseline.side, paths, at)
+                        if value5 != held5 {
+                            try writer.write(value5, width: 1)
+                            set5 = true
+                        }
+                    }
+                    if !set5 { writer.rewind(to: presence5) }
+                }
+                if set5 {
+                    writer.setBit(first + ordinal)
+                    changed = true
+                }
+                ordinal += 1
+            }
             return changed
         }
 
         func __readDelta(_ baseline: World_Cards, _ reader: inout GesBitReader, _ paths: [String], _ at: Int, _ top: Bool) throws(GesWireError) -> Bool {
-            let fieldCount = 2
+            let fieldCount = 3
             try reader.require(fieldCount, path: at == 0 ? "" : paths[at - 1])
             let changeBits = reader.bitPosition
             reader.seek(to: changeBits + fieldCount)
@@ -4039,10 +4114,41 @@ enum RolesWire {
                 }
                 ordinal += 1
             }
+            do {
+                let payload5 = reader.bitPosition
+                reader.seek(to: changeBits + ordinal)
+                let set5 = try reader.read(1, path: paths[at + 5]) == 1
+                reader.seek(to: payload5)
+                if set5 {
+                    let present5 = try reader.read(1, path: paths[at + 5]) == 1
+                    if !present5 && !baseline.hasSide { throw GesWireError(code: GesWireError.invalidDelta, path: paths[at + 5]) }
+                    self.hasSide = present5
+                    if present5 && baseline.hasSide {
+                        do {
+                            let held5 = try Self.__wire5(baseline.side, paths, at)
+                            let value5 = try Self.__read5(&reader, paths, at)
+                            if value5 == held5 { throw GesWireError(code: GesWireError.invalidDelta, path: paths[at + 5]) }
+                            self.side = Self.__value5(value5)
+                        }
+                    } else if present5 {
+                        do {
+                            let index = try reader.read(1, path: paths[at + 5])
+                            self.side = Side(rawValue: UInt8(index))!
+                        }
+                    } else {
+                        self.side = .left
+                    }
+                    changed = true
+                } else {
+                    self.hasSide = baseline.hasSide
+                    self.side = baseline.side
+                }
+                ordinal += 1
+            }
             return changed
         }
 
-        private static let __valueSchema = __GesSchemasd1ed2bb08f30749f.bind("World_Cards", bindingHash)
+        private static let __valueSchema = __GesSchemasaf9ca8970ff66763.bind("World_Cards", bindingHash)
 
         /// Converts this record into a GES Record value, as `GesSchemaValues` decodes its bytes; this allocates.
         /// - Throws: `GesWireError` when a value does not fit its field, or the error of binding the embedded sources.
@@ -4111,10 +4217,18 @@ enum RolesWire {
             }
         }
     }
+
+    /// The tag set `:Side`, in declared order.
+    enum Side: UInt8, Sendable {
+        /// The tag `#left`.
+        case left
+        /// The tag `#right`.
+        case right
+    }
 }
 
 /// The schema sources of this file, which the conversion to and from GES values binds once per type.
-private enum __GesSchemasd1ed2bb08f30749f {
+private enum __GesSchemasaf9ca8970ff66763 {
     /// The embedded sources no longer bind like the generated code.
     struct Mismatch: Error {}
 
@@ -4131,9 +4245,13 @@ private enum __GesSchemasd1ed2bb08f30749f {
                 "  badge: :Panel_Badge optional",
                 "}",
                 "",
+                "// A named tag set: one generated type for every field that uses it, here and in the group view.",
+                "tags :Side as (#left, #right)",
+                "",
                 "wire(world) schema :World_Cards as {",
                 "  cards: :List(:Panel_Badge) max 4",
                 "  labels: :List(:Tag max 12) max 4",
+                "  side: :Side optional",
                 "}",
                 "",
                 "schema :World_Bot as {",
@@ -4219,12 +4337,13 @@ private enum __GesSchemasd1ed2bb08f30749f {
                 "  chunks: :List(:Bytes)",
                 "  status: :Flags(#armed, #cloaked)",
                 "  ranks: :List(:Flags(#gold, #silver))",
-                "  hints: :List(:Tag(#left, #right))",
+                "  hints: :List(:Side)",
                 "}",
                 "",
                 "schema :RadarView as {",
                 "  range: :Quantity(m)",
                 "  contacts: :List(:Number integer)",
+                "  side: :Side optional",
                 "}",
                 "",
             ].joined(separator: "\n")),

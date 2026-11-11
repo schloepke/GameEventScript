@@ -44,6 +44,7 @@ final class GesModelValue {
     var step: String?
     // A closed tag set, empty for any tag, or the members of Flags; the documented maximum of a Tag, Text, List or Dice.
     var tags: [String] = []
+    var tagSet = ""
     var max: Int64?
     var element: GesModelField?
     // The axes a Point or Vector declares, empty without an axis block; union alternatives; a schema reference.
@@ -128,6 +129,7 @@ enum GesModelLayoutBuilder {
         case .tag:
             value.kind = .tag
             value.tags = type.tags
+            value.tagSet = type.tagSet
             value.max = type.max
         case .flags:
             value.kind = .flags
@@ -218,6 +220,7 @@ enum GesModelLayoutJson {
             optional(&json, "step", value.step)
         case .tag:
             json.strings("tags", value.tags)
+            if !value.tagSet.isEmpty { json.string("tagSet", value.tagSet) }
             optional(&json, "max", value.max)
         case .flags:
             json.strings("tags", value.tags)

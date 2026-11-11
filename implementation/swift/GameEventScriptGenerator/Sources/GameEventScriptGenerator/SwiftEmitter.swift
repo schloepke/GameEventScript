@@ -39,10 +39,12 @@ enum GesSwiftEmitter {
         }
         let holder = "__GesSchemas" + GesSchemaPlanner.hash(GesSchemaPlanner.header(layout))
         let context = Context(elements: GesSchemaPlanner.keyedElements(types), values: options.values, holder: holder, checkedExclusivity: options.checkedExclusivity)
+        let tagSets = GesSchemaPlanner.tagSets(types, "")
         for (index, type) in types.enumerated() {
             if index > 0 { code.blank() }
             if type.kind == .messages { try messageSet(&code, type, access, context) } else { try record(&code, type, access, context) }
         }
+        for set in tagSets { tagSetDeclaration(&code, set.name, set.tags, access) }
         for _ in space { code.close() }
         if options.values { valuesHolder(&code, layout, holder) }
         return code.text
@@ -137,7 +139,7 @@ enum GesSwiftEmitter {
 
     static func nested(_ value: GesPlanValue, _ names: inout Names, _ field: String) {
         let name = nestedName(value)
-        if !name.isEmpty { names.append((name, "the type of " + field)) }
+        if !name.isEmpty && value.tagType.isEmpty { names.append((name, "the type of " + field)) }
         switch value.encoding.kind {
         case .text:
             names.append((GesSchemaPlanner.camel(value.base) + "UTF8", "the UTF-8 bytes of " + field))
@@ -155,7 +157,7 @@ enum GesSwiftEmitter {
 
     static func nestedName(_ value: GesPlanValue) -> String {
         switch value.encoding.kind {
-        case .tag: value.base + "Tag"
+        case .tag: value.tagType.isEmpty ? value.base + "Tag" : value.tagType
         case .flags: value.base + "Flags"
         case .union: value.base + "Alternative"
         default: ""
@@ -621,6 +623,7 @@ enum GesSwiftEmitter {
         let name = nestedName(value)
         switch value.encoding.kind {
         case .tag:
+            if !value.tagType.isEmpty { break }
             code.blank()
             code.line("/// The tags of the field, in declared order.")
             code.open("\(access)enum \(name): \(underlying(value.encoding.tags.count)), Sendable {")
@@ -654,6 +657,18 @@ enum GesSwiftEmitter {
     }
 
     static func underlying(_ count: Int) -> String { count <= 256 ? "UInt8" : count <= 65536 ? "UInt16" : "UInt32" }
+
+    // A named tag set, declared once beside the records that use it.
+    static func tagSetDeclaration(_ code: inout Code, _ name: String, _ tags: [String], _ access: String) {
+        code.blank()
+        code.line("/// The tag set `:\(name)`, in declared order.")
+        code.open("\(access)enum \(name): \(underlying(tags.count)), Sendable {")
+        for tag in tags {
+            code.line("/// The tag `#\(tag)`.")
+            code.line("case \(self.name(tag))")
+        }
+        code.close()
+    }
 
     // One bit per member in declared order, so the raw value is the wire mask. A member may not take the name of the mask.
     static func flagsDeclaration(_ code: inout Code, _ name: String, _ members: [String], _ access: String) throws(GesGeneratorError) {

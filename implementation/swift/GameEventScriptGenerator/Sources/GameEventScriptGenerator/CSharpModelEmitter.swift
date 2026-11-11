@@ -36,6 +36,10 @@ enum GesCSharpModelEmitter {
             try record(&code, type, access, support, qualifier, bindings: options.bindings, values: options.values ? values : nil)
             code.blank()
         }
+        for set in GesModelPlanner.tagSets(layout) {
+            try tagEnum(&code, set.name, set.tags, access, "/// <summary>The tag set <c>:\(set.name)</c>, in declared order.</summary>")
+            code.blank()
+        }
         if options.bindings {
             bindings(&code, layout, access, qualifier, support)
             code.blank()
@@ -169,7 +173,7 @@ enum GesCSharpModelEmitter {
     }
 
     private static func nested(_ value: GesModelPlanValue, _ names: inout Names, _ field: String) {
-        if !value.nested.isEmpty { names.append((value.nested, "a type of the field " + field)) }
+        if !value.nested.isEmpty && value.tagSet.isEmpty { names.append((value.nested, "a type of the field " + field)) }
         if let element = value.element { nested(element, &names, field) }
         for alternative in value.alternatives { nested(alternative, &names, field) }
     }
@@ -191,7 +195,10 @@ enum GesCSharpModelEmitter {
     // Outside its owner, as in the generated type set, a nested type also names the owner.
     static func type(_ value: GesModelPlanValue, _ qualifier: String = "", _ owner: String? = nil) -> String { plain(value, qualifier, owner) + (value.nullable ? "?" : "") }
 
-    private static func nested(_ value: GesModelPlanValue, _ qualifier: String, _ owner: String?) -> String { owner.map { qualifier + $0 + "." + value.nested } ?? value.nested }
+    private static func nested(_ value: GesModelPlanValue, _ qualifier: String, _ owner: String?) -> String {
+        if !value.tagSet.isEmpty { return qualifier + value.tagSet }
+        return owner.map { qualifier + $0 + "." + value.nested } ?? value.nested
+    }
 
     private static func plain(_ value: GesModelPlanValue, _ qualifier: String = "", _ owner: String? = nil) -> String {
         switch value.kind {
@@ -270,18 +277,24 @@ enum GesCSharpModelEmitter {
         return list.kind == .dice ? "\(x) => \(x)" : "\(x) => " + hash(list.element!, x, support, depth + 1)
     }
 
+    // A closed Tag's enum, nested in its record or, for a named tag set, declared once beside the records.
+    private static func tagEnum(_ code: inout Code, _ name: String, _ tags: [String], _ access: String, _ summary: String) throws(GesGeneratorError) {
+        try GesSchemaPlanner.unique(name, tags.map { (GesSchemaPlanner.pascal($0), "the tag #" + $0) })
+        code.line(summary)
+        code.line("\(access) enum \(name)")
+        code.open("{")
+        for tag in tags {
+            code.line("/// <summary>The tag <c>#\(tag)</c>.</summary>")
+            code.line(GesSchemaPlanner.pascal(tag) + ",")
+        }
+        code.close()
+    }
+
     private static func declarations(_ code: inout Code, _ value: GesModelPlanValue, _ support: String, _ qualifier: String) throws(GesGeneratorError) {
         if value.closedTag {
-            try GesSchemaPlanner.unique(value.nested, value.model.tags.map { (GesSchemaPlanner.pascal($0), "the tag #" + $0) })
+            if !value.tagSet.isEmpty { return }
             code.blank()
-            code.line("/// <summary>The tags, in declared order.</summary>")
-            code.line("public enum \(value.nested)")
-            code.open("{")
-            for tag in value.model.tags {
-                code.line("/// <summary>The tag <c>#\(tag)</c>.</summary>")
-                code.line(GesSchemaPlanner.pascal(tag) + ",")
-            }
-            code.close()
+            try tagEnum(&code, value.nested, value.model.tags, "public", "/// <summary>The tags, in declared order.</summary>")
         } else if value.kind == .flags {
             try GesSchemaPlanner.unique(value.nested, value.model.tags.map { (GesSchemaPlanner.pascal($0), "the member #" + $0) })
             GesCSharpEmitter.flagsDeclaration(&code, value.nested, value.model.tags)
@@ -463,7 +476,7 @@ enum GesCSharpModelEmitter {
         case .number: return "\(support).Number(\(expression), \(unitName(value.model.unit)), \(target))"
         case .text: return "\(support).Text(\(expression), \(target))"
         case .bytes: return "\(support).Bytes(\(expression), \(target))"
-        case .tag where value.closedTag: return "Decode\(owner)\(value.nested)(\(expression), \(target))"
+        case .tag where value.closedTag: return "Decode\(GesModelPlanner.conversionName(owner, value))(\(expression), \(target))"
         case .tag: return "\(support).Tag(\(expression), \(target))"
         case .list:
             let element = value.element!
@@ -524,6 +537,7 @@ enum GesCSharpModelEmitter {
         code.line("/// <summary>The plain GES values of the models of this file, as <see cref=\"GesSchemaValues\"/> reads and writes them.</summary>")
         code.line("internal static class \(name)")
         code.open("{")
+        var emitted: Set<String> = []
         for (typeIndex, type) in layout.types.enumerated() {
             let fields = GesModelPlanner.fields(type)
             let record = qualifier + type.name
@@ -572,7 +586,9 @@ enum GesCSharpModelEmitter {
             code.close()
             var found: [GesModelPlanValue] = []
             for field in fields { conversions(field.value, &found) }
-            for conversion in found { self.conversion(&code, type.name, qualifier, support, conversion, plain: true) }
+            for conversion in found where conversion.tagSet.isEmpty || emitted.insert(conversion.tagSet).inserted {
+                self.conversion(&code, type.name, qualifier, support, conversion, plain: true)
+            }
         }
         code.blank()
         code.line("// The fields of a Record of the schema, or of a Map whose keys are all fields of it.")
@@ -625,6 +641,7 @@ enum GesCSharpModelEmitter {
         code.line("/// </summary>")
         code.line("\(access) sealed class GesTypes : IGesExternalTypeCatalog, IGesExternalTypeRegistry")
         code.open("{")
+        var emitted: Set<String> = []
         code.line("private static readonly GesExternalTypeDefinition[] Own = { \(ordered.map { $0.name + "Value.Declaration" }.joined(separator: ", ")) };")
         code.line("private readonly IGesExternalTypeCatalog? _nextCatalog;")
         code.line("private readonly IGesExternalTypeRegistry? _nextRegistry;")
@@ -735,13 +752,16 @@ enum GesCSharpModelEmitter {
             code.close()
             var found: [GesModelPlanValue] = []
             for field in fields { conversions(field.value, &found) }
-            for conversion in found { self.conversion(&code, type.name, qualifier, support, conversion) }
+            for conversion in found where conversion.tagSet.isEmpty || emitted.insert(conversion.tagSet).inserted {
+                self.conversion(&code, type.name, qualifier, support, conversion)
+            }
         }
         code.close()
     }
 
     private static func conversion(_ code: inout Code, _ owner: String, _ qualifier: String, _ support: String, _ value: GesModelPlanValue, plain: Bool = false) {
-        let name = qualifier + owner + "." + value.nested
+        let name = nested(value, qualifier, owner)
+        let decoder = "Decode" + GesModelPlanner.conversionName(owner, value)
         code.blank()
         if value.closedTag {
             code.line("private static string Name(\(name) value) => value switch")
@@ -750,7 +770,7 @@ enum GesCSharpModelEmitter {
             code.line("_ => \"\"")
             code.close("};")
             code.blank()
-            code.line("private static bool Decode\(owner)\(value.nested)(in GesValue value, out \(name) result)")
+            code.line("private static bool \(decoder)(in GesValue value, out \(name) result)")
             code.open("{")
             code.line("result = default;")
             code.line("if (!\(support).Tag(value, out var text)) return false;")

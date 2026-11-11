@@ -84,6 +84,9 @@ public struct GesSchemaType: Sendable {
     public let delta: GesSchemaBound?
     /// The closed set of a Tag, empty when any tag is allowed, or the members of Flags in declared order.
     public let tags: [String]
+    /// The name of the declared tag set a Tag takes its members from, or an empty string; the name belongs to no hash and
+    /// does not change the encoding.
+    public let tagSet: String
     /// The maximum of a Text in UTF-8 bytes or of a List in elements, if there is one.
     public let max: Int64?
     /// The alternatives of a List's element; empty when any element is allowed.
@@ -104,6 +107,7 @@ public struct GesSchemaType: Sendable {
         step = constraints.step.map(GesSchemaBound.init)
         delta = constraints.delta.map(GesSchemaBound.init)
         tags = type.tags ?? []
+        tagSet = type.tagSet
         max = type.max
         element = (type.element ?? []).map(GesSchemaType.init)
         axes = (type.axes ?? []).map(GesSchemaAxisInfo.init)

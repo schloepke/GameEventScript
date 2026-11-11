@@ -30,10 +30,11 @@ schema :BotView as {
   chunks: :List(:Bytes)
   status: :Flags(#armed, #cloaked)
   ranks: :List(:Flags(#gold, #silver))
-  hints: :List(:Tag(#left, #right))
+  hints: :List(:Side)
 }
 
 schema :RadarView as {
   range: :Quantity(m)
   contacts: :List(:Number integer)
+  side: :Side optional
 }

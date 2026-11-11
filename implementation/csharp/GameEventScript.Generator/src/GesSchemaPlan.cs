@@ -57,10 +57,43 @@ internal sealed class GesPlanValue
 
     // Whether the value refers to a type that is a class.
     internal bool IsClass;
+
+    // How an emitter spells the type of a Tag of a named tag set, which is declared once beside the records.
+    internal string TagType = "";
 }
 
 internal static class GesSchemaPlanner
 {
+    // The named tag sets the types use, in order of first use, with their members; each Tag of a set gets the type that an
+    // emitter spells with the qualifier in front of the set's name.
+    internal static List<(string Name, List<string> Tags)> TagSets(List<GesPlanType> types, string qualifier)
+    {
+        var sets = new List<(string Name, List<string> Tags)>();
+        var seen = new HashSet<string>(System.StringComparer.Ordinal);
+        var visited = new HashSet<GesPlanType>();
+        foreach (var type in types) TagSets(type, qualifier, sets, seen, visited);
+        return sets;
+    }
+
+    private static void TagSets(GesPlanType type, string qualifier, List<(string Name, List<string> Tags)> sets, HashSet<string> seen, HashSet<GesPlanType> visited)
+    {
+        if (!visited.Add(type)) return;
+        foreach (var field in type.Fields) TagSets(field.Value, qualifier, sets, seen, visited);
+    }
+
+    private static void TagSets(GesPlanValue value, string qualifier, List<(string Name, List<string> Tags)> sets, HashSet<string> seen, HashSet<GesPlanType> visited)
+    {
+        if (value.Encoding.Kind == GesLayoutKind.Tag && value.Encoding.TagSet.Length > 0)
+        {
+            value.TagType = qualifier + value.Encoding.TagSet;
+            if (seen.Add(value.Encoding.TagSet)) sets.Add((value.Encoding.TagSet, value.Encoding.Tags));
+        }
+
+        foreach (var alternative in value.Alternatives) TagSets(alternative, qualifier, sets, seen, visited);
+        if (value.Element is not null) TagSets(value.Element, qualifier, sets, seen, visited);
+        if (value.Item is not null) TagSets(value.Item, qualifier, sets, seen, visited);
+    }
+
     // The schemas that are elements of a keyed list, which compare and read their keys for the list's delta.
     internal static HashSet<string> KeyedElements(List<GesPlanType> types)
     {

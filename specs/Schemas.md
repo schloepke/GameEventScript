@@ -71,7 +71,8 @@ messages :Combat as (Hit, Died)
 ### Grammar
 
 ```text
-source      = { constant | parameter | [ roles ] ( schema | message | messages ) }
+source      = { constant | parameter | tagsdecl | [ roles ] ( schema | message | messages ) }
+tagsdecl    = "tags" ":" TypeName "as" tagset
 roles       = role [ role ]
 role        = ( "wire" | "model" ) [ "(" LowerName ")" ]
 constant    = "constant" "$" ConstantName "be" literal
@@ -142,8 +143,13 @@ A source is a sequence of declarations in any order; a reference may come before
   of the listed messages, at least one, each once. Its encoding starts with the index of the chosen
   message, so a receiver learns which message follows; see [messages](#messages). A set
   can be a root and nothing else: it is not a type, and a message may belong to several sets.
+- **`tags :Name as (#a, #b)`** names a closed tag set, each tag once. A field, argument, list element or union
+  alternative of type `:Name` is the `:Tag(#a, #b)` written in place: the same constraints, encoding, values and
+  [canonical form](#canonical-form), so the name belongs to no hash and renaming a set changes no bytes. A set
+  is no root, and a union cannot hold it beside another Tag. [Generated code](#tools) declares one type per set
+  that every field of it uses, instead of one per field. *Since: Unreleased.*
 
-Schemas, messages and message sets share one namespace across all sources.
+Schemas, messages, message sets and tag sets share one namespace across all sources.
 
 ### Roles
 
@@ -1180,7 +1186,9 @@ in a type it holds, is a value type (C# `struct`, Swift `Sendable` struct); othe
 whose storage grows when a read or a caller needs more room and is then reused, so that reading and
 writing allocate nothing once it has held its largest data. A Text is held as UTF-8 bytes with a
 string view, Bytes as bytes (C# a span with a `Set<Field>` method, Swift `[UInt8]`), a List or Dice as a C# `List<T>` or Swift array, and a list element that is a union,
-Text, Bytes or List as a generated item type. Flags are a `<Field>Flags` type as in [model types](#model-types), whose
+Text, Bytes or List as a generated item type. A closed Tag is an enum `<Field>Tag` nested in its record; a Tag of a
+[tag set](#declarations) uses the one enum `Name` that the file declares beside its records, whose raw value is the
+index. Flags are a `<Field>Flags` type as in [model types](#model-types), whose
 raw value is the wire mask. A `:Point` or `:Vector` is the runtime's
 [`GesPoint` or `GesVector`](PublicApi.md#spatial-values), in every field, list element and alternative; quantization stays per
 field. An axis that a block leaves out is not transmitted: writing a record or a delta whose omitted axis is not zero fails
@@ -1260,6 +1268,7 @@ needs no ranges, steps or parameters, and every reached schema becomes one type,
 | `:Text`, `:Tag` without a set | `String` | `string` |
 | `:Bytes` | `[UInt8]` | `byte[]` |
 | `:Tag(#a, #b)` | an enum `<Field>Tag` with `String` raw values, `CaseIterable` | an enum `<Field>Tag` |
+| `:Name` of a [tag set](#declarations) | one enum `Name` beside the records, as above, for every field of the set | one enum `Name` beside the records |
 | `:Flags(#a, #b)` | an `OptionSet` `<Field>Flags` over `UInt64`, one static member per member | a `[Flags]` enum `<Field>Flags` over `ulong`, one value per member |
 | `:List(T)` | `[T]` | `List<T>` |
 | `:Dice` | `[Int]`, the rolls | `List<int>` |
@@ -1390,7 +1399,8 @@ exact decimals. Hashes are 16 lowercase hexadecimal digits, and a binary64 value
     `wrapping`, `lower` and `maxIndex`; then `width`; `quantized` adds `numerator` and `tenPower`,
     the `p` and `10^k` of its step, and with `float` with a range both add `lowerValue` and
     `upperValue`; then `deltaRange`, `deltaWidth` and `depends`, the parameters named in its bounds.
-  - `tag`: `tags`, without `#`, and `width`.
+  - `tag`: `tags`, without `#`, `tagSet` with the name of a [tag set](#declarations) the tag takes its members
+    from, only then, and `width`.
   - `flags`: `tags`, the members without `#`, and `width`, their count.
   - `text`: `tagName` for a `:Tag max n`, `maxCount` and `width`.
   - `bytes`: `maxCount` and `width`.

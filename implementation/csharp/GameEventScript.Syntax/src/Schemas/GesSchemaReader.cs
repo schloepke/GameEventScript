@@ -82,10 +82,10 @@ internal sealed class GesSchemaSourceReader
 
         if (wire is not null || model is not null)
         {
-            if (word is "constant" or "parameter") throw new SyntaxFailure(offset, "Only a schema, message or message set can be a root.", Code.InvalidRole);
+            if (word is "constant" or "parameter" or "tags") throw new SyntaxFailure(offset, "Only a schema, message or message set can be a root.", Code.InvalidRole);
             if (model is not null && word is "message" or "messages") throw new SyntaxFailure(offset, "A model root is a schema.", Code.InvalidRole);
         }
-        else if (word.Length > 0 && word is not ("constant" or "parameter" or "schema" or "message" or "messages") && AtRoleEnd())
+        else if (word.Length > 0 && word is not ("constant" or "parameter" or "schema" or "message" or "messages" or "tags") && AtRoleEnd())
             throw new SyntaxFailure(offset, $"'{word}' is no role; a root is marked wire or model.", Code.InvalidRole);
 
         var declaration = ReadDeclaration(offset, wordOffset, word);
@@ -204,8 +204,16 @@ internal sealed class GesSchemaSourceReader
                 Expect(')');
                 return new GesSchemaDeclarationSyntax { Kind = GesSchemaDeclarationKind.Messages, Name = name, Offset = offset, Members = members.ToArray(), MemberOffsets = offsets.ToArray() };
             }
+            case "tags":
+            {
+                var name = ReadTypeName();
+                SkipSpaces();
+                ExpectWord("as");
+                SkipSpaces();
+                return new GesSchemaDeclarationSyntax { Kind = GesSchemaDeclarationKind.TagSet, Name = name, Offset = offset, Tags = ReadTagSet() };
+            }
             default:
-                throw new SyntaxFailure(wordOffset, "Expected constant, parameter, schema, message or messages.");
+                throw new SyntaxFailure(wordOffset, "Expected constant, parameter, tags, schema, message or messages.");
         }
     }
 

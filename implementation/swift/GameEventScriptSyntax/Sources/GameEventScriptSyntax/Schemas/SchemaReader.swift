@@ -65,13 +65,13 @@
             written = word()
         }
         if wire != nil || model != nil {
-            if written == "constant" || written == "parameter" {
+            if written == "constant" || written == "parameter" || written == "tags" {
                 throw Failure(offset: offset, message: "Only a schema, message or message set can be a root.", code: Code.invalidRole)
             }
             if model != nil && (written == "message" || written == "messages") {
                 throw Failure(offset: offset, message: "A model root is a schema.", code: Code.invalidRole)
             }
-        } else if !written.isEmpty && !["constant", "parameter", "schema", "message", "messages"].contains(written) && atRoleEnd() {
+        } else if !written.isEmpty && !["constant", "parameter", "schema", "message", "messages", "tags"].contains(written) && atRoleEnd() {
             throw Failure(offset: offset, message: "'\(written)' is no role; a root is marked wire or model.", code: Code.invalidRole)
         }
         var result = try declaration(offset: offset, wordOffset: wordOffset, word: written)
@@ -168,8 +168,15 @@
                 skipTrivia()
             } while consume(44)
             try expect(41)
+        case "tags":
+            result.kind = .tagSet
+            result.name = try typeName()
+            skipSpaces()
+            try expectWord("as")
+            skipSpaces()
+            result.tags = try tagSet()
         default:
-            throw Failure(offset: wordOffset, message: "Expected constant, parameter, schema, message or messages.")
+            throw Failure(offset: wordOffset, message: "Expected constant, parameter, tags, schema, message or messages.")
         }
         return result
     }

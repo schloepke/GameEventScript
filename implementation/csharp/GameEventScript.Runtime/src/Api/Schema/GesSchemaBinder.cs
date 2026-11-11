@@ -123,6 +123,8 @@ internal struct GesSchemaNode
     internal string Name;
     internal string Path;
     internal string[]? Tags;
+    // The named tag set of a Tag, or null.
+    internal string? TagSet;
 
     // Integer: its lower bound. Quantized: lowerN. The largest valid index; for a wrapping field the period is one more.
     internal long Lower;
@@ -664,6 +666,7 @@ internal static class GesSchemaBinder
 
                 node.Kind = GesSchemaNodeKind.Tag;
                 node.Tags = type.Tags;
+                node.TagSet = type.TagSet.Length > 0 ? type.TagSet : null;
                 node.MaxIndex = (ulong)type.Tags.Length - 1;
                 node.Width = BitLength(node.MaxIndex);
                 break;

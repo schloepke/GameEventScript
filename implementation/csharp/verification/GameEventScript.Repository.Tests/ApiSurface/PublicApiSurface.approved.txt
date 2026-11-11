@@ -1097,6 +1097,7 @@ sealed class GameEventScript.Api.GesSchemaType
   property System.Boolean IsInteger { get }
   property System.Boolean IsWrapping { get }
   property System.Int64? Max { get }
+  property System.String TagSet { get }
 enum GameEventScript.Api.GesSchemaTypeKind
   enum-field Boolean = 0
   enum-field Number = 1

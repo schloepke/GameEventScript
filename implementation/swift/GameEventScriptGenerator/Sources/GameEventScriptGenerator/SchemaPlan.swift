@@ -49,6 +49,9 @@ final class GesPlanValue {
     // Whether the value refers to a type that is a class.
     var isClass = false
 
+    // How an emitter spells the type of a Tag of a named tag set, which is declared once beside the records.
+    var tagType = ""
+
     init(base: String = "", label: String = "", node: Int = 0, encoding: GesLayoutEncoding = GesLayoutEncoding(), isClass: Bool = false) {
         self.base = base
         self.label = label
@@ -63,6 +66,32 @@ extension GesSchemaLayout {
 }
 
 enum GesSchemaPlanner {
+    // The named tag sets the types use, in order of first use, with their members; each Tag of a set gets the type that an
+    // emitter spells with the qualifier in front of the set's name.
+    static func tagSets(_ types: [GesPlanType], _ qualifier: String) -> [(name: String, tags: [String])] {
+        var sets: [(name: String, tags: [String])] = []
+        var seen: Set<String> = []
+        var visited: Set<ObjectIdentifier> = []
+
+        func visitType(_ type: GesPlanType) {
+            if !visited.insert(ObjectIdentifier(type)).inserted { return }
+            for field in type.fields { visitValue(field.value) }
+        }
+
+        func visitValue(_ value: GesPlanValue) {
+            if value.encoding.kind == .tag && !value.encoding.tagSet.isEmpty {
+                value.tagType = qualifier + value.encoding.tagSet
+                if seen.insert(value.encoding.tagSet).inserted { sets.append((value.encoding.tagSet, value.encoding.tags)) }
+            }
+            for alternative in value.alternatives { visitValue(alternative) }
+            if let element = value.element { visitValue(element) }
+            if let item = value.item { visitType(item) }
+        }
+
+        for type in types { visitType(type) }
+        return sets
+    }
+
     // The schemas that are elements of a keyed list, which compare and read their keys for the list's delta.
     static func keyedElements(_ types: [GesPlanType]) -> Set<String> {
         var elements = Set<String>()

@@ -26,6 +26,10 @@ enum GesSwiftModelEmitter {
             if index > 0 { code.blank() }
             try record(&code, type, access, bindings: options.bindings, values: options.values ? values : nil)
         }
+        for set in GesModelPlanner.tagSets(layout) {
+            code.blank()
+            tagEnum(&code, set.name, set.tags, access, "/// The tag set `:\(set.name)`, in declared order; the raw value is the tag's name.")
+        }
         if options.bindings { bindings(&code, layout, access, support) }
         if options.values { valueConversions(&code, layout, values, support) }
         if options.bindings || options.values { supportType(&code, support) }
@@ -107,7 +111,7 @@ enum GesSwiftModelEmitter {
     }
 
     private static func nested(_ value: GesModelPlanValue, _ names: inout Names, _ field: String) {
-        if !value.nested.isEmpty { names.append((value.nested, "a type of the field " + field)) }
+        if !value.nested.isEmpty && value.tagSet.isEmpty { names.append((value.nested, "a type of the field " + field)) }
         if let element = value.element { nested(element, &names, field) }
         for alternative in value.alternatives { nested(alternative, &names, field) }
     }
@@ -134,16 +138,22 @@ enum GesSwiftModelEmitter {
         }
     }
 
+    // A closed Tag's enum, nested in its record or, for a named tag set, declared once beside the records.
+    private static func tagEnum(_ code: inout Code, _ name: String, _ tags: [String], _ access: String, _ summary: String) {
+        code.line(summary)
+        code.open("\(access)enum \(name): String, Hashable, Sendable, Codable, CaseIterable {")
+        for tag in tags {
+            code.line("/// The tag `#\(tag)`.")
+            code.line("case \(self.name(tag))")
+        }
+        code.close()
+    }
+
     private static func declarations(_ code: inout Code, _ value: GesModelPlanValue, _ access: String) throws(GesGeneratorError) {
         if value.closedTag {
+            if !value.tagSet.isEmpty { return }
             code.blank()
-            code.line("/// The tags, in declared order; the raw value is the tag's name.")
-            code.open("\(access)enum \(value.nested): String, Hashable, Sendable, Codable, CaseIterable {")
-            for tag in value.model.tags {
-                code.line("/// The tag `#\(tag)`.")
-                code.line("case \(name(tag))")
-            }
-            code.close()
+            tagEnum(&code, value.nested, value.model.tags, access, "/// The tags, in declared order; the raw value is the tag's name.")
         } else if value.kind == .flags {
             try GesSwiftEmitter.flagsDeclaration(&code, value.nested, value.model.tags, access)
         } else if value.kind == .union {
@@ -197,7 +207,8 @@ enum GesSwiftModelEmitter {
         case .number: return "\(support).number(\(expression), \(unit(value.model.unit)))"
         case .text: return "\(support).text(\(expression))"
         case .bytes: return "\(support).bytes(\(expression))"
-        case .tag where value.closedTag: return "\(support).tag(\(expression)).flatMap(\(owner).\(value.nested).init(rawValue:))"
+        case .tag where value.closedTag:
+            return "\(support).tag(\(expression)).flatMap(\(value.tagSet.isEmpty ? owner + "." + value.nested : value.tagSet).init(rawValue:))"
         case .tag: return "\(support).tag(\(expression))"
         case .list: return "\(support).list(\(expression), { \(decode(value.element!, owner, "$0", helper, support, plain: plain)) })"
         case .dice: return "\(support).dice(\(expression))"

@@ -364,6 +364,140 @@ schema:
 
 ---
 
+## Test: a named tag set is its members
+
+A field of a named tag set has the canonical form and hash of the same `:Tag` written in place.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: canonical-tag-set
+schemaApi:
+  sources:
+    - "tags :Mount as (#front, #rear)\nschema :Bot as { mount: :Mount optional, mounts: :List(:Mount) max 2 }\n"
+  root: "Bot"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  canonical: "gess1\nschema Bot\nfield mount Tag(#front #rear) optional\nfield mounts List(Tag(#front #rear)) max 2\n"
+  hash: "dd8517bdb2464d84"
+```
+
+---
+
+## Test: a tag set named like a schema
+
+A tag set shares its name space with schemas, messages and message sets.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-tag-set-name-taken
+schemaApi:
+  sources:
+    - "tags :Mount as (#a)\nschema :Mount as { x: :Boolean }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.duplicateName"
+    line: 2
+    column: 1
+```
+
+---
+
+## Test: a tag set that repeats a tag
+
+Each member of a tag set is listed once.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-tag-set-repeated-tag
+schemaApi:
+  sources:
+    - "tags :M as (#a, #a)\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.duplicateName"
+    line: 1
+    column: 1
+```
+
+---
+
+## Test: a tag set as a root
+
+Only a schema, message or message set takes a role.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-tag-set-root
+schemaApi:
+  sources:
+    - "wire tags :M as (#a)\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidRole"
+    line: 1
+    column: 1
+```
+
+---
+
+## Test: a tag set beside a Tag in a union
+
+A named tag set is a Tag, so a union cannot hold it beside another Tag.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-tag-set-union
+schemaApi:
+  sources:
+    - "tags :M as (#a)\nschema :S as { u: :M | :Tag(#b) }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidUnion"
+    line: 2
+    column: 24
+```
+
+---
+
 ## Test: field order a is part of the hash
 
 Field order is the wire order.

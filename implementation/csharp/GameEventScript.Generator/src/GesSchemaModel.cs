@@ -75,6 +75,7 @@ internal sealed class GesModelValue
 
     // A closed tag set, empty for any tag, or the members of Flags; the documented maximum of a Tag, Text, List or Dice.
     internal List<string> Tags = [];
+    internal string TagSet = "";
     internal long? Max;
     internal GesModelField? Element;
 
@@ -172,6 +173,7 @@ internal static class GesModelLayoutBuilder
             case GesSchemaTypeKind.Tag:
                 value.Kind = GesModelKind.Tag;
                 value.Tags.AddRange(type.Tags);
+                value.TagSet = type.TagSet;
                 value.Max = type.Max;
                 break;
             case GesSchemaTypeKind.Flags:
@@ -284,6 +286,7 @@ internal static class GesModelLayoutJson
                 break;
             case GesModelKind.Tag:
                 json.Strings("tags", value.Tags);
+                if (value.TagSet.Length > 0) json.String("tagSet", value.TagSet);
                 Optional(json, "max", value.Max);
                 break;
             case GesModelKind.Flags:

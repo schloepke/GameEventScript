@@ -118,6 +118,7 @@ internal static class GesSchemaLayoutJson
                 break;
             case GesLayoutKind.Tag or GesLayoutKind.Flags:
                 json.Strings("tags", encoding.Tags);
+                if (encoding.TagSet.Length > 0) json.String("tagSet", encoding.TagSet);
                 json.Number("width", encoding.Width);
                 break;
             case GesLayoutKind.Text:

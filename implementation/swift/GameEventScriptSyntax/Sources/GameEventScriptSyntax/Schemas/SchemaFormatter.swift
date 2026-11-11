@@ -7,7 +7,7 @@
         var output = ""
         var previous: GesSchemaDeclarationKind?
         for declaration in source.declarations {
-            let simple = declaration.kind == .constant || declaration.kind == .parameter
+            let simple = declaration.kind == .constant || declaration.kind == .parameter || declaration.kind == .tagSet
             if let last = previous, !(simple && last == declaration.kind) { output += "\n" }
             previous = declaration.kind
             role("wire", declaration.wireGroup, &output)
@@ -40,6 +40,10 @@
                 output += "\n"
             case .messages:
                 output += "messages :\(declaration.name) as (\(declaration.members.joined(separator: ", ")))\n"
+            case .tagSet:
+                output += "tags :\(declaration.name) as "
+                tags(declaration.tags, &output)
+                output += "\n"
             }
         }
         return output

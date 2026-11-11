@@ -1089,6 +1089,7 @@ symbol {"access":"public","declaration":"let stringConstants: GesStringConstantS
 symbol {"access":"public","declaration":"let symbol: String?","kind":"swift.property","path":"GameEventScriptRuntime.GesDiagnostic.symbol"}
 symbol {"access":"public","declaration":"let symbolKind: GesDiagnosticSymbolKind","kind":"swift.property","path":"GameEventScriptRuntime.GesDiagnostic.symbolKind"}
 symbol {"access":"public","declaration":"let symbols: [GesDebugSymbol]","kind":"swift.property","path":"GameEventScriptRuntime.GesDebugSymbolsSegment.symbols"}
+symbol {"access":"public","declaration":"let tagSet: String","kind":"swift.property","path":"GameEventScriptRuntime.GesSchemaType.tagSet"}
 symbol {"access":"public","declaration":"let tags: [String]","kind":"swift.property","path":"GameEventScriptRuntime.GesSchema.tags"}
 symbol {"access":"public","declaration":"let tags: [String]","kind":"swift.property","path":"GameEventScriptRuntime.GesSchemaType.tags"}
 symbol {"access":"public","declaration":"let technicalDetails: String?","kind":"swift.property","path":"GameEventScriptRuntime.GesDiagnostic.technicalDetails"}

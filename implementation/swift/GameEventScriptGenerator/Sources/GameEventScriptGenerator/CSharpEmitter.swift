@@ -44,10 +44,12 @@ enum GesCSharpEmitter {
         }
         let holder = "__GesSchemas" + GesSchemaPlanner.hash(GesSchemaPlanner.header(layout))
         let context = Context(elements: GesSchemaPlanner.keyedElements(types), global: "global::" + space.map { $0 + "." }.joined(), values: options.values, holder: holder)
+        let tagSets = GesSchemaPlanner.tagSets(types, context.global)
         for (index, type) in types.enumerated() {
             if index > 0 { code.blank() }
             if type.kind == .messages { try messageSet(&code, type, access, context) } else { try record(&code, type, access, context) }
         }
+        for set in tagSets { tagSetDeclaration(&code, set.name, set.tags, access) }
         if options.values { valuesHolder(&code, layout, holder) }
         if !space.isEmpty { code.close() }
         return code.text
@@ -139,7 +141,7 @@ enum GesCSharpEmitter {
     // The nested types and members a value declares, for the collision check.
     static func nested(_ value: GesPlanValue, _ names: inout Names, _ field: String) {
         let name = nestedName(value)
-        if !name.isEmpty { names.append((name, "the type of " + field)) }
+        if !name.isEmpty && value.tagType.isEmpty { names.append((name, "the type of " + field)) }
         switch value.encoding.kind {
         case .text:
             names.append((value.base + "Utf8", "the UTF-8 bytes of " + field))
@@ -160,7 +162,7 @@ enum GesCSharpEmitter {
 
     static func nestedName(_ value: GesPlanValue) -> String {
         switch value.encoding.kind {
-        case .tag: value.base + "Tag"
+        case .tag: value.tagType.isEmpty ? value.base + "Tag" : value.tagType
         case .flags: value.base + "Flags"
         case .union: value.base + "Alternative"
         default: ""
@@ -671,6 +673,7 @@ enum GesCSharpEmitter {
         let name = nestedName(value)
         switch value.encoding.kind {
         case .tag:
+            if !value.tagType.isEmpty { break }
             code.blank()
             code.line("/// <summary>The tags of the field, in declared order.</summary>")
             code.line("public enum \(name) : \(underlying(value.encoding.tags.count))")
@@ -710,6 +713,19 @@ enum GesCSharpEmitter {
     }
 
     static func underlying(_ count: Int) -> String { count <= 256 ? "byte" : count <= 65536 ? "ushort" : "uint" }
+
+    // A named tag set, declared once beside the records that use it.
+    static func tagSetDeclaration(_ code: inout Code, _ name: String, _ tags: [String], _ access: String) {
+        code.blank()
+        code.line("/// <summary>The tag set <c>:\(name)</c>, in declared order.</summary>")
+        code.line("\(access) enum \(name) : \(underlying(tags.count))")
+        code.open("{")
+        for tag in tags {
+            code.line("/// <summary>The tag <c>#\(tag)</c>.</summary>")
+            code.line(GesSchemaPlanner.pascal(tag) + ",")
+        }
+        code.close()
+    }
 
     // One bit per member in declared order, so the enum value is the wire mask; the empty value needs no name.
     static func flagsDeclaration(_ code: inout Code, _ name: String, _ members: [String]) {

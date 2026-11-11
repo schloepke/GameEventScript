@@ -27,6 +27,9 @@ internal sealed class GesModelPlanValue
     // The nested type of a closed Tag (its enum), of Flags or of a union; empty for other kinds.
     internal string Nested = "";
 
+    // The named tag set of a closed Tag, whose enum is declared once beside the records, or empty.
+    internal string TagSet = "";
+
     // The label of a union alternative, its case or subclass.
     internal string Label = "";
     internal GesModelPlanValue? Element;
@@ -37,6 +40,26 @@ internal sealed class GesModelPlanValue
 
 internal static class GesModelPlanner
 {
+    // The named tag sets the types use, in order of first use, with their members.
+    internal static List<(string Name, List<string> Tags)> TagSets(GesModelLayout layout)
+    {
+        var sets = new List<(string Name, List<string> Tags)>();
+        var seen = new HashSet<string>(System.StringComparer.Ordinal);
+        foreach (var type in layout.Types)
+            foreach (var field in Fields(type)) TagSets(field.Value, sets, seen);
+        return sets;
+    }
+
+    private static void TagSets(GesModelPlanValue value, List<(string Name, List<string> Tags)> sets, HashSet<string> seen)
+    {
+        if (value.TagSet.Length > 0 && seen.Add(value.TagSet)) sets.Add((value.TagSet, value.Model.Tags));
+        if (value.Element is not null) TagSets(value.Element, sets, seen);
+        foreach (var alternative in value.Alternatives) TagSets(alternative, sets, seen);
+    }
+
+    // The name of the conversion functions of a closed Tag, Flags or union: per owner, or once per named tag set.
+    internal static string ConversionName(string owner, GesModelPlanValue value) => value.TagSet.Length > 0 ? value.TagSet : owner + value.Nested;
+
     internal static List<GesModelPlanField> Fields(GesModelType type)
     {
         var fields = new List<GesModelPlanField>();
@@ -71,7 +94,12 @@ internal static class GesModelPlanner
         }
 
         var value = new GesModelPlanValue { Kind = model.Kind, Model = model, Label = label };
-        if (value.ClosedTag) value.Nested = name + "Tag";
+        if (value.ClosedTag)
+        {
+            value.TagSet = model.TagSet;
+            value.Nested = model.TagSet.Length > 0 ? model.TagSet : name + "Tag";
+        }
+
         if (model.Kind == GesModelKind.Flags) value.Nested = name + "Flags";
         if (model.Kind == GesModelKind.List) value.Element = Value(model.Element!.Value, name + "Item", "");
         return value;

@@ -106,6 +106,8 @@ public final class GesSchemaParameters {
     @_spi(Generator) public var name = ""
     @_spi(Generator) public var path = ""
     @_spi(Generator) public var tags: [String] = []
+    /// The named tag set of a Tag, or empty.
+    @_spi(Generator) public var tagSet = ""
     @_spi(Generator) public var valueKind = GesSchemaTypeKind.nothing
     @_spi(Generator) public var unit = GesQuantityUnit.none
     @_spi(Generator) public var schemaName = ""
@@ -613,6 +615,7 @@ enum GesSchemaBinder {
             }
             node.kind = .tag
             info.tags = tags
+            info.tagSet = type.tagSet
             node.maxIndex = UInt64(tags.count) - 1
             node.width = bitLength(node.maxIndex)
         case .flags:

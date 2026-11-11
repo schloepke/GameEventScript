@@ -101,6 +101,7 @@ public sealed class GesSchemaType
         Step = Bound(constraints.Step);
         Delta = Bound(constraints.Delta);
         Tags = new GesReadOnlyArray<string>(type.Tags);
+        TagSet = type.TagSet;
         Max = type.Max;
         Element = GesSchema.Types(type.Element ?? []);
         var axes = new List<GesSchemaAxisInfo>();
@@ -137,6 +138,10 @@ public sealed class GesSchemaType
 
     /// <summary>Gets the closed set of a Tag, empty when any tag is allowed, or the members of Flags in declared order.</summary>
     public GesReadOnlyArray<string> Tags { get; }
+
+    /// <summary>Gets the name of the declared tag set a Tag takes its members from, or an empty string; the name belongs to no
+    /// hash and does not change the encoding.</summary>
+    public string TagSet { get; }
 
     /// <summary>Gets the maximum of a Text in UTF-8 bytes or of a List in elements, if there is one.</summary>
     public long? Max { get; }

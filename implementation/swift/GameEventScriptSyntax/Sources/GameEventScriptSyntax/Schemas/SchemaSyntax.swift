@@ -85,6 +85,7 @@ public enum GesSchemaTypeKind: String, Sendable, Equatable {
     case schema
     case message
     case messages
+    case tagSet
 }
 
 /// An exact decimal in lowest terms: no trailing zero in the significand, and zero is 0e0.

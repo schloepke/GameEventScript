@@ -90,6 +90,7 @@ enum GesSchemaLayoutJson {
             json.strings("depends", encoding.depends)
         case .tag, .flags:
             json.strings("tags", encoding.tags)
+            if !encoding.tagSet.isEmpty { json.string("tagSet", encoding.tagSet) }
             json.number("width", Int64(encoding.width))
         case .text:
             json.boolean("tagName", encoding.tagName)

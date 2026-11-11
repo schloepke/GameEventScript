@@ -234,6 +234,9 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   `FromValue(value)`) with the plain Record that wire `--values` reads and writes, so models and wire records convert
   through one value instead of hand-written copies. A nested field that does not convert reports its path, such as
   `entries[].level`, as the wire value path does.
+- Schema tag sets `tags :Mount as (#front, #rear)`: a field, list element or alternative of type `:Mount` is that
+  `:Tag(...)` in place, with the same bytes and hash, and generated code declares one `Mount` enum for every field of it
+  instead of one per field.
 - Generated model types carry their `SchemaHash` (Swift `schemaHash`), as wire records do.
 - Generated model reading reports a required field without a key as `wire.missingField` and `nothing` where a value is
   required as `wire.nothingValue`, as the wire value path does, instead of `wire.typeMismatch`.

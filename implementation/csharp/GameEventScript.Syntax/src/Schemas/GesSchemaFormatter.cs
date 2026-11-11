@@ -15,7 +15,7 @@ internal static class GesSchemaFormatter
         GesSchemaDeclarationKind? previous = null;
         foreach (var declaration in source.Declarations)
         {
-            var simple = declaration.Kind is GesSchemaDeclarationKind.Constant or GesSchemaDeclarationKind.Parameter;
+            var simple = declaration.Kind is GesSchemaDeclarationKind.Constant or GesSchemaDeclarationKind.Parameter or GesSchemaDeclarationKind.TagSet;
             if (previous is { } last && !(simple && last == declaration.Kind)) builder.Append('\n');
             previous = declaration.Kind;
             Role("wire", declaration.WireGroup, builder);
@@ -56,6 +56,11 @@ internal static class GesSchemaFormatter
                         Tags(declaration.Tags, builder);
                     }
 
+                    builder.Append('\n');
+                    break;
+                case GesSchemaDeclarationKind.TagSet:
+                    builder.Append("tags :").Append(declaration.Name).Append(" as ");
+                    Tags(declaration.Tags, builder);
                     builder.Append('\n');
                     break;
                 default:

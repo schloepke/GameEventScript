@@ -111,6 +111,20 @@ schema :Target as {
 `note` may be left out like an `optional` field, and this also works for list elements:
 `:List(:Text max 8 | :Nothing) max 4`.
 
+A tag set that several fields share gets a name once:
+
+```gess
+tags :Mount as (#front, #right, #rear, #left)
+
+schema :Turret as {
+  mount: :Mount
+  covers: :List(:Mount) max 4
+}
+```
+
+`:Mount` behaves exactly like `:Tag(#front, #right, #rear, #left)` written in place, with the same bytes and
+hash. Generated code declares one `Mount` type that both fields use.
+
 ## 4. Share values with constants and parameters
 
 ```gess

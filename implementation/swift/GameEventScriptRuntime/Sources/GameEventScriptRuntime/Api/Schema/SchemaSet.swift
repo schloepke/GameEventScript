@@ -45,8 +45,9 @@ public final class GesSchemaSet: @unchecked Sendable {
             if let error = syntax.error { throw GesSchemaError(code: error.code, sourceName: source.name, line: error.line, column: error.column, message: error.message) }
             files.append(GesFileScope(source, syntax))
         }
-        for file in files { try file.declareNames(&declarations, &ordered) }
-        for file in files { try file.resolve(declarations) }
+        var tagSets: [String: GesSchemaDeclarationSyntax] = [:]
+        for file in files { try file.declareNames(&declarations, &ordered, &tagSets) }
+        for file in files { try file.resolve(declarations, tagSets) }
         var visited: [ObjectIdentifier: Int] = [:]
         for declaration in ordered {
             var path: [GesResolvedDeclaration] = []
@@ -187,10 +188,23 @@ final class GesResolvedType {
     let axes: [GesResolvedAxis]?
     let reference: GesResolvedDeclaration?
     let referenceName: String
+    // The named tag set a Tag takes its members from, or empty.
+    let tagSet: String
     let offset: Int
 
-    init(kind: GesSchemaTypeKind, unit: GesQuantityUnit, tags: [String]?, max: Int64?, element: [GesResolvedType]?, constraints: GesResolvedConstraints, axes: [GesResolvedAxis]?, reference: GesResolvedDeclaration?, referenceName: String, offset: Int)
-    {
+    init(
+        kind: GesSchemaTypeKind,
+        unit: GesQuantityUnit,
+        tags: [String]?,
+        max: Int64?,
+        element: [GesResolvedType]?,
+        constraints: GesResolvedConstraints,
+        axes: [GesResolvedAxis]?,
+        reference: GesResolvedDeclaration?,
+        referenceName: String,
+        tagSet: String = "",
+        offset: Int
+    ) {
         self.kind = kind
         self.unit = unit
         self.tags = tags
@@ -200,6 +214,7 @@ final class GesResolvedType {
         self.axes = axes
         self.reference = reference
         self.referenceName = referenceName
+        self.tagSet = tagSet
         self.offset = offset
     }
 }
@@ -240,6 +255,7 @@ final class GesFileScope {
     private let syntax: GesSchemaSourceSyntax
     private var constants: [String: GesSchemaValueSyntax] = [:]
     private var own: [GesResolvedDeclaration] = []
+    private var tagSets: [String: GesSchemaDeclarationSyntax] = [:]
     private(set) var parameters: [String: GesSchemaTypeSyntax] = [:]
     var sourceName: String { source.name }
 
@@ -253,9 +269,21 @@ final class GesFileScope {
         return GesSchemaError(code: code, sourceName: source.name, line: line, column: column, message: message)
     }
 
-    func declareNames(_ all: inout [String: GesResolvedDeclaration], _ ordered: inout [GesResolvedDeclaration]) throws {
+    func declareNames(_ all: inout [String: GesResolvedDeclaration], _ ordered: inout [GesResolvedDeclaration], _ tagSets: inout [String: GesSchemaDeclarationSyntax]) throws {
         for declaration in syntax.declarations {
             switch declaration.kind {
+            case .tagSet:
+                if GesSchemaTypeNames.isBuiltIn(declaration.name) {
+                    throw error(Code.duplicateName, declaration.offset, "'\(declaration.name)' is a built-in type.")
+                }
+                if all[declaration.name] != nil || tagSets[declaration.name] != nil {
+                    throw error(Code.duplicateName, declaration.offset, "'\(declaration.name)' is declared twice.")
+                }
+                tagSets[declaration.name] = declaration
+                var members: Set<String> = []
+                for tag in declaration.tags where !members.insert(tag).inserted {
+                    throw error(Code.duplicateName, declaration.offset, "Tag '#\(tag)' is listed twice.")
+                }
             case .constant:
                 if constants[declaration.name] != nil { throw error(Code.duplicateName, declaration.offset, "Constant '\(declaration.name)' is declared twice.") }
                 constants[declaration.name] = declaration.value
@@ -268,7 +296,9 @@ final class GesFileScope {
                 if GesSchemaTypeNames.isBuiltIn(declaration.name) {
                     throw error(Code.duplicateName, declaration.offset, "'\(declaration.name)' is a built-in type.")
                 }
-                if all[declaration.name] != nil { throw error(Code.duplicateName, declaration.offset, "'\(declaration.name)' is declared twice.") }
+                if all[declaration.name] != nil || tagSets[declaration.name] != nil {
+                    throw error(Code.duplicateName, declaration.offset, "'\(declaration.name)' is declared twice.")
+                }
                 all[declaration.name] = resolved
                 ordered.append(resolved)
                 own.append(resolved)
@@ -276,7 +306,8 @@ final class GesFileScope {
         }
     }
 
-    func resolve(_ all: [String: GesResolvedDeclaration]) throws {
+    func resolve(_ all: [String: GesResolvedDeclaration], _ tagSets: [String: GesSchemaDeclarationSyntax]) throws {
+        self.tagSets = tagSets
         for declaration in own {
             let syntax = declaration.syntax
             if declaration.kind == .messages {
@@ -298,6 +329,7 @@ final class GesFileScope {
         }
         // A declaration holds its scope, so the scope lets go of them once they are resolved.
         own = []
+        self.tagSets = [:]
     }
 
     private func resolveField(_ field: GesSchemaFieldSyntax, _ index: Int, _ owner: GesSchemaKind, _ all: [String: GesResolvedDeclaration]) throws -> GesResolvedField {
@@ -319,10 +351,11 @@ final class GesFileScope {
         var result: [GesResolvedType] = []
         var seen: Set<String> = []
         for alternative in alternatives {
-            result.append(try resolveType(alternative, all))
+            let resolved = try resolveType(alternative, all)
+            result.append(resolved)
             if alternatives.count == 1 { continue }
-            // The type name decides: a unit does not distinguish alternatives.
-            let name = alternative.kind == .reference ? ":" + alternative.name : alternative.kind.rawValue
+            // The type name decides: a unit does not distinguish alternatives, and a named tag set is a Tag.
+            let name = resolved.kind == .reference ? ":" + alternative.name : resolved.kind.rawValue
             if !seen.insert(name).inserted { throw error(Code.invalidUnion, alternative.offset, "A union repeats a type name; a unit does not distinguish alternatives.") }
             if alternative.constraints.delta != nil { throw error(Code.invalidUnion, alternative.offset, "A union alternative has no delta within.") }
         }
@@ -330,6 +363,22 @@ final class GesFileScope {
     }
 
     private func resolveType(_ type: GesSchemaTypeSyntax, _ all: [String: GesResolvedDeclaration]) throws -> GesResolvedType {
+        // A named tag set stands for a Tag with its members; only its name differs, which belongs to no hash.
+        if type.kind == .reference, let tagSet = tagSets[type.name] {
+            return GesResolvedType(
+                kind: .tag,
+                unit: .none,
+                tags: tagSet.tags,
+                max: nil,
+                element: nil,
+                constraints: GesResolvedConstraints(),
+                axes: nil,
+                reference: nil,
+                referenceName: "",
+                tagSet: tagSet.name,
+                offset: type.offset
+            )
+        }
         var reference: GesResolvedDeclaration?
         if type.kind == .reference {
             guard let found = all[type.name], found.kind == .schema else { throw error(Code.unknownName, type.offset, "Schema '\(type.name)' is not declared.") }

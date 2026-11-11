@@ -267,7 +267,7 @@ public sealed class GesRolesGeneratedCodeTests
             Units = { new Model.BotView.UnitsItemAlternative.Text("x"), new Model.BotView.UnitsItemAlternative.World_Body(new Model.World_Body()) },
             Grid = { new List<long> { 1, 2 }, new List<long>() },
             Rolls = { 6, 3 },
-            Hints = { Model.BotView.HintsItemTag.Left }
+            Hints = { Model.Side.Left }
         };
 
         var left = Bot();
@@ -353,7 +353,7 @@ public sealed class GesRolesBindingTests
             Body = new Bound.World_Body(120, Bound.World_Body.HullTag.Heavy),
             Facing = new Bound.BotView.FacingAlternative.Quantity(45),
             Units = { new Bound.BotView.UnitsItemAlternative.Text("a") },
-            Hints = { Bound.BotView.HintsItemTag.Right }
+            Hints = { Bound.Side.Right }
         });
         Assert.IsTrue(host.Receive(GameEventScriptMessage.Create("Start", [new("view", view.ToGesValue())])));
         Assert.AreEqual(GesExecutionState.Completed, host.RunToCompletion().State);
@@ -373,14 +373,14 @@ public sealed class GesRolesBindingTests
         Assert.AreEqual(Bound.BotView.MoodTag.Angry, built.Mood);
         Assert.AreEqual(new GesPoint(3, 4), built.Position);
         Assert.AreEqual(new Bound.World_Body(90, Bound.World_Body.HullTag.Light), built.Body);
-        Assert.AreEqual(new Bound.RadarView(300, [1, 2]), built.Radar);
+        Assert.AreEqual(new Bound.RadarView(300, [1, 2], null), built.Radar);
         Assert.AreEqual(new Bound.BotView.FacingAlternative.Tag(Bound.BotView.FacingTagTag.North), built.Facing);
         Assert.IsNull(built.Note);
         Assert.HasCount(2, built.Units);
         Assert.AreEqual(new Bound.BotView.UnitsItemAlternative.World_Body(new Bound.World_Body(90, Bound.World_Body.HullTag.Light)), built.Units[1]);
         CollectionAssert.AreEqual(new List<long> { 1, 2 }, built.Grid[0]);
         CollectionAssert.AreEqual(new List<int> { 6, 3 }, built.Rolls);
-        CollectionAssert.AreEqual(new[] { Bound.BotView.HintsItemTag.Left, Bound.BotView.HintsItemTag.Right }, built.Hints);
+        CollectionAssert.AreEqual(new[] { Bound.Side.Left, Bound.Side.Right }, built.Hints);
         Assert.AreEqual(Bound.BotView.StatusFlags.Armed, built.Status);
         CollectionAssert.AreEqual(new[] { Bound.BotView.RanksItemFlags.Gold | Bound.BotView.RanksItemFlags.Silver, default }, built.Ranks);
         Assert.IsTrue(arguments[8].IsNothing, "A value of another unit constructs nothing.");

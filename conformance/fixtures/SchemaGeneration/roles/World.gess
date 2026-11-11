@@ -8,9 +8,13 @@ wire(world) schema :World as {
   badge: :Panel_Badge optional
 }
 
+// A named tag set: one generated type for every field that uses it, here and in the group view.
+tags :Side as (#left, #right)
+
 wire(world) schema :World_Cards as {
   cards: :List(:Panel_Badge) max 4
   labels: :List(:Tag max 12) max 4
+  side: :Side optional
 }
 
 schema :World_Bot as {

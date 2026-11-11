@@ -163,7 +163,8 @@ public sealed class GesSchemaSet
             files.Add(new GesFileScope(source, syntax));
         }
 
-        foreach (var file in files) file.DeclareNames(_declarations, _ordered);
+        var tagSets = new Dictionary<string, GesSchemaDeclarationSyntax>(StringComparer.Ordinal);
+        foreach (var file in files) file.DeclareNames(_declarations, _ordered, tagSets);
         foreach (var file in files) file.Resolve(_declarations);
         var visited = new Dictionary<GesResolvedDeclaration, int>();
         foreach (var declaration in _ordered) CheckNesting(declaration, [], visited);
@@ -259,6 +260,9 @@ internal sealed class GesResolvedType
 
     internal string ReferenceName { get; init; } = "";
 
+    // The named tag set a Tag takes its members from, or empty.
+    internal string TagSet { get; init; } = "";
+
     internal int Offset { get; init; }
 }
 
@@ -304,6 +308,7 @@ internal sealed class GesFileScope
     private readonly GesSchemaSourceSyntax _syntax;
     private readonly Dictionary<string, GesSchemaValueSyntax> _constants = new(StringComparer.Ordinal);
     private readonly List<GesResolvedDeclaration> _own = [];
+    private Dictionary<string, GesSchemaDeclarationSyntax> _tagSets = new(StringComparer.Ordinal);
 
     internal GesFileScope(GesSchemaSource source, GesSchemaSourceSyntax syntax)
     {
@@ -321,12 +326,24 @@ internal sealed class GesFileScope
         return new GesSchemaException(code, _source.Name, line, column, message);
     }
 
-    internal void DeclareNames(Dictionary<string, GesResolvedDeclaration> all, List<GesResolvedDeclaration> ordered)
+    internal void DeclareNames(Dictionary<string, GesResolvedDeclaration> all, List<GesResolvedDeclaration> ordered, Dictionary<string, GesSchemaDeclarationSyntax> tagSets)
     {
+        _tagSets = tagSets;
         foreach (var declaration in _syntax.Declarations)
         {
             switch (declaration.Kind)
             {
+                case GesSchemaDeclarationKind.TagSet:
+                {
+                    if (GesSchemaTypeNames.IsBuiltIn(declaration.Name))
+                        throw Error(Code.DuplicateName, declaration.Offset, $"'{declaration.Name}' is a built-in type.");
+                    if (all.ContainsKey(declaration.Name) || !tagSets.TryAdd(declaration.Name, declaration))
+                        throw Error(Code.DuplicateName, declaration.Offset, $"'{declaration.Name}' is declared twice.");
+                    var members = new HashSet<string>(StringComparer.Ordinal);
+                    foreach (var tag in declaration.Tags)
+                        if (!members.Add(tag)) throw Error(Code.DuplicateName, declaration.Offset, $"Tag '#{tag}' is listed twice.");
+                    break;
+                }
                 case GesSchemaDeclarationKind.Constant:
                     if (!_constants.TryAdd(declaration.Name, declaration.Value!)) throw Error(Code.DuplicateName, declaration.Offset, $"Constant '{declaration.Name}' is declared twice.");
                     break;
@@ -350,7 +367,8 @@ internal sealed class GesFileScope
                     };
                     if (GesSchemaTypeNames.IsBuiltIn(declaration.Name))
                         throw Error(Code.DuplicateName, declaration.Offset, $"'{declaration.Name}' is a built-in type.");
-                    if (!all.TryAdd(declaration.Name, resolved)) throw Error(Code.DuplicateName, declaration.Offset, $"'{declaration.Name}' is declared twice.");
+                    if (tagSets.ContainsKey(declaration.Name) || !all.TryAdd(declaration.Name, resolved))
+                        throw Error(Code.DuplicateName, declaration.Offset, $"'{declaration.Name}' is declared twice.");
                     ordered.Add(resolved);
                     _own.Add(resolved);
                     break;
@@ -420,8 +438,8 @@ internal sealed class GesFileScope
             var alternative = alternatives[index];
             result[index] = ResolveType(alternative, all);
             if (alternatives.Length == 1) continue;
-            // The type name decides: a unit does not distinguish alternatives.
-            var name = alternative.Kind == GesSchemaTypeKind.Reference ? ":" + alternative.Name : alternative.Kind.ToString();
+            // The type name decides: a unit does not distinguish alternatives, and a named tag set is a Tag.
+            var name = result[index].Kind == GesSchemaTypeKind.Reference ? ":" + alternative.Name : result[index].Kind.ToString();
             if (!seen.Add(name)) throw Error(Code.InvalidUnion, alternative.Offset, "A union repeats a type name; a unit does not distinguish alternatives.");
             if (alternative.Constraints.Delta is not null) throw Error(Code.InvalidUnion, alternative.Offset, "A union alternative has no delta within.");
         }
@@ -431,6 +449,9 @@ internal sealed class GesFileScope
 
     private GesResolvedType ResolveType(GesSchemaTypeSyntax type, Dictionary<string, GesResolvedDeclaration> all)
     {
+        // A named tag set stands for a Tag with its members; only its name differs, which belongs to no hash.
+        if (type.Kind == GesSchemaTypeKind.Reference && _tagSets.TryGetValue(type.Name, out var tagSet))
+            return new GesResolvedType { Kind = GesSchemaTypeKind.Tag, Tags = tagSet.Tags, TagSet = tagSet.Name, Offset = type.Offset };
         GesResolvedDeclaration? reference = null;
         if (type.Kind == GesSchemaTypeKind.Reference && (!all.TryGetValue(type.Name, out reference) || reference.Kind != GesSchemaKind.Schema))
             throw Error(Code.UnknownName, type.Offset, $"Schema '{type.Name}' is not declared.");

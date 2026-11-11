@@ -85,8 +85,9 @@ final class GesLayoutEncoding {
     var deltaWidth = 0
     var depends: [String] = []
 
-    // Tag sets, Texts and lists.
+    // Tag sets, Texts and lists. A Tag of a named tag set carries its name.
     var tags: [String] = []
+    var tagSet = ""
     var tagName = false
     var maxCount: Int64 = 0
     var dice = false
@@ -234,6 +235,7 @@ enum GesSchemaLayoutBuilder {
         case .tag where node.kind == .tag:
             encoding.kind = .tag
             encoding.tags = bound.infos[index].tags
+            encoding.tagSet = bound.infos[index].tagSet
             encoding.width = node.width
         case .flags:
             encoding.kind = .flags

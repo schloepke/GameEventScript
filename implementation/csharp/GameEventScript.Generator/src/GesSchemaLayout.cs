@@ -112,8 +112,9 @@ internal sealed class GesLayoutEncoding
     internal int DeltaWidth;
     internal List<string> Depends = [];
 
-    // Tag sets, Texts and lists.
+    // Tag sets, Texts and lists. A Tag of a named tag set carries its name.
     internal List<string> Tags = [];
+    internal string TagSet = "";
     internal bool TagName;
     internal long MaxCount;
     internal bool Dice;
@@ -277,6 +278,7 @@ internal static class GesSchemaLayoutBuilder
             case GesSchemaTypeKind.Tag when node.Kind == GesSchemaNodeKind.Tag:
                 encoding.Kind = GesLayoutKind.Tag;
                 encoding.Tags.AddRange(node.Tags!);
+                encoding.TagSet = node.TagSet ?? "";
                 encoding.Width = node.Width;
                 break;
             case GesSchemaTypeKind.Flags:

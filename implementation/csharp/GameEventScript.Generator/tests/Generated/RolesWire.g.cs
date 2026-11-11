@@ -3,7 +3,7 @@
 //     Do not edit it; generate it again when a schema or a parameter changes.
 //     Parameter worldWidth = 2e3 meter.
 //     World: schema hash 27948924216a58ec, binding hash 67f1ce53774c124d.
-//     World_Cards: schema hash 50b813cda1e6871a, binding hash 875e24e8849b0e5b.
+//     World_Cards: schema hash 2693a7598ba03f7b, binding hash 3eac208185fef672.
 //     Panel_Report: schema hash 4885f554a711dde1, binding hash df8ddbb308347288.
 // </auto-generated>
 
@@ -305,14 +305,14 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
         /// <summary>Converts this record into a GES Record value, as <see cref="GesSchemaValues"/> decodes its bytes; this allocates.</summary>
         /// <returns>The Record.</returns>
         /// <exception cref="GesWireException">A value does not fit its field.</exception>
-        public global::GameEventScript.Runtime.Values.GesValue ToValue() => GesSchemaValues.Decode(__valueSchema ??= __GesSchemasd1ed2bb08f30749f.Bind("Panel_Badge", BindingHash), ToBytes()).Value;
+        public global::GameEventScript.Runtime.Values.GesValue ToValue() => GesSchemaValues.Decode(__valueSchema ??= __GesSchemasaf9ca8970ff66763.Bind("Panel_Badge", BindingHash), ToBytes()).Value;
 
         /// <summary>Reads a Record or Map into this instance, as <see cref="GesSchemaValues"/> encodes it; this allocates.</summary>
         /// <param name="value">The value.</param>
         /// <exception cref="GesWireException">The value does not fit the schema.</exception>
         public void ReadValue(global::GameEventScript.Runtime.Values.GesValue value)
         {
-            var schema = __valueSchema ??= __GesSchemasd1ed2bb08f30749f.Bind("Panel_Badge", BindingHash);
+            var schema = __valueSchema ??= __GesSchemasaf9ca8970ff66763.Bind("Panel_Badge", BindingHash);
             var buffer = new byte[MaxByteCount];
             Read(new ReadOnlySpan<byte>(buffer, 0, GesSchemaValues.Encode(schema, value, buffer)));
         }
@@ -674,14 +674,14 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
         /// <summary>Converts this record into a GES Record value, as <see cref="GesSchemaValues"/> decodes its bytes; this allocates.</summary>
         /// <returns>The Record.</returns>
         /// <exception cref="GesWireException">A value does not fit its field.</exception>
-        public global::GameEventScript.Runtime.Values.GesValue ToValue() => GesSchemaValues.Decode(__valueSchema ??= __GesSchemasd1ed2bb08f30749f.Bind("Panel_Entry", BindingHash), ToBytes()).Value;
+        public global::GameEventScript.Runtime.Values.GesValue ToValue() => GesSchemaValues.Decode(__valueSchema ??= __GesSchemasaf9ca8970ff66763.Bind("Panel_Entry", BindingHash), ToBytes()).Value;
 
         /// <summary>Reads a Record or Map into this instance, as <see cref="GesSchemaValues"/> encodes it; this allocates.</summary>
         /// <param name="value">The value.</param>
         /// <exception cref="GesWireException">The value does not fit the schema.</exception>
         public void ReadValue(global::GameEventScript.Runtime.Values.GesValue value)
         {
-            var schema = __valueSchema ??= __GesSchemasd1ed2bb08f30749f.Bind("Panel_Entry", BindingHash);
+            var schema = __valueSchema ??= __GesSchemasaf9ca8970ff66763.Bind("Panel_Entry", BindingHash);
             var buffer = new byte[MaxByteCount];
             Read(new ReadOnlySpan<byte>(buffer, 0, GesSchemaValues.Encode(schema, value, buffer)));
         }
@@ -1944,14 +1944,14 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
         /// <summary>Converts this record into a GES Record value, as <see cref="GesSchemaValues"/> decodes its bytes; this allocates.</summary>
         /// <returns>The Record.</returns>
         /// <exception cref="GesWireException">A value does not fit its field.</exception>
-        public global::GameEventScript.Runtime.Values.GesValue ToValue() => GesSchemaValues.Decode(__valueSchema ??= __GesSchemasd1ed2bb08f30749f.Bind("Panel_Report", BindingHash), ToBytes()).Value;
+        public global::GameEventScript.Runtime.Values.GesValue ToValue() => GesSchemaValues.Decode(__valueSchema ??= __GesSchemasaf9ca8970ff66763.Bind("Panel_Report", BindingHash), ToBytes()).Value;
 
         /// <summary>Reads a Record or Map into this instance, as <see cref="GesSchemaValues"/> encodes it; this allocates.</summary>
         /// <param name="value">The value.</param>
         /// <exception cref="GesWireException">The value does not fit the schema.</exception>
         public void ReadValue(global::GameEventScript.Runtime.Values.GesValue value)
         {
-            var schema = __valueSchema ??= __GesSchemasd1ed2bb08f30749f.Bind("Panel_Report", BindingHash);
+            var schema = __valueSchema ??= __GesSchemasaf9ca8970ff66763.Bind("Panel_Report", BindingHash);
             var buffer = new byte[MaxByteCount];
             Read(new ReadOnlySpan<byte>(buffer, 0, GesSchemaValues.Encode(schema, value, buffer)));
         }
@@ -2874,14 +2874,14 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
         /// <summary>Converts this record into a GES Record value, as <see cref="GesSchemaValues"/> decodes its bytes; this allocates.</summary>
         /// <returns>The Record.</returns>
         /// <exception cref="GesWireException">A value does not fit its field.</exception>
-        public global::GameEventScript.Runtime.Values.GesValue ToValue() => GesSchemaValues.Decode(__valueSchema ??= __GesSchemasd1ed2bb08f30749f.Bind("World", BindingHash), ToBytes()).Value;
+        public global::GameEventScript.Runtime.Values.GesValue ToValue() => GesSchemaValues.Decode(__valueSchema ??= __GesSchemasaf9ca8970ff66763.Bind("World", BindingHash), ToBytes()).Value;
 
         /// <summary>Reads a Record or Map into this instance, as <see cref="GesSchemaValues"/> encodes it; this allocates.</summary>
         /// <param name="value">The value.</param>
         /// <exception cref="GesWireException">The value does not fit the schema.</exception>
         public void ReadValue(global::GameEventScript.Runtime.Values.GesValue value)
         {
-            var schema = __valueSchema ??= __GesSchemasd1ed2bb08f30749f.Bind("World", BindingHash);
+            var schema = __valueSchema ??= __GesSchemasaf9ca8970ff66763.Bind("World", BindingHash);
             var buffer = new byte[MaxByteCount];
             Read(new ReadOnlySpan<byte>(buffer, 0, GesSchemaValues.Encode(schema, value, buffer)));
         }
@@ -3180,14 +3180,14 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
         /// <summary>Converts this record into a GES Record value, as <see cref="GesSchemaValues"/> decodes its bytes; this allocates.</summary>
         /// <returns>The Record.</returns>
         /// <exception cref="GesWireException">A value does not fit its field.</exception>
-        public readonly global::GameEventScript.Runtime.Values.GesValue ToValue() => GesSchemaValues.Decode(__valueSchema ??= __GesSchemasd1ed2bb08f30749f.Bind("World_Body", BindingHash), ToBytes()).Value;
+        public readonly global::GameEventScript.Runtime.Values.GesValue ToValue() => GesSchemaValues.Decode(__valueSchema ??= __GesSchemasaf9ca8970ff66763.Bind("World_Body", BindingHash), ToBytes()).Value;
 
         /// <summary>Reads a Record or Map into this instance, as <see cref="GesSchemaValues"/> encodes it; this allocates.</summary>
         /// <param name="value">The value.</param>
         /// <exception cref="GesWireException">The value does not fit the schema.</exception>
         public void ReadValue(global::GameEventScript.Runtime.Values.GesValue value)
         {
-            var schema = __valueSchema ??= __GesSchemasd1ed2bb08f30749f.Bind("World_Body", BindingHash);
+            var schema = __valueSchema ??= __GesSchemasaf9ca8970ff66763.Bind("World_Body", BindingHash);
             var buffer = new byte[MaxByteCount];
             Read(new ReadOnlySpan<byte>(buffer, 0, GesSchemaValues.Encode(schema, value, buffer)));
         }
@@ -4063,14 +4063,14 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
         /// <summary>Converts this record into a GES Record value, as <see cref="GesSchemaValues"/> decodes its bytes; this allocates.</summary>
         /// <returns>The Record.</returns>
         /// <exception cref="GesWireException">A value does not fit its field.</exception>
-        public global::GameEventScript.Runtime.Values.GesValue ToValue() => GesSchemaValues.Decode(__valueSchema ??= __GesSchemasd1ed2bb08f30749f.Bind("World_Bot", BindingHash), ToBytes()).Value;
+        public global::GameEventScript.Runtime.Values.GesValue ToValue() => GesSchemaValues.Decode(__valueSchema ??= __GesSchemasaf9ca8970ff66763.Bind("World_Bot", BindingHash), ToBytes()).Value;
 
         /// <summary>Reads a Record or Map into this instance, as <see cref="GesSchemaValues"/> encodes it; this allocates.</summary>
         /// <param name="value">The value.</param>
         /// <exception cref="GesWireException">The value does not fit the schema.</exception>
         public void ReadValue(global::GameEventScript.Runtime.Values.GesValue value)
         {
-            var schema = __valueSchema ??= __GesSchemasd1ed2bb08f30749f.Bind("World_Bot", BindingHash);
+            var schema = __valueSchema ??= __GesSchemasaf9ca8970ff66763.Bind("World_Bot", BindingHash);
             var buffer = new byte[MaxByteCount];
             Read(new ReadOnlySpan<byte>(buffer, 0, GesSchemaValues.Encode(schema, value, buffer)));
         }
@@ -4092,13 +4092,13 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
     internal sealed partial class World_Cards
     {
         /// <summary>The schema hash, independent of parameter values.</summary>
-        public const ulong SchemaHash = 0x50b813cda1e6871aUL;
+        public const ulong SchemaHash = 0x2693a7598ba03f7bUL;
 
         /// <summary>The hash over the schema hash and the parameter values this code was generated with.</summary>
-        public const ulong BindingHash = 0x875e24e8849b0e5bUL;
+        public const ulong BindingHash = 0x3eac208185fef672UL;
 
         /// <summary>The size of the largest encoding in bytes.</summary>
-        public const int MaxByteCount = 85;
+        public const int MaxByteCount = 86;
 
         internal static readonly string[] __paths =
         {
@@ -4107,6 +4107,7 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
             "cards[].label",
             "labels",
             "labels[]",
+            "side",
         };
 
         /// <summary>The field <c>cards</c>, at most 4 elements.</summary>
@@ -4114,6 +4115,23 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
 
         /// <summary>The field <c>labels</c>, at most 4 elements.</summary>
         public List<LabelsItem> Labels = new List<LabelsItem>();
+
+        /// <summary>Whether <c>side</c> is present.</summary>
+        public bool HasSide;
+
+        /// <summary>The field <c>side</c>.</summary>
+        public global::GameEventScript.Tests.Generator.Roles.Wire.Side Side;
+
+        /// <summary>The field <c>side</c> as a nullable value, null when absent.</summary>
+        public global::GameEventScript.Tests.Generator.Roles.Wire.Side? SideOptional
+        {
+            get => HasSide ? Side : (global::GameEventScript.Tests.Generator.Roles.Wire.Side?)null;
+            set
+            {
+                HasSide = value.HasValue;
+                Side = value.GetValueOrDefault();
+            }
+        }
 
         /// <summary>Sets <c>cards</c> to <paramref name="count"/> elements that the record reuses, as a read does; their fields keep earlier values until they are set.</summary>
         /// <param name="count">The element count.</param>
@@ -4216,6 +4234,13 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
             {
                 item.__WriteFields(ref writer, paths, at + 4);
             }
+            if (HasSide)
+            {
+                writer.Write(1, 1);
+                if ((ulong)Side > 1UL) throw new GesWireException(GesWireException.UnknownTag, paths[at + 5]);
+                writer.Write((ulong)Side, 1);
+            }
+            else writer.Write(0, 1);
         }
 
         internal void __ReadFields(ref GesBitReader reader, string[] paths, int at)
@@ -4244,6 +4269,15 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
                     Labels.Add(item);
                 }
             }
+            HasSide = reader.Read(1, paths[at + 5]) != 0;
+            if (HasSide)
+            {
+                {
+                    var index = reader.Read(1, paths[at + 5]);
+                    Side = (global::GameEventScript.Tests.Generator.Roles.Wire.Side)index;
+                }
+            }
+            else Side = default;
         }
 
         #if DEBUG || DEVELOPMENT_BUILD || UNITY_EDITOR || GES_CHECK_SHARING
@@ -4292,6 +4326,20 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
             return true;
         }
 
+        private static ulong __Wire5(global::GameEventScript.Tests.Generator.Roles.Wire.Side value, string[] paths, int at)
+        {
+            if ((ulong)value > 1UL) throw new GesWireException(GesWireException.UnknownTag, paths[at + 5]);
+            return (ulong)value;
+        }
+
+        private static ulong __Read5(ref GesBitReader reader, string[] paths, int at)
+        {
+            var wire = reader.Read(1, paths[at + 5]);
+            return wire;
+        }
+
+        private static global::GameEventScript.Tests.Generator.Roles.Wire.Side __Value5(ulong wire) => (global::GameEventScript.Tests.Generator.Roles.Wire.Side)wire;
+
         internal bool __Same(World_Cards other, string[] paths, int at)
         {
             if (Cards.Count != other.Cards.Count) return false;
@@ -4303,6 +4351,11 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
             for (var index3 = 0; index3 < Labels.Count; index3++)
             {
                 if (!Labels[index3].__Same(other.Labels[index3], paths, at + 4)) return false;
+            }
+            if (HasSide != other.HasSide) return false;
+            if (HasSide)
+            {
+                if (__Wire5(Side, paths, at) != __Wire5(other.Side, paths, at)) return false;
             }
             return true;
         }
@@ -4334,6 +4387,8 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
                     Labels.Add(item3);
                 }
             }
+            HasSide = other.HasSide;
+            Side = other.Side;
         }
 
         internal void __Quantize(string[] paths, int at)
@@ -4341,6 +4396,9 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
             for (var index0 = 0; index0 < Cards.Count; index0++)
             {
                 Cards[index0].__Quantize(paths, at + 2);
+            }
+            if (HasSide)
+            {
             }
         }
 
@@ -4426,7 +4484,7 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
         internal bool __WriteDelta(World_Cards baseline, ref GesBitWriter writer, string[] paths, int at, bool top)
         {
             var first = writer.BitPosition;
-            for (var left = 2; left > 0; left -= 64) writer.Write(0, Math.Min(left, 64));
+            for (var left = 3; left > 0; left -= 64) writer.Write(0, Math.Min(left, 64));
             var changed = false;
             var ordinal = 0;
             {
@@ -4467,12 +4525,46 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
                 }
                 ordinal++;
             }
+            {
+                var set5 = false;
+                if (HasSide != baseline.HasSide)
+                {
+                    writer.Write(HasSide ? 1UL : 0UL, 1);
+                    if (HasSide)
+                    {
+                        if ((ulong)Side > 1UL) throw new GesWireException(GesWireException.UnknownTag, paths[at + 5]);
+                        writer.Write((ulong)Side, 1);
+                    }
+                    set5 = true;
+                }
+                else if (HasSide)
+                {
+                    var presence5 = writer.BitPosition;
+                    writer.Write(1, 1);
+                    {
+                        var value5 = __Wire5(Side, paths, at);
+                        var held5 = __Wire5(baseline.Side, paths, at);
+                        if (value5 != held5)
+                        {
+                            writer.Write(value5, 1);
+                            set5 = true;
+                        }
+                    }
+                    if (!set5) writer.Rewind(presence5);
+                }
+                if (set5)
+                {
+                    writer.SetBit(first + ordinal);
+                    changed = true;
+                }
+                ordinal++;
+            }
             return changed;
         }
 
         internal bool __ReadDelta(World_Cards baseline, ref GesBitReader reader, string[] paths, int at, bool top)
         {
-            var fieldCount = 2;
+            var fieldCount = 3;
             reader.Require(fieldCount, at == 0 ? "" : paths[at - 1]);
             var changeBits = reader.BitPosition;
             reader.Seek(changeBits + fieldCount);
@@ -4554,6 +4646,42 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
                 }
                 ordinal++;
             }
+            {
+                var payload5 = reader.BitPosition;
+                reader.Seek(changeBits + ordinal);
+                var set5 = reader.Read(1, paths[at + 5]) == 1;
+                reader.Seek(payload5);
+                if (set5)
+                {
+                    var present5 = reader.Read(1, paths[at + 5]) == 1;
+                    if (!present5 && !baseline.HasSide) throw new GesWireException(GesWireException.InvalidDelta, paths[at + 5]);
+                    HasSide = present5;
+                    if (present5 && baseline.HasSide)
+                    {
+                        {
+                            var held5 = __Wire5(baseline.Side, paths, at);
+                            var value5 = __Read5(ref reader, paths, at);
+                            if (value5 == held5) throw new GesWireException(GesWireException.InvalidDelta, paths[at + 5]);
+                            Side = __Value5(value5);
+                        }
+                    }
+                    else if (present5)
+                    {
+                        {
+                            var index = reader.Read(1, paths[at + 5]);
+                            Side = (global::GameEventScript.Tests.Generator.Roles.Wire.Side)index;
+                        }
+                    }
+                    else Side = default;
+                    changed = true;
+                }
+                else
+                {
+                    HasSide = baseline.HasSide;
+                    Side = baseline.Side;
+                }
+                ordinal++;
+            }
             return changed;
         }
 
@@ -4562,14 +4690,14 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
         /// <summary>Converts this record into a GES Record value, as <see cref="GesSchemaValues"/> decodes its bytes; this allocates.</summary>
         /// <returns>The Record.</returns>
         /// <exception cref="GesWireException">A value does not fit its field.</exception>
-        public global::GameEventScript.Runtime.Values.GesValue ToValue() => GesSchemaValues.Decode(__valueSchema ??= __GesSchemasd1ed2bb08f30749f.Bind("World_Cards", BindingHash), ToBytes()).Value;
+        public global::GameEventScript.Runtime.Values.GesValue ToValue() => GesSchemaValues.Decode(__valueSchema ??= __GesSchemasaf9ca8970ff66763.Bind("World_Cards", BindingHash), ToBytes()).Value;
 
         /// <summary>Reads a Record or Map into this instance, as <see cref="GesSchemaValues"/> encodes it; this allocates.</summary>
         /// <param name="value">The value.</param>
         /// <exception cref="GesWireException">The value does not fit the schema.</exception>
         public void ReadValue(global::GameEventScript.Runtime.Values.GesValue value)
         {
-            var schema = __valueSchema ??= __GesSchemasd1ed2bb08f30749f.Bind("World_Cards", BindingHash);
+            var schema = __valueSchema ??= __GesSchemasaf9ca8970ff66763.Bind("World_Cards", BindingHash);
             var buffer = new byte[MaxByteCount];
             Read(new ReadOnlySpan<byte>(buffer, 0, GesSchemaValues.Encode(schema, value, buffer)));
         }
@@ -4656,8 +4784,17 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
         }
     }
 
+    /// <summary>The tag set <c>:Side</c>, in declared order.</summary>
+    internal enum Side : byte
+    {
+        /// <summary>The tag <c>#left</c>.</summary>
+        Left,
+        /// <summary>The tag <c>#right</c>.</summary>
+        Right,
+    }
+
     /// <summary>The schema sources of this file, which the conversion to and from GES values binds once per type.</summary>
-    internal static class __GesSchemasd1ed2bb08f30749f
+    internal static class __GesSchemasaf9ca8970ff66763
     {
         private static GesSchemaSet? __set;
 
@@ -4676,9 +4813,13 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
                     "  badge: :Panel_Badge optional",
                     "}",
                     "",
+                    "// A named tag set: one generated type for every field that uses it, here and in the group view.",
+                    "tags :Side as (#left, #right)",
+                    "",
                     "wire(world) schema :World_Cards as {",
                     "  cards: :List(:Panel_Badge) max 4",
                     "  labels: :List(:Tag max 12) max 4",
+                    "  side: :Side optional",
                     "}",
                     "",
                     "schema :World_Bot as {",
@@ -4766,12 +4907,13 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
                     "  chunks: :List(:Bytes)",
                     "  status: :Flags(#armed, #cloaked)",
                     "  ranks: :List(:Flags(#gold, #silver))",
-                    "  hints: :List(:Tag(#left, #right))",
+                    "  hints: :List(:Side)",
                     "}",
                     "",
                     "schema :RadarView as {",
                     "  range: :Quantity(m)",
                     "  contacts: :List(:Number integer)",
+                    "  side: :Side optional",
                     "}",
                     "",
                 })));

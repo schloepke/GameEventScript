@@ -58,10 +58,30 @@ internal static class GesSchemaLayoutJson
             json.BeginArray("fields");
             foreach (var field in type.Fields) Field(json, field, member: true);
             json.EndArray();
+            Constants(json, type.Constants);
             if (type.Kind == GesSchemaKind.Message) json.Strings("tags", type.Tags);
         }
 
         json.EndObject();
+    }
+
+    // Only a schema with lets carries them.
+    internal static void Constants(Writer json, List<GesLayoutConstant> constants)
+    {
+        if (constants.Count == 0) return;
+        json.BeginArray("constants");
+        foreach (var constant in constants)
+        {
+            json.BeginObject();
+            json.String("name", constant.Name);
+            json.String("type", constant.Type);
+            json.String("unit", constant.Unit);
+            json.String("value", constant.Value);
+            json.Boolean("integer", constant.Integer);
+            json.EndObject();
+        }
+
+        json.EndArray();
     }
 
     private static void Field(Writer json, GesLayoutField field, bool member, bool value = false)

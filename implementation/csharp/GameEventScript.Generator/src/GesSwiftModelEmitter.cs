@@ -71,6 +71,7 @@ internal static class GesSwiftModelEmitter
 
         if (key is not null && GesSchemaPlanner.Camel(key.Base) != "id") names.Add(("id", "the identity of the key " + key.Field.Name));
         names.Add(("schemaHash", "the generated member schemaHash"));
+        foreach (var constant in type.Constants) names.Add((constant.Name, "the let " + constant.Name));
         if (bindings) names.Add(("gesValue", "the generated member gesValue"));
         if (values is not null) names.Add(("toValue", "the generated member toValue"));
         if (bindings && fields.Exists(field => field.Field.Name == "fields"))
@@ -81,6 +82,7 @@ internal static class GesSwiftModelEmitter
         code.Open($"{access}struct {type.Name}: Hashable, Sendable, Codable{(key is null ? "" : ", Identifiable")} {{");
         code.Line($"/// The hash of the schema `:{type.Name}`, which wire records of it carry too; a test that compares it notices stale generated code.");
         code.Line($"{access}static let schemaHash: UInt64 = 0x{GesSchemaLayoutJson.Hex(type.Hash)}");
+        GesSwiftEmitter.Lets(code, type.Constants, access, "Int");
         if (fields.Count > 0) code.Blank();
         var first = true;
         foreach (var field in fields)

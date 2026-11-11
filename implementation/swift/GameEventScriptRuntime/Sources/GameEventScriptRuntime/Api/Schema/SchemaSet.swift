@@ -164,6 +164,17 @@ struct GesResolvedValue {
     var isParameter: Bool { !parameter.isEmpty }
 }
 
+/// A constant of a schema: its kind, Number, Percentage or Quantity, its unit and its exact value.
+struct GesResolvedLet {
+    var name = ""
+    var kind = GesSchemaTypeKind.number
+    var unit = GesQuantityUnit.none
+    var value = GesSchemaDecimal(0, 0)
+    /// A whole unitless value within Int64; any other is a binary64 in base units.
+    var integer = false
+    var offset = 0
+}
+
 struct GesResolvedConstraints {
     var integer = false
     var wrapping = false
@@ -237,6 +248,7 @@ final class GesResolvedDeclaration {
     let syntax: GesSchemaDeclarationSyntax
     let tags: [String]
     var fields: [GesResolvedField] = []
+    var lets: [GesResolvedLet] = []
     var members: [GesResolvedDeclaration] = []
     // The public description, which exists once all declarations are resolved. It holds this declaration, so this side is weak.
     weak var schema: GesSchema?
@@ -258,6 +270,8 @@ final class GesFileScope {
     private var constants: [String: GesSchemaValueSyntax] = [:]
     private var own: [GesResolvedDeclaration] = []
     private var tagSets: [String: GesSchemaDeclarationSyntax] = [:]
+    /// The lets of the schema being resolved, which its fields can name.
+    private var lets: [String: GesResolvedLet] = [:]
     private(set) var parameters: [String: GesSchemaTypeSyntax] = [:]
     var sourceName: String { source.name }
 
@@ -324,14 +338,40 @@ final class GesFileScope {
             var tags: Set<String> = []
             for tag in syntax.tags where !tags.insert(tag).inserted { throw error(Code.duplicateName, syntax.offset, "Tag '#\(tag)' is listed twice.") }
             var names: Set<String> = []
+            declaration.lets = try resolveLets(syntax, &names)
             for (index, field) in syntax.fields.enumerated() {
-                if !names.insert(field.name).inserted { throw error(Code.duplicateName, field.offset, "Field '\(field.name)' is declared twice.") }
+                if !names.insert(field.name).inserted { throw error(Code.duplicateName, field.offset, "'\(field.name)' is declared twice in '\(declaration.name)'.") }
                 declaration.fields.append(try resolveField(field, index, declaration.kind, all))
             }
         }
         // A declaration holds its scope, so the scope lets go of them once they are resolved.
         own = []
         self.tagSets = [:]
+        lets = [:]
+    }
+
+    /// A let is a literal or a file constant. Its name differs from the fields and other lets of its schema and from the
+    /// parameters of its file, since a bound names either.
+    private func resolveLets(_ syntax: GesSchemaDeclarationSyntax, _ names: inout Set<String>) throws -> [GesResolvedLet] {
+        lets = [:]
+        var result: [GesResolvedLet] = []
+        for declared in syntax.lets {
+            if !names.insert(declared.name).inserted { throw error(Code.duplicateName, declared.offset, "'\(declared.name)' is declared twice in '\(syntax.name)'.") }
+            if parameters[declared.name] != nil { throw error(Code.duplicateName, declared.offset, "'\(declared.name)' is a parameter of this file.") }
+            var literal = declared.value
+            if !literal.constant.isEmpty {
+                guard let constant = constants[literal.constant] else {
+                    throw error(Code.unknownName, declared.value.offset, "Constant '$\(declared.value.constant)' is not declared in this file.")
+                }
+                literal = constant
+            }
+            let kind: GesSchemaTypeKind = literal.isPercent ? .percentage : literal.unit != .none ? .quantity : .number
+            var resolved = GesResolvedLet(name: declared.name, kind: kind, unit: literal.unit, value: literal.value, offset: declared.offset)
+            resolved.integer = try GesSchemaBinder.checkLet(self, resolved)
+            result.append(resolved)
+            lets[declared.name] = resolved
+        }
+        return result
     }
 
     private func resolveField(_ field: GesSchemaFieldSyntax, _ index: Int, _ owner: GesSchemaKind, _ all: [String: GesResolvedDeclaration]) throws -> GesResolvedField {
@@ -403,7 +443,8 @@ final class GesFileScope {
             for tag in tags where !seen.insert(tag).inserted { throw error(Code.duplicateName, type.offset, "Tag '#\(tag)' is listed twice.") }
             if type.kind == .flags && tags.count > GesSchemaSet.maximumFlagCount { throw error(Code.tooWide, type.offset, "Flags have at most \(GesSchemaSet.maximumFlagCount) members.") }
         }
-        if let max = type.max, max <= 0 { throw error(Code.invalidConstraint, type.offset, "A maximum is positive.") }
+        let max = type.maxName.isEmpty ? type.max : try letMax(type)
+        if let max, max <= 0 { throw error(Code.invalidConstraint, type.offset, "A maximum is positive.") }
         if type.kind == .dice && (type.constraints.integer || type.constraints.wrapping || type.constraints.step != nil || type.constraints.delta != nil) {
             throw error(Code.invalidConstraint, type.offset, "A Dice has only a range.")
         }
@@ -425,7 +466,7 @@ final class GesFileScope {
             kind: type.kind,
             unit: type.unit,
             tags: type.tags,
-            max: type.max,
+            max: max,
             element: element,
             constraints: constraints,
             axes: axes,
@@ -433,6 +474,19 @@ final class GesFileScope {
             referenceName: type.name,
             offset: type.offset
         )
+    }
+
+    /// A maximum that names a let takes its whole unitless value, which has at most 12 digits like a written one.
+    private func letMax(_ type: GesSchemaTypeSyntax) throws -> Int64 {
+        guard let declared = lets[type.maxName] else { throw error(Code.unknownName, type.maxOffset, "'\(type.maxName)' is no let of this schema.") }
+        if declared.kind != .number { throw error(Code.unitMismatch, type.maxOffset, "Let '\(type.maxName)' has a unit; a maximum is a whole number.") }
+        let significand = declared.value.significand
+        if !declared.integer || significand <= 0 || declared.value.exponent + String(significand).count > 12 {
+            throw error(Code.invalidConstraint, type.maxOffset, "Let '\(type.maxName)' is no positive whole number of at most 12 digits.")
+        }
+        var value = significand
+        for _ in 0..<declared.value.exponent { value *= 10 }
+        return value
     }
 
     private func resolveConstraints(_ constraints: GesSchemaConstraintsSyntax, _ unit: GesQuantityUnit, _ percentage: Bool, _ offset: Int) throws -> GesResolvedConstraints {
@@ -444,20 +498,28 @@ final class GesFileScope {
         var resolved = GesResolvedConstraints()
         resolved.integer = constraints.integer
         resolved.wrapping = constraints.wrapping
-        resolved.lower = try resolveValue(constraints.lower, unit, percentage)
-        resolved.upper = try resolveValue(constraints.upper, unit, percentage)
-        resolved.step = try resolveValue(constraints.step, unit, percentage)
-        resolved.delta = try resolveValue(constraints.delta, unit, percentage)
+        resolved.lower = try resolveValue(constraints.lower, unit, percentage, bound: true)
+        resolved.upper = try resolveValue(constraints.upper, unit, percentage, bound: true)
+        resolved.step = try resolveValue(constraints.step, unit, percentage, bound: false)
+        resolved.delta = try resolveValue(constraints.delta, unit, percentage, bound: false)
         try GesSchemaBinder.checkLiterals(self, resolved)
         return resolved
     }
 
-    private func resolveValue(_ value: GesSchemaValueSyntax?, _ unit: GesQuantityUnit, _ percentage: Bool) throws -> GesResolvedValue? {
+    /// A name is a let of the schema and, only in a bound, a parameter of the file; a let is replaced by its value.
+    private func resolveValue(_ value: GesSchemaValueSyntax?, _ unit: GesQuantityUnit, _ percentage: Bool, bound: Bool) throws -> GesResolvedValue? {
         guard let value else { return nil }
-        if !value.parameter.isEmpty {
-            guard let parameter = parameters[value.parameter] else { throw error(Code.unknownName, value.offset, "Parameter '\(value.parameter)' is not declared in this file.") }
-            if parameter.unit != unit || (parameter.kind == .percentage) != percentage { throw error(Code.unitMismatch, value.offset, "Parameter '\(value.parameter)' has another kind or unit than its field.") }
-            return GesResolvedValue(parameter: value.parameter, offset: value.offset)
+        if !value.name.isEmpty {
+            if let declared = lets[value.name] {
+                if declared.unit != unit || (declared.kind == .percentage) != percentage {
+                    throw error(Code.unitMismatch, value.offset, "Let '\(value.name)' has another kind or unit than its field.")
+                }
+                return GesResolvedValue(value: declared.value, offset: value.offset)
+            }
+            if !bound { throw error(Code.unknownName, value.offset, "'\(value.name)' is no let of this schema; a step and a delta range never name a parameter.") }
+            guard let parameter = parameters[value.name] else { throw error(Code.unknownName, value.offset, "'\(value.name)' is neither a let of this schema nor a parameter of this file.") }
+            if parameter.unit != unit || (parameter.kind == .percentage) != percentage { throw error(Code.unitMismatch, value.offset, "Parameter '\(value.name)' has another kind or unit than its field.") }
+            return GesResolvedValue(parameter: value.name, offset: value.offset)
         }
         var literal = value
         if !value.constant.isEmpty {
@@ -531,10 +593,19 @@ enum GesSchemaCanonical {
         }
     }
 
+    static func letKind(_ declared: GesResolvedLet) -> String {
+        switch declared.kind {
+        case .percentage: "Percentage"
+        case .quantity: "Quantity(\(declared.unit.rawValue))"
+        default: "Number"
+        }
+    }
+
     private static func write(_ declaration: GesResolvedDeclaration, _ output: inout String) {
         switch declaration.kind {
         case .schema:
             output += "schema \(declaration.name)\n"
+            for declared in declaration.lets { output += "let \(declared.name) \(letKind(declared)) \(declared.value.canonical)\n" }
             for field in declaration.fields { writeField("field ", field, &output) }
         case .message:
             output += "message \(declaration.name)"

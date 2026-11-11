@@ -149,6 +149,21 @@ Each binding fixes all widths, here 19 bits for `x` and `y`. You can bind one sc
 times with different values, for two zones of different size in one session. The wire does not
 say which binding a record uses, so choose it from your own context, such as the connection.
 
+A constant and a parameter stay in their file. When both sides of a connection need a value, declare it
+with `let` inside the schema instead:
+
+```gess
+schema :SoundView as {
+  let retention be 2s
+  let maximumSources be 16
+  sources: :List(:Text max 32) max maximumSources
+}
+```
+
+The fields of the schema can name it, and generated code gets it as a static member in base units:
+`SoundView.retention` is `2.0` seconds in Swift, and `SoundView.MaximumSources` is `16` in C#. A `let`
+is never sent, but it belongs to the hash, so both sides agree on it.
+
 ## 5. Find the object with a key
 
 `key` marks the first field of a schema as the identity of the object, like `id` of `Player`. It

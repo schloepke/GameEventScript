@@ -229,6 +229,14 @@ final class GeneratedRoleCodeTests: XCTestCase {
         XCTAssertEqual(RolesBound.Panel_Report.schemaHash, RolesModel.Panel_Report.schemaHash)
     }
 
+    func testLetsAreStaticMembersInBaseUnits() {
+        XCTAssertEqual(RolesWire.World_Body.heaviest, 1000)
+        XCTAssertEqual(RolesModel.World_Body.heaviest, 1000)
+        XCTAssertEqual(RolesWire.World_Body.wear, 0.025)
+        XCTAssertEqual(RolesModel.World_Body.wear, 0.025)
+        XCTAssertEqual(RolesWire.World_Cards.deck, Int64(4))
+    }
+
     func testBoundModelsAlsoConvertToPlainValues() throws {
         let value = report().toValue()
         let bound = try RolesBound.Panel_Report(value: value)

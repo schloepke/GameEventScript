@@ -58,6 +58,7 @@ enum GesSwiftModelEmitter {
         }
         if let key, identity { names.append(("id", "the identity of the key " + key.field.name)) }
         names.append(("schemaHash", "the generated member schemaHash"))
+        for constant in type.constants { names.append((constant.name, "the let " + constant.name)) }
         if bindings { names.append(("gesValue", "the generated member gesValue")) }
         if values != nil { names.append(("toValue", "the generated member toValue")) }
         if bindings && fields.contains(where: { $0.field.name == "fields" }) {
@@ -69,6 +70,7 @@ enum GesSwiftModelEmitter {
         code.open("\(access)struct \(type.name): Hashable, Sendable, Codable\(key == nil ? "" : ", Identifiable") {")
         code.line("/// The hash of the schema `:\(type.name)`, which wire records of it carry too; a test that compares it notices stale generated code.")
         code.line("\(access)static let schemaHash: UInt64 = 0x\(GesSchemaLayoutJson.hex(type.hash))")
+        GesSwiftEmitter.lets(&code, type.constants, access, "Int")
         if !fields.isEmpty { code.blank() }
         for (index, field) in fields.enumerated() {
             if index > 0 { code.blank() }

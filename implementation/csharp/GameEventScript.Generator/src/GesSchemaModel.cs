@@ -32,6 +32,7 @@ internal sealed class GesModelType
     internal string Name = "";
     internal ulong Hash;
     internal List<GesModelField> Fields = [];
+    internal List<GesLayoutConstant> Constants = [];
 }
 
 internal sealed class GesModelField
@@ -104,7 +105,7 @@ internal static class GesModelLayoutBuilder
         var types = new List<GesModelType>();
         foreach (var schema in reached.Values)
         {
-            var type = new GesModelType { Name = schema.Name, Hash = schema.Hash };
+            var type = new GesModelType { Name = schema.Name, Hash = schema.Hash, Constants = GesLayoutConstant.Of(schema) };
             foreach (var info in schema.Fields)
             {
                 var field = Field(info.Name, info.Name, info.Alternatives);
@@ -245,6 +246,7 @@ internal static class GesModelLayoutJson
             json.BeginArray("fields");
             foreach (var field in type.Fields) Field(json, field, member: true);
             json.EndArray();
+            GesSchemaLayoutJson.Constants(json, type.Constants);
             json.EndObject();
         }
 

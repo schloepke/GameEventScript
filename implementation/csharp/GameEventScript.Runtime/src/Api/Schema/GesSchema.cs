@@ -209,6 +209,35 @@ public sealed class GesSchemaParameterInfo
     public GesQuantityUnit Unit { get; }
 }
 
+/// <summary>A constant of a schema, declared as <c>let name be value</c>: never encoded, part of the hash, and generated as a
+/// static member of the schema's types.</summary>
+public sealed class GesSchemaConstantInfo
+{
+    internal GesSchemaConstantInfo(GesResolvedLet let)
+    {
+        Name = let.Name;
+        Kind = let.Kind;
+        Unit = let.Unit;
+        IsInteger = let.Integer;
+        Value = new GesSchemaBound(new GesResolvedValue { Value = let.Value });
+    }
+
+    /// <summary>Gets the name.</summary>
+    public string Name { get; }
+
+    /// <summary>Gets the kind its literal gives it: Number, Percentage or Quantity.</summary>
+    public GesSchemaTypeKind Kind { get; }
+
+    /// <summary>Gets the unit of a Quantity.</summary>
+    public GesQuantityUnit Unit { get; }
+
+    /// <summary>Gets whether the value is a whole Number within Int64; any other value is a Binary64 in base units.</summary>
+    public bool IsInteger { get; }
+
+    /// <summary>Gets the exact value in base units; a Percentage holds its ratio.</summary>
+    public GesSchemaBound Value { get; }
+}
+
 /// <summary>
 /// The immutable description of one schema, message or message set of a <see cref="GesSchemaSet"/>. It can be shared
 /// between threads and bound any number of times.
@@ -255,6 +284,9 @@ public sealed class GesSchema
     /// <summary>Gets the fields of a schema or the arguments of a message, in declared order.</summary>
     public GesReadOnlyArray<GesSchemaFieldInfo> Fields { get; private set; }
 
+    /// <summary>Gets the constants a schema declares with <c>let</c>, in declared order.</summary>
+    public GesReadOnlyArray<GesSchemaConstantInfo> Constants { get; private set; }
+
     /// <summary>Gets the tags of a message, in declared order.</summary>
     public GesReadOnlyArray<string> Tags { get; }
 
@@ -287,6 +319,9 @@ public sealed class GesSchema
         var fields = new List<GesSchemaFieldInfo>();
         foreach (var field in _declaration.Fields) fields.Add(new GesSchemaFieldInfo(field));
         Fields = new GesReadOnlyArray<GesSchemaFieldInfo>(fields);
+        var constants = new List<GesSchemaConstantInfo>();
+        foreach (var let in _declaration.Lets) constants.Add(new GesSchemaConstantInfo(let));
+        Constants = new GesReadOnlyArray<GesSchemaConstantInfo>(constants);
         var members = new List<GesSchema>();
         foreach (var member in _declaration.Members) members.Add(member.Public);
         Members = new GesReadOnlyArray<GesSchema>(members);

@@ -129,7 +129,11 @@
             try expect(123)
             skipSeparators()
             while !consume(125) {
-                result.fields.append(try field(allowUnlabeled: false))
+                if let declared = try letDeclaration() {
+                    result.lets.append(declared)
+                } else {
+                    result.fields.append(try field(allowUnlabeled: false))
+                }
                 try endEntry(125)
                 skipSeparators()
             }
@@ -179,6 +183,24 @@
             throw Failure(offset: wordOffset, message: "Expected constant, parameter, tags, schema, message or messages.")
         }
         return result
+    }
+
+    /// `let name be value`; a field named let is followed by its colon instead of a name.
+    private mutating func letDeclaration() throws -> GesSchemaLetSyntax? {
+        let offset = position
+        if !atWord("let") { return nil }
+        _ = word()
+        skipSpaces()
+        if position >= bytes.count || !GesNames.lower(bytes[position]) {
+            position = offset
+            return nil
+        }
+        let letName = try name(GesNames.plain, "let name")
+        skipSpaces()
+        try expectWord("be")
+        skipSpaces()
+        if position < bytes.count && GesNames.lower(bytes[position]) { throw failure("A let is a literal or a constant.") }
+        return GesSchemaLetSyntax(name: letName, value: try value(), offset: offset)
     }
 
     private mutating func field(allowUnlabeled: Bool) throws -> GesSchemaFieldSyntax {
@@ -271,13 +293,13 @@
             }
         case .tag:
             result.kind = .tag
-            if position < bytes.count && bytes[position] == 40 { result.tags = try tagSet() } else { result.max = try maximum() }
+            if position < bytes.count && bytes[position] == 40 { result.tags = try tagSet() } else { try maximum(&result) }
         case .flags:
             result.kind = .flags
             result.tags = try tagSet()
         case .text, .bytes:
             result.kind = written == "Text" ? .text : .bytes
-            result.max = try maximum()
+            try maximum(&result)
         case .list:
             result.kind = .list
             if consume(40) {
@@ -290,14 +312,14 @@
                 try expect(41)
                 typeNesting -= 1
                 skipSpaces()
-                result.max = try maximum()
+                try maximum(&result)
             }
         case .map: result.kind = .map
         case .range: result.kind = .range
         case .series: result.kind = .series
         case .dice:
             result.kind = .dice
-            result.max = try maximum()
+            try maximum(&result)
             result.constraints = try constraints()
         case .message: result.kind = .message
         case .handler: result.kind = .handler
@@ -331,10 +353,17 @@
         return unit
     }
 
-    private mutating func maximum() throws -> Int64? {
-        if !atWord("max") { return nil }
+    /// A whole number, or the name of a let that holds one.
+    private mutating func maximum(_ type: inout GesSchemaTypeSyntax) throws {
+        if !atWord("max") { return }
         _ = word()
         skipSpaces()
+        if position < bytes.count && GesNames.lower(bytes[position]) {
+            type.maxOffset = position
+            type.maxName = try name(GesNames.plain, "let name")
+            skipSpaces()
+            return
+        }
         // Up to 12 decimal digits without a leading zero; a single `_` may separate two digits, as in number literals.
         let start = position
         var value: Int64 = 0
@@ -354,7 +383,8 @@
             throw Failure(offset: start, message: "Expected a whole number.")
         }
         skipSpaces()
-        return value
+        type.max = value
+        type.maxOffset = start
     }
 
     private mutating func tagSet() throws -> [String] {
@@ -385,11 +415,11 @@
             }
             try expectWord("between")
             skipSpaces()
-            result.lower = try bound()
+            result.lower = try value()
             skipSpaces()
             try expectWord("and")
             skipSpaces()
-            result.upper = try bound()
+            result.upper = try value()
             skipSpaces()
         }
         if atWord("step") {
@@ -409,22 +439,19 @@
         return result
     }
 
-    private mutating func bound() throws -> GesSchemaValueSyntax {
-        if position < bytes.count && GesNames.lower(bytes[position]) {
-            var result = GesSchemaValueSyntax()
-            result.offset = position
-            result.parameter = try name(GesNames.plain, "parameter name")
-            return result
-        }
-        return try value()
-    }
-
+    /// A literal, a constant, or the name of a let or parameter.
     private mutating func value() throws -> GesSchemaValueSyntax {
         let offset = position
         if consume(36) {
             var result = GesSchemaValueSyntax()
             result.offset = offset
             result.constant = try name(GesNames.plain, "constant name")
+            return result
+        }
+        if position < bytes.count && GesNames.lower(bytes[position]) {
+            var result = GesSchemaValueSyntax()
+            result.offset = offset
+            result.name = try name(GesNames.plain, "name")
             return result
         }
         return try literal()

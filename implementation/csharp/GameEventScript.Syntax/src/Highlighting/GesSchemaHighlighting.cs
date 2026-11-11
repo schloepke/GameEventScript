@@ -13,7 +13,7 @@ internal static class GesSchemaHighlighting
     private static readonly HashSet<string> Keywords = new(System.StringComparer.Ordinal)
     {
         "schema", "message", "messages", "constant", "parameter", "as", "be", "between", "and", "wrapping", "step", "delta",
-        "within", "integer", "optional", "key", "max", "tags", "wire", "model"
+        "within", "integer", "optional", "key", "max", "tags", "wire", "model", "let"
     };
 
     internal static void Highlight(string text, GesSpanBuilder spans, List<GesHighlightDiagnostic> diagnostics)

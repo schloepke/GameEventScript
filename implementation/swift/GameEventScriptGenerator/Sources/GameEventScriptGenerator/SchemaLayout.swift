@@ -25,6 +25,34 @@ struct GesLayoutParameter {
     var literal: String
 }
 
+/// A `let` of a schema: its kind, unit, exact value in base units and whether it is a whole Number within Int64.
+struct GesLayoutConstant {
+    var name = ""
+    var type = ""
+    var unit = ""
+    var significand: Int64 = 0
+    var exponent = 0
+    var integer = false
+    /// The unit symbol or `%` that a literal of it ends with, for generated documentation; not part of the JSON.
+    var suffix = ""
+
+    var value: String { "\(significand)e\(exponent)" }
+
+    static func of(_ schema: GesSchema) -> [GesLayoutConstant] {
+        schema.constants.map { constant in
+            GesLayoutConstant(
+                name: constant.name,
+                type: constant.kind.rawValue,
+                unit: GesSchemaLayoutBuilder.unitName(constant.kind, constant.unit),
+                significand: constant.value.significand,
+                exponent: constant.value.exponent,
+                integer: constant.isInteger,
+                suffix: constant.kind == .percentage ? "%" : constant.kind == .quantity ? constant.unit.suffix : ""
+            )
+        }
+    }
+}
+
 struct GesLayoutType {
     var name = ""
     var kind = GesSchemaKind.schema
@@ -34,6 +62,7 @@ struct GesLayoutType {
     var maxByteCount = 0
     var maxByteCountDepends: [String] = []
     var fields: [GesLayoutField] = []
+    var constants: [GesLayoutConstant] = []
     var tags: [String] = []
     var members: [String] = []
     var memberWidth = 0
@@ -168,6 +197,7 @@ enum GesSchemaLayoutBuilder {
             }
         } else {
             type.fields = fields(schema, bound)
+            type.constants = GesLayoutConstant.of(schema)
             for field in type.fields { collect(field, &depends) }
             type.tags = schema.tags
         }

@@ -143,15 +143,17 @@ internal sealed class GesSchemaSourceReader
                 SkipTrivia();
                 Expect('{');
                 var fields = new List<GesSchemaFieldSyntax>();
+                var lets = new List<GesSchemaLetSyntax>();
                 SkipSeparators();
                 while (!Consume('}'))
                 {
-                    fields.Add(ReadField(allowUnlabeled: false));
+                    if (ReadLet() is { } let) lets.Add(let);
+                    else fields.Add(ReadField(allowUnlabeled: false));
                     EndEntry('}');
                     SkipSeparators();
                 }
 
-                return new GesSchemaDeclarationSyntax { Kind = GesSchemaDeclarationKind.Schema, Name = name, Offset = offset, Fields = fields.ToArray() };
+                return new GesSchemaDeclarationSyntax { Kind = GesSchemaDeclarationKind.Schema, Name = name, Offset = offset, Fields = fields.ToArray(), Lets = lets.ToArray() };
             }
             case "message":
             {
@@ -215,6 +217,27 @@ internal sealed class GesSchemaSourceReader
             default:
                 throw new SyntaxFailure(wordOffset, "Expected constant, parameter, tags, schema, message or messages.");
         }
+    }
+
+    // `let name be value`; a field named let is followed by its colon instead of a name.
+    private GesSchemaLetSyntax? ReadLet()
+    {
+        var offset = _position;
+        if (!AtWord("let")) return null;
+        ReadWord();
+        SkipSpaces();
+        if (_position >= _text.Length || !GesText.IsAsciiLower(_text[_position]))
+        {
+            _position = offset;
+            return null;
+        }
+
+        var name = ReadName(GesText.IsFieldName, "let name");
+        SkipSpaces();
+        ExpectWord("be");
+        SkipSpaces();
+        if (_position < _text.Length && GesText.IsAsciiLower(_text[_position])) throw Failure("A let is a literal or a constant.");
+        return new GesSchemaLetSyntax { Name = name, Value = ReadValue(), Offset = offset };
     }
 
     private GesSchemaFieldSyntax ReadField(bool allowUnlabeled)
@@ -301,17 +324,21 @@ internal sealed class GesSchemaSourceReader
             case GesSchemaTypeKind.Tag:
             {
                 var tags = _position < _text.Length && _text[_position] == '(' ? ReadTagSet() : null;
-                return new GesSchemaTypeSyntax { Kind = GesSchemaTypeKind.Tag, Tags = tags, Max = tags is null ? ReadMax() : null, Offset = offset };
+                var tagMax = tags is null ? ReadMax() : (null, "", 0);
+                return new GesSchemaTypeSyntax { Kind = GesSchemaTypeKind.Tag, Tags = tags, Max = tagMax.Value, MaxName = tagMax.Name, MaxOffset = tagMax.Offset, Offset = offset };
             }
             case GesSchemaTypeKind.Flags:
                 return new GesSchemaTypeSyntax { Kind = GesSchemaTypeKind.Flags, Tags = ReadTagSet(), Offset = offset };
             case GesSchemaTypeKind.Text:
             case GesSchemaTypeKind.Bytes:
-                return new GesSchemaTypeSyntax { Kind = name == "Text" ? GesSchemaTypeKind.Text : GesSchemaTypeKind.Bytes, Max = ReadMax(), Offset = offset };
+            {
+                var max = ReadMax();
+                return new GesSchemaTypeSyntax { Kind = name == "Text" ? GesSchemaTypeKind.Text : GesSchemaTypeKind.Bytes, Max = max.Value, MaxName = max.Name, MaxOffset = max.Offset, Offset = offset };
+            }
             case GesSchemaTypeKind.List:
             {
                 GesSchemaTypeSyntax[]? element = null;
-                long? max = null;
+                (long? Value, string Name, int Offset) max = (null, "", 0);
                 if (Consume('('))
                 {
                     // Every pass over a type recurses, so its nesting has a limit below any stack.
@@ -325,12 +352,16 @@ internal sealed class GesSchemaSourceReader
                     max = ReadMax();
                 }
 
-                return new GesSchemaTypeSyntax { Kind = GesSchemaTypeKind.List, Element = element, Max = max, Offset = offset };
+                return new GesSchemaTypeSyntax { Kind = GesSchemaTypeKind.List, Element = element, Max = max.Value, MaxName = max.Name, MaxOffset = max.Offset, Offset = offset };
             }
             case GesSchemaTypeKind.Map: return new GesSchemaTypeSyntax { Kind = GesSchemaTypeKind.Map, Offset = offset };
             case GesSchemaTypeKind.Range: return new GesSchemaTypeSyntax { Kind = GesSchemaTypeKind.Range, Offset = offset };
             case GesSchemaTypeKind.Series: return new GesSchemaTypeSyntax { Kind = GesSchemaTypeKind.Series, Offset = offset };
-            case GesSchemaTypeKind.Dice: return new GesSchemaTypeSyntax { Kind = GesSchemaTypeKind.Dice, Max = ReadMax(), Constraints = ReadConstraints(), Offset = offset };
+            case GesSchemaTypeKind.Dice:
+            {
+                var max = ReadMax();
+                return new GesSchemaTypeSyntax { Kind = GesSchemaTypeKind.Dice, Max = max.Value, MaxName = max.Name, MaxOffset = max.Offset, Constraints = ReadConstraints(), Offset = offset };
+            }
             case GesSchemaTypeKind.Message: return new GesSchemaTypeSyntax { Kind = GesSchemaTypeKind.Message, Offset = offset };
             case GesSchemaTypeKind.Handler: return new GesSchemaTypeSyntax { Kind = GesSchemaTypeKind.Handler, Offset = offset };
             case GesSchemaTypeKind.Nothing: return new GesSchemaTypeSyntax { Kind = GesSchemaTypeKind.Nothing, Offset = offset };
@@ -378,11 +409,20 @@ internal sealed class GesSchemaSourceReader
         return GesQuantityUnits.ParseQuantityName(builder.ToString()) ?? throw new SyntaxFailure(start, "A type names a base unit; a prefixed spelling such as kN is only for literals.");
     }
 
-    private long? ReadMax()
+    // A whole number, or the name of a let that holds one.
+    private (long? Value, string Name, int Offset) ReadMax()
     {
-        if (!AtWord("max")) return null;
+        if (!AtWord("max")) return (null, "", 0);
         ReadWord();
         SkipSpaces();
+        if (_position < _text.Length && GesText.IsAsciiLower(_text[_position]))
+        {
+            var nameOffset = _position;
+            var name = ReadName(GesText.IsFieldName, "let name");
+            SkipSpaces();
+            return (null, name, nameOffset);
+        }
+
         // Up to 12 decimal digits without a leading zero; a single `_` may separate two digits, as in number literals.
         var start = _position;
         var value = 0L;
@@ -402,7 +442,7 @@ internal sealed class GesSchemaSourceReader
 
         if (digits == 0 || digits > 12 || (_text[start] == '0' && digits > 1)) throw new SyntaxFailure(start, "Expected a whole number.");
         SkipSpaces();
-        return value;
+        return (value, "", start);
     }
 
     private string[] ReadTagSet()
@@ -447,11 +487,11 @@ internal sealed class GesSchemaSourceReader
 
             ExpectWord("between");
             SkipSpaces();
-            lower = ReadBound();
+            lower = ReadValue();
             SkipSpaces();
             ExpectWord("and");
             SkipSpaces();
-            upper = ReadBound();
+            upper = ReadValue();
             SkipSpaces();
         }
 
@@ -476,21 +516,12 @@ internal sealed class GesSchemaSourceReader
         return new GesSchemaConstraintsSyntax { Integer = integer, Wrapping = wrapping, Lower = lower, Upper = upper, Step = step, Delta = delta };
     }
 
-    private GesSchemaValueSyntax ReadBound()
-    {
-        if (_position < _text.Length && GesText.IsAsciiLower(_text[_position]))
-        {
-            var offset = _position;
-            return new GesSchemaValueSyntax { Parameter = ReadName(GesText.IsFieldName, "parameter name"), Offset = offset };
-        }
-
-        return ReadValue();
-    }
-
+    // A literal, a constant, or the name of a let or parameter.
     private GesSchemaValueSyntax ReadValue()
     {
         var offset = _position;
         if (Consume('$')) return new GesSchemaValueSyntax { Constant = ReadName(GesText.IsConstantName, "constant name"), Offset = offset };
+        if (_position < _text.Length && GesText.IsAsciiLower(_text[_position])) return new GesSchemaValueSyntax { Name = ReadName(GesText.IsFieldName, "name"), Offset = offset };
         return ReadLiteral();
     }
 

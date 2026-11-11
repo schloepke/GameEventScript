@@ -44,9 +44,26 @@ enum GesSchemaLayoutJson {
             json.beginArray("fields")
             for field in type.fields { self.field(&json, field, member: true) }
             json.endArray()
+            constants(&json, type.constants)
             if type.kind == .message { json.strings("tags", type.tags) }
         }
         json.endObject()
+    }
+
+    /// Only a schema with lets carries them.
+    static func constants(_ json: inout Writer, _ constants: [GesLayoutConstant]) {
+        if constants.isEmpty { return }
+        json.beginArray("constants")
+        for constant in constants {
+            json.beginObject()
+            json.string("name", constant.name)
+            json.string("type", constant.type)
+            json.string("unit", constant.unit)
+            json.string("value", constant.value)
+            json.boolean("integer", constant.integer)
+            json.endObject()
+        }
+        json.endArray()
     }
 
     private static func field(_ json: inout Writer, _ field: GesLayoutField, member: Bool, value: Bool = false) {

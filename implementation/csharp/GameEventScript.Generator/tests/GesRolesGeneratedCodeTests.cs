@@ -202,6 +202,13 @@ public sealed class GesRolesGeneratedCodeTests
     }
 
     [TestMethod]
+    public void LetsAreStaticMembersInBaseUnits()
+    {
+        object[] values = [Wire.World_Body.Heaviest, Model.World_Body.Heaviest, Wire.World_Body.Wear, Model.World_Body.Wear, Wire.World_Cards.Deck];
+        CollectionAssert.AreEqual(new object[] { 1000.0, 1000.0, 0.025, 0.025, 4L }, values);
+    }
+
+    [TestMethod]
     public void BoundModelsAlsoConvertToPlainValues()
     {
         var value = Report().ToValue();

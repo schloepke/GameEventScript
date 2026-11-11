@@ -284,6 +284,31 @@ enum GesSchemaPlanner {
 
     // A string literal that stays within printable ASCII: other characters become escapes, \uXXXX or \UXXXXXXXX in C#
     // and \u{X} in Swift, so that both ports write identical text whatever a source holds.
+    /// A let as a code literal: a whole value for an integer, otherwise its exact decimal, which C# and Swift round alike.
+    static func constantValue(_ constant: GesLayoutConstant) -> String {
+        if !constant.integer { return decimal(constant.significand, constant.exponent) }
+        var value = constant.significand
+        for _ in 0..<constant.exponent { value *= 10 }
+        return String(value)
+    }
+
+    /// A let as its source declares it, for generated documentation: a Percentage in percent, a Quantity with its symbol.
+    static func constantSource(_ constant: GesLayoutConstant) -> String {
+        "let \(constant.name) be \(decimal(constant.significand, constant.exponent + (constant.suffix == "%" ? 2 : 0)))\(constant.suffix)"
+    }
+
+    /// Plain digits within 18 places of the point, otherwise <significand>e<exponent>.
+    static func decimal(_ significand: Int64, _ exponent: Int) -> String {
+        let sign = significand < 0 ? "-" : ""
+        let digits = String(significand.magnitude)
+        if exponent >= 0 && digits.count + exponent <= 18 { return sign + digits + String(repeating: "0", count: exponent) }
+        if exponent < 0 && -exponent <= 18 {
+            let point = digits.count + exponent
+            return sign + (point > 0 ? String(digits.prefix(point)) + "." + String(digits.dropFirst(point)) : "0." + String(repeating: "0", count: -point) + digits)
+        }
+        return sign + digits + "e" + String(exponent)
+    }
+
     static func literal(_ text: String, swift: Bool) -> String {
         var result = "\""
         for scalar in text.unicodeScalars {

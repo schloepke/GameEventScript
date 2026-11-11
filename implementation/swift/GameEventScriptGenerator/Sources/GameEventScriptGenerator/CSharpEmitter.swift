@@ -85,6 +85,9 @@ enum GesCSharpEmitter {
             if isTextList(field) { names.append((field.base + "Values", "the texts of " + field.layout.name)) }
         }
         for tag in type.tags { names.append((tag.base, "the tag #" + tag.tag)) }
+        if !type.isItem {
+            for constant in type.layout.constants { names.append((GesSchemaPlanner.pascal(constant.name), "the let " + constant.name)) }
+        }
         try GesSchemaPlanner.unique(type.name, names)
 
         let visibility = type.isItem ? "public" : access
@@ -133,6 +136,16 @@ enum GesCSharpEmitter {
         code.blank()
         code.line("/// <summary>The size of the largest encoding in bytes.</summary>")
         code.line("public const int MaxByteCount = \(layout.maxByteCount);")
+        lets(&code, layout.constants)
+    }
+
+    /// The lets of a schema, in base units; a Percentage holds its ratio.
+    static func lets(_ code: inout Code, _ constants: [GesLayoutConstant]) {
+        for constant in constants {
+            code.blank()
+            code.line("/// <summary><c>\(GesSchemaPlanner.constantSource(constant))</c></summary>")
+            code.line("public const \(constant.integer ? "long" : "double") \(GesSchemaPlanner.pascal(constant.name)) = \(GesSchemaPlanner.constantValue(constant));")
+        }
     }
 
     // Whether an optional value also has a nullable view: a value type without storage.

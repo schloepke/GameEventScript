@@ -11,9 +11,11 @@ wire(world) schema :World as {
 // A named tag set: one generated type for every field that uses it, here and in the group view.
 tags :Side as (#left, #right)
 
+// A let names a value of its schema; generated code declares it as a static member.
 wire(world) schema :World_Cards as {
-  cards: :List(:Panel_Badge) max 4
-  labels: :List(:Tag max 12) max 4
+  let deck be 4
+  cards: :List(:Panel_Badge) max deck
+  labels: :List(:Tag max 12) max deck
   side: :Side optional
 }
 
@@ -28,6 +30,8 @@ schema :World_Bot as {
 
 // Reached from the wire root World and from the model root WorldView.
 schema :World_Body as {
-  mass: :Quantity(kg) between 0kg and 1000kg step 1kg
+  let heaviest be 1t
+  let wear be 2.5%
+  mass: :Quantity(kg) between 0kg and heaviest step 1kg
   hull: :Tag(#light, #heavy)
 }

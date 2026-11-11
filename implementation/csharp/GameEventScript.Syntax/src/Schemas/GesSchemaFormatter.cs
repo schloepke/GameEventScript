@@ -32,6 +32,7 @@ internal static class GesSchemaFormatter
                     break;
                 case GesSchemaDeclarationKind.Schema:
                     builder.Append("schema :").Append(declaration.Name).Append(" as {\n");
+                    foreach (var let in declaration.Lets) builder.Append("  let ").Append(let.Name).Append(" be ").Append(Value(let.Value)).Append('\n');
                     foreach (var field in declaration.Fields)
                     {
                         builder.Append("  ");
@@ -129,6 +130,7 @@ internal static class GesSchemaFormatter
                 builder.Append(":Tag");
                 if (type.Tags is { } tags) Tags(tags, builder);
                 if (type.Max is { } tagMax) builder.Append(" max ").Append(tagMax);
+                else if (type.MaxName.Length > 0) builder.Append(" max ").Append(type.MaxName);
                 return;
             case GesSchemaTypeKind.Flags:
                 builder.Append(":Flags");
@@ -137,10 +139,12 @@ internal static class GesSchemaFormatter
             case GesSchemaTypeKind.Text:
                 builder.Append(":Text");
                 if (type.Max is { } textMax) builder.Append(" max ").Append(textMax);
+                else if (type.MaxName.Length > 0) builder.Append(" max ").Append(type.MaxName);
                 return;
             case GesSchemaTypeKind.Bytes:
                 builder.Append(":Bytes");
                 if (type.Max is { } bytesMax) builder.Append(" max ").Append(bytesMax);
+                else if (type.MaxName.Length > 0) builder.Append(" max ").Append(type.MaxName);
                 return;
             case GesSchemaTypeKind.List:
                 builder.Append(":List");
@@ -152,10 +156,12 @@ internal static class GesSchemaFormatter
                 }
 
                 if (type.Max is { } listMax) builder.Append(" max ").Append(listMax);
+                else if (type.MaxName.Length > 0) builder.Append(" max ").Append(type.MaxName);
                 return;
             case GesSchemaTypeKind.Dice:
                 builder.Append(":Dice");
                 if (type.Max is { } diceMax) builder.Append(" max ").Append(diceMax);
+                else if (type.MaxName.Length > 0) builder.Append(" max ").Append(type.MaxName);
                 break;
             case GesSchemaTypeKind.Reference:
                 builder.Append(':').Append(type.Name);
@@ -182,7 +188,7 @@ internal static class GesSchemaFormatter
     }
 
     private static string Value(GesSchemaValueSyntax value)
-        => value.Parameter.Length > 0 ? value.Parameter : value.Constant.Length > 0 ? "$" + value.Constant : value.Text;
+        => value.Name.Length > 0 ? value.Name : value.Constant.Length > 0 ? "$" + value.Constant : value.Text;
 
     private static void Tags(string[] tags, StringBuilder builder)
     {

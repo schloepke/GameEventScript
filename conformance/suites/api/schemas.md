@@ -605,6 +605,324 @@ schema:
 
 ---
 
+## Test: a schema constant
+
+A `let` names one value of its schema: bounds, steps, delta ranges and maximums of its fields may name it, and it is replaced there. The canonical form lists the lets in declared order before the fields, so their place among the fields does not matter, and a field may still be named `let`.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: canonical-let
+schemaApi:
+  sources:
+    - "constant $cap be 4\nschema :Sound as {\n  span: :Quantity(s) between 0s and retention step 0.1s delta within drift\n  names: :List(:Text max 8) max slots\n  let: :Boolean\n  let retention be 2s\n  let drift be 500ms\n  let slots be $cap\n  let share be 50%\n}\n"
+  root: "Sound"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  canonical: "gess1\nschema Sound\nlet retention Quantity(second) 2e0\nlet drift Quantity(second) 5e-1\nlet slots Number 4e0\nlet share Percentage 5e-1\nfield span Quantity(second) between 0e0 2e0 step 1e-1 delta 5e-1\nfield names List(Text max 8) max 4\nfield let Boolean\n"
+  hash: "57dfa98124dc9ccb"
+```
+
+---
+
+## Test: the description of schema constants
+
+Each `let` keeps its kind, unit and exact value in base units; a whole unitless value within Int64 is an integer.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: describe-let
+schemaApi:
+  sources:
+    - "schema :Sound as {\n  let retention be 2s\n  let slots be 16\n  let share be 50%\n  let ratio be 0.25\n  on: :Boolean\n}\n"
+  root: "Sound"
+  bind: false
+  describe: true
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  description:
+    name: "Sound"
+    kind: "Schema"
+    fields:
+      - name: "on"
+        alternatives:
+          - kind: "Boolean"
+    constants:
+      - name: "retention"
+        kind: "Quantity"
+        unit: "second"
+        value: "2e0"
+      - name: "slots"
+        kind: "Number"
+        integer: true
+        value: "16e0"
+      - name: "share"
+        kind: "Percentage"
+        value: "5e-1"
+      - name: "ratio"
+        kind: "Number"
+        value: "25e-2"
+```
+
+---
+
+## Test: a constant named like a field
+
+A `let` and a field share the names of their schema.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-let-field-name
+schemaApi:
+  sources:
+    - "schema :S as {\n  let n be 4\n  n: :Boolean\n}\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.duplicateName"
+    line: 3
+    column: 3
+```
+
+---
+
+## Test: a constant named like a parameter
+
+A bound may name either a `let` or a parameter, so a `let` cannot take the name of a parameter of its file.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-let-parameter-name
+schemaApi:
+  sources:
+    - "parameter n: :Number\nschema :S as {\n  let n be 4\n}\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.duplicateName"
+    line: 3
+    column: 3
+```
+
+---
+
+## Test: a constant of another unit
+
+A `let` in a bound has the unit of its field.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-let-unit
+schemaApi:
+  sources:
+    - "schema :S as {\n  let n be 4s\n  x: :Quantity(m) between 0m and n\n}\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.unitMismatch"
+    line: 3
+    column: 34
+```
+
+---
+
+## Test: a maximum from a constant with a unit
+
+A maximum is a whole number without a unit.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-let-max-unit
+schemaApi:
+  sources:
+    - "schema :S as {\n  let n be 4s\n  t: :Text max n\n}\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.unitMismatch"
+    line: 3
+    column: 16
+```
+
+---
+
+## Test: a fractional maximum from a constant
+
+A `let` that a maximum names is a positive whole number of at most 12 digits.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-let-max-fraction
+schemaApi:
+  sources:
+    - "schema :S as {\n  let n be 2.5\n  t: :Text max n\n}\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidConstraint"
+    line: 3
+    column: 16
+```
+
+---
+
+## Test: a step that names a parameter
+
+Steps and delta ranges never name a parameter, so a name there must be a `let` of the schema.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-let-step-parameter
+schemaApi:
+  sources:
+    - "parameter w: :Quantity(m)\nschema :S as {\n  x: :Quantity(m) between 0m and 10m step w\n}\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.unknownName"
+    line: 3
+    column: 43
+```
+
+---
+
+## Test: a constant that names another
+
+A `let` is a literal or a file constant; it does not name another `let`.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-let-names-let
+schemaApi:
+  sources:
+    - "schema :S as {\n  let a be 1\n  let b be a\n}\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.syntax"
+    line: 3
+    column: 12
+```
+
+---
+
+## Test: a constant beyond binary64
+
+A value that is no whole number within Int64 is a binary64, so it must stay finite and non-zero there.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-let-beyond-binary64
+schemaApi:
+  sources:
+    - "schema :S as {\n  let huge be 1e400\n}\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.tooWide"
+    line: 2
+    column: 3
+```
+
+---
+
+## Test: a constant in a message
+
+Only schemas declare constants, so a message argument cannot name one.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-let-in-message
+schemaApi:
+  sources:
+    - "message M(x: :Number between 0 and n)\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.unknownName"
+    line: 1
+    column: 36
+```
+
+---
+
+
 ## Test: field order a is part of the hash
 
 Field order is the wire order.

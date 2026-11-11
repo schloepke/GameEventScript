@@ -264,6 +264,16 @@ enum GesSchemaBinder {
     }
 
     // A fractional field compares in binary64, so its bounds must keep their meaning there.
+    // A let is an integer when it is a whole unitless number within Int64, and otherwise a binary64 in base units, which must
+    // keep its meaning there as a bound does.
+    static func checkLet(_ scope: GesFileScope, _ declared: GesResolvedLet) throws -> Bool {
+        if declared.kind == .number && declared.value.exponent >= 0 && scale(declared.value.significand, declared.value.exponent) != nil { return true }
+        guard let binary = Double(declared.value.canonical), binary.isFinite, binary != 0 || declared.value.significand == 0 else {
+            throw scope.error(Code.tooWide, declared.offset, "A let lies beyond binary64.")
+        }
+        return false
+    }
+
     private static func checkBinary(_ scope: GesFileScope, _ value: GesSchemaDecimal, _ origin: GesResolvedValue) throws {
         guard let binary = Double(value.canonical), binary.isFinite, binary != 0 || value.significand == 0 else {
             throw scope.error(Code.tooWide, origin.offset, "A bound of a fractional field lies beyond binary64.")

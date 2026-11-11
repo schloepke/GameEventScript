@@ -216,6 +216,23 @@ internal sealed class GesResolvedValue
     internal bool IsParameter => Parameter.Length > 0;
 }
 
+/// <summary>A constant of a schema: its kind, Number, Percentage or Quantity, its unit and its exact value.</summary>
+internal sealed class GesResolvedLet
+{
+    internal string Name { get; init; } = "";
+
+    internal GesSchemaTypeKind Kind { get; init; }
+
+    internal GesQuantityUnit Unit { get; init; }
+
+    internal GesSchemaDecimal Value { get; init; }
+
+    // A whole unitless value within Int64; any other is a binary64 in base units.
+    internal bool Integer { get; set; }
+
+    internal int Offset { get; init; }
+}
+
 internal sealed class GesResolvedConstraints
 {
     internal bool Integer { get; init; }
@@ -296,6 +313,8 @@ internal sealed class GesResolvedDeclaration
 
     internal GesResolvedField[] Fields { get; set; } = [];
 
+    internal GesResolvedLet[] Lets { get; set; } = [];
+
     internal string[] Tags { get; init; } = [];
 
     internal GesResolvedDeclaration[] Members { get; set; } = [];
@@ -312,6 +331,9 @@ internal sealed class GesFileScope
     private readonly Dictionary<string, GesSchemaValueSyntax> _constants = new(StringComparer.Ordinal);
     private readonly List<GesResolvedDeclaration> _own = [];
     private Dictionary<string, GesSchemaDeclarationSyntax> _tagSets = new(StringComparer.Ordinal);
+
+    // The lets of the schema being resolved, which its fields can name.
+    private readonly Dictionary<string, GesResolvedLet> _lets = new(StringComparer.Ordinal);
 
     internal GesFileScope(GesSchemaSource source, GesSchemaSourceSyntax syntax)
     {
@@ -404,16 +426,41 @@ internal sealed class GesFileScope
             var tags = new HashSet<string>(StringComparer.Ordinal);
             foreach (var tag in syntax.Tags)
                 if (!tags.Add(tag)) throw Error(Code.DuplicateName, syntax.Offset, $"Tag '#{tag}' is listed twice.");
+            declaration.Lets = ResolveLets(syntax, names);
             var fields = new GesResolvedField[syntax.Fields.Length];
             for (var index = 0; index < fields.Length; index++)
             {
                 var field = syntax.Fields[index];
-                if (!names.Add(field.Name)) throw Error(Code.DuplicateName, field.Offset, $"Field '{field.Name}' is declared twice.");
+                if (!names.Add(field.Name)) throw Error(Code.DuplicateName, field.Offset, $"'{field.Name}' is declared twice in '{declaration.Name}'.");
                 fields[index] = ResolveField(field, index, declaration.Kind, all);
             }
 
             declaration.Fields = fields;
         }
+    }
+
+    // A let is a literal or a file constant. Its name differs from the fields and other lets of its schema and from the
+    // parameters of its file, since a bound names either.
+    private GesResolvedLet[] ResolveLets(GesSchemaDeclarationSyntax syntax, HashSet<string> names)
+    {
+        _lets.Clear();
+        var lets = new GesResolvedLet[syntax.Lets.Length];
+        for (var index = 0; index < lets.Length; index++)
+        {
+            var let = syntax.Lets[index];
+            if (!names.Add(let.Name)) throw Error(Code.DuplicateName, let.Offset, $"'{let.Name}' is declared twice in '{syntax.Name}'.");
+            if (Parameters.ContainsKey(let.Name)) throw Error(Code.DuplicateName, let.Offset, $"'{let.Name}' is a parameter of this file.");
+            var literal = let.Value;
+            if (literal.Constant.Length > 0 && !_constants.TryGetValue(literal.Constant, out literal!))
+                throw Error(Code.UnknownName, let.Value.Offset, $"Constant '${let.Value.Constant}' is not declared in this file.");
+            var kind = literal.IsPercent ? GesSchemaTypeKind.Percentage : literal.Unit != GesQuantityUnit.UnitNone ? GesSchemaTypeKind.Quantity : GesSchemaTypeKind.Number;
+            var resolved = new GesResolvedLet { Name = let.Name, Kind = kind, Unit = literal.Unit, Value = literal.Value, Offset = let.Offset };
+            resolved.Integer = GesSchemaBinder.CheckLet(this, resolved);
+            lets[index] = resolved;
+            _lets[let.Name] = resolved;
+        }
+
+        return lets;
     }
 
     private GesResolvedField ResolveField(GesSchemaFieldSyntax field, int index, GesSchemaKind owner, Dictionary<string, GesResolvedDeclaration> all)
@@ -479,7 +526,8 @@ internal sealed class GesFileScope
                 throw Error(Code.TooWide, type.Offset, $"Flags have at most {GesSchemaSet.MaximumFlagCount} members.");
         }
 
-        if (type.Max is <= 0) throw Error(Code.InvalidConstraint, type.Offset, "A maximum is positive.");
+        var max = type.MaxName.Length > 0 ? LetMax(type) : type.Max;
+        if (max is <= 0) throw Error(Code.InvalidConstraint, type.Offset, "A maximum is positive.");
         if (type.Kind == GesSchemaTypeKind.Dice && (type.Constraints.Integer || type.Constraints.Wrapping || type.Constraints.Step is not null || type.Constraints.Delta is not null))
             throw Error(Code.InvalidConstraint, type.Offset, "A Dice has only a range.");
         GesResolvedAxis[]? axes = null;
@@ -503,7 +551,7 @@ internal sealed class GesFileScope
             Kind = type.Kind,
             Unit = type.Unit,
             Tags = type.Tags,
-            Max = type.Max,
+            Max = max,
             Element = type.Element is { } element ? ResolveUnion(element, all) : null,
             Constraints = constraints,
             Axes = axes,
@@ -511,6 +559,30 @@ internal sealed class GesFileScope
             ReferenceName = type.Name,
             Offset = type.Offset
         };
+    }
+
+    // A maximum that names a let takes its whole unitless value, which has at most 12 digits like a written one.
+    private long LetMax(GesSchemaTypeSyntax type)
+    {
+        if (!_lets.TryGetValue(type.MaxName, out var let)) throw Error(Code.UnknownName, type.MaxOffset, $"'{type.MaxName}' is no let of this schema.");
+        if (let.Kind != GesSchemaTypeKind.Number) throw Error(Code.UnitMismatch, type.MaxOffset, $"Let '{type.MaxName}' has a unit; a maximum is a whole number.");
+        if (!let.Integer || let.Value.Significand <= 0 || let.Value.Exponent + Digits(let.Value.Significand) > 12)
+            throw Error(Code.InvalidConstraint, type.MaxOffset, $"Let '{type.MaxName}' is no positive whole number of at most 12 digits.");
+        var value = let.Value.Significand;
+        for (var exponent = 0; exponent < let.Value.Exponent; exponent++) value *= 10;
+        return value;
+    }
+
+    private static int Digits(long value)
+    {
+        var digits = 1;
+        while (value >= 10)
+        {
+            value /= 10;
+            digits++;
+        }
+
+        return digits;
     }
 
     private GesResolvedConstraints ResolveConstraints(GesSchemaConstraintsSyntax constraints, GesQuantityUnit unit, bool percentage, int offset)
@@ -524,23 +596,31 @@ internal sealed class GesFileScope
         {
             Integer = constraints.Integer,
             Wrapping = constraints.Wrapping,
-            Lower = ResolveValue(constraints.Lower, unit, percentage),
-            Upper = ResolveValue(constraints.Upper, unit, percentage),
-            Step = ResolveValue(constraints.Step, unit, percentage),
-            Delta = ResolveValue(constraints.Delta, unit, percentage)
+            Lower = ResolveValue(constraints.Lower, unit, percentage, bound: true),
+            Upper = ResolveValue(constraints.Upper, unit, percentage, bound: true),
+            Step = ResolveValue(constraints.Step, unit, percentage, bound: false),
+            Delta = ResolveValue(constraints.Delta, unit, percentage, bound: false)
         };
         GesSchemaBinder.CheckLiterals(this, resolved);
         return resolved;
     }
 
-    private GesResolvedValue? ResolveValue(GesSchemaValueSyntax? value, GesQuantityUnit unit, bool percentage)
+    // A name is a let of the schema and, only in a bound, a parameter of the file; a let is replaced by its value.
+    private GesResolvedValue? ResolveValue(GesSchemaValueSyntax? value, GesQuantityUnit unit, bool percentage, bool bound)
     {
         if (value is null) return null;
-        if (value.Parameter.Length > 0)
+        if (value.Name.Length > 0)
         {
-            if (!Parameters.TryGetValue(value.Parameter, out var parameter)) throw Error(Code.UnknownName, value.Offset, $"Parameter '{value.Parameter}' is not declared in this file.");
-            if (parameter.Unit != unit || (parameter.Kind == GesSchemaTypeKind.Percentage) != percentage) throw Error(Code.UnitMismatch, value.Offset, $"Parameter '{value.Parameter}' has another kind or unit than its field.");
-            return new GesResolvedValue { Parameter = value.Parameter, Offset = value.Offset };
+            if (_lets.TryGetValue(value.Name, out var let))
+            {
+                if (let.Unit != unit || (let.Kind == GesSchemaTypeKind.Percentage) != percentage) throw Error(Code.UnitMismatch, value.Offset, $"Let '{value.Name}' has another kind or unit than its field.");
+                return new GesResolvedValue { Value = let.Value, Offset = value.Offset };
+            }
+
+            if (!bound) throw Error(Code.UnknownName, value.Offset, $"'{value.Name}' is no let of this schema; a step and a delta range never name a parameter.");
+            if (!Parameters.TryGetValue(value.Name, out var parameter)) throw Error(Code.UnknownName, value.Offset, $"'{value.Name}' is neither a let of this schema nor a parameter of this file.");
+            if (parameter.Unit != unit || (parameter.Kind == GesSchemaTypeKind.Percentage) != percentage) throw Error(Code.UnitMismatch, value.Offset, $"Parameter '{value.Name}' has another kind or unit than its field.");
+            return new GesResolvedValue { Parameter = value.Name, Offset = value.Offset };
         }
 
         var literal = value;
@@ -617,12 +697,20 @@ internal static class GesSchemaCanonical
         _ => "Number"
     };
 
+    internal static string LetKind(GesResolvedLet let) => let.Kind switch
+    {
+        GesSchemaTypeKind.Percentage => "Percentage",
+        GesSchemaTypeKind.Quantity => $"Quantity({let.Unit.ToTypeName()})",
+        _ => "Number"
+    };
+
     private static void Write(GesResolvedDeclaration declaration, StringBuilder builder)
     {
         switch (declaration.Kind)
         {
             case GesSchemaKind.Schema:
                 builder.Append("schema ").Append(declaration.Name).Append('\n');
+                foreach (var let in declaration.Lets) builder.Append("let ").Append(let.Name).Append(' ').Append(LetKind(let)).Append(' ').Append(let.Value.Canonical).Append('\n');
                 foreach (var field in declaration.Fields) WriteField("field ", field, builder);
                 break;
             case GesSchemaKind.Message:

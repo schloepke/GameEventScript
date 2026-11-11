@@ -88,6 +88,13 @@ internal static class SchemaApiObservations
             if (field.IsKey) entry["key"] = true;
             return entry;
         }).ToArray();
+        if (schema.Constants.Count > 0) result["constants"] = schema.Constants.Select(constant =>
+        {
+            var entry = Unit(new Dictionary<string, object?> { ["name"] = constant.Name, ["kind"] = constant.Kind.ToString() }, constant.Unit);
+            if (constant.IsInteger) entry["integer"] = true;
+            entry["value"] = Text(constant.Value);
+            return entry;
+        }).ToArray();
         if (schema.Tags.Count > 0) result["tags"] = schema.Tags.ToArray();
         if (schema.Members.Count > 0) result["members"] = schema.Members.Select(member => member.Name).ToArray();
         return result;

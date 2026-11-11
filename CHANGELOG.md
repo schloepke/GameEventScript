@@ -239,6 +239,9 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 - Schema tag sets `tags :Mount as (#front, #rear)`: a field, list element or alternative of type `:Mount` is that
   `:Tag(...)` in place, with the same bytes and hash, and generated code declares one `Mount` enum for every field of it
   instead of one per field.
+- Schemas declare constants with `let retention be 2s` inside their braces. Its fields can name a let as a bound, step,
+  delta range or `max`; generated wire and model types declare it as a static member in base units, and it belongs to
+  the hash. `GesSchema.Constants` (Swift `constants`) describes them.
 - Generated model types carry their `SchemaHash` (Swift `schemaHash`), as wire records do.
 - Generated model reading reports a required field without a key as `wire.missingField` and `nothing` where a value is
   required as `wire.nothingValue`, as the wire value path does, instead of `wire.typeMismatch`.

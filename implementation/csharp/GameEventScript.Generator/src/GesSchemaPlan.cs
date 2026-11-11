@@ -337,6 +337,35 @@ internal static class GesSchemaPlanner
 
     // A string literal that stays within printable ASCII: other characters become escapes, \uXXXX or \UXXXXXXXX in C#
     // and \u{X} in Swift, so that both ports write identical text whatever a source holds.
+    // A let as a code literal: a whole value for an integer, otherwise its exact decimal, which C# and Swift round alike.
+    internal static string ConstantValue(GesLayoutConstant constant)
+    {
+        if (!constant.Integer) return Decimal(constant.Significand, constant.Exponent);
+        var value = constant.Significand;
+        for (var exponent = 0; exponent < constant.Exponent; exponent++) value *= 10;
+        return value.ToString(CultureInfo.InvariantCulture);
+    }
+
+    // A let as its source declares it, for generated documentation: a Percentage in percent, a Quantity with its symbol.
+    internal static string ConstantSource(GesLayoutConstant constant)
+        => $"let {constant.Name} be {Decimal(constant.Significand, constant.Exponent + (constant.Suffix == "%" ? 2 : 0))}{constant.Suffix}";
+
+    // Plain digits within 18 places of the point, otherwise <significand>e<exponent>.
+    internal static string Decimal(long significand, int exponent)
+    {
+        var text = significand.ToString(CultureInfo.InvariantCulture);
+        var sign = significand < 0 ? "-" : "";
+        var digits = significand < 0 ? text.Substring(1) : text;
+        if (exponent >= 0 && digits.Length + exponent <= 18) return sign + digits + new string('0', exponent);
+        if (exponent < 0 && -exponent <= 18)
+        {
+            var point = digits.Length + exponent;
+            return sign + (point > 0 ? digits.Substring(0, point) + "." + digits.Substring(point) : "0." + new string('0', -point) + digits);
+        }
+
+        return sign + digits + "e" + exponent.ToString(CultureInfo.InvariantCulture);
+    }
+
     internal static string Literal(string text, bool swift)
     {
         var result = new StringBuilder("\"");

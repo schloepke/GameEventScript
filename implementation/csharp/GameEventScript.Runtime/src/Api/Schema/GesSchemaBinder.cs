@@ -317,6 +317,17 @@ internal static class GesSchemaBinder
         return numeric;
     }
 
+    // A let is an integer when it is a whole unitless number within Int64, and otherwise a binary64 in base units, which must
+    // keep its meaning there as a bound does.
+    internal static bool CheckLet(GesFileScope scope, GesResolvedLet let)
+    {
+        if (let.Kind == GesSchemaTypeKind.Number && let.Value.Exponent >= 0 && TryScale(let.Value.Significand, let.Value.Exponent, out _)) return true;
+        var binary = double.Parse(let.Value.Canonical, CultureInfo.InvariantCulture);
+        if (double.IsInfinity(binary) || (binary == 0 && let.Value.Significand != 0))
+            throw scope.Error(Code.TooWide, let.Offset, "A let lies beyond binary64.");
+        return false;
+    }
+
     // A fractional field compares in binary64, so its bounds must keep their meaning there.
     private static void CheckBinary(GesFileScope scope, GesSchemaDecimal value, GesResolvedValue origin)
     {

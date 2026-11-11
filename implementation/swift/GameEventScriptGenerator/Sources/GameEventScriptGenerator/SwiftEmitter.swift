@@ -86,6 +86,9 @@ enum GesSwiftEmitter {
             if GesCSharpEmitter.isTextList(field) { names.append((GesSchemaPlanner.camel(field.base) + "Values", "the texts of " + field.layout.name)) }
         }
         for tag in type.tags { names.append((GesSchemaPlanner.camel(tag.base), "the tag #" + tag.tag)) }
+        if !type.isItem {
+            for constant in type.layout.constants { names.append((constant.name, "the let " + constant.name)) }
+        }
         try GesSchemaPlanner.unique(type.name, names)
 
         code.line(type.isItem ? "/// An element of the list." : "/// The \(kind(type)) `:\(type.name)`, read and written without allocation\(type.isClass ? " once its storage has grown" : "").")
@@ -128,6 +131,15 @@ enum GesSwiftEmitter {
         code.line("\(access)static let bindingHash: UInt64 = 0x\(GesSchemaLayoutJson.hex(layout.bindingHash))")
         code.line("/// The size of the largest encoding in bytes.")
         code.line("\(access)static let maxByteCount = \(layout.maxByteCount)")
+        lets(&code, layout.constants, access, "Int64")
+    }
+
+    /// The lets of a schema, in base units; a Percentage holds its ratio.
+    static func lets(_ code: inout Code, _ constants: [GesLayoutConstant], _ access: String, _ integer: String) {
+        for constant in constants {
+            code.line("/// `\(GesSchemaPlanner.constantSource(constant))`")
+            code.line("\(access)static let \(member(constant.name)): \(constant.integer ? integer : "Double") = \(GesSchemaPlanner.constantValue(constant))")
+        }
     }
 
     static func plain(_ value: GesPlanValue) -> Bool { !value.isClass && value.encoding.kind != .union && value.encoding.kind != .text && value.encoding.kind != .bytes && value.encoding.kind != .list }

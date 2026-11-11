@@ -53,7 +53,7 @@ internal readonly struct GesSchemaDecimal : IEquatable<GesSchemaDecimal>
     public override int GetHashCode() => (Significand.GetHashCode() * 31) ^ Exponent;
 }
 
-/// <summary>A literal, a constant or a parameter in a bound, step or delta range.</summary>
+/// <summary>A literal, a constant, or a name of a let or parameter in a bound, step, delta range or let.</summary>
 internal sealed class GesSchemaValueSyntax
 {
     internal GesSchemaDecimal Value { get; init; }
@@ -65,10 +65,10 @@ internal sealed class GesSchemaValueSyntax
     // The spelling of a literal, which formatting keeps.
     internal string Text { get; init; } = "";
 
-    // The name of a constant or parameter; empty for a literal.
+    // The name of a constant, or a lowercase name of a let of the schema or a parameter of the file; empty for a literal.
     internal string Constant { get; init; } = "";
 
-    internal string Parameter { get; init; } = "";
+    internal string Name { get; init; } = "";
 
     internal int Offset { get; init; }
 }
@@ -108,8 +108,12 @@ internal sealed class GesSchemaTypeSyntax
 
     internal string[]? Tags { get; init; }
 
-    // The written maximum of Text and List.
+    // The written maximum of Text and List, or the let that holds it, and where that name starts.
     internal long? Max { get; init; }
+
+    internal string MaxName { get; init; } = "";
+
+    internal int MaxOffset { get; init; }
 
     // The alternatives of a List's element.
     internal GesSchemaTypeSyntax[]? Element { get; init; }
@@ -139,6 +143,16 @@ internal sealed class GesSchemaFieldSyntax
     internal int Offset { get; init; }
 }
 
+// A constant of a schema, `let name be value`, which its fields can name.
+internal sealed class GesSchemaLetSyntax
+{
+    internal string Name { get; init; } = "";
+
+    internal GesSchemaValueSyntax Value { get; init; } = null!;
+
+    internal int Offset { get; init; }
+}
+
 internal sealed class GesSchemaDeclarationSyntax
 {
     internal GesSchemaDeclarationKind Kind { get; init; }
@@ -153,6 +167,8 @@ internal sealed class GesSchemaDeclarationSyntax
     internal GesSchemaTypeSyntax? Type { get; init; }
 
     internal GesSchemaFieldSyntax[] Fields { get; init; } = [];
+
+    internal GesSchemaLetSyntax[] Lets { get; init; } = [];
 
     internal string[] Tags { get; init; } = [];
 

@@ -79,6 +79,15 @@ enum SchemaApiObservations {
                 return entry
             }
         }
+        if !schema.constants.isEmpty {
+            result["constants"] = schema.constants.map { constant -> [String: Any] in
+                var entry: [String: Any] = ["name": constant.name, "kind": constant.kind.rawValue]
+                if constant.unit != .none { entry["unit"] = constant.unit.rawValue }
+                if constant.isInteger { entry["integer"] = true }
+                entry["value"] = text(constant.value)
+                return entry
+            }
+        }
         if !schema.tags.isEmpty { result["tags"] = schema.tags }
         if !schema.members.isEmpty { result["members"] = schema.members.map(\.name) }
         return result

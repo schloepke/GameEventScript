@@ -108,16 +108,16 @@ public enum GesSchemaTypeKind: String, Sendable, Equatable {
     @_spi(Syntax) public var canonical: String { "\(significand)e\(exponent)" }
 }
 
-/// A literal, a constant or a parameter in a bound, step or delta range.
+/// A literal, a constant, or a name of a let or parameter in a bound, step, delta range or let.
 @_spi(Syntax) public struct GesSchemaValueSyntax: Sendable {
     @_spi(Syntax) public var value = GesSchemaDecimal(0, 0)
     @_spi(Syntax) public var unit = GesQuantityUnit.none
     @_spi(Syntax) public var isPercent = false
     /// The spelling of a literal, which formatting keeps.
     @_spi(Syntax) public var text = ""
-    /// The name of a constant or parameter; empty for a literal.
+    /// The name of a constant, or a lowercase name of a let of the schema or a parameter of the file; empty for a literal.
     @_spi(Syntax) public var constant = ""
-    @_spi(Syntax) public var parameter = ""
+    @_spi(Syntax) public var name = ""
     @_spi(Syntax) public var offset = 0
 }
 
@@ -144,8 +144,10 @@ public enum GesSchemaTypeKind: String, Sendable, Equatable {
     /// The referenced schema's name.
     @_spi(Syntax) public var name = ""
     @_spi(Syntax) public var tags: [String]?
-    /// The written maximum of Text and List.
+    /// The written maximum of Text and List, or the let that holds it, and where that name starts.
     @_spi(Syntax) public var max: Int64?
+    @_spi(Syntax) public var maxName = ""
+    @_spi(Syntax) public var maxOffset = 0
     /// The alternatives of a List's element.
     @_spi(Syntax) public var element: [GesSchemaTypeSyntax]?
     @_spi(Syntax) public var constraints = GesSchemaConstraintsSyntax()
@@ -164,6 +166,13 @@ public enum GesSchemaTypeKind: String, Sendable, Equatable {
     @_spi(Syntax) public let offset: Int
 }
 
+/// A constant of a schema, `let name be value`, which its fields can name.
+@_spi(Syntax) public struct GesSchemaLetSyntax: Sendable {
+    @_spi(Syntax) public let name: String
+    @_spi(Syntax) public let value: GesSchemaValueSyntax
+    @_spi(Syntax) public let offset: Int
+}
+
 @_spi(Syntax) public struct GesSchemaDeclarationSyntax: Sendable {
     @_spi(Syntax) public var kind = GesSchemaDeclarationKind.constant
     @_spi(Syntax) public var name = ""
@@ -172,6 +181,7 @@ public enum GesSchemaTypeKind: String, Sendable, Equatable {
     /// The kind and unit of a parameter.
     @_spi(Syntax) public var type: GesSchemaTypeSyntax?
     @_spi(Syntax) public var fields: [GesSchemaFieldSyntax] = []
+    @_spi(Syntax) public var lets: [GesSchemaLetSyntax] = []
     @_spi(Syntax) public var tags: [String] = []
     @_spi(Syntax) public var members: [String] = []
     @_spi(Syntax) public var memberOffsets: [Int] = []

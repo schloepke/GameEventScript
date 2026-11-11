@@ -91,6 +91,7 @@ internal static class GesCSharpModelEmitter
             Nested(field.Value, names, field.Field.Name);
         }
 
+        foreach (var constant in type.Constants) names.Add((GesSchemaPlanner.Pascal(constant.Name), "the let " + constant.Name));
         GesSchemaPlanner.Unique(type.Name, names);
 
         code.Line($"/// <summary>The model of the schema <c>:{type.Name}</c>: a plain value that is never encoded and compares by value.</summary>");
@@ -98,6 +99,7 @@ internal static class GesCSharpModelEmitter
         code.Open("{");
         code.Line($"/// <summary>The hash of the schema <c>:{type.Name}</c>, which wire records of it carry too; a test that compares it notices stale generated code.</summary>");
         code.Line($"public const ulong SchemaHash = 0x{GesSchemaLayoutJson.Hex(type.Hash)}UL;");
+        GesCSharpEmitter.Lets(code, type.Constants);
         code.Blank();
         code.Line("/// <summary>Creates a record with every field at its zero value: absent, empty or the first alternative.</summary>");
         code.Line($"public {type.Name}()");

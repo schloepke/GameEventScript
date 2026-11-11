@@ -77,7 +77,8 @@ roles       = role [ role ]
 role        = ( "wire" | "model" ) [ "(" LowerName ")" ]
 constant    = "constant" "$" ConstantName "be" literal
 parameter   = "parameter" LowerName ":" ( ":Number" | ":Percentage" | quantity )
-schema      = "schema" ":" TypeName "as" "{" { field } "}"
+schema      = "schema" ":" TypeName "as" "{" { field | let } "}"
+let         = "let" LowerName "be" ( literal | "$" ConstantName )
 message     = "message" MessageName "(" [ argument { "," argument } ] ")" [ "tags" tagset ]
 messages    = "messages" ":" TypeName "as" "(" MessageName { "," MessageName } ")"
 field       = LowerName ":" union [ "optional" | "key" ]
@@ -88,21 +89,21 @@ alternative = [ LowerName ":" ] type
 type        = ":Boolean"
             | numeric
             | spatial
-            | ":Tag" [ tagset | "max" integer ]
-            | ":Text" [ "max" integer ]
-            | ":Bytes" [ "max" integer ]
-            | ":List" [ "(" union ")" [ "max" integer ] ]
+            | ":Tag" [ tagset | "max" maximum ]
+            | ":Text" [ "max" maximum ]
+            | ":Bytes" [ "max" maximum ]
+            | ":List" [ "(" union ")" [ "max" maximum ] ]
             | ":" TypeName
-            | ":Dice" [ "max" integer ] constraints
+            | ":Dice" [ "max" maximum ] constraints
             | ":Map" | ":Range" | ":Series" | ":Message" | ":Handler" | ":Nothing"
 numeric     = ( ":Number" | ":Percentage" | quantity ) constraints
 quantity    = ":Quantity" "(" unit ")"
 spatial     = ( ":Point" | ":Vector" ) [ "(" unit ")" ] [ "{" axis { axis } "}" ]
 axis        = ( "x" | "y" | "z" ) constraints
 constraints = [ "integer" ] [ range ] [ "step" value ] [ "delta" "within" value ]
-range       = [ "wrapping" ] "between" bound "and" bound
-bound       = value | LowerName
-value       = literal | "$" ConstantName
+range       = [ "wrapping" ] "between" value "and" value
+value       = literal | "$" ConstantName | LowerName
+maximum     = integer | LowerName
 tagset      = "(" "#" TagName { "," "#" TagName } ")"
 ```
 
@@ -111,10 +112,11 @@ tagset      = "(" "#" TagName { "," "#" TagName } ")"
 [`:Quantity(unit)`](Language.md#records-and-custom-types) accepts. `literal` is one exact
 finite number of the [number grammar](Semantics/Numbers.md#text-and-number-conversion), with an
 optional `%` or unit suffix; a Text, a constant or a parameter is no literal. `integer` is
-at most 12 decimal digits without a leading zero; a single `_` may separate two digits, as in `max 10_000`.
+at most 12 decimal digits without a leading zero; a single `_` may separate two digits, as in `max 10_000`. A
+`LowerName` in a `value` or `maximum` names a `let` of the schema or, only in a range, a parameter of the file.
 
 **Layout.** Spaces and tabs may separate any two tokens, and a line comment may end any
-line. A source may start with a BOM. Fields and axes are separated by commas or line breaks,
+line. A source may start with a BOM. Fields, lets and axes are separated by commas or line breaks,
 and repeated or trailing separators are allowed. Arguments, members and tags are separated by
 exactly one comma. A line break is allowed only in these places: between declarations, after
 `as`, inside the parentheses of an argument list, a member list, a tag set or a `:List`, inside
@@ -134,6 +136,20 @@ A source is a sequence of declarations in any order; a reference may come before
 - **`schema :Name as { ... }`** declares a record type: named fields in order, none or many.
   It can be a root, the type of a field, argument or list element, and the type name of a
   [Record](#record-values). A schema without fields encodes to no bits.
+- **`let name be value`** inside a schema names one value of that schema, a literal or a file constant. Its literal
+  gives it its kind and unit: `2s` is a `:Quantity(s)`, `50%` a Percentage, `16` a Number. A whole Number within Int64
+  is an integer; any other value is a binary64 in base units and must stay finite and, unless zero, non-zero there, or it
+  is `schema.tooWide`. The fields of its schema, and only they, may name it as a bound, step, delta range or `max`, where
+  it is replaced by its value; a `max` takes a positive whole Number of at most 12 digits, like a written one. A let is
+  never encoded and is no field of a value or document, but it belongs to the [canonical form](#canonical-form) and the
+  hash, since both sides of a connection rely on it, and [generated code](#tools) declares it as a static member of the
+  schema's types. Its name differs from the fields and lets of its schema and from the parameters of its file, since a
+  bound may name either, or it is `schema.duplicateName`. *Since: Unreleased.*
+
+  A let is one value, not an expression: binding and reading evaluate nothing, and arithmetic between lets, such as
+  `peakPower * 2s`, would need an expression language for a single convenience; its result is written instead. File
+  constants and parameters are not generated, so a bound stays private to its file unless a schema states it as a let.
+
 - **`message Name(...) tags (...)`** declares one message signature: its name, its arguments in
   order, and a closed set of tags, of which any subset may be present. An argument has the
   label of its name, as in `target: 5`, or with `_` none, so `_ damage` is passed by position
@@ -235,8 +251,8 @@ Together, the type and the constraints decide a field's [encoding](#field-encodi
 
 ### Rules
 
-- A bound is a literal, a declared constant or a parameter; it cannot refer to a field.
-  A step and a delta range are literals or constants, never parameters. No expression is evaluated, so reading and
+- A bound is a literal, a declared constant, a let of its schema or a parameter; it cannot refer to a field.
+  A step and a delta range are literals, constants or lets, never parameters. No expression is evaluated, so reading and
   binding need neither a compiler nor a VM.
 - `between a and b` is the closed range `[a, b]`; `wrapping between a and b`
   is the half-open range `[a, b)`. The lower bound must be below the upper bound, and
@@ -277,13 +293,13 @@ Together, the type and the constraints decide a field's [encoding](#field-encodi
   `schema.notEncodable`.
 - There is no `computed by`. A receiver derives such values in its own code; see
   [Records](#record-values).
-- Constants and parameters are visible only in the file that declares them. Schema,
+- Constants and parameters are visible only in the file that declares them, and lets only in their schema. Schema,
   message and message set names are visible across all sources.
 - A `max` is positive.
 - A position relative to something else, such as a carrier, is a schema of its own
   with its own bounds.
 - Names are unique: declarations of schemas, messages and sets together, constants and
-  parameters per file, fields within a schema, arguments within a
+  parameters per file, fields and lets within a schema, a let and the parameters of its file, arguments within a
   message, axes within a block, tags within a set or Flags, members within a message set. A Message's labels and their order are part of its
   signature, as everywhere in GES.
 
@@ -316,17 +332,17 @@ Source errors use the phase `schema` with line and column, in the manner of
 | --- | --- |
 | `schema.syntax` | the source does not match the grammar |
 | `schema.duplicateName` | a name repeats within its kind, or a schema, message or message set takes the name of a built-in type or `Record` |
-| `schema.unknownName` | a type, message, constant or parameter is not declared |
+| `schema.unknownName` | a type, message, constant, let or parameter is not declared, or a step, delta range or `max` names no let of its schema |
 | `schema.cycle` | schema references form a cycle, or references or `:List` types nest more than 32 levels |
-| `schema.unitMismatch` | a bound, step or delta range has another unit than its field |
+| `schema.unitMismatch` | a bound, step or delta range has another unit than its field, or a `max` names a let with a unit |
 | `schema.invalidRange` | a lower bound is not below its upper bound |
 | `schema.invalidStep` | a step is not positive, not exact, or a bound or delta range is no multiple of it |
-| `schema.invalidConstraint` | `integer` with `step` or on a Percentage, a Dice constraint other than a range, a `max` that is not positive, `step` or `delta within` without a range, `delta within` without a step or not narrower than the field |
+| `schema.invalidConstraint` | `integer` with `step` or on a Percentage, a Dice constraint other than a range, a `max` that is not positive, `step` or `delta within` without a range, `delta within` without a step or not narrower than the field, a `max` that names a let other than a positive whole Number of at most 12 digits |
 | `schema.notEncodable` | encoding reaches a document-only type, also when the sources are read for a [wire root](#roles) |
 | `schema.invalidKey` | a `key` breaks the [key rules](#rules) |
 | `schema.invalidUnion` | a union alternative repeats a type name or has `delta within`, or a union with `:Nothing` is `optional` |
 | `schema.invalidBound` | an `integer` bound is fractional or outside Int64, or a Dice bound is outside `1` to `2^31 - 1` |
-| `schema.tooWide` | a quantized field exceeds the [limits](#quantization), a bound of a fractional field becomes infinite or zero in binary64, or Flags have more than 64 members |
+| `schema.tooWide` | a quantized field exceeds the [limits](#quantization), a bound of a fractional field or a fractional let becomes infinite or zero in binary64, or Flags have more than 64 members |
 | `schema.tooLarge` | the [largest encoding](#largest-encoding) exceeds its limit or overflows |
 | `schema.invalidRole` | a role stands on a declaration that cannot take it, is no role word, or names an invalid group |
 | `schema.duplicateRole` | a declaration has a second `wire` or a second `model` role |
@@ -422,12 +438,16 @@ separated by one space, and nothing else is added.
 ```text
 parameter <name> <kind>
 schema <TypeName>
+let <name> <kind> <number>
 field <name> <type>
 message <MessageName> [tags <#tag> ...]
 argument <name or _ name> <type>
 messages <TypeName>
 member <MessageName>
 ```
+
+A schema writes its lets right after its `schema` line, in declared order, so where they stand among the fields does
+not matter; `<kind>` is `Number`, `Percentage` or `Quantity(<portable unit name>)`, as for a parameter.
 
 `<type>` is written as:
 
@@ -456,7 +476,7 @@ one. Unit names are the
 A number is its exact decimal value in base units, written `<significand>e<exponent>`:
 the significand is an integer without trailing zeros, with a leading `-` when negative,
 and zero is `0e0`. Prefixes and percent signs are applied first, and constants are
-replaced by their values. So `1cm`, `0.01m` and `10mm` are all `1e-2`, and `135` is
+replaced by their values, and so are lets where a field names them. So `1cm`, `0.01m` and `10mm` are all `1e-2`, and `135` is
 `135e0`, `5km` is `5e3`.
 
 ```text
@@ -1304,6 +1324,10 @@ alternative's type. A list element type is named `<Field>Item`, so a closed Tag 
 - Every model type carries `SchemaHash` (Swift `static let schemaHash`), the [schema hash](#schema-hash) of its schema,
   which a wire record of the same schema carries too, so a test notices generated code that a schema change left stale.
   A field that would take its name fails with `generate.nameCollision`.
+- Every [let](#declarations) of a schema is a static member of its model and wire types, in base units with a Percentage
+  as its ratio: C# `public const long` for an integer and `public const double` otherwise, named in PascalCase; Swift
+  `static let` of type `Int` in models, `Int64` in wire records and `Double` otherwise. A member that would take the name
+  of a generated member or another member fails with `generate.nameCollision`. *Since: Unreleased.*
 - Model and wire types of one schema are separate types in separate files; no conversion between both forms is generated,
   since a client's model rarely has the shape of its wire roots. A program converts in its own code.
 
@@ -1365,7 +1389,8 @@ Reflection, so managed code stripping under IL2CPP removes nothing it needs. Wit
 ### Model layout
 
 `layout --model` prints the language-neutral model layout in the JSON form of the [generation layout](#generation-layout):
-`model` (the format version, 1), `roots` and `types`, ordered by name. A type has `name`, `hash` and `fields`; a field has
+`model` (the format version, 1), `roots` and `types`, ordered by name. A type has `name`, `hash` and `fields`, and a
+schema with lets `constants` as in the generation layout; a field has
 `name`, `path`, `optional`, `key` and `type`. A type has `kind` and the members of its kind: `number` adds `type`, `unit`,
 `integer`, `wrapping`, `lower`, `upper` and `step`, a bound as its canonical decimal or parameter name or `null`; `tag` adds
 `tags` and `max`, `flags` adds `tags`, `text` and `bytes` add `max`, `list` adds `max` and `element`, `dice` adds `max`, `lower` and `upper`, `point` and
@@ -1397,7 +1422,8 @@ exact decimals. Hashes are 16 lowercase hexadecimal digits, and a binary64 value
   `message` or `messages`), `hash`, `bindingHash`, `bindingHashDepends` (the parameters the type
   reaches), `maxByteCount` and `maxByteCountDepends` (the parameters named in the bounds of its
   fields and of the types it reaches). A message set adds `members` and `memberWidth`; a schema
-  or message adds `fields`, and a message also `tags`.
+  or message adds `fields`, a schema with [lets](#declarations) `constants`, and a message `tags`. A constant has `name`,
+  `type` and `unit` as a parameter, `value`, its exact decimal in base units, and `integer`.
 - A field has `name`, `path`, `optional`, `key`, `unlabeled` and `encoding`. List elements,
   axes and union alternatives are written with `name`, `path` and `encoding` only; an element is
   named `[]` and an alternative by its label or else by its type, as in its path.

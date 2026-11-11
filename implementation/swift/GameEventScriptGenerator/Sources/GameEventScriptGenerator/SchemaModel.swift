@@ -18,6 +18,7 @@ struct GesModelType {
     var name = ""
     var hash: UInt64 = 0
     var fields: [GesModelField] = []
+    var constants: [GesLayoutConstant] = []
 }
 
 final class GesModelField {
@@ -67,7 +68,7 @@ enum GesModelLayoutBuilder {
         var types: [GesModelType] = []
         for name in reached.keys.sorted(by: GesSchemaLayoutBuilder.ordinal) {
             let schema = reached[name]!
-            var type = GesModelType(name: schema.name, hash: schema.hash)
+            var type = GesModelType(name: schema.name, hash: schema.hash, constants: GesLayoutConstant.of(schema))
             for info in schema.fields {
                 let field = try self.field(info.name, info.name, info.alternatives)
                 field.optional = info.isOptional
@@ -186,6 +187,7 @@ enum GesModelLayoutJson {
             json.beginArray("fields")
             for field in type.fields { self.field(&json, field, member: true) }
             json.endArray()
+            GesSchemaLayoutJson.constants(&json, type.constants)
             json.endObject()
         }
         json.endArray()

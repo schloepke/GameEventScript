@@ -151,6 +151,29 @@ public struct GesSchemaParameterInfo: Sendable {
     public let unit: GesQuantityUnit
 }
 
+/// A constant of a schema, declared as `let name be value`: never encoded, part of the hash, and generated as a static
+/// member of the schema's types.
+public struct GesSchemaConstantInfo: Sendable {
+    /// The name.
+    public let name: String
+    /// The kind its literal gives it: `.number`, `.percentage` or `.quantity`.
+    public let kind: GesSchemaTypeKind
+    /// The unit of a Quantity.
+    public let unit: GesQuantityUnit
+    /// Whether the value is a whole Number within Int64; any other value is a Binary64 in base units.
+    public let isInteger: Bool
+    /// The exact value in base units; a Percentage holds its ratio.
+    public let value: GesSchemaBound
+
+    init(_ declared: GesResolvedLet) {
+        name = declared.name
+        kind = declared.kind
+        unit = declared.unit
+        isInteger = declared.integer
+        value = GesSchemaBound(GesResolvedValue(value: declared.value))
+    }
+}
+
 /// The immutable description of one schema, message or message set of a `GesSchemaSet`. It can be shared between threads
 /// and bound any number of times.
 public final class GesSchema: @unchecked Sendable {
@@ -173,6 +196,8 @@ public final class GesSchema: @unchecked Sendable {
     public private(set) var parameters: [GesSchemaParameterInfo] = []
     /// The fields of a schema or the arguments of a message, in declared order.
     public private(set) var fields: [GesSchemaFieldInfo] = []
+    /// The constants a schema declares with `let`, in declared order.
+    public private(set) var constants: [GesSchemaConstantInfo] = []
     /// The members of a message set, in declared order.
     public private(set) var members: [GesSchema] = []
 
@@ -217,6 +242,7 @@ public final class GesSchema: @unchecked Sendable {
         parameters = reached.keys.sorted { Array($0.utf8).lexicographicallyPrecedes(Array($1.utf8)) }.map { GesSchemaParameterInfo(name: $0, kind: reached[$0]!.kind, unit: reached[$0]!.unit) }
         hash = GesSchemaCanonical.hash(try GesSchemaCanonical.form(declaration))
         fields = declaration.fields.map(GesSchemaFieldInfo.init)
+        constants = declaration.lets.map(GesSchemaConstantInfo.init)
         members = declaration.members.map { $0.schema! }
     }
 }

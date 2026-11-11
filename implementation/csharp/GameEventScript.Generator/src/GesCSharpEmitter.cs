@@ -103,6 +103,8 @@ internal static partial class GesCSharpEmitter
         }
 
         foreach (var (tag, name, _) in type.Tags) names.Add((name, "the tag #" + tag));
+        if (!type.IsItem)
+            foreach (var constant in type.Layout.Constants) names.Add((GesSchemaPlanner.Pascal(constant.Name), "the let " + constant.Name));
         GesSchemaPlanner.Unique(type.Name, names);
 
         var visibility = type.IsItem ? "public" : access;
@@ -154,6 +156,18 @@ internal static partial class GesCSharpEmitter
         code.Blank();
         code.Line("/// <summary>The size of the largest encoding in bytes.</summary>");
         code.Line($"public const int MaxByteCount = {layout.MaxByteCount.ToString(CultureInfo.InvariantCulture)};");
+        Lets(code, layout.Constants);
+    }
+
+    // The lets of a schema, in base units; a Percentage holds its ratio.
+    internal static void Lets(GesSchemaPlanner.Code code, List<GesLayoutConstant> constants)
+    {
+        foreach (var constant in constants)
+        {
+            code.Blank();
+            code.Line($"/// <summary><c>{GesSchemaPlanner.ConstantSource(constant)}</c></summary>");
+            code.Line($"public const {(constant.Integer ? "long" : "double")} {GesSchemaPlanner.Pascal(constant.Name)} = {GesSchemaPlanner.ConstantValue(constant)};");
+        }
     }
 
     // Whether an optional value also has a nullable view: a value type without storage.

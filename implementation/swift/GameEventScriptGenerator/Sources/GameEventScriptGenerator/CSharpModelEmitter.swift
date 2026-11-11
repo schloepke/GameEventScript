@@ -73,6 +73,7 @@ enum GesCSharpModelEmitter {
             names.append((field.base, "the field " + field.field.name))
             nested(field.value, &names, field.field.name)
         }
+        for constant in type.constants { names.append((GesSchemaPlanner.pascal(constant.name), "the let " + constant.name)) }
         try GesSchemaPlanner.unique(type.name, names)
 
         code.line("/// <summary>The model of the schema <c>:\(type.name)</c>: a plain value that is never encoded and compares by value.</summary>")
@@ -80,6 +81,7 @@ enum GesCSharpModelEmitter {
         code.open("{")
         code.line("/// <summary>The hash of the schema <c>:\(type.name)</c>, which wire records of it carry too; a test that compares it notices stale generated code.</summary>")
         code.line("public const ulong SchemaHash = 0x\(GesSchemaLayoutJson.hex(type.hash))UL;")
+        GesCSharpEmitter.lets(&code, type.constants)
         code.blank()
         code.line("/// <summary>Creates a record with every field at its zero value: absent, empty or the first alternative.</summary>")
         code.line("public \(type.name)()")

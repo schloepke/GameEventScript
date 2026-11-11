@@ -49,6 +49,39 @@ internal sealed class GesLayoutParameter(string name, string type, string unit, 
     internal string Literal { get; } = literal;
 }
 
+// A `let` of a schema: its kind, unit, exact value in base units and whether it is a whole Number within Int64.
+internal sealed class GesLayoutConstant
+{
+    internal string Name = "";
+    internal string Type = "";
+    internal string Unit = "";
+    internal long Significand;
+    internal int Exponent;
+    internal bool Integer;
+
+    // The unit symbol or `%` that a literal of it ends with, for generated documentation; not part of the JSON.
+    internal string Suffix = "";
+
+    internal string Value => Significand.ToString(System.Globalization.CultureInfo.InvariantCulture) + "e" + Exponent.ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+    internal static List<GesLayoutConstant> Of(GesSchema schema)
+    {
+        var constants = new List<GesLayoutConstant>();
+        foreach (var constant in schema.Constants)
+            constants.Add(new GesLayoutConstant
+            {
+                Name = constant.Name,
+                Type = GesSchemaLayoutBuilder.TypeName(constant.Kind),
+                Unit = GesSchemaLayoutBuilder.UnitName(constant.Kind, constant.Unit),
+                Significand = constant.Value.Significand,
+                Exponent = constant.Value.Exponent,
+                Integer = constant.IsInteger,
+                Suffix = constant.Kind == GesSchemaTypeKind.Percentage ? "%" : constant.Kind == GesSchemaTypeKind.Quantity ? constant.Unit.ToSuffix() : ""
+            });
+        return constants;
+    }
+}
+
 internal sealed class GesLayoutType
 {
     internal string Name = "";
@@ -59,6 +92,7 @@ internal sealed class GesLayoutType
     internal long MaxByteCount;
     internal List<string> MaxByteCountDepends = [];
     internal List<GesLayoutField> Fields = [];
+    internal List<GesLayoutConstant> Constants = [];
     internal List<string> Tags = [];
     internal List<string> Members = [];
     internal int MemberWidth;
@@ -199,6 +233,7 @@ internal static class GesSchemaLayoutBuilder
         else
         {
             type.Fields = Fields(schema, bound);
+            type.Constants = GesLayoutConstant.Of(schema);
             foreach (var field in type.Fields) Collect(field, depends);
             foreach (var tag in schema.Tags) type.Tags.Add(tag);
         }

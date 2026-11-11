@@ -106,6 +106,8 @@ internal static partial class GesSwiftEmitter
         }
 
         foreach (var (tag, name, _) in type.Tags) names.Add((GesSchemaPlanner.Camel(name), "the tag #" + tag));
+        if (!type.IsItem)
+            foreach (var constant in type.Layout.Constants) names.Add((constant.Name, "the let " + constant.Name));
         GesSchemaPlanner.Unique(type.Name, names);
 
         code.Line(type.IsItem ? "/// An element of the list." : $"/// The {Kind(type)} `:{type.Name}`, read and written without allocation{(type.IsClass ? " once its storage has grown" : "")}.");
@@ -155,6 +157,17 @@ internal static partial class GesSwiftEmitter
         code.Line($"{access}static let bindingHash: UInt64 = 0x{GesSchemaLayoutJson.Hex(layout.BindingHash)}");
         code.Line("/// The size of the largest encoding in bytes.");
         code.Line($"{access}static let maxByteCount = {layout.MaxByteCount.ToString(CultureInfo.InvariantCulture)}");
+        Lets(code, layout.Constants, access, "Int64");
+    }
+
+    // The lets of a schema, in base units; a Percentage holds its ratio.
+    internal static void Lets(GesSchemaPlanner.Code code, List<GesLayoutConstant> constants, string access, string integer)
+    {
+        foreach (var constant in constants)
+        {
+            code.Line($"/// `{GesSchemaPlanner.ConstantSource(constant)}`");
+            code.Line($"{access}static let {Member(constant.Name)}: {(constant.Integer ? integer : "Double")} = {GesSchemaPlanner.ConstantValue(constant)}");
+        }
     }
 
     private static bool Plain(GesPlanValue value) => !value.IsClass && value.Encoding.Kind is not (GesLayoutKind.Union or GesLayoutKind.Text or GesLayoutKind.Bytes or GesLayoutKind.List);

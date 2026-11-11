@@ -992,6 +992,7 @@ sealed class GameEventScript.Api.GesSchema
   method GameEventScript.Api.GesBoundSchema Bind(GameEventScript.Api.GesSchemaParameters parameters)
   method System.Void CheckDocument(System.String text, GameEventScript.Api.GesSchemaParameters parameters)
   property GameEventScript.Api.GesReadOnlyArray<GameEventScript.Api.GesSchema> Members { get }
+  property GameEventScript.Api.GesReadOnlyArray<GameEventScript.Api.GesSchemaConstantInfo> Constants { get }
   property GameEventScript.Api.GesReadOnlyArray<GameEventScript.Api.GesSchemaFieldInfo> Fields { get }
   property GameEventScript.Api.GesReadOnlyArray<GameEventScript.Api.GesSchemaParameterInfo> Parameters { get }
   property GameEventScript.Api.GesReadOnlyArray<System.String> Tags { get }
@@ -1015,6 +1016,12 @@ struct GameEventScript.Api.GesSchemaBound
   property System.Int32 Exponent { get }
   property System.Int64 Significand { get }
   property System.String Parameter { get }
+sealed class GameEventScript.Api.GesSchemaConstantInfo
+  property GameEventScript.Api.GesQuantityUnit Unit { get }
+  property GameEventScript.Api.GesSchemaBound Value { get }
+  property GameEventScript.Api.GesSchemaTypeKind Kind { get }
+  property System.Boolean IsInteger { get }
+  property System.String Name { get }
 struct GameEventScript.Api.GesSchemaDecoded
   property GameEventScript.Runtime.Values.GesValue Value { get }
   property System.Int32 ByteCount { get }

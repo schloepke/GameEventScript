@@ -20,6 +20,7 @@
                 output += "\n"
             case .schema:
                 output += "schema :\(declaration.name) as {\n"
+                for declared in declaration.lets { output += "  let \(declared.name) be \(value(declared.value))\n" }
                 for item in declaration.fields {
                     output += "  "
                     field(item, &output, "  ")
@@ -89,7 +90,7 @@
         case .tag:
             output += ":Tag"
             if let set = type.tags { tags(set, &output) }
-            if let max = type.max { output += " max \(max)" }
+            if let max = type.max { output += " max \(max)" } else if !type.maxName.isEmpty { output += " max \(type.maxName)" }
             return
         case .flags:
             output += ":Flags"
@@ -97,7 +98,7 @@
             return
         case .text, .bytes:
             output += type.kind == .text ? ":Text" : ":Bytes"
-            if let max = type.max { output += " max \(max)" }
+            if let max = type.max { output += " max \(max)" } else if !type.maxName.isEmpty { output += " max \(type.maxName)" }
             return
         case .list:
             output += ":List"
@@ -106,11 +107,11 @@
                 union(element, &output, indent)
                 output += ")"
             }
-            if let max = type.max { output += " max \(max)" }
+            if let max = type.max { output += " max \(max)" } else if !type.maxName.isEmpty { output += " max \(type.maxName)" }
             return
         case .dice:
             output += ":Dice"
-            if let max = type.max { output += " max \(max)" }
+            if let max = type.max { output += " max \(max)" } else if !type.maxName.isEmpty { output += " max \(type.maxName)" }
         case .reference:
             output += ":\(type.name)"
             return
@@ -130,7 +131,7 @@
     }
 
     private static func value(_ value: GesSchemaValueSyntax) -> String {
-        !value.parameter.isEmpty ? value.parameter : !value.constant.isEmpty ? "$" + value.constant : value.text
+        !value.name.isEmpty ? value.name : !value.constant.isEmpty ? "$" + value.constant : value.text
     }
 
     private static func tags(_ tags: [String], _ output: inout String) {

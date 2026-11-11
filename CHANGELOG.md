@@ -230,6 +230,9 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   iteration, equality and order, `:take`/`:drop` `first`/`last` slices, `+` concatenation and UTF-8
   conversion with `:Bytes(utf8: text)` and `:Text(utf8: bytes)`. Message JSON writes Bytes as Base64, schemas add `:Bytes max n` with
   generated `WriteBytes`/`ReadBytes` code, and the Bridges map C# `byte[]` and Swift `[UInt8]`.
+- `ges schema generate --model <group> --values` gives every model type `toValue()` and `init(value:)` (C# `ToValue()` and
+  `FromValue(value)`) with the plain Record that wire `--values` reads and writes, so models and wire records convert
+  through one value instead of hand-written copies.
 - Schema `:Flags(#a, #b)` with up to 64 members: one bit per member on the wire, a script flag Map such as
   `[armed:]` in the value path and documents, `WriteFlags`/`ReadFlags` (Swift `writeFlags`/`readFlags`) masks, and
   generated C# `[Flags]` enums and Swift `OptionSet` types.

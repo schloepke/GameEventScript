@@ -465,6 +465,16 @@ let target = GesPoint(x: 40, y: 60)
 let heading = (target - bot.position).normalized // GesVector(x: 0.6, y: 0.8)
 ```
 
+A model and a wire record of the same schema meet in a plain GES value. Generate both with `--values`, and the model
+gains `toValue()` and `init(value:)` (C# `ToValue()` and `FromValue(value)`), which read and write the same Record as the
+wire record's `toValue()` and `read(value:)`:
+
+```swift
+let wire = Wire.Panel_Report()
+try wire.read(value: report.toValue())             // fails like a write for a text above its max
+let copy = try Model.Panel_Report(value: wire.toValue())
+```
+
 See [Roles](../../specs/Schemas.md#roles) and [Model types](../../specs/Schemas.md#model-types).
 
 ## What schemas leave to you

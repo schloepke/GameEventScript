@@ -23,7 +23,7 @@ public sealed class GesRolesGeneratedCodeTests
         return GesSchemaSet.Parse([.. Files.Select(file => new GesSchemaSource(file, File.ReadAllText(Path.Combine(directory, file))))]);
     }
 
-    private static GesSchemaGenerateOptions Options(GesSchemaLanguage language, string space) => new() { Language = language, Namespace = space, Access = GesSchemaAccess.Internal };
+    private static GesSchemaGenerateOptions Options(GesSchemaLanguage language, string space, bool values = false) => new() { Language = language, Namespace = space, Access = GesSchemaAccess.Internal, Values = values };
 
     [TestMethod]
     public void CheckedInCodeIsCurrent()
@@ -33,13 +33,13 @@ public sealed class GesRolesGeneratedCodeTests
         var swift = Path.Combine(TestRepositoryPaths.Root, "implementation", "swift", "GameEventScriptConformance", "Tests", "GameEventScriptConformanceTests", "Generated");
         var wire = GesSchemaGenerator.WireRoots(set, "world");
         var model = GesSchemaGenerator.ModelRoots(set, "view");
-        CollectionAssert.AreEqual(new[] { "World", "World_Cards" }, wire.ToArray());
-        CollectionAssert.AreEqual(new[] { "WorldView" }, model.ToArray());
+        CollectionAssert.AreEqual(new[] { "World", "World_Cards", "Panel_Report" }, wire.ToArray());
+        CollectionAssert.AreEqual(new[] { "Panel_Report", "WorldView" }, model.ToArray());
         var parameters = new GesSchemaParameters().With("worldWidth", "2000m");
-        Assert.AreEqual(File.ReadAllText(Path.Combine(csharp, "RolesWire.g.cs")), GesSchemaGenerator.Generate(set, wire, parameters, Options(GesSchemaLanguage.CSharp, "GameEventScript.Tests.Generator.Roles.Wire")));
-        Assert.AreEqual(File.ReadAllText(Path.Combine(csharp, "RolesModel.g.cs")), GesSchemaGenerator.GenerateModels(set, model, Options(GesSchemaLanguage.CSharp, "GameEventScript.Tests.Generator.Roles.Model")));
-        Assert.AreEqual(File.ReadAllText(Path.Combine(swift, "RolesWire.swift")), GesSchemaGenerator.Generate(set, wire, parameters, Options(GesSchemaLanguage.Swift, "RolesWire")));
-        Assert.AreEqual(File.ReadAllText(Path.Combine(swift, "RolesModel.swift")), GesSchemaGenerator.GenerateModels(set, model, Options(GesSchemaLanguage.Swift, "RolesModel")));
+        Assert.AreEqual(File.ReadAllText(Path.Combine(csharp, "RolesWire.g.cs")), GesSchemaGenerator.Generate(set, wire, parameters, Options(GesSchemaLanguage.CSharp, "GameEventScript.Tests.Generator.Roles.Wire", true)));
+        Assert.AreEqual(File.ReadAllText(Path.Combine(csharp, "RolesModel.g.cs")), GesSchemaGenerator.GenerateModels(set, model, Options(GesSchemaLanguage.CSharp, "GameEventScript.Tests.Generator.Roles.Model", true)));
+        Assert.AreEqual(File.ReadAllText(Path.Combine(swift, "RolesWire.swift")), GesSchemaGenerator.Generate(set, wire, parameters, Options(GesSchemaLanguage.Swift, "RolesWire", true)));
+        Assert.AreEqual(File.ReadAllText(Path.Combine(swift, "RolesModel.swift")), GesSchemaGenerator.GenerateModels(set, model, Options(GesSchemaLanguage.Swift, "RolesModel", true)));
         var bound = Options(GesSchemaLanguage.CSharp, "GameEventScript.Tests.Generator.Roles.Bound");
         bound.Bindings = true;
         Assert.AreEqual(File.ReadAllText(Path.Combine(csharp, "RolesBound.g.cs")), GesSchemaGenerator.GenerateModels(set, model, bound));
@@ -47,6 +47,75 @@ public sealed class GesRolesGeneratedCodeTests
         bound.Bindings = true;
         Assert.AreEqual(File.ReadAllText(Path.Combine(swift, "RolesBound.swift")), GesSchemaGenerator.GenerateModels(set, model, bound));
         Assert.AreEqual("generate.usage", Assert.ThrowsExactly<GesGeneratorException>(() => GesSchemaGenerator.Generate(set, wire, parameters, bound)).Code);
+    }
+
+    private static Model.Panel_Report Report(string title = "Pump") => new(
+        title,
+        Model.Panel_Report.StatusTag.Warn,
+        640,
+        new GesPoint(1.5, 2.25),
+        null,
+        [new Model.Panel_Entry("left", 0.25), new Model.Panel_Entry("right", 1)],
+        new Model.Panel_Report.ReadingAlternative.Number(42),
+        Model.Panel_Report.AlarmsFlags.Power);
+
+    [TestMethod]
+    public void AModelRoundTripsThroughItsPlainValue()
+    {
+        var report = Report();
+        var value = report.ToValue();
+        Assert.AreEqual("Panel_Report", value.CustomTypeName);
+        var fields = value.AsMap()!;
+        CollectionAssert.AreEqual(new[] { "title", "status", "load", "spot", "note", "entries", "reading", "alarms" }, Enumerable.Range(0, fields.Length).Select(fields.KeyAt).OrderBy(key => Array.IndexOf(new[] { "title", "status", "load", "spot", "note", "entries", "reading", "alarms" }, key)).ToArray());
+        Assert.AreEqual("Panel_Entry", fields.Get("entries")!.Value.AsList()[0].CustomTypeName, "A nested record is a Record, not an external value.");
+        Assert.IsTrue(fields.Get("note")!.Value.IsNothing, "An absent optional is nothing.");
+        Assert.AreEqual(42L, fields.Get("reading")!.Value.AsInteger(), "A union holds its alternative's value.");
+        Assert.AreEqual(report, Model.Panel_Report.FromValue(value));
+        var other = Report();
+        other.Note = "spare";
+        other.Reading = new Model.Panel_Report.ReadingAlternative.Text("x");
+        other.Alarms = Model.Panel_Report.AlarmsFlags.Heat | Model.Panel_Report.AlarmsFlags.Power;
+        Assert.AreEqual(other, Model.Panel_Report.FromValue(other.ToValue()));
+    }
+
+    [TestMethod]
+    public void AModelConvertsToAWireRecordAndBack()
+    {
+        var report = Report();
+        var wire = new Wire.Panel_Report();
+        wire.ReadValue(report.ToValue());
+        Assert.AreEqual("Pump", wire.Title);
+        Assert.HasCount(2, wire.Entries);
+        Assert.AreEqual(report, Model.Panel_Report.FromValue(wire.ToValue()));
+        var back = new Wire.Panel_Report();
+        back.Read(wire.ToBytes());
+        Assert.AreEqual(report, Model.Panel_Report.FromValue(back.ToValue()));
+    }
+
+    [TestMethod]
+    public void AModelValueThatDoesNotFitFailsOnTheWireSide()
+    {
+        var report = Report("a title that is far too long");
+        var value = report.ToValue();
+        Assert.AreEqual(report, Model.Panel_Report.FromValue(value), "The model value itself holds any text.");
+        var wire = new Wire.Panel_Report();
+        var failure = Assert.ThrowsExactly<GesWireException>(() => wire.ReadValue(value));
+        Assert.AreEqual(GesWireException.TooLong, failure.Code);
+        Assert.AreEqual("title", failure.Path);
+    }
+
+    [TestMethod]
+    public void AValueThatDoesNotConvertNamesItsField()
+    {
+        var fields = Report().ToValue().AsMap()!;
+        var keys = Enumerable.Range(0, fields.Length).Select(fields.KeyAt).ToArray();
+        var values = keys.Select(key => key == "load" ? GesValue.GesFloat(640, GesQuantityUnit.UnitMeter) : fields.Get(key)!.Value).ToArray();
+        var failure = Assert.ThrowsExactly<GesWireException>(() => Model.Panel_Report.FromValue(GesValue.GesRecord("Panel_Report", keys, values)));
+        Assert.AreEqual(GesWireException.TypeMismatch, failure.Code);
+        Assert.AreEqual("load", failure.Path);
+        Assert.AreEqual("", Assert.ThrowsExactly<GesWireException>(() => Model.Panel_Report.FromValue(GesValue.GesRecord("Other", keys, values))).Path);
+        var map = GesValue.GesMap(keys, keys.Select(key => fields.Get(key)!.Value).ToArray());
+        Assert.AreEqual(Report(), Model.Panel_Report.FromValue(map), "A Map of only the fields reads too.");
     }
 
     [TestMethod]
@@ -143,7 +212,7 @@ public sealed class GesRolesGeneratedCodeTests
     [TestMethod]
     public void ModelRunsRejectWireOptions()
     {
-        var error = Assert.ThrowsExactly<GesGeneratorException>(() => GesSchemaGenerator.GenerateModels(Set(), ["WorldView"], new GesSchemaGenerateOptions { Values = true }));
+        var error = Assert.ThrowsExactly<GesGeneratorException>(() => GesSchemaGenerator.GenerateModels(Set(), ["WorldView"], new GesSchemaGenerateOptions { CheckedExclusivity = true }));
         Assert.AreEqual("generate.usage", error.Code);
         error = Assert.ThrowsExactly<GesGeneratorException>(() => GesSchemaGenerator.ModelLayout(GesSchemaSet.Parse("message M()\n"), ["M"]));
         Assert.AreEqual("generate.usage", error.Code);
@@ -232,6 +301,6 @@ public sealed class GesRolesBindingTests
     {
         var first = new Bound.GesTypes();
         Assert.ThrowsExactly<ArgumentException>(() => new Bound.GesTypes(first));
-        CollectionAssert.AreEqual(new[] { "World_Body", "RadarView", "BotView", "Panel_Badge", "WorldView" }, new Bound.GesTypes().Types.Select(type => type.Name).ToArray());
+        CollectionAssert.AreEqual(new[] { "World_Body", "RadarView", "BotView", "Panel_Badge", "Panel_Entry", "Panel_Report", "WorldView" }, new Bound.GesTypes().Types.Select(type => type.Name).ToArray());
     }
 }

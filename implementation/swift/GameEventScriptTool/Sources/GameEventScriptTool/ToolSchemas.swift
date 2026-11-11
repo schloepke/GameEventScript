@@ -38,7 +38,7 @@ extension ToolHelp {
           --language <name>         The language that generate writes: csharp or swift.
           --namespace <A.B>         The namespace of the generated types; Swift declares it as nested enums.
           --access <level>          The visibility of the generated types: public (default) or internal.
-          --values                  Also convert generated records to and from GES values and messages.
+          --values                  Also convert generated records and models to and from GES values and messages.
           --checked-exclusivity     Keep the dynamic exclusivity checks of generated Swift classes.
           --bindings                Also offer generated model types to scripts as external types; only with --model.
           --check                   Compare the generated code with the output file instead of writing it; differences fail.
@@ -145,7 +145,7 @@ extension Tool {
         if (command == "layout" || command == "generate") && (roots.isEmpty ? 0 : 1) + (allRoots ? 1 : 0) + (wireGroup == nil && modelGroup == nil ? 0 : 1) != 1 {
             throw ToolError.usage("\(command) requires one of --root, --all-roots, --wire and --model.")
         }
-        if modelGroup != nil && (withValues || checkedExclusivity) { throw ToolError.usage("--values and --checked-exclusivity concern wire code, not --model.") }
+        if modelGroup != nil && checkedExclusivity { throw ToolError.usage("--checked-exclusivity concerns wire code, not --model.") }
         if bindings && modelGroup == nil { throw ToolError.usage("--bindings concerns model code and requires --model.") }
         if command == "generate" && language != "csharp" && language != "swift" { throw ToolError.usage("generate requires --language csharp or --language swift.") }
         if let access, access != "public" && access != "internal" { throw ToolError.usage("--access is public or internal.") }

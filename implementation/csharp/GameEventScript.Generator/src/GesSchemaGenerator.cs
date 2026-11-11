@@ -100,8 +100,8 @@ public static class GesSchemaGenerator
     /// </summary>
     /// <param name="set">The schemas.</param>
     /// <param name="roots">The schemas to generate as models, in the order the header names them.</param>
-    /// <param name="options">The language, namespace and visibility; <see cref="GesSchemaGenerateOptions.Values"/> and
-    /// <see cref="GesSchemaGenerateOptions.CheckedExclusivity"/> concern wire code and must stay off.</param>
+    /// <param name="options">The language, namespace and visibility; <see cref="GesSchemaGenerateOptions.Values"/> adds plain
+    /// GES values, and <see cref="GesSchemaGenerateOptions.CheckedExclusivity"/> concerns wire code and must stay off.</param>
     /// <returns>The source text, ending with a line break.</returns>
     /// <exception cref="GesSchemaException">A root is not declared.</exception>
     /// <exception cref="GesGeneratorException">No root is given, a root is no schema, an option concerns wire code, the
@@ -111,7 +111,7 @@ public static class GesSchemaGenerator
         if (set is null) throw new ArgumentNullException(nameof(set));
         if (roots is null) throw new ArgumentNullException(nameof(roots));
         if (options is null) throw new ArgumentNullException(nameof(options));
-        if (options.Values || options.CheckedExclusivity) throw new GesGeneratorException(GesGeneratorException.Usage, "Values and checked exclusivity concern wire code, not models.");
+        if (options.CheckedExclusivity) throw new GesGeneratorException(GesGeneratorException.Usage, "Checked exclusivity concerns wire code, not models.");
         var layout = GesModelLayoutBuilder.Build(set, roots);
         return options.Language == GesSchemaLanguage.CSharp ? GesCSharpModelEmitter.Emit(layout, options) : GesSwiftModelEmitter.Emit(layout, options);
     }

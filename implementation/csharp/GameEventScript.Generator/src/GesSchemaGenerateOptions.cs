@@ -42,7 +42,8 @@ public sealed class GesSchemaGenerateOptions
 
     /// <summary>
     /// Gets or sets whether records also convert to and from GES values and messages, through the schema sources the code
-    /// embeds and binds once per type. The conversion allocates and is meant for values from scripts, not the hot path.
+    /// embeds and binds once per type, and whether model types convert to and from the same plain values. The conversion
+    /// allocates and is meant for values from scripts and for converting between models and wire records, not the hot path.
     /// </summary>
     public bool Values { get; set; }
 

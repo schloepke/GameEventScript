@@ -88,4 +88,69 @@ final class GeneratedRoleCodeTests: XCTestCase {
         XCTAssertEqual(RolesModel.BotView.MoodTag.allCases, [.calm, .angry])
         XCTAssertEqual(RolesModel.BotView.MoodTag.angry.rawValue, "angry")
     }
+
+    private func report(title: String = "Pump") -> RolesModel.Panel_Report {
+        RolesModel.Panel_Report(
+            title: title,
+            status: .warn,
+            load: 640,
+            spot: GesPoint(x: 1.5, y: 2.25),
+            entries: [RolesModel.Panel_Entry(name: "left", level: 0.25), RolesModel.Panel_Entry(name: "right", level: 1)],
+            reading: .number(42),
+            alarms: .power
+        )
+    }
+
+    func testAModelRoundTripsThroughItsPlainValue() throws {
+        let model = report()
+        let value = model.toValue()
+        XCTAssertEqual(value.customTypeName, "Panel_Report")
+        let fields = try XCTUnwrap(value.asMap)
+        XCTAssertEqual(fields.get("entries")?.listValue?.first?.customTypeName, "Panel_Entry", "A nested record is a Record, not an external value.")
+        XCTAssertTrue(fields.get("note")?.isNothing == true, "An absent optional is nothing.")
+        XCTAssertEqual(fields.get("reading")?.integerValue, 42, "A union holds its alternative's value.")
+        XCTAssertEqual(try RolesModel.Panel_Report(value: value), model)
+        var other = report()
+        other.note = "spare"
+        other.reading = .text("x")
+        other.alarms = [.heat, .power]
+        XCTAssertEqual(try RolesModel.Panel_Report(value: other.toValue()), other)
+    }
+
+    func testAModelConvertsToAWireRecordAndBack() throws {
+        let model = report()
+        let wire = RolesWire.Panel_Report()
+        try wire.read(value: model.toValue())
+        XCTAssertEqual(wire.title, "Pump")
+        XCTAssertEqual(wire.entries.count, 2)
+        XCTAssertEqual(try RolesModel.Panel_Report(value: wire.toValue()), model)
+        let back = RolesWire.Panel_Report()
+        _ = try back.read(from: try wire.encoded())
+        XCTAssertEqual(try RolesModel.Panel_Report(value: back.toValue()), model)
+    }
+
+    func testAModelValueThatDoesNotFitFailsOnTheWireSide() throws {
+        let model = report(title: "a title that is far too long")
+        let value = model.toValue()
+        XCTAssertEqual(try RolesModel.Panel_Report(value: value), model, "The model value itself holds any text.")
+        XCTAssertThrowsError(try RolesWire.Panel_Report().read(value: value)) { error in
+            XCTAssertEqual((error as? GesWireError)?.code, GesWireError.tooLong)
+            XCTAssertEqual((error as? GesWireError)?.path, "title")
+        }
+    }
+
+    func testAValueThatDoesNotConvertNamesItsField() throws {
+        let fields = try XCTUnwrap(report().toValue().asMap)
+        let keys = (0..<fields.length).map { fields.key(at: $0) }
+        let values = keys.map { $0 == "load" ? GesValue.float(640, unit: .meter) : fields.get($0)! }
+        XCTAssertThrowsError(try RolesModel.Panel_Report(value: .record(typeName: "Panel_Report", keys: keys, values: values))) { error in
+            XCTAssertEqual((error as? GesWireError)?.code, GesWireError.typeMismatch)
+            XCTAssertEqual((error as? GesWireError)?.path, "load")
+        }
+        XCTAssertThrowsError(try RolesModel.Panel_Report(value: .record(typeName: "Other", keys: keys, values: values))) { error in
+            XCTAssertEqual((error as? GesWireError)?.path, "")
+        }
+        let map = GesValue.map(keys: keys, values: keys.map { fields.get($0)! })
+        XCTAssertEqual(try RolesModel.Panel_Report(value: map), report(), "A Map of only the fields reads too.")
+    }
 }

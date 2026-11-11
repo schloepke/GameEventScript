@@ -13,6 +13,7 @@ internal static class GesSwiftModelEmitter
     {
         var access = options.Access == GesSchemaAccess.Public ? "public " : "";
         var space = GesSchemaPlanner.Namespace(options.Namespace, GesSwiftEmitter.Keywords);
+        var values = "__GesModelValues" + GesSchemaPlanner.Hash(GesModelPlanner.Header(layout));
         var code = new GesSchemaPlanner.Code();
         code.Raw(GesModelPlanner.Header(layout));
         code.Line("// swift-format-ignore-file");
@@ -28,10 +29,11 @@ internal static class GesSwiftModelEmitter
         for (var index = 0; index < layout.Types.Count; index++)
         {
             if (index > 0) code.Blank();
-            Record(code, layout.Types[index], access, options.Bindings);
+            Record(code, layout.Types[index], access, options.Bindings, options.Values ? values : null);
         }
 
         if (options.Bindings) Bindings(code, layout, access);
+        if (options.Values) Values(code, layout, values);
         foreach (var _ in space) code.Close();
         return code.ToString();
     }
@@ -40,7 +42,7 @@ internal static class GesSwiftModelEmitter
 
     private static string Member(string pascal) => Name(GesSchemaPlanner.Camel(pascal));
 
-    private static void Record(GesSchemaPlanner.Code code, GesModelType type, string access, bool bindings)
+    private static void Record(GesSchemaPlanner.Code code, GesModelType type, string access, bool bindings, string? values)
     {
         var fields = GesModelPlanner.Fields(type);
         var key = fields.Find(field => field.Field.Key);
@@ -53,6 +55,7 @@ internal static class GesSwiftModelEmitter
 
         if (key is not null && GesSchemaPlanner.Camel(key.Base) != "id") names.Add(("id", "the identity of the key " + key.Field.Name));
         if (bindings) names.Add(("gesValue", "the generated member gesValue"));
+        if (values is not null) names.Add(("toValue", "the generated member toValue"));
         if (bindings && fields.Exists(field => field.Field.Name == "fields"))
             throw new GesGeneratorException(GesGeneratorException.NameCollision, $"In '{type.Name}', the field fields and the generated field fields of its bindings share a name.");
         GesSchemaPlanner.Unique(type.Name, names);
@@ -93,6 +96,17 @@ internal static class GesSwiftModelEmitter
             code.Line($"guard let held = value.externalValue as? GesTypes.{type.Name}Value else {{ return nil }}");
             code.Line("self = held.record");
             code.Close();
+        }
+
+        if (values is not null)
+        {
+            code.Blank();
+            code.Line("/// The record as a plain GES Record of its fields, as `GesSchemaValues` decodes the bytes of the record.");
+            code.Line($"{access}func toValue() -> GesValue {{ {values}.value(self) }}");
+            code.Blank();
+            code.Line("/// Reads a Record of this schema, or a Map of only its fields, as `GesSchemaValues` encodes it.");
+            code.Line("/// - Throws: `GesWireError` with `wire.typeMismatch` at the path of a field that does not convert.");
+            code.Line($"{access}init(value: GesValue) throws(GesWireError) {{ self = try {values}.read{type.Name}(value, \"\") }}");
         }
 
         foreach (var field in fields) Declarations(code, field.Value, access);
@@ -169,10 +183,10 @@ internal static class GesSwiftModelEmitter
 
     private static string Unit(string unit) => "." + unit;
 
-    // Converts a native value to a GES value.
-    private static string Encode(GesModelPlanValue value, string owner, string expression, bool nullable = true)
+    // Converts a native value to a GES value; a plain value holds nested records as Records rather than as external values.
+    private static string Encode(GesModelPlanValue value, string owner, string expression, bool nullable = true, string helper = "GesTypes", bool plain = false)
     {
-        if (nullable && value.Nullable) return $"GesTypes.present({expression}, {{ {Encode(value, owner, "$0", false)} }})";
+        if (nullable && value.Nullable) return $"{helper}.present({expression}, {{ {Encode(value, owner, "$0", false, helper, plain)} }})";
         return value.Kind switch
         {
             GesModelKind.Boolean => $".boolean({expression})",
@@ -181,36 +195,36 @@ internal static class GesSwiftModelEmitter
             GesModelKind.Number => $".float({expression}, unit: {Unit(value.Model.Unit)})",
             GesModelKind.Text => $".text({expression})",
             GesModelKind.Bytes => $".bytes({expression})",
-            GesModelKind.Tag when value.ClosedTag => $"GesTypes.tag({expression}.rawValue)",
-            GesModelKind.Tag => $"GesTypes.tag({expression})",
-            GesModelKind.List => $".list({expression}.map {{ {Encode(value.Element!, owner, "$0")} }})",
-            GesModelKind.Dice => $"GesTypes.dice({expression})",
+            GesModelKind.Tag when value.ClosedTag => $"{helper}.tag({expression}.rawValue)",
+            GesModelKind.Tag => $"{helper}.tag({expression})",
+            GesModelKind.List => $".list({expression}.map {{ {Encode(value.Element!, owner, "$0", helper: helper, plain: plain)} }})",
+            GesModelKind.Dice => $"{helper}.dice({expression})",
             GesModelKind.Point or GesModelKind.Vector => $"{expression}.value(unit: {Unit(value.Model.Unit)})",
-            GesModelKind.Schema => $"{expression}.gesValue()",
-            _ => $"GesTypes.value({expression})"
+            GesModelKind.Schema => plain ? $"{expression}.toValue()" : $"{expression}.gesValue()",
+            _ => $"{helper}.value({expression})"
         };
     }
 
     // Converts a GES value to a native value, or nil when it does not convert.
-    private static string Decode(GesModelPlanValue value, string owner, string expression, bool nullable = true)
+    private static string Decode(GesModelPlanValue value, string owner, string expression, bool nullable = true, string helper = "GesTypes", bool plain = false)
     {
-        if (nullable && value.Nullable) return $"GesTypes.optional({expression}, {{ {Decode(value, owner, "$0", false)} }})";
+        if (nullable && value.Nullable) return $"{helper}.optional({expression}, {{ {Decode(value, owner, "$0", false, helper, plain)} }})";
         return value.Kind switch
         {
-            GesModelKind.Boolean => $"GesTypes.boolean({expression})",
-            GesModelKind.Number when value.Model.Type == "Percentage" => $"GesTypes.percentage({expression})",
-            GesModelKind.Number when value.Model.Integer => $"GesTypes.integer({expression}, {Unit(value.Model.Unit)})",
-            GesModelKind.Number => $"GesTypes.number({expression}, {Unit(value.Model.Unit)})",
-            GesModelKind.Text => $"GesTypes.text({expression})",
-            GesModelKind.Bytes => $"GesTypes.bytes({expression})",
-            GesModelKind.Tag when value.ClosedTag => $"GesTypes.tag({expression}).flatMap({owner}.{value.Nested}.init(rawValue:))",
-            GesModelKind.Tag => $"GesTypes.tag({expression})",
-            GesModelKind.List => $"GesTypes.list({expression}, {{ {Decode(value.Element!, owner, "$0")} }})",
-            GesModelKind.Dice => $"GesTypes.dice({expression})",
+            GesModelKind.Boolean => $"{helper}.boolean({expression})",
+            GesModelKind.Number when value.Model.Type == "Percentage" => $"{helper}.percentage({expression})",
+            GesModelKind.Number when value.Model.Integer => $"{helper}.integer({expression}, {Unit(value.Model.Unit)})",
+            GesModelKind.Number => $"{helper}.number({expression}, {Unit(value.Model.Unit)})",
+            GesModelKind.Text => $"{helper}.text({expression})",
+            GesModelKind.Bytes => $"{helper}.bytes({expression})",
+            GesModelKind.Tag when value.ClosedTag => $"{helper}.tag({expression}).flatMap({owner}.{value.Nested}.init(rawValue:))",
+            GesModelKind.Tag => $"{helper}.tag({expression})",
+            GesModelKind.List => $"{helper}.list({expression}, {{ {Decode(value.Element!, owner, "$0", helper: helper, plain: plain)} }})",
+            GesModelKind.Dice => $"{helper}.dice({expression})",
             GesModelKind.Point => $"GesPoint({expression}, unit: {Unit(value.Model.Unit)})",
             GesModelKind.Vector => $"GesVector({expression}, unit: {Unit(value.Model.Unit)})",
-            GesModelKind.Schema => $"{value.Model.Schema}(gesValue: {expression})",
-            _ => $"GesTypes.decode{owner}{value.Nested}({expression})"
+            GesModelKind.Schema => plain ? $"{helper}.decode{value.Model.Schema}({expression})" : $"{value.Model.Schema}(gesValue: {expression})",
+            _ => $"{helper}.decode{owner}{value.Nested}({expression})"
         };
     }
 
@@ -317,36 +331,106 @@ internal static class GesSwiftModelEmitter
             code.Line($"try call.setExternalValue({type.Name}Value({type.Name}({string.Join(", ", fields.ConvertAll(field => $"{Member(field.Base)}: {Member(field.Base)}"))})))");
             code.Close();
             code.Close();
-            var unions = new List<GesModelPlanValue>();
-            foreach (var field in fields) Unions(field.Value, unions);
-            foreach (var union in unions)
-            {
-                var name = type.Name + "." + union.Nested;
-                code.Blank();
-                if (union.Kind == GesModelKind.Flags)
-                {
-                    var names = $"{type.Name}{union.Nested}Names";
-                    code.Line($"static let {names} = [{string.Join(", ", union.Model.Tags.ConvertAll(member => GesSchemaPlanner.Literal(member, true)))}]");
-                    code.Blank();
-                    code.Line($"static func value(_ value: {name}) -> GesValue {{ flags({names}, value.rawValue) }}");
-                    code.Blank();
-                    code.Line($"static func decode{type.Name}{union.Nested}(_ value: GesValue) -> {name}? {{ flags(value, {names}).map({name}.init(rawValue:)) }}");
-                    continue;
-                }
-
-                code.Line($"static func value(_ value: {name}) -> GesValue {{");
-                code.Line("    switch value {");
-                foreach (var alternative in union.Alternatives) code.Line($"    case .{Member(alternative.Label)}(let alternative): {Encode(alternative, type.Name, "alternative")}");
-                code.Line("    }");
-                code.Line("}");
-                code.Blank();
-                code.Open($"static func decode{type.Name}{union.Nested}(_ value: GesValue) -> {name}? {{");
-                foreach (var alternative in union.Alternatives) code.Line($"if let alternative = {Decode(alternative, type.Name, "value")} {{ return .{Member(alternative.Label)}(alternative) }}");
-                code.Line("return nil");
-                code.Close();
-            }
+            Conversions(code, type.Name, fields, "GesTypes", false);
         }
 
+        Helpers(code);
+        code.Close();
+    }
+
+    // The conversions of the unions and Flags of a type, including those in lists and alternatives.
+    private static void Conversions(GesSchemaPlanner.Code code, string owner, List<GesModelPlanField> fields, string helper, bool plain)
+    {
+        var unions = new List<GesModelPlanValue>();
+        foreach (var field in fields) Unions(field.Value, unions);
+        foreach (var union in unions)
+        {
+            var name = owner + "." + union.Nested;
+            code.Blank();
+            if (union.Kind == GesModelKind.Flags)
+            {
+                var names = $"{owner}{union.Nested}Names";
+                code.Line($"static let {names} = [{string.Join(", ", union.Model.Tags.ConvertAll(member => GesSchemaPlanner.Literal(member, true)))}]");
+                code.Blank();
+                code.Line($"static func value(_ value: {name}) -> GesValue {{ flags({names}, value.rawValue) }}");
+                code.Blank();
+                code.Line($"static func decode{owner}{union.Nested}(_ value: GesValue) -> {name}? {{ flags(value, {names}).map({name}.init(rawValue:)) }}");
+                continue;
+            }
+
+            code.Line($"static func value(_ value: {name}) -> GesValue {{");
+            code.Line("    switch value {");
+            foreach (var alternative in union.Alternatives) code.Line($"    case .{Member(alternative.Label)}(let alternative): {Encode(alternative, owner, "alternative", helper: helper, plain: plain)}");
+            code.Line("    }");
+            code.Line("}");
+            code.Blank();
+            code.Open($"static func decode{owner}{union.Nested}(_ value: GesValue) -> {name}? {{");
+            foreach (var alternative in union.Alternatives) code.Line($"if let alternative = {Decode(alternative, owner, "value", helper: helper, plain: plain)} {{ return .{Member(alternative.Label)}(alternative) }}");
+            code.Line("return nil");
+            code.Close();
+        }
+    }
+
+    // The plain values of the models: a Record of each schema with its fields in declared order, as the value path decodes the
+    // bytes of a record, so that wire records read them and give them back.
+    private static void Values(GesSchemaPlanner.Code code, GesModelLayout layout, string name)
+    {
+        code.Blank();
+        code.Line("/// The plain GES values of the models of this file, as `GesSchemaValues` reads and writes them.");
+        code.Open($"enum {name} {{");
+        var first = true;
+        foreach (var type in layout.Types)
+        {
+            var fields = GesModelPlanner.Fields(type);
+            var names = type.Name + "Fields";
+            var typeLiteral = GesSchemaPlanner.Literal(type.Name, true);
+            if (!first) code.Blank();
+            first = false;
+            code.Line($"static let {names} = [{string.Join(", ", fields.ConvertAll(field => GesSchemaPlanner.Literal(field.Field.Name, true)))}]");
+            code.Blank();
+            code.Open($"static func value(_ record: {type.Name}) -> GesValue {{");
+            code.Line($".record(typeName: {typeLiteral}, keys: {names}, values: [");
+            foreach (var field in fields) code.Line("    " + Encode(field.Value, type.Name, "record." + Member(field.Base), helper: name, plain: true) + ",");
+            code.Line("])");
+            code.Close();
+            code.Blank();
+            code.Open($"static func read{type.Name}(_ value: GesValue, _ path: String) throws(GesWireError) -> {type.Name} {{");
+            if (fields.Count == 0)
+            {
+                code.Line($"guard recordFields(value, {typeLiteral}, {names}) != nil else {{ throw mismatch(path) }}");
+                code.Line($"return {type.Name}()");
+            }
+            else
+            {
+                code.Line($"guard let fields = recordFields(value, {typeLiteral}, {names}) else {{ throw mismatch(path) }}");
+                for (var index = 0; index < fields.Count; index++)
+                {
+                    var fieldLiteral = GesSchemaPlanner.Literal(fields[index].Field.Name, true);
+                    code.Line($"guard let field{index} = {Decode(fields[index].Value, type.Name, $"fields.get({fieldLiteral}) ?? .nothing", helper: name, plain: true)} else {{ throw mismatch(path, {fieldLiteral}) }}");
+                }
+
+                var arguments = new List<string>();
+                for (var index = 0; index < fields.Count; index++) arguments.Add($"{Member(fields[index].Base)}: field{index}");
+                code.Line($"return {type.Name}({string.Join(", ", arguments)})");
+            }
+
+            code.Close();
+            code.Blank();
+            code.Line($"static func decode{type.Name}(_ value: GesValue) -> {type.Name}? {{ try? read{type.Name}(value, \"\") }}");
+            Conversions(code, type.Name, fields, name, true);
+        }
+
+        code.Blank();
+        code.Line("// The fields of a Record of the schema, or of a Map whose keys are all fields of it.");
+        code.Open("static func recordFields(_ value: GesValue, _ name: String, _ names: [String]) -> GesValueMap? {");
+        code.Line("guard let fields = value.asMap else { return nil }");
+        code.Line("if let type = value.customTypeName { return type == name ? fields : nil }");
+        code.Line("return known(fields, Set(names)) ? fields : nil");
+        code.Close();
+        code.Blank();
+        code.Open("static func mismatch(_ path: String, _ field: String? = nil) -> GesWireError {");
+        code.Line("GesWireError(code: GesWireError.typeMismatch, path: field.map { path.isEmpty ? $0 : path + \".\" + $0 } ?? path)");
+        code.Close();
         Helpers(code);
         code.Close();
     }

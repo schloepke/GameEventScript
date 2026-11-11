@@ -23,20 +23,25 @@ enum GesCSharpModelEmitter {
         code.line("using System;")
         code.line("using System.Collections.Generic;")
         code.line("using GameEventScript.Api;")
-        if options.bindings { code.line("using GameEventScript.Runtime.Values;") }
+        if options.bindings || options.values { code.line("using GameEventScript.Runtime.Values;") }
         code.blank()
         if !space.isEmpty {
             code.line("namespace " + space.joined(separator: "."))
             code.open("{")
         }
         let support = "__GesModels" + GesSchemaPlanner.hash(GesModelPlanner.header(layout))
+        let values = "__GesModelValues" + GesSchemaPlanner.hash(GesModelPlanner.header(layout))
         let qualifier = "global::" + space.map { $0 + "." }.joined()
         for type in layout.types {
-            try record(&code, type, access, support, qualifier, bindings: options.bindings)
+            try record(&code, type, access, support, qualifier, bindings: options.bindings, values: options.values ? values : nil)
             code.blank()
         }
         if options.bindings {
             bindings(&code, layout, access, qualifier)
+            code.blank()
+        }
+        if options.values {
+            valueConversions(&code, layout, values, qualifier)
             code.blank()
         }
         supportType(&code, support)
@@ -49,10 +54,13 @@ enum GesCSharpModelEmitter {
         return GesCSharpEmitter.keywords.contains(name) ? "@" + name : name
     }
 
-    private static func record(_ code: inout Code, _ type: GesModelType, _ access: String, _ support: String, _ qualifier: String, bindings: Bool) throws(GesGeneratorError) {
+    private static func record(_ code: inout Code, _ type: GesModelType, _ access: String, _ support: String, _ qualifier: String, bindings: Bool, values: String?)
+        throws(GesGeneratorError)
+    {
         let fields = GesModelPlanner.fields(type)
         var names: Names = reserved.map { ($0, "the inherited member " + $0) }
         if bindings { names += ["ToGesValue", "FromGesValue"].map { ($0, "the generated member " + $0) } }
+        if values != nil { names += ["ToValue", "FromValue"].map { ($0, "the generated member " + $0) } }
         if bindings && fields.contains(where: { $0.field.name == "fields" }) {
             throw GesGeneratorError(GesGeneratorError.nameCollision, "In '\(type.name)', the field fields and the generated field fields of its bindings share a name.")
         }
@@ -125,6 +133,18 @@ enum GesCSharpModelEmitter {
             code.line("/// <param name=\"value\">The value.</param>")
             code.line("/// <returns>The record, or null for another value.</returns>")
             code.line("public static \(type.name)? FromGesValue(in GesValue value) => value.ExternalValue is GesTypes.\(type.name)Value held ? held.Record : null;")
+        }
+        if let values {
+            code.blank()
+            code.line("/// <summary>Converts the record into a plain GES Record of its fields, as <see cref=\"GesSchemaValues\"/> decodes the bytes of the record.</summary>")
+            code.line("/// <returns>The Record.</returns>")
+            code.line("public GesValue ToValue() => \(values).Value(this);")
+            code.blank()
+            code.line("/// <summary>Reads a Record of this schema, or a Map of only its fields, as <see cref=\"GesSchemaValues\"/> encodes it.</summary>")
+            code.line("/// <param name=\"value\">The value.</param>")
+            code.line("/// <returns>The record.</returns>")
+            code.line("/// <exception cref=\"GesWireException\">A field does not convert: <c>wire.typeMismatch</c> at its path.</exception>")
+            code.line("public static \(type.name) FromValue(GesValue value) => \(values).Read\(type.name)(value, \"\");")
         }
         for field in fields { try declarations(&code, field.value, support, qualifier) }
         code.close()
@@ -382,8 +402,21 @@ enum GesCSharpModelEmitter {
     private static func literal(_ text: String) -> String { GesSchemaPlanner.literal(text, swift: false) }
 
     // Converts a native value to a GES value; nullable values pattern-match a numbered variable.
-    private static func encode(_ value: GesModelPlanValue, _ owner: String, _ expression: String, _ qualifier: String, _ depth: Int = 0, nullable: Bool = true) -> String {
-        if nullable && value.nullable { return "\(expression) is { } v\(depth) ? \(encode(value, owner, "v\(depth)", qualifier, depth + 1, nullable: false)) : GesValue.GesNothing()" }
+    // A plain value holds nested records as Records rather than as the external values of the bindings. Pattern variables
+    // start with `pattern`, so that statements in one scope keep them apart.
+    private static func encode(
+        _ value: GesModelPlanValue,
+        _ owner: String,
+        _ expression: String,
+        _ qualifier: String,
+        _ depth: Int = 0,
+        nullable: Bool = true,
+        plain: Bool = false,
+        pattern: String = "v"
+    ) -> String {
+        if nullable && value.nullable {
+            return "\(expression) is { } \(pattern)\(depth) ? \(encode(value, owner, "\(pattern)\(depth)", qualifier, depth + 1, nullable: false, plain: plain, pattern: pattern)) : GesValue.GesNothing()"
+        }
         switch value.kind {
         case .boolean: return "GesValue.GesBoolean(\(expression))"
         case .number where value.model.type == "Percentage": return "GesValue.GesPercentage(\(expression))"
@@ -393,10 +426,10 @@ enum GesCSharpModelEmitter {
         case .bytes: return "GesValue.GesBytes(\(expression))"
         case .tag where value.closedTag: return "Tag(Name(\(expression)))"
         case .tag: return "Tag(\(expression))"
-        case .list: return "List(\(expression), x\(depth) => \(encode(value.element!, owner, "x\(depth)", qualifier, depth + 1)))"
+        case .list: return "List(\(expression), x\(depth) => \(encode(value.element!, owner, "x\(depth)", qualifier, depth + 1, plain: plain, pattern: pattern)))"
         case .dice: return "Dice(\(expression))"
         case .point, .vector: return "\(expression).ToValue(\(unitName(value.model.unit)))"
-        case .schema: return "\(expression).ToGesValue()"
+        case .schema: return plain ? "\(expression).ToValue()" : "\(expression).ToGesValue()"
         case .union, .nothing, .flags: return "Value(\(expression))"
         }
     }
@@ -439,6 +472,73 @@ enum GesCSharpModelEmitter {
         if value.kind == .union || value.kind == .flags || value.closedTag { found.append(value) }
         if let element = value.element { conversions(element, &found) }
         for alternative in value.alternatives { conversions(alternative, &found) }
+    }
+
+    // The plain values of the models: a Record of each schema with its fields in declared order, as the value path decodes the
+    // bytes of a record, so that wire records read them and give them back.
+    private static func valueConversions(_ code: inout Code, _ layout: GesModelLayout, _ name: String, _ qualifier: String) {
+        code.line("/// <summary>The plain GES values of the models of this file, as <see cref=\"GesSchemaValues\"/> reads and writes them.</summary>")
+        code.line("internal static class \(name)")
+        code.open("{")
+        for (typeIndex, type) in layout.types.enumerated() {
+            let fields = GesModelPlanner.fields(type)
+            let record = qualifier + type.name
+            let names = type.name + "Fields"
+            let typeLiteral = literal(type.name)
+            if typeIndex > 0 { code.blank() }
+            code.line("private static readonly string[] \(names) = { \(fields.map { literal($0.field.name) }.joined(separator: ", ")) };")
+            code.blank()
+            // One statement per field, so that the pattern variables of optional fields stay apart.
+            code.line("internal static GesValue Value(\(record) record)")
+            code.open("{")
+            code.line("var values = new GesValue[\(fields.count)];")
+            for (index, field) in fields.enumerated() { code.line("values[\(index)] = \(encode(field.value, type.name, "record." + field.base, qualifier, plain: true, pattern: "value\(index)_"));") }
+            code.line("return GesValue.GesRecord(\(typeLiteral), \(names), values);")
+            code.close()
+            code.blank()
+            code.line("internal static \(record) Read\(type.name)(in GesValue value, string path)")
+            code.open("{")
+            code.line("var fields = RecordFields(value, \(typeLiteral), \(names)) ?? throw Mismatch(path);")
+            for (index, field) in fields.enumerated() {
+                let fieldLiteral = literal(field.field.name)
+                code.line("if (!\(decode(field.value, type.name, "Field(fields, \(fieldLiteral))", "out var field\(index)", qualifier))) throw Mismatch(Path(path, \(fieldLiteral)));")
+            }
+            code.line("return new \(record)(\(fields.indices.map { "field\($0)" }.joined(separator: ", ")));")
+            code.close()
+            code.blank()
+            code.line("private static bool Decode\(type.name)(in GesValue value, out \(record) result)")
+            code.open("{")
+            code.line("result = null!;")
+            code.line("var fields = RecordFields(value, \(typeLiteral), \(names));")
+            var conditions = ["fields is null"]
+            for (index, field) in fields.enumerated() {
+                conditions.append("!" + decode(field.value, type.name, "Field(fields, \(literal(field.field.name)))", "out var field\(index)", qualifier))
+            }
+            for (index, condition) in conditions.enumerated() {
+                code.line((index == 0 ? "if (" : "    || ") + condition + (index == conditions.count - 1 ? ") return false;" : ""))
+            }
+            code.line("result = new \(record)(\(fields.indices.map { "field\($0)" }.joined(separator: ", ")));")
+            code.line("return true;")
+            code.close()
+            var found: [GesModelPlanValue] = []
+            for field in fields { conversions(field.value, &found) }
+            for conversion in found { self.conversion(&code, type.name, qualifier, conversion, plain: true) }
+        }
+        code.blank()
+        code.line("// The fields of a Record of the schema, or of a Map whose keys are all fields of it.")
+        code.line("private static GesValueMap? RecordFields(in GesValue value, string name, string[] names)")
+        code.open("{")
+        code.line("var fields = value.AsMap();")
+        code.line("if (fields is null) return null;")
+        code.line("if (value.CustomTypeName is { } type) return type == name ? fields : null;")
+        code.line("return Known(fields, names) ? fields : null;")
+        code.close()
+        code.blank()
+        code.line("private static string Path(string path, string field) => path.Length == 0 ? field : path + \".\" + field;")
+        code.blank()
+        code.line("private static GesWireException Mismatch(string path) => new GesWireException(GesWireException.TypeMismatch, path);")
+        helpers(&code)
+        code.close()
     }
 
     // The catalog and constructor registry of the models, with an external value and a constructor per type.
@@ -566,7 +666,7 @@ enum GesCSharpModelEmitter {
         code.close()
     }
 
-    private static func conversion(_ code: inout Code, _ owner: String, _ qualifier: String, _ value: GesModelPlanValue) {
+    private static func conversion(_ code: inout Code, _ owner: String, _ qualifier: String, _ value: GesModelPlanValue, plain: Bool = false) {
         let name = qualifier + owner + "." + value.nested
         code.blank()
         if value.closedTag {
@@ -604,7 +704,7 @@ enum GesCSharpModelEmitter {
         }
         code.line("private static GesValue Value(\(name) value) => value switch")
         code.open("{")
-        for alternative in value.alternatives { code.line("\(name).\(alternative.label) alternative => \(encode(alternative, owner, "alternative.Value", qualifier)),") }
+        for alternative in value.alternatives { code.line("\(name).\(alternative.label) alternative => \(encode(alternative, owner, "alternative.Value", qualifier, plain: plain)),") }
         code.line("_ => GesValue.GesNothing()")
         code.close("};")
         code.blank()

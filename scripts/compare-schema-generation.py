@@ -115,10 +115,10 @@ SWIFT_GENERATED = ROOT / "implementation/swift/GameEventScriptConformance/Tests/
 GOLDENS = (
     (GOLDEN_FIXTURE.parent, [GOLDEN_FIXTURE.name], ["--root", "Fleet", "--param", "worldSize=2km"], "csharp", "GameEventScript.Tests.Generator.Generated", CSHARP_GENERATED / "Fleet.g.cs"),
     (GOLDEN_FIXTURE.parent, [GOLDEN_FIXTURE.name], ["--root", "Fleet", "--param", "worldSize=2km"], "swift", "Generated", SWIFT_GENERATED / "Fleet.swift"),
-    (ROLES, ROLE_FILES, ["--wire", "world", "--param", "worldWidth=2000m"], "csharp", "GameEventScript.Tests.Generator.Roles.Wire", CSHARP_GENERATED / "RolesWire.g.cs"),
-    (ROLES, ROLE_FILES, ["--model", "view"], "csharp", "GameEventScript.Tests.Generator.Roles.Model", CSHARP_GENERATED / "RolesModel.g.cs"),
-    (ROLES, ROLE_FILES, ["--wire", "world", "--param", "worldWidth=2000m"], "swift", "RolesWire", SWIFT_GENERATED / "RolesWire.swift"),
-    (ROLES, ROLE_FILES, ["--model", "view"], "swift", "RolesModel", SWIFT_GENERATED / "RolesModel.swift"),
+    (ROLES, ROLE_FILES, ["--wire", "world", "--param", "worldWidth=2000m", "--values"], "csharp", "GameEventScript.Tests.Generator.Roles.Wire", CSHARP_GENERATED / "RolesWire.g.cs"),
+    (ROLES, ROLE_FILES, ["--model", "view", "--values"], "csharp", "GameEventScript.Tests.Generator.Roles.Model", CSHARP_GENERATED / "RolesModel.g.cs"),
+    (ROLES, ROLE_FILES, ["--wire", "world", "--param", "worldWidth=2000m", "--values"], "swift", "RolesWire", SWIFT_GENERATED / "RolesWire.swift"),
+    (ROLES, ROLE_FILES, ["--model", "view", "--values"], "swift", "RolesModel", SWIFT_GENERATED / "RolesModel.swift"),
     (ROLES, ROLE_FILES, ["--model", "view", "--bindings"], "csharp", "GameEventScript.Tests.Generator.Roles.Bound", CSHARP_GENERATED / "RolesBound.g.cs"),
     (ROLES, ROLE_FILES, ["--model", "view", "--bindings"], "swift", "RolesBound", SWIFT_GENERATED / "RolesBound.swift"),
 )

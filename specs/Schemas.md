@@ -1165,8 +1165,8 @@ in declaration order, and `--model <group>` the model roots, which `layout` then
 and `generate` writes as [model types](#model-types). Exactly one of `--root`, `--all-roots`, `--wire` and `--model` is
 given, a run names one group, and a group without a root in the files fails with `generate.usage`; wire and model code go to
 separate files. A `--param` that no root reaches fails with `schema.unknownName`, and so does a reached parameter without a
-value; models reach no parameter, so every `--param` of a `--model` run fails, and `--values` and `--checked-exclusivity`
-are usage errors there.
+value; models reach no parameter, so every `--param` of a `--model` run fails, and `--checked-exclusivity` is a usage error
+there.
 
 `generate` takes the same roots and parameters and writes code in the language of `--language`,
 `csharp` (C# 9, for Unity) or `swift` (Swift 6, without Foundation); every CLI writes every language,
@@ -1265,8 +1265,26 @@ alternative's type. A list element type is named `<Field>Item`, so a closed Tag 
 - Model and wire types of one schema are separate types in separate files; no conversion between both forms is generated,
   since a client's model rarely has the shape of its wire roots. A program converts in its own code.
 
+With `--values`, every model type also converts to and from the plain value that the [value path](#record-values) uses
+for a record of its schema, so that wire records and models meet there; no code converts between them directly:
+
+- Swift `func toValue() -> GesValue` and `init(value: GesValue) throws(GesWireError)`; C# `GesValue ToValue()` and
+  `static T FromValue(GesValue value)`, which throws `GesWireException`.
+- The value is the Record that `GesSchemaValues` decodes from the record's bytes: a Record of the schema's name with every
+  field in declared order, nested records as Records, Lists, numbers with their units and integral values as integers,
+  Percentages, Tags for closed and open tags, Flags as the Map of their set members, Points and Vectors with their unit,
+  a union as its alternative's value and an absent optional or `:Nothing` alternative as `nothing`.
+- Reading takes a Record of the schema's name, whose other fields are ignored, or a Map whose keys are all fields of it,
+  and converts strictly as the [script bindings](#script-bindings) do. A field that does not convert fails with
+  `wire.typeMismatch` at its path, a value that is no such Record or Map at the empty path. A field that holds a nested
+  record, list or union reports itself.
+- So a wire record reads a model with `read(value:)` (C# `ReadValue`), failing as a write would for a value out of range
+  or a text too long, and a model reads a wire record's `toValue()` back. A model whose fields have no wire meaning, such
+  as an unbounded text, still has a value; only the wire side checks constraints.
+- `--values` is independent of `--bindings`; both may be given.
+
 A generated name that collides, such as a field named `id` beside a key named otherwise, fails with
-`generate.nameCollision`, as in wire code.
+`generate.nameCollision`, as in wire code. With `--values`, that includes `toValue` (C# `ToValue` and `FromValue`).
 
 ### Script bindings
 
@@ -1296,8 +1314,8 @@ Reflection, so managed code stripping under IL2CPP removes nothing it needs. Wit
   that does not convert, a missing required field or a key the type does not declare constructs `nothing`, like other domain
   failures. A schema field named `fields` collides with it: `generate.nameCollision`.
 - Wire types get no bindings: a wire record reuses its storage, so a script holding one would see it change with the next
-  read. `--values` converts wire records to and from GES values through their exact bytes, and both options apply to their
-  own code; `--bindings` without `--model` is a usage error, and the Generator rejects it with `generate.usage`.
+  read. `--values` converts wire records to and from GES values through their exact bytes and models to and from the same
+  plain values; `--bindings` without `--model` is a usage error, and the Generator rejects it with `generate.usage`.
 
 ### Model layout
 

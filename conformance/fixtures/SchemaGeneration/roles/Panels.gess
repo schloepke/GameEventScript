@@ -11,3 +11,21 @@ wire(panels) schema :Panel as {
 schema :Panel_Log as {
   lines: :List(:Text max 32) max 8
 }
+
+// A wire root of the group world and a model root of the group view: the model converts to and from the wire record through
+// plain values.
+wire(world) model(view) schema :Panel_Report as {
+  title: :Text max 16
+  status: :Tag(#ok, #warn, #fail)
+  load: :Quantity(W) between 0W and 1000W step 1W
+  spot: :Point(m) { x between 0m and 100m step 1cm, y between 0m and 100m step 1cm }
+  note: :Text max 8 optional
+  entries: :List(:Panel_Entry) max 4
+  reading: :Number integer between 0 and 99 | :Text max 4 | :Nothing
+  alarms: :Flags(#heat, #power)
+}
+
+schema :Panel_Entry as {
+  name: :Text max 8
+  level: :Percentage between 0% and 100% step 1%
+}

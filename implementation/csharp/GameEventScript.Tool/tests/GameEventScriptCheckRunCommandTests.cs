@@ -361,7 +361,7 @@ public sealed class GameEventScriptCheckRunCommandTests
         Assert.AreEqual(1, Run("schema", "layout", "view.gess", "--model", "view", "--param", "w=10m").ExitCode);
         Assert.AreEqual(2, Run("schema", "layout", "view.gess", "--model", "view", "--wire", "world").ExitCode);
         Assert.AreEqual(2, Run("schema", "layout", "view.gess", "--model", "view", "--root", "View").ExitCode);
-        Assert.AreEqual(2, Run("schema", "generate", "view.gess", "--model", "view", "--language", "swift", "--values").ExitCode);
+        Assert.AreEqual(2, Run("schema", "generate", "view.gess", "--model", "view", "--language", "swift", "--checked-exclusivity").ExitCode);
         Assert.AreEqual(2, Run("schema", "hash", "view.gess", "--model", "view").ExitCode);
         Write("bad.gess", "wire schema :Bad as { name: :Text }\n");
         var check = Run("schema", "check", "bad.gess");

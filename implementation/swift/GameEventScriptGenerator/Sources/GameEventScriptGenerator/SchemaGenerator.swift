@@ -68,15 +68,14 @@ public enum GesSchemaGenerator {
     /// - Parameters:
     ///   - set: The schemas.
     ///   - roots: The schemas to generate as models, in the order the header names them.
-    ///   - options: The language, namespace and visibility; `values` and `checkedExclusivity` concern wire code and must stay off.
+    ///   - options: The language, namespace and visibility; `values` adds plain GES values, and `checkedExclusivity` concerns
+    ///     wire code and must stay off.
     /// - Returns: The source text, ending with a line break.
     /// - Throws: `GesSchemaError` when a root is not declared, and `GesGeneratorError` when no root is given, a root is no
     ///   schema, an option concerns wire code, the namespace is invalid, two generated names collide, or a reached type has
     ///   no model type.
     public static func generateModels(_ set: GesSchemaSet, roots: [String], options: GesSchemaGenerateOptions) throws -> String {
-        if options.values || options.checkedExclusivity {
-            throw GesGeneratorError(GesGeneratorError.usage, "Values and checked exclusivity concern wire code, not models.")
-        }
+        if options.checkedExclusivity { throw GesGeneratorError(GesGeneratorError.usage, "Checked exclusivity concerns wire code, not models.") }
         let layout = try GesModelLayoutBuilder.build(set, roots: roots)
         return options.language == .csharp ? try GesCSharpModelEmitter.emit(layout, options) : try GesSwiftModelEmitter.emit(layout, options)
     }

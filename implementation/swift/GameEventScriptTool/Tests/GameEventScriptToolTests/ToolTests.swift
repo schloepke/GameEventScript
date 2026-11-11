@@ -153,7 +153,7 @@ final class ToolTests: XCTestCase {
         XCTAssertEqual(run(["schema", "layout", view, "--model", "view", "--param", "w=10m"]).code, 1)
         XCTAssertEqual(run(["schema", "layout", view, "--model", "view", "--wire", "world"]).code, 2)
         XCTAssertEqual(run(["schema", "layout", view, "--model", "view", "--root", "View"]).code, 2)
-        XCTAssertEqual(run(["schema", "generate", view, "--model", "view", "--language", "swift", "--values"]).code, 2)
+        XCTAssertEqual(run(["schema", "generate", view, "--model", "view", "--language", "swift", "--checked-exclusivity"]).code, 2)
         XCTAssertEqual(run(["schema", "hash", view, "--model", "view"]).code, 2)
         let bad = try file("bad.gess", "wire schema :Bad as { name: :Text }\n")
         let check = run(["schema", "check", bad])

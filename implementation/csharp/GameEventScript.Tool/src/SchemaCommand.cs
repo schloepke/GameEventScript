@@ -43,7 +43,7 @@ Options:
   --language <name>         The language that generate writes: csharp or swift.
   --namespace <A.B>         The namespace of the generated types; Swift declares it as nested enums.
   --access <level>          The visibility of the generated types: public (default) or internal.
-  --values                  Also convert generated records to and from GES values and messages.
+  --values                  Also convert generated records and models to and from GES values and messages.
   --checked-exclusivity     Keep the dynamic exclusivity checks of generated Swift classes.
   --bindings                Also offer generated model types to scripts as external types; only with --model.
   --check                   Compare the generated code with the output file instead of writing it; differences fail.
@@ -150,7 +150,7 @@ Options:
         if (command == "dump" && data is null) return UsageError("dump requires --data.");
         if (command is "layout" or "generate" && (roots.Count > 0 ? 1 : 0) + (allRoots ? 1 : 0) + (wireGroup is null && modelGroup is null ? 0 : 1) != 1)
             return UsageError($"{command} requires one of --root, --all-roots, --wire and --model.");
-        if (modelGroup is not null && (withValues || checkedExclusivity)) return UsageError("--values and --checked-exclusivity concern wire code, not --model.");
+        if (modelGroup is not null && checkedExclusivity) return UsageError("--checked-exclusivity concerns wire code, not --model.");
         if (bindings && modelGroup is null) return UsageError("--bindings concerns model code and requires --model.");
         if (command == "generate" && language is not ("csharp" or "swift")) return UsageError("generate requires --language csharp or --language swift.");
         if (access is not (null or "public" or "internal")) return UsageError("--access is public or internal.");

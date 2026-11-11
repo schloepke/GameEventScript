@@ -721,9 +721,9 @@ port.
 
 `WireRoots` and `ModelRoots` list the [roots of a group](Schemas.md#roles) in declaration order, empty when it has none.
 `ModelLayout` and `GenerateModels` write the [model layout](Schemas.md#model-layout) and the
-[model types](Schemas.md#model-types) of schema roots; a root that is no schema fails with `generate.usage`, and so do the
-wire-only options `Values` and `CheckedExclusivity`; `Generate` rejects the model-only option `Bindings` with
-`generate.usage`. A reached type without a model type fails with `generate.unsupported`.
+[model types](Schemas.md#model-types) of schema roots, where `Values` adds their plain values; a root that is no schema
+fails with `generate.usage`, and so does the wire-only option `CheckedExclusivity`; `Generate` rejects the model-only option
+`Bindings` with `generate.usage`. A reached type without a model type fails with `generate.unsupported`.
 
 ## Host construction and lifecycle API
 

@@ -301,7 +301,7 @@ struct GesAstOptimizer {
         }
     }
 
-    static func indeterminate(_ value: GesValue) -> Bool { [.nothing, .list, .map, .dice].contains(value.valueKind) }
+    static func indeterminate(_ value: GesValue) -> Bool { [.nothing, .list, .map, .dice, .bytes].contains(value.valueKind) }
 
     // Only a power of integers with an exactly representable result folds: the platform math library returns exactly
     // that value, so folding cannot differ from run-time evaluation. Every other power is an approximation.

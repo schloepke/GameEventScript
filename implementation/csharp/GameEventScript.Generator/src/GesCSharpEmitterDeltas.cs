@@ -193,7 +193,7 @@ internal static partial class GesCSharpEmitter
             case GesLayoutKind.Integer or GesLayoutKind.Quantized or GesLayoutKind.Float or GesLayoutKind.Tag:
                 code.Line($"if (__Wire{node}({a}, paths, at) != __Wire{node}({b}, paths, at)) return false;");
                 break;
-            case GesLayoutKind.Text:
+            case GesLayoutKind.Text or GesLayoutKind.Bytes:
                 code.Line($"if (!{Text(value, Prefix(a))}.SequenceEqual({Text(value, Prefix(b))})) return false;");
                 break;
             case GesLayoutKind.Point or GesLayoutKind.Vector:
@@ -312,8 +312,8 @@ internal static partial class GesCSharpEmitter
         var node = N(value.Node);
         switch (value.Encoding.Kind)
         {
-            case GesLayoutKind.Text:
-                code.Line($"Set{value.Base}Utf8({Text(value, Prefix(b))});");
+            case GesLayoutKind.Text or GesLayoutKind.Bytes:
+                code.Line($"Set{value.Base}{(value.Encoding.Kind == GesLayoutKind.Text ? "Utf8" : "")}({Text(value, Prefix(b))});");
                 break;
             case GesLayoutKind.Schema when value.IsClass:
                 code.Line($"{a}.CopyFrom({b});");
@@ -627,7 +627,7 @@ internal static partial class GesCSharpEmitter
             case GesLayoutKind.List when encoding.Keyed:
                 code.Line($"if (__WriteKeyed{node}(baseline, ref writer, paths, at)) {set} = true;");
                 break;
-            case GesLayoutKind.Text or GesLayoutKind.List:
+            case GesLayoutKind.Text or GesLayoutKind.Bytes or GesLayoutKind.List:
                 code.Line($"if (!__Same{node}(baseline, paths, at))");
                 code.Open("{");
                 Write(code, value, a);
@@ -743,7 +743,7 @@ internal static partial class GesCSharpEmitter
             case GesLayoutKind.List when encoding.Keyed:
                 code.Line($"__ReadKeyed{node}(baseline, ref reader, paths, at);");
                 break;
-            case GesLayoutKind.Text or GesLayoutKind.List:
+            case GesLayoutKind.Text or GesLayoutKind.Bytes or GesLayoutKind.List:
                 Read(code, value, a);
                 code.Line($"if (__Same{node}(baseline, paths, at)) {Throw("InvalidDelta", value)}");
                 break;
@@ -825,7 +825,7 @@ internal static partial class GesCSharpEmitter
 
     private static void SameHelper(GesSchemaPlanner.Code code, GesPlanValue value, string parameter, bool isClass)
     {
-        if (value.Encoding.Kind is GesLayoutKind.Text or GesLayoutKind.List)
+        if (value.Encoding.Kind is GesLayoutKind.Text or GesLayoutKind.Bytes or GesLayoutKind.List)
         {
             code.Blank();
             code.Line($"private {(isClass ? "" : "readonly ")}bool __Same{N(value.Node)}({parameter} baseline, string[] paths, int at)");

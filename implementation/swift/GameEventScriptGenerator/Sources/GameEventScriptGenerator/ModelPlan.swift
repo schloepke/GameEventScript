@@ -89,6 +89,7 @@ enum GesModelPlanner {
         case .number where value.model.type == "Percentage": ("Percentage", "none", nil)
         case .number: ("Float", value.model.unit, nil)
         case .text: ("Text", "none", nil)
+        case .bytes: ("Bytes", "none", nil)
         case .tag: ("Tag", "none", nil)
         case .list: ("List", "none", nil)
         case .dice: ("Dice", "none", nil)
@@ -130,6 +131,9 @@ enum GesModelPlanner {
             }
         case .text:
             text += ":Text"
+            if let max = value.max { text += " max \(max)" }
+        case .bytes:
+            text += ":Bytes"
             if let max = value.max { text += " max \(max)" }
         case .list:
             text += ":List("

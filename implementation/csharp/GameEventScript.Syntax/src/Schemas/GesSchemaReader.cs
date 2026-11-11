@@ -281,7 +281,8 @@ internal sealed class GesSchemaSourceReader
                 return new GesSchemaTypeSyntax { Kind = GesSchemaTypeKind.Tag, Tags = tags, Max = tags is null ? ReadMax() : null, Offset = offset };
             }
             case GesSchemaTypeKind.Text:
-                return new GesSchemaTypeSyntax { Kind = GesSchemaTypeKind.Text, Max = ReadMax(), Offset = offset };
+            case GesSchemaTypeKind.Bytes:
+                return new GesSchemaTypeSyntax { Kind = name == "Text" ? GesSchemaTypeKind.Text : GesSchemaTypeKind.Bytes, Max = ReadMax(), Offset = offset };
             case GesSchemaTypeKind.List:
             {
                 GesSchemaTypeSyntax[]? element = null;

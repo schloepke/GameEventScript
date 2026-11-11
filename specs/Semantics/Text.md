@@ -158,6 +158,8 @@ of source quoting.
 | empty Map | `[:]` |
 | Dice containing rolls `6`, `3`, `1` | `:Dice[6, 3, 1]` |
 | empty Dice | `:Dice[]` |
+| Bytes `a0`, `b7`, `0b` | `:Bytes("a0b70b")` |
+| empty Bytes | `:Bytes("")` |
 | Vector with components `10`, `20`, `0` | `:Vector(x: 10, y: 20, z: 0)` |
 | Point with components `1m`, `2m`, `0m` | `:Point(x: 1m, y: 2m, z: 0m)` |
 
@@ -218,7 +220,7 @@ are returned as Text and are not recursively parsed a second time.
 
 Recognized data literals are `nothing`, lowercase `true`/`false`, Number,
 Percentage, scalar Quantity, quoted Text, `#` Tag names following the source
-name grammar, Dice result literals, Vector/Point data forms, and recursively
+name grammar, Dice result literals, Bytes literals, Vector/Point data forms, and recursively
 nested Lists/Maps, and the explicit data forms below. A Map recognizes bare `LowerName`
 keys or quoted Text keys. Quoted keys follow the same single- or double-quoted
 Text rules as values, including doubled delimiters. Map key syntax inside Text
@@ -267,6 +269,15 @@ Within the parse resource bounds, `parse (value as :Text)` reconstructs the same
 Dice value and kind for positive Int32 rolls. The guarantee also applies to Dice
 values nested inside Lists and Maps.
 Dice nesting and entries participate in the shared
+[literal parsing limits](../HostRuntime.md#literal-parsing-limits).
+
+Bytes recognition uses `:Bytes[...]` with unsigned, unitless integers from 0 to
+255 in [numeric text](Numbers.md#text-and-number-conversion), separated by
+commas, and the explicit form `:Bytes("…")` with
+[hexadecimal pairs](../Language.md#bytes). Both use the runtime whitespace rules
+below; invalid entries or text fail recognition of the complete input.
+`parse (value as :Text)` reconstructs the same Bytes, also nested inside Lists
+and Maps, and their entries participate in the shared
 [literal parsing limits](../HostRuntime.md#literal-parsing-limits).
 
 ASCII space/tab and `LF`, `CRLF`, or `CR` may surround a literal and separate

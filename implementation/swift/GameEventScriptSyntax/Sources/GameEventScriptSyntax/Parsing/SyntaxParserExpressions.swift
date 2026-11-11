@@ -639,13 +639,13 @@ extension GesSyntaxParser {
     // A type name starts a data form or a constructor call.
     func typeExpression() throws -> Expression {
         let start = index
-        // `:Dice[...]` and `:List[...]` are data forms that own their type token.
-        if current.text == ":Dice" || current.text == ":List", peekKind() == .leftBracket {
-            startNode(current.text == ":Dice" ? .diceLiteralExpression : .collectionFactoryExpression)
+        // `:Dice[...]`, `:Bytes[...]` and `:List[...]` are data forms that own their type token.
+        if current.text == ":Dice" || current.text == ":Bytes" || current.text == ":List", peekKind() == .leftBracket {
+            startNode(current.text == ":Dice" ? .diceLiteralExpression : current.text == ":Bytes" ? .bytesLiteralExpression : .collectionFactoryExpression)
             let type = try typeNameCore()
             newlines()
             advance()
-            return finishNode(type == "dice" ? try diceLiteral(start) : try generatedList())
+            return finishNode(type == "dice" || type == "bytes" ? try diceLiteral(start, bytes: type == "bytes") : try generatedList())
         }
         startNode(.typeConstructorExpression)
         return finishNode(try typeConstructor(start))
@@ -722,12 +722,18 @@ extension GesSyntaxParser {
         return node(start)
     }
 
-    func diceLiteral(_ start: Int) throws -> Expression {
+    // A Dice or Bytes literal reads as a constructor over a list of its values.
+    func diceLiteral(_ start: Int, bytes: Bool) throws -> Expression {
         newlines()
         if currentKind != .rightBracket {
             repeat {
                 newlines()
-                try positiveInteger()
+                if bytes {
+                    guard currentKind == .float, GesNumberText.isByte(current.text) else { throw failure("Expected an integer literal from 0 to 255.") }
+                    advance()
+                } else {
+                    try positiveInteger()
+                }
                 newlines()
             } while match(.comma)
         }

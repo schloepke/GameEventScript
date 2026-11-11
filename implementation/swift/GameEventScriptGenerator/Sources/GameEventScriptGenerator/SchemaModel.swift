@@ -29,7 +29,7 @@ final class GesModelField {
 }
 
 enum GesModelKind {
-    case boolean, number, tag, text, list, dice, point, vector, schema, union, nothing
+    case boolean, number, tag, text, bytes, list, dice, point, vector, schema, union, nothing
 }
 
 final class GesModelValue {
@@ -132,6 +132,9 @@ enum GesModelLayoutBuilder {
         case .text:
             value.kind = .text
             value.max = type.max
+        case .bytes:
+            value.kind = .bytes
+            value.max = type.max
         case .list where !type.element.isEmpty:
             value.kind = .list
             value.max = type.max
@@ -213,7 +216,7 @@ enum GesModelLayoutJson {
         case .tag:
             json.strings("tags", value.tags)
             optional(&json, "max", value.max)
-        case .text:
+        case .text, .bytes:
             optional(&json, "max", value.max)
         case .list:
             optional(&json, "max", value.max)
@@ -252,6 +255,7 @@ enum GesModelLayoutJson {
         case .number: "number"
         case .tag: "tag"
         case .text: "text"
+        case .bytes: "bytes"
         case .list: "list"
         case .dice: "dice"
         case .point: "point"

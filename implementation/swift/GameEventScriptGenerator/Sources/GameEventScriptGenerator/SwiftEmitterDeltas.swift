@@ -146,7 +146,7 @@ extension GesSwiftEmitter {
     }
 
     // The UTF-8 storage of a Text in `owner`, "self" or another record.
-    private static func bytes(_ value: GesPlanValue, _ owner: String) -> String { "\(owner).\(GesSchemaPlanner.camel(value.base))UTF8" }
+    private static func bytes(_ value: GesPlanValue, _ owner: String) -> String { storage(value, owner) }
 
     // Returns false from the enclosing function when the wire values of a and b differ.
     private static func same(_ code: inout Code, _ value: GesPlanValue, _ a: String, _ b: String, _ ownerA: String, _ ownerB: String) {
@@ -156,7 +156,7 @@ extension GesSwiftEmitter {
             code.line("if \(a) != \(b) { return false }")
         case .integer, .quantized, .float, .tag:
             code.line("if try Self.__wire\(node)(\(a), paths, at) != Self.__wire\(node)(\(b), paths, at) { return false }")
-        case .text:
+        case .text, .bytes:
             code.line("if \(bytes(value, ownerA)) != \(bytes(value, ownerB)) { return false }")
         case .point, .vector:
             for axis in value.axes { same(&code, axis, a + "." + member(axis.base), b + "." + member(axis.base), ownerA, ownerB) }
@@ -250,7 +250,7 @@ extension GesSwiftEmitter {
     private static func copy(_ code: inout Code, _ value: GesPlanValue, _ a: String, _ b: String, _ ownerB: String) {
         let node = String(value.node)
         switch value.encoding.kind {
-        case .text:
+        case .text, .bytes:
             code.line("\(bytes(value, "self")).removeAll(keepingCapacity: true)")
             code.line("\(bytes(value, "self")).append(contentsOf: \(bytes(value, ownerB)))")
         case .schema where value.isClass:
@@ -510,7 +510,7 @@ extension GesSwiftEmitter {
             code.close()
         case .list where encoding.keyed:
             code.line("if try __writeKeyed\(node)(baseline, &writer, paths, at) { \(set) = true }")
-        case .text, .list:
+        case .text, .bytes, .list:
             code.open("if !(try __same\(node)(baseline, paths, at)) {")
             write(&code, value, a)
             code.line("\(set) = true")
@@ -615,7 +615,7 @@ extension GesSwiftEmitter {
             code.line(")")
         case .list where encoding.keyed:
             code.line("try __readKeyed\(node)(baseline, &reader, paths, at)")
-        case .text, .list:
+        case .text, .bytes, .list:
             read(&code, value, a)
             code.line("if try __same\(node)(baseline, paths, at) { \(fail("invalidDelta", value)) }")
         case .point, .vector:
@@ -680,7 +680,7 @@ extension GesSwiftEmitter {
     }
 
     private static func sameHelper(_ code: inout Code, _ value: GesPlanValue, _ type: String) {
-        if value.encoding.kind == .text || value.encoding.kind == .list {
+        if value.encoding.kind == .text || value.encoding.kind == .bytes || value.encoding.kind == .list {
             code.blank()
             code.open("private func __same\(value.node)(_ baseline: \(type), _ paths: [String], _ at: Int) throws(GesWireError) -> Bool {")
             same(&code, value, target(value.base), other("baseline", value.base), "self", "baseline")

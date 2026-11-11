@@ -221,7 +221,7 @@ public ref struct GesSchemaWriter
     public void WriteText(GesSchemaField field, ReadOnlySpan<byte> utf8)
     {
         ref readonly var node = ref Current(field);
-        if (node.Kind != GesSchemaNodeKind.Text) throw new GesWireException(GesWireException.TypeMismatch, node.Path);
+        if (node.Kind != GesSchemaNodeKind.Text || node.IsBytes) throw new GesWireException(GesWireException.TypeMismatch, node.Path);
         if (utf8.Length > node.MaxCount) throw new GesWireException(GesWireException.TooLong, node.Path);
         if (node.IsTagText)
         {
@@ -231,6 +231,20 @@ public ref struct GesSchemaWriter
         Presence(in node);
         Put((ulong)utf8.Length, node.Width);
         _bits.WriteBytes(utf8);
+        Leave(node.After);
+    }
+
+    /// <summary>Writes a <c>:Bytes max n</c> field.</summary>
+    /// <param name="field">The field's handle.</param>
+    /// <param name="bytes">The bytes.</param>
+    public void WriteBytes(GesSchemaField field, ReadOnlySpan<byte> bytes)
+    {
+        ref readonly var node = ref Current(field);
+        if (node.Kind != GesSchemaNodeKind.Text || !node.IsBytes) throw new GesWireException(GesWireException.TypeMismatch, node.Path);
+        if (bytes.Length > node.MaxCount) throw new GesWireException(GesWireException.TooLong, node.Path);
+        Presence(in node);
+        Put((ulong)bytes.Length, node.Width);
+        _bits.WriteBytes(bytes);
         Leave(node.After);
     }
 
@@ -478,12 +492,43 @@ public ref struct GesSchemaReader
     public int ReadText(GesSchemaField field, Span<byte> destination)
     {
         ref readonly var node = ref Enter(field, GesSchemaNodeKind.Text);
+        if (node.IsBytes) throw new GesWireException(GesWireException.TypeMismatch, node.Path);
         var count = Get(node.Width, node.Path);
         if (count > (ulong)node.MaxCount) throw new GesWireException(GesWireException.InvalidCount, node.Path);
         if ((long)count > destination.Length) throw new GesWireException(GesWireException.BufferTooSmall, node.Path);
         _bits.Require((long)count * 8, node.Path);
         ReadTextBytes(in node, destination.Slice(0, (int)count));
         return (int)count;
+    }
+
+    /// <summary>Reads a <c>:Bytes max n</c> field into a caller's buffer.</summary>
+    /// <param name="field">The field's handle.</param>
+    /// <param name="destination">The buffer; its maximum is the field's <c>max</c>.</param>
+    /// <returns>The number of bytes.</returns>
+    public int ReadBytes(GesSchemaField field, Span<byte> destination)
+    {
+        ref readonly var node = ref Enter(field, GesSchemaNodeKind.Text);
+        if (!node.IsBytes) throw new GesWireException(GesWireException.TypeMismatch, node.Path);
+        var count = Get(node.Width, node.Path);
+        if (count > (ulong)node.MaxCount) throw new GesWireException(GesWireException.InvalidCount, node.Path);
+        if ((long)count > destination.Length) throw new GesWireException(GesWireException.BufferTooSmall, node.Path);
+        _bits.Require((long)count * 8, node.Path);
+        _bits.ReadBytes(destination.Slice(0, (int)count), node.Path);
+        Leave(node.After);
+        return (int)count;
+    }
+
+    // Allocates only what the data holds, for the value path.
+    internal byte[] ReadBytesValue(GesSchemaField field)
+    {
+        ref readonly var node = ref Enter(field, GesSchemaNodeKind.Text);
+        var count = Get(node.Width, node.Path);
+        if (count > (ulong)node.MaxCount) throw new GesWireException(GesWireException.InvalidCount, node.Path);
+        _bits.Require((long)count * 8, node.Path);
+        var bytes = new byte[(int)count];
+        _bits.ReadBytes(bytes, node.Path);
+        Leave(node.After);
+        return bytes;
     }
 
     // Allocates only what the data holds, for the rare paths that build a string.

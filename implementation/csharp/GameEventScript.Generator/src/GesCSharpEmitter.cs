@@ -151,7 +151,7 @@ internal static partial class GesCSharpEmitter
     }
 
     // Whether an optional value also has a nullable view: a value type without storage.
-    private static bool Plain(GesPlanValue value) => !value.IsClass && value.Encoding.Kind is not (GesLayoutKind.Union or GesLayoutKind.Text or GesLayoutKind.List);
+    private static bool Plain(GesPlanValue value) => !value.IsClass && value.Encoding.Kind is not (GesLayoutKind.Union or GesLayoutKind.Text or GesLayoutKind.Bytes or GesLayoutKind.List);
 
     // The nested types and members a value declares, for the collision check.
     private static void Nested(GesPlanValue value, List<(string, string)> names, string field)
@@ -163,6 +163,9 @@ internal static partial class GesCSharpEmitter
             case GesLayoutKind.Text:
                 names.Add((value.Base + "Utf8", "the UTF-8 bytes of " + field));
                 names.Add(("Set" + value.Base + "Utf8", "the UTF-8 setter of " + field));
+                break;
+            case GesLayoutKind.Bytes:
+                names.Add(("Set" + value.Base, "the setter of " + field));
                 break;
             case GesLayoutKind.List:
                 if (value.Item is not null) names.Add((value.Item.Name, "the element type of " + field));
@@ -193,6 +196,7 @@ internal static partial class GesCSharpEmitter
         GesLayoutKind.Quantized or GesLayoutKind.Float => "double",
         GesLayoutKind.Schema => value.Encoding.Schema,
         GesLayoutKind.Text => "string",
+        GesLayoutKind.Bytes => "byte[]",
         GesLayoutKind.Point => "GesPoint",
         GesLayoutKind.Vector => "GesVector",
         GesLayoutKind.List => $"List<{ElementName(value)}>",
@@ -208,6 +212,27 @@ internal static partial class GesCSharpEmitter
         GesLayoutKind.List => $" = new List<{ElementName(value)}>();",
         _ => ";"
     };
+
+    // A Bytes value grows its storage as a Text does, without UTF-8 conveniences.
+    private static void BytesMember(GesSchemaPlanner.Code code, GesPlanValue value, string summary)
+    {
+        var storage = "__" + value.Base;
+        var max = value.Encoding.MaxCount.ToString(CultureInfo.InvariantCulture);
+        code.Line($"private byte[] {storage} = Array.Empty<byte>();");
+        code.Line($"private int {storage}Length;");
+        code.Blank();
+        code.Line($"/// <summary>{summary}, at most {max} bytes.</summary>");
+        code.Line($"public ReadOnlySpan<byte> {value.Base} => new ReadOnlySpan<byte>({storage}, 0, {storage}Length);");
+        code.Blank();
+        code.Line($"/// <summary>Sets {summary.Substring(0, 1).ToLowerInvariant() + summary.Substring(1)}; its length is checked when the record is written.</summary>");
+        code.Line("/// <param name=\"bytes\">The bytes.</param>");
+        code.Line($"public void Set{value.Base}(ReadOnlySpan<byte> bytes)");
+        code.Open("{");
+        code.Line($"if ({storage}.Length < bytes.Length) Array.Resize(ref {storage}, Math.Max(bytes.Length, Math.Min({max}, {storage}.Length * 2)));");
+        code.Line($"bytes.CopyTo({storage});");
+        code.Line($"{storage}Length = bytes.Length;");
+        code.Close();
+    }
 
     private static void Members(GesSchemaPlanner.Code code, GesPlanField field, bool first)
     {
@@ -248,6 +273,12 @@ internal static partial class GesCSharpEmitter
     // Declares the member that stores a value, with its storage and conveniences.
     private static void Member(GesSchemaPlanner.Code code, GesPlanValue value, string summary)
     {
+        if (value.Encoding.Kind == GesLayoutKind.Bytes)
+        {
+            BytesMember(code, value, summary);
+            return;
+        }
+
         if (value.Encoding.Kind != GesLayoutKind.Text)
         {
             code.Line($"/// <summary>{summary}{Description(value)}.</summary>");
@@ -488,11 +519,12 @@ internal static partial class GesCSharpEmitter
                 code.Line($"if ((ulong){target} > {Unsigned((ulong)encoding.Tags.Count - 1)}) {Throw("UnknownTag", value)}");
                 code.Line($"writer.Write((ulong){target}, {width});");
                 break;
-            case GesLayoutKind.Text:
+            case GesLayoutKind.Text or GesLayoutKind.Bytes:
                 code.Open("{");
                 code.Line($"var text = new ReadOnlySpan<byte>(__{value.Base}, 0, __{value.Base}Length);");
                 code.Line($"if (text.Length > {max}) {Throw("TooLong", value)}");
-                code.Line(encoding.TagName ? $"if (!GesWireRules.IsTagName(text)) {Throw("InvalidTag", value)}" : $"if (!GesWireRules.IsValidUtf8(text)) {Throw("InvalidText", value)}");
+                if (encoding.Kind == GesLayoutKind.Text)
+                    code.Line(encoding.TagName ? $"if (!GesWireRules.IsTagName(text)) {Throw("InvalidTag", value)}" : $"if (!GesWireRules.IsValidUtf8(text)) {Throw("InvalidText", value)}");
                 code.Line($"writer.Write((ulong)text.Length, {width});");
                 code.Line("writer.WriteBytes(text);");
                 code.Close();
@@ -572,7 +604,7 @@ internal static partial class GesCSharpEmitter
                 code.Line($"{target} = value;");
                 code.Close();
                 break;
-            case GesLayoutKind.Text:
+            case GesLayoutKind.Text or GesLayoutKind.Bytes:
                 var storage = "__" + value.Base;
                 code.Open("{");
                 code.Line($"var count = (int)reader.Read({width}, {Path(value)});");
@@ -581,7 +613,8 @@ internal static partial class GesCSharpEmitter
                 code.Line($"if ({storage}.Length < count) Array.Resize(ref {storage}, Math.Max(count, Math.Min({max}, {storage}.Length * 2)));");
                 code.Line($"var text = new Span<byte>({storage}, 0, count);");
                 code.Line($"reader.ReadBytes(text, {Path(value)});");
-                code.Line(encoding.TagName ? $"if (!GesWireRules.IsTagName(text)) {Throw("InvalidTag", value)}" : $"if (!GesWireRules.IsValidUtf8(text)) {Throw("InvalidText", value)}");
+                if (encoding.Kind == GesLayoutKind.Text)
+                    code.Line(encoding.TagName ? $"if (!GesWireRules.IsTagName(text)) {Throw("InvalidTag", value)}" : $"if (!GesWireRules.IsValidUtf8(text)) {Throw("InvalidText", value)}");
                 code.Line($"{storage}Length = count;");
                 code.Close();
                 break;

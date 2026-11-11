@@ -1042,7 +1042,8 @@ internal sealed partial class GesSyntaxParser
             return FinishNode(ParseTypeConstructorExpressionCore());
         }
 
-        if (Current.Kind == TypeName && string.Equals(Current.Text, ":Dice", StringComparison.Ordinal) && IsNextSignificantToken(LeftBracket)) return ParseDiceLiteralExpression();
+        if (Current.Kind == TypeName && string.Equals(Current.Text, ":Dice", StringComparison.Ordinal) && IsNextSignificantToken(LeftBracket)) return ParseDiceLiteralExpression(bytes: false);
+        if (Current.Kind == TypeName && string.Equals(Current.Text, ":Bytes", StringComparison.Ordinal) && IsNextSignificantToken(LeftBracket)) return ParseDiceLiteralExpression(bytes: true);
 
         if (IsWord("from"))
         {
@@ -1243,10 +1244,10 @@ internal sealed partial class GesSyntaxParser
         return Node(depth, startToken);
     }
 
-    // A Dice literal reads as a constructor over a list of its values.
-    private Expression ParseDiceLiteralExpression()
+    // A Dice or Bytes literal reads as a constructor over a list of its values.
+    private Expression ParseDiceLiteralExpression(bool bytes)
     {
-        _tree.StartNode(GesSyntaxNodeKind.DiceLiteralExpression);
+        _tree.StartNode(bytes ? GesSyntaxNodeKind.BytesLiteralExpression : GesSyntaxNodeKind.DiceLiteralExpression);
         Advance();
         var startToken = PreviousIndex;
         SkipNewLines();
@@ -1259,7 +1260,8 @@ internal sealed partial class GesSyntaxParser
             while (true)
             {
                 var token = Expect(GesTokenKind.Float);
-                if (!GesNumberText.IsPositiveInt32(token.Text)) throw new ParseException("Dice literals require positive Int32 numeric literals.", token);
+                if (bytes ? !GesNumberText.IsByte(token.Text) : !GesNumberText.IsPositiveInt32(token.Text))
+                    throw new ParseException(bytes ? "Bytes literals require integer literals from 0 to 255." : "Dice literals require positive Int32 numeric literals.", token);
                 depth = 1;
                 SkipNewLines();
                 if (!Match(Comma)) break;

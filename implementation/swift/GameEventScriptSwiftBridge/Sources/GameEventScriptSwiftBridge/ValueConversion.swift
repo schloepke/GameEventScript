@@ -148,13 +148,21 @@ extension Optional: GesBridgeValueConvertible where Wrapped: GesBridgeValueConve
 }
 
 extension Array: GesBridgeValueConvertible where Element: GesBridgeValueConvertible {
-    /// Encodes each element in order as a GES List, propagating element conversion errors.
-    public func toGesValue() throws -> GesValue { .list(try map { try $0.toGesValue() }) }
+    /// Encodes `[UInt8]` as GES Bytes and every other array element by element, in order, as a GES List, propagating
+    /// element conversion errors.
+    public func toGesValue() throws -> GesValue {
+        if let bytes = self as? [UInt8] { return .bytes(bytes) }
+        return .list(try map { try $0.toGesValue() })
+    }
 
-    /// Decodes a unitless List in order using strict element conversion.
+    /// Decodes GES Bytes into `[UInt8]` and a List in order into every other array, using strict element conversion.
     ///
-    /// - Throws: A type mismatch for non-Lists, or any element conversion error.
+    /// - Throws: A type mismatch for a value of another kind, or any element conversion error.
     public static func fromGesValue(_ value: GesValue) throws -> Self {
+        if Element.self == UInt8.self {
+            try requireKind(value, .bytes)
+            return value.bytesValue! as! Self
+        }
         try requireKind(value, .list)
         return try value.listValue!.map(Element.fromGesValue)
     }

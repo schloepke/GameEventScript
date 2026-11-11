@@ -37,7 +37,10 @@ private func quoted(_ text: String) -> String { StringLiteralExprSyntax(content:
 private func inferredType(_ type: TypeSyntax) -> String? {
     if let optional = type.as(OptionalTypeSyntax.self) { return inferredType(optional.wrappedType) }
     if let optional = type.as(ImplicitlyUnwrappedOptionalTypeSyntax.self) { return inferredType(optional.wrappedType) }
-    if type.is(ArrayTypeSyntax.self) { return "List" }
+    if let array = type.as(ArrayTypeSyntax.self) {
+        let element = array.element.trimmedDescription
+        return element == "UInt8" || element == "Swift.UInt8" ? "Bytes" : "List"
+    }
     if type.is(DictionaryTypeSyntax.self) { return "Map" }
     let name: String
     let generics: GenericArgumentClauseSyntax?
@@ -54,7 +57,7 @@ private func inferredType(_ type: TypeSyntax) -> String? {
     case "Bool": return "Boolean"
     case "String": return "Text"
     case "Double", "Float", "Int", "Int8", "Int16", "Int32", "Int64", "UInt", "UInt8", "UInt16", "UInt32", "UInt64": return "Number"
-    case "Array": return "List"
+    case "Array": return generics?.arguments.first.map { ["UInt8", "Swift.UInt8"].contains($0.argument.trimmedDescription) } == true ? "Bytes" : "List"
     case "Dictionary": return "Map"
     case "Optional": return generics?.arguments.first.flatMap { inferredType($0.argument) }
     default: return nil

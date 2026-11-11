@@ -10,7 +10,7 @@
     case guardedChoiceExpression, choiceBranch, binaryExpression, unaryExpression, betweenExpression, membershipExpression, typeOperationExpression
     case dicePattern, powerExpression, seriesExpression, intrinsicCallExpression, memberAccessExpression, collectionAccessExpression, collectionSelector
     case objectPattern, objectPatternEntry, parenthesizedExpression, literalExpression, nameExpression, messageExpression, callExpression
-    case handlerLiteralExpression, listLiteralExpression, diceLiteralExpression, collectionFactoryExpression, generatedCollectionExpression
+    case handlerLiteralExpression, listLiteralExpression, diceLiteralExpression, bytesLiteralExpression, collectionFactoryExpression, generatedCollectionExpression
     case mapLiteralExpression, mapEntry, randomExpression, rangeExpression, seededRandomExpression, diceExpression, extensionCallExpression
     case typeConstructorExpression, clampExpression, variadicExpression, error
 }

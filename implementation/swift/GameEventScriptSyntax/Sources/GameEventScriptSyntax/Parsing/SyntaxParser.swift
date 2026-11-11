@@ -303,7 +303,7 @@
         return advance().text
     }
 
-    static let builtinTypeNames: Set<String> = ["Nothing", "Number", "Boolean", "Percentage", "Vector", "Point", "Series", "Tag", "Text", "List", "Range", "Message", "Handler", "Map", "Dice", "Record"]
+    static let builtinTypeNames: Set<String> = ["Nothing", "Number", "Boolean", "Percentage", "Vector", "Point", "Series", "Tag", "Text", "List", "Range", "Message", "Handler", "Map", "Dice", "Bytes", "Record"]
 
     static let quantityUnitKinds: Set<GesTokenKind> = [.identifier, .message, .operatorDivide, .operatorPower, .superscriptInteger, .float]
 

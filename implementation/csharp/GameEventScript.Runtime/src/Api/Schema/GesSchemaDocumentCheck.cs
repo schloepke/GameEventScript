@@ -121,6 +121,10 @@ internal sealed class GesSchemaDocumentCheck
                 Require(value, value.Kind == GesDocumentNodeKind.Text);
                 if (type.Max is { } textMax && Encoding.UTF8.GetByteCount(value.Name) > textMax) throw new Failure(OutOfRange, value.Start);
                 break;
+            case GesSchemaTypeKind.Bytes:
+                Require(value, value.Kind == GesDocumentNodeKind.Bytes);
+                if (type.Max is { } bytesMax && value.Bytes.Length > bytesMax) throw new Failure(OutOfRange, value.Start);
+                break;
             case GesSchemaTypeKind.List:
                 Require(value, value.Kind == GesDocumentNodeKind.List);
                 if (type.Max is { } listMax && value.Children.Length > listMax) throw new Failure(OutOfRange, value.Start);

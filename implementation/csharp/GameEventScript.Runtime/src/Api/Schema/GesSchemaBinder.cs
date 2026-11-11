@@ -106,6 +106,8 @@ internal struct GesSchemaNode
     internal bool HasRange;
     internal bool IsTagBit;
     internal bool IsTagText;
+    // A :Bytes max n: a Text on the wire whose bytes need not be UTF-8.
+    internal bool IsBytes;
     internal int Width;
     internal int Next;
     internal int After;
@@ -663,9 +665,10 @@ internal static class GesSchemaBinder
                 node.MaxIndex = (ulong)type.Tags.Length - 1;
                 node.Width = BitLength(node.MaxIndex);
                 break;
-            case GesSchemaTypeKind.Text:
-                if (type.Max is not { } textMax) throw scope.Error(Code.NotEncodable, type.Offset, "A Text without max has no hard limit.");
+            case GesSchemaTypeKind.Text or GesSchemaTypeKind.Bytes:
+                if (type.Max is not { } textMax) throw scope.Error(Code.NotEncodable, type.Offset, $"A {type.Kind} without max has no hard limit.");
                 node.Kind = GesSchemaNodeKind.Text;
+                node.IsBytes = type.Kind == GesSchemaTypeKind.Bytes;
                 node.MaxCount = textMax;
                 node.Width = BitLength((ulong)textMax);
                 break;
@@ -767,8 +770,8 @@ internal static class GesSchemaBinder
             case GesSchemaTypeKind.Tag:
                 if (type.Tags is null && type.Max is null) throw scope.Error(Code.NotEncodable, type.Offset, "A Tag without a set or max has no hard limit.");
                 break;
-            case GesSchemaTypeKind.Text:
-                if (type.Max is null) throw scope.Error(Code.NotEncodable, type.Offset, "A Text without max has no hard limit.");
+            case GesSchemaTypeKind.Text or GesSchemaTypeKind.Bytes:
+                if (type.Max is null) throw scope.Error(Code.NotEncodable, type.Offset, $"A {type.Kind} without max has no hard limit.");
                 break;
             case GesSchemaTypeKind.List:
                 if (type.Element is not { } element || type.Max is null) throw scope.Error(Code.NotEncodable, type.Offset, "A List without element type and max has no hard limit.");

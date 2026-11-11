@@ -164,18 +164,18 @@ public static class GesSchemaDelta
         source.Require((long)count * 8, node.Path);
         if (write) target.PutBits(count, node.Width);
         var text = new Utf8Scanner();
-        var valid = !node.IsTagText || count > 0;
+        var valid = node.IsBytes || !node.IsTagText || count > 0;
         for (var index = 0UL; index < count; index++)
         {
             var value = (byte)source.GetBits(8, node.Path);
             if (write) target.PutBits(value, 8);
-            if (!valid) continue;
+            if (!valid || node.IsBytes) continue;
             if (node.IsTagText) valid = value is >= 0x61 and <= 0x7A || (index > 0 && value is >= 0x30 and <= 0x39 or >= 0x41 and <= 0x5A);
             else valid = text.Next(value);
         }
 
         if (!valid) throw new GesWireException(node.IsTagText ? GesWireException.InvalidTag : GesWireException.InvalidText, node.Path);
-        if (!node.IsTagText && !text.IsComplete) throw new GesWireException(GesWireException.InvalidText, node.Path);
+        if (!node.IsTagText && !node.IsBytes && !text.IsComplete) throw new GesWireException(GesWireException.InvalidText, node.Path);
     }
 
     // The sort value of a key: an integer without a range compares with its sign, every other key by its index.

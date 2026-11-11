@@ -485,7 +485,7 @@ extension GesCompiler {
     static let splitTypes: Set<String> = ["__split", "__splitWhitespace"]
 
     // Built-in types whose constructor builds data from labeled or several arguments instead of casting one value.
-    static let dataTypes: Set<String> = ["number", "range", "message", "nothing", "percentage", "boolean", "text", "tag", "list", "map", "dice", "handler"]
+    static let dataTypes: Set<String> = ["number", "range", "message", "nothing", "percentage", "boolean", "text", "tag", "list", "map", "dice", "bytes", "handler"]
 
     func constructor(_ type: String, _ arguments: [GesArgument], _ d: Int, _ r: GesRoutine, _ scope: GesScope) throws {
         if Self.splitTypes.contains(type) { return try splitText(arguments, d, r, scope) }

@@ -347,6 +347,7 @@ public sealed class GesBridgeExtensionRegistry : IGesExtensionRegistry
         }
 
         if (parameterType == typeof(string)) return TextArgumentReader.Instance;
+        if (parameterType == typeof(byte[])) return BytesArgumentReader.Instance;
         if (parameterType == typeof(GesPoint)) return new SpatialArgumentReader<GesPoint>(value => GesPoint.FromValue(value, definition.Unit));
         if (parameterType == typeof(GesVector)) return new SpatialArgumentReader<GesVector>(value => GesVector.FromValue(value, definition.Unit));
         if (parameterType == typeof(GesBox)) return new SpatialArgumentReader<GesBox>(value => GesBox.FromValue(value, definition.Unit));
@@ -429,6 +430,7 @@ public sealed class GesBridgeExtensionRegistry : IGesExtensionRegistry
 
         var unit = attribute.ReturnUnit;
         if (returnType == typeof(string)) return new SpatialReturnConverter<string>(value => value is null ? GesValue.GesNothing() : GesValue.GesText(value));
+        if (returnType == typeof(byte[])) return new SpatialReturnConverter<byte[]>(value => value is null ? GesValue.GesNothing() : GesValue.GesBytes(value));
         if (returnType == typeof(GesPoint)) return new SpatialReturnConverter<GesPoint>(value => value.ToValue(unit));
         if (returnType == typeof(GesVector)) return new SpatialReturnConverter<GesVector>(value => value.ToValue(unit));
         if (returnType == typeof(GesBox)) return new SpatialReturnConverter<GesBox>(value => value.ToValue(unit));
@@ -662,6 +664,19 @@ public sealed class GesBridgeExtensionRegistry : IGesExtensionRegistry
         {
             var valid = arguments.KindAt(index) == GesBytecodeTypeKind.Text;
             value = valid ? arguments[index].AsText() : "";
+            return valid;
+        }
+    }
+
+    // A byte[] parameter receives a copy of a Bytes argument.
+    private sealed class BytesArgumentReader : IExtensionArgumentReader<byte[]>
+    {
+        public static readonly BytesArgumentReader Instance = new();
+
+        public bool Read(GesValueArguments arguments, int index, out byte[] value)
+        {
+            var valid = arguments.KindAt(index) == GesBytecodeTypeKind.Bytes;
+            value = valid ? arguments[index].AsBytes().ToArray() : [];
             return valid;
         }
     }

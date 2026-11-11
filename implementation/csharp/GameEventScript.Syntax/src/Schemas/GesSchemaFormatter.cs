@@ -128,6 +128,10 @@ internal static class GesSchemaFormatter
                 builder.Append(":Text");
                 if (type.Max is { } textMax) builder.Append(" max ").Append(textMax);
                 return;
+            case GesSchemaTypeKind.Bytes:
+                builder.Append(":Bytes");
+                if (type.Max is { } bytesMax) builder.Append(" max ").Append(bytesMax);
+                return;
             case GesSchemaTypeKind.List:
                 builder.Append(":List");
                 if (type.Element is { } element)

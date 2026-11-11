@@ -106,7 +106,7 @@ internal static class GesSwiftModelEmitter
         foreach (var alternative in value.Alternatives) Nested(alternative, names, field);
     }
 
-    private static string Default(GesModelPlanValue value) => value.Nullable ? " = nil" : value.Kind is GesModelKind.List or GesModelKind.Dice ? " = []" : "";
+    private static string Default(GesModelPlanValue value) => value.Nullable ? " = nil" : value.Kind is GesModelKind.List or GesModelKind.Dice or GesModelKind.Bytes ? " = []" : "";
 
     internal static string Type(GesModelPlanValue value) => Plain(value) + (value.Nullable ? "?" : "");
 
@@ -116,6 +116,7 @@ internal static class GesSwiftModelEmitter
         GesModelKind.Number => value.Model.Integer ? "Int" : "Double",
         GesModelKind.Tag => value.ClosedTag ? value.Nested : "String",
         GesModelKind.Text => "String",
+        GesModelKind.Bytes => "[UInt8]",
         GesModelKind.List => $"[{Type(value.Element!)}]",
         GesModelKind.Dice => "[Int]",
         GesModelKind.Point => "GesPoint",
@@ -172,6 +173,7 @@ internal static class GesSwiftModelEmitter
             GesModelKind.Number when value.Model.Integer => $".integer(Int64({expression}), unit: {Unit(value.Model.Unit)})",
             GesModelKind.Number => $".float({expression}, unit: {Unit(value.Model.Unit)})",
             GesModelKind.Text => $".text({expression})",
+            GesModelKind.Bytes => $".bytes({expression})",
             GesModelKind.Tag when value.ClosedTag => $"GesTypes.tag({expression}.rawValue)",
             GesModelKind.Tag => $"GesTypes.tag({expression})",
             GesModelKind.List => $".list({expression}.map {{ {Encode(value.Element!, owner, "$0")} }})",
@@ -193,6 +195,7 @@ internal static class GesSwiftModelEmitter
             GesModelKind.Number when value.Model.Integer => $"GesTypes.integer({expression}, {Unit(value.Model.Unit)})",
             GesModelKind.Number => $"GesTypes.number({expression}, {Unit(value.Model.Unit)})",
             GesModelKind.Text => $"GesTypes.text({expression})",
+            GesModelKind.Bytes => $"GesTypes.bytes({expression})",
             GesModelKind.Tag when value.ClosedTag => $"GesTypes.tag({expression}).flatMap({owner}.{value.Nested}.init(rawValue:))",
             GesModelKind.Tag => $"GesTypes.tag({expression})",
             GesModelKind.List => $"GesTypes.list({expression}, {{ {Decode(value.Element!, owner, "$0")} }})",
@@ -344,6 +347,8 @@ internal static class GesSwiftModelEmitter
         code.Line("static func tag(_ value: GesValue) -> String? { value.valueKind == .tag || value.valueKind == .text ? value.textValue : nil }");
         code.Blank();
         code.Line("static func text(_ value: GesValue) -> String? { value.valueKind == .text ? value.textValue : nil }");
+        code.Blank();
+        code.Line("static func bytes(_ value: GesValue) -> [UInt8]? { value.bytesValue }");
         code.Blank();
         code.Line("static func boolean(_ value: GesValue) -> Bool? { value.valueKind == .boolean ? value.asBoolean : nil }");
         code.Blank();

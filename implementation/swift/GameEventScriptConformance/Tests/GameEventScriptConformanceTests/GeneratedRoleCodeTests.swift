@@ -16,6 +16,7 @@ final class GeneratedRoleCodeTests: XCTestCase {
         bot.position = GesPoint(x: 12.34, y: 56.78)
         bot.velocity = GesVector(x: -1.5, y: 2.25, z: 0.5)
         bot.body.mass = 120
+        bot.token = [0xa0, 0x00, 0xff]
         world.bots.append(bot)
         let read = RolesWire.World()
         read.arena = GesVector(x: 0, y: 0, z: 9)
@@ -23,6 +24,7 @@ final class GeneratedRoleCodeTests: XCTestCase {
         XCTAssertEqual(read.arena, GesVector(x: 2000, y: 1500), "A 2D field reads its omitted axis as zero.")
         XCTAssertEqual(read.bots[0].position, GesPoint(x: 12.34, y: 56.78))
         XCTAssertEqual(read.bots[0].velocity, GesVector(x: -1.5, y: 2.25, z: 0.5))
+        XCTAssertEqual(read.bots[0].token, [0xa0, 0x00, 0xff], "Bytes need not be UTF-8.")
         XCTAssertTrue(try read.wireEquals(world))
     }
 

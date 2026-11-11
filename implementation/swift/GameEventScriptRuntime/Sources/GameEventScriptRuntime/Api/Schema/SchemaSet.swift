@@ -520,8 +520,8 @@ enum GesSchemaCanonical {
             output += "Tag"
             if let tags = type.tags { output += "(" + tags.map { "#" + $0 }.joined(separator: " ") + ")" }
             if let max = type.max { output += " max \(max)" }
-        case .text:
-            output += "Text"
+        case .text, .bytes:
+            output += type.kind.rawValue
             if let max = type.max { output += " max \(max)" }
         case .dice:
             output += "Dice"

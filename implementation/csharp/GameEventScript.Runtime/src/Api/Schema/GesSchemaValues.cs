@@ -230,6 +230,10 @@ public static class GesSchemaValues
                 if (tag < 0) throw new GesWireException(GesWireException.UnknownTag, node.Path);
                 writer.WriteTag(field, tag);
                 break;
+            case GesSchemaNodeKind.Text when node.IsBytes:
+                if (value.ValueKind != GesBytecodeTypeKind.Bytes) throw new GesWireException(GesWireException.TypeMismatch, node.Path);
+                writer.WriteBytes(field, value.AsBytes());
+                break;
             case GesSchemaNodeKind.Text:
                 if (value.ValueKind != (node.IsTagText ? GesBytecodeTypeKind.Tag : GesBytecodeTypeKind.Text)) throw new GesWireException(GesWireException.TypeMismatch, node.Path);
                 writer.WriteText(field, Encoding.UTF8.GetBytes(value.AsText()));
@@ -303,6 +307,7 @@ public static class GesSchemaValues
             case GesSchemaTypeKind.Boolean: return value.ValueKind == GesBytecodeTypeKind.Boolean;
             case GesSchemaTypeKind.Tag: return value.ValueKind == GesBytecodeTypeKind.Tag;
             case GesSchemaTypeKind.Text: return value.ValueKind == GesBytecodeTypeKind.Text;
+            case GesSchemaTypeKind.Bytes: return value.ValueKind == GesBytecodeTypeKind.Bytes;
             case GesSchemaTypeKind.List: return value.ValueKind == GesBytecodeTypeKind.List;
             case GesSchemaTypeKind.Dice: return value.ValueKind == GesBytecodeTypeKind.Dice;
             case GesSchemaTypeKind.Point: return value.ValueKind == GesBytecodeTypeKind.Point;
@@ -389,6 +394,7 @@ public static class GesSchemaValues
         {
             case GesSchemaNodeKind.Boolean: return GesValue.GesBoolean(reader.ReadBoolean(field));
             case GesSchemaNodeKind.Tag: return GesValue.GesTag(node.Tags![reader.ReadTag(field)]);
+            case GesSchemaNodeKind.Text when node.IsBytes: return BytesValue(reader.ReadBytesValue(field));
             case GesSchemaNodeKind.Text: return node.IsTagText ? GesValue.GesTag(reader.ReadTextValue(field)) : GesValue.GesText(reader.ReadTextValue(field));
             case GesSchemaNodeKind.List when node.ValueKind == GesSchemaTypeKind.Dice:
                 var count = reader.BeginList(field);
@@ -425,5 +431,12 @@ public static class GesSchemaValues
                 var number = reader.ReadNumber(field);
                 return node.ValueKind == GesSchemaTypeKind.Percentage ? GesValue.GesPercentage(number) : GesValue.GesNumber(number, node.Unit);
         }
+    }
+
+    private static GesValue BytesValue(byte[] bytes)
+    {
+        var value = new GesValue();
+        value.SetBytes(bytes);
+        return value;
     }
 }

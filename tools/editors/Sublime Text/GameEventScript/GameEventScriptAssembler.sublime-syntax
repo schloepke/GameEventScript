@@ -146,7 +146,7 @@
         1: "keyword.other.unit-prefix.gameeventscript.assembler"
         2: "entity.other.attribute-name.tag.gameeventscript"
     -
-      "match": "\\b(?:Nothing|Boolean|Integer|Float|Percentage|Tag|Text|Vector|Point|Range|Handler|Message|List|Dice|Map|ListBuilder|MapBuilder|DistinctBuilder|GroupBuilder|OrderBuilder|Iterator|Series|Custom)\\b"
+      "match": "\\b(?:Nothing|Boolean|Integer|Float|Percentage|Tag|Text|Vector|Point|Range|Bytes|Handler|Message|List|Dice|Map|ListBuilder|MapBuilder|DistinctBuilder|GroupBuilder|OrderBuilder|Iterator|Series|Custom)\\b"
       "scope": "support.type.bytecode.gameeventscript.assembler"
     -
       "match": "\\b(?:MessageHandler|MessageNameHandler|Function|Predicate|ExtensionCall|OutboundMessage|Record|ExternalType)\\b"

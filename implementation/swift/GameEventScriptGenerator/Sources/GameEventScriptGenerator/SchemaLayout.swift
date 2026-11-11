@@ -55,6 +55,7 @@ enum GesLayoutKind {
     case float
     case tag
     case text
+    case bytes
     case list
     case point
     case vector
@@ -232,6 +233,10 @@ enum GesSchemaLayoutBuilder {
         case .tag where node.kind == .tag:
             encoding.kind = .tag
             encoding.tags = bound.infos[index].tags
+            encoding.width = node.width
+        case .bytes:
+            encoding.kind = .bytes
+            encoding.maxCount = node.maxCount
             encoding.width = node.width
         case .tag, .text:
             encoding.kind = .text

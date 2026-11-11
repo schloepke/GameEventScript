@@ -159,7 +159,7 @@ enum GesSchemaPlanner {
             }
         case .list:
             let element = encoding.element!.encoding
-            if element.kind == .union || element.kind == .text || element.kind == .list {
+            if element.kind == .union || element.kind == .text || element.kind == .bytes || element.kind == .list {
                 // The item's single field sits at node 0 of the paths its owner passes on.
                 let item = GesPlanType()
                 item.name = name + "Item"
@@ -180,7 +180,7 @@ enum GesSchemaPlanner {
     // Whether values of an encoding need storage that grows, so that their type is a class.
     private static func holdsStorage(_ context: Context, _ encoding: GesLayoutEncoding) -> Bool {
         switch encoding.kind {
-        case .text, .list: true
+        case .text, .bytes, .list: true
         case .schema: isClass(context, encoding.schema)
         case .union: encoding.alternatives.contains { holdsStorage(context, $0.encoding) }
         default: false

@@ -111,6 +111,8 @@ final class GesVirtualMachine {
 
     func setDice(_ index: Int, _ value: [Int32]) { registers[frameStart + index].setDice(value) }
 
+    func setBytes(_ index: Int, _ value: [UInt8]) { registers[frameStart + index].setBytes(value) }
+
     func setList(_ index: Int, _ value: [GesValue]) { registers[frameStart + index].setList(value) }
 
     func setMap(_ index: Int, _ value: [GesMapEntry]) { registers[frameStart + index].setMap(value) }

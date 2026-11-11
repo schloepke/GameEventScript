@@ -472,6 +472,8 @@ internal static class GesBridgeValueConverter
                 return GesValue.GesBoolean(boolean);
             case string text:
                 return GesValue.GesText(text);
+            case byte[] bytes:
+                return GesValue.GesBytes(bytes);
             case double number:
                 return GesValue.GesFloat(number);
             case float number:
@@ -513,6 +515,13 @@ internal static class GesBridgeValueConverter
         if (targetType == typeof(string))
         {
             return value.AsText();
+        }
+
+        if (targetType == typeof(byte[]))
+        {
+            return value.ValueKind == GesBytecodeTypeKind.Bytes
+                ? value.AsBytes().ToArray()
+                : throw new InvalidOperationException($"Cannot convert GameEventScript value kind '{value.ValueKind}' to CLR type 'System.Byte[]'.");
         }
 
         if (targetType == typeof(bool))

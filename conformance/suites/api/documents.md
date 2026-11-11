@@ -1784,6 +1784,102 @@ document:
 
 ---
 
+## Test: Bytes read from both literal forms
+
+Both `:Bytes("…")` with hexadecimal pairs and `:Bytes[…]` with integer literals from 0 to 255 read as Bytes.
+
+### Case description
+
+```yaml
+gesBlock: "case"
+id: "bytes-values"
+kind: "documentApi"
+level: "atomic"
+documentApi:
+  text: "a: :Bytes(\"A0 b7\")\nb: :Bytes[1, 0xff]\nc: :Bytes[]"
+  print: true
+```
+
+### Expectation
+
+```yaml
+gesBlock: "expect"
+document:
+  value:
+    type: ":Map"
+    entries:
+      - key: "a"
+        value:
+          type: ":Bytes"
+          value: "a0b7"
+      - key: "b"
+        value:
+          type: ":Bytes"
+          value: "01ff"
+      - key: "c"
+        value:
+          type: ":Bytes"
+          value: ""
+```
+
+---
+
+## Test: A Bytes item above 255 is an invalid literal
+
+Each item of `:Bytes[…]` is an integer literal from 0 to 255.
+
+### Case description
+
+```yaml
+gesBlock: "case"
+id: "bytes-item-out-of-range"
+kind: "documentApi"
+level: "atomic"
+documentApi:
+  text: "a: :Bytes[256]"
+```
+
+### Expectation
+
+```yaml
+gesBlock: "expect"
+document:
+  error:
+    code: "invalidLiteral"
+    line: 1
+    column: 4
+```
+
+---
+
+## Test: Invalid hexadecimal Bytes text is an invalid literal
+
+The text of `:Bytes("…")` holds complete hexadecimal pairs; otherwise construction fails at the form.
+
+### Case description
+
+```yaml
+gesBlock: "case"
+id: "bytes-invalid-hex"
+kind: "documentApi"
+level: "atomic"
+documentApi:
+  text: "a: :Bytes(\"abc\")"
+```
+
+### Expectation
+
+```yaml
+gesBlock: "expect"
+document:
+  error:
+    code: "invalidLiteral"
+    line: 1
+    column: 4
+```
+
+---
+
 ## Test: malformed numbers are invalid literals
 
 This case checks the following contract: A number token that is neither a literal nor a number with a unit suffix is `document.invalidLiteral`.

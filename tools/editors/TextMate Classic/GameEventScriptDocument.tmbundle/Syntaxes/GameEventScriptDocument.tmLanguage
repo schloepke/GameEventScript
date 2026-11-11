@@ -159,7 +159,7 @@
 				</dict>
 				<dict>
 					<key>match</key>
-					<string>:(?:Nothing|Number|Percentage|Boolean|Text|Tag|List|Map|Dice|Vector|Point|Range|Series|Message|Handler|Record)\b</string>
+					<string>:(?:Nothing|Number|Percentage|Boolean|Text|Tag|List|Map|Dice|Bytes|Vector|Point|Range|Series|Message|Handler|Record)\b</string>
 					<key>name</key>
 					<string>support.type.primitive.gameeventscript.document</string>
 				</dict>

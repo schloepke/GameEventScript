@@ -11,6 +11,7 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 ## Unreleased
 
 ### Breaking
+- Swift `[UInt8]` converts to and from GES Bytes instead of a List of numbers.
 - Text such as `"0x10"` is now a hexadecimal number for `parse`, `as :Number`, `as :Percentage`,
   documents and Message JSON instead of Text or `nothing`.
 - C# `GesValue.AsMap()` returns only stored Map and Record data, as in Swift; an external
@@ -224,6 +225,10 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   `wire.typeMismatch`, as the value path does, and reading sets that axis to zero.
 
 ### Added
+- `:Bytes`, an immutable byte sequence: literals `:Bytes[0xa0, 183]` and `:Bytes("a0b7")`, `as :Bytes`
+  from integer Lists and hexadecimal Text, `as :Text`/`parse`/documents, count, `in`, indexing,
+  iteration, equality and order. Message JSON writes Bytes as Base64, schemas add `:Bytes max n` with
+  generated `WriteBytes`/`ReadBytes` code, and the Bridges map C# `byte[]` and Swift `[UInt8]`.
 - Hexadecimal integer literals such as `0xff_88_00` in source, `parse`, numeric text casts and
   documents: exact Int64 values with `_` between digits, without unit or percentage suffix.
 - Schema roles: `wire(group)` marks a schema, message or message set as a wire root and

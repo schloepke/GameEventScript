@@ -679,6 +679,7 @@ Values use the existing portable conformance shape:
 | `:List` | ordered `items` value sequence |
 | `:Map` | `entries`, an ordered sequence of `{ key, value }` |
 | `:Dice` | ordered Int32 `rolls` |
+| `:Bytes` | `value`: lowercase hexadecimal Text with two digits per byte |
 | `:Range.int64`, `:Range.binary64` | numeric strings `from`, `to`, `step`; the variant fixes all three storage kinds |
 | `:Message` | nested `message` |
 | any declared custom type | ordered `entries` sequence |

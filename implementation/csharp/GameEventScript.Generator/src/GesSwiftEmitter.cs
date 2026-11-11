@@ -79,6 +79,10 @@ internal static partial class GesSwiftEmitter
 
     private static string Member(string pascal) => Name(GesSchemaPlanner.Camel(pascal));
 
+    // The byte storage of a Text or Bytes value in `owner`, "self" or another record.
+    internal static string Storage(GesPlanValue value, string owner)
+        => value.Encoding.Kind == GesLayoutKind.Bytes ? $"{owner}.{Member(value.Base)}" : $"{owner}.{GesSchemaPlanner.Camel(value.Base)}UTF8";
+
     private static string Kind(GesPlanType type) => type.Kind == GesSchemaKind.Message ? "message" : "schema";
 
     private static void Record(GesSchemaPlanner.Code code, GesPlanType type, string access, Context context)
@@ -147,7 +151,7 @@ internal static partial class GesSwiftEmitter
         code.Line($"{access}static let maxByteCount = {layout.MaxByteCount.ToString(CultureInfo.InvariantCulture)}");
     }
 
-    private static bool Plain(GesPlanValue value) => !value.IsClass && value.Encoding.Kind is not (GesLayoutKind.Union or GesLayoutKind.Text or GesLayoutKind.List);
+    private static bool Plain(GesPlanValue value) => !value.IsClass && value.Encoding.Kind is not (GesLayoutKind.Union or GesLayoutKind.Text or GesLayoutKind.Bytes or GesLayoutKind.List);
 
     private static void Nested(GesPlanValue value, List<(string, string)> names, string field)
     {
@@ -187,6 +191,7 @@ internal static partial class GesSwiftEmitter
         GesLayoutKind.Quantized or GesLayoutKind.Float => "Double",
         GesLayoutKind.Schema => value.Encoding.Schema,
         GesLayoutKind.Text => "String",
+        GesLayoutKind.Bytes => "[UInt8]",
         GesLayoutKind.Point => "GesPoint",
         GesLayoutKind.Vector => "GesVector",
         GesLayoutKind.List => $"[{ElementName(value)}]",
@@ -202,7 +207,7 @@ internal static partial class GesSwiftEmitter
         GesLayoutKind.Quantized or GesLayoutKind.Float => "0.0",
         GesLayoutKind.Tag => "." + Name(value.Encoding.Tags[0]),
         GesLayoutKind.Union => "." + Member(value.Alternatives[0].Label),
-        GesLayoutKind.List => "[]",
+        GesLayoutKind.List or GesLayoutKind.Bytes => "[]",
         _ => TypeName(value) + "()"
     };
 
@@ -488,12 +493,13 @@ internal static partial class GesSwiftEmitter
             case GesLayoutKind.Tag:
                 code.Line($"try writer.write(UInt64({target}.rawValue), width: {width})");
                 break;
-            case GesLayoutKind.Text:
-                var bytes = $"self.{GesSchemaPlanner.Camel(value.Base)}UTF8";
+            case GesLayoutKind.Text or GesLayoutKind.Bytes:
+                var bytes = Storage(value, "self");
                 code.Line($"if {bytes}.count > {max} {{ {Throw("tooLong", value)} }}");
-                code.Line(encoding.TagName
-                    ? $"if !{bytes}.withUnsafeBytes({{ GesWireRules.isTagName($0) }}) {{ {Throw("invalidTag", value)} }}"
-                    : $"if !{bytes}.withUnsafeBytes({{ GesWireRules.isValidUTF8($0) }}) {{ {Throw("invalidText", value)} }}");
+                if (encoding.Kind == GesLayoutKind.Text)
+                    code.Line(encoding.TagName
+                        ? $"if !{bytes}.withUnsafeBytes({{ GesWireRules.isTagName($0) }}) {{ {Throw("invalidTag", value)} }}"
+                        : $"if !{bytes}.withUnsafeBytes({{ GesWireRules.isValidUTF8($0) }}) {{ {Throw("invalidText", value)} }}");
                 code.Line($"try writer.write(UInt64({bytes}.count), width: {width})");
                 code.Line($"for byte in {bytes} {{ try writer.write(UInt64(byte), width: 8) }}");
                 break;
@@ -563,17 +569,18 @@ internal static partial class GesSwiftEmitter
                 code.Line($"{target} = value");
                 code.Close();
                 break;
-            case GesLayoutKind.Text:
-                var bytes = $"self.{GesSchemaPlanner.Camel(value.Base)}UTF8";
+            case GesLayoutKind.Text or GesLayoutKind.Bytes:
+                var bytes = Storage(value, "self");
                 code.Open("do {");
                 code.Line($"let count = Int(try reader.read({width}, path: {Path(value)}))");
                 code.Line($"if count > {max} {{ {Throw("invalidCount", value)} }}");
                 code.Line($"try reader.require(count * 8, path: {Path(value)})");
                 code.Line($"{bytes}.removeAll(keepingCapacity: true)");
                 code.Line($"for _ in 0..<count {{ {bytes}.append(UInt8(truncatingIfNeeded: try reader.read(8, path: {Path(value)}))) }}");
-                code.Line(encoding.TagName
-                    ? $"if !{bytes}.withUnsafeBytes({{ GesWireRules.isTagName($0) }}) {{ {Throw("invalidTag", value)} }}"
-                    : $"if !{bytes}.withUnsafeBytes({{ GesWireRules.isValidUTF8($0) }}) {{ {Throw("invalidText", value)} }}");
+                if (encoding.Kind == GesLayoutKind.Text)
+                    code.Line(encoding.TagName
+                        ? $"if !{bytes}.withUnsafeBytes({{ GesWireRules.isTagName($0) }}) {{ {Throw("invalidTag", value)} }}"
+                        : $"if !{bytes}.withUnsafeBytes({{ GesWireRules.isValidUTF8($0) }}) {{ {Throw("invalidText", value)} }}");
                 code.Close();
                 break;
             case GesLayoutKind.List:

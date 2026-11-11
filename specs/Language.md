@@ -1080,6 +1080,7 @@ The source language recognizes these built-in types:
 - `:List`
 - `:Map`
 - `:Dice`
+- `:Bytes`
 
 ### Casts
 
@@ -1104,6 +1105,7 @@ component constructors.
 | `:List` | preserves lists; expands text/tags into Unicode scalars, spatial values into three components, dice into rolls, and ranges into terms; unsupported values become `[]` |
 | `:Map` | preserves maps; exposes record/external fields and spatial `x`, `y`, `z`; unsupported values become `[:]` |
 | `:Dice` | preserves dice; converts a list of positive Int32 integer rolls; a non-list becomes empty dice and an invalid list becomes `nothing` |
+| `:Bytes` | preserves bytes; converts a list of unitless integers from 0 to 255 and hexadecimal Text as in `:Bytes("…")`; anything else is `nothing` |
 | `:Range`, `:Series`, `:Message`, `:Handler` | preserves the same runtime kind and returns `nothing` for another kind |
 | custom record | preserves the same record type or invokes that record constructor from a map; other values become `nothing` |
 
@@ -1190,9 +1192,10 @@ let snapshot be :Record("Hit", [amount: 100])
 ```
 
 `:Boolean(value)`, `:Text(value)`, `:Tag(value)`, `:List(value)`,
-`:Map(value)`, `:Dice(value)` and the one-argument numeric/spatial forms retain
+`:Map(value)`, `:Dice(value)`, `:Bytes(value)` and the one-argument numeric/spatial forms retain
 their cast behavior. The single argument may also use the label `value`
-(except spatial forms, which retain their component labels). `:Dice[...]` remains a deterministic result literal.
+(except spatial forms, which retain their component labels). `:Dice[...]` remains a deterministic result literal,
+and `:Bytes[...]` a Bytes literal.
 `:Number(value, unit)` accepts empty Text and every `:Quantity(...)` unit name
 from [Quantities](#quantities), such as `none`, `m`, `second`, `m/s` or
 `deg/s`; prefixed spellings and unknown names yield `nothing`, as does a
@@ -1633,6 +1636,37 @@ operations count or return Unicode scalar values rather than UTF-8 bytes,
 UTF-16 code units, or grapheme clusters. Indexes remain 1-based. Equality is
 exact and ordering is lexicographic by Unicode scalar value; see
 [Text semantics](Semantics/Text.md).
+
+### Bytes
+
+> **Since: Unreleased**
+
+Bytes are an immutable sequence of bytes for opaque host data such as hashes,
+identifiers and encoded records. A Bytes literal lists integer literals from 0
+to 255, in decimal or hexadecimal; `:Bytes("…")` reads pairs of hexadecimal
+digits in either case, which single spaces may separate:
+
+```ges
+let header be :Bytes[0xa0, 183, 11]
+let hash be :Bytes("a0b7 0b")      // the same bytes
+let empty be :Bytes[]
+```
+
+Items of `:Bytes[...]` follow the rules of `:Dice[...]` items: signs,
+fractions, expressions, names and units are syntax errors. `as :Bytes` and
+`:Bytes(value)` keep Bytes, convert a List whose items are all unitless integers
+from 0 to 255, and read hexadecimal Text as `:Bytes("…")` does; every other
+value, and Text with an incomplete pair or another character, gives `nothing`.
+`as :Text` writes the canonical literal, lowercase pairs without spaces such as
+`:Bytes("a0b70b")`, which `parse` and documents read back; `as :List` gives
+the bytes as Int64 numbers.
+
+Bytes count their bytes, index from 1 to an Int64 number from 0 to 255 and
+iterate in order. `x in bytes` is true for a unitless integer equal to one of
+the bytes. Equality compares the bytes exactly; ordering is lexicographic by
+unsigned byte, so a prefix comes first ([Determinism](Semantics/Determinism.md)).
+Empty Bytes are `empty`. Like Lists, Bytes are neither true nor false in
+Boolean logic. Bytes are not numeric, not Text and no List.
 
 ### Vector and Point
 
@@ -2611,7 +2645,7 @@ type_reference ::= built_in_type_tag | custom_type_tag
 built_in_type_tag ::= ':Boolean' | ':Number' | ':Percentage' |
                       ':Quantity' '(' unit_name ')' | ':Vector' | ':Point' |
                       ':Series' | ':Range' | ':Message' | ':Handler' | ':Tag' |
-                      ':Text' | ':List' | ':Map' | ':Dice' | ':Nothing'
+                      ':Text' | ':List' | ':Map' | ':Dice' | ':Bytes' | ':Nothing'
 custom_type_tag ::= TYPE_TAG
 unit_name ::= 'none' | 'meter' | 'second' | 'degree' | 'degree/s' | UNIT_SYMBOL
 numeric_check ::= 'numeric' | 'integer' | 'fractional'

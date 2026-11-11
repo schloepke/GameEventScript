@@ -3,7 +3,7 @@
 
 /// The explicit data forms such as `:Range(from: 1, to: 5)`: their lowercase type names and parameters.
 @_spi(Syntax) public enum GesLiteralForms {
-    @_spi(Syntax) public static let types = ["nothing", "number", "percentage", "boolean", "text", "tag", "list", "map", "dice", "vector", "point", "range", "series", "message", "handler", "record"]
+    @_spi(Syntax) public static let types = ["nothing", "number", "percentage", "boolean", "text", "tag", "list", "map", "dice", "bytes", "vector", "point", "range", "series", "message", "handler", "record"]
 
     @_spi(Syntax) public static func positions(_ type: String, _ labels: [String]) -> [Int]? {
         let parameters: [String]

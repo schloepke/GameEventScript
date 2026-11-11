@@ -482,7 +482,7 @@
           }
         },
         {
-          "match": "(:Dice)([ \\t\\r\\n]*)(\\[)",
+          "match": "(:Dice|:Bytes)([ \\t\\r\\n]*)(\\[)",
           "name": "meta.literal.dice.gameeventscript",
           "captures": {
             "1": {
@@ -494,7 +494,7 @@
           }
         },
         {
-          "match": ":(?:Nothing|Text|Boolean|Number|Percentage|Vector|Point|Series|Range|Message|Handler|Tag|List|Map|Dice|Record)(?=$|[^A-Za-z0-9_])",
+          "match": ":(?:Nothing|Text|Boolean|Number|Percentage|Vector|Point|Series|Range|Message|Handler|Tag|List|Map|Dice|Bytes|Record)(?=$|[^A-Za-z0-9_])",
           "name": "support.type.primitive.gameeventscript"
         },
         {

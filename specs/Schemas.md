@@ -88,6 +88,7 @@ type        = ":Boolean"
             | spatial
             | ":Tag" [ tagset | "max" integer ]
             | ":Text" [ "max" integer ]
+            | ":Bytes" [ "max" integer ]
             | ":List" [ "(" union ")" [ "max" integer ] ]
             | ":" TypeName
             | ":Dice" [ "max" integer ] constraints
@@ -194,6 +195,7 @@ Types:
 | `:Point`, `:Vector`, with an optional unit | three components with one unit. A block lists the axes that are transmitted, in any order, each with its own constraints |
 | `:Tag(#a, #b)`, `:Tag max n`, `:Tag` | one tag of the closed set, a tag of at most `n` characters, or any tag |
 | `:Text max n`, `:Text` | a text of at most `n` UTF-8 bytes, or any text |
+| `:Bytes max n`, `:Bytes` | at most `n` bytes, or any [Bytes](Language.md#bytes) |
 | `:List(T) max n`, `:List(T)`, `:List` | at most `n` elements of `T`, any number of them, or any elements |
 | `:Dice max n between a and b`, `:Dice` | at most `n` rolls, each within the range, or any rolls |
 | `:Name` | a Record of the schema `Name` |
@@ -281,11 +283,12 @@ be encoded; binding a schema that reaches another type for encoding fails with
 | `:Boolean`, numeric, `:Point`, `:Vector` | yes | yes |
 | `:Tag(#a, #b)`, `:Tag max n` | yes | yes |
 | `:Text max n` | yes | yes |
+| `:Bytes max n` | yes | yes |
 | `:List(T) max n` with an encodable `T` | yes | yes |
 | `:Dice max n` | yes | yes |
 | `:TypeName` with only encodable fields | yes | yes |
 | A union of encodable alternatives, such as `:Text max 8 \| :Unit \| :Nothing` | yes | yes |
-| `:Tag`, `:Text`, `:List`, `:List(T)`, `:Dice` without a set or `max` | no | yes |
+| `:Tag`, `:Text`, `:Bytes`, `:List`, `:List(T)`, `:Dice` without a set or `max` | no | yes |
 | `:Map`, `:Range`, `:Series`, `:Message`, `:Handler`, `:Nothing` outside a union | no | yes |
 
 ### Source errors
@@ -357,7 +360,7 @@ GES sets no world size; only the limits apply.
 ### Largest encoding
 
 A bound schema has `MaxByteCount`, the size of its largest top-level encoding. It is computed at binding with checked arithmetic, counting every optional as
-present, every Text, List and Dice at its `max`, and every union as its index and its largest alternative. A schema counts the larger of its largest
+present, every Text, Bytes, List and Dice at its `max`, and every union as its index and its largest alternative. A schema counts the larger of its largest
 full record and its largest [delta](#deltas), so one buffer serves both: a Boolean's delta costs its change bit, and a field with a delta range its change bit, the
 fallback bit and the larger of both widths. It may be at most 10 485 760 bytes (10 MiB).
 Exceeding this, or an overflow while computing it, fails binding with `schema.tooLarge`.
@@ -421,6 +424,7 @@ member <MessageName>
 | axis block | after the type, `{ <axis> <constraints> ; ... }` in order x, y, z |
 | `:Tag(#a, #b)`, `:Tag max n`, `:Tag` | `Tag(#a #b)`, `Tag max <n>`, `Tag` |
 | `:Text max n`, `:Text` | `Text max <n>`, `Text` |
+| `:Bytes max n`, `:Bytes` | `Bytes max <n>`, `Bytes` |
 | `:Dice max n between a and b`, `:Dice` | `Dice max <n> between <a> <b>`, each part only when written; `Dice` |
 | `:List(T) max n` | `List(<T>) max <n>`; `List(<T>)` and `List` without `max` or `T` |
 | `:TypeName`, `:Map`, ... | `TypeName`, `Map`, ... |
@@ -532,6 +536,7 @@ caller owns the mapping from keys to objects. Message arguments have no key. A
 | `:Tag(...)` with `n` tags | index in declared order, `width(n)` bits |
 | `:Tag max n` | as `:Text max n`: the tag name without `#`, its byte count, then its bytes |
 | `:Text max n` | UTF-8 byte count, `width(n + 1)` bits, then the bytes |
+| `:Bytes max n` | as `:Text max n`: the byte count, then the bytes, which need not be UTF-8 |
 | `:List(T) max n` | element count, `width(n + 1)` bits, then the elements |
 | `:Dice max n` | roll count, `width(n + 1)` bits, then each roll as an `integer` of its range, `1` to `2^31 - 1` without one. The [value path](#value-path) writes them in descending order and a typed writer in the order of its caller; a decoder accepts any order, since creating a Dice sorts its rolls |
 | union of `n` alternatives | index in declared order, `width(n)` bits, then the alternative |
@@ -687,7 +692,7 @@ movement smaller than a step is no change and costs nothing.
 | --- | --- |
 | `:Boolean` | none; the change bit toggles the baseline |
 | numeric with `delta within` | [range form](#delta-range) |
-| other numeric, `:Tag`, `:Text`, `:List` of other elements, `:Dice` | the full encoding |
+| other numeric, `:Tag`, `:Text`, `:Bytes`, `:List` of other elements, `:Dice` | the full encoding |
 | `:List` of a schema with a key | a [keyed list](#keyed-lists) |
 | `:Point`, `:Vector` with a block | one change bit per declared axis, then the payloads of the changed axes |
 | `:Point`, `:Vector` without a block | three change bits, then a raw 64-bit binary64 for each changed axis; bits are compared |
@@ -866,7 +871,7 @@ one record. Decoding fails without partial results for:
 | --- | --- |
 | `wire.truncated` | the data ends before the record does |
 | `wire.invalidIndex` | an index is at least `n`, for a range, tag, union or message set |
-| `wire.invalidCount` | a Text, Tag, List or Dice count exceeds its `max` |
+| `wire.invalidCount` | a Text, Bytes, Tag, List or Dice count exceeds its `max` |
 | `wire.invalidText` | Text is not valid UTF-8 |
 | `wire.invalidTag` | a `:Tag max n` holds no valid [tag name](Semantics/Text.md#portable-name-grammars) |
 | `wire.invalidNumber` | NaN or negative zero, or an infinity with a range |
@@ -886,7 +891,7 @@ complete:
 | `wire.typeMismatch` | a value has another kind or unit than its field, a nonzero omitted axis, a Message whose labels differ from its signature, or a Map with a key that a union alternative does not have |
 | `wire.unknownTag` | a tag is not in its set |
 | `wire.invalidTag` | a typed writer gives a `:Tag max n` no valid tag name |
-| `wire.tooLong` | a Text, Tag, List or Dice exceeds its `max` |
+| `wire.tooLong` | a Text, Bytes, Tag, List or Dice exceeds its `max` |
 | `wire.bufferTooSmall` | the caller's buffer is too small |
 | `wire.fieldOrder` | a typed writer or reader uses a field out of order |
 | `wire.keyMismatch` | a record and its baseline have different keys |
@@ -998,7 +1003,8 @@ var positionX = reader.ReadNumber(x);                             // double, wit
   `units[]:Unit.name` inside one. Reusing a handle costs no lookup.
 - Typed operations: `Boolean`, `Integer` (Int64), `Number` (binary64), `Index` (the raw
   wire index, for game code that stores quantized values and skips the conversion), `Tag`
-  (index) and `Text` (validated UTF-8, or for a `:Tag max n` a validated tag name without `#`). A reader copies Text into a caller's buffer of the
+  (index), `Text` (validated UTF-8, or for a `:Tag max n` a validated tag name without `#`) and `Bytes`
+  (any bytes of a `:Bytes max n`). A reader copies Text and Bytes into a caller's buffer of the
   field's `max`, since a value need not start at a byte boundary.
 - `BeginList` writes or reads the element count of a List or Dice, and the elements follow, each entered at
   the `[]` handle. `BeginNested` enters a nested schema, Point or Vector. There is no end
@@ -1124,7 +1130,7 @@ data readable through the schema: it lists each field with path, bit offset, wid
 decoded value, and ends with the first error, its field path and bit offset; invalid data
 gives exit code 1. Its text is the same in every port. Each field is one line,
 `<path> bit=<offset> width=<bits> value=<value>`, whose width includes a presence bit. The value
-is `true` or `false`, a number, a quoted Text, `#<tag> index=<i>`, `#<tag>` for a `:Tag max n`, `count=<n>` for a List or Dice,
+is `true` or `false`, a number, a quoted Text, the [Bytes literal](Language.md#bytes) `:Bytes("…")`, `#<tag> index=<i>`, `#<tag>` for a `:Tag max n`, `count=<n>` for a List or Dice,
 `<alternative> index=<i>` for a union, with the type name of the alternative, or `absent`. A nested
 schema, Point or Vector has no line of its own, only its fields. A message set starts with
 `message <name> index=<i>`. A valid record ends with `bytes <n>`, an invalid one with
@@ -1152,12 +1158,12 @@ are usage errors there.
 `csharp` (C# 9, for Unity) or `swift` (Swift 6, without Foundation); every CLI writes every language,
 and both CLIs write identical text. Each reached schema becomes one type that writes and reads its
 records over the [bit primitives](#bit-primitives) with the bytes, `wire.*` codes and field paths of
-the writer and reader, with parameters as constants. A type without Text, List or Dice, directly or
+the writer and reader, with parameters as constants. A type without Text, Bytes, List or Dice, directly or
 in a type it holds, is a value type (C# `struct`, Swift `Sendable` struct); otherwise it is a class
 whose storage grows when a read or a caller needs more room and is then reused, so that reading and
 writing allocate nothing once it has held its largest data. A Text is held as UTF-8 bytes with a
-string view, a List or Dice as a C# `List<T>` or Swift array, and a list element that is a union,
-Text or List as a generated item type. A `:Point` or `:Vector` is the runtime's
+string view, Bytes as bytes (C# a span with a `Set<Field>` method, Swift `[UInt8]`), a List or Dice as a C# `List<T>` or Swift array, and a list element that is a union,
+Text, Bytes or List as a generated item type. A `:Point` or `:Vector` is the runtime's
 [`GesPoint` or `GesVector`](PublicApi.md#spatial-values), in every field, list element and alternative; quantization stays per
 field. An axis that a block leaves out is not transmitted: writing a record or a delta whose omitted axis is not zero fails
 with `wire.typeMismatch` at the field's path, as the [value path](#value-path) does, and reading sets it to zero. An `optional` field adds a presence flag and, for a value
@@ -1217,6 +1223,7 @@ needs no ranges, steps or parameters, and every reached schema becomes one type,
 | `integer` | `Int` | `long` |
 | `:Percentage` | `Double`, the ratio as in wire code | `double` |
 | `:Text`, `:Tag` without a set | `String` | `string` |
+| `:Bytes` | `[UInt8]` | `byte[]` |
 | `:Tag(#a, #b)` | an enum `<Field>Tag` with `String` raw values, `CaseIterable` | an enum `<Field>Tag` |
 | `:List(T)` | `[T]` | `List<T>` |
 | `:Dice` | `[Int]`, the rolls | `List<int>` |
@@ -1282,7 +1289,7 @@ Reflection, so managed code stripping under IL2CPP removes nothing it needs. Wit
 `model` (the format version, 1), `roots` and `types`, ordered by name. A type has `name`, `hash` and `fields`; a field has
 `name`, `path`, `optional`, `key` and `type`. A type has `kind` and the members of its kind: `number` adds `type`, `unit`,
 `integer`, `wrapping`, `lower`, `upper` and `step`, a bound as its canonical decimal or parameter name or `null`; `tag` adds
-`tags` and `max`, `text` adds `max`, `list` adds `max` and `element`, `dice` adds `max`, `lower` and `upper`, `point` and
+`tags` and `max`, `text` and `bytes` add `max`, `list` adds `max` and `element`, `dice` adds `max`, `lower` and `upper`, `point` and
 `vector` add `unit` and `axes` (the names of an axis block), `schema` adds `name`, and `union` adds `alternatives`;
 `boolean` and `nothing` have none. A missing `max` is `null`.
 
@@ -1323,6 +1330,7 @@ exact decimals. Hashes are 16 lowercase hexadecimal digits, and a binary64 value
     `upperValue`; then `deltaRange`, `deltaWidth` and `depends`, the parameters named in its bounds.
   - `tag`: `tags`, without `#`, and `width`.
   - `text`: `tagName` for a `:Tag max n`, `maxCount` and `width`.
+  - `bytes`: `maxCount` and `width`.
   - `list`: `dice`, `maxCount`, `width`, `keyed`, `positionWidth` and `element`.
   - `point` and `vector`: `unit` and `axes`, the transmitted axes in order x, y, z.
   - `schema`: `name`, the type it refers to.

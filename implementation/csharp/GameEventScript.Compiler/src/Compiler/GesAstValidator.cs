@@ -981,7 +981,7 @@ internal static class GesAstValidator
             ValidateExpressionReferences(parsedScriptContext, constructor.Arguments[argumentIndex].Expression, callables, typeDefinitions, errors, declaredTypes);
 
         if (constructor.TypeName is "__split" or "__splitWhitespace") return;
-        if (constructor.TypeName is "record" or "range" or "series" or "number" or "message" or "nothing" or "percentage" or "boolean" or "text" or "tag" or "list" or "map" or "dice" or "handler")
+        if (constructor.TypeName is "record" or "range" or "series" or "number" or "message" or "nothing" or "percentage" or "boolean" or "text" or "tag" or "list" or "map" or "dice" or "bytes" or "handler")
         {
             var labels = new string[constructor.Arguments.Count];
             for (var i = 0; i < labels.Length; i++) labels[i] = constructor.Arguments[i].Name;
@@ -1111,7 +1111,7 @@ internal static class GesAstValidator
     private static bool IsBuiltinConstructorType(string typeName)
         => typeName is "nothing" or "tag" or "text" or "percentage" or
             "vector" or "point" or "boolean" or "number" or "numeric" or "series" or
-            "list" or "range" or "message" or "handler" or "map" or "dice" ||
+            "list" or "range" or "message" or "handler" or "map" or "dice" or "bytes" ||
             GesQuantityUnits.ParseQuantityTypeName(typeName) is not null;
 
     private static bool IsKnownType(string typeName, IReadOnlyDictionary<string, GesTypeDefinitionNode> typeDefinitions)

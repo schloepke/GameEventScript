@@ -47,7 +47,7 @@ extension GesSyntaxBinder {
         case .memberAccessExpression: return try memberAccess(node)
         case .collectionAccessExpression: return try collectionAccess(node)
         case .typeConstructorExpression: return try typeConstructor(node)
-        case .diceLiteralExpression: return try diceLiteral(node)
+        case .diceLiteralExpression, .bytesLiteralExpression: return try diceLiteral(node)
         case .collectionFactoryExpression: return try collectionFactory(node)
         case .rangeExpression:
             var c = cursor(node)

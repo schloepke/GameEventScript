@@ -150,12 +150,12 @@ private struct GesSchemaFullCopy {
         try source.require(Int(count) * 8, index)
         if write { try target.putBits(count, node.width) }
         var text = GesSchemaUtf8Scanner()
-        var valid = !node.isTagText || count > 0
+        var valid = node.isBytes || !node.isTagText || count > 0
         var position: UInt64 = 0
         while position < count {
             let value = UInt8(truncatingIfNeeded: try source.getBits(8, index))
             if write { try target.putBits(UInt64(value), 8) }
-            if valid {
+            if valid && !node.isBytes {
                 if node.isTagText {
                     valid = (0x61...0x7A).contains(value) || (position > 0 && ((0x30...0x39).contains(value) || (0x41...0x5A).contains(value)))
                 } else {
@@ -165,7 +165,7 @@ private struct GesSchemaFullCopy {
             position += 1
         }
         if !valid { throw GesWireError(node.isTagText ? GesWireError.invalidTag : GesWireError.invalidText, path(index)) }
-        if !node.isTagText && !text.isComplete { throw GesWireError(GesWireError.invalidText, path(index)) }
+        if !node.isTagText && !node.isBytes && !text.isComplete { throw GesWireError(GesWireError.invalidText, path(index)) }
     }
 
     // The sort value of a key: an integer without a range compares with its sign, every other key by its index.

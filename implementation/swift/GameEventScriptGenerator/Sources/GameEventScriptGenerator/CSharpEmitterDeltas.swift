@@ -166,7 +166,7 @@ extension GesCSharpEmitter {
             code.line("if (\(a) != \(b)) return false;")
         case .integer, .quantized, .float, .tag:
             code.line("if (__Wire\(node)(\(a), paths, at) != __Wire\(node)(\(b), paths, at)) return false;")
-        case .text:
+        case .text, .bytes:
             code.line("if (!\(text(value, prefix(a))).SequenceEqual(\(text(value, prefix(b))))) return false;")
         case .point, .vector:
             for axis in value.axes { same(&code, axis, a + "." + axis.base, b + "." + axis.base) }
@@ -271,8 +271,8 @@ extension GesCSharpEmitter {
     private static func copy(_ code: inout Code, _ value: GesPlanValue, _ a: String, _ b: String) {
         let node = String(value.node)
         switch value.encoding.kind {
-        case .text:
-            code.line("Set\(value.base)Utf8(\(text(value, prefix(b))));")
+        case .text, .bytes:
+            code.line("Set\(value.base)\(value.encoding.kind == .text ? "Utf8" : "")(\(text(value, prefix(b))));")
         case .schema where value.isClass:
             code.line("\(a).CopyFrom(\(b));")
         case .list where value.element!.isClass:
@@ -547,7 +547,7 @@ extension GesCSharpEmitter {
             code.close()
         case .list where encoding.keyed:
             code.line("if (__WriteKeyed\(node)(baseline, ref writer, paths, at)) \(set) = true;")
-        case .text, .list:
+        case .text, .bytes, .list:
             code.line("if (!__Same\(node)(baseline, paths, at))")
             code.open("{")
             write(&code, value, a)
@@ -648,7 +648,7 @@ extension GesCSharpEmitter {
             )
         case .list where encoding.keyed:
             code.line("__ReadKeyed\(node)(baseline, ref reader, paths, at);")
-        case .text, .list:
+        case .text, .bytes, .list:
             read(&code, value, a)
             code.line("if (__Same\(node)(baseline, paths, at)) \(fail("InvalidDelta", value))")
         case .point, .vector:
@@ -720,7 +720,7 @@ extension GesCSharpEmitter {
     }
 
     private static func sameHelper(_ code: inout Code, _ value: GesPlanValue, _ parameter: String, _ isClass: Bool) {
-        if value.encoding.kind == .text || value.encoding.kind == .list {
+        if value.encoding.kind == .text || value.encoding.kind == .bytes || value.encoding.kind == .list {
             code.blank()
             code.line("private \(isClass ? "" : "readonly ")bool __Same\(value.node)(\(parameter) baseline, string[] paths, int at)")
             code.open("{")

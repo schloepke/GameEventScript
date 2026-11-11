@@ -93,6 +93,7 @@ internal static class RuntimeValues
             ":Percentage" => GesValue.GesPercentage(ParseNumber(value.GetProperty("value").GetString()!)),
             ":List" => GesValue.GesList(value.GetProperty("items").EnumerateArray().Select(Decode).ToArray()),
             ":Tag" => GesValue.GesTag(value.GetProperty("value").GetString() ?? throw new ArgumentException("Tag value required.")),
+            ":Bytes" => GesValue.GesBytes(Convert.FromHexString(value.GetProperty("value").GetString() ?? throw new ArgumentException("Bytes value required."))),
             ":Dice" => GesValue.GesDice(value.GetProperty("rolls").EnumerateArray().Select(roll => roll.GetInt32() > 0 ? roll.GetInt32() : throw new ArgumentException("Positive roll required.")).ToArray()),
             ":Map" => GesValue.GesMap(value.GetProperty("entries").EnumerateArray().Select(item => item.GetProperty("key").GetString()!).ToArray(),
                 value.GetProperty("entries").EnumerateArray().Select(item => Decode(item.GetProperty("value"))).ToArray()),
@@ -117,6 +118,7 @@ internal static class RuntimeValues
             case GesBytecodeTypeKind.Text: return new { type = ":Text", value = value.AsText() };
             case GesBytecodeTypeKind.Tag: return new { type = ":Tag", value = value.AsText() };
             case GesBytecodeTypeKind.Dice: return new { type = ":Dice", rolls = value.AsDice().ToArray() };
+            case GesBytecodeTypeKind.Bytes: return new { type = ":Bytes", value = Convert.ToHexString(value.AsBytes()).ToLowerInvariant() };
             case GesBytecodeTypeKind.Integer: return Numeric(value, "int64", value.AsInteger().ToString(CultureInfo.InvariantCulture));
             case GesBytecodeTypeKind.Float: return Numeric(value, "binary64", value.AsNumber().ToString("R", CultureInfo.InvariantCulture));
             case GesBytecodeTypeKind.Percentage: return new { type = ":Percentage", value = value.AsNumber().ToString("R", CultureInfo.InvariantCulture) };

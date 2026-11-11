@@ -25,6 +25,8 @@ enum GesValueKind: Hashable {
     case point
     /// Descending Int32 dice rolls.
     case dice
+    /// Immutable bytes.
+    case bytes
     /// Ordered immutable value collection.
     case list
     /// Canonical Text-keyed value map.
@@ -132,6 +134,8 @@ public struct GesValue: Hashable, CustomStringConvertible {
     nonisolated(unsafe) private static let emptyList = GesValueObject([GesValue]())
     // These shared payloads contain only immutable empty data, never host values or VM objects.
     nonisolated(unsafe) private static let emptyDice = GesValueObject([Int32]())
+    // These shared payloads contain only immutable empty data, never host values or VM objects.
+    nonisolated(unsafe) private static let emptyBytes = GesValueObject([UInt8]())
 
     private init() {}
 
@@ -155,6 +159,7 @@ public struct GesValue: Hashable, CustomStringConvertible {
         case .vector: .vector
         case .point: .point
         case .dice: .dice
+        case .bytes: .bytes
         case .list: .list
         case .map: .map
         case .record, .external: .custom
@@ -275,6 +280,10 @@ public struct GesValue: Hashable, CustomStringConvertible {
     mutating func setDice(_ value: [Int32]) {
         setObject(.dice, value.isEmpty ? Self.emptyDice : GesValueObject(value.sorted(by: >)), hasValue: !value.isEmpty, numeric: true)
         numericBits = UInt64(bitPattern: value.reduce(Int64(0)) { $0 + Int64($1) })
+    }
+
+    mutating func setBytes(_ value: [UInt8]) {
+        setObject(.bytes, value.isEmpty ? Self.emptyBytes : GesValueObject(value), hasValue: !value.isEmpty)
     }
 
     mutating func setList(_ value: [GesValue]) {
@@ -416,6 +425,13 @@ public struct GesValue: Hashable, CustomStringConvertible {
         return result
     }
 
+    /// Creates an immutable Bytes value; the array is shared through its copy-on-write storage.
+    public static func bytes(_ bytes: [UInt8]) -> Self {
+        var result = Self()
+        result.setBytes(bytes)
+        return result
+    }
+
     /// Creates an immutable ordered list of values.
     public static func list(_ values: [GesValue]) -> Self {
         var result = Self()
@@ -553,6 +569,7 @@ public struct GesValue: Hashable, CustomStringConvertible {
         case .text, .tag: payload(GesTextPayload.self).count
         case .list: listValue!.count
         case .dice: diceRolls!.count
+        case .bytes: bytesValue!.count
         case .map, .record: asMap!.length
         case .external: externalStorage!.definition.fields.count
         case .integerRange: Int(min(integerRangeValue!.count, Int64(Int32.max)))
@@ -581,6 +598,8 @@ public struct GesValue: Hashable, CustomStringConvertible {
     public var listValue: [GesValue]? { kind == .list ? payload([GesValue].self) : nil }
     /// Stored descending dice rolls, or nil for other kinds.
     public var diceRolls: [Int32]? { kind == .dice ? payload([Int32].self) : nil }
+    /// Stored bytes, or nil for other kinds.
+    public var bytesValue: [UInt8]? { kind == .bytes ? payload([UInt8].self) : nil }
     /// Stored Map or Record fields, otherwise nil; does not invoke external field getters.
     public var asMap: GesValueMap? {
         switch kind {
@@ -608,6 +627,8 @@ public struct GesValue: Hashable, CustomStringConvertible {
     public var asList: [GesValue] { listValue ?? [] }
     /// Stored Dice rolls, or an empty array for other kinds.
     public var asDice: [Int32] { diceRolls ?? [] }
+    /// Stored bytes, or an empty array for other kinds.
+    public var asBytes: [UInt8] { bytesValue ?? [] }
     var mapEntries: [GesMapEntry]? { asMap?.entries }
     /// Declared Record or external type name, otherwise nil.
     public var customTypeName: String? {
@@ -637,6 +658,7 @@ public struct GesValue: Hashable, CustomStringConvertible {
         case .text, .tag: return GesText.scalarEqual(a.textValue!, b.textValue!)
         case .vector, .point: return a.spatialValue == b.spatialValue
         case .dice: return a.diceRolls == b.diceRolls
+        case .bytes: return a.bytesValue == b.bytesValue
         case .list: return a.listValue == b.listValue
         case .map: return a.asMap == b.asMap
         case .record: return GesText.scalarEqual(a.customTypeName!, b.customTypeName!) && a.asMap == b.asMap
@@ -659,6 +681,7 @@ public struct GesValue: Hashable, CustomStringConvertible {
         case .text, .tag: GesText.hashScalars(textValue!, into: &hasher)
         case .vector, .point: hasher.combine(spatialValue!)
         case .dice: hasher.combine(diceRolls!)
+        case .bytes: hasher.combine(bytesValue!)
         case .list: hasher.combine(listValue!)
         case .map: hasher.combine(asMap!)
         case .record:
@@ -709,6 +732,8 @@ public struct GesValue: Hashable, CustomStringConvertible {
         case .dice:
             let values = diceRolls!
             return ":Dice[" + values.map(String.init).joined(separator: ", ") + "]"
+        case .bytes:
+            return GesBytesText.format(bytesValue!)
         case .list:
             let values = listValue!
             return "[" + values.map(\.nestedText).joined(separator: ", ") + "]"

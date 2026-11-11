@@ -56,6 +56,15 @@ enum RuntimeValues {
         return try GameEventScriptMessage(name: node.text("name"), arguments: arguments, tags: node.values("tags").compactMap(\.stringValue))
     }
 
+    // A lowercase hexadecimal digit of the Bytes transport.
+    private static func hexDigit(_ byte: UInt8) throws -> UInt8 {
+        switch byte {
+        case 48...57: return byte - 48
+        case 97...102: return byte - 87
+        default: throw ConformanceExecutionError.invalidInput("Invalid bytes")
+        }
+    }
+
     static func decode(_ node: Input, mutateSource: Bool = false) throws -> GesValue {
         let type = try node.text("type")
         let unit = try unit(node)
@@ -74,6 +83,10 @@ enum RuntimeValues {
             let result = GesValue.list(items)
             if mutateSource && !items.isEmpty { items[0] = .nothing }
             return result
+        case ":Bytes":
+            let text = Array(try node.text("value").utf8)
+            guard text.count % 2 == 0 else { throw ConformanceExecutionError.invalidInput("Invalid bytes") }
+            return .bytes(try stride(from: 0, to: text.count, by: 2).map { try hexDigit(text[$0]) << 4 | hexDigit(text[$0 + 1]) })
         case ":Dice":
             var rolls = try node.values("rolls").map { value in
                 guard let result = Int32(value.numberValue ?? value.stringValue ?? "") else { throw ConformanceExecutionError.invalidInput("Invalid roll") }
@@ -122,6 +135,9 @@ extension RuntimeValues {
             result = ["type": (value.unit == .none ? ":Number." : ":Quantity.") + (value.valueKind == .integer ? "int64" : "binary64"), "value": value.valueKind == .integer ? String(value.integerValue!) : numberText(value.asNumber)]
         case .percentage: return ["type": ":Percentage", "value": numberText(value.asNumber)]
         case .dice: return ["type": ":Dice", "rolls": value.diceRolls ?? []]
+        case .bytes:
+            let digits = Array("0123456789abcdef")
+            return ["type": ":Bytes", "value": String((value.bytesValue ?? []).flatMap { [digits[Int($0 >> 4)], digits[Int($0 & 15)]] })]
         case .list: return ["type": ":List", "items": try (value.listValue ?? []).map(encode)]
         case .message: return ["type": ":Message", "message": try encodeMessage(value.messageValue!)]
         case .vector, .point:

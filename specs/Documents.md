@@ -70,7 +70,7 @@ key        = LowerName | quoted Text
   of the text is a key-only entry with the value `true`, as in Map literals.
 - Every value is one complete data literal as recognized by `parse`:
   `nothing`, Booleans, Numbers, Percentages, Quantities including prefixed unit
-  spellings, quoted Text, Tags, Lists, Maps, Dice, Vector, Point and the
+  spellings, quoted Text, Tags, Lists, Maps, Dice, Bytes, Vector, Point and the
   [explicit data forms](Semantics/Text.md#explicit-data-forms). Explicit forms
   construct their values with the same rules as `parse`, except that a failed
   construction is an error rather than `nothing` (see [Strictness](#strictness)).

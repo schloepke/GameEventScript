@@ -39,6 +39,7 @@ enum GesCollectionOperators {
         }
         if let list = value.listValue { return list.contains(needle) }
         if let dice = value.diceRolls { return needle.kind == .integer && !needle.hasUnit && dice.contains { Int64($0) == needle.asInteger } }
+        if let bytes = value.bytesValue { return needle.kind == .integer && !needle.hasUnit && bytes.contains { Int64($0) == needle.asInteger } }
         if value.kind == .map { return needle.textValue.flatMap { value.asMap!.get($0) } != nil }
         if value.spatialValue != nil { return needle.isNumeric && (1...3).contains { value.index(Int64($0)) == needle } }
         if let range = value.integerRangeValue { return needle.kind == .integer && !needle.hasUnit && range.contains(needle.asInteger) }

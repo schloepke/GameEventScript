@@ -94,7 +94,8 @@ internal struct GesLiteralParser
             if (_text.AsSpan(_position).StartsWith(":Vector".AsSpan(), StringComparison.Ordinal)) return ReadSpatial(depth, point: false);
             if (_text.AsSpan(_position).StartsWith(":Point".AsSpan(), StringComparison.Ordinal)) return ReadSpatial(depth, point: true);
         }
-        if (_text[_position] == ':' && !_text.AsSpan(_position).StartsWith(":Dice[".AsSpan(), StringComparison.Ordinal))
+        if (_text[_position] == ':' && !_text.AsSpan(_position).StartsWith(":Dice[".AsSpan(), StringComparison.Ordinal) &&
+            !_text.AsSpan(_position).StartsWith(":Bytes[".AsSpan(), StringComparison.Ordinal))
         {
             var saved = _position;
             var typed = ReadTyped(depth);
@@ -103,16 +104,17 @@ internal struct GesLiteralParser
             _position = saved;
         }
         var dice = _text[_position] == ':' && _text.AsSpan(_position).StartsWith(":Dice".AsSpan(), StringComparison.Ordinal);
-        if (dice)
+        var bytes = _text[_position] == ':' && _text.AsSpan(_position).StartsWith(":Bytes".AsSpan(), StringComparison.Ordinal);
+        if (dice || bytes)
         {
-            _position += 5;
+            _position += dice ? 5 : 6;
             SkipWhitespace();
             if (_position == _text.Length || _text[_position] != '[') return null;
         }
         if (_text[_position] == '[')
         {
             if (depth >= MaximumDepth) return Limit("MaxLiteralDepth");
-            return dice ? ReadDice() : ReadCollection(depth + 1);
+            return dice ? ReadDice() : bytes ? ReadBytes() : ReadCollection(depth + 1);
         }
 
         var start = _position;
@@ -361,6 +363,29 @@ internal struct GesLiteralParser
             var separator = Separator(']');
             if (separator < 0) return null;
             if (separator > 0) return CreateDice(rolls.ToArray());
+        }
+        return null;
+    }
+
+    // `:Bytes[...]` holds integer literals from 0 to 255.
+    private GesValue? ReadBytes()
+    {
+        _position++;
+        SkipWhitespace();
+        var bytes = new List<byte>();
+        if (Consume(']')) return GesValue.GesBytes([]);
+        while (_position < _text.Length)
+        {
+            if (_items >= MaximumItems) return Limit("MaxLiteralItems");
+            _items++;
+            if (_text[_position] is < '0' or > '9') return null;
+            var value = ReadValue(0);
+            if (value is not { } item || item.Kind != GesBytecodeTypeKind.Integer || item.Unit != GesQuantityUnit.UnitNone || item.IntegerValue is < 0 or > 255)
+                return null;
+            bytes.Add((byte)item.IntegerValue);
+            var separator = Separator(']');
+            if (separator < 0) return null;
+            if (separator > 0) return GesValue.GesBytes(bytes.ToArray());
         }
         return null;
     }

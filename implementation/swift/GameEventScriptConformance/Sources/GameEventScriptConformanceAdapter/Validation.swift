@@ -281,6 +281,9 @@ enum Validation {
             } else if [":Range.int64", ":Range.binary64"].contains(type) {
                 try fields(input, ["type", "from", "to", "step"])
                 _ = try RuntimeValues.decode(input)
+            } else if type == ":Bytes" {
+                try fields(input, ["type", "value"])
+                _ = try RuntimeValues.decode(input)
             } else if type == ":Dice" {
                 try fields(input, ["type", "rolls"])
                 for roll in try array(input.required("rolls")) { try require((1...Int(Int32.max)).contains(roll.integerValue ?? 0)) }

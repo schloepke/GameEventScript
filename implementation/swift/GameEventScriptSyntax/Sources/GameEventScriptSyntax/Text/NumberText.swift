@@ -11,6 +11,22 @@ enum GesNumberText {
         return Double(digits + "e-2")?.isFinite ?? false
     }
 
+    // Whether the token is exactly an integer from 0 to 255, such as `0`, `255`, `0xff` or `7.0`.
+    static func isByte(_ text: String) -> Bool {
+        if text.utf8.dropFirst().first == UInt8(ascii: "x") {
+            let value = GesNumberLiteral.read(text).integerValue
+            return value >= 0 && value <= 255
+        }
+        var digits = Substring(digitsOnly(text))
+        if let point = digits.firstIndex(of: ".") {
+            guard digits[digits.index(after: point)...].allSatisfy({ $0 == "0" }) else { return false }
+            digits = digits[..<point]
+        }
+        digits = digits.drop { $0 == "0" }
+        guard digits.count <= 3, let value = Int(digits.isEmpty ? "0" : digits) else { return false }
+        return value <= 255
+    }
+
     // The integer of a token that is exactly an integer from 1 to Int32.max, such as `6` or `6.0`.
     static func positiveInt32(_ text: String) -> Int? {
         // The lexer only forms valid hexadecimal tokens, which start with `0x`.

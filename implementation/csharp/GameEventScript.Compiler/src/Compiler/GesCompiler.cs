@@ -1865,7 +1865,7 @@ internal static partial class GesCompiler
                 );
                 return;
             }
-            if (constructor.TypeName == "record" || constructor.TypeName is "number" or "range" or "series" or "message" or "nothing" or "percentage" or "boolean" or "text" or "tag" or "list" or "map" or "dice" or "handler" &&
+            if (constructor.TypeName == "record" || constructor.TypeName is "number" or "range" or "series" or "message" or "nothing" or "percentage" or "boolean" or "text" or "tag" or "list" or "map" or "dice" or "bytes" or "handler" &&
                 (constructor.Arguments.Count != 1 || constructor.Arguments[0].Label is not null || constructor.TypeName == "series"))
             {
                 var inputs = EmitArgumentExpressionRegisters(constructor.Arguments, context, state);
@@ -2209,6 +2209,7 @@ internal static partial class GesCompiler
                 "handler" => GesBytecodeTypeKind.Handler,
                 "map" => GesBytecodeTypeKind.Map,
                 "dice" => GesBytecodeTypeKind.Dice,
+                "bytes" => GesBytecodeTypeKind.Bytes,
                 _ => (GesBytecodeTypeKind)0
             };
 

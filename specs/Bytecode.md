@@ -599,7 +599,8 @@ for `pc`-based execution.
 - `CheckInteger dst src`
 - `CheckFractional dst src`
 
-`Cast` and `CheckType` use `TypeOperand` as `GesBytecodeTypeKind`.
+`Cast` and `CheckType` use `TypeOperand` as `GesBytecodeTypeKind`. Bytes are
+kind `0x0B`; `Cast :Bytes` converts as [Bytes](Language.md#bytes) defines.
 Built-in types are direct kind operands. Custom/external record types use
 `CastCustom`/`CheckCustomType` with `TypeOperand` as the type-name `StringPool` index.
 Units are not declared type kinds: unit casts and checks use

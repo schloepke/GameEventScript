@@ -73,6 +73,8 @@ public final class GesSchemaParameters {
     @_spi(Generator) public var hasRange = false
     @_spi(Generator) public var isTagBit = false
     @_spi(Generator) public var isTagText = false
+    /// A `:Bytes max n`: a Text on the wire whose bytes need not be UTF-8.
+    @_spi(Generator) public var isBytes = false
     @_spi(Generator) public var width = 0
     @_spi(Generator) public var next = 0
     @_spi(Generator) public var after = 0
@@ -611,9 +613,10 @@ enum GesSchemaBinder {
             info.tags = tags
             node.maxIndex = UInt64(tags.count) - 1
             node.width = bitLength(node.maxIndex)
-        case .text:
-            guard let max = type.max else { throw scope.error(Code.notEncodable, type.offset, "A Text without max has no hard limit.") }
+        case .text, .bytes:
+            guard let max = type.max else { throw scope.error(Code.notEncodable, type.offset, "A \(type.kind.rawValue) without max has no hard limit.") }
             node.kind = .text
+            node.isBytes = type.kind == .bytes
             node.maxCount = max
             node.width = bitLength(UInt64(max))
         case .list:
@@ -700,8 +703,8 @@ enum GesSchemaBinder {
             try checkWrapping(scope, type.constraints, type.offset)
         case .tag:
             if type.tags == nil && type.max == nil { throw scope.error(Code.notEncodable, type.offset, "A Tag without a set or max has no hard limit.") }
-        case .text:
-            if type.max == nil { throw scope.error(Code.notEncodable, type.offset, "A Text without max has no hard limit.") }
+        case .text, .bytes:
+            if type.max == nil { throw scope.error(Code.notEncodable, type.offset, "A \(type.kind.rawValue) without max has no hard limit.") }
         case .list:
             guard let element = type.element, type.max != nil else { throw scope.error(Code.notEncodable, type.offset, "A List without element type and max has no hard limit.") }
             if lists >= maximumListNesting { throw scope.error(Code.notEncodable, type.offset, "Lists nest at most \(maximumListNesting) levels for encoding.") }

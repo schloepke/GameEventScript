@@ -74,7 +74,8 @@ internal sealed partial class GesSyntaxBinder
         NodeKind.MemberAccessExpression => BindMemberAccess(node),
         NodeKind.CollectionAccessExpression => BindCollectionAccess(node),
         NodeKind.TypeConstructorExpression => BindTypeConstructor(node),
-        NodeKind.DiceLiteralExpression => BindDiceLiteral(node),
+        NodeKind.DiceLiteralExpression => BindDiceLiteral(node, "dice"),
+        NodeKind.BytesLiteralExpression => BindDiceLiteral(node, "bytes"),
         NodeKind.RangeExpression => BindRange(node),
         NodeKind.RandomExpression => BindRandom(node),
         NodeKind.SeededRandomExpression => BindSeededRandom(node),
@@ -676,7 +677,8 @@ internal sealed partial class GesSyntaxBinder
         return Set(new GesTypeConstructorExpressionNode(typeName, arguments), start, c.Previous);
     }
 
-    private GesExpressionNode BindDiceLiteral(GesSyntaxNode node)
+    // A Dice or Bytes literal binds as the cast of its integer List.
+    private GesExpressionNode BindDiceLiteral(GesSyntaxNode node, string typeName)
     {
         var c = new Cursor(this, node);
         var start = c.Expect(TypeName);
@@ -698,8 +700,8 @@ internal sealed partial class GesSyntaxBinder
 
         c.Expect(RightBracket);
         var values = Set(new GesListLiteralExpressionNode(items), bracket, c.Previous);
-        // Reuse deterministic list-to-Dice conversion; CreateDice is a random roll.
-        return Set(new GesTypeConstructorExpressionNode("dice", new GesArgumentListNode([new GesArgumentNode(null, values)])), start, c.Previous);
+        // Reuse deterministic list conversion; CreateDice is a random roll.
+        return Set(new GesTypeConstructorExpressionNode(typeName, new GesArgumentListNode([new GesArgumentNode(null, values)])), start, c.Previous);
     }
 
     private GesExpressionNode BindRange(GesSyntaxNode node)

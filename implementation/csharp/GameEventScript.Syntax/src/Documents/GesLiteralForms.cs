@@ -9,7 +9,7 @@ namespace GameEventScript.Syntax;
 // The explicit data forms such as `:Range(from: 1, to: 5)`: their lowercase type names and parameters.
 internal static class GesLiteralForms
 {
-    internal static bool IsType(string name) => name is "nothing" or "number" or "percentage" or "boolean" or "text" or "tag" or "list" or "map" or "dice" or "vector" or "point" or "range" or "series" or "message" or "handler" or "record";
+    internal static bool IsType(string name) => name is "nothing" or "number" or "percentage" or "boolean" or "text" or "tag" or "list" or "map" or "dice" or "bytes" or "vector" or "point" or "range" or "series" or "message" or "handler" or "record";
     // Returns parameter positions in evaluation order, without reordering evaluation of source arguments.
     internal static int[]? Positions(string type, IReadOnlyList<string> labels)
     {

@@ -49,6 +49,7 @@ internal enum GesModelKind
     Number,
     Tag,
     Text,
+    Bytes,
     List,
     Dice,
     Point,
@@ -176,6 +177,10 @@ internal static class GesModelLayoutBuilder
                 value.Kind = GesModelKind.Text;
                 value.Max = type.Max;
                 break;
+            case GesSchemaTypeKind.Bytes:
+                value.Kind = GesModelKind.Bytes;
+                value.Max = type.Max;
+                break;
             case GesSchemaTypeKind.List when type.Element.Count > 0:
                 value.Kind = GesModelKind.List;
                 value.Max = type.Max;
@@ -276,7 +281,7 @@ internal static class GesModelLayoutJson
                 json.Strings("tags", value.Tags);
                 Optional(json, "max", value.Max);
                 break;
-            case GesModelKind.Text:
+            case GesModelKind.Text or GesModelKind.Bytes:
                 Optional(json, "max", value.Max);
                 break;
             case GesModelKind.List:
@@ -324,6 +329,7 @@ internal static class GesModelLayoutJson
         GesModelKind.Number => "number",
         GesModelKind.Tag => "tag",
         GesModelKind.Text => "text",
+        GesModelKind.Bytes => "bytes",
         GesModelKind.List => "list",
         GesModelKind.Dice => "dice",
         GesModelKind.Point => "point",

@@ -499,13 +499,13 @@
 						</dict>
 					</dict>
 					<key>match</key>
-					<string>(:Dice)([ \t\r\n]*)(\[)</string>
+					<string>(:Dice|:Bytes)([ \t\r\n]*)(\[)</string>
 					<key>name</key>
 					<string>meta.literal.dice.gameeventscript</string>
 				</dict>
 				<dict>
 					<key>match</key>
-					<string>:(?:Nothing|Text|Boolean|Number|Percentage|Vector|Point|Series|Range|Message|Handler|Tag|List|Map|Dice|Record)(?=$|[^A-Za-z0-9_])</string>
+					<string>:(?:Nothing|Text|Boolean|Number|Percentage|Vector|Point|Series|Range|Message|Handler|Tag|List|Map|Dice|Bytes|Record)(?=$|[^A-Za-z0-9_])</string>
 					<key>name</key>
 					<string>support.type.primitive.gameeventscript</string>
 				</dict>

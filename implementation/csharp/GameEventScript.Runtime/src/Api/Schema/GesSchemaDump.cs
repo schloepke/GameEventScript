@@ -108,6 +108,10 @@ public static class GesSchemaDump
                 var tag = reader.ReadTag(field);
                 Line(builder, node.Path, offset, reader.BitPosition - offset, "#" + node.Tags![tag] + " index=" + tag.ToString(CultureInfo.InvariantCulture));
                 break;
+            case GesSchemaNodeKind.Text when node.IsBytes:
+                var bytes = reader.ReadBytesValue(field);
+                Line(builder, node.Path, offset, reader.BitPosition - offset, GesBytesText.Format(bytes));
+                break;
             case GesSchemaNodeKind.Text:
                 var text = reader.ReadTextValue(field);
                 Line(builder, node.Path, offset, reader.BitPosition - offset, node.IsTagText ? "#" + text : Quoted(text));

@@ -64,11 +64,13 @@ public sealed class GesRolesGeneratedCodeTests
     {
         var world = new Wire.World { Tick = 7, Arena = new GesVector(2000, 1500) };
         world.Bots.Add(new Wire.World_Bot { Id = 3, Position = new GesPoint(12.34, 56.78), Velocity = new GesVector(-1.5, 2.25, 0.5), Body = new Wire.World_Body { Mass = 120 } });
+        world.Bots[0].SetToken([0xa0, 0x00, 0xff]);
         var read = new Wire.World { Arena = new GesVector(0, 0, 9) };
         read.Read(world.ToBytes());
         Assert.AreEqual(new GesVector(2000, 1500), read.Arena, "A 2D field reads its omitted axis as zero.");
         Assert.AreEqual(new GesPoint(12.34, 56.78), read.Bots[0].Position);
         Assert.AreEqual(new GesVector(-1.5, 2.25, 0.5), read.Bots[0].Velocity);
+        CollectionAssert.AreEqual(new byte[] { 0xa0, 0x00, 0xff }, read.Bots[0].Token.ToArray(), "Bytes need not be UTF-8.");
         Assert.IsTrue(read.WireEquals(world));
     }
 
@@ -159,7 +161,7 @@ public sealed class GesRolesBindingTests
           let bot be view.bots[1]
           let made be :World_Body(fields: [mass: 90kg, hull: #light])
           let radar be :RadarView(fields: [range: 300m, contacts: [1, 2]])
-          let built be :BotView(fields: [bot: 7, name: 'Bo', alive: true, health: 50%, speed: 2.5, heading: 90°, mood: #angry, team: 'blue', position: :Point(3m, 4m), velocity: :Vector(1m, 0m), body: made, radar: radar, facing: #north, marks: [:Point(1m, 1m)], units: ['x', made], grid: [[1, 2]], rolls: :Dice[6, 3], hints: [#left, #right]])
+          let built be :BotView(fields: [bot: 7, name: 'Bo', alive: true, health: 50%, speed: 2.5, heading: 90°, mood: #angry, team: 'blue', position: :Point(3m, 4m), velocity: :Vector(1m, 0m), body: made, radar: radar, facing: #north, marks: [:Point(1m, 1m)], units: ['x', made], grid: [[1, 2]], rolls: :Dice[6, 3], seal: :Bytes("a0ff"), chunks: [:Bytes[1], :Bytes[]], hints: [#left, #right]])
           emit Seen(name: bot.name, x: bot.position.x, mass: bot.body.mass, radar: bot.radar, facing: bot.facing, units: bot.units[:count], hint: bot.hints[1], built: built, bad: :World_Body(fields: [mass: 90m, hull: #light]), unknown: :World_Body(fields: [mass: 1kg, hull: #light, extra: 1]), copied: :World_Body(fields: made.fields))
         }
         """;

@@ -543,7 +543,8 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, GesExpressionN
                 return operand.Kind is GesBytecodeTypeKind.Nothing or
                     GesBytecodeTypeKind.List or
                     GesBytecodeTypeKind.Map or
-                    GesBytecodeTypeKind.Dice
+                    GesBytecodeTypeKind.Dice or
+                    GesBytecodeTypeKind.Bytes
                     ? GesValue.GesNothing()
                     : GesValue.GesBoolean(!operand.AsBoolean());
             case GesUnaryOperator.HasValue: return GesValue.GesBoolean(operand.HasValue);
@@ -747,7 +748,8 @@ internal sealed class GesAstOptimizer(IReadOnlyDictionary<string, GesExpressionN
         => value.Kind is GesBytecodeTypeKind.Nothing or
             GesBytecodeTypeKind.List or
             GesBytecodeTypeKind.Map or
-            GesBytecodeTypeKind.Dice;
+            GesBytecodeTypeKind.Dice or
+            GesBytecodeTypeKind.Bytes;
 
     private static GesValue? FoldAdd(GesValue left, GesValue right, double leftNumber, double rightNumber)
     {

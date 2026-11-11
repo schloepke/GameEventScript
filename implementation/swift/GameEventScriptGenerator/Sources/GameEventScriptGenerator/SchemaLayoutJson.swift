@@ -95,6 +95,9 @@ enum GesSchemaLayoutJson {
             json.boolean("tagName", encoding.tagName)
             json.number("maxCount", encoding.maxCount)
             json.number("width", Int64(encoding.width))
+        case .bytes:
+            json.number("maxCount", encoding.maxCount)
+            json.number("width", Int64(encoding.width))
         case .list:
             json.boolean("dice", encoding.dice)
             json.number("maxCount", encoding.maxCount)
@@ -129,6 +132,7 @@ enum GesSchemaLayoutJson {
         case .float: "float"
         case .tag: "tag"
         case .text: "text"
+        case .bytes: "bytes"
         case .list: "list"
         case .point: "point"
         case .vector: "vector"

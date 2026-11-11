@@ -205,6 +205,9 @@ public enum GesSchemaValues {
             if value.valueKind != .tag { throw GesWireError(code: GesWireError.typeMismatch, path: info.path) }
             guard let tag = info.tags.firstIndex(of: value.asText) else { throw GesWireError(code: GesWireError.unknownTag, path: info.path) }
             try writer.writeTag(field, tag)
+        case .text where node.isBytes:
+            guard let bytes = value.bytesValue else { throw GesWireError(code: GesWireError.typeMismatch, path: info.path) }
+            try bytes.withUnsafeBytes { try writer.writeBytes(field, $0) }
         case .text:
             if value.valueKind != (node.isTagText ? .tag : .text) { throw GesWireError(code: GesWireError.typeMismatch, path: info.path) }
             let bytes = Array(value.asText.utf8)
@@ -273,6 +276,7 @@ public enum GesSchemaValues {
         case .boolean: value.valueKind == .boolean
         case .tag: value.valueKind == .tag
         case .text: value.valueKind == .text
+        case .bytes: value.valueKind == .bytes
         case .list: value.valueKind == .list
         case .dice: value.valueKind == .dice
         case .point: value.valueKind == .point
@@ -346,6 +350,7 @@ public enum GesSchemaValues {
         switch node.kind {
         case .boolean: return .boolean(try reader.readBoolean(field))
         case .tag: return try .tag(info.tags[try reader.readTag(field)])
+        case .text where node.isBytes: return .bytes(try reader.readBytesValue(field))
         case .text: return node.isTagText ? try .tag(try reader.readTextValue(field)) : .text(try reader.readTextValue(field))
         case .list where info.valueKind == .dice:
             let length = try reader.beginList(field)

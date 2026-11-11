@@ -125,6 +125,10 @@ internal static class GesSchemaLayoutJson
                 json.Number("maxCount", encoding.MaxCount);
                 json.Number("width", encoding.Width);
                 break;
+            case GesLayoutKind.Bytes:
+                json.Number("maxCount", encoding.MaxCount);
+                json.Number("width", encoding.Width);
+                break;
             case GesLayoutKind.List:
                 json.Boolean("dice", encoding.Dice);
                 json.Number("maxCount", encoding.MaxCount);
@@ -162,6 +166,7 @@ internal static class GesSchemaLayoutJson
         GesLayoutKind.Float => "float",
         GesLayoutKind.Tag => "tag",
         GesLayoutKind.Text => "text",
+        GesLayoutKind.Bytes => "bytes",
         GesLayoutKind.List => "list",
         GesLayoutKind.Point => "point",
         GesLayoutKind.Vector => "vector",

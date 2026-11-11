@@ -82,6 +82,7 @@ internal enum GesLayoutKind
     Float,
     Tag,
     Text,
+    Bytes,
     List,
     Point,
     Vector,
@@ -275,6 +276,11 @@ internal static class GesSchemaLayoutBuilder
             case GesSchemaTypeKind.Tag when node.Kind == GesSchemaNodeKind.Tag:
                 encoding.Kind = GesLayoutKind.Tag;
                 encoding.Tags.AddRange(node.Tags!);
+                encoding.Width = node.Width;
+                break;
+            case GesSchemaTypeKind.Bytes:
+                encoding.Kind = GesLayoutKind.Bytes;
+                encoding.MaxCount = node.MaxCount;
                 encoding.Width = node.Width;
                 break;
             case GesSchemaTypeKind.Tag or GesSchemaTypeKind.Text:

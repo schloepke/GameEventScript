@@ -55,7 +55,10 @@ public enum GesSchemaTypeKind : byte
     Handler,
 
     /// <summary>Nothing.</summary>
-    Nothing
+    Nothing,
+
+    /// <summary>A Bytes value.</summary>
+    Bytes
 }
 
 internal static class GesSchemaTypeNames
@@ -74,6 +77,7 @@ internal static class GesSchemaTypeNames
         "Vector" => GesSchemaTypeKind.Vector,
         "Tag" => GesSchemaTypeKind.Tag,
         "Text" => GesSchemaTypeKind.Text,
+        "Bytes" => GesSchemaTypeKind.Bytes,
         "List" => GesSchemaTypeKind.List,
         "Map" => GesSchemaTypeKind.Map,
         "Range" => GesSchemaTypeKind.Range,

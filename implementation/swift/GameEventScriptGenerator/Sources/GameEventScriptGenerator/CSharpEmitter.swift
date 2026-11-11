@@ -129,7 +129,7 @@ enum GesCSharpEmitter {
     }
 
     // Whether an optional value also has a nullable view: a value type without storage.
-    static func plain(_ value: GesPlanValue) -> Bool { !value.isClass && value.encoding.kind != .union && value.encoding.kind != .text && value.encoding.kind != .list }
+    static func plain(_ value: GesPlanValue) -> Bool { !value.isClass && value.encoding.kind != .union && value.encoding.kind != .text && value.encoding.kind != .bytes && value.encoding.kind != .list }
 
     // The nested types and members a value declares, for the collision check.
     static func nested(_ value: GesPlanValue, _ names: inout Names, _ field: String) {
@@ -139,6 +139,8 @@ enum GesCSharpEmitter {
         case .text:
             names.append((value.base + "Utf8", "the UTF-8 bytes of " + field))
             names.append(("Set" + value.base + "Utf8", "the UTF-8 setter of " + field))
+        case .bytes:
+            names.append(("Set" + value.base, "the setter of " + field))
         case .list:
             if let item = value.item { names.append((item.name, "the element type of " + field)) } else { nested(value.element!, &names, field) }
         case .union:
@@ -166,6 +168,7 @@ enum GesCSharpEmitter {
         case .quantized, .float: "double"
         case .schema: value.encoding.schema
         case .text: "string"
+        case .bytes: "byte[]"
         case .point: "GesPoint"
         case .vector: "GesVector"
         case .list: "List<\(elementName(value))>"
@@ -213,8 +216,29 @@ enum GesCSharpEmitter {
         }
     }
 
+    // A Bytes value grows its storage as a Text does, without UTF-8 conveniences.
+    static func bytesMember(_ code: inout Code, _ value: GesPlanValue, _ summary: String) {
+        let storage = "__" + value.base
+        let max = String(value.encoding.maxCount)
+        code.line("private byte[] \(storage) = Array.Empty<byte>();")
+        code.line("private int \(storage)Length;")
+        code.blank()
+        code.line("/// <summary>\(summary), at most \(max) bytes.</summary>")
+        code.line("public ReadOnlySpan<byte> \(value.base) => new ReadOnlySpan<byte>(\(storage), 0, \(storage)Length);")
+        code.blank()
+        code.line("/// <summary>Sets \(summary.prefix(1).lowercased() + summary.dropFirst()); its length is checked when the record is written.</summary>")
+        code.line("/// <param name=\"bytes\">The bytes.</param>")
+        code.line("public void Set\(value.base)(ReadOnlySpan<byte> bytes)")
+        code.open("{")
+        code.line("if (\(storage).Length < bytes.Length) Array.Resize(ref \(storage), Math.Max(bytes.Length, Math.Min(\(max), \(storage).Length * 2)));")
+        code.line("bytes.CopyTo(\(storage));")
+        code.line("\(storage)Length = bytes.Length;")
+        code.close()
+    }
+
     // Declares the member that stores a value, with its storage and conveniences.
     static func member(_ code: inout Code, _ value: GesPlanValue, _ summary: String) {
+        if value.encoding.kind == .bytes { return bytesMember(&code, value, summary) }
         if value.encoding.kind != .text {
             code.line("/// <summary>\(summary)\(description(value)).</summary>")
             code.line("public \(typeName(value)) \(value.base)\(initializer(value))")
@@ -433,11 +457,13 @@ enum GesCSharpEmitter {
         case .tag:
             code.line("if ((ulong)\(target) > \(unsigned(UInt64(encoding.tags.count) - 1))) \(fail("UnknownTag", value))")
             code.line("writer.Write((ulong)\(target), \(width));")
-        case .text:
+        case .text, .bytes:
             code.open("{")
             code.line("var text = new ReadOnlySpan<byte>(__\(value.base), 0, __\(value.base)Length);")
             code.line("if (text.Length > \(max)) \(fail("TooLong", value))")
-            code.line(encoding.tagName ? "if (!GesWireRules.IsTagName(text)) \(fail("InvalidTag", value))" : "if (!GesWireRules.IsValidUtf8(text)) \(fail("InvalidText", value))")
+            if encoding.kind == .text {
+                code.line(encoding.tagName ? "if (!GesWireRules.IsTagName(text)) \(fail("InvalidTag", value))" : "if (!GesWireRules.IsValidUtf8(text)) \(fail("InvalidText", value))")
+            }
             code.line("writer.Write((ulong)text.Length, \(width));")
             code.line("writer.WriteBytes(text);")
             code.close()
@@ -507,7 +533,7 @@ enum GesCSharpEmitter {
             if encoding.range { code.line("if (value < \(bits(encoding.lowerValue)) || value > \(bits(encoding.upperValue))) \(fail("OutOfRange", value))") }
             code.line("\(target) = value;")
             code.close()
-        case .text:
+        case .text, .bytes:
             let storage = "__" + value.base
             code.open("{")
             code.line("var count = (int)reader.Read(\(width), \(path(value)));")
@@ -516,7 +542,9 @@ enum GesCSharpEmitter {
             code.line("if (\(storage).Length < count) Array.Resize(ref \(storage), Math.Max(count, Math.Min(\(max), \(storage).Length * 2)));")
             code.line("var text = new Span<byte>(\(storage), 0, count);")
             code.line("reader.ReadBytes(text, \(path(value)));")
-            code.line(encoding.tagName ? "if (!GesWireRules.IsTagName(text)) \(fail("InvalidTag", value))" : "if (!GesWireRules.IsValidUtf8(text)) \(fail("InvalidText", value))")
+            if encoding.kind == .text {
+                code.line(encoding.tagName ? "if (!GesWireRules.IsTagName(text)) \(fail("InvalidTag", value))" : "if (!GesWireRules.IsValidUtf8(text)) \(fail("InvalidText", value))")
+            }
             code.line("\(storage)Length = count;")
             code.close()
         case .list:

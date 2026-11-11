@@ -36,12 +36,13 @@ extension GesExternalTypeNames {
         case "List": .list
         case "Map": .map
         case "Dice": .dice
+        case "Bytes": .bytes
         default: nil
         }
     }
 
     static func typeName(_ kind: GesBytecodeTypeKind, _ unit: GesQuantityUnit) throws -> String {
-        guard [.nothing, .tag, .text, .percentage, .vector, .point, .float, .boolean, .series, .range, .handler, .list, .map, .dice].contains(kind), unit == .none || kind == .float || kind == .vector || kind == .point else {
+        guard [.nothing, .tag, .text, .percentage, .vector, .point, .float, .boolean, .series, .range, .handler, .list, .map, .dice, .bytes].contains(kind), unit == .none || kind == .float || kind == .vector || kind == .point else {
             throw GesApiError.invalidArgument("Unsupported external value kind or unit")
         }
         if (kind == .float || kind == .integer) && unit != .none { return "Quantity(" + unit.suffix + ")" }

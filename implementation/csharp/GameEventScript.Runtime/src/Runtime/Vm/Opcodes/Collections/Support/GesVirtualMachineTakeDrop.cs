@@ -509,6 +509,8 @@ internal partial class GesVirtualMachine
                 return 0;
             case GesBytecodeTypeKind.Boolean when right.Kind is GesBytecodeTypeKind.Boolean:
                 return left.IsTrue.CompareTo(right.IsTrue);
+            case Bytes when right.Kind is Bytes && left.ObjectValue is byte[] leftBytes && right.ObjectValue is byte[] rightBytes:
+                return Math.Sign(leftBytes.AsSpan().SequenceCompareTo(rightBytes));
             case Dice when right.Kind is Dice && left.ObjectValue is int[] leftDice && right.ObjectValue is int[] rightDice:
             {
                 var countComparison = leftDice.Length.CompareTo(rightDice.Length);
@@ -545,6 +547,7 @@ internal partial class GesVirtualMachine
             List => 11,
             Map or Custom => 12,
             Dice => 13,
+            Bytes => 14,
             _ => 8
         };
     }

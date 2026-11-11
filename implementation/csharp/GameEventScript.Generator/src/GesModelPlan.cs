@@ -106,6 +106,7 @@ internal static class GesModelPlanner
         GesModelKind.Number when value.Model.Type == "Percentage" => ("Percentage", "none", null),
         GesModelKind.Number => ("Float", value.Model.Unit, null),
         GesModelKind.Text => ("Text", "none", null),
+        GesModelKind.Bytes => ("Bytes", "none", null),
         GesModelKind.Tag => ("Tag", "none", null),
         GesModelKind.List => ("List", "none", null),
         GesModelKind.Dice => ("Dice", "none", null),
@@ -148,6 +149,10 @@ internal static class GesModelPlanner
             case GesModelKind.Text:
                 text.Append(":Text");
                 if (value.Max is { } textMax) text.Append(" max ").Append(textMax);
+                break;
+            case GesModelKind.Bytes:
+                text.Append(":Bytes");
+                if (value.Max is { } bytesMax) text.Append(" max ").Append(bytesMax);
                 break;
             case GesModelKind.List:
                 text.Append(":List(");

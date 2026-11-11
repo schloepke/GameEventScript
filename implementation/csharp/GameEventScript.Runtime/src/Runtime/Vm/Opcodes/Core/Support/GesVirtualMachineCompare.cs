@@ -36,6 +36,8 @@ internal partial class GesVirtualMachine
                 return !b.HasUnit && GesNumber.EqualsWithinUlps(a.IntegerValue, b.AsNumeric, GesNumber.RuntimeEqualityUlps);
             case not Dice when a.IsNumeric && b.Kind is Dice && b.ObjectValue is int[] bl:
                 return !a.HasUnit && GesNumber.EqualsWithinUlps(b.IntegerValue, a.AsNumeric, GesNumber.RuntimeEqualityUlps);
+            case Bytes when b.Kind is Bytes && a.ObjectValue is byte[] ab && b.ObjectValue is byte[] bb:
+                return ab.AsSpan().SequenceEqual(bb);
             case Handler when b.Kind is Handler && a.ObjectValue is GesMessageSignature asig && b.ObjectValue is GesMessageSignature bsig:
                 return asig.Equals(bsig);
             case Message when b.Kind is Message && a.ObjectValue is GameEventScriptMessage amsg && b.ObjectValue is GameEventScriptMessage bmsg:

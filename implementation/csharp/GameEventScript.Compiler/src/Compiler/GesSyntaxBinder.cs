@@ -463,6 +463,7 @@ internal sealed partial class GesSyntaxBinder
         "List" => "list",
         "Map" => "map",
         "Dice" => "dice",
+        "Bytes" => "bytes",
         _ => typeName
     };
 

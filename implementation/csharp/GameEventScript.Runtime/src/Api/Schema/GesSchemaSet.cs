@@ -678,6 +678,10 @@ internal static class GesSchemaCanonical
                 builder.Append("Text");
                 if (type.Max is { } textMax) builder.Append(" max ").Append(textMax);
                 break;
+            case GesSchemaTypeKind.Bytes:
+                builder.Append("Bytes");
+                if (type.Max is { } bytesMax) builder.Append(" max ").Append(bytesMax);
+                break;
             case GesSchemaTypeKind.Dice:
                 builder.Append("Dice");
                 if (type.Max is { } diceMax) builder.Append(" max ").Append(diceMax);

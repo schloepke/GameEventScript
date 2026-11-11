@@ -461,6 +461,8 @@ struct or another compact representation. Public factory operations create:
 - Vector and Point;
 - IntegerRange and FloatRange;
 - Dice from ordered roll values;
+- Bytes from a byte sequence (C# `GesBytes(ReadOnlySpan<byte>)` copies it, Swift `bytes(_:)` shares the
+  copy-on-write array);
 - immutable List and Map;
 - Handler signature and Message;
 - immutable Record by type name and ordered fields;
@@ -505,7 +507,9 @@ Each port spells these with the language's own means, without another library.
 read operations expose the active value. A typed `As...` operation on an
 incompatible kind follows the public value conversion contract and must never
 expose uninitialized native storage. `AsList` and `AsMap` return immutable
-views; `AsDice` returns an independent ordered copy in the C# mapping.
+views; `AsDice` returns an independent ordered copy in the C# mapping. C#
+`AsBytes()` returns a read-only span over the stored bytes without copying; Swift
+`bytesValue` and `asBytes` return the stored array.
 
 Numeric register storage is a numeric projection only. Boolean stores 0/1 and Dice
 stores its exact Int64 roll sum (zero for empty Dice). Nonnumeric values have no
@@ -672,8 +676,8 @@ GES schemas ([Schemas](Schemas.md)) live in Runtime. Apart from the value path, 
 | parameters | `sealed class GesSchemaParameters` with `With(name, literal)`, `With(name, long, unit)`, `With(name, double, unit)` | `final class GesSchemaParameters` with `with(_:literal:)`, `with(_:_:unit:)` |
 | bound schema | `sealed class GesBoundSchema` with `Schema`, `Name`, `MaxByteCount`, `Hash`, `BindingHash`, `HasKey`, `Field(path)`, `Member(name)`, `MemberIndex(name)` | `final class GesBoundSchema` with `schema`, `name`, `maxByteCount`, `hash`, `bindingHash`, `hasKey`, `field(_:)`, `member(_:)`, `memberIndex(_:)` |
 | field handle | `readonly struct GesSchemaField` with `Path` | `struct GesSchemaField` with `path` |
-| writer | `ref struct GesSchemaWriter(schema, Span<byte>)`: `SelectMember`, `SelectAlternative`, `WriteBoolean`, `WriteInteger`, `WriteNumber`, `WriteIndex`, `WriteTag`, `WriteText`, `BeginList`, `BeginNested`, `WriteAbsent`, `Finish` | `struct GesSchemaWriter(_:into:)` over an `UnsafeMutableRawBufferPointer`, with the same operations |
-| reader | `ref struct GesSchemaReader(schema, ReadOnlySpan<byte>, byteLimit)`: `ReadMember`, `ReadAlternative`, `ReadKey`, `ReadPresence`, `ReadBoolean`, `ReadInteger`, `ReadNumber`, `ReadIndex`, `ReadTag`, `ReadText`, `BeginList`, `BeginNested`, `Finish` | `struct GesSchemaReader(_:data:byteLimit:)` over an `UnsafeRawBufferPointer`, with the same operations |
+| writer | `ref struct GesSchemaWriter(schema, Span<byte>)`: `SelectMember`, `SelectAlternative`, `WriteBoolean`, `WriteInteger`, `WriteNumber`, `WriteIndex`, `WriteTag`, `WriteText`, `WriteBytes`, `BeginList`, `BeginNested`, `WriteAbsent`, `Finish` | `struct GesSchemaWriter(_:into:)` over an `UnsafeMutableRawBufferPointer`, with the same operations |
+| reader | `ref struct GesSchemaReader(schema, ReadOnlySpan<byte>, byteLimit)`: `ReadMember`, `ReadAlternative`, `ReadKey`, `ReadPresence`, `ReadBoolean`, `ReadInteger`, `ReadNumber`, `ReadIndex`, `ReadTag`, `ReadText`, `ReadBytes`, `BeginList`, `BeginNested`, `Finish` | `struct GesSchemaReader(_:data:byteLimit:)` over an `UnsafeRawBufferPointer`, with the same operations |
 | dump | `static GesSchemaDump.Read(schema, data)` returning `GesSchemaDumpResult` with `Text`, `IsValid` | `GesSchemaDump.read(_:data:)` returning `GesSchemaDumpResult` with `text`, `isValid` |
 | source and binding error | `GesSchemaException` with `Code`, `SourceName`, `Line`, `Column` | `GesSchemaError` with `code`, `sourceName`, `line`, `column`, `message` |
 | wire error | `GesWireException(code, path)` with `Code`, `Path` and a public constant per `wire.*` code | `GesWireError(code:path:)` with `code`, `path` and a static constant per code |
@@ -1323,6 +1327,8 @@ value for each normalized label. Ordered tuple inputs support positional labels.
 `GesBridgeValueConvertible` defines explicit native conversion.
 Built-in conformances cover Boolean, Text, signed and unsigned fixed-width Swift
 integers, Float/Double, Optional, Array, String-keyed Dictionary and GesValue.
+`[UInt8]` converts to and from Bytes rather than a List, as C# `byte[]` does in
+extension parameters, results and external fields.
 Native decoding checks kind and units, rejects fractional or out-of-range integer
 conversion and floating-point precision loss. These conversions do not invoke
 source-language casts. Native integer encoding and decoding are bounded by both

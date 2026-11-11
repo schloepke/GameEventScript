@@ -117,6 +117,10 @@ public enum GesBytecodeTypeKind : byte
     /// Identifies the range value.
     /// </summary>
     Range = 0x0a,
+    /// <summary>
+    /// Identifies an immutable sequence of bytes.
+    /// </summary>
+    Bytes = 0x0b,
 
     /// <summary>
     /// Identifies the handler value.

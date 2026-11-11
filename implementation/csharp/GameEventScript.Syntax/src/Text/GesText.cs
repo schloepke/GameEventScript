@@ -115,6 +115,7 @@ internal static class GesText
         "List" => "list",
         "Map" => "map",
         "Dice" => "dice",
+        "Bytes" => "bytes",
         _ => typeName
     };
 

@@ -89,7 +89,7 @@ enum GesSwiftModelEmitter {
     }
 
     private static func defaultValue(_ value: GesModelPlanValue) -> String {
-        value.nullable ? " = nil" : value.kind == .list || value.kind == .dice ? " = []" : ""
+        value.nullable ? " = nil" : value.kind == .list || value.kind == .dice || value.kind == .bytes ? " = []" : ""
     }
 
     static func type(_ value: GesModelPlanValue) -> String { plain(value) + (value.nullable ? "?" : "") }
@@ -100,6 +100,7 @@ enum GesSwiftModelEmitter {
         case .number: value.model.integer ? "Int" : "Double"
         case .tag: value.closedTag ? value.nested : "String"
         case .text: "String"
+        case .bytes: "[UInt8]"
         case .list: "[\(type(value.element!))]"
         case .dice: "[Int]"
         case .point: "GesPoint"
@@ -148,6 +149,7 @@ enum GesSwiftModelEmitter {
         case .number where value.model.integer: return ".integer(Int64(\(expression)), unit: \(unit(value.model.unit)))"
         case .number: return ".float(\(expression), unit: \(unit(value.model.unit)))"
         case .text: return ".text(\(expression))"
+        case .bytes: return ".bytes(\(expression))"
         case .tag where value.closedTag: return "GesTypes.tag(\(expression).rawValue)"
         case .tag: return "GesTypes.tag(\(expression))"
         case .list: return ".list(\(expression).map { \(encode(value.element!, owner, "$0")) })"
@@ -167,6 +169,7 @@ enum GesSwiftModelEmitter {
         case .number where value.model.integer: return "GesTypes.integer(\(expression), \(unit(value.model.unit)))"
         case .number: return "GesTypes.number(\(expression), \(unit(value.model.unit)))"
         case .text: return "GesTypes.text(\(expression))"
+        case .bytes: return "GesTypes.bytes(\(expression))"
         case .tag where value.closedTag: return "GesTypes.tag(\(expression)).flatMap(\(owner).\(value.nested).init(rawValue:))"
         case .tag: return "GesTypes.tag(\(expression))"
         case .list: return "GesTypes.list(\(expression), { \(decode(value.element!, owner, "$0")) })"
@@ -313,6 +316,8 @@ enum GesSwiftModelEmitter {
         code.line("static func tag(_ value: GesValue) -> String? { value.valueKind == .tag || value.valueKind == .text ? value.textValue : nil }")
         code.blank()
         code.line("static func text(_ value: GesValue) -> String? { value.valueKind == .text ? value.textValue : nil }")
+        code.blank()
+        code.line("static func bytes(_ value: GesValue) -> [UInt8]? { value.bytesValue }")
         code.blank()
         code.line("static func boolean(_ value: GesValue) -> Bool? { value.valueKind == .boolean ? value.asBoolean : nil }")
         code.blank()

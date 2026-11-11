@@ -175,6 +175,7 @@ enum GesCSharpModelEmitter {
         case .number: value.model.integer ? "long" : "double"
         case .tag: value.closedTag ? nested(value, qualifier, owner) : "string"
         case .text: "string"
+        case .bytes: "byte[]"
         case .list: "List<\(type(value.element!, qualifier, owner))>"
         case .dice: "List<int>"
         case .point: "GesPoint"
@@ -186,7 +187,7 @@ enum GesCSharpModelEmitter {
 
     private static func isReference(_ value: GesModelPlanValue) -> Bool {
         switch value.kind {
-        case .text, .list, .dice, .schema, .union: true
+        case .text, .bytes, .list, .dice, .schema, .union: true
         case .tag: !value.closedTag
         default: false
         }
@@ -198,6 +199,7 @@ enum GesCSharpModelEmitter {
         if value.nullable { return "" }
         switch value.kind {
         case .text: return "\"\""
+        case .bytes: return "Array.Empty<byte>()"
         case .tag where !value.closedTag: return "\"\""
         case .list, .dice: return "new \(plain(value))()"
         case .schema: return "new \(value.model.schema)()"
@@ -220,6 +222,7 @@ enum GesCSharpModelEmitter {
     // Nested lists compare and hash through lambdas whose parameters are numbered by depth: x0 and y0, then x1 and y1.
     private static func equal(_ value: GesModelPlanValue, _ left: String, _ right: String, _ support: String, _ depth: Int = 0, _ qualifier: String = "") -> String {
         if value.kind == .list || value.kind == .dice { return "\(support).ListEquals(\(left), \(right), \(comparer(value, support, depth, qualifier)))" }
+        if value.kind == .bytes { return "\(support).BytesEquals(\(left), \(right))" }
         return "EqualityComparer<\(type(value, qualifier))>.Default.Equals(\(left), \(right))"
     }
 
@@ -231,6 +234,7 @@ enum GesCSharpModelEmitter {
 
     private static func hash(_ value: GesModelPlanValue, _ expression: String, _ support: String, _ depth: Int = 0) -> String {
         if value.kind == .list || value.kind == .dice { return "\(support).ListHash(\(expression), \(elementHash(value, support, depth)))" }
+        if value.kind == .bytes { return "\(support).BytesHash(\(expression))" }
         if value.kind == .number && !value.model.integer { return "\(support).Hash(\(expression))" }
         if isReference(value) || value.nullable { return "(\(expression)?.GetHashCode() ?? 0)" }
         return "\(expression).GetHashCode()"
@@ -343,6 +347,22 @@ enum GesCSharpModelEmitter {
         code.line("return result;")
         code.close()
         code.close()
+        code.blank()
+        code.line("/// <summary>Compares two byte arrays by their bytes.</summary>")
+        code.line("internal static bool BytesEquals(byte[]? left, byte[]? right)")
+        code.line("    => ReferenceEquals(left, right) || left is not null && right is not null && new ReadOnlySpan<byte>(left).SequenceEqual(right);")
+        code.blank()
+        code.line("/// <summary>Hashes a byte array from its bytes.</summary>")
+        code.line("internal static int BytesHash(byte[]? bytes)")
+        code.open("{")
+        code.line("if (bytes is null) return 0;")
+        code.line("unchecked")
+        code.open("{")
+        code.line("var result = 19;")
+        code.line("foreach (var item in bytes) result = (result * 31) + item;")
+        code.line("return result;")
+        code.close()
+        code.close()
         code.close()
     }
 
@@ -366,6 +386,7 @@ enum GesCSharpModelEmitter {
         case .number where value.model.integer: return "GesValue.GesInteger(\(expression), \(unitName(value.model.unit)))"
         case .number: return "GesValue.GesFloat(\(expression), \(unitName(value.model.unit)))"
         case .text: return "GesValue.GesText(\(expression))"
+        case .bytes: return "GesValue.GesBytes(\(expression))"
         case .tag where value.closedTag: return "Tag(Name(\(expression)))"
         case .tag: return "Tag(\(expression))"
         case .list: return "List(\(expression), x\(depth) => \(encode(value.element!, owner, "x\(depth)", qualifier, depth + 1)))"
@@ -388,6 +409,7 @@ enum GesCSharpModelEmitter {
         case .number where value.model.integer: return "Integer(\(expression), \(unitName(value.model.unit)), \(target))"
         case .number: return "Number(\(expression), \(unitName(value.model.unit)), \(target))"
         case .text: return "Text(\(expression), \(target))"
+        case .bytes: return "Bytes(\(expression), \(target))"
         case .tag where value.closedTag: return "Decode\(owner)\(value.nested)(\(expression), \(target))"
         case .tag: return "Tag(\(expression), \(target))"
         case .list:
@@ -618,6 +640,8 @@ enum GesCSharpModelEmitter {
         code.line("private static bool Tag(in GesValue value, out string result) => Read(value.ValueKind is GesBytecodeTypeKind.Tag or GesBytecodeTypeKind.Text, value.AsText(), out result);")
         code.blank()
         code.line("private static bool Text(in GesValue value, out string result) => Read(value.ValueKind == GesBytecodeTypeKind.Text, value.AsText(), out result);")
+        code.blank()
+        code.line("private static bool Bytes(in GesValue value, out byte[] result) => Read(value.ValueKind == GesBytecodeTypeKind.Bytes, value.AsBytes().ToArray(), out result);")
         code.blank()
         code.line("private static bool Boolean(in GesValue value, out bool result) => Read(value.ValueKind == GesBytecodeTypeKind.Boolean, value.AsBoolean(), out result);")
         code.blank()

@@ -22,6 +22,7 @@ enum GesCallbacks {
         case "List": kind = .list
         case "Map": kind = .map
         case "Dice": kind = .dice
+        case "Bytes": kind = .bytes
         default:
             // Unit names are checked only after the built-in type names. `Quantity(...)` takes any quantity type name;
             // a bare name is a portable unit type name such as `meter`.

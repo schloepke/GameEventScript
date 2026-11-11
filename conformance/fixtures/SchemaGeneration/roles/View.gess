@@ -26,6 +26,8 @@ schema :BotView as {
   units: :List(:Text | :World_Body)
   grid: :List(:List(:Number integer))
   rolls: :Dice
+  seal: :Bytes
+  chunks: :List(:Bytes)
   hints: :List(:Tag(#left, #right))
 }
 

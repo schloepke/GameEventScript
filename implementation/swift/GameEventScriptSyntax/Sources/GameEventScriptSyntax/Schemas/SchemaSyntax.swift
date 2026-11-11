@@ -37,6 +37,8 @@ public enum GesSchemaTypeKind: String, Sendable, Equatable {
     case handler = "Handler"
     /// Nothing.
     case nothing = "Nothing"
+    /// A Bytes value.
+    case bytes = "Bytes"
 }
 
 @_spi(Syntax) public enum GesSchemaTypeNames {
@@ -54,6 +56,7 @@ public enum GesSchemaTypeKind: String, Sendable, Equatable {
         case "Vector": .vector
         case "Tag": .tag
         case "Text": .text
+        case "Bytes": .bytes
         case "List": .list
         case "Map": .map
         case "Range": .range

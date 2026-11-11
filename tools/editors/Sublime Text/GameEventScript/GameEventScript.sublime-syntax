@@ -288,13 +288,13 @@
         1: "variable.parameter.label.gameeventscript"
         2: "keyword.operator.word.gameeventscript"
     -
-      "match": "(:Dice)([ \\t\\r\\n]*)(\\[)"
+      "match": "(:Dice|:Bytes)([ \\t\\r\\n]*)(\\[)"
       "scope": "meta.literal.dice.gameeventscript"
       "captures":
         1: "support.type.primitive.gameeventscript"
         3: "punctuation.bracket.gameeventscript"
     -
-      "match": ":(?:Nothing|Text|Boolean|Number|Percentage|Vector|Point|Series|Range|Message|Handler|Tag|List|Map|Dice|Record)(?=$|[^A-Za-z0-9_])"
+      "match": ":(?:Nothing|Text|Boolean|Number|Percentage|Vector|Point|Series|Range|Message|Handler|Tag|List|Map|Dice|Bytes|Record)(?=$|[^A-Za-z0-9_])"
       "scope": "support.type.primitive.gameeventscript"
     -
       "match": ":[A-Z][A-Za-z0-9]*(?:_[A-Z][A-Za-z0-9]*)*(?=$|[^A-Za-z0-9_])"

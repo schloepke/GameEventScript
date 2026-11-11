@@ -404,6 +404,7 @@ enum GameEventScript.Api.GesBytecodeTypeKind
   enum-field Vector = 8
   enum-field Point = 9
   enum-field Range = 10
+  enum-field Bytes = 11
   enum-field Handler = 16
   enum-field Message = 17
   enum-field List = 32
@@ -1061,6 +1062,7 @@ struct GameEventScript.Api.GesSchemaReader
   method System.Int32 BeginList(GameEventScript.Api.GesSchemaField field)
   method System.Int32 Finish()
   method System.Int32 ReadAlternative(GameEventScript.Api.GesSchemaField field)
+  method System.Int32 ReadBytes(GameEventScript.Api.GesSchemaField field, System.Span<System.Byte> destination)
   method System.Int32 ReadMember()
   method System.Int32 ReadTag(GameEventScript.Api.GesSchemaField field)
   method System.Int32 ReadText(GameEventScript.Api.GesSchemaField field, System.Span<System.Byte> destination)
@@ -1110,6 +1112,7 @@ enum GameEventScript.Api.GesSchemaTypeKind
   enum-field Message = 14
   enum-field Handler = 15
   enum-field Nothing = 16
+  enum-field Bytes = 17
 static class GameEventScript.Api.GesSchemaValues
   method static GameEventScript.Api.GesSchemaDecoded Decode(GameEventScript.Api.GesBoundSchema schema, System.ReadOnlySpan<System.Byte> data, GameEventScript.Runtime.Values.GesValue baseline, System.Int64 byteLimit)
   method static GameEventScript.Api.GesSchemaDecoded Decode(GameEventScript.Api.GesBoundSchema schema, System.ReadOnlySpan<System.Byte> data, System.Int64 byteLimit)
@@ -1125,6 +1128,7 @@ struct GameEventScript.Api.GesSchemaWriter
   method System.Void SelectMember(System.Int32 member)
   method System.Void WriteAbsent(GameEventScript.Api.GesSchemaField field)
   method System.Void WriteBoolean(GameEventScript.Api.GesSchemaField field, System.Boolean value)
+  method System.Void WriteBytes(GameEventScript.Api.GesSchemaField field, System.ReadOnlySpan<System.Byte> bytes)
   method System.Void WriteIndex(GameEventScript.Api.GesSchemaField field, System.UInt64 index)
   method System.Void WriteInteger(GameEventScript.Api.GesSchemaField field, System.Int64 value)
   method System.Void WriteNumber(GameEventScript.Api.GesSchemaField field, System.Double value)
@@ -1456,12 +1460,14 @@ struct GameEventScript.Runtime.Values.GesValue
   method System.Int32 GetHashCode()
   method System.Int32[] AsDice()
   method System.Int64 AsInteger()
+  method System.ReadOnlySpan<System.Byte> AsBytes()
   method System.String AsText()
   method System.String Format(GameEventScript.Api.GesDocumentFormat format)
   method System.String ToJson()
   method System.String ToString()
   method static GameEventScript.Runtime.Values.GesValue FromJson(System.String json)
   method static GameEventScript.Runtime.Values.GesValue GesBoolean(System.Boolean boolean)
+  method static GameEventScript.Runtime.Values.GesValue GesBytes(System.ReadOnlySpan<System.Byte> bytes)
   method static GameEventScript.Runtime.Values.GesValue GesDice(System.Int32[] rolls)
   method static GameEventScript.Runtime.Values.GesValue GesExternal(GameEventScript.Api.IGesExternalValue value)
   method static GameEventScript.Runtime.Values.GesValue GesFloat(System.Double number, GameEventScript.Api.GesQuantityUnit unit)

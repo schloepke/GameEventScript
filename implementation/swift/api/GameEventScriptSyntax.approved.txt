@@ -34,6 +34,7 @@ relationship {"kind":"conformsTo","source":"GameEventScriptSyntax.GesSyntaxLangu
 symbol {"access":"public","declaration":"case ampere","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesQuantityUnit.ampere"}
 symbol {"access":"public","declaration":"case boolean","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesSchemaTypeKind.boolean"}
 symbol {"access":"public","declaration":"case builtin","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesSyntaxKind.builtin"}
+symbol {"access":"public","declaration":"case bytes","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesSchemaTypeKind.bytes"}
 symbol {"access":"public","declaration":"case comment","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesSyntaxKind.comment"}
 symbol {"access":"public","declaration":"case constant","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesSyntaxKind.constant"}
 symbol {"access":"public","declaration":"case cubicMeter","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesQuantityUnit.cubicMeter"}

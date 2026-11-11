@@ -20,6 +20,7 @@ enum GesSelectionOrder {
             case .handler: return 10
             case .list: return 11
             case .map, .record, .external: return 12
+            case .bytes: return 14
             default: return 8
             }
         }

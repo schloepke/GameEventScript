@@ -52,7 +52,7 @@ def value(raw):
         return {'type': kind, 'entries': value({'type': ':Map', 'entries': raw['entries']})['entries']}
 
     field = {':Nothing': None, ':Text': 'value', ':Boolean': 'value', ':Number.int64': 'value',
-             ':List': 'items', ':Map': 'entries', ':Tag': 'value', ':Dice': 'rolls',
+             ':List': 'items', ':Map': 'entries', ':Tag': 'value', ':Dice': 'rolls', ':Bytes': 'value',
              ':Number.binary64': 'value', ':Quantity.int64': 'value', ':Quantity.binary64': 'value', ':Percentage': 'value'}.get(kind, 'unsupported')
     if field == 'unsupported':
         raise InvalidDocument('Unsupported runtime value type: ' + str(kind))
@@ -76,6 +76,9 @@ def value(raw):
     elif kind in (':Text', ':Tag', ':Boolean'):
         if not isinstance(raw['value'], str) or (kind == ':Boolean' and raw['value'] not in ('true', 'false')):
             raise InvalidDocument('Invalid scalar transport')
+    elif kind == ':Bytes':
+        if not isinstance(raw['value'], str) or not re.fullmatch(r'(?:[0-9a-f]{2})*', raw['value']):
+            raise InvalidDocument('Invalid bytes transport')
     elif kind == ':Dice':
         if not isinstance(raw['rolls'], list) or any(type(x) is not int or not 0 < x < 2**31 for x in raw['rolls']):
             raise InvalidDocument('Invalid dice rolls')

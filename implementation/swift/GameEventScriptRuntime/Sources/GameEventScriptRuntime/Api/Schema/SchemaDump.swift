@@ -91,6 +91,8 @@ public enum GesSchemaDump {
         case .tag:
             let tag = try reader.readTag(field)
             line("#\(info.tags[tag]) index=\(tag)")
+        case .text where node.isBytes:
+            line(GesBytesText.format(try reader.readBytesValue(field)))
         case .text:
             let text = try reader.readTextValue(field)
             line(node.isTagText ? "#" + text : quoted(text))

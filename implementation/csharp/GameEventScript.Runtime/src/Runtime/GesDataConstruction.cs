@@ -107,6 +107,7 @@ internal static class GesDataConstruction
             "list" => List,
             "map" => Map,
             "dice" => Dice,
+            "bytes" => Bytes,
             "range" => GesBytecodeTypeKind.Range,
             "series" => Series,
             "message" => Message,

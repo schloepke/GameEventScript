@@ -123,7 +123,12 @@ enum GesSwiftEmitter {
         code.line("\(access)static let maxByteCount = \(layout.maxByteCount)")
     }
 
-    static func plain(_ value: GesPlanValue) -> Bool { !value.isClass && value.encoding.kind != .union && value.encoding.kind != .text && value.encoding.kind != .list }
+    static func plain(_ value: GesPlanValue) -> Bool { !value.isClass && value.encoding.kind != .union && value.encoding.kind != .text && value.encoding.kind != .bytes && value.encoding.kind != .list }
+
+    // The byte storage of a Text or Bytes value in `owner`, "self" or another record.
+    static func storage(_ value: GesPlanValue, _ owner: String) -> String {
+        value.encoding.kind == .bytes ? "\(owner).\(member(value.base))" : "\(owner).\(GesSchemaPlanner.camel(value.base))UTF8"
+    }
 
     static func nested(_ value: GesPlanValue, _ names: inout Names, _ field: String) {
         let name = nestedName(value)
@@ -158,6 +163,7 @@ enum GesSwiftEmitter {
         case .quantized, .float: "Double"
         case .schema: value.encoding.schema
         case .text: "String"
+        case .bytes: "[UInt8]"
         case .point: "GesPoint"
         case .vector: "GesVector"
         case .list: "[\(elementName(value))]"
@@ -174,7 +180,7 @@ enum GesSwiftEmitter {
         case .quantized, .float: "0.0"
         case .tag: "." + name(value.encoding.tags[0])
         case .union: "." + member(value.alternatives[0].label)
-        case .list: "[]"
+        case .list, .bytes: "[]"
         default: typeName(value) + "()"
         }
     }
@@ -426,14 +432,16 @@ enum GesSwiftEmitter {
             code.line("try writer.write((\(target) == 0 ? 0.0 : \(target)).bitPattern, width: 64)")
         case .tag:
             code.line("try writer.write(UInt64(\(target).rawValue), width: \(width))")
-        case .text:
-            let bytes = "self.\(GesSchemaPlanner.camel(value.base))UTF8"
+        case .text, .bytes:
+            let bytes = storage(value, "self")
             code.line("if \(bytes).count > \(max) { \(fail("tooLong", value)) }")
-            code.line(
-                encoding.tagName
-                    ? "if !\(bytes).withUnsafeBytes({ GesWireRules.isTagName($0) }) { \(fail("invalidTag", value)) }"
-                    : "if !\(bytes).withUnsafeBytes({ GesWireRules.isValidUTF8($0) }) { \(fail("invalidText", value)) }"
-            )
+            if encoding.kind == .text {
+                code.line(
+                    encoding.tagName
+                        ? "if !\(bytes).withUnsafeBytes({ GesWireRules.isTagName($0) }) { \(fail("invalidTag", value)) }"
+                        : "if !\(bytes).withUnsafeBytes({ GesWireRules.isValidUTF8($0) }) { \(fail("invalidText", value)) }"
+                )
+            }
             code.line("try writer.write(UInt64(\(bytes).count), width: \(width))")
             code.line("for byte in \(bytes) { try writer.write(UInt64(byte), width: 8) }")
         case .list:
@@ -494,19 +502,21 @@ enum GesSwiftEmitter {
             if encoding.range { code.line("if value < \(bits(encoding.lowerValue)) || value > \(bits(encoding.upperValue)) { \(fail("outOfRange", value)) }") }
             code.line("\(target) = value")
             code.close()
-        case .text:
-            let bytes = "self.\(GesSchemaPlanner.camel(value.base))UTF8"
+        case .text, .bytes:
+            let bytes = storage(value, "self")
             code.open("do {")
             code.line("let count = Int(try reader.read(\(width), path: \(path(value))))")
             code.line("if count > \(max) { \(fail("invalidCount", value)) }")
             code.line("try reader.require(count * 8, path: \(path(value)))")
             code.line("\(bytes).removeAll(keepingCapacity: true)")
             code.line("for _ in 0..<count { \(bytes).append(UInt8(truncatingIfNeeded: try reader.read(8, path: \(path(value))))) }")
-            code.line(
-                encoding.tagName
-                    ? "if !\(bytes).withUnsafeBytes({ GesWireRules.isTagName($0) }) { \(fail("invalidTag", value)) }"
-                    : "if !\(bytes).withUnsafeBytes({ GesWireRules.isValidUTF8($0) }) { \(fail("invalidText", value)) }"
-            )
+            if encoding.kind == .text {
+                code.line(
+                    encoding.tagName
+                        ? "if !\(bytes).withUnsafeBytes({ GesWireRules.isTagName($0) }) { \(fail("invalidTag", value)) }"
+                        : "if !\(bytes).withUnsafeBytes({ GesWireRules.isValidUTF8($0) }) { \(fail("invalidText", value)) }"
+                )
+            }
             code.close()
         case .list:
             let element = value.element!

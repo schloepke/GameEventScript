@@ -169,7 +169,7 @@ internal static class GesSchemaPlanner
                 break;
             case GesLayoutKind.List:
                 var element = encoding.Element!.Encoding;
-                if (element.Kind is GesLayoutKind.Union or GesLayoutKind.Text or GesLayoutKind.List)
+                if (element.Kind is GesLayoutKind.Union or GesLayoutKind.Text or GesLayoutKind.Bytes or GesLayoutKind.List)
                 {
                     // The item's single field sits at node 0 of the paths its owner passes on.
                     var item = new GesPlanType { Name = name + "Item", Kind = GesSchemaKind.Schema, IsItem = true, IsClass = HoldsStorage(context, element) };
@@ -188,7 +188,7 @@ internal static class GesSchemaPlanner
     // Whether values of an encoding need storage that grows, so that their type is a class.
     private static bool HoldsStorage(Context context, GesLayoutEncoding encoding) => encoding.Kind switch
     {
-        GesLayoutKind.Text or GesLayoutKind.List => true,
+        GesLayoutKind.Text or GesLayoutKind.Bytes or GesLayoutKind.List => true,
         GesLayoutKind.Schema => IsClass(context, encoding.Schema),
         GesLayoutKind.Union => encoding.Alternatives.Exists(alternative => HoldsStorage(context, alternative.Encoding)),
         _ => false

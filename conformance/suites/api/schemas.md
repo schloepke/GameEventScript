@@ -2368,6 +2368,34 @@ schema:
 
 ---
 
+## Test: a Bytes without max cannot be bound for encoding
+
+The error has its stable code and position.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: notencodable-bytes
+schemaApi:
+  sources:
+    - "schema :A as {\n  a: :Bytes\n}\n"
+  root: "A"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.notEncodable"
+    line: 2
+    column: 6
+```
+
+---
+
 ## Test: a List without max cannot be bound for encoding
 
 The error has its stable code and position.
@@ -2593,6 +2621,211 @@ schema:
     error:
       code: "wire.invalidText"
       path: "t"
+```
+
+---
+
+## Test: Bytes with a count and raw bytes
+
+A `:Bytes max n` writes its count in `width(n + 1)` bits and then its bytes, which need not be UTF-8.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: bytes-roundtrip
+schemaApi:
+  sources:
+    - "schema :S as {\n  data: :Bytes max 4\n  tail: :Bytes max 2 | :Nothing\n}\n"
+  root: "S"
+  encode:
+    type: ":S"
+    entries:
+      - key: "data"
+        value:
+          type: ":Bytes"
+          value: "a0b70b"
+      - key: "tail"
+        value:
+          type: ":Nothing"
+  decode: "03bd5d08"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "03bd5d08"
+  decoded:
+    value:
+      type: ":S"
+      entries:
+        - key: "data"
+          value:
+            type: ":Bytes"
+            value: "a0b70b"
+        - key: "tail"
+          value:
+            type: ":Nothing"
+    byteCount: 4
+```
+
+---
+
+## Test: Bytes as a union alternative
+
+A Bytes alternative follows its union index like any other value.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: bytes-in-union
+schemaApi:
+  sources:
+    - "schema :S as {\n  data: :Bytes max 4\n  tail: :Bytes max 2 | :Nothing\n}\n"
+  root: "S"
+  encode:
+    type: ":S"
+    entries:
+      - key: "data"
+        value:
+          type: ":Bytes"
+          value: "ff"
+      - key: "tail"
+        value:
+          type: ":Bytes"
+          value: "0a"
+  decode: "f99702"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "f99702"
+  decoded:
+    value:
+      type: ":S"
+      entries:
+        - key: "data"
+          value:
+            type: ":Bytes"
+            value: "ff"
+        - key: "tail"
+          value:
+            type: ":Bytes"
+            value: "0a"
+    byteCount: 3
+```
+
+---
+
+## Test: Bytes above their maximum cannot be encoded
+
+Encoding checks the byte count against max.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: bytes-too-long
+schemaApi:
+  sources:
+    - "schema :S as {\n  data: :Bytes max 4\n  tail: :Bytes max 2 | :Nothing\n}\n"
+  root: "S"
+  encode:
+    type: ":S"
+    entries:
+      - key: "data"
+        value:
+          type: ":Bytes"
+          value: "0102030405"
+      - key: "tail"
+        value:
+          type: ":Nothing"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    error:
+      code: "wire.tooLong"
+      path: "data"
+```
+
+---
+
+## Test: Text is no Bytes value
+
+A Bytes field takes only Bytes values.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: bytes-type-mismatch
+schemaApi:
+  sources:
+    - "schema :S as {\n  data: :Bytes max 4\n  tail: :Bytes max 2 | :Nothing\n}\n"
+  root: "S"
+  encode:
+    type: ":S"
+    entries:
+      - key: "data"
+        value:
+          type: ":Text"
+          value: "ab"
+      - key: "tail"
+        value:
+          type: ":Nothing"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    error:
+      code: "wire.typeMismatch"
+      path: "data"
+```
+
+---
+
+## Test: A Bytes count above its maximum
+
+A count larger than max is invalid.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: bytes-invalid-count
+schemaApi:
+  sources:
+    - "schema :S as { data: :Bytes max 4 }\n"
+  root: "S"
+  decode: "0500"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  decoded:
+    error:
+      code: "wire.invalidCount"
+      path: "data"
 ```
 
 ---

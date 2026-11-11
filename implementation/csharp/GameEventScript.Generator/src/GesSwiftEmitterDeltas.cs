@@ -172,7 +172,7 @@ internal static partial class GesSwiftEmitter
     }
 
     // The UTF-8 storage of a Text in `owner`, "self" or another record.
-    private static string Bytes(GesPlanValue value, string owner) => $"{owner}.{GesSchemaPlanner.Camel(value.Base)}UTF8";
+    private static string Bytes(GesPlanValue value, string owner) => Storage(value, owner);
 
     // Returns false from the enclosing function when the wire values of a and b differ.
     private static void Same(GesSchemaPlanner.Code code, GesPlanValue value, string a, string b, string ownerA, string ownerB)
@@ -186,7 +186,7 @@ internal static partial class GesSwiftEmitter
             case GesLayoutKind.Integer or GesLayoutKind.Quantized or GesLayoutKind.Float or GesLayoutKind.Tag:
                 code.Line($"if try Self.__wire{node}({a}, paths, at) != Self.__wire{node}({b}, paths, at) {{ return false }}");
                 break;
-            case GesLayoutKind.Text:
+            case GesLayoutKind.Text or GesLayoutKind.Bytes:
                 code.Line($"if {Bytes(value, ownerA)} != {Bytes(value, ownerB)} {{ return false }}");
                 break;
             case GesLayoutKind.Point or GesLayoutKind.Vector:
@@ -292,7 +292,7 @@ internal static partial class GesSwiftEmitter
         var node = N(value.Node);
         switch (value.Encoding.Kind)
         {
-            case GesLayoutKind.Text:
+            case GesLayoutKind.Text or GesLayoutKind.Bytes:
                 code.Line($"{Bytes(value, "self")}.removeAll(keepingCapacity: true)");
                 code.Line($"{Bytes(value, "self")}.append(contentsOf: {Bytes(value, ownerB)})");
                 break;
@@ -582,7 +582,7 @@ internal static partial class GesSwiftEmitter
             case GesLayoutKind.List when encoding.Keyed:
                 code.Line($"if try __writeKeyed{node}(baseline, &writer, paths, at) {{ {set} = true }}");
                 break;
-            case GesLayoutKind.Text or GesLayoutKind.List:
+            case GesLayoutKind.Text or GesLayoutKind.Bytes or GesLayoutKind.List:
                 code.Open($"if !(try __same{node}(baseline, paths, at)) {{");
                 Write(code, value, a);
                 code.Line($"{set} = true");
@@ -698,7 +698,7 @@ internal static partial class GesSwiftEmitter
             case GesLayoutKind.List when encoding.Keyed:
                 code.Line($"try __readKeyed{node}(baseline, &reader, paths, at)");
                 break;
-            case GesLayoutKind.Text or GesLayoutKind.List:
+            case GesLayoutKind.Text or GesLayoutKind.Bytes or GesLayoutKind.List:
                 Read(code, value, a);
                 code.Line($"if try __same{node}(baseline, paths, at) {{ {Throw("invalidDelta", value)} }}");
                 break;
@@ -772,7 +772,7 @@ internal static partial class GesSwiftEmitter
 
     private static void SameHelper(GesSchemaPlanner.Code code, GesPlanValue value, string type)
     {
-        if (value.Encoding.Kind is GesLayoutKind.Text or GesLayoutKind.List)
+        if (value.Encoding.Kind is GesLayoutKind.Text or GesLayoutKind.Bytes or GesLayoutKind.List)
         {
             code.Blank();
             code.Open($"private func __same{N(value.Node)}(_ baseline: {type}, _ paths: [String], _ at: Int) throws(GesWireError) -> Bool {{");

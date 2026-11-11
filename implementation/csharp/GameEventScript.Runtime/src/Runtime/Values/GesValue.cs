@@ -333,6 +333,18 @@ public partial struct GesValue : IEquatable<GesValue>
     }
 
     /// <summary>
+    /// Creates a Bytes value from a copy of the given bytes.
+    /// </summary>
+    /// <param name="bytes">The bytes to copy.</param>
+    /// <returns>The Bytes value.</returns>
+    public static GesValue GesBytes(ReadOnlySpan<byte> bytes)
+    {
+        var value = new GesValue();
+        value.SetBytes(bytes.Length == 0 ? [] : bytes.ToArray());
+        return value;
+    }
+
+    /// <summary>
     /// Performs the ges range operation.
     /// </summary>
     /// <param name="from">The from value.</param>
@@ -502,6 +514,7 @@ public partial struct GesValue : IEquatable<GesValue>
         GesTextPayload text => text.Count,
         string text => text.Length,
         int[] dice => dice.Length,
+        byte[] bytes => bytes.Length,
         GesValue[] list => list.Length,
         GesValueMap map => map.Length,
         GesCustomObject record => record.Map.Length,
@@ -598,6 +611,12 @@ public partial struct GesValue : IEquatable<GesValue>
             };
         }
     }
+
+    /// <summary>
+    /// Gets the bytes of a Bytes value without copying them.
+    /// </summary>
+    /// <returns>The stored bytes, or an empty span for other kinds.</returns>
+    public readonly ReadOnlySpan<byte> AsBytes() => ObjectValue is byte[] bytes && Kind == Bytes ? bytes : default;
 
     /// <summary>
     /// Performs the as dice operation.
@@ -815,6 +834,16 @@ public partial struct GesValue : IEquatable<GesValue>
         ObjectValue = values;
     }
 
+    // The array is owned by the value and never changed afterwards.
+    internal void SetBytes(byte[] bytes)
+    {
+        Kind = Bytes;
+        Flags = bytes.Length > 0 ? StorageObjectFlag | HasValueFlag : StorageObjectFlag;
+        Unit = UnitNone;
+        IntegerValue = 0;
+        ObjectValue = bytes;
+    }
+
     internal void SetList(GesValue[] list)
     {
         Kind = List;
@@ -1028,6 +1057,8 @@ public partial struct GesValue : IEquatable<GesValue>
                 return string.Equals(TextValue, other.TextValue, StringComparison.Ordinal);
             case Vector or Point when ObjectValue is GesSpatialValue left && other.ObjectValue is GesSpatialValue right:
                 return left.X.Equals(right.X) && left.Y.Equals(right.Y) && left.Z.Equals(right.Z);
+            case Bytes when ObjectValue is byte[] left && other.ObjectValue is byte[] right:
+                return left.AsSpan().SequenceEqual(right);
             case Dice when ObjectValue is int[] left && other.ObjectValue is int[] right:
                 if (left.Length != right.Length) return false;
                 for (var i = 0; i < left.Length; i++)
@@ -1110,6 +1141,9 @@ public partial struct GesValue : IEquatable<GesValue>
                 hash.Add(vector.Y);
                 hash.Add(vector.Z);
                 break;
+            case Bytes when ObjectValue is byte[] bytes:
+                for (var i = 0; i < bytes.Length; i++) hash.Add(bytes[i]);
+                break;
             case Dice when ObjectValue is int[] dice:
                 for (var i = 0; i < dice.Length; i++) hash.Add(dice[i]);
                 break;
@@ -1176,6 +1210,8 @@ public partial struct GesValue : IEquatable<GesValue>
                 return new GesListIterator(list);
             case Dice when ObjectValue is int[] dices:
                 return new GesIntIterator(dices);
+            case Bytes when ObjectValue is byte[] bytes:
+                return new GesBytesIterator(bytes);
             case Map when ObjectValue is GesValueMap map:
                 return new GesListIterator(map.ValueList);
             case Custom when ObjectValue is GesCustomObject custom:
@@ -1202,6 +1238,7 @@ public partial struct GesValue : IEquatable<GesValue>
         Vector when ObjectValue is GesSpatialValue vector => FormatTriplet(":Vector", vector, Unit),
         Point when ObjectValue is GesSpatialValue point => FormatTriplet(":Point", point, Unit),
         Dice when ObjectValue is int[] dice => FormatDice(dice),
+        Bytes when ObjectValue is byte[] bytes => GesBytesText.Format(bytes),
         List when ObjectValue is GesValue[] list => FormatList(list),
         Map when ObjectValue is GesValueMap map => FormatMap(map),
         Custom when ObjectValue is GesCustomObject custom => FormatRecord(custom.TypeName, custom.Map),

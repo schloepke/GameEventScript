@@ -37,6 +37,23 @@ internal static class GesNumberText
         return digits.Length is > 0 and < 10 || digits.Length == 10 && string.CompareOrdinal(digits, "2147483647") <= 0;
     }
 
+    // Whether the token is exactly an integer from 0 to 255, such as `0`, `255`, `0xff` or `7.0`.
+    internal static bool IsByte(string text)
+    {
+        if (IsHexadecimal(text)) return GesNumberLiteral.Read(text).IntegerValue is >= 0 and <= 255;
+        var digits = Digits(text);
+        var point = digits.IndexOf('.');
+        if (point >= 0)
+        {
+            for (var index = point + 1; index < digits.Length; index++)
+                if (digits[index] != '0') return false;
+            digits = digits.Substring(0, point);
+        }
+
+        digits = digits.TrimStart('0');
+        return digits.Length < 3 || digits.Length == 3 && string.CompareOrdinal(digits, "255") <= 0;
+    }
+
     // The lexer only forms valid hexadecimal tokens, which start with `0x`.
     private static bool IsHexadecimal(string text) => text.Length > 1 && text[1] == 'x';
 

@@ -192,6 +192,7 @@ internal static class GesCSharpModelEmitter
         GesModelKind.Number => value.Model.Integer ? "long" : "double",
         GesModelKind.Tag => value.ClosedTag ? Nested(value, qualifier, owner) : "string",
         GesModelKind.Text => "string",
+        GesModelKind.Bytes => "byte[]",
         GesModelKind.List => $"List<{Type(value.Element!, qualifier, owner)}>",
         GesModelKind.Dice => "List<int>",
         GesModelKind.Point => "GesPoint",
@@ -202,7 +203,7 @@ internal static class GesCSharpModelEmitter
 
     private static string Nested(GesModelPlanValue value, string? qualifier, string? owner) => owner is null ? value.Nested : qualifier + owner + "." + value.Nested;
 
-    private static bool IsReference(GesModelPlanValue value) => value.Kind is GesModelKind.Text or GesModelKind.List or GesModelKind.Dice or GesModelKind.Schema or GesModelKind.Union
+    private static bool IsReference(GesModelPlanValue value) => value.Kind is GesModelKind.Text or GesModelKind.Bytes or GesModelKind.List or GesModelKind.Dice or GesModelKind.Schema or GesModelKind.Union
         || (value.Kind == GesModelKind.Tag && !value.ClosedTag);
 
     // The zero value of a property that the type's default would not give: empty texts and lists, new records, the first
@@ -213,6 +214,7 @@ internal static class GesCSharpModelEmitter
         return value.Kind switch
         {
             GesModelKind.Text or GesModelKind.Tag when !value.ClosedTag => "\"\"",
+            GesModelKind.Bytes => "Array.Empty<byte>()",
             GesModelKind.List or GesModelKind.Dice => $"new {Plain(value)}()",
             GesModelKind.Schema => $"new {value.Model.Schema}()",
             GesModelKind.Union => $"new {value.Nested}.{value.Alternatives[0].Label}({Zero(value.Alternatives[0])})",
@@ -238,6 +240,7 @@ internal static class GesCSharpModelEmitter
     {
         if (value.Kind is GesModelKind.List or GesModelKind.Dice)
             return $"{support}.ListEquals({left}, {right}, {Comparer(value, support, depth, qualifier)})";
+        if (value.Kind == GesModelKind.Bytes) return $"{support}.BytesEquals({left}, {right})";
         return $"EqualityComparer<{Type(value, qualifier)}>.Default.Equals({left}, {right})";
     }
 
@@ -251,6 +254,7 @@ internal static class GesCSharpModelEmitter
     private static string Hash(GesModelPlanValue value, string expression, string support, int depth = 0) => value.Kind switch
     {
         GesModelKind.List or GesModelKind.Dice => $"{support}.ListHash({expression}, {ElementHash(value, support, depth)})",
+        GesModelKind.Bytes => $"{support}.BytesHash({expression})",
         GesModelKind.Number when !value.Model.Integer => $"{support}.Hash({expression})",
         _ when IsReference(value) || value.Nullable => $"({expression}?.GetHashCode() ?? 0)",
         _ => $"{expression}.GetHashCode()"
@@ -374,6 +378,22 @@ internal static class GesCSharpModelEmitter
         code.Line("return result;");
         code.Close();
         code.Close();
+        code.Blank();
+        code.Line("/// <summary>Compares two byte arrays by their bytes.</summary>");
+        code.Line("internal static bool BytesEquals(byte[]? left, byte[]? right)");
+        code.Line("    => ReferenceEquals(left, right) || left is not null && right is not null && new ReadOnlySpan<byte>(left).SequenceEqual(right);");
+        code.Blank();
+        code.Line("/// <summary>Hashes a byte array from its bytes.</summary>");
+        code.Line("internal static int BytesHash(byte[]? bytes)");
+        code.Open("{");
+        code.Line("if (bytes is null) return 0;");
+        code.Line("unchecked");
+        code.Open("{");
+        code.Line("var result = 19;");
+        code.Line("foreach (var item in bytes) result = (result * 31) + item;");
+        code.Line("return result;");
+        code.Close();
+        code.Close();
         code.Close();
     }
 
@@ -396,6 +416,7 @@ internal static class GesCSharpModelEmitter
             GesModelKind.Number when value.Model.Integer => $"GesValue.GesInteger({expression}, {UnitName(value.Model.Unit)})",
             GesModelKind.Number => $"GesValue.GesFloat({expression}, {UnitName(value.Model.Unit)})",
             GesModelKind.Text => $"GesValue.GesText({expression})",
+            GesModelKind.Bytes => $"GesValue.GesBytes({expression})",
             GesModelKind.Tag when value.ClosedTag => $"Tag(Name({expression}))",
             GesModelKind.Tag => $"Tag({expression})",
             GesModelKind.List => $"List({expression}, x{Depth(depth)} => {Encode(value.Element!, owner, "x" + Depth(depth), qualifier, depth + 1)})",
@@ -422,6 +443,7 @@ internal static class GesCSharpModelEmitter
             GesModelKind.Number when value.Model.Integer => $"Integer({expression}, {UnitName(value.Model.Unit)}, {target})",
             GesModelKind.Number => $"Number({expression}, {UnitName(value.Model.Unit)}, {target})",
             GesModelKind.Text => $"Text({expression}, {target})",
+            GesModelKind.Bytes => $"Bytes({expression}, {target})",
             GesModelKind.Tag when value.ClosedTag => $"Decode{owner}{value.Nested}({expression}, {target})",
             GesModelKind.Tag => $"Tag({expression}, {target})",
             GesModelKind.List => $"List({expression}, (in GesValue x{Depth(depth)}, out {Type(value.Element!, qualifier, owner)} y{Depth(depth)}) => {Decode(value.Element!, owner, "x" + Depth(depth), "out y" + Depth(depth), qualifier, depth + 1)}, {target})",
@@ -665,6 +687,7 @@ internal static class GesCSharpModelEmitter
         {
             "private static bool Tag(in GesValue value, out string result) => Read(value.ValueKind is GesBytecodeTypeKind.Tag or GesBytecodeTypeKind.Text, value.AsText(), out result);",
             "private static bool Text(in GesValue value, out string result) => Read(value.ValueKind == GesBytecodeTypeKind.Text, value.AsText(), out result);",
+            "private static bool Bytes(in GesValue value, out byte[] result) => Read(value.ValueKind == GesBytecodeTypeKind.Bytes, value.AsBytes().ToArray(), out result);",
             "private static bool Boolean(in GesValue value, out bool result) => Read(value.ValueKind == GesBytecodeTypeKind.Boolean, value.AsBoolean(), out result);",
             "private static bool Percentage(in GesValue value, out double result) => Read(value.ValueKind == GesBytecodeTypeKind.Percentage, value.AsNumber(), out result);",
             "private static bool Number(in GesValue value, GesQuantityUnit unit, out double result) => Read(value.ValueKind is GesBytecodeTypeKind.Integer or GesBytecodeTypeKind.Float && value.ValueUnit == unit, value.AsNumber(), out result);",

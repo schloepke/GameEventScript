@@ -62,16 +62,8 @@ here.
 - Offer a C# incremental source generator for `[GesExtension]` and `[GesType]` declarations, so that
   Unity IL2CPP builds need neither Reflection nor `link.xml` entries for annotated types, with the
   same rules as the Reflection registries and the Swift macros.
-- Add an immutable `:Bytes` value kind for opaque host data such as hashes, IDs and encoded records:
-  literals `:Bytes[160, 0xb7, 243]` (integer literals 0–255; `:Bytes[]` is empty) and
-  `:Bytes("a0b7 f378")` (hex text with an even digit count, spaces allowed, the canonical text form
-  for `as :Text`, `parse` and documents). Equality and order compare unsigned bytes
-  lexicographically; a runtime size limit applies. Iteration yields Int64 numbers 0–255; count,
-  slice, `in` and `+` as concatenation reuse the collection rules. UTF-8 encoding and decoding are
-  explicit operations, never `as`; invalid UTF-8 yields Nothing. Schemas add `:Bytes max n`, encoded
-  like `:Text max n` without UTF-8 validation; JSON uses a marked Base64 form; the Bridges map
-  `byte[]`/`ReadOnlyMemory<byte>` and `[UInt8]`. Needs a type kind for `Cast`/`CheckType` and a
-  constant form, so bytecode, `.gesb` fixtures and `gesb-reader.js` change.
+- Complete `:Bytes` (specs/Language.md#bytes): slicing selectors, `+` as concatenation, and explicit
+  UTF-8 conversion as `:Bytes(utf8: text)` and `:Text(utf8: bytes)`, where invalid UTF-8 yields Nothing.
 - Add `:Flags(#a, #b, ...)` with at most 64 members to the schema language only; GES scripts keep
   using flag Maps such as `[enemy:, armed:]`. A member is set or not set; there is no unknown
   state. Encoding sets a member for `true`, leaves it unset for `false` or an absent key, and

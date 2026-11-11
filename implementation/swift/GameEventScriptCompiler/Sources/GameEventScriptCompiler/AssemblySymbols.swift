@@ -34,7 +34,7 @@ extension GesCompiler {
             case ("CreateRecord", .constructor(let type, _)): valid = records[type] != nil
             case ("CreateExternalType", .constructor(let type, _)): valid = try records[type] == nil && type.first?.isUppercase == true && catalog?.resolve(type) != nil
             case ("ConstructData", .constructor(let type, let args)):
-                valid = ["record", "series"].contains(type) || ["number", "range", "message", "nothing", "percentage", "boolean", "text", "tag", "list", "map", "dice", "handler"].contains(type) && (args.count != 1 || args[0].label != "_")
+                valid = ["record", "series"].contains(type) || ["number", "range", "message", "nothing", "percentage", "boolean", "text", "tag", "list", "map", "dice", "bytes", "handler"].contains(type) && (args.count != 1 || args[0].label != "_")
             default: valid = false
             }
             if !valid { throw assemblyFailure(line.location, "Operand does not match symbolic instruction.", line.name) }
@@ -127,7 +127,7 @@ extension GesCompiler {
         let name = try assemblyText(e)
         let types: [String: GesBytecodeTypeKind] = [
             "nothing": .nothing, "boolean": .boolean, "percentage": .percentage, "vector": .vector, "point": .point, "series": .series, "tag": .tag, "text": .text, "list": .list, "range": .range, "message": .message, "handler": .handler, "map": .map,
-            "dice": .dice,
+            "dice": .dice, "bytes": .bytes,
         ]
         if name == "Number" { return Int(GesBytecodeTypeKind.float.rawValue) }
         guard let type = types[name.lowercased()] else { throw assemblyFailure(e.location, "Unknown assembly type.", name) }

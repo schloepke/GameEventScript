@@ -313,7 +313,10 @@ qualifies each, and `test-swift.sh` runs them. Checked-in goldens of
 `conformance/fixtures/SchemaGeneration/fleet.gess` (C# `Generator/tests/Generated`, Swift Conformance tests) feed
 both allocation gates; the C# test and `compare-schema-generation.py` require them current. Generated Swift classes
 mark stored properties `@exclusivity(unchecked)` unless `--checked-exclusivity`; `scripts/schema_generated_parties.py`
-generates with the checks for the roundtrip, so overlapping accesses in generated code trap there.
+generates with the checks for the roundtrip, so overlapping accesses in generated code trap there. `--out-dir` writes split output
+(one file per declaration or per source, a shared `_<Namespace>` file and the manifest `.ges-generated.json`, specs/Schemas.md#split-output);
+the Generator only returns the files (`GenerateFiles`, `GenerateModelFiles`), while the CLI owns the directory, its cleanup and
+`--check`. `compare-schema-generation.py` compares and `test-generated-schemas.py` compiles the split role fixture.
 
 ## Host and runtime
 

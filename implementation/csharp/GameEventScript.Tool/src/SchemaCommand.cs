@@ -24,7 +24,7 @@ Usage:
   dotnet ges schema generate <schema.gess> [more.gess ...] (--root <Name> ... | --all-roots | --wire <group> | --model <group>)
                              [--param <name>=<literal> ...]
                              --language csharp|swift [--namespace <A.B>] [--access public|internal] [--values]
-                             [--checked-exclusivity] [--bindings] [-o <file> [--check]]
+                             [--checked-exclusivity] [--bindings] [-o <file> | -d <dir> [--split schema|file]] [--check]
 
 Commands:
   check      Read schemas and report the first error with its line and column.
@@ -46,7 +46,10 @@ Options:
   --values                  Also convert generated records and models to and from GES values and messages.
   --checked-exclusivity     Keep the dynamic exclusivity checks of generated Swift classes.
   --bindings                Also offer generated model types to scripts as external types; only with --model.
-  --check                   Compare the generated code with the output file instead of writing it; differences fail.
+  -d, --out-dir <dir>       Write the code as several files into a directory that generate owns, with a manifest.
+  --split <kind>            With --out-dir, one file per declaration (schema, the default) or per schema file (file).
+  --check                   Compare the generated code with the output file or directory instead of writing it;
+                            changed, missing and surplus files fail.
   --param <name>=<literal>  A parameter value such as worldWidth=5000m; repeat for each one.
   --data <path>             The binary data of dump.
   --baseline <path>         The full record that makes dump read the data as a delta.
@@ -81,6 +84,8 @@ Options:
         string? data = null;
         string? baseline = null;
         string? output = null;
+        string? outDir = null;
+        string? split = null;
         var quiet = false;
         var parameters = new List<(string Name, string Literal)>();
         for (var index = 1; index < arguments.Length; index++)
@@ -98,7 +103,7 @@ Options:
             else if (argument == "--values" && command == "generate") withValues = true;
             else if (argument == "--checked-exclusivity" && command == "generate") checkedExclusivity = true;
             else if (argument == "--bindings" && command == "generate") bindings = true;
-            else if (argument is "--root" or "--data" or "--baseline" or "--param" or "-o" or "--output" or "--language" or "--namespace" or "--access" or "--wire" or "--model")
+            else if (argument is "--root" or "--data" or "--baseline" or "--param" or "-o" or "--output" or "--language" or "--namespace" or "--access" or "--wire" or "--model" or "-d" or "--out-dir" or "--split")
             {
                 var applies = argument switch
                 {
@@ -106,7 +111,7 @@ Options:
                     "--wire" or "--model" => command is "layout" or "generate",
                     "--param" => command is "hash" or "dump" or "layout" or "generate",
                     "--data" or "--baseline" => command == "dump",
-                    "--language" or "--namespace" or "--access" => command == "generate",
+                    "--language" or "--namespace" or "--access" or "-d" or "--out-dir" or "--split" => command == "generate",
                     _ => command is "format" or "layout" or "generate"
                 };
                 if (!applies) return UsageError($"Unknown schema {command} option '{argument}'.");
@@ -130,6 +135,8 @@ Options:
                 else if (argument == "--data") data = next;
                 else if (argument == "--baseline") baseline = next;
                 else if (argument is "-o" or "--output") output = next;
+                else if (argument is "-d" or "--out-dir") outDir = next;
+                else if (argument == "--split") split = next;
                 else
                 {
                     var separator = next.IndexOf('=');
@@ -154,7 +161,11 @@ Options:
         if (bindings && modelGroup is null) return UsageError("--bindings concerns model code and requires --model.");
         if (command == "generate" && language is not ("csharp" or "swift")) return UsageError("generate requires --language csharp or --language swift.");
         if (access is not (null or "public" or "internal")) return UsageError("--access is public or internal.");
-        if (check && output is null) return UsageError("--check requires -o with the file to compare.");
+        if (output is not null && outDir is not null) return GenerateUsage("-o writes one file and --out-dir a directory; give one of them.");
+        if (split is not null && outDir is null) return GenerateUsage("--split divides the files of --out-dir.");
+        if (split is not (null or "schema" or "file")) return UsageError("--split is schema or file.");
+        if (outDir is not null && string.IsNullOrWhiteSpace(outDir)) return UsageError("The output directory must not be empty.");
+        if (check && output is null && outDir is null) return UsageError("--check requires -o or --out-dir with what to compare.");
         if (output is not null)
         {
             if (string.IsNullOrWhiteSpace(output)) return UsageError("The output path must not be empty.");
@@ -200,7 +211,8 @@ Options:
                         Access = access == "internal" ? GesSchemaAccess.Internal : GesSchemaAccess.Public,
                         Values = withValues,
                         CheckedExclusivity = checkedExclusivity,
-                        Bindings = bindings
+                        Bindings = bindings,
+                        Split = outDir is null ? GesSchemaSplit.None : split == "file" ? GesSchemaSplit.File : GesSchemaSplit.Schema
                     };
                     if (wireGroup is not null || modelGroup is not null)
                     {
@@ -213,7 +225,7 @@ Options:
                         }
                     }
 
-                    return Layout(set, allRoots ? set.Schemas.Select(schema => schema.Name).ToList() : roots, parameters, output, options, check, modelGroup is not null);
+                    return Layout(set, allRoots ? set.Schemas.Select(schema => schema.Name).ToList() : roots, parameters, output, outDir, options, check, modelGroup is not null);
             }
 
             var schema = set.Schema(root!);
@@ -270,7 +282,7 @@ Options:
     }
 
     // Prints the layout, or with options the generated code; with check it compares the code with the output file.
-    private static int Layout(GesSchemaSet set, List<string> roots, List<(string Name, string Literal)> parameters, string? output, GesSchemaGenerateOptions? options, bool check, bool model)
+    private static int Layout(GesSchemaSet set, List<string> roots, List<(string Name, string Literal)> parameters, string? output, string? outDir, GesSchemaGenerateOptions? options, bool check, bool model)
     {
         var values = new GesSchemaParameters();
         foreach (var (name, literal) in parameters)
@@ -287,6 +299,12 @@ Options:
         string text;
         try
         {
+            if (outDir is not null)
+            {
+                var files = model ? GesSchemaGenerator.GenerateModelFiles(set, roots, options!) : GesSchemaGenerator.GenerateFiles(set, roots, values, options!);
+                return check ? ToolGeneratedDirectory.Check(outDir, files) : ToolGeneratedDirectory.Write(outDir, files);
+            }
+
             text = model
                 ? options is null ? GesSchemaGenerator.ModelLayout(set, roots) : GesSchemaGenerator.GenerateModels(set, roots, options)
                 : options is null ? GesSchemaGenerator.Layout(set, roots, values) : GesSchemaGenerator.Generate(set, roots, values, options);
@@ -308,6 +326,12 @@ Options:
         if (output is null) Console.Write(text);
         else ToolFileOutput.Write(Path.GetFullPath(output), StrictUtf8.GetBytes(text));
         return 0;
+    }
+
+    private static int GenerateUsage(string message)
+    {
+        Console.Error.WriteLine($"schema: error generate.usage: {message}");
+        return 1;
     }
 
     private static int UsageError(string message)

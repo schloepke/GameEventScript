@@ -194,6 +194,50 @@ final class ToolTests: XCTestCase {
         XCTAssertTrue(invalid.error.contains("error generate.invalidNamespace"))
     }
 
+    func testSchemaGenerateOwnsItsOutputDirectory() throws {
+        let source = try file("s.gess", "model schema :Alpha as { a: :Number }\nmodel schema :Beta as { b: :Text }\n")
+        let output = directory.appendingPathComponent("out").path
+        let manager = FileManager.default
+
+        func names(_ path: String) throws -> [String] { try manager.contentsOfDirectory(atPath: path).sorted { $0.utf16.lexicographicallyPrecedes($1.utf16) } }
+
+        let write = run(["schema", "generate", source, "--model", "default", "--language", "csharp", "--namespace", "Game", "-d", output])
+        XCTAssertEqual(write.code, 0, write.error)
+        XCTAssertEqual(try names(output), [".ges-generated.json", "Game.Alpha.g.cs", "Game.Beta.g.cs", "_Game.g.cs"])
+        XCTAssertTrue(try String(contentsOfFile: output + "/.ges-generated.json", encoding: .utf8).contains("\"code\": \"model\""))
+        XCTAssertEqual(run(["schema", "generate", source, "--model", "default", "--language", "csharp", "--namespace", "Game", "-d", output, "--check"]).code, 0)
+        let stamp = Date(timeIntervalSince1970: 1_577_836_800)
+        try manager.setAttributes([.modificationDate: stamp], ofItemAtPath: output + "/Game.Alpha.g.cs")
+        try "// mine\n".write(toFile: output + "/Mine.cs", atomically: true, encoding: .utf8)
+        try "unity\n".write(toFile: output + "/Game.Alpha.g.cs.meta", atomically: true, encoding: .utf8)
+        try "model schema :Alpha as { a: :Number }\n".write(toFile: source, atomically: true, encoding: .utf8)
+        let rewrite = run(["schema", "generate", source, "--model", "default", "--language", "csharp", "--namespace", "Game", "--out-dir", output, "--split", "schema"])
+        XCTAssertEqual(rewrite.code, 0, rewrite.error)
+        XCTAssertTrue(rewrite.error.contains("warning cli.unowned: \(output)/Mine.cs is not generated and was left alone."), rewrite.error)
+        XCTAssertFalse(rewrite.error.contains(".meta"))
+        XCTAssertFalse(manager.fileExists(atPath: output + "/Game.Beta.g.cs"))
+        XCTAssertEqual(try manager.attributesOfItem(atPath: output + "/Game.Alpha.g.cs")[.modificationDate] as? Date, stamp)
+        try (try String(contentsOfFile: output + "/Game.Alpha.g.cs", encoding: .utf8) + "// edited\n").write(toFile: output + "/Game.Alpha.g.cs", atomically: true, encoding: .utf8)
+        try manager.removeItem(atPath: output + "/_Game.g.cs")
+        let check = run(["schema", "generate", source, "--model", "default", "--language", "csharp", "--namespace", "Game", "-d", output, "--check"])
+        XCTAssertEqual(check.code, 1)
+        XCTAssertTrue(check.error.contains("error cli.outdated: \(output)/Game.Alpha.g.cs differs from the generated code."), check.error)
+        XCTAssertTrue(check.error.contains("error cli.outdated: \(output)/_Game.g.cs does not exist."), check.error)
+        XCTAssertTrue(check.error.contains("error cli.outdated: \(output)/Mine.cs is not generated."), check.error)
+        let files = directory.appendingPathComponent("files").path
+        let split = run(["schema", "generate", source, "--model", "default", "--language", "swift", "-d", files, "--split", "file"])
+        XCTAssertEqual(split.code, 0, split.error)
+        XCTAssertEqual(try names(files), [".ges-generated.json", "s.swift"])
+        let both = run(["schema", "generate", source, "--model", "default", "--language", "swift", "-o", output + "/x.swift", "-d", output])
+        XCTAssertEqual(both.code, 1)
+        XCTAssertTrue(both.error.contains("error generate.usage"))
+        let lone = run(["schema", "generate", source, "--model", "default", "--language", "swift", "--split", "file"])
+        XCTAssertEqual(lone.code, 1)
+        XCTAssertTrue(lone.error.contains("error generate.usage"))
+        XCTAssertEqual(run(["schema", "generate", source, "--model", "default", "--language", "swift", "-d", output, "--split", "type"]).code, 2)
+        XCTAssertEqual(run(["schema", "layout", source, "--model", "default", "-d", output]).code, 2)
+    }
+
     func testSchemaCommandsCheckHashFormatAndDump() throws {
         let source = try file("drone.gess", "// note\nschema :Drone as {\n  id: :Number integer between 0 and 255 key\n  x: :Quantity(m) between 0m and 2km step 1cm\n}\n")
         XCTAssertEqual(run(["schema", "check", source, "--quiet"]).code, 0)

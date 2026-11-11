@@ -53,8 +53,39 @@ public static class GesSchemaGenerator
         if (roots is null) throw new ArgumentNullException(nameof(roots));
         if (parameters is null) throw new ArgumentNullException(nameof(parameters));
         if (options is null) throw new ArgumentNullException(nameof(options));
+        if (options.Split != GesSchemaSplit.None) throw new GesGeneratorException(GesGeneratorException.Usage, "Split code consists of several files; GenerateFiles returns them.");
+        return GesCodeFiles.Single(Wire(set, roots, parameters, options, out _));
+    }
+
+    /// <summary>
+    /// Generates the code of <see cref="Generate"/> as several files: one per declaration or per schema source as
+    /// <see cref="GesSchemaGenerateOptions.Split"/> chooses, a shared file whose name begins with <c>_</c> for the namespace and
+    /// the embedded schema sources, and last the manifest <c>.ges-generated.json</c>, which names the options, roots,
+    /// parameters, hashes and files. Nested types stay in the file of their record. Every port writes identical files.
+    /// </summary>
+    /// <param name="set">The schemas.</param>
+    /// <param name="roots">The schemas to generate, in the order the manifest names them.</param>
+    /// <param name="parameters">A value for every parameter the roots reach; they become constants of the code.</param>
+    /// <param name="options">The language, namespace, visibility and split.</param>
+    /// <returns>The files ordered by name, and the manifest last.</returns>
+    /// <exception cref="ArgumentException">A root is not declared.</exception>
+    /// <exception cref="GesSchemaException">A root cannot be bound, for example because a parameter has no value.</exception>
+    /// <exception cref="GesGeneratorException">No root or no split is given, the namespace is invalid, two generated names or
+    /// two file names that differ only in ASCII case collide, or a reached type cannot be generated yet.</exception>
+    public static IReadOnlyList<GesGeneratedFile> GenerateFiles(GesSchemaSet set, IReadOnlyList<string> roots, GesSchemaParameters parameters, GesSchemaGenerateOptions options)
+    {
+        if (set is null) throw new ArgumentNullException(nameof(set));
+        if (roots is null) throw new ArgumentNullException(nameof(roots));
+        if (parameters is null) throw new ArgumentNullException(nameof(parameters));
+        if (options is null) throw new ArgumentNullException(nameof(options));
+        var document = Wire(set, roots, parameters, options, out var layout);
+        return GesCodeFiles.Split(document, options.Split, set.SourceName, files => Manifest(options, model: false, layout.Roots, root => (layout.Type(root).Hash, layout.Type(root).BindingHash), layout.Parameters, files));
+    }
+
+    private static GesCodeDocument Wire(GesSchemaSet set, IReadOnlyList<string> roots, GesSchemaParameters parameters, GesSchemaGenerateOptions options, out GesSchemaLayout layout)
+    {
         if (options.Bindings) throw new GesGeneratorException(GesGeneratorException.Usage, "Bindings concern model code; wire code converts through Values.");
-        var layout = GesSchemaLayoutBuilder.Build(set, roots, parameters);
+        layout = GesSchemaLayoutBuilder.Build(set, roots, parameters);
         var types = GesSchemaPlanner.Plan(layout);
         return options.Language == GesSchemaLanguage.CSharp ? GesCSharpEmitter.Emit(layout, types, options) : GesSwiftEmitter.Emit(layout, types, options);
     }
@@ -111,9 +142,82 @@ public static class GesSchemaGenerator
         if (set is null) throw new ArgumentNullException(nameof(set));
         if (roots is null) throw new ArgumentNullException(nameof(roots));
         if (options is null) throw new ArgumentNullException(nameof(options));
+        if (options.Split != GesSchemaSplit.None) throw new GesGeneratorException(GesGeneratorException.Usage, "Split code consists of several files; GenerateModelFiles returns them.");
+        return GesCodeFiles.Single(Models(set, roots, options, out _));
+    }
+
+    /// <summary>
+    /// Generates the model types of <see cref="GenerateModels"/> as several files: one per declaration or per schema source
+    /// as <see cref="GesSchemaGenerateOptions.Split"/> chooses, with the protocol of a schema in its file, a shared file
+    /// whose name begins with <c>_</c> for the namespace, the conversions and the helpers, and last the manifest
+    /// <c>.ges-generated.json</c>. Every port writes identical files.
+    /// </summary>
+    /// <param name="set">The schemas.</param>
+    /// <param name="roots">The schemas to generate as models, in the order the manifest names them.</param>
+    /// <param name="options">The language, namespace, visibility, conversions and split.</param>
+    /// <returns>The files ordered by name, and the manifest last.</returns>
+    /// <exception cref="GesSchemaException">A root is not declared.</exception>
+    /// <exception cref="GesGeneratorException">No root or no split is given, a root is no schema, an option concerns wire
+    /// code, the namespace is invalid, two generated names or two file names that differ only in ASCII case collide, or a
+    /// reached type has no model type.</exception>
+    public static IReadOnlyList<GesGeneratedFile> GenerateModelFiles(GesSchemaSet set, IReadOnlyList<string> roots, GesSchemaGenerateOptions options)
+    {
+        if (set is null) throw new ArgumentNullException(nameof(set));
+        if (roots is null) throw new ArgumentNullException(nameof(roots));
+        if (options is null) throw new ArgumentNullException(nameof(options));
+        var document = Models(set, roots, options, out var layout);
+        return GesCodeFiles.Split(document, options.Split, set.SourceName, files => Manifest(options, model: true, layout.Roots, root => (layout.Type(root).Hash, null), [], files));
+    }
+
+    private static GesCodeDocument Models(GesSchemaSet set, IReadOnlyList<string> roots, GesSchemaGenerateOptions options, out GesModelLayout layout)
+    {
         if (options.CheckedExclusivity) throw new GesGeneratorException(GesGeneratorException.Usage, "Checked exclusivity concerns wire code, not models.");
-        var layout = GesModelLayoutBuilder.Build(set, roots);
+        layout = GesModelLayoutBuilder.Build(set, roots);
         return options.Language == GesSchemaLanguage.CSharp ? GesCSharpModelEmitter.Emit(layout, options) : GesSwiftModelEmitter.Emit(layout, options);
+    }
+
+    // The manifest of split output: the options, the roots with their hashes, the parameters and the files, so that a tool
+    // knows which files of the directory it owns.
+    private static string Manifest(GesSchemaGenerateOptions options, bool model, List<string> roots, Func<string, (ulong Hash, ulong? BindingHash)> hashes, List<GesLayoutParameter> parameters, List<string> files)
+    {
+        var json = new GesSchemaLayoutJson.Writer();
+        json.BeginObject();
+        json.Number("manifest", 1);
+        json.String("code", model ? "model" : "wire");
+        json.String("language", options.Language == GesSchemaLanguage.CSharp ? "csharp" : "swift");
+        json.String("split", options.Split == GesSchemaSplit.Schema ? "schema" : "file");
+        json.String("namespace", options.Namespace);
+        json.String("access", options.Access == GesSchemaAccess.Public ? "public" : "internal");
+        json.Boolean("values", options.Values);
+        json.Boolean("bindings", options.Bindings);
+        json.Boolean("checkedExclusivity", options.CheckedExclusivity);
+        json.BeginArray("roots");
+        foreach (var root in roots)
+        {
+            var (hash, bindingHash) = hashes(root);
+            json.BeginObject();
+            json.String("name", root);
+            json.String("hash", GesSchemaLayoutJson.Hex(hash));
+            if (bindingHash is { } binding) json.String("bindingHash", GesSchemaLayoutJson.Hex(binding));
+            json.EndObject();
+        }
+
+        json.EndArray();
+        json.BeginArray("parameters");
+        foreach (var parameter in parameters)
+        {
+            json.BeginObject();
+            json.String("name", parameter.Name);
+            json.String("type", parameter.Type);
+            json.String("unit", parameter.Unit);
+            json.String("value", parameter.Value);
+            json.EndObject();
+        }
+
+        json.EndArray();
+        json.Strings("files", files);
+        json.EndObject();
+        return json.ToString();
     }
 
     private static IReadOnlyList<string> Roots(GesSchemaSet set, string group, bool wire)

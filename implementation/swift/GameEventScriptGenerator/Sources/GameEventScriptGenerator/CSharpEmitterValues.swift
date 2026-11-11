@@ -45,9 +45,9 @@ extension GesCSharpEmitter {
 
     // The embedded sources, parsed when a type first converts a value, and bound with the parameters of this code. A binding
     // hash that differs from the generated one means that the runtime no longer binds the sources like the generator did.
-    static func valuesHolder(_ code: inout Code, _ layout: GesSchemaLayout, _ holder: String) {
+    static func valuesHolder(_ code: inout Code, _ layout: GesSchemaLayout, _ holder: String, shared: Bool) {
         code.blank()
-        code.line("/// <summary>The schema sources of this file, which the conversion to and from GES values binds once per type.</summary>")
+        code.line("/// <summary>The schema sources of \(shared ? "the generated files" : "this file"), which the conversion to and from GES values binds once per type.</summary>")
         code.line("internal static class \(holder)")
         code.open("{")
         code.line("private static GesSchemaSet? __set;")

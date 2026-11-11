@@ -17,6 +17,29 @@ public enum GesSchemaAccess: Sendable {
     case `internal`
 }
 
+/// How generated code is divided into files.
+public enum GesSchemaSplit: Sendable {
+    /// One file with every generated type.
+    case none
+    /// A file per declaration, named after it, and the shared part in a file whose name begins with `_`.
+    case schema
+    /// A file per schema source with every type it declares, and the shared part in a file whose name begins with `_`.
+    case file
+}
+
+/// A generated file: its name within the output directory and its text.
+public struct GesGeneratedFile: Sendable, Equatable {
+    /// The file name, relative to the output directory.
+    public let path: String
+    /// The text, ending with a line break.
+    public let text: String
+
+    init(_ path: String, _ text: String) {
+        self.path = path
+        self.text = text
+    }
+}
+
 /// How schema code is generated.
 public struct GesSchemaGenerateOptions: Sendable {
     /// The target language.
@@ -39,6 +62,9 @@ public struct GesSchemaGenerateOptions: Sendable {
     /// generated `GesTypes` catalog and constructor registry that implement the Runtime's external-type contracts, without
     /// the Bridge, macros or Reflection. Only model generation takes it.
     public var bindings: Bool
+    /// How the code is divided into files. `.none`, the default, is the single text of `generate` and `generateModels`; the
+    /// other choices are the files of `generateFiles` and `generateModelFiles`.
+    public var split: GesSchemaSplit
 
     /// Creates options.
     /// - Parameters:
@@ -48,13 +74,23 @@ public struct GesSchemaGenerateOptions: Sendable {
     ///   - values: Whether records and models also convert to and from GES values, and records to and from messages.
     ///   - checkedExclusivity: Whether generated Swift classes keep dynamic exclusivity checks.
     ///   - bindings: Whether generated model types also offer themselves to scripts as external types.
-    public init(language: GesSchemaLanguage = .csharp, namespace: String = "", access: GesSchemaAccess = .public, values: Bool = false, checkedExclusivity: Bool = false, bindings: Bool = false) {
+    ///   - split: How the code is divided into files.
+    public init(
+        language: GesSchemaLanguage = .csharp,
+        namespace: String = "",
+        access: GesSchemaAccess = .public,
+        values: Bool = false,
+        checkedExclusivity: Bool = false,
+        bindings: Bool = false,
+        split: GesSchemaSplit = .none
+    ) {
         self.language = language
         self.namespace = namespace
         self.access = access
         self.values = values
         self.checkedExclusivity = checkedExclusivity
         self.bindings = bindings
+        self.split = split
     }
 }
 

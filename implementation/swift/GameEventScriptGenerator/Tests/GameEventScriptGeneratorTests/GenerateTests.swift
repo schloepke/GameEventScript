@@ -11,7 +11,7 @@ final class GenerateTests: XCTestCase {
         try GesSchemaGenerator.generate(try GesSchemaSet(parsing: source), roots: [root], parameters: GesSchemaParameters(), options: GesSchemaGenerateOptions(language: language, namespace: namespace))
     }
 
-    private func code(_ body: () throws -> String) -> String {
+    private func code<Result>(_ body: () throws -> Result) -> String {
         do {
             _ = try body()
             return ""
@@ -149,5 +149,52 @@ final class GenerateTests: XCTestCase {
         XCTAssertEqual(text.components(separatedBy: "partial struct Inner").count, 2)
         XCTAssertTrue(text.contains("from the roots A, B."))
         XCTAssertTrue(text.contains("\"i.a\","))
+    }
+
+    func testSplitOutputPlacesEachDeclarationInTheFileOfItsDeclaration() throws {
+        let set = try GesSchemaSet(sources: [
+            GesSchemaSource(name: "maps/world.gess", text: "tags :Side as (#left, #right)\nschema :World as {\n  bot: :Bot\n  side: :Side\n}\n"),
+            GesSchemaSource(name: "bots.gess", text: "schema :Bot as {\n  names: :List(:Text max 4) max 2\n}\n"),
+        ])
+        for language in [GesSchemaLanguage.csharp, .swift] {
+            let fileExtension = language == .swift ? ".swift" : ".g.cs"
+            var options = GesSchemaGenerateOptions(language: language, namespace: "Game.Wire", values: true, split: .schema)
+            var files = try GesSchemaGenerator.generateFiles(set, roots: ["World"], parameters: GesSchemaParameters(), options: options)
+            XCTAssertEqual(files.map(\.path), ["Game.Wire.Bot", "Game.Wire.Side", "Game.Wire.World", "_Game.Wire"].map { $0 + fileExtension } + [".ges-generated.json"])
+            XCTAssertTrue(files[0].text.contains("NamesItem"))
+            XCTAssertFalse(files[2].text.contains("NamesItem"))
+            XCTAssertTrue(files[3].text.contains("__GesSchemas"))
+            XCTAssertTrue(files[4].text.contains("\"split\": \"schema\""))
+            XCTAssertTrue(files[4].text.contains("\"files\": [\n    \"Game.Wire.Bot\(fileExtension)"))
+            options.split = .file
+            files = try GesSchemaGenerator.generateFiles(set, roots: ["World"], parameters: GesSchemaParameters(), options: options)
+            XCTAssertEqual(files.map(\.path), ["Game.Wire.bots" + fileExtension, "Game.Wire.world" + fileExtension, "_Game.Wire" + fileExtension, ".ges-generated.json"])
+            XCTAssertTrue(files[1].text.contains("Side"))
+        }
+        let swift = try GesSchemaGenerator.generateFiles(
+            set,
+            roots: ["World"],
+            parameters: GesSchemaParameters(),
+            options: GesSchemaGenerateOptions(language: .swift, namespace: "Game.Wire", split: .schema)
+        )
+        XCTAssertTrue(swift[0].text.contains("extension Game.Wire {\n"))
+        XCTAssertTrue(swift[3].text.contains("public enum Game {\n    /// The namespace `Wire` of generated schema types.\n    public enum Wire {}\n}\n"))
+        XCTAssertFalse(swift[0].text.contains("from the root"))
+    }
+
+    func testSplitOutputRejectsMismatchedRequestsAndCollidingFileNames() throws {
+        let set = try GesSchemaSet(parsing: "schema :S as {\n  on: :Boolean\n}\n")
+        let split = GesSchemaGenerateOptions(split: .schema)
+        XCTAssertEqual(code { try GesSchemaGenerator.generate(set, roots: ["S"], parameters: GesSchemaParameters(), options: split) }, "generate.usage")
+        XCTAssertEqual(code { try GesSchemaGenerator.generateModels(set, roots: ["S"], options: split) }, "generate.usage")
+        XCTAssertEqual(code { try GesSchemaGenerator.generateFiles(set, roots: ["S"], parameters: GesSchemaParameters(), options: GesSchemaGenerateOptions()) }, "generate.usage")
+        XCTAssertEqual(code { try GesSchemaGenerator.generateModelFiles(set, roots: ["S"], options: GesSchemaGenerateOptions()) }, "generate.usage")
+        let cases = try GesSchemaSet(parsing: "schema :Ab as {\n  b: :AB\n}\nschema :AB as {\n  on: :Boolean\n}\n")
+        XCTAssertEqual(code { try GesSchemaGenerator.generateFiles(cases, roots: ["Ab"], parameters: GesSchemaParameters(), options: split) }, "generate.nameCollision")
+        let sources = try GesSchemaSet(sources: [
+            GesSchemaSource(name: "a/s.gess", text: "schema :A as {\n  b: :B\n}\n"), GesSchemaSource(name: "b/s.gess", text: "schema :B as {\n  on: :Boolean\n}\n"),
+        ])
+        XCTAssertEqual(code { try GesSchemaGenerator.generateModelFiles(sources, roots: ["A"], options: GesSchemaGenerateOptions(split: .file)) }, "generate.nameCollision")
+        XCTAssertEqual(try GesSchemaGenerator.generateModelFiles(sources, roots: ["A"], options: GesSchemaGenerateOptions(split: .schema)).count, 4)
     }
 }

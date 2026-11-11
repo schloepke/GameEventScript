@@ -157,4 +157,49 @@ public sealed class GesSchemaGenerateTests
         StringAssert.Contains(text, "from the roots A, B.");
         StringAssert.Contains(text, "\"i.a\",");
     }
+    [TestMethod]
+    public void SplitOutputPlacesEachDeclarationInTheFileOfItsDeclaration()
+    {
+        var set = GesSchemaSet.Parse(
+            new GesSchemaSource("maps/world.gess", "tags :Side as (#left, #right)\nschema :World as {\n  bot: :Bot\n  side: :Side\n}\n"),
+            new GesSchemaSource("bots.gess", "schema :Bot as {\n  names: :List(:Text max 4) max 2\n}\n"));
+        foreach (var language in new[] { GesSchemaLanguage.CSharp, GesSchemaLanguage.Swift })
+        {
+            var extension = language == GesSchemaLanguage.Swift ? ".swift" : ".g.cs";
+            var options = new GesSchemaGenerateOptions { Language = language, Namespace = "Game.Wire", Values = true, Split = GesSchemaSplit.Schema };
+            var files = GesSchemaGenerator.GenerateFiles(set, ["World"], new GesSchemaParameters(), options);
+            CollectionAssert.AreEqual(new[] { "Game.Wire.Bot", "Game.Wire.Side", "Game.Wire.World", "_Game.Wire", ".ges-generated" },
+                files.Select(file => file.Path.Replace(extension, "", StringComparison.Ordinal).Replace(".json", "", StringComparison.Ordinal)).ToArray());
+            StringAssert.Contains(files[0].Text, "NamesItem");
+            Assert.IsFalse(files[2].Text.Contains("NamesItem", StringComparison.Ordinal));
+            StringAssert.Contains(files[3].Text, "__GesSchemas");
+            StringAssert.Contains(files[4].Text, "\"split\": \"schema\"");
+            StringAssert.Contains(files[4].Text, "\"files\": [\n    \"Game.Wire.Bot" + extension);
+            options.Split = GesSchemaSplit.File;
+            files = GesSchemaGenerator.GenerateFiles(set, ["World"], new GesSchemaParameters(), options);
+            CollectionAssert.AreEqual(new[] { "Game.Wire.bots" + extension, "Game.Wire.world" + extension, "_Game.Wire" + extension, ".ges-generated.json" }, files.Select(file => file.Path).ToArray());
+            StringAssert.Contains(files[1].Text, "Side");
+        }
+
+        var swift = GesSchemaGenerator.GenerateFiles(set, ["World"], new GesSchemaParameters(), new GesSchemaGenerateOptions { Language = GesSchemaLanguage.Swift, Namespace = "Game.Wire", Split = GesSchemaSplit.Schema });
+        StringAssert.Contains(swift[0].Text, "extension Game.Wire {\n");
+        StringAssert.Contains(swift[3].Text, "public enum Game {\n    /// The namespace `Wire` of generated schema types.\n    public enum Wire {}\n}\n");
+        Assert.IsFalse(swift[0].Text.Contains("from the root", StringComparison.Ordinal));
+    }
+
+    [TestMethod]
+    public void SplitOutputRejectsMismatchedRequestsAndCollidingFileNames()
+    {
+        var set = GesSchemaSet.Parse("schema :S as {\n  on: :Boolean\n}\n");
+        var split = new GesSchemaGenerateOptions { Split = GesSchemaSplit.Schema };
+        Assert.AreEqual("generate.usage", Code(() => GesSchemaGenerator.Generate(set, ["S"], new GesSchemaParameters(), split)));
+        Assert.AreEqual("generate.usage", Code(() => GesSchemaGenerator.GenerateModels(set, ["S"], split)));
+        Assert.AreEqual("generate.usage", Code(() => GesSchemaGenerator.GenerateFiles(set, ["S"], new GesSchemaParameters(), new GesSchemaGenerateOptions())));
+        Assert.AreEqual("generate.usage", Code(() => GesSchemaGenerator.GenerateModelFiles(set, ["S"], new GesSchemaGenerateOptions())));
+        var cases = GesSchemaSet.Parse("schema :Ab as {\n  b: :AB\n}\nschema :AB as {\n  on: :Boolean\n}\n");
+        Assert.AreEqual("generate.nameCollision", Code(() => GesSchemaGenerator.GenerateFiles(cases, ["Ab"], new GesSchemaParameters(), split)));
+        var sources = GesSchemaSet.Parse(new GesSchemaSource("a/s.gess", "schema :A as {\n  b: :B\n}\n"), new GesSchemaSource("b/s.gess", "schema :B as {\n  on: :Boolean\n}\n"));
+        Assert.AreEqual("generate.nameCollision", Code(() => GesSchemaGenerator.GenerateModelFiles(sources, ["A"], new GesSchemaGenerateOptions { Split = GesSchemaSplit.File })));
+        Assert.HasCount(4, GesSchemaGenerator.GenerateModelFiles(sources, ["A"], new GesSchemaGenerateOptions { Split = GesSchemaSplit.Schema }));
+    }
 }

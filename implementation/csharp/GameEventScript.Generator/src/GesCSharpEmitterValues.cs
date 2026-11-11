@@ -53,10 +53,10 @@ internal static partial class GesCSharpEmitter
 
     // The embedded sources, parsed when a type first converts a value, and bound with the parameters of this code. A binding
     // hash that differs from the generated one means that the runtime no longer binds the sources like the generator did.
-    private static void ValuesHolder(GesSchemaPlanner.Code code, GesSchemaLayout layout, string holder)
+    private static void ValuesHolder(GesSchemaPlanner.Code code, GesSchemaLayout layout, string holder, bool shared)
     {
         code.Blank();
-        code.Line("/// <summary>The schema sources of this file, which the conversion to and from GES values binds once per type.</summary>");
+        code.Line($"/// <summary>The schema sources of {(shared ? "the generated files" : "this file")}, which the conversion to and from GES values binds once per type.</summary>");
         code.Line($"internal static class {holder}");
         code.Open("{");
         code.Line("private static GesSchemaSet? __set;");

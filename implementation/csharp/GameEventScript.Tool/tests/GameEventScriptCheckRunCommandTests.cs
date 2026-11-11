@@ -335,6 +335,48 @@ public sealed class GameEventScriptCheckRunCommandTests
         StringAssert.Contains(invalid.StandardError, "error generate.invalidNamespace");
     }
 
+    /// <summary>Verifies schema generate into a directory: the split, the manifest, removed and foreign files, and the check.</summary>
+    [TestMethod]
+    public void SchemaGenerateOwnsItsOutputDirectory()
+    {
+        Write("s.gess", "model schema :Alpha as { a: :Number }\nmodel schema :Beta as { b: :Text }\n");
+        var write = Run("schema", "generate", "s.gess", "--model", "default", "--language", "csharp", "--namespace", "Game", "-d", "out");
+        Assert.AreEqual(0, write.ExitCode, write.StandardError);
+        var output = Path.Combine(_directory, "out");
+        CollectionAssert.AreEqual(new[] { ".ges-generated.json", "Game.Alpha.g.cs", "Game.Beta.g.cs", "_Game.g.cs" }, Directory.GetFiles(output).Select(Path.GetFileName).Order(StringComparer.Ordinal).ToArray());
+        StringAssert.Contains(File.ReadAllText(Path.Combine(output, ".ges-generated.json")), "\"code\": \"model\"");
+        Assert.AreEqual(0, Run("schema", "generate", "s.gess", "--model", "default", "--language", "csharp", "--namespace", "Game", "-d", "out", "--check").ExitCode);
+        var stamp = new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        File.SetLastWriteTimeUtc(Path.Combine(output, "Game.Alpha.g.cs"), stamp);
+        File.WriteAllText(Path.Combine(output, "Mine.cs"), "// mine\n");
+        File.WriteAllText(Path.Combine(output, "Game.Alpha.g.cs.meta"), "unity\n");
+        Write("s.gess", "model schema :Alpha as { a: :Number }\n");
+        var rewrite = Run("schema", "generate", "s.gess", "--model", "default", "--language", "csharp", "--namespace", "Game", "--out-dir", "out", "--split", "schema");
+        Assert.AreEqual(0, rewrite.ExitCode, rewrite.StandardError);
+        StringAssert.Contains(rewrite.StandardError, "warning cli.unowned: " + Path.Combine("out", "Mine.cs") + " is not generated and was left alone.");
+        Assert.IsFalse(rewrite.StandardError.Contains(".meta", StringComparison.Ordinal));
+        Assert.IsFalse(File.Exists(Path.Combine(output, "Game.Beta.g.cs")));
+        Assert.AreEqual(stamp, File.GetLastWriteTimeUtc(Path.Combine(output, "Game.Alpha.g.cs")));
+        File.AppendAllText(Path.Combine(output, "Game.Alpha.g.cs"), "// edited\n");
+        File.Delete(Path.Combine(output, "_Game.g.cs"));
+        var check = Run("schema", "generate", "s.gess", "--model", "default", "--language", "csharp", "--namespace", "Game", "-d", "out", "--check");
+        Assert.AreEqual(1, check.ExitCode);
+        StringAssert.Contains(check.StandardError, "error cli.outdated: " + Path.Combine("out", "Game.Alpha.g.cs") + " differs from the generated code.");
+        StringAssert.Contains(check.StandardError, "error cli.outdated: " + Path.Combine("out", "_Game.g.cs") + " does not exist.");
+        StringAssert.Contains(check.StandardError, "error cli.outdated: " + Path.Combine("out", "Mine.cs") + " is not generated.");
+        var file = Run("schema", "generate", "s.gess", "--model", "default", "--language", "swift", "-d", "files", "--split", "file");
+        Assert.AreEqual(0, file.ExitCode, file.StandardError);
+        CollectionAssert.AreEqual(new[] { ".ges-generated.json", "s.swift" }, Directory.GetFiles(Path.Combine(_directory, "files")).Select(Path.GetFileName).Order(StringComparer.Ordinal).ToArray());
+        var both = Run("schema", "generate", "s.gess", "--model", "default", "--language", "swift", "-o", "x.swift", "-d", "out");
+        Assert.AreEqual(1, both.ExitCode);
+        StringAssert.Contains(both.StandardError, "error generate.usage");
+        var lone = Run("schema", "generate", "s.gess", "--model", "default", "--language", "swift", "--split", "file");
+        Assert.AreEqual(1, lone.ExitCode);
+        StringAssert.Contains(lone.StandardError, "error generate.usage");
+        Assert.AreEqual(2, Run("schema", "generate", "s.gess", "--model", "default", "--language", "swift", "-d", "out", "--split", "type").ExitCode);
+        Assert.AreEqual(2, Run("schema", "layout", "s.gess", "--model", "default", "-d", "out").ExitCode);
+    }
+
     /// <summary>Verifies the wire and model groups of schema layout and generate, and their usage errors.</summary>
     [TestMethod]
     public void SchemaRolesSelectTheRootsOfAGroup()

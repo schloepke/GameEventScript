@@ -29,6 +29,14 @@ WORK = ROOT / "artifacts/generated-schemas"
 CODE = re.compile(r"error ([a-z]+\.[A-Za-z]+)")
 FLEET_FIXTURE = ROOT / "conformance/fixtures/SchemaGeneration/fleet.gess"
 GENERATED_CSHARP = ROOT / "implementation/csharp/GameEventScript.Generator/tests/Generated"
+ROLES = ROOT / "conformance/fixtures/SchemaGeneration/roles"
+ROLE_FILES = ["World.gess", "Panels.gess", "View.gess"]
+# Split output of the role fixture: each split once for wire code and once for models, so that the files of one generation
+# reach each other's types and helpers and the shared file declares the namespace, nested for two of them.
+SPLITS = (("schema", ["--wire", "world", "--param", "worldWidth=2000m", "--values"], "SchemaSplit.Wire"),
+          ("file", ["--wire", "world", "--param", "worldWidth=2000m", "--values"], "FileSplitWire"),
+          ("schema", ["--model", "view", "--bindings", "--values"], "SchemaSplitModel"),
+          ("file", ["--model", "view", "--values"], "FileSplit.Model"))
 GENERATED_SWIFT = ROOT / "implementation/swift/GameEventScriptConformance/Tests/GameEventScriptConformanceTests/Generated"
 UNCHECKED_PROGRAM = """using System;
 using Unchecked;
@@ -295,6 +303,12 @@ def main():
     for name in ("RolesWire", "RolesModel", "RolesBound"):
         shutil.copy(GENERATED_CSHARP / f"{name}.g.cs", csharp / f"{name}.g.cs")
         shutil.copy(GENERATED_SWIFT / f"{name}.swift", swift / f"{name}.swift")
+    for split, selection, space in SPLITS:
+        for language, target in (("csharp", csharp), ("swift", swift)):
+            run = subprocess.run(["dotnet", str(CSHARP_CLI), "schema", "generate", *ROLE_FILES, *selection, "--language", language, "--namespace", space,
+                                  "--access", "internal", "--out-dir", str(target / space), "--split", split], cwd=ROLES, capture_output=True, check=False)
+            if run.returncode != 0:
+                raise SystemExit(f"The role fixture does not generate split by {split}: {run.stderr.decode('utf-8', 'replace').strip()}")
     (csharp / "Harness.cs").write_text(csharp_program(entries), encoding="utf-8")
     (csharp / "Harness.csproj").write_text(f"""<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
@@ -347,7 +361,7 @@ let package = Package(
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="{csharp}/*.g.cs" />
+    <Compile Include="{csharp}/**/*.g.cs" />
     <ProjectReference Include="{ROOT / 'implementation/csharp/GameEventScript.Runtime/src/GameEventScript.Runtime.csproj'}" />
   </ItemGroup>
 </Project>

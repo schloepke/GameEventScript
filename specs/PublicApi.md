@@ -705,7 +705,10 @@ depends on it, so a game never ships it. It is synchronous, reads no files and r
 | generator | `static class GesSchemaGenerator` with `Layout(set, roots, parameters)` and `Generate(set, roots, parameters, options)`, returning the text | `enum GesSchemaGenerator` with `layout(_:roots:parameters:)` and `generate(_:roots:parameters:options:)`, throwing and returning the text |
 | roles | `WireRoots(set, group)`, `ModelRoots(set, group)` | `wireRoots(_:group:)`, `modelRoots(_:group:)` |
 | models | `ModelLayout(set, roots)`, `GenerateModels(set, roots, options)` | `modelLayout(_:roots:)`, `generateModels(_:roots:options:)` |
-| options | `sealed class GesSchemaGenerateOptions` with `Language`, `Namespace`, `Access`, `Values`, `CheckedExclusivity`, `Bindings` | `struct GesSchemaGenerateOptions` with `init(language:namespace:access:values:checkedExclusivity:bindings:)` and the same properties |
+| split files | `GenerateFiles(set, roots, parameters, options)`, `GenerateModelFiles(set, roots, options)`, returning `IReadOnlyList<GesGeneratedFile>` | `generateFiles(_:roots:parameters:options:)`, `generateModelFiles(_:roots:options:)`, returning `[GesGeneratedFile]` |
+| generated file | `sealed class GesGeneratedFile` with `Path`, `Text` | `struct GesGeneratedFile` with `path`, `text` |
+| options | `sealed class GesSchemaGenerateOptions` with `Language`, `Namespace`, `Access`, `Values`, `CheckedExclusivity`, `Bindings`, `Split` | `struct GesSchemaGenerateOptions` with `init(language:namespace:access:values:checkedExclusivity:bindings:split:)` and the same properties |
+| split | `enum GesSchemaSplit` with `None`, `Schema`, `File` | `enum GesSchemaSplit` with `none`, `schema`, `file` |
 | target language | `enum GesSchemaLanguage` with `CSharp`, `Swift` | `enum GesSchemaLanguage` with `csharp`, `swift` |
 | access | `enum GesSchemaAccess` with `Public`, `Internal` | `enum GesSchemaAccess` with `public`, `internal` |
 | generation error | `GesGeneratorException` with `Code` | `GesGeneratorError` with `code`, `message` |
@@ -724,6 +727,15 @@ port.
 [model types](Schemas.md#model-types) of schema roots, where `Values` adds their plain values; a root that is no schema
 fails with `generate.usage`, and so does the wire-only option `CheckedExclusivity`; `Generate` rejects the model-only option
 `Bindings` with `generate.usage`. A reached type without a model type fails with `generate.unsupported`.
+
+> **Since: Unreleased** — split files
+
+`GenerateFiles` and `GenerateModelFiles` return the [split output](Schemas.md#split-output) of `Generate` and
+`GenerateModels` as files, `Split` choosing one per declaration (`Schema`) or per schema source (`File`): each file's name
+relative to the output directory and its text, ordered by name, with the manifest `.ges-generated.json` last. They write
+nothing; the CLI owns the directory. `Split` stays `None` for `Generate` and `GenerateModels`, and the file methods need
+`Schema` or `File`; otherwise they fail with `generate.usage`. File names that differ only in ASCII case fail with
+`generate.nameCollision`.
 
 ## Host construction and lifecycle API
 

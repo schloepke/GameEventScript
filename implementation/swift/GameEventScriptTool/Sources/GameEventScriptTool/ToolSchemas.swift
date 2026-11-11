@@ -19,7 +19,7 @@ extension ToolHelp {
           ges schema generate <schema.gess> [more.gess ...] (--root <Name> ... | --all-roots | --wire <group> | --model <group>)
                               [--param <name>=<literal> ...]
                               --language csharp|swift [--namespace <A.B>] [--access public|internal] [--values]
-                              [--checked-exclusivity] [--bindings] [-o <file> [--check]]
+                              [--checked-exclusivity] [--bindings] [-o <file> | -d <dir> [--split schema|file]] [--check]
 
         Commands:
           check      Read schemas and report the first error with its line and column.
@@ -41,7 +41,10 @@ extension ToolHelp {
           --values                  Also convert generated records and models to and from GES values and messages.
           --checked-exclusivity     Keep the dynamic exclusivity checks of generated Swift classes.
           --bindings                Also offer generated model types to scripts as external types; only with --model.
-          --check                   Compare the generated code with the output file instead of writing it; differences fail.
+          -d, --out-dir <dir>       Write the code as several files into a directory that generate owns, with a manifest.
+          --split <kind>            With --out-dir, one file per declaration (schema, the default) or per schema file (file).
+          --check                   Compare the generated code with the output file or directory instead of writing it;
+                                    changed, missing and surplus files fail.
           --param <name>=<literal>  A parameter value such as worldWidth=5000m; repeat for each one.
           --data <path>             The binary data of dump.
           --baseline <path>         The full record that makes dump read the data as a delta.
@@ -75,6 +78,8 @@ extension Tool {
         var data: String?
         var baseline: String?
         var output: String?
+        var outDir: String?
+        var split: String?
         var quiet = false
         var parameters: [(String, String)] = []
         var index = 1
@@ -96,14 +101,14 @@ extension Tool {
                 checkedExclusivity = true
             } else if argument == "--bindings" && command == "generate" {
                 bindings = true
-            } else if ["--root", "--data", "--baseline", "--param", "-o", "--output", "--language", "--namespace", "--access", "--wire", "--model"].contains(argument) {
+            } else if ["--root", "--data", "--baseline", "--param", "-o", "--output", "--language", "--namespace", "--access", "--wire", "--model", "-d", "--out-dir", "--split"].contains(argument) {
                 let applies: Bool
                 switch argument {
                 case "--root": applies = ["hash", "canonical", "dump", "layout", "generate"].contains(command)
                 case "--wire", "--model": applies = command == "layout" || command == "generate"
                 case "--param": applies = ["hash", "dump", "layout", "generate"].contains(command)
                 case "--data", "--baseline": applies = command == "dump"
-                case "--language", "--namespace", "--access": applies = command == "generate"
+                case "--language", "--namespace", "--access", "-d", "--out-dir", "--split": applies = command == "generate"
                 default: applies = ["format", "layout", "generate"].contains(command)
                 }
                 guard applies else { throw ToolError.usage("Unknown schema \(command) option '\(argument)'.") }
@@ -124,6 +129,8 @@ extension Tool {
                 case "--data": data = next
                 case "--baseline": baseline = next
                 case "-o", "--output": output = next
+                case "-d", "--out-dir": outDir = next
+                case "--split": split = next
                 default:
                     guard let separator = next.firstIndex(of: "="), separator != next.startIndex else { throw ToolError.usage("A parameter is written name=literal.") }
                     let name = String(next[..<separator])
@@ -149,7 +156,11 @@ extension Tool {
         if bindings && modelGroup == nil { throw ToolError.usage("--bindings concerns model code and requires --model.") }
         if command == "generate" && language != "csharp" && language != "swift" { throw ToolError.usage("generate requires --language csharp or --language swift.") }
         if let access, access != "public" && access != "internal" { throw ToolError.usage("--access is public or internal.") }
-        if check && output == nil { throw ToolError.usage("--check requires -o with the file to compare.") }
+        if output != nil && outDir != nil { return generateUsage("-o writes one file and --out-dir a directory; give one of them.") }
+        if split != nil && outDir == nil { return generateUsage("--split divides the files of --out-dir.") }
+        if let split, split != "schema" && split != "file" { throw ToolError.usage("--split is schema or file.") }
+        if let outDir, outDir.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { throw ToolError.usage("The output directory must not be empty.") }
+        if check && output == nil && outDir == nil { throw ToolError.usage("--check requires -o or --out-dir with what to compare.") }
         if let output {
             guard !output.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { throw ToolError.usage("The output path must not be empty.") }
             try ToolFiles.ensureDistinct(output, from: paths)
@@ -183,7 +194,8 @@ extension Tool {
                         access: access == "internal" ? .internal : .public,
                         values: withValues,
                         checkedExclusivity: checkedExclusivity,
-                        bindings: bindings
+                        bindings: bindings,
+                        split: outDir == nil ? .none : split == "file" ? .file : .schema
                     )
                 if let group = wireGroup ?? modelGroup {
                     roots = wireGroup != nil ? GesSchemaGenerator.wireRoots(set, group: group) : GesSchemaGenerator.modelRoots(set, group: group)
@@ -192,7 +204,7 @@ extension Tool {
                         return 1
                     }
                 }
-                return try layout(set, allRoots ? set.schemas.map(\.name) : roots, parameters, output, options, check, model: modelGroup != nil)
+                return try layout(set, allRoots ? set.schemas.map(\.name) : roots, parameters, output, outDir, options, check, model: modelGroup != nil)
             default: break
             }
             let schema = try set.schema(root!)
@@ -226,7 +238,16 @@ extension Tool {
     }
 
     // Prints the layout, or with options the generated code; with check it compares the code with the output file.
-    private func layout(_ set: GesSchemaSet, _ roots: [String], _ parameters: [(String, String)], _ output: String?, _ options: GesSchemaGenerateOptions?, _ check: Bool, model: Bool) throws -> Int {
+    private func layout(
+        _ set: GesSchemaSet,
+        _ roots: [String],
+        _ parameters: [(String, String)],
+        _ output: String?,
+        _ outDir: String?,
+        _ options: GesSchemaGenerateOptions?,
+        _ check: Bool,
+        model: Bool
+    ) throws -> Int {
         let values = GesSchemaParameters()
         for (name, literal) in parameters {
             if try model || !roots.contains(where: { try set.schema($0).parameters.contains { $0.name == name } }) {
@@ -237,6 +258,14 @@ extension Tool {
         }
         let text: String
         do {
+            if let outDir, let options {
+                let files =
+                    model
+                    ? try GesSchemaGenerator.generateModelFiles(set, roots: roots, options: options)
+                    : try GesSchemaGenerator.generateFiles(set, roots: roots, parameters: values, options: options)
+                let directory = ToolGeneratedDirectory(io: io)
+                return check ? try directory.check(outDir, files) : try directory.write(outDir, files)
+            }
             if model {
                 text = try options.map { try GesSchemaGenerator.generateModels(set, roots: roots, options: $0) } ?? GesSchemaGenerator.modelLayout(set, roots: roots)
             } else {
@@ -258,6 +287,11 @@ extension Tool {
         }
         if let output { try ToolFiles.write(Data(text.utf8), to: try ToolFiles.fullPath(output)) } else { io.write(text) }
         return 0
+    }
+
+    private func generateUsage(_ message: String) -> Int {
+        io.line("schema: error generate.usage: \(message)", toError: true)
+        return 1
     }
 
     private func hex(_ value: UInt64) -> String {

@@ -25,6 +25,36 @@ public enum GesSchemaAccess
     Internal
 }
 
+/// <summary>How generated code is divided into files.</summary>
+public enum GesSchemaSplit
+{
+    /// <summary>One file with every generated type.</summary>
+    None,
+
+    /// <summary>A file per declaration, named after it, and the shared part in a file whose name begins with <c>_</c>.</summary>
+    Schema,
+
+    /// <summary>A file per schema source with every type it declares, and the shared part in a file whose name begins with
+    /// <c>_</c>.</summary>
+    File
+}
+
+/// <summary>A generated file: its name within the output directory and its text.</summary>
+public sealed class GesGeneratedFile
+{
+    internal GesGeneratedFile(string path, string text)
+    {
+        Path = path;
+        Text = text;
+    }
+
+    /// <summary>Gets the file name, relative to the output directory.</summary>
+    public string Path { get; }
+
+    /// <summary>Gets the text, ending with a line break.</summary>
+    public string Text { get; }
+}
+
 /// <summary>How schema code is generated.</summary>
 public sealed class GesSchemaGenerateOptions
 {
@@ -61,6 +91,13 @@ public sealed class GesSchemaGenerateOptions
     /// instead of a trap. C# has no such checks, so this does not change C# output.
     /// </summary>
     public bool CheckedExclusivity { get; set; }
+
+    /// <summary>
+    /// Gets or sets how the code is divided into files. <see cref="GesSchemaSplit.None"/>, the default, is the single text of
+    /// <c>Generate</c> and <c>GenerateModels</c>; the other choices are the files of <c>GenerateFiles</c> and
+    /// <c>GenerateModelFiles</c>.
+    /// </summary>
+    public GesSchemaSplit Split { get; set; }
 }
 
 /// <summary>

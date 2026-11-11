@@ -17,63 +17,35 @@ internal static class GesCSharpModelEmitter
     // Members every model type declares or inherits.
     private static readonly string[] Reserved = ["Equals", "GetHashCode", "ToString", "GetType"];
 
-    internal static string Emit(GesModelLayout layout, GesSchemaGenerateOptions options)
+    internal static GesCodeDocument Emit(GesModelLayout layout, GesSchemaGenerateOptions options)
     {
         var access = options.Access == GesSchemaAccess.Public ? "public" : "internal";
         var space = GesSchemaPlanner.Namespace(options.Namespace, GesCSharpEmitter.Keywords);
-        var code = new GesSchemaPlanner.Code();
-        code.Raw(GesModelPlanner.Header(layout));
-        code.Blank();
-        code.Line("#nullable enable");
-        code.Blank();
-        code.Line("using System;");
-        code.Line("using System.Collections.Generic;");
-        code.Line("using GameEventScript.Api;");
-        if (options.Bindings || options.Values) code.Line("using GameEventScript.Runtime.Values;");
-        code.Blank();
-        if (space.Count > 0)
-        {
-            code.Line("namespace " + string.Join(".", space));
-            code.Open("{");
-        }
-
-        var support = "__GesModels" + GesSchemaPlanner.Hash(GesModelPlanner.Header(layout));
-        var values = "__GesModelValues" + GesSchemaPlanner.Hash(GesModelPlanner.Header(layout));
+        var prologue = new GesSchemaPlanner.Code();
+        prologue.Blank();
+        prologue.Line("#nullable enable");
+        prologue.Blank();
+        prologue.Line("using System;");
+        prologue.Line("using System.Collections.Generic;");
+        prologue.Line("using GameEventScript.Api;");
+        if (options.Bindings || options.Values) prologue.Line("using GameEventScript.Runtime.Values;");
+        prologue.Blank();
+        var header = GesModelPlanner.Header(layout);
+        var suffix = GesSchemaPlanner.Suffix(header, options);
+        var support = "__GesModels" + suffix;
+        var values = "__GesModelValues" + suffix;
         var qualifier = "global::" + string.Concat(space.ConvertAll(part => part + "."));
         GesModelPlanner.CheckProtocols(layout, swift: false);
-        for (var index = 0; index < layout.Types.Count; index++)
-        {
-            Record(code, layout, layout.Types[index], access, support, qualifier, options.Bindings, options.Values ? values : null);
-            code.Blank();
-        }
-
-        foreach (var protocol in layout.Protocols)
-        {
-            Interface(code, layout, protocol, access);
-            code.Blank();
-        }
-
+        var document = new GesCodeDocument { Header = header, Prologue = prologue.ToString(), Space = space };
+        foreach (var type in layout.Types)
+            document.Units.Add(new GesCodeUnit(type.Name, code => Record(code, layout, type, access, support, qualifier, options.Bindings, options.Values ? values : null)));
+        foreach (var protocol in layout.Protocols) document.Units.Add(new GesCodeUnit(protocol.Name, code => Interface(code, layout, protocol, access)));
         foreach (var (name, tags) in GesModelPlanner.TagSets(layout))
-        {
-            TagEnum(code, name, tags, access, $"/// <summary>The tag set <c>:{name}</c>, in declared order.</summary>");
-            code.Blank();
-        }
-
-        if (options.Bindings)
-        {
-            Bindings(code, layout, access, qualifier, support);
-            code.Blank();
-        }
-
-        if (options.Values)
-        {
-            Values(code, layout, values, qualifier, support);
-            code.Blank();
-        }
-
-        Support(code, support, options.Bindings || options.Values);
-        if (space.Count > 0) code.Close();
-        return code.ToString();
+            document.Units.Add(new GesCodeUnit(name, code => TagEnum(code, name, tags, access, $"/// <summary>The tag set <c>:{name}</c>, in declared order.</summary>")));
+        if (options.Bindings) document.Units.Add(new GesCodeUnit("", code => Bindings(code, layout, access, qualifier, support)));
+        if (options.Values) document.Units.Add(new GesCodeUnit("", code => Values(code, layout, values, qualifier, support)));
+        document.Units.Add(new GesCodeUnit("", code => Support(code, support, options.Bindings || options.Values)));
+        return document;
     }
 
     private static string Parameter(string pascal)

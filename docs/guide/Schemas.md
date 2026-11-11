@@ -517,6 +517,11 @@ ges schema generate *.gess --wire world --language swift --namespace Wire -o Wir
 ges schema generate *.gess --model view --language swift --namespace Model -o Model.swift
 ```
 
+Large sets compile faster and give readable diffs as one file per schema: `-d Generated/Wire` writes
+`Wire.World.swift`, `Wire.World_Bot.swift` and a shared `_Wire.swift` into a directory that `generate` owns, and
+`--split file` writes one file per `.gess` instead. A manifest `.ges-generated.json` lists the files, so the next run
+removes the ones a schema no longer needs and leaves your own files alone; `--check` compares the whole directory.
+
 A schema without a role is generated when a root reaches it. `ges schema check` already rejects a wire root that cannot be
 encoded, such as a `:Text` without `max`; roles change no hash. A model is the data your program keeps rather than sends,
 such as a client's view of the world: a Swift struct that is `Hashable`, `Sendable` and `Codable`, or a C# class that compares

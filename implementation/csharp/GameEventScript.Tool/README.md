@@ -693,12 +693,17 @@ dotnet ges schema layout world.gess --root Bot --root Fleet --param worldWidth=2
 dotnet ges schema generate world.gess --root Bot --param worldWidth=2000m --language csharp --namespace Game.Net -o Bot.g.cs
 dotnet ges schema generate world.gess panels.gess --wire world --param worldWidth=2000m --language csharp -o Wire.g.cs
 dotnet ges schema generate world.gess view.gess --model view --language csharp --namespace Game.Model -o Model.g.cs
+dotnet ges schema generate world.gess panels.gess --wire world --param worldWidth=2000m --language csharp --namespace Game.Net -d Generated/Net
+dotnet ges schema generate world.gess view.gess --model view --language csharp --namespace Game.Model -d Generated/Model --split file --check
 ```
 
 `generate` writes C# or Swift types that write and read the records of the roots without allocating;
 `--values` adds the conversion to and from GES values and messages, `--checked-exclusivity` keeps the
 dynamic exclusivity checks of generated Swift classes, and `--check` fails when the file of `-o` differs
-from the generated code.
+from the generated code. `-d <dir>` (`--out-dir`) writes one file per declaration, or per schema file with
+`--split file`, into a directory that `generate` owns: a manifest `.ges-generated.json` lists the files, a later run
+removes the ones no longer generated and leaves other files alone with a warning, and `--check` fails for every
+changed, missing and surplus file.
 
 `--wire <group>` takes the roots that the schemas mark `wire(group)`, and `--model <group>` generates plain
 model types of the schemas marked `model(group)`, which are never encoded; `--bindings` also offers those models to

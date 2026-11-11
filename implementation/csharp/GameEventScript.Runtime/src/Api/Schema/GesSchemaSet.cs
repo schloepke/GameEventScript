@@ -42,6 +42,7 @@ public sealed class GesSchemaSet
     private readonly List<GesSchemaSource> _sources;
     private readonly Dictionary<string, GesResolvedDeclaration> _declarations = new(StringComparer.Ordinal);
     private readonly List<GesResolvedDeclaration> _ordered = [];
+    private readonly Dictionary<string, string> _tagSetSources = new(StringComparer.Ordinal);
 
     private GesSchemaSet(List<GesSchemaSource> sources) => _sources = sources;
 
@@ -151,6 +152,11 @@ public sealed class GesSchemaSet
             : throw new GesSchemaException(Code.UnknownName, "", 0, 0, $"'{root}' is not declared.");
     }
 
+    // The name of the source that declares a schema, message, message set or tag set, which places its generated code in
+    // split output.
+    internal string SourceName(string name)
+        => _declarations.TryGetValue(name, out var declaration) ? declaration.Scope.SourceName : _tagSetSources[name];
+
     internal GesResolvedDeclaration? FindSchema(string name)
         => _declarations.TryGetValue(name, out var declaration) && declaration.Kind == GesSchemaKind.Schema ? declaration : null;
 
@@ -165,7 +171,11 @@ public sealed class GesSchemaSet
         }
 
         var tagSets = new Dictionary<string, GesSchemaDeclarationSyntax>(StringComparer.Ordinal);
-        foreach (var file in files) file.DeclareNames(_declarations, _ordered, tagSets);
+        foreach (var file in files)
+        {
+            file.DeclareNames(_declarations, _ordered, tagSets);
+            foreach (var name in tagSets.Keys) _tagSetSources.TryAdd(name, file.SourceName);
+        }
         foreach (var file in files) file.Resolve(_declarations);
         var composed = new HashSet<GesResolvedDeclaration>();
         foreach (var declaration in _ordered)

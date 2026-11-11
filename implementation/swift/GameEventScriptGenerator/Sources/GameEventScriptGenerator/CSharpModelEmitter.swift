@@ -12,50 +12,47 @@ enum GesCSharpModelEmitter {
     // Members every model type declares or inherits.
     private static let reserved = ["Equals", "GetHashCode", "ToString", "GetType"]
 
-    static func emit(_ layout: GesModelLayout, _ options: GesSchemaGenerateOptions) throws(GesGeneratorError) -> String {
+    static func emit(_ layout: GesModelLayout, _ options: GesSchemaGenerateOptions) throws(GesGeneratorError) -> GesCodeDocument {
         let access = options.access == .public ? "public" : "internal"
         let space = try GesSchemaPlanner.namespace(options.namespace, GesCSharpEmitter.keywords)
-        var code = Code()
-        code.raw(GesModelPlanner.header(layout))
-        code.blank()
-        code.line("#nullable enable")
-        code.blank()
-        code.line("using System;")
-        code.line("using System.Collections.Generic;")
-        code.line("using GameEventScript.Api;")
-        if options.bindings || options.values { code.line("using GameEventScript.Runtime.Values;") }
-        code.blank()
-        if !space.isEmpty {
-            code.line("namespace " + space.joined(separator: "."))
-            code.open("{")
-        }
-        let support = "__GesModels" + GesSchemaPlanner.hash(GesModelPlanner.header(layout))
-        let values = "__GesModelValues" + GesSchemaPlanner.hash(GesModelPlanner.header(layout))
+        var prologue = Code()
+        prologue.blank()
+        prologue.line("#nullable enable")
+        prologue.blank()
+        prologue.line("using System;")
+        prologue.line("using System.Collections.Generic;")
+        prologue.line("using GameEventScript.Api;")
+        if options.bindings || options.values { prologue.line("using GameEventScript.Runtime.Values;") }
+        prologue.blank()
+        let header = GesModelPlanner.header(layout)
+        let suffix = GesSchemaPlanner.suffix(header, options)
+        let support = "__GesModels" + suffix
+        let values = "__GesModelValues" + suffix
         let qualifier = "global::" + space.map { $0 + "." }.joined()
         try GesModelPlanner.checkProtocols(layout, swift: false)
+        var document = GesCodeDocument(header: header, prologue: prologue.text, space: space)
         for type in layout.types {
-            try record(&code, layout, type, access, support, qualifier, bindings: options.bindings, values: options.values ? values : nil)
-            code.blank()
+            document.units.append(
+                GesCodeUnit(owner: type.name) { code in
+                    try record(&code, layout, type, access, support, qualifier, bindings: options.bindings, values: options.values ? values : nil)
+                }
+            )
         }
         for protocolType in layout.protocols {
-            interfaceDeclaration(&code, layout, protocolType, access)
-            code.blank()
+            document.units.append(GesCodeUnit(owner: protocolType.name) { code in interfaceDeclaration(&code, layout, protocolType, access) })
         }
         for set in GesModelPlanner.tagSets(layout) {
-            try tagEnum(&code, set.name, set.tags, access, "/// <summary>The tag set <c>:\(set.name)</c>, in declared order.</summary>")
-            code.blank()
+            document.units.append(
+                GesCodeUnit(owner: set.name) { code in
+                    try tagEnum(&code, set.name, set.tags, access, "/// <summary>The tag set <c>:\(set.name)</c>, in declared order.</summary>")
+                }
+            )
         }
-        if options.bindings {
-            bindings(&code, layout, access, qualifier, support)
-            code.blank()
-        }
-        if options.values {
-            valueConversions(&code, layout, values, qualifier, support)
-            code.blank()
-        }
-        supportType(&code, support, conversions: options.bindings || options.values)
-        if !space.isEmpty { code.close() }
-        return code.text
+        if options.bindings { document.units.append(GesCodeUnit(owner: "") { code in bindings(&code, layout, access, qualifier, support) }) }
+        if options.values { document.units.append(GesCodeUnit(owner: "") { code in valueConversions(&code, layout, values, qualifier, support) }) }
+        let conversions = options.bindings || options.values
+        document.units.append(GesCodeUnit(owner: "") { code in supportType(&code, support, conversions: conversions) })
+        return document
     }
 
     private static func parameter(_ pascal: String) -> String {

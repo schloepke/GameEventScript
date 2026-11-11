@@ -31,6 +31,7 @@ public final class GesSchemaSet: @unchecked Sendable {
 
     private var declarations: [String: GesResolvedDeclaration] = [:]
     private var ordered: [GesResolvedDeclaration] = []
+    private var tagSetSources: [String: String] = [:]
 
     /// The sources as given, which generated code embeds to convert to and from GES values.
     @_spi(Generator) public let sources: [GesSchemaSource]
@@ -46,7 +47,10 @@ public final class GesSchemaSet: @unchecked Sendable {
             files.append(GesFileScope(source, syntax))
         }
         var tagSets: [String: GesSchemaDeclarationSyntax] = [:]
-        for file in files { try file.declareNames(&declarations, &ordered, &tagSets) }
+        for file in files {
+            try file.declareNames(&declarations, &ordered, &tagSets)
+            for name in tagSets.keys where tagSetSources[name] == nil { tagSetSources[name] = file.sourceName }
+        }
         for file in files { try file.resolve(declarations, tagSets) }
         var composed: Set<ObjectIdentifier> = []
         for declaration in ordered where declaration.kind == .schema {
@@ -153,6 +157,12 @@ public final class GesSchemaSet: @unchecked Sendable {
     private static func collectReferences(_ type: GesResolvedType, _ referenced: inout Set<ObjectIdentifier>) {
         if let reference = type.reference { referenced.insert(ObjectIdentifier(reference)) }
         for alternative in type.element ?? [] { collectReferences(alternative, &referenced) }
+    }
+
+    /// The name of the source that declares a schema, message, message set or tag set, which places its generated code in
+    /// split output. The name must be declared.
+    @_spi(Generator) public func sourceName(of name: String) -> String {
+        declarations[name]?.scope.sourceName ?? tagSetSources[name]!
     }
 
     func declaration(_ root: String) throws -> GesResolvedDeclaration {

@@ -399,6 +399,11 @@ internal static class GesSchemaPlanner
         return GesSchemaLayoutJson.Hex(hash);
     }
 
+    // The suffix of helper type names: unique per single file, and for split output stable across schema and root changes, so
+    // that a change touches only the files of the declarations it changes. Split code of one namespace is one generation.
+    internal static string Suffix(string header, GesSchemaGenerateOptions options)
+        => Hash(options.Split == GesSchemaSplit.None ? header : "split\n" + options.Namespace);
+
     internal static string Header(GesSchemaLayout layout)
     {
         var text = new StringBuilder();
@@ -422,6 +427,10 @@ internal static class GesSchemaPlanner
     {
         private readonly StringBuilder _text = new();
         private int _depth;
+
+        internal Code(int depth = 0) => _depth = depth;
+
+        internal int Depth => _depth;
 
         internal void Line(string line)
         {

@@ -243,6 +243,11 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   `without (id)`; an `abstract schema` only lends its fields. The record stays flat and hashes like written fields.
   Generated models adopt a protocol (C# interface) per schema they take unchanged; `GesSchema.IsAbstract` and `Takes`
   (Swift `isAbstract`, `takes`) describe it, and misuse of an abstract schema is `schema.invalidAbstract`.
+- `ges schema generate -d <dir>` (`--out-dir`) writes one file per declaration, or per `.gess` with `--split file`,
+  plus a shared `_<Namespace>` file and the manifest `.ges-generated.json`; a later run removes files the manifest owns and
+  no longer needs, warns about foreign files with `cli.unowned`, and `--check` compares the whole directory.
+  `GesSchemaGenerator.GenerateFiles` and `GenerateModelFiles` (Swift `generateFiles`, `generateModelFiles`) return the
+  files for build integrations, selected by `GesSchemaGenerateOptions.Split`.
 - Schema fields take defaults, as in `efficiency: :Percentage default 100%` or `maxPower: :Quantity(W) default power`:
   a literal, a constant, a let or a sibling field of the same type fills in what a value, model value or document leaves
   out, while the wire still carries every field. Generated models take defaults as initializer arguments, describe them

@@ -5,8 +5,9 @@
 
 Every distinct combination of sources, root and parameters in the schemaApi cases of the corpus runs `schema layout` in
 both CLIs, once with its root and once with --all-roots, and `schema generate` for C# and for Swift with its root. Both
-must print the same text, or both must fail with the same error code. --self-test qualifies the comparison with negative
-controls.
+must print the same text, or both must fail with the same error code. The role fixture is also generated into directories,
+split by schema and by file, where both CLIs must write the same files with the same bytes. --self-test qualifies the
+comparison with negative controls.
 """
 import argparse
 from concurrent.futures import ThreadPoolExecutor
@@ -88,6 +89,19 @@ def compare(index, item, csharp, swift, work):
     return differences
 
 
+def directory_difference(csharp, swift):
+    """None when two output directories hold the same files with the same bytes, otherwise a short description."""
+    left = {path.name: path.read_bytes() for path in csharp.iterdir()} if csharp.is_dir() else {}
+    right = {path.name: path.read_bytes() for path in swift.iterdir()} if swift.is_dir() else {}
+    if sorted(left) != sorted(right):
+        return f"C# writes {sorted(left)}, Swift {sorted(right)}"
+    for name in sorted(left):
+        if left[name] != right[name]:
+            found = difference(("ok", left[name].decode("utf-8")), ("ok", right[name].decode("utf-8")))
+            return f"{name}: {found}"
+    return None
+
+
 def self_test():
     ok = subprocess.CompletedProcess([], 0, b'{\n  "a": 1\n}\n', b"")
     changed = subprocess.CompletedProcess([], 0, b'{\n  "a": 2\n}\n', b"")
@@ -100,6 +114,17 @@ def self_test():
     assert difference(outcome(failed), outcome(other))
     longer = subprocess.CompletedProcess([], 0, b'{\n  "a": 1\n}\n\n', b"")
     assert difference(outcome(ok), outcome(longer))
+    with tempfile.TemporaryDirectory() as temporary:
+        work = Path(temporary)
+        for side in ("a", "b"):
+            (work / side).mkdir()
+            (work / side / "A.swift").write_text("one\n", encoding="utf-8")
+        assert directory_difference(work / "a", work / "b") is None
+        (work / "b" / "A.swift").write_text("two\n", encoding="utf-8")
+        assert "A.swift: line 1" in directory_difference(work / "a", work / "b")
+        (work / "b" / "A.swift").write_text("one\n", encoding="utf-8")
+        (work / "b" / ".ges-generated.json").write_text("{}\n", encoding="utf-8")
+        assert "Swift" in directory_difference(work / "a", work / "b")
     sample = inputs([ROOT / "conformance/suites/api/schemas.md"])
     assert sample and all(len(item) == 3 for item in sample)
     print("Schema generation comparison controls passed.")
@@ -138,6 +163,30 @@ def stale_goldens(csharp, swift):
     return stale
 
 
+# Split output of the role fixture: (selection, language, namespace), each split by schema and by file.
+ROLE_SPLITS = ((["--wire", "world", "--param", "worldWidth=2000m", "--values"], "csharp", "Roles.Wire"),
+               (["--wire", "world", "--param", "worldWidth=2000m", "--values"], "swift", "Roles.Wire"),
+               (["--model", "view", "--bindings", "--values"], "csharp", "Roles.Model"),
+               (["--model", "view", "--bindings", "--values"], "swift", "Roles.Model"))
+
+
+def role_splits(csharp, swift, work):
+    """The role fixture's split output, compared between the CLIs file by file."""
+    differences = []
+    for index, (selection, language, space) in enumerate(ROLE_SPLITS):
+        for split in ("schema", "file"):
+            directories = [work / f"split-{index}-{split}-{name}" for name in ("csharp", "swift")]
+            for command, directory in zip((csharp, swift), directories):
+                run = subprocess.run([*command, "schema", "generate", *ROLE_FILES, *selection, "--language", language, "--namespace", space, "--out-dir", str(directory), "--split", split],
+                                     cwd=ROLES, capture_output=True, check=False, timeout=TIMEOUT_SECONDS)
+                if run.returncode != 0:
+                    differences.append(f"split {split} {language} {' '.join(selection)}: {run.stderr.decode('utf-8', 'replace').strip()}")
+            found = directory_difference(*directories)
+            if found:
+                differences.append(f"split {split} {language} {' '.join(selection)}: {found}")
+    return differences
+
+
 def role_layouts(csharp, swift):
     """The role fixture's layouts by group, compared between the CLIs."""
     differences = []
@@ -163,11 +212,12 @@ def main():
     with tempfile.TemporaryDirectory() as temporary, ThreadPoolExecutor(max_workers=os.cpu_count() or 4) as pool:
         work = Path(temporary)
         results = list(pool.map(lambda pair: compare(pair[0], pair[1], ["dotnet", str(args.csharp)], [str(args.swift)], work), enumerate(items)))
+        splits = role_splits(["dotnet", str(args.csharp)], [str(args.swift)], work)
     differences = [line for result in results for line in result] + stale_goldens(["dotnet", str(args.csharp)], [str(args.swift)]) \
-        + role_layouts(["dotnet", str(args.csharp)], [str(args.swift)])
+        + role_layouts(["dotnet", str(args.csharp)], [str(args.swift)]) + splits
     for line in differences:
         print(line)
-    print(f"{len(items)} schema inputs, {2 * len(items)} layouts and {2 * len(items)} generated sources, {len(ROLE_LAYOUTS)} role layouts, {len(GOLDENS)} checked-in files: {len(differences)} port differences")
+    print(f"{len(items)} schema inputs, {2 * len(items)} layouts and {2 * len(items)} generated sources, {len(ROLE_LAYOUTS)} role layouts, {2 * len(ROLE_SPLITS)} split outputs, {len(GOLDENS)} checked-in files: {len(differences)} port differences")
     return 1 if differences else 0
 
 

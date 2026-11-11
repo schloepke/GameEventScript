@@ -7,39 +7,47 @@ enum GesSwiftModelEmitter {
     typealias Code = GesSchemaPlanner.Code
     typealias Names = [(name: String, origin: String)]
 
-    static func emit(_ layout: GesModelLayout, _ options: GesSchemaGenerateOptions) throws(GesGeneratorError) -> String {
+    static func emit(_ layout: GesModelLayout, _ options: GesSchemaGenerateOptions) throws(GesGeneratorError) -> GesCodeDocument {
         let access = options.access == .public ? "public " : ""
-        let space = try GesSchemaPlanner.namespace(options.namespace, GesSwiftEmitter.keywords)
-        let values = "__GesModelValues" + GesSchemaPlanner.hash(GesModelPlanner.header(layout))
-        let support = "__GesModels" + GesSchemaPlanner.hash(GesModelPlanner.header(layout))
-        var code = Code()
-        code.raw(GesModelPlanner.header(layout))
-        code.line("// swift-format-ignore-file")
-        code.blank()
-        code.line("import GameEventScriptRuntime")
-        code.blank()
-        for part in space {
-            code.line("/// The namespace `\(part)` of generated model types.")
-            code.open("\(access)enum \(part) {")
-        }
+        let header = GesModelPlanner.header(layout)
+        let suffix = GesSchemaPlanner.suffix(header, options)
+        let values = "__GesModelValues" + suffix
+        let support = "__GesModels" + suffix
+        var prologue = Code()
+        prologue.line("// swift-format-ignore-file")
+        prologue.blank()
+        prologue.line("import GameEventScriptRuntime")
+        prologue.blank()
         try GesModelPlanner.checkProtocols(layout, swift: true)
-        for (index, type) in layout.types.enumerated() {
-            if index > 0 { code.blank() }
-            try record(&code, layout, type, access, bindings: options.bindings, values: options.values ? values : nil)
+        var document = GesCodeDocument(
+            header: header,
+            prologue: prologue.text,
+            space: try GesSchemaPlanner.namespace(options.namespace, GesSwiftEmitter.keywords),
+            swift: true,
+            access: access,
+            holds: "model"
+        )
+        for type in layout.types {
+            document.units.append(
+                GesCodeUnit(owner: type.name) { code in
+                    try record(&code, layout, type, access, bindings: options.bindings, values: options.values ? values : nil)
+                }
+            )
         }
         for protocolType in layout.protocols {
-            code.blank()
-            protocolDeclaration(&code, layout, protocolType, access)
+            document.units.append(GesCodeUnit(owner: protocolType.name) { code in protocolDeclaration(&code, layout, protocolType, access) })
         }
         for set in GesModelPlanner.tagSets(layout) {
-            code.blank()
-            tagEnum(&code, set.name, set.tags, access, "/// The tag set `:\(set.name)`, in declared order; the raw value is the tag's name.")
+            document.units.append(
+                GesCodeUnit(owner: set.name) { code in
+                    tagEnum(&code, set.name, set.tags, access, "/// The tag set `:\(set.name)`, in declared order; the raw value is the tag's name.")
+                }
+            )
         }
-        if options.bindings { bindings(&code, layout, access, support) }
-        if options.values { valueConversions(&code, layout, values, support) }
-        if options.bindings || options.values { supportType(&code, support) }
-        for _ in space { code.close() }
-        return code.text
+        if options.bindings { document.units.append(GesCodeUnit(owner: "") { code in bindings(&code, layout, access, support) }) }
+        if options.values { document.units.append(GesCodeUnit(owner: "") { code in valueConversions(&code, layout, values, support) }) }
+        if options.bindings || options.values { document.units.append(GesCodeUnit(owner: "") { code in supportType(&code, support) }) }
+        return document
     }
 
     private static func name(_ name: String) -> String { GesSwiftEmitter.name(name) }

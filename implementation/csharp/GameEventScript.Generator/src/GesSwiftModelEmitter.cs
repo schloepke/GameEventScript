@@ -12,48 +12,37 @@ namespace GameEventScript.Generator;
 // memberwise initializer, an enum per closed Tag and per union, and the runtime's GesPoint and GesVector for spatial fields.
 internal static class GesSwiftModelEmitter
 {
-    internal static string Emit(GesModelLayout layout, GesSchemaGenerateOptions options)
+    internal static GesCodeDocument Emit(GesModelLayout layout, GesSchemaGenerateOptions options)
     {
         var access = options.Access == GesSchemaAccess.Public ? "public " : "";
-        var space = GesSchemaPlanner.Namespace(options.Namespace, GesSwiftEmitter.Keywords);
-        var values = "__GesModelValues" + GesSchemaPlanner.Hash(GesModelPlanner.Header(layout));
-        var support = "__GesModels" + GesSchemaPlanner.Hash(GesModelPlanner.Header(layout));
-        var code = new GesSchemaPlanner.Code();
-        code.Raw(GesModelPlanner.Header(layout));
-        code.Line("// swift-format-ignore-file");
-        code.Blank();
-        code.Line("import GameEventScriptRuntime");
-        code.Blank();
-        foreach (var part in space)
-        {
-            code.Line($"/// The namespace `{part}` of generated model types.");
-            code.Open($"{access}enum {part} {{");
-        }
-
+        var header = GesModelPlanner.Header(layout);
+        var suffix = GesSchemaPlanner.Suffix(header, options);
+        var values = "__GesModelValues" + suffix;
+        var support = "__GesModels" + suffix;
+        var prologue = new GesSchemaPlanner.Code();
+        prologue.Line("// swift-format-ignore-file");
+        prologue.Blank();
+        prologue.Line("import GameEventScriptRuntime");
+        prologue.Blank();
         GesModelPlanner.CheckProtocols(layout, swift: true);
-        for (var index = 0; index < layout.Types.Count; index++)
+        var document = new GesCodeDocument
         {
-            if (index > 0) code.Blank();
-            Record(code, layout, layout.Types[index], access, options.Bindings, options.Values ? values : null);
-        }
-
-        foreach (var protocol in layout.Protocols)
-        {
-            code.Blank();
-            Protocol(code, layout, protocol, access);
-        }
-
+            Header = header,
+            Prologue = prologue.ToString(),
+            Space = GesSchemaPlanner.Namespace(options.Namespace, GesSwiftEmitter.Keywords),
+            Swift = true,
+            Access = access,
+            Holds = "model"
+        };
+        foreach (var type in layout.Types)
+            document.Units.Add(new GesCodeUnit(type.Name, code => Record(code, layout, type, access, options.Bindings, options.Values ? values : null)));
+        foreach (var protocol in layout.Protocols) document.Units.Add(new GesCodeUnit(protocol.Name, code => Protocol(code, layout, protocol, access)));
         foreach (var (name, tags) in GesModelPlanner.TagSets(layout))
-        {
-            code.Blank();
-            TagEnum(code, name, tags, access, $"/// The tag set `:{name}`, in declared order; the raw value is the tag's name.");
-        }
-
-        if (options.Bindings) Bindings(code, layout, access, support);
-        if (options.Values) Values(code, layout, values, support);
-        if (options.Bindings || options.Values) Support(code, support);
-        foreach (var _ in space) code.Close();
-        return code.ToString();
+            document.Units.Add(new GesCodeUnit(name, code => TagEnum(code, name, tags, access, $"/// The tag set `:{name}`, in declared order; the raw value is the tag's name.")));
+        if (options.Bindings) document.Units.Add(new GesCodeUnit("", code => Bindings(code, layout, access, support)));
+        if (options.Values) document.Units.Add(new GesCodeUnit("", code => Values(code, layout, values, support)));
+        if (options.Bindings || options.Values) document.Units.Add(new GesCodeUnit("", code => Support(code, support)));
+        return document;
     }
 
     private static string Name(string name) => GesSwiftEmitter.Keywords.Contains(name) ? "`" + name + "`" : name;

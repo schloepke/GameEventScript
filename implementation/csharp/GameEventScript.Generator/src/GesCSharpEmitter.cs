@@ -33,41 +33,31 @@ internal static partial class GesCSharpEmitter
         "ToString", "GetType"
     ];
 
-    internal static string Emit(GesSchemaLayout layout, List<GesPlanType> types, GesSchemaGenerateOptions options)
+    internal static GesCodeDocument Emit(GesSchemaLayout layout, List<GesPlanType> types, GesSchemaGenerateOptions options)
     {
         var access = options.Access == GesSchemaAccess.Public ? "public" : "internal";
         var space = GesSchemaPlanner.Namespace(options.Namespace, Keywords);
-        var code = new GesSchemaPlanner.Code();
-        code.Raw(GesSchemaPlanner.Header(layout));
-        code.Blank();
-        code.Line("#nullable enable");
-        code.Blank();
-        code.Line("using System;");
-        code.Line("using System.Collections.Generic;");
-        code.Line("using GameEventScript.Api;");
-        code.Blank();
-        if (space.Count > 0)
-        {
-            code.Line("namespace " + string.Join(".", space));
-            code.Open("{");
-        }
-
-        var holder = "__GesSchemas" + GesSchemaPlanner.Hash(GesSchemaPlanner.Header(layout));
+        var prologue = new GesSchemaPlanner.Code();
+        prologue.Blank();
+        prologue.Line("#nullable enable");
+        prologue.Blank();
+        prologue.Line("using System;");
+        prologue.Line("using System.Collections.Generic;");
+        prologue.Line("using GameEventScript.Api;");
+        prologue.Blank();
+        var header = GesSchemaPlanner.Header(layout);
+        var holder = "__GesSchemas" + GesSchemaPlanner.Suffix(header, options);
         var context = new Context(GesSchemaPlanner.KeyedElements(types), "global::" + string.Concat(space.ConvertAll(part => part + ".")), options.Values, holder);
-        var tagSets = GesSchemaPlanner.TagSets(types, context.Global);
-        for (var index = 0; index < types.Count; index++)
-        {
-            if (index > 0) code.Blank();
-            if (types[index].Kind == GesSchemaKind.Messages) MessageSet(code, types[index], access, context);
-            else Record(code, types[index], access, context);
-        }
-
-        foreach (var (name, tags) in tagSets) TagSetDeclaration(code, name, tags, access);
-
-        if (options.Values) ValuesHolder(code, layout, holder);
-
-        if (space.Count > 0) code.Close();
-        return code.ToString();
+        var document = new GesCodeDocument { Header = header, Prologue = prologue.ToString(), Space = space, Parameters = layout.Parameters.Count > 0 };
+        foreach (var type in types)
+            document.Units.Add(new GesCodeUnit(type.Name, code =>
+            {
+                if (type.Kind == GesSchemaKind.Messages) MessageSet(code, type, access, context);
+                else Record(code, type, access, context);
+            }));
+        foreach (var (name, tags) in GesSchemaPlanner.TagSets(types, context.Global)) document.Units.Add(new GesCodeUnit(name, code => TagSetDeclaration(code, name, tags, access)));
+        if (options.Values) document.Units.Add(new GesCodeUnit("", code => ValuesHolder(code, layout, holder, options.Split != GesSchemaSplit.None)));
+        return document;
     }
 
     // The keyed-list elements and the qualifier of the top-level types, which a member of the same name cannot hide.

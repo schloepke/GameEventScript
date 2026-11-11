@@ -26,33 +26,34 @@ enum GesCSharpEmitter {
     typealias Code = GesSchemaPlanner.Code
     typealias Names = [(name: String, origin: String)]
 
-    static func emit(_ layout: GesSchemaLayout, _ types: [GesPlanType], _ options: GesSchemaGenerateOptions) throws(GesGeneratorError) -> String {
+    static func emit(_ layout: GesSchemaLayout, _ types: [GesPlanType], _ options: GesSchemaGenerateOptions) throws(GesGeneratorError) -> GesCodeDocument {
         let access = options.access == .public ? "public" : "internal"
         let space = try GesSchemaPlanner.namespace(options.namespace, keywords)
-        var code = Code()
-        code.raw(GesSchemaPlanner.header(layout))
-        code.blank()
-        code.line("#nullable enable")
-        code.blank()
-        code.line("using System;")
-        code.line("using System.Collections.Generic;")
-        code.line("using GameEventScript.Api;")
-        code.blank()
-        if !space.isEmpty {
-            code.line("namespace " + space.joined(separator: "."))
-            code.open("{")
-        }
-        let holder = "__GesSchemas" + GesSchemaPlanner.hash(GesSchemaPlanner.header(layout))
+        var prologue = Code()
+        prologue.blank()
+        prologue.line("#nullable enable")
+        prologue.blank()
+        prologue.line("using System;")
+        prologue.line("using System.Collections.Generic;")
+        prologue.line("using GameEventScript.Api;")
+        prologue.blank()
+        let header = GesSchemaPlanner.header(layout)
+        let holder = "__GesSchemas" + GesSchemaPlanner.suffix(header, options)
         let context = Context(elements: GesSchemaPlanner.keyedElements(types), global: "global::" + space.map { $0 + "." }.joined(), values: options.values, holder: holder)
-        let tagSets = GesSchemaPlanner.tagSets(types, context.global)
-        for (index, type) in types.enumerated() {
-            if index > 0 { code.blank() }
-            if type.kind == .messages { try messageSet(&code, type, access, context) } else { try record(&code, type, access, context) }
+        var document = GesCodeDocument(header: header, prologue: prologue.text, space: space, parameters: !layout.parameters.isEmpty)
+        for type in types {
+            document.units.append(
+                GesCodeUnit(owner: type.name) { code in
+                    if type.kind == .messages { try messageSet(&code, type, access, context) } else { try record(&code, type, access, context) }
+                }
+            )
         }
-        for set in tagSets { tagSetDeclaration(&code, set.name, set.tags, access) }
-        if options.values { valuesHolder(&code, layout, holder) }
-        if !space.isEmpty { code.close() }
-        return code.text
+        for set in GesSchemaPlanner.tagSets(types, context.global) {
+            document.units.append(GesCodeUnit(owner: set.name) { code in tagSetDeclaration(&code, set.name, set.tags, access) })
+        }
+        let shared = options.split != .none
+        if options.values { document.units.append(GesCodeUnit(owner: "") { code in valuesHolder(&code, layout, holder, shared: shared) }) }
+        return document
     }
 
     // The keyed-list elements and the qualifier of the top-level types, which a member of the same name cannot hide.

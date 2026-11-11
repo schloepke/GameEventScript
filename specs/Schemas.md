@@ -1245,6 +1245,8 @@ ges schema generate world.gess --root Bot --param worldWidth=2000m --language cs
 ges schema generate world.gess --root Bot --param worldWidth=2000m --language swift --namespace Wire -o Bot.swift --check
 ges schema generate world.gess panels.gess --wire world --param worldWidth=2000m --language swift --namespace Wire -o Wire.swift
 ges schema generate world.gess panels.gess --model view --language csharp --namespace Game.Model -o Model.g.cs
+ges schema generate world.gess panels.gess --wire world --param worldWidth=2000m --language swift --namespace Wire -d Generated/Wire
+ges schema generate world.gess panels.gess --model view --language swift --namespace Model -d Generated/Model --split file --check
 ```
 
 `format` prints the recommended layout and, like document formatting, drops comments; input
@@ -1350,9 +1352,46 @@ namespace or nested Swift enums, and `--access internal` hides them from other m
 differs or is missing. The text starts with a header that names the roots, parameters and hashes,
 without a date or version. A generation request that cannot be carried out fails with a
 `generate.*` code: `generate.nameCollision` when two generated names of one type are equal (in Swift a
-`:Flags` member `#rawValue` meets the mask of its `OptionSet`),
-`generate.invalidNamespace`, and `generate.usage` when the [Generator API](PublicApi.md#schema-code-generation)
-receives no root.
+`:Flags` member `#rawValue` meets the mask of its `OptionSet`) or two [split](#split-output) file names differ only in
+case, `generate.invalidNamespace`, and `generate.usage` when the [Generator API](PublicApi.md#schema-code-generation)
+receives no root or a split that does not fit the call.
+
+### Split output
+
+> **Since: Unreleased**
+
+`-o` writes one file, and without it `generate` prints that file. `-d <dir>` (`--out-dir`) instead writes several files
+into a directory that `generate` owns, which compiles on several cores and turns a schema change into a diff of the files
+it touches. `--split schema`, the default, writes one file per declaration: a schema, message or message set with its
+nested types (list items, closed tags, Flags and union alternatives), a [tag set](#declarations), and for models the
+protocol of an [abstract schema](#declarations) in a file of its own, while the protocol of another schema stands in that
+schema's file. `--split file` writes one file per `.gess` source with every type it declares. A type always goes into the
+file of its declaration, so a type that another source reaches is never duplicated. `-o` together with `-d`, and `--split`
+without `-d`, fail with `generate.usage`.
+
+A file is named after its declaration or after its source file without `.gess`, with the namespace in front:
+`Wire.World_Bot.swift`, `Wire.world.swift`, `Game.Net.World_Bot.g.cs`. Swift requires distinct file names within a
+module, and wire and model code of one target live in different namespaces, so the namespace keeps their files apart.
+Two file names that differ only in ASCII case, which case-insensitive file systems cannot hold, fail with
+`generate.nameCollision`, and so do two sources of the same file name in a file split. The shared part goes into a file
+named `_` and the namespace (`_Wire.swift`), or `_Generated` without a namespace: the Swift namespace enums, the embedded
+schema sources of `--values`, the conversions and helpers of models and the `GesTypes` catalog of `--bindings`. A split file
+declares its types in `extension Wire { … }` (C# `namespace Wire { … }`), and helpers that a single file keeps `private`
+are internal there and keep their `__` prefix; their names depend only on the namespace, so adding a root or changing a
+schema leaves the other files unchanged. A Swift shared file without content is omitted when there is no namespace to
+declare, and so is a C# one. Each split file starts with a short header that refers to the manifest instead of naming
+roots and hashes, so that it changes only with its own declarations; the single file of `-o` keeps its header.
+
+The directory holds the manifest `.ges-generated.json`, canonical JSON with the members `manifest` (1), `code` (`wire` or
+`model`), `language`, `split` (`schema` or `file`), `namespace`, `access`, `values`, `bindings`, `checkedExclusivity`,
+`roots` (each with `name`, `hash` and for wire code `bindingHash`), `parameters` (as in the
+[generation layout](#generation-layout); empty for models) and `files`, the generated file names in ordinal order without
+the manifest. Without `--check`, `generate` writes every file whose bytes changed, keeps unchanged files with their time
+stamps, removes the files that the previous manifest lists and that are no longer generated, and leaves every other file
+alone with the warning `cli.unowned`; a missing or unreadable manifest owns nothing. With `--check` it compares the whole
+directory and fails with `cli.outdated` for every changed, missing and surplus file. Names that begin with `.` and Unity's
+`.meta` files are neither reported nor removed, so editors and engines may keep their files beside the code; SwiftPM and
+Unity both ignore the hidden manifest. Every CLI writes identical files and manifests.
 
 ### Model types
 

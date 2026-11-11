@@ -16,7 +16,7 @@ categories: [conformance]
 > - Keep its structural elements in the form required by the Conformance Test Markdown syntax.
 > - Validate every edit with a conforming parser and runner.
 
-These cases define Bytes literals, casts, text, equality, order and collection access.
+These cases define Bytes literals, casts, text, equality, order, collection access, slicing, concatenation and UTF-8 conversion.
 
 ---
 
@@ -358,6 +358,225 @@ steps:
                   value: "01"
                 - type: ":Bytes"
                   value: "02"
+```
+
+---
+
+## Test: take and drop
+
+Taking or dropping the first or last bytes gives Bytes; a count beyond the length selects all or none. Highest, lowest and reverse are not defined for Bytes.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: "slicing"
+compile:
+  binaryRoundTrip: true
+```
+
+### Source code under test
+
+```ges
+on Start {
+  let value be :Bytes[1, 2, 3, 4]
+  emit Done(takeFirst: value[:take first 2], dropFirst: value[:drop first 1], takeLast: value[:take last 3], dropLast: value[:drop last 1], all: value[:take first 9], none: value[:drop last 9], highest: value[:take highest 2], reverse: value[:reverse])
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args: []
+    local:
+      - name: "Done"
+        args:
+          - name: "takeFirst"
+            value:
+              type: ":Bytes"
+              value: "0102"
+          - name: "dropFirst"
+            value:
+              type: ":Bytes"
+              value: "020304"
+          - name: "takeLast"
+            value:
+              type: ":Bytes"
+              value: "020304"
+          - name: "dropLast"
+            value:
+              type: ":Bytes"
+              value: "010203"
+          - name: "all"
+            value:
+              type: ":Bytes"
+              value: "01020304"
+          - name: "none"
+            value:
+              type: ":Bytes"
+              value: ""
+          - name: "highest"
+            value:
+              type: ":Nothing"
+          - name: "reverse"
+            value:
+              type: ":Nothing"
+```
+
+---
+
+## Test: concatenation
+
+`+` joins two Bytes; Text and Lists keep their own `+` rules, and every other partner gives nothing.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: "concatenation"
+compile:
+  binaryRoundTrip: true
+```
+
+### Source code under test
+
+```ges
+on Start {
+  let value be :Bytes[1, 2]
+  emit Done(joined: value + :Bytes("ff"), leading: :Bytes[] + value, number: value + 3, text: "x" + value, list: [0] + value, difference: value - value)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args: []
+    local:
+      - name: "Done"
+        args:
+          - name: "joined"
+            value:
+              type: ":Bytes"
+              value: "0102ff"
+          - name: "leading"
+            value:
+              type: ":Bytes"
+              value: "0102"
+          - name: "number"
+            value:
+              type: ":Nothing"
+          - name: "text"
+            value:
+              type: ":Text"
+              value: "x:Bytes(\"0102\")"
+          - name: "list"
+            value:
+              type: ":List"
+              items:
+                - type: ":Number.int64"
+                  value: "0"
+                - type: ":Bytes"
+                  value: "0102"
+          - name: "difference"
+            value:
+              type: ":Nothing"
+```
+
+---
+
+## Test: UTF-8 conversion
+
+`:Bytes(utf8:)` encodes Text or a Tag as UTF-8; `:Text(utf8:)` decodes valid UTF-8 and gives nothing for invalid input, such as surrogates and overlong forms, or another kind.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: "utf8"
+compile:
+  binaryRoundTrip: true
+```
+
+### Source code under test
+
+```ges
+on Start {
+  emit Done(encoded: :Bytes(utf8: "hé"), tag: :Bytes(utf8: #ok), emptyText: :Bytes(utf8: ""), number: :Bytes(utf8: 5), decoded: :Text(utf8: :Bytes("68c3a9")), truncated: :Text(utf8: :Bytes("c3")), surrogate: :Text(utf8: :Bytes("eda080")), overlong: :Text(utf8: :Bytes("c0af")), notBytes: :Text(utf8: "x"), parsed: parse ':Text(utf8: :Bytes("6869"))')
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input:
+      args: []
+    local:
+      - name: "Done"
+        args:
+          - name: "encoded"
+            value:
+              type: ":Bytes"
+              value: "68c3a9"
+          - name: "tag"
+            value:
+              type: ":Bytes"
+              value: "6f6b"
+          - name: "emptyText"
+            value:
+              type: ":Bytes"
+              value: ""
+          - name: "number"
+            value:
+              type: ":Nothing"
+          - name: "decoded"
+            value:
+              type: ":Text"
+              value: "h\u00e9"
+          - name: "truncated"
+            value:
+              type: ":Nothing"
+          - name: "surrogate"
+            value:
+              type: ":Nothing"
+          - name: "overlong"
+            value:
+              type: ":Nothing"
+          - name: "notBytes"
+            value:
+              type: ":Nothing"
+          - name: "parsed"
+            value:
+              type: ":Text"
+              value: "hi"
 ```
 
 ---

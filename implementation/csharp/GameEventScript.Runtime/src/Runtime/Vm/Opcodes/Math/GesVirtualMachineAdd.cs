@@ -124,6 +124,14 @@ internal partial class GesVirtualMachine
             case not Nothing when b.Kind is Text:
                 dst.SetText(a.ToText + b.TextValue);
                 break;
+            case Bytes when b.Kind is Bytes && a.ObjectValue is byte[] left && b.ObjectValue is byte[] right:
+                dst.SetBytes(ConcatenateBytes(left, right));
+                break;
+            // Bytes join only Bytes, Text and Lists; any other partner yields nothing.
+            case Bytes when b.Kind is not List:
+            case not List and not Nothing when b.Kind is Bytes:
+                dst.SetNothing();
+                break;
             case List when b.Kind is not Nothing && a.ObjectValue is GesValue[] aList:
             {
                 var list = new GesValue[aList.Length + 1];

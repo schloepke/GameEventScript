@@ -279,6 +279,8 @@ below; invalid entries or text fail recognition of the complete input.
 `parse (value as :Text)` reconstructs the same Bytes, also nested inside Lists
 and Maps, and their entries participate in the shared
 [literal parsing limits](../HostRuntime.md#literal-parsing-limits).
+The `utf8` forms `:Bytes(utf8: "…")` and `:Text(utf8: :Bytes(…))` are recognized
+like the other explicit forms and convert as in [Bytes](../Language.md#bytes).
 
 ASCII space/tab and `LF`, `CRLF`, or `CR` may surround a literal and separate
 container elements. They are preserved inside quoted Text. Other whitespace,

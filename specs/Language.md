@@ -1194,7 +1194,8 @@ let snapshot be :Record("Hit", [amount: 100])
 `:Boolean(value)`, `:Text(value)`, `:Tag(value)`, `:List(value)`,
 `:Map(value)`, `:Dice(value)`, `:Bytes(value)` and the one-argument numeric/spatial forms retain
 their cast behavior. The single argument may also use the label `value`
-(except spatial forms, which retain their component labels). `:Dice[...]` remains a deterministic result literal,
+(except spatial forms, which retain their component labels); `:Text` and `:Bytes`
+alternatively take the label `utf8` for the [UTF-8 conversion](#bytes). `:Dice[...]` remains a deterministic result literal,
 and `:Bytes[...]` a Bytes literal.
 `:Number(value, unit)` accepts empty Text and every `:Quantity(...)` unit name
 from [Quantities](#quantities), such as `none`, `m`, `second`, `m/s` or
@@ -1667,6 +1668,22 @@ the bytes. Equality compares the bytes exactly; ordering is lexicographic by
 unsigned byte, so a prefix comes first ([Determinism](Semantics/Determinism.md)).
 Empty Bytes are `empty`. Like Lists, Bytes are neither true nor false in
 Boolean logic. Bytes are not numeric, not Text and no List.
+
+`[:take first n]`, `[:take last n]`, `[:drop first n]` and `[:drop last n]`
+give Bytes; a count beyond the length selects all bytes or none. `:take` and
+`:drop` with `highest` or `lowest`, as well as `:reverse` and the other list
+selectors that reorder, give `nothing` for Bytes. `bytes + bytes` concatenates;
+see [Collection Operators](#collection-operators) for the other operands.
+
+`:Bytes(utf8: value)` encodes Text or a Tag as UTF-8 and gives `nothing` for
+every other value. `:Text(utf8: value)` decodes Bytes that are valid UTF-8,
+without surrogates or overlong forms, and gives `nothing` for invalid UTF-8 and
+every other value:
+
+```ges
+let encoded be :Bytes(utf8: "hé")             // :Bytes("68c3a9")
+let decoded be :Text(utf8: :Bytes("6869"))    // "hi"
+```
 
 ### Vector and Point
 
@@ -2164,6 +2181,10 @@ returns a list. `scalar - list` and `list - map` produce `nothing`. `map - map`
 removes keys present in the right map. `map - tag`, `map - text`, and
 `map - listOfKeys` remove matching keys. Other unsupported operand
 combinations produce `nothing`.
+
+`bytes + bytes` concatenates both Bytes. Bytes with Text follow the Text rule
+below, and Bytes with a List the insertion rule above; `+` with Bytes and any
+other operand produces `nothing`.
 
 `zip` is defined for lists only. It pairs items by index up to the shorter
 operand length and returns a list of maps with `left` and `right` entries.

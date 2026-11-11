@@ -41,6 +41,12 @@ internal static class GesLiteralForms
                 "value",
                 "tags"
             },
+            // `utf8` replaces `value` for the UTF-8 conversion between Text and Bytes.
+            "text" or "bytes" => new[]
+            {
+                "value",
+                "utf8"
+            },
             _ => new[]
             {
                 "value"
@@ -61,6 +67,8 @@ internal static class GesLiteralForms
 
         if (type == "record" && (!used[0] || !used[1]) || type == "range" && (labels.Count > 1 || labels[0] != "_") && (!used[0] || !used[1]))
             return null;
+        if (type is "text" or "bytes")
+            return used[0] != used[1] ? result : null;
         if (type != "nothing" && !used[0])
             return null;
         return result;

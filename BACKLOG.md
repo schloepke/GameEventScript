@@ -62,8 +62,6 @@ here.
 - Offer a C# incremental source generator for `[GesExtension]` and `[GesType]` declarations, so that
   Unity IL2CPP builds need neither Reflection nor `link.xml` entries for annotated types, with the
   same rules as the Reflection registries and the Swift macros.
-- Complete `:Bytes` (specs/Language.md#bytes): slicing selectors, `+` as concatenation, and explicit
-  UTF-8 conversion as `:Bytes(utf8: text)` and `:Text(utf8: bytes)`, where invalid UTF-8 yields Nothing.
 - Add `:Flags(#a, #b, ...)` with at most 64 members to the schema language only; GES scripts keep
   using flag Maps such as `[enemy:, armed:]`. A member is set or not set; there is no unknown
   state. Encoding sets a member for `true`, leaves it unset for `false` or an absent key, and

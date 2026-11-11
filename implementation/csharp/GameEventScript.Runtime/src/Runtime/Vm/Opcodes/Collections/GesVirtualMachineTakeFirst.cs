@@ -21,6 +21,9 @@ internal partial class GesVirtualMachine
             case List when source.ObjectValue is GesValue[] list:
                 result = TakeFirstList(this, list, count);
                 break;
+            case Bytes when source.ObjectValue is byte[] bytes:
+                result = SliceBytes(in source, bytes, 0, ByteCount(bytes, count));
+                break;
             case Dice when source.ObjectValue is int[] dice:
                 result = TakeFirstDice(this, dice, count);
                 break;

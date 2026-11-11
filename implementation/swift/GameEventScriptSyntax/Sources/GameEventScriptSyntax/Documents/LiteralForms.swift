@@ -13,6 +13,8 @@
         case "series": parameters = ["kind", "offset"]
         case "record": parameters = ["type", "fields"]
         case "message": parameters = ["value", "tags"]
+        // `utf8` replaces `value` for the UTF-8 conversion between Text and Bytes.
+        case "text", "bytes": parameters = ["value", "utf8"]
         default: parameters = ["value"]
         }
         if labels.count > parameters.count || labels.isEmpty && type != "nothing" { return nil }
@@ -22,6 +24,7 @@
             positions.append(position)
         }
         if (type == "record" || type == "range" && (labels.count > 1 || labels[0] != "_")) && (!positions.contains(0) || !positions.contains(1)) { return nil }
+        if type == "text" || type == "bytes" { return positions.contains(0) != positions.contains(1) ? positions : nil }
         if type != "nothing" && !positions.contains(0) { return nil }
         return positions
     }

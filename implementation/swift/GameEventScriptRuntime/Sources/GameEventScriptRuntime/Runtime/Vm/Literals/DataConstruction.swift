@@ -18,6 +18,7 @@ enum GesDataConstruction {
         guard arguments.count == positions.count else { return sink.nothing }
         var slots = (GesValue.nothing, GesValue.nothing, GesValue.nothing)
         for (index, position) in positions.enumerated() { place(arguments[index], at: position, in: &slots) }
+        if positions == [1] { return utf8(type, slots.1, sink: sink) }
         return try create(type, count: arguments.count, slots, context, sink: sink)
     }
 
@@ -27,7 +28,19 @@ enum GesDataConstruction {
         guard registers.count == positions.count else { return sink.nothing }
         var slots = (GesValue.nothing, GesValue.nothing, GesValue.nothing)
         for (index, position) in positions.enumerated() { place(state.value(Int(registers[index])), at: position, in: &slots) }
+        if positions == [1] { return utf8(type, slots.1, sink: sink) }
         return try create(type, count: registers.count, slots, context, sink: sink)
+    }
+
+    // `utf8:` converts between Text and its UTF-8 Bytes; invalid UTF-8 and other kinds give nothing. Only Text and Bytes
+    // forms have a lone second parameter.
+    private static func utf8<Output: GesValueOutput>(_ type: String, _ input: GesValue, sink: Output) -> Output.Result {
+        if type == "bytes" {
+            guard input.kind == .text || input.kind == .tag, let text = input.textValue else { return sink.nothing }
+            return sink.bytes(Array(text.utf8))
+        }
+        guard let bytes = input.bytesValue, bytes.withUnsafeBytes({ GesWireRules.isValidUTF8($0) }) else { return sink.nothing }
+        return sink.text(String(decoding: bytes, as: UTF8.self))
     }
 
     // Every shape has at most three parameters, so positions are 0...2.

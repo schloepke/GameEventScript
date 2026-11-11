@@ -68,6 +68,11 @@ extension GesVirtualMachine {
         case _ where rightKind == .list:
             let result = [registers[x].registerValue] + registers[y].listValue!
             registers[destination].setList(result)
+        // Bytes join only Bytes, Text and Lists; any other partner yields nothing.
+        case .bytes,
+            _ where rightKind == .bytes:
+            guard let left = registers[x].bytesValue, let right = registers[y].bytesValue else { return registers[destination].setNothing() }
+            registers[destination].setBytes(left + right)
         case .dice,
             _ where rightKind == .dice:
             if let dice = registers[x].diceRolls, GesMath.validFace(registers[y].registerValue) {

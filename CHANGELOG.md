@@ -227,7 +227,8 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 ### Added
 - `:Bytes`, an immutable byte sequence: literals `:Bytes[0xa0, 183]` and `:Bytes("a0b7")`, `as :Bytes`
   from integer Lists and hexadecimal Text, `as :Text`/`parse`/documents, count, `in`, indexing,
-  iteration, equality and order. Message JSON writes Bytes as Base64, schemas add `:Bytes max n` with
+  iteration, equality and order, `:take`/`:drop` `first`/`last` slices, `+` concatenation and UTF-8
+  conversion with `:Bytes(utf8: text)` and `:Text(utf8: bytes)`. Message JSON writes Bytes as Base64, schemas add `:Bytes max n` with
   generated `WriteBytes`/`ReadBytes` code, and the Bridges map C# `byte[]` and Swift `[UInt8]`.
 - Hexadecimal integer literals such as `0xff_88_00` in source, `parse`, numeric text casts and
   documents: exact Int64 values with `_` between digits, without unit or percentage suffix.

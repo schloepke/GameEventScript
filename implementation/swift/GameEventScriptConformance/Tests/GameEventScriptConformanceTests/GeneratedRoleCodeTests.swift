@@ -153,4 +153,27 @@ final class GeneratedRoleCodeTests: XCTestCase {
         let map = GesValue.map(keys: keys, values: keys.map { fields.get($0)! })
         XCTAssertEqual(try RolesModel.Panel_Report(value: map), report(), "A Map of only the fields reads too.")
     }
+
+    func testANestedValueThatDoesNotConvertNamesItsPathAsTheWireSideDoes() throws {
+        let fields = try XCTUnwrap(report().toValue().asMap)
+        let keys = (0..<fields.length).map { fields.key(at: $0) }
+        let entry = GesValue.record(typeName: "Panel_Entry", keys: ["name", "level"], values: [.text("left"), .float(0.25, unit: .meter)])
+        for (entries, path) in [(GesValue.list([entry]), "entries[].level"), (.list([.text("left")]), "entries[]"), (.text("left"), "entries")] {
+            let value = GesValue.record(typeName: "Panel_Report", keys: keys, values: keys.map { $0 == "entries" ? entries : fields.get($0)! })
+            XCTAssertThrowsError(try RolesModel.Panel_Report(value: value)) { error in
+                XCTAssertEqual((error as? GesWireError)?.code, GesWireError.typeMismatch)
+                XCTAssertEqual((error as? GesWireError)?.path, path)
+            }
+            XCTAssertThrowsError(try RolesWire.Panel_Report().read(value: value)) { error in
+                XCTAssertEqual((error as? GesWireError)?.path, path)
+            }
+        }
+    }
+
+    func testBoundModelsAlsoConvertToPlainValues() throws {
+        let value = report().toValue()
+        let bound = try RolesBound.Panel_Report(value: value)
+        XCTAssertEqual(bound.toValue(), value)
+        XCTAssertEqual(RolesBound.Panel_Report(gesValue: bound.gesValue()), bound)
+    }
 }

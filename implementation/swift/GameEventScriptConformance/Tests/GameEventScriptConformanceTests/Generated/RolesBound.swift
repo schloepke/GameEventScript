@@ -120,6 +120,13 @@ enum RolesBound {
             self = held.record
         }
 
+        /// The record as a plain GES Record of its fields, as `GesSchemaValues` decodes the bytes of the record.
+        func toValue() -> GesValue { __GesModelValuesae4351b20b848505.value(self) }
+
+        /// Reads a Record of this schema, or a Map of only its fields, as `GesSchemaValues` encodes it.
+        /// - Throws: `GesWireError` with `wire.typeMismatch` at the path of a field that does not convert.
+        init(value: GesValue) throws(GesWireError) { self = try __GesModelValuesae4351b20b848505.readBotView(value, "") }
+
         /// The tags, in declared order; the raw value is the tag's name.
         enum MoodTag: String, Hashable, Sendable, Codable, CaseIterable {
             /// The tag `#calm`.
@@ -209,6 +216,13 @@ enum RolesBound {
             guard let held = value.externalValue as? GesTypes.Panel_BadgeValue else { return nil }
             self = held.record
         }
+
+        /// The record as a plain GES Record of its fields, as `GesSchemaValues` decodes the bytes of the record.
+        func toValue() -> GesValue { __GesModelValuesae4351b20b848505.value(self) }
+
+        /// Reads a Record of this schema, or a Map of only its fields, as `GesSchemaValues` encodes it.
+        /// - Throws: `GesWireError` with `wire.typeMismatch` at the path of a field that does not convert.
+        init(value: GesValue) throws(GesWireError) { self = try __GesModelValuesae4351b20b848505.readPanel_Badge(value, "") }
     }
 
     /// The model of the schema `:Panel_Entry`: a plain value that is never encoded.
@@ -233,6 +247,13 @@ enum RolesBound {
             guard let held = value.externalValue as? GesTypes.Panel_EntryValue else { return nil }
             self = held.record
         }
+
+        /// The record as a plain GES Record of its fields, as `GesSchemaValues` decodes the bytes of the record.
+        func toValue() -> GesValue { __GesModelValuesae4351b20b848505.value(self) }
+
+        /// Reads a Record of this schema, or a Map of only its fields, as `GesSchemaValues` encodes it.
+        /// - Throws: `GesWireError` with `wire.typeMismatch` at the path of a field that does not convert.
+        init(value: GesValue) throws(GesWireError) { self = try __GesModelValuesae4351b20b848505.readPanel_Entry(value, "") }
     }
 
     /// The model of the schema `:Panel_Report`: a plain value that is never encoded.
@@ -281,6 +302,13 @@ enum RolesBound {
             guard let held = value.externalValue as? GesTypes.Panel_ReportValue else { return nil }
             self = held.record
         }
+
+        /// The record as a plain GES Record of its fields, as `GesSchemaValues` decodes the bytes of the record.
+        func toValue() -> GesValue { __GesModelValuesae4351b20b848505.value(self) }
+
+        /// Reads a Record of this schema, or a Map of only its fields, as `GesSchemaValues` encodes it.
+        /// - Throws: `GesWireError` with `wire.typeMismatch` at the path of a field that does not convert.
+        init(value: GesValue) throws(GesWireError) { self = try __GesModelValuesae4351b20b848505.readPanel_Report(value, "") }
 
         /// The tags, in declared order; the raw value is the tag's name.
         enum StatusTag: String, Hashable, Sendable, Codable, CaseIterable {
@@ -338,6 +366,13 @@ enum RolesBound {
             guard let held = value.externalValue as? GesTypes.RadarViewValue else { return nil }
             self = held.record
         }
+
+        /// The record as a plain GES Record of its fields, as `GesSchemaValues` decodes the bytes of the record.
+        func toValue() -> GesValue { __GesModelValuesae4351b20b848505.value(self) }
+
+        /// Reads a Record of this schema, or a Map of only its fields, as `GesSchemaValues` encodes it.
+        /// - Throws: `GesWireError` with `wire.typeMismatch` at the path of a field that does not convert.
+        init(value: GesValue) throws(GesWireError) { self = try __GesModelValuesae4351b20b848505.readRadarView(value, "") }
     }
 
     /// The model of the schema `:WorldView`: a plain value that is never encoded.
@@ -374,6 +409,13 @@ enum RolesBound {
             guard let held = value.externalValue as? GesTypes.WorldViewValue else { return nil }
             self = held.record
         }
+
+        /// The record as a plain GES Record of its fields, as `GesSchemaValues` decodes the bytes of the record.
+        func toValue() -> GesValue { __GesModelValuesae4351b20b848505.value(self) }
+
+        /// Reads a Record of this schema, or a Map of only its fields, as `GesSchemaValues` encodes it.
+        /// - Throws: `GesWireError` with `wire.typeMismatch` at the path of a field that does not convert.
+        init(value: GesValue) throws(GesWireError) { self = try __GesModelValuesae4351b20b848505.readWorldView(value, "") }
     }
 
     /// The model of the schema `:World_Body`: a plain value that is never encoded.
@@ -398,6 +440,13 @@ enum RolesBound {
             guard let held = value.externalValue as? GesTypes.World_BodyValue else { return nil }
             self = held.record
         }
+
+        /// The record as a plain GES Record of its fields, as `GesSchemaValues` decodes the bytes of the record.
+        func toValue() -> GesValue { __GesModelValuesae4351b20b848505.value(self) }
+
+        /// Reads a Record of this schema, or a Map of only its fields, as `GesSchemaValues` encodes it.
+        /// - Throws: `GesWireError` with `wire.typeMismatch` at the path of a field that does not convert.
+        init(value: GesValue) throws(GesWireError) { self = try __GesModelValuesae4351b20b848505.readWorld_Body(value, "") }
 
         /// The tags, in declared order; the raw value is the tag's name.
         enum HullTag: String, Hashable, Sendable, Codable, CaseIterable {
@@ -458,6 +507,7 @@ enum RolesBound {
                 fields: [try! .init(name: "mass", kind: .float, unit: .kilogram), try! .init(name: "hull", kind: .tag), try! .init(name: "fields", kind: .map)],
                 constructors: [try! .init(typeName: "World_Body", parameters: [try! .init(name: "fields", kind: .map)])]
             )
+            static let names = ["mass", "hull"]
             let record: World_Body
 
             init(_ record: World_Body) { self.record = record }
@@ -467,8 +517,8 @@ enum RolesBound {
             func field(_ name: String) throws -> GesValue? {
                 switch name {
                 case "mass": .float(record.mass, unit: .kilogram)
-                case "hull": GesTypes.tag(record.hull.rawValue)
-                case "fields": .map(keys: ["mass", "hull"], values: [try field("mass")!, try field("hull")!])
+                case "hull": __GesModelsae4351b20b848505.tag(record.hull.rawValue)
+                case "fields": .map(keys: Self.names, values: [try field("mass")!, try field("hull")!])
                 default: nil
                 }
             }
@@ -480,9 +530,9 @@ enum RolesBound {
 
             func invoke(_ call: GesExternalTypeConstructorCall) throws {
                 guard
-                    let fields = call.arguments[0].asMap, GesTypes.known(fields, ["mass", "hull"]),
-                    let mass = GesTypes.number(fields.get("mass") ?? .nothing, .kilogram),
-                    let hull = GesTypes.tag(fields.get("hull") ?? .nothing).flatMap(World_Body.HullTag.init(rawValue:))
+                    let fields = call.arguments[0].asMap, __GesModelsae4351b20b848505.known(fields, World_BodyValue.names),
+                    let mass = __GesModelsae4351b20b848505.number(fields.get("mass") ?? .nothing, .kilogram),
+                    let hull = __GesModelsae4351b20b848505.tag(fields.get("hull") ?? .nothing).flatMap(World_Body.HullTag.init(rawValue:))
                 else {
                     call.setNothing()
                     return
@@ -498,6 +548,7 @@ enum RolesBound {
                 fields: [try! .init(name: "range", kind: .float, unit: .meter), try! .init(name: "contacts", kind: .list), try! .init(name: "fields", kind: .map)],
                 constructors: [try! .init(typeName: "RadarView", parameters: [try! .init(name: "fields", kind: .map)])]
             )
+            static let names = ["range", "contacts"]
             let record: RadarView
 
             init(_ record: RadarView) { self.record = record }
@@ -508,7 +559,7 @@ enum RolesBound {
                 switch name {
                 case "range": .float(record.range, unit: .meter)
                 case "contacts": .list(record.contacts.map { .integer(Int64($0), unit: .none) })
-                case "fields": .map(keys: ["range", "contacts"], values: [try field("range")!, try field("contacts")!])
+                case "fields": .map(keys: Self.names, values: [try field("range")!, try field("contacts")!])
                 default: nil
                 }
             }
@@ -520,9 +571,9 @@ enum RolesBound {
 
             func invoke(_ call: GesExternalTypeConstructorCall) throws {
                 guard
-                    let fields = call.arguments[0].asMap, GesTypes.known(fields, ["range", "contacts"]),
-                    let range = GesTypes.number(fields.get("range") ?? .nothing, .meter),
-                    let contacts = GesTypes.list(fields.get("contacts") ?? .nothing, { GesTypes.integer($0, .none) })
+                    let fields = call.arguments[0].asMap, __GesModelsae4351b20b848505.known(fields, RadarViewValue.names),
+                    let range = __GesModelsae4351b20b848505.number(fields.get("range") ?? .nothing, .meter),
+                    let contacts = __GesModelsae4351b20b848505.list(fields.get("contacts") ?? .nothing, { __GesModelsae4351b20b848505.integer($0, .none) })
                 else {
                     call.setNothing()
                     return
@@ -538,6 +589,7 @@ enum RolesBound {
                 fields: [try! .init(name: "bot", kind: .float), try! .init(name: "name", kind: .text), try! .init(name: "alive", kind: .boolean), try! .init(name: "health", kind: .percentage), try! .init(name: "speed", kind: .float), try! .init(name: "heading", kind: .float, unit: .degree), try! .init(name: "mood", kind: .tag), try! .init(name: "team", kind: .tag), try! .init(name: "position", kind: .point, unit: .meter), try! .init(name: "velocity", kind: .vector, unit: .meter), try! .init(name: "body", typeName: "World_Body"), try! .init(name: "radar", typeName: "RadarView"), try! .init(name: "facing", typeName: "Value"), try! .init(name: "note", kind: .text), try! .init(name: "marks", kind: .list), try! .init(name: "units", kind: .list), try! .init(name: "grid", kind: .list), try! .init(name: "rolls", kind: .dice), try! .init(name: "seal", kind: .bytes), try! .init(name: "chunks", kind: .list), try! .init(name: "status", kind: .map), try! .init(name: "ranks", kind: .list), try! .init(name: "hints", kind: .list), try! .init(name: "fields", kind: .map)],
                 constructors: [try! .init(typeName: "BotView", parameters: [try! .init(name: "fields", kind: .map)])]
             )
+            static let names = ["bot", "name", "alive", "health", "speed", "heading", "mood", "team", "position", "velocity", "body", "radar", "facing", "note", "marks", "units", "grid", "rolls", "seal", "chunks", "status", "ranks", "hints"]
             let record: BotView
 
             init(_ record: BotView) { self.record = record }
@@ -552,24 +604,24 @@ enum RolesBound {
                 case "health": .percentage(record.health)
                 case "speed": .float(record.speed, unit: .none)
                 case "heading": .float(record.heading, unit: .degree)
-                case "mood": GesTypes.tag(record.mood.rawValue)
-                case "team": GesTypes.tag(record.team)
+                case "mood": __GesModelsae4351b20b848505.tag(record.mood.rawValue)
+                case "team": __GesModelsae4351b20b848505.tag(record.team)
                 case "position": record.position.value(unit: .meter)
                 case "velocity": record.velocity.value(unit: .meter)
                 case "body": record.body.gesValue()
-                case "radar": GesTypes.present(record.radar, { $0.gesValue() })
-                case "facing": GesTypes.present(record.facing, { GesTypes.value($0) })
-                case "note": GesTypes.present(record.note, { .text($0) })
+                case "radar": __GesModelsae4351b20b848505.present(record.radar, { $0.gesValue() })
+                case "facing": __GesModelsae4351b20b848505.present(record.facing, { GesTypes.value($0) })
+                case "note": __GesModelsae4351b20b848505.present(record.note, { .text($0) })
                 case "marks": .list(record.marks.map { $0.value(unit: .meter) })
                 case "units": .list(record.units.map { GesTypes.value($0) })
                 case "grid": .list(record.grid.map { .list($0.map { .integer(Int64($0), unit: .none) }) })
-                case "rolls": GesTypes.dice(record.rolls)
+                case "rolls": __GesModelsae4351b20b848505.dice(record.rolls)
                 case "seal": .bytes(record.seal)
                 case "chunks": .list(record.chunks.map { .bytes($0) })
                 case "status": GesTypes.value(record.status)
                 case "ranks": .list(record.ranks.map { GesTypes.value($0) })
-                case "hints": .list(record.hints.map { GesTypes.tag($0.rawValue) })
-                case "fields": .map(keys: ["bot", "name", "alive", "health", "speed", "heading", "mood", "team", "position", "velocity", "body", "radar", "facing", "note", "marks", "units", "grid", "rolls", "seal", "chunks", "status", "ranks", "hints"], values: [try field("bot")!, try field("name")!, try field("alive")!, try field("health")!, try field("speed")!, try field("heading")!, try field("mood")!, try field("team")!, try field("position")!, try field("velocity")!, try field("body")!, try field("radar")!, try field("facing")!, try field("note")!, try field("marks")!, try field("units")!, try field("grid")!, try field("rolls")!, try field("seal")!, try field("chunks")!, try field("status")!, try field("ranks")!, try field("hints")!])
+                case "hints": .list(record.hints.map { __GesModelsae4351b20b848505.tag($0.rawValue) })
+                case "fields": .map(keys: Self.names, values: [try field("bot")!, try field("name")!, try field("alive")!, try field("health")!, try field("speed")!, try field("heading")!, try field("mood")!, try field("team")!, try field("position")!, try field("velocity")!, try field("body")!, try field("radar")!, try field("facing")!, try field("note")!, try field("marks")!, try field("units")!, try field("grid")!, try field("rolls")!, try field("seal")!, try field("chunks")!, try field("status")!, try field("ranks")!, try field("hints")!])
                 default: nil
                 }
             }
@@ -581,30 +633,30 @@ enum RolesBound {
 
             func invoke(_ call: GesExternalTypeConstructorCall) throws {
                 guard
-                    let fields = call.arguments[0].asMap, GesTypes.known(fields, ["bot", "name", "alive", "health", "speed", "heading", "mood", "team", "position", "velocity", "body", "radar", "facing", "note", "marks", "units", "grid", "rolls", "seal", "chunks", "status", "ranks", "hints"]),
-                    let bot = GesTypes.integer(fields.get("bot") ?? .nothing, .none),
-                    let name = GesTypes.text(fields.get("name") ?? .nothing),
-                    let alive = GesTypes.boolean(fields.get("alive") ?? .nothing),
-                    let health = GesTypes.percentage(fields.get("health") ?? .nothing),
-                    let speed = GesTypes.number(fields.get("speed") ?? .nothing, .none),
-                    let heading = GesTypes.number(fields.get("heading") ?? .nothing, .degree),
-                    let mood = GesTypes.tag(fields.get("mood") ?? .nothing).flatMap(BotView.MoodTag.init(rawValue:)),
-                    let team = GesTypes.tag(fields.get("team") ?? .nothing),
+                    let fields = call.arguments[0].asMap, __GesModelsae4351b20b848505.known(fields, BotViewValue.names),
+                    let bot = __GesModelsae4351b20b848505.integer(fields.get("bot") ?? .nothing, .none),
+                    let name = __GesModelsae4351b20b848505.text(fields.get("name") ?? .nothing),
+                    let alive = __GesModelsae4351b20b848505.boolean(fields.get("alive") ?? .nothing),
+                    let health = __GesModelsae4351b20b848505.percentage(fields.get("health") ?? .nothing),
+                    let speed = __GesModelsae4351b20b848505.number(fields.get("speed") ?? .nothing, .none),
+                    let heading = __GesModelsae4351b20b848505.number(fields.get("heading") ?? .nothing, .degree),
+                    let mood = __GesModelsae4351b20b848505.tag(fields.get("mood") ?? .nothing).flatMap(BotView.MoodTag.init(rawValue:)),
+                    let team = __GesModelsae4351b20b848505.tag(fields.get("team") ?? .nothing),
                     let position = GesPoint(fields.get("position") ?? .nothing, unit: .meter),
                     let velocity = GesVector(fields.get("velocity") ?? .nothing, unit: .meter),
                     let body = World_Body(gesValue: fields.get("body") ?? .nothing),
-                    let radar = GesTypes.optional(fields.get("radar") ?? .nothing, { RadarView(gesValue: $0) }),
-                    let facing = GesTypes.optional(fields.get("facing") ?? .nothing, { GesTypes.decodeBotViewFacingAlternative($0) }),
-                    let note = GesTypes.optional(fields.get("note") ?? .nothing, { GesTypes.text($0) }),
-                    let marks = GesTypes.list(fields.get("marks") ?? .nothing, { GesPoint($0, unit: .meter) }),
-                    let units = GesTypes.list(fields.get("units") ?? .nothing, { GesTypes.decodeBotViewUnitsItemAlternative($0) }),
-                    let grid = GesTypes.list(fields.get("grid") ?? .nothing, { GesTypes.list($0, { GesTypes.integer($0, .none) }) }),
-                    let rolls = GesTypes.dice(fields.get("rolls") ?? .nothing),
-                    let seal = GesTypes.bytes(fields.get("seal") ?? .nothing),
-                    let chunks = GesTypes.list(fields.get("chunks") ?? .nothing, { GesTypes.bytes($0) }),
+                    let radar = __GesModelsae4351b20b848505.optional(fields.get("radar") ?? .nothing, { RadarView(gesValue: $0) }),
+                    let facing = __GesModelsae4351b20b848505.optional(fields.get("facing") ?? .nothing, { GesTypes.decodeBotViewFacingAlternative($0) }),
+                    let note = __GesModelsae4351b20b848505.optional(fields.get("note") ?? .nothing, { __GesModelsae4351b20b848505.text($0) }),
+                    let marks = __GesModelsae4351b20b848505.list(fields.get("marks") ?? .nothing, { GesPoint($0, unit: .meter) }),
+                    let units = __GesModelsae4351b20b848505.list(fields.get("units") ?? .nothing, { GesTypes.decodeBotViewUnitsItemAlternative($0) }),
+                    let grid = __GesModelsae4351b20b848505.list(fields.get("grid") ?? .nothing, { __GesModelsae4351b20b848505.list($0, { __GesModelsae4351b20b848505.integer($0, .none) }) }),
+                    let rolls = __GesModelsae4351b20b848505.dice(fields.get("rolls") ?? .nothing),
+                    let seal = __GesModelsae4351b20b848505.bytes(fields.get("seal") ?? .nothing),
+                    let chunks = __GesModelsae4351b20b848505.list(fields.get("chunks") ?? .nothing, { __GesModelsae4351b20b848505.bytes($0) }),
                     let status = GesTypes.decodeBotViewStatusFlags(fields.get("status") ?? .nothing),
-                    let ranks = GesTypes.list(fields.get("ranks") ?? .nothing, { GesTypes.decodeBotViewRanksItemFlags($0) }),
-                    let hints = GesTypes.list(fields.get("hints") ?? .nothing, { GesTypes.tag($0).flatMap(BotView.HintsItemTag.init(rawValue:)) })
+                    let ranks = __GesModelsae4351b20b848505.list(fields.get("ranks") ?? .nothing, { GesTypes.decodeBotViewRanksItemFlags($0) }),
+                    let hints = __GesModelsae4351b20b848505.list(fields.get("hints") ?? .nothing, { __GesModelsae4351b20b848505.tag($0).flatMap(BotView.HintsItemTag.init(rawValue:)) })
                 else {
                     call.setNothing()
                     return
@@ -616,13 +668,13 @@ enum RolesBound {
         static func value(_ value: BotView.FacingAlternative) -> GesValue {
             switch value {
             case .quantity(let alternative): .float(alternative, unit: .degree)
-            case .tag(let alternative): GesTypes.tag(alternative.rawValue)
+            case .tag(let alternative): __GesModelsae4351b20b848505.tag(alternative.rawValue)
             }
         }
 
         static func decodeBotViewFacingAlternative(_ value: GesValue) -> BotView.FacingAlternative? {
-            if let alternative = GesTypes.number(value, .degree) { return .quantity(alternative) }
-            if let alternative = GesTypes.tag(value).flatMap(BotView.FacingTagTag.init(rawValue:)) { return .tag(alternative) }
+            if let alternative = __GesModelsae4351b20b848505.number(value, .degree) { return .quantity(alternative) }
+            if let alternative = __GesModelsae4351b20b848505.tag(value).flatMap(BotView.FacingTagTag.init(rawValue:)) { return .tag(alternative) }
             return nil
         }
 
@@ -634,22 +686,22 @@ enum RolesBound {
         }
 
         static func decodeBotViewUnitsItemAlternative(_ value: GesValue) -> BotView.UnitsItemAlternative? {
-            if let alternative = GesTypes.text(value) { return .text(alternative) }
+            if let alternative = __GesModelsae4351b20b848505.text(value) { return .text(alternative) }
             if let alternative = World_Body(gesValue: value) { return .world_Body(alternative) }
             return nil
         }
 
         static let BotViewStatusFlagsNames = ["armed", "cloaked"]
 
-        static func value(_ value: BotView.StatusFlags) -> GesValue { flags(BotViewStatusFlagsNames, value.rawValue) }
+        static func value(_ value: BotView.StatusFlags) -> GesValue { __GesModelsae4351b20b848505.flags(BotViewStatusFlagsNames, value.rawValue) }
 
-        static func decodeBotViewStatusFlags(_ value: GesValue) -> BotView.StatusFlags? { flags(value, BotViewStatusFlagsNames).map(BotView.StatusFlags.init(rawValue:)) }
+        static func decodeBotViewStatusFlags(_ value: GesValue) -> BotView.StatusFlags? { __GesModelsae4351b20b848505.flags(value, BotViewStatusFlagsNames).map(BotView.StatusFlags.init(rawValue:)) }
 
         static let BotViewRanksItemFlagsNames = ["gold", "silver"]
 
-        static func value(_ value: BotView.RanksItemFlags) -> GesValue { flags(BotViewRanksItemFlagsNames, value.rawValue) }
+        static func value(_ value: BotView.RanksItemFlags) -> GesValue { __GesModelsae4351b20b848505.flags(BotViewRanksItemFlagsNames, value.rawValue) }
 
-        static func decodeBotViewRanksItemFlags(_ value: GesValue) -> BotView.RanksItemFlags? { flags(value, BotViewRanksItemFlagsNames).map(BotView.RanksItemFlags.init(rawValue:)) }
+        static func decodeBotViewRanksItemFlags(_ value: GesValue) -> BotView.RanksItemFlags? { __GesModelsae4351b20b848505.flags(value, BotViewRanksItemFlagsNames).map(BotView.RanksItemFlags.init(rawValue:)) }
 
         /// A `:Panel_Badge` held by a script.
         final class Panel_BadgeValue: GesExternalValue {
@@ -658,6 +710,7 @@ enum RolesBound {
                 fields: [try! .init(name: "label", kind: .text), try! .init(name: "fields", kind: .map)],
                 constructors: [try! .init(typeName: "Panel_Badge", parameters: [try! .init(name: "fields", kind: .map)])]
             )
+            static let names = ["label"]
             let record: Panel_Badge
 
             init(_ record: Panel_Badge) { self.record = record }
@@ -667,7 +720,7 @@ enum RolesBound {
             func field(_ name: String) throws -> GesValue? {
                 switch name {
                 case "label": .text(record.label)
-                case "fields": .map(keys: ["label"], values: [try field("label")!])
+                case "fields": .map(keys: Self.names, values: [try field("label")!])
                 default: nil
                 }
             }
@@ -679,8 +732,8 @@ enum RolesBound {
 
             func invoke(_ call: GesExternalTypeConstructorCall) throws {
                 guard
-                    let fields = call.arguments[0].asMap, GesTypes.known(fields, ["label"]),
-                    let label = GesTypes.text(fields.get("label") ?? .nothing)
+                    let fields = call.arguments[0].asMap, __GesModelsae4351b20b848505.known(fields, Panel_BadgeValue.names),
+                    let label = __GesModelsae4351b20b848505.text(fields.get("label") ?? .nothing)
                 else {
                     call.setNothing()
                     return
@@ -696,6 +749,7 @@ enum RolesBound {
                 fields: [try! .init(name: "name", kind: .text), try! .init(name: "level", kind: .percentage), try! .init(name: "fields", kind: .map)],
                 constructors: [try! .init(typeName: "Panel_Entry", parameters: [try! .init(name: "fields", kind: .map)])]
             )
+            static let names = ["name", "level"]
             let record: Panel_Entry
 
             init(_ record: Panel_Entry) { self.record = record }
@@ -706,7 +760,7 @@ enum RolesBound {
                 switch name {
                 case "name": .text(record.name)
                 case "level": .percentage(record.level)
-                case "fields": .map(keys: ["name", "level"], values: [try field("name")!, try field("level")!])
+                case "fields": .map(keys: Self.names, values: [try field("name")!, try field("level")!])
                 default: nil
                 }
             }
@@ -718,9 +772,9 @@ enum RolesBound {
 
             func invoke(_ call: GesExternalTypeConstructorCall) throws {
                 guard
-                    let fields = call.arguments[0].asMap, GesTypes.known(fields, ["name", "level"]),
-                    let name = GesTypes.text(fields.get("name") ?? .nothing),
-                    let level = GesTypes.percentage(fields.get("level") ?? .nothing)
+                    let fields = call.arguments[0].asMap, __GesModelsae4351b20b848505.known(fields, Panel_EntryValue.names),
+                    let name = __GesModelsae4351b20b848505.text(fields.get("name") ?? .nothing),
+                    let level = __GesModelsae4351b20b848505.percentage(fields.get("level") ?? .nothing)
                 else {
                     call.setNothing()
                     return
@@ -736,6 +790,7 @@ enum RolesBound {
                 fields: [try! .init(name: "title", kind: .text), try! .init(name: "status", kind: .tag), try! .init(name: "load", kind: .float, unit: .watt), try! .init(name: "spot", kind: .point, unit: .meter), try! .init(name: "note", kind: .text), try! .init(name: "entries", kind: .list), try! .init(name: "reading", typeName: "Value"), try! .init(name: "alarms", kind: .map), try! .init(name: "fields", kind: .map)],
                 constructors: [try! .init(typeName: "Panel_Report", parameters: [try! .init(name: "fields", kind: .map)])]
             )
+            static let names = ["title", "status", "load", "spot", "note", "entries", "reading", "alarms"]
             let record: Panel_Report
 
             init(_ record: Panel_Report) { self.record = record }
@@ -745,14 +800,14 @@ enum RolesBound {
             func field(_ name: String) throws -> GesValue? {
                 switch name {
                 case "title": .text(record.title)
-                case "status": GesTypes.tag(record.status.rawValue)
+                case "status": __GesModelsae4351b20b848505.tag(record.status.rawValue)
                 case "load": .float(record.load, unit: .watt)
                 case "spot": record.spot.value(unit: .meter)
-                case "note": GesTypes.present(record.note, { .text($0) })
+                case "note": __GesModelsae4351b20b848505.present(record.note, { .text($0) })
                 case "entries": .list(record.entries.map { $0.gesValue() })
-                case "reading": GesTypes.present(record.reading, { GesTypes.value($0) })
+                case "reading": __GesModelsae4351b20b848505.present(record.reading, { GesTypes.value($0) })
                 case "alarms": GesTypes.value(record.alarms)
-                case "fields": .map(keys: ["title", "status", "load", "spot", "note", "entries", "reading", "alarms"], values: [try field("title")!, try field("status")!, try field("load")!, try field("spot")!, try field("note")!, try field("entries")!, try field("reading")!, try field("alarms")!])
+                case "fields": .map(keys: Self.names, values: [try field("title")!, try field("status")!, try field("load")!, try field("spot")!, try field("note")!, try field("entries")!, try field("reading")!, try field("alarms")!])
                 default: nil
                 }
             }
@@ -764,14 +819,14 @@ enum RolesBound {
 
             func invoke(_ call: GesExternalTypeConstructorCall) throws {
                 guard
-                    let fields = call.arguments[0].asMap, GesTypes.known(fields, ["title", "status", "load", "spot", "note", "entries", "reading", "alarms"]),
-                    let title = GesTypes.text(fields.get("title") ?? .nothing),
-                    let status = GesTypes.tag(fields.get("status") ?? .nothing).flatMap(Panel_Report.StatusTag.init(rawValue:)),
-                    let load = GesTypes.number(fields.get("load") ?? .nothing, .watt),
+                    let fields = call.arguments[0].asMap, __GesModelsae4351b20b848505.known(fields, Panel_ReportValue.names),
+                    let title = __GesModelsae4351b20b848505.text(fields.get("title") ?? .nothing),
+                    let status = __GesModelsae4351b20b848505.tag(fields.get("status") ?? .nothing).flatMap(Panel_Report.StatusTag.init(rawValue:)),
+                    let load = __GesModelsae4351b20b848505.number(fields.get("load") ?? .nothing, .watt),
                     let spot = GesPoint(fields.get("spot") ?? .nothing, unit: .meter),
-                    let note = GesTypes.optional(fields.get("note") ?? .nothing, { GesTypes.text($0) }),
-                    let entries = GesTypes.list(fields.get("entries") ?? .nothing, { Panel_Entry(gesValue: $0) }),
-                    let reading = GesTypes.optional(fields.get("reading") ?? .nothing, { GesTypes.decodePanel_ReportReadingAlternative($0) }),
+                    let note = __GesModelsae4351b20b848505.optional(fields.get("note") ?? .nothing, { __GesModelsae4351b20b848505.text($0) }),
+                    let entries = __GesModelsae4351b20b848505.list(fields.get("entries") ?? .nothing, { Panel_Entry(gesValue: $0) }),
+                    let reading = __GesModelsae4351b20b848505.optional(fields.get("reading") ?? .nothing, { GesTypes.decodePanel_ReportReadingAlternative($0) }),
                     let alarms = GesTypes.decodePanel_ReportAlarmsFlags(fields.get("alarms") ?? .nothing)
                 else {
                     call.setNothing()
@@ -789,16 +844,16 @@ enum RolesBound {
         }
 
         static func decodePanel_ReportReadingAlternative(_ value: GesValue) -> Panel_Report.ReadingAlternative? {
-            if let alternative = GesTypes.integer(value, .none) { return .number(alternative) }
-            if let alternative = GesTypes.text(value) { return .text(alternative) }
+            if let alternative = __GesModelsae4351b20b848505.integer(value, .none) { return .number(alternative) }
+            if let alternative = __GesModelsae4351b20b848505.text(value) { return .text(alternative) }
             return nil
         }
 
         static let Panel_ReportAlarmsFlagsNames = ["heat", "power"]
 
-        static func value(_ value: Panel_Report.AlarmsFlags) -> GesValue { flags(Panel_ReportAlarmsFlagsNames, value.rawValue) }
+        static func value(_ value: Panel_Report.AlarmsFlags) -> GesValue { __GesModelsae4351b20b848505.flags(Panel_ReportAlarmsFlagsNames, value.rawValue) }
 
-        static func decodePanel_ReportAlarmsFlags(_ value: GesValue) -> Panel_Report.AlarmsFlags? { flags(value, Panel_ReportAlarmsFlagsNames).map(Panel_Report.AlarmsFlags.init(rawValue:)) }
+        static func decodePanel_ReportAlarmsFlags(_ value: GesValue) -> Panel_Report.AlarmsFlags? { __GesModelsae4351b20b848505.flags(value, Panel_ReportAlarmsFlagsNames).map(Panel_Report.AlarmsFlags.init(rawValue:)) }
 
         /// A `:WorldView` held by a script.
         final class WorldViewValue: GesExternalValue {
@@ -807,6 +862,7 @@ enum RolesBound {
                 fields: [try! .init(name: "tick", kind: .float), try! .init(name: "time", kind: .float, unit: .second), try! .init(name: "arena", kind: .vector, unit: .meter), try! .init(name: "bots", kind: .list), try! .init(name: "badge", typeName: "Panel_Badge"), try! .init(name: "fields", kind: .map)],
                 constructors: [try! .init(typeName: "WorldView", parameters: [try! .init(name: "fields", kind: .map)])]
             )
+            static let names = ["tick", "time", "arena", "bots", "badge"]
             let record: WorldView
 
             init(_ record: WorldView) { self.record = record }
@@ -819,8 +875,8 @@ enum RolesBound {
                 case "time": .float(record.time, unit: .second)
                 case "arena": record.arena.value(unit: .meter)
                 case "bots": .list(record.bots.map { $0.gesValue() })
-                case "badge": GesTypes.present(record.badge, { $0.gesValue() })
-                case "fields": .map(keys: ["tick", "time", "arena", "bots", "badge"], values: [try field("tick")!, try field("time")!, try field("arena")!, try field("bots")!, try field("badge")!])
+                case "badge": __GesModelsae4351b20b848505.present(record.badge, { $0.gesValue() })
+                case "fields": .map(keys: Self.names, values: [try field("tick")!, try field("time")!, try field("arena")!, try field("bots")!, try field("badge")!])
                 default: nil
                 }
             }
@@ -832,12 +888,12 @@ enum RolesBound {
 
             func invoke(_ call: GesExternalTypeConstructorCall) throws {
                 guard
-                    let fields = call.arguments[0].asMap, GesTypes.known(fields, ["tick", "time", "arena", "bots", "badge"]),
-                    let tick = GesTypes.integer(fields.get("tick") ?? .nothing, .none),
-                    let time = GesTypes.number(fields.get("time") ?? .nothing, .second),
+                    let fields = call.arguments[0].asMap, __GesModelsae4351b20b848505.known(fields, WorldViewValue.names),
+                    let tick = __GesModelsae4351b20b848505.integer(fields.get("tick") ?? .nothing, .none),
+                    let time = __GesModelsae4351b20b848505.number(fields.get("time") ?? .nothing, .second),
                     let arena = GesVector(fields.get("arena") ?? .nothing, unit: .meter),
-                    let bots = GesTypes.list(fields.get("bots") ?? .nothing, { BotView(gesValue: $0) }),
-                    let badge = GesTypes.optional(fields.get("badge") ?? .nothing, { Panel_Badge(gesValue: $0) })
+                    let bots = __GesModelsae4351b20b848505.list(fields.get("bots") ?? .nothing, { BotView(gesValue: $0) }),
+                    let badge = __GesModelsae4351b20b848505.optional(fields.get("badge") ?? .nothing, { Panel_Badge(gesValue: $0) })
                 else {
                     call.setNothing()
                     return
@@ -845,8 +901,363 @@ enum RolesBound {
                 try call.setExternalValue(WorldViewValue(WorldView(tick: tick, time: time, arena: arena, bots: bots, badge: badge)))
             }
         }
+    }
 
-        static func known(_ fields: GesValueMap, _ names: Set<String>) -> Bool { (0..<fields.length).allSatisfy { names.contains(fields.key(at: $0)) } }
+    /// The plain GES values of the models of this file, as `GesSchemaValues` reads and writes them.
+    enum __GesModelValuesae4351b20b848505 {
+        static let BotViewFields = ["bot", "name", "alive", "health", "speed", "heading", "mood", "team", "position", "velocity", "body", "radar", "facing", "note", "marks", "units", "grid", "rolls", "seal", "chunks", "status", "ranks", "hints"]
+
+        static func value(_ record: BotView) -> GesValue {
+            .record(typeName: "BotView", keys: BotViewFields, values: [
+                .integer(Int64(record.bot), unit: .none),
+                .text(record.name),
+                .boolean(record.alive),
+                .percentage(record.health),
+                .float(record.speed, unit: .none),
+                .float(record.heading, unit: .degree),
+                __GesModelsae4351b20b848505.tag(record.mood.rawValue),
+                __GesModelsae4351b20b848505.tag(record.team),
+                record.position.value(unit: .meter),
+                record.velocity.value(unit: .meter),
+                record.body.toValue(),
+                __GesModelsae4351b20b848505.present(record.radar, { $0.toValue() }),
+                __GesModelsae4351b20b848505.present(record.facing, { __GesModelValuesae4351b20b848505.value($0) }),
+                __GesModelsae4351b20b848505.present(record.note, { .text($0) }),
+                .list(record.marks.map { $0.value(unit: .meter) }),
+                .list(record.units.map { __GesModelValuesae4351b20b848505.value($0) }),
+                .list(record.grid.map { .list($0.map { .integer(Int64($0), unit: .none) }) }),
+                __GesModelsae4351b20b848505.dice(record.rolls),
+                .bytes(record.seal),
+                .list(record.chunks.map { .bytes($0) }),
+                __GesModelValuesae4351b20b848505.value(record.status),
+                .list(record.ranks.map { __GesModelValuesae4351b20b848505.value($0) }),
+                .list(record.hints.map { __GesModelsae4351b20b848505.tag($0.rawValue) }),
+            ])
+        }
+
+        static func readBotView(_ value: GesValue, _ path: String) throws(GesWireError) -> BotView {
+            guard let fields = recordFields(value, "BotView", BotViewFields) else { throw mismatch(path) }
+            guard let field0 = __GesModelsae4351b20b848505.integer(fields.get("bot") ?? .nothing, .none) else { throw mismatch(fieldPath(path, "bot")) }
+            guard let field1 = __GesModelsae4351b20b848505.text(fields.get("name") ?? .nothing) else { throw mismatch(fieldPath(path, "name")) }
+            guard let field2 = __GesModelsae4351b20b848505.boolean(fields.get("alive") ?? .nothing) else { throw mismatch(fieldPath(path, "alive")) }
+            guard let field3 = __GesModelsae4351b20b848505.percentage(fields.get("health") ?? .nothing) else { throw mismatch(fieldPath(path, "health")) }
+            guard let field4 = __GesModelsae4351b20b848505.number(fields.get("speed") ?? .nothing, .none) else { throw mismatch(fieldPath(path, "speed")) }
+            guard let field5 = __GesModelsae4351b20b848505.number(fields.get("heading") ?? .nothing, .degree) else { throw mismatch(fieldPath(path, "heading")) }
+            guard let field6 = __GesModelsae4351b20b848505.tag(fields.get("mood") ?? .nothing).flatMap(BotView.MoodTag.init(rawValue:)) else { throw mismatch(fieldPath(path, "mood")) }
+            guard let field7 = __GesModelsae4351b20b848505.tag(fields.get("team") ?? .nothing) else { throw mismatch(fieldPath(path, "team")) }
+            guard let field8 = GesPoint(fields.get("position") ?? .nothing, unit: .meter) else { throw mismatch(fieldPath(path, "position")) }
+            guard let field9 = GesVector(fields.get("velocity") ?? .nothing, unit: .meter) else { throw mismatch(fieldPath(path, "velocity")) }
+            let field10 = try readWorld_Body(fields.get("body") ?? .nothing, fieldPath(path, "body"))
+            let field11 = try readOptional(fields.get("radar") ?? .nothing, fieldPath(path, "radar")) { (x0: GesValue, p0: String) throws(GesWireError) in try readRadarView(x0, p0) }
+            guard let field12 = __GesModelsae4351b20b848505.optional(fields.get("facing") ?? .nothing, { __GesModelValuesae4351b20b848505.decodeBotViewFacingAlternative($0) }) else { throw mismatch(fieldPath(path, "facing")) }
+            guard let field13 = __GesModelsae4351b20b848505.optional(fields.get("note") ?? .nothing, { __GesModelsae4351b20b848505.text($0) }) else { throw mismatch(fieldPath(path, "note")) }
+            let field14 = try readList(fields.get("marks") ?? .nothing, fieldPath(path, "marks")) { (x0: GesValue, p0: String) throws(GesWireError) in try require(GesPoint(x0, unit: .meter), p0) }
+            let field15 = try readList(fields.get("units") ?? .nothing, fieldPath(path, "units")) { (x0: GesValue, p0: String) throws(GesWireError) in try require(__GesModelValuesae4351b20b848505.decodeBotViewUnitsItemAlternative(x0), p0) }
+            let field16 = try readList(fields.get("grid") ?? .nothing, fieldPath(path, "grid")) { (x0: GesValue, p0: String) throws(GesWireError) in try readList(x0, p0) { (x1: GesValue, p1: String) throws(GesWireError) in try require(__GesModelsae4351b20b848505.integer(x1, .none), p1) } }
+            guard let field17 = __GesModelsae4351b20b848505.dice(fields.get("rolls") ?? .nothing) else { throw mismatch(fieldPath(path, "rolls")) }
+            guard let field18 = __GesModelsae4351b20b848505.bytes(fields.get("seal") ?? .nothing) else { throw mismatch(fieldPath(path, "seal")) }
+            let field19 = try readList(fields.get("chunks") ?? .nothing, fieldPath(path, "chunks")) { (x0: GesValue, p0: String) throws(GesWireError) in try require(__GesModelsae4351b20b848505.bytes(x0), p0) }
+            guard let field20 = __GesModelValuesae4351b20b848505.decodeBotViewStatusFlags(fields.get("status") ?? .nothing) else { throw mismatch(fieldPath(path, "status")) }
+            let field21 = try readList(fields.get("ranks") ?? .nothing, fieldPath(path, "ranks")) { (x0: GesValue, p0: String) throws(GesWireError) in try require(__GesModelValuesae4351b20b848505.decodeBotViewRanksItemFlags(x0), p0) }
+            let field22 = try readList(fields.get("hints") ?? .nothing, fieldPath(path, "hints")) { (x0: GesValue, p0: String) throws(GesWireError) in try require(__GesModelsae4351b20b848505.tag(x0).flatMap(BotView.HintsItemTag.init(rawValue:)), p0) }
+            return BotView(bot: field0, name: field1, alive: field2, health: field3, speed: field4, heading: field5, mood: field6, team: field7, position: field8, velocity: field9, body: field10, radar: field11, facing: field12, note: field13, marks: field14, units: field15, grid: field16, rolls: field17, seal: field18, chunks: field19, status: field20, ranks: field21, hints: field22)
+        }
+
+        static func decodeBotView(_ value: GesValue) -> BotView? {
+            guard
+                let fields = recordFields(value, "BotView", BotViewFields),
+                let field0 = __GesModelsae4351b20b848505.integer(fields.get("bot") ?? .nothing, .none),
+                let field1 = __GesModelsae4351b20b848505.text(fields.get("name") ?? .nothing),
+                let field2 = __GesModelsae4351b20b848505.boolean(fields.get("alive") ?? .nothing),
+                let field3 = __GesModelsae4351b20b848505.percentage(fields.get("health") ?? .nothing),
+                let field4 = __GesModelsae4351b20b848505.number(fields.get("speed") ?? .nothing, .none),
+                let field5 = __GesModelsae4351b20b848505.number(fields.get("heading") ?? .nothing, .degree),
+                let field6 = __GesModelsae4351b20b848505.tag(fields.get("mood") ?? .nothing).flatMap(BotView.MoodTag.init(rawValue:)),
+                let field7 = __GesModelsae4351b20b848505.tag(fields.get("team") ?? .nothing),
+                let field8 = GesPoint(fields.get("position") ?? .nothing, unit: .meter),
+                let field9 = GesVector(fields.get("velocity") ?? .nothing, unit: .meter),
+                let field10 = __GesModelValuesae4351b20b848505.decodeWorld_Body(fields.get("body") ?? .nothing),
+                let field11 = __GesModelsae4351b20b848505.optional(fields.get("radar") ?? .nothing, { __GesModelValuesae4351b20b848505.decodeRadarView($0) }),
+                let field12 = __GesModelsae4351b20b848505.optional(fields.get("facing") ?? .nothing, { __GesModelValuesae4351b20b848505.decodeBotViewFacingAlternative($0) }),
+                let field13 = __GesModelsae4351b20b848505.optional(fields.get("note") ?? .nothing, { __GesModelsae4351b20b848505.text($0) }),
+                let field14 = __GesModelsae4351b20b848505.list(fields.get("marks") ?? .nothing, { GesPoint($0, unit: .meter) }),
+                let field15 = __GesModelsae4351b20b848505.list(fields.get("units") ?? .nothing, { __GesModelValuesae4351b20b848505.decodeBotViewUnitsItemAlternative($0) }),
+                let field16 = __GesModelsae4351b20b848505.list(fields.get("grid") ?? .nothing, { __GesModelsae4351b20b848505.list($0, { __GesModelsae4351b20b848505.integer($0, .none) }) }),
+                let field17 = __GesModelsae4351b20b848505.dice(fields.get("rolls") ?? .nothing),
+                let field18 = __GesModelsae4351b20b848505.bytes(fields.get("seal") ?? .nothing),
+                let field19 = __GesModelsae4351b20b848505.list(fields.get("chunks") ?? .nothing, { __GesModelsae4351b20b848505.bytes($0) }),
+                let field20 = __GesModelValuesae4351b20b848505.decodeBotViewStatusFlags(fields.get("status") ?? .nothing),
+                let field21 = __GesModelsae4351b20b848505.list(fields.get("ranks") ?? .nothing, { __GesModelValuesae4351b20b848505.decodeBotViewRanksItemFlags($0) }),
+                let field22 = __GesModelsae4351b20b848505.list(fields.get("hints") ?? .nothing, { __GesModelsae4351b20b848505.tag($0).flatMap(BotView.HintsItemTag.init(rawValue:)) })
+            else { return nil }
+            return BotView(bot: field0, name: field1, alive: field2, health: field3, speed: field4, heading: field5, mood: field6, team: field7, position: field8, velocity: field9, body: field10, radar: field11, facing: field12, note: field13, marks: field14, units: field15, grid: field16, rolls: field17, seal: field18, chunks: field19, status: field20, ranks: field21, hints: field22)
+        }
+
+        static func value(_ value: BotView.FacingAlternative) -> GesValue {
+            switch value {
+            case .quantity(let alternative): .float(alternative, unit: .degree)
+            case .tag(let alternative): __GesModelsae4351b20b848505.tag(alternative.rawValue)
+            }
+        }
+
+        static func decodeBotViewFacingAlternative(_ value: GesValue) -> BotView.FacingAlternative? {
+            if let alternative = __GesModelsae4351b20b848505.number(value, .degree) { return .quantity(alternative) }
+            if let alternative = __GesModelsae4351b20b848505.tag(value).flatMap(BotView.FacingTagTag.init(rawValue:)) { return .tag(alternative) }
+            return nil
+        }
+
+        static func value(_ value: BotView.UnitsItemAlternative) -> GesValue {
+            switch value {
+            case .text(let alternative): .text(alternative)
+            case .world_Body(let alternative): alternative.toValue()
+            }
+        }
+
+        static func decodeBotViewUnitsItemAlternative(_ value: GesValue) -> BotView.UnitsItemAlternative? {
+            if let alternative = __GesModelsae4351b20b848505.text(value) { return .text(alternative) }
+            if let alternative = __GesModelValuesae4351b20b848505.decodeWorld_Body(value) { return .world_Body(alternative) }
+            return nil
+        }
+
+        static let BotViewStatusFlagsNames = ["armed", "cloaked"]
+
+        static func value(_ value: BotView.StatusFlags) -> GesValue { __GesModelsae4351b20b848505.flags(BotViewStatusFlagsNames, value.rawValue) }
+
+        static func decodeBotViewStatusFlags(_ value: GesValue) -> BotView.StatusFlags? { __GesModelsae4351b20b848505.flags(value, BotViewStatusFlagsNames).map(BotView.StatusFlags.init(rawValue:)) }
+
+        static let BotViewRanksItemFlagsNames = ["gold", "silver"]
+
+        static func value(_ value: BotView.RanksItemFlags) -> GesValue { __GesModelsae4351b20b848505.flags(BotViewRanksItemFlagsNames, value.rawValue) }
+
+        static func decodeBotViewRanksItemFlags(_ value: GesValue) -> BotView.RanksItemFlags? { __GesModelsae4351b20b848505.flags(value, BotViewRanksItemFlagsNames).map(BotView.RanksItemFlags.init(rawValue:)) }
+
+        static let Panel_BadgeFields = ["label"]
+
+        static func value(_ record: Panel_Badge) -> GesValue {
+            .record(typeName: "Panel_Badge", keys: Panel_BadgeFields, values: [
+                .text(record.label),
+            ])
+        }
+
+        static func readPanel_Badge(_ value: GesValue, _ path: String) throws(GesWireError) -> Panel_Badge {
+            guard let fields = recordFields(value, "Panel_Badge", Panel_BadgeFields) else { throw mismatch(path) }
+            guard let field0 = __GesModelsae4351b20b848505.text(fields.get("label") ?? .nothing) else { throw mismatch(fieldPath(path, "label")) }
+            return Panel_Badge(label: field0)
+        }
+
+        static func decodePanel_Badge(_ value: GesValue) -> Panel_Badge? {
+            guard
+                let fields = recordFields(value, "Panel_Badge", Panel_BadgeFields),
+                let field0 = __GesModelsae4351b20b848505.text(fields.get("label") ?? .nothing)
+            else { return nil }
+            return Panel_Badge(label: field0)
+        }
+
+        static let Panel_EntryFields = ["name", "level"]
+
+        static func value(_ record: Panel_Entry) -> GesValue {
+            .record(typeName: "Panel_Entry", keys: Panel_EntryFields, values: [
+                .text(record.name),
+                .percentage(record.level),
+            ])
+        }
+
+        static func readPanel_Entry(_ value: GesValue, _ path: String) throws(GesWireError) -> Panel_Entry {
+            guard let fields = recordFields(value, "Panel_Entry", Panel_EntryFields) else { throw mismatch(path) }
+            guard let field0 = __GesModelsae4351b20b848505.text(fields.get("name") ?? .nothing) else { throw mismatch(fieldPath(path, "name")) }
+            guard let field1 = __GesModelsae4351b20b848505.percentage(fields.get("level") ?? .nothing) else { throw mismatch(fieldPath(path, "level")) }
+            return Panel_Entry(name: field0, level: field1)
+        }
+
+        static func decodePanel_Entry(_ value: GesValue) -> Panel_Entry? {
+            guard
+                let fields = recordFields(value, "Panel_Entry", Panel_EntryFields),
+                let field0 = __GesModelsae4351b20b848505.text(fields.get("name") ?? .nothing),
+                let field1 = __GesModelsae4351b20b848505.percentage(fields.get("level") ?? .nothing)
+            else { return nil }
+            return Panel_Entry(name: field0, level: field1)
+        }
+
+        static let Panel_ReportFields = ["title", "status", "load", "spot", "note", "entries", "reading", "alarms"]
+
+        static func value(_ record: Panel_Report) -> GesValue {
+            .record(typeName: "Panel_Report", keys: Panel_ReportFields, values: [
+                .text(record.title),
+                __GesModelsae4351b20b848505.tag(record.status.rawValue),
+                .float(record.load, unit: .watt),
+                record.spot.value(unit: .meter),
+                __GesModelsae4351b20b848505.present(record.note, { .text($0) }),
+                .list(record.entries.map { $0.toValue() }),
+                __GesModelsae4351b20b848505.present(record.reading, { __GesModelValuesae4351b20b848505.value($0) }),
+                __GesModelValuesae4351b20b848505.value(record.alarms),
+            ])
+        }
+
+        static func readPanel_Report(_ value: GesValue, _ path: String) throws(GesWireError) -> Panel_Report {
+            guard let fields = recordFields(value, "Panel_Report", Panel_ReportFields) else { throw mismatch(path) }
+            guard let field0 = __GesModelsae4351b20b848505.text(fields.get("title") ?? .nothing) else { throw mismatch(fieldPath(path, "title")) }
+            guard let field1 = __GesModelsae4351b20b848505.tag(fields.get("status") ?? .nothing).flatMap(Panel_Report.StatusTag.init(rawValue:)) else { throw mismatch(fieldPath(path, "status")) }
+            guard let field2 = __GesModelsae4351b20b848505.number(fields.get("load") ?? .nothing, .watt) else { throw mismatch(fieldPath(path, "load")) }
+            guard let field3 = GesPoint(fields.get("spot") ?? .nothing, unit: .meter) else { throw mismatch(fieldPath(path, "spot")) }
+            guard let field4 = __GesModelsae4351b20b848505.optional(fields.get("note") ?? .nothing, { __GesModelsae4351b20b848505.text($0) }) else { throw mismatch(fieldPath(path, "note")) }
+            let field5 = try readList(fields.get("entries") ?? .nothing, fieldPath(path, "entries")) { (x0: GesValue, p0: String) throws(GesWireError) in try readPanel_Entry(x0, p0) }
+            guard let field6 = __GesModelsae4351b20b848505.optional(fields.get("reading") ?? .nothing, { __GesModelValuesae4351b20b848505.decodePanel_ReportReadingAlternative($0) }) else { throw mismatch(fieldPath(path, "reading")) }
+            guard let field7 = __GesModelValuesae4351b20b848505.decodePanel_ReportAlarmsFlags(fields.get("alarms") ?? .nothing) else { throw mismatch(fieldPath(path, "alarms")) }
+            return Panel_Report(title: field0, status: field1, load: field2, spot: field3, note: field4, entries: field5, reading: field6, alarms: field7)
+        }
+
+        static func decodePanel_Report(_ value: GesValue) -> Panel_Report? {
+            guard
+                let fields = recordFields(value, "Panel_Report", Panel_ReportFields),
+                let field0 = __GesModelsae4351b20b848505.text(fields.get("title") ?? .nothing),
+                let field1 = __GesModelsae4351b20b848505.tag(fields.get("status") ?? .nothing).flatMap(Panel_Report.StatusTag.init(rawValue:)),
+                let field2 = __GesModelsae4351b20b848505.number(fields.get("load") ?? .nothing, .watt),
+                let field3 = GesPoint(fields.get("spot") ?? .nothing, unit: .meter),
+                let field4 = __GesModelsae4351b20b848505.optional(fields.get("note") ?? .nothing, { __GesModelsae4351b20b848505.text($0) }),
+                let field5 = __GesModelsae4351b20b848505.list(fields.get("entries") ?? .nothing, { __GesModelValuesae4351b20b848505.decodePanel_Entry($0) }),
+                let field6 = __GesModelsae4351b20b848505.optional(fields.get("reading") ?? .nothing, { __GesModelValuesae4351b20b848505.decodePanel_ReportReadingAlternative($0) }),
+                let field7 = __GesModelValuesae4351b20b848505.decodePanel_ReportAlarmsFlags(fields.get("alarms") ?? .nothing)
+            else { return nil }
+            return Panel_Report(title: field0, status: field1, load: field2, spot: field3, note: field4, entries: field5, reading: field6, alarms: field7)
+        }
+
+        static func value(_ value: Panel_Report.ReadingAlternative) -> GesValue {
+            switch value {
+            case .number(let alternative): .integer(Int64(alternative), unit: .none)
+            case .text(let alternative): .text(alternative)
+            }
+        }
+
+        static func decodePanel_ReportReadingAlternative(_ value: GesValue) -> Panel_Report.ReadingAlternative? {
+            if let alternative = __GesModelsae4351b20b848505.integer(value, .none) { return .number(alternative) }
+            if let alternative = __GesModelsae4351b20b848505.text(value) { return .text(alternative) }
+            return nil
+        }
+
+        static let Panel_ReportAlarmsFlagsNames = ["heat", "power"]
+
+        static func value(_ value: Panel_Report.AlarmsFlags) -> GesValue { __GesModelsae4351b20b848505.flags(Panel_ReportAlarmsFlagsNames, value.rawValue) }
+
+        static func decodePanel_ReportAlarmsFlags(_ value: GesValue) -> Panel_Report.AlarmsFlags? { __GesModelsae4351b20b848505.flags(value, Panel_ReportAlarmsFlagsNames).map(Panel_Report.AlarmsFlags.init(rawValue:)) }
+
+        static let RadarViewFields = ["range", "contacts"]
+
+        static func value(_ record: RadarView) -> GesValue {
+            .record(typeName: "RadarView", keys: RadarViewFields, values: [
+                .float(record.range, unit: .meter),
+                .list(record.contacts.map { .integer(Int64($0), unit: .none) }),
+            ])
+        }
+
+        static func readRadarView(_ value: GesValue, _ path: String) throws(GesWireError) -> RadarView {
+            guard let fields = recordFields(value, "RadarView", RadarViewFields) else { throw mismatch(path) }
+            guard let field0 = __GesModelsae4351b20b848505.number(fields.get("range") ?? .nothing, .meter) else { throw mismatch(fieldPath(path, "range")) }
+            let field1 = try readList(fields.get("contacts") ?? .nothing, fieldPath(path, "contacts")) { (x0: GesValue, p0: String) throws(GesWireError) in try require(__GesModelsae4351b20b848505.integer(x0, .none), p0) }
+            return RadarView(range: field0, contacts: field1)
+        }
+
+        static func decodeRadarView(_ value: GesValue) -> RadarView? {
+            guard
+                let fields = recordFields(value, "RadarView", RadarViewFields),
+                let field0 = __GesModelsae4351b20b848505.number(fields.get("range") ?? .nothing, .meter),
+                let field1 = __GesModelsae4351b20b848505.list(fields.get("contacts") ?? .nothing, { __GesModelsae4351b20b848505.integer($0, .none) })
+            else { return nil }
+            return RadarView(range: field0, contacts: field1)
+        }
+
+        static let WorldViewFields = ["tick", "time", "arena", "bots", "badge"]
+
+        static func value(_ record: WorldView) -> GesValue {
+            .record(typeName: "WorldView", keys: WorldViewFields, values: [
+                .integer(Int64(record.tick), unit: .none),
+                .float(record.time, unit: .second),
+                record.arena.value(unit: .meter),
+                .list(record.bots.map { $0.toValue() }),
+                __GesModelsae4351b20b848505.present(record.badge, { $0.toValue() }),
+            ])
+        }
+
+        static func readWorldView(_ value: GesValue, _ path: String) throws(GesWireError) -> WorldView {
+            guard let fields = recordFields(value, "WorldView", WorldViewFields) else { throw mismatch(path) }
+            guard let field0 = __GesModelsae4351b20b848505.integer(fields.get("tick") ?? .nothing, .none) else { throw mismatch(fieldPath(path, "tick")) }
+            guard let field1 = __GesModelsae4351b20b848505.number(fields.get("time") ?? .nothing, .second) else { throw mismatch(fieldPath(path, "time")) }
+            guard let field2 = GesVector(fields.get("arena") ?? .nothing, unit: .meter) else { throw mismatch(fieldPath(path, "arena")) }
+            let field3 = try readList(fields.get("bots") ?? .nothing, fieldPath(path, "bots")) { (x0: GesValue, p0: String) throws(GesWireError) in try readBotView(x0, p0) }
+            let field4 = try readOptional(fields.get("badge") ?? .nothing, fieldPath(path, "badge")) { (x0: GesValue, p0: String) throws(GesWireError) in try readPanel_Badge(x0, p0) }
+            return WorldView(tick: field0, time: field1, arena: field2, bots: field3, badge: field4)
+        }
+
+        static func decodeWorldView(_ value: GesValue) -> WorldView? {
+            guard
+                let fields = recordFields(value, "WorldView", WorldViewFields),
+                let field0 = __GesModelsae4351b20b848505.integer(fields.get("tick") ?? .nothing, .none),
+                let field1 = __GesModelsae4351b20b848505.number(fields.get("time") ?? .nothing, .second),
+                let field2 = GesVector(fields.get("arena") ?? .nothing, unit: .meter),
+                let field3 = __GesModelsae4351b20b848505.list(fields.get("bots") ?? .nothing, { __GesModelValuesae4351b20b848505.decodeBotView($0) }),
+                let field4 = __GesModelsae4351b20b848505.optional(fields.get("badge") ?? .nothing, { __GesModelValuesae4351b20b848505.decodePanel_Badge($0) })
+            else { return nil }
+            return WorldView(tick: field0, time: field1, arena: field2, bots: field3, badge: field4)
+        }
+
+        static let World_BodyFields = ["mass", "hull"]
+
+        static func value(_ record: World_Body) -> GesValue {
+            .record(typeName: "World_Body", keys: World_BodyFields, values: [
+                .float(record.mass, unit: .kilogram),
+                __GesModelsae4351b20b848505.tag(record.hull.rawValue),
+            ])
+        }
+
+        static func readWorld_Body(_ value: GesValue, _ path: String) throws(GesWireError) -> World_Body {
+            guard let fields = recordFields(value, "World_Body", World_BodyFields) else { throw mismatch(path) }
+            guard let field0 = __GesModelsae4351b20b848505.number(fields.get("mass") ?? .nothing, .kilogram) else { throw mismatch(fieldPath(path, "mass")) }
+            guard let field1 = __GesModelsae4351b20b848505.tag(fields.get("hull") ?? .nothing).flatMap(World_Body.HullTag.init(rawValue:)) else { throw mismatch(fieldPath(path, "hull")) }
+            return World_Body(mass: field0, hull: field1)
+        }
+
+        static func decodeWorld_Body(_ value: GesValue) -> World_Body? {
+            guard
+                let fields = recordFields(value, "World_Body", World_BodyFields),
+                let field0 = __GesModelsae4351b20b848505.number(fields.get("mass") ?? .nothing, .kilogram),
+                let field1 = __GesModelsae4351b20b848505.tag(fields.get("hull") ?? .nothing).flatMap(World_Body.HullTag.init(rawValue:))
+            else { return nil }
+            return World_Body(mass: field0, hull: field1)
+        }
+
+        // The fields of a Record of the schema, or of a Map whose keys are all fields of it.
+        static func recordFields(_ value: GesValue, _ name: String, _ names: [String]) -> GesValueMap? {
+            guard let fields = value.asMap else { return nil }
+            if let type = value.customTypeName { return type == name ? fields : nil }
+            return __GesModelsae4351b20b848505.known(fields, names) ? fields : nil
+        }
+
+        static func fieldPath(_ path: String, _ field: String) -> String { path.isEmpty ? field : path + "." + field }
+
+        static func mismatch(_ path: String) -> GesWireError { GesWireError(code: GesWireError.typeMismatch, path: path) }
+
+        static func require<T>(_ value: T?, _ path: String) throws(GesWireError) -> T {
+            guard let value else { throw mismatch(path) }
+            return value
+        }
+
+        // The elements of a List, each read at the list's path with `[]`.
+        static func readList<T>(_ value: GesValue, _ path: String, _ element: (GesValue, String) throws(GesWireError) -> T) throws(GesWireError) -> [T] {
+            guard let items = value.listValue else { throw mismatch(path) }
+            let item = path + "[]"
+            var result: [T] = []
+            result.reserveCapacity(items.count)
+            for value in items { result.append(try element(value, item)) }
+            return result
+        }
+
+        static func readOptional<T>(_ value: GesValue, _ path: String, _ read: (GesValue, String) throws(GesWireError) -> T) throws(GesWireError) -> T? {
+            value.isNothing ? nil : try read(value, path)
+        }
+    }
+
+    /// The GES value conversions of the models of this file.
+    enum __GesModelsae4351b20b848505 {
+        static func known(_ fields: GesValueMap, _ names: [String]) -> Bool { (0..<fields.length).allSatisfy { names.contains(fields.key(at: $0)) } }
 
         static func present<T>(_ value: T?, _ encode: (T) -> GesValue) -> GesValue { value.map(encode) ?? .nothing }
 

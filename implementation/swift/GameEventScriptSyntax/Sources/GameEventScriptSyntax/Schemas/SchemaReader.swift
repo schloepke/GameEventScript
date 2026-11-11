@@ -314,13 +314,24 @@
         if !atWord("max") { return nil }
         _ = word()
         skipSpaces()
+        // Up to 12 decimal digits without a leading zero; a single `_` may separate two digits, as in number literals.
         let start = position
-        while position < bytes.count && GesNames.digit(bytes[position]) { position += 1 }
-        if start == position || position - start > 12 || (bytes[start] == 48 && position - start > 1) {
+        var value: Int64 = 0
+        var digits = 0
+        while position < bytes.count {
+            let byte = bytes[position]
+            if GesNames.digit(byte) {
+                value = value * 10 + Int64(byte - 48)
+                digits += 1
+            } else if byte != 95 || digits == 0 || position + 1 >= bytes.count || !GesNames.digit(bytes[position + 1]) {
+                break
+            }
+            position += 1
+            if digits > 12 { break }
+        }
+        if digits == 0 || digits > 12 || (bytes[start] == 48 && digits > 1) {
             throw Failure(offset: start, message: "Expected a whole number.")
         }
-        var value: Int64 = 0
-        for byte in bytes[start..<position] { value = value * 10 + Int64(byte - 48) }
         skipSpaces()
         return value
     }

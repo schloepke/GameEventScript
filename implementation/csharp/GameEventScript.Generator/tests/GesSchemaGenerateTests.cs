@@ -41,6 +41,8 @@ public sealed class GesSchemaGenerateTests
         Assert.AreEqual("generate.nameCollision", Code(() => Generate("schema :S as {\n  quantize: :Boolean\n}\n", "S", GesSchemaLanguage.Swift)));
         Assert.AreEqual("generate.nameCollision", Code(() => Generate("schema :S as {\n  state: :Tag(#a)\n  stateTag: :Boolean\n}\n", "S", GesSchemaLanguage.CSharp)));
         Assert.AreEqual("generate.nameCollision", Code(() => Generate("schema :S as {\n  heat: :Boolean optional\n  hasHeat: :Boolean\n}\n", "S", GesSchemaLanguage.Swift)));
+        Assert.AreEqual("generate.nameCollision", Code(() => Generate("schema :S as {\n  mode: :Flags(#rawValue, #other)\n}\n", "S", GesSchemaLanguage.Swift)));
+        StringAssert.Contains(Generate("schema :S as {\n  mode: :Flags(#rawValue, #other)\n}\n", "S", GesSchemaLanguage.CSharp), "RawValue = 1UL << 0,");
         StringAssert.Contains(Generate("schema :S as {\n  s: :Boolean\n}\n", "S", GesSchemaLanguage.Swift), "public var sValue: Bool = false");
     }
 

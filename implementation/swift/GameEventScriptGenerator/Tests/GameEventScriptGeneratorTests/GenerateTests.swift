@@ -44,6 +44,8 @@ final class GenerateTests: XCTestCase {
         XCTAssertEqual(code { try generate("schema :S as {\n  quantize: :Boolean\n}\n", "S", .swift) }, "generate.nameCollision")
         XCTAssertEqual(code { try generate("schema :S as {\n  state: :Tag(#a)\n  stateTag: :Boolean\n}\n", "S", .csharp) }, "generate.nameCollision")
         XCTAssertEqual(code { try generate("schema :S as {\n  heat: :Boolean optional\n  hasHeat: :Boolean\n}\n", "S", .swift) }, "generate.nameCollision")
+        XCTAssertEqual(code { try generate("schema :S as {\n  mode: :Flags(#rawValue, #other)\n}\n", "S", .swift) }, "generate.nameCollision")
+        XCTAssertTrue(try generate("schema :S as {\n  mode: :Flags(#rawValue, #other)\n}\n", "S", .csharp).contains("RawValue = 1UL << 0,"))
         XCTAssertTrue(try generate("schema :S as {\n  s: :Boolean\n}\n", "S", .swift).contains("public var sValue: Bool = false"))
     }
 

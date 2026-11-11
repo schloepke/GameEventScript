@@ -360,10 +360,24 @@ internal sealed class GesSchemaSourceReader
         if (!AtWord("max")) return null;
         ReadWord();
         SkipSpaces();
+        // Up to 12 decimal digits without a leading zero; a single `_` may separate two digits, as in number literals.
         var start = _position;
-        while (_position < _text.Length && _text[_position] is >= '0' and <= '9') _position++;
-        if (start == _position || _position - start > 12 || (_text[start] == '0' && _position - start > 1)) throw new SyntaxFailure(start, "Expected a whole number.");
-        var value = long.Parse(_text.AsSpan(start, _position - start), System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture);
+        var value = 0L;
+        var digits = 0;
+        while (_position < _text.Length)
+        {
+            var c = _text[_position];
+            if (c is >= '0' and <= '9')
+            {
+                value = value * 10 + (c - '0');
+                digits++;
+            }
+            else if (c != '_' || digits == 0 || _position + 1 >= _text.Length || _text[_position + 1] is not (>= '0' and <= '9')) break;
+            _position++;
+            if (digits > 12) break;
+        }
+
+        if (digits == 0 || digits > 12 || (_text[start] == '0' && digits > 1)) throw new SyntaxFailure(start, "Expected a whole number.");
         SkipSpaces();
         return value;
     }

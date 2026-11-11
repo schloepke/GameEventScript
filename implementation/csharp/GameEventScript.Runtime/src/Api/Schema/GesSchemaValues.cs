@@ -196,31 +196,23 @@ public static class GesSchemaValues
         }
     }
 
-    // A flag Map sets a member for true and leaves it unset for false or an absent key.
-    private static ulong FlagMask(in GesSchemaNode node, GesValue value)
+    // A flag Map sets a member for true and leaves it unset for false or an absent key. Returns the wire code that
+    // rejects the value, or null; a union alternative holds exactly the Maps that encoding accepts.
+    private static string? FlagMask(in GesSchemaNode node, GesValue value, out ulong mask)
     {
+        mask = 0;
         if (value.ValueKind != GesBytecodeTypeKind.Map || value.CustomTypeName is not null || value.MaterializedMap() is not { } map)
-            throw new GesWireException(GesWireException.TypeMismatch, node.Path);
-        var mask = 0UL;
+            return GesWireException.TypeMismatch;
         for (var entry = 0; entry < map.Length; entry++)
         {
             var member = Array.IndexOf(node.Tags!, map.KeyAt(entry));
-            if (member < 0) throw new GesWireException(GesWireException.UnknownTag, node.Path);
+            if (member < 0) return GesWireException.UnknownTag;
             var set = map.ValueAt(entry);
-            if (set.ValueKind != GesBytecodeTypeKind.Boolean) throw new GesWireException(GesWireException.TypeMismatch, node.Path);
+            if (set.ValueKind != GesBytecodeTypeKind.Boolean) return GesWireException.TypeMismatch;
             if (set.AsBoolean()) mask |= 1UL << member;
         }
 
-        return mask;
-    }
-
-    // Whether a Map names only members, each with a Boolean, so that a union alternative holds it.
-    private static bool HoldsFlags(in GesSchemaNode node, GesValue value)
-    {
-        if (value.ValueKind != GesBytecodeTypeKind.Map || value.CustomTypeName is not null || value.MaterializedMap() is not { } map) return false;
-        for (var entry = 0; entry < map.Length; entry++)
-            if (Array.IndexOf(node.Tags!, map.KeyAt(entry)) < 0 || map.ValueAt(entry).ValueKind != GesBytecodeTypeKind.Boolean) return false;
-        return true;
+        return null;
     }
 
     // The Map of the set members, each true.
@@ -269,7 +261,8 @@ public static class GesSchemaValues
                 writer.WriteTag(field, tag);
                 break;
             case GesSchemaNodeKind.Flags:
-                writer.WriteFlags(field, FlagMask(in node, value));
+                if (FlagMask(in node, value, out var mask) is { } rejected) throw new GesWireException(rejected, node.Path);
+                writer.WriteFlags(field, mask);
                 break;
             case GesSchemaNodeKind.Text when node.IsBytes:
                 if (value.ValueKind != GesBytecodeTypeKind.Bytes) throw new GesWireException(GesWireException.TypeMismatch, node.Path);
@@ -349,7 +342,7 @@ public static class GesSchemaValues
             case GesSchemaTypeKind.Tag: return value.ValueKind == GesBytecodeTypeKind.Tag;
             case GesSchemaTypeKind.Text: return value.ValueKind == GesBytecodeTypeKind.Text;
             case GesSchemaTypeKind.Bytes: return value.ValueKind == GesBytecodeTypeKind.Bytes;
-            case GesSchemaTypeKind.Flags: return HoldsFlags(in candidate, value);
+            case GesSchemaTypeKind.Flags: return FlagMask(in candidate, value, out _) is null;
             case GesSchemaTypeKind.List: return value.ValueKind == GesBytecodeTypeKind.List;
             case GesSchemaTypeKind.Dice: return value.ValueKind == GesBytecodeTypeKind.Dice;
             case GesSchemaTypeKind.Point: return value.ValueKind == GesBytecodeTypeKind.Point;

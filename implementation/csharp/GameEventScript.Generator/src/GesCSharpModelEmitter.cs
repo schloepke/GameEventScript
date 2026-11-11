@@ -46,17 +46,17 @@ internal static class GesCSharpModelEmitter
 
         if (options.Bindings)
         {
-            Bindings(code, layout, access, qualifier);
+            Bindings(code, layout, access, qualifier, support);
             code.Blank();
         }
 
         if (options.Values)
         {
-            Values(code, layout, values, qualifier);
+            Values(code, layout, values, qualifier, support);
             code.Blank();
         }
 
-        Support(code, support);
+        Support(code, support, options.Bindings || options.Values);
         if (space.Count > 0) code.Close();
         return code.ToString();
     }
@@ -376,10 +376,11 @@ internal static class GesCSharpModelEmitter
         foreach (var alternative in value.Alternatives) Declarations(code, alternative, support, qualifier);
     }
 
-    // Equality and hashing helpers of the file, named after its header so that two generated files can share a namespace.
-    private static void Support(GesSchemaPlanner.Code code, string name)
+    // Equality and hashing helpers of the file, named after its header so that two generated files can share a namespace, and
+    // the conversions that the script bindings and the plain values share.
+    private static void Support(GesSchemaPlanner.Code code, string name, bool conversions)
     {
-        code.Line("/// <summary>Value equality of lists and numbers for the models of this file.</summary>");
+        code.Line($"/// <summary>Value equality of lists and numbers{(conversions ? " and GES value conversions" : "")} for the models of this file.</summary>");
         code.Line($"internal static class {name}");
         code.Open("{");
         code.Line("/// <summary>Hashes a number so that 0 and -0, which compare equal, hash alike.</summary>");
@@ -425,6 +426,7 @@ internal static class GesCSharpModelEmitter
         code.Line("return result;");
         code.Close();
         code.Close();
+        if (conversions) Helpers(code);
         code.Close();
     }
 
@@ -438,10 +440,10 @@ internal static class GesCSharpModelEmitter
     // Converts a native value to a GES value; nullable values pattern-match a numbered variable.
     // A plain value holds nested records as Records rather than as the external values of the bindings. Pattern variables
     // start with `pattern`, so that statements in one scope keep them apart.
-    private static string Encode(GesModelPlanValue value, string owner, string expression, string qualifier, int depth = 0, bool nullable = true, bool plain = false, string pattern = "v")
+    private static string Encode(GesModelPlanValue value, string owner, string expression, string qualifier, string support, int depth = 0, bool nullable = true, bool plain = false, string pattern = "v")
     {
         if (nullable && value.Nullable)
-            return $"{expression} is {{ }} {pattern}{Depth(depth)} ? {Encode(value, owner, pattern + Depth(depth), qualifier, depth + 1, false, plain, pattern)} : GesValue.GesNothing()";
+            return $"{expression} is {{ }} {pattern}{Depth(depth)} ? {Encode(value, owner, pattern + Depth(depth), qualifier, support, depth + 1, false, plain, pattern)} : GesValue.GesNothing()";
         return value.Kind switch
         {
             GesModelKind.Boolean => $"GesValue.GesBoolean({expression})",
@@ -450,10 +452,10 @@ internal static class GesCSharpModelEmitter
             GesModelKind.Number => $"GesValue.GesFloat({expression}, {UnitName(value.Model.Unit)})",
             GesModelKind.Text => $"GesValue.GesText({expression})",
             GesModelKind.Bytes => $"GesValue.GesBytes({expression})",
-            GesModelKind.Tag when value.ClosedTag => $"Tag(Name({expression}))",
-            GesModelKind.Tag => $"Tag({expression})",
-            GesModelKind.List => $"List({expression}, x{Depth(depth)} => {Encode(value.Element!, owner, "x" + Depth(depth), qualifier, depth + 1, plain: plain, pattern: pattern)})",
-            GesModelKind.Dice => $"Dice({expression})",
+            GesModelKind.Tag when value.ClosedTag => $"{support}.Tag(Name({expression}))",
+            GesModelKind.Tag => $"{support}.Tag({expression})",
+            GesModelKind.List => $"{support}.List({expression}, x{Depth(depth)} => {Encode(value.Element!, owner, "x" + Depth(depth), qualifier, support, depth + 1, plain: plain, pattern: pattern)})",
+            GesModelKind.Dice => $"{support}.Dice({expression})",
             GesModelKind.Point or GesModelKind.Vector => $"{expression}.ToValue({UnitName(value.Model.Unit)})",
             GesModelKind.Schema => plain ? $"{expression}.ToValue()" : $"{expression}.ToGesValue()",
             _ => $"Value({expression})"
@@ -461,31 +463,48 @@ internal static class GesCSharpModelEmitter
     }
 
     // A condition that converts a GES value into the `out` target, false when it does not convert.
-    private static string Decode(GesModelPlanValue value, string owner, string expression, string target, string qualifier, int depth = 0, bool nullable = true)
+    private static string Decode(GesModelPlanValue value, string owner, string expression, string target, string qualifier, string support, int depth = 0, bool nullable = true)
     {
         if (nullable && value.Nullable)
         {
-            var inner = $"(in GesValue x{Depth(depth)}, out {Plain(value, qualifier, owner)} y{Depth(depth)}) => {Decode(value, owner, "x" + Depth(depth), "out y" + Depth(depth), qualifier, depth + 1, false)}";
-            return $"{(IsValueType(value) ? "OptionalValue" : "OptionalObject")}({expression}, {inner}, {target})";
+            var inner = $"(in GesValue x{Depth(depth)}, out {Plain(value, qualifier, owner)} y{Depth(depth)}) => {Decode(value, owner, "x" + Depth(depth), "out y" + Depth(depth), qualifier, support, depth + 1, false)}";
+            return $"{support}.{(IsValueType(value) ? "OptionalValue" : "OptionalObject")}({expression}, {inner}, {target})";
         }
 
         return value.Kind switch
         {
-            GesModelKind.Boolean => $"Boolean({expression}, {target})",
-            GesModelKind.Number when value.Model.Type == "Percentage" => $"Percentage({expression}, {target})",
-            GesModelKind.Number when value.Model.Integer => $"Integer({expression}, {UnitName(value.Model.Unit)}, {target})",
-            GesModelKind.Number => $"Number({expression}, {UnitName(value.Model.Unit)}, {target})",
-            GesModelKind.Text => $"Text({expression}, {target})",
-            GesModelKind.Bytes => $"Bytes({expression}, {target})",
+            GesModelKind.Boolean => $"{support}.Boolean({expression}, {target})",
+            GesModelKind.Number when value.Model.Type == "Percentage" => $"{support}.Percentage({expression}, {target})",
+            GesModelKind.Number when value.Model.Integer => $"{support}.Integer({expression}, {UnitName(value.Model.Unit)}, {target})",
+            GesModelKind.Number => $"{support}.Number({expression}, {UnitName(value.Model.Unit)}, {target})",
+            GesModelKind.Text => $"{support}.Text({expression}, {target})",
+            GesModelKind.Bytes => $"{support}.Bytes({expression}, {target})",
             GesModelKind.Tag when value.ClosedTag => $"Decode{owner}{value.Nested}({expression}, {target})",
-            GesModelKind.Tag => $"Tag({expression}, {target})",
-            GesModelKind.List => $"List({expression}, (in GesValue x{Depth(depth)}, out {Type(value.Element!, qualifier, owner)} y{Depth(depth)}) => {Decode(value.Element!, owner, "x" + Depth(depth), "out y" + Depth(depth), qualifier, depth + 1)}, {target})",
-            GesModelKind.Dice => $"Dice({expression}, {target})",
-            GesModelKind.Point => $"Point({expression}, {UnitName(value.Model.Unit)}, {target})",
-            GesModelKind.Vector => $"Vector({expression}, {UnitName(value.Model.Unit)}, {target})",
+            GesModelKind.Tag => $"{support}.Tag({expression}, {target})",
+            GesModelKind.List => $"{support}.List({expression}, (in GesValue x{Depth(depth)}, out {Type(value.Element!, qualifier, owner)} y{Depth(depth)}) => {Decode(value.Element!, owner, "x" + Depth(depth), "out y" + Depth(depth), qualifier, support, depth + 1)}, {target})",
+            GesModelKind.Dice => $"{support}.Dice({expression}, {target})",
+            GesModelKind.Point => $"{support}.Point({expression}, {UnitName(value.Model.Unit)}, {target})",
+            GesModelKind.Vector => $"{support}.Vector({expression}, {UnitName(value.Model.Unit)}, {target})",
             GesModelKind.Schema => $"Decode{value.Model.Schema}({expression}, {target})",
             _ => $"Decode{owner}{value.Nested}({expression}, {target})"
         };
+    }
+
+    // Whether reading a value descends into it, so that a failure inside reports its own path: a nested record or a list.
+    private static bool Descends(GesModelPlanValue value) => value.Kind is GesModelKind.Schema or GesModelKind.List;
+
+    // An expression that reads a value that descends, or throws wire.typeMismatch at the path of the part that does not convert:
+    // a nested record's field, or a list element with `[]`, as the value path names them.
+    private static string Read(GesModelPlanValue value, string owner, string expression, string path, string qualifier, string support, int depth = 0, bool nullable = true)
+    {
+        var x = "x" + Depth(depth);
+        var p = "p" + Depth(depth);
+        if (nullable && value.Nullable) return $"ReadOptional({expression}, {path}, (in GesValue {x}, string {p}) => {Read(value, owner, x, p, qualifier, support, depth + 1, false)})";
+        if (value.Kind == GesModelKind.Schema) return $"Read{value.Model.Schema}({expression}, {path})";
+        var element = Descends(value.Element!)
+            ? Read(value.Element!, owner, x, p, qualifier, support, depth + 1)
+            : $"{Decode(value.Element!, owner, x, "out var y" + Depth(depth), qualifier, support, depth + 1)} ? y{Depth(depth)} : throw Mismatch({p})";
+        return $"ReadList({expression}, {path}, (in GesValue {x}, string {p}) => {element})";
     }
 
     private static string Definition(string name, GesModelPlanValue value, string kind)
@@ -505,7 +524,7 @@ internal static class GesCSharpModelEmitter
 
     // The plain values of the models: a Record of each schema with its fields in declared order, as the value path decodes the
     // bytes of a record, so that wire records read them and give them back.
-    private static void Values(GesSchemaPlanner.Code code, GesModelLayout layout, string name, string qualifier)
+    private static void Values(GesSchemaPlanner.Code code, GesModelLayout layout, string name, string qualifier, string support)
     {
         code.Line("/// <summary>The plain GES values of the models of this file, as <see cref=\"GesSchemaValues\"/> reads and writes them.</summary>");
         code.Line($"internal static class {name}");
@@ -524,7 +543,7 @@ internal static class GesCSharpModelEmitter
             code.Line($"internal static GesValue Value({record} record)");
             code.Open("{");
             code.Line($"var values = new GesValue[{fields.Count.ToString(CultureInfo.InvariantCulture)}];");
-            for (var index = 0; index < fields.Count; index++) code.Line($"values[{Depth(index)}] = {Encode(fields[index].Value, type.Name, "record." + fields[index].Base, qualifier, plain: true, pattern: "value" + Depth(index) + "_")};");
+            for (var index = 0; index < fields.Count; index++) code.Line($"values[{Depth(index)}] = {Encode(fields[index].Value, type.Name, "record." + fields[index].Base, qualifier, support, plain: true, pattern: "value" + Depth(index) + "_")};");
             code.Line($"return GesValue.GesRecord({GesSchemaPlanner.Literal(type.Name, false)}, {names}, values);");
             code.Close();
             code.Blank();
@@ -534,7 +553,9 @@ internal static class GesCSharpModelEmitter
             for (var index = 0; index < fields.Count; index++)
             {
                 var field = fields[index];
-                code.Line($"if (!{Decode(field.Value, type.Name, $"Field(fields, {GesSchemaPlanner.Literal(field.Field.Name, false)})", "out var field" + Depth(index), qualifier)}) throw Mismatch(Path(path, {GesSchemaPlanner.Literal(field.Field.Name, false)}));");
+                var literal = GesSchemaPlanner.Literal(field.Field.Name, false);
+                if (Descends(field.Value)) code.Line($"var field{Depth(index)} = {Read(field.Value, type.Name, $"{support}.Field(fields, {literal})", $"Path(path, {literal})", qualifier, support)};");
+                else code.Line($"if (!{Decode(field.Value, type.Name, $"{support}.Field(fields, {literal})", "out var field" + Depth(index), qualifier, support)}) throw Mismatch(Path(path, {literal}));");
             }
 
             code.Line($"return new {record}({string.Join(", ", fields.ConvertAll(field => "field" + Depth(fields.IndexOf(field))))});");
@@ -546,7 +567,7 @@ internal static class GesCSharpModelEmitter
             code.Line($"var fields = RecordFields(value, {GesSchemaPlanner.Literal(type.Name, false)}, {names});");
             var conditions = new List<string> { "fields is null" };
             for (var index = 0; index < fields.Count; index++)
-                conditions.Add("!" + Decode(fields[index].Value, type.Name, $"Field(fields, {GesSchemaPlanner.Literal(fields[index].Field.Name, false)})", "out var field" + Depth(index), qualifier));
+                conditions.Add("!" + Decode(fields[index].Value, type.Name, $"{support}.Field(fields, {GesSchemaPlanner.Literal(fields[index].Field.Name, false)})", "out var field" + Depth(index), qualifier, support));
             for (var index = 0; index < conditions.Count; index++)
                 code.Line((index == 0 ? "if (" : "    || ") + conditions[index] + (index == conditions.Count - 1 ? ") return false;" : ""));
             code.Line($"result = new {record}({string.Join(", ", fields.ConvertAll(field => "field" + Depth(fields.IndexOf(field))))});");
@@ -554,7 +575,7 @@ internal static class GesCSharpModelEmitter
             code.Close();
             var conversions = new List<GesModelPlanValue>();
             foreach (var field in fields) Conversions(field.Value, conversions);
-            foreach (var conversion in conversions) Conversion(code, type.Name, qualifier, conversion, plain: true);
+            foreach (var conversion in conversions) Conversion(code, type.Name, qualifier, support, conversion, plain: true);
         }
 
         code.Blank();
@@ -564,18 +585,32 @@ internal static class GesCSharpModelEmitter
         code.Line("var fields = value.AsMap();");
         code.Line("if (fields is null) return null;");
         code.Line("if (value.CustomTypeName is { } type) return type == name ? fields : null;");
-        code.Line("return Known(fields, names) ? fields : null;");
+        code.Line($"return {support}.Known(fields, names) ? fields : null;");
         code.Close();
         code.Blank();
         code.Line("private static string Path(string path, string field) => path.Length == 0 ? field : path + \".\" + field;");
         code.Blank();
         code.Line("private static GesWireException Mismatch(string path) => new GesWireException(GesWireException.TypeMismatch, path);");
-        Helpers(code);
+        code.Blank();
+        code.Line("private delegate T Reader<T>(in GesValue value, string path);");
+        code.Blank();
+        code.Line("// The elements of a List, each read at the list's path with `[]`.");
+        code.Line("private static List<T> ReadList<T>(in GesValue value, string path, Reader<T> element)");
+        code.Open("{");
+        code.Line("if (value.ValueKind != GesBytecodeTypeKind.List) throw Mismatch(path);");
+        code.Line("var items = value.AsList();");
+        code.Line("var list = new List<T>(items.Length);");
+        code.Line("var item = path + \"[]\";");
+        code.Line("for (var index = 0; index < items.Length; index++) list.Add(element(items[index], item));");
+        code.Line("return list;");
+        code.Close();
+        code.Blank();
+        code.Line("private static T? ReadOptional<T>(in GesValue value, string path, Reader<T> read) where T : class => value.IsNothing ? null : read(value, path);");
         code.Close();
     }
 
     // The catalog and constructor registry of the models, with an external value and a constructor per type.
-    private static void Bindings(GesSchemaPlanner.Code code, GesModelLayout layout, string access, string qualifier)
+    private static void Bindings(GesSchemaPlanner.Code code, GesModelLayout layout, string access, string qualifier, string support)
     {
         var ordered = GesModelPlanner.DependencyOrder(layout);
         code.Line("/// <summary>");
@@ -660,8 +695,8 @@ internal static class GesCSharpModelEmitter
             code.Line("/// <inheritdoc />");
             code.Line("public GesValue? GetField(string fieldName) => fieldName switch");
             code.Open("{");
-            foreach (var field in fields) code.Line($"{GesSchemaPlanner.Literal(field.Field.Name, false)} => {Encode(field.Value, type.Name, "Record." + field.Base, qualifier)},");
-            code.Line("\"fields\" => Fields(Names, this),");
+            foreach (var field in fields) code.Line($"{GesSchemaPlanner.Literal(field.Field.Name, false)} => {Encode(field.Value, type.Name, "Record." + field.Base, qualifier, support)},");
+            code.Line($"\"fields\" => {support}.Fields(Names, this),");
             code.Line("_ => null");
             code.Close("};");
             code.Close();
@@ -676,9 +711,9 @@ internal static class GesCSharpModelEmitter
             code.Line("public void Invoke(GesExternalTypeConstructorCall call)");
             code.Open("{");
             code.Line("var fields = call.Arguments[0].AsMap();");
-            var conditions = new List<string> { "fields is null", $"!Known(fields, {type.Name}Value.Names)" };
+            var conditions = new List<string> { "fields is null", $"!{support}.Known(fields, {type.Name}Value.Names)" };
             foreach (var field in fields)
-                conditions.Add("!" + Decode(field.Value, type.Name, $"Field(fields, {GesSchemaPlanner.Literal(field.Field.Name, false)})", "out var " + Parameter(field.Base), qualifier));
+                conditions.Add("!" + Decode(field.Value, type.Name, $"{support}.Field(fields, {GesSchemaPlanner.Literal(field.Field.Name, false)})", "out var " + Parameter(field.Base), qualifier, support));
             for (var index = 0; index < conditions.Count; index++)
                 code.Line((index == 0 ? "if (" : "    || ") + conditions[index] + (index == conditions.Count - 1 ? ")" : ""));
             code.Open("{");
@@ -698,14 +733,13 @@ internal static class GesCSharpModelEmitter
             code.Close();
             var conversions = new List<GesModelPlanValue>();
             foreach (var field in fields) Conversions(field.Value, conversions);
-            foreach (var conversion in conversions) Conversion(code, type.Name, qualifier, conversion);
+            foreach (var conversion in conversions) Conversion(code, type.Name, qualifier, support, conversion);
         }
 
-        Helpers(code);
         code.Close();
     }
 
-    private static void Conversion(GesSchemaPlanner.Code code, string owner, string qualifier, GesModelPlanValue value, bool plain = false)
+    private static void Conversion(GesSchemaPlanner.Code code, string owner, string qualifier, string support, GesModelPlanValue value, bool plain = false)
     {
         var name = qualifier + owner + "." + value.Nested;
         code.Blank();
@@ -720,7 +754,7 @@ internal static class GesCSharpModelEmitter
             code.Line($"private static bool Decode{owner}{value.Nested}(in GesValue value, out {name} result)");
             code.Open("{");
             code.Line("result = default;");
-            code.Line("if (!Tag(value, out var text)) return false;");
+            code.Line($"if (!{support}.Tag(value, out var text)) return false;");
             code.Line("switch (text)");
             code.Open("{");
             foreach (var tag in value.Model.Tags) code.Line($"case {GesSchemaPlanner.Literal(tag, false)}: result = {name}.{GesSchemaPlanner.Pascal(tag)}; return true;");
@@ -735,11 +769,11 @@ internal static class GesCSharpModelEmitter
             var names = $"{owner}{value.Nested}Names";
             code.Line($"private static readonly string[] {names} = {{ {string.Join(", ", value.Model.Tags.ConvertAll(member => GesSchemaPlanner.Literal(member, false)))} }};");
             code.Blank();
-            code.Line($"private static GesValue Value({name} value) => Flags({names}, (ulong)value);");
+            code.Line($"private static GesValue Value({name} value) => {support}.Flags({names}, (ulong)value);");
             code.Blank();
             code.Line($"private static bool Decode{owner}{value.Nested}(in GesValue value, out {name} result)");
             code.Open("{");
-            code.Line($"var valid = Flags(value, {names}, out var mask);");
+            code.Line($"var valid = {support}.Flags(value, {names}, out var mask);");
             code.Line($"result = ({name})mask;");
             code.Line("return valid;");
             code.Close();
@@ -749,7 +783,7 @@ internal static class GesCSharpModelEmitter
         code.Line($"private static GesValue Value({name} value) => value switch");
         code.Open("{");
         foreach (var alternative in value.Alternatives)
-            code.Line($"{name}.{alternative.Label} alternative => {Encode(alternative, owner, "alternative.Value", qualifier, plain: plain)},");
+            code.Line($"{name}.{alternative.Label} alternative => {Encode(alternative, owner, "alternative.Value", qualifier, support, plain: plain)},");
         code.Line("_ => GesValue.GesNothing()");
         code.Close("};");
         code.Blank();
@@ -758,7 +792,7 @@ internal static class GesCSharpModelEmitter
         for (var index = 0; index < value.Alternatives.Count; index++)
         {
             var alternative = value.Alternatives[index];
-            code.Line($"if ({Decode(alternative, owner, "value", "out var alternative" + Depth(index), qualifier)})");
+            code.Line($"if ({Decode(alternative, owner, "value", "out var alternative" + Depth(index), qualifier, support)})");
             code.Open("{");
             code.Line($"result = new {name}.{alternative.Label}(alternative{Depth(index)});");
             code.Line("return true;");
@@ -774,25 +808,25 @@ internal static class GesCSharpModelEmitter
     private static void Helpers(GesSchemaPlanner.Code code)
     {
         code.Blank();
-        code.Line("private delegate bool Decoder<T>(in GesValue value, out T result);");
+        code.Line("internal delegate bool Decoder<T>(in GesValue value, out T result);");
         code.Blank();
-        code.Line("private static GesValue Field(GesValueMap fields, string name) => fields.Get(name) ?? GesValue.GesNothing();");
+        code.Line("internal static GesValue Field(GesValueMap fields, string name) => fields.Get(name) ?? GesValue.GesNothing();");
         code.Blank();
-        code.Line("private static bool Known(GesValueMap fields, string[] names)");
+        code.Line("internal static bool Known(GesValueMap fields, string[] names)");
         code.Open("{");
         code.Line("for (var index = 0; index < fields.Length; index++)");
         code.Line("    if (Array.IndexOf(names, fields.KeyAt(index)) < 0) return false;");
         code.Line("return true;");
         code.Close();
         code.Blank();
-        code.Line("private static GesValue Fields(string[] names, IGesExternalValue value)");
+        code.Line("internal static GesValue Fields(string[] names, IGesExternalValue value)");
         code.Open("{");
         code.Line("var values = new GesValue[names.Length];");
         code.Line("for (var index = 0; index < names.Length; index++) values[index] = value.GetField(names[index]) ?? GesValue.GesNothing();");
         code.Line("return GesValue.GesMap(names, values);");
         code.Close();
         code.Blank();
-        code.Line("private static GesValue Flags(string[] names, ulong mask)");
+        code.Line("internal static GesValue Flags(string[] names, ulong mask)");
         code.Open("{");
         code.Line("var keys = new List<string>();");
         code.Line("for (var index = 0; index < names.Length; index++)");
@@ -802,7 +836,7 @@ internal static class GesCSharpModelEmitter
         code.Line("return GesValue.GesMap(keys.ToArray(), values);");
         code.Close();
         code.Blank();
-        code.Line("private static bool Flags(in GesValue value, string[] names, out ulong result)");
+        code.Line("internal static bool Flags(in GesValue value, string[] names, out ulong result)");
         code.Open("{");
         code.Line("result = 0;");
         code.Line("if (value.ValueKind != GesBytecodeTypeKind.Map || value.CustomTypeName is not null || value.MaterializedMap() is not { } map) return false;");
@@ -816,7 +850,7 @@ internal static class GesCSharpModelEmitter
         code.Line("return true;");
         code.Close();
         code.Blank();
-        code.Line("private static GesValue Tag(string name)");
+        code.Line("internal static GesValue Tag(string name)");
         code.Open("{");
         code.Line("try");
         code.Open("{");
@@ -829,14 +863,14 @@ internal static class GesCSharpModelEmitter
         code.Close();
         foreach (var line in new[]
         {
-            "private static bool Tag(in GesValue value, out string result) => Read(value.ValueKind is GesBytecodeTypeKind.Tag or GesBytecodeTypeKind.Text, value.AsText(), out result);",
-            "private static bool Text(in GesValue value, out string result) => Read(value.ValueKind == GesBytecodeTypeKind.Text, value.AsText(), out result);",
-            "private static bool Bytes(in GesValue value, out byte[] result) => Read(value.ValueKind == GesBytecodeTypeKind.Bytes, value.AsBytes().ToArray(), out result);",
-            "private static bool Boolean(in GesValue value, out bool result) => Read(value.ValueKind == GesBytecodeTypeKind.Boolean, value.AsBoolean(), out result);",
-            "private static bool Percentage(in GesValue value, out double result) => Read(value.ValueKind == GesBytecodeTypeKind.Percentage, value.AsNumber(), out result);",
-            "private static bool Number(in GesValue value, GesQuantityUnit unit, out double result) => Read(value.ValueKind is GesBytecodeTypeKind.Integer or GesBytecodeTypeKind.Float && value.ValueUnit == unit, value.AsNumber(), out result);",
-            "private static bool Point(in GesValue value, GesQuantityUnit unit, out GesPoint result) => Read(GesPoint.FromValue(value, unit), out result);",
-            "private static bool Vector(in GesValue value, GesQuantityUnit unit, out GesVector result) => Read(GesVector.FromValue(value, unit), out result);",
+            "internal static bool Tag(in GesValue value, out string result) => Read(value.ValueKind is GesBytecodeTypeKind.Tag or GesBytecodeTypeKind.Text, value.AsText(), out result);",
+            "internal static bool Text(in GesValue value, out string result) => Read(value.ValueKind == GesBytecodeTypeKind.Text, value.AsText(), out result);",
+            "internal static bool Bytes(in GesValue value, out byte[] result) => Read(value.ValueKind == GesBytecodeTypeKind.Bytes, value.AsBytes().ToArray(), out result);",
+            "internal static bool Boolean(in GesValue value, out bool result) => Read(value.ValueKind == GesBytecodeTypeKind.Boolean, value.AsBoolean(), out result);",
+            "internal static bool Percentage(in GesValue value, out double result) => Read(value.ValueKind == GesBytecodeTypeKind.Percentage, value.AsNumber(), out result);",
+            "internal static bool Number(in GesValue value, GesQuantityUnit unit, out double result) => Read(value.ValueKind is GesBytecodeTypeKind.Integer or GesBytecodeTypeKind.Float && value.ValueUnit == unit, value.AsNumber(), out result);",
+            "internal static bool Point(in GesValue value, GesQuantityUnit unit, out GesPoint result) => Read(GesPoint.FromValue(value, unit), out result);",
+            "internal static bool Vector(in GesValue value, GesQuantityUnit unit, out GesVector result) => Read(GesVector.FromValue(value, unit), out result);",
         })
         {
             code.Blank();
@@ -844,7 +878,7 @@ internal static class GesCSharpModelEmitter
         }
 
         code.Blank();
-        code.Line("private static bool Integer(in GesValue value, GesQuantityUnit unit, out long result)");
+        code.Line("internal static bool Integer(in GesValue value, GesQuantityUnit unit, out long result)");
         code.Open("{");
         code.Line("result = 0;");
         code.Line("if (value.ValueUnit != unit) return false;");
@@ -854,19 +888,19 @@ internal static class GesCSharpModelEmitter
         code.Line("return true;");
         code.Close();
         code.Blank();
-        code.Line("private static bool Read<T>(bool valid, T value, out T result)");
+        code.Line("internal static bool Read<T>(bool valid, T value, out T result)");
         code.Open("{");
         code.Line("result = valid ? value : default!;");
         code.Line("return valid;");
         code.Close();
         code.Blank();
-        code.Line("private static bool Read<T>(T? value, out T result) where T : struct");
+        code.Line("internal static bool Read<T>(T? value, out T result) where T : struct");
         code.Open("{");
         code.Line("result = value.GetValueOrDefault();");
         code.Line("return value.HasValue;");
         code.Close();
         code.Blank();
-        code.Line("private static bool OptionalValue<T>(in GesValue value, Decoder<T> decode, out T? result) where T : struct");
+        code.Line("internal static bool OptionalValue<T>(in GesValue value, Decoder<T> decode, out T? result) where T : struct");
         code.Open("{");
         code.Line("result = null;");
         code.Line("if (value.IsNothing) return true;");
@@ -875,7 +909,7 @@ internal static class GesCSharpModelEmitter
         code.Line("return true;");
         code.Close();
         code.Blank();
-        code.Line("private static bool OptionalObject<T>(in GesValue value, Decoder<T> decode, out T? result) where T : class");
+        code.Line("internal static bool OptionalObject<T>(in GesValue value, Decoder<T> decode, out T? result) where T : class");
         code.Open("{");
         code.Line("result = null;");
         code.Line("if (value.IsNothing) return true;");
@@ -884,7 +918,7 @@ internal static class GesCSharpModelEmitter
         code.Line("return true;");
         code.Close();
         code.Blank();
-        code.Line("private static bool List<T>(in GesValue value, Decoder<T> element, out List<T> result)");
+        code.Line("internal static bool List<T>(in GesValue value, Decoder<T> element, out List<T> result)");
         code.Open("{");
         code.Line("result = null!;");
         code.Line("if (value.ValueKind != GesBytecodeTypeKind.List) return false;");
@@ -900,14 +934,14 @@ internal static class GesCSharpModelEmitter
         code.Line("return true;");
         code.Close();
         code.Blank();
-        code.Line("private static GesValue List<T>(List<T> list, Func<T, GesValue> element)");
+        code.Line("internal static GesValue List<T>(List<T> list, Func<T, GesValue> element)");
         code.Open("{");
         code.Line("var items = new GesValue[list.Count];");
         code.Line("for (var index = 0; index < items.Length; index++) items[index] = element(list[index]);");
         code.Line("return GesValue.GesList(items);");
         code.Close();
         code.Blank();
-        code.Line("private static bool Dice(in GesValue value, out List<int> result)");
+        code.Line("internal static bool Dice(in GesValue value, out List<int> result)");
         code.Open("{");
         code.Line("result = null!;");
         code.Line("if (value.ValueKind != GesBytecodeTypeKind.Dice) return false;");
@@ -915,7 +949,7 @@ internal static class GesCSharpModelEmitter
         code.Line("return true;");
         code.Close();
         code.Blank();
-        code.Line("private static GesValue Dice(List<int> rolls)");
+        code.Line("internal static GesValue Dice(List<int> rolls)");
         code.Open("{");
         code.Line("foreach (var roll in rolls)");
         code.Line("    if (roll <= 0) return GesValue.GesNothing();");

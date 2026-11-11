@@ -11,6 +11,7 @@ enum GesSwiftModelEmitter {
         let access = options.access == .public ? "public " : ""
         let space = try GesSchemaPlanner.namespace(options.namespace, GesSwiftEmitter.keywords)
         let values = "__GesModelValues" + GesSchemaPlanner.hash(GesModelPlanner.header(layout))
+        let support = "__GesModels" + GesSchemaPlanner.hash(GesModelPlanner.header(layout))
         var code = Code()
         code.raw(GesModelPlanner.header(layout))
         code.line("// swift-format-ignore-file")
@@ -25,8 +26,9 @@ enum GesSwiftModelEmitter {
             if index > 0 { code.blank() }
             try record(&code, type, access, bindings: options.bindings, values: options.values ? values : nil)
         }
-        if options.bindings { bindings(&code, layout, access) }
-        if options.values { valueConversions(&code, layout, values) }
+        if options.bindings { bindings(&code, layout, access, support) }
+        if options.values { valueConversions(&code, layout, values, support) }
+        if options.bindings || options.values { supportType(&code, support) }
         for _ in space { code.close() }
         return code.text
     }
@@ -133,8 +135,7 @@ enum GesSwiftModelEmitter {
             }
             code.close()
         } else if value.kind == .flags {
-            try GesSchemaPlanner.unique(value.nested, value.model.tags.map { ($0, "the member #" + $0) })
-            GesSwiftEmitter.flagsDeclaration(&code, value.nested, value.model.tags, access)
+            try GesSwiftEmitter.flagsDeclaration(&code, value.nested, value.model.tags, access)
         } else if value.kind == .union {
             try GesSchemaPlanner.unique(value.nested, value.alternatives.map { (GesSchemaPlanner.camel($0.label), "the alternative " + $0.label) })
             code.blank()
@@ -156,8 +157,9 @@ enum GesSwiftModelEmitter {
     private static func literal(_ text: String) -> String { GesSchemaPlanner.literal(text, swift: true) }
 
     // Converts a native value to a GES value; a plain value holds nested records as Records rather than as external values.
-    private static func encode(_ value: GesModelPlanValue, _ owner: String, _ expression: String, nullable: Bool = true, helper: String = "GesTypes", plain: Bool = false) -> String {
-        if nullable && value.nullable { return "\(helper).present(\(expression), { \(encode(value, owner, "$0", nullable: false, helper: helper, plain: plain)) })" }
+    // `helper` declares the conversions of the file's unions and Flags, `support` the conversions that both share.
+    private static func encode(_ value: GesModelPlanValue, _ owner: String, _ expression: String, _ helper: String, _ support: String, nullable: Bool = true, plain: Bool = false) -> String {
+        if nullable && value.nullable { return "\(support).present(\(expression), { \(encode(value, owner, "$0", helper, support, nullable: false, plain: plain)) })" }
         switch value.kind {
         case .boolean: return ".boolean(\(expression))"
         case .number where value.model.type == "Percentage": return ".percentage(\(expression))"
@@ -165,10 +167,10 @@ enum GesSwiftModelEmitter {
         case .number: return ".float(\(expression), unit: \(unit(value.model.unit)))"
         case .text: return ".text(\(expression))"
         case .bytes: return ".bytes(\(expression))"
-        case .tag where value.closedTag: return "\(helper).tag(\(expression).rawValue)"
-        case .tag: return "\(helper).tag(\(expression))"
-        case .list: return ".list(\(expression).map { \(encode(value.element!, owner, "$0", helper: helper, plain: plain)) })"
-        case .dice: return "\(helper).dice(\(expression))"
+        case .tag where value.closedTag: return "\(support).tag(\(expression).rawValue)"
+        case .tag: return "\(support).tag(\(expression))"
+        case .list: return ".list(\(expression).map { \(encode(value.element!, owner, "$0", helper, support, plain: plain)) })"
+        case .dice: return "\(support).dice(\(expression))"
         case .point, .vector: return "\(expression).value(unit: \(unit(value.model.unit)))"
         case .schema: return plain ? "\(expression).toValue()" : "\(expression).gesValue()"
         case .union, .nothing, .flags: return "\(helper).value(\(expression))"
@@ -176,24 +178,52 @@ enum GesSwiftModelEmitter {
     }
 
     // Converts a GES value to a native value, or nil when it does not convert.
-    private static func decode(_ value: GesModelPlanValue, _ owner: String, _ expression: String, nullable: Bool = true, helper: String = "GesTypes", plain: Bool = false) -> String {
-        if nullable && value.nullable { return "\(helper).optional(\(expression), { \(decode(value, owner, "$0", nullable: false, helper: helper, plain: plain)) })" }
+    private static func decode(_ value: GesModelPlanValue, _ owner: String, _ expression: String, _ helper: String, _ support: String, nullable: Bool = true, plain: Bool = false) -> String {
+        if nullable && value.nullable { return "\(support).optional(\(expression), { \(decode(value, owner, "$0", helper, support, nullable: false, plain: plain)) })" }
         switch value.kind {
-        case .boolean: return "\(helper).boolean(\(expression))"
-        case .number where value.model.type == "Percentage": return "\(helper).percentage(\(expression))"
-        case .number where value.model.integer: return "\(helper).integer(\(expression), \(unit(value.model.unit)))"
-        case .number: return "\(helper).number(\(expression), \(unit(value.model.unit)))"
-        case .text: return "\(helper).text(\(expression))"
-        case .bytes: return "\(helper).bytes(\(expression))"
-        case .tag where value.closedTag: return "\(helper).tag(\(expression)).flatMap(\(owner).\(value.nested).init(rawValue:))"
-        case .tag: return "\(helper).tag(\(expression))"
-        case .list: return "\(helper).list(\(expression), { \(decode(value.element!, owner, "$0", helper: helper, plain: plain)) })"
-        case .dice: return "\(helper).dice(\(expression))"
+        case .boolean: return "\(support).boolean(\(expression))"
+        case .number where value.model.type == "Percentage": return "\(support).percentage(\(expression))"
+        case .number where value.model.integer: return "\(support).integer(\(expression), \(unit(value.model.unit)))"
+        case .number: return "\(support).number(\(expression), \(unit(value.model.unit)))"
+        case .text: return "\(support).text(\(expression))"
+        case .bytes: return "\(support).bytes(\(expression))"
+        case .tag where value.closedTag: return "\(support).tag(\(expression)).flatMap(\(owner).\(value.nested).init(rawValue:))"
+        case .tag: return "\(support).tag(\(expression))"
+        case .list: return "\(support).list(\(expression), { \(decode(value.element!, owner, "$0", helper, support, plain: plain)) })"
+        case .dice: return "\(support).dice(\(expression))"
         case .point: return "GesPoint(\(expression), unit: \(unit(value.model.unit)))"
         case .vector: return "GesVector(\(expression), unit: \(unit(value.model.unit)))"
         case .schema: return plain ? "\(helper).decode\(value.model.schema)(\(expression))" : "\(value.model.schema)(gesValue: \(expression))"
         case .union, .nothing, .flags: return "\(helper).decode\(owner)\(value.nested)(\(expression))"
         }
+    }
+
+    // Whether reading a value descends into it, so that a failure inside reports its own path: a nested record or a list.
+    private static func descends(_ value: GesModelPlanValue) -> Bool { value.kind == .schema || value.kind == .list }
+
+    // An expression that reads a value that descends, or throws wire.typeMismatch at the path of the part that does not convert:
+    // a nested record's field, or a list element with `[]`, as the value path names them.
+    private static func read(
+        _ value: GesModelPlanValue,
+        _ owner: String,
+        _ expression: String,
+        _ path: String,
+        _ helper: String,
+        _ support: String,
+        _ depth: Int = 0,
+        nullable: Bool = true
+    ) -> String {
+        let x = "x\(depth)"
+        let p = "p\(depth)"
+        if nullable && value.nullable {
+            return "try readOptional(\(expression), \(path)) { (\(x): GesValue, \(p): String) throws(GesWireError) in \(read(value, owner, x, p, helper, support, depth + 1, nullable: false)) }"
+        }
+        if value.kind == .schema { return "try read\(value.model.schema)(\(expression), \(path))" }
+        let element =
+            descends(value.element!)
+            ? read(value.element!, owner, x, p, helper, support, depth + 1)
+            : "try require(\(decode(value.element!, owner, x, helper, support, plain: true)), \(p))"
+        return "try readList(\(expression), \(path)) { (\(x): GesValue, \(p): String) throws(GesWireError) in \(element) }"
     }
 
     private static func definition(_ name: String, _ value: GesModelPlanValue) -> String {
@@ -212,7 +242,7 @@ enum GesSwiftModelEmitter {
     }
 
     // The catalog and constructor registry of the models, with an external value and a constructor per type.
-    private static func bindings(_ code: inout Code, _ layout: GesModelLayout, _ access: String) {
+    private static func bindings(_ code: inout Code, _ layout: GesModelLayout, _ access: String, _ support: String) {
         let ordered = GesModelPlanner.dependencyOrder(layout)
         code.blank()
         code.line("/// The model types for scripts as external types: pass one instance to the compiler as its catalog and to the host as")
@@ -262,6 +292,7 @@ enum GesSwiftModelEmitter {
             code.line("    fields: [\(fields.map { definition($0.field.name, $0.value) }.joined(separator: ", "))\(fields.isEmpty ? "" : ", ")try! .init(name: \"fields\", kind: .map)],")
             code.line("    constructors: [try! .init(typeName: \(literal(type.name)), parameters: [try! .init(name: \"fields\", kind: .map)])]")
             code.line(")")
+            code.line("static let names = [\(names)]")
             code.line("let record: \(type.name)")
             code.blank()
             code.line("init(_ record: \(type.name)) { self.record = record }")
@@ -270,8 +301,8 @@ enum GesSwiftModelEmitter {
             code.blank()
             code.open("func field(_ name: String) throws -> GesValue? {")
             code.line("switch name {")
-            for field in fields { code.line("case \(literal(field.field.name)): \(encode(field.value, type.name, "record." + member(field.base)))") }
-            code.line("case \"fields\": .map(keys: [\(names)], values: [\(fields.map { "try field(\(literal($0.field.name)))!" }.joined(separator: ", "))])")
+            for field in fields { code.line("case \(literal(field.field.name)): \(encode(field.value, type.name, "record." + member(field.base), "GesTypes", support))") }
+            code.line("case \"fields\": .map(keys: Self.names, values: [\(fields.map { "try field(\(literal($0.field.name)))!" }.joined(separator: ", "))])")
             code.line("default: nil")
             code.line("}")
             code.close()
@@ -283,9 +314,9 @@ enum GesSwiftModelEmitter {
             code.blank()
             code.open("func invoke(_ call: GesExternalTypeConstructorCall) throws {")
             code.open("guard")
-            code.line("let fields = call.arguments[0].asMap, GesTypes.known(fields, [\(names)])\(fields.isEmpty ? "" : ",")")
+            code.line("let fields = call.arguments[0].asMap, \(support).known(fields, \(type.name)Value.names)\(fields.isEmpty ? "" : ",")")
             for (index, field) in fields.enumerated() {
-                code.line("let \(member(field.base)) = \(decode(field.value, type.name, "fields.get(\(literal(field.field.name))) ?? .nothing"))\(index == fields.count - 1 ? "" : ",")")
+                code.line("let \(member(field.base)) = \(decode(field.value, type.name, "fields.get(\(literal(field.field.name))) ?? .nothing", "GesTypes", support))\(index == fields.count - 1 ? "" : ",")")
             }
             code.dedent()
             code.open("else {")
@@ -295,14 +326,13 @@ enum GesSwiftModelEmitter {
             code.line("try call.setExternalValue(\(type.name)Value(\(type.name)(\(fields.map { "\(member($0.base)): \(member($0.base))" }.joined(separator: ", ")))))")
             code.close()
             code.close()
-            conversions(&code, type.name, fields, helper: "GesTypes", plain: false)
+            conversions(&code, type.name, fields, helper: "GesTypes", support: support, plain: false)
         }
-        helpers(&code)
         code.close()
     }
 
     // The conversions of the unions and Flags of a type, including those in lists and alternatives.
-    private static func conversions(_ code: inout Code, _ owner: String, _ fields: [GesModelPlanField], helper: String, plain: Bool) {
+    private static func conversions(_ code: inout Code, _ owner: String, _ fields: [GesModelPlanField], helper: String, support: String, plain: Bool) {
         var found: [GesModelPlanValue] = []
         for field in fields { unions(field.value, &found) }
         for union in found {
@@ -312,22 +342,22 @@ enum GesSwiftModelEmitter {
                 let names = "\(owner)\(union.nested)Names"
                 code.line("static let \(names) = [\(union.model.tags.map(literal).joined(separator: ", "))]")
                 code.blank()
-                code.line("static func value(_ value: \(name)) -> GesValue { flags(\(names), value.rawValue) }")
+                code.line("static func value(_ value: \(name)) -> GesValue { \(support).flags(\(names), value.rawValue) }")
                 code.blank()
-                code.line("static func decode\(owner)\(union.nested)(_ value: GesValue) -> \(name)? { flags(value, \(names)).map(\(name).init(rawValue:)) }")
+                code.line("static func decode\(owner)\(union.nested)(_ value: GesValue) -> \(name)? { \(support).flags(value, \(names)).map(\(name).init(rawValue:)) }")
                 continue
             }
             code.line("static func value(_ value: \(name)) -> GesValue {")
             code.line("    switch value {")
             for alternative in union.alternatives {
-                code.line("    case .\(member(alternative.label))(let alternative): \(encode(alternative, owner, "alternative", helper: helper, plain: plain))")
+                code.line("    case .\(member(alternative.label))(let alternative): \(encode(alternative, owner, "alternative", helper, support, plain: plain))")
             }
             code.line("    }")
             code.line("}")
             code.blank()
             code.open("static func decode\(owner)\(union.nested)(_ value: GesValue) -> \(name)? {")
             for alternative in union.alternatives {
-                code.line("if let alternative = \(decode(alternative, owner, "value", helper: helper, plain: plain)) { return .\(member(alternative.label))(alternative) }")
+                code.line("if let alternative = \(decode(alternative, owner, "value", helper, support, plain: plain)) { return .\(member(alternative.label))(alternative) }")
             }
             code.line("return nil")
             code.close()
@@ -336,7 +366,7 @@ enum GesSwiftModelEmitter {
 
     // The plain values of the models: a Record of each schema with its fields in declared order, as the value path decodes the
     // bytes of a record, so that wire records read them and give them back.
-    private static func valueConversions(_ code: inout Code, _ layout: GesModelLayout, _ name: String) {
+    private static func valueConversions(_ code: inout Code, _ layout: GesModelLayout, _ name: String, _ support: String) {
         code.blank()
         code.line("/// The plain GES values of the models of this file, as `GesSchemaValues` reads and writes them.")
         code.open("enum \(name) {")
@@ -344,12 +374,13 @@ enum GesSwiftModelEmitter {
             let fields = GesModelPlanner.fields(type)
             let names = type.name + "Fields"
             let typeLiteral = literal(type.name)
+            let arguments = fields.enumerated().map { "\(member($0.element.base)): field\($0.offset)" }.joined(separator: ", ")
             if typeIndex > 0 { code.blank() }
             code.line("static let \(names) = [\(fields.map { literal($0.field.name) }.joined(separator: ", "))]")
             code.blank()
             code.open("static func value(_ record: \(type.name)) -> GesValue {")
             code.line(".record(typeName: \(typeLiteral), keys: \(names), values: [")
-            for field in fields { code.line("    " + encode(field.value, type.name, "record." + member(field.base), helper: name, plain: true) + ",") }
+            for field in fields { code.line("    " + encode(field.value, type.name, "record." + member(field.base), name, support, plain: true) + ",") }
             code.line("])")
             code.close()
             code.blank()
@@ -361,33 +392,78 @@ enum GesSwiftModelEmitter {
                 code.line("guard let fields = recordFields(value, \(typeLiteral), \(names)) else { throw mismatch(path) }")
                 for (index, field) in fields.enumerated() {
                     let fieldLiteral = literal(field.field.name)
-                    code.line("guard let field\(index) = \(decode(field.value, type.name, "fields.get(\(fieldLiteral)) ?? .nothing", helper: name, plain: true)) else { throw mismatch(path, \(fieldLiteral)) }")
+                    let value = "fields.get(\(fieldLiteral)) ?? .nothing"
+                    if descends(field.value) {
+                        code.line("let field\(index) = \(read(field.value, type.name, value, "fieldPath(path, \(fieldLiteral))", name, support))")
+                    } else {
+                        code.line("guard let field\(index) = \(decode(field.value, type.name, value, name, support, plain: true)) else { throw mismatch(fieldPath(path, \(fieldLiteral))) }")
+                    }
                 }
-                code.line("return \(type.name)(\(fields.enumerated().map { "\(member($0.element.base)): field\($0.offset)" }.joined(separator: ", ")))")
+                code.line("return \(type.name)(\(arguments))")
             }
             code.close()
             code.blank()
-            code.line("static func decode\(type.name)(_ value: GesValue) -> \(type.name)? { try? read\(type.name)(value, \"\") }")
-            conversions(&code, type.name, fields, helper: name, plain: true)
+            code.open("static func decode\(type.name)(_ value: GesValue) -> \(type.name)? {")
+            if fields.isEmpty {
+                code.line("guard recordFields(value, \(typeLiteral), \(names)) != nil else { return nil }")
+            } else {
+                code.open("guard")
+                code.line("let fields = recordFields(value, \(typeLiteral), \(names)),")
+                for (index, field) in fields.enumerated() {
+                    code.line("let field\(index) = \(decode(field.value, type.name, "fields.get(\(literal(field.field.name))) ?? .nothing", name, support, plain: true))\(index == fields.count - 1 ? "" : ",")")
+                }
+                code.dedent()
+                code.line("else { return nil }")
+            }
+            code.line("return \(type.name)(\(arguments))")
+            code.close()
+            conversions(&code, type.name, fields, helper: name, support: support, plain: true)
         }
         code.blank()
         code.line("// The fields of a Record of the schema, or of a Map whose keys are all fields of it.")
         code.open("static func recordFields(_ value: GesValue, _ name: String, _ names: [String]) -> GesValueMap? {")
         code.line("guard let fields = value.asMap else { return nil }")
         code.line("if let type = value.customTypeName { return type == name ? fields : nil }")
-        code.line("return known(fields, Set(names)) ? fields : nil")
+        code.line("return \(support).known(fields, names) ? fields : nil")
         code.close()
         code.blank()
-        code.open("static func mismatch(_ path: String, _ field: String? = nil) -> GesWireError {")
-        code.line("GesWireError(code: GesWireError.typeMismatch, path: field.map { path.isEmpty ? $0 : path + \".\" + $0 } ?? path)")
+        code.line("static func fieldPath(_ path: String, _ field: String) -> String { path.isEmpty ? field : path + \".\" + field }")
+        code.blank()
+        code.line("static func mismatch(_ path: String) -> GesWireError { GesWireError(code: GesWireError.typeMismatch, path: path) }")
+        code.blank()
+        code.open("static func require<T>(_ value: T?, _ path: String) throws(GesWireError) -> T {")
+        code.line("guard let value else { throw mismatch(path) }")
+        code.line("return value")
         code.close()
+        code.blank()
+        code.line("// The elements of a List, each read at the list's path with `[]`.")
+        code.open("static func readList<T>(_ value: GesValue, _ path: String, _ element: (GesValue, String) throws(GesWireError) -> T) throws(GesWireError) -> [T] {")
+        code.line("guard let items = value.listValue else { throw mismatch(path) }")
+        code.line("let item = path + \"[]\"")
+        code.line("var result: [T] = []")
+        code.line("result.reserveCapacity(items.count)")
+        code.line("for value in items { result.append(try element(value, item)) }")
+        code.line("return result")
+        code.close()
+        code.blank()
+        code.open("static func readOptional<T>(_ value: GesValue, _ path: String, _ read: (GesValue, String) throws(GesWireError) -> T) throws(GesWireError) -> T? {")
+        code.line("value.isNothing ? nil : try read(value, path)")
+        code.close()
+        code.close()
+    }
+
+    // The conversions that the script bindings and the plain values share, named after the header so that two generated
+    // files can share a module.
+    private static func supportType(_ code: inout Code, _ name: String) {
+        code.blank()
+        code.line("/// The GES value conversions of the models of this file.")
+        code.open("enum \(name) {")
         helpers(&code)
         code.close()
     }
 
     private static func helpers(_ code: inout Code) {
-        code.blank()
-        code.line("static func known(_ fields: GesValueMap, _ names: Set<String>) -> Bool { (0..<fields.length).allSatisfy { names.contains(fields.key(at: $0)) } }")
+        code.line("static func known(_ fields: GesValueMap, _ names: [String]) -> Bool { (0..<fields.length).allSatisfy { names.contains(fields.key(at: $0)) } }")
         code.blank()
         code.line("static func present<T>(_ value: T?, _ encode: (T) -> GesValue) -> GesValue { value.map(encode) ?? .nothing }")
         code.blank()

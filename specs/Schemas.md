@@ -109,7 +109,7 @@ tagset      = "(" "#" TagName { "," "#" TagName } ")"
 [`:Quantity(unit)`](Language.md#records-and-custom-types) accepts. `literal` is one exact
 finite number of the [number grammar](Semantics/Numbers.md#text-and-number-conversion), with an
 optional `%` or unit suffix; a Text, a constant or a parameter is no literal. `integer` is
-at most 12 decimal digits without a leading zero.
+at most 12 decimal digits without a leading zero; a single `_` may separate two digits, as in `max 10_000`.
 
 **Layout.** Spaces and tabs may separate any two tokens, and a line comment may end any
 line. A source may start with a BOM. Fields and axes are separated by commas or line breaks,
@@ -1218,7 +1218,8 @@ namespace or nested Swift enums, and `--access internal` hides them from other m
 `--check`, `generate` compares its text with the file of `-o` and fails with `cli.outdated` when it
 differs or is missing. The text starts with a header that names the roots, parameters and hashes,
 without a date or version. A generation request that cannot be carried out fails with a
-`generate.*` code: `generate.nameCollision` when two generated names of one type are equal,
+`generate.*` code: `generate.nameCollision` when two generated names of one type are equal (in Swift a
+`:Flags` member `#rawValue` meets the mask of its `OptionSet`),
 `generate.invalidNamespace`, and `generate.usage` when the [Generator API](PublicApi.md#schema-code-generation)
 receives no root.
 
@@ -1256,12 +1257,14 @@ alternative's type. A list element type is named `<Field>Item`, so a closed Tag 
 - **Swift** stores `var` properties in declared order and has a memberwise `init` whose absent values default to `nil` and
   lists to `[]`. A schema with a `key` is `Identifiable`; the key is `id`, or a computed `id` returns it. `Codable` is part
   of the standard library, so models still import no Foundation; `GesPoint` and `GesVector` are `Codable` with `x`, `y`,
-  `z`.
+  `z`. With `--bindings` or `--values`, one internal helper enum named after the header holds the value conversions both
+  share.
 - **C#** has settable properties in declared order, a constructor with every field and a parameterless one that leaves every
   field at its zero value (empty text and lists, new records, the first alternative with its zero value). It uses C# 9 with
   neither `record`, `init` accessors nor Reflection, so Unity and IL2CPP need no shim. Classes keep a copy from sharing a
   list with its original; value equality compares lists element by element, and 0 and -0 hash alike. A file holds one
-  internal helper class named after its header.
+  internal helper class named after its header; it also holds the value conversions that `--bindings` and `--values`
+  share, so a file with both options holds them once.
 - Model and wire types of one schema are separate types in separate files; no conversion between both forms is generated,
   since a client's model rarely has the shape of its wire roots. A program converts in its own code.
 
@@ -1276,8 +1279,9 @@ for a record of its schema, so that wire records and models meet there; no code 
   a union as its alternative's value and an absent optional or `:Nothing` alternative as `nothing`.
 - Reading takes a Record of the schema's name, whose other fields are ignored, or a Map whose keys are all fields of it,
   and converts strictly as the [script bindings](#script-bindings) do. A field that does not convert fails with
-  `wire.typeMismatch` at its path, a value that is no such Record or Map at the empty path. A field that holds a nested
-  record, list or union reports itself.
+  `wire.typeMismatch` at its path, a value that is no such Record or Map at the empty path. A nested record reports the
+  path of its own field and a list element its list's path with `[]`, as the value path names them, such as
+  `entries[].level`; a union that holds none of its alternatives reports itself.
 - So a wire record reads a model with `read(value:)` (C# `ReadValue`), failing as a write would for a value out of range
   or a text too long, and a model reads a wire record's `toValue()` back. A model whose fields have no wire meaning, such
   as an unbounded text, still has a value; only the wire side checks constraints.

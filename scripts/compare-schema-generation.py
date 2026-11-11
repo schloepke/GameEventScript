@@ -119,8 +119,8 @@ GOLDENS = (
     (ROLES, ROLE_FILES, ["--model", "view", "--values"], "csharp", "GameEventScript.Tests.Generator.Roles.Model", CSHARP_GENERATED / "RolesModel.g.cs"),
     (ROLES, ROLE_FILES, ["--wire", "world", "--param", "worldWidth=2000m", "--values"], "swift", "RolesWire", SWIFT_GENERATED / "RolesWire.swift"),
     (ROLES, ROLE_FILES, ["--model", "view", "--values"], "swift", "RolesModel", SWIFT_GENERATED / "RolesModel.swift"),
-    (ROLES, ROLE_FILES, ["--model", "view", "--bindings"], "csharp", "GameEventScript.Tests.Generator.Roles.Bound", CSHARP_GENERATED / "RolesBound.g.cs"),
-    (ROLES, ROLE_FILES, ["--model", "view", "--bindings"], "swift", "RolesBound", SWIFT_GENERATED / "RolesBound.swift"),
+    (ROLES, ROLE_FILES, ["--model", "view", "--bindings", "--values"], "csharp", "GameEventScript.Tests.Generator.Roles.Bound", CSHARP_GENERATED / "RolesBound.g.cs"),
+    (ROLES, ROLE_FILES, ["--model", "view", "--bindings", "--values"], "swift", "RolesBound", SWIFT_GENERATED / "RolesBound.swift"),
 )
 # The layouts of the role fixture, which both CLIs must print identically.
 ROLE_LAYOUTS = (["--wire", "world", "--param", "worldWidth=2000m"], ["--wire", "panels"], ["--model", "view"])

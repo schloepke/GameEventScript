@@ -40,10 +40,10 @@ public sealed class GesRolesGeneratedCodeTests
         Assert.AreEqual(File.ReadAllText(Path.Combine(csharp, "RolesModel.g.cs")), GesSchemaGenerator.GenerateModels(set, model, Options(GesSchemaLanguage.CSharp, "GameEventScript.Tests.Generator.Roles.Model", true)));
         Assert.AreEqual(File.ReadAllText(Path.Combine(swift, "RolesWire.swift")), GesSchemaGenerator.Generate(set, wire, parameters, Options(GesSchemaLanguage.Swift, "RolesWire", true)));
         Assert.AreEqual(File.ReadAllText(Path.Combine(swift, "RolesModel.swift")), GesSchemaGenerator.GenerateModels(set, model, Options(GesSchemaLanguage.Swift, "RolesModel", true)));
-        var bound = Options(GesSchemaLanguage.CSharp, "GameEventScript.Tests.Generator.Roles.Bound");
+        var bound = Options(GesSchemaLanguage.CSharp, "GameEventScript.Tests.Generator.Roles.Bound", true);
         bound.Bindings = true;
         Assert.AreEqual(File.ReadAllText(Path.Combine(csharp, "RolesBound.g.cs")), GesSchemaGenerator.GenerateModels(set, model, bound));
-        bound = Options(GesSchemaLanguage.Swift, "RolesBound");
+        bound = Options(GesSchemaLanguage.Swift, "RolesBound", true);
         bound.Bindings = true;
         Assert.AreEqual(File.ReadAllText(Path.Combine(swift, "RolesBound.swift")), GesSchemaGenerator.GenerateModels(set, model, bound));
         Assert.AreEqual("generate.usage", Assert.ThrowsExactly<GesGeneratorException>(() => GesSchemaGenerator.Generate(set, wire, parameters, bound)).Code);
@@ -116,6 +116,36 @@ public sealed class GesRolesGeneratedCodeTests
         Assert.AreEqual("", Assert.ThrowsExactly<GesWireException>(() => Model.Panel_Report.FromValue(GesValue.GesRecord("Other", keys, values))).Path);
         var map = GesValue.GesMap(keys, keys.Select(key => fields.Get(key)!.Value).ToArray());
         Assert.AreEqual(Report(), Model.Panel_Report.FromValue(map), "A Map of only the fields reads too.");
+    }
+
+    [TestMethod]
+    public void ANestedValueThatDoesNotConvertNamesItsPathAsTheWireSideDoes()
+    {
+        var fields = Report().ToValue().AsMap()!;
+        var keys = Enumerable.Range(0, fields.Length).Select(fields.KeyAt).ToArray();
+        var entry = GesValue.GesRecord("Panel_Entry", ["name", "level"], [GesValue.GesText("left"), GesValue.GesFloat(0.25, GesQuantityUnit.UnitMeter)]);
+        foreach (var (entries, path) in new[]
+        {
+            (GesValue.GesList([entry]), "entries[].level"),
+            (GesValue.GesList([GesValue.GesText("left")]), "entries[]"),
+            (GesValue.GesText("left"), "entries"),
+        })
+        {
+            var value = GesValue.GesRecord("Panel_Report", keys, keys.Select(key => key == "entries" ? entries : fields.Get(key)!.Value).ToArray());
+            var failure = Assert.ThrowsExactly<GesWireException>(() => Model.Panel_Report.FromValue(value));
+            Assert.AreEqual(GesWireException.TypeMismatch, failure.Code);
+            Assert.AreEqual(path, failure.Path);
+            Assert.AreEqual(path, Assert.ThrowsExactly<GesWireException>(() => new Wire.Panel_Report().ReadValue(value)).Path);
+        }
+    }
+
+    [TestMethod]
+    public void BoundModelsAlsoConvertToPlainValues()
+    {
+        var value = Report().ToValue();
+        var bound = Bound.Panel_Report.FromValue(value);
+        Assert.AreEqual(value, bound.ToValue());
+        Assert.AreEqual(bound, Bound.Panel_Report.FromGesValue(bound.ToGesValue()));
     }
 
     [TestMethod]

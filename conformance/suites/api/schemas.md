@@ -284,6 +284,86 @@ schema:
 
 ---
 
+## Test: digit separators in a maximum
+
+A maximum may separate digits with `_`, as number literals do; the canonical form writes plain digits.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: canonical-max-separators
+schemaApi:
+  sources:
+    - "schema :Log as { lines: :List(:Text max 1_024) max 10_000 }\n"
+  root: "Log"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  canonical: "gess1\nschema Log\nfield lines List(Text max 1024) max 10000\n"
+  hash: "a1f97b9aa3b41bf8"
+```
+
+---
+
+## Test: a doubled separator in a maximum
+
+A separator stands only between two digits, so the maximum ends before it.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-max-double-separator
+schemaApi:
+  sources:
+    - "schema :S as { a: :Text max 4__234 }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.syntax"
+    line: 1
+    column: 30
+```
+
+---
+
+## Test: a leading zero before a separator
+
+A separator does not hide a leading zero.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-max-leading-zero-separator
+schemaApi:
+  sources:
+    - "schema :S as { a: :Text max 0_1 }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.syntax"
+    line: 1
+    column: 29
+```
+
+---
+
 ## Test: field order a is part of the hash
 
 Field order is the wire order.

@@ -37,14 +37,14 @@ enum GesCSharpModelEmitter {
             code.blank()
         }
         if options.bindings {
-            bindings(&code, layout, access, qualifier)
+            bindings(&code, layout, access, qualifier, support)
             code.blank()
         }
         if options.values {
-            valueConversions(&code, layout, values, qualifier)
+            valueConversions(&code, layout, values, qualifier, support)
             code.blank()
         }
-        supportType(&code, support)
+        supportType(&code, support, conversions: options.bindings || options.values)
         if !space.isEmpty { code.close() }
         return code.text
     }
@@ -339,9 +339,10 @@ enum GesCSharpModelEmitter {
         for alternative in value.alternatives { try declarations(&code, alternative, support, qualifier) }
     }
 
-    // Equality and hashing helpers of the file, named after its header so that two generated files can share a namespace.
-    private static func supportType(_ code: inout Code, _ name: String) {
-        code.line("/// <summary>Value equality of lists and numbers for the models of this file.</summary>")
+    // Equality and hashing helpers of the file, named after its header so that two generated files can share a namespace, and
+    // the conversions that the script bindings and the plain values share.
+    private static func supportType(_ code: inout Code, _ name: String, conversions: Bool) {
+        code.line("/// <summary>Value equality of lists and numbers\(conversions ? " and GES value conversions" : "") for the models of this file.</summary>")
         code.line("internal static class \(name)")
         code.open("{")
         code.line("/// <summary>Hashes a number so that 0 and -0, which compare equal, hash alike.</summary>")
@@ -387,6 +388,7 @@ enum GesCSharpModelEmitter {
         code.line("return result;")
         code.close()
         code.close()
+        if conversions { helpers(&code) }
         code.close()
     }
 
@@ -409,13 +411,14 @@ enum GesCSharpModelEmitter {
         _ owner: String,
         _ expression: String,
         _ qualifier: String,
+        _ support: String,
         _ depth: Int = 0,
         nullable: Bool = true,
         plain: Bool = false,
         pattern: String = "v"
     ) -> String {
         if nullable && value.nullable {
-            return "\(expression) is { } \(pattern)\(depth) ? \(encode(value, owner, "\(pattern)\(depth)", qualifier, depth + 1, nullable: false, plain: plain, pattern: pattern)) : GesValue.GesNothing()"
+            return "\(expression) is { } \(pattern)\(depth) ? \(encode(value, owner, "\(pattern)\(depth)", qualifier, support, depth + 1, nullable: false, plain: plain, pattern: pattern)) : GesValue.GesNothing()"
         }
         switch value.kind {
         case .boolean: return "GesValue.GesBoolean(\(expression))"
@@ -424,10 +427,10 @@ enum GesCSharpModelEmitter {
         case .number: return "GesValue.GesFloat(\(expression), \(unitName(value.model.unit)))"
         case .text: return "GesValue.GesText(\(expression))"
         case .bytes: return "GesValue.GesBytes(\(expression))"
-        case .tag where value.closedTag: return "Tag(Name(\(expression)))"
-        case .tag: return "Tag(\(expression))"
-        case .list: return "List(\(expression), x\(depth) => \(encode(value.element!, owner, "x\(depth)", qualifier, depth + 1, plain: plain, pattern: pattern)))"
-        case .dice: return "Dice(\(expression))"
+        case .tag where value.closedTag: return "\(support).Tag(Name(\(expression)))"
+        case .tag: return "\(support).Tag(\(expression))"
+        case .list: return "\(support).List(\(expression), x\(depth) => \(encode(value.element!, owner, "x\(depth)", qualifier, support, depth + 1, plain: plain, pattern: pattern)))"
+        case .dice: return "\(support).Dice(\(expression))"
         case .point, .vector: return "\(expression).ToValue(\(unitName(value.model.unit)))"
         case .schema: return plain ? "\(expression).ToValue()" : "\(expression).ToGesValue()"
         case .union, .nothing, .flags: return "Value(\(expression))"
@@ -435,29 +438,66 @@ enum GesCSharpModelEmitter {
     }
 
     // A condition that converts a GES value into the `out` target, false when it does not convert.
-    private static func decode(_ value: GesModelPlanValue, _ owner: String, _ expression: String, _ target: String, _ qualifier: String, _ depth: Int = 0, nullable: Bool = true) -> String {
+    private static func decode(
+        _ value: GesModelPlanValue,
+        _ owner: String,
+        _ expression: String,
+        _ target: String,
+        _ qualifier: String,
+        _ support: String,
+        _ depth: Int = 0,
+        nullable: Bool = true
+    ) -> String {
         if nullable && value.nullable {
-            let inner = "(in GesValue x\(depth), out \(plain(value, qualifier, owner)) y\(depth)) => \(decode(value, owner, "x\(depth)", "out y\(depth)", qualifier, depth + 1, nullable: false))"
-            return "\(isValueType(value) ? "OptionalValue" : "OptionalObject")(\(expression), \(inner), \(target))"
+            let inner = "(in GesValue x\(depth), out \(plain(value, qualifier, owner)) y\(depth)) => \(decode(value, owner, "x\(depth)", "out y\(depth)", qualifier, support, depth + 1, nullable: false))"
+            return "\(support).\(isValueType(value) ? "OptionalValue" : "OptionalObject")(\(expression), \(inner), \(target))"
         }
         switch value.kind {
-        case .boolean: return "Boolean(\(expression), \(target))"
-        case .number where value.model.type == "Percentage": return "Percentage(\(expression), \(target))"
-        case .number where value.model.integer: return "Integer(\(expression), \(unitName(value.model.unit)), \(target))"
-        case .number: return "Number(\(expression), \(unitName(value.model.unit)), \(target))"
-        case .text: return "Text(\(expression), \(target))"
-        case .bytes: return "Bytes(\(expression), \(target))"
+        case .boolean: return "\(support).Boolean(\(expression), \(target))"
+        case .number where value.model.type == "Percentage": return "\(support).Percentage(\(expression), \(target))"
+        case .number where value.model.integer: return "\(support).Integer(\(expression), \(unitName(value.model.unit)), \(target))"
+        case .number: return "\(support).Number(\(expression), \(unitName(value.model.unit)), \(target))"
+        case .text: return "\(support).Text(\(expression), \(target))"
+        case .bytes: return "\(support).Bytes(\(expression), \(target))"
         case .tag where value.closedTag: return "Decode\(owner)\(value.nested)(\(expression), \(target))"
-        case .tag: return "Tag(\(expression), \(target))"
+        case .tag: return "\(support).Tag(\(expression), \(target))"
         case .list:
             let element = value.element!
-            return "List(\(expression), (in GesValue x\(depth), out \(type(element, qualifier, owner)) y\(depth)) => \(decode(element, owner, "x\(depth)", "out y\(depth)", qualifier, depth + 1)), \(target))"
-        case .dice: return "Dice(\(expression), \(target))"
-        case .point: return "Point(\(expression), \(unitName(value.model.unit)), \(target))"
-        case .vector: return "Vector(\(expression), \(unitName(value.model.unit)), \(target))"
+            return "\(support).List(\(expression), (in GesValue x\(depth), out \(type(element, qualifier, owner)) y\(depth)) => \(decode(element, owner, "x\(depth)", "out y\(depth)", qualifier, support, depth + 1)), \(target))"
+        case .dice: return "\(support).Dice(\(expression), \(target))"
+        case .point: return "\(support).Point(\(expression), \(unitName(value.model.unit)), \(target))"
+        case .vector: return "\(support).Vector(\(expression), \(unitName(value.model.unit)), \(target))"
         case .schema: return "Decode\(value.model.schema)(\(expression), \(target))"
         case .union, .nothing, .flags: return "Decode\(owner)\(value.nested)(\(expression), \(target))"
         }
+    }
+
+    // Whether reading a value descends into it, so that a failure inside reports its own path: a nested record or a list.
+    private static func descends(_ value: GesModelPlanValue) -> Bool { value.kind == .schema || value.kind == .list }
+
+    // An expression that reads a value that descends, or throws wire.typeMismatch at the path of the part that does not convert:
+    // a nested record's field, or a list element with `[]`, as the value path names them.
+    private static func read(
+        _ value: GesModelPlanValue,
+        _ owner: String,
+        _ expression: String,
+        _ path: String,
+        _ qualifier: String,
+        _ support: String,
+        _ depth: Int = 0,
+        nullable: Bool = true
+    ) -> String {
+        let x = "x\(depth)"
+        let p = "p\(depth)"
+        if nullable && value.nullable {
+            return "ReadOptional(\(expression), \(path), (in GesValue \(x), string \(p)) => \(read(value, owner, x, p, qualifier, support, depth + 1, nullable: false)))"
+        }
+        if value.kind == .schema { return "Read\(value.model.schema)(\(expression), \(path))" }
+        let element =
+            descends(value.element!)
+            ? read(value.element!, owner, x, p, qualifier, support, depth + 1)
+            : "\(decode(value.element!, owner, x, "out var y\(depth)", qualifier, support, depth + 1)) ? y\(depth) : throw Mismatch(\(p))"
+        return "ReadList(\(expression), \(path), (in GesValue \(x), string \(p)) => \(element))"
     }
 
     private static func definition(_ name: String, _ value: GesModelPlanValue, _ kind: String) -> String {
@@ -476,7 +516,7 @@ enum GesCSharpModelEmitter {
 
     // The plain values of the models: a Record of each schema with its fields in declared order, as the value path decodes the
     // bytes of a record, so that wire records read them and give them back.
-    private static func valueConversions(_ code: inout Code, _ layout: GesModelLayout, _ name: String, _ qualifier: String) {
+    private static func valueConversions(_ code: inout Code, _ layout: GesModelLayout, _ name: String, _ qualifier: String, _ support: String) {
         code.line("/// <summary>The plain GES values of the models of this file, as <see cref=\"GesSchemaValues\"/> reads and writes them.</summary>")
         code.line("internal static class \(name)")
         code.open("{")
@@ -492,7 +532,7 @@ enum GesCSharpModelEmitter {
             code.line("internal static GesValue Value(\(record) record)")
             code.open("{")
             code.line("var values = new GesValue[\(fields.count)];")
-            for (index, field) in fields.enumerated() { code.line("values[\(index)] = \(encode(field.value, type.name, "record." + field.base, qualifier, plain: true, pattern: "value\(index)_"));") }
+            for (index, field) in fields.enumerated() { code.line("values[\(index)] = \(encode(field.value, type.name, "record." + field.base, qualifier, support, plain: true, pattern: "value\(index)_"));") }
             code.line("return GesValue.GesRecord(\(typeLiteral), \(names), values);")
             code.close()
             code.blank()
@@ -501,7 +541,11 @@ enum GesCSharpModelEmitter {
             code.line("var fields = RecordFields(value, \(typeLiteral), \(names)) ?? throw Mismatch(path);")
             for (index, field) in fields.enumerated() {
                 let fieldLiteral = literal(field.field.name)
-                code.line("if (!\(decode(field.value, type.name, "Field(fields, \(fieldLiteral))", "out var field\(index)", qualifier))) throw Mismatch(Path(path, \(fieldLiteral)));")
+                if descends(field.value) {
+                    code.line("var field\(index) = \(read(field.value, type.name, "\(support).Field(fields, \(fieldLiteral))", "Path(path, \(fieldLiteral))", qualifier, support));")
+                } else {
+                    code.line("if (!\(decode(field.value, type.name, "\(support).Field(fields, \(fieldLiteral))", "out var field\(index)", qualifier, support))) throw Mismatch(Path(path, \(fieldLiteral)));")
+                }
             }
             code.line("return new \(record)(\(fields.indices.map { "field\($0)" }.joined(separator: ", ")));")
             code.close()
@@ -512,7 +556,7 @@ enum GesCSharpModelEmitter {
             code.line("var fields = RecordFields(value, \(typeLiteral), \(names));")
             var conditions = ["fields is null"]
             for (index, field) in fields.enumerated() {
-                conditions.append("!" + decode(field.value, type.name, "Field(fields, \(literal(field.field.name)))", "out var field\(index)", qualifier))
+                conditions.append("!" + decode(field.value, type.name, "\(support).Field(fields, \(literal(field.field.name)))", "out var field\(index)", qualifier, support))
             }
             for (index, condition) in conditions.enumerated() {
                 code.line((index == 0 ? "if (" : "    || ") + condition + (index == conditions.count - 1 ? ") return false;" : ""))
@@ -522,7 +566,7 @@ enum GesCSharpModelEmitter {
             code.close()
             var found: [GesModelPlanValue] = []
             for field in fields { conversions(field.value, &found) }
-            for conversion in found { self.conversion(&code, type.name, qualifier, conversion, plain: true) }
+            for conversion in found { self.conversion(&code, type.name, qualifier, support, conversion, plain: true) }
         }
         code.blank()
         code.line("// The fields of a Record of the schema, or of a Map whose keys are all fields of it.")
@@ -531,18 +575,32 @@ enum GesCSharpModelEmitter {
         code.line("var fields = value.AsMap();")
         code.line("if (fields is null) return null;")
         code.line("if (value.CustomTypeName is { } type) return type == name ? fields : null;")
-        code.line("return Known(fields, names) ? fields : null;")
+        code.line("return \(support).Known(fields, names) ? fields : null;")
         code.close()
         code.blank()
         code.line("private static string Path(string path, string field) => path.Length == 0 ? field : path + \".\" + field;")
         code.blank()
         code.line("private static GesWireException Mismatch(string path) => new GesWireException(GesWireException.TypeMismatch, path);")
-        helpers(&code)
+        code.blank()
+        code.line("private delegate T Reader<T>(in GesValue value, string path);")
+        code.blank()
+        code.line("// The elements of a List, each read at the list's path with `[]`.")
+        code.line("private static List<T> ReadList<T>(in GesValue value, string path, Reader<T> element)")
+        code.open("{")
+        code.line("if (value.ValueKind != GesBytecodeTypeKind.List) throw Mismatch(path);")
+        code.line("var items = value.AsList();")
+        code.line("var list = new List<T>(items.Length);")
+        code.line("var item = path + \"[]\";")
+        code.line("for (var index = 0; index < items.Length; index++) list.Add(element(items[index], item));")
+        code.line("return list;")
+        code.close()
+        code.blank()
+        code.line("private static T? ReadOptional<T>(in GesValue value, string path, Reader<T> read) where T : class => value.IsNothing ? null : read(value, path);")
         code.close()
     }
 
     // The catalog and constructor registry of the models, with an external value and a constructor per type.
-    private static func bindings(_ code: inout Code, _ layout: GesModelLayout, _ access: String, _ qualifier: String) {
+    private static func bindings(_ code: inout Code, _ layout: GesModelLayout, _ access: String, _ qualifier: String, _ support: String) {
         let ordered = GesModelPlanner.dependencyOrder(layout)
         code.line("/// <summary>")
         code.line("/// The model types for scripts as external types: pass one instance to the compiler as its catalog and to the host as its")
@@ -625,8 +683,8 @@ enum GesCSharpModelEmitter {
             code.line("/// <inheritdoc />")
             code.line("public GesValue? GetField(string fieldName) => fieldName switch")
             code.open("{")
-            for field in fields { code.line("\(literal(field.field.name)) => \(encode(field.value, type.name, "Record." + field.base, qualifier)),") }
-            code.line("\"fields\" => Fields(Names, this),")
+            for field in fields { code.line("\(literal(field.field.name)) => \(encode(field.value, type.name, "Record." + field.base, qualifier, support)),") }
+            code.line("\"fields\" => \(support).Fields(Names, this),")
             code.line("_ => null")
             code.close("};")
             code.close()
@@ -641,8 +699,10 @@ enum GesCSharpModelEmitter {
             code.line("public void Invoke(GesExternalTypeConstructorCall call)")
             code.open("{")
             code.line("var fields = call.Arguments[0].AsMap();")
-            var conditions = ["fields is null", "!Known(fields, \(type.name)Value.Names)"]
-            for field in fields { conditions.append("!" + decode(field.value, type.name, "Field(fields, \(literal(field.field.name)))", "out var " + parameter(field.base), qualifier)) }
+            var conditions = ["fields is null", "!\(support).Known(fields, \(type.name)Value.Names)"]
+            for field in fields {
+                conditions.append("!" + decode(field.value, type.name, "\(support).Field(fields, \(literal(field.field.name)))", "out var " + parameter(field.base), qualifier, support))
+            }
             for (index, condition) in conditions.enumerated() { code.line((index == 0 ? "if (" : "    || ") + condition + (index == conditions.count - 1 ? ")" : "")) }
             code.open("{")
             code.line("call.SetNothing();")
@@ -660,13 +720,12 @@ enum GesCSharpModelEmitter {
             code.close()
             var found: [GesModelPlanValue] = []
             for field in fields { conversions(field.value, &found) }
-            for conversion in found { self.conversion(&code, type.name, qualifier, conversion) }
+            for conversion in found { self.conversion(&code, type.name, qualifier, support, conversion) }
         }
-        helpers(&code)
         code.close()
     }
 
-    private static func conversion(_ code: inout Code, _ owner: String, _ qualifier: String, _ value: GesModelPlanValue, plain: Bool = false) {
+    private static func conversion(_ code: inout Code, _ owner: String, _ qualifier: String, _ support: String, _ value: GesModelPlanValue, plain: Bool = false) {
         let name = qualifier + owner + "." + value.nested
         code.blank()
         if value.closedTag {
@@ -679,7 +738,7 @@ enum GesCSharpModelEmitter {
             code.line("private static bool Decode\(owner)\(value.nested)(in GesValue value, out \(name) result)")
             code.open("{")
             code.line("result = default;")
-            code.line("if (!Tag(value, out var text)) return false;")
+            code.line("if (!\(support).Tag(value, out var text)) return false;")
             code.line("switch (text)")
             code.open("{")
             for tag in value.model.tags { code.line("case \(literal(tag)): result = \(name).\(GesSchemaPlanner.pascal(tag)); return true;") }
@@ -692,11 +751,11 @@ enum GesCSharpModelEmitter {
             let names = "\(owner)\(value.nested)Names"
             code.line("private static readonly string[] \(names) = { \(value.model.tags.map(literal).joined(separator: ", ")) };")
             code.blank()
-            code.line("private static GesValue Value(\(name) value) => Flags(\(names), (ulong)value);")
+            code.line("private static GesValue Value(\(name) value) => \(support).Flags(\(names), (ulong)value);")
             code.blank()
             code.line("private static bool Decode\(owner)\(value.nested)(in GesValue value, out \(name) result)")
             code.open("{")
-            code.line("var valid = Flags(value, \(names), out var mask);")
+            code.line("var valid = \(support).Flags(value, \(names), out var mask);")
             code.line("result = (\(name))mask;")
             code.line("return valid;")
             code.close()
@@ -704,14 +763,14 @@ enum GesCSharpModelEmitter {
         }
         code.line("private static GesValue Value(\(name) value) => value switch")
         code.open("{")
-        for alternative in value.alternatives { code.line("\(name).\(alternative.label) alternative => \(encode(alternative, owner, "alternative.Value", qualifier, plain: plain)),") }
+        for alternative in value.alternatives { code.line("\(name).\(alternative.label) alternative => \(encode(alternative, owner, "alternative.Value", qualifier, support, plain: plain)),") }
         code.line("_ => GesValue.GesNothing()")
         code.close("};")
         code.blank()
         code.line("private static bool Decode\(owner)\(value.nested)(in GesValue value, out \(name) result)")
         code.open("{")
         for (index, alternative) in value.alternatives.enumerated() {
-            code.line("if (\(decode(alternative, owner, "value", "out var alternative\(index)", qualifier)))")
+            code.line("if (\(decode(alternative, owner, "value", "out var alternative\(index)", qualifier, support)))")
             code.open("{")
             code.line("result = new \(name).\(alternative.label)(alternative\(index));")
             code.line("return true;")
@@ -725,25 +784,25 @@ enum GesCSharpModelEmitter {
 
     private static func helpers(_ code: inout Code) {
         code.blank()
-        code.line("private delegate bool Decoder<T>(in GesValue value, out T result);")
+        code.line("internal delegate bool Decoder<T>(in GesValue value, out T result);")
         code.blank()
-        code.line("private static GesValue Field(GesValueMap fields, string name) => fields.Get(name) ?? GesValue.GesNothing();")
+        code.line("internal static GesValue Field(GesValueMap fields, string name) => fields.Get(name) ?? GesValue.GesNothing();")
         code.blank()
-        code.line("private static bool Known(GesValueMap fields, string[] names)")
+        code.line("internal static bool Known(GesValueMap fields, string[] names)")
         code.open("{")
         code.line("for (var index = 0; index < fields.Length; index++)")
         code.line("    if (Array.IndexOf(names, fields.KeyAt(index)) < 0) return false;")
         code.line("return true;")
         code.close()
         code.blank()
-        code.line("private static GesValue Fields(string[] names, IGesExternalValue value)")
+        code.line("internal static GesValue Fields(string[] names, IGesExternalValue value)")
         code.open("{")
         code.line("var values = new GesValue[names.Length];")
         code.line("for (var index = 0; index < names.Length; index++) values[index] = value.GetField(names[index]) ?? GesValue.GesNothing();")
         code.line("return GesValue.GesMap(names, values);")
         code.close()
         code.blank()
-        code.line("private static GesValue Flags(string[] names, ulong mask)")
+        code.line("internal static GesValue Flags(string[] names, ulong mask)")
         code.open("{")
         code.line("var keys = new List<string>();")
         code.line("for (var index = 0; index < names.Length; index++)")
@@ -753,7 +812,7 @@ enum GesCSharpModelEmitter {
         code.line("return GesValue.GesMap(keys.ToArray(), values);")
         code.close()
         code.blank()
-        code.line("private static bool Flags(in GesValue value, string[] names, out ulong result)")
+        code.line("internal static bool Flags(in GesValue value, string[] names, out ulong result)")
         code.open("{")
         code.line("result = 0;")
         code.line("if (value.ValueKind != GesBytecodeTypeKind.Map || value.CustomTypeName is not null || value.MaterializedMap() is not { } map) return false;")
@@ -767,7 +826,7 @@ enum GesCSharpModelEmitter {
         code.line("return true;")
         code.close()
         code.blank()
-        code.line("private static GesValue Tag(string name)")
+        code.line("internal static GesValue Tag(string name)")
         code.open("{")
         code.line("try")
         code.open("{")
@@ -779,23 +838,26 @@ enum GesCSharpModelEmitter {
         code.close()
         code.close()
         code.blank()
-        code.line("private static bool Tag(in GesValue value, out string result) => Read(value.ValueKind is GesBytecodeTypeKind.Tag or GesBytecodeTypeKind.Text, value.AsText(), out result);")
+        code.line("internal static bool Tag(in GesValue value, out string result) => Read(value.ValueKind is GesBytecodeTypeKind.Tag or GesBytecodeTypeKind.Text, value.AsText(), out result);")
         code.blank()
-        code.line("private static bool Text(in GesValue value, out string result) => Read(value.ValueKind == GesBytecodeTypeKind.Text, value.AsText(), out result);")
+        code.line("internal static bool Text(in GesValue value, out string result) => Read(value.ValueKind == GesBytecodeTypeKind.Text, value.AsText(), out result);")
         code.blank()
-        code.line("private static bool Bytes(in GesValue value, out byte[] result) => Read(value.ValueKind == GesBytecodeTypeKind.Bytes, value.AsBytes().ToArray(), out result);")
+        code.line("internal static bool Bytes(in GesValue value, out byte[] result) => Read(value.ValueKind == GesBytecodeTypeKind.Bytes, value.AsBytes().ToArray(), out result);")
         code.blank()
-        code.line("private static bool Boolean(in GesValue value, out bool result) => Read(value.ValueKind == GesBytecodeTypeKind.Boolean, value.AsBoolean(), out result);")
+        code.line("internal static bool Boolean(in GesValue value, out bool result) => Read(value.ValueKind == GesBytecodeTypeKind.Boolean, value.AsBoolean(), out result);")
         code.blank()
-        code.line("private static bool Percentage(in GesValue value, out double result) => Read(value.ValueKind == GesBytecodeTypeKind.Percentage, value.AsNumber(), out result);")
+        code.line("internal static bool Percentage(in GesValue value, out double result) => Read(value.ValueKind == GesBytecodeTypeKind.Percentage, value.AsNumber(), out result);")
         code.blank()
-        code.line("private static bool Number(in GesValue value, GesQuantityUnit unit, out double result) => Read(value.ValueKind is GesBytecodeTypeKind.Integer or GesBytecodeTypeKind.Float && value.ValueUnit == unit, value.AsNumber(), out result);")
+        code.line(
+            "internal static bool Number(in GesValue value, GesQuantityUnit unit, out double result)"
+                + " => Read(value.ValueKind is GesBytecodeTypeKind.Integer or GesBytecodeTypeKind.Float && value.ValueUnit == unit, value.AsNumber(), out result);"
+        )
         code.blank()
-        code.line("private static bool Point(in GesValue value, GesQuantityUnit unit, out GesPoint result) => Read(GesPoint.FromValue(value, unit), out result);")
+        code.line("internal static bool Point(in GesValue value, GesQuantityUnit unit, out GesPoint result) => Read(GesPoint.FromValue(value, unit), out result);")
         code.blank()
-        code.line("private static bool Vector(in GesValue value, GesQuantityUnit unit, out GesVector result) => Read(GesVector.FromValue(value, unit), out result);")
+        code.line("internal static bool Vector(in GesValue value, GesQuantityUnit unit, out GesVector result) => Read(GesVector.FromValue(value, unit), out result);")
         code.blank()
-        code.line("private static bool Integer(in GesValue value, GesQuantityUnit unit, out long result)")
+        code.line("internal static bool Integer(in GesValue value, GesQuantityUnit unit, out long result)")
         code.open("{")
         code.line("result = 0;")
         code.line("if (value.ValueUnit != unit) return false;")
@@ -805,19 +867,19 @@ enum GesCSharpModelEmitter {
         code.line("return true;")
         code.close()
         code.blank()
-        code.line("private static bool Read<T>(bool valid, T value, out T result)")
+        code.line("internal static bool Read<T>(bool valid, T value, out T result)")
         code.open("{")
         code.line("result = valid ? value : default!;")
         code.line("return valid;")
         code.close()
         code.blank()
-        code.line("private static bool Read<T>(T? value, out T result) where T : struct")
+        code.line("internal static bool Read<T>(T? value, out T result) where T : struct")
         code.open("{")
         code.line("result = value.GetValueOrDefault();")
         code.line("return value.HasValue;")
         code.close()
         code.blank()
-        code.line("private static bool OptionalValue<T>(in GesValue value, Decoder<T> decode, out T? result) where T : struct")
+        code.line("internal static bool OptionalValue<T>(in GesValue value, Decoder<T> decode, out T? result) where T : struct")
         code.open("{")
         code.line("result = null;")
         code.line("if (value.IsNothing) return true;")
@@ -826,7 +888,7 @@ enum GesCSharpModelEmitter {
         code.line("return true;")
         code.close()
         code.blank()
-        code.line("private static bool OptionalObject<T>(in GesValue value, Decoder<T> decode, out T? result) where T : class")
+        code.line("internal static bool OptionalObject<T>(in GesValue value, Decoder<T> decode, out T? result) where T : class")
         code.open("{")
         code.line("result = null;")
         code.line("if (value.IsNothing) return true;")
@@ -835,7 +897,7 @@ enum GesCSharpModelEmitter {
         code.line("return true;")
         code.close()
         code.blank()
-        code.line("private static bool List<T>(in GesValue value, Decoder<T> element, out List<T> result)")
+        code.line("internal static bool List<T>(in GesValue value, Decoder<T> element, out List<T> result)")
         code.open("{")
         code.line("result = null!;")
         code.line("if (value.ValueKind != GesBytecodeTypeKind.List) return false;")
@@ -851,14 +913,14 @@ enum GesCSharpModelEmitter {
         code.line("return true;")
         code.close()
         code.blank()
-        code.line("private static GesValue List<T>(List<T> list, Func<T, GesValue> element)")
+        code.line("internal static GesValue List<T>(List<T> list, Func<T, GesValue> element)")
         code.open("{")
         code.line("var items = new GesValue[list.Count];")
         code.line("for (var index = 0; index < items.Length; index++) items[index] = element(list[index]);")
         code.line("return GesValue.GesList(items);")
         code.close()
         code.blank()
-        code.line("private static bool Dice(in GesValue value, out List<int> result)")
+        code.line("internal static bool Dice(in GesValue value, out List<int> result)")
         code.open("{")
         code.line("result = null!;")
         code.line("if (value.ValueKind != GesBytecodeTypeKind.Dice) return false;")
@@ -866,7 +928,7 @@ enum GesCSharpModelEmitter {
         code.line("return true;")
         code.close()
         code.blank()
-        code.line("private static GesValue Dice(List<int> rolls)")
+        code.line("internal static GesValue Dice(List<int> rolls)")
         code.open("{")
         code.line("foreach (var roll in rolls)")
         code.line("    if (roll <= 0) return GesValue.GesNothing();")

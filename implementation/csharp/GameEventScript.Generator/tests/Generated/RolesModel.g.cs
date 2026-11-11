@@ -1025,52 +1025,52 @@ namespace GameEventScript.Tests.Generator.Roles.Model
             values[3] = GesValue.GesPercentage(record.Health);
             values[4] = GesValue.GesFloat(record.Speed, GesQuantityUnit.UnitNone);
             values[5] = GesValue.GesFloat(record.Heading, GesQuantityUnit.UnitDegree);
-            values[6] = Tag(Name(record.Mood));
-            values[7] = Tag(record.Team);
+            values[6] = __GesModelsae4351b20b848505.Tag(Name(record.Mood));
+            values[7] = __GesModelsae4351b20b848505.Tag(record.Team);
             values[8] = record.Position.ToValue(GesQuantityUnit.UnitMeter);
             values[9] = record.Velocity.ToValue(GesQuantityUnit.UnitMeter);
             values[10] = record.Body.ToValue();
             values[11] = record.Radar is { } value11_0 ? value11_0.ToValue() : GesValue.GesNothing();
             values[12] = record.Facing is { } value12_0 ? Value(value12_0) : GesValue.GesNothing();
             values[13] = record.Note is { } value13_0 ? GesValue.GesText(value13_0) : GesValue.GesNothing();
-            values[14] = List(record.Marks, x0 => x0.ToValue(GesQuantityUnit.UnitMeter));
-            values[15] = List(record.Units, x0 => Value(x0));
-            values[16] = List(record.Grid, x0 => List(x0, x1 => GesValue.GesInteger(x1, GesQuantityUnit.UnitNone)));
-            values[17] = Dice(record.Rolls);
+            values[14] = __GesModelsae4351b20b848505.List(record.Marks, x0 => x0.ToValue(GesQuantityUnit.UnitMeter));
+            values[15] = __GesModelsae4351b20b848505.List(record.Units, x0 => Value(x0));
+            values[16] = __GesModelsae4351b20b848505.List(record.Grid, x0 => __GesModelsae4351b20b848505.List(x0, x1 => GesValue.GesInteger(x1, GesQuantityUnit.UnitNone)));
+            values[17] = __GesModelsae4351b20b848505.Dice(record.Rolls);
             values[18] = GesValue.GesBytes(record.Seal);
-            values[19] = List(record.Chunks, x0 => GesValue.GesBytes(x0));
+            values[19] = __GesModelsae4351b20b848505.List(record.Chunks, x0 => GesValue.GesBytes(x0));
             values[20] = Value(record.Status);
-            values[21] = List(record.Ranks, x0 => Value(x0));
-            values[22] = List(record.Hints, x0 => Tag(Name(x0)));
+            values[21] = __GesModelsae4351b20b848505.List(record.Ranks, x0 => Value(x0));
+            values[22] = __GesModelsae4351b20b848505.List(record.Hints, x0 => __GesModelsae4351b20b848505.Tag(Name(x0)));
             return GesValue.GesRecord("BotView", BotViewFields, values);
         }
 
         internal static global::GameEventScript.Tests.Generator.Roles.Model.BotView ReadBotView(in GesValue value, string path)
         {
             var fields = RecordFields(value, "BotView", BotViewFields) ?? throw Mismatch(path);
-            if (!Integer(Field(fields, "bot"), GesQuantityUnit.UnitNone, out var field0)) throw Mismatch(Path(path, "bot"));
-            if (!Text(Field(fields, "name"), out var field1)) throw Mismatch(Path(path, "name"));
-            if (!Boolean(Field(fields, "alive"), out var field2)) throw Mismatch(Path(path, "alive"));
-            if (!Percentage(Field(fields, "health"), out var field3)) throw Mismatch(Path(path, "health"));
-            if (!Number(Field(fields, "speed"), GesQuantityUnit.UnitNone, out var field4)) throw Mismatch(Path(path, "speed"));
-            if (!Number(Field(fields, "heading"), GesQuantityUnit.UnitDegree, out var field5)) throw Mismatch(Path(path, "heading"));
-            if (!DecodeBotViewMoodTag(Field(fields, "mood"), out var field6)) throw Mismatch(Path(path, "mood"));
-            if (!Tag(Field(fields, "team"), out var field7)) throw Mismatch(Path(path, "team"));
-            if (!Point(Field(fields, "position"), GesQuantityUnit.UnitMeter, out var field8)) throw Mismatch(Path(path, "position"));
-            if (!Vector(Field(fields, "velocity"), GesQuantityUnit.UnitMeter, out var field9)) throw Mismatch(Path(path, "velocity"));
-            if (!DecodeWorld_Body(Field(fields, "body"), out var field10)) throw Mismatch(Path(path, "body"));
-            if (!OptionalObject(Field(fields, "radar"), (in GesValue x0, out global::GameEventScript.Tests.Generator.Roles.Model.RadarView y0) => DecodeRadarView(x0, out y0), out var field11)) throw Mismatch(Path(path, "radar"));
-            if (!OptionalObject(Field(fields, "facing"), (in GesValue x0, out global::GameEventScript.Tests.Generator.Roles.Model.BotView.FacingAlternative y0) => DecodeBotViewFacingAlternative(x0, out y0), out var field12)) throw Mismatch(Path(path, "facing"));
-            if (!OptionalObject(Field(fields, "note"), (in GesValue x0, out string y0) => Text(x0, out y0), out var field13)) throw Mismatch(Path(path, "note"));
-            if (!List(Field(fields, "marks"), (in GesValue x0, out GesPoint y0) => Point(x0, GesQuantityUnit.UnitMeter, out y0), out var field14)) throw Mismatch(Path(path, "marks"));
-            if (!List(Field(fields, "units"), (in GesValue x0, out global::GameEventScript.Tests.Generator.Roles.Model.BotView.UnitsItemAlternative y0) => DecodeBotViewUnitsItemAlternative(x0, out y0), out var field15)) throw Mismatch(Path(path, "units"));
-            if (!List(Field(fields, "grid"), (in GesValue x0, out List<long> y0) => List(x0, (in GesValue x1, out long y1) => Integer(x1, GesQuantityUnit.UnitNone, out y1), out y0), out var field16)) throw Mismatch(Path(path, "grid"));
-            if (!Dice(Field(fields, "rolls"), out var field17)) throw Mismatch(Path(path, "rolls"));
-            if (!Bytes(Field(fields, "seal"), out var field18)) throw Mismatch(Path(path, "seal"));
-            if (!List(Field(fields, "chunks"), (in GesValue x0, out byte[] y0) => Bytes(x0, out y0), out var field19)) throw Mismatch(Path(path, "chunks"));
-            if (!DecodeBotViewStatusFlags(Field(fields, "status"), out var field20)) throw Mismatch(Path(path, "status"));
-            if (!List(Field(fields, "ranks"), (in GesValue x0, out global::GameEventScript.Tests.Generator.Roles.Model.BotView.RanksItemFlags y0) => DecodeBotViewRanksItemFlags(x0, out y0), out var field21)) throw Mismatch(Path(path, "ranks"));
-            if (!List(Field(fields, "hints"), (in GesValue x0, out global::GameEventScript.Tests.Generator.Roles.Model.BotView.HintsItemTag y0) => DecodeBotViewHintsItemTag(x0, out y0), out var field22)) throw Mismatch(Path(path, "hints"));
+            if (!__GesModelsae4351b20b848505.Integer(__GesModelsae4351b20b848505.Field(fields, "bot"), GesQuantityUnit.UnitNone, out var field0)) throw Mismatch(Path(path, "bot"));
+            if (!__GesModelsae4351b20b848505.Text(__GesModelsae4351b20b848505.Field(fields, "name"), out var field1)) throw Mismatch(Path(path, "name"));
+            if (!__GesModelsae4351b20b848505.Boolean(__GesModelsae4351b20b848505.Field(fields, "alive"), out var field2)) throw Mismatch(Path(path, "alive"));
+            if (!__GesModelsae4351b20b848505.Percentage(__GesModelsae4351b20b848505.Field(fields, "health"), out var field3)) throw Mismatch(Path(path, "health"));
+            if (!__GesModelsae4351b20b848505.Number(__GesModelsae4351b20b848505.Field(fields, "speed"), GesQuantityUnit.UnitNone, out var field4)) throw Mismatch(Path(path, "speed"));
+            if (!__GesModelsae4351b20b848505.Number(__GesModelsae4351b20b848505.Field(fields, "heading"), GesQuantityUnit.UnitDegree, out var field5)) throw Mismatch(Path(path, "heading"));
+            if (!DecodeBotViewMoodTag(__GesModelsae4351b20b848505.Field(fields, "mood"), out var field6)) throw Mismatch(Path(path, "mood"));
+            if (!__GesModelsae4351b20b848505.Tag(__GesModelsae4351b20b848505.Field(fields, "team"), out var field7)) throw Mismatch(Path(path, "team"));
+            if (!__GesModelsae4351b20b848505.Point(__GesModelsae4351b20b848505.Field(fields, "position"), GesQuantityUnit.UnitMeter, out var field8)) throw Mismatch(Path(path, "position"));
+            if (!__GesModelsae4351b20b848505.Vector(__GesModelsae4351b20b848505.Field(fields, "velocity"), GesQuantityUnit.UnitMeter, out var field9)) throw Mismatch(Path(path, "velocity"));
+            var field10 = ReadWorld_Body(__GesModelsae4351b20b848505.Field(fields, "body"), Path(path, "body"));
+            var field11 = ReadOptional(__GesModelsae4351b20b848505.Field(fields, "radar"), Path(path, "radar"), (in GesValue x0, string p0) => ReadRadarView(x0, p0));
+            if (!__GesModelsae4351b20b848505.OptionalObject(__GesModelsae4351b20b848505.Field(fields, "facing"), (in GesValue x0, out global::GameEventScript.Tests.Generator.Roles.Model.BotView.FacingAlternative y0) => DecodeBotViewFacingAlternative(x0, out y0), out var field12)) throw Mismatch(Path(path, "facing"));
+            if (!__GesModelsae4351b20b848505.OptionalObject(__GesModelsae4351b20b848505.Field(fields, "note"), (in GesValue x0, out string y0) => __GesModelsae4351b20b848505.Text(x0, out y0), out var field13)) throw Mismatch(Path(path, "note"));
+            var field14 = ReadList(__GesModelsae4351b20b848505.Field(fields, "marks"), Path(path, "marks"), (in GesValue x0, string p0) => __GesModelsae4351b20b848505.Point(x0, GesQuantityUnit.UnitMeter, out var y0) ? y0 : throw Mismatch(p0));
+            var field15 = ReadList(__GesModelsae4351b20b848505.Field(fields, "units"), Path(path, "units"), (in GesValue x0, string p0) => DecodeBotViewUnitsItemAlternative(x0, out var y0) ? y0 : throw Mismatch(p0));
+            var field16 = ReadList(__GesModelsae4351b20b848505.Field(fields, "grid"), Path(path, "grid"), (in GesValue x0, string p0) => ReadList(x0, p0, (in GesValue x1, string p1) => __GesModelsae4351b20b848505.Integer(x1, GesQuantityUnit.UnitNone, out var y1) ? y1 : throw Mismatch(p1)));
+            if (!__GesModelsae4351b20b848505.Dice(__GesModelsae4351b20b848505.Field(fields, "rolls"), out var field17)) throw Mismatch(Path(path, "rolls"));
+            if (!__GesModelsae4351b20b848505.Bytes(__GesModelsae4351b20b848505.Field(fields, "seal"), out var field18)) throw Mismatch(Path(path, "seal"));
+            var field19 = ReadList(__GesModelsae4351b20b848505.Field(fields, "chunks"), Path(path, "chunks"), (in GesValue x0, string p0) => __GesModelsae4351b20b848505.Bytes(x0, out var y0) ? y0 : throw Mismatch(p0));
+            if (!DecodeBotViewStatusFlags(__GesModelsae4351b20b848505.Field(fields, "status"), out var field20)) throw Mismatch(Path(path, "status"));
+            var field21 = ReadList(__GesModelsae4351b20b848505.Field(fields, "ranks"), Path(path, "ranks"), (in GesValue x0, string p0) => DecodeBotViewRanksItemFlags(x0, out var y0) ? y0 : throw Mismatch(p0));
+            var field22 = ReadList(__GesModelsae4351b20b848505.Field(fields, "hints"), Path(path, "hints"), (in GesValue x0, string p0) => DecodeBotViewHintsItemTag(x0, out var y0) ? y0 : throw Mismatch(p0));
             return new global::GameEventScript.Tests.Generator.Roles.Model.BotView(field0, field1, field2, field3, field4, field5, field6, field7, field8, field9, field10, field11, field12, field13, field14, field15, field16, field17, field18, field19, field20, field21, field22);
         }
 
@@ -1079,29 +1079,29 @@ namespace GameEventScript.Tests.Generator.Roles.Model
             result = null!;
             var fields = RecordFields(value, "BotView", BotViewFields);
             if (fields is null
-                || !Integer(Field(fields, "bot"), GesQuantityUnit.UnitNone, out var field0)
-                || !Text(Field(fields, "name"), out var field1)
-                || !Boolean(Field(fields, "alive"), out var field2)
-                || !Percentage(Field(fields, "health"), out var field3)
-                || !Number(Field(fields, "speed"), GesQuantityUnit.UnitNone, out var field4)
-                || !Number(Field(fields, "heading"), GesQuantityUnit.UnitDegree, out var field5)
-                || !DecodeBotViewMoodTag(Field(fields, "mood"), out var field6)
-                || !Tag(Field(fields, "team"), out var field7)
-                || !Point(Field(fields, "position"), GesQuantityUnit.UnitMeter, out var field8)
-                || !Vector(Field(fields, "velocity"), GesQuantityUnit.UnitMeter, out var field9)
-                || !DecodeWorld_Body(Field(fields, "body"), out var field10)
-                || !OptionalObject(Field(fields, "radar"), (in GesValue x0, out global::GameEventScript.Tests.Generator.Roles.Model.RadarView y0) => DecodeRadarView(x0, out y0), out var field11)
-                || !OptionalObject(Field(fields, "facing"), (in GesValue x0, out global::GameEventScript.Tests.Generator.Roles.Model.BotView.FacingAlternative y0) => DecodeBotViewFacingAlternative(x0, out y0), out var field12)
-                || !OptionalObject(Field(fields, "note"), (in GesValue x0, out string y0) => Text(x0, out y0), out var field13)
-                || !List(Field(fields, "marks"), (in GesValue x0, out GesPoint y0) => Point(x0, GesQuantityUnit.UnitMeter, out y0), out var field14)
-                || !List(Field(fields, "units"), (in GesValue x0, out global::GameEventScript.Tests.Generator.Roles.Model.BotView.UnitsItemAlternative y0) => DecodeBotViewUnitsItemAlternative(x0, out y0), out var field15)
-                || !List(Field(fields, "grid"), (in GesValue x0, out List<long> y0) => List(x0, (in GesValue x1, out long y1) => Integer(x1, GesQuantityUnit.UnitNone, out y1), out y0), out var field16)
-                || !Dice(Field(fields, "rolls"), out var field17)
-                || !Bytes(Field(fields, "seal"), out var field18)
-                || !List(Field(fields, "chunks"), (in GesValue x0, out byte[] y0) => Bytes(x0, out y0), out var field19)
-                || !DecodeBotViewStatusFlags(Field(fields, "status"), out var field20)
-                || !List(Field(fields, "ranks"), (in GesValue x0, out global::GameEventScript.Tests.Generator.Roles.Model.BotView.RanksItemFlags y0) => DecodeBotViewRanksItemFlags(x0, out y0), out var field21)
-                || !List(Field(fields, "hints"), (in GesValue x0, out global::GameEventScript.Tests.Generator.Roles.Model.BotView.HintsItemTag y0) => DecodeBotViewHintsItemTag(x0, out y0), out var field22)) return false;
+                || !__GesModelsae4351b20b848505.Integer(__GesModelsae4351b20b848505.Field(fields, "bot"), GesQuantityUnit.UnitNone, out var field0)
+                || !__GesModelsae4351b20b848505.Text(__GesModelsae4351b20b848505.Field(fields, "name"), out var field1)
+                || !__GesModelsae4351b20b848505.Boolean(__GesModelsae4351b20b848505.Field(fields, "alive"), out var field2)
+                || !__GesModelsae4351b20b848505.Percentage(__GesModelsae4351b20b848505.Field(fields, "health"), out var field3)
+                || !__GesModelsae4351b20b848505.Number(__GesModelsae4351b20b848505.Field(fields, "speed"), GesQuantityUnit.UnitNone, out var field4)
+                || !__GesModelsae4351b20b848505.Number(__GesModelsae4351b20b848505.Field(fields, "heading"), GesQuantityUnit.UnitDegree, out var field5)
+                || !DecodeBotViewMoodTag(__GesModelsae4351b20b848505.Field(fields, "mood"), out var field6)
+                || !__GesModelsae4351b20b848505.Tag(__GesModelsae4351b20b848505.Field(fields, "team"), out var field7)
+                || !__GesModelsae4351b20b848505.Point(__GesModelsae4351b20b848505.Field(fields, "position"), GesQuantityUnit.UnitMeter, out var field8)
+                || !__GesModelsae4351b20b848505.Vector(__GesModelsae4351b20b848505.Field(fields, "velocity"), GesQuantityUnit.UnitMeter, out var field9)
+                || !DecodeWorld_Body(__GesModelsae4351b20b848505.Field(fields, "body"), out var field10)
+                || !__GesModelsae4351b20b848505.OptionalObject(__GesModelsae4351b20b848505.Field(fields, "radar"), (in GesValue x0, out global::GameEventScript.Tests.Generator.Roles.Model.RadarView y0) => DecodeRadarView(x0, out y0), out var field11)
+                || !__GesModelsae4351b20b848505.OptionalObject(__GesModelsae4351b20b848505.Field(fields, "facing"), (in GesValue x0, out global::GameEventScript.Tests.Generator.Roles.Model.BotView.FacingAlternative y0) => DecodeBotViewFacingAlternative(x0, out y0), out var field12)
+                || !__GesModelsae4351b20b848505.OptionalObject(__GesModelsae4351b20b848505.Field(fields, "note"), (in GesValue x0, out string y0) => __GesModelsae4351b20b848505.Text(x0, out y0), out var field13)
+                || !__GesModelsae4351b20b848505.List(__GesModelsae4351b20b848505.Field(fields, "marks"), (in GesValue x0, out GesPoint y0) => __GesModelsae4351b20b848505.Point(x0, GesQuantityUnit.UnitMeter, out y0), out var field14)
+                || !__GesModelsae4351b20b848505.List(__GesModelsae4351b20b848505.Field(fields, "units"), (in GesValue x0, out global::GameEventScript.Tests.Generator.Roles.Model.BotView.UnitsItemAlternative y0) => DecodeBotViewUnitsItemAlternative(x0, out y0), out var field15)
+                || !__GesModelsae4351b20b848505.List(__GesModelsae4351b20b848505.Field(fields, "grid"), (in GesValue x0, out List<long> y0) => __GesModelsae4351b20b848505.List(x0, (in GesValue x1, out long y1) => __GesModelsae4351b20b848505.Integer(x1, GesQuantityUnit.UnitNone, out y1), out y0), out var field16)
+                || !__GesModelsae4351b20b848505.Dice(__GesModelsae4351b20b848505.Field(fields, "rolls"), out var field17)
+                || !__GesModelsae4351b20b848505.Bytes(__GesModelsae4351b20b848505.Field(fields, "seal"), out var field18)
+                || !__GesModelsae4351b20b848505.List(__GesModelsae4351b20b848505.Field(fields, "chunks"), (in GesValue x0, out byte[] y0) => __GesModelsae4351b20b848505.Bytes(x0, out y0), out var field19)
+                || !DecodeBotViewStatusFlags(__GesModelsae4351b20b848505.Field(fields, "status"), out var field20)
+                || !__GesModelsae4351b20b848505.List(__GesModelsae4351b20b848505.Field(fields, "ranks"), (in GesValue x0, out global::GameEventScript.Tests.Generator.Roles.Model.BotView.RanksItemFlags y0) => DecodeBotViewRanksItemFlags(x0, out y0), out var field21)
+                || !__GesModelsae4351b20b848505.List(__GesModelsae4351b20b848505.Field(fields, "hints"), (in GesValue x0, out global::GameEventScript.Tests.Generator.Roles.Model.BotView.HintsItemTag y0) => DecodeBotViewHintsItemTag(x0, out y0), out var field22)) return false;
             result = new global::GameEventScript.Tests.Generator.Roles.Model.BotView(field0, field1, field2, field3, field4, field5, field6, field7, field8, field9, field10, field11, field12, field13, field14, field15, field16, field17, field18, field19, field20, field21, field22);
             return true;
         }
@@ -1116,7 +1116,7 @@ namespace GameEventScript.Tests.Generator.Roles.Model
         private static bool DecodeBotViewMoodTag(in GesValue value, out global::GameEventScript.Tests.Generator.Roles.Model.BotView.MoodTag result)
         {
             result = default;
-            if (!Tag(value, out var text)) return false;
+            if (!__GesModelsae4351b20b848505.Tag(value, out var text)) return false;
             switch (text)
             {
                 case "calm": result = global::GameEventScript.Tests.Generator.Roles.Model.BotView.MoodTag.Calm; return true;
@@ -1128,13 +1128,13 @@ namespace GameEventScript.Tests.Generator.Roles.Model
         private static GesValue Value(global::GameEventScript.Tests.Generator.Roles.Model.BotView.FacingAlternative value) => value switch
         {
             global::GameEventScript.Tests.Generator.Roles.Model.BotView.FacingAlternative.Quantity alternative => GesValue.GesFloat(alternative.Value, GesQuantityUnit.UnitDegree),
-            global::GameEventScript.Tests.Generator.Roles.Model.BotView.FacingAlternative.Tag alternative => Tag(Name(alternative.Value)),
+            global::GameEventScript.Tests.Generator.Roles.Model.BotView.FacingAlternative.Tag alternative => __GesModelsae4351b20b848505.Tag(Name(alternative.Value)),
             _ => GesValue.GesNothing()
         };
 
         private static bool DecodeBotViewFacingAlternative(in GesValue value, out global::GameEventScript.Tests.Generator.Roles.Model.BotView.FacingAlternative result)
         {
-            if (Number(value, GesQuantityUnit.UnitDegree, out var alternative0))
+            if (__GesModelsae4351b20b848505.Number(value, GesQuantityUnit.UnitDegree, out var alternative0))
             {
                 result = new global::GameEventScript.Tests.Generator.Roles.Model.BotView.FacingAlternative.Quantity(alternative0);
                 return true;
@@ -1160,7 +1160,7 @@ namespace GameEventScript.Tests.Generator.Roles.Model
         private static bool DecodeBotViewFacingTagTag(in GesValue value, out global::GameEventScript.Tests.Generator.Roles.Model.BotView.FacingTagTag result)
         {
             result = default;
-            if (!Tag(value, out var text)) return false;
+            if (!__GesModelsae4351b20b848505.Tag(value, out var text)) return false;
             switch (text)
             {
                 case "north": result = global::GameEventScript.Tests.Generator.Roles.Model.BotView.FacingTagTag.North; return true;
@@ -1178,7 +1178,7 @@ namespace GameEventScript.Tests.Generator.Roles.Model
 
         private static bool DecodeBotViewUnitsItemAlternative(in GesValue value, out global::GameEventScript.Tests.Generator.Roles.Model.BotView.UnitsItemAlternative result)
         {
-            if (Text(value, out var alternative0))
+            if (__GesModelsae4351b20b848505.Text(value, out var alternative0))
             {
                 result = new global::GameEventScript.Tests.Generator.Roles.Model.BotView.UnitsItemAlternative.Text(alternative0);
                 return true;
@@ -1196,22 +1196,22 @@ namespace GameEventScript.Tests.Generator.Roles.Model
 
         private static readonly string[] BotViewStatusFlagsNames = { "armed", "cloaked" };
 
-        private static GesValue Value(global::GameEventScript.Tests.Generator.Roles.Model.BotView.StatusFlags value) => Flags(BotViewStatusFlagsNames, (ulong)value);
+        private static GesValue Value(global::GameEventScript.Tests.Generator.Roles.Model.BotView.StatusFlags value) => __GesModelsae4351b20b848505.Flags(BotViewStatusFlagsNames, (ulong)value);
 
         private static bool DecodeBotViewStatusFlags(in GesValue value, out global::GameEventScript.Tests.Generator.Roles.Model.BotView.StatusFlags result)
         {
-            var valid = Flags(value, BotViewStatusFlagsNames, out var mask);
+            var valid = __GesModelsae4351b20b848505.Flags(value, BotViewStatusFlagsNames, out var mask);
             result = (global::GameEventScript.Tests.Generator.Roles.Model.BotView.StatusFlags)mask;
             return valid;
         }
 
         private static readonly string[] BotViewRanksItemFlagsNames = { "gold", "silver" };
 
-        private static GesValue Value(global::GameEventScript.Tests.Generator.Roles.Model.BotView.RanksItemFlags value) => Flags(BotViewRanksItemFlagsNames, (ulong)value);
+        private static GesValue Value(global::GameEventScript.Tests.Generator.Roles.Model.BotView.RanksItemFlags value) => __GesModelsae4351b20b848505.Flags(BotViewRanksItemFlagsNames, (ulong)value);
 
         private static bool DecodeBotViewRanksItemFlags(in GesValue value, out global::GameEventScript.Tests.Generator.Roles.Model.BotView.RanksItemFlags result)
         {
-            var valid = Flags(value, BotViewRanksItemFlagsNames, out var mask);
+            var valid = __GesModelsae4351b20b848505.Flags(value, BotViewRanksItemFlagsNames, out var mask);
             result = (global::GameEventScript.Tests.Generator.Roles.Model.BotView.RanksItemFlags)mask;
             return valid;
         }
@@ -1226,7 +1226,7 @@ namespace GameEventScript.Tests.Generator.Roles.Model
         private static bool DecodeBotViewHintsItemTag(in GesValue value, out global::GameEventScript.Tests.Generator.Roles.Model.BotView.HintsItemTag result)
         {
             result = default;
-            if (!Tag(value, out var text)) return false;
+            if (!__GesModelsae4351b20b848505.Tag(value, out var text)) return false;
             switch (text)
             {
                 case "left": result = global::GameEventScript.Tests.Generator.Roles.Model.BotView.HintsItemTag.Left; return true;
@@ -1247,7 +1247,7 @@ namespace GameEventScript.Tests.Generator.Roles.Model
         internal static global::GameEventScript.Tests.Generator.Roles.Model.Panel_Badge ReadPanel_Badge(in GesValue value, string path)
         {
             var fields = RecordFields(value, "Panel_Badge", Panel_BadgeFields) ?? throw Mismatch(path);
-            if (!Text(Field(fields, "label"), out var field0)) throw Mismatch(Path(path, "label"));
+            if (!__GesModelsae4351b20b848505.Text(__GesModelsae4351b20b848505.Field(fields, "label"), out var field0)) throw Mismatch(Path(path, "label"));
             return new global::GameEventScript.Tests.Generator.Roles.Model.Panel_Badge(field0);
         }
 
@@ -1256,7 +1256,7 @@ namespace GameEventScript.Tests.Generator.Roles.Model
             result = null!;
             var fields = RecordFields(value, "Panel_Badge", Panel_BadgeFields);
             if (fields is null
-                || !Text(Field(fields, "label"), out var field0)) return false;
+                || !__GesModelsae4351b20b848505.Text(__GesModelsae4351b20b848505.Field(fields, "label"), out var field0)) return false;
             result = new global::GameEventScript.Tests.Generator.Roles.Model.Panel_Badge(field0);
             return true;
         }
@@ -1274,8 +1274,8 @@ namespace GameEventScript.Tests.Generator.Roles.Model
         internal static global::GameEventScript.Tests.Generator.Roles.Model.Panel_Entry ReadPanel_Entry(in GesValue value, string path)
         {
             var fields = RecordFields(value, "Panel_Entry", Panel_EntryFields) ?? throw Mismatch(path);
-            if (!Text(Field(fields, "name"), out var field0)) throw Mismatch(Path(path, "name"));
-            if (!Percentage(Field(fields, "level"), out var field1)) throw Mismatch(Path(path, "level"));
+            if (!__GesModelsae4351b20b848505.Text(__GesModelsae4351b20b848505.Field(fields, "name"), out var field0)) throw Mismatch(Path(path, "name"));
+            if (!__GesModelsae4351b20b848505.Percentage(__GesModelsae4351b20b848505.Field(fields, "level"), out var field1)) throw Mismatch(Path(path, "level"));
             return new global::GameEventScript.Tests.Generator.Roles.Model.Panel_Entry(field0, field1);
         }
 
@@ -1284,8 +1284,8 @@ namespace GameEventScript.Tests.Generator.Roles.Model
             result = null!;
             var fields = RecordFields(value, "Panel_Entry", Panel_EntryFields);
             if (fields is null
-                || !Text(Field(fields, "name"), out var field0)
-                || !Percentage(Field(fields, "level"), out var field1)) return false;
+                || !__GesModelsae4351b20b848505.Text(__GesModelsae4351b20b848505.Field(fields, "name"), out var field0)
+                || !__GesModelsae4351b20b848505.Percentage(__GesModelsae4351b20b848505.Field(fields, "level"), out var field1)) return false;
             result = new global::GameEventScript.Tests.Generator.Roles.Model.Panel_Entry(field0, field1);
             return true;
         }
@@ -1296,11 +1296,11 @@ namespace GameEventScript.Tests.Generator.Roles.Model
         {
             var values = new GesValue[8];
             values[0] = GesValue.GesText(record.Title);
-            values[1] = Tag(Name(record.Status));
+            values[1] = __GesModelsae4351b20b848505.Tag(Name(record.Status));
             values[2] = GesValue.GesFloat(record.Load, GesQuantityUnit.UnitWatt);
             values[3] = record.Spot.ToValue(GesQuantityUnit.UnitMeter);
             values[4] = record.Note is { } value4_0 ? GesValue.GesText(value4_0) : GesValue.GesNothing();
-            values[5] = List(record.Entries, x0 => x0.ToValue());
+            values[5] = __GesModelsae4351b20b848505.List(record.Entries, x0 => x0.ToValue());
             values[6] = record.Reading is { } value6_0 ? Value(value6_0) : GesValue.GesNothing();
             values[7] = Value(record.Alarms);
             return GesValue.GesRecord("Panel_Report", Panel_ReportFields, values);
@@ -1309,14 +1309,14 @@ namespace GameEventScript.Tests.Generator.Roles.Model
         internal static global::GameEventScript.Tests.Generator.Roles.Model.Panel_Report ReadPanel_Report(in GesValue value, string path)
         {
             var fields = RecordFields(value, "Panel_Report", Panel_ReportFields) ?? throw Mismatch(path);
-            if (!Text(Field(fields, "title"), out var field0)) throw Mismatch(Path(path, "title"));
-            if (!DecodePanel_ReportStatusTag(Field(fields, "status"), out var field1)) throw Mismatch(Path(path, "status"));
-            if (!Number(Field(fields, "load"), GesQuantityUnit.UnitWatt, out var field2)) throw Mismatch(Path(path, "load"));
-            if (!Point(Field(fields, "spot"), GesQuantityUnit.UnitMeter, out var field3)) throw Mismatch(Path(path, "spot"));
-            if (!OptionalObject(Field(fields, "note"), (in GesValue x0, out string y0) => Text(x0, out y0), out var field4)) throw Mismatch(Path(path, "note"));
-            if (!List(Field(fields, "entries"), (in GesValue x0, out global::GameEventScript.Tests.Generator.Roles.Model.Panel_Entry y0) => DecodePanel_Entry(x0, out y0), out var field5)) throw Mismatch(Path(path, "entries"));
-            if (!OptionalObject(Field(fields, "reading"), (in GesValue x0, out global::GameEventScript.Tests.Generator.Roles.Model.Panel_Report.ReadingAlternative y0) => DecodePanel_ReportReadingAlternative(x0, out y0), out var field6)) throw Mismatch(Path(path, "reading"));
-            if (!DecodePanel_ReportAlarmsFlags(Field(fields, "alarms"), out var field7)) throw Mismatch(Path(path, "alarms"));
+            if (!__GesModelsae4351b20b848505.Text(__GesModelsae4351b20b848505.Field(fields, "title"), out var field0)) throw Mismatch(Path(path, "title"));
+            if (!DecodePanel_ReportStatusTag(__GesModelsae4351b20b848505.Field(fields, "status"), out var field1)) throw Mismatch(Path(path, "status"));
+            if (!__GesModelsae4351b20b848505.Number(__GesModelsae4351b20b848505.Field(fields, "load"), GesQuantityUnit.UnitWatt, out var field2)) throw Mismatch(Path(path, "load"));
+            if (!__GesModelsae4351b20b848505.Point(__GesModelsae4351b20b848505.Field(fields, "spot"), GesQuantityUnit.UnitMeter, out var field3)) throw Mismatch(Path(path, "spot"));
+            if (!__GesModelsae4351b20b848505.OptionalObject(__GesModelsae4351b20b848505.Field(fields, "note"), (in GesValue x0, out string y0) => __GesModelsae4351b20b848505.Text(x0, out y0), out var field4)) throw Mismatch(Path(path, "note"));
+            var field5 = ReadList(__GesModelsae4351b20b848505.Field(fields, "entries"), Path(path, "entries"), (in GesValue x0, string p0) => ReadPanel_Entry(x0, p0));
+            if (!__GesModelsae4351b20b848505.OptionalObject(__GesModelsae4351b20b848505.Field(fields, "reading"), (in GesValue x0, out global::GameEventScript.Tests.Generator.Roles.Model.Panel_Report.ReadingAlternative y0) => DecodePanel_ReportReadingAlternative(x0, out y0), out var field6)) throw Mismatch(Path(path, "reading"));
+            if (!DecodePanel_ReportAlarmsFlags(__GesModelsae4351b20b848505.Field(fields, "alarms"), out var field7)) throw Mismatch(Path(path, "alarms"));
             return new global::GameEventScript.Tests.Generator.Roles.Model.Panel_Report(field0, field1, field2, field3, field4, field5, field6, field7);
         }
 
@@ -1325,14 +1325,14 @@ namespace GameEventScript.Tests.Generator.Roles.Model
             result = null!;
             var fields = RecordFields(value, "Panel_Report", Panel_ReportFields);
             if (fields is null
-                || !Text(Field(fields, "title"), out var field0)
-                || !DecodePanel_ReportStatusTag(Field(fields, "status"), out var field1)
-                || !Number(Field(fields, "load"), GesQuantityUnit.UnitWatt, out var field2)
-                || !Point(Field(fields, "spot"), GesQuantityUnit.UnitMeter, out var field3)
-                || !OptionalObject(Field(fields, "note"), (in GesValue x0, out string y0) => Text(x0, out y0), out var field4)
-                || !List(Field(fields, "entries"), (in GesValue x0, out global::GameEventScript.Tests.Generator.Roles.Model.Panel_Entry y0) => DecodePanel_Entry(x0, out y0), out var field5)
-                || !OptionalObject(Field(fields, "reading"), (in GesValue x0, out global::GameEventScript.Tests.Generator.Roles.Model.Panel_Report.ReadingAlternative y0) => DecodePanel_ReportReadingAlternative(x0, out y0), out var field6)
-                || !DecodePanel_ReportAlarmsFlags(Field(fields, "alarms"), out var field7)) return false;
+                || !__GesModelsae4351b20b848505.Text(__GesModelsae4351b20b848505.Field(fields, "title"), out var field0)
+                || !DecodePanel_ReportStatusTag(__GesModelsae4351b20b848505.Field(fields, "status"), out var field1)
+                || !__GesModelsae4351b20b848505.Number(__GesModelsae4351b20b848505.Field(fields, "load"), GesQuantityUnit.UnitWatt, out var field2)
+                || !__GesModelsae4351b20b848505.Point(__GesModelsae4351b20b848505.Field(fields, "spot"), GesQuantityUnit.UnitMeter, out var field3)
+                || !__GesModelsae4351b20b848505.OptionalObject(__GesModelsae4351b20b848505.Field(fields, "note"), (in GesValue x0, out string y0) => __GesModelsae4351b20b848505.Text(x0, out y0), out var field4)
+                || !__GesModelsae4351b20b848505.List(__GesModelsae4351b20b848505.Field(fields, "entries"), (in GesValue x0, out global::GameEventScript.Tests.Generator.Roles.Model.Panel_Entry y0) => DecodePanel_Entry(x0, out y0), out var field5)
+                || !__GesModelsae4351b20b848505.OptionalObject(__GesModelsae4351b20b848505.Field(fields, "reading"), (in GesValue x0, out global::GameEventScript.Tests.Generator.Roles.Model.Panel_Report.ReadingAlternative y0) => DecodePanel_ReportReadingAlternative(x0, out y0), out var field6)
+                || !DecodePanel_ReportAlarmsFlags(__GesModelsae4351b20b848505.Field(fields, "alarms"), out var field7)) return false;
             result = new global::GameEventScript.Tests.Generator.Roles.Model.Panel_Report(field0, field1, field2, field3, field4, field5, field6, field7);
             return true;
         }
@@ -1348,7 +1348,7 @@ namespace GameEventScript.Tests.Generator.Roles.Model
         private static bool DecodePanel_ReportStatusTag(in GesValue value, out global::GameEventScript.Tests.Generator.Roles.Model.Panel_Report.StatusTag result)
         {
             result = default;
-            if (!Tag(value, out var text)) return false;
+            if (!__GesModelsae4351b20b848505.Tag(value, out var text)) return false;
             switch (text)
             {
                 case "ok": result = global::GameEventScript.Tests.Generator.Roles.Model.Panel_Report.StatusTag.Ok; return true;
@@ -1367,13 +1367,13 @@ namespace GameEventScript.Tests.Generator.Roles.Model
 
         private static bool DecodePanel_ReportReadingAlternative(in GesValue value, out global::GameEventScript.Tests.Generator.Roles.Model.Panel_Report.ReadingAlternative result)
         {
-            if (Integer(value, GesQuantityUnit.UnitNone, out var alternative0))
+            if (__GesModelsae4351b20b848505.Integer(value, GesQuantityUnit.UnitNone, out var alternative0))
             {
                 result = new global::GameEventScript.Tests.Generator.Roles.Model.Panel_Report.ReadingAlternative.Number(alternative0);
                 return true;
             }
 
-            if (Text(value, out var alternative1))
+            if (__GesModelsae4351b20b848505.Text(value, out var alternative1))
             {
                 result = new global::GameEventScript.Tests.Generator.Roles.Model.Panel_Report.ReadingAlternative.Text(alternative1);
                 return true;
@@ -1385,11 +1385,11 @@ namespace GameEventScript.Tests.Generator.Roles.Model
 
         private static readonly string[] Panel_ReportAlarmsFlagsNames = { "heat", "power" };
 
-        private static GesValue Value(global::GameEventScript.Tests.Generator.Roles.Model.Panel_Report.AlarmsFlags value) => Flags(Panel_ReportAlarmsFlagsNames, (ulong)value);
+        private static GesValue Value(global::GameEventScript.Tests.Generator.Roles.Model.Panel_Report.AlarmsFlags value) => __GesModelsae4351b20b848505.Flags(Panel_ReportAlarmsFlagsNames, (ulong)value);
 
         private static bool DecodePanel_ReportAlarmsFlags(in GesValue value, out global::GameEventScript.Tests.Generator.Roles.Model.Panel_Report.AlarmsFlags result)
         {
-            var valid = Flags(value, Panel_ReportAlarmsFlagsNames, out var mask);
+            var valid = __GesModelsae4351b20b848505.Flags(value, Panel_ReportAlarmsFlagsNames, out var mask);
             result = (global::GameEventScript.Tests.Generator.Roles.Model.Panel_Report.AlarmsFlags)mask;
             return valid;
         }
@@ -1400,15 +1400,15 @@ namespace GameEventScript.Tests.Generator.Roles.Model
         {
             var values = new GesValue[2];
             values[0] = GesValue.GesFloat(record.Range, GesQuantityUnit.UnitMeter);
-            values[1] = List(record.Contacts, x0 => GesValue.GesInteger(x0, GesQuantityUnit.UnitNone));
+            values[1] = __GesModelsae4351b20b848505.List(record.Contacts, x0 => GesValue.GesInteger(x0, GesQuantityUnit.UnitNone));
             return GesValue.GesRecord("RadarView", RadarViewFields, values);
         }
 
         internal static global::GameEventScript.Tests.Generator.Roles.Model.RadarView ReadRadarView(in GesValue value, string path)
         {
             var fields = RecordFields(value, "RadarView", RadarViewFields) ?? throw Mismatch(path);
-            if (!Number(Field(fields, "range"), GesQuantityUnit.UnitMeter, out var field0)) throw Mismatch(Path(path, "range"));
-            if (!List(Field(fields, "contacts"), (in GesValue x0, out long y0) => Integer(x0, GesQuantityUnit.UnitNone, out y0), out var field1)) throw Mismatch(Path(path, "contacts"));
+            if (!__GesModelsae4351b20b848505.Number(__GesModelsae4351b20b848505.Field(fields, "range"), GesQuantityUnit.UnitMeter, out var field0)) throw Mismatch(Path(path, "range"));
+            var field1 = ReadList(__GesModelsae4351b20b848505.Field(fields, "contacts"), Path(path, "contacts"), (in GesValue x0, string p0) => __GesModelsae4351b20b848505.Integer(x0, GesQuantityUnit.UnitNone, out var y0) ? y0 : throw Mismatch(p0));
             return new global::GameEventScript.Tests.Generator.Roles.Model.RadarView(field0, field1);
         }
 
@@ -1417,8 +1417,8 @@ namespace GameEventScript.Tests.Generator.Roles.Model
             result = null!;
             var fields = RecordFields(value, "RadarView", RadarViewFields);
             if (fields is null
-                || !Number(Field(fields, "range"), GesQuantityUnit.UnitMeter, out var field0)
-                || !List(Field(fields, "contacts"), (in GesValue x0, out long y0) => Integer(x0, GesQuantityUnit.UnitNone, out y0), out var field1)) return false;
+                || !__GesModelsae4351b20b848505.Number(__GesModelsae4351b20b848505.Field(fields, "range"), GesQuantityUnit.UnitMeter, out var field0)
+                || !__GesModelsae4351b20b848505.List(__GesModelsae4351b20b848505.Field(fields, "contacts"), (in GesValue x0, out long y0) => __GesModelsae4351b20b848505.Integer(x0, GesQuantityUnit.UnitNone, out y0), out var field1)) return false;
             result = new global::GameEventScript.Tests.Generator.Roles.Model.RadarView(field0, field1);
             return true;
         }
@@ -1431,7 +1431,7 @@ namespace GameEventScript.Tests.Generator.Roles.Model
             values[0] = GesValue.GesInteger(record.Tick, GesQuantityUnit.UnitNone);
             values[1] = GesValue.GesFloat(record.Time, GesQuantityUnit.UnitSecond);
             values[2] = record.Arena.ToValue(GesQuantityUnit.UnitMeter);
-            values[3] = List(record.Bots, x0 => x0.ToValue());
+            values[3] = __GesModelsae4351b20b848505.List(record.Bots, x0 => x0.ToValue());
             values[4] = record.Badge is { } value4_0 ? value4_0.ToValue() : GesValue.GesNothing();
             return GesValue.GesRecord("WorldView", WorldViewFields, values);
         }
@@ -1439,11 +1439,11 @@ namespace GameEventScript.Tests.Generator.Roles.Model
         internal static global::GameEventScript.Tests.Generator.Roles.Model.WorldView ReadWorldView(in GesValue value, string path)
         {
             var fields = RecordFields(value, "WorldView", WorldViewFields) ?? throw Mismatch(path);
-            if (!Integer(Field(fields, "tick"), GesQuantityUnit.UnitNone, out var field0)) throw Mismatch(Path(path, "tick"));
-            if (!Number(Field(fields, "time"), GesQuantityUnit.UnitSecond, out var field1)) throw Mismatch(Path(path, "time"));
-            if (!Vector(Field(fields, "arena"), GesQuantityUnit.UnitMeter, out var field2)) throw Mismatch(Path(path, "arena"));
-            if (!List(Field(fields, "bots"), (in GesValue x0, out global::GameEventScript.Tests.Generator.Roles.Model.BotView y0) => DecodeBotView(x0, out y0), out var field3)) throw Mismatch(Path(path, "bots"));
-            if (!OptionalObject(Field(fields, "badge"), (in GesValue x0, out global::GameEventScript.Tests.Generator.Roles.Model.Panel_Badge y0) => DecodePanel_Badge(x0, out y0), out var field4)) throw Mismatch(Path(path, "badge"));
+            if (!__GesModelsae4351b20b848505.Integer(__GesModelsae4351b20b848505.Field(fields, "tick"), GesQuantityUnit.UnitNone, out var field0)) throw Mismatch(Path(path, "tick"));
+            if (!__GesModelsae4351b20b848505.Number(__GesModelsae4351b20b848505.Field(fields, "time"), GesQuantityUnit.UnitSecond, out var field1)) throw Mismatch(Path(path, "time"));
+            if (!__GesModelsae4351b20b848505.Vector(__GesModelsae4351b20b848505.Field(fields, "arena"), GesQuantityUnit.UnitMeter, out var field2)) throw Mismatch(Path(path, "arena"));
+            var field3 = ReadList(__GesModelsae4351b20b848505.Field(fields, "bots"), Path(path, "bots"), (in GesValue x0, string p0) => ReadBotView(x0, p0));
+            var field4 = ReadOptional(__GesModelsae4351b20b848505.Field(fields, "badge"), Path(path, "badge"), (in GesValue x0, string p0) => ReadPanel_Badge(x0, p0));
             return new global::GameEventScript.Tests.Generator.Roles.Model.WorldView(field0, field1, field2, field3, field4);
         }
 
@@ -1452,11 +1452,11 @@ namespace GameEventScript.Tests.Generator.Roles.Model
             result = null!;
             var fields = RecordFields(value, "WorldView", WorldViewFields);
             if (fields is null
-                || !Integer(Field(fields, "tick"), GesQuantityUnit.UnitNone, out var field0)
-                || !Number(Field(fields, "time"), GesQuantityUnit.UnitSecond, out var field1)
-                || !Vector(Field(fields, "arena"), GesQuantityUnit.UnitMeter, out var field2)
-                || !List(Field(fields, "bots"), (in GesValue x0, out global::GameEventScript.Tests.Generator.Roles.Model.BotView y0) => DecodeBotView(x0, out y0), out var field3)
-                || !OptionalObject(Field(fields, "badge"), (in GesValue x0, out global::GameEventScript.Tests.Generator.Roles.Model.Panel_Badge y0) => DecodePanel_Badge(x0, out y0), out var field4)) return false;
+                || !__GesModelsae4351b20b848505.Integer(__GesModelsae4351b20b848505.Field(fields, "tick"), GesQuantityUnit.UnitNone, out var field0)
+                || !__GesModelsae4351b20b848505.Number(__GesModelsae4351b20b848505.Field(fields, "time"), GesQuantityUnit.UnitSecond, out var field1)
+                || !__GesModelsae4351b20b848505.Vector(__GesModelsae4351b20b848505.Field(fields, "arena"), GesQuantityUnit.UnitMeter, out var field2)
+                || !__GesModelsae4351b20b848505.List(__GesModelsae4351b20b848505.Field(fields, "bots"), (in GesValue x0, out global::GameEventScript.Tests.Generator.Roles.Model.BotView y0) => DecodeBotView(x0, out y0), out var field3)
+                || !__GesModelsae4351b20b848505.OptionalObject(__GesModelsae4351b20b848505.Field(fields, "badge"), (in GesValue x0, out global::GameEventScript.Tests.Generator.Roles.Model.Panel_Badge y0) => DecodePanel_Badge(x0, out y0), out var field4)) return false;
             result = new global::GameEventScript.Tests.Generator.Roles.Model.WorldView(field0, field1, field2, field3, field4);
             return true;
         }
@@ -1467,15 +1467,15 @@ namespace GameEventScript.Tests.Generator.Roles.Model
         {
             var values = new GesValue[2];
             values[0] = GesValue.GesFloat(record.Mass, GesQuantityUnit.UnitKilogram);
-            values[1] = Tag(Name(record.Hull));
+            values[1] = __GesModelsae4351b20b848505.Tag(Name(record.Hull));
             return GesValue.GesRecord("World_Body", World_BodyFields, values);
         }
 
         internal static global::GameEventScript.Tests.Generator.Roles.Model.World_Body ReadWorld_Body(in GesValue value, string path)
         {
             var fields = RecordFields(value, "World_Body", World_BodyFields) ?? throw Mismatch(path);
-            if (!Number(Field(fields, "mass"), GesQuantityUnit.UnitKilogram, out var field0)) throw Mismatch(Path(path, "mass"));
-            if (!DecodeWorld_BodyHullTag(Field(fields, "hull"), out var field1)) throw Mismatch(Path(path, "hull"));
+            if (!__GesModelsae4351b20b848505.Number(__GesModelsae4351b20b848505.Field(fields, "mass"), GesQuantityUnit.UnitKilogram, out var field0)) throw Mismatch(Path(path, "mass"));
+            if (!DecodeWorld_BodyHullTag(__GesModelsae4351b20b848505.Field(fields, "hull"), out var field1)) throw Mismatch(Path(path, "hull"));
             return new global::GameEventScript.Tests.Generator.Roles.Model.World_Body(field0, field1);
         }
 
@@ -1484,8 +1484,8 @@ namespace GameEventScript.Tests.Generator.Roles.Model
             result = null!;
             var fields = RecordFields(value, "World_Body", World_BodyFields);
             if (fields is null
-                || !Number(Field(fields, "mass"), GesQuantityUnit.UnitKilogram, out var field0)
-                || !DecodeWorld_BodyHullTag(Field(fields, "hull"), out var field1)) return false;
+                || !__GesModelsae4351b20b848505.Number(__GesModelsae4351b20b848505.Field(fields, "mass"), GesQuantityUnit.UnitKilogram, out var field0)
+                || !DecodeWorld_BodyHullTag(__GesModelsae4351b20b848505.Field(fields, "hull"), out var field1)) return false;
             result = new global::GameEventScript.Tests.Generator.Roles.Model.World_Body(field0, field1);
             return true;
         }
@@ -1500,7 +1500,7 @@ namespace GameEventScript.Tests.Generator.Roles.Model
         private static bool DecodeWorld_BodyHullTag(in GesValue value, out global::GameEventScript.Tests.Generator.Roles.Model.World_Body.HullTag result)
         {
             result = default;
-            if (!Tag(value, out var text)) return false;
+            if (!__GesModelsae4351b20b848505.Tag(value, out var text)) return false;
             switch (text)
             {
                 case "light": result = global::GameEventScript.Tests.Generator.Roles.Model.World_Body.HullTag.Light; return true;
@@ -1515,163 +1515,30 @@ namespace GameEventScript.Tests.Generator.Roles.Model
             var fields = value.AsMap();
             if (fields is null) return null;
             if (value.CustomTypeName is { } type) return type == name ? fields : null;
-            return Known(fields, names) ? fields : null;
+            return __GesModelsae4351b20b848505.Known(fields, names) ? fields : null;
         }
 
         private static string Path(string path, string field) => path.Length == 0 ? field : path + "." + field;
 
         private static GesWireException Mismatch(string path) => new GesWireException(GesWireException.TypeMismatch, path);
 
-        private delegate bool Decoder<T>(in GesValue value, out T result);
+        private delegate T Reader<T>(in GesValue value, string path);
 
-        private static GesValue Field(GesValueMap fields, string name) => fields.Get(name) ?? GesValue.GesNothing();
-
-        private static bool Known(GesValueMap fields, string[] names)
+        // The elements of a List, each read at the list's path with `[]`.
+        private static List<T> ReadList<T>(in GesValue value, string path, Reader<T> element)
         {
-            for (var index = 0; index < fields.Length; index++)
-                if (Array.IndexOf(names, fields.KeyAt(index)) < 0) return false;
-            return true;
-        }
-
-        private static GesValue Fields(string[] names, IGesExternalValue value)
-        {
-            var values = new GesValue[names.Length];
-            for (var index = 0; index < names.Length; index++) values[index] = value.GetField(names[index]) ?? GesValue.GesNothing();
-            return GesValue.GesMap(names, values);
-        }
-
-        private static GesValue Flags(string[] names, ulong mask)
-        {
-            var keys = new List<string>();
-            for (var index = 0; index < names.Length; index++)
-                if ((mask >> index & 1) != 0) keys.Add(names[index]);
-            var values = new GesValue[keys.Count];
-            for (var index = 0; index < values.Length; index++) values[index] = GesValue.GesBoolean(true);
-            return GesValue.GesMap(keys.ToArray(), values);
-        }
-
-        private static bool Flags(in GesValue value, string[] names, out ulong result)
-        {
-            result = 0;
-            if (value.ValueKind != GesBytecodeTypeKind.Map || value.CustomTypeName is not null || value.MaterializedMap() is not { } map) return false;
-            for (var index = 0; index < map.Length; index++)
-            {
-                var member = Array.IndexOf(names, map.KeyAt(index));
-                var set = map.ValueAt(index);
-                if (member < 0 || set.ValueKind != GesBytecodeTypeKind.Boolean) return false;
-                if (set.AsBoolean()) result |= 1UL << member;
-            }
-            return true;
-        }
-
-        private static GesValue Tag(string name)
-        {
-            try
-            {
-                return GesValue.GesTag(name);
-            }
-            catch (ArgumentException)
-            {
-                return GesValue.GesNothing();
-            }
-        }
-
-        private static bool Tag(in GesValue value, out string result) => Read(value.ValueKind is GesBytecodeTypeKind.Tag or GesBytecodeTypeKind.Text, value.AsText(), out result);
-
-        private static bool Text(in GesValue value, out string result) => Read(value.ValueKind == GesBytecodeTypeKind.Text, value.AsText(), out result);
-
-        private static bool Bytes(in GesValue value, out byte[] result) => Read(value.ValueKind == GesBytecodeTypeKind.Bytes, value.AsBytes().ToArray(), out result);
-
-        private static bool Boolean(in GesValue value, out bool result) => Read(value.ValueKind == GesBytecodeTypeKind.Boolean, value.AsBoolean(), out result);
-
-        private static bool Percentage(in GesValue value, out double result) => Read(value.ValueKind == GesBytecodeTypeKind.Percentage, value.AsNumber(), out result);
-
-        private static bool Number(in GesValue value, GesQuantityUnit unit, out double result) => Read(value.ValueKind is GesBytecodeTypeKind.Integer or GesBytecodeTypeKind.Float && value.ValueUnit == unit, value.AsNumber(), out result);
-
-        private static bool Point(in GesValue value, GesQuantityUnit unit, out GesPoint result) => Read(GesPoint.FromValue(value, unit), out result);
-
-        private static bool Vector(in GesValue value, GesQuantityUnit unit, out GesVector result) => Read(GesVector.FromValue(value, unit), out result);
-
-        private static bool Integer(in GesValue value, GesQuantityUnit unit, out long result)
-        {
-            result = 0;
-            if (value.ValueUnit != unit) return false;
-            if (value.ValueKind == GesBytecodeTypeKind.Integer) result = value.AsInteger();
-            else if (value.ValueKind == GesBytecodeTypeKind.Float && value.AsNumber() is var number && number >= -9.2233720368547758E18 && number < 9.2233720368547758E18 && Math.Floor(number) == number) result = (long)number;
-            else return false;
-            return true;
-        }
-
-        private static bool Read<T>(bool valid, T value, out T result)
-        {
-            result = valid ? value : default!;
-            return valid;
-        }
-
-        private static bool Read<T>(T? value, out T result) where T : struct
-        {
-            result = value.GetValueOrDefault();
-            return value.HasValue;
-        }
-
-        private static bool OptionalValue<T>(in GesValue value, Decoder<T> decode, out T? result) where T : struct
-        {
-            result = null;
-            if (value.IsNothing) return true;
-            if (!decode(value, out var decoded)) return false;
-            result = decoded;
-            return true;
-        }
-
-        private static bool OptionalObject<T>(in GesValue value, Decoder<T> decode, out T? result) where T : class
-        {
-            result = null;
-            if (value.IsNothing) return true;
-            if (!decode(value, out var decoded)) return false;
-            result = decoded;
-            return true;
-        }
-
-        private static bool List<T>(in GesValue value, Decoder<T> element, out List<T> result)
-        {
-            result = null!;
-            if (value.ValueKind != GesBytecodeTypeKind.List) return false;
+            if (value.ValueKind != GesBytecodeTypeKind.List) throw Mismatch(path);
             var items = value.AsList();
             var list = new List<T>(items.Length);
-            for (var index = 0; index < items.Length; index++)
-            {
-                if (!element(items[index], out var item)) return false;
-                list.Add(item);
-            }
-
-            result = list;
-            return true;
+            var item = path + "[]";
+            for (var index = 0; index < items.Length; index++) list.Add(element(items[index], item));
+            return list;
         }
 
-        private static GesValue List<T>(List<T> list, Func<T, GesValue> element)
-        {
-            var items = new GesValue[list.Count];
-            for (var index = 0; index < items.Length; index++) items[index] = element(list[index]);
-            return GesValue.GesList(items);
-        }
-
-        private static bool Dice(in GesValue value, out List<int> result)
-        {
-            result = null!;
-            if (value.ValueKind != GesBytecodeTypeKind.Dice) return false;
-            result = new List<int>(value.AsDice());
-            return true;
-        }
-
-        private static GesValue Dice(List<int> rolls)
-        {
-            foreach (var roll in rolls)
-                if (roll <= 0) return GesValue.GesNothing();
-            return GesValue.GesDice(rolls.ToArray());
-        }
+        private static T? ReadOptional<T>(in GesValue value, string path, Reader<T> read) where T : class => value.IsNothing ? null : read(value, path);
     }
 
-    /// <summary>Value equality of lists and numbers for the models of this file.</summary>
+    /// <summary>Value equality of lists and numbers and GES value conversions for the models of this file.</summary>
     internal static class __GesModelsae4351b20b848505
     {
         /// <summary>Hashes a number so that 0 and -0, which compare equal, hash alike.</summary>
@@ -1716,6 +1583,154 @@ namespace GameEventScript.Tests.Generator.Roles.Model
                 foreach (var item in bytes) result = (result * 31) + item;
                 return result;
             }
+        }
+
+        internal delegate bool Decoder<T>(in GesValue value, out T result);
+
+        internal static GesValue Field(GesValueMap fields, string name) => fields.Get(name) ?? GesValue.GesNothing();
+
+        internal static bool Known(GesValueMap fields, string[] names)
+        {
+            for (var index = 0; index < fields.Length; index++)
+                if (Array.IndexOf(names, fields.KeyAt(index)) < 0) return false;
+            return true;
+        }
+
+        internal static GesValue Fields(string[] names, IGesExternalValue value)
+        {
+            var values = new GesValue[names.Length];
+            for (var index = 0; index < names.Length; index++) values[index] = value.GetField(names[index]) ?? GesValue.GesNothing();
+            return GesValue.GesMap(names, values);
+        }
+
+        internal static GesValue Flags(string[] names, ulong mask)
+        {
+            var keys = new List<string>();
+            for (var index = 0; index < names.Length; index++)
+                if ((mask >> index & 1) != 0) keys.Add(names[index]);
+            var values = new GesValue[keys.Count];
+            for (var index = 0; index < values.Length; index++) values[index] = GesValue.GesBoolean(true);
+            return GesValue.GesMap(keys.ToArray(), values);
+        }
+
+        internal static bool Flags(in GesValue value, string[] names, out ulong result)
+        {
+            result = 0;
+            if (value.ValueKind != GesBytecodeTypeKind.Map || value.CustomTypeName is not null || value.MaterializedMap() is not { } map) return false;
+            for (var index = 0; index < map.Length; index++)
+            {
+                var member = Array.IndexOf(names, map.KeyAt(index));
+                var set = map.ValueAt(index);
+                if (member < 0 || set.ValueKind != GesBytecodeTypeKind.Boolean) return false;
+                if (set.AsBoolean()) result |= 1UL << member;
+            }
+            return true;
+        }
+
+        internal static GesValue Tag(string name)
+        {
+            try
+            {
+                return GesValue.GesTag(name);
+            }
+            catch (ArgumentException)
+            {
+                return GesValue.GesNothing();
+            }
+        }
+
+        internal static bool Tag(in GesValue value, out string result) => Read(value.ValueKind is GesBytecodeTypeKind.Tag or GesBytecodeTypeKind.Text, value.AsText(), out result);
+
+        internal static bool Text(in GesValue value, out string result) => Read(value.ValueKind == GesBytecodeTypeKind.Text, value.AsText(), out result);
+
+        internal static bool Bytes(in GesValue value, out byte[] result) => Read(value.ValueKind == GesBytecodeTypeKind.Bytes, value.AsBytes().ToArray(), out result);
+
+        internal static bool Boolean(in GesValue value, out bool result) => Read(value.ValueKind == GesBytecodeTypeKind.Boolean, value.AsBoolean(), out result);
+
+        internal static bool Percentage(in GesValue value, out double result) => Read(value.ValueKind == GesBytecodeTypeKind.Percentage, value.AsNumber(), out result);
+
+        internal static bool Number(in GesValue value, GesQuantityUnit unit, out double result) => Read(value.ValueKind is GesBytecodeTypeKind.Integer or GesBytecodeTypeKind.Float && value.ValueUnit == unit, value.AsNumber(), out result);
+
+        internal static bool Point(in GesValue value, GesQuantityUnit unit, out GesPoint result) => Read(GesPoint.FromValue(value, unit), out result);
+
+        internal static bool Vector(in GesValue value, GesQuantityUnit unit, out GesVector result) => Read(GesVector.FromValue(value, unit), out result);
+
+        internal static bool Integer(in GesValue value, GesQuantityUnit unit, out long result)
+        {
+            result = 0;
+            if (value.ValueUnit != unit) return false;
+            if (value.ValueKind == GesBytecodeTypeKind.Integer) result = value.AsInteger();
+            else if (value.ValueKind == GesBytecodeTypeKind.Float && value.AsNumber() is var number && number >= -9.2233720368547758E18 && number < 9.2233720368547758E18 && Math.Floor(number) == number) result = (long)number;
+            else return false;
+            return true;
+        }
+
+        internal static bool Read<T>(bool valid, T value, out T result)
+        {
+            result = valid ? value : default!;
+            return valid;
+        }
+
+        internal static bool Read<T>(T? value, out T result) where T : struct
+        {
+            result = value.GetValueOrDefault();
+            return value.HasValue;
+        }
+
+        internal static bool OptionalValue<T>(in GesValue value, Decoder<T> decode, out T? result) where T : struct
+        {
+            result = null;
+            if (value.IsNothing) return true;
+            if (!decode(value, out var decoded)) return false;
+            result = decoded;
+            return true;
+        }
+
+        internal static bool OptionalObject<T>(in GesValue value, Decoder<T> decode, out T? result) where T : class
+        {
+            result = null;
+            if (value.IsNothing) return true;
+            if (!decode(value, out var decoded)) return false;
+            result = decoded;
+            return true;
+        }
+
+        internal static bool List<T>(in GesValue value, Decoder<T> element, out List<T> result)
+        {
+            result = null!;
+            if (value.ValueKind != GesBytecodeTypeKind.List) return false;
+            var items = value.AsList();
+            var list = new List<T>(items.Length);
+            for (var index = 0; index < items.Length; index++)
+            {
+                if (!element(items[index], out var item)) return false;
+                list.Add(item);
+            }
+
+            result = list;
+            return true;
+        }
+
+        internal static GesValue List<T>(List<T> list, Func<T, GesValue> element)
+        {
+            var items = new GesValue[list.Count];
+            for (var index = 0; index < items.Length; index++) items[index] = element(list[index]);
+            return GesValue.GesList(items);
+        }
+
+        internal static bool Dice(in GesValue value, out List<int> result)
+        {
+            result = null!;
+            if (value.ValueKind != GesBytecodeTypeKind.Dice) return false;
+            result = new List<int>(value.AsDice());
+            return true;
+        }
+
+        internal static GesValue Dice(List<int> rolls)
+        {
+            foreach (var roll in rolls)
+                if (roll <= 0) return GesValue.GesNothing();
+            return GesValue.GesDice(rolls.ToArray());
         }
     }
 }

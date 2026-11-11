@@ -588,7 +588,7 @@ enum GesSwiftEmitter {
             }
             code.close()
         case .flags:
-            flagsDeclaration(&code, name, value.encoding.tags, access)
+            try flagsDeclaration(&code, name, value.encoding.tags, access)
         case .union:
             code.blank()
             code.line("/// The alternatives of the field, in declared order.")
@@ -613,8 +613,9 @@ enum GesSwiftEmitter {
 
     static func underlying(_ count: Int) -> String { count <= 256 ? "UInt8" : count <= 65536 ? "UInt16" : "UInt32" }
 
-    // One bit per member in declared order, so the raw value is the wire mask.
-    static func flagsDeclaration(_ code: inout Code, _ name: String, _ members: [String], _ access: String) {
+    // One bit per member in declared order, so the raw value is the wire mask. A member may not take the name of the mask.
+    static func flagsDeclaration(_ code: inout Code, _ name: String, _ members: [String], _ access: String) throws(GesGeneratorError) {
+        try GesSchemaPlanner.unique(name, [("rawValue", "the generated member rawValue")] + members.map { ($0, "the member #" + $0) })
         code.blank()
         code.line("/// The members of the field, one bit each in declared order.")
         code.open("\(access)struct \(name): OptionSet, Hashable, Sendable, Codable {")

@@ -689,9 +689,12 @@ internal static partial class GesSwiftEmitter
 
     private static string Underlying(int count) => count <= 256 ? "UInt8" : count <= 65536 ? "UInt16" : "UInt32";
 
-    // One bit per member in declared order, so the raw value is the wire mask.
+    // One bit per member in declared order, so the raw value is the wire mask. A member may not take the name of the mask.
     internal static void FlagsDeclaration(GesSchemaPlanner.Code code, string name, List<string> members, string access)
     {
+        var names = new List<(string, string)> { ("rawValue", "the generated member rawValue") };
+        foreach (var member in members) names.Add((member, "the member #" + member));
+        GesSchemaPlanner.Unique(name, names);
         code.Blank();
         code.Line("/// The members of the field, one bit each in declared order.");
         code.Open($"{access}struct {name}: OptionSet, Hashable, Sendable, Codable {{");

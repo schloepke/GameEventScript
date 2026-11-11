@@ -232,7 +232,9 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   generated `WriteBytes`/`ReadBytes` code, and the Bridges map C# `byte[]` and Swift `[UInt8]`.
 - `ges schema generate --model <group> --values` gives every model type `toValue()` and `init(value:)` (C# `ToValue()` and
   `FromValue(value)`) with the plain Record that wire `--values` reads and writes, so models and wire records convert
-  through one value instead of hand-written copies.
+  through one value instead of hand-written copies. A nested field that does not convert reports its path, such as
+  `entries[].level`, as the wire value path does.
+- Schema maximums accept digit separators, such as `:List(:Text max 1_024) max 10_000`.
 - Schema `:Flags(#a, #b)` with up to 64 members: one bit per member on the wire, a script flag Map such as
   `[armed:]` in the value path and documents, `WriteFlags`/`ReadFlags` (Swift `writeFlags`/`readFlags`) masks, and
   generated C# `[Flags]` enums and Swift `OptionSet` types.

@@ -23,10 +23,10 @@ public sealed partial class GameEventScriptHost
     }
 
     private readonly IGesClock _clock;
-    private List<GesDelayedMessage>? _delayed;
+    private GesDelayedQueue? _delayed;
 
     /// <summary>Gets whole microseconds until the earliest delayed message, or null when no delayed message remains. Reading never pumps the host.</summary>
-    public long? NextMessageDelay => _delayed is { Count: > 0 } ? Math.Max(0, _delayed[0].Deadline - _clock.ElapsedMicroseconds) : null;
+    public long? NextMessageDelay => _delayed is { Count: > 0 } ? Math.Max(0, _delayed.First.Deadline - _clock.ElapsedMicroseconds) : null;
 
     internal bool SendFromContext(GameEventScriptMessage message, bool publish, long microseconds)
     {
@@ -69,15 +69,7 @@ public sealed partial class GameEventScriptHost
         var pending = new GesPendingMessage(message, exact, names, ++_lastSendId, initializationOutput: _initializationInstance);
         var delayed = new GesDelayedMessage(now + microseconds, pending, publish, _initializationInstance);
         _delayed ??= new();
-        var lo = 0;
-        var hi = _delayed.Count;
-        while (lo < hi)
-        {
-            var mid = lo + (hi - lo) / 2;
-            if (_delayed[mid].Deadline <= delayed.Deadline) lo = mid + 1;
-            else hi = mid;
-        }
-        _delayed.Insert(lo, delayed);
+        _delayed.Add(in delayed);
         _idleSinceMicroseconds = null;
         _observer?.MessageScheduled(message, delayed.Id, delayed.Deadline, publish);
         if (publish)
@@ -98,11 +90,10 @@ public sealed partial class GameEventScriptHost
     {
         if (_delayed is not { Count: > 0 }) return;
         var now = _clock.ElapsedMicroseconds;
-        while (_delayed.Count > 0 && _delayed[0].Deadline <= now)
+        while (_delayed.Count > 0 && _delayed.First.Deadline <= now)
         {
             // Failed initializations removed their entries already, so every due entry is delivered.
-            var delayed = _delayed[0];
-            _delayed.RemoveAt(0);
+            var delayed = _delayed.RemoveFirst();
             var localAccepted = delayed.Pending.HasRecipients();
             if (localAccepted) _queue.Enqueue(delayed.Pending);
             if (!delayed.Publish) continue;
@@ -127,9 +118,9 @@ public sealed partial class GameEventScriptHost
         if (_delayed is null) return;
         if (_observer is { } observer)
         {
-            for (var index = 0; index < _delayed.Count; index++)
+            foreach (var entry in _delayed.InOrder())
             {
-                if (_delayed[index].IsAbandoned) observer.MessageDiscarded(_delayed[index].Id);
+                if (entry.IsAbandoned) observer.MessageDiscarded(entry.Id);
             }
         }
 
@@ -142,7 +133,7 @@ public sealed partial class GameEventScriptHost
         if (_delayed is null) return;
         if (_observer is { } observer)
         {
-            for (var index = 0; index < _delayed.Count; index++) observer.MessageDiscarded(_delayed[index].Id);
+            foreach (var entry in _delayed.InOrder()) observer.MessageDiscarded(entry.Id);
         }
 
         _delayed.Clear();

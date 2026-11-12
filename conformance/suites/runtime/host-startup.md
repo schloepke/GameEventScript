@@ -381,6 +381,81 @@ initialization:
 
 ---
 
+## Test: Start completes more initializations than the processed-message limit
+
+This scenario verifies that `MaxProcessedEventsPerRun` paces ordinary pumps only: Start completes all three initializations under a limit of 1, and the first ordinary pump afterwards stops after one message.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: initial-group-beyond-processed-limit
+runtimeLimits:
+  maxProcessedEventsPerRun: 1
+sources:
+  - name: a.ges
+    program: a
+  - name: b.ges
+    program: b
+  - name: c.ges
+    program: c
+```
+
+### Source code under test
+
+```ges
+module a
+on initialization { emit One() }
+on One { emit SeenOne() }
+on Two { emit SeenTwo() }
+on Three { emit SeenThree() }
+```
+
+```ges
+module b
+on initialization { emit Two() }
+```
+
+```ges
+module c
+on initialization { emit Three() }
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| first | Unknown | completion |  |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+initialization:
+  pump: start
+  hostReady: true
+  programStarts: { a: ready, b: ready, c: ready }
+  local:
+    - name: One
+    - name: Two
+    - name: Three
+  runtimeLimits:
+    exclude:
+      - name: MaxProcessedEventsPerRun
+        limit: 1
+steps:
+  first:
+    accepted: false
+    local:
+      - name: SeenOne
+    runtimeLimits:
+      include:
+        - name: MaxProcessedEventsPerRun
+          limit: 1
+```
+
+---
+
 ## Test: Late initialization can pause without enabling ordinary handlers
 
 This scenario verifies late initialization can pause without enabling ordinary handlers.

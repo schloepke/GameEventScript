@@ -98,6 +98,7 @@ internal sealed class RuntimeObservations(string publishSink) : IGesRuntimeObser
             MaxRandomScopeDepth = Read("maxRandomScopeDepth", defaults.MaxRandomScopeDepth),
             MaxRangeItems = Read("maxRangeItems", defaults.MaxRangeItems),
             MaxGeneratedCollectionItems = Read("maxGeneratedCollectionItems", defaults.MaxGeneratedCollectionItems),
+            MaxValueDepth = Read("maxValueDepth", defaults.MaxValueDepth),
             MaxDiceCount = Read("maxDiceCount", defaults.MaxDiceCount),
             MaxDiceSides = Read("maxDiceSides", defaults.MaxDiceSides)
         };

@@ -101,6 +101,9 @@ here.
   and is not required for 1.0. Revisit only for a demonstrated application need;
   portable literals and JSON already reconstruct data, and external snapshots
   become Records. See the [language scope review](docs/guide/distribution/Packages.md#language-scope-review-for-10).
+- A portable per-value size limit (Text scalars and List, Dice and Bytes items) checked by concatenation and
+  conversion to Text, so that a host can run untrusted Programs without an outside memory bound. Runtime limits
+  bound work and nesting today, not memory (specs/HostRuntime.md#memory).
 
 ## Language ports and distribution
 

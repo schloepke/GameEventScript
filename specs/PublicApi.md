@@ -774,10 +774,11 @@ reentrancy requirements of those callbacks.
 ### RuntimeLimits
 
 `RuntimeLimits` is a configuration snapshot with the following signed integer
-settings: processed events per RunToCompletion call, queued logical
+settings: processed events per ordinary pump call (Start completes its whole
+initial group regardless), queued logical
 messages, execution steps per handler, register values, loop iterations, call
-depth, random scope depth, range items, generated collection items, dice count,
-and dice sides. The exact defaults are part of the public versioned API.
+depth, random scope depth, range items, generated collection items, value
+nesting depth, dice count, and dice sides. The exact defaults are part of the public versioned API.
 
 | Setting | Default |
 | --- | ---: |
@@ -790,11 +791,12 @@ and dice sides. The exact defaults are part of the public versioned API.
 | `MaxRandomScopeDepth` | 16 |
 | `MaxRangeItems` | 10,000 |
 | `MaxGeneratedCollectionItems` | 10,000 |
+| `MaxValueDepth` | 64 |
 | `MaxDiceCount` | 1,000 |
 | `MaxDiceSides` | 1,000,000 |
 
 A nonpositive value disables the processed-event, queue, execution-step, loop,
-range, generated-item, dice-count, or dice-side limit. A nonpositive register
+range, generated-item, value-depth, dice-count, or dice-side limit. A nonpositive register
 limit selects the portable default capacity of 512. Call depth is clamped to the
 encoded `u16` range for linking; zero permits only root handlers. Random scope
 depth alone must be in `0...65535` and is validated at Build. Host.Load checks

@@ -91,11 +91,16 @@ final class GesMessageStorage {
     let arguments: GesMessageArguments
     let tags: [String]
     let signatureId: String
+    // A Message is one level deeper than its deepest argument (specs/HostRuntime.md#value-nesting).
+    let nestingDepth: Int64
 
     init(name: String, arguments: GesMessageArguments, tags: [String], signatureId: String) {
         self.name = name
         self.arguments = arguments
         self.tags = tags
         self.signatureId = signatureId
+        var deepest: Int64 = 0
+        for index in 0..<arguments.count { deepest = max(deepest, arguments[index].nestingDepth) }
+        nestingDepth = deepest + 1
     }
 }

@@ -295,7 +295,7 @@ public sealed partial class GameEventScriptHost
             if (!_hasActiveMessage)
             {
                 if (!_starting) PromoteDelayed();
-                if (_limits.MaxProcessedEventsPerRun > 0 && _stepProcessedMessages >= _limits.MaxProcessedEventsPerRun && (_starting ? _startupQueue.Count : _queue.Count) > 0)
+                if (!_starting && _limits.MaxProcessedEventsPerRun > 0 && _stepProcessedMessages >= _limits.MaxProcessedEventsPerRun && _queue.Count > 0)
                 {
                     _context.RecordRuntimeLimitReached(nameof(GesRuntimeLimits.MaxProcessedEventsPerRun), "Message processing limit reached before the host became idle.", _limits.MaxProcessedEventsPerRun);
                     runtimeLimitReached = true;

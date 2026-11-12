@@ -21,6 +21,11 @@ public struct GesRuntimeLimits: Sendable {
     public var maxRangeItems = 10_000
     /// Maximum materialized collection size; nonpositive disables this bound.
     public var maxGeneratedCollectionItems = 10_000
+    /// Maximum nesting depth of a List, Map, Record or Message a handler constructs; nonpositive disables this bound.
+    ///
+    /// A List, Map, Record or Message is one level deeper than its deepest item, field or argument; other values have depth 0.
+    /// Constructing a deeper value stops the handler, so recursive conversions, comparisons and releases stay within the stack.
+    public var maxValueDepth = 64
     /// Maximum number of dice in a roll; nonpositive disables this bound.
     public var maxDiceCount = 1_000
     /// Maximum sides of a die; nonpositive disables this bound.

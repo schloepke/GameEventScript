@@ -15,7 +15,16 @@ extension GesVirtualMachine {
         defer { candidates.close() }
         let container: GesValue
         if let iterator = right.iteratorValue { container = .list(GesCollectionOperators.read(iterator)) } else { container = right }
-        while let candidate = candidates.next() { if GesCollectionOperators.contains(candidate, container) != all { return setBoolean(destination, !all) } }
+        var chargeItems = GesCollectionOperators.isRange(registers[x])
+        // Against an iterator every Range candidate is visited before the search, as the iterator is read only once.
+        if chargeItems, right.iteratorValue != nil {
+            for _ in 0..<GesCollectionOperators.length(registers[x]) where !chargeRangeItem() { return setNothing(destination) }
+            chargeItems = false
+        }
+        while let candidate = candidates.next() {
+            if chargeItems && !chargeRangeItem() { return setNothing(destination) }
+            if GesCollectionOperators.contains(candidate, container) != all { return setBoolean(destination, !all) }
+        }
         return setBoolean(destination, all)
     }
 }

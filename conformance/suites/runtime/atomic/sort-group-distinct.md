@@ -1154,3 +1154,86 @@ steps:
               type: ":Number.int64"
               value: "2"
 ```
+
+---
+
+## Test: distinct, grouping and Map building keep their order beyond small sizes
+
+This case verifies: With more than sixteen distinct keys, `:distinct`, `:distinct by`, `:group by` and `:map by` keep first occurrences in source order, drop later duplicates and let a later item replace a Map value.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: case-0008
+kind: scriptApi
+level: atomic
+sources:
+  - name: "large distinct group and map order.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+module atomiclargedistinct
+on Start {
+  let values be (from 1 to 60)[:select v => v mod 20]
+  let unique be values[:distinct]
+  let keyed be values[:distinct by v => v mod 18]
+  let groups be values[:group by v => v as :Text]
+  let mapped be values[:map v by (v mod 18) as :Text]
+  emit Done(unique: unique[:count], firstUnique: unique[1], lastUnique: unique[20], keyed: keyed[:count], lastKeyed: keyed[18], groups: groups[:count], groupSize: groups["19"][:count], mapped: mapped[:count])
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| step-0001 | Start | completion |  |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  step-0001:
+    input:
+      args: []
+    local:
+      - name: "Done"
+        args:
+          - name: "unique"
+            value:
+              type: ":Number.int64"
+              value: "20"
+          - name: "firstUnique"
+            value:
+              type: ":Number.int64"
+              value: "1"
+          - name: "lastUnique"
+            value:
+              type: ":Number.int64"
+              value: "0"
+          - name: "keyed"
+            value:
+              type: ":Number.int64"
+              value: "18"
+          - name: "lastKeyed"
+            value:
+              type: ":Number.int64"
+              value: "18"
+          - name: "groups"
+            value:
+              type: ":Number.int64"
+              value: "20"
+          - name: "groupSize"
+            value:
+              type: ":Number.int64"
+              value: "3"
+          - name: "mapped"
+            value:
+              type: ":Number.int64"
+              value: "18"
+```

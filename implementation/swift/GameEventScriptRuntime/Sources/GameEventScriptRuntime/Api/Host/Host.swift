@@ -10,7 +10,7 @@ public final class GameEventScriptHost {
     private let externalTypes: (any GesExternalTypeRegistry)?
     private let limits: GesRuntimeLimits
     private let clock: GesClockSource?
-    private var delayed: [GesDelayedMessage] = []
+    private var delayed = GesDelayedQueue()
     // Host-local send IDs start at 1; 0 reports a send without an ID.
     private var lastSendID: Int64 = 0
     private let sink: (any GesPublishSink)?
@@ -219,7 +219,7 @@ public final class GameEventScriptHost {
         while remaining > 0 {
             if active == nil {
                 if !starting { promoteDelayed() }
-                if limits.maxProcessedEventsPerRun > 0 && processed >= limits.maxProcessedEventsPerRun && (starting ? startupQueue.count : queue.count) > 0 {
+                if !starting && limits.maxProcessedEventsPerRun > 0 && processed >= limits.maxProcessedEventsPerRun && queue.count > 0 {
                     context.reportLimit("MaxProcessedEventsPerRun", limits.maxProcessedEventsPerRun)
                     limitReached = true
                     break
@@ -370,13 +370,7 @@ public final class GameEventScriptHost {
         lastSendID += 1
         let pending = GesPendingMessage(message: message, exact: exact, names: names, id: lastSendID, initializationOutputID: initializationInstance?.registrationID ?? 0)
         let entry = GesDelayedMessage(deadline: now + microseconds, pending: pending, publish: publish, owner: initializationInstance)
-        var lo = 0
-        var hi = delayed.count
-        while lo < hi {
-            let mid = lo + (hi - lo) / 2
-            if delayed[mid].deadline <= entry.deadline { lo = mid + 1 } else { hi = mid }
-        }
-        delayed.insert(entry, at: lo)
+        delayed.add(entry)
         idleSinceMicroseconds = nil
         observer?.messageScheduled(message, id: entry.id, deadline: entry.deadline, publish: publish)
         if publish {
@@ -393,9 +387,9 @@ public final class GameEventScriptHost {
     private func promoteDelayed() {
         guard !delayed.isEmpty else { return }
         let now = elapsedMicroseconds
-        while let entry = delayed.first, entry.deadline <= now {
+        while let next = delayed.first, next.deadline <= now {
             // Failed initializations removed their entries already, so every due entry is delivered.
-            delayed.removeFirst()
+            let entry = delayed.removeFirst()
             let local = entry.pending.hasRecipients
             if local { queue.enqueue(entry.pending) }
             if entry.publish {
@@ -659,13 +653,13 @@ extension GameEventScriptHost {
     // Removes entries abandoned by a failed initialization. Each is reported in deadline order before the array
     // changes, so a throwing observer cannot leave it inconsistent.
     private func removeFailedDelayed() {
-        if let observer { for entry in delayed where entry.isAbandoned { observer.messageDiscarded(id: entry.id) } }
+        if let observer { for entry in delayed.inOrder where entry.isAbandoned { observer.messageDiscarded(id: entry.id) } }
         delayed.removeAll { $0.isAbandoned }
     }
 
     // Discards every delayed entry, reporting each in deadline order.
     private func clearDelayed() {
-        if let observer { for entry in delayed { observer.messageDiscarded(id: entry.id) } }
+        if let observer { for entry in delayed.inOrder { observer.messageDiscarded(id: entry.id) } }
         delayed.removeAll()
     }
 

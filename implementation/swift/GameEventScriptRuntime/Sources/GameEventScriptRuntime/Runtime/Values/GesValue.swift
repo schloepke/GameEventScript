@@ -286,13 +286,35 @@ public struct GesValue: Hashable, CustomStringConvertible {
         setObject(.bytes, value.isEmpty ? Self.emptyBytes : GesValueObject(value), hasValue: !value.isEmpty)
     }
 
+    // Lists, Maps, Records and Messages keep their nesting depth in the numeric word, which they use for nothing else, so
+    // the depth of a new container follows from its items without walking them (specs/HostRuntime.md#value-nesting).
+    var nestingDepth: Int64 {
+        switch storageKind {
+        case .list, .map, .record, .message: return Int64(bitPattern: numericBits)
+        default: return 0
+        }
+    }
+
+    static func containerDepth(_ items: [GesValue]) -> Int64 {
+        var deepest: Int64 = 0
+        for item in items {
+            let depth = item.nestingDepth
+            if depth > deepest { deepest = depth }
+        }
+        return deepest + 1
+    }
+
     mutating func setList(_ value: [GesValue]) {
         setObject(.list, value.isEmpty ? Self.emptyList : GesValueObject(value), hasValue: !value.isEmpty)
+        numericBits = UInt64(bitPattern: Self.containerDepth(value))
     }
 
     mutating func setMap(_ entries: [GesMapEntry]) { setMap(GesValueMap(entries)) }
 
-    mutating func setMap(_ map: GesValueMap) { setObject(.map, GesValueObject(map), hasValue: map.length != 0) }
+    mutating func setMap(_ map: GesValueMap) {
+        setObject(.map, GesValueObject(map), hasValue: map.length != 0)
+        numericBits = UInt64(bitPattern: Self.containerDepth(map.values))
+    }
 
     mutating func setRecord(typeName: String, entries: [GesMapEntry]) {
         setRecord(typeName: typeName, fields: GesValueMap(entries))
@@ -300,6 +322,7 @@ public struct GesValue: Hashable, CustomStringConvertible {
 
     mutating func setRecord(typeName: String, fields: GesValueMap) {
         setObject(.record, GesValueObject(GesRecordPayload(name: typeName, fields: fields)), hasValue: fields.length != 0)
+        numericBits = UInt64(bitPattern: Self.containerDepth(fields.values))
     }
 
     mutating func setIntegerRange(from: Int64, to: Int64, step: Int64 = 1) {
@@ -326,7 +349,10 @@ public struct GesValue: Hashable, CustomStringConvertible {
         setObject(.floatRange, GesValueObject(range))
     }
 
-    mutating func setMessage(_ value: GameEventScriptMessage) { setObject(.message, value.storage) }
+    mutating func setMessage(_ value: GameEventScriptMessage) {
+        setObject(.message, value.storage)
+        numericBits = UInt64(bitPattern: value.storage.nestingDepth)
+    }
 
     mutating func setHandler(_ value: GesMessageSignature) { setObject(.handler, value.storage) }
 

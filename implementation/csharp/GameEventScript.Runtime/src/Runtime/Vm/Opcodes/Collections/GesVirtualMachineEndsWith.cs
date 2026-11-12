@@ -84,12 +84,27 @@ internal partial class GesVirtualMachine
             return;
         }
 
+        if (leftRange is not null && rightRange is not null)
+        {
+            SetBoolean(dst, IntegerRangeAffix(leftRange, a.CollectionCount, rightRange, b.CollectionCount, suffix: true));
+            return;
+        }
+
+        // Between two Ranges every compared pair charges the loop budget (specs/HostRuntime.md#iterator-and-generated-collection-limits).
+        var chargeItems = (leftRange is not null || leftFloatRange is not null) && (rightRange is not null || rightFloatRange is not null);
+
         var leftOffset = a.CollectionCount - b.CollectionCount;
         var leftInteger = leftRange is not null ? leftRange.From + leftRange.Step * leftOffset : 0;
         var rightInteger = rightRange?.From ?? 0;
 
         for (var i = 0L; i < b.CollectionCount; i++)
         {
+            if (chargeItems && !ChargeRangeItem())
+            {
+                SetNothing(dst);
+                return;
+            }
+
             var leftIndex = leftOffset + i;
             var left = new GesValue();
             if (leftList is not null) left = leftList[leftIndex];

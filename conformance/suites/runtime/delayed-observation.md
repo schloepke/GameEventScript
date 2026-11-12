@@ -124,6 +124,94 @@ steps:
 
 ---
 
+## Test: due messages are delivered by deadline and then by scheduling order
+
+Delayed emits scheduled with falling and equal deadlines are delivered in deadline order once due, and entries with the same deadline keep the order in which they were scheduled.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: due-order-by-deadline-then-schedule
+sources:
+  - name: order.ges
+    program: main
+stepActions:
+  due:
+    - advanceMicroseconds: "3000000"
+```
+
+### Source code under test
+
+```ges
+module main
+on Work { emit after 3s Late(n: 1); emit after 2s Late(n: 2); emit after 2s Late(n: 3); emit after 1s Late(n: 4); emit after 2s Late(n: 5) }
+on Late(n) { emit Seen(n: n) }
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| begin | Work | completion | |
+| due | Unknown | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  begin:
+    waiting: true
+    local:
+      - name: Late
+        args:
+          - name: n
+            value: { type: ":Number.int64", value: "1" }
+      - name: Late
+        args:
+          - name: n
+            value: { type: ":Number.int64", value: "2" }
+      - name: Late
+        args:
+          - name: n
+            value: { type: ":Number.int64", value: "3" }
+      - name: Late
+        args:
+          - name: n
+            value: { type: ":Number.int64", value: "4" }
+      - name: Late
+        args:
+          - name: n
+            value: { type: ":Number.int64", value: "5" }
+  due:
+    accepted: false
+    waiting: false
+    local:
+      - name: Seen
+        args:
+          - name: n
+            value: { type: ":Number.int64", value: "4" }
+      - name: Seen
+        args:
+          - name: n
+            value: { type: ":Number.int64", value: "2" }
+      - name: Seen
+        args:
+          - name: n
+            value: { type: ":Number.int64", value: "3" }
+      - name: Seen
+        args:
+          - name: n
+            value: { type: ":Number.int64", value: "5" }
+      - name: Seen
+        args:
+          - name: n
+            value: { type: ":Number.int64", value: "1" }
+```
+
+---
+
 ## Test: delayed emit without recipients is not scheduled
 
 A delayed emit whose recipient snapshot is empty behaves exactly like the instant emit: the script result is true, the emit is observed as not queued, it reports send ID 0 and leaves no delayed work.

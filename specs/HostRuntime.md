@@ -138,7 +138,10 @@ available when any initialization emits, so its enqueue-time snapshot can includ
 another member of the group. No ordinary queued message is dispatched by Start.
 
 Every initialization uses the ordinary runtime safety limits. Exhaustion fails
-startup; the initial group never becomes partially ready. Successful Start marks
+startup; the initial group never becomes partially ready. `MaxProcessedEventsPerRun`
+paces ordinary pumps and does not bound Start: Start completes every
+initialization snapshot of the group, however many there are, because a failed
+Start is terminal while a paced pump resumes later. Successful Start marks
 the host ready and returns `StartResult.Ready`, while emitted messages may remain
 queued. StartResult also reports initialization opcode, completed-snapshot, emit,
 and publish counters; these exclude subsequent ordinary dispatch. A runtime fault or exhausted safety limit returns `RuntimeError` or
@@ -349,7 +352,7 @@ and performs no synchronization. A host is serial but not thread-affine: only
 one caller may access it at a time, while later frames may run on another thread
 when the embedding environment supplies the required happens-before handoff.
 
-The processed-message limit counts completed logical messages, after all of
+The processed-message limit counts completed logical messages of ordinary pumps, after all of
 their captured handlers have finished. After completing the configured number,
 the pump reports `RuntimeLimitReached` and one corresponding observer event only
 if another logical message remains queued. That next message stays queued and
@@ -433,11 +436,61 @@ stops the handler without returning a partial projection result. Previously
 completed effects remain observable. This is an incremental materialization
 limit, not a byte-allocation budget or a bound on existing input collections.
 
+Operations that visit the items of a Range inside one opcode charge the same
+`MaxLoopIterations` counter for each visited Range item, before visiting it:
+`:contains any` and `:contains all` for each candidate of a Range, `HasAny` and
+`HasAll` for each item of a binary64 Range, and `starts with` and `ends with`
+for each compared pair when both operands are Ranges. Against an iterator,
+`:contains any` and `:contains all` visit every Range candidate before the
+search, because the iterator is read once. Integer Ranges need no visits where
+their bounds decide the result: `HasAny` is true unless the Range is empty or
+just `0`, `HasAll` is true unless the Range contains `0` (an empty Range has
+all), and `starts with` or `ends with` between two integer Ranges compares the
+first or last terms and, beyond one item, the steps. Shuffling a Range
+materializes it, so a Range longer than `MaxRangeItems` reports that limit and
+shuffles to an empty List, as the List cast does; choosing items at random from
+a Range draws positions among the items not chosen yet and does not materialize
+it.
+
 For either limit, a nonpositive value disables that limit. An exceeded limit
 produces one structured runtime-limit observation for the failing handler and
 stops the pump with `RuntimeLimitReached`. Normal handler cleanup restores random
 boundaries and clears VM state. Remaining handlers and queued messages stay
 available for a later pump call.
+
+### Value nesting
+
+`MaxValueDepth` (default 64) bounds how deeply a handler nests the values it
+constructs. A List, Map, Record or Message is one level deeper than its deepest
+item, field or argument; every other value, including Dice, Bytes, Ranges,
+Vectors, Points and external values, has depth 0, so a List of numbers has
+depth 1 and an empty List also has depth 1. Exactly the configured depth is
+allowed. Constructing a deeper value stops the handler with this runtime limit
+before its next instruction, without returning the value; previously completed
+effects remain. Values a handler receives as arguments, and values native code
+builds through the API, are not checked until the handler nests them further.
+A nonpositive value disables the limit.
+
+The bound exists because converting, comparing, hashing and releasing a value
+walks its nesting recursively in both ports. Without it, a handler that wraps
+its accumulator once per step, or a message chain that wraps its argument once
+per message, could exhaust the native stack, which neither port can catch. With
+the default, every value a script builds converts and compares within the stack
+of a 512 KB thread, and also stays within the nesting bounds of `parse` and of
+the JSON codec. Each container records its depth when it is built, so the check
+costs no walk of its items.
+
+### Memory
+
+Runtime limits bound the work, the nesting and the collection sizes of one
+handler; they are not a memory budget. Concatenating Text, Lists, Dice or Bytes
+and converting values to Text produce values whose size can double with each
+instruction, so a few dozen instructions can request more memory than a
+process has. C# reports a failed allocation as a handler error; Swift
+terminates the process. A host that runs untrusted Programs bounds their memory
+outside the runtime, for example by running them in a separate process with an
+operating-system memory limit. A portable per-value size limit is deferred in
+`BACKLOG.md`.
 
 ## C# Automatic Runner
 

@@ -844,12 +844,28 @@ public partial struct GesValue : IEquatable<GesValue>
         ObjectValue = bytes;
     }
 
+    // Lists, Maps, Records and Messages keep their nesting depth in the numeric word, which they use for nothing else, so
+    // the depth of a new container follows from its items without walking them (specs/HostRuntime.md#value-nesting).
+    internal readonly long NestingDepth => Kind is List or Map or Custom or GesBytecodeTypeKind.Message ? IntegerValue : 0;
+
+    internal static long ContainerDepth(GesValue[] items)
+    {
+        long deepest = 0;
+        for (var i = 0; i < items.Length; i++)
+        {
+            var depth = items[i].NestingDepth;
+            if (depth > deepest) deepest = depth;
+        }
+
+        return deepest + 1;
+    }
+
     internal void SetList(GesValue[] list)
     {
         Kind = List;
         Flags = list.Length > 0 ? StorageObjectFlag | HasValueFlag : StorageObjectFlag;
         Unit = UnitNone;
-        IntegerValue = 0;
+        IntegerValue = ContainerDepth(list);
         ObjectValue = list;
     }
 
@@ -858,7 +874,7 @@ public partial struct GesValue : IEquatable<GesValue>
         Kind = Map;
         Flags = valueMap.Length > 0 ? StorageObjectFlag | HasValueFlag : StorageObjectFlag;
         Unit = UnitNone;
-        IntegerValue = 0;
+        IntegerValue = ContainerDepth(valueMap.ValueList);
         ObjectValue = valueMap;
     }
 
@@ -867,7 +883,7 @@ public partial struct GesValue : IEquatable<GesValue>
         Kind = Custom;
         Flags = record.Length > 0 ? StorageObjectFlag | HasValueFlag : StorageObjectFlag;
         Unit = UnitNone;
-        IntegerValue = 0;
+        IntegerValue = ContainerDepth(record.ValueList);
         ObjectValue = new GesCustomObject(typeName, record);
     }
 
@@ -947,7 +963,7 @@ public partial struct GesValue : IEquatable<GesValue>
         Kind = GesBytecodeTypeKind.Message;
         Flags = StorageObjectFlag | HasValueFlag;
         Unit = UnitNone;
-        IntegerValue = 0;
+        IntegerValue = message.Arguments.NestingDepth;
         ObjectValue = message;
     }
 

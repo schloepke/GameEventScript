@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using System;
+using System.Collections.Generic;
 using GameEventScript.Runtime.Values;
 
 namespace GameEventScript.Runtime.Vm;
@@ -53,9 +54,21 @@ internal sealed class GesVmListBuilder
 
 internal sealed class GesVmMapBuilder
 {
+    // Builders search their keys linearly while they are small, which allocates nothing, and through a hash index once they
+    // hold IndexThreshold keys, so building a large Map, group or distinct List stays linear instead of quadratic.
+    internal const int IndexThreshold = 16;
+
+    internal static Dictionary<string, int> CreateIndex(string[] keys, int count)
+    {
+        var index = new Dictionary<string, int>(count * 2, StringComparer.Ordinal);
+        for (var i = 0; i < count; i++) index[keys[i]] = i;
+        return index;
+    }
+
     private string[] _keys;
     private GesValue[] _values;
     private int _count;
+    private Dictionary<string, int>? _index;
 
     internal GesVmMapBuilder(int capacity = 0)
     {
@@ -66,22 +79,25 @@ internal sealed class GesVmMapBuilder
 
     internal int Count => _count;
 
-    internal bool ContainsKey(string key)
+    internal bool ContainsKey(string key) => IndexOf(key) >= 0;
+
+    private int IndexOf(string key)
     {
+        if (_index is not null) return _index.TryGetValue(key, out var found) ? found : -1;
         for (var i = 0; i < _count; i++)
         {
-            if (string.Equals(_keys[i], key, StringComparison.Ordinal)) return true;
+            if (string.Equals(_keys[i], key, StringComparison.Ordinal)) return i;
         }
 
-        return false;
+        return -1;
     }
 
     internal void Set(string key, GesValue value, GesRuntimeBudget? budget = null)
     {
-        for (var i = 0; i < _count; i++)
+        var existing = IndexOf(key);
+        if (existing >= 0)
         {
-            if (!string.Equals(_keys[i], key, StringComparison.Ordinal)) continue;
-            _values[i] = value;
+            _values[existing] = value;
             return;
         }
 
@@ -100,6 +116,8 @@ internal sealed class GesVmMapBuilder
         _keys[_count] = key;
         _values[_count] = value;
         _count++;
+        if (_index is not null) _index[key] = _count - 1;
+        else if (_count == GesVmMapBuilder.IndexThreshold) _index = GesVmMapBuilder.CreateIndex(_keys, _count);
     }
 
     internal GesValueMap ToMap() => new(_keys, _values, _count);
@@ -112,6 +130,7 @@ internal sealed class GesVmGroupBuilder
     private GesValue[][] _buckets;
     private int[] _counts;
     private int _count;
+    private Dictionary<string, int>? _index;
 
     internal GesVmGroupBuilder(GesVirtualMachine state, int capacity = 0)
     {
@@ -125,11 +144,18 @@ internal sealed class GesVmGroupBuilder
     internal void Add(string key, GesValue value, GesRuntimeBudget budget)
     {
         var groupIndex = -1;
-        for (var i = 0; i < _count; i++)
+        if (_index is not null)
         {
-            if (!string.Equals(_keys[i], key, StringComparison.Ordinal)) continue;
-            groupIndex = i;
-            break;
+            if (_index.TryGetValue(key, out var found)) groupIndex = found;
+        }
+        else
+        {
+            for (var i = 0; i < _count; i++)
+            {
+                if (!string.Equals(_keys[i], key, StringComparison.Ordinal)) continue;
+                groupIndex = i;
+                break;
+            }
         }
 
         if (groupIndex < 0)
@@ -152,6 +178,8 @@ internal sealed class GesVmGroupBuilder
             groupIndex = _count++;
             _keys[groupIndex] = key;
             _buckets[groupIndex] = new GesValue[4];
+            if (_index is not null) _index[key] = groupIndex;
+            else if (_count == GesVmMapBuilder.IndexThreshold) _index = GesVmMapBuilder.CreateIndex(_keys, _count);
         }
 
         var bucket = _buckets[groupIndex];
@@ -193,6 +221,7 @@ internal sealed class GesVmDistinctBuilder
     private GesValue[] _keys;
     private GesValue[] _values;
     private int _count;
+    private HashSet<GesValue>? _index;
 
     internal GesVmDistinctBuilder(int capacity = 0)
     {
@@ -203,11 +232,16 @@ internal sealed class GesVmDistinctBuilder
 
     internal void Add(in GesValue key, in GesValue value, GesRuntimeBudget budget)
     {
-        for (var i = 0; i < _count; i++)
+        if (_index is not null)
         {
-            var existing = _keys[i];
-            var candidate = key;
-            if (existing.EqualsValue(in candidate)) return;
+            if (_index.Contains(key)) return;
+        }
+        else
+        {
+            for (var i = 0; i < _count; i++)
+            {
+                if (_keys[i].EqualsValue(in key)) return;
+            }
         }
 
         if (!budget.CheckGeneratedCollectionItemCountWithinLimit((long)_count + 1)) return;
@@ -226,6 +260,12 @@ internal sealed class GesVmDistinctBuilder
         _keys[_count] = key;
         _values[_count] = value;
         _count++;
+        if (_index is not null) _index.Add(key);
+        else if (_count == GesVmMapBuilder.IndexThreshold)
+        {
+            _index = new HashSet<GesValue>(_count * 2);
+            for (var i = 0; i < _count; i++) _index.Add(_keys[i]);
+        }
     }
 
     internal GesValue[] ToList()

@@ -127,6 +127,18 @@ public sealed class GesRuntimeLimits
     public int MaxGeneratedCollectionItems { get; init; } = 10_000;
 
     /// <summary>
+    /// Specifies the maximum nesting depth of a List, Map, Record or Message that a handler constructs.
+    /// </summary>
+    /// <remarks>
+    /// The default is 64; a nonpositive value disables this limit. A List, Map, Record or Message is one level
+    /// deeper than its deepest item, field or argument, and every other value has depth 0, so a List of numbers
+    /// has depth 1. Constructing a deeper value stops the handler with this runtime limit. The bound keeps the
+    /// recursive conversion, comparison and release of script-built values within the native stack. Values
+    /// that native code builds through the API are not checked until a handler nests them further.
+    /// </remarks>
+    public int MaxValueDepth { get; init; } = 64;
+
+    /// <summary>
     /// Specifies the maximum number of dice that can be processed during the execution
     /// of a game event script. This limit ensures controlled usage of resources
     /// when handling random number generation mechanics in scripts.

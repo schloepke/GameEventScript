@@ -989,6 +989,7 @@ sealed class GameEventScript.Api.GesRuntimeLimits
   property System.Int32 MaxRandomScopeDepth { get set }
   property System.Int32 MaxRangeItems { get set }
   property System.Int32 MaxRegisterValues { get set }
+  property System.Int32 MaxValueDepth { get set }
 sealed class GameEventScript.Api.GesSchema
   method GameEventScript.Api.GesBoundSchema Bind(GameEventScript.Api.GesSchemaParameters parameters)
   method System.Void CheckDocument(System.String text, GameEventScript.Api.GesSchemaParameters parameters)

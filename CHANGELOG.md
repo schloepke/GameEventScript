@@ -11,6 +11,12 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 ## Unreleased
 
 ### Breaking
+- The new runtime limit `MaxValueDepth` (default 64) stops a handler that nests Lists, Maps, Records or Messages more
+  than 64 levels deep, which could otherwise overflow the native stack when the value was converted, compared or
+  released. Raise it in `GesRuntimeLimits` where deeper values are needed.
+- `:contains any` and `:contains all` with a Range of candidates, `has any`/`has all` over a binary64 Range and
+  `starts with`/`ends with` between two Ranges charge `MaxLoopIterations` for every Range item they visit, and
+  shuffling a Range longer than `MaxRangeItems` reports that limit and gives an empty List, as `as :List` does.
 - `Box` and `Poly` are built-in schema types, so a schema, message or message set of that name is now
   `schema.duplicateName`; rename it.
 - A required computed schema field that reads an optional field without `has value` or `default` is the new
@@ -515,6 +521,14 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   of every port. Runtime behavior does not depend on it.
 
 ### Fixed
+- `Start()` completes an initial group with more initializations than `MaxProcessedEventsPerRun` instead of failing
+  with `runtime.initializationLimitReached`; the limit paces ordinary pumps only.
+- Choosing items at random from a long Range no longer allocates one entry per Range item, and integer Ranges answer
+  `has any`, `has all`, `starts with` and `ends with` from their bounds.
+- Delayed messages are kept in a heap, so scheduling them in falling deadline order and delivering many at once no
+  longer take quadratic time; equal deadlines still keep their scheduling order.
+- C# `:distinct`, `:distinct by`, `:group by`, `:map by` and Map union index their keys once they hold sixteen, so large
+  results no longer take quadratic time.
 - Generated schema code for a List whose elements get an item type, such as `:List(:Number step 0.5 | :Text max 8)` or a
   List of Lists of Points, quantizes its elements in `CopyFrom` and deltas instead of skipping them, and no longer fails to
   generate for a List of Lists.

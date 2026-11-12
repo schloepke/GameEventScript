@@ -13,7 +13,7 @@ from checks import numeric_checks as numeric
 
 LIMITS = {'maxProcessedEventsPerRun', 'maxQueuedMessagesPerRun', 'maxExecutionSteps', 'maxRegisterValues',
           'maxLoopIterations', 'maxCallDepth', 'maxRandomScopeDepth', 'maxRangeItems',
-          'maxGeneratedCollectionItems', 'maxDiceCount', 'maxDiceSides'}
+          'maxGeneratedCollectionItems', 'maxValueDepth', 'maxDiceCount', 'maxDiceSides'}
 
 
 def value(raw):

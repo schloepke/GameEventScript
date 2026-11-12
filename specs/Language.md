@@ -2098,8 +2098,10 @@ reversed lists. Maps, scalars, and `nothing` yield `nothing`.
 
 `:shuffle` is defined for lists, dice, ranges, and iterator chains and always
 materializes a list. This allows game-oriented cases such as shuffling a card
-range with `from 1 to 32[:shuffle]`. Maps, scalars, and `nothing` yield
-`nothing`.
+range with `from 1 to 32[:shuffle]`. A Range longer than `MaxRangeItems`
+shuffles to an empty list with a limit observation, as `as :List` does
+([Host runtime](HostRuntime.md#iterator-and-generated-collection-limits)).
+Maps, scalars, and `nothing` yield `nothing`.
 
 ### Dice Patterns and Object Matching
 
@@ -2438,6 +2440,7 @@ Runtime limits cover:
 - maximum call depth
 - maximum range items
 - maximum generated collection items
+- maximum value nesting depth
 - maximum dice count and dice sides
 
 Runtime limits are reset per handler, while a host frame budget is an independent

@@ -39,6 +39,13 @@ internal partial class GesVirtualMachine
                     break;
                 }
 
+                // Shuffling materializes the Range, so it obeys MaxRangeItems like the List cast.
+                if (_budget is not null && !_budget.CheckRangeLengthWithinLimit(length, "Shuffled Range length exceeds the configured limit."))
+                {
+                    SetList(destinationRegister, EmptyList);
+                    break;
+                }
+
                 if (length > int.MaxValue)
                 {
                     SetNothing(destinationRegister);
@@ -60,6 +67,13 @@ internal partial class GesVirtualMachine
             {
                 var length = GesRangeMath.GetLength(range.From, range.To, range.Step);
                 if (length <= 0)
+                {
+                    SetList(destinationRegister, EmptyList);
+                    break;
+                }
+
+                // Shuffling materializes the Range, so it obeys MaxRangeItems like the List cast.
+                if (_budget is not null && !_budget.CheckRangeLengthWithinLimit(length, "Shuffled Range length exceeds the configured limit."))
                 {
                     SetList(destinationRegister, EmptyList);
                     break;

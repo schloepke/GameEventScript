@@ -1593,6 +1593,7 @@ symbol {"access":"public","declaration":"var maxRetainedOpaqueBytes: Int","kind"
 symbol {"access":"public","declaration":"var maxSectionCount: Int","kind":"swift.property","path":"GameEventScriptRuntime.GesProgramReadLimits.maxSectionCount"}
 symbol {"access":"public","declaration":"var maxSourceArchiveBytes: Int","kind":"swift.property","path":"GameEventScriptRuntime.GesProgramReadLimits.maxSourceArchiveBytes"}
 symbol {"access":"public","declaration":"var maxStringEntries: Int","kind":"swift.property","path":"GameEventScriptRuntime.GesProgramReadLimits.maxStringEntries"}
+symbol {"access":"public","declaration":"var maxValueDepth: Int","kind":"swift.property","path":"GameEventScriptRuntime.GesRuntimeLimits.maxValueDepth"}
 symbol {"access":"public","declaration":"var maxX: Double { get }","kind":"swift.property","path":"GameEventScriptRuntime.GesBox.maxX"}
 symbol {"access":"public","declaration":"var maxY: Double { get }","kind":"swift.property","path":"GameEventScriptRuntime.GesBox.maxY"}
 symbol {"access":"public","declaration":"var maxZ: Double { get }","kind":"swift.property","path":"GameEventScriptRuntime.GesBox.maxZ"}

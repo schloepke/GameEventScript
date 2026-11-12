@@ -37,7 +37,8 @@ final class HostScenario {
         var limits = GesRuntimeLimits()
         let setters: [String: WritableKeyPath<GesRuntimeLimits, Int>] = [
             "maxProcessedEventsPerRun": \.maxProcessedEventsPerRun, "maxQueuedMessagesPerRun": \.maxQueuedMessagesPerRun, "maxExecutionSteps": \.maxExecutionSteps, "maxRegisterValues": \.maxRegisterValues, "maxLoopIterations": \.maxLoopIterations,
-            "maxCallDepth": \.maxCallDepth, "maxRandomScopeDepth": \.maxRandomScopeDepth, "maxRangeItems": \.maxRangeItems, "maxGeneratedCollectionItems": \.maxGeneratedCollectionItems, "maxDiceCount": \.maxDiceCount, "maxDiceSides": \.maxDiceSides,
+            "maxCallDepth": \.maxCallDepth, "maxRandomScopeDepth": \.maxRandomScopeDepth, "maxRangeItems": \.maxRangeItems, "maxGeneratedCollectionItems": \.maxGeneratedCollectionItems, "maxValueDepth": \.maxValueDepth,
+            "maxDiceCount": \.maxDiceCount, "maxDiceSides": \.maxDiceSides,
         ]
         for entry in test["limits"]?.objectValue ?? [] { if let key = setters[entry.key], let number = entry.value.integerValue { limits[keyPath: key] = number } }
         let random = test["random"]

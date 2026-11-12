@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 using System;
+using System.Collections.Generic;
 using GameEventScript.Api;
 using GameEventScript.Runtime.Values;
 using static GameEventScript.Api.GesBytecodeTypeKind;
@@ -86,7 +87,7 @@ internal partial class GesVirtualMachine
         var list = new GesValue[length];
         if (sourceLength <= int.MaxValue)
         {
-            var indices = CreateShuffledPrefix(checked((int)sourceLength), length, randomGenerator);
+            var indices = CreateSparseShuffledPrefix(checked((int)sourceLength), length, randomGenerator);
             for (var i = 0; i < length; i++)
             {
                 if (GesRangeMath.GetTerm(valueRangeInteger.From, valueRangeInteger.To, valueRangeInteger.Step, indices[i] + 1L) is { } value) list[i].SetInteger(value);
@@ -139,7 +140,7 @@ internal partial class GesVirtualMachine
         var list = new GesValue[length];
         if (sourceLength <= int.MaxValue)
         {
-            var indices = CreateShuffledPrefix(checked((int)sourceLength), length, randomGenerator);
+            var indices = CreateSparseShuffledPrefix(checked((int)sourceLength), length, randomGenerator);
             for (var i = 0; i < length; i++)
             {
                 if (GesRangeMath.GetTerm(range.From, range.To, range.Step, indices[i] + 1L) is { } value) list[i].SetFloat(value);
@@ -214,6 +215,31 @@ internal partial class GesVirtualMachine
         {
             if (iterator is IDisposable disposable) disposable.Dispose();
         }
+    }
+
+    // Draws the same indices as CreateShuffledPrefix without materializing the source: the selected position counts only
+    // the indices not chosen yet, which the sorted chosen indices shift upward. A Range thus costs its prefix, not its length.
+    private static int[] CreateSparseShuffledPrefix(int sourceLength, int prefixLength, GesRandomGenerator randomGenerator)
+    {
+        var selectedIndices = new int[prefixLength];
+        var chosen = new List<int>(prefixLength);
+        var remainingLength = sourceLength;
+        for (var i = 0; i < prefixLength; i++)
+        {
+            var value = (int)randomGenerator.NextInclusiveInteger(0, remainingLength - 1);
+            var position = 0;
+            while (position < chosen.Count && chosen[position] <= value)
+            {
+                value++;
+                position++;
+            }
+
+            chosen.Insert(position, value);
+            selectedIndices[i] = value;
+            remainingLength--;
+        }
+
+        return selectedIndices;
     }
 
     private static int[] CreateShuffledPrefix(int sourceLength, int prefixLength, GesRandomGenerator randomGenerator)

@@ -56,7 +56,11 @@ public sealed class GesMessageArguments : IReadOnlyCollection<GesMessageArgument
     {
         _names = names;
         _values = values;
+        NestingDepth = GesValue.ContainerDepth(values);
     }
+
+    // A Message is one level deeper than its deepest argument (specs/HostRuntime.md#value-nesting).
+    internal long NestingDepth { get; }
 
     /// <summary>
     /// Gets the count.

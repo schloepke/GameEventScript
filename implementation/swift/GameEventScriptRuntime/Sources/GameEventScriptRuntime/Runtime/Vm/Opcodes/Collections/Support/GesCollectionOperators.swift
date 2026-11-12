@@ -4,6 +4,16 @@
 enum GesCollectionOperators {
     static func length(_ value: GesValue) -> Int64 { value.integerRangeValue?.count ?? value.floatRangeValue?.count ?? (value.spatialValue != nil ? 3 : Int64(value.length)) }
 
+    static func isRange(_ value: GesValue) -> Bool { value.integerRangeValue != nil || value.floatRangeValue != nil }
+
+    // Two integer Ranges compare without visiting items: the first (or last) terms and, beyond one item, the steps decide.
+    static func integerRangeAffix(_ left: GesIntegerRange, _ leftCount: Int64, _ right: GesIntegerRange, _ rightCount: Int64, suffix: Bool) -> Bool {
+        if rightCount == 0 { return true }
+        let leftTerm = suffix ? left.term(at: leftCount) : left.from
+        let rightTerm = suffix ? right.term(at: rightCount) : right.from
+        return leftTerm == rightTerm && (rightCount == 1 || left.step == right.step)
+    }
+
     static func sequence(_ value: GesValue) -> Bool { [.list, .dice, .integerRange, .floatRange].contains(value.kind) }
 
     static func materialize(_ slot: GesValue, ranges: Bool = true) -> [GesValue]? {

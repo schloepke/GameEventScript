@@ -268,6 +268,8 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   `wire.tooDeep at 'units[].units[].units': deeper than depth 3` (`GesWireException.Detail`, Swift
   `GesWireError.detail`), and a document with `document.tooDeep`. Generated code of the recursive schema takes the level
   of each record; every other schema generates the same code as before. `GesSchemaType.Depth` (Swift `depth`) describes it.
+  The element may also be a union of scalars and the schema itself, `units: :List(id: :Text max 64 | bind: :Loadout_Bind)
+  max 16 depth 3`, so a document writes a unit as its id alone or as a bind; at the depth the List holds neither.
 - `ges schema generate -d <dir>` (`--out-dir`) writes one file per declaration, or per `.gess` with `--split file`,
   plus a shared `_<Namespace>` file and the manifest `.ges-generated.json`; a later run removes files the manifest owns and
   no longer needs, warns about foreign files with `cli.unowned`, and `--check` compares the whole directory.

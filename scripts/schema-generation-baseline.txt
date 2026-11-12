@@ -506,6 +506,10 @@ aee8ee93652a9d94 generate/csharp a3b84735ca34ec38
 aee8ee93652a9d94 generate/swift 4458f5641ff05cdb
 aee8ee93652a9d94 layout 77c743ebc0dddd9e
 aee8ee93652a9d94 layout/--all-roots 77c743ebc0dddd9e
+afc2b96602c557f4 generate/csharp 967fe5884302cb52
+afc2b96602c557f4 generate/swift 6ce3f4acb00bfc85
+afc2b96602c557f4 layout 0d8904e773d73261
+afc2b96602c557f4 layout/--all-roots 8a2e277c126e9429
 b00e4db2d03902cc generate/csharp b36dd5a77dce5e2e
 b00e4db2d03902cc generate/swift 986d7e754b4f7f9e
 b00e4db2d03902cc layout b4dc71b22db52026

@@ -428,20 +428,24 @@ A schema cannot hold itself, except through one recursive List: `units: :List(:L
 schema `:Loadout_Bind` holds records of that schema, which hold such a List in turn, so that at most `d` records of the
 schema nest in each other where `d` is the `depth`. A tree of binds needs one schema instead of one per level.
 
-- **Where.** `depth` stands only on a List that is the single type of a field and whose element is the single schema that
-  declares the field. Anything else, a second recursive List in a schema, and a depth of 1, which would leave the List
-  always empty, are `schema.invalidConstraint` at `depth`. Every other reference cycle stays `schema.cycle`, and a List
+- **Where.** `depth` stands only on a List that is the single type of a field and whose element is the schema that
+  declares the field: alone, or as the one schema alternative of a union whose other alternatives are scalars, as in
+  `units: :List(id: :Text max 64 | bind: :Loadout_Bind) max 16 depth 3`, where a document writes a unit as its id alone or
+  as a bind. A scalar holds no schema and no elements, so no List, Dice or Poly. Anything else, such as a second schema
+  alternative, a second recursive List in a schema, and a depth of 1, which would leave the List always empty, are
+  `schema.invalidConstraint` at `depth`. Every other reference cycle stays `schema.cycle`, and a List
   of the schema itself without `depth` is such a cycle. The depth belongs to the [canonical form](#canonical-form) and the
   hash; a model List may have no `max`, but `depth` still follows it.
 - **Levels.** Binding unrolls the recursion: the outermost record of the schema is level 1, and each record in the List
-  is one level deeper. Below the depth the List is an ordinary List of its `max`. At the depth it holds no record: it is
-  always empty, takes no bits, has no element and counts toward no list nesting. Each level above it nests one list
+  is one level deeper. Below the depth the List is an ordinary List of its `max`. At the depth it holds no record and no
+  other alternative either: it is always empty, takes no bits, has no element and counts toward no list nesting. Each level above it nests one list
   further, so [lists nest at most 4 levels](#rules) bounds the depth together with the other Lists around it, and the
   [largest encoding](#largest-encoding) follows from `max` and `depth` as for any List.
 - **Deeper data.** A record in the List at the depth is deeper than the depth: writing fails with `wire.tooDeep` at the
   List's path, with the detail `deeper than depth <d>` in its message, such as
   `wire.tooDeep at 'root.units[].units[].units': deeper than depth 3`, and a document check with `document.tooDeep` at
-  the List. Data cannot be deeper, since a decoder reads nothing there.
+  the List. Data cannot be deeper, since a decoder reads nothing there. In a union element the record at the depth is a
+  value that no alternative holds, so the element around it is `document.fieldType`, as in any union.
 - **Taken by `with`.** Where [`with`](#declarations) copies a recursive List into another schema, it is an ordinary List
   of the declaring schema there, whose records nest up to the depth below it. The copy counts as a reference to the
   declaring schema, so a schema that holds it inside the declaring one forms a cycle.
@@ -449,7 +453,9 @@ schema nest in each other where `d` is the `depth`. A tree of binds needs one sc
   deepest, which holds nothing and never changes. A delta descends through the levels like through any nested record.
 
 Unrolling keeps the wire format: a recursive record is encoded as if each level had its own schema, and readers and
-writers need no stack beyond their running lists. Only self-recursion is supported, because a schema that holds one
+writers need no stack beyond their running lists. In generated code the item type of a union element takes the level of the
+record that holds the List, and the schema alternative's nodes follow the union's other alternatives, so that those keep
+their offsets at every level. Only self-recursion is supported, because a schema that holds one
 recursive List has one level to count, and generated code of all other schemas stays as it is. A recursion through
 several schemas or with several Lists would need a level per path, for no use found so far.
 

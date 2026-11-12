@@ -137,7 +137,7 @@ struct GesSchemaDocumentCheck {
             if let max = type.max, bytes.count > max { throw Failure(code: Self.outOfRange, offset: start) }
         case .list:
             guard case .list(let items, let offsets) = value else { return try require(false) }
-            if type.depth > 0 && !items.isEmpty && (attempts.levels[ObjectIdentifier(type.element![0].reference!)] ?? 0) >= type.depth {
+            if let recursion = type.recursion, !items.isEmpty, (attempts.levels[ObjectIdentifier(recursion)] ?? 0) >= type.depth {
                 throw Failure(code: Self.tooDeep, offset: start)
             }
             if let max = type.max, items.count > max { throw Failure(code: Self.outOfRange, offset: start) }

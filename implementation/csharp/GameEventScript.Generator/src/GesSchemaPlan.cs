@@ -66,8 +66,12 @@ internal sealed class GesPlanValue
     internal bool IsClass;
 
     // Whether the value is the element of a recursive List: its schema's record one level deeper, whose nodes follow the
-    // declaring schema's own nodes.
+    // declaring schema's own nodes. In a union element it is the alternative of that schema.
     internal bool Recursive;
+
+    // Whether the value is the item element of a recursive List of a union, whose item takes the level of the record that
+    // holds the List.
+    internal bool PassesLevel;
 
     // The depth of a recursive List of the schema that holds it, 0 for every other value. Where `with` copies such a List
     // into another schema, it is an ordinary List there.
@@ -294,7 +298,17 @@ internal static class GesSchemaPlanner
             if (!Recursive(field.Layout.Encoding, type.Name)) continue;
             plan.Depth = field.Value.Depth = field.Value.Encoding.Depth;
             field.Value.Element!.Node = node;
-            field.Value.Element.Recursive = true;
+            if (field.Value.Item is not { } item)
+            {
+                field.Value.Element.Recursive = true;
+                continue;
+            }
+
+            // A union of scalars and the schema itself: the item takes the level of the record that holds the List, and the
+            // schema's nodes come after the union's own ones, so that every other alternative keeps its offset at every level.
+            item.Depth = plan.Depth;
+            field.Value.Element.PassesLevel = true;
+            SelfLast(context, item.Fields[0].Value, type.Name);
         }
 
         return plan;
@@ -370,9 +384,47 @@ internal static class GesSchemaPlanner
         return result;
     }
 
-    // Whether an encoding is a recursive List of the schema that holds it.
+    // Plans the alternatives of a recursive union again, with the schema's alternative after the others.
+    private static void SelfLast(Context context, GesPlanValue union, string owner)
+    {
+        var alternatives = union.Encoding.Alternatives;
+        var node = union.Node + 1;
+        var self = 0;
+        for (var index = 0; index < alternatives.Count; index++)
+        {
+            if (alternatives[index].Encoding.Schema == owner)
+            {
+                self = index;
+                continue;
+            }
+
+            union.Alternatives[index] = Value(context, alternatives[index].Encoding, union.Base + Pascal(alternatives[index].Name), Pascal(alternatives[index].Name), node);
+            node += Count(context.Layout, alternatives[index].Encoding, context.Counts);
+        }
+
+        union.Alternatives[self].Node = node;
+        union.Alternatives[self].Recursive = true;
+    }
+
+    // Whether an encoding is a recursive List of the schema that holds it, alone or as an alternative of its element.
     private static bool Recursive(GesLayoutEncoding encoding, string owner)
-        => encoding.Kind == GesLayoutKind.List && encoding.Depth > 0 && encoding.Element!.Encoding.Schema == owner;
+        => encoding.Kind == GesLayoutKind.List && encoding.Depth > 0 && SelfAlternative(encoding.Element!) is not null && SelfAlternative(encoding.Element!)!.Encoding.Schema == owner;
+
+    // The element of a recursive List that is its schema: the element itself or the schema alternative of its union.
+    private static GesLayoutField? SelfAlternative(GesLayoutField element)
+        => element.Encoding.Kind == GesLayoutKind.Union ? element.Encoding.Alternatives.Find(alternative => alternative.Encoding.Kind == GesLayoutKind.Schema) : element;
+
+    // The nodes of a recursive List's element at one level, without the schema's own: one for a schema, and for a union the
+    // union, its other alternatives and the schema's group.
+    private static int ElementNodes(GesSchemaLayout layout, GesLayoutEncoding list, string owner, Dictionary<string, int> counts)
+    {
+        var element = list.Element!.Encoding;
+        if (element.Kind != GesLayoutKind.Union) return 1;
+        var total = 2;
+        foreach (var alternative in element.Alternatives)
+            if (alternative.Encoding.Schema != owner) total += Count(layout, alternative.Encoding, counts);
+        return total;
+    }
 
     // The number of nodes an encoding occupies in a bound layout; the element of a recursive List of `owner` is counted
     // apart, after its own nodes.
@@ -408,14 +460,14 @@ internal static class GesSchemaPlanner
     private static int Nodes(GesSchemaLayout layout, GesLayoutType type, int level, Dictionary<string, int> counts)
     {
         var total = 0;
-        var depth = 0;
+        GesLayoutEncoding? recursive = null;
         foreach (var field in type.Fields)
         {
             total += Count(layout, field.Encoding, counts, type.Name);
-            if (Recursive(field.Encoding, type.Name)) depth = field.Encoding.Depth;
+            if (Recursive(field.Encoding, type.Name)) recursive = field.Encoding;
         }
 
-        return level < depth ? total + 1 + Nodes(layout, type, level + 1, counts) : total;
+        return recursive is not null && level < recursive.Depth ? total + ElementNodes(layout, recursive, type.Name, counts) + Nodes(layout, type, level + 1, counts) : total;
     }
 
     // The paths of a type's nodes in order; a nested schema's paths follow its field's path, and a message's tags its fields.
@@ -438,9 +490,19 @@ internal static class GesSchemaPlanner
         foreach (var field in type.Fields)
         {
             if (!Recursive(field.Encoding, type.Name) || level >= field.Encoding.Depth) continue;
-            var element = field.Encoding.Element!.Path;
-            paths.Add(element);
-            foreach (var nested in Paths(layout, type, level + 1, cache)) paths.Add(element + "." + nested);
+            var element = field.Encoding.Element!;
+            paths.Add(element.Path);
+            var self = element;
+            if (element.Encoding.Kind == GesLayoutKind.Union)
+            {
+                // The schema's alternative and its nodes come after the other alternatives.
+                foreach (var alternative in element.Encoding.Alternatives)
+                    if (alternative.Encoding.Schema != type.Name) Paths(layout, alternative.Path, alternative.Encoding, paths, cache);
+                self = SelfAlternative(element)!;
+                paths.Add(self.Path);
+            }
+
+            foreach (var nested in Paths(layout, type, level + 1, cache)) paths.Add(self.Path + "." + nested);
         }
 
         return paths;

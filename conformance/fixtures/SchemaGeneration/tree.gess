@@ -1,11 +1,12 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
-// The fixture of the checked-in recursive code: a tree of binds as deep as its depth, a keyed tree, and a recursive List
-// that `with` copies into another schema.
+// The fixture of the checked-in recursive code: a tree of binds as deep as its depth, a keyed tree, a recursive List
+// that `with` copies into another schema, and a crew whose List holds unit ids and crews.
 wire(tree) model(tree) schema :Loadout as {
   root: :Bind
   team: :Unit
   leaf: :Leaf
+  crew: :Crew
 }
 
 schema :Bind as {
@@ -26,4 +27,9 @@ schema :Node as {
 schema :Leaf as {
   with :Node
   name: :Text max 4
+}
+
+schema :Crew as {
+  name: :Text max 8
+  units: :List(id: :Text max 8 | crew: :Crew) max 4 depth 3
 }

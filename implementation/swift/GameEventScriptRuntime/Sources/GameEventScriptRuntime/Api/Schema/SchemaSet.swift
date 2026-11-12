@@ -189,7 +189,7 @@ public final class GesSchemaSet: @unchecked Sendable {
         if let reference = type.reference { try checkNesting(reference, &path, &visited) }
         // A List with depth in the schema it holds is a limited recursion; where `with` copies it into another schema, it is
         // an ordinary List of the declaring schema.
-        if type.depth > 0 && type.element![0].reference === holder { return }
+        if let recursion = type.recursion, recursion === holder { return }
         for alternative in type.element ?? [] { try checkNesting(alternative, holder, &path, &visited) }
     }
 }
@@ -245,6 +245,8 @@ final class GesResolvedType {
     var label = ""
     // The `depth` of a List whose element is the schema that declares it: how many records of it nest; 0 without one.
     var depth = 0
+    // The schema a List with depth holds itself through: its element, alone or as the one schema alternative of a union.
+    var recursion: GesResolvedDeclaration? { depth > 0 ? element?.first { $0.kind == .reference }?.reference : nil }
 
     init(
         kind: GesSchemaTypeKind,
@@ -706,12 +708,30 @@ final class GesFileScope {
         return resolved
     }
 
+    // The element of a recursive List: the declaring schema alone, or a union of it and scalars, which hold no schema and no
+    // elements, so that the recursion has one path and every alternative but one keeps its size at every level.
+    private static func selfElement(_ element: [GesResolvedType], _ owner: GesResolvedDeclaration) -> Bool {
+        var count = 0
+        for alternative in element {
+            if alternative.kind == .reference && alternative.reference === owner {
+                count += 1
+            } else if [.reference, .list, .dice, .poly].contains(alternative.kind) {
+                return false
+            }
+        }
+        return count == 1
+    }
+
     // `depth` stands only on a field's List of the schema that declares the field, which may then hold itself that many
     // levels deep; every other cycle stays an error.
     private func checkDepth(_ written: [GesSchemaTypeSyntax], _ resolved: [GesResolvedType], _ owner: GesResolvedDeclaration, top: Bool) throws {
         for (index, type) in resolved.enumerated() {
-            if type.depth > 0 && !(top && written.count == 1 && type.element?.count == 1 && type.element![0].reference === owner) {
-                throw error(Code.invalidConstraint, written[index].depthOffset, "depth stands on a field's List whose element is the schema that declares it.")
+            if type.depth > 0 && !(top && written.count == 1 && Self.selfElement(type.element ?? [], owner)) {
+                throw error(
+                    Code.invalidConstraint,
+                    written[index].depthOffset,
+                    "depth stands on a field's List whose element is the schema that declares it, alone or as the one schema of a union of scalars."
+                )
             }
             if type.depth == 1 {
                 throw error(Code.invalidConstraint, written[index].depthOffset, "A depth of 1 leaves the List always empty; it counts the records that nest, at least 2.")

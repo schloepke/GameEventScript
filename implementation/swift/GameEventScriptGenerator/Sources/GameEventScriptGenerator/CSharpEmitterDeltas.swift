@@ -193,7 +193,7 @@ extension GesCSharpEmitter {
             code.open("{")
             let element = value.element!
             if value.item != nil {
-                code.line("if (!\(a)[index\(node)].__Same(\(b)[index\(node)], paths, at + \(element.node))) return false;")
+                code.line("if (!\(a)[index\(node)].__Same(\(b)[index\(node)], paths, at + \(element.node)\(itemLevel(element)))) return false;")
             } else {
                 same(&code, element, "\(a)[index\(node)]", "\(b)[index\(node)]")
             }
@@ -351,10 +351,10 @@ extension GesCSharpEmitter {
             code.line("for (var index\(node) = 0; index\(node) < \(target).Count; index\(node)++)")
             code.open("{")
             if element.isClass {
-                code.line("\(target)[index\(node)].__Quantize(paths, at + \(value.item != nil ? element.node : element.node + 1)\(nextLevel(element)));")
+                code.line("\(target)[index\(node)].__Quantize(paths, at + \(value.item != nil ? element.node : element.node + 1)\(nextLevel(element))\(itemLevel(element)));")
             } else {
                 code.line("var item\(node) = \(target)[index\(node)];")
-                if value.item != nil { code.line("item\(node).__Quantize(paths, at + \(element.node));") } else { quantize(&code, element, "item\(node)") }
+                if value.item != nil { code.line("item\(node).__Quantize(paths, at + \(element.node)\(itemLevel(element)));") } else { quantize(&code, element, "item\(node)") }
                 code.line("\(target)[index\(node)] = item\(node);")
             }
             code.close()

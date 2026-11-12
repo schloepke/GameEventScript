@@ -233,7 +233,7 @@ public sealed class GesSchemaSet
         if (type.Reference is { } reference) CheckNesting(reference, path, visited);
         // A List with depth in the schema it holds is a limited recursion; where `with` copies it into another schema, it is
         // an ordinary List of the declaring schema.
-        if (type.Depth > 0 && type.Element![0].Reference == holder) return;
+        if (type.Recursion == holder) return;
         if (type.Element is { } element)
             foreach (var alternative in element) CheckNesting(alternative, holder, path, visited);
     }
@@ -306,6 +306,9 @@ internal sealed class GesResolvedType
 
     // The `depth` of a List whose element is the schema that declares it: how many records of it nest; 0 without one.
     internal int Depth { get; init; }
+
+    // The schema a List with depth holds itself through: its element, alone or as the one schema alternative of a union.
+    internal GesResolvedDeclaration? Recursion => Depth > 0 ? Array.Find(Element!, alternative => alternative.Kind == GesSchemaTypeKind.Reference)?.Reference : null;
 
     internal GesResolvedConstraints Constraints { get; init; } = new();
 
@@ -686,6 +689,20 @@ internal sealed partial class GesFileScope
         }
     }
 
+    // The element of a recursive List: the declaring schema alone, or a union of it and scalars, which hold no schema and no
+    // elements, so that the recursion has one path and every alternative but one keeps its size at every level.
+    private static bool SelfElement(GesResolvedType[] element, GesResolvedDeclaration owner)
+    {
+        var self = 0;
+        foreach (var alternative in element)
+        {
+            if (alternative.Kind == GesSchemaTypeKind.Reference && alternative.Reference == owner) self++;
+            else if (alternative.Kind is GesSchemaTypeKind.Reference or GesSchemaTypeKind.List or GesSchemaTypeKind.Dice or GesSchemaTypeKind.Poly) return false;
+        }
+
+        return self == 1;
+    }
+
     // `depth` stands only on a field's List of the schema that declares the field, which may then hold itself that many
     // levels deep; every other cycle stays an error.
     private void CheckDepth(GesSchemaTypeSyntax[] written, GesResolvedType[] resolved, GesResolvedDeclaration owner, bool top)
@@ -693,8 +710,8 @@ internal sealed partial class GesFileScope
         for (var index = 0; index < written.Length; index++)
         {
             var type = resolved[index];
-            if (type.Depth > 0 && !(top && written.Length == 1 && type.Element is { Length: 1 } element && element[0].Reference == owner))
-                throw Error(Code.InvalidConstraint, written[index].DepthOffset, "depth stands on a field's List whose element is the schema that declares it.");
+            if (type.Depth > 0 && !(top && written.Length == 1 && type.Element is { } element && SelfElement(element, owner)))
+                throw Error(Code.InvalidConstraint, written[index].DepthOffset, "depth stands on a field's List whose element is the schema that declares it, alone or as the one schema of a union of scalars.");
             if (type.Depth == 1) throw Error(Code.InvalidConstraint, written[index].DepthOffset, "A depth of 1 leaves the List always empty; it counts the records that nest, at least 2.");
             if (written[index].Element is { } elements) CheckDepth(elements, type.Element!, owner, top: false);
         }

@@ -183,7 +183,7 @@ extension GesSwiftEmitter {
             code.open("for index\(node) in 0..<\(a).count {")
             let element = value.element!
             if value.item != nil {
-                code.line("if !(try \(a)[index\(node)].__same(\(b)[index\(node)], paths, at + \(element.node))) { return false }")
+                code.line("if !(try \(a)[index\(node)].__same(\(b)[index\(node)], paths, at + \(element.node)\(itemLevel(element)))) { return false }")
             } else {
                 same(&code, element, "\(a)[index\(node)]", "\(b)[index\(node)]", ownerA, ownerB)
             }
@@ -325,7 +325,7 @@ extension GesSwiftEmitter {
             if value.depth > 0 { openLevels(&code, value, target + ".count") }
             code.open("for index\(node) in 0..<\(target).count {")
             if value.item != nil {
-                code.line("try \(target)[index\(node)].__quantize(paths, at + \(element.node))")
+                code.line("try \(target)[index\(node)].__quantize(paths, at + \(element.node)\(itemLevel(element)))")
             } else if element.encoding.kind == .schema {
                 code.line("try \(target)[index\(node)].__quantize(paths, at + \(element.node + 1)\(nextLevel(element)))")
             } else {

@@ -747,7 +747,7 @@ internal static class GesSchemaBinder
                 node.MaxCount = textMax;
                 node.Width = BitLength((ulong)textMax);
                 break;
-            case GesSchemaTypeKind.List when type.Depth > 0 && build.Levels.TryGetValue(type.Element![0].Reference!, out var reached) && reached >= type.Depth:
+            case GesSchemaTypeKind.List when type.Recursion is { } recursion && build.Levels.TryGetValue(recursion, out var reached) && reached >= type.Depth:
                 // The deepest level of a recursive List holds no element: it is empty, so it takes no bits and no list nesting.
                 node.Kind = GesSchemaNodeKind.List;
                 node.DepthLimit = type.Depth;
@@ -883,7 +883,7 @@ internal static class GesSchemaBinder
             case GesSchemaTypeKind.Text or GesSchemaTypeKind.Bytes:
                 if (type.Max is null) throw scope.Error(Code.NotEncodable, type.Offset, $"A {type.Kind} without max has no hard limit.");
                 break;
-            case GesSchemaTypeKind.List when type.Depth > 0 && levels.TryGetValue(type.Element![0].Reference!, out var level) && level >= type.Depth:
+            case GesSchemaTypeKind.List when type.Recursion is { } recursion && levels.TryGetValue(recursion, out var level) && level >= type.Depth:
                 break;
             case GesSchemaTypeKind.List:
                 if (type.Element is not { } element || type.Max is null) throw scope.Error(Code.NotEncodable, type.Offset, "A List without element type and max has no hard limit.");

@@ -153,7 +153,7 @@ internal sealed class GesSchemaDocumentCheck
                 break;
             case GesSchemaTypeKind.List:
                 Require(value, value.Kind == GesDocumentNodeKind.List);
-                if (type.Depth > 0 && value.Children.Length > 0 && _levels.TryGetValue(type.Element![0].Reference!, out var reached) && reached >= type.Depth) throw new Failure(TooDeep, value.Start);
+                if (type.Recursion is { } recursion && value.Children.Length > 0 && _levels.TryGetValue(recursion, out var reached) && reached >= type.Depth) throw new Failure(TooDeep, value.Start);
                 if (type.Max is { } listMax && value.Children.Length > listMax) throw new Failure(OutOfRange, value.Start);
                 if (type.Element is { } element)
                     foreach (var item in value.Children) Union(element, item);

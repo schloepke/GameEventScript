@@ -697,7 +697,7 @@ enum GesSchemaBinder {
             node.isBytes = type.kind == .bytes
             node.maxCount = max
             node.width = bitLength(UInt64(max))
-        case .list where type.depth > 0 && (build.levels[ObjectIdentifier(type.element![0].reference!)] ?? 0) >= type.depth:
+        case .list where type.recursion.map { (build.levels[ObjectIdentifier($0)] ?? 0) >= type.depth } ?? false:
             // The deepest level of a recursive List holds no element: it is empty, so it takes no bits and no list nesting.
             node.kind = .list
             node.depthLimit = type.depth
@@ -811,7 +811,7 @@ enum GesSchemaBinder {
             break
         case .text, .bytes:
             if type.max == nil { throw scope.error(Code.notEncodable, type.offset, "A \(type.kind.rawValue) without max has no hard limit.") }
-        case .list where type.depth > 0 && (levels[ObjectIdentifier(type.element![0].reference!)] ?? 0) >= type.depth:
+        case .list where type.recursion.map { (levels[ObjectIdentifier($0)] ?? 0) >= type.depth } ?? false:
             break
         case .list:
             guard let element = type.element, type.max != nil else { throw scope.error(Code.notEncodable, type.offset, "A List without element type and max has no hard limit.") }

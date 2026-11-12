@@ -59,10 +59,30 @@ public sealed class GesTreeGeneratedCodeTests
         return node;
     }
 
-    // Every tree as deep as its depth: three binds, three units and, below the leaf, three nodes.
+    // A crew holds unit ids and crews, as the alternatives of its List.
+    private static Wire.Crew Crew(string name, params object[] units)
+    {
+        var crew = new Wire.Crew { Name = name };
+        foreach (var unit in units)
+        {
+            var item = new Wire.Crew.UnitsItem();
+            if (unit is Wire.Crew nested)
+            {
+                item.Value = Wire.Crew.UnitsItem.ValueAlternative.Crew;
+                item.ValueCrew = nested;
+            }
+            else item.ValueId = (string)unit;
+
+            crew.Units.Add(item);
+        }
+
+        return crew;
+    }
+
+    // Every tree as deep as its depth: three binds, three units, below the leaf three nodes, and three crews with unit ids.
     private static Wire.Loadout Full()
     {
-        var loadout = new Wire.Loadout { Root = Bind("a", Bind("b", Bind("c")), Bind("d")), Team = Unit(1, Unit(2, Unit(3)), Unit(4)) };
+        var loadout = new Wire.Loadout { Root = Bind("a", Bind("b", Bind("c")), Bind("d")), Team = Unit(1, Unit(2, Unit(3)), Unit(4)), Crew = Crew("p", "u1", Crew("q", Crew("r"), "u2")) };
         loadout.Leaf.Tag = "l";
         loadout.Leaf.Name = "n";
         loadout.Leaf.Kids.Add(Node("x", Node("y", Node("z"))));
@@ -89,6 +109,8 @@ public sealed class GesTreeGeneratedCodeTests
         Assert.AreEqual("c", read.Root.Units[0].Units[0].Name);
         Assert.AreEqual(3L, read.Team.Units[0].Units[0].Id);
         Assert.AreEqual("z", read.Leaf.Kids[0].Kids[0].Kids[0].Tag);
+        Assert.AreEqual("r", read.Crew.Units[1].ValueCrew.Units[0].ValueCrew.Name);
+        Assert.AreEqual("u2", read.Crew.Units[1].ValueCrew.Units[1].ValueId);
 
         // The value path of the runtime writes the same bytes and reads the same tree.
         var value = loadout.ToValue();
@@ -116,6 +138,12 @@ public sealed class GesTreeGeneratedCodeTests
         leaf.Leaf.Kids[0].Kids[0].Kids[0].Kids.Add(Node("w"));
         AssertTooDeep("leaf.kids[].kids[].kids[].kids", () => leaf.ToBytes());
 
+        // At the depth a crew's List holds no unit id either.
+        var crew = Full();
+        crew.Crew.Units[1].ValueCrew.Units[0].ValueCrew.Units.Add(new Wire.Crew.UnitsItem { ValueId = "u3" });
+        AssertTooDeep("crew.units[]:Crew.units[]:Crew.units", () => crew.ToBytes());
+        AssertTooDeep("crew.units[]:Crew.units[]:Crew.units", () => crew.ToDeltaBytes(Full()));
+
         // A keyed tree is no keyed List at its depth either.
         var team = Full();
         team.Team.Units[0].Units[0].Units.Add(Unit(9));
@@ -130,6 +158,7 @@ public sealed class GesTreeGeneratedCodeTests
         changed.Root.Units[0].Units[0].Name = "e";
         changed.Team.Units[0].Units.Add(Unit(5));
         changed.Leaf.Kids[0].Kids[0].Kids[0].Tag = "q";
+        changed.Crew.Units[1].ValueCrew.Units[0].ValueCrew.Name = "s";
         var delta = changed.ToDeltaBytes(baseline);
         var read = new Wire.Loadout();
         Assert.AreEqual(delta.Length, read.ReadDelta(delta, baseline));
@@ -145,6 +174,8 @@ public sealed class GesTreeGeneratedCodeTests
         var model = Model.Loadout.FromValue(Full().ToValue());
         Assert.AreEqual("c", model.Root.Units[0].Units[0].Name);
         Assert.AreEqual(3L, model.Team.Units[0].Units[0].Id);
+        var inner = (Model.Crew.UnitsItemAlternative.Crew)model.Crew.Units[1];
+        Assert.AreEqual("u2", ((Model.Crew.UnitsItemAlternative.Id)inner.Value.Units[1]).Value);
         var wire = new Wire.Loadout();
         wire.ReadValue(model.ToValue());
         CollectionAssert.AreEqual(Full().ToBytes(), wire.ToBytes());

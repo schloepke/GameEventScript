@@ -225,7 +225,7 @@ internal static partial class GesCSharpEmitter
                 code.Line($"for (var index{node} = 0; index{node} < {a}.Count; index{node}++)");
                 code.Open("{");
                 var element = value.Element!;
-                if (value.Item is not null) code.Line($"if (!{a}[index{node}].__Same({b}[index{node}], paths, at + {N(element.Node)})) return false;");
+                if (value.Item is not null) code.Line($"if (!{a}[index{node}].__Same({b}[index{node}], paths, at + {N(element.Node)}{ItemLevel(element)})) return false;");
                 else Same(code, element, $"{a}[index{node}]", $"{b}[index{node}]");
                 code.Close();
                 if (value.Depth > 0) code.Close();
@@ -411,11 +411,11 @@ internal static partial class GesCSharpEmitter
                 if (value.Depth > 0) OpenLevels(code, value, target + ".Count");
                 code.Line($"for (var index{node} = 0; index{node} < {target}.Count; index{node}++)");
                 code.Open("{");
-                if (element.IsClass) code.Line($"{target}[index{node}].__Quantize(paths, at + {N(value.Item is not null ? element.Node : element.Node + 1)}{NextLevel(element)});");
+                if (element.IsClass) code.Line($"{target}[index{node}].__Quantize(paths, at + {N(value.Item is not null ? element.Node : element.Node + 1)}{NextLevel(element)}{ItemLevel(element)});");
                 else
                 {
                     code.Line($"var item{node} = {target}[index{node}];");
-                    if (value.Item is not null) code.Line($"item{node}.__Quantize(paths, at + {N(element.Node)});");
+                    if (value.Item is not null) code.Line($"item{node}.__Quantize(paths, at + {N(element.Node)}{ItemLevel(element)});");
                     else Quantize(code, element, $"item{node}");
                     code.Line($"{target}[index{node}] = item{node};");
                 }

@@ -488,6 +488,9 @@ enum GesSwiftEmitter {
     // The level argument of a call into a record: one deeper for the element of a recursive List.
     static func nextLevel(_ value: GesPlanValue) -> String { value.recursive ? ", level + 1" : "" }
 
+    // The level that the item of a recursive union takes: that of the record holding the List.
+    static func itemLevel(_ element: GesPlanValue) -> String { element.passesLevel ? ", level" : "" }
+
     // Opens the levels of a recursive List that hold elements; at its depth the List holds nothing, so data there is deeper.
     static func openLevels(_ code: inout Code, _ value: GesPlanValue, _ count: String) {
         code.open("if level >= \(value.depth) {")
@@ -554,7 +557,7 @@ enum GesSwiftEmitter {
             code.line("try writer.write(UInt64(\(target).count), width: \(width))")
             code.open("for item in \(target) {")
             if value.item != nil {
-                code.line("try item.__writeFields(&writer, paths, at + \(value.element!.node))")
+                code.line("try item.__writeFields(&writer, paths, at + \(value.element!.node)\(itemLevel(value.element!)))")
             } else {
                 write(&code, value.element!, "item")
             }
@@ -654,7 +657,7 @@ enum GesSwiftEmitter {
                 code.line("var item: \(name) = \(zero(element))")
             }
             if value.item != nil {
-                code.line("try item.__readFields(&reader, paths, at + \(element.node))")
+                code.line("try item.__readFields(&reader, paths, at + \(element.node)\(itemLevel(element)))")
             } else {
                 read(&code, element, "item")
             }

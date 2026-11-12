@@ -532,6 +532,9 @@ internal static partial class GesSwiftEmitter
     // The level argument of a call into a record: one deeper for the element of a recursive List.
     private static string NextLevel(GesPlanValue value) => value.Recursive ? ", level + 1" : "";
 
+    // The level that the item of a recursive union takes: that of the record holding the List.
+    private static string ItemLevel(GesPlanValue element) => element.PassesLevel ? ", level" : "";
+
     // Opens the levels of a recursive List that hold elements; at its depth the List holds nothing, so data there is deeper.
     private static void OpenLevels(GesSchemaPlanner.Code code, GesPlanValue value, string count)
     {
@@ -604,7 +607,7 @@ internal static partial class GesSwiftEmitter
                 code.Line($"if {target}.count > {max} {{ {Throw("tooLong", value)} }}");
                 code.Line($"try writer.write(UInt64({target}.count), width: {width})");
                 code.Open($"for item in {target} {{");
-                if (value.Item is not null) code.Line($"try item.__writeFields(&writer, paths, at + {value.Element!.Node.ToString(CultureInfo.InvariantCulture)})");
+                if (value.Item is not null) code.Line($"try item.__writeFields(&writer, paths, at + {value.Element!.Node.ToString(CultureInfo.InvariantCulture)}{ItemLevel(value.Element)})");
                 else Write(code, value.Element!, "item");
                 code.Close();
                 if (value.Depth > 0) code.Close();
@@ -711,7 +714,7 @@ internal static partial class GesSwiftEmitter
                 }
                 else if (value.Item is not null || element.Encoding.Kind is GesLayoutKind.Point or GesLayoutKind.Vector or GesLayoutKind.Schema) code.Line($"var item = {name}()");
                 else code.Line($"var item: {name} = {Zero(element)}");
-                if (value.Item is not null) code.Line($"try item.__readFields(&reader, paths, at + {element.Node.ToString(CultureInfo.InvariantCulture)})");
+                if (value.Item is not null) code.Line($"try item.__readFields(&reader, paths, at + {element.Node.ToString(CultureInfo.InvariantCulture)}{ItemLevel(element)})");
                 else Read(code, element, "item");
                 code.Line($"{target}.append(item)");
                 code.Close();

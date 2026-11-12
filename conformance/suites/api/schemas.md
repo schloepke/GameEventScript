@@ -4263,6 +4263,293 @@ schema:
 
 ---
 
+## Test: a tree of binds and unit ids
+
+The element of a recursive List may be a union of scalars and the one schema that declares it, so a bind holds unit ids and
+binds. Each record of the schema is one level deeper, and at the depth the List holds neither.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: encode-recursive-union
+schemaApi:
+  sources:
+    - "schema :Loadout as { root: :Bind }\nschema :Bind as {\n  name: :Text max 8\n  units: :List(id: :Text max 8 | bind: :Bind) max 4 depth 3\n}\n"
+  root: "Loadout"
+  encode:
+    type: ":Loadout"
+    entries:
+      - key: "root"
+        value:
+          type: ":Bind"
+          entries:
+            - key: "name"
+              value:
+                type: ":Text"
+                value: "a"
+            - key: "units"
+              value:
+                type: ":List"
+                items:
+                  - type: ":Text"
+                    value: "x"
+                  - type: ":Bind"
+                    entries:
+                      - key: "name"
+                        value:
+                          type: ":Text"
+                          value: "b"
+                      - key: "units"
+                        value:
+                          type: ":List"
+                          items:
+                            - type: ":Bind"
+                              entries:
+                                - key: "name"
+                                  value:
+                                    type: ":Text"
+                                    value: "c"
+                                - key: "units"
+                                  value:
+                                    type: ":List"
+                                    items: []
+                            - type: ":Text"
+                              value: "y"
+  decode: "11268137c434c6441e"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "11268137c434c6441e"
+  decoded:
+    value:
+      type: ":Loadout"
+      entries:
+        - key: "root"
+          value:
+            type: ":Bind"
+            entries:
+              - key: "name"
+                value:
+                  type: ":Text"
+                  value: "a"
+              - key: "units"
+                value:
+                  type: ":List"
+                  items:
+                    - type: ":Text"
+                      value: "x"
+                    - type: ":Bind"
+                      entries:
+                        - key: "name"
+                          value:
+                            type: ":Text"
+                            value: "b"
+                        - key: "units"
+                          value:
+                            type: ":List"
+                            items:
+                              - type: ":Bind"
+                                entries:
+                                  - key: "name"
+                                    value:
+                                      type: ":Text"
+                                      value: "c"
+                                  - key: "units"
+                                    value:
+                                      type: ":List"
+                                      items: []
+                              - type: ":Text"
+                                value: "y"
+    byteCount: 9
+```
+
+---
+
+## Test: a unit id deeper than the depth
+
+At the depth the List holds no element of any alternative, so a unit id there is as deep as a bind.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-encode-too-deep-union
+schemaApi:
+  sources:
+    - "schema :Loadout as { root: :Bind }\nschema :Bind as {\n  name: :Text max 8\n  units: :List(id: :Text max 8 | bind: :Bind) max 4 depth 3\n}\n"
+  root: "Loadout"
+  encode:
+    type: ":Loadout"
+    entries:
+      - key: "root"
+        value:
+          type: ":Bind"
+          entries:
+            - key: "name"
+              value:
+                type: ":Text"
+                value: "a"
+            - key: "units"
+              value:
+                type: ":List"
+                items:
+                  - type: ":Text"
+                    value: "x"
+                  - type: ":Bind"
+                    entries:
+                      - key: "name"
+                        value:
+                          type: ":Text"
+                          value: "b"
+                      - key: "units"
+                        value:
+                          type: ":List"
+                          items:
+                            - type: ":Bind"
+                              entries:
+                                - key: "name"
+                                  value:
+                                    type: ":Text"
+                                    value: "c"
+                                - key: "units"
+                                  value:
+                                    type: ":List"
+                                    items:
+                                      - type: ":Text"
+                                        value: "z"
+                            - type: ":Text"
+                              value: "y"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    error:
+      code: "wire.tooDeep"
+      path: "root.units[]:Bind.units[]:Bind.units"
+```
+
+---
+
+## Test: a document of binds and unit ids
+
+A document writes a unit as its id alone or as a bind record.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: document-recursive-union
+schemaApi:
+  sources:
+    - "schema :Loadout as { root: :Bind }\nschema :Bind as {\n  name: :Text max 8\n  units: :List(id: :Text max 8 | bind: :Bind) max 4 depth 3\n}\n"
+  document: ":Schema(:Loadout)\nroot: [name: 'a', units: ['x', [name: 'b', units: [[name: 'c', units: []], 'y']]]]\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  document:
+    ok: true
+```
+
+---
+
+## Test: a document unit id deeper than the depth
+
+The deepest bind holds a unit id, so no alternative of the elements around it holds them, and the outermost element
+that none holds is `document.fieldType`, as in any union.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: document-too-deep-union
+schemaApi:
+  sources:
+    - "schema :Loadout as { root: :Bind }\nschema :Bind as {\n  name: :Text max 8\n  units: :List(id: :Text max 8 | bind: :Bind) max 4 depth 3\n}\n"
+  document: ":Schema(:Loadout)\nroot: [name: 'a', units: [[name: 'b', units: [[name: 'c', units: ['z']]]]]]\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  document:
+    error:
+      code: "document.fieldType"
+      line: 2
+      column: 27
+```
+
+---
+
+## Test: a recursive union with a second schema
+
+Only one alternative of the union may be a schema, the one that declares the List.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-depth-union-schema
+schemaApi:
+  sources:
+    - "schema :Unit as { id: :Text max 8 }\nschema :Bind as { units: :List(:Unit | :Bind) max 4 depth 3 }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidConstraint"
+    line: 2
+    column: 53
+```
+
+---
+
+## Test: a recursive union with a List
+
+The other alternatives are scalars: a List alternative holds elements, whose size the levels would have to count too.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-depth-union-list
+schemaApi:
+  sources:
+    - "schema :Bind as { units: :List(:List(:Text max 8) max 2 | :Bind) max 4 depth 3 }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidConstraint"
+    line: 1
+    column: 72
+```
+
+---
+
 ## Test: recursion without depth
 
 The source is rejected.

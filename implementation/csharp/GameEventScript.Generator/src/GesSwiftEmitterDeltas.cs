@@ -218,7 +218,7 @@ internal static partial class GesSwiftEmitter
                 code.Line($"if {a}.count != {b}.count {{ return false }}");
                 code.Open($"for index{node} in 0..<{a}.count {{");
                 var element = value.Element!;
-                if (value.Item is not null) code.Line($"if !(try {a}[index{node}].__same({b}[index{node}], paths, at + {N(element.Node)})) {{ return false }}");
+                if (value.Item is not null) code.Line($"if !(try {a}[index{node}].__same({b}[index{node}], paths, at + {N(element.Node)}{ItemLevel(element)})) {{ return false }}");
                 else Same(code, element, $"{a}[index{node}]", $"{b}[index{node}]", ownerA, ownerB);
                 code.Close();
                 if (value.Depth > 0) code.Close();
@@ -382,7 +382,7 @@ internal static partial class GesSwiftEmitter
                 var element = value.Element!;
                 if (value.Depth > 0) OpenLevels(code, value, target + ".count");
                 code.Open($"for index{node} in 0..<{target}.count {{");
-                if (value.Item is not null) code.Line($"try {target}[index{node}].__quantize(paths, at + {N(element.Node)})");
+                if (value.Item is not null) code.Line($"try {target}[index{node}].__quantize(paths, at + {N(element.Node)}{ItemLevel(element)})");
                 else if (element.Encoding.Kind == GesLayoutKind.Schema) code.Line($"try {target}[index{node}].__quantize(paths, at + {N(element.Node + 1)}{NextLevel(element)})");
                 else Quantize(code, element, $"{target}[index{node}]");
                 code.Close();

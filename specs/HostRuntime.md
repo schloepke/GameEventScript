@@ -583,11 +583,14 @@ ID. Without an observer, send IDs are unobservable and change no behavior.
 A message with an ID that is removed before it is dispatched reports
 `MessageDiscarded` with that ID exactly once. On initial-group failure these are
 every pending initialization in load order, then every queued message in queue
-order, then every delayed entry in deadline order. On later-instance failure
-they are the failed instance's staged outputs and every message it left without
-recipients: queued messages in queue order, then delayed entries in deadline
-order. A deferred initialization Publish is never released by a failed
-initialization, so its ID can appear only in this callback. Dispatched and due
+order, then every delayed entry in deadline order, then every deferred
+initialization Publish without a local queue entry in send-ID order. On
+later-instance failure they are the failed instance's staged outputs and every
+message it left without recipients: queued messages in queue order, then
+delayed entries in deadline order, then its deferred Publishes without a local
+queue entry in send-ID order. A deferred initialization Publish is never
+released by a failed initialization, so its ID can appear only in this
+callback; one with a local queue entry is reported once, with that entry. Dispatched and due
 messages report no discard; their ordinary callbacks follow.
 
 ## Delayed dispatch

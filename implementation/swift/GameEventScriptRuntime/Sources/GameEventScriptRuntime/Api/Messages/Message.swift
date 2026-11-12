@@ -4,6 +4,9 @@
 @_spi(Syntax) import GameEventScriptSyntax
 
 /// An immutable portable message with ordered arguments and delivery-tag metadata.
+///
+/// Not `Sendable`: arguments may hold External values, which are live host objects. Forward a message to another
+/// isolation domain as its `json()` snapshot and rebuild it with `init(json:)`.
 public struct GameEventScriptMessage: Hashable, CustomStringConvertible {
     let storage: GesMessageStorage
 

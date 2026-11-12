@@ -63,7 +63,7 @@ public sealed partial class GameEventScriptHost
                     _startupQueue.Clear(_observer);
                     _queue.Clear(_observer);
                     ClearDelayed();
-                    _startupPublications?.Clear();
+                    DiscardDeferredPublications(_startupPublications);
                     return failure;
                 }
             }
@@ -103,14 +103,39 @@ public sealed partial class GameEventScriptHost
         instance.StartResult = new(state, _initializationDiagnostic ?? InitializationLimitDiagnostic(instance), _initializationOpcodes, 0, _initializationEmits, _initializationPublishes);
         _initializationFailure = instance.StartResult;
         instance.Detach();
-        _initializationPublications?.Clear();
         _initializationInstance = null;
         _initializationDiagnostic = null;
         _hasActiveMessage = false;
         // A failure during Start fails the whole group, which then discards and reports every entry in one pass.
-        if (_starting) return;
+        if (_starting)
+        {
+            if (_initializationPublications is { Count: > 0 } publications)
+            {
+                _startupPublications ??= new();
+                _startupPublications.AddRange(publications);
+                publications.Clear();
+            }
+
+            return;
+        }
+
         _queue.RemoveFailedRecipients(_observer);
         RemoveFailedDelayed();
+        DiscardDeferredPublications(_initializationPublications);
+    }
+
+    // A deferred publication with a local queue entry was reported with that entry; one that only waited for the sink is
+    // reported here, in send-ID order, so every send ID of a failed initialization reaches the observer.
+    private void DiscardDeferredPublications(List<GesDeferredPublication>? publications)
+    {
+        if (publications is null) return;
+        if (_observer is { } observer)
+        {
+            foreach (var publication in publications)
+                if (!publication.LocalAccepted) observer.MessageDiscarded(publication.Id);
+        }
+
+        publications.Clear();
     }
 
     private static GesDiagnostic InitializationLimitDiagnostic(GesProgramInstance? instance)

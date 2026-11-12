@@ -9,7 +9,7 @@ enum GesProgramWriter {
     ///
     /// - Throws: `GesProgramFormatError` for invalid Program data.
     static func encodedSize(_ program: GameEventScriptProgram) throws -> Int {
-        try program.validate()
+        try program.ensureValid()
         var output = GesBinaryOutput(countOnly: true)
         try encode(program, &output, fileSize: 0)
         return output.count

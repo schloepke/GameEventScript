@@ -62,4 +62,29 @@ public sealed class GameEventScriptProgramValidationCostTests
         watch.Stop();
         Assert.IsLessThan(1_000L, watch.ElapsedMilliseconds, "Line offsets must not re-count each line's prefix.");
     }
+
+    [TestMethod]
+    public void CompiledAndDecodedProgramsSkipRevalidationButUncheckedInstancesDoNot()
+    {
+        var program = new GesProgramBuilder()
+            .AddScript("module once\non Start() {}", "once.ges")
+            .WithDebugInfo(GesDebugInfoOptions.None)
+            .Compile();
+        Assert.IsTrue(program.IsValidated, "The Compiler validates before it returns the Program.");
+        Assert.IsTrue(GameEventScriptProgram.Read(program.Encode()).IsValidated, "The Reader validates before it returns the Program.");
+
+        var unvalidated = new GameEventScriptProgram(
+            program.FormatVersion,
+            program.ModuleName,
+            program.Metadata.ProgramVersion,
+            program.Metadata.RequiredRegisterCount,
+            program.Metadata.RequiredCallStackDepth,
+            program.StringConstants,
+            program.UInt16IndexLists,
+            program.Bindings,
+            program.Code);
+        Assert.IsFalse(unvalidated.IsValidated);
+        GameEventScriptHost.CreateBuilder().Build().StartForTest().Load(unvalidated);
+        Assert.IsTrue(unvalidated.IsValidated, "Load validates an unchecked instance and records the result.");
+    }
 }

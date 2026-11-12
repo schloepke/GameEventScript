@@ -26,6 +26,9 @@ final class GesVirtualMachine {
     private var depth = 0
     private let maxRegisters: Int
     private var pendingCapacity = 0
+    private var registersInUse = 0
+    // Advances when an extension call ends, so argument views retained beyond their call can tell.
+    var extensionCallGeneration = 0
     // The running handler's budget and MaxValueDepth, fixed for each slice.
     private var valueBudget: GesRuntimeBudget?
     private var maxValueDepth: Int64 = .max
@@ -58,10 +61,16 @@ final class GesVirtualMachine {
             pendingCapacity = max(pendingCapacity, capacity)
             return
         }
+        // Prewarming grows the capacity only; the new registers hold Nothing and are not in use.
+        let inUse = registersInUse
         ensureRegisterCapacity(capacity)
+        registersInUse = inUse
     }
 
     @discardableResult func ensureRegisterCapacity(_ count: Int) -> Bool {
+        // Every frame, local block and staged argument reserves its registers here, so this is the high-water mark of
+        // the registers the handler can have written.
+        if count > registersInUse { registersInUse = count }
         if count <= registerCapacity { return true }
         if count > maxRegisters {
             raiseError("runtime.registerOverflow")
@@ -326,7 +335,9 @@ final class GesVirtualMachine {
 
     func reset() {
         for index in 0..<depth { frames[index] = .init() }
-        for index in 0..<registerCapacity { registerBase[index].setNothing() }
+        // Only the registers this handler reserved can hold values; the rest of the capacity is still Nothing.
+        for index in 0..<min(registersInUse, registerCapacity) { registerBase[index].setNothing() }
+        registersInUse = 0
         linked = nil
         handlerName = nil
         error = nil
@@ -340,6 +351,7 @@ final class GesVirtualMachine {
         constructorCall.end()
         if pendingCapacity > 0 {
             ensureRegisterCapacity(pendingCapacity)
+            registersInUse = 0
             pendingCapacity = 0
         }
     }

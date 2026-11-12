@@ -215,6 +215,7 @@ public sealed class GesExtensionCall
 
     internal void EndCall()
     {
+        _vm?.EndExtensionCall();
         _vm = null;
         _destinationRegister = 0;
         _arguments = GesValueArguments.Empty;
@@ -235,7 +236,6 @@ public sealed class GesExtensionCall
     {
         _hasResult = true;
         _result = value;
-        _vm?.SetValue(_destinationRegister, in value);
     }
 
     /// <summary>
@@ -246,7 +246,6 @@ public sealed class GesExtensionCall
     {
         _hasResult = true;
         _result = GesValue.GesBoolean(value);
-        _vm?.SetBoolean(_destinationRegister, value);
     }
 
     /// <summary>
@@ -258,7 +257,6 @@ public sealed class GesExtensionCall
     {
         _hasResult = true;
         _result = GesValue.GesInteger(value, unit);
-        _vm?.SetInteger(_destinationRegister, value, unit);
     }
 
     /// <summary>
@@ -270,7 +268,6 @@ public sealed class GesExtensionCall
     {
         _hasResult = true;
         _result = GesValue.GesFloat(value, unit);
-        _vm?.SetFloat(_destinationRegister, value, unit);
     }
 
     /// <summary>
@@ -281,7 +278,6 @@ public sealed class GesExtensionCall
     {
         _hasResult = true;
         _result = GesValue.GesPercentage(ratio);
-        _vm?.SetPercentage(_destinationRegister, ratio);
     }
 
     /// <summary>
@@ -292,7 +288,6 @@ public sealed class GesExtensionCall
     {
         _hasResult = true;
         _result = GesValue.GesText(text);
-        _vm?.SetText(_destinationRegister, text);
     }
 
     /// <summary>
@@ -303,6 +298,5 @@ public sealed class GesExtensionCall
     {
         _hasResult = true;
         _result = GesValue.GesTag(tag);
-        _vm?.SetTag(_destinationRegister, tag);
     }
 }

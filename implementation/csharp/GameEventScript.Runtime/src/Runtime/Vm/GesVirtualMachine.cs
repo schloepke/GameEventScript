@@ -70,6 +70,11 @@ internal partial class GesVirtualMachine
 
     internal ushort CodeSegmentSize => ActiveProgram!.CodeSegmentSize;
     private GesRuntimeBudget? _budget;
+    private int _registersInUse;
+    // Advances when an extension call ends, so argument views retained beyond their call can tell.
+    internal int ExtensionCallGeneration { get; private set; }
+
+    internal void EndExtensionCall() => ExtensionCallGeneration++;
     private long _maxValueDepth = long.MaxValue;
     internal readonly int MaxRegisterCount;
 
@@ -93,7 +98,11 @@ internal partial class GesVirtualMachine
     {
         if (State != StateValue.Ready) return false;
 
-        if (!EnsureRegisterCapacity(required))
+        // Prewarming grows the capacity only; the new registers hold Nothing and are not in use.
+        var inUse = _registersInUse;
+        var prepared = EnsureRegisterCapacity(required);
+        _registersInUse = inUse;
+        if (!prepared)
             throw new GesVmException(ErrorDiagnostic ?? new GesDiagnostic(
                 GesDiagnosticPhase.Runtime,
                 GesDiagnosticCodes.RuntimeRegisterOverflow,
@@ -244,7 +253,10 @@ internal partial class GesVirtualMachine
         RegisterFrameStart = 0;
         RegisterFrameLength = 0;
         StageLength = 0;
-        for (var i = 0; i < RegisterValues.Length; i++) RegisterValues[i].SetNothing();
+        // Only the registers this handler reserved can hold values; the rest of the capacity is still Nothing.
+        var used = Math.Min(_registersInUse, RegisterValues.Length);
+        for (var i = 0; i < used; i++) RegisterValues[i].SetNothing();
+        _registersInUse = 0;
         RandomGenerator = null!;
         ExtensionCall.EndCall();
         _externalTypeConstructorCall?.EndCall();
@@ -437,6 +449,9 @@ internal partial class GesVirtualMachine
     }
     private bool EnsureRegisterCapacity(int requiredRegisters)
     {
+        // Every frame, local block and staged argument reserves its registers here, so this is the high-water mark of
+        // the registers the handler can have written.
+        if (requiredRegisters > _registersInUse) _registersInUse = requiredRegisters;
         if (requiredRegisters <= RegisterValues.Length) return true;
         if (requiredRegisters > MaxRegisterCount)
             return RaiseError(GesDiagnosticCodes.RuntimeRegisterOverflow,

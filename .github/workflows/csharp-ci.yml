@@ -47,6 +47,11 @@ jobs:
           python3 scripts/test-port-names.py
           python3 scripts/verify-port-names.py
 
+      - name: Verify runtime diagnostic codes against the catalog
+        run: |
+          python3 scripts/verify-runtime-codes.py --self-test
+          python3 scripts/verify-runtime-codes.py
+
       - name: Verify publication package selection
         run: |
           python3 scripts/test-publish-csharp-packages.py

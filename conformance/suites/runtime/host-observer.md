@@ -1283,3 +1283,51 @@ steps:
         message: { name: Missing }
         signatureId: "undeliverable(*)"
 ```
+
+---
+
+## Test: A leaked random scope is reported after another handler failed
+
+A failing native handler does not suppress the random-scope diagnostic of the next handler of the same message: only a handler's own failure makes its scope cleanup expected recovery.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: scope-imbalance-after-failed-handler
+nativeHandlers:
+  - id: failing
+    message: "Start"
+    priority: 2
+    throw: true
+  - id: leaking
+    message: "Start"
+    priority: 1
+    leakRandomScope: true
+```
+
+### Source code under test
+
+```ges
+on Start {}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    diagnostics:
+      - phase: runtime
+        code: runtime.nativeHandlerFailure
+      - phase: runtime
+        code: runtime.randomScopeImbalance
+```
+

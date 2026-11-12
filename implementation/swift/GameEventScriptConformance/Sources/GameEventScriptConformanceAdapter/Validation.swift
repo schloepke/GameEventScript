@@ -184,7 +184,7 @@ enum Validation {
         try require(Set(deferred).isSubset(of: programs) && Set(deferred).count == deferred.count)
         var handlers = Set<String>()
         for handler in try array(input.required("nativeHandlers")) {
-            try fields(handler, ["id", "message", "parameters", "messageName", "priority", "initiallySubscribed", "throw", "faultCode", "faultContext", "emit", "actions"])
+            try fields(handler, ["id", "message", "parameters", "messageName", "priority", "initiallySubscribed", "throw", "faultCode", "faultContext", "emit", "actions", "leakRandomScope"])
             try require(handlers.insert(handler.text("id")).inserted)
             _ = try strings(handler.required("parameters"))
             try require(handler["message"]?.stringValue != nil && handler["priority"]?.integerValue.map { (Int(Int32.min)...Int(Int32.max)).contains($0) } == true)
@@ -192,7 +192,7 @@ enum Validation {
             let context = try handler.required("faultContext")
             try fields(context, ["programName", "handlerName"])
             for key in ["programName", "handlerName"] { try require(context[key] == .null || context[key]?.stringValue != nil) }
-            for key in ["messageName", "initiallySubscribed", "throw"] { try require(handler[key]?.boolValue != nil) }
+            for key in ["messageName", "initiallySubscribed", "throw", "leakRandomScope"] { try require(handler[key]?.boolValue != nil) }
             for emit in try array(handler.required("emit")) {
                 try fields(emit, ["message", "forwardArguments"])
                 try require(emit["forwardArguments"]?.boolValue != nil)

@@ -10,6 +10,8 @@ public final class GameEventScriptHost {
     private let externalTypes: (any GesExternalTypeRegistry)?
     private let limits: GesRuntimeLimits
     private let clock: GesClockSource?
+    // Whether the active handler already reported a runtime error; its random-scope cleanup is then expected recovery.
+    private var activeHandlerFailed = false
     private var delayed = GesDelayedQueue()
     // Host-local send IDs start at 1; 0 reports a send without an ID.
     private var lastSendID: Int64 = 0
@@ -101,7 +103,7 @@ public final class GameEventScriptHost {
     ///   initialization, script execution or after failed initial startup. Failed linking adds no registrations.
     public func load(_ program: GameEventScriptProgram, priority: Int = 0) throws -> GesProgramInstance {
         guard !starting, !executingScript, startupResult == nil || isReady else { throw GesApiError.invalidOperation("Loading is not allowed during initialization, script execution, or after a failed start") }
-        try program.validate()
+        try program.ensureValid()
         let registers = min(65535, limits.maxRegisterValues > 0 ? limits.maxRegisterValues : 512)
         let depth = min(65535, max(0, limits.maxCallDepth))
         if program.requiredRegisterCount > registers {
@@ -268,6 +270,7 @@ public final class GameEventScriptHost {
                 continue
             }
             activeHandler = next
+            activeHandlerFailed = false
             randomBoundary = context.beginHandler()
             observer?.dispatchStarted(active!.message, id: active!.id, signatureID: next.dispatchSignature)
             if let handler = next.native {
@@ -444,6 +447,7 @@ public final class GameEventScriptHost {
         if value.programName == nil { value.programName = activeHandler?.instance?.program.moduleName }
         if value.handlerName == nil { value.handlerName = activeHandler?.dispatchSignature }
         if diagnostic == nil { diagnostic = value }
+        if activeHandler != nil { activeHandlerFailed = true }
         if initializationInstance != nil && initializationDiagnostic == nil { initializationDiagnostic = GesStartDiagnostic(value) }
         observer?.runtimeError(value)
     }
@@ -454,7 +458,8 @@ public final class GameEventScriptHost {
 
     private func completeHandler() {
         let fault = context.endBoundary(randomBoundary)
-        if (initializationInstance != nil ? initializationDiagnostic == nil : diagnostic == nil) && !context.budget.isExhausted {
+        // Only this handler's own failure suppresses the scope diagnostics, not one of an earlier handler or message.
+        if !activeHandlerFailed && !context.budget.isExhausted {
             if fault == .boundaryUnderflow { record(runtimeDiagnostic("runtime.randomStackUnderflow")) }
             if fault == .unbalanced { record(runtimeDiagnostic("runtime.randomScopeImbalance")) }
         }
@@ -605,6 +610,7 @@ extension GameEventScriptHost {
                 startupQueue.clear(reportingTo: observer)
                 queue.clear(reportingTo: observer)
                 clearDelayed()
+                discardDeferredPublications(startupPublications)
                 startupPublications.removeAll(keepingCapacity: true)
                 return result
             }
@@ -640,14 +646,26 @@ extension GameEventScriptHost {
         )
         initializationFailure = instance.startResult
         _ = instance.detach()
+        let publications = initializationPublications
         initializationPublications.removeAll(keepingCapacity: true)
         initializationInstance = nil
         initializationDiagnostic = nil
         active = nil
         // A failure during start fails the whole group, which then discards and reports every entry in one pass.
-        if starting { return }
+        if starting {
+            startupPublications.append(contentsOf: publications)
+            return
+        }
         queue.removeFailedRecipients(discardingOutputsFrom: instance.registrationID, reportingTo: observer)
         removeFailedDelayed()
+        discardDeferredPublications(publications)
+    }
+
+    // A deferred publication with a local queue entry was reported with that entry; one that only waited for the sink is
+    // reported here, in send-ID order, so every send ID of a failed initialization reaches the observer.
+    private func discardDeferredPublications(_ publications: [GesDeferredPublication]) {
+        guard let observer else { return }
+        for publication in publications where !publication.localAccepted { observer.messageDiscarded(id: publication.id) }
     }
 
     // Removes entries abandoned by a failed initialization. Each is reported in deadline order before the array

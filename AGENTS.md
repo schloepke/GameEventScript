@@ -146,6 +146,9 @@ publish.
   corpus as their sole oracle.
 - Conformance assertions use stable phase/code and structured context, never
   English diagnostic text or implementation-only AST/optimizer shapes.
+- `python3 scripts/verify-runtime-codes.py` requires every `runtime.*` code literal
+  of both Runtimes in the other port and in `specs/Diagnostics.md` (`--self-test`
+  qualifies it); C# CI runs both.
 
 ## Program, bytecode, and binary
 

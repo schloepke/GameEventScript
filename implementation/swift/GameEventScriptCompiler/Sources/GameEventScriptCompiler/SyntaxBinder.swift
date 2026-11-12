@@ -265,6 +265,7 @@ final class GesSyntaxBinder {
         var c = cursor(field)
         let fieldStart = c.current
         let unlabeled = try c.match(.underscore)
+        if unlabeled { try c.newlines() }
         let name = try c.identifier()
         try c.expect(.colon)
         try c.newlines()

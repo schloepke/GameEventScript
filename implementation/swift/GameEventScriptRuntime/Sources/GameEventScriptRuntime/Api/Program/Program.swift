@@ -37,6 +37,9 @@ public final class GameEventScriptProgram: Sendable {
     public let buildMetadata: GesBuildMetadataSegment?
     /// Preserved opaque sections retained by the selected reader policy.
     public let opaqueSections: [GesOpaqueSection]
+    /// Set only by the Reader and the Compiler, which validate the instance before it escapes and discard it on
+    /// failure. Program data is immutable, so the result holds for every later Load and encode (specs/ProgramModel.md).
+    let isValidated: Bool
 
     init(
         formatVersion: UInt16,
@@ -52,8 +55,10 @@ public final class GameEventScriptProgram: Sendable {
         sourceMap: GesSourceMapSegment?,
         sourceArchive: [GesSourceArchiveEntry]?,
         buildMetadata: GesBuildMetadataSegment?,
-        opaqueSections: [GesOpaqueSection]
+        opaqueSections: [GesOpaqueSection],
+        validated: Bool = false
     ) {
+        isValidated = validated
         self.formatVersion = formatVersion
         metadata = GesProgramMetadataSegment(moduleName: moduleName, requiredRegisterCount: requiredRegisterCount, requiredCallStackDepth: requiredCallStackDepth, programVersion: programVersion)
         self.stringConstants = GesStringConstantSegment(values: stringConstants)

@@ -1067,6 +1067,12 @@ Exactly one result may be selected through `SetNothing`, `SetValue`,
 the last setter call is the effective result. Omitting a result produces Nothing.
 
 The callback must not retain the call, arguments, Context, or borrowed values.
+An argument view borrowed from the VM's registers ends with its call: reading a
+retained view afterwards fails instead of returning another handler's register
+contents (C# throws `InvalidOperationException`; Swift reports `count` 0 and
+`nothing` for every index). The extension result is written to its destination
+register once the callback returns, so a destination that is also an argument
+keeps the argument's value while the callback reads it.
 Setters are invalid outside an active invocation. Implementations should reuse
 the adapter and must not allocate it per hot-path invocation after warmup.
 Invoke may throw `ExtensionFaultException` or an unanticipated exception; see
@@ -1294,6 +1300,17 @@ sink and registries. Every `build()` creates an independent Host; the Host
 initializer is internal. `GesProgramBuilder()` or
 `GameEventScriptProgram.makeBuilder()` creates a compiler builder. `load`, `start`, `isReady`, `subscribe`, `receive`, `executeFrame`,
 and `runToCompletion` retain the host contracts above. The mutable VM is host-private.
+
+`GesValue` and `GameEventScriptMessage` are deliberately not `Sendable`. A value
+may hold an External value, which is a live object of one host whose getters
+read mutable embedding state on every access (see the External types section).
+Declaring them `Sendable` would
+promise a thread safety that the embedding's objects cannot give. To forward a
+published Message to a host in another isolation domain, send its
+`json()` snapshot and rebuild it there with `GameEventScriptMessage(json:)`:
+the snapshot turns External values into Record snapshots and is plain text.
+The C# port has no compile-time equivalent; the same rule applies to its
+objects.
 
 `GameEventScriptProgram` is a `final`, `Sendable` reference type. Passing it to
 multiple hosts shares one immutable instance rather than copying the Program

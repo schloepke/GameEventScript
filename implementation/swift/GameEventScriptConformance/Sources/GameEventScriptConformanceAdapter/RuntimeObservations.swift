@@ -192,6 +192,7 @@ private final class RuntimeNativeHandler: GesNativeMessageHandler {
         if let code = definition["faultCode"]?.stringValue {
             throw try GesExtensionFaultError(code: code, message: "Configured native fault", programName: definition["faultContext"]?["programName"]?.stringValue, handlerName: definition["faultContext"]?["handlerName"]?.stringValue)
         }
+        if definition["leakRandomScope"]?.boolValue == true { context.random.push() }
         try scenario.actions(definition.values("actions"), path: "native/" + id)
         for emit in definition.values("emit") {
             if emit["forwardArguments"]?.boolValue == true {

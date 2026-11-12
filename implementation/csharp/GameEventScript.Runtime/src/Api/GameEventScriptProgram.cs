@@ -157,7 +157,20 @@ public sealed class GameEventScriptProgram
     /// Enforces the shared structural and semantic invariants required by the reader, writer, and host linker.
     /// </summary>
     /// <exception cref="GesProgramFormatException">Thrown with a stable error code when an invariant is violated.</exception>
-    public void Validate() => GesProgramValidator.Validate(this);
+    public void Validate()
+    {
+        GesProgramValidator.Validate(this);
+        IsValidated = true;
+    }
+
+    // Program data is immutable, so one successful validation holds for every later Load and encode
+    // (specs/ProgramModel.md). Concurrent first validations may both run; each writes the same value.
+    internal bool IsValidated { get; private set; }
+
+    internal void EnsureValid()
+    {
+        if (!IsValidated) Validate();
+    }
 
     /// <summary>
     /// Dumps program metadata, tables, binds, and code as assembler-like GESA text.

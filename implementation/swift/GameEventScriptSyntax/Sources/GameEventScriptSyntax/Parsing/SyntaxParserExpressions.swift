@@ -621,11 +621,10 @@ extension GesSyntaxParser {
 
     func randomExpression() throws -> Expression {
         let checkpoint = mark()
-        var start = index
+        // The range starts at `random`, also when a line break follows it.
+        let start = index
         advance()
         newlines()
-        // As in C#, the range starts at the last token before its bounds, so a line break after `random` begins it.
-        if previous.kind == .newLine { start = previousIndex }
         if match(.with) {
             let withToken = previousIndex
             _ = try expression()
@@ -1219,8 +1218,10 @@ extension GesSyntaxParser {
             return
         }
         if matchWord("straight") { return }
-        let t = advance()
+        // As in C#, an unexpected token stays unread so that recovery sees it, for example a closing brace.
+        let t = current
         guard t.kind == .identifier, ["pair", "three", "four", "five", "six", "seven"].contains(t.text) else { throw failure("Expected dice pattern.", t) }
+        advance()
         role(.keyword)
         newlines()
         // `pair` takes an optional face; the larger counts take a face or `a kind`.

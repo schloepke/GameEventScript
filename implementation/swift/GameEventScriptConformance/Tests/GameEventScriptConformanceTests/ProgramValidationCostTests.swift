@@ -40,4 +40,13 @@ final class ProgramValidationCostTests: XCTestCase {
         XCTAssertThrowsError(try crafted.validate()) { error in XCTAssertEqual((error as? GesProgramFormatError)?.code, .invalidOperand) }
         XCTAssertLessThan(Date().timeIntervalSince(start), 5, "Validation must not scan the long list once per reference.")
     }
+
+    func testCompiledAndDecodedProgramsAreMarkedValidated() throws {
+        let builder = GesProgramBuilder()
+        builder.addScript("module once\non Start() {}", sourceName: "once.ges")
+        builder.withDebugInfo(.none)
+        let program = try builder.compile()
+        XCTAssertTrue(program.isValidated, "The Compiler validates before it returns the Program.")
+        XCTAssertTrue(try GameEventScriptProgram.read(program.encode()).isValidated, "The Reader validates before it returns the Program.")
+    }
 }

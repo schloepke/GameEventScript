@@ -1056,11 +1056,12 @@ internal sealed partial class GesSyntaxParser
         if (Is(KeywordRandom))
         {
             var randomStart = _tree.Mark();
+            var randomToken = _tree.TokenCount;
             Advance();
             SkipNewLines();
             if (Match(With)) return WrapNode(randomStart, GesSyntaxNodeKind.SeededRandomExpression, ParseSeededRandomExpression());
 
-            return WrapNode(randomStart, GesSyntaxNodeKind.RandomExpression, ParseRandomExpression());
+            return WrapNode(randomStart, GesSyntaxNodeKind.RandomExpression, ParseRandomExpression(randomToken));
         }
 
         if (Is(Roll) && IsNextSignificantWord("dice"))
@@ -1361,9 +1362,9 @@ internal sealed partial class GesSyntaxParser
 
     private bool IsMapLiteralEntryStart() => Current.Kind == Identifier && _reader.PeekSignificant(1).Kind == Colon;
 
-    private Expression ParseRandomExpression()
+    // The range starts at `random`, also when a line break follows it.
+    private Expression ParseRandomExpression(int startToken)
     {
-        var startToken = PreviousIndex;
         MatchWord("from");
         SkipNewLines();
         var from = ParseRangeBoundExpression();

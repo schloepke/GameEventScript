@@ -671,6 +671,80 @@ steps:
 
 ---
 
+## Test: failed initialization discards a sink-only publish
+
+A Publish of a failing initialization waits for the sink; when it has no local recipient, its send ID is reported as discarded after the other discards, so every send ID reaches the observer.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: failed-initialization-discards-sink-only-publish
+sources:
+  - name: failed-publish.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+module main
+on initialization { publish Telemetry(); emit after 1s Leak(); let outcome be :test.declaredFault() }
+on Leak {}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| idle | Unknown | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+initialization:
+  hostReady: false
+  programStarts: { main: runtimeError }
+  local: [{ name: Leak }]
+  diagnostics:
+    - phase: runtime
+      code: test.declaredFault
+      programName: main
+      handlerName: initialization()
+  trace:
+    - event: dispatchStarted
+      id: "1"
+      message: { name: initialization }
+      signatureId: "initialization()"
+    - event: scheduled
+      id: "3"
+      message: { name: Leak }
+      deadline: "1000000"
+      publish: false
+    - event: emit
+      id: "3"
+      message: { name: Leak }
+      accepted: true
+    - event: diagnostic
+      diagnostic: { phase: runtime, code: test.declaredFault, programName: main, handlerName: initialization() }
+    - event: dispatchCompleted
+      id: "1"
+      message: { name: initialization }
+      signatureId: "initialization()"
+    - event: discarded
+      id: "3"
+    - event: discarded
+      id: "2"
+steps:
+  idle:
+    accepted: false
+    waiting: false
+    trace: []
+```
+
+---
+
 ## Test: failed initial group reports discards across programs in deadline order
 
 A delayed emit that loses its only recipient when another program of the initial group fails is reported together with all other entries, in one deadline-ordered pass.

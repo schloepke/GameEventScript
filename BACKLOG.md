@@ -118,6 +118,10 @@ here.
 - Add an independent CI job with build, unit tests, strict shared Conformance,
   canonical `.gesb` fixtures and cross-language result comparison for every new
   implementation. A future C runtime additionally requires sanitizer jobs.
+- Consider a `Sendable` Swift message snapshot type for forwarding between
+  isolation domains without the JSON text round trip. `GesValue` and
+  `GameEventScriptMessage` stay non-`Sendable` because External values are live
+  host objects (specs/PublicApi.md#swift).
 - Add Maven publication with the real Kotlin implementation; do not introduce
   empty package scaffolds.
 - Consider a C runtime and optional thin C++ facade when gaming adoption or a

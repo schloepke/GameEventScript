@@ -660,3 +660,100 @@ steps:
           - name: value
             value: { type: ":Number.int64", value: "31" }
 ```
+
+---
+
+## Test: unlabeled-record-field-before-line-break
+
+A line break may follow the `_` of an unlabeled Record field; the field keeps its positional constructor parameter.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: unlabeled-record-field-before-line-break
+kind: scriptApi
+level: scenario
+sources:
+  - name: unlabeled-record-field-before-line-break.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+record :Hit as { _
+  amount: :Number }
+on Start {
+  let hit be :Hit(7)
+  emit Done(value: hit.amount)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input: { args: [] }
+    local:
+      - name: Done
+        args:
+          - name: value
+            value: { type: ":Number.int64", value: "7" }
+```
+
+---
+
+## Test: random-before-line-break
+
+A line break may follow `random`; the expression and its source range start at `random`, which the cross-port compiler comparison checks in the SourceMap.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: random-before-line-break
+kind: scriptApi
+level: scenario
+sources:
+  - name: random-before-line-break.ges
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start {
+  let value be random
+    from 3 to 3
+  emit Done(value: value)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  run:
+    input: { args: [] }
+    local:
+      - name: Done
+        args:
+          - name: value
+            value: { type: ":Number.int64", value: "3" }
+```

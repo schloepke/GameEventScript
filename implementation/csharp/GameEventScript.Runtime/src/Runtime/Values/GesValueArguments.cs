@@ -15,6 +15,9 @@ public readonly struct GesValueArguments
     private readonly GesValue[]? _values;
     private readonly GesVirtualMachine? _vm;
     private readonly GesUInt16IndexList _registers;
+    // The extension call this view belongs to; a retained view fails once that call has ended instead of reading
+    // whatever a later handler left in the registers.
+    private readonly int _generation;
 
     /// <summary>
     /// Defines the empty value.
@@ -38,6 +41,7 @@ public readonly struct GesValueArguments
         _values = null;
         _vm = vm ?? throw new ArgumentNullException(nameof(vm));
         _registers = registers;
+        _generation = vm.ExtensionCallGeneration;
         Length = registers.Length;
     }
 
@@ -61,6 +65,7 @@ public readonly struct GesValueArguments
     {
         if (_vm is { } vm)
         {
+            if (vm.ExtensionCallGeneration != _generation) throw new InvalidOperationException("Extension arguments are only readable during their call.");
             return ref vm.Register(_registers[index]);
         }
 

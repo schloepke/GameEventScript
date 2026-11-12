@@ -45,7 +45,7 @@ extension GesVirtualMachine {
                 if executed >= reserved { break }
                 instrumentation.phaseStarting(.fetch)
                 if ip < 0 || ip >= code.count {
-                    raiseError("runtime.illegalInstructionPointer")
+                    raiseError(GesDiagnosticCodes.runtimeInstructionPointerOutOfRange)
                     break
                 }
                 let instruction = code[ip]
@@ -178,7 +178,7 @@ extension GesVirtualMachine {
                     createIterator(d, value, context, checkRangeLimit: true)
                 case .createRecord:
                     guard let binding = linked!.records[instruction.word1] else {
-                        raiseError("runtime.invalidRecordBinding")
+                        raiseError(GesDiagnosticCodes.runtimeInvalidRecordConstructor)
                         break
                     }
                     call(Int(binding.entryAddress), destination: d)

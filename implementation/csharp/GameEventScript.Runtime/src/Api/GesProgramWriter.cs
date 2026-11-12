@@ -24,7 +24,7 @@ internal static class GesProgramWriter
     public static int GetEncodedSize(GameEventScriptProgram program)
     {
         _ = program ?? throw new ArgumentNullException(nameof(program));
-        program.Validate();
+        program.EnsureValid();
         return MeasureValidated(program);
     }
 

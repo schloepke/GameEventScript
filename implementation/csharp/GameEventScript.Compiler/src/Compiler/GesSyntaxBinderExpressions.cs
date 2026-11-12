@@ -734,9 +734,8 @@ internal sealed partial class GesSyntaxBinder
     private GesExpressionNode BindRandom(GesSyntaxNode node)
     {
         var c = new Cursor(this, node);
-        c.Expect(KeywordRandom);
+        var start = c.Expect(KeywordRandom);
         c.SkipNewLines();
-        var start = c.Previous;
         c.MatchWord("from");
         c.SkipNewLines();
         var from = Operand(ref c);

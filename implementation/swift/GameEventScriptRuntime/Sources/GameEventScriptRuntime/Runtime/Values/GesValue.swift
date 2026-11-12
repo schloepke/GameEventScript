@@ -112,6 +112,7 @@ private struct GesRecordPayload {
 
 /// Immutable portable GES value with strict structural equality and copy-on-write collection ownership.
 /// Factories canonicalize invalid numeric values to Nothing and never expose mutable shared storage.
+/// Not `Sendable`, because an External value is a live host object; send a `json()` snapshot across isolation domains.
 public struct GesValue: Hashable, CustomStringConvertible {
     // Same architecture as C#: one numeric word, one object reference, kind, unit and flags.
     // Double.bitPattern gives the Int64/Double union without depending on Swift struct layout.

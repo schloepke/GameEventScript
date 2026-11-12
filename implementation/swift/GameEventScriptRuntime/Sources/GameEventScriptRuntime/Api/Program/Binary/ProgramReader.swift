@@ -206,7 +206,8 @@ enum GesProgramReader {
             sourceMap: sourceMap,
             sourceArchive: archive,
             buildMetadata: build,
-            opaqueSections: opaque
+            opaqueSections: opaque,
+            validated: true
         )
         try program.validate()
         return program

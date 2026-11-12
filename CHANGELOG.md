@@ -502,6 +502,15 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 
 ### Changed
 
+- `Host.Load` and the writer no longer validate a Program again that the Reader, the Compiler or an earlier validation
+  already accepted, so loading one Program into many hosts costs no repeated pass. A VM reset clears only the registers
+  the last handler used instead of the whole register file.
+- C# writes an extension's result into its destination register when the call returns, as Swift does, instead of during
+  the call. `GesValueArguments` is valid only during the extension call: C# throws `InvalidOperationException` and
+  Swift reads it as empty with Nothing items when it is kept longer.
+- The `GesRuntimeLimits` documentation states what each limit counts; the unused call-depth bookkeeping of the runtime
+  budget is gone. Swift `GesValue` and `GameEventScriptMessage` document why they are not `Sendable` and how to forward
+  a message across isolation domains as a JSON snapshot.
 - Swift Syntax, Runtime and Compiler no longer use Foundation. The Card Lab
   WebAssembly module shrinks from about 71 MB to about 19 MB. Highlighting the
   shared corpus is about 20 times faster in Swift and 3.5 times faster in C#.
@@ -535,6 +544,16 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   of every port. Runtime behavior does not depend on it.
 
 ### Fixed
+- A random scope that a handler leaves open is reported as `runtime.randomScopeImbalance` even when an earlier handler of
+  the same message failed; before, any earlier error in the frame suppressed it.
+- A publication that only an outbound sink would receive and that a failed initialization discards now reports
+  `MessageDiscarded` with its send ID, so every issued send ID reaches an observer callback.
+- The Swift parser leaves the token after a missing dice pattern unread, as C# does, so a closing brace there still ends
+  the handler, and the Swift binder accepts a line break after the `_` of an unlabeled Record field.
+- The source range of `random from … to …` starts at `random` in both ports, also when a line break follows it, so
+  diagnostics and the SourceMap point at the whole expression.
+- The Swift VM reports `runtime.invalidRecordConstructor` and `runtime.instructionPointerOutOfRange` like C#, and a
+  Publish without an outbound binding is ignored as in C# instead of raising an uncatalogued code.
 - `nothing = nothing` and `nothing <> nothing` fold to `nothing`, as the VM computes them, and C# folds dice pattern faces
   such as `[:has pair of (1.5 + 1.5)]` as Swift does; `(50%) / (true)` folds to `50%`.
 - A negated decimal random bound such as `random from -20.0 to -10.0`, a decimal constant and `random 1 to pi` draw

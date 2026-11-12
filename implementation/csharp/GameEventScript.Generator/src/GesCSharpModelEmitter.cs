@@ -38,18 +38,110 @@ internal static class GesCSharpModelEmitter
         GesModelPlanner.CheckProtocols(layout, swift: false);
         var document = new GesCodeDocument { Header = header, Prologue = prologue.ToString(), Space = space };
         var computed = GesModelPlanner.Computed(layout, GesComputedEmitter.Helper(options.Namespace, suffix), swift: false);
+        var documents = options.Documents ? "__GesModelDocuments" + suffix : null;
+        var documentType = options.Documents ? GesModelPlanner.DocumentType(layout, space) : "";
         foreach (var type in layout.Types)
-            document.Units.Add(new GesCodeUnit(type.Name, code => Record(code, layout, type, access, support, qualifier, options.Bindings, options.Values ? values : null, computed)));
+            document.Units.Add(new GesCodeUnit(type.Name, code => Record(code, layout, type, access, support, qualifier, options.Bindings, options.Values ? values : null, computed, layout.Roots.Contains(type.Name) ? documents : null)));
         foreach (var protocol in layout.Protocols) document.Units.Add(new GesCodeUnit(protocol.Name, code => Interface(code, layout, protocol, access)));
         foreach (var (name, tags) in GesModelPlanner.TagSets(layout))
             document.Units.Add(new GesCodeUnit(name, code => TagEnum(code, name, tags, access, $"/// <summary>The tag set <c>:{name}</c>, in declared order.</summary>")));
         if (options.Bindings) document.Units.Add(new GesCodeUnit("", code => Bindings(code, layout, access, qualifier, support, computed)));
         if (options.Values) document.Units.Add(new GesCodeUnit("", code => Values(code, layout, values, qualifier, support, computed)));
+        if (documents is not null)
+        {
+            document.Units.Add(new GesCodeUnit("", code => DocumentType(code, layout, documentType, documents, access, qualifier)));
+            document.Units.Add(new GesCodeUnit("", code => DocumentsHolder(code, layout, documents)));
+        }
+
         var geometry = GesModelPlanner.UsesGeometry(layout);
         document.Units.Add(new GesCodeUnit("", code => Support(code, support, options.Bindings || options.Values, geometry)));
         if (layout.Types.Exists(type => type.Computed.Length > 0))
             document.Units.Add(new GesCodeUnit("", code => GesComputedLibrary.Write(code, computed.HelperName, swift: false, options.Bindings || options.Values || computed.NeedsValues(layout.Types.ConvertAll(type => (type.Name, type.Computed))))));
         return document;
+    }
+
+    // Reads a document of any root by its header, so that a host reading files of several kinds needs no switch on names.
+    private static void DocumentType(GesSchemaPlanner.Code code, GesModelLayout layout, string name, string documents, string access, string qualifier)
+    {
+        code.Line($"/// <summary>A GES document of one of the model roots of this file, chosen by its header <c>:Schema(:Name)</c>.</summary>");
+        code.Line($"{access} abstract class {name}");
+        code.Open("{");
+        code.Line($"private {name}()");
+        code.Open("{");
+        code.Close();
+        foreach (var root in layout.Roots)
+        {
+            code.Blank();
+            code.Line($"/// <summary>A document of <c>:{root}</c>.</summary>");
+            code.Line($"public sealed class {root} : {name}");
+            code.Open("{");
+            code.Line("/// <summary>Holds a record.</summary>");
+            code.Line("/// <param name=\"value\">The record.</param>");
+            code.Line($"public {root}({qualifier}{root} value)");
+            code.Open("{");
+            code.Line("Value = value;");
+            code.Close();
+            code.Blank();
+            code.Line("/// <summary>Gets the record.</summary>");
+            code.Line($"public {qualifier}{root} Value {{ get; }}");
+            code.Close();
+        }
+
+        code.Blank();
+        code.Line("/// <summary>Reads GES document text whose header names a model root of this file, as that root's <c>FromDocument</c> does.</summary>");
+        code.Line("/// <param name=\"text\">The document text.</param>");
+        code.Line("/// <returns>The document of the root its header names.</returns>");
+        code.Line("/// <exception cref=\"GesDocumentException\">The text is no document, names no root of this file (<c>document.schemaMismatch</c>), or");
+        code.Line("/// breaks its schema, with the <c>document.*</c> or <c>wire.*</c> code, the line, the column and the field path.</exception>");
+        code.Line($"public static {name} FromDocument(string text)");
+        code.Open("{");
+        code.Line($"var document = {documents}.Read(text{string.Concat(layout.Roots.ConvertAll(root => ", " + GesSchemaPlanner.Literal(root, false)))});");
+        code.Line("try");
+        code.Open("{");
+        code.Line("switch (document.Schema)");
+        code.Open("{");
+        for (var index = 0; index < layout.Roots.Count; index++)
+        {
+            var root = layout.Roots[index];
+            code.Line(index + 1 < layout.Roots.Count ? $"case {GesSchemaPlanner.Literal(root, false)}:" : "default:");
+            code.Line($"    return new {root}({qualifier}{root}.FromValue(document.Value));");
+        }
+
+        code.Close();
+        code.Close();
+        code.Line("catch (GesWireException error)");
+        code.Open("{");
+        code.Line("throw document.Locate(error);");
+        code.Close();
+        code.Close();
+        code.Close();
+    }
+
+    // The schema sources of this file, parsed when a document is first read.
+    private static void DocumentsHolder(GesSchemaPlanner.Code code, GesModelLayout layout, string holder)
+    {
+        code.Line("/// <summary>The schema sources of this file, which reading documents checks them against.</summary>");
+        code.Line($"internal static class {holder}");
+        code.Open("{");
+        code.Line("private static GesSchemaSet? __set;");
+        code.Blank();
+        code.Line("internal static GesSchemaDocument Read(string text, params string[] roots)");
+        code.Open("{");
+        code.Line("var set = __set ??= GesSchemaSet.Parse(");
+        code.Indent();
+        for (var index = 0; index < layout.Sources.Count; index++)
+        {
+            var source = layout.Sources[index];
+            code.Line($"new GesSchemaSource({GesSchemaPlanner.Literal(source.Name, false)}, string.Join(\"\\n\", new[]");
+            code.Open("{");
+            foreach (var line in source.Text.Split('\n')) code.Line(GesSchemaPlanner.Literal(line, false) + ",");
+            code.Close(index + 1 < layout.Sources.Count ? "}))," : "})));");
+        }
+
+        code.Dedent();
+        code.Line("return GesSchemaDocument.Read(set, text, roots);");
+        code.Close();
+        code.Close();
     }
 
     private static string Parameter(string pascal)
@@ -77,7 +169,7 @@ internal static class GesCSharpModelEmitter
         code.Close();
     }
 
-    private static void Record(GesSchemaPlanner.Code code, GesModelLayout layout, GesModelType type, string access, string support, string qualifier, bool bindings, string? values, GesComputedEmitter computed)
+    private static void Record(GesSchemaPlanner.Code code, GesModelLayout layout, GesModelType type, string access, string support, string qualifier, bool bindings, string? values, GesComputedEmitter computed, string? documents)
     {
         var fields = GesModelPlanner.Fields(type);
         var names = new List<(string, string)>();
@@ -87,6 +179,7 @@ internal static class GesCSharpModelEmitter
             foreach (var reserved in new[] { "ToGesValue", "FromGesValue" }) names.Add((reserved, "the generated member " + reserved));
         if (values is not null)
             foreach (var reserved in new[] { "ToValue", "FromValue" }) names.Add((reserved, "the generated member " + reserved));
+        if (documents is not null) names.Add(("FromDocument", "the generated member FromDocument"));
         if (bindings && fields.Exists(field => field.Field.Name == "fields"))
             throw new GesGeneratorException(GesGeneratorException.NameCollision, $"In '{type.Name}', the field fields and the generated field fields of its bindings share a name.");
         foreach (var field in fields)
@@ -210,6 +303,29 @@ internal static class GesCSharpModelEmitter
             code.Line("/// <returns>The record.</returns>");
             code.Line("/// <exception cref=\"GesWireException\">A field does not convert: <c>wire.typeMismatch</c> at its path.</exception>");
             code.Line($"public static {type.Name} FromValue(GesValue value) => {values}.Read{type.Name}(value, \"\");");
+        }
+
+        if (documents is not null)
+        {
+            code.Blank();
+            code.Line($"/// <summary>Reads a record from GES document text with the header <c>:Schema(:{type.Name})</c>: the document is checked against");
+            code.Line("/// the schema sources of this file, and fields it leaves out take their defaults. Reading allocates and does no file I/O.</summary>");
+            code.Line("/// <param name=\"text\">The document text.</param>");
+            code.Line("/// <returns>The record.</returns>");
+            code.Line("/// <exception cref=\"GesDocumentException\">The text is no document, names another schema (<c>document.schemaMismatch</c>), or breaks");
+            code.Line("/// the schema, with the <c>document.*</c> or <c>wire.*</c> code, the line, the column and the field path.</exception>");
+            code.Line($"public static {type.Name} FromDocument(string text)");
+            code.Open("{");
+            code.Line($"var document = {documents}.Read(text, {GesSchemaPlanner.Literal(type.Name, false)});");
+            code.Line("try");
+            code.Open("{");
+            code.Line("return FromValue(document.Value);");
+            code.Close();
+            code.Line("catch (GesWireException error)");
+            code.Open("{");
+            code.Line("throw document.Locate(error);");
+            code.Close();
+            code.Close();
         }
 
         foreach (var field in fields) Declarations(code, field.Value, support, qualifier);

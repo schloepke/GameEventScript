@@ -35,13 +35,21 @@ internal static class GesSwiftModelEmitter
             Holds = "model"
         };
         var computed = GesModelPlanner.Computed(layout, GesComputedEmitter.Helper(options.Namespace, suffix), swift: true);
+        var documents = options.Documents ? "__GesModelDocuments" + suffix : null;
+        var documentType = options.Documents ? GesModelPlanner.DocumentType(layout, document.Space) : "";
         foreach (var type in layout.Types)
-            document.Units.Add(new GesCodeUnit(type.Name, code => Record(code, layout, type, access, options.Bindings, options.Values ? values : null, computed)));
+            document.Units.Add(new GesCodeUnit(type.Name, code => Record(code, layout, type, access, options.Bindings, options.Values ? values : null, computed, layout.Roots.Contains(type.Name) ? documents : null)));
         foreach (var protocol in layout.Protocols) document.Units.Add(new GesCodeUnit(protocol.Name, code => Protocol(code, layout, protocol, access)));
         foreach (var (name, tags) in GesModelPlanner.TagSets(layout))
             document.Units.Add(new GesCodeUnit(name, code => TagEnum(code, name, tags, access, $"/// The tag set `:{name}`, in declared order; the raw value is the tag's name.")));
         if (options.Bindings) document.Units.Add(new GesCodeUnit("", code => Bindings(code, layout, access, support, computed)));
         if (options.Values) document.Units.Add(new GesCodeUnit("", code => Values(code, layout, values, support, computed)));
+        if (documents is not null)
+        {
+            document.Units.Add(new GesCodeUnit("", code => DocumentType(code, layout, documentType, documents, access)));
+            document.Units.Add(new GesCodeUnit("", code => DocumentsHolder(code, layout, documents)));
+        }
+
         if (options.Bindings || options.Values) document.Units.Add(new GesCodeUnit("", code => Support(code, support)));
         if (layout.Types.Exists(type => type.Computed.Length > 0))
             document.Units.Add(new GesCodeUnit("", code => GesComputedLibrary.Write(code, computed.HelperName, swift: true, options.Bindings || options.Values || computed.NeedsValues(layout.Types.ConvertAll(type => (type.Name, type.Computed))))));
@@ -49,6 +57,65 @@ internal static class GesSwiftModelEmitter
     }
 
     private static string Name(string name) => GesSwiftEmitter.Keywords.Contains(name) ? "`" + name + "`" : name;
+
+    // Reads a document of any root by its header, so that a host reading files of several kinds needs no switch on names.
+    private static void DocumentType(GesSchemaPlanner.Code code, GesModelLayout layout, string name, string documents, string access)
+    {
+        code.Line("/// A GES document of one of the model roots of this file, chosen by its header `:Schema(:Name)`.");
+        code.Open($"{access}enum {name}: Hashable, Sendable {{");
+        foreach (var root in layout.Roots)
+        {
+            code.Line($"/// A document of `:{root}`.");
+            code.Line($"case {Member(root)}({root})");
+        }
+
+        code.Blank();
+        code.Line("/// Reads GES document text whose header names a model root of this file, as that root's `init(document:)` does.");
+        code.Line("/// - Throws: `GesDocumentError` when the text is no document, names no root of this file (`document.schemaMismatch`), or");
+        code.Line("///   breaks its schema, with the `document.*` or `wire.*` code, the line, the column and the field path.");
+        code.Open($"{access}init(document text: String) throws(GesDocumentError) {{");
+        code.Line($"let document = try {documents}.read(text, [{string.Join(", ", layout.Roots.ConvertAll(root => GesSchemaPlanner.Literal(root, true)))}])");
+        code.Open("do {");
+        code.Line("switch document.schema {");
+        for (var index = 0; index < layout.Roots.Count; index++)
+        {
+            var root = layout.Roots[index];
+            code.Line(index + 1 < layout.Roots.Count ? $"case {GesSchemaPlanner.Literal(root, true)}: self = .{Member(root)}(try {root}(value: document.value))" : $"default: self = .{Member(root)}(try {root}(value: document.value))");
+        }
+
+        code.Line("}");
+        code.Close("} catch {");
+        code.Line("    throw document.error(for: error)");
+        code.Line("}");
+        code.Close();
+        code.Close();
+    }
+
+    // The schema sources of this file, parsed when a document is first read.
+    private static void DocumentsHolder(GesSchemaPlanner.Code code, GesModelLayout layout, string holder)
+    {
+        code.Line("/// The schema sources of this file, which reading documents checks them against.");
+        code.Open($"enum {holder} {{");
+        code.Open("static let set = Result<GesSchemaSet, any Error> {");
+        code.Open("try GesSchemaSet(sources: [");
+        foreach (var source in layout.Sources)
+        {
+            code.Open($"GesSchemaSource(name: {GesSchemaPlanner.Literal(source.Name, true)}, text: [");
+            foreach (var line in source.Text.Split('\n')) code.Line(GesSchemaPlanner.Literal(line, true) + ",");
+            code.Close("].joined(separator: \"\\n\")),");
+        }
+
+        code.Close("])");
+        code.Close();
+        code.Blank();
+        code.Open("static func read(_ text: String, _ roots: [String]) throws(GesDocumentError) -> GesSchemaDocument {");
+        code.Open("guard let set = try? Self.set.get() else {");
+        code.Line("throw GesDocumentError(code: GesSchemaDocument.schemaMismatch, line: 1, column: 1, message: \"The embedded schema sources no longer parse.\")");
+        code.Close();
+        code.Line("return try GesSchemaDocument(text, schemas: set, expected: roots)");
+        code.Close();
+        code.Close();
+    }
 
     private static string Member(string pascal) => Name(GesSchemaPlanner.Camel(pascal));
 
@@ -77,7 +144,7 @@ internal static class GesSwiftModelEmitter
         code.Close();
     }
 
-    private static void Record(GesSchemaPlanner.Code code, GesModelLayout layout, GesModelType type, string access, bool bindings, string? values, GesComputedEmitter computed)
+    private static void Record(GesSchemaPlanner.Code code, GesModelLayout layout, GesModelType type, string access, bool bindings, string? values, GesComputedEmitter computed, string? documents)
     {
         var fields = GesModelPlanner.Fields(type);
         var key = fields.Find(field => field.Field.Key);
@@ -162,6 +229,23 @@ internal static class GesSwiftModelEmitter
             code.Line("/// Reads a Record of this schema, or a Map of only its fields, as `GesSchemaValues` encodes it.");
             code.Line("/// - Throws: `GesWireError` with `wire.typeMismatch` at the path of a field that does not convert.");
             code.Line($"{access}init(value: GesValue) throws(GesWireError) {{ self = try {values}.read{type.Name}(value, \"\") }}");
+        }
+
+        if (documents is not null)
+        {
+            code.Blank();
+            code.Line($"/// Reads a record from GES document text with the header `:Schema(:{type.Name})`: the document is checked against the schema");
+            code.Line("/// sources of this file, and fields it leaves out take their defaults. Reading allocates and does no file I/O.");
+            code.Line("/// - Throws: `GesDocumentError` when the text is no document, names another schema (`document.schemaMismatch`), or breaks the");
+            code.Line("///   schema, with the `document.*` or `wire.*` code, the line, the column and the field path.");
+            code.Open($"{access}init(document text: String) throws(GesDocumentError) {{");
+            code.Line($"let document = try {documents}.read(text, [{GesSchemaPlanner.Literal(type.Name, true)}])");
+            code.Open("do {");
+            code.Line("self = try Self(value: document.value)");
+            code.Close("} catch {");
+            code.Line("    throw document.error(for: error)");
+            code.Line("}");
+            code.Close();
         }
 
         foreach (var field in fields) Declarations(code, field.Value, access);

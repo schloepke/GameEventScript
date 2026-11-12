@@ -19,7 +19,7 @@ public sealed class GesGeometryGeneratedCodeTests
         return GesSchemaSet.Parse(new GesSchemaSource("geometry.gess", File.ReadAllText(fixture)));
     }
 
-    private static GesSchemaGenerateOptions Options(GesSchemaLanguage language, string space, bool bindings) => new() { Language = language, Namespace = space, Access = GesSchemaAccess.Internal, Values = true, Bindings = bindings };
+    private static GesSchemaGenerateOptions Options(GesSchemaLanguage language, string space, bool model) => new() { Language = language, Namespace = space, Access = GesSchemaAccess.Internal, Values = true, Bindings = model, Documents = model };
 
     private static string Generated(string name) => File.ReadAllText(Path.Combine(TestRepositoryPaths.CSharpDirectory, "GameEventScript.Generator", "tests", "Generated", name));
 
@@ -100,6 +100,44 @@ public sealed class GesGeometryGeneratedCodeTests
         read.ReadDelta(delta, baseline);
         Assert.AreEqual(next.Area, read.Area);
         Assert.IsTrue(read.WireEquals(next));
+    }
+
+    private const string ZoneDocument = """
+        :Schema(:Zone)
+        id: 7
+        area: [lower: :Point(20m, 1m), upper: :Point(5m, 3m)]
+        outline: [:Point(0m, 0m), :Point(10m, 0m), :Point(0m, 2m)]
+        free: [:Point(0.5, -0.25)]
+        rings: [[:Point(1m, 1m), :Point(2m, 2m)]]
+
+        """;
+
+    [TestMethod]
+    public void ModelsReadTheirDocuments()
+    {
+        var zone = Model.Zone.FromDocument(ZoneDocument);
+        Assert.AreEqual(7L, zone.Id);
+        Assert.AreEqual(new GesBox(new GesPoint(5, 1), new GesPoint(20, 3)), zone.Area);
+        Assert.IsNull(zone.Bounds);
+        Assert.AreEqual(10d, zone.Outline.Area);
+        Assert.AreEqual(new GesPoly([new GesPoint(1, 1), new GesPoint(2, 2)]), zone.Rings[0]);
+
+        // The document type chooses the root by the header.
+        var document = Model.ModelDocument.FromDocument(ZoneDocument);
+        Assert.AreEqual(zone, ((Model.ModelDocument.Zone)document).Value);
+    }
+
+    [TestMethod]
+    public void DocumentErrorsHaveTheirPositionAndPath()
+    {
+        var other = Assert.ThrowsExactly<GesDocumentException>(() => Model.Zone.FromDocument(ZoneDocument.Replace(":Schema(:Zone)", ":Schema(:Area)")));
+        Assert.AreEqual((GesSchemaDocument.SchemaMismatch, 1, 1, ""), (other.Code, other.Line, other.Column, other.Path));
+        StringAssert.Contains(other.Message, ":Area");
+        StringAssert.Contains(other.Message, ":Zone");
+        var range = Assert.ThrowsExactly<GesDocumentException>(() => Model.ModelDocument.FromDocument(ZoneDocument.Replace("id: 7", "id: 300")));
+        Assert.AreEqual(("document.outOfRange", 2, 5, "id"), (range.Code, range.Line, range.Column, range.Path));
+        var unit = Assert.ThrowsExactly<GesDocumentException>(() => Model.Zone.FromDocument(ZoneDocument.Replace("[:Point(1m, 1m),", "[:Point(1s, 1s),")));
+        Assert.AreEqual(("document.fieldType", 6, 10, "rings[][]"), (unit.Code, unit.Line, unit.Column, unit.Path));
     }
 
     [TestMethod]

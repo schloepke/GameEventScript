@@ -85,6 +85,15 @@ public sealed class GesSchemaGenerateOptions
     public bool Bindings { get; set; }
 
     /// <summary>
+    /// Gets or sets whether generated model roots also read GES document text: each root a <c>FromDocument</c> (Swift
+    /// <c>init(document:)</c>) that requires the header <c>:Schema(:Name)</c>, checks the document against the embedded schema
+    /// sources, applies defaults and converts, and one type <c>&lt;Namespace&gt;Document</c> per generation that reads any
+    /// root by its header. It includes <see cref="Values"/>. The code reads text and does no file I/O. Only model generation
+    /// takes it.
+    /// </summary>
+    public bool Documents { get; set; }
+
+    /// <summary>
     /// Gets or sets whether generated Swift classes keep the dynamic exclusivity checks of their stored properties. By
     /// default they mark them <c>@exclusivity(unchecked)</c>, which halves the time of reading and writing; overlapping
     /// accesses to one record, such as passing a list <c>inout</c> while the record reads into it, are then undefined

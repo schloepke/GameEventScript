@@ -10,7 +10,7 @@ internal static class SchemaApiObservations
 {
     internal static void Validate(JsonElement input)
     {
-        RuntimeValues.Fields(input, "sources", "root", "parameters", "bind", "encode", "encodeExternal", "baselineExternal", "externalFields", "failingField", "baselineFailingField", "failingCode", "encodeBuffer", "baseline", "decode", "decodeLimit", "key", "dump", "dumpBaseline", "deltaEncode", "deltaDecode", "describe", "document");
+        RuntimeValues.Fields(input, "sources", "root", "parameters", "bind", "encode", "encodeExternal", "baselineExternal", "externalFields", "failingField", "baselineFailingField", "failingCode", "encodeBuffer", "baseline", "decode", "decodeLimit", "key", "dump", "dumpBaseline", "deltaEncode", "deltaDecode", "describe", "document", "readDocument");
         if (input.GetProperty("encode").ValueKind != JsonValueKind.Null) _ = ValueApiObservations.Construct(input.GetProperty("encode"));
         if (input.GetProperty("baseline").ValueKind != JsonValueKind.Null) _ = ValueApiObservations.Construct(input.GetProperty("baseline"));
     }
@@ -46,6 +46,7 @@ internal static class SchemaApiObservations
             }
 
             if (input.GetProperty("document").GetString() is { } document) result["document"] = Check(set, document, root, parameters);
+            if (input.GetProperty("readDocument") is { ValueKind: JsonValueKind.Object } reading) result["readDocument"] = ReadDocument(set, reading);
             if (input.GetProperty("bind").GetBoolean())
             {
                 var bound = set.Schema(root!).Bind(parameters);
@@ -171,6 +172,21 @@ internal static class SchemaApiObservations
         catch (GesSchemaException exception)
         {
             return new { error = new { code = exception.Code, line = exception.Line, column = exception.Column } };
+        }
+    }
+
+    // Reads a document as generated models do: the header names an expected schema, and the entries are checked against it.
+    private static object ReadDocument(GesSchemaSet set, JsonElement input)
+    {
+        RuntimeValues.Fields(input, "text", "expected");
+        try
+        {
+            var document = GesSchemaDocument.Read(set, input.GetProperty("text").GetString()!, input.GetProperty("expected").EnumerateArray().Select(name => name.GetString()!).ToArray());
+            return new { schema = document.Schema, value = RuntimeValues.Encode(document.Value) };
+        }
+        catch (GesDocumentException exception)
+        {
+            return new { error = new { code = exception.Code, line = exception.Line, column = exception.Column, path = exception.Path } };
         }
     }
 

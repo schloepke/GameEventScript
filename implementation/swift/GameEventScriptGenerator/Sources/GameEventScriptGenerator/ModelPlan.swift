@@ -169,6 +169,16 @@ enum GesModelPlanner {
 
     // The type a script sees for a field: a built-in kind with its unit, or a type name; a union keeps its value as `Value`.
     // Whether a model holds a Box or a Poly, whose conversions the support class then offers.
+    // The type that reads a document of any root of a generation: named after the last part of the namespace, or ModelDocument
+    // without one. It must not take the name of a generated type.
+    static func documentType(_ layout: GesModelLayout, _ space: [String]) throws(GesGeneratorError) -> String {
+        let name = (space.last ?? "Model") + "Document"
+        if layout.types.contains(where: { $0.name == name }) || layout.protocols.contains(where: { $0.name == name }) || tagSets(layout).contains(where: { $0.name == name }) {
+            throw GesGeneratorError(GesGeneratorError.nameCollision, "The document type '\(name)' takes the name of a generated type; choose another namespace.")
+        }
+        return name
+    }
+
     static func usesGeometry(_ layout: GesModelLayout) -> Bool { layout.types.contains { $0.fields.contains { usesGeometry($0.value) } } }
 
     private static func usesGeometry(_ value: GesModelValue) -> Bool {

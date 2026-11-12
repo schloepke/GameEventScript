@@ -419,6 +419,61 @@ public static class GesSchemaValues
         EncodeFields(ref writer, schema, index + 1, node.Next, fields, strict);
     }
 
+    // A checked document writes a Box as the Map of its corners and a Poly as the List of its points, since documents have no
+    // geometry literal; this gives them the geometry library's values, as the schema's fields and their alternatives expect.
+    internal static GesValue DocumentShapes(GesResolvedDeclaration schema, GesValue value)
+    {
+        if (value.AsMap() is not { } map) return value;
+        var keys = new string[map.Length];
+        var values = new GesValue[map.Length];
+        for (var index = 0; index < map.Length; index++)
+        {
+            keys[index] = map.KeyAt(index);
+            var entry = map.ValueAt(index);
+            var field = Array.Find(schema.Fields, candidate => candidate.Name == keys[index]);
+            values[index] = field is null ? entry : DocumentShape(field.Alternatives, entry);
+        }
+
+        return value.CustomTypeName is { } name ? GesValue.GesRecord(name, keys, values) : GesValue.GesMap(keys, values);
+    }
+
+    private static GesValue DocumentShape(GesResolvedType[] alternatives, GesValue value)
+    {
+        foreach (var type in alternatives)
+        {
+            switch (type.Kind)
+            {
+                case GesSchemaTypeKind.Box when value.AsMap() is { Length: 2 } corners && corners.Get("lower") is { } lower && corners.Get("upper") is { } upper
+                    && GesPoint.FromValue(lower, type.Unit) is { } low && GesPoint.FromValue(upper, type.Unit) is { } high:
+                    return new GesBox(low, high).ToValue(type.Unit);
+                case GesSchemaTypeKind.Poly when value.ValueKind == GesBytecodeTypeKind.List && Points(value.AsList(), type.Unit) is { } points:
+                    return new GesPoly(points).ToValue(type.Unit);
+                case GesSchemaTypeKind.List when type.Element is { } element && value.ValueKind == GesBytecodeTypeKind.List:
+                    var list = value.AsList();
+                    var shaped = new GesValue[list.Length];
+                    for (var index = 0; index < shaped.Length; index++) shaped[index] = DocumentShape(element, list[index]);
+                    return GesValue.GesList(shaped);
+                case GesSchemaTypeKind.Reference when value.AsMap() is not null && (value.CustomTypeName is not { } name || name == type.ReferenceName):
+                    return DocumentShapes(type.Reference!, value);
+            }
+        }
+
+        return value;
+    }
+
+    // The Points of a document Poly in the field's unit, or null when an item is no such Point.
+    private static GesPoint[]? Points(GesValueSlice items, GesQuantityUnit unit)
+    {
+        var points = new GesPoint[items.Length];
+        for (var index = 0; index < points.Length; index++)
+        {
+            if (GesPoint.FromValue(items[index], unit) is not { } point) return null;
+            points[index] = point;
+        }
+
+        return points;
+    }
+
     // The components of a Point, Vector, Box corner or Poly point; an axis that the block leaves out must be zero.
     private static void EncodePoint(ref GesSchemaWriter writer, GesBoundSchema schema, int index, double x, double y, double z)
     {

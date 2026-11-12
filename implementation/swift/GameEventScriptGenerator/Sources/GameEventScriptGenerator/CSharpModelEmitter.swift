@@ -34,10 +34,13 @@ enum GesCSharpModelEmitter {
         try GesModelPlanner.checkProtocols(layout, swift: false)
         var document = GesCodeDocument(header: header, prologue: prologue.text, space: space)
         let computed = GesModelPlanner.computed(layout, GesComputedEmitter.helper(options.namespace, suffix), swift: false)
+        let documents = options.documents ? "__GesModelDocuments" + suffix : nil
+        let documentType = options.documents ? try GesModelPlanner.documentType(layout, space) : ""
         for type in layout.types {
+            let reads = layout.roots.contains(type.name) ? documents : nil
             document.units.append(
                 GesCodeUnit(owner: type.name) { code in
-                    try record(&code, layout, type, access, support, qualifier, bindings: options.bindings, values: options.values ? values : nil, computed: computed)
+                    try record(&code, layout, type, access, support, qualifier, bindings: options.bindings, values: options.values ? values : nil, computed: computed, documents: reads)
                 }
             )
         }
@@ -53,6 +56,10 @@ enum GesCSharpModelEmitter {
         }
         if options.bindings { document.units.append(GesCodeUnit(owner: "") { code in bindings(&code, layout, access, qualifier, support, computed) }) }
         if options.values { document.units.append(GesCodeUnit(owner: "") { code in valueConversions(&code, layout, values, qualifier, support, computed) }) }
+        if let documents {
+            document.units.append(GesCodeUnit(owner: "") { code in documentTypeDeclaration(&code, layout, documentType, documents, access, qualifier) })
+            document.units.append(GesCodeUnit(owner: "") { code in documentsHolder(&code, layout, documents) })
+        }
         let conversions = options.bindings || options.values
         let geometry = GesModelPlanner.usesGeometry(layout)
         document.units.append(GesCodeUnit(owner: "") { code in supportType(&code, support, conversions: conversions, geometry: geometry) })
@@ -61,6 +68,80 @@ enum GesCSharpModelEmitter {
             document.units.append(GesCodeUnit(owner: "") { code in GesComputedLibrary.write(&code, computed.helper, swift: false, values: values) })
         }
         return document
+    }
+
+    // Reads a document of any root by its header, so that a host reading files of several kinds needs no switch on names.
+    private static func documentTypeDeclaration(_ code: inout Code, _ layout: GesModelLayout, _ name: String, _ documents: String, _ access: String, _ qualifier: String) {
+        code.line("/// <summary>A GES document of one of the model roots of this file, chosen by its header <c>:Schema(:Name)</c>.</summary>")
+        code.line("\(access) abstract class \(name)")
+        code.open("{")
+        code.line("private \(name)()")
+        code.open("{")
+        code.close()
+        for root in layout.roots {
+            code.blank()
+            code.line("/// <summary>A document of <c>:\(root)</c>.</summary>")
+            code.line("public sealed class \(root) : \(name)")
+            code.open("{")
+            code.line("/// <summary>Holds a record.</summary>")
+            code.line("/// <param name=\"value\">The record.</param>")
+            code.line("public \(root)(\(qualifier)\(root) value)")
+            code.open("{")
+            code.line("Value = value;")
+            code.close()
+            code.blank()
+            code.line("/// <summary>Gets the record.</summary>")
+            code.line("public \(qualifier)\(root) Value { get; }")
+            code.close()
+        }
+        code.blank()
+        code.line("/// <summary>Reads GES document text whose header names a model root of this file, as that root's <c>FromDocument</c> does.</summary>")
+        code.line("/// <param name=\"text\">The document text.</param>")
+        code.line("/// <returns>The document of the root its header names.</returns>")
+        code.line("/// <exception cref=\"GesDocumentException\">The text is no document, names no root of this file (<c>document.schemaMismatch</c>), or")
+        code.line("/// breaks its schema, with the <c>document.*</c> or <c>wire.*</c> code, the line, the column and the field path.</exception>")
+        code.line("public static \(name) FromDocument(string text)")
+        code.open("{")
+        code.line("var document = \(documents).Read(text\(layout.roots.map { ", " + GesSchemaPlanner.literal($0, swift: false) }.joined()));")
+        code.line("try")
+        code.open("{")
+        code.line("switch (document.Schema)")
+        code.open("{")
+        for (index, root) in layout.roots.enumerated() {
+            code.line(index + 1 < layout.roots.count ? "case \(GesSchemaPlanner.literal(root, swift: false)):" : "default:")
+            code.line("    return new \(root)(\(qualifier)\(root).FromValue(document.Value));")
+        }
+        code.close()
+        code.close()
+        code.line("catch (GesWireException error)")
+        code.open("{")
+        code.line("throw document.Locate(error);")
+        code.close()
+        code.close()
+        code.close()
+    }
+
+    // The schema sources of this file, parsed when a document is first read.
+    private static func documentsHolder(_ code: inout Code, _ layout: GesModelLayout, _ holder: String) {
+        code.line("/// <summary>The schema sources of this file, which reading documents checks them against.</summary>")
+        code.line("internal static class \(holder)")
+        code.open("{")
+        code.line("private static GesSchemaSet? __set;")
+        code.blank()
+        code.line("internal static GesSchemaDocument Read(string text, params string[] roots)")
+        code.open("{")
+        code.line("var set = __set ??= GesSchemaSet.Parse(")
+        code.indent()
+        for (index, source) in layout.sources.enumerated() {
+            code.line("new GesSchemaSource(\(GesSchemaPlanner.literal(source.name, swift: false)), string.Join(\"\\n\", new[]")
+            code.open("{")
+            for line in GesSchemaPlanner.lines(source.text) { code.line(GesSchemaPlanner.literal(line, swift: false) + ",") }
+            code.close(index + 1 < layout.sources.count ? "}))," : "})));")
+        }
+        code.dedent()
+        code.line("return GesSchemaDocument.Read(set, text, roots);")
+        code.close()
+        code.close()
     }
 
     private static func parameter(_ pascal: String) -> String {
@@ -91,13 +172,15 @@ enum GesCSharpModelEmitter {
         _ qualifier: String,
         bindings: Bool,
         values: String?,
-        computed: GesComputedEmitter
+        computed: GesComputedEmitter,
+        documents: String?
     ) throws(GesGeneratorError) {
         let fields = GesModelPlanner.fields(type)
         var names: Names = reserved.map { ($0, "the inherited member " + $0) }
         names.append(("SchemaHash", "the generated member SchemaHash"))
         if bindings { names += ["ToGesValue", "FromGesValue"].map { ($0, "the generated member " + $0) } }
         if values != nil { names += ["ToValue", "FromValue"].map { ($0, "the generated member " + $0) } }
+        if documents != nil { names.append(("FromDocument", "the generated member FromDocument")) }
         if bindings && fields.contains(where: { $0.field.name == "fields" }) {
             throw GesGeneratorError(GesGeneratorError.nameCollision, "In '\(type.name)', the field fields and the generated field fields of its bindings share a name.")
         }
@@ -209,6 +292,27 @@ enum GesCSharpModelEmitter {
             code.line("/// <returns>The record.</returns>")
             code.line("/// <exception cref=\"GesWireException\">A field does not convert: <c>wire.typeMismatch</c> at its path.</exception>")
             code.line("public static \(type.name) FromValue(GesValue value) => \(values).Read\(type.name)(value, \"\");")
+        }
+        if let documents {
+            code.blank()
+            code.line("/// <summary>Reads a record from GES document text with the header <c>:Schema(:\(type.name))</c>: the document is checked against")
+            code.line("/// the schema sources of this file, and fields it leaves out take their defaults. Reading allocates and does no file I/O.</summary>")
+            code.line("/// <param name=\"text\">The document text.</param>")
+            code.line("/// <returns>The record.</returns>")
+            code.line("/// <exception cref=\"GesDocumentException\">The text is no document, names another schema (<c>document.schemaMismatch</c>), or breaks")
+            code.line("/// the schema, with the <c>document.*</c> or <c>wire.*</c> code, the line, the column and the field path.</exception>")
+            code.line("public static \(type.name) FromDocument(string text)")
+            code.open("{")
+            code.line("var document = \(documents).Read(text, \(GesSchemaPlanner.literal(type.name, swift: false)));")
+            code.line("try")
+            code.open("{")
+            code.line("return FromValue(document.Value);")
+            code.close()
+            code.line("catch (GesWireException error)")
+            code.open("{")
+            code.line("throw document.Locate(error);")
+            code.close()
+            code.close()
         }
         for field in fields { try declarations(&code, field.value, support, qualifier) }
         code.close()

@@ -62,6 +62,11 @@ public struct GesSchemaGenerateOptions: Sendable {
     /// generated `GesTypes` catalog and constructor registry that implement the Runtime's external-type contracts, without
     /// the Bridge, macros or Reflection. Only model generation takes it.
     public var bindings: Bool
+    /// Whether generated model roots also read GES document text: each root an `init(document:)` (C# `FromDocument`) that
+    /// requires the header `:Schema(:Name)`, checks the document against the embedded schema sources, applies defaults and
+    /// converts, and one type `<Namespace>Document` per generation that reads any root by its header. It includes `values`.
+    /// The code reads text and does no file I/O. Only model generation takes it.
+    public var documents: Bool
     /// How the code is divided into files. `.none`, the default, is the single text of `generate` and `generateModels`; the
     /// other choices are the files of `generateFiles` and `generateModelFiles`.
     public var split: GesSchemaSplit
@@ -74,6 +79,7 @@ public struct GesSchemaGenerateOptions: Sendable {
     ///   - values: Whether records and models also convert to and from GES values, and records to and from messages.
     ///   - checkedExclusivity: Whether generated Swift classes keep dynamic exclusivity checks.
     ///   - bindings: Whether generated model types also offer themselves to scripts as external types.
+    ///   - documents: Whether generated model roots also read GES document text.
     ///   - split: How the code is divided into files.
     public init(
         language: GesSchemaLanguage = .csharp,
@@ -82,6 +88,7 @@ public struct GesSchemaGenerateOptions: Sendable {
         values: Bool = false,
         checkedExclusivity: Bool = false,
         bindings: Bool = false,
+        documents: Bool = false,
         split: GesSchemaSplit = .none
     ) {
         self.language = language
@@ -90,6 +97,7 @@ public struct GesSchemaGenerateOptions: Sendable {
         self.values = values
         self.checkedExclusivity = checkedExclusivity
         self.bindings = bindings
+        self.documents = documents
         self.split = split
     }
 }

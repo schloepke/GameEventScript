@@ -19,7 +19,7 @@ extension ToolHelp {
           ges schema generate <schema.gess> [more.gess ...] (--root <Name> ... | --all-roots | --wire <group> | --model <group>)
                               [--param <name>=<literal> ...]
                               --language csharp|swift [--namespace <A.B>] [--access public|internal] [--values]
-                              [--checked-exclusivity] [--bindings] [-o <file> | -d <dir> [--split schema|file]] [--check]
+                              [--checked-exclusivity] [--bindings] [--documents] [-o <file> | -d <dir> [--split schema|file]] [--check]
 
         Commands:
           check      Read schemas and report the first error with its line and column.
@@ -41,6 +41,7 @@ extension ToolHelp {
           --values                  Also convert generated records and models to and from GES values and messages.
           --checked-exclusivity     Keep the dynamic exclusivity checks of generated Swift classes.
           --bindings                Also offer generated model types to scripts as external types; only with --model.
+          --documents               Also read model roots from GES document text; includes --values, only with --model.
           -d, --out-dir <dir>       Write the code as several files into a directory that generate owns, with a manifest.
           --split <kind>            With --out-dir, one file per declaration (schema, the default) or per schema file (file).
           --check                   Compare the generated code with the output file or directory instead of writing it;
@@ -72,6 +73,7 @@ extension Tool {
         var withValues = false
         var checkedExclusivity = false
         var bindings = false
+        var documents = false
         var language: String?
         var space: String?
         var access: String?
@@ -101,6 +103,8 @@ extension Tool {
                 checkedExclusivity = true
             } else if argument == "--bindings" && command == "generate" {
                 bindings = true
+            } else if argument == "--documents" && command == "generate" {
+                documents = true
             } else if ["--root", "--data", "--baseline", "--param", "-o", "--output", "--language", "--namespace", "--access", "--wire", "--model", "-d", "--out-dir", "--split"].contains(argument) {
                 let applies: Bool
                 switch argument {
@@ -154,6 +158,7 @@ extension Tool {
         }
         if modelGroup != nil && checkedExclusivity { throw ToolError.usage("--checked-exclusivity concerns wire code, not --model.") }
         if bindings && modelGroup == nil { throw ToolError.usage("--bindings concerns model code and requires --model.") }
+        if documents && modelGroup == nil { throw ToolError.usage("--documents concerns model code and requires --model.") }
         if command == "generate" && language != "csharp" && language != "swift" { throw ToolError.usage("generate requires --language csharp or --language swift.") }
         if let access, access != "public" && access != "internal" { throw ToolError.usage("--access is public or internal.") }
         if output != nil && outDir != nil { return generateUsage("-o writes one file and --out-dir a directory; give one of them.") }
@@ -195,6 +200,7 @@ extension Tool {
                         values: withValues,
                         checkedExclusivity: checkedExclusivity,
                         bindings: bindings,
+                        documents: documents,
                         split: outDir == nil ? .none : split == "file" ? .file : .schema
                     )
                 if let group = wireGroup ?? modelGroup {

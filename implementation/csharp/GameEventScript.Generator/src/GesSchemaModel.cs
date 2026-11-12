@@ -24,6 +24,9 @@ internal sealed class GesModelLayout
 
     internal List<GesModelType> Types { get; }
 
+    // The schema sources, with their file names only, which generated code that reads documents embeds.
+    internal List<GesSchemaSource> Sources { get; } = [];
+
     // The schemas whose fields reached types take unchanged with `with`, directly or through each other, by name.
     internal List<GesModelProtocol> Protocols { get; } = [];
 
@@ -148,6 +151,7 @@ internal static class GesModelLayoutBuilder
         }
 
         var layout = new GesModelLayout(rootNames, types);
+        foreach (var source in set.Sources) layout.Sources.Add(new GesSchemaSource(source.Name.Substring(source.Name.LastIndexOfAny(['/', '\\']) + 1), source.Text));
         var protocols = new SortedDictionary<string, GesSchema>(StringComparer.Ordinal);
         foreach (var schema in reached.Values) Protocols(schema, protocols);
         foreach (var schema in protocols.Values)

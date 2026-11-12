@@ -13,6 +13,8 @@ struct GesModelLayout {
     var types: [GesModelType]
     /// The schemas whose fields reached types take unchanged with `with`, directly or through each other, by name.
     var protocols: [GesModelProtocol] = []
+    /// The schema sources, with their file names only, which generated code that reads documents embeds.
+    var sources: [GesSchemaSource] = []
 
     func type(_ name: String) -> GesModelType { types.first { $0.name == name }! }
 }
@@ -104,6 +106,11 @@ enum GesModelLayoutBuilder {
             types.append(type)
         }
         var layout = GesModelLayout(roots: rootNames, types: types)
+        layout.sources = set.sources.map { source in
+            let scalars = source.name.unicodeScalars
+            let start = scalars.lastIndex { $0 == "/" || $0 == "\\" }.map { scalars.index(after: $0) } ?? scalars.startIndex
+            return GesSchemaSource(name: String(scalars[start...]), text: source.text)
+        }
         var protocols: [String: GesSchema] = [:]
         for schema in reached.values { collectProtocols(schema, &protocols) }
         for name in protocols.keys.sorted(by: GesSchemaLayoutBuilder.ordinal) {

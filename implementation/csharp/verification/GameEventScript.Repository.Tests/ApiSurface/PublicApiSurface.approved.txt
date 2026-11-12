@@ -581,12 +581,13 @@ sealed class GameEventScript.Api.GesDocument
   property GameEventScript.Runtime.Values.GesValue Value { get }
   property GameEventScript.Runtime.Values.GesValueMap Entries { get }
 sealed class GameEventScript.Api.GesDocumentException
-  ctor GesDocumentException(System.String code, System.Int32 line, System.Int32 column, System.String limitName, System.Int32? limit)
+  ctor GesDocumentException(System.String code, System.Int32 line, System.Int32 column, System.String limitName, System.Int32? limit, System.String path, System.String message)
   property System.Int32 Column { get }
   property System.Int32 Line { get }
   property System.Int32? Limit { get }
   property System.String Code { get }
   property System.String LimitName { get }
+  property System.String Path { get }
 sealed class GameEventScript.Api.GesDocumentFormat
   ctor GesDocumentFormat()
   field static System.Int32 MaximumIndentation
@@ -1050,6 +1051,12 @@ static class GameEventScript.Api.GesSchemaDelta
 struct GameEventScript.Api.GesSchemaDeltaDecoded
   property System.Int32 ByteCount { get }
   property System.Int32 DeltaByteCount { get }
+sealed class GameEventScript.Api.GesSchemaDocument
+  field static System.String SchemaMismatch
+  method GameEventScript.Api.GesDocumentException Locate(GameEventScript.Api.GesWireException error)
+  method static GameEventScript.Api.GesSchemaDocument Read(GameEventScript.Api.GesSchemaSet schemas, System.String text, System.String[] expected)
+  property GameEventScript.Runtime.Values.GesValue Value { get }
+  property System.String Schema { get }
 static class GameEventScript.Api.GesSchemaDump
   method static GameEventScript.Api.GesSchemaDumpResult Read(GameEventScript.Api.GesBoundSchema schema, System.ReadOnlySpan<System.Byte> data)
   method static GameEventScript.Api.GesSchemaDumpResult Read(GameEventScript.Api.GesBoundSchema schema, System.ReadOnlySpan<System.Byte> data, System.ReadOnlySpan<System.Byte> baseline)
@@ -1485,6 +1492,7 @@ sealed class GameEventScript.Generator.GesSchemaGenerateOptions
   property GameEventScript.Generator.GesSchemaSplit Split { get set }
   property System.Boolean Bindings { get set }
   property System.Boolean CheckedExclusivity { get set }
+  property System.Boolean Documents { get set }
   property System.Boolean Values { get set }
   property System.String Namespace { get set }
 static class GameEventScript.Generator.GesSchemaGenerator

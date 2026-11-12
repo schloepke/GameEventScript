@@ -130,6 +130,25 @@ namespace GameEventScript.Tests.Generator.Geometry.Model
         /// <returns>The record.</returns>
         /// <exception cref="GesWireException">A field does not convert: <c>wire.typeMismatch</c> at its path.</exception>
         public static Zone FromValue(GesValue value) => __GesModelValues051a0fba84e20ad6.ReadZone(value, "");
+
+        /// <summary>Reads a record from GES document text with the header <c>:Schema(:Zone)</c>: the document is checked against
+        /// the schema sources of this file, and fields it leaves out take their defaults. Reading allocates and does no file I/O.</summary>
+        /// <param name="text">The document text.</param>
+        /// <returns>The record.</returns>
+        /// <exception cref="GesDocumentException">The text is no document, names another schema (<c>document.schemaMismatch</c>), or breaks
+        /// the schema, with the <c>document.*</c> or <c>wire.*</c> code, the line, the column and the field path.</exception>
+        public static Zone FromDocument(string text)
+        {
+            var document = __GesModelDocuments051a0fba84e20ad6.Read(text, "Zone");
+            try
+            {
+                return FromValue(document.Value);
+            }
+            catch (GesWireException error)
+            {
+                throw document.Locate(error);
+            }
+        }
     }
 
     /// <summary>
@@ -341,6 +360,85 @@ namespace GameEventScript.Tests.Generator.Geometry.Model
         }
 
         private static T? ReadOptional<T>(in GesValue value, string path, Reader<T> read) where T : class => value.IsNothing ? null : read(value, path);
+    }
+
+    /// <summary>A GES document of one of the model roots of this file, chosen by its header <c>:Schema(:Name)</c>.</summary>
+    internal abstract class ModelDocument
+    {
+        private ModelDocument()
+        {
+        }
+
+        /// <summary>A document of <c>:Zone</c>.</summary>
+        public sealed class Zone : ModelDocument
+        {
+            /// <summary>Holds a record.</summary>
+            /// <param name="value">The record.</param>
+            public Zone(global::GameEventScript.Tests.Generator.Geometry.Model.Zone value)
+            {
+                Value = value;
+            }
+
+            /// <summary>Gets the record.</summary>
+            public global::GameEventScript.Tests.Generator.Geometry.Model.Zone Value { get; }
+        }
+
+        /// <summary>Reads GES document text whose header names a model root of this file, as that root's <c>FromDocument</c> does.</summary>
+        /// <param name="text">The document text.</param>
+        /// <returns>The document of the root its header names.</returns>
+        /// <exception cref="GesDocumentException">The text is no document, names no root of this file (<c>document.schemaMismatch</c>), or
+        /// breaks its schema, with the <c>document.*</c> or <c>wire.*</c> code, the line, the column and the field path.</exception>
+        public static ModelDocument FromDocument(string text)
+        {
+            var document = __GesModelDocuments051a0fba84e20ad6.Read(text, "Zone");
+            try
+            {
+                switch (document.Schema)
+                {
+                    default:
+                        return new Zone(global::GameEventScript.Tests.Generator.Geometry.Model.Zone.FromValue(document.Value));
+                }
+            }
+            catch (GesWireException error)
+            {
+                throw document.Locate(error);
+            }
+        }
+    }
+
+    /// <summary>The schema sources of this file, which reading documents checks them against.</summary>
+    internal static class __GesModelDocuments051a0fba84e20ad6
+    {
+        private static GesSchemaSet? __set;
+
+        internal static GesSchemaDocument Read(string text, params string[] roots)
+        {
+            var set = __set ??= GesSchemaSet.Parse(
+                new GesSchemaSource("geometry.gess", string.Join("\n", new[]
+                {
+                    "// Copyright 2026 Stephan Schl\u00F6pke",
+                    "// SPDX-License-Identifier: Apache-2.0",
+                    "// The fixture of the checked-in geometry code: Boxes and Polys with and without axis blocks, optional, as a union",
+                    "// alternative and as list elements, in wire records with deltas and in models.",
+                    "wire(geometry) model(geometry) schema :Zone as {",
+                    "  id: :Number integer between 0 and 255 key",
+                    "  area: :Box(m) {",
+                    "    x between 0m and 100m step 1m delta within 3m",
+                    "    y between 0m and 3m step 1m",
+                    "  }",
+                    "  bounds: :Box optional",
+                    "  outline: :Poly(m) max 3 {",
+                    "    x between 0m and 100m step 1m",
+                    "    y between 0m and 3m step 1m",
+                    "  }",
+                    "  free: :Poly max 4",
+                    "  pick: :Box(m) | :Nothing",
+                    "  rings: :List(:Poly(m) max 2) max 2",
+                    "}",
+                    "",
+                })));
+            return GesSchemaDocument.Read(set, text, roots);
+        }
     }
 
     /// <summary>Value equality of lists and numbers and GES value conversions for the models of this file.</summary>

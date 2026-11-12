@@ -143,18 +143,34 @@ public struct GesDocumentError: Error, Hashable, Sendable {
     /// The exceeded limit value for `document.limitExceeded`; otherwise nil.
     public let limit: Int?
 
+    /// The field path that a schema check or a model reports, such as `units[].name`; empty for a reading error.
+    public let path: String
+
+    private let detail: String?
+
     /// Creates a document error at a source position.
-    public init(code: String, line: Int, column: Int, limitName: String? = nil, limit: Int? = nil) {
+    /// - Parameters:
+    ///   - code: The stable error code.
+    ///   - line: The 1-based line.
+    ///   - column: The 1-based column, in Unicode scalars.
+    ///   - limitName: The exceeded limit's name for `document.limitExceeded`.
+    ///   - limit: The exceeded limit's value for `document.limitExceeded`.
+    ///   - path: The field path of a schema check or model error, or empty.
+    ///   - message: A message that replaces the default one, which is not part of the contract.
+    public init(code: String, line: Int, column: Int, limitName: String? = nil, limit: Int? = nil, path: String = "", message: String? = nil) {
         self.code = code
         self.line = line
         self.column = column
         self.limitName = limitName
         self.limit = limit
+        self.path = path
+        detail = message
     }
 
     /// A diagnostic message that is not part of the contract.
     public var message: String {
+        if let detail { return detail }
         if let limitName { return "GES document exceeds \(limitName) (\(limit ?? 0)) at line \(line), column \(column)." }
-        return "Invalid GES document (\(code)) at line \(line), column \(column)."
+        return "Invalid GES document (\(code)) at line \(line), column \(column)\(path.isEmpty ? "" : ", field '\(path)'")."
     }
 }

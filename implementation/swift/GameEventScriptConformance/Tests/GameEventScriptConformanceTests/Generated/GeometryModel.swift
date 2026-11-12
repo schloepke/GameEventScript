@@ -61,6 +61,19 @@ enum GeometryModel {
         /// Reads a Record of this schema, or a Map of only its fields, as `GesSchemaValues` encodes it.
         /// - Throws: `GesWireError` with `wire.typeMismatch` at the path of a field that does not convert.
         init(value: GesValue) throws(GesWireError) { self = try __GesModelValues051a0fba84e20ad6.readZone(value, "") }
+
+        /// Reads a record from GES document text with the header `:Schema(:Zone)`: the document is checked against the schema
+        /// sources of this file, and fields it leaves out take their defaults. Reading allocates and does no file I/O.
+        /// - Throws: `GesDocumentError` when the text is no document, names another schema (`document.schemaMismatch`), or breaks the
+        ///   schema, with the `document.*` or `wire.*` code, the line, the column and the field path.
+        init(document text: String) throws(GesDocumentError) {
+            let document = try __GesModelDocuments051a0fba84e20ad6.read(text, ["Zone"])
+            do {
+                self = try Self(value: document.value)
+            } catch {
+                throw document.error(for: error)
+            }
+        }
     }
 
     /// The model types for scripts as external types: pass one instance to the compiler as its catalog and to the host as
@@ -237,6 +250,63 @@ enum GeometryModel {
 
         static func readOptional<T>(_ value: GesValue, _ path: String, _ read: (GesValue, String) throws(GesWireError) -> T) throws(GesWireError) -> T? {
             value.isNothing ? nil : try read(value, path)
+        }
+    }
+
+    /// A GES document of one of the model roots of this file, chosen by its header `:Schema(:Name)`.
+    enum GeometryModelDocument: Hashable, Sendable {
+        /// A document of `:Zone`.
+        case zone(Zone)
+
+        /// Reads GES document text whose header names a model root of this file, as that root's `init(document:)` does.
+        /// - Throws: `GesDocumentError` when the text is no document, names no root of this file (`document.schemaMismatch`), or
+        ///   breaks its schema, with the `document.*` or `wire.*` code, the line, the column and the field path.
+        init(document text: String) throws(GesDocumentError) {
+            let document = try __GesModelDocuments051a0fba84e20ad6.read(text, ["Zone"])
+            do {
+                switch document.schema {
+                default: self = .zone(try Zone(value: document.value))
+                }
+            } catch {
+                throw document.error(for: error)
+            }
+        }
+    }
+
+    /// The schema sources of this file, which reading documents checks them against.
+    enum __GesModelDocuments051a0fba84e20ad6 {
+        static let set = Result<GesSchemaSet, any Error> {
+            try GesSchemaSet(sources: [
+                GesSchemaSource(name: "geometry.gess", text: [
+                    "// Copyright 2026 Stephan Schl\u{F6}pke",
+                    "// SPDX-License-Identifier: Apache-2.0",
+                    "// The fixture of the checked-in geometry code: Boxes and Polys with and without axis blocks, optional, as a union",
+                    "// alternative and as list elements, in wire records with deltas and in models.",
+                    "wire(geometry) model(geometry) schema :Zone as {",
+                    "  id: :Number integer between 0 and 255 key",
+                    "  area: :Box(m) {",
+                    "    x between 0m and 100m step 1m delta within 3m",
+                    "    y between 0m and 3m step 1m",
+                    "  }",
+                    "  bounds: :Box optional",
+                    "  outline: :Poly(m) max 3 {",
+                    "    x between 0m and 100m step 1m",
+                    "    y between 0m and 3m step 1m",
+                    "  }",
+                    "  free: :Poly max 4",
+                    "  pick: :Box(m) | :Nothing",
+                    "  rings: :List(:Poly(m) max 2) max 2",
+                    "}",
+                    "",
+                ].joined(separator: "\n")),
+            ])
+        }
+
+        static func read(_ text: String, _ roots: [String]) throws(GesDocumentError) -> GesSchemaDocument {
+            guard let set = try? Self.set.get() else {
+                throw GesDocumentError(code: GesSchemaDocument.schemaMismatch, line: 1, column: 1, message: "The embedded schema sources no longer parse.")
+            }
+            return try GesSchemaDocument(text, schemas: set, expected: roots)
         }
     }
 

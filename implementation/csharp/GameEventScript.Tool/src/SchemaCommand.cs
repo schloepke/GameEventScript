@@ -24,7 +24,7 @@ Usage:
   dotnet ges schema generate <schema.gess> [more.gess ...] (--root <Name> ... | --all-roots | --wire <group> | --model <group>)
                              [--param <name>=<literal> ...]
                              --language csharp|swift [--namespace <A.B>] [--access public|internal] [--values]
-                             [--checked-exclusivity] [--bindings] [-o <file> | -d <dir> [--split schema|file]] [--check]
+                             [--checked-exclusivity] [--bindings] [--documents] [-o <file> | -d <dir> [--split schema|file]] [--check]
 
 Commands:
   check      Read schemas and report the first error with its line and column.
@@ -46,6 +46,7 @@ Options:
   --values                  Also convert generated records and models to and from GES values and messages.
   --checked-exclusivity     Keep the dynamic exclusivity checks of generated Swift classes.
   --bindings                Also offer generated model types to scripts as external types; only with --model.
+  --documents               Also read model roots from GES document text; includes --values, only with --model.
   -d, --out-dir <dir>       Write the code as several files into a directory that generate owns, with a manifest.
   --split <kind>            With --out-dir, one file per declaration (schema, the default) or per schema file (file).
   --check                   Compare the generated code with the output file or directory instead of writing it;
@@ -78,6 +79,7 @@ Options:
         var withValues = false;
         var checkedExclusivity = false;
         var bindings = false;
+        var documents = false;
         string? language = null;
         string? space = null;
         string? access = null;
@@ -103,6 +105,7 @@ Options:
             else if (argument == "--values" && command == "generate") withValues = true;
             else if (argument == "--checked-exclusivity" && command == "generate") checkedExclusivity = true;
             else if (argument == "--bindings" && command == "generate") bindings = true;
+            else if (argument == "--documents" && command == "generate") documents = true;
             else if (argument is "--root" or "--data" or "--baseline" or "--param" or "-o" or "--output" or "--language" or "--namespace" or "--access" or "--wire" or "--model" or "-d" or "--out-dir" or "--split")
             {
                 var applies = argument switch
@@ -159,6 +162,7 @@ Options:
             return UsageError($"{command} requires one of --root, --all-roots, --wire and --model.");
         if (modelGroup is not null && checkedExclusivity) return UsageError("--checked-exclusivity concerns wire code, not --model.");
         if (bindings && modelGroup is null) return UsageError("--bindings concerns model code and requires --model.");
+        if (documents && modelGroup is null) return UsageError("--documents concerns model code and requires --model.");
         if (command == "generate" && language is not ("csharp" or "swift")) return UsageError("generate requires --language csharp or --language swift.");
         if (access is not (null or "public" or "internal")) return UsageError("--access is public or internal.");
         if (output is not null && outDir is not null) return GenerateUsage("-o writes one file and --out-dir a directory; give one of them.");
@@ -212,6 +216,7 @@ Options:
                         Values = withValues,
                         CheckedExclusivity = checkedExclusivity,
                         Bindings = bindings,
+                        Documents = documents,
                         Split = outDir is null ? GesSchemaSplit.None : split == "file" ? GesSchemaSplit.File : GesSchemaSplit.Schema
                     };
                     if (wireGroup is not null || modelGroup is not null)

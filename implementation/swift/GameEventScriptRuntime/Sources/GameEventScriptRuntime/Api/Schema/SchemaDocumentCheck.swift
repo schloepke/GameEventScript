@@ -15,6 +15,8 @@ struct GesSchemaDocumentCheck {
     private struct Failure: Error {
         let code: String
         let offset: Int
+        // The value path of the field that fails, as the value path and generated code name it, such as `units[].name`.
+        let path: String
     }
 
     private struct Attempt: Hashable {
@@ -27,20 +29,48 @@ struct GesSchemaDocumentCheck {
     private final class Attempts {
         var holds: [Attempt: Bool] = [:]
         var levels: [ObjectIdentifier: Int] = [:]
+        // The path of the value being checked.
+        var path = ""
     }
 
     let parameters: GesSchemaParameters?
     private let attempts = Attempts()
 
     static func check(_ syntax: GesDocumentSyntax, _ schema: GesResolvedDeclaration, _ parameters: GesSchemaParameters?) throws {
+        if let failure = try failing(syntax, schema, parameters) {
+            throw GesSchemaError(
+                code: failure.code,
+                sourceName: "",
+                line: failure.line,
+                column: failure.column,
+                message: "The document breaks its schema (\(failure.code)) at line \(failure.line), column \(failure.column)."
+            )
+        }
+    }
+
+    // The first error of a document against its schema, with its position and field path, or nil.
+    static func failing(_ syntax: GesDocumentSyntax, _ schema: GesResolvedDeclaration, _ parameters: GesSchemaParameters?) throws -> GesDocumentError? {
         if let parameters { try GesSchemaBinder.checkParameters(schema, parameters) }
         do {
-            guard case .map(let keys, let values, let keyOffsets, let valueOffsets)? = syntax.root else { return }
+            guard case .map(let keys, let values, let keyOffsets, let valueOffsets)? = syntax.root else { return nil }
             try Self(parameters: parameters).fields(keys, values, keyOffsets, valueOffsets, start: 0, schema)
+            return nil
         } catch let failure as Failure {
             let (line, column) = syntax.location(failure.offset)
-            throw GesSchemaError(code: failure.code, sourceName: "", line: line, column: column, message: "The document breaks its schema (\(failure.code)) at line \(line), column \(column).")
+            return GesDocumentError(code: failure.code, line: line, column: column, path: failure.path)
         }
+    }
+
+    private func fail(_ code: String, _ offset: Int, path: String? = nil) -> Failure { Failure(code: code, offset: offset, path: path ?? attempts.path) }
+
+    static func join(_ path: String, _ name: String) -> String { path.isEmpty ? name : path + "." + name }
+
+    // Checks a nested value under its path segment: a field name, or `[]` for an element.
+    private func under(_ segment: String, _ check: () throws -> Void) throws {
+        let outer = attempts.path
+        attempts.path = segment == "[]" ? outer + segment : Self.join(outer, segment)
+        defer { attempts.path = outer }
+        try check()
     }
 
     private func fields(_ keys: [String], _ values: [GesDocumentNode], _ keyOffsets: [Int], _ valueOffsets: [Int], start: Int, _ schema: GesResolvedDeclaration) throws {
@@ -49,14 +79,14 @@ struct GesSchemaDocumentCheck {
         defer { attempts.levels[ObjectIdentifier(schema)] = level == 0 ? nil : level }
         var seen: Set<String> = []
         for (index, key) in keys.enumerated() {
-            guard let field = schema.fields.first(where: { $0.name == key }) else { throw Failure(code: Self.unknownField, offset: keyOffsets[index]) }
+            guard let field = schema.fields.first(where: { $0.name == key }) else { throw fail(Self.unknownField, keyOffsets[index], path: Self.join(attempts.path, key)) }
             seen.insert(field.name)
             let value = Self.resolved(values[index], valueOffsets[index])
             if field.marker == .optional, case .nothing = value { continue }
-            try union(field.alternatives, value, valueOffsets[index])
+            try under(field.name) { try union(field.alternatives, value, valueOffsets[index]) }
         }
         for field in schema.fields where !seen.contains(field.name) && field.defaultValue == nil && field.marker != .optional && !field.alternatives.contains(where: { $0.kind == .nothing }) {
-            throw Failure(code: Self.missingField, offset: start)
+            throw fail(Self.missingField, start, path: Self.join(attempts.path, field.name))
         }
     }
 
@@ -78,11 +108,11 @@ struct GesSchemaDocumentCheck {
                 attempts.holds[attempt] = false
             }
         }
-        throw Failure(code: Self.fieldType, offset: start)
+        throw fail(Self.fieldType, start)
     }
 
     private func type(_ type: GesResolvedType, _ value: GesDocumentNode, _ start: Int) throws {
-        func require(_ holds: Bool) throws { if !holds { throw Failure(code: Self.fieldType, offset: start) } }
+        func require(_ holds: Bool) throws { if !holds { throw fail(Self.fieldType, start) } }
 
         switch type.kind {
         case .boolean:
@@ -108,41 +138,41 @@ struct GesSchemaDocumentCheck {
             var seen = 0
             for (index, key) in keys.enumerated() {
                 let corner = key == "lower" ? 1 : key == "upper" ? 2 : 0
-                if corner == 0 { throw Failure(code: Self.unknownField, offset: keyOffsets[index]) }
+                if corner == 0 { throw fail(Self.unknownField, keyOffsets[index], path: Self.join(attempts.path, key)) }
                 seen |= corner
-                try spatial(type, Self.resolved(values[index], valueOffsets[index]), valueOffsets[index], point: true)
+                try under(key) { try spatial(type, Self.resolved(values[index], valueOffsets[index]), valueOffsets[index], point: true) }
             }
-            if seen != 3 { throw Failure(code: Self.missingField, offset: start) }
+            if seen != 3 { throw fail(Self.missingField, start) }
         case .poly:
             // A document has no geometry literal: a Poly is the List of its points.
             guard case .list(let items, let offsets) = value else { return try require(false) }
-            if let max = type.max, items.count > max { throw Failure(code: Self.outOfRange, offset: start) }
-            for (index, item) in items.enumerated() { try spatial(type, Self.resolved(item, offsets[index]), offsets[index], point: true) }
+            if let max = type.max, items.count > max { throw fail(Self.outOfRange, start) }
+            for (index, item) in items.enumerated() { try under("[]") { try spatial(type, Self.resolved(item, offsets[index]), offsets[index], point: true) } }
         case .tag:
             guard case .tag(let name) = value else { return try require(false) }
             try require(type.tags?.contains(name) ?? true)
-            if let max = type.max, name.utf8.count > max { throw Failure(code: Self.outOfRange, offset: start) }
+            if let max = type.max, name.utf8.count > max { throw fail(Self.outOfRange, start) }
         case .text:
             guard case .text(let text) = value else { return try require(false) }
-            if let max = type.max, text.utf8.count > max { throw Failure(code: Self.outOfRange, offset: start) }
+            if let max = type.max, text.utf8.count > max { throw fail(Self.outOfRange, start) }
         case .flags:
             // Each key names a member and each value is a Boolean.
             guard case .map(let keys, let values, let keyOffsets, let valueOffsets) = value else { return try require(false) }
             for (index, key) in keys.enumerated() {
-                if !(type.tags ?? []).contains(key) { throw Failure(code: Self.fieldType, offset: keyOffsets[index]) }
-                guard case .boolean = Self.resolved(values[index], valueOffsets[index]) else { throw Failure(code: Self.fieldType, offset: valueOffsets[index]) }
+                if !(type.tags ?? []).contains(key) { throw fail(Self.fieldType, keyOffsets[index]) }
+                guard case .boolean = Self.resolved(values[index], valueOffsets[index]) else { throw fail(Self.fieldType, valueOffsets[index]) }
             }
         case .bytes:
             guard case .bytes(let bytes) = value else { return try require(false) }
-            if let max = type.max, bytes.count > max { throw Failure(code: Self.outOfRange, offset: start) }
+            if let max = type.max, bytes.count > max { throw fail(Self.outOfRange, start) }
         case .list:
             guard case .list(let items, let offsets) = value else { return try require(false) }
             if let recursion = type.recursion, !items.isEmpty, (attempts.levels[ObjectIdentifier(recursion)] ?? 0) >= type.depth {
-                throw Failure(code: Self.tooDeep, offset: start)
+                throw fail(Self.tooDeep, start)
             }
-            if let max = type.max, items.count > max { throw Failure(code: Self.outOfRange, offset: start) }
+            if let max = type.max, items.count > max { throw fail(Self.outOfRange, start) }
             if let element = type.element {
-                for (index, item) in items.enumerated() { try union(element, item, offsets[index]) }
+                for (index, item) in items.enumerated() { try under("[]") { try union(element, item, offsets[index]) } }
             }
         case .reference:
             var fields = value
@@ -166,7 +196,7 @@ struct GesSchemaDocumentCheck {
             try require(false)
         case .dice:
             guard case .dice(let rolls) = value else { return try require(false) }
-            if let max = type.max, rolls.count > max { throw Failure(code: Self.outOfRange, offset: start) }
+            if let max = type.max, rolls.count > max { throw fail(Self.outOfRange, start) }
             for roll in rolls { try numeric(type.constraints, true, Int64(roll), Double(roll), start) }
         case .message:
             if case .message = value { return }
@@ -183,13 +213,13 @@ struct GesSchemaDocumentCheck {
     }
 
     private func spatial(_ type: GesResolvedType, _ value: GesDocumentNode, _ start: Int, point: Bool) throws {
-        guard case .spatial(let isPoint, let x, let y, let z, let unit) = value, isPoint == point, unit == type.unit else { throw Failure(code: Self.fieldType, offset: start) }
+        guard case .spatial(let isPoint, let x, let y, let z, let unit) = value, isPoint == point, unit == type.unit else { throw fail(Self.fieldType, start) }
         guard let axes = type.axes else { return }
         for (axis, component) in [("x", x), ("y", y), ("z", z)] {
             if let declared = axes.first(where: { $0.axis == axis }) {
                 try numeric(declared.constraints, false, 0, component, start)
             } else if component != 0 {
-                throw Failure(code: Self.fieldType, offset: start)
+                throw fail(Self.fieldType, start)
             }
         }
     }
@@ -205,20 +235,20 @@ struct GesSchemaDocumentCheck {
         var integer = writtenInteger
         if constraints.integer {
             if !isInteger {
-                guard number == number.rounded(.down), number < 9_223_372_036_854_775_808, number >= -9_223_372_036_854_775_808 else { throw Failure(code: Self.fieldType, offset: start) }
+                guard number == number.rounded(.down), number < 9_223_372_036_854_775_808, number >= -9_223_372_036_854_775_808 else { throw fail(Self.fieldType, start) }
                 integer = Int64(number)
             }
             isInteger = true
         }
         if constraints.wrapping {
-            if !isInteger && !number.isFinite { throw Failure(code: Self.outOfRange, offset: start) }
+            if !isInteger && !number.isFinite { throw fail(Self.outOfRange, start) }
             return
         }
         if let lower = bound(constraints.lower), isInteger ? GesSchemaBinder.compare(GesSchemaDecimal(integer, 0), lower) < 0 : number < Double(lower.canonical)! {
-            throw Failure(code: Self.outOfRange, offset: start)
+            throw fail(Self.outOfRange, start)
         }
         if let upper = bound(constraints.upper), isInteger ? GesSchemaBinder.compare(GesSchemaDecimal(integer, 0), upper) > 0 : number > Double(upper.canonical)! {
-            throw Failure(code: Self.outOfRange, offset: start)
+            throw fail(Self.outOfRange, start)
         }
     }
 

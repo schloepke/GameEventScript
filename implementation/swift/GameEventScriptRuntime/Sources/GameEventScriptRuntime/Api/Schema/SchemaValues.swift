@@ -371,6 +371,48 @@ public enum GesSchemaValues {
         try encodeFields(&writer, schema, index + 1, node.next, fields, strict: strict)
     }
 
+    // A checked document writes a Box as the Map of its corners and a Poly as the List of its points, since documents have no
+    // geometry literal; this gives them the geometry library's values, as the schema's fields and their alternatives expect.
+    static func documentShapes(_ schema: GesResolvedDeclaration, _ value: GesValue) -> GesValue {
+        guard let map = value.asMap else { return value }
+        var keys: [String] = []
+        var values: [GesValue] = []
+        for index in 0..<map.length {
+            let key = map.key(at: index)
+            let entry = map.value(at: index)
+            keys.append(key)
+            values.append(schema.fields.first { $0.name == key }.map { documentShape($0.alternatives, entry) } ?? entry)
+        }
+        if let name = value.customTypeName { return .record(typeName: name, keys: keys, values: values) }
+        return .map(keys: keys, values: values)
+    }
+
+    private static func documentShape(_ alternatives: [GesResolvedType], _ value: GesValue) -> GesValue {
+        for type in alternatives {
+            switch type.kind {
+            case .box:
+                if let corners = value.asMap, corners.length == 2, let lower = corners.get("lower").flatMap({ GesPoint($0, unit: type.unit) }),
+                    let upper = corners.get("upper").flatMap({ GesPoint($0, unit: type.unit) })
+                {
+                    return GesBox(lower, upper).value(unit: type.unit)
+                }
+            case .poly:
+                guard value.valueKind == .list else { continue }
+                let points = value.asList.compactMap { GesPoint($0, unit: type.unit) }
+                if points.count == value.asList.count { return GesPoly(points).value(unit: type.unit) }
+            case .list:
+                if let element = type.element, value.valueKind == .list { return .list(value.asList.map { documentShape(element, $0) }) }
+            case .reference:
+                if value.asMap != nil, value.customTypeName == nil || value.customTypeName == type.referenceName, let reference = type.reference {
+                    return documentShapes(reference, value)
+                }
+            default:
+                continue
+            }
+        }
+        return value
+    }
+
     // The components of a Point, Vector, Box corner or Poly point; an axis that the block leaves out must be zero.
     private static func encodePoint(_ writer: inout GesSchemaWriter, _ schema: GesBoundSchema, _ index: Int, _ x: Double, _ y: Double, _ z: Double) throws {
         let node = schema.nodes[index]

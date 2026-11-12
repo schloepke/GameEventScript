@@ -33,6 +33,7 @@ enum SchemaApiObservations {
                 if input["describe"]?.boolValue == true { result["description"] = describe(schema) }
             }
             if let document = input["document"]?.stringValue { result["document"] = check(set, document, root, parameters) }
+            if let read = input["readDocument"], read != .null { result["readDocument"] = try readDocument(set, read) }
             if input["bind"]?.boolValue == true, let root {
                 let bound = try set.schema(root).bind(parameters: parameters)
                 result["bindingHash"] = hex(bound.bindingHash)
@@ -152,6 +153,16 @@ enum SchemaApiObservations {
     }
 
     private static func text(_ bound: GesSchemaBound) -> String { bound.isParameter ? "parameter \(bound.parameter)" : "\(bound.significand)e\(bound.exponent)" }
+
+    // Reads a document as generated models do: the header names an expected schema, and the entries are checked against it.
+    private static func readDocument(_ set: GesSchemaSet, _ input: Input) throws -> [String: Any] {
+        do {
+            let document = try GesSchemaDocument(try input.text("text"), schemas: set, expected: input.values("expected").map { $0.stringValue ?? "" })
+            return ["schema": document.schema, "value": try RuntimeValues.encode(document.value)]
+        } catch let error as GesDocumentError {
+            return ["error": ["code": error.code, "line": error.line, "column": error.column, "path": error.path]]
+        }
+    }
 
     private static func check(_ set: GesSchemaSet, _ document: String, _ root: String?, _ parameters: GesSchemaParameters) -> [String: Any] {
         do {

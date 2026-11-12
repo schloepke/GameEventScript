@@ -257,6 +257,12 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   `schema.invalidExpression`. Generated code is plain binary64 and Boolean code in the language's own operators, such as
   `duration <= 0.0 ? 0.0 : energy / duration`, with a small `GesComputed` helper type for the rules plain code lacks;
   only a field where whole numbers beyond 2^53 could meet keeps the exact-value helpers.
+- `ges schema generate --model <group> --documents` (option `Documents`) lets models read GES document text: each root gets
+  C# `FromDocument(text)` (Swift `init(document:)`) and the generation a `<Namespace>Document` type that reads any root by its
+  `:Schema(:Name)` header. The document is checked against the embedded schemas, defaults apply, and errors carry their
+  `document.*` or `wire.*` code, line, column and field path; a missing or other header is the new
+  `document.schemaMismatch`. The Runtime's `GesSchemaDocument` does this for generated code, and `GesDocumentException.Path`
+  (Swift `GesDocumentError.path`) names the field.
 - Schema types `:Box(unit) { ... }` and `:Poly(unit) max n { ... }` hold the geometry library's `GesBox` and `GesPoly`
   with per-axis constraints like `:Point`. A Box encodes its corners `lower` and `upper` as two Points and its value
   orders them; a Poly encodes its points in the plane z = 0 as a List of x and y. The value path converts the library's

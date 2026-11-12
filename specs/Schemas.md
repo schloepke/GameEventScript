@@ -1576,7 +1576,7 @@ declare, and so is a C# one. Each split file starts with a short header that ref
 roots and hashes, so that it changes only with its own declarations; the single file of `-o` keeps its header.
 
 The directory holds the manifest `.ges-generated.json`, canonical JSON with the members `manifest` (1), `code` (`wire` or
-`model`), `language`, `split` (`schema` or `file`), `namespace`, `access`, `values`, `bindings`, `checkedExclusivity`,
+`model`), `language`, `split` (`schema` or `file`), `namespace`, `access`, `values`, `bindings`, `documents` only when given, `checkedExclusivity`,
 `roots` (each with `name`, `hash` and for wire code `bindingHash`), `parameters` (as in the
 [generation layout](#generation-layout); empty for models) and `files`, the generated file names in ordinal order without
 the manifest. Without `--check`, `generate` writes every file whose bytes changed, keeps unchanged files with their time
@@ -1703,6 +1703,33 @@ for a record of its schema, so that wire records and models meet there; no code 
 
 A generated name that collides, such as a field named `id` beside a key named otherwise, fails with
 `generate.nameCollision`, as in wire code. With `--values`, that includes `toValue` (C# `ToValue` and `FromValue`).
+
+### Model documents
+
+> **Since: Unreleased**
+
+`--documents` (option `Documents`) lets generated models read GES document text, so a host that loads data files repeats
+no parsing, header check, schema check or error mapping. It includes `--values`, concerns only model code and does no file
+I/O: text goes in, a model comes out.
+
+- **Per model root:** Swift `init(document text: String) throws(GesDocumentError)`, C# `static T FromDocument(string text)`.
+  It requires the header `:Schema(:Name)` of the root; a missing or other header is `document.schemaMismatch` at line 1,
+  column 1, with a message naming both. It checks the document against the schema sources the code embeds, as
+  [document checking](#document-checking) does, and converts its entries as `init(value:)` does, so fields it leaves out take
+  their [defaults](#defaults). A Box written as the Map of its corners and a Poly as the List of its points become the
+  geometry library's values first.
+- **Per generation:** one type `<Namespace>Document`, named after the last part of the namespace, `ModelDocument` without
+  one: a Swift enum with one case per model root, holding its model, and a C# abstract class with one sealed subclass per
+  root, named after it and holding `Value`. Its `init(document:)` (C# `FromDocument`) accepts the header of any root and
+  chooses the case by it, so a host that reads files of several kinds needs no switch on schema names. A model type of that
+  name is `generate.nameCollision`.
+- **Errors** are the document error of the port (`GesDocumentError`, `GesDocumentException`) with its code, line, column
+  and field path: a reading error with its `document.*` code and no path, a schema check error with its `document.*` code
+  and the path of the field as the value path names it, such as `parts[].kind`, and a `wire.*` error of the conversion at
+  the deepest entry its path names, a List for an element, since paths name no index. The Runtime's
+  [`GesSchemaDocument`](PublicApi.md#schemas) does the reading for generated code.
+- The embedded sources live in one internal helper per generation, beside the value conversions; split output puts the
+  document type and the helper in the shared file, and the manifest adds `documents: true`.
 
 ### Script bindings
 

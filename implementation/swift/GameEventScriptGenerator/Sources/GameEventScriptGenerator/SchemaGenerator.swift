@@ -58,6 +58,7 @@ public enum GesSchemaGenerator {
 
     private static func wire(_ set: GesSchemaSet, _ roots: [String], _ parameters: GesSchemaParameters, _ options: GesSchemaGenerateOptions) throws -> (document: GesCodeDocument, layout: GesSchemaLayout) {
         if options.bindings { throw GesGeneratorError(GesGeneratorError.usage, "Bindings concern model code; wire code converts through Values.") }
+        if options.documents { throw GesGeneratorError(GesGeneratorError.usage, "Documents concern model code; wire code converts through Values.") }
         let layout = try GesSchemaLayoutBuilder.build(set, roots: roots, parameters: parameters)
         let types = try GesSchemaPlanner.plan(layout)
         let document = options.language == .csharp ? try GesCSharpEmitter.emit(layout, types, options) : try GesSwiftEmitter.emit(layout, types, options)
@@ -127,7 +128,10 @@ public enum GesSchemaGenerator {
     private static func models(_ set: GesSchemaSet, _ roots: [String], _ options: GesSchemaGenerateOptions) throws -> (document: GesCodeDocument, layout: GesModelLayout) {
         if options.checkedExclusivity { throw GesGeneratorError(GesGeneratorError.usage, "Checked exclusivity concerns wire code, not models.") }
         let layout = try GesModelLayoutBuilder.build(set, roots: roots)
-        let document = options.language == .csharp ? try GesCSharpModelEmitter.emit(layout, options) : try GesSwiftModelEmitter.emit(layout, options)
+        // Reading documents converts through the plain values.
+        var effective = options
+        if options.documents { effective.values = true }
+        let document = effective.language == .csharp ? try GesCSharpModelEmitter.emit(layout, effective) : try GesSwiftModelEmitter.emit(layout, effective)
         return (document, layout)
     }
 
@@ -151,6 +155,7 @@ public enum GesSchemaGenerator {
         json.string("access", options.access == .public ? "public" : "internal")
         json.boolean("values", options.values)
         json.boolean("bindings", options.bindings)
+        if options.documents { json.boolean("documents", true) }
         json.boolean("checkedExclusivity", options.checkedExclusivity)
         json.beginArray("roots")
         for root in roots {

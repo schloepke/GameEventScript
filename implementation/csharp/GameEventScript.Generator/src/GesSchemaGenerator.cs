@@ -85,6 +85,7 @@ public static class GesSchemaGenerator
     private static GesCodeDocument Wire(GesSchemaSet set, IReadOnlyList<string> roots, GesSchemaParameters parameters, GesSchemaGenerateOptions options, out GesSchemaLayout layout)
     {
         if (options.Bindings) throw new GesGeneratorException(GesGeneratorException.Usage, "Bindings concern model code; wire code converts through Values.");
+        if (options.Documents) throw new GesGeneratorException(GesGeneratorException.Usage, "Documents concern model code; wire code converts through Values.");
         layout = GesSchemaLayoutBuilder.Build(set, roots, parameters);
         var types = GesSchemaPlanner.Plan(layout);
         return options.Language == GesSchemaLanguage.CSharp ? GesCSharpEmitter.Emit(layout, types, options) : GesSwiftEmitter.Emit(layout, types, options);
@@ -173,7 +174,9 @@ public static class GesSchemaGenerator
     {
         if (options.CheckedExclusivity) throw new GesGeneratorException(GesGeneratorException.Usage, "Checked exclusivity concerns wire code, not models.");
         layout = GesModelLayoutBuilder.Build(set, roots);
-        return options.Language == GesSchemaLanguage.CSharp ? GesCSharpModelEmitter.Emit(layout, options) : GesSwiftModelEmitter.Emit(layout, options);
+        // Reading documents converts through the plain values.
+        var effective = options.Documents && !options.Values ? new GesSchemaGenerateOptions { Language = options.Language, Namespace = options.Namespace, Access = options.Access, Values = true, Bindings = options.Bindings, Documents = true, Split = options.Split } : options;
+        return effective.Language == GesSchemaLanguage.CSharp ? GesCSharpModelEmitter.Emit(layout, effective) : GesSwiftModelEmitter.Emit(layout, effective);
     }
 
     // The manifest of split output: the options, the roots with their hashes, the parameters and the files, so that a tool
@@ -190,6 +193,7 @@ public static class GesSchemaGenerator
         json.String("access", options.Access == GesSchemaAccess.Public ? "public" : "internal");
         json.Boolean("values", options.Values);
         json.Boolean("bindings", options.Bindings);
+        if (options.Documents) json.Boolean("documents", true);
         json.Boolean("checkedExclusivity", options.CheckedExclusivity);
         json.BeginArray("roots");
         foreach (var root in roots)

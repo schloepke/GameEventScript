@@ -4550,6 +4550,335 @@ schema:
 
 ---
 
+## Test: a document read as a model reads it
+
+The header names the expected schema, the document passes its check, and its entries are the value a model converts; a field it leaves out keeps no entry, so the model takes its default.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: read-document
+schemaApi:
+  sources:
+    - "schema :Unit as {\n  name: :Text max 16\n  hp: :Number integer between 0 and 100 default 100\n  parts: :List(:Part) max 4\n}\nschema :Part as { kind: :Tag(#arm, #leg) }\nschema :Base as { id: :Number integer }\n"
+  readDocument:
+    text: ":Schema(:Unit)\nname: 'scout'\nparts: [[kind: #arm]]\n"
+    expected: ["Unit"]
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  readDocument:
+    schema: "Unit"
+    value:
+      type: ":Unit"
+      entries:
+        - key: "name"
+          value:
+            type: ":Text"
+            value: "scout"
+        - key: "parts"
+          value:
+            type: ":List"
+            items:
+              - type: ":Map"
+                entries:
+                  - key: "kind"
+                    value:
+                      type: ":Tag"
+                      value: "arm"
+```
+
+---
+
+## Test: a document of one of several schemas
+
+The header chooses among the expected schemas.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: read-document-choice
+schemaApi:
+  sources:
+    - "schema :Unit as {\n  name: :Text max 16\n  hp: :Number integer between 0 and 100 default 100\n  parts: :List(:Part) max 4\n}\nschema :Part as { kind: :Tag(#arm, #leg) }\nschema :Base as { id: :Number integer }\n"
+  readDocument:
+    text: ":Schema(:Base)\nid: 7\n"
+    expected: ["Unit", "Base"]
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  readDocument:
+    schema: "Base"
+    value:
+      type: ":Base"
+      entries:
+        - key: "id"
+          value:
+            type: ":Number.int64"
+            value: "7"
+```
+
+---
+
+## Test: a document of another schema
+
+A header that names another schema is `document.schemaMismatch`.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: read-document-other-schema
+schemaApi:
+  sources:
+    - "schema :Unit as {\n  name: :Text max 16\n  hp: :Number integer between 0 and 100 default 100\n  parts: :List(:Part) max 4\n}\nschema :Part as { kind: :Tag(#arm, #leg) }\nschema :Base as { id: :Number integer }\n"
+  readDocument:
+    text: ":Schema(:Base)\nid: 7\n"
+    expected: ["Unit"]
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  readDocument:
+    error:
+      code: "document.schemaMismatch"
+      line: 1
+      column: 1
+      path: ""
+```
+
+---
+
+## Test: a document without a header
+
+A document without a header names no schema.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: read-document-no-header
+schemaApi:
+  sources:
+    - "schema :Unit as {\n  name: :Text max 16\n  hp: :Number integer between 0 and 100 default 100\n  parts: :List(:Part) max 4\n}\nschema :Part as { kind: :Tag(#arm, #leg) }\nschema :Base as { id: :Number integer }\n"
+  readDocument:
+    text: "name: 'scout'\nparts: []\n"
+    expected: ["Unit"]
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  readDocument:
+    error:
+      code: "document.schemaMismatch"
+      line: 1
+      column: 1
+      path: ""
+```
+
+---
+
+## Test: an error inside a list element names its path
+
+The error has its position and the path of the field, as the value path names it.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: read-document-nested-path
+schemaApi:
+  sources:
+    - "schema :Unit as {\n  name: :Text max 16\n  hp: :Number integer between 0 and 100 default 100\n  parts: :List(:Part) max 4\n}\nschema :Part as { kind: :Tag(#arm, #leg) }\nschema :Base as { id: :Number integer }\n"
+  readDocument:
+    text: ":Schema(:Unit)\nname: 'scout'\nparts: [[kind: #arm], [kind: #tail]]\n"
+    expected: ["Unit"]
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  readDocument:
+    error:
+      code: "document.fieldType"
+      line: 3
+      column: 30
+      path: "parts[].kind"
+```
+
+---
+
+## Test: a missing field names its path
+
+A missing field is reported where the record that lacks it starts, here the document.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: read-document-missing-field
+schemaApi:
+  sources:
+    - "schema :Unit as {\n  name: :Text max 16\n  hp: :Number integer between 0 and 100 default 100\n  parts: :List(:Part) max 4\n}\nschema :Part as { kind: :Tag(#arm, #leg) }\nschema :Base as { id: :Number integer }\n"
+  readDocument:
+    text: ":Schema(:Unit)\nparts: []\n"
+    expected: ["Unit"]
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  readDocument:
+    error:
+      code: "document.missingField"
+      line: 1
+      column: 1
+      path: "name"
+```
+
+---
+
+## Test: an unknown field names its path
+
+
+### Case description
+
+```yaml
+gesBlock: case
+id: read-document-unknown-field
+schemaApi:
+  sources:
+    - "schema :Unit as {\n  name: :Text max 16\n  hp: :Number integer between 0 and 100 default 100\n  parts: :List(:Part) max 4\n}\nschema :Part as { kind: :Tag(#arm, #leg) }\nschema :Base as { id: :Number integer }\n"
+  readDocument:
+    text: ":Schema(:Unit)\nname: 'scout'\nparts: []\nlevel: 3\n"
+    expected: ["Unit"]
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  readDocument:
+    error:
+      code: "document.unknownField"
+      line: 4
+      column: 1
+      path: "level"
+```
+
+---
+
+## Test: an unreadable document has no path
+
+A reading error comes before the schema and has no field path.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: read-document-unreadable
+schemaApi:
+  sources:
+    - "schema :Unit as {\n  name: :Text max 16\n  hp: :Number integer between 0 and 100 default 100\n  parts: :List(:Part) max 4\n}\nschema :Part as { kind: :Tag(#arm, #leg) }\nschema :Base as { id: :Number integer }\n"
+  readDocument:
+    text: ":Schema(:Unit)\nname: 'scout'\nparts: [\n"
+    expected: ["Unit"]
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  readDocument:
+    error:
+      code: "document.unclosedBracket"
+      line: 3
+      column: 8
+      path: ""
+```
+
+---
+
+## Test: a document Box and Poly read as the library's values
+
+A document writes a Box as the Map of its corners and a Poly as the List of its points; reading gives the geometry library's
+values that a model converts.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: read-document-geometry
+schemaApi:
+  sources:
+    - "schema :Zone as {\n  area: :Box(m)\n  outline: :Poly max 3\n}\n"
+  readDocument:
+    text: ":Schema(:Zone)\narea: [lower: :Point(20m, 1m), upper: :Point(5m, 3m)]\noutline: [:Point(0, 0), :Point(4, 0)]\n"
+    expected: ["Zone"]
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  readDocument:
+    schema: "Zone"
+    value:
+      type: ":Zone"
+      entries:
+        - key: "area"
+          value:
+            type: ":Box"
+            lower:
+              type: ":Point"
+              x: "5"
+              y: "1"
+              z: "0"
+            upper:
+              type: ":Point"
+              x: "20"
+              y: "3"
+              z: "0"
+            unit: ":meter"
+        - key: "outline"
+          value:
+            type: ":Poly"
+            points:
+              - type: ":Point"
+                x: "0"
+                y: "0"
+                z: "0"
+              - type: ":Point"
+                x: "4"
+                y: "0"
+                z: "0"
+```
+
+---
+
 ## Test: recursion without depth
 
 The source is rejected.

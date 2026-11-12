@@ -642,14 +642,15 @@ with an optional schema reference, read from and printed to `.gesd` text.
 | schema reference | `sealed record GesDocumentSchema(GesDocumentSchemaKind Kind, string Name)` | `struct GesDocumentSchema` with `kind`, `name`, `.type(_:)`, `.file(_:)` |
 | schema kind | `enum GesDocumentSchemaKind { Type, File }` | `enum GesDocumentSchemaKind { case type, file }` |
 | layout options | `sealed record GesDocumentFormat` with `Indentation`, `LineWidth`, `PrefixedUnits` | `struct GesDocumentFormat` with `indentation`, `lineWidth`, `prefixedUnits` |
-| reading error | `GesDocumentException` with `Code`, `Line`, `Column`, `LimitName`, `Limit` | `GesDocumentError` with `code`, `line`, `column`, `limitName`, `limit`, `message` |
+| reading error | `GesDocumentException` with `Code`, `Line`, `Column`, `LimitName`, `Limit`, `Path` | `GesDocumentError` with `code`, `line`, `column`, `limitName`, `limit`, `path`, `message` |
 | single-value printer | `string GesValue.Format(GesDocumentFormat? format = null)` | `GesValue.formatted(_:) throws -> String` |
 
 Building a document validates the root and schema as owned by the document
 specification; C# throws `ArgumentException` and Swift `GesApiError.invalidArgument`.
 A schema reference validates its name the same way. Reading throws only the
 document error, whose `Code` is one of the stable `document.*` codes; C# also
-rejects a null text and unpaired surrogates like `ParseLiteral`. Printing never
+rejects a null text and unpaired surrogates like `ParseLiteral`. `Path` (Swift `path`) is empty for a reading error and names the field of a schema check or model error, as
+`GesSchemaDocument` reports them. Printing never
 fails: documents cannot contain values without literal text. The single-value
 printer rejects the same values as the document constructor: External values,
 Dice rolls below 1 and Records whose type name is not a `TypeName`. Indentation is
@@ -671,6 +672,7 @@ GES schemas ([Schemas](Schemas.md)) live in Runtime. Apart from the value path, 
 | schema set | `sealed class GesSchemaSet` with `static Parse(params GesSchemaSource[])`, `static Parse(string)` | `final class GesSchemaSet` with `init(sources:) throws`, `init(parsing:) throws` |
 | declarations | `Schemas`, `Schema(name)` | `schemas`, `schema(_:)` |
 | document check by header | `CheckDocument(text, parameters)` | `checkDocument(_:parameters:)` |
+| document read as a model reads it | `sealed class GesSchemaDocument` with `static Read(schemas, text, params expected)`, `Schema`, `Value`, `Locate(GesWireException)` and the constant `SchemaMismatch` | `struct GesSchemaDocument` with `init(_:schemas:expected:) throws(GesDocumentError)`, `schema`, `value`, `error(for:)` and the constant `schemaMismatch` |
 | description | `sealed class GesSchema` with `Name`, `Kind`, `WireGroup`, `ModelGroup`, `IsAbstract`, `Takes`, `Hash`, `CanonicalForm`, `Parameters`, `Fields`, `ComputedFields`, `Constants`, `Tags`, `Members`, `Bind(parameters)`, `CheckDocument(text, parameters)` | `final class GesSchema` with `name`, `kind`, `wireGroup`, `modelGroup`, `isAbstract`, `takes`, `hash`, `canonicalForm`, `parameters`, `fields`, `computedFields`, `constants`, `tags`, `members`, `bind(parameters:)`, `checkDocument(_:parameters:)` |
 | description parts | `enum GesSchemaKind`, `GesSchemaTypeKind`, `GesSchemaDefaultKind`; `sealed class GesSchemaParameterInfo`, `GesSchemaConstantInfo` (a `let` with `Name`, `Kind`, `Unit`, `IsInteger` and `Value`), `GesSchemaFieldInfo` (with `Default`), `GesSchemaDefaultInfo` (a field's `default` with `Kind`, `Number`, `Boolean` and `Name`), `GesSchemaTakeInfo` (a `with` with `Schema`, `IsAllOptional`, `Without` and `IsUnchanged`), `GesSchemaComputedFieldInfo` (a field written `computed by` with `Name`, `Kind`, `Unit`, `IsOptional` and `Expression`, the prefix form of the canonical form), `GesSchemaType` (with `TagSet`, the name of a declared tag set, `Label`, the label of a union alternative, and `Depth`, the depth of a recursive List or 0), `GesSchemaAxisInfo`; `readonly struct GesSchemaBound` with `ToDouble()` | `enum GesSchemaKind`, `GesSchemaTypeKind`, `GesSchemaDefaultKind`; `struct GesSchemaParameterInfo`, `GesSchemaConstantInfo` (with `name`, `kind`, `unit`, `isInteger` and `value`), `GesSchemaFieldInfo` (with `defaultValue`), `GesSchemaDefaultInfo` (with `kind`, `number`, `boolean` and `name`), `GesSchemaTakeInfo` (with `schema`, `isAllOptional`, `without` and `isUnchanged`), `GesSchemaComputedFieldInfo` (with `name`, `kind`, `unit`, `isOptional` and `expression`), `GesSchemaType` (with `tagSet`, `label` and `depth`), `GesSchemaAxisInfo`, `GesSchemaBound` with `doubleValue` |
 | parameters | `sealed class GesSchemaParameters` with `With(name, literal)`, `With(name, long, unit)`, `With(name, double, unit)` | `final class GesSchemaParameters` with `with(_:literal:)`, `with(_:_:unit:)` |
@@ -687,6 +689,13 @@ GES schemas ([Schemas](Schemas.md)) live in Runtime. Apart from the value path, 
 | deltas | `static GesSchemaDelta.Encode(schema, record, baseline, buffer)`, `Decode(schema, delta, baseline, buffer, byteLimit)` returning `GesSchemaDeltaDecoded` with `ByteCount`, `DeltaByteCount` | `GesSchemaDelta.encode(_:record:baseline:into:)`, `decode(_:delta:baseline:into:byteLimit:)` returning `GesSchemaDeltaDecoded` with `byteCount`, `deltaByteCount` |
 | value path (Runtime) | `static GesSchemaValues.Encode`, `Decode` returning `GesSchemaDecoded`, `ReadKey`, each `Encode` and `Decode` also with a baseline value | `GesSchemaValues.encode`, `decode` returning `GesSchemaDecoded`, `readKey`, each `encode` and `decode` also with `baseline:` |
 | dump | `static GesSchemaDump.Read(schema, data)`, also with a baseline record | `GesSchemaDump.read(_:data:)`, also with `baseline:` |
+
+`GesSchemaDocument` reads a document as [generated models](Schemas.md#model-documents) do: its header must name one of the
+expected schemas, or the error is `document.schemaMismatch` at line 1, column 1, naming both; the document is then checked
+against that schema, whose error carries its `document.*` code, position and field path. `Value` is the Record of the
+document's entries, with a Box or Poly written as their corners or points turned into the geometry library's values.
+`Locate` places a `GesWireException` of converting it into a model at the deepest entry its path names, a List for an
+element, and keeps its code and path.
 
 `GesSyntaxLanguage` adds `Gess` (Swift `.gess`) for highlighting schema sources.
 
@@ -707,7 +716,7 @@ depends on it, so a game never ships it. It is synchronous, reads no files and r
 | models | `ModelLayout(set, roots)`, `GenerateModels(set, roots, options)` | `modelLayout(_:roots:)`, `generateModels(_:roots:options:)` |
 | split files | `GenerateFiles(set, roots, parameters, options)`, `GenerateModelFiles(set, roots, options)`, returning `IReadOnlyList<GesGeneratedFile>` | `generateFiles(_:roots:parameters:options:)`, `generateModelFiles(_:roots:options:)`, returning `[GesGeneratedFile]` |
 | generated file | `sealed class GesGeneratedFile` with `Path`, `Text` | `struct GesGeneratedFile` with `path`, `text` |
-| options | `sealed class GesSchemaGenerateOptions` with `Language`, `Namespace`, `Access`, `Values`, `CheckedExclusivity`, `Bindings`, `Split` | `struct GesSchemaGenerateOptions` with `init(language:namespace:access:values:checkedExclusivity:bindings:split:)` and the same properties |
+| options | `sealed class GesSchemaGenerateOptions` with `Language`, `Namespace`, `Access`, `Values`, `CheckedExclusivity`, `Bindings`, `Documents`, `Split` | `struct GesSchemaGenerateOptions` with `init(language:namespace:access:values:checkedExclusivity:bindings:documents:split:)` and the same properties |
 | split | `enum GesSchemaSplit` with `None`, `Schema`, `File` | `enum GesSchemaSplit` with `none`, `schema`, `file` |
 | target language | `enum GesSchemaLanguage` with `CSharp`, `Swift` | `enum GesSchemaLanguage` with `csharp`, `swift` |
 | access | `enum GesSchemaAccess` with `Public`, `Internal` | `enum GesSchemaAccess` with `public`, `internal` |
@@ -725,8 +734,8 @@ port.
 `WireRoots` and `ModelRoots` list the [roots of a group](Schemas.md#roles) in declaration order, empty when it has none.
 `ModelLayout` and `GenerateModels` write the [model layout](Schemas.md#model-layout) and the
 [model types](Schemas.md#model-types) of schema roots, where `Values` adds their plain values; a root that is no schema
-fails with `generate.usage`, and so does the wire-only option `CheckedExclusivity`; `Generate` rejects the model-only option
-`Bindings` with `generate.usage`. A reached type without a model type fails with `generate.unsupported`.
+fails with `generate.usage`, and so does the wire-only option `CheckedExclusivity`; `Generate` rejects the model-only options
+`Bindings` and `Documents` with `generate.usage`. A reached type without a model type fails with `generate.unsupported`.
 
 > **Since: Unreleased** — split files
 

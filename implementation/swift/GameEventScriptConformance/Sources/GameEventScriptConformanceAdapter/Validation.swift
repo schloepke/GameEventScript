@@ -83,7 +83,7 @@ enum Validation {
                             "sources", "root", "parameters", "bind", "encode", "encodeExternal", "baselineExternal", "externalFields", "failingField", "baselineFailingField", "failingCode", "encodeBuffer", "baseline", "decode", "decodeLimit", "key",
                             "dump", "dumpBaseline",
                             "deltaEncode",
-                            "deltaDecode", "describe", "document",
+                            "deltaDecode", "describe", "document", "readDocument",
                         ]
                     )
                 case "documentApi":

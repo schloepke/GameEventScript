@@ -191,7 +191,8 @@ public static class GesSchemaGenerator
         json.String("split", options.Split == GesSchemaSplit.Schema ? "schema" : "file");
         json.String("namespace", options.Namespace);
         json.String("access", options.Access == GesSchemaAccess.Public ? "public" : "internal");
-        json.Boolean("values", options.Values);
+        // Document reading includes the value conversions, so the manifest names what the files contain.
+        json.Boolean("values", options.Values || options.Documents);
         json.Boolean("bindings", options.Bindings);
         if (options.Documents) json.Boolean("documents", true);
         json.Boolean("checkedExclusivity", options.CheckedExclusivity);

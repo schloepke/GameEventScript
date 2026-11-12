@@ -159,6 +159,11 @@ here.
 - Consider reusable Unity editor hot-reload integration when extracting the
   editor package. Existing CLI `:reload` and the consuming Swift application's
   editor already reload programs through the existing host lifecycle. Keep file watching, threading and Unity dependencies in adapters.
+- Check whether IL2CPP contracts the C# Runtime's floating arithmetic, and keep products out of sums where it does. The VM
+  computes `number + percentage` as `a + a * b`, distances as sums of squares and floating Range elements as `from + i * step`
+  in single expressions, which a C++ compiler under `-ffp-contract=on` may fuse into one rounding, unlike .NET and Swift;
+  specs/Semantics/Determinism.md requires separate operations. Generated computed-field code already avoids the shape
+  (specs/Schemas.md#tools); measure on a device build before changing the hot path.
 - After the Kotlin port is stable, build a dedicated IntelliJ plugin with native
   `.ges`/`.gesa` support beyond portable TextMate highlighting and `.region`
   folding. Keep the portable dump and TextMate bundles free of IntelliJ-specific

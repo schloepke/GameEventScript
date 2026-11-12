@@ -519,7 +519,8 @@ public enum GesSchemaValues {
         case .list where info.valueKind == .poly:
             let count = try reader.beginList(field)
             var points: [GesPoint] = []
-            points.reserveCapacity(count)
+            // The count is untrusted until the points are read, so the capacity grows with the data as for a List.
+            points.reserveCapacity(min(count, 1024))
             for _ in 0..<count { points.append(try decodePoint(&reader, schema, index + 1)) }
             return GesPoly(points).value(unit: info.unit)
         case .list:

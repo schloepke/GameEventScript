@@ -78,7 +78,7 @@ internal static partial class GesCSharpEmitter
         var parameters = "new GesSchemaParameters()";
         foreach (var parameter in layout.Parameters) parameters += $".With({GesSchemaPlanner.Literal(parameter.Name, false)}, {GesSchemaPlanner.Literal(parameter.Literal, false)})";
         code.Line($"var bound = set.Schema(root).Bind({parameters});");
-        code.Line("if (bound.BindingHash != bindingHash) throw new InvalidOperationException(\"The embedded schema sources no longer bind like the generated code.\");");
+        code.Line("if (bound.BindingHash != bindingHash) throw new global::System.InvalidOperationException(\"The embedded schema sources no longer bind like the generated code.\");");
         code.Line("return bound;");
         code.Close();
         code.Close();

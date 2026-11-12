@@ -14,6 +14,7 @@ internal static class GesSwiftModelEmitter
 {
     internal static GesCodeDocument Emit(GesModelLayout layout, GesSchemaGenerateOptions options)
     {
+        GesSchemaPlanner.CheckTopLevel(GesModelPlanner.TopLevel(layout, swift: true), swift: true);
         var access = options.Access == GesSchemaAccess.Public ? "public " : "";
         var header = GesModelPlanner.Header(layout);
         var suffix = GesSchemaPlanner.Suffix(header, options);
@@ -157,13 +158,16 @@ internal static class GesSwiftModelEmitter
 
         if (key is not null && GesSchemaPlanner.Camel(key.Base) != "id") names.Add(("id", "the identity of the key " + key.Field.Name));
         names.Add(("schemaHash", "the generated member schemaHash"));
+        // Hashable's requirements: a stored hashValue would satisfy the deprecated requirement in place of the synthesized one.
+        names.Add(("hashValue", "the Hashable member hashValue"));
+        names.Add(("hash", "the Hashable member hash(into:)"));
         foreach (var constant in type.Constants) names.Add((constant.Name, "the let " + constant.Name));
         GesComputedEmitter.Names(type.Computed, type.Name, swift: true, names);
         if (bindings) names.Add(("gesValue", "the generated member gesValue"));
         if (values is not null) names.Add(("toValue", "the generated member toValue"));
         if (bindings && fields.Exists(field => field.Field.Name == "fields"))
             throw new GesGeneratorException(GesGeneratorException.NameCollision, $"In '{type.Name}', the field fields and the generated field fields of its bindings share a name.");
-        GesSchemaPlanner.Unique(type.Name, names);
+        GesSchemaPlanner.Unique(type.Name, names, GesModelPlanner.TopLevel(layout, swift: true));
 
         code.Line($"/// The model of the schema `:{type.Name}`: a plain value that is never encoded.");
         var adopted = string.Concat(GesModelPlanner.Adopted(layout, type, swift: true).ConvertAll(name => ", " + name));
@@ -254,7 +258,7 @@ internal static class GesSwiftModelEmitter
 
     private static void Nested(GesModelPlanValue value, List<(string, string)> names, string field)
     {
-        if (value.Nested.Length > 0 && value.TagSet.Length == 0) names.Add((value.Nested, "a type of the field " + field));
+        if (value.Nested.Length > 0 && value.TagSet.Length == 0) names.Add((value.Nested, GesSchemaPlanner.NestedTypeOrigin + "of the field " + field));
         if (value.Element is not null) Nested(value.Element, names, field);
         foreach (var alternative in value.Alternatives) Nested(alternative, names, field);
     }

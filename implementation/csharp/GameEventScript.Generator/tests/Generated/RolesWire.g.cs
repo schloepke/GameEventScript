@@ -32,7 +32,7 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
             "label",
         };
 
-        private byte[] __Label = Array.Empty<byte>();
+        private byte[] __Label = global::System.Array.Empty<byte>();
         private int __LabelLength;
 
         /// <summary>The field <c>label</c> as UTF-8 bytes.</summary>
@@ -42,7 +42,7 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
         /// <param name="utf8">The bytes.</param>
         public void SetLabelUtf8(ReadOnlySpan<byte> utf8)
         {
-            if (__Label.Length < utf8.Length) Array.Resize(ref __Label, Math.Max(utf8.Length, Math.Min(8, __Label.Length * 2)));
+            if (__Label.Length < utf8.Length) global::System.Array.Resize(ref __Label, global::System.Math.Max(utf8.Length, global::System.Math.Min(8, __Label.Length * 2)));
             utf8.CopyTo(__Label);
             __LabelLength = utf8.Length;
         }
@@ -50,8 +50,8 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
         /// <summary>The field <c>label</c> as a string; reading and setting it allocate.</summary>
         public string Label
         {
-            get => System.Text.Encoding.UTF8.GetString(__Label, 0, __LabelLength);
-            set => SetLabelUtf8(System.Text.Encoding.UTF8.GetBytes(value));
+            get => global::System.Text.Encoding.UTF8.GetString(__Label, 0, __LabelLength);
+            set => SetLabelUtf8(global::System.Text.Encoding.UTF8.GetBytes(value));
         }
 
         /// <summary>Writes this record into a buffer; <see cref="MaxByteCount"/> bytes always suffice.</summary>
@@ -114,7 +114,7 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
                 var count = (int)reader.Read(4, paths[at + 0]);
                 if (count > 8) throw new GesWireException(GesWireException.InvalidCount, paths[at + 0]);
                 reader.Require(count * 8L, paths[at + 0]);
-                if (__Label.Length < count) Array.Resize(ref __Label, Math.Max(count, Math.Min(8, __Label.Length * 2)));
+                if (__Label.Length < count) global::System.Array.Resize(ref __Label, global::System.Math.Max(count, global::System.Math.Min(8, __Label.Length * 2)));
                 var text = new Span<byte>(__Label, 0, count);
                 reader.ReadBytes(text, paths[at + 0]);
                 if (!GesWireRules.IsValidUtf8(text)) throw new GesWireException(GesWireException.InvalidText, paths[at + 0]);
@@ -123,7 +123,7 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
         }
 
         #if DEBUG || DEVELOPMENT_BUILD || UNITY_EDITOR || GES_CHECK_SHARING
-        [ThreadStatic] private static HashSet<object>? __SharingLists;
+        [global::System.ThreadStatic] private static HashSet<object>? __SharingLists;
         internal bool __Busy;
 
         internal void __Mark(bool busy, HashSet<object>? lists) => __Busy = busy;
@@ -237,7 +237,7 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
         internal bool __WriteDelta(Panel_Badge baseline, ref GesBitWriter writer, string[] paths, int at, bool top)
         {
             var first = writer.BitPosition;
-            for (var left = 1; left > 0; left -= 64) writer.Write(0, Math.Min(left, 64));
+            for (var left = 1; left > 0; left -= 64) writer.Write(0, global::System.Math.Min(left, 64));
             var changed = false;
             var ordinal = 0;
             {
@@ -282,7 +282,7 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
                         var count = (int)reader.Read(4, paths[at + 0]);
                         if (count > 8) throw new GesWireException(GesWireException.InvalidCount, paths[at + 0]);
                         reader.Require(count * 8L, paths[at + 0]);
-                        if (__Label.Length < count) Array.Resize(ref __Label, Math.Max(count, Math.Min(8, __Label.Length * 2)));
+                        if (__Label.Length < count) global::System.Array.Resize(ref __Label, global::System.Math.Max(count, global::System.Math.Min(8, __Label.Length * 2)));
                         var text = new Span<byte>(__Label, 0, count);
                         reader.ReadBytes(text, paths[at + 0]);
                         if (!GesWireRules.IsValidUtf8(text)) throw new GesWireException(GesWireException.InvalidText, paths[at + 0]);
@@ -336,7 +336,7 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
             "level",
         };
 
-        private byte[] __Name = Array.Empty<byte>();
+        private byte[] __Name = global::System.Array.Empty<byte>();
         private int __NameLength;
 
         /// <summary>The field <c>name</c> as UTF-8 bytes.</summary>
@@ -346,7 +346,7 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
         /// <param name="utf8">The bytes.</param>
         public void SetNameUtf8(ReadOnlySpan<byte> utf8)
         {
-            if (__Name.Length < utf8.Length) Array.Resize(ref __Name, Math.Max(utf8.Length, Math.Min(8, __Name.Length * 2)));
+            if (__Name.Length < utf8.Length) global::System.Array.Resize(ref __Name, global::System.Math.Max(utf8.Length, global::System.Math.Min(8, __Name.Length * 2)));
             utf8.CopyTo(__Name);
             __NameLength = utf8.Length;
         }
@@ -354,8 +354,8 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
         /// <summary>The field <c>name</c> as a string; reading and setting it allocate.</summary>
         public string Name
         {
-            get => System.Text.Encoding.UTF8.GetString(__Name, 0, __NameLength);
-            set => SetNameUtf8(System.Text.Encoding.UTF8.GetBytes(value));
+            get => global::System.Text.Encoding.UTF8.GetString(__Name, 0, __NameLength);
+            set => SetNameUtf8(global::System.Text.Encoding.UTF8.GetBytes(value));
         }
 
         /// <summary>The field <c>level</c>.</summary>
@@ -413,7 +413,7 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
                 writer.Write((ulong)text.Length, 4);
                 writer.WriteBytes(text);
             }
-            writer.Write(GesWireRules.QuantizedIndex(Level, BitConverter.Int64BitsToDouble(unchecked((long)0x0000000000000000UL)), BitConverter.Int64BitsToDouble(unchecked((long)0x3ff0000000000000UL)), 100d, 1d, 0L, paths[at + 1]), 7);
+            writer.Write(GesWireRules.QuantizedIndex(Level, global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x0000000000000000UL)), global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x3ff0000000000000UL)), 100d, 1d, 0L, paths[at + 1]), 7);
         }
 
         internal void __ReadFields(ref GesBitReader reader, string[] paths, int at)
@@ -422,7 +422,7 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
                 var count = (int)reader.Read(4, paths[at + 0]);
                 if (count > 8) throw new GesWireException(GesWireException.InvalidCount, paths[at + 0]);
                 reader.Require(count * 8L, paths[at + 0]);
-                if (__Name.Length < count) Array.Resize(ref __Name, Math.Max(count, Math.Min(8, __Name.Length * 2)));
+                if (__Name.Length < count) global::System.Array.Resize(ref __Name, global::System.Math.Max(count, global::System.Math.Min(8, __Name.Length * 2)));
                 var text = new Span<byte>(__Name, 0, count);
                 reader.ReadBytes(text, paths[at + 0]);
                 if (!GesWireRules.IsValidUtf8(text)) throw new GesWireException(GesWireException.InvalidText, paths[at + 0]);
@@ -436,7 +436,7 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
         }
 
         #if DEBUG || DEVELOPMENT_BUILD || UNITY_EDITOR || GES_CHECK_SHARING
-        [ThreadStatic] private static HashSet<object>? __SharingLists;
+        [global::System.ThreadStatic] private static HashSet<object>? __SharingLists;
         internal bool __Busy;
 
         internal void __Mark(bool busy, HashSet<object>? lists) => __Busy = busy;
@@ -452,7 +452,7 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
 
         private static ulong __Wire1(double value, string[] paths, int at)
         {
-            return GesWireRules.QuantizedIndex(value, BitConverter.Int64BitsToDouble(unchecked((long)0x0000000000000000UL)), BitConverter.Int64BitsToDouble(unchecked((long)0x3ff0000000000000UL)), 100d, 1d, 0L, paths[at + 1]);
+            return GesWireRules.QuantizedIndex(value, global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x0000000000000000UL)), global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x3ff0000000000000UL)), 100d, 1d, 0L, paths[at + 1]);
         }
 
         private static ulong __Read1(ref GesBitReader reader, string[] paths, int at)
@@ -567,7 +567,7 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
         internal bool __WriteDelta(Panel_Entry baseline, ref GesBitWriter writer, string[] paths, int at, bool top)
         {
             var first = writer.BitPosition;
-            for (var left = 2; left > 0; left -= 64) writer.Write(0, Math.Min(left, 64));
+            for (var left = 2; left > 0; left -= 64) writer.Write(0, global::System.Math.Min(left, 64));
             var changed = false;
             var ordinal = 0;
             {
@@ -630,7 +630,7 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
                         var count = (int)reader.Read(4, paths[at + 0]);
                         if (count > 8) throw new GesWireException(GesWireException.InvalidCount, paths[at + 0]);
                         reader.Require(count * 8L, paths[at + 0]);
-                        if (__Name.Length < count) Array.Resize(ref __Name, Math.Max(count, Math.Min(8, __Name.Length * 2)));
+                        if (__Name.Length < count) global::System.Array.Resize(ref __Name, global::System.Math.Max(count, global::System.Math.Min(8, __Name.Length * 2)));
                         var text = new Span<byte>(__Name, 0, count);
                         reader.ReadBytes(text, paths[at + 0]);
                         if (!GesWireRules.IsValidUtf8(text)) throw new GesWireException(GesWireException.InvalidText, paths[at + 0]);
@@ -719,7 +719,7 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
             "alarms",
         };
 
-        private byte[] __Title = Array.Empty<byte>();
+        private byte[] __Title = global::System.Array.Empty<byte>();
         private int __TitleLength;
 
         /// <summary>The field <c>title</c> as UTF-8 bytes.</summary>
@@ -729,7 +729,7 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
         /// <param name="utf8">The bytes.</param>
         public void SetTitleUtf8(ReadOnlySpan<byte> utf8)
         {
-            if (__Title.Length < utf8.Length) Array.Resize(ref __Title, Math.Max(utf8.Length, Math.Min(16, __Title.Length * 2)));
+            if (__Title.Length < utf8.Length) global::System.Array.Resize(ref __Title, global::System.Math.Max(utf8.Length, global::System.Math.Min(16, __Title.Length * 2)));
             utf8.CopyTo(__Title);
             __TitleLength = utf8.Length;
         }
@@ -737,8 +737,8 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
         /// <summary>The field <c>title</c> as a string; reading and setting it allocate.</summary>
         public string Title
         {
-            get => System.Text.Encoding.UTF8.GetString(__Title, 0, __TitleLength);
-            set => SetTitleUtf8(System.Text.Encoding.UTF8.GetBytes(value));
+            get => global::System.Text.Encoding.UTF8.GetString(__Title, 0, __TitleLength);
+            set => SetTitleUtf8(global::System.Text.Encoding.UTF8.GetBytes(value));
         }
 
         /// <summary>The field <c>status</c>.</summary>
@@ -753,7 +753,7 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
         /// <summary>Whether <c>note</c> is present.</summary>
         public bool HasNote;
 
-        private byte[] __Note = Array.Empty<byte>();
+        private byte[] __Note = global::System.Array.Empty<byte>();
         private int __NoteLength;
 
         /// <summary>The field <c>note</c> as UTF-8 bytes.</summary>
@@ -763,7 +763,7 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
         /// <param name="utf8">The bytes.</param>
         public void SetNoteUtf8(ReadOnlySpan<byte> utf8)
         {
-            if (__Note.Length < utf8.Length) Array.Resize(ref __Note, Math.Max(utf8.Length, Math.Min(8, __Note.Length * 2)));
+            if (__Note.Length < utf8.Length) global::System.Array.Resize(ref __Note, global::System.Math.Max(utf8.Length, global::System.Math.Min(8, __Note.Length * 2)));
             utf8.CopyTo(__Note);
             __NoteLength = utf8.Length;
         }
@@ -771,8 +771,8 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
         /// <summary>The field <c>note</c> as a string; reading and setting it allocate.</summary>
         public string Note
         {
-            get => System.Text.Encoding.UTF8.GetString(__Note, 0, __NoteLength);
-            set => SetNoteUtf8(System.Text.Encoding.UTF8.GetBytes(value));
+            get => global::System.Text.Encoding.UTF8.GetString(__Note, 0, __NoteLength);
+            set => SetNoteUtf8(global::System.Text.Encoding.UTF8.GetBytes(value));
         }
 
         /// <summary>The field <c>entries</c>, at most 4 elements.</summary>
@@ -784,7 +784,7 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
         /// <summary>The value of <c>reading</c> when its alternative is <c>Number</c>.</summary>
         public long ReadingNumber;
 
-        private byte[] __ReadingCode = Array.Empty<byte>();
+        private byte[] __ReadingCode = global::System.Array.Empty<byte>();
         private int __ReadingCodeLength;
 
         /// <summary>The value of <c>reading</c> when its alternative is <c>Code</c> as UTF-8 bytes.</summary>
@@ -794,7 +794,7 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
         /// <param name="utf8">The bytes.</param>
         public void SetReadingCodeUtf8(ReadOnlySpan<byte> utf8)
         {
-            if (__ReadingCode.Length < utf8.Length) Array.Resize(ref __ReadingCode, Math.Max(utf8.Length, Math.Min(4, __ReadingCode.Length * 2)));
+            if (__ReadingCode.Length < utf8.Length) global::System.Array.Resize(ref __ReadingCode, global::System.Math.Max(utf8.Length, global::System.Math.Min(4, __ReadingCode.Length * 2)));
             utf8.CopyTo(__ReadingCode);
             __ReadingCodeLength = utf8.Length;
         }
@@ -802,8 +802,8 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
         /// <summary>The value of <c>reading</c> when its alternative is <c>Code</c> as a string; reading and setting it allocate.</summary>
         public string ReadingCode
         {
-            get => System.Text.Encoding.UTF8.GetString(__ReadingCode, 0, __ReadingCodeLength);
-            set => SetReadingCodeUtf8(System.Text.Encoding.UTF8.GetBytes(value));
+            get => global::System.Text.Encoding.UTF8.GetString(__ReadingCode, 0, __ReadingCodeLength);
+            set => SetReadingCodeUtf8(global::System.Text.Encoding.UTF8.GetBytes(value));
         }
 
         /// <summary>The field <c>alarms</c>.</summary>
@@ -813,7 +813,7 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
         /// <param name="count">The element count.</param>
         public void SetEntriesCount(int count)
         {
-            if (count < 0) throw new ArgumentOutOfRangeException(nameof(count));
+            if (count < 0) throw new global::System.ArgumentOutOfRangeException(nameof(count));
             Entries.Clear();
             for (var position = 0; position < count; position++)
             {
@@ -876,9 +876,9 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
             }
             if ((ulong)Status > 2UL) throw new GesWireException(GesWireException.UnknownTag, paths[at + 1]);
             writer.Write((ulong)Status, 2);
-            writer.Write(GesWireRules.QuantizedIndex(Load, BitConverter.Int64BitsToDouble(unchecked((long)0x0000000000000000UL)), BitConverter.Int64BitsToDouble(unchecked((long)0x408f400000000000UL)), 1d, 1d, 0L, paths[at + 2]), 10);
-            writer.Write(GesWireRules.QuantizedIndex(Spot.X, BitConverter.Int64BitsToDouble(unchecked((long)0x0000000000000000UL)), BitConverter.Int64BitsToDouble(unchecked((long)0x4059000000000000UL)), 100d, 1d, 0L, paths[at + 4]), 14);
-            writer.Write(GesWireRules.QuantizedIndex(Spot.Y, BitConverter.Int64BitsToDouble(unchecked((long)0x0000000000000000UL)), BitConverter.Int64BitsToDouble(unchecked((long)0x4059000000000000UL)), 100d, 1d, 0L, paths[at + 5]), 14);
+            writer.Write(GesWireRules.QuantizedIndex(Load, global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x0000000000000000UL)), global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x408f400000000000UL)), 1d, 1d, 0L, paths[at + 2]), 10);
+            writer.Write(GesWireRules.QuantizedIndex(Spot.X, global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x0000000000000000UL)), global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x4059000000000000UL)), 100d, 1d, 0L, paths[at + 4]), 14);
+            writer.Write(GesWireRules.QuantizedIndex(Spot.Y, global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x0000000000000000UL)), global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x4059000000000000UL)), 100d, 1d, 0L, paths[at + 5]), 14);
             if (Spot.Z != 0) throw new GesWireException(GesWireException.TypeMismatch, paths[at + 3]);
             if (HasNote)
             {
@@ -939,7 +939,7 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
                 var count = (int)reader.Read(5, paths[at + 0]);
                 if (count > 16) throw new GesWireException(GesWireException.InvalidCount, paths[at + 0]);
                 reader.Require(count * 8L, paths[at + 0]);
-                if (__Title.Length < count) Array.Resize(ref __Title, Math.Max(count, Math.Min(16, __Title.Length * 2)));
+                if (__Title.Length < count) global::System.Array.Resize(ref __Title, global::System.Math.Max(count, global::System.Math.Min(16, __Title.Length * 2)));
                 var text = new Span<byte>(__Title, 0, count);
                 reader.ReadBytes(text, paths[at + 0]);
                 if (!GesWireRules.IsValidUtf8(text)) throw new GesWireException(GesWireException.InvalidText, paths[at + 0]);
@@ -973,7 +973,7 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
                     var count = (int)reader.Read(4, paths[at + 6]);
                     if (count > 8) throw new GesWireException(GesWireException.InvalidCount, paths[at + 6]);
                     reader.Require(count * 8L, paths[at + 6]);
-                    if (__Note.Length < count) Array.Resize(ref __Note, Math.Max(count, Math.Min(8, __Note.Length * 2)));
+                    if (__Note.Length < count) global::System.Array.Resize(ref __Note, global::System.Math.Max(count, global::System.Math.Min(8, __Note.Length * 2)));
                     var text = new Span<byte>(__Note, 0, count);
                     reader.ReadBytes(text, paths[at + 6]);
                     if (!GesWireRules.IsValidUtf8(text)) throw new GesWireException(GesWireException.InvalidText, paths[at + 6]);
@@ -1013,7 +1013,7 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
                             var count = (int)reader.Read(3, paths[at + 13]);
                             if (count > 4) throw new GesWireException(GesWireException.InvalidCount, paths[at + 13]);
                             reader.Require(count * 8L, paths[at + 13]);
-                            if (__ReadingCode.Length < count) Array.Resize(ref __ReadingCode, Math.Max(count, Math.Min(4, __ReadingCode.Length * 2)));
+                            if (__ReadingCode.Length < count) global::System.Array.Resize(ref __ReadingCode, global::System.Math.Max(count, global::System.Math.Min(4, __ReadingCode.Length * 2)));
                             var text = new Span<byte>(__ReadingCode, 0, count);
                             reader.ReadBytes(text, paths[at + 13]);
                             if (!GesWireRules.IsValidUtf8(text)) throw new GesWireException(GesWireException.InvalidText, paths[at + 13]);
@@ -1027,7 +1027,7 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
         }
 
         #if DEBUG || DEVELOPMENT_BUILD || UNITY_EDITOR || GES_CHECK_SHARING
-        [ThreadStatic] private static HashSet<object>? __SharingLists;
+        [global::System.ThreadStatic] private static HashSet<object>? __SharingLists;
         internal bool __Busy;
 
         internal void __Mark(bool busy, HashSet<object>? lists)
@@ -1092,7 +1092,7 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
 
         private static ulong __Wire2(double value, string[] paths, int at)
         {
-            return GesWireRules.QuantizedIndex(value, BitConverter.Int64BitsToDouble(unchecked((long)0x0000000000000000UL)), BitConverter.Int64BitsToDouble(unchecked((long)0x408f400000000000UL)), 1d, 1d, 0L, paths[at + 2]);
+            return GesWireRules.QuantizedIndex(value, global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x0000000000000000UL)), global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x408f400000000000UL)), 1d, 1d, 0L, paths[at + 2]);
         }
 
         private static ulong __Read2(ref GesBitReader reader, string[] paths, int at)
@@ -1106,7 +1106,7 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
 
         private static ulong __Wire4(double value, string[] paths, int at)
         {
-            return GesWireRules.QuantizedIndex(value, BitConverter.Int64BitsToDouble(unchecked((long)0x0000000000000000UL)), BitConverter.Int64BitsToDouble(unchecked((long)0x4059000000000000UL)), 100d, 1d, 0L, paths[at + 4]);
+            return GesWireRules.QuantizedIndex(value, global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x0000000000000000UL)), global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x4059000000000000UL)), 100d, 1d, 0L, paths[at + 4]);
         }
 
         private static ulong __Read4(ref GesBitReader reader, string[] paths, int at)
@@ -1120,7 +1120,7 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
 
         private static ulong __Wire5(double value, string[] paths, int at)
         {
-            return GesWireRules.QuantizedIndex(value, BitConverter.Int64BitsToDouble(unchecked((long)0x0000000000000000UL)), BitConverter.Int64BitsToDouble(unchecked((long)0x4059000000000000UL)), 100d, 1d, 0L, paths[at + 5]);
+            return GesWireRules.QuantizedIndex(value, global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x0000000000000000UL)), global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x4059000000000000UL)), 100d, 1d, 0L, paths[at + 5]);
         }
 
         private static ulong __Read5(ref GesBitReader reader, string[] paths, int at)
@@ -1331,7 +1331,7 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
         internal bool __WriteDelta(Panel_Report baseline, ref GesBitWriter writer, string[] paths, int at, bool top)
         {
             var first = writer.BitPosition;
-            for (var left = 8; left > 0; left -= 64) writer.Write(0, Math.Min(left, 64));
+            for (var left = 8; left > 0; left -= 64) writer.Write(0, global::System.Math.Min(left, 64));
             var changed = false;
             var ordinal = 0;
             {
@@ -1623,7 +1623,7 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
                         var count = (int)reader.Read(5, paths[at + 0]);
                         if (count > 16) throw new GesWireException(GesWireException.InvalidCount, paths[at + 0]);
                         reader.Require(count * 8L, paths[at + 0]);
-                        if (__Title.Length < count) Array.Resize(ref __Title, Math.Max(count, Math.Min(16, __Title.Length * 2)));
+                        if (__Title.Length < count) global::System.Array.Resize(ref __Title, global::System.Math.Max(count, global::System.Math.Min(16, __Title.Length * 2)));
                         var text = new Span<byte>(__Title, 0, count);
                         reader.ReadBytes(text, paths[at + 0]);
                         if (!GesWireRules.IsValidUtf8(text)) throw new GesWireException(GesWireException.InvalidText, paths[at + 0]);
@@ -1753,7 +1753,7 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
                             var count = (int)reader.Read(4, paths[at + 6]);
                             if (count > 8) throw new GesWireException(GesWireException.InvalidCount, paths[at + 6]);
                             reader.Require(count * 8L, paths[at + 6]);
-                            if (__Note.Length < count) Array.Resize(ref __Note, Math.Max(count, Math.Min(8, __Note.Length * 2)));
+                            if (__Note.Length < count) global::System.Array.Resize(ref __Note, global::System.Math.Max(count, global::System.Math.Min(8, __Note.Length * 2)));
                             var text = new Span<byte>(__Note, 0, count);
                             reader.ReadBytes(text, paths[at + 6]);
                             if (!GesWireRules.IsValidUtf8(text)) throw new GesWireException(GesWireException.InvalidText, paths[at + 6]);
@@ -1767,7 +1767,7 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
                             var count = (int)reader.Read(4, paths[at + 6]);
                             if (count > 8) throw new GesWireException(GesWireException.InvalidCount, paths[at + 6]);
                             reader.Require(count * 8L, paths[at + 6]);
-                            if (__Note.Length < count) Array.Resize(ref __Note, Math.Max(count, Math.Min(8, __Note.Length * 2)));
+                            if (__Note.Length < count) global::System.Array.Resize(ref __Note, global::System.Math.Max(count, global::System.Math.Min(8, __Note.Length * 2)));
                             var text = new Span<byte>(__Note, 0, count);
                             reader.ReadBytes(text, paths[at + 6]);
                             if (!GesWireRules.IsValidUtf8(text)) throw new GesWireException(GesWireException.InvalidText, paths[at + 6]);
@@ -1864,7 +1864,7 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
                                         var count = (int)reader.Read(3, paths[at + 13]);
                                         if (count > 4) throw new GesWireException(GesWireException.InvalidCount, paths[at + 13]);
                                         reader.Require(count * 8L, paths[at + 13]);
-                                        if (__ReadingCode.Length < count) Array.Resize(ref __ReadingCode, Math.Max(count, Math.Min(4, __ReadingCode.Length * 2)));
+                                        if (__ReadingCode.Length < count) global::System.Array.Resize(ref __ReadingCode, global::System.Math.Max(count, global::System.Math.Min(4, __ReadingCode.Length * 2)));
                                         var text = new Span<byte>(__ReadingCode, 0, count);
                                         reader.ReadBytes(text, paths[at + 13]);
                                         if (!GesWireRules.IsValidUtf8(text)) throw new GesWireException(GesWireException.InvalidText, paths[at + 13]);
@@ -1878,7 +1878,7 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
                                         var count = (int)reader.Read(3, paths[at + 13]);
                                         if (count > 4) throw new GesWireException(GesWireException.InvalidCount, paths[at + 13]);
                                         reader.Require(count * 8L, paths[at + 13]);
-                                        if (__ReadingCode.Length < count) Array.Resize(ref __ReadingCode, Math.Max(count, Math.Min(4, __ReadingCode.Length * 2)));
+                                        if (__ReadingCode.Length < count) global::System.Array.Resize(ref __ReadingCode, global::System.Math.Max(count, global::System.Math.Min(4, __ReadingCode.Length * 2)));
                                         var text = new Span<byte>(__ReadingCode, 0, count);
                                         reader.ReadBytes(text, paths[at + 13]);
                                         if (!GesWireRules.IsValidUtf8(text)) throw new GesWireException(GesWireException.InvalidText, paths[at + 13]);
@@ -1981,7 +1981,7 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
         }
 
         /// <summary>The members of the field, one bit each in declared order.</summary>
-        [Flags]
+        [global::System.Flags]
         public enum AlarmsFlags : ulong
         {
             /// <summary>The member <c>#heat</c>.</summary>
@@ -2047,7 +2047,7 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
         /// <param name="count">The element count.</param>
         public void SetBotsCount(int count)
         {
-            if (count < 0) throw new ArgumentOutOfRangeException(nameof(count));
+            if (count < 0) throw new global::System.ArgumentOutOfRangeException(nameof(count));
             Bots.Clear();
             for (var position = 0; position < count; position++)
             {
@@ -2103,8 +2103,8 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
         {
             if (Tick < 0L || unchecked((ulong)Tick - 0UL) > 1000000UL) throw new GesWireException(GesWireException.OutOfRange, paths[at + 0]);
             writer.Write(unchecked((ulong)Tick - 0UL), 20);
-            writer.Write(GesWireRules.QuantizedIndex(Arena.X, BitConverter.Int64BitsToDouble(unchecked((long)0x0000000000000000UL)), BitConverter.Int64BitsToDouble(unchecked((long)0x409f400000000000UL)), 1d, 1d, 0L, paths[at + 2]), 11);
-            writer.Write(GesWireRules.QuantizedIndex(Arena.Y, BitConverter.Int64BitsToDouble(unchecked((long)0x0000000000000000UL)), BitConverter.Int64BitsToDouble(unchecked((long)0x409f400000000000UL)), 1d, 1d, 0L, paths[at + 3]), 11);
+            writer.Write(GesWireRules.QuantizedIndex(Arena.X, global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x0000000000000000UL)), global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x409f400000000000UL)), 1d, 1d, 0L, paths[at + 2]), 11);
+            writer.Write(GesWireRules.QuantizedIndex(Arena.Y, global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x0000000000000000UL)), global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x409f400000000000UL)), 1d, 1d, 0L, paths[at + 3]), 11);
             if (Arena.Z != 0) throw new GesWireException(GesWireException.TypeMismatch, paths[at + 1]);
             if (Bots.Count > 8) throw new GesWireException(GesWireException.TooLong, paths[at + 4]);
             writer.Write((ulong)Bots.Count, 4);
@@ -2158,7 +2158,7 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
         }
 
         #if DEBUG || DEVELOPMENT_BUILD || UNITY_EDITOR || GES_CHECK_SHARING
-        [ThreadStatic] private static HashSet<object>? __SharingLists;
+        [global::System.ThreadStatic] private static HashSet<object>? __SharingLists;
         internal bool __Busy;
 
         internal void __Mark(bool busy, HashSet<object>? lists)
@@ -2453,7 +2453,7 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
 
         private static ulong __Wire2(double value, string[] paths, int at)
         {
-            return GesWireRules.QuantizedIndex(value, BitConverter.Int64BitsToDouble(unchecked((long)0x0000000000000000UL)), BitConverter.Int64BitsToDouble(unchecked((long)0x409f400000000000UL)), 1d, 1d, 0L, paths[at + 2]);
+            return GesWireRules.QuantizedIndex(value, global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x0000000000000000UL)), global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x409f400000000000UL)), 1d, 1d, 0L, paths[at + 2]);
         }
 
         private static ulong __Read2(ref GesBitReader reader, string[] paths, int at)
@@ -2467,7 +2467,7 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
 
         private static ulong __Wire3(double value, string[] paths, int at)
         {
-            return GesWireRules.QuantizedIndex(value, BitConverter.Int64BitsToDouble(unchecked((long)0x0000000000000000UL)), BitConverter.Int64BitsToDouble(unchecked((long)0x409f400000000000UL)), 1d, 1d, 0L, paths[at + 3]);
+            return GesWireRules.QuantizedIndex(value, global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x0000000000000000UL)), global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x409f400000000000UL)), 1d, 1d, 0L, paths[at + 3]);
         }
 
         private static ulong __Read3(ref GesBitReader reader, string[] paths, int at)
@@ -2615,7 +2615,7 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
         internal bool __WriteDelta(World baseline, ref GesBitWriter writer, string[] paths, int at, bool top)
         {
             var first = writer.BitPosition;
-            for (var left = 4; left > 0; left -= 64) writer.Write(0, Math.Min(left, 64));
+            for (var left = 4; left > 0; left -= 64) writer.Write(0, global::System.Math.Min(left, 64));
             var changed = false;
             var ordinal = 0;
             {
@@ -2920,7 +2920,7 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
         public HullTag Hull;
 
         /// <summary><c>burden</c> computed by <c>mass + wear</c>; NaN where the expression gives nothing.</summary>
-        public double Burden => Mass + Mass * 0.025;
+        public double Burden => GesComputed.AddPercentage(Mass, 0.025);
 
         /// <summary>Writes this record into a buffer; <see cref="MaxByteCount"/> bytes always suffice.</summary>
         /// <param name="buffer">The buffer.</param>
@@ -2967,7 +2967,7 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
 
         internal readonly void __WriteFields(ref GesBitWriter writer, string[] paths, int at)
         {
-            writer.Write(GesWireRules.QuantizedIndex(Mass, BitConverter.Int64BitsToDouble(unchecked((long)0x0000000000000000UL)), BitConverter.Int64BitsToDouble(unchecked((long)0x408f400000000000UL)), 1d, 1d, 0L, paths[at + 0]), 10);
+            writer.Write(GesWireRules.QuantizedIndex(Mass, global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x0000000000000000UL)), global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x408f400000000000UL)), 1d, 1d, 0L, paths[at + 0]), 10);
             if ((ulong)Hull > 1UL) throw new GesWireException(GesWireException.UnknownTag, paths[at + 1]);
             writer.Write((ulong)Hull, 1);
         }
@@ -2987,7 +2987,7 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
 
         private static ulong __Wire0(double value, string[] paths, int at)
         {
-            return GesWireRules.QuantizedIndex(value, BitConverter.Int64BitsToDouble(unchecked((long)0x0000000000000000UL)), BitConverter.Int64BitsToDouble(unchecked((long)0x408f400000000000UL)), 1d, 1d, 0L, paths[at + 0]);
+            return GesWireRules.QuantizedIndex(value, global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x0000000000000000UL)), global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x408f400000000000UL)), 1d, 1d, 0L, paths[at + 0]);
         }
 
         private static ulong __Read0(ref GesBitReader reader, string[] paths, int at)
@@ -3089,7 +3089,7 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
         internal readonly bool __WriteDelta(in World_Body baseline, ref GesBitWriter writer, string[] paths, int at, bool top)
         {
             var first = writer.BitPosition;
-            for (var left = 2; left > 0; left -= 64) writer.Write(0, Math.Min(left, 64));
+            for (var left = 2; left > 0; left -= 64) writer.Write(0, global::System.Math.Min(left, 64));
             var changed = false;
             var ordinal = 0;
             {
@@ -3252,7 +3252,7 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
         /// <summary>The field <c>body</c>.</summary>
         public World_Body Body;
 
-        private byte[] __Token = Array.Empty<byte>();
+        private byte[] __Token = global::System.Array.Empty<byte>();
         private int __TokenLength;
 
         /// <summary>The field <c>token</c>, at most 4 bytes.</summary>
@@ -3262,7 +3262,7 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
         /// <param name="bytes">The bytes.</param>
         public void SetToken(ReadOnlySpan<byte> bytes)
         {
-            if (__Token.Length < bytes.Length) Array.Resize(ref __Token, Math.Max(bytes.Length, Math.Min(4, __Token.Length * 2)));
+            if (__Token.Length < bytes.Length) global::System.Array.Resize(ref __Token, global::System.Math.Max(bytes.Length, global::System.Math.Min(4, __Token.Length * 2)));
             bytes.CopyTo(__Token);
             __TokenLength = bytes.Length;
         }
@@ -3334,12 +3334,12 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
         {
             if (Id < 0L || unchecked((ulong)Id - 0UL) > 255UL) throw new GesWireException(GesWireException.OutOfRange, paths[at + 0]);
             writer.Write(unchecked((ulong)Id - 0UL), 8);
-            writer.Write(GesWireRules.QuantizedIndex(Position.X, BitConverter.Int64BitsToDouble(unchecked((long)0x0000000000000000UL)), BitConverter.Int64BitsToDouble(unchecked((long)0x409f400000000000UL)), 100d, 1d, 0L, paths[at + 2]), 18);
-            writer.Write(GesWireRules.QuantizedIndex(Position.Y, BitConverter.Int64BitsToDouble(unchecked((long)0x0000000000000000UL)), BitConverter.Int64BitsToDouble(unchecked((long)0x409f400000000000UL)), 100d, 1d, 0L, paths[at + 3]), 18);
+            writer.Write(GesWireRules.QuantizedIndex(Position.X, global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x0000000000000000UL)), global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x409f400000000000UL)), 100d, 1d, 0L, paths[at + 2]), 18);
+            writer.Write(GesWireRules.QuantizedIndex(Position.Y, global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x0000000000000000UL)), global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x409f400000000000UL)), 100d, 1d, 0L, paths[at + 3]), 18);
             if (Position.Z != 0) throw new GesWireException(GesWireException.TypeMismatch, paths[at + 1]);
-            writer.Write(GesWireRules.QuantizedIndex(Velocity.X, BitConverter.Int64BitsToDouble(unchecked((long)0xc059000000000000UL)), BitConverter.Int64BitsToDouble(unchecked((long)0x4059000000000000UL)), 100d, 1d, -10000L, paths[at + 5]), 15);
-            writer.Write(GesWireRules.QuantizedIndex(Velocity.Y, BitConverter.Int64BitsToDouble(unchecked((long)0xc059000000000000UL)), BitConverter.Int64BitsToDouble(unchecked((long)0x4059000000000000UL)), 100d, 1d, -10000L, paths[at + 6]), 15);
-            writer.Write(GesWireRules.QuantizedIndex(Velocity.Z, BitConverter.Int64BitsToDouble(unchecked((long)0xc059000000000000UL)), BitConverter.Int64BitsToDouble(unchecked((long)0x4059000000000000UL)), 100d, 1d, -10000L, paths[at + 7]), 15);
+            writer.Write(GesWireRules.QuantizedIndex(Velocity.X, global::System.BitConverter.Int64BitsToDouble(unchecked((long)0xc059000000000000UL)), global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x4059000000000000UL)), 100d, 1d, -10000L, paths[at + 5]), 15);
+            writer.Write(GesWireRules.QuantizedIndex(Velocity.Y, global::System.BitConverter.Int64BitsToDouble(unchecked((long)0xc059000000000000UL)), global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x4059000000000000UL)), 100d, 1d, -10000L, paths[at + 6]), 15);
+            writer.Write(GesWireRules.QuantizedIndex(Velocity.Z, global::System.BitConverter.Int64BitsToDouble(unchecked((long)0xc059000000000000UL)), global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x4059000000000000UL)), 100d, 1d, -10000L, paths[at + 7]), 15);
             Body.__WriteFields(ref writer, paths, at + 9);
             {
                 var text = new ReadOnlySpan<byte>(__Token, 0, __TokenLength);
@@ -3388,7 +3388,7 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
                 var count = (int)reader.Read(3, paths[at + 11]);
                 if (count > 4) throw new GesWireException(GesWireException.InvalidCount, paths[at + 11]);
                 reader.Require(count * 8L, paths[at + 11]);
-                if (__Token.Length < count) Array.Resize(ref __Token, Math.Max(count, Math.Min(4, __Token.Length * 2)));
+                if (__Token.Length < count) global::System.Array.Resize(ref __Token, global::System.Math.Max(count, global::System.Math.Min(4, __Token.Length * 2)));
                 var text = new Span<byte>(__Token, 0, count);
                 reader.ReadBytes(text, paths[at + 11]);
                 __TokenLength = count;
@@ -3397,7 +3397,7 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
         }
 
         #if DEBUG || DEVELOPMENT_BUILD || UNITY_EDITOR || GES_CHECK_SHARING
-        [ThreadStatic] private static HashSet<object>? __SharingLists;
+        [global::System.ThreadStatic] private static HashSet<object>? __SharingLists;
         internal bool __Busy;
 
         internal void __Mark(bool busy, HashSet<object>? lists) => __Busy = busy;
@@ -3427,7 +3427,7 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
 
         private static ulong __Wire2(double value, string[] paths, int at)
         {
-            return GesWireRules.QuantizedIndex(value, BitConverter.Int64BitsToDouble(unchecked((long)0x0000000000000000UL)), BitConverter.Int64BitsToDouble(unchecked((long)0x409f400000000000UL)), 100d, 1d, 0L, paths[at + 2]);
+            return GesWireRules.QuantizedIndex(value, global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x0000000000000000UL)), global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x409f400000000000UL)), 100d, 1d, 0L, paths[at + 2]);
         }
 
         private static ulong __Read2(ref GesBitReader reader, string[] paths, int at)
@@ -3441,7 +3441,7 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
 
         private static ulong __Wire3(double value, string[] paths, int at)
         {
-            return GesWireRules.QuantizedIndex(value, BitConverter.Int64BitsToDouble(unchecked((long)0x0000000000000000UL)), BitConverter.Int64BitsToDouble(unchecked((long)0x409f400000000000UL)), 100d, 1d, 0L, paths[at + 3]);
+            return GesWireRules.QuantizedIndex(value, global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x0000000000000000UL)), global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x409f400000000000UL)), 100d, 1d, 0L, paths[at + 3]);
         }
 
         private static ulong __Read3(ref GesBitReader reader, string[] paths, int at)
@@ -3455,7 +3455,7 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
 
         private static ulong __Wire5(double value, string[] paths, int at)
         {
-            return GesWireRules.QuantizedIndex(value, BitConverter.Int64BitsToDouble(unchecked((long)0xc059000000000000UL)), BitConverter.Int64BitsToDouble(unchecked((long)0x4059000000000000UL)), 100d, 1d, -10000L, paths[at + 5]);
+            return GesWireRules.QuantizedIndex(value, global::System.BitConverter.Int64BitsToDouble(unchecked((long)0xc059000000000000UL)), global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x4059000000000000UL)), 100d, 1d, -10000L, paths[at + 5]);
         }
 
         private static ulong __Read5(ref GesBitReader reader, string[] paths, int at)
@@ -3469,7 +3469,7 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
 
         private static ulong __Wire6(double value, string[] paths, int at)
         {
-            return GesWireRules.QuantizedIndex(value, BitConverter.Int64BitsToDouble(unchecked((long)0xc059000000000000UL)), BitConverter.Int64BitsToDouble(unchecked((long)0x4059000000000000UL)), 100d, 1d, -10000L, paths[at + 6]);
+            return GesWireRules.QuantizedIndex(value, global::System.BitConverter.Int64BitsToDouble(unchecked((long)0xc059000000000000UL)), global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x4059000000000000UL)), 100d, 1d, -10000L, paths[at + 6]);
         }
 
         private static ulong __Read6(ref GesBitReader reader, string[] paths, int at)
@@ -3483,7 +3483,7 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
 
         private static ulong __Wire7(double value, string[] paths, int at)
         {
-            return GesWireRules.QuantizedIndex(value, BitConverter.Int64BitsToDouble(unchecked((long)0xc059000000000000UL)), BitConverter.Int64BitsToDouble(unchecked((long)0x4059000000000000UL)), 100d, 1d, -10000L, paths[at + 7]);
+            return GesWireRules.QuantizedIndex(value, global::System.BitConverter.Int64BitsToDouble(unchecked((long)0xc059000000000000UL)), global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x4059000000000000UL)), 100d, 1d, -10000L, paths[at + 7]);
         }
 
         private static ulong __Read7(ref GesBitReader reader, string[] paths, int at)
@@ -3651,7 +3651,7 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
         internal bool __WriteDelta(World_Bot baseline, ref GesBitWriter writer, string[] paths, int at, bool top)
         {
             var first = writer.BitPosition;
-            for (var left = top ? 5 : 6; left > 0; left -= 64) writer.Write(0, Math.Min(left, 64));
+            for (var left = top ? 5 : 6; left > 0; left -= 64) writer.Write(0, global::System.Math.Min(left, 64));
             var changed = false;
             var ordinal = 0;
             if (!top)
@@ -4029,7 +4029,7 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
                         var count = (int)reader.Read(3, paths[at + 11]);
                         if (count > 4) throw new GesWireException(GesWireException.InvalidCount, paths[at + 11]);
                         reader.Require(count * 8L, paths[at + 11]);
-                        if (__Token.Length < count) Array.Resize(ref __Token, Math.Max(count, Math.Min(4, __Token.Length * 2)));
+                        if (__Token.Length < count) global::System.Array.Resize(ref __Token, global::System.Math.Max(count, global::System.Math.Min(4, __Token.Length * 2)));
                         var text = new Span<byte>(__Token, 0, count);
                         reader.ReadBytes(text, paths[at + 11]);
                         __TokenLength = count;
@@ -4085,7 +4085,7 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
         }
 
         /// <summary>The members of the field, one bit each in declared order.</summary>
-        [Flags]
+        [global::System.Flags]
         public enum StateFlags : ulong
         {
             /// <summary>The member <c>#armed</c>.</summary>
@@ -4123,7 +4123,7 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
             "side",
         };
 
-        private byte[] __Name = Array.Empty<byte>();
+        private byte[] __Name = global::System.Array.Empty<byte>();
         private int __NameLength;
 
         /// <summary>The field <c>name</c> as UTF-8 bytes.</summary>
@@ -4133,7 +4133,7 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
         /// <param name="utf8">The bytes.</param>
         public void SetNameUtf8(ReadOnlySpan<byte> utf8)
         {
-            if (__Name.Length < utf8.Length) Array.Resize(ref __Name, Math.Max(utf8.Length, Math.Min(12, __Name.Length * 2)));
+            if (__Name.Length < utf8.Length) global::System.Array.Resize(ref __Name, global::System.Math.Max(utf8.Length, global::System.Math.Min(12, __Name.Length * 2)));
             utf8.CopyTo(__Name);
             __NameLength = utf8.Length;
         }
@@ -4141,8 +4141,8 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
         /// <summary>The field <c>name</c> as a string; reading and setting it allocate.</summary>
         public string Name
         {
-            get => System.Text.Encoding.UTF8.GetString(__Name, 0, __NameLength);
-            set => SetNameUtf8(System.Text.Encoding.UTF8.GetBytes(value));
+            get => global::System.Text.Encoding.UTF8.GetString(__Name, 0, __NameLength);
+            set => SetNameUtf8(global::System.Text.Encoding.UTF8.GetBytes(value));
         }
 
         /// <summary>The field <c>cards</c>, at most 4 elements.</summary>
@@ -4172,7 +4172,7 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
         /// <param name="count">The element count.</param>
         public void SetCardsCount(int count)
         {
-            if (count < 0) throw new ArgumentOutOfRangeException(nameof(count));
+            if (count < 0) throw new global::System.ArgumentOutOfRangeException(nameof(count));
             Cards.Clear();
             for (var position = 0; position < count; position++)
             {
@@ -4185,7 +4185,7 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
         /// <param name="count">The element count.</param>
         public void SetLabelsCount(int count)
         {
-            if (count < 0) throw new ArgumentOutOfRangeException(nameof(count));
+            if (count < 0) throw new global::System.ArgumentOutOfRangeException(nameof(count));
             Labels.Clear();
             for (var position = 0; position < count; position++)
             {
@@ -4206,7 +4206,7 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
 
             set
             {
-                if (value is null) throw new ArgumentNullException(nameof(value));
+                if (value is null) throw new global::System.ArgumentNullException(nameof(value));
                 SetLabelsCount(value.Length);
                 for (var index = 0; index < value.Length; index++) Labels[index].Value = value[index];
             }
@@ -4291,7 +4291,7 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
                 var count = (int)reader.Read(4, paths[at + 0]);
                 if (count > 12) throw new GesWireException(GesWireException.InvalidCount, paths[at + 0]);
                 reader.Require(count * 8L, paths[at + 0]);
-                if (__Name.Length < count) Array.Resize(ref __Name, Math.Max(count, Math.Min(12, __Name.Length * 2)));
+                if (__Name.Length < count) global::System.Array.Resize(ref __Name, global::System.Math.Max(count, global::System.Math.Min(12, __Name.Length * 2)));
                 var text = new Span<byte>(__Name, 0, count);
                 reader.ReadBytes(text, paths[at + 0]);
                 if (!GesWireRules.IsValidUtf8(text)) throw new GesWireException(GesWireException.InvalidText, paths[at + 0]);
@@ -4333,7 +4333,7 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
         }
 
         #if DEBUG || DEVELOPMENT_BUILD || UNITY_EDITOR || GES_CHECK_SHARING
-        [ThreadStatic] private static HashSet<object>? __SharingLists;
+        [global::System.ThreadStatic] private static HashSet<object>? __SharingLists;
         internal bool __Busy;
 
         internal void __Mark(bool busy, HashSet<object>? lists)
@@ -4544,7 +4544,7 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
         internal bool __WriteDelta(World_Cards baseline, ref GesBitWriter writer, string[] paths, int at, bool top)
         {
             var first = writer.BitPosition;
-            for (var left = 4; left > 0; left -= 64) writer.Write(0, Math.Min(left, 64));
+            for (var left = 4; left > 0; left -= 64) writer.Write(0, global::System.Math.Min(left, 64));
             var changed = false;
             var ordinal = 0;
             {
@@ -4661,7 +4661,7 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
                         var count = (int)reader.Read(4, paths[at + 0]);
                         if (count > 12) throw new GesWireException(GesWireException.InvalidCount, paths[at + 0]);
                         reader.Require(count * 8L, paths[at + 0]);
-                        if (__Name.Length < count) Array.Resize(ref __Name, Math.Max(count, Math.Min(12, __Name.Length * 2)));
+                        if (__Name.Length < count) global::System.Array.Resize(ref __Name, global::System.Math.Max(count, global::System.Math.Min(12, __Name.Length * 2)));
                         var text = new Span<byte>(__Name, 0, count);
                         reader.ReadBytes(text, paths[at + 0]);
                         if (!GesWireRules.IsValidUtf8(text)) throw new GesWireException(GesWireException.InvalidText, paths[at + 0]);
@@ -4815,7 +4815,7 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
         /// <summary>An element of the list.</summary>
         public sealed partial class LabelsItem
         {
-            private byte[] __Value = Array.Empty<byte>();
+            private byte[] __Value = global::System.Array.Empty<byte>();
             private int __ValueLength;
 
             /// <summary>The field <c>[]</c> as UTF-8 bytes, a tag name without #.</summary>
@@ -4825,7 +4825,7 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
             /// <param name="utf8">The bytes.</param>
             public void SetValueUtf8(ReadOnlySpan<byte> utf8)
             {
-                if (__Value.Length < utf8.Length) Array.Resize(ref __Value, Math.Max(utf8.Length, Math.Min(12, __Value.Length * 2)));
+                if (__Value.Length < utf8.Length) global::System.Array.Resize(ref __Value, global::System.Math.Max(utf8.Length, global::System.Math.Min(12, __Value.Length * 2)));
                 utf8.CopyTo(__Value);
                 __ValueLength = utf8.Length;
             }
@@ -4833,8 +4833,8 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
             /// <summary>The field <c>[]</c> as a string; reading and setting it allocate.</summary>
             public string Value
             {
-                get => System.Text.Encoding.UTF8.GetString(__Value, 0, __ValueLength);
-                set => SetValueUtf8(System.Text.Encoding.UTF8.GetBytes(value));
+                get => global::System.Text.Encoding.UTF8.GetString(__Value, 0, __ValueLength);
+                set => SetValueUtf8(global::System.Text.Encoding.UTF8.GetBytes(value));
             }
 
             internal void __WriteFields(ref GesBitWriter writer, string[] paths, int at)
@@ -4854,7 +4854,7 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
                     var count = (int)reader.Read(4, paths[at + 0]);
                     if (count > 12) throw new GesWireException(GesWireException.InvalidCount, paths[at + 0]);
                     reader.Require(count * 8L, paths[at + 0]);
-                    if (__Value.Length < count) Array.Resize(ref __Value, Math.Max(count, Math.Min(12, __Value.Length * 2)));
+                    if (__Value.Length < count) global::System.Array.Resize(ref __Value, global::System.Math.Max(count, global::System.Math.Min(12, __Value.Length * 2)));
                     var text = new Span<byte>(__Value, 0, count);
                     reader.ReadBytes(text, paths[at + 0]);
                     if (!GesWireRules.IsTagName(text)) throw new GesWireException(GesWireException.InvalidTag, paths[at + 0]);
@@ -5071,7 +5071,7 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
                     "",
                 })));
             var bound = set.Schema(root).Bind(new GesSchemaParameters().With("worldWidth", "2e3m"));
-            if (bound.BindingHash != bindingHash) throw new InvalidOperationException("The embedded schema sources no longer bind like the generated code.");
+            if (bound.BindingHash != bindingHash) throw new global::System.InvalidOperationException("The embedded schema sources no longer bind like the generated code.");
             return bound;
         }
     }
@@ -5091,9 +5091,12 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
         /// <summary>The ratio of an optional Percentage field, absent where the expression gives nothing or no finite ratio.</summary>
         internal static double? OptionalRatio(double value) => double.IsNaN(value) || double.IsInfinity(value) ? null : value == 0 ? 0 : value;
 
-        internal static double AddPercentage(double value, double ratio) => value + value * ratio;
+        /// <summary>A product as an operation of its own: an addition beside it in one expression could be fused with it.</summary>
+        internal static double Product(double a, double b) => a * b;
 
-        internal static double SubtractPercentage(double value, double ratio) => value - value * ratio;
+        internal static double AddPercentage(double value, double ratio) => value + Product(value, ratio);
+
+        internal static double SubtractPercentage(double value, double ratio) => value - Product(value, ratio);
 
         /// <summary>The smaller of two numbers, the left one on a tie, and nothing where either is.</summary>
         internal static double Min(double a, double b) => double.IsNaN(a) || double.IsNaN(b) ? double.NaN : b < a ? b : a;
@@ -5112,11 +5115,11 @@ namespace GameEventScript.Tests.Generator.Roles.Wire
         /// <summary>A number, or the fallback where it is nothing.</summary>
         internal static double Otherwise(double value, double fallback) => double.IsNaN(value) ? fallback : value;
 
-        private static bool Whole(double value) => value >= -9223372036854775808d && value < 9223372036854775808d && value == Math.Truncate(value);
+        private static bool Whole(double value) => value >= -9223372036854775808d && value < 9223372036854775808d && value == global::System.Math.Truncate(value);
 
         private static ulong Ordered(double value)
         {
-            var bits = unchecked((ulong)BitConverter.DoubleToInt64Bits(value));
+            var bits = unchecked((ulong)global::System.BitConverter.DoubleToInt64Bits(value));
             return (bits & 0x8000000000000000UL) != 0 ? ~bits : bits | 0x8000000000000000UL;
         }
 

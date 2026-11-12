@@ -557,6 +557,58 @@ internal static class GesSchemaPlanner
     private static bool IsLetter(char character) => character is >= 'a' and <= 'z' or >= 'A' and <= 'Z';
 
     // Fails when two generated members of one scope get the same name.
+    // A record's nested types are named after its fields. Each would hide a top-level type or tag set of the same name for
+    // every reference inside the record, so that name fails like any other collision; their origins carry this prefix.
+    internal const string NestedTypeOrigin = "the nested type ";
+
+    internal static HashSet<string> TopLevel(List<GesPlanType> types, List<(string Name, List<string> Tags)> sets)
+    {
+        var names = new HashSet<string>(System.StringComparer.Ordinal);
+        foreach (var type in types)
+            if (!type.IsItem) names.Add(type.Name);
+        foreach (var (name, _) in sets) names.Add(name);
+        return names;
+    }
+
+    internal static void Unique(string scope, List<(string Name, string Origin)> names, ICollection<string> topLevel)
+    {
+        Unique(scope, names);
+        foreach (var (name, origin) in names)
+        {
+            if (origin.StartsWith(NestedTypeOrigin, System.StringComparison.Ordinal) && topLevel.Contains(name))
+                throw new GesGeneratorException(GesGeneratorException.NameCollision, $"In '{scope}', {origin} is generated as '{name}', which hides the top-level type of that name.");
+            if (IsRuntimeName(name))
+                throw new GesGeneratorException(GesGeneratorException.NameCollision, $"In '{scope}', {origin} is generated as '{name}', a name of the runtime types that generated code uses.");
+        }
+    }
+
+    // Generated Swift names these standard-library and runtime types without qualification, so a type of the same name in
+    // the namespace would hide them; Type, Any, AnyObject, Protocol and Self cannot name a nested type at all. Generated C#
+    // qualifies the platform types it uses with global::, so only the runtime's names are reserved there.
+    private static readonly string[] SwiftReserved =
+    [
+        "Any", "AnyObject", "Array", "Bool", "CaseIterable", "Codable", "Double", "Equatable", "Error", "GameEventScriptRuntime", "Hashable",
+        "Identifiable", "Int", "Int32", "Int64", "OptionSet", "Protocol", "Result", "Self", "Sendable", "String", "Swift", "Type", "UInt64",
+        "UInt8", "UTF8", "UnsafeMutableRawBufferPointer", "UnsafeRawBufferPointer"
+    ];
+
+    // Names of the form Ges and a capital letter belong to the runtime types that generated code names without qualification.
+    private static bool IsRuntimeName(string name) => name.Length > 3 && name.StartsWith("Ges", System.StringComparison.Ordinal) && name[3] is >= 'A' and <= 'Z';
+
+    // The types declared beside the records must not take a name that the generated code uses for another type.
+    internal static void CheckTopLevel(ICollection<string> names, bool swift)
+    {
+        var sorted = new List<string>(names);
+        sorted.Sort(System.StringComparer.Ordinal);
+        foreach (var name in sorted)
+        {
+            if (IsRuntimeName(name))
+                throw new GesGeneratorException(GesGeneratorException.NameCollision, $"The type '{name}' takes a name of the runtime types that generated code uses.");
+            if (swift && System.Array.IndexOf(SwiftReserved, name) >= 0)
+                throw new GesGeneratorException(GesGeneratorException.NameCollision, $"The type '{name}' takes a name of a Swift type that generated code uses.");
+        }
+    }
+
     internal static void Unique(string scope, List<(string Name, string Origin)> names)
     {
         var seen = new Dictionary<string, string>(StringComparer.Ordinal);

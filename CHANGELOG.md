@@ -249,6 +249,14 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   or a delta whose axis outside the field's axis block is not zero fails with
   `wire.typeMismatch`, as the value path does, and reading sets that axis to zero.
 
+- Schema generation rejects names that would break the generated code with `generate.nameCollision`: a type that a
+  record nests for a field (such as `SlotsItem` or `ModeTag`) may not take the name of a schema, message or tag set of
+  the generation, a type or C# member may not take a runtime name of the form `Ges` and an uppercase letter, a Swift
+  type may not take a name that generated Swift uses, such as `String`, `Int`, `Array`, `Type` or `Swift`, and a Swift
+  model field may not be named `hashValue` or `hash`. Such code previously failed to compile or bound the wrong type.
+- A `:Poly` whose block leaves its points without bits, such as a single wrapping axis with a period of one step, fails
+  binding with `schema.notEncodable`, as a List element without bits does, because no data would limit its count.
+
 ### Added
 - `:Bytes`, an immutable byte sequence: literals `:Bytes[0xa0, 183]` and `:Bytes("a0b7")`, `as :Bytes`
   from integer Lists and hexadecimal Text, `as :Text`/`parse`/documents, count, `in`, indexing,
@@ -500,6 +508,9 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 - C# `IGesRuntimeObserver` gives every callback an empty default implementation,
   like Swift, so an observer implements only the callbacks it needs.
 
+- Swift `GesBitWriter.writeBytes(_:)` and `GesBitReader.readBytes(_:into:path:)` take a `[UInt8]`; generated Swift
+  wire code uses them, so a counting writer skips the bytes of a Text or Bytes at once and byte-aligned reads copy them.
+
 ### Changed
 
 - `Host.Load` and the writer no longer validate a Program again that the Reader, the Compiler or an earlier validation
@@ -542,6 +553,13 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 - The Swift compiler now writes the BuildMetadata section with compiler ID
   `steph.ges.compiler.swift` and version `0.1.0`, as the binary format requires
   of every port. Runtime behavior does not depend on it.
+
+- Generated C# qualifies the platform types it uses (`global::System.Math`, `Array`, `BitConverter`, `Text.Encoding`,
+  exceptions and attributes), so schemas and fields such as `:Math`, `system` or `array` compile.
+- Generated C# computed fields never add a product in the same expression: `number + percentage` and an addition or
+  subtraction of a product call the helper `Product`, so a C++ compiler under IL2CPP cannot fuse them into one rounding.
+- Swift generated wire code writes and reads the bytes of a Text or Bytes field with the bit primitives' array overloads
+  instead of one call per byte, so `encodedByteCount()` and `encoded()` no longer cost a loop over every byte.
 
 ### Fixed
 - A random scope that a handler leaves open is reported as `runtime.randomScopeImbalance` even when an earlier handler of
@@ -691,6 +709,16 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   position: the offending token, the repeated or misnamed parameter, argument,
   condition or binding, the failing call or constructor, or the first construct
   that exceeds the nesting limit.
+- The split manifest of model code generated with `documents` records `values: true`, since that code always contains
+  the value conversions; equal code now has an equal manifest.
+- C# schema highlighting reports an error at the end of the text with length zero and one on a scalar outside the BMP
+  over both UTF-16 units, as Swift does. GES schema highlighting is now specified and compared between the ports.
+- Decoding a `:Poly` through the value path grows its point storage with the data instead of allocating by the claimed
+  count, and the C# value path allocates one scratch of the largest encoding per delta call instead of two.
+- Swift `GesBitWriter.setBit(_:)`, `rewind(to:)` and `GesBitReader.seek(to:)` trap on a negative position instead of
+  accessing memory out of bounds in release builds.
+- The specification names `wire.outOfRange` for decoding a finite binary64 outside the range of a field without a step,
+  and states that a bound member of a message set reports its set's hash and binding hash.
 
 ## [0.4.0] — 2026-10-11
 

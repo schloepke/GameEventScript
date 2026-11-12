@@ -104,6 +104,14 @@ enum GesModelPlanner {
         return adopted
     }
 
+    // The names declared beside the records, which a record's nested type must not hide.
+    static func topLevel(_ layout: GesModelLayout, swift: Bool) -> Set<String> {
+        var names = Set(layout.types.map(\.name))
+        for set in tagSets(layout) { names.insert(set.name) }
+        for protocolType in layout.protocols { names.insert(protocolName(layout, protocolType.name, swift: swift)) }
+        return names
+    }
+
     // Protocol names must not meet a type or tag set of the file.
     static func checkProtocols(_ layout: GesModelLayout, swift: Bool) throws(GesGeneratorError) {
         var names: [(name: String, origin: String)] = layout.types.map { ($0.name, "the type " + $0.name) }

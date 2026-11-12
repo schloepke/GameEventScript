@@ -122,7 +122,7 @@ extension GesCSharpEmitter {
         case .float:
             code.line("if (double.IsNaN(value)) \(fail("NotRepresentable", value))")
             if encoding.range { code.line("if (value < \(bits(encoding.lowerValue)) || value > \(bits(encoding.upperValue))) \(fail("OutOfRange", value))") }
-            code.line("return unchecked((ulong)BitConverter.DoubleToInt64Bits(value == 0 ? 0d : value));")
+            code.line("return unchecked((ulong)global::System.BitConverter.DoubleToInt64Bits(value == 0 ? 0d : value));")
         case .flags:
             if encoding.width < 64 { code.line("if ((ulong)value > \(unsigned(full(encoding.width)))) \(fail("UnknownTag", value))") }
             code.line("return (ulong)value;")
@@ -136,7 +136,7 @@ extension GesCSharpEmitter {
         code.open("{")
         code.line("var wire = reader.Read(\(width), \(path(value)));")
         if encoding.kind == .float {
-            code.line("var value = BitConverter.Int64BitsToDouble(unchecked((long)wire));")
+            code.line("var value = global::System.BitConverter.Int64BitsToDouble(unchecked((long)wire));")
             code.line("if (double.IsNaN(value) || wire == 0x8000000000000000UL\(encoding.range ? " || double.IsInfinity(value)" : "")) \(fail("InvalidNumber", value))")
             if encoding.range { code.line("if (value < \(bits(encoding.lowerValue)) || value > \(bits(encoding.upperValue))) \(fail("OutOfRange", value))") }
         } else if encoding.kind != .boolean {
@@ -157,7 +157,7 @@ extension GesCSharpEmitter {
         case .integer: code.line("private static long __Value\(node)(ulong wire) => unchecked((long)(\(unsigned(UInt64(bitPattern: encoding.lower))) + wire));")
         case .quantized:
             code.line("private static double __Value\(node)(ulong wire) => GesWireRules.QuantizedValue(wire, \(long(encoding.lower)), \(long(encoding.numerator)), \(double(encoding.tenPower)));")
-        case .float: code.line("private static double __Value\(node)(ulong wire) => BitConverter.Int64BitsToDouble(unchecked((long)wire));")
+        case .float: code.line("private static double __Value\(node)(ulong wire) => global::System.BitConverter.Int64BitsToDouble(unchecked((long)wire));")
         default: code.line("private static \(type) __Value\(node)(ulong wire) => (\(type))wire;")
         }
     }
@@ -222,7 +222,7 @@ extension GesCSharpEmitter {
     static func sharing(_ code: inout Code, _ type: GesPlanType) {
         code.blank()
         code.line(checkSharing)
-        if type.kind == .schema && !type.isItem { code.line("[ThreadStatic] private static HashSet<object>? __SharingLists;") }
+        if type.kind == .schema && !type.isItem { code.line("[global::System.ThreadStatic] private static HashSet<object>? __SharingLists;") }
         code.line("internal bool __Busy;")
         code.blank()
         if !type.fields.contains(where: { GesSchemaPlanner.holdsStorage($0.value, lists: true) }) {
@@ -489,7 +489,7 @@ extension GesCSharpEmitter {
             return
         }
         code.line("var first = writer.BitPosition;")
-        code.line("for (var left = \(counted); left > 0; left -= 64) writer.Write(0, Math.Min(left, 64));")
+        code.line("for (var left = \(counted); left > 0; left -= 64) writer.Write(0, global::System.Math.Min(left, 64));")
         code.line("var changed = false;")
         code.line("var ordinal = 0;")
         for field in type.fields {

@@ -186,10 +186,12 @@ public sealed class GesBoundSchema
     /// <summary>Gets the size of the largest encoding in bytes, of a full record or of a delta.</summary>
     public long MaxByteCount { get; }
 
-    /// <summary>Gets the schema hash, independent of parameter values.</summary>
+    /// <summary>Gets the schema hash, independent of parameter values. A member of a bound message set carries the set's
+    /// hash, since its records exist only within the set's encoding.</summary>
     public ulong Hash { get; }
 
-    /// <summary>Gets the hash over the schema hash and the parameter values.</summary>
+    /// <summary>Gets the hash over the schema hash and the parameter values; a member of a bound message set carries the
+    /// set's.</summary>
     public ulong BindingHash { get; }
 
     /// <summary>Gets whether the first field is a key that a reader can take first.</summary>
@@ -801,6 +803,7 @@ internal static class GesSchemaBinder
                 node.PositionWidth = BitLength((ulong)polyMax - 1);
                 build.Nodes.Add(node);
                 AddCorner(build, scope, type, "[]", path + "[]", "xy");
+                if (!HasBits(build.Nodes, index + 1)) throw scope.Error(Code.NotEncodable, type.Offset, "A Poly point without bits has a count that no data limits.");
                 break;
             case GesSchemaTypeKind.Reference:
                 node.Kind = GesSchemaNodeKind.Group;
@@ -871,6 +874,7 @@ internal static class GesSchemaBinder
                 if (lists >= MaximumListNesting) throw scope.Error(Code.NotEncodable, type.Offset, $"Lists nest at most {MaximumListNesting} levels for encoding.");
                 if (type.Axes is { } points)
                     foreach (var axis in points) CheckWrapping(scope, axis.Constraints, type.Offset);
+                if (type.Axes is { Length: 0 }) throw scope.Error(Code.NotEncodable, type.Offset, "A Poly point without bits has a count that no data limits.");
                 break;
             case GesSchemaTypeKind.Number or GesSchemaTypeKind.Percentage or GesSchemaTypeKind.Quantity:
                 CheckWrapping(scope, type.Constraints, type.Offset);

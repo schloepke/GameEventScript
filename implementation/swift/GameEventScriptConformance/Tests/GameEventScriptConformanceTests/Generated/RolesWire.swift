@@ -89,16 +89,14 @@ enum RolesWire {
             if self.labelUTF8.count > 8 { throw GesWireError(code: GesWireError.tooLong, path: paths[at + 0]) }
             if !self.labelUTF8.withUnsafeBytes({ GesWireRules.isValidUTF8($0) }) { throw GesWireError(code: GesWireError.invalidText, path: paths[at + 0]) }
             try writer.write(UInt64(self.labelUTF8.count), width: 4)
-            for byte in self.labelUTF8 { try writer.write(UInt64(byte), width: 8) }
+            try writer.writeBytes(self.labelUTF8)
         }
 
         func __readFields(_ reader: inout GesBitReader, _ paths: [String], _ at: Int) throws(GesWireError) {
             do {
                 let count = Int(try reader.read(4, path: paths[at + 0]))
                 if count > 8 { throw GesWireError(code: GesWireError.invalidCount, path: paths[at + 0]) }
-                try reader.require(count * 8, path: paths[at + 0])
-                self.labelUTF8.removeAll(keepingCapacity: true)
-                for _ in 0..<count { self.labelUTF8.append(UInt8(truncatingIfNeeded: try reader.read(8, path: paths[at + 0]))) }
+                try reader.readBytes(count, into: &self.labelUTF8, path: paths[at + 0])
                 if !self.labelUTF8.withUnsafeBytes({ GesWireRules.isValidUTF8($0) }) { throw GesWireError(code: GesWireError.invalidText, path: paths[at + 0]) }
             }
         }
@@ -220,7 +218,7 @@ enum RolesWire {
                     if self.labelUTF8.count > 8 { throw GesWireError(code: GesWireError.tooLong, path: paths[at + 0]) }
                     if !self.labelUTF8.withUnsafeBytes({ GesWireRules.isValidUTF8($0) }) { throw GesWireError(code: GesWireError.invalidText, path: paths[at + 0]) }
                     try writer.write(UInt64(self.labelUTF8.count), width: 4)
-                    for byte in self.labelUTF8 { try writer.write(UInt64(byte), width: 8) }
+                    try writer.writeBytes(self.labelUTF8)
                     set0 = true
                 }
                 if set0 {
@@ -248,9 +246,7 @@ enum RolesWire {
                     do {
                         let count = Int(try reader.read(4, path: paths[at + 0]))
                         if count > 8 { throw GesWireError(code: GesWireError.invalidCount, path: paths[at + 0]) }
-                        try reader.require(count * 8, path: paths[at + 0])
-                        self.labelUTF8.removeAll(keepingCapacity: true)
-                        for _ in 0..<count { self.labelUTF8.append(UInt8(truncatingIfNeeded: try reader.read(8, path: paths[at + 0]))) }
+                        try reader.readBytes(count, into: &self.labelUTF8, path: paths[at + 0])
                         if !self.labelUTF8.withUnsafeBytes({ GesWireRules.isValidUTF8($0) }) { throw GesWireError(code: GesWireError.invalidText, path: paths[at + 0]) }
                     }
                     if try __same0(baseline, paths, at) { throw GesWireError(code: GesWireError.invalidDelta, path: paths[at + 0]) }
@@ -360,7 +356,7 @@ enum RolesWire {
             if self.nameUTF8.count > 8 { throw GesWireError(code: GesWireError.tooLong, path: paths[at + 0]) }
             if !self.nameUTF8.withUnsafeBytes({ GesWireRules.isValidUTF8($0) }) { throw GesWireError(code: GesWireError.invalidText, path: paths[at + 0]) }
             try writer.write(UInt64(self.nameUTF8.count), width: 4)
-            for byte in self.nameUTF8 { try writer.write(UInt64(byte), width: 8) }
+            try writer.writeBytes(self.nameUTF8)
             try writer.write(
                 try GesWireRules.quantizedIndex(self.level, lowerValue: Double(bitPattern: 0x0000000000000000), upperValue: Double(bitPattern: 0x3ff0000000000000), tenPower: 100.0, numerator: 1.0, lower: 0, path: paths[at + 1]),
                 width: 7
@@ -371,9 +367,7 @@ enum RolesWire {
             do {
                 let count = Int(try reader.read(4, path: paths[at + 0]))
                 if count > 8 { throw GesWireError(code: GesWireError.invalidCount, path: paths[at + 0]) }
-                try reader.require(count * 8, path: paths[at + 0])
-                self.nameUTF8.removeAll(keepingCapacity: true)
-                for _ in 0..<count { self.nameUTF8.append(UInt8(truncatingIfNeeded: try reader.read(8, path: paths[at + 0]))) }
+                try reader.readBytes(count, into: &self.nameUTF8, path: paths[at + 0])
                 if !self.nameUTF8.withUnsafeBytes({ GesWireRules.isValidUTF8($0) }) { throw GesWireError(code: GesWireError.invalidText, path: paths[at + 0]) }
             }
             do {
@@ -515,7 +509,7 @@ enum RolesWire {
                     if self.nameUTF8.count > 8 { throw GesWireError(code: GesWireError.tooLong, path: paths[at + 0]) }
                     if !self.nameUTF8.withUnsafeBytes({ GesWireRules.isValidUTF8($0) }) { throw GesWireError(code: GesWireError.invalidText, path: paths[at + 0]) }
                     try writer.write(UInt64(self.nameUTF8.count), width: 4)
-                    for byte in self.nameUTF8 { try writer.write(UInt64(byte), width: 8) }
+                    try writer.writeBytes(self.nameUTF8)
                     set0 = true
                 }
                 if set0 {
@@ -559,9 +553,7 @@ enum RolesWire {
                     do {
                         let count = Int(try reader.read(4, path: paths[at + 0]))
                         if count > 8 { throw GesWireError(code: GesWireError.invalidCount, path: paths[at + 0]) }
-                        try reader.require(count * 8, path: paths[at + 0])
-                        self.nameUTF8.removeAll(keepingCapacity: true)
-                        for _ in 0..<count { self.nameUTF8.append(UInt8(truncatingIfNeeded: try reader.read(8, path: paths[at + 0]))) }
+                        try reader.readBytes(count, into: &self.nameUTF8, path: paths[at + 0])
                         if !self.nameUTF8.withUnsafeBytes({ GesWireRules.isValidUTF8($0) }) { throw GesWireError(code: GesWireError.invalidText, path: paths[at + 0]) }
                     }
                     if try __same0(baseline, paths, at) { throw GesWireError(code: GesWireError.invalidDelta, path: paths[at + 0]) }
@@ -748,7 +740,7 @@ enum RolesWire {
             if self.titleUTF8.count > 16 { throw GesWireError(code: GesWireError.tooLong, path: paths[at + 0]) }
             if !self.titleUTF8.withUnsafeBytes({ GesWireRules.isValidUTF8($0) }) { throw GesWireError(code: GesWireError.invalidText, path: paths[at + 0]) }
             try writer.write(UInt64(self.titleUTF8.count), width: 5)
-            for byte in self.titleUTF8 { try writer.write(UInt64(byte), width: 8) }
+            try writer.writeBytes(self.titleUTF8)
             try writer.write(UInt64(self.status.rawValue), width: 2)
             try writer.write(
                 try GesWireRules.quantizedIndex(self.load, lowerValue: Double(bitPattern: 0x0000000000000000), upperValue: Double(bitPattern: 0x408f400000000000), tenPower: 1.0, numerator: 1.0, lower: 0, path: paths[at + 2]),
@@ -768,7 +760,7 @@ enum RolesWire {
                 if self.noteUTF8.count > 8 { throw GesWireError(code: GesWireError.tooLong, path: paths[at + 6]) }
                 if !self.noteUTF8.withUnsafeBytes({ GesWireRules.isValidUTF8($0) }) { throw GesWireError(code: GesWireError.invalidText, path: paths[at + 6]) }
                 try writer.write(UInt64(self.noteUTF8.count), width: 4)
-                for byte in self.noteUTF8 { try writer.write(UInt64(byte), width: 8) }
+                try writer.writeBytes(self.noteUTF8)
             } else {
                 try writer.write(0, width: 1)
             }
@@ -788,7 +780,7 @@ enum RolesWire {
                 if self.readingCodeUTF8.count > 4 { throw GesWireError(code: GesWireError.tooLong, path: paths[at + 13]) }
                 if !self.readingCodeUTF8.withUnsafeBytes({ GesWireRules.isValidUTF8($0) }) { throw GesWireError(code: GesWireError.invalidText, path: paths[at + 13]) }
                 try writer.write(UInt64(self.readingCodeUTF8.count), width: 3)
-                for byte in self.readingCodeUTF8 { try writer.write(UInt64(byte), width: 8) }
+                try writer.writeBytes(self.readingCodeUTF8)
 
             case .nothing:
                 try writer.write(2, width: 2)
@@ -802,9 +794,7 @@ enum RolesWire {
             do {
                 let count = Int(try reader.read(5, path: paths[at + 0]))
                 if count > 16 { throw GesWireError(code: GesWireError.invalidCount, path: paths[at + 0]) }
-                try reader.require(count * 8, path: paths[at + 0])
-                self.titleUTF8.removeAll(keepingCapacity: true)
-                for _ in 0..<count { self.titleUTF8.append(UInt8(truncatingIfNeeded: try reader.read(8, path: paths[at + 0]))) }
+                try reader.readBytes(count, into: &self.titleUTF8, path: paths[at + 0])
                 if !self.titleUTF8.withUnsafeBytes({ GesWireRules.isValidUTF8($0) }) { throw GesWireError(code: GesWireError.invalidText, path: paths[at + 0]) }
             }
             do {
@@ -833,9 +823,7 @@ enum RolesWire {
                 do {
                     let count = Int(try reader.read(4, path: paths[at + 6]))
                     if count > 8 { throw GesWireError(code: GesWireError.invalidCount, path: paths[at + 6]) }
-                    try reader.require(count * 8, path: paths[at + 6])
-                    self.noteUTF8.removeAll(keepingCapacity: true)
-                    for _ in 0..<count { self.noteUTF8.append(UInt8(truncatingIfNeeded: try reader.read(8, path: paths[at + 6]))) }
+                    try reader.readBytes(count, into: &self.noteUTF8, path: paths[at + 6])
                     if !self.noteUTF8.withUnsafeBytes({ GesWireRules.isValidUTF8($0) }) { throw GesWireError(code: GesWireError.invalidText, path: paths[at + 6]) }
                 }
             }
@@ -866,9 +854,7 @@ enum RolesWire {
                     do {
                         let count = Int(try reader.read(3, path: paths[at + 13]))
                         if count > 4 { throw GesWireError(code: GesWireError.invalidCount, path: paths[at + 13]) }
-                        try reader.require(count * 8, path: paths[at + 13])
-                        self.readingCodeUTF8.removeAll(keepingCapacity: true)
-                        for _ in 0..<count { self.readingCodeUTF8.append(UInt8(truncatingIfNeeded: try reader.read(8, path: paths[at + 13]))) }
+                        try reader.readBytes(count, into: &self.readingCodeUTF8, path: paths[at + 13])
                         if !self.readingCodeUTF8.withUnsafeBytes({ GesWireRules.isValidUTF8($0) }) { throw GesWireError(code: GesWireError.invalidText, path: paths[at + 13]) }
                     }
 
@@ -1154,7 +1140,7 @@ enum RolesWire {
                     if self.titleUTF8.count > 16 { throw GesWireError(code: GesWireError.tooLong, path: paths[at + 0]) }
                     if !self.titleUTF8.withUnsafeBytes({ GesWireRules.isValidUTF8($0) }) { throw GesWireError(code: GesWireError.invalidText, path: paths[at + 0]) }
                     try writer.write(UInt64(self.titleUTF8.count), width: 5)
-                    for byte in self.titleUTF8 { try writer.write(UInt64(byte), width: 8) }
+                    try writer.writeBytes(self.titleUTF8)
                     set0 = true
                 }
                 if set0 {
@@ -1247,7 +1233,7 @@ enum RolesWire {
                         if self.noteUTF8.count > 8 { throw GesWireError(code: GesWireError.tooLong, path: paths[at + 6]) }
                         if !self.noteUTF8.withUnsafeBytes({ GesWireRules.isValidUTF8($0) }) { throw GesWireError(code: GesWireError.invalidText, path: paths[at + 6]) }
                         try writer.write(UInt64(self.noteUTF8.count), width: 4)
-                        for byte in self.noteUTF8 { try writer.write(UInt64(byte), width: 8) }
+                        try writer.writeBytes(self.noteUTF8)
                     }
                     set6 = true
                 } else if self.hasNote {
@@ -1257,7 +1243,7 @@ enum RolesWire {
                         if self.noteUTF8.count > 8 { throw GesWireError(code: GesWireError.tooLong, path: paths[at + 6]) }
                         if !self.noteUTF8.withUnsafeBytes({ GesWireRules.isValidUTF8($0) }) { throw GesWireError(code: GesWireError.invalidText, path: paths[at + 6]) }
                         try writer.write(UInt64(self.noteUTF8.count), width: 4)
-                        for byte in self.noteUTF8 { try writer.write(UInt64(byte), width: 8) }
+                        try writer.writeBytes(self.noteUTF8)
                         set6 = true
                     }
                     if !set6 { writer.rewind(to: presence6) }
@@ -1298,7 +1284,7 @@ enum RolesWire {
                         if self.readingCodeUTF8.count > 4 { throw GesWireError(code: GesWireError.tooLong, path: paths[at + 13]) }
                         if !self.readingCodeUTF8.withUnsafeBytes({ GesWireRules.isValidUTF8($0) }) { throw GesWireError(code: GesWireError.invalidText, path: paths[at + 13]) }
                         try writer.write(UInt64(self.readingCodeUTF8.count), width: 3)
-                        for byte in self.readingCodeUTF8 { try writer.write(UInt64(byte), width: 8) }
+                        try writer.writeBytes(self.readingCodeUTF8)
 
                     case .nothing:
                         try writer.write(2, width: 2)
@@ -1324,7 +1310,7 @@ enum RolesWire {
                             if self.readingCodeUTF8.count > 4 { throw GesWireError(code: GesWireError.tooLong, path: paths[at + 13]) }
                             if !self.readingCodeUTF8.withUnsafeBytes({ GesWireRules.isValidUTF8($0) }) { throw GesWireError(code: GesWireError.invalidText, path: paths[at + 13]) }
                             try writer.write(UInt64(self.readingCodeUTF8.count), width: 3)
-                            for byte in self.readingCodeUTF8 { try writer.write(UInt64(byte), width: 8) }
+                            try writer.writeBytes(self.readingCodeUTF8)
                             set11 = true
                         }
 
@@ -1375,9 +1361,7 @@ enum RolesWire {
                     do {
                         let count = Int(try reader.read(5, path: paths[at + 0]))
                         if count > 16 { throw GesWireError(code: GesWireError.invalidCount, path: paths[at + 0]) }
-                        try reader.require(count * 8, path: paths[at + 0])
-                        self.titleUTF8.removeAll(keepingCapacity: true)
-                        for _ in 0..<count { self.titleUTF8.append(UInt8(truncatingIfNeeded: try reader.read(8, path: paths[at + 0]))) }
+                        try reader.readBytes(count, into: &self.titleUTF8, path: paths[at + 0])
                         if !self.titleUTF8.withUnsafeBytes({ GesWireRules.isValidUTF8($0) }) { throw GesWireError(code: GesWireError.invalidText, path: paths[at + 0]) }
                     }
                     if try __same0(baseline, paths, at) { throw GesWireError(code: GesWireError.invalidDelta, path: paths[at + 0]) }
@@ -1491,9 +1475,7 @@ enum RolesWire {
                         do {
                             let count = Int(try reader.read(4, path: paths[at + 6]))
                             if count > 8 { throw GesWireError(code: GesWireError.invalidCount, path: paths[at + 6]) }
-                            try reader.require(count * 8, path: paths[at + 6])
-                            self.noteUTF8.removeAll(keepingCapacity: true)
-                            for _ in 0..<count { self.noteUTF8.append(UInt8(truncatingIfNeeded: try reader.read(8, path: paths[at + 6]))) }
+                            try reader.readBytes(count, into: &self.noteUTF8, path: paths[at + 6])
                             if !self.noteUTF8.withUnsafeBytes({ GesWireRules.isValidUTF8($0) }) { throw GesWireError(code: GesWireError.invalidText, path: paths[at + 6]) }
                         }
                         if try __same6(baseline, paths, at) { throw GesWireError(code: GesWireError.invalidDelta, path: paths[at + 6]) }
@@ -1501,9 +1483,7 @@ enum RolesWire {
                         do {
                             let count = Int(try reader.read(4, path: paths[at + 6]))
                             if count > 8 { throw GesWireError(code: GesWireError.invalidCount, path: paths[at + 6]) }
-                            try reader.require(count * 8, path: paths[at + 6])
-                            self.noteUTF8.removeAll(keepingCapacity: true)
-                            for _ in 0..<count { self.noteUTF8.append(UInt8(truncatingIfNeeded: try reader.read(8, path: paths[at + 6]))) }
+                            try reader.readBytes(count, into: &self.noteUTF8, path: paths[at + 6])
                             if !self.noteUTF8.withUnsafeBytes({ GesWireRules.isValidUTF8($0) }) { throw GesWireError(code: GesWireError.invalidText, path: paths[at + 6]) }
                         }
                     }
@@ -1578,9 +1558,7 @@ enum RolesWire {
                                 do {
                                     let count = Int(try reader.read(3, path: paths[at + 13]))
                                     if count > 4 { throw GesWireError(code: GesWireError.invalidCount, path: paths[at + 13]) }
-                                    try reader.require(count * 8, path: paths[at + 13])
-                                    self.readingCodeUTF8.removeAll(keepingCapacity: true)
-                                    for _ in 0..<count { self.readingCodeUTF8.append(UInt8(truncatingIfNeeded: try reader.read(8, path: paths[at + 13]))) }
+                                    try reader.readBytes(count, into: &self.readingCodeUTF8, path: paths[at + 13])
                                     if !self.readingCodeUTF8.withUnsafeBytes({ GesWireRules.isValidUTF8($0) }) { throw GesWireError(code: GesWireError.invalidText, path: paths[at + 13]) }
                                 }
                                 if try __same13(baseline, paths, at) { throw GesWireError(code: GesWireError.invalidDelta, path: paths[at + 13]) }
@@ -1588,9 +1566,7 @@ enum RolesWire {
                                 do {
                                     let count = Int(try reader.read(3, path: paths[at + 13]))
                                     if count > 4 { throw GesWireError(code: GesWireError.invalidCount, path: paths[at + 13]) }
-                                    try reader.require(count * 8, path: paths[at + 13])
-                                    self.readingCodeUTF8.removeAll(keepingCapacity: true)
-                                    for _ in 0..<count { self.readingCodeUTF8.append(UInt8(truncatingIfNeeded: try reader.read(8, path: paths[at + 13]))) }
+                                    try reader.readBytes(count, into: &self.readingCodeUTF8, path: paths[at + 13])
                                     if !self.readingCodeUTF8.withUnsafeBytes({ GesWireRules.isValidUTF8($0) }) { throw GesWireError(code: GesWireError.invalidText, path: paths[at + 13]) }
                                 }
                             }
@@ -2957,7 +2933,7 @@ enum RolesWire {
             try self.body.__writeFields(&writer, paths, at + 9)
             if self.token.count > 4 { throw GesWireError(code: GesWireError.tooLong, path: paths[at + 11]) }
             try writer.write(UInt64(self.token.count), width: 3)
-            for byte in self.token { try writer.write(UInt64(byte), width: 8) }
+            try writer.writeBytes(self.token)
             if self.state.rawValue > 7 { throw GesWireError(code: GesWireError.unknownTag, path: paths[at + 12]) }
             try writer.write(self.state.rawValue, width: 3)
         }
@@ -2997,9 +2973,7 @@ enum RolesWire {
             do {
                 let count = Int(try reader.read(3, path: paths[at + 11]))
                 if count > 4 { throw GesWireError(code: GesWireError.invalidCount, path: paths[at + 11]) }
-                try reader.require(count * 8, path: paths[at + 11])
-                self.token.removeAll(keepingCapacity: true)
-                for _ in 0..<count { self.token.append(UInt8(truncatingIfNeeded: try reader.read(8, path: paths[at + 11]))) }
+                try reader.readBytes(count, into: &self.token, path: paths[at + 11])
             }
             self.state = StateFlags(rawValue: try reader.read(3, path: paths[at + 12]))
         }
@@ -3380,7 +3354,7 @@ enum RolesWire {
                 if !(try __same11(baseline, paths, at)) {
                     if self.token.count > 4 { throw GesWireError(code: GesWireError.tooLong, path: paths[at + 11]) }
                     try writer.write(UInt64(self.token.count), width: 3)
-                    for byte in self.token { try writer.write(UInt64(byte), width: 8) }
+                    try writer.writeBytes(self.token)
                     set11 = true
                 }
                 if set11 {
@@ -3581,9 +3555,7 @@ enum RolesWire {
                     do {
                         let count = Int(try reader.read(3, path: paths[at + 11]))
                         if count > 4 { throw GesWireError(code: GesWireError.invalidCount, path: paths[at + 11]) }
-                        try reader.require(count * 8, path: paths[at + 11])
-                        self.token.removeAll(keepingCapacity: true)
-                        for _ in 0..<count { self.token.append(UInt8(truncatingIfNeeded: try reader.read(8, path: paths[at + 11]))) }
+                        try reader.readBytes(count, into: &self.token, path: paths[at + 11])
                     }
                     if try __same11(baseline, paths, at) { throw GesWireError(code: GesWireError.invalidDelta, path: paths[at + 11]) }
                     changed = true
@@ -3782,7 +3754,7 @@ enum RolesWire {
             if self.nameUTF8.count > 12 { throw GesWireError(code: GesWireError.tooLong, path: paths[at + 0]) }
             if !self.nameUTF8.withUnsafeBytes({ GesWireRules.isValidUTF8($0) }) { throw GesWireError(code: GesWireError.invalidText, path: paths[at + 0]) }
             try writer.write(UInt64(self.nameUTF8.count), width: 4)
-            for byte in self.nameUTF8 { try writer.write(UInt64(byte), width: 8) }
+            try writer.writeBytes(self.nameUTF8)
             if self.cards.count > 4 { throw GesWireError(code: GesWireError.tooLong, path: paths[at + 1]) }
             try writer.write(UInt64(self.cards.count), width: 3)
             for item in self.cards {
@@ -3805,9 +3777,7 @@ enum RolesWire {
             do {
                 let count = Int(try reader.read(4, path: paths[at + 0]))
                 if count > 12 { throw GesWireError(code: GesWireError.invalidCount, path: paths[at + 0]) }
-                try reader.require(count * 8, path: paths[at + 0])
-                self.nameUTF8.removeAll(keepingCapacity: true)
-                for _ in 0..<count { self.nameUTF8.append(UInt8(truncatingIfNeeded: try reader.read(8, path: paths[at + 0]))) }
+                try reader.readBytes(count, into: &self.nameUTF8, path: paths[at + 0])
                 if !self.nameUTF8.withUnsafeBytes({ GesWireRules.isValidUTF8($0) }) { throw GesWireError(code: GesWireError.invalidText, path: paths[at + 0]) }
             }
             do {
@@ -4029,7 +3999,7 @@ enum RolesWire {
                     if self.nameUTF8.count > 12 { throw GesWireError(code: GesWireError.tooLong, path: paths[at + 0]) }
                     if !self.nameUTF8.withUnsafeBytes({ GesWireRules.isValidUTF8($0) }) { throw GesWireError(code: GesWireError.invalidText, path: paths[at + 0]) }
                     try writer.write(UInt64(self.nameUTF8.count), width: 4)
-                    for byte in self.nameUTF8 { try writer.write(UInt64(byte), width: 8) }
+                    try writer.writeBytes(self.nameUTF8)
                     set0 = true
                 }
                 if set0 {
@@ -4116,9 +4086,7 @@ enum RolesWire {
                     do {
                         let count = Int(try reader.read(4, path: paths[at + 0]))
                         if count > 12 { throw GesWireError(code: GesWireError.invalidCount, path: paths[at + 0]) }
-                        try reader.require(count * 8, path: paths[at + 0])
-                        self.nameUTF8.removeAll(keepingCapacity: true)
-                        for _ in 0..<count { self.nameUTF8.append(UInt8(truncatingIfNeeded: try reader.read(8, path: paths[at + 0]))) }
+                        try reader.readBytes(count, into: &self.nameUTF8, path: paths[at + 0])
                         if !self.nameUTF8.withUnsafeBytes({ GesWireRules.isValidUTF8($0) }) { throw GesWireError(code: GesWireError.invalidText, path: paths[at + 0]) }
                     }
                     if try __same0(baseline, paths, at) { throw GesWireError(code: GesWireError.invalidDelta, path: paths[at + 0]) }
@@ -4254,16 +4222,14 @@ enum RolesWire {
                 if self.valueUTF8.count > 12 { throw GesWireError(code: GesWireError.tooLong, path: paths[at + 0]) }
                 if !self.valueUTF8.withUnsafeBytes({ GesWireRules.isTagName($0) }) { throw GesWireError(code: GesWireError.invalidTag, path: paths[at + 0]) }
                 try writer.write(UInt64(self.valueUTF8.count), width: 4)
-                for byte in self.valueUTF8 { try writer.write(UInt64(byte), width: 8) }
+                try writer.writeBytes(self.valueUTF8)
             }
 
             func __readFields(_ reader: inout GesBitReader, _ paths: [String], _ at: Int) throws(GesWireError) {
                 do {
                     let count = Int(try reader.read(4, path: paths[at + 0]))
                     if count > 12 { throw GesWireError(code: GesWireError.invalidCount, path: paths[at + 0]) }
-                    try reader.require(count * 8, path: paths[at + 0])
-                    self.valueUTF8.removeAll(keepingCapacity: true)
-                    for _ in 0..<count { self.valueUTF8.append(UInt8(truncatingIfNeeded: try reader.read(8, path: paths[at + 0]))) }
+                    try reader.readBytes(count, into: &self.valueUTF8, path: paths[at + 0])
                     if !self.valueUTF8.withUnsafeBytes({ GesWireRules.isTagName($0) }) { throw GesWireError(code: GesWireError.invalidTag, path: paths[at + 0]) }
                 }
             }

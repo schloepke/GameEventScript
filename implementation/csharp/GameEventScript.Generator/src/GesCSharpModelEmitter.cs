@@ -19,6 +19,7 @@ internal static class GesCSharpModelEmitter
 
     internal static GesCodeDocument Emit(GesModelLayout layout, GesSchemaGenerateOptions options)
     {
+        GesSchemaPlanner.CheckTopLevel(GesModelPlanner.TopLevel(layout, swift: false), swift: false);
         var access = options.Access == GesSchemaAccess.Public ? "public" : "internal";
         var space = GesSchemaPlanner.Namespace(options.Namespace, GesCSharpEmitter.Keywords);
         var prologue = new GesSchemaPlanner.Code();
@@ -190,7 +191,7 @@ internal static class GesCSharpModelEmitter
 
         foreach (var constant in type.Constants) names.Add((GesSchemaPlanner.Pascal(constant.Name), "the let " + constant.Name));
         GesComputedEmitter.Names(type.Computed, type.Name, swift: false, names);
-        GesSchemaPlanner.Unique(type.Name, names);
+        GesSchemaPlanner.Unique(type.Name, names, GesModelPlanner.TopLevel(layout, swift: false));
 
         code.Line($"/// <summary>The model of the schema <c>:{type.Name}</c>: a plain value that is never encoded and compares by value.</summary>");
         code.Line($"{access} sealed class {type.Name} : IEquatable<{type.Name}>{string.Concat(GesModelPlanner.Adopted(layout, type, swift: false).ConvertAll(name => ", " + name))}");
@@ -349,7 +350,7 @@ internal static class GesCSharpModelEmitter
 
     private static void Nested(GesModelPlanValue value, List<(string, string)> names, string field)
     {
-        if (value.Nested.Length > 0 && value.TagSet.Length == 0) names.Add((value.Nested, "a type of the field " + field));
+        if (value.Nested.Length > 0 && value.TagSet.Length == 0) names.Add((value.Nested, GesSchemaPlanner.NestedTypeOrigin + "of the field " + field));
         if (value.Element is not null) Nested(value.Element, names, field);
         foreach (var alternative in value.Alternatives) Nested(alternative, names, field);
     }
@@ -423,11 +424,11 @@ internal static class GesCSharpModelEmitter
         return value.Kind switch
         {
             GesModelKind.Text or GesModelKind.Tag when !value.ClosedTag => "\"\"",
-            GesModelKind.Bytes => "Array.Empty<byte>()",
+            GesModelKind.Bytes => "global::System.Array.Empty<byte>()",
             GesModelKind.List or GesModelKind.Dice => $"new {Plain(value)}()",
             GesModelKind.Schema => $"new {value.Model.Schema}()",
             GesModelKind.Union => $"new {value.Nested}.{value.Alternatives[0].Label}({Zero(value.Alternatives[0])})",
-            GesModelKind.Poly => "new GesPoly(Array.Empty<GesPoint>())",
+            GesModelKind.Poly => "new GesPoly(global::System.Array.Empty<GesPoint>())",
             _ => ""
         };
     }
@@ -885,7 +886,7 @@ internal static class GesCSharpModelEmitter
         code.Line("foreach (var type in nextCatalog.Types)");
         code.Open("{");
         code.Line("foreach (var own in Own)");
-        code.Line("    if (own.Name == type.Name) throw new ArgumentException(\"The type :\" + type.Name + \" is already declared.\", nameof(nextCatalog));");
+        code.Line("    if (own.Name == type.Name) throw new global::System.ArgumentException(\"The type :\" + type.Name + \" is already declared.\", nameof(nextCatalog));");
         code.Line("_types.Add(type);");
         code.Close();
         code.Close();
@@ -912,7 +913,7 @@ internal static class GesCSharpModelEmitter
         code.Line("/// <returns>The constructor, or null.</returns>");
         code.Line("public IGesExternalTypeConstructor? Resolve(GesExternalTypeConstructorReference reference)");
         code.Open("{");
-        code.Line("if (reference is null) throw new ArgumentNullException(nameof(reference));");
+        code.Line("if (reference is null) throw new global::System.ArgumentNullException(nameof(reference));");
         foreach (var type in ordered) code.Line($"if (reference.SignatureId == {type.Name}Value.Declaration.Constructors[0].SignatureId) return new {type.Name}Constructor();");
         code.Line("return _nextRegistry?.Resolve(reference);");
         code.Close();
@@ -1076,7 +1077,7 @@ internal static class GesCSharpModelEmitter
         code.Line("internal static bool Known(GesValueMap fields, string[] names)");
         code.Open("{");
         code.Line("for (var index = 0; index < fields.Length; index++)");
-        code.Line("    if (Array.IndexOf(names, fields.KeyAt(index)) < 0) return false;");
+        code.Line("    if (global::System.Array.IndexOf(names, fields.KeyAt(index)) < 0) return false;");
         code.Line("return true;");
         code.Close();
         code.Blank();
@@ -1103,7 +1104,7 @@ internal static class GesCSharpModelEmitter
         code.Line("if (value.ValueKind != GesBytecodeTypeKind.Map || value.CustomTypeName is not null || value.MaterializedMap() is not { } map) return false;");
         code.Line("for (var index = 0; index < map.Length; index++)");
         code.Open("{");
-        code.Line("var member = Array.IndexOf(names, map.KeyAt(index));");
+        code.Line("var member = global::System.Array.IndexOf(names, map.KeyAt(index));");
         code.Line("var set = map.ValueAt(index);");
         code.Line("if (member < 0 || set.ValueKind != GesBytecodeTypeKind.Boolean) return false;");
         code.Line("if (set.AsBoolean()) result |= 1UL << member;");
@@ -1144,7 +1145,7 @@ internal static class GesCSharpModelEmitter
         code.Line("result = 0;");
         code.Line("if (value.ValueUnit != unit) return false;");
         code.Line("if (value.ValueKind == GesBytecodeTypeKind.Integer) result = value.AsInteger();");
-        code.Line("else if (value.ValueKind == GesBytecodeTypeKind.Float && value.AsNumber() is var number && number >= -9.2233720368547758E18 && number < 9.2233720368547758E18 && Math.Floor(number) == number) result = (long)number;");
+        code.Line("else if (value.ValueKind == GesBytecodeTypeKind.Float && value.AsNumber() is var number && number >= -9.2233720368547758E18 && number < 9.2233720368547758E18 && global::System.Math.Floor(number) == number) result = (long)number;");
         code.Line("else return false;");
         code.Line("return true;");
         code.Close();

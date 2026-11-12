@@ -131,7 +131,7 @@ namespace GameEventScript.Tests.Generator.Roles.Bound
         public List<int> Rolls { get; set; } = new List<int>();
 
         /// <summary><c>seal: :Bytes</c></summary>
-        public byte[] Seal { get; set; } = Array.Empty<byte>();
+        public byte[] Seal { get; set; } = global::System.Array.Empty<byte>();
 
         /// <summary><c>chunks: :List(:Bytes)</c></summary>
         public List<byte[]> Chunks { get; set; } = new List<byte[]>();
@@ -149,7 +149,7 @@ namespace GameEventScript.Tests.Generator.Roles.Bound
         public bool Fit => Alive && Health >= 0.5;
 
         /// <summary><c>pace</c> computed by <c>abs speed * 1m/s when speed has value, otherwise 0m/s</c>; absent where the expression gives nothing.</summary>
-        public double? Pace => GesComputed.Optional(Math.Abs(Speed) * 1.0);
+        public double? Pace => GesComputed.Optional(global::System.Math.Abs(Speed) * 1.0);
 
         /// <summary><c>traced</c> computed by <c>marks[:count]</c>; NaN where the expression gives nothing.</summary>
         public double Traced => (double)Marks.Count;
@@ -414,7 +414,7 @@ namespace GameEventScript.Tests.Generator.Roles.Bound
         }
 
         /// <summary>The members of the field, one bit each in declared order.</summary>
-        [Flags]
+        [global::System.Flags]
         public enum StatusFlags : ulong
         {
             /// <summary>The member <c>#armed</c>.</summary>
@@ -424,7 +424,7 @@ namespace GameEventScript.Tests.Generator.Roles.Bound
         }
 
         /// <summary>The members of the field, one bit each in declared order.</summary>
-        [Flags]
+        [global::System.Flags]
         public enum RanksItemFlags : ulong
         {
             /// <summary>The member <c>#gold</c>.</summary>
@@ -1024,7 +1024,7 @@ namespace GameEventScript.Tests.Generator.Roles.Bound
         }
 
         /// <summary>The members of the field, one bit each in declared order.</summary>
-        [Flags]
+        [global::System.Flags]
         public enum AlarmsFlags : ulong
         {
             /// <summary>The member <c>#heat</c>.</summary>
@@ -1088,7 +1088,7 @@ namespace GameEventScript.Tests.Generator.Roles.Bound
         public double Strength { get; set; }
 
         /// <summary><c>depth</c> computed by <c>reach - range * strength</c>; NaN where the expression gives nothing.</summary>
-        public double Depth => Reach - Range * Strength;
+        public double Depth => Reach - GesComputed.Product(Range, Strength);
 
         /// <summary>Compares every field by value.</summary>
         /// <param name="other">The other record.</param>
@@ -1431,7 +1431,7 @@ namespace GameEventScript.Tests.Generator.Roles.Bound
         public HullTag Hull { get; set; } = HullTag.Light;
 
         /// <summary><c>burden</c> computed by <c>mass + wear</c>; NaN where the expression gives nothing.</summary>
-        public double Burden => Mass + Mass * 0.025;
+        public double Burden => GesComputed.AddPercentage(Mass, 0.025);
 
         /// <summary>Compares every field by value.</summary>
         /// <param name="other">The other record.</param>
@@ -1573,7 +1573,7 @@ namespace GameEventScript.Tests.Generator.Roles.Bound
                 foreach (var type in nextCatalog.Types)
                 {
                     foreach (var own in Own)
-                        if (own.Name == type.Name) throw new ArgumentException("The type :" + type.Name + " is already declared.", nameof(nextCatalog));
+                        if (own.Name == type.Name) throw new global::System.ArgumentException("The type :" + type.Name + " is already declared.", nameof(nextCatalog));
                     _types.Add(type);
                 }
             }
@@ -1600,7 +1600,7 @@ namespace GameEventScript.Tests.Generator.Roles.Bound
         /// <returns>The constructor, or null.</returns>
         public IGesExternalTypeConstructor? Resolve(GesExternalTypeConstructorReference reference)
         {
-            if (reference is null) throw new ArgumentNullException(nameof(reference));
+            if (reference is null) throw new global::System.ArgumentNullException(nameof(reference));
             if (reference.SignatureId == World_BodyValue.Declaration.Constructors[0].SignatureId) return new World_BodyConstructor();
             if (reference.SignatureId == RadarViewValue.Declaration.Constructors[0].SignatureId) return new RadarViewConstructor();
             if (reference.SignatureId == BotViewValue.Declaration.Constructors[0].SignatureId) return new BotViewConstructor();
@@ -3366,7 +3366,7 @@ namespace GameEventScript.Tests.Generator.Roles.Bound
         internal static bool Known(GesValueMap fields, string[] names)
         {
             for (var index = 0; index < fields.Length; index++)
-                if (Array.IndexOf(names, fields.KeyAt(index)) < 0) return false;
+                if (global::System.Array.IndexOf(names, fields.KeyAt(index)) < 0) return false;
             return true;
         }
 
@@ -3393,7 +3393,7 @@ namespace GameEventScript.Tests.Generator.Roles.Bound
             if (value.ValueKind != GesBytecodeTypeKind.Map || value.CustomTypeName is not null || value.MaterializedMap() is not { } map) return false;
             for (var index = 0; index < map.Length; index++)
             {
-                var member = Array.IndexOf(names, map.KeyAt(index));
+                var member = global::System.Array.IndexOf(names, map.KeyAt(index));
                 var set = map.ValueAt(index);
                 if (member < 0 || set.ValueKind != GesBytecodeTypeKind.Boolean) return false;
                 if (set.AsBoolean()) result |= 1UL << member;
@@ -3434,7 +3434,7 @@ namespace GameEventScript.Tests.Generator.Roles.Bound
             result = 0;
             if (value.ValueUnit != unit) return false;
             if (value.ValueKind == GesBytecodeTypeKind.Integer) result = value.AsInteger();
-            else if (value.ValueKind == GesBytecodeTypeKind.Float && value.AsNumber() is var number && number >= -9.2233720368547758E18 && number < 9.2233720368547758E18 && Math.Floor(number) == number) result = (long)number;
+            else if (value.ValueKind == GesBytecodeTypeKind.Float && value.AsNumber() is var number && number >= -9.2233720368547758E18 && number < 9.2233720368547758E18 && global::System.Math.Floor(number) == number) result = (long)number;
             else return false;
             return true;
         }
@@ -3523,9 +3523,12 @@ namespace GameEventScript.Tests.Generator.Roles.Bound
         /// <summary>The ratio of an optional Percentage field, absent where the expression gives nothing or no finite ratio.</summary>
         internal static double? OptionalRatio(double value) => double.IsNaN(value) || double.IsInfinity(value) ? null : value == 0 ? 0 : value;
 
-        internal static double AddPercentage(double value, double ratio) => value + value * ratio;
+        /// <summary>A product as an operation of its own: an addition beside it in one expression could be fused with it.</summary>
+        internal static double Product(double a, double b) => a * b;
 
-        internal static double SubtractPercentage(double value, double ratio) => value - value * ratio;
+        internal static double AddPercentage(double value, double ratio) => value + Product(value, ratio);
+
+        internal static double SubtractPercentage(double value, double ratio) => value - Product(value, ratio);
 
         /// <summary>The smaller of two numbers, the left one on a tie, and nothing where either is.</summary>
         internal static double Min(double a, double b) => double.IsNaN(a) || double.IsNaN(b) ? double.NaN : b < a ? b : a;
@@ -3544,11 +3547,11 @@ namespace GameEventScript.Tests.Generator.Roles.Bound
         /// <summary>A number, or the fallback where it is nothing.</summary>
         internal static double Otherwise(double value, double fallback) => double.IsNaN(value) ? fallback : value;
 
-        private static bool Whole(double value) => value >= -9223372036854775808d && value < 9223372036854775808d && value == Math.Truncate(value);
+        private static bool Whole(double value) => value >= -9223372036854775808d && value < 9223372036854775808d && value == global::System.Math.Truncate(value);
 
         private static ulong Ordered(double value)
         {
-            var bits = unchecked((ulong)BitConverter.DoubleToInt64Bits(value));
+            var bits = unchecked((ulong)global::System.BitConverter.DoubleToInt64Bits(value));
             return (bits & 0x8000000000000000UL) != 0 ? ~bits : bits | 0x8000000000000000UL;
         }
 
@@ -3613,7 +3616,7 @@ namespace GameEventScript.Tests.Generator.Roles.Bound
         internal static Value Float(double value)
         {
             if (double.IsNaN(value)) return Nothing;
-            if (!double.IsInfinity(value) && value >= -9223372036854775808d && value < 9223372036854775808d && value == Math.Truncate(value)) return Integer((long)value);
+            if (!double.IsInfinity(value) && value >= -9223372036854775808d && value < 9223372036854775808d && value == global::System.Math.Truncate(value)) return Integer((long)value);
             return new Value(2, 0, value);
         }
 
@@ -3676,7 +3679,7 @@ namespace GameEventScript.Tests.Generator.Roles.Bound
             {
                 if (!percentage) return Nothing;
                 var x = a.Numeric;
-                return Float(subtract ? x - x * b.Number : x + x * b.Number);
+                return Float(subtract ? SubtractPercentage(x, b.Number) : AddPercentage(x, b.Number));
             }
 
             return a.Kind == 3 && b.Kind == 3 ? Percentage(subtract ? a.Number - b.Number : a.Number + b.Number) : Nothing;
@@ -3718,9 +3721,9 @@ namespace GameEventScript.Tests.Generator.Roles.Bound
 
         internal static Value Abs(Value a) => a.Kind switch
         {
-            1 => a.Whole == long.MinValue ? Float(-(double)a.Whole) : Integer(Math.Abs(a.Whole)),
-            2 => Float(Math.Abs(a.Number)),
-            3 => Percentage(Math.Abs(a.Number)),
+            1 => a.Whole == long.MinValue ? Float(-(double)a.Whole) : Integer(global::System.Math.Abs(a.Whole)),
+            2 => Float(global::System.Math.Abs(a.Number)),
+            3 => Percentage(global::System.Math.Abs(a.Number)),
             _ => Nothing
         };
 

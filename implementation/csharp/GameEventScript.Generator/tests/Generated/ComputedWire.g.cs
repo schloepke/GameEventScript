@@ -77,7 +77,7 @@ namespace GameEventScript.Tests.Generator.Computed.Wire
 
         internal readonly void __WriteFields(ref GesBitWriter writer, string[] paths, int at)
         {
-            writer.Write(GesWireRules.QuantizedIndex(Draw, BitConverter.Int64BitsToDouble(unchecked((long)0x0000000000000000UL)), BitConverter.Int64BitsToDouble(unchecked((long)0x40b3880000000000UL)), 1d, 1d, 0L, paths[at + 0]), 13);
+            writer.Write(GesWireRules.QuantizedIndex(Draw, global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x0000000000000000UL)), global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x40b3880000000000UL)), 1d, 1d, 0L, paths[at + 0]), 13);
         }
 
         internal void __ReadFields(ref GesBitReader reader, string[] paths, int at)
@@ -91,7 +91,7 @@ namespace GameEventScript.Tests.Generator.Computed.Wire
 
         private static ulong __Wire0(double value, string[] paths, int at)
         {
-            return GesWireRules.QuantizedIndex(value, BitConverter.Int64BitsToDouble(unchecked((long)0x0000000000000000UL)), BitConverter.Int64BitsToDouble(unchecked((long)0x40b3880000000000UL)), 1d, 1d, 0L, paths[at + 0]);
+            return GesWireRules.QuantizedIndex(value, global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x0000000000000000UL)), global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x40b3880000000000UL)), 1d, 1d, 0L, paths[at + 0]);
         }
 
         private static ulong __Read0(ref GesBitReader reader, string[] paths, int at)
@@ -178,7 +178,7 @@ namespace GameEventScript.Tests.Generator.Computed.Wire
         internal readonly bool __WriteDelta(in Cell baseline, ref GesBitWriter writer, string[] paths, int at, bool top)
         {
             var first = writer.BitPosition;
-            for (var left = 1; left > 0; left -= 64) writer.Write(0, Math.Min(left, 64));
+            for (var left = 1; left > 0; left -= 64) writer.Write(0, global::System.Math.Min(left, 64));
             var changed = false;
             var ordinal = 0;
             {
@@ -312,7 +312,7 @@ namespace GameEventScript.Tests.Generator.Computed.Wire
         public double Power => Duration <= 0.0 ? 0.0 : Energy / Duration;
 
         /// <summary><c>boosted</c> computed by <c>power + boost</c>; NaN where the expression gives nothing.</summary>
-        public double Boosted => Power + Power * Boost;
+        public double Boosted => GesComputed.AddPercentage(Power, Boost);
 
         /// <summary><c>level</c> computed by <c>trim default 0</c>; NaN where the expression gives nothing.</summary>
         public double Level => HasTrim ? Trim : 0.0;
@@ -393,13 +393,13 @@ namespace GameEventScript.Tests.Generator.Computed.Wire
 
         internal void __WriteFields(ref GesBitWriter writer, string[] paths, int at)
         {
-            writer.Write(GesWireRules.QuantizedIndex(Energy, BitConverter.Int64BitsToDouble(unchecked((long)0x0000000000000000UL)), BitConverter.Int64BitsToDouble(unchecked((long)0x412e848000000000UL)), 1d, 1d, 0L, paths[at + 0]), 20);
-            writer.Write(GesWireRules.QuantizedIndex(Duration, BitConverter.Int64BitsToDouble(unchecked((long)0x0000000000000000UL)), BitConverter.Int64BitsToDouble(unchecked((long)0x404e000000000000UL)), 1000d, 1d, 0L, paths[at + 1]), 16);
-            writer.Write(GesWireRules.QuantizedIndex(Boost, BitConverter.Int64BitsToDouble(unchecked((long)0x0000000000000000UL)), BitConverter.Int64BitsToDouble(unchecked((long)0x3fe0000000000000UL)), 100d, 1d, 0L, paths[at + 2]), 6);
+            writer.Write(GesWireRules.QuantizedIndex(Energy, global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x0000000000000000UL)), global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x412e848000000000UL)), 1d, 1d, 0L, paths[at + 0]), 20);
+            writer.Write(GesWireRules.QuantizedIndex(Duration, global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x0000000000000000UL)), global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x404e000000000000UL)), 1000d, 1d, 0L, paths[at + 1]), 16);
+            writer.Write(GesWireRules.QuantizedIndex(Boost, global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x0000000000000000UL)), global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x3fe0000000000000UL)), 100d, 1d, 0L, paths[at + 2]), 6);
             if (HasTrim)
             {
                 writer.Write(1, 1);
-                writer.Write(GesWireRules.QuantizedIndex(Trim, BitConverter.Int64BitsToDouble(unchecked((long)0xc024000000000000UL)), BitConverter.Int64BitsToDouble(unchecked((long)0x4024000000000000UL)), 10d, 5d, -20L, paths[at + 3]), 6);
+                writer.Write(GesWireRules.QuantizedIndex(Trim, global::System.BitConverter.Int64BitsToDouble(unchecked((long)0xc024000000000000UL)), global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x4024000000000000UL)), 10d, 5d, -20L, paths[at + 3]), 6);
             }
             else writer.Write(0, 1);
             if (Cells.Count > 8) throw new GesWireException(GesWireException.TooLong, paths[at + 4]);
@@ -453,7 +453,7 @@ namespace GameEventScript.Tests.Generator.Computed.Wire
         }
 
         #if DEBUG || DEVELOPMENT_BUILD || UNITY_EDITOR || GES_CHECK_SHARING
-        [ThreadStatic] private static HashSet<object>? __SharingLists;
+        [global::System.ThreadStatic] private static HashSet<object>? __SharingLists;
         internal bool __Busy;
 
         internal void __Mark(bool busy, HashSet<object>? lists)
@@ -482,7 +482,7 @@ namespace GameEventScript.Tests.Generator.Computed.Wire
 
         private static ulong __Wire0(double value, string[] paths, int at)
         {
-            return GesWireRules.QuantizedIndex(value, BitConverter.Int64BitsToDouble(unchecked((long)0x0000000000000000UL)), BitConverter.Int64BitsToDouble(unchecked((long)0x412e848000000000UL)), 1d, 1d, 0L, paths[at + 0]);
+            return GesWireRules.QuantizedIndex(value, global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x0000000000000000UL)), global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x412e848000000000UL)), 1d, 1d, 0L, paths[at + 0]);
         }
 
         private static ulong __Read0(ref GesBitReader reader, string[] paths, int at)
@@ -496,7 +496,7 @@ namespace GameEventScript.Tests.Generator.Computed.Wire
 
         private static ulong __Wire1(double value, string[] paths, int at)
         {
-            return GesWireRules.QuantizedIndex(value, BitConverter.Int64BitsToDouble(unchecked((long)0x0000000000000000UL)), BitConverter.Int64BitsToDouble(unchecked((long)0x404e000000000000UL)), 1000d, 1d, 0L, paths[at + 1]);
+            return GesWireRules.QuantizedIndex(value, global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x0000000000000000UL)), global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x404e000000000000UL)), 1000d, 1d, 0L, paths[at + 1]);
         }
 
         private static ulong __Read1(ref GesBitReader reader, string[] paths, int at)
@@ -510,7 +510,7 @@ namespace GameEventScript.Tests.Generator.Computed.Wire
 
         private static ulong __Wire2(double value, string[] paths, int at)
         {
-            return GesWireRules.QuantizedIndex(value, BitConverter.Int64BitsToDouble(unchecked((long)0x0000000000000000UL)), BitConverter.Int64BitsToDouble(unchecked((long)0x3fe0000000000000UL)), 100d, 1d, 0L, paths[at + 2]);
+            return GesWireRules.QuantizedIndex(value, global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x0000000000000000UL)), global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x3fe0000000000000UL)), 100d, 1d, 0L, paths[at + 2]);
         }
 
         private static ulong __Read2(ref GesBitReader reader, string[] paths, int at)
@@ -524,7 +524,7 @@ namespace GameEventScript.Tests.Generator.Computed.Wire
 
         private static ulong __Wire3(double value, string[] paths, int at)
         {
-            return GesWireRules.QuantizedIndex(value, BitConverter.Int64BitsToDouble(unchecked((long)0xc024000000000000UL)), BitConverter.Int64BitsToDouble(unchecked((long)0x4024000000000000UL)), 10d, 5d, -20L, paths[at + 3]);
+            return GesWireRules.QuantizedIndex(value, global::System.BitConverter.Int64BitsToDouble(unchecked((long)0xc024000000000000UL)), global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x4024000000000000UL)), 10d, 5d, -20L, paths[at + 3]);
         }
 
         private static ulong __Read3(ref GesBitReader reader, string[] paths, int at)
@@ -685,7 +685,7 @@ namespace GameEventScript.Tests.Generator.Computed.Wire
         internal bool __WriteDelta(Reactor baseline, ref GesBitWriter writer, string[] paths, int at, bool top)
         {
             var first = writer.BitPosition;
-            for (var left = 6; left > 0; left -= 64) writer.Write(0, Math.Min(left, 64));
+            for (var left = 6; left > 0; left -= 64) writer.Write(0, global::System.Math.Min(left, 64));
             var changed = false;
             var ordinal = 0;
             {
@@ -749,7 +749,7 @@ namespace GameEventScript.Tests.Generator.Computed.Wire
                     writer.Write(HasTrim ? 1UL : 0UL, 1);
                     if (HasTrim)
                     {
-                        writer.Write(GesWireRules.QuantizedIndex(Trim, BitConverter.Int64BitsToDouble(unchecked((long)0xc024000000000000UL)), BitConverter.Int64BitsToDouble(unchecked((long)0x4024000000000000UL)), 10d, 5d, -20L, paths[at + 3]), 6);
+                        writer.Write(GesWireRules.QuantizedIndex(Trim, global::System.BitConverter.Int64BitsToDouble(unchecked((long)0xc024000000000000UL)), global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x4024000000000000UL)), 10d, 5d, -20L, paths[at + 3]), 6);
                     }
                     set3 = true;
                 }
@@ -1035,7 +1035,7 @@ namespace GameEventScript.Tests.Generator.Computed.Wire
                     "",
                 })));
             var bound = set.Schema(root).Bind(new GesSchemaParameters());
-            if (bound.BindingHash != bindingHash) throw new InvalidOperationException("The embedded schema sources no longer bind like the generated code.");
+            if (bound.BindingHash != bindingHash) throw new global::System.InvalidOperationException("The embedded schema sources no longer bind like the generated code.");
             return bound;
         }
     }
@@ -1055,9 +1055,12 @@ namespace GameEventScript.Tests.Generator.Computed.Wire
         /// <summary>The ratio of an optional Percentage field, absent where the expression gives nothing or no finite ratio.</summary>
         internal static double? OptionalRatio(double value) => double.IsNaN(value) || double.IsInfinity(value) ? null : value == 0 ? 0 : value;
 
-        internal static double AddPercentage(double value, double ratio) => value + value * ratio;
+        /// <summary>A product as an operation of its own: an addition beside it in one expression could be fused with it.</summary>
+        internal static double Product(double a, double b) => a * b;
 
-        internal static double SubtractPercentage(double value, double ratio) => value - value * ratio;
+        internal static double AddPercentage(double value, double ratio) => value + Product(value, ratio);
+
+        internal static double SubtractPercentage(double value, double ratio) => value - Product(value, ratio);
 
         /// <summary>The smaller of two numbers, the left one on a tie, and nothing where either is.</summary>
         internal static double Min(double a, double b) => double.IsNaN(a) || double.IsNaN(b) ? double.NaN : b < a ? b : a;
@@ -1076,11 +1079,11 @@ namespace GameEventScript.Tests.Generator.Computed.Wire
         /// <summary>A number, or the fallback where it is nothing.</summary>
         internal static double Otherwise(double value, double fallback) => double.IsNaN(value) ? fallback : value;
 
-        private static bool Whole(double value) => value >= -9223372036854775808d && value < 9223372036854775808d && value == Math.Truncate(value);
+        private static bool Whole(double value) => value >= -9223372036854775808d && value < 9223372036854775808d && value == global::System.Math.Truncate(value);
 
         private static ulong Ordered(double value)
         {
-            var bits = unchecked((ulong)BitConverter.DoubleToInt64Bits(value));
+            var bits = unchecked((ulong)global::System.BitConverter.DoubleToInt64Bits(value));
             return (bits & 0x8000000000000000UL) != 0 ? ~bits : bits | 0x8000000000000000UL;
         }
 
@@ -1145,7 +1148,7 @@ namespace GameEventScript.Tests.Generator.Computed.Wire
         internal static Value Float(double value)
         {
             if (double.IsNaN(value)) return Nothing;
-            if (!double.IsInfinity(value) && value >= -9223372036854775808d && value < 9223372036854775808d && value == Math.Truncate(value)) return Integer((long)value);
+            if (!double.IsInfinity(value) && value >= -9223372036854775808d && value < 9223372036854775808d && value == global::System.Math.Truncate(value)) return Integer((long)value);
             return new Value(2, 0, value);
         }
 
@@ -1208,7 +1211,7 @@ namespace GameEventScript.Tests.Generator.Computed.Wire
             {
                 if (!percentage) return Nothing;
                 var x = a.Numeric;
-                return Float(subtract ? x - x * b.Number : x + x * b.Number);
+                return Float(subtract ? SubtractPercentage(x, b.Number) : AddPercentage(x, b.Number));
             }
 
             return a.Kind == 3 && b.Kind == 3 ? Percentage(subtract ? a.Number - b.Number : a.Number + b.Number) : Nothing;
@@ -1250,9 +1253,9 @@ namespace GameEventScript.Tests.Generator.Computed.Wire
 
         internal static Value Abs(Value a) => a.Kind switch
         {
-            1 => a.Whole == long.MinValue ? Float(-(double)a.Whole) : Integer(Math.Abs(a.Whole)),
-            2 => Float(Math.Abs(a.Number)),
-            3 => Percentage(Math.Abs(a.Number)),
+            1 => a.Whole == long.MinValue ? Float(-(double)a.Whole) : Integer(global::System.Math.Abs(a.Whole)),
+            2 => Float(global::System.Math.Abs(a.Number)),
+            3 => Percentage(global::System.Math.Abs(a.Number)),
             _ => Nothing
         };
 

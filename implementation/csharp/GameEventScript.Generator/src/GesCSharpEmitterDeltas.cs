@@ -142,7 +142,7 @@ internal static partial class GesCSharpEmitter
             case GesLayoutKind.Float:
                 code.Line($"if (double.IsNaN(value)) {Throw("NotRepresentable", value)}");
                 if (encoding.Range) code.Line($"if (value < {Bits(encoding.LowerValue)} || value > {Bits(encoding.UpperValue)}) {Throw("OutOfRange", value)}");
-                code.Line("return unchecked((ulong)BitConverter.DoubleToInt64Bits(value == 0 ? 0d : value));");
+                code.Line("return unchecked((ulong)global::System.BitConverter.DoubleToInt64Bits(value == 0 ? 0d : value));");
                 break;
             case GesLayoutKind.Flags:
                 if (encoding.Width < 64) code.Line($"if ((ulong)value > {Unsigned(Full(encoding.Width))}) {Throw("UnknownTag", value)}");
@@ -161,7 +161,7 @@ internal static partial class GesCSharpEmitter
         code.Line($"var wire = reader.Read({width}, {Path(value)});");
         if (encoding.Kind == GesLayoutKind.Float)
         {
-            code.Line("var value = BitConverter.Int64BitsToDouble(unchecked((long)wire));");
+            code.Line("var value = global::System.BitConverter.Int64BitsToDouble(unchecked((long)wire));");
             code.Line($"if (double.IsNaN(value) || wire == 0x8000000000000000UL{(encoding.Range ? " || double.IsInfinity(value)" : "")}) {Throw("InvalidNumber", value)}");
             if (encoding.Range) code.Line($"if (value < {Bits(encoding.LowerValue)} || value > {Bits(encoding.UpperValue)}) {Throw("OutOfRange", value)}");
         }
@@ -185,7 +185,7 @@ internal static partial class GesCSharpEmitter
             GesLayoutKind.Integer when !encoding.Range => $"private static long __Value{node}(ulong wire) => unchecked((long)wire);",
             GesLayoutKind.Integer => $"private static long __Value{node}(ulong wire) => unchecked((long)({Unsigned(unchecked((ulong)encoding.Lower))} + wire));",
             GesLayoutKind.Quantized => $"private static double __Value{node}(ulong wire) => GesWireRules.QuantizedValue(wire, {Long(encoding.Lower)}, {Long(encoding.Numerator)}, {Double(encoding.TenPower)});",
-            GesLayoutKind.Float => $"private static double __Value{node}(ulong wire) => BitConverter.Int64BitsToDouble(unchecked((long)wire));",
+            GesLayoutKind.Float => $"private static double __Value{node}(ulong wire) => global::System.BitConverter.Int64BitsToDouble(unchecked((long)wire));",
             _ => $"private static {type} __Value{node}(ulong wire) => ({type})wire;"
         });
     }
@@ -256,7 +256,7 @@ internal static partial class GesCSharpEmitter
     {
         code.Blank();
         code.Line(CheckSharing);
-        if (type.Kind == GesSchemaKind.Schema && !type.IsItem) code.Line("[ThreadStatic] private static HashSet<object>? __SharingLists;");
+        if (type.Kind == GesSchemaKind.Schema && !type.IsItem) code.Line("[global::System.ThreadStatic] private static HashSet<object>? __SharingLists;");
         code.Line("internal bool __Busy;");
         code.Blank();
         if (!type.Fields.Exists(field => GesSchemaPlanner.HoldsStorage(field.Value, true)))
@@ -564,7 +564,7 @@ internal static partial class GesCSharpEmitter
         }
 
         code.Line("var first = writer.BitPosition;");
-        code.Line($"for (var left = {counted}; left > 0; left -= 64) writer.Write(0, Math.Min(left, 64));");
+        code.Line($"for (var left = {counted}; left > 0; left -= 64) writer.Write(0, global::System.Math.Min(left, 64));");
         code.Line("var changed = false;");
         code.Line("var ordinal = 0;");
         foreach (var field in type.Fields)

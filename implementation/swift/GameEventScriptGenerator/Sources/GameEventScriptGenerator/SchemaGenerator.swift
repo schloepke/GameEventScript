@@ -153,7 +153,8 @@ public enum GesSchemaGenerator {
         json.string("split", options.split == .schema ? "schema" : "file")
         json.string("namespace", options.namespace)
         json.string("access", options.access == .public ? "public" : "internal")
-        json.boolean("values", options.values)
+        // Document reading includes the value conversions, so the manifest names what the files contain.
+        json.boolean("values", options.values || options.documents)
         json.boolean("bindings", options.bindings)
         if options.documents { json.boolean("documents", true) }
         json.boolean("checkedExclusivity", options.checkedExclusivity)

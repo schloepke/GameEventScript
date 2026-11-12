@@ -68,7 +68,7 @@ extension GesCSharpEmitter {
             parameters += ".With(\(GesSchemaPlanner.literal(parameter.name, swift: false)), \(GesSchemaPlanner.literal(parameter.literal, swift: false)))"
         }
         code.line("var bound = set.Schema(root).Bind(\(parameters));")
-        code.line("if (bound.BindingHash != bindingHash) throw new InvalidOperationException(\"The embedded schema sources no longer bind like the generated code.\");")
+        code.line("if (bound.BindingHash != bindingHash) throw new global::System.InvalidOperationException(\"The embedded schema sources no longer bind like the generated code.\");")
         code.line("return bound;")
         code.close()
         code.close()

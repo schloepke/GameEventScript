@@ -204,4 +204,55 @@ final class GenerateTests: XCTestCase {
         XCTAssertEqual(code { try GesSchemaGenerator.generateModelFiles(sources, roots: ["A"], options: GesSchemaGenerateOptions(split: .file)) }, "generate.nameCollision")
         XCTAssertEqual(try GesSchemaGenerator.generateModelFiles(sources, roots: ["A"], options: GesSchemaGenerateOptions(split: .schema)).count, 4)
     }
+
+    func testNestedTypesMustNotHideTopLevelTypes() throws {
+        let set = try GesSchemaSet(
+            parsing:
+                "tags :ModeTag as (#p, #q, #r)\nschema :SlotsItem as {\n  a: :Boolean\n}\nschema :Squad as {\n  mode: :Tag(#a, #b)\n  other: :ModeTag\n}\nschema :Crew as {\n  slots: :List(:Text max 4 | :Number integer between 0 and 3) max 3\n  spare: :SlotsItem\n}\n"
+        )
+        for language in [GesSchemaLanguage.csharp, .swift] {
+            let options = GesSchemaGenerateOptions(language: language)
+            XCTAssertEqual(code { try GesSchemaGenerator.generate(set, roots: ["Squad"], parameters: GesSchemaParameters(), options: options) }, "generate.nameCollision")
+            XCTAssertEqual(code { try GesSchemaGenerator.generate(set, roots: ["Crew"], parameters: GesSchemaParameters(), options: options) }, "generate.nameCollision")
+            XCTAssertEqual(code { try GesSchemaGenerator.generateModels(set, roots: ["Squad"], options: options) }, "generate.nameCollision")
+        }
+    }
+
+    func testTypesMustNotTakeNamesThatGeneratedCodeUses() throws {
+        let swift = GesSchemaGenerateOptions(language: .swift)
+        let csharp = GesSchemaGenerateOptions()
+        for name in ["String", "Int", "Type", "Swift"] {
+            let set = try GesSchemaSet(parsing: "schema :\(name) as {\n  on: :Boolean\n}\n")
+            XCTAssertEqual(code { try GesSchemaGenerator.generate(set, roots: [name], parameters: GesSchemaParameters(), options: swift) }, "generate.nameCollision")
+            XCTAssertEqual(code { try GesSchemaGenerator.generateModels(set, roots: [name], options: swift) }, "generate.nameCollision")
+            _ = try GesSchemaGenerator.generate(set, roots: [name], parameters: GesSchemaParameters(), options: csharp)
+        }
+        let runtime = try GesSchemaSet(parsing: "schema :GesValue as {\n  on: :Boolean\n}\n")
+        for options in [csharp, swift] {
+            XCTAssertEqual(code { try GesSchemaGenerator.generate(runtime, roots: ["GesValue"], parameters: GesSchemaParameters(), options: options) }, "generate.nameCollision")
+            XCTAssertEqual(code { try GesSchemaGenerator.generateModels(runtime, roots: ["GesValue"], options: options) }, "generate.nameCollision")
+        }
+        let member = try GesSchemaSet(parsing: "schema :S as {\n  gesValue: :Boolean\n  gesture: :Boolean\n}\n")
+        XCTAssertEqual(code { try GesSchemaGenerator.generate(member, roots: ["S"], parameters: GesSchemaParameters(), options: csharp) }, "generate.nameCollision")
+        _ = try GesSchemaGenerator.generate(try GesSchemaSet(parsing: "schema :Gesture as {\n  gesture: :Boolean\n}\n"), roots: ["Gesture"], parameters: GesSchemaParameters(), options: csharp)
+    }
+
+    func testSwiftModelsReserveTheHashableMembers() throws {
+        for field in ["hashValue", "hash"] {
+            let set = try GesSchemaSet(parsing: "schema :Unit as {\n  \(field): :Number integer between 0 and 9\n}\n")
+            XCTAssertEqual(code { try GesSchemaGenerator.generateModels(set, roots: ["Unit"], options: GesSchemaGenerateOptions(language: .swift)) }, "generate.nameCollision")
+            _ = try GesSchemaGenerator.generateModels(set, roots: ["Unit"], options: GesSchemaGenerateOptions())
+        }
+    }
+
+    func testManifestNamesTheValueConversionsThatDocumentsInclude() throws {
+        let set = try GesSchemaSet(parsing: "schema :S as {\n  on: :Boolean\n}\n")
+        var documents = GesSchemaGenerateOptions(split: .schema)
+        documents.documents = true
+        var both = documents
+        both.values = true
+        let documentFiles = try GesSchemaGenerator.generateModelFiles(set, roots: ["S"], options: documents)
+        XCTAssertEqual(documentFiles, try GesSchemaGenerator.generateModelFiles(set, roots: ["S"], options: both))
+        XCTAssertTrue(try XCTUnwrap(documentFiles.last).text.contains("\"values\": true"))
+    }
 }

@@ -477,6 +477,55 @@ enum GesSchemaPlanner {
     private static func isLetter(_ byte: UInt8) -> Bool { (byte >= 0x61 && byte <= 0x7A) || (byte >= 0x41 && byte <= 0x5A) }
 
     // Fails when two generated members of one scope get the same name.
+    // A record's nested types are named after its fields. Each would hide a top-level type or tag set of the same name for
+    // every reference inside the record, so that name fails like any other collision; their origins carry this prefix.
+    static let nestedTypeOrigin = "the nested type "
+
+    static func topLevel(_ types: [GesPlanType], _ sets: [(name: String, tags: [String])]) -> Set<String> {
+        var names = Set(types.filter { !$0.isItem }.map(\.name))
+        for set in sets { names.insert(set.name) }
+        return names
+    }
+
+    static func unique(_ scope: String, _ names: [(name: String, origin: String)], _ topLevel: Set<String>) throws(GesGeneratorError) {
+        try unique(scope, names)
+        for (name, origin) in names {
+            if origin.hasPrefix(nestedTypeOrigin) && topLevel.contains(name) {
+                throw GesGeneratorError(GesGeneratorError.nameCollision, "In '\(scope)', \(origin) is generated as '\(name)', which hides the top-level type of that name.")
+            }
+            if isRuntimeName(name) {
+                throw GesGeneratorError(GesGeneratorError.nameCollision, "In '\(scope)', \(origin) is generated as '\(name)', a name of the runtime types that generated code uses.")
+            }
+        }
+    }
+
+    // Generated Swift names these standard-library and runtime types without qualification, so a type of the same name in
+    // the namespace would hide them; Type, Any, AnyObject, Protocol and Self cannot name a nested type at all. Generated C#
+    // qualifies the platform types it uses with global::, so only the runtime's names are reserved there.
+    private static let swiftReserved: Set<String> = [
+        "Any", "AnyObject", "Array", "Bool", "CaseIterable", "Codable", "Double", "Equatable", "Error", "GameEventScriptRuntime", "Hashable",
+        "Identifiable", "Int", "Int32", "Int64", "OptionSet", "Protocol", "Result", "Self", "Sendable", "String", "Swift", "Type", "UInt64",
+        "UInt8", "UTF8", "UnsafeMutableRawBufferPointer", "UnsafeRawBufferPointer",
+    ]
+
+    // Names of the form Ges and a capital letter belong to the runtime types that generated code names without qualification.
+    private static func isRuntimeName(_ name: String) -> Bool {
+        let scalars = Array(name.unicodeScalars)
+        return scalars.count > 3 && name.hasPrefix("Ges") && ("A"..."Z").contains(scalars[3])
+    }
+
+    // The types declared beside the records must not take a name that the generated code uses for another type.
+    static func checkTopLevel(_ names: Set<String>, swift: Bool) throws(GesGeneratorError) {
+        for name in names.sorted(by: { $0.unicodeScalars.lexicographicallyPrecedes($1.unicodeScalars) }) {
+            if isRuntimeName(name) {
+                throw GesGeneratorError(GesGeneratorError.nameCollision, "The type '\(name)' takes a name of the runtime types that generated code uses.")
+            }
+            if swift && swiftReserved.contains(name) {
+                throw GesGeneratorError(GesGeneratorError.nameCollision, "The type '\(name)' takes a name of a Swift type that generated code uses.")
+            }
+        }
+    }
+
     static func unique(_ scope: String, _ names: [(name: String, origin: String)]) throws(GesGeneratorError) {
         var seen: [String: String] = [:]
         for (name, origin) in names {

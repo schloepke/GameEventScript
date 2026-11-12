@@ -53,10 +53,10 @@ namespace GameEventScript.Tests.Generator.Geometry.Model
         public GesBox? Bounds { get; set; }
 
         /// <summary><c>outline: :Poly(meter) max 3 { x, y }</c></summary>
-        public GesPoly Outline { get; set; } = new GesPoly(Array.Empty<GesPoint>());
+        public GesPoly Outline { get; set; } = new GesPoly(global::System.Array.Empty<GesPoint>());
 
         /// <summary><c>free: :Poly max 4</c></summary>
-        public GesPoly Free { get; set; } = new GesPoly(Array.Empty<GesPoint>());
+        public GesPoly Free { get; set; } = new GesPoly(global::System.Array.Empty<GesPoint>());
 
         /// <summary><c>pick: :Box(meter) | :Nothing</c></summary>
         public GesBox? Pick { get; set; }
@@ -176,7 +176,7 @@ namespace GameEventScript.Tests.Generator.Geometry.Model
                 foreach (var type in nextCatalog.Types)
                 {
                     foreach (var own in Own)
-                        if (own.Name == type.Name) throw new ArgumentException("The type :" + type.Name + " is already declared.", nameof(nextCatalog));
+                        if (own.Name == type.Name) throw new global::System.ArgumentException("The type :" + type.Name + " is already declared.", nameof(nextCatalog));
                     _types.Add(type);
                 }
             }
@@ -203,7 +203,7 @@ namespace GameEventScript.Tests.Generator.Geometry.Model
         /// <returns>The constructor, or null.</returns>
         public IGesExternalTypeConstructor? Resolve(GesExternalTypeConstructorReference reference)
         {
-            if (reference is null) throw new ArgumentNullException(nameof(reference));
+            if (reference is null) throw new global::System.ArgumentNullException(nameof(reference));
             if (reference.SignatureId == ZoneValue.Declaration.Constructors[0].SignatureId) return new ZoneConstructor();
             return _nextRegistry?.Resolve(reference);
         }
@@ -495,7 +495,7 @@ namespace GameEventScript.Tests.Generator.Geometry.Model
         internal static bool Known(GesValueMap fields, string[] names)
         {
             for (var index = 0; index < fields.Length; index++)
-                if (Array.IndexOf(names, fields.KeyAt(index)) < 0) return false;
+                if (global::System.Array.IndexOf(names, fields.KeyAt(index)) < 0) return false;
             return true;
         }
 
@@ -522,7 +522,7 @@ namespace GameEventScript.Tests.Generator.Geometry.Model
             if (value.ValueKind != GesBytecodeTypeKind.Map || value.CustomTypeName is not null || value.MaterializedMap() is not { } map) return false;
             for (var index = 0; index < map.Length; index++)
             {
-                var member = Array.IndexOf(names, map.KeyAt(index));
+                var member = global::System.Array.IndexOf(names, map.KeyAt(index));
                 var set = map.ValueAt(index);
                 if (member < 0 || set.ValueKind != GesBytecodeTypeKind.Boolean) return false;
                 if (set.AsBoolean()) result |= 1UL << member;
@@ -563,7 +563,7 @@ namespace GameEventScript.Tests.Generator.Geometry.Model
             result = 0;
             if (value.ValueUnit != unit) return false;
             if (value.ValueKind == GesBytecodeTypeKind.Integer) result = value.AsInteger();
-            else if (value.ValueKind == GesBytecodeTypeKind.Float && value.AsNumber() is var number && number >= -9.2233720368547758E18 && number < 9.2233720368547758E18 && Math.Floor(number) == number) result = (long)number;
+            else if (value.ValueKind == GesBytecodeTypeKind.Float && value.AsNumber() is var number && number >= -9.2233720368547758E18 && number < 9.2233720368547758E18 && global::System.Math.Floor(number) == number) result = (long)number;
             else return false;
             return true;
         }

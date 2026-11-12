@@ -131,7 +131,7 @@ namespace GameEventScript.Tests.Generator.Computed.Model
         public double Power => Duration <= 0.0 ? 0.0 : Energy / Duration;
 
         /// <summary><c>boosted</c> computed by <c>power + boost</c>; NaN where the expression gives nothing.</summary>
-        public double Boosted => Power + Power * Boost;
+        public double Boosted => GesComputed.AddPercentage(Power, Boost);
 
         /// <summary><c>level</c> computed by <c>trim default 0</c>; NaN where the expression gives nothing.</summary>
         public double Level => (Trim ?? 0.0);
@@ -397,7 +397,7 @@ namespace GameEventScript.Tests.Generator.Computed.Model
         internal static bool Known(GesValueMap fields, string[] names)
         {
             for (var index = 0; index < fields.Length; index++)
-                if (Array.IndexOf(names, fields.KeyAt(index)) < 0) return false;
+                if (global::System.Array.IndexOf(names, fields.KeyAt(index)) < 0) return false;
             return true;
         }
 
@@ -424,7 +424,7 @@ namespace GameEventScript.Tests.Generator.Computed.Model
             if (value.ValueKind != GesBytecodeTypeKind.Map || value.CustomTypeName is not null || value.MaterializedMap() is not { } map) return false;
             for (var index = 0; index < map.Length; index++)
             {
-                var member = Array.IndexOf(names, map.KeyAt(index));
+                var member = global::System.Array.IndexOf(names, map.KeyAt(index));
                 var set = map.ValueAt(index);
                 if (member < 0 || set.ValueKind != GesBytecodeTypeKind.Boolean) return false;
                 if (set.AsBoolean()) result |= 1UL << member;
@@ -465,7 +465,7 @@ namespace GameEventScript.Tests.Generator.Computed.Model
             result = 0;
             if (value.ValueUnit != unit) return false;
             if (value.ValueKind == GesBytecodeTypeKind.Integer) result = value.AsInteger();
-            else if (value.ValueKind == GesBytecodeTypeKind.Float && value.AsNumber() is var number && number >= -9.2233720368547758E18 && number < 9.2233720368547758E18 && Math.Floor(number) == number) result = (long)number;
+            else if (value.ValueKind == GesBytecodeTypeKind.Float && value.AsNumber() is var number && number >= -9.2233720368547758E18 && number < 9.2233720368547758E18 && global::System.Math.Floor(number) == number) result = (long)number;
             else return false;
             return true;
         }
@@ -554,9 +554,12 @@ namespace GameEventScript.Tests.Generator.Computed.Model
         /// <summary>The ratio of an optional Percentage field, absent where the expression gives nothing or no finite ratio.</summary>
         internal static double? OptionalRatio(double value) => double.IsNaN(value) || double.IsInfinity(value) ? null : value == 0 ? 0 : value;
 
-        internal static double AddPercentage(double value, double ratio) => value + value * ratio;
+        /// <summary>A product as an operation of its own: an addition beside it in one expression could be fused with it.</summary>
+        internal static double Product(double a, double b) => a * b;
 
-        internal static double SubtractPercentage(double value, double ratio) => value - value * ratio;
+        internal static double AddPercentage(double value, double ratio) => value + Product(value, ratio);
+
+        internal static double SubtractPercentage(double value, double ratio) => value - Product(value, ratio);
 
         /// <summary>The smaller of two numbers, the left one on a tie, and nothing where either is.</summary>
         internal static double Min(double a, double b) => double.IsNaN(a) || double.IsNaN(b) ? double.NaN : b < a ? b : a;
@@ -575,11 +578,11 @@ namespace GameEventScript.Tests.Generator.Computed.Model
         /// <summary>A number, or the fallback where it is nothing.</summary>
         internal static double Otherwise(double value, double fallback) => double.IsNaN(value) ? fallback : value;
 
-        private static bool Whole(double value) => value >= -9223372036854775808d && value < 9223372036854775808d && value == Math.Truncate(value);
+        private static bool Whole(double value) => value >= -9223372036854775808d && value < 9223372036854775808d && value == global::System.Math.Truncate(value);
 
         private static ulong Ordered(double value)
         {
-            var bits = unchecked((ulong)BitConverter.DoubleToInt64Bits(value));
+            var bits = unchecked((ulong)global::System.BitConverter.DoubleToInt64Bits(value));
             return (bits & 0x8000000000000000UL) != 0 ? ~bits : bits | 0x8000000000000000UL;
         }
 
@@ -644,7 +647,7 @@ namespace GameEventScript.Tests.Generator.Computed.Model
         internal static Value Float(double value)
         {
             if (double.IsNaN(value)) return Nothing;
-            if (!double.IsInfinity(value) && value >= -9223372036854775808d && value < 9223372036854775808d && value == Math.Truncate(value)) return Integer((long)value);
+            if (!double.IsInfinity(value) && value >= -9223372036854775808d && value < 9223372036854775808d && value == global::System.Math.Truncate(value)) return Integer((long)value);
             return new Value(2, 0, value);
         }
 
@@ -707,7 +710,7 @@ namespace GameEventScript.Tests.Generator.Computed.Model
             {
                 if (!percentage) return Nothing;
                 var x = a.Numeric;
-                return Float(subtract ? x - x * b.Number : x + x * b.Number);
+                return Float(subtract ? SubtractPercentage(x, b.Number) : AddPercentage(x, b.Number));
             }
 
             return a.Kind == 3 && b.Kind == 3 ? Percentage(subtract ? a.Number - b.Number : a.Number + b.Number) : Nothing;
@@ -749,9 +752,9 @@ namespace GameEventScript.Tests.Generator.Computed.Model
 
         internal static Value Abs(Value a) => a.Kind switch
         {
-            1 => a.Whole == long.MinValue ? Float(-(double)a.Whole) : Integer(Math.Abs(a.Whole)),
-            2 => Float(Math.Abs(a.Number)),
-            3 => Percentage(Math.Abs(a.Number)),
+            1 => a.Whole == long.MinValue ? Float(-(double)a.Whole) : Integer(global::System.Math.Abs(a.Whole)),
+            2 => Float(global::System.Math.Abs(a.Number)),
+            3 => Percentage(global::System.Math.Abs(a.Number)),
             _ => Nothing
         };
 

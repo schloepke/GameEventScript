@@ -877,7 +877,7 @@ namespace GameEventScript.Tests.Generator.Tree.Model
         internal static bool Known(GesValueMap fields, string[] names)
         {
             for (var index = 0; index < fields.Length; index++)
-                if (Array.IndexOf(names, fields.KeyAt(index)) < 0) return false;
+                if (global::System.Array.IndexOf(names, fields.KeyAt(index)) < 0) return false;
             return true;
         }
 
@@ -904,7 +904,7 @@ namespace GameEventScript.Tests.Generator.Tree.Model
             if (value.ValueKind != GesBytecodeTypeKind.Map || value.CustomTypeName is not null || value.MaterializedMap() is not { } map) return false;
             for (var index = 0; index < map.Length; index++)
             {
-                var member = Array.IndexOf(names, map.KeyAt(index));
+                var member = global::System.Array.IndexOf(names, map.KeyAt(index));
                 var set = map.ValueAt(index);
                 if (member < 0 || set.ValueKind != GesBytecodeTypeKind.Boolean) return false;
                 if (set.AsBoolean()) result |= 1UL << member;
@@ -945,7 +945,7 @@ namespace GameEventScript.Tests.Generator.Tree.Model
             result = 0;
             if (value.ValueUnit != unit) return false;
             if (value.ValueKind == GesBytecodeTypeKind.Integer) result = value.AsInteger();
-            else if (value.ValueKind == GesBytecodeTypeKind.Float && value.AsNumber() is var number && number >= -9.2233720368547758E18 && number < 9.2233720368547758E18 && Math.Floor(number) == number) result = (long)number;
+            else if (value.ValueKind == GesBytecodeTypeKind.Float && value.AsNumber() is var number && number >= -9.2233720368547758E18 && number < 9.2233720368547758E18 && global::System.Math.Floor(number) == number) result = (long)number;
             else return false;
             return true;
         }

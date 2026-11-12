@@ -33,12 +33,15 @@ enum GesSwiftEmitter {
         prologue.blank()
         let header = GesSchemaPlanner.header(layout)
         let holder = "__GesSchemas" + GesSchemaPlanner.suffix(header, options)
+        let computed = GesSchemaPlanner.computed(types, GesComputedEmitter.helper(options.namespace, GesSchemaPlanner.suffix(header, options)), swift: true)
+        let sets = GesSchemaPlanner.tagSets(types, "")
         let context = Context(
             elements: GesSchemaPlanner.keyedElements(types),
             values: options.values,
             holder: holder,
             checkedExclusivity: options.checkedExclusivity,
-            computed: GesSchemaPlanner.computed(types, GesComputedEmitter.helper(options.namespace, GesSchemaPlanner.suffix(header, options)), swift: true)
+            computed: computed,
+            topLevel: GesSchemaPlanner.topLevel(types, sets)
         )
         var document = GesCodeDocument(
             header: header,
@@ -56,9 +59,10 @@ enum GesSwiftEmitter {
                 }
             )
         }
-        for set in GesSchemaPlanner.tagSets(types, "") {
+        for set in sets {
             document.units.append(GesCodeUnit(owner: set.name) { code in tagSetDeclaration(&code, set.name, set.tags, access) })
         }
+        try GesSchemaPlanner.checkTopLevel(context.topLevel, swift: true)
         // Split files reach the sources of another file, so the holder is internal there.
         let shared = options.split != .none
         if options.values { document.units.append(GesCodeUnit(owner: "", write: { code in valuesHolder(&code, layout, holder, shared: shared) }, outside: true)) }
@@ -77,6 +81,8 @@ enum GesSwiftEmitter {
         let holder: String
         let checkedExclusivity: Bool
         let computed: GesComputedEmitter
+        // The records and tag sets declared beside each other, which a record's nested type must not hide.
+        let topLevel: Set<String>
 
         // The attribute of a class's stored properties: without exclusivity checks unless they are asked for.
         func stored(_ isClass: Bool) -> String { isClass && !checkedExclusivity ? "@exclusivity(unchecked) " : "" }
@@ -111,7 +117,7 @@ enum GesSwiftEmitter {
             for constant in type.layout.constants { names.append((constant.name, "the let " + constant.name)) }
         }
         if !type.isItem { GesComputedEmitter.names(type.layout.computed, type.name, swift: true, &names) }
-        try GesSchemaPlanner.unique(type.name, names)
+        try GesSchemaPlanner.unique(type.name, names, context.topLevel)
 
         code.line(type.isItem ? "/// An element of the list." : "/// The \(kind(type)) `:\(type.name)`, read and written without allocation\(type.isClass ? " once its storage has grown" : "").")
         code.open(type.isClass ? "\(access)final class \(type.name) {" : "\(access)struct \(type.name): Sendable {")
@@ -174,13 +180,13 @@ enum GesSwiftEmitter {
 
     static func nested(_ value: GesPlanValue, _ names: inout Names, _ field: String) {
         let name = nestedName(value)
-        if !name.isEmpty && value.tagType.isEmpty { names.append((name, "the type of " + field)) }
+        if !name.isEmpty && value.tagType.isEmpty { names.append((name, GesSchemaPlanner.nestedTypeOrigin + "of " + field)) }
         switch value.encoding.kind {
         case .text:
             names.append((GesSchemaPlanner.camel(value.base) + "UTF8", "the UTF-8 bytes of " + field))
         case .list:
             if value.encoding.poly { names.append((GesSchemaPlanner.camel(value.base) + "Poly", "the polygon view of " + field)) }
-            if let item = value.item { names.append((item.name, "the element type of " + field)) } else { nested(value.element!, &names, field) }
+            if let item = value.item { names.append((item.name, GesSchemaPlanner.nestedTypeOrigin + "of the elements of " + field)) } else { nested(value.element!, &names, field) }
         case .union:
             for alternative in value.alternatives {
                 if alternative.encoding.kind != .nothing { names.append((GesSchemaPlanner.camel(alternative.base), "the alternative \(alternative.label) of \(field)")) }
@@ -434,13 +440,13 @@ enum GesSwiftEmitter {
     }
 
     static func messageSet(_ code: inout Code, _ type: GesPlanType, _ access: String, _ context: Context) throws(GesGeneratorError) {
-        var names: Names = [("selected", "the selected member"), ("Member", "the member type")]
+        var names: Names = [("selected", "the selected member"), ("Member", GesSchemaPlanner.nestedTypeOrigin + "of the members")]
         for name in reserved { names.append((name, "the generated member " + name)) }
         if context.values {
             for name in valueReserved { names.append((name, "the generated member " + name)) }
         }
         for member in type.members { names.append((GesSchemaPlanner.camel(member), "the member " + member)) }
-        try GesSchemaPlanner.unique(type.name, names)
+        try GesSchemaPlanner.unique(type.name, names, context.topLevel)
         let width = String(type.layout.memberWidth)
         let last = String(UInt64(type.members.count) - 1)
         code.line("/// The message set `:\(type.name)`: one of its messages, read and written without allocation\(type.membersAreClasses ? " once its storage has grown" : "").")
@@ -550,7 +556,7 @@ enum GesSwiftEmitter {
                 )
             }
             code.line("try writer.write(UInt64(\(bytes).count), width: \(width))")
-            code.line("for byte in \(bytes) { try writer.write(UInt64(byte), width: 8) }")
+            code.line("try writer.writeBytes(\(bytes))")
         case .list:
             if value.depth > 0 { openLevels(&code, value, target + ".count") }
             code.line("if \(target).count > \(max) { \(fail("tooLong", value)) }")
@@ -620,9 +626,7 @@ enum GesSwiftEmitter {
             code.open("do {")
             code.line("let count = Int(try reader.read(\(width), path: \(path(value))))")
             code.line("if count > \(max) { \(fail("invalidCount", value)) }")
-            code.line("try reader.require(count * 8, path: \(path(value)))")
-            code.line("\(bytes).removeAll(keepingCapacity: true)")
-            code.line("for _ in 0..<count { \(bytes).append(UInt8(truncatingIfNeeded: try reader.read(8, path: \(path(value))))) }")
+            code.line("try reader.readBytes(count, into: &\(bytes), path: \(path(value)))")
             if encoding.kind == .text {
                 code.line(
                     encoding.tagName

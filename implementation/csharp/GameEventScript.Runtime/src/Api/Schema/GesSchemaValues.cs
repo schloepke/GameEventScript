@@ -77,12 +77,12 @@ public static class GesSchemaValues
     {
         if (schema is null) throw new ArgumentNullException(nameof(schema));
         // This path is for rare data, so it allocates its scratch space: a pool would put shared, synchronized state into the
-        // Runtime. Time-critical code passes its own buffers to GesSchemaDelta.
-        var record = new byte[schema.MaxByteCount];
-        var previous = new byte[schema.MaxByteCount];
-        var recordLength = Encode(schema, value, record);
-        var previousLength = Encode(schema, baseline, previous);
-        return GesSchemaDelta.Encode(schema, record.AsSpan(0, recordLength), previous.AsSpan(0, previousLength), buffer);
+        // Runtime. Time-critical code passes its own buffers to GesSchemaDelta. One scratch of the largest encoding serves
+        // both records; only the bytes of the first one are kept, since a count pass would run external getters twice.
+        var scratch = new byte[schema.MaxByteCount];
+        var record = scratch.AsSpan(0, Encode(schema, value, scratch)).ToArray();
+        var previousLength = Encode(schema, baseline, scratch);
+        return GesSchemaDelta.Encode(schema, record, scratch.AsSpan(0, previousLength), buffer);
     }
 
     /// <summary>Decodes a delta against the baseline value it was encoded with.</summary>
@@ -96,11 +96,11 @@ public static class GesSchemaValues
     public static GesSchemaDecoded Decode(GesBoundSchema schema, ReadOnlySpan<byte> data, GesValue baseline, long byteLimit = long.MaxValue)
     {
         if (schema is null) throw new ArgumentNullException(nameof(schema));
-        var previous = new byte[schema.MaxByteCount];
-        var previousLength = Encode(schema, baseline, previous);
-        var record = new byte[schema.MaxByteCount];
-        var decoded = GesSchemaDelta.Decode(schema, data, previous.AsSpan(0, previousLength), record, byteLimit);
-        return new GesSchemaDecoded(Decode(schema, record.AsSpan(0, decoded.ByteCount)).Value, decoded.DeltaByteCount);
+        // One scratch of the largest encoding holds the baseline and then the decoded record, as in Encode.
+        var scratch = new byte[schema.MaxByteCount];
+        var previous = scratch.AsSpan(0, Encode(schema, baseline, scratch)).ToArray();
+        var decoded = GesSchemaDelta.Decode(schema, data, previous, scratch, byteLimit);
+        return new GesSchemaDecoded(Decode(schema, scratch.AsSpan(0, decoded.ByteCount)).Value, decoded.DeltaByteCount);
     }
 
     /// <summary>Decodes a Record or Message.</summary>
@@ -628,8 +628,9 @@ public static class GesSchemaValues
                 return schema.Nodes[selected].Kind == GesSchemaNodeKind.Nothing ? default : DecodeNode(ref reader, schema, selected);
             case GesSchemaNodeKind.List when node.ValueKind == GesSchemaTypeKind.Poly:
                 var pointCount = reader.BeginList(field);
-                var points = new GesPoint[pointCount];
-                for (var point = 0; point < pointCount; point++) points[point] = DecodePoint(ref reader, schema, index + 1);
+                // The count is untrusted until the points are read, so the capacity grows with the data as for a List.
+                var points = new List<GesPoint>(Math.Min(pointCount, 1024));
+                for (var point = 0; point < pointCount; point++) points.Add(DecodePoint(ref reader, schema, index + 1));
                 return new GesPoly(points).ToValue(node.Unit);
             case GesSchemaNodeKind.List:
                 var length = reader.BeginList(field);

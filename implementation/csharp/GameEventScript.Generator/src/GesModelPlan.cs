@@ -211,6 +211,16 @@ internal static class GesModelPlanner
         return adopted;
     }
 
+    // The names declared beside the records, which a record's nested type must not hide.
+    internal static HashSet<string> TopLevel(GesModelLayout layout, bool swift)
+    {
+        var names = new HashSet<string>(System.StringComparer.Ordinal);
+        foreach (var type in layout.Types) names.Add(type.Name);
+        foreach (var (name, _) in TagSets(layout)) names.Add(name);
+        foreach (var protocol in layout.Protocols) names.Add(ProtocolName(layout, protocol.Name, swift));
+        return names;
+    }
+
     // Protocol names must not meet a type or tag set of the file.
     internal static void CheckProtocols(GesModelLayout layout, bool swift)
     {

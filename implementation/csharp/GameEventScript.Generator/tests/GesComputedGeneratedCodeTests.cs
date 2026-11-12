@@ -46,7 +46,7 @@ public sealed class GesComputedGeneratedCodeTests
         string[] lines =
         [
             "public double Power => Duration <= 0.0 ? 0.0 : Energy / Duration;",
-            "public double Boosted => Power + Power * Boost;",
+            "public double Boosted => GesComputed.AddPercentage(Power, Boost);",
             "public double Level => HasTrim ? Trim : 0.0;",
             "public bool Marked => HasTrim && Trim > 1.0;",
             "public double CellCount => (double)Cells.Count;",

@@ -650,8 +650,10 @@ A message set adds its index to the bits of its largest member, before rounding 
 A bound layout has at most 1 048 576 fields, counting each use of a referenced schema and each
 List element type once; more also fails with `schema.tooLarge`.
 
-A List element must have at least one bit, or `schema.notEncodable` fails binding: only then
-does the data limit the count. A `:Tag` with one tag and a schema without fields have no bits.
+A List element and a Poly point must have at least one bit, or `schema.notEncodable` fails
+binding: only then does the data limit the count. A `:Tag` with one tag, a schema without fields
+and a wrapping field whose period is one step have no bits, so a Poly whose block names only such
+axes has points without bits.
 
 ## Schema hash
 
@@ -659,6 +661,11 @@ Every schema, message and message set has a 64-bit hash that checks version equa
 It is not sent with records: the caller compares it at connection setup or stores it in
 its own header, and there is no compatibility between different hashes. It is no
 security measure.
+
+A bound member of a message set reports the hash and binding hash of its set, not those of
+its own declaration: its records exist only within the set's encoding, which starts with the
+member index, so the set's hash is the one that the two sides of a connection compare. The
+member's declaration keeps its own hash, as every declaration does.
 
 The hash runs over a [canonical form](#canonical-form), never over source text.
 Comments, layout, file boundaries, declaration order outside the reached declarations,
@@ -1174,6 +1181,7 @@ one record. Decoding fails without partial results for:
 | `wire.invalidText` | Text is not valid UTF-8 |
 | `wire.invalidTag` | a `:Tag max n` holds no valid [tag name](Semantics/Text.md#portable-name-grammars) |
 | `wire.invalidNumber` | NaN or negative zero, or an infinity with a range |
+| `wire.outOfRange` | a fractional field without a step holds a finite binary64 outside its range, in a record or a raw delta value; the same code as when encoding it, since the pattern is a valid Number |
 | `wire.invalidPadding` | a padding bit is not zero |
 | `wire.limitExceeded` | the record exceeds the caller's limit |
 | `wire.invalidDelta` | a delta is not [canonical](#canonical-delta-form), leaves its range, or its key differs from the baseline's |
@@ -1383,6 +1391,9 @@ calls them with constant widths and operands, so they are part of the contract:
   the path the caller names; `ReadBytes` reads nothing when the bytes do not fit. `Require`
   checks remaining bits without reading, `Seek` moves to a position, and `Finish` checks the
   padding (`wire.invalidPadding`) and returns the bytes consumed.
+- Positions given to `SetBit`, `Rewind` and `Seek` come from the caller's own writes and reads, never from data. A
+  negative position is a programming error, not a wire error: C# throws when the buffer is accessed, and Swift traps
+  through a precondition, since its raw buffer access checks no bounds in release builds.
 - `GesWireRules` holds the value rules over plain operands: `IsValidUtf8`, `IsTagName`,
   `QuantizedIndex` and `WrappedQuantizedIndex` with the [quantization](#quantization) operands
   `10^k` and `p`, `QuantizedValue` and `WrappedIndex`, and `WriteDeltaRange` and `ReadDeltaRange` for
@@ -1424,7 +1435,10 @@ For rare data, Runtime offers `GesSchemaValues`: `Encode(bot, value, buffer)` en
 [Record, Map or Message](#record-values), `Decode(bot, bytes)` returns the value and the
 bytes it occupied, and `ReadKey(bot, bytes)` returns a [key](#keys) without decoding the
 rest. An external value of the schema's type name encodes through its materialized fields, also as a nested Record or a baseline, and a failing getter propagates as the [runtime failure of a field read](PublicApi.md), not as a wire error. `Encode(bot, value, baseline, buffer)` and `Decode(bot, bytes, baseline)` do the same for a
-[delta](#deltas) against a baseline value. Swift uses the idiomatic spelling of the same concepts. Kinds do not convert implicitly:
+[delta](#deltas) against a baseline value. A delta call encodes both values in full, so it takes scratch space of the
+largest encoding per call, whatever the size of the data: the size is known only after encoding, and a counting pass first
+would run external getters twice. A receiver of untrusted or frequent deltas uses `GesSchemaDelta` with its own buffers.
+Swift uses the idiomatic spelling of the same concepts. Kinds do not convert implicitly:
 the language computes with Boolean and Dice as numbers, but a Number, Quantity or Percentage
 field rejects them with `wire.typeMismatch`, because decoding could not return them. A script
 converts them explicitly with `as :Number`.
@@ -1565,9 +1579,18 @@ namespace or nested Swift enums, and `--access internal` hides them from other m
 differs or is missing. The text starts with a header that names the roots, parameters and hashes,
 without a date or version. A generation request that cannot be carried out fails with a
 `generate.*` code: `generate.nameCollision` when two generated names of one type are equal (in Swift a
-`:Flags` member `#rawValue` meets the mask of its `OptionSet`) or two [split](#split-output) file names differ only in
+`:Flags` member `#rawValue` meets the mask of its `OptionSet`), when a type that a record nests for a field, such as
+`SlotsItem` or `ModeTag`, takes the name of a schema, message or tag set of the generation, which it would hide for every
+reference inside the record, when a type or a C# member takes a name of the form `Ges` and an uppercase letter, which
+belongs to the runtime types that generated code names without qualification, when a Swift type takes a name that
+generated Swift uses without qualification (`Any`, `AnyObject`, `Array`, `Bool`, `CaseIterable`, `Codable`, `Double`,
+`Equatable`, `Error`, `GameEventScriptRuntime`, `Hashable`, `Identifiable`, `Int`, `Int32`, `Int64`, `OptionSet`,
+`Protocol`, `Result`, `Self`, `Sendable`, `String`, `Swift`, `Type`, `UInt64`, `UInt8`, `UTF8`,
+`UnsafeMutableRawBufferPointer`, `UnsafeRawBufferPointer`), or two [split](#split-output) file names differ only in
 case, `generate.invalidNamespace`, and `generate.usage` when the [Generator API](PublicApi.md#schema-code-generation)
-receives no root or a split that does not fit the call.
+receives no root or a split that does not fit the call. Generated C# instead qualifies every platform type it uses that
+a type or member of the same name could hide, such as `global::System.Math` and `[global::System.Flags]`, so a schema
+`:Math` or a field `system` needs no reservation.
 
 ### Split output
 
@@ -1596,7 +1619,8 @@ declare, and so is a C# one. Each split file starts with a short header that ref
 roots and hashes, so that it changes only with its own declarations; the single file of `-o` keeps its header.
 
 The directory holds the manifest `.ges-generated.json`, canonical JSON with the members `manifest` (1), `code` (`wire` or
-`model`), `language`, `split` (`schema` or `file`), `namespace`, `access`, `values`, `bindings`, `documents` only when given, `checkedExclusivity`,
+`model`), `language`, `split` (`schema` or `file`), `namespace`, `access`, `values` (also `true` with `documents`, whose
+code includes the value conversions, so that equal code has an equal manifest), `bindings`, `documents` only when given, `checkedExclusivity`,
 `roots` (each with `name`, `hash` and for wire code `bindingHash`), `parameters` (as in the
 [generation layout](#generation-layout); empty for models) and `files`, the generated file names in ordinal order without
 the manifest. Without `--check`, `generate` writes every file whose bytes changed, keeps unchanged files with their time
@@ -1677,7 +1701,10 @@ alternative's type. A list element type is named `<Field>Item`, so a closed Tag 
   optionality and declared range, so a field is one expression in the language's own operators, such as
   `var power: Double { duration <= 0.0 ? 0.0 : energy / duration }`, with every unit and percentage decision made when the
   code is generated. It gives the virtual machine's bits because binary64 `+ - * /` round correctly and the evaluation order
-  is kept: NaN stands for nothing, an optional field reads as NaN where it is absent (or directly where `has value` proves
+  is kept. Generated C# never adds a product in the same expression: a product that an addition or subtraction takes,
+  including the change of `number + percentage`, comes from the helper `Product`, because a C++ compiler such as the one
+  behind IL2CPP may contract `a * b + c` into a fused operation with one rounding, as the [quantization](#why-this-is-exact)
+  formulas avoid too; Swift contracts nothing without an explicit option. NaN stands for nothing, an optional field reads as NaN where it is absent (or directly where `has value` proves
   it present), and a Boolean that may be nothing is an optional Bool only where `not`, `=`, `has value` or `default` tells
   nothing from false. The few rules plain code lacks are helpers of one type `GesComputed` per generation (with the
   generation's suffix without a namespace): no negative zero, where binding cannot exclude one; the equality of GES numbers
@@ -1722,7 +1749,9 @@ for a record of its schema, so that wire records and models meet there; no code 
 - `--values` is independent of `--bindings`; both may be given.
 
 A generated name that collides, such as a field named `id` beside a key named otherwise, fails with
-`generate.nameCollision`, as in wire code. With `--values`, that includes `toValue` (C# `ToValue` and `FromValue`).
+`generate.nameCollision`, as in wire code. With `--values`, that includes `toValue` (C# `ToValue` and `FromValue`). Swift
+models are `Hashable`, so they reserve `hashValue` and `hash`, as C# models reserve the members every object inherits:
+a stored `hashValue` would otherwise satisfy the deprecated requirement in place of the synthesized hash.
 
 ### Model documents
 

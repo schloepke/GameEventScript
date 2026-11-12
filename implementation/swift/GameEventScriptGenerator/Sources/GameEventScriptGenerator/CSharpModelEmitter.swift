@@ -15,6 +15,7 @@ enum GesCSharpModelEmitter {
     private static let reserved = ["Equals", "GetHashCode", "ToString", "GetType"]
 
     static func emit(_ layout: GesModelLayout, _ options: GesSchemaGenerateOptions) throws(GesGeneratorError) -> GesCodeDocument {
+        try GesSchemaPlanner.checkTopLevel(GesModelPlanner.topLevel(layout, swift: false), swift: false)
         let access = options.access == .public ? "public" : "internal"
         let space = try GesSchemaPlanner.namespace(options.namespace, GesCSharpEmitter.keywords)
         var prologue = Code()
@@ -190,7 +191,7 @@ enum GesCSharpModelEmitter {
         }
         for constant in type.constants { names.append((GesSchemaPlanner.pascal(constant.name), "the let " + constant.name)) }
         GesComputedEmitter.names(type.computed, type.name, swift: false, &names)
-        try GesSchemaPlanner.unique(type.name, names)
+        try GesSchemaPlanner.unique(type.name, names, GesModelPlanner.topLevel(layout, swift: false))
 
         code.line("/// <summary>The model of the schema <c>:\(type.name)</c>: a plain value that is never encoded and compares by value.</summary>")
         code.line("\(access) sealed class \(type.name) : IEquatable<\(type.name)>\(GesModelPlanner.adopted(layout, type, swift: false).map { ", " + $0 }.joined())")
@@ -333,7 +334,7 @@ enum GesCSharpModelEmitter {
     }
 
     private static func nested(_ value: GesModelPlanValue, _ names: inout Names, _ field: String) {
-        if !value.nested.isEmpty && value.tagSet.isEmpty { names.append((value.nested, "a type of the field " + field)) }
+        if !value.nested.isEmpty && value.tagSet.isEmpty { names.append((value.nested, GesSchemaPlanner.nestedTypeOrigin + "of the field " + field)) }
         if let element = value.element { nested(element, &names, field) }
         for alternative in value.alternatives { nested(alternative, &names, field) }
     }
@@ -420,12 +421,12 @@ enum GesCSharpModelEmitter {
         if value.nullable { return "" }
         switch value.kind {
         case .text: return "\"\""
-        case .bytes: return "Array.Empty<byte>()"
+        case .bytes: return "global::System.Array.Empty<byte>()"
         case .tag where !value.closedTag: return "\"\""
         case .list, .dice: return "new \(plain(value))()"
         case .schema: return "new \(value.model.schema)()"
         case .union: return "new \(value.nested).\(value.alternatives[0].label)(\(zero(value.alternatives[0])))"
-        case .poly: return "new GesPoly(Array.Empty<GesPoint>())"
+        case .poly: return "new GesPoly(global::System.Array.Empty<GesPoint>())"
         default: return ""
         }
     }
@@ -892,7 +893,7 @@ enum GesCSharpModelEmitter {
         code.line("foreach (var type in nextCatalog.Types)")
         code.open("{")
         code.line("foreach (var own in Own)")
-        code.line("    if (own.Name == type.Name) throw new ArgumentException(\"The type :\" + type.Name + \" is already declared.\", nameof(nextCatalog));")
+        code.line("    if (own.Name == type.Name) throw new global::System.ArgumentException(\"The type :\" + type.Name + \" is already declared.\", nameof(nextCatalog));")
         code.line("_types.Add(type);")
         code.close()
         code.close()
@@ -919,7 +920,7 @@ enum GesCSharpModelEmitter {
         code.line("/// <returns>The constructor, or null.</returns>")
         code.line("public IGesExternalTypeConstructor? Resolve(GesExternalTypeConstructorReference reference)")
         code.open("{")
-        code.line("if (reference is null) throw new ArgumentNullException(nameof(reference));")
+        code.line("if (reference is null) throw new global::System.ArgumentNullException(nameof(reference));")
         for type in ordered { code.line("if (reference.SignatureId == \(type.name)Value.Declaration.Constructors[0].SignatureId) return new \(type.name)Constructor();") }
         code.line("return _nextRegistry?.Resolve(reference);")
         code.close()
@@ -1073,7 +1074,7 @@ enum GesCSharpModelEmitter {
         code.line("internal static bool Known(GesValueMap fields, string[] names)")
         code.open("{")
         code.line("for (var index = 0; index < fields.Length; index++)")
-        code.line("    if (Array.IndexOf(names, fields.KeyAt(index)) < 0) return false;")
+        code.line("    if (global::System.Array.IndexOf(names, fields.KeyAt(index)) < 0) return false;")
         code.line("return true;")
         code.close()
         code.blank()
@@ -1100,7 +1101,7 @@ enum GesCSharpModelEmitter {
         code.line("if (value.ValueKind != GesBytecodeTypeKind.Map || value.CustomTypeName is not null || value.MaterializedMap() is not { } map) return false;")
         code.line("for (var index = 0; index < map.Length; index++)")
         code.open("{")
-        code.line("var member = Array.IndexOf(names, map.KeyAt(index));")
+        code.line("var member = global::System.Array.IndexOf(names, map.KeyAt(index));")
         code.line("var set = map.ValueAt(index);")
         code.line("if (member < 0 || set.ValueKind != GesBytecodeTypeKind.Boolean) return false;")
         code.line("if (set.AsBoolean()) result |= 1UL << member;")
@@ -1144,7 +1145,7 @@ enum GesCSharpModelEmitter {
         code.line("result = 0;")
         code.line("if (value.ValueUnit != unit) return false;")
         code.line("if (value.ValueKind == GesBytecodeTypeKind.Integer) result = value.AsInteger();")
-        code.line("else if (value.ValueKind == GesBytecodeTypeKind.Float && value.AsNumber() is var number && number >= -9.2233720368547758E18 && number < 9.2233720368547758E18 && Math.Floor(number) == number) result = (long)number;")
+        code.line("else if (value.ValueKind == GesBytecodeTypeKind.Float && value.AsNumber() is var number && number >= -9.2233720368547758E18 && number < 9.2233720368547758E18 && global::System.Math.Floor(number) == number) result = (long)number;")
         code.line("else return false;")
         code.line("return true;")
         code.close()

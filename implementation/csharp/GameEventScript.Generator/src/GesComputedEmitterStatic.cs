@@ -434,6 +434,18 @@ internal sealed partial class GesComputedEmitter
         return text.IndexOf('.') < 0 && text.IndexOf('e') < 0 ? text + ".0" : text;
     }
 
+    // An operand of an addition or subtraction. A C++ compiler, such as the one behind IL2CPP, may contract a product that
+    // an addition takes in the same expression into one fused operation with other rounding; a product computed by a helper
+    // call stays a separate operation, as in the VM. Swift does not contract without an explicit option.
+    private Text Operand(GesComputedNode node, string root)
+    {
+        if (!_swift && node.Op == GesComputedOp.Multiply) return new Text(Product(node, root), 10);
+        if (!_swift && node.Op == GesComputedOp.Negate && node.Children[0].Op == GesComputedOp.Multiply) return new Text("-" + Product(node.Children[0], root), 9);
+        return Emit(node, Want.Plain, root);
+    }
+
+    private string Product(GesComputedNode node, string root) => Call("Product", Emit(node.Children[0], Want.Plain, root).Value, Emit(node.Children[1], Want.Plain, root).Value);
+
     private Text Emit(GesComputedNode node, Want want, string root)
     {
         var children = node.Children;
@@ -451,15 +463,15 @@ internal sealed partial class GesComputedEmitter
                 return new Text("-" + Wrap(operand, operand.Value.StartsWith("-", StringComparison.Ordinal) ? 11 : 9), 9);
             }
             case GesComputedOp.Abs:
-                return new Text((_swift ? "abs(" : "Math.Abs(") + Emit(children[0], Want.Plain, root).Value + ")", 10);
+                return new Text((_swift ? "abs(" : "global::System.Math.Abs(") + Emit(children[0], Want.Plain, root).Value + ")", 10);
             case GesComputedOp.Add or GesComputedOp.Subtract:
             {
                 var symbol = node.Op == GesComputedOp.Add ? " + " : " - ";
-                var a = Emit(children[0], Want.Plain, root);
-                var b = Emit(children[1], Want.Plain, root);
+                var a = Operand(children[0], root);
+                var b = Operand(children[1], root);
                 if (children[0].Type == GesComputedType.Number && children[1].Type == GesComputedType.Percentage)
                 {
-                    if (a.Precedence == 10 && children[0].Op != GesComputedOp.Literal && !a.Value.Contains("("))
+                    if (_swift && a.Precedence == 10 && children[0].Op != GesComputedOp.Literal && !a.Value.Contains("("))
                         return new Text(a.Value + symbol + a.Value + " * " + Wrap(b, 9), 7);
                     return new Text(Call(node.Op == GesComputedOp.Add ? "AddPercentage" : "SubtractPercentage", a.Value, b.Value), 10);
                 }

@@ -125,9 +125,10 @@ public final class GesBoundSchema: Sendable {
     public let name: String
     /// The size of the largest encoding in bytes, of a full record or of a delta.
     public let maxByteCount: Int
-    /// The schema hash, independent of parameter values.
+    /// The schema hash, independent of parameter values. A member of a bound message set carries the set's hash, since
+    /// its records exist only within the set's encoding.
     public let hash: UInt64
-    /// The hash over the schema hash and the parameter values.
+    /// The hash over the schema hash and the parameter values; a member of a bound message set carries the set's.
     public let bindingHash: UInt64
     @_spi(Generator) public let kind: GesSchemaKind
     @_spi(Generator) public let nodes: [GesSchemaNode]
@@ -745,6 +746,7 @@ enum GesSchemaBinder {
             node.width = bitLength(UInt64(max))
             node.positionWidth = bitLength(UInt64(max - 1))
             try addCorner(&build, scope, type, "[]", path + "[]", ["x", "y"])
+            if !build.nodes[(index + 1)...].contains(where: { $0.width > 0 || $0.optional }) { throw scope.error(Code.notEncodable, type.offset, "A Poly point without bits has a count that no data limits.") }
         case .reference:
             node.kind = .group
             info.schemaName = type.referenceName
@@ -803,6 +805,7 @@ enum GesSchemaBinder {
             if type.max == nil { throw scope.error(Code.notEncodable, type.offset, "A Poly without max has no hard limit.") }
             if lists >= maximumListNesting { throw scope.error(Code.notEncodable, type.offset, "Lists nest at most \(maximumListNesting) levels for encoding.") }
             for axis in type.axes ?? [] { try checkWrapping(scope, axis.constraints, type.offset) }
+            if type.axes?.isEmpty == true { throw scope.error(Code.notEncodable, type.offset, "A Poly point without bits has a count that no data limits.") }
         case .number, .percentage, .quantity:
             try checkWrapping(scope, type.constraints, type.offset)
         case .tag:

@@ -258,6 +258,67 @@ schema:
 
 ---
 
+## Test: names of platform types
+
+A schema and fields may take names that the platforms give their own types, such as `Math`,
+`system` and `array`: generated C# qualifies the platform types it uses, and the generation
+comparison compiles the code of this case.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: platform-type-names
+schemaApi:
+  sources:
+    - "schema :Math as {\n  system: :Text max 8\n  math: :Number integer between 0 and 9\n  array: :Bytes max 4\n  bitConverter: :Number between 0 and 1\n  flags: :Flags(#a, #b)\n}\n"
+  root: "Math"
+  encode:
+    type: ":Math"
+    entries:
+      - key: "array"
+        value:
+          type: ":Bytes"
+          value: "a0b7"
+      - key: "bitConverter"
+        value:
+          type: ":Number.binary64"
+          value: "0.5"
+      - key: "flags"
+        value:
+          type: ":Map"
+          entries:
+            - key: "a"
+              value:
+                type: ":Boolean"
+                value: "true"
+            - key: "b"
+              value:
+                type: ":Boolean"
+                value: "false"
+      - key: "math"
+        value:
+          type: ":Number.int64"
+          value: "3"
+      - key: "system"
+        value:
+          type: ":Text"
+          value: "sol"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  canonical: "gess1\nschema Math\nfield system Text max 8\nfield math Number integer between 0e0 9e0\nfield array Bytes max 4\nfield bitConverter Number between 0e0 1e0\nfield flags Flags(#a #b)\n"
+  hash: "6ee045515b30c8ee"
+  encoded:
+    bytes: "33f7c63602bd05000000000000ff09"
+```
+
+---
+
 ## Test: comments and layout do not change the hash
 
 A respelled source has the same canonical form.
@@ -9324,6 +9385,67 @@ schema:
 
 ---
 
+## Test: a decoded value outside the range of a field without a step
+
+A finite binary64 outside the range is `wire.outOfRange`, as when encoding it; only a
+pattern that is no Number value is `wire.invalidNumber`.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: wire-decode-out-of-range
+schemaApi:
+  sources:
+    - "schema :S as { v: :Number between 0 and 1 }\n"
+  root: "S"
+  decode: "0000000000001440"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  decoded:
+    error:
+      code: "wire.outOfRange"
+      path: "v"
+```
+
+---
+
+## Test: a delta value outside the range of a field without a step
+
+A delta carries such a value raw, so it fails the same way.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: wire-delta-decode-out-of-range
+schemaApi:
+  sources:
+    - "schema :S as { v: :Number between 0 and 1 }\n"
+  root: "S"
+  deltaDecode:
+    delta: "010000000000288000"
+    baseline: "000000000000e03f"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  deltaDecoded:
+    error:
+      code: "wire.outOfRange"
+      path: "v"
+```
+
+---
+
 ## Test: a value above its range
 
 Nothing is clamped.
@@ -13005,6 +13127,65 @@ schema:
     code: "schema.notEncodable"
     line: 4
     column: 7
+```
+
+---
+
+## Test: a Poly point without bits
+
+A Poly whose block names only a wrapping axis of one step has points without bits, so the
+data cannot limit its count, as for a List element.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-poly-point-without-bits
+schemaApi:
+  sources:
+    - "schema :A as {\n  outline: :Poly(m) max 999999999999 {\n    x wrapping between 0m and 1m step 1m\n  }\n}\n"
+  root: "A"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.notEncodable"
+    line: 2
+    column: 12
+```
+
+---
+
+## Test: a Poly point that a parameter leaves without bits
+
+Binding decides it when a parameter makes the period one step.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-poly-point-without-bits-parameter
+schemaApi:
+  sources:
+    - "parameter period: :Quantity(m)\nschema :A as {\n  outline: :Poly(m) max 8 {\n    x wrapping between 0m and period step 1m\n  }\n}\n"
+  root: "A"
+  parameters:
+    period: "1m"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.notEncodable"
+    line: 3
+    column: 12
 ```
 
 ---

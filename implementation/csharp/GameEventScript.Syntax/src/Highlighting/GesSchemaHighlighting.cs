@@ -1,6 +1,7 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
+using System;
 using System.Collections.Generic;
 using Code = GameEventScript.Syntax.GesSchemaDiagnostic;
 
@@ -70,7 +71,11 @@ internal static class GesSchemaHighlighting
         }
 
         if (GesSchemaSourceReader.Read(text).Error is { } error)
-            diagnostics.Add(new GesHighlightDiagnostic(error.Code, error.Message, error.Offset, 1));
+        {
+            // The scalar at the error, or a position at the end of the text, as Swift measures it.
+            var length = error.Offset >= text.Length ? 0 : char.IsHighSurrogate(text[error.Offset]) && error.Offset + 1 < text.Length ? 2 : 1;
+            diagnostics.Add(new GesHighlightDiagnostic(error.Code, error.Message, Math.Min(error.Offset, text.Length), length));
+        }
     }
 
     private static int WordEnd(string text, int position)

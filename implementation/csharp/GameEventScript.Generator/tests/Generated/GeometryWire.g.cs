@@ -117,7 +117,7 @@ namespace GameEventScript.Tests.Generator.Geometry.Wire
         /// <param name="count">The element count.</param>
         public void SetRingsCount(int count)
         {
-            if (count < 0) throw new ArgumentOutOfRangeException(nameof(count));
+            if (count < 0) throw new global::System.ArgumentOutOfRangeException(nameof(count));
             Rings.Clear();
             for (var position = 0; position < count; position++)
             {
@@ -190,35 +190,35 @@ namespace GameEventScript.Tests.Generator.Geometry.Wire
         {
             if (Id < 0L || unchecked((ulong)Id - 0UL) > 255UL) throw new GesWireException(GesWireException.OutOfRange, paths[at + 0]);
             writer.Write(unchecked((ulong)Id - 0UL), 8);
-            writer.Write(GesWireRules.QuantizedIndex(Area.Min.X, BitConverter.Int64BitsToDouble(unchecked((long)0x0000000000000000UL)), BitConverter.Int64BitsToDouble(unchecked((long)0x4059000000000000UL)), 1d, 1d, 0L, paths[at + 3]), 7);
-            writer.Write(GesWireRules.QuantizedIndex(Area.Min.Y, BitConverter.Int64BitsToDouble(unchecked((long)0x0000000000000000UL)), BitConverter.Int64BitsToDouble(unchecked((long)0x4008000000000000UL)), 1d, 1d, 0L, paths[at + 4]), 2);
+            writer.Write(GesWireRules.QuantizedIndex(Area.Min.X, global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x0000000000000000UL)), global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x4059000000000000UL)), 1d, 1d, 0L, paths[at + 3]), 7);
+            writer.Write(GesWireRules.QuantizedIndex(Area.Min.Y, global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x0000000000000000UL)), global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x4008000000000000UL)), 1d, 1d, 0L, paths[at + 4]), 2);
             if (Area.Min.Z != 0) throw new GesWireException(GesWireException.TypeMismatch, paths[at + 2]);
-            writer.Write(GesWireRules.QuantizedIndex(Area.Max.X, BitConverter.Int64BitsToDouble(unchecked((long)0x0000000000000000UL)), BitConverter.Int64BitsToDouble(unchecked((long)0x4059000000000000UL)), 1d, 1d, 0L, paths[at + 6]), 7);
-            writer.Write(GesWireRules.QuantizedIndex(Area.Max.Y, BitConverter.Int64BitsToDouble(unchecked((long)0x0000000000000000UL)), BitConverter.Int64BitsToDouble(unchecked((long)0x4008000000000000UL)), 1d, 1d, 0L, paths[at + 7]), 2);
+            writer.Write(GesWireRules.QuantizedIndex(Area.Max.X, global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x0000000000000000UL)), global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x4059000000000000UL)), 1d, 1d, 0L, paths[at + 6]), 7);
+            writer.Write(GesWireRules.QuantizedIndex(Area.Max.Y, global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x0000000000000000UL)), global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x4008000000000000UL)), 1d, 1d, 0L, paths[at + 7]), 2);
             if (Area.Max.Z != 0) throw new GesWireException(GesWireException.TypeMismatch, paths[at + 5]);
             if (HasBounds)
             {
                 writer.Write(1, 1);
                 if (double.IsNaN(Bounds.Min.X)) throw new GesWireException(GesWireException.NotRepresentable, paths[at + 10]);
-                writer.Write(unchecked((ulong)BitConverter.DoubleToInt64Bits(Bounds.Min.X == 0 ? 0d : Bounds.Min.X)), 64);
+                writer.Write(unchecked((ulong)global::System.BitConverter.DoubleToInt64Bits(Bounds.Min.X == 0 ? 0d : Bounds.Min.X)), 64);
                 if (double.IsNaN(Bounds.Min.Y)) throw new GesWireException(GesWireException.NotRepresentable, paths[at + 11]);
-                writer.Write(unchecked((ulong)BitConverter.DoubleToInt64Bits(Bounds.Min.Y == 0 ? 0d : Bounds.Min.Y)), 64);
+                writer.Write(unchecked((ulong)global::System.BitConverter.DoubleToInt64Bits(Bounds.Min.Y == 0 ? 0d : Bounds.Min.Y)), 64);
                 if (double.IsNaN(Bounds.Min.Z)) throw new GesWireException(GesWireException.NotRepresentable, paths[at + 12]);
-                writer.Write(unchecked((ulong)BitConverter.DoubleToInt64Bits(Bounds.Min.Z == 0 ? 0d : Bounds.Min.Z)), 64);
+                writer.Write(unchecked((ulong)global::System.BitConverter.DoubleToInt64Bits(Bounds.Min.Z == 0 ? 0d : Bounds.Min.Z)), 64);
                 if (double.IsNaN(Bounds.Max.X)) throw new GesWireException(GesWireException.NotRepresentable, paths[at + 14]);
-                writer.Write(unchecked((ulong)BitConverter.DoubleToInt64Bits(Bounds.Max.X == 0 ? 0d : Bounds.Max.X)), 64);
+                writer.Write(unchecked((ulong)global::System.BitConverter.DoubleToInt64Bits(Bounds.Max.X == 0 ? 0d : Bounds.Max.X)), 64);
                 if (double.IsNaN(Bounds.Max.Y)) throw new GesWireException(GesWireException.NotRepresentable, paths[at + 15]);
-                writer.Write(unchecked((ulong)BitConverter.DoubleToInt64Bits(Bounds.Max.Y == 0 ? 0d : Bounds.Max.Y)), 64);
+                writer.Write(unchecked((ulong)global::System.BitConverter.DoubleToInt64Bits(Bounds.Max.Y == 0 ? 0d : Bounds.Max.Y)), 64);
                 if (double.IsNaN(Bounds.Max.Z)) throw new GesWireException(GesWireException.NotRepresentable, paths[at + 16]);
-                writer.Write(unchecked((ulong)BitConverter.DoubleToInt64Bits(Bounds.Max.Z == 0 ? 0d : Bounds.Max.Z)), 64);
+                writer.Write(unchecked((ulong)global::System.BitConverter.DoubleToInt64Bits(Bounds.Max.Z == 0 ? 0d : Bounds.Max.Z)), 64);
             }
             else writer.Write(0, 1);
             if (Outline.Count > 3) throw new GesWireException(GesWireException.TooLong, paths[at + 17]);
             writer.Write((ulong)Outline.Count, 2);
             foreach (var item in Outline)
             {
-                writer.Write(GesWireRules.QuantizedIndex(item.X, BitConverter.Int64BitsToDouble(unchecked((long)0x0000000000000000UL)), BitConverter.Int64BitsToDouble(unchecked((long)0x4059000000000000UL)), 1d, 1d, 0L, paths[at + 19]), 7);
-                writer.Write(GesWireRules.QuantizedIndex(item.Y, BitConverter.Int64BitsToDouble(unchecked((long)0x0000000000000000UL)), BitConverter.Int64BitsToDouble(unchecked((long)0x4008000000000000UL)), 1d, 1d, 0L, paths[at + 20]), 2);
+                writer.Write(GesWireRules.QuantizedIndex(item.X, global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x0000000000000000UL)), global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x4059000000000000UL)), 1d, 1d, 0L, paths[at + 19]), 7);
+                writer.Write(GesWireRules.QuantizedIndex(item.Y, global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x0000000000000000UL)), global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x4008000000000000UL)), 1d, 1d, 0L, paths[at + 20]), 2);
                 if (item.Z != 0) throw new GesWireException(GesWireException.TypeMismatch, paths[at + 18]);
             }
             if (Free.Count > 4) throw new GesWireException(GesWireException.TooLong, paths[at + 21]);
@@ -226,9 +226,9 @@ namespace GameEventScript.Tests.Generator.Geometry.Wire
             foreach (var item in Free)
             {
                 if (double.IsNaN(item.X)) throw new GesWireException(GesWireException.NotRepresentable, paths[at + 23]);
-                writer.Write(unchecked((ulong)BitConverter.DoubleToInt64Bits(item.X == 0 ? 0d : item.X)), 64);
+                writer.Write(unchecked((ulong)global::System.BitConverter.DoubleToInt64Bits(item.X == 0 ? 0d : item.X)), 64);
                 if (double.IsNaN(item.Y)) throw new GesWireException(GesWireException.NotRepresentable, paths[at + 24]);
-                writer.Write(unchecked((ulong)BitConverter.DoubleToInt64Bits(item.Y == 0 ? 0d : item.Y)), 64);
+                writer.Write(unchecked((ulong)global::System.BitConverter.DoubleToInt64Bits(item.Y == 0 ? 0d : item.Y)), 64);
                 if (item.Z != 0) throw new GesWireException(GesWireException.TypeMismatch, paths[at + 22]);
             }
             switch (Pick)
@@ -237,17 +237,17 @@ namespace GameEventScript.Tests.Generator.Geometry.Wire
                 {
                     writer.Write(0, 1);
                     if (double.IsNaN(PickBox.Min.X)) throw new GesWireException(GesWireException.NotRepresentable, paths[at + 28]);
-                    writer.Write(unchecked((ulong)BitConverter.DoubleToInt64Bits(PickBox.Min.X == 0 ? 0d : PickBox.Min.X)), 64);
+                    writer.Write(unchecked((ulong)global::System.BitConverter.DoubleToInt64Bits(PickBox.Min.X == 0 ? 0d : PickBox.Min.X)), 64);
                     if (double.IsNaN(PickBox.Min.Y)) throw new GesWireException(GesWireException.NotRepresentable, paths[at + 29]);
-                    writer.Write(unchecked((ulong)BitConverter.DoubleToInt64Bits(PickBox.Min.Y == 0 ? 0d : PickBox.Min.Y)), 64);
+                    writer.Write(unchecked((ulong)global::System.BitConverter.DoubleToInt64Bits(PickBox.Min.Y == 0 ? 0d : PickBox.Min.Y)), 64);
                     if (double.IsNaN(PickBox.Min.Z)) throw new GesWireException(GesWireException.NotRepresentable, paths[at + 30]);
-                    writer.Write(unchecked((ulong)BitConverter.DoubleToInt64Bits(PickBox.Min.Z == 0 ? 0d : PickBox.Min.Z)), 64);
+                    writer.Write(unchecked((ulong)global::System.BitConverter.DoubleToInt64Bits(PickBox.Min.Z == 0 ? 0d : PickBox.Min.Z)), 64);
                     if (double.IsNaN(PickBox.Max.X)) throw new GesWireException(GesWireException.NotRepresentable, paths[at + 32]);
-                    writer.Write(unchecked((ulong)BitConverter.DoubleToInt64Bits(PickBox.Max.X == 0 ? 0d : PickBox.Max.X)), 64);
+                    writer.Write(unchecked((ulong)global::System.BitConverter.DoubleToInt64Bits(PickBox.Max.X == 0 ? 0d : PickBox.Max.X)), 64);
                     if (double.IsNaN(PickBox.Max.Y)) throw new GesWireException(GesWireException.NotRepresentable, paths[at + 33]);
-                    writer.Write(unchecked((ulong)BitConverter.DoubleToInt64Bits(PickBox.Max.Y == 0 ? 0d : PickBox.Max.Y)), 64);
+                    writer.Write(unchecked((ulong)global::System.BitConverter.DoubleToInt64Bits(PickBox.Max.Y == 0 ? 0d : PickBox.Max.Y)), 64);
                     if (double.IsNaN(PickBox.Max.Z)) throw new GesWireException(GesWireException.NotRepresentable, paths[at + 34]);
-                    writer.Write(unchecked((ulong)BitConverter.DoubleToInt64Bits(PickBox.Max.Z == 0 ? 0d : PickBox.Max.Z)), 64);
+                    writer.Write(unchecked((ulong)global::System.BitConverter.DoubleToInt64Bits(PickBox.Max.Z == 0 ? 0d : PickBox.Max.Z)), 64);
                     break;
                 }
                 case PickAlternative.Nothing:
@@ -306,38 +306,38 @@ namespace GameEventScript.Tests.Generator.Geometry.Wire
                     var lower8 = new GesPoint();
                     {
                         var bits = reader.Read(64, paths[at + 10]);
-                        var value = BitConverter.Int64BitsToDouble(unchecked((long)bits));
+                        var value = global::System.BitConverter.Int64BitsToDouble(unchecked((long)bits));
                         if (double.IsNaN(value) || bits == 0x8000000000000000UL) throw new GesWireException(GesWireException.InvalidNumber, paths[at + 10]);
                         lower8.X = value;
                     }
                     {
                         var bits = reader.Read(64, paths[at + 11]);
-                        var value = BitConverter.Int64BitsToDouble(unchecked((long)bits));
+                        var value = global::System.BitConverter.Int64BitsToDouble(unchecked((long)bits));
                         if (double.IsNaN(value) || bits == 0x8000000000000000UL) throw new GesWireException(GesWireException.InvalidNumber, paths[at + 11]);
                         lower8.Y = value;
                     }
                     {
                         var bits = reader.Read(64, paths[at + 12]);
-                        var value = BitConverter.Int64BitsToDouble(unchecked((long)bits));
+                        var value = global::System.BitConverter.Int64BitsToDouble(unchecked((long)bits));
                         if (double.IsNaN(value) || bits == 0x8000000000000000UL) throw new GesWireException(GesWireException.InvalidNumber, paths[at + 12]);
                         lower8.Z = value;
                     }
                     var upper8 = new GesPoint();
                     {
                         var bits = reader.Read(64, paths[at + 14]);
-                        var value = BitConverter.Int64BitsToDouble(unchecked((long)bits));
+                        var value = global::System.BitConverter.Int64BitsToDouble(unchecked((long)bits));
                         if (double.IsNaN(value) || bits == 0x8000000000000000UL) throw new GesWireException(GesWireException.InvalidNumber, paths[at + 14]);
                         upper8.X = value;
                     }
                     {
                         var bits = reader.Read(64, paths[at + 15]);
-                        var value = BitConverter.Int64BitsToDouble(unchecked((long)bits));
+                        var value = global::System.BitConverter.Int64BitsToDouble(unchecked((long)bits));
                         if (double.IsNaN(value) || bits == 0x8000000000000000UL) throw new GesWireException(GesWireException.InvalidNumber, paths[at + 15]);
                         upper8.Y = value;
                     }
                     {
                         var bits = reader.Read(64, paths[at + 16]);
-                        var value = BitConverter.Int64BitsToDouble(unchecked((long)bits));
+                        var value = global::System.BitConverter.Int64BitsToDouble(unchecked((long)bits));
                         if (double.IsNaN(value) || bits == 0x8000000000000000UL) throw new GesWireException(GesWireException.InvalidNumber, paths[at + 16]);
                         upper8.Z = value;
                     }
@@ -374,13 +374,13 @@ namespace GameEventScript.Tests.Generator.Geometry.Wire
                     var item = new GesPoint();
                     {
                         var bits = reader.Read(64, paths[at + 23]);
-                        var value = BitConverter.Int64BitsToDouble(unchecked((long)bits));
+                        var value = global::System.BitConverter.Int64BitsToDouble(unchecked((long)bits));
                         if (double.IsNaN(value) || bits == 0x8000000000000000UL) throw new GesWireException(GesWireException.InvalidNumber, paths[at + 23]);
                         item.X = value;
                     }
                     {
                         var bits = reader.Read(64, paths[at + 24]);
-                        var value = BitConverter.Int64BitsToDouble(unchecked((long)bits));
+                        var value = global::System.BitConverter.Int64BitsToDouble(unchecked((long)bits));
                         if (double.IsNaN(value) || bits == 0x8000000000000000UL) throw new GesWireException(GesWireException.InvalidNumber, paths[at + 24]);
                         item.Y = value;
                     }
@@ -399,38 +399,38 @@ namespace GameEventScript.Tests.Generator.Geometry.Wire
                             var lower26 = new GesPoint();
                             {
                                 var bits = reader.Read(64, paths[at + 28]);
-                                var value = BitConverter.Int64BitsToDouble(unchecked((long)bits));
+                                var value = global::System.BitConverter.Int64BitsToDouble(unchecked((long)bits));
                                 if (double.IsNaN(value) || bits == 0x8000000000000000UL) throw new GesWireException(GesWireException.InvalidNumber, paths[at + 28]);
                                 lower26.X = value;
                             }
                             {
                                 var bits = reader.Read(64, paths[at + 29]);
-                                var value = BitConverter.Int64BitsToDouble(unchecked((long)bits));
+                                var value = global::System.BitConverter.Int64BitsToDouble(unchecked((long)bits));
                                 if (double.IsNaN(value) || bits == 0x8000000000000000UL) throw new GesWireException(GesWireException.InvalidNumber, paths[at + 29]);
                                 lower26.Y = value;
                             }
                             {
                                 var bits = reader.Read(64, paths[at + 30]);
-                                var value = BitConverter.Int64BitsToDouble(unchecked((long)bits));
+                                var value = global::System.BitConverter.Int64BitsToDouble(unchecked((long)bits));
                                 if (double.IsNaN(value) || bits == 0x8000000000000000UL) throw new GesWireException(GesWireException.InvalidNumber, paths[at + 30]);
                                 lower26.Z = value;
                             }
                             var upper26 = new GesPoint();
                             {
                                 var bits = reader.Read(64, paths[at + 32]);
-                                var value = BitConverter.Int64BitsToDouble(unchecked((long)bits));
+                                var value = global::System.BitConverter.Int64BitsToDouble(unchecked((long)bits));
                                 if (double.IsNaN(value) || bits == 0x8000000000000000UL) throw new GesWireException(GesWireException.InvalidNumber, paths[at + 32]);
                                 upper26.X = value;
                             }
                             {
                                 var bits = reader.Read(64, paths[at + 33]);
-                                var value = BitConverter.Int64BitsToDouble(unchecked((long)bits));
+                                var value = global::System.BitConverter.Int64BitsToDouble(unchecked((long)bits));
                                 if (double.IsNaN(value) || bits == 0x8000000000000000UL) throw new GesWireException(GesWireException.InvalidNumber, paths[at + 33]);
                                 upper26.Y = value;
                             }
                             {
                                 var bits = reader.Read(64, paths[at + 34]);
-                                var value = BitConverter.Int64BitsToDouble(unchecked((long)bits));
+                                var value = global::System.BitConverter.Int64BitsToDouble(unchecked((long)bits));
                                 if (double.IsNaN(value) || bits == 0x8000000000000000UL) throw new GesWireException(GesWireException.InvalidNumber, paths[at + 34]);
                                 upper26.Z = value;
                             }
@@ -455,7 +455,7 @@ namespace GameEventScript.Tests.Generator.Geometry.Wire
         }
 
         #if DEBUG || DEVELOPMENT_BUILD || UNITY_EDITOR || GES_CHECK_SHARING
-        [ThreadStatic] private static HashSet<object>? __SharingLists;
+        [global::System.ThreadStatic] private static HashSet<object>? __SharingLists;
         internal bool __Busy;
 
         internal void __Mark(bool busy, HashSet<object>? lists)
@@ -527,7 +527,7 @@ namespace GameEventScript.Tests.Generator.Geometry.Wire
 
         private static ulong __Wire3(double value, string[] paths, int at)
         {
-            return GesWireRules.QuantizedIndex(value, BitConverter.Int64BitsToDouble(unchecked((long)0x0000000000000000UL)), BitConverter.Int64BitsToDouble(unchecked((long)0x4059000000000000UL)), 1d, 1d, 0L, paths[at + 3]);
+            return GesWireRules.QuantizedIndex(value, global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x0000000000000000UL)), global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x4059000000000000UL)), 1d, 1d, 0L, paths[at + 3]);
         }
 
         private static ulong __Read3(ref GesBitReader reader, string[] paths, int at)
@@ -541,7 +541,7 @@ namespace GameEventScript.Tests.Generator.Geometry.Wire
 
         private static ulong __Wire4(double value, string[] paths, int at)
         {
-            return GesWireRules.QuantizedIndex(value, BitConverter.Int64BitsToDouble(unchecked((long)0x0000000000000000UL)), BitConverter.Int64BitsToDouble(unchecked((long)0x4008000000000000UL)), 1d, 1d, 0L, paths[at + 4]);
+            return GesWireRules.QuantizedIndex(value, global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x0000000000000000UL)), global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x4008000000000000UL)), 1d, 1d, 0L, paths[at + 4]);
         }
 
         private static ulong __Read4(ref GesBitReader reader, string[] paths, int at)
@@ -554,7 +554,7 @@ namespace GameEventScript.Tests.Generator.Geometry.Wire
 
         private static ulong __Wire6(double value, string[] paths, int at)
         {
-            return GesWireRules.QuantizedIndex(value, BitConverter.Int64BitsToDouble(unchecked((long)0x0000000000000000UL)), BitConverter.Int64BitsToDouble(unchecked((long)0x4059000000000000UL)), 1d, 1d, 0L, paths[at + 6]);
+            return GesWireRules.QuantizedIndex(value, global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x0000000000000000UL)), global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x4059000000000000UL)), 1d, 1d, 0L, paths[at + 6]);
         }
 
         private static ulong __Read6(ref GesBitReader reader, string[] paths, int at)
@@ -568,7 +568,7 @@ namespace GameEventScript.Tests.Generator.Geometry.Wire
 
         private static ulong __Wire7(double value, string[] paths, int at)
         {
-            return GesWireRules.QuantizedIndex(value, BitConverter.Int64BitsToDouble(unchecked((long)0x0000000000000000UL)), BitConverter.Int64BitsToDouble(unchecked((long)0x4008000000000000UL)), 1d, 1d, 0L, paths[at + 7]);
+            return GesWireRules.QuantizedIndex(value, global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x0000000000000000UL)), global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x4008000000000000UL)), 1d, 1d, 0L, paths[at + 7]);
         }
 
         private static ulong __Read7(ref GesBitReader reader, string[] paths, int at)
@@ -582,102 +582,102 @@ namespace GameEventScript.Tests.Generator.Geometry.Wire
         private static ulong __Wire10(double value, string[] paths, int at)
         {
             if (double.IsNaN(value)) throw new GesWireException(GesWireException.NotRepresentable, paths[at + 10]);
-            return unchecked((ulong)BitConverter.DoubleToInt64Bits(value == 0 ? 0d : value));
+            return unchecked((ulong)global::System.BitConverter.DoubleToInt64Bits(value == 0 ? 0d : value));
         }
 
         private static ulong __Read10(ref GesBitReader reader, string[] paths, int at)
         {
             var wire = reader.Read(64, paths[at + 10]);
-            var value = BitConverter.Int64BitsToDouble(unchecked((long)wire));
+            var value = global::System.BitConverter.Int64BitsToDouble(unchecked((long)wire));
             if (double.IsNaN(value) || wire == 0x8000000000000000UL) throw new GesWireException(GesWireException.InvalidNumber, paths[at + 10]);
             return wire;
         }
 
-        private static double __Value10(ulong wire) => BitConverter.Int64BitsToDouble(unchecked((long)wire));
+        private static double __Value10(ulong wire) => global::System.BitConverter.Int64BitsToDouble(unchecked((long)wire));
 
         private static ulong __Wire11(double value, string[] paths, int at)
         {
             if (double.IsNaN(value)) throw new GesWireException(GesWireException.NotRepresentable, paths[at + 11]);
-            return unchecked((ulong)BitConverter.DoubleToInt64Bits(value == 0 ? 0d : value));
+            return unchecked((ulong)global::System.BitConverter.DoubleToInt64Bits(value == 0 ? 0d : value));
         }
 
         private static ulong __Read11(ref GesBitReader reader, string[] paths, int at)
         {
             var wire = reader.Read(64, paths[at + 11]);
-            var value = BitConverter.Int64BitsToDouble(unchecked((long)wire));
+            var value = global::System.BitConverter.Int64BitsToDouble(unchecked((long)wire));
             if (double.IsNaN(value) || wire == 0x8000000000000000UL) throw new GesWireException(GesWireException.InvalidNumber, paths[at + 11]);
             return wire;
         }
 
-        private static double __Value11(ulong wire) => BitConverter.Int64BitsToDouble(unchecked((long)wire));
+        private static double __Value11(ulong wire) => global::System.BitConverter.Int64BitsToDouble(unchecked((long)wire));
 
         private static ulong __Wire12(double value, string[] paths, int at)
         {
             if (double.IsNaN(value)) throw new GesWireException(GesWireException.NotRepresentable, paths[at + 12]);
-            return unchecked((ulong)BitConverter.DoubleToInt64Bits(value == 0 ? 0d : value));
+            return unchecked((ulong)global::System.BitConverter.DoubleToInt64Bits(value == 0 ? 0d : value));
         }
 
         private static ulong __Read12(ref GesBitReader reader, string[] paths, int at)
         {
             var wire = reader.Read(64, paths[at + 12]);
-            var value = BitConverter.Int64BitsToDouble(unchecked((long)wire));
+            var value = global::System.BitConverter.Int64BitsToDouble(unchecked((long)wire));
             if (double.IsNaN(value) || wire == 0x8000000000000000UL) throw new GesWireException(GesWireException.InvalidNumber, paths[at + 12]);
             return wire;
         }
 
-        private static double __Value12(ulong wire) => BitConverter.Int64BitsToDouble(unchecked((long)wire));
+        private static double __Value12(ulong wire) => global::System.BitConverter.Int64BitsToDouble(unchecked((long)wire));
 
         private static ulong __Wire14(double value, string[] paths, int at)
         {
             if (double.IsNaN(value)) throw new GesWireException(GesWireException.NotRepresentable, paths[at + 14]);
-            return unchecked((ulong)BitConverter.DoubleToInt64Bits(value == 0 ? 0d : value));
+            return unchecked((ulong)global::System.BitConverter.DoubleToInt64Bits(value == 0 ? 0d : value));
         }
 
         private static ulong __Read14(ref GesBitReader reader, string[] paths, int at)
         {
             var wire = reader.Read(64, paths[at + 14]);
-            var value = BitConverter.Int64BitsToDouble(unchecked((long)wire));
+            var value = global::System.BitConverter.Int64BitsToDouble(unchecked((long)wire));
             if (double.IsNaN(value) || wire == 0x8000000000000000UL) throw new GesWireException(GesWireException.InvalidNumber, paths[at + 14]);
             return wire;
         }
 
-        private static double __Value14(ulong wire) => BitConverter.Int64BitsToDouble(unchecked((long)wire));
+        private static double __Value14(ulong wire) => global::System.BitConverter.Int64BitsToDouble(unchecked((long)wire));
 
         private static ulong __Wire15(double value, string[] paths, int at)
         {
             if (double.IsNaN(value)) throw new GesWireException(GesWireException.NotRepresentable, paths[at + 15]);
-            return unchecked((ulong)BitConverter.DoubleToInt64Bits(value == 0 ? 0d : value));
+            return unchecked((ulong)global::System.BitConverter.DoubleToInt64Bits(value == 0 ? 0d : value));
         }
 
         private static ulong __Read15(ref GesBitReader reader, string[] paths, int at)
         {
             var wire = reader.Read(64, paths[at + 15]);
-            var value = BitConverter.Int64BitsToDouble(unchecked((long)wire));
+            var value = global::System.BitConverter.Int64BitsToDouble(unchecked((long)wire));
             if (double.IsNaN(value) || wire == 0x8000000000000000UL) throw new GesWireException(GesWireException.InvalidNumber, paths[at + 15]);
             return wire;
         }
 
-        private static double __Value15(ulong wire) => BitConverter.Int64BitsToDouble(unchecked((long)wire));
+        private static double __Value15(ulong wire) => global::System.BitConverter.Int64BitsToDouble(unchecked((long)wire));
 
         private static ulong __Wire16(double value, string[] paths, int at)
         {
             if (double.IsNaN(value)) throw new GesWireException(GesWireException.NotRepresentable, paths[at + 16]);
-            return unchecked((ulong)BitConverter.DoubleToInt64Bits(value == 0 ? 0d : value));
+            return unchecked((ulong)global::System.BitConverter.DoubleToInt64Bits(value == 0 ? 0d : value));
         }
 
         private static ulong __Read16(ref GesBitReader reader, string[] paths, int at)
         {
             var wire = reader.Read(64, paths[at + 16]);
-            var value = BitConverter.Int64BitsToDouble(unchecked((long)wire));
+            var value = global::System.BitConverter.Int64BitsToDouble(unchecked((long)wire));
             if (double.IsNaN(value) || wire == 0x8000000000000000UL) throw new GesWireException(GesWireException.InvalidNumber, paths[at + 16]);
             return wire;
         }
 
-        private static double __Value16(ulong wire) => BitConverter.Int64BitsToDouble(unchecked((long)wire));
+        private static double __Value16(ulong wire) => global::System.BitConverter.Int64BitsToDouble(unchecked((long)wire));
 
         private static ulong __Wire19(double value, string[] paths, int at)
         {
-            return GesWireRules.QuantizedIndex(value, BitConverter.Int64BitsToDouble(unchecked((long)0x0000000000000000UL)), BitConverter.Int64BitsToDouble(unchecked((long)0x4059000000000000UL)), 1d, 1d, 0L, paths[at + 19]);
+            return GesWireRules.QuantizedIndex(value, global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x0000000000000000UL)), global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x4059000000000000UL)), 1d, 1d, 0L, paths[at + 19]);
         }
 
         private static ulong __Read19(ref GesBitReader reader, string[] paths, int at)
@@ -691,7 +691,7 @@ namespace GameEventScript.Tests.Generator.Geometry.Wire
 
         private static ulong __Wire20(double value, string[] paths, int at)
         {
-            return GesWireRules.QuantizedIndex(value, BitConverter.Int64BitsToDouble(unchecked((long)0x0000000000000000UL)), BitConverter.Int64BitsToDouble(unchecked((long)0x4008000000000000UL)), 1d, 1d, 0L, paths[at + 20]);
+            return GesWireRules.QuantizedIndex(value, global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x0000000000000000UL)), global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x4008000000000000UL)), 1d, 1d, 0L, paths[at + 20]);
         }
 
         private static ulong __Read20(ref GesBitReader reader, string[] paths, int at)
@@ -705,130 +705,130 @@ namespace GameEventScript.Tests.Generator.Geometry.Wire
         private static ulong __Wire23(double value, string[] paths, int at)
         {
             if (double.IsNaN(value)) throw new GesWireException(GesWireException.NotRepresentable, paths[at + 23]);
-            return unchecked((ulong)BitConverter.DoubleToInt64Bits(value == 0 ? 0d : value));
+            return unchecked((ulong)global::System.BitConverter.DoubleToInt64Bits(value == 0 ? 0d : value));
         }
 
         private static ulong __Read23(ref GesBitReader reader, string[] paths, int at)
         {
             var wire = reader.Read(64, paths[at + 23]);
-            var value = BitConverter.Int64BitsToDouble(unchecked((long)wire));
+            var value = global::System.BitConverter.Int64BitsToDouble(unchecked((long)wire));
             if (double.IsNaN(value) || wire == 0x8000000000000000UL) throw new GesWireException(GesWireException.InvalidNumber, paths[at + 23]);
             return wire;
         }
 
-        private static double __Value23(ulong wire) => BitConverter.Int64BitsToDouble(unchecked((long)wire));
+        private static double __Value23(ulong wire) => global::System.BitConverter.Int64BitsToDouble(unchecked((long)wire));
 
         private static ulong __Wire24(double value, string[] paths, int at)
         {
             if (double.IsNaN(value)) throw new GesWireException(GesWireException.NotRepresentable, paths[at + 24]);
-            return unchecked((ulong)BitConverter.DoubleToInt64Bits(value == 0 ? 0d : value));
+            return unchecked((ulong)global::System.BitConverter.DoubleToInt64Bits(value == 0 ? 0d : value));
         }
 
         private static ulong __Read24(ref GesBitReader reader, string[] paths, int at)
         {
             var wire = reader.Read(64, paths[at + 24]);
-            var value = BitConverter.Int64BitsToDouble(unchecked((long)wire));
+            var value = global::System.BitConverter.Int64BitsToDouble(unchecked((long)wire));
             if (double.IsNaN(value) || wire == 0x8000000000000000UL) throw new GesWireException(GesWireException.InvalidNumber, paths[at + 24]);
             return wire;
         }
 
-        private static double __Value24(ulong wire) => BitConverter.Int64BitsToDouble(unchecked((long)wire));
+        private static double __Value24(ulong wire) => global::System.BitConverter.Int64BitsToDouble(unchecked((long)wire));
 
         private static ulong __Wire28(double value, string[] paths, int at)
         {
             if (double.IsNaN(value)) throw new GesWireException(GesWireException.NotRepresentable, paths[at + 28]);
-            return unchecked((ulong)BitConverter.DoubleToInt64Bits(value == 0 ? 0d : value));
+            return unchecked((ulong)global::System.BitConverter.DoubleToInt64Bits(value == 0 ? 0d : value));
         }
 
         private static ulong __Read28(ref GesBitReader reader, string[] paths, int at)
         {
             var wire = reader.Read(64, paths[at + 28]);
-            var value = BitConverter.Int64BitsToDouble(unchecked((long)wire));
+            var value = global::System.BitConverter.Int64BitsToDouble(unchecked((long)wire));
             if (double.IsNaN(value) || wire == 0x8000000000000000UL) throw new GesWireException(GesWireException.InvalidNumber, paths[at + 28]);
             return wire;
         }
 
-        private static double __Value28(ulong wire) => BitConverter.Int64BitsToDouble(unchecked((long)wire));
+        private static double __Value28(ulong wire) => global::System.BitConverter.Int64BitsToDouble(unchecked((long)wire));
 
         private static ulong __Wire29(double value, string[] paths, int at)
         {
             if (double.IsNaN(value)) throw new GesWireException(GesWireException.NotRepresentable, paths[at + 29]);
-            return unchecked((ulong)BitConverter.DoubleToInt64Bits(value == 0 ? 0d : value));
+            return unchecked((ulong)global::System.BitConverter.DoubleToInt64Bits(value == 0 ? 0d : value));
         }
 
         private static ulong __Read29(ref GesBitReader reader, string[] paths, int at)
         {
             var wire = reader.Read(64, paths[at + 29]);
-            var value = BitConverter.Int64BitsToDouble(unchecked((long)wire));
+            var value = global::System.BitConverter.Int64BitsToDouble(unchecked((long)wire));
             if (double.IsNaN(value) || wire == 0x8000000000000000UL) throw new GesWireException(GesWireException.InvalidNumber, paths[at + 29]);
             return wire;
         }
 
-        private static double __Value29(ulong wire) => BitConverter.Int64BitsToDouble(unchecked((long)wire));
+        private static double __Value29(ulong wire) => global::System.BitConverter.Int64BitsToDouble(unchecked((long)wire));
 
         private static ulong __Wire30(double value, string[] paths, int at)
         {
             if (double.IsNaN(value)) throw new GesWireException(GesWireException.NotRepresentable, paths[at + 30]);
-            return unchecked((ulong)BitConverter.DoubleToInt64Bits(value == 0 ? 0d : value));
+            return unchecked((ulong)global::System.BitConverter.DoubleToInt64Bits(value == 0 ? 0d : value));
         }
 
         private static ulong __Read30(ref GesBitReader reader, string[] paths, int at)
         {
             var wire = reader.Read(64, paths[at + 30]);
-            var value = BitConverter.Int64BitsToDouble(unchecked((long)wire));
+            var value = global::System.BitConverter.Int64BitsToDouble(unchecked((long)wire));
             if (double.IsNaN(value) || wire == 0x8000000000000000UL) throw new GesWireException(GesWireException.InvalidNumber, paths[at + 30]);
             return wire;
         }
 
-        private static double __Value30(ulong wire) => BitConverter.Int64BitsToDouble(unchecked((long)wire));
+        private static double __Value30(ulong wire) => global::System.BitConverter.Int64BitsToDouble(unchecked((long)wire));
 
         private static ulong __Wire32(double value, string[] paths, int at)
         {
             if (double.IsNaN(value)) throw new GesWireException(GesWireException.NotRepresentable, paths[at + 32]);
-            return unchecked((ulong)BitConverter.DoubleToInt64Bits(value == 0 ? 0d : value));
+            return unchecked((ulong)global::System.BitConverter.DoubleToInt64Bits(value == 0 ? 0d : value));
         }
 
         private static ulong __Read32(ref GesBitReader reader, string[] paths, int at)
         {
             var wire = reader.Read(64, paths[at + 32]);
-            var value = BitConverter.Int64BitsToDouble(unchecked((long)wire));
+            var value = global::System.BitConverter.Int64BitsToDouble(unchecked((long)wire));
             if (double.IsNaN(value) || wire == 0x8000000000000000UL) throw new GesWireException(GesWireException.InvalidNumber, paths[at + 32]);
             return wire;
         }
 
-        private static double __Value32(ulong wire) => BitConverter.Int64BitsToDouble(unchecked((long)wire));
+        private static double __Value32(ulong wire) => global::System.BitConverter.Int64BitsToDouble(unchecked((long)wire));
 
         private static ulong __Wire33(double value, string[] paths, int at)
         {
             if (double.IsNaN(value)) throw new GesWireException(GesWireException.NotRepresentable, paths[at + 33]);
-            return unchecked((ulong)BitConverter.DoubleToInt64Bits(value == 0 ? 0d : value));
+            return unchecked((ulong)global::System.BitConverter.DoubleToInt64Bits(value == 0 ? 0d : value));
         }
 
         private static ulong __Read33(ref GesBitReader reader, string[] paths, int at)
         {
             var wire = reader.Read(64, paths[at + 33]);
-            var value = BitConverter.Int64BitsToDouble(unchecked((long)wire));
+            var value = global::System.BitConverter.Int64BitsToDouble(unchecked((long)wire));
             if (double.IsNaN(value) || wire == 0x8000000000000000UL) throw new GesWireException(GesWireException.InvalidNumber, paths[at + 33]);
             return wire;
         }
 
-        private static double __Value33(ulong wire) => BitConverter.Int64BitsToDouble(unchecked((long)wire));
+        private static double __Value33(ulong wire) => global::System.BitConverter.Int64BitsToDouble(unchecked((long)wire));
 
         private static ulong __Wire34(double value, string[] paths, int at)
         {
             if (double.IsNaN(value)) throw new GesWireException(GesWireException.NotRepresentable, paths[at + 34]);
-            return unchecked((ulong)BitConverter.DoubleToInt64Bits(value == 0 ? 0d : value));
+            return unchecked((ulong)global::System.BitConverter.DoubleToInt64Bits(value == 0 ? 0d : value));
         }
 
         private static ulong __Read34(ref GesBitReader reader, string[] paths, int at)
         {
             var wire = reader.Read(64, paths[at + 34]);
-            var value = BitConverter.Int64BitsToDouble(unchecked((long)wire));
+            var value = global::System.BitConverter.Int64BitsToDouble(unchecked((long)wire));
             if (double.IsNaN(value) || wire == 0x8000000000000000UL) throw new GesWireException(GesWireException.InvalidNumber, paths[at + 34]);
             return wire;
         }
 
-        private static double __Value34(ulong wire) => BitConverter.Int64BitsToDouble(unchecked((long)wire));
+        private static double __Value34(ulong wire) => global::System.BitConverter.Int64BitsToDouble(unchecked((long)wire));
 
         internal bool __Same(Zone other, string[] paths, int at)
         {
@@ -1046,7 +1046,7 @@ namespace GameEventScript.Tests.Generator.Geometry.Wire
         internal bool __WriteDelta(Zone baseline, ref GesBitWriter writer, string[] paths, int at, bool top)
         {
             var first = writer.BitPosition;
-            for (var left = top ? 6 : 7; left > 0; left -= 64) writer.Write(0, Math.Min(left, 64));
+            for (var left = top ? 6 : 7; left > 0; left -= 64) writer.Write(0, global::System.Math.Min(left, 64));
             var changed = false;
             var ordinal = 0;
             if (!top)
@@ -1186,17 +1186,17 @@ namespace GameEventScript.Tests.Generator.Geometry.Wire
                     if (HasBounds)
                     {
                         if (double.IsNaN(Bounds.Min.X)) throw new GesWireException(GesWireException.NotRepresentable, paths[at + 10]);
-                        writer.Write(unchecked((ulong)BitConverter.DoubleToInt64Bits(Bounds.Min.X == 0 ? 0d : Bounds.Min.X)), 64);
+                        writer.Write(unchecked((ulong)global::System.BitConverter.DoubleToInt64Bits(Bounds.Min.X == 0 ? 0d : Bounds.Min.X)), 64);
                         if (double.IsNaN(Bounds.Min.Y)) throw new GesWireException(GesWireException.NotRepresentable, paths[at + 11]);
-                        writer.Write(unchecked((ulong)BitConverter.DoubleToInt64Bits(Bounds.Min.Y == 0 ? 0d : Bounds.Min.Y)), 64);
+                        writer.Write(unchecked((ulong)global::System.BitConverter.DoubleToInt64Bits(Bounds.Min.Y == 0 ? 0d : Bounds.Min.Y)), 64);
                         if (double.IsNaN(Bounds.Min.Z)) throw new GesWireException(GesWireException.NotRepresentable, paths[at + 12]);
-                        writer.Write(unchecked((ulong)BitConverter.DoubleToInt64Bits(Bounds.Min.Z == 0 ? 0d : Bounds.Min.Z)), 64);
+                        writer.Write(unchecked((ulong)global::System.BitConverter.DoubleToInt64Bits(Bounds.Min.Z == 0 ? 0d : Bounds.Min.Z)), 64);
                         if (double.IsNaN(Bounds.Max.X)) throw new GesWireException(GesWireException.NotRepresentable, paths[at + 14]);
-                        writer.Write(unchecked((ulong)BitConverter.DoubleToInt64Bits(Bounds.Max.X == 0 ? 0d : Bounds.Max.X)), 64);
+                        writer.Write(unchecked((ulong)global::System.BitConverter.DoubleToInt64Bits(Bounds.Max.X == 0 ? 0d : Bounds.Max.X)), 64);
                         if (double.IsNaN(Bounds.Max.Y)) throw new GesWireException(GesWireException.NotRepresentable, paths[at + 15]);
-                        writer.Write(unchecked((ulong)BitConverter.DoubleToInt64Bits(Bounds.Max.Y == 0 ? 0d : Bounds.Max.Y)), 64);
+                        writer.Write(unchecked((ulong)global::System.BitConverter.DoubleToInt64Bits(Bounds.Max.Y == 0 ? 0d : Bounds.Max.Y)), 64);
                         if (double.IsNaN(Bounds.Max.Z)) throw new GesWireException(GesWireException.NotRepresentable, paths[at + 16]);
-                        writer.Write(unchecked((ulong)BitConverter.DoubleToInt64Bits(Bounds.Max.Z == 0 ? 0d : Bounds.Max.Z)), 64);
+                        writer.Write(unchecked((ulong)global::System.BitConverter.DoubleToInt64Bits(Bounds.Max.Z == 0 ? 0d : Bounds.Max.Z)), 64);
                     }
                     set8 = true;
                 }
@@ -1354,8 +1354,8 @@ namespace GameEventScript.Tests.Generator.Geometry.Wire
                     writer.Write((ulong)Outline.Count, 2);
                     foreach (var item in Outline)
                     {
-                        writer.Write(GesWireRules.QuantizedIndex(item.X, BitConverter.Int64BitsToDouble(unchecked((long)0x0000000000000000UL)), BitConverter.Int64BitsToDouble(unchecked((long)0x4059000000000000UL)), 1d, 1d, 0L, paths[at + 19]), 7);
-                        writer.Write(GesWireRules.QuantizedIndex(item.Y, BitConverter.Int64BitsToDouble(unchecked((long)0x0000000000000000UL)), BitConverter.Int64BitsToDouble(unchecked((long)0x4008000000000000UL)), 1d, 1d, 0L, paths[at + 20]), 2);
+                        writer.Write(GesWireRules.QuantizedIndex(item.X, global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x0000000000000000UL)), global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x4059000000000000UL)), 1d, 1d, 0L, paths[at + 19]), 7);
+                        writer.Write(GesWireRules.QuantizedIndex(item.Y, global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x0000000000000000UL)), global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x4008000000000000UL)), 1d, 1d, 0L, paths[at + 20]), 2);
                         if (item.Z != 0) throw new GesWireException(GesWireException.TypeMismatch, paths[at + 18]);
                     }
                     set17 = true;
@@ -1376,9 +1376,9 @@ namespace GameEventScript.Tests.Generator.Geometry.Wire
                     foreach (var item in Free)
                     {
                         if (double.IsNaN(item.X)) throw new GesWireException(GesWireException.NotRepresentable, paths[at + 23]);
-                        writer.Write(unchecked((ulong)BitConverter.DoubleToInt64Bits(item.X == 0 ? 0d : item.X)), 64);
+                        writer.Write(unchecked((ulong)global::System.BitConverter.DoubleToInt64Bits(item.X == 0 ? 0d : item.X)), 64);
                         if (double.IsNaN(item.Y)) throw new GesWireException(GesWireException.NotRepresentable, paths[at + 24]);
-                        writer.Write(unchecked((ulong)BitConverter.DoubleToInt64Bits(item.Y == 0 ? 0d : item.Y)), 64);
+                        writer.Write(unchecked((ulong)global::System.BitConverter.DoubleToInt64Bits(item.Y == 0 ? 0d : item.Y)), 64);
                         if (item.Z != 0) throw new GesWireException(GesWireException.TypeMismatch, paths[at + 22]);
                     }
                     set21 = true;
@@ -1402,17 +1402,17 @@ namespace GameEventScript.Tests.Generator.Geometry.Wire
                             {
                                 writer.Write(0, 1);
                                 if (double.IsNaN(PickBox.Min.X)) throw new GesWireException(GesWireException.NotRepresentable, paths[at + 28]);
-                                writer.Write(unchecked((ulong)BitConverter.DoubleToInt64Bits(PickBox.Min.X == 0 ? 0d : PickBox.Min.X)), 64);
+                                writer.Write(unchecked((ulong)global::System.BitConverter.DoubleToInt64Bits(PickBox.Min.X == 0 ? 0d : PickBox.Min.X)), 64);
                                 if (double.IsNaN(PickBox.Min.Y)) throw new GesWireException(GesWireException.NotRepresentable, paths[at + 29]);
-                                writer.Write(unchecked((ulong)BitConverter.DoubleToInt64Bits(PickBox.Min.Y == 0 ? 0d : PickBox.Min.Y)), 64);
+                                writer.Write(unchecked((ulong)global::System.BitConverter.DoubleToInt64Bits(PickBox.Min.Y == 0 ? 0d : PickBox.Min.Y)), 64);
                                 if (double.IsNaN(PickBox.Min.Z)) throw new GesWireException(GesWireException.NotRepresentable, paths[at + 30]);
-                                writer.Write(unchecked((ulong)BitConverter.DoubleToInt64Bits(PickBox.Min.Z == 0 ? 0d : PickBox.Min.Z)), 64);
+                                writer.Write(unchecked((ulong)global::System.BitConverter.DoubleToInt64Bits(PickBox.Min.Z == 0 ? 0d : PickBox.Min.Z)), 64);
                                 if (double.IsNaN(PickBox.Max.X)) throw new GesWireException(GesWireException.NotRepresentable, paths[at + 32]);
-                                writer.Write(unchecked((ulong)BitConverter.DoubleToInt64Bits(PickBox.Max.X == 0 ? 0d : PickBox.Max.X)), 64);
+                                writer.Write(unchecked((ulong)global::System.BitConverter.DoubleToInt64Bits(PickBox.Max.X == 0 ? 0d : PickBox.Max.X)), 64);
                                 if (double.IsNaN(PickBox.Max.Y)) throw new GesWireException(GesWireException.NotRepresentable, paths[at + 33]);
-                                writer.Write(unchecked((ulong)BitConverter.DoubleToInt64Bits(PickBox.Max.Y == 0 ? 0d : PickBox.Max.Y)), 64);
+                                writer.Write(unchecked((ulong)global::System.BitConverter.DoubleToInt64Bits(PickBox.Max.Y == 0 ? 0d : PickBox.Max.Y)), 64);
                                 if (double.IsNaN(PickBox.Max.Z)) throw new GesWireException(GesWireException.NotRepresentable, paths[at + 34]);
-                                writer.Write(unchecked((ulong)BitConverter.DoubleToInt64Bits(PickBox.Max.Z == 0 ? 0d : PickBox.Max.Z)), 64);
+                                writer.Write(unchecked((ulong)global::System.BitConverter.DoubleToInt64Bits(PickBox.Max.Z == 0 ? 0d : PickBox.Max.Z)), 64);
                                 break;
                             }
                             case PickAlternative.Nothing:
@@ -1918,38 +1918,38 @@ namespace GameEventScript.Tests.Generator.Geometry.Wire
                             var lower8 = new GesPoint();
                             {
                                 var bits = reader.Read(64, paths[at + 10]);
-                                var value = BitConverter.Int64BitsToDouble(unchecked((long)bits));
+                                var value = global::System.BitConverter.Int64BitsToDouble(unchecked((long)bits));
                                 if (double.IsNaN(value) || bits == 0x8000000000000000UL) throw new GesWireException(GesWireException.InvalidNumber, paths[at + 10]);
                                 lower8.X = value;
                             }
                             {
                                 var bits = reader.Read(64, paths[at + 11]);
-                                var value = BitConverter.Int64BitsToDouble(unchecked((long)bits));
+                                var value = global::System.BitConverter.Int64BitsToDouble(unchecked((long)bits));
                                 if (double.IsNaN(value) || bits == 0x8000000000000000UL) throw new GesWireException(GesWireException.InvalidNumber, paths[at + 11]);
                                 lower8.Y = value;
                             }
                             {
                                 var bits = reader.Read(64, paths[at + 12]);
-                                var value = BitConverter.Int64BitsToDouble(unchecked((long)bits));
+                                var value = global::System.BitConverter.Int64BitsToDouble(unchecked((long)bits));
                                 if (double.IsNaN(value) || bits == 0x8000000000000000UL) throw new GesWireException(GesWireException.InvalidNumber, paths[at + 12]);
                                 lower8.Z = value;
                             }
                             var upper8 = new GesPoint();
                             {
                                 var bits = reader.Read(64, paths[at + 14]);
-                                var value = BitConverter.Int64BitsToDouble(unchecked((long)bits));
+                                var value = global::System.BitConverter.Int64BitsToDouble(unchecked((long)bits));
                                 if (double.IsNaN(value) || bits == 0x8000000000000000UL) throw new GesWireException(GesWireException.InvalidNumber, paths[at + 14]);
                                 upper8.X = value;
                             }
                             {
                                 var bits = reader.Read(64, paths[at + 15]);
-                                var value = BitConverter.Int64BitsToDouble(unchecked((long)bits));
+                                var value = global::System.BitConverter.Int64BitsToDouble(unchecked((long)bits));
                                 if (double.IsNaN(value) || bits == 0x8000000000000000UL) throw new GesWireException(GesWireException.InvalidNumber, paths[at + 15]);
                                 upper8.Y = value;
                             }
                             {
                                 var bits = reader.Read(64, paths[at + 16]);
-                                var value = BitConverter.Int64BitsToDouble(unchecked((long)bits));
+                                var value = global::System.BitConverter.Int64BitsToDouble(unchecked((long)bits));
                                 if (double.IsNaN(value) || bits == 0x8000000000000000UL) throw new GesWireException(GesWireException.InvalidNumber, paths[at + 16]);
                                 upper8.Z = value;
                             }
@@ -2022,13 +2022,13 @@ namespace GameEventScript.Tests.Generator.Geometry.Wire
                             var item = new GesPoint();
                             {
                                 var bits = reader.Read(64, paths[at + 23]);
-                                var value = BitConverter.Int64BitsToDouble(unchecked((long)bits));
+                                var value = global::System.BitConverter.Int64BitsToDouble(unchecked((long)bits));
                                 if (double.IsNaN(value) || bits == 0x8000000000000000UL) throw new GesWireException(GesWireException.InvalidNumber, paths[at + 23]);
                                 item.X = value;
                             }
                             {
                                 var bits = reader.Read(64, paths[at + 24]);
-                                var value = BitConverter.Int64BitsToDouble(unchecked((long)bits));
+                                var value = global::System.BitConverter.Int64BitsToDouble(unchecked((long)bits));
                                 if (double.IsNaN(value) || bits == 0x8000000000000000UL) throw new GesWireException(GesWireException.InvalidNumber, paths[at + 24]);
                                 item.Y = value;
                             }
@@ -2219,38 +2219,38 @@ namespace GameEventScript.Tests.Generator.Geometry.Wire
                                         var lower26 = new GesPoint();
                                         {
                                             var bits = reader.Read(64, paths[at + 28]);
-                                            var value = BitConverter.Int64BitsToDouble(unchecked((long)bits));
+                                            var value = global::System.BitConverter.Int64BitsToDouble(unchecked((long)bits));
                                             if (double.IsNaN(value) || bits == 0x8000000000000000UL) throw new GesWireException(GesWireException.InvalidNumber, paths[at + 28]);
                                             lower26.X = value;
                                         }
                                         {
                                             var bits = reader.Read(64, paths[at + 29]);
-                                            var value = BitConverter.Int64BitsToDouble(unchecked((long)bits));
+                                            var value = global::System.BitConverter.Int64BitsToDouble(unchecked((long)bits));
                                             if (double.IsNaN(value) || bits == 0x8000000000000000UL) throw new GesWireException(GesWireException.InvalidNumber, paths[at + 29]);
                                             lower26.Y = value;
                                         }
                                         {
                                             var bits = reader.Read(64, paths[at + 30]);
-                                            var value = BitConverter.Int64BitsToDouble(unchecked((long)bits));
+                                            var value = global::System.BitConverter.Int64BitsToDouble(unchecked((long)bits));
                                             if (double.IsNaN(value) || bits == 0x8000000000000000UL) throw new GesWireException(GesWireException.InvalidNumber, paths[at + 30]);
                                             lower26.Z = value;
                                         }
                                         var upper26 = new GesPoint();
                                         {
                                             var bits = reader.Read(64, paths[at + 32]);
-                                            var value = BitConverter.Int64BitsToDouble(unchecked((long)bits));
+                                            var value = global::System.BitConverter.Int64BitsToDouble(unchecked((long)bits));
                                             if (double.IsNaN(value) || bits == 0x8000000000000000UL) throw new GesWireException(GesWireException.InvalidNumber, paths[at + 32]);
                                             upper26.X = value;
                                         }
                                         {
                                             var bits = reader.Read(64, paths[at + 33]);
-                                            var value = BitConverter.Int64BitsToDouble(unchecked((long)bits));
+                                            var value = global::System.BitConverter.Int64BitsToDouble(unchecked((long)bits));
                                             if (double.IsNaN(value) || bits == 0x8000000000000000UL) throw new GesWireException(GesWireException.InvalidNumber, paths[at + 33]);
                                             upper26.Y = value;
                                         }
                                         {
                                             var bits = reader.Read(64, paths[at + 34]);
-                                            var value = BitConverter.Int64BitsToDouble(unchecked((long)bits));
+                                            var value = global::System.BitConverter.Int64BitsToDouble(unchecked((long)bits));
                                             if (double.IsNaN(value) || bits == 0x8000000000000000UL) throw new GesWireException(GesWireException.InvalidNumber, paths[at + 34]);
                                             upper26.Z = value;
                                         }
@@ -2367,9 +2367,9 @@ namespace GameEventScript.Tests.Generator.Geometry.Wire
                 foreach (var item in Value)
                 {
                     if (double.IsNaN(item.X)) throw new GesWireException(GesWireException.NotRepresentable, paths[at + 2]);
-                    writer.Write(unchecked((ulong)BitConverter.DoubleToInt64Bits(item.X == 0 ? 0d : item.X)), 64);
+                    writer.Write(unchecked((ulong)global::System.BitConverter.DoubleToInt64Bits(item.X == 0 ? 0d : item.X)), 64);
                     if (double.IsNaN(item.Y)) throw new GesWireException(GesWireException.NotRepresentable, paths[at + 3]);
-                    writer.Write(unchecked((ulong)BitConverter.DoubleToInt64Bits(item.Y == 0 ? 0d : item.Y)), 64);
+                    writer.Write(unchecked((ulong)global::System.BitConverter.DoubleToInt64Bits(item.Y == 0 ? 0d : item.Y)), 64);
                     if (item.Z != 0) throw new GesWireException(GesWireException.TypeMismatch, paths[at + 1]);
                 }
             }
@@ -2385,13 +2385,13 @@ namespace GameEventScript.Tests.Generator.Geometry.Wire
                         var item = new GesPoint();
                         {
                             var bits = reader.Read(64, paths[at + 2]);
-                            var value = BitConverter.Int64BitsToDouble(unchecked((long)bits));
+                            var value = global::System.BitConverter.Int64BitsToDouble(unchecked((long)bits));
                             if (double.IsNaN(value) || bits == 0x8000000000000000UL) throw new GesWireException(GesWireException.InvalidNumber, paths[at + 2]);
                             item.X = value;
                         }
                         {
                             var bits = reader.Read(64, paths[at + 3]);
-                            var value = BitConverter.Int64BitsToDouble(unchecked((long)bits));
+                            var value = global::System.BitConverter.Int64BitsToDouble(unchecked((long)bits));
                             if (double.IsNaN(value) || bits == 0x8000000000000000UL) throw new GesWireException(GesWireException.InvalidNumber, paths[at + 3]);
                             item.Y = value;
                         }
@@ -2421,34 +2421,34 @@ namespace GameEventScript.Tests.Generator.Geometry.Wire
             private static ulong __Wire2(double value, string[] paths, int at)
             {
                 if (double.IsNaN(value)) throw new GesWireException(GesWireException.NotRepresentable, paths[at + 2]);
-                return unchecked((ulong)BitConverter.DoubleToInt64Bits(value == 0 ? 0d : value));
+                return unchecked((ulong)global::System.BitConverter.DoubleToInt64Bits(value == 0 ? 0d : value));
             }
 
             private static ulong __Read2(ref GesBitReader reader, string[] paths, int at)
             {
                 var wire = reader.Read(64, paths[at + 2]);
-                var value = BitConverter.Int64BitsToDouble(unchecked((long)wire));
+                var value = global::System.BitConverter.Int64BitsToDouble(unchecked((long)wire));
                 if (double.IsNaN(value) || wire == 0x8000000000000000UL) throw new GesWireException(GesWireException.InvalidNumber, paths[at + 2]);
                 return wire;
             }
 
-            private static double __Value2(ulong wire) => BitConverter.Int64BitsToDouble(unchecked((long)wire));
+            private static double __Value2(ulong wire) => global::System.BitConverter.Int64BitsToDouble(unchecked((long)wire));
 
             private static ulong __Wire3(double value, string[] paths, int at)
             {
                 if (double.IsNaN(value)) throw new GesWireException(GesWireException.NotRepresentable, paths[at + 3]);
-                return unchecked((ulong)BitConverter.DoubleToInt64Bits(value == 0 ? 0d : value));
+                return unchecked((ulong)global::System.BitConverter.DoubleToInt64Bits(value == 0 ? 0d : value));
             }
 
             private static ulong __Read3(ref GesBitReader reader, string[] paths, int at)
             {
                 var wire = reader.Read(64, paths[at + 3]);
-                var value = BitConverter.Int64BitsToDouble(unchecked((long)wire));
+                var value = global::System.BitConverter.Int64BitsToDouble(unchecked((long)wire));
                 if (double.IsNaN(value) || wire == 0x8000000000000000UL) throw new GesWireException(GesWireException.InvalidNumber, paths[at + 3]);
                 return wire;
             }
 
-            private static double __Value3(ulong wire) => BitConverter.Int64BitsToDouble(unchecked((long)wire));
+            private static double __Value3(ulong wire) => global::System.BitConverter.Int64BitsToDouble(unchecked((long)wire));
 
             internal bool __Same(RingsItem other, string[] paths, int at)
             {
@@ -2511,7 +2511,7 @@ namespace GameEventScript.Tests.Generator.Geometry.Wire
                     "",
                 })));
             var bound = set.Schema(root).Bind(new GesSchemaParameters());
-            if (bound.BindingHash != bindingHash) throw new InvalidOperationException("The embedded schema sources no longer bind like the generated code.");
+            if (bound.BindingHash != bindingHash) throw new global::System.InvalidOperationException("The embedded schema sources no longer bind like the generated code.");
             return bound;
         }
     }

@@ -8,6 +8,7 @@ enum GesSwiftModelEmitter {
     typealias Names = [(name: String, origin: String)]
 
     static func emit(_ layout: GesModelLayout, _ options: GesSchemaGenerateOptions) throws(GesGeneratorError) -> GesCodeDocument {
+        try GesSchemaPlanner.checkTopLevel(GesModelPlanner.topLevel(layout, swift: true), swift: true)
         let access = options.access == .public ? "public " : ""
         let header = GesModelPlanner.header(layout)
         let suffix = GesSchemaPlanner.suffix(header, options)
@@ -159,6 +160,9 @@ enum GesSwiftModelEmitter {
         }
         if let key, identity { names.append(("id", "the identity of the key " + key.field.name)) }
         names.append(("schemaHash", "the generated member schemaHash"))
+        // Hashable's requirements: a stored hashValue would satisfy the deprecated requirement in place of the synthesized one.
+        names.append(("hashValue", "the Hashable member hashValue"))
+        names.append(("hash", "the Hashable member hash(into:)"))
         for constant in type.constants { names.append((constant.name, "the let " + constant.name)) }
         GesComputedEmitter.names(type.computed, type.name, swift: true, &names)
         if bindings { names.append(("gesValue", "the generated member gesValue")) }
@@ -166,7 +170,7 @@ enum GesSwiftModelEmitter {
         if bindings && fields.contains(where: { $0.field.name == "fields" }) {
             throw GesGeneratorError(GesGeneratorError.nameCollision, "In '\(type.name)', the field fields and the generated field fields of its bindings share a name.")
         }
-        try GesSchemaPlanner.unique(type.name, names)
+        try GesSchemaPlanner.unique(type.name, names, GesModelPlanner.topLevel(layout, swift: true))
 
         code.line("/// The model of the schema `:\(type.name)`: a plain value that is never encoded.")
         let adopted = GesModelPlanner.adopted(layout, type, swift: true).map { ", " + $0 }.joined()
@@ -241,7 +245,7 @@ enum GesSwiftModelEmitter {
     }
 
     private static func nested(_ value: GesModelPlanValue, _ names: inout Names, _ field: String) {
-        if !value.nested.isEmpty && value.tagSet.isEmpty { names.append((value.nested, "a type of the field " + field)) }
+        if !value.nested.isEmpty && value.tagSet.isEmpty { names.append((value.nested, GesSchemaPlanner.nestedTypeOrigin + "of the field " + field)) }
         if let element = value.element { nested(element, &names, field) }
         for alternative in value.alternatives { nested(alternative, &names, field) }
     }

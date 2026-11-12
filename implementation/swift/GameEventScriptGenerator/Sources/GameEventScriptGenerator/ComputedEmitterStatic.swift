@@ -392,6 +392,19 @@ extension GesComputedEmitter {
         return text.contains(".") || text.contains("e") ? text : text + ".0"
     }
 
+    // An operand of an addition or subtraction. A C++ compiler, such as the one behind IL2CPP, may contract a product that
+    // an addition takes in the same expression into one fused operation with other rounding; a product computed by a helper
+    // call stays a separate operation, as in the VM. Swift does not contract without an explicit option.
+    private func operand(_ node: GesComputedNode, _ root: String) -> Text {
+        if !swift && node.op == .multiply { return Text(product(node, root), 10) }
+        if !swift && node.op == .negate && node.children[0].op == .multiply { return Text("-" + product(node.children[0], root), 9) }
+        return emit(node, .plain, root)
+    }
+
+    private func product(_ node: GesComputedNode, _ root: String) -> String {
+        call("Product", emit(node.children[0], .plain, root).value, emit(node.children[1], .plain, root).value)
+    }
+
     private func emit(_ node: GesComputedNode, _ want: Want, _ root: String) -> Text {
         let children = node.children
         let facts = self.facts[ObjectIdentifier(node)]!
@@ -405,13 +418,13 @@ extension GesComputedEmitter {
             let operand = emit(children[0], .plain, root)
             return Text("-" + Self.wrap(operand, operand.value.hasPrefix("-") ? 11 : 9), 9)
         case .abs:
-            return Text((swift ? "abs(" : "Math.Abs(") + emit(children[0], .plain, root).value + ")", 10)
+            return Text((swift ? "abs(" : "global::System.Math.Abs(") + emit(children[0], .plain, root).value + ")", 10)
         case .add, .subtract:
             let symbol = node.op == .add ? " + " : " - "
-            let a = emit(children[0], .plain, root)
-            let b = emit(children[1], .plain, root)
+            let a = operand(children[0], root)
+            let b = operand(children[1], root)
             if children[0].type == .number && children[1].type == .percentage {
-                if a.precedence == 10 && children[0].op != .literal && !a.value.contains("(") {
+                if swift && a.precedence == 10 && children[0].op != .literal && !a.value.contains("(") {
                     return Text(a.value + symbol + a.value + " * " + Self.wrap(b, 9), 7)
                 }
                 return Text(call(node.op == .add ? "AddPercentage" : "SubtractPercentage", a.value, b.value), 10)

@@ -212,4 +212,64 @@ public sealed class GesSchemaGenerateTests
         Assert.AreEqual("generate.nameCollision", Code(() => GesSchemaGenerator.GenerateModelFiles(sources, ["A"], new GesSchemaGenerateOptions { Split = GesSchemaSplit.File })));
         Assert.HasCount(4, GesSchemaGenerator.GenerateModelFiles(sources, ["A"], new GesSchemaGenerateOptions { Split = GesSchemaSplit.Schema }));
     }
+
+    [TestMethod]
+    public void NestedTypesMustNotHideTopLevelTypes()
+    {
+        var set = GesSchemaSet.Parse("tags :ModeTag as (#p, #q, #r)\nschema :SlotsItem as {\n  a: :Boolean\n}\nschema :Squad as {\n  mode: :Tag(#a, #b)\n  other: :ModeTag\n}\nschema :Crew as {\n  slots: :List(:Text max 4 | :Number integer between 0 and 3) max 3\n  spare: :SlotsItem\n}\n");
+        foreach (var language in new[] { GesSchemaLanguage.CSharp, GesSchemaLanguage.Swift })
+        {
+            var options = new GesSchemaGenerateOptions { Language = language };
+            Assert.AreEqual("generate.nameCollision", Code(() => GesSchemaGenerator.Generate(set, ["Squad"], new GesSchemaParameters(), options)));
+            Assert.AreEqual("generate.nameCollision", Code(() => GesSchemaGenerator.Generate(set, ["Crew"], new GesSchemaParameters(), options)));
+            Assert.AreEqual("generate.nameCollision", Code(() => GesSchemaGenerator.GenerateModels(set, ["Squad"], options)));
+        }
+    }
+
+    [TestMethod]
+    public void TypesMustNotTakeNamesThatGeneratedCodeUses()
+    {
+        var swift = new GesSchemaGenerateOptions { Language = GesSchemaLanguage.Swift };
+        var csharp = new GesSchemaGenerateOptions();
+        foreach (var name in new[] { "String", "Int", "Type", "Swift" })
+        {
+            var set = GesSchemaSet.Parse($"schema :{name} as {{\n  on: :Boolean\n}}\n");
+            Assert.AreEqual("generate.nameCollision", Code(() => GesSchemaGenerator.Generate(set, [name], new GesSchemaParameters(), swift)));
+            Assert.AreEqual("generate.nameCollision", Code(() => GesSchemaGenerator.GenerateModels(set, [name], swift)));
+            GesSchemaGenerator.Generate(set, [name], new GesSchemaParameters(), csharp);
+        }
+
+        var runtime = GesSchemaSet.Parse("schema :GesValue as {\n  on: :Boolean\n}\n");
+        foreach (var options in new[] { csharp, swift })
+        {
+            Assert.AreEqual("generate.nameCollision", Code(() => GesSchemaGenerator.Generate(runtime, ["GesValue"], new GesSchemaParameters(), options)));
+            Assert.AreEqual("generate.nameCollision", Code(() => GesSchemaGenerator.GenerateModels(runtime, ["GesValue"], options)));
+        }
+
+        var member = GesSchemaSet.Parse("schema :S as {\n  gesValue: :Boolean\n  gesture: :Boolean\n}\n");
+        Assert.AreEqual("generate.nameCollision", Code(() => GesSchemaGenerator.Generate(member, ["S"], new GesSchemaParameters(), csharp)));
+        GesSchemaGenerator.Generate(GesSchemaSet.Parse("schema :Gesture as {\n  gesture: :Boolean\n}\n"), ["Gesture"], new GesSchemaParameters(), csharp);
+    }
+
+    [TestMethod]
+    public void SwiftModelsReserveTheHashableMembers()
+    {
+        foreach (var field in new[] { "hashValue", "hash" })
+        {
+            var set = GesSchemaSet.Parse($"schema :Unit as {{\n  {field}: :Number integer between 0 and 9\n}}\n");
+            Assert.AreEqual("generate.nameCollision", Code(() => GesSchemaGenerator.GenerateModels(set, ["Unit"], new GesSchemaGenerateOptions { Language = GesSchemaLanguage.Swift })));
+            GesSchemaGenerator.GenerateModels(set, ["Unit"], new GesSchemaGenerateOptions());
+        }
+    }
+
+    [TestMethod]
+    public void ManifestNamesTheValueConversionsThatDocumentsInclude()
+    {
+        var set = GesSchemaSet.Parse("schema :S as {\n  on: :Boolean\n}\n");
+        var documents = GesSchemaGenerator.GenerateModelFiles(set, ["S"], new GesSchemaGenerateOptions { Split = GesSchemaSplit.Schema, Documents = true });
+        var both = GesSchemaGenerator.GenerateModelFiles(set, ["S"], new GesSchemaGenerateOptions { Split = GesSchemaSplit.Schema, Documents = true, Values = true });
+        Assert.HasCount(both.Count, documents);
+        for (var index = 0; index < both.Count; index++) Assert.AreEqual(both[index].Text, documents[index].Text, both[index].Path);
+        StringAssert.Contains(documents[^1].Text, "\"values\": true");
+    }
 }

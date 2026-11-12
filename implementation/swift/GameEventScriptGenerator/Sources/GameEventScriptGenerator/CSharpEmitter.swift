@@ -39,12 +39,16 @@ enum GesCSharpEmitter {
         prologue.blank()
         let header = GesSchemaPlanner.header(layout)
         let holder = "__GesSchemas" + GesSchemaPlanner.suffix(header, options)
+        let global = "global::" + space.map { $0 + "." }.joined()
+        let computed = GesSchemaPlanner.computed(types, GesComputedEmitter.helper(options.namespace, GesSchemaPlanner.suffix(header, options)), swift: false)
+        let sets = GesSchemaPlanner.tagSets(types, global)
         let context = Context(
             elements: GesSchemaPlanner.keyedElements(types),
-            global: "global::" + space.map { $0 + "." }.joined(),
+            global: global,
             values: options.values,
             holder: holder,
-            computed: GesSchemaPlanner.computed(types, GesComputedEmitter.helper(options.namespace, GesSchemaPlanner.suffix(header, options)), swift: false)
+            computed: computed,
+            topLevel: GesSchemaPlanner.topLevel(types, sets)
         )
         var document = GesCodeDocument(header: header, prologue: prologue.text, space: space, parameters: !layout.parameters.isEmpty)
         for type in types {
@@ -54,9 +58,10 @@ enum GesCSharpEmitter {
                 }
             )
         }
-        for set in GesSchemaPlanner.tagSets(types, context.global) {
+        for set in sets {
             document.units.append(GesCodeUnit(owner: set.name) { code in tagSetDeclaration(&code, set.name, set.tags, access) })
         }
+        try GesSchemaPlanner.checkTopLevel(context.topLevel, swift: false)
         let shared = options.split != .none
         if options.values { document.units.append(GesCodeUnit(owner: "") { code in valuesHolder(&code, layout, holder, shared: shared) }) }
         if layout.types.contains(where: { !$0.computed.isEmpty }) {
@@ -75,6 +80,8 @@ enum GesCSharpEmitter {
         let values: Bool
         let holder: String
         let computed: GesComputedEmitter
+        // The records and tag sets declared beside each other, which a record's nested type must not hide.
+        let topLevel: Set<String>
     }
 
     static func kind(_ type: GesPlanType) -> String { type.kind == .message ? "message" : "schema" }
@@ -102,7 +109,7 @@ enum GesCSharpEmitter {
             for constant in type.layout.constants { names.append((GesSchemaPlanner.pascal(constant.name), "the let " + constant.name)) }
         }
         if !type.isItem { GesComputedEmitter.names(type.layout.computed, type.name, swift: false, &names) }
-        try GesSchemaPlanner.unique(type.name, names)
+        try GesSchemaPlanner.unique(type.name, names, context.topLevel)
 
         let visibility = type.isItem ? "public" : access
         code.line(
@@ -169,7 +176,7 @@ enum GesCSharpEmitter {
     // The nested types and members a value declares, for the collision check.
     static func nested(_ value: GesPlanValue, _ names: inout Names, _ field: String) {
         let name = nestedName(value)
-        if !name.isEmpty && value.tagType.isEmpty { names.append((name, "the type of " + field)) }
+        if !name.isEmpty && value.tagType.isEmpty { names.append((name, GesSchemaPlanner.nestedTypeOrigin + "of " + field)) }
         switch value.encoding.kind {
         case .text:
             names.append((value.base + "Utf8", "the UTF-8 bytes of " + field))
@@ -178,7 +185,7 @@ enum GesCSharpEmitter {
             names.append(("Set" + value.base, "the setter of " + field))
         case .list:
             if value.encoding.poly { names.append((value.base + "Poly", "the polygon view of " + field)) }
-            if let item = value.item { names.append((item.name, "the element type of " + field)) } else { nested(value.element!, &names, field) }
+            if let item = value.item { names.append((item.name, GesSchemaPlanner.nestedTypeOrigin + "of the elements of " + field)) } else { nested(value.element!, &names, field) }
         case .union:
             for alternative in value.alternatives {
                 if alternative.encoding.kind != .nothing { names.append((alternative.base, "the alternative \(alternative.label) of \(field)")) }
@@ -232,7 +239,7 @@ enum GesCSharpEmitter {
         code.line("/// <param name=\"count\">The element count.</param>")
         code.line("public void Set\(base)Count(int count)")
         code.open("{")
-        code.line("if (count < 0) throw new ArgumentOutOfRangeException(nameof(count));")
+        code.line("if (count < 0) throw new global::System.ArgumentOutOfRangeException(nameof(count));")
         code.line("\(base).Clear();")
         code.line("for (var position = 0; position < count; position++)")
         code.open("{")
@@ -255,7 +262,7 @@ enum GesCSharpEmitter {
         code.blank()
         code.line("set")
         code.open("{")
-        code.line("if (value is null) throw new ArgumentNullException(nameof(value));")
+        code.line("if (value is null) throw new global::System.ArgumentNullException(nameof(value));")
         code.line("Set\(base)Count(value.Length);")
         code.line("for (var index = 0; index < value.Length; index++) \(base)[index].\(text) = value[index];")
         code.close()
@@ -304,7 +311,7 @@ enum GesCSharpEmitter {
     static func bytesMember(_ code: inout Code, _ value: GesPlanValue, _ summary: String) {
         let storage = "__" + value.base
         let max = String(value.encoding.maxCount)
-        code.line("private byte[] \(storage) = Array.Empty<byte>();")
+        code.line("private byte[] \(storage) = global::System.Array.Empty<byte>();")
         code.line("private int \(storage)Length;")
         code.blank()
         code.line("/// <summary>\(summary), at most \(max) bytes.</summary>")
@@ -314,7 +321,7 @@ enum GesCSharpEmitter {
         code.line("/// <param name=\"bytes\">The bytes.</param>")
         code.line("public void Set\(value.base)(ReadOnlySpan<byte> bytes)")
         code.open("{")
-        code.line("if (\(storage).Length < bytes.Length) Array.Resize(ref \(storage), Math.Max(bytes.Length, Math.Min(\(max), \(storage).Length * 2)));")
+        code.line("if (\(storage).Length < bytes.Length) global::System.Array.Resize(ref \(storage), global::System.Math.Max(bytes.Length, global::System.Math.Min(\(max), \(storage).Length * 2)));")
         code.line("bytes.CopyTo(\(storage));")
         code.line("\(storage)Length = bytes.Length;")
         code.close()
@@ -334,7 +341,7 @@ enum GesCSharpEmitter {
         }
         let storage = "__" + value.base
         let max = String(value.encoding.maxCount)
-        code.line("private byte[] \(storage) = Array.Empty<byte>();")
+        code.line("private byte[] \(storage) = global::System.Array.Empty<byte>();")
         code.line("private int \(storage)Length;")
         code.blank()
         code.line("/// <summary>\(summary) as UTF-8 bytes\(value.encoding.tagName ? ", a tag name without #" : "").</summary>")
@@ -344,7 +351,7 @@ enum GesCSharpEmitter {
         code.line("/// <param name=\"utf8\">The bytes.</param>")
         code.line("public void Set\(value.base)Utf8(ReadOnlySpan<byte> utf8)")
         code.open("{")
-        code.line("if (\(storage).Length < utf8.Length) Array.Resize(ref \(storage), Math.Max(utf8.Length, Math.Min(\(max), \(storage).Length * 2)));")
+        code.line("if (\(storage).Length < utf8.Length) global::System.Array.Resize(ref \(storage), global::System.Math.Max(utf8.Length, global::System.Math.Min(\(max), \(storage).Length * 2)));")
         code.line("utf8.CopyTo(\(storage));")
         code.line("\(storage)Length = utf8.Length;")
         code.close()
@@ -352,8 +359,8 @@ enum GesCSharpEmitter {
         code.line("/// <summary>\(summary) as a string; reading and setting it allocate.</summary>")
         code.line("public string \(value.base)")
         code.open("{")
-        code.line("get => System.Text.Encoding.UTF8.GetString(\(storage), 0, \(storage)Length);")
-        code.line("set => Set\(value.base)Utf8(System.Text.Encoding.UTF8.GetBytes(value));")
+        code.line("get => global::System.Text.Encoding.UTF8.GetString(\(storage), 0, \(storage)Length);")
+        code.line("set => Set\(value.base)Utf8(global::System.Text.Encoding.UTF8.GetBytes(value));")
         code.close()
     }
 
@@ -472,13 +479,13 @@ enum GesCSharpEmitter {
     }
 
     static func messageSet(_ code: inout Code, _ type: GesPlanType, _ access: String, _ context: Context) throws(GesGeneratorError) {
-        var names: Names = [(type.name, "the type itself"), ("Selected", "the selected member"), ("Member", "the member type")]
+        var names: Names = [(type.name, "the type itself"), ("Selected", "the selected member"), ("Member", GesSchemaPlanner.nestedTypeOrigin + "of the members")]
         for name in reserved { names.append((name, "the generated member " + name)) }
         if context.values {
             for name in valueReserved { names.append((name, "the generated member " + name)) }
         }
         for member in type.members { names.append((member, "the member " + member)) }
-        try GesSchemaPlanner.unique(type.name, names)
+        try GesSchemaPlanner.unique(type.name, names, context.topLevel)
         let width = String(type.layout.memberWidth)
         let last = unsigned(UInt64(type.members.count) - 1)
         code.line(
@@ -572,7 +579,7 @@ enum GesCSharpEmitter {
         case .float:
             code.line("if (double.IsNaN(\(target))) \(fail("NotRepresentable", value))")
             if encoding.range { code.line("if (\(target) < \(bits(encoding.lowerValue)) || \(target) > \(bits(encoding.upperValue))) \(fail("OutOfRange", value))") }
-            code.line("writer.Write(unchecked((ulong)BitConverter.DoubleToInt64Bits(\(target) == 0 ? 0d : \(target))), 64);")
+            code.line("writer.Write(unchecked((ulong)global::System.BitConverter.DoubleToInt64Bits(\(target) == 0 ? 0d : \(target))), 64);")
         case .tag:
             code.line("if ((ulong)\(target) > \(unsigned(UInt64(encoding.tags.count) - 1))) \(fail("UnknownTag", value))")
             code.line("writer.Write((ulong)\(target), \(width));")
@@ -656,7 +663,7 @@ enum GesCSharpEmitter {
         case .float:
             code.open("{")
             code.line("var bits = reader.Read(64, \(path(value)));")
-            code.line("var value = BitConverter.Int64BitsToDouble(unchecked((long)bits));")
+            code.line("var value = global::System.BitConverter.Int64BitsToDouble(unchecked((long)bits));")
             code.line("if (double.IsNaN(value) || bits == 0x8000000000000000UL\(encoding.range ? " || double.IsInfinity(value)" : "")) \(fail("InvalidNumber", value))")
             if encoding.range { code.line("if (value < \(bits(encoding.lowerValue)) || value > \(bits(encoding.upperValue))) \(fail("OutOfRange", value))") }
             code.line("\(target) = value;")
@@ -667,7 +674,7 @@ enum GesCSharpEmitter {
             code.line("var count = (int)reader.Read(\(width), \(path(value)));")
             code.line("if (count > \(max)) \(fail("InvalidCount", value))")
             code.line("reader.Require(count * 8L, \(path(value)));")
-            code.line("if (\(storage).Length < count) Array.Resize(ref \(storage), Math.Max(count, Math.Min(\(max), \(storage).Length * 2)));")
+            code.line("if (\(storage).Length < count) global::System.Array.Resize(ref \(storage), global::System.Math.Max(count, global::System.Math.Min(\(max), \(storage).Length * 2)));")
             code.line("var text = new Span<byte>(\(storage), 0, count);")
             code.line("reader.ReadBytes(text, \(path(value)));")
             if encoding.kind == .text {
@@ -803,7 +810,7 @@ enum GesCSharpEmitter {
     static func flagsDeclaration(_ code: inout Code, _ name: String, _ members: [String]) {
         code.blank()
         code.line("/// <summary>The members of the field, one bit each in declared order.</summary>")
-        code.line("[Flags]")
+        code.line("[global::System.Flags]")
         code.line("public enum \(name) : ulong")
         code.open("{")
         for (index, member) in members.enumerated() {
@@ -822,5 +829,5 @@ enum GesCSharpEmitter {
     // An integral binary64 such as 10^k or p, exact as a literal.
     static func double(_ value: Int64) -> String { "\(value)d" }
 
-    static func bits(_ value: Double) -> String { "BitConverter.Int64BitsToDouble(unchecked((long)0x\(GesSchemaLayoutJson.hex(value.bitPattern))UL))" }
+    static func bits(_ value: Double) -> String { "global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x\(GesSchemaLayoutJson.hex(value.bitPattern))UL))" }
 }

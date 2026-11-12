@@ -42,6 +42,17 @@ final class SchemaTests: XCTestCase {
         XCTAssertEqual(try plain.schema("Force").canonicalForm, "gess1\nschema Force\nfield force Quantity(newton) between 0e0 5e4 step 1e1\n")
     }
 
+    func testMessageSetMembersCarryTheSetHash() throws {
+        let set = try GesSchemaSet(parsing: "message Hit(target: :Number integer between 0 and 15)\nmessage Died(target: :Number integer between 0 and 15)\nmessages :Combat as (Hit, Died)\n")
+        let combat = try set.schema("Combat").bind()
+        let member = try XCTUnwrap(combat.member("Hit"))
+        XCTAssertEqual(member.hash, combat.hash)
+        XCTAssertEqual(member.bindingHash, combat.bindingHash)
+        XCTAssertEqual(try set.schema("Hit").bind().hash, try set.schema("Hit").hash)
+        XCTAssertNotEqual(member.hash, try set.schema("Hit").hash)
+        XCTAssertEqual(member.schema.hash, try set.schema("Hit").hash)
+    }
+
     func testWriterAndReaderMatchTheWorkedExample() throws {
         let schema = try bot()
         XCTAssertEqual(schema.maxByteCount, 14)

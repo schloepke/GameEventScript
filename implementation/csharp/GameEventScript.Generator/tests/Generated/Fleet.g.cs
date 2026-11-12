@@ -30,7 +30,7 @@ namespace GameEventScript.Tests.Generator.Generated
             "motto",
         };
 
-        private byte[] __Motto = Array.Empty<byte>();
+        private byte[] __Motto = global::System.Array.Empty<byte>();
         private int __MottoLength;
 
         /// <summary>The field <c>motto</c> as UTF-8 bytes.</summary>
@@ -40,7 +40,7 @@ namespace GameEventScript.Tests.Generator.Generated
         /// <param name="utf8">The bytes.</param>
         public void SetMottoUtf8(ReadOnlySpan<byte> utf8)
         {
-            if (__Motto.Length < utf8.Length) Array.Resize(ref __Motto, Math.Max(utf8.Length, Math.Min(16, __Motto.Length * 2)));
+            if (__Motto.Length < utf8.Length) global::System.Array.Resize(ref __Motto, global::System.Math.Max(utf8.Length, global::System.Math.Min(16, __Motto.Length * 2)));
             utf8.CopyTo(__Motto);
             __MottoLength = utf8.Length;
         }
@@ -48,8 +48,8 @@ namespace GameEventScript.Tests.Generator.Generated
         /// <summary>The field <c>motto</c> as a string; reading and setting it allocate.</summary>
         public string Motto
         {
-            get => System.Text.Encoding.UTF8.GetString(__Motto, 0, __MottoLength);
-            set => SetMottoUtf8(System.Text.Encoding.UTF8.GetBytes(value));
+            get => global::System.Text.Encoding.UTF8.GetString(__Motto, 0, __MottoLength);
+            set => SetMottoUtf8(global::System.Text.Encoding.UTF8.GetBytes(value));
         }
 
         /// <summary>Writes this record into a buffer; <see cref="MaxByteCount"/> bytes always suffice.</summary>
@@ -112,7 +112,7 @@ namespace GameEventScript.Tests.Generator.Generated
                 var count = (int)reader.Read(5, paths[at + 0]);
                 if (count > 16) throw new GesWireException(GesWireException.InvalidCount, paths[at + 0]);
                 reader.Require(count * 8L, paths[at + 0]);
-                if (__Motto.Length < count) Array.Resize(ref __Motto, Math.Max(count, Math.Min(16, __Motto.Length * 2)));
+                if (__Motto.Length < count) global::System.Array.Resize(ref __Motto, global::System.Math.Max(count, global::System.Math.Min(16, __Motto.Length * 2)));
                 var text = new Span<byte>(__Motto, 0, count);
                 reader.ReadBytes(text, paths[at + 0]);
                 if (!GesWireRules.IsValidUtf8(text)) throw new GesWireException(GesWireException.InvalidText, paths[at + 0]);
@@ -121,7 +121,7 @@ namespace GameEventScript.Tests.Generator.Generated
         }
 
         #if DEBUG || DEVELOPMENT_BUILD || UNITY_EDITOR || GES_CHECK_SHARING
-        [ThreadStatic] private static HashSet<object>? __SharingLists;
+        [global::System.ThreadStatic] private static HashSet<object>? __SharingLists;
         internal bool __Busy;
 
         internal void __Mark(bool busy, HashSet<object>? lists) => __Busy = busy;
@@ -235,7 +235,7 @@ namespace GameEventScript.Tests.Generator.Generated
         internal bool __WriteDelta(Banner baseline, ref GesBitWriter writer, string[] paths, int at, bool top)
         {
             var first = writer.BitPosition;
-            for (var left = 1; left > 0; left -= 64) writer.Write(0, Math.Min(left, 64));
+            for (var left = 1; left > 0; left -= 64) writer.Write(0, global::System.Math.Min(left, 64));
             var changed = false;
             var ordinal = 0;
             {
@@ -280,7 +280,7 @@ namespace GameEventScript.Tests.Generator.Generated
                         var count = (int)reader.Read(5, paths[at + 0]);
                         if (count > 16) throw new GesWireException(GesWireException.InvalidCount, paths[at + 0]);
                         reader.Require(count * 8L, paths[at + 0]);
-                        if (__Motto.Length < count) Array.Resize(ref __Motto, Math.Max(count, Math.Min(16, __Motto.Length * 2)));
+                        if (__Motto.Length < count) global::System.Array.Resize(ref __Motto, global::System.Math.Max(count, global::System.Math.Min(16, __Motto.Length * 2)));
                         var text = new Span<byte>(__Motto, 0, count);
                         reader.ReadBytes(text, paths[at + 0]);
                         if (!GesWireRules.IsValidUtf8(text)) throw new GesWireException(GesWireException.InvalidText, paths[at + 0]);
@@ -346,7 +346,7 @@ namespace GameEventScript.Tests.Generator.Generated
         /// <summary>The value of <c>mode</c> when its alternative is <c>Tag</c>.</summary>
         public ModeTagTag ModeTag;
 
-        private byte[] __ModeText = Array.Empty<byte>();
+        private byte[] __ModeText = global::System.Array.Empty<byte>();
         private int __ModeTextLength;
 
         /// <summary>The value of <c>mode</c> when its alternative is <c>Text</c> as UTF-8 bytes.</summary>
@@ -356,7 +356,7 @@ namespace GameEventScript.Tests.Generator.Generated
         /// <param name="utf8">The bytes.</param>
         public void SetModeTextUtf8(ReadOnlySpan<byte> utf8)
         {
-            if (__ModeText.Length < utf8.Length) Array.Resize(ref __ModeText, Math.Max(utf8.Length, Math.Min(8, __ModeText.Length * 2)));
+            if (__ModeText.Length < utf8.Length) global::System.Array.Resize(ref __ModeText, global::System.Math.Max(utf8.Length, global::System.Math.Min(8, __ModeText.Length * 2)));
             utf8.CopyTo(__ModeText);
             __ModeTextLength = utf8.Length;
         }
@@ -364,8 +364,8 @@ namespace GameEventScript.Tests.Generator.Generated
         /// <summary>The value of <c>mode</c> when its alternative is <c>Text</c> as a string; reading and setting it allocate.</summary>
         public string ModeText
         {
-            get => System.Text.Encoding.UTF8.GetString(__ModeText, 0, __ModeTextLength);
-            set => SetModeTextUtf8(System.Text.Encoding.UTF8.GetBytes(value));
+            get => global::System.Text.Encoding.UTF8.GetString(__ModeText, 0, __ModeTextLength);
+            set => SetModeTextUtf8(global::System.Text.Encoding.UTF8.GetBytes(value));
         }
 
         /// <summary>The field <c>flag</c>.</summary>
@@ -375,7 +375,7 @@ namespace GameEventScript.Tests.Generator.Generated
         /// <param name="count">The element count.</param>
         public void SetShipsCount(int count)
         {
-            if (count < 0) throw new ArgumentOutOfRangeException(nameof(count));
+            if (count < 0) throw new global::System.ArgumentOutOfRangeException(nameof(count));
             Ships.Clear();
             for (var position = 0; position < count; position++)
             {
@@ -504,7 +504,7 @@ namespace GameEventScript.Tests.Generator.Generated
                             var count = (int)reader.Read(4, paths[at + 16]);
                             if (count > 8) throw new GesWireException(GesWireException.InvalidCount, paths[at + 16]);
                             reader.Require(count * 8L, paths[at + 16]);
-                            if (__ModeText.Length < count) Array.Resize(ref __ModeText, Math.Max(count, Math.Min(8, __ModeText.Length * 2)));
+                            if (__ModeText.Length < count) global::System.Array.Resize(ref __ModeText, global::System.Math.Max(count, global::System.Math.Min(8, __ModeText.Length * 2)));
                             var text = new Span<byte>(__ModeText, 0, count);
                             reader.ReadBytes(text, paths[at + 16]);
                             if (!GesWireRules.IsValidUtf8(text)) throw new GesWireException(GesWireException.InvalidText, paths[at + 16]);
@@ -518,7 +518,7 @@ namespace GameEventScript.Tests.Generator.Generated
         }
 
         #if DEBUG || DEVELOPMENT_BUILD || UNITY_EDITOR || GES_CHECK_SHARING
-        [ThreadStatic] private static HashSet<object>? __SharingLists;
+        [global::System.ThreadStatic] private static HashSet<object>? __SharingLists;
         internal bool __Busy;
 
         internal void __Mark(bool busy, HashSet<object>? lists)
@@ -982,7 +982,7 @@ namespace GameEventScript.Tests.Generator.Generated
         internal bool __WriteDelta(Fleet baseline, ref GesBitWriter writer, string[] paths, int at, bool top)
         {
             var first = writer.BitPosition;
-            for (var left = 4; left > 0; left -= 64) writer.Write(0, Math.Min(left, 64));
+            for (var left = 4; left > 0; left -= 64) writer.Write(0, global::System.Math.Min(left, 64));
             var changed = false;
             var ordinal = 0;
             {
@@ -1201,7 +1201,7 @@ namespace GameEventScript.Tests.Generator.Generated
                                         var count = (int)reader.Read(4, paths[at + 16]);
                                         if (count > 8) throw new GesWireException(GesWireException.InvalidCount, paths[at + 16]);
                                         reader.Require(count * 8L, paths[at + 16]);
-                                        if (__ModeText.Length < count) Array.Resize(ref __ModeText, Math.Max(count, Math.Min(8, __ModeText.Length * 2)));
+                                        if (__ModeText.Length < count) global::System.Array.Resize(ref __ModeText, global::System.Math.Max(count, global::System.Math.Min(8, __ModeText.Length * 2)));
                                         var text = new Span<byte>(__ModeText, 0, count);
                                         reader.ReadBytes(text, paths[at + 16]);
                                         if (!GesWireRules.IsValidUtf8(text)) throw new GesWireException(GesWireException.InvalidText, paths[at + 16]);
@@ -1215,7 +1215,7 @@ namespace GameEventScript.Tests.Generator.Generated
                                         var count = (int)reader.Read(4, paths[at + 16]);
                                         if (count > 8) throw new GesWireException(GesWireException.InvalidCount, paths[at + 16]);
                                         reader.Require(count * 8L, paths[at + 16]);
-                                        if (__ModeText.Length < count) Array.Resize(ref __ModeText, Math.Max(count, Math.Min(8, __ModeText.Length * 2)));
+                                        if (__ModeText.Length < count) global::System.Array.Resize(ref __ModeText, global::System.Math.Max(count, global::System.Math.Min(8, __ModeText.Length * 2)));
                                         var text = new Span<byte>(__ModeText, 0, count);
                                         reader.ReadBytes(text, paths[at + 16]);
                                         if (!GesWireRules.IsValidUtf8(text)) throw new GesWireException(GesWireException.InvalidText, paths[at + 16]);
@@ -1362,8 +1362,8 @@ namespace GameEventScript.Tests.Generator.Generated
 
         internal readonly void __WriteFields(ref GesBitWriter writer, string[] paths, int at)
         {
-            writer.Write(GesWireRules.QuantizedIndex(X, BitConverter.Int64BitsToDouble(unchecked((long)0x0000000000000000UL)), BitConverter.Int64BitsToDouble(unchecked((long)0x409f400000000000UL)), 100d, 1d, 0L, paths[at + 0]), 18);
-            writer.Write(GesWireRules.QuantizedIndex(Y, BitConverter.Int64BitsToDouble(unchecked((long)0x0000000000000000UL)), BitConverter.Int64BitsToDouble(unchecked((long)0x409f400000000000UL)), 100d, 1d, 0L, paths[at + 1]), 18);
+            writer.Write(GesWireRules.QuantizedIndex(X, global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x0000000000000000UL)), global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x409f400000000000UL)), 100d, 1d, 0L, paths[at + 0]), 18);
+            writer.Write(GesWireRules.QuantizedIndex(Y, global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x0000000000000000UL)), global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x409f400000000000UL)), 100d, 1d, 0L, paths[at + 1]), 18);
             writer.Write(GesWireRules.WrappedQuantizedIndex(Heading, 10d, 5d, 0L, 720UL, paths[at + 2]), 10);
         }
 
@@ -1388,7 +1388,7 @@ namespace GameEventScript.Tests.Generator.Generated
 
         private static ulong __Wire0(double value, string[] paths, int at)
         {
-            return GesWireRules.QuantizedIndex(value, BitConverter.Int64BitsToDouble(unchecked((long)0x0000000000000000UL)), BitConverter.Int64BitsToDouble(unchecked((long)0x409f400000000000UL)), 100d, 1d, 0L, paths[at + 0]);
+            return GesWireRules.QuantizedIndex(value, global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x0000000000000000UL)), global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x409f400000000000UL)), 100d, 1d, 0L, paths[at + 0]);
         }
 
         private static ulong __Read0(ref GesBitReader reader, string[] paths, int at)
@@ -1402,7 +1402,7 @@ namespace GameEventScript.Tests.Generator.Generated
 
         private static ulong __Wire1(double value, string[] paths, int at)
         {
-            return GesWireRules.QuantizedIndex(value, BitConverter.Int64BitsToDouble(unchecked((long)0x0000000000000000UL)), BitConverter.Int64BitsToDouble(unchecked((long)0x409f400000000000UL)), 100d, 1d, 0L, paths[at + 1]);
+            return GesWireRules.QuantizedIndex(value, global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x0000000000000000UL)), global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x409f400000000000UL)), 100d, 1d, 0L, paths[at + 1]);
         }
 
         private static ulong __Read1(ref GesBitReader reader, string[] paths, int at)
@@ -1507,7 +1507,7 @@ namespace GameEventScript.Tests.Generator.Generated
         internal readonly bool __WriteDelta(in Pose baseline, ref GesBitWriter writer, string[] paths, int at, bool top)
         {
             var first = writer.BitPosition;
-            for (var left = 3; left > 0; left -= 64) writer.Write(0, Math.Min(left, 64));
+            for (var left = 3; left > 0; left -= 64) writer.Write(0, global::System.Math.Min(left, 64));
             var changed = false;
             var ordinal = 0;
             {
@@ -1683,7 +1683,7 @@ namespace GameEventScript.Tests.Generator.Generated
             }
         }
 
-        private byte[] __Name = Array.Empty<byte>();
+        private byte[] __Name = global::System.Array.Empty<byte>();
         private int __NameLength;
 
         /// <summary>The field <c>name</c> as UTF-8 bytes.</summary>
@@ -1693,7 +1693,7 @@ namespace GameEventScript.Tests.Generator.Generated
         /// <param name="utf8">The bytes.</param>
         public void SetNameUtf8(ReadOnlySpan<byte> utf8)
         {
-            if (__Name.Length < utf8.Length) Array.Resize(ref __Name, Math.Max(utf8.Length, Math.Min(12, __Name.Length * 2)));
+            if (__Name.Length < utf8.Length) global::System.Array.Resize(ref __Name, global::System.Math.Max(utf8.Length, global::System.Math.Min(12, __Name.Length * 2)));
             utf8.CopyTo(__Name);
             __NameLength = utf8.Length;
         }
@@ -1701,8 +1701,8 @@ namespace GameEventScript.Tests.Generator.Generated
         /// <summary>The field <c>name</c> as a string; reading and setting it allocate.</summary>
         public string Name
         {
-            get => System.Text.Encoding.UTF8.GetString(__Name, 0, __NameLength);
-            set => SetNameUtf8(System.Text.Encoding.UTF8.GetBytes(value));
+            get => global::System.Text.Encoding.UTF8.GetString(__Name, 0, __NameLength);
+            set => SetNameUtf8(global::System.Text.Encoding.UTF8.GetBytes(value));
         }
 
         /// <summary>The field <c>cargo</c>, at most 4 elements.</summary>
@@ -1825,7 +1825,7 @@ namespace GameEventScript.Tests.Generator.Generated
                 var count = (int)reader.Read(4, paths[at + 8]);
                 if (count > 12) throw new GesWireException(GesWireException.InvalidCount, paths[at + 8]);
                 reader.Require(count * 8L, paths[at + 8]);
-                if (__Name.Length < count) Array.Resize(ref __Name, Math.Max(count, Math.Min(12, __Name.Length * 2)));
+                if (__Name.Length < count) global::System.Array.Resize(ref __Name, global::System.Math.Max(count, global::System.Math.Min(12, __Name.Length * 2)));
                 var text = new Span<byte>(__Name, 0, count);
                 reader.ReadBytes(text, paths[at + 8]);
                 if (!GesWireRules.IsValidUtf8(text)) throw new GesWireException(GesWireException.InvalidText, paths[at + 8]);
@@ -1848,7 +1848,7 @@ namespace GameEventScript.Tests.Generator.Generated
         }
 
         #if DEBUG || DEVELOPMENT_BUILD || UNITY_EDITOR || GES_CHECK_SHARING
-        [ThreadStatic] private static HashSet<object>? __SharingLists;
+        [global::System.ThreadStatic] private static HashSet<object>? __SharingLists;
         internal bool __Busy;
 
         internal void __Mark(bool busy, HashSet<object>? lists)
@@ -2103,7 +2103,7 @@ namespace GameEventScript.Tests.Generator.Generated
         internal bool __WriteDelta(Ship baseline, ref GesBitWriter writer, string[] paths, int at, bool top)
         {
             var first = writer.BitPosition;
-            for (var left = top ? 6 : 7; left > 0; left -= 64) writer.Write(0, Math.Min(left, 64));
+            for (var left = top ? 6 : 7; left > 0; left -= 64) writer.Write(0, global::System.Math.Min(left, 64));
             var changed = false;
             var ordinal = 0;
             if (!top)
@@ -2375,7 +2375,7 @@ namespace GameEventScript.Tests.Generator.Generated
                         var count = (int)reader.Read(4, paths[at + 8]);
                         if (count > 12) throw new GesWireException(GesWireException.InvalidCount, paths[at + 8]);
                         reader.Require(count * 8L, paths[at + 8]);
-                        if (__Name.Length < count) Array.Resize(ref __Name, Math.Max(count, Math.Min(12, __Name.Length * 2)));
+                        if (__Name.Length < count) global::System.Array.Resize(ref __Name, global::System.Math.Max(count, global::System.Math.Min(12, __Name.Length * 2)));
                         var text = new Span<byte>(__Name, 0, count);
                         reader.ReadBytes(text, paths[at + 8]);
                         if (!GesWireRules.IsValidUtf8(text)) throw new GesWireException(GesWireException.InvalidText, paths[at + 8]);

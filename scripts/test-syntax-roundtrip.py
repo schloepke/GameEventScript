@@ -346,6 +346,22 @@ def main():
         case["id"] = document["id"]
         case["sources"] = [{"name": "document.gesd", "program": "main", "text": document["api"]["text"]}]
         request["cases"].append(case)
+    # The schema texts of the corpus and the schema fixtures take part as GES schemas, so both highlighters must agree on them.
+    schemas = [case for case in read_corpus(sorted((ROOT / "conformance/suites").rglob("*.md"))) if case.kind == "schemaApi"]
+    seen = set()
+    for schema in requests(schemas)["cases"]:
+        texts = [text for text in schema["api"].get("sources", []) if text not in seen]
+        seen.update(texts)
+        if texts:
+            case = copy.deepcopy(template)
+            case["id"] = schema["id"]
+            case["sources"] = [{"name": "schema.gess", "program": "main", "text": text} for text in texts]
+            request["cases"].append(case)
+    for path in sorted((ROOT / "conformance/fixtures").rglob("*.gess")):
+        case = copy.deepcopy(template)
+        case["id"] = "syntax.schema-fixture/" + path.relative_to(ROOT / "conformance/fixtures").as_posix()
+        case["sources"] = [{"name": path.name, "program": "main", "text": path.read_text(encoding="utf-8")}]
+        request["cases"].append(case)
     sources = {case["id"] + "#" + str(index): source["text"] for case in request["cases"] for index, source in enumerate(case["sources"])}
 
     observed = {}

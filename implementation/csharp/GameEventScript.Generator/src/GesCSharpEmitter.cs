@@ -58,7 +58,10 @@ internal static partial class GesCSharpEmitter
                 if (type.Kind == GesSchemaKind.Messages) MessageSet(code, type, access, context);
                 else Record(code, type, access, context);
             }));
-        foreach (var (name, tags) in GesSchemaPlanner.TagSets(types, context.Global)) document.Units.Add(new GesCodeUnit(name, code => TagSetDeclaration(code, name, tags, access)));
+        var sets = GesSchemaPlanner.TagSets(types, context.Global);
+        foreach (var (name, tags) in sets) document.Units.Add(new GesCodeUnit(name, code => TagSetDeclaration(code, name, tags, access)));
+        context.TopLevel = GesSchemaPlanner.TopLevel(types, sets);
+        GesSchemaPlanner.CheckTopLevel(context.TopLevel, swift: false);
         if (options.Values) document.Units.Add(new GesCodeUnit("", code => ValuesHolder(code, layout, holder, options.Split != GesSchemaSplit.None)));
         if (layout.Types.Exists(type => type.Computed.Length > 0))
             document.Units.Add(new GesCodeUnit("", code => GesComputedLibrary.Write(code, context.Computed.HelperName, swift: false, context.Computed.NeedsValues(types.ConvertAll(type => (type.Name, type.Layout.Computed))))));
@@ -78,6 +81,9 @@ internal static partial class GesCSharpEmitter
         internal string Holder { get; } = holder;
 
         internal GesComputedEmitter Computed { get; set; } = null!;
+
+        // The records and tag sets declared beside each other, which a record's nested type must not hide.
+        internal HashSet<string> TopLevel { get; set; } = null!;
     }
 
     private static string Kind(GesPlanType type) => type.Kind == GesSchemaKind.Message ? "message" : "schema";
@@ -103,7 +109,7 @@ internal static partial class GesCSharpEmitter
         if (!type.IsItem)
             foreach (var constant in type.Layout.Constants) names.Add((GesSchemaPlanner.Pascal(constant.Name), "the let " + constant.Name));
         if (!type.IsItem) GesComputedEmitter.Names(type.Layout.Computed, type.Name, swift: false, names);
-        GesSchemaPlanner.Unique(type.Name, names);
+        GesSchemaPlanner.Unique(type.Name, names, context.TopLevel);
 
         var visibility = type.IsItem ? "public" : access;
         code.Line(type.IsItem ? "/// <summary>An element of the list.</summary>" : $"/// <summary>The {Kind(type)} <c>:{type.Name}</c>, read and written without allocation{(type.IsClass ? " once its storage has grown" : "")}.</summary>");
@@ -176,7 +182,7 @@ internal static partial class GesCSharpEmitter
     private static void Nested(GesPlanValue value, List<(string, string)> names, string field)
     {
         var name = NestedName(value);
-        if (name.Length > 0 && value.TagType.Length == 0) names.Add((name, "the type of " + field));
+        if (name.Length > 0 && value.TagType.Length == 0) names.Add((name, GesSchemaPlanner.NestedTypeOrigin + "of " + field));
         switch (value.Encoding.Kind)
         {
             case GesLayoutKind.Text:
@@ -188,7 +194,7 @@ internal static partial class GesCSharpEmitter
                 break;
             case GesLayoutKind.List:
                 if (value.Encoding.Poly) names.Add((value.Base + "Poly", "the polygon view of " + field));
-                if (value.Item is not null) names.Add((value.Item.Name, "the element type of " + field));
+                if (value.Item is not null) names.Add((value.Item.Name, GesSchemaPlanner.NestedTypeOrigin + "of the elements of " + field));
                 else Nested(value.Element!, names, field);
                 break;
             case GesLayoutKind.Union:
@@ -240,7 +246,7 @@ internal static partial class GesCSharpEmitter
     {
         var storage = "__" + value.Base;
         var max = value.Encoding.MaxCount.ToString(CultureInfo.InvariantCulture);
-        code.Line($"private byte[] {storage} = Array.Empty<byte>();");
+        code.Line($"private byte[] {storage} = global::System.Array.Empty<byte>();");
         code.Line($"private int {storage}Length;");
         code.Blank();
         code.Line($"/// <summary>{summary}, at most {max} bytes.</summary>");
@@ -250,7 +256,7 @@ internal static partial class GesCSharpEmitter
         code.Line("/// <param name=\"bytes\">The bytes.</param>");
         code.Line($"public void Set{value.Base}(ReadOnlySpan<byte> bytes)");
         code.Open("{");
-        code.Line($"if ({storage}.Length < bytes.Length) Array.Resize(ref {storage}, Math.Max(bytes.Length, Math.Min({max}, {storage}.Length * 2)));");
+        code.Line($"if ({storage}.Length < bytes.Length) global::System.Array.Resize(ref {storage}, global::System.Math.Max(bytes.Length, global::System.Math.Min({max}, {storage}.Length * 2)));");
         code.Line($"bytes.CopyTo({storage});");
         code.Line($"{storage}Length = bytes.Length;");
         code.Close();
@@ -314,7 +320,7 @@ internal static partial class GesCSharpEmitter
 
         var storage = "__" + value.Base;
         var max = value.Encoding.MaxCount.ToString(CultureInfo.InvariantCulture);
-        code.Line($"private byte[] {storage} = Array.Empty<byte>();");
+        code.Line($"private byte[] {storage} = global::System.Array.Empty<byte>();");
         code.Line($"private int {storage}Length;");
         code.Blank();
         code.Line($"/// <summary>{summary} as UTF-8 bytes{(value.Encoding.TagName ? ", a tag name without #" : "")}.</summary>");
@@ -324,7 +330,7 @@ internal static partial class GesCSharpEmitter
         code.Line("/// <param name=\"utf8\">The bytes.</param>");
         code.Line($"public void Set{value.Base}Utf8(ReadOnlySpan<byte> utf8)");
         code.Open("{");
-        code.Line($"if ({storage}.Length < utf8.Length) Array.Resize(ref {storage}, Math.Max(utf8.Length, Math.Min({max}, {storage}.Length * 2)));");
+        code.Line($"if ({storage}.Length < utf8.Length) global::System.Array.Resize(ref {storage}, global::System.Math.Max(utf8.Length, global::System.Math.Min({max}, {storage}.Length * 2)));");
         code.Line($"utf8.CopyTo({storage});");
         code.Line($"{storage}Length = utf8.Length;");
         code.Close();
@@ -332,8 +338,8 @@ internal static partial class GesCSharpEmitter
         code.Line($"/// <summary>{summary} as a string; reading and setting it allocate.</summary>");
         code.Line($"public string {value.Base}");
         code.Open("{");
-        code.Line($"get => System.Text.Encoding.UTF8.GetString({storage}, 0, {storage}Length);");
-        code.Line($"set => Set{value.Base}Utf8(System.Text.Encoding.UTF8.GetBytes(value));");
+        code.Line($"get => global::System.Text.Encoding.UTF8.GetString({storage}, 0, {storage}Length);");
+        code.Line($"set => Set{value.Base}Utf8(global::System.Text.Encoding.UTF8.GetBytes(value));");
         code.Close();
     }
 
@@ -466,12 +472,12 @@ internal static partial class GesCSharpEmitter
 
     private static void MessageSet(GesSchemaPlanner.Code code, GesPlanType type, string access, Context context)
     {
-        var names = new List<(string, string)> { (type.Name, "the type itself"), ("Selected", "the selected member"), ("Member", "the member type") };
+        var names = new List<(string, string)> { (type.Name, "the type itself"), ("Selected", "the selected member"), ("Member", GesSchemaPlanner.NestedTypeOrigin + "of the members") };
         foreach (var reserved in Reserved) names.Add((reserved, "the generated member " + reserved));
         if (context.Values)
             foreach (var reserved in ValueReserved) names.Add((reserved, "the generated member " + reserved));
         foreach (var member in type.Members) names.Add((member, "the member " + member));
-        GesSchemaPlanner.Unique(type.Name, names);
+        GesSchemaPlanner.Unique(type.Name, names, context.TopLevel);
         var width = type.Layout.MemberWidth.ToString(CultureInfo.InvariantCulture);
         var last = Unsigned((ulong)type.Members.Count - 1);
         code.Line($"/// <summary>The message set <c>:{type.Name}</c>: one of its messages, read and written without allocation{(type.MembersAreClasses ? " once its storage has grown" : "")}.</summary>");
@@ -572,7 +578,7 @@ internal static partial class GesCSharpEmitter
             case GesLayoutKind.Float:
                 code.Line($"if (double.IsNaN({target})) {Throw("NotRepresentable", value)}");
                 if (encoding.Range) code.Line($"if ({target} < {Bits(encoding.LowerValue)} || {target} > {Bits(encoding.UpperValue)}) {Throw("OutOfRange", value)}");
-                code.Line($"writer.Write(unchecked((ulong)BitConverter.DoubleToInt64Bits({target} == 0 ? 0d : {target})), 64);");
+                code.Line($"writer.Write(unchecked((ulong)global::System.BitConverter.DoubleToInt64Bits({target} == 0 ? 0d : {target})), 64);");
                 break;
             case GesLayoutKind.Tag:
                 code.Line($"if ((ulong){target} > {Unsigned((ulong)encoding.Tags.Count - 1)}) {Throw("UnknownTag", value)}");
@@ -669,7 +675,7 @@ internal static partial class GesCSharpEmitter
             case GesLayoutKind.Float:
                 code.Open("{");
                 code.Line($"var bits = reader.Read(64, {Path(value)});");
-                code.Line("var value = BitConverter.Int64BitsToDouble(unchecked((long)bits));");
+                code.Line("var value = global::System.BitConverter.Int64BitsToDouble(unchecked((long)bits));");
                 code.Line($"if (double.IsNaN(value) || bits == 0x8000000000000000UL{(encoding.Range ? " || double.IsInfinity(value)" : "")}) {Throw("InvalidNumber", value)}");
                 if (encoding.Range) code.Line($"if (value < {Bits(encoding.LowerValue)} || value > {Bits(encoding.UpperValue)}) {Throw("OutOfRange", value)}");
                 code.Line($"{target} = value;");
@@ -681,7 +687,7 @@ internal static partial class GesCSharpEmitter
                 code.Line($"var count = (int)reader.Read({width}, {Path(value)});");
                 code.Line($"if (count > {max}) {Throw("InvalidCount", value)}");
                 code.Line($"reader.Require(count * 8L, {Path(value)});");
-                code.Line($"if ({storage}.Length < count) Array.Resize(ref {storage}, Math.Max(count, Math.Min({max}, {storage}.Length * 2)));");
+                code.Line($"if ({storage}.Length < count) global::System.Array.Resize(ref {storage}, global::System.Math.Max(count, global::System.Math.Min({max}, {storage}.Length * 2)));");
                 code.Line($"var text = new Span<byte>({storage}, 0, count);");
                 code.Line($"reader.ReadBytes(text, {Path(value)});");
                 if (encoding.Kind == GesLayoutKind.Text)
@@ -848,7 +854,7 @@ internal static partial class GesCSharpEmitter
         code.Line("/// <param name=\"count\">The element count.</param>");
         code.Line($"public void Set{value.Base}Count(int count)");
         code.Open("{");
-        code.Line("if (count < 0) throw new ArgumentOutOfRangeException(nameof(count));");
+        code.Line("if (count < 0) throw new global::System.ArgumentOutOfRangeException(nameof(count));");
         code.Line($"{value.Base}.Clear();");
         code.Line("for (var position = 0; position < count; position++)");
         code.Open("{");
@@ -871,7 +877,7 @@ internal static partial class GesCSharpEmitter
         code.Blank();
         code.Line("set");
         code.Open("{");
-        code.Line("if (value is null) throw new ArgumentNullException(nameof(value));");
+        code.Line("if (value is null) throw new global::System.ArgumentNullException(nameof(value));");
         code.Line($"Set{value.Base}Count(value.Length);");
         code.Line($"for (var index = 0; index < value.Length; index++) {value.Base}[index].{text} = value[index];");
         code.Close();
@@ -883,7 +889,7 @@ internal static partial class GesCSharpEmitter
     {
         code.Blank();
         code.Line("/// <summary>The members of the field, one bit each in declared order.</summary>");
-        code.Line("[Flags]");
+        code.Line("[global::System.Flags]");
         code.Line($"public enum {name} : ulong");
         code.Open("{");
         for (var index = 0; index < members.Count; index++)
@@ -904,7 +910,7 @@ internal static partial class GesCSharpEmitter
     // An integral binary64 such as 10^k or p, exact as a literal.
     private static string Double(long value) => value.ToString(CultureInfo.InvariantCulture) + "d";
 
-    private static string Bits(double value) => $"BitConverter.Int64BitsToDouble(unchecked((long)0x{GesSchemaLayoutJson.Hex((ulong)BitConverter.DoubleToInt64Bits(value))}UL))";
+    private static string Bits(double value) => $"global::System.BitConverter.Int64BitsToDouble(unchecked((long)0x{GesSchemaLayoutJson.Hex((ulong)global::System.BitConverter.DoubleToInt64Bits(value))}UL))";
 
     private static string Quote(string text) => "\"" + text.Replace("\\", "\\\\").Replace("\"", "\\\"") + "\"";
 }

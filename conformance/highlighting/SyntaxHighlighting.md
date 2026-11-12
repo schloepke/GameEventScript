@@ -174,6 +174,14 @@ and ANSI text preservation.
 ```
 
 ```highlight
+{"name":"schema error at the end of the text","language":"gess","source":"schema :A as {\n  a: :Number\n","expect":[{"text":":Number","kind":"type"}],"diagnostics":[{"code":"schema.syntax","text":":Number\n","after":true,"length":0}]}
+```
+
+```highlight
+{"name":"schema error on a scalar outside the BMP","language":"gess","source":"schema :A as { \ud83d\ude00 }\n","expect":[{"text":"schema","kind":"keyword"}],"diagnostics":[{"code":"schema.syntax","text":"\ud83d\ude00"}]}
+```
+
+```highlight
 {"name":"inline assembly operands are not resolved","language":"ges","source":"on Start(input) {\n  asm {\n    .register temp, list\n    LoadInteger temp, input\n    Call temp, scale(value: temp, by: list[1])\n    CreateList list, [temp, temp]\n    emit Done(value: temp, first: list[1], total: list[:fold acc be 0, item => acc + temp])\n  }\n}","expect":[{"text":"asm","kind":"keyword"}],"diagnostics":[]}
 ```
 

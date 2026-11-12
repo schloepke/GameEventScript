@@ -25,7 +25,8 @@ internal static class SyntaxTokens
                 var fragment = GesSyntaxParser.Parse(text, fragment: true);
                 var sourceName = source.TryGetProperty("name", out var name) ? name.GetString()! : "";
                 var language = sourceName.EndsWith(".gesa", StringComparison.Ordinal) ? GesSyntaxLanguage.Gesa
-                    : sourceName.EndsWith(".gesd", StringComparison.Ordinal) ? GesSyntaxLanguage.Gesd : GesSyntaxLanguage.Ges;
+                    : sourceName.EndsWith(".gesd", StringComparison.Ordinal) ? GesSyntaxLanguage.Gesd
+                    : sourceName.EndsWith(".gess", StringComparison.Ordinal) ? GesSyntaxLanguage.Gess : GesSyntaxLanguage.Ges;
                 var highlight = new GesSyntaxHighlighter(language, int.MaxValue).Highlight(text);
                 var scalarOffsets = ScalarOffsets(text);
                 sources[test.GetProperty("id").GetString()! + "#" + index++] = new

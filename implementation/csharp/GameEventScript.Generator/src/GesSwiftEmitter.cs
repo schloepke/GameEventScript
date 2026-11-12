@@ -62,7 +62,10 @@ internal static partial class GesSwiftEmitter
                 if (type.Kind == GesSchemaKind.Messages) MessageSet(code, type, access, context);
                 else Record(code, type, access, context);
             }));
-        foreach (var (name, tags) in GesSchemaPlanner.TagSets(types, "")) document.Units.Add(new GesCodeUnit(name, code => TagSetDeclaration(code, name, tags, access)));
+        var sets = GesSchemaPlanner.TagSets(types, "");
+        foreach (var (name, tags) in sets) document.Units.Add(new GesCodeUnit(name, code => TagSetDeclaration(code, name, tags, access)));
+        context.TopLevel = GesSchemaPlanner.TopLevel(types, sets);
+        GesSchemaPlanner.CheckTopLevel(context.TopLevel, swift: true);
 
         // Split files reach the sources of another file, so the holder is internal there.
         var shared = options.Split != GesSchemaSplit.None;
@@ -82,6 +85,9 @@ internal static partial class GesSwiftEmitter
         internal string Holder { get; } = holder;
 
         internal GesComputedEmitter Computed { get; set; } = null!;
+
+        // The records and tag sets declared beside each other, which a record's nested type must not hide.
+        internal HashSet<string> TopLevel { get; set; } = null!;
 
         // The attribute of a class's stored properties: without exclusivity checks unless they are asked for.
         internal string Stored(bool isClass) => isClass && !checkedExclusivity ? "@exclusivity(unchecked) " : "";
@@ -118,7 +124,7 @@ internal static partial class GesSwiftEmitter
         if (!type.IsItem)
             foreach (var constant in type.Layout.Constants) names.Add((constant.Name, "the let " + constant.Name));
         if (!type.IsItem) GesComputedEmitter.Names(type.Layout.Computed, type.Name, swift: true, names);
-        GesSchemaPlanner.Unique(type.Name, names);
+        GesSchemaPlanner.Unique(type.Name, names, context.TopLevel);
 
         code.Line(type.IsItem ? "/// An element of the list." : $"/// The {Kind(type)} `:{type.Name}`, read and written without allocation{(type.IsClass ? " once its storage has grown" : "")}.");
         code.Open(type.IsClass ? $"{access}final class {type.Name} {{" : $"{access}struct {type.Name}: Sendable {{");
@@ -186,7 +192,7 @@ internal static partial class GesSwiftEmitter
     private static void Nested(GesPlanValue value, List<(string, string)> names, string field)
     {
         var name = NestedName(value);
-        if (name.Length > 0 && value.TagType.Length == 0) names.Add((name, "the type of " + field));
+        if (name.Length > 0 && value.TagType.Length == 0) names.Add((name, GesSchemaPlanner.NestedTypeOrigin + "of " + field));
         switch (value.Encoding.Kind)
         {
             case GesLayoutKind.Text:
@@ -194,7 +200,7 @@ internal static partial class GesSwiftEmitter
                 break;
             case GesLayoutKind.List:
                 if (value.Encoding.Poly) names.Add((GesSchemaPlanner.Camel(value.Base) + "Poly", "the polygon view of " + field));
-                if (value.Item is not null) names.Add((value.Item.Name, "the element type of " + field));
+                if (value.Item is not null) names.Add((value.Item.Name, GesSchemaPlanner.NestedTypeOrigin + "of the elements of " + field));
                 else Nested(value.Element!, names, field);
                 break;
             case GesLayoutKind.Union:
@@ -473,12 +479,12 @@ internal static partial class GesSwiftEmitter
 
     private static void MessageSet(GesSchemaPlanner.Code code, GesPlanType type, string access, Context context)
     {
-        var names = new List<(string, string)> { ("selected", "the selected member"), ("Member", "the member type") };
+        var names = new List<(string, string)> { ("selected", "the selected member"), ("Member", GesSchemaPlanner.NestedTypeOrigin + "of the members") };
         foreach (var reserved in Reserved) names.Add((reserved, "the generated member " + reserved));
         if (context.Values)
             foreach (var reserved in ValueReserved) names.Add((reserved, "the generated member " + reserved));
         foreach (var member in type.Members) names.Add((GesSchemaPlanner.Camel(member), "the member " + member));
-        GesSchemaPlanner.Unique(type.Name, names);
+        GesSchemaPlanner.Unique(type.Name, names, context.TopLevel);
         var width = type.Layout.MemberWidth.ToString(CultureInfo.InvariantCulture);
         var last = ((ulong)type.Members.Count - 1).ToString(CultureInfo.InvariantCulture);
         code.Line($"/// The message set `:{type.Name}`: one of its messages, read and written without allocation{(type.MembersAreClasses ? " once its storage has grown" : "")}.");
@@ -600,7 +606,7 @@ internal static partial class GesSwiftEmitter
                         ? $"if !{bytes}.withUnsafeBytes({{ GesWireRules.isTagName($0) }}) {{ {Throw("invalidTag", value)} }}"
                         : $"if !{bytes}.withUnsafeBytes({{ GesWireRules.isValidUTF8($0) }}) {{ {Throw("invalidText", value)} }}");
                 code.Line($"try writer.write(UInt64({bytes}.count), width: {width})");
-                code.Line($"for byte in {bytes} {{ try writer.write(UInt64(byte), width: 8) }}");
+                code.Line($"try writer.writeBytes({bytes})");
                 break;
             case GesLayoutKind.List:
                 if (value.Depth > 0) OpenLevels(code, value, target + ".count");
@@ -681,9 +687,7 @@ internal static partial class GesSwiftEmitter
                 code.Open("do {");
                 code.Line($"let count = Int(try reader.read({width}, path: {Path(value)}))");
                 code.Line($"if count > {max} {{ {Throw("invalidCount", value)} }}");
-                code.Line($"try reader.require(count * 8, path: {Path(value)})");
-                code.Line($"{bytes}.removeAll(keepingCapacity: true)");
-                code.Line($"for _ in 0..<count {{ {bytes}.append(UInt8(truncatingIfNeeded: try reader.read(8, path: {Path(value)}))) }}");
+                code.Line($"try reader.readBytes(count, into: &{bytes}, path: {Path(value)})");
                 if (encoding.Kind == GesLayoutKind.Text)
                     code.Line(encoding.TagName
                         ? $"if !{bytes}.withUnsafeBytes({{ GesWireRules.isTagName($0) }}) {{ {Throw("invalidTag", value)} }}"

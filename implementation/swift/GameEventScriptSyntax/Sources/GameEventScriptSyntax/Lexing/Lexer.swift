@@ -5,6 +5,10 @@
     let scalars: [Unicode.Scalar]
     var index = 0, line = 1, column = 1, byteOffset = 0
     var previousCR = false
+    // Open groups: `(` and `[` make line breaks trivia, `{` makes them statement separators again
+    // (specs/Language.md#lexical-rules). A closer also ends the unclosed groups inside it, but never one outside the
+    // innermost open block, so an unclosed `(` cannot swallow the line breaks after its block.
+    var groups: [Unicode.Scalar] = []
 
     @_spi(Syntax) public init(_ text: String) { scalars = Array(text.unicodeScalars) }
 
@@ -181,7 +185,33 @@
 
     func slice(_ start: Int) -> String { String(String.UnicodeScalarView(scalars[start..<index])) }
 
+    var inGroup: Bool { groups.last.map { $0 != "{" } ?? false }
+
     @_spi(Syntax) public mutating func read() -> GesToken {
+        let token = readToken()
+        switch token.kind {
+        case .leftParen: groups.append("(")
+        case .leftBracket: groups.append("[")
+        case .leftBrace: groups.append("{")
+        case .rightParen: close("(")
+        case .rightBracket: close("[")
+        case .rightBrace: close("{")
+        default: break
+        }
+        return token
+    }
+
+    private mutating func close(_ opener: Unicode.Scalar) {
+        for index in groups.indices.reversed() {
+            if groups[index] == opener {
+                groups.removeSubrange(index...)
+                return
+            }
+            if groups[index] == "{" { return }
+        }
+    }
+
+    private mutating func readToken() -> GesToken {
         // Each read starts where the previous token ended, so everything skipped here is leading trivia.
         let fullStart = byteOffset
         // A leading BOM is trivia of the first token and occupies no column.
@@ -196,6 +226,13 @@
             }
             if current == "/" && peek() == "/" {
                 while index < scalars.count && current != "\n" && current != "\r" { advance() }
+                continue
+            }
+            // Inside parentheses and brackets a line break separates nothing and is leading trivia.
+            if (current == "\r" || current == "\n") && inGroup {
+                let cr = current == "\r"
+                advance()
+                if cr && current == "\n" { advance() }
                 continue
             }
             break
@@ -272,12 +309,18 @@
             let suffixLength = Self.unitStarts.contains(current) ? GesQuantityUnit.suffixLength(scalars, at: index) { Self.space($0) || Self.boundaries.contains($0) } : 0
             if current == "%" {
                 advance()
+                // As in C#, a percentage ends at whitespace, a structural boundary or a dice `d`+digit, not at a letter.
+                if index < scalars.count && !Self.space(current) && !Self.boundaries.contains(current) && !(current == "d" && Self.digit(peek())) {
+                    while index < scalars.count && !Self.space(current) { advance() }
+                    return token(.illegal, slice(start))
+                }
             } else if suffixLength > 0 {
                 for _ in 0..<suffixLength { advance() }
                 quantity = true
             } else if current == "°" {
-                advance()
-                quantity = true
+                // `°` not followed by a boundary is no degree suffix, and the whole word is illegal.
+                while index < scalars.count && !Self.space(current) { advance() }
+                return token(.illegal, slice(start))
             }
             if index < scalars.count && !Self.letter(current) && !Self.space(current) && !Self.boundaries.contains(current) {
                 while index < scalars.count && !Self.space(current) { advance() }

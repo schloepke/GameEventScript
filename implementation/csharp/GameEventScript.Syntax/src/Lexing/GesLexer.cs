@@ -202,6 +202,14 @@ internal sealed class GesLexer
 
             switch (Current)
             {
+                // Inside parentheses and brackets a line break separates nothing and is leading trivia.
+                case '\r' or '\n' when InGroup:
+                {
+                    var carriageReturn = Current == '\r';
+                    Advance();
+                    if (carriageReturn && !IsAtEnd && Current == '\n') Advance();
+                    continue;
+                }
                 case '\r':
                 {
                     var newlineLine = _line;
@@ -300,8 +308,43 @@ internal sealed class GesLexer
     private GesToken CreateToken(GesTokenKind kind, string text, int startLine, int startColumn) => Finish(new(kind, text, startLine, startColumn, _line, _column));
 
     // Attaches the source offsets; the next token's leading trivia starts where this token ends.
+    // Open groups: `(` and `[` make line breaks trivia, `{` makes them statement separators again
+    // (specs/Language.md#lexical-rules). A closer also ends the unclosed groups inside it, but never one outside the
+    // innermost open block, so an unclosed `(` cannot swallow the line breaks after its block.
+    private readonly List<char> _groups = [];
+
+    private bool InGroup => _groups.Count > 0 && _groups[^1] != '{';
+
+    private void Track(GesTokenKind kind)
+    {
+        switch (kind)
+        {
+            case GesTokenKind.LeftParen: _groups.Add('('); break;
+            case GesTokenKind.LeftBracket: _groups.Add('['); break;
+            case GesTokenKind.LeftBrace: _groups.Add('{'); break;
+            case GesTokenKind.RightParen: Close('('); break;
+            case GesTokenKind.RightBracket: Close('['); break;
+            case GesTokenKind.RightBrace: Close('{'); break;
+        }
+    }
+
+    private void Close(char opener)
+    {
+        for (var index = _groups.Count - 1; index >= 0; index--)
+        {
+            if (_groups[index] == opener)
+            {
+                _groups.RemoveRange(index, _groups.Count - index);
+                return;
+            }
+
+            if (_groups[index] == '{') return;
+        }
+    }
+
     private GesToken Finish(GesToken token)
     {
+        Track(token.Kind);
         _tokenEnd = _index;
         return token with { FullStart = _fullStart, Start = _start, End = _index };
     }

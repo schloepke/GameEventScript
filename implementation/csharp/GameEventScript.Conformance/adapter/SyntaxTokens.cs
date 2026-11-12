@@ -50,8 +50,9 @@ internal static class SyntaxTokens
 
     private static int IndexOf(IReadOnlyList<GesHighlightDiagnostic> diagnostics, GesHighlightDiagnostic diagnostic)
     {
+        // Equal diagnostics map to the first, as in the Swift adapter, which compares values.
         for (var i = 0; i < diagnostics.Count; i++)
-            if (ReferenceEquals(diagnostics[i], diagnostic)) return i;
+            if (diagnostics[i].Code == diagnostic.Code && diagnostics[i].Start == diagnostic.Start && diagnostics[i].Length == diagnostic.Length && diagnostics[i].Message == diagnostic.Message) return i;
         return -1;
     }
 

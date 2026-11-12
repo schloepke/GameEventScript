@@ -108,6 +108,8 @@
     let text: String
     var tokens: [GesToken] = []
     var index = 0, expressionDepth = 0, statementDepth = 0
+    // The token start and depth of each expression completed but not yet counted by an enclosing node.
+    var completedDepths: [(start: Int, depth: Int)] = []
     var delimiterDepth = 0
     var forSourceDepth: Int?
     var choiceConditionDepth: Int?
@@ -119,6 +121,10 @@
     // Where the open declarations and statements start; a failure turns the innermost one into an error node.
     var recoveryPoints: [(depth: Int, start: GesSyntaxTreeBuilder.Checkpoint)] = []
     var completedInfixKind = GesSyntaxNodeKind.binaryExpression
+    // The tightest operator precedence that may follow the step just completed, as in the C# level structure: after `as`
+    // or `is` only type operations and looser operators, after `has value` only membership and looser, after a power
+    // only multiplication and looser.
+    var completedCeiling = Int.max
     // Set while the brackets after `:has` form an object pattern rather than a collection literal.
     var objectPattern = false
 
@@ -315,7 +321,9 @@
 
     // The canonical type name: built-in types are lowercase, a quantity type names its unit.
     func typeNameCore() throws -> String {
-        var name = String(advance().text.dropFirst())
+        let typeToken = advance()
+        var name = String(typeToken.text.dropFirst())
+        if name == "Numeric" { throw failure("The numeric type helper is a keyword; use numeric without ':'.", typeToken) }
         if Self.builtinTypeNames.contains(name) { name = name.lowercased() }
         // Uppercase unit symbols such as N or Hz read as message-name tokens.
         if name == "Quantity", currentKind == .leftParen, peek().isWord || peek().isIdentifier("degree") || peekKind() == .message, quantityUnitAhead() {
@@ -509,6 +517,7 @@
         startNode(.recordField)
         let fieldStart = current
         let unlabeled = match(.underscore)
+        if unlabeled { newlines() }
         _ = try identifier()
         role(unlabeled ? .unlabeledField : .field)
         try expect(.colon)
@@ -646,6 +655,8 @@
         } else if currentKind == .emit || currentKind == .publish {
             if peek().isIdentifier("after") {
                 advance()
+                // As in C#, the send node starts at `after`, after any line break.
+                newlines()
                 _ = try sendExpression(start, mark())
                 return
             }
@@ -679,7 +690,7 @@
             advance()
             role(.messageName)
             if currentKind == .leftParen { try arguments() }
-            _ = finishNode(node(messageStart))
+            _ = finishNode(try node(messageStart))
         } else {
             _ = try expression()
         }
@@ -786,8 +797,20 @@
         return count
     }
 
-    // A node ranging from `start` to the previous token, with the depth of a parser node.
-    func node(_ start: Int, shape: Shape = .none) -> Expression { .init(depth: 1, start: start, end: previousIndex, shape: shape) }
+    // A single token, which contains no expression.
+    func leaf(_ start: Int, shape: Shape = .none) -> Expression { .init(depth: 1, start: start, end: previousIndex, shape: shape) }
+
+    // A node ranging from `start` to the previous token, one level deeper than its deepest contained expression, as in
+    // C#. The expressions completed since `start` are the node's descendants: their depths are popped here.
+    func node(_ start: Int, shape: Shape = .none) throws -> Expression {
+        var deepest = 0
+        while let last = completedDepths.last, last.start >= start {
+            deepest = max(deepest, last.depth)
+            completedDepths.removeLast()
+        }
+        if deepest + 1 > 32 { throw nestingLimit(start, previousIndex) }
+        return .init(depth: deepest + 1, start: start, end: previousIndex, shape: shape)
+    }
 
     // A node with exactly the range of `node`, one level deeper.
     func ranged(_ node: Expression) throws -> Expression {

@@ -195,9 +195,13 @@ not as an additional source-compilation limit.
 ## Lexical Rules
 
 ASCII space and tab separate tokens. `LF`, `CRLF`, `CR`, and semicolons separate
-statements where the grammar permits a separator. Inside the parentheses of an
-argument list or type constructor, line breaks separate nothing: they may stand
-before and after each argument and before the closing parenthesis. Line comments
+statements where the grammar permits a separator. Inside any parentheses or
+square brackets, line breaks separate nothing: an argument or parameter list, a
+list, map or pattern, a selector such as `[:take highest⏎1]` and a parenthesized
+expression may span lines anywhere between their tokens. Inside braces, which
+contain statements, line breaks separate statements again, also when the braces
+stand inside brackets. Word forms that read a word on the same line, such as
+`parse strict`, keep that rule inside brackets. Line comments
 start with `//` and continue up to, but do not consume, the next logical newline.
 
 ```ges
@@ -272,7 +276,10 @@ Numeric literals contain an integer part and an optional fractional part, use
 supplies a negative sign. Single underscores may separate adjacent digits but
 may not lead, trail, or repeat. A directly following `%` forms a percentage
 literal, and a directly following unit spelling from [Quantities](#quantities)
-forms a quantity literal:
+forms a quantity literal. A percentage ends before whitespace, a structural
+character or a dice `d` with a digit, a unit before whitespace or a structural
+character; any other following character makes the whole word illegal, so
+`5%abc` and `90°x` are no products:
 
 ```ges
 let integer be 42

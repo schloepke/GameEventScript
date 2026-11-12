@@ -334,7 +334,8 @@ internal sealed partial class GesSyntaxBinder
         {
             c.Advance();
             var operation = start.Kind switch { OperatorMinus => GesUnaryOperator.Negate, KeywordParse => GesUnaryOperator.Parse, Empty => GesUnaryOperator.Empty, _ => GesUnaryOperator.Not };
-            if (operation == GesUnaryOperator.Parse && c.MatchWord("strict")) operation = GesUnaryOperator.ParseStrict;
+            // As the parser decides: the mode word stands on the line of `parse`.
+            if (operation == GesUnaryOperator.Parse && c.Current.Line == c.Previous.EndLine && c.MatchWord("strict")) operation = GesUnaryOperator.ParseStrict;
             if (operation is not (GesUnaryOperator.Parse or GesUnaryOperator.ParseStrict)) c.SkipNewLines();
             var operand = Operand(ref c);
             return Set(new GesUnaryExpressionNode(operation, operand), start, c.Previous);
@@ -903,15 +904,18 @@ internal sealed partial class GesSyntaxBinder
             return Set(new GesCallExpressionNode(start.Text, labeled), start, c.Previous);
         }
 
-        // Unlabeled call arguments carry no source range.
+        // Unlabeled call arguments carry no source range; labeled ones after them bind as in a labeled call.
         var arguments = new List<GesArgumentNode> { BindUnrangedArgument(first) };
-        while (c.Match(Comma))
+        while (true)
         {
             c.SkipNewLines();
-            arguments.Add(BindUnrangedArgument(c.TakeNode(NodeKind.Argument)));
+            if (c.Match(Comma)) c.SkipNewLines();
+            else if (!c.IsNode(NodeKind.Argument)) break;
+            var argument = c.TakeNode(NodeKind.Argument);
+            var labelProbe = new Cursor(this, argument);
+            arguments.Add(IsLabelStart(ref labelProbe) ? BindArgument(argument) : BindUnrangedArgument(argument));
         }
 
-        c.SkipNewLines();
         c.Expect(RightParen);
         return Set(new GesCallExpressionNode(start.Text, new GesArgumentListNode(arguments)), start, c.Previous);
     }

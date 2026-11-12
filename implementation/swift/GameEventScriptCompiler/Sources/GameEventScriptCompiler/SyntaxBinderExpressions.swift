@@ -237,7 +237,8 @@ extension GesSyntaxBinder {
             let op = try c.advance().kind
             // `strict` directly after `parse` is the mode word.
             var strict = false
-            if op == .keywordParse { strict = try c.matchWord("strict") }
+            // As the parser decides: the mode word stands on the line of `parse`.
+            if op == .keywordParse, c.current.line == c.previous.endLine { strict = try c.matchWord("strict") }
             let operation: GesUnaryOperator = op == .operatorMinus ? .negate : op == .keywordParse ? (strict ? .parseStrict : .parse) : op == .empty ? .empty : .not
             let value = try expression(&c)
             // From the operator to the last consumed token.

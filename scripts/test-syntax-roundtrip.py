@@ -6,13 +6,16 @@
 
 Each port's adapter lexes every source with `--syntax-tokens` and reports kind, offsets and normalized text per token
 in Unicode scalars. The tokens of a source must cover it without gaps, leading trivia may only hold inline whitespace,
-`//` comments and a leading BOM, and both ports must report identical token streams. Negative controls qualify the
+`//` comments, a leading BOM and line breaks inside parentheses and brackets, and both ports must report identical token streams. Negative controls qualify the
 checks before the real observations are judged.
 
 With `--trees`, a port's syntax trees must hold every token exactly once and nest correctly; valid sources must have no
 error nodes, and every source must have the same tree in both ports, error nodes included. Both ports must also parse
 every source alike as a fragment and highlight it alike, spans and diagnostics included; the shared highlighting cases,
 GESA among them, join the corpus sources for this.
+
+With `--mutants N`, N seeded mutants of the GES corpus sources (deleted, duplicated or swapped words, a line break for a
+space, a truncation) join the comparison, so both ports must also reject, recover and highlight broken sources alike.
 """
 
 import argparse
@@ -52,7 +55,34 @@ SYNTHETIC = [
     "on Start { emit Done(value: 1 && 2, other: 3 ||| 4, sign: § ) }",
     "on Start {\remit Done\r}",
     "on Start { emit Done(value: 1) }\u000b\u000c",
+    # Number suffixes end at a boundary: a word after `%` or a bare `°` makes the whole word illegal.
+    "on Start { let abc be 2; let x be 5%abc; let y be 90°x; let z be 5%5; let w be 3%d6 }",
+    # Line breaks inside parentheses and brackets are trivia, inside braces separators.
+    "function scale(\n  _ value,\n  factor\n) be value * factor\non Main(\n  args\n) {\n  let v be [3, 1][:take highest\n    1]\n  emit Done(value: scale(2,\n    factor: 3), parsed: parse\n    strict)\n}",
+    "on Start { emit Done(value: foo(\n }\non Other { emit Done }",
+    # Type operations, `has value` and powers take only operators of their own or a looser level after them.
+    "on Start(a, c) { let x be a as :Number + 1 }",
+    "on Start(a, c) { let x be a is numeric < c }",
+    "on Start(a, c) { let x be a has value + 1 }",
+    "on Start(a, c) { let x be a²² }",
+    "on Start(a, c) { let x be a² ^ c }",
+    "on Start(a, c) { let x be a as :Numeric }",
+    "on Start(a, c) { let x be a as :Number is numeric in c }",
+    # A positional first argument may precede labeled ones.
+    "function scale(_ value, factor) be value * factor\non Start { emit Done(value: scale(2, factor: 3)) }",
+    # Unparenthesized extension calls take the same operand starts in both ports.
+    "on Start(a) { let x be :math.double pi; let y be :math.abs :math.neg a; let z be :m.f floor a; let w be :m.f Msg(a: 1) }",
 ]
+# Nesting counts inside call arguments, list items and member chains: depth 32 is allowed, 33 exceeds the limit.
+for _count in (31, 32):
+    _chain = " + ".join(["a"] * _count)
+    SYNTHETIC.append("on Start(a) { let x be f(" + _chain + ") }")
+    SYNTHETIC.append("on Start(a) { let x be [" + _chain + "] }")
+    SYNTHETIC.append("on Start(a) { let x be f(a" + ".x" * (_count - 1) + ") }")
+_nested = "a"
+for _ in range(3):
+    _nested = "f(" + " + ".join([_nested] + ["a"] * 12) + ")"
+SYNTHETIC.append("on Start(a) { let x be " + _nested + " }")
 
 
 # Names and decoded Text carry their value in the token text; other kinds keep a per-port spelling, such as `\\n` or a
@@ -80,6 +110,9 @@ def trivia_problem(text, start):
             while position < len(text) and text[position] not in "\r\n":
                 position += 1
         elif text[position] == "\ufeff" and start + position == 0:
+            position += 1
+        elif text[position] in "\r\n":
+            # Inside parentheses and brackets a line break is trivia (specs/Language.md#lexical-rules).
             position += 1
         else:
             return f"unexpected trivia {text[position]!r}"
@@ -214,6 +247,47 @@ def highlight_difference(left, right, left_port, right_port):
     return f"span {index}: {left_port} {left['spans'][index:index + 1]}, {right_port} {right['spans'][index:index + 1]}"
 
 
+MUTATION_SEED = 20261112
+
+
+def mutate(text, rng):
+    """One to three edits of a source: delete, duplicate or swap a word, break a line at a space, or truncate."""
+    words = re.split(r"(\s+)", text)
+    for _ in range(rng.randint(1, 3)):
+        positions = [index for index, word in enumerate(words) if word and not word.isspace()]
+        if not positions:
+            break
+        index = rng.choice(positions)
+        edit = rng.randrange(5)
+        if edit == 0:
+            words[index] = ""
+        elif edit == 1:
+            words[index] = words[index] + " " + words[index]
+        elif edit == 2:
+            other = rng.choice(positions)
+            words[index], words[other] = words[other], words[index]
+        elif edit == 3:
+            spaces = [i for i, word in enumerate(words) if word == " "]
+            if spaces:
+                words[rng.choice(spaces)] = "\n"
+        else:
+            words = words[:index]
+    return "".join(words)
+
+
+def add_mutants(request, template, count):
+    """Seeded mutants of the GES corpus sources: both ports must lex, parse, recover and highlight them alike."""
+    import random
+    rng = random.Random(MUTATION_SEED)
+    originals = [source["text"] for case in request["cases"] for source in case["sources"] if source.get("name", "").endswith(".ges")]
+    originals = [text for text in originals if text.strip() and not text.lstrip().startswith(":Schema")]
+    for index in range(count):
+        case = copy.deepcopy(template)
+        case["id"] = f"syntax.mutant/case-{index:05d}"
+        case["sources"] = [{"name": "mutant.ges", "program": "main", "text": mutate(rng.choice(originals), rng)}]
+        request["cases"].append(case)
+
+
 def controls(sources, observed):
     # Each mutation must be detected, so a passing comparison is meaningful.
     key = next(key for key, source in sources.items() if len(observed[next(iter(observed))].get(key, [])) > 2)
@@ -240,12 +314,16 @@ def main():
     parser.add_argument("--port", choices=sorted(ADAPTERS), action="append", help="Port to check; repeat for several (default: both)")
     parser.add_argument("--skip-build", action="store_true", help="Use the existing Release adapters")
     parser.add_argument("--trees", choices=sorted(ADAPTERS), action="append", default=[], help="Also check this port's syntax trees; repeat for several")
+    parser.add_argument("--mutants", type=int, default=0, help="Also compare this many seeded mutants of the GES corpus sources")
     args = parser.parse_args()
     ports = args.port or sorted(ADAPTERS)
 
     cases = [case for case in read_corpus(sorted((ROOT / "conformance/suites").rglob("*.md"))) if supported(case) and case.sources]
     request = requests(cases)
     template = next(case for case in request["cases"] if case["kind"] == "compileError")
+    # Mutants draw from the corpus sources only, so a mutant's text depends on the seed and the corpus alone.
+    if args.mutants:
+        add_mutants(request, template, args.mutants)
     for index, text in enumerate(SYNTHETIC):
         case = copy.deepcopy(template)
         case["id"] = f"syntax.synthetic/case-{index:02d}"

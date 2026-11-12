@@ -11,6 +11,14 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 ## Unreleased
 
 ### Breaking
+- Line breaks inside any parentheses or square brackets separate nothing, so parameter lists, selectors such as
+  `[:take highest⏎1]` and parenthesized expressions may span lines in both ports; inside braces they separate
+  statements as before.
+- The Swift parser rejects what the C# reference rejects: an operator tighter than the type operation after `as`, `is`
+  or `has value` (`a as :Number + 1`), a second superscript or `^` after a power (`a²²`, `a² ^ b`), `:Numeric` as a
+  type, `5%abc` and `90°x`, `roll` without `dice`, and a dice count on the next line. Calls and lists count the
+  nesting of their arguments and items, so deeply nested chains report `parse.sourceNestingExceeded` instead of
+  exhausting the stack.
 - Program segment and section types (`GesStringConstantSegment`, `GesCodeSegment`, `GesSourceMapSegment` and the
   others) have no public constructors and their `SliceEntry` values no public setters; Programs come only from the
   Compiler and the Reader. Swift keeps those initializers behind `@_spi(Compiler)`.
@@ -527,6 +535,11 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   of every port. Runtime behavior does not depend on it.
 
 ### Fixed
+- C# compiles a call whose unlabeled first argument is followed by labeled ones, such as `scale(2, factor: 3)` for
+  `scale(_ value, factor)`, as Swift does.
+- Unparenthesized extension calls such as `:math.double pi` take the same operands in both ports.
+- Both parsers report the same positions and recover alike for broken sources; `test-syntax-roundtrip.py --mutants`
+  compares seeded broken variants of the corpus in `test-swift.sh`.
 - `on Start as incoming_1` compiles to a Program that loads; before, linking failed with an argument exception.
 - Program validation is linear in the Program size: a long register or label list shared by many instructions, many
   source lines and many mappings no longer make C# validation take minutes to hours. `Encode()`/`ToArray()` validate

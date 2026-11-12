@@ -966,8 +966,12 @@ internal sealed partial class GesSyntaxParser
         return extensionToken;
     }
 
-    private bool IsExtensionUnaryArgumentStart()
-        => !IsPipelineSelectorStart() && Current.Kind is Identifier or Message or Tag or Selector or TypeName or ConstantReference or GesTokenKind.Float or Percentage or UnitNumber or Text or True or False or Nothing or
+    private bool IsExtensionUnaryArgumentStart() => !IsPipelineSelectorStart() && IsExtensionOperandKind(Current.Kind);
+
+    // The tokens that start the single operand of an unparenthesized extension call; Swift `extensionOperandKinds` copies
+    // them, checked by scripts/verify-swift-parser-tokens.py.
+    private static bool IsExtensionOperandKind(GesTokenKind kind)
+        => kind is Identifier or Message or Tag or Selector or TypeName or ConstantReference or Float or Percentage or UnitNumber or Text or True or False or Nothing or
             MathConstantPi or MathConstantE or MathConstantTau or MathConstantInfinity or
             IntrinsicAbs or IntrinsicLn or IntrinsicExp or IntrinsicSqrt or IntrinsicCbrt or IntrinsicChance or
             IntrinsicFloor or IntrinsicCeil or IntrinsicTruncate or IntrinsicRad or IntrinsicDeg or IntrinsicWrap or IntrinsicRound or

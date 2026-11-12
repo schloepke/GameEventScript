@@ -211,7 +211,8 @@ belongs to the CLI or embedding; the portable compiler accepts source text.
   types); the Compiler validator keeps the rules that need other sources, the
   catalog or the runtime.
   `--trees` checks token coverage, nesting and identical trees, roles and
-  ranges, error nodes included, for every source in both ports.
+  ranges, error nodes included, for every source in both ports; `--mutants N`
+  adds seeded broken variants of the corpus sources (`test-swift.sh` uses 3000).
 - Module identifiers are dot-separated lowercase components with optional
   digits.
 - `constant $name be LITERAL` declares a program-wide compile-time scalar.

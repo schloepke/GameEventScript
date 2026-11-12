@@ -500,7 +500,8 @@ internal sealed partial class GesSyntaxParser
             var operation = Advance().Kind;
             var opToken = PreviousIndex;
             // `strict` directly after `parse` on the same line is always the mode word, never an operand.
-            if (operation == KeywordParse && Current.Kind == Identifier && Current.Text == "strict") AdvanceKeyword();
+            // The mode word stands on the line of `parse`; inside parentheses a line break is trivia, so compare lines.
+            if (operation == KeywordParse && Current.Kind == Identifier && Current.Text == "strict" && Current.Line == Previous.EndLine) AdvanceKeyword();
             if (operation != KeywordParse) SkipNewLines();
             var operand = ParseUnaryExpression();
             var shape = operation == OperatorMinus && operand.Shape is Shape.Number or Shape.Numeric ? Shape.NegatedNumeric : Shape.None;
@@ -1209,16 +1210,8 @@ internal sealed partial class GesSyntaxParser
             return WrapNode(start, GesSyntaxNodeKind.HandlerLiteralExpression, Node(0, startToken));
         }
 
-        var argument = _tree.Mark();
-        var depth = WrapNode(argument, GesSyntaxNodeKind.Argument, ParseExpression().Depth);
-        while (Match(Comma))
-        {
-            SkipNewLines();
-            argument = _tree.Mark();
-            depth = Deepest(depth, WrapNode(argument, GesSyntaxNodeKind.Argument, ParseExpression().Depth));
-        }
-
-        SkipNewLines();
+        // A positional first argument may be followed by labeled ones, as in `scale(2, factor: 3)` for `scale(_ value, factor)`.
+        var depth = ParseArgumentListAfterFirstArgument(ParseArgument(), RightParen);
         Expect(RightParen);
         return WrapNode(start, GesSyntaxNodeKind.CallExpression, Node(depth, startToken));
     }

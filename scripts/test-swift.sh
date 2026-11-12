@@ -49,7 +49,7 @@ python3 "$ges_root/scripts/test-message-json-roundtrip.py" --skip-build
 # Builds the C# Conformance adapter; the Swift adapter is already current, and building it again without testing
 # support would recompile the whole package.
 python3 "$ges_root/scripts/test-document-roundtrip.py" --skip-swift-build
-python3 "$ges_root/scripts/test-syntax-roundtrip.py" --skip-build --trees csharp --trees swift
+python3 "$ges_root/scripts/test-syntax-roundtrip.py" --skip-build --trees csharp --trees swift --mutants 3000
 
 python3 "$ges_root/scripts/test-binary-reader-fuzz-controls.py"
 python3 "$ges_root/scripts/test-binary-reader-fuzz.py" --skip-build

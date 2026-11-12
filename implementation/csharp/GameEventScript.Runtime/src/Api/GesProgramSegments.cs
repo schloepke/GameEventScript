@@ -11,18 +11,19 @@ using System.Text;
 namespace GameEventScript.Api;
 
 /// <summary>
-/// Represents a game event script program metadata segment.
+/// The immutable decoded ProgramMetadataSegment (section <c>0x0001</c>) of a <c>.gesb</c> V1 program: module identity,
+/// program-level resource bounds and the application-owned program version.
 /// </summary>
 public readonly struct GesProgramMetadataSegment
 {
     /// <summary>
-    /// Initializes a new instance of Game Event Script Program Metadata Segment.
+    /// Creates the metadata segment. Only the Compiler and the binary Reader construct Programs and their segments.
     /// </summary>
-    /// <param name="moduleName">The module name value.</param>
-    /// <param name="requiredRegisterCount">The required register count value.</param>
-    /// <param name="requiredCallStackDepth">The required call stack depth value.</param>
-    /// <param name="programVersion">The program version value.</param>
-    public GesProgramMetadataSegment(string moduleName, ushort requiredRegisterCount, ushort requiredCallStackDepth, ulong programVersion)
+    /// <param name="moduleName">The module name; <see langword="null"/> is stored as an empty string.</param>
+    /// <param name="requiredRegisterCount">The maximum register requirement across all message handlers.</param>
+    /// <param name="requiredCallStackDepth">The maximum nested call depth across all message handlers.</param>
+    /// <param name="programVersion">The application-owned program version; zero means development or unspecified.</param>
+    internal GesProgramMetadataSegment(string moduleName, ushort requiredRegisterCount, ushort requiredCallStackDepth, ulong programVersion)
     {
         ModuleName = moduleName ?? string.Empty;
         RequiredRegisterCount = requiredRegisterCount;
@@ -31,77 +32,99 @@ public readonly struct GesProgramMetadataSegment
     }
 
     /// <summary>
-    /// Gets the module name.
+    /// Gets the decoded module name, the stable program identity. In <c>.gesb</c> it is stored as an index into the
+    /// <see cref="GesStringConstantSegment"/>.
     /// </summary>
     public string ModuleName { get; }
     /// <summary>
-    /// Gets the required register count.
+    /// Gets the maximum <see cref="GesBindingSegment.Entry.RequiredRegisterCount"/> across all message handlers: the number
+    /// of VM registers a host must provide to run any handler of this program.
     /// </summary>
     public ushort RequiredRegisterCount { get; }
     /// <summary>
-    /// Gets the required call stack depth.
+    /// Gets the maximum <see cref="GesBindingSegment.Entry.RequiredCallStackDepth"/> across all message handlers: the
+    /// deepest chain of nested calls below a root handler, where a handler that calls nothing has depth zero.
     /// </summary>
     public ushort RequiredCallStackDepth { get; }
     /// <summary>
-    /// Gets the program version.
+    /// Gets the application-owned program version, distinct from the format and section versions; zero means
+    /// development or unspecified.
     /// </summary>
     public ulong ProgramVersion { get; }
 }
 
 /// <summary>
-/// Represents a game event script string constant segment.
+/// The immutable StringConstantSegment (section <c>0x0002</c>): an ordered pool of at most 65,535 strict UTF-8 strings
+/// that bytecode and bindings reference by zero-based <see cref="ushort"/> index. Order and duplicates are program data.
 /// </summary>
+/// <remarks>
+/// All entries share one contiguous byte buffer, <see cref="Data"/>, addressed by <see cref="Slices"/>. A
+/// <see langword="default"/> instance is an empty pool on which every index is invalid.
+/// </remarks>
 public readonly struct GesStringConstantSegment
 {
     /// <summary>
-    /// Represents a slice entry.
+    /// Locates one string entry inside <see cref="Data"/>.
     /// </summary>
     public readonly struct SliceEntry
     {
         /// <summary>
-        /// Gets the start.
+        /// Gets the zero-based byte offset of the entry's UTF-8 bytes in <see cref="Data"/>.
         /// </summary>
-        public int Start { get; init; }
+        public int Start { get; internal init; }
         /// <summary>
-        /// Gets the length.
+        /// Gets the entry's length in UTF-8 bytes (not UTF-16 code units).
         /// </summary>
-        public int Length { get; init; }
+        public int Length { get; internal init; }
     }
 
     private readonly GesReadOnlyArray<SliceEntry> _slices;
     private readonly GesReadOnlyArray<byte> _data;
 
     /// <summary>
-    /// Initializes a new instance of Game Event Script String Constant Segment.
+    /// Creates the segment from defensive copies of <paramref name="slices"/> and <paramref name="data"/>. Only the
+    /// Compiler and the binary Reader construct Programs and their segments.
     /// </summary>
-    /// <param name="slices">The slices value.</param>
-    /// <param name="data">The data value.</param>
-    public GesStringConstantSegment(IReadOnlyList<SliceEntry> slices, IReadOnlyList<byte> data)
+    /// <param name="slices">One slice per string entry, in index order.</param>
+    /// <param name="data">The concatenated UTF-8 bytes the slices address.</param>
+    internal GesStringConstantSegment(IReadOnlyList<SliceEntry> slices, IReadOnlyList<byte> data)
     {
         _slices = new GesReadOnlyArray<SliceEntry>(slices);
         _data = new GesReadOnlyArray<byte>(data);
     }
 
+    // Takes ownership of arrays the reader built, which nothing else references, instead of copying them again.
+    internal static GesStringConstantSegment FromOwned(SliceEntry[] slices, byte[] data) => new(GesReadOnlyArray<SliceEntry>.FromOwnedArray(slices), GesReadOnlyArray<byte>.FromOwnedArray(data), owned: true);
+
+    private GesStringConstantSegment(GesReadOnlyArray<SliceEntry> slices, GesReadOnlyArray<byte> data, bool owned)
+    {
+        _ = owned;
+        _slices = slices;
+        _data = data;
+    }
+
     /// <summary>
-    /// Gets the slices.
+    /// Gets the immutable slice table; its <see cref="GesReadOnlyArray{T}.Count"/> is the number of string entries.
     /// </summary>
     public GesReadOnlyArray<SliceEntry> Slices => _slices;
     /// <summary>
-    /// Gets the data.
+    /// Gets the immutable concatenated UTF-8 bytes of all entries.
     /// </summary>
     public GesReadOnlyArray<byte> Data => _data;
 
     /// <summary>
-    /// Resolves the size.
+    /// Returns the UTF-8 byte length of a string entry without decoding it.
     /// </summary>
-    /// <param name="index">The index value.</param>
-    /// <returns>The result of the operation.</returns>
+    /// <param name="index">The zero-based entry index, which must be less than the number of <see cref="Slices"/>.</param>
+    /// <returns>The entry's length in UTF-8 bytes.</returns>
+    /// <exception cref="IndexOutOfRangeException">The index does not name an entry.</exception>
     public int ResolveSize(ushort index) => _slices[index].Length;
     /// <summary>
-    /// Resolves the value.
+    /// Decodes a string entry into a new <see cref="string"/>; each call decodes again.
     /// </summary>
-    /// <param name="index">The index value.</param>
-    /// <returns>The result of the operation.</returns>
+    /// <param name="index">The zero-based entry index, which must be less than the number of <see cref="Slices"/>.</param>
+    /// <returns>The decoded string.</returns>
+    /// <exception cref="IndexOutOfRangeException">The index does not name an entry.</exception>
     public string Resolve(ushort index)
     {
         var slice = _slices[index];
@@ -149,65 +172,95 @@ public readonly struct GesUInt16IndexList
 }
 
 /// <summary>
-/// Represents a game event script u int16 index list segment.
+/// The immutable UInt16IndexListSegment (section <c>0x0003</c>): at most 65,535 ordered lists of <see cref="ushort"/>
+/// elements that bindings and instructions reference by zero-based list index. The referencing field or opcode defines
+/// what the elements mean, for example string indices of argument names and tags, or register lists.
 /// </summary>
+/// <remarks>
+/// All lists share one contiguous element buffer, <see cref="Data"/>, addressed by <see cref="Slices"/>. A
+/// <see langword="default"/> instance has no lists.
+/// </remarks>
 public readonly struct GesUInt16IndexListSegment
 {
     /// <summary>
-    /// Represents a slice entry.
+    /// Locates one list inside <see cref="Data"/>.
     /// </summary>
     public readonly struct SliceEntry
     {
         /// <summary>
-        /// Gets the start.
+        /// Gets the zero-based element offset of the list's first element in <see cref="Data"/>.
         /// </summary>
-        public int Start { get; init; }
+        public int Start { get; internal init; }
         /// <summary>
-        /// Gets the length.
+        /// Gets the number of elements in the list.
         /// </summary>
-        public int Length { get; init; }
+        public int Length { get; internal init; }
     }
 
     private readonly GesReadOnlyArray<SliceEntry> _slices;
     private readonly GesReadOnlyArray<ushort> _data;
 
     /// <summary>
-    /// Initializes a new instance of Game Event Script U Int16 Index List Segment.
+    /// Creates the segment from defensive copies of <paramref name="slices"/> and <paramref name="data"/>. Only the
+    /// Compiler and the binary Reader construct Programs and their segments.
     /// </summary>
-    /// <param name="slices">The slices value.</param>
-    /// <param name="data">The data value.</param>
-    public GesUInt16IndexListSegment(IReadOnlyList<SliceEntry> slices, IReadOnlyList<ushort> data)
+    /// <param name="slices">One slice per list, in list-index order.</param>
+    /// <param name="data">The concatenated elements the slices address.</param>
+    internal GesUInt16IndexListSegment(IReadOnlyList<SliceEntry> slices, IReadOnlyList<ushort> data)
     {
         _slices = new GesReadOnlyArray<SliceEntry>(slices);
         _data = new GesReadOnlyArray<ushort>(data);
     }
 
+    // Takes ownership of arrays the reader built, which nothing else references, instead of copying them again.
+    internal static GesUInt16IndexListSegment FromOwned(SliceEntry[] slices, ushort[] data) => new(GesReadOnlyArray<SliceEntry>.FromOwnedArray(slices), GesReadOnlyArray<ushort>.FromOwnedArray(data), owned: true);
+
+    private GesUInt16IndexListSegment(GesReadOnlyArray<SliceEntry> slices, GesReadOnlyArray<ushort> data, bool owned)
+    {
+        _ = owned;
+        _slices = slices;
+        _data = data;
+    }
+
     /// <summary>
-    /// Gets the slices.
+    /// Gets the immutable slice table; its <see cref="GesReadOnlyArray{T}.Count"/> is the number of lists.
     /// </summary>
     public GesReadOnlyArray<SliceEntry> Slices => _slices;
     /// <summary>
-    /// Gets the data.
+    /// Gets the immutable concatenated elements of all lists.
     /// </summary>
     public GesReadOnlyArray<ushort> Data => _data;
 
     /// <summary>
-    /// Resolves the value.
+    /// Returns a read-only view of one list that shares this segment's storage without copying it.
     /// </summary>
-    /// <param name="index">The index value.</param>
-    /// <returns>The result of the operation.</returns>
+    /// <param name="index">The zero-based list index, which must be less than the number of <see cref="Slices"/>.</param>
+    /// <returns>The list's elements; <see cref="GesUInt16IndexList.Start"/> is its offset in <see cref="Data"/>.</returns>
+    /// <exception cref="IndexOutOfRangeException">The index does not name a list.</exception>
     public GesUInt16IndexList Resolve(ushort index) => new(_data, _slices[index].Start, _slices[index].Length);
 }
 
 /// <summary>
-/// Represents a game event script binding segment.
+/// The immutable BindingSegment (section <c>0x0004</c>): the program's exported handlers and callables, imported
+/// extensions and external types, outbound message signatures and Record constructors, in encoded order.
 /// </summary>
+/// <remarks>A <see langword="default"/> instance has no entries.</remarks>
 public readonly struct GesBindingSegment
 {
 
     /// <summary>
-    /// Represents a game event script binary bind entry.
+    /// One immutable binding record. In <c>.gesb</c> the argument-name and tag lists are UInt16IndexListSegment indices;
+    /// this model holds their resolved elements, which are string-constant indices.
     /// </summary>
+    /// <param name="kind">The binding kind.</param>
+    /// <param name="name">The string-constant index of the binding name.</param>
+    /// <param name="argumentNames">The string-constant indices of the ordered argument labels; <see langword="null"/> means none.</param>
+    /// <param name="entryAddress">The code address of an executable binding's entry, or <c>0xFFFF</c> when there is none.</param>
+    /// <param name="id">The binding ID, or <c>0xFFFF</c> when there is none.</param>
+    /// <param name="requiredTags">The string-constant indices of tags a delivery must carry; <see langword="null"/> means none.</param>
+    /// <param name="excludedTags">The string-constant indices of tags a delivery must not carry; <see langword="null"/> means none.</param>
+    /// <param name="requiredRegisterCount">The declared register requirement of a message handler.</param>
+    /// <param name="requiredCallStackDepth">The declared nested call depth of a message handler.</param>
     public readonly struct Entry(
         GesBinaryBindKind kind,
         ushort name,
@@ -224,47 +277,55 @@ public readonly struct GesBindingSegment
         private readonly GesReadOnlyArray<ushort> _excludedTags = new(excludedTags);
 
         /// <summary>
-        /// Gets the id.
+        /// Gets the binding ID, unique per kind except for handlers, whose ID is an overload ordinal scoped to their message
+        /// name; <c>0xFFFF</c> means no ID. Every Record binding carries an ID.
         /// </summary>
         public ushort Id { get; } = id;
 
         /// <summary>
-        /// Gets the kind.
+        /// Gets the binding kind. Export kinds occupy <c>0x10</c>–<c>0x1F</c>, import kinds <c>0x20</c>–<c>0x2F</c>.
         /// </summary>
         public GesBinaryBindKind Kind { get; } = kind;
 
         /// <summary>
-        /// Gets the name.
+        /// Gets the string-constant index of the binding name: a message name, callable name, <c>extension.function</c>
+        /// for extension imports, or a type name.
         /// </summary>
         public ushort Name { get; } = name;
 
         /// <summary>
-        /// Gets the argument names.
+        /// Gets the string-constant indices of the ordered argument labels, which together with <see cref="Name"/> form
+        /// the signature. Empty when the binding has no arguments.
         /// </summary>
         public GesReadOnlyArray<ushort> ArgumentNames => _argumentNames;
 
         /// <summary>
-        /// Gets the required tags.
+        /// Gets the string-constant indices of a handler's <c>matching</c> tags, all of which a message must carry to be
+        /// delivered; empty means no requirement.
         /// </summary>
         public GesReadOnlyArray<ushort> RequiredTags => _requiredTags;
 
         /// <summary>
-        /// Gets the excluded tags.
+        /// Gets the string-constant indices of a handler's <c>without</c> tags, any of which excludes a message; empty
+        /// means none.
         /// </summary>
         public GesReadOnlyArray<ushort> ExcludedTags => _excludedTags;
 
         /// <summary>
-        /// Gets the entry address.
+        /// Gets the zero-based code address (instruction index) of an executable binding's <c>RegisterLocals</c> prolog;
+        /// non-executable bindings such as imports use the sentinel <c>0xFFFF</c>.
         /// </summary>
         public ushort EntryAddress { get; } = entryAddress;
 
         /// <summary>
-        /// Gets the required register count.
+        /// Gets a message handler's declared conservative upper bound of VM registers retained while it runs, including
+        /// staged values and all caller frames on its deepest synchronous call path.
         /// </summary>
         public ushort RequiredRegisterCount { get; } = requiredRegisterCount;
 
         /// <summary>
-        /// Gets the required call stack depth.
+        /// Gets a message handler's declared conservative upper bound of nested calls below the handler; zero when it
+        /// calls nothing.
         /// </summary>
         public ushort RequiredCallStackDepth { get; } = requiredCallStackDepth;
 
@@ -273,22 +334,24 @@ public readonly struct GesBindingSegment
     private readonly GesReadOnlyArray<GesBindingSegment.Entry> _entries;
 
     /// <summary>
-    /// Initializes a new instance of Game Event Script Binding Segment.
+    /// Creates the segment from a defensive copy of <paramref name="entries"/>. Only the Compiler and the binary Reader
+    /// construct Programs and their segments.
     /// </summary>
-    /// <param name="entries">The entries value.</param>
-    public GesBindingSegment(IReadOnlyList<GesBindingSegment.Entry>? entries)
+    /// <param name="entries">The binding records in encoded order; <see langword="null"/> means none.</param>
+    /// <exception cref="ArgumentOutOfRangeException">More than 65,535 entries are supplied.</exception>
+    internal GesBindingSegment(IReadOnlyList<GesBindingSegment.Entry>? entries)
     {
         _entries = new GesReadOnlyArray<GesBindingSegment.Entry>(entries);
         EntryCount = ToEntryCount(_entries.Count);
     }
 
     /// <summary>
-    /// Gets the entry count.
+    /// Gets the number of binding records, equal to the count of <see cref="Entries"/>.
     /// </summary>
     public ushort EntryCount { get; }
 
     /// <summary>
-    /// Gets the entries.
+    /// Gets the immutable binding records in encoded order.
     /// </summary>
     public GesReadOnlyArray<GesBindingSegment.Entry> Entries => _entries;
 
@@ -297,95 +360,105 @@ public readonly struct GesBindingSegment
 }
 
 /// <summary>
-/// Represents a game event script code segment.
+/// The immutable CodeSegment (section <c>0x0010</c>): the program's single linear instruction table of at most 65,535
+/// instructions, each encoded as 16 bytes. A code address is the zero-based index of an instruction in this table.
 /// </summary>
+/// <remarks>A <see langword="default"/> instance has no instructions.</remarks>
 public readonly struct GesCodeSegment
 {
     private readonly GesReadOnlyArray<GesBytecodeInstruction> _instructions;
 
     /// <summary>
-    /// Initializes a new instance of Game Event Script Code Segment.
+    /// Creates the segment from a defensive copy of <paramref name="instructions"/>. Only the Compiler and the binary
+    /// Reader construct Programs and their segments.
     /// </summary>
-    /// <param name="instructions">The instructions value.</param>
-    public GesCodeSegment(IReadOnlyList<GesBytecodeInstruction>? instructions)
+    /// <param name="instructions">The instructions in code-address order; <see langword="null"/> means none.</param>
+    internal GesCodeSegment(IReadOnlyList<GesBytecodeInstruction>? instructions)
         => _instructions = new GesReadOnlyArray<GesBytecodeInstruction>(instructions);
 
     /// <summary>
-    /// Gets the count.
+    /// Gets the number of instructions.
     /// </summary>
     public int Count => _instructions.Count;
     /// <summary>
-    /// Gets the length.
+    /// Gets the number of instructions; identical to <see cref="Count"/>.
     /// </summary>
     public int Length => _instructions.Count;
     /// <summary>
-    /// Gets the value at the specified index.
+    /// Gets a copy of the instruction at a code address; mutating the returned struct cannot change the program.
     /// </summary>
-    /// <param name="index">The index value.</param>
+    /// <param name="index">The zero-based code address, which must be less than <see cref="Count"/>.</param>
+    /// <exception cref="IndexOutOfRangeException">The address is outside the code segment.</exception>
     public GesBytecodeInstruction this[int index] => _instructions[index];
     /// <summary>
-    /// Gets the instructions.
+    /// Gets the immutable instruction table in code-address order.
     /// </summary>
     public GesReadOnlyArray<GesBytecodeInstruction> Instructions => _instructions;
 }
 
 /// <summary>
-/// Defines the supported game event script debug symbol kind values.
+/// The kind of a named register in <see cref="GesDebugSymbolsSegment"/>; the numeric values are the encoded
+/// <c>SymbolKind</c> byte.
 /// </summary>
 public enum GesDebugSymbolKind : byte
 {
     /// <summary>
-    /// Identifies the parameter value.
+    /// An explicit script parameter of a handler or callable.
     /// </summary>
     Parameter = 1,
     /// <summary>
-    /// Identifies the local value.
+    /// An explicit script local binding.
     /// </summary>
     Local = 2
 }
 
 /// <summary>
-/// Represents a game event script debug symbol.
+/// Names one physical register over a half-open range of code addresses. Only explicit script parameters and locals are
+/// named; compiler temporaries are not.
 /// </summary>
-/// <param name="Kind">The kind value.</param>
-/// <param name="RegisterId">The register id value.</param>
-/// <param name="Name">The name value.</param>
-/// <param name="CodeStart">The code start value.</param>
-/// <param name="CodeLength">The code length value.</param>
+/// <param name="Kind">Whether the register holds a parameter or a local.</param>
+/// <param name="RegisterId">The physical register after final allocation, below the frame length of the enclosing routine.</param>
+/// <param name="Name">The decoded source name; the encoding stores it in the segment's own name pool.</param>
+/// <param name="CodeStart">The zero-based code address where the name becomes valid.</param>
+/// <param name="CodeLength">The nonzero number of instructions the name stays valid, within one routine.</param>
 public readonly record struct GesDebugSymbol(GesDebugSymbolKind Kind, ushort RegisterId, string Name, uint CodeStart, uint CodeLength);
 
 /// <summary>
-/// Represents a game event script debug symbols segment.
+/// The immutable optional DebugSymbolsSegment (section <c>0x0020</c>), which names script parameters and locals by
+/// register and code range. Runtime behaviour never depends on it.
 /// </summary>
 public sealed class GesDebugSymbolsSegment
 {
     /// <summary>
-    /// Initializes a new instance of Game Event Script Debug Symbols Segment.
+    /// Creates the segment from a defensive copy of <paramref name="symbols"/>. Only the Compiler and the binary Reader
+    /// construct Programs and their segments.
     /// </summary>
-    /// <param name="symbols">The symbols value.</param>
-    public GesDebugSymbolsSegment(IReadOnlyList<GesDebugSymbol>? symbols)
+    /// <param name="symbols">The symbols in encoded order; <see langword="null"/> means none.</param>
+    internal GesDebugSymbolsSegment(IReadOnlyList<GesDebugSymbol>? symbols)
         => Symbols = new GesReadOnlyArray<GesDebugSymbol>(symbols);
 
     /// <summary>
-    /// Gets the symbols.
+    /// Gets the immutable symbols in encoded order.
     /// </summary>
     public GesReadOnlyArray<GesDebugSymbol> Symbols { get; }
 }
 
 /// <summary>
-/// Represents a game event script source map source.
+/// Describes one compiler input in the <see cref="GesSourceMapSegment"/>. All offsets and lengths count bytes of the
+/// logical UTF-8 source, not UTF-16 code units.
 /// </summary>
 public sealed class GesSourceMapSource
 {
     /// <summary>
-    /// Initializes a new instance of Game Event Script Source Map Source.
+    /// Creates the source description from defensive copies of its byte and offset tables. Only the Compiler and the
+    /// binary Reader construct Programs and their segments.
     /// </summary>
-    /// <param name="sourceId">The source id value.</param>
-    /// <param name="sourceName">The source name value.</param>
-    /// <param name="sourceByteLength">The source byte length value.</param>
-    /// <param name="sha256">The sha256 value.</param>
-    /// <param name="lineStartByteOffsets">The line start byte offsets value.</param>
-    public GesSourceMapSource(uint sourceId, string sourceName, uint sourceByteLength, IReadOnlyList<byte> sha256, IReadOnlyList<uint> lineStartByteOffsets)
+    /// <param name="sourceId">The stable source ID, equal to the source's index in the table.</param>
+    /// <param name="sourceName">The source name; <see langword="null"/> is stored as an empty string.</param>
+    /// <param name="sourceByteLength">The source length in UTF-8 bytes.</param>
+    /// <param name="sha256">The 32-byte SHA-256 of the logical UTF-8 source.</param>
+    /// <param name="lineStartByteOffsets">The UTF-8 byte offset at which each line starts.</param>
+    internal GesSourceMapSource(uint sourceId, string sourceName, uint sourceByteLength, IReadOnlyList<byte> sha256, IReadOnlyList<uint> lineStartByteOffsets)
     {
         SourceId = sourceId;
         SourceName = sourceName ?? string.Empty;
@@ -395,77 +468,83 @@ public sealed class GesSourceMapSource
     }
 
     /// <summary>
-    /// Gets the source id.
+    /// Gets the stable source ID, which equals this source's zero-based index in <see cref="GesSourceMapSegment.Sources"/>
+    /// and follows the compiler's input order.
     /// </summary>
     public uint SourceId { get; }
     /// <summary>
-    /// Gets the source name.
+    /// Gets the source name as given to the compiler.
     /// </summary>
     public string SourceName { get; }
     /// <summary>
-    /// Gets the source byte length.
+    /// Gets the length of the logical source in UTF-8 bytes.
     /// </summary>
     public uint SourceByteLength { get; }
     /// <summary>
-    /// Gets the sha256.
+    /// Gets the 32 bytes of the SHA-256 hash of the logical UTF-8 source content.
     /// </summary>
     public GesReadOnlyArray<byte> Sha256 { get; }
     /// <summary>
-    /// Gets the line start byte offsets.
+    /// Gets the UTF-8 byte offset at which each zero-based line starts. The first offset is zero; later offsets are
+    /// strictly increasing UTF-8 boundaries and may equal <see cref="SourceByteLength"/> for a final empty line.
     /// </summary>
     public GesReadOnlyArray<uint> LineStartByteOffsets { get; }
 }
 
 /// <summary>
-/// Represents a game event script source map entry.
+/// Maps a half-open range of code addresses to a range of UTF-8 bytes in one source.
 /// </summary>
-/// <param name="CodeStart">The code start value.</param>
-/// <param name="CodeLength">The code length value.</param>
-/// <param name="SourceId">The source id value.</param>
-/// <param name="SourceStartByteOffset">The source start byte offset value.</param>
-/// <param name="SourceByteLength">The source byte length value.</param>
+/// <param name="CodeStart">The zero-based code address of the first mapped instruction.</param>
+/// <param name="CodeLength">The nonzero number of mapped instructions.</param>
+/// <param name="SourceId">The <see cref="GesSourceMapSource.SourceId"/> of the mapped source.</param>
+/// <param name="SourceStartByteOffset">The zero-based UTF-8 byte offset of the mapped source range.</param>
+/// <param name="SourceByteLength">The nonzero length of the mapped source range in UTF-8 bytes.</param>
 public readonly record struct GesSourceMapEntry(uint CodeStart, uint CodeLength, uint SourceId, uint SourceStartByteOffset, uint SourceByteLength);
 
 /// <summary>
-/// Represents a game event script source map segment.
+/// The immutable optional SourceMapSegment (section <c>0x0021</c>), which maps code addresses to source byte ranges. It
+/// is useful without an embedded <see cref="GesSourceArchiveSegment"/>; when both are present they must agree.
 /// </summary>
 public sealed class GesSourceMapSegment
 {
     /// <summary>
-    /// Initializes a new instance of Game Event Script Source Map Segment.
+    /// Creates the segment from defensive copies of <paramref name="sources"/> and <paramref name="entries"/>. Only the
+    /// Compiler and the binary Reader construct Programs and their segments.
     /// </summary>
-    /// <param name="sources">The sources value.</param>
-    /// <param name="entries">The entries value.</param>
-    public GesSourceMapSegment(IReadOnlyList<GesSourceMapSource>? sources, IReadOnlyList<GesSourceMapEntry>? entries)
+    /// <param name="sources">The source table, indexed by source ID; <see langword="null"/> means none.</param>
+    /// <param name="entries">The mappings in ascending, non-overlapping code order; <see langword="null"/> means none.</param>
+    internal GesSourceMapSegment(IReadOnlyList<GesSourceMapSource>? sources, IReadOnlyList<GesSourceMapEntry>? entries)
     {
         Sources = new GesReadOnlyArray<GesSourceMapSource>(sources);
         Entries = new GesReadOnlyArray<GesSourceMapEntry>(entries);
     }
 
     /// <summary>
-    /// Gets the sources.
+    /// Gets the immutable source table; a source's index equals its <see cref="GesSourceMapSource.SourceId"/>.
     /// </summary>
     public GesReadOnlyArray<GesSourceMapSource> Sources { get; }
     /// <summary>
-    /// Gets the entries.
+    /// Gets the immutable mappings, ordered by ascending, non-overlapping code ranges.
     /// </summary>
     public GesReadOnlyArray<GesSourceMapEntry> Entries { get; }
 }
 
 /// <summary>
-/// Represents a game event script source archive entry.
+/// One embedded compiler input in the <see cref="GesSourceArchiveSegment"/>: the exact logical source as UTF-8, without
+/// the original byte order mark or file encoding.
 /// </summary>
 public sealed class GesSourceArchiveEntry
 {
     private readonly GesReadOnlyArray<byte> _utf8Content;
 
     /// <summary>
-    /// Initializes a new instance of Game Event Script Source Archive Entry.
+    /// Creates the entry from a defensive copy of <paramref name="utf8Content"/>. Only the Compiler and the binary Reader
+    /// construct Programs and their segments.
     /// </summary>
-    /// <param name="sourceId">The source id value.</param>
-    /// <param name="sourceName">The source name value.</param>
-    /// <param name="utf8Content">The utf8 content value.</param>
-    public GesSourceArchiveEntry(uint sourceId, string sourceName, IReadOnlyList<byte> utf8Content)
+    /// <param name="sourceId">The source ID, matching the source map's ID when both are present.</param>
+    /// <param name="sourceName">The source name; <see langword="null"/> is stored as an empty string.</param>
+    /// <param name="utf8Content">The logical source content as UTF-8 bytes.</param>
+    internal GesSourceArchiveEntry(uint sourceId, string sourceName, IReadOnlyList<byte> utf8Content)
     {
         SourceId = sourceId;
         SourceName = sourceName ?? string.Empty;
@@ -473,86 +552,90 @@ public sealed class GesSourceArchiveEntry
     }
 
     /// <summary>
-    /// Gets the source id.
+    /// Gets the source ID, unique within the archive and equal to the matching <see cref="GesSourceMapSource.SourceId"/>.
     /// </summary>
     public uint SourceId { get; }
     /// <summary>
-    /// Gets the source name.
+    /// Gets the source name, nonempty in a valid program.
     /// </summary>
     public string SourceName { get; }
     /// <summary>
-    /// Gets the utf8 content.
+    /// Gets the immutable logical source content as strict UTF-8 bytes.
     /// </summary>
     public GesReadOnlyArray<byte> Utf8Content => _utf8Content;
     /// <summary>
-    /// Resolves the text.
+    /// Decodes <see cref="Utf8Content"/> into a new <see cref="string"/>; each call decodes again.
     /// </summary>
-    /// <returns>The result of the operation.</returns>
+    /// <returns>The source text.</returns>
     public string ResolveText() => DecodeText(Encoding.UTF8);
 
     internal string DecodeText(Encoding encoding) => _utf8Content.DecodeUtf8(encoding, 0, _utf8Content.Count);
 }
 
 /// <summary>
-/// Represents a game event script source archive segment.
+/// The immutable optional SourceArchiveSegment (section <c>0x0022</c>), which embeds the compiler inputs.
 /// </summary>
 public sealed class GesSourceArchiveSegment
 {
     /// <summary>
-    /// Initializes a new instance of Game Event Script Source Archive Segment.
+    /// Creates the segment from a defensive copy of <paramref name="sources"/>. Only the Compiler and the binary Reader
+    /// construct Programs and their segments.
     /// </summary>
-    /// <param name="sources">The sources value.</param>
-    public GesSourceArchiveSegment(IReadOnlyList<GesSourceArchiveEntry>? sources)
+    /// <param name="sources">The embedded sources in encoded order; <see langword="null"/> means none.</param>
+    internal GesSourceArchiveSegment(IReadOnlyList<GesSourceArchiveEntry>? sources)
         => Sources = new GesReadOnlyArray<GesSourceArchiveEntry>(sources);
 
     /// <summary>
-    /// Gets the sources.
+    /// Gets the immutable embedded sources in encoded order.
     /// </summary>
     public GesReadOnlyArray<GesSourceArchiveEntry> Sources { get; }
 }
 
 /// <summary>
-/// Represents a game event script build metadata segment.
+/// The immutable optional BuildMetadataSegment (section <c>0x0030</c>), which names the producing compiler. Runtime
+/// behaviour never depends on it.
 /// </summary>
 public sealed class GesBuildMetadataSegment
 {
     /// <summary>
-    /// Initializes a new instance of Game Event Script Build Metadata Segment.
+    /// Creates the segment. Only the Compiler and the binary Reader construct Programs and their segments.
     /// </summary>
-    /// <param name="compilerId">The compiler id value.</param>
-    /// <param name="compilerVersion">The compiler version value.</param>
-    public GesBuildMetadataSegment(string compilerId, string compilerVersion)
+    /// <param name="compilerId">The stable compiler implementation ID; <see langword="null"/> is stored as an empty string.</param>
+    /// <param name="compilerVersion">The compiler version; <see langword="null"/> is stored as an empty string.</param>
+    internal GesBuildMetadataSegment(string compilerId, string compilerVersion)
     {
         CompilerId = compilerId ?? string.Empty;
         CompilerVersion = compilerVersion ?? string.Empty;
     }
 
     /// <summary>
-    /// Gets the compiler id.
+    /// Gets the stable ID of the producing compiler implementation, for example <c>steph.ges.compiler.csharp</c>.
     /// </summary>
     public string CompilerId { get; }
     /// <summary>
-    /// Gets the compiler version.
+    /// Gets the version of the producing compiler.
     /// </summary>
     public string CompilerVersion { get; }
 }
 
 /// <summary>
-/// Represents a game event script opaque section.
+/// An optional section the reader retained without interpreting it under <see cref="GesProgramRetention.PreserveAll"/>:
+/// an unknown optional section, or a known optional section with an unsupported version or compression. The writer
+/// re-emits it unchanged after the known sections.
 /// </summary>
 public sealed class GesOpaqueSection
 {
     private readonly GesReadOnlyArray<byte> _rawPayload;
 
     /// <summary>
-    /// Initializes a new instance of Game Event Script Opaque Section.
+    /// Creates the section from a defensive copy of <paramref name="rawPayload"/>. Only the binary Reader constructs it.
     /// </summary>
-    /// <param name="sectionType">The section type value.</param>
-    /// <param name="flags">The flags value.</param>
-    /// <param name="sectionVersion">The section version value.</param>
-    /// <param name="rawPayload">The raw payload value.</param>
-    /// <param name="originalOrdinal">The original ordinal value.</param>
-    public GesOpaqueSection(ushort sectionType, GesSectionFlags flags, ushort sectionVersion, IReadOnlyList<byte> rawPayload, int originalOrdinal)
+    /// <param name="sectionType">The raw encoded section type.</param>
+    /// <param name="flags">The encoded section flags.</param>
+    /// <param name="sectionVersion">The encoded section version.</param>
+    /// <param name="rawPayload">The section payload bytes.</param>
+    /// <param name="originalOrdinal">The zero-based position of the section among all sections of the read file.</param>
+    internal GesOpaqueSection(ushort sectionType, GesSectionFlags flags, ushort sectionVersion, IReadOnlyList<byte> rawPayload, int originalOrdinal)
     {
         SectionType = sectionType;
         Flags = flags;
@@ -562,23 +645,24 @@ public sealed class GesOpaqueSection
     }
 
     /// <summary>
-    /// Gets the section type.
+    /// Gets the raw encoded section type, which may be outside <see cref="GesSectionType"/>.
     /// </summary>
     public ushort SectionType { get; }
     /// <summary>
-    /// Gets the flags.
+    /// Gets the encoded section flags; <see cref="GesSectionFlags.Required"/> is never set on an opaque section.
     /// </summary>
     public GesSectionFlags Flags { get; }
     /// <summary>
-    /// Gets the section version.
+    /// Gets the encoded section version.
     /// </summary>
     public ushort SectionVersion { get; }
     /// <summary>
-    /// Gets the raw payload.
+    /// Gets the immutable payload bytes exactly as read, excluding the 12-byte section header.
     /// </summary>
     public GesReadOnlyArray<byte> RawPayload => _rawPayload;
     /// <summary>
-    /// Gets the original ordinal.
+    /// Gets the zero-based position of this section among all sections of the file it was read from; unique per
+    /// program, it determines the relative order in which the writer re-emits opaque sections.
     /// </summary>
     public int OriginalOrdinal { get; }
 }

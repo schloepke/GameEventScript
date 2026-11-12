@@ -12,7 +12,7 @@ namespace GameEventScript.Api;
 // retaining a register-state matrix for every instruction in an untrusted file.
 internal static class GesProgramInternalValueValidator
 {
-    internal static void Validate(GameEventScriptProgram program, ushort[] entries, ReadOnlySpan<int> frames)
+    internal static void Validate(GameEventScriptProgram program, ushort[] entries, ReadOnlySpan<int> frames, GesProgramListMembers lists)
     {
         int[]? visited = null;
         int[]? pending = null;
@@ -52,14 +52,11 @@ internal static class GesProgramInternalValueValidator
                     }
                     else if (operand == TargetRegisterList)
                     {
-                        var targets = program.UInt16IndexLists.Resolve(instruction.DestinationRegister);
-                        for (var element = 0; element < targets.Length; element++) overwritten |= targets[element] == register;
+                        overwritten |= lists.Contains(instruction.DestinationRegister, register);
                     }
                     else if (operand is SourceRegisterList or ArgumentRegisterList or ItemRegisterList or ValueRegisterList or CaptureRegisterList or TagRegisterList)
                     {
-                        var list = program.UInt16IndexLists.Resolve(GesProgramValidator.ReadListOperand(instruction, operand));
-                        for (var element = 0; element < list.Length; element++)
-                            if (list[element] == register) Invalid(address);
+                        if (lists.Contains(GesProgramValidator.ReadListOperand(instruction, operand), register)) Invalid(address);
                     }
                 }
                 if (overwritten || instruction.OpCode == IteratorClose && instruction.XRegister == register || instruction.OpCode is ReturnVoid or ReturnValue) continue;

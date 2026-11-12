@@ -157,6 +157,8 @@ internal struct GesLiteralParser
         if (builtin is "handler" or "message" && _position < _text.Length && GesText.IsAsciiUpper(_text[_position]))
             return ReadMessageForm(depth + 1, builtin == "handler", formStart);
         var labels = new List<string>();
+        // Labels are checked through a set: a form may hold up to MaxLiteralItems of them.
+        var seen = new HashSet<string>(StringComparer.Ordinal);
         var values = new List<GesValue>();
         if (!Consume(')'))
         {
@@ -168,7 +170,7 @@ internal struct GesLiteralParser
                 SkipWhitespace();
                 if (label is null || !Consume(':')) { label = "_"; _position = saved; }
                 else if (!GesText.IsFieldName(label)) return null;
-                else if (labels.Contains(label)) return null;
+                else if (!seen.Add(label)) return null;
                 SkipWhitespace();
                 GesValue? value;
                 if (builtin == "series" && (label == "kind" || label == "_" && values.Count == 0) && _position < _text.Length && _text[_position] is >= 'a' and <= 'z')
@@ -214,6 +216,7 @@ internal struct GesLiteralParser
         if (!Consume('(')) return null;
         SkipWhitespace();
         var labels = new List<string>();
+        var seen = new HashSet<string>(StringComparer.Ordinal);
         var values = new List<GesValue>();
         if (!Consume(')'))
         {
@@ -225,7 +228,7 @@ internal struct GesLiteralParser
                     var label = ReadName();
                     if (label is null) return null;
                     if (label != "_" && !GesText.IsFieldName(label)) return null;
-                    if (label != "_" && labels.Contains(label)) return null;
+                    if (label != "_" && !seen.Add(label)) return null;
                     labels.Add(label);
                 }
                 else
@@ -235,7 +238,7 @@ internal struct GesLiteralParser
                     SkipWhitespace();
                     if (label is null || !Consume(':')) { label = "_"; _position = saved; }
                     else if (!GesText.IsFieldName(label)) return null;
-                    else if (labels.Contains(label)) return null;
+                    else if (!seen.Add(label)) return null;
                     var value = ReadValue(depth);
                     if (value is not { } item) return null;
                     labels.Add(label);

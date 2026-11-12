@@ -72,7 +72,6 @@ static class GameEventScript.Api.GesBinaryFormat
   field static System.UInt32 HeaderSize
   field static System.UInt32 SectionHeaderSize
 struct GameEventScript.Api.GesBindingSegment
-  ctor GesBindingSegment(System.Collections.Generic.IReadOnlyList<GameEventScript.Api.GesBindingSegment.Entry> entries)
   property GameEventScript.Api.GesReadOnlyArray<GameEventScript.Api.GesBindingSegment.Entry> Entries { get }
   property System.UInt16 EntryCount { get }
 struct GameEventScript.Api.GesBindingSegment.Entry
@@ -144,7 +143,6 @@ struct GameEventScript.Api.GesBox
   property System.Double MinY { get }
   property System.Double MinZ { get }
 sealed class GameEventScript.Api.GesBuildMetadataSegment
-  ctor GesBuildMetadataSegment(System.String compilerId, System.String compilerVersion)
   property System.String CompilerId { get }
   property System.String CompilerVersion { get }
 struct GameEventScript.Api.GesBytecodeInstruction
@@ -421,7 +419,6 @@ enum GameEventScript.Api.GesBytecodeTypeKind
   enum-field Series = 49
   enum-field Custom = 255
 struct GameEventScript.Api.GesCodeSegment
-  ctor GesCodeSegment(System.Collections.Generic.IReadOnlyList<GameEventScript.Api.GesBytecodeInstruction> instructions)
   property GameEventScript.Api.GesBytecodeInstruction Item { get }
   property GameEventScript.Api.GesReadOnlyArray<GameEventScript.Api.GesBytecodeInstruction> Instructions { get }
   property System.Int32 Count { get }
@@ -470,7 +467,6 @@ enum GameEventScript.Api.GesDebugSymbolKind
   enum-field Parameter = 1
   enum-field Local = 2
 sealed class GameEventScript.Api.GesDebugSymbolsSegment
-  ctor GesDebugSymbolsSegment(System.Collections.Generic.IReadOnlyList<GameEventScript.Api.GesDebugSymbol> symbols)
   property GameEventScript.Api.GesReadOnlyArray<GameEventScript.Api.GesDebugSymbol> Symbols { get }
 sealed class GameEventScript.Api.GesDeclaredExternalTypeCatalog
   ctor GesDeclaredExternalTypeCatalog(System.Collections.Generic.IEnumerable<GameEventScript.Api.GesExternalTypeDefinition> types)
@@ -785,7 +781,6 @@ sealed class GameEventScript.Api.GesMessageSignature
   property System.String Name { get }
   property System.String SignatureId { get }
 sealed class GameEventScript.Api.GesOpaqueSection
-  ctor GesOpaqueSection(System.UInt16 sectionType, GameEventScript.Api.GesSectionFlags flags, System.UInt16 sectionVersion, System.Collections.Generic.IReadOnlyList<System.Byte> rawPayload, System.Int32 originalOrdinal)
   property GameEventScript.Api.GesReadOnlyArray<System.Byte> RawPayload { get }
   property GameEventScript.Api.GesSectionFlags Flags { get }
   property System.Int32 OriginalOrdinal { get }
@@ -896,7 +891,6 @@ sealed class GameEventScript.Api.GesProgramInstance
   property GameEventScript.Api.GesStartResult? StartResult { get }
   property System.Boolean IsAttached { get }
 struct GameEventScript.Api.GesProgramMetadataSegment
-  ctor GesProgramMetadataSegment(System.String moduleName, System.UInt16 requiredRegisterCount, System.UInt16 requiredCallStackDepth, System.UInt64 programVersion)
   property System.String ModuleName { get }
   property System.UInt16 RequiredCallStackDepth { get }
   property System.UInt16 RequiredRegisterCount { get }
@@ -1201,13 +1195,11 @@ enum GameEventScript.Api.GesSectionType
   enum-field ReservedSignature = 64
   enum-field NamedCustom = 65534
 sealed class GameEventScript.Api.GesSourceArchiveEntry
-  ctor GesSourceArchiveEntry(System.UInt32 sourceId, System.String sourceName, System.Collections.Generic.IReadOnlyList<System.Byte> utf8Content)
   method System.String ResolveText()
   property GameEventScript.Api.GesReadOnlyArray<System.Byte> Utf8Content { get }
   property System.String SourceName { get }
   property System.UInt32 SourceId { get }
 sealed class GameEventScript.Api.GesSourceArchiveSegment
-  ctor GesSourceArchiveSegment(System.Collections.Generic.IReadOnlyList<GameEventScript.Api.GesSourceArchiveEntry> sources)
   property GameEventScript.Api.GesReadOnlyArray<GameEventScript.Api.GesSourceArchiveEntry> Sources { get }
 sealed class GameEventScript.Api.GesSourceLocation
   ctor GesSourceLocation(System.String SourceName, System.Int32? Line, System.Int32? Column, System.Int32? EndLine, System.Int32? EndColumn, System.String ModuleName, System.UInt32? SourceId)
@@ -1241,11 +1233,9 @@ struct GameEventScript.Api.GesSourceMapEntry
   property System.UInt32 SourceId { get set }
   property System.UInt32 SourceStartByteOffset { get set }
 sealed class GameEventScript.Api.GesSourceMapSegment
-  ctor GesSourceMapSegment(System.Collections.Generic.IReadOnlyList<GameEventScript.Api.GesSourceMapSource> sources, System.Collections.Generic.IReadOnlyList<GameEventScript.Api.GesSourceMapEntry> entries)
   property GameEventScript.Api.GesReadOnlyArray<GameEventScript.Api.GesSourceMapEntry> Entries { get }
   property GameEventScript.Api.GesReadOnlyArray<GameEventScript.Api.GesSourceMapSource> Sources { get }
 sealed class GameEventScript.Api.GesSourceMapSource
-  ctor GesSourceMapSource(System.UInt32 sourceId, System.String sourceName, System.UInt32 sourceByteLength, System.Collections.Generic.IReadOnlyList<System.Byte> sha256, System.Collections.Generic.IReadOnlyList<System.UInt32> lineStartByteOffsets)
   property GameEventScript.Api.GesReadOnlyArray<System.Byte> Sha256 { get }
   property GameEventScript.Api.GesReadOnlyArray<System.UInt32> LineStartByteOffsets { get }
   property System.String SourceName { get }
@@ -1264,14 +1254,13 @@ enum GameEventScript.Api.GesStartState
   enum-field RuntimeError = 1
   enum-field RuntimeLimitReached = 2
 struct GameEventScript.Api.GesStringConstantSegment
-  ctor GesStringConstantSegment(System.Collections.Generic.IReadOnlyList<GameEventScript.Api.GesStringConstantSegment.SliceEntry> slices, System.Collections.Generic.IReadOnlyList<System.Byte> data)
   method System.Int32 ResolveSize(System.UInt16 index)
   method System.String Resolve(System.UInt16 index)
   property GameEventScript.Api.GesReadOnlyArray<GameEventScript.Api.GesStringConstantSegment.SliceEntry> Slices { get }
   property GameEventScript.Api.GesReadOnlyArray<System.Byte> Data { get }
 struct GameEventScript.Api.GesStringConstantSegment.SliceEntry
-  property System.Int32 Length { get set }
-  property System.Int32 Start { get set }
+  property System.Int32 Length { get }
+  property System.Int32 Start { get }
 sealed class GameEventScript.Api.GesSubscription
   method System.Boolean Unsubscribe()
   property System.Boolean IsSubscribed { get }
@@ -1280,13 +1269,12 @@ struct GameEventScript.Api.GesUInt16IndexList
   property System.Int32 Start { get }
   property System.UInt16 Item { get }
 struct GameEventScript.Api.GesUInt16IndexListSegment
-  ctor GesUInt16IndexListSegment(System.Collections.Generic.IReadOnlyList<GameEventScript.Api.GesUInt16IndexListSegment.SliceEntry> slices, System.Collections.Generic.IReadOnlyList<System.UInt16> data)
   method GameEventScript.Api.GesUInt16IndexList Resolve(System.UInt16 index)
   property GameEventScript.Api.GesReadOnlyArray<GameEventScript.Api.GesUInt16IndexListSegment.SliceEntry> Slices { get }
   property GameEventScript.Api.GesReadOnlyArray<System.UInt16> Data { get }
 struct GameEventScript.Api.GesUInt16IndexListSegment.SliceEntry
-  property System.Int32 Length { get set }
-  property System.Int32 Start { get set }
+  property System.Int32 Length { get }
+  property System.Int32 Start { get }
 struct GameEventScript.Api.GesVector
   ctor GesVector(System.Double x, System.Double y, System.Double z)
   method GameEventScript.Api.GesVector Cross(GameEventScript.Api.GesVector other)

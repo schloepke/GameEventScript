@@ -3590,3 +3590,85 @@ binary:
   sectionType: 16
   entryIndex: 1
 ```
+
+---
+
+## Test: binding-argument-suffix
+
+A handler binding argument named `amou_1` uses the `_number` suffix, which only local variables may carry, so Program validation rejects it instead of failing when a Host links the handler.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: binding-argument-suffix
+compile:
+  debugInfo: []
+binaryFixture:
+  id: gesb-v1-binding-argument-suffix
+  resourceId: gesb-v1.binding-argument-suffix
+  relativePath: GesbV1/binding-argument-suffix.gesb
+  sha256: 10FE9DA98B5DA5B73AF0D98DDBAD83496A9F593E4B6AE5A7454C2384B7714407
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 0
+  derivation: "replace the handler binding argument name string `amount` with `amou_1` at file byte offset 64; retain all other bytes"
+```
+
+### Source code under test
+
+```ges
+module labelsuffix
+on Damage(amount) {}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+binary:
+  outcome: validationError
+  errorCode: InvalidProgram
+```
+
+---
+
+## Test: duplicate-record-name
+
+Two Record bindings named `Aaa` would let casts and `parse` pick different constructors, so Program validation rejects the second name.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: duplicate-record-name
+compile:
+  debugInfo: []
+binaryFixture:
+  id: gesb-v1-duplicate-record-name
+  resourceId: gesb-v1.duplicate-record-name
+  relativePath: GesbV1/duplicate-record-name.gesb
+  sha256: 45E8E0A973BFC458DCD9490E3D345959CC151398DC740CC58CE4EE2EF5061FF7
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 0
+  derivation: "replace the second Record name string `Bbb` with `Aaa` at file byte offset 89; retain all other bytes"
+```
+
+### Source code under test
+
+```ges
+module recordnames
+record :Aaa as { value: :Number }
+record :Bbb as { value: :Number }
+on Start(value) { emit Done(first: [value: value] as :Aaa, second: [value: value] as :Bbb) }
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+binary:
+  outcome: validationError
+  errorCode: InvalidProgram
+```

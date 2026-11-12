@@ -11,6 +11,12 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 ## Unreleased
 
 ### Breaking
+- Program segment and section types (`GesStringConstantSegment`, `GesCodeSegment`, `GesSourceMapSegment` and the
+  others) have no public constructors and their `SliceEntry` values no public setters; Programs come only from the
+  Compiler and the Reader. Swift keeps those initializers behind `@_spi(Compiler)`.
+- Program validation rejects binding argument names with a `_number` suffix and a second Record binding of the same name
+  or a Record binding without an ID (`InvalidProgram`). A message-name handler records the label `message` whatever its
+  source binding is called.
 - The new runtime limit `MaxValueDepth` (default 64) stops a handler that nests Lists, Maps, Records or Messages more
   than 64 levels deep, which could otherwise overflow the native stack when the value was converted, compared or
   released. Raise it in `GesRuntimeLimits` where deeper values are needed.
@@ -521,6 +527,13 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   of every port. Runtime behavior does not depend on it.
 
 ### Fixed
+- `on Start as incoming_1` compiles to a Program that loads; before, linking failed with an argument exception.
+- Program validation is linear in the Program size: a long register or label list shared by many instructions, many
+  source lines and many mappings no longer make C# validation take minutes to hours. `Encode()`/`ToArray()` validate
+  once, and the reader copies pools without per-element calls.
+- `parse` of a form with many labels checks them through a set instead of quadratically, in both ports.
+- The Swift Program reader rejects counts and lengths above `Int.max` on 32-bit targets such as wasm32 with the format
+  error instead of trapping.
 - `Start()` completes an initial group with more initializations than `MaxProcessedEventsPerRun` instead of failing
   with `runtime.initializationLimitReached`; the limit paces ordinary pumps only.
 - Choosing items at random from a long Range no longer allocates one entry per Range item, and integer Ranges answer

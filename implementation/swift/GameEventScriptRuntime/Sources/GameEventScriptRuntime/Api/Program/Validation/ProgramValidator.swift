@@ -16,6 +16,7 @@ enum GesProgramValidator {
         var functions: Set<String> = []
         var predicates: Set<String> = []
         var signatures: Set<String> = []
+        var records: Set<String> = []
         var maxRegisters: UInt16 = 0
         var maxDepth: UInt16 = 0
         for (index, binding) in p.bindings.enumerated() {
@@ -35,7 +36,7 @@ enum GesProgramValidator {
             for argument in binding.argumentNames {
                 let text = p.stringConstants[Int(argument)]
                 if text == "_" { continue }
-                if !GesNames.identifier(text) || !names.insert(text).inserted { throw failure(.invalidProgram, 4, index) }
+                if !GesNames.plain(text) || !names.insert(text).inserted { throw failure(.invalidProgram, 4, index) }
             }
             for tag in binding.requiredTags + binding.excludedTags { if !GesNames.plain(p.stringConstants[Int(tag)]) { throw failure(.invalidProgram, 4, index) } }
             if binding.kind == .function || binding.kind == .predicate {
@@ -43,6 +44,8 @@ enum GesProgramValidator {
                 if !signatures.insert(signature).inserted { throw failure(.invalidProgram, 4, index) }
                 if binding.kind == .function { functions.insert(name) } else { predicates.insert(name) }
             }
+            // Casts and `parse` find a Record constructor by its name, so each name has exactly one indexed binding.
+            if binding.kind == .record, binding.id == .max || !records.insert(name).inserted { throw failure(.invalidProgram, 4, index) }
             let key = binding.isHandler ? (UInt64(1) << 63) | (UInt64(binding.kind.rawValue) << 32) | (UInt64(binding.name) << 16) | UInt64(binding.id) : (UInt64(binding.kind.rawValue) << 16) | UInt64(binding.id)
             if binding.id != .max, !ids.insert(key).inserted { throw failure(.duplicateBindingId, 4, index) }
             if binding.isExecutable {
@@ -58,7 +61,9 @@ enum GesProgramValidator {
         if !functions.isDisjoint(with: predicates) { throw failure(.invalidProgram, 4) }
         if maxRegisters != p.requiredRegisterCount || maxDepth != p.requiredCallStackDepth { throw failure(.invalidResourceMetadata, 1) }
         if !p.stringConstants.contains(where: { GesText.scalarEqual($0, p.moduleName) }) { throw failure(.invalidStringIndex, 1) }
-        for (index, instruction) in p.code.enumerated() { try validateInstruction(p, instruction, index, ids) }
+        // A list is validated once per role; later references only check what depends on their instruction.
+        var validatedLists: [Int: Set<UInt16>?] = [:]
+        for (index, instruction) in p.code.enumerated() { try validateInstruction(p, instruction, index, ids, &validatedLists) }
         try GesProgramDebugValidator.validate(p)
         try GesProgramDebugValidator.validateOpaque(p)
         try GesProgramCallGraphValidator.validate(p)
@@ -66,7 +71,7 @@ enum GesProgramValidator {
 
     static func failure(_ code: GesProgramFormatErrorCode, _ section: UInt16? = nil, _ entry: Int? = nil) -> GesProgramFormatError { .init(code, sectionType: section, entryIndex: entry) }
 
-    static func validateInstruction(_ p: GameEventScriptProgram, _ i: GesBytecodeInstruction, _ index: Int, _ ids: Set<UInt64>) throws {
+    static func validateInstruction(_ p: GameEventScriptProgram, _ i: GesBytecodeInstruction, _ index: Int, _ ids: Set<UInt64>, _ validatedLists: inout [Int: Set<UInt16>?]) throws {
         if i.opcode.isResultSend {
             if i.unitAndFlags & 0x3f != 0 || i.c != 0 || i.d != 0 || i.unitAndFlags & 0x40 == 0 && i.a != 0 || i.unitAndFlags & 0x80 != 0 && i.word2 != 0
                 || (i.opcode == .emitInstant || i.opcode == .publishInstant) && i.b != 0
@@ -100,8 +105,21 @@ enum GesProgramValidator {
             } else if operand.isList {
                 let listIndex = Int(i.list(operand))
                 if listIndex >= p.uint16IndexLists.count { throw failure(.invalidListIndex, 16, index) }
+                let key = listIndex << 8 | Int(operand.rawValue)
+                if let known = validatedLists[key] {
+                    if let members = known, members.contains(i.word1) { throw failure(.invalidOperand, 16, index) }
+                    continue
+                }
                 let values = p.uint16IndexLists[listIndex]
-                if operand == .sourceRegisterList && values.count < 2 || operand == .targetRegisterList && (values.isEmpty || Set(values).count != values.count || values.contains(i.word1)) { throw failure(.invalidOperand, 16, index) }
+                var members: Set<UInt16>?
+                if operand == .targetRegisterList {
+                    var targets = Set<UInt16>()
+                    for value in values where !targets.insert(value).inserted { throw failure(.invalidOperand, 16, index) }
+                    if values.isEmpty || targets.contains(i.word1) { throw failure(.invalidOperand, 16, index) }
+                    members = targets
+                }
+                if operand == .sourceRegisterList && values.count < 2 { throw failure(.invalidOperand, 16, index) }
+                validatedLists[key] = .some(members)
                 var seen: Set<String> = []
                 for (element, value) in p.uint16IndexLists[listIndex].enumerated() {
                     if !operand.isTextList {
@@ -132,15 +150,16 @@ enum GesProgramValidator {
         }
         if i.opcode == .constructData {
             let type = p.stringConstants[Int(i.word1)]
+            if p.uint16IndexLists[Int(i.a)].count > GesLiteralForms.maxParameters { throw failure(.invalidOperand, 16, index) }
             let labels = p.uint16IndexLists[Int(i.a)].map { p.stringConstants[Int($0)] }
             if type == "vector" || type == "point" || !GesLiteralForms.types.contains(type) || GesLiteralForms.positions(type, labels) == nil || labels.count != p.uint16IndexLists[Int(i.word2)].count { throw failure(.invalidOperand, 16, index) }
         }
     }
 
-    static func validateFrame(_ p: GameEventScriptProgram, _ i: GesBytecodeInstruction, _ index: Int, _ length: Int) throws {
+    static func validateFrame(_ p: GameEventScriptProgram, _ i: GesBytecodeInstruction, _ index: Int, _ length: Int, _ lists: GesProgramListMembers) throws {
         for (position, operand) in i.operands.enumerated() {
             if operand.isRegister && Int(i.register(operand, position)) >= length { throw failure(.invalidOperand, 16, index) }
-            if operand.isList && !operand.isTextList && p.uint16IndexLists[Int(i.list(operand))].contains(where: { Int($0) >= length }) { throw failure(.invalidOperand, 16, index) }
+            if operand.isList && !operand.isTextList && lists.max(Int(i.list(operand))) >= length { throw failure(.invalidOperand, 16, index) }
         }
 
     }

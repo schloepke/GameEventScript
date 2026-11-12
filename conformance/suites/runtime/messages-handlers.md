@@ -636,3 +636,53 @@ initialization:
             type: ":Number.int64"
             value: "1"
 ```
+
+---
+
+## Test: a message-name handler binds the message to a subscripted name
+
+This runtime case verifies that `on Start as incoming_1` compiles, loads and receives the message: the binding records the fixed label `message`, and the subscripted name is a local variable of the handler.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: case-0009
+kind: scriptApi
+level: scenario
+sources:
+  - name: "message-name handler with a subscripted binding.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+module runtimesubscriptedbinding
+on Start as incoming_1 {
+  emit Seen(name: incoming_1.name)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| step-0001 | Start | completion |  |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  step-0001:
+    input:
+      args: []
+    local:
+      - name: "Seen"
+        args:
+          - name: "name"
+            value:
+              type: ":Text"
+              value: "Start"
+```

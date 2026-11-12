@@ -100,10 +100,17 @@ The portable public API has exactly two program-producing operations:
   program validator before returning the decoded program.
 
 There is no public free-form `GameEventScriptProgram` constructor or public
-factory that combines arbitrary segments. Public segment constructors are data
-helpers only and cannot create a program. Internal compiler builders and
+factory that combines arbitrary segments, and the segment and section types
+have no public constructors either (C# `internal`, Swift `@_spi(Compiler)`):
+their values are read from a Program, never assembled by an embedding. Small
+value records inside them (binding entries, debug symbols, source mappings and
+instructions) keep public initializers. Internal compiler builders and
 test-only friend access are implementation details and do not extend the
 portable construction contract.
+
+Validation costs time linear in the Program's size: a list, string or source
+shared by many references is checked once, so an untrusted file cannot make
+validation quadratic. One `Encode`/`ToArray` call validates once.
 
 Validation is deliberately repeated at output and execution trust boundaries:
 

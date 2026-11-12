@@ -176,11 +176,13 @@ struct GesLiteralParser {
 
     private mutating func typedArguments(depth: Int, _ head: TypedHead, formStart: Int) -> GesValue? {
         var labels: [String] = []
+        // Labels are checked through a set: a form may hold up to the literal item limit of them.
+        var seen: Set<String> = []
         var args: [GesValue] = []
         if !consume(41) {
             while position < bytes.count {
                 if !item() { return nil }
-                guard let label = argumentLabel(labels) else { return nil }
+                guard let label = argumentLabel(&seen) else { return nil }
                 let argument: GesValue
                 if let kind = seriesKind(head.type, first: label == "kind" || (label == "_" && args.isEmpty)) {
                     argument = kind
@@ -200,7 +202,7 @@ struct GesLiteralParser {
     }
 
     // An optional `label:` before a constructor or Message argument: "_" when unlabeled, nil after a failure.
-    private mutating func argumentLabel(_ labels: [String]) -> String? {
+    private mutating func argumentLabel(_ seen: inout Set<String>) -> String? {
         let saved = position
         var label = key()
         whitespace()
@@ -209,7 +211,7 @@ struct GesLiteralParser {
             position = saved
         } else if !GesNames.plain(label!) {
             return nil
-        } else if labels.contains(label!) {
+        } else if !seen.insert(label!).inserted {
             return nil
         }
         whitespace()
@@ -247,12 +249,14 @@ struct GesLiteralParser {
     private mutating func handlerForm() -> GesValue? {
         guard let name = messageHead() else { return nil }
         var labels: [String] = []
+        // Labels are checked through a set: a form may hold up to the literal item limit of them.
+        var seen: Set<String> = []
         if !consume(41) {
             while position < bytes.count {
                 if !item() { return nil }
                 guard let label = self.name() else { return nil }
                 if label != "_" && !GesNames.plain(label) { return nil }
-                if label != "_" && labels.contains(label) { return nil }
+                if label != "_" && !seen.insert(label).inserted { return nil }
                 labels.append(label)
                 let next = separator(41)
                 if next < 0 { return nil }
@@ -268,11 +272,13 @@ struct GesLiteralParser {
     private mutating func messageArguments(depth: Int, formStart: Int) -> GesValue? {
         guard let name = messageHead() else { return nil }
         var labels: [String] = []
+        // Labels are checked through a set: a form may hold up to the literal item limit of them.
+        var seen: Set<String> = []
         var args: [GesValue] = []
         if !consume(41) {
             while position < bytes.count {
                 if !item() { return nil }
-                guard let label = argumentLabel(labels) else { return nil }
+                guard let label = argumentLabel(&seen) else { return nil }
                 guard let arg = value(depth: depth) else { return nil }
                 labels.append(label)
                 args.append(arg)

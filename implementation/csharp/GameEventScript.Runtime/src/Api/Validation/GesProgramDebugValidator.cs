@@ -66,8 +66,8 @@ internal static class GesProgramDebugValidator
         for (var index = 0; index < map.Entries.Count; index++)
         {
             var entry = map.Entries[index];
-            GesSourceMapSource? source = null;
-            for (var sourceIndex = 0; sourceIndex < map.Sources.Count; sourceIndex++) if (map.Sources[sourceIndex].SourceId == entry.SourceId) { source = map.Sources[sourceIndex]; break; }
+            // Every SourceId equals its table index (checked above), so a mapping finds its source directly.
+            var source = entry.SourceId < (uint)map.Sources.Count ? map.Sources[(int)entry.SourceId] : null;
             if (source is null || entry.CodeLength == 0 || entry.SourceByteLength == 0 || entry.CodeStart < previousCodeEnd ||
                 (ulong)entry.CodeStart + entry.CodeLength > (ulong)program.Code.Count ||
                 (ulong)entry.SourceStartByteOffset + entry.SourceByteLength > source.SourceByteLength)
@@ -105,11 +105,21 @@ internal static class GesProgramDebugValidator
             GesProgramValidator.Throw(GesProgramFormatErrorCode.SourceMetadataMismatch, "SourceMap and SourceArchive must describe the same source set.", (ushort)GesSectionType.SourceMap);
         using var sha256 = SHA256.Create();
         Span<byte> hash = stackalloc byte[32];
+        // Index the archive and the mappings once, so each source costs its own size instead of a scan of all sources and
+        // mappings (untrusted input must validate in bounded time, specs/ProgramModel.md).
+        var contents = new Dictionary<uint, GesSourceArchiveEntry>(archive.Sources.Count);
+        for (var archiveIndex = 0; archiveIndex < archive.Sources.Count; archiveIndex++) contents[archive.Sources[archiveIndex].SourceId] = archive.Sources[archiveIndex];
+        var mappings = new List<int>?[map.Sources.Count];
+        for (var entryIndex = 0; entryIndex < map.Entries.Count; entryIndex++)
+        {
+            var sourceId = map.Entries[entryIndex].SourceId;
+            if (sourceId < (uint)mappings.Length) (mappings[sourceId] ??= new List<int>()).Add(entryIndex);
+        }
+
         for (var index = 0; index < map.Sources.Count; index++)
         {
             var metadata = map.Sources[index];
-            GesSourceArchiveEntry? content = null;
-            for (var archiveIndex = 0; archiveIndex < archive.Sources.Count; archiveIndex++) if (archive.Sources[archiveIndex].SourceId == metadata.SourceId) { content = archive.Sources[archiveIndex]; break; }
+            contents.TryGetValue(metadata.SourceId, out var content);
             if (content is null)
             {
                 GesProgramValidator.Throw(GesProgramFormatErrorCode.SourceMetadataMismatch, "SourceMap has no matching SourceArchive entry.", (ushort)GesSectionType.SourceMap, index);
@@ -122,17 +132,16 @@ internal static class GesProgramDebugValidator
             for (var byteIndex = 0; byteIndex < hash.Length; byteIndex++) if (hash[byteIndex] != metadata.Sha256[byteIndex])
                 GesProgramValidator.Throw(GesProgramFormatErrorCode.SourceMetadataMismatch, "SourceMap SHA-256 does not match SourceArchive.", (ushort)GesSectionType.SourceMap, index);
             ValidateUtf8Offsets(content.Utf8Content.AsSpan(), metadata, index);
-            ValidateLogicalLineOffsets(content.DecodeText(StrictUtf8), metadata, index);
-            ValidateMappingUtf8Offsets(content.Utf8Content.AsSpan(), map, metadata.SourceId, index);
+            ValidateLogicalLineOffsets(content.Utf8Content.AsSpan(), metadata, index);
+            if (metadata.SourceId < (uint)mappings.Length && mappings[metadata.SourceId] is { } own) ValidateMappingUtf8Offsets(content.Utf8Content.AsSpan(), map, own, index);
         }
     }
 
-    private static void ValidateMappingUtf8Offsets(ReadOnlySpan<byte> bytes, GesSourceMapSegment map, uint sourceId, int sourceIndex)
+    private static void ValidateMappingUtf8Offsets(ReadOnlySpan<byte> bytes, GesSourceMapSegment map, List<int> entries, int sourceIndex)
     {
-        for (var index = 0; index < map.Entries.Count; index++)
+        foreach (var index in entries)
         {
             var entry = map.Entries[index];
-            if (entry.SourceId != sourceId) continue;
             var start = checked((int)entry.SourceStartByteOffset);
             var end = checked((int)(entry.SourceStartByteOffset + entry.SourceByteLength));
             if (!IsUtf8Boundary(bytes, start) || !IsUtf8Boundary(bytes, end))
@@ -143,28 +152,33 @@ internal static class GesProgramDebugValidator
     private static bool IsUtf8Boundary(ReadOnlySpan<byte> bytes, int offset)
         => offset == 0 || offset == bytes.Length || offset > 0 && offset < bytes.Length && (bytes[offset] & 0xC0) != 0x80;
 
-    private static void ValidateLogicalLineOffsets(string text, GesSourceMapSource metadata, int entryIndex)
+    // CR and LF are single bytes that never occur inside a multibyte UTF-8 sequence, so line starts are read from the bytes
+    // in one pass instead of re-counting each line's prefix.
+    private static void ValidateLogicalLineOffsets(ReadOnlySpan<byte> bytes, GesSourceMapSource metadata, int entryIndex)
     {
-        var expected = new List<uint> { 0 };
-        for (var utf16Offset = 0; utf16Offset < text.Length; utf16Offset++)
+        var lines = metadata.LineStartByteOffsets;
+        if (lines.Count == 0 || lines[0] != 0) Mismatch(entryIndex);
+        var line = 1;
+        for (var offset = 0; offset < bytes.Length; offset++)
         {
-            if (text[utf16Offset] == '\r')
+            if (bytes[offset] == (byte)'\r')
             {
-                if (utf16Offset + 1 < text.Length && text[utf16Offset + 1] == '\n') utf16Offset++;
-                expected.Add(checked((uint)StrictUtf8.GetByteCount(text, 0, utf16Offset + 1)));
+                if (offset + 1 < bytes.Length && bytes[offset + 1] == (byte)'\n') offset++;
             }
-            else if (text[utf16Offset] == '\n')
+            else if (bytes[offset] != (byte)'\n')
             {
-                expected.Add(checked((uint)StrictUtf8.GetByteCount(text, 0, utf16Offset + 1)));
+                continue;
             }
+
+            if (line >= lines.Count || lines[line] != (uint)(offset + 1)) Mismatch(entryIndex);
+            line++;
         }
 
-        if (expected.Count != metadata.LineStartByteOffsets.Count)
-            GesProgramValidator.Throw(GesProgramFormatErrorCode.SourceMetadataMismatch, "SourceMap line offsets do not match the logical source newlines.", (ushort)GesSectionType.SourceMap, entryIndex);
-        for (var index = 0; index < expected.Count; index++)
-            if (expected[index] != metadata.LineStartByteOffsets[index])
-                GesProgramValidator.Throw(GesProgramFormatErrorCode.SourceMetadataMismatch, "SourceMap line offsets do not match the logical source newlines.", (ushort)GesSectionType.SourceMap, entryIndex);
+        if (line != lines.Count) Mismatch(entryIndex);
     }
+
+    private static void Mismatch(int entryIndex)
+        => GesProgramValidator.Throw(GesProgramFormatErrorCode.SourceMetadataMismatch, "SourceMap line offsets do not match the logical source newlines.", (ushort)GesSectionType.SourceMap, entryIndex);
 
     private static void ValidateMetadataText(string value, string role, ushort sectionType)
     {

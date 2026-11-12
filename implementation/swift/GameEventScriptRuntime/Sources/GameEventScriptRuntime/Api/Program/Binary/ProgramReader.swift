@@ -36,7 +36,7 @@ enum GesProgramReader {
             let flags = try cursor.u16()
             let version = try cursor.u16()
             let reserved = try cursor.u16()
-            let length = Int(try cursor.u32())
+            let length = GesBinaryCursor.int(try cursor.u32())
 
             func fail(_ code: GesProgramFormatErrorCode, _ delta: Int = 0) -> GesProgramFormatError { .init(code, byteOffset: offset + delta, sectionType: type) }
 
@@ -142,7 +142,7 @@ enum GesProgramReader {
                     let raw = try reader.u8()
                     if try reader.u8() != 0 { throw reader.error(.invalidSectionReserved, offset: reader.offset - 1, entry: index) }
                     let register = try reader.u16()
-                    let name = Int(try reader.u32())
+                    let name = GesBinaryCursor.int(try reader.u32())
                     let start = try reader.u32()
                     let length = try reader.u32()
                     if name >= names.count { throw reader.error(.invalidStringIndex, offset: reader.offset - 12, entry: index) }
@@ -251,14 +251,17 @@ struct GesBinaryCursor {
         return try UInt64(low) | (UInt64(u32()) << 32)
     }
 
+    // On 32-bit targets such as wasm32 a u32 above Int.max saturates, so the range checks reject it instead of trapping.
+    static func int(_ value: UInt32) -> Int { Int(exactly: value) ?? .max }
+
     mutating func count(_ maximum: Int) throws -> Int {
-        let value = Int(try u32())
+        let value = Self.int(try u32())
         if value > maximum { throw error(.tooManyEntries, offset: offset - 4) }
         return value
     }
 
     mutating func length() throws -> Int {
-        let value = Int(try u32())
+        let value = Self.int(try u32())
         if value > Int(Int32.max) { throw error(.sectionTooLarge, offset: offset - 4) }
         return value
     }

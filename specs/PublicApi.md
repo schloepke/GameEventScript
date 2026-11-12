@@ -257,8 +257,11 @@ The Program exposes:
 | `DebugSymbols`, `SourceMap`, `SourceArchive`, `BuildMetadata` | Independent optional known segments. Absence is represented explicitly. |
 | `OpaqueSections` | Immutable retained unknown optional sections in original relative order. |
 
-All segment entry order, duplicate string constants, instruction bits, source
-bytes, and opaque payload bytes are meaningful immutable data. Resolving a
+Segments and sections are read-only: they have no public constructors, because
+only the Compiler and the binary Reader create Programs
+([Program model](ProgramModel.md)). All segment entry order, duplicate string
+constants, instruction bits, source bytes, and opaque payload bytes are
+meaningful immutable data. Resolving a
 string or index list returns a decoded value/view without mutating Program.
 Out-of-range access fails as an argument/index error for direct low-level API
 use; Reader, Writer, Validator, and Host must report structured format/link

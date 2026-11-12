@@ -241,7 +241,7 @@ final class GesBinaryBuilder {
                 .init(
                     kind: kind,
                     name: UInt16(text(d.name)),
-                    argumentNames: d.parameters.map { UInt16(text(d.argumentName($0))) },
+                    argumentNames: d.parameters.map { UInt16(text(d.bindingLabel($0))) },
                     entryAddress: UInt16(offset),
                     id: UInt16(id),
                     requiredTags: d.required.map { UInt16(text($0)) },

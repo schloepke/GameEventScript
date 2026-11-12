@@ -5,6 +5,9 @@
 @_spi(Syntax) public enum GesLiteralForms {
     @_spi(Syntax) public static let types = ["nothing", "number", "percentage", "boolean", "text", "tag", "list", "map", "dice", "bytes", "vector", "point", "range", "series", "message", "handler", "record"]
 
+    /// The most parameters any form takes, so readers can reject longer label lists before decoding them.
+    @_spi(Syntax) public static let maxParameters = 3
+
     @_spi(Syntax) public static func positions(_ type: String, _ labels: [String]) -> [Int]? {
         let parameters: [String]
         switch type {

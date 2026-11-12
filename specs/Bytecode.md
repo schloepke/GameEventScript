@@ -516,8 +516,10 @@ entries subscribe by `MessageName` and tag filters only; the runtime invokes
 them with a single direct `:Message` argument. Message-name handlers count as
 normal delivery and therefore prevent `undeliverable` fallback when their tag
 filters match. For `MessageNameHandler` entries, `SignatureId` still records the
-synthetic message parameter signature such as `Damage(message)`, but it is
-metadata and not the dispatch key.
+synthetic message parameter signature `Damage(message)`, but it is metadata
+and not the dispatch key. The label is always `message`; the name a source
+handler binds the message to, such as `incoming_1` in `on Damage as incoming_1`,
+is a local variable and is not encoded in the binding.
 
 System endpoint entries use reserved lowercase names outside normal message
 casing. Only handler entries may use them: an `OutboundMessage` entry and the

@@ -10,6 +10,9 @@ namespace GameEventScript.Syntax;
 internal static class GesLiteralForms
 {
     internal static bool IsType(string name) => name is "nothing" or "number" or "percentage" or "boolean" or "text" or "tag" or "list" or "map" or "dice" or "bytes" or "vector" or "point" or "range" or "series" or "message" or "handler" or "record";
+    // The most parameters any form takes, so readers can reject longer label lists before decoding them.
+    internal const int MaxParameters = 3;
+
     // Returns parameter positions in evaluation order, without reordering evaluation of source arguments.
     internal static int[]? Positions(string type, IReadOnlyList<string> labels)
     {

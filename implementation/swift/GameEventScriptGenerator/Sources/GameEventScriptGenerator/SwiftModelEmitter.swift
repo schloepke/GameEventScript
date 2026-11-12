@@ -226,6 +226,8 @@ enum GesSwiftModelEmitter {
         case .dice: "[Int]"
         case .point: "GesPoint"
         case .vector: "GesVector"
+        case .box: "GesBox"
+        case .poly: "GesPoly"
         case .schema: value.model.schema
         case .union, .nothing, .flags: value.nested
         }
@@ -284,7 +286,7 @@ enum GesSwiftModelEmitter {
         case .tag: return "\(support).tag(\(expression))"
         case .list: return ".list(\(expression).map { \(encode(value.element!, owner, "$0", helper, support, plain: plain)) })"
         case .dice: return "\(support).dice(\(expression))"
-        case .point, .vector: return "\(expression).value(unit: \(unit(value.model.unit)))"
+        case .point, .vector, .box, .poly: return "\(expression).value(unit: \(unit(value.model.unit)))"
         case .schema: return plain ? "\(expression).toValue()" : "\(expression).gesValue()"
         case .union, .nothing, .flags: return "\(helper).value(\(expression))"
         }
@@ -307,6 +309,8 @@ enum GesSwiftModelEmitter {
         case .dice: return "\(support).dice(\(expression))"
         case .point: return "GesPoint(\(expression), unit: \(unit(value.model.unit)))"
         case .vector: return "GesVector(\(expression), unit: \(unit(value.model.unit)))"
+        case .box: return "GesBox(\(expression), unit: \(unit(value.model.unit)))"
+        case .poly: return "GesPoly(\(expression), unit: \(unit(value.model.unit)))"
         case .schema: return plain ? "\(helper).decode\(value.model.schema)(\(expression))" : "\(value.model.schema)(gesValue: \(expression))"
         case .union, .nothing, .flags: return "\(helper).decode\(owner)\(value.nested)(\(expression))"
         }

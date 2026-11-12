@@ -730,11 +730,21 @@ enum GesSchemaBinder {
             build.infos.append(rollInfo)
         case .point, .vector:
             node.kind = .group
-            if let axes = type.axes {
-                for axis in axes { try addAxis(&build, scope, axis.axis, axis.constraints, path, type.offset) }
-            } else {
-                for axis in ["x", "y", "z"] { try addAxis(&build, scope, axis, GesResolvedConstraints(), path, type.offset) }
-            }
+            try addAxes(&build, scope, type, path, ["x", "y", "z"])
+        case .box:
+            // Two corners of the axes of the block, each a Point; the value orders them.
+            node.kind = .group
+            try addCorner(&build, scope, type, "lower", path + ".lower", ["x", "y", "z"])
+            try addCorner(&build, scope, type, "upper", path + ".upper", ["x", "y", "z"])
+        case .poly:
+            // A List of Points in the plane z = 0.
+            guard let max = type.max else { throw scope.error(Code.notEncodable, type.offset, "A Poly without max has no hard limit.") }
+            if lists >= maximumListNesting { throw scope.error(Code.notEncodable, type.offset, "Lists nest at most \(maximumListNesting) levels for encoding.") }
+            node.kind = .list
+            node.maxCount = max
+            node.width = bitLength(UInt64(max))
+            node.positionWidth = bitLength(UInt64(max - 1))
+            try addCorner(&build, scope, type, "[]", path + "[]", ["x", "y"])
         case .reference:
             node.kind = .group
             info.schemaName = type.referenceName
@@ -787,7 +797,11 @@ enum GesSchemaBinder {
 
     private static func checkEncodable(_ scope: GesFileScope, _ type: GesResolvedType, _ lists: Int, _ known: inout Set<EncodableVisit>, _ levels: inout [ObjectIdentifier: Int]) throws {
         switch type.kind {
-        case .boolean, .point, .vector:
+        case .boolean, .point, .vector, .box:
+            for axis in type.axes ?? [] { try checkWrapping(scope, axis.constraints, type.offset) }
+        case .poly:
+            if type.max == nil { throw scope.error(Code.notEncodable, type.offset, "A Poly without max has no hard limit.") }
+            if lists >= maximumListNesting { throw scope.error(Code.notEncodable, type.offset, "Lists nest at most \(maximumListNesting) levels for encoding.") }
             for axis in type.axes ?? [] { try checkWrapping(scope, axis.constraints, type.offset) }
         case .number, .percentage, .quantity:
             try checkWrapping(scope, type.constraints, type.offset)
@@ -831,7 +845,7 @@ enum GesSchemaBinder {
         switch type.kind {
         case .tag: return type.tags?.count != 1
         case .nothing: return false
-        case .point, .vector: return type.axes.map { !$0.isEmpty } ?? true
+        case .point, .vector, .box: return type.axes.map { !$0.isEmpty } ?? true
         case .reference: return type.reference!.fields.contains { $0.marker == .optional || hasBits($0.alternatives) }
         default: return true
         }
@@ -839,6 +853,32 @@ enum GesSchemaBinder {
 
     private static func checkNodeCount(_ build: Build, _ scope: GesFileScope, _ offset: Int) throws {
         if build.nodes.count >= maximumNodeCount { throw scope.error(Code.tooLarge, offset, "A bound layout has at most \(maximumNodeCount) fields.") }
+    }
+
+    // The axes of a block, or every given axis as a binary64 without one.
+    private static func addAxes(_ build: inout Build, _ scope: GesFileScope, _ type: GesResolvedType, _ path: String, _ all: [String]) throws {
+        if let axes = type.axes {
+            for axis in axes { try addAxis(&build, scope, axis.axis, axis.constraints, path, type.offset) }
+        } else {
+            for axis in all { try addAxis(&build, scope, axis, GesResolvedConstraints(), path, type.offset) }
+        }
+    }
+
+    // A corner of a Box or a point of a Poly: a Point of the type's unit and axes.
+    private static func addCorner(_ build: inout Build, _ scope: GesFileScope, _ type: GesResolvedType, _ name: String, _ path: String, _ all: [String]) throws {
+        try checkNodeCount(build, scope, type.offset)
+        let index = build.nodes.count
+        var node = GesSchemaNode()
+        node.kind = .group
+        var info = GesSchemaNodeInfo()
+        info.name = name
+        info.path = path
+        info.valueKind = .point
+        info.unit = type.unit
+        build.nodes.append(node)
+        build.infos.append(info)
+        try addAxes(&build, scope, type, path, all)
+        build.nodes[index].next = build.nodes.count
     }
 
     private static func addAxis(_ build: inout Build, _ scope: GesFileScope, _ axis: String, _ constraints: GesResolvedConstraints, _ path: String, _ offset: Int) throws {

@@ -54,7 +54,8 @@ enum GesCSharpModelEmitter {
         if options.bindings { document.units.append(GesCodeUnit(owner: "") { code in bindings(&code, layout, access, qualifier, support, computed) }) }
         if options.values { document.units.append(GesCodeUnit(owner: "") { code in valueConversions(&code, layout, values, qualifier, support, computed) }) }
         let conversions = options.bindings || options.values
-        document.units.append(GesCodeUnit(owner: "") { code in supportType(&code, support, conversions: conversions) })
+        let geometry = GesModelPlanner.usesGeometry(layout)
+        document.units.append(GesCodeUnit(owner: "") { code in supportType(&code, support, conversions: conversions, geometry: geometry) })
         if layout.types.contains(where: { !$0.computed.isEmpty }) {
             let values = options.bindings || options.values || computed.needsValues(layout.types.map { ($0.name, $0.computed) })
             document.units.append(GesCodeUnit(owner: "") { code in GesComputedLibrary.write(&code, computed.helper, swift: false, values: values) })
@@ -266,6 +267,8 @@ enum GesCSharpModelEmitter {
         case .dice: "List<int>"
         case .point: "GesPoint"
         case .vector: "GesVector"
+        case .box: "GesBox"
+        case .poly: "GesPoly"
         case .schema: qualifier + value.model.schema
         case .union, .nothing, .flags: nested(value, qualifier, owner)
         }
@@ -273,7 +276,7 @@ enum GesCSharpModelEmitter {
 
     private static func isReference(_ value: GesModelPlanValue) -> Bool {
         switch value.kind {
-        case .text, .bytes, .list, .dice, .schema, .union: true
+        case .text, .bytes, .list, .dice, .schema, .union, .poly: true
         case .tag: !value.closedTag
         default: false
         }
@@ -318,6 +321,7 @@ enum GesCSharpModelEmitter {
         case .list, .dice: return "new \(plain(value))()"
         case .schema: return "new \(value.model.schema)()"
         case .union: return "new \(value.nested).\(value.alternatives[0].label)(\(zero(value.alternatives[0])))"
+        case .poly: return "new GesPoly(Array.Empty<GesPoint>())"
         default: return ""
         }
     }
@@ -329,7 +333,7 @@ enum GesCSharpModelEmitter {
         case .number: return value.model.integer ? "0L" : "0d"
         case .tag where value.closedTag: return "default(\(value.nested))"
         case .flags: return "default(\(value.nested))"
-        case .point, .vector: return "default(\(plain(value)))"
+        case .point, .vector, .box: return "default(\(plain(value)))"
         default: return initial(value)
         }
     }
@@ -441,7 +445,7 @@ enum GesCSharpModelEmitter {
 
     // Equality and hashing helpers of the file, named after its header so that two generated files can share a namespace, and
     // the conversions that the script bindings and the plain values share.
-    private static func supportType(_ code: inout Code, _ name: String, conversions: Bool) {
+    private static func supportType(_ code: inout Code, _ name: String, conversions: Bool, geometry: Bool) {
         code.line("/// <summary>Value equality of lists and numbers\(conversions ? " and GES value conversions" : "") for the models of this file.</summary>")
         code.line("internal static class \(name)")
         code.open("{")
@@ -489,6 +493,16 @@ enum GesCSharpModelEmitter {
         code.close()
         code.close()
         if conversions { helpers(&code) }
+        if conversions && geometry {
+            code.blank()
+            code.line("internal static bool Box(in GesValue value, GesQuantityUnit unit, out GesBox result) => Read(GesBox.FromValue(value, unit), out result);")
+            code.blank()
+            code.line("internal static bool Poly(in GesValue value, GesQuantityUnit unit, out GesPoly result)")
+            code.open("{")
+            code.line("result = GesPoly.FromValue(value, unit)!;")
+            code.line("return result is not null;")
+            code.close()
+        }
         code.close()
     }
 
@@ -507,7 +521,7 @@ enum GesCSharpModelEmitter {
 
     private static func isValueType(_ value: GesModelPlanValue) -> Bool {
         switch value.kind {
-        case .boolean, .number, .point, .vector, .flags: true
+        case .boolean, .number, .point, .vector, .box, .flags: true
         default: value.closedTag
         }
     }
@@ -542,7 +556,7 @@ enum GesCSharpModelEmitter {
         case .tag: return "\(support).Tag(\(expression))"
         case .list: return "\(support).List(\(expression), x\(depth) => \(encode(value.element!, owner, "x\(depth)", qualifier, support, depth + 1, plain: plain, pattern: pattern)))"
         case .dice: return "\(support).Dice(\(expression))"
-        case .point, .vector: return "\(expression).ToValue(\(unitName(value.model.unit)))"
+        case .point, .vector, .box, .poly: return "\(expression).ToValue(\(unitName(value.model.unit)))"
         case .schema: return plain ? "\(expression).ToValue()" : "\(expression).ToGesValue()"
         case .union, .nothing, .flags: return "Value(\(expression))"
         }
@@ -578,6 +592,8 @@ enum GesCSharpModelEmitter {
         case .dice: return "\(support).Dice(\(expression), \(target))"
         case .point: return "\(support).Point(\(expression), \(unitName(value.model.unit)), \(target))"
         case .vector: return "\(support).Vector(\(expression), \(unitName(value.model.unit)), \(target))"
+        case .box: return "\(support).Box(\(expression), \(unitName(value.model.unit)), \(target))"
+        case .poly: return "\(support).Poly(\(expression), \(unitName(value.model.unit)), \(target))"
         case .schema: return "Decode\(value.model.schema)(\(expression), \(target))"
         case .union, .nothing, .flags: return "Decode\(owner)\(value.nested)(\(expression), \(target))"
         }

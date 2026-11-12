@@ -282,8 +282,12 @@ internal static class GesSchemaFormatter
                 break;
             case GesSchemaTypeKind.Point:
             case GesSchemaTypeKind.Vector:
-                builder.Append(type.Kind == GesSchemaTypeKind.Point ? ":Point" : ":Vector");
+            case GesSchemaTypeKind.Box:
+            case GesSchemaTypeKind.Poly:
+                builder.Append(':').Append(type.Kind.ToString());
                 if (type.Unit != GesQuantityUnit.UnitNone) builder.Append('(').Append(type.Unit.ToSuffix()).Append(')');
+                if (type.Max is { } polyMax) builder.Append(" max ").Append(polyMax);
+                else if (type.MaxName.Length > 0) builder.Append(" max ").Append(type.MaxName);
                 if (type.Axes is { } axes)
                 {
                     builder.Append(" {\n");

@@ -309,6 +309,11 @@ public static class GesSchemaValues
                 writer.BeginList(field, rolls.Length);
                 foreach (var roll in rolls) writer.WriteInteger(new GesSchemaField(schema, index + 1), roll);
                 break;
+            case GesSchemaNodeKind.List when node.ValueKind == GesSchemaTypeKind.Poly:
+                var poly = GesPoly.FromValue(value, node.Unit) ?? throw new GesWireException(GesWireException.TypeMismatch, node.Path);
+                writer.BeginList(field, poly.Points.Count);
+                foreach (var point in poly.Points) EncodePoint(ref writer, schema, index + 1, point.X, point.Y, point.Z);
+                break;
             case GesSchemaNodeKind.List:
                 if (value.ValueKind != GesBytecodeTypeKind.List) throw new GesWireException(GesWireException.TypeMismatch, node.Path);
                 var items = value.AsList();
@@ -378,6 +383,8 @@ public static class GesSchemaValues
             case GesSchemaTypeKind.Dice: return value.ValueKind == GesBytecodeTypeKind.Dice;
             case GesSchemaTypeKind.Point: return value.ValueKind == GesBytecodeTypeKind.Point;
             case GesSchemaTypeKind.Vector: return value.ValueKind == GesBytecodeTypeKind.Vector;
+            case GesSchemaTypeKind.Box: return value.ExternalValue is GesGeometryLibrary.BoxValue;
+            case GesSchemaTypeKind.Poly: return value.ExternalValue is GesGeometryLibrary.PolyValue;
             case GesSchemaTypeKind.Percentage: return value.ValueKind == GesBytecodeTypeKind.Percentage;
             case GesSchemaTypeKind.Reference: return value.CustomTypeName == candidate.SchemaName;
             default: return value.ValueKind is GesBytecodeTypeKind.Integer or GesBytecodeTypeKind.Float && value.ValueUnit == candidate.Unit;
@@ -392,20 +399,16 @@ public static class GesSchemaValues
         {
             var kind = node.ValueKind == GesSchemaTypeKind.Point ? GesBytecodeTypeKind.Point : GesBytecodeTypeKind.Vector;
             if (value.ValueKind != kind || value.ValueUnit != node.Unit) throw new GesWireException(GesWireException.TypeMismatch, node.Path);
-            var seenX = false;
-            var seenY = false;
-            var seenZ = false;
-            writer.BeginNested(field);
-            for (var axis = index + 1; axis < node.Next; axis++)
-            {
-                var name = schema.Nodes[axis].Name;
-                seenX |= name == "x";
-                seenY |= name == "y";
-                seenZ |= name == "z";
-                writer.WriteNumber(new GesSchemaField(schema, axis), name == "x" ? value.X : name == "y" ? value.Y : value.Z);
-            }
+            EncodePoint(ref writer, schema, index, value.X, value.Y, value.Z);
+            return;
+        }
 
-            if ((!seenX && value.X != 0) || (!seenY && value.Y != 0) || (!seenZ && value.Z != 0)) throw new GesWireException(GesWireException.TypeMismatch, node.Path);
+        if (node.ValueKind == GesSchemaTypeKind.Box)
+        {
+            var box = GesBox.FromValue(value, node.Unit) ?? throw new GesWireException(GesWireException.TypeMismatch, node.Path);
+            writer.BeginNested(field);
+            EncodePoint(ref writer, schema, index + 1, box.Min.X, box.Min.Y, box.Min.Z);
+            EncodePoint(ref writer, schema, schema.Nodes[index + 1].Next, box.Max.X, box.Max.Y, box.Max.Z);
             return;
         }
 
@@ -414,6 +417,26 @@ public static class GesSchemaValues
         if (strict && value.CustomTypeName is null && !HasEveryKey(schema, index, fields)) throw new GesWireException(GesWireException.TypeMismatch, node.Path);
         writer.BeginNested(field);
         EncodeFields(ref writer, schema, index + 1, node.Next, fields, strict);
+    }
+
+    // The components of a Point, Vector, Box corner or Poly point; an axis that the block leaves out must be zero.
+    private static void EncodePoint(ref GesSchemaWriter writer, GesBoundSchema schema, int index, double x, double y, double z)
+    {
+        ref readonly var node = ref schema.Nodes[index];
+        var seenX = false;
+        var seenY = false;
+        var seenZ = false;
+        writer.BeginNested(new GesSchemaField(schema, index));
+        for (var axis = index + 1; axis < node.Next; axis++)
+        {
+            var name = schema.Nodes[axis].Name;
+            seenX |= name == "x";
+            seenY |= name == "y";
+            seenZ |= name == "z";
+            writer.WriteNumber(new GesSchemaField(schema, axis), name == "x" ? x : name == "y" ? y : z);
+        }
+
+        if ((!seenX && x != 0) || (!seenY && y != 0) || (!seenZ && z != 0)) throw new GesWireException(GesWireException.TypeMismatch, node.Path);
     }
 
     private static bool HasEveryKey(GesBoundSchema schema, int index, GesValueMap fields)
@@ -548,33 +571,54 @@ public static class GesSchemaValues
             case GesSchemaNodeKind.Union:
                 var selected = GesSchemaNumbers.Alternative(schema.Nodes, index, reader.ReadAlternative(field));
                 return schema.Nodes[selected].Kind == GesSchemaNodeKind.Nothing ? default : DecodeNode(ref reader, schema, selected);
+            case GesSchemaNodeKind.List when node.ValueKind == GesSchemaTypeKind.Poly:
+                var pointCount = reader.BeginList(field);
+                var points = new GesPoint[pointCount];
+                for (var point = 0; point < pointCount; point++) points[point] = DecodePoint(ref reader, schema, index + 1);
+                return new GesPoly(points).ToValue(node.Unit);
             case GesSchemaNodeKind.List:
                 var length = reader.BeginList(field);
                 var items = new List<GesValue>(Math.Min(length, 1024));
                 for (var item = 0; item < length; item++) items.Add(DecodeNode(ref reader, schema, index + 1));
                 return GesValue.GesList(items.ToArray());
+            case GesSchemaNodeKind.Group when node.ValueKind is GesSchemaTypeKind.Point or GesSchemaTypeKind.Vector:
+                var spatial = DecodePoint(ref reader, schema, index);
+                return node.ValueKind == GesSchemaTypeKind.Point ? GesValue.GesPoint(spatial.X, spatial.Y, spatial.Z, node.Unit) : GesValue.GesVector(spatial.X, spatial.Y, spatial.Z, node.Unit);
+            case GesSchemaNodeKind.Group when node.ValueKind == GesSchemaTypeKind.Box:
+                // The corners are two Points on the wire; the box orders them.
+                reader.BeginNested(field);
+                var lower = DecodePoint(ref reader, schema, index + 1);
+                var upper = DecodePoint(ref reader, schema, schema.Nodes[index + 1].Next);
+                return new GesBox(lower, upper).ToValue(node.Unit);
             case GesSchemaNodeKind.Group:
                 reader.BeginNested(field);
-                if (node.ValueKind is not (GesSchemaTypeKind.Point or GesSchemaTypeKind.Vector)) return DecodeRecord(ref reader, schema, node.SchemaName, index + 1, node.Next);
-                var (x, y, z) = (0d, 0d, 0d);
-                for (var axis = index + 1; axis < node.Next; axis++)
-                {
-                    var component = reader.ReadNumber(new GesSchemaField(schema, axis));
-                    switch (schema.Nodes[axis].Name)
-                    {
-                        case "x": x = component; break;
-                        case "y": y = component; break;
-                        default: z = component; break;
-                    }
-                }
-
-                return node.ValueKind == GesSchemaTypeKind.Point ? GesValue.GesPoint(x, y, z, node.Unit) : GesValue.GesVector(x, y, z, node.Unit);
+                return DecodeRecord(ref reader, schema, node.SchemaName, index + 1, node.Next);
             case GesSchemaNodeKind.Integer:
                 return GesValue.GesInteger(reader.ReadInteger(field), node.Unit);
             default:
                 var number = reader.ReadNumber(field);
                 return node.ValueKind == GesSchemaTypeKind.Percentage ? GesValue.GesPercentage(number) : GesValue.GesNumber(number, node.Unit);
         }
+    }
+
+    // The components of a Point, Vector, Box corner or Poly point; an axis that the block leaves out is zero.
+    private static GesPoint DecodePoint(ref GesSchemaReader reader, GesBoundSchema schema, int index)
+    {
+        ref readonly var node = ref schema.Nodes[index];
+        reader.BeginNested(new GesSchemaField(schema, index));
+        var (x, y, z) = (0d, 0d, 0d);
+        for (var axis = index + 1; axis < node.Next; axis++)
+        {
+            var component = reader.ReadNumber(new GesSchemaField(schema, axis));
+            switch (schema.Nodes[axis].Name)
+            {
+                case "x": x = component; break;
+                case "y": y = component; break;
+                default: z = component; break;
+            }
+        }
+
+        return new GesPoint(x, y, z);
     }
 
     private static GesValue BytesValue(byte[] bytes)

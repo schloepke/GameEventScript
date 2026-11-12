@@ -94,16 +94,30 @@ struct GesSchemaDocumentCheck {
             try require(percent == (type.kind == .percentage) && number.unit == type.unit)
             try numeric(type.constraints, number.kind == .integer, number.integerValue, number.floatValue, start)
         case .point, .vector:
-            guard case .spatial(let point, let x, let y, let z, let unit) = value else { return try require(false) }
-            try require(point == (type.kind == .point) && unit == type.unit)
-            guard let axes = type.axes else { return }
-            for (axis, component) in [("x", x), ("y", y), ("z", z)] {
-                if let declared = axes.first(where: { $0.axis == axis }) {
-                    try numeric(declared.constraints, false, 0, component, start)
-                } else {
-                    try require(component == 0)
-                }
+            try spatial(type, value, start, point: type.kind == .point)
+        case .box:
+            // A document has no geometry literal: a Box is the Map of its corners, as Points, or a Record "Box" of them.
+            var fields = value
+            if case .form("record", let labels, let arguments, _) = value {
+                guard let positions = GesLiteralForms.positions("record", labels), let typeIndex = positions.firstIndex(of: 0), let fieldsIndex = positions.firstIndex(of: 1),
+                    case .text(let name) = Self.resolved(arguments[typeIndex], start), name == "Box"
+                else { return try require(false) }
+                fields = arguments[fieldsIndex]
             }
+            guard case .map(let keys, let values, let keyOffsets, let valueOffsets) = Self.resolved(fields, start) else { return try require(false) }
+            var seen = 0
+            for (index, key) in keys.enumerated() {
+                let corner = key == "lower" ? 1 : key == "upper" ? 2 : 0
+                if corner == 0 { throw Failure(code: Self.unknownField, offset: keyOffsets[index]) }
+                seen |= corner
+                try spatial(type, Self.resolved(values[index], valueOffsets[index]), valueOffsets[index], point: true)
+            }
+            if seen != 3 { throw Failure(code: Self.missingField, offset: start) }
+        case .poly:
+            // A document has no geometry literal: a Poly is the List of its points.
+            guard case .list(let items, let offsets) = value else { return try require(false) }
+            if let max = type.max, items.count > max { throw Failure(code: Self.outOfRange, offset: start) }
+            for (index, item) in items.enumerated() { try spatial(type, Self.resolved(item, offsets[index]), offsets[index], point: true) }
         case .tag:
             guard case .tag(let name) = value else { return try require(false) }
             try require(type.tags?.contains(name) ?? true)
@@ -165,6 +179,18 @@ struct GesSchemaDocumentCheck {
         case .nothing:
             if case .nothing = value { return }
             try require(false)
+        }
+    }
+
+    private func spatial(_ type: GesResolvedType, _ value: GesDocumentNode, _ start: Int, point: Bool) throws {
+        guard case .spatial(let isPoint, let x, let y, let z, let unit) = value, isPoint == point, unit == type.unit else { throw Failure(code: Self.fieldType, offset: start) }
+        guard let axes = type.axes else { return }
+        for (axis, component) in [("x", x), ("y", y), ("z", z)] {
+            if let declared = axes.first(where: { $0.axis == axis }) {
+                try numeric(declared.constraints, false, 0, component, start)
+            } else if component != 0 {
+                throw Failure(code: Self.fieldType, offset: start)
+            }
         }
     }
 

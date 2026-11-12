@@ -911,7 +911,7 @@ enum GesSchemaCanonical {
             if let max = type.max { output += " max \(max)" }
             if type.depth > 0 { output += " depth \(type.depth)" }
             return true
-        case .number, .percentage, .quantity, .dice, .point, .vector:
+        case .number, .percentage, .quantity, .dice, .point, .vector, .box, .poly:
             var constraints = type.constraints
             constraints.delta = nil
             let axes = type.axes?.map { axis in
@@ -954,8 +954,9 @@ enum GesSchemaCanonical {
         case .number, .percentage:
             output += type.kind.rawValue
             writeConstraints(type.constraints, &output)
-        case .point, .vector:
+        case .point, .vector, .box, .poly:
             output += "\(type.kind.rawValue)(\(type.unit == .none ? "none" : type.unit.rawValue))"
+            if let max = type.max { output += " max \(max)" }
             if let axes = type.axes {
                 output += " {"
                 for (index, axis) in axes.enumerated() {

@@ -41,6 +41,10 @@ public enum GesSchemaTypeKind: String, Sendable, Equatable {
     case bytes = "Bytes"
     /// Flags of a closed set, as a Map of the set members.
     case flags = "Flags"
+    /// An axis-aligned Box between two Points.
+    case box = "Box"
+    /// A polygon of Points in the plane z = 0.
+    case poly = "Poly"
 }
 
 @_spi(Syntax) public enum GesSchemaTypeNames {
@@ -56,6 +60,8 @@ public enum GesSchemaTypeKind: String, Sendable, Equatable {
         case "Quantity": .quantity
         case "Point": .point
         case "Vector": .vector
+        case "Box": .box
+        case "Poly": .poly
         case "Tag": .tag
         case "Text": .text
         case "Bytes": .bytes

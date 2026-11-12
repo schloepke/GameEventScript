@@ -782,16 +782,25 @@ internal static class GesSchemaBinder
             case GesSchemaTypeKind.Vector:
                 node.Kind = GesSchemaNodeKind.Group;
                 build.Nodes.Add(node);
-                if (type.Axes is { } axes)
-                {
-                    foreach (var axis in axes) AddAxis(build, scope, axis.Axis, axis.Constraints, path, type.Offset);
-                }
-                else
-                {
-                    var none = new GesResolvedConstraints();
-                    foreach (var axis in "xyz") AddAxis(build, scope, axis, none, path, type.Offset);
-                }
-
+                AddAxes(build, scope, type, path, "xyz");
+                break;
+            case GesSchemaTypeKind.Box:
+                // Two corners of the axes of the block, each a Point; the value orders them.
+                node.Kind = GesSchemaNodeKind.Group;
+                build.Nodes.Add(node);
+                AddCorner(build, scope, type, "lower", path + ".lower", "xyz");
+                AddCorner(build, scope, type, "upper", path + ".upper", "xyz");
+                break;
+            case GesSchemaTypeKind.Poly:
+                // A List of Points in the plane z = 0.
+                if (type.Max is not { } polyMax) throw scope.Error(Code.NotEncodable, type.Offset, "A Poly without max has no hard limit.");
+                if (lists >= MaximumListNesting) throw scope.Error(Code.NotEncodable, type.Offset, $"Lists nest at most {MaximumListNesting} levels for encoding.");
+                node.Kind = GesSchemaNodeKind.List;
+                node.MaxCount = polyMax;
+                node.Width = BitLength((ulong)polyMax);
+                node.PositionWidth = BitLength((ulong)polyMax - 1);
+                build.Nodes.Add(node);
+                AddCorner(build, scope, type, "[]", path + "[]", "xy");
                 break;
             case GesSchemaTypeKind.Reference:
                 node.Kind = GesSchemaNodeKind.Group;
@@ -853,9 +862,15 @@ internal static class GesSchemaBinder
     {
         switch (type.Kind)
         {
-            case GesSchemaTypeKind.Boolean or GesSchemaTypeKind.Point or GesSchemaTypeKind.Vector:
+            case GesSchemaTypeKind.Boolean or GesSchemaTypeKind.Point or GesSchemaTypeKind.Vector or GesSchemaTypeKind.Box:
                 if (type.Axes is { } axes)
                     foreach (var axis in axes) CheckWrapping(scope, axis.Constraints, type.Offset);
+                break;
+            case GesSchemaTypeKind.Poly:
+                if (type.Max is null) throw scope.Error(Code.NotEncodable, type.Offset, "A Poly without max has no hard limit.");
+                if (lists >= MaximumListNesting) throw scope.Error(Code.NotEncodable, type.Offset, $"Lists nest at most {MaximumListNesting} levels for encoding.");
+                if (type.Axes is { } points)
+                    foreach (var axis in points) CheckWrapping(scope, axis.Constraints, type.Offset);
                 break;
             case GesSchemaTypeKind.Number or GesSchemaTypeKind.Percentage or GesSchemaTypeKind.Quantity:
                 CheckWrapping(scope, type.Constraints, type.Offset);
@@ -908,7 +923,7 @@ internal static class GesSchemaBinder
                 return type.Tags is not { Length: 1 };
             case GesSchemaTypeKind.Nothing:
                 return false;
-            case GesSchemaTypeKind.Point or GesSchemaTypeKind.Vector:
+            case GesSchemaTypeKind.Point or GesSchemaTypeKind.Vector or GesSchemaTypeKind.Box:
                 return type.Axes is not { Length: 0 };
             case GesSchemaTypeKind.Reference:
                 foreach (var field in type.Reference!.Fields)
@@ -930,6 +945,31 @@ internal static class GesSchemaBinder
         for (var index = start; index < nodes.Count; index++)
             if (nodes[index].Width > 0 || nodes[index].Optional) return true;
         return false;
+    }
+
+    // The axes of a block, or every given axis as a binary64 without one.
+    private static void AddAxes(Build build, GesFileScope scope, GesResolvedType type, string path, string all)
+    {
+        if (type.Axes is { } axes)
+        {
+            foreach (var axis in axes) AddAxis(build, scope, axis.Axis, axis.Constraints, path, type.Offset);
+            return;
+        }
+
+        var none = new GesResolvedConstraints();
+        foreach (var axis in all) AddAxis(build, scope, axis, none, path, type.Offset);
+    }
+
+    // A corner of a Box or a point of a Poly: a Point of the type's unit and axes.
+    private static void AddCorner(Build build, GesFileScope scope, GesResolvedType type, string name, string path, string all)
+    {
+        CheckNodeCount(build, scope, type.Offset);
+        var index = build.Nodes.Count;
+        build.Nodes.Add(new GesSchemaNode { Kind = GesSchemaNodeKind.Group, Name = name, Path = path, ValueKind = GesSchemaTypeKind.Point, Unit = type.Unit, SchemaName = "" });
+        AddAxes(build, scope, type, path, all);
+        var corner = build.Nodes[index];
+        corner.Next = build.Nodes.Count;
+        build.Nodes[index] = corner;
     }
 
     private static void AddAxis(Build build, GesFileScope scope, char axis, GesResolvedConstraints constraints, string path, int offset)

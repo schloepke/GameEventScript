@@ -112,7 +112,7 @@ public readonly struct GesSchemaBound
     public double? ToDouble() => IsParameter ? null : double.Parse(Significand.ToString(CultureInfo.InvariantCulture) + "e" + Exponent.ToString(CultureInfo.InvariantCulture), CultureInfo.InvariantCulture);
 }
 
-/// <summary>The limits of a numeric axis of a Point or Vector.</summary>
+/// <summary>The limits of a numeric axis of a Point, Vector, Box or Poly.</summary>
 public sealed class GesSchemaAxisInfo
 {
     internal GesSchemaAxisInfo(GesResolvedAxis axis)
@@ -180,7 +180,7 @@ public sealed class GesSchemaType
     /// <summary>Gets the kind of type.</summary>
     public GesSchemaTypeKind Kind { get; }
 
-    /// <summary>Gets the unit of a Quantity, Point or Vector.</summary>
+    /// <summary>Gets the unit of a Quantity, Point, Vector, Box or Poly.</summary>
     public GesQuantityUnit Unit { get; }
 
     /// <summary>Gets whether a number holds whole numbers.</summary>
@@ -212,7 +212,7 @@ public sealed class GesSchemaType
     /// names the alternative after it, and it belongs to no hash.</summary>
     public string Label { get; }
 
-    /// <summary>Gets the maximum of a Text in UTF-8 bytes or of a List in elements, if there is one.</summary>
+    /// <summary>Gets the maximum of a Text in UTF-8 bytes, of a List in elements or of a Poly in points, if there is one.</summary>
     public long? Max { get; }
 
     /// <summary>Gets the alternatives of a List's element; empty when any element is allowed.</summary>
@@ -222,7 +222,8 @@ public sealed class GesSchemaType
     /// nest in each other at most; 0 for every other type.</summary>
     public int Depth { get; }
 
-    /// <summary>Gets the axes of an axis block in x, y, z order; empty without a block, when all three are stored in full.</summary>
+    /// <summary>Gets the axes of an axis block in x, y, z order; empty without a block, when every axis is stored in full: x, y
+    /// and z, or x and y of a Poly.</summary>
     public GesReadOnlyArray<GesSchemaAxisInfo> Axes { get; }
 
     /// <summary>Gets the schema a <see cref="GesSchemaTypeKind.Reference"/> refers to.</summary>

@@ -11,6 +11,8 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 ## Unreleased
 
 ### Breaking
+- `Box` and `Poly` are built-in schema types, so a schema, message or message set of that name is now
+  `schema.duplicateName`; rename it.
 - A required computed schema field that reads an optional field without `has value` or `default` is the new
   `schema.computedMayBeAbsent` instead of giving NaN or false where the field is absent; mark it `optional`, guard the
   read or give a fallback.
@@ -255,6 +257,11 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   `schema.invalidExpression`. Generated code is plain binary64 and Boolean code in the language's own operators, such as
   `duration <= 0.0 ? 0.0 : energy / duration`, with a small `GesComputed` helper type for the rules plain code lacks;
   only a field where whole numbers beyond 2^53 could meet keeps the exact-value helpers.
+- Schema types `:Box(unit) { ... }` and `:Poly(unit) max n { ... }` hold the geometry library's `GesBox` and `GesPoly`
+  with per-axis constraints like `:Point`. A Box encodes its corners `lower` and `upper` as two Points and its value
+  orders them; a Poly encodes its points in the plane z = 0 as a List of x and y. The value path converts the library's
+  external values, documents write a Box as the Map of its corners and a Poly as the List of its points, generated wire code
+  holds `GesBox` and the reusable Points of a Poly with a `GesPoly` view, and models hold `GesBox` and `GesPoly`.
 - Recursive schema Lists: `units: :List(:Loadout_Bind) max 16 depth 3` in `:Loadout_Bind` holds records of that schema
   up to three deep, so a tree needs one schema instead of one per level. The wire encoding is that of one schema per
   level; a record deeper than the depth fails with the new `wire.tooDeep`, whose message names the depth, such as
@@ -497,6 +504,9 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   of every port. Runtime behavior does not depend on it.
 
 ### Fixed
+- Generated schema code for a List whose elements get an item type, such as `:List(:Number step 0.5 | :Text max 8)` or a
+  List of Lists of Points, quantizes its elements in `CopyFrom` and deltas instead of skipping them, and no longer fails to
+  generate for a List of Lists.
 - Generated Swift models write keyword argument labels such as `default` without backticks, which Swift warned about;
   only a declared `var`, `let` or `inout` label keeps them.
 - The C# CLI builds with .NET SDK 10.0.404, so the Windows archives and the AOT tool packages

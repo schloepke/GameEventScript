@@ -359,17 +359,22 @@
             result.unit = unit
             result.kind = unit == .none ? .number : .quantity
             result.constraints = try constraints()
-        case .point, .vector:
-            result.kind = written == "Point" ? .point : .vector
+        case .point, .vector, .box, .poly:
+            let kind = GesSchemaTypeNames.kind(written)!
+            result.kind = kind
             if position < bytes.count && bytes[position] == 40 { result.unit = try unit() ?? .none }
             skipSpaces()
+            // A polygon lies in the plane z = 0, so it has a count and only the axes x and y.
+            if kind == .poly { try maximum(&result) }
             if consume(123) {
                 var axes: [GesSchemaAxisSyntax] = []
                 skipSeparators()
                 while !consume(125) {
                     let axisOffset = position
                     let axis = word()
-                    if axis != "x" && axis != "y" && axis != "z" { throw Failure(offset: axisOffset, message: "Expected the axis x, y or z.") }
+                    if kind == .poly ? axis != "x" && axis != "y" : axis != "x" && axis != "y" && axis != "z" {
+                        throw Failure(offset: axisOffset, message: kind == .poly ? "Expected the axis x or y of a Poly." : "Expected the axis x, y or z.")
+                    }
                     skipSpaces()
                     axes.append(GesSchemaAxisSyntax(axis: axis, constraints: try constraints(), offset: axisOffset))
                     try endEntry(125)

@@ -193,6 +193,7 @@ internal static partial class GesSwiftEmitter
                 names.Add((GesSchemaPlanner.Camel(value.Base) + "UTF8", "the UTF-8 bytes of " + field));
                 break;
             case GesLayoutKind.List:
+                if (value.Encoding.Poly) names.Add((GesSchemaPlanner.Camel(value.Base) + "Poly", "the polygon view of " + field));
                 if (value.Item is not null) names.Add((value.Item.Name, "the element type of " + field));
                 else Nested(value.Element!, names, field);
                 break;
@@ -225,6 +226,7 @@ internal static partial class GesSwiftEmitter
         GesLayoutKind.Bytes => "[UInt8]",
         GesLayoutKind.Point => "GesPoint",
         GesLayoutKind.Vector => "GesVector",
+        GesLayoutKind.Box => "GesBox",
         GesLayoutKind.List => $"[{ElementName(value)}]",
         _ => NestedName(value)
     };
@@ -239,6 +241,7 @@ internal static partial class GesSwiftEmitter
         GesLayoutKind.Tag => "." + Name(value.Encoding.Tags[0]),
         GesLayoutKind.Union => "." + Member(value.Alternatives[0].Label),
         GesLayoutKind.List or GesLayoutKind.Bytes or GesLayoutKind.Flags => "[]",
+        GesLayoutKind.Box => "GesBox(GesPoint(), GesPoint())",
         _ => TypeName(value) + "()"
     };
 
@@ -279,6 +282,9 @@ internal static partial class GesSwiftEmitter
         {
             code.Line($"/// {summary}{Description(value)}.");
             code.Line($"{stored}{access}var {Member(value.Base)}: {TypeName(value)} = {Zero(value)}");
+            if (!value.Encoding.Poly) return;
+            code.Line($"/// {summary} as a polygon; reading it allocates.");
+            code.Line($"{access}var {Member(value.Base + "Poly")}: GesPoly {{ GesPoly({Member(value.Base)}) }}");
             return;
         }
 
@@ -336,7 +342,8 @@ internal static partial class GesSwiftEmitter
         return encoding.Kind switch
         {
             GesLayoutKind.Quantized or GesLayoutKind.Float or GesLayoutKind.Integer when encoding.Unit != "none" => $", in {encoding.Unit}",
-            GesLayoutKind.Point or GesLayoutKind.Vector when encoding.Unit != "none" => $", in {encoding.Unit}",
+            GesLayoutKind.Point or GesLayoutKind.Vector or GesLayoutKind.Box when encoding.Unit != "none" => $", in {encoding.Unit}",
+            GesLayoutKind.List when encoding.Poly => $", the points of a polygon{(encoding.Unit != "none" ? " in " + encoding.Unit : "")}, at most {encoding.MaxCount.ToString(CultureInfo.InvariantCulture)}",
             GesLayoutKind.Union => ", the selected alternative",
             GesLayoutKind.List => $", at most {encoding.MaxCount.ToString(CultureInfo.InvariantCulture)} elements",
             _ => ""
@@ -606,6 +613,9 @@ internal static partial class GesSwiftEmitter
                 foreach (var axis in value.Axes) Write(code, axis, target + "." + Member(axis.Base));
                 foreach (var axis in GesSchemaPlanner.Omitted(value)) code.Line($"if {target}.{Member(axis)} != 0 {{ {Throw("typeMismatch", value)} }}");
                 break;
+            case GesLayoutKind.Box:
+                foreach (var corner in value.Corners) Write(code, corner, target + "." + Member(corner.Base));
+                break;
             case GesLayoutKind.Schema:
                 code.Line($"try {target}.__writeFields(&writer, paths, at + {(value.Node + 1).ToString(CultureInfo.InvariantCulture)}{NextLevel(value)})");
                 break;
@@ -710,6 +720,18 @@ internal static partial class GesSwiftEmitter
             case GesLayoutKind.Point or GesLayoutKind.Vector:
                 foreach (var axis in value.Axes) Read(code, axis, target + "." + Member(axis.Base));
                 foreach (var axis in GesSchemaPlanner.Omitted(value)) code.Line($"{target}.{Member(axis)} = 0");
+                break;
+            case GesLayoutKind.Box:
+                // The corners arrive as two Points; the box orders them.
+                code.Open("do {");
+                foreach (var corner in value.Corners)
+                {
+                    code.Line($"var {corner.Label}{N(value.Node)} = GesPoint()");
+                    Read(code, corner, corner.Label + N(value.Node));
+                }
+
+                code.Line($"{target} = GesBox(lower{N(value.Node)}, upper{N(value.Node)})");
+                code.Close();
                 break;
             case GesLayoutKind.Schema:
                 code.Line($"try {target}.__readFields(&reader, paths, at + {(value.Node + 1).ToString(CultureInfo.InvariantCulture)}{NextLevel(value)})");

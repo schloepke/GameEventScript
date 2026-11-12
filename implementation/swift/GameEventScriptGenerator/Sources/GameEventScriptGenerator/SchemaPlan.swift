@@ -46,6 +46,8 @@ final class GesPlanValue {
     var node = 0
     var encoding = GesLayoutEncoding()
     var axes: [GesPlanValue] = []
+    // The corners of a Box, as the Points that its min and max hold.
+    var corners: [GesPlanValue] = []
     var alternatives: [GesPlanValue] = []
     var element: GesPlanValue?
     var item: GesPlanType?
@@ -200,6 +202,12 @@ enum GesSchemaPlanner {
                 value.axes.append(GesPlanValue(base: pascal(axis.name), label: axis.name, node: axisNode, encoding: axis.encoding))
                 axisNode += 1
             }
+        case .box:
+            var cornerNode = node + 1
+            for corner in encoding.corners {
+                value.corners.append(self.value(context, corner.encoding, corner.name == "lower" ? "Min" : "Max", corner.name, cornerNode))
+                cornerNode += 1 + corner.encoding.axes.count
+            }
         case .union:
             var alternativeNode = node + 1
             for alternative in encoding.alternatives {
@@ -257,6 +265,8 @@ enum GesSchemaPlanner {
             return recursive(encoding, owner) ? 1 : 1 + count(layout, encoding.element!.encoding, &counts)
         case .point, .vector:
             return 1 + encoding.axes.count
+        case .box:
+            return 1 + 2 * (1 + encoding.corners[0].encoding.axes.count)
         case .union:
             var total = 1
             for alternative in encoding.alternatives { total += count(layout, alternative.encoding, &counts) }
@@ -311,6 +321,8 @@ enum GesSchemaPlanner {
             if !recursive(encoding, owner) { self.paths(layout, encoding.element!.path, encoding.element!.encoding, &paths, &cache) }
         case .point, .vector:
             for axis in encoding.axes { paths.append(axis.path) }
+        case .box:
+            for corner in encoding.corners { self.paths(layout, corner.path, corner.encoding, &paths, &cache) }
         case .union:
             for alternative in encoding.alternatives { self.paths(layout, alternative.path, alternative.encoding, &paths, &cache) }
         case .schema:

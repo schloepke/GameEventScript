@@ -177,6 +177,7 @@ enum GesCSharpEmitter {
         case .bytes:
             names.append(("Set" + value.base, "the setter of " + field))
         case .list:
+            if value.encoding.poly { names.append((value.base + "Poly", "the polygon view of " + field)) }
             if let item = value.item { names.append((item.name, "the element type of " + field)) } else { nested(value.element!, &names, field) }
         case .union:
             for alternative in value.alternatives {
@@ -207,6 +208,7 @@ enum GesCSharpEmitter {
         case .bytes: "byte[]"
         case .point: "GesPoint"
         case .vector: "GesVector"
+        case .box: "GesBox"
         case .list: "List<\(elementName(value))>"
         default: nestedName(value)
         }
@@ -324,6 +326,10 @@ enum GesCSharpEmitter {
         if value.encoding.kind != .text {
             code.line("/// <summary>\(summary)\(description(value)).</summary>")
             code.line("public \(typeName(value)) \(value.base)\(initializer(value))")
+            if !value.encoding.poly { return }
+            code.blank()
+            code.line("/// <summary>\(summary) as a polygon; reading it allocates.</summary>")
+            code.line("public GesPoly \(value.base)Poly => new GesPoly(\(value.base));")
             return
         }
         let storage = "__" + value.base
@@ -354,8 +360,9 @@ enum GesCSharpEmitter {
     static func description(_ value: GesPlanValue) -> String {
         let encoding = value.encoding
         switch encoding.kind {
-        case .quantized, .float, .integer, .point, .vector: return encoding.unit != "none" ? ", in \(encoding.unit)" : ""
+        case .quantized, .float, .integer, .point, .vector, .box: return encoding.unit != "none" ? ", in \(encoding.unit)" : ""
         case .union: return ", the selected alternative"
+        case .list where encoding.poly: return ", the points of a polygon\(encoding.unit != "none" ? " in " + encoding.unit : ""), at most \(encoding.maxCount)"
         case .list: return ", at most \(encoding.maxCount) elements"
         default: return ""
         }
@@ -595,6 +602,8 @@ enum GesCSharpEmitter {
         case .point, .vector:
             for axis in value.axes { write(&code, axis, target + "." + axis.base) }
             for axis in GesSchemaPlanner.omitted(value) { code.line("if (\(target).\(axis) != 0) \(fail("TypeMismatch", value))") }
+        case .box:
+            for corner in value.corners { write(&code, corner, target + "." + corner.base) }
         case .schema:
             code.line("\(target).__WriteFields(ref writer, paths, at + \(value.node + 1)\(nextLevel(value)));")
         case .union:
@@ -696,6 +705,15 @@ enum GesCSharpEmitter {
         case .point, .vector:
             for axis in value.axes { read(&code, axis, target + "." + axis.base) }
             for axis in GesSchemaPlanner.omitted(value) { code.line("\(target).\(axis) = 0;") }
+        case .box:
+            // The corners arrive as two Points; the box orders them.
+            code.open("{")
+            for corner in value.corners {
+                code.line("var \(corner.label)\(value.node) = new GesPoint();")
+                read(&code, corner, corner.label + String(value.node))
+            }
+            code.line("\(target) = new GesBox(lower\(value.node), upper\(value.node));")
+            code.close()
         case .schema:
             code.line("\(target).__ReadFields(ref reader, paths, at + \(value.node + 1)\(nextLevel(value)));")
         case .union:

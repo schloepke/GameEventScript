@@ -225,9 +225,12 @@
     private static func type(_ type: GesSchemaTypeSyntax, _ output: inout String, _ indent: String) {
         switch type.kind {
         case .quantity: output += ":Quantity(\(type.unit.suffix))"
-        case .point, .vector:
-            output += type.kind == .point ? ":Point" : ":Vector"
+        case .point, .vector, .box, .poly:
+            output += ":" + type.kind.rawValue
             if type.unit != .none { output += "(\(type.unit.suffix))" }
+            if type.kind == .poly {
+                if let max = type.max { output += " max \(max)" } else if !type.maxName.isEmpty { output += " max \(type.maxName)" }
+            }
             if let axes = type.axes {
                 output += " {\n"
                 for axis in axes {

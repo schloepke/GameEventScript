@@ -179,6 +179,7 @@ enum GesSwiftEmitter {
         case .text:
             names.append((GesSchemaPlanner.camel(value.base) + "UTF8", "the UTF-8 bytes of " + field))
         case .list:
+            if value.encoding.poly { names.append((GesSchemaPlanner.camel(value.base) + "Poly", "the polygon view of " + field)) }
             if let item = value.item { names.append((item.name, "the element type of " + field)) } else { nested(value.element!, &names, field) }
         case .union:
             for alternative in value.alternatives {
@@ -209,6 +210,7 @@ enum GesSwiftEmitter {
         case .bytes: "[UInt8]"
         case .point: "GesPoint"
         case .vector: "GesVector"
+        case .box: "GesBox"
         case .list: "[\(elementName(value))]"
         default: nestedName(value)
         }
@@ -253,6 +255,7 @@ enum GesSwiftEmitter {
         case .tag: "." + name(value.encoding.tags[0])
         case .union: "." + member(value.alternatives[0].label)
         case .list, .bytes, .flags: "[]"
+        case .box: "GesBox(GesPoint(), GesPoint())"
         default: typeName(value) + "()"
         }
     }
@@ -285,6 +288,9 @@ enum GesSwiftEmitter {
         if value.encoding.kind != .text {
             code.line("/// \(summary)\(description(value)).")
             code.line("\(stored)\(access)var \(member(value.base)): \(typeName(value)) = \(zero(value))")
+            if !value.encoding.poly { return }
+            code.line("/// \(summary) as a polygon; reading it allocates.")
+            code.line("\(access)var \(member(value.base + "Poly")): GesPoly { GesPoly(\(member(value.base))) }")
             return
         }
         let bytes = GesSchemaPlanner.camel(value.base) + "UTF8"
@@ -308,8 +314,9 @@ enum GesSwiftEmitter {
     static func description(_ value: GesPlanValue) -> String {
         let encoding = value.encoding
         switch encoding.kind {
-        case .quantized, .float, .integer, .point, .vector: return encoding.unit != "none" ? ", in \(encoding.unit)" : ""
+        case .quantized, .float, .integer, .point, .vector, .box: return encoding.unit != "none" ? ", in \(encoding.unit)" : ""
         case .union: return ", the selected alternative"
+        case .list where encoding.poly: return ", the points of a polygon\(encoding.unit != "none" ? " in " + encoding.unit : ""), at most \(encoding.maxCount)"
         case .list: return ", at most \(encoding.maxCount) elements"
         default: return ""
         }
@@ -556,6 +563,8 @@ enum GesSwiftEmitter {
         case .point, .vector:
             for axis in value.axes { write(&code, axis, target + "." + member(axis.base)) }
             for axis in GesSchemaPlanner.omitted(value) { code.line("if \(target).\(member(axis)) != 0 { \(fail("typeMismatch", value)) }") }
+        case .box:
+            for corner in value.corners { write(&code, corner, target + "." + member(corner.base)) }
         case .schema:
             code.line("try \(target).__writeFields(&writer, paths, at + \(value.node + 1)\(nextLevel(value)))")
         case .union:
@@ -655,6 +664,15 @@ enum GesSwiftEmitter {
         case .point, .vector:
             for axis in value.axes { read(&code, axis, target + "." + member(axis.base)) }
             for axis in GesSchemaPlanner.omitted(value) { code.line("\(target).\(member(axis)) = 0") }
+        case .box:
+            // The corners arrive as two Points; the box orders them.
+            code.open("do {")
+            for corner in value.corners {
+                code.line("var \(corner.label)\(value.node) = GesPoint()")
+                read(&code, corner, corner.label + String(value.node))
+            }
+            code.line("\(target) = GesBox(lower\(value.node), upper\(value.node))")
+            code.close()
         case .schema:
             code.line("try \(target).__readFields(&reader, paths, at + \(value.node + 1)\(nextLevel(value)))")
         case .union:

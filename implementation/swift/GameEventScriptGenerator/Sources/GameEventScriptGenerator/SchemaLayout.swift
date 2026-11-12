@@ -123,6 +123,7 @@ enum GesLayoutKind {
     case list
     case point
     case vector
+    case box
     case schema
     case union
     case nothing
@@ -155,6 +156,7 @@ final class GesLayoutEncoding {
     var tagName = false
     var maxCount: Int64 = 0
     var dice = false
+    var poly = false
     var keyed = false
     var positionWidth = 0
     var element: GesLayoutField?
@@ -162,8 +164,9 @@ final class GesLayoutEncoding {
     // A recursive List: how many records of its schema nest at most, and 0 for every other List.
     var depth = 0
 
-    // Point and Vector axes, union alternatives and schema references.
+    // Point and Vector axes, the corners lower and upper of a Box, union alternatives and schema references.
     var axes: [GesLayoutField] = []
+    var corners: [GesLayoutField] = []
     var alternatives: [GesLayoutField] = []
     var schema = ""
 }
@@ -295,6 +298,7 @@ enum GesSchemaLayoutBuilder {
     }
 
     private static func encoding(_ bound: GesBoundSchema, _ index: inout Int, _ type: GesSchemaType) -> GesLayoutEncoding {
+        let start = index
         let node = bound.nodes[index]
         let encoding = GesLayoutEncoding()
         switch type.kind {
@@ -339,15 +343,23 @@ enum GesSchemaLayoutBuilder {
             encoding.kind = type.kind == .point ? .point : .vector
             encoding.unit = unitName(type.kind, type.unit)
             index += 1
-            var axis = 0
-            while axis < 3 && index < node.next {
-                let bounds = type.axes.isEmpty ? nil : type.axes[axis]
-                let axisEncoding = GesLayoutEncoding()
-                number(bound.nodes[index], .number, .none, bounds?.lower, bounds?.upper, axisEncoding)
-                encoding.axes.append(GesLayoutField(name: bound.infos[index].name, path: bound.infos[index].path, encoding: axisEncoding))
-                index += 1
-                axis += 1
-            }
+            axes(bound, &index, start, type, encoding)
+            return encoding
+        case .box:
+            // Two corners, each a Point of the block's axes.
+            encoding.kind = .box
+            encoding.unit = unitName(type.kind, type.unit)
+            index += 1
+            encoding.corners.append(corner(bound, &index, type))
+            encoding.corners.append(corner(bound, &index, type))
+            return encoding
+        case .poly:
+            // A List of Points with the axes x and y.
+            list(node, encoding)
+            encoding.poly = true
+            encoding.unit = unitName(type.kind, type.unit)
+            index += 1
+            encoding.element = corner(bound, &index, type)
             return encoding
         case .reference:
             encoding.kind = .schema
@@ -360,6 +372,29 @@ enum GesSchemaLayoutBuilder {
         }
         index += 1
         return encoding
+    }
+
+    // The axes of a Point, a Box corner or a Poly point, whose group node ends at `group`'s next.
+    private static func axes(_ bound: GesBoundSchema, _ index: inout Int, _ group: Int, _ type: GesSchemaType, _ encoding: GesLayoutEncoding) {
+        var axis = 0
+        while axis < 3 && index < bound.nodes[group].next {
+            let bounds = type.axes.isEmpty ? nil : type.axes[axis]
+            let axisEncoding = GesLayoutEncoding()
+            number(bound.nodes[index], .number, .none, bounds?.lower, bounds?.upper, axisEncoding)
+            encoding.axes.append(GesLayoutField(name: bound.infos[index].name, path: bound.infos[index].path, encoding: axisEncoding))
+            index += 1
+            axis += 1
+        }
+    }
+
+    private static func corner(_ bound: GesBoundSchema, _ index: inout Int, _ type: GesSchemaType) -> GesLayoutField {
+        let group = index
+        let corner = GesLayoutEncoding()
+        corner.kind = .point
+        corner.unit = unitName(type.kind, type.unit)
+        index += 1
+        axes(bound, &index, group, type, corner)
+        return GesLayoutField(name: bound.infos[group].name, path: bound.infos[group].path, encoding: corner)
     }
 
     private static func list(_ node: GesSchemaNode, _ encoding: GesLayoutEncoding) {
@@ -412,6 +447,6 @@ enum GesSchemaLayoutBuilder {
     }
 
     static func unitName(_ kind: GesSchemaTypeKind, _ unit: GesQuantityUnit) -> String {
-        (kind == .quantity || kind == .point || kind == .vector) && unit != .none ? unit.rawValue : "none"
+        (kind == .quantity || kind == .point || kind == .vector || kind == .box || kind == .poly) && unit != .none ? unit.rawValue : "none"
     }
 }

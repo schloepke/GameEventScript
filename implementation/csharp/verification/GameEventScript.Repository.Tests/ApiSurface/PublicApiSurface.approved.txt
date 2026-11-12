@@ -1152,6 +1152,8 @@ enum GameEventScript.Api.GesSchemaTypeKind
   enum-field Nothing = 16
   enum-field Bytes = 17
   enum-field Flags = 18
+  enum-field Box = 19
+  enum-field Poly = 20
 static class GameEventScript.Api.GesSchemaValues
   method static GameEventScript.Api.GesSchemaDecoded Decode(GameEventScript.Api.GesBoundSchema schema, System.ReadOnlySpan<System.Byte> data, GameEventScript.Runtime.Values.GesValue baseline, System.Int64 byteLimit)
   method static GameEventScript.Api.GesSchemaDecoded Decode(GameEventScript.Api.GesBoundSchema schema, System.ReadOnlySpan<System.Byte> data, System.Int64 byteLimit)

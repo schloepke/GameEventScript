@@ -132,6 +132,13 @@ internal sealed class GesSchemaDocumentCheck
             case GesSchemaTypeKind.Quantity: Number(type, value); break;
             case GesSchemaTypeKind.Point: Spatial(type, value, GesDocumentNodeKind.Point); break;
             case GesSchemaTypeKind.Vector: Spatial(type, value, GesDocumentNodeKind.Vector); break;
+            case GesSchemaTypeKind.Box: Box(type, value); break;
+            case GesSchemaTypeKind.Poly:
+                // A document has no geometry literal: a Poly is the List of its points.
+                Require(value, value.Kind == GesDocumentNodeKind.List);
+                if (type.Max is { } polyMax && value.Children.Length > polyMax) throw new Failure(OutOfRange, value.Start);
+                foreach (var point in value.Children) Spatial(type, Resolved(point), GesDocumentNodeKind.Point);
+                break;
             case GesSchemaTypeKind.Tag:
                 Require(value, value.Kind == GesDocumentNodeKind.Tag && (type.Tags is null || Array.IndexOf(type.Tags, value.Name) >= 0));
                 if (type.Max is { } tagMax && Encoding.UTF8.GetByteCount(value.Name) > tagMax) throw new Failure(OutOfRange, value.Start);
@@ -203,6 +210,33 @@ internal sealed class GesSchemaDocumentCheck
         var percent = number.Kind == GesNumberLiteralKind.Percentage;
         Require(value, percent == (type.Kind == GesSchemaTypeKind.Percentage) && number.Unit == type.Unit);
         Numeric(type.Constraints, number.Kind == GesNumberLiteralKind.Integer, number.IntegerValue, number.FloatValue, value);
+    }
+
+    // A document has no geometry literal: a Box is the Map of its corners, as Points, or a Record "Box" of them.
+    private void Box(GesResolvedType type, GesDocumentNode value)
+    {
+        var fields = value;
+        if (IsForm(value, "record"))
+        {
+            var positions = GesLiteralForms.Positions("record", value.Labels);
+            Require(value, positions is not null);
+            var name = Resolved(value.Children[Array.IndexOf(positions!, 0)]);
+            Require(value, name.Kind == GesDocumentNodeKind.Text && name.Name == "Box");
+            fields = value.Children[Array.IndexOf(positions!, 1)];
+        }
+
+        fields = Resolved(fields);
+        Require(value, fields.Kind == GesDocumentNodeKind.Map);
+        var seen = 0;
+        for (var index = 0; index < fields.Labels.Length; index++)
+        {
+            var corner = fields.Labels[index] switch { "lower" => 1, "upper" => 2, _ => 0 };
+            if (corner == 0) throw new Failure(UnknownField, fields.KeyOffsets[index]);
+            seen |= corner;
+            Spatial(type, Resolved(fields.Children[index]), GesDocumentNodeKind.Point);
+        }
+
+        if (seen != 3) throw new Failure(MissingField, value.Start);
     }
 
     private void Spatial(GesResolvedType type, GesDocumentNode value, GesDocumentNodeKind kind)

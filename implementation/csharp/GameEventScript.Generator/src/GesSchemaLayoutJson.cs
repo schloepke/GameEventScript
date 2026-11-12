@@ -163,9 +163,22 @@ internal static class GesSchemaLayoutJson
     private static void Encoding(Writer json, GesLayoutEncoding encoding)
     {
         json.BeginValueObject();
-        json.String("kind", Kind(encoding.Kind));
+        json.String("kind", encoding.Poly ? "poly" : Kind(encoding.Kind));
         switch (encoding.Kind)
         {
+            case GesLayoutKind.List when encoding.Poly:
+                json.String("unit", encoding.Unit);
+                json.Number("maxCount", encoding.MaxCount);
+                json.Number("width", encoding.Width);
+                json.Key("element");
+                Field(json, encoding.Element!, member: false, value: true);
+                break;
+            case GesLayoutKind.Box:
+                json.String("unit", encoding.Unit);
+                json.BeginArray("corners");
+                foreach (var corner in encoding.Corners) Field(json, corner, member: false);
+                json.EndArray();
+                break;
             case GesLayoutKind.Integer or GesLayoutKind.Quantized or GesLayoutKind.Float:
                 json.String("type", encoding.Type);
                 json.String("unit", encoding.Unit);
@@ -251,6 +264,7 @@ internal static class GesSchemaLayoutJson
         GesLayoutKind.List => "list",
         GesLayoutKind.Point => "point",
         GesLayoutKind.Vector => "vector",
+        GesLayoutKind.Box => "box",
         GesLayoutKind.Schema => "schema",
         GesLayoutKind.Union => "union",
         _ => "nothing"

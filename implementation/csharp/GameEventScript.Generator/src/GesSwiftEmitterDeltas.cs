@@ -22,6 +22,8 @@ internal static partial class GesSwiftEmitter
     {
         if (Scalar(value)) yield return value;
         foreach (var axis in value.Axes) yield return axis;
+        foreach (var corner in value.Corners)
+            foreach (var axis in corner.Axes) yield return axis;
         foreach (var alternative in value.Alternatives)
             foreach (var nested in Scalars(alternative)) yield return nested;
         if (value.Item is null && value.Element is not null)
@@ -205,6 +207,9 @@ internal static partial class GesSwiftEmitter
             case GesLayoutKind.Point or GesLayoutKind.Vector:
                 foreach (var axis in value.Axes) Same(code, axis, a + "." + Member(axis.Base), b + "." + Member(axis.Base), ownerA, ownerB);
                 break;
+            case GesLayoutKind.Box:
+                foreach (var corner in value.Corners) Same(code, corner, a + "." + Member(corner.Base), b + "." + Member(corner.Base), ownerA, ownerB);
+                break;
             case GesLayoutKind.Schema:
                 code.Line($"if !(try {a}.__same({b}, paths, at + {N(value.Node + 1)}{NextLevel(value)})) {{ return false }}");
                 break;
@@ -358,10 +363,22 @@ internal static partial class GesSwiftEmitter
             case GesLayoutKind.Point or GesLayoutKind.Vector:
                 foreach (var axis in value.Axes) Quantize(code, axis, target + "." + Member(axis.Base));
                 break;
+            case GesLayoutKind.Box when Quantized(value):
+                // A box is immutable: its corners are quantized as Points and make a new box, still in order.
+                code.Open("do {");
+                foreach (var corner in value.Corners)
+                {
+                    code.Line($"var {corner.Label}{node} = {target}.{Member(corner.Base)}");
+                    Quantize(code, corner, corner.Label + node);
+                }
+
+                code.Line($"{target} = GesBox(lower{node}, upper{node})");
+                code.Close();
+                break;
             case GesLayoutKind.Schema:
                 code.Line($"try {target}.__quantize(paths, at + {N(value.Node + 1)}{NextLevel(value)})");
                 break;
-            case GesLayoutKind.List when Quantized(value.Element!):
+            case GesLayoutKind.List when Quantized(value):
                 var element = value.Element!;
                 if (value.Depth > 0) OpenLevels(code, value, target + ".count");
                 code.Open($"for index{node} in 0..<{target}.count {{");
@@ -390,6 +407,7 @@ internal static partial class GesSwiftEmitter
     {
         GesLayoutKind.Quantized or GesLayoutKind.Schema => true,
         GesLayoutKind.Point or GesLayoutKind.Vector => value.Axes.Exists(Quantized),
+        GesLayoutKind.Box => value.Corners.Exists(Quantized),
         GesLayoutKind.Union => value.Alternatives.Exists(Quantized),
         GesLayoutKind.List => value.Item is not null ? Quantized(value.Item.Fields[0].Value) : Quantized(value.Element!),
         _ => false
@@ -639,6 +657,27 @@ internal static partial class GesSwiftEmitter
                 code.Line($"if !{set} {{ writer.rewind(to: first{node}) }}");
                 code.Close();
                 break;
+            case GesLayoutKind.Box:
+                // A nested delta of the corners, each one of a Point.
+                code.Open("do {");
+                code.Line($"let first{node} = writer.bitPosition");
+                code.Line($"try writer.write(0, width: {N(value.Corners.Count)})");
+                for (var index = 0; index < value.Corners.Count; index++)
+                {
+                    var corner = value.Corners[index];
+                    code.Open("do {");
+                    code.Line($"var set{N(corner.Node)} = false");
+                    DeltaPayload(code, corner, a + "." + Member(corner.Base), b + "." + Member(corner.Base), $"set{N(corner.Node)}");
+                    code.Open($"if set{N(corner.Node)} {{");
+                    code.Line($"writer.setBit(first{node} + {N(index)})");
+                    code.Line($"{set} = true");
+                    code.Close();
+                    code.Close();
+                }
+
+                code.Line($"if !{set} {{ writer.rewind(to: first{node}) }}");
+                code.Close();
+                break;
             case GesLayoutKind.Schema:
                 code.Open("do {");
                 code.Line($"let start{node} = writer.bitPosition");
@@ -758,6 +797,34 @@ internal static partial class GesSwiftEmitter
 
                 foreach (var axis in GesSchemaPlanner.Omitted(value)) code.Line($"{a}.{Member(axis)} = 0");
                 code.Line($"if !changed{node} {{ {Throw("invalidDelta", value)} }}");
+                code.Close();
+                break;
+            case GesLayoutKind.Box:
+                // The corners start as the baseline's; the box orders what the delta changes.
+                code.Open("do {");
+                code.Line($"try reader.require({N(value.Corners.Count)}, path: {Path(value)})");
+                code.Line($"let bits{node} = reader.bitPosition");
+                code.Line($"reader.seek(to: bits{node} + {N(value.Corners.Count)})");
+                code.Line($"var changed{node} = false");
+                for (var index = 0; index < value.Corners.Count; index++)
+                {
+                    var corner = value.Corners[index];
+                    var cornerNode = N(corner.Node);
+                    code.Line($"var {corner.Label}{node} = {b}.{Member(corner.Base)}");
+                    code.Open("do {");
+                    code.Line($"let payload{cornerNode} = reader.bitPosition");
+                    code.Line($"reader.seek(to: bits{node} + {N(index)})");
+                    code.Line($"let set{cornerNode} = try reader.read(1, path: {Path(corner)}) == 1");
+                    code.Line($"reader.seek(to: payload{cornerNode})");
+                    code.Open($"if set{cornerNode} {{");
+                    ReadDeltaPayload(code, corner, corner.Label + node, b + "." + Member(corner.Base));
+                    code.Line($"changed{node} = true");
+                    code.Close();
+                    code.Close();
+                }
+
+                code.Line($"if !changed{node} {{ {Throw("invalidDelta", value)} }}");
+                code.Line($"{a} = GesBox(lower{node}, upper{node})");
                 code.Close();
                 break;
             case GesLayoutKind.Schema:

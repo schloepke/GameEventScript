@@ -98,6 +98,11 @@ enum RuntimeValues {
         case ":Range.int64": return try .integerRange(from: integer(node.text("from")), to: integer(node.text("to")), step: integer(node.text("step")))
         case ":Range.binary64": return try .floatRange(from: parseNumber(node.text("from")), to: parseNumber(node.text("to")), step: parseNumber(node.text("step")))
         case ":Message": return try .message(decodeMessage(node.required("message")))
+        case ":Box" where node["entries"] == nil:
+            // A shape of the geometry library: unitless Points and the unit of the whole shape. A Record of that name has entries.
+            return GesBox(try unitlessPoint(node.required("lower")), try unitlessPoint(node.required("upper"))).value(unit: unit)
+        case ":Poly" where node["entries"] == nil:
+            return GesPoly(try node.values("points").map(unitlessPoint)).value(unit: unit)
         default:
             let nodes = node.values("entries")
             var keys = try nodes.map { try $0.text("key") }
@@ -125,7 +130,30 @@ extension RuntimeValues {
         ["name": value.name, "tags": value.tags, "args": try (0..<value.arguments.count).map { ["name": value.arguments.nameAt($0), "value": try encode(value.arguments[$0])] as [String: Any] }]
     }
 
+    private static func unitlessPoint(_ node: Input) throws -> GesPoint {
+        guard try node.text("type") == ":Point", node["unit"] == nil else { throw ConformanceExecutionError.invalidInput("A geometry point is a unitless :Point.") }
+        return GesPoint(x: try parseNumber(node.text("x")), y: try parseNumber(node.text("y")), z: try parseNumber(node.text("z")))
+    }
+
+    private static func unitless(_ point: GesPoint) -> [String: Any] { ["type": ":Point", "x": numberText(point.x), "y": numberText(point.y), "z": numberText(point.z)] }
+
+    // A Box or Poly of the geometry library; its unit is no public property, so it is read by reflection.
+    private static func geometry(_ value: GesValue) -> [String: Any]? {
+        guard let external = value.externalValue, let unit = Mirror(reflecting: external).children.first(where: { $0.label == "unit" })?.value as? GesQuantityUnit else { return nil }
+        var result: [String: Any]
+        if let box = GesBox(value, unit: unit) {
+            result = ["type": ":Box", "lower": unitless(box.min), "upper": unitless(box.max)]
+        } else if let poly = GesPoly(value, unit: unit) {
+            result = ["type": ":Poly", "points": poly.points.map(unitless)]
+        } else {
+            return nil
+        }
+        if unit != .none { result["unit"] = ":" + String(describing: unit) }
+        return result
+    }
+
     static func encode(_ value: GesValue) throws -> [String: Any] {
+        if let geometry = geometry(value) { return geometry }
         var result: [String: Any]
         switch value.valueKind {
         case .nothing: return ["type": ":Nothing"]

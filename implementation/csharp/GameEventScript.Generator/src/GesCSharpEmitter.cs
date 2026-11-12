@@ -187,6 +187,7 @@ internal static partial class GesCSharpEmitter
                 names.Add(("Set" + value.Base, "the setter of " + field));
                 break;
             case GesLayoutKind.List:
+                if (value.Encoding.Poly) names.Add((value.Base + "Poly", "the polygon view of " + field));
                 if (value.Item is not null) names.Add((value.Item.Name, "the element type of " + field));
                 else Nested(value.Element!, names, field);
                 break;
@@ -219,6 +220,7 @@ internal static partial class GesCSharpEmitter
         GesLayoutKind.Bytes => "byte[]",
         GesLayoutKind.Point => "GesPoint",
         GesLayoutKind.Vector => "GesVector",
+        GesLayoutKind.Box => "GesBox",
         GesLayoutKind.List => $"List<{ElementName(value)}>",
         _ => NestedName(value)
     };
@@ -303,6 +305,10 @@ internal static partial class GesCSharpEmitter
         {
             code.Line($"/// <summary>{summary}{Description(value)}.</summary>");
             code.Line($"public {TypeName(value)} {value.Base}{Initializer(value)}");
+            if (!value.Encoding.Poly) return;
+            code.Blank();
+            code.Line($"/// <summary>{summary} as a polygon; reading it allocates.</summary>");
+            code.Line($"public GesPoly {value.Base}Poly => new GesPoly({value.Base});");
             return;
         }
 
@@ -337,7 +343,8 @@ internal static partial class GesCSharpEmitter
         return encoding.Kind switch
         {
             GesLayoutKind.Quantized or GesLayoutKind.Float or GesLayoutKind.Integer when encoding.Unit != "none" => $", in {encoding.Unit}",
-            GesLayoutKind.Point or GesLayoutKind.Vector when encoding.Unit != "none" => $", in {encoding.Unit}",
+            GesLayoutKind.Point or GesLayoutKind.Vector or GesLayoutKind.Box when encoding.Unit != "none" => $", in {encoding.Unit}",
+            GesLayoutKind.List when encoding.Poly => $", the points of a polygon{(encoding.Unit != "none" ? " in " + encoding.Unit : "")}, at most {encoding.MaxCount.ToString(CultureInfo.InvariantCulture)}",
             GesLayoutKind.Union => ", the selected alternative",
             GesLayoutKind.List => $", at most {encoding.MaxCount.ToString(CultureInfo.InvariantCulture)} elements",
             _ => ""
@@ -597,6 +604,9 @@ internal static partial class GesCSharpEmitter
                 foreach (var axis in value.Axes) Write(code, axis, target + "." + axis.Base);
                 foreach (var axis in GesSchemaPlanner.Omitted(value)) code.Line($"if ({target}.{axis} != 0) {Throw("TypeMismatch", value)}");
                 break;
+            case GesLayoutKind.Box:
+                foreach (var corner in value.Corners) Write(code, corner, target + "." + corner.Base);
+                break;
             case GesLayoutKind.Schema:
                 code.Line($"{target}.__WriteFields(ref writer, paths, at + {(value.Node + 1).ToString(CultureInfo.InvariantCulture)}{NextLevel(value)});");
                 break;
@@ -708,6 +718,18 @@ internal static partial class GesCSharpEmitter
             case GesLayoutKind.Point or GesLayoutKind.Vector:
                 foreach (var axis in value.Axes) Read(code, axis, target + "." + axis.Base);
                 foreach (var axis in GesSchemaPlanner.Omitted(value)) code.Line($"{target}.{axis} = 0;");
+                break;
+            case GesLayoutKind.Box:
+                // The corners arrive as two Points; the box orders them.
+                code.Open("{");
+                foreach (var corner in value.Corners)
+                {
+                    code.Line($"var {corner.Label}{N(value.Node)} = new GesPoint();");
+                    Read(code, corner, corner.Label + N(value.Node));
+                }
+
+                code.Line($"{target} = new GesBox(lower{N(value.Node)}, upper{N(value.Node)});");
+                code.Close();
                 break;
             case GesLayoutKind.Schema:
                 code.Line($"{target}.__ReadFields(ref reader, paths, at + {(value.Node + 1).ToString(CultureInfo.InvariantCulture)}{NextLevel(value)});");

@@ -432,7 +432,9 @@ internal sealed partial class GesSchemaSourceReader
             }
             case GesSchemaTypeKind.Point:
             case GesSchemaTypeKind.Vector:
-                return ReadSpatial(name == "Point" ? GesSchemaTypeKind.Point : GesSchemaTypeKind.Vector, offset);
+            case GesSchemaTypeKind.Box:
+            case GesSchemaTypeKind.Poly:
+                return ReadSpatial(GesSchemaTypeNames.Kind(name)!.Value, offset);
             case GesSchemaTypeKind.Tag:
             {
                 var tags = _position < _text.Length && _text[_position] == '(' ? ReadTagSet() : null;
@@ -509,6 +511,8 @@ internal sealed partial class GesSchemaSourceReader
     {
         var unit = _position < _text.Length && _text[_position] == '(' ? ReadUnit() : GesQuantityUnit.UnitNone;
         SkipSpaces();
+        // A polygon lies in the plane z = 0, so it has a count and only the axes x and y.
+        var max = kind == GesSchemaTypeKind.Poly ? ReadMax() : (null, "", 0);
         GesSchemaAxisSyntax[]? axes = null;
         if (Consume('{'))
         {
@@ -518,7 +522,8 @@ internal sealed partial class GesSchemaSourceReader
             {
                 var axisOffset = _position;
                 var axis = ReadWord();
-                if (axis is not ("x" or "y" or "z")) throw new SyntaxFailure(axisOffset, "Expected the axis x, y or z.");
+                if (kind == GesSchemaTypeKind.Poly ? axis is not ("x" or "y") : axis is not ("x" or "y" or "z"))
+                    throw new SyntaxFailure(axisOffset, kind == GesSchemaTypeKind.Poly ? "Expected the axis x or y of a Poly." : "Expected the axis x, y or z.");
                 SkipSpaces();
                 list.Add(new GesSchemaAxisSyntax { Axis = axis[0], Offset = axisOffset, Constraints = ReadConstraints() });
                 EndEntry('}');
@@ -529,7 +534,7 @@ internal sealed partial class GesSchemaSourceReader
             axes = list.ToArray();
         }
 
-        return new GesSchemaTypeSyntax { Kind = kind, Unit = unit ?? GesQuantityUnit.UnitNone, Axes = axes, Offset = offset };
+        return new GesSchemaTypeSyntax { Kind = kind, Unit = unit ?? GesQuantityUnit.UnitNone, Axes = axes, Max = max.Value, MaxName = max.Name, MaxOffset = max.Offset, Offset = offset };
     }
 
     private GesQuantityUnit? ReadUnit()

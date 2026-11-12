@@ -99,7 +99,8 @@ type        = ":Boolean"
             | ":Map" | ":Range" | ":Series" | ":Message" | ":Handler" | ":Nothing"
 numeric     = ( ":Number" | ":Percentage" | quantity ) constraints
 quantity    = ":Quantity" "(" unit ")"
-spatial     = ( ":Point" | ":Vector" ) [ "(" unit ")" ] [ "{" axis { axis } "}" ]
+spatial     = ( ":Point" | ":Vector" | ":Box" ) [ "(" unit ")" ] [ "{" axis { axis } "}" ]
+            | ":Poly" [ "(" unit ")" ] [ "max" maximum ] [ "{" axis { axis } "}" ]
 axis        = ( "x" | "y" | "z" ) constraints
 constraints = [ "integer" ] [ range ] [ "step" value ] [ "delta" "within" value ]
 range       = [ "wrapping" ] "between" value "and" value
@@ -263,6 +264,8 @@ Types:
 | `:Boolean` | `true` or `false` |
 | `:Number`, `:Percentage`, `:Quantity(unit)` | a number, a percentage, or a number with that unit; `:Quantity(none)` is `:Number`. Limited by [constraints](#constraints) |
 | `:Point`, `:Vector`, with an optional unit | three components with one unit. A block lists the axes that are transmitted, in any order, each with its own constraints |
+| `:Box`, with an optional unit and block | an axis-aligned [Box](PublicApi.md#geometry-library) of the corners `lower` and `upper`, each a `:Point` of the unit and block; see [geometry](#geometry) |
+| `:Poly max n`, with an optional unit and block | a [Poly](PublicApi.md#geometry-library) of at most `n` points in the plane z = 0; its block names only x and y |
 | `:Tag(#a, #b)`, `:Tag max n`, `:Tag` | one tag of the closed set, a tag of at most `n` characters, or any tag |
 | `:Flags(#a, #b)` | any subset of 1 to 64 members, as a Map of the members with Boolean values; see [record values](#record-values) |
 | `:Text max n`, `:Text` | a text of at most `n` UTF-8 bytes, or any text |
@@ -277,6 +280,38 @@ Types:
 
 A schema, message or message set cannot take the name of a built-in type of this table, nor
 `Record`, the language's type of all Records.
+
+### Geometry
+
+> **Since: Unreleased**
+
+`:Box` and `:Poly` hold the shapes of the [geometry library](PublicApi.md#geometry-library), so that a record carries
+them as its native types instead of as two `:Point` fields or a `:List(:Point)`.
+
+```gess
+schema :Zone as {
+  area: :Box(m) {
+    x between 0m and 100m step 1cm
+    y between 0m and 100m step 1cm
+  }
+  outline: :Poly(m) max 16 {
+    x between 0m and 100m step 1cm
+    y between 0m and 100m step 1cm
+  }
+}
+```
+
+- **A Box** is two corners, `lower` and `upper`, each a `:Point` with the unit and the axes of the block, so it
+  binds, encodes, deltas and dumps as two nested Points with the paths `area.lower.x` and so on. Its value orders
+  the corners on each axis, as creating a `GesBox` from two corners does: a decoder accepts them in any order and gives the
+  ordered Box, and writing that Box writes them in order. Requiring order on the wire would need a check across fields in
+  every decoder and delta path for data that only a hand-written writer can produce, so the Box orders it instead.
+- **A Poly** is a List of Points with the unit and the axes x and y of the block, or x and y as binary64 without one. A
+  polygon lies in the plane z = 0, so `z` is not transmitted: a point with another `z` cannot be written
+  (`wire.typeMismatch`), and decoding sets it to 0. Like a List, it needs `max` for encoding. Encoding does not check that
+  the polygon is [valid](PublicApi.md#geometry-library), since an invalid polygon is a value of its own.
+- Their values are the external values `:Box` and `:Poly` of the library with the field's unit; another value or unit is
+  `wire.typeMismatch`. A Box or Poly cannot be a key, has no default literal and cannot be read by a computed field.
 
 ### Defaults
 
@@ -493,16 +528,17 @@ be encoded; binding a schema that reaches another type for encoding fails with
 
 | Type | Encodable | Document check |
 | --- | --- | --- |
-| `:Boolean`, numeric, `:Point`, `:Vector` | yes | yes |
+| `:Boolean`, numeric, `:Point`, `:Vector`, `:Box` | yes | yes |
 | `:Tag(#a, #b)`, `:Tag max n` | yes | yes |
 | `:Flags(#a, #b)` | yes | yes |
 | `:Text max n` | yes | yes |
 | `:Bytes max n` | yes | yes |
 | `:List(T) max n` with an encodable `T` | yes | yes |
+| `:Poly max n` | yes | yes |
 | `:Dice max n` | yes | yes |
 | `:TypeName` with only encodable fields | yes | yes |
 | A union of encodable alternatives, such as `:Text max 8 \| :Unit \| :Nothing` | yes | yes |
-| `:Tag`, `:Text`, `:Bytes`, `:List`, `:List(T)`, `:Dice` without a set or `max` | no | yes |
+| `:Tag`, `:Text`, `:Bytes`, `:List`, `:List(T)`, `:Dice`, `:Poly` without a set or `max` | no | yes |
 | `:Map`, `:Range`, `:Series`, `:Message`, `:Handler`, `:Nothing` outside a union | no | yes |
 
 ### Source errors
@@ -650,7 +686,8 @@ The variable of a projection is not written, so renaming it keeps the hash.
 | `:Boolean` | `Boolean` |
 | `:Number`, `:Percentage` | `Number`, `Percentage` |
 | `:Quantity(unit)` | `Quantity(<portable unit name>)`; `:Quantity(none)` is `Number` |
-| `:Point(unit)`, `:Vector(unit)` | `Point(<portable unit name>)`, `Vector(...)`; no unit or `none` is `Point(none)` |
+| `:Point(unit)`, `:Vector(unit)`, `:Box(unit)` | `Point(<portable unit name>)`, `Vector(...)`, `Box(...)`; no unit or `none` is `Point(none)` |
+| `:Poly(unit) max n` | `Poly(<portable unit name>) max <n>`, `Poly(...)` without `max` |
 | axis block | after the type, `{ <axis> <constraints> ; ... }` in order x, y, z |
 | `:Tag(#a, #b)`, `:Tag max n`, `:Tag` | `Tag(#a #b)`, `Tag max <n>`, `Tag` |
 | `:Flags(#a, #b)` | `Flags(#a #b)` |
@@ -765,6 +802,8 @@ caller owns the mapping from keys to objects. Message arguments have no key. A
 | wrapping | [index](#wrapping-values), `width(n)` bits |
 | fractional without a step | IEEE 754 bits of the binary64, 64 bits; a range is checked but does not narrow it |
 | `:Point`, `:Vector` | declared axes in order x, y, z, each as a numeric; without a block x, y, z as 64-bit binary64 |
+| `:Box` | the corner `lower`, then `upper`, each as a `:Point` of the block |
+| `:Poly max n` | point count, `width(n + 1)` bits, then each point as a `:Point` of the block, x and y without one |
 | `:Tag(...)` with `n` tags | index in declared order, `width(n)` bits |
 | `:Flags(...)` with `n` members | a mask of `n` bits; bit `i`, counted from the first bit written, is set for the member at index `i` in declared order |
 | `:Tag max n` | as `:Text max n`: the tag name without `#`, its byte count, then its bytes |
@@ -776,8 +815,8 @@ caller owns the mapping from keys to objects. Message arguments have no key. A
 | `:Nothing` as an alternative | no bits |
 | `:TypeName` | its fields inline |
 
-`max` counts UTF-8 bytes for Text, characters for a Tag, which is ASCII, elements for a List and
-rolls for a Dice. A range's index never
+`max` counts UTF-8 bytes for Text, characters for a Tag, which is ASCII, elements for a List,
+points for a Poly and rolls for a Dice. A range's index never
 exceeds `n - 1`; a decoder rejects a larger bit pattern. Units come from the schema.
 
 A fractional field without a step stays at 64 bits, which is a deliberate choice in the
@@ -926,10 +965,11 @@ movement smaller than a step is no change and costs nothing.
 | --- | --- |
 | `:Boolean` | none; the change bit toggles the baseline |
 | numeric with `delta within` | [range form](#delta-range) |
-| other numeric, `:Tag`, `:Text`, `:Bytes`, `:List` of other elements, `:Dice` | the full encoding |
+| other numeric, `:Tag`, `:Text`, `:Bytes`, `:List` of other elements, `:Dice`, `:Poly` | the full encoding |
 | `:List` of a schema with a key | a [keyed list](#keyed-lists) |
 | `:Point`, `:Vector` with a block | one change bit per declared axis, then the payloads of the changed axes |
 | `:Point`, `:Vector` without a block | three change bits, then a raw 64-bit binary64 for each changed axis; bits are compared |
+| `:Box` | a nested delta of its corners: two change bits, then the payload of each changed corner as a `:Point` |
 | `:TypeName` | a nested delta: its own change bits and payloads |
 | union | index; when the baseline has the same alternative, its payload, otherwise its full encoding |
 | `optional` | presence bit; when present and the baseline also has a value, the field's payload, otherwise its full encoding |
@@ -1157,8 +1197,10 @@ The convenient path converts between `GesValue` and the wire.
   leaves it unset. Another key is `wire.unknownTag`, a value that is no Boolean or a value that
   is no Map `wire.typeMismatch`. Decoding gives a Map of the set members, each `true`, in key
   order, so `[armed:]` from a script's [flag Map](Language.md#maps) round-trips.
-- A value selects a union alternative by its kind, with unit, or for a Record by its type name; no
-  other kind converts. Since alternatives repeat no type name, a union value has exactly one encoding. A Map
+- A `:Box` or `:Poly` field takes the library's external value of its unit, and decoding gives one; a Box orders its
+  corners.
+- A value selects a union alternative by its kind, with unit, or for a Record by its type name, and for a Box or Poly by
+  being one; no other kind converts. Since alternatives repeat no type name, a union value has exactly one encoding. A Map
   has no type name: the first schema or Flags alternative that holds it decides. A schema holds a Map
   when all its fields fit and every key is one of its fields, also in the Maps nested in it, as in
   a [document check](#document-checking); Flags hold it when every key is a member with a Boolean.
@@ -1206,6 +1248,10 @@ facing: #north
 
 - `:Flags` accept a Map whose keys are members with Boolean values; another key is
   `document.fieldType` at the key, a value that is no Boolean at the value.
+- A document has no geometry literal, since `parse` resolves no external constructor. A `:Box` is the Map of its corners,
+  `[lower: :Point(1m, 0m), upper: :Point(20m, 3m)]`, or a `:Record("Box", ...)` of them: another key is
+  `document.unknownField` and a missing corner `document.missingField`. A `:Poly` is the List of its points. Each corner or
+  point is a Point of the unit within the axes of the block.
 - A value outside a closed range is an error. A wrapping field accepts any finite
   value. `max` and `integer` are checked; `step` and `delta within` are not.
 - A bound that uses an unbound parameter is not checked. A value that is given must have the
@@ -1256,9 +1302,9 @@ var positionX = reader.ReadNumber(x);                             // double, wit
   beyond the last member with `wire.unknownTag`), `Text` (validated UTF-8, or for a `:Tag max n` a validated tag name without `#`) and `Bytes`
   (any bytes of a `:Bytes max n`). A reader copies Text and Bytes into a caller's buffer of the
   field's `max`, since a value need not start at a byte boundary.
-- `BeginList` writes or reads the element count of a List or Dice, and the elements follow, each entered at
-  the `[]` handle. `BeginNested` enters a nested schema, Point or Vector. There is no end
-  call: the cursor knows where a list or nesting ends.
+- `BeginList` writes or reads the element count of a List, Dice or Poly, and the elements follow, each entered at
+  the `[]` handle. `BeginNested` enters a nested schema, Point, Vector, Box, corner of a Box (`area.lower`) or point of
+  a Poly. There is no end call: the cursor knows where a list or nesting ends.
 - `WriteAbsent` marks an `optional` field as absent; any other write sets its presence bit.
   `ReadPresence` reads the bit, and a reader calls it before an `optional` field.
 - `SelectAlternative` writes the index of a union's alternative, in declared order, and `ReadAlternative`
@@ -1392,7 +1438,7 @@ gives exit code 1. Its text is the same in every port. Each field is one line,
 is `true` or `false`, a number, a quoted Text, the [Bytes literal](Language.md#bytes) `:Bytes("…")`, `#<tag> index=<i>`, `#<tag>` for a `:Tag max n`, the set members as `#<member>` separated by spaces, or `none`, then
 ` mask=<mask>` for Flags, `count=<n>` for a List or Dice,
 `<alternative> index=<i>` for a union, with the type name of the alternative, or `absent`. A nested
-schema, Point or Vector has no line of its own, only its fields. A message set starts with
+schema, Point, Vector, Box or Box corner has no line of its own, only its fields; a Poly has the line of a List. A message set starts with
 `message <name> index=<i>`. A valid record ends with `bytes <n>`, an invalid one with
 `error <code> path=<path> bit=<offset>`. With `--baseline` the data is a [delta](#deltas): a first
 line `delta bytes <n>` is followed by the lines of the resulting record, or the error ends the text
@@ -1427,8 +1473,10 @@ Text, Bytes or List as a generated item type. A closed Tag is an enum `<Field>Ta
 [tag set](#declarations) uses the one enum `Name` that the file declares beside its records, whose raw value is the
 index. Flags are a `<Field>Flags` type as in [model types](#model-types), whose
 raw value is the wire mask. A `:Point` or `:Vector` is the runtime's
-[`GesPoint` or `GesVector`](PublicApi.md#spatial-values), in every field, list element and alternative; quantization stays per
-field. An axis that a block leaves out is not transmitted: writing a record or a delta whose omitted axis is not zero fails
+[`GesPoint` or `GesVector`](PublicApi.md#spatial-values), and a `:Box` its [`GesBox`](PublicApi.md#geometry-library), in every
+field, list element and alternative; quantization stays per field, and reading or quantizing a Box makes a new, ordered
+one. A `:Poly` is the List of its Points, which reading reuses, with a view `<Field>Poly` (Swift `<field>Poly`) that
+makes the `GesPoly`: an immutable polygon that checks its validity when it is made could not be read without allocating. An axis that a block leaves out is not transmitted: writing a record or a delta whose omitted axis is not zero fails
 with `wire.typeMismatch` at the field's path, as the [value path](#value-path) does, and reading sets it to zero. An `optional` field adds a presence flag and, for a value
 type, a nullable view. A message adds a Boolean per tag, and a message set holds the selected
 member and one record per message. After a failed read the values of the target are unspecified.
@@ -1555,6 +1603,7 @@ needs no ranges, steps or parameters, and every reached schema becomes one type,
 | `:List(T)` | `[T]` | `List<T>` |
 | `:Dice` | `[Int]`, the rolls | `List<int>` |
 | `:Point`, `:Vector` | `GesPoint`, `GesVector` | `GesPoint`, `GesVector` |
+| `:Box`, `:Poly` | `GesBox`, `GesPoly` | `GesBox`, `GesPoly` |
 | `:Name` | the model type `Name` | the model type `Name` |
 | union | an enum `<Field>Alternative` with one case and value per alternative | an abstract class `<Field>Alternative` with one sealed subclass per alternative, named after it, holding `Value` |
 | `optional`, `:Nothing` alternative | `Optional`; `nil` is absent or `nothing` | nullable; `null` is absent or `nothing` |
@@ -1632,7 +1681,8 @@ for a record of its schema, so that wire records and models meet there; no code 
 - The value is the Record that `GesSchemaValues` decodes from the record's bytes: a Record of the schema's name with every
   field in declared order, nested records as Records, Lists, numbers with their units and integral values as integers,
   Percentages, Tags for closed and open tags, Flags as the Map of their set members, Points and Vectors with their unit,
-  a union as its alternative's value and an absent optional or `:Nothing` alternative as `nothing`.
+  Boxes and Polys as the library's external values with their unit, a union as its alternative's value and an absent
+  optional or `:Nothing` alternative as `nothing`.
 - Reading takes a Record of the schema's name, whose other fields are ignored, or a Map whose keys are all fields of it,
   and converts strictly as the [script bindings](#script-bindings) do. It fails with the codes of the
   [value path](#value-path), and a field it leaves out takes its [default](#defaults): a required field without a key or default is `wire.missingField`, `nothing` where a value is required
@@ -1665,7 +1715,8 @@ Reflection, so managed code stripping under IL2CPP removes nothing it needs. Wit
   one name never compete.
 - Each type gets `ToGesValue()` and `FromGesValue(value)` (Swift `gesValue()` and `init?(gesValue:)`). A script reads its
   fields with their declared kinds and units: a Quantity with its unit, a Percentage, a Text, a Tag (also for a closed tag),
-  a Point or Vector with its unit, Flags as the Map of their set members, a List, Dice, the nested record as its external value, a union as its alternative's value,
+  a Point or Vector with its unit, a Box or Poly as the [geometry library's](PublicApi.md#geometry-library) external value, which
+  the host registers, Flags as the Map of their set members, a List, Dice, the nested record as its external value, a union as its alternative's value,
   and `nothing` for an absent value. Integers read as Numbers. A Swift value is the copy that was wrapped; a C# record is read
   when a script reads a field.
 - Each type has one constructor, `:Name(fields: map)`, and a field `fields` that returns the record as such a Map, so
@@ -1689,7 +1740,7 @@ protocols it refines) and `fields` (the shared fields it requires besides those)
 `name`, `path`, `optional`, `key`, `default` as in the generation layout when it has one, and `type`. A type has `kind` and the members of its kind: `number` adds `type`, `unit`,
 `integer`, `wrapping`, `lower`, `upper` and `step`, a bound as its canonical decimal or parameter name or `null`; `tag` adds
 `tags` and `max`, `flags` adds `tags`, `text` and `bytes` add `max`, `list` adds `max`, `depth` only for a [recursive List](#recursion), and `element`, `dice` adds `max`, `lower` and `upper`, `point` and
-`vector` add `unit` and `axes` (the names of an axis block), `schema` adds `name`, and `union` adds `alternatives`;
+`vector` add `unit` and `axes` (the names of an axis block), so does `box`, `poly` adds `unit`, `axes` and `max`, `schema` adds `name`, and `union` adds `alternatives`;
 `boolean` and `nothing` have none. A missing `max` is `null`.
 
 ### Generation layout
@@ -1744,6 +1795,8 @@ exact decimals. Hashes are 16 lowercase hexadecimal digits, and a binary64 value
   - `list`: `dice`, `maxCount`, `width`, `keyed`, `positionWidth`, `depth` only for a [recursive List](#recursion),
     and `element`.
   - `point` and `vector`: `unit` and `axes`, the transmitted axes in order x, y, z.
+  - `box`: `unit` and `corners`, the fields `lower` and `upper`, each a `point`.
+  - `poly`: `unit`, `maxCount`, `width` and `element`, a `point` field with the axes x and y.
   - `schema`: `name`, the type it refers to.
   - `union`: `width` and `alternatives`, in declared order.
   - `nothing`: none.

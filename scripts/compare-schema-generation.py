@@ -171,6 +171,7 @@ GOLDEN_FIXTURE = ROOT / "conformance/fixtures/SchemaGeneration/fleet.gess"
 ROLES = ROOT / "conformance/fixtures/SchemaGeneration/roles"
 TREE_FIXTURE = ROOT / "conformance/fixtures/SchemaGeneration/tree.gess"
 COMPUTED_FIXTURE = ROOT / "conformance/fixtures/SchemaGeneration/computed.gess"
+GEOMETRY_FIXTURE = ROOT / "conformance/fixtures/SchemaGeneration/geometry.gess"
 ROLE_FILES = ["World.gess", "Panels.gess", "View.gess"]
 CSHARP_GENERATED = ROOT / "implementation/csharp/GameEventScript.Generator/tests/Generated"
 SWIFT_GENERATED = ROOT / "implementation/swift/GameEventScriptConformance/Tests/GameEventScriptConformanceTests/Generated"
@@ -191,6 +192,10 @@ GOLDENS = (
     (COMPUTED_FIXTURE.parent, [COMPUTED_FIXTURE.name], ["--wire", "computed", "--values"], "swift", "ComputedWire", SWIFT_GENERATED / "ComputedWire.swift"),
     (COMPUTED_FIXTURE.parent, [COMPUTED_FIXTURE.name], ["--model", "computed", "--values"], "csharp", "GameEventScript.Tests.Generator.Computed.Model", CSHARP_GENERATED / "ComputedModel.g.cs"),
     (COMPUTED_FIXTURE.parent, [COMPUTED_FIXTURE.name], ["--model", "computed", "--values"], "swift", "ComputedModel", SWIFT_GENERATED / "ComputedModel.swift"),
+    (GEOMETRY_FIXTURE.parent, [GEOMETRY_FIXTURE.name], ["--wire", "geometry", "--values"], "csharp", "GameEventScript.Tests.Generator.Geometry.Wire", CSHARP_GENERATED / "GeometryWire.g.cs"),
+    (GEOMETRY_FIXTURE.parent, [GEOMETRY_FIXTURE.name], ["--wire", "geometry", "--values"], "swift", "GeometryWire", SWIFT_GENERATED / "GeometryWire.swift"),
+    (GEOMETRY_FIXTURE.parent, [GEOMETRY_FIXTURE.name], ["--model", "geometry", "--bindings", "--values"], "csharp", "GameEventScript.Tests.Generator.Geometry.Model", CSHARP_GENERATED / "GeometryModel.g.cs"),
+    (GEOMETRY_FIXTURE.parent, [GEOMETRY_FIXTURE.name], ["--model", "geometry", "--bindings", "--values"], "swift", "GeometryModel", SWIFT_GENERATED / "GeometryModel.swift"),
 )
 # The layouts of the role fixture, which both CLIs must print identically.
 ROLE_LAYOUTS = (["--wire", "world", "--param", "worldWidth=2000m"], ["--wire", "panels"], ["--model", "view"])

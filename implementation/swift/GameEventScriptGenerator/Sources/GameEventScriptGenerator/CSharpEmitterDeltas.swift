@@ -18,6 +18,7 @@ extension GesCSharpEmitter {
     static func scalars(_ value: GesPlanValue) -> [GesPlanValue] {
         var result: [GesPlanValue] = isScalar(value) ? [value] : []
         result += value.axes
+        for corner in value.corners { result += corner.axes }
         for alternative in value.alternatives { result += scalars(alternative) }
         if value.item == nil, let element = value.element { result += scalars(element) }
         return result
@@ -181,6 +182,8 @@ extension GesCSharpEmitter {
             code.line("if (!\(text(value, prefix(a))).SequenceEqual(\(text(value, prefix(b))))) return false;")
         case .point, .vector:
             for axis in value.axes { same(&code, axis, a + "." + axis.base, b + "." + axis.base) }
+        case .box:
+            for corner in value.corners { same(&code, corner, a + "." + corner.base, b + "." + corner.base) }
         case .schema:
             code.line("if (!\(a).__Same(\(b), paths, at + \(value.node + 1)\(nextLevel(value)))) return false;")
         case .list:
@@ -331,9 +334,18 @@ extension GesCSharpEmitter {
             code.line("\(target) = __Value\(node)(__Wire\(node)(\(target), paths, at));")
         case .point, .vector:
             for axis in value.axes { quantize(&code, axis, target + "." + axis.base) }
+        case .box where quantized(value):
+            // A box is immutable: its corners are quantized as Points and make a new box, still in order.
+            code.open("{")
+            for corner in value.corners {
+                code.line("var \(corner.label)\(node) = \(target).\(corner.base);")
+                quantize(&code, corner, corner.label + node)
+            }
+            code.line("\(target) = new GesBox(lower\(node), upper\(node));")
+            code.close()
         case .schema:
             code.line("\(target).__Quantize(paths, at + \(value.node + 1)\(nextLevel(value)));")
-        case .list where quantized(value.element!):
+        case .list where quantized(value):
             let element = value.element!
             if value.depth > 0 { openLevels(&code, value, target + ".Count") }
             code.line("for (var index\(node) = 0; index\(node) < \(target).Count; index\(node)++)")
@@ -368,6 +380,7 @@ extension GesCSharpEmitter {
         switch value.encoding.kind {
         case .quantized, .schema: true
         case .point, .vector: value.axes.contains(where: quantized)
+        case .box: value.corners.contains(where: quantized)
         case .union: value.alternatives.contains(where: quantized)
         case .list: value.item.map { quantized($0.fields[0].value) } ?? quantized(value.element!)
         default: false
@@ -603,6 +616,24 @@ extension GesCSharpEmitter {
             for axis in GesSchemaPlanner.omitted(value) { code.line("if (\(a).\(axis) != 0) \(fail("TypeMismatch", value))") }
             code.line("if (!\(set)) writer.Rewind(first\(node));")
             code.close()
+        case .box:
+            // A nested delta of the corners, each one of a Point.
+            code.open("{")
+            code.line("var first\(node) = writer.BitPosition;")
+            code.line("writer.Write(0, \(value.corners.count));")
+            for (index, corner) in value.corners.enumerated() {
+                code.open("{")
+                code.line("var set\(corner.node) = false;")
+                deltaPayload(&code, corner, a + "." + corner.base, b + "." + corner.base, "set\(corner.node)")
+                code.line("if (set\(corner.node))")
+                code.open("{")
+                code.line("writer.SetBit(first\(node) + \(index));")
+                code.line("\(set) = true;")
+                code.close()
+                code.close()
+            }
+            code.line("if (!\(set)) writer.Rewind(first\(node));")
+            code.close()
         case .schema:
             code.open("{")
             code.line("var start\(node) = writer.BitPosition;")
@@ -706,6 +737,31 @@ extension GesCSharpEmitter {
             }
             for axis in GesSchemaPlanner.omitted(value) { code.line("\(a).\(axis) = 0;") }
             code.line("if (!changed\(node)) \(fail("InvalidDelta", value))")
+            code.close()
+        case .box:
+            // The corners start as the baseline's; the box orders what the delta changes.
+            code.open("{")
+            code.line("reader.Require(\(value.corners.count), \(path(value)));")
+            code.line("var bits\(node) = reader.BitPosition;")
+            code.line("reader.Seek(bits\(node) + \(value.corners.count));")
+            code.line("var changed\(node) = false;")
+            for (index, corner) in value.corners.enumerated() {
+                let cornerNode = String(corner.node)
+                code.line("var \(corner.label)\(node) = \(b).\(corner.base);")
+                code.open("{")
+                code.line("var payload\(cornerNode) = reader.BitPosition;")
+                code.line("reader.Seek(bits\(node) + \(index));")
+                code.line("var set\(cornerNode) = reader.Read(1, \(path(corner))) == 1;")
+                code.line("reader.Seek(payload\(cornerNode));")
+                code.line("if (set\(cornerNode))")
+                code.open("{")
+                readDeltaPayload(&code, corner, corner.label + node, b + "." + corner.base)
+                code.line("changed\(node) = true;")
+                code.close()
+                code.close()
+            }
+            code.line("if (!changed\(node)) \(fail("InvalidDelta", value))")
+            code.line("\(a) = new GesBox(lower\(node), upper\(node));")
             code.close()
         case .schema:
             code.line("if (!\(a).__ReadDelta(\(b), ref reader, paths, at + \(value.node + 1), false\(nextLevel(value)))) \(fail("InvalidDelta", value))")

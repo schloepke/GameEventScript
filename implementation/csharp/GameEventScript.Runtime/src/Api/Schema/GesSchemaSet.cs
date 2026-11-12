@@ -1061,9 +1061,9 @@ internal static class GesSchemaCanonical
             case GesSchemaTypeKind.Number or GesSchemaTypeKind.Percentage or GesSchemaTypeKind.Quantity or GesSchemaTypeKind.Dice:
                 WriteType(new GesResolvedType { Kind = type.Kind, Unit = type.Unit, Max = type.Max, Constraints = WithoutDelta(type.Constraints) }, builder);
                 return true;
-            case GesSchemaTypeKind.Point or GesSchemaTypeKind.Vector:
+            case GesSchemaTypeKind.Point or GesSchemaTypeKind.Vector or GesSchemaTypeKind.Box or GesSchemaTypeKind.Poly:
                 var axes = type.Axes is { } written ? Array.ConvertAll(written, axis => new GesResolvedAxis { Axis = axis.Axis, Constraints = WithoutDelta(axis.Constraints) }) : null;
-                WriteType(new GesResolvedType { Kind = type.Kind, Unit = type.Unit, Axes = axes }, builder);
+                WriteType(new GesResolvedType { Kind = type.Kind, Unit = type.Unit, Max = type.Max, Axes = axes }, builder);
                 return true;
             default:
                 WriteType(type, builder);
@@ -1101,8 +1101,11 @@ internal static class GesSchemaCanonical
                 break;
             case GesSchemaTypeKind.Point:
             case GesSchemaTypeKind.Vector:
-                builder.Append(type.Kind == GesSchemaTypeKind.Point ? "Point(" : "Vector(");
+            case GesSchemaTypeKind.Box:
+            case GesSchemaTypeKind.Poly:
+                builder.Append(type.Kind.ToString()).Append('(');
                 builder.Append(type.Unit == GesQuantityUnit.UnitNone ? "none" : type.Unit.ToTypeName()).Append(')');
+                if (type.Max is { } polyMax) builder.Append(" max ").Append(polyMax);
                 if (type.Axes is { } axes)
                 {
                     builder.Append(" {");

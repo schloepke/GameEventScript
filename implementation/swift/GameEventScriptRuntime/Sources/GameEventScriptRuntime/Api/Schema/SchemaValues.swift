@@ -250,6 +250,10 @@ public enum GesSchemaValues {
             let rolls = value.asDice
             try writer.beginList(field, count: rolls.count)
             for roll in rolls { try writer.writeInteger(GesSchemaField(owner: schema, index: index + 1), Int64(roll)) }
+        case .list where info.valueKind == .poly:
+            guard let poly = GesPoly(value, unit: info.unit) else { throw GesWireError(code: GesWireError.typeMismatch, path: info.path) }
+            try writer.beginList(field, count: poly.points.count)
+            for point in poly.points { try encodePoint(&writer, schema, index + 1, point.x, point.y, point.z) }
         case .list:
             guard value.valueKind == .list else { throw GesWireError(code: GesWireError.typeMismatch, path: info.path) }
             let items = value.asList
@@ -335,6 +339,8 @@ public enum GesSchemaValues {
         case .dice: value.valueKind == .dice
         case .point: value.valueKind == .point
         case .vector: value.valueKind == .vector
+        case .box: value.externalValue is GesGeometryLibrary.BoxValue
+        case .poly: value.externalValue is GesGeometryLibrary.PolyValue
         case .percentage: value.valueKind == .percentage
         case .reference: value.customTypeName == candidate.schemaName
         default: (value.valueKind == .integer || value.valueKind == .float) && value.unit == candidate.unit
@@ -348,18 +354,14 @@ public enum GesSchemaValues {
         if info.valueKind == .point || info.valueKind == .vector {
             let kind: GesBytecodeTypeKind = info.valueKind == .point ? .point : .vector
             if value.valueKind != kind || value.unit != info.unit { throw GesWireError(code: GesWireError.typeMismatch, path: info.path) }
-            var seen: Set<String> = []
+            try encodePoint(&writer, schema, index, value.x, value.y, value.z)
+            return
+        }
+        if info.valueKind == .box {
+            guard let box = GesBox(value, unit: info.unit) else { throw GesWireError(code: GesWireError.typeMismatch, path: info.path) }
             try writer.beginNested(field)
-            var axis = index + 1
-            while axis < node.next {
-                let name = schema.infos[axis].name
-                seen.insert(name)
-                try writer.writeNumber(GesSchemaField(owner: schema, index: axis), name == "x" ? value.x : name == "y" ? value.y : value.z)
-                axis += 1
-            }
-            if (!seen.contains("x") && value.x != 0) || (!seen.contains("y") && value.y != 0) || (!seen.contains("z") && value.z != 0) {
-                throw GesWireError(code: GesWireError.typeMismatch, path: info.path)
-            }
+            try encodePoint(&writer, schema, index + 1, box.min.x, box.min.y, box.min.z)
+            try encodePoint(&writer, schema, schema.nodes[index + 1].next, box.max.x, box.max.y, box.max.z)
             return
         }
         if let name = value.customTypeName, name != info.schemaName { throw GesWireError(code: GesWireError.typeMismatch, path: info.path) }
@@ -367,6 +369,41 @@ public enum GesSchemaValues {
         if strict && value.customTypeName == nil && !hasEveryKey(schema, index, fields) { throw GesWireError(code: GesWireError.typeMismatch, path: info.path) }
         try writer.beginNested(field)
         try encodeFields(&writer, schema, index + 1, node.next, fields, strict: strict)
+    }
+
+    // The components of a Point, Vector, Box corner or Poly point; an axis that the block leaves out must be zero.
+    private static func encodePoint(_ writer: inout GesSchemaWriter, _ schema: GesBoundSchema, _ index: Int, _ x: Double, _ y: Double, _ z: Double) throws {
+        let node = schema.nodes[index]
+        var seen: Set<String> = []
+        try writer.beginNested(GesSchemaField(owner: schema, index: index))
+        var axis = index + 1
+        while axis < node.next {
+            let name = schema.infos[axis].name
+            seen.insert(name)
+            try writer.writeNumber(GesSchemaField(owner: schema, index: axis), name == "x" ? x : name == "y" ? y : z)
+            axis += 1
+        }
+        if (!seen.contains("x") && x != 0) || (!seen.contains("y") && y != 0) || (!seen.contains("z") && z != 0) {
+            throw GesWireError(code: GesWireError.typeMismatch, path: schema.infos[index].path)
+        }
+    }
+
+    // The components of a Point, Vector, Box corner or Poly point; an axis that the block leaves out is zero.
+    private static func decodePoint(_ reader: inout GesSchemaReader, _ schema: GesBoundSchema, _ index: Int) throws -> GesPoint {
+        let node = schema.nodes[index]
+        try reader.beginNested(GesSchemaField(owner: schema, index: index))
+        var (x, y, z) = (0.0, 0.0, 0.0)
+        var axis = index + 1
+        while axis < node.next {
+            let component = try reader.readNumber(GesSchemaField(owner: schema, index: axis))
+            switch schema.infos[axis].name {
+            case "x": x = component
+            case "y": y = component
+            default: z = component
+            }
+            axis += 1
+        }
+        return GesPoint(x: x, y: y, z: z)
     }
 
     private static func hasEveryKey(_ schema: GesBoundSchema, _ index: Int, _ fields: GesValueMap) -> Bool {
@@ -437,6 +474,12 @@ public enum GesSchemaValues {
         case .union:
             let selected = GesSchemaNumbers.alternative(schema.nodes, index, try reader.readAlternative(field))
             return schema.nodes[selected].kind == .nothing ? .nothing : try decodeNode(&reader, schema, selected)
+        case .list where info.valueKind == .poly:
+            let count = try reader.beginList(field)
+            var points: [GesPoint] = []
+            points.reserveCapacity(count)
+            for _ in 0..<count { points.append(try decodePoint(&reader, schema, index + 1)) }
+            return GesPoly(points).value(unit: info.unit)
         case .list:
             let length = try reader.beginList(field)
             var items: [GesValue] = []
@@ -447,21 +490,18 @@ public enum GesSchemaValues {
                 item += 1
             }
             return .list(items)
+        case .group where info.valueKind == .point || info.valueKind == .vector:
+            let spatial = try decodePoint(&reader, schema, index)
+            return info.valueKind == .point ? .point(x: spatial.x, y: spatial.y, z: spatial.z, unit: info.unit) : .vector(x: spatial.x, y: spatial.y, z: spatial.z, unit: info.unit)
+        case .group where info.valueKind == .box:
+            // The corners are two Points on the wire; the box orders them.
+            try reader.beginNested(field)
+            let lower = try decodePoint(&reader, schema, index + 1)
+            let upper = try decodePoint(&reader, schema, schema.nodes[index + 1].next)
+            return GesBox(lower, upper).value(unit: info.unit)
         case .group:
             try reader.beginNested(field)
-            if info.valueKind != .point && info.valueKind != .vector { return try decodeRecord(&reader, schema, info.schemaName, index + 1, node.next) }
-            var (x, y, z) = (0.0, 0.0, 0.0)
-            var axis = index + 1
-            while axis < node.next {
-                let component = try reader.readNumber(GesSchemaField(owner: schema, index: axis))
-                switch schema.infos[axis].name {
-                case "x": x = component
-                case "y": y = component
-                default: z = component
-                }
-                axis += 1
-            }
-            return info.valueKind == .point ? .point(x: x, y: y, z: z, unit: info.unit) : .vector(x: x, y: y, z: z, unit: info.unit)
+            return try decodeRecord(&reader, schema, info.schemaName, index + 1, node.next)
         case .integer: return .integer(try reader.readInteger(field), unit: info.unit)
         case .quantized:
             let (value, integer) = try reader.readExactNumber(field)

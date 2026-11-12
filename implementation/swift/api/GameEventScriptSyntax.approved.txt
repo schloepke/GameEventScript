@@ -33,6 +33,7 @@ relationship {"kind":"conformsTo","source":"GameEventScriptSyntax.GesSyntaxLangu
 relationship {"kind":"conformsTo","source":"GameEventScriptSyntax.GesSyntaxLanguage :: enum GesSyntaxLanguage","target":"Swift.Sendable"}
 symbol {"access":"public","declaration":"case ampere","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesQuantityUnit.ampere"}
 symbol {"access":"public","declaration":"case boolean","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesSchemaTypeKind.boolean"}
+symbol {"access":"public","declaration":"case box","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesSchemaTypeKind.box"}
 symbol {"access":"public","declaration":"case builtin","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesSyntaxKind.builtin"}
 symbol {"access":"public","declaration":"case bytes","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesSchemaTypeKind.bytes"}
 symbol {"access":"public","declaration":"case comment","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesSyntaxKind.comment"}
@@ -76,6 +77,7 @@ symbol {"access":"public","declaration":"case number","kind":"swift.enum.case","
 symbol {"access":"public","declaration":"case percentage","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesSchemaTypeKind.percentage"}
 symbol {"access":"public","declaration":"case plain","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesSyntaxKind.plain"}
 symbol {"access":"public","declaration":"case point","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesSchemaTypeKind.point"}
+symbol {"access":"public","declaration":"case poly","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesSchemaTypeKind.poly"}
 symbol {"access":"public","declaration":"case quantity","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesSchemaTypeKind.quantity"}
 symbol {"access":"public","declaration":"case range","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesSchemaTypeKind.range"}
 symbol {"access":"public","declaration":"case reference","kind":"swift.enum.case","path":"GameEventScriptSyntax.GesSchemaTypeKind.reference"}

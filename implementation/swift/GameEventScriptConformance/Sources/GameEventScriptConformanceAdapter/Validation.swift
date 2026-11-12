@@ -275,6 +275,14 @@ enum Validation {
             } else if type == ":Message" {
                 try fields(input, ["type", "message"])
                 try message(input.required("message"))
+            } else if type == ":Box" || type == ":Poly" {
+                try fields(input, type == ":Box" ? ["type", "lower", "upper"] : ["type", "points"], optional: ["unit"])
+                let points = type == ":Box" ? [try input.required("lower"), try input.required("upper")] : try array(input.required("points"))
+                for point in points {
+                    try fields(point, ["type", "x", "y", "z"])
+                    try require(point["type"]?.stringValue == ":Point")
+                    for key in ["x", "y", "z"] { _ = try RuntimeValues.parseNumber(point.text(key)) }
+                }
             } else if [":Vector", ":Point"].contains(type) {
                 try fields(input, ["type", "x", "y", "z"], optional: ["unit"])
                 for key in ["x", "y", "z"] { _ = try RuntimeValues.parseNumber(input.text(key)) }

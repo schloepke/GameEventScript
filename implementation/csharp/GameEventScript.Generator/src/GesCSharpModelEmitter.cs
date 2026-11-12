@@ -45,7 +45,8 @@ internal static class GesCSharpModelEmitter
             document.Units.Add(new GesCodeUnit(name, code => TagEnum(code, name, tags, access, $"/// <summary>The tag set <c>:{name}</c>, in declared order.</summary>")));
         if (options.Bindings) document.Units.Add(new GesCodeUnit("", code => Bindings(code, layout, access, qualifier, support, computed)));
         if (options.Values) document.Units.Add(new GesCodeUnit("", code => Values(code, layout, values, qualifier, support, computed)));
-        document.Units.Add(new GesCodeUnit("", code => Support(code, support, options.Bindings || options.Values)));
+        var geometry = GesModelPlanner.UsesGeometry(layout);
+        document.Units.Add(new GesCodeUnit("", code => Support(code, support, options.Bindings || options.Values, geometry)));
         if (layout.Types.Exists(type => type.Computed.Length > 0))
             document.Units.Add(new GesCodeUnit("", code => GesComputedLibrary.Write(code, computed.HelperName, swift: false, options.Bindings || options.Values || computed.NeedsValues(layout.Types.ConvertAll(type => (type.Name, type.Computed))))));
         return document;
@@ -258,6 +259,8 @@ internal static class GesCSharpModelEmitter
         GesModelKind.Dice => "List<int>",
         GesModelKind.Point => "GesPoint",
         GesModelKind.Vector => "GesVector",
+        GesModelKind.Box => "GesBox",
+        GesModelKind.Poly => "GesPoly",
         GesModelKind.Schema => qualifier + value.Model.Schema,
         _ => Nested(value, qualifier, owner)
     };
@@ -265,7 +268,7 @@ internal static class GesCSharpModelEmitter
     private static string Nested(GesModelPlanValue value, string? qualifier, string? owner)
         => value.TagSet.Length > 0 ? qualifier + value.TagSet : owner is null ? value.Nested : qualifier + owner + "." + value.Nested;
 
-    private static bool IsReference(GesModelPlanValue value) => value.Kind is GesModelKind.Text or GesModelKind.Bytes or GesModelKind.List or GesModelKind.Dice or GesModelKind.Schema or GesModelKind.Union
+    private static bool IsReference(GesModelPlanValue value) => value.Kind is GesModelKind.Text or GesModelKind.Bytes or GesModelKind.List or GesModelKind.Dice or GesModelKind.Schema or GesModelKind.Union or GesModelKind.Poly
         || (value.Kind == GesModelKind.Tag && !value.ClosedTag);
 
     // The zero value of a property that the type's default would not give: empty texts and lists, new records, the first
@@ -308,6 +311,7 @@ internal static class GesCSharpModelEmitter
             GesModelKind.List or GesModelKind.Dice => $"new {Plain(value)}()",
             GesModelKind.Schema => $"new {value.Model.Schema}()",
             GesModelKind.Union => $"new {value.Nested}.{value.Alternatives[0].Label}({Zero(value.Alternatives[0])})",
+            GesModelKind.Poly => "new GesPoly(Array.Empty<GesPoint>())",
             _ => ""
         };
     }
@@ -321,7 +325,7 @@ internal static class GesCSharpModelEmitter
             GesModelKind.Number => value.Model.Integer ? "0L" : "0d",
             GesModelKind.Tag when value.ClosedTag => $"default({value.Nested})",
             GesModelKind.Flags => $"default({value.Nested})",
-            GesModelKind.Point or GesModelKind.Vector => $"default({Plain(value)})",
+            GesModelKind.Point or GesModelKind.Vector or GesModelKind.Box => $"default({Plain(value)})",
             _ => Initial(value)
         };
     }
@@ -452,7 +456,7 @@ internal static class GesCSharpModelEmitter
 
     // Equality and hashing helpers of the file, named after its header so that two generated files can share a namespace, and
     // the conversions that the script bindings and the plain values share.
-    private static void Support(GesSchemaPlanner.Code code, string name, bool conversions)
+    private static void Support(GesSchemaPlanner.Code code, string name, bool conversions, bool geometry)
     {
         code.Line($"/// <summary>Value equality of lists and numbers{(conversions ? " and GES value conversions" : "")} for the models of this file.</summary>");
         code.Line($"internal static class {name}");
@@ -501,12 +505,24 @@ internal static class GesCSharpModelEmitter
         code.Close();
         code.Close();
         if (conversions) Helpers(code);
+        if (conversions && geometry)
+        {
+            code.Blank();
+            code.Line("internal static bool Box(in GesValue value, GesQuantityUnit unit, out GesBox result) => Read(GesBox.FromValue(value, unit), out result);");
+            code.Blank();
+            code.Line("internal static bool Poly(in GesValue value, GesQuantityUnit unit, out GesPoly result)");
+            code.Open("{");
+            code.Line("result = GesPoly.FromValue(value, unit)!;");
+            code.Line("return result is not null;");
+            code.Close();
+        }
+
         code.Close();
     }
 
     private static string UnitName(string unit) => "GesQuantityUnit.Unit" + GesSchemaPlanner.Pascal(unit);
 
-    private static bool IsValueType(GesModelPlanValue value) => value.Kind is GesModelKind.Boolean or GesModelKind.Number or GesModelKind.Point or GesModelKind.Vector or GesModelKind.Flags
+    private static bool IsValueType(GesModelPlanValue value) => value.Kind is GesModelKind.Boolean or GesModelKind.Number or GesModelKind.Point or GesModelKind.Vector or GesModelKind.Box or GesModelKind.Flags
         || value.ClosedTag;
 
     private static string Depth(int depth) => depth.ToString(CultureInfo.InvariantCulture);
@@ -530,7 +546,7 @@ internal static class GesCSharpModelEmitter
             GesModelKind.Tag => $"{support}.Tag({expression})",
             GesModelKind.List => $"{support}.List({expression}, x{Depth(depth)} => {Encode(value.Element!, owner, "x" + Depth(depth), qualifier, support, depth + 1, plain: plain, pattern: pattern)})",
             GesModelKind.Dice => $"{support}.Dice({expression})",
-            GesModelKind.Point or GesModelKind.Vector => $"{expression}.ToValue({UnitName(value.Model.Unit)})",
+            GesModelKind.Point or GesModelKind.Vector or GesModelKind.Box or GesModelKind.Poly => $"{expression}.ToValue({UnitName(value.Model.Unit)})",
             GesModelKind.Schema => plain ? $"{expression}.ToValue()" : $"{expression}.ToGesValue()",
             _ => $"Value({expression})"
         };
@@ -559,6 +575,8 @@ internal static class GesCSharpModelEmitter
             GesModelKind.Dice => $"{support}.Dice({expression}, {target})",
             GesModelKind.Point => $"{support}.Point({expression}, {UnitName(value.Model.Unit)}, {target})",
             GesModelKind.Vector => $"{support}.Vector({expression}, {UnitName(value.Model.Unit)}, {target})",
+            GesModelKind.Box => $"{support}.Box({expression}, {UnitName(value.Model.Unit)}, {target})",
+            GesModelKind.Poly => $"{support}.Poly({expression}, {UnitName(value.Model.Unit)}, {target})",
             GesModelKind.Schema => $"Decode{value.Model.Schema}({expression}, {target})",
             _ => $"Decode{owner}{value.Nested}({expression}, {target})"
         };

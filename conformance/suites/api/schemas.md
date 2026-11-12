@@ -6204,6 +6204,611 @@ schema:
 
 ---
 
+## Test: a Box and a Poly with axis blocks
+
+A Box writes its corners `lower` and `upper` as two Points of the block's axes; a Poly writes its point count and
+then its points, each with the axes x and y.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: spatial-box-poly
+schemaApi:
+  sources:
+    - "schema :Zone as {\n  area: :Box(m) {\n    x between 0m and 100m step 1m\n    y between 0m and 3m step 1m\n  }\n  outline: :Poly(m) max 3 {\n    x between 0m and 100m step 1m\n    y between 0m and 3m step 1m\n  }\n}\n"
+  root: "Zone"
+  encode:
+    type: ":Zone"
+    entries:
+      - key: "area"
+        value:
+          type: ":Box"
+          lower:
+            type: ":Point"
+            x: "5"
+            y: "1"
+            z: "0"
+          upper:
+            type: ":Point"
+            x: "20"
+            y: "3"
+            z: "0"
+          unit: ":meter"
+      - key: "outline"
+        value:
+          type: ":Poly"
+          points:
+            - type: ":Point"
+              x: "0"
+              y: "0"
+              z: "0"
+            - type: ":Point"
+              x: "10"
+              y: "0"
+              z: "0"
+            - type: ":Point"
+              x: "0"
+              y: "2"
+              z: "0"
+          unit: ":meter"
+  decode: "85280f400140"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "85280f400140"
+  decoded:
+    value:
+      type: ":Zone"
+      entries:
+        - key: "area"
+          value:
+            type: ":Box"
+            lower:
+              type: ":Point"
+              x: "5"
+              y: "1"
+              z: "0"
+            upper:
+              type: ":Point"
+              x: "20"
+              y: "3"
+              z: "0"
+            unit: ":meter"
+        - key: "outline"
+          value:
+            type: ":Poly"
+            points:
+              - type: ":Point"
+                x: "0"
+                y: "0"
+                z: "0"
+              - type: ":Point"
+                x: "10"
+                y: "0"
+                z: "0"
+              - type: ":Point"
+                x: "0"
+                y: "2"
+                z: "0"
+            unit: ":meter"
+    byteCount: 6
+```
+
+---
+
+## Test: a Box and a Poly without axis blocks
+
+Without a block each corner takes x, y and z as binary64 values, and each point of a Poly x and y.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: spatial-box-poly-raw
+schemaApi:
+  sources:
+    - "schema :Zone as {\n  area: :Box\n  outline: :Poly max 1\n}\n"
+  root: "Zone"
+  encode:
+    type: ":Zone"
+    entries:
+      - key: "area"
+        value:
+          type: ":Box"
+          lower:
+            type: ":Point"
+            x: "-1"
+            y: "0"
+            z: "0"
+          upper:
+            type: ":Point"
+            x: "1.5"
+            y: "2"
+            z: "0.5"
+      - key: "outline"
+        value:
+          type: ":Poly"
+          points:
+            - type: ":Point"
+              x: "2"
+              y: "-0.5"
+              z: "0"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "000000000000f0bf00000000000000000000000000000000000000000000f83f0000000000000040000000000000e03f0100000000000080000000000000c07f01"
+```
+
+---
+
+## Test: a decoded Box orders its corners
+
+The corners are two Points on the wire. A decoder accepts them in any order, and the Box takes the smaller component
+on each axis as `lower` and the larger as `upper`, as creating a Box from two corners does. Writing that Box gives its
+corners in order.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: spatial-box-ordered
+schemaApi:
+  sources:
+    - "schema :Zone as {\n  area: :Box(m) {\n    x between 0m and 100m step 1m\n    y between 0m and 3m step 1m\n  }\n  outline: :Poly(m) max 3 {\n    x between 0m and 100m step 1m\n    y between 0m and 3m step 1m\n  }\n}\n"
+  root: "Zone"
+  encode:
+    type: ":Zone"
+    entries:
+      - key: "area"
+        value:
+          type: ":Box"
+          lower:
+            type: ":Point"
+            x: "20"
+            y: "1"
+            z: "0"
+          upper:
+            type: ":Point"
+            x: "5"
+            y: "3"
+            z: "0"
+          unit: ":meter"
+      - key: "outline"
+        value:
+          type: ":Poly"
+          points: []
+          unit: ":meter"
+  decode: "940a03"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "852803"
+  decoded:
+    value:
+      type: ":Zone"
+      entries:
+        - key: "area"
+          value:
+            type: ":Box"
+            lower:
+              type: ":Point"
+              x: "5"
+              y: "1"
+              z: "0"
+            upper:
+              type: ":Point"
+              x: "20"
+              y: "3"
+              z: "0"
+            unit: ":meter"
+        - key: "outline"
+          value:
+            type: ":Poly"
+            points: []
+            unit: ":meter"
+    byteCount: 3
+```
+
+---
+
+## Test: a Poly point outside the plane
+
+A Poly lies in the plane z = 0, which it does not transmit, so a point with another `z` cannot be written.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: spatial-poly-z
+schemaApi:
+  sources:
+    - "schema :Zone as {\n  outline: :Poly max 3\n}\n"
+  root: "Zone"
+  encode:
+    type: ":Zone"
+    entries:
+      - key: "outline"
+        value:
+          type: ":Poly"
+          points:
+            - type: ":Point"
+              x: "0"
+              y: "0"
+              z: "1"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    error:
+      code: "wire.typeMismatch"
+      path: "outline[]"
+```
+
+---
+
+## Test: a Poly with more points than its max
+
+### Case description
+
+```yaml
+gesBlock: case
+id: spatial-poly-too-long
+schemaApi:
+  sources:
+    - "schema :Zone as {\n  outline: :Poly max 1\n}\n"
+  root: "Zone"
+  encode:
+    type: ":Zone"
+    entries:
+      - key: "outline"
+        value:
+          type: ":Poly"
+          points:
+            - type: ":Point"
+              x: "0"
+              y: "0"
+              z: "0"
+            - type: ":Point"
+              x: "1"
+              y: "0"
+              z: "0"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    error:
+      code: "wire.tooLong"
+      path: "outline"
+```
+
+---
+
+## Test: a Box of another unit
+
+A Box keeps the unit of its corners, which must be the field's unit, as for a Point.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: spatial-box-unit
+schemaApi:
+  sources:
+    - "schema :Zone as {\n  area: :Box(m)\n}\n"
+  root: "Zone"
+  encode:
+    type: ":Zone"
+    entries:
+      - key: "area"
+        value:
+          type: ":Box"
+          lower:
+            type: ":Point"
+            x: "0"
+            y: "0"
+            z: "0"
+          upper:
+            type: ":Point"
+            x: "1"
+            y: "1"
+            z: "0"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    error:
+      code: "wire.typeMismatch"
+      path: "area"
+```
+
+---
+
+## Test: a Poly without max cannot be bound for encoding
+
+Like a List, a Poly needs a hard limit on its points.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: notencodable-poly
+schemaApi:
+  sources:
+    - "schema :Zone as {\n  outline: :Poly(m)\n}\n"
+  root: "Zone"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.notEncodable"
+    line: 2
+    column: 12
+```
+
+---
+
+## Test: Box and Poly are built-in type names
+
+A declaration cannot take the name of a built-in type, so `Box` and `Poly` name no schema.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-poly-builtin-name
+schemaApi:
+  sources:
+    - "schema :Poly as {\n  a: :Boolean\n}\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.duplicateName"
+    line: 1
+    column: 1
+```
+
+---
+
+## Test: a Poly has no z axis
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-poly-axis
+schemaApi:
+  sources:
+    - "schema :Zone as {\n  outline: :Poly max 4 {\n    z between 0 and 1\n  }\n}\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.syntax"
+    line: 3
+    column: 5
+```
+
+---
+
+## Test: a dump of a Box and a Poly
+
+A Box and its corners have no line of their own, only their axes; a Poly has a line with its count.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: dump-box-poly
+schemaApi:
+  sources:
+    - "schema :Zone as {\n  area: :Box(m) {\n    x between 0m and 100m step 1m\n    y between 0m and 3m step 1m\n  }\n  outline: :Poly(m) max 3 {\n    x between 0m and 100m step 1m\n    y between 0m and 3m step 1m\n  }\n}\n"
+  root: "Zone"
+  dump: "940a0700"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  dump:
+    text: "area.lower.x bit=0 width=7 value=20\narea.lower.y bit=7 width=2 value=1\narea.upper.x bit=9 width=7 value=5\narea.upper.y bit=16 width=2 value=3\noutline bit=18 width=2 value=count=1\noutline[].x bit=20 width=7 value=0\noutline[].y bit=27 width=2 value=0\nbytes 4\n"
+    valid: true
+```
+
+---
+
+## Test: a delta of a Box
+
+A Box is a nested delta of its corners, and each corner one of its axes.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delta-box
+schemaApi:
+  sources:
+    - "schema :Zone as {\n  area: :Box(m) {\n    x between 0m and 100m step 1m\n    y between 0m and 3m step 1m\n  }\n  outline: :Poly(m) max 3 {\n    x between 0m and 100m step 1m\n    y between 0m and 3m step 1m\n  }\n}\n"
+  root: "Zone"
+  deltaEncode:
+    record: "852803"
+    baseline: "850c03"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  deltaEncoded:
+    bytes: "1905"
+```
+
+---
+
+## Test: the description of a Box and a Poly
+
+### Case description
+
+```yaml
+gesBlock: case
+id: describe-box-poly
+schemaApi:
+  sources:
+    - "schema :Zone as {\n  area: :Box(m) {\n    y between 0m and 3m\n  }\n  outline: :Poly max 8\n}\n"
+  root: "Zone"
+  bind: false
+  describe: true
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  description:
+    name: "Zone"
+    kind: "Schema"
+    fields:
+      - name: "area"
+        alternatives:
+          - kind: "Box"
+            unit: "meter"
+            axes:
+              - name: "y"
+                lower: "0e0"
+                upper: "3e0"
+      - name: "outline"
+        alternatives:
+          - kind: "Poly"
+            max: 8
+```
+
+---
+
+## Test: a Box and a Poly in a document
+
+A document has no geometry literal: a Box is the Map of its corners `lower` and `upper`, and a Poly the List of its
+points, each within the axes of the block.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: document-box-poly
+schemaApi:
+  sources:
+    - "schema :Zone as {\n  area: :Box(m) {\n    x between 0m and 100m\n    y between 0m and 3m\n  }\n  outline: :Poly max 3\n}\n"
+  document: ":Schema(:Zone)\narea: [lower: :Point(1m, 0m), upper: :Point(20m, 3m)]\noutline: [:Point(0, 0), :Point(4, 0), :Point(0, 3)]\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  document:
+    ok: true
+```
+
+---
+
+## Test: a document Box without a corner
+
+### Case description
+
+```yaml
+gesBlock: case
+id: document-box-missing-corner
+schemaApi:
+  sources:
+    - "schema :Zone as {\n  area: :Box(m)\n}\n"
+  document: ":Schema(:Zone)\narea: [lower: :Point(1m, 0m)]\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  document:
+    error:
+      code: "document.missingField"
+      line: 2
+      column: 7
+```
+
+---
+
+## Test: a document Poly with a point outside its range
+
+### Case description
+
+```yaml
+gesBlock: case
+id: document-poly-range
+schemaApi:
+  sources:
+    - "schema :Zone as {\n  outline: :Poly max 3 {\n    x between 0 and 10\n    y between 0 and 10\n  }\n}\n"
+  document: ":Schema(:Zone)\noutline: [:Point(0, 0), :Point(11, 0)]\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  document:
+    error:
+      code: "document.outOfRange"
+      line: 2
+      column: 25
+```
+
+---
+
 ## Test: a message with arguments and tags
 
 Arguments follow in signature order, then one bit per declared tag.
@@ -20871,7 +21476,7 @@ id: keyed-nested-field
 kind: schemaApi
 level: atomic
 schemaApi:
-  sources: ["schema :Item as {\n  id: :Number integer between 0 and 255 key\n  hp: :Number integer between 0 and 15\n  on: :Boolean\n}\n\nschema :Box as {\n  items: :List(:Item) max 5\n}\n\nschema :Top as {\n  box: :Box\n}\n"]
+  sources: ["schema :Item as {\n  id: :Number integer between 0 and 255 key\n  hp: :Number integer between 0 and 15\n  on: :Boolean\n}\n\nschema :Crate as {\n  items: :List(:Item) max 5\n}\n\nschema :Top as {\n  crate: :Crate\n}\n"]
   root: "Top"
   deltaEncode: {"record": "0a280206", "baseline": "0928"}
   deltaDecode: {"delta": "43040c00", "baseline": "0928"}

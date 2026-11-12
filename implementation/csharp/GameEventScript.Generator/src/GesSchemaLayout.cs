@@ -162,6 +162,7 @@ internal enum GesLayoutKind
     List,
     Point,
     Vector,
+    Box,
     Schema,
     Union,
     Nothing,
@@ -194,6 +195,7 @@ internal sealed class GesLayoutEncoding
     internal bool TagName;
     internal long MaxCount;
     internal bool Dice;
+    internal bool Poly;
     internal bool Keyed;
     internal int PositionWidth;
     internal GesLayoutField? Element;
@@ -201,8 +203,9 @@ internal sealed class GesLayoutEncoding
     // A recursive List: how many records of its schema nest at most, and 0 for every other List.
     internal int Depth;
 
-    // Point and Vector axes, union alternatives and schema references.
+    // Point and Vector axes, the corners lower and upper of a Box, union alternatives and schema references.
     internal List<GesLayoutField> Axes = [];
+    internal List<GesLayoutField> Corners = [];
     internal List<GesLayoutField> Alternatives = [];
     internal string Schema = "";
 }
@@ -398,16 +401,23 @@ internal static class GesSchemaLayoutBuilder
                 encoding.Kind = type.Kind == GesSchemaTypeKind.Point ? GesLayoutKind.Point : GesLayoutKind.Vector;
                 encoding.Unit = UnitName(type.Kind, type.Unit);
                 index++;
-                for (var axis = 0; axis < 3 && index < node.Next; axis++)
-                {
-                    ref readonly var axisNode = ref nodes[index];
-                    var bounds = type.Axes.Count > 0 ? type.Axes[axis] : null;
-                    var axisEncoding = new GesLayoutEncoding();
-                    Number(in axisNode, GesSchemaTypeKind.Number, GesQuantityUnit.UnitNone, bounds?.Lower, bounds?.Upper, axisEncoding);
-                    encoding.Axes.Add(new GesLayoutField { Name = axisNode.Name, Path = axisNode.Path, Encoding = axisEncoding });
-                    index++;
-                }
-
+                Axes(nodes, ref index, start, type, encoding);
+                return encoding;
+            case GesSchemaTypeKind.Box:
+                // Two corners, each a Point of the block's axes.
+                encoding.Kind = GesLayoutKind.Box;
+                encoding.Unit = UnitName(type.Kind, type.Unit);
+                index++;
+                encoding.Corners.Add(Corner(nodes, ref index, type));
+                encoding.Corners.Add(Corner(nodes, ref index, type));
+                return encoding;
+            case GesSchemaTypeKind.Poly:
+                // A List of Points with the axes x and y.
+                List(in node, encoding);
+                encoding.Poly = true;
+                encoding.Unit = UnitName(type.Kind, type.Unit);
+                index++;
+                encoding.Element = Corner(nodes, ref index, type);
                 return encoding;
             case GesSchemaTypeKind.Reference:
                 encoding.Kind = GesLayoutKind.Schema;
@@ -423,6 +433,29 @@ internal static class GesSchemaLayoutBuilder
 
         index++;
         return encoding;
+    }
+
+    // The axes of a Point, a Box corner or a Poly point, whose group node ends at `group`'s Next.
+    private static void Axes(GesSchemaNode[] nodes, ref int index, int group, GesSchemaType type, GesLayoutEncoding encoding)
+    {
+        for (var axis = 0; axis < 3 && index < nodes[group].Next; axis++)
+        {
+            ref readonly var axisNode = ref nodes[index];
+            var bounds = type.Axes.Count > 0 ? type.Axes[axis] : null;
+            var axisEncoding = new GesLayoutEncoding();
+            Number(in axisNode, GesSchemaTypeKind.Number, GesQuantityUnit.UnitNone, bounds?.Lower, bounds?.Upper, axisEncoding);
+            encoding.Axes.Add(new GesLayoutField { Name = axisNode.Name, Path = axisNode.Path, Encoding = axisEncoding });
+            index++;
+        }
+    }
+
+    private static GesLayoutField Corner(GesSchemaNode[] nodes, ref int index, GesSchemaType type)
+    {
+        var group = index;
+        var corner = new GesLayoutEncoding { Kind = GesLayoutKind.Point, Unit = UnitName(type.Kind, type.Unit) };
+        index++;
+        Axes(nodes, ref index, group, type, corner);
+        return new GesLayoutField { Name = nodes[group].Name, Path = nodes[group].Path, Encoding = corner };
     }
 
     private static void List(in GesSchemaNode node, GesLayoutEncoding encoding)
@@ -497,5 +530,5 @@ internal static class GesSchemaLayoutBuilder
     }
 
     internal static string UnitName(GesSchemaTypeKind kind, GesQuantityUnit unit)
-        => kind is GesSchemaTypeKind.Quantity or GesSchemaTypeKind.Point or GesSchemaTypeKind.Vector && unit != GesQuantityUnit.UnitNone ? unit.ToTypeName() : "none";
+        => kind is GesSchemaTypeKind.Quantity or GesSchemaTypeKind.Point or GesSchemaTypeKind.Vector or GesSchemaTypeKind.Box or GesSchemaTypeKind.Poly && unit != GesQuantityUnit.UnitNone ? unit.ToTypeName() : "none";
 }

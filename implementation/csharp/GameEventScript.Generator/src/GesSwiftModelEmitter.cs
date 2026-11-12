@@ -218,6 +218,8 @@ internal static class GesSwiftModelEmitter
         GesModelKind.Dice => "[Int]",
         GesModelKind.Point => "GesPoint",
         GesModelKind.Vector => "GesVector",
+        GesModelKind.Box => "GesBox",
+        GesModelKind.Poly => "GesPoly",
         GesModelKind.Schema => value.Model.Schema,
         _ => value.Nested
     };
@@ -287,7 +289,7 @@ internal static class GesSwiftModelEmitter
             GesModelKind.Tag => $"{support}.tag({expression})",
             GesModelKind.List => $".list({expression}.map {{ {Encode(value.Element!, owner, "$0", helper, support, plain: plain)} }})",
             GesModelKind.Dice => $"{support}.dice({expression})",
-            GesModelKind.Point or GesModelKind.Vector => $"{expression}.value(unit: {Unit(value.Model.Unit)})",
+            GesModelKind.Point or GesModelKind.Vector or GesModelKind.Box or GesModelKind.Poly => $"{expression}.value(unit: {Unit(value.Model.Unit)})",
             GesModelKind.Schema => plain ? $"{expression}.toValue()" : $"{expression}.gesValue()",
             _ => $"{helper}.value({expression})"
         };
@@ -311,6 +313,8 @@ internal static class GesSwiftModelEmitter
             GesModelKind.Dice => $"{support}.dice({expression})",
             GesModelKind.Point => $"GesPoint({expression}, unit: {Unit(value.Model.Unit)})",
             GesModelKind.Vector => $"GesVector({expression}, unit: {Unit(value.Model.Unit)})",
+            GesModelKind.Box => $"GesBox({expression}, unit: {Unit(value.Model.Unit)})",
+            GesModelKind.Poly => $"GesPoly({expression}, unit: {Unit(value.Model.Unit)})",
             GesModelKind.Schema => plain ? $"{helper}.decode{value.Model.Schema}({expression})" : $"{value.Model.Schema}(gesValue: {expression})",
             _ => $"{helper}.decode{owner}{value.Nested}({expression})"
         };

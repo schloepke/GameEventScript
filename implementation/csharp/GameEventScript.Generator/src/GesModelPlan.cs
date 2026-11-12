@@ -283,6 +283,12 @@ internal static class GesModelPlanner
         foreach (var alternative in value.Alternatives) References(layout, alternative.Value, seen, ordered);
     }
 
+    // Whether a model holds a Box or a Poly, whose conversions the support class then offers.
+    internal static bool UsesGeometry(GesModelLayout layout) => layout.Types.Exists(type => type.Fields.Exists(field => UsesGeometry(field.Value)));
+
+    private static bool UsesGeometry(GesModelValue value)
+        => value.Kind is GesModelKind.Box or GesModelKind.Poly || (value.Element is { } element && UsesGeometry(element.Value)) || value.Alternatives.Exists(alternative => UsesGeometry(alternative.Value));
+
     // The type a script sees for a field: a built-in kind with its unit, or a type name; a union keeps its value as `Value`.
     internal static (string? Kind, string Unit, string? TypeName) Declared(GesModelPlanValue value) => value.Kind switch
     {
@@ -297,6 +303,8 @@ internal static class GesModelPlanner
         GesModelKind.Dice => ("Dice", "none", null),
         GesModelKind.Point => ("Point", value.Model.Unit, null),
         GesModelKind.Vector => ("Vector", value.Model.Unit, null),
+        GesModelKind.Box => (null, "none", "Box"),
+        GesModelKind.Poly => (null, "none", "Poly"),
         GesModelKind.Schema => (null, "none", value.Model.Schema),
         _ => (null, "none", "Value")
     };
@@ -365,9 +373,10 @@ internal static class GesModelPlanner
                 if (value.Max is { } diceMax) text.Append(" max ").Append(diceMax);
                 if (value.Lower is not null) text.Append(" between ").Append(Decimal(value.Lower)).Append(" and ").Append(Decimal(value.Upper!));
                 break;
-            case GesModelKind.Point or GesModelKind.Vector:
-                text.Append(value.Kind == GesModelKind.Point ? ":Point" : ":Vector");
+            case GesModelKind.Point or GesModelKind.Vector or GesModelKind.Box or GesModelKind.Poly:
+                text.Append(':').Append(value.Kind.ToString());
                 if (value.Unit != "none") text.Append('(').Append(value.Unit).Append(')');
+                if (value.Kind == GesModelKind.Poly && value.Max is { } polyMax) text.Append(" max ").Append(polyMax);
                 if (value.Axes.Count > 0) text.Append(" { ").Append(string.Join(", ", value.Axes)).Append(" }");
                 break;
             case GesModelKind.Schema:

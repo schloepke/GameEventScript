@@ -128,7 +128,7 @@ enum GesSchemaLayoutJson {
 
     private static func encoding(_ json: inout Writer, _ encoding: GesLayoutEncoding) {
         json.beginValueObject()
-        json.string("kind", kind(encoding.kind))
+        json.string("kind", encoding.poly ? "poly" : kind(encoding.kind))
         switch encoding.kind {
         case .integer, .quantized, .float:
             json.string("type", encoding.type)
@@ -162,6 +162,17 @@ enum GesSchemaLayoutJson {
         case .bytes:
             json.number("maxCount", encoding.maxCount)
             json.number("width", Int64(encoding.width))
+        case .list where encoding.poly:
+            json.string("unit", encoding.unit)
+            json.number("maxCount", encoding.maxCount)
+            json.number("width", Int64(encoding.width))
+            json.key("element")
+            field(&json, encoding.element!, member: false, value: true)
+        case .box:
+            json.string("unit", encoding.unit)
+            json.beginArray("corners")
+            for corner in encoding.corners { field(&json, corner, member: false) }
+            json.endArray()
         case .list:
             json.boolean("dice", encoding.dice)
             json.number("maxCount", encoding.maxCount)
@@ -202,6 +213,7 @@ enum GesSchemaLayoutJson {
         case .list: "list"
         case .point: "point"
         case .vector: "vector"
+        case .box: "box"
         case .schema: "schema"
         case .union: "union"
         case .nothing: "nothing"

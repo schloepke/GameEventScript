@@ -329,7 +329,10 @@ record with computed fields as a script record on both VMs.
 (`:List(:Self) max n depth d`, specs/Schemas.md#recursion) unrolls per level at binding; only the recursive schema's
 generated methods take a level and order its deeper paths last, and every schema without one must generate unchanged
 code. `conformance/fixtures/SchemaGeneration/tree.gess` has checked-in goldens (`TreeWire`, `TreeModel`) and native tests
-in both ports.
+in both ports. `:Box` binds as two Point corners and `:Poly` as a List of Points (specs/Schemas.md#geometry); generated
+wire code holds `GesBox` and a Poly's reusable Points with a `GesPoly` view, models `GesBox` and `GesPoly`, and
+`conformance/fixtures/SchemaGeneration/geometry.gess` has goldens (`GeometryWire`, `GeometryModel`) and native tests in both
+ports.
 
 ## Host and runtime
 

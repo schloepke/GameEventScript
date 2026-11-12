@@ -7,7 +7,7 @@ The schemaApi cases with literal parameters name a root and give bytes to decode
 delta to encode or decode. For every such schema the C# CLI generates C# and Swift, which compile into one C# program
 (C# 9, warnings as errors) and one Swift executable (Swift 6 language mode, warnings as errors). Each program decodes the
 given bytes with the generated type and writes the record again: an expected error must have the same code and path, a
-valid record the same byte count and the same bytes. A delta is encoded from the decoded record and baseline, and decoded
+valid record the same byte count and the same bytes, or the encoded bytes of the case where it also encodes a value. A delta is encoded from the decoded record and baseline, and decoded
 against the baseline into the expected record. Operations on types without delta methods are counted as skipped.
 The programs check shared baselines (GES_CHECK_SHARING); the unchecked form of release builds also compiles in both
 languages, and a small C# program holds its remaining guarantee on the fleet fixture, qualified by a control without the
@@ -104,7 +104,11 @@ def cases(paths):
                 operations.append(("decode", api["decode"], "", limit, failure(decoded["error"])))
             elif "value" in decoded:
                 size = decoded.get("byteCount")
-                operations.append(("decode", api["decode"], "", limit, ("ok", size if size is not None else len(api["decode"]) // 2)))
+                # A case that also encodes a value gives the bytes the decoded record writes, which differ only where the value
+                # orders its parts, as a Box its corners.
+                written = (expected.get("encoded") or {}).get("bytes")
+                outcome = ("ok", size if size is not None else len(api["decode"]) // 2) + ((written,) if isinstance(written, str) else ())
+                operations.append(("decode", api["decode"], "", limit, outcome))
                 names = computed_names(api["sources"], api["root"])
                 if names:
                     entries = {entry["key"]: entry["value"] for entry in decoded["value"].get("entries", [])}
@@ -204,13 +208,15 @@ def csharp_program(entries):
         else:
             lines += ["                if (operation != \"decode\") return \"none\";"]
         # A decoded record converts into a GES value, through the embedded schema sources, and that value back into an equal one;
-        # equal, not the same bytes, since a Dice value orders its rolls.
+        # equal, not the same bytes, since a Dice value orders its rolls. External values such as a Box compare by identity, so
+        # two of them are alike when their JSON snapshots are.
         wrap = "" if conversion == "Value" else "GameEventScript.Runtime.Values.GesValue.GesMessage"
         lines += ["                var count = record.Read(data, limit);", f"                var copy = new {name}();", f"                var value = record.To{conversion}();",
-                  f"                copy.Read{conversion}(value);", f"                if (!{wrap}(copy.To{conversion}()).Equals({wrap}(value))) return \"value mismatch\";",
+                  f"                copy.Read{conversion}(value);", f"                if (!Same({wrap}(copy.To{conversion}()), {wrap}(value))) return \"value mismatch\";",
                   "                return \"ok \" + count + \" \" + Hex(record.ToBytes());", "            }"]
     lines += ["            default: return \"none\";", "        }", "    }", "",
               "    private static byte[] Bytes(string text) => Convert.FromHexString(text == \".\" ? \"\" : text);", "",
+              "    private static bool Same(GameEventScript.Runtime.Values.GesValue a, GameEventScript.Runtime.Values.GesValue b) => a.Equals(b) || a.ToJson() == b.ToJson();", "",
               "    private static void Main()", "    {", "        string? line;", "        while ((line = Console.ReadLine()) != null)", "        {",
               "            var parts = line.Split(' ');", "            var limit = parts[4] == \"-\" ? long.MaxValue : long.Parse(parts[4]);",
               "            try { Console.WriteLine(Run(int.Parse(parts[0]), parts[1], Bytes(parts[2]), Bytes(parts[3]), limit)); }",
@@ -253,7 +259,7 @@ def swift_program(entries):
         label = conversion.lower()
         lines += ["        let count = try record.read(from: data, byteLimit: limit)", "        do {", f"            {binding} copy = Case{index}.{root}()",
                   f"            let value = try record.to{conversion}()", f"            try copy.read({label}: value)",
-                  f"            if try copy.to{conversion}() != value {{ return \"value mismatch\" }}",
+                  f"            if try copy.to{conversion}() != value, try copy.to{conversion}().json() != value.json() {{ return \"value mismatch\" }}",
                   "        } catch {", "            return \"value error \\(error)\"", "        }", "        return \"ok \\(count) \" + hex(try record.encoded())"]
     lines += ["    default:", "        return \"none\"", "    }", "}", "",
               "while let line = readLine() {", "    let parts = line.split(separator: \" \", omittingEmptySubsequences: false)",
@@ -279,7 +285,8 @@ def verdict(expected, observed, data):
         return None if parts == ["ok", str(expected[2]), expected[1]] else f"expected record {expected[1]} after {expected[2]} bytes, got {observed!r}"
     if parts[0] != "ok" or int(parts[1]) != expected[1]:
         return f"expected {expected[1]} bytes, got {observed!r}"
-    return None if parts[2] == data[:2 * expected[1]] else f"wrote {parts[2]} instead of {data[:2 * expected[1]]}"
+    written = expected[2] if len(expected) > 2 else data[:2 * expected[1]]
+    return None if parts[2] == written else f"wrote {parts[2]} instead of {written}"
 
 
 def self_test():
@@ -289,6 +296,8 @@ def self_test():
     assert verdict(("error", "wire.truncated", None), "error wire.truncated x", "") is None
     assert verdict(("error", "wire.truncated", None), "error wire.invalidIndex x", "")
     assert verdict(("ok", 2), "ok 2 0a0b", "0a0b0c") is None
+    assert verdict(("ok", 2, "0b0a"), "ok 2 0b0a", "0a0b0c") is None
+    assert verdict(("ok", 2, "0b0a"), "ok 2 0a0b", "0a0b0c")
     assert verdict(("ok", 2), "ok 2 0a0c", "0a0b0c")
     assert verdict(("ok", 2), "ok 3 0a0b0c", "0a0b0c")
     assert verdict(("ok", 2), "error wire.truncated x", "0a0b")

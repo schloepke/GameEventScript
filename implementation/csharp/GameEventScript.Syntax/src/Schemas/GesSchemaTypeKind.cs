@@ -61,7 +61,13 @@ public enum GesSchemaTypeKind : byte
     Bytes,
 
     /// <summary>Flags of a closed set, as a Map of the set members.</summary>
-    Flags
+    Flags,
+
+    /// <summary>An axis-aligned Box between two Points.</summary>
+    Box,
+
+    /// <summary>A polygon of Points in the plane z = 0.</summary>
+    Poly
 }
 
 internal static class GesSchemaTypeNames
@@ -78,6 +84,8 @@ internal static class GesSchemaTypeNames
         "Quantity" => GesSchemaTypeKind.Quantity,
         "Point" => GesSchemaTypeKind.Point,
         "Vector" => GesSchemaTypeKind.Vector,
+        "Box" => GesSchemaTypeKind.Box,
+        "Poly" => GesSchemaTypeKind.Poly,
         "Tag" => GesSchemaTypeKind.Tag,
         "Text" => GesSchemaTypeKind.Text,
         "Bytes" => GesSchemaTypeKind.Bytes,

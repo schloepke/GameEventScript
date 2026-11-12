@@ -62,11 +62,6 @@ here.
 - Offer a C# incremental source generator for `[GesExtension]` and `[GesType]` declarations, so that
   Unity IL2CPP builds need neither Reflection nor `link.xml` entries for annotated types, with the
   same rules as the Reflection registries and the Swift macros.
-- Add `:Box(unit) { ... }` and `:Poly(unit) max n { ... }` to the schema language, with per-axis
-  ranges like `:Point`, so that generated wire and model code holds `GesBox` and `GesPoly` fields.
-  Until then a schema writes a Box as two `:Point` fields and a Poly as `:List(:Point) max n`, and
-  a program builds the runtime types from them; this touches the reader, canonical form, binding,
-  wire format, dump, value path and all four emitters.
 - Bind selected schema parameters of generated code at run time: `ges schema generate
   --dynamic-param name` would turn only the constants that depend on the named parameters into
   fields of a generated binding value, created from `GesSchemaParameters` and checked against the

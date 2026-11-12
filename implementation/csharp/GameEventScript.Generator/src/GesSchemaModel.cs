@@ -79,7 +79,9 @@ internal enum GesModelKind
     Schema,
     Union,
     Nothing,
-    Flags
+    Flags,
+    Box,
+    Poly
 }
 
 internal sealed class GesModelValue
@@ -285,9 +287,16 @@ internal static class GesModelLayoutBuilder
                 value.Lower = Bound(type.Lower);
                 value.Upper = Bound(type.Upper);
                 break;
-            case GesSchemaTypeKind.Point or GesSchemaTypeKind.Vector:
-                value.Kind = type.Kind == GesSchemaTypeKind.Point ? GesModelKind.Point : GesModelKind.Vector;
+            case GesSchemaTypeKind.Point or GesSchemaTypeKind.Vector or GesSchemaTypeKind.Box or GesSchemaTypeKind.Poly:
+                value.Kind = type.Kind switch
+                {
+                    GesSchemaTypeKind.Point => GesModelKind.Point,
+                    GesSchemaTypeKind.Vector => GesModelKind.Vector,
+                    GesSchemaTypeKind.Box => GesModelKind.Box,
+                    _ => GesModelKind.Poly
+                };
                 value.Unit = GesSchemaLayoutBuilder.UnitName(type.Kind, type.Unit);
+                value.Max = type.Max;
                 foreach (var axis in type.Axes) value.Axes.Add(axis.Name);
                 break;
             case GesSchemaTypeKind.Reference:
@@ -414,9 +423,14 @@ internal static class GesModelLayoutJson
                 Optional(json, "lower", value.Lower);
                 Optional(json, "upper", value.Upper);
                 break;
-            case GesModelKind.Point or GesModelKind.Vector:
+            case GesModelKind.Point or GesModelKind.Vector or GesModelKind.Box:
                 json.String("unit", value.Unit);
                 json.Strings("axes", value.Axes);
+                break;
+            case GesModelKind.Poly:
+                json.String("unit", value.Unit);
+                json.Strings("axes", value.Axes);
+                Optional(json, "max", value.Max);
                 break;
             case GesModelKind.Schema:
                 json.String("name", value.Schema);
@@ -455,6 +469,8 @@ internal static class GesModelLayoutJson
         GesModelKind.Dice => "dice",
         GesModelKind.Point => "point",
         GesModelKind.Vector => "vector",
+        GesModelKind.Box => "box",
+        GesModelKind.Poly => "poly",
         GesModelKind.Schema => "schema",
         GesModelKind.Union => "union",
         _ => "nothing"

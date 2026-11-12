@@ -31,6 +31,29 @@ def value(raw):
                 raise InvalidDocument('Invalid spatial unit')
             result['unit'] = numeric.UNITS[raw['unit']]
         return result
+    if kind in (':Box', ':Poly') and 'entries' not in raw:
+        # A shape of the geometry library: unitless Points and the unit of the whole shape. A Record of that name has entries.
+        shape = {'type', 'lower', 'upper'} if kind == ':Box' else {'type', 'points'}
+        if set(raw) not in (shape, shape | {'unit'}):
+            raise InvalidDocument('Invalid geometry value fields')
+        points = [raw['lower'], raw['upper']] if kind == ':Box' else raw['points']
+        if not isinstance(points, list):
+            raise InvalidDocument('Invalid polygon points')
+        checked = []
+        for point in points:
+            if not isinstance(point, dict) or point.get('type') != ':Point' or 'unit' in point:
+                raise InvalidDocument('A geometry point is a unitless :Point')
+            checked.append(value(point))
+        result = dict(raw)
+        if kind == ':Box':
+            result['lower'], result['upper'] = checked
+        else:
+            result['points'] = checked
+        if 'unit' in raw:
+            if not isinstance(raw['unit'], str) or raw['unit'] not in numeric.UNITS:
+                raise InvalidDocument('Invalid geometry unit')
+            result['unit'] = numeric.UNITS[raw['unit']]
+        return result
     if kind in (':Range.int64', ':Range.binary64'):
         if set(raw) != {'type', 'from', 'to', 'step'}:
             raise InvalidDocument('Invalid range fields')

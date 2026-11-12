@@ -168,6 +168,13 @@ enum GesModelPlanner {
     }
 
     // The type a script sees for a field: a built-in kind with its unit, or a type name; a union keeps its value as `Value`.
+    // Whether a model holds a Box or a Poly, whose conversions the support class then offers.
+    static func usesGeometry(_ layout: GesModelLayout) -> Bool { layout.types.contains { $0.fields.contains { usesGeometry($0.value) } } }
+
+    private static func usesGeometry(_ value: GesModelValue) -> Bool {
+        value.kind == .box || value.kind == .poly || (value.element.map { usesGeometry($0.value) } ?? false) || value.alternatives.contains { usesGeometry($0.value) }
+    }
+
     static func declared(_ value: GesModelPlanValue) -> (kind: String?, unit: String, typeName: String?) {
         switch value.kind {
         case .boolean: ("Boolean", "none", nil)
@@ -181,6 +188,8 @@ enum GesModelPlanner {
         case .dice: ("Dice", "none", nil)
         case .point: ("Point", value.model.unit, nil)
         case .vector: ("Vector", value.model.unit, nil)
+        case .box: (nil, "none", "Box")
+        case .poly: (nil, "none", "Poly")
         case .schema: (nil, "none", value.model.schema)
         case .union, .nothing: (nil, "none", "Value")
         }
@@ -242,9 +251,10 @@ enum GesModelPlanner {
             text += ":Dice"
             if let max = value.max { text += " max \(max)" }
             if let lower = value.lower, let upper = value.upper { text += " between " + decimal(lower) + " and " + decimal(upper) }
-        case .point, .vector:
-            text += value.kind == .point ? ":Point" : ":Vector"
+        case .point, .vector, .box, .poly:
+            text += value.kind == .point ? ":Point" : value.kind == .vector ? ":Vector" : value.kind == .box ? ":Box" : ":Poly"
             if value.unit != "none" { text += "(\(value.unit))" }
+            if value.kind == .poly, let max = value.max { text += " max \(max)" }
             if !value.axes.isEmpty { text += " { " + value.axes.joined(separator: ", ") + " }" }
         case .schema:
             text += ":" + value.schema

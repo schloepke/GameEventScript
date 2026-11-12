@@ -55,6 +55,9 @@ internal sealed class GesPlanValue
     internal int Node;
     internal GesLayoutEncoding Encoding = new();
     internal List<GesPlanValue> Axes = [];
+
+    // The corners of a Box, as the Points that its Min and Max hold.
+    internal List<GesPlanValue> Corners = [];
     internal List<GesPlanValue> Alternatives = [];
     internal GesPlanValue? Element;
     internal GesPlanType? Item;
@@ -311,6 +314,15 @@ internal static class GesSchemaPlanner
                 }
 
                 break;
+            case GesLayoutKind.Box:
+                var cornerNode = node + 1;
+                foreach (var corner in encoding.Corners)
+                {
+                    value.Corners.Add(Value(context, corner.Encoding, corner.Name == "lower" ? "Min" : "Max", corner.Name, cornerNode));
+                    cornerNode += 1 + corner.Encoding.Axes.Count;
+                }
+
+                break;
             case GesLayoutKind.Union:
                 var alternativeNode = node + 1;
                 foreach (var alternative in encoding.Alternatives)
@@ -372,6 +384,8 @@ internal static class GesSchemaPlanner
                 return Recursive(encoding, owner) ? 1 : 1 + Count(layout, encoding.Element!.Encoding, counts);
             case GesLayoutKind.Point or GesLayoutKind.Vector:
                 return 1 + encoding.Axes.Count;
+            case GesLayoutKind.Box:
+                return 1 + 2 * (1 + encoding.Corners[0].Encoding.Axes.Count);
             case GesLayoutKind.Union:
                 var total = 1;
                 foreach (var alternative in encoding.Alternatives) total += Count(layout, alternative.Encoding, counts);
@@ -442,6 +456,9 @@ internal static class GesSchemaPlanner
                 break;
             case GesLayoutKind.Point or GesLayoutKind.Vector:
                 foreach (var axis in encoding.Axes) paths.Add(axis.Path);
+                break;
+            case GesLayoutKind.Box:
+                foreach (var corner in encoding.Corners) Paths(layout, corner.Path, corner.Encoding, paths, cache);
                 break;
             case GesLayoutKind.Union:
                 foreach (var alternative in encoding.Alternatives) Paths(layout, alternative.Path, alternative.Encoding, paths, cache);

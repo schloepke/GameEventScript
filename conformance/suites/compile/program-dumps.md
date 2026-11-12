@@ -1392,7 +1392,7 @@ Start:				 // handler Start(items, a, b)
 
 .source-line "compile.program-dumps.optimized-access-and-branches.ges" 4 |     let sorted be items[:order by item => item descending]
 					CheckType r6, r0(items), List
-					JumpIfFalse r6, Start_11
+					JumpIfNotTrue r6, Start_11
 					IteratorCreateOrJump r6, r0(items), Start_11
 					OrderBuilderCreate r7
 Start_5:			IteratorNext r8, r6, Start_8
@@ -1409,7 +1409,7 @@ Start_12:			CheckType r6, r3(sorted), List
 					CheckType r6, r3(sorted), Map
 					JumpIfTrue r6, Start_18
 					CheckType r6, r3(sorted), Custom
-					JumpIfFalse r6, Start_26
+					JumpIfNotTrue r6, Start_26
 Start_18:			IteratorCreateOrJump r6, r3(sorted), Start_26
 					GroupBuilderCreate r7
 Start_20:			IteratorNext r8, r6, Start_23

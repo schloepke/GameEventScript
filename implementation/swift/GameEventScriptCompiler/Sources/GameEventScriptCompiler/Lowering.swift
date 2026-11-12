@@ -326,7 +326,8 @@ extension GesCompiler {
         if let definition = definitions.values.first(where: { $0.name == name }) {
             throw compileError(definition.kind == "predicate" ? "validate.wrongPredicateArity" : "validate.wrongFunctionArity", location, symbol: name, kind: definition.kind == "predicate" ? .predicate : .function)
         }
-        throw compileError("validate.missingCallable", location, symbol: name, kind: .globalDefinition)
+        // The validator reports unknown positional calls; a labeled one reaching lowering is unresolved, as in C#.
+        throw compileError("compile.unresolvedSymbol", location, symbol: name, kind: .globalDefinition, phase: .compile)
     }
 
     func predicateExpression(_ e: GesExpression, _ d: Int, _ r: GesRoutine, _ scope: GesScope) throws {

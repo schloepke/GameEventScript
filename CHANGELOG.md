@@ -535,6 +535,18 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   of every port. Runtime behavior does not depend on it.
 
 ### Fixed
+- `nothing = nothing` and `nothing <> nothing` fold to `nothing`, as the VM computes them, and C# folds dice pattern faces
+  such as `[:has pair of (1.5 + 1.5)]` as Swift does; `(50%) / (true)` folds to `50%`.
+- A negated decimal random bound such as `random from -20.0 to -10.0`, a decimal constant and `random 1 to pi` draw
+  binary64 values in both ports.
+- C# types constants in function and predicate bodies by their literal and `let` bindings by their value, as Swift does,
+  so `predicate active() be $flag` compiles and `emit after $delay` with a unitless constant is
+  `validate.invalidTypeConstructor` in both ports.
+- Swift rejects `:Record` and unknown quantity units as parameter types like C#, lowers fold seeds and unit-literal
+  indexes like C#, and reports an unresolved labeled call as `compile.unresolvedSymbol`.
+- `emit emit Done()` compiles in both ports instead of crashing the syntax binder.
+- The branch simplification inverts only exact branch pairs, so a `nothing` condition keeps its branch.
+- `compare-compiler-output.py --mutants N` compiles seeded broken variants of corpus programs with both CLIs.
 - C# compiles a call whose unlabeled first argument is followed by labeled ones, such as `scale(2, factor: 3)` for
   `scale(_ value, factor)`, as Swift does.
 - Unparenthesized extension calls such as `:math.double pi` take the same operands in both ports.

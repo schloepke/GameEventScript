@@ -61,7 +61,8 @@ extension GesCompiler {
         }
     }
 
-    func assemblySymbolicReads(_ e: GesExpression, handlerTarget: Bool = false) throws -> [GesExpression] {
+    // A non-scalar operand fails at its instruction line, as in C#.
+    func assemblySymbolicReads(_ e: GesExpression, at line: GesSourceLocation, handlerTarget: Bool = false) throws -> [GesExpression] {
         var operands: [GesExpression]
         switch e.kind {
         case .call(let name, let args): operands = (handlerTarget ? [.init(.name(name), e.location)] : []) + args.map(\.value)
@@ -73,7 +74,7 @@ extension GesCompiler {
         }
         for operand in operands {
             if case .name = operand.kind { continue }
-            if !assemblyScalar(operand) { throw assemblyFailure(operand.location, "Symbolic arguments must be scalar literals or names.") }
+            if !assemblyScalar(operand) { throw assemblyFailure(line, "Symbolic arguments must be scalar literals or names.") }
         }
         return operands
     }

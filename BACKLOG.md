@@ -162,6 +162,13 @@ here.
 
 ## Performance and optimizer follow-ups
 
+- Scope-based register reuse for named locals: today every `let`, loop and `if let` binding pins its own register for the
+  whole routine, so the frame grows with the number of bindings rather than with the values live at once (a generated
+  handler with about 1,300 bindings exceeds the default 512 registers). Give named registers intervals from their first
+  write to the end of their scope, extended across loop back edges, allocate them with the temporaries' linear scan in
+  both compilers, keep debug symbols per range, and measure the performance corpus. Deferred because it changes every
+  bytecode snapshot and should land with the instruction-format review before 1.0.
+
 - Investigate the Swift/C# execution-time gap observed with release 0.3.0 on
   the same machine and the same precompiled `compute-benchmark.gesb`. User
   measurements with `hyperfine -w 10 -r 100` reported mean elapsed times of

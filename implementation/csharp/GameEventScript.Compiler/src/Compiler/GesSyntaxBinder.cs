@@ -531,7 +531,9 @@ internal sealed partial class GesSyntaxBinder
                 var start = c.Advance();
                 var kind = start.Kind == Emit ? GesPublishStatementKind.Emit : GesPublishStatementKind.Publish;
                 c.SkipNewLines();
-                if (c.IsNode(NodeKind.SendExpression))
+                // A statement's delayed send starts at `after`; a send expression as the sent value, as in
+                // `emit emit Done()`, starts with its own keyword and binds as an ordinary value.
+                if (c.IsNode(NodeKind.SendExpression) && c.Current.Kind is not (Emit or Publish))
                 {
                     var send = BindSend(c.TakeNode(), kind, start);
                     return Set(new GesExpressionStatementNode(send), start, c.Previous);

@@ -29,7 +29,10 @@ extension GesSyntaxBinder {
         case .identifier: return node(.name(token.text), token, token)
         default:
             guard let constant = Self.mathConstants[token.kind] else { throw Mismatch(token: 0) }
-            return node(.literal(.float(constant)), token, token)
+            // A math constant is a binary64 literal, so as a random bound it draws continuously, as in C#.
+            let result = node(.literal(.float(constant)), token, token)
+            result.decimalLiteral = true
+            return result
         }
     }
 

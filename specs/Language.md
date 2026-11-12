@@ -2210,8 +2210,12 @@ formatted with the same text representation used by `as :Text`, so
 
 `random` is a built-in random expression form. Bounds are evaluated left to
 right. Two integral, unitless bounds draw a uniformly distributed signed-64-bit
-integer including both ordered bounds. Otherwise compatible finite numeric
-bounds draw a Binary64 value by scaling a `[0, 1)` source; final Binary64
+integer including both ordered bounds. A bound written as a decimal literal,
+such as `10.0`, also negated (`-10.0`), through a constant whose literal is
+decimal, or as a math constant such as `pi`, selects the Binary64 draw even
+when its value is integral; the spelling is decided at compile time, so a bound
+read from a binding or a call counts by its value. Otherwise compatible finite
+numeric bounds draw a Binary64 value by scaling a `[0, 1)` source; final Binary64
 rounding may nevertheless equal the upper bound. Reversed bounds are accepted.
 Equal bounds return that bound without consuming random state. Incompatible
 units, absent values, non-numeric values, and invalid non-finite bounds produce

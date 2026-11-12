@@ -416,8 +416,9 @@ final class GesSyntaxBinder {
             try c.expectWord("asm")
             kind = .assembly(try assemblyBlock(&c, nil, allowSend: true))
         case .emitStatement, .publishStatement:
-            // A delayed send statement is a send expression directly after its keyword.
-            if let send = node.children.first, send.kind == .sendExpression, send.firstToken == node.firstToken + 1 {
+            // A delayed send statement is a send expression after its keyword that starts at `after`; a send expression
+            // as the sent value, as in `emit emit Done()`, starts with its own keyword and binds as an ordinary value.
+            if let send = node.children.first, send.kind == .sendExpression, ![.emit, .publish].contains(c.tokens[send.firstToken].kind) {
                 let publish = try c.advance().kind == .publish
                 let send = try bindSend(c.takeNode(.sendExpression), publish: publish, start: start)
                 return GesStatement(kind: .expression(send), location: send.location)

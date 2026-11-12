@@ -586,7 +586,8 @@ compiles every corpus program with both CLIs, requires equal ordered diagnostic 
 start positions for rejected programs, checks that checked-in `examples/**/*.gesb` match a
 fresh C# compilation without debug information, and ratchets the remaining differences
 against `scripts/compiler-output-baseline.txt` (`--update-baseline` after a deliberate
-change); its controls are `python3 scripts/test-compiler-output-controls.py`. The full
+change); `--mutants N` also compiles seeded broken variants of single-source programs, which must agree without a
+baseline (`test-swift.sh` uses 1500); its controls are `python3 scripts/test-compiler-output-controls.py`. The full
 Swift test script runs both. `python3 scripts/test-constructor-forms.py` runs a matrix of
 type-constructor forms through both CLIs as source, `parse`, `parse strict` and document
 and requires equal values, codes and first positions; the corpus owns the expected

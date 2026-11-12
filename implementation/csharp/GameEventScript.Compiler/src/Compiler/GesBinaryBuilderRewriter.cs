@@ -379,13 +379,9 @@ internal sealed partial class GesBinaryBuilder
                 if (folded is not null) return folded;
             }
 
+            // Equality with a nothing operand is nothing, also `nothing = nothing` (specs/Language.md#equality).
             if (left.Kind != ConstantKind.Nothing && right.Kind != ConstantKind.Nothing) return null;
-            return instruction.OpCode switch
-            {
-                GesBytecodeOpCode.Equal => CreateLoadBoolean(instruction, left.Kind == ConstantKind.Nothing && right.Kind == ConstantKind.Nothing),
-                GesBytecodeOpCode.NotEqual => CreateLoadBoolean(instruction, left.Kind != ConstantKind.Nothing || right.Kind != ConstantKind.Nothing),
-                _ => null
-            };
+            return instruction.OpCode is GesBytecodeOpCode.Equal or GesBytecodeOpCode.NotEqual ? CreateLoad(instruction, GesBytecodeOpCode.LoadNothing, null) : null;
         }
 
         // The modulo result takes the divisor's sign, as the VM computes it.
@@ -517,11 +513,13 @@ internal sealed partial class GesBinaryBuilder
             return changed;
         }
 
+        // Only exact inverses under three-valued logic: nothing and other indeterminate values are neither true nor false,
+        // so JumpIfFalse has no inverse opcode and stays.
         private static GesBytecodeOpCode? ReadInvertedBranchOpcode(InstructionPlan instruction)
             => instruction.OpCode switch
             {
-                GesBytecodeOpCode.JumpIfTrue => GesBytecodeOpCode.JumpIfFalse,
-                GesBytecodeOpCode.JumpIfFalse or GesBytecodeOpCode.JumpIfNotTrue => GesBytecodeOpCode.JumpIfTrue,
+                GesBytecodeOpCode.JumpIfTrue => GesBytecodeOpCode.JumpIfNotTrue,
+                GesBytecodeOpCode.JumpIfNotTrue => GesBytecodeOpCode.JumpIfTrue,
                 _ => null
             };
     }

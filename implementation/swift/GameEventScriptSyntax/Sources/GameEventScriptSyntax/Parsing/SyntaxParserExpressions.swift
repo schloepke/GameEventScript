@@ -320,8 +320,10 @@ extension GesSyntaxParser {
         }
         if matchWord("between") { return try betweenTest(input) }
         if matchWord("at") {
-            let mode = advance()
-            guard mode.isIdentifier("least") || mode.isIdentifier("most") else { throw failure("Expected least or most.", previous) }
+            // As in C#, the mode may follow a line break, and a missing one fails at the next token without consuming it.
+            newlines()
+            guard current.isIdentifier("least") || current.isIdentifier("most") else { throw failure("Expected least or most.") }
+            advance()
             role(.keyword)
             return try combined(input, try expression(13))
         }
@@ -415,8 +417,9 @@ extension GesSyntaxParser {
         if op == "round" {
             try expectWord("half")
             newlines()
-            let token = advance()
-            guard token.kind == .identifier, ["even", "up", "down"].contains(token.text) else { throw failure("Expected rounding mode.", previous) }
+            // As in C#, a missing mode fails at the next token without consuming it.
+            guard currentKind == .identifier, ["even", "up", "down"].contains(current.text) else { throw failure("Expected rounding mode.") }
+            advance()
             role(.keyword)
         }
     }

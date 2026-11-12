@@ -268,6 +268,8 @@ struct GesAstOptimizer {
     @inline(never) func fold(_ e: GesExpression) -> GesExpression {
         if case .literal = e.kind { return e }
         guard let value = Self.evaluate(e), let literal = Self.literal(value, e.location) else { return e }
+        // A negated decimal literal such as `-10.0` keeps its decimal spelling (specs/Language.md#random-values).
+        if case .unary(.negate, let operand) = e.kind { literal.decimalLiteral = operand.decimalLiteral }
         return literal
     }
 
@@ -420,7 +422,8 @@ struct GesAstOptimizer {
         // Quotients of differing units follow the derivation table, as in the VM; percentages keep their own rules.
         case .divide where r != 0 && (sameUnit || left.valueKind != .percentage && right.valueKind != .percentage):
             guard let quotientUnit = GesCompilerSupport.quotientUnit(left.unit, right.unit) else { return nil }
-            if left.valueKind == .percentage && [.integer, .float].contains(right.valueKind) { return .percentage(l / r) }
+            // As the VM, a percentage divided by a number or a Boolean stays a percentage.
+            if left.valueKind == .percentage && [.integer, .float, .boolean].contains(right.valueKind) { return .percentage(l / r) }
             return number(l / r, quotientUnit, preferInteger: false)
         case .integerDivide where r != 0 && sameUnit:
             return number((l / r).rounded(.down), divideUnit(left.unit), preferInteger: true)

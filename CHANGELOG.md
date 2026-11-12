@@ -257,9 +257,12 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   `schema.invalidExpression`. Generated code is plain binary64 and Boolean code in the language's own operators, such as
   `duration <= 0.0 ? 0.0 : energy / duration`, with a small `GesComputed` helper type for the rules plain code lacks;
   only a field where whole numbers beyond 2^53 could meet keeps the exact-value helpers.
+- A schema union may span lines: a `|` may end a line or start the next one, with comments and blank lines between the
+  alternatives, in fields, arguments and List elements. `ges schema format` breaks a union before each further
+  alternative once it no longer fits 100 columns or holds an axis block.
 - `ges schema generate --model <group> --documents` (option `Documents`) lets models read GES document text: each root gets
-  C# `FromDocument(text)` (Swift `init(document:)`) and the generation a `<Namespace>Document` type that reads any root by its
-  `:Schema(:Name)` header. The document is checked against the embedded schemas, defaults apply, and errors carry their
+  C# `FromDocument(text)` (Swift `init(document:)`) and the generation a type that reads any root by its `:Schema(:Name)`
+  header: `Document` inside the namespace, `ModelDocument` without one. The document is checked against the embedded schemas, defaults apply, and errors carry their
   `document.*` or `wire.*` code, line, column and field path; a missing or other header is the new
   `document.schemaMismatch`. The Runtime's `GesSchemaDocument` does this for generated code, and `GesDocumentException.Path`
   (Swift `GesDocumentError.path`) names the field.

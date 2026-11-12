@@ -4879,6 +4879,164 @@ schema:
 
 ---
 
+## Test: a union continues on a line that starts with |
+
+A line whose first token is `|` continues the union of the field before it, and the field's marker follows the last alternative.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: union-leading-bar
+schemaApi:
+  sources:
+    - "schema :S as {\n  shape: :Text max 8\n    | :Number optional\n}\n"
+  root: "S"
+  bind: false
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  canonical: "gess1\nschema S\nfield shape Text max 8 | Number optional\n"
+```
+
+---
+
+## Test: a union continues after a | that ends a line
+
+
+
+### Case description
+
+```yaml
+gesBlock: case
+id: union-trailing-bar
+schemaApi:
+  sources:
+    - "schema :S as {\n  shape: :Text max 8 |\n    :Number optional\n}\n"
+  root: "S"
+  bind: false
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  canonical: "gess1\nschema S\nfield shape Text max 8 | Number optional\n"
+```
+
+---
+
+## Test: comments and blank lines between alternatives
+
+
+
+### Case description
+
+```yaml
+gesBlock: case
+id: union-comment-between
+schemaApi:
+  sources:
+    - "schema :S as {\n  shape: :Text max 8 // a name\n\n    // or a number\n    | :Number optional\n}\n"
+  root: "S"
+  bind: false
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  canonical: "gess1\nschema S\nfield shape Text max 8 | Number optional\n"
+```
+
+---
+
+## Test: a list element union spans lines
+
+The element union of a List and its labels may span lines like a field's.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: union-list-element-lines
+schemaApi:
+  sources:
+    - "schema :S as {\n  items: :List(id: :Text max 8\n    | count: :Number) max 2\n}\n"
+  root: "S"
+  bind: false
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  canonical: "gess1\nschema S\nfield items List(Text max 8 | Number) max 2\n"
+```
+
+---
+
+## Test: a field that starts with |
+
+A field never starts with `|`; one that does continues nothing.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-union-bar-continues-nothing
+schemaApi:
+  sources:
+    - "schema :S as {\n  | :Text max 8\n}\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.syntax"
+    line: 2
+    column: 3
+```
+
+---
+
+## Test: an error inside a continued alternative
+
+The error has the position of the alternative on its own line.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-union-continued-alternative
+schemaApi:
+  sources:
+    - "schema :S as {\n  shape: :Text max 8\n    | :Number between 5 and 1\n}\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidRange"
+    line: 3
+    column: 23
+```
+
+---
+
 ## Test: recursion without depth
 
 The source is rejected.

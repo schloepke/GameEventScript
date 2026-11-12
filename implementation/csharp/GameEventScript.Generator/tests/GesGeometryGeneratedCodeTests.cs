@@ -123,8 +123,8 @@ public sealed class GesGeometryGeneratedCodeTests
         Assert.AreEqual(new GesPoly([new GesPoint(1, 1), new GesPoint(2, 2)]), zone.Rings[0]);
 
         // The document type chooses the root by the header.
-        var document = Model.ModelDocument.FromDocument(ZoneDocument);
-        Assert.AreEqual(zone, ((Model.ModelDocument.Zone)document).Value);
+        var document = Model.Document.FromDocument(ZoneDocument);
+        Assert.AreEqual(zone, ((Model.Document.Zone)document).Value);
     }
 
     [TestMethod]
@@ -134,7 +134,7 @@ public sealed class GesGeometryGeneratedCodeTests
         Assert.AreEqual((GesSchemaDocument.SchemaMismatch, 1, 1, ""), (other.Code, other.Line, other.Column, other.Path));
         StringAssert.Contains(other.Message, ":Area");
         StringAssert.Contains(other.Message, ":Zone");
-        var range = Assert.ThrowsExactly<GesDocumentException>(() => Model.ModelDocument.FromDocument(ZoneDocument.Replace("id: 7", "id: 300")));
+        var range = Assert.ThrowsExactly<GesDocumentException>(() => Model.Document.FromDocument(ZoneDocument.Replace("id: 7", "id: 300")));
         Assert.AreEqual(("document.outOfRange", 2, 5, "id"), (range.Code, range.Line, range.Column, range.Path));
         var unit = Assert.ThrowsExactly<GesDocumentException>(() => Model.Zone.FromDocument(ZoneDocument.Replace("[:Point(1m, 1m),", "[:Point(1s, 1s),")));
         Assert.AreEqual(("document.fieldType", 6, 10, "rings[][]"), (unit.Code, unit.Line, unit.Column, unit.Path));

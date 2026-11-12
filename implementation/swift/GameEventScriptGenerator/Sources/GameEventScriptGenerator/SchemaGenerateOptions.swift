@@ -64,7 +64,8 @@ public struct GesSchemaGenerateOptions: Sendable {
     public var bindings: Bool
     /// Whether generated model roots also read GES document text: each root an `init(document:)` (C# `FromDocument`) that
     /// requires the header `:Schema(:Name)`, checks the document against the embedded schema sources, applies defaults and
-    /// converts, and one type `<Namespace>Document` per generation that reads any root by its header. It includes `values`.
+    /// converts, and one type per generation that reads any root by its header, `Document` inside the namespace and
+    /// `ModelDocument` without one. It includes `values`.
     /// The code reads text and does no file I/O. Only model generation takes it.
     public var documents: Bool
     /// How the code is divided into files. `.none`, the default, is the single text of `generate` and `generateModels`; the

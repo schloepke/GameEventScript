@@ -87,9 +87,9 @@ public sealed class GesSchemaGenerateOptions
     /// <summary>
     /// Gets or sets whether generated model roots also read GES document text: each root a <c>FromDocument</c> (Swift
     /// <c>init(document:)</c>) that requires the header <c>:Schema(:Name)</c>, checks the document against the embedded schema
-    /// sources, applies defaults and converts, and one type <c>&lt;Namespace&gt;Document</c> per generation that reads any
-    /// root by its header. It includes <see cref="Values"/>. The code reads text and does no file I/O. Only model generation
-    /// takes it.
+    /// sources, applies defaults and converts, and one type per generation that reads any root by its header, <c>Document</c>
+    /// inside the namespace and <c>ModelDocument</c> without one. It includes <see cref="Values"/>. The code reads text and
+    /// does no file I/O. Only model generation takes it.
     /// </summary>
     public bool Documents { get; set; }
 

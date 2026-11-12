@@ -105,6 +105,36 @@ final class ToolTests: XCTestCase {
         XCTAssertEqual(result.output, "")
     }
 
+    func testSchemaFormatBreaksLongUnions() throws {
+        let source = try file(
+            "union.gess",
+            "schema :Unit as {\n"
+                + "  shape: point: :Point(m) { x between 0m and 2000m step 0.1m, y between 0m and 2000m step 0.1m }\n"
+                + "    | box: :Box(m) { x between 0m and 2000m step 0.1m }\n"
+                + "    // a comment\n"
+                + "    | id: :Text max 64 optional\n"
+                + "  name: :Text max 8 |\n"
+                + "    :Number\n"
+                + "}\n"
+        )
+        let format = run(["schema", "format", source])
+        XCTAssertEqual(format.code, 0, format.error)
+        XCTAssertEqual(
+            format.output,
+            "schema :Unit as {\n"
+                + "  shape: point: :Point(m) {\n"
+                + "      x between 0m and 2000m step 0.1m\n"
+                + "      y between 0m and 2000m step 0.1m\n"
+                + "    }\n"
+                + "    | box: :Box(m) {\n"
+                + "      x between 0m and 2000m step 0.1m\n"
+                + "    }\n"
+                + "    | id: :Text max 64 optional\n"
+                + "  name: :Text max 8 | :Number\n"
+                + "}\n"
+        )
+    }
+
     func testSchemaLayoutCoversSeveralRoots() throws {
         let nested = try file("nested.gess", "parameter width: :Quantity(m)\nschema :Inner as {\n  x: :Quantity(m) between 0m and width step 1m\n}\nschema :Outer as {\n  inner: :Inner\n}\nschema :Other as {\n  inner: :Inner\n}\n")
         let layout = run(["schema", "layout", nested, "--root", "Outer", "--root", "Other", "--param", "width=8m"])

@@ -314,15 +314,25 @@
         return GesSchemaDefaultSyntax(value: try value(), offset: offset)
     }
 
+    // Alternatives separated by `|`, which may end a line or start the next one; comments and blank lines may stand between.
     private mutating func union() throws -> [GesSchemaTypeSyntax] {
         var alternatives = [try alternative()]
         skipSpaces()
-        while consume(124) {
+        while consumeBar() {
             skipTrivia()
             alternatives.append(try alternative())
             skipSpaces()
         }
         return alternatives
+    }
+
+    // A `|` on this line, or as the first token of a later line, which continues the union; a field never starts with it.
+    private mutating func consumeBar() -> Bool {
+        let start = position
+        skipTrivia()
+        if consume(124) { return true }
+        position = start
+        return false
     }
 
     // A type with an optional label in front, as in `bind: :Loadout_UnitBind`; a type itself starts with ':'.

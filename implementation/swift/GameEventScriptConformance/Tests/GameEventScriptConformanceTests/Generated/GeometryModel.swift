@@ -254,7 +254,7 @@ enum GeometryModel {
     }
 
     /// A GES document of one of the model roots of this file, chosen by its header `:Schema(:Name)`.
-    enum GeometryModelDocument: Hashable, Sendable {
+    enum Document: Hashable, Sendable {
         /// A document of `:Zone`.
         case zone(Zone)
 

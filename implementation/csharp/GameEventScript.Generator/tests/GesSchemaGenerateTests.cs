@@ -15,6 +15,16 @@ public sealed class GesSchemaGenerateTests
 
     private static string Code(Action action) => Assert.ThrowsExactly<GesGeneratorException>(action).Code;
 
+    private static string Models(string source, string space) => GesSchemaGenerator.GenerateModels(GesSchemaSet.Parse(source), ["Document"], new GesSchemaGenerateOptions { Namespace = space, Documents = true });
+
+    [TestMethod]
+    public void TheDocumentTypeTakesNoGeneratedName()
+    {
+        // In a namespace the reading type is Document, which a model root of that name would also be.
+        Assert.AreEqual("generate.nameCollision", Code(() => Models("schema :Document as { a: :Boolean }\n", "Game.Units")));
+        StringAssert.Contains(Models("schema :Document as { a: :Boolean }\n", ""), "abstract class ModelDocument");
+    }
+
     [TestMethod]
     public void NamesFollowTheLanguage()
     {

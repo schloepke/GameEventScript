@@ -11,6 +11,13 @@ final class GenerateTests: XCTestCase {
         try GesSchemaGenerator.generate(try GesSchemaSet(parsing: source), roots: [root], parameters: GesSchemaParameters(), options: GesSchemaGenerateOptions(language: language, namespace: namespace))
     }
 
+    func testTheDocumentTypeTakesNoGeneratedName() throws {
+        // In a namespace the reading type is Document, which a model root of that name would also be.
+        let set = try GesSchemaSet(parsing: "schema :Document as { a: :Boolean }\n")
+        XCTAssertEqual(code { try GesSchemaGenerator.generateModels(set, roots: ["Document"], options: GesSchemaGenerateOptions(language: .swift, namespace: "Units", documents: true)) }, "generate.nameCollision")
+        XCTAssertTrue(try GesSchemaGenerator.generateModels(set, roots: ["Document"], options: GesSchemaGenerateOptions(language: .swift, documents: true)).contains("enum ModelDocument"))
+    }
+
     private func code<Result>(_ body: () throws -> Result) -> String {
         do {
             _ = try body()

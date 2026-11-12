@@ -708,7 +708,7 @@ changed, missing and surplus file.
 `--wire <group>` takes the roots that the schemas mark `wire(group)`, and `--model <group>` generates plain
 model types of the schemas marked `model(group)`, which are never encoded; `--bindings` also offers those models to
 scripts as external types, `--values` converts them to and from the plain values that wire records read and write, and
-`--documents` adds `FromDocument` (Swift `init(document:)`) per root and a `<Namespace>Document` type that reads GES document
+`--documents` adds `FromDocument` (Swift `init(document:)`) per root and a `Document` type (`ModelDocument` without a namespace) that reads GES document
 text by its `:Schema(:Name)` header, checked against the embedded schemas, with errors at their line, column and field path.
 
 `layout` prints the language-neutral generation layout of one or more roots, or of every

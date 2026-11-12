@@ -383,11 +383,12 @@ internal sealed partial class GesSchemaSourceReader
         return new GesSchemaDefaultSyntax { Value = ReadValue(), Offset = offset };
     }
 
+    // Alternatives separated by `|`, which may end a line or start the next one; comments and blank lines may stand between.
     private GesSchemaTypeSyntax[] ReadUnion()
     {
         var alternatives = new List<GesSchemaTypeSyntax> { ReadAlternative() };
         SkipSpaces();
-        while (Consume('|'))
+        while (ConsumeBar())
         {
             SkipTrivia();
             alternatives.Add(ReadAlternative());
@@ -395,6 +396,16 @@ internal sealed partial class GesSchemaSourceReader
         }
 
         return alternatives.ToArray();
+    }
+
+    // A `|` on this line, or as the first token of a later line, which continues the union; a field never starts with it.
+    private bool ConsumeBar()
+    {
+        var start = _position;
+        SkipTrivia();
+        if (Consume('|')) return true;
+        _position = start;
+        return false;
     }
 
     // A type with an optional label in front, as in `bind: :Loadout_UnitBind`; a type itself starts with ':'.

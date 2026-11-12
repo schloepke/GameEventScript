@@ -363,14 +363,14 @@ namespace GameEventScript.Tests.Generator.Geometry.Model
     }
 
     /// <summary>A GES document of one of the model roots of this file, chosen by its header <c>:Schema(:Name)</c>.</summary>
-    internal abstract class ModelDocument
+    internal abstract class Document
     {
-        private ModelDocument()
+        private Document()
         {
         }
 
         /// <summary>A document of <c>:Zone</c>.</summary>
-        public sealed class Zone : ModelDocument
+        public sealed class Zone : Document
         {
             /// <summary>Holds a record.</summary>
             /// <param name="value">The record.</param>
@@ -388,7 +388,7 @@ namespace GameEventScript.Tests.Generator.Geometry.Model
         /// <returns>The document of the root its header names.</returns>
         /// <exception cref="GesDocumentException">The text is no document, names no root of this file (<c>document.schemaMismatch</c>), or
         /// breaks its schema, with the <c>document.*</c> or <c>wire.*</c> code, the line, the column and the field path.</exception>
-        public static ModelDocument FromDocument(string text)
+        public static Document FromDocument(string text)
         {
             var document = __GesModelDocuments051a0fba84e20ad6.Read(text, "Zone");
             try

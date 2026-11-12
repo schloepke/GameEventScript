@@ -139,8 +139,26 @@ line. A source may start with a BOM. Fields, lets and axes are separated by comm
 and repeated or trailing separators are allowed. Arguments, members and tags are separated by
 exactly one comma. A line break is allowed only in these places: between declarations, after
 `as`, inside the parentheses of an argument list, a member list, a tag set or a `:List`, inside
-the braces of a schema or an axis block, and after `|`. Each field, with its type and marker,
-otherwise stays on one line. A role is written without spaces, as in `wire(world)`, and stands on the line of its
+the braces of a schema or an axis block, and before or after each `|` of a union. Each field, with its type and marker,
+otherwise stays on one line.
+
+> **Since: Unreleased** — unions across lines
+
+A union may span lines wherever it stands: in a field, an argument, a List element and with labeled alternatives. A `|` may
+end a line with the next alternative on the following line, or start a line, which then continues the union of the field
+before it; a field never starts with `|`, so a field whose first token is `|` is `schema.syntax`. Comments and blank lines
+may stand between the alternatives, and the field's marker, `default` or `computed by` follows the last one, as on one line:
+
+```gess
+schema :Unit_Marker as {
+  shape: point: :Point(m) { x between 0m and 2000m step 0.1m, y between 0m and 2000m step 0.1m }
+    | box: :Box(m) { x between 0m and 2000m step 0.1m, y between 0m and 2000m step 0.1m }
+    // A polygon of up to 16 points.
+    | poly: :Poly(m) max 16 { x between 0m and 2000m step 0.1m, y between 0m and 2000m step 0.1m } optional
+}
+```
+
+An error inside a continued alternative has the line and column of that alternative. A role is written without spaces, as in `wire(world)`, and stands on the line of its
 declaration.
 
 ### Declarations
@@ -1433,7 +1451,9 @@ ges schema generate world.gess panels.gess --model view --language swift --names
 ```
 
 `format` prints the recommended layout and, like document formatting, drops comments; input
-and output must differ. An option a command does not use is a usage error.
+and output must differ. A schema field's union stays on one line while the field fits 100 Unicode scalars and holds no axis
+block; otherwise each further alternative takes a line of its own, starting with `| ` and indented one level beyond the
+field, with the marker after the last alternative. Message arguments stay on the line of their message. An option a command does not use is a usage error.
 `hash` prints the schema hash and, with parameters, the binding hash. A `--param` of `hash`
 or `dump` for a parameter the root does not reach fails with `schema.unknownName`, so that a
 misspelled name cannot go unnoticed; naming a parameter twice is a usage error. `dump` makes binary
@@ -1718,11 +1738,11 @@ I/O: text goes in, a model comes out.
   [document checking](#document-checking) does, and converts its entries as `init(value:)` does, so fields it leaves out take
   their [defaults](#defaults). A Box written as the Map of its corners and a Poly as the List of its points become the
   geometry library's values first.
-- **Per generation:** one type `<Namespace>Document`, named after the last part of the namespace, `ModelDocument` without
-  one: a Swift enum with one case per model root, holding its model, and a C# abstract class with one sealed subclass per
+- **Per generation:** one type `Document` inside the namespace, which already qualifies it (Swift `Units.Document`, C#
+  `Game.Units.Document`), and `ModelDocument` without a namespace, where `Document` would collide too easily: a Swift enum with one case per model root, holding its model, and a C# abstract class with one sealed subclass per
   root, named after it and holding `Value`. Its `init(document:)` (C# `FromDocument`) accepts the header of any root and
-  chooses the case by it, so a host that reads files of several kinds needs no switch on schema names. A model type of that
-  name is `generate.nameCollision`.
+  chooses the case by it, so a host that reads files of several kinds needs no switch on schema names. A model root, tag set
+  or other generated type of that name is `generate.nameCollision`.
 - **Errors** are the document error of the port (`GesDocumentError`, `GesDocumentException`) with its code, line, column
   and field path: a reading error with its `document.*` code and no path, a schema check error with its `document.*` code
   and the path of the field as the value path names it, such as `parts[].kind`, and a `wire.*` error of the conversion at

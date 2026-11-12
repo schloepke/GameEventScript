@@ -192,10 +192,26 @@
         output += group == "default" ? "\(role) " : "\(role)(\(group)) "
     }
 
+    // The width up to which a schema field's union stays on one line, as documents print their containers.
+    private static let lineWidth = 100
+
+    // A schema field's union stays on one line while it fits; past that, or with an axis block, each further alternative
+    // takes a line of its own with a leading `|`, one level deeper than the field. Message arguments stay on their line.
     private static func field(_ field: GesSchemaFieldSyntax, _ output: inout String, _ indent: String) {
+        if indent.isEmpty || field.alternatives.count < 2 { return fieldText(field, &output, indent, broken: false) }
+        var inline = ""
+        fieldText(field, &inline, indent, broken: false)
+        if !inline.unicodeScalars.contains("\n") && indent.unicodeScalars.count + inline.unicodeScalars.count <= lineWidth {
+            output += inline
+        } else {
+            fieldText(field, &output, indent, broken: true)
+        }
+    }
+
+    private static func fieldText(_ field: GesSchemaFieldSyntax, _ output: inout String, _ indent: String, broken: Bool) {
         if field.unlabeled { output += "_ " }
         output += "\(field.name): "
-        union(field.alternatives, &output, indent)
+        union(field.alternatives, &output, indent, broken: broken)
         if field.marker == .optional { output += " optional" } else if field.marker == .key { output += " key" }
         if let computed = field.computed {
             output += " computed by "
@@ -214,11 +230,12 @@
         }
     }
 
-    private static func union(_ alternatives: [GesSchemaTypeSyntax], _ output: inout String, _ indent: String) {
+    private static func union(_ alternatives: [GesSchemaTypeSyntax], _ output: inout String, _ indent: String, broken: Bool = false) {
+        let inner = broken ? indent + "  " : indent
         for (index, alternative) in alternatives.enumerated() {
-            if index > 0 { output += " | " }
+            if index > 0 { output += broken ? "\n" + inner + "| " : " | " }
             if !alternative.label.isEmpty { output += alternative.label + ": " }
-            type(alternative, &output, indent)
+            type(alternative, &output, inner)
         }
     }
 

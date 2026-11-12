@@ -105,11 +105,39 @@ internal static class GesSchemaFormatter
         builder.Append('\n');
     }
 
+    // The width up to which a schema field's union stays on one line, as documents print their containers.
+    private const int LineWidth = 100;
+
+    // A schema field's union stays on one line while it fits; past that, or with an axis block, each further alternative
+    // takes a line of its own with a leading `|`, one level deeper than the field. Message arguments stay on their line.
     private static void Field(GesSchemaFieldSyntax field, StringBuilder builder, string indent)
+    {
+        if (indent.Length == 0 || field.Alternatives.Length < 2)
+        {
+            FieldText(field, builder, indent, broken: false);
+            return;
+        }
+
+        var inline = new StringBuilder();
+        FieldText(field, inline, indent, broken: false);
+        var text = inline.ToString();
+        if (text.IndexOf('\n') < 0 && Scalars(indent) + Scalars(text) <= LineWidth) builder.Append(text);
+        else FieldText(field, builder, indent, broken: true);
+    }
+
+    private static int Scalars(string text)
+    {
+        var count = 0;
+        foreach (var c in text)
+            if (!char.IsLowSurrogate(c)) count++;
+        return count;
+    }
+
+    private static void FieldText(GesSchemaFieldSyntax field, StringBuilder builder, string indent, bool broken)
     {
         if (field.Unlabeled) builder.Append("_ ");
         builder.Append(field.Name).Append(": ");
-        Union(field.Alternatives, builder, indent);
+        Union(field.Alternatives, builder, indent, broken);
         if (field.Marker == GesSchemaFieldMarker.Optional) builder.Append(" optional");
         else if (field.Marker == GesSchemaFieldMarker.Key) builder.Append(" key");
         if (field.Computed is { } computed)
@@ -263,13 +291,14 @@ internal static class GesSchemaFormatter
         _ => "or"
     };
 
-    private static void Union(GesSchemaTypeSyntax[] alternatives, StringBuilder builder, string indent)
+    private static void Union(GesSchemaTypeSyntax[] alternatives, StringBuilder builder, string indent, bool broken = false)
     {
+        var inner = broken ? indent + "  " : indent;
         for (var index = 0; index < alternatives.Length; index++)
         {
-            if (index > 0) builder.Append(" | ");
+            if (index > 0) builder.Append(broken ? "\n" + inner + "| " : " | ");
             if (alternatives[index].Label.Length > 0) builder.Append(alternatives[index].Label).Append(": ");
-            Type(alternatives[index], builder, indent);
+            Type(alternatives[index], builder, inner);
         }
     }
 

@@ -283,11 +283,11 @@ internal static class GesModelPlanner
         foreach (var alternative in value.Alternatives) References(layout, alternative.Value, seen, ordered);
     }
 
-    // The type that reads a document of any root of a generation: named after the last part of the namespace, or ModelDocument
-    // without one. It must not take the name of a generated type.
+    // The type that reads a document of any root of a generation: Document within a namespace, which qualifies it, and
+    // ModelDocument without one, where Document would collide too easily. It must not take the name of a generated type.
     internal static string DocumentType(GesModelLayout layout, List<string> space)
     {
-        var name = space.Count > 0 ? space[space.Count - 1] + "Document" : "ModelDocument";
+        var name = space.Count > 0 ? "Document" : "ModelDocument";
         if (layout.Types.Exists(type => type.Name == name) || layout.Protocols.Exists(protocol => protocol.Name == name) || TagSets(layout).Exists(set => set.Name == name))
             throw new GesGeneratorException(GesGeneratorException.NameCollision, $"The document type '{name}' takes the name of a generated type; choose another namespace.");
         return name;

@@ -84,7 +84,7 @@ final class GeneratedGeometryCodeTests: XCTestCase {
         XCTAssertEqual(zone.rings[0], GesPoly([GesPoint(x: 1, y: 1), GesPoint(x: 2, y: 2)]))
 
         // The document type chooses the root by the header.
-        XCTAssertEqual(try GeometryModel.GeometryModelDocument(document: zoneDocument), .zone(zone))
+        XCTAssertEqual(try GeometryModel.Document(document: zoneDocument), .zone(zone))
     }
 
     private func documentError(_ text: String, file: StaticString = #filePath, line: UInt = #line, _ read: (String) throws(GesDocumentError) -> Void) -> GesDocumentError? {
@@ -102,7 +102,7 @@ final class GeneratedGeometryCodeTests: XCTestCase {
         XCTAssertEqual(other?.code, GesSchemaDocument.schemaMismatch)
         XCTAssertEqual(other.map { [$0.line, $0.column] }, [1, 1])
         XCTAssertTrue(other?.message.contains(":Area") == true && other?.message.contains(":Zone") == true)
-        let range = documentError(zoneDocument.replacingOccurrences(of: "id: 7", with: "id: 300")) { text throws(GesDocumentError) in _ = try GeometryModel.GeometryModelDocument(document: text) }
+        let range = documentError(zoneDocument.replacingOccurrences(of: "id: 7", with: "id: 300")) { text throws(GesDocumentError) in _ = try GeometryModel.Document(document: text) }
         XCTAssertEqual(range.map { [$0.code, "\($0.line)", "\($0.column)", $0.path] }, ["document.outOfRange", "2", "5", "id"])
         let unit = documentError(zoneDocument.replacingOccurrences(of: "[:Point(1m, 1m),", with: "[:Point(1s, 1s),")) { text throws(GesDocumentError) in _ = try GeometryModel.Zone(document: text) }
         XCTAssertEqual(unit.map { [$0.code, "\($0.line)", "\($0.column)", $0.path] }, ["document.fieldType", "6", "10", "rings[][]"])

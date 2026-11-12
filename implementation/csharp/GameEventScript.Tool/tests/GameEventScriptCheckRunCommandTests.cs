@@ -275,6 +275,17 @@ public sealed class GameEventScriptCheckRunCommandTests
         Assert.AreEqual(string.Empty, run.StandardOutput);
     }
 
+    /// <summary>Verifies that schema formatting keeps a union on one line while it fits and otherwise breaks it before each
+    /// further alternative.</summary>
+    [TestMethod]
+    public void SchemaFormatBreaksLongUnions()
+    {
+        Write("union.gess", "schema :Unit as {\n  shape: point: :Point(m) { x between 0m and 2000m step 0.1m, y between 0m and 2000m step 0.1m }\n    | box: :Box(m) { x between 0m and 2000m step 0.1m }\n    // a comment\n    | id: :Text max 64 optional\n  name: :Text max 8 |\n    :Number\n}\n");
+        var format = Run("schema", "format", "union.gess");
+        Assert.AreEqual(0, format.ExitCode, format.StandardError);
+        Assert.AreEqual("schema :Unit as {\n  shape: point: :Point(m) {\n      x between 0m and 2000m step 0.1m\n      y between 0m and 2000m step 0.1m\n    }\n    | box: :Box(m) {\n      x between 0m and 2000m step 0.1m\n    }\n    | id: :Text max 64 optional\n  name: :Text max 8 | :Number\n}\n", format.StandardOutput.Replace("\r\n", "\n"));
+    }
+
     /// <summary>Verifies the schema layout command: several roots, all roots, parameters, output files and usage errors.</summary>
     [TestMethod]
     public void SchemaLayoutCoversSeveralRoots()

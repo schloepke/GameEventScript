@@ -504,7 +504,8 @@ the last execution result and synchronized instance startup results.
 `CSharpBridge.GesBridgeHostRunner` serializes access
 to one host with a C# lock and schedules at most one pump job for that host on a
 shared dispatcher. Concurrent `Receive`, `Load`, subscribe, detach, and
-unsubscribe calls go through the runner. Creating a runner immediately schedules
+unsubscribe calls go through the runner: loading and subscribing return a runner-owned registration whose
+lifecycle operations take the same lock, never the host's own handles. Creating a runner immediately schedules
 one pump when its host is ready and already has pending work, including queued
 messages, late initialization, or a paused script handler. No later `Receive` or `Load` is
 required to start that work. An idle host waits for later accepted work.

@@ -151,7 +151,8 @@ extension Array: GesBridgeValueConvertible where Element: GesBridgeValueConverti
     /// Encodes `[UInt8]` as GES Bytes and every other array element by element, in order, as a GES List, propagating
     /// element conversion errors.
     public func toGesValue() throws -> GesValue {
-        if let bytes = self as? [UInt8] { return .bytes(bytes) }
+        // The static element type decides, as when decoding: a dynamic cast of an empty array succeeds for any element type.
+        if Element.self == UInt8.self { return .bytes(self as! [UInt8]) }
         return .list(try map { try $0.toGesValue() })
     }
 

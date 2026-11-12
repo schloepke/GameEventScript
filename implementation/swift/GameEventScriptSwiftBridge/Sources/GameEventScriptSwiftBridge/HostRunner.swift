@@ -155,7 +155,9 @@ public final class GesBridgeHostRunner: @unchecked Sendable {
                 scheduled = false
                 if let host, host.isReady && !host.isIdle {
                     if result?.state == .waiting, let delay = host.nextMessageDelay {
-                        let work = DispatchWorkItem { [weak self] in self?.locked { self?.schedule() } }
+                        // The wake-up retains the runner, as immediate work and the C# timer do, so delayed work is not dropped
+                        // with the last outside reference; close() cancels it.
+                        let work = DispatchWorkItem { self.locked { self.schedule() } }
                         wakeup = work
                         Self.dispatcher.asyncAfter(deadline: .now() + .microseconds(Int(min(delay, 86_400_000_000))), execute: work)
                     } else {

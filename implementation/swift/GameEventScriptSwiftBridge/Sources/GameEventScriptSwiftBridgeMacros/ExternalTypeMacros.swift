@@ -302,7 +302,10 @@ struct GesExtensionMacro: MemberMacro {
                 used.insert(local)
                 if unit != nil && type == "GesValue" { throw BindingError("A GesValue parameter receives the raw argument and takes no unit.") }
                 labels.append(predicate != nil ? "_" : external)
-                conditions.append("let a\(index) = try? GesBridgeValueConversion.decode(call.arguments[\(index)], as: (\(type)).self, unit: .\(unit ?? "none"))")
+                // A Result tells a failed conversion from a decoded nil, which an Optional parameter receives for Nothing.
+                conditions.append(
+                    "case .success(let a\(index)) = Result(catching: { try GesBridgeValueConversion.decode(call.arguments[\(index)], as: (\(type)).self, unit: .\(unit ?? "none")) })"
+                )
                 values.append((external == "_" ? "" : "\(external): ") + "a\(index)")
             }
             if let unknown = Set(parameterUnits.keys).subtracting(used).sorted().first { throw BindingError("units names \(unknown), which is no parameter.") }

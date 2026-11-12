@@ -1404,19 +1404,22 @@ static class GameEventScript.CSharpBridge.GesBridgeHostExtensions
   method static GameEventScript.CSharpBridge.GesBridgeHostRunner RunAutomatically(GameEventScript.Api.GameEventScriptHost host)
 sealed class GameEventScript.CSharpBridge.GesBridgeHostRunner
   method GameEventScript.Api.GesExecutionResult RunToCompletion()
-  method GameEventScript.Api.GesProgramInstance Load(GameEventScript.Api.GameEventScriptProgram program, System.Int32 priority)
   method GameEventScript.Api.GesStartResult Start()
-  method GameEventScript.Api.GesStartResult? GetStartResult(GameEventScript.Api.GesProgramInstance instance)
-  method GameEventScript.Api.GesSubscription Subscribe(System.String message, System.Collections.Generic.IReadOnlyCollection<System.String> parameterNames, System.Action<GameEventScript.Api.GameEventScriptMessage, GameEventScript.Api.GesContext> handler, System.Int32 priority)
-  method System.Boolean Detach(GameEventScript.Api.GesProgramInstance instance)
+  method GameEventScript.CSharpBridge.GesBridgeHostRunnerRegistration Load(GameEventScript.Api.GameEventScriptProgram program, System.Int32 priority)
+  method GameEventScript.CSharpBridge.GesBridgeHostRunnerRegistration Subscribe(GameEventScript.Api.GesMessageSignature signature, System.Action<GameEventScript.Api.GameEventScriptMessage, GameEventScript.Api.GesContext> handler, System.Collections.Generic.IReadOnlyCollection<System.String> matchingTags, System.Collections.Generic.IReadOnlyCollection<System.String> withoutTags, System.Int32 priority)
+  method GameEventScript.CSharpBridge.GesBridgeHostRunnerRegistration Subscribe(System.String message, System.Collections.Generic.IReadOnlyCollection<System.String> parameterNames, System.Action<GameEventScript.Api.GameEventScriptMessage, GameEventScript.Api.GesContext> handler, System.Int32 priority)
   method System.Boolean Receive(GameEventScript.Api.GameEventScriptMessage message)
-  method System.Boolean Unsubscribe(GameEventScript.Api.GesSubscription subscription)
   method System.Void Dispose()
   method static GameEventScript.CSharpBridge.GesBridgeHostRunner Create(GameEventScript.Api.GameEventScriptHost host)
   property GameEventScript.Api.GesExecutionResult? LastResult { get }
   property System.Boolean IsIdle { get }
   property System.Boolean IsReady { get }
   property System.Int64? IdleDurationMicroseconds { get }
+sealed class GameEventScript.CSharpBridge.GesBridgeHostRunnerRegistration
+  method System.Boolean Detach()
+  property GameEventScript.Api.GesStartResult? StartResult { get }
+  property System.Boolean IsAttached { get }
+  property System.Int64 RegistrationId { get }
 static class GameEventScript.CSharpBridge.GesBridgeMessage
   method static GameEventScript.Api.GameEventScriptMessage Create(GameEventScript.Api.GesMessageSignature signature, System.Collections.Generic.IReadOnlyDictionary<System.String, GameEventScript.Runtime.Values.GesValue> arguments, System.Collections.Generic.IEnumerable<System.String> tags)
   method static GameEventScript.Api.GameEventScriptMessage Create(System.String name, System.Collections.Generic.IEnumerable<System.String> tags, System.ValueTuple<System.String, GameEventScript.Runtime.Values.GesValue>[] arguments)

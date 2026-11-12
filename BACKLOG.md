@@ -61,7 +61,9 @@ here.
   and predicates; those stay in declaration modules.
 - Offer a C# incremental source generator for `[GesExtension]` and `[GesType]` declarations, so that
   Unity IL2CPP builds need neither Reflection nor `link.xml` entries for annotated types, with the
-  same rules as the Reflection registries and the Swift macros.
+  same rules as the Reflection registries and the Swift macros. Generated adapters would also lift the
+  four-parameter limit of attributed functions and the need for value-type generic sharing at run time
+  (`MakeGenericType`), which excludes NativeAOT and IL2CPP before Unity 2022 (specs/PublicApi.md).
 - Bind selected schema parameters of generated code at run time: `ges schema generate
   --dynamic-param name` would turn only the constants that depend on the named parameters into
   fields of a generated binding value, created from `GesSchemaParameters` and checked against the

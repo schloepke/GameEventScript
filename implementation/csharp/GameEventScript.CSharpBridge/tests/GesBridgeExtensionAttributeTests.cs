@@ -53,6 +53,22 @@ public sealed class GesBridgeExtensionAttributeTests
         public static int Twice([GesParam("_", GesBytecodeTypeKind.Float)] int value) => value * 2;
     }
 
+    [GesExtension("strict")]
+    private static class StrictExtensions
+    {
+        [GesFunction("whole")]
+        public static long Whole([GesParam("_", GesBytecodeTypeKind.Float)] long value) => value;
+
+        [GesFunction("real")]
+        public static double Real([GesParam("_", GesBytecodeTypeKind.Float)] double value) => value;
+
+        [GesFunction("truth")]
+        public static bool Truth([GesParam("_", GesBytecodeTypeKind.Boolean)] bool value) => value;
+
+        [GesFunction("maybe")]
+        public static string Maybe([GesParam("_", GesBytecodeTypeKind.Float)] long? value) => value is { } present ? "value " + present : "none";
+    }
+
     private static (GameEventScriptMessage? Seen, GesExecutionResult Result) Run(string body, IGesExtensionRegistry registry)
     {
         var program = new GesProgramBuilder().AddScript("on Start() {\n" + body + "\n}").Compile();
@@ -93,6 +109,19 @@ public sealed class GesBridgeExtensionAttributeTests
         var (failed, result) = Run("emit Seen(a: :navigation.fail(), b: 1, c: 2, d: 3)", registry);
         Assert.IsNull(failed);
         Assert.AreEqual("runtime.extensionCallFailed", result.Diagnostic?.Code, "An exception stays an extension fault.");
+    }
+
+    [TestMethod]
+    public void ArgumentsConvertOnlyExactly()
+    {
+        var registry = GesBridgeExtensionRegistry.Create(typeof(StrictExtensions));
+        var (rejected, _) = Run("emit Seen(a: :strict.whole(2.7), b: :strict.whole(true), c: :strict.real(50%), d: :strict.truth(5))", registry);
+        for (var index = 0; index < 4; index++) Assert.IsTrue(rejected!.Arguments[index].IsNothing, "A fraction, a Boolean, a Percentage and a number do not convert.");
+        var (accepted, _) = Run("emit Seen(a: :strict.whole(3.0), b: :strict.real(2), c: :strict.maybe(nothing), d: :strict.maybe(4))", registry);
+        Assert.AreEqual(3L, accepted!.Arguments[0].AsInteger());
+        Assert.AreEqual(2d, accepted.Arguments[1].AsNumber());
+        Assert.AreEqual("none", accepted.Arguments[2].AsText(), "Nothing reaches a nullable parameter as null.");
+        Assert.AreEqual("value 4", accepted.Arguments[3].AsText());
     }
 
     [TestMethod]

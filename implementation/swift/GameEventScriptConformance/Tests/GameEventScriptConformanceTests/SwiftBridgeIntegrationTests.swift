@@ -20,6 +20,18 @@ final class SwiftBridgeIntegrationTests: XCTestCase {
         wait(for: [done], timeout: 5)
     }
 
+    func testDelayedWorkOutlivesTheLastReferenceToTheRunner() throws {
+        let program = try GesProgramBuilder().addScript("on Start { emit after 0.02s Done() }").compile()
+        var runner: GesBridgeHostRunner? = try GesBridgeHostRunner(GameEventScriptHost.makeBuilder().build())
+        let done = expectation(description: "Delayed delivery after the runner was released")
+        _ = try runner?.subscribe(.init(name: "Done")) { _, _ in done.fulfill() }
+        _ = try runner?.load(program)
+        XCTAssertEqual(try runner?.start().state, .ready)
+        XCTAssertTrue(try runner?.receive(.init(name: "Start")) ?? false)
+        runner = nil
+        wait(for: [done], timeout: 5)
+    }
+
     @GesType("Player")
     struct Player {
         @GesField

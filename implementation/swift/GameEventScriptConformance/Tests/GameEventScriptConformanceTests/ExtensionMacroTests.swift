@@ -42,6 +42,21 @@ final class GameExtensions {
     static func twice(_ value: Int) -> Int { value * 2 }
 }
 
+@GesExtension("strict")
+enum StrictExtensions {
+    @GesFunction
+    static func whole(_ value: Int) -> Int { value }
+
+    @GesFunction
+    static func real(_ value: Double) -> Double { value }
+
+    @GesFunction
+    static func truth(_ value: Bool) -> Bool { value }
+
+    @GesFunction
+    static func maybe(_ value: Int?) -> String { value.map { "value \($0)" } ?? "none" }
+}
+
 /// Extensions declared with `@GesExtension`, `@GesFunction` and `@GesPredicate` take their signatures from the declarations
 /// and convert arguments and results strictly, with `nothing` for a value that does not convert.
 final class ExtensionMacroTests: XCTestCase {
@@ -74,6 +89,19 @@ final class ExtensionMacroTests: XCTestCase {
         XCTAssertEqual(arguments[3], .boolean(true))
         let labels = try NavigationExtensions.gesExtensions().map(\.reference.signatureID)
         XCTAssertEqual(labels, ["navigation.destination(from,bearing,distance)", "navigation.gap(_,_)", "navigation.isFar(_)", "navigation.kind(_)", "navigation.fail()"])
+    }
+
+    func testArgumentsConvertOnlyExactly() throws {
+        let registry = try GesBridgeExtensionRegistry(try StrictExtensions.gesExtensions())
+        let (rejected, _) = try run("emit Seen(a: :strict.whole(2.7), b: :strict.whole(true), c: :strict.real(50%), d: :strict.truth(5))", registry)
+        let rejectedArguments = try XCTUnwrap(rejected).arguments
+        for index in 0..<4 { XCTAssertTrue(rejectedArguments[index].isNothing, "A fraction, a Boolean, a Percentage and a number do not convert.") }
+        let (accepted, _) = try run("emit Seen(a: :strict.whole(3.0), b: :strict.real(2), c: :strict.maybe(nothing), d: :strict.maybe(4))", registry)
+        let arguments = try XCTUnwrap(accepted).arguments
+        XCTAssertEqual(arguments[0], .integer(3))
+        XCTAssertEqual(arguments[1].asNumber, 2)
+        XCTAssertEqual(arguments[2], .text("none"), "Nothing reaches an Optional parameter as nil.")
+        XCTAssertEqual(arguments[3], .text("value 4"))
     }
 
     func testRawValuesAndFaults() throws {

@@ -566,17 +566,13 @@ public sealed class GesBridgeExtensionRegistry : IGesExtensionRegistry
                 : GesExternalTypeNames.NormalizeIdentifier(name, nameof(name));
     }
 
-    // A numeric argument must have the declared unit, or none; the unit is removed.
+    // A numeric argument must have the declared unit, or none; the unit is removed. Conversions are strict, as in Swift: a
+    // number converts only exactly, and neither a Boolean nor a Percentage is a number here.
     private sealed class FloatArgumentReader(GesQuantityUnit unit) : IExtensionArgumentReader<double>
     {
         public bool Read(GesValueArguments arguments, int index, out double value)
         {
-            if (arguments.KindAt(index) is GesBytecodeTypeKind.Integer or GesBytecodeTypeKind.Float or GesBytecodeTypeKind.Percentage && arguments.UnitAt(index) == unit)
-            {
-                value = arguments.GetAsNumber(index);
-                return true;
-            }
-
+            if (arguments.UnitAt(index) == unit) return GesBridgeValueConverter.TryReadDouble(in arguments[index], out value);
             value = 0d;
             return false;
         }
@@ -586,12 +582,7 @@ public sealed class GesBridgeExtensionRegistry : IGesExtensionRegistry
     {
         public bool Read(GesValueArguments arguments, int index, out long value)
         {
-            if (arguments.KindAt(index) is GesBytecodeTypeKind.Integer or GesBytecodeTypeKind.Float or GesBytecodeTypeKind.Percentage or GesBytecodeTypeKind.Boolean && arguments.UnitAt(index) == unit)
-            {
-                value = arguments.GetAsInteger(index);
-                return true;
-            }
-
+            if (arguments.UnitAt(index) == unit) return GesBridgeValueConverter.TryReadInt64(in arguments[index], out value);
             value = 0;
             return false;
         }
@@ -621,8 +612,7 @@ public sealed class GesBridgeExtensionRegistry : IGesExtensionRegistry
 
         public bool Read(GesValueArguments arguments, int index, out bool value)
         {
-            if (arguments.KindAt(index) is GesBytecodeTypeKind.Boolean or GesBytecodeTypeKind.Integer or GesBytecodeTypeKind.Float or GesBytecodeTypeKind.Percentage
-                or GesBytecodeTypeKind.Vector or GesBytecodeTypeKind.Point)
+            if (arguments.KindAt(index) == GesBytecodeTypeKind.Boolean)
             {
                 value = arguments.GetAsBoolean(index);
                 return true;

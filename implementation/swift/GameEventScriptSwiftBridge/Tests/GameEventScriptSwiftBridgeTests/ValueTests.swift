@@ -52,6 +52,15 @@ final class ValueTests: XCTestCase {
         XCTAssertThrowsError(try [Int].fromGesValue(.list([.text("1")])))
     }
 
+    func testEmptyArraysKeepTheirKind() throws {
+        // A dynamic cast of an empty array succeeds for any element type, so the static element type must decide.
+        XCTAssertEqual(try [Int]().toGesValue().valueKind, .list)
+        XCTAssertEqual(try [String]().toGesValue().valueKind, .list)
+        XCTAssertEqual(try [UInt8]().toGesValue().valueKind, .bytes)
+        XCTAssertEqual(try [String].fromGesValue(try [String]().toGesValue()), [])
+        XCTAssertEqual(try [UInt8].fromGesValue(try [UInt8]().toGesValue()), [])
+    }
+
     func testDictionaryDecodeRejectsCanonicalEquivalenceCollisions() throws {
         let value = GesValue.map(keys: ["é", "e\u{301}"], values: [.integer(1), .integer(2)])
         XCTAssertEqual(value.length, 2)

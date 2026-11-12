@@ -257,6 +257,15 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 - A `:Poly` whose block leaves its points without bits, such as a single wrapping axis with a period of one step, fails
   binding with `schema.notEncodable`, as a List element without bits does, because no data would limit its count.
 
+- The C# `GesBridgeHostRunner` returns a runner-owned `GesBridgeHostRunnerRegistration` from `Load` and `Subscribe`, as
+  the Swift runner does; its `IsAttached`, `StartResult` and `Detach()` take the runner's lock. `GetStartResult`,
+  `Detach(instance)` and `Unsubscribe(subscription)` are removed, since the host's own handles bypassed the lock.
+- C# attributed extensions convert arguments strictly, as Swift does: a fraction, a Boolean or a Percentage no longer
+  converts to an integer or number parameter, and a number no longer to a `bool`; such a call gives `nothing`.
+- C# `GesBridgeExternalTypeRegistry.Create` rejects fields and constructor parameters of CLR types without a conversion,
+  such as `decimal` or enums, and external classes it does not register. A constructor argument that does not convert
+  exactly, such as `2.7` for an `int`, is now `runtime.externalConstructorFailed` instead of a truncated value.
+
 ### Added
 - `:Bytes`, an immutable byte sequence: literals `:Bytes[0xa0, 183]` and `:Bytes("a0b7")`, `as :Bytes`
   from integer Lists and hexadecimal Text, `as :Text`/`parse`/documents, count, `in`, indexing,
@@ -511,6 +520,10 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 - Swift `GesBitWriter.writeBytes(_:)` and `GesBitReader.readBytes(_:into:path:)` take a `[UInt8]`; generated Swift
   wire code uses them, so a counting writer skips the bytes of a Text or Bytes at once and byte-aligned reads copy them.
 
+- The C# runner subscribes by exact signature with optional tag filters, as the Swift runner does.
+- C# external-type fields and constructor parameters accept `float`, `GesPoint`, `GesVector`, `GesBox`, `GesPoly` and
+  nullable value types, and a `[GesConstruct]` factory may return an instance of a derived class.
+
 ### Changed
 
 - `Host.Load` and the writer no longer validate a Program again that the Reader, the Compiler or an earlier validation
@@ -719,6 +732,10 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   accessing memory out of bounds in release builds.
 - The specification names `wire.outOfRange` for decoding a finite binary64 outside the range of a field without a step,
   and states that a bound member of a message set reports its set's hash and binding hash.
+- A Swift `@GesFunction` or `@GesPredicate` with an Optional parameter receives `nil` for `nothing` instead of being
+  skipped.
+- Swift encodes an empty non-byte array, such as `[String]()`, as an empty List instead of empty Bytes.
+- A Swift runner delivers delayed work after the last outside reference to it is gone, as the C# runner does.
 
 ## [0.4.0] — 2026-10-11
 

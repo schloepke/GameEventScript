@@ -21,6 +21,8 @@ public sealed class GesBridgeHostRunner : IDisposable
     private bool _scheduled;
     private bool _disposed;
     private GesExecutionResult? _lastResult;
+    private readonly Dictionary<long, GesProgramInstance> _instances = [];
+    private readonly Dictionary<long, GesSubscription> _subscriptions = [];
 
     private GesBridgeHostRunner(GameEventScriptHost host, GesBridgeDispatcher dispatcher)
     {
@@ -71,17 +73,6 @@ public sealed class GesBridgeHostRunner : IDisposable
         }
     }
 
-    /// <summary>Reads an instance's completed initialization result under the runner gate.</summary>
-    /// <param name="instance">The instance returned by Load.</param>
-    /// <returns>The initialization result, or null while pending.</returns>
-    public GesStartResult? GetStartResult(GesProgramInstance instance)
-    {
-        lock (_gate)
-        {
-            ThrowIfDisposed();
-            return instance.StartResult;
-        }
-    }
 
     /// <summary>Synchronously drains the ready host under the serialization gate.</summary>
     /// <returns>The execution result.</returns>
@@ -117,15 +108,16 @@ public sealed class GesBridgeHostRunner : IDisposable
     /// </summary>
     /// <param name="program">The immutable portable program.</param>
     /// <param name="priority">The dispatch priority assigned to its handlers.</param>
-    /// <returns>The host-local program instance.</returns>
-    public GesProgramInstance Load(GameEventScriptProgram program, int priority = 0)
+    /// <returns>A runner-owned registration whose lifecycle uses the runner's gate.</returns>
+    public GesBridgeHostRunnerRegistration Load(GameEventScriptProgram program, int priority = 0)
     {
         lock (_gate)
         {
             ThrowIfDisposed();
             var instance = _host.Load(program, priority);
+            _instances[instance.RegistrationId] = instance;
             if (_host.IsReady && !_host.IsIdle) Schedule();
-            return instance;
+            return new GesBridgeHostRunnerRegistration(instance.RegistrationId, this);
         }
     }
 
@@ -136,44 +128,64 @@ public sealed class GesBridgeHostRunner : IDisposable
     /// <param name="parameterNames">The ordered signature labels.</param>
     /// <param name="handler">The synchronous callback executed while the runner owns its serialization gate.</param>
     /// <param name="priority">The dispatch priority.</param>
-    /// <returns>The host-local subscription.</returns>
-    public GesSubscription Subscribe(string message, IReadOnlyCollection<string> parameterNames, Action<GameEventScriptMessage, GesContext> handler, int priority = 0)
+    /// <returns>A runner-owned registration whose lifecycle uses the runner's gate.</returns>
+    public GesBridgeHostRunnerRegistration Subscribe(string message, IReadOnlyCollection<string> parameterNames, Action<GameEventScriptMessage, GesContext> handler, int priority = 0)
+        => Subscribe(GesMessageSignature.Create(message, parameterNames), handler, null, null, priority);
+
+    /// <summary>
+    /// Thread-safely subscribes a C# delegate to an exact message signature and optional tag constraints.
+    /// </summary>
+    /// <param name="signature">The exact ordered message signature.</param>
+    /// <param name="handler">The synchronous callback executed while the runner owns its serialization gate.</param>
+    /// <param name="matchingTags">Tags all of which must be present, or <see langword="null"/> for no required tags.</param>
+    /// <param name="withoutTags">Tags all of which must be absent, or <see langword="null"/> for no exclusions.</param>
+    /// <param name="priority">The dispatch priority.</param>
+    /// <returns>A runner-owned registration whose lifecycle uses the runner's gate.</returns>
+    public GesBridgeHostRunnerRegistration Subscribe(
+        GesMessageSignature signature,
+        Action<GameEventScriptMessage, GesContext> handler,
+        IReadOnlyCollection<string>? matchingTags,
+        IReadOnlyCollection<string>? withoutTags = null,
+        int priority = 0)
     {
         lock (_gate)
         {
             ThrowIfDisposed();
-            return _host.Subscribe(
-                message,
-                parameterNames,
-                new GesBridgeMessageHandler(handler),
-                priority);
+            var subscription = _host.Subscribe(signature, new GesBridgeMessageHandler(handler), matchingTags, withoutTags, priority);
+            _subscriptions[subscription.RegistrationId] = subscription;
+            return new GesBridgeHostRunnerRegistration(subscription.RegistrationId, this);
         }
     }
 
-    /// <summary>
-    /// Thread-safely detaches a loaded program instance.
-    /// </summary>
-    /// <param name="instance">The instance handle to detach.</param>
-    /// <returns>Whether this call performed the detach.</returns>
-    public bool Detach(GesProgramInstance instance)
+    internal bool IsAttached(long registrationId)
     {
         lock (_gate)
         {
-            ThrowIfDisposed();
-            return instance.Detach();
+            return _instances.TryGetValue(registrationId, out var instance) ? instance.IsAttached
+                : _subscriptions.TryGetValue(registrationId, out var subscription) && subscription.IsSubscribed;
         }
     }
 
-    /// <summary>
-    /// Thread-safely removes a native subscription.
-    /// </summary>
-    /// <param name="subscription">The subscription handle to remove.</param>
-    /// <returns>Whether this call performed the removal.</returns>
-    public bool Unsubscribe(GesSubscription subscription)
+    internal GesStartResult? GetStartResult(long registrationId)
     {
         lock (_gate)
         {
-            ThrowIfDisposed();
+            return _instances.TryGetValue(registrationId, out var instance) ? instance.StartResult : null;
+        }
+    }
+
+    internal bool Detach(long registrationId)
+    {
+        lock (_gate)
+        {
+            if (_instances.TryGetValue(registrationId, out var instance))
+            {
+                _instances.Remove(registrationId);
+                return instance.Detach();
+            }
+
+            if (!_subscriptions.TryGetValue(registrationId, out var subscription)) return false;
+            _subscriptions.Remove(registrationId);
             return subscription.Unsubscribe();
         }
     }
@@ -226,4 +238,33 @@ public sealed class GesBridgeHostRunner : IDisposable
     {
         if (_disposed) throw new ObjectDisposedException(nameof(GesBridgeHostRunner));
     }
+}
+
+/// <summary>
+/// A program instance or subscription owned by a <see cref="GesBridgeHostRunner"/>. Every access goes through the runner's
+/// serialization gate, so another thread may use it while the runner pumps.
+/// </summary>
+public sealed class GesBridgeHostRunnerRegistration
+{
+    private readonly GesBridgeHostRunner _owner;
+
+    internal GesBridgeHostRunnerRegistration(long registrationId, GesBridgeHostRunner owner)
+    {
+        RegistrationId = registrationId;
+        _owner = owner;
+    }
+
+    /// <summary>Gets the stable identifier of the registration within the runner's host.</summary>
+    public long RegistrationId { get; }
+
+    /// <summary>Gets whether the instance or subscription still contributes to future message snapshots.</summary>
+    public bool IsAttached => _owner.IsAttached(RegistrationId);
+
+    /// <summary>Gets the initialization result of a loaded program, or null while pending, after detaching, or for a
+    /// subscription.</summary>
+    public GesStartResult? StartResult => _owner.GetStartResult(RegistrationId);
+
+    /// <summary>Idempotently detaches the instance or removes the subscription under the runner's gate.</summary>
+    /// <returns><see langword="true"/> only when this call removed it.</returns>
+    public bool Detach() => _owner.Detach(RegistrationId);
 }

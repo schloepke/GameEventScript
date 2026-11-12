@@ -43,12 +43,12 @@ public sealed class GameEventScriptStartupBootstrapTests
         runner.Subscribe("Tick", [], (_, _) => delivered++);
         var instance = runner.Load(new GesProgramBuilder().AddScript("on initialization { emit Tick() }").Compile());
         Assert.IsFalse(runner.IsReady);
-        Assert.IsNull(runner.GetStartResult(instance));
+        Assert.IsNull(instance.StartResult);
         Assert.IsFalse(runner.Receive(GameEventScriptMessage.Create("Tick")));
         Assert.AreEqual(0, delivered);
         Assert.AreEqual(GesStartState.Ready, runner.Start().State);
         runner.RunToCompletion();
         Assert.AreEqual(1, delivered);
-        Assert.AreEqual(GesStartState.Ready, runner.GetStartResult(instance)!.Value.State);
+        Assert.AreEqual(GesStartState.Ready, instance.StartResult!.Value.State);
     }
 }

@@ -1426,6 +1426,18 @@ portable descriptor name/signature validation still occurs when the throwing
 factory executes. Manual descriptors remain available for foreign/generic types
 and throwing getters. Macro expansion adds no GES syntax or portable behavior.
 
+The C# `GesBridgeExternalTypeRegistry.Create(types)` reads `[GesType]`, `[GesField]`, `[GesConstruct]` and `[GesParam]`
+through Reflection and decides each member's conversion from its CLR type at registration, as the Swift macros and type
+checker do at compile time. A field may hold `GesValue`, `bool`, `string`, `byte[]`, `double`, `float`, `long`, `int`,
+`short`, `byte`, `GesPoint`, `GesVector`, `GesBox`, `GesPoly` (with the declared unit), a Message, a Handler signature, a
+nullable form of a value type, or a class with `[GesType]`; a constructor parameter the same types except Message and
+Handler signature. Any other type, such as `decimal` or an enum, and an external class that the same registry does not
+register fail `Create` with `ArgumentException`. A constructor argument converts strictly as for
+extensions below; one that does not, such as `2.7` for an `int` or a value outside its range, is a fault of the call
+(`runtime.externalConstructorFailed`), as a throwing Swift conversion is. The runtime has already constructed nothing
+for a `nothing` argument without calling the constructor. A factory may return an instance of a derived class, which
+takes the binding of its nearest registered base class.
+
 > **Since: Unreleased** — extensions declared with macros and attributes
 
 `@GesExtension(namespace)` on an enum, struct or final class generates `gesExtensions()`, the `GesBridgeExtension` list of
@@ -1438,7 +1450,10 @@ Reflection, and both follow one set of rules:
   `[GesParam(name, ...)]`. A predicate has one parameter, a `Bool`/`bool` or optional Boolean result, and is registered with
   one unlabeled argument, as `value is :namespace.name` calls it. The generated or reflected signatures and the code cannot
   drift apart.
-- **Conversion.** An argument converts strictly to the parameter's type: numbers, Booleans, Text, `GesPoint`, `GesVector`,
+- **Conversion.** An argument converts strictly to the parameter's type, in both bridges alike: an integer only from an
+  Integer or an integral Float in its range, a binary64 only from a Float or an Integer it represents exactly, a Boolean
+  only from a Boolean, and Nothing only to an Optional (C# nullable value type), which receives nil or null; neither a
+  Boolean nor a Percentage converts to a number. The types are numbers, Booleans, Text, `GesPoint`, `GesVector`,
   `GesBox` and `GesPoly`, Optionals (C# nullable value types), and in Swift every `GesBridgeValueConvertible`; a `GesValue`
   parameter receives the raw argument. A declared parameter unit (Swift `units: ["distance": .meter]`, since Swift has no
   attributes on parameters; C# `[GesParam(name, kind, unit)]`) must match exactly and is removed; without one the argument
@@ -1455,7 +1470,11 @@ Reflection, and both follow one set of rules:
 
 The macros need approval in Xcode like the type macros; command-line builds pass `-skipMacroValidation`. Hosts that write
 closures keep working unchanged. C# registration uses Reflection, so IL2CPP code stripping must preserve the annotated
-types (a `link.xml` entry or `[Preserve]`).
+types (a `link.xml` entry or `[Preserve]`). It also builds its typed adapters with `MakeGenericType` over value types,
+which needs generic sharing for value types at run time: IL2CPP with full generic sharing (Unity 2022 and later) or a
+JIT; NativeAOT and older IL2CPP versions are not supported. A C# attributed function takes at most four script
+parameters; a longer one fails at registration, while Swift has no such limit. A
+[source generator](../BACKLOG.md#language) would remove both limits.
 
 `GesBridgeHostRunner` is an optional synchronized embedding adapter.
 It takes exclusive ownership through Swift 6 sending parameters and serializes
@@ -1470,9 +1489,12 @@ ownership transfer. Recursive receives only enqueue; recursive pumping fails.
 Automatic pumps continue scheduling while ready queued work remains.
 `lastResult` is a synchronized snapshot of the most recent completed pump.
 `isReady` reports the startup barrier; a registration's `startResult` reports its
-instance initialization. C# exposes the same outcome through runner.GetStartResult(instance).
-Runner-owned handles use stable registration IDs, retain their runner and detach
-idempotently under its lock. Closing rejects further work, detaches owned
+instance initialization. Both runners return a runner-owned `GesBridgeHostRunnerRegistration` from loading and
+subscribing (C# `RegistrationId`, `IsAttached`, `StartResult`, `Detach()`), never the host's own handles, whose
+methods would bypass the lock; both subscribe by exact signature with optional tag filters, and C# also by name and
+labels. Runner-owned handles use stable registration IDs, retain their runner and detach
+idempotently under its lock. A pending delayed wake-up also retains its runner, so delayed work is delivered after
+the last outside reference is gone, as immediate work is. Closing rejects further work, detaches owned
 registrations and releases the Host; an already executing pump may finish.
 Blocking on another caller while inside a callback is outside this contract.
 

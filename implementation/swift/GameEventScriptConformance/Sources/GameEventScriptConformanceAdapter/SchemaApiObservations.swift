@@ -100,6 +100,15 @@ enum SchemaApiObservations {
                 return entry
             }
         }
+        if !schema.computedFields.isEmpty {
+            result["computed"] = schema.computedFields.map { field -> [String: Any] in
+                var entry: [String: Any] = ["name": field.name, "kind": field.kind.rawValue]
+                if field.unit != .none { entry["unit"] = field.unit.rawValue }
+                if field.isOptional { entry["optional"] = true }
+                entry["expression"] = field.expression
+                return entry
+            }
+        }
         if !schema.constants.isEmpty {
             result["constants"] = schema.constants.map { constant -> [String: Any] in
                 var entry: [String: Any] = ["name": constant.name, "kind": constant.kind.rawValue]

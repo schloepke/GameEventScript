@@ -448,7 +448,84 @@ public static class GesSchemaValues
             values.Add(DecodeNode(ref reader, schema, index));
         }
 
+        if (schema.Computed.TryGetValue(name, out var computed)) Derive(computed, keys, values);
         return GesValue.GesRecord(name, keys.ToArray(), values.ToArray());
+    }
+
+    // Adds the computed fields in order, each reading the fields and the computed fields before it, as a script record does.
+    private static void Derive(GesResolvedComputed[] computed, List<string> keys, List<GesValue> values)
+    {
+        var scope = new RecordScope(keys, values);
+        foreach (var field in computed)
+        {
+            var value = GesComputedMath.Cast(GesComputedEvaluation.Evaluate(field.Expression, scope, null), field.Type);
+            keys.Add(field.Name);
+            values.Add(value.Kind switch
+            {
+                GesComputedKind.Integer => GesValue.GesInteger(value.Integer, field.Unit),
+                GesComputedKind.Float => GesValue.GesNumber(value.Number, field.Unit),
+                GesComputedKind.Percentage => GesValue.GesPercentage(value.Number),
+                GesComputedKind.True or GesComputedKind.False => GesValue.GesBoolean(value.Kind == GesComputedKind.True),
+                _ => default
+            });
+        }
+    }
+
+    // The decoded fields of a record, or a value of a list element, as computed fields read them.
+    private sealed class RecordScope : GesComputedScope
+    {
+        private readonly List<string>? _keys;
+        private readonly List<GesValue>? _values;
+        private readonly GesValue _value;
+
+        internal RecordScope(List<string> keys, List<GesValue> values)
+        {
+            _keys = keys;
+            _values = values;
+        }
+
+        private RecordScope(GesValue value) => _value = value;
+
+        internal override GesComputedValue Read(string[] path, bool percentage)
+        {
+            var value = Walk(path);
+            return value.Kind switch
+            {
+                GesBytecodeTypeKind.Integer => GesComputedValue.OfInteger(value.IntegerValue),
+                GesBytecodeTypeKind.Float => GesComputedValue.OfFloat(value.FloatValue),
+                GesBytecodeTypeKind.Percentage => GesComputedValue.OfPercentage(value.FloatValue),
+                GesBytecodeTypeKind.Boolean => GesComputedValue.OfBoolean(value.IsTrue),
+                _ => GesComputedValue.Nothing
+            };
+        }
+
+        internal override bool Has(string[] path) => Walk(path).Kind != GesBytecodeTypeKind.Nothing;
+
+        internal override int Count(string[] path) => Walk(path).ObjectValue is GesValue[] items ? items.Length : 0;
+
+        internal override GesComputedScope Element(string[] path, int index) => new RecordScope(((GesValue[])Walk(path).ObjectValue!)[index]);
+
+        private GesValue Walk(string[] path)
+        {
+            var current = _value;
+            for (var segment = 0; segment < path.Length; segment++)
+            {
+                if (segment == 0 && _keys is not null)
+                {
+                    var index = _keys.IndexOf(path[0]);
+                    current = index >= 0 ? _values![index] : default;
+                    continue;
+                }
+
+                if (current.MaterializedMap() is not { } fields) return default;
+                var found = default(GesValue);
+                for (var key = 0; key < fields.Length; key++)
+                    if (fields.KeyAt(key) == path[segment]) found = fields.ValueAt(key);
+                current = found;
+            }
+
+            return current;
+        }
     }
 
     private static GesValue DecodeNode(ref GesSchemaReader reader, GesBoundSchema schema, int index)

@@ -33,7 +33,13 @@ enum GesSwiftEmitter {
         prologue.blank()
         let header = GesSchemaPlanner.header(layout)
         let holder = "__GesSchemas" + GesSchemaPlanner.suffix(header, options)
-        let context = Context(elements: GesSchemaPlanner.keyedElements(types), values: options.values, holder: holder, checkedExclusivity: options.checkedExclusivity)
+        let context = Context(
+            elements: GesSchemaPlanner.keyedElements(types),
+            values: options.values,
+            holder: holder,
+            checkedExclusivity: options.checkedExclusivity,
+            computed: GesSchemaPlanner.computed(types, GesComputedEmitter.helper(GesSchemaPlanner.suffix(header, options)), swift: true)
+        )
         var document = GesCodeDocument(
             header: header,
             prologue: prologue.text,
@@ -56,6 +62,10 @@ enum GesSwiftEmitter {
         // Split files reach the sources of another file, so the holder is internal there.
         let shared = options.split != .none
         if options.values { document.units.append(GesCodeUnit(owner: "", write: { code in valuesHolder(&code, layout, holder, shared: shared) }, outside: true)) }
+        if layout.types.contains(where: { !$0.computed.isEmpty }) {
+            let helper = GesComputedEmitter.helper(GesSchemaPlanner.suffix(header, options))
+            document.units.append(GesCodeUnit(owner: "") { code in GesComputedLibrary.write(&code, helper, swift: true) })
+        }
         return document
     }
 
@@ -65,6 +75,7 @@ enum GesSwiftEmitter {
         let values: Bool
         let holder: String
         let checkedExclusivity: Bool
+        let computed: GesComputedEmitter
 
         // The attribute of a class's stored properties: without exclusivity checks unless they are asked for.
         func stored(_ isClass: Bool) -> String { isClass && !checkedExclusivity ? "@exclusivity(unchecked) " : "" }
@@ -98,6 +109,7 @@ enum GesSwiftEmitter {
         if !type.isItem {
             for constant in type.layout.constants { names.append((constant.name, "the let " + constant.name)) }
         }
+        if !type.isItem { GesComputedEmitter.names(type.layout.computed, type.name, swift: true, &names) }
         try GesSchemaPlanner.unique(type.name, names)
 
         code.line(type.isItem ? "/// An element of the list." : "/// The \(kind(type)) `:\(type.name)`, read and written without allocation\(type.isClass ? " once its storage has grown" : "").")
@@ -120,6 +132,7 @@ enum GesSwiftEmitter {
         }
         for field in type.fields { pools(&code, field.value, stored) }
         for field in type.fields { listAccess(&code, field, access) }
+        if !type.isItem { context.computed.members(&code, type.name, type.layout.computed, String(access.dropLast(access.hasSuffix(" ") ? 1 : 0))) }
         code.blank()
         code.line(type.isItem ? "/// Creates an element with every field at its zero value." : "/// Creates a record with every field at its zero value.")
         code.line("\(access)init() {}")

@@ -17,6 +17,7 @@ import argparse
 from pathlib import Path
 import re
 import shutil
+import struct
 import subprocess
 import sys
 
@@ -62,6 +63,25 @@ return 0;
 """
 
 
+def computed_names(sources, root):
+    """The computed fields of the root schema, in declared order, read from its source."""
+    for text in sources:
+        match = re.search(r"schema :" + re.escape(root) + r" as \{(.*?)\n\}", text, re.S) or re.search(r"schema :" + re.escape(root) + r" as \{([^\n]*)\}", text)
+        if match:
+            return [name for name in re.findall(r"(?:^|[\n,{])\s*([a-z][A-Za-z0-9]*): [^\n,]*? computed by", match.group(1))]
+    return []
+
+
+def property_text(value):
+    """A computed property as the harness prints it: the bits of a binary64, a Boolean, or nothing."""
+    kind = value["type"]
+    if kind == ":Nothing":
+        return "nothing"
+    if kind == ":Boolean":
+        return "true" if value["value"] in (True, "true") else "false"
+    return format(struct.unpack(">Q", struct.pack(">d", float(value["value"])))[0], "016x")
+
+
 def failure(error):
     return ("error", error["code"], error.get("path"))
 
@@ -85,6 +105,10 @@ def cases(paths):
             elif "value" in decoded:
                 size = decoded.get("byteCount")
                 operations.append(("decode", api["decode"], "", limit, ("ok", size if size is not None else len(api["decode"]) // 2)))
+                names = computed_names(api["sources"], api["root"])
+                if names:
+                    entries = {entry["key"]: entry["value"] for entry in decoded["value"].get("entries", [])}
+                    operations.append(("computed", api["decode"], "", limit, ("computed", " ".join(property_text(entries[name]) for name in names))))
         encoded = expected.get("encoded")
         if isinstance(encoded, dict) and isinstance(encoded.get("bytes"), str) and "baseline" not in api:
             operations.append(("decode", encoded["bytes"], "", None, ("ok", len(encoded["bytes"]) // 2)))
@@ -149,15 +173,29 @@ def has_delta(code, root):
     return declares(code, root, "public int ReadDelta(")
 
 
+def member(name, owner, swift=False):
+    """The property of a computed field: its name in Pascal case, with Value when it equals its type, and camel case in Swift."""
+    pascal = name[0].upper() + name[1:]
+    if pascal == owner:
+        pascal += "Value"
+    return pascal[0].lower() + pascal[1:] if swift else pascal
+
+
 def csharp_program(entries):
     lines = ["using System;", "", "internal static class Harness", "{",
              "    private static string Hex(ReadOnlySpan<byte> bytes) { var text = new System.Text.StringBuilder(); foreach (var b in bytes) text.Append(b.ToString(\"x2\")); return text.ToString(); }",
+             "    private static string P(double value) => double.IsNaN(value) ? \"nothing\" : ((ulong)BitConverter.DoubleToInt64Bits(value)).ToString(\"x16\");",
+             "    private static string P(double? value) => value is { } present ? P(present) : \"nothing\";",
+             "    private static string P(bool value) => value ? \"true\" : \"false\";",
              "    private static string Run(int schema, string operation, byte[] data, byte[] second, long limit)", "    {", "        switch (schema)", "        {"]
-    for index, root, key, _, delta, conversion in entries:
+    for index, root, key, _, delta, conversion, computed in entries:
         name = f"Gen.Case{index}.{root}"
         lines += [f"            case {index}:", "            {"]
         lines += [f"                if (operation == \"key\") return \"ok \" + ((long){name}.ReadKey(data)).ToString();" if key else "                if (operation == \"key\") return \"none\";"]
         lines += [f"                var record = new {name}();"]
+        if computed:
+            values = ", ".join(f"P(record.{member(field, root)})" for field in computed)
+            lines += ["                if (operation == \"computed\")", "                {", "                    record.Read(data, limit);", f"                    return \"ok \" + string.Join(\" \", new[] {{ {values} }});", "                }"]
         if delta:
             lines += ["                if (operation != \"decode\")", "                {", f"                    var baseline = new {name}();", "                    baseline.Read(second);",
                       "                    if (operation == \"deltaDecode\")", "                    {", "                        var used = record.ReadDelta(data, baseline, limit);",
@@ -186,10 +224,18 @@ def swift_program(entries):
              "func bytes(_ text: Substring) -> [UInt8] {", "    if text == \".\" { return [] }", "    var result: [UInt8] = []", "    var index = text.startIndex",
              "    while index < text.endIndex {", "        let next = text.index(index, offsetBy: 2)", "        result.append(UInt8(text[index..<next], radix: 16)!)",
              "        index = next", "    }", "    return result", "}", "",
+             "func p(_ value: Double) -> String { value.isNaN ? \"nothing\" : String(value.bitPattern, radix: 16).leftPadded() }",
+             "func p(_ value: Double?) -> String { value.map { p($0) } ?? \"nothing\" }",
+             "func p(_ value: Bool) -> String { value ? \"true\" : \"false\" }",
+             "extension String { func leftPadded() -> String { String(repeating: \"0\", count: Swift.max(0, 16 - count)) + self } }", "",
              "func run(_ schema: Int, _ operation: Substring, _ data: [UInt8], _ second: [UInt8], _ limit: Int) throws(GesWireError) -> String {", "    switch schema {"]
-    for index, root, key, is_class, delta, conversion in entries:
+    for index, root, key, is_class, delta, conversion, computed in entries:
         binding = "let" if is_class else "var"
         lines += [f"    case {index}:"]
+        if computed:
+            values = ", ".join(f"p(record.{member(field, root, swift=True)})" for field in computed)
+            lines += ["        if operation == \"computed\" {", f"            {binding} record = Case{index}.{root}()", "            _ = try record.read(from: data, byteLimit: limit)",
+                      f"            return \"ok \" + [{values}].joined(separator: \" \")", "        }"]
         if key:
             lines += ["        if operation == \"key\" {", "            let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: max(data.count, 1), alignment: 8)",
                       "            defer { buffer.deallocate() }", "            buffer.copyBytes(from: data)",
@@ -227,6 +273,8 @@ def verdict(expected, observed, data):
         return None if parts[:2] == ["ok", str(expected[1])] else f"expected key {expected[1]}, got {observed!r}"
     if expected[0] == "delta":
         return None if parts == ["ok", expected[1]] else f"expected delta {expected[1]}, got {observed!r}"
+    if expected[0] == "computed":
+        return None if observed == "ok " + expected[1] else f"expected computed {expected[1]}, got {observed!r}"
     if expected[0] == "record":
         return None if parts == ["ok", str(expected[2]), expected[1]] else f"expected record {expected[1]} after {expected[2]} bytes, got {observed!r}"
     if parts[0] != "ok" or int(parts[1]) != expected[1]:
@@ -284,7 +332,7 @@ def main():
         (swift / f"Case{index}.swift").write_text(swift_code, encoding="utf-8")
         delta = has_delta(code, root)
         conversion = "Value" if declares(code, root, " ToValue(") else "Message"
-        entries.append((index, root, declares(code, root, " ReadKey("), f"final class {root} {{" in swift_code, delta, conversion))
+        entries.append((index, root, declares(code, root, " ReadKey("), f"final class {root} {{" in swift_code, delta, conversion, computed_names(sources, root)))
         for case_id, operation, data, second, limit, expected in operations:
             if operation.startswith("delta") and not delta:
                 skipped["no delta methods"] = skipped.get("no delta methods", 0) + 1

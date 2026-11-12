@@ -142,6 +142,72 @@ internal sealed class GesSchemaFieldSyntax
 
     internal GesSchemaDefaultSyntax? Default { get; init; }
 
+    // The expression of a field written `computed by`, which is never encoded.
+    internal GesSchemaExpressionSyntax? Computed { get; init; }
+
+    // The index of the entry among all fields, lets and withs of its schema, which orders computed and taken fields.
+    internal int Sequence { get; set; }
+
+    internal int Offset { get; init; }
+}
+
+internal enum GesSchemaExpressionKind : byte
+{
+    Literal,
+    Boolean,
+    Constant,
+    Name,
+    Member,
+    Negate,
+    Not,
+    Abs,
+    Binary,
+    Choice,
+    Min,
+    Max,
+    Clamp,
+    Default,
+    HasValue,
+    Sum,
+    Count
+}
+
+internal enum GesSchemaBinaryOperator : byte
+{
+    Add,
+    Subtract,
+    Multiply,
+    Divide,
+    Less,
+    LessOrEqual,
+    Greater,
+    GreaterOrEqual,
+    Equal,
+    NotEqual,
+    And,
+    Or
+}
+
+// An expression of a computed field, a subset of GES expressions with their spellings. A Member reads Name from its one
+// child; a Choice holds value and condition pairs and then the fallback; Sum holds its list and, with a variable in Name,
+// the projection; Clamp holds the value and both bounds.
+internal sealed class GesSchemaExpressionSyntax
+{
+    internal GesSchemaExpressionKind Kind { get; init; }
+
+    internal GesSchemaBinaryOperator Operator { get; init; }
+
+    internal GesSchemaValueSyntax? Literal { get; init; }
+
+    internal bool Boolean { get; init; }
+
+    internal string Name { get; init; } = "";
+
+    internal GesSchemaExpressionSyntax[] Children { get; init; } = [];
+
+    // The depth of the tree below and including this node, which the reader limits.
+    internal int Depth { get; init; } = 1;
+
     internal int Offset { get; init; }
 }
 
@@ -182,6 +248,9 @@ internal sealed class GesSchemaWithSyntax
     // The number of the schema's own fields declared before it.
     internal int Position { get; init; }
 
+    // The index of the entry among all fields, lets and withs of its schema.
+    internal int Sequence { get; init; }
+
     internal int Offset { get; init; }
 }
 
@@ -203,6 +272,9 @@ internal sealed class GesSchemaDeclarationSyntax
     internal GesSchemaLetSyntax[] Lets { get; init; } = [];
 
     internal GesSchemaWithSyntax[] Withs { get; init; } = [];
+
+    // The fields written `computed by`, in declared order; Fields holds the others.
+    internal GesSchemaFieldSyntax[] Computed { get; init; } = [];
 
     // An abstract schema only lends its fields with `with`.
     internal bool Abstract { get; set; }
@@ -239,6 +311,7 @@ internal sealed class GesSchemaDiagnostic
     internal const string DuplicateRole = "schema.duplicateRole";
     internal const string InvalidDefault = "schema.invalidDefault";
     internal const string InvalidAbstract = "schema.invalidAbstract";
+    internal const string InvalidExpression = "schema.invalidExpression";
 
     internal GesSchemaDiagnostic(string code, string text, int offset, string message)
     {

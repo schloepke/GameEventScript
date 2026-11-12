@@ -256,6 +256,39 @@ public sealed class GesSchemaFieldInfo
     public GesSchemaDefaultInfo? Default { get; }
 }
 
+/// <summary>
+/// A field written <c>computed by</c>: a value derived from the other fields that is never encoded or read from a document.
+/// </summary>
+public sealed class GesSchemaComputedFieldInfo
+{
+    internal GesSchemaComputedFieldInfo(GesResolvedComputed field)
+    {
+        Name = field.Name;
+        Kind = field.Kind;
+        Unit = field.Unit;
+        IsOptional = field.Optional;
+        var builder = new System.Text.StringBuilder();
+        GesComputedCanonical.Write(field.Expression, builder);
+        Expression = builder.ToString();
+    }
+
+    /// <summary>Gets the name.</summary>
+    public string Name { get; }
+
+    /// <summary>Gets the type: <see cref="GesSchemaTypeKind.Number"/>, <see cref="GesSchemaTypeKind.Quantity"/>,
+    /// <see cref="GesSchemaTypeKind.Percentage"/> or <see cref="GesSchemaTypeKind.Boolean"/>.</summary>
+    public GesSchemaTypeKind Kind { get; }
+
+    /// <summary>Gets the unit of a Quantity.</summary>
+    public GesQuantityUnit Unit { get; }
+
+    /// <summary>Gets whether the value may be absent, which generated code then gives an optional type.</summary>
+    public bool IsOptional { get; }
+
+    /// <summary>Gets the checked expression in the prefix form of the canonical form, with literals as exact decimals.</summary>
+    public string Expression { get; }
+}
+
 /// <summary>A parameter that a declaration reaches and every binding must supply.</summary>
 public sealed class GesSchemaParameterInfo
 {
@@ -360,6 +393,10 @@ public sealed class GesSchema
     /// <summary>Gets the fields of a schema or the arguments of a message, in declared order.</summary>
     public GesReadOnlyArray<GesSchemaFieldInfo> Fields { get; private set; }
 
+    /// <summary>Gets the fields of a schema written <c>computed by</c>, own and taken, in the order their expressions may read
+    /// each other.</summary>
+    public GesReadOnlyArray<GesSchemaComputedFieldInfo> ComputedFields { get; private set; }
+
     /// <summary>Gets the constants a schema declares with <c>let</c>, in declared order.</summary>
     public GesReadOnlyArray<GesSchemaConstantInfo> Constants { get; private set; }
 
@@ -383,6 +420,8 @@ public sealed class GesSchema
     public void CheckDocument(string text, GesSchemaParameters? parameters = null)
         => GesSchemaSet.Check(text, GesSchemaSet.ReadDocument(text), _declaration, parameters);
 
+    internal GesResolvedDeclaration Declaration => _declaration;
+
     // Declarations can refer to each other, so the sets are filled once every declaration has its object.
     internal void Complete()
     {
@@ -395,6 +434,9 @@ public sealed class GesSchema
         var fields = new List<GesSchemaFieldInfo>();
         foreach (var field in _declaration.Fields) fields.Add(new GesSchemaFieldInfo(field));
         Fields = new GesReadOnlyArray<GesSchemaFieldInfo>(fields);
+        var computed = new List<GesSchemaComputedFieldInfo>();
+        foreach (var field in _declaration.Computed) computed.Add(new GesSchemaComputedFieldInfo(field));
+        ComputedFields = new GesReadOnlyArray<GesSchemaComputedFieldInfo>(computed);
         var constants = new List<GesSchemaConstantInfo>();
         foreach (var let in _declaration.Lets) constants.Add(new GesSchemaConstantInfo(let));
         Constants = new GesReadOnlyArray<GesSchemaConstantInfo>(constants);

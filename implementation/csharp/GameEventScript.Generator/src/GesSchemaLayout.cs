@@ -131,6 +131,9 @@ internal sealed class GesLayoutType
     internal List<string> MaxByteCountDepends = [];
     internal List<GesLayoutField> Fields = [];
     internal List<GesLayoutConstant> Constants = [];
+
+    // The fields written `computed by`, which are never encoded, with their checked expressions.
+    internal GesResolvedComputed[] Computed = [];
     internal List<string> Tags = [];
     internal List<string> Members = [];
     internal int MemberWidth;
@@ -273,6 +276,7 @@ internal static class GesSchemaLayoutBuilder
         {
             type.Fields = Fields(schema, bound);
             type.Constants = GesLayoutConstant.Of(schema);
+            type.Computed = schema.Declaration.Computed;
             foreach (var field in type.Fields) Collect(field, depends);
             foreach (var tag in schema.Tags) type.Tags.Add(tag);
         }

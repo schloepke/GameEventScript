@@ -42,7 +42,10 @@ internal static partial class GesSwiftEmitter
         prologue.Blank();
         var header = GesSchemaPlanner.Header(layout);
         var holder = "__GesSchemas" + GesSchemaPlanner.Suffix(header, options);
-        var context = new Context(GesSchemaPlanner.KeyedElements(types), options.Values, holder, options.CheckedExclusivity);
+        var context = new Context(GesSchemaPlanner.KeyedElements(types), options.Values, holder, options.CheckedExclusivity)
+        {
+            Computed = GesSchemaPlanner.Computed(types, GesComputedEmitter.Helper(GesSchemaPlanner.Suffix(header, options)), swift: true)
+        };
         var document = new GesCodeDocument
         {
             Header = header,
@@ -64,6 +67,8 @@ internal static partial class GesSwiftEmitter
         // Split files reach the sources of another file, so the holder is internal there.
         var shared = options.Split != GesSchemaSplit.None;
         if (options.Values) document.Units.Add(new GesCodeUnit("", code => ValuesHolder(code, layout, holder, shared), outside: true));
+        if (layout.Types.Exists(type => type.Computed.Length > 0))
+            document.Units.Add(new GesCodeUnit("", code => GesComputedLibrary.Write(code, GesComputedEmitter.Helper(GesSchemaPlanner.Suffix(header, options)), swift: true)));
         return document;
     }
 
@@ -75,6 +80,8 @@ internal static partial class GesSwiftEmitter
         internal bool Values { get; } = values;
 
         internal string Holder { get; } = holder;
+
+        internal GesComputedEmitter Computed { get; set; } = null!;
 
         // The attribute of a class's stored properties: without exclusivity checks unless they are asked for.
         internal string Stored(bool isClass) => isClass && !checkedExclusivity ? "@exclusivity(unchecked) " : "";
@@ -110,6 +117,7 @@ internal static partial class GesSwiftEmitter
         foreach (var (tag, name, _) in type.Tags) names.Add((GesSchemaPlanner.Camel(name), "the tag #" + tag));
         if (!type.IsItem)
             foreach (var constant in type.Layout.Constants) names.Add((constant.Name, "the let " + constant.Name));
+        if (!type.IsItem) GesComputedEmitter.Names(type.Layout.Computed, type.Name, swift: true, names);
         GesSchemaPlanner.Unique(type.Name, names);
 
         code.Line(type.IsItem ? "/// An element of the list." : $"/// The {Kind(type)} `:{type.Name}`, read and written without allocation{(type.IsClass ? " once its storage has grown" : "")}.");
@@ -138,6 +146,7 @@ internal static partial class GesSwiftEmitter
 
         foreach (var field in type.Fields) Pools(code, field.Value, stored);
         foreach (var field in type.Fields) ListAccess(code, field, access);
+        if (!type.IsItem) context.Computed.Members(code, type.Name, type.Layout.Computed, access.TrimEnd());
         code.Blank();
         code.Line(type.IsItem ? "/// Creates an element with every field at its zero value." : "/// Creates a record with every field at its zero value.");
         code.Line($"{access}init() {{}}");

@@ -14,7 +14,8 @@ internal static class GesSchemaHighlighting
     {
         "schema", "message", "messages", "constant", "parameter", "as", "be", "between", "and", "wrapping", "step", "delta",
         "within", "integer", "optional", "key", "max", "tags", "wire", "model", "let",
-        "default", "true", "false", "abstract", "with", "all", "without"
+        "default", "true", "false", "abstract", "with", "all", "without", "computed", "by", "when", "otherwise", "or", "not", "of",
+        "min", "clamp", "abs", "has"
     };
 
     internal static void Highlight(string text, GesSpanBuilder spans, List<GesHighlightDiagnostic> diagnostics)

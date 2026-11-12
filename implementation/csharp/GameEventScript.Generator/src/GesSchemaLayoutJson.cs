@@ -59,11 +59,68 @@ internal static class GesSchemaLayoutJson
             foreach (var field in type.Fields) Field(json, field, member: true);
             json.EndArray();
             Constants(json, type.Constants);
+            Computed(json, type.Computed);
             if (type.Kind == GesSchemaKind.Message) json.Strings("tags", type.Tags);
         }
 
         json.EndObject();
     }
+
+    // Only a schema with computed fields carries them: each with its type and its checked expression tree.
+    internal static void Computed(Writer json, GesResolvedComputed[] computed)
+    {
+        if (computed.Length == 0) return;
+        json.BeginArray("computed");
+        foreach (var field in computed)
+        {
+            json.BeginObject();
+            json.String("name", field.Name);
+            json.String("type", field.Kind.ToString());
+            json.String("unit", UnitName(field.Unit));
+            json.Boolean("optional", field.Optional);
+            json.Key("expression");
+            Expression(json, field.Expression, element: false);
+            json.EndObject();
+        }
+
+        json.EndArray();
+    }
+
+    private static void Expression(Writer json, GesComputedNode node, bool element)
+    {
+        if (element) json.BeginObject();
+        else json.BeginValueObject();
+        json.String("op", GesComputedCanonical.Name(node.Op));
+        json.String("type", node.Type.ToString());
+        json.String("unit", UnitName(node.Unit));
+        switch (node.Op)
+        {
+            case GesComputedOp.Literal:
+                json.String("value", node.Type == GesComputedType.Boolean ? node.Literal.Kind == GesComputedKind.True ? "true" : "false" : node.Decimal.Canonical);
+                json.Boolean("integer", node.Literal.Kind == GesComputedKind.Integer);
+                break;
+            case GesComputedOp.Field or GesComputedOp.Item:
+                json.Strings("path", node.Path);
+                break;
+            case GesComputedOp.Add or GesComputedOp.Subtract or GesComputedOp.Multiply or GesComputedOp.Divide:
+                json.Boolean("first", node.First);
+                json.Boolean("second", node.Second);
+                json.Boolean("third", node.Third);
+                break;
+        }
+
+        if (node.Children.Length > 0)
+        {
+            json.BeginArray("children");
+            foreach (var child in node.Children) Expression(json, child, element: true);
+
+            json.EndArray();
+        }
+
+        json.EndObject();
+    }
+
+    private static string UnitName(GesQuantityUnit unit) => unit == GesQuantityUnit.UnitNone ? "none" : unit.ToTypeName();
 
     // Only a schema with lets carries them.
     internal static void Constants(Writer json, List<GesLayoutConstant> constants)

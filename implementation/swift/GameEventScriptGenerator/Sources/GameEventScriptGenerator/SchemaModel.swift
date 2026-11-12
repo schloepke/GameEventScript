@@ -1,7 +1,8 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
-import GameEventScriptRuntime
+@_spi(Generator) import GameEventScriptRuntime
+@_spi(Syntax) import GameEventScriptSyntax
 
 // The language-neutral model layout: every schema reached from the model roots, described without binding, since a model
 // type is a plain value that is never encoded. Model emitters read only this, and its JSON form is compared between ports.
@@ -23,6 +24,8 @@ struct GesModelType {
     var constants: [GesLayoutConstant] = []
     /// The schemas it takes unchanged with `with`, whose protocols or interfaces it adopts, in declared order.
     var takes: [String] = []
+    /// The fields written `computed by`, which models derive from their other fields.
+    var computed: [GesSchemaComputedFieldInfo] = []
 }
 
 /// A schema that types take with `with`: generated as a protocol (Swift) or interface (C#) with read-only properties. It
@@ -87,6 +90,7 @@ enum GesModelLayoutBuilder {
         for name in reached.keys.sorted(by: GesSchemaLayoutBuilder.ordinal) {
             let schema = reached[name]!
             var type = GesModelType(name: schema.name, hash: schema.hash, constants: GesLayoutConstant.of(schema))
+            type.computed = schema.computedFields
             for info in schema.fields {
                 let field = try self.field(info.name, info.name, info.alternatives)
                 field.optional = info.isOptional
@@ -247,6 +251,7 @@ enum GesModelLayoutJson {
             for field in type.fields { self.field(&json, field, member: true) }
             json.endArray()
             GesSchemaLayoutJson.constants(&json, type.constants)
+            GesSchemaLayoutJson.computed(&json, type.computed)
             if !type.takes.isEmpty { json.strings("takes", type.takes) }
             json.endObject()
         }

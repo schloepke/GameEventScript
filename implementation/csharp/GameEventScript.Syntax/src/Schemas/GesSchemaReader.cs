@@ -12,7 +12,7 @@ namespace GameEventScript.Syntax;
 /// Reads schema source text (<c>.gess</c>) into its declarations. Reading stops at the first syntax error; the rules
 /// across declarations belong to the Runtime.
 /// </summary>
-internal sealed class GesSchemaSourceReader
+internal sealed partial class GesSchemaSourceReader
 {
     internal const int MaximumInputScalars = 1048576;
     private const int MaximumTypeNesting = 32;
@@ -155,19 +155,35 @@ internal sealed class GesSchemaSourceReader
                 SkipTrivia();
                 Expect('{');
                 var fields = new List<GesSchemaFieldSyntax>();
+                var computed = new List<GesSchemaFieldSyntax>();
                 var lets = new List<GesSchemaLetSyntax>();
                 var withs = new List<GesSchemaWithSyntax>();
                 SkipSeparators();
-                while (!Consume('}'))
+                for (var sequence = 0; !Consume('}'); sequence++)
                 {
                     if (ReadLet() is { } let) lets.Add(let);
-                    else if (ReadWith(fields.Count) is { } with) withs.Add(with);
-                    else fields.Add(ReadField(allowUnlabeled: false, allowDefault: true));
+                    else if (ReadWith(fields.Count, sequence) is { } with) withs.Add(with);
+                    else
+                    {
+                        var field = ReadField(allowUnlabeled: false, allowDefault: true);
+                        field.Sequence = sequence;
+                        (field.Computed is null ? fields : computed).Add(field);
+                    }
+
                     EndEntry('}');
                     SkipSeparators();
                 }
 
-                return new GesSchemaDeclarationSyntax { Kind = GesSchemaDeclarationKind.Schema, Name = name, Offset = offset, Fields = fields.ToArray(), Lets = lets.ToArray(), Withs = withs.ToArray() };
+                return new GesSchemaDeclarationSyntax
+                {
+                    Kind = GesSchemaDeclarationKind.Schema,
+                    Name = name,
+                    Offset = offset,
+                    Fields = fields.ToArray(),
+                    Computed = computed.ToArray(),
+                    Lets = lets.ToArray(),
+                    Withs = withs.ToArray()
+                };
             }
             case "message":
             {
@@ -255,7 +271,7 @@ internal sealed class GesSchemaSourceReader
     }
 
     // `with :Name [all optional] [without (a, b)]`; a field named with is followed by its colon instead of a type name.
-    private GesSchemaWithSyntax? ReadWith(int position)
+    private GesSchemaWithSyntax? ReadWith(int position, int sequence)
     {
         var offset = _position;
         if (!AtWord("with")) return null;
@@ -297,7 +313,7 @@ internal sealed class GesSchemaSourceReader
             Expect(')');
         }
 
-        return new GesSchemaWithSyntax { Name = name, AllOptional = allOptional, Without = without.ToArray(), WithoutOffsets = offsets.ToArray(), Position = position, Offset = offset };
+        return new GesSchemaWithSyntax { Name = name, AllOptional = allOptional, Without = without.ToArray(), WithoutOffsets = offsets.ToArray(), Position = position, Sequence = sequence, Offset = offset };
     }
 
     private GesSchemaFieldSyntax ReadField(bool allowUnlabeled, bool allowDefault)
@@ -330,6 +346,18 @@ internal sealed class GesSchemaSourceReader
 
         GesSchemaDefaultSyntax? fallback = null;
         SkipSpaces();
+        if (AtWord("computed"))
+        {
+            if (!allowDefault) throw Failure("A message argument is not computed.");
+            ReadWord();
+            SkipSpaces();
+            ExpectWord("by");
+            SkipContinuation();
+            _expressionNesting = 0;
+            var expression = ReadExpression();
+            return new GesSchemaFieldSyntax { Name = name, Alternatives = alternatives, Marker = marker, Computed = expression, Offset = offset };
+        }
+
         if (allowDefault && AtWord("default"))
         {
             var start = _position;

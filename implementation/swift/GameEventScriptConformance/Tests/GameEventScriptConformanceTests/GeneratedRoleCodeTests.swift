@@ -269,6 +269,21 @@ final class GeneratedRoleCodeTests: XCTestCase {
         XCTAssertNil(RolesModel.GearPreset().weight)
     }
 
+    func testComputedFieldsDeriveTheValuesOfAScriptRecord() throws {
+        // depth: reach - range * strength; a percentage scales the quantity on its left.
+        let echo = RolesModel.RadarEcho(range: 500, reach: 600, contacts: [], strength: 0.25)
+        XCTAssertEqual(echo.depth, 475)
+        let value = echo.toValue()
+        XCTAssertEqual(value.asMap?.get("depth"), .integer(475, unit: .meter))
+        XCTAssertEqual(try RolesModel.RadarEcho(value: value), echo)
+        // burden: mass + wear, with wear the let 2.5%; models and wire records derive it alike.
+        XCTAssertEqual(RolesModel.World_Body(mass: 200).burden, 205)
+        var body = RolesWire.World_Body()
+        body.mass = 200
+        XCTAssertEqual(body.burden, 205)
+        XCTAssertEqual(try body.toValue().asMap?.get("burden"), .integer(205, unit: .kilogram))
+    }
+
     func testBoundModelsAlsoConvertToPlainValues() throws {
         let value = report().toValue()
         let bound = try RolesBound.Panel_Report(value: value)

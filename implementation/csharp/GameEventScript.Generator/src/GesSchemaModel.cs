@@ -39,6 +39,9 @@ internal sealed class GesModelType
 
     // The schemas it takes unchanged with `with`, whose protocols or interfaces it adopts, in declared order.
     internal List<string> Takes = [];
+
+    // The fields written `computed by`, which models derive from their other fields.
+    internal GesResolvedComputed[] Computed = [];
 }
 
 // A schema that types take with `with`: generated as a protocol (Swift) or interface (C#) with read-only properties. It
@@ -124,7 +127,7 @@ internal static class GesModelLayoutBuilder
         var types = new List<GesModelType>();
         foreach (var schema in reached.Values)
         {
-            var type = new GesModelType { Name = schema.Name, Hash = schema.Hash, Constants = GesLayoutConstant.Of(schema) };
+            var type = new GesModelType { Name = schema.Name, Hash = schema.Hash, Constants = GesLayoutConstant.Of(schema), Computed = schema.Declaration.Computed };
             foreach (var info in schema.Fields)
             {
                 var field = Field(info.Name, info.Name, info.Alternatives);
@@ -324,6 +327,7 @@ internal static class GesModelLayoutJson
             foreach (var field in type.Fields) Field(json, field, member: true);
             json.EndArray();
             GesSchemaLayoutJson.Constants(json, type.Constants);
+            GesSchemaLayoutJson.Computed(json, type.Computed);
             if (type.Takes.Count > 0) json.Strings("takes", type.Takes);
             json.EndObject();
         }

@@ -165,6 +165,110 @@ public enum GesSchemaTypeKind: String, Sendable, Equatable {
     @_spi(Syntax) public let marker: GesSchemaFieldMarker
     @_spi(Syntax) public let defaultValue: GesSchemaDefaultSyntax?
     @_spi(Syntax) public let offset: Int
+    /// The expression of a field written `computed by`, which is never encoded.
+    @_spi(Syntax) public var computed: GesSchemaExpressionSyntax?
+    /// The index of the entry among all fields, lets and withs of its schema, which orders computed and taken fields.
+    @_spi(Syntax) public var sequence = 0
+}
+
+/// The kinds of the expressions of computed fields.
+@_spi(Syntax) public enum GesSchemaExpressionKind: Sendable {
+    /// A number literal.
+    case literal
+    /// `true` or `false`.
+    case boolean
+    /// A file constant.
+    case constant
+    /// A field, let or projection variable.
+    case name
+    /// A field of a record.
+    case member
+    /// Unary minus.
+    case negate
+    /// `not`.
+    case not
+    /// `abs`.
+    case abs
+    /// A binary operator.
+    case binary
+    /// `value when condition, …, otherwise fallback`.
+    case choice
+    /// `min of`.
+    case min
+    /// `max of`.
+    case max
+    /// `clamp … between … and …`.
+    case clamp
+    /// `default`.
+    case `default`
+    /// `has value`.
+    case hasValue
+    /// `[:sum]`.
+    case sum
+    /// `[:count]`.
+    case count
+}
+
+/// The binary operators of computed expressions.
+@_spi(Syntax) public enum GesSchemaBinaryOperator: Sendable {
+    /// `+`.
+    case add
+    /// `-`.
+    case subtract
+    /// `*`.
+    case multiply
+    /// `/`.
+    case divide
+    /// `<`.
+    case less
+    /// `<=`.
+    case lessOrEqual
+    /// `>`.
+    case greater
+    /// `>=`.
+    case greaterOrEqual
+    /// `=`.
+    case equal
+    /// `<>`.
+    case notEqual
+    /// `and`.
+    case and
+    /// `or`.
+    case or
+}
+
+/// An expression of a computed field, a subset of GES expressions with their spellings. A member reads `name` from its one
+/// child; a choice holds value and condition pairs and then the fallback; a sum holds its list and, with a variable in
+/// `name`, the projection; a clamp holds the value and both bounds.
+@_spi(Syntax) public final class GesSchemaExpressionSyntax: Sendable {
+    @_spi(Syntax) public let kind: GesSchemaExpressionKind
+    @_spi(Syntax) public let binary: GesSchemaBinaryOperator
+    @_spi(Syntax) public let literal: GesSchemaValueSyntax?
+    @_spi(Syntax) public let boolean: Bool
+    @_spi(Syntax) public let name: String
+    @_spi(Syntax) public let children: [GesSchemaExpressionSyntax]
+    /// The depth of the tree below and including this node, which the reader limits.
+    @_spi(Syntax) public let depth: Int
+    @_spi(Syntax) public let offset: Int
+
+    init(
+        _ kind: GesSchemaExpressionKind,
+        offset: Int,
+        binary: GesSchemaBinaryOperator = .add,
+        literal: GesSchemaValueSyntax? = nil,
+        boolean: Bool = false,
+        name: String = "",
+        children: [GesSchemaExpressionSyntax] = []
+    ) {
+        self.kind = kind
+        self.binary = binary
+        self.literal = literal
+        self.boolean = boolean
+        self.name = name
+        self.children = children
+        depth = (children.map(\.depth).max() ?? 0) + 1
+        self.offset = offset
+    }
 }
 
 /// The value a field takes when a value or document leaves it out: `default` with a number, a constant, a let or a sibling
@@ -191,6 +295,8 @@ public enum GesSchemaTypeKind: String, Sendable, Equatable {
     @_spi(Syntax) public var withoutOffsets: [Int] = []
     /// The number of the schema's own fields declared before it.
     @_spi(Syntax) public var position = 0
+    /// The index of the entry among all fields, lets and withs of its schema.
+    @_spi(Syntax) public var sequence = 0
     @_spi(Syntax) public var offset = 0
 }
 
@@ -204,6 +310,8 @@ public enum GesSchemaTypeKind: String, Sendable, Equatable {
     @_spi(Syntax) public var fields: [GesSchemaFieldSyntax] = []
     @_spi(Syntax) public var lets: [GesSchemaLetSyntax] = []
     @_spi(Syntax) public var withs: [GesSchemaWithSyntax] = []
+    /// The fields written `computed by`, in declared order; `fields` holds the others.
+    @_spi(Syntax) public var computed: [GesSchemaFieldSyntax] = []
     /// An abstract schema only lends its fields with `with`.
     @_spi(Syntax) public var isAbstract = false
     @_spi(Syntax) public var tags: [String] = []
@@ -233,6 +341,7 @@ public enum GesSchemaTypeKind: String, Sendable, Equatable {
     @_spi(Syntax) public static let duplicateRole = "schema.duplicateRole"
     @_spi(Syntax) public static let invalidDefault = "schema.invalidDefault"
     @_spi(Syntax) public static let invalidAbstract = "schema.invalidAbstract"
+    @_spi(Syntax) public static let invalidExpression = "schema.invalidExpression"
 
     @_spi(Syntax) public let code: String
     /// The UTF-8 offset of the error.

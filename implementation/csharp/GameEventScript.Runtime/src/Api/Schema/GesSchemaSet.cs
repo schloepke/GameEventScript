@@ -376,12 +376,15 @@ internal sealed class GesResolvedDeclaration
 
     internal GesResolvedDeclaration[] Members { get; set; } = [];
 
+    // The fields written `computed by`, own and taken, in the order their expressions may read each other.
+    internal GesResolvedComputed[] Computed { get; set; } = [];
+
     // The public description, which exists once all declarations are resolved.
     internal GesSchema Public { get; set; } = null!;
 }
 
 /// <summary>One source: its constants and parameters, which only its own declarations see.</summary>
-internal sealed class GesFileScope
+internal sealed partial class GesFileScope
 {
     private readonly GesSchemaSource _source;
     private readonly GesSchemaSourceSyntax _syntax;
@@ -513,7 +516,7 @@ internal sealed class GesFileScope
                 var source = all[with.Name];
                 takes.Add((source, with));
                 for (var excluded = 0; excluded < with.Without.Length; excluded++)
-                    if (!Array.Exists(source.Fields, field => field.Name == with.Without[excluded]))
+                    if (!Array.Exists(source.Fields, field => field.Name == with.Without[excluded]) && !Array.Exists(source.Computed, field => field.Name == with.Without[excluded]))
                         throw Error(Code.UnknownName, with.WithoutOffsets[excluded], $"'{with.Without[excluded]}' is no field of '{source.Name}'.");
                 foreach (var field in source.Fields)
                 {
@@ -556,9 +559,59 @@ internal sealed class GesFileScope
                 throw Error(Code.InvalidDefault, origins[index], $"'{merged[index].Name}' defaults to '{fallback.Name}', which 'without' leaves out.");
         declaration.Fields = merged.ToArray();
         declaration.Takes = takes.ToArray();
+        declaration.Computed = ResolveComputed(declaration, ComputedEntries(declaration, all), names);
         _lets.Clear();
         foreach (var let in declaration.Lets) _lets[let.Name] = let;
         ResolveDefaults(declaration);
+    }
+
+    // The computed fields in written order: own ones, and those of a schema taken by `with` where the `with` stands, without
+    // the names it leaves out; `all optional` makes taken numbers optional.
+    private List<GesResolvedComputed> ComputedEntries(GesResolvedDeclaration declaration, Dictionary<string, GesResolvedDeclaration> all)
+    {
+        var entries = new List<GesResolvedComputed>();
+        var syntax = declaration.Syntax;
+        var withIndex = 0;
+        var ownIndex = 0;
+        while (withIndex < syntax.Withs.Length || ownIndex < syntax.Computed.Length)
+        {
+            if (ownIndex == syntax.Computed.Length || withIndex < syntax.Withs.Length && syntax.Withs[withIndex].Sequence < syntax.Computed[ownIndex].Sequence)
+            {
+                var with = syntax.Withs[withIndex++];
+                foreach (var taken in all[with.Name].Computed)
+                {
+                    if (Array.IndexOf(with.Without, taken.Name) >= 0) continue;
+                    entries.Add(new GesResolvedComputed
+                    {
+                        Name = taken.Name,
+                        Kind = taken.Kind,
+                        Unit = taken.Unit,
+                        Optional = taken.Optional || with.AllOptional && taken.Kind != GesSchemaTypeKind.Boolean,
+                        Offset = taken.Offset,
+                        Scope = taken.Scope,
+                        Syntax = taken.Syntax,
+                        Lets = taken.Lets
+                    });
+                }
+
+                continue;
+            }
+
+            var field = syntax.Computed[ownIndex++];
+            entries.Add(new GesResolvedComputed
+            {
+                Name = field.Name,
+                Kind = field.Alternatives[0].Kind,
+                Unit = field.Alternatives[0].Unit,
+                Optional = field.Marker == GesSchemaFieldMarker.Optional,
+                Offset = field.Offset,
+                Scope = this,
+                Syntax = field,
+                Lets = declaration.Lets
+            });
+        }
+
+        return entries;
     }
 
     // A default is a number, a Boolean or a tag of the field's single type, or a sibling field of the same type whose value it
@@ -572,6 +625,8 @@ internal sealed class GesFileScope
             var field = Array.Find(declaration.Fields, candidate => candidate.Name == syntax[index].Name && candidate.Scope == this && candidate.Offset == syntax[index].Offset)!;
             if (field.Marker == GesSchemaFieldMarker.Key) throw Error(Code.InvalidDefault, written.Offset, "A key takes no default.");
             var name = written.Value?.Name ?? "";
+            if (name.Length > 0 && Array.Exists(declaration.Computed, candidate => candidate.Name == name))
+                throw Error(Code.InvalidDefault, written.Offset, $"'{name}' is computed; a default names a stored field.");
             var sibling = name.Length > 0 ? Array.Find(declaration.Fields, candidate => candidate.Name == name) : null;
             if (sibling is not null)
             {
@@ -894,6 +949,19 @@ internal static class GesSchemaCanonical
                 builder.Append("schema ").Append(declaration.Name).Append('\n');
                 foreach (var let in declaration.Lets) builder.Append("let ").Append(let.Name).Append(' ').Append(LetKind(let)).Append(' ').Append(let.Value.Canonical).Append('\n');
                 foreach (var field in declaration.Fields) WriteField("field ", field, builder);
+                foreach (var computed in declaration.Computed)
+                {
+                    builder.Append("computed ").Append(computed.Name).Append(' ').Append(computed.Kind switch
+                    {
+                        GesSchemaTypeKind.Quantity => "Quantity(" + computed.Unit.ToTypeName() + ")",
+                        _ => computed.Kind.ToString()
+                    });
+                    if (computed.Optional) builder.Append(" optional");
+                    builder.Append(' ');
+                    GesComputedCanonical.Write(computed.Expression, builder);
+                    builder.Append('\n');
+                }
+
                 break;
             case GesSchemaKind.Message:
                 builder.Append("message ").Append(declaration.Name);

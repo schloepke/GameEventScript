@@ -2388,6 +2388,1511 @@ schema:
 
 ---
 
+## Test: computed fields belong to the hash
+
+A computed field is part of the canonical form, in a prefix form with exact literals; a later
+field of the same spelling changes the hash like any other.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: canonical-computed
+schemaApi:
+  sources:
+    - "schema :Sound as {\n  energy: :Quantity(J) between 0J and 1kJ step 1J\n  duration: :Quantity(s) between 0s and 10s step 1ms\n  power: :Quantity(W) computed by 0W when duration <= 0s, otherwise energy / duration\n  loud: :Boolean computed by power > 50W and not (duration = 0s)\n}\n"
+  root: "Sound"
+  bind: false
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  canonical: "gess1\nschema Sound\nfield energy Quantity(joule) between 0e0 1e3 step 1e0\nfield duration Quantity(second) between 0e0 1e1 step 1e-3\ncomputed power Quantity(watt) (choice (quantity watt 0e0) (lessOrEqual (field duration) (quantity second 0e0)) (divide (field energy) (field duration)))\ncomputed loud Boolean (and (greater (field power) (quantity watt 5e1)) (not (equal (field duration) (quantity second 0e0))))\n"
+  hash: "df67ebf131d5bfd3"
+```
+
+---
+
+## Test: the description of computed fields
+
+Computed fields are described apart from the fields that are encoded.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: describe-computed
+schemaApi:
+  sources:
+    - "schema :Gauge as {\n  current: :Number between 0 and 1000 step 0.5\n  maximum: :Number integer between 0 and 1000\n  bonus: :Percentage between 0% and 100% step 1%\n  boosted: :Number computed by current + bonus\n  share: :Number computed by current * bonus\n  doubled: :Percentage computed by bonus + bonus\n  spread: :Percentage optional computed by bonus / maximum\n}\n"
+  root: "Gauge"
+  bind: false
+  describe: true
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  description:
+    name: "Gauge"
+    kind: "Schema"
+    fields:
+      - name: "current"
+        alternatives:
+          - kind: "Number"
+            lower: "0e0"
+            upper: "1e3"
+            step: "5e-1"
+      - name: "maximum"
+        alternatives:
+          - kind: "Number"
+            integer: true
+            lower: "0e0"
+            upper: "1e3"
+      - name: "bonus"
+        alternatives:
+          - kind: "Percentage"
+            lower: "0e0"
+            upper: "1e0"
+            step: "1e-2"
+    computed:
+      - name: "boosted"
+        kind: "Number"
+        expression: "(add (field current) (field bonus))"
+      - name: "share"
+        kind: "Number"
+        expression: "(multiply (field current) (field bonus))"
+      - name: "doubled"
+        kind: "Percentage"
+        expression: "(add (field bonus) (field bonus))"
+      - name: "spread"
+        kind: "Percentage"
+        optional: true
+        expression: "(divide (field bonus) (field maximum))"
+```
+
+---
+
+## Test: a computed quantity and its condition
+
+Decoding derives each computed field from the decoded fields and the computed fields before it,
+with the values a script record gives: `300J / 0.25s` is the integer `1200W`.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: decode-computed-quantity
+schemaApi:
+  sources:
+    - "schema :Sound as {\n  energy: :Quantity(J) between 0J and 1kJ step 1J\n  duration: :Quantity(s) between 0s and 10s step 1ms\n  power: :Quantity(W) computed by 0W when duration <= 0s, otherwise energy / duration\n  loud: :Boolean computed by power > 50W and not (duration = 0s)\n}\n"
+  root: "Sound"
+  encode:
+    type: ":Sound"
+    entries:
+      - key: "duration"
+        value:
+          type: ":Quantity.binary64"
+          value: "0.25"
+          unit: ":second"
+      - key: "energy"
+        value:
+          type: ":Quantity.int64"
+          value: "300"
+          unit: ":joule"
+  decode: "2ce903"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "2ce903"
+  decoded:
+    value:
+      type: ":Sound"
+      entries:
+        - key: "duration"
+          value:
+            type: ":Quantity.binary64"
+            value: "0.25"
+            unit: ":second"
+        - key: "energy"
+          value:
+            type: ":Quantity.int64"
+            value: "300"
+            unit: ":joule"
+        - key: "loud"
+          value:
+            type: ":Boolean"
+            value: true
+        - key: "power"
+          value:
+            type: ":Quantity.int64"
+            value: "1200"
+            unit: ":watt"
+    byteCount: 3
+```
+
+---
+
+## Test: a choice guards a division
+
+The first condition that holds selects its value, so a zero duration gives `0W` instead of a division.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: decode-computed-choice
+schemaApi:
+  sources:
+    - "schema :Sound as {\n  energy: :Quantity(J) between 0J and 1kJ step 1J\n  duration: :Quantity(s) between 0s and 10s step 1ms\n  power: :Quantity(W) computed by 0W when duration <= 0s, otherwise energy / duration\n  loud: :Boolean computed by power > 50W and not (duration = 0s)\n}\n"
+  root: "Sound"
+  encode:
+    type: ":Sound"
+    entries:
+      - key: "duration"
+        value:
+          type: ":Quantity.int64"
+          value: "0"
+          unit: ":second"
+      - key: "energy"
+        value:
+          type: ":Quantity.int64"
+          value: "300"
+          unit: ":joule"
+  decode: "2c0100"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "2c0100"
+  decoded:
+    value:
+      type: ":Sound"
+      entries:
+        - key: "duration"
+          value:
+            type: ":Quantity.int64"
+            value: "0"
+            unit: ":second"
+        - key: "energy"
+          value:
+            type: ":Quantity.int64"
+            value: "300"
+            unit: ":joule"
+        - key: "loud"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "power"
+          value:
+            type: ":Quantity.int64"
+            value: "0"
+            unit: ":watt"
+    byteCount: 3
+```
+
+---
+
+## Test: a computed binary64
+
+A quotient that is not whole stays binary64.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: decode-computed-binary64
+schemaApi:
+  sources:
+    - "schema :Sound as {\n  energy: :Quantity(J) between 0J and 1kJ step 1J\n  duration: :Quantity(s) between 0s and 10s step 1ms\n  power: :Quantity(W) computed by 0W when duration <= 0s, otherwise energy / duration\n  loud: :Boolean computed by power > 50W and not (duration = 0s)\n}\n"
+  root: "Sound"
+  encode:
+    type: ":Sound"
+    entries:
+      - key: "duration"
+        value:
+          type: ":Quantity.int64"
+          value: "3"
+          unit: ":second"
+      - key: "energy"
+        value:
+          type: ":Quantity.int64"
+          value: "7"
+          unit: ":joule"
+  decode: "07e02e"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "07e02e"
+  decoded:
+    value:
+      type: ":Sound"
+      entries:
+        - key: "duration"
+          value:
+            type: ":Quantity.int64"
+            value: "3"
+            unit: ":second"
+        - key: "energy"
+          value:
+            type: ":Quantity.int64"
+            value: "7"
+            unit: ":joule"
+        - key: "loud"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "power"
+          value:
+            type: ":Quantity.binary64"
+            value: "2.3333333333333335"
+            unit: ":watt"
+    byteCount: 3
+```
+
+---
+
+## Test: percentages in computed fields
+
+A percentage right of a number scales it by its own magnitude, `10.5 + 25%` is `13.125`; beside
+another percentage it adds. A percentage divided by zero is infinite, which a Percentage field
+turns into nothing.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: decode-computed-percentages
+schemaApi:
+  sources:
+    - "schema :Gauge as {\n  current: :Number between 0 and 1000 step 0.5\n  maximum: :Number integer between 0 and 1000\n  bonus: :Percentage between 0% and 100% step 1%\n  boosted: :Number computed by current + bonus\n  share: :Number computed by current * bonus\n  doubled: :Percentage computed by bonus + bonus\n  spread: :Percentage optional computed by bonus / maximum\n}\n"
+  root: "Gauge"
+  encode:
+    type: ":Gauge"
+    entries:
+      - key: "bonus"
+        value:
+          type: ":Percentage"
+          value: "0.25"
+      - key: "current"
+        value:
+          type: ":Number.binary64"
+          value: "10.5"
+      - key: "maximum"
+        value:
+          type: ":Number.int64"
+          value: "0"
+  decode: "15002003"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "15002003"
+  decoded:
+    value:
+      type: ":Gauge"
+      entries:
+        - key: "boosted"
+          value:
+            type: ":Number.binary64"
+            value: "13.125"
+        - key: "bonus"
+          value:
+            type: ":Percentage"
+            value: "0.25"
+        - key: "current"
+          value:
+            type: ":Number.binary64"
+            value: "10.5"
+        - key: "doubled"
+          value:
+            type: ":Percentage"
+            value: "0.5"
+        - key: "maximum"
+          value:
+            type: ":Number.int64"
+            value: "0"
+        - key: "share"
+          value:
+            type: ":Number.binary64"
+            value: "2.625"
+        - key: "spread"
+          value:
+            type: ":Nothing"
+    byteCount: 4
+```
+
+---
+
+## Test: a percentage divided by a number
+
+A percentage divided by a unitless number stays a percentage.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: decode-computed-percentage-quotient
+schemaApi:
+  sources:
+    - "schema :Gauge as {\n  current: :Number between 0 and 1000 step 0.5\n  maximum: :Number integer between 0 and 1000\n  bonus: :Percentage between 0% and 100% step 1%\n  boosted: :Number computed by current + bonus\n  share: :Number computed by current * bonus\n  doubled: :Percentage computed by bonus + bonus\n  spread: :Percentage optional computed by bonus / maximum\n}\n"
+  root: "Gauge"
+  encode:
+    type: ":Gauge"
+    entries:
+      - key: "bonus"
+        value:
+          type: ":Percentage"
+          value: "0.25"
+      - key: "current"
+        value:
+          type: ":Number.binary64"
+          value: "10.5"
+      - key: "maximum"
+        value:
+          type: ":Number.int64"
+          value: "4"
+  decode: "15202003"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "15202003"
+  decoded:
+    value:
+      type: ":Gauge"
+      entries:
+        - key: "boosted"
+          value:
+            type: ":Number.binary64"
+            value: "13.125"
+        - key: "bonus"
+          value:
+            type: ":Percentage"
+            value: "0.25"
+        - key: "current"
+          value:
+            type: ":Number.binary64"
+            value: "10.5"
+        - key: "doubled"
+          value:
+            type: ":Percentage"
+            value: "0.5"
+        - key: "maximum"
+          value:
+            type: ":Number.int64"
+            value: "4"
+        - key: "share"
+          value:
+            type: ":Number.binary64"
+            value: "2.625"
+        - key: "spread"
+          value:
+            type: ":Percentage"
+            value: "0.0625"
+    byteCount: 4
+```
+
+---
+
+## Test: integers stay exact
+
+Integer arithmetic is exact within Int64 and falls back to binary64 on overflow, so `a + 1 - a` is `1`
+where binary64 would give 0; `min of`, `max of`, `clamp`, `abs` and negation keep integers.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: decode-computed-integers
+schemaApi:
+  sources:
+    - "schema :Counter as {\n  a: :Number integer between -5000000000000000000 and 5000000000000000000\n  b: :Number integer between -1000 and 1000\n  sum: :Number computed by a + 1 - a\n  tripled: :Number computed by a * 3\n  low: :Number computed by min of a and b and 0\n  high: :Number computed by max of b and 0\n  bound: :Number computed by clamp b between 10 and -10\n  gap: :Number computed by abs (b - 7)\n  flipped: :Number computed by -b\n}\n"
+  root: "Counter"
+  encode:
+    type: ":Counter"
+    entries:
+      - key: "a"
+        value:
+          type: ":Number.int64"
+          value: "4000000000000000000"
+      - key: "b"
+        value:
+          type: ":Number.int64"
+          value: "-12"
+  decode: "000084e2506ce67cdc03"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "000084e2506ce67cdc03"
+  decoded:
+    value:
+      type: ":Counter"
+      entries:
+        - key: "a"
+          value:
+            type: ":Number.int64"
+            value: "4000000000000000000"
+        - key: "b"
+          value:
+            type: ":Number.int64"
+            value: "-12"
+        - key: "bound"
+          value:
+            type: ":Number.int64"
+            value: "-10"
+        - key: "flipped"
+          value:
+            type: ":Number.int64"
+            value: "12"
+        - key: "gap"
+          value:
+            type: ":Number.int64"
+            value: "19"
+        - key: "high"
+          value:
+            type: ":Number.int64"
+            value: "0"
+        - key: "low"
+          value:
+            type: ":Number.int64"
+            value: "-12"
+        - key: "sum"
+          value:
+            type: ":Number.int64"
+            value: "1"
+        - key: "tripled"
+          value:
+            type: ":Number.binary64"
+            value: "1.2e19"
+    byteCount: 10
+```
+
+---
+
+## Test: lists, records and absent values
+
+A sum projects each element and adds from left to right, a count counts the elements, and an absent
+element field makes the sum nothing. `default` replaces an absent value and `has value` tests for one.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: decode-computed-lists
+schemaApi:
+  sources:
+    - "schema :Source as {\n  power: :Quantity(W) between 0W and 1kW step 1W\n  level: :Number integer between 0 and 9 optional\n}\nschema :Room as {\n  sources: :List(:Source) max 4\n  levels: :List(:Number integer between 0 and 9) max 4\n  main: :Source optional\n  signature: :Quantity(W) computed by sources[:sum s => s.power]\n  total: :Number computed by levels[:sum] + sources[:count]\n  levelSum: :Number optional computed by sources[:sum s => s.level]\n  mainPower: :Quantity(W) computed by main.power default 0W\n  mainPresent: :Boolean computed by main has value\n  fallbackLevel: :Number computed by main.level default 5\n}\n"
+  root: "Room"
+  encode:
+    type: ":Room"
+    entries:
+      - key: "levels"
+        value:
+          type: ":List"
+          items:
+            - type: ":Number.int64"
+              value: "1"
+            - type: ":Number.int64"
+              value: "2"
+            - type: ":Number.int64"
+              value: "3"
+      - key: "sources"
+        value:
+          type: ":List"
+          items:
+            - type: ":Source"
+              entries:
+                - key: "level"
+                  value:
+                    type: ":Number.int64"
+                    value: "2"
+                - key: "power"
+                  value:
+                    type: ":Quantity.int64"
+                    value: "100"
+                    unit: ":watt"
+            - type: ":Source"
+              entries:
+                - key: "power"
+                  value:
+                    type: ":Quantity.int64"
+                    value: "250"
+                    unit: ":watt"
+  decode: "22a3e8632103"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "22a3e8632103"
+  decoded:
+    value:
+      type: ":Room"
+      entries:
+        - key: "fallbackLevel"
+          value:
+            type: ":Number.int64"
+            value: "5"
+        - key: "levelSum"
+          value:
+            type: ":Nothing"
+        - key: "levels"
+          value:
+            type: ":List"
+            items:
+              - type: ":Number.int64"
+                value: "1"
+              - type: ":Number.int64"
+                value: "2"
+              - type: ":Number.int64"
+                value: "3"
+        - key: "main"
+          value:
+            type: ":Nothing"
+        - key: "mainPower"
+          value:
+            type: ":Quantity.int64"
+            value: "0"
+            unit: ":watt"
+        - key: "mainPresent"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "signature"
+          value:
+            type: ":Quantity.int64"
+            value: "350"
+            unit: ":watt"
+        - key: "sources"
+          value:
+            type: ":List"
+            items:
+              - type: ":Source"
+                entries:
+                  - key: "level"
+                    value:
+                      type: ":Number.int64"
+                      value: "2"
+                  - key: "power"
+                    value:
+                      type: ":Quantity.int64"
+                      value: "100"
+                      unit: ":watt"
+              - type: ":Source"
+                entries:
+                  - key: "level"
+                    value:
+                      type: ":Nothing"
+                  - key: "power"
+                    value:
+                      type: ":Quantity.int64"
+                      value: "250"
+                      unit: ":watt"
+        - key: "total"
+          value:
+            type: ":Number.int64"
+            value: "8"
+    byteCount: 6
+```
+
+---
+
+## Test: empty lists and a present record
+
+An empty sum is 0, which the field's type gives its unit; a present record is read through its fields.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: decode-computed-empty
+schemaApi:
+  sources:
+    - "schema :Source as {\n  power: :Quantity(W) between 0W and 1kW step 1W\n  level: :Number integer between 0 and 9 optional\n}\nschema :Room as {\n  sources: :List(:Source) max 4\n  levels: :List(:Number integer between 0 and 9) max 4\n  main: :Source optional\n  signature: :Quantity(W) computed by sources[:sum s => s.power]\n  total: :Number computed by levels[:sum] + sources[:count]\n  levelSum: :Number optional computed by sources[:sum s => s.level]\n  mainPower: :Quantity(W) computed by main.power default 0W\n  mainPresent: :Boolean computed by main has value\n  fallbackLevel: :Number computed by main.level default 5\n}\n"
+  root: "Room"
+  encode:
+    type: ":Room"
+    entries:
+      - key: "levels"
+        value:
+          type: ":List"
+          items: []
+      - key: "main"
+        value:
+          type: ":Source"
+          entries:
+            - key: "level"
+              value:
+                type: ":Number.int64"
+                value: "1"
+            - key: "power"
+              value:
+                type: ":Quantity.int64"
+                value: "5"
+                unit: ":watt"
+      - key: "sources"
+        value:
+          type: ":List"
+          items: []
+  decode: "c00206"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "c00206"
+  decoded:
+    value:
+      type: ":Room"
+      entries:
+        - key: "fallbackLevel"
+          value:
+            type: ":Number.int64"
+            value: "1"
+        - key: "levelSum"
+          value:
+            type: ":Number.int64"
+            value: "0"
+        - key: "levels"
+          value:
+            type: ":List"
+            items: []
+        - key: "main"
+          value:
+            type: ":Source"
+            entries:
+              - key: "level"
+                value:
+                  type: ":Number.int64"
+                  value: "1"
+              - key: "power"
+                value:
+                  type: ":Quantity.int64"
+                  value: "5"
+                  unit: ":watt"
+        - key: "mainPower"
+          value:
+            type: ":Quantity.int64"
+            value: "5"
+            unit: ":watt"
+        - key: "mainPresent"
+          value:
+            type: ":Boolean"
+            value: true
+        - key: "signature"
+          value:
+            type: ":Quantity.int64"
+            value: "0"
+            unit: ":watt"
+        - key: "sources"
+          value:
+            type: ":List"
+            items: []
+        - key: "total"
+          value:
+            type: ":Number.int64"
+            value: "0"
+    byteCount: 3
+```
+
+---
+
+## Test: division by zero and percentages
+
+`0 / 0` is nothing and `1 / 0` infinite; `x - p` takes the percentage of x, and a percentage times a
+percentage stays one.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: decode-computed-edges
+schemaApi:
+  sources:
+    - "schema :Edge as {\n  x: :Number\n  y: :Number\n  p: :Percentage\n  q: :Number optional computed by x / y\n  huge: :Number computed by 1 / y\n  s: :Number computed by x - p\n  t: :Percentage computed by -p * p\n  u: :Number computed by p * x\n  v: :Number computed by clamp x between -1.5 and y + 0.5\n  w: :Number computed by max of x and 0.5 and -2\n  ne: :Boolean computed by x <> 0 and p = 25%\n}\n"
+  root: "Edge"
+  encode:
+    type: ":Edge"
+    entries:
+      - key: "p"
+        value:
+          type: ":Percentage"
+          value: "0.25"
+      - key: "x"
+        value:
+          type: ":Number.int64"
+          value: "0"
+      - key: "y"
+        value:
+          type: ":Number.int64"
+          value: "0"
+  decode: "00000000000000000000000000000000000000000000d03f"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "00000000000000000000000000000000000000000000d03f"
+  decoded:
+    value:
+      type: ":Edge"
+      entries:
+        - key: "huge"
+          value:
+            type: ":Number.binary64"
+            value: "Infinity"
+        - key: "ne"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "p"
+          value:
+            type: ":Percentage"
+            value: "0.25"
+        - key: "q"
+          value:
+            type: ":Nothing"
+        - key: "s"
+          value:
+            type: ":Number.int64"
+            value: "0"
+        - key: "t"
+          value:
+            type: ":Percentage"
+            value: "-0.0625"
+        - key: "u"
+          value:
+            type: ":Number.int64"
+            value: "0"
+        - key: "v"
+          value:
+            type: ":Number.int64"
+            value: "0"
+        - key: "w"
+          value:
+            type: ":Number.binary64"
+            value: "0.5"
+        - key: "x"
+          value:
+            type: ":Number.int64"
+            value: "0"
+        - key: "y"
+          value:
+            type: ":Number.int64"
+            value: "0"
+    byteCount: 24
+```
+
+---
+
+## Test: clamp, max and a percentage of a binary64
+
+Bounds of `clamp` may come in any order, and `max of` keeps the kind of the winning value.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: decode-computed-bounds
+schemaApi:
+  sources:
+    - "schema :Edge as {\n  x: :Number\n  y: :Number\n  p: :Percentage\n  q: :Number optional computed by x / y\n  huge: :Number computed by 1 / y\n  s: :Number computed by x - p\n  t: :Percentage computed by -p * p\n  u: :Number computed by p * x\n  v: :Number computed by clamp x between -1.5 and y + 0.5\n  w: :Number computed by max of x and 0.5 and -2\n  ne: :Boolean computed by x <> 0 and p = 25%\n}\n"
+  root: "Edge"
+  encode:
+    type: ":Edge"
+    entries:
+      - key: "p"
+        value:
+          type: ":Percentage"
+          value: "0.25"
+      - key: "x"
+        value:
+          type: ":Number.binary64"
+          value: "3.5"
+      - key: "y"
+        value:
+          type: ":Number.int64"
+          value: "-2"
+  decode: "0000000000000c4000000000000000c0000000000000d03f"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "0000000000000c4000000000000000c0000000000000d03f"
+  decoded:
+    value:
+      type: ":Edge"
+      entries:
+        - key: "huge"
+          value:
+            type: ":Number.binary64"
+            value: "-0.5"
+        - key: "ne"
+          value:
+            type: ":Boolean"
+            value: true
+        - key: "p"
+          value:
+            type: ":Percentage"
+            value: "0.25"
+        - key: "q"
+          value:
+            type: ":Number.binary64"
+            value: "-1.75"
+        - key: "s"
+          value:
+            type: ":Number.binary64"
+            value: "2.625"
+        - key: "t"
+          value:
+            type: ":Percentage"
+            value: "-0.0625"
+        - key: "u"
+          value:
+            type: ":Number.binary64"
+            value: "0.875"
+        - key: "v"
+          value:
+            type: ":Number.binary64"
+            value: "-1.5"
+        - key: "w"
+          value:
+            type: ":Number.binary64"
+            value: "3.5"
+        - key: "x"
+          value:
+            type: ":Number.binary64"
+            value: "3.5"
+        - key: "y"
+          value:
+            type: ":Number.int64"
+            value: "-2"
+    byteCount: 24
+```
+
+---
+## Test: Booleans with absent values
+
+`=` compares binary64 within two ULPs; `and` and `or` are three-valued, and a computed Boolean that
+gives nothing is false, as a script record reads it.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: decode-computed-logic
+schemaApi:
+  sources:
+    - "schema :Logic as {\n  x: :Number\n  y: :Number\n  flag: :Boolean optional\n  close: :Boolean computed by x + y = 0.3\n  apart: :Boolean computed by x <> y\n  both: :Boolean computed by flag and x > 0\n  either: :Boolean computed by flag or x > 0\n}\n"
+  root: "Logic"
+  encode:
+    type: ":Logic"
+    entries:
+      - key: "x"
+        value:
+          type: ":Number.binary64"
+          value: "0.1"
+      - key: "y"
+        value:
+          type: ":Number.binary64"
+          value: "0.2"
+  decode: "9a9999999999b93f9a9999999999c93f00"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "9a9999999999b93f9a9999999999c93f00"
+  decoded:
+    value:
+      type: ":Logic"
+      entries:
+        - key: "apart"
+          value:
+            type: ":Boolean"
+            value: true
+        - key: "both"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "close"
+          value:
+            type: ":Boolean"
+            value: true
+        - key: "either"
+          value:
+            type: ":Boolean"
+            value: true
+        - key: "flag"
+          value:
+            type: ":Nothing"
+        - key: "x"
+          value:
+            type: ":Number.binary64"
+            value: "0.1"
+        - key: "y"
+          value:
+            type: ":Number.binary64"
+            value: "0.2"
+    byteCount: 17
+```
+
+---
+
+## Test: a document sets no computed field
+
+A computed field is never read from a document.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: document-computed
+schemaApi:
+  sources:
+    - "schema :Sound as {\n  energy: :Quantity(J) between 0J and 1kJ step 1J\n  duration: :Quantity(s) between 0s and 10s step 1ms\n  power: :Quantity(W) computed by 0W when duration <= 0s, otherwise energy / duration\n  loud: :Boolean computed by power > 50W and not (duration = 0s)\n}\n"
+  document: ":Schema(:Sound)\nenergy: 3J\nduration: 1s\npower: 3W\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  document:
+    error:
+      code: "document.unknownField"
+      line: 4
+      column: 1
+```
+
+---
+
+## Test: with takes computed fields
+
+A taken computed field reads the fields of the schema that takes it, and `without` may leave it out.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: describe-with-computed
+schemaApi:
+  sources:
+    - "abstract schema :Base as {\n  a: :Number\n  b: :Number\n  sum: :Number computed by a + b\n}\nschema :S as { with :Base, twice: :Number computed by sum * 2 }\n"
+  root: "S"
+  bind: false
+  describe: true
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  description:
+    name: "S"
+    kind: "Schema"
+    takes:
+      - schema: "Base"
+    fields:
+      - name: "a"
+        alternatives:
+          - kind: "Number"
+      - name: "b"
+        alternatives:
+          - kind: "Number"
+    computed:
+      - name: "sum"
+        kind: "Number"
+        expression: "(add (field a) (field b))"
+      - name: "twice"
+        kind: "Number"
+        expression: "(multiply (field sum) (number 2e0))"
+```
+
+---
+
+## Test: an unknown name
+
+The source is rejected.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-computed-unknown
+schemaApi:
+  sources:
+    - "schema :S as { a: :Number, b: :Number computed by a + c }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.unknownName"
+    line: 1
+    column: 55
+```
+
+---
+
+## Test: units that do not fit
+
+The source is rejected.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-computed-units
+schemaApi:
+  sources:
+    - "schema :S as { a: :Quantity(m), b: :Quantity(s), c: :Quantity(m) computed by a + b }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.unitMismatch"
+    line: 1
+    column: 78
+```
+
+---
+
+## Test: a result of another unit
+
+The source is rejected.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-computed-result-unit
+schemaApi:
+  sources:
+    - "schema :S as { a: :Quantity(m), b: :Quantity(s), c: :Quantity(m) computed by a / b }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.unitMismatch"
+    line: 1
+    column: 78
+```
+
+---
+
+## Test: a result of another type
+
+The source is rejected.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-computed-result-type
+schemaApi:
+  sources:
+    - "schema :S as { a: :Number, b: :Boolean computed by a + 1 }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidExpression"
+    line: 1
+    column: 52
+```
+
+---
+
+## Test: a percentage on the left
+
+The source is rejected.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-computed-percentage
+schemaApi:
+  sources:
+    - "schema :S as { a: :Percentage, b: :Number, c: :Number computed by a + b }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidExpression"
+    line: 1
+    column: 67
+```
+
+---
+
+## Test: a later computed field
+
+The source is rejected.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-computed-order
+schemaApi:
+  sources:
+    - "schema :S as { a: :Number, b: :Number computed by c, c: :Number computed by a }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidExpression"
+    line: 1
+    column: 51
+```
+
+---
+
+## Test: a keyword as a name
+
+The source is rejected.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-computed-keyword
+schemaApi:
+  sources:
+    - "schema :S as { e: :Number, b: :Number computed by e * 2 }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidExpression"
+    line: 1
+    column: 51
+```
+
+---
+
+## Test: a sum of quantities in arithmetic
+
+The source is rejected.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-computed-sum-alone
+schemaApi:
+  sources:
+    - "schema :P as { w: :Quantity(W) }\nschema :S as { list: :List(:P), b: :Quantity(W) computed by list[:sum p => p.w] + 1W }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidExpression"
+    line: 2
+    column: 65
+```
+
+---
+
+## Test: constraints on a computed field
+
+The source is rejected.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-computed-constraint
+schemaApi:
+  sources:
+    - "schema :S as { a: :Number, b: :Number between 0 and 1 computed by a }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidExpression"
+    line: 1
+    column: 28
+```
+
+---
+
+## Test: an optional computed Boolean
+
+The source is rejected.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-computed-optional-boolean
+schemaApi:
+  sources:
+    - "schema :S as { a: :Number, b: :Boolean optional computed by a > 0 }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidExpression"
+    line: 1
+    column: 28
+```
+
+---
+
+## Test: a choice without otherwise
+
+The source is rejected.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-computed-otherwise
+schemaApi:
+  sources:
+    - "schema :S as {\n  a: :Number\n  b: :Number computed by 1 when a > 0\n}\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.syntax"
+    line: 3
+    column: 38
+```
+
+---
+
+## Test: a computed name twice
+
+The source is rejected.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-computed-duplicate
+schemaApi:
+  sources:
+    - "schema :S as { a: :Number, a: :Number computed by 1 }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.duplicateName"
+    line: 1
+    column: 28
+```
+
+---
+
+## Test: a default that names a computed field
+
+The source is rejected.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-computed-default
+schemaApi:
+  sources:
+    - "schema :S as { a: :Number, b: :Number computed by a, c: :Number default b }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidDefault"
+    line: 1
+    column: 65
+```
+
+---
+
+## Test: a computed message argument
+
+The source is rejected.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-computed-message
+schemaApi:
+  sources:
+    - "message M(a: :Number computed by 1)\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.syntax"
+    line: 1
+    column: 22
+```
+
+---
+
+## Test: without leaves out a field that a taken computed field reads
+
+The source is rejected.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-computed-without
+schemaApi:
+  sources:
+    - "abstract schema :Base as { a: :Number, b: :Number computed by a * 2 }\nschema :S as { with :Base without (a) }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.unknownName"
+    line: 1
+    column: 63
+```
+
+---
+
+## Test: an optional list in a sum
+
+The source is rejected.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-computed-optional-list
+schemaApi:
+  sources:
+    - "schema :S as { list: :List(:Number) optional, b: :Number computed by list[:sum] }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidExpression"
+    line: 1
+    column: 70
+```
+
+---
 ## Test: field order a is part of the hash
 
 Field order is the wire order.

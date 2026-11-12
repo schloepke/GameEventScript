@@ -34,6 +34,10 @@ schema :BotView as {
   status: :Flags(#armed, #cloaked)
   ranks: :List(:Flags(#gold, #silver))
   hints: :List(:Side)
+  // Computed fields derive from the others with the rules of a script record; models never store them.
+  fit: :Boolean computed by alive and health >= 50%
+  pace: :Quantity(m/s) optional computed by abs speed * 1m/s when speed has value, otherwise 0m/s
+  traced: :Number computed by marks[:count]
 }
 
 // Defaults fill in what a value leaves out: a literal, or the sibling a field names.
@@ -68,4 +72,4 @@ schema :GearView as {
 schema :GearPreset as { with :GearView all optional without (slot) }
 
 // A plain schema that another takes unchanged adopts its own protocol too.
-schema :RadarEcho as { with :RadarView, strength: :Percentage }
+schema :RadarEcho as { with :RadarView, strength: :Percentage, depth: :Quantity(m) computed by reach - range * strength }

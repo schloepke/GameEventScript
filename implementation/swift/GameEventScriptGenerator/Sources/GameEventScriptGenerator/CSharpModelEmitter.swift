@@ -1,6 +1,8 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
+@_spi(Generator) import GameEventScriptRuntime
+
 // Writes C# 9 models for Unity: a sealed class per schema with value equality, settable properties in declared order, a
 // constructor that sets every field and one that leaves every field at its zero value, an enum per closed Tag, an abstract
 // class with one sealed subclass per alternative for a union, and the runtime's GesPoint and GesVector for spatial fields.
@@ -31,10 +33,11 @@ enum GesCSharpModelEmitter {
         let qualifier = "global::" + space.map { $0 + "." }.joined()
         try GesModelPlanner.checkProtocols(layout, swift: false)
         var document = GesCodeDocument(header: header, prologue: prologue.text, space: space)
+        let computed = GesModelPlanner.computed(layout, GesComputedEmitter.helper(suffix), swift: false)
         for type in layout.types {
             document.units.append(
                 GesCodeUnit(owner: type.name) { code in
-                    try record(&code, layout, type, access, support, qualifier, bindings: options.bindings, values: options.values ? values : nil)
+                    try record(&code, layout, type, access, support, qualifier, bindings: options.bindings, values: options.values ? values : nil, computed: computed)
                 }
             )
         }
@@ -52,6 +55,9 @@ enum GesCSharpModelEmitter {
         if options.values { document.units.append(GesCodeUnit(owner: "") { code in valueConversions(&code, layout, values, qualifier, support) }) }
         let conversions = options.bindings || options.values
         document.units.append(GesCodeUnit(owner: "") { code in supportType(&code, support, conversions: conversions) })
+        if layout.types.contains(where: { !$0.computed.isEmpty }) {
+            document.units.append(GesCodeUnit(owner: "") { code in GesComputedLibrary.write(&code, GesComputedEmitter.helper(suffix), swift: false) })
+        }
         return document
     }
 
@@ -74,9 +80,17 @@ enum GesCSharpModelEmitter {
         code.close()
     }
 
-    private static func record(_ code: inout Code, _ layout: GesModelLayout, _ type: GesModelType, _ access: String, _ support: String, _ qualifier: String, bindings: Bool, values: String?)
-        throws(GesGeneratorError)
-    {
+    private static func record(
+        _ code: inout Code,
+        _ layout: GesModelLayout,
+        _ type: GesModelType,
+        _ access: String,
+        _ support: String,
+        _ qualifier: String,
+        bindings: Bool,
+        values: String?,
+        computed: GesComputedEmitter
+    ) throws(GesGeneratorError) {
         let fields = GesModelPlanner.fields(type)
         var names: Names = reserved.map { ($0, "the inherited member " + $0) }
         names.append(("SchemaHash", "the generated member SchemaHash"))
@@ -90,6 +104,7 @@ enum GesCSharpModelEmitter {
             nested(field.value, &names, field.field.name)
         }
         for constant in type.constants { names.append((GesSchemaPlanner.pascal(constant.name), "the let " + constant.name)) }
+        GesComputedEmitter.names(type.computed, type.name, swift: false, &names)
         try GesSchemaPlanner.unique(type.name, names)
 
         code.line("/// <summary>The model of the schema <c>:\(type.name)</c>: a plain value that is never encoded and compares by value.</summary>")
@@ -138,6 +153,7 @@ enum GesCSharpModelEmitter {
             if let fallback = field.field.defaultValue, fallback.kind != .field { initial = native(field.value, fallback) } else { initial = self.initial(field.value) }
             code.line("public \(self.type(field.value)) \(field.base) { get; set; }\(initial.isEmpty ? "" : " = " + initial + ";")")
         }
+        computed.members(&code, type.name, type.computed, "public")
         code.blank()
         code.line("/// <summary>Compares every field by value.</summary>")
         code.line("/// <param name=\"other\">The other record.</param>")
@@ -477,6 +493,17 @@ enum GesCSharpModelEmitter {
 
     private static func unitName(_ unit: String) -> String { "GesQuantityUnit.Unit" + GesSchemaPlanner.pascal(unit) }
 
+    /// A computed field reads like a field of its type; scripts cannot set it.
+    private static func computedDefinition(_ field: GesSchemaComputedFieldInfo) -> String {
+        let name = literal(field.name)
+        switch field.kind {
+        case .boolean: return "new GesExternalTypeFieldDefinition(\(name), GesBytecodeTypeKind.Boolean)"
+        case .percentage: return "new GesExternalTypeFieldDefinition(\(name), GesBytecodeTypeKind.Percentage)"
+        case .quantity: return "new GesExternalTypeFieldDefinition(\(name), GesBytecodeTypeKind.Float, \(unitName(field.unit.rawValue)))"
+        default: return "new GesExternalTypeFieldDefinition(\(name), GesBytecodeTypeKind.Float)"
+        }
+    }
+
     private static func isValueType(_ value: GesModelPlanValue) -> Bool {
         switch value.kind {
         case .boolean, .number, .point, .vector, .flags: true
@@ -615,9 +642,18 @@ enum GesCSharpModelEmitter {
             // One statement per field, so that the pattern variables of optional fields stay apart.
             code.line("internal static GesValue Value(\(record) record)")
             code.open("{")
-            code.line("var values = new GesValue[\(fields.count)];")
+            code.line("var values = new GesValue[\(fields.count + type.computed.count)];")
             for (index, field) in fields.enumerated() { code.line("values[\(index)] = \(encode(field.value, type.name, "record." + field.base, qualifier, support, plain: true, pattern: "value\(index)_"));") }
-            code.line("return GesValue.GesRecord(\(typeLiteral), \(names), values);")
+
+            // A value also carries the computed fields, as decoding the record's bytes gives them; reading ignores them.
+            let helper = GesComputedEmitter.helper(String(name.dropFirst("__GesModelValues".count)))
+            for (index, field) in type.computed.enumerated() {
+                let unit = unitName(field.kind == .quantity ? field.unit.rawValue : "none")
+                code.line("values[\(fields.count + index)] = \(helper).ToGesValue(record.\(GesComputedEmitter.method(field.name, type.name, swift: false))(), \(unit));")
+            }
+            let keyNames = fields.map { literal($0.field.name) } + type.computed.map { literal($0.name) }
+            let keys = type.computed.isEmpty ? names : "new[] { \(keyNames.joined(separator: ", ")) }"
+            code.line("return GesValue.GesRecord(\(typeLiteral), \(keys), values);")
             code.close()
             code.blank()
             code.line("internal static \(record) Read\(type.name)(in GesValue value, string path)")
@@ -777,7 +813,9 @@ enum GesCSharpModelEmitter {
             code.line("/// <summary>The declaration that every value of the type shares.</summary>")
             code.line("internal static readonly GesExternalTypeDefinition Declaration = new GesExternalTypeDefinition(")
             code.line("    \(literal(type.name)),")
-            code.line("    new[] { \(fields.map { definition($0.field.name, $0.value, "Field") }.joined(separator: ", "))\(fields.isEmpty ? "" : ", ")new GesExternalTypeFieldDefinition(\"fields\", GesBytecodeTypeKind.Map) },")
+            var definitions = fields.map { definition($0.field.name, $0.value, "Field") }
+            for field in type.computed { definitions.append(computedDefinition(field)) }
+            code.line("    new[] { \(definitions.joined(separator: ", "))\(definitions.isEmpty ? "" : ", ")new GesExternalTypeFieldDefinition(\"fields\", GesBytecodeTypeKind.Map) },")
             code.line("    new[] { new GesExternalTypeConstructorDefinition(\(literal(type.name)), new[] { new GesExternalTypeParameterDefinition(\"fields\", GesBytecodeTypeKind.Map) }) });")
             code.blank()
             code.line("internal static readonly string[] Names = { \(fields.map { literal($0.field.name) }.joined(separator: ", ")) };")
@@ -793,6 +831,11 @@ enum GesCSharpModelEmitter {
             code.line("public GesValue? GetField(string fieldName) => fieldName switch")
             code.open("{")
             for field in fields { code.line("\(literal(field.field.name)) => \(encode(field.value, type.name, "Record." + field.base, qualifier, support)),") }
+            for field in type.computed {
+                let helper = GesComputedEmitter.helper(String(support.dropFirst("__GesModels".count)))
+                let unit = unitName(field.kind == .quantity ? field.unit.rawValue : "none")
+                code.line("\(literal(field.name)) => \(helper).ToGesValue(Record.\(GesComputedEmitter.method(field.name, type.name, swift: false))(), \(unit)),")
+            }
             code.line("\"fields\" => \(support).Fields(Names, this),")
             code.line("_ => null")
             code.close("};")

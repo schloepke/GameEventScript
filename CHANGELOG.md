@@ -243,6 +243,13 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   `without (id)`; an `abstract schema` only lends its fields. The record stays flat and hashes like written fields.
   Generated models adopt a protocol (C# interface) per schema they take unchanged; `GesSchema.IsAbstract` and `Takes`
   (Swift `isAbstract`, `takes`) describe it, and misuse of an abstract schema is `schema.invalidAbstract`.
+- Schema fields `computed by` an expression, as in script records: `power: :Quantity(W) computed by 0W when duration <= 0s,
+  otherwise energy / duration`. The subset reads fields, lets and constants with arithmetic and comparisons in units,
+  `when … otherwise`, `min of`, `max of`, `clamp`, `abs`, `default`, `has value` and list sums and counts; binding checks
+  types and units, and the expression belongs to the hash. Computed fields are never encoded, decoding adds them, a
+  document that sets one fails, and generated models and wire records give them as read-only properties that compute the
+  bits of the virtual machine. `GesSchema.ComputedFields` (Swift `computedFields`) describes them; mistakes are
+  `schema.invalidExpression`.
 - `ges schema generate -d <dir>` (`--out-dir`) writes one file per declaration, or per `.gess` with `--split file`,
   plus a shared `_<Namespace>` file and the manifest `.ges-generated.json`; a later run removes files the manifest owns and
   no longer needs, warns about foreign files with `cli.unowned`, and `--check` compares the whole directory.

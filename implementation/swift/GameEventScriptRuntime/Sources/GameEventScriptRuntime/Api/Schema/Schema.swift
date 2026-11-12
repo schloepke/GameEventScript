@@ -144,6 +144,36 @@ public struct GesSchemaFieldInfo: Sendable {
     }
 }
 
+/// A field written `computed by`: a value derived from the other fields that is never encoded or read from a document.
+public struct GesSchemaComputedFieldInfo: Sendable {
+    /// The name.
+    public let name: String
+    /// The type: `.number`, `.quantity`, `.percentage` or `.boolean`.
+    public let kind: GesSchemaTypeKind
+    /// The unit of a Quantity.
+    public let unit: GesQuantityUnit
+    /// Whether the value may be absent, which generated code then gives an optional type.
+    public let isOptional: Bool
+    /// The checked expression in the prefix form of the canonical form, with literals as exact decimals.
+    public let expression: String
+    /// The checked expression tree, which generated code translates.
+    @_spi(Generator) public let tree: GesComputedNode
+    /// The expression as its source spells it, on one line.
+    @_spi(Generator) public let spelling: String
+
+    init(_ field: GesResolvedComputed) {
+        name = field.name
+        kind = field.kind
+        unit = field.unit
+        isOptional = field.isOptional
+        var text = ""
+        GesComputedCanonical.write(field.expression, &text)
+        expression = text
+        tree = field.expression
+        spelling = GesSchemaFormatter.expression(field.syntax.computed!)
+    }
+}
+
 /// The fields a schema takes from another with `with`.
 public struct GesSchemaTakeInfo: Sendable {
     /// The schema whose fields are taken.
@@ -225,7 +255,7 @@ public struct GesSchemaConstantInfo: Sendable {
 /// The immutable description of one schema, message or message set of a `GesSchemaSet`. It can be shared between threads
 /// and bound any number of times.
 public final class GesSchema: @unchecked Sendable {
-    private let declaration: GesResolvedDeclaration
+    let declaration: GesResolvedDeclaration
     /// The name.
     public let name: String
     /// The kind of declaration.
@@ -250,6 +280,8 @@ public final class GesSchema: @unchecked Sendable {
     public private(set) var parameters: [GesSchemaParameterInfo] = []
     /// The fields of a schema or the arguments of a message, in declared order.
     public private(set) var fields: [GesSchemaFieldInfo] = []
+    /// The fields of a schema written `computed by`, own and taken, in the order their expressions may read each other.
+    public private(set) var computedFields: [GesSchemaComputedFieldInfo] = []
     /// The constants a schema declares with `let`, in declared order.
     public private(set) var constants: [GesSchemaConstantInfo] = []
     /// The members of a message set, in declared order.
@@ -297,6 +329,7 @@ public final class GesSchema: @unchecked Sendable {
         parameters = reached.keys.sorted { Array($0.utf8).lexicographicallyPrecedes(Array($1.utf8)) }.map { GesSchemaParameterInfo(name: $0, kind: reached[$0]!.kind, unit: reached[$0]!.unit) }
         hash = GesSchemaCanonical.hash(try GesSchemaCanonical.form(declaration))
         fields = declaration.fields.map(GesSchemaFieldInfo.init)
+        computedFields = declaration.computed.map(GesSchemaComputedFieldInfo.init)
         constants = declaration.lets.map(GesSchemaConstantInfo.init)
         members = declaration.members.map { $0.schema! }
         takes = declaration.takes.map { GesSchemaTakeInfo(schema: $0.schema.schema!, isAllOptional: $0.with.allOptional, without: $0.with.without) }

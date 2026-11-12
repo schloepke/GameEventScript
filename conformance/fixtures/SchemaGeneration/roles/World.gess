@@ -40,4 +40,6 @@ schema :World_Body as {
   let wear be 2.5%
   mass: :Quantity(kg) between 0kg and heaviest step 1kg
   hull: :Tag(#light, #heavy) default #light
+  // A computed field is not encoded; wire records and models derive it alike.
+  burden: :Quantity(kg) computed by mass + wear
 }

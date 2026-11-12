@@ -166,7 +166,14 @@ public sealed class GesBoundSchema
         Hash = hash;
         BindingHash = bindingHash;
         for (var index = 0; index < nodes.Length; index++) _fields[nodes[index].Path] = index;
+        var declarations = new List<GesResolvedDeclaration>();
+        GesSchemaCanonical.Reach(schema.Declaration, declarations, new SortedDictionary<string, GesSchemaTypeSyntax>(StringComparer.Ordinal));
+        foreach (var declaration in declarations)
+            if (declaration.Computed.Length > 0) Computed[declaration.Name] = declaration.Computed;
     }
+
+    // The computed fields of every reached schema that has any, by schema name, which decoding derives.
+    internal Dictionary<string, GesResolvedComputed[]> Computed { get; } = new(StringComparer.Ordinal);
 
     /// <summary>Gets the description this binding comes from.</summary>
     public GesSchema Schema { get; }

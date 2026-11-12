@@ -247,6 +247,24 @@ public sealed class GesRolesGeneratedCodeTests
     }
 
     [TestMethod]
+    public void ComputedFieldsDeriveTheValuesOfAScriptRecord()
+    {
+        // depth: reach - range * strength; a percentage scales the quantity on its left.
+        var echo = new Model.RadarEcho(500, 600, [], null, null, true, 0.25);
+        Assert.AreEqual(475.0, echo.Depth);
+        var value = echo.ToValue();
+        Assert.AreEqual(GesValue.GesInteger(475, GesQuantityUnit.UnitMeter), Field(value, "depth"));
+        Assert.AreEqual(echo, Model.RadarEcho.FromValue(value));
+        // burden: mass + wear, with wear the let 2.5%; models and wire records derive it alike.
+        Assert.AreEqual(205.0, new Model.World_Body(200).Burden);
+        var body = new Wire.World_Body { Mass = 200 };
+        Assert.AreEqual(205.0, body.Burden);
+        Assert.AreEqual(GesValue.GesInteger(205, GesQuantityUnit.UnitKilogram), Field(body.ToValue(), "burden"));
+    }
+
+    private static GesValue Field(GesValue record, string name) => record.AsMap()!.Get(name) ?? throw new AssertFailedException($"The record has no field {name}.");
+
+    [TestMethod]
     public void BoundModelsAlsoConvertToPlainValues()
     {
         var value = Report().ToValue();

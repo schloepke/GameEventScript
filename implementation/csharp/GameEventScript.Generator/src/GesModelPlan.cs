@@ -61,6 +61,63 @@ internal static class GesModelPlanner
     // The name of the conversion functions of a closed Tag, Flags or union: per owner, or once per named tag set.
     internal static string ConversionName(string owner, GesModelPlanValue value) => value.TagSet.Length > 0 ? value.TagSet : owner + value.Nested;
 
+    // The translator of a model layout's computed fields: paths read the fields of model types, with optional chaining
+    // through optional fields, and a computed field through its exact value.
+    internal static GesComputedEmitter Computed(GesModelLayout layout, string helper, bool swift)
+        => new(swift, helper, new ModelAccess(layout, helper, swift));
+
+    private sealed class ModelAccess(GesModelLayout layout, string helper, bool swift) : IGesComputedAccess
+    {
+        public string Read(string root, string owner, string[] path, bool percentage)
+        {
+            var (text, computed) = Chain(root, owner, path);
+            return $"{helper}.{(swift ? "read" : "Read")}{(percentage && !computed ? "Percentage" : "")}({text})";
+        }
+
+        public string Present(string root, string owner, string[] path) => Chain(root, owner, path).Text + (swift ? " != nil" : " != null");
+
+        public string List(string root, string owner, string[] path) => Chain(root, owner, path).Text;
+
+        public string ElementOwner(string owner, string[] path)
+        {
+            var type = layout.Type(owner);
+            GesModelPlanValue? value = null;
+            foreach (var name in path)
+            {
+                value = Fields(type).Find(candidate => candidate.Field.Name == name)!.Value;
+                if (value.Kind == GesModelKind.Schema) type = layout.Type(value.Model.Schema);
+            }
+
+            var element = value!.Element!;
+            return element.Kind == GesModelKind.Schema ? element.Model.Schema : "";
+        }
+
+        private (string Text, bool Computed) Chain(string root, string owner, string[] path)
+        {
+            var text = root;
+            var nullable = false;
+            var type = owner.Length > 0 ? layout.Type(owner) : null;
+            foreach (var name in path)
+            {
+                var separator = nullable ? "?." : ".";
+                var field = Fields(type!).Find(candidate => candidate.Field.Name == name);
+                if (field is null) return (text + separator + GesComputedEmitter.Method(name, type!.Name, swift) + "()", true);
+                text += separator + Member(field.Base);
+                nullable |= field.Value.Nullable;
+                type = field.Value.Kind == GesModelKind.Schema ? layout.Type(field.Value.Model.Schema) : null;
+            }
+
+            return (text, false);
+        }
+
+        private string Member(string pascal)
+        {
+            if (!swift) return pascal;
+            var camel = GesSchemaPlanner.Camel(pascal);
+            return GesSwiftEmitter.Keywords.Contains(camel) ? "`" + camel + "`" : camel;
+        }
+    }
+
     internal static List<GesModelPlanField> Fields(GesModelType type)
     {
         var fields = new List<GesModelPlanField>();

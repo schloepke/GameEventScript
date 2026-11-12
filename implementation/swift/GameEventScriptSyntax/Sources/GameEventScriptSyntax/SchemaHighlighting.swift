@@ -6,7 +6,7 @@
 enum GesSchemaHighlighting {
     private static let keywords: Set<String> = [
         "schema", "message", "messages", "constant", "parameter", "as", "be", "between", "and", "wrapping", "step", "delta", "within", "integer", "optional", "key", "max", "tags", "wire", "model", "let", "default", "true", "false", "abstract",
-        "with", "all", "without",
+        "with", "all", "without", "computed", "by", "when", "otherwise", "or", "not", "of", "min", "clamp", "abs", "has",
     ]
 
     static func highlight(_ text: String, _ spans: inout GesSpanBuilder) -> [GesSpanBuilder.Diagnostic] {

@@ -139,6 +139,8 @@ public final class GesBoundSchema: Sendable {
     // The labels of a message's arguments, `_` for an unlabeled one.
     let labels: [String]
     private let fields: [String: Int]
+    /// The computed fields of every reached schema that has any, by schema name, which decoding derives.
+    let computed: [String: [GesSchemaComputedFieldInfo]]
 
     init(
         schema: GesSchema,
@@ -171,6 +173,12 @@ public final class GesBoundSchema: Sendable {
         var fields: [String: Int] = [:]
         for (index, info) in infos.enumerated() { fields[info.path] = index }
         self.fields = fields
+        var declarations: [GesResolvedDeclaration] = []
+        var reached: [String: GesSchemaTypeSyntax] = [:]
+        try? GesSchemaCanonical.reach(schema.declaration, &declarations, &reached)
+        var computed: [String: [GesSchemaComputedFieldInfo]] = [:]
+        for declaration in declarations where !declaration.computed.isEmpty { computed[declaration.name] = declaration.computed.map(GesSchemaComputedFieldInfo.init) }
+        self.computed = computed
     }
 
     /// Whether the first field is a key that a reader can take first.

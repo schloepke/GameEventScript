@@ -39,7 +39,13 @@ enum GesCSharpEmitter {
         prologue.blank()
         let header = GesSchemaPlanner.header(layout)
         let holder = "__GesSchemas" + GesSchemaPlanner.suffix(header, options)
-        let context = Context(elements: GesSchemaPlanner.keyedElements(types), global: "global::" + space.map { $0 + "." }.joined(), values: options.values, holder: holder)
+        let context = Context(
+            elements: GesSchemaPlanner.keyedElements(types),
+            global: "global::" + space.map { $0 + "." }.joined(),
+            values: options.values,
+            holder: holder,
+            computed: GesSchemaPlanner.computed(types, GesComputedEmitter.helper(GesSchemaPlanner.suffix(header, options)), swift: false)
+        )
         var document = GesCodeDocument(header: header, prologue: prologue.text, space: space, parameters: !layout.parameters.isEmpty)
         for type in types {
             document.units.append(
@@ -53,6 +59,10 @@ enum GesCSharpEmitter {
         }
         let shared = options.split != .none
         if options.values { document.units.append(GesCodeUnit(owner: "") { code in valuesHolder(&code, layout, holder, shared: shared) }) }
+        if layout.types.contains(where: { !$0.computed.isEmpty }) {
+            let helper = GesComputedEmitter.helper(GesSchemaPlanner.suffix(header, options))
+            document.units.append(GesCodeUnit(owner: "") { code in GesComputedLibrary.write(&code, helper, swift: false) })
+        }
         return document
     }
 
@@ -63,6 +73,7 @@ enum GesCSharpEmitter {
         // Whether records convert to and from GES values through the helper type that holds the embedded sources.
         let values: Bool
         let holder: String
+        let computed: GesComputedEmitter
     }
 
     static func kind(_ type: GesPlanType) -> String { type.kind == .message ? "message" : "schema" }
@@ -89,6 +100,7 @@ enum GesCSharpEmitter {
         if !type.isItem {
             for constant in type.layout.constants { names.append((GesSchemaPlanner.pascal(constant.name), "the let " + constant.name)) }
         }
+        if !type.isItem { GesComputedEmitter.names(type.layout.computed, type.name, swift: false, &names) }
         try GesSchemaPlanner.unique(type.name, names)
 
         let visibility = type.isItem ? "public" : access
@@ -118,6 +130,7 @@ enum GesCSharpEmitter {
             code.line("public bool \(tag.base);")
         }
         for field in type.fields { listAccess(&code, field) }
+        if !type.isItem { context.computed.members(&code, type.name, type.layout.computed, "public") }
         methods(&code, type)
         if type.isClass && (type.kind == .schema || type.isItem) { sharing(&code, type) }
         let deltas = type.kind == .schema && !type.isItem

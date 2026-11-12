@@ -105,6 +105,13 @@ internal static class SchemaApiObservations
 
             return entry;
         }).ToArray();
+        if (schema.ComputedFields.Count > 0) result["computed"] = schema.ComputedFields.Select(field =>
+        {
+            var entry = Unit(new Dictionary<string, object?> { ["name"] = field.Name, ["kind"] = field.Kind.ToString() }, field.Unit);
+            if (field.IsOptional) entry["optional"] = true;
+            entry["expression"] = field.Expression;
+            return entry;
+        }).ToArray();
         if (schema.Constants.Count > 0) result["constants"] = schema.Constants.Select(constant =>
         {
             var entry = Unit(new Dictionary<string, object?> { ["name"] = constant.Name, ["kind"] = constant.Kind.ToString() }, constant.Unit);

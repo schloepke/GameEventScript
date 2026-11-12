@@ -199,6 +199,21 @@ Generated models of it adopt the protocol `Unit_Common` (C# `IUnit_Common`), so 
 fields once works for every unit. `with :GameMap all optional without (id)` takes the fields of a plain
 schema as optional ones and leaves `id` out, for files that override some values.
 
+A value that both sides derive from others is written once, as a computed field, with the expressions of
+[script records](../../specs/Language.md#records-and-custom-types):
+
+```gess
+schema :SoundMade as {
+  energy: :Quantity(J) between 0J and 1MJ step 1J
+  duration: :Quantity(s) between 0s and 60s step 1ms
+  power: :Quantity(W) computed by 0W when duration <= 0s, otherwise energy / duration
+}
+```
+
+`power` is never sent. Decoding a value adds it, and generated code in every language gives it as a property that
+computes the same bits as a script, units and integer rules included; `ges schema check` rejects an expression whose
+units do not fit, such as `energy + duration`. See [computed fields](../../specs/Schemas.md#computed-fields).
+
 ## 5. Find the object with a key
 
 `key` marks the first field of a schema as the identity of the object, like `id` of `Player`. It

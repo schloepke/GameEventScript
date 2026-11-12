@@ -428,3 +428,64 @@ enum GesSchemaPlanner {
         mutating func raw(_ text: String) { self.text += text }
     }
 }
+
+extension GesSchemaPlanner {
+    /// The translator of wire records' computed fields: an optional field on a path is read only where its presence flag is
+    /// set, and a computed field through its exact value.
+    static func computed(_ types: [GesPlanType], _ helper: String, swift: Bool) -> GesComputedEmitter {
+        GesComputedEmitter(swift: swift, helper: helper, access: GesWireAccess(types: types, helper: helper, swift: swift))
+    }
+}
+
+private struct GesWireAccess: GesComputedAccess {
+    let types: [GesPlanType]
+    let helper: String
+    let swift: Bool
+
+    func read(_ root: String, _ owner: String, _ path: [String], percentage: Bool) -> String {
+        let (text, conditions, computed) = chain(root, owner, path)
+        let read = "\(helper).\(swift ? "read" : "Read")\(percentage && !computed ? "Percentage" : "")(\(text))"
+        return conditions.isEmpty ? read : "(\(conditions.joined(separator: " && ")) ? \(read) : \(helper).\(swift ? "nothing" : "Nothing"))"
+    }
+
+    func present(_ root: String, _ owner: String, _ path: [String]) -> String {
+        let conditions = chain(root, owner, path).conditions
+        return conditions.isEmpty ? "true" : conditions.joined(separator: " && ")
+    }
+
+    func list(_ root: String, _ owner: String, _ path: [String]) -> String { chain(root, owner, path).text }
+
+    func elementOwner(_ owner: String, _ path: [String]) -> String {
+        var type = self.type(owner)
+        var value: GesPlanValue?
+        for name in path {
+            value = type!.fields.first { $0.layout.name == name }!.value
+            type = value!.encoding.kind == .schema ? self.type(value!.encoding.schema) : nil
+        }
+        let element = value!.element!
+        return element.encoding.kind == .schema ? element.encoding.schema : ""
+    }
+
+    private func type(_ name: String) -> GesPlanType? { name.isEmpty ? nil : types.first { $0.name == name } }
+
+    private func chain(_ root: String, _ owner: String, _ path: [String]) -> (text: String, conditions: [String], computed: Bool) {
+        var text = root
+        var conditions: [String] = []
+        var type = self.type(owner)
+        for name in path {
+            guard let field = type!.fields.first(where: { $0.layout.name == name }) else {
+                return (text + "." + GesComputedEmitter.method(name, type!.name, swift: swift) + "()", conditions, true)
+            }
+            if field.optional { conditions.append(text + "." + (swift ? "has" : "Has") + field.base) }
+            text += "." + member(field.base)
+            type = field.value.encoding.kind == .schema ? self.type(field.value.encoding.schema) : nil
+        }
+        return (text, conditions, false)
+    }
+
+    private func member(_ pascal: String) -> String {
+        if !swift { return pascal }
+        let camel = GesSchemaPlanner.camel(pascal)
+        return GesSwiftEmitter.keywords.contains(camel) ? "`" + camel + "`" : camel
+    }
+}

@@ -282,3 +282,59 @@ enum GesModelPlanner {
         return text
     }
 }
+
+extension GesModelPlanner {
+    /// The translator of a model layout's computed fields: paths read the fields of model types, with optional chaining through
+    /// optional fields, and a computed field through its exact value.
+    static func computed(_ layout: GesModelLayout, _ helper: String, swift: Bool) -> GesComputedEmitter {
+        GesComputedEmitter(swift: swift, helper: helper, access: GesModelAccess(layout: layout, helper: helper, swift: swift))
+    }
+}
+
+private struct GesModelAccess: GesComputedAccess {
+    let layout: GesModelLayout
+    let helper: String
+    let swift: Bool
+
+    func read(_ root: String, _ owner: String, _ path: [String], percentage: Bool) -> String {
+        let (text, computed) = chain(root, owner, path)
+        return "\(helper).\(swift ? "read" : "Read")\(percentage && !computed ? "Percentage" : "")(\(text))"
+    }
+
+    func present(_ root: String, _ owner: String, _ path: [String]) -> String { chain(root, owner, path).text + (swift ? " != nil" : " != null") }
+
+    func list(_ root: String, _ owner: String, _ path: [String]) -> String { chain(root, owner, path).text }
+
+    func elementOwner(_ owner: String, _ path: [String]) -> String {
+        var type = layout.type(owner)
+        var value: GesModelPlanValue?
+        for name in path {
+            value = GesModelPlanner.fields(type).first { $0.field.name == name }!.value
+            if value!.kind == .schema { type = layout.type(value!.model.schema) }
+        }
+        let element = value!.element!
+        return element.kind == .schema ? element.model.schema : ""
+    }
+
+    private func chain(_ root: String, _ owner: String, _ path: [String]) -> (text: String, computed: Bool) {
+        var text = root
+        var nullable = false
+        var type: GesModelType? = owner.isEmpty ? nil : layout.type(owner)
+        for name in path {
+            let separator = nullable ? "?." : "."
+            guard let field = GesModelPlanner.fields(type!).first(where: { $0.field.name == name }) else {
+                return (text + separator + GesComputedEmitter.method(name, type!.name, swift: swift) + "()", true)
+            }
+            text += separator + member(field.base)
+            if field.value.nullable { nullable = true }
+            type = field.value.kind == .schema ? layout.type(field.value.model.schema) : nil
+        }
+        return (text, false)
+    }
+
+    private func member(_ pascal: String) -> String {
+        if !swift { return pascal }
+        let camel = GesSchemaPlanner.camel(pascal)
+        return GesSwiftEmitter.keywords.contains(camel) ? "`" + camel + "`" : camel
+    }
+}

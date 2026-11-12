@@ -302,6 +302,8 @@ final class GesResolvedDeclaration {
     /// The schemas it takes with `with`, in declared order, each with its `with`.
     var takes: [(schema: GesResolvedDeclaration, with: GesSchemaWithSyntax)] = []
     var members: [GesResolvedDeclaration] = []
+    /// The fields written `computed by`, own and taken, in the order their expressions may read each other.
+    var computed: [GesResolvedComputed] = []
     var isAbstract: Bool { syntax.isAbstract }
     // The public description, which exists once all declarations are resolved. It holds this declaration, so this side is weak.
     weak var schema: GesSchema?
@@ -320,7 +322,7 @@ final class GesResolvedDeclaration {
 final class GesFileScope {
     private let source: GesSchemaSource
     private let syntax: GesSchemaSourceSyntax
-    private var constants: [String: GesSchemaValueSyntax] = [:]
+    private(set) var constants: [String: GesSchemaValueSyntax] = [:]
     private var own: [GesResolvedDeclaration] = []
     private var tagSets: [String: GesSchemaDeclarationSyntax] = [:]
     /// The lets of the schema being resolved, which its fields can name.
@@ -438,7 +440,8 @@ final class GesFileScope {
             for with in declaration.syntax.withs where with.position == index {
                 let source = all[with.name]!
                 takes.append((source, with))
-                for (excluded, name) in with.without.enumerated() where !source.fields.contains(where: { $0.name == name }) {
+                for (excluded, name) in with.without.enumerated()
+                where !source.fields.contains(where: { $0.name == name }) && !source.computed.contains(where: { $0.name == name }) {
                     throw error(Code.unknownName, with.withoutOffsets[excluded], "'\(name)' is no field of '\(source.name)'.")
                 }
                 for field in source.fields where !with.without.contains(field.name) {
@@ -479,9 +482,55 @@ final class GesFileScope {
         }
         declaration.fields = merged
         declaration.takes = takes
+        declaration.computed = try Self.resolveComputed(declaration, computedEntries(declaration, all), &names)
         lets = Dictionary(uniqueKeysWithValues: declaration.lets.map { ($0.name, $0) })
         defer { lets = [:] }
         try resolveDefaults(declaration)
+    }
+
+    /// The computed fields in written order: own ones, and those of a schema taken by `with` where the `with` stands, without
+    /// the names it leaves out; `all optional` makes taken numbers optional.
+    private func computedEntries(_ declaration: GesResolvedDeclaration, _ all: [String: GesResolvedDeclaration]) -> [GesResolvedComputed] {
+        var entries: [GesResolvedComputed] = []
+        let syntax = declaration.syntax
+        var withIndex = 0
+        var ownIndex = 0
+        while withIndex < syntax.withs.count || ownIndex < syntax.computed.count {
+            if ownIndex == syntax.computed.count || (withIndex < syntax.withs.count && syntax.withs[withIndex].sequence < syntax.computed[ownIndex].sequence) {
+                let with = syntax.withs[withIndex]
+                withIndex += 1
+                for taken in all[with.name]!.computed where !with.without.contains(taken.name) {
+                    entries.append(
+                        GesResolvedComputed(
+                            name: taken.name,
+                            kind: taken.kind,
+                            unit: taken.unit,
+                            isOptional: taken.isOptional || (with.allOptional && taken.kind != .boolean),
+                            offset: taken.offset,
+                            scope: taken.scope,
+                            syntax: taken.syntax,
+                            lets: taken.lets
+                        )
+                    )
+                }
+                continue
+            }
+            let field = syntax.computed[ownIndex]
+            ownIndex += 1
+            entries.append(
+                GesResolvedComputed(
+                    name: field.name,
+                    kind: field.alternatives[0].kind,
+                    unit: field.alternatives[0].unit,
+                    isOptional: field.marker == .optional,
+                    offset: field.offset,
+                    scope: self,
+                    syntax: field,
+                    lets: declaration.lets
+                )
+            )
+        }
+        return entries
     }
 
     /// A default is a number, a Boolean or a tag of the field's single type, or a sibling field of the same type whose value it
@@ -493,6 +542,9 @@ final class GesFileScope {
             let resolved = declaration.fields[index]
             if resolved.marker == .key { throw error(Code.invalidDefault, written.offset, "A key takes no default.") }
             let name = written.value?.name ?? ""
+            if !name.isEmpty && declaration.computed.contains(where: { $0.name == name }) {
+                throw error(Code.invalidDefault, written.offset, "'\(name)' is computed; a default names a stored field.")
+            }
             if !name.isEmpty, let sibling = declaration.fields.first(where: { $0.name == name }) {
                 guard let type = GesSchemaCanonical.defaultType(resolved.alternatives) else {
                     throw error(Code.invalidDefault, written.offset, "The type of '\(resolved.name)' belongs to it alone, as a union, Flags or a closed Tag written in place does; a tag set can be shared.")
@@ -773,6 +825,13 @@ enum GesSchemaCanonical {
             output += "schema \(declaration.name)\n"
             for declared in declaration.lets { output += "let \(declared.name) \(letKind(declared)) \(declared.value.canonical)\n" }
             for field in declaration.fields { writeField("field ", field, &output) }
+            for computed in declaration.computed {
+                output += "computed \(computed.name) " + (computed.kind == .quantity ? "Quantity(\(computed.unit.rawValue))" : computed.kind.rawValue)
+                if computed.isOptional { output += " optional" }
+                output += " "
+                GesComputedCanonical.write(computed.expression, &output)
+                output += "\n"
+            }
         case .message:
             output += "message \(declaration.name)"
             if !declaration.tags.isEmpty { output += " tags " + declaration.tags.map { "#" + $0 }.joined(separator: " ") }

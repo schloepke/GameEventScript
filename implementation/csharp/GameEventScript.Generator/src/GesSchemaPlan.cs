@@ -134,6 +134,68 @@ internal static class GesSchemaPlanner
 
     internal static bool HasKeyed(GesPlanValue value) => Keyed(value) || value.Alternatives.Exists(HasKeyed);
 
+    // The translator of wire records' computed fields: an optional field on a path is read only where its presence flag is
+    // set, and a computed field through its exact value.
+    internal static GesComputedEmitter Computed(List<GesPlanType> types, string helper, bool swift) => new(swift, helper, new WireAccess(types, helper, swift));
+
+    private sealed class WireAccess(List<GesPlanType> types, string helper, bool swift) : IGesComputedAccess
+    {
+        public string Read(string root, string owner, string[] path, bool percentage)
+        {
+            var (text, conditions, computed) = Chain(root, owner, path);
+            var read = $"{helper}.{(swift ? "read" : "Read")}{(percentage && !computed ? "Percentage" : "")}({text})";
+            return conditions.Count == 0 ? read : $"({string.Join(" && ", conditions)} ? {read} : {helper}.{(swift ? "nothing" : "Nothing")})";
+        }
+
+        public string Present(string root, string owner, string[] path)
+        {
+            var conditions = Chain(root, owner, path).Conditions;
+            return conditions.Count == 0 ? "true" : string.Join(" && ", conditions);
+        }
+
+        public string List(string root, string owner, string[] path) => Chain(root, owner, path).Text;
+
+        public string ElementOwner(string owner, string[] path)
+        {
+            var type = Type(owner);
+            GesPlanValue? value = null;
+            foreach (var name in path)
+            {
+                value = type!.Fields.Find(candidate => candidate.Layout.Name == name)!.Value;
+                type = value.Encoding.Kind == GesLayoutKind.Schema ? Type(value.Encoding.Schema) : null;
+            }
+
+            var element = value!.Element!;
+            return element.Encoding.Kind == GesLayoutKind.Schema ? element.Encoding.Schema : "";
+        }
+
+        private GesPlanType? Type(string name) => name.Length == 0 ? null : types.Find(type => type.Name == name);
+
+        private (string Text, List<string> Conditions, bool Computed) Chain(string root, string owner, string[] path)
+        {
+            var text = root;
+            var conditions = new List<string>();
+            var type = Type(owner);
+            foreach (var name in path)
+            {
+                var field = type!.Fields.Find(candidate => candidate.Layout.Name == name);
+                if (field is null) return (text + "." + GesComputedEmitter.Method(name, type.Name, swift) + "()", conditions, true);
+                if (field.Optional) conditions.Add(text + "." + (swift ? "has" : "Has") + field.Base);
+                text += "." + Member(field.Base);
+                type = field.Value.Encoding.Kind == GesLayoutKind.Schema ? Type(field.Value.Encoding.Schema) : null;
+            }
+
+            return (text, conditions, false);
+        }
+
+        private string Member(string pascal)
+        {
+            if (!swift) return pascal;
+            var camel = Camel(pascal);
+            return GesSwiftEmitter.Keywords.Contains(camel) ? "`" + camel + "`" : camel;
+        }
+    }
+
     internal static List<GesPlanType> Plan(GesSchemaLayout layout)
     {
         var context = new Context(layout);

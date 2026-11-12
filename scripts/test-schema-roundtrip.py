@@ -663,7 +663,9 @@ def normalized(value):
         numeric = isinstance(kind, str) and kind in (':Percentage', ':Number.binary64', ':Quantity.binary64', ':Vector', ':Point')
         result = {}
         for key, item in value.items():
-            result[key] = canonical_text(parsed_number(item)) if numeric and key in ('value', 'x', 'y', 'z') and isinstance(item, str) else normalized(item)
+            # Infinities have one spelling already; the canonical metric text covers finite numbers only.
+            finite = numeric and key in ('value', 'x', 'y', 'z') and isinstance(item, str) and math.isfinite(float(parsed_number(item)))
+            result[key] = canonical_text(parsed_number(item)) if finite else normalized(item)
         return result
     if isinstance(value, list):
         return [normalized(item) for item in value]

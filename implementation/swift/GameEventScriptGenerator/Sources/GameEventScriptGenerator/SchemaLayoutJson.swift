@@ -1,7 +1,8 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
-import GameEventScriptRuntime
+@_spi(Generator) import GameEventScriptRuntime
+@_spi(Syntax) import GameEventScriptSyntax
 
 // The canonical JSON form of a layout: members in a fixed order, two spaces of indentation, one value per line, integers
 // as exact decimals and binary64 values as their bit patterns. Both ports write identical bytes.
@@ -45,7 +46,51 @@ enum GesSchemaLayoutJson {
             for field in type.fields { self.field(&json, field, member: true) }
             json.endArray()
             constants(&json, type.constants)
+            computed(&json, type.computed)
             if type.kind == .message { json.strings("tags", type.tags) }
+        }
+        json.endObject()
+    }
+
+    /// Only a schema with computed fields carries them: each with its type and its checked expression tree.
+    static func computed(_ json: inout Writer, _ computed: [GesSchemaComputedFieldInfo]) {
+        if computed.isEmpty { return }
+        json.beginArray("computed")
+        for field in computed {
+            json.beginObject()
+            json.string("name", field.name)
+            json.string("type", field.kind.rawValue)
+            json.string("unit", field.unit.rawValue)
+            json.boolean("optional", field.isOptional)
+            json.key("expression")
+            expression(&json, field.tree, element: false)
+            json.endObject()
+        }
+        json.endArray()
+    }
+
+    private static func expression(_ json: inout Writer, _ node: GesComputedNode, element: Bool) {
+        if element { json.beginObject() } else { json.beginValueObject() }
+        json.string("op", node.op.name)
+        json.string("type", node.type.rawValue)
+        json.string("unit", node.unit.rawValue)
+        switch node.op {
+        case .literal:
+            json.string("value", node.type == .boolean ? (node.literal.kind == .true ? "true" : "false") : node.decimal.canonical)
+            json.boolean("integer", node.literal.kind == .integer)
+        case .field, .item:
+            json.strings("path", node.path)
+        case .add, .subtract, .multiply, .divide:
+            json.boolean("first", node.first)
+            json.boolean("second", node.second)
+            json.boolean("third", node.third)
+        default:
+            break
+        }
+        if !node.children.isEmpty {
+            json.beginArray("children")
+            for child in node.children { expression(&json, child, element: true) }
+            json.endArray()
         }
         json.endObject()
     }

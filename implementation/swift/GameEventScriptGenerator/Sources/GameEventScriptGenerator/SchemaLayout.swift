@@ -95,6 +95,8 @@ struct GesLayoutType {
     var maxByteCountDepends: [String] = []
     var fields: [GesLayoutField] = []
     var constants: [GesLayoutConstant] = []
+    /// The fields written `computed by`, which are never encoded, with their checked expressions.
+    var computed: [GesSchemaComputedFieldInfo] = []
     var tags: [String] = []
     var members: [String] = []
     var memberWidth = 0
@@ -231,6 +233,7 @@ enum GesSchemaLayoutBuilder {
         } else {
             type.fields = fields(schema, bound)
             type.constants = GesLayoutConstant.of(schema)
+            type.computed = schema.computedFields
             for field in type.fields { collect(field, &depends) }
             type.tags = schema.tags
         }

@@ -82,7 +82,7 @@ with        = "with" ":" TypeName [ "all" "optional" ] [ "without" "(" LowerName
 let         = "let" LowerName "be" ( literal | "$" ConstantName )
 message     = "message" MessageName "(" [ argument { "," argument } ] ")" [ "tags" tagset ]
 messages    = "messages" ":" TypeName "as" "(" MessageName { "," MessageName } ")"
-field       = LowerName ":" union [ "optional" | "key" ] [ "default" fallback ]
+field       = LowerName ":" union [ "optional" | "key" ] [ "default" fallback | "computed" "by" expression ]
 argument    = [ "_" ] LowerName ":" union [ "optional" ]
 
 union       = alternative { "|" alternative }
@@ -107,6 +107,20 @@ value       = literal | "$" ConstantName | LowerName
 maximum     = integer | LowerName
 fallback    = "true" | "false" | "#" TagName | value
 tagset      = "(" "#" TagName { "," "#" TagName } ")"
+
+expression  = fallen [ "when" fallen { "," fallen "when" fallen } [ "," ] "otherwise" fallen ]
+fallen      = disjunction { "default" disjunction }
+disjunction = conjunction { "or" conjunction }
+conjunction = equality { "and" equality }
+equality    = relation { ( "=" | "<>" ) relation }
+relation    = sum { ( "<" | "<=" | ">" | ">=" ) sum | "has" "value" }
+sum         = product { ( "+" | "-" ) product }
+product     = unary { ( "*" | "/" ) unary }
+unary       = ( "-" | "not" | "abs" ) unary | postfix
+postfix     = primary { "." LowerName | "[" ":" "count" "]" | "[" ":" "sum" [ LowerName "=>" expression ] "]" }
+primary     = literal | "true" | "false" | "$" ConstantName | LowerName | "(" expression ")"
+            | ( "min" | "max" ) "of" sum "and" sum { "and" sum }
+            | "clamp" sum "between" sum "and" sum
 ```
 
 `LowerName`, `ConstantName`, `TypeName`, `MessageName` and `TagName` follow the
@@ -116,7 +130,7 @@ finite number of the [number grammar](Semantics/Numbers.md#text-and-number-conve
 optional `%` or unit suffix; a Text, a constant or a parameter is no literal. `integer` is
 at most 12 decimal digits without a leading zero; a single `_` may separate two digits, as in `max 10_000`. A
 `LowerName` in a `value` or `maximum` names a `let` of the schema or, only in a range, a parameter of the file; in a
-`fallback` it names a `let` or a sibling field.
+`fallback` it names a `let` or a sibling field. An [expression](#computed-fields) has its own names.
 
 **Layout.** Spaces and tabs may separate any two tokens, and a line comment may end any
 line. A source may start with a BOM. Fields, lets and axes are separated by commas or line breaks,
@@ -300,8 +314,68 @@ schema :DriveUnit as {
   resolved value, and decoding gives every field. `nothing` given for a required field stays `wire.nothingValue`: only
   a field that is left out takes its default.
 - A default belongs to the [canonical form](#canonical-form) and the hash, since both sides read values and documents
-  alike. Only sibling fields, literals and lets serve as defaults; a default computed from an expression waits for an
-  expression language in schemas.
+  alike. Only sibling fields, literals and lets serve as defaults, not [computed fields](#computed-fields) or
+  expressions: a default is a value the sender left out and resolves to a field that the wire carries.
+
+### Computed fields
+
+> **Since: Unreleased**
+
+A schema field may be written **`computed by`** an expression, as a field of a [script record](Language.md#records-and-custom-types)
+is: a value derived from the other fields, which is never encoded and never read from a document. Rules that both a server
+and its clients need, in different languages, are written once in the schema.
+
+```gess
+schema :SoundMade as {
+  energy: :Quantity(J) between 0J and 1MJ step 1J
+  duration: :Quantity(s) between 0s and 60s step 1ms
+  sources: :List(:SoundSource) max 8
+  power: :Quantity(W) computed by
+    0W when duration <= 0s,
+    otherwise energy / duration
+  signature: :Quantity(W) computed by sources[:sum s => s.power]
+  loud: :Boolean computed by power > 50W and not (duration = 0s)
+}
+```
+
+- **The expression** is a subset of GES expressions with their spellings and precedence, so the same text means the same
+  in a script record: number, percentage and quantity literals, `true`, `false`, file constants, lets, the fields of the
+  record and of its schema fields (`main.power`), the computed fields declared before it, `+ - * /`, unary `-`, `abs`,
+  `< <= > >= = <>`, `and`, `or`, `not`, `value when condition, …, otherwise fallback`, `min of a and b …`,
+  `max of …`, `clamp x between a and b`, `default`, `has value`, and over a list field `[:count]`, `[:sum]` and
+  `[:sum item => value]`. A line break may follow an operator, a keyword, a comma or `by`. Names that GES reserves, such as
+  `e`, `pi`, `abs` or `on`, cannot be named, since a script record would read them differently.
+- **Types and units are checked at binding.** Each operand is a Number with a unit, a Percentage or a Boolean, and the
+  operations take the [same-unit and derivation rules](Language.md#quantities): `energy / duration` gives watts, `2N + 3J`
+  is `schema.unitMismatch`. A percentage scales a number on its left (`x + 10%` is `x * 1.1`) or combines with another
+  percentage; on the left of a number it is `schema.invalidExpression`. The expression gives exactly the field's type and
+  unit. The field is a `:Number`, `:Quantity`, `:Percentage` or `:Boolean` without constraints, never a `key`, and takes no
+  `default`.
+- **Values follow the virtual machine.** Integers stay exact Int64 values and fall back to binary64 on overflow, a binary64
+  result that is whole within Int64 becomes an integer, `/` divides in binary64, `0 / 0` is nothing and `1 / 0` infinite,
+  `=` compares within two ULPs, `and` and `or` are three-valued, an absent optional field is nothing, and a condition passes
+  only when it is true. The value is then converted to the field's type as a record converts it: a Percentage takes a
+  finite number as its ratio and is nothing when infinite, and a Boolean is `true` only for true, so a computed Boolean is
+  never absent and is not `optional`. A number that may be nothing is written `optional`; a required one that still gives
+  nothing reads as NaN in generated code.
+- **A sum adds from left to right**, starting with its first element; an empty list gives the integer 0, which the field's
+  type gives its unit. That 0 has no unit, so a sum of quantities or percentages stands alone, as the expression, a value of
+  a choice or a side of `default`; inside arithmetic it is `schema.invalidExpression`. A sum or count reads a list that is
+  no optional field and lies in none, and a projection contains no other aggregate.
+- **Order.** A computed field reads the stored fields and the computed fields declared before it, so there is no cycle;
+  naming a later one is `schema.invalidExpression`. A `with` takes the computed fields of its schema where it stands, checked
+  against the fields of the schema that takes them, with the lets and constants of where they were written; `without` may
+  leave one out, and leaving out a field one reads is `schema.unknownName`. `all optional` makes a taken number optional.
+- **Not encoded.** The wire, deltas, the largest encoding and the binding hash ignore computed fields, and a document that
+  sets one fails with `document.unknownField`. Decoding a [value](#record-values) adds them, encoding ignores them, and
+  they belong to the [canonical form](#canonical-form) and the schema hash, since both sides derive the same values.
+- **Not included:** square roots, trigonometry and powers, whose results differ between platform libraries; the index of a
+  tag in its set, which a script cannot compute; text; and functions with parameters, such as a bearing at a given time,
+  which are a possible next step.
+
+The rules come from the virtual machine, which is the reference: `scripts/test-computed-fields.py` turns every corpus record
+with computed fields into a script record and requires both virtual machines to print the bits that the value paths of both
+runtimes and the generated code of both languages give.
 
 ### Constraints
 
@@ -358,8 +432,7 @@ Together, the type and the constraints decide a field's [encoding](#field-encodi
   limited to 32 levels. Lists nest at most 4 levels for encoding, so that a writer and
   a reader keep their running lists without allocating; deeper lists are
   `schema.notEncodable`.
-- There is no `computed by`. A receiver derives such values in its own code; see
-  [Records](#record-values).
+- A [computed field](#computed-fields) is derived from the other fields and is never encoded.
 - Constants and parameters are visible only in the file that declares them, and lets only in their schema. Schema,
   message and message set names are visible across all sources.
 - A `max` is positive.
@@ -401,7 +474,7 @@ Source errors use the phase `schema` with line and column, in the manner of
 | `schema.duplicateName` | a name repeats within its kind, or a schema, message or message set takes the name of a built-in type or `Record` |
 | `schema.unknownName` | a type, message, constant, let or parameter is not declared, a step, delta range or `max` names no let of its schema, or a default names neither a field nor a let |
 | `schema.cycle` | schema references form a cycle, references or `:List` types nest more than 32 levels, or sibling defaults form a cycle |
-| `schema.unitMismatch` | a bound, step, delta range or default has another unit than its field, or a `max` names a let with a unit |
+| `schema.unitMismatch` | a bound, step, delta range or default has another unit than its field, a `max` names a let with a unit, or a computed expression combines units that have no result unit or gives another unit than its field |
 | `schema.invalidRange` | a lower bound is not below its upper bound |
 | `schema.invalidStep` | a step is not positive, not exact, or a bound or delta range is no multiple of it |
 | `schema.invalidConstraint` | `integer` with `step` or on a Percentage, a Dice constraint other than a range, a `max` that is not positive, `step` or `delta within` without a range, `delta within` without a step or not narrower than the field, a `max` that names a let other than a positive whole Number of at most 12 digits |
@@ -414,6 +487,7 @@ Source errors use the phase `schema` with line and column, in the manner of
 | `schema.invalidRole` | a role stands on a declaration that cannot take it, is no role word, or names an invalid group |
 | `schema.duplicateRole` | a declaration has a second `wire` or a second `model` role |
 | `schema.invalidAbstract` | an abstract schema is a field type, list element, union alternative, a bound or checked root, or a model root |
+| `schema.invalidExpression` | a [computed field](#computed-fields) has another type than its expression, constraints, a key or optional Boolean, reads a type or name it cannot (a later computed field, a union, a reserved GES name, an optional list in an aggregate), combines operands without a value, or a sum of quantities or percentages stands inside arithmetic |
 | `schema.invalidDefault` | a [default](#defaults) lies outside its field's range or off its step, is fractional for an `integer` field, is no tag of the set or longer than `max`, has another kind than its field, stands on a key, a union or an optional field with a literal, names a sibling of another type or optionality, or names one for a type that generated code declares per field |
 
 `schema.notEncodable`, `schema.invalidRange`, `schema.invalidStep`, `schema.invalidBound`,
@@ -509,6 +583,7 @@ parameter <name> <kind>
 schema <TypeName>
 let <name> <kind> <number>
 field <name> <type>
+computed <name> <kind> [optional] <expression>
 message <MessageName> [tags <#tag> ...]
 argument <name or _ name> <type>
 messages <TypeName>
@@ -516,7 +591,14 @@ member <MessageName>
 ```
 
 A schema writes its lets right after its `schema` line, in declared order, so where they stand among the fields does
-not matter; `<kind>` is `Number`, `Percentage` or `Quantity(<portable unit name>)`, as for a parameter.
+not matter; `<kind>` is `Number`, `Percentage` or `Quantity(<portable unit name>)`, as for a parameter. Its computed fields
+follow its fields, in the order they read each other, with the kind `Boolean` besides; the expression is a prefix form in
+parentheses: `(field a b)` for `a.b`, `(item b)` for a projected element, literals as `(number <n>)`, `(percentage <n>)`,
+`(quantity <unit> <n>)`, `(true)` and `(false)` with constants and lets replaced by their values, and every operation as
+`(<name> <operands>)`: `negate`, `not`, `abs`, `add`, `subtract`, `multiply`, `divide`, `less`, `lessOrEqual`,
+`greater`, `greaterOrEqual`, `equal`, `notEqual`, `and`, `or`, `choice` with values and conditions in pairs and the
+fallback last, `min`, `max`, `clamp`, `default`, `hasValue`, `sum` with the list and an optional projection, and `count`.
+The variable of a projection is not written, so renaming it keeps the hash.
 
 `<type>` is written as:
 
@@ -1018,11 +1100,11 @@ The convenient path converts between `GesValue` and the wire.
   names, after that sibling's own default. A chain that ends at a field without a value or default is
   `wire.missingField` at that field, and `nothing` for an optional one.
 - Record fields without a schema entry are not transmitted. This covers the computed
-  fields of a script record. The same holds for the keys of a Map, except when it selects a union
+  fields of a script record and of the schema. The same holds for the keys of a Map, except when it selects a union
   alternative.
 - Decoding builds `:Record("Bot", fields)` without a constructor, as in
-  [product JSON](MessageFormat.md). A host with a Program may pass the fields to the
-  record's constructor, which derives its computed fields on the normal VM.
+  [product JSON](MessageFormat.md), and adds the schema's [computed fields](#computed-fields) with the values a script
+  record derives. A host with a Program may still pass the fields to a record's constructor.
 - A Message converts in the same way, with its signature and tags.
 - `:Flags` take a Map whose keys are members: `true` sets a member, `false` or an absent key
   leaves it unset. Another key is `wire.unknownTag`, a value that is no Boolean or a value that
@@ -1457,6 +1539,16 @@ alternative's type. A list element type is named `<Field>Item`, so a closed Tag 
   nothing. A protocol named like a type or tag set of the file is `generate.nameCollision`. Wire records adopt no
   protocol: their fields are storage that a read reuses, with presence flags and UTF-8 text, so a shared read-only
   property would need an allocating view; a program reads shared fields on models. *Since: Unreleased.*
+- **Computed fields.** A [computed field](#computed-fields) is a read-only property of models and wire records alike,
+  derived on each read: `Double` (C# `double`) for a number or percentage ratio, `Double?` when it is `optional`, and
+  `Bool` for a Boolean; a required number that gives nothing reads as NaN. Beside it an internal method `__<field>()`
+  returns the exact GES value, which other computed fields read, so an Int64 result stays exact between them. The
+  arithmetic is one helper type `__GesComputed<suffix>` per generation that repeats the virtual machine's rules, with the
+  units resolved when the code is generated; each sum is a method with a loop. A computed field is no initializer
+  parameter, is not stored, encoded or part of equality and `Codable`, and its name must not collide with a generated
+  member, such as the presence flag `hasMain` of a field `main`. With `--values` a model's value carries it as decoding a
+  record's bytes does, and reading ignores it; `--bindings` offers it to scripts as a field they read but cannot set.
+  *Since: Unreleased.*
 - A model is a plain value: an optional field that defaults to a sibling holds what it is given, and reading a value that
   gives `nothing` for it keeps it absent, though its initializer resolves `nil` to the sibling. Swift's synthesized
   `Codable` stores every property and applies no default; defaults belong to GES values and documents.
@@ -1522,8 +1614,8 @@ Reflection, so managed code stripping under IL2CPP removes nothing it needs. Wit
 
 `layout --model` prints the language-neutral model layout in the JSON form of the [generation layout](#generation-layout):
 `model` (the format version, 1), `roots` and `types`, ordered by name, and when types take schemas unchanged with `with`,
-`protocols`, ordered by name. A type has `name`, `hash` and `fields`, a schema with lets `constants` as in the generation
-layout, and `takes`, the schemas it takes unchanged, when it has any. A protocol has `name`, `abstract`, `takes` (the
+`protocols`, ordered by name. A type has `name`, `hash` and `fields`, a schema with lets `constants` and one with computed
+fields `computed` as in the generation layout, and `takes`, the schemas it takes unchanged, when it has any. A protocol has `name`, `abstract`, `takes` (the
 protocols it refines) and `fields` (the shared fields it requires besides those). A field has
 `name`, `path`, `optional`, `key`, `default` as in the generation layout when it has one, and `type`. A type has `kind` and the members of its kind: `number` adds `type`, `unit`,
 `integer`, `wrapping`, `lower`, `upper` and `step`, a bound as its canonical decimal or parameter name or `null`; `tag` adds
@@ -1556,8 +1648,14 @@ exact decimals. Hashes are 16 lowercase hexadecimal digits, and a binary64 value
   `message` or `messages`), `hash`, `bindingHash`, `bindingHashDepends` (the parameters the type
   reaches), `maxByteCount` and `maxByteCountDepends` (the parameters named in the bounds of its
   fields and of the types it reaches). A message set adds `members` and `memberWidth`; a schema
-  or message adds `fields`, a schema with [lets](#declarations) `constants`, and a message `tags`. A constant has `name`,
-  `type` and `unit` as a parameter, `value`, its exact decimal in base units, and `integer`.
+  or message adds `fields`, a schema with [lets](#declarations) `constants`, a schema with
+  [computed fields](#computed-fields) `computed`, and a message `tags`. A constant has `name`, `type` and `unit` as a
+  parameter, `value`, its exact decimal in base units, and `integer`. A computed field has `name`, `type` (`Number`,
+  `Quantity`, `Percentage` or `Boolean`), `unit`, `optional` and `expression`, a node with `op` (the names of the
+  [canonical form](#canonical-form), and `literal`, `field` and `item`), `type` (`Number`, `Percentage`, `Boolean`, `Record`
+  or `List`) and `unit`; a literal adds `value` (an exact decimal, `true` or `false`) and `integer`, a path `path`, the four
+  arithmetic operations `first`, `second` and `third`, the unit checks the virtual machine makes for them, and an operation
+  `children`.
 - A field has `name`, `path`, `optional`, `key`, `unlabeled`, with a [default](#defaults) `default` with `kind`
   (`number`, `boolean`, `tag` or `field`) and `value` (an exact decimal in base units, a Boolean, a tag without `#` or
   the sibling's name), and `encoding`. List elements,

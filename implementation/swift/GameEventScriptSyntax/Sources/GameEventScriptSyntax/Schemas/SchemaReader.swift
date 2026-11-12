@@ -6,7 +6,7 @@
 @_spi(Syntax) public struct GesSchemaSourceReader {
     private typealias Code = GesSchemaDiagnostic
 
-    private struct Failure: Error {
+    struct Failure: Error {
         let offset: Int
         let message: String
         var code = GesSchemaDiagnostic.syntax
@@ -14,9 +14,10 @@
 
     private static let maximumTypeNesting = 32
 
-    private let bytes: [UInt8]
-    private var position = 0
+    let bytes: [UInt8]
+    var position = 0
     private var typeNesting = 0
+    var expressionNesting = 0
 
     private init(_ bytes: [UInt8]) { self.bytes = bytes }
 
@@ -140,16 +141,21 @@
             skipTrivia()
             try expect(123)
             skipSeparators()
+            var sequence = 0
             while !consume(125) {
                 if let declared = try letDeclaration() {
                     result.lets.append(declared)
-                } else if let with = try withEntry(result.fields.count) {
+                } else if var with = try withEntry(result.fields.count) {
+                    with.sequence = sequence
                     result.withs.append(with)
                 } else {
-                    result.fields.append(try field(allowUnlabeled: false, allowDefault: true))
+                    var entry = try field(allowUnlabeled: false, allowDefault: true)
+                    entry.sequence = sequence
+                    if entry.computed == nil { result.fields.append(entry) } else { result.computed.append(entry) }
                 }
                 try endEntry(125)
                 skipSeparators()
+                sequence += 1
             }
         case "message":
             skipSpaces()
@@ -277,6 +283,18 @@
         }
         var fallback: GesSchemaDefaultSyntax?
         skipSpaces()
+        if atWord("computed") {
+            if !allowDefault { throw failure("A message argument is not computed.") }
+            _ = word()
+            skipSpaces()
+            try expectWord("by")
+            skipTrivia()
+            expressionNesting = 0
+            let expression = try readExpression()
+            var result = GesSchemaFieldSyntax(name: fieldName, unlabeled: unlabeled, alternatives: alternatives, marker: marker, defaultValue: nil, offset: offset)
+            result.computed = expression
+            return result
+        }
         if allowDefault && atWord("default") {
             let start = position
             _ = word()
@@ -545,7 +563,7 @@
         return result
     }
 
-    private func isLiteralEnd(_ index: Int) -> Bool {
+    func isLiteralEnd(_ index: Int) -> Bool {
         switch bytes[index] {
         case 32, 9, 13, 10, 44, 40, 41, 123, 125, 124, 35: return true
         case 47: return index + 1 < bytes.count && bytes[index + 1] == 47
@@ -566,20 +584,20 @@
         while consume(44) { skipTrivia() }
     }
 
-    private mutating func skipSpaces() {
+    mutating func skipSpaces() {
         while position < bytes.count && (bytes[position] == 32 || bytes[position] == 9) { position += 1 }
     }
 
-    private mutating func skipSpacesAndComments() {
+    mutating func skipSpacesAndComments() {
         skipSpaces()
         if atComment { skipLine() }
     }
 
-    private mutating func skipLine() {
+    mutating func skipLine() {
         while position < bytes.count && bytes[position] != 13 && bytes[position] != 10 { position += 1 }
     }
 
-    private mutating func skipTrivia() {
+    mutating func skipTrivia() {
         while position < bytes.count {
             let byte = bytes[position]
             if byte == 32 || byte == 9 || byte == 13 || byte == 10 {
@@ -592,31 +610,31 @@
         }
     }
 
-    private var atComment: Bool { position + 1 < bytes.count && bytes[position] == 47 && bytes[position + 1] == 47 }
+    var atComment: Bool { position + 1 < bytes.count && bytes[position] == 47 && bytes[position + 1] == 47 }
 
-    private mutating func consume(_ byte: UInt8) -> Bool {
+    mutating func consume(_ byte: UInt8) -> Bool {
         guard position < bytes.count && bytes[position] == byte else { return false }
         position += 1
         return true
     }
 
-    private mutating func expect(_ byte: UInt8) throws {
+    mutating func expect(_ byte: UInt8) throws {
         if !consume(byte) { throw failure("Expected '\(Character(Unicode.Scalar(byte)))'.") }
     }
 
-    private func atWord(_ written: String) -> Bool {
+    func atWord(_ written: String) -> Bool {
         let scalars = Array(written.utf8)
         guard position + scalars.count <= bytes.count, bytes[position..<(position + scalars.count)].elementsEqual(scalars) else { return false }
         let end = position + scalars.count
         return end == bytes.count || !GesNames.alnum(bytes[end])
     }
 
-    private mutating func expectWord(_ written: String) throws {
+    mutating func expectWord(_ written: String) throws {
         if !atWord(written) { throw failure("Expected '\(written)'.") }
         position += written.utf8.count
     }
 
-    private mutating func word() -> String {
+    mutating func word() -> String {
         let start = position
         while position < bytes.count && GesNames.alnum(bytes[position]) { position += 1 }
         return String(decoding: bytes[start..<position], as: UTF8.self)
@@ -628,7 +646,7 @@
         return try name(GesNames.type, "type name")
     }
 
-    private mutating func name(_ valid: (String) -> Bool, _ description: String) throws -> String {
+    mutating func name(_ valid: (String) -> Bool, _ description: String) throws -> String {
         let start = position
         var written = word()
         if position > start && GesNames.upper(bytes[start]) {
@@ -642,7 +660,7 @@
         return written
     }
 
-    private func failure(_ message: String) -> Failure { Failure(offset: position, message: message) }
+    func failure(_ message: String) -> Failure { Failure(offset: position, message: message) }
 }
 
 /// Reads schema literals exactly, with the number grammar and spelling table of GES literals.

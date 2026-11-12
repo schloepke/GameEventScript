@@ -22,16 +22,32 @@
                 if declaration.isAbstract { output += "abstract " }
                 output += "schema :\(declaration.name) as {\n"
                 for declared in declaration.lets { output += "  let \(declared.name) be \(value(declared.value))\n" }
-                for index in 0...declaration.fields.count {
-                    for with in declaration.withs where with.position == index {
-                        output += "  with :\(with.name)"
-                        if with.allOptional { output += " all optional" }
-                        if !with.without.isEmpty { output += " without (\(with.without.joined(separator: ", ")))" }
+                // Fields, computed fields and withs in their written order.
+                var withIndex = 0
+                var fieldIndex = 0
+                var computedIndex = 0
+                while true {
+                    let with = withIndex < declaration.withs.count ? declaration.withs[withIndex].sequence : Int.max
+                    let stored = fieldIndex < declaration.fields.count ? declaration.fields[fieldIndex].sequence : Int.max
+                    let computed = computedIndex < declaration.computed.count ? declaration.computed[computedIndex].sequence : Int.max
+                    if with == Int.max && stored == Int.max && computed == Int.max { break }
+                    if with < stored && with < computed {
+                        let entry = declaration.withs[withIndex]
+                        withIndex += 1
+                        output += "  with :\(entry.name)"
+                        if entry.allOptional { output += " all optional" }
+                        if !entry.without.isEmpty { output += " without (\(entry.without.joined(separator: ", ")))" }
                         output += "\n"
+                        continue
                     }
-                    if index == declaration.fields.count { break }
                     output += "  "
-                    field(declaration.fields[index], &output, "  ")
+                    if stored < computed {
+                        field(declaration.fields[fieldIndex], &output, "  ")
+                        fieldIndex += 1
+                    } else {
+                        field(declaration.computed[computedIndex], &output, "  ")
+                        computedIndex += 1
+                    }
                     output += "\n"
                 }
                 output += "}\n"
@@ -58,6 +74,118 @@
         return output
     }
 
+    /// The source spelling of an expression on one line.
+    @_spi(Syntax) public static func expression(_ expression: GesSchemaExpressionSyntax) -> String {
+        var output = ""
+        self.expression(expression, 0, &output)
+        return output
+    }
+
+    /// Prints an expression with the parentheses its precedence needs: 0 choice, 1 default, 2 or, 3 and, 4 equality,
+    /// 5 relation, 6 addition, 7 multiplication, 8 unary, 9 postfix and primary.
+    private static func expression(_ node: GesSchemaExpressionSyntax, _ minimum: Int, _ output: inout String) {
+        let level = level(node)
+        if level < minimum { output += "(" }
+        let children = node.children
+        switch node.kind {
+        case .literal: output += node.literal!.text
+        case .boolean: output += node.boolean ? "true" : "false"
+        case .constant: output += "$" + node.name
+        case .name: output += node.name
+        case .member:
+            expression(children[0], 9, &output)
+            output += "." + node.name
+        case .negate:
+            output += "-"
+            expression(children[0], 8, &output)
+        case .not, .abs:
+            output += node.kind == .not ? "not " : "abs "
+            expression(children[0], 8, &output)
+        case .binary:
+            expression(children[0], level, &output)
+            output += " \(symbol(node.binary)) "
+            expression(children[1], level + 1, &output)
+        case .choice:
+            for index in stride(from: 0, to: children.count - 1, by: 2) {
+                expression(children[index], 1, &output)
+                output += " when "
+                expression(children[index + 1], 1, &output)
+                output += ", "
+            }
+            output += "otherwise "
+            expression(children[children.count - 1], 1, &output)
+        case .min, .max:
+            output += node.kind == .min ? "min of " : "max of "
+            for (index, child) in children.enumerated() {
+                if index > 0 { output += " and " }
+                expression(child, 6, &output)
+            }
+        case .clamp:
+            output += "clamp "
+            expression(children[0], 6, &output)
+            output += " between "
+            expression(children[1], 6, &output)
+            output += " and "
+            expression(children[2], 6, &output)
+        case .default:
+            expression(children[0], 1, &output)
+            output += " default "
+            expression(children[1], 2, &output)
+        case .hasValue:
+            expression(children[0], 6, &output)
+            output += " has value"
+        case .count:
+            expression(children[0], 9, &output)
+            output += "[:count]"
+        case .sum:
+            expression(children[0], 9, &output)
+            output += "[:sum"
+            if children.count > 1 {
+                output += " \(node.name) => "
+                expression(children[1], 0, &output)
+            }
+            output += "]"
+        }
+        if level < minimum { output += ")" }
+    }
+
+    private static func level(_ node: GesSchemaExpressionSyntax) -> Int {
+        switch node.kind {
+        case .choice: return 0
+        case .default: return 1
+        case .hasValue: return 5
+        case .negate, .not, .abs: return 8
+        case .binary:
+            switch node.binary {
+            case .or: return 2
+            case .and: return 3
+            case .equal, .notEqual: return 4
+            case .add, .subtract: return 6
+            case .multiply, .divide: return 7
+            default: return 5
+            }
+        default: return 9
+        }
+    }
+
+    /// The spelling of a binary operator.
+    @_spi(Syntax) public static func symbol(_ binary: GesSchemaBinaryOperator) -> String {
+        switch binary {
+        case .add: return "+"
+        case .subtract: return "-"
+        case .multiply: return "*"
+        case .divide: return "/"
+        case .less: return "<"
+        case .lessOrEqual: return "<="
+        case .greater: return ">"
+        case .greaterOrEqual: return ">="
+        case .equal: return "="
+        case .notEqual: return "<>"
+        case .and: return "and"
+        case .or: return "or"
+        }
+    }
+
     /// The group `default` is the one a role without a group names.
     private static func role(_ role: String, _ group: String?, _ output: inout String) {
         guard let group else { return }
@@ -69,6 +197,11 @@
         output += "\(field.name): "
         union(field.alternatives, &output, indent)
         if field.marker == .optional { output += " optional" } else if field.marker == .key { output += " key" }
+        if let computed = field.computed {
+            output += " computed by "
+            expression(computed, 0, &output)
+            return
+        }
         if let fallback = field.defaultValue {
             output += " default "
             if let tag = fallback.tag {

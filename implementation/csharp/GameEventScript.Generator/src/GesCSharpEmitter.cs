@@ -47,7 +47,10 @@ internal static partial class GesCSharpEmitter
         prologue.Blank();
         var header = GesSchemaPlanner.Header(layout);
         var holder = "__GesSchemas" + GesSchemaPlanner.Suffix(header, options);
-        var context = new Context(GesSchemaPlanner.KeyedElements(types), "global::" + string.Concat(space.ConvertAll(part => part + ".")), options.Values, holder);
+        var context = new Context(GesSchemaPlanner.KeyedElements(types), "global::" + string.Concat(space.ConvertAll(part => part + ".")), options.Values, holder)
+        {
+            Computed = GesSchemaPlanner.Computed(types, GesComputedEmitter.Helper(GesSchemaPlanner.Suffix(header, options)), swift: false)
+        };
         var document = new GesCodeDocument { Header = header, Prologue = prologue.ToString(), Space = space, Parameters = layout.Parameters.Count > 0 };
         foreach (var type in types)
             document.Units.Add(new GesCodeUnit(type.Name, code =>
@@ -57,6 +60,8 @@ internal static partial class GesCSharpEmitter
             }));
         foreach (var (name, tags) in GesSchemaPlanner.TagSets(types, context.Global)) document.Units.Add(new GesCodeUnit(name, code => TagSetDeclaration(code, name, tags, access)));
         if (options.Values) document.Units.Add(new GesCodeUnit("", code => ValuesHolder(code, layout, holder, options.Split != GesSchemaSplit.None)));
+        if (layout.Types.Exists(type => type.Computed.Length > 0))
+            document.Units.Add(new GesCodeUnit("", code => GesComputedLibrary.Write(code, GesComputedEmitter.Helper(GesSchemaPlanner.Suffix(header, options)), swift: false)));
         return document;
     }
 
@@ -71,6 +76,8 @@ internal static partial class GesCSharpEmitter
         internal bool Values { get; } = values;
 
         internal string Holder { get; } = holder;
+
+        internal GesComputedEmitter Computed { get; set; } = null!;
     }
 
     private static string Kind(GesPlanType type) => type.Kind == GesSchemaKind.Message ? "message" : "schema";
@@ -95,6 +102,7 @@ internal static partial class GesCSharpEmitter
         foreach (var (tag, name, _) in type.Tags) names.Add((name, "the tag #" + tag));
         if (!type.IsItem)
             foreach (var constant in type.Layout.Constants) names.Add((GesSchemaPlanner.Pascal(constant.Name), "the let " + constant.Name));
+        if (!type.IsItem) GesComputedEmitter.Names(type.Layout.Computed, type.Name, swift: false, names);
         GesSchemaPlanner.Unique(type.Name, names);
 
         var visibility = type.IsItem ? "public" : access;
@@ -126,6 +134,7 @@ internal static partial class GesCSharpEmitter
         }
 
         foreach (var field in type.Fields) ListAccess(code, field);
+        if (!type.IsItem) context.Computed.Members(code, type.Name, type.Layout.Computed, "public");
         Methods(code, type);
         if (type.IsClass && (type.Kind == GesSchemaKind.Schema || type.IsItem)) Sharing(code, type);
         var deltas = type.Kind == GesSchemaKind.Schema && !type.IsItem;

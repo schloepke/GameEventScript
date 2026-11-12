@@ -64,6 +64,8 @@ python3 "$ges_root/scripts/compare-schema-generation.py" --self-test
 python3 "$ges_root/scripts/compare-schema-generation.py"
 python3 "$ges_root/scripts/test-generated-schemas.py" --self-test
 python3 "$ges_root/scripts/test-generated-schemas.py"
+python3 "$ges_root/scripts/test-computed-fields.py" --self-test
+python3 "$ges_root/scripts/test-computed-fields.py"
 # Needs the C# Conformance adapter built by the document roundtrip and both CLIs for its generated parties.
 python3 "$ges_root/scripts/test-schema-roundtrip.py" --skip-build
 python3 "$ges_root/scripts/test-constructor-forms.py"

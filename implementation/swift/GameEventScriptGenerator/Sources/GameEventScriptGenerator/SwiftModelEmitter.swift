@@ -27,10 +27,11 @@ enum GesSwiftModelEmitter {
             access: access,
             holds: "model"
         )
+        let computed = GesModelPlanner.computed(layout, GesComputedEmitter.helper(suffix), swift: true)
         for type in layout.types {
             document.units.append(
                 GesCodeUnit(owner: type.name) { code in
-                    try record(&code, layout, type, access, bindings: options.bindings, values: options.values ? values : nil)
+                    try record(&code, layout, type, access, bindings: options.bindings, values: options.values ? values : nil, computed: computed)
                 }
             )
         }
@@ -47,6 +48,9 @@ enum GesSwiftModelEmitter {
         if options.bindings { document.units.append(GesCodeUnit(owner: "") { code in bindings(&code, layout, access, support) }) }
         if options.values { document.units.append(GesCodeUnit(owner: "") { code in valueConversions(&code, layout, values, support) }) }
         if options.bindings || options.values { document.units.append(GesCodeUnit(owner: "") { code in supportType(&code, support) }) }
+        if layout.types.contains(where: { !$0.computed.isEmpty }) {
+            document.units.append(GesCodeUnit(owner: "") { code in GesComputedLibrary.write(&code, GesComputedEmitter.helper(suffix), swift: true) })
+        }
         return document
     }
 
@@ -73,7 +77,15 @@ enum GesSwiftModelEmitter {
         code.close()
     }
 
-    private static func record(_ code: inout Code, _ layout: GesModelLayout, _ type: GesModelType, _ access: String, bindings: Bool, values: String?) throws(GesGeneratorError) {
+    private static func record(
+        _ code: inout Code,
+        _ layout: GesModelLayout,
+        _ type: GesModelType,
+        _ access: String,
+        bindings: Bool,
+        values: String?,
+        computed: GesComputedEmitter
+    ) throws(GesGeneratorError) {
         let fields = GesModelPlanner.fields(type)
         let key = fields.first { $0.field.key }
         let identity = key.map { GesSchemaPlanner.camel($0.base) != "id" } ?? false
@@ -85,6 +97,7 @@ enum GesSwiftModelEmitter {
         if let key, identity { names.append(("id", "the identity of the key " + key.field.name)) }
         names.append(("schemaHash", "the generated member schemaHash"))
         for constant in type.constants { names.append((constant.name, "the let " + constant.name)) }
+        GesComputedEmitter.names(type.computed, type.name, swift: true, &names)
         if bindings { names.append(("gesValue", "the generated member gesValue")) }
         if values != nil { names.append(("toValue", "the generated member toValue")) }
         if bindings && fields.contains(where: { $0.field.name == "fields" }) {
@@ -109,6 +122,7 @@ enum GesSwiftModelEmitter {
             code.line("/// The key `\(key.field.name)`, which identifies the record in a keyed list.")
             code.line("\(access)var id: \(self.type(key.value)) { \(member(key.base)) }")
         }
+        computed.members(&code, type.name, type.computed, String(access.dropLast(access.hasSuffix(" ") ? 1 : 0)))
         code.blank()
         let siblings = fields.contains { GesModelPlanner.sibling(fields, $0) != nil }
         code.line("/// Creates a record from its fields; an absent value defaults to nil, a list to empty and a field with a default to it\(siblings ? ", where nil takes the field it names" : "").")
@@ -388,7 +402,17 @@ enum GesSwiftModelEmitter {
             code.open("final class \(type.name)Value: GesExternalValue {")
             code.line("nonisolated(unsafe) static let definition = try! GesExternalTypeDefinition(")
             code.line("    name: \(literal(type.name)),")
-            code.line("    fields: [\(fields.map { definition($0.field.name, $0.value) }.joined(separator: ", "))\(fields.isEmpty ? "" : ", ")try! .init(name: \"fields\", kind: .map)],")
+            var definitions = fields.map { definition($0.field.name, $0.value) }
+            for field in type.computed {
+                let name = literal(field.name)
+                switch field.kind {
+                case .boolean: definitions.append("try! .init(name: \(name), kind: .boolean)")
+                case .percentage: definitions.append("try! .init(name: \(name), kind: .percentage)")
+                case .quantity: definitions.append("try! .init(name: \(name), kind: .float, unit: .\(field.unit.rawValue))")
+                default: definitions.append("try! .init(name: \(name), kind: .float)")
+                }
+            }
+            code.line("    fields: [\(definitions.joined(separator: ", "))\(definitions.isEmpty ? "" : ", ")try! .init(name: \"fields\", kind: .map)],")
             code.line("    constructors: [try! .init(typeName: \(literal(type.name)), parameters: [try! .init(name: \"fields\", kind: .map)])]")
             code.line(")")
             code.line("static let names = [\(names)]")
@@ -401,6 +425,11 @@ enum GesSwiftModelEmitter {
             code.open("func field(_ name: String) throws -> GesValue? {")
             code.line("switch name {")
             for field in fields { code.line("case \(literal(field.field.name)): \(encode(field.value, type.name, "record." + member(field.base), "GesTypes", support))") }
+            for field in type.computed {
+                let helper = GesComputedEmitter.helper(String(support.dropFirst("__GesModels".count)))
+                let unit = field.kind == .quantity ? field.unit.rawValue : "none"
+                code.line("case \(literal(field.name)): \(helper).gesValue(record.\(GesComputedEmitter.method(field.name, type.name, swift: true))(), .\(unit))")
+            }
             code.line("case \"fields\": .map(keys: Self.names, values: [\(fields.map { "try field(\(literal($0.field.name)))!" }.joined(separator: ", "))])")
             code.line("default: nil")
             code.line("}")
@@ -485,9 +514,20 @@ enum GesSwiftModelEmitter {
             if typeIndex > 0 { code.blank() }
             code.line("static let \(names) = [\(fields.map { literal($0.field.name) }.joined(separator: ", "))]")
             code.blank()
+            // A value also carries the computed fields, as decoding the record's bytes gives them; reading ignores them.
+            var keys = names
+            if !type.computed.isEmpty {
+                keys = type.name + "Keys"
+                code.line("static let \(keys) = \(names) + [\(type.computed.map { literal($0.name) }.joined(separator: ", "))]")
+                code.blank()
+            }
             code.open("static func value(_ record: \(type.name)) -> GesValue {")
-            code.line(".record(typeName: \(typeLiteral), keys: \(names), values: [")
+            code.line(".record(typeName: \(typeLiteral), keys: \(keys), values: [")
             for field in fields { code.line("    " + encode(field.value, type.name, "record." + member(field.base), name, support, plain: true) + ",") }
+            let helper = GesComputedEmitter.helper(String(name.dropFirst("__GesModelValues".count)))
+            for field in type.computed {
+                code.line("    \(helper).gesValue(record.\(GesComputedEmitter.method(field.name, type.name, swift: true))(), .\(field.kind == .quantity ? field.unit.rawValue : "none")),")
+            }
             code.line("])")
             code.close()
             code.blank()

@@ -393,7 +393,24 @@ public enum GesSchemaValues {
             values.append(try decodeNode(&reader, schema, index))
             index = schema.nodes[index].next
         }
+        if let computed = schema.computed[name] { derive(computed, &keys, &values) }
         return .record(typeName: name, keys: keys, values: values)
+    }
+
+    /// Adds the computed fields in order, each reading the fields and the computed fields before it, as a script record does.
+    private static func derive(_ computed: [GesSchemaComputedFieldInfo], _ keys: inout [String], _ values: inout [GesValue]) {
+        for field in computed {
+            let type: GesComputedType = field.kind == .boolean ? .boolean : field.kind == .percentage ? .percentage : .number
+            let value = GesComputedMath.cast(GesComputedEvaluation.evaluate(field.tree, GesRecordScope(keys: keys, values: values), nil), type)
+            keys.append(field.name)
+            switch value.kind {
+            case .integer: values.append(.integer(value.integer, unit: field.unit))
+            case .float: values.append(.float(value.number, unit: field.unit))
+            case .percentage: values.append(.percentage(value.number))
+            case .true, .false: values.append(.boolean(value.kind == .true))
+            case .nothing: values.append(.nothing)
+            }
+        }
     }
 
     private static func decodeNode(_ reader: inout GesSchemaReader, _ schema: GesBoundSchema, _ index: Int) throws -> GesValue {
@@ -457,5 +474,49 @@ public enum GesSchemaValues {
             if value == value.rounded(.down), value < 9_223_372_036_854_775_808, value >= -9_223_372_036_854_775_808 { return .integer(Int64(value), unit: info.unit) }
             return .float(value, unit: info.unit)
         }
+    }
+}
+
+/// The decoded fields of a record, or a value of a list element, as computed fields read them.
+private struct GesRecordScope: GesComputedScope {
+    var keys: [String]?
+    var values: [GesValue]?
+    var value = GesValue.nothing
+
+    init(keys: [String], values: [GesValue]) {
+        self.keys = keys
+        self.values = values
+    }
+
+    init(value: GesValue) { self.value = value }
+
+    func read(_ path: [String], percentage: Bool) -> GesComputedValue {
+        let found = walk(path)
+        switch found.valueKind {
+        case .integer: return .of(integer: found.integerValue!)
+        case .float: return .of(float: found.floatValue!)
+        case .percentage: return .of(percentage: found.floatValue!)
+        case .boolean: return .of(boolean: found.asBoolean)
+        default: return .nothing
+        }
+    }
+
+    func has(_ path: [String]) -> Bool { !walk(path).isNothing }
+
+    func count(_ path: [String]) -> Int { walk(path).listValue?.count ?? 0 }
+
+    func element(_ path: [String], _ index: Int) -> any GesComputedScope { GesRecordScope(value: walk(path).listValue![index]) }
+
+    private func walk(_ path: [String]) -> GesValue {
+        var current = value
+        for (segment, name) in path.enumerated() {
+            if segment == 0, let keys, let values {
+                current = keys.firstIndex(of: name).map { values[$0] } ?? .nothing
+                continue
+            }
+            guard let fields = current.asMap else { return .nothing }
+            current = fields.get(name) ?? .nothing
+        }
+        return current
     }
 }

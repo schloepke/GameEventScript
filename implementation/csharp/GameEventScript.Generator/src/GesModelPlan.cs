@@ -62,23 +62,76 @@ internal static class GesModelPlanner
     internal static string ConversionName(string owner, GesModelPlanValue value) => value.TagSet.Length > 0 ? value.TagSet : owner + value.Nested;
 
     // The translator of a model layout's computed fields: paths read the fields of model types, with optional chaining
-    // through optional fields, and a computed field through its exact value.
+    // through optional fields, and a computed field through its property or exact value.
     internal static GesComputedEmitter Computed(GesModelLayout layout, string helper, bool swift)
-        => new(swift, helper, new ModelAccess(layout, helper, swift));
+        => new(swift, helper, new ModelAccess(layout, swift));
 
-    private sealed class ModelAccess(GesModelLayout layout, string helper, bool swift) : IGesComputedAccess
+    private sealed class ModelAccess(GesModelLayout layout, bool swift) : IGesComputedAccess
     {
-        public string Read(string root, string owner, string[] path, bool percentage)
+        public GesComputedReach Reach(string root, string owner, string[] path)
         {
-            var (text, computed) = Chain(root, owner, path);
-            return $"{helper}.{(swift ? "read" : "Read")}{(percentage && !computed ? "Percentage" : "")}({text})";
+            var reach = new GesComputedReach { Text = root };
+            var type = owner.Length > 0 ? layout.Type(owner) : null;
+            GesModelPlanValue? value = null;
+            foreach (var name in path)
+            {
+                var separator = reach.Text.Length == 0 ? "" : reach.Nullable ? "?." : ".";
+                var field = Fields(type!).Find(candidate => candidate.Field.Name == name);
+                if (field is null)
+                {
+                    reach.ComputedOwner = type!.Name;
+                    reach.ComputedName = name;
+                    if (reach.Nullable) reach.Text += "?";
+                    return reach;
+                }
+
+                reach.Text += separator + Member(field.Base);
+                reach.Nullable |= field.Value.Nullable;
+                value = field.Value;
+                type = value.Kind == GesModelKind.Schema ? layout.Type(value.Model.Schema) : null;
+            }
+
+            if (value is not null) Declare(value, reach);
+            return reach;
         }
 
-        public string Present(string root, string owner, string[] path) => Chain(root, owner, path).Text + (swift ? " != nil" : " != null");
-
-        public string List(string root, string owner, string[] path) => Chain(root, owner, path).Text;
+        public GesComputedReach Element(string owner, string[] path)
+        {
+            var reach = new GesComputedReach { Text = "item" };
+            Declare(Value(owner, path).Element!, reach);
+            return reach;
+        }
 
         public string ElementOwner(string owner, string[] path)
+        {
+            var element = Value(owner, path).Element!;
+            return element.Kind == GesModelKind.Schema ? element.Model.Schema : "";
+        }
+
+        public GesResolvedComputed[] Computed(string owner) => layout.Type(owner).Computed;
+
+        // The declared range of a number, where its bounds are literals, and the largest count of a list.
+        private static void Declare(GesModelPlanValue value, GesComputedReach reach)
+        {
+            var model = value.Model;
+            reach.Integer = model.Integer;
+            if (model.Integer)
+            {
+                reach.Lower = long.MinValue;
+                reach.Upper = long.MaxValue;
+            }
+
+            if (Number(model.Lower) is { } lower) reach.Lower = lower;
+            if (Number(model.Upper) is { } upper) reach.Upper = upper;
+            if (value.Kind == GesModelKind.List && model.Max is { } max) reach.MaxCount = max;
+        }
+
+        // A bound that is a canonical decimal, not a parameter's name.
+        private static double? Number(string? bound)
+            => bound is { Length: > 0 } && (bound[0] == '-' || bound[0] is >= '0' and <= '9')
+                && double.TryParse(bound, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var value) ? value : null;
+
+        private GesModelPlanValue Value(string owner, string[] path)
         {
             var type = layout.Type(owner);
             GesModelPlanValue? value = null;
@@ -88,26 +141,7 @@ internal static class GesModelPlanner
                 if (value.Kind == GesModelKind.Schema) type = layout.Type(value.Model.Schema);
             }
 
-            var element = value!.Element!;
-            return element.Kind == GesModelKind.Schema ? element.Model.Schema : "";
-        }
-
-        private (string Text, bool Computed) Chain(string root, string owner, string[] path)
-        {
-            var text = root;
-            var nullable = false;
-            var type = owner.Length > 0 ? layout.Type(owner) : null;
-            foreach (var name in path)
-            {
-                var separator = nullable ? "?." : ".";
-                var field = Fields(type!).Find(candidate => candidate.Field.Name == name);
-                if (field is null) return (text + separator + GesComputedEmitter.Method(name, type!.Name, swift) + "()", true);
-                text += separator + Member(field.Base);
-                nullable |= field.Value.Nullable;
-                type = field.Value.Kind == GesModelKind.Schema ? layout.Type(field.Value.Model.Schema) : null;
-            }
-
-            return (text, false);
+            return value!;
         }
 
         private string Member(string pascal)

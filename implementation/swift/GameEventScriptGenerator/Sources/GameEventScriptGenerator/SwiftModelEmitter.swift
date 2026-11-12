@@ -27,7 +27,7 @@ enum GesSwiftModelEmitter {
             access: access,
             holds: "model"
         )
-        let computed = GesModelPlanner.computed(layout, GesComputedEmitter.helper(suffix), swift: true)
+        let computed = GesModelPlanner.computed(layout, GesComputedEmitter.helper(options.namespace, suffix), swift: true)
         for type in layout.types {
             document.units.append(
                 GesCodeUnit(owner: type.name) { code in
@@ -45,11 +45,12 @@ enum GesSwiftModelEmitter {
                 }
             )
         }
-        if options.bindings { document.units.append(GesCodeUnit(owner: "") { code in bindings(&code, layout, access, support) }) }
-        if options.values { document.units.append(GesCodeUnit(owner: "") { code in valueConversions(&code, layout, values, support) }) }
+        if options.bindings { document.units.append(GesCodeUnit(owner: "") { code in bindings(&code, layout, access, support, computed) }) }
+        if options.values { document.units.append(GesCodeUnit(owner: "") { code in valueConversions(&code, layout, values, support, computed) }) }
         if options.bindings || options.values { document.units.append(GesCodeUnit(owner: "") { code in supportType(&code, support) }) }
         if layout.types.contains(where: { !$0.computed.isEmpty }) {
-            document.units.append(GesCodeUnit(owner: "") { code in GesComputedLibrary.write(&code, GesComputedEmitter.helper(suffix), swift: true) })
+            let values = options.bindings || options.values || computed.needsValues(layout.types.map { ($0.name, $0.computed) })
+            document.units.append(GesCodeUnit(owner: "") { code in GesComputedLibrary.write(&code, computed.helper, swift: true, values: values) })
         }
         return document
     }
@@ -355,7 +356,7 @@ enum GesSwiftModelEmitter {
     }
 
     // The catalog and constructor registry of the models, with an external value and a constructor per type.
-    private static func bindings(_ code: inout Code, _ layout: GesModelLayout, _ access: String, _ support: String) {
+    private static func bindings(_ code: inout Code, _ layout: GesModelLayout, _ access: String, _ support: String, _ computed: GesComputedEmitter) {
         let ordered = GesModelPlanner.dependencyOrder(layout)
         code.blank()
         code.line("/// The model types for scripts as external types: pass one instance to the compiler as its catalog and to the host as")
@@ -426,9 +427,8 @@ enum GesSwiftModelEmitter {
             code.line("switch name {")
             for field in fields { code.line("case \(literal(field.field.name)): \(encode(field.value, type.name, "record." + member(field.base), "GesTypes", support))") }
             for field in type.computed {
-                let helper = GesComputedEmitter.helper(String(support.dropFirst("__GesModels".count)))
                 let unit = field.kind == .quantity ? field.unit.rawValue : "none"
-                code.line("case \(literal(field.name)): \(helper).gesValue(record.\(GesComputedEmitter.method(field.name, type.name, swift: true))(), .\(unit))")
+                code.line("case \(literal(field.name)): \(computed.helper).gesValue(\(computed.valueOf("record", type.name, field)), .\(unit))")
             }
             code.line("case \"fields\": .map(keys: Self.names, values: [\(fields.map { "try field(\(literal($0.field.name)))!" }.joined(separator: ", "))])")
             code.line("default: nil")
@@ -502,7 +502,7 @@ enum GesSwiftModelEmitter {
 
     // The plain values of the models: a Record of each schema with its fields in declared order, as the value path decodes the
     // bytes of a record, so that wire records read them and give them back.
-    private static func valueConversions(_ code: inout Code, _ layout: GesModelLayout, _ name: String, _ support: String) {
+    private static func valueConversions(_ code: inout Code, _ layout: GesModelLayout, _ name: String, _ support: String, _ computed: GesComputedEmitter) {
         code.blank()
         code.line("/// The plain GES values of the models of this file, as `GesSchemaValues` reads and writes them.")
         code.open("enum \(name) {")
@@ -524,9 +524,8 @@ enum GesSwiftModelEmitter {
             code.open("static func value(_ record: \(type.name)) -> GesValue {")
             code.line(".record(typeName: \(typeLiteral), keys: \(keys), values: [")
             for field in fields { code.line("    " + encode(field.value, type.name, "record." + member(field.base), name, support, plain: true) + ",") }
-            let helper = GesComputedEmitter.helper(String(name.dropFirst("__GesModelValues".count)))
             for field in type.computed {
-                code.line("    \(helper).gesValue(record.\(GesComputedEmitter.method(field.name, type.name, swift: true))(), .\(field.kind == .quantity ? field.unit.rawValue : "none")),")
+                code.line("    \(computed.helper).gesValue(\(computed.valueOf("record", type.name, field)), .\(field.kind == .quantity ? field.unit.rawValue : "none")),")
             }
             code.line("])")
             code.close()

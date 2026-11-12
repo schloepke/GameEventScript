@@ -479,57 +479,79 @@ enum GesSchemaPlanner {
 
 extension GesSchemaPlanner {
     /// The translator of wire records' computed fields: an optional field on a path is read only where its presence flag is
-    /// set, and a computed field through its exact value.
+    /// set, and a computed field through its property or exact value.
     static func computed(_ types: [GesPlanType], _ helper: String, swift: Bool) -> GesComputedEmitter {
-        GesComputedEmitter(swift: swift, helper: helper, access: GesWireAccess(types: types, helper: helper, swift: swift))
+        GesComputedEmitter(swift: swift, helper: helper, access: GesWireAccess(types: types, swift: swift))
     }
 }
 
 private struct GesWireAccess: GesComputedAccess {
     let types: [GesPlanType]
-    let helper: String
     let swift: Bool
 
-    func read(_ root: String, _ owner: String, _ path: [String], percentage: Bool) -> String {
-        let (text, conditions, computed) = chain(root, owner, path)
-        let read = "\(helper).\(swift ? "read" : "Read")\(percentage && !computed ? "Percentage" : "")(\(text))"
-        return conditions.isEmpty ? read : "(\(conditions.joined(separator: " && ")) ? \(read) : \(helper).\(swift ? "nothing" : "Nothing"))"
+    func reach(_ root: String, _ owner: String, _ path: [String]) -> GesComputedReach {
+        let reach = GesComputedReach(text: root)
+        var type = self.type(owner)
+        var value: GesPlanValue?
+        for (step, name) in path.enumerated() {
+            guard let field = type!.fields.first(where: { $0.layout.name == name }) else {
+                reach.computedOwner = type!.name
+                reach.computedName = name
+                return reach
+            }
+            if field.optional { reach.conditions.append((step, GesComputedEmitter.join(reach.text, (swift ? "has" : "Has") + field.base))) }
+            reach.text = GesComputedEmitter.join(reach.text, member(field.base))
+            value = field.value
+            type = field.value.encoding.kind == .schema ? self.type(field.value.encoding.schema) : nil
+        }
+        if let value { Self.declare(value.encoding, reach) }
+        return reach
     }
 
-    func present(_ root: String, _ owner: String, _ path: [String]) -> String {
-        let conditions = chain(root, owner, path).conditions
-        return conditions.isEmpty ? "true" : conditions.joined(separator: " && ")
+    func element(_ owner: String, _ path: [String]) -> GesComputedReach {
+        let reach = GesComputedReach(text: "item")
+        Self.declare(value(owner, path).element!.encoding, reach)
+        return reach
     }
-
-    func list(_ root: String, _ owner: String, _ path: [String]) -> String { chain(root, owner, path).text }
 
     func elementOwner(_ owner: String, _ path: [String]) -> String {
+        let element = value(owner, path).element!
+        return element.encoding.kind == .schema ? element.encoding.schema : ""
+    }
+
+    func computed(_ owner: String) -> [GesSchemaComputedFieldInfo] { type(owner)!.layout.computed }
+
+    /// The declared range of a number and the largest count of a list.
+    private static func declare(_ encoding: GesLayoutEncoding, _ reach: GesComputedReach) {
+        switch encoding.kind {
+        case .integer:
+            reach.integer = true
+            reach.lower = encoding.range ? Double(encoding.lower) : Double(Int64.min)
+            reach.upper = encoding.range ? Double(encoding.lower) + Double(encoding.maxIndex) : Double(Int64.max)
+        case .quantized:
+            reach.lower = encoding.lowerValue
+            reach.upper = encoding.upperValue
+        case .float where encoding.range:
+            reach.lower = encoding.lowerValue
+            reach.upper = encoding.upperValue
+        case .list:
+            reach.maxCount = Double(encoding.maxCount)
+        default:
+            break
+        }
+    }
+
+    private func value(_ owner: String, _ path: [String]) -> GesPlanValue {
         var type = self.type(owner)
         var value: GesPlanValue?
         for name in path {
             value = type!.fields.first { $0.layout.name == name }!.value
             type = value!.encoding.kind == .schema ? self.type(value!.encoding.schema) : nil
         }
-        let element = value!.element!
-        return element.encoding.kind == .schema ? element.encoding.schema : ""
+        return value!
     }
 
     private func type(_ name: String) -> GesPlanType? { name.isEmpty ? nil : types.first { $0.name == name } }
-
-    private func chain(_ root: String, _ owner: String, _ path: [String]) -> (text: String, conditions: [String], computed: Bool) {
-        var text = root
-        var conditions: [String] = []
-        var type = self.type(owner)
-        for name in path {
-            guard let field = type!.fields.first(where: { $0.layout.name == name }) else {
-                return (text + "." + GesComputedEmitter.method(name, type!.name, swift: swift) + "()", conditions, true)
-            }
-            if field.optional { conditions.append(text + "." + (swift ? "has" : "Has") + field.base) }
-            text += "." + member(field.base)
-            type = field.value.encoding.kind == .schema ? self.type(field.value.encoding.schema) : nil
-        }
-        return (text, conditions, false)
-    }
 
     private func member(_ pascal: String) -> String {
         if !swift { return pascal }

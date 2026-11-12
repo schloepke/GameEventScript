@@ -95,11 +95,104 @@ internal sealed partial class GesFileScope
             if (expected == GesComputedType.Number && result.Unit != entry.Unit)
                 throw scope.Error(Code.UnitMismatch, syntax.Computed!.Offset, $"The expression gives a {Describe(result)}, but '{entry.Name}' is a {(entry.Unit == GesQuantityUnit.UnitNone ? "Number" : "Quantity(" + entry.Unit.ToSuffix() + ")")}.");
             scope.CheckAlone(syntax.Computed!, result, alone: true);
+            Guard(result, []);
+            if (result.MayBeAbsent && !entry.Optional)
+                throw scope.Error(Code.ComputedMayBeAbsent, syntax.Computed!.Offset, entry.Kind == GesSchemaTypeKind.Boolean
+                    ? $"'{entry.Name}' reads an optional field that may be absent; guard it with has value or give a fallback with default."
+                    : $"'{entry.Name}' reads an optional field that may be absent; mark it optional, guard the field with has value or give a fallback with default.");
             entry.Expression = result;
             resolved.Add(entry);
         }
 
         return resolved.ToArray();
+    }
+
+    // Which reads `has value` proves present, and which nodes may give nothing for an absent optional field. A `has value` of a
+    // path proves it and every leading part of it present on the right of `and` and in the value its `when` condition selects.
+    private static void Guard(GesComputedNode node, List<(GesComputedOp Op, string[] Path)> present)
+    {
+        var children = node.Children;
+        switch (node.Op)
+        {
+            case GesComputedOp.Field or GesComputedOp.Item:
+                foreach (var (op, path) in present)
+                    if (op == node.Op && path.Length > node.Present && StartsWith(node.Path, path)) node.Present = path.Length;
+                for (var index = node.Present; index < node.OptionalSteps.Length; index++) node.MayBeAbsent |= node.OptionalSteps[index];
+                return;
+            case GesComputedOp.HasValue:
+                Guard(children[0], present);
+                return;
+            case GesComputedOp.And:
+            {
+                Guard(children[0], present);
+                var proven = new List<(GesComputedOp, string[])>(present);
+                Proven(children[0], proven);
+                Guard(children[1], proven);
+                node.MayBeAbsent = children[0].MayBeAbsent || children[1].MayBeAbsent;
+                return;
+            }
+            case GesComputedOp.Choice:
+                for (var index = 0; index + 1 < children.Length; index += 2)
+                {
+                    Guard(children[index + 1], present);
+                    var proven = new List<(GesComputedOp, string[])>(present);
+                    Proven(children[index + 1], proven);
+                    Guard(children[index], proven);
+                    node.MayBeAbsent |= children[index].MayBeAbsent;
+                }
+
+                Guard(children[^1], present);
+                node.MayBeAbsent |= children[^1].MayBeAbsent;
+                return;
+            case GesComputedOp.Default:
+                Guard(children[0], present);
+                Guard(children[1], present);
+                node.MayBeAbsent = children[1].MayBeAbsent;
+                return;
+            case GesComputedOp.Sum:
+            {
+                // A projection reads the element afresh, so no proof about an element carries into it.
+                Guard(children[0], present);
+                if (children.Length > 1)
+                {
+                    Guard(children[1], present.FindAll(entry => entry.Op == GesComputedOp.Field));
+                    node.MayBeAbsent = children[1].MayBeAbsent;
+                }
+
+                return;
+            }
+            case GesComputedOp.Count:
+                Guard(children[0], present);
+                return;
+            default:
+                foreach (var child in children)
+                {
+                    Guard(child, present);
+                    node.MayBeAbsent |= child.MayBeAbsent;
+                }
+
+                return;
+        }
+    }
+
+    // The paths that a true condition proves present: its `has value` conjuncts.
+    private static void Proven(GesComputedNode node, List<(GesComputedOp, string[])> proven)
+    {
+        if (node.Op == GesComputedOp.And)
+        {
+            Proven(node.Children[0], proven);
+            Proven(node.Children[1], proven);
+        }
+        else if (node.Op == GesComputedOp.HasValue && node.Children[0].Op is GesComputedOp.Field or GesComputedOp.Item)
+            proven.Add((node.Children[0].Op, node.Children[0].Path));
+    }
+
+    private static bool StartsWith(string[] path, string[] prefix)
+    {
+        if (prefix.Length > path.Length) return false;
+        for (var index = 0; index < prefix.Length; index++)
+            if (path[index] != prefix[index]) return false;
+        return true;
     }
 
     private static string Describe(GesComputedNode node) => node.Type switch
@@ -159,6 +252,10 @@ internal sealed partial class GesFileScope
                 target.Node.Path.CopyTo(path, 0);
                 path[^1] = syntax.Name;
                 var reached = field is not null ? Reach(field, target.Node.Op, path, syntax.Offset) : Reach(computed!, target.Node.Op, path);
+                var steps = new bool[path.Length];
+                target.Node.OptionalSteps.CopyTo(steps, 0);
+                steps[^1] = reached.Optional;
+                reached.Node.OptionalSteps = steps;
                 return new Checked(reached.Node, reached.Record, reached.Element, target.Optional || reached.Optional);
             }
             case GesSchemaExpressionKind.Negate or GesSchemaExpressionKind.Abs:
@@ -288,11 +385,12 @@ internal sealed partial class GesFileScope
     {
         if (field.Alternatives.Length != 1) throw Error(Code.InvalidExpression, offset, $"'{field.Name}' is a union, which a computed field does not read.");
         var node = TypeNode(field.Alternatives[0], op, path, offset, out var record, out var element);
+        node.OptionalSteps = [field.Marker == GesSchemaFieldMarker.Optional];
         return new Checked(node, record, element, field.Marker == GesSchemaFieldMarker.Optional);
     }
 
     private static Checked Reach(GesResolvedComputed field, GesComputedOp op, string[] path)
-        => new(new GesComputedNode { Op = op, Type = field.Type, Unit = field.Kind == GesSchemaTypeKind.Quantity ? field.Unit : GesQuantityUnit.UnitNone, Path = path }, optional: field.Optional);
+        => new(new GesComputedNode { Op = op, Type = field.Type, Unit = field.Kind == GesSchemaTypeKind.Quantity ? field.Unit : GesQuantityUnit.UnitNone, Path = path, OptionalSteps = [field.Optional] }, optional: field.Optional);
 
     private GesComputedNode TypeNode(GesResolvedType type, GesComputedOp op, string[] path, int offset, out GesResolvedDeclaration? record, out GesResolvedType[]? element)
     {

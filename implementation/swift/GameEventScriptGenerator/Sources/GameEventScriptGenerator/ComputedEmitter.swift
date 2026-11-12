@@ -4,36 +4,60 @@
 @_spi(Generator) import GameEventScriptRuntime
 @_spi(Syntax) import GameEventScriptSyntax
 
-/// How generated code reaches the fields that computed expressions read. Paths start at the record (`self`, `this`) or at a
-/// list element (`item`, whose owner is its schema, or empty for a number).
+/// What a path reaches: the member text, the presence flags of the optional fields on it (wire records), whether the text
+/// gives an optional value (models), a computed field it ends at, and what the field holds as declared.
+final class GesComputedReach {
+    var text = ""
+    /// A presence flag per optional field on the path, with the index of that field.
+    var conditions: [(step: Int, condition: String)] = []
+    /// Whether the text gives an optional value: an optional field, or a field behind an optional one.
+    var nullable = false
+    /// The schema and name of a computed field at the end of the path, where `text` names the record that holds it.
+    var computedOwner = ""
+    var computedName = ""
+    /// Whether the field holds an Int64, and the closed range it declares, unbounded without one.
+    var integer = false
+    var lower = -Double.infinity
+    var upper = Double.infinity
+    /// The largest element count of a list, unbounded without a max.
+    var maxCount = Double.infinity
+
+    init(text: String) { self.text = text }
+}
+
+/// How generated code reaches the fields that computed expressions read. Paths start at the record (an empty root, `self`
+/// or `this`) or at a list element (`item`, whose owner is its schema, or empty for a number).
 protocol GesComputedAccess {
-    /// The exact value at a path, nothing where an optional field on the way is absent.
-    func read(_ root: String, _ owner: String, _ path: [String], percentage: Bool) -> String
+    /// What a path from a record of the owner reaches.
+    func reach(_ root: String, _ owner: String, _ path: [String]) -> GesComputedReach
 
-    /// Whether the record at a path is present.
-    func present(_ root: String, _ owner: String, _ path: [String]) -> String
-
-    /// The list at a path that holds no optional field.
-    func list(_ root: String, _ owner: String, _ path: [String]) -> String
+    /// A list element that is a number, of the list at the path.
+    func element(_ owner: String, _ path: [String]) -> GesComputedReach
 
     /// The schema of a list's elements, or empty for numbers.
     func elementOwner(_ owner: String, _ path: [String]) -> String
+
+    /// The computed fields of a schema.
+    func computed(_ owner: String) -> [GesSchemaComputedFieldInfo]
 }
 
-/// Translates the checked expressions of computed fields into C# or Swift. Each field becomes a property and a method that
-/// returns the exact GES value, which other computed fields read, and each sum a method with a loop. The arithmetic lives in
-/// one helper type per generation that repeats the rules of the GES virtual machine, so that the generated code gives the
-/// bits a script record gives.
+/// Translates the checked expressions of computed fields into C# or Swift. A field whose operands binding proves to give the
+/// bits of the GES virtual machine in plain binary64 becomes one property in the language's own operators (static code); any
+/// other field keeps the dynamic form, a property over a method that returns the exact GES value with the rules of the
+/// virtual machine. The helpers of both forms live in one type per generation, `GesComputed`.
 final class GesComputedEmitter {
-    private typealias Code = GesSchemaPlanner.Code
+    typealias Code = GesSchemaPlanner.Code
 
-    private let swift: Bool
-    private let helper: String
-    private let access: any GesComputedAccess
-    private var sums: [String] = []
-    private var owner = ""
-    private var field = ""
-    private var element = ""
+    let swift: Bool
+    let helper: String
+    let access: any GesComputedAccess
+    var sums: [String] = []
+    var owner = ""
+    var field = ""
+    var element = ""
+    var facts: [ObjectIdentifier: GesComputedFacts] = [:]
+    var fields: [String: GesComputedFacts] = [:]
+    var analyzed: Set<String> = []
 
     init(swift: Bool, helper: String, access: any GesComputedAccess) {
         self.swift = swift
@@ -41,9 +65,11 @@ final class GesComputedEmitter {
         self.access = access
     }
 
-    static func helper(_ suffix: String) -> String { "__GesComputed" + suffix }
+    /// The helper type: `GesComputed` in a namespace, otherwise with the suffix of the generation, so that two generations
+    /// without namespaces can share a module.
+    static func helper(_ space: String, _ suffix: String) -> String { space.isEmpty ? "GesComputed" + suffix : "GesComputed" }
 
-    /// The member names of a computed field: the property and the method with the exact value.
+    /// The member names of a computed field: the property and, in the dynamic form, the method with the exact value.
     static func property(_ name: String, _ type: String, swift: Bool) -> String {
         var pascal = GesSchemaPlanner.pascal(name)
         if pascal == type { pascal += "Value" }
@@ -66,30 +92,33 @@ final class GesComputedEmitter {
         return (swift ? "Double" : "double") + (field.isOptional ? "?" : "")
     }
 
-    /// Writes the properties, value methods and sum methods of a type's computed fields.
-    func members(_ code: inout GesSchemaPlanner.Code, _ owner: String, _ computed: [GesSchemaComputedFieldInfo], _ access: String) {
-        let root = swift ? "self" : "this"
+    /// Whether any computed field of the types needs the exact values of the dynamic form.
+    func needsValues(_ types: [(owner: String, computed: [GesSchemaComputedFieldInfo])]) -> Bool {
+        for (owner, computed) in types {
+            for field in computed where analyze(owner, field) == nil { return true }
+        }
+        return false
+    }
+
+    /// The exact GES value of a computed field of a record, which conversions to GES values read.
+    func valueOf(_ record: String, _ owner: String, _ field: GesSchemaComputedFieldInfo) -> String {
+        if analyze(owner, field) == nil { return "\(record).\(Self.method(field.name, owner, swift: swift))()" }
+        let property = "\(record).\(member(Self.property(field.name, owner, swift: swift)))"
+        return call(field.kind == .percentage ? "ReadPercentage" : "Read", property)
+    }
+
+    /// Writes the properties and helper methods of a type's computed fields.
+    func members(_ code: inout Code, _ owner: String, _ computed: [GesSchemaComputedFieldInfo], _ access: String) {
         for field in computed {
             self.owner = owner
             self.field = Self.property(field.name, owner, swift: swift)
+            element = ""
             sums = []
-            let expression = cast(self.expression(field.tree, root), field)
-            let property = Self.property(field.name, owner, swift: swift)
-            let method = Self.method(field.name, owner, swift: swift)
-            let result = field.kind == .boolean ? "IsTrue" : field.isOptional ? "OptionalNumber" : "Number"
             code.blank()
-            if swift {
-                code.line("/// `\(field.name)` computed by `\(field.spelling)`; \(Self.absent(field)).")
-                code.line("\(access.isEmpty ? "" : access + " ")var \(property): \(Self.propertyType(field, swift: true)) { \(helper).\(camel(result))(\(method)()) }")
-                code.blank()
-                code.line("/// The exact GES value of `\(field.name)`, which other computed fields read.")
-                code.line("func \(method)() -> \(helper).Value { \(expression) }")
+            if let known = analyze(owner, field) {
+                staticMembers(&code, field, known, access)
             } else {
-                code.line("/// <summary><c>\(Self.escape(field.name))</c> computed by <c>\(Self.escape(field.spelling))</c>; \(Self.absent(field)).</summary>")
-                code.line("\(access) \(Self.propertyType(field, swift: false)) \(property) => \(helper).\(result)(\(method)());")
-                code.blank()
-                code.line("/// <summary>The exact GES value of <c>\(Self.escape(field.name))</c>, which other computed fields read.</summary>")
-                code.line("internal \(helper).Value \(method)() => \(expression);")
+                dynamicMembers(&code, owner, field, access)
             }
             for body in sums {
                 code.blank()
@@ -98,13 +127,13 @@ final class GesComputedEmitter {
         }
     }
 
-    private static func absent(_ field: GesSchemaComputedFieldInfo) -> String {
+    static func absent(_ field: GesSchemaComputedFieldInfo) -> String {
         field.kind == .boolean
             ? "false where the expression gives nothing, as a script record reads it"
             : field.isOptional ? "absent where the expression gives nothing" : "NaN where the expression gives nothing"
     }
 
-    private static func escape(_ text: String) -> String {
+    static func escape(_ text: String) -> String {
         replace(replace(replace(text, "&", "&amp;"), "<", "&lt;"), ">", "&gt;")
     }
 
@@ -126,114 +155,29 @@ final class GesComputedEmitter {
         return String(result)
     }
 
-    private func camel(_ name: String) -> String { swift ? GesSchemaPlanner.camel(name) : name }
-
-    private func call(_ name: String, _ arguments: String...) -> String { "\(helper).\(camel(name))(\(arguments.joined(separator: ", ")))" }
-
-    private func flag(_ value: Bool) -> String { value ? "true" : "false" }
-
-    /// A script record converts the value to the field's type: a Percentage takes a finite number, a Boolean only true.
-    private func cast(_ expression: String, _ field: GesSchemaComputedFieldInfo) -> String {
-        switch field.kind {
-        case .percentage: return call("CastPercentage", expression)
-        case .boolean: return call("CastBoolean", expression)
-        default: return expression
-        }
+    func summary(_ code: inout Code, _ field: GesSchemaComputedFieldInfo) {
+        code.line(
+            swift
+                ? "/// `\(field.name)` computed by `\(field.spelling)`; \(Self.absent(field))."
+                : "/// <summary><c>\(Self.escape(field.name))</c> computed by <c>\(Self.escape(field.spelling))</c>; \(Self.absent(field)).</summary>"
+        )
     }
 
-    private static func opName(_ op: GesComputedOp) -> String { GesSchemaPlanner.pascal(op.name) }
+    func camel(_ name: String) -> String { swift ? GesSchemaPlanner.camel(name) : name }
 
-    private func expression(_ node: GesComputedNode, _ root: String) -> String {
-        let children = node.children
-        switch node.op {
-        case .literal:
-            switch node.literal.kind {
-            case .true, .false: return call("Boolean", flag(node.literal.kind == .true))
-            case .integer: return call("Integer", node.literal.integer == Int64.min ? (swift ? "Int64.min" : "long.MinValue") : String(node.literal.integer))
-            case .percentage: return call("Percentage", node.decimal.canonical)
-            case .float where node.type == .percentage: return call("Percentage", node.decimal.canonical)
-            default: return call("Float", node.decimal.canonical)
-            }
-        case .field, .item:
-            return access.read(node.op == .item ? "item" : root, node.op == .item ? element : owner, node.path, percentage: node.type == .percentage)
-        case .negate: return call("Negate", expression(children[0], root))
-        case .not: return call("Not", expression(children[0], root))
-        case .abs: return call("Abs", expression(children[0], root))
-        case .add, .subtract:
-            return call(Self.opName(node.op), expression(children[0], root), expression(children[1], root), flag(node.first), flag(node.second))
-        case .multiply, .divide:
-            return call(Self.opName(node.op), expression(children[0], root), expression(children[1], root), flag(node.first), flag(node.second), flag(node.third))
-        case .less, .lessOrEqual, .greater, .greaterOrEqual:
-            let relation = node.op == .less ? 0 : node.op == .lessOrEqual ? 1 : node.op == .greater ? 2 : 3
-            return call("Compare", expression(children[0], root), expression(children[1], root), flag(node.first), String(relation))
-        case .equal, .notEqual:
-            return call("Equal", expression(children[0], root), expression(children[1], root), flag(node.first), flag(node.op == .notEqual))
-        case .and, .or:
-            return call(Self.opName(node.op), expression(children[0], root), expression(children[1], root))
-        case .choice:
-            var result = expression(children[children.count - 1], root)
-            var index = children.count - 3
-            while index >= 0 {
-                result = call("When", expression(children[index + 1], root), expression(children[index], root), result)
-                index -= 2
-            }
-            return result
-        case .min, .max:
-            var result = expression(children[0], root)
-            for child in children.dropFirst() { result = call("Extreme", result, expression(child, root), flag(node.first), flag(node.op == .max)) }
-            return result
-        case .clamp:
-            return call("Clamp", expression(children[0], root), expression(children[1], root), expression(children[2], root), flag(node.first))
-        case .default:
-            return call("Fallback", expression(children[0], root), expression(children[1], root))
-        case .hasValue:
-            let child = children[0]
-            if child.type != .record { return call("Has", expression(child, root)) }
-            return call("Boolean", access.present(child.op == .item ? "item" : root, child.op == .item ? element : owner, child.path))
-        case .count:
-            let list = access.list(root, owner, children[0].path)
-            return swift ? call("Integer", "Int64(\(list).count)") : call("Integer", "\(list).Count")
-        case .sum:
-            return sum(node, root)
-        }
-    }
+    func call(_ name: String, _ arguments: String...) -> String { "\(helper).\(camel(name))(\(arguments.joined(separator: ", ")))" }
 
-    /// A sum adds the projected elements from left to right, starting with the first one, and is the integer 0 for none.
-    private func sum(_ node: GesComputedNode, _ root: String) -> String {
-        let list = access.list(root, owner, node.children[0].path)
-        let name = "__\(field)Sum\(sums.count)"
-        let previous = element
-        element = access.elementOwner(owner, node.children[0].path)
-        let value = node.children.count > 1 ? expression(node.children[1], root) : access.read("item", "", [], percentage: node.type == .percentage)
-        element = previous
-        var body = ""
-        if swift {
-            body += "func \(name)() -> \(helper).Value {\n"
-            body += "    var sum = \(helper).integer(0)\n"
-            body += "    var first = true\n"
-            body += "    for item in \(list) {\n"
-            body += "        let value = \(value)\n"
-            body += "        sum = first ? value : \(helper).add(sum, value, true, true)\n"
-            body += "        first = false\n"
-            body += "    }\n"
-            body += "    return sum\n"
-            body += "}"
-        } else {
-            body += "internal \(helper).Value \(name)()\n"
-            body += "{\n"
-            body += "    var sum = \(helper).Integer(0);\n"
-            body += "    var first = true;\n"
-            body += "    foreach (var item in \(list))\n"
-            body += "    {\n"
-            body += "        var value = \(value);\n"
-            body += "        sum = first ? value : \(helper).Add(sum, value, true, true);\n"
-            body += "        first = false;\n"
-            body += "    }\n"
-            body += "\n"
-            body += "    return sum;\n"
-            body += "}"
-        }
-        sums.append(body)
-        return "\(name)()"
+    /// A member name as the language spells it, with Swift keywords escaped.
+    func member(_ name: String) -> String { swift && GesSwiftEmitter.keywords.contains(name) ? "`" + name + "`" : name }
+
+    /// A read of a path from a record (empty root for the record itself in a property) or from a list element.
+    func root(_ node: GesComputedNode, _ root: String) -> String { node.op == .item ? "item" : root }
+
+    func owner(_ node: GesComputedNode) -> String { node.op == .item ? element : owner }
+
+    static func join(_ root: String, _ member: String) -> String { root.isEmpty ? member : root + "." + member }
+
+    func target(_ reach: GesComputedReach) -> GesSchemaComputedFieldInfo {
+        access.computed(reach.computedOwner).first { $0.name == reach.computedName }!
     }
 }

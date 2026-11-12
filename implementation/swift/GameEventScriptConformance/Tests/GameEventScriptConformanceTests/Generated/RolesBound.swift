@@ -88,22 +88,13 @@ enum RolesBound {
         var id: Int { bot }
 
         /// `fit` computed by `alive and health >= 50%`; false where the expression gives nothing, as a script record reads it.
-        var fit: Bool { __GesComputedad61f0c45f3be33d.isTrue(__fit()) }
-
-        /// The exact GES value of `fit`, which other computed fields read.
-        func __fit() -> __GesComputedad61f0c45f3be33d.Value { __GesComputedad61f0c45f3be33d.castBoolean(__GesComputedad61f0c45f3be33d.and(__GesComputedad61f0c45f3be33d.read(self.alive), __GesComputedad61f0c45f3be33d.compare(__GesComputedad61f0c45f3be33d.readPercentage(self.health), __GesComputedad61f0c45f3be33d.percentage(5e-1), true, 3))) }
+        var fit: Bool { alive && health >= 0.5 }
 
         /// `pace` computed by `abs speed * 1m/s when speed has value, otherwise 0m/s`; absent where the expression gives nothing.
-        var pace: Double? { __GesComputedad61f0c45f3be33d.optionalNumber(__pace()) }
-
-        /// The exact GES value of `pace`, which other computed fields read.
-        func __pace() -> __GesComputedad61f0c45f3be33d.Value { __GesComputedad61f0c45f3be33d.when(__GesComputedad61f0c45f3be33d.has(__GesComputedad61f0c45f3be33d.read(self.speed)), __GesComputedad61f0c45f3be33d.multiply(__GesComputedad61f0c45f3be33d.abs(__GesComputedad61f0c45f3be33d.read(self.speed)), __GesComputedad61f0c45f3be33d.integer(1), true, true, true), __GesComputedad61f0c45f3be33d.integer(0)) }
+        var pace: Double? { GesComputed.optional(abs(speed) * 1.0) }
 
         /// `traced` computed by `marks[:count]`; NaN where the expression gives nothing.
-        var traced: Double { __GesComputedad61f0c45f3be33d.number(__traced()) }
-
-        /// The exact GES value of `traced`, which other computed fields read.
-        func __traced() -> __GesComputedad61f0c45f3be33d.Value { __GesComputedad61f0c45f3be33d.integer(Int64(self.marks.count)) }
+        var traced: Double { Double(marks.count) }
 
         /// Creates a record from its fields; an absent value defaults to nil, a list to empty and a field with a default to it.
         init(bot: Int, name: String, alive: Bool, health: Double, speed: Double, heading: Double, mood: MoodTag, team: String, position: GesPoint, velocity: GesVector, body: World_Body, radar: RadarView? = nil, facing: FacingAlternative? = nil, note: String? = nil, marks: [GesPoint] = [], units: [UnitsItemAlternative] = [], grid: [[Int]] = [], rolls: [Int] = [], seal: [UInt8] = [], chunks: [[UInt8]] = [], status: StatusFlags = [], ranks: [RanksItemFlags] = [], hints: [Side] = []) {
@@ -497,10 +488,7 @@ enum RolesBound {
         var strength: Double
 
         /// `depth` computed by `reach - range * strength`; NaN where the expression gives nothing.
-        var depth: Double { __GesComputedad61f0c45f3be33d.number(__depth()) }
-
-        /// The exact GES value of `depth`, which other computed fields read.
-        func __depth() -> __GesComputedad61f0c45f3be33d.Value { __GesComputedad61f0c45f3be33d.subtract(__GesComputedad61f0c45f3be33d.read(self.reach), __GesComputedad61f0c45f3be33d.multiply(__GesComputedad61f0c45f3be33d.read(self.range), __GesComputedad61f0c45f3be33d.readPercentage(self.strength), true, true, true), true, true) }
+        var depth: Double { reach - range * strength }
 
         /// Creates a record from its fields; an absent value defaults to nil, a list to empty and a field with a default to it, where nil takes the field it names.
         init(range: Double = 500, reach: Double? = nil, contacts: [Int] = [], side: Side? = nil, lead: Side? = nil, active: Bool = true, strength: Double) {
@@ -654,10 +642,7 @@ enum RolesBound {
         var hull: HullTag
 
         /// `burden` computed by `mass + wear`; NaN where the expression gives nothing.
-        var burden: Double { __GesComputedad61f0c45f3be33d.number(__burden()) }
-
-        /// The exact GES value of `burden`, which other computed fields read.
-        func __burden() -> __GesComputedad61f0c45f3be33d.Value { __GesComputedad61f0c45f3be33d.add(__GesComputedad61f0c45f3be33d.read(self.mass), __GesComputedad61f0c45f3be33d.percentage(25e-3), false, true) }
+        var burden: Double { mass + mass * 0.025 }
 
         /// Creates a record from its fields; an absent value defaults to nil, a list to empty and a field with a default to it.
         init(mass: Double, hull: HullTag = .light) {
@@ -798,7 +783,7 @@ enum RolesBound {
                 switch name {
                 case "mass": .float(record.mass, unit: .kilogram)
                 case "hull": __GesModelsad61f0c45f3be33d.tag(record.hull.rawValue)
-                case "burden": __GesComputedad61f0c45f3be33d.gesValue(record.__burden(), .kilogram)
+                case "burden": GesComputed.gesValue(GesComputed.read(record.burden), .kilogram)
                 case "fields": .map(keys: Self.names, values: [try field("mass")!, try field("hull")!])
                 default: nil
                 }
@@ -912,9 +897,9 @@ enum RolesBound {
                 case "status": GesTypes.value(record.status)
                 case "ranks": .list(record.ranks.map { GesTypes.value($0) })
                 case "hints": .list(record.hints.map { __GesModelsad61f0c45f3be33d.tag($0.rawValue) })
-                case "fit": __GesComputedad61f0c45f3be33d.gesValue(record.__fit(), .none)
-                case "pace": __GesComputedad61f0c45f3be33d.gesValue(record.__pace(), .meterPerSecond)
-                case "traced": __GesComputedad61f0c45f3be33d.gesValue(record.__traced(), .none)
+                case "fit": GesComputed.gesValue(GesComputed.read(record.fit), .none)
+                case "pace": GesComputed.gesValue(GesComputed.read(record.pace), .meterPerSecond)
+                case "traced": GesComputed.gesValue(GesComputed.read(record.traced), .none)
                 case "fields": .map(keys: Self.names, values: [try field("bot")!, try field("name")!, try field("alive")!, try field("health")!, try field("speed")!, try field("heading")!, try field("mood")!, try field("team")!, try field("position")!, try field("velocity")!, try field("body")!, try field("radar")!, try field("facing")!, try field("note")!, try field("marks")!, try field("units")!, try field("grid")!, try field("rolls")!, try field("seal")!, try field("chunks")!, try field("status")!, try field("ranks")!, try field("hints")!])
                 default: nil
                 }
@@ -1264,7 +1249,7 @@ enum RolesBound {
                 case "lead": __GesModelsad61f0c45f3be33d.present(record.lead, { __GesModelsad61f0c45f3be33d.tag($0.rawValue) })
                 case "active": .boolean(record.active)
                 case "strength": .percentage(record.strength)
-                case "depth": __GesComputedad61f0c45f3be33d.gesValue(record.__depth(), .meter)
+                case "depth": GesComputed.gesValue(GesComputed.read(record.depth), .meter)
                 case "fields": .map(keys: Self.names, values: [try field("range")!, try field("reach")!, try field("contacts")!, try field("side")!, try field("lead")!, try field("active")!, try field("strength")!])
                 default: nil
                 }
@@ -1380,9 +1365,9 @@ enum RolesBound {
                 __GesModelValuesad61f0c45f3be33d.value(record.status),
                 .list(record.ranks.map { __GesModelValuesad61f0c45f3be33d.value($0) }),
                 .list(record.hints.map { __GesModelsad61f0c45f3be33d.tag($0.rawValue) }),
-                __GesComputedad61f0c45f3be33d.gesValue(record.__fit(), .none),
-                __GesComputedad61f0c45f3be33d.gesValue(record.__pace(), .meterPerSecond),
-                __GesComputedad61f0c45f3be33d.gesValue(record.__traced(), .none),
+                GesComputed.gesValue(GesComputed.read(record.fit), .none),
+                GesComputed.gesValue(GesComputed.read(record.pace), .meterPerSecond),
+                GesComputed.gesValue(GesComputed.read(record.traced), .none),
             ])
         }
 
@@ -1712,7 +1697,7 @@ enum RolesBound {
                 __GesModelsad61f0c45f3be33d.present(record.lead, { __GesModelsad61f0c45f3be33d.tag($0.rawValue) }),
                 .boolean(record.active),
                 .percentage(record.strength),
-                __GesComputedad61f0c45f3be33d.gesValue(record.__depth(), .meter),
+                GesComputed.gesValue(GesComputed.read(record.depth), .meter),
             ])
         }
 
@@ -1859,7 +1844,7 @@ enum RolesBound {
             .record(typeName: "World_Body", keys: World_BodyKeys, values: [
                 .float(record.mass, unit: .kilogram),
                 __GesModelsad61f0c45f3be33d.tag(record.hull.rawValue),
-                __GesComputedad61f0c45f3be33d.gesValue(record.__burden(), .kilogram),
+                GesComputed.gesValue(GesComputed.read(record.burden), .kilogram),
             ])
         }
 
@@ -1984,8 +1969,85 @@ enum RolesBound {
         static func dice(_ rolls: [Int]) -> GesValue { rolls.allSatisfy { $0 > 0 && $0 <= Int(Int32.max) } ? .dice(rolls.map { Int32($0) }) : .nothing }
     }
 
-    /// The arithmetic of computed fields, with the values and rules of the GES virtual machine.
-    enum __GesComputedad61f0c45f3be33d {
+    /// The rules of computed fields that plain binary64 and Boolean code does not have.
+    enum GesComputed {
+        /// GES has no negative zero.
+        static func positiveZero(_ value: Double) -> Double { value == 0 ? 0 : value }
+
+        /// The number of an optional field, absent where the expression gives nothing.
+        static func optional(_ value: Double) -> Double? { value.isNaN ? nil : value == 0 ? 0 : value }
+
+        /// The ratio of a Percentage field, NaN where the ratio is not finite, which is no percentage.
+        static func ratio(_ value: Double) -> Double { value.isInfinite ? .nan : value == 0 ? 0 : value }
+
+        /// The ratio of an optional Percentage field, absent where the expression gives nothing or no finite ratio.
+        static func optionalRatio(_ value: Double) -> Double? { value.isNaN || value.isInfinite ? nil : value == 0 ? 0 : value }
+
+        static func addPercentage(_ value: Double, _ ratio: Double) -> Double { value + value * ratio }
+
+        static func subtractPercentage(_ value: Double, _ ratio: Double) -> Double { value - value * ratio }
+
+        /// The smaller of two numbers, the left one on a tie, and nothing where either is.
+        static func min(_ a: Double, _ b: Double) -> Double { a.isNaN || b.isNaN ? .nan : b < a ? b : a }
+
+        /// The larger of two numbers, the left one on a tie, and nothing where either is.
+        static func max(_ a: Double, _ b: Double) -> Double { a.isNaN || b.isNaN ? .nan : b > a ? b : a }
+
+        static func clamp(_ value: Double, _ first: Double, _ second: Double) -> Double {
+            if value.isNaN || first.isNaN || second.isNaN { return .nan }
+            let lower = first <= second ? first : second
+            let upper = first <= second ? second : first
+            return value < lower ? lower : value > upper ? upper : value
+        }
+
+        /// A number, or the fallback where it is nothing.
+        static func otherwise(_ value: Double, _ fallback: Double) -> Double { value.isNaN ? fallback : value }
+
+        private static func whole(_ value: Double) -> Bool {
+            value >= -9_223_372_036_854_775_808.0 && value < 9_223_372_036_854_775_808.0 && value == value.rounded(.towardZero)
+        }
+
+        private static func ordered(_ value: Double) -> UInt64 {
+            let bits = value.bitPattern
+            return bits & 0x8000_0000_0000_0000 != 0 ? ~bits : bits | 0x8000_0000_0000_0000
+        }
+
+        private static func close(_ left: Double, _ right: Double) -> Bool {
+            if left.isNaN || right.isNaN { return false }
+            if left.isInfinite || right.isInfinite { return left == right }
+            if left == right { return true }
+            let a = ordered(left)
+            let b = ordered(right)
+            return (a >= b ? a - b : b - a) <= 2
+        }
+
+        /// Whole numbers are equal when they are the same, others within two units in the last place; nothing is unequal.
+        static func equal(_ a: Double, _ b: Double) -> Bool { whole(a) && whole(b) ? a == b : close(a, b) }
+
+        static func equalOrNothing(_ a: Double, _ b: Double) -> Bool? { a.isNaN || b.isNaN ? nil : equal(a, b) }
+
+        /// Percentages are equal within two units in the last place of their ratios.
+        static func equalRatios(_ a: Double, _ b: Double) -> Bool { close(a, b) }
+
+        static func equalRatiosOrNothing(_ a: Double, _ b: Double) -> Bool? { a.isNaN || b.isNaN ? nil : close(a, b) }
+
+        static func lessOrNothing(_ a: Double, _ b: Double) -> Bool? { a.isNaN || b.isNaN ? nil : a < b }
+
+        static func lessOrEqualOrNothing(_ a: Double, _ b: Double) -> Bool? { a.isNaN || b.isNaN ? nil : a <= b }
+
+        static func greaterOrNothing(_ a: Double, _ b: Double) -> Bool? { a.isNaN || b.isNaN ? nil : a > b }
+
+        static func greaterOrEqualOrNothing(_ a: Double, _ b: Double) -> Bool? { a.isNaN || b.isNaN ? nil : a >= b }
+
+        /// Whether two Booleans are equal, nothing where either is.
+        static func same(_ a: Bool?, _ b: Bool?) -> Bool? { a == nil || b == nil ? nil : a == b }
+
+        /// Three-valued and: false wins over nothing.
+        static func and(_ a: Bool?, _ b: Bool?) -> Bool? { a == false || b == false ? false : a == true && b == true ? true : nil }
+
+        /// Three-valued or: true wins over nothing.
+        static func or(_ a: Bool?, _ b: Bool?) -> Bool? { a == true || b == true ? true : a == false && b == false ? false : nil }
+
         /// A GES scalar: kind 0 nothing, 1 an Int64, 2 a binary64, 3 a percentage ratio, 4 false, 5 true.
         struct Value {
             let kind: UInt8
@@ -2099,20 +2161,6 @@ enum RolesBound {
             let x = a.numeric
             let y = b.numeric
             return boolean(relation == 0 ? x < y : relation == 1 ? x <= y : relation == 2 ? x > y : x >= y)
-        }
-
-        private static func ordered(_ value: Double) -> UInt64 {
-            let bits = value.bitPattern
-            return bits & 0x8000_0000_0000_0000 != 0 ? ~bits : bits | 0x8000_0000_0000_0000
-        }
-
-        private static func close(_ left: Double, _ right: Double) -> Bool {
-            if left.isNaN || right.isNaN { return false }
-            if left.isInfinite || right.isInfinite { return left == right }
-            if left == right { return true }
-            let a = ordered(left)
-            let b = ordered(right)
-            return (a >= b ? a - b : b - a) <= 2
         }
 
         static func equal(_ a: Value, _ b: Value, _ sameUnit: Bool, _ negate: Bool) -> Value {

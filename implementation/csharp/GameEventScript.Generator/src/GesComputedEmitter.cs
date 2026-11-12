@@ -10,16 +10,16 @@ using GameEventScript.Syntax;
 
 namespace GameEventScript.Generator;
 
-// Translates the checked expressions of computed fields into C# or Swift. Each field becomes a property and a method that
-// returns the exact GES value, which other computed fields read, and each sum a method with a loop. The arithmetic lives in
-// one helper type per generation that repeats the rules of the GES virtual machine, so that the generated code gives the
-// bits a script record gives.
-internal sealed class GesComputedEmitter
+// Translates the checked expressions of computed fields into C# or Swift. A field whose operands binding proves to give the
+// bits of the GES virtual machine in plain binary64 becomes one property in the language's own operators (static code); any
+// other field keeps the dynamic form, a property over a method that returns the exact GES value with the rules of the
+// virtual machine. The helpers of both forms live in one type per generation, `GesComputed`.
+internal sealed partial class GesComputedEmitter
 {
     private readonly bool _swift;
     private readonly string _helper;
     private readonly IGesComputedAccess _access;
-    private readonly List<(string Name, string Body)> _sums = [];
+    private readonly List<string> _sums = [];
     private string _owner = "";
     private string _field = "";
     private string _element = "";
@@ -31,9 +31,13 @@ internal sealed class GesComputedEmitter
         _access = access;
     }
 
-    internal static string Helper(string suffix) => "__GesComputed" + suffix;
+    // The helper type: `GesComputed` in a namespace, otherwise with the suffix of the generation, so that two generations
+    // without namespaces can share a module.
+    internal static string Helper(string space, string suffix) => space.Length > 0 ? "GesComputed" : "GesComputed" + suffix;
 
-    // The member names of a computed field: the property and the method with the exact value.
+    internal string HelperName => _helper;
+
+    // The member names of a computed field: the property and, in the dynamic form, the method with the exact value.
     internal static string Property(string name, string type, bool swift)
     {
         var pascal = GesSchemaPlanner.Pascal(name);
@@ -60,39 +64,36 @@ internal sealed class GesComputedEmitter
         return (swift ? "Double" : "double") + (field.Optional ? "?" : "");
     }
 
-    // Writes the properties, value methods and sum methods of a type's computed fields.
+    // Whether any computed field of the types needs the exact values of the dynamic form.
+    internal bool NeedsValues(IEnumerable<(string Owner, GesResolvedComputed[] Computed)> types)
+    {
+        foreach (var (owner, computed) in types)
+            foreach (var field in computed)
+                if (Analyze(owner, field) is null) return true;
+        return false;
+    }
+
+    // The exact GES value of a computed field of a record, which conversions to GES values read.
+    internal string ValueOf(string record, string owner, GesResolvedComputed field)
+    {
+        if (Analyze(owner, field) is null) return $"{record}.{Method(field.Name, owner, _swift)}()";
+        var property = $"{record}.{Member(Property(field.Name, owner, _swift))}";
+        return Call(field.Kind == GesSchemaTypeKind.Percentage ? "ReadPercentage" : "Read", property);
+    }
+
+    // Writes the properties and helper methods of a type's computed fields.
     internal void Members(GesSchemaPlanner.Code code, string owner, GesResolvedComputed[] computed, string access)
     {
-        var self = _swift ? "self" : "this";
         foreach (var field in computed)
         {
             _owner = owner;
             _field = Property(field.Name, owner, _swift);
+            _element = "";
             _sums.Clear();
-            var expression = Cast(Expression(field.Expression, self), field);
-            var property = Property(field.Name, owner, _swift);
-            var method = Method(field.Name, owner, _swift);
-            var result = field.Kind == GesSchemaTypeKind.Boolean ? "IsTrue" : field.Optional ? "OptionalNumber" : "Number";
             code.Blank();
-            var spelling = Spelling(field);
-            if (_swift)
-            {
-                code.Line($"/// `{field.Name}` computed by `{spelling}`; {Absent(field)}.");
-                code.Line($"{(access.Length > 0 ? access + " " : "")}var {property}: {PropertyType(field, true)} {{ {_helper}.{Camel(result)}({method}()) }}");
-                code.Blank();
-                code.Line($"/// The exact GES value of `{field.Name}`, which other computed fields read.");
-                code.Line($"func {method}() -> {_helper}.Value {{ {expression} }}");
-            }
-            else
-            {
-                code.Line($"/// <summary><c>{Escape(field.Name)}</c> computed by <c>{Escape(spelling)}</c>; {Absent(field)}.</summary>");
-                code.Line($"{access} {PropertyType(field, false)} {property} => {_helper}.{result}({method}());");
-                code.Blank();
-                code.Line($"/// <summary>The exact GES value of <c>{Escape(field.Name)}</c>, which other computed fields read.</summary>");
-                code.Line($"internal {_helper}.Value {method}() => {expression};");
-            }
-
-            foreach (var (name, body) in _sums)
+            if (Analyze(owner, field) is { } facts) Static(code, field, facts, access);
+            else Dynamic(code, owner, field, access);
+            foreach (var body in _sums)
             {
                 code.Blank();
                 foreach (var line in body.Split('\n')) code.Line(line);
@@ -109,146 +110,67 @@ internal sealed class GesComputedEmitter
 
     private static string Escape(string text) => text.Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;");
 
+    private void Summary(GesSchemaPlanner.Code code, GesResolvedComputed field)
+    {
+        var spelling = Spelling(field);
+        code.Line(_swift
+            ? $"/// `{field.Name}` computed by `{spelling}`; {Absent(field)}."
+            : $"/// <summary><c>{Escape(field.Name)}</c> computed by <c>{Escape(spelling)}</c>; {Absent(field)}.</summary>");
+    }
+
     private string Camel(string name) => _swift ? GesSchemaPlanner.Camel(name) : name;
 
     private string Call(string name, params string[] arguments) => $"{_helper}.{Camel(name)}({string.Join(", ", arguments)})";
 
-    private string Flag(bool value) => value ? "true" : "false";
+    // A member name as the language spells it, with Swift keywords escaped.
+    private string Member(string name) => _swift && GesSwiftEmitter.Keywords.Contains(name) ? "`" + name + "`" : name;
 
-    // A script record converts the value to the field's type: a Percentage takes a finite number, a Boolean only true.
-    private string Cast(string expression, GesResolvedComputed field) => field.Kind switch
-    {
-        GesSchemaTypeKind.Percentage => Call("CastPercentage", expression),
-        GesSchemaTypeKind.Boolean => Call("CastBoolean", expression),
-        _ => expression
-    };
+    // A read of a path from a record (empty root for the record itself in a property) or from a list element.
+    private string Root(GesComputedNode node, string root) => node.Op == GesComputedOp.Item ? "item" : root;
 
-    private string Expression(GesComputedNode node, string root)
-    {
-        var children = node.Children;
-        switch (node.Op)
-        {
-            case GesComputedOp.Literal:
-                return node.Literal.Kind switch
-                {
-                    GesComputedKind.True or GesComputedKind.False => Call("Boolean", Flag(node.Literal.Kind == GesComputedKind.True)),
-                    GesComputedKind.Integer => Call("Integer", node.Literal.Integer == long.MinValue ? _swift ? "Int64.min" : "long.MinValue" : node.Literal.Integer.ToString(CultureInfo.InvariantCulture)),
-                    GesComputedKind.Percentage => Call("Percentage", node.Decimal.Canonical),
-                    GesComputedKind.Float when node.Type == GesComputedType.Percentage => Call("Percentage", node.Decimal.Canonical),
-                    _ => Call("Float", node.Decimal.Canonical)
-                };
-            case GesComputedOp.Field or GesComputedOp.Item:
-                return _access.Read(node.Op == GesComputedOp.Item ? "item" : root, node.Op == GesComputedOp.Item ? _element : _owner, node.Path, node.Type == GesComputedType.Percentage);
-            case GesComputedOp.Negate:
-                return Call("Negate", Expression(children[0], root));
-            case GesComputedOp.Not:
-                return Call("Not", Expression(children[0], root));
-            case GesComputedOp.Abs:
-                return Call("Abs", Expression(children[0], root));
-            case GesComputedOp.Add or GesComputedOp.Subtract:
-                return Call(node.Op.ToString(), Expression(children[0], root), Expression(children[1], root), Flag(node.First), Flag(node.Second));
-            case GesComputedOp.Multiply or GesComputedOp.Divide:
-                return Call(node.Op.ToString(), Expression(children[0], root), Expression(children[1], root), Flag(node.First), Flag(node.Second), Flag(node.Third));
-            case GesComputedOp.Less or GesComputedOp.LessOrEqual or GesComputedOp.Greater or GesComputedOp.GreaterOrEqual:
-                return Call("Compare", Expression(children[0], root), Expression(children[1], root), Flag(node.First), ((int)(node.Op - GesComputedOp.Less)).ToString(CultureInfo.InvariantCulture));
-            case GesComputedOp.Equal or GesComputedOp.NotEqual:
-                return Call("Equal", Expression(children[0], root), Expression(children[1], root), Flag(node.First), Flag(node.Op == GesComputedOp.NotEqual));
-            case GesComputedOp.And or GesComputedOp.Or:
-                return Call(node.Op.ToString(), Expression(children[0], root), Expression(children[1], root));
-            case GesComputedOp.Choice:
-            {
-                var result = Expression(children[^1], root);
-                for (var index = children.Length - 3; index >= 0; index -= 2)
-                    result = Call("When", Expression(children[index + 1], root), Expression(children[index], root), result);
-                return result;
-            }
-            case GesComputedOp.Min or GesComputedOp.Max:
-            {
-                var result = Expression(children[0], root);
-                for (var index = 1; index < children.Length; index++)
-                    result = Call("Extreme", result, Expression(children[index], root), Flag(node.First), Flag(node.Op == GesComputedOp.Max));
-                return result;
-            }
-            case GesComputedOp.Clamp:
-                return Call("Clamp", Expression(children[0], root), Expression(children[1], root), Expression(children[2], root), Flag(node.First));
-            case GesComputedOp.Default:
-                return Call("Fallback", Expression(children[0], root), Expression(children[1], root));
-            case GesComputedOp.HasValue:
-            {
-                var child = children[0];
-                if (child.Type != GesComputedType.Record) return Call("Has", Expression(child, root));
-                return Call("Boolean", _access.Present(child.Op == GesComputedOp.Item ? "item" : root, child.Op == GesComputedOp.Item ? _element : _owner, child.Path));
-            }
-            case GesComputedOp.Count:
-            {
-                var list = _access.List(root, _owner, children[0].Path);
-                return _swift ? Call("Integer", $"Int64({list}.count)") : Call("Integer", $"{list}.Count");
-            }
-            default:
-                return Sum(node, root);
-        }
-    }
+    private string Owner(GesComputedNode node) => node.Op == GesComputedOp.Item ? _element : _owner;
 
-    // A sum adds the projected elements from left to right, starting with the first one, and is the integer 0 for none.
-    private string Sum(GesComputedNode node, string root)
-    {
-        var list = _access.List(root, _owner, node.Children[0].Path);
-        var name = $"__{_field}Sum{_sums.Count.ToString(CultureInfo.InvariantCulture)}";
-        var previous = _element;
-        _element = ElementOwner(node.Children[0]);
-        var value = node.Children.Length > 1 ? Expression(node.Children[1], root) : _access.Read("item", "", [], node.Type == GesComputedType.Percentage);
-        _element = previous;
-        var body = new StringBuilder();
-        if (_swift)
-        {
-            body.Append($"func {name}() -> {_helper}.Value {{\n");
-            body.Append($"    var sum = {_helper}.integer(0)\n");
-            body.Append("    var first = true\n");
-            body.Append($"    for item in {list} {{\n");
-            body.Append($"        let value = {value}\n");
-            body.Append($"        sum = first ? value : {_helper}.add(sum, value, true, true)\n");
-            body.Append("        first = false\n");
-            body.Append("    }\n");
-            body.Append("    return sum\n");
-            body.Append('}');
-        }
-        else
-        {
-            body.Append($"internal {_helper}.Value {name}()\n");
-            body.Append("{\n");
-            body.Append($"    var sum = {_helper}.Integer(0);\n");
-            body.Append("    var first = true;\n");
-            body.Append($"    foreach (var item in {list})\n");
-            body.Append("    {\n");
-            body.Append($"        var value = {value};\n");
-            body.Append($"        sum = first ? value : {_helper}.Add(sum, value, true, true);\n");
-            body.Append("        first = false;\n");
-            body.Append("    }\n");
-            body.Append('\n');
-            body.Append("    return sum;\n");
-            body.Append('}');
-        }
-
-        _sums.Add((name, body.ToString()));
-        return $"{name}()";
-    }
-
-    private string ElementOwner(GesComputedNode source) => _access.ElementOwner(_owner, source.Path);
+    private static string Join(string root, string member) => root.Length == 0 ? member : root + "." + member;
 }
 
-// How generated code reaches the fields that computed expressions read. Paths start at the record (`self`, `this`) or at a
-// list element (`item`, whose owner is its schema, or empty for a number).
+// What a path reaches: the member text, the presence flags of the optional fields on it (wire records), whether the text gives
+// an optional value (models), a computed field it ends at, and what the field holds as declared.
+internal sealed class GesComputedReach
+{
+    internal string Text = "";
+
+    // A presence flag per optional field on the path, with the index of that field.
+    internal List<(int Step, string Condition)> Conditions = [];
+
+    // Whether the text gives an optional value: an optional field, or a field behind an optional one.
+    internal bool Nullable;
+
+    // The schema and name of a computed field at the end of the path, where Text names the record that holds it.
+    internal string ComputedOwner = "";
+    internal string ComputedName = "";
+
+    // Whether the field holds an Int64, and the closed range it declares, unbounded without one.
+    internal bool Integer;
+    internal double Lower = double.NegativeInfinity;
+    internal double Upper = double.PositiveInfinity;
+
+    // The largest element count of a list, unbounded without a max.
+    internal double MaxCount = double.PositiveInfinity;
+}
+
+// How generated code reaches the fields that computed expressions read. Paths start at the record (an empty root, `self` or
+// `this`) or at a list element (`item`, whose owner is its schema, or empty for a number).
 internal interface IGesComputedAccess
 {
-    // The exact value at a path, nothing where an optional field on the way is absent.
-    string Read(string root, string owner, string[] path, bool percentage);
+    // What a path from a record of the owner reaches; with an empty path, a list element of numbers whose list `path` names.
+    GesComputedReach Reach(string root, string owner, string[] path);
 
-    // Whether the record at a path is present.
-    string Present(string root, string owner, string[] path);
-
-    // The list at a path that holds no optional field.
-    string List(string root, string owner, string[] path);
+    // A list element that is a number, of the list at the path.
+    GesComputedReach Element(string owner, string[] path);
 
     // The schema of a list's elements, or empty for numbers.
     string ElementOwner(string owner, string[] path);
+
+    // The computed fields of a schema.
+    GesResolvedComputed[] Computed(string owner);
 }

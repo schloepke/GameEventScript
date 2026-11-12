@@ -318,9 +318,12 @@ generates with the checks for the roundtrip, so overlapping accesses in generate
 the Generator only returns the files (`GenerateFiles`, `GenerateModelFiles`), while the CLI owns the directory, its cleanup and
 `--check`. `compare-schema-generation.py` compares and `test-generated-schemas.py` compiles the split role fixture. Computed fields
 (`computed by`, specs/Schemas.md#computed-fields) follow the VM exactly: C# `GesSchemaComputed` and Swift `SchemaComputed.swift`
-evaluate them in the value path, the generators translate the checked tree with the helper library `GesComputedLibrary`
-(templates identical in both ports), the harness of `test-generated-schemas.py` checks the generated properties, and
-`scripts/test-computed-fields.py` runs every corpus record with computed fields as a script record on both VMs.
+evaluate them in the value path. Binding marks which reads `has value` guards and rejects a required field that may be absent
+(`schema.computedMayBeAbsent`). The generators analyze each field's ranges (`GesComputedEmitterStatic`, Swift
+`ComputedEmitterStatic.swift`) and emit plain binary64/Boolean code where the bits provably match, else the dynamic form over the
+helper library `GesComputedLibrary` (templates identical in both ports); the goldens of `computed.gess` pin both forms, the
+harness of `test-generated-schemas.py` checks the generated properties, and `scripts/test-computed-fields.py` runs every corpus
+record with computed fields as a script record on both VMs.
 `compare-schema-generation.py` also ratchets a digest of every output against `scripts/schema-generation-baseline.txt`
 (`--update-baseline` after a deliberate change), so a change of existing generated code is visible. A recursive List
 (`:List(:Self) max n depth d`, specs/Schemas.md#recursion) unrolls per level at binding; only the recursive schema's

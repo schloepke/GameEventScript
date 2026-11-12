@@ -1,6 +1,8 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
+@_spi(Generator) import GameEventScriptRuntime
+
 // What both model emitters generate: per field its value in language-neutral terms with the names of the nested types it
 // declares. A union with a :Nothing alternative becomes a nullable value without it, and a union that then holds one
 // alternative becomes that alternative, so that absence reads as null or nil like an optional field.
@@ -288,49 +290,75 @@ extension GesModelPlanner {
     /// The translator of a model layout's computed fields: paths read the fields of model types, with optional chaining through
     /// optional fields, and a computed field through its exact value.
     static func computed(_ layout: GesModelLayout, _ helper: String, swift: Bool) -> GesComputedEmitter {
-        GesComputedEmitter(swift: swift, helper: helper, access: GesModelAccess(layout: layout, helper: helper, swift: swift))
+        GesComputedEmitter(swift: swift, helper: helper, access: GesModelAccess(layout: layout, swift: swift))
     }
 }
 
 private struct GesModelAccess: GesComputedAccess {
     let layout: GesModelLayout
-    let helper: String
     let swift: Bool
 
-    func read(_ root: String, _ owner: String, _ path: [String], percentage: Bool) -> String {
-        let (text, computed) = chain(root, owner, path)
-        return "\(helper).\(swift ? "read" : "Read")\(percentage && !computed ? "Percentage" : "")(\(text))"
+    func reach(_ root: String, _ owner: String, _ path: [String]) -> GesComputedReach {
+        let reach = GesComputedReach(text: root)
+        var type: GesModelType? = owner.isEmpty ? nil : layout.type(owner)
+        var value: GesModelPlanValue?
+        for name in path {
+            let separator = reach.text.isEmpty ? "" : reach.nullable ? "?." : "."
+            guard let field = GesModelPlanner.fields(type!).first(where: { $0.field.name == name }) else {
+                reach.computedOwner = type!.name
+                reach.computedName = name
+                if reach.nullable { reach.text += "?" }
+                return reach
+            }
+            reach.text += separator + member(field.base)
+            if field.value.nullable { reach.nullable = true }
+            value = field.value
+            type = field.value.kind == .schema ? layout.type(field.value.model.schema) : nil
+        }
+        if let value { Self.declare(value, reach) }
+        return reach
     }
 
-    func present(_ root: String, _ owner: String, _ path: [String]) -> String { chain(root, owner, path).text + (swift ? " != nil" : " != null") }
-
-    func list(_ root: String, _ owner: String, _ path: [String]) -> String { chain(root, owner, path).text }
+    func element(_ owner: String, _ path: [String]) -> GesComputedReach {
+        let reach = GesComputedReach(text: "item")
+        Self.declare(value(owner, path).element!, reach)
+        return reach
+    }
 
     func elementOwner(_ owner: String, _ path: [String]) -> String {
+        let element = value(owner, path).element!
+        return element.kind == .schema ? element.model.schema : ""
+    }
+
+    func computed(_ owner: String) -> [GesSchemaComputedFieldInfo] { layout.type(owner).computed }
+
+    /// The declared range of a number, where its bounds are literals, and the largest count of a list.
+    private static func declare(_ value: GesModelPlanValue, _ reach: GesComputedReach) {
+        let model = value.model
+        reach.integer = model.integer
+        if model.integer {
+            reach.lower = Double(Int64.min)
+            reach.upper = Double(Int64.max)
+        }
+        if let lower = number(model.lower) { reach.lower = lower }
+        if let upper = number(model.upper) { reach.upper = upper }
+        if value.kind == .list, let max = model.max { reach.maxCount = Double(max) }
+    }
+
+    /// A bound that is a canonical decimal, not a parameter's name.
+    private static func number(_ bound: String?) -> Double? {
+        guard let bound, let first = bound.unicodeScalars.first, first == "-" || ("0"..."9").contains(first) else { return nil }
+        return Double(bound)
+    }
+
+    private func value(_ owner: String, _ path: [String]) -> GesModelPlanValue {
         var type = layout.type(owner)
         var value: GesModelPlanValue?
         for name in path {
             value = GesModelPlanner.fields(type).first { $0.field.name == name }!.value
             if value!.kind == .schema { type = layout.type(value!.model.schema) }
         }
-        let element = value!.element!
-        return element.kind == .schema ? element.model.schema : ""
-    }
-
-    private func chain(_ root: String, _ owner: String, _ path: [String]) -> (text: String, computed: Bool) {
-        var text = root
-        var nullable = false
-        var type: GesModelType? = owner.isEmpty ? nil : layout.type(owner)
-        for name in path {
-            let separator = nullable ? "?." : "."
-            guard let field = GesModelPlanner.fields(type!).first(where: { $0.field.name == name }) else {
-                return (text + separator + GesComputedEmitter.method(name, type!.name, swift: swift) + "()", true)
-            }
-            text += separator + member(field.base)
-            if field.value.nullable { nullable = true }
-            type = field.value.kind == .schema ? layout.type(field.value.model.schema) : nil
-        }
-        return (text, false)
+        return value!
     }
 
     private func member(_ pascal: String) -> String {

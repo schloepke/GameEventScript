@@ -90,10 +90,73 @@ extension GesFileScope {
                 throw scope.error(Code.unitMismatch, expression.offset, "The expression gives a \(describe(result)), but '\(entry.name)' is a \(declared).")
             }
             try scope.checkAlone(expression, result, true)
+            guardReads(result, [])
+            if result.mayBeAbsent && !entry.isOptional {
+                throw scope.error(
+                    Code.computedMayBeAbsent,
+                    expression.offset,
+                    entry.kind == .boolean
+                        ? "'\(entry.name)' reads an optional field that may be absent; guard it with has value or give a fallback with default."
+                        : "'\(entry.name)' reads an optional field that may be absent; mark it optional, guard the field with has value or give a fallback with default."
+                )
+            }
             entry.expression = result
             resolved.append(entry)
         }
         return resolved
+    }
+
+    /// Which reads `has value` proves present, and which nodes may give nothing for an absent optional field. A `has value`
+    /// of a path proves it and every leading part of it present on the right of `and` and in the value its `when` condition
+    /// selects.
+    private static func guardReads(_ node: GesComputedNode, _ present: [(op: GesComputedOp, path: [String])]) {
+        let children = node.children
+        switch node.op {
+        case .field, .item:
+            for (op, path) in present where op == node.op && path.count > node.present && node.path.starts(with: path) { node.present = path.count }
+            if node.present < node.optionalSteps.count { node.mayBeAbsent = node.optionalSteps[node.present...].contains(true) }
+        case .hasValue:
+            guardReads(children[0], present)
+        case .and:
+            guardReads(children[0], present)
+            guardReads(children[1], present + proven(children[0]))
+            node.mayBeAbsent = children[0].mayBeAbsent || children[1].mayBeAbsent
+        case .choice:
+            var index = 0
+            while index + 1 < children.count {
+                guardReads(children[index + 1], present)
+                guardReads(children[index], present + proven(children[index + 1]))
+                node.mayBeAbsent = node.mayBeAbsent || children[index].mayBeAbsent
+                index += 2
+            }
+            guardReads(children[children.count - 1], present)
+            node.mayBeAbsent = node.mayBeAbsent || children[children.count - 1].mayBeAbsent
+        case .default:
+            guardReads(children[0], present)
+            guardReads(children[1], present)
+            node.mayBeAbsent = children[1].mayBeAbsent
+        case .sum:
+            // A projection reads the element afresh, so no proof about an element carries into it.
+            guardReads(children[0], present)
+            if children.count > 1 {
+                guardReads(children[1], present.filter { $0.op == .field })
+                node.mayBeAbsent = children[1].mayBeAbsent
+            }
+        case .count:
+            guardReads(children[0], present)
+        default:
+            for child in children {
+                guardReads(child, present)
+                node.mayBeAbsent = node.mayBeAbsent || child.mayBeAbsent
+            }
+        }
+    }
+
+    /// The paths that a true condition proves present: its `has value` conjuncts.
+    private static func proven(_ node: GesComputedNode) -> [(op: GesComputedOp, path: [String])] {
+        if node.op == .and { return proven(node.children[0]) + proven(node.children[1]) }
+        if node.op == .hasValue, node.children[0].op == .field || node.children[0].op == .item { return [(node.children[0].op, node.children[0].path)] }
+        return []
     }
 
     private static func describe(_ node: GesComputedNode) -> String {
@@ -153,6 +216,7 @@ extension GesFileScope {
             } else {
                 throw error(Code.unknownName, syntax.offset, "'\(syntax.name)' is no field of '\(record.name)'.")
             }
+            reached.node.optionalSteps = target.node.optionalSteps + [reached.optional]
             reached.optional = reached.optional || target.optional
             return reached
         case .negate, .abs:
@@ -269,11 +333,14 @@ extension GesFileScope {
     private func reach(_ field: GesResolvedField, _ op: GesComputedOp, _ path: [String], _ offset: Int) throws -> Checked {
         if field.alternatives.count != 1 { throw error(Code.invalidExpression, offset, "'\(field.name)' is a union, which a computed field does not read.") }
         let (node, record, element) = Self.typeNode(field.alternatives[0], op, path)
+        node.optionalSteps = [field.marker == .optional]
         return Checked(node: node, record: record, element: element, optional: field.marker == .optional)
     }
 
     private static func reach(_ field: GesResolvedComputed, _ op: GesComputedOp, _ path: [String]) -> Checked {
-        Checked(node: GesComputedNode(op, field.type, unit: field.kind == .quantity ? field.unit : .none, path: path), optional: field.isOptional)
+        let node = GesComputedNode(op, field.type, unit: field.kind == .quantity ? field.unit : .none, path: path)
+        node.optionalSteps = [field.isOptional]
+        return Checked(node: node, optional: field.isOptional)
     }
 
     private static func typeNode(_ type: GesResolvedType, _ op: GesComputedOp, _ path: [String]) -> (GesComputedNode, GesResolvedDeclaration?, [GesResolvedType]?) {

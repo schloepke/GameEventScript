@@ -3329,7 +3329,7 @@ gesBlock: case
 id: decode-computed-logic
 schemaApi:
   sources:
-    - "schema :Logic as {\n  x: :Number\n  y: :Number\n  flag: :Boolean optional\n  close: :Boolean computed by x + y = 0.3\n  apart: :Boolean computed by x <> y\n  both: :Boolean computed by flag and x > 0\n  either: :Boolean computed by flag or x > 0\n}\n"
+    - "schema :Logic as {\n  x: :Number\n  y: :Number\n  flag: :Boolean optional\n  close: :Boolean computed by x + y = 0.3\n  apart: :Boolean computed by x <> y\n  both: :Boolean computed by flag and x > 0 default false\n  either: :Boolean computed by flag or x > 0 default false\n}\n"
   root: "Logic"
   encode:
     type: ":Logic"
@@ -5117,6 +5117,198 @@ schema:
   deltaDecoded:
     record: "21d11401"
     deltaByteCount: 4
+```
+
+---
+## Test: a guarded optional field that is absent
+
+`has value` guards the reads of an optional field, and `default` replaces it; an optional computed field is absent with it.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: decode-computed-guarded-absent
+schemaApi:
+  sources:
+    - "schema :Guarded as {\n  a: :Number between 0 and 100 step 0.5 optional\n  twice: :Number computed by a * 2 when a has value, otherwise 0\n  large: :Boolean computed by a has value and a > 1\n  filled: :Number computed by a default 5\n  next: :Number optional computed by a + 1\n}\n"
+  root: "Guarded"
+  encode:
+    type: ":Guarded"
+    entries: []
+  decode: "00"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "00"
+  decoded:
+    value:
+      type: ":Guarded"
+      entries:
+        - key: "a"
+          value:
+            type: ":Nothing"
+        - key: "filled"
+          value:
+            type: ":Number.int64"
+            value: "5"
+        - key: "large"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "next"
+          value:
+            type: ":Nothing"
+        - key: "twice"
+          value:
+            type: ":Number.int64"
+            value: "0"
+    byteCount: 1
+```
+
+---
+
+## Test: a guarded optional field that is present
+
+The same fields with the optional field present.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: decode-computed-guarded-present
+schemaApi:
+  sources:
+    - "schema :Guarded as {\n  a: :Number between 0 and 100 step 0.5 optional\n  twice: :Number computed by a * 2 when a has value, otherwise 0\n  large: :Boolean computed by a has value and a > 1\n  filled: :Number computed by a default 5\n  next: :Number optional computed by a + 1\n}\n"
+  root: "Guarded"
+  encode:
+    type: ":Guarded"
+    entries:
+      - key: "a"
+        value:
+          type: ":Number.binary64"
+          value: "2.5"
+  decode: "0b00"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "0b00"
+  decoded:
+    value:
+      type: ":Guarded"
+      entries:
+        - key: "a"
+          value:
+            type: ":Number.binary64"
+            value: "2.5"
+        - key: "filled"
+          value:
+            type: ":Number.binary64"
+            value: "2.5"
+        - key: "large"
+          value:
+            type: ":Boolean"
+            value: true
+        - key: "next"
+          value:
+            type: ":Number.binary64"
+            value: "3.5"
+        - key: "twice"
+          value:
+            type: ":Number.int64"
+            value: "5"
+    byteCount: 2
+```
+
+---
+
+## Test: a required computed number that may be absent
+
+An optional operand without `has value` or `default` would give nothing: the source is rejected.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-computed-may-be-absent
+schemaApi:
+  sources:
+    - "schema :S as {\n  a: :Number optional\n  b: :Number computed by a * 2\n}\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.computedMayBeAbsent"
+    line: 3
+    column: 26
+```
+
+---
+
+## Test: a computed Boolean that may be absent
+
+A computed Boolean is never optional, so an operand that may be absent needs a guard or a fallback.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-computed-may-be-absent-boolean
+schemaApi:
+  sources:
+    - "schema :S as {\n  flag: :Boolean optional\n  on: :Boolean computed by flag and true\n}\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.computedMayBeAbsent"
+    line: 3
+    column: 28
+```
+
+---
+
+## Test: a guard on another field
+
+`has value` proves only the field it names present.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-computed-may-be-absent-other-guard
+schemaApi:
+  sources:
+    - "schema :S as {\n  a: :Number optional\n  b: :Number optional\n  c: :Number computed by a + b when a has value, otherwise 0\n}\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.computedMayBeAbsent"
+    line: 4
+    column: 26
 ```
 
 ---

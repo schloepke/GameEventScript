@@ -345,6 +345,7 @@ public enum GesSchemaTypeKind: String, Sendable, Equatable {
     @_spi(Syntax) public static let invalidDefault = "schema.invalidDefault"
     @_spi(Syntax) public static let invalidAbstract = "schema.invalidAbstract"
     @_spi(Syntax) public static let invalidExpression = "schema.invalidExpression"
+    @_spi(Syntax) public static let computedMayBeAbsent = "schema.computedMayBeAbsent"
 
     @_spi(Syntax) public let code: String
     /// The UTF-8 offset of the error.

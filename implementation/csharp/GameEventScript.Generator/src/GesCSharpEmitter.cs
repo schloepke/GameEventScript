@@ -49,7 +49,7 @@ internal static partial class GesCSharpEmitter
         var holder = "__GesSchemas" + GesSchemaPlanner.Suffix(header, options);
         var context = new Context(GesSchemaPlanner.KeyedElements(types), "global::" + string.Concat(space.ConvertAll(part => part + ".")), options.Values, holder)
         {
-            Computed = GesSchemaPlanner.Computed(types, GesComputedEmitter.Helper(GesSchemaPlanner.Suffix(header, options)), swift: false)
+            Computed = GesSchemaPlanner.Computed(types, GesComputedEmitter.Helper(options.Namespace, GesSchemaPlanner.Suffix(header, options)), swift: false)
         };
         var document = new GesCodeDocument { Header = header, Prologue = prologue.ToString(), Space = space, Parameters = layout.Parameters.Count > 0 };
         foreach (var type in types)
@@ -61,7 +61,7 @@ internal static partial class GesCSharpEmitter
         foreach (var (name, tags) in GesSchemaPlanner.TagSets(types, context.Global)) document.Units.Add(new GesCodeUnit(name, code => TagSetDeclaration(code, name, tags, access)));
         if (options.Values) document.Units.Add(new GesCodeUnit("", code => ValuesHolder(code, layout, holder, options.Split != GesSchemaSplit.None)));
         if (layout.Types.Exists(type => type.Computed.Length > 0))
-            document.Units.Add(new GesCodeUnit("", code => GesComputedLibrary.Write(code, GesComputedEmitter.Helper(GesSchemaPlanner.Suffix(header, options)), swift: false)));
+            document.Units.Add(new GesCodeUnit("", code => GesComputedLibrary.Write(code, context.Computed.HelperName, swift: false, context.Computed.NeedsValues(types.ConvertAll(type => (type.Name, type.Layout.Computed))))));
         return document;
     }
 

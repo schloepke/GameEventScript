@@ -358,8 +358,14 @@ schema :SoundMade as {
   `=` compares within two ULPs, `and` and `or` are three-valued, an absent optional field is nothing, and a condition passes
   only when it is true. The value is then converted to the field's type as a record converts it: a Percentage takes a
   finite number as its ratio and is nothing when infinite, and a Boolean is `true` only for true, so a computed Boolean is
-  never absent and is not `optional`. A number that may be nothing is written `optional`; a required one that still gives
-  nothing reads as NaN in generated code.
+  never absent and is not `optional`. A required one that gives nothing, such as `0 / 0`, reads as NaN in generated code.
+- **An absent field is handled where it is read.** A required computed field that would give nothing because an optional
+  field it reads is absent is `schema.computedMayBeAbsent`: mark it `optional`, guard the read with `has value`, or give a
+  fallback with `default`. `x has value` proves `x` and each record on its path present on the right of `and` and in the
+  value its `when` condition selects, so `x * 2 when x has value, otherwise 0` and `x has value and x > 1` are required
+  fields; a guard on another field proves nothing. NaN, such as `0 / 0`, is no absence and stays allowed. A computed Boolean
+  is never optional, so it guards or falls back. `has value` of a field that is never absent is allowed and simply true;
+  schemas report errors, not notices, so it gives none.
 - **A sum adds from left to right**, starting with its first element; an empty list gives the integer 0, which the field's
   type gives its unit. That 0 has no unit, so a sum of quantities or percentages stands alone, as the expression, a value of
   a choice or a side of `default`; inside arithmetic it is `schema.invalidExpression`. A sum or count reads a list that is
@@ -523,6 +529,7 @@ Source errors use the phase `schema` with line and column, in the manner of
 | `schema.invalidRole` | a role stands on a declaration that cannot take it, is no role word, or names an invalid group |
 | `schema.duplicateRole` | a declaration has a second `wire` or a second `model` role |
 | `schema.invalidAbstract` | an abstract schema is a field type, list element, union alternative, a bound or checked root, or a model root |
+| `schema.computedMayBeAbsent` | a required [computed field](#computed-fields) reads an optional field that may be absent without `has value` or `default` |
 | `schema.invalidExpression` | a [computed field](#computed-fields) has another type than its expression, constraints, a key or optional Boolean, reads a type or name it cannot (a later computed field, a union, a reserved GES name, an optional list in an aggregate), combines operands without a value, or a sum of quantities or percentages stands inside arithmetic |
 | `schema.invalidDefault` | a [default](#defaults) lies outside its field's range or off its step, is fractional for an `integer` field, is no tag of the set or longer than `max`, has another kind than its field, stands on a key, a union or an optional field with a literal, names a sibling of another type or optionality, or names one for a type that generated code declares per field |
 
@@ -1591,10 +1598,22 @@ alternative's type. A list element type is named `<Field>Item`, so a closed Tag 
   property would need an allocating view; a program reads shared fields on models. *Since: Unreleased.*
 - **Computed fields.** A [computed field](#computed-fields) is a read-only property of models and wire records alike,
   derived on each read: `Double` (C# `double`) for a number or percentage ratio, `Double?` when it is `optional`, and
-  `Bool` for a Boolean; a required number that gives nothing reads as NaN. Beside it an internal method `__<field>()`
-  returns the exact GES value, which other computed fields read, so an Int64 result stays exact between them. The
-  arithmetic is one helper type `__GesComputed<suffix>` per generation that repeats the virtual machine's rules, with the
-  units resolved when the code is generated; each sum is a method with a loop. A computed field is no initializer
+  `Bool` for a Boolean; a required number that gives nothing reads as NaN. Binding knows each operand's kind, unit,
+  optionality and declared range, so a field is one expression in the language's own operators, such as
+  `var power: Double { duration <= 0.0 ? 0.0 : energy / duration }`, with every unit and percentage decision made when the
+  code is generated. It gives the virtual machine's bits because binary64 `+ - * /` round correctly and the evaluation order
+  is kept: NaN stands for nothing, an optional field reads as NaN where it is absent (or directly where `has value` proves
+  it present), and a Boolean that may be nothing is an optional Bool only where `not`, `=`, `has value` or `default` tells
+  nothing from false. The few rules plain code lacks are helpers of one type `GesComputed` per generation (with the
+  generation's suffix without a namespace): no negative zero, where binding cannot exclude one; the equality of GES numbers
+  (whole numbers exactly, others within two ULPs); `min`, `max` and `clamp`, which give nothing for nothing; three-valued
+  `and`, `or` and comparisons; and the conversions to optional fields and ratios. Each sum is a private method with a loop.
+  The virtual machine adds and multiplies whole numbers as exact Int64 values; where the declared ranges cannot exclude such
+  a result beyond 2^53 meeting another operand, as for an `integer` field without a range, the field keeps the dynamic
+  form: a property over an internal method `__<field>()` that returns the exact GES value through the helpers that repeat
+  the virtual machine. The bits hold for the values a record can hold on the wire; a value outside its declared range, which
+  no encoding carries, may differ in the last bit of a chain of whole numbers beyond 2^53 or in the sign of a zero. The
+  checked-in code of `conformance/fixtures/SchemaGeneration/computed.gess` pins both forms. A computed field is no initializer
   parameter, is not stored, encoded or part of equality and `Codable`, and its name must not collide with a generated
   member, such as the presence flag `hasMain` of a field `main`. With `--values` a model's value carries it as decoding a
   record's bytes does, and reading ignores it; `--bindings` offers it to scripts as a field they read but cannot set.

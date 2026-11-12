@@ -34,17 +34,17 @@ internal static class GesSwiftModelEmitter
             Access = access,
             Holds = "model"
         };
-        var computed = GesModelPlanner.Computed(layout, GesComputedEmitter.Helper(suffix), swift: true);
+        var computed = GesModelPlanner.Computed(layout, GesComputedEmitter.Helper(options.Namespace, suffix), swift: true);
         foreach (var type in layout.Types)
             document.Units.Add(new GesCodeUnit(type.Name, code => Record(code, layout, type, access, options.Bindings, options.Values ? values : null, computed)));
         foreach (var protocol in layout.Protocols) document.Units.Add(new GesCodeUnit(protocol.Name, code => Protocol(code, layout, protocol, access)));
         foreach (var (name, tags) in GesModelPlanner.TagSets(layout))
             document.Units.Add(new GesCodeUnit(name, code => TagEnum(code, name, tags, access, $"/// The tag set `:{name}`, in declared order; the raw value is the tag's name.")));
-        if (options.Bindings) document.Units.Add(new GesCodeUnit("", code => Bindings(code, layout, access, support)));
-        if (options.Values) document.Units.Add(new GesCodeUnit("", code => Values(code, layout, values, support)));
+        if (options.Bindings) document.Units.Add(new GesCodeUnit("", code => Bindings(code, layout, access, support, computed)));
+        if (options.Values) document.Units.Add(new GesCodeUnit("", code => Values(code, layout, values, support, computed)));
         if (options.Bindings || options.Values) document.Units.Add(new GesCodeUnit("", code => Support(code, support)));
         if (layout.Types.Exists(type => type.Computed.Length > 0))
-            document.Units.Add(new GesCodeUnit("", code => GesComputedLibrary.Write(code, GesComputedEmitter.Helper(suffix), swift: true)));
+            document.Units.Add(new GesCodeUnit("", code => GesComputedLibrary.Write(code, computed.HelperName, swift: true, options.Bindings || options.Values || computed.NeedsValues(layout.Types.ConvertAll(type => (type.Name, type.Computed))))));
         return document;
     }
 
@@ -350,7 +350,7 @@ internal static class GesSwiftModelEmitter
     }
 
     // The catalog and constructor registry of the models, with an external value and a constructor per type.
-    private static void Bindings(GesSchemaPlanner.Code code, GesModelLayout layout, string access, string support)
+    private static void Bindings(GesSchemaPlanner.Code code, GesModelLayout layout, string access, string support, GesComputedEmitter computed)
     {
         var ordered = GesModelPlanner.DependencyOrder(layout);
         code.Blank();
@@ -425,7 +425,7 @@ internal static class GesSwiftModelEmitter
             code.Line("switch name {");
             foreach (var field in fields) code.Line($"case {GesSchemaPlanner.Literal(field.Field.Name, true)}: {Encode(field.Value, type.Name, "record." + Member(field.Base), "GesTypes", support)}");
             foreach (var field in type.Computed)
-                code.Line($"case {GesSchemaPlanner.Literal(field.Name, true)}: {GesComputedEmitter.Helper(support.Substring("__GesModels".Length))}.gesValue(record.{GesComputedEmitter.Method(field.Name, type.Name, swift: true)}(), .{(field.Kind == GesSchemaTypeKind.Quantity ? field.Unit.ToTypeName() : "none")})");
+                code.Line($"case {GesSchemaPlanner.Literal(field.Name, true)}: {computed.HelperName}.gesValue({computed.ValueOf("record", type.Name, field)}, .{(field.Kind == GesSchemaTypeKind.Quantity ? field.Unit.ToTypeName() : "none")})");
             code.Line($"case \"fields\": .map(keys: Self.names, values: [{string.Join(", ", fields.ConvertAll(field => $"try field({GesSchemaPlanner.Literal(field.Field.Name, true)})!"))}])");
             code.Line("default: nil");
             code.Line("}");
@@ -516,7 +516,7 @@ internal static class GesSwiftModelEmitter
 
     // The plain values of the models: a Record of each schema with its fields in declared order, as the value path decodes the
     // bytes of a record, so that wire records read them and give them back.
-    private static void Values(GesSchemaPlanner.Code code, GesModelLayout layout, string name, string support)
+    private static void Values(GesSchemaPlanner.Code code, GesModelLayout layout, string name, string support, GesComputedEmitter computed)
     {
         code.Blank();
         code.Line("/// The plain GES values of the models of this file, as `GesSchemaValues` reads and writes them.");
@@ -545,9 +545,8 @@ internal static class GesSwiftModelEmitter
             code.Open($"static func value(_ record: {type.Name}) -> GesValue {{");
             code.Line($".record(typeName: {typeLiteral}, keys: {keys}, values: [");
             foreach (var field in fields) code.Line("    " + Encode(field.Value, type.Name, "record." + Member(field.Base), name, support, plain: true) + ",");
-            var helper = GesComputedEmitter.Helper(name.Substring("__GesModelValues".Length));
             foreach (var field in type.Computed)
-                code.Line($"    {helper}.gesValue(record.{GesComputedEmitter.Method(field.Name, type.Name, swift: true)}(), .{(field.Kind == GesSchemaTypeKind.Quantity ? field.Unit.ToTypeName() : "none")}),");
+                code.Line($"    {computed.HelperName}.gesValue({computed.ValueOf("record", type.Name, field)}, .{(field.Kind == GesSchemaTypeKind.Quantity ? field.Unit.ToTypeName() : "none")}),");
             code.Line("])");
             code.Close();
             code.Blank();

@@ -147,27 +147,78 @@ internal static class GesSchemaPlanner
     internal static bool HasKeyed(GesPlanValue value) => Keyed(value) || value.Alternatives.Exists(HasKeyed);
 
     // The translator of wire records' computed fields: an optional field on a path is read only where its presence flag is
-    // set, and a computed field through its exact value.
-    internal static GesComputedEmitter Computed(List<GesPlanType> types, string helper, bool swift) => new(swift, helper, new WireAccess(types, helper, swift));
+    // set, and a computed field through its property or exact value.
+    internal static GesComputedEmitter Computed(List<GesPlanType> types, string helper, bool swift) => new(swift, helper, new WireAccess(types, swift));
 
-    private sealed class WireAccess(List<GesPlanType> types, string helper, bool swift) : IGesComputedAccess
+    private sealed class WireAccess(List<GesPlanType> types, bool swift) : IGesComputedAccess
     {
-        public string Read(string root, string owner, string[] path, bool percentage)
+        public GesComputedReach Reach(string root, string owner, string[] path)
         {
-            var (text, conditions, computed) = Chain(root, owner, path);
-            var read = $"{helper}.{(swift ? "read" : "Read")}{(percentage && !computed ? "Percentage" : "")}({text})";
-            return conditions.Count == 0 ? read : $"({string.Join(" && ", conditions)} ? {read} : {helper}.{(swift ? "nothing" : "Nothing")})";
+            var reach = new GesComputedReach { Text = root };
+            var type = Type(owner);
+            GesPlanValue? value = null;
+            for (var step = 0; step < path.Length; step++)
+            {
+                var name = path[step];
+                var field = type!.Fields.Find(candidate => candidate.Layout.Name == name);
+                if (field is null)
+                {
+                    reach.ComputedOwner = type.Name;
+                    reach.ComputedName = name;
+                    return reach;
+                }
+
+                if (field.Optional) reach.Conditions.Add((step, Join(reach.Text, (swift ? "has" : "Has") + field.Base)));
+                reach.Text = Join(reach.Text, Member(field.Base));
+                value = field.Value;
+                type = value.Encoding.Kind == GesLayoutKind.Schema ? Type(value.Encoding.Schema) : null;
+            }
+
+            if (value is not null) Declare(value.Encoding, reach);
+            return reach;
         }
 
-        public string Present(string root, string owner, string[] path)
+        public GesComputedReach Element(string owner, string[] path)
         {
-            var conditions = Chain(root, owner, path).Conditions;
-            return conditions.Count == 0 ? "true" : string.Join(" && ", conditions);
+            var list = Value(owner, path);
+            var reach = new GesComputedReach { Text = "item" };
+            Declare(list.Element!.Encoding, reach);
+            return reach;
         }
-
-        public string List(string root, string owner, string[] path) => Chain(root, owner, path).Text;
 
         public string ElementOwner(string owner, string[] path)
+        {
+            var element = Value(owner, path).Element!;
+            return element.Encoding.Kind == GesLayoutKind.Schema ? element.Encoding.Schema : "";
+        }
+
+        public GesResolvedComputed[] Computed(string owner) => Type(owner)!.Layout.Computed;
+
+        // The declared range of a number and the largest count of a list.
+        private static void Declare(GesLayoutEncoding encoding, GesComputedReach reach)
+        {
+            switch (encoding.Kind)
+            {
+                case GesLayoutKind.Integer:
+                    reach.Integer = true;
+                    reach.Lower = encoding.Range ? encoding.Lower : long.MinValue;
+                    reach.Upper = encoding.Range ? encoding.Lower + (double)encoding.MaxIndex : long.MaxValue;
+                    break;
+                case GesLayoutKind.Quantized:
+                    reach.Lower = encoding.LowerValue;
+                    reach.Upper = encoding.UpperValue;
+                    break;
+                case GesLayoutKind.Float when encoding.Range:
+                    reach.Lower = encoding.LowerValue;
+                    reach.Upper = encoding.UpperValue;
+                    break;
+                case GesLayoutKind.List:
+                    reach.MaxCount = encoding.MaxCount;
+                    break;
+            }
+        }
+
+        private GesPlanValue Value(string owner, string[] path)
         {
             var type = Type(owner);
             GesPlanValue? value = null;
@@ -177,28 +228,12 @@ internal static class GesSchemaPlanner
                 type = value.Encoding.Kind == GesLayoutKind.Schema ? Type(value.Encoding.Schema) : null;
             }
 
-            var element = value!.Element!;
-            return element.Encoding.Kind == GesLayoutKind.Schema ? element.Encoding.Schema : "";
+            return value!;
         }
 
         private GesPlanType? Type(string name) => name.Length == 0 ? null : types.Find(type => type.Name == name);
 
-        private (string Text, List<string> Conditions, bool Computed) Chain(string root, string owner, string[] path)
-        {
-            var text = root;
-            var conditions = new List<string>();
-            var type = Type(owner);
-            foreach (var name in path)
-            {
-                var field = type!.Fields.Find(candidate => candidate.Layout.Name == name);
-                if (field is null) return (text + "." + GesComputedEmitter.Method(name, type.Name, swift) + "()", conditions, true);
-                if (field.Optional) conditions.Add(text + "." + (swift ? "has" : "Has") + field.Base);
-                text += "." + Member(field.Base);
-                type = field.Value.Encoding.Kind == GesLayoutKind.Schema ? Type(field.Value.Encoding.Schema) : null;
-            }
-
-            return (text, conditions, false);
-        }
+        private static string Join(string root, string member) => root.Length == 0 ? member : root + "." + member;
 
         private string Member(string pascal)
         {

@@ -2533,10 +2533,7 @@ enum RolesWire {
         var hull: HullTag = .light
 
         /// `burden` computed by `mass + wear`; NaN where the expression gives nothing.
-        var burden: Double { __GesComputedcc45c18dee0bddd6.number(__burden()) }
-
-        /// The exact GES value of `burden`, which other computed fields read.
-        func __burden() -> __GesComputedcc45c18dee0bddd6.Value { __GesComputedcc45c18dee0bddd6.add(__GesComputedcc45c18dee0bddd6.read(self.mass), __GesComputedcc45c18dee0bddd6.percentage(25e-3), false, true) }
+        var burden: Double { mass + mass * 0.025 }
 
         /// Creates a record with every field at its zero value.
         init() {}
@@ -4304,121 +4301,42 @@ enum RolesWire {
         case right
     }
 
-    /// The arithmetic of computed fields, with the values and rules of the GES virtual machine.
-    enum __GesComputedcc45c18dee0bddd6 {
-        /// A GES scalar: kind 0 nothing, 1 an Int64, 2 a binary64, 3 a percentage ratio, 4 false, 5 true.
-        struct Value {
-            let kind: UInt8
-            let whole: Int64
-            let number: Double
+    /// The rules of computed fields that plain binary64 and Boolean code does not have.
+    enum GesComputed {
+        /// GES has no negative zero.
+        static func positiveZero(_ value: Double) -> Double { value == 0 ? 0 : value }
 
-            var numeric: Double { kind == 1 ? Double(whole) : number }
+        /// The number of an optional field, absent where the expression gives nothing.
+        static func optional(_ value: Double) -> Double? { value.isNaN ? nil : value == 0 ? 0 : value }
+
+        /// The ratio of a Percentage field, NaN where the ratio is not finite, which is no percentage.
+        static func ratio(_ value: Double) -> Double { value.isInfinite ? .nan : value == 0 ? 0 : value }
+
+        /// The ratio of an optional Percentage field, absent where the expression gives nothing or no finite ratio.
+        static func optionalRatio(_ value: Double) -> Double? { value.isNaN || value.isInfinite ? nil : value == 0 ? 0 : value }
+
+        static func addPercentage(_ value: Double, _ ratio: Double) -> Double { value + value * ratio }
+
+        static func subtractPercentage(_ value: Double, _ ratio: Double) -> Double { value - value * ratio }
+
+        /// The smaller of two numbers, the left one on a tie, and nothing where either is.
+        static func min(_ a: Double, _ b: Double) -> Double { a.isNaN || b.isNaN ? .nan : b < a ? b : a }
+
+        /// The larger of two numbers, the left one on a tie, and nothing where either is.
+        static func max(_ a: Double, _ b: Double) -> Double { a.isNaN || b.isNaN ? .nan : b > a ? b : a }
+
+        static func clamp(_ value: Double, _ first: Double, _ second: Double) -> Double {
+            if value.isNaN || first.isNaN || second.isNaN { return .nan }
+            let lower = first <= second ? first : second
+            let upper = first <= second ? second : first
+            return value < lower ? lower : value > upper ? upper : value
         }
 
-        static let nothing = Value(kind: 0, whole: 0, number: 0)
+        /// A number, or the fallback where it is nothing.
+        static func otherwise(_ value: Double, _ fallback: Double) -> Double { value.isNaN ? fallback : value }
 
-        static func integer(_ value: Int64) -> Value { Value(kind: 1, whole: value, number: 0) }
-
-        static func float(_ value: Double) -> Value {
-            if value.isNaN { return nothing }
-            if value.isFinite && value >= -9_223_372_036_854_775_808.0 && value < 9_223_372_036_854_775_808.0 && value == value.rounded(.towardZero) { return integer(Int64(value)) }
-            return Value(kind: 2, whole: 0, number: value)
-        }
-
-        static func percentage(_ ratio: Double) -> Value {
-            if ratio.isNaN { return nothing }
-            let canonical = ratio == 0 ? 0 : ratio
-            return Value(kind: canonical.isInfinite ? 2 : 3, whole: 0, number: canonical)
-        }
-
-        static func boolean(_ value: Bool) -> Value { Value(kind: value ? 5 : 4, whole: 0, number: 0) }
-
-        static func read(_ value: Double?) -> Value { value.map(float) ?? nothing }
-
-        static func read(_ value: Int?) -> Value { value.map { integer(Int64($0)) } ?? nothing }
-
-        static func read(_ value: Int64?) -> Value { value.map(integer) ?? nothing }
-
-        static func read(_ value: Bool?) -> Value { value.map(boolean) ?? nothing }
-
-        static func read(_ value: Value?) -> Value { value ?? nothing }
-
-        static func readPercentage(_ value: Double?) -> Value { value.map(percentage) ?? nothing }
-
-        static func add(_ a: Value, _ b: Value, _ sameUnit: Bool, _ percentage: Bool) -> Value { sum(a, b, sameUnit, percentage, false) }
-
-        static func subtract(_ a: Value, _ b: Value, _ sameUnit: Bool, _ percentage: Bool) -> Value { sum(a, b, sameUnit, percentage, true) }
-
-        private static func sum(_ a: Value, _ b: Value, _ sameUnit: Bool, _ percent: Bool, _ subtract: Bool) -> Value {
-            if a.kind == 0 || b.kind == 0 { return nothing }
-            if a.kind == 1 && b.kind == 1 {
-                if !sameUnit { return nothing }
-                let (exact, overflow) = subtract ? a.whole.subtractingReportingOverflow(b.whole) : a.whole.addingReportingOverflow(b.whole)
-                return overflow ? float(subtract ? Double(a.whole) - Double(b.whole) : Double(a.whole) + Double(b.whole)) : integer(exact)
-            }
-            if (a.kind == 1 || a.kind == 2) && (b.kind == 1 || b.kind == 2) { return sameUnit ? float(subtract ? a.numeric - b.numeric : a.numeric + b.numeric) : nothing }
-            if (a.kind == 1 || a.kind == 2) && b.kind == 3 {
-                if !percent { return nothing }
-                let x = a.numeric
-                return float(subtract ? x - x * b.number : x + x * b.number)
-            }
-            return a.kind == 3 && b.kind == 3 ? percentage(subtract ? a.number - b.number : a.number + b.number) : nothing
-        }
-
-        static func multiply(_ a: Value, _ b: Value, _ product: Bool, _ leftPercentage: Bool, _ rightPercentage: Bool) -> Value {
-            if a.kind == 0 || b.kind == 0 { return nothing }
-            if a.kind == 1 && b.kind == 1 {
-                if !product { return nothing }
-                let (exact, overflow) = a.whole.multipliedReportingOverflow(by: b.whole)
-                return overflow ? float(Double(a.whole) * Double(b.whole)) : integer(exact)
-            }
-            let left = a.kind == 1 || a.kind == 2
-            let right = b.kind == 1 || b.kind == 2
-            if left && right { return product ? float(a.numeric * b.numeric) : nothing }
-            if left && b.kind == 3 { return leftPercentage ? float(a.numeric * b.number) : nothing }
-            if a.kind == 3 && b.kind == 3 { return percentage(a.number * b.number) }
-            if a.kind == 3 && right { return rightPercentage ? float(a.number * b.numeric) : nothing }
-            return nothing
-        }
-
-        static func divide(_ a: Value, _ b: Value, _ quotient: Bool, _ leftPercentage: Bool, _ rightUnitless: Bool) -> Value {
-            if a.kind == 0 || b.kind == 0 { return nothing }
-            let left = a.kind == 1 || a.kind == 2
-            let right = b.kind == 1 || b.kind == 2
-            if left && right { return quotient ? float(a.numeric / b.numeric) : nothing }
-            if a.kind == 3 && b.kind == 3 { return float(a.number / b.number) }
-            if a.kind == 3 && right { return rightUnitless ? percentage(a.number / b.numeric) : nothing }
-            if left && b.kind == 3 { return leftPercentage ? float(a.numeric / b.number) : nothing }
-            return nothing
-        }
-
-        static func negate(_ a: Value) -> Value {
-            switch a.kind {
-            case 1: return a.whole == Int64.min ? float(-Double(a.whole)) : integer(-a.whole)
-            case 2: return float(-a.number)
-            case 3: return percentage(-a.number)
-            default: return nothing
-            }
-        }
-
-        static func abs(_ a: Value) -> Value {
-            switch a.kind {
-            case 1: return a.whole == Int64.min ? float(-Double(a.whole)) : integer(Swift.abs(a.whole))
-            case 2: return float(Swift.abs(a.number))
-            case 3: return percentage(Swift.abs(a.number))
-            default: return nothing
-            }
-        }
-
-        static func compare(_ a: Value, _ b: Value, _ sameUnit: Bool, _ relation: Int) -> Value {
-            if a.kind == 0 || b.kind == 0 { return nothing }
-            if !sameUnit { return boolean(false) }
-            if a.kind == 1 && b.kind == 1 {
-                return boolean(relation == 0 ? a.whole < b.whole : relation == 1 ? a.whole <= b.whole : relation == 2 ? a.whole > b.whole : a.whole >= b.whole)
-            }
-            let x = a.numeric
-            let y = b.numeric
-            return boolean(relation == 0 ? x < y : relation == 1 ? x <= y : relation == 2 ? x > y : x >= y)
+        private static func whole(_ value: Double) -> Bool {
+            value >= -9_223_372_036_854_775_808.0 && value < 9_223_372_036_854_775_808.0 && value == value.rounded(.towardZero)
         }
 
         private static func ordered(_ value: Double) -> UInt64 {
@@ -4435,83 +4353,32 @@ enum RolesWire {
             return (a >= b ? a - b : b - a) <= 2
         }
 
-        static func equal(_ a: Value, _ b: Value, _ sameUnit: Bool, _ negate: Bool) -> Value {
-            if a.kind == 0 || b.kind == 0 { return nothing }
-            let equal: Bool
-            if a.kind > 3 || b.kind > 3 {
-                equal = a.kind == b.kind
-            } else if a.kind == 1 && b.kind == 1 {
-                equal = sameUnit && a.whole == b.whole
-            } else {
-                equal = sameUnit && close(a.numeric, b.numeric)
-            }
-            return boolean(equal != negate)
-        }
+        /// Whole numbers are equal when they are the same, others within two units in the last place; nothing is unequal.
+        static func equal(_ a: Double, _ b: Double) -> Bool { whole(a) && whole(b) ? a == b : close(a, b) }
 
-        static func not(_ a: Value) -> Value { a.kind == 5 ? boolean(false) : a.kind == 4 ? boolean(true) : nothing }
+        static func equalOrNothing(_ a: Double, _ b: Double) -> Bool? { a.isNaN || b.isNaN ? nil : equal(a, b) }
 
-        static func and(_ a: Value, _ b: Value) -> Value {
-            if a.kind == 4 || b.kind == 4 { return boolean(false) }
-            return a.kind == 5 && b.kind == 5 ? boolean(true) : nothing
-        }
+        /// Percentages are equal within two units in the last place of their ratios.
+        static func equalRatios(_ a: Double, _ b: Double) -> Bool { close(a, b) }
 
-        static func or(_ a: Value, _ b: Value) -> Value {
-            if a.kind == 5 || b.kind == 5 { return boolean(true) }
-            return a.kind == 4 && b.kind == 4 ? boolean(false) : nothing
-        }
+        static func equalRatiosOrNothing(_ a: Double, _ b: Double) -> Bool? { a.isNaN || b.isNaN ? nil : close(a, b) }
 
-        static func extreme(_ a: Value, _ b: Value, _ sameUnit: Bool, _ maximum: Bool) -> Value {
-            if a.kind == 0 || b.kind == 0 || !sameUnit { return nothing }
-            let right =
-                a.kind == 1 && b.kind == 1
-                ? (maximum ? b.whole > a.whole : b.whole < a.whole) : (maximum ? b.numeric > a.numeric : b.numeric < a.numeric)
-            return right ? b : a
-        }
+        static func lessOrNothing(_ a: Double, _ b: Double) -> Bool? { a.isNaN || b.isNaN ? nil : a < b }
 
-        static func clamp(_ value: Value, _ first: Value, _ second: Value, _ sameUnit: Bool) -> Value {
-            if value.kind == 0 || first.kind == 0 || second.kind == 0 || !sameUnit { return nothing }
-            if value.kind == 1 && first.kind == 1 && second.kind == 1 {
-                let low = first.whole <= second.whole ? first.whole : second.whole
-                let high = first.whole <= second.whole ? second.whole : first.whole
-                return integer(value.whole < low ? low : value.whole > high ? high : value.whole)
-            }
-            let x = value.numeric
-            let a = first.numeric
-            let b = second.numeric
-            let lower = a <= b ? a : b
-            let upper = a <= b ? b : a
-            return float(x < lower ? lower : x > upper ? upper : x)
-        }
+        static func lessOrEqualOrNothing(_ a: Double, _ b: Double) -> Bool? { a.isNaN || b.isNaN ? nil : a <= b }
 
-        static func when(_ condition: Value, _ value: Value, _ otherwise: Value) -> Value { condition.kind == 5 ? value : otherwise }
+        static func greaterOrNothing(_ a: Double, _ b: Double) -> Bool? { a.isNaN || b.isNaN ? nil : a > b }
 
-        static func fallback(_ value: Value, _ fallback: Value) -> Value { value.kind == 0 ? fallback : value }
+        static func greaterOrEqualOrNothing(_ a: Double, _ b: Double) -> Bool? { a.isNaN || b.isNaN ? nil : a >= b }
 
-        static func has(_ value: Value) -> Value { boolean(value.kind != 0) }
+        /// Whether two Booleans are equal, nothing where either is.
+        static func same(_ a: Bool?, _ b: Bool?) -> Bool? { a == nil || b == nil ? nil : a == b }
 
-        static func castPercentage(_ value: Value) -> Value {
-            if value.kind != 1 && value.kind != 2 { return value }
-            let ratio = value.numeric
-            return ratio.isInfinite ? nothing : percentage(ratio)
-        }
+        /// Three-valued and: false wins over nothing.
+        static func and(_ a: Bool?, _ b: Bool?) -> Bool? { a == false || b == false ? false : a == true && b == true ? true : nil }
 
-        static func castBoolean(_ value: Value) -> Value { boolean(value.kind == 5) }
-
-        static func number(_ value: Value) -> Double { value.kind == 0 ? .nan : value.numeric }
-
-        static func optionalNumber(_ value: Value) -> Double? { value.kind == 0 ? nil : value.numeric }
-
-        static func isTrue(_ value: Value) -> Bool { value.kind == 5 }
-
-        static func gesValue(_ value: Value, _ unit: GesQuantityUnit) -> GesValue {
-            switch value.kind {
-            case 1: return .integer(value.whole, unit: unit)
-            case 2: return .float(value.number, unit: unit)
-            case 3: return .percentage(value.number)
-            case 4, 5: return .boolean(value.kind == 5)
-            default: return .nothing
-            }
-        }
+        /// Three-valued or: true wins over nothing.
+        static func or(_ a: Bool?, _ b: Bool?) -> Bool? { a == true || b == true ? true : a == false && b == false ? false : nil }
     }
 }
 

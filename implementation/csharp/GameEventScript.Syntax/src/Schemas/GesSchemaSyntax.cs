@@ -317,6 +317,7 @@ internal sealed class GesSchemaDiagnostic
     internal const string InvalidDefault = "schema.invalidDefault";
     internal const string InvalidAbstract = "schema.invalidAbstract";
     internal const string InvalidExpression = "schema.invalidExpression";
+    internal const string ComputedMayBeAbsent = "schema.computedMayBeAbsent";
 
     internal GesSchemaDiagnostic(string code, string text, int offset, string message)
     {

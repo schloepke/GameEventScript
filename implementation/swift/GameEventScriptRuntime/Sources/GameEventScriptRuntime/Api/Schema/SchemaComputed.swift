@@ -164,7 +164,7 @@
 /// unit exists, `second` and `third` = the left and right unit take a percentage. Divide: `first` = a quotient unit exists,
 /// `second` = the left unit takes a percentage, `third` = the right side has no unit. Comparisons, min, max and clamp:
 /// `first` = equal units.
-@_spi(Generator) public final class GesComputedNode: Sendable {
+@_spi(Generator) public final class GesComputedNode: @unchecked Sendable {
     /// The operation.
     @_spi(Generator) public let op: GesComputedOp
     /// The static type.
@@ -185,6 +185,13 @@
     @_spi(Generator) public let second: Bool
     /// The third unit check.
     @_spi(Generator) public let third: Bool
+    /// For a path: whether each field on it is optional. The checker sets it and the next two while it builds the
+    /// expression, before the node is shared, so the node is immutable once a schema set holds it.
+    @_spi(Generator) public internal(set) var optionalSteps: [Bool] = []
+    /// How many leading fields of the path `has value` around the read proves present.
+    @_spi(Generator) public internal(set) var present = 0
+    /// Whether the node gives nothing where an optional field it reads is absent; NaN, which is nothing too, is not counted.
+    @_spi(Generator) public internal(set) var mayBeAbsent = false
 
     init(
         _ op: GesComputedOp,

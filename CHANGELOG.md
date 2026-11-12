@@ -11,6 +11,9 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 ## Unreleased
 
 ### Breaking
+- A required computed schema field that reads an optional field without `has value` or `default` is the new
+  `schema.computedMayBeAbsent` instead of giving NaN or false where the field is absent; mark it `optional`, guard the
+  read or give a fallback.
 - Swift `[UInt8]` converts to and from GES Bytes instead of a List of numbers.
 - Text such as `"0x10"` is now a hexadecimal number for `parse`, `as :Number`, `as :Percentage`,
   documents and Message JSON instead of Text or `nothing`.
@@ -249,7 +252,9 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   types and units, and the expression belongs to the hash. Computed fields are never encoded, decoding adds them, a
   document that sets one fails, and generated models and wire records give them as read-only properties that compute the
   bits of the virtual machine. `GesSchema.ComputedFields` (Swift `computedFields`) describes them; mistakes are
-  `schema.invalidExpression`.
+  `schema.invalidExpression`. Generated code is plain binary64 and Boolean code in the language's own operators, such as
+  `duration <= 0.0 ? 0.0 : energy / duration`, with a small `GesComputed` helper type for the rules plain code lacks;
+  only a field where whole numbers beyond 2^53 could meet keeps the exact-value helpers.
 - Recursive schema Lists: `units: :List(:Loadout_Bind) max 16 depth 3` in `:Loadout_Bind` holds records of that schema
   up to three deep, so a tree needs one schema instead of one per level. The wire encoding is that of one schema per
   level; a record deeper than the depth fails with the new `wire.tooDeep`, whose message names the depth, such as

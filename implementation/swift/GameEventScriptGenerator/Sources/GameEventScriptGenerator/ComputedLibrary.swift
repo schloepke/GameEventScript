@@ -1,19 +1,194 @@
 // Copyright 2026 Stephan Schlöpke
 // SPDX-License-Identifier: Apache-2.0
 
-/// The arithmetic of computed fields in generated code: the rules of the GES virtual machine for exact Int64 values with a
-/// binary64 fallback, binary64 values that are integers when they are whole, percentage ratios, three-valued Booleans and
-/// nothing. Units are resolved when the code is generated and arrive as flags. Both generators write identical text.
+/// The helpers of computed fields in generated code. Static code needs only the rules that plain binary64 and Boolean code
+/// lacks: no negative zero, the equality of GES numbers, three-valued logic and NaN as nothing. Dynamic code and conversions
+/// to GES values also take the exact values of the GES virtual machine: Int64 values with a binary64 fallback, binary64
+/// values that are integers when they are whole, percentage ratios, three-valued Booleans and nothing, with the unit checks
+/// resolved when the code is generated. Both generators write identical text.
 enum GesComputedLibrary {
-    static func write(_ code: inout GesSchemaPlanner.Code, _ helper: String, swift: Bool) {
-        let text = GesComputedEmitter.replace(swift ? swiftText : csharpText, "@HELPER@", helper)
-        for line in text.split(separator: "\n", omittingEmptySubsequences: false) { code.line(String(line)) }
+    static func write(_ code: inout GesSchemaPlanner.Code, _ helper: String, swift: Bool, values: Bool) {
+        var text = (swift ? swiftHead : csharpHead) + (swift ? swiftStatic : csharpStatic)
+        if values { text += "\n" + (swift ? swiftValues : csharpValues) }
+        text += "}"
+        for line in GesComputedEmitter.replace(text, "@HELPER@", helper).split(separator: "\n", omittingEmptySubsequences: false) { code.line(String(line)) }
     }
 
-    private static let csharpText = """
-        /// <summary>The arithmetic of computed fields, with the values and rules of the GES virtual machine.</summary>
+    private static let csharpHead = """
+        /// <summary>The rules of computed fields that plain binary64 and Boolean code does not have.</summary>
         internal static class @HELPER@
         {
+
+        """
+
+    private static let swiftHead = """
+        /// The rules of computed fields that plain binary64 and Boolean code does not have.
+        enum @HELPER@ {
+
+        """
+
+    private static let csharpStatic = """
+            /// <summary>GES has no negative zero.</summary>
+            internal static double PositiveZero(double value) => value == 0 ? 0 : value;
+
+            /// <summary>The number of an optional field, absent where the expression gives nothing.</summary>
+            internal static double? Optional(double value) => double.IsNaN(value) ? null : value == 0 ? 0 : value;
+
+            /// <summary>The ratio of a Percentage field, NaN where the ratio is not finite, which is no percentage.</summary>
+            internal static double Ratio(double value) => double.IsInfinity(value) ? double.NaN : value == 0 ? 0 : value;
+
+            /// <summary>The ratio of an optional Percentage field, absent where the expression gives nothing or no finite ratio.</summary>
+            internal static double? OptionalRatio(double value) => double.IsNaN(value) || double.IsInfinity(value) ? null : value == 0 ? 0 : value;
+
+            internal static double AddPercentage(double value, double ratio) => value + value * ratio;
+
+            internal static double SubtractPercentage(double value, double ratio) => value - value * ratio;
+
+            /// <summary>The smaller of two numbers, the left one on a tie, and nothing where either is.</summary>
+            internal static double Min(double a, double b) => double.IsNaN(a) || double.IsNaN(b) ? double.NaN : b < a ? b : a;
+
+            /// <summary>The larger of two numbers, the left one on a tie, and nothing where either is.</summary>
+            internal static double Max(double a, double b) => double.IsNaN(a) || double.IsNaN(b) ? double.NaN : b > a ? b : a;
+
+            internal static double Clamp(double value, double first, double second)
+            {
+                if (double.IsNaN(value) || double.IsNaN(first) || double.IsNaN(second)) return double.NaN;
+                var lower = first <= second ? first : second;
+                var upper = first <= second ? second : first;
+                return value < lower ? lower : value > upper ? upper : value;
+            }
+
+            /// <summary>A number, or the fallback where it is nothing.</summary>
+            internal static double Otherwise(double value, double fallback) => double.IsNaN(value) ? fallback : value;
+
+            private static bool Whole(double value) => value >= -9223372036854775808d && value < 9223372036854775808d && value == Math.Truncate(value);
+
+            private static ulong Ordered(double value)
+            {
+                var bits = unchecked((ulong)BitConverter.DoubleToInt64Bits(value));
+                return (bits & 0x8000000000000000UL) != 0 ? ~bits : bits | 0x8000000000000000UL;
+            }
+
+            private static bool Close(double left, double right)
+            {
+                if (double.IsNaN(left) || double.IsNaN(right)) return false;
+                if (double.IsInfinity(left) || double.IsInfinity(right)) return left == right;
+                if (left == right) return true;
+                var a = Ordered(left);
+                var b = Ordered(right);
+                return (a >= b ? a - b : b - a) <= 2;
+            }
+
+            /// <summary>Whole numbers are equal when they are the same, others within two units in the last place; nothing is unequal.</summary>
+            internal static bool Equal(double a, double b) => Whole(a) && Whole(b) ? a == b : Close(a, b);
+
+            internal static bool? EqualOrNothing(double a, double b) => double.IsNaN(a) || double.IsNaN(b) ? null : Equal(a, b);
+
+            /// <summary>Percentages are equal within two units in the last place of their ratios.</summary>
+            internal static bool EqualRatios(double a, double b) => Close(a, b);
+
+            internal static bool? EqualRatiosOrNothing(double a, double b) => double.IsNaN(a) || double.IsNaN(b) ? null : Close(a, b);
+
+            internal static bool? LessOrNothing(double a, double b) => double.IsNaN(a) || double.IsNaN(b) ? null : a < b;
+
+            internal static bool? LessOrEqualOrNothing(double a, double b) => double.IsNaN(a) || double.IsNaN(b) ? null : a <= b;
+
+            internal static bool? GreaterOrNothing(double a, double b) => double.IsNaN(a) || double.IsNaN(b) ? null : a > b;
+
+            internal static bool? GreaterOrEqualOrNothing(double a, double b) => double.IsNaN(a) || double.IsNaN(b) ? null : a >= b;
+
+            /// <summary>Whether two Booleans are equal, nothing where either is.</summary>
+            internal static bool? Same(bool? a, bool? b) => a is null || b is null ? null : a == b;
+
+            /// <summary>Three-valued and: false wins over nothing.</summary>
+            internal static bool? And(bool? a, bool? b) => a == false || b == false ? false : a == true && b == true ? true : null;
+
+            /// <summary>Three-valued or: true wins over nothing.</summary>
+            internal static bool? Or(bool? a, bool? b) => a == true || b == true ? true : a == false && b == false ? false : null;
+
+        """
+
+    private static let swiftStatic = """
+            /// GES has no negative zero.
+            static func positiveZero(_ value: Double) -> Double { value == 0 ? 0 : value }
+
+            /// The number of an optional field, absent where the expression gives nothing.
+            static func optional(_ value: Double) -> Double? { value.isNaN ? nil : value == 0 ? 0 : value }
+
+            /// The ratio of a Percentage field, NaN where the ratio is not finite, which is no percentage.
+            static func ratio(_ value: Double) -> Double { value.isInfinite ? .nan : value == 0 ? 0 : value }
+
+            /// The ratio of an optional Percentage field, absent where the expression gives nothing or no finite ratio.
+            static func optionalRatio(_ value: Double) -> Double? { value.isNaN || value.isInfinite ? nil : value == 0 ? 0 : value }
+
+            static func addPercentage(_ value: Double, _ ratio: Double) -> Double { value + value * ratio }
+
+            static func subtractPercentage(_ value: Double, _ ratio: Double) -> Double { value - value * ratio }
+
+            /// The smaller of two numbers, the left one on a tie, and nothing where either is.
+            static func min(_ a: Double, _ b: Double) -> Double { a.isNaN || b.isNaN ? .nan : b < a ? b : a }
+
+            /// The larger of two numbers, the left one on a tie, and nothing where either is.
+            static func max(_ a: Double, _ b: Double) -> Double { a.isNaN || b.isNaN ? .nan : b > a ? b : a }
+
+            static func clamp(_ value: Double, _ first: Double, _ second: Double) -> Double {
+                if value.isNaN || first.isNaN || second.isNaN { return .nan }
+                let lower = first <= second ? first : second
+                let upper = first <= second ? second : first
+                return value < lower ? lower : value > upper ? upper : value
+            }
+
+            /// A number, or the fallback where it is nothing.
+            static func otherwise(_ value: Double, _ fallback: Double) -> Double { value.isNaN ? fallback : value }
+
+            private static func whole(_ value: Double) -> Bool {
+                value >= -9_223_372_036_854_775_808.0 && value < 9_223_372_036_854_775_808.0 && value == value.rounded(.towardZero)
+            }
+
+            private static func ordered(_ value: Double) -> UInt64 {
+                let bits = value.bitPattern
+                return bits & 0x8000_0000_0000_0000 != 0 ? ~bits : bits | 0x8000_0000_0000_0000
+            }
+
+            private static func close(_ left: Double, _ right: Double) -> Bool {
+                if left.isNaN || right.isNaN { return false }
+                if left.isInfinite || right.isInfinite { return left == right }
+                if left == right { return true }
+                let a = ordered(left)
+                let b = ordered(right)
+                return (a >= b ? a - b : b - a) <= 2
+            }
+
+            /// Whole numbers are equal when they are the same, others within two units in the last place; nothing is unequal.
+            static func equal(_ a: Double, _ b: Double) -> Bool { whole(a) && whole(b) ? a == b : close(a, b) }
+
+            static func equalOrNothing(_ a: Double, _ b: Double) -> Bool? { a.isNaN || b.isNaN ? nil : equal(a, b) }
+
+            /// Percentages are equal within two units in the last place of their ratios.
+            static func equalRatios(_ a: Double, _ b: Double) -> Bool { close(a, b) }
+
+            static func equalRatiosOrNothing(_ a: Double, _ b: Double) -> Bool? { a.isNaN || b.isNaN ? nil : close(a, b) }
+
+            static func lessOrNothing(_ a: Double, _ b: Double) -> Bool? { a.isNaN || b.isNaN ? nil : a < b }
+
+            static func lessOrEqualOrNothing(_ a: Double, _ b: Double) -> Bool? { a.isNaN || b.isNaN ? nil : a <= b }
+
+            static func greaterOrNothing(_ a: Double, _ b: Double) -> Bool? { a.isNaN || b.isNaN ? nil : a > b }
+
+            static func greaterOrEqualOrNothing(_ a: Double, _ b: Double) -> Bool? { a.isNaN || b.isNaN ? nil : a >= b }
+
+            /// Whether two Booleans are equal, nothing where either is.
+            static func same(_ a: Bool?, _ b: Bool?) -> Bool? { a == nil || b == nil ? nil : a == b }
+
+            /// Three-valued and: false wins over nothing.
+            static func and(_ a: Bool?, _ b: Bool?) -> Bool? { a == false || b == false ? false : a == true && b == true ? true : nil }
+
+            /// Three-valued or: true wins over nothing.
+            static func or(_ a: Bool?, _ b: Bool?) -> Bool? { a == true || b == true ? true : a == false && b == false ? false : nil }
+
+        """
+
+    private static let csharpValues = """
             /// <summary>A GES scalar: kind 0 nothing, 1 an Int64, 2 a binary64, 3 a percentage ratio, 4 false, 5 true.</summary>
             internal readonly struct Value
             {
@@ -160,22 +335,6 @@ enum GesComputedLibrary {
                 return Boolean(relation == 0 ? x < y : relation == 1 ? x <= y : relation == 2 ? x > y : x >= y);
             }
 
-            private static ulong Ordered(double value)
-            {
-                var bits = unchecked((ulong)BitConverter.DoubleToInt64Bits(value));
-                return (bits & 0x8000000000000000UL) != 0 ? ~bits : bits | 0x8000000000000000UL;
-            }
-
-            private static bool Close(double left, double right)
-            {
-                if (double.IsNaN(left) || double.IsNaN(right)) return false;
-                if (double.IsInfinity(left) || double.IsInfinity(right)) return left == right;
-                if (left == right) return true;
-                var a = Ordered(left);
-                var b = Ordered(right);
-                return (a >= b ? a - b : b - a) <= 2;
-            }
-
             internal static Value Equal(Value a, Value b, bool sameUnit, bool negate)
             {
                 if (a.Kind == 0 || b.Kind == 0) return Nothing;
@@ -256,12 +415,10 @@ enum GesComputedLibrary {
                 4 or 5 => global::GameEventScript.Runtime.Values.GesValue.GesBoolean(value.Kind == 5),
                 _ => global::GameEventScript.Runtime.Values.GesValue.GesNothing()
             };
-        }
+
         """
 
-    private static let swiftText = """
-        /// The arithmetic of computed fields, with the values and rules of the GES virtual machine.
-        enum @HELPER@ {
+    private static let swiftValues = """
             /// A GES scalar: kind 0 nothing, 1 an Int64, 2 a binary64, 3 a percentage ratio, 4 false, 5 true.
             struct Value {
                 let kind: UInt8
@@ -377,20 +534,6 @@ enum GesComputedLibrary {
                 return boolean(relation == 0 ? x < y : relation == 1 ? x <= y : relation == 2 ? x > y : x >= y)
             }
 
-            private static func ordered(_ value: Double) -> UInt64 {
-                let bits = value.bitPattern
-                return bits & 0x8000_0000_0000_0000 != 0 ? ~bits : bits | 0x8000_0000_0000_0000
-            }
-
-            private static func close(_ left: Double, _ right: Double) -> Bool {
-                if left.isNaN || right.isNaN { return false }
-                if left.isInfinite || right.isInfinite { return left == right }
-                if left == right { return true }
-                let a = ordered(left)
-                let b = ordered(right)
-                return (a >= b ? a - b : b - a) <= 2
-            }
-
             static func equal(_ a: Value, _ b: Value, _ sameUnit: Bool, _ negate: Bool) -> Value {
                 if a.kind == 0 || b.kind == 0 { return nothing }
                 let equal: Bool
@@ -468,6 +611,6 @@ enum GesComputedLibrary {
                 default: return .nothing
                 }
             }
-        }
+
         """
 }

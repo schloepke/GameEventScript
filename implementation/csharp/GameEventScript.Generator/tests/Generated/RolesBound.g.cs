@@ -146,22 +146,13 @@ namespace GameEventScript.Tests.Generator.Roles.Bound
         public List<Side> Hints { get; set; } = new List<Side>();
 
         /// <summary><c>fit</c> computed by <c>alive and health &gt;= 50%</c>; false where the expression gives nothing, as a script record reads it.</summary>
-        public bool Fit => __GesComputedad61f0c45f3be33d.IsTrue(__Fit());
-
-        /// <summary>The exact GES value of <c>fit</c>, which other computed fields read.</summary>
-        internal __GesComputedad61f0c45f3be33d.Value __Fit() => __GesComputedad61f0c45f3be33d.CastBoolean(__GesComputedad61f0c45f3be33d.And(__GesComputedad61f0c45f3be33d.Read(this.Alive), __GesComputedad61f0c45f3be33d.Compare(__GesComputedad61f0c45f3be33d.ReadPercentage(this.Health), __GesComputedad61f0c45f3be33d.Percentage(5e-1), true, 3)));
+        public bool Fit => Alive && Health >= 0.5;
 
         /// <summary><c>pace</c> computed by <c>abs speed * 1m/s when speed has value, otherwise 0m/s</c>; absent where the expression gives nothing.</summary>
-        public double? Pace => __GesComputedad61f0c45f3be33d.OptionalNumber(__Pace());
-
-        /// <summary>The exact GES value of <c>pace</c>, which other computed fields read.</summary>
-        internal __GesComputedad61f0c45f3be33d.Value __Pace() => __GesComputedad61f0c45f3be33d.When(__GesComputedad61f0c45f3be33d.Has(__GesComputedad61f0c45f3be33d.Read(this.Speed)), __GesComputedad61f0c45f3be33d.Multiply(__GesComputedad61f0c45f3be33d.Abs(__GesComputedad61f0c45f3be33d.Read(this.Speed)), __GesComputedad61f0c45f3be33d.Integer(1), true, true, true), __GesComputedad61f0c45f3be33d.Integer(0));
+        public double? Pace => GesComputed.Optional(Math.Abs(Speed) * 1.0);
 
         /// <summary><c>traced</c> computed by <c>marks[:count]</c>; NaN where the expression gives nothing.</summary>
-        public double Traced => __GesComputedad61f0c45f3be33d.Number(__Traced());
-
-        /// <summary>The exact GES value of <c>traced</c>, which other computed fields read.</summary>
-        internal __GesComputedad61f0c45f3be33d.Value __Traced() => __GesComputedad61f0c45f3be33d.Integer(this.Marks.Count);
+        public double Traced => (double)Marks.Count;
 
         /// <summary>Compares every field by value.</summary>
         /// <param name="other">The other record.</param>
@@ -1097,10 +1088,7 @@ namespace GameEventScript.Tests.Generator.Roles.Bound
         public double Strength { get; set; }
 
         /// <summary><c>depth</c> computed by <c>reach - range * strength</c>; NaN where the expression gives nothing.</summary>
-        public double Depth => __GesComputedad61f0c45f3be33d.Number(__Depth());
-
-        /// <summary>The exact GES value of <c>depth</c>, which other computed fields read.</summary>
-        internal __GesComputedad61f0c45f3be33d.Value __Depth() => __GesComputedad61f0c45f3be33d.Subtract(__GesComputedad61f0c45f3be33d.Read(this.Reach), __GesComputedad61f0c45f3be33d.Multiply(__GesComputedad61f0c45f3be33d.Read(this.Range), __GesComputedad61f0c45f3be33d.ReadPercentage(this.Strength), true, true, true), true, true);
+        public double Depth => Reach - Range * Strength;
 
         /// <summary>Compares every field by value.</summary>
         /// <param name="other">The other record.</param>
@@ -1443,10 +1431,7 @@ namespace GameEventScript.Tests.Generator.Roles.Bound
         public HullTag Hull { get; set; } = HullTag.Light;
 
         /// <summary><c>burden</c> computed by <c>mass + wear</c>; NaN where the expression gives nothing.</summary>
-        public double Burden => __GesComputedad61f0c45f3be33d.Number(__Burden());
-
-        /// <summary>The exact GES value of <c>burden</c>, which other computed fields read.</summary>
-        internal __GesComputedad61f0c45f3be33d.Value __Burden() => __GesComputedad61f0c45f3be33d.Add(__GesComputedad61f0c45f3be33d.Read(this.Mass), __GesComputedad61f0c45f3be33d.Percentage(25e-3), false, true);
+        public double Burden => Mass + Mass * 0.025;
 
         /// <summary>Compares every field by value.</summary>
         /// <param name="other">The other record.</param>
@@ -1652,7 +1637,7 @@ namespace GameEventScript.Tests.Generator.Roles.Bound
             {
                 "mass" => GesValue.GesFloat(Record.Mass, GesQuantityUnit.UnitKilogram),
                 "hull" => __GesModelsad61f0c45f3be33d.Tag(Name(Record.Hull)),
-                "burden" => __GesComputedad61f0c45f3be33d.ToGesValue(Record.__Burden(), GesQuantityUnit.UnitKilogram),
+                "burden" => GesComputed.ToGesValue(GesComputed.Read(Record.Burden), GesQuantityUnit.UnitKilogram),
                 "fields" => __GesModelsad61f0c45f3be33d.Fields(Names, this),
                 _ => null
             };
@@ -1836,9 +1821,9 @@ namespace GameEventScript.Tests.Generator.Roles.Bound
                 "status" => Value(Record.Status),
                 "ranks" => __GesModelsad61f0c45f3be33d.List(Record.Ranks, x0 => Value(x0)),
                 "hints" => __GesModelsad61f0c45f3be33d.List(Record.Hints, x0 => __GesModelsad61f0c45f3be33d.Tag(Name(x0))),
-                "fit" => __GesComputedad61f0c45f3be33d.ToGesValue(Record.__Fit(), GesQuantityUnit.UnitNone),
-                "pace" => __GesComputedad61f0c45f3be33d.ToGesValue(Record.__Pace(), GesQuantityUnit.UnitMeterPerSecond),
-                "traced" => __GesComputedad61f0c45f3be33d.ToGesValue(Record.__Traced(), GesQuantityUnit.UnitNone),
+                "fit" => GesComputed.ToGesValue(GesComputed.Read(Record.Fit), GesQuantityUnit.UnitNone),
+                "pace" => GesComputed.ToGesValue(GesComputed.Read(Record.Pace), GesQuantityUnit.UnitMeterPerSecond),
+                "traced" => GesComputed.ToGesValue(GesComputed.Read(Record.Traced), GesQuantityUnit.UnitNone),
                 "fields" => __GesModelsad61f0c45f3be33d.Fields(Names, this),
                 _ => null
             };
@@ -2432,7 +2417,7 @@ namespace GameEventScript.Tests.Generator.Roles.Bound
                 "lead" => Record.Lead is { } v0 ? __GesModelsad61f0c45f3be33d.Tag(Name(v0)) : GesValue.GesNothing(),
                 "active" => GesValue.GesBoolean(Record.Active),
                 "strength" => GesValue.GesPercentage(Record.Strength),
-                "depth" => __GesComputedad61f0c45f3be33d.ToGesValue(Record.__Depth(), GesQuantityUnit.UnitMeter),
+                "depth" => GesComputed.ToGesValue(GesComputed.Read(Record.Depth), GesQuantityUnit.UnitMeter),
                 "fields" => __GesModelsad61f0c45f3be33d.Fields(Names, this),
                 _ => null
             };
@@ -2575,9 +2560,9 @@ namespace GameEventScript.Tests.Generator.Roles.Bound
             values[20] = Value(record.Status);
             values[21] = __GesModelsad61f0c45f3be33d.List(record.Ranks, x0 => Value(x0));
             values[22] = __GesModelsad61f0c45f3be33d.List(record.Hints, x0 => __GesModelsad61f0c45f3be33d.Tag(Name(x0)));
-            values[23] = __GesComputedad61f0c45f3be33d.ToGesValue(record.__Fit(), GesQuantityUnit.UnitNone);
-            values[24] = __GesComputedad61f0c45f3be33d.ToGesValue(record.__Pace(), GesQuantityUnit.UnitMeterPerSecond);
-            values[25] = __GesComputedad61f0c45f3be33d.ToGesValue(record.__Traced(), GesQuantityUnit.UnitNone);
+            values[23] = GesComputed.ToGesValue(GesComputed.Read(record.Fit), GesQuantityUnit.UnitNone);
+            values[24] = GesComputed.ToGesValue(GesComputed.Read(record.Pace), GesQuantityUnit.UnitMeterPerSecond);
+            values[25] = GesComputed.ToGesValue(GesComputed.Read(record.Traced), GesQuantityUnit.UnitNone);
             return GesValue.GesRecord("BotView", new[] { "bot", "name", "alive", "health", "speed", "heading", "mood", "team", "position", "velocity", "body", "radar", "facing", "note", "marks", "units", "grid", "rolls", "seal", "chunks", "status", "ranks", "hints", "fit", "pace", "traced" }, values);
         }
 
@@ -3096,7 +3081,7 @@ namespace GameEventScript.Tests.Generator.Roles.Bound
             values[4] = record.Lead is { } value4_0 ? __GesModelsad61f0c45f3be33d.Tag(Name(value4_0)) : GesValue.GesNothing();
             values[5] = GesValue.GesBoolean(record.Active);
             values[6] = GesValue.GesPercentage(record.Strength);
-            values[7] = __GesComputedad61f0c45f3be33d.ToGesValue(record.__Depth(), GesQuantityUnit.UnitMeter);
+            values[7] = GesComputed.ToGesValue(GesComputed.Read(record.Depth), GesQuantityUnit.UnitMeter);
             return GesValue.GesRecord("RadarEcho", new[] { "range", "reach", "contacts", "side", "lead", "active", "strength", "depth" }, values);
         }
 
@@ -3251,7 +3236,7 @@ namespace GameEventScript.Tests.Generator.Roles.Bound
             var values = new GesValue[3];
             values[0] = GesValue.GesFloat(record.Mass, GesQuantityUnit.UnitKilogram);
             values[1] = __GesModelsad61f0c45f3be33d.Tag(Name(record.Hull));
-            values[2] = __GesComputedad61f0c45f3be33d.ToGesValue(record.__Burden(), GesQuantityUnit.UnitKilogram);
+            values[2] = GesComputed.ToGesValue(GesComputed.Read(record.Burden), GesQuantityUnit.UnitKilogram);
             return GesValue.GesRecord("World_Body", new[] { "mass", "hull", "burden" }, values);
         }
 
@@ -3523,9 +3508,87 @@ namespace GameEventScript.Tests.Generator.Roles.Bound
         }
     }
 
-    /// <summary>The arithmetic of computed fields, with the values and rules of the GES virtual machine.</summary>
-    internal static class __GesComputedad61f0c45f3be33d
+    /// <summary>The rules of computed fields that plain binary64 and Boolean code does not have.</summary>
+    internal static class GesComputed
     {
+        /// <summary>GES has no negative zero.</summary>
+        internal static double PositiveZero(double value) => value == 0 ? 0 : value;
+
+        /// <summary>The number of an optional field, absent where the expression gives nothing.</summary>
+        internal static double? Optional(double value) => double.IsNaN(value) ? null : value == 0 ? 0 : value;
+
+        /// <summary>The ratio of a Percentage field, NaN where the ratio is not finite, which is no percentage.</summary>
+        internal static double Ratio(double value) => double.IsInfinity(value) ? double.NaN : value == 0 ? 0 : value;
+
+        /// <summary>The ratio of an optional Percentage field, absent where the expression gives nothing or no finite ratio.</summary>
+        internal static double? OptionalRatio(double value) => double.IsNaN(value) || double.IsInfinity(value) ? null : value == 0 ? 0 : value;
+
+        internal static double AddPercentage(double value, double ratio) => value + value * ratio;
+
+        internal static double SubtractPercentage(double value, double ratio) => value - value * ratio;
+
+        /// <summary>The smaller of two numbers, the left one on a tie, and nothing where either is.</summary>
+        internal static double Min(double a, double b) => double.IsNaN(a) || double.IsNaN(b) ? double.NaN : b < a ? b : a;
+
+        /// <summary>The larger of two numbers, the left one on a tie, and nothing where either is.</summary>
+        internal static double Max(double a, double b) => double.IsNaN(a) || double.IsNaN(b) ? double.NaN : b > a ? b : a;
+
+        internal static double Clamp(double value, double first, double second)
+        {
+            if (double.IsNaN(value) || double.IsNaN(first) || double.IsNaN(second)) return double.NaN;
+            var lower = first <= second ? first : second;
+            var upper = first <= second ? second : first;
+            return value < lower ? lower : value > upper ? upper : value;
+        }
+
+        /// <summary>A number, or the fallback where it is nothing.</summary>
+        internal static double Otherwise(double value, double fallback) => double.IsNaN(value) ? fallback : value;
+
+        private static bool Whole(double value) => value >= -9223372036854775808d && value < 9223372036854775808d && value == Math.Truncate(value);
+
+        private static ulong Ordered(double value)
+        {
+            var bits = unchecked((ulong)BitConverter.DoubleToInt64Bits(value));
+            return (bits & 0x8000000000000000UL) != 0 ? ~bits : bits | 0x8000000000000000UL;
+        }
+
+        private static bool Close(double left, double right)
+        {
+            if (double.IsNaN(left) || double.IsNaN(right)) return false;
+            if (double.IsInfinity(left) || double.IsInfinity(right)) return left == right;
+            if (left == right) return true;
+            var a = Ordered(left);
+            var b = Ordered(right);
+            return (a >= b ? a - b : b - a) <= 2;
+        }
+
+        /// <summary>Whole numbers are equal when they are the same, others within two units in the last place; nothing is unequal.</summary>
+        internal static bool Equal(double a, double b) => Whole(a) && Whole(b) ? a == b : Close(a, b);
+
+        internal static bool? EqualOrNothing(double a, double b) => double.IsNaN(a) || double.IsNaN(b) ? null : Equal(a, b);
+
+        /// <summary>Percentages are equal within two units in the last place of their ratios.</summary>
+        internal static bool EqualRatios(double a, double b) => Close(a, b);
+
+        internal static bool? EqualRatiosOrNothing(double a, double b) => double.IsNaN(a) || double.IsNaN(b) ? null : Close(a, b);
+
+        internal static bool? LessOrNothing(double a, double b) => double.IsNaN(a) || double.IsNaN(b) ? null : a < b;
+
+        internal static bool? LessOrEqualOrNothing(double a, double b) => double.IsNaN(a) || double.IsNaN(b) ? null : a <= b;
+
+        internal static bool? GreaterOrNothing(double a, double b) => double.IsNaN(a) || double.IsNaN(b) ? null : a > b;
+
+        internal static bool? GreaterOrEqualOrNothing(double a, double b) => double.IsNaN(a) || double.IsNaN(b) ? null : a >= b;
+
+        /// <summary>Whether two Booleans are equal, nothing where either is.</summary>
+        internal static bool? Same(bool? a, bool? b) => a is null || b is null ? null : a == b;
+
+        /// <summary>Three-valued and: false wins over nothing.</summary>
+        internal static bool? And(bool? a, bool? b) => a == false || b == false ? false : a == true && b == true ? true : null;
+
+        /// <summary>Three-valued or: true wins over nothing.</summary>
+        internal static bool? Or(bool? a, bool? b) => a == true || b == true ? true : a == false && b == false ? false : null;
+
         /// <summary>A GES scalar: kind 0 nothing, 1 an Int64, 2 a binary64, 3 a percentage ratio, 4 false, 5 true.</summary>
         internal readonly struct Value
         {
@@ -3670,22 +3733,6 @@ namespace GameEventScript.Tests.Generator.Roles.Bound
             var x = a.Numeric;
             var y = b.Numeric;
             return Boolean(relation == 0 ? x < y : relation == 1 ? x <= y : relation == 2 ? x > y : x >= y);
-        }
-
-        private static ulong Ordered(double value)
-        {
-            var bits = unchecked((ulong)BitConverter.DoubleToInt64Bits(value));
-            return (bits & 0x8000000000000000UL) != 0 ? ~bits : bits | 0x8000000000000000UL;
-        }
-
-        private static bool Close(double left, double right)
-        {
-            if (double.IsNaN(left) || double.IsNaN(right)) return false;
-            if (double.IsInfinity(left) || double.IsInfinity(right)) return left == right;
-            if (left == right) return true;
-            var a = Ordered(left);
-            var b = Ordered(right);
-            return (a >= b ? a - b : b - a) <= 2;
         }
 
         internal static Value Equal(Value a, Value b, bool sameUnit, bool negate)

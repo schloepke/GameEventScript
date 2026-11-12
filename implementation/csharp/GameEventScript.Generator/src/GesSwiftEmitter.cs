@@ -44,7 +44,7 @@ internal static partial class GesSwiftEmitter
         var holder = "__GesSchemas" + GesSchemaPlanner.Suffix(header, options);
         var context = new Context(GesSchemaPlanner.KeyedElements(types), options.Values, holder, options.CheckedExclusivity)
         {
-            Computed = GesSchemaPlanner.Computed(types, GesComputedEmitter.Helper(GesSchemaPlanner.Suffix(header, options)), swift: true)
+            Computed = GesSchemaPlanner.Computed(types, GesComputedEmitter.Helper(options.Namespace, GesSchemaPlanner.Suffix(header, options)), swift: true)
         };
         var document = new GesCodeDocument
         {
@@ -68,7 +68,7 @@ internal static partial class GesSwiftEmitter
         var shared = options.Split != GesSchemaSplit.None;
         if (options.Values) document.Units.Add(new GesCodeUnit("", code => ValuesHolder(code, layout, holder, shared), outside: true));
         if (layout.Types.Exists(type => type.Computed.Length > 0))
-            document.Units.Add(new GesCodeUnit("", code => GesComputedLibrary.Write(code, GesComputedEmitter.Helper(GesSchemaPlanner.Suffix(header, options)), swift: true)));
+            document.Units.Add(new GesCodeUnit("", code => GesComputedLibrary.Write(code, context.Computed.HelperName, swift: true, context.Computed.NeedsValues(types.ConvertAll(type => (type.Name, type.Layout.Computed))))));
         return document;
     }
 

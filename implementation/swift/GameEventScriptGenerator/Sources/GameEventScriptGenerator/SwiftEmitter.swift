@@ -38,7 +38,7 @@ enum GesSwiftEmitter {
             values: options.values,
             holder: holder,
             checkedExclusivity: options.checkedExclusivity,
-            computed: GesSchemaPlanner.computed(types, GesComputedEmitter.helper(GesSchemaPlanner.suffix(header, options)), swift: true)
+            computed: GesSchemaPlanner.computed(types, GesComputedEmitter.helper(options.namespace, GesSchemaPlanner.suffix(header, options)), swift: true)
         )
         var document = GesCodeDocument(
             header: header,
@@ -63,8 +63,9 @@ enum GesSwiftEmitter {
         let shared = options.split != .none
         if options.values { document.units.append(GesCodeUnit(owner: "", write: { code in valuesHolder(&code, layout, holder, shared: shared) }, outside: true)) }
         if layout.types.contains(where: { !$0.computed.isEmpty }) {
-            let helper = GesComputedEmitter.helper(GesSchemaPlanner.suffix(header, options))
-            document.units.append(GesCodeUnit(owner: "") { code in GesComputedLibrary.write(&code, helper, swift: true) })
+            let computed = context.computed
+            let values = computed.needsValues(types.map { ($0.name, $0.layout.computed) })
+            document.units.append(GesCodeUnit(owner: "") { code in GesComputedLibrary.write(&code, computed.helper, swift: true, values: values) })
         }
         return document
     }

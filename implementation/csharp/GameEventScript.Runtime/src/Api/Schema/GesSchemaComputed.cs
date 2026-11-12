@@ -73,6 +73,15 @@ internal sealed class GesComputedNode
     // The field names from the record, or from the element for Item; for Sum and Count, the list.
     internal string[] Path { get; init; } = [];
 
+    // For a path: whether each field on it is optional, and how many of its leading fields `has value` around the read
+    // proves present.
+    internal bool[] OptionalSteps { get; set; } = [];
+
+    internal int Present { get; set; }
+
+    // Whether the node gives nothing where an optional field it reads is absent; NaN, which is nothing too, is not counted.
+    internal bool MayBeAbsent { get; set; }
+
     internal bool First { get; init; }
 
     internal bool Second { get; init; }

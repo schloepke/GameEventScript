@@ -170,6 +170,7 @@ def self_test():
 GOLDEN_FIXTURE = ROOT / "conformance/fixtures/SchemaGeneration/fleet.gess"
 ROLES = ROOT / "conformance/fixtures/SchemaGeneration/roles"
 TREE_FIXTURE = ROOT / "conformance/fixtures/SchemaGeneration/tree.gess"
+COMPUTED_FIXTURE = ROOT / "conformance/fixtures/SchemaGeneration/computed.gess"
 ROLE_FILES = ["World.gess", "Panels.gess", "View.gess"]
 CSHARP_GENERATED = ROOT / "implementation/csharp/GameEventScript.Generator/tests/Generated"
 SWIFT_GENERATED = ROOT / "implementation/swift/GameEventScriptConformance/Tests/GameEventScriptConformanceTests/Generated"
@@ -186,6 +187,10 @@ GOLDENS = (
     (TREE_FIXTURE.parent, [TREE_FIXTURE.name], ["--wire", "tree", "--values"], "swift", "TreeWire", SWIFT_GENERATED / "TreeWire.swift"),
     (TREE_FIXTURE.parent, [TREE_FIXTURE.name], ["--model", "tree", "--values"], "csharp", "GameEventScript.Tests.Generator.Tree.Model", CSHARP_GENERATED / "TreeModel.g.cs"),
     (TREE_FIXTURE.parent, [TREE_FIXTURE.name], ["--model", "tree", "--values"], "swift", "TreeModel", SWIFT_GENERATED / "TreeModel.swift"),
+    (COMPUTED_FIXTURE.parent, [COMPUTED_FIXTURE.name], ["--wire", "computed", "--values"], "csharp", "GameEventScript.Tests.Generator.Computed.Wire", CSHARP_GENERATED / "ComputedWire.g.cs"),
+    (COMPUTED_FIXTURE.parent, [COMPUTED_FIXTURE.name], ["--wire", "computed", "--values"], "swift", "ComputedWire", SWIFT_GENERATED / "ComputedWire.swift"),
+    (COMPUTED_FIXTURE.parent, [COMPUTED_FIXTURE.name], ["--model", "computed", "--values"], "csharp", "GameEventScript.Tests.Generator.Computed.Model", CSHARP_GENERATED / "ComputedModel.g.cs"),
+    (COMPUTED_FIXTURE.parent, [COMPUTED_FIXTURE.name], ["--model", "computed", "--values"], "swift", "ComputedModel", SWIFT_GENERATED / "ComputedModel.swift"),
 )
 # The layouts of the role fixture, which both CLIs must print identically.
 ROLE_LAYOUTS = (["--wire", "world", "--param", "worldWidth=2000m"], ["--wire", "panels"], ["--model", "view"])

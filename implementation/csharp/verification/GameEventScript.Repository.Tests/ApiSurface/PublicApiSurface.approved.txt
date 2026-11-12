@@ -1128,6 +1128,7 @@ sealed class GameEventScript.Api.GesSchemaType
   property GameEventScript.Api.GesSchemaTypeKind Kind { get }
   property System.Boolean IsInteger { get }
   property System.Boolean IsWrapping { get }
+  property System.Int32 Depth { get }
   property System.Int64? Max { get }
   property System.String Label { get }
   property System.String TagSet { get }
@@ -1304,6 +1305,7 @@ struct GameEventScript.Api.GesVector
   property System.Double Z { get set }
 sealed class GameEventScript.Api.GesWireException
   ctor GesWireException(System.String code, System.String path)
+  ctor GesWireException(System.String code, System.String path, System.String detail)
   field static System.String BufferTooSmall
   field static System.String FieldOrder
   field static System.String InvalidCount
@@ -1320,11 +1322,13 @@ sealed class GameEventScript.Api.GesWireException
   field static System.String NothingValue
   field static System.String OutOfRange
   field static System.String OverlappingBuffers
+  field static System.String TooDeep
   field static System.String TooLong
   field static System.String Truncated
   field static System.String TypeMismatch
   field static System.String UnknownTag
   property System.String Code { get }
+  property System.String Detail { get }
   property System.String Path { get }
 static class GameEventScript.Api.GesWireRules
   method static System.Boolean IsTagName(System.ReadOnlySpan<System.Byte> bytes)

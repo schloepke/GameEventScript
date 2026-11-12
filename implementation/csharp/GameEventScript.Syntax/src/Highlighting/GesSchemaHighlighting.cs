@@ -13,7 +13,7 @@ internal static class GesSchemaHighlighting
     private static readonly HashSet<string> Keywords = new(System.StringComparer.Ordinal)
     {
         "schema", "message", "messages", "constant", "parameter", "as", "be", "between", "and", "wrapping", "step", "delta",
-        "within", "integer", "optional", "key", "max", "tags", "wire", "model", "let",
+        "within", "integer", "optional", "key", "max", "depth", "tags", "wire", "model", "let",
         "default", "true", "false", "abstract", "with", "all", "without", "computed", "by", "when", "otherwise", "or", "not", "of",
         "min", "clamp", "abs", "has"
     };

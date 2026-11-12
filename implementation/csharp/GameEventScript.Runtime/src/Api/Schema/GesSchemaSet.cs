@@ -224,15 +224,18 @@ public sealed class GesSchemaSet
         visited[declaration] = path.Count;
         path.Add(declaration);
         foreach (var field in declaration.Fields)
-            foreach (var type in field.Alternatives) CheckNesting(type, path, visited);
+            foreach (var type in field.Alternatives) CheckNesting(type, declaration, path, visited);
         path.RemoveAt(path.Count - 1);
     }
 
-    private static void CheckNesting(GesResolvedType type, List<GesResolvedDeclaration> path, Dictionary<GesResolvedDeclaration, int> visited)
+    private static void CheckNesting(GesResolvedType type, GesResolvedDeclaration holder, List<GesResolvedDeclaration> path, Dictionary<GesResolvedDeclaration, int> visited)
     {
         if (type.Reference is { } reference) CheckNesting(reference, path, visited);
+        // A List with depth in the schema it holds is a limited recursion; where `with` copies it into another schema, it is
+        // an ordinary List of the declaring schema.
+        if (type.Depth > 0 && type.Element![0].Reference == holder) return;
         if (type.Element is { } element)
-            foreach (var alternative in element) CheckNesting(alternative, path, visited);
+            foreach (var alternative in element) CheckNesting(alternative, holder, path, visited);
     }
 }
 
@@ -300,6 +303,9 @@ internal sealed class GesResolvedType
     internal long? Max { get; init; }
 
     internal GesResolvedType[]? Element { get; init; }
+
+    // The `depth` of a List whose element is the schema that declares it: how many records of it nest; 0 without one.
+    internal int Depth { get; init; }
 
     internal GesResolvedConstraints Constraints { get; init; } = new();
 
@@ -488,11 +494,16 @@ internal sealed partial class GesFileScope
                 if (!tags.Add(tag)) throw Error(Code.DuplicateName, syntax.Offset, $"Tag '#{tag}' is listed twice.");
             declaration.Lets = ResolveLets(syntax, names);
             var fields = new GesResolvedField[syntax.Fields.Length];
+            var recursive = false;
             for (var index = 0; index < fields.Length; index++)
             {
                 var field = syntax.Fields[index];
                 if (!names.Add(field.Name)) throw Error(Code.DuplicateName, field.Offset, $"'{field.Name}' is declared twice in '{declaration.Name}'.");
                 fields[index] = ResolveField(field, index, declaration.Kind, all);
+                CheckDepth(field.Alternatives, fields[index].Alternatives, declaration, top: true);
+                if (fields[index].Alternatives[0].Depth == 0) continue;
+                if (recursive) throw Error(Code.InvalidConstraint, field.Alternatives[0].DepthOffset, "A schema holds at most one List with depth.");
+                recursive = true;
             }
 
             declaration.Fields = fields;
@@ -675,6 +686,20 @@ internal sealed partial class GesFileScope
         }
     }
 
+    // `depth` stands only on a field's List of the schema that declares the field, which may then hold itself that many
+    // levels deep; every other cycle stays an error.
+    private void CheckDepth(GesSchemaTypeSyntax[] written, GesResolvedType[] resolved, GesResolvedDeclaration owner, bool top)
+    {
+        for (var index = 0; index < written.Length; index++)
+        {
+            var type = resolved[index];
+            if (type.Depth > 0 && !(top && written.Length == 1 && type.Element is { Length: 1 } element && element[0].Reference == owner))
+                throw Error(Code.InvalidConstraint, written[index].DepthOffset, "depth stands on a field's List whose element is the schema that declares it.");
+            if (type.Depth == 1) throw Error(Code.InvalidConstraint, written[index].DepthOffset, "A depth of 1 leaves the List always empty; it counts the records that nest, at least 2.");
+            if (written[index].Element is { } elements) CheckDepth(elements, type.Element!, owner, top: false);
+        }
+    }
+
     // A let is a literal or a file constant. Its name differs from the fields and other lets of its schema and from the
     // parameters of its file, since a bound names either.
     private GesResolvedLet[] ResolveLets(GesSchemaDeclarationSyntax syntax, HashSet<string> names)
@@ -790,6 +815,7 @@ internal sealed partial class GesFileScope
             Tags = type.Tags,
             Max = max,
             Element = type.Element is { } element ? ResolveUnion(element, all) : null,
+            Depth = type.Depth,
             Constraints = constraints,
             Axes = axes,
             Reference = reference,
@@ -1030,6 +1056,7 @@ internal static class GesSchemaCanonical
                 if (!DefaultType(element, builder)) return false;
                 builder.Append(')');
                 if (type.Max is { } max) builder.Append(" max ").Append(max);
+                if (type.Depth > 0) builder.Append(" depth ").Append(type.Depth);
                 return true;
             case GesSchemaTypeKind.Number or GesSchemaTypeKind.Percentage or GesSchemaTypeKind.Quantity or GesSchemaTypeKind.Dice:
                 WriteType(new GesResolvedType { Kind = type.Kind, Unit = type.Unit, Max = type.Max, Constraints = WithoutDelta(type.Constraints) }, builder);
@@ -1140,6 +1167,7 @@ internal static class GesSchemaCanonical
                 }
 
                 if (type.Max is { } listMax) builder.Append(" max ").Append(listMax);
+                if (type.Depth > 0) builder.Append(" depth ").Append(type.Depth);
                 break;
             case GesSchemaTypeKind.Reference:
                 builder.Append(type.ReferenceName);

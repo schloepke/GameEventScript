@@ -131,6 +131,7 @@ internal static class SchemaApiObservations
         if (type.Tags.Count > 0) result["tags"] = type.Tags.ToArray();
         if (type.Max is { } max) result["max"] = max;
         if (type.Element.Count > 0) result["element"] = type.Element.Select(Describe).ToArray();
+        if (type.Depth > 0) result["depth"] = type.Depth;
         if (type.Axes.Count > 0) result["axes"] = type.Axes.Select(axis =>
         {
             var entry = new Dictionary<string, object?> { ["name"] = axis.Name };

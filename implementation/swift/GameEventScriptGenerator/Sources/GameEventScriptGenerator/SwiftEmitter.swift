@@ -334,7 +334,7 @@ enum GesSwiftEmitter {
             }
         }
         code.blank()
-        code.open("func __writeFields(_ writer: inout GesBitWriter, _ paths: [String], _ at: Int) throws(GesWireError) {")
+        code.open("func __writeFields(_ writer: inout GesBitWriter, _ paths: [String], _ at: Int\(levelParameter(type))) throws(GesWireError) {")
         for field in type.fields {
             let target = "self." + member(field.base)
             if field.optional {
@@ -351,7 +351,7 @@ enum GesSwiftEmitter {
         for tag in type.tags { code.line("try writer.write(self.\(member(tag.base)) ? 1 : 0, width: 1)") }
         code.close()
         code.blank()
-        code.open("\(mutating)func __readFields(_ reader: inout GesBitReader, _ paths: [String], _ at: Int) throws(GesWireError) {")
+        code.open("\(mutating)func __readFields(_ reader: inout GesBitReader, _ paths: [String], _ at: Int\(levelParameter(type))) throws(GesWireError) {")
         for field in type.fields {
             let target = "self." + member(field.base)
             if field.optional {
@@ -474,6 +474,20 @@ enum GesSwiftEmitter {
 
     static func path(_ value: GesPlanValue) -> String { "paths[at + \(value.node)]" }
 
+    // A recursive schema's methods take the level of the record, 1 where a caller enters the recursion.
+    static func levelParameter(_ type: GesPlanType) -> String { type.depth > 0 ? ", _ level: Int = 1" : "" }
+
+    // The level argument of a call into a record: one deeper for the element of a recursive List.
+    static func nextLevel(_ value: GesPlanValue) -> String { value.recursive ? ", level + 1" : "" }
+
+    // Opens the levels of a recursive List that hold elements; at its depth the List holds nothing, so data there is deeper.
+    static func openLevels(_ code: inout Code, _ value: GesPlanValue, _ count: String) {
+        code.open("if level >= \(value.depth) {")
+        code.line("if \(count) > 0 { throw GesWireError(code: GesWireError.tooDeep, path: \(path(value)), detail: \"deeper than depth \(value.depth)\") }")
+        code.close("} else {")
+        code.indent()
+    }
+
     static func fail(_ code: String, _ value: GesPlanValue) -> String { "throw GesWireError(code: GesWireError.\(code), path: \(path(value)))" }
 
     static func write(_ code: inout Code, _ value: GesPlanValue, _ target: String) {
@@ -527,6 +541,7 @@ enum GesSwiftEmitter {
             code.line("try writer.write(UInt64(\(bytes).count), width: \(width))")
             code.line("for byte in \(bytes) { try writer.write(UInt64(byte), width: 8) }")
         case .list:
+            if value.depth > 0 { openLevels(&code, value, target + ".count") }
             code.line("if \(target).count > \(max) { \(fail("tooLong", value)) }")
             code.line("try writer.write(UInt64(\(target).count), width: \(width))")
             code.open("for item in \(target) {")
@@ -536,11 +551,12 @@ enum GesSwiftEmitter {
                 write(&code, value.element!, "item")
             }
             code.close()
+            if value.depth > 0 { code.close() }
         case .point, .vector:
             for axis in value.axes { write(&code, axis, target + "." + member(axis.base)) }
             for axis in GesSchemaPlanner.omitted(value) { code.line("if \(target).\(member(axis)) != 0 { \(fail("typeMismatch", value)) }") }
         case .schema:
-            code.line("try \(target).__writeFields(&writer, paths, at + \(value.node + 1))")
+            code.line("try \(target).__writeFields(&writer, paths, at + \(value.node + 1)\(nextLevel(value)))")
         case .union:
             code.line("switch \(target) {")
             for (index, alternative) in value.alternatives.enumerated() {
@@ -605,7 +621,15 @@ enum GesSwiftEmitter {
         case .list:
             let element = value.element!
             let name = elementName(value)
-            code.open("do {")
+            if value.depth > 0 {
+                // The deepest level reads no count, since its List takes no bits.
+                code.open("if level >= \(value.depth) {")
+                code.line("\(target).removeAll(keepingCapacity: true)")
+                code.close("} else {")
+                code.indent()
+            } else {
+                code.open("do {")
+            }
             code.line("let count = Int(try reader.read(\(width), path: \(path(value))))")
             code.line("if count > \(max) { \(fail("invalidCount", value)) }")
             code.line("\(target).removeAll(keepingCapacity: true)")
@@ -631,7 +655,7 @@ enum GesSwiftEmitter {
             for axis in value.axes { read(&code, axis, target + "." + member(axis.base)) }
             for axis in GesSchemaPlanner.omitted(value) { code.line("\(target).\(member(axis)) = 0") }
         case .schema:
-            code.line("try \(target).__readFields(&reader, paths, at + \(value.node + 1))")
+            code.line("try \(target).__readFields(&reader, paths, at + \(value.node + 1)\(nextLevel(value)))")
         case .union:
             code.open("do {")
             code.line("let choice = try reader.read(\(width), path: \(path(value)))")

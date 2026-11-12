@@ -77,6 +77,8 @@ public final class GesSchemaParameters {
     @_spi(Generator) public var isTagText = false
     /// A `:Bytes max n`: a Text on the wire whose bytes need not be UTF-8.
     @_spi(Generator) public var isBytes = false
+    /// The `depth` of a recursive List at its deepest level, which holds no element; 0 otherwise.
+    @_spi(Generator) public var depthLimit = 0
     @_spi(Generator) public var width = 0
     @_spi(Generator) public var next = 0
     @_spi(Generator) public var after = 0
@@ -397,6 +399,8 @@ enum GesSchemaBinder {
         var nodes: [GesSchemaNode] = []
         var infos: [GesSchemaNodeInfo] = []
         let parameters: GesSchemaParameters
+        // How many records of each schema enclose the node being added, which a recursive List counts against its depth.
+        var levels: [ObjectIdentifier: Int] = [:]
     }
 
     static func bind(_ root: GesResolvedDeclaration, _ parameters: GesSchemaParameters) throws -> GesBoundSchema {
@@ -454,6 +458,7 @@ enum GesSchemaBinder {
 
     private static func bindNodes(_ declaration: GesResolvedDeclaration, _ parameters: GesSchemaParameters, _ hash: UInt64, _ bindingHash: UInt64) throws -> GesBoundSchema {
         var build = Build(parameters: parameters)
+        build.levels[ObjectIdentifier(declaration)] = 1
         for field in declaration.fields { try addField(&build, field.scope, field, "", 0, top: true) }
         for tag in declaration.tags {
             var node = GesSchemaNode()
@@ -692,6 +697,10 @@ enum GesSchemaBinder {
             node.isBytes = type.kind == .bytes
             node.maxCount = max
             node.width = bitLength(UInt64(max))
+        case .list where type.depth > 0 && (build.levels[ObjectIdentifier(type.element![0].reference!)] ?? 0) >= type.depth:
+            // The deepest level of a recursive List holds no element: it is empty, so it takes no bits and no list nesting.
+            node.kind = .list
+            node.depthLimit = type.depth
         case .list:
             guard let element = type.element, let max = type.max else { throw scope.error(Code.notEncodable, type.offset, "A List without element type and max has no hard limit.") }
             if lists >= maximumListNesting { throw scope.error(Code.notEncodable, type.offset, "Lists nest at most \(maximumListNesting) levels for encoding.") }
@@ -730,7 +739,10 @@ enum GesSchemaBinder {
             node.kind = .group
             info.schemaName = type.referenceName
             let reference = type.reference!
+            let level = build.levels[ObjectIdentifier(reference)] ?? 0
+            build.levels[ObjectIdentifier(reference)] = level + 1
             for field in reference.fields { try addField(&build, field.scope, field, path, lists, top: false) }
+            build.levels[ObjectIdentifier(reference)] = level == 0 ? nil : level
         default:
             throw scope.error(Code.notEncodable, type.offset, "A \(type.kind.rawValue) has no width and is only for documents.")
         }
@@ -745,30 +757,35 @@ enum GesSchemaBinder {
     // errors.
     static func checkEncodable(_ root: GesResolvedDeclaration) throws {
         var known: Set<EncodableVisit> = []
+        var levels: [ObjectIdentifier: Int] = [:]
         if root.kind == .messages {
-            for member in root.members { try checkEncodable(member, 0, &known) }
+            for member in root.members { try checkEncodable(member, 0, &known, &levels) }
             return
         }
-        try checkEncodable(root, 0, &known)
+        try checkEncodable(root, 0, &known, &levels)
     }
 
     private struct EncodableVisit: Hashable {
         let declaration: ObjectIdentifier
         let lists: Int
+        let level: Int
     }
 
-    private static func checkEncodable(_ declaration: GesResolvedDeclaration, _ lists: Int, _ known: inout Set<EncodableVisit>) throws {
-        guard known.insert(EncodableVisit(declaration: ObjectIdentifier(declaration), lists: lists)).inserted else { return }
+    private static func checkEncodable(_ declaration: GesResolvedDeclaration, _ lists: Int, _ known: inout Set<EncodableVisit>, _ levels: inout [ObjectIdentifier: Int]) throws {
+        let outer = levels[ObjectIdentifier(declaration)] ?? 0
+        guard known.insert(EncodableVisit(declaration: ObjectIdentifier(declaration), lists: lists, level: outer + 1)).inserted else { return }
+        levels[ObjectIdentifier(declaration)] = outer + 1
         for field in declaration.fields {
             if field.alternatives.count == 1 {
-                try checkEncodable(field.scope, field.alternatives[0], lists, &known)
+                try checkEncodable(field.scope, field.alternatives[0], lists, &known, &levels)
             } else {
-                for alternative in field.alternatives where alternative.kind != .nothing { try checkEncodable(field.scope, alternative, lists, &known) }
+                for alternative in field.alternatives where alternative.kind != .nothing { try checkEncodable(field.scope, alternative, lists, &known, &levels) }
             }
         }
+        levels[ObjectIdentifier(declaration)] = outer == 0 ? nil : outer
     }
 
-    private static func checkEncodable(_ scope: GesFileScope, _ type: GesResolvedType, _ lists: Int, _ known: inout Set<EncodableVisit>) throws {
+    private static func checkEncodable(_ scope: GesFileScope, _ type: GesResolvedType, _ lists: Int, _ known: inout Set<EncodableVisit>, _ levels: inout [ObjectIdentifier: Int]) throws {
         switch type.kind {
         case .boolean, .point, .vector:
             for axis in type.axes ?? [] { try checkWrapping(scope, axis.constraints, type.offset) }
@@ -780,20 +797,22 @@ enum GesSchemaBinder {
             break
         case .text, .bytes:
             if type.max == nil { throw scope.error(Code.notEncodable, type.offset, "A \(type.kind.rawValue) without max has no hard limit.") }
+        case .list where type.depth > 0 && (levels[ObjectIdentifier(type.element![0].reference!)] ?? 0) >= type.depth:
+            break
         case .list:
             guard let element = type.element, type.max != nil else { throw scope.error(Code.notEncodable, type.offset, "A List without element type and max has no hard limit.") }
             if lists >= maximumListNesting { throw scope.error(Code.notEncodable, type.offset, "Lists nest at most \(maximumListNesting) levels for encoding.") }
             if element.count == 1 {
-                try checkEncodable(scope, element[0], lists + 1, &known)
+                try checkEncodable(scope, element[0], lists + 1, &known, &levels)
             } else {
-                for alternative in element where alternative.kind != .nothing { try checkEncodable(scope, alternative, lists + 1, &known) }
+                for alternative in element where alternative.kind != .nothing { try checkEncodable(scope, alternative, lists + 1, &known, &levels) }
             }
             if !hasBits(element) { throw scope.error(Code.notEncodable, type.offset, "A List element without bits has a count that no data limits.") }
         case .dice:
             if type.max == nil { throw scope.error(Code.notEncodable, type.offset, "A Dice without max has no hard limit.") }
             if lists >= maximumListNesting { throw scope.error(Code.notEncodable, type.offset, "Lists nest at most \(maximumListNesting) levels for encoding.") }
         case .reference:
-            try checkEncodable(type.reference!, lists, &known)
+            try checkEncodable(type.reference!, lists, &known, &levels)
         default:
             throw scope.error(Code.notEncodable, type.offset, "A \(type.kind.rawValue) has no width and is only for documents.")
         }

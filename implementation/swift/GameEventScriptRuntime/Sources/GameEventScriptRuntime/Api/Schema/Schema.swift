@@ -94,6 +94,9 @@ public struct GesSchemaType: Sendable {
     public let max: Int64?
     /// The alternatives of a List's element; empty when any element is allowed.
     public let element: [GesSchemaType]
+    /// The `depth` of a List whose element is the schema that declares it: how many records of that schema nest in each
+    /// other at most; 0 for every other type.
+    public let depth: Int
     /// The axes of an axis block in x, y, z order; empty without a block, when all three are stored in full.
     public let axes: [GesSchemaAxisInfo]
     /// The schema a `.reference` refers to.
@@ -114,6 +117,7 @@ public struct GesSchemaType: Sendable {
         label = type.label
         max = type.max
         element = (type.element ?? []).map(GesSchemaType.init)
+        depth = type.depth
         axes = (type.axes ?? []).map(GesSchemaAxisInfo.init)
         schema = type.reference?.schema
     }

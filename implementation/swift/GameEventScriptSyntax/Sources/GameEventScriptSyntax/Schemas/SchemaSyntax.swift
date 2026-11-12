@@ -150,6 +150,9 @@ public enum GesSchemaTypeKind: String, Sendable, Equatable {
     @_spi(Syntax) public var maxOffset = 0
     /// The alternatives of a List's element.
     @_spi(Syntax) public var element: [GesSchemaTypeSyntax]?
+    /// The written `depth` of a List whose element is the schema that declares it, and where it starts; 0 without one.
+    @_spi(Syntax) public var depth = 0
+    @_spi(Syntax) public var depthOffset = 0
     @_spi(Syntax) public var constraints = GesSchemaConstraintsSyntax()
     @_spi(Syntax) public var axes: [GesSchemaAxisSyntax]?
     @_spi(Syntax) public var offset = 0

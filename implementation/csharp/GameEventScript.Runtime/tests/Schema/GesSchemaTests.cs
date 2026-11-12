@@ -445,6 +445,22 @@ public sealed class GesSchemaTests
         Assert.AreEqual("wire.truncated", Read(small, field, []));
     }
 
+    [TestMethod]
+    public void ARecordBelowTheDepthNamesTheDepth()
+    {
+        var set = GesSchemaSet.Parse("schema :Bind as {\n  name: :Text max 8\n  units: :List(:Bind) max 4 depth 2\n}\n");
+        var schema = set.Schema("Bind").Bind();
+        GesValue Bind(string name, params GesValue[] units) => GesValue.GesRecord("Bind", ("name", GesValue.GesText(name)), ("units", GesValue.GesList(units)));
+        var buffer = new byte[schema.MaxByteCount];
+        Assert.IsGreaterThan(0, GesSchemaValues.Encode(schema, Bind("a", Bind("b")), buffer));
+        var error = Assert.ThrowsExactly<GesWireException>(() => GesSchemaValues.Encode(schema, Bind("a", Bind("b", Bind("c"))), buffer));
+        Assert.AreEqual(GesWireException.TooDeep, error.Code);
+        Assert.AreEqual("units[].units", error.Path);
+        Assert.AreEqual("deeper than depth 2", error.Detail);
+        Assert.AreEqual("wire.tooDeep at 'units[].units': deeper than depth 2", error.Message);
+        Assert.AreEqual("", new GesWireException(GesWireException.TooLong, "units").Detail);
+    }
+
     private static string Read(GesBoundSchema schema, GesSchemaField field, byte[] data)
     {
         try

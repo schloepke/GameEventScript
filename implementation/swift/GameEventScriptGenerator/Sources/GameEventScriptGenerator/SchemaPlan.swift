@@ -15,6 +15,10 @@ final class GesPlanType {
 
     // A synthesized list element type, which shares the paths of its owner.
     var isItem = false
+
+    // The depth of a recursive schema's List of itself, 0 for other types. Only such a schema takes the level of its record
+    // in the recursion, since its deepest List holds nothing; every other type keeps constant offsets.
+    var depth = 0
     var paths: [String] = []
     var fields: [GesPlanField] = []
 
@@ -48,6 +52,14 @@ final class GesPlanValue {
 
     // Whether the value refers to a type that is a class.
     var isClass = false
+
+    // Whether the value is the element of a recursive List: its schema's record one level deeper, whose nodes follow the
+    // declaring schema's own nodes.
+    var recursive = false
+
+    // The depth of a recursive List of the schema that holds it, 0 for every other value. Where `with` copies such a List
+    // into another schema, it is an ordinary List there.
+    var depth = 0
 
     // How an emitter spells the type of a Tag of a named tag set, which is declared once beside the records.
     var tagType = ""
@@ -161,12 +173,20 @@ enum GesSchemaPlanner {
         for field in type.fields {
             var planned = GesPlanField(layout: field, base: member(field.name, type.name), optional: field.optional, key: field.key)
             planned.value = value(context, field.encoding, planned.base, "", node)
-            node += count(context.layout, field.encoding, &context.counts)
+            node += count(context.layout, field.encoding, &context.counts, owner: type.name)
             plan.fields.append(planned)
         }
         for tag in type.tags {
             plan.tags.append((tag, member(tag, type.name), node))
             node += 1
+        }
+        // The element of a recursive List and its nodes come after the schema's own nodes, so that every own node keeps its
+        // offset at every level and only the element's subtree, whose size depends on the level, varies.
+        for field in plan.fields where recursive(field.layout.encoding, type.name) {
+            plan.depth = field.value.encoding.depth
+            field.value.depth = field.value.encoding.depth
+            field.value.element!.node = node
+            field.value.element!.recursive = true
         }
         return plan
     }
@@ -224,11 +244,17 @@ enum GesSchemaPlanner {
         return result
     }
 
-    // The number of nodes an encoding occupies in a bound layout.
-    static func count(_ layout: GesSchemaLayout, _ encoding: GesLayoutEncoding, _ counts: inout [String: Int]) -> Int {
+    // Whether an encoding is a recursive List of the schema that holds it.
+    private static func recursive(_ encoding: GesLayoutEncoding, _ owner: String) -> Bool {
+        encoding.kind == .list && encoding.depth > 0 && encoding.element!.encoding.schema == owner
+    }
+
+    // The number of nodes an encoding occupies in a bound layout; the element of a recursive List of `owner` is counted
+    // apart, after its own nodes.
+    static func count(_ layout: GesSchemaLayout, _ encoding: GesLayoutEncoding, _ counts: inout [String: Int], owner: String = "") -> Int {
         switch encoding.kind {
         case .list:
-            return 1 + count(layout, encoding.element!.encoding, &counts)
+            return recursive(encoding, owner) ? 1 : 1 + count(layout, encoding.element!.encoding, &counts)
         case .point, .vector:
             return 1 + encoding.axes.count
         case .union:
@@ -237,8 +263,7 @@ enum GesSchemaPlanner {
             return total
         case .schema:
             if let nested = counts[encoding.schema] { return 1 + nested }
-            var nested = 0
-            for field in layout.type(encoding.schema).fields { nested += count(layout, field.encoding, &counts) }
+            let nested = nodes(layout, layout.type(encoding.schema), 1, &counts)
             counts[encoding.schema] = nested
             return 1 + nested
         default:
@@ -246,21 +271,44 @@ enum GesSchemaPlanner {
         }
     }
 
+    // The nodes of a schema's fields at a level of its recursion: its own nodes and, below the depth of a recursive List, the
+    // element and its nodes one level deeper.
+    private static func nodes(_ layout: GesSchemaLayout, _ type: GesLayoutType, _ level: Int, _ counts: inout [String: Int]) -> Int {
+        var total = 0
+        var depth = 0
+        for field in type.fields {
+            total += count(layout, field.encoding, &counts, owner: type.name)
+            if recursive(field.encoding, type.name) { depth = field.encoding.depth }
+        }
+        return level < depth ? total + 1 + nodes(layout, type, level + 1, &counts) : total
+    }
+
     // The paths of a type's nodes in order; a nested schema's paths follow its field's path, and a message's tags its fields.
+    // A recursive List's element and its paths come last, one level deeper each time.
     private static func paths(_ layout: GesSchemaLayout, _ type: GesLayoutType, _ cache: inout [String: [String]]) -> [String] {
         if let known = cache[type.name] { return known }
-        var paths: [String] = []
-        for field in type.fields { self.paths(layout, field.path, field.encoding, &paths, &cache) }
-        for tag in type.tags { paths.append("#" + tag) }
+        let paths = self.paths(layout, type, 1, &cache)
         cache[type.name] = paths
         return paths
     }
 
-    private static func paths(_ layout: GesSchemaLayout, _ path: String, _ encoding: GesLayoutEncoding, _ paths: inout [String], _ cache: inout [String: [String]]) {
+    private static func paths(_ layout: GesSchemaLayout, _ type: GesLayoutType, _ level: Int, _ cache: inout [String: [String]]) -> [String] {
+        var paths: [String] = []
+        for field in type.fields { self.paths(layout, field.path, field.encoding, &paths, &cache, owner: type.name) }
+        for tag in type.tags { paths.append("#" + tag) }
+        for field in type.fields where recursive(field.encoding, type.name) && level < field.encoding.depth {
+            let element = field.encoding.element!.path
+            paths.append(element)
+            for nested in self.paths(layout, type, level + 1, &cache) { paths.append(element + "." + nested) }
+        }
+        return paths
+    }
+
+    private static func paths(_ layout: GesSchemaLayout, _ path: String, _ encoding: GesLayoutEncoding, _ paths: inout [String], _ cache: inout [String: [String]], owner: String = "") {
         paths.append(path)
         switch encoding.kind {
         case .list:
-            self.paths(layout, encoding.element!.path, encoding.element!.encoding, &paths, &cache)
+            if !recursive(encoding, owner) { self.paths(layout, encoding.element!.path, encoding.element!.encoding, &paths, &cache) }
         case .point, .vector:
             for axis in encoding.axes { paths.append(axis.path) }
         case .union:

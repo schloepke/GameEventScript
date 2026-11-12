@@ -66,6 +66,8 @@ final class GesModelValue {
     var tagSet = ""
     var max: Int64?
     var element: GesModelField?
+    // The depth of a recursive List, 0 for every other List.
+    var depth = 0
     // The axes a Point or Vector declares, empty without an axis block; union alternatives; a schema reference.
     var axes: [String] = []
     var alternatives: [GesModelField] = []
@@ -207,6 +209,7 @@ enum GesModelLayoutBuilder {
         case .list where !type.element.isEmpty:
             value.kind = .list
             value.max = type.max
+            value.depth = type.depth
             value.element = try field("[]", path + "[]", type.element)
         case .dice:
             value.kind = .dice
@@ -310,6 +313,7 @@ enum GesModelLayoutJson {
             optional(&json, "max", value.max)
         case .list:
             optional(&json, "max", value.max)
+            if value.depth > 0 { json.number("depth", Int64(value.depth)) }
             json.key("element")
             field(&json, value.element!, member: false, value: true)
         case .dice:

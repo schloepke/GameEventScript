@@ -321,6 +321,12 @@ the Generator only returns the files (`GenerateFiles`, `GenerateModelFiles`), wh
 evaluate them in the value path, the generators translate the checked tree with the helper library `GesComputedLibrary`
 (templates identical in both ports), the harness of `test-generated-schemas.py` checks the generated properties, and
 `scripts/test-computed-fields.py` runs every corpus record with computed fields as a script record on both VMs.
+`compare-schema-generation.py` also ratchets a digest of every output against `scripts/schema-generation-baseline.txt`
+(`--update-baseline` after a deliberate change), so a change of existing generated code is visible. A recursive List
+(`:List(:Self) max n depth d`, specs/Schemas.md#recursion) unrolls per level at binding; only the recursive schema's
+generated methods take a level and order its deeper paths last, and every schema without one must generate unchanged
+code. `conformance/fixtures/SchemaGeneration/tree.gess` has checked-in goldens (`TreeWire`, `TreeModel`) and native tests
+in both ports.
 
 ## Host and runtime
 

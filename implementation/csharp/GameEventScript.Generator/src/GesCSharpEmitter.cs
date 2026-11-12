@@ -372,7 +372,7 @@ internal static partial class GesCSharpEmitter
         }
 
         code.Blank();
-        code.Line($"internal {self}void __WriteFields(ref GesBitWriter writer, string[] paths, int at)");
+        code.Line($"internal {self}void __WriteFields(ref GesBitWriter writer, string[] paths, int at{LevelParameter(type)})");
         code.Open("{");
         foreach (var field in type.Fields)
         {
@@ -391,7 +391,7 @@ internal static partial class GesCSharpEmitter
         foreach (var (_, name, _) in type.Tags) code.Line($"writer.Write({name} ? 1UL : 0UL, 1);");
         code.Close();
         code.Blank();
-        code.Line("internal void __ReadFields(ref GesBitReader reader, string[] paths, int at)");
+        code.Line($"internal void __ReadFields(ref GesBitReader reader, string[] paths, int at{LevelParameter(type)})");
         code.Open("{");
         foreach (var field in type.Fields)
         {
@@ -512,6 +512,24 @@ internal static partial class GesCSharpEmitter
 
     private static string Path(GesPlanValue value) => $"paths[at + {value.Node.ToString(CultureInfo.InvariantCulture)}]";
 
+    // A recursive schema's methods take the level of the record, 1 where a caller enters the recursion.
+    private static string LevelParameter(GesPlanType type) => type.Depth > 0 ? ", int level = 1" : "";
+
+    // The level argument of a call into a record: one deeper for the element of a recursive List.
+    private static string NextLevel(GesPlanValue value) => value.Recursive ? ", level + 1" : "";
+
+    // Opens the levels of a recursive List that hold elements; at its depth the List holds nothing, so data there is deeper.
+    private static void OpenLevels(GesSchemaPlanner.Code code, GesPlanValue value, string count)
+    {
+        var depth = value.Depth.ToString(CultureInfo.InvariantCulture);
+        code.Line($"if (level >= {depth})");
+        code.Open("{");
+        code.Line($"if ({count} > 0) throw new GesWireException(GesWireException.TooDeep, {Path(value)}, \"deeper than depth {depth}\");");
+        code.Close();
+        code.Line("else");
+        code.Open("{");
+    }
+
     private static string Throw(string code, GesPlanValue value) => $"throw new GesWireException(GesWireException.{code}, {Path(value)});";
 
     // Writes the value in `target`, which the caller has validated as present.
@@ -565,6 +583,7 @@ internal static partial class GesCSharpEmitter
                 code.Close();
                 break;
             case GesLayoutKind.List:
+                if (value.Depth > 0) OpenLevels(code, value, target + ".Count");
                 code.Line($"if ({target}.Count > {max}) {Throw("TooLong", value)}");
                 code.Line($"writer.Write((ulong){target}.Count, {width});");
                 code.Line($"foreach (var item in {target})");
@@ -572,13 +591,14 @@ internal static partial class GesCSharpEmitter
                 if (value.Item is not null) code.Line($"item.__WriteFields(ref writer, paths, at + {value.Element!.Node.ToString(CultureInfo.InvariantCulture)});");
                 else Write(code, value.Element!, "item");
                 code.Close();
+                if (value.Depth > 0) code.Close();
                 break;
             case GesLayoutKind.Point or GesLayoutKind.Vector:
                 foreach (var axis in value.Axes) Write(code, axis, target + "." + axis.Base);
                 foreach (var axis in GesSchemaPlanner.Omitted(value)) code.Line($"if ({target}.{axis} != 0) {Throw("TypeMismatch", value)}");
                 break;
             case GesLayoutKind.Schema:
-                code.Line($"{target}.__WriteFields(ref writer, paths, at + {(value.Node + 1).ToString(CultureInfo.InvariantCulture)});");
+                code.Line($"{target}.__WriteFields(ref writer, paths, at + {(value.Node + 1).ToString(CultureInfo.InvariantCulture)}{NextLevel(value)});");
                 break;
             case GesLayoutKind.Union:
                 code.Line($"switch ({target})");
@@ -659,6 +679,13 @@ internal static partial class GesCSharpEmitter
             case GesLayoutKind.List:
                 var element = value.Element!;
                 var name = ElementName(value);
+                if (value.Depth > 0)
+                {
+                    // The deepest level reads no count, since its List takes no bits.
+                    code.Line($"if (level >= {value.Depth.ToString(CultureInfo.InvariantCulture)}) {target}.Clear();");
+                    code.Line("else");
+                }
+
                 code.Open("{");
                 code.Line($"var count = (int)reader.Read({width}, {Path(value)});");
                 code.Line($"if (count > {max}) {Throw("InvalidCount", value)}");
@@ -683,7 +710,7 @@ internal static partial class GesCSharpEmitter
                 foreach (var axis in GesSchemaPlanner.Omitted(value)) code.Line($"{target}.{axis} = 0;");
                 break;
             case GesLayoutKind.Schema:
-                code.Line($"{target}.__ReadFields(ref reader, paths, at + {(value.Node + 1).ToString(CultureInfo.InvariantCulture)});");
+                code.Line($"{target}.__ReadFields(ref reader, paths, at + {(value.Node + 1).ToString(CultureInfo.InvariantCulture)}{NextLevel(value)});");
                 break;
             case GesLayoutKind.Union:
                 code.Open("{");

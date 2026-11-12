@@ -159,6 +159,9 @@ final class GesLayoutEncoding {
     var positionWidth = 0
     var element: GesLayoutField?
 
+    // A recursive List: how many records of its schema nest at most, and 0 for every other List.
+    var depth = 0
+
     // Point and Vector axes, union alternatives and schema references.
     var axes: [GesLayoutField] = []
     var alternatives: [GesLayoutField] = []
@@ -319,6 +322,7 @@ enum GesSchemaLayoutBuilder {
             encoding.width = node.width
         case .list:
             list(node, encoding)
+            encoding.depth = type.depth
             index += 1
             encoding.element = field(bound, &index, "[]", type.element)
             return encoding

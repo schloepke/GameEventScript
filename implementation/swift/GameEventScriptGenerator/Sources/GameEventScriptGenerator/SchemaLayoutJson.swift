@@ -168,6 +168,7 @@ enum GesSchemaLayoutJson {
             json.number("width", Int64(encoding.width))
             json.boolean("keyed", encoding.keyed)
             json.number("positionWidth", Int64(encoding.positionWidth))
+            if encoding.depth > 0 { json.number("depth", Int64(encoding.depth)) }
             json.key("element")
             field(&json, encoding.element!, member: false, value: true)
         case .point, .vector:

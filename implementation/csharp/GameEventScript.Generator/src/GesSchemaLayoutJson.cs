@@ -214,6 +214,7 @@ internal static class GesSchemaLayoutJson
                 json.Number("width", encoding.Width);
                 json.Boolean("keyed", encoding.Keyed);
                 json.Number("positionWidth", encoding.PositionWidth);
+                if (encoding.Depth > 0) json.Number("depth", encoding.Depth);
                 json.Key("element");
                 Field(json, encoding.Element!, member: false, value: true);
                 break;

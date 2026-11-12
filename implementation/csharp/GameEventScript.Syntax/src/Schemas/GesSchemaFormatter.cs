@@ -329,6 +329,7 @@ internal static class GesSchemaFormatter
 
                 if (type.Max is { } listMax) builder.Append(" max ").Append(listMax);
                 else if (type.MaxName.Length > 0) builder.Append(" max ").Append(type.MaxName);
+                if (type.Depth > 0) builder.Append(" depth ").Append(type.Depth);
                 return;
             case GesSchemaTypeKind.Dice:
                 builder.Append(":Dice");

@@ -261,6 +261,9 @@ public ref struct GesSchemaWriter
         Leave(node.After);
     }
 
+    // A recursive List at its deepest level holds nothing; data that goes on is deeper than the depth.
+    internal static GesWireException TooDeep(string path, int depth) => new(GesWireException.TooDeep, path, $"deeper than depth {depth}");
+
     /// <summary>Starts a list with its element count; the elements follow.</summary>
     /// <param name="field">The field's handle.</param>
     /// <param name="count">The element count.</param>
@@ -268,6 +271,7 @@ public ref struct GesSchemaWriter
     {
         ref readonly var node = ref Current(field);
         if (node.Kind != GesSchemaNodeKind.List) throw new GesWireException(GesWireException.TypeMismatch, node.Path);
+        if (count > 0 && node.DepthLimit > 0) throw TooDeep(node.Path, node.DepthLimit);
         if (count < 0 || count > node.MaxCount) throw new GesWireException(GesWireException.TooLong, node.Path);
         Presence(in node);
         Put((ulong)count, node.Width);

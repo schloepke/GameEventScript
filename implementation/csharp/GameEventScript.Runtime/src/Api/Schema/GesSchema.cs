@@ -168,6 +168,7 @@ public sealed class GesSchemaType
         Label = type.Label;
         Max = type.Max;
         Element = GesSchema.Types(type.Element ?? []);
+        Depth = type.Depth;
         var axes = new List<GesSchemaAxisInfo>();
         foreach (var axis in type.Axes ?? []) axes.Add(new GesSchemaAxisInfo(axis));
         Axes = new GesReadOnlyArray<GesSchemaAxisInfo>(axes);
@@ -216,6 +217,10 @@ public sealed class GesSchemaType
 
     /// <summary>Gets the alternatives of a List's element; empty when any element is allowed.</summary>
     public GesReadOnlyArray<GesSchemaType> Element { get; }
+
+    /// <summary>Gets the <c>depth</c> of a List whose element is the schema that declares it: how many records of that schema
+    /// nest in each other at most; 0 for every other type.</summary>
+    public int Depth { get; }
 
     /// <summary>Gets the axes of an axis block in x, y, z order; empty without a block, when all three are stored in full.</summary>
     public GesReadOnlyArray<GesSchemaAxisInfo> Axes { get; }

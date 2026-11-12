@@ -90,7 +90,8 @@ schema :Tank as {
   roll takes 31 bits. A Dice value always holds its rolls sorted, whatever their order in the data.
 - `optional` adds one presence bit. An absent value reads as `nothing`.
 - `:Point` and `:Vector` list the axes they transmit. An axis left out is not sent and must be zero.
-- `:Weapon` refers to another schema, whose fields follow inline. References cannot form a cycle.
+- `:Weapon` refers to another schema, whose fields follow inline. References cannot form a cycle, except through
+  a recursive List, shown below.
 
 A single switch is a `:Boolean` field and takes one bit. Several switches fit one field,
 `:Flags(#armed, #cloaked, #docked)`, with one bit per member. Code and scripts write it as a flag Map such as
@@ -124,6 +125,20 @@ schema :Turret as {
 
 `:Mount` behaves exactly like `:Tag(#front, #right, #rear, #left)` written in place, with the same bytes and
 hash. Generated code declares one `Mount` type that both fields use.
+
+A tree of records holds itself through one List with a `depth`:
+
+```gess
+schema :Bind as {
+  name: :Text max 16
+  units: :List(:Bind) max 8 depth 3
+}
+```
+
+A `:Bind` holds up to 8 binds, each of them up to 8 more, and those hold none: at most three records nest. The
+bytes are those of three schemas, one per level, and the deepest List takes no bits. A tree that goes deeper fails to
+encode with `wire.tooDeep`, whose message names the depth, such as
+`wire.tooDeep at 'units[].units[].units': deeper than depth 3`. See [recursion](../../specs/Schemas.md#recursion).
 
 ## 4. Share values with constants and parameters
 

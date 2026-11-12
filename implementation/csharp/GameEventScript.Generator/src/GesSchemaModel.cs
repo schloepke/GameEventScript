@@ -101,6 +101,9 @@ internal sealed class GesModelValue
     internal long? Max;
     internal GesModelField? Element;
 
+    // The depth of a recursive List, 0 for every other List.
+    internal int Depth;
+
     // The axes a Point or Vector declares, empty without an axis block; union alternatives; a schema reference.
     internal List<string> Axes = [];
     internal List<GesModelField> Alternatives = [];
@@ -273,6 +276,7 @@ internal static class GesModelLayoutBuilder
             case GesSchemaTypeKind.List when type.Element.Count > 0:
                 value.Kind = GesModelKind.List;
                 value.Max = type.Max;
+                value.Depth = type.Depth;
                 value.Element = Field("[]", path + "[]", type.Element);
                 break;
             case GesSchemaTypeKind.Dice:
@@ -401,6 +405,7 @@ internal static class GesModelLayoutJson
                 break;
             case GesModelKind.List:
                 Optional(json, "max", value.Max);
+                if (value.Depth > 0) json.Number("depth", value.Depth);
                 json.Key("element");
                 Field(json, value.Element!, member: false, value: true);
                 break;

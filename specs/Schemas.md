@@ -93,7 +93,7 @@ type        = ":Boolean"
             | ":Tag" [ tagset | "max" maximum ]
             | ":Text" [ "max" maximum ]
             | ":Bytes" [ "max" maximum ]
-            | ":List" [ "(" union ")" [ "max" maximum ] ]
+            | ":List" [ "(" union ")" [ "max" maximum ] [ "depth" depth ] ]
             | ":" TypeName
             | ":Dice" [ "max" maximum ] constraints
             | ":Map" | ":Range" | ":Series" | ":Message" | ":Handler" | ":Nothing"
@@ -128,7 +128,8 @@ primary     = literal | "true" | "false" | "$" ConstantName | LowerName | "(" ex
 [`:Quantity(unit)`](Language.md#records-and-custom-types) accepts. `literal` is one exact
 finite number of the [number grammar](Semantics/Numbers.md#text-and-number-conversion), with an
 optional `%` or unit suffix; a Text, a constant or a parameter is no literal. `integer` is
-at most 12 decimal digits without a leading zero; a single `_` may separate two digits, as in `max 10_000`. A
+at most 12 decimal digits without a leading zero; a single `_` may separate two digits, as in `max 10_000`. `depth` is
+1 to 3 decimal digits without a leading zero, and a [recursive List](#recursion) needs at least 2. A
 `LowerName` in a `value` or `maximum` names a `let` of the schema or, only in a range, a parameter of the file; in a
 `fallback` it names a `let` or a sibling field. An [expression](#computed-fields) has its own names.
 
@@ -267,6 +268,7 @@ Types:
 | `:Text max n`, `:Text` | a text of at most `n` UTF-8 bytes, or any text |
 | `:Bytes max n`, `:Bytes` | at most `n` bytes, or any [Bytes](Language.md#bytes) |
 | `:List(T) max n`, `:List(T)`, `:List` | at most `n` elements of `T`, any number of them, or any elements |
+| `:List(:Self) max n depth d` | a [recursive List](#recursion) of the schema that declares it, at most `d` records deep |
 | `:Dice max n between a and b`, `:Dice` | at most `n` rolls, each within the range, or any rolls |
 | `:Name` | a Record of the schema `Name` |
 | `T \| U` | a value of one of the alternatives; see [rules](#rules) |
@@ -377,6 +379,39 @@ The rules come from the virtual machine, which is the reference: `scripts/test-c
 with computed fields into a script record and requires both virtual machines to print the bits that the value paths of both
 runtimes and the generated code of both languages give.
 
+### Recursion
+
+> **Since: Unreleased**
+
+A schema cannot hold itself, except through one recursive List: `units: :List(:Loadout_Bind) max 16 depth 3` in the
+schema `:Loadout_Bind` holds records of that schema, which hold such a List in turn, so that at most `d` records of the
+schema nest in each other where `d` is the `depth`. A tree of binds needs one schema instead of one per level.
+
+- **Where.** `depth` stands only on a List that is the single type of a field and whose element is the single schema that
+  declares the field. Anything else, a second recursive List in a schema, and a depth of 1, which would leave the List
+  always empty, are `schema.invalidConstraint` at `depth`. Every other reference cycle stays `schema.cycle`, and a List
+  of the schema itself without `depth` is such a cycle. The depth belongs to the [canonical form](#canonical-form) and the
+  hash; a model List may have no `max`, but `depth` still follows it.
+- **Levels.** Binding unrolls the recursion: the outermost record of the schema is level 1, and each record in the List
+  is one level deeper. Below the depth the List is an ordinary List of its `max`. At the depth it holds no record: it is
+  always empty, takes no bits, has no element and counts toward no list nesting. Each level above it nests one list
+  further, so [lists nest at most 4 levels](#rules) bounds the depth together with the other Lists around it, and the
+  [largest encoding](#largest-encoding) follows from `max` and `depth` as for any List.
+- **Deeper data.** A record in the List at the depth is deeper than the depth: writing fails with `wire.tooDeep` at the
+  List's path, with the detail `deeper than depth <d>` in its message, such as
+  `wire.tooDeep at 'root.units[].units[].units': deeper than depth 3`, and a document check with `document.tooDeep` at
+  the List. Data cannot be deeper, since a decoder reads nothing there.
+- **Taken by `with`.** Where [`with`](#declarations) copies a recursive List into another schema, it is an ordinary List
+  of the declaring schema there, whose records nest up to the depth below it. The copy counts as a reference to the
+  declaring schema, so a schema that holds it inside the declaring one forms a cycle.
+- **Keys and deltas.** A recursive List of a schema with a key is a [keyed list](#keyed-lists) at every level but the
+  deepest, which holds nothing and never changes. A delta descends through the levels like through any nested record.
+
+Unrolling keeps the wire format: a recursive record is encoded as if each level had its own schema, and readers and
+writers need no stack beyond their running lists. Only self-recursion is supported, because a schema that holds one
+recursive List has one level to count, and generated code of all other schemas stays as it is. A recursion through
+several schemas or with several Lists would need a level per path, for no use found so far.
+
 ### Constraints
 
 In this order, all optional:
@@ -428,7 +463,8 @@ Together, the type and the constraints decide a field's [encoding](#field-encodi
 - A field with a `:Nothing` alternative may be left out, in a value and in a document, which
   counts as `nothing`. A Message holds every argument of its signature, with `nothing` where one
   is absent, since its labels and their order are its signature.
-- A schema reference names a `schema`; references must not form a cycle. Nesting is
+- A schema reference names a `schema`; references must not form a cycle, except through a
+  [recursive List](#recursion). Nesting is
   limited to 32 levels. Lists nest at most 4 levels for encoding, so that a writer and
   a reader keep their running lists without allocating; deeper lists are
   `schema.notEncodable`.
@@ -477,7 +513,7 @@ Source errors use the phase `schema` with line and column, in the manner of
 | `schema.unitMismatch` | a bound, step, delta range or default has another unit than its field, a `max` names a let with a unit, or a computed expression combines units that have no result unit or gives another unit than its field |
 | `schema.invalidRange` | a lower bound is not below its upper bound |
 | `schema.invalidStep` | a step is not positive, not exact, or a bound or delta range is no multiple of it |
-| `schema.invalidConstraint` | `integer` with `step` or on a Percentage, a Dice constraint other than a range, a `max` that is not positive, `step` or `delta within` without a range, `delta within` without a step or not narrower than the field, a `max` that names a let other than a positive whole Number of at most 12 digits |
+| `schema.invalidConstraint` | `integer` with `step` or on a Percentage, a Dice constraint other than a range, a `max` that is not positive, `step` or `delta within` without a range, `delta within` without a step or not narrower than the field, a `max` that names a let other than a positive whole Number of at most 12 digits, a `depth` other than on a field's List of its own schema, a second `depth` in a schema, or a depth of 1 |
 | `schema.notEncodable` | encoding reaches a document-only type, also when the sources are read for a [wire root](#roles) |
 | `schema.invalidKey` | a `key` breaks the [key rules](#rules) |
 | `schema.invalidUnion` | a union alternative repeats a type name or has `delta within`, or a union with `:Nothing` is `optional` |
@@ -614,7 +650,7 @@ The variable of a projection is not written, so renaming it keeps the hash.
 | `:Text max n`, `:Text` | `Text max <n>`, `Text` |
 | `:Bytes max n`, `:Bytes` | `Bytes max <n>`, `Bytes` |
 | `:Dice max n between a and b`, `:Dice` | `Dice max <n> between <a> <b>`, each part only when written; `Dice` |
-| `:List(T) max n` | `List(<T>) max <n>`; `List(<T>)` and `List` without `max` or `T` |
+| `:List(T) max n` | `List(<T>) max <n>`; `List(<T>)` and `List` without `max` or `T`; ` depth <d>` follows a [recursive List](#recursion) |
 | `:TypeName`, `:Map`, ... | `TypeName`, `Map`, ... |
 
 A numeric type is followed by its constraints, and any field or argument then by its
@@ -727,7 +763,7 @@ caller owns the mapping from keys to objects. Message arguments have no key. A
 | `:Tag max n` | as `:Text max n`: the tag name without `#`, its byte count, then its bytes |
 | `:Text max n` | UTF-8 byte count, `width(n + 1)` bits, then the bytes |
 | `:Bytes max n` | as `:Text max n`: the byte count, then the bytes, which need not be UTF-8 |
-| `:List(T) max n` | element count, `width(n + 1)` bits, then the elements |
+| `:List(T) max n` | element count, `width(n + 1)` bits, then the elements; at the depth of a [recursive List](#recursion) nothing |
 | `:Dice max n` | roll count, `width(n + 1)` bits, then each roll as an `integer` of its range, `1` to `2^31 - 1` without one. The [value path](#value-path) writes them in descending order and a typed writer in the order of its caller; a decoder accepts any order, since creating a Dice sorts its rolls |
 | union of `n` alternatives | index in declared order, `width(n)` bits, then the alternative |
 | `:Nothing` as an alternative | no bits |
@@ -930,7 +966,8 @@ delta. In a [keyed list](#keyed-lists), an element's key has neither.
 > **Since: Unreleased**
 
 A list is keyed when its element type is a single `:TypeName` whose schema has a `key`, at any depth.
-This needs no syntax, and the full encoding does not change. Lists of other elements, including
+This needs no syntax, and the full encoding does not change. A [recursive List](#recursion) is keyed at every level but
+its deepest. Lists of other elements, including
 unions, are replaced as a whole.
 
 The payload of a changed keyed list starts with a form bit:
@@ -1083,12 +1120,15 @@ complete:
 | `wire.unknownTag` | a tag is not in its set |
 | `wire.invalidTag` | a typed writer gives a `:Tag max n` no valid tag name |
 | `wire.tooLong` | a Text, Bytes, Tag, List or Dice exceeds its `max` |
+| `wire.tooDeep` | a [recursive List](#recursion) holds a record at its depth; the message names the depth |
 | `wire.bufferTooSmall` | the caller's buffer is too small |
 | `wire.fieldOrder` | a typed writer or reader uses a field out of order |
 | `wire.keyMismatch` | a record and its baseline have different keys |
 | `wire.overlappingBuffers` | the target buffer of `GesSchemaDelta` overlaps an input, in either direction, or a generated record's baseline shares its storage |
 
-Errors carry the field path but no value from the data, so they can be logged safely.
+Errors carry the field path but no value from the data, so they can be logged safely. `wire.tooDeep` also carries a
+detail from the schema, `deeper than depth <d>`, in `GesWireException.Detail` and its message (Swift `GesWireError.detail`);
+other errors have an empty detail.
 
 ## Record values
 
@@ -1129,7 +1169,8 @@ to a `GesSchema`, which ignores it, and takes optional parameters.
   one schema no other schema of it refers to, which is the root. A reference from a message
   does not count. Without such a source or root the check fails with `schema.unknownName`.
 - Errors use document positions: `document.missingField`, `document.unknownField`,
-  `document.fieldType`, `document.outOfRange`. Units are not cast implicitly.
+  `document.fieldType`, `document.outOfRange`, and `document.tooDeep` for a non-empty
+  [recursive List](#recursion) at its depth. Units are not cast implicitly.
 - An explicit form counts as the value it constructs, so `:Number(3, 'm')` checks like `3m`.
   A position inside such a value is reported at the form. A form that constructs `nothing`
   is `document.invalidLiteral`, as in [reading](Documents.md).
@@ -1293,7 +1334,8 @@ not use it:
 - `Bind` and `CheckDocument`.
 
 An alternative is a `GesSchemaType` with `Kind`, `Unit`, `IsInteger`, `IsWrapping`, `Lower`,
-`Upper`, `Step`, `Delta`, `Tags`, `Max`, `Element`, `Axes` and, for a reference, `Schema`. An axis
+`Upper`, `Step`, `Delta`, `Tags`, `Max`, `Element`, `Depth`, 0 except for a [recursive List](#recursion), `Axes` and,
+for a reference, `Schema`. An axis
 has `Name` and the same limits. Absent limits are absent, and an empty `Tags`, `Element` or `Axes`
 means no closed set, no element type and no axis block. A limit is a `GesSchemaBound`: a parameter's
 name, or the exact decimal `Significand` and `Exponent` of the [canonical form](#schema-hash),
@@ -1384,6 +1426,14 @@ with `wire.typeMismatch` at the field's path, as the [value path](#value-path) d
 type, a nullable view. A message adds a Boolean per tag, and a message set holds the selected
 member and one record per message. After a failed read the values of the target are unspecified.
 A field named like its type, which C# does not allow, gets the suffix `Value` in every language.
+
+A schema with a [recursive List](#recursion) is a class whose List holds records of itself. Its internal methods take the
+level of the record as a last parameter, 1 by default, and pass one more to the records in the List; at the depth the
+List writes and reads nothing and fails with `wire.tooDeep` and its detail when it holds a record, in writing, counting,
+comparing, quantizing and deltas alike. Its field paths list its own fields first and then the deeper levels, so its own
+offsets stay constants at every level. No other schema changes: a schema that holds a recursive one calls it as any
+nested record, and every schema without one generates the same code as before recursion existed, which
+`scripts/compare-schema-generation.py` checks against a recorded digest of every corpus schema's output.
 
 A required list of class elements gets `Set<Field>Count(count)` (Swift `set<Field>Count(_:)`), which sets the list to
 `count` elements the record reuses, as a read does, so a caller fills it without allocating once it has grown; the
@@ -1619,7 +1669,7 @@ fields `computed` as in the generation layout, and `takes`, the schemas it takes
 protocols it refines) and `fields` (the shared fields it requires besides those). A field has
 `name`, `path`, `optional`, `key`, `default` as in the generation layout when it has one, and `type`. A type has `kind` and the members of its kind: `number` adds `type`, `unit`,
 `integer`, `wrapping`, `lower`, `upper` and `step`, a bound as its canonical decimal or parameter name or `null`; `tag` adds
-`tags` and `max`, `flags` adds `tags`, `text` and `bytes` add `max`, `list` adds `max` and `element`, `dice` adds `max`, `lower` and `upper`, `point` and
+`tags` and `max`, `flags` adds `tags`, `text` and `bytes` add `max`, `list` adds `max`, `depth` only for a [recursive List](#recursion), and `element`, `dice` adds `max`, `lower` and `upper`, `point` and
 `vector` add `unit` and `axes` (the names of an axis block), `schema` adds `name`, and `union` adds `alternatives`;
 `boolean` and `nothing` have none. A missing `max` is `null`.
 
@@ -1672,7 +1722,8 @@ exact decimals. Hashes are 16 lowercase hexadecimal digits, and a binary64 value
   - `flags`: `tags`, the members without `#`, and `width`, their count.
   - `text`: `tagName` for a `:Tag max n`, `maxCount` and `width`.
   - `bytes`: `maxCount` and `width`.
-  - `list`: `dice`, `maxCount`, `width`, `keyed`, `positionWidth` and `element`.
+  - `list`: `dice`, `maxCount`, `width`, `keyed`, `positionWidth`, `depth` only for a [recursive List](#recursion),
+    and `element`.
   - `point` and `vector`: `unit` and `axes`, the transmitted axes in order x, y, z.
   - `schema`: `name`, the type it refers to.
   - `union`: `width` and `alternatives`, in declared order.
@@ -1848,7 +1899,9 @@ Parity is verified like every GES feature.
     lists of unions, a field after a union, and rejection of a document-only alternative with
     `schema.notEncodable`;
   - the document errors `document.missingField`, `document.unknownField`,
-    `document.fieldType` and `document.outOfRange`, with their positions.
+    `document.fieldType`, `document.outOfRange` and `document.tooDeep`, with their positions;
+  - [recursive Lists](#recursion): the canonical form, trees as deep as their depth, deeper data, keyed trees and their
+    deltas, a recursive List that `with` copies, and the source errors.
 - `scripts/test-schema-roundtrip.py` exchanges real
   bytes between C# and Swift, with random values, edge values at each bound and half-step
   ties, and compares bytes and decoded binary64 bits in both directions. Negative controls

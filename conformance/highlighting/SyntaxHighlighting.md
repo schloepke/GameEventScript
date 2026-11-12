@@ -158,6 +158,10 @@ and ANSI text preservation.
 ```
 
 ```highlight
+{"name":"schema recursive list","language":"gess","source":"schema :Bind as { units: :List(:Bind) max 4 depth 3 }\n","expect":[{"text":":List","kind":"type"},{"text":"max","kind":"keyword"},{"text":"depth","kind":"keyword"},{"text":"3","kind":"number"}],"diagnostics":[]}
+```
+
+```highlight
 {"name":"schema roles","language":"gess","source":"wire(world) model(view) schema :Arena as { size: :Number integer between 1 and 64 }\nwire messages :Events as (Hit)\nmessage Hit()\n","expect":[{"text":"wire","occurrence":0,"kind":"keyword"},{"text":"model","kind":"keyword"},{"text":"schema","kind":"keyword"},{"text":"wire","occurrence":1,"kind":"keyword"},{"text":"messages","kind":"keyword"}],"diagnostics":[]}
 ```
 

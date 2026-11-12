@@ -110,6 +110,8 @@ internal struct GesSchemaNode
     internal bool IsTagText;
     // A :Bytes max n: a Text on the wire whose bytes need not be UTF-8.
     internal bool IsBytes;
+    // The `depth` of a recursive List at its deepest level, which holds no element; 0 otherwise.
+    internal int DepthLimit;
     internal int Width;
     internal int Next;
     internal int After;
@@ -459,6 +461,9 @@ internal static class GesSchemaBinder
         internal readonly List<GesSchemaNode> Nodes = [];
         internal readonly GesSchemaParameters Parameters;
 
+        // How many records of each schema enclose the node being added, which a recursive List counts against its depth.
+        internal readonly Dictionary<GesResolvedDeclaration, int> Levels = [];
+
         internal Build(GesSchemaParameters parameters) => Parameters = parameters;
     }
 
@@ -517,6 +522,7 @@ internal static class GesSchemaBinder
     private static GesBoundSchema BindNodes(GesResolvedDeclaration declaration, GesSchemaParameters parameters, ulong hash, ulong bindingHash)
     {
         var inner = new Build(parameters);
+        inner.Levels[declaration] = 1;
         foreach (var field in declaration.Fields) AddField(inner, field.Scope, field, "", 0, top: true);
         foreach (var tag in declaration.Tags)
             inner.Nodes.Add(new GesSchemaNode { Kind = GesSchemaNodeKind.Boolean, IsTagBit = true, Width = 1, Name = tag, Path = "#" + tag, Next = inner.Nodes.Count + 1, SchemaName = "" });
@@ -741,6 +747,12 @@ internal static class GesSchemaBinder
                 node.MaxCount = textMax;
                 node.Width = BitLength((ulong)textMax);
                 break;
+            case GesSchemaTypeKind.List when type.Depth > 0 && build.Levels.TryGetValue(type.Element![0].Reference!, out var reached) && reached >= type.Depth:
+                // The deepest level of a recursive List holds no element: it is empty, so it takes no bits and no list nesting.
+                node.Kind = GesSchemaNodeKind.List;
+                node.DepthLimit = type.Depth;
+                build.Nodes.Add(node);
+                break;
             case GesSchemaTypeKind.List:
                 if (type.Element is not { } element || type.Max is not { } listMax) throw scope.Error(Code.NotEncodable, type.Offset, "A List without element type and max has no hard limit.");
                 if (lists >= MaximumListNesting) throw scope.Error(Code.NotEncodable, type.Offset, $"Lists nest at most {MaximumListNesting} levels for encoding.");
@@ -786,7 +798,11 @@ internal static class GesSchemaBinder
                 node.SchemaName = type.ReferenceName;
                 build.Nodes.Add(node);
                 var reference = type.Reference!;
+                build.Levels.TryGetValue(reference, out var level);
+                build.Levels[reference] = level + 1;
                 foreach (var field in reference.Fields) AddField(build, field.Scope, field, path, lists, top: false);
+                if (level == 0) build.Levels.Remove(reference);
+                else build.Levels[reference] = level;
                 break;
             default:
                 throw scope.Error(Code.NotEncodable, type.Offset, $"A {type.Kind} has no width and is only for documents.");
@@ -803,29 +819,37 @@ internal static class GesSchemaBinder
     // errors.
     internal static void CheckEncodable(GesResolvedDeclaration root)
     {
-        var known = new HashSet<(GesResolvedDeclaration, int)>();
+        var known = new HashSet<(GesResolvedDeclaration, int, int)>();
+        var levels = new Dictionary<GesResolvedDeclaration, int>();
         if (root.Kind == GesSchemaKind.Messages)
         {
-            foreach (var member in root.Members) CheckEncodable(member, 0, known);
+            foreach (var member in root.Members) CheckEncodable(member, 0, known, levels);
             return;
         }
 
-        CheckEncodable(root, 0, known);
+        CheckEncodable(root, 0, known, levels);
     }
 
-    private static void CheckEncodable(GesResolvedDeclaration declaration, int lists, HashSet<(GesResolvedDeclaration, int)> known)
+    private static void CheckEncodable(GesResolvedDeclaration declaration, int lists, HashSet<(GesResolvedDeclaration, int, int)> known, Dictionary<GesResolvedDeclaration, int> levels)
     {
-        if (!known.Add((declaration, lists))) return;
-        foreach (var field in declaration.Fields)
+        levels.TryGetValue(declaration, out var outer);
+        if (known.Add((declaration, lists, outer + 1)))
         {
-            if (field.Alternatives.Length == 1) CheckEncodable(field.Scope, field.Alternatives[0], lists, known);
-            else
-                foreach (var alternative in field.Alternatives)
-                    if (alternative.Kind != GesSchemaTypeKind.Nothing) CheckEncodable(field.Scope, alternative, lists, known);
+            levels[declaration] = outer + 1;
+            foreach (var field in declaration.Fields)
+            {
+                if (field.Alternatives.Length == 1) CheckEncodable(field.Scope, field.Alternatives[0], lists, known, levels);
+                else
+                    foreach (var alternative in field.Alternatives)
+                        if (alternative.Kind != GesSchemaTypeKind.Nothing) CheckEncodable(field.Scope, alternative, lists, known, levels);
+            }
+
+            if (outer == 0) levels.Remove(declaration);
+            else levels[declaration] = outer;
         }
     }
 
-    private static void CheckEncodable(GesFileScope scope, GesResolvedType type, int lists, HashSet<(GesResolvedDeclaration, int)> known)
+    private static void CheckEncodable(GesFileScope scope, GesResolvedType type, int lists, HashSet<(GesResolvedDeclaration, int, int)> known, Dictionary<GesResolvedDeclaration, int> levels)
     {
         switch (type.Kind)
         {
@@ -844,13 +868,15 @@ internal static class GesSchemaBinder
             case GesSchemaTypeKind.Text or GesSchemaTypeKind.Bytes:
                 if (type.Max is null) throw scope.Error(Code.NotEncodable, type.Offset, $"A {type.Kind} without max has no hard limit.");
                 break;
+            case GesSchemaTypeKind.List when type.Depth > 0 && levels.TryGetValue(type.Element![0].Reference!, out var level) && level >= type.Depth:
+                break;
             case GesSchemaTypeKind.List:
                 if (type.Element is not { } element || type.Max is null) throw scope.Error(Code.NotEncodable, type.Offset, "A List without element type and max has no hard limit.");
                 if (lists >= MaximumListNesting) throw scope.Error(Code.NotEncodable, type.Offset, $"Lists nest at most {MaximumListNesting} levels for encoding.");
-                if (element.Length == 1) CheckEncodable(scope, element[0], lists + 1, known);
+                if (element.Length == 1) CheckEncodable(scope, element[0], lists + 1, known, levels);
                 else
                     foreach (var alternative in element)
-                        if (alternative.Kind != GesSchemaTypeKind.Nothing) CheckEncodable(scope, alternative, lists + 1, known);
+                        if (alternative.Kind != GesSchemaTypeKind.Nothing) CheckEncodable(scope, alternative, lists + 1, known, levels);
                 if (!HasBits(element)) throw scope.Error(Code.NotEncodable, type.Offset, "A List element without bits has a count that no data limits.");
                 break;
             case GesSchemaTypeKind.Dice:
@@ -858,7 +884,7 @@ internal static class GesSchemaBinder
                 if (lists >= MaximumListNesting) throw scope.Error(Code.NotEncodable, type.Offset, $"Lists nest at most {MaximumListNesting} levels for encoding.");
                 break;
             case GesSchemaTypeKind.Reference:
-                CheckEncodable(type.Reference!, lists, known);
+                CheckEncodable(type.Reference!, lists, known, levels);
                 break;
             default:
                 throw scope.Error(Code.NotEncodable, type.Offset, $"A {type.Kind} has no width and is only for documents.");

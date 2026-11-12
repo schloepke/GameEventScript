@@ -22,6 +22,10 @@ internal sealed class GesPlanType
 
     // A synthesized list element type, which shares the paths of its owner.
     internal bool IsItem;
+
+    // The depth of a recursive schema's List of itself, 0 for other types. Only such a schema takes the level of its record
+    // in the recursion, since its deepest List holds nothing; every other type keeps constant offsets.
+    internal int Depth;
     internal List<string> Paths = [];
     internal List<GesPlanField> Fields = [];
 
@@ -57,6 +61,14 @@ internal sealed class GesPlanValue
 
     // Whether the value refers to a type that is a class.
     internal bool IsClass;
+
+    // Whether the value is the element of a recursive List: its schema's record one level deeper, whose nodes follow the
+    // declaring schema's own nodes.
+    internal bool Recursive;
+
+    // The depth of a recursive List of the schema that holds it, 0 for every other value. Where `with` copies such a List
+    // into another schema, it is an ordinary List there.
+    internal int Depth;
 
     // How an emitter spells the type of a Tag of a named tag set, which is declared once beside the records.
     internal string TagType = "";
@@ -231,11 +243,22 @@ internal static class GesSchemaPlanner
         {
             var planned = new GesPlanField { Layout = field, Base = Member(field.Name, type.Name), Optional = field.Optional, Key = field.Key };
             planned.Value = Value(context, field.Encoding, planned.Base, "", node);
-            node += Count(context.Layout, field.Encoding, context.Counts);
+            node += Count(context.Layout, field.Encoding, context.Counts, type.Name);
             plan.Fields.Add(planned);
         }
 
         foreach (var tag in type.Tags) plan.Tags.Add((tag, Member(tag, type.Name), node++));
+
+        // The element of a recursive List and its nodes come after the schema's own nodes, so that every own node keeps its
+        // offset at every level and only the element's subtree, whose size depends on the level, varies.
+        foreach (var field in plan.Fields)
+        {
+            if (!Recursive(field.Layout.Encoding, type.Name)) continue;
+            plan.Depth = field.Value.Depth = field.Value.Encoding.Depth;
+            field.Value.Element!.Node = node;
+            field.Value.Element.Recursive = true;
+        }
+
         return plan;
     }
 
@@ -300,13 +323,18 @@ internal static class GesSchemaPlanner
         return result;
     }
 
-    // The number of nodes an encoding occupies in a bound layout.
-    internal static int Count(GesSchemaLayout layout, GesLayoutEncoding encoding, Dictionary<string, int> counts)
+    // Whether an encoding is a recursive List of the schema that holds it.
+    private static bool Recursive(GesLayoutEncoding encoding, string owner)
+        => encoding.Kind == GesLayoutKind.List && encoding.Depth > 0 && encoding.Element!.Encoding.Schema == owner;
+
+    // The number of nodes an encoding occupies in a bound layout; the element of a recursive List of `owner` is counted
+    // apart, after its own nodes.
+    internal static int Count(GesSchemaLayout layout, GesLayoutEncoding encoding, Dictionary<string, int> counts, string owner = "")
     {
         switch (encoding.Kind)
         {
             case GesLayoutKind.List:
-                return 1 + Count(layout, encoding.Element!.Encoding, counts);
+                return Recursive(encoding, owner) ? 1 : 1 + Count(layout, encoding.Element!.Encoding, counts);
             case GesLayoutKind.Point or GesLayoutKind.Vector:
                 return 1 + encoding.Axes.Count;
             case GesLayoutKind.Union:
@@ -316,8 +344,7 @@ internal static class GesSchemaPlanner
             case GesLayoutKind.Schema:
                 if (!counts.TryGetValue(encoding.Schema, out var nested))
                 {
-                    nested = 0;
-                    foreach (var field in layout.Type(encoding.Schema).Fields) nested += Count(layout, field.Encoding, counts);
+                    nested = Nodes(layout, layout.Type(encoding.Schema), 1, counts);
                     counts[encoding.Schema] = nested;
                 }
 
@@ -327,26 +354,56 @@ internal static class GesSchemaPlanner
         }
     }
 
+    // The nodes of a schema's fields at a level of its recursion: its own nodes and, below the depth of a recursive List, the
+    // element and its nodes one level deeper.
+    private static int Nodes(GesSchemaLayout layout, GesLayoutType type, int level, Dictionary<string, int> counts)
+    {
+        var total = 0;
+        var depth = 0;
+        foreach (var field in type.Fields)
+        {
+            total += Count(layout, field.Encoding, counts, type.Name);
+            if (Recursive(field.Encoding, type.Name)) depth = field.Encoding.Depth;
+        }
+
+        return level < depth ? total + 1 + Nodes(layout, type, level + 1, counts) : total;
+    }
+
     // The paths of a type's nodes in order; a nested schema's paths follow its field's path, and a message's tags its fields.
+    // A recursive List's element and its paths come last, one level deeper each time.
     private static List<string> Paths(Context context, GesLayoutType type) => Paths(context.Layout, type, context.Paths);
 
     private static List<string> Paths(GesSchemaLayout layout, GesLayoutType type, Dictionary<string, List<string>> cache)
     {
         if (cache.TryGetValue(type.Name, out var known)) return known;
-        var paths = new List<string>();
-        foreach (var field in type.Fields) Paths(layout, field.Path, field.Encoding, paths, cache);
-        foreach (var tag in type.Tags) paths.Add("#" + tag);
+        var paths = Paths(layout, type, 1, cache);
         cache[type.Name] = paths;
         return paths;
     }
 
-    private static void Paths(GesSchemaLayout layout, string path, GesLayoutEncoding encoding, List<string> paths, Dictionary<string, List<string>> cache)
+    private static List<string> Paths(GesSchemaLayout layout, GesLayoutType type, int level, Dictionary<string, List<string>> cache)
+    {
+        var paths = new List<string>();
+        foreach (var field in type.Fields) Paths(layout, field.Path, field.Encoding, paths, cache, type.Name);
+        foreach (var tag in type.Tags) paths.Add("#" + tag);
+        foreach (var field in type.Fields)
+        {
+            if (!Recursive(field.Encoding, type.Name) || level >= field.Encoding.Depth) continue;
+            var element = field.Encoding.Element!.Path;
+            paths.Add(element);
+            foreach (var nested in Paths(layout, type, level + 1, cache)) paths.Add(element + "." + nested);
+        }
+
+        return paths;
+    }
+
+    private static void Paths(GesSchemaLayout layout, string path, GesLayoutEncoding encoding, List<string> paths, Dictionary<string, List<string>> cache, string owner = "")
     {
         paths.Add(path);
         switch (encoding.Kind)
         {
             case GesLayoutKind.List:
-                Paths(layout, encoding.Element!.Path, encoding.Element.Encoding, paths, cache);
+                if (!Recursive(encoding, owner)) Paths(layout, encoding.Element!.Path, encoding.Element.Encoding, paths, cache);
                 break;
             case GesLayoutKind.Point or GesLayoutKind.Vector:
                 foreach (var axis in encoding.Axes) paths.Add(axis.Path);

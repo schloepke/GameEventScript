@@ -130,6 +130,7 @@ enum SchemaApiObservations {
         if !type.tags.isEmpty { result["tags"] = type.tags }
         if let max = type.max { result["max"] = max }
         if !type.element.isEmpty { result["element"] = type.element.map(describe) }
+        if type.depth > 0 { result["depth"] = type.depth }
         if !type.axes.isEmpty {
             result["axes"] = type.axes.map { axis -> [String: Any] in
                 var entry: [String: Any] = ["name": axis.name]

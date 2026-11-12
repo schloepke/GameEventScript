@@ -464,7 +464,31 @@ internal sealed partial class GesSchemaSourceReader
                     max = ReadMax();
                 }
 
-                return new GesSchemaTypeSyntax { Kind = GesSchemaTypeKind.List, Element = element, Max = max.Value, MaxName = max.Name, MaxOffset = max.Offset, Offset = offset };
+                var depth = 0;
+                var depthOffset = 0;
+                if (element is not null && AtWord("depth"))
+                {
+                    depthOffset = _position;
+                    ReadWord();
+                    SkipSpaces();
+                    var start = _position;
+                    while (_position < _text.Length && _text[_position] is >= '0' and <= '9' && _position - start < 3) depth = depth * 10 + (_text[_position++] - '0');
+                    if (_position == start || _text[start] == '0' || (_position < _text.Length && _text[_position] is >= '0' and <= '9'))
+                        throw new SyntaxFailure(start, "Expected a depth from 1 to 999.");
+                    SkipSpaces();
+                }
+
+                return new GesSchemaTypeSyntax
+                {
+                    Kind = GesSchemaTypeKind.List,
+                    Element = element,
+                    Max = max.Value,
+                    MaxName = max.Name,
+                    MaxOffset = max.Offset,
+                    Depth = depth,
+                    DepthOffset = depthOffset,
+                    Offset = offset
+                };
             }
             case GesSchemaTypeKind.Map: return new GesSchemaTypeSyntax { Kind = GesSchemaTypeKind.Map, Offset = offset };
             case GesSchemaTypeKind.Range: return new GesSchemaTypeSyntax { Kind = GesSchemaTypeKind.Range, Offset = offset };

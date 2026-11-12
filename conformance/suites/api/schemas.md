@@ -3893,6 +3893,1233 @@ schema:
 ```
 
 ---
+## Test: a recursive List belongs to the hash
+
+`depth` follows `max` in the canonical form; a recursive schema is written once.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: canonical-recursive
+schemaApi:
+  sources:
+    - "schema :Loadout as { root: :Bind }\nschema :Bind as {\n  name: :Text max 8\n  units: :List(:Bind) max 4 depth 3\n}\n"
+  root: "Loadout"
+  bind: false
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  canonical: "gess1\nschema Loadout\nfield root Bind\nschema Bind\nfield name Text max 8\nfield units List(Bind) max 4 depth 3\n"
+  hash: "283ea52df2ff492f"
+```
+
+---
+
+## Test: the description of a recursive List
+
+A List type describes its depth.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: describe-recursive
+schemaApi:
+  sources:
+    - "schema :Loadout as { root: :Bind }\nschema :Bind as {\n  name: :Text max 8\n  units: :List(:Bind) max 4 depth 3\n}\n"
+  root: "Bind"
+  bind: false
+  describe: true
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  description:
+    name: "Bind"
+    kind: "Schema"
+    fields:
+      - name: "name"
+        alternatives:
+          - kind: "Text"
+            max: 8
+      - name: "units"
+        alternatives:
+          - kind: "List"
+            max: 4
+            element:
+              - kind: "Reference"
+                schema: "Bind"
+            depth: 3
+```
+
+---
+
+## Test: a tree as deep as its depth
+
+Records of the schema nest in each other up to the depth; the deepest List is empty and takes no bits.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: encode-recursive
+schemaApi:
+  sources:
+    - "schema :Loadout as { root: :Bind }\nschema :Bind as {\n  name: :Text max 8\n  units: :List(:Bind) max 4 depth 3\n}\n"
+  root: "Loadout"
+  encode:
+    type: ":Loadout"
+    entries:
+      - key: "root"
+        value:
+          type: ":Bind"
+          entries:
+            - key: "name"
+              value:
+                type: ":Text"
+                value: "a"
+            - key: "units"
+              value:
+                type: ":List"
+                items:
+                  - type: ":Bind"
+                    entries:
+                      - key: "name"
+                        value:
+                          type: ":Text"
+                          value: "b"
+                      - key: "units"
+                        value:
+                          type: ":List"
+                          items:
+                            - type: ":Bind"
+                              entries:
+                                - key: "name"
+                                  value:
+                                    type: ":Text"
+                                    value: "c"
+                                - key: "units"
+                                  value:
+                                    type: ":List"
+                                    items: []
+                  - type: ":Bind"
+                    entries:
+                      - key: "name"
+                        value:
+                          type: ":Text"
+                          value: "d"
+                      - key: "units"
+                        value:
+                          type: ":List"
+                          items: []
+  decode: "11a6104b8c051900"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "11a6104b8c051900"
+  decoded:
+    value:
+      type: ":Loadout"
+      entries:
+        - key: "root"
+          value:
+            type: ":Bind"
+            entries:
+              - key: "name"
+                value:
+                  type: ":Text"
+                  value: "a"
+              - key: "units"
+                value:
+                  type: ":List"
+                  items:
+                    - type: ":Bind"
+                      entries:
+                        - key: "name"
+                          value:
+                            type: ":Text"
+                            value: "b"
+                        - key: "units"
+                          value:
+                            type: ":List"
+                            items:
+                              - type: ":Bind"
+                                entries:
+                                  - key: "name"
+                                    value:
+                                      type: ":Text"
+                                      value: "c"
+                                  - key: "units"
+                                    value:
+                                      type: ":List"
+                                      items: []
+                    - type: ":Bind"
+                      entries:
+                        - key: "name"
+                          value:
+                            type: ":Text"
+                            value: "d"
+                        - key: "units"
+                          value:
+                            type: ":List"
+                            items: []
+    byteCount: 8
+```
+
+---
+
+## Test: a tree deeper than its depth
+
+A record in the deepest List is deeper than the depth: `wire.tooDeep` at that List.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-encode-too-deep
+schemaApi:
+  sources:
+    - "schema :Loadout as { root: :Bind }\nschema :Bind as {\n  name: :Text max 8\n  units: :List(:Bind) max 4 depth 3\n}\n"
+  root: "Loadout"
+  encode:
+    type: ":Loadout"
+    entries:
+      - key: "root"
+        value:
+          type: ":Bind"
+          entries:
+            - key: "name"
+              value:
+                type: ":Text"
+                value: "a"
+            - key: "units"
+              value:
+                type: ":List"
+                items:
+                  - type: ":Bind"
+                    entries:
+                      - key: "name"
+                        value:
+                          type: ":Text"
+                          value: "b"
+                      - key: "units"
+                        value:
+                          type: ":List"
+                          items:
+                            - type: ":Bind"
+                              entries:
+                                - key: "name"
+                                  value:
+                                    type: ":Text"
+                                    value: "c"
+                                - key: "units"
+                                  value:
+                                    type: ":List"
+                                    items:
+                                      - type: ":Bind"
+                                        entries:
+                                          - key: "name"
+                                            value:
+                                              type: ":Text"
+                                              value: "d"
+                                          - key: "units"
+                                            value:
+                                              type: ":List"
+                                              items: []
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    error:
+      code: "wire.tooDeep"
+      path: "root.units[].units[].units"
+```
+
+---
+
+## Test: a document tree as deep as its depth
+
+Document checking counts the records of the schema as encoding does.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: document-recursive
+schemaApi:
+  sources:
+    - "schema :Loadout as { root: :Bind }\nschema :Bind as {\n  name: :Text max 8\n  units: :List(:Bind) max 4 depth 3\n}\n"
+  document: ":Schema(:Loadout)\nroot: [name: 'a', units: [[name: 'b', units: [[name: 'c', units: []]]]]]\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  document:
+    ok: true
+```
+
+---
+
+## Test: a document tree deeper than its depth
+
+A record in the deepest List is `document.tooDeep`.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: document-too-deep
+schemaApi:
+  sources:
+    - "schema :Loadout as { root: :Bind }\nschema :Bind as {\n  name: :Text max 8\n  units: :List(:Bind) max 4 depth 3\n}\n"
+  document: ":Schema(:Loadout)\nroot: [name: 'a', units: [[name: 'b', units: [[name: 'c', units: [[name: 'd', units: []]]]]]]]\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  document:
+    error:
+      code: "document.tooDeep"
+      line: 2
+      column: 66
+```
+
+---
+
+## Test: depth on a list of another schema
+
+The source is rejected.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-depth-other
+schemaApi:
+  sources:
+    - "schema :A as { b: :List(:B) max 2 depth 2 }\nschema :B as { on: :Boolean }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidConstraint"
+    line: 1
+    column: 35
+```
+
+---
+
+## Test: depth inside a union
+
+The source is rejected.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-depth-union
+schemaApi:
+  sources:
+    - "schema :A as { b: :List(:A) max 2 depth 2 | :Nothing }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidConstraint"
+    line: 1
+    column: 35
+```
+
+---
+
+## Test: recursion without depth
+
+The source is rejected.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-depth-missing
+schemaApi:
+  sources:
+    - "schema :A as { b: :List(:A) max 2 }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.cycle"
+    line: 1
+    column: 1
+```
+
+---
+
+## Test: a depth of zero
+
+The source is rejected.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-depth-zero
+schemaApi:
+  sources:
+    - "schema :A as { b: :List(:A) max 2 depth 0 }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.syntax"
+    line: 1
+    column: 41
+```
+
+---
+
+## Test: a recursion deeper than lists nest
+
+Each level of a recursive List nests one list further, and lists nest at most 4 levels for encoding.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-depth-lists
+schemaApi:
+  sources:
+    - "schema :A as { b: :List(:A) max 2 depth 5 }\n"
+  root: "A"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.notEncodable"
+    line: 1
+    column: 19
+```
+
+---
+## Test: a changed tree
+
+The deepest name differs from the tree as deep as its depth.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: encode-recursive-changed
+schemaApi:
+  sources:
+    - "schema :Loadout as { root: :Bind }\nschema :Bind as {\n  name: :Text max 8\n  units: :List(:Bind) max 4 depth 3\n}\n"
+  root: "Loadout"
+  encode:
+    type: ":Loadout"
+    entries:
+      - key: "root"
+        value:
+          type: ":Bind"
+          entries:
+            - key: "name"
+              value:
+                type: ":Text"
+                value: "a"
+            - key: "units"
+              value:
+                type: ":List"
+                items:
+                  - type: ":Bind"
+                    entries:
+                      - key: "name"
+                        value:
+                          type: ":Text"
+                          value: "b"
+                      - key: "units"
+                        value:
+                          type: ":List"
+                          items:
+                            - type: ":Bind"
+                              entries:
+                                - key: "name"
+                                  value:
+                                    type: ":Text"
+                                    value: "e"
+                                - key: "units"
+                                  value:
+                                    type: ":List"
+                                    items: []
+                  - type: ":Bind"
+                    entries:
+                      - key: "name"
+                        value:
+                          type: ":Text"
+                          value: "d"
+                      - key: "units"
+                        value:
+                          type: ":List"
+                          items: []
+  decode: "11a6104b94051900"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "11a6104b94051900"
+  decoded:
+    value:
+      type: ":Loadout"
+      entries:
+        - key: "root"
+          value:
+            type: ":Bind"
+            entries:
+              - key: "name"
+                value:
+                  type: ":Text"
+                  value: "a"
+              - key: "units"
+                value:
+                  type: ":List"
+                  items:
+                    - type: ":Bind"
+                      entries:
+                        - key: "name"
+                          value:
+                            type: ":Text"
+                            value: "b"
+                        - key: "units"
+                          value:
+                            type: ":List"
+                            items:
+                              - type: ":Bind"
+                                entries:
+                                  - key: "name"
+                                    value:
+                                      type: ":Text"
+                                      value: "e"
+                                  - key: "units"
+                                    value:
+                                      type: ":List"
+                                      items: []
+                    - type: ":Bind"
+                      entries:
+                        - key: "name"
+                          value:
+                            type: ":Text"
+                            value: "d"
+                        - key: "units"
+                          value:
+                            type: ":List"
+                            items: []
+    byteCount: 8
+```
+
+---
+
+## Test: a keyed tree
+
+A recursive List of a schema with a key is keyed at every level but the deepest.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: encode-recursive-keyed
+schemaApi:
+  sources:
+    - "schema :Team as { root: :Unit }\nschema :Unit as {\n  id: :Number integer between 0 and 15 key\n  units: :List(:Unit) max 4 depth 3\n}\n"
+  root: "Team"
+  encode:
+    type: ":Team"
+    entries:
+      - key: "root"
+        value:
+          type: ":Unit"
+          entries:
+            - key: "id"
+              value:
+                type: ":Number.int64"
+                value: "1"
+            - key: "units"
+              value:
+                type: ":List"
+                items:
+                  - type: ":Unit"
+                    entries:
+                      - key: "id"
+                        value:
+                          type: ":Number.int64"
+                          value: "2"
+                      - key: "units"
+                        value:
+                          type: ":List"
+                          items:
+                            - type: ":Unit"
+                              entries:
+                                - key: "id"
+                                  value:
+                                    type: ":Number.int64"
+                                    value: "3"
+                                - key: "units"
+                                  value:
+                                    type: ":List"
+                                    items: []
+                  - type: ":Unit"
+                    entries:
+                      - key: "id"
+                        value:
+                          type: ":Number.int64"
+                          value: "4"
+                      - key: "units"
+                        value:
+                          type: ":List"
+                          items: []
+  decode: "21c91000"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "21c91000"
+  decoded:
+    value:
+      type: ":Team"
+      entries:
+        - key: "root"
+          value:
+            type: ":Unit"
+            entries:
+              - key: "id"
+                value:
+                  type: ":Number.int64"
+                  value: "1"
+              - key: "units"
+                value:
+                  type: ":List"
+                  items:
+                    - type: ":Unit"
+                      entries:
+                        - key: "id"
+                          value:
+                            type: ":Number.int64"
+                            value: "2"
+                        - key: "units"
+                          value:
+                            type: ":List"
+                            items:
+                              - type: ":Unit"
+                                entries:
+                                  - key: "id"
+                                    value:
+                                      type: ":Number.int64"
+                                      value: "3"
+                                  - key: "units"
+                                    value:
+                                      type: ":List"
+                                      items: []
+                    - type: ":Unit"
+                      entries:
+                        - key: "id"
+                          value:
+                            type: ":Number.int64"
+                            value: "4"
+                        - key: "units"
+                          value:
+                            type: ":List"
+                            items: []
+    byteCount: 4
+```
+
+---
+
+## Test: a keyed tree with an added record
+
+A record is added at the deepest level that holds records.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: encode-recursive-keyed-added
+schemaApi:
+  sources:
+    - "schema :Team as { root: :Unit }\nschema :Unit as {\n  id: :Number integer between 0 and 15 key\n  units: :List(:Unit) max 4 depth 3\n}\n"
+  root: "Team"
+  encode:
+    type: ":Team"
+    entries:
+      - key: "root"
+        value:
+          type: ":Unit"
+          entries:
+            - key: "id"
+              value:
+                type: ":Number.int64"
+                value: "1"
+            - key: "units"
+              value:
+                type: ":List"
+                items:
+                  - type: ":Unit"
+                    entries:
+                      - key: "id"
+                        value:
+                          type: ":Number.int64"
+                          value: "2"
+                      - key: "units"
+                        value:
+                          type: ":List"
+                          items:
+                            - type: ":Unit"
+                              entries:
+                                - key: "id"
+                                  value:
+                                    type: ":Number.int64"
+                                    value: "3"
+                                - key: "units"
+                                  value:
+                                    type: ":List"
+                                    items: []
+                            - type: ":Unit"
+                              entries:
+                                - key: "id"
+                                  value:
+                                    type: ":Number.int64"
+                                    value: "5"
+                                - key: "units"
+                                  value:
+                                    type: ":List"
+                                    items: []
+                  - type: ":Unit"
+                    entries:
+                      - key: "id"
+                        value:
+                          type: ":Number.int64"
+                          value: "4"
+                      - key: "units"
+                        value:
+                          type: ":List"
+                          items: []
+  decode: "21d11401"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "21d11401"
+  decoded:
+    value:
+      type: ":Team"
+      entries:
+        - key: "root"
+          value:
+            type: ":Unit"
+            entries:
+              - key: "id"
+                value:
+                  type: ":Number.int64"
+                  value: "1"
+              - key: "units"
+                value:
+                  type: ":List"
+                  items:
+                    - type: ":Unit"
+                      entries:
+                        - key: "id"
+                          value:
+                            type: ":Number.int64"
+                            value: "2"
+                        - key: "units"
+                          value:
+                            type: ":List"
+                            items:
+                              - type: ":Unit"
+                                entries:
+                                  - key: "id"
+                                    value:
+                                      type: ":Number.int64"
+                                      value: "3"
+                                  - key: "units"
+                                    value:
+                                      type: ":List"
+                                      items: []
+                              - type: ":Unit"
+                                entries:
+                                  - key: "id"
+                                    value:
+                                      type: ":Number.int64"
+                                      value: "5"
+                                  - key: "units"
+                                    value:
+                                      type: ":List"
+                                      items: []
+                    - type: ":Unit"
+                      entries:
+                        - key: "id"
+                          value:
+                            type: ":Number.int64"
+                            value: "4"
+                        - key: "units"
+                          value:
+                            type: ":List"
+                            items: []
+    byteCount: 4
+```
+
+---
+
+## Test: a recursive List that with copies
+
+Where `with` copies a recursive List into another schema, it holds records of the declaring schema, which nest up to its depth below it.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: encode-recursive-composed
+schemaApi:
+  sources:
+    - "schema :Node as {\n  tag: :Text max 4\n  kids: :List(:Node) max 2 depth 3\n}\nschema :Leaf as {\n  with :Node\n  name: :Text max 4\n}\n"
+  root: "Leaf"
+  encode:
+    type: ":Leaf"
+    entries:
+      - key: "tag"
+        value:
+          type: ":Text"
+          value: "l"
+      - key: "kids"
+        value:
+          type: ":List"
+          items:
+            - type: ":Node"
+              entries:
+                - key: "tag"
+                  value:
+                    type: ":Text"
+                    value: "a"
+                - key: "kids"
+                  value:
+                    type: ":List"
+                    items:
+                      - type: ":Node"
+                        entries:
+                          - key: "tag"
+                            value:
+                              type: ":Text"
+                              value: "b"
+                          - key: "kids"
+                            value:
+                              type: ":List"
+                              items:
+                                - type: ":Node"
+                                  entries:
+                                    - key: "tag"
+                                      value:
+                                        type: ":Text"
+                                        value: "c"
+                                    - key: "kids"
+                                      value:
+                                        type: ":List"
+                                        items: []
+      - key: "name"
+        value:
+          type: ":Text"
+          value: "n"
+  decode: "612b6145ac8cc50d"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "612b6145ac8cc50d"
+  decoded:
+    value:
+      type: ":Leaf"
+      entries:
+        - key: "tag"
+          value:
+            type: ":Text"
+            value: "l"
+        - key: "kids"
+          value:
+            type: ":List"
+            items:
+              - type: ":Node"
+                entries:
+                  - key: "tag"
+                    value:
+                      type: ":Text"
+                      value: "a"
+                  - key: "kids"
+                    value:
+                      type: ":List"
+                      items:
+                        - type: ":Node"
+                          entries:
+                            - key: "tag"
+                              value:
+                                type: ":Text"
+                                value: "b"
+                            - key: "kids"
+                              value:
+                                type: ":List"
+                                items:
+                                  - type: ":Node"
+                                    entries:
+                                      - key: "tag"
+                                        value:
+                                          type: ":Text"
+                                          value: "c"
+                                      - key: "kids"
+                                        value:
+                                          type: ":List"
+                                          items: []
+        - key: "name"
+          value:
+            type: ":Text"
+            value: "n"
+    byteCount: 8
+```
+
+---
+
+## Test: a copied recursive List deeper than its depth
+
+The fourth record of the declaring schema is deeper than the depth: `wire.tooDeep` at the List that holds it.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-encode-too-deep-composed
+schemaApi:
+  sources:
+    - "schema :Node as {\n  tag: :Text max 4\n  kids: :List(:Node) max 2 depth 3\n}\nschema :Leaf as {\n  with :Node\n  name: :Text max 4\n}\n"
+  root: "Leaf"
+  encode:
+    type: ":Leaf"
+    entries:
+      - key: "tag"
+        value:
+          type: ":Text"
+          value: "l"
+      - key: "kids"
+        value:
+          type: ":List"
+          items:
+            - type: ":Node"
+              entries:
+                - key: "tag"
+                  value:
+                    type: ":Text"
+                    value: "a"
+                - key: "kids"
+                  value:
+                    type: ":List"
+                    items:
+                      - type: ":Node"
+                        entries:
+                          - key: "tag"
+                            value:
+                              type: ":Text"
+                              value: "b"
+                          - key: "kids"
+                            value:
+                              type: ":List"
+                              items:
+                                - type: ":Node"
+                                  entries:
+                                    - key: "tag"
+                                      value:
+                                        type: ":Text"
+                                        value: "c"
+                                    - key: "kids"
+                                      value:
+                                        type: ":List"
+                                        items:
+                                          - type: ":Node"
+                                            entries:
+                                              - key: "tag"
+                                                value:
+                                                  type: ":Text"
+                                                  value: "d"
+                                              - key: "kids"
+                                                value:
+                                                  type: ":List"
+                                                  items: []
+      - key: "name"
+        value:
+          type: ":Text"
+          value: "n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    error:
+      code: "wire.tooDeep"
+      path: "kids[].kids[].kids[].kids"
+```
+
+---
+
+## Test: a depth of one
+
+A depth of 1 leaves the List always empty, so the source is rejected.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-depth-one
+schemaApi:
+  sources:
+    - "schema :A as { on: :Boolean, b: :List(:A) max 2 depth 1 }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidConstraint"
+    line: 1
+    column: 49
+```
+
+---
+
+## Test: two recursive Lists
+
+A schema holds at most one List with depth.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-depth-twice
+schemaApi:
+  sources:
+    - "schema :A as { on: :Boolean, b: :List(:A) max 2 depth 2, c: :List(:A) max 2 depth 2 }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidConstraint"
+    line: 1
+    column: 77
+```
+
+---
+
+## Test: a cycle through a copied recursive List
+
+A recursive List that `with` copies is an ordinary List of the declaring schema, so a schema that holds the copy inside the declaring one forms a cycle.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-depth-cycle-composed
+schemaApi:
+  sources:
+    - "schema :Node as {\n  on: :Boolean\n  kids: :List(:Node) max 2 depth 2\n  more: :List(:Extra) max 1\n}\nschema :Extra as {\n  with :Node\n}\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.cycle"
+    line: 1
+    column: 1
+```
+
+---
+## Test: a delta of a tree
+
+A record at the deepest level changes; the delta descends through each level of the recursion.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delta-recursive
+schemaApi:
+  sources:
+    - "schema :Loadout as { root: :Bind }\nschema :Bind as {\n  name: :Text max 8\n  units: :List(:Bind) max 4 depth 3\n}\n"
+  root: "Loadout"
+  deltaEncode:
+    record: "11a6104b94051900"
+    baseline: "11a6104b8c051900"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  deltaEncoded:
+    bytes: "558825ca820c"
+```
+
+---
+
+## Test: a delta of a tree gives the tree back
+
+The delta of a tree reads into the changed tree.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delta-recursive-decoded
+schemaApi:
+  sources:
+    - "schema :Loadout as { root: :Bind }\nschema :Bind as {\n  name: :Text max 8\n  units: :List(:Bind) max 4 depth 3\n}\n"
+  root: "Loadout"
+  deltaDecode:
+    delta: "558825ca820c"
+    baseline: "11a6104b8c051900"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  deltaDecoded:
+    record: "11a6104b94051900"
+    deltaByteCount: 6
+```
+
+---
+
+## Test: a delta of a keyed tree
+
+A record is added to a keyed List one level below the root; the deepest level holds no records and is no keyed List.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delta-recursive-keyed
+schemaApi:
+  sources:
+    - "schema :Team as { root: :Unit }\nschema :Unit as {\n  id: :Number integer between 0 and 15 key\n  units: :List(:Unit) max 4 depth 3\n}\n"
+  root: "Team"
+  deltaEncode:
+    record: "21d11401"
+    baseline: "21c91000"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  deltaEncoded:
+    bytes: "05849002"
+```
+
+---
+
+## Test: a delta of a keyed tree gives the tree back
+
+The delta of a keyed tree reads into the changed tree.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: delta-recursive-keyed-decoded
+schemaApi:
+  sources:
+    - "schema :Team as { root: :Unit }\nschema :Unit as {\n  id: :Number integer between 0 and 15 key\n  units: :List(:Unit) max 4 depth 3\n}\n"
+  root: "Team"
+  deltaDecode:
+    delta: "05849002"
+    baseline: "21c91000"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  deltaDecoded:
+    record: "21d11401"
+    deltaByteCount: 4
+```
+
+---
 ## Test: field order a is part of the hash
 
 Field order is the wire order.

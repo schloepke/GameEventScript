@@ -170,7 +170,6 @@ public final class GesSchemaSet: @unchecked Sendable {
         return found
     }
 
-    // Reference cycles and too deep nesting, along every path from the declaration.
     // Reference cycles and too deep nesting. A declaration already finished at this depth or deeper holds no error, so
     // the check stays polynomial however often schemas refer to each other.
     private static func checkNesting(_ declaration: GesResolvedDeclaration, _ path: inout [GesResolvedDeclaration], _ visited: inout [ObjectIdentifier: Int]) throws {
@@ -181,14 +180,17 @@ public final class GesSchemaSet: @unchecked Sendable {
         visited[ObjectIdentifier(declaration)] = path.count
         path.append(declaration)
         for field in declaration.fields {
-            for type in field.alternatives { try checkNesting(type, &path, &visited) }
+            for type in field.alternatives { try checkNesting(type, declaration, &path, &visited) }
         }
         path.removeLast()
     }
 
-    private static func checkNesting(_ type: GesResolvedType, _ path: inout [GesResolvedDeclaration], _ visited: inout [ObjectIdentifier: Int]) throws {
+    private static func checkNesting(_ type: GesResolvedType, _ holder: GesResolvedDeclaration, _ path: inout [GesResolvedDeclaration], _ visited: inout [ObjectIdentifier: Int]) throws {
         if let reference = type.reference { try checkNesting(reference, &path, &visited) }
-        for alternative in type.element ?? [] { try checkNesting(alternative, &path, &visited) }
+        // A List with depth in the schema it holds is a limited recursion; where `with` copies it into another schema, it is
+        // an ordinary List of the declaring schema.
+        if type.depth > 0 && type.element![0].reference === holder { return }
+        for alternative in type.element ?? [] { try checkNesting(alternative, holder, &path, &visited) }
     }
 }
 
@@ -241,6 +243,8 @@ final class GesResolvedType {
     let offset: Int
     // The label of a union alternative, or empty.
     var label = ""
+    // The `depth` of a List whose element is the schema that declares it: how many records of it nest; 0 without one.
+    var depth = 0
 
     init(
         kind: GesSchemaTypeKind,
@@ -394,9 +398,15 @@ final class GesFileScope {
             for tag in syntax.tags where !tags.insert(tag).inserted { throw error(Code.duplicateName, syntax.offset, "Tag '#\(tag)' is listed twice.") }
             var names: Set<String> = []
             declaration.lets = try resolveLets(syntax, &names)
+            var recursive = false
             for (index, field) in syntax.fields.enumerated() {
                 if !names.insert(field.name).inserted { throw error(Code.duplicateName, field.offset, "'\(field.name)' is declared twice in '\(declaration.name)'.") }
-                declaration.fields.append(try resolveField(field, index, declaration.kind, all))
+                let resolved = try resolveField(field, index, declaration.kind, all)
+                declaration.fields.append(resolved)
+                try checkDepth(field.alternatives, resolved.alternatives, declaration, top: true)
+                if resolved.alternatives[0].depth == 0 { continue }
+                if recursive { throw error(Code.invalidConstraint, field.alternatives[0].depthOffset, "A schema holds at most one List with depth.") }
+                recursive = true
             }
         }
         // A declaration holds its scope, so the scope lets go of them once they are resolved.
@@ -680,7 +690,7 @@ final class GesFileScope {
         if let written = type.element { element = try resolveUnion(written, all) }
         let constraints = try resolveConstraints(type.constraints, type.unit, type.kind == .percentage, type.offset)
         if type.kind == .dice { try GesSchemaBinder.checkDice(self, constraints, type.offset, nil) }
-        return GesResolvedType(
+        let resolved = GesResolvedType(
             kind: type.kind,
             unit: type.unit,
             tags: type.tags,
@@ -692,6 +702,22 @@ final class GesFileScope {
             referenceName: type.name,
             offset: type.offset
         )
+        resolved.depth = type.depth
+        return resolved
+    }
+
+    // `depth` stands only on a field's List of the schema that declares the field, which may then hold itself that many
+    // levels deep; every other cycle stays an error.
+    private func checkDepth(_ written: [GesSchemaTypeSyntax], _ resolved: [GesResolvedType], _ owner: GesResolvedDeclaration, top: Bool) throws {
+        for (index, type) in resolved.enumerated() {
+            if type.depth > 0 && !(top && written.count == 1 && type.element?.count == 1 && type.element![0].reference === owner) {
+                throw error(Code.invalidConstraint, written[index].depthOffset, "depth stands on a field's List whose element is the schema that declares it.")
+            }
+            if type.depth == 1 {
+                throw error(Code.invalidConstraint, written[index].depthOffset, "A depth of 1 leaves the List always empty; it counts the records that nest, at least 2.")
+            }
+            if let elements = written[index].element { try checkDepth(elements, type.element!, owner, top: false) }
+        }
     }
 
     /// A maximum that names a let takes its whole unitless value, which has at most 12 digits like a written one.
@@ -883,6 +909,7 @@ enum GesSchemaCanonical {
             if !defaultType(type.element!, &output) { return false }
             output += ")"
             if let max = type.max { output += " max \(max)" }
+            if type.depth > 0 { output += " depth \(type.depth)" }
             return true
         case .number, .percentage, .quantity, .dice, .point, .vector:
             var constraints = type.constraints
@@ -959,6 +986,7 @@ enum GesSchemaCanonical {
                 output += ")"
             }
             if let max = type.max { output += " max \(max)" }
+            if type.depth > 0 { output += " depth \(type.depth)" }
         case .reference: output += type.referenceName
         default: output += type.kind.rawValue
         }

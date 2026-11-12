@@ -198,6 +198,9 @@ internal sealed class GesLayoutEncoding
     internal int PositionWidth;
     internal GesLayoutField? Element;
 
+    // A recursive List: how many records of its schema nest at most, and 0 for every other List.
+    internal int Depth;
+
     // Point and Vector axes, union alternatives and schema references.
     internal List<GesLayoutField> Axes = [];
     internal List<GesLayoutField> Alternatives = [];
@@ -378,6 +381,7 @@ internal static class GesSchemaLayoutBuilder
                 break;
             case GesSchemaTypeKind.List:
                 List(in node, encoding);
+                encoding.Depth = type.Depth;
                 index++;
                 encoding.Element = Field(nodes, ref index, "[]", type.Element);
                 return encoding;

@@ -400,6 +400,7 @@
                 typeNesting -= 1
                 skipSpaces()
                 try maximum(&result)
+                try depth(&result)
             }
         case .map: result.kind = .map
         case .range: result.kind = .range
@@ -472,6 +473,25 @@
         skipSpaces()
         type.max = value
         type.maxOffset = start
+    }
+
+    /// The depth of a recursive List: 1 to 999 without a leading zero.
+    private mutating func depth(_ type: inout GesSchemaTypeSyntax) throws {
+        if !atWord("depth") { return }
+        type.depthOffset = position
+        _ = word()
+        skipSpaces()
+        let start = position
+        var value = 0
+        while position < bytes.count && GesNames.digit(bytes[position]) && position - start < 3 {
+            value = value * 10 + Int(bytes[position] - 48)
+            position += 1
+        }
+        if position == start || bytes[start] == 48 || (position < bytes.count && GesNames.digit(bytes[position])) {
+            throw Failure(offset: start, message: "Expected a depth from 1 to 999.")
+        }
+        skipSpaces()
+        type.depth = value
     }
 
     private mutating func tagSet() throws -> [String] {

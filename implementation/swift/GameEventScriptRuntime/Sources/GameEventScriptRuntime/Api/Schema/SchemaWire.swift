@@ -251,6 +251,7 @@ public struct GesSchemaWriter {
         try current(field)
         let node = schema.nodes[field.index]
         if node.kind != .list { throw GesWireError(GesWireError.typeMismatch, field.path) }
+        if count > 0 && node.depthLimit > 0 { throw GesWireError.tooDeep(field.path, node.depthLimit) }
         if count < 0 || Int64(count) > node.maxCount { throw GesWireError(GesWireError.tooLong, field.path) }
         try presence(node)
         try put(UInt64(count), node.width)

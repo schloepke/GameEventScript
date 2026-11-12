@@ -259,6 +259,7 @@
                 output += ")"
             }
             if let max = type.max { output += " max \(max)" } else if !type.maxName.isEmpty { output += " max \(type.maxName)" }
+            if type.depth > 0 { output += " depth \(type.depth)" }
             return
         case .dice:
             output += ":Dice"

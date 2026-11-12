@@ -118,6 +118,11 @@ internal sealed class GesSchemaTypeSyntax
     // The alternatives of a List's element.
     internal GesSchemaTypeSyntax[]? Element { get; init; }
 
+    // The written `depth` of a List whose element is the schema that declares it, and where it starts; 0 without one.
+    internal int Depth { get; init; }
+
+    internal int DepthOffset { get; init; }
+
     internal GesSchemaConstraintsSyntax Constraints { get; init; } = new();
 
     internal GesSchemaAxisSyntax[]? Axes { get; init; }

@@ -250,6 +250,12 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   document that sets one fails, and generated models and wire records give them as read-only properties that compute the
   bits of the virtual machine. `GesSchema.ComputedFields` (Swift `computedFields`) describes them; mistakes are
   `schema.invalidExpression`.
+- Recursive schema Lists: `units: :List(:Loadout_Bind) max 16 depth 3` in `:Loadout_Bind` holds records of that schema
+  up to three deep, so a tree needs one schema instead of one per level. The wire encoding is that of one schema per
+  level; a record deeper than the depth fails with the new `wire.tooDeep`, whose message names the depth, such as
+  `wire.tooDeep at 'units[].units[].units': deeper than depth 3` (`GesWireException.Detail`, Swift
+  `GesWireError.detail`), and a document with `document.tooDeep`. Generated code of the recursive schema takes the level
+  of each record; every other schema generates the same code as before. `GesSchemaType.Depth` (Swift `depth`) describes it.
 - `ges schema generate -d <dir>` (`--out-dir`) writes one file per declaration, or per `.gess` with `--split file`,
   plus a shared `_<Namespace>` file and the manifest `.ges-generated.json`; a later run removes files the manifest owns and
   no longer needs, warns about foreign files with `cli.unowned`, and `--check` compares the whole directory.

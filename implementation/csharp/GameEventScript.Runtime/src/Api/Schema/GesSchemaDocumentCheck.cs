@@ -17,6 +17,7 @@ internal sealed class GesSchemaDocumentCheck
     internal const string UnknownField = "document.unknownField";
     internal const string FieldType = "document.fieldType";
     internal const string OutOfRange = "document.outOfRange";
+    internal const string TooDeep = "document.tooDeep";
 
     private sealed class Failure(string code, int offset) : Exception(code)
     {
@@ -30,6 +31,9 @@ internal sealed class GesSchemaDocumentCheck
     // What each alternative of a union answered and what each form constructed, so nested unions stay linear.
     private readonly Dictionary<(GesResolvedType Type, GesDocumentNode Value), bool> _holds = new();
     private readonly Dictionary<GesDocumentNode, GesDocumentNode> _resolved = new();
+
+    // How many records of each schema enclose the value being checked, which a recursive List counts against its depth.
+    private readonly Dictionary<GesResolvedDeclaration, int> _levels = new();
 
     private GesSchemaDocumentCheck(GesSchemaParameters? parameters) => _parameters = parameters;
 
@@ -49,6 +53,21 @@ internal sealed class GesSchemaDocumentCheck
 
     // A missing field is reported where the value that lacks it starts.
     private void Fields(GesDocumentNode map, GesResolvedDeclaration schema, int start)
+    {
+        _levels.TryGetValue(schema, out var level);
+        _levels[schema] = level + 1;
+        try
+        {
+            CheckFields(map, schema, start);
+        }
+        finally
+        {
+            if (level == 0) _levels.Remove(schema);
+            else _levels[schema] = level;
+        }
+    }
+
+    private void CheckFields(GesDocumentNode map, GesResolvedDeclaration schema, int start)
     {
         var seen = new HashSet<string>(StringComparer.Ordinal);
         for (var index = 0; index < map.Labels.Length; index++)
@@ -127,6 +146,7 @@ internal sealed class GesSchemaDocumentCheck
                 break;
             case GesSchemaTypeKind.List:
                 Require(value, value.Kind == GesDocumentNodeKind.List);
+                if (type.Depth > 0 && value.Children.Length > 0 && _levels.TryGetValue(type.Element![0].Reference!, out var reached) && reached >= type.Depth) throw new Failure(TooDeep, value.Start);
                 if (type.Max is { } listMax && value.Children.Length > listMax) throw new Failure(OutOfRange, value.Start);
                 if (type.Element is { } element)
                     foreach (var item in value.Children) Union(element, item);

@@ -324,6 +324,7 @@ internal static class GesModelPlanner
                 Describe(value.Element!.Value, text);
                 text.Append(')');
                 if (value.Max is { } listMax) text.Append(" max ").Append(listMax);
+                if (value.Depth > 0) text.Append(" depth ").Append(value.Depth);
                 break;
             case GesModelKind.Dice:
                 text.Append(":Dice");

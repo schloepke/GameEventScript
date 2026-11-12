@@ -13,6 +13,9 @@ internal static partial class GesSwiftEmitter
 {
     private static string N(int node) => node.ToString(CultureInfo.InvariantCulture);
 
+    // The level argument that a recursive List's own helpers take.
+    private static string Level(GesPlanValue value) => value.Depth > 0 ? ", level" : "";
+
     private static bool Scalar(GesPlanValue value) => value.Encoding.Kind is GesLayoutKind.Boolean or GesLayoutKind.Integer or GesLayoutKind.Quantized or GesLayoutKind.Float or GesLayoutKind.Tag or GesLayoutKind.Flags;
 
     private static IEnumerable<GesPlanValue> Scalars(GesPlanValue value)
@@ -36,7 +39,7 @@ internal static partial class GesSwiftEmitter
             foreach (var value in Scalars(field.Value)) Helpers(code, value);
 
         code.Blank();
-        code.Open($"func __same(_ other: {type.Name}, _ paths: [String], _ at: Int) throws(GesWireError) -> Bool {{");
+        code.Open($"func __same(_ other: {type.Name}, _ paths: [String], _ at: Int{LevelParameter(type)}) throws(GesWireError) -> Bool {{");
         foreach (var field in type.Fields)
         {
             if (field.Optional)
@@ -70,7 +73,7 @@ internal static partial class GesSwiftEmitter
         }
 
         code.Blank();
-        code.Open($"{mutating}func __quantize(_ paths: [String], _ at: Int) throws(GesWireError) {{");
+        code.Open($"{mutating}func __quantize(_ paths: [String], _ at: Int{LevelParameter(type)}) throws(GesWireError) {{");
         foreach (var field in type.Fields)
         {
             if (field.Optional)
@@ -203,15 +206,17 @@ internal static partial class GesSwiftEmitter
                 foreach (var axis in value.Axes) Same(code, axis, a + "." + Member(axis.Base), b + "." + Member(axis.Base), ownerA, ownerB);
                 break;
             case GesLayoutKind.Schema:
-                code.Line($"if !(try {a}.__same({b}, paths, at + {N(value.Node + 1)})) {{ return false }}");
+                code.Line($"if !(try {a}.__same({b}, paths, at + {N(value.Node + 1)}{NextLevel(value)})) {{ return false }}");
                 break;
             case GesLayoutKind.List:
+                if (value.Depth > 0) OpenLevels(code, value, $"{a}.count + {b}.count");
                 code.Line($"if {a}.count != {b}.count {{ return false }}");
                 code.Open($"for index{node} in 0..<{a}.count {{");
                 var element = value.Element!;
                 if (value.Item is not null) code.Line($"if !(try {a}[index{node}].__same({b}[index{node}], paths, at + {N(element.Node)})) {{ return false }}");
                 else Same(code, element, $"{a}[index{node}]", $"{b}[index{node}]", ownerA, ownerB);
                 code.Close();
+                if (value.Depth > 0) code.Close();
                 break;
             case GesLayoutKind.Union:
                 code.Line($"if {a} != {b} {{ return false }}");
@@ -354,15 +359,17 @@ internal static partial class GesSwiftEmitter
                 foreach (var axis in value.Axes) Quantize(code, axis, target + "." + Member(axis.Base));
                 break;
             case GesLayoutKind.Schema:
-                code.Line($"try {target}.__quantize(paths, at + {N(value.Node + 1)})");
+                code.Line($"try {target}.__quantize(paths, at + {N(value.Node + 1)}{NextLevel(value)})");
                 break;
             case GesLayoutKind.List when Quantized(value.Element!):
                 var element = value.Element!;
+                if (value.Depth > 0) OpenLevels(code, value, target + ".count");
                 code.Open($"for index{node} in 0..<{target}.count {{");
                 if (value.Item is not null) code.Line($"try {target}[index{node}].__quantize(paths, at + {N(element.Node)})");
-                else if (element.Encoding.Kind == GesLayoutKind.Schema) code.Line($"try {target}[index{node}].__quantize(paths, at + {N(element.Node + 1)})");
+                else if (element.Encoding.Kind == GesLayoutKind.Schema) code.Line($"try {target}[index{node}].__quantize(paths, at + {N(element.Node + 1)}{NextLevel(element)})");
                 else Quantize(code, element, $"{target}[index{node}]");
                 code.Close();
+                if (value.Depth > 0) code.Close();
                 break;
             case GesLayoutKind.Union when value.Alternatives.Exists(Quantized):
                 code.Line($"switch {target} {{");
@@ -478,14 +485,14 @@ internal static partial class GesSwiftEmitter
         var count = N(type.Fields.Count);
         var counted = key is null ? count : $"top ? {N(type.Fields.Count - 1)} : {count}";
         code.Blank();
-        code.Open($"func __writeDelta(_ baseline: {type.Name}, _ writer: inout GesBitWriter, _ paths: [String], _ at: Int, _ top: Bool) throws(GesWireError) -> Bool {{");
+        code.Open($"func __writeDelta(_ baseline: {type.Name}, _ writer: inout GesBitWriter, _ paths: [String], _ at: Int, _ top: Bool{LevelParameter(type)}) throws(GesWireError) -> Bool {{");
         if (type.Fields.Count == 0)
         {
             // A schema without fields has no change bits and never changes.
             code.Line("false");
             code.Close();
             code.Blank();
-            code.Open($"{mutating}func __readDelta(_ baseline: {type.Name}, _ reader: inout GesBitReader, _ paths: [String], _ at: Int, _ top: Bool) throws(GesWireError) -> Bool {{");
+            code.Open($"{mutating}func __readDelta(_ baseline: {type.Name}, _ reader: inout GesBitReader, _ paths: [String], _ at: Int, _ top: Bool{LevelParameter(type)}) throws(GesWireError) -> Bool {{");
             code.Line("false");
             code.Close();
             return;
@@ -516,7 +523,7 @@ internal static partial class GesSwiftEmitter
         code.Line("return changed");
         code.Close();
         code.Blank();
-        code.Open($"{mutating}func __readDelta(_ baseline: {type.Name}, _ reader: inout GesBitReader, _ paths: [String], _ at: Int, _ top: Bool) throws(GesWireError) -> Bool {{");
+        code.Open($"{mutating}func __readDelta(_ baseline: {type.Name}, _ reader: inout GesBitReader, _ paths: [String], _ at: Int, _ top: Bool{LevelParameter(type)}) throws(GesWireError) -> Bool {{");
         code.Line($"let fieldCount = {counted}");
         code.Line("try reader.require(fieldCount, path: at == 0 ? \"\" : paths[at - 1])");
         code.Line("let changeBits = reader.bitPosition");
@@ -603,10 +610,10 @@ internal static partial class GesSwiftEmitter
                 code.Close();
                 break;
             case GesLayoutKind.List when encoding.Keyed:
-                code.Line($"if try __writeKeyed{node}(baseline, &writer, paths, at) {{ {set} = true }}");
+                code.Line($"if try __writeKeyed{node}(baseline, &writer, paths, at{Level(value)}) {{ {set} = true }}");
                 break;
             case GesLayoutKind.Text or GesLayoutKind.Bytes or GesLayoutKind.List:
-                code.Open($"if !(try __same{node}(baseline, paths, at)) {{");
+                code.Open($"if !(try __same{node}(baseline, paths, at{Level(value)})) {{");
                 Write(code, value, a);
                 code.Line($"{set} = true");
                 code.Close();
@@ -635,7 +642,7 @@ internal static partial class GesSwiftEmitter
             case GesLayoutKind.Schema:
                 code.Open("do {");
                 code.Line($"let start{node} = writer.bitPosition");
-                code.Open($"if try {a}.__writeDelta({b}, &writer, paths, at + {N(value.Node + 1)}, false) {{");
+                code.Open($"if try {a}.__writeDelta({b}, &writer, paths, at + {N(value.Node + 1)}, false{NextLevel(value)}) {{");
                 code.Line($"{set} = true");
                 code.Close("} else {");
                 code.Line($"    writer.rewind(to: start{node})");
@@ -719,11 +726,11 @@ internal static partial class GesSwiftEmitter
                 code.Line(")");
                 break;
             case GesLayoutKind.List when encoding.Keyed:
-                code.Line($"try __readKeyed{node}(baseline, &reader, paths, at)");
+                code.Line($"try __readKeyed{node}(baseline, &reader, paths, at{Level(value)})");
                 break;
             case GesLayoutKind.Text or GesLayoutKind.Bytes or GesLayoutKind.List:
                 Read(code, value, a);
-                code.Line($"if try __same{node}(baseline, paths, at) {{ {Throw("invalidDelta", value)} }}");
+                code.Line($"if try __same{node}(baseline, paths, at{Level(value)}) {{ {Throw("invalidDelta", value)} }}");
                 break;
             case GesLayoutKind.Point or GesLayoutKind.Vector:
                 code.Open("do {");
@@ -754,7 +761,7 @@ internal static partial class GesSwiftEmitter
                 code.Close();
                 break;
             case GesLayoutKind.Schema:
-                code.Line($"if !(try {a}.__readDelta({b}, &reader, paths, at + {N(value.Node + 1)}, false)) {{ {Throw("invalidDelta", value)} }}");
+                code.Line($"if !(try {a}.__readDelta({b}, &reader, paths, at + {N(value.Node + 1)}, false{NextLevel(value)})) {{ {Throw("invalidDelta", value)} }}");
                 break;
             case GesLayoutKind.Union:
                 code.Open("do {");
@@ -798,7 +805,7 @@ internal static partial class GesSwiftEmitter
         if (value.Encoding.Kind is GesLayoutKind.Text or GesLayoutKind.Bytes or GesLayoutKind.List)
         {
             code.Blank();
-            code.Open($"private func __same{N(value.Node)}(_ baseline: {type}, _ paths: [String], _ at: Int) throws(GesWireError) -> Bool {{");
+            code.Open($"private func __same{N(value.Node)}(_ baseline: {type}, _ paths: [String], _ at: Int{(value.Depth > 0 ? ", _ level: Int" : "")}) throws(GesWireError) -> Bool {{");
             Same(code, value, Target(value.Base), Other("baseline", value.Base), "self", "baseline");
             code.Line("return true");
             code.Close();

@@ -383,7 +383,7 @@ enum GesCSharpEmitter {
             }
         }
         code.blank()
-        code.line("internal \(selfModifier)void __WriteFields(ref GesBitWriter writer, string[] paths, int at)")
+        code.line("internal \(selfModifier)void __WriteFields(ref GesBitWriter writer, string[] paths, int at\(levelParameter(type)))")
         code.open("{")
         for field in type.fields {
             if field.optional {
@@ -400,7 +400,7 @@ enum GesCSharpEmitter {
         for tag in type.tags { code.line("writer.Write(\(tag.base) ? 1UL : 0UL, 1);") }
         code.close()
         code.blank()
-        code.line("internal void __ReadFields(ref GesBitReader reader, string[] paths, int at)")
+        code.line("internal void __ReadFields(ref GesBitReader reader, string[] paths, int at\(levelParameter(type)))")
         code.open("{")
         for field in type.fields {
             if field.optional {
@@ -516,6 +516,22 @@ enum GesCSharpEmitter {
 
     static func path(_ value: GesPlanValue) -> String { "paths[at + \(value.node)]" }
 
+    // A recursive schema's methods take the level of the record, 1 where a caller enters the recursion.
+    static func levelParameter(_ type: GesPlanType) -> String { type.depth > 0 ? ", int level = 1" : "" }
+
+    // The level argument of a call into a record: one deeper for the element of a recursive List.
+    static func nextLevel(_ value: GesPlanValue) -> String { value.recursive ? ", level + 1" : "" }
+
+    // Opens the levels of a recursive List that hold elements; at its depth the List holds nothing, so data there is deeper.
+    static func openLevels(_ code: inout Code, _ value: GesPlanValue, _ count: String) {
+        code.line("if (level >= \(value.depth))")
+        code.open("{")
+        code.line("if (\(count) > 0) throw new GesWireException(GesWireException.TooDeep, \(path(value)), \"deeper than depth \(value.depth)\");")
+        code.close()
+        code.line("else")
+        code.open("{")
+    }
+
     static func fail(_ code: String, _ value: GesPlanValue) -> String { "throw new GesWireException(GesWireException.\(code), \(path(value)));" }
 
     // Writes the value in `target`, which the caller has validated as present.
@@ -563,6 +579,7 @@ enum GesCSharpEmitter {
             code.line("writer.WriteBytes(text);")
             code.close()
         case .list:
+            if value.depth > 0 { openLevels(&code, value, target + ".Count") }
             code.line("if (\(target).Count > \(max)) \(fail("TooLong", value))")
             code.line("writer.Write((ulong)\(target).Count, \(width));")
             code.line("foreach (var item in \(target))")
@@ -573,11 +590,12 @@ enum GesCSharpEmitter {
                 write(&code, value.element!, "item")
             }
             code.close()
+            if value.depth > 0 { code.close() }
         case .point, .vector:
             for axis in value.axes { write(&code, axis, target + "." + axis.base) }
             for axis in GesSchemaPlanner.omitted(value) { code.line("if (\(target).\(axis) != 0) \(fail("TypeMismatch", value))") }
         case .schema:
-            code.line("\(target).__WriteFields(ref writer, paths, at + \(value.node + 1));")
+            code.line("\(target).__WriteFields(ref writer, paths, at + \(value.node + 1)\(nextLevel(value)));")
         case .union:
             code.line("switch (\(target))")
             code.open("{")
@@ -647,6 +665,11 @@ enum GesCSharpEmitter {
         case .list:
             let element = value.element!
             let name = elementName(value)
+            if value.depth > 0 {
+                // The deepest level reads no count, since its List takes no bits.
+                code.line("if (level >= \(value.depth)) \(target).Clear();")
+                code.line("else")
+            }
             code.open("{")
             code.line("var count = (int)reader.Read(\(width), \(path(value)));")
             code.line("if (count > \(max)) \(fail("InvalidCount", value))")
@@ -673,7 +696,7 @@ enum GesCSharpEmitter {
             for axis in value.axes { read(&code, axis, target + "." + axis.base) }
             for axis in GesSchemaPlanner.omitted(value) { code.line("\(target).\(axis) = 0;") }
         case .schema:
-            code.line("\(target).__ReadFields(ref reader, paths, at + \(value.node + 1));")
+            code.line("\(target).__ReadFields(ref reader, paths, at + \(value.node + 1)\(nextLevel(value)));")
         case .union:
             code.open("{")
             code.line("var choice = reader.Read(\(width), \(path(value)));")

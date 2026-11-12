@@ -235,6 +235,7 @@ enum GesModelPlanner {
             describe(value.element!.value, &text)
             text += ")"
             if let max = value.max { text += " max \(max)" }
+            if value.depth > 0 { text += " depth \(value.depth)" }
         case .dice:
             text += ":Dice"
             if let max = value.max { text += " max \(max)" }

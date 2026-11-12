@@ -10,6 +10,7 @@ struct GesSchemaDocumentCheck {
     private static let unknownField = "document.unknownField"
     private static let fieldType = "document.fieldType"
     private static let outOfRange = "document.outOfRange"
+    private static let tooDeep = "document.tooDeep"
 
     private struct Failure: Error {
         let code: String
@@ -21,9 +22,11 @@ struct GesSchemaDocumentCheck {
         let value: GesDocumentNode
     }
 
-    // What each alternative of a union answered, so nested unions stay linear.
+    // What each alternative of a union answered, so nested unions stay linear, and how many records of each schema enclose
+    // the value being checked, which a recursive List counts against its depth.
     private final class Attempts {
         var holds: [Attempt: Bool] = [:]
+        var levels: [ObjectIdentifier: Int] = [:]
     }
 
     let parameters: GesSchemaParameters?
@@ -41,6 +44,9 @@ struct GesSchemaDocumentCheck {
     }
 
     private func fields(_ keys: [String], _ values: [GesDocumentNode], _ keyOffsets: [Int], _ valueOffsets: [Int], start: Int, _ schema: GesResolvedDeclaration) throws {
+        let level = attempts.levels[ObjectIdentifier(schema)] ?? 0
+        attempts.levels[ObjectIdentifier(schema)] = level + 1
+        defer { attempts.levels[ObjectIdentifier(schema)] = level == 0 ? nil : level }
         var seen: Set<String> = []
         for (index, key) in keys.enumerated() {
             guard let field = schema.fields.first(where: { $0.name == key }) else { throw Failure(code: Self.unknownField, offset: keyOffsets[index]) }
@@ -117,6 +123,9 @@ struct GesSchemaDocumentCheck {
             if let max = type.max, bytes.count > max { throw Failure(code: Self.outOfRange, offset: start) }
         case .list:
             guard case .list(let items, let offsets) = value else { return try require(false) }
+            if type.depth > 0 && !items.isEmpty && (attempts.levels[ObjectIdentifier(type.element![0].reference!)] ?? 0) >= type.depth {
+                throw Failure(code: Self.tooDeep, offset: start)
+            }
             if let max = type.max, items.count > max { throw Failure(code: Self.outOfRange, offset: start) }
             if let element = type.element {
                 for (index, item) in items.enumerated() { try union(element, item, offsets[index]) }

@@ -917,3 +917,78 @@ profiles on the same machine and use unprofiled benchmarks for overall speed.
 A wall-clock-sensitive script may observe different delayed-message readiness
 under instrumentation. Counts after an opcode fault can differ from the Host's
 completed-opcode counter. The report measures neither allocations nor CPU time.
+
+## In-process benchmark
+
+> **Since: Unreleased**
+
+`bench` measures the steady state of a compiled program inside one process, the same way in both CLIs, so the Swift
+runtime, the .NET JIT and .NET NativeAOT can be compared. It is the contract for both implementations:
+
+```sh
+dotnet ges bench workload.gesb [--entry <name>] [--warmup <count>] [--iterations <count>] [--min-time <ms>]
+                               [--fresh-instance] [--gc-between] [--per-iteration] [--json]
+                               [--seed <integer>] [--max-messages <count>] [--max-steps <count>]
+ges bench workload.gesb ...
+```
+
+- **Input.** Only a compiled `.gesb`; `bench` never compiles. A source file is a usage error.
+- **Load.** Reading, decoding and validating the binary, building the Host, linking and the initialization of `Start`
+  are timed once as the load time. The Host has the console endpoints of `run`, but they record messages instead of
+  writing them, and the limits of `run` (`--max-messages`, `--max-steps`, `--seed` as there).
+- **Entry.** One run sends the entry message, by default `Main`, and pumps the Host until it is idle. The message is
+  `<entry>(args: [])` when the program handles `<entry>(args)`, otherwise `<entry>()`; a program with neither fails with
+  `cli.missingEntry`. A run must not leave delayed messages: waiting would measure sleep, not execution.
+- **Warm-up.** `--warmup` untimed runs, by default 20. With `--min-time <ms>`, warm-up continues after that count until
+  that much time has passed, which lets the .NET JIT reach its optimized tiers; the output reports the runs done.
+- **Measurement.** `--iterations` timed runs, by default 50, each timed with the platform's monotonic high-resolution
+  clock (.NET `Stopwatch.GetTimestamp`, Swift `DispatchTime.uptimeNanoseconds`). Only sending and pumping are timed;
+  recording a console message stores the message, and everything else, such as the checksum, happens between runs.
+- **Fresh instance.** With `--fresh-instance`, every run gets a new Host and instance; creating it is timed separately
+  and reported as its median, never as part of a run.
+- **Checksum.** After each timed run, the CLI folds the recorded messages into an FNV-1a 64 hash, in order, as one
+  UTF-8 line each: the message name, `:` and its arguments' texts joined without separator, as `run` prints them
+  (`ErrorCode:7`). The hash over all timed runs, 16 lowercase hexadecimal digits, shows that runtimes compute the same.
+- **Failures.** A runtime error, a reached limit, a remaining delayed message or a nonzero `ErrorCode` fails the
+  benchmark with exit code 1 and `error cli.benchFailed: <warm-up|iteration> <n>: <reason>`; usage errors exit 2.
+- **Statistics.** Milliseconds per run: minimum, median, mean, 95th percentile, maximum and the sample standard
+  deviation (n - 1; 0 for one run). Median and p95 interpolate linearly between the closest ranks of the sorted
+  samples, at position `(n - 1) * q`.
+- **Memory.** .NET reports the bytes allocated on the measuring thread per timed run (mean of
+  `GC.GetAllocatedBytesForCurrentThread` differences) and the Gen0, Gen1 and Gen2 collections over the timed phase.
+  `--gc-between` runs `GC.Collect`, `GC.WaitForPendingFinalizers` and `GC.Collect` before each run, untimed. Swift uses
+  reference counting and has no such counters: it reports them as absent and accepts `--gc-between` without effect.
+
+The text output, on stdout:
+
+```text
+Benchmark: workload.gesb, entry Main
+Runtime: dotnet-jit 8.0.22 (macos arm64)
+Tiering: TieredCompilation=true, TieredPGO=true, ReadyToRun=false
+Load: 41.210 ms
+Warm-up: 20 runs
+Iterations: 50
+Time per run (ms): min 9.812, median 10.044, mean 10.101, p95 10.733, max 11.020, stddev 0.231
+Allocated per run: 2148760 bytes; collections gen0 41, gen1 0, gen2 0
+Checksum: 9d2c4b1f0a8e7d36
+```
+
+Swift and NativeAOT print `Tiering: n/a`, Swift `Allocated per run: n/a`. `--fresh-instance` adds
+`Instance creation (median): <ms> ms` after the load line, and `--per-iteration` lists `Run <n>: <ms> ms` for every
+timed run before the statistics, which shows JIT tiering over time.
+
+`--json` prints one JSON object instead, with these members in this order: `runtime` (`swift`, `dotnet-jit` or
+`dotnet-aot`; .NET is AOT when `RuntimeFeature.IsDynamicCodeSupported` is false), `runtimeVersion`, `os` (`macos`,
+`linux` or `windows`), `arch` (`arm64` or `x64`), `script`, `entry`, `freshInstance`, `loadMs`, `instanceMedianMs`,
+`warmup`, `iterations`, `minMs`, `medianMs`, `meanMs`, `p95Ms`, `maxMs`, `stddevMs`, `allocatedBytesPerIteration`,
+`gen0Collections`, `gen1Collections`, `gen2Collections`, `tieredCompilation`, `tieredPgo`, `readyToRun`, `checksum`, and
+with `--per-iteration` `samplesMs`. Times are milliseconds with six decimals. Absent values are `null`: the memory
+counters on Swift, the tiering settings on Swift and NativeAOT, `instanceMedianMs` without `--fresh-instance`. .NET reads
+the tiering settings from the `DOTNET_TieredCompilation`, `DOTNET_TieredPGO` and `DOTNET_ReadyToRun` variables and the
+runtime configuration, and `readyToRun` also requires that the Runtime assembly contains precompiled code.
+
+**Steady state and cold start.** `bench` answers how fast a long-running client executes a warmed-up program. A
+process started per measurement, as Hyperfine does, measures process start plus the first run instead: under the .NET
+JIT that first run executes the Runtime's own code unoptimized. Use Hyperfine for cold start and `bench` for steady
+state; [the compute benchmark](../../../examples/compute-benchmark/Benchmarks.md) shows both, and
+`scripts/bench-compare.py` compares the Swift CLI and four .NET configurations in one table.

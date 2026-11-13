@@ -14,6 +14,7 @@ enum ToolHelp {
           ges run <program files ...> [--color] -- <text> ...
           ges run --interactive [--color] [program files ...]
           ges dump <program.gesb> [-o <output.gesa>] [--addresses]
+          ges bench <program.gesb> [--entry <name>] [--warmup <count>] [--iterations <count>] [--json]
           ges document check <data.gesd> [more.gesd ...] [-q]
           ges document format <data.gesd> [-o <output.gesd>] [--color]
           ges schema <check|format|hash|canonical|dump|layout|generate> <schema.gess> ...
@@ -23,12 +24,36 @@ enum ToolHelp {
           check       Validate source files without writing a binary. Use 'ges check --help' for options.
           run         Run Main(args), an event scenario, or the event console. Use 'ges run --help' for options.
           dump        Dump a .gesb file as GESA text. Use 'ges dump --help' for options.
+          bench       Measure the steady state of a compiled program in this process. Use 'ges bench --help' for options.
           document    Check or format GES documents (.gesd). Use 'ges document --help' for options.
           schema      Check, format or hash GES schemas (.gess), dump binary data, and generate code. Use 'ges schema --help' for options.
 
         Options:
           -h, --help  Show this help.
           --version   Show the tool version.
+        """#
+    static let bench = #"""
+        Usage:
+          ges bench <program.gesb> [--entry <name>] [--warmup <count>] [--iterations <count>] [--min-time <ms>]
+                    [--fresh-instance] [--gc-between] [--per-iteration] [--json]
+                    [--seed <integer>] [--max-messages <count>] [--max-steps <count>]
+
+        Measure the steady state of a compiled program in this process: load it once, warm up, then time every run of the
+        entry message. The CLI README describes the output, which 'dotnet ges bench' shares.
+
+        Options:
+          --entry <name>        Message every run sends (default: Main); Main(args) receives an empty list.
+          --warmup <count>      Untimed runs before measuring (default: 20).
+          --iterations <count>  Timed runs (default: 50).
+          --min-time <ms>       Continue warming up until this many milliseconds have passed.
+          --fresh-instance      Create the Host and instance for every run; their creation is timed separately.
+          --gc-between          Collect garbage before every run, untimed (no effect: Swift uses reference counting).
+          --per-iteration       List every timed run.
+          --json                Print one JSON object instead of text.
+          --seed <integer>      Signed 64-bit random seed. Omit for a fresh host seed.
+          --max-messages <n>    Maximum processed messages per pump (default: 64).
+          --max-steps <n>       Maximum execution steps per handler (default: 100000).
+          -h, --help            Show this help.
         """#
     static let compile = #"""
         Usage:

@@ -28,3 +28,4 @@ swift test --package-path "$ges_root/implementation/swift/GameEventScriptTool" \
 python3 "$ges_root/scripts/test-swift-tool.py" "$ges_root/artifacts/swift/linux/tool/debug/ges"
 python3 "$ges_root/scripts/test-cli-delayed.py" "$ges_root/artifacts/swift/linux/tool/debug/ges"
 python3 "$ges_root/scripts/test-cli-editor.py" "$ges_root/artifacts/swift/linux/tool/debug/ges"
+python3 "$ges_root/scripts/test-cli-bench.py" --swift "$ges_root/artifacts/swift/linux/tool/debug/ges"

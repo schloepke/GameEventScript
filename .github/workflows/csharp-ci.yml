@@ -102,6 +102,9 @@ jobs:
       - name: Verify CLI editor and save sessions
         run: python3 scripts/test-cli-editor.py dotnet artifacts/csharp/tool/bin/Release/net8.0/GameEventScript.Tool.dll
 
+      - name: Verify the in-process benchmark contract
+        run: python3 scripts/test-cli-bench.py --csharp artifacts/csharp/tool/bin/Release/net8.0/GameEventScript.Tool.dll
+
       - name: Verify the C# guide examples
         run: python3 scripts/test-guide-examples.py --language csharp
 

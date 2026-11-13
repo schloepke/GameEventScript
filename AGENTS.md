@@ -704,8 +704,11 @@ the `cli-release` environment and an existing GitHub release. Never overwrite as
 Preparing archives does not publish. Run `python3 scripts/test-cli-distribution.py`.
 See `docs/guide/distribution/Tools.md`; all output stays below `artifacts/cli`.
 
-The C# `dotnet ges` and Swift `ges` tools provide `compile`, `check`, `run`, and
-`dump`. The C# NuGet package remains `GameEventScript.Tool`; the installed command is
+The C# `dotnet ges` and Swift `ges` tools provide `compile`, `check`, `run`, `dump` and
+`bench`. `bench` measures a compiled program's steady state in process with identical flags, statistics, text and JSON
+in both CLIs (contract: the C# CLI README, In-process benchmark); `python3 scripts/test-cli-bench.py` checks the
+contract and equal checksums, and `python3 scripts/bench-compare.py` compares the Swift CLI with four .NET
+configurations (JIT, JIT without tiering, ReadyToRun, NativeAOT) in one table. The C# NuGet package remains `GameEventScript.Tool`; the installed command is
 `dotnet-ges`, resolved by `dotnet ges` when the tool directory is on `PATH`.
 `check` uses the complete compiler pipeline without writing a binary or executing
 handlers. `document check` reads `.gesd` files and reports the first error of each

@@ -279,6 +279,12 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   values unequal.
 
 ### Added
+
+- Both CLIs have `bench`, an in-process benchmark of a compiled program: it loads the program once, warms it up and
+  times every further run of the entry message, then reports min, median, mean, p95, max and standard deviation, a
+  checksum of the console output, and on .NET the allocations and collections per run and the tiering settings, as
+  text or JSON. `scripts/bench-compare.py` compares the Swift CLI, the .NET JIT with and without tiered compilation,
+  ReadyToRun and NativeAOT on the same binary.
 - `:Bytes`, an immutable byte sequence: literals `:Bytes[0xa0, 183]` and `:Bytes("a0b7")`, `as :Bytes`
   from integer Lists and hexadecimal Text, `as :Text`/`parse`/documents, count, `in`, indexing,
   iteration, equality and order, `:take`/`:drop` `first`/`last` slices, `+` concatenation and UTF-8

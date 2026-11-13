@@ -27,7 +27,7 @@ final class Tool {
                 return 0
             }
         }
-        guard ["compile", "check", "dump", "document", "schema", "run"].contains(command) else {
+        guard ["compile", "check", "dump", "bench", "document", "schema", "run"].contains(command) else {
             io.line("Unknown command or arguments. Run 'ges --help' for usage.", toError: true)
             return 2
         }
@@ -36,6 +36,7 @@ final class Tool {
             switch command {
             case "compile", "check": result = try compile(args, check: command == "check")
             case "dump": result = try dump(args)
+            case "bench": result = try bench(args)
             case "document": result = try document(args)
             case "schema": result = try schema(args)
             default: result = try runPrograms(args)

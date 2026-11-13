@@ -293,3 +293,12 @@ profiles on the same machine and use unprofiled benchmarks for overall speed.
 A wall-clock-sensitive script may observe different delayed-message readiness
 under instrumentation. Counts after an opcode fault can differ from the Host's
 completed-opcode counter. The report measures neither allocations nor CPU time.
+
+## In-process benchmark
+
+> **Since: Unreleased**
+
+`ges bench workload.gesb` measures the steady state of a compiled program inside one process, with the same flags,
+statistics, text and JSON output as `dotnet ges bench`. The [C# CLI README](../../csharp/GameEventScript.Tool/README.md#in-process-benchmark)
+holds the contract for both. Swift reports the .NET memory counters and tiering settings as absent and accepts
+`--gc-between` without effect.

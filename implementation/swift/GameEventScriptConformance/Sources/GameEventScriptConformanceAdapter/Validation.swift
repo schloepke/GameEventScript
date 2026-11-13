@@ -108,7 +108,7 @@ enum Validation {
                     let access = try api.required("access")
                     try self.fields(access, ["value", "external", "fromEntries", "members", "readFields", "materialize", "toJson", "toMessageJson"])
                     try require(access["fromEntries"]?.boolValue != nil && access["toJson"]?.boolValue != nil && access["toMessageJson"]?.boolValue != nil && (access["external"] == .null) != (access["value"] == .null))
-                    if let probe = access["external"], probe != .null { try require(["counting", "typed", "failing", "faulting", "ordered", "sparse"].contains(try probe.stringValue ?? "")) }
+                    if let probe = access["external"], probe != .null { try require(["counting", "typed", "failing", "faulting", "ordered", "sparse"].contains(probe.stringValue ?? "")) }
                     if access["value"] != .null { try value(access.required("value")) }
                     for path in access.values("members") { try require(path.arrayValue?.allSatisfy { $0.stringValue != nil } == true) }
                 case "valueApi":

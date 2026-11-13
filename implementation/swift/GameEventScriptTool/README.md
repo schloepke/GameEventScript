@@ -33,7 +33,7 @@ ges --version
 ges --help
 ```
 
-The installer builds all Swift packages in Release and installs a standalone
+The installer builds the CLI package and its dependencies in Release and installs a standalone
 executable in `$HOME/.local/bin`. Add that directory to `PATH`. Run the same
 script after changing or pulling sources to update it. It does not run tests.
 An installation can be relocated without any resource bundle or repository;

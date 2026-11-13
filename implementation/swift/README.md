@@ -107,7 +107,7 @@ invoked by absolute path from another working directory:
 | `python3 scripts/test-swift-spacing.py` | Verify syntax-aware declaration spacing and preservation of comments/strings |
 | `./scripts/test-swift-tool.sh` | Verify CLI adapters, real process I/O and terminal editing without .NET |
 | `./scripts/test-swift-bridge.sh` | Verify native Swift adapters and Compiler/Runtime binding integration without .NET |
-| `./scripts/install-swift-tool.sh` | Build all packages and install/update the native `ges` CLI |
+| `./scripts/install-swift-tool.sh` | Build the CLI package and install/update the native `ges` CLI |
 | `./scripts/uninstall-swift-tool.sh` | Remove the owned Swift CLI installation |
 | `./scripts/test-swift.sh` | Export C# interoperability fixtures, run native tests, strict shared Conformance and bidirectional numeric text roundtrips |
 | `python3 scripts/test-number-text-roundtrip.py` | Verify exact C# ↔ Swift Number/Quantity/Percentage text exchange with deterministic inputs |

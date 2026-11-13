@@ -8483,7 +8483,7 @@ schema:
 
 ## Test: a Disc in a document
 
-A document has no geometry literal: a Disc is the Map of its `center`, a Point, and its `radius`, a number of the unit, each within the block.
+A document has no geometry literal: a Disc is the Map of its `center`, a Point, and its `radius`, a number of the unit, each within the block; a negative radius is checked by its magnitude, which the disc takes.
 
 ### Case description
 
@@ -8493,7 +8493,7 @@ id: document-disc
 schemaApi:
   sources:
     - "schema :Zone as {\n  reach: :Disc(m) {\n    x between 0m and 100m\n    radius between 0m and 7m\n  }\n}\n"
-  document: ":Schema(:Zone)\nreach: [center: :Point(1m, 0m), radius: 3m]\n"
+  document: ":Schema(:Zone)\nreach: [center: :Point(1m, 0m), radius: -3m]\n"
 ```
 
 ### Expectation

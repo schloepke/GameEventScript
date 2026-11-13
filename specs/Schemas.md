@@ -100,9 +100,11 @@ type        = ":Boolean"
 numeric     = ( ":Number" | ":Percentage" | quantity ) constraints
 quantity    = ":Quantity" "(" unit ")"
 spatial     = ( ":Point" | ":Vector" | ":Box" ) [ "(" unit ")" ] [ "{" axis { axis } "}" ]
-            | ":Poly" [ "(" unit ")" ] [ "max" maximum ] [ "{" axis { axis } "}" ]
-            | ":Disc" [ "(" unit ")" ] [ "{" axis { axis } "}" ]
-axis        = ( "x" | "y" | "z" | "radius" ) constraints
+            | ":Poly" [ "(" unit ")" ] [ "max" maximum ] [ "{" planeaxis { planeaxis } "}" ]
+            | ":Disc" [ "(" unit ")" ] [ "{" discaxis { discaxis } "}" ]
+axis        = ( "x" | "y" | "z" ) constraints
+planeaxis   = ( "x" | "y" ) constraints
+discaxis    = ( "x" | "y" | "radius" ) constraints
 constraints = [ "integer" ] [ range ] [ "step" value ] [ "delta" "within" value ]
 range       = [ "wrapping" ] "between" value "and" value
 value       = literal | "$" ConstantName | LowerName
@@ -1329,7 +1331,7 @@ facing: #north
   `document.unknownField` and a missing corner `document.missingField`. A `:Poly` is the List of its points. A `:Disc` is
   the Map of its `center` and `radius`, `[center: :Point(1m, 0m), radius: 3m]`, or a `:Record("Disc", ...)` of them, with
   the same errors. Each corner, point or centre is a Point of the unit within the axes of the block, and a radius a number of
-  the unit within the block's `radius`, or zero when the block leaves it out.
+  the unit whose magnitude, which the disc takes, lies within the block's `radius`, or zero when the block leaves it out.
 - A value outside a closed range is an error. A wrapping field accepts any finite
   value. `max` and `integer` are checked; `step` and `delta within` are not.
 - A bound that uses an unbound parameter is not checked. A value that is given must have the

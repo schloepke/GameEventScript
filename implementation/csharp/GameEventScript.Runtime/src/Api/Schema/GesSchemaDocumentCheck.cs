@@ -302,15 +302,20 @@ internal sealed class GesSchemaDocumentCheck
         if (seen != 3) throw Fail(MissingField, value.Start);
     }
 
-    // A radius of the Disc's unit, within the block's radius, or zero when the block leaves it out.
+    // A radius of the Disc's unit, whose magnitude lies within the block's radius, as a disc takes the magnitude, or zero when
+    // the block leaves it out.
     private void Radius(GesResolvedType type, GesDocumentNode value)
     {
         Require(value, value.Kind == GesDocumentNodeKind.Number && value.Number.Kind != GesNumberLiteralKind.Percentage && value.Number.Unit == type.Unit);
         var number = value.Number;
         if (type.Axes is not { } axes) return;
         var declared = Array.Find(axes, candidate => candidate.Axis == "radius");
-        if (declared is null) Require(value, number.Kind == GesNumberLiteralKind.Integer ? number.IntegerValue == 0 : number.FloatValue == 0);
-        else Numeric(declared.Constraints, number.Kind == GesNumberLiteralKind.Integer, number.IntegerValue, number.FloatValue, value);
+        // long.MinValue has no Int64 magnitude, so it is checked as its binary64 magnitude.
+        var integer = number.Kind == GesNumberLiteralKind.Integer && number.IntegerValue != long.MinValue;
+        var whole = integer ? Math.Abs(number.IntegerValue) : 0;
+        var fraction = Math.Abs(integer ? number.IntegerValue : number.Kind == GesNumberLiteralKind.Integer ? (double)number.IntegerValue : number.FloatValue);
+        if (declared is null) Require(value, integer ? whole == 0 : fraction == 0);
+        else Numeric(declared.Constraints, integer, whole, fraction, value);
     }
 
     private void Spatial(GesResolvedType type, GesDocumentNode value, GesDocumentNodeKind kind)

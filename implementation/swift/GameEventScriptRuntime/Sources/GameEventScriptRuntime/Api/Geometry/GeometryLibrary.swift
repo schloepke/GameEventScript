@@ -9,7 +9,7 @@
 /// `:Box(lower: p, upper: q)` takes two corners in any order, which its fields `lower` and `upper` return ordered (`min` and
 /// `max` are GES keywords), and `:Box(center: p, size: v)` a centre and a size;
 /// `:Poly(points: [...])` takes its points; `:Disc(center: p, radius: r)` a centre and a radius and `:Disc(radius: r)` a
-/// radius around the origin. Corners, points, sizes and radii share one unit, which the value keeps; another kind or a mixed
+/// radius around the origin; the radius follows its declared Number type, so a Percentage is its unitless ratio. Corners, points, sizes and radii share one unit, which the value keeps; another kind or a mixed
 /// unit constructs `nothing`. A polygon or disc need not be valid to exist, but its operations give `nothing` when it is not.
 /// Functions: `size`, `center`, `union`, `inset(_, by:)` and `nearest`, the point of a shape nearest to a point (`clamp` is
 /// a GES keyword), of boxes; `bounds`, `area` (signed and unitless, like `dot`), `distance` and `centroid` of polygons;

@@ -63,9 +63,14 @@ internal static class GameEventScriptConformanceExternalTypes
         ],
         [new GesExternalTypeConstructorDefinition("DeclaredProbe", [new GesExternalTypeParameterDefinition("name", GesBytecodeTypeKind.Text)])]);
 
+    private static readonly GesExternalTypeDefinition NumberDefinition = new(
+        "NumberProbe",
+        [new GesExternalTypeFieldDefinition("value", GesBytecodeTypeKind.Float), new GesExternalTypeFieldDefinition("stored", GesBytecodeTypeKind.Float)],
+        [new GesExternalTypeConstructorDefinition("NumberProbe", [new GesExternalTypeParameterDefinition("value", GesBytecodeTypeKind.Float)])]);
+
     // The fixtures follow the standard geometry library, which resolves :Box and :Poly in front of them.
     internal static readonly IGesExternalTypeCatalog Catalog = GesGeometryLibrary.Catalog(
-        new GesDeclaredExternalTypeCatalog([AimDefinition, GameEventScriptConformanceCallbackProbe.Definition, SpatialDefinition, OptionalDefinition, DeclaredDefinition, ReadProbeDefinition]));
+        new GesDeclaredExternalTypeCatalog([AimDefinition, GameEventScriptConformanceCallbackProbe.Definition, SpatialDefinition, OptionalDefinition, DeclaredDefinition, ReadProbeDefinition, NumberDefinition]));
 
     internal static readonly IGesExternalTypeRegistry Registry = GesGeometryLibrary.ExternalTypes(new TestRuntimeRegistry());
 
@@ -124,6 +129,7 @@ internal static class GameEventScriptConformanceExternalTypes
         private readonly OptionalConstructor _optionalConstructor = new();
         private readonly DeclaredConstructor _declaredConstructor = new();
         private readonly ReadProbeConstructor _readConstructor = new();
+        private readonly NumberConstructor _numberConstructor = new();
 
         public IGesExternalTypeConstructor? Resolve(GesExternalTypeConstructorReference reference)
             => string.Equals(reference.SignatureId, _constructor.Definition.SignatureId, StringComparison.Ordinal)
@@ -138,7 +144,30 @@ internal static class GameEventScriptConformanceExternalTypes
                                 ? _declaredConstructor
                                 : string.Equals(reference.SignatureId, _readConstructor.Definition.SignatureId, StringComparison.Ordinal)
                                     ? _readConstructor
-                                    : null;
+                                    : string.Equals(reference.SignatureId, _numberConstructor.Definition.SignatureId, StringComparison.Ordinal)
+                                        ? _numberConstructor
+                                        : null;
+    }
+
+    // Keeps the converted argument as `value`; `stored` is an Integer quantity that its Number declaration reads as binary64.
+    private sealed class NumberConstructor : IGesExternalTypeConstructor
+    {
+        public GesExternalTypeConstructorDefinition Definition { get; } = NumberDefinition.Constructors[0];
+
+        public void Invoke(GesExternalTypeConstructorCall call) => call.SetExternalValue(new NumberValue(call.Arguments[0]));
+    }
+
+    private sealed class NumberValue(GesValue value) : IGesExternalValue
+    {
+        public GesExternalTypeDefinition Definition { get; } = NumberDefinition;
+
+        public GesValue? GetField(string fieldName)
+            => fieldName switch
+            {
+                "value" => value,
+                "stored" => GesValue.GesInteger(3, GesQuantityUnit.UnitMeter),
+                _ => null
+            };
     }
 
     private sealed class SpatialConstructor : IGesExternalTypeConstructor

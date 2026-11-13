@@ -637,7 +637,8 @@ Game logic, such as rounded hulls, bearings or sensor sectors, stays in hosts.
   - `:Box(lower: p, upper: q)` takes two corners and `:Box(center: p, size: v)` a centre and a size, all of one unit, which
     the value keeps; its fields are `lower`, `upper`, `center` and `size`. `:Poly(points: [...])` takes a list of Points of
     one unit and has the field `points`. `:Disc(center: p, radius: r)` takes a centre and a radius of one unit and
-    `:Disc(radius: r)` a radius around the origin, whose unit the origin takes; its fields are `center` and `radius`. Another
+    `:Disc(radius: r)` a radius around the origin, whose unit the origin takes; its fields are `center` and `radius`. The
+    radius follows its declared Number type, so a Percentage is its unitless ratio, as for any external constructor. Another
     kind or a mixed unit constructs `nothing`. `min` and `max` are GES keywords,
     so the corner fields are `lower` and `upper`.
   - The functions are `:geometry.size`, `center`, `union(_, _)`, `inset(_, by:)` and `nearest(_, point)` of boxes

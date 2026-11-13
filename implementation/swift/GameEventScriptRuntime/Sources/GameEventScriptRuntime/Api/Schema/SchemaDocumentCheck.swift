@@ -235,13 +235,18 @@ struct GesSchemaDocumentCheck {
         }
     }
 
-    // A radius of the Disc's unit, within the block's radius, or zero when the block leaves it out.
+    // A radius of the Disc's unit, whose magnitude lies within the block's radius, as a disc takes the magnitude, or zero when
+    // the block leaves it out.
     private func radius(_ type: GesResolvedType, _ value: GesDocumentNode, _ start: Int) throws {
         guard case .number(let number) = value, number.kind != .percentage, number.unit == type.unit else { throw fail(Self.fieldType, start) }
         guard let axes = type.axes else { return }
+        // Int64.min has no Int64 magnitude, so it is checked as its binary64 magnitude.
+        let integer = number.kind == .integer && number.integerValue != .min
+        let whole = integer ? number.integerValue.magnitude : 0
+        let fraction = (integer || number.kind == .integer ? Double(number.integerValue) : number.floatValue).magnitude
         if let declared = axes.first(where: { $0.axis == "radius" }) {
-            try numeric(declared.constraints, number.kind == .integer, number.integerValue, number.floatValue, start)
-        } else if number.kind == .integer ? number.integerValue != 0 : number.floatValue != 0 {
+            try numeric(declared.constraints, integer, Int64(whole), fraction, start)
+        } else if integer ? whole != 0 : fraction != 0 {
             throw fail(Self.fieldType, start)
         }
     }

@@ -394,7 +394,8 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   a generated `GesTypes` catalog and registry, `ToGesValue`/`FromGesValue` (Swift `gesValue()`/
   `init?(gesValue:)`) and a `:Name(fields: map)` constructor, without the Bridge, macros or Reflection.
 - `GesDisc` in both runtimes, a filled circle in the plane z = 0, which the geometry library offers to scripts as
-  `:Disc(center: p, radius: r)` and `:Disc(radius: r)` around the origin, with `center`, `bounds`, `area`, `distance`,
+  `:Disc(center: p, radius: r)` and `:Disc(radius: r)` around the origin (a Percentage radius is its unitless ratio,
+  as the declared Number type converts it), with `center`, `bounds`, `area`, `distance`,
   `inset`, `nearest`, `contains` and `intersects` with discs, 2D boxes and polygons.
 - `GesBox` and `GesPoly` in both runtimes, and `GesGeometryLibrary`, which offers them to
   scripts as the external types `:Box` and `:Poly` with the functions `:geometry.size`, `center`,

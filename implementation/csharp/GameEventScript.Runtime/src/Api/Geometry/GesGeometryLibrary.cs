@@ -17,8 +17,8 @@ namespace GameEventScript.Api;
 /// <c>:Box(lower: p, upper: q)</c> takes two corners in any order, which its fields <c>lower</c> and <c>upper</c> return
 /// ordered (<c>min</c> and <c>max</c> are GES keywords), and <c>:Box(center: p, size: v)</c> a centre and a size;
 /// <c>:Poly(points: [...])</c> takes its points; <c>:Disc(center: p, radius: r)</c> a centre and a radius and
-/// <c>:Disc(radius: r)</c> a radius around the origin. Corners, points, sizes and radii share one unit, which the value
-/// keeps; another kind or a mixed unit constructs <c>nothing</c>. A polygon or disc need not be valid to exist, but its
+/// <c>:Disc(radius: r)</c> a radius around the origin; the radius follows its declared Number type, so a Percentage is its
+/// unitless ratio. Corners, points, sizes and radii share one unit, which the value keeps; another kind or a mixed unit constructs <c>nothing</c>. A polygon or disc need not be valid to exist, but its
 /// operations give <c>nothing</c> when it is not. Functions: <c>size</c>, <c>center</c>, <c>union</c>, <c>inset(_, by:)</c>
 /// and <c>nearest</c>, the point of a shape nearest to a point (<c>clamp</c> is a GES keyword), of boxes; <c>bounds</c>,
 /// <c>area</c> (signed and unitless, like <c>dot</c>), <c>distance</c> and <c>centroid</c> of polygons; <c>center</c>,

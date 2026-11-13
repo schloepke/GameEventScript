@@ -127,6 +127,13 @@ here.
   JavaScript module with a small runtime for host, queue and values, verified
   against the shared Markdown Conformance; it must keep the VM's deterministic
   ordering, randomness and exact Int64 semantics.
+- Add Godot support for schemas: a GDExtension that does wire, delta and
+  document encoding natively (built on the Rust port, or on the C# port for
+  Godot .NET projects, which can use the generated C# code directly), plus
+  GDScript model generation (`ges schema generate --language gdscript --model`)
+  with typed classes the extension fills. GDScript runs as interpreted bytecode,
+  so a pure GDScript wire codec remains an optional later fallback for low
+  rates; it would need byte-identical goldens like the other languages.
 - Add an independent CI job with build, unit tests, strict shared Conformance,
   canonical `.gesb` fixtures and cross-language result comparison for every new
   implementation. A future C runtime additionally requires sanitizer jobs.

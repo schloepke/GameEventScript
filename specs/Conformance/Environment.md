@@ -74,6 +74,15 @@ constructor input. Every read of `count` returns one more than the read before i
 starting at 1. Reading `other` raises an unanticipated platform failure when
 `failOther` is true and otherwise returns 0.
 
+## External type `NumberProbe`
+
+> **Since: Unreleased**
+
+The fixed V1 external-type catalog also declares `NumberProbe(value: Float<UnitNone>)` with fields
+`value: Float<UnitNone>` and `stored: Float<UnitNone>` in that order. `value` retains the converted
+constructor input; `stored` returns the Integer quantity `3m`, so a case can observe that a Number
+declaration without a unit keeps a Quantity's unit and makes the value binary64.
+
 ## External type `CallbackProbe`
 
 The fixed V1 external-type catalog also declares

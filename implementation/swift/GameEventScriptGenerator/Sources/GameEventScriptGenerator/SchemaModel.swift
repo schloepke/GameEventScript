@@ -28,6 +28,9 @@ struct GesModelType {
     var takes: [String] = []
     /// The fields written `computed by`, which models derive from their other fields.
     var computed: [GesSchemaComputedFieldInfo] = []
+
+    // The wire layout of a packed schema, whose fields' encodings place them in its word; nil for other types.
+    var packed: GesSchemaLayout?
 }
 
 /// A schema that types take with `with`: generated as a protocol (Swift) or interface (C#) with read-only properties. It
@@ -74,6 +77,9 @@ final class GesModelValue {
     var axes: [String] = []
     var alternatives: [GesModelField] = []
     var schema = ""
+
+    // Whether the schema is packed, so that its type is a value type over one word.
+    var packed = false
 }
 
 enum GesModelLayoutBuilder {
@@ -95,6 +101,7 @@ enum GesModelLayoutBuilder {
             let schema = reached[name]!
             var type = GesModelType(name: schema.name, hash: schema.hash, constants: GesLayoutConstant.of(schema))
             type.computed = schema.computedFields
+            if schema.packedWidth > 0 { type.packed = try GesSchemaLayoutBuilder.build(set, roots: [schema.name], parameters: GesSchemaParameters()) }
             for info in schema.fields {
                 let field = try self.field(info.name, info.name, info.alternatives)
                 field.optional = info.isOptional
@@ -231,6 +238,7 @@ enum GesModelLayoutBuilder {
         case .reference:
             value.kind = .schema
             value.schema = type.schema!.name
+            value.packed = type.schema!.packedWidth > 0
         case .nothing:
             value.kind = .nothing
         default:
@@ -258,6 +266,10 @@ enum GesModelLayoutJson {
             json.beginObject()
             json.string("name", type.name)
             json.string("hash", GesSchemaLayoutJson.hex(type.hash))
+            if let packed = type.packed?.type(type.name) {
+                json.number("packedWidth", Int64(packed.packedWidth))
+                json.number("packedBits", Int64(packed.packedBits))
+            }
             json.beginArray("fields")
             for field in type.fields { self.field(&json, field, member: true) }
             json.endArray()

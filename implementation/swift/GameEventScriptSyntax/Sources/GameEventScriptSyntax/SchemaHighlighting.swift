@@ -6,7 +6,7 @@
 enum GesSchemaHighlighting {
     private static let keywords: Set<String> = [
         "schema", "message", "messages", "constant", "parameter", "as", "be", "between", "and", "wrapping", "step", "delta", "within", "integer", "optional", "key", "max", "depth", "tags", "wire", "model", "let", "default", "true", "false",
-        "abstract",
+        "abstract", "packed",
         "with", "all", "without", "computed", "by", "when", "otherwise", "or", "not", "of", "min", "clamp", "abs", "has",
     ]
 

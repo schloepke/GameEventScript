@@ -63,6 +63,7 @@ public final class GesSchemaSet: @unchecked Sendable {
             try Self.checkNesting(declaration, &path, &visited)
         }
         for file in files { try file.resolveRecordDefaults() }
+        for declaration in ordered where declaration.isPacked { try GesSchemaBinder.checkPacked(declaration) }
         for declaration in ordered where declaration.syntax.wireGroup != nil { try GesSchemaBinder.checkEncodable(declaration) }
         schemas = ordered.map { declaration in
             let schema = GesSchema(declaration)
@@ -331,6 +332,10 @@ final class GesResolvedDeclaration {
     /// The fields written `computed by`, own and taken, in the order their expressions may read each other.
     var computed: [GesResolvedComputed] = []
     var isAbstract: Bool { syntax.isAbstract }
+    // A packed schema's machine word: the declared width or the smallest of 8, 16, 32 and 64 that holds its bits.
+    var isPacked: Bool { syntax.isPacked }
+    var packedBits = 0
+    var packedWidth = 0
     // The public description, which exists once all declarations are resolved. It holds this declaration, so this side is weak.
     weak var schema: GesSchema?
 
@@ -943,7 +948,9 @@ enum GesSchemaCanonical {
     private static func write(_ declaration: GesResolvedDeclaration, _ output: inout String) {
         switch declaration.kind {
         case .schema:
-            output += "schema \(declaration.name)\n"
+            output += "schema \(declaration.name)"
+            if declaration.isPacked { output += " packed \(declaration.packedWidth)" }
+            output += "\n"
             for declared in declaration.lets { output += "let \(declared.name) \(letKind(declared)) \(declared.value.canonical)\n" }
             for field in declaration.fields { writeField("field ", field, &output) }
             for computed in declaration.computed {

@@ -172,6 +172,7 @@ ROLES = ROOT / "conformance/fixtures/SchemaGeneration/roles"
 TREE_FIXTURE = ROOT / "conformance/fixtures/SchemaGeneration/tree.gess"
 COMPUTED_FIXTURE = ROOT / "conformance/fixtures/SchemaGeneration/computed.gess"
 GEOMETRY_FIXTURE = ROOT / "conformance/fixtures/SchemaGeneration/geometry.gess"
+PACKED_FIXTURE = ROOT / "conformance/fixtures/SchemaGeneration/packed.gess"
 ROLE_FILES = ["World.gess", "Panels.gess", "View.gess"]
 CSHARP_GENERATED = ROOT / "implementation/csharp/GameEventScript.Generator/tests/Generated"
 SWIFT_GENERATED = ROOT / "implementation/swift/GameEventScriptConformance/Tests/GameEventScriptConformanceTests/Generated"
@@ -196,6 +197,12 @@ GOLDENS = (
     (GEOMETRY_FIXTURE.parent, [GEOMETRY_FIXTURE.name], ["--wire", "geometry", "--values"], "swift", "GeometryWire", SWIFT_GENERATED / "GeometryWire.swift"),
     (GEOMETRY_FIXTURE.parent, [GEOMETRY_FIXTURE.name], ["--model", "geometry", "--bindings", "--documents"], "csharp", "GameEventScript.Tests.Generator.Geometry.Model", CSHARP_GENERATED / "GeometryModel.g.cs"),
     (GEOMETRY_FIXTURE.parent, [GEOMETRY_FIXTURE.name], ["--model", "geometry", "--bindings", "--documents"], "swift", "GeometryModel", SWIFT_GENERATED / "GeometryModel.swift"),
+    (PACKED_FIXTURE.parent, [PACKED_FIXTURE.name], ["--model", "packed", "--values"], "csharp", "GameEventScript.Tests.Generator.Packed.Model", CSHARP_GENERATED / "PackedModel.g.cs"),
+    (PACKED_FIXTURE.parent, [PACKED_FIXTURE.name], ["--model", "packed", "--values"], "swift", "PackedModel", SWIFT_GENERATED / "PackedModel.swift"),
+    (PACKED_FIXTURE.parent, [PACKED_FIXTURE.name], ["--wire", "packed", "--values", "--models", "GameEventScript.Tests.Generator.Packed.Model"], "csharp", "GameEventScript.Tests.Generator.Packed.Wire", CSHARP_GENERATED / "PackedWire.g.cs"),
+    (PACKED_FIXTURE.parent, [PACKED_FIXTURE.name], ["--wire", "packed", "--values", "--models", "PackedModel"], "swift", "PackedWire", SWIFT_GENERATED / "PackedWire.swift"),
+    (PACKED_FIXTURE.parent, [PACKED_FIXTURE.name], ["--wire", "packed"], "csharp", "GameEventScript.Tests.Generator.Packed.Own", CSHARP_GENERATED / "PackedOwn.g.cs"),
+    (PACKED_FIXTURE.parent, [PACKED_FIXTURE.name], ["--wire", "packed"], "swift", "PackedOwn", SWIFT_GENERATED / "PackedOwn.swift"),
 )
 # The layouts of the role fixture, which both CLIs must print identically.
 ROLE_LAYOUTS = (["--wire", "world", "--param", "worldWidth=2000m"], ["--wire", "panels"], ["--model", "view"])

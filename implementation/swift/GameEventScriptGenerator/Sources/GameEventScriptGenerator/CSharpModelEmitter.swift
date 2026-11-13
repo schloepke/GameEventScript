@@ -176,6 +176,10 @@ enum GesCSharpModelEmitter {
         computed: GesComputedEmitter,
         documents: String?
     ) throws(GesGeneratorError) {
+        if type.packed != nil {
+            try packedRecord(&code, layout, type, access, support, qualifier, bindings: bindings, values: values, computed: computed, documents: documents)
+            return
+        }
         let fields = GesModelPlanner.fields(type)
         var names: Names = reserved.map { ($0, "the inherited member " + $0) }
         names.append(("SchemaHash", "the generated member SchemaHash"))
@@ -336,6 +340,214 @@ enum GesCSharpModelEmitter {
         code.close()
     }
 
+    // A packed type that wire code declares itself, without conversions, as the model code of the same schema declares it.
+    static func packedType(_ code: inout Code, _ layout: GesModelLayout, _ name: String, _ access: String, _ qualifier: String, _ wire: ((inout Code) -> Void)?) throws(GesGeneratorError) {
+        let type = layout.types.first { $0.name == name }!
+        try packedRecord(&code, layout, type, access, "", qualifier, bindings: false, values: nil, computed: GesModelPlanner.computed(layout, "", swift: false), documents: nil, members: wire)
+    }
+
+    // A packed schema's model: a struct over one word whose fields are properties at their bits, so that a list of them is a
+    // dense array of words; wire code of the same schema holds the same word. Equality and hashing compare the word.
+    private static func packedRecord(
+        _ code: inout Code,
+        _ layout: GesModelLayout,
+        _ type: GesModelType,
+        _ access: String,
+        _ support: String,
+        _ qualifier: String,
+        bindings: Bool,
+        values: String?,
+        computed: GesComputedEmitter,
+        documents: String?,
+        members: ((inout Code) -> Void)? = nil
+    ) throws(GesGeneratorError) {
+        let fields = GesModelPlanner.fields(type)
+        let packedLayout = type.packed!
+        let wire = packedLayout.type(type.name)
+        let raw = GesCSharpEmitter.packedRaw(wire.packedWidth)
+        var names: Names = reserved.map { ($0, "the inherited member " + $0) }
+        names += ["SchemaHash", "Bits", "RawValue", "IsValid", "FromRaw", "FromRawUnchecked"].map { ($0, "the generated member " + $0) }
+        if bindings { names += ["ToGesValue", "FromGesValue"].map { ($0, "the generated member " + $0) } }
+        if values != nil { names += ["ToValue", "FromValue"].map { ($0, "the generated member " + $0) } }
+        if documents != nil { names.append(("FromDocument", "the generated member FromDocument")) }
+        if bindings && fields.contains(where: { $0.field.name == "fields" }) {
+            throw GesGeneratorError(GesGeneratorError.nameCollision, "In '\(type.name)', the field fields and the generated field fields of its bindings share a name.")
+        }
+        if bindings || values != nil, fields.contains(where: { $0.field.defaultValue?.kind == .record }), GesModelPlanner.topLevel(layout, swift: false).contains(type.name + "Defaults") {
+            throw GesGeneratorError(GesGeneratorError.nameCollision, "The record defaults of '\(type.name)' are generated as '\(type.name)Defaults', which hides the top-level type of that name.")
+        }
+        for field in fields {
+            names.append((field.base, "the field " + field.field.name))
+            names.append(("With" + field.base, "the generated member With" + field.base))
+            nested(field.value, &names, field.field.name)
+        }
+        for constant in type.constants { names.append((GesSchemaPlanner.pascal(constant.name), "the let " + constant.name)) }
+        GesComputedEmitter.names(type.computed, type.name, swift: false, &names)
+        try GesSchemaPlanner.unique(type.name, names, GesModelPlanner.topLevel(layout, swift: false))
+
+        var packed: [GesCSharpEmitter.PackedField] = []
+        let bits = GesCSharpEmitter.packedLayout(packedLayout, wire)
+        for index in fields.indices {
+            let value = fields[index].value
+            let nestedRaw = value.kind == .schema ? GesCSharpEmitter.packedRaw(packedLayout.type(value.model.schema).packedWidth) : nil
+            packed.append(
+                GesCSharpEmitter.PackedField(field: bits[index].field, shift: bits[index].shift, width: bits[index].width, member: fields[index].base, type: plain(value, qualifier), nestedRaw: nestedRaw)
+            )
+        }
+
+        code.line("/// <summary>The model of the packed schema <c>:\(type.name)</c>: one \(wire.packedWidth)-bit word, whose fields lie at their bits from the least")
+        code.line("/// significant bit in declared order, as the record's wire bytes hold them. <c>default</c> is the word 0, not the defaults.</summary>")
+        code.line("\(access) struct \(type.name) : IEquatable<\(type.name)>\(GesModelPlanner.adopted(layout, type, swift: false).map { ", " + $0 }.joined())")
+        code.open("{")
+        code.line("/// <summary>The hash of the schema <c>:\(type.name)</c>, which wire records of it carry too; a test that compares it notices stale generated code.</summary>")
+        code.line("public const ulong SchemaHash = 0x\(GesSchemaLayoutJson.hex(type.hash))UL;")
+        code.blank()
+        code.line("/// <summary>The bits that the fields take, those of the record on the wire; the word's other bits are zero.</summary>")
+        code.line("public const int Bits = \(wire.packedBits);")
+        GesCSharpEmitter.lets(&code, type.constants)
+        code.blank()
+        code.line("private \(raw) _raw;")
+        code.blank()
+        code.line("private \(type.name)(\(raw) raw) => _raw = raw;")
+        if !fields.isEmpty {
+            var trailing = fields.count
+            while trailing > 0 && fields[trailing - 1].field.defaultValue != nil { trailing -= 1 }
+            code.blank()
+            code.line("/// <summary>Creates a record from its fields.</summary>")
+            for field in fields {
+                let note = GesModelPlanner.sibling(fields, field).map { "; null takes <c>\(fields[$0].field.name)</c>" } ?? ""
+                code.line("/// <param name=\"\(GesSchemaPlanner.camel(field.base))\">The field <c>\(field.field.name)</c>\(note).</param>")
+            }
+            code.line("/// <exception cref=\"ArgumentOutOfRangeException\">A value lies outside its field.</exception>")
+            let parameters = fields.enumerated().map { index, field in
+                let optional = index >= trailing
+                return GesModelPlanner.sibling(fields, field) == nil
+                    ? "\(self.type(field.value)) \(parameter(field.base))\(optional ? " = " + native(layout, field.value, field.field.defaultValue!) : "")"
+                    : "\(plain(field.value))? \(parameter(field.base))\(optional ? " = null" : "")"
+            }
+            code.line("public \(type.name)(\(parameters.joined(separator: ", ")))")
+            code.open("{")
+            code.line("_raw = 0;")
+            for index in GesModelPlanner.readOrder(fields) {
+                let field = fields[index]
+                let fallback = GesModelPlanner.sibling(fields, field).map { " ?? " + fields[$0].base } ?? ""
+                code.line("\(field.base) = \(parameter(field.base))\(fallback);")
+            }
+            code.close()
+        }
+        code.blank()
+        code.line("/// <summary>Gets the word, whose first <see cref=\"Bits\"/> bits, written little-endian, are the record's wire bytes.</summary>")
+        code.line("public readonly \(raw) RawValue => _raw;")
+        code.blank()
+        code.line("/// <summary>Tests whether a word holds a valid value in every field: an index within its range or tag set and zero bits")
+        code.line("/// above <see cref=\"Bits\"/>.</summary>")
+        code.line("/// <param name=\"raw\">The word.</param>")
+        code.line("/// <returns>Whether the word is a record of this schema.</returns>")
+        var checks = GesCSharpEmitter.packedChecks(packed)
+        if wire.packedBits < wire.packedWidth { checks.insert("((ulong)raw >> \(wire.packedBits)) == 0", at: 0) }
+        code.line("public static bool IsValid(\(raw) raw) => \(checks.isEmpty ? "true" : checks.joined(separator: " && "));")
+        code.blank()
+        code.line("/// <summary>Reads a word from foreign data, checked as decoding checks it.</summary>")
+        code.line("/// <param name=\"raw\">The word.</param>")
+        code.line("/// <returns>The record, or null when the word is not valid.</returns>")
+        code.line("public static \(type.name)? FromRaw(\(raw) raw) => IsValid(raw) ? new \(type.name)(raw) : null;")
+        code.blank()
+        code.line("/// <summary>Takes a word whose validity is known, without checking it; an invalid word gives values outside their fields.</summary>")
+        code.line("/// <param name=\"raw\">The word.</param>")
+        code.line("/// <returns>The record.</returns>")
+        code.line("public static \(type.name) FromRawUnchecked(\(raw) raw) => new \(type.name)(raw);")
+        for (index, field) in fields.enumerated() {
+            code.blank()
+            code.line("/// <summary><c>\(escape(field.field.name + ": " + GesModelPlanner.describe(layout, field.field)))</c></summary>")
+            code.line("/// <exception cref=\"ArgumentOutOfRangeException\">A value set lies outside the field.</exception>")
+            code.line("public \(self.type(field.value)) \(field.base)")
+            code.open("{")
+            GesCSharpEmitter.packedAccessors(&code, packed[index], raw)
+            code.close()
+            code.blank()
+            code.line("/// <summary>Copies the record with another <c>\(field.field.name)</c>.</summary>")
+            code.line("/// <param name=\"value\">The value.</param>")
+            code.line("/// <returns>The copy.</returns>")
+            code.line("/// <exception cref=\"ArgumentOutOfRangeException\">The value lies outside the field.</exception>")
+            code.line("public \(type.name) With\(field.base)(\(self.type(field.value)) value)")
+            code.open("{")
+            code.line("var copy = this;")
+            code.line("copy.\(field.base) = value;")
+            code.line("return copy;")
+            code.close()
+        }
+        computed.members(&code, type.name, type.computed, "public")
+        code.blank()
+        code.line("/// <summary>Compares the words.</summary>")
+        code.line("/// <param name=\"other\">The other record.</param>")
+        code.line("/// <returns>Whether both hold equal values.</returns>")
+        code.line("public bool Equals(\(type.name) other) => _raw == other._raw;")
+        code.blank()
+        code.line("/// <inheritdoc />")
+        code.line("public override bool Equals(object? obj) => obj is \(type.name) other && Equals(other);")
+        code.blank()
+        code.line("/// <inheritdoc />")
+        code.line("public override int GetHashCode() => _raw.GetHashCode();")
+        code.blank()
+        code.line("/// <summary>Compares two records by their words.</summary>")
+        code.line("/// <param name=\"left\">The first value.</param>")
+        code.line("/// <param name=\"right\">The second value.</param>")
+        code.line("/// <returns>Whether both are equal.</returns>")
+        code.line("public static bool operator ==(\(type.name) left, \(type.name) right) => left._raw == right._raw;")
+        code.blank()
+        code.line("/// <summary>Compares two records by their words.</summary>")
+        code.line("/// <param name=\"left\">The first value.</param>")
+        code.line("/// <param name=\"right\">The second value.</param>")
+        code.line("/// <returns>Whether they differ.</returns>")
+        code.line("public static bool operator !=(\(type.name) left, \(type.name) right) => left._raw != right._raw;")
+        if bindings {
+            code.blank()
+            code.line("/// <summary>Wraps the record as the external value <c>:\(type.name)</c> of <see cref=\"GesTypes\"/>; scripts read its fields when they read them.</summary>")
+            code.line("/// <returns>The GES value.</returns>")
+            code.line("public GesValue ToGesValue() => GesValue.GesExternal(new GesTypes.\(type.name)Value(this));")
+            code.blank()
+            code.line("/// <summary>Reads a <c>:\(type.name)</c> that a script holds.</summary>")
+            code.line("/// <param name=\"value\">The value.</param>")
+            code.line("/// <returns>The record, or null for another value.</returns>")
+            code.line("public static \(type.name)? FromGesValue(in GesValue value) => value.ExternalValue is GesTypes.\(type.name)Value held ? held.Record : null;")
+        }
+        if let values {
+            code.blank()
+            code.line("/// <summary>Converts the record into a plain GES Record of its fields, as <see cref=\"GesSchemaValues\"/> decodes the bytes of the record;")
+            code.line("/// a List of many packed records is faster through their words.</summary>")
+            code.line("/// <returns>The Record.</returns>")
+            code.line("public GesValue ToValue() => \(values).Value(this);")
+            code.blank()
+            code.line("/// <summary>Reads a Record of this schema, or a Map of only its fields, as <see cref=\"GesSchemaValues\"/> encodes it.</summary>")
+            code.line("/// <param name=\"value\">The value.</param>")
+            code.line("/// <returns>The record.</returns>")
+            code.line("/// <exception cref=\"GesWireException\">A field does not convert: <c>wire.typeMismatch</c> at its path.</exception>")
+            code.line("public static \(type.name) FromValue(GesValue value) => \(values).Read\(type.name)(value, \"\");")
+        }
+        if let documents {
+            code.blank()
+            code.line("/// <summary>Reads a record from GES document text with the header <c>:Schema(:\(type.name))</c>, as the records of this file do.</summary>")
+            code.line("/// <param name=\"text\">The document text.</param>")
+            code.line("/// <returns>The record.</returns>")
+            code.line("/// <exception cref=\"GesDocumentException\">The text is no document, names another schema or breaks the schema.</exception>")
+            code.line("public static \(type.name) FromDocument(string text)")
+            code.open("{")
+            code.line("var document = \(documents).Read(text, \(GesSchemaPlanner.literal(type.name, swift: false)));")
+            code.line("try")
+            code.open("{")
+            code.line("return FromValue(document.Value);")
+            code.close()
+            code.line("catch (GesWireException error)")
+            code.open("{")
+            code.line("throw document.Locate(error);")
+            code.close()
+            code.close()
+        }
+        members?(&code)
+        for field in fields { try declarations(&code, field.value, support, qualifier) }
+        code.close()
+    }
+
     private static func operators(_ code: inout Code, _ name: String, _ what: String) {
         code.line("/// <summary>Compares two \(what)s by value.</summary>")
         code.line("/// <param name=\"left\">The first value.</param>")
@@ -399,7 +611,8 @@ enum GesCSharpModelEmitter {
 
     private static func isReference(_ value: GesModelPlanValue) -> Bool {
         switch value.kind {
-        case .text, .bytes, .list, .dice, .schema, .union, .poly: true
+        case .text, .bytes, .list, .dice, .union, .poly: true
+        case .schema: !value.model.packed
         case .tag: !value.closedTag
         default: false
         }
@@ -482,6 +695,7 @@ enum GesCSharpModelEmitter {
     private static func allocating(_ layout: GesModelLayout, _ field: GesModelPlanField) -> String? {
         if let fallback = field.field.defaultValue, fallback.kind == .record { return native(layout, field.value, fallback) }
         if field.field.defaultValue != nil || field.value.nullable { return nil }
+        if field.value.kind == .schema && field.value.model.packed { return nil }
         switch field.value.kind {
         case .list, .dice, .schema, .union, .poly: return initial(field.value)
         default: return nil
@@ -497,6 +711,7 @@ enum GesCSharpModelEmitter {
         case .bytes: return "global::System.Array.Empty<byte>()"
         case .tag where !value.closedTag: return "\"\""
         case .list, .dice: return "new \(plain(value))()"
+        case .schema where value.model.packed: return ""
         case .schema: return "new \(value.model.schema)()"
         case .union: return "new \(value.nested).\(value.alternatives[0].label)(\(zero(value.alternatives[0])))"
         case .poly: return "new GesPoly(global::System.Array.Empty<GesPoint>())"
@@ -702,7 +917,7 @@ enum GesCSharpModelEmitter {
     private static func isValueType(_ value: GesModelPlanValue) -> Bool {
         switch value.kind {
         case .boolean, .number, .point, .vector, .box, .disc, .flags: true
-        default: value.closedTag
+        default: value.closedTag || (value.kind == .schema && value.model.packed)
         }
     }
 
@@ -882,7 +1097,7 @@ enum GesCSharpModelEmitter {
             code.blank()
             code.line("private static bool Decode\(type.name)(in GesValue value, out \(record) result)")
             code.open("{")
-            code.line("result = null!;")
+            code.line(type.packed == nil ? "result = null!;" : "result = default;")
             code.line("var fields = RecordFields(value, \(typeLiteral), \(names));")
             var conditions = ["fields is null"]
             for (index, field) in fields.enumerated() {

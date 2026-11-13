@@ -76,6 +76,32 @@
             written = word()
             if written != "schema" { throw Failure(offset: wordOffset, message: "Expected 'schema' after 'abstract'.") }
         }
+        // `packed` or `packed(width)` makes a schema one machine word of 8, 16, 32 or 64 bits.
+        var isPacked = false
+        var packedWidth = 0
+        var packedOffset = 0
+        if written == "packed" && position < bytes.count && (bytes[position] == 32 || bytes[position] == 9 || bytes[position] == 40) {
+            if isAbstract { throw Failure(offset: wordOffset, message: "An abstract schema is not packed.") }
+            isPacked = true
+            packedOffset = wordOffset
+            if consume(40) {
+                skipSpaces()
+                let widthOffset = position
+                switch word() {
+                case "8": packedWidth = 8
+                case "16": packedWidth = 16
+                case "32": packedWidth = 32
+                case "64": packedWidth = 64
+                default: throw Failure(offset: widthOffset, message: "A packed width is 8, 16, 32 or 64.")
+                }
+                skipSpaces()
+                try expect(41)
+            }
+            skipSpaces()
+            wordOffset = position
+            written = word()
+            if written != "schema" { throw Failure(offset: wordOffset, message: "Expected 'schema' after 'packed'.") }
+        }
         if wire != nil || model != nil {
             if written == "constant" || written == "parameter" || written == "tags" {
                 throw Failure(offset: offset, message: "Only a schema, message or message set can be a root.", code: Code.invalidRole)
@@ -88,6 +114,9 @@
         }
         var result = try declaration(offset: offset, wordOffset: wordOffset, word: written)
         result.isAbstract = isAbstract
+        result.isPacked = isPacked
+        result.packedWidth = packedWidth
+        result.packedOffset = packedOffset
         result.wireGroup = wire
         result.modelGroup = model
         return result
@@ -98,7 +127,7 @@
         if position < bytes.count && bytes[position] == 40 { return true }
         let start = position
         skipSpaces()
-        let role = position > start && (atWord("schema") || atWord("message") || atWord("messages") || atWord("abstract"))
+        let role = position > start && (atWord("schema") || atWord("message") || atWord("messages") || atWord("abstract") || atWord("packed"))
         position = start
         return role
     }

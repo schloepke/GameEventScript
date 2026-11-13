@@ -178,6 +178,8 @@ extension GesSwiftEmitter {
             for axis in value.axes { same(&code, axis, a + "." + member(axis.base), b + "." + member(axis.base), ownerA, ownerB) }
         case .box, .disc:
             for corner in value.corners { same(&code, corner, a + "." + member(corner.base), b + "." + member(corner.base), ownerA, ownerB) }
+        case .schema where value.packed != nil:
+            code.line("if \(a).rawValue != \(b).rawValue { return false }")
         case .schema:
             code.line("if !(try \(a).__same(\(b), paths, at + \(value.node + 1)\(nextLevel(value)))) { return false }")
         case .list:
@@ -331,6 +333,8 @@ extension GesSwiftEmitter {
             if value.corners.count == 1 { code.line("let radius\(node) = \(target).radius") }
             code.line("\(target) = GesDisc(center: center\(node), radius: radius\(node))")
             code.close()
+        case .schema where value.packed != nil:
+            break
         case .schema:
             code.line("try \(target).__quantize(paths, at + \(value.node + 1)\(nextLevel(value)))")
         case .list where quantized(value):
@@ -364,7 +368,8 @@ extension GesSwiftEmitter {
 
     private static func quantized(_ value: GesPlanValue) -> Bool {
         switch value.encoding.kind {
-        case .quantized, .schema: true
+        case .schema: value.packed == nil
+        case .quantized: true
         case .point, .vector: value.axes.contains(where: quantized)
         case .box, .disc: value.corners.contains(where: quantized)
         case .union: value.alternatives.contains(where: quantized)
@@ -613,6 +618,12 @@ extension GesSwiftEmitter {
             if value.encoding.kind == .disc && value.corners.count == 1 { code.line("if \(a).radius != 0 { \(fail("typeMismatch", value)) }") }
             code.line("if !\(set) { writer.rewind(to: first\(node)) }")
             code.close()
+        case .schema where value.packed != nil:
+            // A packed record changes as a whole: its word follows the change bit.
+            code.open("if \(a).rawValue != \(b).rawValue {")
+            packedWrite(&code, value, a)
+            code.line("\(set) = true")
+            code.close()
         case .schema:
             code.open("do {")
             code.line("let start\(node) = writer.bitPosition")
@@ -750,6 +761,9 @@ extension GesSwiftEmitter {
             if value.encoding.kind == .disc && value.corners.count == 1 { code.line("let radius\(node) = 0.0") }
             code.line(value.encoding.kind == .disc ? "\(a) = GesDisc(center: center\(node), radius: radius\(node))" : "\(a) = GesBox(lower\(node), upper\(node))")
             code.close()
+        case .schema where value.packed != nil:
+            packedRead(&code, value, a)
+            code.line("if \(a).rawValue == \(b).rawValue { \(fail("invalidDelta", value)) }")
         case .schema:
             code.line("if !(try \(a).__readDelta(\(b), &reader, paths, at + \(value.node + 1), false\(nextLevel(value)))) { \(fail("invalidDelta", value)) }")
         case .union:

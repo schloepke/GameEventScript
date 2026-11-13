@@ -75,7 +75,7 @@
     "keywords": {
       "patterns": [
         {
-          "match": "\\b(?:schema|messages|message|constant|parameter|as|be|between|and|wrapping|step|delta|within|integer|optional|key|max|depth|tags|wire|model|let|default|true|false|abstract|with|all|without|computed|by|when|otherwise|or|not|of|min|clamp|abs|has)\\b",
+          "match": "\\b(?:schema|messages|message|constant|parameter|as|be|between|and|wrapping|step|delta|within|integer|optional|key|max|depth|tags|wire|model|let|default|true|false|abstract|packed|with|all|without|computed|by|when|otherwise|or|not|of|min|clamp|abs|has)\\b",
           "name": "keyword.other.gameeventscript.schema"
         }
       ]

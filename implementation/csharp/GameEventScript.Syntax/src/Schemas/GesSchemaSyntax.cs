@@ -298,6 +298,13 @@ internal sealed class GesSchemaDeclarationSyntax
     // An abstract schema only lends its fields with `with`.
     internal bool Abstract { get; set; }
 
+    // A packed schema is one machine word; its width is 8, 16, 32 or 64 when written as `packed(width)`, else 0.
+    internal bool Packed { get; set; }
+
+    internal int PackedWidth { get; set; }
+
+    internal int PackedOffset { get; set; }
+
     internal string[] Tags { get; init; } = [];
 
     internal string[] Members { get; init; } = [];
@@ -330,6 +337,8 @@ internal sealed class GesSchemaDiagnostic
     internal const string DuplicateRole = "schema.duplicateRole";
     internal const string InvalidDefault = "schema.invalidDefault";
     internal const string InvalidAbstract = "schema.invalidAbstract";
+    internal const string PackedField = "schema.packedField";
+    internal const string PackedTooWide = "schema.packedTooWide";
     internal const string InvalidExpression = "schema.invalidExpression";
     internal const string ComputedMayBeAbsent = "schema.computedMayBeAbsent";
 

@@ -345,7 +345,7 @@ if (reader.ReadMember() == combat.MemberIndex("Hit"))
 ```
 
 `stackalloc` suits a small schema like this one, whose largest encoding takes a few bytes. `MaxByteCount`
-can reach 10 MiB, more than a thread's stack holds, so for large schemas keep one buffer per connection
+can reach 64 MiB, more than a thread's stack holds, so for large schemas keep one buffer per connection
 or take it from a pool.
 
 And the same in Swift, which follows the same steps with its own spelling:
@@ -595,6 +595,52 @@ let copy = try Model.Panel_Report(value: wire.toValue())
 ```
 
 See [Roles](../../specs/Schemas.md#roles) and [Model types](../../specs/Schemas.md#model-types).
+
+## 15. Pack dense data into words
+
+> **Since: Unreleased**
+
+A map of millions of points needs neither a class per point nor a GES value per point. Mark a schema of small fixed-width
+fields `packed`, and generated code holds each record as one machine word:
+
+```gess
+wire(map) model(map) packed schema :MapPoint as {
+  height: :Number integer between 0 and 4095
+  surface: :Number integer between 0 and 15
+  wear: :Number integer between 0 and 15
+  flags: :Flags(#impassable, #blocksLineOfSight, #indestructible, #reserved)
+}
+
+wire(map) model(map) schema :MapTrack as { points: :List(:MapPoint) max 1000000 }
+```
+
+The fields take 12 + 4 + 4 + 4 = 24 bits, so `MapPoint` is a 32-bit word; `packed(64)` would ask for a wider one. Only
+integers and stepped numbers with fixed ranges, Booleans, closed Tags, Flags and other packed schemas fit; `ges schema check`
+names any other field. The word is exactly the record's wire encoding, so the word's bytes are what the wire carries.
+
+Generate the models first and point the wire code at them, so both share `MapPoint` and convert directly:
+
+```bash
+ges schema generate map.gess --model map --language swift --namespace Model -o Model.swift
+ges schema generate map.gess --wire map --language swift --namespace Wire --models Model -o Wire.swift
+```
+
+```swift
+var point = Model.MapPoint(height: 812, surface: 3, wear: 0, flags: [.impassable])
+point.wear = 2                                      // a precondition checks the range
+let track = Model.MapTrack(points: Array(repeating: point, count: 1_000_000))
+
+let wire = Wire.MapTrack()
+wire.read(model: track)                             // shares the array of words
+let bytes = try wire.encoded()                      // about 4 MB, a word at a time
+let copy = Model.MapTrack(wire: wire)
+```
+
+In C# the same is `wire.CopyFrom(track)`, `wire.ToBytes()` and `wire.ToModel()`. Avoid `toValue()` on such records: it
+builds one GES value per point. Scripts and `.gesd` documents see a packed record as an ordinary Record.
+
+See [Packed schemas](../../specs/Schemas.md#packed-schemas) and
+[Packed records and models](../../specs/Schemas.md#packed-records-and-models).
 
 ## What schemas leave to you
 

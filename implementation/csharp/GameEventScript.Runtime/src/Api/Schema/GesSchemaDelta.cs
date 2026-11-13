@@ -325,12 +325,14 @@ public static class GesSchemaDelta
 
         private readonly GesSchemaNode[] _nodes;
         private readonly int _fieldCount;
+        private readonly bool _packed;
         private GesSchemaReader _record;
         private GesSchemaReader _baseline;
         private GesSchemaWriter _writer;
 
         internal Encoder(GesBoundSchema schema, ReadOnlySpan<byte> record, ReadOnlySpan<byte> baseline, Span<byte> buffer)
         {
+            _packed = schema.Schema.PackedWidth > 0;
             _nodes = schema.Nodes;
             _fieldCount = schema.DeltaFieldCount;
             _record = new GesSchemaReader(schema, record);
@@ -350,10 +352,30 @@ public static class GesSchemaDelta
                 start = key.Next;
             }
 
-            Group(start, _nodes.Length, _fieldCount);
+            if (_packed) Whole();
+            else Group(start, _nodes.Length, _fieldCount);
             _record.FinishBits();
             _baseline.FinishBits();
             return _writer.FinishBits();
+        }
+
+        // A packed record changes as a whole, also as the root: a change bit, then its word when it differs.
+        private void Whole()
+        {
+            var recordStart = _record.BitPosition;
+            for (var index = 0; index < _nodes.Length; index = _nodes[index].Next) FullField(ref _record, _nodes, index, ref _writer, false);
+            var recordEnd = _record.BitPosition;
+            var baselineStart = _baseline.BitPosition;
+            for (var index = 0; index < _nodes.Length; index = _nodes[index].Next) FullField(ref _baseline, _nodes, index, ref _writer, false);
+            if (Equal(ref _record, recordStart, recordEnd, ref _baseline, baselineStart, _baseline.BitPosition))
+            {
+                _writer.PutBits(0, 1);
+                return;
+            }
+
+            _writer.PutBits(1, 1);
+            _record.Seek(recordStart);
+            for (var index = 0; index < _nodes.Length; index = _nodes[index].Next) FullField(ref _record, _nodes, index, ref _writer, true);
         }
 
         // The change bits come first and are set as the fields turn out to differ.
@@ -408,6 +430,8 @@ public static class GesSchemaDelta
                 case GesSchemaNodeKind.List when node.KeyedElements:
                     return KeyedList(index);
                 case GesSchemaNodeKind.Text or GesSchemaNodeKind.List:
+                    return Whole(index);
+                case GesSchemaNodeKind.Group when node.Packed:
                     return Whole(index);
                 case GesSchemaNodeKind.Group:
                     var start = _writer.BitPosition;
@@ -602,12 +626,14 @@ public static class GesSchemaDelta
     {
         private readonly GesSchemaNode[] _nodes;
         private readonly int _fieldCount;
+        private readonly bool _packed;
         private GesSchemaReader _delta;
         private GesSchemaReader _baseline;
         private GesSchemaWriter _writer;
 
         internal Decoder(GesBoundSchema schema, ReadOnlySpan<byte> delta, ReadOnlySpan<byte> baseline, Span<byte> buffer, long byteLimit)
         {
+            _packed = schema.Schema.PackedWidth > 0;
             _nodes = schema.Nodes;
             _fieldCount = schema.DeltaFieldCount;
             _delta = new GesSchemaReader(schema, delta, byteLimit);
@@ -629,10 +655,28 @@ public static class GesSchemaDelta
                 start = key.Next;
             }
 
-            Group(start, _nodes.Length, _fieldCount, "");
+            if (_packed) Whole();
+            else Group(start, _nodes.Length, _fieldCount, "");
             var deltaBytes = _delta.FinishBits();
             _baseline.FinishBits();
             return new GesSchemaDeltaDecoded(_writer.FinishBits(), deltaBytes);
+        }
+
+        // A packed record's delta: its baseline when the change bit is clear, else its word, which must differ.
+        private void Whole()
+        {
+            if (_delta.GetBits(1, "") == 0)
+            {
+                for (var index = 0; index < _nodes.Length; index = _nodes[index].Next) FullField(ref _baseline, _nodes, index, ref _writer, true);
+                return;
+            }
+
+            var deltaStart = _delta.BitPosition;
+            for (var index = 0; index < _nodes.Length; index = _nodes[index].Next) FullField(ref _delta, _nodes, index, ref _writer, true);
+            var deltaEnd = _delta.BitPosition;
+            var baselineStart = _baseline.BitPosition;
+            for (var index = 0; index < _nodes.Length; index = _nodes[index].Next) FullField(ref _baseline, _nodes, index, ref _writer, false);
+            if (Equal(ref _delta, deltaStart, deltaEnd, ref _baseline, baselineStart, _baseline.BitPosition)) throw new GesWireException(GesWireException.InvalidDelta, "");
         }
 
         private bool Group(int start, int end, int count, string path)
@@ -693,13 +737,12 @@ public static class GesSchemaDelta
                 case GesSchemaNodeKind.List when node.KeyedElements:
                     KeyedList(index);
                     break;
+                case GesSchemaNodeKind.Group when node.Packed:
+                    // A packed record changes as a whole: its word follows the change bit.
+                    WholePayload(index);
+                    break;
                 case GesSchemaNodeKind.Text or GesSchemaNodeKind.List:
-                    var deltaStart = _delta.BitPosition;
-                    FullValue(ref _delta, _nodes, index, ref _writer, true);
-                    var deltaEnd = _delta.BitPosition;
-                    var baselineStart = _baseline.BitPosition;
-                    FullValue(ref _baseline, _nodes, index, ref _writer, false);
-                    if (Equal(ref _delta, deltaStart, deltaEnd, ref _baseline, baselineStart, _baseline.BitPosition)) throw new GesWireException(GesWireException.InvalidDelta, node.Path);
+                    WholePayload(index);
                     break;
                 case GesSchemaNodeKind.Group:
                     if (!Group(index + 1, node.Next, node.ChildCount, node.Path)) throw new GesWireException(GesWireException.InvalidDelta, node.Path);
@@ -711,6 +754,18 @@ public static class GesSchemaDelta
                     _writer.PutBits(Number(in node), node.Width);
                     break;
             }
+        }
+
+        // A field that changes as a whole: its full value, which must differ from the baseline's.
+        private void WholePayload(int index)
+        {
+            ref readonly var node = ref _nodes[index];
+            var deltaStart = _delta.BitPosition;
+            FullValue(ref _delta, _nodes, index, ref _writer, true);
+            var deltaEnd = _delta.BitPosition;
+            var baselineStart = _baseline.BitPosition;
+            FullValue(ref _baseline, _nodes, index, ref _writer, false);
+            if (Equal(ref _delta, deltaStart, deltaEnd, ref _baseline, baselineStart, _baseline.BitPosition)) throw new GesWireException(GesWireException.InvalidDelta, node.Path);
         }
 
         private void KeyedList(int index)

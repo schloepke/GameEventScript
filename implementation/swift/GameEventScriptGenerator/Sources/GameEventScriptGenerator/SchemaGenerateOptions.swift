@@ -71,6 +71,11 @@ public struct GesSchemaGenerateOptions: Sendable {
     /// How the code is divided into files. `.none`, the default, is the single text of `generate` and `generateModels`; the
     /// other choices are the files of `generateFiles` and `generateModelFiles`.
     public var split: GesSchemaSplit
+    /// The namespace of the model code that wire code shares types with, or nil for none, the default. With it, wire code
+    /// uses that namespace's packed types instead of declaring its own, so a List of them is one array in both, and converts
+    /// each wire record directly to and from the model of the same schema that a model root of any group reaches. An empty
+    /// string is the global namespace. Only wire generation takes it.
+    public var models: String?
 
     /// Creates options.
     /// - Parameters:
@@ -82,6 +87,7 @@ public struct GesSchemaGenerateOptions: Sendable {
     ///   - bindings: Whether generated model types also offer themselves to scripts as external types.
     ///   - documents: Whether generated model roots also read GES document text.
     ///   - split: How the code is divided into files.
+    ///   - models: The namespace of the model code that wire code shares types with, or nil for none.
     public init(
         language: GesSchemaLanguage = .csharp,
         namespace: String = "",
@@ -90,7 +96,8 @@ public struct GesSchemaGenerateOptions: Sendable {
         checkedExclusivity: Bool = false,
         bindings: Bool = false,
         documents: Bool = false,
-        split: GesSchemaSplit = .none
+        split: GesSchemaSplit = .none,
+        models: String? = nil
     ) {
         self.language = language
         self.namespace = namespace
@@ -100,6 +107,7 @@ public struct GesSchemaGenerateOptions: Sendable {
         self.bindings = bindings
         self.documents = documents
         self.split = split
+        self.models = models
     }
 }
 

@@ -61,7 +61,18 @@ public enum GesSchemaGenerator {
         if options.documents { throw GesGeneratorError(GesGeneratorError.usage, "Documents concern model code; wire code converts through Values.") }
         let layout = try GesSchemaLayoutBuilder.build(set, roots: roots, parameters: parameters)
         let types = try GesSchemaPlanner.plan(layout)
-        let document = options.language == .csharp ? try GesCSharpEmitter.emit(layout, types, options) : try GesSwiftEmitter.emit(layout, types, options)
+        // Packed records are model types over one word, which wire code declares itself unless it shares those of models.
+        let packed = layout.types.filter { $0.packedWidth > 0 }.map(\.name)
+        let shared = !packed.isEmpty && options.models == nil ? try GesModelLayoutBuilder.build(set, roots: packed) : nil
+        // With models, wire records that a model root of any group reaches convert to their model directly.
+        var modelRoots: [String] = []
+        if options.models != nil {
+            for schema in set.schemas where schema.modelGroup != nil { modelRoots.append(schema.name) }
+        }
+        let models = !modelRoots.isEmpty ? try GesModelLayoutBuilder.build(set, roots: modelRoots) : nil
+        let document =
+            options.language == .csharp
+            ? try GesCSharpEmitter.emit(layout, types, options, shared, models) : try GesSwiftEmitter.emit(layout, types, options, shared, models)
         return (document, layout)
     }
 
@@ -127,6 +138,9 @@ public enum GesSchemaGenerator {
 
     private static func models(_ set: GesSchemaSet, _ roots: [String], _ options: GesSchemaGenerateOptions) throws -> (document: GesCodeDocument, layout: GesModelLayout) {
         if options.checkedExclusivity { throw GesGeneratorError(GesGeneratorError.usage, "Checked exclusivity concerns wire code, not models.") }
+        if options.models != nil {
+            throw GesGeneratorError(GesGeneratorError.usage, "Models concern wire code, which shares their types; models do not name another namespace.")
+        }
         let layout = try GesModelLayoutBuilder.build(set, roots: roots)
         // Reading documents converts through the plain values.
         var effective = options

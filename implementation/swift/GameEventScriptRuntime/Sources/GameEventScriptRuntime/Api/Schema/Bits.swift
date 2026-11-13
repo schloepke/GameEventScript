@@ -160,6 +160,9 @@ public struct GesBitReader {
     /// The position of the next bit.
     public private(set) var bitPosition = 0
 
+    /// How many bits remain before the data or its byte limit ends, for example to read many values without checking each one.
+    public var remainingBits: Int { bitCount - bitPosition }
+
     /// Starts reading at the beginning of the data.
     /// - Parameters:
     ///   - data: The data; it may continue after the record.

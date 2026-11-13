@@ -20,6 +20,7 @@
                 output += "\n"
             case .schema:
                 if declaration.isAbstract { output += "abstract " }
+                if declaration.isPacked { output += declaration.packedWidth > 0 ? "packed(\(declaration.packedWidth)) " : "packed " }
                 output += "schema :\(declaration.name) as {\n"
                 for declared in declaration.lets { output += "  let \(declared.name) be \(value(declared.value))\n" }
                 // Fields, computed fields and withs in their written order.

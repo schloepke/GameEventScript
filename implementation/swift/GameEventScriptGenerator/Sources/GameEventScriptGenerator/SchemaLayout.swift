@@ -123,6 +123,10 @@ struct GesLayoutType {
     var tags: [String] = []
     var members: [String] = []
     var memberWidth = 0
+
+    // A packed schema's word: its width of 8, 16, 32 or 64 bits and the bits its fields take; 0 for other types.
+    var packedWidth = 0
+    var packedBits = 0
 }
 
 struct GesLayoutField {
@@ -166,6 +170,9 @@ final class GesLayoutEncoding {
     var lower: Int64 = 0
     var maxIndex: UInt64 = 0
     var width = 0
+
+    // The bits a field of fixed width takes on the wire: a Boolean has no layout width but takes one bit.
+    var bits: Int { kind == .boolean ? 1 : width }
     var numerator: Int64 = 0
     var tenPower: Int64 = 0
     var lowerValue = 0.0
@@ -253,6 +260,8 @@ enum GesSchemaLayoutBuilder {
         type.hash = bound.hash
         type.bindingHash = bound.bindingHash
         type.maxByteCount = bound.maxByteCount
+        type.packedWidth = schema.packedWidth
+        type.packedBits = schema.packedBits
         type.bindingHashDepends = schema.parameters.map(\.name)
         var depends = Set<String>()
         if schema.kind == .messages {

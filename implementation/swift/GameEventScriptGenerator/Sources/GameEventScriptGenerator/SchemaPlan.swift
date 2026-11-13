@@ -30,6 +30,56 @@ final class GesPlanType {
     var membersAreClasses = false
 }
 
+// A packed schema's word as wire code reads it: its type, its bits and each field of a fixed width below it, with the node
+// whose path an error names, its first bit and the largest valid index when its bits allow more.
+final class GesPackedWord {
+    var type = ""
+    var bits = 0
+    var width = 0
+    var leaves: [(node: Int, shift: Int, width: Int, largest: UInt64?)] = []
+
+    // Whether every word of its bits is valid, so that a read needs no check.
+    var full: Bool { leaves.allSatisfy { $0.largest == nil } }
+
+    static func of(_ layout: GesSchemaLayout, _ name: String, _ node: Int) -> GesPackedWord {
+        let type = layout.type(name)
+        let word = GesPackedWord()
+        word.type = name
+        word.bits = type.packedBits
+        word.width = type.packedWidth
+        var shift = 0
+        _ = add(layout, type, node + 1, &shift, &word.leaves)
+        return word
+    }
+
+    // The leaves of a packed type's fields from `node` on; a nested packed schema has a group node before its own.
+    private static func add(_ layout: GesSchemaLayout, _ type: GesLayoutType, _ start: Int, _ shift: inout Int, _ leaves: inout [(node: Int, shift: Int, width: Int, largest: UInt64?)]) -> Int {
+        var node = start
+        for field in type.fields {
+            if field.encoding.kind == .schema {
+                node = add(layout, layout.type(field.encoding.schema), node + 1, &shift, &leaves)
+                continue
+            }
+            leaves.append((node, shift, field.encoding.bits, packedLargest(field.encoding)))
+            shift += field.encoding.bits
+            node += 1
+        }
+        return node
+    }
+
+    // The largest valid index of a field, nil when every index of its bits is valid.
+    private static func packedLargest(_ encoding: GesLayoutEncoding) -> UInt64? {
+        let full: UInt64 = encoding.width >= 64 ? UInt64.max : (1 << UInt64(encoding.width)) - 1
+        let largest: UInt64 =
+            switch encoding.kind {
+            case .tag: UInt64(encoding.tags.count) &- 1
+            case .integer, .quantized: encoding.maxIndex
+            default: full
+            }
+        return largest < full ? largest : nil
+    }
+}
+
 struct GesPlanField {
     var layout = GesLayoutField()
     var base = ""
@@ -54,6 +104,9 @@ final class GesPlanValue {
 
     // Whether the value refers to a type that is a class.
     var isClass = false
+
+    // The word of a packed schema that the value refers to, nil for every other value.
+    var packed: GesPackedWord?
 
     // Whether the value is the item element of a recursive List of a union, whose item takes the level of the record that
     // holds the List.
@@ -206,6 +259,7 @@ enum GesSchemaPlanner {
 
     private static func value(_ context: Context, _ encoding: GesLayoutEncoding, _ name: String, _ label: String, _ node: Int) -> GesPlanValue {
         let value = GesPlanValue(base: name, label: label, node: node, encoding: encoding, isClass: holdsStorage(context, encoding))
+        if encoding.kind == .schema && context.layout.type(encoding.schema).packedWidth > 0 { value.packed = GesPackedWord.of(context.layout, encoding.schema, node) }
         switch encoding.kind {
         case .point, .vector:
             var axisNode = node + 1
@@ -468,6 +522,16 @@ enum GesSchemaPlanner {
     static func pascal(_ name: String) -> String { name.isEmpty ? name : name.prefix(1).uppercased() + name.dropFirst() }
 
     static func camel(_ name: String) -> String { name.isEmpty ? name : name.prefix(1).lowercased() + name.dropFirst() }
+
+    // Qualifies the packed types that values refer to, everywhere below them.
+    static func qualifyPacked(_ value: GesPlanValue, _ qualifier: String) {
+        if let word = value.packed, !word.type.contains(".") { word.type = qualifier + word.type }
+        if let element = value.element { qualifyPacked(element, qualifier) }
+        if let item = value.item {
+            for field in item.fields { qualifyPacked(field.value, qualifier) }
+        }
+        for alternative in value.alternatives { qualifyPacked(alternative, qualifier) }
+    }
 
     // Checks a namespace of dot-separated identifiers that are no keywords of the language.
     static func namespace(_ text: String, _ keywords: Set<String>) throws(GesGeneratorError) -> [String] {

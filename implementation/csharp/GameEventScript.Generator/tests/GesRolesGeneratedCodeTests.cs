@@ -389,6 +389,8 @@ public sealed class GesRolesGeneratedCodeTests
     {
         var error = Assert.ThrowsExactly<GesGeneratorException>(() => GesSchemaGenerator.GenerateModels(Set(), ["WorldView"], new GesSchemaGenerateOptions { CheckedExclusivity = true }));
         Assert.AreEqual("generate.usage", error.Code);
+        error = Assert.ThrowsExactly<GesGeneratorException>(() => GesSchemaGenerator.GenerateModels(Set(), ["WorldView"], new GesSchemaGenerateOptions { Models = "Model" }));
+        Assert.AreEqual("generate.usage", error.Code);
         error = Assert.ThrowsExactly<GesGeneratorException>(() => GesSchemaGenerator.ModelLayout(GesSchemaSet.Parse("message M()\n"), ["M"]));
         Assert.AreEqual("generate.usage", error.Code);
         error = Assert.ThrowsExactly<GesGeneratorException>(() => GesSchemaGenerator.ModelLayout(GesSchemaSet.Parse("schema :A as { m: :Map }\n"), ["A"]));

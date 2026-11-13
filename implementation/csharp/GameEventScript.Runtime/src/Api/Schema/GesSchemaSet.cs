@@ -187,6 +187,8 @@ public sealed class GesSchemaSet
         foreach (var declaration in _ordered) CheckNesting(declaration, [], visited);
         foreach (var file in files) file.ResolveRecordDefaults();
         foreach (var declaration in _ordered)
+            if (declaration.Packed) GesSchemaBinder.CheckPacked(declaration);
+        foreach (var declaration in _ordered)
             if (declaration.Syntax.WireGroup is not null) GesSchemaBinder.CheckEncodable(declaration);
         var schemas = new List<GesSchema>();
         foreach (var declaration in _ordered)
@@ -402,6 +404,13 @@ internal sealed class GesResolvedDeclaration
     internal (GesResolvedDeclaration Schema, GesSchemaWithSyntax With)[] Takes { get; set; } = [];
 
     internal bool Abstract => Syntax.Abstract;
+
+    // A packed schema's machine word: the declared width or the smallest of 8, 16, 32 and 64 that holds its bits.
+    internal bool Packed => Syntax.Packed;
+
+    internal int PackedBits { get; set; }
+
+    internal int PackedWidth { get; set; }
 
     internal string[] Tags { get; init; } = [];
 
@@ -1069,7 +1078,9 @@ internal static class GesSchemaCanonical
         switch (declaration.Kind)
         {
             case GesSchemaKind.Schema:
-                builder.Append("schema ").Append(declaration.Name).Append('\n');
+                builder.Append("schema ").Append(declaration.Name);
+                if (declaration.Packed) builder.Append(" packed ").Append(declaration.PackedWidth);
+                builder.Append('\n');
                 foreach (var let in declaration.Lets) builder.Append("let ").Append(let.Name).Append(' ').Append(LetKind(let)).Append(' ').Append(let.Value.Canonical).Append('\n');
                 foreach (var field in declaration.Fields) WriteField("field ", field, builder);
                 foreach (var computed in declaration.Computed)

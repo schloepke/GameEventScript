@@ -388,6 +388,8 @@ public sealed class GesSchema
         WireGroup = declaration.Syntax.WireGroup;
         ModelGroup = declaration.Syntax.ModelGroup;
         IsAbstract = declaration.Abstract;
+        PackedWidth = declaration.Packed ? declaration.PackedWidth : 0;
+        PackedBits = declaration.PackedBits;
     }
 
     /// <summary>Gets the declared name without the leading <c>:</c>, such as <c>Ship</c>; <see cref="GesSchemaSet.Schema"/>
@@ -410,6 +412,13 @@ public sealed class GesSchema
     /// <summary>Gets whether the schema is abstract: it only lends its fields with <c>with</c> and is never bound, checked
     /// against a document or generated as a type.</summary>
     public bool IsAbstract { get; }
+
+    /// <summary>Gets the width of a packed schema's word, 8, 16, 32 or 64 bits, or 0 for a schema that is not packed.</summary>
+    public int PackedWidth { get; }
+
+    /// <summary>Gets how many bits of its word a packed schema's fields take, those of its record on the wire; 0 for a schema
+    /// that is not packed.</summary>
+    public int PackedBits { get; }
 
     /// <summary>Gets the schemas whose fields this schema takes with <c>with</c>, in declared order. Their fields are part of
     /// <see cref="Fields"/>, as if written in place.</summary>

@@ -93,6 +93,7 @@ struct GameEventScript.Api.GesBitReader
   method System.Void Require(System.Int64 bits, System.String path)
   method System.Void Seek(System.Int64 bit)
   property System.Int64 BitPosition { get }
+  property System.Int64 RemainingBits { get }
 struct GameEventScript.Api.GesBitWriter
   ctor GesBitWriter(System.Span<System.Byte> buffer)
   method System.Int32 Finish()
@@ -1019,6 +1020,8 @@ sealed class GameEventScript.Api.GesSchema
   property GameEventScript.Api.GesReadOnlyArray<System.String> Tags { get }
   property GameEventScript.Api.GesSchemaKind Kind { get }
   property System.Boolean IsAbstract { get }
+  property System.Int32 PackedBits { get }
+  property System.Int32 PackedWidth { get }
   property System.String CanonicalForm { get }
   property System.String ModelGroup { get }
   property System.String Name { get }
@@ -1515,6 +1518,7 @@ sealed class GameEventScript.Generator.GesSchemaGenerateOptions
   property System.Boolean CheckedExclusivity { get set }
   property System.Boolean Documents { get set }
   property System.Boolean Values { get set }
+  property System.String Models { get set }
   property System.String Namespace { get set }
 static class GameEventScript.Generator.GesSchemaGenerator
   method static System.Collections.Generic.IReadOnlyList<GameEventScript.Generator.GesGeneratedFile> GenerateFiles(GameEventScript.Api.GesSchemaSet set, System.Collections.Generic.IReadOnlyList<System.String> roots, GameEventScript.Api.GesSchemaParameters parameters, GameEventScript.Generator.GesSchemaGenerateOptions options)

@@ -33,7 +33,7 @@ internal static partial class GesCSharpEmitter
         "ToString", "GetType"
     ];
 
-    internal static GesCodeDocument Emit(GesSchemaLayout layout, List<GesPlanType> types, GesSchemaGenerateOptions options)
+    internal static GesCodeDocument Emit(GesSchemaLayout layout, List<GesPlanType> types, GesSchemaGenerateOptions options, GesModelLayout? packed, GesModelLayout? modelLayout)
     {
         var access = options.Access == GesSchemaAccess.Public ? "public" : "internal";
         var space = GesSchemaPlanner.Namespace(options.Namespace, Keywords);
@@ -51,13 +51,39 @@ internal static partial class GesCSharpEmitter
         {
             Computed = GesSchemaPlanner.Computed(types, GesComputedEmitter.Helper(options.Namespace, GesSchemaPlanner.Suffix(header, options)), swift: false)
         };
+        context.Layout = layout;
         var document = new GesCodeDocument { Header = header, Prologue = prologue.ToString(), Space = space, Parameters = layout.Parameters.Count > 0 };
+        // Packed records are the model types over one word, the shared ones of the model namespace or declared here.
+        var models = options.Models is { } shared ? "global::" + string.Concat(GesSchemaPlanner.Namespace(shared, Keywords).ConvertAll(part => part + ".")) : context.Global;
         foreach (var type in types)
+            foreach (var field in type.Fields) GesSchemaPlanner.QualifyPacked(field.Value, models);
+        if (modelLayout is not null) context.Models = new ModelConversion(modelLayout, models);
+        foreach (var type in types)
+        {
+            if (type.Layout.PackedWidth > 0)
+            {
+                var root = layout.Roots.Contains(type.Name);
+                if (packed is not null)
+                    document.Units.Add(new GesCodeUnit(type.Name, code => GesCSharpModelEmitter.PackedType(code, packed, type.Name, access, context.Global, root ? members => PackedRoot(members, type, context) : null)));
+                else if (root)
+                    document.Units.Add(new GesCodeUnit(type.Name, code =>
+                    {
+                        // A root shared with models gets its wire members as extension methods of the model's struct.
+                        code.Line($"/// <summary>The wire members of the packed record <c>:{type.Name}</c>, a wire root whose type the models declare: its bytes are its word, little-endian.</summary>");
+                        code.Line($"{access} static class {type.Name}Wire");
+                        code.Open("{");
+                        PackedRoot(code, type, context, models + type.Name);
+                        code.Close();
+                    }));
+                continue;
+            }
+
             document.Units.Add(new GesCodeUnit(type.Name, code =>
             {
                 if (type.Kind == GesSchemaKind.Messages) MessageSet(code, type, access, context);
                 else Record(code, type, access, context);
             }));
+        }
         var sets = GesSchemaPlanner.TagSets(types, context.Global);
         foreach (var (name, tags) in sets) document.Units.Add(new GesCodeUnit(name, code => TagSetDeclaration(code, name, tags, access)));
         context.TopLevel = GesSchemaPlanner.TopLevel(types, sets);
@@ -71,6 +97,8 @@ internal static partial class GesCSharpEmitter
     // The keyed-list elements and the qualifier of the top-level types, which a member of the same name cannot hide.
     private sealed class Context(HashSet<string> elements, string global, bool values, string holder)
     {
+        internal GesSchemaLayout Layout { get; set; } = null!;
+
         internal HashSet<string> Elements { get; } = elements;
 
         internal string Global { get; } = global;
@@ -84,6 +112,9 @@ internal static partial class GesCSharpEmitter
 
         // The records and tag sets declared beside each other, which a record's nested type must not hide.
         internal HashSet<string> TopLevel { get; set; } = null!;
+
+        // The models that records convert to and from directly, null without `--models`.
+        internal ModelConversion? Models { get; set; }
     }
 
     private static string Kind(GesPlanType type) => type.Kind == GesSchemaKind.Message ? "message" : "schema";
@@ -109,6 +140,8 @@ internal static partial class GesCSharpEmitter
         if (!type.IsItem)
             foreach (var constant in type.Layout.Constants) names.Add((GesSchemaPlanner.Pascal(constant.Name), "the let " + constant.Name));
         if (!type.IsItem) GesComputedEmitter.Names(type.Layout.Computed, type.Name, swift: false, names);
+        var model = type.IsItem || type.Kind != GesSchemaKind.Schema ? null : context.Models?.Type(type.Name);
+        if (model is not null) names.Add(("ToModel", "the generated member ToModel"));
         GesSchemaPlanner.Unique(type.Name, names, context.TopLevel);
 
         var visibility = type.IsItem ? "public" : access;
@@ -147,6 +180,7 @@ internal static partial class GesCSharpEmitter
         if (deltas) SameHelpers(code, type, context.Global);
         Extras(code, type, deltas, context.Elements.Contains(type.Name));
         if (context.Values && !type.IsItem) ValueMembers(code, type, context.Holder);
+        if (model is not null) ModelMembers(code, type, model, context.Models!);
         foreach (var field in type.Fields) Declarations(code, field.Value, access, context);
         code.Close();
     }
@@ -221,7 +255,7 @@ internal static partial class GesCSharpEmitter
         GesLayoutKind.Boolean => "bool",
         GesLayoutKind.Integer => "long",
         GesLayoutKind.Quantized or GesLayoutKind.Float => "double",
-        GesLayoutKind.Schema => value.Encoding.Schema,
+        GesLayoutKind.Schema => value.Packed?.Type ?? value.Encoding.Schema,
         GesLayoutKind.Text => "string",
         GesLayoutKind.Bytes => "byte[]",
         GesLayoutKind.Point => "GesPoint",
@@ -621,6 +655,9 @@ internal static partial class GesCSharpEmitter
                 foreach (var part in value.Corners) Write(code, part, target + "." + part.Base);
                 if (value.Corners.Count == 1) code.Line($"if ({target}.Radius != 0) {Throw("TypeMismatch", value)}");
                 break;
+            case GesLayoutKind.Schema when value.Packed is not null:
+                PackedWrite(code, value, target);
+                break;
             case GesLayoutKind.Schema:
                 code.Line($"{target}.__WriteFields(ref writer, paths, at + {(value.Node + 1).ToString(CultureInfo.InvariantCulture)}{NextLevel(value)});");
                 break;
@@ -714,6 +751,13 @@ internal static partial class GesCSharpEmitter
                 code.Line($"var count = (int)reader.Read({width}, {Path(value)});");
                 code.Line($"if (count > {max}) {Throw("InvalidCount", value)}");
                 code.Line($"{target}.Clear();");
+                if (element.Packed is not null)
+                {
+                    PackedList(code, value, target, "count");
+                    code.Close();
+                    break;
+                }
+
                 code.Line("for (var position = 0; position < count; position++)");
                 code.Open("{");
                 if (element.IsClass)
@@ -753,6 +797,9 @@ internal static partial class GesCSharpEmitter
                 foreach (var part in value.Corners) Read(code, part, part.Label + N(value.Node));
                 code.Line($"{target} = new GesDisc(center{N(value.Node)}, radius{N(value.Node)});");
                 code.Close();
+                break;
+            case GesLayoutKind.Schema when value.Packed is not null:
+                PackedRead(code, value, target);
                 break;
             case GesLayoutKind.Schema:
                 code.Line($"{target}.__ReadFields(ref reader, paths, at + {(value.Node + 1).ToString(CultureInfo.InvariantCulture)}{NextLevel(value)});");

@@ -172,6 +172,12 @@ internal static class GesCSharpModelEmitter
 
     private static void Record(GesSchemaPlanner.Code code, GesModelLayout layout, GesModelType type, string access, string support, string qualifier, bool bindings, string? values, GesComputedEmitter computed, string? documents)
     {
+        if (type.Packed is not null)
+        {
+            PackedRecord(code, layout, type, access, support, qualifier, bindings, values, computed, documents);
+            return;
+        }
+
         var fields = GesModelPlanner.Fields(type);
         var names = new List<(string, string)>();
         foreach (var reserved in Reserved) names.Add((reserved, "the inherited member " + reserved));
@@ -346,6 +352,225 @@ internal static class GesCSharpModelEmitter
         code.Close();
     }
 
+    // A packed type that wire code declares itself, without conversions, as the model code of the same schema declares it.
+    internal static void PackedType(GesSchemaPlanner.Code code, GesModelLayout layout, string name, string access, string qualifier, Action<GesSchemaPlanner.Code>? wire)
+    {
+        var type = layout.Types.Find(candidate => candidate.Name == name)!;
+        PackedRecord(code, layout, type, access, "", qualifier, false, null, GesModelPlanner.Computed(layout, "", swift: false), null, wire);
+    }
+
+    // A packed schema's model: a struct over one word whose fields are properties at their bits, so that a list of them is a
+    // dense array of words; wire code of the same schema holds the same word. Equality and hashing compare the word.
+    private static void PackedRecord(GesSchemaPlanner.Code code, GesModelLayout layout, GesModelType type, string access, string support, string qualifier, bool bindings, string? values, GesComputedEmitter computed, string? documents, Action<GesSchemaPlanner.Code>? members = null)
+    {
+        var fields = GesModelPlanner.Fields(type);
+        var wire = type.Packed!.Type(type.Name);
+        var raw = GesCSharpEmitter.PackedRaw(wire.PackedWidth);
+        var names = new List<(string, string)>();
+        foreach (var reserved in Reserved) names.Add((reserved, "the inherited member " + reserved));
+        foreach (var reserved in new[] { "SchemaHash", "Bits", "RawValue", "IsValid", "FromRaw", "FromRawUnchecked" }) names.Add((reserved, "the generated member " + reserved));
+        if (bindings)
+            foreach (var reserved in new[] { "ToGesValue", "FromGesValue" }) names.Add((reserved, "the generated member " + reserved));
+        if (values is not null)
+            foreach (var reserved in new[] { "ToValue", "FromValue" }) names.Add((reserved, "the generated member " + reserved));
+        if (documents is not null) names.Add(("FromDocument", "the generated member FromDocument"));
+        if (bindings && fields.Exists(field => field.Field.Name == "fields"))
+            throw new GesGeneratorException(GesGeneratorException.NameCollision, $"In '{type.Name}', the field fields and the generated field fields of its bindings share a name.");
+        if ((bindings || values is not null) && fields.Exists(field => field.Field.Default is { Kind: GesSchemaDefaultKind.Record }) && GesModelPlanner.TopLevel(layout, swift: false).Contains(type.Name + "Defaults"))
+            throw new GesGeneratorException(GesGeneratorException.NameCollision, $"The record defaults of '{type.Name}' are generated as '{type.Name}Defaults', which hides the top-level type of that name.");
+        foreach (var field in fields)
+        {
+            names.Add((field.Base, "the field " + field.Field.Name));
+            names.Add(("With" + field.Base, "the generated member With" + field.Base));
+            Nested(field.Value, names, field.Field.Name);
+        }
+
+        foreach (var constant in type.Constants) names.Add((GesSchemaPlanner.Pascal(constant.Name), "the let " + constant.Name));
+        GesComputedEmitter.Names(type.Computed, type.Name, swift: false, names);
+        GesSchemaPlanner.Unique(type.Name, names, GesModelPlanner.TopLevel(layout, swift: false));
+
+        var packed = new List<GesCSharpEmitter.PackedField>();
+        var bits = GesCSharpEmitter.PackedLayout(type.Packed, wire);
+        for (var index = 0; index < fields.Count; index++)
+        {
+            var value = fields[index].Value;
+            var nestedRaw = value.Kind == GesModelKind.Schema ? GesCSharpEmitter.PackedRaw(type.Packed.Type(value.Model.Schema).PackedWidth) : null;
+            packed.Add(new GesCSharpEmitter.PackedField(bits[index].Field, bits[index].Shift, bits[index].Width, fields[index].Base, Plain(value, qualifier), nestedRaw));
+        }
+
+        var width = wire.PackedWidth.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        code.Line($"/// <summary>The model of the packed schema <c>:{type.Name}</c>: one {width}-bit word, whose fields lie at their bits from the least");
+        code.Line($"/// significant bit in declared order, as the record's wire bytes hold them. <c>default</c> is the word 0, not the defaults.</summary>");
+        code.Line($"{access} struct {type.Name} : IEquatable<{type.Name}>{string.Concat(GesModelPlanner.Adopted(layout, type, swift: false).ConvertAll(name => ", " + name))}");
+        code.Open("{");
+        code.Line($"/// <summary>The hash of the schema <c>:{type.Name}</c>, which wire records of it carry too; a test that compares it notices stale generated code.</summary>");
+        code.Line($"public const ulong SchemaHash = 0x{GesSchemaLayoutJson.Hex(type.Hash)}UL;");
+        code.Blank();
+        code.Line("/// <summary>The bits that the fields take, those of the record on the wire; the word's other bits are zero.</summary>");
+        code.Line($"public const int Bits = {wire.PackedBits.ToString(System.Globalization.CultureInfo.InvariantCulture)};");
+        GesCSharpEmitter.Lets(code, type.Constants);
+        code.Blank();
+        code.Line($"private {raw} _raw;");
+        code.Blank();
+        code.Line($"private {type.Name}({raw} raw) => _raw = raw;");
+        if (fields.Count > 0)
+        {
+            var trailing = fields.Count;
+            while (trailing > 0 && fields[trailing - 1].Field.Default is not null) trailing--;
+            code.Blank();
+            code.Line("/// <summary>Creates a record from its fields.</summary>");
+            foreach (var field in fields)
+            {
+                var note = GesModelPlanner.Sibling(fields, field) is { } named ? $"; null takes <c>{fields[named].Field.Name}</c>" : "";
+                code.Line($"/// <param name=\"{GesSchemaPlanner.Camel(field.Base)}\">The field <c>{field.Field.Name}</c>{note}.</param>");
+            }
+
+            code.Line("/// <exception cref=\"ArgumentOutOfRangeException\">A value lies outside its field.</exception>");
+            var parameters = new List<string>();
+            for (var index = 0; index < fields.Count; index++)
+            {
+                var field = fields[index];
+                var optional = index >= trailing;
+                parameters.Add(GesModelPlanner.Sibling(fields, field) is null
+                    ? $"{Type(field.Value)} {Parameter(field.Base)}{(optional ? " = " + Native(layout, field.Value, field.Field.Default!) : "")}"
+                    : $"{Plain(field.Value)}? {Parameter(field.Base)}{(optional ? " = null" : "")}");
+            }
+
+            code.Line($"public {type.Name}({string.Join(", ", parameters)})");
+            code.Open("{");
+            code.Line("_raw = 0;");
+            foreach (var index in GesModelPlanner.ReadOrder(fields))
+            {
+                var field = fields[index];
+                var fallback = GesModelPlanner.Sibling(fields, field) is { } named ? " ?? " + fields[named].Base : "";
+                code.Line($"{field.Base} = {Parameter(field.Base)}{fallback};");
+            }
+
+            code.Close();
+        }
+
+        code.Blank();
+        code.Line("/// <summary>Gets the word, whose first <see cref=\"Bits\"/> bits, written little-endian, are the record's wire bytes.</summary>");
+        code.Line($"public readonly {raw} RawValue => _raw;");
+        code.Blank();
+        code.Line("/// <summary>Tests whether a word holds a valid value in every field: an index within its range or tag set and zero bits");
+        code.Line("/// above <see cref=\"Bits\"/>.</summary>");
+        code.Line("/// <param name=\"raw\">The word.</param>");
+        code.Line("/// <returns>Whether the word is a record of this schema.</returns>");
+        var checks = GesCSharpEmitter.PackedChecks(packed);
+        if (wire.PackedBits < wire.PackedWidth) checks.Insert(0, $"((ulong)raw >> {wire.PackedBits.ToString(System.Globalization.CultureInfo.InvariantCulture)}) == 0");
+        code.Line($"public static bool IsValid({raw} raw) => {(checks.Count == 0 ? "true" : string.Join(" && ", checks))};");
+        code.Blank();
+        code.Line("/// <summary>Reads a word from foreign data, checked as decoding checks it.</summary>");
+        code.Line("/// <param name=\"raw\">The word.</param>");
+        code.Line("/// <returns>The record, or null when the word is not valid.</returns>");
+        code.Line($"public static {type.Name}? FromRaw({raw} raw) => IsValid(raw) ? new {type.Name}(raw) : null;");
+        code.Blank();
+        code.Line("/// <summary>Takes a word whose validity is known, without checking it; an invalid word gives values outside their fields.</summary>");
+        code.Line("/// <param name=\"raw\">The word.</param>");
+        code.Line("/// <returns>The record.</returns>");
+        code.Line($"public static {type.Name} FromRawUnchecked({raw} raw) => new {type.Name}(raw);");
+        for (var index = 0; index < fields.Count; index++)
+        {
+            var field = fields[index];
+            code.Blank();
+            code.Line($"/// <summary><c>{Escape(field.Field.Name + ": " + GesModelPlanner.Describe(layout, field.Field))}</c></summary>");
+            code.Line($"/// <exception cref=\"ArgumentOutOfRangeException\">A value set lies outside the field.</exception>");
+            code.Line($"public {Type(field.Value)} {field.Base}");
+            code.Open("{");
+            GesCSharpEmitter.PackedAccessors(code, packed[index], raw);
+            code.Close();
+            code.Blank();
+            code.Line($"/// <summary>Copies the record with another <c>{field.Field.Name}</c>.</summary>");
+            code.Line("/// <param name=\"value\">The value.</param>");
+            code.Line("/// <returns>The copy.</returns>");
+            code.Line("/// <exception cref=\"ArgumentOutOfRangeException\">The value lies outside the field.</exception>");
+            code.Line($"public {type.Name} With{field.Base}({Type(field.Value)} value)");
+            code.Open("{");
+            code.Line("var copy = this;");
+            code.Line($"copy.{field.Base} = value;");
+            code.Line("return copy;");
+            code.Close();
+        }
+
+        computed.Members(code, type.Name, type.Computed, "public");
+        code.Blank();
+        code.Line("/// <summary>Compares the words.</summary>");
+        code.Line("/// <param name=\"other\">The other record.</param>");
+        code.Line("/// <returns>Whether both hold equal values.</returns>");
+        code.Line($"public bool Equals({type.Name} other) => _raw == other._raw;");
+        code.Blank();
+        code.Line("/// <inheritdoc />");
+        code.Line($"public override bool Equals(object? obj) => obj is {type.Name} other && Equals(other);");
+        code.Blank();
+        code.Line("/// <inheritdoc />");
+        code.Line("public override int GetHashCode() => _raw.GetHashCode();");
+        code.Blank();
+        code.Line("/// <summary>Compares two records by their words.</summary>");
+        code.Line("/// <param name=\"left\">The first value.</param>");
+        code.Line("/// <param name=\"right\">The second value.</param>");
+        code.Line("/// <returns>Whether both are equal.</returns>");
+        code.Line($"public static bool operator ==({type.Name} left, {type.Name} right) => left._raw == right._raw;");
+        code.Blank();
+        code.Line("/// <summary>Compares two records by their words.</summary>");
+        code.Line("/// <param name=\"left\">The first value.</param>");
+        code.Line("/// <param name=\"right\">The second value.</param>");
+        code.Line("/// <returns>Whether they differ.</returns>");
+        code.Line($"public static bool operator !=({type.Name} left, {type.Name} right) => left._raw != right._raw;");
+        if (bindings)
+        {
+            code.Blank();
+            code.Line($"/// <summary>Wraps the record as the external value <c>:{type.Name}</c> of <see cref=\"GesTypes\"/>; scripts read its fields when they read them.</summary>");
+            code.Line("/// <returns>The GES value.</returns>");
+            code.Line($"public GesValue ToGesValue() => GesValue.GesExternal(new GesTypes.{type.Name}Value(this));");
+            code.Blank();
+            code.Line($"/// <summary>Reads a <c>:{type.Name}</c> that a script holds.</summary>");
+            code.Line("/// <param name=\"value\">The value.</param>");
+            code.Line("/// <returns>The record, or null for another value.</returns>");
+            code.Line($"public static {type.Name}? FromGesValue(in GesValue value) => value.ExternalValue is GesTypes.{type.Name}Value held ? held.Record : null;");
+        }
+
+        if (values is not null)
+        {
+            code.Blank();
+            code.Line("/// <summary>Converts the record into a plain GES Record of its fields, as <see cref=\"GesSchemaValues\"/> decodes the bytes of the record;");
+            code.Line("/// a List of many packed records is faster through their words.</summary>");
+            code.Line("/// <returns>The Record.</returns>");
+            code.Line($"public GesValue ToValue() => {values}.Value(this);");
+            code.Blank();
+            code.Line("/// <summary>Reads a Record of this schema, or a Map of only its fields, as <see cref=\"GesSchemaValues\"/> encodes it.</summary>");
+            code.Line("/// <param name=\"value\">The value.</param>");
+            code.Line("/// <returns>The record.</returns>");
+            code.Line("/// <exception cref=\"GesWireException\">A field does not convert: <c>wire.typeMismatch</c> at its path.</exception>");
+            code.Line($"public static {type.Name} FromValue(GesValue value) => {values}.Read{type.Name}(value, \"\");");
+        }
+
+        if (documents is not null)
+        {
+            code.Blank();
+            code.Line($"/// <summary>Reads a record from GES document text with the header <c>:Schema(:{type.Name})</c>, as the records of this file do.</summary>");
+            code.Line("/// <param name=\"text\">The document text.</param>");
+            code.Line("/// <returns>The record.</returns>");
+            code.Line("/// <exception cref=\"GesDocumentException\">The text is no document, names another schema or breaks the schema.</exception>");
+            code.Line($"public static {type.Name} FromDocument(string text)");
+            code.Open("{");
+            code.Line($"var document = {documents}.Read(text, {GesSchemaPlanner.Literal(type.Name, false)});");
+            code.Line("try");
+            code.Open("{");
+            code.Line("return FromValue(document.Value);");
+            code.Close();
+            code.Line("catch (GesWireException error)");
+            code.Open("{");
+            code.Line("throw document.Locate(error);");
+            code.Close();
+            code.Close();
+        }
+
+        members?.Invoke(code);
+        foreach (var field in fields) Declarations(code, field.Value, support, qualifier);
+        code.Close();
+    }
+
     private static void Operators(GesSchemaPlanner.Code code, string name, string what)
     {
         code.Line($"/// <summary>Compares two {what}s by value.</summary>");
@@ -399,8 +624,8 @@ internal static class GesCSharpModelEmitter
     private static string Nested(GesModelPlanValue value, string? qualifier, string? owner)
         => value.TagSet.Length > 0 ? qualifier + value.TagSet : owner is null ? value.Nested : qualifier + owner + "." + value.Nested;
 
-    private static bool IsReference(GesModelPlanValue value) => value.Kind is GesModelKind.Text or GesModelKind.Bytes or GesModelKind.List or GesModelKind.Dice or GesModelKind.Schema or GesModelKind.Union or GesModelKind.Poly
-        || (value.Kind == GesModelKind.Tag && !value.ClosedTag);
+    private static bool IsReference(GesModelPlanValue value) => value.Kind is GesModelKind.Text or GesModelKind.Bytes or GesModelKind.List or GesModelKind.Dice or GesModelKind.Union or GesModelKind.Poly
+        || (value.Kind == GesModelKind.Schema && !value.Model.Packed) || (value.Kind == GesModelKind.Tag && !value.ClosedTag);
 
     // A literal default as a native constant; a record calls the constructor of its model.
     private static string Native(GesModelLayout layout, GesModelPlanValue value, GesLayoutDefault fallback, string? qualifier = null, string? owner = null) => fallback.Kind switch
@@ -480,6 +705,7 @@ internal static class GesCSharpModelEmitter
     {
         if (field.Field.Default is { Kind: GesSchemaDefaultKind.Record } fallback) return Native(layout, field.Value, fallback);
         if (field.Field.Default is not null || field.Value.Nullable) return null;
+        if (field.Value.Kind == GesModelKind.Schema && field.Value.Model.Packed) return null;
         return field.Value.Kind is GesModelKind.List or GesModelKind.Dice or GesModelKind.Schema or GesModelKind.Union or GesModelKind.Poly ? Initial(field.Value) : null;
     }
 
@@ -493,6 +719,7 @@ internal static class GesCSharpModelEmitter
             GesModelKind.Text or GesModelKind.Tag when !value.ClosedTag => "\"\"",
             GesModelKind.Bytes => "global::System.Array.Empty<byte>()",
             GesModelKind.List or GesModelKind.Dice => $"new {Plain(value)}()",
+            GesModelKind.Schema when value.Model.Packed => "",
             GesModelKind.Schema => $"new {value.Model.Schema}()",
             GesModelKind.Union => $"new {value.Nested}.{value.Alternatives[0].Label}({Zero(value.Alternatives[0])})",
             GesModelKind.Poly => "new GesPoly(global::System.Array.Empty<GesPoint>())",
@@ -709,7 +936,7 @@ internal static class GesCSharpModelEmitter
     private static string UnitName(string unit) => "GesQuantityUnit.Unit" + GesSchemaPlanner.Pascal(unit);
 
     private static bool IsValueType(GesModelPlanValue value) => value.Kind is GesModelKind.Boolean or GesModelKind.Number or GesModelKind.Point or GesModelKind.Vector or GesModelKind.Box or GesModelKind.Disc or GesModelKind.Flags
-        || value.ClosedTag;
+        || value.ClosedTag || (value.Kind == GesModelKind.Schema && value.Model.Packed);
 
     private static string Depth(int depth) => depth.ToString(CultureInfo.InvariantCulture);
 
@@ -876,7 +1103,7 @@ internal static class GesCSharpModelEmitter
             code.Blank();
             code.Line($"private static bool Decode{type.Name}(in GesValue value, out {record} result)");
             code.Open("{");
-            code.Line("result = null!;");
+            code.Line(type.Packed is null ? "result = null!;" : "result = default;");
             code.Line($"var fields = RecordFields(value, {GesSchemaPlanner.Literal(type.Name, false)}, {names});");
             var conditions = new List<string> { "fields is null" };
             for (var index = 0; index < fields.Count; index++)

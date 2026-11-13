@@ -47,6 +47,8 @@ Options:
   --checked-exclusivity     Keep the dynamic exclusivity checks of generated Swift classes.
   --bindings                Also offer generated model types to scripts as external types; only with --model.
   --documents               Also read model roots from GES document text; includes --values, only with --model.
+  --models <namespace>      Share the packed types of the model code in that namespace ("" for the global one) and
+                            convert wire records directly to and from the models of their schemas; only wire code.
   -d, --out-dir <dir>       Write the code as several files into a directory that generate owns, with a manifest.
   --split <kind>            With --out-dir, one file per declaration (schema, the default) or per schema file (file).
   --check                   Compare the generated code with the output file or directory instead of writing it;
@@ -88,6 +90,7 @@ Options:
         string? output = null;
         string? outDir = null;
         string? split = null;
+        string? models = null;
         var quiet = false;
         var parameters = new List<(string Name, string Literal)>();
         for (var index = 1; index < arguments.Length; index++)
@@ -106,7 +109,7 @@ Options:
             else if (argument == "--checked-exclusivity" && command == "generate") checkedExclusivity = true;
             else if (argument == "--bindings" && command == "generate") bindings = true;
             else if (argument == "--documents" && command == "generate") documents = true;
-            else if (argument is "--root" or "--data" or "--baseline" or "--param" or "-o" or "--output" or "--language" or "--namespace" or "--access" or "--wire" or "--model" or "-d" or "--out-dir" or "--split")
+            else if (argument is "--root" or "--data" or "--baseline" or "--param" or "-o" or "--output" or "--language" or "--namespace" or "--access" or "--wire" or "--model" or "-d" or "--out-dir" or "--split" or "--models")
             {
                 var applies = argument switch
                 {
@@ -114,7 +117,7 @@ Options:
                     "--wire" or "--model" => command is "layout" or "generate",
                     "--param" => command is "hash" or "dump" or "layout" or "generate",
                     "--data" or "--baseline" => command == "dump",
-                    "--language" or "--namespace" or "--access" or "-d" or "--out-dir" or "--split" => command == "generate",
+                    "--language" or "--namespace" or "--access" or "-d" or "--out-dir" or "--split" or "--models" => command == "generate",
                     _ => command is "format" or "layout" or "generate"
                 };
                 if (!applies) return UsageError($"Unknown schema {command} option '{argument}'.");
@@ -140,6 +143,7 @@ Options:
                 else if (argument is "-o" or "--output") output = next;
                 else if (argument is "-d" or "--out-dir") outDir = next;
                 else if (argument == "--split") split = next;
+                else if (argument == "--models") models = next;
                 else
                 {
                     var separator = next.IndexOf('=');
@@ -163,6 +167,7 @@ Options:
         if (modelGroup is not null && checkedExclusivity) return UsageError("--checked-exclusivity concerns wire code, not --model.");
         if (bindings && modelGroup is null) return UsageError("--bindings concerns model code and requires --model.");
         if (documents && modelGroup is null) return UsageError("--documents concerns model code and requires --model.");
+        if (models is not null && modelGroup is not null) return UsageError("--models concerns wire code, not --model.");
         if (command == "generate" && language is not ("csharp" or "swift")) return UsageError("generate requires --language csharp or --language swift.");
         if (access is not (null or "public" or "internal")) return UsageError("--access is public or internal.");
         if (output is not null && outDir is not null) return GenerateUsage("-o writes one file and --out-dir a directory; give one of them.");
@@ -217,7 +222,8 @@ Options:
                         CheckedExclusivity = checkedExclusivity,
                         Bindings = bindings,
                         Documents = documents,
-                        Split = outDir is null ? GesSchemaSplit.None : split == "file" ? GesSchemaSplit.File : GesSchemaSplit.Schema
+                        Split = outDir is null ? GesSchemaSplit.None : split == "file" ? GesSchemaSplit.File : GesSchemaSplit.Schema,
+                        Models = models
                     };
                     if (wireGroup is not null || modelGroup is not null)
                     {

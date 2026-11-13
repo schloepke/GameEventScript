@@ -108,6 +108,9 @@ internal struct GesSchemaNode
     internal bool HasRange;
     internal bool IsTagBit;
     internal bool IsTagText;
+
+    // A record of a packed schema, whose delta is its whole word.
+    internal bool Packed;
     // A :Bytes max n: a Text on the wire whose bytes need not be UTF-8.
     internal bool IsBytes;
     // The `depth` of a recursive List at its deepest level, which holds no element; 0 otherwise.
@@ -264,7 +267,7 @@ public readonly struct GesSchemaField
 /// <summary>Builds the layout of a declaration for fixed parameter values.</summary>
 internal static class GesSchemaBinder
 {
-    internal const long MaximumByteCount = 10485760;
+    internal const long MaximumByteCount = 67108864;
     private const long LargestSteps = 1L << 50;
     private const long LargestMultiple = 1L << 53;
     private const int MaximumFractionDigits = 15;
@@ -483,6 +486,46 @@ internal static class GesSchemaBinder
         var percentage = declared.Kind == GesSchemaTypeKind.Percentage;
         if (value.Unit != declared.Unit || (value.IsLiteral && value.IsPercent != percentage))
             throw root.Scope.Error(Code.UnitMismatch, root.Offset, $"Parameter '{name}' has another kind or unit.");
+    }
+
+    // A packed schema holds only fields of a fixed width that no parameter decides: integers and quantized numbers with a range,
+    // Booleans, closed Tags, Flags and packed schemas, with neither `optional`, a key nor `delta within`. Its bits, those of
+    // its record on the wire, fit its word. Nested packed schemas are checked first, since their bits count here.
+    internal static void CheckPacked(GesResolvedDeclaration declaration)
+    {
+        if (declaration.PackedWidth > 0) return;
+        var scope = declaration.Scope;
+        if (declaration.Computed.Length > 0) throw scope.Error(Code.PackedField, declaration.Computed[0].Offset, "A packed schema holds no computed field.");
+        foreach (var field in declaration.Fields)
+        {
+            if (field.Marker != GesSchemaFieldMarker.None) throw scope.Error(Code.PackedField, field.Offset, $"A packed schema holds no {(field.Marker == GesSchemaFieldMarker.Key ? "key" : "optional field")}, since its width is fixed.");
+            if (field.Alternatives.Length != 1) throw scope.Error(Code.PackedField, field.Offset, "A packed schema holds no union, since its width is fixed.");
+            var type = field.Alternatives[0];
+            var constraints = type.Constraints;
+            var fixedNumber = type.Kind is GesSchemaTypeKind.Number or GesSchemaTypeKind.Percentage or GesSchemaTypeKind.Quantity
+                && constraints.Lower is { IsParameter: false } && constraints.Upper is { IsParameter: false } && constraints.Delta is null
+                && (constraints.Integer || constraints.Step is { IsParameter: false });
+            var accepted = type.Kind switch
+            {
+                GesSchemaTypeKind.Boolean or GesSchemaTypeKind.Flags => true,
+                GesSchemaTypeKind.Tag => type.Tags is not null,
+                GesSchemaTypeKind.Reference => type.Reference!.Packed,
+                _ => fixedNumber
+            };
+            if (!accepted)
+                throw scope.Error(Code.PackedField, type.Offset, "A packed field is an integer or quantized number with a range and no delta range, a Boolean, a closed Tag, Flags or a packed schema.");
+            if (type.Kind == GesSchemaTypeKind.Reference) CheckPacked(type.Reference!);
+        }
+
+        var build = new Build(new GesSchemaParameters());
+        foreach (var field in declaration.Fields) AddField(build, field.Scope, field, "", 0, top: false);
+        var bits = 0;
+        foreach (var node in build.Nodes) bits += node.Width;
+        var width = declaration.Syntax.PackedWidth;
+        if (bits > 64 || (width > 0 && bits > width))
+            throw scope.Error(Code.PackedTooWide, declaration.Syntax.PackedOffset, $"'{declaration.Name}' has {bits} bits, more than {(width > 0 ? width : 64)}.");
+        declaration.PackedBits = bits;
+        declaration.PackedWidth = width > 0 ? width : bits <= 8 ? 8 : bits <= 16 ? 16 : bits <= 32 ? 32 : 64;
     }
 
     internal static GesBoundSchema Bind(GesResolvedDeclaration root, GesSchemaParameters parameters)
@@ -824,6 +867,7 @@ internal static class GesSchemaBinder
             case GesSchemaTypeKind.Reference:
                 node.Kind = GesSchemaNodeKind.Group;
                 node.SchemaName = type.ReferenceName;
+                node.Packed = type.Reference!.Packed;
                 build.Nodes.Add(node);
                 var reference = type.Reference!;
                 build.Levels.TryGetValue(reference, out var level);

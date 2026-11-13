@@ -48,6 +48,12 @@ internal static class GesSchemaLayoutJson
         json.Strings("bindingHashDepends", type.BindingHashDepends);
         json.Number("maxByteCount", type.MaxByteCount);
         json.Strings("maxByteCountDepends", type.MaxByteCountDepends);
+        if (type.PackedWidth > 0)
+        {
+            json.Number("packedWidth", type.PackedWidth);
+            json.Number("packedBits", type.PackedBits);
+        }
+
         if (type.Kind == GesSchemaKind.Messages)
         {
             json.Strings("members", type.Members);

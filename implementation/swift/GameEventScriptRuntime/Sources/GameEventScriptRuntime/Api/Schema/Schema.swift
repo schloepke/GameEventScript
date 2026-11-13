@@ -296,6 +296,11 @@ public final class GesSchema: @unchecked Sendable {
     /// Whether the schema is abstract: it only lends its fields with `with` and is never bound, checked against a document
     /// or generated as a type.
     public let isAbstract: Bool
+    /// The width of a packed schema's word, 8, 16, 32 or 64 bits, or 0 for a schema that is not packed.
+    public let packedWidth: Int
+    /// How many bits of its word a packed schema's fields take, those of its record on the wire; 0 for a schema that is not
+    /// packed.
+    public let packedBits: Int
     /// The schemas whose fields this schema takes with `with`, in declared order. Their fields are part of ``fields``, as if
     /// written in place.
     public private(set) var takes: [GesSchemaTakeInfo] = []
@@ -320,6 +325,8 @@ public final class GesSchema: @unchecked Sendable {
         wireGroup = declaration.syntax.wireGroup
         modelGroup = declaration.syntax.modelGroup
         isAbstract = declaration.isAbstract
+        packedWidth = declaration.isPacked ? declaration.packedWidth : 0
+        packedBits = declaration.packedBits
     }
 
     /// The canonical form, which the hash runs over. It is computed on each call.

@@ -38,6 +38,10 @@ enum GesSchemaLayoutJson {
         json.strings("bindingHashDepends", type.bindingHashDepends)
         json.number("maxByteCount", Int64(type.maxByteCount))
         json.strings("maxByteCountDepends", type.maxByteCountDepends)
+        if type.packedWidth > 0 {
+            json.number("packedWidth", Int64(type.packedWidth))
+            json.number("packedBits", Int64(type.packedBits))
+        }
         if type.kind == .messages {
             json.strings("members", type.members)
             json.number("memberWidth", Int64(type.memberWidth))

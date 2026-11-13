@@ -84,7 +84,7 @@ public enum GesSchemaValues {
         }
     }
 
-    // Scratch space for one record, released on return. The largest encoding may reach 10 MiB, so it is neither cleared
+    // Scratch space for one record, released on return. The largest encoding may reach 64 MiB, so it is neither cleared
     // nor kept; the writer writes whole words before it reads any back.
     static func withScratch<Result>(_ count: Int, _ body: (UnsafeMutableRawBufferPointer) throws -> Result) rethrows -> Result {
         let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: count, alignment: 8)

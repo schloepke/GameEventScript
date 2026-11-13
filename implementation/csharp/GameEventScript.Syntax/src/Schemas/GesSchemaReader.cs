@@ -91,6 +91,31 @@ internal sealed partial class GesSchemaSourceReader
             if (word != "schema") throw new SyntaxFailure(wordOffset, "Expected 'schema' after 'abstract'.");
         }
 
+        // `packed` or `packed(width)` makes a schema one machine word of 8, 16, 32 or 64 bits.
+        var packed = false;
+        var packedWidth = 0;
+        var packedOffset = 0;
+        if (word == "packed" && _position < _text.Length && _text[_position] is ' ' or '\t' or '(')
+        {
+            if (isAbstract) throw new SyntaxFailure(wordOffset, "An abstract schema is not packed.");
+            packed = true;
+            packedOffset = wordOffset;
+            if (Consume('('))
+            {
+                SkipSpaces();
+                var widthOffset = _position;
+                var width = ReadWord();
+                packedWidth = width switch { "8" => 8, "16" => 16, "32" => 32, "64" => 64, _ => throw new SyntaxFailure(widthOffset, "A packed width is 8, 16, 32 or 64.") };
+                SkipSpaces();
+                Expect(')');
+            }
+
+            SkipSpaces();
+            wordOffset = _position;
+            word = ReadWord();
+            if (word != "schema") throw new SyntaxFailure(wordOffset, "Expected 'schema' after 'packed'.");
+        }
+
         if (wire is not null || model is not null)
         {
             if (word is "constant" or "parameter" or "tags") throw new SyntaxFailure(offset, "Only a schema, message or message set can be a root.", Code.InvalidRole);
@@ -101,6 +126,9 @@ internal sealed partial class GesSchemaSourceReader
 
         var declaration = ReadDeclaration(offset, wordOffset, word);
         declaration.Abstract = isAbstract;
+        declaration.Packed = packed;
+        declaration.PackedWidth = packedWidth;
+        declaration.PackedOffset = packedOffset;
         declaration.WireGroup = wire;
         declaration.ModelGroup = model;
         return declaration;
@@ -112,7 +140,7 @@ internal sealed partial class GesSchemaSourceReader
         if (_position < _text.Length && _text[_position] == '(') return true;
         var start = _position;
         SkipSpaces();
-        var role = _position > start && (AtWord("schema") || AtWord("message") || AtWord("messages") || AtWord("abstract"));
+        var role = _position > start && (AtWord("schema") || AtWord("message") || AtWord("messages") || AtWord("abstract") || AtWord("packed"));
         _position = start;
         return role;
     }

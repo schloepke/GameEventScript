@@ -71,7 +71,8 @@ messages :Combat as (Hit, Died)
 ### Grammar
 
 ```text
-source      = { constant | parameter | tagsdecl | "abstract" schema | [ roles ] ( schema | message | messages ) }
+source      = { constant | parameter | tagsdecl | "abstract" schema | [ roles ] ( [ packed ] schema | message | messages ) }
+packed      = "packed" [ "(" ( "8" | "16" | "32" | "64" ) ")" ]
 tagsdecl    = "tags" ":" TypeName "as" tagset
 roles       = role [ role ]
 role        = ( "wire" | "model" ) [ "(" LowerName ")" ]
@@ -519,6 +520,41 @@ their offsets at every level. Only self-recursion is supported, because a schema
 recursive List has one level to count, and generated code of all other schemas stays as it is. A recursion through
 several schemas or with several Lists would need a level per path, for no use found so far.
 
+### Packed schemas
+
+> **Since: Unreleased**
+
+`packed` before `schema` declares a record of fixed width that generated code holds as one machine word. It may follow
+[roles](#roles) and is no role itself:
+
+```gess
+wire(map) model(map) packed schema :MapPoint as {
+  height: :Number integer between 0 and 4095
+  surface: :Number integer between 0 and 15
+  moisture: :Number integer between 0 and 15
+  flags: :Flags(#impassable, #blocksLineOfSight, #indestructible, #reserved)
+}
+
+wire(map) model(map) schema :MapTrack as { points: :List(:MapPoint) max 1000000 }
+```
+
+- **Fields.** A packed schema holds only fields of a fixed width: an `integer` or stepped number with literal or constant
+  bounds and without `delta within`, a `:Boolean`, a closed `:Tag` or tag set, `:Flags`, or another packed schema. Every
+  other field is `schema.packedField` at its type, an `optional` field or `key` at the field, and a computed field at its
+  name; unions and parameters are not allowed, since either would change the width.
+- **Width.** The bits are the sum of the fields' [encoding widths](#field-encodings), at most 64, else
+  `schema.packedTooWide` at `packed`. `packed(n)` declares the word of `n` bits, which must hold them, and plain `packed`
+  takes the smallest of 8, 16, 32 and 64 that does. An abstract schema is not packed (`schema.syntax`).
+- **Bit layout.** The word holds the fields from its least significant bit in declared order, a nested packed schema as its
+  own bits: exactly the bits of the record's [wire encoding](#records). The word written in little-endian byte order is
+  therefore the record's wire bytes, padded with zero bits to whole bytes; bits above the fields are zero. A packed root
+  encodes in `ceil(bits / 8)` bytes.
+- **Everywhere else** a packed schema is an ordinary schema: the same wire format, [defaults](#defaults), document form and
+  [record value](#record-values) for scripts. Its [delta](#deltas) is a change bit and, when the word differs, the word.
+
+Packed records exist for dense data such as maps of millions of points: [generated code](#tools) stores a `:List` of them as
+one array of words, which reads and writes a word at a time.
+
 ### Constraints
 
 In this order, all optional:
@@ -630,6 +666,8 @@ Source errors use the phase `schema` with line and column, in the manner of
 | `schema.tooLarge` | the [largest encoding](#largest-encoding) exceeds its limit or overflows |
 | `schema.invalidRole` | a role stands on a declaration that cannot take it, is no role word, or names an invalid group |
 | `schema.duplicateRole` | a declaration has a second `wire` or a second `model` role |
+| `schema.packedField` | a [packed schema](#packed-schemas) holds a field without a fixed width, an `optional` field, a key, a union or a computed field |
+| `schema.packedTooWide` | a packed schema's fields take more than 64 bits or more than its declared `packed(n)` |
 | `schema.invalidAbstract` | an abstract schema is a field type, list element, union alternative, a bound or checked root, or a model root |
 | `schema.computedMayBeAbsent` | a required [computed field](#computed-fields) reads an optional field that may be absent without `has value` or `default` |
 | `schema.invalidExpression` | a [computed field](#computed-fields) has another type than its expression, constraints, a key or optional Boolean, reads a type or name it cannot (a later computed field, a union, a reserved GES name, an optional list in an aggregate), combines operands without a value, or a sum of quantities or percentages stands inside arithmetic |
@@ -682,7 +720,7 @@ GES sets no world size; only the limits apply.
 A bound schema has `MaxByteCount`, the size of its largest top-level encoding. It is computed at binding with checked arithmetic, counting every optional as
 present, every Text, Bytes, List and Dice at its `max`, and every union as its index and its largest alternative. A schema counts the larger of its largest
 full record and its largest [delta](#deltas), so one buffer serves both: a Boolean's delta costs its change bit, and a field with a delta range its change bit, the
-fallback bit and the larger of both widths. It may be at most 10 485 760 bytes (10 MiB).
+fallback bit and the larger of both widths. It may be at most 67 108 864 bytes (64 MiB), enough for 16 million packed records of 32 bits.
 Exceeding this, or an overflow while computing it, fails binding with `schema.tooLarge`.
 A [keyed list](#keyed-lists) counts its form bit and the larger of the whole list and its
 element form: three counts and `max · (position + the larger of the largest element and its largest
@@ -732,7 +770,7 @@ separated by one space, and nothing else is added.
 
 ```text
 parameter <name> <kind>
-schema <TypeName>
+schema <TypeName> [packed <width>]
 let <name> <kind> <number>
 field <name> <type>
 computed <name> <kind> [optional] <expression>
@@ -742,7 +780,8 @@ messages <TypeName>
 member <MessageName>
 ```
 
-A schema writes its lets right after its `schema` line, in declared order, so where they stand among the fields does
+A [packed schema](#packed-schemas) adds ` packed` and its word's width, declared or chosen, to its `schema` line, so packing
+changes the hash. A schema writes its lets right after its `schema` line, in declared order, so where they stand among the fields does
 not matter; `<kind>` is `Number`, `Percentage` or `Quantity(<portable unit name>)`, as for a parameter. Its computed fields
 follow its fields, in the order they read each other, with the kind `Boolean` besides; the expression is a prefix form in
 parentheses: `(field a b)` for `a.b`, `(item b)` for a projected element, literals as `(number <n>)`, `(percentage <n>)`,
@@ -1048,10 +1087,12 @@ movement smaller than a step is no change and costs nothing.
 | `:Box` | a nested delta of its corners: two change bits, then the payload of each changed corner as a `:Point` |
 | `:Disc` | a nested delta of its centre and radius: a change bit for each that is transmitted, then the payload of the changed centre as a `:Point` and of the changed radius as a numeric |
 | `:TypeName` | a nested delta: its own change bits and payloads |
+| a [packed schema](#packed-schemas) | its full encoding: the word changes as a whole |
 | union | index; when the baseline has the same alternative, its payload, otherwise its full encoding |
 | `optional` | presence bit; when present and the baseline also has a value, the field's payload, otherwise its full encoding |
 
-A list is replaced as a whole, unless its elements have a key, which is what identifies them.
+A list is replaced as a whole, unless its elements have a key, which is what identifies them, so a List of packed records is
+replaced as a whole too. A packed root's delta is one change bit, then its full encoding when it changed.
 
 With `worldWidth = worldHeight = 5000m`:
 
@@ -1436,7 +1477,9 @@ calls them with constant widths and operands, so they are part of the contract:
   `Rewind` took bits back, as a delta does for an element that turned out unchanged.
 - `GesBitReader` reads such values from untrusted data with an optional byte limit. Reading
   past the end is `wire.truncated`, or `wire.limitExceeded` when the limit ends first, with
-  the path the caller names; `ReadBytes` reads nothing when the bytes do not fit. `Require`
+  the path the caller names; `ReadBytes` reads nothing when the bytes do not fit. `RemainingBits` (Swift
+  `remainingBits`) counts the bits left before the end or the limit, so a reader can check once for many fixed-width
+  values, as generated code does for a List of packed records. `Require`
   checks remaining bits without reading, `Seek` moves to a position, and `Finish` checks the
   padding (`wire.invalidPadding`) and returns the bytes consumed.
 - Positions given to `SetBit`, `Rewind` and `Seek` come from the caller's own writes and reads, never from data. A
@@ -1510,6 +1553,7 @@ ges schema generate world.gess --root Bot --param worldWidth=2000m --language cs
 ges schema generate world.gess --root Bot --param worldWidth=2000m --language swift --namespace Wire -o Bot.swift --check
 ges schema generate world.gess panels.gess --wire world --param worldWidth=2000m --language swift --namespace Wire -o Wire.swift
 ges schema generate world.gess panels.gess --model view --language csharp --namespace Game.Model -o Model.g.cs
+ges schema generate map.gess --wire map --language swift --namespace Wire --models Model -o MapWire.swift
 ges schema generate world.gess panels.gess --wire world --param worldWidth=2000m --language swift --namespace Wire -d Generated/Wire
 ges schema generate world.gess panels.gess --model view --language swift --namespace Model -d Generated/Model --split file --check
 ```
@@ -1642,6 +1686,38 @@ receives no root or a split that does not fit the call. Generated C# instead qua
 a type or member of the same name could hide, such as `global::System.Math` and `[global::System.Flags]`, so a schema
 `:Math` or a field `system` needs no reservation.
 
+#### Packed records and models
+
+> **Since: Unreleased**
+
+A [packed schema](#packed-schemas) is one type in model and wire code, its model type below: a value type over one word of
+its width, whose fields are computed properties over their bits. A field of it in a wire record is a plain value and a
+`:List` of it a `List<T>` or Swift array of words, which a reader fills a word at a time: when the data holds all
+elements, it checks the remaining bits once and reads each word as one value, never a GES value. A word with an index
+beyond a field's range, such as 10 in a field `between 0 and 9` of 4 bits, or beyond a closed Tag's tags, is
+`wire.invalidIndex` at that field's path in either path, and the per-word check is left out when every field uses all of its
+bits. Writing checks a word that was taken unchecked field by field, `wire.outOfRange` at the field, and a word with bits
+above the fields at the record. A packed wire root gets the wire members of every root over its word, `MaxByteCount` being
+`ceil(bits / 8)`; its delta is a change bit and the word.
+
+`--models <namespace>` (an empty string for the global namespace) is for wire code that sits beside model code of the
+same schemas, generated with `--model` into that namespace in the same module. The wire code then uses the models'
+packed types instead of declaring its own, so a wire record with a List of packed records exposes the models' type as its
+array element (`points: [MapPoint]`, C# `List<MapPoint>`), and assigning such a List between a model and a record copies
+no element. Every wire record whose schema a model root of any group reaches also converts to and from its model
+directly, field by field, without GES values and without the bytes: C# `ToModel()` and `CopyFrom(model)`, Swift
+`toModel()`, `read(model:)` and the model's `init(wire:)`. The conversion compares the model type's `SchemaHash` with the
+record's, so a model generated from another state of the schema fails with C# `InvalidOperationException` or a Swift
+precondition and is never converted. Values are checked when the record is written, as for any value a caller sets.
+In C#, a packed wire root shared with the models gets its wire members as extension methods of the model's struct in a
+static class `<Name>Wire`, which also holds `BindingHash` and `MaxByteCount`; Swift extends the struct itself. Such a root
+converts to and from GES values through its model's `--values` conversion, which gives the same Record. `--models` is
+only for wire code and is a usage error with `--model`.
+
+`ToValue` and `ReadValue` go through the record's bytes and build one GES value per element, so on a List of millions of
+packed records they take far longer and much more memory than the record's own reading and writing; scripts that need
+such data take it as a Record, and native code uses the conversion above.
+
 ### Split output
 
 > **Since: Unreleased**
@@ -1691,6 +1767,7 @@ needs no ranges, steps or parameters, and every reached schema becomes one type,
 | Schema | Swift | C# |
 | --- | --- | --- |
 | schema | `struct`, `Hashable`, `Sendable`, `Codable` | `sealed class` with value equality, `IEquatable<T>`, `==` |
+| [packed schema](#packed-schemas) | a `struct` as below | a `struct` as below |
 | `:Boolean` | `Bool` | `bool` |
 | `:Number`, `:Quantity(unit)` | `Double` | `double` |
 | `integer` | `Int` | `long` |
@@ -1712,6 +1789,22 @@ A union with a `:Nothing` alternative becomes a nullable value without it, and w
 alternative's type. A list element type is named `<Field>Item`, so a closed Tag in a list is `<Field>ItemTag`. `:Map`,
 `:Range`, `:Series`, `:Message`, `:Handler` and a `:List` without an element type have no model type yet:
 `generate.unsupported`. Each property is documented with its declaration, so its unit and documented range stay visible.
+
+A [packed schema](#packed-schemas) is a value type over one unsigned word of its width (C# `byte`, `ushort`, `uint` or
+`ulong`, Swift `UInt8` to `UInt64`), whose size is the word's: a Swift struct's `MemoryLayout.stride` equals the word's
+bytes. Its fields are computed properties over their bits, which follow the [bit layout](#packed-schemas), so the word is
+the record's wire encoding; a nested packed schema is its own type in its bits. Setting a field, in the property or the
+memberwise initializer, checks the value against the field's range and tags and fails with Swift `precondition` or C#
+`ArgumentOutOfRangeException`; a stepped number is stored as its nearest step. A field with a [default](#defaults) has it as its default
+argument.
+
+- **Swift**: `struct Name: Hashable, Sendable, Codable` with the one stored property `rawValue`, `static let bits`, a
+  memberwise `init`, `init(uncheckedRawValue:)` for words known to be valid, `init?(rawValue:)` and `static func
+  isValid(_:)`, which reject a word with bits above the fields, an index beyond a field's range that does not use all of
+  its bits, or one beyond a Tag's tags. `Codable` writes the fields by name, not the word.
+- **C#**: `struct Name : IEquatable<Name>` with `Bits`, `RawValue`, a constructor with every field, `FromRawUnchecked(raw)`,
+  `FromRaw(raw)`, which returns `null` for an invalid word, `IsValid(raw)`, a property per field and `With<Field>(value)`,
+  which returns a copy with that field changed. `default(Name)` is the word 0, not the fields' defaults.
 
 - **Swift** stores `var` properties in declared order and has a memberwise `init` whose absent values default to `nil` and
   lists to `[]`. A field with a literal [default](#defaults) has it as its default argument; one with a sibling default takes
@@ -2117,6 +2210,8 @@ Parity is verified like every GES feature.
     `document.fieldType`, `document.outOfRange` and `document.tooDeep`, with their positions;
   - [recursive Lists](#recursion): the canonical form, trees as deep as their depth, deeper data, keyed trees and their
     deltas, a recursive List that `with` copies, and the source errors.
+  - [packed schemas](#packed-schemas): the canonical form, the word as wire bytes, nested packed schemas, invalid
+    indices, Lists, deltas, defaults, documents and every source error.
 - `scripts/test-schema-roundtrip.py` exchanges real
   bytes between C# and Swift, with random values, edge values at each bound and half-step
   ties, and compares bytes and decoded binary64 bits in both directions. Negative controls
@@ -2127,6 +2222,10 @@ Parity is verified like every GES feature.
 - A fuzz run feeds random and mutated bytes to the decoders of both ports, which must
   agree on accept or reject, for full records and for deltas. Random deltas also match an
   independent oracle.
+- `scripts/test-generated-schemas.py` also marks each corpus record root as a model root and generates its wire code
+  with `--models`, so every such record converts to its model and back to the same bytes in both languages.
+  `scripts/bench-packed-schemas.py` measures a List of 1, 4 and 16 million packed records in both ports: the copy between
+  model and wire record, encoding, decoding and the conversion back, and checks that the decoded model is equal.
 - Allocation tests prove that the writer, the reader and `GesSchemaDelta` allocate nothing on
   success in both ports, as for the existing hot paths.
 - The role suite covers reading and describing roles, every role error, the encodability check of wire roots at reading

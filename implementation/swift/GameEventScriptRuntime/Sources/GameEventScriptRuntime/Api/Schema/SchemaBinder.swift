@@ -75,6 +75,8 @@ public final class GesSchemaParameters {
     @_spi(Generator) public var hasRange = false
     @_spi(Generator) public var isTagBit = false
     @_spi(Generator) public var isTagText = false
+    /// A record of a packed schema, whose delta is its whole word.
+    @_spi(Generator) public var packed = false
     /// A `:Bytes max n`: a Text on the wire whose bytes need not be UTF-8.
     @_spi(Generator) public var isBytes = false
     /// The `depth` of a recursive List at its deepest level, which holds no element; 0 otherwise.
@@ -215,7 +217,7 @@ public struct GesSchemaField: Sendable {
 
 /// Builds the layout of a declaration for fixed parameter values.
 enum GesSchemaBinder {
-    static let maximumByteCount: Int64 = 10_485_760
+    static let maximumByteCount: Int64 = 67_108_864
     private static let maximumNodeCount = 1_048_576
     private static let largestSteps: Int64 = 1 << 50
     private static let largestMultiple: Int64 = 1 << 53
@@ -402,6 +404,52 @@ enum GesSchemaBinder {
         let parameters: GesSchemaParameters
         // How many records of each schema enclose the node being added, which a recursive List counts against its depth.
         var levels: [ObjectIdentifier: Int] = [:]
+    }
+
+    // A packed schema holds only fields of a fixed width that no parameter decides: integers and quantized numbers with a range,
+    // Booleans, closed Tags, Flags and packed schemas, with neither `optional`, a key nor `delta within`. Its bits, those of
+    // its record on the wire, fit its word. Nested packed schemas are checked first, since their bits count here.
+    static func checkPacked(_ declaration: GesResolvedDeclaration) throws {
+        if declaration.packedWidth > 0 { return }
+        let scope = declaration.scope
+        if let computed = declaration.computed.first { throw scope.error(Code.packedField, computed.offset, "A packed schema holds no computed field.") }
+        for field in declaration.fields {
+            if field.marker != .none {
+                throw scope.error(Code.packedField, field.offset, "A packed schema holds no \(field.marker == .key ? "key" : "optional field"), since its width is fixed.")
+            }
+            if field.alternatives.count != 1 { throw scope.error(Code.packedField, field.offset, "A packed schema holds no union, since its width is fixed.") }
+            let type = field.alternatives[0]
+            let constraints = type.constraints
+            let fixedNumber =
+                (type.kind == .number || type.kind == .percentage || type.kind == .quantity)
+                && constraints.lower.map { !$0.isParameter } == true && constraints.upper.map { !$0.isParameter } == true && constraints.delta == nil
+                && (constraints.integer || constraints.step.map { !$0.isParameter } == true)
+            let accepted: Bool
+            switch type.kind {
+            case .boolean, .flags: accepted = true
+            case .tag: accepted = type.tags != nil
+            case .reference: accepted = type.reference!.isPacked
+            default: accepted = fixedNumber
+            }
+            if !accepted {
+                throw scope.error(
+                    Code.packedField,
+                    type.offset,
+                    "A packed field is an integer or quantized number with a range and no delta range, a Boolean, a closed Tag, Flags or a packed schema."
+                )
+            }
+            if type.kind == .reference { try checkPacked(type.reference!) }
+        }
+        var build = Build(parameters: GesSchemaParameters())
+        for field in declaration.fields { try addField(&build, field.scope, field, "", 0, top: false) }
+        var bits = 0
+        for node in build.nodes { bits += node.width }
+        let width = declaration.syntax.packedWidth
+        if bits > 64 || (width > 0 && bits > width) {
+            throw scope.error(Code.packedTooWide, declaration.syntax.packedOffset, "'\(declaration.name)' has \(bits) bits, more than \(width > 0 ? width : 64).")
+        }
+        declaration.packedBits = bits
+        declaration.packedWidth = width > 0 ? width : bits <= 8 ? 8 : bits <= 16 ? 16 : bits <= 32 ? 32 : 64
     }
 
     static func bind(_ root: GesResolvedDeclaration, _ parameters: GesSchemaParameters) throws -> GesBoundSchema {
@@ -768,6 +816,7 @@ enum GesSchemaBinder {
             node.kind = .group
             info.schemaName = type.referenceName
             let reference = type.reference!
+            node.packed = reference.isPacked
             let level = build.levels[ObjectIdentifier(reference)] ?? 0
             build.levels[ObjectIdentifier(reference)] = level + 1
             for field in reference.fields { try addField(&build, field.scope, field, path, lists, top: false) }

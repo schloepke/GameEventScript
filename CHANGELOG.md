@@ -283,6 +283,17 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 
 ### Added
 
+- Packed schemas: `packed schema :Name` or `packed(8|16|32|64) schema :Name` declares a record of fixed-width fields
+  (integers and stepped numbers with fixed ranges, Booleans, closed Tags, Flags, other packed schemas) of at most 64
+  bits, `schema.packedField` and `schema.packedTooWide` otherwise. Its wire encoding is unchanged and equals the word in
+  little-endian order; its delta changes the word as a whole. Generated code holds it as one word: a Swift struct over
+  `rawValue` that is `Hashable`, `Sendable` and `Codable`, or a C# struct over `RawValue`, with checked field properties,
+  checked and unchecked creation from a raw word, and Lists of them as arrays of words that read and write a word at a
+  time. `GesSchema.PackedWidth`/`PackedBits` and `GesBitReader.RemainingBits` (Swift `packedWidth`, `packedBits`,
+  `remainingBits`) are new.
+- `ges schema generate --models <namespace>` (`GesSchemaGenerateOptions.Models`): wire code shares the packed types of
+  model code in that namespace and converts every wire record with a model directly to and from it, without GES values:
+  C# `ToModel()`/`CopyFrom(model)`, Swift `toModel()`/`read(model:)`/`init(wire:)`, guarded by the schema hash.
 - Both CLIs have `bench`, an in-process benchmark of a compiled program: it loads the program once, warms it up and
   times every further run of the entry message, then reports min, median, mean, p95, max and standard deviation, a
   checksum of the console output, and on .NET the allocations and collections per run and the tiering settings, as
@@ -447,7 +458,7 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   reader now build on these primitives, without loss in speed.
 - Schema deltas work element by element for a list whose elements have a `key`, when the keys of
   baseline and record ascend strictly; otherwise the list is replaced as a whole. The limit of
-  `MaxByteCount` rises from 1 MiB to 10 MiB. `GesSchemaDelta.Encode` uses its buffer as scratch
+  `MaxByteCount` rises from 1 MiB to 64 MiB. `GesSchemaDelta.Encode` uses its buffer as scratch
   space, so size it with `MaxByteCount`: a smaller buffer can fail with `wire.bufferTooSmall`
   even when the delta would fit.
 - Schema deltas: `GesSchemaDelta` converts between full records and deltas against a baseline

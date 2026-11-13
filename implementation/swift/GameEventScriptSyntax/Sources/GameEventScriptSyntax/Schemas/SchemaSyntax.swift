@@ -335,6 +335,12 @@ public enum GesSchemaTypeKind: String, Sendable, Equatable {
     @_spi(Syntax) public var computed: [GesSchemaFieldSyntax] = []
     /// An abstract schema only lends its fields with `with`.
     @_spi(Syntax) public var isAbstract = false
+    /// A packed schema is one machine word.
+    @_spi(Syntax) public var isPacked = false
+    /// The width of a schema written `packed(width)`, 8, 16, 32 or 64; 0 otherwise.
+    @_spi(Syntax) public var packedWidth = 0
+    /// The UTF-8 offset of the word `packed`.
+    @_spi(Syntax) public var packedOffset = 0
     @_spi(Syntax) public var tags: [String] = []
     @_spi(Syntax) public var members: [String] = []
     @_spi(Syntax) public var memberOffsets: [Int] = []
@@ -362,6 +368,8 @@ public enum GesSchemaTypeKind: String, Sendable, Equatable {
     @_spi(Syntax) public static let duplicateRole = "schema.duplicateRole"
     @_spi(Syntax) public static let invalidDefault = "schema.invalidDefault"
     @_spi(Syntax) public static let invalidAbstract = "schema.invalidAbstract"
+    @_spi(Syntax) public static let packedField = "schema.packedField"
+    @_spi(Syntax) public static let packedTooWide = "schema.packedTooWide"
     @_spi(Syntax) public static let invalidExpression = "schema.invalidExpression"
     @_spi(Syntax) public static let computedMayBeAbsent = "schema.computedMayBeAbsent"
 

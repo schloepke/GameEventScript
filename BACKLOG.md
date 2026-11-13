@@ -73,6 +73,10 @@ here.
 - Provide a base for publish/subscribe transport of messages and data, outside Runtime, in a
   `GesNetwork` module or in `GesBridge`; decide which. It frames records, maps channels to message
   sets or schemas and carries the hash at connection setup (specs/Schemas.md#extension-points).
+- Extend packed schemas (specs/Schemas.md#packed-schemas): `optional` fields as a presence bit, spatial fields with
+  fixed axes, computed fields over the word, and a block copy of a List of packed records between the bit reader or
+  writer and an array of words when the bit position is byte-aligned, which needs new public bit-primitive API. Also a
+  raw-word conversion for scripts that pass packed records on without reading their fields.
 - Add schema elapsed-time references to the performance corpus: writer, reader and value path
   on Bot-sized records, with budgets per measured profile.
 - Run the schema byte and vector suites, generated schema code (`ges schema generate --language csharp`)

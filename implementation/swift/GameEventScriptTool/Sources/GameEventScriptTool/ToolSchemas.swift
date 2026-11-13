@@ -42,6 +42,8 @@ extension ToolHelp {
           --checked-exclusivity     Keep the dynamic exclusivity checks of generated Swift classes.
           --bindings                Also offer generated model types to scripts as external types; only with --model.
           --documents               Also read model roots from GES document text; includes --values, only with --model.
+          --models <namespace>      Share the packed types of the model code in that namespace ("" for the global one) and
+                                    convert wire records directly to and from the models of their schemas; only wire code.
           -d, --out-dir <dir>       Write the code as several files into a directory that generate owns, with a manifest.
           --split <kind>            With --out-dir, one file per declaration (schema, the default) or per schema file (file).
           --check                   Compare the generated code with the output file or directory instead of writing it;
@@ -74,6 +76,7 @@ extension Tool {
         var checkedExclusivity = false
         var bindings = false
         var documents = false
+        var models: String?
         var language: String?
         var space: String?
         var access: String?
@@ -105,14 +108,14 @@ extension Tool {
                 bindings = true
             } else if argument == "--documents" && command == "generate" {
                 documents = true
-            } else if ["--root", "--data", "--baseline", "--param", "-o", "--output", "--language", "--namespace", "--access", "--wire", "--model", "-d", "--out-dir", "--split"].contains(argument) {
+            } else if ["--root", "--data", "--baseline", "--param", "-o", "--output", "--language", "--namespace", "--access", "--wire", "--model", "-d", "--out-dir", "--split", "--models"].contains(argument) {
                 let applies: Bool
                 switch argument {
                 case "--root": applies = ["hash", "canonical", "dump", "layout", "generate"].contains(command)
                 case "--wire", "--model": applies = command == "layout" || command == "generate"
                 case "--param": applies = ["hash", "dump", "layout", "generate"].contains(command)
                 case "--data", "--baseline": applies = command == "dump"
-                case "--language", "--namespace", "--access", "-d", "--out-dir", "--split": applies = command == "generate"
+                case "--language", "--namespace", "--access", "-d", "--out-dir", "--split", "--models": applies = command == "generate"
                 default: applies = ["format", "layout", "generate"].contains(command)
                 }
                 guard applies else { throw ToolError.usage("Unknown schema \(command) option '\(argument)'.") }
@@ -135,6 +138,7 @@ extension Tool {
                 case "-o", "--output": output = next
                 case "-d", "--out-dir": outDir = next
                 case "--split": split = next
+                case "--models": models = next
                 default:
                     guard let separator = next.firstIndex(of: "="), separator != next.startIndex else { throw ToolError.usage("A parameter is written name=literal.") }
                     let name = String(next[..<separator])
@@ -159,6 +163,7 @@ extension Tool {
         if modelGroup != nil && checkedExclusivity { throw ToolError.usage("--checked-exclusivity concerns wire code, not --model.") }
         if bindings && modelGroup == nil { throw ToolError.usage("--bindings concerns model code and requires --model.") }
         if documents && modelGroup == nil { throw ToolError.usage("--documents concerns model code and requires --model.") }
+        if models != nil && modelGroup != nil { throw ToolError.usage("--models concerns wire code, not --model.") }
         if command == "generate" && language != "csharp" && language != "swift" { throw ToolError.usage("generate requires --language csharp or --language swift.") }
         if let access, access != "public" && access != "internal" { throw ToolError.usage("--access is public or internal.") }
         if output != nil && outDir != nil { return generateUsage("-o writes one file and --out-dir a directory; give one of them.") }
@@ -201,7 +206,8 @@ extension Tool {
                         checkedExclusivity: checkedExclusivity,
                         bindings: bindings,
                         documents: documents,
-                        split: outDir == nil ? .none : split == "file" ? .file : .schema
+                        split: outDir == nil ? .none : split == "file" ? .file : .schema,
+                        models: models
                     )
                 if let group = wireGroup ?? modelGroup {
                     roots = wireGroup != nil ? GesSchemaGenerator.wireRoots(set, group: group) : GesSchemaGenerator.modelRoots(set, group: group)

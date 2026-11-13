@@ -72,6 +72,10 @@ enum SchemaApiObservations {
             }
         }
         if schema.isAbstract { result["abstract"] = true }
+        if schema.packedWidth > 0 {
+            result["packedWidth"] = schema.packedWidth
+            result["packedBits"] = schema.packedBits
+        }
         if !schema.takes.isEmpty {
             result["takes"] = schema.takes.map { take -> [String: Any] in
                 var entry: [String: Any] = ["schema": take.schema.name]

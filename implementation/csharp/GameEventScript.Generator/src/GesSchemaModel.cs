@@ -45,6 +45,9 @@ internal sealed class GesModelType
 
     // The fields written `computed by`, which models derive from their other fields.
     internal GesResolvedComputed[] Computed = [];
+
+    // The wire layout of a packed schema, whose fields' encodings place them in its word; null for other types.
+    internal GesSchemaLayout? Packed;
 }
 
 // A schema that types take with `with`: generated as a protocol (Swift) or interface (C#) with read-only properties. It
@@ -114,6 +117,9 @@ internal sealed class GesModelValue
     internal List<string> Axes = [];
     internal List<GesModelField> Alternatives = [];
     internal string Schema = "";
+
+    // Whether the schema is packed, so that its type is a value type over one word.
+    internal bool Packed;
 }
 
 internal static class GesModelLayoutBuilder
@@ -137,6 +143,7 @@ internal static class GesModelLayoutBuilder
         foreach (var schema in reached.Values)
         {
             var type = new GesModelType { Name = schema.Name, Hash = schema.Hash, Constants = GesLayoutConstant.Of(schema), Computed = schema.Declaration.Computed };
+            if (schema.PackedWidth > 0) type.Packed = GesSchemaLayoutBuilder.Build(set, [schema.Name], new GesSchemaParameters());
             foreach (var info in schema.Fields)
             {
                 var field = Field(info.Name, info.Name, info.Alternatives);
@@ -308,6 +315,7 @@ internal static class GesModelLayoutBuilder
             case GesSchemaTypeKind.Reference:
                 value.Kind = GesModelKind.Schema;
                 value.Schema = type.Schema!.Name;
+                value.Packed = type.Schema.PackedWidth > 0;
                 break;
             case GesSchemaTypeKind.Nothing:
                 value.Kind = GesModelKind.Nothing;
@@ -342,6 +350,12 @@ internal static class GesModelLayoutJson
             json.BeginObject();
             json.String("name", type.Name);
             json.String("hash", GesSchemaLayoutJson.Hex(type.Hash));
+            if (type.Packed?.Type(type.Name) is { } packed)
+            {
+                json.Number("packedWidth", packed.PackedWidth);
+                json.Number("packedBits", packed.PackedBits);
+            }
+
             json.BeginArray("fields");
             foreach (var field in type.Fields) Field(json, field, member: true);
             json.EndArray();

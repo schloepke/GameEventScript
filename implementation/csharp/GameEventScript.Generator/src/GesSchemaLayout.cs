@@ -162,6 +162,10 @@ internal sealed class GesLayoutType
     internal List<string> Tags = [];
     internal List<string> Members = [];
     internal int MemberWidth;
+
+    // A packed schema's word: its width of 8, 16, 32 or 64 bits and the bits its fields take; 0 for other types.
+    internal int PackedWidth;
+    internal int PackedBits;
 }
 
 internal sealed class GesLayoutField
@@ -207,6 +211,9 @@ internal sealed class GesLayoutEncoding
     internal long Lower;
     internal ulong MaxIndex;
     internal int Width;
+
+    // The bits a field of fixed width takes on the wire: a Boolean has no layout width but takes one bit.
+    internal int Bits => Kind == GesLayoutKind.Boolean ? 1 : Width;
     internal long Numerator;
     internal long TenPower;
     internal double LowerValue;
@@ -294,7 +301,9 @@ internal static class GesSchemaLayoutBuilder
             Kind = schema.Kind,
             Hash = bound.Hash,
             BindingHash = bound.BindingHash,
-            MaxByteCount = bound.MaxByteCount
+            MaxByteCount = bound.MaxByteCount,
+            PackedWidth = schema.PackedWidth,
+            PackedBits = schema.PackedBits
         };
         foreach (var parameter in schema.Parameters) type.BindingHashDepends.Add(parameter.Name);
         var depends = new SortedSet<string>(StringComparer.Ordinal);

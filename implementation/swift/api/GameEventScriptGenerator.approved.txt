@@ -30,7 +30,7 @@ symbol {"access":"public","declaration":"enum GesSchemaAccess","kind":"swift.enu
 symbol {"access":"public","declaration":"enum GesSchemaGenerator","kind":"swift.enum","path":"GameEventScriptGenerator.GesSchemaGenerator"}
 symbol {"access":"public","declaration":"enum GesSchemaLanguage","kind":"swift.enum","path":"GameEventScriptGenerator.GesSchemaLanguage"}
 symbol {"access":"public","declaration":"enum GesSchemaSplit","kind":"swift.enum","path":"GameEventScriptGenerator.GesSchemaSplit"}
-symbol {"access":"public","declaration":"init(language: GesSchemaLanguage = .csharp, namespace: String = \"\", access: GesSchemaAccess = .public, values: Bool = false, checkedExclusivity: Bool = false, bindings: Bool = false, documents: Bool = false, split: GesSchemaSplit = .none)","kind":"swift.init","path":"GameEventScriptGenerator.GesSchemaGenerateOptions.init(language:namespace:access:values:checkedExclusivity:bindings:documents:split:)"}
+symbol {"access":"public","declaration":"init(language: GesSchemaLanguage = .csharp, namespace: String = \"\", access: GesSchemaAccess = .public, values: Bool = false, checkedExclusivity: Bool = false, bindings: Bool = false, documents: Bool = false, split: GesSchemaSplit = .none, models: String? = nil)","kind":"swift.init","path":"GameEventScriptGenerator.GesSchemaGenerateOptions.init(language:namespace:access:values:checkedExclusivity:bindings:documents:split:models:)"}
 symbol {"access":"public","declaration":"let code: String","kind":"swift.property","path":"GameEventScriptGenerator.GesGeneratorError.code"}
 symbol {"access":"public","declaration":"let message: String","kind":"swift.property","path":"GameEventScriptGenerator.GesGeneratorError.message"}
 symbol {"access":"public","declaration":"let path: String","kind":"swift.property","path":"GameEventScriptGenerator.GesGeneratedFile.path"}
@@ -51,6 +51,7 @@ symbol {"access":"public","declaration":"var bindings: Bool","kind":"swift.prope
 symbol {"access":"public","declaration":"var checkedExclusivity: Bool","kind":"swift.property","path":"GameEventScriptGenerator.GesSchemaGenerateOptions.checkedExclusivity"}
 symbol {"access":"public","declaration":"var documents: Bool","kind":"swift.property","path":"GameEventScriptGenerator.GesSchemaGenerateOptions.documents"}
 symbol {"access":"public","declaration":"var language: GesSchemaLanguage","kind":"swift.property","path":"GameEventScriptGenerator.GesSchemaGenerateOptions.language"}
+symbol {"access":"public","declaration":"var models: String?","kind":"swift.property","path":"GameEventScriptGenerator.GesSchemaGenerateOptions.models"}
 symbol {"access":"public","declaration":"var namespace: String","kind":"swift.property","path":"GameEventScriptGenerator.GesSchemaGenerateOptions.namespace"}
 symbol {"access":"public","declaration":"var split: GesSchemaSplit","kind":"swift.property","path":"GameEventScriptGenerator.GesSchemaGenerateOptions.split"}
 symbol {"access":"public","declaration":"var values: Bool","kind":"swift.property","path":"GameEventScriptGenerator.GesSchemaGenerateOptions.values"}

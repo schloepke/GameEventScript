@@ -92,6 +92,11 @@ internal static class SchemaApiObservations
         if (schema.WireGroup is { } wire) result["wireGroup"] = wire;
         if (schema.ModelGroup is { } model) result["modelGroup"] = model;
         if (schema.IsAbstract) result["abstract"] = true;
+        if (schema.PackedWidth > 0)
+        {
+            result["packedWidth"] = schema.PackedWidth;
+            result["packedBits"] = schema.PackedBits;
+        }
         if (schema.Takes.Count > 0) result["takes"] = schema.Takes.Select(take =>
         {
             var entry = new Dictionary<string, object?> { ["schema"] = take.Schema.Name };

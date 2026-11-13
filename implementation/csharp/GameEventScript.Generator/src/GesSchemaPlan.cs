@@ -37,6 +37,60 @@ internal sealed class GesPlanType
     internal bool MembersAreClasses;
 }
 
+// A packed schema's word as wire code reads it: its type, its bits and each field of a fixed width below it, with the node
+// whose path an error names, its first bit and the largest valid index when its bits allow more.
+internal sealed class GesPackedWord
+{
+    internal string Type = "";
+    internal int Bits;
+    internal int Width;
+    internal List<(int Node, int Shift, int Width, ulong? Largest)> Leaves = [];
+
+    // Whether every word of its bits is valid, so that a read needs no check.
+    internal bool Full => Leaves.TrueForAll(leaf => leaf.Largest is null);
+
+    internal static GesPackedWord Of(GesSchemaLayout layout, string name, int node)
+    {
+        var type = layout.Type(name);
+        var word = new GesPackedWord { Type = name, Bits = type.PackedBits, Width = type.PackedWidth };
+        var shift = 0;
+        Add(layout, type, node + 1, ref shift, word.Leaves);
+        return word;
+    }
+
+    // The leaves of a packed type's fields from `node` on; a nested packed schema has a group node before its own.
+    private static int Add(GesSchemaLayout layout, GesLayoutType type, int node, ref int shift, List<(int, int, int, ulong?)> leaves)
+    {
+        foreach (var field in type.Fields)
+        {
+            if (field.Encoding.Kind == GesLayoutKind.Schema)
+            {
+                node = Add(layout, layout.Type(field.Encoding.Schema), node + 1, ref shift, leaves);
+                continue;
+            }
+
+            leaves.Add((node, shift, field.Encoding.Bits, GesPackedLargest(field.Encoding)));
+            shift += field.Encoding.Bits;
+            node++;
+        }
+
+        return node;
+    }
+
+    // The largest valid index of a field, null when every index of its bits is valid.
+    private static ulong? GesPackedLargest(GesLayoutEncoding encoding)
+    {
+        var full = encoding.Width >= 64 ? ulong.MaxValue : (1UL << encoding.Width) - 1;
+        var largest = encoding.Kind switch
+        {
+            GesLayoutKind.Tag => (ulong)encoding.Tags.Count - 1,
+            GesLayoutKind.Integer or GesLayoutKind.Quantized => encoding.MaxIndex,
+            _ => full
+        };
+        return largest < full ? largest : null;
+    }
+}
+
 internal sealed class GesPlanField
 {
     internal GesLayoutField Layout = new();
@@ -64,6 +118,9 @@ internal sealed class GesPlanValue
 
     // Whether the value refers to a type that is a class.
     internal bool IsClass;
+
+    // The word of a packed schema that the value refers to, null for every other value.
+    internal GesPackedWord? Packed;
 
     // Whether the value is the element of a recursive List: its schema's record one level deeper, whose nodes follow the
     // declaring schema's own nodes. In a union element it is the alternative of that schema.
@@ -317,6 +374,7 @@ internal static class GesSchemaPlanner
     private static GesPlanValue Value(Context context, GesLayoutEncoding encoding, string name, string label, int node)
     {
         var value = new GesPlanValue { Base = name, Label = label, Node = node, Encoding = encoding, IsClass = HoldsStorage(context, encoding) };
+        if (encoding.Kind == GesLayoutKind.Schema && context.Layout.Type(encoding.Schema).PackedWidth > 0) value.Packed = GesPackedWord.Of(context.Layout, encoding.Schema, node);
         switch (encoding.Kind)
         {
             case GesLayoutKind.Point or GesLayoutKind.Vector:
@@ -548,6 +606,16 @@ internal static class GesSchemaPlanner
     internal static string Pascal(string name) => name.Length == 0 ? name : char.ToUpperInvariant(name[0]) + name.Substring(1);
 
     internal static string Camel(string name) => name.Length == 0 ? name : char.ToLowerInvariant(name[0]) + name.Substring(1);
+
+    // Qualifies the packed types that values refer to, everywhere below them.
+    internal static void QualifyPacked(GesPlanValue value, string qualifier)
+    {
+        if (value.Packed is { } word && word.Type.IndexOf('.') < 0) word.Type = qualifier + word.Type;
+        if (value.Element is not null) QualifyPacked(value.Element, qualifier);
+        if (value.Item is not null)
+            foreach (var field in value.Item.Fields) QualifyPacked(field.Value, qualifier);
+        foreach (var alternative in value.Alternatives) QualifyPacked(alternative, qualifier);
+    }
 
     // Checks a namespace of dot-separated identifiers that are no keywords of the language.
     internal static List<string> Namespace(string text, ISet<string> keywords)

@@ -26,7 +26,13 @@ enum GesCSharpEmitter {
     typealias Code = GesSchemaPlanner.Code
     typealias Names = [(name: String, origin: String)]
 
-    static func emit(_ layout: GesSchemaLayout, _ types: [GesPlanType], _ options: GesSchemaGenerateOptions) throws(GesGeneratorError) -> GesCodeDocument {
+    static func emit(
+        _ layout: GesSchemaLayout,
+        _ types: [GesPlanType],
+        _ options: GesSchemaGenerateOptions,
+        _ packed: GesModelLayout?,
+        _ modelLayout: GesModelLayout?
+    ) throws(GesGeneratorError) -> GesCodeDocument {
         let access = options.access == .public ? "public" : "internal"
         let space = try GesSchemaPlanner.namespace(options.namespace, keywords)
         var prologue = Code()
@@ -42,16 +48,46 @@ enum GesCSharpEmitter {
         let global = "global::" + space.map { $0 + "." }.joined()
         let computed = GesSchemaPlanner.computed(types, GesComputedEmitter.helper(options.namespace, GesSchemaPlanner.suffix(header, options)), swift: false)
         let sets = GesSchemaPlanner.tagSets(types, global)
+        // Packed records are the model types over one word, the shared ones of the model namespace or declared here.
+        var models = global
+        if let shared = options.models { models = "global::" + (try GesSchemaPlanner.namespace(shared, keywords)).map { $0 + "." }.joined() }
+        for type in types {
+            for field in type.fields { GesSchemaPlanner.qualifyPacked(field.value, models) }
+        }
         let context = Context(
+            layout: layout,
             elements: GesSchemaPlanner.keyedElements(types),
             global: global,
             values: options.values,
             holder: holder,
             computed: computed,
-            topLevel: GesSchemaPlanner.topLevel(types, sets)
+            topLevel: GesSchemaPlanner.topLevel(types, sets),
+            models: modelLayout.map { ModelConversion($0, models) }
         )
         var document = GesCodeDocument(header: header, prologue: prologue.text, space: space, parameters: !layout.parameters.isEmpty)
         for type in types {
+            if type.layout.packedWidth > 0 {
+                let root = layout.roots.contains(type.name)
+                if let packed {
+                    document.units.append(
+                        GesCodeUnit(owner: type.name) { code in
+                            try GesCSharpModelEmitter.packedType(&code, packed, type.name, access, context.global, root ? { members in packedRoot(&members, type, context) } : nil)
+                        }
+                    )
+                } else if root {
+                    document.units.append(
+                        GesCodeUnit(owner: type.name) { code in
+                            // A root shared with models gets its wire members as extension methods of the model's struct.
+                            code.line("/// <summary>The wire members of the packed record <c>:\(type.name)</c>, a wire root whose type the models declare: its bytes are its word, little-endian.</summary>")
+                            code.line("\(access) static class \(type.name)Wire")
+                            code.open("{")
+                            packedRoot(&code, type, context, models + type.name)
+                            code.close()
+                        }
+                    )
+                }
+                continue
+            }
             document.units.append(
                 GesCodeUnit(owner: type.name) { code in
                     if type.kind == .messages { try messageSet(&code, type, access, context) } else { try record(&code, type, access, context) }
@@ -74,6 +110,7 @@ enum GesCSharpEmitter {
 
     // The keyed-list elements and the qualifier of the top-level types, which a member of the same name cannot hide.
     struct Context {
+        let layout: GesSchemaLayout
         let elements: Set<String>
         let global: String
         // Whether records convert to and from GES values through the helper type that holds the embedded sources.
@@ -82,6 +119,8 @@ enum GesCSharpEmitter {
         let computed: GesComputedEmitter
         // The records and tag sets declared beside each other, which a record's nested type must not hide.
         let topLevel: Set<String>
+        // The models that records convert to and from directly, nil without `--models`.
+        let models: ModelConversion?
     }
 
     static func kind(_ type: GesPlanType) -> String { type.kind == .message ? "message" : "schema" }
@@ -109,6 +148,8 @@ enum GesCSharpEmitter {
             for constant in type.layout.constants { names.append((GesSchemaPlanner.pascal(constant.name), "the let " + constant.name)) }
         }
         if !type.isItem { GesComputedEmitter.names(type.layout.computed, type.name, swift: false, &names) }
+        let model = type.isItem || type.kind != .schema ? nil : context.models?.type(type.name)
+        if model != nil { names.append(("ToModel", "the generated member ToModel")) }
         try GesSchemaPlanner.unique(type.name, names, context.topLevel)
 
         let visibility = type.isItem ? "public" : access
@@ -145,6 +186,7 @@ enum GesCSharpEmitter {
         if deltas { sameHelpers(&code, type, context.global) }
         extras(&code, type, deltas, context.elements.contains(type.name))
         if context.values && !type.isItem { valueMembers(&code, type, context.holder) }
+        if let model { try modelMembers(&code, type, model, context.models!) }
         for field in type.fields { try declarations(&code, field.value, access, context) }
         code.close()
     }
@@ -210,7 +252,7 @@ enum GesCSharpEmitter {
         case .boolean: "bool"
         case .integer: "long"
         case .quantized, .float: "double"
-        case .schema: value.encoding.schema
+        case .schema: value.packed?.type ?? value.encoding.schema
         case .text: "string"
         case .bytes: "byte[]"
         case .point: "GesPoint"
@@ -618,6 +660,8 @@ enum GesCSharpEmitter {
         case .disc:
             for part in value.corners { write(&code, part, target + "." + part.base) }
             if value.corners.count == 1 { code.line("if (\(target).Radius != 0) \(fail("TypeMismatch", value))") }
+        case .schema where value.packed != nil:
+            packedWrite(&code, value, target)
         case .schema:
             code.line("\(target).__WriteFields(ref writer, paths, at + \(value.node + 1)\(nextLevel(value)));")
         case .union:
@@ -698,6 +742,11 @@ enum GesCSharpEmitter {
             code.line("var count = (int)reader.Read(\(width), \(path(value)));")
             code.line("if (count > \(max)) \(fail("InvalidCount", value))")
             code.line("\(target).Clear();")
+            if element.packed != nil {
+                packedList(&code, value, target, "count")
+                code.close()
+                break
+            }
             code.line("for (var position = 0; position < count; position++)")
             code.open("{")
             if element.isClass {
@@ -736,6 +785,8 @@ enum GesCSharpEmitter {
             for part in value.corners { read(&code, part, part.label + String(value.node)) }
             code.line("\(target) = new GesDisc(center\(value.node), radius\(value.node));")
             code.close()
+        case .schema where value.packed != nil:
+            packedRead(&code, value, target)
         case .schema:
             code.line("\(target).__ReadFields(ref reader, paths, at + \(value.node + 1)\(nextLevel(value)));")
         case .union:

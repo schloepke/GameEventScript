@@ -107,6 +107,14 @@ public sealed class GesSchemaGenerateOptions
     /// <c>GenerateModelFiles</c>.
     /// </summary>
     public GesSchemaSplit Split { get; set; }
+
+    /// <summary>
+    /// Gets or sets the namespace of the model code that wire code shares types with, or null for none, the default. With it,
+    /// wire code uses that namespace's packed types instead of declaring its own, so a List of them is one array in both,
+    /// and converts each wire record directly to and from the model of the same schema that a model root of any group
+    /// reaches. An empty string is the global namespace. Only wire generation takes it.
+    /// </summary>
+    public string? Models { get; set; }
 }
 
 /// <summary>

@@ -115,7 +115,7 @@
 			<array>
 				<dict>
 					<key>match</key>
-					<string>\b(?:schema|messages|message|constant|parameter|as|be|between|and|wrapping|step|delta|within|integer|optional|key|max|tags|wire|model|let|default|true|false|abstract|with|all|without|computed|by|when|otherwise|or|not|of|min|clamp|abs|has)\b</string>
+					<string>\b(?:schema|messages|message|constant|parameter|as|be|between|and|wrapping|step|delta|within|integer|optional|key|max|tags|wire|model|let|default|true|false|abstract|packed|with|all|without|computed|by|when|otherwise|or|not|of|min|clamp|abs|has)\b</string>
 					<key>name</key>
 					<string>keyword.other.gameeventscript.schema</string>
 				</dict>

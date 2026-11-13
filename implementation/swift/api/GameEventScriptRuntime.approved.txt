@@ -1068,6 +1068,8 @@ symbol {"access":"public","declaration":"let originalOrdinal: Int","kind":"swift
 symbol {"access":"public","declaration":"let outboundAccepted: Bool","kind":"swift.property","path":"GameEventScriptRuntime.GesPublishResult.outboundAccepted"}
 symbol {"access":"public","declaration":"let outboundAttempted: Bool","kind":"swift.property","path":"GameEventScriptRuntime.GesPublishResult.outboundAttempted"}
 symbol {"access":"public","declaration":"let outboundDeferred: Bool","kind":"swift.property","path":"GameEventScriptRuntime.GesPublishResult.outboundDeferred"}
+symbol {"access":"public","declaration":"let packedBits: Int","kind":"swift.property","path":"GameEventScriptRuntime.GesSchema.packedBits"}
+symbol {"access":"public","declaration":"let packedWidth: Int","kind":"swift.property","path":"GameEventScriptRuntime.GesSchema.packedWidth"}
 symbol {"access":"public","declaration":"let parameter: String","kind":"swift.property","path":"GameEventScriptRuntime.GesSchemaBound.parameter"}
 symbol {"access":"public","declaration":"let parameters: [GesExternalTypeParameterDefinition]","kind":"swift.property","path":"GameEventScriptRuntime.GesExternalTypeConstructorDefinition.parameters"}
 symbol {"access":"public","declaration":"let path: String","kind":"swift.property","path":"GameEventScriptRuntime.GesDocumentError.path"}
@@ -1639,6 +1641,7 @@ symbol {"access":"public","declaration":"var program: GameEventScriptProgram { g
 symbol {"access":"public","declaration":"var programName: String?","kind":"swift.property","path":"GameEventScriptRuntime.GesDiagnostic.programName"}
 symbol {"access":"public","declaration":"var programVersion: UInt64 { get }","kind":"swift.property","path":"GameEventScriptRuntime.GameEventScriptProgram.programVersion"}
 symbol {"access":"public","declaration":"var random: GesRandomGenerator { get }","kind":"swift.property","path":"GameEventScriptRuntime.GesExtensionCall.random"}
+symbol {"access":"public","declaration":"var remainingBits: Int { get }","kind":"swift.property","path":"GameEventScriptRuntime.GesBitReader.remainingBits"}
 symbol {"access":"public","declaration":"var requiredByteCount: Int { get }","kind":"swift.property","path":"GameEventScriptRuntime.GesBitWriter.requiredByteCount"}
 symbol {"access":"public","declaration":"var requiredCallStackDepth: UInt16 { get }","kind":"swift.property","path":"GameEventScriptRuntime.GameEventScriptProgram.requiredCallStackDepth"}
 symbol {"access":"public","declaration":"var requiredRegisterCount: UInt16 { get }","kind":"swift.property","path":"GameEventScriptRuntime.GameEventScriptProgram.requiredRegisterCount"}

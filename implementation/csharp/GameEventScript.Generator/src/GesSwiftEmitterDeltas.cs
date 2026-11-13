@@ -213,6 +213,9 @@ internal static partial class GesSwiftEmitter
             case GesLayoutKind.Box or GesLayoutKind.Disc:
                 foreach (var corner in value.Corners) Same(code, corner, a + "." + Member(corner.Base), b + "." + Member(corner.Base), ownerA, ownerB);
                 break;
+            case GesLayoutKind.Schema when value.Packed is not null:
+                code.Line($"if {a}.rawValue != {b}.rawValue {{ return false }}");
+                break;
             case GesLayoutKind.Schema:
                 code.Line($"if !(try {a}.__same({b}, paths, at + {N(value.Node + 1)}{NextLevel(value)})) {{ return false }}");
                 break;
@@ -391,6 +394,8 @@ internal static partial class GesSwiftEmitter
                 code.Line($"{target} = GesDisc(center: center{node}, radius: radius{node})");
                 code.Close();
                 break;
+            case GesLayoutKind.Schema when value.Packed is not null:
+                break;
             case GesLayoutKind.Schema:
                 code.Line($"try {target}.__quantize(paths, at + {N(value.Node + 1)}{NextLevel(value)})");
                 break;
@@ -424,7 +429,8 @@ internal static partial class GesSwiftEmitter
 
     private static bool Quantized(GesPlanValue value) => value.Encoding.Kind switch
     {
-        GesLayoutKind.Quantized or GesLayoutKind.Schema => true,
+        GesLayoutKind.Schema => value.Packed is null,
+        GesLayoutKind.Quantized => true,
         GesLayoutKind.Point or GesLayoutKind.Vector => value.Axes.Exists(Quantized),
         GesLayoutKind.Box or GesLayoutKind.Disc => value.Corners.Exists(Quantized),
         GesLayoutKind.Union => value.Alternatives.Exists(Quantized),
@@ -705,6 +711,13 @@ internal static partial class GesSwiftEmitter
                 code.Line($"if !{set} {{ writer.rewind(to: first{node}) }}");
                 code.Close();
                 break;
+            case GesLayoutKind.Schema when value.Packed is not null:
+                // A packed record changes as a whole: its word follows the change bit.
+                code.Open($"if {a}.rawValue != {b}.rawValue {{");
+                PackedWrite(code, value, a);
+                code.Line($"{set} = true");
+                code.Close();
+                break;
             case GesLayoutKind.Schema:
                 code.Open("do {");
                 code.Line($"let start{node} = writer.bitPosition");
@@ -856,6 +869,10 @@ internal static partial class GesSwiftEmitter
                 if (value.Encoding.Kind == GesLayoutKind.Disc && value.Corners.Count == 1) code.Line($"let radius{node} = 0.0");
                 code.Line(value.Encoding.Kind == GesLayoutKind.Disc ? $"{a} = GesDisc(center: center{node}, radius: radius{node})" : $"{a} = GesBox(lower{node}, upper{node})");
                 code.Close();
+                break;
+            case GesLayoutKind.Schema when value.Packed is not null:
+                PackedRead(code, value, a);
+                code.Line($"if {a}.rawValue == {b}.rawValue {{ {Throw("invalidDelta", value)} }}");
                 break;
             case GesLayoutKind.Schema:
                 code.Line($"if !(try {a}.__readDelta({b}, &reader, paths, at + {N(value.Node + 1)}, false{NextLevel(value)})) {{ {Throw("invalidDelta", value)} }}");

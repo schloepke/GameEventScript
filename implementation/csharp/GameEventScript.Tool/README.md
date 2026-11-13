@@ -696,6 +696,7 @@ dotnet ges schema generate world.gess panels.gess --wire world --param worldWidt
 dotnet ges schema generate world.gess view.gess --model view --language csharp --namespace Game.Model -o Model.g.cs
 dotnet ges schema generate world.gess panels.gess --wire world --param worldWidth=2000m --language csharp --namespace Game.Net -d Generated/Net
 dotnet ges schema generate world.gess view.gess --model view --language csharp --namespace Game.Model -d Generated/Model --split file --check
+dotnet ges schema generate map.gess --wire map --language csharp --namespace Game.Net --models Game.Model -o MapWire.g.cs
 ```
 
 `generate` writes C# or Swift types that write and read the records of the roots without allocating;
@@ -705,6 +706,9 @@ from the generated code. `-d <dir>` (`--out-dir`) writes one file per declaratio
 `--split file`, into a directory that `generate` owns: a manifest `.ges-generated.json` lists the files, a later run
 removes the ones no longer generated and leaves other files alone with a warning, and `--check` fails for every
 changed, missing and surplus file.
+`--models <namespace>` lets wire code share the packed types of model code generated into that namespace (`""` for
+the global one) and convert each wire record with a model directly to and from it (`ToModel()`, `CopyFrom(model)`); it is
+a usage error with `--model`.
 
 `--wire <group>` takes the roots that the schemas mark `wire(group)`, and `--model <group>` generates plain
 model types of the schemas marked `model(group)`, which are never encoded; `--bindings` also offers those models to

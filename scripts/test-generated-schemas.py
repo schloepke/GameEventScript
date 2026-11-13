@@ -152,6 +152,7 @@ schema :Second as {
 """
 
 def generate(directory, sources, root, parameters, language, space, more=()):
+    directory.mkdir(parents=True, exist_ok=True)
     files = []
     for number, text in enumerate(sources):
         path = directory / f"s{number}.gess"
@@ -166,11 +167,34 @@ def generate(directory, sources, root, parameters, language, space, more=()):
     return run.stdout.decode("utf-8"), None
 
 
+def with_model_role(sources, root):
+    """The sources with the root marked as a model root, or None when its declaration has roles or another form."""
+    pattern = re.compile(rf"(?m)^schema :{re.escape(root)} as\b")
+    if sum(len(pattern.findall(text)) for text in sources) != 1:
+        return None
+    return [pattern.sub(f"model schema :{root} as", text) for text in sources]
+
+
+def generate_models(directory, sources, language, space):
+    """Model code of the default group, or None when the schemas do not generate as models."""
+    directory.mkdir(parents=True, exist_ok=True)
+    files = []
+    for number, text in enumerate(sources):
+        path = directory / f"s{number}.gess"
+        path.write_text(text, encoding="utf-8")
+        files.append(path.name)
+    run = subprocess.run(["dotnet", str(CSHARP_CLI), "schema", "generate", *files, "--model", "default", "--language", language, "--namespace", space],
+                         cwd=directory, capture_output=True, check=False)
+    return run.stdout.decode("utf-8") if run.returncode == 0 else None
+
+
 def declares(code, root, member):
     """Whether the generated C# root type declares a member, within its own declaration."""
-    start = code.find(f" {root}\n    {{")
-    end = code.find("\n    }\n", start)
-    return start >= 0 and member in code[start:end]
+    found = re.search(rf" {re.escape(root)}( : [^\n]*)?\n    {{", code)
+    if found is None:
+        return False
+    end = code.find("\n    }\n", found.start())
+    return member in code[found.start():end]
 
 
 def has_delta(code, root):
@@ -192,7 +216,7 @@ def csharp_program(entries):
              "    private static string P(double? value) => value is { } present ? P(present) : \"nothing\";",
              "    private static string P(bool value) => value ? \"true\" : \"false\";",
              "    private static string Run(int schema, string operation, byte[] data, byte[] second, long limit)", "    {", "        switch (schema)", "        {"]
-    for index, root, key, _, delta, conversion, computed in entries:
+    for index, root, key, _, delta, conversion, computed, model in entries:
         name = f"Gen.Case{index}.{root}"
         lines += [f"            case {index}:", "            {"]
         lines += [f"                if (operation == \"key\") return \"ok \" + ((long){name}.ReadKey(data)).ToString();" if key else "                if (operation == \"key\") return \"none\";"]
@@ -212,7 +236,12 @@ def csharp_program(entries):
         # two of them are alike when their JSON snapshots are.
         wrap = "" if conversion == "Value" else "GameEventScript.Runtime.Values.GesValue.GesMessage"
         lines += ["                var count = record.Read(data, limit);", f"                var copy = new {name}();", f"                var value = record.To{conversion}();",
-                  f"                copy.Read{conversion}(value);", f"                if (!Same({wrap}(copy.To{conversion}()), {wrap}(value))) return \"value mismatch\";",
+                  f"                copy.Read{conversion}(value);", f"                if (!Same({wrap}(copy.To{conversion}()), {wrap}(value))) return \"value mismatch\";"]
+        # A record with a model converts to it and back directly, to the same bytes.
+        if model:
+            lines += [f"                var round = new {name}();", "                round.CopyFrom(record.ToModel());",
+                      "                if (Hex(round.ToBytes()) != Hex(record.ToBytes())) return \"model mismatch\";"]
+        lines += [
                   "                return \"ok \" + count + \" \" + Hex(record.ToBytes());", "            }"]
     lines += ["            default: return \"none\";", "        }", "    }", "",
               "    private static byte[] Bytes(string text) => Convert.FromHexString(text == \".\" ? \"\" : text);", "",
@@ -235,7 +264,7 @@ def swift_program(entries):
              "func p(_ value: Bool) -> String { value ? \"true\" : \"false\" }",
              "extension String { func leftPadded() -> String { String(repeating: \"0\", count: Swift.max(0, 16 - count)) + self } }", "",
              "func run(_ schema: Int, _ operation: Substring, _ data: [UInt8], _ second: [UInt8], _ limit: Int) throws(GesWireError) -> String {", "    switch schema {"]
-    for index, root, key, is_class, delta, conversion, computed in entries:
+    for index, root, key, is_class, delta, conversion, computed, model in entries:
         binding = "let" if is_class else "var"
         lines += [f"    case {index}:"]
         if computed:
@@ -260,7 +289,11 @@ def swift_program(entries):
         lines += ["        let count = try record.read(from: data, byteLimit: limit)", "        do {", f"            {binding} copy = Case{index}.{root}()",
                   f"            let value = try record.to{conversion}()", f"            try copy.read({label}: value)",
                   f"            if try copy.to{conversion}() != value, try copy.to{conversion}().json() != value.json() {{ return \"value mismatch\" }}",
-                  "        } catch {", "            return \"value error \\(error)\"", "        }", "        return \"ok \\(count) \" + hex(try record.encoded())"]
+                  "        } catch {", "            return \"value error \\(error)\"", "        }"]
+        if model:
+            lines += [f"        {binding} round = Case{index}.{root}()", "        round.read(model: record.toModel())",
+                      "        if try round.encoded() != record.encoded() { return \"model mismatch\" }"]
+        lines += ["        return \"ok \\(count) \" + hex(try record.encoded())"]
     lines += ["    default:", "        return \"none\"", "    }", "}", "",
               "while let line = readLine() {", "    let parts = line.split(separator: \" \", omittingEmptySubsequences: false)",
               "    let limit = parts[4] == \"-\" ? Int.max : Int(parts[4])!", "    do {",
@@ -337,11 +370,24 @@ def main():
             skipped[error] = skipped.get(error, 0) + len(operations)
             continue
         swift_code, _ = generate(directory, sources, root, parameters, "swift", f"Case{index}")
+        conversion = "Value" if declares(code, root, " ToValue(") else "Message"
+        # A record root that also generates as a model converts to it directly: the wire code shares the models' namespace.
+        model = False
+        marked = with_model_role(sources, root) if conversion == "Value" else None
+        if marked is not None:
+            models = {language: generate_models(directory / f"models-{language}", marked, language, space)
+                      for language, space in (("csharp", f"Gen.Case{index}M"), ("swift", f"Case{index}M"))}
+            if all(text is not None for text in models.values()):
+                wired = {language: generate(directory / f"wired-{language}", marked, root, parameters, language, space, ["--models", models_space])[0]
+                         for language, space, models_space in (("csharp", f"Gen.Case{index}", f"Gen.Case{index}M"), ("swift", f"Case{index}", f"Case{index}M"))}
+                if all(text is not None for text in wired.values()):
+                    code, swift_code, model = wired["csharp"], wired["swift"], True
+                    (csharp / f"Case{index}M.g.cs").write_text(models["csharp"], encoding="utf-8")
+                    (swift / f"Case{index}M.swift").write_text(models["swift"], encoding="utf-8")
         (csharp / f"Case{index}.g.cs").write_text(code, encoding="utf-8")
         (swift / f"Case{index}.swift").write_text(swift_code, encoding="utf-8")
         delta = has_delta(code, root)
-        conversion = "Value" if declares(code, root, " ToValue(") else "Message"
-        entries.append((index, root, declares(code, root, " ReadKey("), f"final class {root} {{" in swift_code, delta, conversion, computed_names(sources, root)))
+        entries.append((index, root, declares(code, root, " ReadKey("), f"final class {root} {{" in swift_code, delta, conversion, computed_names(sources, root), model))
         for case_id, operation, data, second, limit, expected in operations:
             if operation.startswith("delta") and not delta:
                 skipped["no delta methods"] = skipped.get("no delta methods", 0) + 1
@@ -486,7 +532,7 @@ let package = Package(
                 failures += 1
                 print(f"{port} {case_id} {operation}: {problem}")
     skipped_text = ", ".join(f"{count} {code}" for code, count in sorted(skipped.items()))
-    print(f"{len(entries)} generated schemas, {len(requests)} operations in each port: {failures} failures; skipped {skipped_text or 'none'}")
+    print(f"{len(entries)} generated schemas ({sum(1 for entry in entries if entry[-1])} with models), {len(requests)} operations in each port: {failures} failures; skipped {skipped_text or 'none'}")
     return 1 if failures else 0
 
 

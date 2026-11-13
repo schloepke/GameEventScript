@@ -147,6 +147,12 @@ internal static class GesSwiftModelEmitter
 
     private static void Record(GesSchemaPlanner.Code code, GesModelLayout layout, GesModelType type, string access, bool bindings, string? values, GesComputedEmitter computed, string? documents)
     {
+        if (type.Packed is not null)
+        {
+            PackedRecord(code, layout, type, access, bindings, values, documents);
+            return;
+        }
+
         var fields = GesModelPlanner.Fields(type);
         var key = fields.Find(field => field.Field.Key);
         var names = new List<(string, string)>();
@@ -245,6 +251,180 @@ internal static class GesSwiftModelEmitter
             code.Line("/// sources of this file, and fields it leaves out take their defaults. Reading allocates and does no file I/O.");
             code.Line("/// - Throws: `GesDocumentError` when the text is no document, names another schema (`document.schemaMismatch`), or breaks the");
             code.Line("///   schema, with the `document.*` or `wire.*` code, the line, the column and the field path.");
+            code.Open($"{access}init(document text: String) throws(GesDocumentError) {{");
+            code.Line($"let document = try {documents}.read(text, [{GesSchemaPlanner.Literal(type.Name, true)}])");
+            code.Open("do {");
+            code.Line("self = try Self(value: document.value)");
+            code.Close("} catch {");
+            code.Line("    throw document.error(for: error)");
+            code.Line("}");
+            code.Close();
+        }
+
+        foreach (var field in fields) Declarations(code, field.Value, access);
+        code.Close();
+    }
+
+    // A packed type that wire code declares itself, without conversions, as the model code of the same schema declares it.
+    internal static void PackedType(GesSchemaPlanner.Code code, GesModelLayout layout, string name, string access)
+        => PackedRecord(code, layout, layout.Types.Find(candidate => candidate.Name == name)!, access, false, null, null);
+
+    // A packed schema's model: a struct whose one stored property is its word, with a property per field at its bits, so that
+    // `MemoryLayout<T>.stride` is the word's size and a list of them is a dense array; wire code of the schema holds the same
+    // word. Hashable and equality compare the word; Codable writes the fields by name.
+    private static void PackedRecord(GesSchemaPlanner.Code code, GesModelLayout layout, GesModelType type, string access, bool bindings, string? values, string? documents)
+    {
+        var fields = GesModelPlanner.Fields(type);
+        var wire = type.Packed!.Type(type.Name);
+        var raw = GesSwiftEmitter.PackedRaw(wire.PackedWidth);
+        var names = new List<(string, string)>();
+        foreach (var field in fields)
+        {
+            names.Add((GesSchemaPlanner.Camel(field.Base), "the field " + field.Field.Name));
+            names.Add(("fits" + field.Base, "the generated member fits" + field.Base));
+            Nested(field.Value, names, field.Field.Name);
+        }
+
+        foreach (var reserved in new[] { "schemaHash", "bits", "rawValue", "isValid", "CodingKeys", "hashValue", "hash" }) names.Add((reserved, "the generated member " + reserved));
+        foreach (var constant in type.Constants) names.Add((constant.Name, "the let " + constant.Name));
+        if (bindings) names.Add(("gesValue", "the generated member gesValue"));
+        if (values is not null) names.Add(("toValue", "the generated member toValue"));
+        if (bindings && fields.Exists(field => field.Field.Name == "fields"))
+            throw new GesGeneratorException(GesGeneratorException.NameCollision, $"In '{type.Name}', the field fields and the generated field fields of its bindings share a name.");
+        if ((bindings || values is not null) && fields.Exists(field => field.Field.Default is { Kind: GesSchemaDefaultKind.Record }) && GesModelPlanner.TopLevel(layout, swift: true).Contains(type.Name + "Defaults"))
+            throw new GesGeneratorException(GesGeneratorException.NameCollision, $"The record defaults of '{type.Name}' are generated as '{type.Name}Defaults', which hides the top-level type of that name.");
+        GesSchemaPlanner.Unique(type.Name, names, GesModelPlanner.TopLevel(layout, swift: true));
+
+        var bits = GesCSharpEmitter.PackedLayout(type.Packed, wire);
+        var packed = new List<GesCSharpEmitter.PackedField>();
+        for (var index = 0; index < fields.Count; index++)
+        {
+            var value = fields[index].Value;
+            var nestedRaw = value.Kind == GesModelKind.Schema ? GesSwiftEmitter.PackedRaw(type.Packed.Type(value.Model.Schema).PackedWidth) : null;
+            packed.Add(new GesCSharpEmitter.PackedField(bits[index].Field, bits[index].Shift, bits[index].Width, fields[index].Base, Plain(value), nestedRaw));
+        }
+
+        var width = wire.PackedWidth.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        code.Line($"/// The model of the packed schema `:{type.Name}`: one {width}-bit word, whose fields lie at their bits from the least significant");
+        code.Line("/// bit in declared order, as the record's wire bytes hold them.");
+        var adopted = string.Concat(GesModelPlanner.Adopted(layout, type, swift: true).ConvertAll(name => ", " + name));
+        code.Open($"{access}struct {type.Name}: Hashable, Sendable, Codable{adopted} {{");
+        code.Line($"/// The hash of the schema `:{type.Name}`, which wire records of it carry too; a test that compares it notices stale generated code.");
+        code.Line($"{access}static let schemaHash: UInt64 = 0x{GesSchemaLayoutJson.Hex(type.Hash)}");
+        code.Blank();
+        code.Line("/// The bits that the fields take, those of the record on the wire; the word's other bits are zero.");
+        code.Line($"{access}static let bits = {wire.PackedBits.ToString(System.Globalization.CultureInfo.InvariantCulture)}");
+        GesSwiftEmitter.Lets(code, type.Constants, access, "Int");
+        code.Blank();
+        code.Line("/// The word, whose first `bits` bits, written little-endian, are the record's wire bytes.");
+        code.Line($"{access}private(set) var rawValue: {raw}");
+        code.Blank();
+        code.Line("/// Takes a word whose validity is known, without checking it; an invalid word gives values outside their fields.");
+        code.Line($"{access}init(uncheckedRawValue rawValue: {raw}) {{ self.rawValue = rawValue }}");
+        code.Blank();
+        code.Line("/// Reads a word from foreign data, checked as decoding checks it, or fails when the word is not valid.");
+        code.Open($"{access}init?(rawValue: {raw}) {{");
+        code.Line("guard Self.isValid(rawValue) else { return nil }");
+        code.Line("self.rawValue = rawValue");
+        code.Close();
+        code.Blank();
+        code.Line("/// Whether a word holds a valid value in every field: an index within its range or tag set and zero bits above `bits`.");
+        var checks = GesSwiftEmitter.PackedChecks(packed);
+        if (wire.PackedBits < wire.PackedWidth) checks.Insert(0, $"UInt64(rawValue) >> {wire.PackedBits.ToString(System.Globalization.CultureInfo.InvariantCulture)} == 0");
+        code.Line($"{access}static func isValid(_ rawValue: {raw}) -> Bool {{ {(checks.Count == 0 ? "true" : string.Join(" && ", checks))} }}");
+        if (fields.Count > 0)
+        {
+            code.Blank();
+            var siblings = fields.Exists(field => GesModelPlanner.Sibling(fields, field) is not null);
+            code.Line($"/// Creates a record from its fields; a field with a default defaults to it{(siblings ? ", where nil takes the field it names" : "")}. A value outside its field traps.");
+            var parameters = new List<string>();
+            foreach (var field in fields)
+                parameters.Add(GesModelPlanner.Sibling(fields, field) is null
+                    ? $"{Label(field.Base)}: {Type(field.Value)}{(field.Field.Default is { } fallback ? " = " + Native(layout, field.Value, fallback) : "")}"
+                    : $"{Label(field.Base)}: {Plain(field.Value)}? = nil");
+            code.Open($"{access}init({string.Join(", ", parameters)}) {{");
+            code.Line("rawValue = 0");
+            foreach (var index in GesModelPlanner.ReadOrder(fields))
+            {
+                var field = fields[index];
+                var sibling = GesModelPlanner.Sibling(fields, field);
+                code.Line($"self.{Member(field.Base)} = {Member(field.Base)}{(sibling is { } named ? " ?? self." + Member(fields[named].Base) : "")}");
+            }
+
+            code.Close();
+        }
+
+        for (var index = 0; index < fields.Count; index++)
+        {
+            var field = fields[index];
+            var tags = field.Value.Model.Tags.ConvertAll(Name);
+            code.Blank();
+            code.Line($"/// `{field.Field.Name}: {GesModelPlanner.Describe(layout, field.Field)}`. A value set outside the field traps.");
+            code.Open($"{access}var {Member(field.Base)}: {Type(field.Value)} {{");
+            GesSwiftEmitter.PackedAccessors(code, packed[index], raw, field.Base, tags);
+            code.Close();
+            if (GesSwiftEmitter.PackedFits(packed[index]) is { } fits)
+            {
+                code.Blank();
+                code.Line($"/// Whether a value fits `{field.Field.Name}`, so that setting it does not trap.");
+                code.Line($"{access}static func fits{field.Base}(_ value: {Type(field.Value)}) -> Bool {{ {fits} }}");
+            }
+        }
+
+        code.Blank();
+        code.Open("private enum CodingKeys: String, CodingKey {");
+        foreach (var field in fields) code.Line($"case {Member(field.Base)} = {GesSchemaPlanner.Literal(field.Field.Name, true)}");
+        code.Close();
+        code.Blank();
+        code.Line("/// Decodes the fields by name and checks each as its setter does.");
+        code.Open($"{access}init(from decoder: any Decoder) throws {{");
+        code.Line("let container = try decoder.container(keyedBy: CodingKeys.self)");
+        code.Line("rawValue = 0");
+        foreach (var (field, check) in fields.ConvertAll(field => (field, GesSwiftEmitter.PackedFits(packed[fields.IndexOf(field)]))))
+        {
+            code.Line($"let {Member(field.Base)} = try container.decode({Type(field.Value)}.self, forKey: .{Member(field.Base)})");
+            if (check is not null)
+                code.Line($"guard Self.fits{field.Base}({Member(field.Base)}) else {{ throw DecodingError.dataCorruptedError(forKey: .{Member(field.Base)}, in: container, debugDescription: \"Outside the range of {field.Field.Name}.\") }}");
+            code.Line($"self.{Member(field.Base)} = {Member(field.Base)}");
+        }
+
+        code.Close();
+        code.Blank();
+        code.Line("/// Encodes the fields by name.");
+        code.Open($"{access}func encode(to encoder: any Encoder) throws {{");
+        code.Line(fields.Count == 0 ? "_ = encoder.container(keyedBy: CodingKeys.self)" : "var container = encoder.container(keyedBy: CodingKeys.self)");
+        foreach (var field in fields) code.Line($"try container.encode({Member(field.Base)}, forKey: .{Member(field.Base)})");
+        code.Close();
+        if (bindings)
+        {
+            code.Blank();
+            code.Line($"/// The record as the external value `:{type.Name}` of ``GesTypes``; scripts read its fields as this copy holds them.");
+            code.Line($"{access}func gesValue() -> GesValue {{ .external(GesTypes.{type.Name}Value(self)) }}");
+            code.Blank();
+            code.Line($"/// Reads a `:{type.Name}` that a script holds, or fails for another value.");
+            code.Open($"{access}init?(gesValue value: GesValue) {{");
+            code.Line($"guard let held = value.externalValue as? GesTypes.{type.Name}Value else {{ return nil }}");
+            code.Line("self = held.record");
+            code.Close();
+        }
+
+        if (values is not null)
+        {
+            code.Blank();
+            code.Line("/// The record as a plain GES Record of its fields, as `GesSchemaValues` decodes the bytes of the record; a List of many");
+            code.Line("/// packed records is faster through their words.");
+            code.Line($"{access}func toValue() -> GesValue {{ {values}.value(self) }}");
+            code.Blank();
+            code.Line("/// Reads a Record of this schema, or a Map of only its fields, as `GesSchemaValues` encodes it.");
+            code.Line("/// - Throws: `GesWireError` with `wire.typeMismatch` at the path of a field that does not convert.");
+            code.Line($"{access}init(value: GesValue) throws(GesWireError) {{ self = try {values}.read{type.Name}(value, \"\") }}");
+        }
+
+        if (documents is not null)
+        {
+            code.Blank();
+            code.Line($"/// Reads a record from GES document text with the header `:Schema(:{type.Name})`, as the records of this file do.");
+            code.Line("/// - Throws: `GesDocumentError` when the text is no document, names another schema or breaks the schema.");
             code.Open($"{access}init(document text: String) throws(GesDocumentError) {{");
             code.Line($"let document = try {documents}.read(text, [{GesSchemaPlanner.Literal(type.Name, true)}])");
             code.Open("do {");

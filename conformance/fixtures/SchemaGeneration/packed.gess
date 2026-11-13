@@ -1,0 +1,33 @@
+// Copyright 2026 Stephan Schlöpke
+// SPDX-License-Identifier: Apache-2.0
+// The fixture of the checked-in packed code: packed records of every field kind, one nested in another, as wire roots,
+// fields and list elements, beside the other kinds that convert between wire records and models directly.
+wire(packed) model(packed) packed schema :Cell as {
+  level: :Number integer between 0 and 9
+  open: :Boolean
+  kind: :Tag(#rock, #sand, #water)
+  slope: :Percentage between 0% and 100% step 10%
+  marks: :Flags(#seen, #held)
+}
+
+wire(packed) model(packed) packed(32) schema :Pair as {
+  low: :Cell
+  high: :Cell
+}
+
+wire(packed) model(packed) schema :Grid as {
+  name: :Text max 16
+  cells: :List(:Cell) max 64
+  pairs: :List(:Pair) max 8
+  origin: :Cell
+  note: :Text max 8 optional
+  reading: :Number integer between 0 and 99 | code: :Text max 4 | :Nothing
+  labels: :List(:Text max 8) max 4
+  depth: :Quantity(m) between 0m and 10m step 1cm
+  rows: :List(:Grid_Row) max 4
+}
+
+schema :Grid_Row as {
+  index: :Number integer between 0 and 15
+  cells: :List(:Cell) max 16
+}

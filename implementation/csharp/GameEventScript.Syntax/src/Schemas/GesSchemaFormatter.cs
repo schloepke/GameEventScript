@@ -32,6 +32,7 @@ internal static class GesSchemaFormatter
                     break;
                 case GesSchemaDeclarationKind.Schema:
                     if (declaration.Abstract) builder.Append("abstract ");
+                    if (declaration.Packed) builder.Append(declaration.PackedWidth > 0 ? $"packed({declaration.PackedWidth}) " : "packed ");
                     builder.Append("schema :").Append(declaration.Name).Append(" as {\n");
                     foreach (var let in declaration.Lets) builder.Append("  let ").Append(let.Name).Append(" be ").Append(Value(let.Value)).Append('\n');
                     // Fields, computed fields and withs in their written order.

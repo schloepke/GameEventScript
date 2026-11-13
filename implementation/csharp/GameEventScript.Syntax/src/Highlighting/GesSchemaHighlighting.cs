@@ -15,7 +15,7 @@ internal static class GesSchemaHighlighting
     {
         "schema", "message", "messages", "constant", "parameter", "as", "be", "between", "and", "wrapping", "step", "delta",
         "within", "integer", "optional", "key", "max", "depth", "tags", "wire", "model", "let",
-        "default", "true", "false", "abstract", "with", "all", "without", "computed", "by", "when", "otherwise", "or", "not", "of",
+        "default", "true", "false", "abstract", "packed", "with", "all", "without", "computed", "by", "when", "otherwise", "or", "not", "of",
         "min", "clamp", "abs", "has"
     };
 

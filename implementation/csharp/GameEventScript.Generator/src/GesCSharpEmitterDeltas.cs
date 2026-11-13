@@ -219,6 +219,9 @@ internal static partial class GesCSharpEmitter
             case GesLayoutKind.Box or GesLayoutKind.Disc:
                 foreach (var corner in value.Corners) Same(code, corner, a + "." + corner.Base, b + "." + corner.Base);
                 break;
+            case GesLayoutKind.Schema when value.Packed is not null:
+                code.Line($"if ({a}.RawValue != {b}.RawValue) return false;");
+                break;
             case GesLayoutKind.Schema:
                 code.Line($"if (!{a}.__Same({b}, paths, at + {N(value.Node + 1)}{NextLevel(value)})) return false;");
                 break;
@@ -415,6 +418,8 @@ internal static partial class GesCSharpEmitter
                 code.Line($"{target} = new GesDisc(center{node}, radius{node});");
                 code.Close();
                 break;
+            case GesLayoutKind.Schema when value.Packed is not null:
+                break;
             case GesLayoutKind.Schema:
                 code.Line($"{target}.__Quantize(paths, at + {N(value.Node + 1)}{NextLevel(value)});");
                 break;
@@ -459,7 +464,8 @@ internal static partial class GesCSharpEmitter
     // Whether a value holds a quantized number that Quantize changes; schemas always forward, as theirs may.
     private static bool Quantized(GesPlanValue value) => value.Encoding.Kind switch
     {
-        GesLayoutKind.Quantized or GesLayoutKind.Schema => true,
+        GesLayoutKind.Schema => value.Packed is null,
+        GesLayoutKind.Quantized => true,
         GesLayoutKind.Point or GesLayoutKind.Vector => value.Axes.Exists(Quantized),
         GesLayoutKind.Box or GesLayoutKind.Disc => value.Corners.Exists(Quantized),
         GesLayoutKind.Union => value.Alternatives.Exists(Quantized),
@@ -752,6 +758,14 @@ internal static partial class GesCSharpEmitter
                 code.Line($"if (!{set}) writer.Rewind(first{node});");
                 code.Close();
                 break;
+            case GesLayoutKind.Schema when value.Packed is not null:
+                // A packed record changes as a whole: its word follows the change bit.
+                code.Line($"if ({a}.RawValue != {b}.RawValue)");
+                code.Open("{");
+                PackedWrite(code, value, a);
+                code.Line($"{set} = true;");
+                code.Close();
+                break;
             case GesLayoutKind.Schema:
                 code.Open("{");
                 code.Line($"var start{node} = writer.BitPosition;");
@@ -902,6 +916,10 @@ internal static partial class GesCSharpEmitter
                 if (value.Encoding.Kind == GesLayoutKind.Disc && value.Corners.Count == 1) code.Line($"var radius{node} = 0d;");
                 code.Line(value.Encoding.Kind == GesLayoutKind.Disc ? $"{a} = new GesDisc(center{node}, radius{node});" : $"{a} = new GesBox(lower{node}, upper{node});");
                 code.Close();
+                break;
+            case GesLayoutKind.Schema when value.Packed is not null:
+                PackedRead(code, value, a);
+                code.Line($"if ({a}.RawValue == {b}.RawValue) {Throw("InvalidDelta", value)}");
                 break;
             case GesLayoutKind.Schema:
                 code.Line($"if (!{a}.__ReadDelta({b}, ref reader, paths, at + {N(value.Node + 1)}, false{NextLevel(value)})) {Throw("InvalidDelta", value)}");

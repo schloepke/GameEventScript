@@ -88,7 +88,16 @@ public static class GesSchemaGenerator
         if (options.Documents) throw new GesGeneratorException(GesGeneratorException.Usage, "Documents concern model code; wire code converts through Values.");
         layout = GesSchemaLayoutBuilder.Build(set, roots, parameters);
         var types = GesSchemaPlanner.Plan(layout);
-        return options.Language == GesSchemaLanguage.CSharp ? GesCSharpEmitter.Emit(layout, types, options) : GesSwiftEmitter.Emit(layout, types, options);
+        // Packed records are model types over one word, which wire code declares itself unless it shares those of models.
+        var packed = layout.Types.FindAll(type => type.PackedWidth > 0).ConvertAll(type => type.Name);
+        var shared = packed.Count > 0 && options.Models is null ? GesModelLayoutBuilder.Build(set, packed) : null;
+        // With models, wire records that a model root of any group reaches convert to their model directly.
+        var modelRoots = new List<string>();
+        if (options.Models is not null)
+            foreach (var schema in set.Schemas)
+                if (schema.ModelGroup is not null) modelRoots.Add(schema.Name);
+        var models = modelRoots.Count > 0 ? GesModelLayoutBuilder.Build(set, modelRoots) : null;
+        return options.Language == GesSchemaLanguage.CSharp ? GesCSharpEmitter.Emit(layout, types, options, shared, models) : GesSwiftEmitter.Emit(layout, types, options, shared, models);
     }
 
     /// <summary>
@@ -173,6 +182,7 @@ public static class GesSchemaGenerator
     private static GesCodeDocument Models(GesSchemaSet set, IReadOnlyList<string> roots, GesSchemaGenerateOptions options, out GesModelLayout layout)
     {
         if (options.CheckedExclusivity) throw new GesGeneratorException(GesGeneratorException.Usage, "Checked exclusivity concerns wire code, not models.");
+        if (options.Models is not null) throw new GesGeneratorException(GesGeneratorException.Usage, "Models concern wire code, which shares their types; models do not name another namespace.");
         layout = GesModelLayoutBuilder.Build(set, roots);
         // Reading documents converts through the plain values.
         var effective = options.Documents && !options.Values ? new GesSchemaGenerateOptions { Language = options.Language, Namespace = options.Namespace, Access = options.Access, Values = true, Bindings = options.Bindings, Documents = true, Split = options.Split } : options;

@@ -187,6 +187,8 @@ extension GesCSharpEmitter {
             for axis in value.axes { same(&code, axis, a + "." + axis.base, b + "." + axis.base) }
         case .box, .disc:
             for corner in value.corners { same(&code, corner, a + "." + corner.base, b + "." + corner.base) }
+        case .schema where value.packed != nil:
+            code.line("if (\(a).RawValue != \(b).RawValue) return false;")
         case .schema:
             code.line("if (!\(a).__Same(\(b), paths, at + \(value.node + 1)\(nextLevel(value)))) return false;")
         case .list:
@@ -354,6 +356,8 @@ extension GesCSharpEmitter {
             for part in value.corners { quantize(&code, part, part.label + node) }
             code.line("\(target) = new GesDisc(center\(node), radius\(node));")
             code.close()
+        case .schema where value.packed != nil:
+            break
         case .schema:
             code.line("\(target).__Quantize(paths, at + \(value.node + 1)\(nextLevel(value)));")
         case .list where quantized(value):
@@ -392,7 +396,8 @@ extension GesCSharpEmitter {
     // Whether a value holds a quantized number that Quantize changes; schemas always forward, as theirs may.
     private static func quantized(_ value: GesPlanValue) -> Bool {
         switch value.encoding.kind {
-        case .quantized, .schema: true
+        case .schema: value.packed == nil
+        case .quantized: true
         case .point, .vector: value.axes.contains(where: quantized)
         case .box, .disc: value.corners.contains(where: quantized)
         case .union: value.alternatives.contains(where: quantized)
@@ -654,6 +659,13 @@ extension GesCSharpEmitter {
             if value.encoding.kind == .disc && value.corners.count == 1 { code.line("if (\(a).Radius != 0) \(fail("TypeMismatch", value))") }
             code.line("if (!\(set)) writer.Rewind(first\(node));")
             code.close()
+        case .schema where value.packed != nil:
+            // A packed record changes as a whole: its word follows the change bit.
+            code.line("if (\(a).RawValue != \(b).RawValue)")
+            code.open("{")
+            packedWrite(&code, value, a)
+            code.line("\(set) = true;")
+            code.close()
         case .schema:
             code.open("{")
             code.line("var start\(node) = writer.BitPosition;")
@@ -786,6 +798,9 @@ extension GesCSharpEmitter {
             if value.encoding.kind == .disc && value.corners.count == 1 { code.line("var radius\(node) = 0d;") }
             code.line(value.encoding.kind == .disc ? "\(a) = new GesDisc(center\(node), radius\(node));" : "\(a) = new GesBox(lower\(node), upper\(node));")
             code.close()
+        case .schema where value.packed != nil:
+            packedRead(&code, value, a)
+            code.line("if (\(a).RawValue == \(b).RawValue) \(fail("InvalidDelta", value))")
         case .schema:
             code.line("if (!\(a).__ReadDelta(\(b), ref reader, paths, at + \(value.node + 1), false\(nextLevel(value)))) \(fail("InvalidDelta", value))")
         case .union:

@@ -203,6 +203,11 @@ GOLDENS = (
     (PACKED_FIXTURE.parent, [PACKED_FIXTURE.name], ["--wire", "packed", "--values", "--models", "PackedModel"], "swift", "PackedWire", SWIFT_GENERATED / "PackedWire.swift"),
     (PACKED_FIXTURE.parent, [PACKED_FIXTURE.name], ["--wire", "packed"], "csharp", "GameEventScript.Tests.Generator.Packed.Own", CSHARP_GENERATED / "PackedOwn.g.cs"),
     (PACKED_FIXTURE.parent, [PACKED_FIXTURE.name], ["--wire", "packed"], "swift", "PackedOwn", SWIFT_GENERATED / "PackedOwn.swift"),
+    # Models in the global namespace beside wire code in a namespace, where a wire record and a model share a name.
+    (PACKED_FIXTURE.parent, [PACKED_FIXTURE.name], ["--model", "packed", "--values"], "csharp", "", CSHARP_GENERATED / "PackedGlobalModel.g.cs"),
+    (PACKED_FIXTURE.parent, [PACKED_FIXTURE.name], ["--model", "packed", "--values"], "swift", "", SWIFT_GENERATED / "PackedGlobalModel.swift"),
+    (PACKED_FIXTURE.parent, [PACKED_FIXTURE.name], ["--wire", "packed", "--values", "--models", ""], "csharp", "GameEventScript.Tests.Generator.Packed.Global", CSHARP_GENERATED / "PackedGlobalWire.g.cs"),
+    (PACKED_FIXTURE.parent, [PACKED_FIXTURE.name], ["--wire", "packed", "--values", "--models", ""], "swift", "PackedGlobal", SWIFT_GENERATED / "PackedGlobalWire.swift"),
 )
 # The layouts of the role fixture, which both CLIs must print identically.
 ROLE_LAYOUTS = (["--wire", "world", "--param", "worldWidth=2000m"], ["--wire", "panels"], ["--model", "view"])

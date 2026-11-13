@@ -25,8 +25,42 @@ final class GeneratedPackedCodeTests: XCTestCase {
             reading: .code("ab"),
             labels: ["a", "bc"],
             depth: 2.5,
-            rows: [PackedModel.Grid_Row(index: 3, cells: [cell])]
+            rows: [PackedModel.Grid_Row(index: 3, cells: [cell])],
+            offset: PackedModel.Offset(delta: -3, gear: 12, lift: 0.5, kind: .high)
         )
+    }
+
+    func testEveryPackedFieldLandsAtItsBits() {
+        // delta -3 is index 5 at bit 0, gear 12 index 2 at bit 4, lift 0.5m index 3 at bit 6, high index 2 at bit 9.
+        let expected = UInt16(5 | (2 << 4) | (3 << 6) | (2 << 9))
+        XCTAssertEqual(expected, PackedModel.Offset(delta: -3, gear: 12, lift: 0.5, kind: .high).rawValue)
+        var offset = PackedModel.Offset(delta: 7, gear: 13, lift: 1, kind: .low)
+        offset.delta = -3
+        offset.gear = 12
+        offset.lift = 0.5
+        offset.kind = .high
+        XCTAssertEqual(expected, offset.rawValue)
+        XCTAssertEqual(-3, offset.delta)
+        XCTAssertEqual(12, offset.gear)
+        XCTAssertEqual(0.5, offset.lift)
+        XCTAssertEqual(.high, offset.kind)
+        var lowest = offset
+        lowest.delta = -8
+        lowest.gear = 10
+        lowest.lift = -1
+        lowest.kind = .low
+        XCTAssertEqual(0, lowest.rawValue)
+    }
+
+    func testGlobalModelsConvertBesideNamespacedWire() throws {
+        let cell = Cell(level: 7, open: true, kind: .water, slope: 0.3, marks: .held)
+        let model = Grid(name: "grid", cells: [cell], origin: cell, depth: 1, offset: Offset(delta: 1, gear: 11, lift: -0.5, kind: .mid))
+        let wire = PackedGlobal.Grid()
+        wire.read(model: model)
+        let back = PackedGlobal.Grid()
+        try back.read(from: try wire.encoded())
+        XCTAssertEqual(model, Grid(wire: back))
+        XCTAssertEqual([UInt8(truncatingIfNeeded: cell.rawValue), UInt8(cell.rawValue >> 8)], try PackedGlobal.CellWire.encoded(cell))
     }
 
     func testPackedRecordIsOneWordWithCheckedFields() {
@@ -79,21 +113,25 @@ final class GeneratedPackedCodeTests: XCTestCase {
         }
     }
 
-    func testSharedPackedRootsWriteThroughExtensions() throws {
+    /// A packed root that the models declare gets its wire members as the enum `CellWire` of its wire namespace, so that
+    /// another wire generation of the module may share the model type too.
+    func testSharedPackedRootsWriteThroughTheirWireEnum() throws {
         let cell = PackedModel.Cell(level: 9, open: true, kind: .sand, slope: 1, marks: .seen)
-        let bytes = try cell.encoded()
-        XCTAssertEqual(PackedModel.Cell.maxByteCount, bytes.count)
+        let bytes = try PackedWire.CellWire.encoded(cell)
+        XCTAssertEqual(PackedWire.CellWire.maxByteCount, bytes.count)
         XCTAssertEqual([UInt8(truncatingIfNeeded: cell.rawValue), UInt8(cell.rawValue >> 8)], bytes)
-        var read = PackedModel.Cell()
-        try read.read(from: bytes)
+        var read = PackedModel.Cell(uncheckedRawValue: 0)
+        try PackedWire.CellWire.read(&read, from: bytes)
         XCTAssertEqual(cell, read)
-        XCTAssertEqual([0], try cell.deltaEncoded(against: cell))
+        XCTAssertEqual([0], try PackedWire.CellWire.deltaEncoded(cell, against: cell))
         var changed = cell
         changed.level = 1
-        var target = PackedModel.Cell()
-        try target.readDelta(from: try changed.deltaEncoded(against: cell), against: cell)
+        var target = PackedModel.Cell(uncheckedRawValue: 0)
+        try PackedWire.CellWire.readDelta(&target, from: try PackedWire.CellWire.deltaEncoded(changed, against: cell), against: cell)
         XCTAssertEqual(changed, target)
-        XCTAssertThrowsError(try PackedModel.Cell(uncheckedRawValue: 1 << 14).encoded()) { error in
+        // The global models share Cell with two wire namespaces, each with its own enum.
+        XCTAssertEqual(bytes, try PackedGlobal.CellWire.encoded(Cell(level: 9, open: true, kind: .sand, slope: 1, marks: .seen)))
+        XCTAssertThrowsError(try PackedWire.CellWire.encoded(PackedModel.Cell(uncheckedRawValue: 1 << 14))) { error in
             XCTAssertEqual(GesWireError.outOfRange, (error as? GesWireError)?.code)
         }
     }

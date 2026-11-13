@@ -59,6 +59,13 @@ public enum GesSchemaGenerator {
     private static func wire(_ set: GesSchemaSet, _ roots: [String], _ parameters: GesSchemaParameters, _ options: GesSchemaGenerateOptions) throws -> (document: GesCodeDocument, layout: GesSchemaLayout) {
         if options.bindings { throw GesGeneratorError(GesGeneratorError.usage, "Bindings concern model code; wire code converts through Values.") }
         if options.documents { throw GesGeneratorError(GesGeneratorError.usage, "Documents concern model code; wire code converts through Values.") }
+        // Wire records and models of one schema share its name, so they need different namespaces.
+        if let models = options.models, models == options.namespace {
+            throw GesGeneratorError(
+                GesGeneratorError.nameCollision,
+                "The models live in the namespace of the wire code ('\(models)'), where a wire record and the model of its schema would share a name; generate them into different namespaces."
+            )
+        }
         let layout = try GesSchemaLayoutBuilder.build(set, roots: roots, parameters: parameters)
         let types = try GesSchemaPlanner.plan(layout)
         // Packed records are model types over one word, which wire code declares itself unless it shares those of models.

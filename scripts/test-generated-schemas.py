@@ -32,6 +32,14 @@ FLEET_FIXTURE = ROOT / "conformance/fixtures/SchemaGeneration/fleet.gess"
 GENERATED_CSHARP = ROOT / "implementation/csharp/GameEventScript.Generator/tests/Generated"
 ROLES = ROOT / "conformance/fixtures/SchemaGeneration/roles"
 ROLE_FILES = ["World.gess", "Panels.gess", "View.gess"]
+PACKED = ROOT / "conformance/fixtures/SchemaGeneration/packed.gess"
+# Split wire code in a namespace beside split models in the global namespace, which share packed types and convert directly:
+# their extensions must stand at file scope, and a wire record and a model of one name must not hide each other.
+# A second wire generation, split by schema, shares the same models: each declares the wire members of a shared packed
+# root in its own namespace, and the models gain one init(wire:) per wire namespace.
+PACKED_SPLITS = ((["--model", "packed", "--values"], "", "PackedSplitModel", "file"),
+                 (["--wire", "packed", "--values", "--models", ""], "PackedSplit", "PackedSplitWire", "file"),
+                 (["--wire", "packed", "--values", "--models", ""], "PackedSchemaSplit", "PackedSchemaSplitWire", "schema"))
 # Split output of the role fixture: each split once for wire code and once for models, so that the files of one generation
 # reach each other's types and helpers and the shared file declares the namespace, nested for two of them.
 SPLITS = (("schema", ["--wire", "world", "--param", "worldWidth=2000m", "--values"], "SchemaSplit.Wire"),
@@ -442,6 +450,12 @@ def main():
                                   "--access", "internal", "--out-dir", str(target / space), "--split", split], cwd=ROLES, capture_output=True, check=False)
             if run.returncode != 0:
                 raise SystemExit(f"The role fixture does not generate split by {split}: {run.stderr.decode('utf-8', 'replace').strip()}")
+    for selection, space, directory, split in PACKED_SPLITS:
+        for language, target in (("csharp", csharp), ("swift", swift)):
+            run = subprocess.run(["dotnet", str(CSHARP_CLI), "schema", "generate", PACKED.name, *selection, "--language", language, "--namespace", space,
+                                  "--access", "internal", "--out-dir", str(target / directory), "--split", split], cwd=PACKED.parent, capture_output=True, check=False)
+            if run.returncode != 0:
+                raise SystemExit(f"The packed fixture does not generate split: {run.stderr.decode('utf-8', 'replace').strip()}")
     (csharp / "Harness.cs").write_text(csharp_program(entries), encoding="utf-8")
     (csharp / "Harness.csproj").write_text(f"""<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>

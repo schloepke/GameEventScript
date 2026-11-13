@@ -26,6 +26,10 @@ clean_product_outputs() {
     dotnet clean "$repository_root/implementation/csharp/GameEventScript.Runtime/src/GameEventScript.Runtime.csproj" --configuration Release >/dev/null
 }
 
+# Both runs take one timestamp, also when uncommitted changes would give each run its own.
+SOURCE_DATE_EPOCH=${SOURCE_DATE_EPOCH:-$(git -C "$repository_root" log -1 --format=%ct 2>/dev/null || echo 946684800)}
+export SOURCE_DATE_EPOCH
+
 clean_product_outputs
 "$repository_root/scripts/pack-csharp.sh" "$release_version" "$first"
 clean_product_outputs

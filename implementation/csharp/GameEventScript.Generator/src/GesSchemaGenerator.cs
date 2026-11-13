@@ -86,6 +86,9 @@ public static class GesSchemaGenerator
     {
         if (options.Bindings) throw new GesGeneratorException(GesGeneratorException.Usage, "Bindings concern model code; wire code converts through Values.");
         if (options.Documents) throw new GesGeneratorException(GesGeneratorException.Usage, "Documents concern model code; wire code converts through Values.");
+        // Wire records and models of one schema share its name, so they need different namespaces.
+        if (options.Models is not null && options.Models == options.Namespace)
+            throw new GesGeneratorException(GesGeneratorException.NameCollision, $"The models live in the namespace of the wire code ('{options.Models}'), where a wire record and the model of its schema would share a name; generate them into different namespaces.");
         layout = GesSchemaLayoutBuilder.Build(set, roots, parameters);
         var types = GesSchemaPlanner.Plan(layout);
         // Packed records are model types over one word, which wire code declares itself unless it shares those of models.

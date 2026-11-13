@@ -117,18 +117,23 @@ enum GesCodeFiles {
         var code = GesSchemaPlanner.Code()
         code.raw(header(document))
         code.raw(document.prologue)
-        let space = !document.space.isEmpty
+        // A file of units outside the namespace alone, such as the conversion of a shared packed root, opens no namespace.
+        let space = !document.space.isEmpty && units.contains { !$0.outside }
         if space && document.swift {
             code.open("extension \(document.space.joined(separator: ".")) {")
         } else if space {
             code.line("namespace " + document.space.joined(separator: "."))
             code.open("{")
         }
-        for (index, unit) in units.enumerated() {
-            if index > 0 { code.blank() }
+        // Units outside the namespace, such as extensions of model types, follow it at file scope.
+        var first = true
+        for unit in units where !unit.outside {
+            if !first { code.blank() }
+            first = false
             code.raw(try render(unit, code.depth))
         }
         if space { code.close() }
+        try outside(&code, units)
         return code.text
     }
 

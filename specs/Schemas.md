@@ -1747,9 +1747,14 @@ directly, field by field, without GES values and without the bytes: C# `ToModel(
 `toModel()`, `read(model:)` and the model's `init(wire:)`. The conversion compares the model type's `SchemaHash` with the
 record's, so a model generated from another state of the schema fails with C# `InvalidOperationException` or a Swift
 precondition and is never converted. Values are checked when the record is written, as for any value a caller sets.
-In C#, a packed wire root shared with the models gets its wire members as extension methods of the model's struct in a
-static class `<Name>Wire`, which also holds `BindingHash` and `MaxByteCount`; Swift extends the struct itself. Such a root
-converts to and from GES values through its model's `--values` conversion, which gives the same Record. `--models` is
+A packed wire root shared with the models gets its wire members in the wire namespace, so that several wire generations
+of one module may share the model type: C# as extension methods of the model's struct in a static class `<Name>Wire`,
+Swift as static members of an enum `<Name>Wire` that take the record (`Wire.MapPointWire.encoded(point)`,
+`read(&point, from: bytes)`); both hold `BindingHash`/`bindingHash` and `MaxByteCount`/`maxByteCount`. Such a root converts
+to and from GES values through its model's `--values` conversion, which gives the same Record. The conversion of wire
+records and the wire members of a packed root that wire code declares itself extend their types at file scope, also in
+split files, and name wire and model types so that neither hides the other. `--models` must name another namespace than
+`--namespace`, else `generate.nameCollision`. `--models` is
 only for wire code and is a usage error with `--model`.
 
 `ToValue` and `ReadValue` go through the record's bytes and build one GES value per element, so on a List of millions of

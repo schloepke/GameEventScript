@@ -65,10 +65,10 @@ internal static partial class GesSwiftEmitter
         var space = string.Concat(document.Space.ConvertAll(part => part + "."));
         if (modelLayout is not null)
         {
-            context.Models = new ModelConversion(modelLayout, models);
+            var conversion = context.Models = new ModelConversion(modelLayout, models, space);
             foreach (var type in types)
-                if (type.Kind == GesSchemaKind.Schema && type.Layout.PackedWidth == 0 && context.Models.Type(type.Name) is not null)
-                    document.Units.Add(new GesCodeUnit(type.Name, code => ModelInitializer(code, models + type.Name, space + type.Name, access), outside: true));
+                if (type.Kind == GesSchemaKind.Schema && type.Layout.PackedWidth == 0 && conversion.Type(type.Name) is { } model)
+                    document.Units.Add(new GesCodeUnit(type.Name, code => ModelConversionUnit(code, type, model, access, conversion), outside: true));
         }
         foreach (var type in types)
         {
@@ -76,9 +76,11 @@ internal static partial class GesSwiftEmitter
             {
                 if (packed is not null) document.Units.Add(new GesCodeUnit(type.Name, code => GesSwiftModelEmitter.PackedType(code, packed, type.Name, access)));
 
-                // A wire root's members extend the type at file scope, wherever the type is declared.
-                var qualified = (options.Models is null ? string.Concat(document.Space.ConvertAll(part => part + ".")) : models) + type.Name;
-                if (layout.Roots.Contains(type.Name)) document.Units.Add(new GesCodeUnit(type.Name, code => PackedRoot(code, type, access, qualified, context, packed is null), outside: true));
+                // A wire root's members extend the type at file scope where the wire code declares it, and are an enum
+                // `<Name>Wire` in the wire namespace where the models declare it.
+                var sharesModel = packed is null;
+                var qualified = (sharesModel ? models : space) + type.Name;
+                if (layout.Roots.Contains(type.Name)) document.Units.Add(new GesCodeUnit(type.Name, code => PackedRoot(code, type, access, qualified, context, sharesModel), outside: !sharesModel));
                 continue;
             }
 
@@ -195,7 +197,6 @@ internal static partial class GesSwiftEmitter
         if (deltas) SameHelpers(code, type);
         Extras(code, type, access, deltas, context.Elements.Contains(type.Name));
         if (context.Values && !type.IsItem) ValueMembers(code, type, access, context.Holder);
-        if (model is not null) ModelMembers(code, type, model, access, context.Models!);
         foreach (var field in type.Fields) Declarations(code, field.Value, access, context);
         code.Close();
     }

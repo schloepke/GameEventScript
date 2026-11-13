@@ -13,9 +13,13 @@ namespace GameEventScript.Generator;
 internal static partial class GesSwiftEmitter
 {
     // The model layout and the qualifier of its namespace, and a counter for the names of locals.
-    private sealed class ModelConversion(GesModelLayout layout, string qualifier)
+    private sealed class ModelConversion(GesModelLayout layout, string qualifier, string wireSpace)
     {
         internal string Qualifier { get; } = qualifier;
+
+        // The qualifier of the wire namespace: the conversion extends a wire record at file scope, where a bare name of a
+        // record or tag set means the model's when the models live in the global namespace.
+        internal string WireSpace { get; } = wireSpace;
 
         internal GesModelType? Type(string name) => layout.Types.Find(type => type.Name == name);
 
@@ -26,13 +30,25 @@ internal static partial class GesSwiftEmitter
         internal void Reset() => _local = 0;
     }
 
+    // The conversion between a wire record and its model at file scope: an extension of the wire record with toModel() and
+    // read(model:), and one of the model with init(wire:). Inside the wire namespace a bare name would mean the wire type.
+    private static void ModelConversionUnit(GesSchemaPlanner.Code code, GesPlanType type, GesModelType model, string access, ModelConversion conversion)
+    {
+        var wire = conversion.WireSpace + type.Name;
+        code.Line("/// The conversion of the wire record to and from the model of the same schema.");
+        code.Open($"extension {wire} {{");
+        ModelMembers(code, type, model, access, conversion);
+        code.Close();
+        code.Blank();
+        ModelInitializer(code, conversion.Qualifier + model.Name, wire, access);
+    }
+
     // The members of a wire record that convert it to and from its model.
     private static void ModelMembers(GesSchemaPlanner.Code code, GesPlanType type, GesModelType model, string access, ModelConversion conversion)
     {
         var name = conversion.Qualifier + model.Name;
         var fields = GesModelPlanner.Fields(model);
         var check = $"precondition({name}.schemaHash == Self.schemaHash, \"The model type {model.Name} was generated from another state of the schema than this wire record.\")";
-        code.Blank();
         code.Line("/// Creates the model of this record, field by field without GES values.");
         code.Line("/// - Precondition: The model type was generated from the same state of the schema.");
         code.Open($"{access}func toModel() -> {name} {{");
@@ -153,7 +169,7 @@ internal static partial class GesSwiftEmitter
     private static string Converted(GesPlanValue value, GesModelPlanValue model, string modelOwner, string source, bool toModel, string wired, ModelConversion conversion)
     {
         var modelType = ModelType(model, modelOwner, conversion).TrimEnd('?');
-        var wireType = value.TagType.Length > 0 ? TypeName(value) : wired + TypeName(value);
+        var wireType = value.TagType.Length > 0 ? conversion.WireSpace + TypeName(value) : wired + TypeName(value);
         switch (value.Encoding.Kind)
         {
             case GesLayoutKind.Integer:
@@ -286,7 +302,7 @@ internal static partial class GesSwiftEmitter
 
         var index = conversion.Local("index");
         var target = conversion.Local("target");
-        var wireType = value.Item is not null ? wired + value.Item.Name : wired + ElementName(value);
+        var wireType = value.Item is not null ? wired + value.Item.Name : conversion.WireSpace + ElementName(value);
         var from = $"{source}[{index}]";
         var holder = value.Item;
         var record = holder is null && value.Element!.Encoding.Kind == GesLayoutKind.Schema && value.Element.Packed is null;

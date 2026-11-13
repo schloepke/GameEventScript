@@ -41,6 +41,10 @@ public sealed class GesPackedGeneratedCodeTests
         Assert.AreEqual(File.ReadAllText(Path.Combine(swift, "PackedModel.swift")), GesSchemaGenerator.GenerateModels(set, model, Swift("PackedModel", true)));
         Assert.AreEqual(File.ReadAllText(Path.Combine(swift, "PackedWire.swift")), GesSchemaGenerator.Generate(set, wire, parameters, Swift("PackedWire", true, "PackedModel")));
         Assert.AreEqual(File.ReadAllText(Path.Combine(swift, "PackedOwn.swift")), GesSchemaGenerator.Generate(set, wire, parameters, Swift("PackedOwn", false)));
+        Assert.AreEqual(Generated("PackedGlobalModel.g.cs"), GesSchemaGenerator.GenerateModels(set, model, Options("", true)));
+        Assert.AreEqual(Generated("PackedGlobalWire.g.cs"), GesSchemaGenerator.Generate(set, wire, parameters, Options("GameEventScript.Tests.Generator.Packed.Global", true, "")));
+        Assert.AreEqual(File.ReadAllText(Path.Combine(swift, "PackedGlobalModel.swift")), GesSchemaGenerator.GenerateModels(set, model, Swift("", true)));
+        Assert.AreEqual(File.ReadAllText(Path.Combine(swift, "PackedGlobalWire.swift")), GesSchemaGenerator.Generate(set, wire, parameters, Swift("PackedGlobal", true, "")));
     }
 
     private static Model.Grid Grid()
@@ -55,7 +59,32 @@ public sealed class GesPackedGeneratedCodeTests
             new Model.Grid.ReadingAlternative.Code("ab"),
             ["a", "bc"],
             2.5,
-            [new Model.Grid_Row(3, [cell])]);
+            [new Model.Grid_Row(3, [cell])],
+            new Model.Offset(-3, 12, 0.5, Model.Offset.KindTag.High));
+    }
+
+    [TestMethod]
+    public void ModelsNeedAnotherNamespaceThanTheWireCode()
+    {
+        var set = Set();
+        foreach (var language in new[] { GesSchemaLanguage.CSharp, GesSchemaLanguage.Swift })
+            foreach (var space in new[] { "", "Game.Shared" })
+            {
+                var options = new GesSchemaGenerateOptions { Language = language, Namespace = space, Models = space };
+                var error = Assert.ThrowsExactly<GesGeneratorException>(() => GesSchemaGenerator.Generate(set, GesSchemaGenerator.WireRoots(set, "packed"), new GesSchemaParameters(), options));
+                Assert.AreEqual("generate.nameCollision", error.Code);
+            }
+    }
+
+    [TestMethod]
+    public void EveryPackedFieldLandsAtItsBits()
+    {
+        // delta -3 is index 5 at bit 0, gear 12 index 2 at bit 4, lift 0.5m index 3 at bit 6, high index 2 at bit 9.
+        const ushort expected = 5 | (2 << 4) | (3 << 6) | (2 << 9);
+        Assert.AreEqual(expected, new Model.Offset(-3, 12, 0.5, Model.Offset.KindTag.High).RawValue);
+        var offset = new Model.Offset(7, 13, 1, Model.Offset.KindTag.Low) { Delta = -3, Gear = 12, Lift = 0.5, Kind = Model.Offset.KindTag.High };
+        Assert.AreEqual(expected, offset.RawValue);
+        Assert.AreEqual(0, new Model.Offset(-8, 10, -1, Model.Offset.KindTag.Low).RawValue);
     }
 
     [TestMethod]

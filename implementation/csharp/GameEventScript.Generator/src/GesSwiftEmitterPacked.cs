@@ -98,7 +98,7 @@ internal static partial class GesSwiftEmitter
         if (PackedFits(packed) is not null) code.Line($"precondition(Self.fits{GesSchemaPlanner.Pascal(member)}(newValue), \"Outside the range of {packed.Field.Name}.\")");
         code.Line(packed.Width == 0
             ? "_ = newValue"
-            : $"rawValue = {raw}(truncatingIfNeeded: (UInt64(rawValue) & ~({mask} << {shift})) | ({wire} << {shift}))");
+            : $"rawValue = {raw}(truncatingIfNeeded: (UInt64(rawValue) & ~({mask} << {shift})) | (({wire}) << {shift}))");
         code.Close();
     }
 
@@ -168,14 +168,37 @@ internal static partial class GesSwiftEmitter
 
     // The wire members of a packed record that is a wire root, as an extension of its type: it reads, writes and compares its
     // word, and its delta is a change bit and, when it differs, its word.
+    // The wire members of a packed wire root over its word. Declared here, they extend the type at file scope. Shared with
+    // models, they are static members of an enum `<Name>Wire` in the wire namespace instead, as C#'s `<Name>Wire` class, so
+    // that two wire generations of one module that share the model type do not declare its members twice.
     private static void PackedRoot(GesSchemaPlanner.Code code, GesPlanType type, string access, string name, Context context, bool shared)
     {
         var word = GesPackedWord.Of(context.Layout, type.Name, -1);
         word.Type = name;
         var raw = PackedRaw(word.Width);
         var self = new GesPlanValue { Node = -1, Packed = word };
-        code.Line($"/// The wire members of the packed record `:{type.Name}`, a wire root: its bytes are its word, little-endian.");
-        code.Open($"extension {name} {{");
+        var record = shared ? "record" : "self";
+        var rawOf = shared ? "record.rawValue" : "rawValue";
+        var recordType = shared ? name : "Self";
+        string Sig(bool mutates, string member, string parameters, string result)
+        {
+            if (!shared) return $"{access}{(mutates ? "mutating " : "")}func {member}({parameters}){result} {{";
+            var first = $"_ record: {(mutates ? "inout " : "")}{name}";
+            return $"{access}static func {member}({first}{(parameters.Length > 0 ? ", " + parameters : "")}){result} {{";
+        }
+        string Call(string member, string arguments) => shared ? $"{member}({(member.StartsWith("read", System.StringComparison.Ordinal) ? "&record" : "record")}{(arguments.Length > 0 ? ", " + arguments : "")})" : $"{member}({arguments})";
+        string Set(string value) => shared ? $"record = {name}(uncheckedRawValue: {value})" : $"self = Self(uncheckedRawValue: {value})";
+        if (shared)
+        {
+            code.Line($"/// The wire members of the packed record `:{type.Name}`, a wire root whose type the models declare: its bytes are its word, little-endian.");
+            code.Open($"{access}enum {type.Name}Wire {{");
+        }
+        else
+        {
+            code.Line($"/// The wire members of the packed record `:{type.Name}`, a wire root: its bytes are its word, little-endian.");
+            code.Open($"extension {name} {{");
+        }
+
         code.Line("/// The hash over the schema hash and the parameter values this code was generated with.");
         code.Line($"{access}static let bindingHash: UInt64 = 0x{GesSchemaLayoutJson.Hex(type.Layout.BindingHash)}");
         code.Blank();
@@ -184,113 +207,121 @@ internal static partial class GesSwiftEmitter
         code.Blank();
         code.Line($"static let __paths: [String] = [{string.Join(", ", type.Paths.ConvertAll(path => GesSchemaPlanner.Literal(path, true)))}]");
         code.Blank();
-        code.Line("/// Creates the record of the word 0, to read into.");
-        code.Line($"{access}init() {{ self.init(uncheckedRawValue: 0) }}");
-        code.Blank();
-        code.Line("/// Writes the record into a buffer and returns the number of bytes written; its bytes are its word, little-endian.");
+        if (!shared)
+        {
+            code.Line("/// Creates the record of the word 0, to read into.");
+            code.Line($"{access}init() {{ self.init(uncheckedRawValue: 0) }}");
+            code.Blank();
+        }
+
+        code.Line($"/// Writes the record into a buffer and returns the number of bytes written; its bytes are its word, little-endian.");
         code.Line("/// - Throws: `GesWireError` when a word taken unchecked holds an invalid field or the buffer is too small.");
-        code.Open($"{access}func write(into buffer: UnsafeMutableRawBufferPointer) throws(GesWireError) -> Int {{");
+        code.Open(Sig(false, "write", "into buffer: UnsafeMutableRawBufferPointer", " throws(GesWireError) -> Int"));
         code.Line("var writer = GesBitWriter(into: buffer)");
         GesCSharpEmitter.PackedPaths(code, word, "let paths = Self.__paths", "let at = 0");
-        PackedWrite(code, self, "self");
+        PackedWrite(code, self, record);
         code.Line("return try writer.finish()");
         code.Close();
         code.Blank();
         code.Line("/// Counts the bytes that `write(into:)` writes, which are `maxByteCount`.");
         code.Line("/// - Throws: `GesWireError` when a word taken unchecked holds an invalid field.");
-        code.Open($"{access}func encodedByteCount() throws(GesWireError) -> Int {{");
+        code.Open(Sig(false, "encodedByteCount", "", " throws(GesWireError) -> Int"));
         GesCSharpEmitter.PackedPaths(code, word, "let paths = Self.__paths", "let at = 0");
-        PackedChecks(code, word, "UInt64(rawValue)", "\"\"");
+        PackedChecks(code, word, $"UInt64({rawOf})", "\"\"");
         code.Line("return Self.maxByteCount");
         code.Close();
         code.Blank();
         code.Line("/// Writes the record into a new array of its size.");
         code.Line("/// - Throws: `GesWireError` when a word taken unchecked holds an invalid field.");
-        code.Open($"{access}func encoded() throws(GesWireError) -> [UInt8] {{");
+        code.Open(Sig(false, "encoded", "", " throws(GesWireError) -> [UInt8]"));
         code.Line("let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: Self.maxByteCount, alignment: 8)");
         code.Line("defer { buffer.deallocate() }");
-        code.Line("let count = try write(into: buffer)");
+        code.Line($"let count = try {Call("write", "into: buffer")}");
         code.Line("return Array(buffer[0..<count])");
         code.Close();
         code.Blank();
-        code.Line("/// Reads a record from untrusted data into this instance and returns the number of bytes it occupies.");
+        code.Line($"/// Reads a record from untrusted data into {(shared ? "the record" : "this instance")} and returns the number of bytes it occupies.");
         code.Line("/// - Throws: `GesWireError` when the data is no valid record.");
         code.Line("@discardableResult");
-        code.Open($"{access}mutating func read(from data: UnsafeRawBufferPointer, byteLimit: Int = .max) throws(GesWireError) -> Int {{");
+        code.Open(Sig(true, "read", "from data: UnsafeRawBufferPointer, byteLimit: Int = .max", " throws(GesWireError) -> Int"));
         code.Line("var reader = GesBitReader(data: data, byteLimit: byteLimit)");
         code.Line("let paths = Self.__paths");
         code.Line("let at = 0");
         PackedReadFields(code, self, "word");
-        code.Line($"self = Self(uncheckedRawValue: {raw}(truncatingIfNeeded: word))");
+        code.Line(Set($"{raw}(truncatingIfNeeded: word)"));
         code.Line("return try reader.finish()");
         code.Close();
         code.Blank();
-        code.Line("/// Reads a record from bytes into this instance and returns the number of bytes it occupies.");
+        code.Line($"/// Reads a record from bytes into {(shared ? "the record" : "this instance")} and returns the number of bytes it occupies.");
         code.Line("/// - Throws: `GesWireError` when the bytes are no valid record.");
         code.Line("@discardableResult");
-        code.Open($"{access}mutating func read(from bytes: [UInt8], byteLimit: Int = .max) throws(GesWireError) -> Int {{");
-        Copied(code, "read(from: UnsafeRawBufferPointer(rebasing: buffer[0..<bytes.count]), byteLimit: byteLimit)");
+        code.Open(Sig(true, "read", "from bytes: [UInt8], byteLimit: Int = .max", " throws(GesWireError) -> Int"));
+        Copied(code, Call("read", "from: UnsafeRawBufferPointer(rebasing: buffer[0..<bytes.count]), byteLimit: byteLimit"));
         code.Close();
         code.Blank();
         code.Line("/// Whether another record writes the same bytes: whether the words are equal.");
-        code.Line($"{access}func wireEquals(_ other: Self) -> Bool {{ rawValue == other.rawValue }}");
+        code.Line($"{Sig(false, "wireEquals", $"_ other: {recordType}", " -> Bool")} {rawOf} == other.rawValue }}");
+        if (!shared)
+        {
+            code.Blank();
+            code.Line("/// Copies another record's word.");
+            code.Line($"{access}mutating func copy(from other: Self) {{ self = other }}");
+            code.Blank();
+            code.Line("/// Does nothing: a packed record holds only values its fields encode.");
+            code.Line($"{access}func quantize() {{}}");
+        }
+
         code.Blank();
-        code.Line("/// Copies another record's word.");
-        code.Line($"{access}mutating func copy(from other: Self) {{ self = other }}");
-        code.Blank();
-        code.Line("/// Does nothing: a packed record holds only values its fields encode.");
-        code.Line($"{access}func quantize() {{}}");
-        code.Blank();
-        code.Line("/// Writes the delta against a baseline: a change bit and, when the words differ, this word.");
+        code.Line("/// Writes the delta against a baseline: a change bit and, when the words differ, the record's word.");
         code.Line("/// - Throws: `GesWireError` when a word taken unchecked holds an invalid field or the buffer is too small.");
-        code.Open($"{access}func writeDelta(against baseline: Self, into buffer: UnsafeMutableRawBufferPointer) throws(GesWireError) -> Int {{");
+        code.Open(Sig(false, "writeDelta", $"against baseline: {recordType}, into buffer: UnsafeMutableRawBufferPointer", " throws(GesWireError) -> Int"));
         code.Line("var writer = GesBitWriter(into: buffer)");
         GesCSharpEmitter.PackedPaths(code, word, "let paths = Self.__paths", "let at = 0");
-        code.Open("if rawValue == baseline.rawValue {");
+        code.Open($"if {rawOf} == baseline.rawValue {{");
         code.Line("try writer.write(0, width: 1)");
         code.Close("} else {");
         code.Indent();
         code.Line("try writer.write(1, width: 1)");
-        PackedWrite(code, self, "self");
+        PackedWrite(code, self, record);
         code.Close();
         code.Line("return try writer.finish()");
         code.Close();
         code.Blank();
         code.Line("/// Counts the bytes of the delta against a baseline.");
-        code.Line($"{access}func deltaEncodedByteCount(against baseline: Self) -> Int {{ rawValue == baseline.rawValue ? 1 : ({N(word.Bits)} + 8) / 8 }}");
+        code.Line($"{Sig(false, "deltaEncodedByteCount", $"against baseline: {recordType}", " -> Int")} {rawOf} == baseline.rawValue ? 1 : ({N(word.Bits)} + 8) / 8 }}");
         code.Blank();
         code.Line("/// Writes the delta against a baseline into a new array of its size.");
         code.Line("/// - Throws: `GesWireError` when a word taken unchecked holds an invalid field.");
-        code.Open($"{access}func deltaEncoded(against baseline: Self) throws(GesWireError) -> [UInt8] {{");
-        code.Line("let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: deltaEncodedByteCount(against: baseline), alignment: 8)");
+        code.Open(Sig(false, "deltaEncoded", $"against baseline: {recordType}", " throws(GesWireError) -> [UInt8]"));
+        code.Line($"let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: {Call("deltaEncodedByteCount", "against: baseline")}, alignment: 8)");
         code.Line("defer { buffer.deallocate() }");
-        code.Line("let count = try writeDelta(against: baseline, into: buffer)");
+        code.Line($"let count = try {Call("writeDelta", "against: baseline, into: buffer")}");
         code.Line("return Array(buffer[0..<count])");
         code.Close();
         code.Blank();
-        code.Line("/// Reads a delta against a baseline into this instance and returns the number of bytes it occupies.");
+        code.Line($"/// Reads a delta against a baseline into {(shared ? "the record" : "this instance")} and returns the number of bytes it occupies.");
         code.Line("/// - Throws: `GesWireError` when the data is no valid delta, such as a word equal to the baseline's.");
         code.Line("@discardableResult");
-        code.Open($"{access}mutating func readDelta(from data: UnsafeRawBufferPointer, against baseline: Self, byteLimit: Int = .max) throws(GesWireError) -> Int {{");
+        code.Open(Sig(true, "readDelta", $"from data: UnsafeRawBufferPointer, against baseline: {recordType}, byteLimit: Int = .max", " throws(GesWireError) -> Int"));
         code.Line("var reader = GesBitReader(data: data, byteLimit: byteLimit)");
         code.Line("let paths = Self.__paths");
         code.Line("let at = 0");
         code.Open("if try reader.read(1, path: \"\") == 0 {");
-        code.Line("self = baseline");
+        code.Line($"{record} = baseline");
         code.Close("} else {");
         code.Indent();
         PackedReadFields(code, self, "word");
         code.Line($"if {raw}(truncatingIfNeeded: word) == baseline.rawValue {{ throw GesWireError(code: GesWireError.invalidDelta, path: \"\") }}");
-        code.Line($"self = Self(uncheckedRawValue: {raw}(truncatingIfNeeded: word))");
+        code.Line(Set($"{raw}(truncatingIfNeeded: word)"));
         code.Close();
         code.Line("return try reader.finish()");
         code.Close();
         code.Blank();
-        code.Line("/// Reads a delta from bytes against a baseline into this instance and returns the number of bytes it occupies.");
+        code.Line($"/// Reads a delta from bytes against a baseline into {(shared ? "the record" : "this instance")} and returns the number of bytes it occupies.");
         code.Line("/// - Throws: `GesWireError` when the bytes are no valid delta.");
         code.Line("@discardableResult");
-        code.Open($"{access}mutating func readDelta(from bytes: [UInt8], against baseline: Self, byteLimit: Int = .max) throws(GesWireError) -> Int {{");
-        Copied(code, "readDelta(from: UnsafeRawBufferPointer(rebasing: buffer[0..<bytes.count]), against: baseline, byteLimit: byteLimit)");
+        code.Open(Sig(true, "readDelta", $"from bytes: [UInt8], against baseline: {recordType}, byteLimit: Int = .max", " throws(GesWireError) -> Int"));
+        Copied(code, Call("readDelta", "from: UnsafeRawBufferPointer(rebasing: buffer[0..<bytes.count]), against: baseline, byteLimit: byteLimit"));
         code.Close();
         // A root shared with models converts to and from values through the model's own conversion.
         if (context.Values && !shared) ValueMembers(code, type, access, context.Holder);

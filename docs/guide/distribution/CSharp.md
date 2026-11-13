@@ -67,6 +67,17 @@ The repository package tool rewrites this packaging-only metadata, ZIP entry
 order, and timestamps into a canonical form. Package normalization is permitted
 only before signing. A signed archive is rejected.
 
+> **Since: Unreleased** — commit-time timestamps
+
+Every packaged file takes the time of the packed commit, or the current time
+when the working tree has uncommitted changes (`SOURCE_DATE_EPOCH` overrides
+both), so packing one commit stays byte-identical while a newer build's DLLs
+are newer. ZIP times have no time zone: the UTC clock time is stored and an
+extracted file shows it as local clock time, the same shift for every package
+on one machine. A build that copies a referenced DLL into its output
+only when date or size differ, as MSBuild's CopyLocal does, therefore replaces
+the DLL of an older package version.
+
 Two independent package runs can be compared byte for byte with:
 
 ```bash

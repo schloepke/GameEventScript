@@ -10,11 +10,15 @@ extension GesSwiftEmitter {
     final class ModelConversion {
         let layout: GesModelLayout
         let qualifier: String
+        // The qualifier of the wire namespace: the conversion extends a wire record at file scope, where a bare name of a
+        // record or tag set means the model's when the models live in the global namespace.
+        let wireSpace: String
         private var counter = 0
 
-        init(_ layout: GesModelLayout, _ qualifier: String) {
+        init(_ layout: GesModelLayout, _ qualifier: String, _ wireSpace: String) {
             self.layout = layout
             self.qualifier = qualifier
+            self.wireSpace = wireSpace
         }
 
         func type(_ name: String) -> GesModelType? { layout.types.first { $0.name == name } }
@@ -27,12 +31,23 @@ extension GesSwiftEmitter {
         func reset() { counter = 0 }
     }
 
+    // The conversion between a wire record and its model at file scope: an extension of the wire record with toModel() and
+    // read(model:), and one of the model with init(wire:). Inside the wire namespace a bare name would mean the wire type.
+    static func modelConversionUnit(_ code: inout Code, _ type: GesPlanType, _ model: GesModelType, _ access: String, _ conversion: ModelConversion) throws(GesGeneratorError) {
+        let wire = conversion.wireSpace + type.name
+        code.line("/// The conversion of the wire record to and from the model of the same schema.")
+        code.open("extension \(wire) {")
+        try modelMembers(&code, type, model, access, conversion)
+        code.close()
+        code.blank()
+        modelInitializer(&code, conversion.qualifier + model.name, wire, access)
+    }
+
     // The members of a wire record that convert it to and from its model.
     static func modelMembers(_ code: inout Code, _ type: GesPlanType, _ model: GesModelType, _ access: String, _ conversion: ModelConversion) throws(GesGeneratorError) {
         let name = conversion.qualifier + model.name
         let fields = GesModelPlanner.fields(model)
         let check = "precondition(\(name).schemaHash == Self.schemaHash, \"The model type \(model.name) was generated from another state of the schema than this wire record.\")"
-        code.blank()
         code.line("/// Creates the model of this record, field by field without GES values.")
         code.line("/// - Precondition: The model type was generated from the same state of the schema.")
         code.open("\(access)func toModel() -> \(name) {")
@@ -170,7 +185,7 @@ extension GesSwiftEmitter {
     ) -> String {
         var modelType = self.modelType(model, modelOwner, conversion)
         while modelType.hasSuffix("?") { modelType.removeLast() }
-        let wireType = !value.tagType.isEmpty ? typeName(value) : wired + typeName(value)
+        let wireType = !value.tagType.isEmpty ? conversion.wireSpace + typeName(value) : wired + typeName(value)
         switch value.encoding.kind {
         case .integer:
             return model.model.integer ? (toModel ? "Int(\(source))" : "Int64(\(source))") : (toModel ? "Double(\(source))" : "Int64(\(source))")
@@ -331,7 +346,7 @@ extension GesSwiftEmitter {
         }
         let index = conversion.local("index")
         let target = conversion.local("target")
-        let wireType = value.item.map { wired + $0.name } ?? wired + elementName(value)
+        let wireType = value.item.map { wired + $0.name } ?? conversion.wireSpace + elementName(value)
         let from = "\(source)[\(index)]"
         let holder = value.item
         let record = holder == nil && value.element!.encoding.kind == .schema && value.element!.packed == nil

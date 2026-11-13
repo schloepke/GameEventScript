@@ -887,6 +887,15 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 
 ### Fixed
 
+- Swift wire code generated with `--namespace` and `--models` now places the conversion to and from models at file
+  scope, also in split files, and names wire and model types so that a model and a wire record of the same name, such as
+  with `--models ""`, cannot hide each other. A packed wire root shared with the models gets its wire members as static
+  members of an enum `<Name>Wire` in the wire namespace, as C# does with its class, so that several wire generations of a
+  module can share the model; `--models` naming the wire namespace itself is `generate.nameCollision`.
+- Generated Swift setters of packed fields shift the field after subtracting its lower bound; they ORed every field into
+  the lowest bits.
+- The DLLs in the C# packages carry the time of the packed commit, or the current time for uncommitted changes, instead
+  of a fixed date, so MSBuild's copy into a build output replaces the DLL of an older package version of the same size.
 - A unary intrinsic with a parenthesized operand, such as `floor(x)`, and an intrinsic call such as `atan2(y, x)` are power
   bases in both ports: `floor(x) ^ 2` is `(floor x) ^ 2`. C# rejected both, and Swift accepted `-x² ^ 2` and `floor x² ^ 2`,
   which are syntax errors.

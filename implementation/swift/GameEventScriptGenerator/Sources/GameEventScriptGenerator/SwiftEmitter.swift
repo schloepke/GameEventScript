@@ -48,9 +48,11 @@ enum GesSwiftEmitter {
         for type in types {
             for field in type.fields { GesSchemaPlanner.qualifyPacked(field.value, models) }
         }
+        let spaceParts = try GesSchemaPlanner.namespace(options.namespace, keywords)
+        let space = spaceParts.map { $0 + "." }.joined()
         let context = Context(
             layout: layout,
-            models: modelLayout.map { ModelConversion($0, models) },
+            models: modelLayout.map { ModelConversion($0, models, space) },
             elements: GesSchemaPlanner.keyedElements(types),
             values: options.values,
             holder: holder,
@@ -61,26 +63,28 @@ enum GesSwiftEmitter {
         var document = GesCodeDocument(
             header: header,
             prologue: prologue.text,
-            space: try GesSchemaPlanner.namespace(options.namespace, keywords),
+            space: spaceParts,
             swift: true,
             access: access,
             holds: "schema",
             parameters: !layout.parameters.isEmpty
         )
-        let space = document.space.map { $0 + "." }.joined()
         if let conversion = context.models {
-            for type in types where type.kind == .schema && type.layout.packedWidth == 0 && conversion.type(type.name) != nil {
-                document.units.append(GesCodeUnit(owner: type.name, write: { code in modelInitializer(&code, models + type.name, space + type.name, access) }, outside: true))
+            for type in types where type.kind == .schema && type.layout.packedWidth == 0 {
+                guard let model = conversion.type(type.name) else { continue }
+                document.units.append(GesCodeUnit(owner: type.name, write: { code in try modelConversionUnit(&code, type, model, access, conversion) }, outside: true))
             }
         }
         for type in types {
             if type.layout.packedWidth > 0 {
                 if let packed { document.units.append(GesCodeUnit(owner: type.name) { code in try GesSwiftModelEmitter.packedType(&code, packed, type.name, access) }) }
 
-                // A wire root's members extend the type at file scope, wherever the type is declared.
-                let qualified = (options.models == nil ? space : models) + type.name
+                // A wire root's members extend the type at file scope where the wire code declares it, and are an enum
+                // `<Name>Wire` in the wire namespace where the models declare it.
+                let sharesModel = packed == nil
+                let qualified = (sharesModel ? models : space) + type.name
                 if layout.roots.contains(type.name) {
-                    document.units.append(GesCodeUnit(owner: type.name, write: { code in packedRoot(&code, type, access, qualified, context, packed == nil) }, outside: true))
+                    document.units.append(GesCodeUnit(owner: type.name, write: { code in packedRoot(&code, type, access, qualified, context, sharesModel) }, outside: !sharesModel))
                 }
                 continue
             }
@@ -186,7 +190,6 @@ enum GesSwiftEmitter {
         if deltas { sameHelpers(&code, type) }
         extras(&code, type, access, deltas, context.elements.contains(type.name))
         if context.values && !type.isItem { valueMembers(&code, type, access, context.holder) }
-        if let model { try modelMembers(&code, type, model, access, context.models!) }
         for field in type.fields { try declarations(&code, field.value, access, context) }
         code.close()
     }

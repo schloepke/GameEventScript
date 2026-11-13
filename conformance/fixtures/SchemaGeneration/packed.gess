@@ -15,6 +15,14 @@ wire(packed) model(packed) packed(32) schema :Pair as {
   high: :Cell
 }
 
+// Fields with lower bounds other than zero, set one by one, must land at their bits.
+wire(packed) model(packed) packed schema :Offset as {
+  delta: :Number integer between -8 and 7
+  gear: :Number integer between 10 and 13
+  lift: :Quantity(m) between -1m and 1m step 50cm
+  kind: :Tag(#low, #mid, #high)
+}
+
 wire(packed) model(packed) schema :Grid as {
   name: :Text max 16
   cells: :List(:Cell) max 64
@@ -25,6 +33,7 @@ wire(packed) model(packed) schema :Grid as {
   labels: :List(:Text max 8) max 4
   depth: :Quantity(m) between 0m and 10m step 1cm
   rows: :List(:Grid_Row) max 4
+  offset: :Offset
 }
 
 schema :Grid_Row as {

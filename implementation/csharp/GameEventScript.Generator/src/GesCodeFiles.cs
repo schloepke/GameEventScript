@@ -141,7 +141,8 @@ internal static class GesCodeFiles
         var code = new GesSchemaPlanner.Code();
         code.Raw(Header(document));
         code.Raw(document.Prologue);
-        var space = document.Space.Count > 0;
+        // A file of units outside the namespace alone, such as the conversion of a shared packed root, opens no namespace.
+        var space = document.Space.Count > 0 && units.Exists(unit => !unit.Outside);
         if (space && document.Swift) code.Open($"extension {string.Join(".", document.Space)} {{");
         else if (space)
         {
@@ -149,13 +150,18 @@ internal static class GesCodeFiles
             code.Open("{");
         }
 
-        for (var index = 0; index < units.Count; index++)
+        // Units outside the namespace, such as extensions of model types, follow it at file scope.
+        var first = true;
+        foreach (var unit in units)
         {
-            if (index > 0) code.Blank();
-            code.Raw(Render(units[index], code.Depth));
+            if (unit.Outside) continue;
+            if (!first) code.Blank();
+            first = false;
+            code.Raw(Render(unit, code.Depth));
         }
 
         if (space) code.Close();
+        Outside(code, units);
         return code.ToString();
     }
 

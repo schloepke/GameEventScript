@@ -93,6 +93,7 @@ internal static partial class GesSwiftEmitter
         var sets = GesSchemaPlanner.TagSets(types, "");
         foreach (var (name, tags) in sets) document.Units.Add(new GesCodeUnit(name, code => TagSetDeclaration(code, name, tags, access)));
         context.TopLevel = GesSchemaPlanner.TopLevel(types, sets);
+        if (options.Models is not null) GesSchemaPlanner.ReserveSharedRoots(layout, types, context.TopLevel);
         GesSchemaPlanner.CheckTopLevel(context.TopLevel, swift: true);
 
         // Split files reach the sources of another file, so the holder is internal there.

@@ -186,7 +186,8 @@ internal static partial class GesSwiftEmitter
             var first = $"_ record: {(mutates ? "inout " : "")}{name}";
             return $"{access}static func {member}({first}{(parameters.Length > 0 ? ", " + parameters : "")}){result} {{";
         }
-        string Call(string member, string arguments) => shared ? $"{member}({(member.StartsWith("read", System.StringComparison.Ordinal) ? "&record" : "record")}{(arguments.Length > 0 ? ", " + arguments : "")})" : $"{member}({arguments})";
+        string Call(string member, string arguments, bool mutates = false) => shared ? $"{member}({(mutates ? "&record" : "record")}{(arguments.Length > 0 ? ", " + arguments : "")})" : $"{member}({arguments})";
+        var writeName = shared ? "write(_:into:)" : "write(into:)";
         string Set(string value) => shared ? $"record = {name}(uncheckedRawValue: {value})" : $"self = Self(uncheckedRawValue: {value})";
         if (shared)
         {
@@ -223,7 +224,7 @@ internal static partial class GesSwiftEmitter
         code.Line("return try writer.finish()");
         code.Close();
         code.Blank();
-        code.Line("/// Counts the bytes that `write(into:)` writes, which are `maxByteCount`.");
+        code.Line($"/// Counts the bytes that `{writeName}` writes, which are `maxByteCount`.");
         code.Line("/// - Throws: `GesWireError` when a word taken unchecked holds an invalid field.");
         code.Open(Sig(false, "encodedByteCount", "", " throws(GesWireError) -> Int"));
         GesCSharpEmitter.PackedPaths(code, word, "let paths = Self.__paths", "let at = 0");
@@ -256,20 +257,17 @@ internal static partial class GesSwiftEmitter
         code.Line("/// - Throws: `GesWireError` when the bytes are no valid record.");
         code.Line("@discardableResult");
         code.Open(Sig(true, "read", "from bytes: [UInt8], byteLimit: Int = .max", " throws(GesWireError) -> Int"));
-        Copied(code, Call("read", "from: UnsafeRawBufferPointer(rebasing: buffer[0..<bytes.count]), byteLimit: byteLimit"));
+        Copied(code, Call("read", "from: UnsafeRawBufferPointer(rebasing: buffer[0..<bytes.count]), byteLimit: byteLimit", mutates: true));
         code.Close();
         code.Blank();
         code.Line("/// Whether another record writes the same bytes: whether the words are equal.");
         code.Line($"{Sig(false, "wireEquals", $"_ other: {recordType}", " -> Bool")} {rawOf} == other.rawValue }}");
-        if (!shared)
-        {
-            code.Blank();
-            code.Line("/// Copies another record's word.");
-            code.Line($"{access}mutating func copy(from other: Self) {{ self = other }}");
-            code.Blank();
-            code.Line("/// Does nothing: a packed record holds only values its fields encode.");
-            code.Line($"{access}func quantize() {{}}");
-        }
+        code.Blank();
+        code.Line("/// Copies another record's word.");
+        code.Line($"{Sig(true, "copy", $"from other: {recordType}", "")} {record} = other }}");
+        code.Blank();
+        code.Line("/// Does nothing: a packed record holds only values its fields encode.");
+        code.Line(shared ? $"{access}static func quantize(_ record: {name}) {{}}" : $"{access}func quantize() {{}}");
 
         code.Blank();
         code.Line("/// Writes the delta against a baseline: a change bit and, when the words differ, the record's word.");
@@ -321,7 +319,7 @@ internal static partial class GesSwiftEmitter
         code.Line("/// - Throws: `GesWireError` when the bytes are no valid delta.");
         code.Line("@discardableResult");
         code.Open(Sig(true, "readDelta", $"from bytes: [UInt8], against baseline: {recordType}, byteLimit: Int = .max", " throws(GesWireError) -> Int"));
-        Copied(code, Call("readDelta", "from: UnsafeRawBufferPointer(rebasing: buffer[0..<bytes.count]), against: baseline, byteLimit: byteLimit"));
+        Copied(code, Call("readDelta", "from: UnsafeRawBufferPointer(rebasing: buffer[0..<bytes.count]), against: baseline, byteLimit: byteLimit", mutates: true));
         code.Close();
         // A root shared with models converts to and from values through the model's own conversion.
         if (context.Values && !shared) ValueMembers(code, type, access, context.Holder);

@@ -586,6 +586,19 @@ enum GesSchemaPlanner {
         return scalars.count > 3 && name.hasPrefix("Ges") && ("A"..."Z").contains(scalars[3])
     }
 
+    // Reserves the `<Name>Wire` type of every packed wire root that the models declare, which holds its wire members beside the
+    // records, so that no record or tag set takes that name.
+    static func reserveSharedRoots(_ layout: GesSchemaLayout, _ types: [GesPlanType], _ names: inout Set<String>) throws(GesGeneratorError) {
+        for type in types where type.layout.packedWidth > 0 && layout.roots.contains(type.name) {
+            if !names.insert(type.name + "Wire").inserted {
+                throw GesGeneratorError(
+                    GesGeneratorError.nameCollision,
+                    "The wire members of the packed root '\(type.name)' take the name '\(type.name)Wire', which another type of the generation has."
+                )
+            }
+        }
+    }
+
     // The types declared beside the records must not take a name that the generated code uses for another type.
     static func checkTopLevel(_ names: Set<String>, swift: Bool) throws(GesGeneratorError) {
         for name in names.sorted(by: { $0.unicodeScalars.lexicographicallyPrecedes($1.unicodeScalars) }) {

@@ -89,6 +89,10 @@ public static class GesSchemaGenerator
         // Wire records and models of one schema share its name, so they need different namespaces.
         if (options.Models is not null && options.Models == options.Namespace)
             throw new GesGeneratorException(GesGeneratorException.NameCollision, $"The models live in the namespace of the wire code ('{options.Models}'), where a wire record and the model of its schema would share a name; generate them into different namespaces.");
+        // Swift declares each namespace component as an enum, so two generations of one module cannot share the first one.
+        if (options.Language == GesSchemaLanguage.Swift && options.Models is { Length: > 0 } && options.Namespace.Length > 0
+            && options.Models.Split('.')[0] == options.Namespace.Split('.')[0])
+            throw new GesGeneratorException(GesGeneratorException.NameCollision, $"The Swift namespaces '{options.Namespace}' and '{options.Models}' of wire code and models start alike, so both would declare the enum '{options.Namespace.Split('.')[0]}'; give them different first components.");
         layout = GesSchemaLayoutBuilder.Build(set, roots, parameters);
         var types = GesSchemaPlanner.Plan(layout);
         // Packed records are model types over one word, which wire code declares itself unless it shares those of models.

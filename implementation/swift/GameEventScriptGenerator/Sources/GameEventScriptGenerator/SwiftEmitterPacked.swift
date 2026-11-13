@@ -163,8 +163,8 @@ extension GesSwiftEmitter {
             return "\(access)static func \(member)(\(first)\(parameters.isEmpty ? "" : ", " + parameters))\(result) {"
         }
 
-        func call(_ member: String, _ arguments: String) -> String {
-            shared ? "\(member)(\(member.hasPrefix("read") ? "&record" : "record")\(arguments.isEmpty ? "" : ", " + arguments))" : "\(member)(\(arguments))"
+        func call(_ member: String, _ arguments: String, mutates: Bool = false) -> String {
+            shared ? "\(member)(\(mutates ? "&record" : "record")\(arguments.isEmpty ? "" : ", " + arguments))" : "\(member)(\(arguments))"
         }
 
         func set(_ value: String) -> String { shared ? "record = \(name)(uncheckedRawValue: \(value))" : "self = Self(uncheckedRawValue: \(value))" }
@@ -199,7 +199,7 @@ extension GesSwiftEmitter {
         code.line("return try writer.finish()")
         code.close()
         code.blank()
-        code.line("/// Counts the bytes that `write(into:)` writes, which are `maxByteCount`.")
+        code.line("/// Counts the bytes that `\(shared ? "write(_:into:)" : "write(into:)")` writes, which are `maxByteCount`.")
         code.line("/// - Throws: `GesWireError` when a word taken unchecked holds an invalid field.")
         code.open(sig(false, "encodedByteCount", "", " throws(GesWireError) -> Int"))
         GesCSharpEmitter.packedPaths(&code, word, "let paths = Self.__paths", "let at = 0")
@@ -232,19 +232,17 @@ extension GesSwiftEmitter {
         code.line("/// - Throws: `GesWireError` when the bytes are no valid record.")
         code.line("@discardableResult")
         code.open(sig(true, "read", "from bytes: [UInt8], byteLimit: Int = .max", " throws(GesWireError) -> Int"))
-        copied(&code, call("read", "from: UnsafeRawBufferPointer(rebasing: buffer[0..<bytes.count]), byteLimit: byteLimit"))
+        copied(&code, call("read", "from: UnsafeRawBufferPointer(rebasing: buffer[0..<bytes.count]), byteLimit: byteLimit", mutates: true))
         code.close()
         code.blank()
         code.line("/// Whether another record writes the same bytes: whether the words are equal.")
         code.line("\(sig(false, "wireEquals", "_ other: \(recordType)", " -> Bool")) \(rawOf) == other.rawValue }")
-        if !shared {
-            code.blank()
-            code.line("/// Copies another record's word.")
-            code.line("\(access)mutating func copy(from other: Self) { self = other }")
-            code.blank()
-            code.line("/// Does nothing: a packed record holds only values its fields encode.")
-            code.line("\(access)func quantize() {}")
-        }
+        code.blank()
+        code.line("/// Copies another record's word.")
+        code.line("\(sig(true, "copy", "from other: \(recordType)", "")) \(record) = other }")
+        code.blank()
+        code.line("/// Does nothing: a packed record holds only values its fields encode.")
+        code.line(shared ? "\(access)static func quantize(_ record: \(name)) {}" : "\(access)func quantize() {}")
         code.blank()
         code.line("/// Writes the delta against a baseline: a change bit and, when the words differ, the record's word.")
         code.line("/// - Throws: `GesWireError` when a word taken unchecked holds an invalid field or the buffer is too small.")
@@ -295,7 +293,7 @@ extension GesSwiftEmitter {
         code.line("/// - Throws: `GesWireError` when the bytes are no valid delta.")
         code.line("@discardableResult")
         code.open(sig(true, "readDelta", "from bytes: [UInt8], against baseline: \(recordType), byteLimit: Int = .max", " throws(GesWireError) -> Int"))
-        copied(&code, call("readDelta", "from: UnsafeRawBufferPointer(rebasing: buffer[0..<bytes.count]), against: baseline, byteLimit: byteLimit"))
+        copied(&code, call("readDelta", "from: UnsafeRawBufferPointer(rebasing: buffer[0..<bytes.count]), against: baseline, byteLimit: byteLimit", mutates: true))
         code.close()
         // A root shared with models converts to and from values through the model's own conversion.
         if context.values && !shared { valueMembers(&code, type, access, context.holder) }

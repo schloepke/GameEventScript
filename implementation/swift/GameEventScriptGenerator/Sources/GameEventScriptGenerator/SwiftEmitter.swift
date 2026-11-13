@@ -50,6 +50,8 @@ enum GesSwiftEmitter {
         }
         let spaceParts = try GesSchemaPlanner.namespace(options.namespace, keywords)
         let space = spaceParts.map { $0 + "." }.joined()
+        var topLevel = GesSchemaPlanner.topLevel(types, sets)
+        if options.models != nil { try GesSchemaPlanner.reserveSharedRoots(layout, types, &topLevel) }
         let context = Context(
             layout: layout,
             models: modelLayout.map { ModelConversion($0, models, space) },
@@ -58,7 +60,7 @@ enum GesSwiftEmitter {
             holder: holder,
             checkedExclusivity: options.checkedExclusivity,
             computed: computed,
-            topLevel: GesSchemaPlanner.topLevel(types, sets)
+            topLevel: topLevel
         )
         var document = GesCodeDocument(
             header: header,

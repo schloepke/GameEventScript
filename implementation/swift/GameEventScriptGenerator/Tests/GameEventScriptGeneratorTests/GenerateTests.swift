@@ -21,6 +21,27 @@ final class GenerateTests: XCTestCase {
         }
     }
 
+    func testModelsNeedTheirOwnNamespaceAndWireName() throws {
+        let set = try GesSchemaSet(parsing: "wire model packed schema :Cell as { a: :Boolean }\nwire schema :CellWire as { b: :Boolean }\nwire model schema :Grid as { c: :List(:Cell) max 4 }\n")
+        let roots = ["Cell", "Grid"]
+
+        func wire(_ language: GesSchemaLanguage, _ namespace: String, _ models: String, _ more: [String] = []) -> String {
+            code { try GesSchemaGenerator.generate(set, roots: roots + more, parameters: GesSchemaParameters(), options: GesSchemaGenerateOptions(language: language, namespace: namespace, models: models)) }
+        }
+
+        for language in [GesSchemaLanguage.csharp, .swift] {
+            // Wire records and models of one schema share its name, so they need different namespaces.
+            XCTAssertEqual(wire(language, "", ""), "generate.nameCollision")
+            XCTAssertEqual(wire(language, "Game.Shared", "Game.Shared"), "generate.nameCollision")
+            // The wire members of the shared packed root Cell take the name CellWire.
+            XCTAssertEqual(wire(language, "Wire", "", ["CellWire"]), "generate.nameCollision")
+            XCTAssertEqual(wire(language, "Wire", ""), "")
+        }
+        // Swift namespace components are enums, which two generations of one module cannot both declare.
+        XCTAssertEqual(wire(.swift, "Game.Wire", "Game.Model"), "generate.nameCollision")
+        XCTAssertEqual(wire(.csharp, "Game.Wire", "Game.Model"), "")
+    }
+
     func testTheDocumentTypeTakesNoGeneratedName() throws {
         // In a namespace the reading type is Document, which a model root of that name would also be.
         let set = try GesSchemaSet(parsing: "schema :Document as { a: :Boolean }\n")

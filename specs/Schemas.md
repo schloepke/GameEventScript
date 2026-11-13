@@ -1754,7 +1754,10 @@ Swift as static members of an enum `<Name>Wire` that take the record (`Wire.MapP
 to and from GES values through its model's `--values` conversion, which gives the same Record. The conversion of wire
 records and the wire members of a packed root that wire code declares itself extend their types at file scope, also in
 split files, and name wire and model types so that neither hides the other. `--models` must name another namespace than
-`--namespace`, else `generate.nameCollision`. `--models` is
+`--namespace` and, in Swift, whose namespace components are enums, another first component, else
+`generate.nameCollision`; a `<Name>Wire` that another type of the generation already names is `generate.nameCollision`
+too. The conversion members take the wire code's `--access` and name the models' types, so the models need the same
+`--access`, or a broader one. `--models` is
 only for wire code and is a usage error with `--model`.
 
 `ToValue` and `ReadValue` go through the record's bytes and build one GES value per element, so on a List of millions of

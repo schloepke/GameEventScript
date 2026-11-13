@@ -54,6 +54,8 @@ enum GesCSharpEmitter {
         for type in types {
             for field in type.fields { GesSchemaPlanner.qualifyPacked(field.value, models) }
         }
+        var topLevel = GesSchemaPlanner.topLevel(types, sets)
+        if options.models != nil { try GesSchemaPlanner.reserveSharedRoots(layout, types, &topLevel) }
         let context = Context(
             layout: layout,
             elements: GesSchemaPlanner.keyedElements(types),
@@ -61,7 +63,7 @@ enum GesCSharpEmitter {
             values: options.values,
             holder: holder,
             computed: computed,
-            topLevel: GesSchemaPlanner.topLevel(types, sets),
+            topLevel: topLevel,
             models: modelLayout.map { ModelConversion($0, models) }
         )
         var document = GesCodeDocument(header: header, prologue: prologue.text, space: space, parameters: !layout.parameters.isEmpty)

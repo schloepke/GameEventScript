@@ -74,6 +74,16 @@ public sealed class GesPackedGeneratedCodeTests
                 var error = Assert.ThrowsExactly<GesGeneratorException>(() => GesSchemaGenerator.Generate(set, GesSchemaGenerator.WireRoots(set, "packed"), new GesSchemaParameters(), options));
                 Assert.AreEqual("generate.nameCollision", error.Code);
             }
+
+        // Swift namespace components are enums, which two generations of one module cannot both declare.
+        var prefix = new GesSchemaGenerateOptions { Language = GesSchemaLanguage.Swift, Namespace = "Game.Wire", Models = "Game.Model" };
+        Assert.AreEqual("generate.nameCollision", Assert.ThrowsExactly<GesGeneratorException>(() => GesSchemaGenerator.Generate(set, GesSchemaGenerator.WireRoots(set, "packed"), new GesSchemaParameters(), prefix)).Code);
+        prefix.Language = GesSchemaLanguage.CSharp;
+        Assert.IsFalse(string.IsNullOrEmpty(GesSchemaGenerator.Generate(set, GesSchemaGenerator.WireRoots(set, "packed"), new GesSchemaParameters(), prefix)));
+        // The wire members of a shared packed root take the name <Name>Wire, which no schema may have.
+        var taken = GesSchemaSet.Parse("wire model packed schema :Cell as { a: :Boolean }\nwire schema :CellWire as { b: :Boolean }\n");
+        var shared = new GesSchemaGenerateOptions { Language = GesSchemaLanguage.CSharp, Namespace = "Wire", Models = "" };
+        Assert.AreEqual("generate.nameCollision", Assert.ThrowsExactly<GesGeneratorException>(() => GesSchemaGenerator.Generate(taken, ["Cell", "CellWire"], new GesSchemaParameters(), shared)).Code);
     }
 
     [TestMethod]

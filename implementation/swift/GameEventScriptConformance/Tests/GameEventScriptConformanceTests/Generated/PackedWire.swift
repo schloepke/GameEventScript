@@ -36,7 +36,7 @@ enum PackedWire {
             return try writer.finish()
         }
 
-        /// Counts the bytes that `write(into:)` writes, which are `maxByteCount`.
+        /// Counts the bytes that `write(_:into:)` writes, which are `maxByteCount`.
         /// - Throws: `GesWireError` when a word taken unchecked holds an invalid field.
         static func encodedByteCount(_ record: PackedModel.Cell) throws(GesWireError) -> Int {
             let paths = Self.__paths
@@ -98,6 +98,12 @@ enum PackedWire {
 
         /// Whether another record writes the same bytes: whether the words are equal.
         static func wireEquals(_ record: PackedModel.Cell, _ other: PackedModel.Cell) -> Bool { record.rawValue == other.rawValue }
+
+        /// Copies another record's word.
+        static func copy(_ record: inout PackedModel.Cell, from other: PackedModel.Cell) { record = other }
+
+        /// Does nothing: a packed record holds only values its fields encode.
+        static func quantize(_ record: PackedModel.Cell) {}
 
         /// Writes the delta against a baseline: a change bit and, when the words differ, the record's word.
         /// - Throws: `GesWireError` when a word taken unchecked holds an invalid field or the buffer is too small.
@@ -2207,7 +2213,7 @@ enum PackedWire {
             return try writer.finish()
         }
 
-        /// Counts the bytes that `write(into:)` writes, which are `maxByteCount`.
+        /// Counts the bytes that `write(_:into:)` writes, which are `maxByteCount`.
         /// - Throws: `GesWireError` when a word taken unchecked holds an invalid field.
         static func encodedByteCount(_ record: PackedModel.Offset) throws(GesWireError) -> Int {
             let paths = Self.__paths
@@ -2263,6 +2269,12 @@ enum PackedWire {
 
         /// Whether another record writes the same bytes: whether the words are equal.
         static func wireEquals(_ record: PackedModel.Offset, _ other: PackedModel.Offset) -> Bool { record.rawValue == other.rawValue }
+
+        /// Copies another record's word.
+        static func copy(_ record: inout PackedModel.Offset, from other: PackedModel.Offset) { record = other }
+
+        /// Does nothing: a packed record holds only values its fields encode.
+        static func quantize(_ record: PackedModel.Offset) {}
 
         /// Writes the delta against a baseline: a change bit and, when the words differ, the record's word.
         /// - Throws: `GesWireError` when a word taken unchecked holds an invalid field or the buffer is too small.
@@ -2361,7 +2373,7 @@ enum PackedWire {
             return try writer.finish()
         }
 
-        /// Counts the bytes that `write(into:)` writes, which are `maxByteCount`.
+        /// Counts the bytes that `write(_:into:)` writes, which are `maxByteCount`.
         /// - Throws: `GesWireError` when a word taken unchecked holds an invalid field.
         static func encodedByteCount(_ record: PackedModel.Pair) throws(GesWireError) -> Int {
             let paths = Self.__paths
@@ -2443,6 +2455,12 @@ enum PackedWire {
 
         /// Whether another record writes the same bytes: whether the words are equal.
         static func wireEquals(_ record: PackedModel.Pair, _ other: PackedModel.Pair) -> Bool { record.rawValue == other.rawValue }
+
+        /// Copies another record's word.
+        static func copy(_ record: inout PackedModel.Pair, from other: PackedModel.Pair) { record = other }
+
+        /// Does nothing: a packed record holds only values its fields encode.
+        static func quantize(_ record: PackedModel.Pair) {}
 
         /// Writes the delta against a baseline: a change bit and, when the words differ, the record's word.
         /// - Throws: `GesWireError` when a word taken unchecked holds an invalid field or the buffer is too small.

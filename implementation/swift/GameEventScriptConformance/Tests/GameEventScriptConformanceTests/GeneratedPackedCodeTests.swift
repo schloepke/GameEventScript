@@ -123,6 +123,10 @@ final class GeneratedPackedCodeTests: XCTestCase {
         var read = PackedModel.Cell(uncheckedRawValue: 0)
         try PackedWire.CellWire.read(&read, from: bytes)
         XCTAssertEqual(cell, read)
+        var copied = PackedModel.Cell(uncheckedRawValue: 0)
+        PackedWire.CellWire.copy(&copied, from: cell)
+        PackedWire.CellWire.quantize(copied)
+        XCTAssertTrue(PackedWire.CellWire.wireEquals(cell, copied))
         XCTAssertEqual([0], try PackedWire.CellWire.deltaEncoded(cell, against: cell))
         var changed = cell
         changed.level = 1

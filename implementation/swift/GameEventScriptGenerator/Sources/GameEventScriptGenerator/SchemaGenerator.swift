@@ -66,6 +66,16 @@ public enum GesSchemaGenerator {
                 "The models live in the namespace of the wire code ('\(models)'), where a wire record and the model of its schema would share a name; generate them into different namespaces."
             )
         }
+        // Swift declares each namespace component as an enum, so two generations of one module cannot share the first one.
+        if options.language == .swift, let models = options.models, !models.isEmpty, !options.namespace.isEmpty {
+            let first = options.namespace.split(separator: ".", omittingEmptySubsequences: false)[0]
+            if models.split(separator: ".", omittingEmptySubsequences: false)[0] == first {
+                throw GesGeneratorError(
+                    GesGeneratorError.nameCollision,
+                    "The Swift namespaces '\(options.namespace)' and '\(models)' of wire code and models start alike, so both would declare the enum '\(first)'; give them different first components."
+                )
+            }
+        }
         let layout = try GesSchemaLayoutBuilder.build(set, roots: roots, parameters: parameters)
         let types = try GesSchemaPlanner.plan(layout)
         // Packed records are model types over one word, which wire code declares itself unless it shares those of models.

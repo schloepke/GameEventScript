@@ -675,6 +675,18 @@ internal static class GesSchemaPlanner
     private static bool IsRuntimeName(string name) => name.Length > 3 && name.StartsWith("Ges", System.StringComparison.Ordinal) && name[3] is >= 'A' and <= 'Z';
 
     // The types declared beside the records must not take a name that the generated code uses for another type.
+    // Reserves the `<Name>Wire` type of every packed wire root that the models declare, which holds its wire members beside the
+    // records, so that no record or tag set takes that name.
+    internal static void ReserveSharedRoots(GesSchemaLayout layout, List<GesPlanType> types, HashSet<string> names)
+    {
+        foreach (var type in types)
+        {
+            if (type.Layout.PackedWidth == 0 || !layout.Roots.Contains(type.Name)) continue;
+            if (!names.Add(type.Name + "Wire"))
+                throw new GesGeneratorException(GesGeneratorException.NameCollision, $"The wire members of the packed root '{type.Name}' take the name '{type.Name}Wire', which another type of the generation has.");
+        }
+    }
+
     internal static void CheckTopLevel(ICollection<string> names, bool swift)
     {
         var sorted = new List<string>(names);

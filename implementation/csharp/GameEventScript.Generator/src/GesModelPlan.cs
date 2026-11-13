@@ -330,24 +330,38 @@ internal static class GesModelPlanner
     };
 
     // The declaration as a reader would write it, for documentation: `:Quantity(meter) between 0 and worldWidth step 0.01`.
-    internal static string Describe(GesModelField field)
+    internal static string Describe(GesModelLayout layout, GesModelField field)
     {
         var text = new StringBuilder();
         Describe(field.Value, text);
         if (field.Optional) text.Append(" optional");
         if (field.Key) text.Append(" key");
-        if (field.Default is { } fallback)
-        {
-            text.Append(" default ").Append(fallback.Kind switch
-            {
-                GesSchemaDefaultKind.Number => Decimal(fallback.Value, field.Value.Type == "Percentage" ? 2 : 0),
-                GesSchemaDefaultKind.Boolean => fallback.Boolean ? "true" : "false",
-                GesSchemaDefaultKind.Tag => "#" + fallback.Value,
-                _ => fallback.Value
-            });
-        }
-
+        if (field.Default is { } fallback) text.Append(" default ").Append(DescribeDefault(layout, field.Value, fallback));
         return text.ToString();
+    }
+
+    // A default as a reader would write it, numbers in base units: `0.9`, `90%`, `#rear`, `[efficiency: 90%]`.
+    private static string DescribeDefault(GesModelLayout layout, GesModelValue value, GesLayoutDefault fallback)
+    {
+        switch (fallback.Kind)
+        {
+            case GesSchemaDefaultKind.Number: return Decimal(fallback.Value, value.Type == "Percentage" ? 2 : 0);
+            case GesSchemaDefaultKind.Boolean: return fallback.Boolean ? "true" : "false";
+            case GesSchemaDefaultKind.Tag: return "#" + fallback.Value;
+            case GesSchemaDefaultKind.Record:
+                if (fallback.Entries.Count == 0) return "[:]";
+                var fields = layout.Type(value.Schema).Fields;
+                var entries = fallback.Entries.ConvertAll(entry => entry.Name + ": " + DescribeDefault(layout, fields.Find(field => field.Name == entry.Name)!.Value, entry.Value));
+                return "[" + string.Join(", ", entries) + "]";
+            default: return fallback.Value;
+        }
+    }
+
+    // The fields of the record's schema that a record default names, with their values, in field order.
+    internal static List<(GesModelPlanField Field, GesLayoutDefault Value)> Entries(GesModelLayout layout, GesModelPlanValue value, GesLayoutDefault fallback)
+    {
+        var fields = Fields(layout.Type(value.Model.Schema));
+        return fallback.Entries.ConvertAll(entry => (fields.Find(field => field.Field.Name == entry.Name)!, entry.Value));
     }
 
     private static void Describe(GesModelValue value, StringBuilder text)

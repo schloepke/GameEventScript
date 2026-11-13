@@ -198,6 +198,22 @@ arguments: `DriveUnit(power: 2000)` has a `maxPower` of `2000`. The wire still c
 defaults cost no bits and no presence flags. Rules that reject data, such as `power <= maxPower`, stay in
 your code; a default only fills in.
 
+A field whose type is another schema takes a record literal as its default. It names the fields that differ,
+and every other field keeps its own default; `[:]` names none:
+
+```gess
+schema :Unit_Consumer as {
+  power: :Quantity(W) between 0W and 1_000_000W default 0W
+  efficiency: :Percentage between 0% and 100% default 100%
+}
+
+schema :DriveUnit as { electricity: :Unit_Consumer default [:] }
+schema :WeaponUnit as { electricity: :Unit_Consumer default [efficiency: 90%] }
+```
+
+A generated Swift model then declares `electricity: Unit_Consumer = Unit_Consumer(efficiency: 0.9)`. The literal
+applies only when the whole record is left out; a record that is given, even partly, fills in from its own schema.
+
 Fields that many schemas share are declared once in an `abstract` schema and taken with `with`:
 
 ```gess

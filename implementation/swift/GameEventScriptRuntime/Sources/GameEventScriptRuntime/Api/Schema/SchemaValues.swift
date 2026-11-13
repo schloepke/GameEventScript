@@ -200,8 +200,42 @@ public enum GesSchemaValues {
         case .number:
             let number = Double(fallback.value.canonical) ?? 0
             value = info.valueKind == .percentage ? .percentage(number) : .float(number, unit: info.unit)
+        case .record:
+            value = recordValue(fallback)
         }
         return nil
+    }
+
+    /// The Map of the fields a record literal names; encoding gives every other field its own default.
+    private static func recordValue(_ fallback: GesResolvedDefault) -> GesValue {
+        let entries = fallback.record?.entries ?? []
+        var keys: [String] = []
+        var values: [GesValue] = []
+        keys.reserveCapacity(entries.count)
+        values.reserveCapacity(entries.count)
+        for entry in entries {
+            keys.append(entry.field.name)
+            let type = entry.field.alternatives[0]
+            let value = entry.value
+            switch value.kind {
+            case .boolean:
+                values.append(.boolean(value.boolean))
+            case .tag:
+                values.append((try? .tag(value.name)) ?? .nothing)
+            case .record:
+                values.append(recordValue(value))
+            default:
+                if type.constraints.integer {
+                    var whole = value.value.significand
+                    for _ in 0..<max(value.value.exponent, 0) { whole *= 10 }
+                    values.append(.integer(whole, unit: type.unit))
+                } else {
+                    let number = Double(value.value.canonical) ?? 0
+                    values.append(type.kind == .percentage ? .percentage(number) : .float(number, unit: type.unit))
+                }
+            }
+        }
+        return .map(keys: keys, values: values)
     }
 
     private static func acceptsNothing(_ schema: GesBoundSchema, _ index: Int) -> Bool {

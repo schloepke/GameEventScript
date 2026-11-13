@@ -220,13 +220,30 @@
         }
         if let fallback = field.defaultValue {
             output += " default "
-            if let tag = fallback.tag {
-                output += "#" + tag
-            } else if let boolean = fallback.boolean {
-                output += boolean ? "true" : "false"
-            } else {
-                output += value(fallback.value!)
+            defaultText(fallback, &output)
+        }
+    }
+
+    /// A record literal prints on one line, `[:]` when it names no field.
+    private static func defaultText(_ fallback: GesSchemaDefaultSyntax, _ output: inout String) {
+        if let record = fallback.record {
+            if record.isEmpty {
+                output += "[:]"
+                return
             }
+            output += "["
+            for (index, entry) in record.enumerated() {
+                if index > 0 { output += ", " }
+                output += entry.name + ": "
+                defaultText(entry.value, &output)
+            }
+            output += "]"
+        } else if let tag = fallback.tag {
+            output += "#" + tag
+        } else if let boolean = fallback.boolean {
+            output += boolean ? "true" : "false"
+        } else {
+            output += value(fallback.value!)
         }
     }
 

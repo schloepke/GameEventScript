@@ -162,6 +162,10 @@ and ANSI text preservation.
 ```
 
 ```highlight
+{"name":"schema record default","language":"gess","source":"schema :C as { a: :Percentage default 1%, m: :Tag(#x, #y) default #x }\nschema :S as { c: :C default [a: 90%, m: #y] }\n","expect":[{"text":"default","occurrence":2,"kind":"keyword"},{"text":"90%","kind":"number"},{"text":"#y","occurrence":1,"kind":"tag"}],"diagnostics":[]}
+```
+
+```highlight
 {"name":"schema roles","language":"gess","source":"wire(world) model(view) schema :Arena as { size: :Number integer between 1 and 64 }\nwire messages :Events as (Hit)\nmessage Hit()\n","expect":[{"text":"wire","occurrence":0,"kind":"keyword"},{"text":"model","kind":"keyword"},{"text":"schema","kind":"keyword"},{"text":"wire","occurrence":1,"kind":"keyword"},{"text":"messages","kind":"keyword"}],"diagnostics":[]}
 ```
 

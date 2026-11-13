@@ -30,7 +30,10 @@ public enum GesSchemaDefaultKind : byte
     /// <summary>A tag of a Tag field.</summary>
     Tag,
     /// <summary>A sibling field of the same type, whose value the field takes.</summary>
-    Field
+    Field,
+    /// <summary>A record literal of a field whose type is a schema: the fields it names, each other field taking its own
+    /// default.</summary>
+    Record
 }
 
 /// <summary>The value a field takes when a value or document leaves it out, declared with <c>default</c>; the wire always
@@ -43,6 +46,9 @@ public sealed class GesSchemaDefaultInfo
         if (fallback.Kind == GesSchemaDefaultKind.Number) Number = new GesSchemaBound(new GesResolvedValue { Value = fallback.Value });
         Boolean = fallback.Boolean;
         Name = fallback.Name;
+        var entries = new GesSchemaDefaultEntryInfo[fallback.Entries.Length];
+        for (var index = 0; index < entries.Length; index++) entries[index] = new GesSchemaDefaultEntryInfo(fallback.Entries[index]);
+        Entries = new GesReadOnlyArray<GesSchemaDefaultEntryInfo>(entries);
     }
 
     /// <summary>Gets the kind of default.</summary>
@@ -57,6 +63,27 @@ public sealed class GesSchemaDefaultInfo
     /// <summary>Gets the tag without <c>#</c> of a <see cref="GesSchemaDefaultKind.Tag"/> default, the sibling field of a
     /// <see cref="GesSchemaDefaultKind.Field"/> default, or an empty string.</summary>
     public string Name { get; }
+
+    /// <summary>Gets the fields a <see cref="GesSchemaDefaultKind.Record"/> default names, in the field order of its schema;
+    /// empty for <c>[:]</c> and every other kind.</summary>
+    public GesReadOnlyArray<GesSchemaDefaultEntryInfo> Entries { get; }
+}
+
+/// <summary>A field that a record literal default names, with its value.</summary>
+public sealed class GesSchemaDefaultEntryInfo
+{
+    internal GesSchemaDefaultEntryInfo(GesResolvedRecordEntry entry)
+    {
+        Name = entry.Field.Name;
+        Value = new GesSchemaDefaultInfo(entry.Value);
+    }
+
+    /// <summary>Gets the name of the field in the record's schema.</summary>
+    public string Name { get; }
+
+    /// <summary>Gets the value: a <see cref="GesSchemaDefaultKind.Number"/>, <see cref="GesSchemaDefaultKind.Boolean"/>,
+    /// <see cref="GesSchemaDefaultKind.Tag"/> or nested <see cref="GesSchemaDefaultKind.Record"/> default.</summary>
+    public GesSchemaDefaultInfo Value { get; }
 }
 
 /// <summary>The fields a schema takes from another with <c>with</c>.</summary>

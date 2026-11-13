@@ -75,6 +75,6 @@ final class GeneratedBindingTests: XCTestCase {
 
     func testASetRefusesATypeThatTheNextCatalogDeclares() throws {
         XCTAssertThrowsError(try RolesBound.GesTypes(nextCatalog: try RolesBound.GesTypes()))
-        XCTAssertEqual(try RolesBound.GesTypes().types.map(\.name), ["World_Body", "RadarView", "BotView", "GearPreset", "GearView", "Panel_Badge", "Panel_Entry", "Panel_Report", "RadarEcho", "WorldView"])
+        XCTAssertEqual(try RolesBound.GesTypes().types.map(\.name), ["World_Body", "RadarView", "BotView", "GearPreset", "GearView", "Panel_Badge", "Panel_Entry", "Panel_Report", "RadarEcho", "Tuning", "Rig", "WorldView"])
     }
 }

@@ -256,6 +256,19 @@ final class GeneratedRoleCodeTests: XCTestCase {
         XCTAssertEqual(body.hull, .light)
     }
 
+    func testALeftOutRecordTakesItsRecordDefault() throws {
+        let view = RolesModel.WorldView(tick: 1, time: 0, arena: GesVector())
+        XCTAssertEqual(view.tuning, RolesModel.Tuning(gain: 1, mode: .soft, limit: 100, cap: 100), "[:] gives every field its own default.")
+        XCTAssertEqual(view.rig, RolesModel.Rig(tuning: RolesModel.Tuning(gain: 0.5)), "A nested literal fills in the record it names.")
+        XCTAssertEqual(view.boost, RolesModel.Tuning(gain: 1.5, mode: .hard, limit: 2000, cap: 2000), "A field that defaults to a named field takes its value.")
+        XCTAssertEqual(RolesModel.WorldView(tick: 1, time: 0, arena: GesVector(), boost: RolesModel.Tuning()).boost, RolesModel.Tuning())
+
+        let fields = try XCTUnwrap(view.toValue().asMap)
+        let keys = (0..<fields.length).map { fields.key(at: $0) }.filter { !["rig", "tuning", "boost"].contains($0) }
+        let values = keys.map { fields.get($0)! }
+        XCTAssertEqual(try RolesModel.WorldView(value: .map(keys: keys, values: values)), view)
+    }
+
     func testTakenFieldsAdoptTheProtocolOfTheirSchema() {
         let gear: any RolesModel.Gear = RolesModel.GearView(slot: 3, label: "drill", side: .left, grade: .high)
         let part: any RolesModel.Part = gear

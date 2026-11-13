@@ -670,9 +670,18 @@ internal static class GesSchemaBinder
         AddUnion(build, scope, field.Alternatives, field.Name, path, field.Marker == GesSchemaFieldMarker.Optional, top && field.Marker == GesSchemaFieldMarker.Key, lists);
         if (field.Default is not { } fallback) return;
         if (fallback.Kind == GesSchemaDefaultKind.Number) CheckDefault(scope, field.Alternatives[0].Constraints, fallback.Value, fallback.Offset, Bound(build));
+        else if (fallback.Kind == GesSchemaDefaultKind.Record) CheckRecord(build, scope, fallback);
         var node = build.Nodes[index];
         node.Default = fallback;
         build.Nodes[index] = node;
+    }
+
+    // The numbers of a record literal against the bounds its parameters decide.
+    private static void CheckRecord(Build build, GesFileScope scope, GesResolvedDefault fallback)
+    {
+        foreach (var entry in fallback.Entries)
+            if (entry.Value.Kind == GesSchemaDefaultKind.Number) CheckDefault(scope, entry.Field.Alternatives[0].Constraints, entry.Value.Value, entry.Value.Offset, Bound(build));
+            else if (entry.Value.Kind == GesSchemaDefaultKind.Record) CheckRecord(build, scope, entry.Value);
     }
 
     private static void AddUnion(Build build, GesFileScope scope, GesResolvedType[] alternatives, string name, string path, bool optional, bool key, int lists)

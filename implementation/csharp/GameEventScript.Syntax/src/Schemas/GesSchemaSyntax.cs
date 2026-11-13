@@ -217,7 +217,7 @@ internal sealed class GesSchemaExpressionSyntax
 }
 
 // The value a field takes when a value or document leaves it out: `default` with a number, a constant, a let or a sibling field
-// (both in Value), `true` or `false`, or a tag.
+// (both in Value), `true` or `false`, a tag, or a record literal such as `[:]` or `[efficiency: 90%]`.
 internal sealed class GesSchemaDefaultSyntax
 {
     internal GesSchemaValueSyntax? Value { get; init; }
@@ -225,6 +225,19 @@ internal sealed class GesSchemaDefaultSyntax
     internal bool? Boolean { get; init; }
 
     internal string? Tag { get; init; }
+
+    // The named fields of a record literal in written order, empty for `[:]`; null for every other default.
+    internal GesSchemaRecordEntrySyntax[]? Record { get; init; }
+
+    internal int Offset { get; init; }
+}
+
+// One `name: value` of a record literal; the value is again a number, a constant, `true`, `false`, a tag or a record literal.
+internal sealed class GesSchemaRecordEntrySyntax
+{
+    internal string Name { get; init; } = "";
+
+    internal GesSchemaDefaultSyntax Value { get; init; } = null!;
 
     internal int Offset { get; init; }
 }

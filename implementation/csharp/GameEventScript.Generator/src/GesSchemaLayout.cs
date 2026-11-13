@@ -49,18 +49,20 @@ internal sealed class GesLayoutParameter(string name, string type, string unit, 
     internal string Literal { get; } = literal;
 }
 
-// The default of a field: its kind, `number`, `boolean`, `tag` or `field`, and its value, a canonical decimal in base units,
-// a Boolean, a tag without `#` or a sibling field's name.
+// The default of a field: its kind, `number`, `boolean`, `tag`, `field` or `record`, and its value, a canonical decimal in
+// base units, a Boolean, a tag without `#` or a sibling field's name; a record lists the fields it names with their defaults.
 internal sealed class GesLayoutDefault
 {
     internal GesSchemaDefaultKind Kind;
     internal string Value = "";
     internal bool Boolean;
+    internal List<GesLayoutDefaultEntry> Entries = [];
 
-    internal static GesLayoutDefault? Of(GesSchemaFieldInfo field)
+    internal static GesLayoutDefault? Of(GesSchemaFieldInfo field) => field.Default is { } fallback ? Of(fallback) : null;
+
+    private static GesLayoutDefault Of(GesSchemaDefaultInfo fallback)
     {
-        if (field.Default is not { } fallback) return null;
-        return new GesLayoutDefault
+        var result = new GesLayoutDefault
         {
             Kind = fallback.Kind,
             Boolean = fallback.Boolean,
@@ -68,6 +70,8 @@ internal sealed class GesLayoutDefault
                 ? number.Significand.ToString(System.Globalization.CultureInfo.InvariantCulture) + "e" + number.Exponent.ToString(System.Globalization.CultureInfo.InvariantCulture)
                 : fallback.Name
         };
+        foreach (var entry in fallback.Entries) result.Entries.Add(new GesLayoutDefaultEntry { Name = entry.Name, Value = Of(entry.Value) });
+        return result;
     }
 
     internal void Write(GesSchemaLayoutJson.Writer json)
@@ -79,12 +83,33 @@ internal sealed class GesLayoutDefault
             GesSchemaDefaultKind.Number => "number",
             GesSchemaDefaultKind.Boolean => "boolean",
             GesSchemaDefaultKind.Tag => "tag",
+            GesSchemaDefaultKind.Record => "record",
             _ => "field"
         });
-        if (Kind == GesSchemaDefaultKind.Boolean) json.Boolean("value", Boolean);
+        if (Kind == GesSchemaDefaultKind.Record)
+        {
+            json.BeginArray("entries");
+            foreach (var entry in Entries)
+            {
+                json.BeginObject();
+                json.String("name", entry.Name);
+                entry.Value.Write(json);
+                json.EndObject();
+            }
+
+            json.EndArray();
+        }
+        else if (Kind == GesSchemaDefaultKind.Boolean) json.Boolean("value", Boolean);
         else json.String("value", Value);
         json.EndObject();
     }
+}
+
+// A field a record default names, with its value.
+internal sealed class GesLayoutDefaultEntry
+{
+    internal string Name = "";
+    internal GesLayoutDefault Value = null!;
 }
 
 // A `let` of a schema: its kind, unit, exact value in base units and whether it is a whole Number within Int64.

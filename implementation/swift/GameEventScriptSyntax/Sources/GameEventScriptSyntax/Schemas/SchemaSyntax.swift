@@ -281,12 +281,21 @@ public enum GesSchemaTypeKind: String, Sendable, Equatable {
 }
 
 /// The value a field takes when a value or document leaves it out: `default` with a number, a constant, a let or a sibling
-/// field (all in `value`), `true` or `false`, or a tag.
+/// field (all in `value`), `true` or `false`, a tag, or a record literal such as `[:]` or `[efficiency: 90%]`.
 @_spi(Syntax) public struct GesSchemaDefaultSyntax: Sendable {
     @_spi(Syntax) public var value: GesSchemaValueSyntax?
     @_spi(Syntax) public var boolean: Bool?
     @_spi(Syntax) public var tag: String?
+    /// The named fields of a record literal in written order, empty for `[:]`; nil for every other default.
+    @_spi(Syntax) public var record: [GesSchemaRecordEntrySyntax]?
     @_spi(Syntax) public var offset = 0
+}
+
+/// One `name: value` of a record literal; the value is again a number, a constant, `true`, `false`, a tag or a record literal.
+@_spi(Syntax) public struct GesSchemaRecordEntrySyntax: Sendable {
+    @_spi(Syntax) public let name: String
+    @_spi(Syntax) public let value: GesSchemaDefaultSyntax
+    @_spi(Syntax) public let offset: Int
 }
 
 /// A constant of a schema, `let name be value`, which its fields can name.

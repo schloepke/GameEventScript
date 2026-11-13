@@ -103,7 +103,7 @@
 			<array>
 				<dict>
 					<key>match</key>
-					<string>-?\b\d[\d_]*(?:\.\d[\d_]*)?(?:[eE][+-]?\d+)?[^\s,(){}|#]*</string>
+					<string>-?\b\d[\d_]*(?:\.\d[\d_]*)?(?:[eE][+-]?\d+)?[^\s,(){}\[\]|#]*</string>
 					<key>name</key>
 					<string>constant.numeric.gameeventscript.schema</string>
 				</dict>
@@ -145,7 +145,7 @@
 				</dict>
 				<dict>
 					<key>match</key>
-					<string>[,:{}()]</string>
+					<string>[,:{}()\[\]]</string>
 					<key>name</key>
 					<string>punctuation.separator.gameeventscript.schema</string>
 				</dict>

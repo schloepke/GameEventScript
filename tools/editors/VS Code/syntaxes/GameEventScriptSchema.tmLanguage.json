@@ -67,7 +67,7 @@
     "numbers": {
       "patterns": [
         {
-          "match": "-?\\b\\d[\\d_]*(?:\\.\\d[\\d_]*)?(?:[eE][+-]?\\d+)?[^\\s,(){}|#]*",
+          "match": "-?\\b\\d[\\d_]*(?:\\.\\d[\\d_]*)?(?:[eE][+-]?\\d+)?[^\\s,(){}\\[\\]|#]*",
           "name": "constant.numeric.gameeventscript.schema"
         }
       ]
@@ -95,7 +95,7 @@
           "name": "keyword.operator.union.gameeventscript.schema"
         },
         {
-          "match": "[,:{}()]",
+          "match": "[,:{}()\\[\\]]",
           "name": "punctuation.separator.gameeventscript.schema"
         }
       ]

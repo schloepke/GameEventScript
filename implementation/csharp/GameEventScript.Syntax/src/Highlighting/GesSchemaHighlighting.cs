@@ -85,5 +85,5 @@ internal static class GesSchemaHighlighting
     }
 
     private static bool IsNumberEnd(string text, int index)
-        => text[index] is ' ' or '\t' or '\r' or '\n' or ',' or '(' or ')' or '{' or '}' or '|' or '#' || (text[index] == '/' && index + 1 < text.Length && text[index + 1] == '/');
+        => text[index] is ' ' or '\t' or '\r' or '\n' or ',' or '(' or ')' or '{' or '}' or '[' or ']' or '|' or '#' || (text[index] == '/' && index + 1 < text.Length && text[index + 1] == '/');
 }

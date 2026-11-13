@@ -232,6 +232,23 @@ public sealed class GesRolesGeneratedCodeTests
     }
 
     [TestMethod]
+    public void ALeftOutRecordTakesItsRecordDefault()
+    {
+        var view = new Model.WorldView();
+        Assert.AreEqual(new Model.Tuning(1, Model.Tuning.ModeTag.Soft, 100, 100), view.Tuning, "[:] gives every field its own default.");
+        Assert.AreEqual(new Model.Rig(new Model.Tuning(0.5)), view.Rig, "A nested literal fills in the record it names.");
+        Assert.AreEqual(new Model.Tuning(1.5, Model.Tuning.ModeTag.Hard, 2000, 2000), view.Boost, "A field that defaults to a named field takes its value.");
+
+        var built = new Model.WorldView(1, 0, new GesVector(0, 0), [], null, [], null, null);
+        Assert.AreEqual(view.Boost, built.Boost);
+        Assert.AreEqual(new Model.Tuning(), new Model.WorldView(1, 0, new GesVector(0, 0), [], null, [], null, null, boost: new Model.Tuning()).Boost);
+
+        var fields = built.ToValue().AsMap()!;
+        var keys = Enumerable.Range(0, fields.Length).Select(fields.KeyAt).Where(key => key is not ("rig" or "tuning" or "boost")).ToArray();
+        Assert.AreEqual(built, Model.WorldView.FromValue(GesValue.GesMap(keys, keys.Select(key => fields.Get(key)!.Value).ToArray())));
+    }
+
+    [TestMethod]
     public void TakenFieldsAdoptTheInterfaceOfTheirSchema()
     {
         Model.IGear gear = new Model.GearView(3, "drill", Model.Side.Left, 2, Model.GearView.GradeTag.High);
@@ -456,6 +473,6 @@ public sealed class GesRolesBindingTests
     {
         var first = new Bound.GesTypes();
         Assert.ThrowsExactly<ArgumentException>(() => new Bound.GesTypes(first));
-        CollectionAssert.AreEqual(new[] { "World_Body", "RadarView", "BotView", "GearPreset", "GearView", "Panel_Badge", "Panel_Entry", "Panel_Report", "RadarEcho", "WorldView" }, new Bound.GesTypes().Types.Select(type => type.Name).ToArray());
+        CollectionAssert.AreEqual(new[] { "World_Body", "RadarView", "BotView", "GearPreset", "GearView", "Panel_Badge", "Panel_Entry", "Panel_Report", "RadarEcho", "Tuning", "Rig", "WorldView" }, new Bound.GesTypes().Types.Select(type => type.Name).ToArray());
     }
 }

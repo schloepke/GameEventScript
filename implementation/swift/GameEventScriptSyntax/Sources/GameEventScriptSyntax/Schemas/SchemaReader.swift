@@ -304,8 +304,38 @@
         return GesSchemaFieldSyntax(name: fieldName, unlabeled: unlabeled, alternatives: alternatives, marker: marker, defaultValue: fallback, offset: offset)
     }
 
-    /// A tag, `true`, `false`, or a value: a number, a constant, or the name of a let or a sibling field.
+    /// A tag, `true`, `false`, a record literal, or a value: a number, a constant, or the name of a let or a sibling field.
     private mutating func defaultValue(_ offset: Int) throws -> GesSchemaDefaultSyntax {
+        position < bytes.count && bytes[position] == 91 ? try recordDefault(offset, depth: 1) : try entryValue(offset)
+    }
+
+    /// `[:]`, or `[name: value, ...]` with comma-separated entries; comments and line breaks may stand between the tokens.
+    private mutating func recordDefault(_ offset: Int, depth: Int) throws -> GesSchemaDefaultSyntax {
+        if depth > Self.maximumTypeNesting { throw failure("Record defaults nest at most \(Self.maximumTypeNesting) levels.") }
+        try expect(91)
+        skipTrivia()
+        if consume(58) {
+            skipTrivia()
+            try expect(93)
+            return GesSchemaDefaultSyntax(record: [], offset: offset)
+        }
+        var entries: [GesSchemaRecordEntrySyntax] = []
+        repeat {
+            skipTrivia()
+            let start = position
+            let entryName = try name(GesNames.plain, "field name")
+            skipSpaces()
+            try expect(58)
+            skipTrivia()
+            let entry = position < bytes.count && bytes[position] == 91 ? try recordDefault(position, depth: depth + 1) : try entryValue(position)
+            entries.append(GesSchemaRecordEntrySyntax(name: entryName, value: entry, offset: start))
+            skipTrivia()
+        } while consume(44)
+        try expect(93)
+        return GesSchemaDefaultSyntax(record: entries, offset: offset)
+    }
+
+    private mutating func entryValue(_ offset: Int) throws -> GesSchemaDefaultSyntax {
         if consume(35) { return GesSchemaDefaultSyntax(tag: try name(GesNames.plain, "tag name"), offset: offset) }
         for written in ["true", "false"] where atWord(written) {
             _ = word()
@@ -600,7 +630,7 @@
 
     func isLiteralEnd(_ index: Int) -> Bool {
         switch bytes[index] {
-        case 32, 9, 13, 10, 44, 40, 41, 123, 125, 124, 35: return true
+        case 32, 9, 13, 10, 44, 40, 41, 123, 125, 91, 93, 124, 35: return true
         case 47: return index + 1 < bytes.count && bytes[index + 1] == 47
         default: return false
         }

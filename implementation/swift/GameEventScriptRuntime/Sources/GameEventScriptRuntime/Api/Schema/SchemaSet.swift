@@ -62,6 +62,7 @@ public final class GesSchemaSet: @unchecked Sendable {
             var path: [GesResolvedDeclaration] = []
             try Self.checkNesting(declaration, &path, &visited)
         }
+        for file in files { try file.resolveRecordDefaults() }
         for declaration in ordered where declaration.syntax.wireGroup != nil { try GesSchemaBinder.checkEncodable(declaration) }
         schemas = ordered.map { declaration in
             let schema = GesSchema(declaration)
@@ -286,14 +287,28 @@ struct GesResolvedField {
     let scope: GesFileScope
 }
 
-/// The default of a field: an exact number in base units, a Boolean, a tag, or the name of a sibling field.
+/// The default of a field: an exact number in base units, a Boolean, a tag, the name of a sibling field, or a record literal.
 struct GesResolvedDefault: Sendable {
     var kind = GesSchemaDefaultKind.number
     var value = GesSchemaDecimal(0, 0)
     var boolean = false
     /// The tag without `#`, or the sibling field.
     var name = ""
+    /// The fields a record literal names, which every copy of the field taken with `with` shares.
+    var record: GesResolvedRecord?
     var offset = 0
+}
+
+/// The named fields of a record literal in the field order of its schema, filled once every schema is composed and immutable
+/// after loading.
+final class GesResolvedRecord: @unchecked Sendable {
+    var entries: [GesResolvedRecordEntry] = []
+}
+
+/// A field a record literal names, with its default-like value: a number, a Boolean, a tag, or again a record literal.
+struct GesResolvedRecordEntry {
+    let field: GesResolvedField
+    let value: GesResolvedDefault
 }
 
 final class GesResolvedDeclaration {
@@ -333,6 +348,8 @@ final class GesFileScope {
     private var tagSets: [String: GesSchemaDeclarationSyntax] = [:]
     /// The lets of the schema being resolved, which its fields can name.
     private var lets: [String: GesResolvedLet] = [:]
+    /// Record literals of fields, resolved once every schema is composed, since they name the fields of another schema.
+    private var records: [(record: GesResolvedRecord, schema: GesResolvedDeclaration, syntax: GesSchemaDefaultSyntax)] = []
     private(set) var parameters: [String: GesSchemaTypeSyntax] = [:]
     var sourceName: String { source.name }
 
@@ -597,10 +614,57 @@ final class GesFileScope {
             let resolved = try resolveValue(value, type.unit, type.kind == .percentage, bound: false)!
             try GesSchemaBinder.checkDefault(self, type.constraints, resolved.value, written.offset, nil)
             return GesResolvedDefault(kind: .number, value: resolved.value, offset: written.offset)
+        case .reference where written.record != nil:
+            let record = GesResolvedRecord()
+            records.append((record, type.reference!, written))
+            return GesResolvedDefault(kind: .record, record: record, offset: written.offset)
         default:
             break
         }
         throw error(Code.invalidDefault, written.offset, "A \(type.kind.rawValue) field takes no such default; a sibling field of its type can be one.")
+    }
+
+    func resolveRecordDefaults() throws {
+        for (record, schema, written) in records { record.entries = try resolveRecord(schema, written) }
+    }
+
+    /// The fields a record literal names, in the field order of its schema. Each name is a stored field, at most once, whose
+    /// value is checked as its own default would be; a required field it leaves out has a default or accepts nothing.
+    private func resolveRecord(_ schema: GesResolvedDeclaration, _ written: GesSchemaDefaultSyntax) throws -> [GesResolvedRecordEntry] {
+        var resolved = [GesResolvedDefault?](repeating: nil, count: schema.fields.count)
+        for entry in written.record! {
+            guard let index = schema.fields.firstIndex(where: { $0.name == entry.name }) else {
+                throw error(Code.invalidDefault, entry.offset, "'\(entry.name)' is no stored field of '\(schema.name)'.")
+            }
+            if resolved[index] != nil { throw error(Code.invalidDefault, entry.offset, "The record literal names '\(entry.name)' twice.") }
+            let field = schema.fields[index]
+            let value = entry.value
+            if let name = value.value?.name, !name.isEmpty { throw error(Code.invalidDefault, entry.offset, "A record literal names no let, parameter or field.") }
+            if field.alternatives.count != 1 { throw error(Code.invalidDefault, entry.offset, "'\(entry.name)' is a union, which a record literal leaves out.") }
+            let type = field.alternatives[0]
+            if type.kind == .reference && value.record != nil {
+                let record = GesResolvedRecord()
+                record.entries = try resolveRecord(type.reference!, value)
+                resolved[index] = GesResolvedDefault(kind: .record, record: record, offset: entry.offset)
+                continue
+            }
+            let scalars: Set<GesSchemaTypeKind> = [.boolean, .tag, .number, .percentage, .quantity]
+            if !scalars.contains(type.kind) || value.record != nil {
+                throw error(Code.invalidDefault, entry.offset, "'\(entry.name)' is a \(type.kind.rawValue) field, which takes no such value in a record literal.")
+            }
+            var scalar = value
+            scalar.offset = entry.offset
+            resolved[index] = try resolveDefault(type, scalar)
+        }
+        var result: [GesResolvedRecordEntry] = []
+        for (index, field) in schema.fields.enumerated() {
+            if let value = resolved[index] {
+                result.append(GesResolvedRecordEntry(field: field, value: value))
+            } else if field.defaultValue == nil && field.marker != .optional && !field.alternatives.contains(where: { $0.kind == .nothing }) {
+                throw error(Code.invalidDefault, written.offset, "The record literal leaves out '\(field.name)' of '\(schema.name)', which has no default.")
+            }
+        }
+        return result
     }
 
     private func resolveField(_ field: GesSchemaFieldSyntax, _ index: Int, _ owner: GesSchemaKind, _ all: [String: GesResolvedDeclaration]) throws -> GesResolvedField {
@@ -902,9 +966,28 @@ enum GesSchemaCanonical {
             case .boolean: output += fallback.boolean ? "true" : "false"
             case .tag: output += "#" + fallback.name
             case .field: output += "field " + fallback.name
+            case .record: output += recordText(fallback)
             }
         }
         output += "\n"
+    }
+
+    /// `[:]`, or `[name: value, ...]` in the field order of the record's schema.
+    private static func recordText(_ fallback: GesResolvedDefault) -> String {
+        let entries = fallback.record?.entries ?? []
+        if entries.isEmpty { return "[:]" }
+        var output = "["
+        for (index, entry) in entries.enumerated() {
+            if index > 0 { output += ", " }
+            output += entry.field.name + ": "
+            switch entry.value.kind {
+            case .number: output += entry.value.value.canonical
+            case .boolean: output += entry.value.boolean ? "true" : "false"
+            case .tag: output += "#" + entry.value.name
+            default: output += recordText(entry.value)
+            }
+        }
+        return output + "]"
     }
 
     /// The canonical type of a field that a sibling may default to, without delta ranges, which constrain no value, and with

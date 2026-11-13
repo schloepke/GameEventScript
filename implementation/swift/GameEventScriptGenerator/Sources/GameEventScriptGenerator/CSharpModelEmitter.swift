@@ -158,7 +158,7 @@ enum GesCSharpModelEmitter {
         code.open("{")
         for (index, field) in GesModelPlanner.fields(GesModelType(name: protocolType.name, fields: protocolType.fields)).enumerated() {
             if index > 0 { code.blank() }
-            code.line("/// <summary><c>\(escape(field.field.name + ": " + GesModelPlanner.describe(field.field)))</c></summary>")
+            code.line("/// <summary><c>\(escape(field.field.name + ": " + GesModelPlanner.describe(layout, field.field)))</c></summary>")
             code.line("\(self.type(field.value)) \(field.base) { get; }")
         }
         code.close()
@@ -214,29 +214,31 @@ enum GesCSharpModelEmitter {
             while trailing > 0 && fields[trailing - 1].field.defaultValue != nil { trailing -= 1 }
             code.blank()
             code.line("/// <summary>Creates a record from its fields.</summary>")
-            for field in fields {
-                let named = GesModelPlanner.sibling(fields, field).map { "; null takes <c>\(fields[$0].field.name)</c>" } ?? ""
-                code.line("/// <param name=\"\(GesSchemaPlanner.camel(field.base))\">The field <c>\(field.field.name)</c>\(named).</param>")
+            // A record default is no constant, so a trailing parameter of one is null for it.
+            let record = { (index: Int) in index >= trailing && fields[index].field.defaultValue?.kind == .record }
+            for (index, field) in fields.enumerated() {
+                let note = GesModelPlanner.sibling(fields, field).map { "; null takes <c>\(fields[$0].field.name)</c>" } ?? (record(index) ? "; null takes its default" : "")
+                code.line("/// <param name=\"\(GesSchemaPlanner.camel(field.base))\">The field <c>\(field.field.name)</c>\(note).</param>")
             }
             let parameters = fields.enumerated().map { index, field in
                 let optional = index >= trailing
-                if GesModelPlanner.sibling(fields, field) != nil { return "\(plain(field.value))? \(parameter(field.base))\(optional ? " = null" : "")" }
-                return "\(self.type(field.value)) \(parameter(field.base))\(optional ? " = " + native(field.value, field.field.defaultValue!) : "")"
+                if GesModelPlanner.sibling(fields, field) != nil || record(index) { return "\(plain(field.value))? \(parameter(field.base))\(optional ? " = null" : "")" }
+                return "\(self.type(field.value)) \(parameter(field.base))\(optional ? " = " + native(layout, field.value, field.field.defaultValue!) : "")"
             }
             code.line("public \(type.name)(\(parameters.joined(separator: ", ")))")
             code.open("{")
             for index in order {
                 let field = fields[index]
-                let fallback = GesModelPlanner.sibling(fields, field).map { " ?? " + fields[$0].base } ?? ""
+                let fallback = GesModelPlanner.sibling(fields, field).map { " ?? " + fields[$0].base } ?? (record(index) ? " ?? " + native(layout, field.value, field.field.defaultValue!) : "")
                 code.line("\(field.base) = \(parameter(field.base))\(fallback);")
             }
             code.close()
         }
         for field in fields {
             code.blank()
-            code.line("/// <summary><c>\(escape(field.field.name + ": " + GesModelPlanner.describe(field.field)))</c></summary>")
+            code.line("/// <summary><c>\(escape(field.field.name + ": " + GesModelPlanner.describe(layout, field.field)))</c></summary>")
             let initial: String
-            if let fallback = field.field.defaultValue, fallback.kind != .field { initial = native(field.value, fallback) } else { initial = self.initial(field.value) }
+            if let fallback = field.field.defaultValue, fallback.kind != .field { initial = native(layout, field.value, fallback) } else { initial = self.initial(field.value) }
             code.line("public \(self.type(field.value)) \(field.base) { get; set; }\(initial.isEmpty ? "" : " = " + initial + ";")")
         }
         computed.members(&code, type.name, type.computed, "public")
@@ -387,32 +389,52 @@ enum GesCSharpModelEmitter {
         }
     }
 
-    // A literal default as a native constant.
-    private static func native(_ value: GesModelPlanValue, _ fallback: GesLayoutDefault) -> String {
+    // A literal default as a native constant. A record creates its model with the fields the literal names, and also sets
+    // each field that defaults to one of them, since the parameterless constructor copies siblings before an object
+    // initializer runs.
+    private static func native(_ layout: GesModelLayout, _ value: GesModelPlanValue, _ fallback: GesLayoutDefault, _ qualifier: String = "", _ owner: String? = nil) -> String {
         switch fallback.kind {
         case .boolean: fallback.boolean ? "true" : "false"
-        case .tag where value.closedTag: plain(value) + "." + GesSchemaPlanner.pascal(fallback.value)
+        case .tag where value.closedTag: plain(value, qualifier, owner) + "." + GesSchemaPlanner.pascal(fallback.value)
         case .tag: literal(fallback.value)
+        case .record: recordNative(layout, value, fallback, qualifier)
         default: GesModelPlanner.number(value, fallback)
         }
     }
 
+    private static func recordNative(_ layout: GesModelLayout, _ value: GesModelPlanValue, _ fallback: GesLayoutDefault, _ qualifier: String) -> String {
+        let fields = GesModelPlanner.fields(layout.type(value.model.schema))
+        let named = GesModelPlanner.entries(layout, value, fallback)
+        var assignments: [String] = []
+        for field in fields {
+            var current = field
+            var entry = named.firstIndex { $0.field.field.name == current.field.name }
+            while entry == nil, let next = GesModelPlanner.sibling(fields, current) {
+                current = fields[next]
+                entry = named.firstIndex { $0.field.field.name == current.field.name }
+            }
+            if let entry { assignments.append("\(field.base) = \(native(layout, named[entry].field.value, named[entry].value, qualifier, value.model.schema))") }
+        }
+        let type = plain(value, qualifier)
+        return assignments.isEmpty ? "new \(type)()" : "new \(type) { \(assignments.joined(separator: ", ")) }"
+    }
+
     // The GES value that a field left out of a Record or Map takes: its literal default, the value of the sibling it names,
     // or else `missing`.
-    private static func held(_ fields: [GesModelPlanField], _ index: Int, _ owner: String, _ qualifier: String, _ support: String, _ sibling: (Int) -> String, _ missing: String) -> String {
+    private static func held(_ layout: GesModelLayout, _ fields: [GesModelPlanField], _ index: Int, _ owner: String, _ qualifier: String, _ support: String, _ sibling: (Int) -> String, _ missing: String) -> String {
         let field = fields[index]
         let key = "fields.Get(\(literal(field.field.name)))"
         guard let fallback = field.field.defaultValue else { return missing }
         switch fallback.kind {
         case .field: return "\(key) ?? \(sibling(GesModelPlanner.sibling(fields, field)!))"
         case .tag: return "\(key) ?? GesValue.GesTag(\(literal(fallback.value)))"
-        default: return "\(key) ?? \(encode(field.value, owner, native(field.value, fallback), qualifier, support, nullable: false, plain: true))"
+        default: return "\(key) ?? \(encode(field.value, owner, native(layout, field.value, fallback, qualifier), qualifier, support, nullable: false, plain: true))"
         }
     }
 
     // A field's GES value inline, following defaults to siblings; nothing when no value or default is left.
-    private static func inline(_ fields: [GesModelPlanField], _ index: Int, _ owner: String, _ qualifier: String, _ support: String) -> String {
-        held(fields, index, owner, qualifier, support, { inline(fields, $0, owner, qualifier, support) }, "\(support).Field(fields, \(literal(fields[index].field.name)))")
+    private static func inline(_ layout: GesModelLayout, _ fields: [GesModelPlanField], _ index: Int, _ owner: String, _ qualifier: String, _ support: String) -> String {
+        held(layout, fields, index, owner, qualifier, support, { inline(layout, fields, $0, owner, qualifier, support) }, "\(support).Field(fields, \(literal(fields[index].field.name)))")
     }
 
     // The zero value of a property that the type's default would not give: empty texts and lists, new records, the first
@@ -785,7 +807,7 @@ enum GesCSharpModelEmitter {
                 let fieldLiteral = literal(field.field.name)
                 let held = "value\(index)"
                 let missing = field.value.nullable ? "\(support).Field(fields, \(fieldLiteral))" : "Required(fields, \(fieldLiteral), path)"
-                code.line("var \(held) = \(self.held(fields, index, type.name, qualifier, support, { "value\($0)" }, missing));")
+                code.line("var \(held) = \(self.held(layout, fields, index, type.name, qualifier, support, { "value\($0)" }, missing));")
                 if descends(field.value) {
                     code.line("var field\(index) = \(read(field.value, type.name, held, "Path(path, \(fieldLiteral))", qualifier, support));")
                 } else {
@@ -809,7 +831,7 @@ enum GesCSharpModelEmitter {
             code.line("var fields = RecordFields(value, \(typeLiteral), \(names));")
             var conditions = ["fields is null"]
             for (index, field) in fields.enumerated() {
-                conditions.append("!" + decode(field.value, type.name, inline(fields, index, type.name, qualifier, support), "out var field\(index)", qualifier, support))
+                conditions.append("!" + decode(field.value, type.name, inline(layout, fields, index, type.name, qualifier, support), "out var field\(index)", qualifier, support))
             }
             for (index, condition) in conditions.enumerated() {
                 code.line((index == 0 ? "if (" : "    || ") + condition + (index == conditions.count - 1 ? ") return false;" : ""))
@@ -973,7 +995,7 @@ enum GesCSharpModelEmitter {
             code.line("var fields = call.Arguments[0].AsMap();")
             var conditions = ["fields is null", "!\(support).Known(fields, \(type.name)Value.Names)"]
             for (index, field) in fields.enumerated() {
-                conditions.append("!" + decode(field.value, type.name, inline(fields, index, type.name, qualifier, support), "out var " + parameter(field.base), qualifier, support))
+                conditions.append("!" + decode(field.value, type.name, inline(layout, fields, index, type.name, qualifier, support), "out var " + parameter(field.base), qualifier, support))
             }
             for (index, condition) in conditions.enumerated() { code.line((index == 0 ? "if (" : "    || ") + condition + (index == conditions.count - 1 ? ")" : "")) }
             code.open("{")

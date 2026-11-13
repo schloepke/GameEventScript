@@ -1877,6 +1877,726 @@ schema:
 
 ---
 
+## Test: record defaults in the canonical form
+
+A record literal lists the fields it names in the field order of their schema, each value exact in base units, and `[:]` names none; a constant is replaced by its value.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: canonical-default-record
+schemaApi:
+  sources:
+    - "constant $half be 50%\nschema :C as {\n  power: :Number integer between 0 and 15 default 3\n  level: :Percentage between 0% and 100% step 10% default 100%\n  on: :Boolean default true\n}\nschema :Outer as { c: :C default [on: false] }\nschema :S as {\n  empty: :C default [:]\n  partial: :C default [on: false, level: $half]\n  nested: :Outer default [c: [power: 7]]\n}\n"
+  root: "S"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  canonical: "gess1\nschema S\nfield empty C default [:]\nfield partial C default [level: 5e-1, on: false]\nfield nested Outer default [c: [power: 7e0]]\nschema C\nfield power Number integer between 0e0 15e0 default 3e0\nfield level Percentage between 0e0 1e0 step 1e-1 default 1e0\nfield on Boolean default true\nschema Outer\nfield c C default [on: false]\n"
+  hash: "64574f645f09b5b1"
+```
+
+---
+
+## Test: the description of a record default
+
+A record default lists the fields it names with their values in field order, a nested literal as a record of its own.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: describe-default-record
+schemaApi:
+  sources:
+    - "schema :C as {\n  power: :Number integer between 0 and 15 default 3\n  level: :Percentage between 0% and 100% step 10% default 100%\n  on: :Boolean default true\n}\nschema :Outer as { c: :C }\nschema :S as {\n  empty: :C default [:]\n  nested: :Outer default [c: [on: false, power: 7]]\n}\n"
+  root: "S"
+  bind: false
+  describe: true
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  description:
+    name: "S"
+    kind: "Schema"
+    fields:
+      - name: "empty"
+        alternatives:
+          - kind: "Reference"
+            schema: "C"
+        default:
+          kind: "Record"
+          entries: []
+      - name: "nested"
+        alternatives:
+          - kind: "Reference"
+            schema: "Outer"
+        default:
+          kind: "Record"
+          entries:
+            - name: "c"
+              value:
+                kind: "Record"
+                entries:
+                  - name: "power"
+                    value:
+                      kind: "Number"
+                      value: "7e0"
+                  - name: "on"
+                    value:
+                      kind: "Boolean"
+                      value: false
+```
+
+---
+
+## Test: a left-out record takes the defaults of its schema
+
+`[:]` names no field, so each field of the left-out record takes its own default.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: encode-default-record-empty
+schemaApi:
+  sources:
+    - "schema :C as {\n  power: :Number integer between 0 and 15 default 3\n  level: :Percentage between 0% and 100% step 10% default 100%\n  on: :Boolean default true\n}\nschema :S as { c: :C default [:] }\n"
+  root: "S"
+  encode:
+    type: ":S"
+    entries: []
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "a301"
+```
+
+---
+
+## Test: a left-out record takes its literal
+
+The fields a record literal names take its values; every other field takes its own default.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: encode-default-record-partial
+schemaApi:
+  sources:
+    - "schema :C as {\n  power: :Number integer between 0 and 15 default 3\n  level: :Percentage between 0% and 100% step 10% default 100%\n  on: :Boolean default true\n}\nschema :S as { c: :C default [on: false, level: 50%] }\n"
+  root: "S"
+  encode:
+    type: ":S"
+    entries: []
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "5300"
+```
+
+---
+
+## Test: a nested record literal
+
+A record literal of a field whose type is again a schema writes that record as a nested literal, whose left-out fields take their own defaults.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: encode-default-record-nested
+schemaApi:
+  sources:
+    - "schema :C as {\n  power: :Number integer between 0 and 15 default 3\n  level: :Percentage between 0% and 100% step 10% default 100%\n  on: :Boolean default true\n}\nschema :Outer as {\n  c: :C\n  count: :Number integer between 0 and 7 default 1\n}\nschema :S as { o: :Outer default [c: [power: 7]] }\n"
+  root: "S"
+  encode:
+    type: ":S"
+    entries: []
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "a703"
+```
+
+---
+
+## Test: a given record ignores the literal
+
+The literal applies only when the record is left out; a given record takes the defaults of its own schema for the fields it leaves out.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: encode-default-record-present
+schemaApi:
+  sources:
+    - "schema :C as {\n  power: :Number integer between 0 and 15 default 3\n  level: :Percentage between 0% and 100% step 10% default 100%\n  on: :Boolean default true\n}\nschema :S as { c: :C default [on: false, level: 50%] }\n"
+  root: "S"
+  encode:
+    type: ":S"
+    entries:
+      - key: "c"
+        value:
+          type: ":Map"
+          entries:
+            - key: "power"
+              value:
+                type: ":Number.int64"
+                value: "9"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "a901"
+```
+
+---
+
+## Test: a taken record default
+
+`with` takes a record default together with its field, also from an abstract schema; `all optional` drops it as any other default.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: canonical-default-record-with
+schemaApi:
+  sources:
+    - "schema :C as {\n  power: :Number integer between 0 and 15 default 3\n  level: :Percentage between 0% and 100% step 10% default 100%\n  on: :Boolean default true\n}\nabstract schema :Base as {\n  c: :C default [power: 1]\n  d: :C default [:]\n}\nschema :S as {\n  with :Base without (d)\n  with :Base all optional without (c)\n}\n"
+  root: "S"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  canonical: "gess1\nschema S\nfield c C default [power: 1e0]\nfield d C optional\nschema C\nfield power Number integer between 0e0 15e0 default 3e0\nfield level Percentage between 0e0 1e0 step 1e-1 default 1e0\nfield on Boolean default true\n"
+  hash: "a12ef2623472683c"
+```
+
+---
+
+## Test: a document may leave out a record with a default
+
+Document checking accepts a left-out record field that has a record default.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: document-default-record-omitted
+schemaApi:
+  sources:
+    - "schema :C as {\n  power: :Number integer between 0 and 15 default 3\n  level: :Percentage between 0% and 100% step 10% default 100%\n  on: :Boolean default true\n}\nschema :S as {\n  c: :C default [level: 50%]\n  on: :Boolean\n}\n"
+  document: ":Schema(:S)\non: true\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  document:
+    ok: true
+```
+
+---
+
+## Test: a record literal without a required field
+
+A required field without a default that the literal leaves out makes the literal invalid.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-default-record-missing
+schemaApi:
+  sources:
+    - "schema :C as {\n  a: :Number\n  b: :Number default 1\n}\nschema :S as { c: :C default [b: 2] }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidDefault"
+    line: 5
+    column: 22
+```
+
+---
+
+## Test: a nested record literal without a required field
+
+A nested literal is checked as its own literal, at its opening bracket.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-default-record-nested-missing
+schemaApi:
+  sources:
+    - "schema :C as { a: :Number }\nschema :O as { c: :C }\nschema :S as { o: :O default [c: [:]] }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidDefault"
+    line: 3
+    column: 34
+```
+
+---
+
+## Test: a record literal names an unknown field
+
+Each name of a record literal is a stored field of the record's schema; a computed field is none.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-default-record-unknown
+schemaApi:
+  sources:
+    - "schema :C as {\n  a: :Number default 1\n  b: :Number computed by a + 1\n}\nschema :S as { c: :C default [b: 2] }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidDefault"
+    line: 5
+    column: 31
+```
+
+---
+
+## Test: a record literal value outside the range
+
+A value of a record literal is checked as the field's own default would be.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-default-record-range
+schemaApi:
+  sources:
+    - "schema :C as { level: :Percentage between 0% and 100% default 100% }\nschema :S as { c: :C default [level: 120%] }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidDefault"
+    line: 2
+    column: 31
+```
+
+---
+
+## Test: a record literal value off the step
+
+A value of a quantized field lies on its step.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-default-record-step
+schemaApi:
+  sources:
+    - "schema :C as { a: :Quantity(m) between 0m and 10m step 1m default 1m }\nschema :S as { c: :C default [a: 2.5m] }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidDefault"
+    line: 2
+    column: 31
+```
+
+---
+
+## Test: a record literal tag outside the set
+
+A tag of a record literal belongs to the field's tag set.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-default-record-tag
+schemaApi:
+  sources:
+    - "schema :C as { mode: :Tag(#a, #b) default #a }\nschema :S as { c: :C default [mode: #c] }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidDefault"
+    line: 2
+    column: 31
+```
+
+---
+
+## Test: a record literal value with another unit
+
+A value of a record literal has its field's unit, as a default does.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-default-record-unit
+schemaApi:
+  sources:
+    - "schema :C as { a: :Quantity(m) default 1m }\nschema :S as { c: :C default [a: 1W] }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.unitMismatch"
+    line: 2
+    column: 34
+```
+
+---
+
+## Test: a record literal value outside a range from a parameter
+
+A bound that a parameter decides checks the value at binding.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-default-record-parameter
+schemaApi:
+  sources:
+    - "parameter limit: :Quantity(m)\nschema :C as { a: :Quantity(m) between 0m and limit default 1m }\nschema :S as { c: :C default [a: 5m] }\n"
+  root: "S"
+  parameters:
+    limit: "3m"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidDefault"
+    line: 3
+    column: 31
+```
+
+---
+
+## Test: a record literal names a field twice
+
+Each field appears at most once in a record literal.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-default-record-twice
+schemaApi:
+  sources:
+    - "schema :C as { a: :Number default 1 }\nschema :S as { c: :C default [a: 2, a: 3] }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidDefault"
+    line: 2
+    column: 37
+```
+
+---
+
+## Test: a record default of an optional field
+
+An optional field takes no record default, since it may be absent.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-default-record-optional
+schemaApi:
+  sources:
+    - "schema :C as { a: :Number default 1 }\nschema :S as { c: :C optional default [:] }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidDefault"
+    line: 2
+    column: 31
+```
+
+---
+
+## Test: a record default of a union
+
+A union takes its default only from a sibling field, also when a schema is one of its alternatives.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-default-record-union
+schemaApi:
+  sources:
+    - "schema :C as { a: :Number default 1 }\nschema :S as { c: :C | :Nothing default [:] }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidDefault"
+    line: 2
+    column: 33
+```
+
+---
+
+## Test: a record literal of a scalar field
+
+Only a field whose type is a schema takes a record literal.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-default-record-scalar
+schemaApi:
+  sources:
+    - "schema :S as { a: :Number default [:] }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidDefault"
+    line: 1
+    column: 27
+```
+
+---
+
+## Test: a number default of a record field
+
+A record field takes a record literal or a sibling field, never a number.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-default-record-number
+schemaApi:
+  sources:
+    - "schema :C as { a: :Number default 1 }\nschema :S as { c: :C default 1 }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidDefault"
+    line: 2
+    column: 22
+```
+
+---
+
+## Test: a record literal names a List
+
+A record literal holds numbers, Booleans, tags and nested records; a List, Text or union field stays out.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-default-record-list-entry
+schemaApi:
+  sources:
+    - "schema :C as {\n  a: :List(:Number) max 4\n  b: :Number default 1\n}\nschema :S as { c: :C default [a: 1] }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidDefault"
+    line: 5
+    column: 31
+```
+
+---
+
+## Test: a record literal names a union
+
+A union field of a record keeps out of its literal.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-default-record-union-entry
+schemaApi:
+  sources:
+    - "schema :C as { a: :Number | :Nothing }\nschema :S as { c: :C default [a: 1] }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidDefault"
+    line: 2
+    column: 31
+```
+
+---
+
+## Test: a record literal names a let
+
+A record literal holds literals and constants; it names no let, parameter or field.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-default-record-let
+schemaApi:
+  sources:
+    - "schema :C as { a: :Number default 1 }\nschema :S as {\n  let one be 1\n  c: :C default [a: one]\n}\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidDefault"
+    line: 4
+    column: 18
+```
+
+---
+
+## Test: an empty record literal without a colon
+
+An empty record literal is written `[:]`.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-default-record-empty-brackets
+schemaApi:
+  sources:
+    - "schema :C as { a: :Number default 1 }\nschema :S as { c: :C default [] }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.syntax"
+    line: 2
+    column: 31
+```
+
+---
+
 ## Test: taken fields in the canonical form
 
 `with` copies the fields of another schema where it stands, with their defaults; the canonical form lists them as if written there, and an abstract schema leaves no trace.

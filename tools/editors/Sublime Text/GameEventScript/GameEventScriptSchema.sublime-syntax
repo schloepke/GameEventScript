@@ -44,7 +44,7 @@
       "scope": "variable.other.constant.gameeventscript.schema"
   "numbers":
     -
-      "match": "-?\\b\\d[\\d_]*(?:\\.\\d[\\d_]*)?(?:[eE][+-]?\\d+)?[^\\s,(){}|#]*"
+      "match": "-?\\b\\d[\\d_]*(?:\\.\\d[\\d_]*)?(?:[eE][+-]?\\d+)?[^\\s,(){}\\[\\]|#]*"
       "scope": "constant.numeric.gameeventscript.schema"
   "keywords":
     -
@@ -59,5 +59,5 @@
       "match": "[|]"
       "scope": "keyword.operator.union.gameeventscript.schema"
     -
-      "match": "[,:{}()]"
+      "match": "[,:{}()\\[\\]]"
       "scope": "punctuation.separator.gameeventscript.schema"

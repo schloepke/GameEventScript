@@ -214,21 +214,34 @@ enum GesModelPlanner {
     }
 
     // The declaration as a reader would write it, for documentation: `:Quantity(meter) between 0 and worldWidth step 0.01`.
-    static func describe(_ field: GesModelField) -> String {
+    static func describe(_ layout: GesModelLayout, _ field: GesModelField) -> String {
         var text = ""
         describe(field.value, &text)
         if field.optional { text += " optional" }
         if field.key { text += " key" }
-        if let fallback = field.defaultValue {
-            text += " default "
-            switch fallback.kind {
-            case .number: text += decimal(fallback.value, field.value.type == "Percentage" ? 2 : 0)
-            case .boolean: text += fallback.boolean ? "true" : "false"
-            case .tag: text += "#" + fallback.value
-            case .field: text += fallback.value
-            }
-        }
+        if let fallback = field.defaultValue { text += " default " + describeDefault(layout, field.value, fallback) }
         return text
+    }
+
+    // A default as a reader would write it, numbers in base units: `0.9`, `90%`, `#rear`, `[efficiency: 90%]`.
+    private static func describeDefault(_ layout: GesModelLayout, _ value: GesModelValue, _ fallback: GesLayoutDefault) -> String {
+        switch fallback.kind {
+        case .number: return decimal(fallback.value, value.type == "Percentage" ? 2 : 0)
+        case .boolean: return fallback.boolean ? "true" : "false"
+        case .tag: return "#" + fallback.value
+        case .record:
+            if fallback.entries.isEmpty { return "[:]" }
+            let fields = layout.type(value.schema).fields
+            let entries = fallback.entries.map { entry in entry.name + ": " + describeDefault(layout, fields.first { $0.name == entry.name }!.value, entry.value) }
+            return "[" + entries.joined(separator: ", ") + "]"
+        case .field: return fallback.value
+        }
+    }
+
+    // The fields of the record's schema that a record default names, with their values, in field order.
+    static func entries(_ layout: GesModelLayout, _ value: GesModelPlanValue, _ fallback: GesLayoutDefault) -> [(field: GesModelPlanField, value: GesLayoutDefault)] {
+        let members = fields(layout.type(value.model.schema))
+        return fallback.entries.map { entry in (members.first { $0.field.name == entry.name }!, entry.value) }
     }
 
     private static func describe(_ value: GesModelValue, _ text: inout String) {

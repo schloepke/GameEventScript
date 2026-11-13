@@ -615,7 +615,19 @@ enum GesSchemaBinder {
         try addUnion(&build, scope, field.alternatives, field.name, path, optional: field.marker == .optional, key: top && field.marker == .key, lists)
         guard let fallback = field.defaultValue else { return }
         if fallback.kind == .number { try checkDefault(scope, field.alternatives[0].constraints, fallback.value, fallback.offset, build.parameters) }
+        if fallback.kind == .record { try checkRecord(scope, fallback, build.parameters) }
         build.infos[index].defaultValue = fallback
+    }
+
+    /// The numbers of a record literal against the bounds its parameters decide.
+    private static func checkRecord(_ scope: GesFileScope, _ fallback: GesResolvedDefault, _ parameters: GesSchemaParameters?) throws {
+        for entry in fallback.record?.entries ?? [] {
+            if entry.value.kind == .number {
+                try checkDefault(scope, entry.field.alternatives[0].constraints, entry.value.value, entry.value.offset, parameters)
+            } else if entry.value.kind == .record {
+                try checkRecord(scope, entry.value, parameters)
+            }
+        }
     }
 
     private static func addUnion(_ build: inout Build, _ scope: GesFileScope, _ alternatives: [GesResolvedType], _ name: String, _ path: String, optional: Bool, key: Bool, _ lists: Int) throws {

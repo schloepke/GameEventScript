@@ -185,6 +185,7 @@ public sealed class GesSchemaSet
             if (declaration.Kind == GesSchemaKind.Schema) Compose(declaration, [], composed);
         var visited = new Dictionary<GesResolvedDeclaration, int>();
         foreach (var declaration in _ordered) CheckNesting(declaration, [], visited);
+        foreach (var file in files) file.ResolveRecordDefaults();
         foreach (var declaration in _ordered)
             if (declaration.Syntax.WireGroup is not null) GesSchemaBinder.CheckEncodable(declaration);
         var schemas = new List<GesSchema>();
@@ -348,10 +349,16 @@ internal sealed class GesResolvedField
     internal GesFileScope Scope { get; init; } = null!;
 }
 
-/// <summary>The default of a field: an exact number in base units, a Boolean, a tag, or the name of a sibling field.</summary>
+/// <summary>The default of a field: an exact number in base units, a Boolean, a tag, the name of a sibling field, or a record
+/// literal.</summary>
 internal sealed class GesResolvedDefault
 {
     internal GesSchemaDefaultKind Kind { get; init; }
+
+    // The fields a record literal names, which every copy of the field taken with `with` shares.
+    internal GesResolvedRecord? Record { get; init; }
+
+    internal GesResolvedRecordEntry[] Entries => Record?.Entries ?? [];
 
     internal GesSchemaDecimal Value { get; init; }
 
@@ -361,6 +368,21 @@ internal sealed class GesResolvedDefault
     internal string Name { get; init; } = "";
 
     internal int Offset { get; init; }
+}
+
+// The named fields of a record literal in the field order of its schema, filled once every schema is composed and immutable
+// after loading.
+internal sealed class GesResolvedRecord
+{
+    internal GesResolvedRecordEntry[] Entries { get; set; } = [];
+}
+
+// A field a record literal names, with its default-like value: a number, a Boolean, a tag, or again a record literal.
+internal sealed class GesResolvedRecordEntry
+{
+    internal GesResolvedField Field { get; init; } = null!;
+
+    internal GesResolvedDefault Value { get; init; } = null!;
 }
 
 internal sealed class GesResolvedDeclaration
@@ -406,6 +428,9 @@ internal sealed partial class GesFileScope
 
     // The lets of the schema being resolved, which its fields can name.
     private readonly Dictionary<string, GesResolvedLet> _lets = new(StringComparer.Ordinal);
+
+    // Record literals of fields, resolved once every schema is composed, since they name the fields of another schema.
+    private readonly List<(GesResolvedRecord Record, GesResolvedDeclaration Schema, GesSchemaDefaultSyntax Syntax)> _records = [];
 
     internal GesFileScope(GesSchemaSource source, GesSchemaSourceSyntax syntax)
     {
@@ -687,9 +712,57 @@ internal sealed partial class GesFileScope
                 var resolved = ResolveValue(value, type.Unit, type.Kind == GesSchemaTypeKind.Percentage, bound: false)!;
                 GesSchemaBinder.CheckDefault(this, type.Constraints, resolved.Value, written.Offset, null);
                 return new GesResolvedDefault { Kind = GesSchemaDefaultKind.Number, Value = resolved.Value, Offset = written.Offset };
+            case GesSchemaTypeKind.Reference when written.Record is not null:
+                var record = new GesResolvedRecord();
+                _records.Add((record, type.Reference!, written));
+                return new GesResolvedDefault { Kind = GesSchemaDefaultKind.Record, Record = record, Offset = written.Offset };
             default:
                 throw Error(Code.InvalidDefault, written.Offset, $"A {type.Kind} field takes no such default; a sibling field of its type can be one.");
         }
+    }
+
+    internal void ResolveRecordDefaults()
+    {
+        foreach (var (record, schema, written) in _records) record.Entries = ResolveRecord(schema, written);
+    }
+
+    // The fields a record literal names, in the field order of its schema. Each name is a stored field, at most once, whose
+    // value is checked as its own default would be; a required field it leaves out has a default or accepts nothing.
+    private GesResolvedRecordEntry[] ResolveRecord(GesResolvedDeclaration schema, GesSchemaDefaultSyntax written)
+    {
+        var entries = written.Record!;
+        var resolved = new GesResolvedDefault[schema.Fields.Length];
+        foreach (var entry in entries)
+        {
+            var index = Array.FindIndex(schema.Fields, field => field.Name == entry.Name);
+            if (index < 0) throw Error(Code.InvalidDefault, entry.Offset, $"'{entry.Name}' is no stored field of '{schema.Name}'.");
+            if (resolved[index] is not null) throw Error(Code.InvalidDefault, entry.Offset, $"The record literal names '{entry.Name}' twice.");
+            var field = schema.Fields[index];
+            var value = entry.Value;
+            if (value.Value is { Name.Length: > 0 }) throw Error(Code.InvalidDefault, entry.Offset, "A record literal names no let, parameter or field.");
+            if (field.Alternatives.Length != 1) throw Error(Code.InvalidDefault, entry.Offset, $"'{entry.Name}' is a union, which a record literal leaves out.");
+            var type = field.Alternatives[0];
+            if (type.Kind == GesSchemaTypeKind.Reference && value.Record is not null)
+            {
+                resolved[index] = new GesResolvedDefault { Kind = GesSchemaDefaultKind.Record, Record = new GesResolvedRecord { Entries = ResolveRecord(type.Reference!, value) }, Offset = entry.Offset };
+                continue;
+            }
+
+            if (type.Kind is not (GesSchemaTypeKind.Boolean or GesSchemaTypeKind.Tag or GesSchemaTypeKind.Number or GesSchemaTypeKind.Percentage or GesSchemaTypeKind.Quantity) || value.Record is not null)
+                throw Error(Code.InvalidDefault, entry.Offset, $"'{entry.Name}' is a {type.Kind} field, which takes no such value in a record literal.");
+            resolved[index] = ResolveDefault(type, new GesSchemaDefaultSyntax { Value = value.Value, Boolean = value.Boolean, Tag = value.Tag, Offset = entry.Offset });
+        }
+
+        var result = new List<GesResolvedRecordEntry>();
+        for (var index = 0; index < resolved.Length; index++)
+        {
+            var field = schema.Fields[index];
+            if (resolved[index] is { } value) result.Add(new GesResolvedRecordEntry { Field = field, Value = value });
+            else if (field.Default is null && field.Marker != GesSchemaFieldMarker.Optional && !Array.Exists(field.Alternatives, alternative => alternative.Kind == GesSchemaTypeKind.Nothing))
+                throw Error(Code.InvalidDefault, written.Offset, $"The record literal leaves out '{field.Name}' of '{schema.Name}', which has no default.");
+        }
+
+        return result.ToArray();
     }
 
     // The element of a recursive List: the declaring schema alone, or a union of it and scalars, which hold no schema and no
@@ -1043,11 +1116,33 @@ internal static class GesSchemaCanonical
                 GesSchemaDefaultKind.Number => fallback.Value.Canonical,
                 GesSchemaDefaultKind.Boolean => fallback.Boolean ? "true" : "false",
                 GesSchemaDefaultKind.Tag => "#" + fallback.Name,
+                GesSchemaDefaultKind.Record => RecordText(fallback),
                 _ => "field " + fallback.Name
             });
         }
 
         builder.Append('\n');
+    }
+
+    // `[:]`, or `[name: value, ...]` in the field order of the record's schema.
+    private static string RecordText(GesResolvedDefault fallback)
+    {
+        if (fallback.Entries.Length == 0) return "[:]";
+        var builder = new StringBuilder("[");
+        for (var index = 0; index < fallback.Entries.Length; index++)
+        {
+            var entry = fallback.Entries[index];
+            if (index > 0) builder.Append(", ");
+            builder.Append(entry.Field.Name).Append(": ").Append(entry.Value.Kind switch
+            {
+                GesSchemaDefaultKind.Number => entry.Value.Value.Canonical,
+                GesSchemaDefaultKind.Boolean => entry.Value.Boolean ? "true" : "false",
+                GesSchemaDefaultKind.Tag => "#" + entry.Value.Name,
+                _ => RecordText(entry.Value)
+            });
+        }
+
+        return builder.Append(']').ToString();
     }
 
     // The canonical type of a field that a sibling may default to, without delta ranges, which constrain no value, and with

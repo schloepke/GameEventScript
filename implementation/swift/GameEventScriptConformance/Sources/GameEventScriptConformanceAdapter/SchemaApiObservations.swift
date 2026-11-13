@@ -86,18 +86,7 @@ enum SchemaApiObservations {
                 if field.isUnlabeled { entry["unlabeled"] = true }
                 if field.isOptional { entry["optional"] = true }
                 if field.isKey { entry["key"] = true }
-                if let fallback = field.defaultValue {
-                    let kinds: [GesSchemaDefaultKind: String] = [.number: "Number", .boolean: "Boolean", .tag: "Tag", .field: "Field"]
-                    var described: [String: Any] = ["kind": kinds[fallback.kind]!]
-                    if let number = fallback.number {
-                        described["value"] = text(number)
-                    } else if fallback.kind == .boolean {
-                        described["value"] = fallback.boolean
-                    } else {
-                        described["name"] = fallback.name
-                    }
-                    entry["default"] = described
-                }
+                if let fallback = field.defaultValue { entry["default"] = describeDefault(fallback) }
                 return entry
             }
         }
@@ -122,6 +111,21 @@ enum SchemaApiObservations {
         if !schema.tags.isEmpty { result["tags"] = schema.tags }
         if !schema.members.isEmpty { result["members"] = schema.members.map(\.name) }
         return result
+    }
+
+    private static func describeDefault(_ fallback: GesSchemaDefaultInfo) -> [String: Any] {
+        let kinds: [GesSchemaDefaultKind: String] = [.number: "Number", .boolean: "Boolean", .tag: "Tag", .field: "Field", .record: "Record"]
+        var described: [String: Any] = ["kind": kinds[fallback.kind]!]
+        if let number = fallback.number {
+            described["value"] = text(number)
+        } else if fallback.kind == .boolean {
+            described["value"] = fallback.boolean
+        } else if fallback.kind == .record {
+            described["entries"] = fallback.entries.map { ["name": $0.name, "value": describeDefault($0.value)] as [String: Any] }
+        } else {
+            described["name"] = fallback.name
+        }
+        return described
     }
 
     private static func describe(_ type: GesSchemaType) -> [String: Any] {

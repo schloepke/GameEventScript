@@ -202,6 +202,8 @@ public enum GesSchemaDefaultKind: Sendable {
     case tag
     /// A sibling field of the same type, whose value the field takes.
     case field
+    /// A record literal of a field whose type is a schema: the fields it names, each other field taking its own default.
+    case record
 }
 
 /// The value a field takes when a value or document leaves it out, declared with `default`; the wire always carries the field.
@@ -215,12 +217,30 @@ public struct GesSchemaDefaultInfo: Sendable {
     /// The tag without `#` of a ``GesSchemaDefaultKind/tag`` default, the sibling field of a ``GesSchemaDefaultKind/field``
     /// default, or an empty string.
     public let name: String
+    /// The fields a ``GesSchemaDefaultKind/record`` default names, in the field order of its schema; empty for `[:]` and every
+    /// other kind.
+    public let entries: [GesSchemaDefaultEntryInfo]
 
     init(_ fallback: GesResolvedDefault) {
         kind = fallback.kind
         number = fallback.kind == .number ? GesSchemaBound(GesResolvedValue(value: fallback.value)) : nil
         boolean = fallback.boolean
         name = fallback.name
+        entries = (fallback.record?.entries ?? []).map(GesSchemaDefaultEntryInfo.init)
+    }
+}
+
+/// A field that a record literal default names, with its value.
+public struct GesSchemaDefaultEntryInfo: Sendable {
+    /// The name of the field in the record's schema.
+    public let name: String
+    /// The value: a ``GesSchemaDefaultKind/number``, ``GesSchemaDefaultKind/boolean``, ``GesSchemaDefaultKind/tag`` or nested
+    /// ``GesSchemaDefaultKind/record`` default.
+    public let value: GesSchemaDefaultInfo
+
+    init(_ entry: GesResolvedRecordEntry) {
+        name = entry.field.name
+        value = GesSchemaDefaultInfo(entry.value)
     }
 }
 

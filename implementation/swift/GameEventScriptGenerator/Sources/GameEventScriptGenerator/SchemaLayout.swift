@@ -25,19 +25,22 @@ struct GesLayoutParameter {
     var literal: String
 }
 
-/// The default of a field: its kind, `number`, `boolean`, `tag` or `field`, and its value, a canonical decimal in base units,
-/// a Boolean, a tag without `#` or a sibling field's name.
+/// The default of a field: its kind, `number`, `boolean`, `tag`, `field` or `record`, and its value, a canonical decimal in
+/// base units, a Boolean, a tag without `#` or a sibling field's name; a record lists the fields it names with their defaults.
 struct GesLayoutDefault {
     var kind = GesSchemaDefaultKind.number
     var value = ""
     var boolean = false
+    var entries: [GesLayoutDefaultEntry] = []
 
-    static func of(_ field: GesSchemaFieldInfo) -> GesLayoutDefault? {
-        guard let fallback = field.defaultValue else { return nil }
-        return GesLayoutDefault(
+    static func of(_ field: GesSchemaFieldInfo) -> GesLayoutDefault? { field.defaultValue.map(of) }
+
+    private static func of(_ fallback: GesSchemaDefaultInfo) -> GesLayoutDefault {
+        GesLayoutDefault(
             kind: fallback.kind,
             value: fallback.number.map { "\($0.significand)e\($0.exponent)" } ?? fallback.name,
-            boolean: fallback.boolean
+            boolean: fallback.boolean,
+            entries: fallback.entries.map { GesLayoutDefaultEntry(name: $0.name, value: of($0.value)) }
         )
     }
 
@@ -50,11 +53,31 @@ struct GesLayoutDefault {
             case .boolean: "boolean"
             case .tag: "tag"
             case .field: "field"
+            case .record: "record"
             }
         json.string("kind", kind)
-        if self.kind == .boolean { json.boolean("value", boolean) } else { json.string("value", value) }
+        if self.kind == .record {
+            json.beginArray("entries")
+            for entry in entries {
+                json.beginObject()
+                json.string("name", entry.name)
+                entry.value.write(&json)
+                json.endObject()
+            }
+            json.endArray()
+        } else if self.kind == .boolean {
+            json.boolean("value", boolean)
+        } else {
+            json.string("value", value)
+        }
         json.endObject()
     }
+}
+
+/// A field a record default names, with its value.
+struct GesLayoutDefaultEntry {
+    var name: String
+    var value: GesLayoutDefault
 }
 
 /// A `let` of a schema: its kind, unit, exact value in base units and whether it is a whole Number within Int64.

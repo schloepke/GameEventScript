@@ -106,7 +106,9 @@ constraints = [ "integer" ] [ range ] [ "step" value ] [ "delta" "within" value 
 range       = [ "wrapping" ] "between" value "and" value
 value       = literal | "$" ConstantName | LowerName
 maximum     = integer | LowerName
-fallback    = "true" | "false" | "#" TagName | value
+fallback    = "true" | "false" | "#" TagName | value | record
+record      = "[" ":" "]" | "[" entry { "," entry } "]"
+entry       = LowerName ":" ( literal | "$" ConstantName | "true" | "false" | "#" TagName | record )
 tagset      = "(" "#" TagName { "," "#" TagName } ")"
 
 expression  = fallen [ "when" fallen { "," fallen "when" fallen } [ "," ] "otherwise" fallen ]
@@ -352,8 +354,8 @@ schema :DriveUnit as {
 - **A literal default** is a number, a file constant or a let of the field's schema for a numeric field, `true` or
   `false` for a `:Boolean`, or a tag for a `:Tag`. It has the field's unit, lies in its range (a wrapping range is
   half-open), on its step, is whole within Int64 for an `integer` field and keeps its meaning in binary64 otherwise, and a
-  tag belongs to the set or fits `max`. A bound that a parameter decides checks it at binding. Other types and unions take
-  no literal default: their values have no literal in the schema language, and a literal that picks a union alternative by
+  tag belongs to the set or fits `max`. A bound that a parameter decides checks it at binding. Other types, apart from a
+  schema with a record default, and unions take no literal default: their values have no literal in the schema language, and a literal that picks a union alternative by
   its kind would add a rule for a rare case.
 - **A sibling default** names another field of the same schema, whose value the field takes, after that field's own
   default; chains resolve in dependency order and must not form a cycle. Both have the same type, constraints included,
@@ -361,15 +363,38 @@ schema :DriveUnit as {
   no value. A type that generated code declares per field, a closed Tag written in place, Flags, a union or a List of
   them, takes no sibling default; a [tag set](#declarations) shares its type, so its fields can. A range that the sibling
   shares only partly is no default but a rule that rejects data, which stays in host code like other such rules.
+- **A record default** is a record literal for a field whose single type is a schema, as in
+  `electricity: :Unit_Consumer default [efficiency: 90%]`; `[:]` names no field. Comments and line breaks may stand
+  between its tokens. It names fields of that schema, each at most once, and gives each a value that is checked as a
+  literal default of that field would be, also against a bound a parameter decides at binding; a field whose type is
+  again a schema takes a nested record literal. A field it leaves out takes its own default, or is absent where it is
+  optional or accepts `:Nothing`; a required field without a default that it leaves out makes it
+  `schema.invalidDefault`. It names no let, parameter or sibling, and no computed field, union, List, Text, Bytes,
+  Flags, spatial or other field without a literal: such a field keeps its own default or stays out. The literal applies
+  only when the whole record is left out; a given record, even a partial one, takes the defaults of its own schema for
+  what it leaves out.
+
+```gess
+schema :Unit_Consumer as {
+  power: :Quantity(W) between 0W and 1_000_000W default 0W
+  efficiency: :Percentage between 0% and 100% default 100%
+}
+
+model(data) schema :DriveUnit as { electricity: :Unit_Consumer default [:] }
+model(data) schema :WeaponUnit as { electricity: :Unit_Consumer default [efficiency: 90%] }
+```
+
 - **`optional`** with a default only names an optional sibling: the field is absent when the sibling is, and a literal
   would make `optional` meaningless. Both are optional or both are not. A `key` takes no default, since it identifies the
-  record. Message arguments take none, since a message holds every argument of its signature.
+  record. Message arguments take none, since a message holds every argument of its signature. A record default is no
+  sibling, so an optional field or a union takes none.
 - **Where it applies:** reading a [value](#record-values) or a model's value, [checking a document](#document-checking),
   and generated model initializers. The wire always carries the field without a presence bit, since the sender holds the
-  resolved value, and decoding gives every field. `nothing` given for a required field stays `wire.nothingValue`: only
+  resolved value, and decoding gives every field; a record with a record default is encoded in full like any other. `nothing` given for a required field stays `wire.nothingValue`: only
   a field that is left out takes its default.
 - A default belongs to the [canonical form](#canonical-form) and the hash, since both sides read values and documents
-  alike. Only sibling fields, literals and lets serve as defaults, not [computed fields](#computed-fields) or
+  alike. `with` takes a record default with its field like any other default, also from an abstract schema, and
+  `all optional` drops it. Only sibling fields, literals and lets serve as defaults, not [computed fields](#computed-fields) or
   expressions: a default is a value the sender left out and resolves to a field that the wire carries.
 
 ### Computed fields
@@ -591,7 +616,7 @@ Source errors use the phase `schema` with line and column, in the manner of
 | `schema.invalidAbstract` | an abstract schema is a field type, list element, union alternative, a bound or checked root, or a model root |
 | `schema.computedMayBeAbsent` | a required [computed field](#computed-fields) reads an optional field that may be absent without `has value` or `default` |
 | `schema.invalidExpression` | a [computed field](#computed-fields) has another type than its expression, constraints, a key or optional Boolean, reads a type or name it cannot (a later computed field, a union, a reserved GES name, an optional list in an aggregate), combines operands without a value, or a sum of quantities or percentages stands inside arithmetic |
-| `schema.invalidDefault` | a [default](#defaults) lies outside its field's range or off its step, is fractional for an `integer` field, is no tag of the set or longer than `max`, has another kind than its field, stands on a key, a union or an optional field with a literal, names a sibling of another type or optionality, or names one for a type that generated code declares per field |
+| `schema.invalidDefault` | a [default](#defaults) lies outside its field's range or off its step, is fractional for an `integer` field, is no tag of the set or longer than `max`, has another kind than its field, stands on a key, a union or an optional field with a literal, names a sibling of another type or optionality, or names one for a type that generated code declares per field; a record literal on a field that is not one schema, or that names an unknown or computed field, a field twice, a field without a literal, a let or a parameter, or leaves out a required field without a default |
 
 `schema.notEncodable`, `schema.invalidRange`, `schema.invalidStep`, `schema.invalidBound`,
 `schema.invalidConstraint`, `schema.tooWide` and `schema.tooLarge` can also arise at binding,
@@ -730,8 +755,9 @@ The variable of a projection is not written, so renaming it keeps the hash.
 
 A numeric type is followed by its constraints, and any field or argument then by its
 marker, in this order: `integer`, `between <a> <b>` or `wrapping between <a> <b>`,
-`step <s>`, `delta <d>`, then `optional` or `key`, then `default` and a number, `true`, `false`, `#<tag>`
-or `field <name>` for a sibling. A union writes its alternatives in
+`step <s>`, `delta <d>`, then `optional` or `key`, then `default` and a number, `true`, `false`, `#<tag>`,
+`field <name>` for a sibling, or a record literal: `[:]`, or `[<name>: <value>, ...]` with the named fields in the order of
+their schema, each value written like a default and a nested record literal again in brackets. A union writes its alternatives in
 source order with ` | ` between them, also inside `List(...)`; the marker follows the last
 one. Unit names are the
 [portable names](Language.md#quantities). A bound is a number or a parameter name.
@@ -1414,8 +1440,10 @@ not use it:
 - `Name`, `Kind` (`Schema`, `Message` or `Messages`), `Hash` and `CanonicalForm`;
 - `Parameters`, the reached parameters in ascending name order, each with `Name`, `Kind` and `Unit`;
 - `Fields`, the fields or arguments in declared order, each with `Name`, `IsUnlabeled`,
-  `IsOptional`, `IsKey`, `Alternatives` and `Default`, a `GesSchemaDefaultInfo` with `Kind` (`Number`, `Boolean`, `Tag`
-  or `Field`), the exact `Number`, the `Boolean`, and the `Name` of a tag without `#` or of the sibling, or null;
+  `IsOptional`, `IsKey`, `Alternatives` and `Default`, a `GesSchemaDefaultInfo` with `Kind` (`Number`, `Boolean`, `Tag`,
+  `Field` or `Record`), the exact `Number`, the `Boolean`, the `Name` of a tag without `#` or of the sibling, and the
+  `Entries` of a record literal in the field order of its schema, each a `GesSchemaDefaultEntryInfo` with `Name` and
+  `Value`, or null;
 - `IsAbstract`, and `Takes`, what a schema takes with `with` in declared order: each a `GesSchemaTakeInfo` with
   `Schema`, `IsAllOptional`, `Without` and `IsUnchanged`; `Fields` already holds the taken fields in place;
 - `Tags` of a message and `Members` of a message set, in declared order;
@@ -1666,13 +1694,18 @@ alternative's type. A list element type is named `<Field>Item`, so a closed Tag 
 - **Swift** stores `var` properties in declared order and has a memberwise `init` whose absent values default to `nil` and
   lists to `[]`. A field with a literal [default](#defaults) has it as its default argument; one with a sibling default takes
   an optional argument that defaults to `nil` and resolves `nil` to the sibling's property, since Swift cannot default one
-  argument to another. A schema with a `key` is `Identifiable`; the key is `id`, or a computed `id` returns it. `Codable` is part
+  argument to another. A record default is a call of the memberwise `init` with the fields it names, as in
+  `electricity: Unit_Consumer = Unit_Consumer(efficiency: 0.9)`, units and percentages resolved to the stored values at
+  generation. A schema with a `key` is `Identifiable`; the key is `id`, or a computed `id` returns it. `Codable` is part
   of the standard library, so models still import no Foundation; `GesPoint` and `GesVector` are `Codable` with `x`, `y`,
   `z`. With `--bindings` or `--values`, one internal helper enum named after the header holds the value conversions both
   share.
 - **C#** has settable properties in declared order, a constructor with every field and a parameterless one that leaves every
   field at its default or zero value (empty text and lists, new records, the first alternative with its zero value). A
-  sibling default takes a nullable parameter that resolves `null` to the sibling's property. C# optional parameters end
+  sibling default takes a nullable parameter that resolves `null` to the sibling's property. A record default initializes
+  its property with an object initializer of the fields it names, as in `new Unit_Consumer { Efficiency = 0.9 }`, which
+  also sets each field that defaults to a named field, since the parameterless constructor copies siblings first; as a
+  parameter it is no constant, so it takes `= null` and resolves `null` to that object. C# optional parameters end
   the list, so a default becomes one, `= value` or `= null`, only for the fields after the last field without a default. It uses C# 9 with
   neither `record`, `init` accessors nor Reflection, so Unity and IL2CPP need no shim. Classes keep a copy from sharing a
   list with its original; value equality compares lists element by element, and 0 and -0 hash alike. A file holds one
@@ -1859,8 +1892,8 @@ exact decimals. Hashes are 16 lowercase hexadecimal digits, and a binary64 value
   arithmetic operations `first`, `second` and `third`, the unit checks the virtual machine makes for them, and an operation
   `children`.
 - A field has `name`, `path`, `optional`, `key`, `unlabeled`, with a [default](#defaults) `default` with `kind`
-  (`number`, `boolean`, `tag` or `field`) and `value` (an exact decimal in base units, a Boolean, a tag without `#` or
-  the sibling's name), and `encoding`. List elements,
+  (`number`, `boolean`, `tag`, `field` or `record`) and `value` (an exact decimal in base units, a Boolean, a tag without
+  `#` or the sibling's name), or for a record `entries`, each with `name` and its own `default`, and `encoding`. List elements,
   axes and union alternatives are written with `name`, `path` and `encoding` only; an element is
   named `[]` and an alternative by its label or else by its type, as in its path.
 - An encoding has `kind` and the members of its kind:

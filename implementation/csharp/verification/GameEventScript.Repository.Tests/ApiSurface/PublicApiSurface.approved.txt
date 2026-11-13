@@ -1030,7 +1030,11 @@ sealed class GameEventScript.Api.GesSchemaConstantInfo
 struct GameEventScript.Api.GesSchemaDecoded
   property GameEventScript.Runtime.Values.GesValue Value { get }
   property System.Int32 ByteCount { get }
+sealed class GameEventScript.Api.GesSchemaDefaultEntryInfo
+  property GameEventScript.Api.GesSchemaDefaultInfo Value { get }
+  property System.String Name { get }
 sealed class GameEventScript.Api.GesSchemaDefaultInfo
+  property GameEventScript.Api.GesReadOnlyArray<GameEventScript.Api.GesSchemaDefaultEntryInfo> Entries { get }
   property GameEventScript.Api.GesSchemaBound? Number { get }
   property GameEventScript.Api.GesSchemaDefaultKind Kind { get }
   property System.Boolean Boolean { get }
@@ -1040,6 +1044,7 @@ enum GameEventScript.Api.GesSchemaDefaultKind
   enum-field Boolean = 1
   enum-field Tag = 2
   enum-field Field = 3
+  enum-field Record = 4
 static class GameEventScript.Api.GesSchemaDelta
   method static GameEventScript.Api.GesSchemaDeltaDecoded Decode(GameEventScript.Api.GesBoundSchema schema, System.ReadOnlySpan<System.Byte> delta, System.ReadOnlySpan<System.Byte> baseline, System.Span<System.Byte> buffer, System.Int64 byteLimit)
   method static System.Int32 Encode(GameEventScript.Api.GesBoundSchema schema, System.ReadOnlySpan<System.Byte> record, System.ReadOnlySpan<System.Byte> baseline, System.Span<System.Byte> buffer)

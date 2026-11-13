@@ -63,7 +63,7 @@ enum GesSchemaHighlighting {
 
     private static func isNumberEnd(_ bytes: [UInt8], _ index: Int) -> Bool {
         switch bytes[index] {
-        case 32, 9, 13, 10, 44, 40, 41, 123, 125, 124, 35: return true
+        case 32, 9, 13, 10, 44, 40, 41, 123, 125, 91, 93, 124, 35: return true
         case 47: return index + 1 < bytes.count && bytes[index + 1] == 47
         default: return false
         }

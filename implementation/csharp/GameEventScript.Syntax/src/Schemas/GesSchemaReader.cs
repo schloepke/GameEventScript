@@ -369,8 +369,44 @@ internal sealed partial class GesSchemaSourceReader
         return new GesSchemaFieldSyntax { Name = name, Unlabeled = unlabeled, Alternatives = alternatives, Marker = marker, Default = fallback, Offset = offset };
     }
 
-    // A tag, `true`, `false`, or a value: a number, a constant, or the name of a let or a sibling field.
+    // A tag, `true`, `false`, a record literal, or a value: a number, a constant, or the name of a let or a sibling field.
     private GesSchemaDefaultSyntax ReadDefault(int offset)
+    {
+        return _position < _text.Length && _text[_position] == '[' ? ReadRecordDefault(offset, 1) : ReadEntryValue(offset);
+    }
+
+    // `[:]`, or `[name: value, ...]` with comma-separated entries; comments and line breaks may stand between the tokens.
+    private GesSchemaDefaultSyntax ReadRecordDefault(int offset, int depth)
+    {
+        if (depth > MaximumTypeNesting) throw Failure($"Record defaults nest at most {MaximumTypeNesting} levels.");
+        Expect('[');
+        SkipTrivia();
+        var entries = new List<GesSchemaRecordEntrySyntax>();
+        if (Consume(':'))
+        {
+            SkipTrivia();
+            Expect(']');
+            return new GesSchemaDefaultSyntax { Record = [], Offset = offset };
+        }
+
+        do
+        {
+            SkipTrivia();
+            var start = _position;
+            var name = ReadName(GesText.IsFieldName, "field name");
+            SkipSpaces();
+            Expect(':');
+            SkipTrivia();
+            var value = _position < _text.Length && _text[_position] == '[' ? ReadRecordDefault(_position, depth + 1) : ReadEntryValue(_position);
+            entries.Add(new GesSchemaRecordEntrySyntax { Name = name, Value = value, Offset = start });
+            SkipTrivia();
+        }
+        while (Consume(','));
+        Expect(']');
+        return new GesSchemaDefaultSyntax { Record = entries.ToArray(), Offset = offset };
+    }
+
+    private GesSchemaDefaultSyntax ReadEntryValue(int offset)
     {
         if (Consume('#')) return new GesSchemaDefaultSyntax { Tag = ReadName(GesText.IsTagName, "tag name"), Offset = offset };
         foreach (var word in new[] { "true", "false" })
@@ -692,7 +728,7 @@ internal sealed partial class GesSchemaSourceReader
     private bool IsLiteralEnd(int index)
     {
         var c = _text[index];
-        return c is ' ' or '\t' or '\r' or '\n' or ',' or '(' or ')' or '{' or '}' or '|' or '#' || (c == '/' && index + 1 < _text.Length && _text[index + 1] == '/');
+        return c is ' ' or '\t' or '\r' or '\n' or ',' or '(' or ')' or '{' or '}' or '[' or ']' or '|' or '#' || (c == '/' && index + 1 < _text.Length && _text[index + 1] == '/');
     }
 
     private void EndEntry(char closing)

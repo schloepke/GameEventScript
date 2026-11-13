@@ -75,6 +75,17 @@ internal static class SchemaApiObservations
     }
 
     // Only what differs from the default, so that expectations stay readable.
+    private static Dictionary<string, object?> DescribeDefault(GesSchemaDefaultInfo fallback)
+    {
+        var described = new Dictionary<string, object?> { ["kind"] = fallback.Kind.ToString() };
+        if (fallback.Number is { } number) described["value"] = Text(number);
+        else if (fallback.Kind == GesSchemaDefaultKind.Boolean) described["value"] = fallback.Boolean;
+        else if (fallback.Kind == GesSchemaDefaultKind.Record)
+            described["entries"] = fallback.Entries.Select(entry => new Dictionary<string, object?> { ["name"] = entry.Name, ["value"] = DescribeDefault(entry.Value) }).ToArray();
+        else described["name"] = fallback.Name;
+        return described;
+    }
+
     private static Dictionary<string, object?> Describe(GesSchema schema)
     {
         var result = new Dictionary<string, object?> { ["name"] = schema.Name, ["kind"] = schema.Kind.ToString() };
@@ -95,14 +106,7 @@ internal static class SchemaApiObservations
             if (field.IsUnlabeled) entry["unlabeled"] = true;
             if (field.IsOptional) entry["optional"] = true;
             if (field.IsKey) entry["key"] = true;
-            if (field.Default is { } fallback)
-            {
-                var described = new Dictionary<string, object?> { ["kind"] = fallback.Kind.ToString() };
-                if (fallback.Number is { } number) described["value"] = Text(number);
-                else if (fallback.Kind == GesSchemaDefaultKind.Boolean) described["value"] = fallback.Boolean;
-                else described["name"] = fallback.Name;
-                entry["default"] = described;
-            }
+            if (field.Default is { } fallback) entry["default"] = DescribeDefault(fallback);
 
             return entry;
         }).ToArray();

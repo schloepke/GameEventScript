@@ -149,7 +149,31 @@ internal static class GesSchemaFormatter
 
         if (field.Default is not { } fallback) return;
         builder.Append(" default ");
-        if (fallback.Tag is { } tag) builder.Append('#').Append(tag);
+        DefaultText(fallback, builder);
+    }
+
+    // A record literal prints on one line, `[:]` when it names no field.
+    private static void DefaultText(GesSchemaDefaultSyntax fallback, StringBuilder builder)
+    {
+        if (fallback.Record is { } record)
+        {
+            if (record.Length == 0)
+            {
+                builder.Append("[:]");
+                return;
+            }
+
+            builder.Append('[');
+            for (var index = 0; index < record.Length; index++)
+            {
+                if (index > 0) builder.Append(", ");
+                builder.Append(record[index].Name).Append(": ");
+                DefaultText(record[index].Value, builder);
+            }
+
+            builder.Append(']');
+        }
+        else if (fallback.Tag is { } tag) builder.Append('#').Append(tag);
         else if (fallback.Boolean is { } boolean) builder.Append(boolean ? "true" : "false");
         else builder.Append(Value(fallback.Value!));
     }

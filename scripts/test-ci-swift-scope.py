@@ -21,6 +21,9 @@ spec.loader.exec_module(scope)
 class ScopeTests(unittest.TestCase):
     def test_only_known_documentation_can_skip(self):
         self.assertFalse(scope.requires_swift(["docs/guide/swift.md", "website/src/page.astro", "README.md", ".spi.yml"]))
+        # A guide whose examples the Swift tools run is verified like code.
+        for guide in ("docs/guide/Swift.md", "docs/guide/Schemas.md", "docs/guide/Language.md"):
+            self.assertTrue(scope.requires_swift(["README.md", guide]))
         for path in ["Package.swift", "implementation/swift/Runtime.swift", "implementation/csharp/Value.cs",
                      "conformance/case.md", "specs/HostRuntime.md", "scripts/test-swift.sh",
                      ".github/workflows/swift-ci.yml", "tools/editors/grammar.json", "new-directory/input"]:

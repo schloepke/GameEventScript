@@ -764,6 +764,18 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
   names, reserved section types as unknown sections, and the instruction flag bits; stale runner names and a Swift
   Host initializer are gone.
 - The public C# Runtime types document what each member does instead of generated placeholder text.
+- Swift CI runs the Swift port on Linux in the release image of the static CLI (package tests, the supported corpus,
+  CLI process checks) and builds the libraries with the declared minimum Swift 6.0; a Linux-only Swift test that did
+  not compile is fixed.
+- Publication requires the tagged commit on main with successful C# CI and Swift CI runs, and the C# release workflow
+  also runs the zero-allocation gate and the reproducibility check.
+- An interrupted NuGet or CLI download publication can be resumed by running it again; identical published packages
+  and downloads are skipped and differing ones stop the run.
+- C# CI runs the guide examples, the timing-only performance scenarios without timing and a license header gate for
+  Swift, C, Python, GES and web sources; Swift CI runs the Swift guide examples and treats guide example edits as
+  code.
+- The Conformance runner scales its batch deadline with the selected cases and prints how long a batch took.
+- Workflow container images are pinned by digest and every job has a timeout.
 
 ## [0.4.0] — 2026-10-11
 

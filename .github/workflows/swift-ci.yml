@@ -33,16 +33,36 @@ jobs:
         id: scope
         run: python3 scripts/ci-swift-scope.py
 
-  syntax-linux:
+  # The packages declare swift-tools-version 6.0, so the libraries consumers build must compile with it.
+  linux-minimum:
     needs: changes
     if: needs.changes.outputs.swift == 'true'
     runs-on: ubuntu-latest
-    container: swift:6.0
+    timeout-minutes: 30
+    container: swift:6.0@sha256:f73bbe1acf48ee6b0b6764268e0e2bed2cdf29285abcc908320a68cbfd9d5b90
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Verify the standalone Syntax module on Linux
         run: swift test --package-path implementation/swift/GameEventScriptSyntax --scratch-path artifacts/swift/syntax --disable-build-manifest-caching --configuration release
+      - name: Build the Runtime, Compiler and Generator libraries with the minimum toolchain
+        run: |
+          for package in GameEventScriptRuntime GameEventScriptCompiler GameEventScriptGenerator; do
+            swift build --package-path "implementation/swift/$package" --scratch-path "artifacts/swift/minimum/$package" --disable-build-manifest-caching
+          done
+
+  # The static Linux CLI is built with this toolchain and image, so the corpus and the CLI checks run on it too.
+  linux:
+    needs: changes
+    if: needs.changes.outputs.swift == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    container: swift:6.4.0-jammy@sha256:a6053d2de72091906bfa064f76f145e3f28830664cae250e1b84aa8c499a8ee6
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Verify the Swift port, the shared corpus and the CLI on Linux
+        run: ./scripts/test-swift-linux.sh
 
   distribution:
     needs: changes
@@ -108,6 +128,12 @@ jobs:
         run: ./scripts/format-swift.sh
 
       - if: needs.changes.outputs.swift == 'true'
+        name: Verify license headers outside the C# license test
+        run: |
+          python3 scripts/verify-license-headers.py --self-test
+          python3 scripts/verify-license-headers.py
+
+      - if: needs.changes.outputs.swift == 'true'
         name: Verify direct Swift target dependencies
         run: python3 scripts/verify-swift-dependencies.py
 
@@ -129,6 +155,10 @@ jobs:
         name: Build packages and verify shared conformance
         id: conformance
         run: ./scripts/test-swift.sh
+
+      - if: needs.changes.outputs.swift == 'true'
+        name: Verify the Swift guide examples
+        run: python3 scripts/test-guide-examples.py --language swift
 
       - if: needs.changes.outputs.swift == 'true'
         name: Verify Swift documentation gate controls
@@ -154,7 +184,7 @@ jobs:
           retention-days: 14
 
   verify:
-    needs: [changes, native, distribution, syntax-linux]
+    needs: [changes, native, distribution, linux-minimum, linux]
     if: ${{ always() }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -168,5 +198,6 @@ jobs:
           RUN_SWIFT: ${{ needs.changes.outputs.swift }}
           NATIVE_RESULT: ${{ needs.native.result }}
           DISTRIBUTION_RESULT: ${{ needs.distribution.result }}
-          SYNTAX_RESULT: ${{ needs.syntax-linux.result }}
+          MINIMUM_RESULT: ${{ needs.linux-minimum.result }}
+          LINUX_RESULT: ${{ needs.linux.result }}
         run: python3 scripts/ci-swift-result.py

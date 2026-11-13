@@ -27,7 +27,7 @@ def main(argv=None):
     parser.add_argument('--report', type=Path, help='V1 report for received output')
     parser.add_argument('--observations', type=Path, help='Required for verify')
     parser.add_argument('--output', type=Path, help='JSON output; defaults to stdout')
-    parser.add_argument('--timeout', type=float, default=60, help='Adapter batch deadline in seconds (default: 60)')
+    parser.add_argument('--timeout', type=float, help='Adapter batch deadline in seconds (default: 60 plus 0.1 per selected case)')
     parser.add_argument('--adapter', nargs=argparse.REMAINDER, help='Executable and arguments; must be the last option')
     options = parser.parse_args(argv)
     try:
@@ -59,7 +59,9 @@ def main(argv=None):
         elif options.command == 'requests':
             result = requests(selected, options.fixtures)
         elif options.command == 'run':
-            result = reports.canonical(selected, execution.run(selected, options.adapter, options.fixtures, options.timeout, options.performance_profile))
+            # The deadline grows with the corpus, so a larger batch does not turn into a flake on a slow runner.
+            timeout = options.timeout if options.timeout is not None else 60 + 0.1 * len(selected)
+            result = reports.canonical(selected, execution.run(selected, options.adapter, options.fixtures, timeout, options.performance_profile))
         else:
             if options.observations is None:
                 raise InvalidDocument('--observations is required')

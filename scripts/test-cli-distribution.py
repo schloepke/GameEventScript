@@ -158,16 +158,37 @@ class DistributionTests(unittest.TestCase):
             output.assert_not_called()
         self.assertEqual(6, len(next(self.root.glob("*SHA256SUMS.txt")).read_text().splitlines()))
 
-    def test_publication_rejects_branch_and_existing_assets(self):
+    def publish_with(self, published):
+        """Publishes against a release that already holds the given assets, each downloaded with the given bytes."""
+        release = {"tagName": self.release, "assets": [{"name": name} for name in published]}
+        downloads = self.root / "downloads"
+        downloads.mkdir(exist_ok=True)
+
+        def download(tag, repository, name, directory):
+            (downloads / name).write_bytes(published[name])
+            return downloads / name
+
+        with patch.object(sys, "argv", self.arguments(True)), patch.dict(os.environ, {"GITHUB_REF": f"refs/tags/{self.release}", "GITHUB_REPOSITORY": "example/fixture"}), \
+                patch.object(collect.subprocess, "check_output", side_effect=[self.revision, self.revision, json.dumps(release)]), \
+                patch.object(collect, "download_asset", side_effect=download), patch.object(collect.subprocess, "run") as run:
+            collect.main()
+        return run
+
+    def test_publication_rejects_branch_and_differing_assets(self):
         self.populate()
         with patch.object(sys, "argv", self.arguments(True)), patch.dict(os.environ, {"GITHUB_REF": "refs/heads/main"}), self.assertRaises(ValueError):
             collect.main()
-        release = {"tagName": self.release, "assets": [{"name": archive_name("csharp", self.release, "win-x64")}]}
-        with patch.object(sys, "argv", self.arguments(True)), patch.dict(os.environ, {"GITHUB_REF": f"refs/tags/{self.release}", "GITHUB_REPOSITORY": "example/fixture"}), \
-                patch.object(collect.subprocess, "check_output", side_effect=[self.revision, self.revision, json.dumps(release)]), \
-                patch.object(collect.subprocess, "run") as run, self.assertRaises(ValueError):
-            collect.main()
-        run.assert_not_called()
+        with self.assertRaises(ValueError):
+            self.publish_with({archive_name("csharp", self.release, "win-x64"): b"other bytes"})
+
+    def test_publication_resumes_after_a_partial_upload(self):
+        self.populate()
+        first = archive_name("csharp", self.release, "win-x64")
+        run = self.publish_with({first: (self.root / first).read_bytes()})
+        uploaded = run.call_args.args[0]
+        self.assertEqual(["gh", "release", "upload", self.release], uploaded[:4])
+        self.assertNotIn(str(self.root / first), uploaded, "An identical attached asset is not uploaded again.")
+        self.assertEqual(6, len([part for part in uploaded if part.startswith(str(self.root))]))
 
 
 if __name__ == "__main__":

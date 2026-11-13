@@ -111,7 +111,9 @@ from another module; compiler-synthesized members are exempt.
 
 Licensing follows `LICENSING.md`. Use exactly `Copyright 2026 Stephan Schlöpke`
 and `SPDX-License-Identifier: Apache-2.0`, retain third-party notices, and honor
-the documented generated, strict-format, and binary exclusions.
+the documented generated, strict-format, and binary exclusions. The C# repository
+test checks C#, Markdown, project and workflow headers; `python3 scripts/verify-license-headers.py`
+(qualified by `--self-test`) checks Swift, C, Python, GES and web sources, and both CIs run it.
 
 `scripts/clean.sh --dry-run` previews repository build-output cleanup;
 `--artifacts-only` limits it to `artifacts`. It retains tracked files, skips
@@ -497,7 +499,11 @@ It also rejects test-only modules compiled by library consumers. Its isolated
 fixture includes the shared highlighting Markdown, without a Conformance dependency.
 
 Publication is manual and requires a matching version tag, verified NuGet and
-SwiftPM consumers, and the protected `nuget` environment. Preparing or checking
+SwiftPM consumers, and the protected `nuget` environment. Publication jobs also run
+`scripts/require-verified-release.py`, which requires the tagged commit on main with
+successful C# CI and Swift CI runs. A rerun resumes an interrupted publication:
+`scripts/nuget_publication.py` and `collect-cli-release.py` skip what is already
+published with identical contents and fail on differing contents. Preparing or checking
 packages never publishes. See `docs/guide/distribution/Packages.md` for the
 release procedure and required account configuration.
 
@@ -565,6 +571,9 @@ This regenerates build planning, not compiled objects. Keep the same option in
 new native SwiftPM entry points. `python3 scripts/test-swift-incremental.py`
 verifies source discovery and unchanged-build object reuse through the build script.
 Run `./scripts/test-swift.sh` and `python3 scripts/verify-swift-api.py`.
+`./scripts/test-swift-linux.sh` runs the Swift port on Linux without .NET (package tests, the supported corpus,
+CLI process checks); Swift CI runs it in the digest-pinned `swift:6.4.0-jammy` release image and builds Runtime,
+Compiler and Generator with the declared minimum Swift 6.0. Docker reproduces both locally.
 The API snapshot gate invokes the official symbol-graph extractor directly with
 explicit options; Swift Build’s intermediate graphs are not snapshot inputs.
 DocC consumes only explicit `dump-symbol-graph` exports, including extension blocks.

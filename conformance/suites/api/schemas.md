@@ -4195,6 +4195,913 @@ schema:
 
 ---
 
+## Test: square roots are correctly rounded
+
+`sqrt`, `√` and the power `^ 0.5` that they lower to give the correctly rounded square root on every platform: a whole
+root is an integer, a negative number has none, and `-infinity` gives `infinity` as pow does. `m²` has the root `m`.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: decode-computed-roots
+schemaApi:
+  sources:
+    - "schema :Roots as {\n  zero: :Number\n  tiny: :Number\n  one: :Number\n  two: :Number\n  sixteen: :Number\n  large: :Number\n  infinite: :Number\n  negative: :Number\n  negativeInfinite: :Number\n  area: :Quantity(m²)\n  rootZero: :Number computed by sqrt zero\n  rootTiny: :Number computed by sqrt tiny\n  rootOne: :Number computed by √one\n  rootTwo: :Number computed by sqrt two\n  rootSixteen: :Number computed by sqrt(sixteen)\n  rootLarge: :Number computed by sqrt large\n  rootInfinite: :Number computed by sqrt infinite\n  rootNegative: :Number computed by sqrt negative\n  rootNegativeInfinite: :Number computed by sqrt negativeInfinite\n  rootNothing: :Number optional computed by sqrt (zero / zero)\n  power: :Number computed by two ^ 0.5\n  side: :Quantity(m) computed by sqrt area\n  scaled: :Number computed by sqrt two * 2 + 1\n}\n"
+  root: "Roots"
+  encode:
+    type: ":Roots"
+    entries:
+      - key: "area"
+        value:
+          type: ":Quantity.int64"
+          value: "16"
+          unit: ":squareMeter"
+      - key: "infinite"
+        value:
+          type: ":Number.binary64"
+          value: "Infinity"
+      - key: "large"
+        value:
+          type: ":Number.binary64"
+          value: "1.7976931348623157e308"
+      - key: "negative"
+        value:
+          type: ":Number.int64"
+          value: "-4"
+      - key: "negativeInfinite"
+        value:
+          type: ":Number.binary64"
+          value: "-Infinity"
+      - key: "one"
+        value:
+          type: ":Number.int64"
+          value: "1"
+      - key: "sixteen"
+        value:
+          type: ":Number.int64"
+          value: "16"
+      - key: "tiny"
+        value:
+          type: ":Number.binary64"
+          value: "5e-324"
+      - key: "two"
+        value:
+          type: ":Number.int64"
+          value: "2"
+      - key: "zero"
+        value:
+          type: ":Number.int64"
+          value: "0"
+  decode: "00000000000000000100000000000000000000000000f03f00000000000000400000000000003040ffffffffffffef7f000000000000f07f00000000000010c0000000000000f0ff0000000000003040"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "00000000000000000100000000000000000000000000f03f00000000000000400000000000003040ffffffffffffef7f000000000000f07f00000000000010c0000000000000f0ff0000000000003040"
+  decoded:
+    value:
+      type: ":Roots"
+      entries:
+        - key: "area"
+          value:
+            type: ":Quantity.int64"
+            value: "16"
+            unit: ":squareMeter"
+        - key: "infinite"
+          value:
+            type: ":Number.binary64"
+            value: "Infinity"
+        - key: "large"
+          value:
+            type: ":Number.binary64"
+            value: "1.7976931348623157e308"
+        - key: "negative"
+          value:
+            type: ":Number.int64"
+            value: "-4"
+        - key: "negativeInfinite"
+          value:
+            type: ":Number.binary64"
+            value: "-Infinity"
+        - key: "one"
+          value:
+            type: ":Number.int64"
+            value: "1"
+        - key: "power"
+          value:
+            type: ":Number.binary64"
+            value: "1.4142135623730951"
+        - key: "rootInfinite"
+          value:
+            type: ":Number.binary64"
+            value: "Infinity"
+        - key: "rootLarge"
+          value:
+            type: ":Number.binary64"
+            value: "1.3407807929942596e154"
+        - key: "rootNegative"
+          value:
+            type: ":Nothing"
+        - key: "rootNegativeInfinite"
+          value:
+            type: ":Number.binary64"
+            value: "Infinity"
+        - key: "rootNothing"
+          value:
+            type: ":Nothing"
+        - key: "rootOne"
+          value:
+            type: ":Number.int64"
+            value: "1"
+        - key: "rootSixteen"
+          value:
+            type: ":Number.int64"
+            value: "4"
+        - key: "rootTiny"
+          value:
+            type: ":Number.binary64"
+            value: "2.2227587494850775e-162"
+        - key: "rootTwo"
+          value:
+            type: ":Number.binary64"
+            value: "1.4142135623730951"
+        - key: "rootZero"
+          value:
+            type: ":Number.int64"
+            value: "0"
+        - key: "scaled"
+          value:
+            type: ":Number.binary64"
+            value: "3.8284271247461903"
+        - key: "side"
+          value:
+            type: ":Quantity.int64"
+            value: "4"
+            unit: ":meter"
+        - key: "sixteen"
+          value:
+            type: ":Number.int64"
+            value: "16"
+        - key: "tiny"
+          value:
+            type: ":Number.binary64"
+            value: "5e-324"
+        - key: "two"
+          value:
+            type: ":Number.int64"
+            value: "2"
+        - key: "zero"
+          value:
+            type: ":Number.int64"
+            value: "0"
+    byteCount: 80
+```
+
+---
+
+## Test: rounding and angle conversions in computed fields
+
+Rounding gives an integer with the unit of its operand, saturated at the bounds of Int64, and a percentage rounds its ratio.
+`rad` and `deg` divide and multiply in binary64, so their bits are exact too.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: decode-computed-rounding
+schemaApi:
+  sources:
+    - "schema :Rounds as {\n  x: :Number\n  big: :Number\n  share: :Percentage\n  span: :Quantity(m)\n  turn: :Quantity(°)\n  floorX: :Number computed by floor x\n  ceilX: :Number computed by ceil x\n  truncX: :Number computed by truncate x\n  evenX: :Number computed by round half even x\n  upX: :Number computed by round half up x\n  downX: :Number computed by round half down x\n  saturated: :Number computed by floor big\n  shareFloor: :Number computed by floor share\n  spanUp: :Quantity(m) computed by round half up span\n  radians: :Number computed by rad turn\n  degrees: :Quantity(°) computed by deg 1\n}\n"
+  root: "Rounds"
+  encode:
+    type: ":Rounds"
+    entries:
+      - key: "big"
+        value:
+          type: ":Number.binary64"
+          value: "1e300"
+      - key: "share"
+        value:
+          type: ":Percentage"
+          value: "2.5"
+      - key: "span"
+        value:
+          type: ":Quantity.binary64"
+          value: "2.5"
+          unit: ":meter"
+      - key: "turn"
+        value:
+          type: ":Quantity.int64"
+          value: "90"
+          unit: ":degree"
+      - key: "x"
+        value:
+          type: ":Number.binary64"
+          value: "-2.5"
+  decode: "00000000000004c09c7500883ce4377e000000000000044000000000000004400000000000805640"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "00000000000004c09c7500883ce4377e000000000000044000000000000004400000000000805640"
+  decoded:
+    value:
+      type: ":Rounds"
+      entries:
+        - key: "big"
+          value:
+            type: ":Number.binary64"
+            value: "1e300"
+        - key: "ceilX"
+          value:
+            type: ":Number.int64"
+            value: "-2"
+        - key: "degrees"
+          value:
+            type: ":Quantity.binary64"
+            value: "57.29577951308232"
+            unit: ":degree"
+        - key: "downX"
+          value:
+            type: ":Number.int64"
+            value: "-2"
+        - key: "evenX"
+          value:
+            type: ":Number.int64"
+            value: "-2"
+        - key: "floorX"
+          value:
+            type: ":Number.int64"
+            value: "-3"
+        - key: "radians"
+          value:
+            type: ":Number.binary64"
+            value: "1.5707963267948966"
+        - key: "saturated"
+          value:
+            type: ":Number.int64"
+            value: "9223372036854775807"
+        - key: "share"
+          value:
+            type: ":Percentage"
+            value: "2.5"
+        - key: "shareFloor"
+          value:
+            type: ":Number.int64"
+            value: "2"
+        - key: "span"
+          value:
+            type: ":Quantity.binary64"
+            value: "2.5"
+            unit: ":meter"
+        - key: "spanUp"
+          value:
+            type: ":Quantity.int64"
+            value: "3"
+            unit: ":meter"
+        - key: "truncX"
+          value:
+            type: ":Number.int64"
+            value: "-2"
+        - key: "turn"
+          value:
+            type: ":Quantity.int64"
+            value: "90"
+            unit: ":degree"
+        - key: "upX"
+          value:
+            type: ":Number.int64"
+            value: "-3"
+        - key: "x"
+          value:
+            type: ":Number.binary64"
+            value: "-2.5"
+    byteCount: 40
+```
+
+---
+
+## Test: trigonometry in computed fields
+
+Trigonometry reads radians as a plain number or degrees, and `atan2` and the inverse functions give radians; `deg`
+turns them into degrees. These functions come from the platform library, so the case compares within four ULPs.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: decode-computed-trigonometry
+comparison:
+  binary64:
+    mode: ulp
+    maxUlps: 4
+schemaApi:
+  sources:
+    - "schema :Aim as {\n  dx: :Quantity(m) between -1000m and 1000m step 0.01m\n  dy: :Quantity(m) between -1000m and 1000m step 0.01m\n  turn: :Quantity(°) between -360° and 360° step 0.5°\n  t: :Number between -10 and 10 step 0.25\n  bearing: :Number computed by atan2(dy, dx)\n  heading: :Quantity(°) computed by deg atan2(dy, dx)\n  reach: :Quantity(m) computed by hypot(dx, dy)\n  rise: :Quantity(m) computed by hypot(dx, dy, 1m)\n  still: :Number computed by atan2(dx - dx, 0m)\n  sine: :Number computed by sin turn\n  cosine: :Number computed by cos turn\n  tangent: :Number computed by tan t\n  arc: :Number computed by asin (t / 10)\n  wide: :Number computed by acos t\n  arctan: :Number computed by atan t\n  inCone: :Boolean computed by heading < 30°\n}\n"
+  root: "Aim"
+  encode:
+    type: ":Aim"
+    entries:
+      - key: "dx"
+        value:
+          type: ":Quantity.int64"
+          value: "3"
+          unit: ":meter"
+      - key: "dy"
+        value:
+          type: ":Quantity.int64"
+          value: "4"
+          unit: ":meter"
+      - key: "t"
+        value:
+          type: ":Number.binary64"
+          value: "2.5"
+      - key: "turn"
+        value:
+          type: ":Quantity.int64"
+          value: "30"
+          unit: ":degree"
+  decode: "cc87c120c63019"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "cc87c120c63019"
+  decoded:
+    value:
+      type: ":Aim"
+      entries:
+        - key: "arc"
+          value:
+            type: ":Number.binary64"
+            value: "0.25268025514207865"
+        - key: "arctan"
+          value:
+            type: ":Number.binary64"
+            value: "1.1902899496825317"
+        - key: "bearing"
+          value:
+            type: ":Number.binary64"
+            value: "0.9272952180016122"
+        - key: "cosine"
+          value:
+            type: ":Number.binary64"
+            value: "0.8660254037844387"
+        - key: "dx"
+          value:
+            type: ":Quantity.int64"
+            value: "3"
+            unit: ":meter"
+        - key: "dy"
+          value:
+            type: ":Quantity.int64"
+            value: "4"
+            unit: ":meter"
+        - key: "heading"
+          value:
+            type: ":Quantity.binary64"
+            value: "53.13010235415597"
+            unit: ":degree"
+        - key: "inCone"
+          value:
+            type: ":Boolean"
+            value: false
+        - key: "reach"
+          value:
+            type: ":Quantity.int64"
+            value: "5"
+            unit: ":meter"
+        - key: "rise"
+          value:
+            type: ":Quantity.binary64"
+            value: "5.0990195135927845"
+            unit: ":meter"
+        - key: "sine"
+          value:
+            type: ":Number.binary64"
+            value: "0.49999999999999994"
+        - key: "still"
+          value:
+            type: ":Number.int64"
+            value: "0"
+        - key: "t"
+          value:
+            type: ":Number.binary64"
+            value: "2.5"
+        - key: "tangent"
+          value:
+            type: ":Number.binary64"
+            value: "-0.7470222972386602"
+        - key: "turn"
+          value:
+            type: ":Quantity.int64"
+            value: "30"
+            unit: ":degree"
+        - key: "wide"
+          value:
+            type: ":Nothing"
+    byteCount: 7
+```
+
+---
+
+## Test: powers, exponentials and logarithms in computed fields
+
+`^`, `²` and `³` use the platform's pow and take the unit of the power from the derivation table; `cbrt` is the power 1/3,
+which a negative number does not have. `exp` and `ln` read plain numbers: `ln 0` is `-infinity` and the logarithm of a
+negative number is nothing, as is NaN, without making the field absent.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: decode-computed-powers
+comparison:
+  binary64:
+    mode: ulp
+    maxUlps: 4
+schemaApi:
+  sources:
+    - "schema :Growth as {\n  t: :Number between -10 and 10 step 0.25\n  n: :Number between -10 and 10 step 0.25\n  side: :Quantity(m) between 0m and 100m step 0.5m\n  cubed: :Number computed by t ^ 3\n  doubling: :Number computed by 2 ^ t\n  square: :Quantity(m²) computed by side²\n  volume: :Quantity(m³) computed by side³\n  back: :Quantity(m) computed by cbrt volume\n  root: :Number computed by cbrt t\n  noRoot: :Number computed by cbrt n\n  growth: :Number computed by exp t\n  huge: :Number computed by exp (t * 100)\n  log: :Number computed by ln t\n  logZero: :Number computed by ln (t - t)\n  logNegative: :Number computed by ln n\n  inverse: :Number computed by t ^ -1\n}\n"
+  root: "Growth"
+  encode:
+    type: ":Growth"
+    entries:
+      - key: "n"
+        value:
+          type: ":Number.int64"
+          value: "-2"
+      - key: "side"
+        value:
+          type: ":Quantity.binary64"
+          value: "1.5"
+          unit: ":meter"
+      - key: "t"
+        value:
+          type: ":Number.binary64"
+          value: "2.5"
+  decode: "32d000"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "32d000"
+  decoded:
+    value:
+      type: ":Growth"
+      entries:
+        - key: "back"
+          value:
+            type: ":Quantity.binary64"
+            value: "1.5"
+            unit: ":meter"
+        - key: "cubed"
+          value:
+            type: ":Number.binary64"
+            value: "15.625"
+        - key: "doubling"
+          value:
+            type: ":Number.binary64"
+            value: "5.656854249492381"
+        - key: "growth"
+          value:
+            type: ":Number.binary64"
+            value: "12.182493960703473"
+        - key: "huge"
+          value:
+            type: ":Number.binary64"
+            value: "3.7464546145026734e108"
+        - key: "inverse"
+          value:
+            type: ":Number.binary64"
+            value: "0.4"
+        - key: "log"
+          value:
+            type: ":Number.binary64"
+            value: "0.9162907318741551"
+        - key: "logNegative"
+          value:
+            type: ":Nothing"
+        - key: "logZero"
+          value:
+            type: ":Number.binary64"
+            value: "-Infinity"
+        - key: "n"
+          value:
+            type: ":Number.int64"
+            value: "-2"
+        - key: "noRoot"
+          value:
+            type: ":Nothing"
+        - key: "root"
+          value:
+            type: ":Number.binary64"
+            value: "1.3572088082974532"
+        - key: "side"
+          value:
+            type: ":Quantity.binary64"
+            value: "1.5"
+            unit: ":meter"
+        - key: "square"
+          value:
+            type: ":Quantity.binary64"
+            value: "2.25"
+            unit: ":squareMeter"
+        - key: "t"
+          value:
+            type: ":Number.binary64"
+            value: "2.5"
+        - key: "volume"
+          value:
+            type: ":Quantity.binary64"
+            value: "3.375"
+            unit: ":cubicMeter"
+    byteCount: 3
+```
+
+---
+
+## Test: names in backticks
+
+A name in backticks names a field or let also where GES reserves its word: `` `length` `` reads the field `length`, and
+`` `e` `` reads the field `e` rather than the constant.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: decode-computed-backticks
+schemaApi:
+  sources:
+    - "schema :Span as {\n  length: :Quantity(m) between 0m and 100m step 0.5m\n  e: :Number between 0 and 10 step 1\n  half: :Quantity(m) computed by `length` / 2\n  scaled: :Number computed by `e` * 2\n  long: :Boolean computed by `length` > 10m and `e` > 1\n}\n"
+  root: "Span"
+  encode:
+    type: ":Span"
+    entries:
+      - key: "e"
+        value:
+          type: ":Number.int64"
+          value: "3"
+      - key: "length"
+        value:
+          type: ":Quantity.int64"
+          value: "25"
+          unit: ":meter"
+  decode: "3203"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  encoded:
+    bytes: "3203"
+  decoded:
+    value:
+      type: ":Span"
+      entries:
+        - key: "e"
+          value:
+            type: ":Number.int64"
+            value: "3"
+        - key: "half"
+          value:
+            type: ":Quantity.binary64"
+            value: "12.5"
+            unit: ":meter"
+        - key: "length"
+          value:
+            type: ":Quantity.int64"
+            value: "25"
+            unit: ":meter"
+        - key: "long"
+          value:
+            type: ":Boolean"
+            value: true
+        - key: "scaled"
+          value:
+            type: ":Number.int64"
+            value: "6"
+    byteCount: 2
+```
+
+---
+
+## Test: functions and names in backticks in the canonical form
+
+A function is a node of the canonical form like an operator, and `²` is the power 2. Backticks are spelling only: the
+canonical form names the field `length` as any other field.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: canonical-computed-functions
+schemaApi:
+  sources:
+    - "schema :Aim as {\n  length: :Quantity(m) between 0m and 100m step 0.5m\n  turn: :Quantity(°) between 0° and 360° step 0.5°\n  area: :Quantity(m²) computed by `length`²\n  side: :Quantity(m) computed by √area\n  lean: :Number computed by sin turn\n  reach: :Quantity(m) computed by hypot(`length`, side)\n  steps: :Number computed by round half even (`length` / 1m)\n}\n"
+  root: "Aim"
+  bind: false
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  canonical: "gess1\nschema Aim\nfield length Quantity(meter) between 0e0 1e2 step 5e-1\nfield turn Quantity(degree) between 0e0 36e1 step 5e-1\ncomputed area Quantity(squareMeter) (power (field length) (number 2e0))\ncomputed side Quantity(meter) (sqrt (field area))\ncomputed lean Number (sin (field turn))\ncomputed reach Quantity(meter) (hypot (field length) (field side))\ncomputed steps Number (roundHalfEven (divide (field length) (quantity meter 1e0)))\n"
+```
+
+---
+
+## Test: a square root without a unit of its own
+
+A unit has a square root only where the derivation table holds its square, so the root of `m` is rejected.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-computed-root-unit
+schemaApi:
+  sources:
+    - "schema :S as { a: :Quantity(m), b: :Quantity(m) computed by sqrt a }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.unitMismatch"
+    line: 1
+    column: 61
+```
+
+---
+
+## Test: a cube root of a square
+
+The root of `m²` is `m`, but its cube root has no unit.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-computed-cube-root-unit
+schemaApi:
+  sources:
+    - "schema :S as { a: :Quantity(m²), b: :Quantity(m) computed by cbrt a }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.unitMismatch"
+    line: 1
+    column: 62
+```
+
+---
+
+## Test: a power of a quantity needs a literal exponent
+
+The unit of a power follows from its exponent, so a quantity takes a literal one.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-computed-power-exponent
+schemaApi:
+  sources:
+    - "schema :S as { a: :Quantity(m), n: :Number, b: :Quantity(m²) computed by a ^ n }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.unitMismatch"
+    line: 1
+    column: 78
+```
+
+---
+
+## Test: an exponent with a unit
+
+An exponent has no unit.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-computed-power-unit
+schemaApi:
+  sources:
+    - "schema :S as { a: :Number, n: :Quantity(m), b: :Number computed by a ^ n }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.unitMismatch"
+    line: 1
+    column: 72
+```
+
+---
+
+## Test: trigonometry of a length
+
+Trigonometry reads radians as a plain number or degrees.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-computed-sine-unit
+schemaApi:
+  sources:
+    - "schema :S as { a: :Quantity(m), b: :Number computed by sin a }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.unitMismatch"
+    line: 1
+    column: 56
+```
+
+---
+
+## Test: an inverse function of an angle
+
+`asin` reads a plain number.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-computed-arcsine-unit
+schemaApi:
+  sources:
+    - "schema :S as { a: :Quantity(°), b: :Number computed by asin a }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.unitMismatch"
+    line: 1
+    column: 56
+```
+
+---
+
+## Test: atan2 of two units
+
+The arguments of `atan2` and `hypot` have one unit.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-computed-atan2-units
+schemaApi:
+  sources:
+    - "schema :S as { a: :Quantity(m), b: :Quantity(s), c: :Number computed by atan2(a, b) }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.unitMismatch"
+    line: 1
+    column: 82
+```
+
+---
+
+## Test: hypot of one value
+
+`hypot` takes two or three arguments.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-computed-hypot-arity
+schemaApi:
+  sources:
+    - "schema :S as { a: :Number, b: :Number computed by hypot(a) }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidExpression"
+    line: 1
+    column: 51
+```
+
+---
+
+## Test: a root of a Boolean
+
+A function reads a number or a percentage.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: error-computed-root-boolean
+schemaApi:
+  sources:
+    - "schema :S as { a: :Boolean, b: :Number computed by sqrt a }\n"
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  error:
+    code: "schema.invalidExpression"
+    line: 1
+    column: 57
+```
+
+---
+
+## Test: a power of a parenthesized function
+
+A parenthesized operand directly after a function or `abs` is the whole operand, as in GES, and the function is then
+the base of a power: `sqrt(a) ^ 2` is `(sqrt a) ^ 2`, `floor(a)²` the square of the floor, and unary minus still negates
+the power. Without parentheses the power belongs to the operand, so `sqrt a ^ 2` is the root of `a ^ 2`.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: canonical-computed-call-power
+schemaApi:
+  sources:
+    - "schema :S as {\n  a: :Number\n  b: :Number computed by sqrt(a) ^ 2\n  c: :Number computed by floor(a)²\n  d: :Number computed by abs (a) ^ 3\n  e: :Number computed by -√(a) ^ 2\n  f: :Number computed by sqrt a ^ 2\n  g: :Number computed by round half even(a) ^ 2 ^ 2\n}\n"
+  root: "S"
+  bind: false
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+schema:
+  canonical: "gess1\nschema S\nfield a Number\ncomputed b Number (power (sqrt (field a)) (number 2e0))\ncomputed c Number (power (floor (field a)) (number 2e0))\ncomputed d Number (power (abs (field a)) (number 3e0))\ncomputed e Number (negate (power (sqrt (field a)) (number 2e0)))\ncomputed f Number (sqrt (power (field a) (number 2e0)))\ncomputed g Number (power (roundHalfEven (field a)) (power (number 2e0) (number 2e0)))\n"
+```
+
+---
 ## Test: a document sets no computed field
 
 A computed field is never read from a document.

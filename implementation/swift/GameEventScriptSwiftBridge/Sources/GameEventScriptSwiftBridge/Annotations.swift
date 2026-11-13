@@ -38,7 +38,9 @@ public macro GesExtension(_ namespace: String) = #externalMacro(module: "GameEve
 /// argument labels are the Swift labels, `_` for an unlabeled argument. `unit` is attached to a numeric or spatial result,
 /// and `units` maps Swift parameter names to the units their arguments must have, which are checked and removed; Swift has
 /// no attributes on parameters, so they are named here. A `GesValue` parameter receives the raw argument, and an `Optional`
-/// result returns `nothing` for nil. GES has no purity contract for host calls, so scripts treat the function as effectful.
+/// result returns `nothing` for nil. At most one `GesRandomGenerator` parameter, in any position, receives the host's generator
+/// (`GesExtensionCall.random`); it is no script argument, so it has no label, does not count toward the signature and takes no
+/// unit. GES has no purity contract for host calls, so scripts treat the function as effectful.
 @attached(peer)
 public macro GesFunction(_ name: String? = nil, unit: GesQuantityUnit = .none, units: [String: GesQuantityUnit] = [:]) =
     #externalMacro(module: "GameEventScriptSwiftBridgeMacros", type: "GesFunctionMacro")

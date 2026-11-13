@@ -24,6 +24,7 @@ internal static class GesSwiftModelEmitter
         prologue.Line("// swift-format-ignore-file");
         prologue.Blank();
         prologue.Line("import GameEventScriptRuntime");
+        if (GesComputedEmitter.UsesMath(layout.Types.ConvertAll(type => type.Computed))) GesComputedLibrary.MathImport(prologue);
         prologue.Blank();
         GesModelPlanner.CheckProtocols(layout, swift: true);
         var document = new GesCodeDocument
@@ -53,7 +54,7 @@ internal static class GesSwiftModelEmitter
 
         if (options.Bindings || options.Values) document.Units.Add(new GesCodeUnit("", code => Support(code, support)));
         if (layout.Types.Exists(type => type.Computed.Length > 0))
-            document.Units.Add(new GesCodeUnit("", code => GesComputedLibrary.Write(code, computed.HelperName, swift: true, options.Bindings || options.Values || computed.NeedsValues(layout.Types.ConvertAll(type => (type.Name, type.Computed))))));
+            document.Units.Add(new GesCodeUnit("", code => GesComputedLibrary.Write(code, computed.HelperName, swift: true, options.Bindings || options.Values || computed.NeedsValues(layout.Types.ConvertAll(type => (type.Name, type.Computed))), GesComputedEmitter.UsesMath(layout.Types.ConvertAll(type => type.Computed)))));
         return document;
     }
 

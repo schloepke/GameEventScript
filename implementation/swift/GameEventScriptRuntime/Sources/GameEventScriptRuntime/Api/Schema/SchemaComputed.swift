@@ -3,6 +3,14 @@
 
 @_spi(Syntax) import GameEventScriptSyntax
 
+#if canImport(Darwin)
+    import Darwin
+#elseif canImport(Glibc)
+    import Glibc
+#elseif canImport(Musl)
+    import Musl
+#endif
+
 /// The operations of a checked computed expression.
 @_spi(Generator) public enum GesComputedOp: Sendable, CaseIterable {
     /// A number, percentage or Boolean literal.
@@ -57,6 +65,48 @@
     case sum
     /// `[:count]`.
     case count
+    /// `^`, `²` and `³`.
+    case power
+    /// `sqrt` and `√`.
+    case sqrt
+    /// `cbrt` and `∛`.
+    case cbrt
+    /// `sin`.
+    case sin
+    /// `cos`.
+    case cos
+    /// `tan`.
+    case tan
+    /// `asin`.
+    case asin
+    /// `acos`.
+    case acos
+    /// `atan`.
+    case atan
+    /// `atan2`.
+    case atan2
+    /// `hypot`.
+    case hypot
+    /// `exp`.
+    case exp
+    /// `ln`.
+    case ln
+    /// `floor`.
+    case floor
+    /// `ceil`.
+    case ceil
+    /// `truncate`.
+    case truncate
+    /// `round half even`.
+    case roundHalfEven
+    /// `round half up`.
+    case roundHalfUp
+    /// `round half down`.
+    case roundHalfDown
+    /// `rad`.
+    case rad
+    /// `deg`.
+    case deg
 
     /// The name in the canonical form and the layouts.
     @_spi(Generator) public var name: String {
@@ -87,6 +137,37 @@
         case .hasValue: "hasValue"
         case .sum: "sum"
         case .count: "count"
+        case .power: "power"
+        case .sqrt: "sqrt"
+        case .cbrt: "cbrt"
+        case .sin: "sin"
+        case .cos: "cos"
+        case .tan: "tan"
+        case .asin: "asin"
+        case .acos: "acos"
+        case .atan: "atan"
+        case .atan2: "atan2"
+        case .hypot: "hypot"
+        case .exp: "exp"
+        case .ln: "ln"
+        case .floor: "floor"
+        case .ceil: "ceil"
+        case .truncate: "truncate"
+        case .roundHalfEven: "roundHalfEven"
+        case .roundHalfUp: "roundHalfUp"
+        case .roundHalfDown: "roundHalfDown"
+        case .rad: "rad"
+        case .deg: "deg"
+        }
+    }
+
+    /// Whether the operation is a function or a power, whose helpers generated code holds only where a field uses one.
+    @_spi(Generator) public var isFunction: Bool {
+        switch self {
+        case .power, .sqrt, .cbrt, .sin, .cos, .tan, .asin, .acos, .atan, .atan2, .hypot, .exp, .ln, .floor, .ceil, .truncate, .roundHalfEven,
+            .roundHalfUp, .roundHalfDown, .rad, .deg:
+            true
+        default: false
         }
     }
 }
@@ -156,6 +237,9 @@
     }
 
     static func of(boolean value: Bool) -> GesComputedValue { GesComputedValue(kind: value ? .true : .false, integer: 0, number: 0) }
+
+    /// A rounded number: an Int64, saturated at its bounds as the virtual machine rounds.
+    static func of(rounded value: Double) -> GesComputedValue { of(integer: GesNumber.saturatedInteger(value)) }
 }
 
 /// A checked expression. Units are resolved at binding: each node knows its static type and unit, and an operation knows the
@@ -163,7 +247,8 @@
 /// there. Add and subtract: `first` = equal units, `second` = the left unit takes a percentage. Multiply: `first` = a product
 /// unit exists, `second` and `third` = the left and right unit take a percentage. Divide: `first` = a quotient unit exists,
 /// `second` = the left unit takes a percentage, `third` = the right side has no unit. Comparisons, min, max and clamp:
-/// `first` = equal units.
+/// `first` = equal units. Sin, cos and tan: `first` = the angle is in degrees. The other functions check their units at
+/// binding alone.
 @_spi(Generator) public final class GesComputedNode: @unchecked Sendable {
     /// The operation.
     @_spi(Generator) public let op: GesComputedOp
@@ -350,6 +435,56 @@ enum GesComputedMath {
         return .of(float: x < lower ? lower : x > upper ? upper : x)
     }
 
+    /// A power of the virtual machine: nothing for nothing, the platform's pow, and the correctly rounded square root for the
+    /// exponent 0.5 that `sqrt` lowers to. The unit checks are made at binding.
+    static func power(_ a: GesComputedValue, _ b: GesComputedValue) -> GesComputedValue {
+        a.isNothing || b.isNothing ? .nothing : .of(float: GesNumber.power(a.numeric, b.numeric))
+    }
+
+    /// A function of one number in binary64: nothing for nothing, the function's result otherwise.
+    static func function(_ op: GesComputedOp, _ a: GesComputedValue, _ degrees: Bool) -> GesComputedValue {
+        if a.isNothing { return .nothing }
+        let x = a.numeric
+        let radians = degrees ? x / 180 * Double.pi : x
+        switch op {
+        case .sqrt: return .of(float: GesNumber.squareRoot(x))
+        case .cbrt: return .of(float: pow(x, 1.0 / 3.0))
+        case .sin: return .of(float: sin(radians))
+        case .cos: return .of(float: cos(radians))
+        case .tan: return .of(float: tan(radians))
+        case .asin: return .of(float: asin(x))
+        case .acos: return .of(float: acos(x))
+        case .atan: return .of(float: atan(x))
+        case .exp: return .of(float: exp(x))
+        case .ln: return .of(float: log(x))
+        case .floor: return .of(rounded: x.rounded(.down))
+        case .ceil: return .of(rounded: x.rounded(.up))
+        case .truncate: return .of(rounded: x.rounded(.towardZero))
+        case .roundHalfEven: return .of(rounded: x.rounded(.toNearestOrEven))
+        case .roundHalfUp: return .of(rounded: x.rounded(.toNearestOrAwayFromZero))
+        case .roundHalfDown:
+            let truncated = x.rounded(.towardZero)
+            return .of(rounded: Swift.abs(x - truncated) <= 0.5 ? truncated : x.rounded(.toNearestOrAwayFromZero))
+        case .rad: return .of(float: x.isFinite ? x / 180 * Double.pi : .nan)
+        default: return .of(float: x.isFinite ? x / Double.pi * 180 : .nan)
+        }
+    }
+
+    /// `atan2(y, x)` in radians, 0 for (0, 0).
+    static func arctangent(_ y: GesComputedValue, _ x: GesComputedValue) -> GesComputedValue {
+        if y.isNothing || x.isNothing { return .nothing }
+        return .of(float: y.numeric == 0 && x.numeric == 0 ? 0 : atan2(y.numeric, x.numeric))
+    }
+
+    /// The Euclidean length of two or three components of one unit.
+    static func hypotenuse(_ a: GesComputedValue, _ b: GesComputedValue, _ c: GesComputedValue?) -> GesComputedValue {
+        if a.isNothing || b.isNothing || c?.isNothing == true { return .nothing }
+        let x = a.numeric
+        let y = b.numeric
+        guard let z = c?.numeric else { return .of(float: (x * x + y * y).squareRoot()) }
+        return .of(float: (x * x + y * y + z * z).squareRoot())
+    }
+
     /// The conversion to the field's type that a script record makes: a Percentage takes a finite number as its ratio, and a
     /// Boolean is true only for true.
     static func cast(_ value: GesComputedValue, _ type: GesComputedType) -> GesComputedValue {
@@ -442,6 +577,14 @@ enum GesComputedEvaluation {
         case .count:
             let source = children[0]
             return .of(integer: Int64((source.op == .item ? item! : scope).count(source.path)))
+        case .power:
+            return GesComputedMath.power(evaluate(children[0], scope, item), evaluate(children[1], scope, item))
+        case .atan2:
+            return GesComputedMath.arctangent(evaluate(children[0], scope, item), evaluate(children[1], scope, item))
+        case .hypot:
+            return GesComputedMath.hypotenuse(evaluate(children[0], scope, item), evaluate(children[1], scope, item), children.count > 2 ? evaluate(children[2], scope, item) : nil)
+        default:
+            return GesComputedMath.function(node.op, evaluate(children[0], scope, item), node.first)
         }
     }
 }

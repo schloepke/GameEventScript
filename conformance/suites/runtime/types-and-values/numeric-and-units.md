@@ -1383,6 +1383,103 @@ steps:
 
 ---
 
+## Test: a unary intrinsic with a parenthesized operand is a power base
+
+An operand in parentheses directly after a unary intrinsic is its whole operand, and the intrinsic is then the base of a
+power like `hypot(3, 4) ^ 2`: `floor(x) ^ 2` is `(floor x) ^ 2`, whitespace before the parenthesis included. Without
+parentheses the power belongs to the operand, so `floor x ^ 2` is `floor (x ^ 2)`. A power binds tighter than unary minus,
+so `-floor(x) ^ 2` is `-((floor x) ^ 2)`.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: unary-intrinsic-power-base
+kind: scriptApi
+level: scenario
+comparison:
+  binary64:
+    mode: ulp
+    maxUlps: 4096
+sources:
+  - name: "a unary intrinsic with a parenthesized operand is a power base.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start {
+  let x be 2.5
+  emit Done(power: floor(x) ^ 2, square: floor(x)², root: sqrt(16) ^ 2, symbolRoot: √(16) ^ 2, rounded: round half even(x) ^ 2, spaced: floor (x) ^ 2, rightAssoc: floor(x) ^ 2 ^ 2, exponent: 2 ^ floor(x) ^ 2, unparenthesized: floor x ^ 2, negated: -floor(x) ^ 2, call: hypot(3, 4) ^ 2)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| step-0001 | Start | completion |  |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  step-0001:
+    input:
+      args: []
+    local:
+      - name: "Done"
+        args:
+          - name: "power"
+            value:
+              type: ":Number.int64"
+              value: "4"
+          - name: "square"
+            value:
+              type: ":Number.int64"
+              value: "4"
+          - name: "root"
+            value:
+              type: ":Number.int64"
+              value: "16"
+          - name: "symbolRoot"
+            value:
+              type: ":Number.int64"
+              value: "16"
+          - name: "rounded"
+            value:
+              type: ":Number.int64"
+              value: "4"
+          - name: "spaced"
+            value:
+              type: ":Number.int64"
+              value: "4"
+          - name: "rightAssoc"
+            value:
+              type: ":Number.int64"
+              value: "16"
+          - name: "exponent"
+            value:
+              type: ":Number.int64"
+              value: "16"
+          - name: "unparenthesized"
+            value:
+              type: ":Number.int64"
+              value: "6"
+          - name: "negated"
+            value:
+              type: ":Number.int64"
+              value: "-4"
+          - name: "call"
+            value:
+              type: ":Number.int64"
+              value: "25"
+```
+
+---
+
 ## Test: implicit multiplication superscripts and unicode operator aliases
 
 This runtime case exercises “implicit multiplication superscripts and unicode operator aliases” and verifies the declared messages, values, and execution result.

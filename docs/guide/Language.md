@@ -91,6 +91,27 @@ on Main(args) {
 positional because `_ value` declares an unlabeled argument. Keep named argument
 order consistent: labels and their order participate in signature matching.
 
+> **Since: Unreleased** — names in backticks
+
+A name that is also a GES keyword can be written in backticks. `` `length` ``
+is the plain name `length`, so it reads a field or binding of that name where
+plain `length` would be the intrinsic. Words that already work as argument
+labels, such as `length`, `e` or `to`, also name record fields and members
+without backticks; any other keyword, such as `record` or `if`, needs them:
+
+```ges
+record :Box as {
+    length: :Number,
+    `record`: :Number,
+    half: :Number computed by `length` / 2
+}
+
+on Main(args) {
+    let box be :Box(length: 8, `record`: 1)
+    emit ConsoleOut(box.length, ' ', box.half, ' ', box.`record`)
+}
+```
+
 ## Values and local bindings
 
 Use `let name be expression` to bind a value. Bindings are immutable: compute a

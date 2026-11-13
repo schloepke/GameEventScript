@@ -6,7 +6,9 @@
 Every schemaApi case of the corpus that decodes a record with computed fields is turned into a GES program: each schema
 becomes a script record with the same computed expressions, the record is constructed from the case's input, and the
 program prints each computed field. Both CLIs run it on their virtual machine, and every printed value must have the bits of
-the corpus expectation, which the value path of both runtimes and the generated code of both languages already meet.
+the corpus expectation, which the value path of both runtimes and the generated code of both languages already meet. A case
+that compares binary64 within a number of ULPs, for functions of the platform's math library such as `sin` or `exp`, is
+compared within that tolerance; square roots, rounding and arithmetic stay bit-exact.
 --self-test qualifies the comparison with negative controls.
 """
 import argparse
@@ -67,7 +69,12 @@ def literal(value):
     kind = value["type"]
     unit = SYMBOLS[value["unit"][1:]] if "unit" in value else ""
     if kind.endswith(".int64") or kind.endswith(".binary64"):
-        return f"{value['value']}{unit}" if not value["value"].startswith("-") else f"({value['value']}{unit})"
+        # Source has no exponent or infinity literal: such a number is a converted text or the constant, scaled to its unit.
+        text = value["value"]
+        if text in ("Infinity", "-Infinity") or "e" in text.lower():
+            number = text.replace("Infinity", "infinity") if "Infinity" in text else f'("{text}" as :Number)'
+            return f"({number} * 1{unit})" if unit else number if number.startswith("(") else f"({number})"
+        return f"{text}{unit}" if not text.startswith("-") else f"({text}{unit})"
     if kind == ":Percentage":
         return f"({value['value']} as :Percentage)"
     if kind == ":Boolean":
@@ -121,14 +128,38 @@ def expected(value):
     return bits(value["value"])
 
 
-def difference(wanted, seen):
+def ordered(word):
+    """The position of binary64 bits in the order of the numbers, as the runner counts ULPs."""
+    value = int(word, 16)
+    return (~value & (2**64 - 1)) if value >> 63 else value | (1 << 63)
+
+
+def close(want, got, ulps):
+    """Whether two printed values match: exactly, or finite numbers within the case's ULP tolerance."""
+    if want == got:
+        return True
+    if ulps == 0 or want in ("true", "false", "nothing") or got in ("true", "false", "nothing"):
+        return False
+    infinite = ("7ff0000000000000", "fff0000000000000")
+    if want in infinite or got in infinite:
+        return False
+    return abs(ordered(want) - ordered(got)) <= ulps
+
+
+def difference(wanted, seen, ulps=0):
     """None when the virtual machine printed the expected values, otherwise a short description."""
     if len(wanted) != len(seen):
         return f"expected {len(wanted)} values, got {seen}"
     for (name, want), got in zip(wanted, seen):
-        if want != got:
+        if not close(want, got, ulps):
             return f"{name}: expected {want}, got {got}"
     return None
+
+
+def tolerance(case):
+    """The ULPs a case allows for binary64, 0 for its default exact comparison."""
+    config = (case.metadata.get("comparison") or {}).get("binary64") or {"mode": "exact"}
+    return config.get("maxUlps", 0) if config.get("mode") == "ulp" else 0
 
 
 def cases(paths):
@@ -138,14 +169,14 @@ def cases(paths):
         decoded = ((case.expected or {}).get("schema") or {}).get("decoded") or {}
         if not isinstance(api, dict) or "computed by" not in "".join(api.get("sources") or []) or "value" not in decoded or "encode" not in api:
             continue
-        result.append((case.id, api["sources"], api["root"], api["encode"], decoded["value"]))
+        result.append((case.id, api["sources"], api["root"], api["encode"], decoded["value"], tolerance(case)))
     return result
 
 
 def check(csharp, swift):
     failures = []
     items = cases(sorted((ROOT / "conformance/suites").rglob("*.md")))
-    for case_id, sources, root, value, decoded in items:
+    for case_id, sources, root, value, decoded, ulps in items:
         with tempfile.TemporaryDirectory() as temporary:
             work = Path(temporary)
             for index, text in enumerate(sources):
@@ -169,7 +200,7 @@ def check(csharp, swift):
                 if run.returncode != 0:
                     failures.append(f"{port} {case_id}: {run.stderr.decode('utf-8', 'replace').strip()}")
                     continue
-                found = difference(wanted, [bits(line) for line in run.stdout.decode("utf-8").splitlines()])
+                found = difference(wanted, [bits(line) for line in run.stdout.decode("utf-8").splitlines()], ulps)
                 if found:
                     failures.append(f"{port} {case_id}: {found}")
     return len(items), failures
@@ -181,8 +212,16 @@ def self_test():
     assert difference([("a", "nothing")], [bits("0")])
     assert difference([("a", "true")], ["false"])
     assert difference([("a", "true")], [])
+    assert difference([("a", bits("0.5"))], [bits("0.49999999999999994")], 4) is None
+    assert difference([("a", bits("0.5"))], [bits("0.49999999999999994")])
+    assert difference([("a", bits("1"))], [bits("1.0000000000000011")], 4)
+    assert difference([("a", "nothing")], [bits("0")], 4)
+    assert difference([("a", bits("inf"))], [bits("1.7976931348623157e308")], 4)
+    assert difference([("a", bits("-0.0"))], [bits("0")], 4) is None
     assert literal({"type": ":Quantity.binary64", "value": "0.25", "unit": ":second"}) == "0.25s"
     assert literal({"type": ":Percentage", "value": "0.25"}) == "(0.25 as :Percentage)"
+    assert literal({"type": ":Number.binary64", "value": "5e-324"}) == '("5e-324" as :Number)'
+    assert literal({"type": ":Quantity.binary64", "value": "-Infinity", "unit": ":meter"}) == "(-infinity * 1m)"
     assert record_type(":Quantity(W) between 0W and 1kW step 1W") == ":Quantity(W)"
     declared = schemas("schema :S as {\n  a: :Number\n  b: :Number computed by a * 2\n}\n")
     assert declared == {"S": [("a", ":Number", None), ("b", ":Number", "a * 2")]}

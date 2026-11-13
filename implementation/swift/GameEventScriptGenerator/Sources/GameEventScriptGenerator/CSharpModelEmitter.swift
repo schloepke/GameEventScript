@@ -66,7 +66,8 @@ enum GesCSharpModelEmitter {
         document.units.append(GesCodeUnit(owner: "") { code in supportType(&code, support, conversions: conversions, geometry: geometry) })
         if layout.types.contains(where: { !$0.computed.isEmpty }) {
             let values = options.bindings || options.values || computed.needsValues(layout.types.map { ($0.name, $0.computed) })
-            document.units.append(GesCodeUnit(owner: "") { code in GesComputedLibrary.write(&code, computed.helper, swift: false, values: values) })
+            let math = GesComputedEmitter.usesMath(layout.types.map(\.computed))
+            document.units.append(GesCodeUnit(owner: "") { code in GesComputedLibrary.write(&code, computed.helper, swift: false, values: values, math: math) })
         }
         return document
     }

@@ -31,6 +31,19 @@
     // Only space, tab and the line breaks LF and CR are portable source whitespace.
     static func space(_ c: Unicode.Scalar) -> Bool { [9, 10, 13, 32].contains(c.value) }
 
+    // A lowercase ASCII letter, then ASCII letters or digits, then optionally `_0` or `_` with digits without a leading zero.
+    static func quotableName(_ name: String) -> Bool {
+        let scalars = Array(name.unicodeScalars)
+        guard let first = scalars.first, lower(first) else { return false }
+        var index = 1
+        while index < scalars.count && (letter(scalars[index]) || digit(scalars[index])) { index += 1 }
+        if index == scalars.count { return true }
+        guard scalars[index] == "_", index + 1 < scalars.count else { return false }
+        index += 1
+        if scalars[index] == "0" { return index + 1 == scalars.count }
+        return scalars[index...].allSatisfy { digit($0) }
+    }
+
     static func validSuffix(_ text: String) -> Bool {
         guard let separator = text.firstIndex(of: "_") else { return true }
         let digits = text[text.index(after: separator)...]
@@ -328,6 +341,20 @@
             }
             let text = slice(start)
             return token(quantity ? .unitNumber : text.unicodeScalars.last == "%" ? .percentage : .float, text)
+        }
+        // A name in backticks, such as `length` in backticks, is an identifier whose value is the inner name: a lower name,
+        // which may be any keyword word, optionally with a binding's derivation suffix (specs/Language.md#lexical-rules).
+        // Other content up to the closing backtick on the same line is one illegal token; an unclosed backtick alone is one.
+        if first == "`" {
+            var close = index + 1
+            while close < scalars.count && scalars[close] != "`" && scalars[close] != "\r" && scalars[close] != "\n" { close += 1 }
+            guard close < scalars.count && scalars[close] == "`" else {
+                advance()
+                return token(.illegal, "`")
+            }
+            while index <= close { advance() }
+            let name = String(String.UnicodeScalarView(scalars[(start + 1)..<close]))
+            return Self.quotableName(name) ? token(.identifier, name, word: true) : token(.illegal, slice(start))
         }
         if first == "\"" || first == "'" {
             // Only a doubled delimiter escapes the quote; a backslash is ordinary text.

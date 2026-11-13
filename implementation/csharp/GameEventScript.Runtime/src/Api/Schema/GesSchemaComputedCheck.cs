@@ -303,6 +303,8 @@ internal sealed partial class GesFileScope
                 if (!SameType(value, fallback)) throw Different(children[1], value, fallback);
                 return Node(GesComputedOp.Default, value.Type, value.Unit, value, fallback);
             }
+            case GesSchemaExpressionKind.Function:
+                return Function(syntax, context);
             case GesSchemaExpressionKind.HasValue:
             {
                 var operand = CheckExpression(children[0], context);
@@ -490,6 +492,24 @@ internal sealed partial class GesFileScope
                 var unit = left.Type == percentage ? GesQuantityUnit.UnitNone : right.Type == percentage ? a : quotient!.Value;
                 return Flags(GesComputedOp.Divide, type, unit, left, right, quotient is not null, a.AcceptsPercentage(), b == GesQuantityUnit.UnitNone);
             }
+            case GesSchemaBinaryOperator.Power:
+            {
+                // A quantity takes the unit of its power from the derivation table, which needs the exponent at binding.
+                Numeric(syntax.Children[0], left);
+                Numeric(syntax.Children[1], right);
+                if (right.Type == number && b != GesQuantityUnit.UnitNone)
+                    throw Error(Code.UnitMismatch, syntax.Children[1].Offset, $"An exponent has no unit, but this one is a {Describe(right)}.");
+                var unit = GesQuantityUnit.UnitNone;
+                if (left.Type == number && a != GesQuantityUnit.UnitNone)
+                {
+                    if (right.Op != GesComputedOp.Literal)
+                        throw Error(Code.UnitMismatch, syntax.Children[1].Offset, $"The power of a {Describe(left)} takes a literal exponent, which gives the unit of the result.");
+                    unit = GesQuantityUnits.Power(a, right.Literal.Numeric)
+                        ?? throw Error(Code.UnitMismatch, syntax.Offset, $"A {Describe(left)} to the power {right.Decimal.Canonical} has no unit of the closed unit set.");
+                }
+
+                return Node(GesComputedOp.Power, number, unit, left, right);
+            }
             case GesSchemaBinaryOperator.And or GesSchemaBinaryOperator.Or:
                 if (left.Type != GesComputedType.Boolean) throw Mismatch(syntax.Children[0], "a Boolean", left);
                 if (right.Type != GesComputedType.Boolean) throw Mismatch(syntax.Children[1], "a Boolean", right);
@@ -513,6 +533,86 @@ internal sealed partial class GesFileScope
             }
         }
     }
+
+    // A number or percentage, which functions and powers read through its numeric view: a percentage as its ratio.
+    private void Numeric(GesSchemaExpressionSyntax syntax, GesComputedNode node)
+    {
+        if (node.Type is not (GesComputedType.Number or GesComputedType.Percentage)) throw Mismatch(syntax, "a number or percentage", node);
+    }
+
+    // The unit of a number, none for a percentage, which functions read as its ratio.
+    private static GesQuantityUnit NumericUnit(GesComputedNode node) => node.Type == GesComputedType.Number ? node.Unit : GesQuantityUnit.UnitNone;
+
+    // The functions of GES with the unit rules of the virtual machine, each giving a number: roots take the unit of the root
+    // in the derivation table, trigonometry takes radians as a plain number or degrees, the inverse functions and `atan2` give
+    // radians, rounding keeps the unit, and the others read plain numbers.
+    private Checked Function(GesSchemaExpressionSyntax syntax, ComputedContext context)
+    {
+        var children = syntax.Children;
+        var arguments = new GesComputedNode[children.Length];
+        for (var index = 0; index < children.Length; index++)
+        {
+            arguments[index] = Value(children[index], context);
+            Numeric(children[index], arguments[index]);
+        }
+
+        var number = GesComputedType.Number;
+        var unit = NumericUnit(arguments[0]);
+        switch (syntax.Name)
+        {
+            case "sqrt" or "cbrt":
+            {
+                var root = GesQuantityUnits.Power(unit, syntax.Name == "sqrt" ? 0.5d : 1d / 3d)
+                    ?? throw Error(Code.UnitMismatch, syntax.Offset, $"A {Describe(arguments[0])} has no {(syntax.Name == "sqrt" ? "square" : "cube")} root in the closed unit set.");
+                return Node(syntax.Name == "sqrt" ? GesComputedOp.Sqrt : GesComputedOp.Cbrt, number, root, arguments);
+            }
+            case "sin" or "cos" or "tan":
+            {
+                if (unit != GesQuantityUnit.UnitNone && unit != GesQuantityUnit.UnitDegree) throw Angle(syntax, arguments[0]);
+                var op = syntax.Name switch { "sin" => GesComputedOp.Sin, "cos" => GesComputedOp.Cos, _ => GesComputedOp.Tan };
+                return new Checked(new GesComputedNode { Op = op, Type = number, Unit = GesQuantityUnit.UnitNone, Children = arguments, First = unit == GesQuantityUnit.UnitDegree });
+            }
+            case "rad":
+                if (unit != GesQuantityUnit.UnitNone && unit != GesQuantityUnit.UnitDegree) throw Angle(syntax, arguments[0]);
+                return Node(GesComputedOp.Rad, number, GesQuantityUnit.UnitNone, arguments);
+            case "atan2" or "hypot":
+                for (var index = 1; index < arguments.Length; index++)
+                    if (NumericUnit(arguments[index]) != unit)
+                        throw Error(Code.UnitMismatch, children[index].Offset, $"The arguments of {syntax.Name} have one unit, but a {Describe(arguments[index])} meets a {Describe(arguments[0])}.");
+                return syntax.Name == "atan2" ? Node(GesComputedOp.Atan2, number, GesQuantityUnit.UnitNone, arguments) : Node(GesComputedOp.Hypot, number, unit, arguments);
+            case "floor" or "ceil" or "truncate" or "round half even" or "round half up" or "round half down":
+            {
+                var op = syntax.Name switch
+                {
+                    "floor" => GesComputedOp.Floor,
+                    "ceil" => GesComputedOp.Ceil,
+                    "truncate" => GesComputedOp.Truncate,
+                    "round half even" => GesComputedOp.RoundHalfEven,
+                    "round half up" => GesComputedOp.RoundHalfUp,
+                    _ => GesComputedOp.RoundHalfDown
+                };
+                return Node(op, number, unit, arguments);
+            }
+            default:
+            {
+                if (unit != GesQuantityUnit.UnitNone)
+                    throw Error(Code.UnitMismatch, syntax.Offset, $"{syntax.Name} reads a plain number, but this is a {Describe(arguments[0])}.");
+                var op = syntax.Name switch
+                {
+                    "asin" => GesComputedOp.Asin,
+                    "acos" => GesComputedOp.Acos,
+                    "atan" => GesComputedOp.Atan,
+                    "exp" => GesComputedOp.Exp,
+                    "ln" => GesComputedOp.Ln,
+                    _ => GesComputedOp.Deg
+                };
+                return Node(op, number, op == GesComputedOp.Deg ? GesQuantityUnit.UnitDegree : GesQuantityUnit.UnitNone, arguments);
+            }
+        }
+    }
+
+    private GesSchemaException Angle(GesSchemaExpressionSyntax syntax, GesComputedNode argument)
+        => Error(Code.UnitMismatch, syntax.Offset, $"{syntax.Name} reads an angle in radians as a plain number or in degrees, but this is a {Describe(argument)}.");
 
     private static GesQuantityUnit? ProductUnit(GesQuantityUnit a, GesQuantityUnit b)
         => a == GesQuantityUnit.UnitNone ? b : b == GesQuantityUnit.UnitNone ? a : GesQuantityUnits.Product(a, b);

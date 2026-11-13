@@ -263,7 +263,82 @@ extension GesFileScope {
             return Self.node(.hasValue, .boolean, .none, [operand.node])
         case .sum, .count:
             return try aggregate(syntax, context)
+        case .function:
+            return try function(syntax, context)
         }
+    }
+
+    /// A number or percentage, which functions and powers read through its numeric view: a percentage as its ratio.
+    private func numeric(_ syntax: GesSchemaExpressionSyntax, _ node: GesComputedNode) throws {
+        if node.type != .number && node.type != .percentage { throw mismatch(syntax, "a number or percentage", node) }
+    }
+
+    /// The unit of a number, none for a percentage, which functions read as its ratio.
+    private static func numericUnit(_ node: GesComputedNode) -> GesQuantityUnit { node.type == .number ? node.unit : .none }
+
+    /// The functions of GES with the unit rules of the virtual machine, each giving a number: roots take the unit of the root
+    /// in the derivation table, trigonometry takes radians as a plain number or degrees, the inverse functions and `atan2`
+    /// give radians, rounding keeps the unit, and the others read plain numbers.
+    private func function(_ syntax: GesSchemaExpressionSyntax, _ context: Context) throws -> Checked {
+        let children = syntax.children
+        var arguments: [GesComputedNode] = []
+        for child in children {
+            let argument = try value(child, context)
+            try numeric(child, argument)
+            arguments.append(argument)
+        }
+        let unit = Self.numericUnit(arguments[0])
+        switch syntax.name {
+        case "sqrt", "cbrt":
+            let square = syntax.name == "sqrt"
+            guard let root = GesQuantityUnit.power(unit, square ? 0.5 : 1.0 / 3.0) else {
+                throw error(Code.unitMismatch, syntax.offset, "A \(Self.describe(arguments[0])) has no \(square ? "square" : "cube") root in the closed unit set.")
+            }
+            return Self.node(square ? .sqrt : .cbrt, .number, root, arguments)
+        case "sin", "cos", "tan":
+            if unit != .none && unit != .degree { throw angle(syntax, arguments[0]) }
+            let op: GesComputedOp = syntax.name == "sin" ? .sin : syntax.name == "cos" ? .cos : .tan
+            return Checked(node: GesComputedNode(op, .number, children: arguments, first: unit == .degree))
+        case "rad":
+            if unit != .none && unit != .degree { throw angle(syntax, arguments[0]) }
+            return Self.node(.rad, .number, .none, arguments)
+        case "atan2", "hypot":
+            for index in 1..<arguments.count where Self.numericUnit(arguments[index]) != unit {
+                throw error(
+                    Code.unitMismatch,
+                    children[index].offset,
+                    "The arguments of \(syntax.name) have one unit, but a \(Self.describe(arguments[index])) meets a \(Self.describe(arguments[0]))."
+                )
+            }
+            return syntax.name == "atan2" ? Self.node(.atan2, .number, .none, arguments) : Self.node(.hypot, .number, unit, arguments)
+        case "floor", "ceil", "truncate", "round half even", "round half up", "round half down":
+            let op: GesComputedOp
+            switch syntax.name {
+            case "floor": op = .floor
+            case "ceil": op = .ceil
+            case "truncate": op = .truncate
+            case "round half even": op = .roundHalfEven
+            case "round half up": op = .roundHalfUp
+            default: op = .roundHalfDown
+            }
+            return Self.node(op, .number, unit, arguments)
+        default:
+            if unit != .none { throw error(Code.unitMismatch, syntax.offset, "\(syntax.name) reads a plain number, but this is a \(Self.describe(arguments[0])).") }
+            let op: GesComputedOp
+            switch syntax.name {
+            case "asin": op = .asin
+            case "acos": op = .acos
+            case "atan": op = .atan
+            case "exp": op = .exp
+            case "ln": op = .ln
+            default: op = .deg
+            }
+            return Self.node(op, .number, op == .deg ? .degree : .none, arguments)
+        }
+    }
+
+    private func angle(_ syntax: GesSchemaExpressionSyntax, _ argument: GesComputedNode) -> GesSchemaError {
+        error(Code.unitMismatch, syntax.offset, "\(syntax.name) reads an angle in radians as a plain number or in degrees, but this is a \(Self.describe(argument)).")
     }
 
     /// A value that arithmetic, comparisons and choices read: a number, percentage or Boolean.
@@ -416,6 +491,24 @@ extension GesFileScope {
             let type: GesComputedType = left.type == .percentage && right.type == .number ? .percentage : .number
             let unit = left.type == .percentage ? GesQuantityUnit.none : right.type == .percentage ? a : quotient!
             return Self.flags(.divide, type, unit, left, right, quotient != nil, a.acceptsPercentage, b == .none)
+        case .power:
+            // A quantity takes the unit of its power from the derivation table, which needs the exponent at binding.
+            try self.numeric(syntax.children[0], left)
+            try self.numeric(syntax.children[1], right)
+            if right.type == .number && b != .none {
+                throw error(Code.unitMismatch, syntax.children[1].offset, "An exponent has no unit, but this one is a \(Self.describe(right)).")
+            }
+            var unit = GesQuantityUnit.none
+            if left.type == .number && a != .none {
+                if right.op != .literal {
+                    throw error(Code.unitMismatch, syntax.children[1].offset, "The power of a \(Self.describe(left)) takes a literal exponent, which gives the unit of the result.")
+                }
+                guard let powered = GesQuantityUnit.power(a, right.literal.numeric) else {
+                    throw error(Code.unitMismatch, syntax.offset, "A \(Self.describe(left)) to the power \(right.decimal.canonical) has no unit of the closed unit set.")
+                }
+                unit = powered
+            }
+            return Self.node(.power, .number, unit, [left, right])
         case .and, .or:
             if left.type != .boolean { throw mismatch(syntax.children[0], "a Boolean", left) }
             if right.type != .boolean { throw mismatch(syntax.children[1], "a Boolean", right) }

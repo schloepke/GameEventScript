@@ -182,7 +182,7 @@ enum GesSourceHighlighting {
     // reads, it has a role.
     private static func isDiceSides(_ tokens: [GesToken], _ roles: [GesSyntaxRole], _ index: Int) -> Bool {
         let token = tokens[index]
-        guard token.kind == .identifier, roles[index] == .none, index > 0, tokens[index - 1].kind == .float, token.fullStart == token.start else { return false }
+        guard token.kind == .identifier, !token.isQuotedName, roles[index] == .none, index > 0, tokens[index - 1].kind == .float, token.fullStart == token.start else { return false }
         let text = token.text.utf8
         return text.count >= 2 && text.first == 0x64 && text.dropFirst().allSatisfy(GesNames.digit)
     }

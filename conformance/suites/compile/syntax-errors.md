@@ -2343,6 +2343,124 @@ error:
 
 ---
 
+## Test: a power after a unary operation without parentheses
+
+A power applies to a power base; a unary operator or an intrinsic without parentheses ends with its operand, so a second
+power after `x²` has no base, as after `x²` alone.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: power-after-unary-operation
+kind: compileError
+level: atomic
+sources:
+  - name: "a power after a unary operation without parentheses.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start(x) {
+  let y be floor x² ^ 2
+  emit Done(value: y)
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "parse"
+  code: "parse.syntax"
+  line: 2
+  column: 21
+```
+
+---
+
+## Test: a call's parenthesis on the next line
+
+A line break outside brackets separates statements, so a parenthesis on the next line does not call the name before it:
+`twice` stands alone and is no variable.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: call-parenthesis-next-line
+kind: compileError
+level: atomic
+sources:
+  - name: "a call's parenthesis on the next line.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+function twice(x) be x * 2
+on Start(x) {
+  let y be twice
+  (x)
+  emit Done(value: y)
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "validate"
+  code: "validate.unresolvedVariable"
+  line: 3
+  column: 12
+```
+
+---
+
+## Test: a power after a negated square
+
+As for an intrinsic without parentheses, unary minus ends with its operand `x²`, which takes no second power.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: power-after-negated-square
+kind: compileError
+level: atomic
+sources:
+  - name: "a power after a negated square.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start(x) {
+  let y be -x² ^ 2
+  emit Done(value: y)
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "parse"
+  code: "parse.syntax"
+  line: 2
+  column: 16
+```
+
+---
+
 ## Test: a hexadecimal literal without digits
 
 A `0x` prefix requires at least one hexadecimal digit.

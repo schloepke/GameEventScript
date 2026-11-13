@@ -156,6 +156,13 @@ internal enum GesTokenKind
 // token stays small: the unit of a UnitNumber follows from its spelling.
 internal readonly record struct GesToken(GesTokenKind Kind, string Text, int Line, int Column, int EndLine, int EndColumn, int FullStart = 0, int Start = 0, int End = 0)
 {
+    // A name written in backticks: its spelling is its value between two backticks. Only the `°` spelling of `degree` is
+    // another identifier whose spelling differs from its value, and it is shorter.
+    public bool IsQuotedName => Kind == GesTokenKind.Identifier && End - Start == Text.Length + 2;
+
+    // A contextual word such as `from` or `where`: a plain identifier with this value. A name in backticks is never one.
+    public bool IsWord(string word) => Kind == GesTokenKind.Identifier && string.Equals(Text, word, StringComparison.Ordinal) && !IsQuotedName;
+
     public override string ToString() => $"{Kind}('{Text}', {Line}:{Column}-{EndLine}:{EndColumn})";
 }
 
@@ -244,6 +251,7 @@ internal sealed class GesLexer
                 case ':' when GesText.IsAsciiLower(Peek()): return ReadSelectorToken(startLine, startColumn);
                 case '#' when GesText.IsAsciiLower(Peek()): return ReadTagToken(startLine, startColumn);
                 case '$' when GesText.IsAsciiLower(Peek()): return ReadConstantReferenceToken(startLine, startColumn);
+                case '`': return ReadQuotedNameToken(startLine, startColumn);
                 default: return ReadOperatorToken(startLine, startColumn);
             }
         }
@@ -464,6 +472,41 @@ internal sealed class GesLexer
         while (!IsAtEnd && !GesText.IsTokenWhitespace(Current)) Advance();
 
         return CreateToken(GesTokenKind.Illegal, _input[start.._index], line, column);
+    }
+
+    // A name in backticks, such as `length` in backticks, is an identifier whose value is the inner name: a lower name,
+    // which may be any keyword word, optionally with a binding's derivation suffix (specs/Language.md#lexical-rules).
+    // Other content up to the closing backtick on the same line is one illegal token; an unclosed backtick alone is one.
+    private GesToken ReadQuotedNameToken(int line, int column)
+    {
+        var start = _index;
+        var close = start + 1;
+        while (close < _length && _input[close] is not ('`' or '\r' or '\n')) close++;
+        if (close >= _length || _input[close] != '`')
+        {
+            Advance();
+            return CreateToken(GesTokenKind.Illegal, "`", line, column);
+        }
+
+        while (_index <= close) Advance();
+        var name = _input.Substring(start + 1, close - start - 1);
+        return IsQuotableName(name)
+            ? CreateToken(GesTokenKind.Identifier, name, line, column)
+            : CreateToken(GesTokenKind.Illegal, _input[start.._index], line, column);
+    }
+
+    // A lowercase ASCII letter, then ASCII letters or digits, then optionally `_0` or `_` with digits without a leading zero.
+    private static bool IsQuotableName(string name)
+    {
+        if (name.Length == 0 || !GesText.IsAsciiLower(name[0])) return false;
+        var index = 1;
+        while (index < name.Length && (GesText.IsAsciiLetter(name[index]) || GesText.IsAsciiDigit(name[index]))) index++;
+        if (index == name.Length) return true;
+        if (name[index++] != '_' || index == name.Length) return false;
+        if (name[index] == '0') return index + 1 == name.Length;
+        for (; index < name.Length; index++)
+            if (!GesText.IsAsciiDigit(name[index])) return false;
+        return true;
     }
 
     private bool ReadValidIdentifierSuffix()

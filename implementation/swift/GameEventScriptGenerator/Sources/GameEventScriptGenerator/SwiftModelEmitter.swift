@@ -18,6 +18,7 @@ enum GesSwiftModelEmitter {
         prologue.line("// swift-format-ignore-file")
         prologue.blank()
         prologue.line("import GameEventScriptRuntime")
+        if GesComputedEmitter.usesMath(layout.types.map(\.computed)) { GesComputedLibrary.mathImport(&prologue) }
         prologue.blank()
         try GesModelPlanner.checkProtocols(layout, swift: true)
         var document = GesCodeDocument(
@@ -58,7 +59,8 @@ enum GesSwiftModelEmitter {
         if options.bindings || options.values { document.units.append(GesCodeUnit(owner: "") { code in supportType(&code, support) }) }
         if layout.types.contains(where: { !$0.computed.isEmpty }) {
             let values = options.bindings || options.values || computed.needsValues(layout.types.map { ($0.name, $0.computed) })
-            document.units.append(GesCodeUnit(owner: "") { code in GesComputedLibrary.write(&code, computed.helper, swift: true, values: values) })
+            let math = GesComputedEmitter.usesMath(layout.types.map(\.computed))
+            document.units.append(GesCodeUnit(owner: "") { code in GesComputedLibrary.write(&code, computed.helper, swift: true, values: values, math: math) })
         }
         return document
     }

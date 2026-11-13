@@ -57,7 +57,7 @@ internal static class GesCSharpModelEmitter
         var geometry = GesModelPlanner.UsesGeometry(layout);
         document.Units.Add(new GesCodeUnit("", code => Support(code, support, options.Bindings || options.Values, geometry)));
         if (layout.Types.Exists(type => type.Computed.Length > 0))
-            document.Units.Add(new GesCodeUnit("", code => GesComputedLibrary.Write(code, computed.HelperName, swift: false, options.Bindings || options.Values || computed.NeedsValues(layout.Types.ConvertAll(type => (type.Name, type.Computed))))));
+            document.Units.Add(new GesCodeUnit("", code => GesComputedLibrary.Write(code, computed.HelperName, swift: false, options.Bindings || options.Values || computed.NeedsValues(layout.Types.ConvertAll(type => (type.Name, type.Computed))), GesComputedEmitter.UsesMath(layout.Types.ConvertAll(type => type.Computed)))));
         return document;
     }
 

@@ -249,6 +249,14 @@ schema :SoundMade as {
 computes the same bits as a script, units and integer rules included; `ges schema check` rejects an expression whose
 units do not fit, such as `energy + duration`. See [computed fields](../../specs/Schemas.md#computed-fields).
 
+> **Since: Unreleased** — functions in computed fields
+
+The functions of GES work there too, such as `sqrt area`, `sin heading`, `deg atan2(dy, dx)`, `hypot(dx, dy)` or
+`side²`, and a field named with a word that GES reserves is read in backticks, as `` `length` / 2 ``. A square root has
+the same bits everywhere; trigonometry, `exp`, `ln` and other powers come from each platform's math library and may differ
+in their last bits between a server and its clients, so a decision both must agree on, such as whether a target is in a
+cone, belongs in a stored field.
+
 ## 5. Find the object with a key
 
 `key` marks the first field of a schema as the identity of the object, like `id` of `Player`. It

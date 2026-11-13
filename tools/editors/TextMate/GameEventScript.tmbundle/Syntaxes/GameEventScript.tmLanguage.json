@@ -20,6 +20,31 @@
         }
       ]
     },
+    "names": {
+      "comment": "A name in backticks is a plain name, whatever word it holds. The keyword-like words of an argument label are names before a label colon and after a member dot.",
+      "patterns": [
+        {
+          "match": "(`)([a-z][A-Za-z0-9]*(?:_(?:0|[1-9][0-9]*))?)(`)",
+          "name": "variable.other.quoted.gameeventscript",
+          "captures": {
+            "1": {
+              "name": "punctuation.definition.variable.begin.gameeventscript"
+            },
+            "3": {
+              "name": "punctuation.definition.variable.end.gameeventscript"
+            }
+          }
+        },
+        {
+          "match": "\\b(?:to|nothing|pi|e|tau|infinity|abs|ln|exp|sqrt|cbrt|chance|floor|ceil|truncate|rad|deg|wrap|round|sin|cos|tan|asin|acos|atan|atan2|hypot|distance|squared|length|normalize|dot|cross|angle)(?=[ \\t]*:(?![A-Za-z:]))",
+          "name": "variable.parameter.label.gameeventscript"
+        },
+        {
+          "match": "(?<=[A-Za-z0-9_)\\]`]\\.)(?:to|nothing|pi|e|tau|infinity|abs|ln|exp|sqrt|cbrt|chance|floor|ceil|truncate|rad|deg|wrap|round|sin|cos|tan|asin|acos|atan|atan2|hypot|distance|squared|length|normalize|dot|cross|angle)\\b",
+          "name": "variable.other.member.gameeventscript"
+        }
+      ]
+    },
     "comments": {
       "patterns": [
         {
@@ -973,6 +998,9 @@
     },
     {
       "include": "#strings"
+    },
+    {
+      "include": "#names"
     },
     {
       "include": "#assembly"

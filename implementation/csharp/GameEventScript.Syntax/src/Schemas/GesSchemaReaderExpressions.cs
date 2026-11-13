@@ -152,16 +152,106 @@ internal sealed partial class GesSchemaSourceReader
             return Node(GesSchemaExpressionKind.Negate, offset, ReadUnary());
         }
 
-        foreach (var (word, kind) in new[] { ("not", GesSchemaExpressionKind.Not), ("abs", GesSchemaExpressionKind.Abs) })
+        if (AtWord("not"))
+        {
+            ReadWord();
+            SkipSpaces();
+            return Node(GesSchemaExpressionKind.Not, offset, ReadUnary());
+        }
+
+        var abs = AtWord("abs");
+        if (abs) ReadWord();
+        if ((abs ? "abs" : ReadPrefixFunction()) is { } function)
+        {
+            SkipSpaces();
+            if (!At("("))
+            {
+                var unary = ReadUnary();
+                return abs ? Node(GesSchemaExpressionKind.Abs, offset, unary) : Function(function, offset, unary);
+            }
+
+            // A parenthesized operand is the whole operand, as in GES, and the function is then the base of a power.
+            _position++;
+            SkipContinuation();
+            var operand = ReadExpression();
+            SkipContinuation();
+            Expect(')');
+            return ReadPower(abs ? Node(GesSchemaExpressionKind.Abs, offset, operand) : Function(function, offset, operand));
+        }
+
+        return ReadPower(ReadPostfix());
+    }
+
+    // The unary functions of GES: roots, trigonometry, exponential and logarithm, rounding and angle conversions, written as a
+    // word or as `√` and `∛`. Returns the ASCII spelling, or null with the position unchanged.
+    private string? ReadPrefixFunction()
+    {
+        if (Consume('\u221A')) return "sqrt";
+        if (Consume('\u221B')) return "cbrt";
+        foreach (var word in PrefixFunctions)
         {
             if (!AtWord(word)) continue;
             ReadWord();
+            if (word != "round") return word;
             SkipSpaces();
-            return Node(kind, offset, ReadUnary());
+            ExpectWord("half");
+            SkipSpaces();
+            foreach (var mode in new[] { "even", "up", "down" })
+                if (AtWord(mode))
+                {
+                    ReadWord();
+                    return "round half " + mode;
+                }
+
+            throw Failure("Expected 'even', 'up' or 'down'.");
         }
 
-        return ReadPostfix();
+        return null;
     }
+
+    private static readonly string[] PrefixFunctions =
+        ["sqrt", "cbrt", "sin", "cos", "tan", "asin", "acos", "atan", "exp", "ln", "floor", "ceil", "truncate", "round", "rad", "deg"];
+
+    // A power `base ^ exponent`, `base²` or `base³` after its base: the exponent of `^` is a unary expression, so powers
+    // associate to the right and `-x ^ 2` negates the power. A base takes at most one power.
+    private GesSchemaExpressionSyntax ReadPower(GesSchemaExpressionSyntax value)
+    {
+        var end = _position;
+        SkipSpaces();
+        var offset = _position;
+        if (Consume('^'))
+        {
+            SkipContinuation();
+            return Power(value, ReadUnary());
+        }
+
+        if (Consume('\u00B2') || Consume('\u00B3'))
+        {
+            var text = _text[offset] == '\u00B2' ? "2" : "3";
+            var exponent = GesSchemaLiterals.Read(text, 0, 1)!.Value;
+            return Power(value, new GesSchemaExpressionSyntax
+            {
+                Kind = GesSchemaExpressionKind.Literal,
+                Literal = new GesSchemaValueSyntax { Value = exponent.Value, Text = text, Offset = offset },
+                Offset = offset
+            });
+        }
+
+        _position = end;
+        return value;
+    }
+
+    private GesSchemaExpressionSyntax Power(GesSchemaExpressionSyntax value, GesSchemaExpressionSyntax exponent)
+        => Checked(new GesSchemaExpressionSyntax
+        {
+            Kind = GesSchemaExpressionKind.Binary,
+            Operator = GesSchemaBinaryOperator.Power,
+            Children = [value, exponent],
+            Offset = value.Offset
+        });
+
+    private GesSchemaExpressionSyntax Function(string name, int offset, params GesSchemaExpressionSyntax[] arguments)
+        => Checked(new GesSchemaExpressionSyntax { Kind = GesSchemaExpressionKind.Function, Name = name, Children = arguments, Offset = offset });
 
     // Member access `record.field` and the list aggregates `list[:sum]`, `list[:sum item => value]` and `list[:count]`.
     private GesSchemaExpressionSyntax ReadPostfix()
@@ -169,10 +259,10 @@ internal sealed partial class GesSchemaSourceReader
         var value = ReadPrimary();
         while (true)
         {
-            if (At(".") && _position + 1 < _text.Length && GesText.IsAsciiLower(_text[_position + 1]))
+            if (At(".") && _position + 1 < _text.Length && (GesText.IsAsciiLower(_text[_position + 1]) || _text[_position + 1] == '`'))
             {
                 var offset = ++_position;
-                var member = ReadName(GesText.IsFieldName, "field name");
+                var member = At("`") ? ReadQuotedName() : ReadName(GesText.IsFieldName, "field name");
                 value = Checked(new GesSchemaExpressionSyntax { Kind = GesSchemaExpressionKind.Member, Name = member, Children = [value], Depth = value.Depth + 1, Offset = offset });
                 continue;
             }
@@ -273,12 +363,33 @@ internal sealed partial class GesSchemaSourceReader
             return Node(GesSchemaExpressionKind.Clamp, offset, value, lower, ReadBinary(4));
         }
 
+        if (AtWord("atan2") || AtWord("hypot"))
+        {
+            var function = ReadWord();
+            SkipSpaces();
+            Expect('(');
+            SkipContinuation();
+            var arguments = new List<GesSchemaExpressionSyntax> { ReadExpression() };
+            SkipContinuation();
+            while (Consume(','))
+            {
+                SkipContinuation();
+                arguments.Add(ReadExpression());
+                SkipContinuation();
+            }
+
+            Expect(')');
+            if (function == "atan2" ? arguments.Count != 2 : arguments.Count is not (2 or 3))
+                throw new SyntaxFailure(offset, function == "atan2" ? "atan2 takes two arguments: atan2(y, x)." : "hypot takes two or three arguments.", Code.InvalidExpression);
+            return Function(function, offset, arguments.ToArray());
+        }
+
+        if (At("`")) return new GesSchemaExpressionSyntax { Kind = GesSchemaExpressionKind.Name, Name = ReadQuotedName(), Offset = offset };
         if (GesText.IsAsciiLower(_text[_position]))
         {
             var name = ReadName(GesText.IsFieldName, "name");
-            var tokens = GesLexer.Tokenize(name);
-            if (tokens.Count == 0 || tokens[0].Kind != GesTokenKind.Identifier)
-                throw new SyntaxFailure(offset, $"'{name}' is a GES keyword or constant, which a computed expression cannot name.", Code.InvalidExpression);
+            if (!IsPlainName(name))
+                throw new SyntaxFailure(offset, $"'{name}' is a GES keyword or constant; a computed expression names a field or let '{name}' in backticks, as `{name}`.", Code.InvalidExpression);
             return new GesSchemaExpressionSyntax { Kind = GesSchemaExpressionKind.Name, Name = name, Offset = offset };
         }
 
@@ -287,14 +398,43 @@ internal sealed partial class GesSchemaSourceReader
     }
 
     // A number with its suffix. Besides the ends of other literals it stops at an operator; a minus continues only an exponent.
+    // A power sign continues the literal only where it belongs to its unit, as in `16m²` or `16m^2`; otherwise, as in `2²` or
+    // `2s²`, the longest literal before it is the base of a power.
     private GesSchemaValueSyntax ReadExpressionLiteral()
     {
         var offset = _position;
         var end = _position;
         while (end < _text.Length && !IsExpressionLiteralEnd(end)) end++;
-        var value = GesSchemaLiterals.Read(_text, offset, end) ?? throw new SyntaxFailure(offset, "Expected an exact finite number with a unit known to literals.");
+        var value = GesSchemaLiterals.Read(_text, offset, end);
+        for (var cut = end - 1; value is null && cut > offset; cut--)
+            if (_text[cut] is '^' or '\u00B2' or '\u00B3' && GesSchemaLiterals.Read(_text, offset, cut) is { } shorter)
+            {
+                value = shorter;
+                end = cut;
+            }
+
+        if (value is null) throw new SyntaxFailure(offset, "Expected an exact finite number with a unit known to literals.");
         _position = end;
-        return new GesSchemaValueSyntax { Value = value.Value, Unit = value.Unit, IsPercent = value.IsPercent, Text = _text.Substring(offset, end - offset), Offset = offset };
+        return new GesSchemaValueSyntax { Value = value.Value.Value, Unit = value.Value.Unit, IsPercent = value.Value.IsPercent, Text = _text.Substring(offset, end - offset), Offset = offset };
+    }
+
+    // A name in backticks, which may be a word that GES reserves, such as `length` or `e`: a field or let of that name.
+    private string ReadQuotedName()
+    {
+        var start = _position++;
+        var close = _position;
+        while (close < _text.Length && _text[close] is not ('`' or '\r' or '\n')) close++;
+        var name = _text.Substring(_position, close - _position);
+        if (close >= _text.Length || _text[close] != '`' || !GesText.IsFieldName(name)) throw new SyntaxFailure(start, "Expected a name between two backticks, such as `length`.");
+        _position = close + 1;
+        return name;
+    }
+
+    // Whether GES reads a name as a plain name, rather than as a keyword or constant that only backticks make a name.
+    internal static bool IsPlainName(string name)
+    {
+        var tokens = GesLexer.Tokenize(name);
+        return tokens.Count > 0 && tokens[0].Kind == GesTokenKind.Identifier && tokens[0].Text == name;
     }
 
     private bool IsExpressionLiteralEnd(int index)

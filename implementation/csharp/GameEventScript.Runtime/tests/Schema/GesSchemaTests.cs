@@ -474,6 +474,15 @@ public sealed class GesSchemaTests
         Assert.AreEqual("", new GesWireException(GesWireException.TooLong, "units").Detail);
     }
 
+    [TestMethod]
+    public void ReservedNamesPointToBackticks()
+    {
+        var error = Assert.ThrowsExactly<GesSchemaException>(() => GesSchemaSet.Parse("schema :S as { length: :Number, b: :Number computed by length / 2 }"));
+        Assert.AreEqual("schema.invalidExpression", error.Code);
+        StringAssert.Contains(error.Message, "in backticks, as `length`");
+        GesSchemaSet.Parse("schema :S as { length: :Number, b: :Number computed by `length` / 2 }").Schema("S").Bind();
+    }
+
     private static string Read(GesBoundSchema schema, GesSchemaField field, byte[] data)
     {
         try

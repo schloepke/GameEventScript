@@ -90,7 +90,7 @@ internal static partial class GesCSharpEmitter
         GesSchemaPlanner.CheckTopLevel(context.TopLevel, swift: false);
         if (options.Values) document.Units.Add(new GesCodeUnit("", code => ValuesHolder(code, layout, holder, options.Split != GesSchemaSplit.None)));
         if (layout.Types.Exists(type => type.Computed.Length > 0))
-            document.Units.Add(new GesCodeUnit("", code => GesComputedLibrary.Write(code, context.Computed.HelperName, swift: false, context.Computed.NeedsValues(types.ConvertAll(type => (type.Name, type.Layout.Computed))))));
+            document.Units.Add(new GesCodeUnit("", code => GesComputedLibrary.Write(code, context.Computed.HelperName, swift: false, context.Computed.NeedsValues(types.ConvertAll(type => (type.Name, type.Layout.Computed))), GesComputedEmitter.UsesMath(types.ConvertAll(type => type.Layout.Computed)))));
         return document;
     }
 

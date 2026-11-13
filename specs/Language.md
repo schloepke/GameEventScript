@@ -201,7 +201,8 @@ list, map or pattern, a selector such as `[:take highest⏎1]` and a parenthesiz
 expression may span lines anywhere between their tokens. Inside braces, which
 contain statements, line breaks separate statements again, also when the braces
 stand inside brackets. Word forms that read a word on the same line, such as
-`parse strict`, keep that rule inside brackets. Line comments
+`parse strict`, keep that rule inside brackets. Outside brackets the parenthesis of a call stands on the line of its name,
+so `twice` followed by `(x)` on the next line is two statements. Line comments
 start with `//` and continue up to, but do not consume, the next logical newline.
 
 ```ges
@@ -222,7 +223,10 @@ Names are intentionally narrow:
   `deg`, `wrap`, `round`, `sin`, `cos`, `tan`, `asin`, `acos`, `atan`, `atan2`,
   `hypot`, `distance`, `squared`, `length`, `normalize`, `dot`, `cross`,
   `angle`). Any other keyword, such as `empty`, `record` or `if`, followed by `:`
-  is a `parse.syntax` error. A map literal key is always a plain name; even
+  is a `parse.syntax` error. A record field name in a record declaration and
+  the name after `.` in member access accept the same keyword-like words, so
+  `record :Shape as { length: :Number }` declares a field that `s.length` reads.
+  A map literal key is always a plain name; even
   `to:` does not start a map entry. An extension function name after
   `:namespace.` is a plain name or a prefix intrinsic name, so `:ns.empty(1)`
   is not an extension call.
@@ -247,6 +251,39 @@ Names are intentionally narrow:
 - A module name is one or more dot-separated components. Every component starts
   with a lowercase ASCII letter and continues with lowercase ASCII letters or
   digits. Uppercase letters, `_`, and `-` are forbidden.
+
+> **Since: Unreleased** — names in backticks and keyword-like field names
+
+A name in backticks is the plain name wherever a lowercase name stands: a
+binding and its reads, a parameter, a callable name, an argument label, a record
+field in a declaration and after `.`, a map key and an object-pattern key. It
+lets any keyword serve as a name, such as a record field named `record` or a
+local named `if`. Between the backticks stands exactly one lowercase name: a
+lowercase ASCII letter followed by ASCII letters or digits, which may be any
+keyword word, optionally followed by the canonical derivation suffix `_0`,
+`_1`, and so on. The name obeys the rules of the position it stands in, so a
+suffix is still valid only for variable bindings. A pair of backticks with
+nothing, a space, an uppercase letter, `_` other than that suffix, or any other
+character between them, and a backtick without a closing backtick on the same
+line, are `parse.syntax` errors. A name in backticks and the plain name are the
+same name: they declare and read the same binding or field. In backticks a word
+is never a keyword or a contextual word, so `` `e` `` reads a binding or field
+named `e` while plain `e` stays Euler's number, and `` parse `strict` `` parses
+a binding named `strict`. The lexer keeps the backticks in the token's
+spelling ([Syntax](Syntax.md#tokens)).
+
+```ges
+record :Shape as {
+  length: :Quantity(m),
+  `record`: :Number,
+  half: :Quantity(m) computed by `length` / 2
+}
+
+on Start {
+  let `if` be :Shape(length: 4m, `record`: 7)
+  emit Done(half: `if`.half, length: `if`.length, `record`: `if`.`record`)
+}
+```
 
 All of these name grammars use only ASCII characters; they do not depend on
 platform Unicode classification. Source is strict UTF-8, an optional initial BOM
@@ -757,6 +794,11 @@ From high to low precedence:
 
 Power accepts at most one `^` or superscript suffix at each unparenthesized
 power node; its right operand is unary, which makes `a ^ b ^ c` right-associative.
+A power applies only to a power base: a postfix expression, an intrinsic call
+such as `atan2(y, x)`, or a unary intrinsic with a parenthesized operand (see
+[Prefix Intrinsics and Selectors](#prefix-intrinsics-and-selectors)). A unary
+operator or a unary intrinsic without parentheses ends with its operand, so
+`-x² ^ 2` is a syntax error like `x² ^ 2`.
 Parentheses override precedence. The fixed Unicode aliases are token aliases and
 have exactly the semantics and precedence of their ASCII counterparts.
 
@@ -983,6 +1025,21 @@ unitless number. `asin` and `acos` accept unitless numbers in `[-1, 1]`; `atan`
 accepts any unitless number. Invalid domains, incompatible units, unsupported
 values, and `nothing` produce `nothing`. Transcendental portability follows
 [Number semantics](Semantics/Numbers.md).
+
+> **Since: Unreleased** — parenthesized intrinsic as power base
+
+When the first token after the intrinsic word, including the mode words of
+`round half even`, `round half up`, `round half down` and `wrap degree`, is `(`,
+whitespace, comments and line breaks between them included, that parenthesis
+opens the intrinsic's whole operand, which ends at its matching `)`. Such an
+intrinsic is a power base like the call form `atan2(y, x)`: `floor(x) ^ 2` and
+`floor (x) ^ 2` are `(floor x) ^ 2`, `floor(x)²` squares the floor,
+`sqrt(16) ^ 2` and `√(16) ^ 2` are `16`, and, since a power binds tighter than
+unary minus, `-floor(x) ^ 2` is `-((floor x) ^ 2)`. Without parentheses the
+operand is a unary expression that takes the power itself: `floor x ^ 2` is
+`floor (x ^ 2)` and `sqrt x²` is the root of `x²`. A postfix suffix such as
+`.y` or `[...]` cannot follow the closing parenthesis; parenthesize the whole
+intrinsic instead, as in `(floor(x)).y`.
 
 ### Multi-argument navigation intrinsics
 
@@ -2501,7 +2558,8 @@ IntelliJ-based editors. A rule uses `::=`; adjacent expressions form a sequence;
 zero-or-more / one-or-more repetitions. Quoted text is a terminal. Uppercase
 bare names such as `LOWER_NAME`, `VARIABLE_NAME`, `TYPE_TAG`, `MODULE_NAME`,
 `CONSTANT_REFERENCE`, `MESSAGE_NAME`, `NUMBER`, and `NL` are lexical token
-categories governed by the lexical rules above; `UNIT_SYMBOL` is a unit symbol
+categories governed by the lexical rules above; `LOWER_NAME` and
+`VARIABLE_NAME` include a name in backticks; `UNIT_SYMBOL` is a unit symbol
 or ASCII spelling from [Quantities](#quantities).
 
 This is only a notation contract. The specification does not adopt Grammar-Kit
@@ -2520,7 +2578,7 @@ constant_definition ::= 'constant' CONSTANT_REFERENCE 'be' scalar_literal
 
 record_definition ::= 'record' custom_type_tag 'as' '{' separators [record_field (record_field_separator record_field)*] separators '}'
 record_field_separator ::= ',' separators | separators
-record_field ::= ['_'] LOWER_NAME ':' type_reference ['clamped' 'between' expression 'and' expression] ['computed' 'by' expression]
+record_field ::= ['_'] field_name ':' type_reference ['clamped' 'between' expression 'and' expression] ['computed' 'by' expression]
 
 predicate_definition ::= 'predicate' LOWER_NAME definition_parameters 'be' expression
 function_definition ::= 'function' LOWER_NAME definition_parameters 'be' expression
@@ -2581,10 +2639,11 @@ multiplicative_expression ::= unary_expression (('*' | '×' | '·' | '⋅' | '/'
 unary_expression ::= ('-' | '−' | not_operator | 'empty' | 'parse' ['strict']) unary_expression | unary_intrinsic_expression | power_expression
 not_operator ::= 'not' | '!' | '~' | '¬'
 power_expression ::= power_base_expression [('^' unary_expression) | '²' | '³']
-power_base_expression ::= series_expression | extension_call_expression | intrinsic_call_expression | clamp_expression | variadic_expression | postfix_expression
+power_base_expression ::= parenthesized_intrinsic_expression | series_expression | extension_call_expression | intrinsic_call_expression |
+                          clamp_expression | variadic_expression | postfix_expression
 
-unary_intrinsic_expression ::= unary_intrinsic unary_intrinsic_operand
-unary_intrinsic_operand ::= unary_expression | '(' expression ')'
+unary_intrinsic_expression ::= unary_intrinsic unary_expression
+parenthesized_intrinsic_expression ::= unary_intrinsic '(' expression ')'
 unary_intrinsic ::= 'abs' | 'ln' | 'exp' | 'sqrt' | '√' | 'cbrt' | '∛' |
                     'chance' | 'floor' | 'ceil' | 'truncate' |
                     'round' 'half' ('even' | 'up' | 'down') |
@@ -2596,7 +2655,7 @@ clamp_expression ::= 'clamp' unary_expression 'between' expression 'and' express
 variadic_expression ::= ('min' | 'max') 'of' expression ('and' expression)*
 
 postfix_expression ::= primary_expression postfix_suffix*
-postfix_suffix ::= '.' LOWER_NAME | '[' collection_selector structured_selector* ']'
+postfix_suffix ::= '.' field_name | '[' collection_selector structured_selector* ']'
 primary_expression ::= nullary_predicate_expression | literal | CONSTANT_REFERENCE | call_expression | uppercase_call_expression |
                        type_constructor_expression | VARIABLE_NAME |
                        '(' expression ')' | bracket_literal | generated_list_expression | combined_source_expression |
@@ -2607,7 +2666,11 @@ uppercase_call_expression ::= MESSAGE_NAME parenthesized_arguments
 type_constructor_expression ::= (built_in_type_tag | custom_type_tag) parenthesized_arguments
 parenthesized_arguments ::= '(' [argument (',' argument)*] ')'
 argument ::= [argument_label ':'] expression
-argument_label ::= LOWER_NAME | 'to'
+argument_label ::= LOWER_NAME | label_word
+field_name ::= LOWER_NAME | label_word
+label_word ::= 'to' | 'nothing' | 'pi' | 'e' | 'tau' | 'infinity' | 'abs' | 'ln' | 'exp' | 'sqrt' | 'cbrt' | 'chance' | 'floor' | 'ceil' |
+               'truncate' | 'rad' | 'deg' | 'wrap' | 'round' | 'sin' | 'cos' | 'tan' | 'asin' | 'acos' | 'atan' | 'atan2' | 'hypot' |
+               'distance' | 'squared' | 'length' | 'normalize' | 'dot' | 'cross' | 'angle'
 
 literal ::= NUMBER | PERCENTAGE | UNIT_NUMBER | TEXT_LITERAL | TAG_LITERAL | 'true' | 'false' | 'nothing' | math_constant
 scalar_literal ::= literal | ('-' | '−') (NUMBER | PERCENTAGE | UNIT_NUMBER | math_constant)
@@ -2691,6 +2754,11 @@ share the same leading syntax. An empty argument list, or a list containing only
 unlabeled parameter declarations (`name` or `_ name`), creates a handler value.
 A list containing a labeled argument (`name: expression`) creates a message
 value. A bare uppercase name in `emit` or `publish` is a zero-argument message.
+
+A unary intrinsic whose operand starts with `(` as the next token after the
+intrinsic word always forms `parenthesized_intrinsic_expression`, never
+`unary_intrinsic_expression` with a parenthesized primary; see
+[Prefix Intrinsics and Selectors](#prefix-intrinsics-and-selectors).
 
 Adjacent `NUMBER VARIABLE_NAME` tokens without whitespace are also accepted as
 implicit multiplication. This applies only to numeric literals followed by an

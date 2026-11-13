@@ -172,7 +172,7 @@ internal static class GesSourceHighlighting
     private static bool IsDiceSides(IReadOnlyList<GesToken> tokens, IReadOnlyList<GesSyntaxRole> roles, int index)
     {
         var token = tokens[index];
-        if (token.Kind != GesTokenKind.Identifier || roles[index] != GesSyntaxRole.None || index == 0 || tokens[index - 1].Kind != GesTokenKind.Float || token.FullStart != token.Start)
+        if (token.Kind != GesTokenKind.Identifier || token.IsQuotedName || roles[index] != GesSyntaxRole.None || index == 0 || tokens[index - 1].Kind != GesTokenKind.Float || token.FullStart != token.Start)
             return false;
         if (token.Text.Length < 2 || token.Text[0] != 'd') return false;
         for (var i = 1; i < token.Text.Length; i++)

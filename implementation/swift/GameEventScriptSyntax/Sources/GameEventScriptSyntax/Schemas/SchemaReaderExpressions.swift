@@ -118,22 +118,90 @@ extension GesSchemaSourceReader {
             skipSpaces()
             return try node(.negate, offset, [try readUnary()])
         }
-        for (written, kind) in [("not", GesSchemaExpressionKind.not), ("abs", .abs)] where atWord(written) {
+        if atWord("not") {
             _ = word()
             skipSpaces()
-            return try node(kind, offset, [try readUnary()])
+            return try node(.not, offset, [try readUnary()])
         }
-        return try readPostfix()
+        let abs = atWord("abs")
+        if abs { _ = word() }
+        if let function = abs ? "abs" : try readPrefixFunction() {
+            skipSpaces()
+            if !at("(") {
+                let unary = try readUnary()
+                return abs ? try node(.abs, offset, [unary]) : try checked(GesSchemaExpressionSyntax(.function, offset: offset, name: function, children: [unary]))
+            }
+            // A parenthesized operand is the whole operand, as in GES, and the function is then the base of a power.
+            position += 1
+            skipTrivia()
+            let operand = try readExpression()
+            skipTrivia()
+            try expect(41)
+            return try readPower(abs ? try node(.abs, offset, [operand]) : try checked(GesSchemaExpressionSyntax(.function, offset: offset, name: function, children: [operand])))
+        }
+        return try readPower(try readPostfix())
+    }
+
+    private static let prefixFunctions = ["sqrt", "cbrt", "sin", "cos", "tan", "asin", "acos", "atan", "exp", "ln", "floor", "ceil", "truncate", "round", "rad", "deg"]
+
+    /// The unary functions of GES: roots, trigonometry, exponential and logarithm, rounding and angle conversions, written as a
+    /// word or as `√` and `∛`. Returns the ASCII spelling, or nil with the position unchanged.
+    private mutating func readPrefixFunction() throws -> String? {
+        if at("\u{221A}") {
+            position += 3
+            return "sqrt"
+        }
+        if at("\u{221B}") {
+            position += 3
+            return "cbrt"
+        }
+        for written in Self.prefixFunctions where atWord(written) {
+            _ = word()
+            if written != "round" { return written }
+            skipSpaces()
+            try expectWord("half")
+            skipSpaces()
+            for mode in ["even", "up", "down"] where atWord(mode) {
+                _ = word()
+                return "round half " + mode
+            }
+            throw failure("Expected 'even', 'up' or 'down'.")
+        }
+        return nil
+    }
+
+    /// A power `base ^ exponent`, `base²` or `base³` after its base: the exponent of `^` is a unary expression, so powers
+    /// associate to the right and `-x ^ 2` negates the power. A base takes at most one power.
+    private mutating func readPower(_ value: GesSchemaExpressionSyntax) throws -> GesSchemaExpressionSyntax {
+        let end = position
+        skipSpaces()
+        let offset = position
+        if consume(94) {
+            skipTrivia()
+            return try checked(GesSchemaExpressionSyntax(.binary, offset: value.offset, binary: .power, children: [value, try readUnary()]))
+        }
+        if at("\u{00B2}") || at("\u{00B3}") {
+            let text = bytes[position + 1] == 0xB2 ? "2" : "3"
+            position += 2
+            var exponent = GesSchemaValueSyntax()
+            exponent.value = GesSchemaLiterals.read(text)!.value
+            exponent.text = text
+            exponent.offset = offset
+            let literal = GesSchemaExpressionSyntax(.literal, offset: offset, literal: exponent)
+            return try checked(GesSchemaExpressionSyntax(.binary, offset: value.offset, binary: .power, children: [value, literal]))
+        }
+        position = end
+        return value
     }
 
     /// Member access `record.field` and the list aggregates `list[:sum]`, `list[:sum item => value]` and `list[:count]`.
     private mutating func readPostfix() throws -> GesSchemaExpressionSyntax {
         var value = try readPrimary()
         while true {
-            if at("."), position + 1 < bytes.count, GesNames.lower(bytes[position + 1]) {
+            if at("."), position + 1 < bytes.count, GesNames.lower(bytes[position + 1]) || bytes[position + 1] == 96 {
                 position += 1
                 let offset = position
-                let member = try name(GesNames.plain, "field name")
+                let member = at("`") ? try readQuotedName() : try name(GesNames.plain, "field name")
                 value = try checked(GesSchemaExpressionSyntax(.member, offset: offset, name: member, children: [value]))
                 continue
             }
@@ -211,11 +279,37 @@ extension GesSchemaSourceReader {
             skipTrivia()
             return try node(.clamp, offset, [value, lower, try readBinary(4)])
         }
+        if atWord("atan2") || atWord("hypot") {
+            let function = word()
+            skipSpaces()
+            try expect(40)
+            skipTrivia()
+            var arguments = [try readExpression()]
+            skipTrivia()
+            while consume(44) {
+                skipTrivia()
+                arguments.append(try readExpression())
+                skipTrivia()
+            }
+            try expect(41)
+            if function == "atan2" ? arguments.count != 2 : arguments.count != 2 && arguments.count != 3 {
+                throw Failure(
+                    offset: offset,
+                    message: function == "atan2" ? "atan2 takes two arguments: atan2(y, x)." : "hypot takes two or three arguments.",
+                    code: GesSchemaDiagnostic.invalidExpression
+                )
+            }
+            return try checked(GesSchemaExpressionSyntax(.function, offset: offset, name: function, children: arguments))
+        }
+        if at("`") { return GesSchemaExpressionSyntax(.name, offset: offset, name: try readQuotedName()) }
         if GesNames.lower(bytes[position]) {
             let written = try name(GesNames.plain, "name")
-            let tokens = GesLexer.tokenize(written)
-            if tokens.isEmpty || tokens[0].kind != .identifier {
-                throw Failure(offset: offset, message: "'\(written)' is a GES keyword or constant, which a computed expression cannot name.", code: GesSchemaDiagnostic.invalidExpression)
+            if !Self.isPlainName(written) {
+                throw Failure(
+                    offset: offset,
+                    message: "'\(written)' is a GES keyword or constant; a computed expression names a field or let '\(written)' in backticks, as `\(written)`.",
+                    code: GesSchemaDiagnostic.invalidExpression
+                )
             }
             return GesSchemaExpressionSyntax(.name, offset: offset, name: written)
         }
@@ -224,11 +318,24 @@ extension GesSchemaSourceReader {
     }
 
     /// A number with its suffix. Besides the ends of other literals it stops at an operator; a minus continues only an exponent.
+    /// A power sign continues the literal only where it belongs to its unit, as in `16m²` or `16m^2`; otherwise, as in `2²` or
+    /// `2s²`, the longest literal before it is the base of a power.
     private mutating func readExpressionLiteral() throws -> GesSchemaValueSyntax {
         let offset = position
         var end = position
         while end < bytes.count && !isExpressionLiteralEnd(end) { end += 1 }
-        guard let read = GesSchemaLiterals.read(Array(bytes[offset..<end])) else {
+        var found = GesSchemaLiterals.read(Array(bytes[offset..<end]))
+        var cut = end - 1
+        while found == nil && cut > offset {
+            // `^` is one byte; `²` and `³` are C2 B2 and C2 B3.
+            let power = bytes[cut] == 94 || bytes[cut] == 0xC2 && cut + 1 < end && (bytes[cut + 1] == 0xB2 || bytes[cut + 1] == 0xB3)
+            if power, let shorter = GesSchemaLiterals.read(Array(bytes[offset..<cut])) {
+                found = shorter
+                end = cut
+            }
+            cut -= 1
+        }
+        guard let read = found else {
             throw Failure(offset: offset, message: "Expected an exact finite number with a unit known to literals.")
         }
         position = end
@@ -245,6 +352,26 @@ extension GesSchemaSourceReader {
         let byte = bytes[index]
         if byte == 45 { return !(index > 1 && (bytes[index - 1] == 101 || bytes[index - 1] == 69) && bytes[index - 2] >= 48 && bytes[index - 2] <= 57) }
         return isLiteralEnd(index) || byte == 91 || byte == 93 || byte == 43 || byte == 42 || byte == 60 || byte == 62 || byte == 61
+    }
+
+    /// A name in backticks, which may be a word that GES reserves, such as `length` or `e`: a field or let of that name.
+    private mutating func readQuotedName() throws -> String {
+        let start = position
+        position += 1
+        var close = position
+        while close < bytes.count && bytes[close] != 96 && bytes[close] != 13 && bytes[close] != 10 { close += 1 }
+        let written = String(decoding: bytes[position..<close], as: UTF8.self)
+        if close >= bytes.count || bytes[close] != 96 || !GesNames.plain(written) {
+            throw Failure(offset: start, message: "Expected a name between two backticks, such as `length`.")
+        }
+        position = close + 1
+        return written
+    }
+
+    /// Whether GES reads a name as a plain name, rather than as a keyword or constant that only backticks make a name.
+    static func isPlainName(_ written: String) -> Bool {
+        let tokens = GesLexer.tokenize(written)
+        return !tokens.isEmpty && tokens[0].kind == .identifier && tokens[0].text == written
     }
 
     private func at(_ text: String) -> Bool {

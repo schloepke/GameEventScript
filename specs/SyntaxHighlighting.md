@@ -39,6 +39,14 @@ the parser recorded for it, and for a few constructs the node that owns it.
 Leading trivia contributes Plain whitespace, a leading BOM as Plain and `//`
 comments as Comment.
 
+> **Since: Unreleased** — names in backticks and keyword-like field names
+
+A name in backticks is one token, backticks included, and is categorized like
+any other name, usually as Identifier; invalid backtick content is an illegal
+token and Plain. A keyword-like word that names a record field in a
+declaration or after `.` has the field or member role and is Identifier, as it
+is as an argument label.
+
 Input is parsed as a fragment: besides declarations, it may hold statements
 outside a handler, as editor and console input does, and those are categorized
 as statements. Parsing recovers after each failed declaration or statement, so

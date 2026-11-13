@@ -123,11 +123,16 @@ equality    = relation { ( "=" | "<>" ) relation }
 relation    = sum { ( "<" | "<=" | ">" | ">=" ) sum | "has" "value" }
 sum         = product { ( "+" | "-" ) product }
 product     = unary { ( "*" | "/" ) unary }
-unary       = ( "-" | "not" | "abs" ) unary | postfix
-postfix     = primary { "." LowerName | "[" ":" "count" "]" | "[" ":" "sum" [ LowerName "=>" expression ] "]" }
-primary     = literal | "true" | "false" | "$" ConstantName | LowerName | "(" expression ")"
+unary       = ( "-" | "not" | "abs" | function ) unary | power
+function    = "sqrt" | "√" | "cbrt" | "∛" | "sin" | "cos" | "tan" | "asin" | "acos" | "atan" | "exp" | "ln"
+            | "floor" | "ceil" | "truncate" | "round" "half" ( "even" | "up" | "down" ) | "rad" | "deg"
+power       = ( postfix | ( "abs" | function ) "(" expression ")" ) [ "^" unary | "²" | "³" ]
+postfix     = primary { "." name | "[" ":" "count" "]" | "[" ":" "sum" [ LowerName "=>" expression ] "]" }
+primary     = literal | "true" | "false" | "$" ConstantName | name | "(" expression ")"
             | ( "min" | "max" ) "of" sum "and" sum { "and" sum }
             | "clamp" sum "between" sum "and" sum
+            | ( "atan2" | "hypot" ) "(" expression "," expression [ "," expression ] ")"
+name        = LowerName | "`" LowerName "`"
 ```
 
 `LowerName`, `ConstantName`, `TypeName`, `MessageName` and `TagName` follow the
@@ -441,20 +446,49 @@ schema :SoundMade as {
   record and of its schema fields (`main.power`), the computed fields declared before it, `+ - * /`, unary `-`, `abs`,
   `< <= > >= = <>`, `and`, `or`, `not`, `value when condition, …, otherwise fallback`, `min of a and b …`,
   `max of …`, `clamp x between a and b`, `default`, `has value`, and over a list field `[:count]`, `[:sum]` and
-  `[:sum item => value]`. A line break may follow an operator, a keyword, a comma or `by`. Names that GES reserves, such as
-  `e`, `pi`, `abs` or `on`, cannot be named, since a script record would read them differently.
+  `[:sum item => value]`. A line break may follow an operator, a keyword, a comma or `by`.
+- **Functions and powers** (*Since: Unreleased*) are those of GES with its spellings: `sqrt` or `√`, `cbrt` or `∛`, `sin`,
+  `cos`, `tan`, `asin`, `acos`, `atan`, `exp`, `ln`, `floor`, `ceil`, `truncate`, `round half even`, `round half up`,
+  `round half down`, `rad` and `deg` before their operand, as `sqrt area` or `sqrt (a * a)`; `atan2(y, x)` and
+  `hypot(x, y)` or `hypot(x, y, z)` with arguments; and the power `x ^ y`, `x²` and `x³`. A power binds tighter than unary
+  minus, so `-x ^ 2` is `-(x ^ 2)`, and `a ^ b ^ c` is `a ^ (b ^ c)`. An operand that starts with `(` right after a
+  function or `abs` is its whole operand, and the function is then the base of a power as in GES: `sqrt(x) ^ 2` is
+  `(sqrt x) ^ 2` and `floor(x)²` squares the floor, while `sqrt x ^ 2` is the root of `x ^ 2`. A
+  power sign belongs to a literal where it completes a unit, as in `16m²`, and is a power otherwise, as in `2²` or `2s²`.
+- **Names in backticks** (*Since: Unreleased*). A name that GES reserves, such as `length`, `e`, `pi` or `on`, names a
+  field or let only in backticks, as `` `length` / 2 ``, since a script record reads the plain word differently: `e` is
+  Euler's number there. Without backticks it is `schema.invalidExpression`. Backticks are spelling only: the field is the
+  same, the [canonical form](#canonical-form) writes its plain name, and a field may be declared `length` without them.
 - **Types and units are checked at binding.** Each operand is a Number with a unit, a Percentage or a Boolean, and the
   operations take the [same-unit and derivation rules](Language.md#quantities): `energy / duration` gives watts, `2N + 3J`
   is `schema.unitMismatch`. A percentage scales a number on its left (`x + 10%` is `x * 1.1`) or combines with another
   percentage; on the left of a number it is `schema.invalidExpression`. The expression gives exactly the field's type and
   unit. The field is a `:Number`, `:Quantity`, `:Percentage` or `:Boolean` without constraints, never a `key`, and takes no
-  `default`.
+  `default`. A function reads a number or a percentage, whose ratio it takes, and gives a number: `sqrt` and `cbrt` give
+  the root of a unit that is a square or cube in the derivation table (`sqrt` of `m²` is `m`), and of another unit, such
+  as `m` or `m³` for `sqrt`, they are `schema.unitMismatch`; `sin`, `cos` and `tan` read radians as a plain number or
+  degrees as `°`; `asin`, `acos`, `atan`, `exp` and `ln` read plain numbers, and the inverse functions and `atan2` give
+  plain radians, which `deg` turns into `°` and `rad` back; `atan2` and `hypot` take arguments of one unit, which `hypot`
+  keeps; rounding keeps the unit. A quantity's power takes a literal exponent, which gives the unit of the result from
+  the derivation table (`side²` of `m` is `m²`); an exponent has no unit. Every other unit is `schema.unitMismatch`.
 - **Values follow the virtual machine.** Integers stay exact Int64 values and fall back to binary64 on overflow, a binary64
   result that is whole within Int64 becomes an integer, `/` divides in binary64, `0 / 0` is nothing and `1 / 0` infinite,
   `=` compares within two ULPs, `and` and `or` are three-valued, an absent optional field is nothing, and a condition passes
   only when it is true. The value is then converted to the field's type as a record converts it: a Percentage takes a
   finite number as its ratio and is nothing when infinite, and a Boolean is `true` only for true, so a computed Boolean is
   never absent and is not `optional`. A required one that gives nothing, such as `0 / 0`, reads as NaN in generated code.
+  A function of nothing is nothing, and one without a value is NaN, which is nothing without making the field absent: the
+  root of a negative number, `ln` of one, `asin 2` or `sin` of an infinity. Rounding gives an integer, saturated at the
+  bounds of Int64. `ln 0` is `-infinity`, `atan2(0, 0)` is `0`, and the square root of `-infinity` is `infinity`, as the
+  power 0.5 that it is gives.
+- **Square roots are exact, the other functions are not** (*Since: Unreleased*). `sqrt`, `√` and a power with the
+  exponent 0.5 give the correctly rounded square root, so their bits are the same on every platform and in every port, as
+  the bits of `+ - * /`, rounding, `rad` and `deg` are. Trigonometry, `exp`, `ln`, `cbrt` and other powers come from the
+  platform's math library, as they do in [scripts](Semantics/Numbers.md#transcendental-functions): the runtimes and the
+  generated code give the bits of the virtual machine on the same platform, but a value may differ in its last bits
+  between platforms, such as a server and its clients. A computed Boolean or choice that compares such a value near a
+  boundary, such as `inCone: :Boolean computed by bearing < 30°`, can then come out differently on both sides; a
+  classification that both sides must agree on belongs in a stored field, which one side computes and sends.
 - **An absent field is handled where it is read.** A required computed field that would give nothing because an optional
   field it reads is absent is `schema.computedMayBeAbsent`: mark it `optional`, guard the read with `has value`, or give a
   fallback with `default`. `x has value` proves `x` and each record on its path present on the right of `and` and in the
@@ -473,13 +507,14 @@ schema :SoundMade as {
 - **Not encoded.** The wire, deltas, the largest encoding and the binding hash ignore computed fields, and a document that
   sets one fails with `document.unknownField`. Decoding a [value](#record-values) adds them, encoding ignores them, and
   they belong to the [canonical form](#canonical-form) and the schema hash, since both sides derive the same values.
-- **Not included:** square roots, trigonometry and powers, whose results differ between platform libraries; the index of a
-  tag in its set, which a script cannot compute; text; and functions with parameters, such as a bearing at a given time,
-  which are a possible next step.
+- **Not included:** the vector and point functions of GES, such as `distance`, `dot` or `normalize`, `wrap degree` and
+  `chance`; the index of a tag in its set, which a script cannot compute; text; and functions with parameters, such as a
+  bearing at a given time, which are a possible next step.
 
 The rules come from the virtual machine, which is the reference: `scripts/test-computed-fields.py` turns every corpus record
 with computed fields into a script record and requires both virtual machines to print the bits that the value paths of both
-runtimes and the generated code of both languages give.
+runtimes and the generated code of both languages give, within the ULPs a corpus case allows for the functions of the
+platform's math library.
 
 ### Recursion
 
@@ -654,7 +689,7 @@ Source errors use the phase `schema` with line and column, in the manner of
 | `schema.duplicateName` | a name repeats within its kind, or a schema, message or message set takes the name of a built-in type or `Record` |
 | `schema.unknownName` | a type, message, constant, let or parameter is not declared, a step, delta range or `max` names no let of its schema, or a default names neither a field nor a let |
 | `schema.cycle` | schema references form a cycle, references or `:List` types nest more than 32 levels, or sibling defaults form a cycle |
-| `schema.unitMismatch` | a bound, step, delta range or default has another unit than its field, a `max` names a let with a unit, or a computed expression combines units that have no result unit or gives another unit than its field |
+| `schema.unitMismatch` | a bound, step, delta range or default has another unit than its field, a `max` names a let with a unit, or a computed expression combines units that have no result unit or gives another unit than its field, or a function, root or power reads a unit it does not take or a quantity's power has no literal exponent |
 | `schema.invalidRange` | a lower bound is not below its upper bound |
 | `schema.invalidStep` | a step is not positive, not exact, or a bound or delta range is no multiple of it |
 | `schema.invalidConstraint` | `integer` with `step` or on a Percentage, a Dice constraint other than a range, a `max` that is not positive, `step` or `delta within` without a range, `delta within` without a step or not narrower than the field, a `max` that names a let other than a positive whole Number of at most 12 digits, a `depth` other than on a field's List of its own schema, a second `depth` in a schema, or a depth of 1 |
@@ -670,7 +705,7 @@ Source errors use the phase `schema` with line and column, in the manner of
 | `schema.packedTooWide` | a packed schema's fields take more than 64 bits or more than its declared `packed(n)` |
 | `schema.invalidAbstract` | an abstract schema is a field type, list element, union alternative, a bound or checked root, or a model root |
 | `schema.computedMayBeAbsent` | a required [computed field](#computed-fields) reads an optional field that may be absent without `has value` or `default` |
-| `schema.invalidExpression` | a [computed field](#computed-fields) has another type than its expression, constraints, a key or optional Boolean, reads a type or name it cannot (a later computed field, a union, a reserved GES name, an optional list in an aggregate), combines operands without a value, or a sum of quantities or percentages stands inside arithmetic |
+| `schema.invalidExpression` | a [computed field](#computed-fields) has another type than its expression, constraints, a key or optional Boolean, reads a type or name it cannot (a later computed field, a union, a reserved GES name without backticks, an optional list in an aggregate), gives `hypot` or `atan2` another number of arguments, combines operands without a value, or a sum of quantities or percentages stands inside arithmetic |
 | `schema.invalidDefault` | a [default](#defaults) lies outside its field's range or off its step, is fractional for an `integer` field, is no tag of the set or longer than `max`, has another kind than its field, stands on a key, a union or an optional field with a literal, names a sibling of another type or optionality, or names one for a type that generated code declares per field; a record literal on a field that is not one schema, or that names an unknown or computed field, a field twice, a field without a literal, a let or a parameter, or leaves out a required field without a default |
 
 `schema.notEncodable`, `schema.invalidRange`, `schema.invalidStep`, `schema.invalidBound`,
@@ -788,7 +823,10 @@ parentheses: `(field a b)` for `a.b`, `(item b)` for a projected element, litera
 `(quantity <unit> <n>)`, `(true)` and `(false)` with constants and lets replaced by their values, and every operation as
 `(<name> <operands>)`: `negate`, `not`, `abs`, `add`, `subtract`, `multiply`, `divide`, `less`, `lessOrEqual`,
 `greater`, `greaterOrEqual`, `equal`, `notEqual`, `and`, `or`, `choice` with values and conditions in pairs and the
-fallback last, `min`, `max`, `clamp`, `default`, `hasValue`, `sum` with the list and an optional projection, and `count`.
+fallback last, `min`, `max`, `clamp`, `default`, `hasValue`, `sum` with the list and an optional projection, `count`, and
+the functions `power` (also for `²` and `³`, whose exponent is `(number 2e0)` or `(number 3e0)`), `sqrt` (also for `√`),
+`cbrt`, `sin`, `cos`, `tan`, `asin`, `acos`, `atan`, `atan2`, `hypot`, `exp`, `ln`, `floor`, `ceil`, `truncate`,
+`roundHalfEven`, `roundHalfUp`, `roundHalfDown`, `rad` and `deg`. A name in backticks is written as its plain name.
 The variable of a projection is not written, so renaming it keeps the hash.
 
 `<type>` is written as:
@@ -1862,6 +1900,14 @@ argument.
   generation's suffix without a namespace): no negative zero, where binding cannot exclude one; the equality of GES numbers
   (whole numbers exactly, others within two ULPs); `min`, `max` and `clamp`, which give nothing for nothing; three-valued
   `and`, `or` and comparisons; and the conversions to optional fields and ratios. Each sum is a private method with a loop.
+  Functions and powers (*Since: Unreleased*) call the same platform functions as the virtual machine: a square root is
+  `Math.Sqrt` or `.squareRoot()` (through the helper `SquareRoot` only where the operand may be `-infinity`), rounding is
+  `Math.Floor`, `Math.Round` or `.rounded(...)`, and the other functions are helpers such as `Sine`, `Power`, `Arctangent`
+  (`atan2`, 0 for `(0, 0)`), `Hypotenuse` or `Radians` over `System.Math` and the C math library. Swift reaches the C
+  library only through these helpers, so that no member of a record such as a field `exp` hides it, and a Swift file of a
+  generation whose computed fields use a function or power imports `Darwin`, `Glibc`, `Musl` or `ucrt`, whichever the
+  platform has; the helpers and the import are absent from a generation without them. A rounding of an operand whose
+  declared range reaches beyond Int64 keeps the dynamic form, since the virtual machine saturates it.
   The virtual machine adds and multiplies whole numbers as exact Int64 values; where the declared ranges cannot exclude such
   a result beyond 2^53 meeting another operand, as for an `integer` field without a range, the field keeps the dynamic
   form: a property over an internal method `__<field>()` that returns the exact GES value through the helpers that repeat

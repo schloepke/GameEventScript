@@ -57,14 +57,39 @@ enum StrictExtensions {
     static func maybe(_ value: Int?) -> String { value.map { "value \($0)" } ?? "none" }
 }
 
+// A GesRandomGenerator parameter receives the call's generator in any position and is no script argument.
+@GesExtension("arena")
+enum ArenaExtensions {
+    @GesFunction
+    static func first(random: GesRandomGenerator, count: Int) -> String { draw(random, count, 0) }
+
+    @GesFunction
+    static func middle(count: Int, _ random: GesRandomGenerator, _ offset: Double) -> String { draw(random, count, offset) }
+
+    @GesFunction
+    static func spawnSpots(count: Int, margin: Double, spacing: Double, random: GesRandomGenerator) -> GesValue? { .text(draw(random, count, margin + spacing)) }
+
+    @GesFunction
+    static func only(_ random: GesRandomGenerator) -> Int { Int(random.nextInclusiveInteger(1, 1000)) }
+
+    @GesFunction(units: ["d": .meter])
+    static func four(a: Int, b: Int, random: GesRandomGenerator, c: Int, d: Int) -> Int { 1000 * a + 100 * b + 10 * c + d + Int(random.nextInclusiveInteger(0, 0)) }
+
+    static func draw(_ random: GesRandomGenerator, _ count: Int, _ offset: Double) -> String {
+        (0..<count).map { _ in String(describing: Double(random.nextInclusiveInteger(1, 1000)) + offset) }.joined(separator: ",")
+    }
+}
+
 /// Extensions declared with `@GesExtension`, `@GesFunction` and `@GesPredicate` take their signatures from the declarations
 /// and convert arguments and results strictly, with `nothing` for a value that does not convert.
 final class ExtensionMacroTests: XCTestCase {
     enum Failure: Error { case deliberate }
 
-    private func run(_ body: String, _ registry: some GesExtensionRegistry) throws -> (GameEventScriptMessage?, GesExecutionResult) {
+    private func run(_ body: String, _ registry: some GesExtensionRegistry, seed: Int64? = nil) throws -> (GameEventScriptMessage?, GesExecutionResult) {
         let program = try GesProgramBuilder().addScript("on Start() {\n" + body + "\n}").compile()
-        let host = try GameEventScriptHost.makeBuilder().withExtensionRegistry(registry).build()
+        let builder = GameEventScriptHost.makeBuilder().withExtensionRegistry(registry)
+        if let seed { _ = builder.withRandomSeed(seed) }
+        let host = try builder.build()
         let instance = try host.load(program)
         XCTAssertNil(instance.startResult?.diagnostic, "\(String(describing: instance.startResult))")
         var seen: GameEventScriptMessage?
@@ -127,5 +152,50 @@ final class ExtensionMacroTests: XCTestCase {
         XCTAssertTrue(arguments[3].isNothing, "A fraction does not convert to Int.")
         XCTAssertEqual(game.damage, 7)
         XCTAssertEqual(try GameExtensions.gesExtensions().map(\.reference.signatureID), ["game.twice(_)"])
+    }
+
+    func testRandomGeneratorParametersDrawFromTheHostGenerator() throws {
+        let registry = try GesBridgeExtensionRegistry(try ArenaExtensions.gesExtensions())
+        let body = "emit Seen(a: :arena.first(count: 2), b: :arena.middle(count: 3, 0.5), c: :arena.spawnSpots(count: 2, margin: 1, spacing: 2), d: :arena.only())"
+        let (seen, result) = try run(body, registry, seed: 42)
+        XCTAssertEqual(result.state, .completed)
+        let arguments = try XCTUnwrap(seen).arguments
+        let expected = GesRandomGenerator(seed: 42)
+        XCTAssertEqual(arguments[0], .text(ArenaExtensions.draw(expected, 2, 0)), "The first parameter receives the host generator.")
+        XCTAssertEqual(arguments[1], .text(ArenaExtensions.draw(expected, 3, 0.5)), "A middle parameter receives the host generator.")
+        XCTAssertEqual(arguments[2], .text(ArenaExtensions.draw(expected, 2, 3)), "The last parameter receives the host generator.")
+        XCTAssertEqual(arguments[3], .integer(expected.nextInclusiveInteger(1, 1000)), "A generator alone leaves no script parameter.")
+        let (again, _) = try run(body, registry, seed: 42)
+        XCTAssertEqual(try XCTUnwrap(again).arguments.map { $0 }, arguments.map { $0 }, "The same seed draws the same numbers.")
+    }
+
+    func testRandomGeneratorParametersFollowRandomScopes() throws {
+        let registry = try GesBridgeExtensionRegistry(try ArenaExtensions.gesExtensions())
+        let (seen, result) = try run("emit Seen(a: :arena.first(count: 2), b: random with 7 (:arena.first(count: 2)), c: :arena.first(count: 2), d: nothing)", registry, seed: 42)
+        XCTAssertEqual(result.state, .completed)
+        let arguments = try XCTUnwrap(seen).arguments
+        let outer = GesRandomGenerator(seed: 42)
+        XCTAssertEqual(arguments[0], .text(ArenaExtensions.draw(outer, 2, 0)))
+        XCTAssertEqual(arguments[1], .text(ArenaExtensions.draw(GesRandomGenerator(seed: 7), 2, 0)), "A seeded scope supplies its stream.")
+        XCTAssertEqual(arguments[2], .text(ArenaExtensions.draw(outer, 2, 0)), "The outer stream continues after the scope.")
+    }
+
+    func testRandomGeneratorParametersAreNoScriptArguments() throws {
+        let registry = try GesBridgeExtensionRegistry(try ArenaExtensions.gesExtensions())
+        XCTAssertEqual(
+            try ArenaExtensions.gesExtensions().map(\.reference.signatureID),
+            ["arena.first(count)", "arena.middle(count,_)", "arena.spawnSpots(count,margin,spacing)", "arena.only()", "arena.four(a,b,c,d)"]
+        )
+        let (seen, result) = try run(
+            "emit Seen(a: :arena.four(a: 1, b: 2, c: 3, d: 4m), b: :arena.four(a: 1, b: 2, c: 3, d: 4), c: :arena.spawnSpots(count: 1, margin: 1m, spacing: 2), d: :arena.first(count: 'x'))",
+            registry,
+            seed: 1
+        )
+        XCTAssertEqual(result.state, .completed)
+        let arguments = try XCTUnwrap(seen).arguments
+        XCTAssertEqual(arguments[0], .integer(1234), "Script arguments around the generator keep their order and units.")
+        XCTAssertTrue(arguments[1].isNothing, "The unit of an argument after the generator is checked.")
+        XCTAssertTrue(arguments[2].isNothing, "An argument after the generator converts strictly.")
+        XCTAssertTrue(arguments[3].isNothing)
     }
 }

@@ -140,8 +140,15 @@ internal sealed partial class GesComputedEmitter
                 var list = _access.Reach(root, _owner, children[0].Path).Text;
                 return _swift ? Call("Integer", $"Int64({list}.count)") : Call("Integer", $"{list}.Count");
             }
-            default:
+            case GesComputedOp.Sum:
                 return Sum(node, root);
+            default:
+            {
+                var arguments = new List<string>();
+                foreach (var child in children) arguments.Add(Expression(child, root));
+                if (node.Op is GesComputedOp.Sin or GesComputedOp.Cos or GesComputedOp.Tan) arguments.Add(Flag(node.First));
+                return Call(FunctionHelper(node.Op), arguments.ToArray());
+            }
         }
     }
 

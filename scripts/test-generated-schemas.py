@@ -82,6 +82,27 @@ def property_text(value):
     return format(struct.unpack(">Q", struct.pack(">d", float(value["value"])))[0], "016x")
 
 
+def ulps(case):
+    """The ULPs a case allows for binary64, 0 for its default exact comparison, as the runner reads them."""
+    config = (case.metadata.get("comparison") or {}).get("binary64") or {"mode": "exact"}
+    return config.get("maxUlps", 0) if config.get("mode") == "ulp" else 0
+
+
+def close(want, got, tolerance):
+    """Whether a printed property matches: exactly, or as finite binary64 within the tolerance, for platform math."""
+    if want == got:
+        return True
+    words = ("true", "false", "nothing", "7ff0000000000000", "fff0000000000000")
+    if tolerance == 0 or want in words or got in words or len(got) != 16:
+        return False
+
+    def ordered(word):
+        value = int(word, 16)
+        return (~value & (2**64 - 1)) if value >> 63 else value | (1 << 63)
+
+    return abs(ordered(want) - ordered(got)) <= tolerance
+
+
 def failure(error):
     return ("error", error["code"], error.get("path"))
 
@@ -112,7 +133,8 @@ def cases(paths):
                 names = computed_names(api["sources"], api["root"])
                 if names:
                     entries = {entry["key"]: entry["value"] for entry in decoded["value"].get("entries", [])}
-                    operations.append(("computed", api["decode"], "", limit, ("computed", " ".join(property_text(entries[name]) for name in names))))
+                    expect = ("computed", " ".join(property_text(entries[name]) for name in names), ulps(case))
+                    operations.append(("computed", api["decode"], "", limit, expect))
         encoded = expected.get("encoded")
         if isinstance(encoded, dict) and isinstance(encoded.get("bytes"), str) and "baseline" not in api:
             operations.append(("decode", encoded["bytes"], "", None, ("ok", len(encoded["bytes"]) // 2)))
@@ -313,7 +335,10 @@ def verdict(expected, observed, data):
     if expected[0] == "delta":
         return None if parts == ["ok", expected[1]] else f"expected delta {expected[1]}, got {observed!r}"
     if expected[0] == "computed":
-        return None if observed == "ok " + expected[1] else f"expected computed {expected[1]}, got {observed!r}"
+        wanted = expected[1].split(" ")
+        seen = parts[1:] if parts[0] == "ok" else []
+        same = len(seen) == len(wanted) and all(close(a, b, expected[2] if len(expected) > 2 else 0) for a, b in zip(wanted, seen))
+        return None if same else f"expected computed {expected[1]}, got {observed!r}"
     if expected[0] == "record":
         return None if parts == ["ok", str(expected[2]), expected[1]] else f"expected record {expected[1]} after {expected[2]} bytes, got {observed!r}"
     if parts[0] != "ok" or int(parts[1]) != expected[1]:
@@ -323,6 +348,11 @@ def verdict(expected, observed, data):
 
 
 def self_test():
+    half, below = property_text({"type": ":Number.binary64", "value": "0.5"}), property_text({"type": ":Number.binary64", "value": "0.49999999999999994"})
+    assert verdict(("computed", half + " true", 4), f"ok {below} true", "") is None
+    assert verdict(("computed", half + " true", 0), f"ok {below} true", "")
+    assert verdict(("computed", half + " true", 4), f"ok {below} false", "")
+    assert verdict(("computed", half, 4), "ok nothing", "")
     assert verdict(("error", "wire.truncated", "x"), "error wire.truncated x", "") is None
     assert verdict(("error", "wire.truncated", "x"), "error wire.truncated y", "")
     assert verdict(("error", "wire.truncated", ""), "error wire.truncated ", "") is None

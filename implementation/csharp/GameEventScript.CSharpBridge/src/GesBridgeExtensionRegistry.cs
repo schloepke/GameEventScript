@@ -25,8 +25,14 @@ public sealed class GesExtensionAttribute(string name) : Attribute
 }
 
 /// <summary>
-/// Represents a ges function attribute.
+/// Exposes a method of a <see cref="GesExtensionAttribute"/> type as the extension function <c>:extension.name(...)</c>.
 /// </summary>
+/// <remarks>
+/// Each script parameter declares <see cref="GesParamAttribute"/>; the labels and their order form the signature. An optional
+/// leading <see cref="GesExtensionCall"/> parameter receives the call, and at most one <see cref="GesRandomGenerator"/>
+/// parameter, in any position, receives the host's generator (<see cref="GesExtensionCall.Random"/>); neither is a script
+/// argument, takes a <see cref="GesParamAttribute"/> or counts toward the four script parameters.
+/// </remarks>
 [AttributeUsage(AttributeTargets.Method)]
 public sealed class GesFunctionAttribute(string name) : Attribute
 {
@@ -283,20 +289,65 @@ public sealed class GesBridgeExtensionRegistry : IGesExtensionRegistry
 
         var parameters = method.GetParameters();
         var hasContext = parameters.Length > 0 && parameters[0].ParameterType == typeof(GesExtensionCall);
-        var scriptParameters = parameters.Skip(hasContext ? 1 : 0).ToArray();
+        var methodParameters = parameters.Skip(hasContext ? 1 : 0).ToArray();
+        var randomPosition = FindRandomParameter(method, methodParameters);
+        var scriptParameters = methodParameters.Where((_, position) => position != randomPosition).ToArray();
         var definitions = scriptParameters
             .Select(parameter => CreateParameterDefinition(method, parameter))
             .ToArray();
-        if (predicate && (definitions.Length != 1 || method.ReturnType != typeof(bool) && method.ReturnType != typeof(bool?)))
+        if (predicate && (definitions.Length != 1 || randomPosition >= 0 || method.ReturnType != typeof(bool) && method.ReturnType != typeof(bool?)))
             throw new ArgumentException($"GameEventScript predicate '{method.DeclaringType?.FullName}.{method.Name}' requires one parameter and a bool or bool? result.");
+        if (definitions.Length > 4)
+        {
+            throw new ArgumentException(
+                $"GameEventScript extension function '{method.DeclaringType?.FullName}.{method.Name}' has {definitions.Length} script parameter(s); annotated extension functions currently support up to 4.");
+        }
+
         var labels = predicate ? [GesMessageSignature.UnlabeledParameterName] : definitions.Select(definition => definition.Name).ToArray();
         signatureId = new GesExtensionReference(extensionName, attribute.Name, labels).SignatureId;
-        var readers = scriptParameters
-            .Select((parameter, index) => CreateArgumentReader(method, parameter.ParameterType, definitions[index]))
-            .ToArray();
+        // One reader per method parameter in method order; the generator parameter reads the call's generator, and the
+        // script parameters after it read the argument one position earlier.
+        var readers = new object[methodParameters.Length];
+        for (var position = 0; position < methodParameters.Length; position++)
+        {
+            if (position == randomPosition)
+            {
+                readers[position] = RandomArgumentReader.Instance;
+                continue;
+            }
+
+            var scriptIndex = randomPosition >= 0 && position > randomPosition ? position - 1 : position;
+            var reader = CreateArgumentReader(method, methodParameters[position].ParameterType, definitions[scriptIndex]);
+            readers[position] = randomPosition >= 0 && position > randomPosition
+                ? Activator.CreateInstance(typeof(PrecedingArgumentReader<>).MakeGenericType(methodParameters[position].ParameterType), reader)!
+                : reader;
+        }
+
         var returnConverter = CreateReturnConverter(method, attribute);
 
-        return CreateAdapter(method, instance, hasContext, readers, returnConverter);
+        return CreateAdapter(method, instance, hasContext, methodParameters, definitions.Length, readers, returnConverter);
+    }
+
+    // The position of the parameter that receives the call's random generator, or -1. It is no script argument, so it
+    // takes no GesParam, and a function has at most one.
+    private static int FindRandomParameter(MethodInfo method, ParameterInfo[] parameters)
+    {
+        var found = -1;
+        for (var position = 0; position < parameters.Length; position++)
+        {
+            if (parameters[position].ParameterType != typeof(GesRandomGenerator)) continue;
+            if (found >= 0)
+                throw new ArgumentException($"GameEventScript extension function '{method.DeclaringType?.FullName}.{method.Name}' declares more than one GesRandomGenerator parameter.");
+            if (parameters[position].GetCustomAttribute<GesParamAttribute>() is not null)
+            {
+                throw new ArgumentException(
+                    $"GameEventScript extension function '{method.DeclaringType?.FullName}.{method.Name}' parameter '{parameters[position].Name}' receives the call's random generator and must not declare GesParamAttribute.");
+            }
+
+            found = position;
+        }
+
+        return found;
     }
 
     private static ExtensionParameterDefinition CreateParameterDefinition(MethodInfo method, ParameterInfo parameter)
@@ -460,28 +511,20 @@ public sealed class GesBridgeExtensionRegistry : IGesExtensionRegistry
         }
     }
 
-    private static IGesExtensionFunction CreateAdapter(MethodInfo method, object? instance, bool hasContext, object[] readers, object returnConverter)
+    private static IGesExtensionFunction CreateAdapter(MethodInfo method, object? instance, bool hasContext, ParameterInfo[] methodParameters, int argumentCount, object[] readers, object returnConverter)
     {
-        if (readers.Length > 4)
-        {
-            throw new ArgumentException(
-                $"GameEventScript extension function '{method.DeclaringType?.FullName}.{method.Name}' has {readers.Length} script parameter(s); annotated extension functions currently support up to 4.");
-        }
-
         var returnType = method.ReturnType;
-        var scriptParameterTypes = method.GetParameters()
-            .Skip(hasContext ? 1 : 0)
-            .Select(parameter => parameter.ParameterType)
-            .ToArray();
+        var parameterTypes = methodParameters.Select(parameter => parameter.ParameterType).ToArray();
         var delegateTypes = hasContext
-            ? new[] { typeof(GesExtensionCall) }.Concat(scriptParameterTypes).Append(returnType).ToArray()
-            : scriptParameterTypes.Append(returnType).ToArray();
+            ? new[] { typeof(GesExtensionCall) }.Concat(parameterTypes).Append(returnType).ToArray()
+            : parameterTypes.Append(returnType).ToArray();
         var delegateType = GetFuncType(delegateTypes);
         var functionDelegate = instance is null ? method.CreateDelegate(delegateType) : method.CreateDelegate(delegateType, instance);
-        var adapterType = GetAdapterType(readers.Length, hasContext).MakeGenericType(scriptParameterTypes.Append(returnType).ToArray());
-        var args = new object[2 + readers.Length];
+        var adapterType = GetAdapterType(readers.Length, hasContext).MakeGenericType(parameterTypes.Append(returnType).ToArray());
+        var args = new object[3 + readers.Length];
         args[0] = functionDelegate;
-        Array.Copy(readers, 0, args, 1, readers.Length);
+        args[1] = argumentCount;
+        Array.Copy(readers, 0, args, 2, readers.Length);
         args[^1] = returnConverter;
         return (IGesExtensionFunction)Activator.CreateInstance(adapterType, args)!;
     }
@@ -495,6 +538,7 @@ public sealed class GesBridgeExtensionRegistry : IGesExtensionRegistry
             4 => typeof(Func<,,,>).MakeGenericType(typeArguments),
             5 => typeof(Func<,,,,>).MakeGenericType(typeArguments),
             6 => typeof(Func<,,,,,>).MakeGenericType(typeArguments),
+            7 => typeof(Func<,,,,,,>).MakeGenericType(typeArguments),
             _ => throw new ArgumentOutOfRangeException(nameof(typeArguments), typeArguments.Length, "Unsupported extension function arity.")
         };
 
@@ -506,17 +550,19 @@ public sealed class GesBridgeExtensionRegistry : IGesExtensionRegistry
             (2, false) => typeof(AnnotatedExtensionFunction2<,,>),
             (3, false) => typeof(AnnotatedExtensionFunction3<,,,>),
             (4, false) => typeof(AnnotatedExtensionFunction4<,,,,>),
+            (5, false) => typeof(AnnotatedExtensionFunction5<,,,,,>),
             (0, true) => typeof(AnnotatedContextExtensionFunction0<>),
             (1, true) => typeof(AnnotatedContextExtensionFunction1<,>),
             (2, true) => typeof(AnnotatedContextExtensionFunction2<,,>),
             (3, true) => typeof(AnnotatedContextExtensionFunction3<,,,>),
             (4, true) => typeof(AnnotatedContextExtensionFunction4<,,,,>),
+            (5, true) => typeof(AnnotatedContextExtensionFunction5<,,,,,>),
             _ => throw new ArgumentOutOfRangeException(nameof(arity), arity, "Unsupported extension function arity.")
         };
 
     private interface IExtensionArgumentReader<T>
     {
-        bool Read(GesValueArguments arguments, int index, out T value);
+        bool Read(GesExtensionCall call, int index, out T value);
     }
 
     private interface IExtensionReturnConverter<T>
@@ -528,9 +574,9 @@ public sealed class GesBridgeExtensionRegistry : IGesExtensionRegistry
     {
         public static readonly GesValueArgumentReader Instance = new();
 
-        public bool Read(GesValueArguments arguments, int index, out GesValue value)
+        public bool Read(GesExtensionCall call, int index, out GesValue value)
         {
-            value = arguments[index];
+            value = call.Arguments[index];
             return true;
         }
     }
@@ -572,8 +618,9 @@ public sealed class GesBridgeExtensionRegistry : IGesExtensionRegistry
     // number converts only exactly, and neither a Boolean nor a Percentage is a number here.
     private sealed class FloatArgumentReader(GesQuantityUnit unit) : IExtensionArgumentReader<double>
     {
-        public bool Read(GesValueArguments arguments, int index, out double value)
+        public bool Read(GesExtensionCall call, int index, out double value)
         {
+            var arguments = call.Arguments;
             if (arguments.UnitAt(index) == unit) return GesBridgeValueConverter.TryReadDouble(in arguments[index], out value);
             value = 0d;
             return false;
@@ -582,8 +629,9 @@ public sealed class GesBridgeExtensionRegistry : IGesExtensionRegistry
 
     private sealed class LongArgumentReader(GesQuantityUnit unit) : IExtensionArgumentReader<long>
     {
-        public bool Read(GesValueArguments arguments, int index, out long value)
+        public bool Read(GesExtensionCall call, int index, out long value)
         {
+            var arguments = call.Arguments;
             if (arguments.UnitAt(index) == unit) return GesBridgeValueConverter.TryReadInt64(in arguments[index], out value);
             value = 0;
             return false;
@@ -594,9 +642,9 @@ public sealed class GesBridgeExtensionRegistry : IGesExtensionRegistry
     {
         private readonly LongArgumentReader _long = new(unit);
 
-        public bool Read(GesValueArguments arguments, int index, out int value)
+        public bool Read(GesExtensionCall call, int index, out int value)
         {
-            if (_long.Read(arguments, index, out var integer) &&
+            if (_long.Read(call, index, out var integer) &&
                 integer is >= int.MinValue and <= int.MaxValue)
             {
                 value = (int)integer;
@@ -612,8 +660,9 @@ public sealed class GesBridgeExtensionRegistry : IGesExtensionRegistry
     {
         public static readonly BoolArgumentReader Instance = new();
 
-        public bool Read(GesValueArguments arguments, int index, out bool value)
+        public bool Read(GesExtensionCall call, int index, out bool value)
         {
+            var arguments = call.Arguments;
             if (arguments.KindAt(index) == GesBytecodeTypeKind.Boolean)
             {
                 value = arguments.GetAsBoolean(index);
@@ -627,11 +676,12 @@ public sealed class GesBridgeExtensionRegistry : IGesExtensionRegistry
 
     private sealed class NullableArgumentReader<T>(IExtensionArgumentReader<T> inner) : IExtensionArgumentReader<T?> where T : struct
     {
-        public bool Read(GesValueArguments arguments, int index, out T? value)
+        public bool Read(GesExtensionCall call, int index, out T? value)
         {
+            var arguments = call.Arguments;
             value = null;
             if (arguments.IsNothingAt(index)) return true;
-            if (!inner.Read(arguments, index, out var present)) return false;
+            if (!inner.Read(call, index, out var present)) return false;
             value = present;
             return true;
         }
@@ -640,8 +690,9 @@ public sealed class GesBridgeExtensionRegistry : IGesExtensionRegistry
     // Spatial values and boxes with the declared unit, which they leave behind.
     private sealed class SpatialArgumentReader<T>(Func<GesValue, T?> read) : IExtensionArgumentReader<T> where T : struct
     {
-        public bool Read(GesValueArguments arguments, int index, out T value)
+        public bool Read(GesExtensionCall call, int index, out T value)
         {
+            var arguments = call.Arguments;
             var result = read(arguments[index]);
             value = result.GetValueOrDefault();
             return result.HasValue;
@@ -652,8 +703,9 @@ public sealed class GesBridgeExtensionRegistry : IGesExtensionRegistry
     {
         public static readonly TextArgumentReader Instance = new();
 
-        public bool Read(GesValueArguments arguments, int index, out string value)
+        public bool Read(GesExtensionCall call, int index, out string value)
         {
+            var arguments = call.Arguments;
             var valid = arguments.KindAt(index) == GesBytecodeTypeKind.Text;
             value = valid ? arguments[index].AsText() : "";
             return valid;
@@ -665,8 +717,9 @@ public sealed class GesBridgeExtensionRegistry : IGesExtensionRegistry
     {
         public static readonly BytesArgumentReader Instance = new();
 
-        public bool Read(GesValueArguments arguments, int index, out byte[] value)
+        public bool Read(GesExtensionCall call, int index, out byte[] value)
         {
+            var arguments = call.Arguments;
             var valid = arguments.KindAt(index) == GesBytecodeTypeKind.Bytes;
             value = valid ? arguments[index].AsBytes().ToArray() : [];
             return valid;
@@ -675,11 +728,30 @@ public sealed class GesBridgeExtensionRegistry : IGesExtensionRegistry
 
     private sealed class PolyArgumentReader(GesQuantityUnit unit) : IExtensionArgumentReader<GesPoly>
     {
-        public bool Read(GesValueArguments arguments, int index, out GesPoly value)
+        public bool Read(GesExtensionCall call, int index, out GesPoly value)
         {
+            var arguments = call.Arguments;
             value = GesPoly.FromValue(arguments[index], unit)!;
             return value is not null;
         }
+    }
+
+    // The parameter that receives the call's random generator; it reads no argument.
+    private sealed class RandomArgumentReader : IExtensionArgumentReader<GesRandomGenerator>
+    {
+        public static readonly RandomArgumentReader Instance = new();
+
+        public bool Read(GesExtensionCall call, int index, out GesRandomGenerator value)
+        {
+            value = call.Random;
+            return true;
+        }
+    }
+
+    // A script parameter after the generator parameter: its argument index is one less than its method position.
+    private sealed class PrecedingArgumentReader<T>(IExtensionArgumentReader<T> inner) : IExtensionArgumentReader<T>
+    {
+        public bool Read(GesExtensionCall call, int index, out T value) => inner.Read(call, index - 1, out value);
     }
 
     private sealed class NullableReturnConverter<T>(IExtensionReturnConverter<T> inner) : IExtensionReturnConverter<T?> where T : struct
@@ -694,8 +766,8 @@ public sealed class GesBridgeExtensionRegistry : IGesExtensionRegistry
 
     private sealed class ExternalObjectArgumentReader<T> : IExtensionArgumentReader<T>
     {
-        public bool Read(GesValueArguments arguments, int index, out T value)
-            => (value = (GesBridgeValueConverter.ToClrExternalObjectValue(in arguments[index], typeof(T)) is T typed ? typed : default)!) is not null;
+        public bool Read(GesExtensionCall call, int index, out T value)
+            => (value = (GesBridgeValueConverter.ToClrExternalObjectValue(in call.Arguments[index], typeof(T)) is T typed ? typed : default)!) is not null;
     }
 
     private sealed class GesValueReturnConverter : IExtensionReturnConverter<GesValue>
@@ -743,49 +815,65 @@ public sealed class GesBridgeExtensionRegistry : IGesExtensionRegistry
             => GesValue.GesFloat(value.Value, value.Unit.ToStoredUnit());
     }
 
-    private sealed class AnnotatedExtensionFunction0<R>(Func<R> invoke, IExtensionReturnConverter<R> returnConverter) : IGesExtensionFunction
+    private sealed class AnnotatedExtensionFunction0<R>(
+        Func<R> invoke,
+        int argumentCount,
+        IExtensionReturnConverter<R> returnConverter) : IGesExtensionFunction
     {
         public void Invoke(GesExtensionCall call)
-            => call.SetValue(call.Arguments.Length == 0 ? returnConverter.Convert(invoke()) : GesValue.GesNothing());
+            => call.SetValue(call.Arguments.Length == argumentCount
+                ? returnConverter.Convert(invoke())
+                : GesValue.GesNothing());
     }
 
-    private sealed class AnnotatedExtensionFunction1<T1, R>(Func<T1, R> invoke, IExtensionArgumentReader<T1> reader1, IExtensionReturnConverter<R> returnConverter) : IGesExtensionFunction
+    private sealed class AnnotatedExtensionFunction1<T1, R>(
+        Func<T1, R> invoke,
+        int argumentCount,
+        IExtensionArgumentReader<T1> reader1,
+        IExtensionReturnConverter<R> returnConverter) : IGesExtensionFunction
     {
         public void Invoke(GesExtensionCall call)
-            => call.SetValue(call.Arguments.Length == 1 && reader1.Read(call.Arguments, 0, out var value1)
+            => call.SetValue(call.Arguments.Length == argumentCount &&
+               reader1.Read(call, 0, out var value1)
                 ? returnConverter.Convert(invoke(value1))
                 : GesValue.GesNothing());
     }
 
-    private sealed class AnnotatedExtensionFunction2<T1, T2, R>(Func<T1, T2, R> invoke, IExtensionArgumentReader<T1> reader1, IExtensionArgumentReader<T2> reader2, IExtensionReturnConverter<R> returnConverter)
-        : IGesExtensionFunction
+    private sealed class AnnotatedExtensionFunction2<T1, T2, R>(
+        Func<T1, T2, R> invoke,
+        int argumentCount,
+        IExtensionArgumentReader<T1> reader1,
+        IExtensionArgumentReader<T2> reader2,
+        IExtensionReturnConverter<R> returnConverter) : IGesExtensionFunction
     {
         public void Invoke(GesExtensionCall call)
-            => call.SetValue(call.Arguments.Length == 2 &&
-               reader1.Read(call.Arguments, 0, out var value1) &&
-               reader2.Read(call.Arguments, 1, out var value2)
+            => call.SetValue(call.Arguments.Length == argumentCount &&
+               reader1.Read(call, 0, out var value1) &&
+               reader2.Read(call, 1, out var value2)
                 ? returnConverter.Convert(invoke(value1, value2))
                 : GesValue.GesNothing());
     }
 
     private sealed class AnnotatedExtensionFunction3<T1, T2, T3, R>(
         Func<T1, T2, T3, R> invoke,
+        int argumentCount,
         IExtensionArgumentReader<T1> reader1,
         IExtensionArgumentReader<T2> reader2,
         IExtensionArgumentReader<T3> reader3,
         IExtensionReturnConverter<R> returnConverter) : IGesExtensionFunction
     {
         public void Invoke(GesExtensionCall call)
-            => call.SetValue(call.Arguments.Length == 3 &&
-               reader1.Read(call.Arguments, 0, out var value1) &&
-               reader2.Read(call.Arguments, 1, out var value2) &&
-               reader3.Read(call.Arguments, 2, out var value3)
+            => call.SetValue(call.Arguments.Length == argumentCount &&
+               reader1.Read(call, 0, out var value1) &&
+               reader2.Read(call, 1, out var value2) &&
+               reader3.Read(call, 2, out var value3)
                 ? returnConverter.Convert(invoke(value1, value2, value3))
                 : GesValue.GesNothing());
     }
 
     private sealed class AnnotatedExtensionFunction4<T1, T2, T3, T4, R>(
         Func<T1, T2, T3, T4, R> invoke,
+        int argumentCount,
         IExtensionArgumentReader<T1> reader1,
         IExtensionArgumentReader<T2> reader2,
         IExtensionArgumentReader<T3> reader3,
@@ -793,62 +881,95 @@ public sealed class GesBridgeExtensionRegistry : IGesExtensionRegistry
         IExtensionReturnConverter<R> returnConverter) : IGesExtensionFunction
     {
         public void Invoke(GesExtensionCall call)
-            => call.SetValue(call.Arguments.Length == 4 &&
-               reader1.Read(call.Arguments, 0, out var value1) &&
-               reader2.Read(call.Arguments, 1, out var value2) &&
-               reader3.Read(call.Arguments, 2, out var value3) &&
-               reader4.Read(call.Arguments, 3, out var value4)
+            => call.SetValue(call.Arguments.Length == argumentCount &&
+               reader1.Read(call, 0, out var value1) &&
+               reader2.Read(call, 1, out var value2) &&
+               reader3.Read(call, 2, out var value3) &&
+               reader4.Read(call, 3, out var value4)
                 ? returnConverter.Convert(invoke(value1, value2, value3, value4))
                 : GesValue.GesNothing());
     }
 
-    private sealed class AnnotatedContextExtensionFunction0<R>(Func<GesExtensionCall, R> invoke, IExtensionReturnConverter<R> returnConverter) : IGesExtensionFunction
+    private sealed class AnnotatedExtensionFunction5<T1, T2, T3, T4, T5, R>(
+        Func<T1, T2, T3, T4, T5, R> invoke,
+        int argumentCount,
+        IExtensionArgumentReader<T1> reader1,
+        IExtensionArgumentReader<T2> reader2,
+        IExtensionArgumentReader<T3> reader3,
+        IExtensionArgumentReader<T4> reader4,
+        IExtensionArgumentReader<T5> reader5,
+        IExtensionReturnConverter<R> returnConverter) : IGesExtensionFunction
     {
         public void Invoke(GesExtensionCall call)
-            => call.SetValue(call.Arguments.Length == 0 ? returnConverter.Convert(invoke(call)) : GesValue.GesNothing());
+            => call.SetValue(call.Arguments.Length == argumentCount &&
+               reader1.Read(call, 0, out var value1) &&
+               reader2.Read(call, 1, out var value2) &&
+               reader3.Read(call, 2, out var value3) &&
+               reader4.Read(call, 3, out var value4) &&
+               reader5.Read(call, 4, out var value5)
+                ? returnConverter.Convert(invoke(value1, value2, value3, value4, value5))
+                : GesValue.GesNothing());
     }
 
-    private sealed class AnnotatedContextExtensionFunction1<T1, R>(Func<GesExtensionCall, T1, R> invoke, IExtensionArgumentReader<T1> reader1, IExtensionReturnConverter<R> returnConverter)
-        : IGesExtensionFunction
+    private sealed class AnnotatedContextExtensionFunction0<R>(
+        Func<GesExtensionCall, R> invoke,
+        int argumentCount,
+        IExtensionReturnConverter<R> returnConverter) : IGesExtensionFunction
     {
         public void Invoke(GesExtensionCall call)
-            => call.SetValue(call.Arguments.Length == 1 && reader1.Read(call.Arguments, 0, out var value1)
+            => call.SetValue(call.Arguments.Length == argumentCount
+                ? returnConverter.Convert(invoke(call))
+                : GesValue.GesNothing());
+    }
+
+    private sealed class AnnotatedContextExtensionFunction1<T1, R>(
+        Func<GesExtensionCall, T1, R> invoke,
+        int argumentCount,
+        IExtensionArgumentReader<T1> reader1,
+        IExtensionReturnConverter<R> returnConverter) : IGesExtensionFunction
+    {
+        public void Invoke(GesExtensionCall call)
+            => call.SetValue(call.Arguments.Length == argumentCount &&
+               reader1.Read(call, 0, out var value1)
                 ? returnConverter.Convert(invoke(call, value1))
                 : GesValue.GesNothing());
     }
 
     private sealed class AnnotatedContextExtensionFunction2<T1, T2, R>(
         Func<GesExtensionCall, T1, T2, R> invoke,
+        int argumentCount,
         IExtensionArgumentReader<T1> reader1,
         IExtensionArgumentReader<T2> reader2,
         IExtensionReturnConverter<R> returnConverter) : IGesExtensionFunction
     {
         public void Invoke(GesExtensionCall call)
-            => call.SetValue(call.Arguments.Length == 2 &&
-               reader1.Read(call.Arguments, 0, out var value1) &&
-               reader2.Read(call.Arguments, 1, out var value2)
+            => call.SetValue(call.Arguments.Length == argumentCount &&
+               reader1.Read(call, 0, out var value1) &&
+               reader2.Read(call, 1, out var value2)
                 ? returnConverter.Convert(invoke(call, value1, value2))
                 : GesValue.GesNothing());
     }
 
     private sealed class AnnotatedContextExtensionFunction3<T1, T2, T3, R>(
         Func<GesExtensionCall, T1, T2, T3, R> invoke,
+        int argumentCount,
         IExtensionArgumentReader<T1> reader1,
         IExtensionArgumentReader<T2> reader2,
         IExtensionArgumentReader<T3> reader3,
         IExtensionReturnConverter<R> returnConverter) : IGesExtensionFunction
     {
         public void Invoke(GesExtensionCall call)
-            => call.SetValue(call.Arguments.Length == 3 &&
-               reader1.Read(call.Arguments, 0, out var value1) &&
-               reader2.Read(call.Arguments, 1, out var value2) &&
-               reader3.Read(call.Arguments, 2, out var value3)
+            => call.SetValue(call.Arguments.Length == argumentCount &&
+               reader1.Read(call, 0, out var value1) &&
+               reader2.Read(call, 1, out var value2) &&
+               reader3.Read(call, 2, out var value3)
                 ? returnConverter.Convert(invoke(call, value1, value2, value3))
                 : GesValue.GesNothing());
     }
 
     private sealed class AnnotatedContextExtensionFunction4<T1, T2, T3, T4, R>(
         Func<GesExtensionCall, T1, T2, T3, T4, R> invoke,
+        int argumentCount,
         IExtensionArgumentReader<T1> reader1,
         IExtensionArgumentReader<T2> reader2,
         IExtensionArgumentReader<T3> reader3,
@@ -856,12 +977,33 @@ public sealed class GesBridgeExtensionRegistry : IGesExtensionRegistry
         IExtensionReturnConverter<R> returnConverter) : IGesExtensionFunction
     {
         public void Invoke(GesExtensionCall call)
-            => call.SetValue(call.Arguments.Length == 4 &&
-               reader1.Read(call.Arguments, 0, out var value1) &&
-               reader2.Read(call.Arguments, 1, out var value2) &&
-               reader3.Read(call.Arguments, 2, out var value3) &&
-               reader4.Read(call.Arguments, 3, out var value4)
+            => call.SetValue(call.Arguments.Length == argumentCount &&
+               reader1.Read(call, 0, out var value1) &&
+               reader2.Read(call, 1, out var value2) &&
+               reader3.Read(call, 2, out var value3) &&
+               reader4.Read(call, 3, out var value4)
                 ? returnConverter.Convert(invoke(call, value1, value2, value3, value4))
+                : GesValue.GesNothing());
+    }
+
+    private sealed class AnnotatedContextExtensionFunction5<T1, T2, T3, T4, T5, R>(
+        Func<GesExtensionCall, T1, T2, T3, T4, T5, R> invoke,
+        int argumentCount,
+        IExtensionArgumentReader<T1> reader1,
+        IExtensionArgumentReader<T2> reader2,
+        IExtensionArgumentReader<T3> reader3,
+        IExtensionArgumentReader<T4> reader4,
+        IExtensionArgumentReader<T5> reader5,
+        IExtensionReturnConverter<R> returnConverter) : IGesExtensionFunction
+    {
+        public void Invoke(GesExtensionCall call)
+            => call.SetValue(call.Arguments.Length == argumentCount &&
+               reader1.Read(call, 0, out var value1) &&
+               reader2.Read(call, 1, out var value2) &&
+               reader3.Read(call, 2, out var value3) &&
+               reader4.Read(call, 3, out var value4) &&
+               reader5.Read(call, 4, out var value5)
+                ? returnConverter.Convert(invoke(call, value1, value2, value3, value4, value5))
                 : GesValue.GesNothing());
     }
 }

@@ -4,6 +4,14 @@
 @_spi(Generator) import GameEventScriptRuntime
 @_spi(Syntax) import GameEventScriptSyntax
 
+#if canImport(Darwin)
+    import Darwin
+#elseif canImport(Glibc)
+    import Glibc
+#elseif canImport(Musl)
+    import Musl
+#endif
+
 /// What binding knows about a node: its range, whether it may give nothing (NaN or an absent field), a negative zero, or
 /// an exact Int64 that binary64 cannot hold.
 final class GesComputedFacts {
@@ -241,6 +249,124 @@ extension GesComputedEmitter {
             return Facts(0, Swift.min(list.maxCount, Self.limit))
         case .sum:
             return sumFacts(node, analysis)
+        default:
+            return functionFacts(node, analysis)
+        }
+    }
+
+    /// The range of a function in binary64. The virtual machine reads its operands as binary64, as static code does, and
+    /// makes a whole result within Int64 an integer, which may meet another operand as an exact Int64 beyond 2^53.
+    private func functionFacts(_ node: GesComputedNode, _ analysis: Analysis) -> Facts {
+        let parts = node.children.map { analyze($0, analysis) }
+        let a = parts[0]
+        var nothing = parts.contains { $0.mayBeNothing }
+        let facts: Facts
+        switch node.op {
+        case .power:
+            facts = Self.powerFacts(a, node.children[1], parts[1])
+        case .sqrt, .cbrt:
+            // A negative number has no root, and -infinity gives +infinity as pow does.
+            let root = node.op == .sqrt ? 0.5 : 1.0 / 3.0
+            facts = a.lower == -.infinity ? Facts(0, .infinity) : Facts(pow(Swift.max(a.lower, 0), root), pow(Swift.max(a.upper, 0), root))
+            nothing = nothing || a.lower < 0
+        case .sin, .cos:
+            facts = Facts(-1, 1)
+            nothing = nothing || a.infinite
+        case .tan:
+            facts = Facts()
+            nothing = nothing || a.infinite
+        case .asin, .atan:
+            facts = Facts(-Double.pi / 2, Double.pi / 2)
+            nothing = nothing || node.op == .asin && (a.lower < -1 || a.upper > 1)
+        case .acos:
+            facts = Facts(0, Double.pi)
+            nothing = nothing || a.lower < -1 || a.upper > 1
+        case .atan2:
+            facts = Facts(-Double.pi, Double.pi)
+        case .hypot:
+            var sum = 0.0
+            for part in parts { sum += part.magnitude * part.magnitude }
+            facts = Facts(0, sum.squareRoot())
+        case .exp:
+            facts = Facts(exp(a.lower), exp(a.upper))
+        case .ln:
+            facts = Facts(a.lower <= 0 ? -.infinity : log(a.lower), log(Swift.max(a.upper, 0)))
+            nothing = nothing || a.lower < 0
+        case .rad, .deg:
+            // A conversion of an infinite angle is invalid.
+            let radians = node.op == .rad
+            facts = Facts(radians ? a.lower / 180 * Double.pi : a.lower / Double.pi * 180, radians ? a.upper / 180 * Double.pi : a.upper / Double.pi * 180)
+            nothing = nothing || a.infinite
+        default:
+            // Rounding gives an Int64, saturated beyond its range; binary64 keeps the bits only within it.
+            facts = Facts(a.lower.rounded(.down), a.upper.rounded(.up))
+            if a.infinite || a.magnitude >= 9_223_372_036_854_775_808.0 { analysis.risky = true }
+        }
+        // Only a negative operand, or a negative zero, gives a negative zero.
+        let negative = parts.contains { $0.mayBeNegative }
+        facts.mayBeNothing = facts.mayBeNothing || nothing
+        facts.negativeZero = node.op != .cos && node.op != .exp && node.op != .hypot && node.op != .acos && facts.hasZero && negative
+        facts.unrepresentable = facts.magnitude > Self.limit
+        return facts
+    }
+
+    /// The power that the virtual machine computes, with the correctly rounded square root for the exponent 0.5.
+    private static func power(_ x: Double, _ e: Double) -> Double {
+        x.isNaN || e.isNaN ? .nan : e == 0.5 ? (x == -.infinity ? .infinity : x.squareRoot()) : pow(x, e)
+    }
+
+    /// A power is monotonic in its base on each side of zero for one exponent, and monotonic in its exponent for one base
+    /// that is not negative, so its range lies between the powers of the bounds and of both zeros. A negative base gives
+    /// nothing for an exponent that is no integer, and has no such bounds for more than one exponent.
+    private static func powerFacts(_ a: Facts, _ exponent: GesComputedNode, _ b: Facts) -> Facts {
+        let literal = exponent.op == .literal
+        if !literal && a.lower < 0 {
+            let open = Facts()
+            open.mayBeNothing = true
+            return open
+        }
+        let value = exponent.literal.kind == .integer ? Double(exponent.literal.integer) : exponent.literal.number
+        let exponents = literal ? [value] : [b.lower, b.upper]
+        var bases = [a.lower, a.upper]
+        if a.hasZero { bases += [0.0, -0.0] }
+        var corners: [Double] = []
+        for x in bases { for e in exponents { corners.append(power(x, e)) } }
+        let facts = Facts(minimum(corners), maximum(corners))
+        facts.mayBeNothing = literal ? a.lower < 0 && exponents[0] != exponents[0].rounded(.down) : a.infinite || b.infinite
+        return facts
+    }
+
+    /// Whether any computed field of the types uses a function or a power, whose helpers and, in Swift, math library the
+    /// generated code then holds.
+    static func usesMath(_ types: [[GesSchemaComputedFieldInfo]]) -> Bool {
+        types.contains { $0.contains { usesMath($0.tree) } }
+    }
+
+    private static func usesMath(_ node: GesComputedNode) -> Bool { node.op.isFunction || node.children.contains { usesMath($0) } }
+
+    /// The helper of a function in both forms: a binary64 one in static code, a GES value one in the dynamic form.
+    static func functionHelper(_ op: GesComputedOp) -> String {
+        switch op {
+        case .power: "Power"
+        case .sqrt: "SquareRoot"
+        case .cbrt: "CubeRoot"
+        case .sin: "Sine"
+        case .cos: "Cosine"
+        case .tan: "Tangent"
+        case .asin: "Arcsine"
+        case .acos: "Arccosine"
+        case .atan, .atan2: "Arctangent"
+        case .hypot: "Hypotenuse"
+        case .exp: "Exponential"
+        case .ln: "Logarithm"
+        case .floor: "Floor"
+        case .ceil: "Ceiling"
+        case .truncate: "Truncate"
+        case .roundHalfEven: "RoundHalfEven"
+        case .roundHalfUp: "RoundHalfUp"
+        case .roundHalfDown: "RoundHalfDown"
+        case .rad: "Radians"
+        default: "Degrees"
         }
     }
 
@@ -490,7 +616,70 @@ extension GesComputedEmitter {
             return swift ? Text("Double(\(list).count)", 10) : Text("(double)\(list).Count", 9)
         case .sum:
             return staticSum(node, root)
+        default:
+            return staticFunction(node, root)
         }
+    }
+
+    /// A function: the platform's own call where binary64 gives the bits of the virtual machine, and a helper of
+    /// `GesComputed` where the virtual machine adds a rule, as for the root of -infinity, `atan2(0, 0)` or the angle of an
+    /// infinity. Swift reaches the math library through the helpers, so that no member of a record hides it. A base or angle
+    /// that may be a negative zero, which GES does not have, becomes a positive one first.
+    private func staticFunction(_ node: GesComputedNode, _ root: String) -> Text {
+        let children = node.children
+        var operands: [Text] = []
+        for child in children {
+            // Only a power and an angle tell a negative zero from a positive one in more than the sign of a zero.
+            let operand = emit(child, .plain, root)
+            let sign = node.op == .atan2 || node.op == .power && operands.isEmpty
+            operands.append(sign && facts[ObjectIdentifier(child)]!.negativeZero ? Text(call("PositiveZero", operand.value), 10) : operand)
+        }
+        let x = operands[0]
+        let math = swift ? "" : "global::System.Math."
+        switch node.op {
+        case .power:
+            let exponent = children[1]
+            let base = facts[ObjectIdentifier(children[0])]!
+            let half = exponent.literal.kind != .integer && exponent.literal.number == 0.5
+            if exponent.op == .literal && half { return squareRootText(x, base) }
+            if exponent.op == .literal && !base.mayBeNothing {
+                return Text(swift ? call("Power", x.value, operands[1].value) : "\(math)Pow(\(x.value), \(operands[1].value))", 10)
+            }
+            return Text(call("Power", x.value, operands[1].value), 10)
+        case .sqrt:
+            return squareRootText(x, facts[ObjectIdentifier(children[0])]!)
+        case .sin, .cos, .tan:
+            let name = node.op == .sin ? "Sine" : node.op == .cos ? "Cosine" : "Tangent"
+            return Text(call(name, node.first ? call("Radians", x.value) : x.value), 10)
+        case .floor, .ceil, .truncate, .roundHalfEven, .roundHalfUp:
+            if swift {
+                let rule: String
+                switch node.op {
+                case .floor: rule = ".down"
+                case .ceil: rule = ".up"
+                case .truncate: rule = ".towardZero"
+                case .roundHalfEven: rule = ".toNearestOrEven"
+                default: rule = ".toNearestOrAwayFromZero"
+                }
+                return Text("\(Self.wrap(x, 10)).rounded(\(rule))", 10)
+            }
+            switch node.op {
+            case .floor: return Text("\(math)Floor(\(x.value))", 10)
+            case .ceil: return Text("\(math)Ceiling(\(x.value))", 10)
+            case .truncate: return Text("\(math)Truncate(\(x.value))", 10)
+            case .roundHalfEven: return Text("\(math)Round(\(x.value), global::System.MidpointRounding.ToEven)", 10)
+            default: return Text("\(math)Round(\(x.value), global::System.MidpointRounding.AwayFromZero)", 10)
+            }
+        default:
+            return Text(call(Self.functionHelper(node.op), arguments: operands.map(\.value)), 10)
+        }
+    }
+
+    /// A square root: the platform's correctly rounded one, through the helper where the operand may be -infinity, whose
+    /// root is +infinity as with pow.
+    private func squareRootText(_ x: Text, _ operand: Facts) -> Text {
+        if operand.lower == -.infinity { return Text(call("SquareRoot", x.value), 10) }
+        return swift ? Text("\(Self.wrap(x, 10)).squareRoot()", 10) : Text("global::System.Math.Sqrt(\(x.value))", 10)
     }
 
     /// A read: a member converted to binary64, NaN where an optional field on the way is absent; Booleans stay Booleans.

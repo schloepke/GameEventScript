@@ -283,9 +283,109 @@ internal sealed partial class GesComputedEmitter
                 var list = _access.Reach("", analysis.Owner, children[0].Path);
                 return Range(0, Math.Min(list.MaxCount, Limit));
             }
-            default:
+            case GesComputedOp.Sum:
                 return SumFacts(node, analysis);
+            default:
+                return FunctionFacts(node, analysis);
         }
+    }
+
+    // The range of a function in binary64. The virtual machine reads its operands as binary64, as static code does, and makes
+    // a whole result within Int64 an integer, which may meet another operand as an exact Int64 beyond 2^53.
+    private Facts FunctionFacts(GesComputedNode node, Analysis analysis)
+    {
+        var parts = new List<Facts>();
+        foreach (var child in node.Children) parts.Add(Analyze(child, analysis));
+        var a = parts[0];
+        var nothing = false;
+        foreach (var part in parts) nothing |= part.MayBeNothing;
+        Facts facts;
+        switch (node.Op)
+        {
+            case GesComputedOp.Power:
+                facts = PowerFacts(a, node.Children[1], parts[1]);
+                break;
+            case GesComputedOp.Sqrt or GesComputedOp.Cbrt:
+            {
+                // A negative number has no root, and -infinity gives +infinity as pow does.
+                var root = node.Op == GesComputedOp.Sqrt ? 0.5 : 1d / 3d;
+                facts = double.IsNegativeInfinity(a.Lower) ? Range(0, double.PositiveInfinity) : Range(Math.Pow(Math.Max(a.Lower, 0), root), Math.Pow(Math.Max(a.Upper, 0), root));
+                nothing |= a.Lower < 0;
+                break;
+            }
+            case GesComputedOp.Sin or GesComputedOp.Cos:
+                facts = Range(-1, 1);
+                nothing |= a.Infinite;
+                break;
+            case GesComputedOp.Tan:
+                facts = new Facts();
+                nothing |= a.Infinite;
+                break;
+            case GesComputedOp.Asin or GesComputedOp.Atan:
+                facts = Range(-Math.PI / 2, Math.PI / 2);
+                nothing |= node.Op == GesComputedOp.Asin && (a.Lower < -1 || a.Upper > 1);
+                break;
+            case GesComputedOp.Acos:
+                facts = Range(0, Math.PI);
+                nothing |= a.Lower < -1 || a.Upper > 1;
+                break;
+            case GesComputedOp.Atan2:
+                facts = Range(-Math.PI, Math.PI);
+                break;
+            case GesComputedOp.Hypot:
+            {
+                var sum = 0d;
+                foreach (var part in parts) sum += part.Magnitude * part.Magnitude;
+                facts = Range(0, Math.Sqrt(sum));
+                break;
+            }
+            case GesComputedOp.Exp:
+                facts = Range(Math.Exp(a.Lower), Math.Exp(a.Upper));
+                break;
+            case GesComputedOp.Ln:
+                facts = Range(a.Lower <= 0 ? double.NegativeInfinity : Math.Log(a.Lower), Math.Log(Math.Max(a.Upper, 0)));
+                nothing |= a.Lower < 0;
+                break;
+            case GesComputedOp.Rad or GesComputedOp.Deg:
+            {
+                // A conversion of an infinite angle is invalid.
+                var radians = node.Op == GesComputedOp.Rad;
+                facts = Range(radians ? a.Lower / 180 * Math.PI : a.Lower / Math.PI * 180, radians ? a.Upper / 180 * Math.PI : a.Upper / Math.PI * 180);
+                nothing |= a.Infinite;
+                break;
+            }
+            default:
+                // Rounding gives an Int64, saturated beyond its range; binary64 keeps the bits only within it.
+                facts = Range(Math.Floor(a.Lower), Math.Ceiling(a.Upper));
+                analysis.Risky |= a.Infinite || a.Magnitude >= 9223372036854775808d;
+                break;
+        }
+
+        // Only a negative operand, or a negative zero, gives a negative zero.
+        var negative = false;
+        foreach (var part in parts) negative |= part.MayBeNegative;
+        facts.MayBeNothing |= nothing;
+        facts.NegativeZero = node.Op is not (GesComputedOp.Cos or GesComputedOp.Exp or GesComputedOp.Hypot or GesComputedOp.Acos) && facts.HasZero && negative;
+        facts.Unrepresentable = facts.Magnitude > Limit;
+        return facts;
+    }
+
+    // A power is monotonic in its base on each side of zero for one exponent, and monotonic in its exponent for one base that
+    // is not negative, so its range lies between the powers of the bounds and of both zeros. A negative base gives nothing for
+    // an exponent that is no integer, and has no such bounds for more than one exponent.
+    private static Facts PowerFacts(Facts a, GesComputedNode exponent, Facts b)
+    {
+        var literal = exponent.Op == GesComputedOp.Literal;
+        if (!literal && a.Lower < 0) return new Facts { MayBeNothing = true };
+        double[] exponents = literal ? [exponent.Literal.Numeric] : [b.Lower, b.Upper];
+        var bases = new List<double> { a.Lower, a.Upper };
+        if (a.HasZero) bases.AddRange([0d, -0d]);
+        var corners = new List<double>();
+        foreach (var x in bases)
+            foreach (var e in exponents) corners.Add(GameEventScript.Runtime.GesNumber.Power(x, e));
+        var facts = Range(Min(corners.ToArray()), Max(corners.ToArray()));
+        facts.MayBeNothing = literal ? a.Lower < 0 && exponents[0] != Math.Floor(exponents[0]) : a.Infinite || b.Infinite;
+        return facts;
     }
 
     private Facts SumFacts(GesComputedNode node, Analysis analysis)
@@ -553,9 +653,130 @@ internal sealed partial class GesComputedEmitter
                 var list = _access.Reach(root, _owner, children[0].Path).Text;
                 return _swift ? new Text($"Double({list}.count)", 10) : new Text($"(double){list}.Count", 9);
             }
-            default:
+            case GesComputedOp.Sum:
                 return StaticSum(node, root);
+            default:
+                return StaticFunction(node, root);
         }
+    }
+
+    // A function: the platform's own call where binary64 gives the bits of the virtual machine, and a helper of
+    // `GesComputed` where the virtual machine adds a rule, as for the root of -infinity, `atan2(0, 0)` or the angle of an
+    // infinity. Swift reaches the math library through the helpers, so that no member of a record hides it. A base or angle
+    // that may be a negative zero, which GES does not have, becomes a positive one first.
+    private Text StaticFunction(GesComputedNode node, string root)
+    {
+        var children = node.Children;
+        var operands = new List<Text>();
+        foreach (var child in children)
+        {
+            // Only a power and an angle tell a negative zero from a positive one in more than the sign of a zero.
+            var operand = Emit(child, Want.Plain, root);
+            var sign = node.Op == GesComputedOp.Atan2 || node.Op == GesComputedOp.Power && operands.Count == 0;
+            operands.Add(sign && _facts[child].NegativeZero ? new Text(Call("PositiveZero", operand.Value), 10) : operand);
+        }
+
+        var x = operands[0];
+        var math = _swift ? "" : "global::System.Math.";
+        switch (node.Op)
+        {
+            case GesComputedOp.Power:
+            {
+                var exponent = children[1];
+                if (exponent.Op == GesComputedOp.Literal && exponent.Literal.Numeric == 0.5) return Root(x, _facts[children[0]]);
+                if (exponent.Op == GesComputedOp.Literal && !_facts[children[0]].MayBeNothing)
+                    return new Text(_swift ? Call("Power", x.Value, operands[1].Value) : $"{math}Pow({x.Value}, {operands[1].Value})", 10);
+                return new Text(Call("Power", x.Value, operands[1].Value), 10);
+            }
+            case GesComputedOp.Sqrt:
+                return Root(x, _facts[children[0]]);
+            case GesComputedOp.Sin or GesComputedOp.Cos or GesComputedOp.Tan:
+            {
+                var name = node.Op switch { GesComputedOp.Sin => "Sine", GesComputedOp.Cos => "Cosine", _ => "Tangent" };
+                return new Text(Call(name, node.First ? Call("Radians", x.Value) : x.Value), 10);
+            }
+            case GesComputedOp.Floor or GesComputedOp.Ceil or GesComputedOp.Truncate or GesComputedOp.RoundHalfEven or GesComputedOp.RoundHalfUp:
+            {
+                if (_swift)
+                {
+                    var rule = node.Op switch
+                    {
+                        GesComputedOp.Floor => ".down",
+                        GesComputedOp.Ceil => ".up",
+                        GesComputedOp.Truncate => ".towardZero",
+                        GesComputedOp.RoundHalfEven => ".toNearestOrEven",
+                        _ => ".toNearestOrAwayFromZero"
+                    };
+                    return new Text($"{Wrap(x, 10)}.rounded({rule})", 10);
+                }
+
+                return new Text(node.Op switch
+                {
+                    GesComputedOp.Floor => $"{math}Floor({x.Value})",
+                    GesComputedOp.Ceil => $"{math}Ceiling({x.Value})",
+                    GesComputedOp.Truncate => $"{math}Truncate({x.Value})",
+                    GesComputedOp.RoundHalfEven => $"{math}Round({x.Value}, global::System.MidpointRounding.ToEven)",
+                    _ => $"{math}Round({x.Value}, global::System.MidpointRounding.AwayFromZero)"
+                }, 10);
+            }
+            default:
+            {
+                var arguments = new List<string>();
+                foreach (var operand in operands) arguments.Add(operand.Value);
+                return new Text(Call(FunctionHelper(node.Op), arguments.ToArray()), 10);
+            }
+        }
+    }
+
+    // A square root: the platform's correctly rounded one, through the helper where the operand may be -infinity, whose
+    // root is +infinity as with pow.
+    private Text Root(Text x, Facts operand)
+    {
+        if (double.IsNegativeInfinity(operand.Lower)) return new Text(Call("SquareRoot", x.Value), 10);
+        return _swift ? new Text($"{Wrap(x, 10)}.squareRoot()", 10) : new Text($"global::System.Math.Sqrt({x.Value})", 10);
+    }
+
+    // The helper of a function in both forms: a binary64 one in static code, a GES value one in the dynamic form.
+    private static string FunctionHelper(GesComputedOp op) => op switch
+    {
+        GesComputedOp.Power => "Power",
+        GesComputedOp.Sqrt => "SquareRoot",
+        GesComputedOp.Cbrt => "CubeRoot",
+        GesComputedOp.Sin => "Sine",
+        GesComputedOp.Cos => "Cosine",
+        GesComputedOp.Tan => "Tangent",
+        GesComputedOp.Asin => "Arcsine",
+        GesComputedOp.Acos => "Arccosine",
+        GesComputedOp.Atan or GesComputedOp.Atan2 => "Arctangent",
+        GesComputedOp.Hypot => "Hypotenuse",
+        GesComputedOp.Exp => "Exponential",
+        GesComputedOp.Ln => "Logarithm",
+        GesComputedOp.Floor => "Floor",
+        GesComputedOp.Ceil => "Ceiling",
+        GesComputedOp.Truncate => "Truncate",
+        GesComputedOp.RoundHalfEven => "RoundHalfEven",
+        GesComputedOp.RoundHalfUp => "RoundHalfUp",
+        GesComputedOp.RoundHalfDown => "RoundHalfDown",
+        GesComputedOp.Rad => "Radians",
+        _ => "Degrees"
+    };
+
+    // Whether any computed field of the types uses a function or a power, whose helpers and, in Swift, math library the
+    // generated code then holds.
+    internal static bool UsesMath(IEnumerable<GesResolvedComputed[]> types)
+    {
+        foreach (var computed in types)
+            foreach (var field in computed)
+                if (UsesMath(field.Expression)) return true;
+        return false;
+    }
+
+    private static bool UsesMath(GesComputedNode node)
+    {
+        if (node.Op >= GesComputedOp.Power) return true;
+        foreach (var child in node.Children)
+            if (UsesMath(child)) return true;
+        return false;
     }
 
     // A read: a member converted to binary64, NaN where an optional field on the way is absent; Booleans stay Booleans.

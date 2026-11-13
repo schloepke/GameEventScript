@@ -15,6 +15,9 @@ final class GeneratedComputedCodeTests: XCTestCase {
         reactor.boost = 0.25
         reactor.trimOptional = trim
         reactor.ticks = ticks
+        reactor.span = Double(ticks & 0xFF) / 4
+        reactor.heading = Double(Swift.abs(ticks % 720)) / 2
+        reactor.length = Double(Swift.abs(ticks % 21)) / 2
         for draw in draws {
             var cell = ComputedWire.Cell()
             cell.draw = draw
@@ -49,6 +52,12 @@ final class GeneratedComputedCodeTests: XCTestCase {
             assertNumber(fields.get("load"), reactor.load, "load")
             assertNumber(fields.get("cellCount"), reactor.cellCount, "cellCount")
             assertNumber(fields.get("doubled"), reactor.doubled, "doubled")
+            assertNumber(fields.get("area"), reactor.area, "area")
+            assertNumber(fields.get("side"), reactor.side, "side")
+            assertNumber(fields.get("reach"), reactor.reach, "reach")
+            assertNumber(fields.get("lean"), reactor.lean, "lean")
+            assertNumber(fields.get("half"), reactor.half, "half")
+            assertNumber(fields.get("settled"), reactor.settled, "settled")
             XCTAssertEqual(fields.get("marked")?.asBoolean, reactor.marked, "marked")
             XCTAssertEqual(fields.get("steady")?.asBoolean, reactor.steady, "steady")
             XCTAssertEqual(fields.get("balanced")?.asBoolean, reactor.balanced, "balanced")

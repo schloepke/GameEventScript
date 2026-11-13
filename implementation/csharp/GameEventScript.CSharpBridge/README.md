@@ -144,6 +144,14 @@ The script calls `:combat.bonus(energy: 100)`. Extension registries and external
 type registries have distinct roles: `WithExtensionRegistry` installs functions;
 `WithExternalTypeRegistry` installs native types.
 
+> **Since: Unreleased** — random generator parameters
+
+A function that draws random numbers takes the host's generator as a
+`GesRandomGenerator` parameter, in any position and without `[GesParam]`. It is
+no script argument, so `SpawnSpots([GesParam("count", ...)] int count,
+GesRandomGenerator random)` registers `:arena.spawnSpots(count:)`, and seeded
+hosts stay deterministic. A function takes at most one such parameter.
+
 ## Native messages and values
 
 `host.Subscribe("Done", ["value"], (message, context) => { ... })` adapts a

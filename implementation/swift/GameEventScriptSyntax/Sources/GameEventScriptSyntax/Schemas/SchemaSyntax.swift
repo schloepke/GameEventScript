@@ -219,6 +219,8 @@ public enum GesSchemaTypeKind: String, Sendable, Equatable {
     case sum
     /// `[:count]`.
     case count
+    /// A function with its arguments and its ASCII spelling in `name`, such as `sqrt`, `round half up` or `atan2`.
+    case function
 }
 
 /// The binary operators of computed expressions.
@@ -247,11 +249,14 @@ public enum GesSchemaTypeKind: String, Sendable, Equatable {
     case and
     /// `or`.
     case or
+    /// `^`, `²` or `³`.
+    case power
 }
 
 /// An expression of a computed field, a subset of GES expressions with their spellings. A member reads `name` from its one
 /// child; a choice holds value and condition pairs and then the fallback; a sum holds its list and, with a variable in
-/// `name`, the projection; a clamp holds the value and both bounds.
+/// `name`, the projection; a clamp holds the value and both bounds; a function holds its arguments and the function's ASCII
+/// spelling in `name`.
 @_spi(Syntax) public final class GesSchemaExpressionSyntax: Sendable {
     @_spi(Syntax) public let kind: GesSchemaExpressionKind
     @_spi(Syntax) public let binary: GesSchemaBinaryOperator

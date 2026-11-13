@@ -26,6 +26,10 @@
 		</dict>
 		<dict>
 			<key>include</key>
+			<string>#names</string>
+		</dict>
+		<dict>
+			<key>include</key>
 			<string>#assembly</string>
 		</dict>
 		<dict>
@@ -71,6 +75,45 @@
 	</array>
 	<key>repository</key>
 	<dict>
+		<key>names</key>
+		<dict>
+			<key>comment</key>
+			<string>A name in backticks is a plain name, whatever word it holds. The keyword-like words of an argument label are names before a label colon and after a member dot.</string>
+			<key>patterns</key>
+			<array>
+				<dict>
+					<key>match</key>
+					<string>(`)([a-z][A-Za-z0-9]*(?:_(?:0|[1-9][0-9]*))?)(`)</string>
+					<key>name</key>
+					<string>variable.other.quoted.gameeventscript</string>
+					<key>captures</key>
+					<dict>
+						<key>1</key>
+						<dict>
+							<key>name</key>
+							<string>punctuation.definition.variable.begin.gameeventscript</string>
+						</dict>
+						<key>3</key>
+						<dict>
+							<key>name</key>
+							<string>punctuation.definition.variable.end.gameeventscript</string>
+						</dict>
+					</dict>
+				</dict>
+				<dict>
+					<key>match</key>
+					<string>\b(?:to|nothing|pi|e|tau|infinity|abs|ln|exp|sqrt|cbrt|chance|floor|ceil|truncate|rad|deg|wrap|round|sin|cos|tan|asin|acos|atan|atan2|hypot|distance|squared|length|normalize|dot|cross|angle)(?=[ \t]*:(?![A-Za-z:]))</string>
+					<key>name</key>
+					<string>variable.parameter.label.gameeventscript</string>
+				</dict>
+				<dict>
+					<key>match</key>
+					<string>(?&lt;=[A-Za-z0-9_)\]`]\.)(?:to|nothing|pi|e|tau|infinity|abs|ln|exp|sqrt|cbrt|chance|floor|ceil|truncate|rad|deg|wrap|round|sin|cos|tan|asin|acos|atan|atan2|hypot|distance|squared|length|normalize|dot|cross|angle)\b</string>
+					<key>name</key>
+					<string>variable.other.member.gameeventscript</string>
+				</dict>
+			</array>
+		</dict>
 		<key>assembly</key>
 		<dict>
 			<key>patterns</key>

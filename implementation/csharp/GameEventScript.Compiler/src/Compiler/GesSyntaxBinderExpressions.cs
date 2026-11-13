@@ -590,7 +590,7 @@ internal sealed partial class GesSyntaxBinder
         var target = Operand(ref c);
         c.Expect(Dot);
         c.SkipNewLines();
-        return Merge(new GesMemberAccessExpressionNode(target, c.Expect(Identifier).Text), target);
+        return Merge(new GesMemberAccessExpressionNode(target, c.ExpectFieldName().Text), target);
     }
 
     private GesExpressionNode BindCollectionAccess(GesSyntaxNode node)

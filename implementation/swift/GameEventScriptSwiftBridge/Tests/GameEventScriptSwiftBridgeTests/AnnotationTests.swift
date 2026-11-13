@@ -95,7 +95,37 @@ private struct PositionalData {
     init(_ value: UInt8) { self.value = value }
 }
 
+// A GesRandomGenerator parameter receives the call's generator in any position and is no script argument.
+@GesExtension("arena")
+private enum RandomArena {
+    @GesFunction
+    static func first(random: GesRandomGenerator, count: Int) -> Int { Int(random.nextInclusiveInteger(1, Int64(count))) }
+
+    @GesFunction(units: ["offset": .meter])
+    static func middle(count: Int, _ random: GameEventScriptRuntime.GesRandomGenerator, _ offset: Double) -> Double { Double(random.nextInclusiveInteger(1, Int64(count))) + offset }
+
+    @GesFunction
+    static func spawnSpots(count: Int, margin: Double, spacing: Double, random: GesRandomGenerator) -> GesValue? { .integer(random.nextInclusiveInteger(1, Int64(count))) }
+
+    @GesFunction
+    static func only(_ random: GesRandomGenerator) -> Int { Int(random.nextInclusiveInteger(1, 6)) }
+}
+
 final class AnnotationTests: XCTestCase {
+    func testRandomGeneratorParametersAreNoScriptArguments() throws {
+        let extensions = try RandomArena.gesExtensions()
+        XCTAssertEqual(
+            extensions.map(\.reference.signatureID),
+            ["arena.first(count)", "arena.middle(count,_)", "arena.spawnSpots(count,margin,spacing)", "arena.only()"]
+        )
+        // Another argument count gives nothing before the generator is read; the call has no host here.
+        let call = GesExtensionCall()
+        for function in extensions.dropLast() {
+            try function.invoke(call)
+            XCTAssertEqual(call.result, .nothing)
+        }
+    }
+
     func testUnmarkedInitializerIsNotExposedAndOptionalTypesAreInferred() throws {
         let type = try ReadOnlyData.createGesType()
         XCTAssertTrue(type.definition.constructors.isEmpty)

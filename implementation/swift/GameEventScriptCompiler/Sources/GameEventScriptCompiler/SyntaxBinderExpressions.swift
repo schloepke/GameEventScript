@@ -394,7 +394,7 @@ extension GesSyntaxBinder {
         let target = try expression(&c)
         try c.expect(.dot)
         try c.newlines()
-        return ranged(.member(target, try c.identifier()), target)
+        return ranged(.member(target, try c.fieldName()), target)
     }
 
     func collectionAccess(_ access: GesSyntaxNode) throws -> GesExpression {

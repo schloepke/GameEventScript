@@ -5,7 +5,7 @@
 """Fail on drift between the keyword-like name token sets of the C# and Swift source parsers.
 
 C# `IsArgumentLabelKind` and `IsExtensionFunctionNameKind` own which keyword tokens may spell an
-argument label or an extension function name. Swift copies them into `labelKeywords` and
+argument label or record field name, or an extension function name. Swift copies them into `labelKeywords` and
 `intrinsicNames`; both sets must name the same token kinds, apart from the identifier kind that
 each parser checks separately.
 """

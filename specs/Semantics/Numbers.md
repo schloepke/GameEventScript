@@ -421,6 +421,12 @@ the DSL's unit, domain, absence, and special-value checks. Exact bit identity
 between different correctly rounded or near-correctly-rounded math libraries is
 not required.
 
+> **Since: Unreleased** — exact square roots
+
+A power with the exponent 0.5, which `sqrt` and `√` lower to, is the correctly rounded IEEE square root rather than the
+library's `pow`, so a square root has the same bits on every platform. Like `pow`, it gives `+infinity` for `-infinity`
+and NaN for a negative number. `cbrt` and `∛` remain the library power with the binary64 exponent 1/3.
+
 Constant folding never evaluates these approximations. It folds their exact
 operand subterms, and a power only when base and exponent are integers, the
 exponent is not negative and the exact result does not exceed `2^53` in
@@ -428,10 +434,9 @@ magnitude. Every other approximation runs on the target platform, so a constant
 expression and the same computation from a runtime value yield one value within
 an execution, including for `<`, ordering and text conversion.
 
-Conformance expectations therefore compare finite binary64 results by ULP distance.
-The default is 4096 ULPs, allowing bounded cross-library differences. A test or individual step
-can set `maxFloatUlps`; `0` requires bit-exact finite results. NaN/nothing,
-infinities, kinds, units, integers, booleans, text, and structure remain exact.
+Conformance expectations therefore compare finite binary64 results exactly by default, and a case that runs
+such an approximation sets the [`comparison`](../Conformance/MarkdownFormat.md) form `binary64: {mode: ulp, maxUlps: n}`
+for a bounded ULP distance. NaN/nothing, infinities, kinds, units, integers, booleans, text, and structure remain exact.
 Runtime `=` is unaffected and always uses its two-ULP rule.
 
 ## Canonical conformance scalar encoding

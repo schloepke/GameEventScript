@@ -117,6 +117,12 @@ final class GesSyntaxBinder {
             return try advance().text
         }
 
+        // A record field name, which may be one of the keyword-like words of an argument label.
+        mutating func fieldName() throws -> String {
+            guard self.is(.identifier) || isOwnToken && GesSyntaxParser.labelKeywords.contains(current.kind) else { throw Mismatch(token: position) }
+            return try advance().text
+        }
+
         mutating func newlines() throws {
             while self.is(.newLine) { try advance() }
         }
@@ -266,7 +272,7 @@ final class GesSyntaxBinder {
         let fieldStart = c.current
         let unlabeled = try c.match(.underscore)
         if unlabeled { try c.newlines() }
-        let name = try c.identifier()
+        let name = try c.fieldName()
         try c.expect(.colon)
         try c.newlines()
         let type = try typeName(c.takeNode(.typeReference))

@@ -167,6 +167,8 @@ final class GesComputedEmitter {
 
     func call(_ name: String, _ arguments: String...) -> String { "\(helper).\(camel(name))(\(arguments.joined(separator: ", ")))" }
 
+    func call(_ name: String, arguments: [String]) -> String { "\(helper).\(camel(name))(\(arguments.joined(separator: ", ")))" }
+
     /// A member name as the language spells it, with Swift keywords escaped.
     func member(_ name: String) -> String { swift && GesSwiftEmitter.keywords.contains(name) ? "`" + name + "`" : name }
 

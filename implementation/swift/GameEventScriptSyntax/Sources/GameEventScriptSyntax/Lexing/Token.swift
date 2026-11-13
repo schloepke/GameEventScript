@@ -188,8 +188,13 @@
 }
 
 extension GesToken {
-    // A contextual word: an identifier with this spelling, as C# MatchWord compares it.
-    @_spi(Syntax) public func isIdentifier(_ word: String) -> Bool { kind == .identifier && text == word }
+    // A contextual word such as `from` or `where`: a plain identifier with this value, as C# GesToken.IsWord compares it.
+    // A name in backticks is never one.
+    @_spi(Syntax) public func isIdentifier(_ word: String) -> Bool { kind == .identifier && text == word && !isQuotedName }
+
+    // A name written in backticks: its spelling is its value between two backticks. Only the `°` spelling of `degree` is
+    // another identifier whose spelling differs from its value, and it is shorter. Offsets count UTF-8 bytes.
+    @_spi(Syntax) public var isQuotedName: Bool { kind == .identifier && end - start == text.utf8.count + 2 }
 
     @_spi(Syntax) public var isNumber: Bool { kind == .float || kind == .percentage || kind == .unitNumber }
 

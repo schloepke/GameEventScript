@@ -283,6 +283,18 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 
 ### Added
 
+- Schema computed fields take the script language's functions and powers: `sqrt`/`√`, `cbrt`/`∛`, `sin`, `cos`, `tan`,
+  `asin`, `acos`, `atan`, `atan2`, `hypot`, `exp`, `ln`, `^`, `²`, `³`, `floor`, `ceil`, `truncate`, `round half …`, `rad`
+  and `deg`, with the language's units (the root of m² is m). A square root is correctly rounded and bit-identical
+  everywhere; the other functions may differ in their last bits between platforms, as in scripts. A field named like a
+  GES keyword is read in backticks, such as `` `length` / 2 ``.
+- Names in backticks: any GES keyword written in backticks is a plain name wherever a name stands (bindings, parameters,
+  labels, record fields, member access, map keys), so a field named `length` or `if` can be declared and read, and a
+  backticked `e` reads a field while plain `e` stays Euler's number. Argument-label words such as `length`, `e` or `abs` also
+  name record fields and members without backticks.
+- Extension functions declared with Swift `@GesFunction` or C# `[GesFunction]` may take one `GesRandomGenerator`
+  parameter in any position, which receives the call's seeded generator; it is no script argument and does not count
+  toward labels, arity or C#'s four-parameter limit.
 - Packed schemas: `packed schema :Name` or `packed(8|16|32|64) schema :Name` declares a record of fixed-width fields
   (integers and stepped numbers with fixed ranges, Booleans, closed Tags, Flags, other packed schemas) of at most 64
   bits, `schema.packedField` and `schema.packedTooWide` otherwise. Its wire encoding is unchanged and equals the word in
@@ -577,6 +589,8 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 
 ### Changed
 
+- A power with the exponent 0.5, as `sqrt` and `√` compute it, is now the correctly rounded square root in both virtual
+  machines, so its bits no longer depend on the platform's `pow`.
 - `Host.Load` and the writer no longer validate a Program again that the Reader, the Compiler or an earlier validation
   already accepted, so loading one Program into many hosts costs no repeated pass. A VM reset clears only the registers
   the last handler used instead of the whole register file.
@@ -873,6 +887,9 @@ available on [GitHub Releases](https://github.com/schloepke/GameEventScript/rele
 
 ### Fixed
 
+- A unary intrinsic with a parenthesized operand, such as `floor(x)`, and an intrinsic call such as `atan2(y, x)` are power
+  bases in both ports: `floor(x) ^ 2` is `(floor x) ^ 2`. C# rejected both, and Swift accepted `-x² ^ 2` and `floor x² ^ 2`,
+  which are syntax errors.
 - C# distribution smoke tests use fresh build and restore directories, preventing
   stale reproducible DLLs from a prior version contaminating package validation.
 - Program validation rejects internal VM values escaping into script-visible

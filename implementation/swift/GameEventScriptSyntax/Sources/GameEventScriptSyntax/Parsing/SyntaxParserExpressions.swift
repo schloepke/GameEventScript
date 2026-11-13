@@ -162,8 +162,10 @@ extension GesSyntaxParser {
         }
         // Each operator wraps its left operand, which starts here, into the operator's node.
         let start = mark()
+        let prefixKind = currentKind
         var left = try prefix()
-        var ceiling = Int.max
+        // A prefix operator or an intrinsic without parentheses ends with its operand: no power applies to it, as in C#.
+        var ceiling = Self.prefixOperators.contains(prefixKind) || Self.unaryIntrinsics.contains(prefixKind) && !intrinsicParenthesized ? 14 : Int.max
         while let step = try infixStep(left, minimum, ceiling) {
             ceiling = min(ceiling, completedCeiling)
             switch step {
@@ -378,28 +380,31 @@ extension GesSyntaxParser {
         return try postfixSuffixes(primary(), start)
     }
 
-    // A prefix operation measures two levels from a placeholder start, whatever its operand.
+    // A prefix operation measures one level deeper than its operand, as in C#.
     func prefixOperation() throws -> Expression {
         startNode(.unaryExpression)
         let start = index
         let op = advance().kind
         // `strict` directly after `parse` on the same line is always the mode word, never an operand.
         // The mode word stands on the line of `parse`; inside parentheses a line break is trivia, so compare lines.
-        if op == .keywordParse && currentKind == .identifier && current.text == "strict" && current.line == previous.endLine { advanceKeyword() }
+        if op == .keywordParse && current.isIdentifier("strict") && current.line == previous.endLine { advanceKeyword() }
         let value = try expression(15)
         let negated: Shape = value.shape == .number || value.shape == .quantity ? .negated : .negatedOther
-        return finishNode(Expression(depth: 2, start: start, end: previousIndex, shape: op == .operatorMinus ? negated : .none))
+        return finishNode(try node(start, shape: op == .operatorMinus ? negated : .none))
     }
 
     func unaryIntrinsic() throws -> Expression {
         startNode(.unaryExpression)
         let start = index
-        let root = currentKind == .intrinsicSqrt || currentKind == .intrinsicCbrt
         try unaryIntrinsicName()
-        // A parenthesized operand belongs to the intrinsic: its parentheses add no depth and end the operand.
-        if currentKind == .leftParen { try intrinsicParenthesizedOperand() } else { _ = try expression(15) }
-        // A root lowers to a power ranged from the operator.
-        return finishNode(root ? Expression(depth: 2, start: start, end: previousIndex) : try node(start))
+        // A parenthesized operand belongs to the intrinsic: its parentheses add no depth and end the operand, and the
+        // intrinsic becomes a power base. The parenthesis may follow a line break, as the operand may.
+        newlines()
+        let parenthesized = currentKind == .leftParen
+        if parenthesized { try intrinsicParenthesizedOperand() } else { _ = try expression(15) }
+        intrinsicParenthesized = parenthesized
+        // A root lowers to a power whose exponent has no depth of its own, so it measures as the other intrinsics do.
+        return finishNode(try node(start))
     }
 
     func intrinsicParenthesizedOperand() throws {
@@ -418,7 +423,7 @@ extension GesSyntaxParser {
             try expectWord("half")
             newlines()
             // As in C#, a missing mode fails at the next token without consuming it.
-            guard currentKind == .identifier, ["even", "up", "down"].contains(current.text) else { throw failure("Expected rounding mode.") }
+            guard currentKind == .identifier, !current.isQuotedName, ["even", "up", "down"].contains(current.text) else { throw failure("Expected rounding mode.") }
             advance()
             role(.keyword)
         }
@@ -498,7 +503,7 @@ extension GesSyntaxParser {
             if match(.dot) {
                 startNode(at: start, .memberAccessExpression)
                 newlines()
-                _ = try identifier()
+                _ = try fieldName()
                 role(.member)
                 result = finishNode(try ranged(result))
             } else if match(.leftBracket) {
@@ -664,7 +669,7 @@ extension GesSyntaxParser {
             advance()
             guard currentKind == .float else { throw failure("Expected a side count.") }
             sides = advance()
-        } else if currentKind == .identifier, current.text.unicodeScalars.count > 1, current.text.hasPrefix("d"), current.text.unicodeScalars.dropFirst().allSatisfy({ GesLexer.digit($0) }) {
+        } else if currentKind == .identifier, !current.isQuotedName, current.text.unicodeScalars.count > 1, current.text.hasPrefix("d"), current.text.unicodeScalars.dropFirst().allSatisfy({ GesLexer.digit($0) }) {
             // The rest of a compact dice token such as `d6` is its side count.
             let token = advance()
             sides = .init(
@@ -831,9 +836,9 @@ extension GesSyntaxParser {
         let start = index
         let upper = currentKind == .message
         advance()
-        if peekKind(0) == .leftParen {
+        // A call's parenthesis follows its name on the same line: a line break outside brackets separates statements.
+        if currentKind == .leftParen {
             role(upper ? .messageName : .callTarget)
-            newlines()
             if upper && !isMessageArguments() {
                 try parameters(false, listNode: false)
                 return wrap(checkpoint, .handlerLiteralExpression, try node(start))
@@ -1075,7 +1080,7 @@ extension GesSyntaxParser {
         case .key: try keyClause(op)
         case .direction: try direction()
         case .contains:
-            if currentKind == .identifier && ["all", "any"].contains(current.text) { advanceKeyword() }
+            if currentKind == .identifier && !current.isQuotedName && ["all", "any"].contains(current.text) { advanceKeyword() }
             _ = try expression()
         case .term: _ = try expression()
         case .count: try positiveInteger()
@@ -1164,7 +1169,7 @@ extension GesSyntaxParser {
     }
 
     func sliceClause(_ op: String) throws {
-        if currentKind == .identifier && ["first", "last", "highest", "lowest"].contains(current.text) {
+        if currentKind == .identifier && !current.isQuotedName && ["first", "last", "highest", "lowest"].contains(current.text) {
             advanceKeyword()
             try positiveInteger()
         } else if op == "take" {
@@ -1208,7 +1213,7 @@ extension GesSyntaxParser {
 
     func direction() throws {
         newlines()
-        guard currentKind == .identifier && ["ascending", "descending"].contains(current.text) else { throw failure("Expected sort direction.") }
+        guard currentKind == .identifier && !current.isQuotedName && ["ascending", "descending"].contains(current.text) else { throw failure("Expected sort direction.") }
         advanceKeyword()
     }
 
@@ -1220,7 +1225,7 @@ extension GesSyntaxParser {
         if matchWord("straight") { return }
         // As in C#, an unexpected token stays unread so that recovery sees it, for example a closing brace.
         let t = current
-        guard t.kind == .identifier, ["pair", "three", "four", "five", "six", "seven"].contains(t.text) else { throw failure("Expected dice pattern.", t) }
+        guard t.kind == .identifier, !t.isQuotedName, ["pair", "three", "four", "five", "six", "seven"].contains(t.text) else { throw failure("Expected dice pattern.", t) }
         advance()
         role(.keyword)
         newlines()

@@ -66,12 +66,23 @@ SYNTHETIC = [
     "on Start(a, c) { let x be a has value + 1 }",
     "on Start(a, c) { let x be a²² }",
     "on Start(a, c) { let x be a² ^ c }",
+    # A unary intrinsic with a parenthesized operand is a power base; a prefix operation without one takes no power.
+    "on Start(a, c) { let x be floor(a) ^ 2; let y be floor (a)²; let z be -√(a) ^ c ^ 2; let w be round half even(a) ^ 2 * c }",
+    "on Start(a, c) { let x be floor a ^ 2; let y be 2 ^ floor(a) ^ c; let z be wrap degree\n(a)³; let w be hypot(a, c) ^ 2 }",
+    "on Start(a, c) { let x be floor a² ^ 2 }",
+    "on Start(a, c) { let x be -a² ^ 2 }",
+    "on Start(a, c) { let x be not floor(a)² ^ 2 }",
+    "on Start(a, c) { let x be floor(a).y }",
     "on Start(a, c) { let x be a as :Numeric }",
     "on Start(a, c) { let x be a as :Number is numeric in c }",
     # A positional first argument may precede labeled ones.
     "function scale(_ value, factor) be value * factor\non Start { emit Done(value: scale(2, factor: 3)) }",
     # Unparenthesized extension calls take the same operand starts in both ports.
     "on Start(a) { let x be :math.double pi; let y be :math.abs :math.neg a; let z be :m.f floor a; let w be :m.f Msg(a: 1) }",
+    # Names in backticks: valid names, keywords and suffixes, invalid content, a line break and an unclosed backtick;
+    # contextual words in backticks stay names, and keyword-like field names follow a dot.
+    "record :R as { length: :Number, `if`: :Number, e: :Number computed by `e` + e }\non Start(a) { let `x_1` be a.length + a.`if`; let y be ``; let z be `A` + `a b` + `a_01` + `😀` }",
+    "on Start(a) { let `from` be roll dice 2`d6`; for v in `from` { emit Done(v: parse `strict`) }; let w be `open\n  emit Done }",
 ]
 # Nesting counts inside call arguments, list items and member chains: depth 32 is allowed, 33 exceeds the limit.
 for _count in (31, 32):
@@ -83,6 +94,11 @@ _nested = "a"
 for _ in range(3):
     _nested = "f(" + " + ".join([_nested] + ["a"] * 12) + ")"
 SYNTHETIC.append("on Start(a) { let x be " + _nested + " }")
+# Prefix operations, intrinsics and the powers of parenthesized intrinsics measure alike at the nesting limit: a level of two
+# nodes exceeds it at 16 levels, a level of three at 11.
+for _count in (10, 11, 15, 16):
+    for _open, _close in (("floor(", ") ^ 2"), ("sqrt(", ")²"), ("-sqrt(", ")"), ("-abs(", ")"), ("-floor(", ") ^ 2"), ("-sqrt(", ")²"), ("-(", ") ^ 2"), ("sqrt -(", ")²")):
+        SYNTHETIC.append("on Start(a) { let x be " + _open * _count + "a" + _close * _count + " }")
 
 
 # Names and decoded Text carry their value in the token text; other kinds keep a per-port spelling, such as `\\n` or a

@@ -36,7 +36,28 @@ internal enum GesComputedOp : byte
     Default,
     HasValue,
     Sum,
-    Count
+    Count,
+    Power,
+    Sqrt,
+    Cbrt,
+    Sin,
+    Cos,
+    Tan,
+    Asin,
+    Acos,
+    Atan,
+    Atan2,
+    Hypot,
+    Exp,
+    Ln,
+    Floor,
+    Ceil,
+    Truncate,
+    RoundHalfEven,
+    RoundHalfUp,
+    RoundHalfDown,
+    Rad,
+    Deg
 }
 
 // The static type of a node: a number with a unit, a percentage, a Boolean, or a record or list that only a path, `has value`
@@ -54,7 +75,8 @@ internal enum GesComputedType : byte
 // unit checks that GES makes at run time, as flags, since a percentage that becomes infinite turns into a plain number there.
 // Add and Subtract: First = equal units, Second = the left unit takes a percentage. Multiply: First = a product unit exists,
 // Second and Third = the left and right unit take a percentage. Divide: First = a quotient unit exists, Second = the left unit
-// takes a percentage, Third = the right side has no unit. Comparisons, Min, Max and Clamp: First = equal units.
+// takes a percentage, Third = the right side has no unit. Comparisons, Min, Max and Clamp: First = equal units. Sin, Cos and
+// Tan: First = the angle is in degrees. The other functions check their units at binding alone.
 internal sealed class GesComputedNode
 {
     internal GesComputedOp Op { get; init; }
@@ -144,6 +166,9 @@ internal readonly struct GesComputedValue
     }
 
     internal static GesComputedValue OfBoolean(bool value) => new(value ? GesComputedKind.True : GesComputedKind.False, 0, 0);
+
+    // A rounded number: an Int64, saturated at its bounds as the virtual machine rounds.
+    internal static GesComputedValue OfRounded(double value) => OfInteger(GesNumber.ToIntegerSaturated(value));
 }
 
 // The operations of the GES virtual machine on the scalars of computed fields, with the unit checks resolved at binding.
@@ -299,6 +324,57 @@ internal static class GesComputedMath
         return GesComputedValue.OfFloat(x < lower ? lower : x > upper ? upper : x);
     }
 
+    // A power of the virtual machine: nothing for nothing, the platform's pow, and the correctly rounded square root for the
+    // exponent 0.5 that `sqrt` lowers to. The unit checks are made at binding.
+    internal static GesComputedValue Power(GesComputedValue a, GesComputedValue b)
+        => a.IsNothing || b.IsNothing ? GesComputedValue.Nothing : GesComputedValue.OfFloat(GesNumber.Power(a.Numeric, b.Numeric));
+
+    // A function of one number in binary64: nothing for nothing, the function's result otherwise.
+    internal static GesComputedValue Function(GesComputedOp op, GesComputedValue a, bool degrees)
+    {
+        if (a.IsNothing) return GesComputedValue.Nothing;
+        var x = a.Numeric;
+        return op switch
+        {
+            GesComputedOp.Sqrt => GesComputedValue.OfFloat(GesNumber.SquareRoot(x)),
+            GesComputedOp.Cbrt => GesComputedValue.OfFloat(Math.Pow(x, 1d / 3d)),
+            GesComputedOp.Sin => GesComputedValue.OfFloat(Math.Sin(degrees ? x / 180d * GesMathConstants.Pi : x)),
+            GesComputedOp.Cos => GesComputedValue.OfFloat(Math.Cos(degrees ? x / 180d * GesMathConstants.Pi : x)),
+            GesComputedOp.Tan => GesComputedValue.OfFloat(Math.Tan(degrees ? x / 180d * GesMathConstants.Pi : x)),
+            GesComputedOp.Asin => GesComputedValue.OfFloat(Math.Asin(x)),
+            GesComputedOp.Acos => GesComputedValue.OfFloat(Math.Acos(x)),
+            GesComputedOp.Atan => GesComputedValue.OfFloat(Math.Atan(x)),
+            GesComputedOp.Exp => GesComputedValue.OfFloat(Math.Exp(x)),
+            GesComputedOp.Ln => GesComputedValue.OfFloat(Math.Log(x)),
+            GesComputedOp.Floor => GesComputedValue.OfRounded(Math.Floor(x)),
+            GesComputedOp.Ceil => GesComputedValue.OfRounded(Math.Ceiling(x)),
+            GesComputedOp.Truncate => GesComputedValue.OfRounded(Math.Truncate(x)),
+            GesComputedOp.RoundHalfEven => GesComputedValue.OfRounded(Math.Round(x, 0, MidpointRounding.ToEven)),
+            GesComputedOp.RoundHalfUp => GesComputedValue.OfRounded(Math.Round(x, 0, MidpointRounding.AwayFromZero)),
+            GesComputedOp.RoundHalfDown => GesComputedValue.OfRounded(GesNumber.RoundHalfTowardZero(x)),
+            GesComputedOp.Rad => GesComputedValue.OfFloat(double.IsFinite(x) ? x / 180d * GesMathConstants.Pi : double.NaN),
+            _ => GesComputedValue.OfFloat(double.IsFinite(x) ? x / GesMathConstants.Pi * 180d : double.NaN)
+        };
+    }
+
+    // `atan2(y, x)` in radians, 0 for (0, 0).
+    internal static GesComputedValue Atan2(GesComputedValue y, GesComputedValue x)
+    {
+        if (y.IsNothing || x.IsNothing) return GesComputedValue.Nothing;
+        return GesComputedValue.OfFloat(y.Numeric == 0d && x.Numeric == 0d ? 0d : Math.Atan2(y.Numeric, x.Numeric));
+    }
+
+    // The Euclidean length of two or three components of one unit.
+    internal static GesComputedValue Hypot(GesComputedValue a, GesComputedValue b, GesComputedValue? c)
+    {
+        if (a.IsNothing || b.IsNothing || c is { IsNothing: true }) return GesComputedValue.Nothing;
+        var x = a.Numeric;
+        var y = b.Numeric;
+        if (c is not { } third) return GesComputedValue.OfFloat(Math.Sqrt(x * x + y * y));
+        var z = third.Numeric;
+        return GesComputedValue.OfFloat(Math.Sqrt(x * x + y * y + z * z));
+    }
+
     // The conversion to the field's type that a script record makes: a Percentage takes a finite number as its ratio, and a
     // Boolean is true only for true.
     internal static GesComputedValue Cast(GesComputedValue value, GesComputedType type)
@@ -405,11 +481,19 @@ internal static class GesComputedEvaluation
 
                 return count == 0 ? GesComputedValue.OfInteger(0) : sum;
             }
-            default:
+            case GesComputedOp.Count:
             {
                 var source = children[0];
                 return GesComputedValue.OfInteger((source.Op == GesComputedOp.Item ? item! : scope).Count(source.Path));
             }
+            case GesComputedOp.Power:
+                return GesComputedMath.Power(Evaluate(children[0], scope, item), Evaluate(children[1], scope, item));
+            case GesComputedOp.Atan2:
+                return GesComputedMath.Atan2(Evaluate(children[0], scope, item), Evaluate(children[1], scope, item));
+            case GesComputedOp.Hypot:
+                return GesComputedMath.Hypot(Evaluate(children[0], scope, item), Evaluate(children[1], scope, item), children.Length > 2 ? Evaluate(children[2], scope, item) : null);
+            default:
+                return GesComputedMath.Function(node.Op, Evaluate(children[0], scope, item), node.First);
         }
     }
 }
@@ -485,6 +569,27 @@ internal static class GesComputedCanonical
         GesComputedOp.Count => "count",
         GesComputedOp.Field => "field",
         GesComputedOp.Item => "item",
+        GesComputedOp.Power => "power",
+        GesComputedOp.Sqrt => "sqrt",
+        GesComputedOp.Cbrt => "cbrt",
+        GesComputedOp.Sin => "sin",
+        GesComputedOp.Cos => "cos",
+        GesComputedOp.Tan => "tan",
+        GesComputedOp.Asin => "asin",
+        GesComputedOp.Acos => "acos",
+        GesComputedOp.Atan => "atan",
+        GesComputedOp.Atan2 => "atan2",
+        GesComputedOp.Hypot => "hypot",
+        GesComputedOp.Exp => "exp",
+        GesComputedOp.Ln => "ln",
+        GesComputedOp.Floor => "floor",
+        GesComputedOp.Ceil => "ceil",
+        GesComputedOp.Truncate => "truncate",
+        GesComputedOp.RoundHalfEven => "roundHalfEven",
+        GesComputedOp.RoundHalfUp => "roundHalfUp",
+        GesComputedOp.RoundHalfDown => "roundHalfDown",
+        GesComputedOp.Rad => "rad",
+        GesComputedOp.Deg => "deg",
         _ => "literal"
     };
 }

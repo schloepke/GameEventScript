@@ -187,7 +187,8 @@ internal static class GesSchemaFormatter
     }
 
     // Prints an expression on one line with the parentheses its precedence needs: 0 choice, 1 default, 2 or, 3 and,
-    // 4 equality, 5 relation, 6 addition, 7 multiplication, 8 unary, 9 postfix and primary.
+    // 4 equality, 5 relation, 6 addition, 7 multiplication, 8 unary, 9 power, 10 postfix and primary. A name that GES reserves
+    // is written in backticks.
     private static void Expression(GesSchemaExpressionSyntax expression, int minimum, StringBuilder builder)
     {
         var level = Level(expression);
@@ -205,11 +206,32 @@ internal static class GesSchemaFormatter
                 builder.Append('$').Append(expression.Name);
                 break;
             case GesSchemaExpressionKind.Name:
-                builder.Append(expression.Name);
+                Name(expression.Name, builder);
                 break;
             case GesSchemaExpressionKind.Member:
-                Expression(children[0], 9, builder);
-                builder.Append('.').Append(expression.Name);
+                Expression(children[0], 10, builder);
+                builder.Append('.');
+                Name(expression.Name, builder);
+                break;
+            case GesSchemaExpressionKind.Function when expression.Name is "atan2" or "hypot":
+                builder.Append(expression.Name).Append('(');
+                for (var index = 0; index < children.Length; index++)
+                {
+                    if (index > 0) builder.Append(", ");
+                    Expression(children[index], 0, builder);
+                }
+
+                builder.Append(')');
+                break;
+            case GesSchemaExpressionKind.Function:
+                builder.Append(expression.Name).Append(' ');
+                Expression(children[0], 8, builder);
+                break;
+            case GesSchemaExpressionKind.Binary when expression.Operator == GesSchemaBinaryOperator.Power:
+                // The base takes no power of its own and the exponent is unary, so powers associate to the right.
+                Expression(children[0], 10, builder);
+                builder.Append(" ^ ");
+                Expression(children[1], 8, builder);
                 break;
             case GesSchemaExpressionKind.Negate:
                 builder.Append('-');
@@ -263,11 +285,11 @@ internal static class GesSchemaFormatter
                 builder.Append(" has value");
                 break;
             case GesSchemaExpressionKind.Count:
-                Expression(children[0], 9, builder);
+                Expression(children[0], 10, builder);
                 builder.Append("[:count]");
                 break;
             default:
-                Expression(children[0], 9, builder);
+                Expression(children[0], 10, builder);
                 builder.Append("[:sum");
                 if (children.Length > 1)
                 {
@@ -288,6 +310,7 @@ internal static class GesSchemaFormatter
         GesSchemaExpressionKind.Default => 1,
         GesSchemaExpressionKind.HasValue => 5,
         GesSchemaExpressionKind.Negate or GesSchemaExpressionKind.Not or GesSchemaExpressionKind.Abs => 8,
+        GesSchemaExpressionKind.Function => expression.Name is "atan2" or "hypot" ? 10 : 8,
         GesSchemaExpressionKind.Binary => expression.Operator switch
         {
             GesSchemaBinaryOperator.Or => 2,
@@ -295,10 +318,17 @@ internal static class GesSchemaFormatter
             GesSchemaBinaryOperator.Equal or GesSchemaBinaryOperator.NotEqual => 4,
             GesSchemaBinaryOperator.Add or GesSchemaBinaryOperator.Subtract => 6,
             GesSchemaBinaryOperator.Multiply or GesSchemaBinaryOperator.Divide => 7,
+            GesSchemaBinaryOperator.Power => 9,
             _ => 5
         },
-        _ => 9
+        _ => 10
     };
+
+    private static void Name(string name, StringBuilder builder)
+    {
+        if (GesSchemaSourceReader.IsPlainName(name)) builder.Append(name);
+        else builder.Append('`').Append(name).Append('`');
+    }
 
     internal static string Symbol(GesSchemaBinaryOperator binary) => binary switch
     {
@@ -313,6 +343,7 @@ internal static class GesSchemaFormatter
         GesSchemaBinaryOperator.Equal => "=",
         GesSchemaBinaryOperator.NotEqual => "<>",
         GesSchemaBinaryOperator.And => "and",
+        GesSchemaBinaryOperator.Power => "^",
         _ => "or"
     };
 

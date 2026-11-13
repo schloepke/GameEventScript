@@ -257,6 +257,11 @@ private func units(_ expression: ExprSyntax?) throws -> [String: String] {
     return result
 }
 
+// Whether a parameter receives the call's random generator; the macro cannot resolve type aliases.
+private func isRandomGenerator(_ type: TypeSyntax) -> Bool {
+    ["GesRandomGenerator", "GameEventScriptRuntime.GesRandomGenerator"].contains(type.trimmedDescription)
+}
+
 struct GesExtensionMacro: MemberMacro {
     static func expansion(of node: AttributeSyntax, providingMembersOf declaration: some DeclGroupSyntax, in context: some MacroExpansionContext) throws -> [DeclSyntax] {
         guard
@@ -285,13 +290,16 @@ struct GesExtensionMacro: MemberMacro {
             }
             let parameters = Array(function.signature.parameterClause.parameters)
             if predicate != nil {
-                guard parameters.count == 1, ["Bool", "Bool?", "Optional<Bool>"].contains(result) else { throw BindingError("@GesPredicate requires one parameter and a Bool or Bool? result.") }
+                guard parameters.count == 1, !isRandomGenerator(parameters[0].type), ["Bool", "Bool?", "Optional<Bool>"].contains(result) else {
+                    throw BindingError("@GesPredicate requires one parameter and a Bool or Bool? result.")
+                }
             }
             var labels: [String] = []
-            var conditions = ["call.arguments.count == \(parameters.count)"]
+            var conditions: [String] = []
             var values: [String] = []
             var used: Set<String> = []
-            for (index, parameter) in parameters.enumerated() {
+            var hasRandom = false
+            for parameter in parameters {
                 guard parameter.ellipsis == nil, parameter.defaultValue == nil, !parameter.type.trimmedDescription.hasPrefix("inout "), parameter.modifiers.isEmpty else {
                     throw BindingError("@GesFunction does not support variadic, defaulted, inout or ownership-qualified parameters.")
                 }
@@ -300,7 +308,16 @@ struct GesExtensionMacro: MemberMacro {
                 let type = parameter.type.trimmedDescription
                 let unit = parameterUnits[local]
                 used.insert(local)
+                // The call's random generator is no script argument: it has no label and reads no argument.
+                if isRandomGenerator(parameter.type) {
+                    guard !hasRandom else { throw BindingError("@GesFunction declares more than one GesRandomGenerator parameter.") }
+                    if unit != nil { throw BindingError("A GesRandomGenerator parameter receives the call's random generator and takes no unit.") }
+                    hasRandom = true
+                    values.append((external == "_" ? "" : "\(external): ") + "call.random")
+                    continue
+                }
                 if unit != nil && type == "GesValue" { throw BindingError("A GesValue parameter receives the raw argument and takes no unit.") }
+                let index = labels.count
                 labels.append(predicate != nil ? "_" : external)
                 // A Result tells a failed conversion from a decoded nil, which an Optional parameter receives for Nothing.
                 conditions.append(
@@ -308,6 +325,7 @@ struct GesExtensionMacro: MemberMacro {
                 )
                 values.append((external == "_" ? "" : "\(external): ") + "a\(index)")
             }
+            conditions.insert("call.arguments.count == \(labels.count)", at: 0)
             if let unknown = Set(parameterUnits.keys).subtracting(used).sorted().first { throw BindingError("units names \(unknown), which is no parameter.") }
             let signature = name + "(" + labels.joined(separator: ",") + ")"
             guard signatures.insert(signature).inserted else { throw BindingError("@GesExtension declares :\(namespace).\(signature) twice.") }

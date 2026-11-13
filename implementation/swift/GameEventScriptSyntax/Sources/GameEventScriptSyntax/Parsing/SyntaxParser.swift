@@ -125,6 +125,8 @@
     // or `is` only type operations and looser operators, after `has value` only membership and looser, after a power
     // only multiplication and looser.
     var completedCeiling = Int.max
+    // Whether the unary intrinsic just completed took its operand in parentheses, which makes it a power base.
+    var intrinsicParenthesized = false
     // Set while the brackets after `:has` form an object pattern rather than a collection literal.
     var objectPattern = false
 
@@ -306,6 +308,12 @@
 
     func identifier() throws -> String {
         guard current.isName else { throw failure("Expected an identifier.") }
+        return advance().text
+    }
+
+    // A record field name in a declaration or after `.`: a name or one of the keyword-like words of an argument label.
+    func fieldName() throws -> String {
+        guard current.isName || Self.labelKeywords.contains(currentKind) else { throw failure("Expected an identifier.") }
         return advance().text
     }
 
@@ -518,7 +526,7 @@
         let fieldStart = current
         let unlabeled = match(.underscore)
         if unlabeled { newlines() }
-        _ = try identifier()
+        _ = try fieldName()
         role(unlabeled ? .unlabeledField : .field)
         try expect(.colon)
         newlines()

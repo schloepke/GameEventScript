@@ -1510,6 +1510,16 @@ Reflection, and both follow one set of rules:
   must be unitless. The result converts back; a declared result unit (`unit:`, C# `[GesFunction(name, kind, unit)]` or
   `[GesFunction(name, unit)]`) is attached to a numeric, spatial or shape result, and an absent Optional or null result is
   `nothing`.
+- **Random generator.** A function may take the host's random generator: a parameter of type `GesRandomGenerator`
+  receives the call's generator (Swift `call.random`, C# `GesExtensionCall.Random`) instead of an argument. It is no script
+  argument: it has no label, does not count toward the signature's labels or arity, takes no unit (Swift `units:`) and no
+  `[GesParam]`, and does not count toward the C# limit of four script parameters. A function has at most one, in any
+  position; a second one is a macro diagnostic (Swift) or fails registration (C#). A predicate takes none. Draws advance the
+  host's stream and follow its random scopes, so seeded runs stay deterministic. `@GesFunction func spawnSpots(count: Int,
+  margin: Double, spacing: Double, random: GesRandomGenerator) -> GesValue?` registers
+  `:arena.spawnSpots(count:margin:spacing:)` with three script parameters. The Swift macro recognizes the parameter by its
+  written type, `GesRandomGenerator` or `GameEventScriptRuntime.GesRandomGenerator`, not through a type alias. A C#
+  method may still take a leading `GesExtensionCall` for the whole call context.
 - **Failures.** An argument that does not convert, or another argument count, gives `nothing`, as GES operations do for a
   domain failure; an error the method throws stays an extension fault (`runtime.extensionCallFailed`, or the declared fault).
 - **Instances.** Instance methods need an instance: Swift generates an instance `gesExtensions()` that also lists the static

@@ -57,12 +57,28 @@ public sealed class GesComputedGeneratedCodeTests
 
         // An integer field without a range may hold whole numbers beyond 2^53, which the virtual machine multiplies exactly.
         StringAssert.Contains(code, "public double Doubled => GesComputed.Number(__Doubled());");
+
+        // Functions call the platform's math as the virtual machine does, the square root directly.
+        StringAssert.Contains(code, "public double Side => global::System.Math.Sqrt(Area);");
+        StringAssert.Contains(code, "public double Lean => GesComputed.Sine(GesComputed.Radians(Heading));");
+        StringAssert.Contains(code, "public double Half => Length / 2.0;");
+        StringAssert.Contains(code, "public double Settled => GesComputed.Number(__Settled());");
         Assert.IsFalse(code.Contains("internal double __Power", StringComparison.Ordinal), "A static field has no exact-value method.");
     }
 
     private static Wire.Reactor Reactor(double energy, double duration, double? trim, long ticks, params double[] draws)
     {
-        var reactor = new Wire.Reactor { Energy = energy, Duration = duration, Boost = 0.25, TrimOptional = trim, Ticks = ticks };
+        var reactor = new Wire.Reactor
+        {
+            Energy = energy,
+            Duration = duration,
+            Boost = 0.25,
+            TrimOptional = trim,
+            Ticks = ticks,
+            Span = (ticks & 0xFF) / 4.0,
+            Heading = Math.Abs(ticks % 720) / 2.0,
+            Length = Math.Abs(ticks % 21) / 2.0
+        };
         foreach (var draw in draws) reactor.Cells.Add(new Wire.Cell { Draw = draw });
         return reactor;
     }
@@ -101,6 +117,12 @@ public sealed class GesComputedGeneratedCodeTests
             AssertNumber(Field(value, "load"), reactor.Load, "load");
             AssertNumber(Field(value, "cellCount"), reactor.CellCount, "cellCount");
             AssertNumber(Field(value, "doubled"), reactor.Doubled, "doubled");
+            AssertNumber(Field(value, "area"), reactor.Area, "area");
+            AssertNumber(Field(value, "side"), reactor.Side, "side");
+            AssertNumber(Field(value, "reach"), reactor.Reach, "reach");
+            AssertNumber(Field(value, "lean"), reactor.Lean, "lean");
+            AssertNumber(Field(value, "half"), reactor.Half, "half");
+            AssertNumber(Field(value, "settled"), reactor.Settled, "settled");
             Assert.AreEqual(Field(value, "marked").AsBoolean(), reactor.Marked, "marked");
             Assert.AreEqual(Field(value, "steady").AsBoolean(), reactor.Steady, "steady");
             Assert.AreEqual(Field(value, "balanced").AsBoolean(), reactor.Balanced, "balanced");

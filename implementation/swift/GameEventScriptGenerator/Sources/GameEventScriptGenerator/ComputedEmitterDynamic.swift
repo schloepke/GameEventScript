@@ -118,6 +118,10 @@ extension GesComputedEmitter {
             return swift ? call("Integer", "Int64(\(list).count)") : call("Integer", "\(list).Count")
         case .sum:
             return sum(node, root)
+        default:
+            var arguments = children.map { expression($0, root) }
+            if node.op == .sin || node.op == .cos || node.op == .tan { arguments.append(flag(node.first)) }
+            return call(Self.functionHelper(node.op), arguments: arguments)
         }
     }
 

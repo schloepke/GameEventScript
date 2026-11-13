@@ -41,6 +41,16 @@ one outside the innermost open `{`. The tokens of a
 source therefore cover it without gaps and reproduce it exactly, for valid and
 malformed source alike: text the lexer cannot read becomes an illegal token.
 
+> **Since: Unreleased** — names in backticks
+
+A name in backticks ([Language](Language.md#lexical-rules)) is one identifier
+token whose spelling includes both backticks and whose value is the name
+between them. Content that is no name becomes one illegal token from the
+opening through the closing backtick; a backtick without a closing backtick on
+its line is an illegal token of that backtick alone. The parser compares
+contextual words such as `from`, `where` or `strict` with identifiers whose
+spelling is their value, so a name in backticks never matches one.
+
 Offsets are indices of the port's string storage; lines and columns are
 one-based and columns count Unicode scalars. Numeric token values are read by
 the Compiler, not the lexer.

@@ -285,7 +285,7 @@ internal sealed partial class GesSyntaxParser
     private bool IsValuesOfOperator()
     {
         var first = _reader.PeekSignificant(0);
-        if (first.Kind != Identifier || !string.Equals(first.Text, "values", StringComparison.Ordinal)) return false;
+        if (!first.IsWord("values")) return false;
 
         return _reader.PeekSignificant(1).Kind == Of;
     }
@@ -461,7 +461,20 @@ internal sealed partial class GesSyntaxParser
     private Expression ParsePowerExpression()
     {
         var start = _tree.Mark();
-        var expression = ParsePowerBaseExpression();
+        var startToken = CurrentIndex;
+        Expression expression;
+        if (ParseKeywordUnaryOperator())
+        {
+            _tree.StartNodeAt(start, GesSyntaxNodeKind.UnaryExpression);
+            SkipNewLines();
+            var parenthesized = Is(LeftParen);
+            var keywordOperand = ParseUnaryIntrinsicOperand();
+            // A root lowers to a power whose exponent has no depth of its own, so it measures as the unary operators do.
+            expression = FinishNode(Node(keywordOperand.Depth, startToken));
+            // Only an operand in parentheses directly after the intrinsic word makes the intrinsic a power base.
+            if (!parenthesized) return expression;
+        }
+        else expression = ParsePowerBaseExpression();
 
         if (Match(OperatorPower))
         {
@@ -501,25 +514,20 @@ internal sealed partial class GesSyntaxParser
             var opToken = PreviousIndex;
             // `strict` directly after `parse` on the same line is always the mode word, never an operand.
             // The mode word stands on the line of `parse`; inside parentheses a line break is trivia, so compare lines.
-            if (operation == KeywordParse && Current.Kind == Identifier && Current.Text == "strict" && Current.Line == Previous.EndLine) AdvanceKeyword();
+            if (operation == KeywordParse && Current.IsWord("strict") && Current.Line == Previous.EndLine) AdvanceKeyword();
             if (operation != KeywordParse) SkipNewLines();
             var operand = ParseUnaryExpression();
             var shape = operation == OperatorMinus && operand.Shape is Shape.Number or Shape.Numeric ? Shape.NegatedNumeric : Shape.None;
             return FinishNode(Node(operand.Depth, opToken, shape));
         }
 
-        if (ParseIntrinsicCallExpression() is { } intrinsicCall) return intrinsicCall;
-        var start = _tree.Mark();
-        var startToken = CurrentIndex;
-        if (!ParseKeywordUnaryOperator()) return ParsePowerExpression();
-        _tree.StartNodeAt(start, GesSyntaxNodeKind.UnaryExpression);
-        // A root lowers to a power whose exponent has no depth of its own, so it measures as the unary operators do.
-        var keywordOperand = ParseUnaryIntrinsicOperand();
-        return FinishNode(Node(keywordOperand.Depth, startToken));
+        return ParsePowerExpression();
     }
 
     private Expression ParsePowerBaseExpression()
     {
+        if (ParseIntrinsicCallExpression() is { } intrinsicCall) return intrinsicCall;
+
         if (Is(Series))
         {
             _tree.StartNode(GesSyntaxNodeKind.SeriesExpression);
@@ -650,7 +658,7 @@ internal sealed partial class GesSyntaxParser
             {
                 _tree.StartNodeAt(start, GesSyntaxNodeKind.MemberAccessExpression);
                 SkipNewLines();
-                ExpectIdentifier();
+                ExpectFieldName();
                 Role(GesSyntaxRole.Member);
                 expression = FinishNode(Merged(expression.Depth, expression));
                 continue;
@@ -957,7 +965,7 @@ internal sealed partial class GesSyntaxParser
         if (Current.Kind == Identifier)
         {
             var lookahead = _reader.PeekSignificant(1);
-            if (lookahead.Kind == Comma || lookahead.Kind == Identifier && string.Equals(lookahead.Text, "where", StringComparison.Ordinal)) depth = ParseBoundWhere();
+            if (lookahead.Kind == Comma || lookahead.IsWord("where")) depth = ParseBoundWhere();
         }
 
         SkipNewLines();
@@ -1302,7 +1310,7 @@ internal sealed partial class GesSyntaxParser
         else if (Match(In))
         {
             SkipNewLines();
-            if (Current.Kind == Identifier && string.Equals(Current.Text, "from", StringComparison.Ordinal))
+            if (Current.IsWord("from"))
             {
                 throw new ParseException("Direct ranges are not allowed after 'in'; use ':select item from ... to ...' or iterate a range value", Current);
             }
@@ -1437,7 +1445,7 @@ internal sealed partial class GesSyntaxParser
         if (parenthesized) depth = ParseArgumentListAfterLeftParen();
         else if (Current.Kind == Of) depth = ParseOfArgumentList();
         else if (IsArgumentLabelStart()) depth = ParseUngroupedLabeledArgumentList();
-        else if (IsExtensionUnaryArgumentStart() && !(_choiceConditionDepth == _delimiterDepth && Current.Kind == Identifier && Current.Text == "then")) depth = ParseUnaryExpression().Depth;
+        else if (IsExtensionUnaryArgumentStart() && !(_choiceConditionDepth == _delimiterDepth && Current.IsWord("then"))) depth = ParseUnaryExpression().Depth;
 
         var expression = WrapNode(start, GesSyntaxNodeKind.ExtensionCallExpression, Node(depth, startToken));
         return parenthesized ? ParsePostfixSuffixes(expression, start) : expression;
@@ -1539,7 +1547,7 @@ internal sealed partial class GesSyntaxParser
 
     private GesToken ParseDiceSideCountToken()
     {
-        if (Is(Identifier))
+        if (Is(Identifier) && !Current.IsQuotedName)
         {
             var token = Current;
             if (string.Equals(token.Text, "d", StringComparison.Ordinal))

@@ -83,7 +83,8 @@
     }
 
     /// Prints an expression with the parentheses its precedence needs: 0 choice, 1 default, 2 or, 3 and, 4 equality,
-    /// 5 relation, 6 addition, 7 multiplication, 8 unary, 9 postfix and primary.
+    /// 5 relation, 6 addition, 7 multiplication, 8 unary, 9 power, 10 postfix and primary. A name that GES reserves is written in
+    /// backticks.
     private static func expression(_ node: GesSchemaExpressionSyntax, _ minimum: Int, _ output: inout String) {
         let level = level(node)
         if level < minimum { output += "(" }
@@ -92,10 +93,25 @@
         case .literal: output += node.literal!.text
         case .boolean: output += node.boolean ? "true" : "false"
         case .constant: output += "$" + node.name
-        case .name: output += node.name
+        case .name: output += quoted(node.name)
         case .member:
-            expression(children[0], 9, &output)
-            output += "." + node.name
+            expression(children[0], 10, &output)
+            output += "." + quoted(node.name)
+        case .function where node.name == "atan2" || node.name == "hypot":
+            output += node.name + "("
+            for (index, child) in children.enumerated() {
+                if index > 0 { output += ", " }
+                expression(child, 0, &output)
+            }
+            output += ")"
+        case .function:
+            output += node.name + " "
+            expression(children[0], 8, &output)
+        case .binary where node.binary == .power:
+            // The base takes no power of its own and the exponent is unary, so powers associate to the right.
+            expression(children[0], 10, &output)
+            output += " ^ "
+            expression(children[1], 8, &output)
         case .negate:
             output += "-"
             expression(children[0], 8, &output)
@@ -136,10 +152,10 @@
             expression(children[0], 6, &output)
             output += " has value"
         case .count:
-            expression(children[0], 9, &output)
+            expression(children[0], 10, &output)
             output += "[:count]"
         case .sum:
-            expression(children[0], 9, &output)
+            expression(children[0], 10, &output)
             output += "[:sum"
             if children.count > 1 {
                 output += " \(node.name) => "
@@ -156,6 +172,7 @@
         case .default: return 1
         case .hasValue: return 5
         case .negate, .not, .abs: return 8
+        case .function: return node.name == "atan2" || node.name == "hypot" ? 10 : 8
         case .binary:
             switch node.binary {
             case .or: return 2
@@ -163,11 +180,14 @@
             case .equal, .notEqual: return 4
             case .add, .subtract: return 6
             case .multiply, .divide: return 7
+            case .power: return 9
             default: return 5
             }
-        default: return 9
+        default: return 10
         }
     }
+
+    private static func quoted(_ name: String) -> String { GesSchemaSourceReader.isPlainName(name) ? name : "`" + name + "`" }
 
     /// The spelling of a binary operator.
     @_spi(Syntax) public static func symbol(_ binary: GesSchemaBinaryOperator) -> String {
@@ -184,6 +204,7 @@
         case .notEqual: return "<>"
         case .and: return "and"
         case .or: return "or"
+        case .power: return "^"
         }
     }
 
